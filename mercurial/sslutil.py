@@ -161,6 +161,16 @@ def _hostsettings(ui, hostname):
     if modernssl:
         defaultprotocol = 'tls1.1'
     else:
+        # Let people on legacy Python versions know they are borderline
+        # secure.
+        # We don't document this config option because we want people to see
+        # the bold warnings on the web site.
+        # internal config: hostsecurity.disabletls10warning
+        if not ui.configbool('hostsecurity', 'disabletls10warning'):
+            ui.warn(_('warning: connecting to %s using legacy security '
+                      'technology (TLS 1.0); see '
+                      'https://mercurial-scm.org/wiki/SecureConnections for '
+                      'more info\n') % hostname)
         defaultprotocol = 'tls1.0'
 
     key = 'minimumprotocol'

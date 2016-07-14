@@ -58,6 +58,7 @@ we are able to load CA certs:
   this patch series consists of 1 patches.
   
   
+  warning: connecting to localhost using legacy security technology (TLS 1.0); see https://mercurial-scm.org/wiki/SecureConnections for more info
   (using CA certificates from *; if you see this message, your Mercurial install is not properly configured; see https://mercurial-scm.org/wiki/SecureConnections for how to configure Mercurial to avoid this message) (glob) (?)
   (?i)abort: .*?certificate.verify.failed.* (re)
   [255]
@@ -95,6 +96,7 @@ Without certificates:
   
   (using smtps)
   sending mail: smtp host localhost, port * (glob)
+  warning: connecting to localhost using legacy security technology (TLS 1.0); see https://mercurial-scm.org/wiki/SecureConnections for more info (?)
   (verifying remote certificate)
   abort: unable to verify security of localhost (no loaded CA certificates); refusing to connect
   (see https://mercurial-scm.org/wiki/SecureConnections for how to configure Mercurial to avoid this error or set hostsecurity.localhost:fingerprints=sha256:20:de:b3:ad:b4:cd:a5:42:f0:74:41:1c:a2:70:1e:da:6e:c0:5c:16:9e:e7:22:0f:f1:b7:e5:6e:e4:92:af:7e to trust this server)
@@ -108,6 +110,7 @@ With global certificates:
   
   (using smtps)
   sending mail: smtp host localhost, port * (glob)
+  warning: connecting to localhost using legacy security technology (TLS 1.0); see https://mercurial-scm.org/wiki/SecureConnections for more info (?)
   (verifying remote certificate)
   sending [PATCH] a ...
 
@@ -117,6 +120,7 @@ With invalid certificates:
   this patch series consists of 1 patches.
   
   
+  warning: connecting to localhost using legacy security technology (TLS 1.0); see https://mercurial-scm.org/wiki/SecureConnections for more info (?)
   (?i)abort: .*?certificate.verify.failed.* (re)
   [255]
 
