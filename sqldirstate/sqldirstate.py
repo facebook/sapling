@@ -374,7 +374,8 @@ def makedirstate(cls):
             self._sqlconn.commit()
             self._lastnormaltime = 0
             self._dirty = self._dirtypl = False
-            self._nonnormalset = self._map.nonnormalentries()
+            if '_nonnormalset' in self.__dict__:
+                delattr(self, '_nonnormalset')
 
             if self._ui.configbool('sqldirstate', 'fakedirstate', True):
                 writefakedirstate(self)
@@ -389,7 +390,8 @@ def makedirstate(cls):
 
         def clear(self):
             self._map.clear()
-            self._nonnormalset = set()
+            if '_nonnormalset' in self.__dict__:
+                delattr(self, '_nonnormalset')
             self._dirs.clear()
             self._copymap.clear()
             self._filefoldmap.clear()
