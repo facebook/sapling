@@ -225,7 +225,7 @@ test http authentication
   remote: added 1 changesets with 1 changes to 1 files
   $ hg rollback -q
 
-  $ cut -c38- ../access.log
+  $ sed 's/.*] "/"/' < ../access.log
   "GET /?cmd=capabilities HTTP/1.1" 200 -
   "GET /?cmd=lookup HTTP/1.1" 200 - x-hgarg-1:key=tip
   "GET /?cmd=listkeys HTTP/1.1" 401 - x-hgarg-1:namespace=namespaces
