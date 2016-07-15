@@ -325,6 +325,52 @@ def wrapsocket(sock, keyfile, certfile, ui, serverhostname=None):
 
     return sslsocket
 
+def wrapserversocket(sock, ui, certfile=None, keyfile=None, cafile=None,
+                     requireclientcert=False):
+    """Wrap a socket for use by servers.
+
+    ``certfile`` and ``keyfile`` specify the files containing the certificate's
+    public and private keys, respectively. Both keys can be defined in the same
+    file via ``certfile`` (the private key must come first in the file).
+
+    ``cafile`` defines the path to certificate authorities.
+
+    ``requireclientcert`` specifies whether to require client certificates.
+
+    Typically ``cafile`` is only defined if ``requireclientcert`` is true.
+    """
+    if modernssl:
+        # We /could/ use create_default_context() here since it doesn't load
+        # CAs when configured for client auth.
+        sslcontext = SSLContext(ssl.PROTOCOL_SSLv23)
+        # SSLv2 and SSLv3 are broken. Ban them outright.
+        sslcontext.options |= OP_NO_SSLv2 | OP_NO_SSLv3
+        # Prevent CRIME
+        sslcontext.options |= getattr(ssl, 'OP_NO_COMPRESSION', 0)
+        # Improve forward secrecy.
+        sslcontext.options |= getattr(ssl, 'OP_SINGLE_DH_USE', 0)
+        sslcontext.options |= getattr(ssl, 'OP_SINGLE_ECDH_USE', 0)
+
+        # Use the list of more secure ciphers if found in the ssl module.
+        if util.safehasattr(ssl, '_RESTRICTED_SERVER_CIPHERS'):
+            sslcontext.options |= getattr(ssl, 'OP_CIPHER_SERVER_PREFERENCE', 0)
+            sslcontext.set_ciphers(ssl._RESTRICTED_SERVER_CIPHERS)
+    else:
+        sslcontext = SSLContext(ssl.PROTOCOL_TLSv1)
+
+    if requireclientcert:
+        sslcontext.verify_mode = ssl.CERT_REQUIRED
+    else:
+        sslcontext.verify_mode = ssl.CERT_NONE
+
+    if certfile or keyfile:
+        sslcontext.load_cert_chain(certfile=certfile, keyfile=keyfile)
+
+    if cafile:
+        sslcontext.load_verify_locations(cafile=cafile)
+
+    return sslcontext.wrap_socket(sock, server_side=True)
+
 class wildcarderror(Exception):
     """Represents an error parsing wildcards in DNS name."""
 
