@@ -15,6 +15,7 @@ Any help will be greatly appreciated.           SUZUKI Hisao
 __version__ = "0.2.1"
 
 import BaseHTTPServer
+import optparse
 import os
 import select
 import socket
@@ -143,6 +144,19 @@ class ThreadingHTTPServer (socketserver.ThreadingMixIn,
         a.write(str(os.getpid()) + "\n")
         a.close()
 
+def runserver(port=8000, bind=""):
+    server_address = (bind, port)
+    ProxyHandler.protocol_version = "HTTP/1.0"
+    httpd = ThreadingHTTPServer(server_address, ProxyHandler)
+    sa = httpd.socket.getsockname()
+    print("Serving HTTP on", sa[0], "port", sa[1], "...")
+    try:
+        httpd.serve_forever()
+    except KeyboardInterrupt:
+        print("\nKeyboard interrupt received, exiting.")
+        httpd.server_close()
+        sys.exit(0)
+
 if __name__ == '__main__':
     argv = sys.argv
     if argv[1:] and argv[1] in ('-h', '--help'):
@@ -158,4 +172,13 @@ if __name__ == '__main__':
             del argv[2:]
         else:
             print("Any clients will be served...")
-        BaseHTTPServer.test(ProxyHandler, ThreadingHTTPServer)
+
+        parser = optparse.OptionParser()
+        parser.add_option('-b', '--bind', metavar='ADDRESS',
+                          help='Specify alternate bind address '
+                               '[default: all interfaces]', default='')
+        (options, args) = parser.parse_args()
+        port = 8000
+        if len(args) == 1:
+            port = int(args[0])
+        runserver(port, options.bind)
