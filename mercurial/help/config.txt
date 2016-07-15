@@ -1000,10 +1000,22 @@ For example::
 ``hostsecurity``
 ----------------
 
-Used to specify per-host security settings.
+Used to specify global and per-host security settings for connecting to
+other machines.
 
-Options in this section have the form ``hostname``:``setting``. This allows
-multiple settings to be defined on a per-host basis.
+The following options control default behavior for all hosts.
+
+``minimumprotocol``
+    Defines the minimum channel encryption protocol to use.
+
+    By default, the highest version of TLS - 1.0 or greater - supported by
+    both client and server is used.
+
+    Allowed values are: ``tls1.0`` (the default), ``tls1.1``, ``tls1.2``.
+
+Options in the ``[hostsecurity]`` section can have the form
+``hostname``:``setting``. This allows multiple settings to be defined on a
+per-host basis.
 
 The following per-host settings can be defined.
 
@@ -1025,6 +1037,10 @@ The following per-host settings can be defined.
     at the expense of convenience.
 
     This option takes precedence over ``verifycertsfile``.
+
+``minimumprotocol``
+    This behaves like ``minimumprotocol`` as described above except it
+    only applies to the host on which it is defined.
 
 ``verifycertsfile``
     Path to file a containing a list of PEM encoded certificates used to
@@ -1057,6 +1073,13 @@ For example::
     hg.example.com:fingerprints = sha256:c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2
     hg2.example.com:fingerprints = sha1:914f1aff87249c09b6859b88b1906d30756491ca, sha1:fc:e2:8d:d9:51:cd:cb:c1:4d:18:6b:b7:44:8d:49:72:57:e6:cd:33
     foo.example.com:verifycertsfile = /etc/ssl/trusted-ca-certs.pem
+
+To change the default minimum protocol version to TLS 1.2 but to allow TLS 1.1
+when connecting to ``hg.example.com``::
+
+    [hostsecurity]
+    minimumprotocol = tls1.2
+    hg.example.com:minimumprotocol = tls1.1
 
 ``http_proxy``
 --------------

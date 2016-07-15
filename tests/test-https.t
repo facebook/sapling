@@ -345,11 +345,79 @@ Fingerprints
   $ hg -R copy-pull id https://127.0.0.1:$HGPORT/ --config hostfingerprints.127.0.0.1=ecd87cd6b386d04fc1b8b41c9d8f5e168eef1c03
   5fed3813f7f5
 
-HGPORT1 is reused below for tinyproxy tests. Kill that server.
+Ports used by next test. Kill servers.
+
+  $ killdaemons.py hg0.pid
   $ killdaemons.py hg1.pid
+  $ killdaemons.py hg2.pid
+
+#if sslcontext
+Start servers running supported TLS versions
+
+  $ cd test
+  $ hg serve -p $HGPORT -d --pid-file=../hg0.pid --certificate=$PRIV \
+  > --config devel.serverexactprotocol=tls1.0
+  $ cat ../hg0.pid >> $DAEMON_PIDS
+  $ hg serve -p $HGPORT1 -d --pid-file=../hg1.pid --certificate=$PRIV \
+  > --config devel.serverexactprotocol=tls1.1
+  $ cat ../hg1.pid >> $DAEMON_PIDS
+  $ hg serve -p $HGPORT2 -d --pid-file=../hg2.pid --certificate=$PRIV \
+  > --config devel.serverexactprotocol=tls1.2
+  $ cat ../hg2.pid >> $DAEMON_PIDS
+  $ cd ..
+
+Clients talking same TLS versions work
+
+  $ P="$CERTSDIR" hg --config hostsecurity.minimumprotocol=tls1.0 id https://localhost:$HGPORT/
+  5fed3813f7f5
+  $ P="$CERTSDIR" hg --config hostsecurity.minimumprotocol=tls1.1 id https://localhost:$HGPORT1/
+  5fed3813f7f5
+  $ P="$CERTSDIR" hg --config hostsecurity.minimumprotocol=tls1.2 id https://localhost:$HGPORT2/
+  5fed3813f7f5
+
+Clients requiring newer TLS version than what server supports fail
+
+  $ P="$CERTSDIR" hg --config hostsecurity.minimumprotocol=tls1.1 id https://localhost:$HGPORT/
+  (could not negotiate a common protocol; see https://mercurial-scm.org/wiki/SecureConnections for how to configure Mercurial to avoid this error)
+  abort: error: *unsupported protocol* (glob)
+  [255]
+  $ P="$CERTSDIR" hg --config hostsecurity.minimumprotocol=tls1.2 id https://localhost:$HGPORT/
+  (could not negotiate a common protocol; see https://mercurial-scm.org/wiki/SecureConnections for how to configure Mercurial to avoid this error)
+  abort: error: *unsupported protocol* (glob)
+  [255]
+  $ P="$CERTSDIR" hg --config hostsecurity.minimumprotocol=tls1.2 id https://localhost:$HGPORT1/
+  (could not negotiate a common protocol; see https://mercurial-scm.org/wiki/SecureConnections for how to configure Mercurial to avoid this error)
+  abort: error: *unsupported protocol* (glob)
+  [255]
+
+The per-host config option overrides the default
+
+  $ P="$CERTSDIR" hg id https://localhost:$HGPORT/ \
+  > --config hostsecurity.minimumprotocol=tls1.2 \
+  > --config hostsecurity.localhost:minimumprotocol=tls1.0
+  5fed3813f7f5
+
+The per-host config option by itself works
+
+  $ P="$CERTSDIR" hg id https://localhost:$HGPORT/ \
+  > --config hostsecurity.localhost:minimumprotocol=tls1.2
+  (could not negotiate a common protocol; see https://mercurial-scm.org/wiki/SecureConnections for how to configure Mercurial to avoid this error)
+  abort: error: *unsupported protocol* (glob)
+  [255]
+
+  $ killdaemons.py hg0.pid
+  $ killdaemons.py hg1.pid
+  $ killdaemons.py hg2.pid
+#endif
 
 Prepare for connecting through proxy
 
+  $ hg serve -R test -p $HGPORT -d --pid-file=hg0.pid --certificate=$PRIV
+  $ cat hg0.pid >> $DAEMON_PIDS
+  $ hg serve -R test -p $HGPORT2 -d --pid-file=hg2.pid --certificate=server-expired.pem
+  $ cat hg2.pid >> $DAEMON_PIDS
+tinyproxy.py doesn't fully detach, so killing it may result in extra output
+from the shell. So don't kill it.
   $ tinyproxy.py $HGPORT1 localhost >proxy.log </dev/null 2>&1 &
   $ while [ ! -f proxy.pid ]; do sleep 0; done
   $ cat proxy.pid >> $DAEMON_PIDS

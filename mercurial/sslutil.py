@@ -29,14 +29,13 @@ from . import (
 # modern/secure or legacy/insecure. Many operations in this module have
 # separate code paths depending on support in Python.
 
-hassni = getattr(ssl, 'HAS_SNI', False)
+configprotocols = set([
+    'tls1.0',
+    'tls1.1',
+    'tls1.2',
+])
 
-try:
-    OP_NO_SSLv2 = ssl.OP_NO_SSLv2
-    OP_NO_SSLv3 = ssl.OP_NO_SSLv3
-except AttributeError:
-    OP_NO_SSLv2 = 0x1000000
-    OP_NO_SSLv3 = 0x2000000
+hassni = getattr(ssl, 'HAS_SNI', False)
 
 try:
     # ssl.SSLContext was added in 2.7.9 and presence indicates modern
@@ -136,7 +135,7 @@ def _hostsettings(ui, hostname):
 
     # Despite its name, PROTOCOL_SSLv23 selects the highest protocol
     # that both ends support, including TLS protocols. On legacy stacks,
-    # the highest it likely goes in TLS 1.0. On modern stacks, it can
+    # the highest it likely goes is TLS 1.0. On modern stacks, it can
     # support TLS 1.2.
     #
     # The PROTOCOL_TLSv* constants select a specific TLS version
@@ -145,19 +144,26 @@ def _hostsettings(ui, hostname):
     # disable protocols via SSLContext.options and OP_NO_* constants.
     # However, SSLContext.options doesn't work unless we have the
     # full/real SSLContext available to us.
-    if modernssl:
-        s['protocol'] = ssl.PROTOCOL_SSLv23
-    else:
-        s['protocol'] = ssl.PROTOCOL_TLSv1
 
-    # SSLv2 and SSLv3 are broken. We ban them outright.
-    # WARNING: ctxoptions doesn't have an effect unless the modern ssl module
-    # is available. Be careful when adding flags!
-    s['ctxoptions'] = OP_NO_SSLv2 | OP_NO_SSLv3
+    # Allow minimum TLS protocol to be specified in the config.
+    def validateprotocol(protocol, key):
+        if protocol not in configprotocols:
+            raise error.Abort(
+                _('unsupported protocol from hostsecurity.%s: %s') %
+                (key, protocol),
+                hint=_('valid protocols: %s') %
+                     ' '.join(sorted(configprotocols)))
 
-    # Prevent CRIME.
-    # There is no guarantee this attribute is defined on the module.
-    s['ctxoptions'] |= getattr(ssl, 'OP_NO_COMPRESSION', 0)
+    key = 'minimumprotocol'
+    # Default to TLS 1.0+ as that is what browsers are currently doing.
+    protocol = ui.config('hostsecurity', key, 'tls1.0')
+    validateprotocol(protocol, key)
+
+    key = '%s:minimumprotocol' % hostname
+    protocol = ui.config('hostsecurity', key, protocol)
+    validateprotocol(protocol, key)
+
+    s['protocol'], s['ctxoptions'] = protocolsettings(protocol)
 
     # Look for fingerprints in [hostsecurity] section. Value is a list
     # of <alg>:<fingerprint> strings.
@@ -250,6 +256,46 @@ def _hostsettings(ui, hostname):
 
     return s
 
+def protocolsettings(protocol):
+    """Resolve the protocol and context options for a config value."""
+    if protocol not in configprotocols:
+        raise ValueError('protocol value not supported: %s' % protocol)
+
+    # Legacy ssl module only supports up to TLS 1.0. Ideally we'd use
+    # PROTOCOL_SSLv23 and options to disable SSLv2 and SSLv3. However,
+    # SSLContext.options doesn't work in our implementation since we use
+    # a fake SSLContext on these Python versions.
+    if not modernssl:
+        if protocol != 'tls1.0':
+            raise error.Abort(_('current Python does not support protocol '
+                                'setting %s') % protocol,
+                              hint=_('upgrade Python or disable setting since '
+                                     'only TLS 1.0 is supported'))
+
+        return ssl.PROTOCOL_TLSv1, 0
+
+    # WARNING: returned options don't work unless the modern ssl module
+    # is available. Be careful when adding options here.
+
+    # SSLv2 and SSLv3 are broken. We ban them outright.
+    options = ssl.OP_NO_SSLv2 | ssl.OP_NO_SSLv3
+
+    if protocol == 'tls1.0':
+        # Defaults above are to use TLS 1.0+
+        pass
+    elif protocol == 'tls1.1':
+        options |= ssl.OP_NO_TLSv1
+    elif protocol == 'tls1.2':
+        options |= ssl.OP_NO_TLSv1 | ssl.OP_NO_TLSv1_1
+    else:
+        raise error.Abort(_('this should not happen'))
+
+    # Prevent CRIME.
+    # There is no guarantee this attribute is defined on the module.
+    options |= getattr(ssl, 'OP_NO_COMPRESSION', 0)
+
+    return ssl.PROTOCOL_SSLv23, options
+
 def wrapsocket(sock, keyfile, certfile, ui, serverhostname=None):
     """Add SSL/TLS to a socket.
 
@@ -306,7 +352,7 @@ def wrapsocket(sock, keyfile, certfile, ui, serverhostname=None):
 
     try:
         sslsocket = sslcontext.wrap_socket(sock, server_hostname=serverhostname)
-    except ssl.SSLError:
+    except ssl.SSLError as e:
         # If we're doing certificate verification and no CA certs are loaded,
         # that is almost certainly the reason why verification failed. Provide
         # a hint to the user.
@@ -318,6 +364,13 @@ def wrapsocket(sock, keyfile, certfile, ui, serverhostname=None):
                       'were loaded; see '
                       'https://mercurial-scm.org/wiki/SecureConnections for '
                       'how to configure Mercurial to avoid this error)\n'))
+        # Try to print more helpful error messages for known failures.
+        if util.safehasattr(e, 'reason'):
+            if e.reason == 'UNSUPPORTED_PROTOCOL':
+                ui.warn(_('(could not negotiate a common protocol; see '
+                          'https://mercurial-scm.org/wiki/SecureConnections '
+                          'for how to configure Mercurial to avoid this '
+                          'error)\n'))
         raise
 
     # check if wrap_socket failed silently because socket had been
@@ -349,14 +402,28 @@ def wrapserversocket(sock, ui, certfile=None, keyfile=None, cafile=None,
 
     Typically ``cafile`` is only defined if ``requireclientcert`` is true.
     """
+    protocol, options = protocolsettings('tls1.0')
+
+    # This config option is intended for use in tests only. It is a giant
+    # footgun to kill security. Don't define it.
+    exactprotocol = ui.config('devel', 'serverexactprotocol')
+    if exactprotocol == 'tls1.0':
+        protocol = ssl.PROTOCOL_TLSv1
+    elif exactprotocol == 'tls1.1':
+        protocol = ssl.PROTOCOL_TLSv1_1
+    elif exactprotocol == 'tls1.2':
+        protocol = ssl.PROTOCOL_TLSv1_2
+    elif exactprotocol:
+        raise error.Abort(_('invalid value for serverexactprotocol: %s') %
+                          exactprotocol)
+
     if modernssl:
         # We /could/ use create_default_context() here since it doesn't load
-        # CAs when configured for client auth.
-        sslcontext = SSLContext(ssl.PROTOCOL_SSLv23)
-        # SSLv2 and SSLv3 are broken. Ban them outright.
-        sslcontext.options |= OP_NO_SSLv2 | OP_NO_SSLv3
-        # Prevent CRIME
-        sslcontext.options |= getattr(ssl, 'OP_NO_COMPRESSION', 0)
+        # CAs when configured for client auth. However, it is hard-coded to
+        # use ssl.PROTOCOL_SSLv23 which may not be appropriate here.
+        sslcontext = SSLContext(protocol)
+        sslcontext.options |= options
+
         # Improve forward secrecy.
         sslcontext.options |= getattr(ssl, 'OP_SINGLE_DH_USE', 0)
         sslcontext.options |= getattr(ssl, 'OP_SINGLE_ECDH_USE', 0)
