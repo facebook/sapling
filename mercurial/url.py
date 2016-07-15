@@ -505,8 +505,20 @@ def opener(ui, authinfo=None):
     handlers.extend([h(ui, passmgr) for h in handlerfuncs])
     opener = urlreq.buildopener(*handlers)
 
-    # 1.0 here is the _protocol_ version
-    opener.addheaders = [('User-agent', 'mercurial/proto-1.0')]
+    # The user agent should should *NOT* be used by servers for e.g.
+    # protocol detection or feature negotiation: there are other
+    # facilities for that.
+    #
+    # "mercurial/proto-1.0" was the original user agent string and
+    # exists for backwards compatibility reasons.
+    #
+    # The "(Mercurial %s)" string contains the distribution
+    # name and version. Other client implementations should choose their
+    # own distribution name. Since servers should not be using the user
+    # agent string for anything, clients should be able to define whatever
+    # user agent they deem appropriate.
+    agent = 'mercurial/proto-1.0 (Mercurial %s)' % util.version()
+    opener.addheaders = [('User-agent', agent)]
     opener.addheaders.append(('Accept', 'application/mercurial-0.1'))
     return opener
 
