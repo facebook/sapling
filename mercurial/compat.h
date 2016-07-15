@@ -8,7 +8,7 @@
 #if defined(_WIN64)
 typedef __int64 ssize_t;
 #else
-typedef long ssize_t;
+typedef int ssize_t;
 #endif
 typedef signed char int8_t;
 typedef short int16_t;
