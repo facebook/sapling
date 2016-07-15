@@ -117,13 +117,13 @@ invalid arch type should give 404
   $ python getarchive.py "$TIP" zip > archive.zip
   $ unzip -t archive.zip
   Archive:  archive.zip
-      testing: test-archive-1701ef1f1510/.hg_archival.txt   OK
-      testing: test-archive-1701ef1f1510/.hgsub   OK
-      testing: test-archive-1701ef1f1510/.hgsubstate   OK
-      testing: test-archive-1701ef1f1510/bar   OK
-      testing: test-archive-1701ef1f1510/baz/bletch   OK
-      testing: test-archive-1701ef1f1510/foo   OK
-      testing: test-archive-1701ef1f1510/subrepo/sub   OK
+      testing: test-archive-1701ef1f1510/.hg_archival.txt*OK (glob)
+      testing: test-archive-1701ef1f1510/.hgsub*OK (glob)
+      testing: test-archive-1701ef1f1510/.hgsubstate*OK (glob)
+      testing: test-archive-1701ef1f1510/bar*OK (glob)
+      testing: test-archive-1701ef1f1510/baz/bletch*OK (glob)
+      testing: test-archive-1701ef1f1510/foo*OK (glob)
+      testing: test-archive-1701ef1f1510/subrepo/sub*OK (glob)
   No errors detected in compressed data of archive.zip.
 
 test that we can download single directories and files
@@ -235,9 +235,9 @@ rename them afterwards.
   $ hg archive --config ui.archivemeta=false -t zip -r 2 test.zip
   $ unzip -t test.zip
   Archive:  test.zip
-      testing: test/bar                 OK
-      testing: test/baz/bletch          OK
-      testing: test/foo                 OK
+      testing: test/bar*OK (glob)
+      testing: test/baz/bletch*OK (glob)
+      testing: test/foo*OK (glob)
   No errors detected in compressed data of test.zip.
 
   $ hg archive -t tar - | tar tf - 2>/dev/null

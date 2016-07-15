@@ -232,8 +232,8 @@ Archive contains largefiles
   ...     f.write(urllib2.urlopen(u).read())
   $ unzip -t archive.zip
   Archive:  archive.zip
-      testing: empty-default/.hg_archival.txt   OK
-      testing: empty-default/f1         OK
+      testing: empty-default/.hg_archival.txt*OK (glob)
+      testing: empty-default/f1*OK (glob)
   No errors detected in compressed data of archive.zip.
 
 test 'verify' with remotestore:
