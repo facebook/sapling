@@ -155,6 +155,10 @@ def _hostsettings(ui, hostname):
     # is available. Be careful when adding flags!
     s['ctxoptions'] = OP_NO_SSLv2 | OP_NO_SSLv3
 
+    # Prevent CRIME.
+    # There is no guarantee this attribute is defined on the module.
+    s['ctxoptions'] |= getattr(ssl, 'OP_NO_COMPRESSION', 0)
+
     # Look for fingerprints in [hostsecurity] section. Value is a list
     # of <alg>:<fingerprint> strings.
     fingerprints = ui.configlist('hostsecurity', '%s:fingerprints' % hostname,
