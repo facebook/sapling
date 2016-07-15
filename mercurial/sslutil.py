@@ -264,7 +264,13 @@ def wrapsocket(sock, keyfile, certfile, ui, serverhostname=None):
 
     settings = _hostsettings(ui, serverhostname)
 
-    # TODO use ssl.create_default_context() on modernssl.
+    # We can't use ssl.create_default_context() because it calls
+    # load_default_certs() unless CA arguments are passed to it. We want to
+    # have explicit control over CA loading because implicitly loading
+    # CAs may undermine the user's intent. For example, a user may define a CA
+    # bundle with a specific CA cert removed. If the system/default CA bundle
+    # is loaded and contains that removed CA, you've just undone the user's
+    # choice.
     sslcontext = SSLContext(settings['protocol'])
 
     # This is a no-op unless using modern ssl.
