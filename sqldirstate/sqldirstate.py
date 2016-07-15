@@ -271,6 +271,7 @@ def makedirstate(cls):
             self._sqlconn = sqlite3.connect(self._sqlfilename)
             self._sqlconn.text_factory = str
             self._sqlconn.execute("PRAGMA cache_size = %d" % SQLITE_CACHE_SIZE)
+            self._sqlconn.execute("PRAGMA synchronous = OFF")
             createotherschema(self._sqlconn)
             self._map = sqldirstatemap(self._sqlconn)
             self._dirs = sqldirs(self._sqlconn)
