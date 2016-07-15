@@ -28,6 +28,7 @@ test-keyword.t
 test-treemanifest.t
 test-wireproto.t
 test-run-tests.t
+test-static-http.t
 
 # tests chmoding -w .hg directory
 test-eol.t
@@ -38,9 +39,3 @@ test-issue3084.t
 # and we don't support pending
 test-shelve.t
 test-import.t
-
-# tries to open a sqlite db folr http repo
-#  test-static-http.t
-
-
-
