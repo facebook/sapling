@@ -536,8 +536,17 @@ class ooberror(object):
     def __init__(self, message):
         self.message = message
 
+def getdispatchrepo(repo, proto, command):
+    """Obtain the repo used for processing wire protocol commands.
+
+    The intent of this function is to serve as a monkeypatch point for
+    extensions that need commands to operate on different repo views under
+    specialized circumstances.
+    """
+    return repo.filtered('served')
+
 def dispatch(repo, proto, command):
-    repo = repo.filtered("served")
+    repo = getdispatchrepo(repo, proto, command)
     func, spec = commands[command]
     args = proto.getargs(spec)
     return func(repo, proto, *args)
