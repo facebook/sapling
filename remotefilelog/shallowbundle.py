@@ -8,7 +8,7 @@
 import fileserverclient, remotefilelog, shallowutil
 import collections, os
 from mercurial.node import bin, hex, nullid, nullrev
-from mercurial import changegroup, revlog, phases, mdiff, match, bundlerepo
+from mercurial import changegroup, phases, mdiff, match, bundlerepo
 from mercurial import util, error
 from mercurial.i18n import _
 
@@ -19,7 +19,7 @@ AllFiles = 2
 requirement = "remotefilelog"
 
 def shallowgroup(cls, self, nodelist, rlog, lookup, units=None, reorder=None):
-    if isinstance(rlog, revlog.revlog):
+    if not isinstance(rlog, remotefilelog.remotefilelog):
         for c in super(cls, self).group(nodelist, rlog, lookup,
                                         units=units):
             yield c
@@ -135,7 +135,7 @@ class shallowcg1packer(changegroup.cg1packer):
         return NoFiles
 
     def prune(self, rlog, missing, commonrevs):
-        if isinstance(rlog, revlog.revlog):
+        if not isinstance(rlog, remotefilelog.remotefilelog):
             return super(shallowcg1packer, self).prune(rlog, missing,
                 commonrevs)
 
