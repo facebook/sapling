@@ -210,10 +210,12 @@ table tr.parity1:hover {
   background: #D5E1E6;
 }
 */
-table tr.parity0 {
+table tr.parity0,
+table td.annotate.parity0 {
   background: #F1F6F7;
 }
-table tr.parity1 {
+table tr.parity1,
+table td.annotate.parity1 {
   background: #FFFFFF;
 }
 table tr td {
