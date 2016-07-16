@@ -77,7 +77,7 @@ filelogentry = filelogentry.tmpl
 
 annotateline = '
   <tr id="{lineid}"{ifeq(node, originalnode, ' class="thisrev"')}>
-    <td class="annotate">
+    <td class="annotate parity{blockparity}">
       {if(blockhead,
           '<a href="{url|urlescape}annotate/{node|short}/{file|urlescape}{sessionvars%urlparameter}#l{targetline}">
              {rev}
