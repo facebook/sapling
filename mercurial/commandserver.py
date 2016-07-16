@@ -484,7 +484,7 @@ class unixforkingservice(object):
                     conn.close()  # release handle in parent process
             else:
                 try:
-                    self._serveworker(conn)
+                    self._runworker(conn)
                     conn.close()
                     os._exit(0)
                 except:  # never return, hence no re-raises
@@ -514,7 +514,7 @@ class unixforkingservice(object):
             self.ui.debug('worker process exited (pid=%d)\n' % pid)
             self._workerpids.discard(pid)
 
-    def _serveworker(self, conn):
+    def _runworker(self, conn):
         signal.signal(signal.SIGCHLD, self._oldsigchldhandler)
         _initworkerprocess()
         h = self._servicehandler
