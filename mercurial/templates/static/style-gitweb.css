@@ -29,6 +29,7 @@ a.list { text-decoration:none; color:#000000; }
 a.list:hover { text-decoration:underline; color:#880000; }
 table { padding:8px 4px; }
 th { padding:2px 5px; font-size:12px; text-align:left; }
+.parity0 { background-color:#ffffff; }
 tr.dark, .parity1, pre.sourcelines.stripes > :nth-child(4n+4) { background-color:#f6f6f0; }
 tr.light:hover, .parity0:hover, tr.dark:hover, .parity1:hover,
 pre.sourcelines.stripes > :nth-child(4n+2):hover,

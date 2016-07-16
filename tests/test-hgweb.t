@@ -340,7 +340,7 @@ static file
 
   $ get-with-headers.py --twice localhost:$HGPORT 'static/style-gitweb.css' - date etag server
   200 Script output follows
-  content-length: 6908
+  content-length: 6947
   content-type: text/css
   
   body { font-family: sans-serif; font-size: 12px; border:solid #d9d8d1; border-width:1px; margin:10px; background: white; color: black; }
@@ -374,6 +374,7 @@ static file
   a.list:hover { text-decoration:underline; color:#880000; }
   table { padding:8px 4px; }
   th { padding:2px 5px; font-size:12px; text-align:left; }
+  .parity0 { background-color:#ffffff; }
   tr.dark, .parity1, pre.sourcelines.stripes > :nth-child(4n+4) { background-color:#f6f6f0; }
   tr.light:hover, .parity0:hover, tr.dark:hover, .parity1:hover,
   pre.sourcelines.stripes > :nth-child(4n+2):hover,

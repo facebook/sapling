@@ -96,7 +96,7 @@ fileline = '
   <a href="#{lineid}"></a><span id="{lineid}">{strip(line|escape, '\r\n')}</span>'
 annotateline = '
   <tr id="{lineid}" style="font-family:monospace" class="parity{parity}{ifeq(node, originalnode, ' thisrev')}">
-    <td class="annotate linenr" style="text-align: right;">
+    <td class="annotate linenr parity{blockparity}" style="text-align: right;">
       {if(blockhead,
           '<a href="{url|urlescape}annotate/{node|short}/{file|urlescape}{sessionvars%urlparameter}#l{targetline}">
              {rev}
