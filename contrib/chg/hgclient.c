@@ -63,6 +63,7 @@ typedef struct {
 
 struct hgclient_tag_ {
 	int sockfd;
+	pid_t pgid;
 	pid_t pid;
 	context_t ctx;
 	unsigned int capflags;
@@ -339,6 +340,8 @@ static void readhello(hgclient_t *hgc)
 			u = dataend;
 		if (strncmp(s, "capabilities:", t - s + 1) == 0) {
 			hgc->capflags = parsecapabilities(t + 2, u);
+		} else if (strncmp(s, "pgid:", t - s + 1) == 0) {
+			hgc->pgid = strtol(t + 2, NULL, 10);
 		} else if (strncmp(s, "pid:", t - s + 1) == 0) {
 			hgc->pid = strtol(t + 2, NULL, 10);
 		}
@@ -461,6 +464,12 @@ void hgc_close(hgclient_t *hgc)
 	freecontext(&hgc->ctx);
 	close(hgc->sockfd);
 	free(hgc);
+}
+
+pid_t hgc_peerpgid(const hgclient_t *hgc)
+{
+	assert(hgc);
+	return hgc->pgid;
 }
 
 pid_t hgc_peerpid(const hgclient_t *hgc)
