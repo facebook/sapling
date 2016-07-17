@@ -990,7 +990,7 @@ Support for changegroup
 
   $ hg debugbundle ../rev.hg2
   Stream params: {}
-  changegroup -- '{}'
+  changegroup -- 'sortdict()'
       32af7686d403cf45b5d95f2d70cebea587ac806a
       9520eea781bcca16c1e15acc0ba14335a0e8e5ba
       eea13746799a9e0bfd88f29d3c2e9dc9389f524f
@@ -1118,8 +1118,8 @@ Simple case where it just work: GZ
   0360: db fb 6a 33 df c1 7d 99 cf ef d4 d5 6d da 77 7c |..j3..}.....m.w||
   0370: 3b 19 fd af c5 3f f1 60 c3 17                   |;....?.`..|
   $ hg debugbundle ../rev.hg2.bz
-  Stream params: {'Compression': 'GZ'}
-  changegroup -- '{}'
+  Stream params: sortdict([('Compression', 'GZ')])
+  changegroup -- 'sortdict()'
       32af7686d403cf45b5d95f2d70cebea587ac806a
       9520eea781bcca16c1e15acc0ba14335a0e8e5ba
       eea13746799a9e0bfd88f29d3c2e9dc9389f524f
@@ -1205,8 +1205,8 @@ Simple case where it just work: BZ
   0420: 8b 43 88 57 9c 01 f5 61 b5 e1 27 41 7e af 83 fe |.C.W...a..'A~...|
   0430: 2e e4 8a 70 a1 21 46 96 30 7a                   |...p.!F.0z|
   $ hg debugbundle ../rev.hg2.bz
-  Stream params: {'Compression': 'BZ'}
-  changegroup -- '{}'
+  Stream params: sortdict([('Compression', 'BZ')])
+  changegroup -- 'sortdict()'
       32af7686d403cf45b5d95f2d70cebea587ac806a
       9520eea781bcca16c1e15acc0ba14335a0e8e5ba
       eea13746799a9e0bfd88f29d3c2e9dc9389f524f

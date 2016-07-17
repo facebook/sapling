@@ -527,6 +527,10 @@ class sortdict(dict):
     def insert(self, index, key, val):
         self._list.insert(index, key)
         dict.__setitem__(self, key, val)
+    def __repr__(self):
+        if not self:
+            return '%s()' % self.__class__.__name__
+        return '%s(%r)' % (self.__class__.__name__, self.items())
 
 class _lrucachenode(object):
     """A node in a doubly linked list.
