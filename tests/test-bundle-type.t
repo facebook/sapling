@@ -52,7 +52,7 @@ test bundle types
   1 changesets found
   HG20\x00\x00 (esc)
   Stream params: {}
-  changegroup -- "sortdict([('version', '02')])"
+  changegroup -- "sortdict([('version', '02'), ('nbchanges', '1')])"
       c35a0f9217e65d1fdb90c936ffa7dbe679f83ddf
   none-v2
   
@@ -61,7 +61,7 @@ test bundle types
   1 changesets found
   HG20\x00\x00 (esc)
   Stream params: sortdict([('Compression', 'BZ')])
-  changegroup -- "sortdict([('version', '02')])"
+  changegroup -- "sortdict([('version', '02'), ('nbchanges', '1')])"
       c35a0f9217e65d1fdb90c936ffa7dbe679f83ddf
   bzip2-v2
   
@@ -70,7 +70,7 @@ test bundle types
   1 changesets found
   HG20\x00\x00 (esc)
   Stream params: sortdict([('Compression', 'GZ')])
-  changegroup -- "sortdict([('version', '02')])"
+  changegroup -- "sortdict([('version', '02'), ('nbchanges', '1')])"
       c35a0f9217e65d1fdb90c936ffa7dbe679f83ddf
   gzip-v2
   
@@ -79,7 +79,7 @@ test bundle types
   1 changesets found
   HG20\x00\x00 (esc)
   Stream params: {}
-  changegroup -- "sortdict([('version', '02')])"
+  changegroup -- "sortdict([('version', '02'), ('nbchanges', '1')])"
       c35a0f9217e65d1fdb90c936ffa7dbe679f83ddf
   none-v2
   
@@ -88,7 +88,7 @@ test bundle types
   1 changesets found
   HG20\x00\x00 (esc)
   Stream params: sortdict([('Compression', 'BZ')])
-  changegroup -- "sortdict([('version', '02')])"
+  changegroup -- "sortdict([('version', '02'), ('nbchanges', '1')])"
       c35a0f9217e65d1fdb90c936ffa7dbe679f83ddf
   bzip2-v2
   

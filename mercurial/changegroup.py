@@ -135,7 +135,7 @@ class cg1unpacker(object):
     version = '01'
     _grouplistcount = 1 # One list of files after the manifests
 
-    def __init__(self, fh, alg):
+    def __init__(self, fh, alg, extras=None):
         if alg == 'UN':
             alg = None # get more modern without breaking too much
         if not alg in util.decompressors:
@@ -145,6 +145,7 @@ class cg1unpacker(object):
             alg = '_truncatedBZ'
         self._stream = util.decompressors[alg](fh)
         self._type = alg
+        self.extras = extras or {}
         self.callback = None
 
     # These methods (compressed, read, seek, tell) all appear to only
@@ -900,8 +901,8 @@ def getbundler(version, repo, bundlecaps=None):
     assert version in supportedoutgoingversions(repo)
     return _packermap[version][0](repo, bundlecaps)
 
-def getunbundler(version, fh, alg):
-    return _packermap[version][1](fh, alg)
+def getunbundler(version, fh, alg, extras=None):
+    return _packermap[version][1](fh, alg, extras=extras)
 
 def _changegroupinfo(repo, nodes, source):
     if repo.ui.verbose or source == 'bundle':
@@ -929,7 +930,8 @@ def getsubsetraw(repo, outgoing, bundler, source, fastpath=False):
 
 def getsubset(repo, outgoing, bundler, source, fastpath=False):
     gengroup = getsubsetraw(repo, outgoing, bundler, source, fastpath)
-    return getunbundler(bundler.version, util.chunkbuffer(gengroup), None)
+    return getunbundler(bundler.version, util.chunkbuffer(gengroup), None,
+                        {'clcount': len(outgoing.missing)})
 
 def changegroupsubset(repo, roots, heads, source, version='01'):
     """Compute a changegroup consisting of all the nodes that are

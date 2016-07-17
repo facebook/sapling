@@ -1294,6 +1294,9 @@ def writebundle(ui, cg, filename, bundletype, vfs=None, compression=None):
         bundle.setcompression(compression)
         part = bundle.newpart('changegroup', data=cg.getchunks())
         part.addparam('version', cg.version)
+        if 'clcount' in cg.extras:
+            part.addparam('nbchanges', str(cg.extras['clcount']),
+                          mandatory=False)
         chunkiter = bundle.getchunks()
     else:
         # compression argument is only for the bundle2 case

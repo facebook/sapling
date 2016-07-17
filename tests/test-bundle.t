@@ -708,7 +708,7 @@ bundle single branch
   1a38c1b849e8b70c756d2d80b0b9a3ac0b7ea11a
   057f4db07f61970e1c11e83be79e9d08adc4dc31
   bundle2-output-bundle: "HG20", (1 params) 1 parts total
-  bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
+  bundle2-output-part: "changegroup" (params: 1 mandatory 1 advisory) streamed payload
   bundling: 1/2 changesets (50.00%)
   bundling: 2/2 changesets (100.00%)
   bundling: 1/2 manifests (50.00%)

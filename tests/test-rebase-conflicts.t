@@ -279,7 +279,7 @@ Check that the right ancestors is used while rebasing a merge (issue4041)
   e31216eec445e44352c5f01588856059466a24c9
   2f2496ddf49d69b5ef23ad8cf9fb2e0e4faf0ac2
   bundle2-output-bundle: "HG20", (1 params) 1 parts total
-  bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
+  bundle2-output-part: "changegroup" (params: 1 mandatory 1 advisory) streamed payload
   saved backup bundle to $TESTTMP/issue4041/.hg/strip-backup/e31216eec445-15f7a814-backup.hg (glob)
   3 changesets found
   list of changesets:
@@ -287,10 +287,10 @@ Check that the right ancestors is used while rebasing a merge (issue4041)
   19c888675e133ab5dff84516926a65672eaf04d9
   2a7f09cac94c7f4b73ebd5cd1a62d3b2e8e336bf
   bundle2-output-bundle: "HG20", 1 parts total
-  bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
+  bundle2-output-part: "changegroup" (params: 1 mandatory 1 advisory) streamed payload
   adding branch
   bundle2-input-bundle: with-transaction
-  bundle2-input-part: "changegroup" (params: 1 mandatory) supported
+  bundle2-input-part: "changegroup" (params: 1 mandatory 1 advisory) supported
   adding changesets
   add changeset 4c9fbe56a16f
   add changeset 19c888675e13
