@@ -339,6 +339,7 @@ static void killcmdserver(const struct cmdserveropts *opts)
 }
 
 static pid_t pagerpid = 0;
+static pid_t peerpgid = 0;
 static pid_t peerpid = 0;
 
 static void forwardsignal(int sig)
@@ -347,6 +348,15 @@ static void forwardsignal(int sig)
 	if (kill(peerpid, sig) < 0)
 		abortmsgerrno("cannot kill %d", peerpid);
 	debugmsg("forward signal %d", sig);
+}
+
+static void forwardsignaltogroup(int sig)
+{
+	/* prefer kill(-pgid, sig), fallback to pid if pgid is invalid */
+	pid_t killpid = peerpgid > 1 ? -peerpgid : peerpid;
+	if (kill(killpid, sig) < 0)
+		abortmsgerrno("cannot kill %d", killpid);
+	debugmsg("forward signal %d to %d", sig, killpid);
 }
 
 static void handlestopsignal(int sig)
@@ -392,15 +402,19 @@ static void handlechildsignal(int sig UNUSED_)
 		kill(peerpid, SIGPIPE);
 }
 
-static void setupsignalhandler(pid_t pid)
+static void setupsignalhandler(const hgclient_t *hgc)
 {
+	pid_t pid = hgc_peerpid(hgc);
 	if (pid <= 0)
 		return;
 	peerpid = pid;
 
+	pid_t pgid = hgc_peerpgid(hgc);
+	peerpgid = (pgid <= 1 ? 0 : pgid);
+
 	struct sigaction sa;
 	memset(&sa, 0, sizeof(sa));
-	sa.sa_handler = forwardsignal;
+	sa.sa_handler = forwardsignaltogroup;
 	sa.sa_flags = SA_RESTART;
 	if (sigemptyset(&sa.sa_mask) < 0)
 		goto error;
@@ -411,6 +425,7 @@ static void setupsignalhandler(pid_t pid)
 		goto error;
 
 	/* terminate frontend by double SIGTERM in case of server freeze */
+	sa.sa_handler = forwardsignal;
 	sa.sa_flags |= SA_RESETHAND;
 	if (sigaction(SIGTERM, &sa, NULL) < 0)
 		goto error;
@@ -656,7 +671,7 @@ int main(int argc, const char *argv[], const char *envp[])
 				 gethgcmd());
 	}
 
-	setupsignalhandler(hgc_peerpid(hgc));
+	setupsignalhandler(hgc);
 	pagerpid = setuppager(hgc, argv + 1, argc - 1);
 	int exitcode = hgc_runcommand(hgc, argv + 1, argc - 1);
 	restoresignalhandler();
