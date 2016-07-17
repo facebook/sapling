@@ -690,7 +690,7 @@ class unbundle20(unpackermixin):
 
     def _processallparams(self, paramsblock):
         """"""
-        params = {}
+        params = util.sortdict()
         for p in paramsblock.split(' '):
             p = p.split('=', 1)
             p = [urlreq.unquote(i) for i in p]
@@ -1115,8 +1115,8 @@ class unbundlepart(unpackermixin):
         self.mandatoryparams = tuple(mandatoryparams)
         self.advisoryparams  = tuple(advisoryparams)
         # user friendly UI
-        self.params = dict(self.mandatoryparams)
-        self.params.update(dict(self.advisoryparams))
+        self.params = util.sortdict(self.mandatoryparams)
+        self.params.update(self.advisoryparams)
         self.mandatorykeys = frozenset(p[0] for p in mandatoryparams)
 
     def _payloadchunks(self, chunknum=0):
