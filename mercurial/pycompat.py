@@ -10,53 +10,26 @@ This contains aliases to hide python version-specific details from the core.
 
 from __future__ import absolute_import
 
-try:
+import sys
+
+if sys.version_info[0] < 3:
     import cPickle as pickle
-    pickle.dumps
-except ImportError:
-    import pickle
-    pickle.dumps # silence pyflakes
-
-try:
-    import httplib
-    httplib.HTTPException
-except ImportError:
-    import http.client as httplib
-    httplib.HTTPException
-
-try:
-    import SocketServer as socketserver
-    socketserver.ThreadingMixIn
-except ImportError:
-    import socketserver
-    socketserver.ThreadingMixIn
-
-try:
-    import xmlrpclib
-    xmlrpclib.Transport
-except ImportError:
-    import xmlrpc.client as xmlrpclib
-    xmlrpclib.Transport
-
-try:
-    import urlparse
-    urlparse.urlparse
-except ImportError:
-    import urllib.parse as urlparse
-    urlparse.urlparse
-
-try:
     import cStringIO as io
-    stringio = io.StringIO
-except ImportError:
-    import io
-    stringio = io.StringIO
-
-try:
+    import httplib
     import Queue as _queue
-    _queue.Queue
-except ImportError:
+    import SocketServer as socketserver
+    import urlparse
+    import xmlrpclib
+else:
+    import http.client as httplib
+    import io
+    import pickle
     import queue as _queue
+    import socketserver
+    import urllib.parse as urlparse
+    import xmlrpc.client as xmlrpclib
+
+stringio = io.StringIO
 empty = _queue.Empty
 queue = _queue.Queue
 
