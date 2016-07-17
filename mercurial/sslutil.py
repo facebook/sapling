@@ -139,18 +139,6 @@ def _hostsettings(ui, hostname):
         'ciphers': None,
     }
 
-    # Despite its name, PROTOCOL_SSLv23 selects the highest protocol
-    # that both ends support, including TLS protocols. On legacy stacks,
-    # the highest it likely goes is TLS 1.0. On modern stacks, it can
-    # support TLS 1.2.
-    #
-    # The PROTOCOL_TLSv* constants select a specific TLS version
-    # only (as opposed to multiple versions). So the method for
-    # supporting multiple TLS versions is to use PROTOCOL_SSLv23 and
-    # disable protocols via SSLContext.options and OP_NO_* constants.
-    # However, SSLContext.options doesn't work unless we have the
-    # full/real SSLContext available to us.
-
     # Allow minimum TLS protocol to be specified in the config.
     def validateprotocol(protocol, key):
         if protocol not in configprotocols:
@@ -289,10 +277,17 @@ def protocolsettings(protocol):
     if protocol not in configprotocols:
         raise ValueError('protocol value not supported: %s' % protocol)
 
-    # Legacy ssl module only supports up to TLS 1.0. Ideally we'd use
-    # PROTOCOL_SSLv23 and options to disable SSLv2 and SSLv3. However,
-    # SSLContext.options doesn't work in our implementation since we use
-    # a fake SSLContext on these Python versions.
+    # Despite its name, PROTOCOL_SSLv23 selects the highest protocol
+    # that both ends support, including TLS protocols. On legacy stacks,
+    # the highest it likely goes is TLS 1.0. On modern stacks, it can
+    # support TLS 1.2.
+    #
+    # The PROTOCOL_TLSv* constants select a specific TLS version
+    # only (as opposed to multiple versions). So the method for
+    # supporting multiple TLS versions is to use PROTOCOL_SSLv23 and
+    # disable protocols via SSLContext.options and OP_NO_* constants.
+    # However, SSLContext.options doesn't work unless we have the
+    # full/real SSLContext available to us.
     if not modernssl:
         if protocol != 'tls1.0':
             raise error.Abort(_('current Python does not support protocol '
