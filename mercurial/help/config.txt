@@ -1005,6 +1005,18 @@ other machines.
 
 The following options control default behavior for all hosts.
 
+``ciphers``
+    Defines the cryptographic ciphers to use for connections.
+
+    Value must be a valid OpenSSL Cipher List Format as documented at
+    https://www.openssl.org/docs/manmaster/apps/ciphers.html#CIPHER-LIST-FORMAT.
+
+    This setting is for advanced users only. Setting to incorrect values
+    can significantly lower connection security or decrease performance.
+    You have been warned.
+
+    This option requires Python 2.7.
+
 ``minimumprotocol``
     Defines the minimum channel encryption protocol to use.
 
@@ -1026,6 +1038,10 @@ Options in the ``[hostsecurity]`` section can have the form
 per-host basis.
 
 The following per-host settings can be defined.
+
+``ciphers``
+    This behaves like ``ciphers`` as described above except it only applies
+    to the host on which it is defined.
 
 ``fingerprints``
     A list of hashes of the DER encoded peer/remote certificate. Values have

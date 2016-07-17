@@ -326,6 +326,48 @@ Disabling the TLS 1.0 warning works
   > --config hostsecurity.disabletls10warning=true
   5fed3813f7f5
 
+#if no-sslcontext no-py27+
+Setting ciphers doesn't work in Python 2.6
+  $ P="$CERTSDIR" hg --config hostsecurity.ciphers=HIGH -R copy-pull id https://localhost:$HGPORT/
+  warning: connecting to localhost using legacy security technology (TLS 1.0); see https://mercurial-scm.org/wiki/SecureConnections for more info
+  abort: setting ciphers in [hostsecurity] is not supported by this version of Python
+  (remove the config option or run Mercurial with a modern Python version (preferred))
+  [255]
+#endif
+
+Setting ciphers works in Python 2.7+ but the error message is different on
+legacy ssl. We test legacy once and do more feature checking on modern
+configs.
+
+#if py27+ no-sslcontext
+  $ P="$CERTSDIR" hg --config hostsecurity.ciphers=invalid -R copy-pull id https://localhost:$HGPORT/
+  warning: connecting to localhost using legacy security technology (TLS 1.0); see https://mercurial-scm.org/wiki/SecureConnections for more info
+  abort: *No cipher can be selected. (glob)
+  [255]
+
+  $ P="$CERTSDIR" hg --config hostsecurity.ciphers=HIGH -R copy-pull id https://localhost:$HGPORT/
+  warning: connecting to localhost using legacy security technology (TLS 1.0); see https://mercurial-scm.org/wiki/SecureConnections for more info
+  5fed3813f7f5
+#endif
+
+#if sslcontext
+Setting ciphers to an invalid value aborts
+  $ P="$CERTSDIR" hg --config hostsecurity.ciphers=invalid -R copy-pull id https://localhost:$HGPORT/
+  abort: could not set ciphers: No cipher can be selected.
+  (change cipher string (invalid) in config)
+  [255]
+
+  $ P="$CERTSDIR" hg --config hostsecurity.localhost:ciphers=invalid -R copy-pull id https://localhost:$HGPORT/
+  abort: could not set ciphers: No cipher can be selected.
+  (change cipher string (invalid) in config)
+  [255]
+
+Changing the cipher string works
+
+  $ P="$CERTSDIR" hg --config hostsecurity.ciphers=HIGH -R copy-pull id https://localhost:$HGPORT/
+  5fed3813f7f5
+#endif
+
 Fingerprints
 
 - works without cacerts (hostkeyfingerprints)

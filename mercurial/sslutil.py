@@ -84,7 +84,11 @@ except AttributeError:
 
         def set_ciphers(self, ciphers):
             if not self._supportsciphers:
-                raise error.Abort(_('setting ciphers not supported'))
+                raise error.Abort(_('setting ciphers in [hostsecurity] is not '
+                                    'supported by this version of Python'),
+                                  hint=_('remove the config option or run '
+                                         'Mercurial with a modern Python '
+                                         'version (preferred)'))
 
             self._ciphers = ciphers
 
@@ -131,6 +135,8 @@ def _hostsettings(ui, hostname):
         'verifymode': None,
         # Defines extra ssl.OP* bitwise options to set.
         'ctxoptions': None,
+        # OpenSSL Cipher List to use (instead of default).
+        'ciphers': None,
     }
 
     # Despite its name, PROTOCOL_SSLv23 selects the highest protocol
@@ -182,6 +188,10 @@ def _hostsettings(ui, hostname):
     validateprotocol(protocol, key)
 
     s['protocol'], s['ctxoptions'] = protocolsettings(protocol)
+
+    ciphers = ui.config('hostsecurity', 'ciphers')
+    ciphers = ui.config('hostsecurity', '%s:ciphers' % hostname, ciphers)
+    s['ciphers'] = ciphers
 
     # Look for fingerprints in [hostsecurity] section. Value is a list
     # of <alg>:<fingerprint> strings.
@@ -346,6 +356,14 @@ def wrapsocket(sock, keyfile, certfile, ui, serverhostname=None):
 
     # This still works on our fake SSLContext.
     sslcontext.verify_mode = settings['verifymode']
+
+    if settings['ciphers']:
+        try:
+            sslcontext.set_ciphers(settings['ciphers'])
+        except ssl.SSLError as e:
+            raise error.Abort(_('could not set ciphers: %s') % e.args[0],
+                              hint=_('change cipher string (%s) in config') %
+                                   settings['ciphers'])
 
     if certfile is not None:
         def password():
