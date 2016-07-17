@@ -4,27 +4,22 @@ Generate a private key (priv.pem):
 
 Generate 2 self-signed certificates from this key (pub.pem, pub-other.pem):
 
-  $ printf '.\n.\n.\n.\n.\nlocalhost\nhg@localhost\n' | \
-    openssl req -new -x509 -key priv.pem -nodes -sha256 -days 9000 -out pub.pem
-
-  $ printf '.\n.\n.\n.\n.\nlocalhost\nhg@localhost\n' | \
-    openssl req -new -x509 -key priv.pem -nodes -sha256 -days 9000 -out pub-other.pem
+  $ openssl req -new -x509 -key priv.pem -nodes -sha256 -days 9000 \
+    -out pub.pem -batch -subj '/CN=localhost/emailAddress=hg@localhost/'
+  $ openssl req -new -x509 -key priv.pem -nodes -sha256 -days 9000 \
+    -out pub-other.pem -batch -subj '/CN=localhost/emailAddress=hg@localhost/'
 
 Now generate an expired certificate by turning back the system time:
 
-  $ date --set='2016-01-01T00:00:00Z'
-  $ printf '.\n.\n.\n.\n.\nlocalhost\nhg@localhost\n' | \
-    openssl req -new -x509 -key priv.pem -nodes -sha256 -days 1 -out pub-expired.pem
+  $ faketime 2016-01-01T00:00:00Z \
+    openssl req -new -x509 -key priv.pem -nodes -sha256 -days 1 \
+    -out pub-expired.pem -batch -subj '/CN=localhost/emailAddress=hg@localhost/'
 
 Generate a certificate not yet active by advancing the system time:
 
-  $ date --set='2030-01-01T00:00:00Z'
-  $ printf '.\n.\n.\n.\n.\nlocalhost\nhg@localhost\n' | \
-    openssl req -new -x509 -key priv.pem -nodes -sha256 -days 1 -out pub-not-yet.pem
-
-Note: When adjusting system time, verify the time change sticks. If running
-systemd, you may want to use `timedatectl set-ntp false` and e.g.
-`timedatectl set-time '2016-01-01 00:00:00'` to set system time.
+  $ faketime 2030-01-1T00:00:00Z \
+    openssl req -new -x509 -key priv.pem -nodes -sha256 -days 1 \
+    -out pub-not-yet.pem -batch -subj '/CN=localhost/emailAddress=hg@localhost/'
 
 Generate a passphrase protected client certificate private key:
 
