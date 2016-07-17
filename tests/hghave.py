@@ -523,6 +523,10 @@ def has_absimport():
     from mercurial import util
     return util.safehasattr(__future__, "absolute_import")
 
+@check("py27+", "running with Python 2.7+")
+def has_python27ornewer():
+    return sys.version_info[0:2] >= (2, 7)
+
 @check("py3k", "running with Python 3.x")
 def has_py3k():
     return 3 == sys.version_info[0]
