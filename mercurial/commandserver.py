@@ -282,6 +282,9 @@ class server(object):
         hellomsg += 'encoding: ' + encoding.encoding
         hellomsg += '\n'
         hellomsg += 'pid: %d' % util.getpid()
+        if util.safehasattr(os, 'getpgid'):
+            hellomsg += '\n'
+            hellomsg += 'pgid: %d' % os.getpgid(0)
 
         # write the hello msg in -one- chunk
         self.cout.write(hellomsg)
