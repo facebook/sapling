@@ -76,7 +76,6 @@ from mercurial import (
     archival,
     cmdutil,
     commands,
-    encoding,
     error,
     filemerge,
     scmutil,
@@ -365,7 +364,10 @@ def uisetup(ui):
                 if options:
                     options = ' ' + options
                 return dodiff(ui, repo, cmdline + options, pats, opts)
-            doc = _('''\
+            # We can't pass non-ASCII through docstrings (and path is
+            # in an unknown encoding anyway)
+            docpath = path.encode("string-escape")
+            mydiff.__doc__ = '''\
 use %(path)s to diff repository (or selected files)
 
     Show differences between revisions for the specified files, using
@@ -376,15 +378,7 @@ use %(path)s to diff repository (or selected files)
     that revision is compared to the working directory, and, when no
     revisions are specified, the working directory files are compared
     to its parent.\
-''') % {'path': util.uirepr(path)}
-
-            # We must translate the docstring right away since it is
-            # used as a format string. The string will unfortunately
-            # be translated again in commands.helpcmd and this will
-            # fail when the docstring contains non-ASCII characters.
-            # Decoding the string to a Unicode string here (using the
-            # right encoding) prevents that.
-            mydiff.__doc__ = doc.decode(encoding.encoding)
+''' % {'path': util.uirepr(docpath)}
             return mydiff
         command(cmd, extdiffopts[:], _('hg %s [OPTION]... [FILE]...') % cmd,
                 inferrepo=True)(save(cmdline))

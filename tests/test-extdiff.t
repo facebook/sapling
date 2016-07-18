@@ -389,3 +389,23 @@ Test symlinks handling (issue1909)
   $ cd ..
 
 #endif
+
+Test handling of non-ASCII paths in generated docstrings (issue5301)
+
+  >>> open("u", "w").write("\xa5\xa5")
+  $ U=`cat u`
+
+  $ HGPLAIN=1 hg --config hgext.extdiff= --config extdiff.cmd.td=hi help -k xyzzy
+  abort: no matches
+  (try "hg help" for a list of topics)
+  [255]
+
+  $ HGPLAIN=1 hg --config hgext.extdiff= --config extdiff.cmd.td=hi help td > /dev/null
+
+  $ LC_MESSAGES=ja_JP.UTF-8 hg --config hgext.extdiff= --config extdiff.cmd.td=$U help -k xyzzy
+  abort: no matches
+  (try "hg help" for a list of topics)
+  [255]
+
+  $ LC_MESSAGES=ja_JP.UTF-8 hg --config hgext.extdiff= --config extdiff.cmd.td=$U help td | grep "^use"
+  use '\xa5\xa5' to diff repository (or selected files)
