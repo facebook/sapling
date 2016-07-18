@@ -10,13 +10,9 @@ except ImportError:
     # Python 3
     import socketserver as SocketServer
 
-try:
-    from hgext3rd import patchpython
-except ImportError:
-    # This happens if run-tests.py is run from the "tests" directory
-    # instead of the root of the project.
-    sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-    from hgext3rd import patchpython
+# Make sure we use patchpython.py in this repo, unaffected by PYTHONPATH
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../hgext3rd'))
+import patchpython
 
 def testnozombies():
     class reportpidhandler(SocketServer.StreamRequestHandler):
@@ -56,6 +52,7 @@ def testnozombies():
                         raise
         finally:
             os.kill(pid, signal.SIGTERM) # stop server
+            os.unlink(socketpath)
     else:
         # server
         s = server(socketpath, reportpidhandler)
