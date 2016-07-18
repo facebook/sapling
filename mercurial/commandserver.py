@@ -343,9 +343,17 @@ class pipeservice(object):
             _restoreio(ui, fin, fout)
 
 def _initworkerprocess():
-    # use a different process group from the master process, making this
-    # process pass kernel "is_current_pgrp_orphaned" check so signals like
-    # SIGTSTP, SIGTTIN, SIGTTOU are not ignored.
+    # use a different process group from the master process, in order to:
+    # 1. make the current process group no longer "orphaned" (because the
+    #    parent of this process is in a different process group while
+    #    remains in a same session)
+    #    according to POSIX 2.2.2.52, orphaned process group will ignore
+    #    terminal-generated stop signals like SIGTSTP (Ctrl+Z), which will
+    #    cause trouble for things like ncurses.
+    # 2. the client can use kill(-pgid, sig) to simulate terminal-generated
+    #    SIGINT (Ctrl+C) and process-exit-generated SIGHUP. our child
+    #    processes like ssh will be killed properly, without affecting
+    #    unrelated processes.
     os.setpgid(0, 0)
     # change random state otherwise forked request handlers would have a
     # same state inherited from parent.
