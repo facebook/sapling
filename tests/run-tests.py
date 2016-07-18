@@ -308,11 +308,14 @@ def parseargs(args, parser):
             sys.stderr.write('warning: --with-hg should specify an hg script\n')
     if options.local:
         testdir = os.path.dirname(_bytespath(canonpath(sys.argv[0])))
-        hgbin = os.path.join(os.path.dirname(testdir), b'hg')
-        if os.name != 'nt' and not os.access(hgbin, os.X_OK):
-            parser.error('--local specified, but %r not found or not executable'
-                         % hgbin)
-        options.with_hg = hgbin
+        reporootdir = os.path.dirname(testdir)
+        pathandattrs = [(b'hg', 'with_hg')]
+        for relpath, attr in pathandattrs:
+            binpath = os.path.join(reporootdir, relpath)
+            if os.name != 'nt' and not os.access(binpath, os.X_OK):
+                parser.error('--local specified, but %r not found or '
+                             'not executable' % binpath)
+            setattr(options, attr, binpath)
 
     if (options.chg or options.with_chg) and os.name == 'nt':
         parser.error('chg does not work on %s' % os.name)
