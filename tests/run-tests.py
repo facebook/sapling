@@ -214,7 +214,8 @@ def getparser():
     parser.add_option("-k", "--keywords",
         help="run tests matching keywords")
     parser.add_option("-l", "--local", action="store_true",
-        help="shortcut for --with-hg=<testdir>/../hg")
+        help="shortcut for --with-hg=<testdir>/../hg, "
+             "and --with-chg=<testdir>/../contrib/chg/chg if --chg is set")
     parser.add_option("--loop", action="store_true",
         help="loop tests repeatedly")
     parser.add_option("--runs-per-test", type="int", dest="runs_per_test",
@@ -310,6 +311,8 @@ def parseargs(args, parser):
         testdir = os.path.dirname(_bytespath(canonpath(sys.argv[0])))
         reporootdir = os.path.dirname(testdir)
         pathandattrs = [(b'hg', 'with_hg')]
+        if options.chg:
+            pathandattrs.append((b'contrib/chg/chg', 'with_chg'))
         for relpath, attr in pathandattrs:
             binpath = os.path.join(reporootdir, relpath)
             if os.name != 'nt' and not os.access(binpath, os.X_OK):
