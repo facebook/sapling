@@ -358,7 +358,7 @@ class revbranchcache(object):
         self._repo = repo
         self._names = [] # branch names in local encoding with static index
         self._rbcrevs = array('c') # structs of type _rbcrecfmt
-        self._rbcsnameslen = 0
+        self._rbcsnameslen = 0 # length of names read at _rbcsnameslen
         try:
             bndata = repo.vfs.read(_rbcnames)
             self._rbcsnameslen = len(bndata) # for verification before writing
@@ -380,7 +380,8 @@ class revbranchcache(object):
                                len(repo.changelog))
         if self._rbcrevslen == 0:
             self._names = []
-        self._rbcnamescount = len(self._names) # number of good names on disk
+        self._rbcnamescount = len(self._names) # number of names read at
+                                               # _rbcsnameslen
         self._namesreverse = dict((b, r) for r, b in enumerate(self._names))
 
     def _clear(self):
@@ -416,13 +417,17 @@ class revbranchcache(object):
         if cachenode == '\0\0\0\0':
             pass
         elif cachenode == reponode:
-            if branchidx < self._rbcnamescount:
+            try:
                 return self._names[branchidx], close
-            # referenced branch doesn't exist - rebuild is expensive but needed
-            self._repo.ui.debug("rebuilding corrupted revision branch cache\n")
-            self._clear()
+            except IndexError:
+                # recover from invalid reference to unknown branch
+                self._repo.ui.debug("referenced branch names not found"
+                    " - rebuilding revision branch cache from scratch\n")
+                self._clear()
         else:
             # rev/node map has changed, invalidate the cache from here up
+            self._repo.ui.debug("history modification detected - truncating "
+                "revision branch cache to revision %s\n" % rev)
             truncate = rbcrevidx + _rbcrecsize
             del self._rbcrevs[truncate:]
             self._rbcrevslen = min(self._rbcrevslen, truncate)
