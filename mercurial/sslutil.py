@@ -37,6 +37,14 @@ configprotocols = set([
 
 hassni = getattr(ssl, 'HAS_SNI', False)
 
+# TLS 1.1 and 1.2 may not be supported if the OpenSSL Python is compiled
+# against doesn't support them.
+supportedprotocols = set(['tls1.0'])
+if util.safehasattr(ssl, 'PROTOCOL_TLSv1_1'):
+    supportedprotocols.add('tls1.1')
+if util.safehasattr(ssl, 'PROTOCOL_TLSv1_2'):
+    supportedprotocols.add('tls1.2')
+
 try:
     # ssl.SSLContext was added in 2.7.9 and presence indicates modern
     # SSL/TLS features are available.
@@ -148,15 +156,13 @@ def _hostsettings(ui, hostname):
                 hint=_('valid protocols: %s') %
                      ' '.join(sorted(configprotocols)))
 
-    # Legacy Python can only do TLS 1.0. We default to TLS 1.1+ where we
-    # can because TLS 1.0 has known vulnerabilities (like BEAST and POODLE).
-    # We allow users to downgrade to TLS 1.0+ via config options in case a
-    # legacy server is encountered.
-    if modernssl:
+    # We default to TLS 1.1+ where we can because TLS 1.0 has known
+    # vulnerabilities (like BEAST and POODLE). We allow users to downgrade to
+    # TLS 1.0+ via config options in case a legacy server is encountered.
+    if 'tls1.1' in supportedprotocols:
         defaultprotocol = 'tls1.1'
     else:
-        # Let people on legacy Python versions know they are borderline
-        # secure.
+        # Let people know they are borderline secure.
         # We don't document this config option because we want people to see
         # the bold warnings on the web site.
         # internal config: hostsecurity.disabletls10warning
@@ -288,7 +294,7 @@ def protocolsettings(protocol):
     # disable protocols via SSLContext.options and OP_NO_* constants.
     # However, SSLContext.options doesn't work unless we have the
     # full/real SSLContext available to us.
-    if not modernssl:
+    if supportedprotocols == set(['tls1.0']):
         if protocol != 'tls1.0':
             raise error.Abort(_('current Python does not support protocol '
                                 'setting %s') % protocol,
@@ -441,8 +447,12 @@ def wrapserversocket(sock, ui, certfile=None, keyfile=None, cafile=None,
     if exactprotocol == 'tls1.0':
         protocol = ssl.PROTOCOL_TLSv1
     elif exactprotocol == 'tls1.1':
+        if 'tls1.1' not in supportedprotocols:
+            raise error.Abort(_('TLS 1.1 not supported by this Python'))
         protocol = ssl.PROTOCOL_TLSv1_1
     elif exactprotocol == 'tls1.2':
+        if 'tls1.2' not in supportedprotocols:
+            raise error.Abort(_('TLS 1.2 not supported by this Python'))
         protocol = ssl.PROTOCOL_TLSv1_2
     elif exactprotocol:
         raise error.Abort(_('invalid value for serverexactprotocol: %s') %

@@ -69,6 +69,7 @@ we are able to load CA certs:
   this patch series consists of 1 patches.
   
   
+  warning: connecting to localhost using legacy security technology (TLS 1.0); see https://mercurial-scm.org/wiki/SecureConnections for more info (?)
   (using CA certificates from *; if you see this message, your Mercurial install is not properly configured; see https://mercurial-scm.org/wiki/SecureConnections for how to configure Mercurial to avoid this message) (glob) (?)
   (?i)abort: .*?certificate.verify.failed.* (re)
   [255]
