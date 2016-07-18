@@ -650,4 +650,17 @@ cache is rebuilt when corruption is detected
   0050: bf be 84 1b 00 00 00 00 d3 f1 63 45 80 00 00 00 |..........cE....|
   0060: e3 d4 9c 05 80 00 00 00 e2 3b 55 05 00 00 00 00 |.........;U.....|
 
+Test that cache files are created and grows correctly:
+
+  $ rm .hg/cache/rbc*
+  $ hg log -r "5 & branch(5)" -T "{rev}\n"
+  5
+BUG: rbc-revs should have an entry as 5th record but has it misplaced as the
+first:
+  $ f --size --hexdump .hg/cache/rbc-*
+  .hg/cache/rbc-names-v1: size=1
+  0000: 61                                              |a|
+  .hg/cache/rbc-revs-v1: size=8
+  0000: d8 cb c6 1d 00 00 00 00                         |........|
+
   $ cd ..
