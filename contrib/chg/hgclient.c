@@ -126,10 +126,15 @@ static void readchannel(hgclient_t *hgc)
 		return;  /* assumes input request */
 
 	size_t cursize = 0;
+	int emptycount = 0;
 	while (cursize < hgc->ctx.datasize) {
 		rsize = recv(hgc->sockfd, hgc->ctx.data + cursize,
 			     hgc->ctx.datasize - cursize, 0);
-		if (rsize < 0)
+		/* rsize == 0 normally indicates EOF, while it's also a valid
+		 * packet size for unix socket. treat it as EOF and abort if
+		 * we get many empty responses in a row. */
+		emptycount = (rsize == 0 ? emptycount + 1 : 0);
+		if (rsize < 0 || emptycount > 20)
 			abortmsg("failed to read data block");
 		cursize += rsize;
 	}
