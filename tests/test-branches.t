@@ -668,3 +668,36 @@ Test that cache files are created and grows correctly:
   0060: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 |................|
 
   $ cd ..
+
+Test for multiple incorrect branch cache entries:
+
+  $ hg init b
+  $ cd b
+  $ touch f
+  $ hg ci -Aqmf
+  $ echo >> f
+  $ hg ci -Amf
+  $ hg branch -q branch
+  $ hg ci -Amf
+
+  $ f --size --hexdump .hg/cache/rbc-*
+  .hg/cache/rbc-names-v1: size=14
+  0000: 64 65 66 61 75 6c 74 00 62 72 61 6e 63 68       |default.branch|
+  .hg/cache/rbc-revs-v1: size=24
+  0000: 66 e5 f5 aa 00 00 00 00 fa 4c 04 e5 00 00 00 00 |f........L......|
+  0010: 56 46 78 69 00 00 00 01                         |VFxi....|
+  $ : > .hg/cache/rbc-revs-v1
+
+  $ hg log -r "branch(null)&branch(branch)" --debug
+  rebuilding corrupted revision branch cache
+  rebuilding corrupted revision branch cache
+  truncating cache/rbc-revs-v1 to 8
+BUG: the cache was declared corrupt multiple times and not fully rebuilt:
+  $ f --size --hexdump .hg/cache/rbc-*
+  .hg/cache/rbc-names-v1: size=14
+  0000: 64 65 66 61 75 6c 74 00 62 72 61 6e 63 68       |default.branch|
+  .hg/cache/rbc-revs-v1: size=24
+  0000: 00 00 00 00 00 00 00 00 fa 4c 04 e5 00 00 00 00 |.........L......|
+  0010: 56 46 78 69 00 00 00 01                         |VFxi....|
+
+  $ cd ..
