@@ -27,6 +27,7 @@
 
 #include "util.h"
 #include "bitmanipulation.h"
+#include "compat.h"
 
 static char mpatch_doc[] = "Efficient binary patching.";
 static PyObject *mpatch_Error;
@@ -40,7 +41,7 @@ struct flist {
 	struct frag *base, *head, *tail;
 };
 
-static struct flist *lalloc(Py_ssize_t size)
+static struct flist *lalloc(ssize_t size)
 {
 	struct flist *a = NULL;
 
@@ -70,7 +71,7 @@ static void lfree(struct flist *a)
 	}
 }
 
-static Py_ssize_t lsize(struct flist *a)
+static ssize_t lsize(struct flist *a)
 {
 	return a->tail - a->head;
 }
@@ -199,7 +200,7 @@ static struct flist *combine(struct flist *a, struct flist *b)
 }
 
 /* decode a binary patch into a hunk list */
-static struct flist *decode(const char *bin, Py_ssize_t len)
+static struct flist *decode(const char *bin, ssize_t len)
 {
 	struct flist *l;
 	struct frag *lt;
@@ -235,9 +236,9 @@ static struct flist *decode(const char *bin, Py_ssize_t len)
 }
 
 /* calculate the size of resultant text */
-static Py_ssize_t calcsize(Py_ssize_t len, struct flist *l)
+static ssize_t calcsize(ssize_t len, struct flist *l)
 {
-	Py_ssize_t outlen = 0, last = 0;
+	ssize_t outlen = 0, last = 0;
 	struct frag *f = l->head;
 
 	while (f != l->tail) {
@@ -257,7 +258,7 @@ static Py_ssize_t calcsize(Py_ssize_t len, struct flist *l)
 	return outlen;
 }
 
-static int apply(char *buf, const char *orig, Py_ssize_t len, struct flist *l)
+static int apply(char *buf, const char *orig, ssize_t len, struct flist *l)
 {
 	struct frag *f = l->head;
 	int last = 0;
@@ -282,9 +283,9 @@ static int apply(char *buf, const char *orig, Py_ssize_t len, struct flist *l)
 }
 
 /* recursively generate a patch of all bins between start and end */
-static struct flist *fold(PyObject *bins, Py_ssize_t start, Py_ssize_t end)
+static struct flist *fold(PyObject *bins, ssize_t start, ssize_t end)
 {
-	Py_ssize_t len, blen;
+	ssize_t len, blen;
 	const char *buffer;
 
 	if (start + 1 == end) {
