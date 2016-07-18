@@ -32,25 +32,25 @@
 static char mpatch_doc[] = "Efficient binary patching.";
 static PyObject *mpatch_Error;
 
-struct frag {
+struct mpatch_frag {
 	int start, end, len;
 	const char *data;
 };
 
-struct flist {
-	struct frag *base, *head, *tail;
+struct mpatch_flist {
+	struct mpatch_frag *base, *head, *tail;
 };
 
-static struct flist *lalloc(ssize_t size)
+static struct mpatch_flist *lalloc(ssize_t size)
 {
-	struct flist *a = NULL;
+	struct mpatch_flist *a = NULL;
 
 	if (size < 1)
 		size = 1;
 
-	a = (struct flist *)malloc(sizeof(struct flist));
+	a = (struct mpatch_flist *)malloc(sizeof(struct mpatch_flist));
 	if (a) {
-		a->base = (struct frag *)malloc(sizeof(struct frag) * size);
+		a->base = (struct mpatch_frag *)malloc(sizeof(struct mpatch_frag) * size);
 		if (a->base) {
 			a->head = a->tail = a->base;
 			return a;
@@ -63,7 +63,7 @@ static struct flist *lalloc(ssize_t size)
 	return NULL;
 }
 
-static void lfree(struct flist *a)
+static void mpatch_lfree(struct mpatch_flist *a)
 {
 	if (a) {
 		free(a->base);
@@ -71,7 +71,7 @@ static void lfree(struct flist *a)
 	}
 }
 
-static ssize_t lsize(struct flist *a)
+static ssize_t lsize(struct mpatch_flist *a)
 {
 	return a->tail - a->head;
 }
@@ -79,9 +79,10 @@ static ssize_t lsize(struct flist *a)
 /* move hunks in source that are less cut to dest, compensating
    for changes in offset. the last hunk may be split if necessary.
 */
-static int gather(struct flist *dest, struct flist *src, int cut, int offset)
+static int gather(struct mpatch_flist *dest, struct mpatch_flist *src, int cut,
+	int offset)
 {
-	struct frag *d = dest->tail, *s = src->head;
+	struct mpatch_frag *d = dest->tail, *s = src->head;
 	int postend, c, l;
 
 	while (s != src->tail) {
@@ -124,9 +125,9 @@ static int gather(struct flist *dest, struct flist *src, int cut, int offset)
 }
 
 /* like gather, but with no output list */
-static int discard(struct flist *src, int cut, int offset)
+static int discard(struct mpatch_flist *src, int cut, int offset)
 {
-	struct frag *s = src->head;
+	struct mpatch_frag *s = src->head;
 	int postend, c, l;
 
 	while (s != src->tail) {
@@ -161,10 +162,11 @@ static int discard(struct flist *src, int cut, int offset)
 
 /* combine hunk lists a and b, while adjusting b for offset changes in a/
    this deletes a and b and returns the resultant list. */
-static struct flist *combine(struct flist *a, struct flist *b)
+static struct mpatch_flist *combine(struct mpatch_flist *a,
+	struct mpatch_flist *b)
 {
-	struct flist *c = NULL;
-	struct frag *bh, *ct;
+	struct mpatch_flist *c = NULL;
+	struct mpatch_frag *bh, *ct;
 	int offset = 0, post;
 
 	if (a && b)
@@ -190,20 +192,20 @@ static struct flist *combine(struct flist *a, struct flist *b)
 		}
 
 		/* hold on to tail from a */
-		memcpy(c->tail, a->head, sizeof(struct frag) * lsize(a));
+		memcpy(c->tail, a->head, sizeof(struct mpatch_frag) * lsize(a));
 		c->tail += lsize(a);
 	}
 
-	lfree(a);
-	lfree(b);
+	mpatch_lfree(a);
+	mpatch_lfree(b);
 	return c;
 }
 
 /* decode a binary patch into a hunk list */
-static struct flist *decode(const char *bin, ssize_t len)
+static struct mpatch_flist *mpatch_decode(const char *bin, ssize_t len)
 {
-	struct flist *l;
-	struct frag *lt;
+	struct mpatch_flist *l;
+	struct mpatch_frag *lt;
 	int pos = 0;
 
 	/* assume worst case size, we won't have many of these lists */
@@ -227,7 +229,7 @@ static struct flist *decode(const char *bin, ssize_t len)
 	if (pos != len) {
 		if (!PyErr_Occurred())
 			PyErr_SetString(mpatch_Error, "patch cannot be decoded");
-		lfree(l);
+		mpatch_lfree(l);
 		return NULL;
 	}
 
@@ -236,10 +238,10 @@ static struct flist *decode(const char *bin, ssize_t len)
 }
 
 /* calculate the size of resultant text */
-static ssize_t calcsize(ssize_t len, struct flist *l)
+static ssize_t mpatch_calcsize(ssize_t len, struct mpatch_flist *l)
 {
 	ssize_t outlen = 0, last = 0;
-	struct frag *f = l->head;
+	struct mpatch_frag *f = l->head;
 
 	while (f != l->tail) {
 		if (f->start < last || f->end > len) {
@@ -258,9 +260,10 @@ static ssize_t calcsize(ssize_t len, struct flist *l)
 	return outlen;
 }
 
-static int apply(char *buf, const char *orig, ssize_t len, struct flist *l)
+static int mpatch_apply(char *buf, const char *orig, ssize_t len,
+	struct mpatch_flist *l)
 {
-	struct frag *f = l->head;
+	struct mpatch_frag *f = l->head;
 	int last = 0;
 	char *p = buf;
 
@@ -283,7 +286,8 @@ static int apply(char *buf, const char *orig, ssize_t len, struct flist *l)
 }
 
 /* recursively generate a patch of all bins between start and end */
-static struct flist *fold(PyObject *bins, ssize_t start, ssize_t end)
+static struct mpatch_flist *mpatch_fold(PyObject *bins, ssize_t start,
+	ssize_t end)
 {
 	ssize_t len, blen;
 	const char *buffer;
@@ -295,20 +299,20 @@ static struct flist *fold(PyObject *bins, ssize_t start, ssize_t end)
 			return NULL;
 		if (PyObject_AsCharBuffer(tmp, &buffer, &blen))
 			return NULL;
-		return decode(buffer, blen);
+		return mpatch_decode(buffer, blen);
 	}
 
 	/* divide and conquer, memory management is elsewhere */
 	len = (end - start) / 2;
-	return combine(fold(bins, start, start + len),
-		       fold(bins, start + len, end));
+	return combine(mpatch_fold(bins, start, start + len),
+		       mpatch_fold(bins, start + len, end));
 }
 
 static PyObject *
 patches(PyObject *self, PyObject *args)
 {
 	PyObject *text, *bins, *result;
-	struct flist *patch;
+	struct mpatch_flist *patch;
 	const char *in;
 	char *out;
 	Py_ssize_t len, outlen, inlen;
@@ -326,11 +330,11 @@ patches(PyObject *self, PyObject *args)
 	if (PyObject_AsCharBuffer(text, &in, &inlen))
 		return NULL;
 
-	patch = fold(bins, 0, len);
+	patch = mpatch_fold(bins, 0, len);
 	if (!patch)
 		return NULL;
 
-	outlen = calcsize(inlen, patch);
+	outlen = mpatch_calcsize(inlen, patch);
 	if (outlen < 0) {
 		result = NULL;
 		goto cleanup;
@@ -341,12 +345,12 @@ patches(PyObject *self, PyObject *args)
 		goto cleanup;
 	}
 	out = PyBytes_AsString(result);
-	if (!apply(out, in, inlen, patch)) {
+	if (!mpatch_apply(out, in, inlen, patch)) {
 		Py_DECREF(result);
 		result = NULL;
 	}
 cleanup:
-	lfree(patch);
+	mpatch_lfree(patch);
 	return result;
 }
 
