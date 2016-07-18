@@ -655,12 +655,16 @@ Test that cache files are created and grows correctly:
   $ rm .hg/cache/rbc*
   $ hg log -r "5 & branch(5)" -T "{rev}\n"
   5
-BUG: rbc-revs should have an entry as 5th record but has it misplaced as the
-first:
   $ f --size --hexdump .hg/cache/rbc-*
   .hg/cache/rbc-names-v1: size=1
   0000: 61                                              |a|
-  .hg/cache/rbc-revs-v1: size=8
-  0000: d8 cb c6 1d 00 00 00 00                         |........|
+  .hg/cache/rbc-revs-v1: size=112
+  0000: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 |................|
+  0010: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 |................|
+  0020: 00 00 00 00 00 00 00 00 d8 cb c6 1d 00 00 00 00 |................|
+  0030: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 |................|
+  0040: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 |................|
+  0050: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 |................|
+  0060: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 |................|
 
   $ cd ..
