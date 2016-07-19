@@ -31,8 +31,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2016-04-30 20:49-0300\n"
-"PO-Revision-Date: 2016-04-30 18:41-0300\n"
+"POT-Creation-Date: 2016-07-19 11:11-0300\n"
+"PO-Revision-Date: 2016-07-19 18:48-0300\n"
 "Last-Translator: Wagner Bruna <wbruna@softwareexpress.com.br>\n"
 "Language-Team: Brazilian Portuguese <>\n"
 "MIME-Version: 1.0\n"
@@ -1461,10 +1461,6 @@ msgstr ""
 
 msgid "invalid response"
 msgstr "resposta inválida"
-
-#, python-format
-msgid "abort: %s\n"
-msgstr "abortado: %s\n"
 
 msgid "command to display child changesets (DEPRECATED)"
 msgstr "comando para exibir revisões filhas (OBSOLETO)"
@@ -4461,6 +4457,10 @@ msgstr ""
 msgid "no valid signature for %s\n"
 msgstr "nenhuma assinatura válida para %s\n"
 
+#, python-format
+msgid "%s is signed by:\n"
+msgstr "%s é assinada por:\n"
+
 msgid "make the signature local"
 msgstr "torna a assinatura local"
 
@@ -4619,94 +4619,6 @@ msgid ""
 msgstr ""
 "    É um apelido para :hg:`log -G`.\n"
 "    "
-
-msgid "hooks for integrating with the CIA.vc notification service"
-msgstr "ganchos para integração com o serviço de notificação CIA.vc"
-
-msgid ""
-"This is meant to be run as a changegroup or incoming hook. To\n"
-"configure it, set the following options in your hgrc::"
-msgstr ""
-"Isto deve ser executado como um gancho changegroup ou incoming.\n"
-"Para configurá-lo, defina as seguintes opções em seu hgrc::"
-
-msgid ""
-"  [cia]\n"
-"  # your registered CIA user name\n"
-"  user = foo\n"
-"  # the name of the project in CIA\n"
-"  project = foo\n"
-"  # the module (subproject) (optional)\n"
-"  #module = foo\n"
-"  # Append a diffstat to the log message (optional)\n"
-"  #diffstat = False\n"
-"  # Template to use for log messages (optional)\n"
-"  #template = {desc}\\n{baseurl}{webroot}/rev/{node}-- {diffstat}\n"
-"  # Style to use (optional)\n"
-"  #style = foo\n"
-"  # The URL of the CIA notification service (optional)\n"
-"  # You can use mailto: URLs to send by email, e.g.\n"
-"  # mailto:cia@cia.vc\n"
-"  # Make sure to set email.from if you do this.\n"
-"  #url = http://cia.vc/\n"
-"  # print message instead of sending it (optional)\n"
-"  #test = False\n"
-"  # number of slashes to strip for url paths\n"
-"  #strip = 0"
-msgstr ""
-"  [cia]\n"
-"  # seu nome de usuário CIA registrado\n"
-"  user = foo\n"
-"  # o nome do projeto CIA\n"
-"  project = foo\n"
-"  # o módulo (subprojeto) (opcional)\n"
-"  #module = foo\n"
-"  # Anexa um diffstat à mensagem de log (opcional)\n"
-"  #diffstat = False\n"
-"  # Modelo a ser usado em mensagens de log (opcional)\n"
-"  #template = {desc}\\n{baseurl}{webroot}/rev/{node}-- {diffstat}\n"
-"  # Estilo a ser usado (opcional)\n"
-"  #style = foo\n"
-"  # A URL do serviço de notificação CIA (opcional)\n"
-"  # Você pode usar URLs mailto: para enviar por e-mail, por exemplo\n"
-"  # mailto:cia@cia.vc\n"
-"  # Certifique-se de definir email.from se você fizer isso.\n"
-"  #url = http://cia.vc/\n"
-"  # imprime a mensagem ao invés de enviá-la (opcional)\n"
-"  #test = False\n"
-"  # número de barras a serem removidas de caminhos url\n"
-"  #strip = 0"
-
-msgid ""
-"  [hooks]\n"
-"  # one of these:\n"
-"  changegroup.cia = python:hgcia.hook\n"
-"  #incoming.cia = python:hgcia.hook"
-msgstr ""
-"  [hooks]\n"
-"  # use um destes:\n"
-"  changegroup.cia = python:hgcia.hook\n"
-"  #incoming.cia = python:hgcia.hook"
-
-msgid ""
-"  [web]\n"
-"  # If you want hyperlinks (optional)\n"
-"  baseurl = http://server/path/to/repo\n"
-msgstr ""
-"  [web]\n"
-"  # Se você desejar hyperlinks (opcional)\n"
-"  baseurl = http://server/path/to/repo\n"
-
-#, python-format
-msgid "%s returned an error: %s"
-msgstr "%s devolveu um erro: %s"
-
-#, python-format
-msgid "hgcia: sending update to %s\n"
-msgstr "hgcia: enviando atualização para %s\n"
-
-msgid "email.from must be defined when sending by email"
-msgstr "email.from deve estar definido ao enviar por e-mail"
 
 msgid "browse the repository in a graphical way"
 msgstr "visualiza o repositório em modo gráfico"
@@ -5656,6 +5568,102 @@ msgstr "hg histedit --continue"
 msgid "checkout changeset and apply further changesets from there"
 msgstr "atualiza para a revisão e aplica mudanças seguintes a partir dela"
 
+msgid "Track previous positions of bookmarks (EXPERIMENTAL)"
+msgstr "Rastreia posições anteriores de marcadores (EXPERIMENTAL)"
+
+msgid ""
+"This extension adds a new command: `hg journal`, which shows you where\n"
+"bookmarks were previously located."
+msgstr ""
+"Esta extensão fornece um novo comando: `hg journal`, que mostra aonde\n"
+"marcadores estiveram localizados previamente."
+
+msgid "journal lock does not support nesting"
+msgstr "o lock do journal não suporta aninhamento"
+
+#, python-format
+msgid "journal of %s"
+msgstr "journal de %s"
+
+#, python-format
+msgid "waiting for lock on %s held by %r\n"
+msgstr "esperando pelo bloqueio em %s feito por %r\n"
+
+#, python-format
+msgid "got lock after %s seconds\n"
+msgstr "obteve o lock após %s segundos\n"
+
+#, python-format
+msgid "unsupported journal file version '%s'\n"
+msgstr "versão de journal '%s' não suportada\n"
+
+msgid "not available"
+msgstr "não disponível"
+
+#, python-format
+msgid "unknown journal file version '%s'"
+msgstr "versão de arquivo de journal '%s' desconhecida"
+
+msgid "show the previous position of bookmarks and the working copy"
+msgstr ""
+"mostra as posições anteriores de marcadores e do diretório de trabalho"
+
+msgid ""
+"    The journal is used to see the previous commits that bookmarks and the\n"
+"    working copy pointed to. By default the previous locations for the working\n"
+"    copy.  Passing a bookmark name will show all the previous positions of\n"
+"    that bookmark. Use the --all switch to show previous locations for all\n"
+"    bookmarks and the working copy; each line will then include the bookmark\n"
+"    name, or '.' for the working copy, as well."
+msgstr ""
+
+msgid ""
+"    If `name` starts with `re:`, the remainder of the name is treated as\n"
+"    a regular expression. To match a name that actually starts with `re:`,\n"
+"    use the prefix `literal:`."
+msgstr ""
+"    Se `nome` começar com `re:`, o restante do nome é tratado como\n"
+"    uma expressão regular. Para combinar com um nome que comece\n"
+"    com `re:` literalmente, use o prefixo `literal:`."
+
+msgid ""
+"    By default hg journal only shows the commit hash and the command that was\n"
+"    running at that time. -v/--verbose will show the prior hash, the user, and\n"
+"    the time at which it happened."
+msgstr ""
+"    Por padrão hg journal mostra apenas o identificador de revisão e o\n"
+"    comando que foi executado. Com -v/--verbose, mostrará o identificador\n"
+"    anterior, usuário e o horário em que o comando foi executado."
+
+msgid ""
+"    Use -c/--commits to output log information on each commit hash; at this\n"
+"    point you can use the usual `--patch`, `--git`, `--stat` and `--template`\n"
+"    switches to alter the log output for these."
+msgstr ""
+"    Use -c/--commits para mostrar informações de log para cada\n"
+"    identificador de revisão; neste ponto você pode usar as opções\n"
+"    comuns `--patch`, `--git`, `--stat` e `--template` para alterar\n"
+"    a saída."
+
+msgid ""
+"    `hg journal -T json` can be used to produce machine readable output."
+msgstr ""
+"    `hg journal -T json` pode ser usado para produzir saída legível por "
+"máquinas."
+
+msgid "You can't combine --all and filtering on a name"
+msgstr "Você não pode combinar --all e filtragem em um nome"
+
+msgid "the working copy and bookmarks"
+msgstr ""
+
+#, python-format
+msgid "previous locations of %s:\n"
+msgstr ""
+
+msgid "no recorded locations\n"
+msgstr ""
+
 msgid "expand keywords in tracked files"
 msgstr "expande palavras chave em arquivos rastreados"
 
@@ -6319,14 +6327,6 @@ msgstr "verificado o conteúdo de %d revisões de %d largefiles\n"
 msgid "verified existence of %d revisions of %d largefiles\n"
 msgstr "verificada a existência de %d revisões de %d largefiles\n"
 
-#, python-format
-msgid "unsupported URL scheme %r"
-msgstr "esquema URL %r não suportado"
-
-#, python-format
-msgid "%s does not appear to be a largefile store"
-msgstr "'%s' não parece ser um repositório de largefiles"
-
 msgid "minimum size (MB) for files to be converted as largefiles"
 msgstr "tamanho mínimo (MB) para arquivos serem convertidos em largefiles"
 
@@ -6632,6 +6632,14 @@ msgstr "funcionalidades necessárias não são suportadas pelo destino: %s"
 msgid "file \"%s\" is a largefile standin"
 msgstr "o arquivo \"%s\" é um standin largefile"
 
+#, python-format
+msgid "unsupported URL scheme %r"
+msgstr "esquema URL %r não suportado"
+
+#, python-format
+msgid "%s does not appear to be a largefile store"
+msgstr "'%s' não parece ser um repositório de largefiles"
+
 msgid "add as largefile"
 msgstr "adiciona como largefile"
 
@@ -6673,12 +6681,15 @@ msgid "download all versions of all largefiles"
 msgstr "baixa todas as versões de todos os largefiles"
 
 msgid "Send ui.log() data to a subprocess (EXPERIMENTAL)"
-msgstr ""
+msgstr "Envia dados de ui.log() para um subprocesso (EXPERIMENTAL)"
 
 msgid ""
 "This extension lets you specify a shell command per ui.log() event,\n"
 "sending all remaining arguments to as environment variables to that command."
 msgstr ""
+"Esta extensão permite especificar um comando shell por evento\n"
+"ui.log(), enviando todos os outros argumentos como variáveis de\n"
+"ambiente para tal comando."
 
 msgid ""
 "Each positional argument to the method results in a `MSG[N]` key in the\n"
@@ -6687,31 +6698,49 @@ msgid ""
 "prefixed with `OPT_`). The original event name is passed in the `EVENT`\n"
 "environment variable, and the process ID of mercurial is given in `HGPID`."
 msgstr ""
+"Cada argumento posicional para a função resulta em uma chave\n"
+"`MSG[N]` no ambiente, começando em 1 (`MSG1`, `MSG2`, etc.).\n"
+"Cada argumento nomeado define uma chave `OPT_CHAVE_EM_MAIÙSCULAS\n"
+"(a chave é alterada para maiúsculas e recebe o prefixo `OPT_`).\n"
+"O nome do evento original é passado na variável de ambiente\n"
+"`EVENT`, e o identificador do processo do Mercurial é passado em\n"
+"`HGPID`."
 
 msgid ""
 "So given a call `ui.log('foo', 'bar', 'baz', spam='eggs'), a script configured\n"
 "for the `foo` event can expect an environment with `MSG1=bar`, `MSG2=baz`, and\n"
 "`OPT_SPAM=eggs`."
 msgstr ""
+"Assim, dada uma chamada `ui.log('foo', 'bar', 'baz', spam='eggs'),\n"
+"um script configurado para o evento `foo` receberá no ambiente as\n"
+"variáveis `MSG1=bar`, `MSG2=baz` e `OPT_SPAM=eggs`."
 
 msgid ""
 "Scripts are configured in the `[logtoprocess]` section, each key an event name.\n"
 "For example::"
 msgstr ""
+"Scripts são configurados na seção `[logtoprocess]`, onde cada chave\n"
+"corresponde a um nome de evento. Por exemplo::"
 
 msgid ""
 "  [logtoprocess]\n"
 "  commandexception = echo \"$MSG2$MSG3\" > /var/log/mercurial_exceptions.log"
 msgstr ""
+"  [logtoprocess]\n"
+"  commandexception = echo \"$MSG2$MSG3\" > /var/log/mercurial_exceptions.log"
 
 msgid ""
 "would log the warning message and traceback of any failed command dispatch."
 msgstr ""
+"registraria a mensagem de aviso e um traceback de qualquer comando que "
+"falhasse."
 
 msgid ""
 "Scripts are run asychronously as detached daemon processes; mercurial will\n"
 "not ensure that they exit cleanly."
 msgstr ""
+"Os scripts são executados assincronamente como processos desanexados;\n"
+"o Mercurial não verifica se eles terminarão de maneira limpa."
 
 msgid "manage a stack of patches"
 msgstr "gerencia uma pilha de patches"
@@ -8599,6 +8628,18 @@ msgstr "notify: enviando a %d assinantes %d mudanças\n"
 #, python-format
 msgid ""
 "\n"
+"diffstat:"
+msgstr ""
+"\n"
+"diffstat:"
+
+#, python-format
+msgid "%s"
+msgstr "%s"
+
+#, python-format
+msgid ""
+"\n"
 "diffs (truncated from %d to %d lines):"
 msgstr ""
 "\n"
@@ -9332,6 +9373,93 @@ msgstr ""
 "Para mais informações:\n"
 "https://mercurial-scm.org/wiki/RebaseExtension\n"
 
+msgid "rebase"
+msgstr "%d rebaseados"
+
+msgid ".hg/rebasestate is incomplete"
+msgstr ".hg/rebasestate está incompleto"
+
+msgid "rebase aborted (no revision is removed, only broken state is cleared)\n"
+msgstr ""
+"rebase abortado (nenhuma revisão foi removida, apenas o estado quebrado foi "
+"limpo)\n"
+
+msgid "cannot continue inconsistent rebase"
+msgstr "não é possível continuar um rebaseamento inconsistente"
+
+msgid "use \"hg rebase --abort\" to clear broken state"
+msgstr "use \"hg rebase --abort\" para limpar o estado quebrado"
+
+msgid "can't remove original changesets with unrebased descendants"
+msgstr ""
+"não é possível remover revisões originais que tenham descendentes não "
+"rebaseados"
+
+msgid "use --keep to keep original changesets"
+msgstr "use --keep para manter as revisões originais"
+
+msgid "nothing to rebase\n"
+msgstr "nada para rebasear\n"
+
+#, python-format
+msgid "can't rebase public changeset %s"
+msgstr "não é possível rebasear a revisão pública %s"
+
+#, python-format
+msgid "reopening closed branch head %s\n"
+msgstr "reabrindo cabeça de ramo fechada %s\n"
+
+msgid "cannot collapse multiple named branches"
+msgstr "não é possível colapsar múltiplos ramos nomeados"
+
+#, python-format
+msgid "rebasing %s\n"
+msgstr "rebaseando %s\n"
+
+msgid "rebasing"
+msgstr "rebaseando"
+
+msgid "changesets"
+msgstr "revisões"
+
+msgid "unresolved conflicts (see hg resolve, then hg rebase --continue)"
+msgstr ""
+"conflitos não resolvidos (veja hg resolve, e em seguida hg rebase "
+"--continue)"
+
+#, python-format
+msgid "note: rebase of %d:%s created no changes to commit\n"
+msgstr "nota: o rebaseamento de %d:%s não criou mudanças a serem consolidadas\n"
+
+#, python-format
+msgid "not rebasing ignored %s\n"
+msgstr "não rebaseando revisão ignorada %s\n"
+
+#, python-format
+msgid "note: not rebasing %s, already in destination as %s\n"
+msgstr "nota: omitindo rebaseamento de %s, que já está no destino como %s\n"
+
+#, python-format
+msgid "note: not rebasing %s, it has no successor\n"
+msgstr "nota: omitindo rebaseamento de %s, que não possui sucessor\n"
+
+#, python-format
+msgid "already rebased %s as %s\n"
+msgstr "revisão %s já rebaseada como %s\n"
+
+msgid "rebase merging completed\n"
+msgstr "mesclagem de rebaseamento completada\n"
+
+msgid "update back to initial working directory parent\n"
+msgstr "atualizando de volta para o pai do diretório de trabalho original\n"
+
+msgid "rebase completed\n"
+msgstr "rebaseamento completado\n"
+
+#, python-format
+msgid "%d revisions have been skipped\n"
+msgstr "%d revisões foram omitidas\n"
+
 msgid "rebase the specified changeset and descendants"
 msgstr "rebaseia a revisão especificada e seus descendentes"
 
@@ -9570,87 +9698,6 @@ msgstr "abort e continue não permitem especificar revisões"
 msgid "tool option will be ignored\n"
 msgstr "a opção tool será ignorada\n"
 
-msgid "rebase aborted (no revision is removed, only broken state is cleared)\n"
-msgstr ""
-"rebase abortado (nenhuma revisão foi removida, apenas o estado quebrado foi "
-"limpo)\n"
-
-msgid "cannot continue inconsistent rebase"
-msgstr "não é possível continuar um rebaseamento inconsistente"
-
-msgid "use \"hg rebase --abort\" to clear broken state"
-msgstr "use \"hg rebase --abort\" para limpar o estado quebrado"
-
-msgid "can't remove original changesets with unrebased descendants"
-msgstr ""
-"não é possível remover revisões originais que tenham descendentes não "
-"rebaseados"
-
-msgid "use --keep to keep original changesets"
-msgstr "use --keep para manter as revisões originais"
-
-msgid "nothing to rebase\n"
-msgstr "nada para rebasear\n"
-
-#, python-format
-msgid "can't rebase public changeset %s"
-msgstr "não é possível rebasear a revisão pública %s"
-
-#, python-format
-msgid "reopening closed branch head %s\n"
-msgstr "reabrindo cabeça de ramo fechada %s\n"
-
-msgid "cannot collapse multiple named branches"
-msgstr "não é possível colapsar múltiplos ramos nomeados"
-
-#, python-format
-msgid "rebasing %s\n"
-msgstr "rebaseando %s\n"
-
-msgid "rebasing"
-msgstr "rebaseando"
-
-msgid "changesets"
-msgstr "revisões"
-
-msgid "unresolved conflicts (see hg resolve, then hg rebase --continue)"
-msgstr ""
-"conflitos não resolvidos (veja hg resolve, e em seguida hg rebase "
-"--continue)"
-
-#, python-format
-msgid "note: rebase of %d:%s created no changes to commit\n"
-msgstr "nota: o rebaseamento de %d:%s não criou mudanças a serem consolidadas\n"
-
-#, python-format
-msgid "not rebasing ignored %s\n"
-msgstr "não rebaseando revisão ignorada %s\n"
-
-#, python-format
-msgid "note: not rebasing %s, already in destination as %s\n"
-msgstr "nota: omitindo rebaseamento de %s, que já está no destino como %s\n"
-
-#, python-format
-msgid "note: not rebasing %s, it has no successor\n"
-msgstr "nota: omitindo rebaseamento de %s, que não possui sucessor\n"
-
-#, python-format
-msgid "already rebased %s as %s\n"
-msgstr "revisão %s já rebaseada como %s\n"
-
-msgid "rebase merging completed\n"
-msgstr "mesclagem de rebaseamento completada\n"
-
-msgid "update back to initial working directory parent\n"
-msgstr "atualizando de volta para o pai do diretório de trabalho original\n"
-
-msgid "rebase completed\n"
-msgstr "rebaseamento completado\n"
-
-#, python-format
-msgid "%d revisions have been skipped\n"
-msgstr "%d revisões foram omitidas\n"
-
 msgid "cannot specify both a source and a base"
 msgstr "não se pode especificar ao mesmo tempo uma origem e uma base"
 
@@ -9709,17 +9756,6 @@ msgstr ""
 "para forçar o rebaseamento por favor configure "
 "experimental.allowdivergence=True"
 
-msgid "all requested changesets have equivalents or were marked as obsolete"
-msgstr ""
-"todas as revisões pedidas possuem equivalentes ou foram marcadas como "
-"obsoletas"
-
-msgid ""
-"to force the rebase, set the config experimental.rebaseskipobsolete to False"
-msgstr ""
-"para forçar o rebaseamento, configure experimental.rebaseskipobsolete como "
-"False"
-
 #, python-format
 msgid "cannot use revision %d as base, result would have 3 parents"
 msgstr "não se pode usar a revisão %d como base, o resultado teria 3 pais"
@@ -9730,12 +9766,6 @@ msgstr "atualizando patch mq %s para %s:%s\n"
 
 msgid "no rebase in progress"
 msgstr "nenhum rebaseamento em andamento"
-
-msgid "rebase"
-msgstr "%d rebaseados"
-
-msgid ".hg/rebasestate is incomplete"
-msgstr ".hg/rebasestate está incompleto"
 
 #, python-format
 msgid "warning: can't clean up public changesets %s\n"
@@ -10416,6 +10446,20 @@ msgstr ""
 
 msgid "unshelve"
 msgstr "unshelve"
+
+msgid "corrupted shelved state file"
+msgstr "arquivo de estado da shelve corrompido"
+
+msgid "please run hg unshelve --abort to abort unshelve operation"
+msgstr "por favor use 'hg unshelve --abort' para abortar a operação unshelve"
+
+msgid ""
+"could not read shelved state file, your working copy may be in an unexpected state\n"
+"please update to some commit\n"
+msgstr ""
+"não foi possível ler o arquivo de estado da shelve, a sua cópia de\n"
+"trabalho pode estar em um estado inconsistente\n"
+"por favor atualize para alguma revisão\n"
 
 msgid "can only unshelve one change at a time"
 msgstr "só é possível realizar unshelve de uma mudança de cada vez"
@@ -11237,6 +11281,9 @@ msgstr "nenhum arquivo corresponde ao padrão pedido"
 msgid "malformed line in .hg/bookmarks: %r\n"
 msgstr "linha malformada em .hg/bookmarks: %r\n"
 
+msgid "no active bookmark"
+msgstr "nenhum marcador ativo"
+
 #, python-format
 msgid "updating to active bookmark %s\n"
 msgstr "atualizando para o marcador ativo %s\n"
@@ -11359,6 +11406,9 @@ msgstr "base de delta desconhecida"
 #, python-format
 msgid "Unsupported changegroup version: %s"
 msgstr "Versão de changegroup não suportada: %s"
+
+msgid "No changegroups found"
+msgstr "nenhum changegroup encontrado"
 
 #, python-format
 msgid "setting parent to node %s that only exists in the bundle\n"
@@ -14032,6 +14082,22 @@ msgstr ""
 msgid "no ignore patterns found"
 msgstr "nenhum padrão de arquivos ignorados encontrado"
 
+#, python-format
+msgid "%s is ignored\n"
+msgstr "%s é ignorado\n"
+
+#, python-format
+msgid "%s is ignored because of containing folder %s\n"
+msgstr "%s é ignorado por causa do diretório pai %s\n"
+
+#, python-format
+msgid "(ignore rule in %s, line %d: '%s')\n"
+msgstr "(regra hgignore em %s, linha %d: '%s')\n"
+
+#, python-format
+msgid "%s is not ignored\n"
+msgstr "o nó %s não é ignorado\n"
+
 msgid "revlog format"
 msgstr "formato do revlog"
 
@@ -14129,6 +14195,18 @@ msgstr "verificando a versão do Python (%s)\n"
 #, python-format
 msgid "checking Python lib (%s)...\n"
 msgstr "verificando biblioteca Python (%s)...\n"
+
+#, python-format
+msgid "checking Mercurial version (%s)\n"
+msgstr "verificando a versão do Mercurial (%s)\n"
+
+#, python-format
+msgid "checking Mercurial custom build (%s)\n"
+msgstr "verificando compilação personalizada do Mercurial (%s)\n"
+
+#, python-format
+msgid "checking module policy (%s)\n"
+msgstr "verificando política de módulos (%s)\n"
 
 #, python-format
 msgid "checking installed modules (%s)...\n"
@@ -15227,6 +15305,9 @@ msgstr ""
 #, python-format
 msgid "grep: invalid match pattern: %s\n"
 msgstr "grep: padrão de busca inválido: %s\n"
+
+msgid " Binary file matches"
+msgstr " Arquivo binário corresponde ao padrão"
 
 msgid "STARTREV"
 msgstr "REVINICIAL"
@@ -16459,6 +16540,13 @@ msgstr ""
 "    revisão listada por :hg:`incoming`."
 
 msgid ""
+"    Specifying bookmark as ``.`` is equivalent to specifying the active\n"
+"    bookmark's name."
+msgstr ""
+"    Especificar um marcador como ``.`` equivale a especificar o nome do\n"
+"    marcador ativo."
+
+msgid ""
 "    Returns 0 on success, 1 if an update had unresolved files.\n"
 "    "
 msgstr ""
@@ -16576,6 +16664,9 @@ msgstr "as revisões especificadas resultam em um conjunto vazio"
 
 msgid "use different revision arguments"
 msgstr "use argumentos de revisão diferentes"
+
+msgid "default push revset for path evaluates to an empty set"
+msgstr "o revset padrão para o caminho resulta em um conjunto vazio"
 
 msgid "roll back an interrupted transaction"
 msgstr "desfaz uma transação interrompida"
@@ -16904,10 +16995,16 @@ msgstr ""
 
 msgid ""
 "    Modified files are saved with a .orig suffix before reverting.\n"
-"    To disable these backups, use --no-backup."
+"    To disable these backups, use --no-backup. It is possible to store\n"
+"    the backup files in a custom directory relative to the root of the\n"
+"    repository by setting the ``ui.origbackuppath`` configuration\n"
+"    option."
 msgstr ""
-"    Arquivos modificados são gravados com um sufixo .orig antes da\n"
-"    reversão. Para desabilitar essas cópias, use --no-backup."
+"    Arquivos modificados são gravados com um sufixo .orig antes de\n"
+"    serem revertidos. Para desabilitar essas cópias de segurança,\n"
+"    use --no-backup. É possível armazenar as cópias de segurança em\n"
+"    um diretório personalizado relativo ao raiz do repositório\n"
+"    configurando a opção ``ui.origbackuppath``."
 
 msgid ""
 "    See :hg:`help backout` for a way to reverse the effect of an\n"
@@ -17019,6 +17116,18 @@ msgstr ""
 "      proteção e remover a revisão de qualquer maneira, use a opção --force."
 
 msgid ""
+"      The rollback command can be entirely disabled by setting the\n"
+"      ``ui.rollback`` configuration setting to false. If you're here\n"
+"      because you want to use rollback and it's disabled, you can\n"
+"      re-enable the command by setting ``ui.rollback`` to true."
+msgstr ""
+"      O comando rollback pode ser completamente desabilitado\n"
+"      definindo a configuração ``ui.rollback`` como False.\n"
+"      Se você estiver aqui porque quer usar rollback e este\n"
+"      comando está desabilitado, você pode habilitá-lo\n"
+"      novamente definindo ``ui.rollback`` como True."
+
+msgid ""
 "    This command is not intended for use on public repositories. Once\n"
 "    changes are visible for pull by other users, rolling a transaction\n"
 "    back locally is ineffective (someone else may already have pulled\n"
@@ -17040,6 +17149,9 @@ msgstr ""
 "    Devolve 0 para indicar sucesso, 1 se não houver dados de\n"
 "    desfazimento disponíveis.\n"
 "    "
+
+msgid "rollback is disabled because it is unsafe"
+msgstr "rollback está desabilitado por ser inseguro"
 
 msgid "print the root (top) of the current working directory"
 msgstr "imprime o raiz (topo) do diretório de trabalho atual"
@@ -17822,15 +17934,19 @@ msgstr "a extensão '%s' sobrepõe o comando: %s\n"
 msgid "unknown command %s"
 msgstr "comando %s desconhecido"
 
+#, python-format
+msgid "abort: %s\n"
+msgstr "abortado: %s\n"
+
+#, python-format
+msgid "listening at %s\n"
+msgstr "ouvindo em %s\n"
+
 msgid "unsupported platform"
 msgstr "plataforma não suportada"
 
 msgid "no socket path specified with --address"
 msgstr "nenhum caminho de socket especificado com --address"
-
-#, python-format
-msgid "listening at %s\n"
-msgstr "ouvindo em %s\n"
 
 #, python-format
 msgid "unknown mode %s"
@@ -17954,9 +18070,6 @@ msgstr ""
 "# limpa, arquivos de rejeitos serão gerados. Você poderá usar\n"
 "# esses arquivos ao tentar novamente.\n"
 
-msgid "confirm"
-msgstr "confirmar"
-
 msgid "starting interactive selection\n"
 msgstr "iniciando seleção interativa\n"
 
@@ -18028,8 +18141,8 @@ msgid ""
 "no matching bookmark to rebase - please rebase to an explicit rev or "
 "bookmark"
 msgstr ""
-"nenhum marcador correspondente para rebasear - por favor rebaseie para "
-"uma revisão ou marcador explícitos"
+"nenhum marcador correspondente para rebasear - por favor rebaseie para uma "
+"revisão ou marcador explícitos"
 
 #, python-format
 msgid "branch '%s' has %d heads - please merge with an explicit rev"
@@ -18063,8 +18176,8 @@ msgstr ""
 #, python-format
 msgid "branch '%s' has one head - please rebase to an explicit rev"
 msgstr ""
-"o ramo '%s' tem apenas uma cabeça - por favor rebaseie para uma "
-"revisão explícita"
+"o ramo '%s' tem apenas uma cabeça - por favor rebaseie para uma revisão "
+"explícita"
 
 msgid "nothing to merge"
 msgstr "nada para mesclar"
@@ -18569,6 +18682,10 @@ msgstr "a atualização da fase de %s para pública falhou!\n"
 #, python-format
 msgid "server ignored bookmark %s update\n"
 msgstr "o servidor ignorou a atualização do marcador %s\n"
+
+#, python-format
+msgid "missing support for %s"
+msgstr "falta suporte a %s"
 
 msgid "push failed on remote"
 msgstr "o push falhou no remoto"
@@ -19336,10 +19453,6 @@ msgstr "definido por: %s\n"
 #, python-format
 msgid "alias for: hg %s"
 msgstr "apelido para: hg %s"
-
-#, python-format
-msgid "%s"
-msgstr "%s"
 
 #, python-format
 msgid "(use \"hg help -e %s\" to show help for the %s extension)"
@@ -21191,6 +21304,26 @@ msgstr ""
 "  lista de argumentos. A falha destes ganchos é ignorada."
 
 msgid ""
+"``fail-<command>``\n"
+"  Run after a failed invocation of an associated command. The contents\n"
+"  of the command line are passed as ``$HG_ARGS``. Parsed command line\n"
+"  arguments are passed as ``$HG_PATS`` and ``$HG_OPTS``. These contain\n"
+"  string representations of the python data internally passed to\n"
+"  <command>. ``$HG_OPTS`` is a dictionary of options (with unspecified\n"
+"  options set to their defaults). ``$HG_PATS`` is a list of arguments.\n"
+"  Hook failure is ignored."
+msgstr ""
+"``fail-<comando>``\n"
+"  Executado após uma falha na execução do comando.\n"
+"  O conteúdo da linha de comando é passado em ``$HG_ARGS``\n"
+"  Argumentos de linha de comando decodificados\n"
+"  são passados em ``$HG_PATS`` e ``$HG_OPTS``; estas contém representações\n"
+"  em string dos dados python passados internamente para o <comando>.\n"
+"  Em ``$HG_OPTS`` é passado um dicionário de opções (com opções não\n"
+"  especificadas definidas para seus valores padrão). ``$HG_PATS`` é uma\n"
+"  lista de argumentos. A falha destes ganchos é ignorada."
+
+msgid ""
 "``pre-<command>``\n"
 "  Run before executing the associated command. The contents of the\n"
 "  command line are passed as ``$HG_ARGS``. Parsed command line arguments\n"
@@ -21546,6 +21679,10 @@ msgstr ""
 "``hostfingerprints``\n"
 "--------------------"
 
+msgid ""
+"(Deprecated. Use ``[hostsecurity]``'s ``fingerprints`` options instead.)"
+msgstr "(Obsoleta. Use as opções ``fingerprints`` em ``[hostsecurity]``.)"
+
 msgid "Fingerprints of the certificates of known HTTPS servers."
 msgstr "Impressões digitais dos certificados de servidores HTTPS conhecidos."
 
@@ -21591,6 +21728,244 @@ msgstr ""
 "    [hostfingerprints]\n"
 "    hg.intevation.de = fc:e2:8d:d9:51:cd:cb:c1:4d:18:6b:b7:44:8d:49:72:57:e6:cd:33\n"
 "    hg.intevation.org = fc:e2:8d:d9:51:cd:cb:c1:4d:18:6b:b7:44:8d:49:72:57:e6:cd:33"
+
+msgid ""
+"``hostsecurity``\n"
+"----------------"
+msgstr ""
+"``hostsecurity``\n"
+"----------------"
+
+msgid ""
+"Used to specify global and per-host security settings for connecting to\n"
+"other machines."
+msgstr ""
+"Especifica opções de segurança globais e por servidor remoto\n"
+"para conexões com outras máquinas."
+
+msgid "The following options control default behavior for all hosts."
+msgstr ""
+"As seguintes opções controlam o comportamento padrão para todos os "
+"servidores."
+
+msgid ""
+"``ciphers``\n"
+"    Defines the cryptographic ciphers to use for connections."
+msgstr ""
+"``ciphers``\n"
+"    Define as cifras criptográficas usadas para conexões."
+
+msgid ""
+"    Value must be a valid OpenSSL Cipher List Format as documented at\n"
+"    https://www.openssl.org/docs/manmaster/apps/ciphers.html#CIPHER-LIST-FORMAT."
+msgstr ""
+"    O valor deve estar no formato de lista de cifras do OpenSSL,\n"
+"    conforme documentado em\n"
+"    https://www.openssl.org/docs/manmaster/apps/ciphers.html#CIPHER-LIST-FORMAT."
+
+msgid ""
+"    This setting is for advanced users only. Setting to incorrect values\n"
+"    can significantly lower connection security or decrease performance.\n"
+"    You have been warned."
+msgstr ""
+"    Esta configuração é considerada avançada. A definição de valores\n"
+"    incorretos pode diminuir significativamente a segurança e o\n"
+"    desempenho das conexões."
+
+msgid "    This option requires Python 2.7."
+msgstr "    Esta opção requer o Python 2.7."
+
+msgid ""
+"``minimumprotocol``\n"
+"    Defines the minimum channel encryption protocol to use."
+msgstr ""
+"``minimumprotocol``\n"
+"    Define o protocolo de encriptação mínimo para o canal."
+
+msgid ""
+"    By default, the highest version of TLS supported by both client and server\n"
+"    is used."
+msgstr ""
+"    Por padrão, será usado o maior nível de TLS suportado tanto\n"
+"    pelo servidor como pelo cliente."
+
+msgid "    Allowed values are: ``tls1.0``, ``tls1.1``, ``tls1.2``."
+msgstr "    Os valores permitidos são: ``tls1.0``, ``tls1.1``, ``tls1.2``."
+
+msgid ""
+"    When running on an old Python version, only ``tls1.0`` is allowed since\n"
+"    old versions of Python only support up to TLS 1.0."
+msgstr ""
+"    Ao executar em versões antigas do Python, apenas ``tls1.0`` é\n"
+"    permitido, porque tais versões do Python suportam apenas até\n"
+"    TLS 1.0."
+
+msgid ""
+"    When running a Python that supports modern TLS versions, the default is\n"
+"    ``tls1.1``. ``tls1.0`` can still be used to allow TLS 1.0. However, this\n"
+"    weakens security and should only be used as a feature of last resort if\n"
+"    a server does not support TLS 1.1+."
+msgstr ""
+"    Em versões do Python que suportam versões modernas de TLS, o\n"
+"    padrão é ``tls1.1``. ``tls1.0`` pode ser usada para permitir\n"
+"    TLS 1.0. No entanto, isso enfraquece a segurança, devendo ser\n"
+"    usado apenas como último recurso se um servidor não suportar\n"
+"    TLS 1.1+."
+
+msgid ""
+"Options in the ``[hostsecurity]`` section can have the form\n"
+"``hostname``:``setting``. This allows multiple settings to be defined on a\n"
+"per-host basis."
+msgstr ""
+"As opções na seção ``[hostsecurity]`` podem ter a forma\n"
+"``servidor``:``configuração``. Isso permite que múltiplas\n"
+"opções sejam definidas para servidores específicos."
+
+msgid "The following per-host settings can be defined."
+msgstr "As seguintes opções podem ser definidas por servidor:"
+
+msgid ""
+"``ciphers``\n"
+"    This behaves like ``ciphers`` as described above except it only applies\n"
+"    to the host on which it is defined."
+msgstr ""
+"``ciphers``\n"
+"    Como ``ciphers`` descrita acima, mas se aplica apenas ao\n"
+"    servidor onde estiver definida."
+
+msgid ""
+"``fingerprints``\n"
+"    A list of hashes of the DER encoded peer/remote certificate. Values have\n"
+"    the form ``algorithm``:``fingerprint``. e.g.\n"
+"    ``sha256:c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2``."
+msgstr ""
+"``fingerprints``\n"
+"    Uma lista de hashes (\"impressões digitais\") do certificado remoto\n"
+"    codificado em formato DER.\n"
+"    Os valores são da forma ``algoritmo``:``impressãodigital``, como em\n"
+"    ``sha256:c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2``."
+
+msgid ""
+"    The following algorithms/prefixes are supported: ``sha1``, ``sha256``,\n"
+"    ``sha512``."
+msgstr ""
+"    Os seguintes algoritmos/prefixos são suportados: ``sha1``, ``sha256``,\n"
+"    ``sha512``."
+
+msgid "    Use of ``sha256`` or ``sha512`` is preferred."
+msgstr "    O uso de ``sha256`` ou ``sha512`` é preferível."
+
+msgid ""
+"    If a fingerprint is specified, the CA chain is not validated for this\n"
+"    host and Mercurial will require the remote certificate to match one\n"
+"    of the fingerprints specified. This means if the server updates its\n"
+"    certificate, Mercurial will abort until a new fingerprint is defined.\n"
+"    This can provide stronger security than traditional CA-based validation\n"
+"    at the expense of convenience."
+msgstr ""
+"    Se uma impressão digital for especificada, a cadeia de CAs não\n"
+"    será validada para este servidor, e o Mercurial exigirá que o\n"
+"    certificado remoto combine com uma das impressões especificadas.\n"
+"    Assim, se o servidor atualizar seu certificado, o Mercurial\n"
+"    abortará até que uma nova impressão seja definida.\n"
+"    Isto pode fornecer segurança mais forte que a validação\n"
+"    tradicional por CAs, em detrimento da conveniência."
+
+msgid "    This option takes precedence over ``verifycertsfile``."
+msgstr "    Esta opção tem precedência sobre ``verifycertsfile``."
+
+msgid ""
+"``minimumprotocol``\n"
+"    This behaves like ``minimumprotocol`` as described above except it\n"
+"    only applies to the host on which it is defined."
+msgstr ""
+"``minimumprotocol``\n"
+"    Como ``minimumprotocol`` descrita acima, mas se aplica apenas ao\n"
+"    servidor onde estiver definida."
+
+msgid ""
+"``verifycertsfile``\n"
+"    Path to file a containing a list of PEM encoded certificates used to\n"
+"    verify the server certificate. Environment variables and ``~user``\n"
+"    constructs are expanded in the filename."
+msgstr ""
+"``verifycertsfile``\n"
+"    Caminho para um arquivo contendo uma lista de certificados de\n"
+"    autoridades certificadoras em formato PEM usados para verificar\n"
+"    o certificado do servidor.\n"
+"    Variáveis de ambiente e construções ``~user`` são expandidas no\n"
+"    nome de arquivo."
+
+msgid ""
+"    The server certificate or the certificate's certificate authority (CA)\n"
+"    must match a certificate from this file or certificate verification\n"
+"    will fail and connections to the server will be refused."
+msgstr ""
+"    O certificado do servidor ou o certificado da autoridade\n"
+"    certificadora (CA) devem corresponder a um certificado neste\n"
+"    arquivo, ou a verificação de certificado falhará e conexões\n"
+"    para esse servidor serão recusadas."
+
+msgid ""
+"    If defined, only certificates provided by this file will be used:\n"
+"    ``web.cacerts`` and any system/default certificates will not be\n"
+"    used."
+msgstr ""
+"    Se definida, apenas certificados fornecidos por este arquivo\n"
+"    serão usados; ``web.cacerts`` e qualquer certificado padrão\n"
+"    ou do sistema não serão usados."
+
+msgid ""
+"    This option has no effect if the per-host ``fingerprints`` option\n"
+"    is set."
+msgstr ""
+"    Esta opção não tem efeito se a opção ``fingerprints`` estiver\n"
+"    definida para o servidor."
+
+msgid "    The format of the file is as follows:"
+msgstr "    O formato do arquivo é como segue::"
+
+msgid ""
+"        -----BEGIN CERTIFICATE-----\n"
+"        ... (certificate in base64 PEM encoding) ...\n"
+"        -----END CERTIFICATE-----\n"
+"        -----BEGIN CERTIFICATE-----\n"
+"        ... (certificate in base64 PEM encoding) ...\n"
+"        -----END CERTIFICATE-----"
+msgstr ""
+"        -----BEGIN CERTIFICATE-----\n"
+"        ... (certificado em codificação PEM base64) ...\n"
+"        -----END CERTIFICATE-----\n"
+"        -----BEGIN CERTIFICATE-----\n"
+"        ... (certificado em codificação PEM base64) ...\n"
+"        -----END CERTIFICATE-----"
+
+msgid ""
+"    [hostsecurity]\n"
+"    hg.example.com:fingerprints = sha256:c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2\n"
+"    hg2.example.com:fingerprints = sha1:914f1aff87249c09b6859b88b1906d30756491ca, sha1:fc:e2:8d:d9:51:cd:cb:c1:4d:18:6b:b7:44:8d:49:72:57:e6:cd:33\n"
+"    foo.example.com:verifycertsfile = /etc/ssl/trusted-ca-certs.pem"
+msgstr ""
+"    [hostsecurity]\n"
+"    hg.example.com:fingerprints = sha256:c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2\n"
+"    hg2.example.com:fingerprints = sha1:914f1aff87249c09b6859b88b1906d30756491ca, sha1:fc:e2:8d:d9:51:cd:cb:c1:4d:18:6b:b7:44:8d:49:72:57:e6:cd:33\n"
+"    foo.example.com:verifycertsfile = /etc/ssl/trusted-ca-certs.pem"
+
+msgid ""
+"To change the default minimum protocol version to TLS 1.2 but to allow TLS 1.1\n"
+"when connecting to ``hg.example.com``::"
+msgstr ""
+"Para mudar a versão mínima do protocolo para TLS 1.2, mas permitir TLS 1.1\n"
+"ao conectar com ``hg.example.com``::"
+
+msgid ""
+"    [hostsecurity]\n"
+"    minimumprotocol = tls1.2\n"
+"    hg.example.com:minimumprotocol = tls1.1"
+msgstr ""
+"    [hostsecurity]\n"
+"    minimumprotocol = tls1.2\n"
+"    hg.example.com:minimumprotocol = tls1.1"
 
 msgid ""
 "``http_proxy``\n"
@@ -21664,8 +22039,8 @@ msgid ""
 "   file in the changeset being merged or updated to, and has different\n"
 "   contents. Options are ``abort``, ``warn`` and ``ignore``. With ``abort``,\n"
 "   abort on such files. With ``warn``, warn on such files and back them up as\n"
-"   .orig. With ``ignore``, don't print a warning and back them up as\n"
-"   .orig. (default: ``abort``)"
+"   ``.orig``. With ``ignore``, don't print a warning and back them up as\n"
+"   ``.orig``. (default: ``abort``)"
 msgstr ""
 "``checkignored``\n"
 "   Controla o comportamento quando um arquivo ignorado no disco\n"
@@ -21674,9 +22049,9 @@ msgstr ""
 "   As opções são ``abort``, ``warn`` e ``ignore``.\n"
 "   Com ``abort``, aborta ao encontrar tais arquivos.\n"
 "   Com ``warn``, emite um aviso e cria uma cópia desses arquivos\n"
-"   com a extensão .orig.\n"
+"   com a extensão ``.orig``.\n"
 "   Com ``ignore``, não emite um aviso e cria uma cópia com a\n"
-"   extensão .orig.\n"
+"   extensão ``.orig``.\n"
 "   (padrão: ``abort``)"
 
 msgid ""
@@ -22080,6 +22455,35 @@ msgstr ""
 "``pushurl``\n"
 "   A URL usada para operações push. Se não definida, será usada a\n"
 "   localização definida pela entrada principal do caminho."
+
+msgid ""
+"``pushrev``\n"
+"   A revset defining which revisions to push by default."
+msgstr ""
+"``pushrev``\n"
+"   Um revset que define quais revisões serão enviadas por padrão."
+
+msgid ""
+"   When :hg:`push` is executed without a ``-r`` argument, the revset\n"
+"   defined by this sub-option is evaluated to determine what to push."
+msgstr ""
+"   Quando :hg:`push` for executado sem um argumento ``-r``,\n"
+"   o revset definido por esta sub-opção será avaliado para\n"
+"   determinar o que será enviado."
+
+msgid ""
+"   For example, a value of ``.`` will push the working directory's\n"
+"   revision by default."
+msgstr ""
+"   Por exemplo, o valor ``.`` fará com que a revisão do diretório de\n"
+"   trabalho seja enviada por padrão."
+
+msgid ""
+"   Revsets specifying bookmarks will not result in the bookmark being\n"
+"   pushed."
+msgstr ""
+"   Revsets especificando marcadores não resultarão no envio de\n"
+"   tais marcadores."
 
 msgid "The following special named paths exist:"
 msgstr "Existem os seguintes caminhos com nomes especiais:"
@@ -22618,29 +23022,6 @@ msgstr ""
 "    Opcional. Método para habilitar TLS ao conectar com o servidor de\n"
 "    emails: starttls, smtps ou none.\n"
 "    (padrão: none)"
-
-msgid ""
-"``verifycert``\n"
-"    Optional. Verification for the certificate of mail server, when\n"
-"    ``tls`` is starttls or smtps. \"strict\", \"loose\" or False. For\n"
-"    \"strict\" or \"loose\", the certificate is verified as same as the\n"
-"    verification for HTTPS connections (see ``[hostfingerprints]`` and\n"
-"    ``[web] cacerts`` also). For \"strict\", sending email is also\n"
-"    aborted, if there is no configuration for mail server in\n"
-"    ``[hostfingerprints]`` and ``[web] cacerts``.  --insecure for\n"
-"    :hg:`email` overwrites this as \"loose\". (default: strict)"
-msgstr ""
-"``verifycert``\n"
-"    Opcional. Verificação do certificado do servidor de emails, se\n"
-"    ``tls`` for starttls ou smtps. Pode ser \"strict\", \"loose\" ou False.\n"
-"    Para \"strict\" ou \"loose\", o certificado será verificado da mesma\n"
-"    maneira que para conexões HTTPS (veja ``[hostfingerprints]`` e\n"
-"    ``[web] cacerts``).\n"
-"    Para \"strict\", o envio de emails também será abortado, se não\n"
-"    houver configuração para o servidor de emails em\n"
-"    ``[hostfingerprints]`` e ``[web] cacerts``.\n"
-"    A opção --insecure de :hg:`email` força o valor \"loose\".\n"
-"    (padrão: \"strict\")"
 
 msgid ""
 "``username``\n"
@@ -23289,6 +23670,21 @@ msgstr ""
 "    o suporte interno da organização."
 
 msgid ""
+"``textwidth``\n"
+"    Maximum width of help text. A longer line generated by ``hg help`` or\n"
+"    ``hg subcommand --help`` will be broken after white space to get this\n"
+"    width or the terminal width, whichever comes first.\n"
+"    A non-positive value will disable this and the terminal width will be\n"
+"    used. (default: 78)"
+msgstr ""
+"``textwidth``\n"
+"    Largura máxima do texto de ajuda. Uma linha mais comprida gerada por\n"
+"    ``hg subcommand --help`` será quebrada após espaço em branco para\n"
+"    obter esta largura ou a largura do terminal (a que vier primeiro).\n"
+"    Um valor não positivo fará com que a largura do terminal seja usada.\n"
+"    (padrão: 78)"
+
+msgid ""
 "``timeout``\n"
 "    The timeout used when a lock is held (in seconds), a negative value\n"
 "    means no timeout. (default: 600)"
@@ -23565,21 +23961,6 @@ msgstr ""
 "    A forma deve ser a seguinte::"
 
 msgid ""
-"        -----BEGIN CERTIFICATE-----\n"
-"        ... (certificate in base64 PEM encoding) ...\n"
-"        -----END CERTIFICATE-----\n"
-"        -----BEGIN CERTIFICATE-----\n"
-"        ... (certificate in base64 PEM encoding) ...\n"
-"        -----END CERTIFICATE-----"
-msgstr ""
-"        -----BEGIN CERTIFICATE-----\n"
-"        ... (certificado em codificação PEM base64) ...\n"
-"        -----END CERTIFICATE-----\n"
-"        -----BEGIN CERTIFICATE-----\n"
-"        ... (certificado em codificação PEM base64) ...\n"
-"        -----END CERTIFICATE-----"
-
-msgid ""
 "``cache``\n"
 "    Whether to support caching in hgweb. (default: True)"
 msgstr ""
@@ -23766,6 +24147,25 @@ msgstr ""
 "``ipv6``\n"
 "    Determina se IPv6 deve ser usado.\n"
 "    (padrão: False)"
+
+msgid ""
+"``labels``\n"
+"    List of string *labels* associated with the repository."
+msgstr ""
+"``labels``\n"
+"    Lista de *rótulos* associados ao repositório."
+
+msgid ""
+"    Labels are exposed as a template keyword and can be used to customize\n"
+"    output. e.g. the ``index`` template can group or filter repositories\n"
+"    by labels and the ``summary`` template can display additional content\n"
+"    if a specific label is present."
+msgstr ""
+"    Rótulos são expostos como uma palavra chave de modelo e podem ser\n"
+"    usados para personalizar a saída. Por exemplo, o modelo ``index``\n"
+"    pode agrupar ou filtrar repositórios por rótulos e o modelo\n"
+"    ``summary`` pode mostrar conteúdo adicional se um determinado\n"
+"    rótulo estiver presente."
 
 msgid ""
 "``logoimg``\n"
@@ -28419,6 +28819,12 @@ msgstr "- Juntar a lista de arquivos com \", \"::"
 msgid "   $ hg log -r 0 --template \"files: {join(files, ', ')}\\n\""
 msgstr "   $ hg log -r 0 --template \"files: {join(files, ', ')}\\n\""
 
+msgid "- Separate non-empty arguments by a \" \"::"
+msgstr "- Separar argumentos não vazios com \" \"::"
+
+msgid "   $ hg log -r 0 --template \"{separate(' ', node, bookmarks, tags}\\n\""
+msgstr "   $ hg log -r 0 --template \"{separate(' ', node, bookmarks, tags}\\n\""
+
 msgid "- Modify each line of a commit description::"
 msgstr "- Modifica cada linha de uma descrição de revisão::"
 
@@ -28737,6 +29143,10 @@ msgid "(not using pooled storage: unable to resolve identity of remote)\n"
 msgstr ""
 "(desativando armazenamento compartilhado: incapaz de determinar identidade "
 "do remoto)\n"
+
+#, python-format
+msgid "unknown share naming mode: %s"
+msgstr "modo de nomeação de compartilhamento desconhecido: %s"
 
 msgid "clone from remote to remote not supported"
 msgstr "clone de origem remota para destino remoto não suportado"
@@ -29443,6 +29853,9 @@ msgstr "suporte do Python a SSL e HTTPS não está instalado"
 msgid "cannot create new http repository"
 msgstr "impossível criar novo repositório http"
 
+msgid "(falling back to static-http)\n"
+msgstr "(tentando static-http)\n"
+
 #, python-format
 msgid "repository %s not found"
 msgstr "repositório %s não encontrado"
@@ -29525,14 +29938,6 @@ msgid "working directory now based on revision %d\n"
 msgstr "o diretório de trabalho está agora baseado na revisão %d\n"
 
 #, python-format
-msgid "waiting for lock on %s held by %r\n"
-msgstr "esperando pelo bloqueio em %s feito por %r\n"
-
-#, python-format
-msgid "got lock after %s seconds\n"
-msgstr "obteve o lock após %s segundos\n"
-
-#, python-format
 msgid "repository %s"
 msgstr "repositório %s"
 
@@ -29613,10 +30018,6 @@ msgstr "impossível usar TLS: suporte Python a SSL não instalado"
 msgid "smtp.host not configured - cannot send mail"
 msgstr "servidor smtp não configurado - impossível enviar e-mail"
 
-#, python-format
-msgid "invalid smtp.verifycert configuration: %s"
-msgstr "configuração smtp.verifycert inválida: %s"
-
 msgid "(using smtps)\n"
 msgstr "(usando smtps)\n"
 
@@ -29667,6 +30068,12 @@ msgstr "falha ao remover %s do manifesto"
 #, python-format
 msgid "'\\n' and '\\r' disallowed in filenames: %r"
 msgstr "'\\n' e '\\r' proibidos em nomes de arquivos: %r"
+
+msgid "readshallowdelta() not implemented for manifestv2"
+msgstr "readshallowdelta() não implementada para manifestv2"
+
+msgid "fileset expression with no context"
+msgstr "expressão fileset sem contexto"
 
 #, python-format
 msgid "unable to read file list (%s)"
@@ -29752,6 +30159,18 @@ msgid ""
 msgstr ""
 "\n"
 "leilão para mesclar lances de mesclagem\n"
+
+#, python-format
+msgid " %s: consensus for %s\n"
+msgstr " %s: consenso para %s\n"
+
+#, python-format
+msgid " %s: picking 'keep' action\n"
+msgstr " %s: escolhendo a ação 'keep'\n"
+
+#, python-format
+msgid " %s: picking 'get' action\n"
+msgstr " %s: escolhendo a ação 'get'\n"
 
 #, python-format
 msgid " %s: multiple bids for merge action:\n"
@@ -29882,6 +30301,11 @@ msgstr ""
 msgid "in-marker cycle with %s"
 msgstr "ciclo nos marcadores com %s"
 
+msgid "creating obsolete markers is not enabled on this repo"
+msgstr ""
+"a criação de marcações de obsolescência não está habilitada para este "
+"repositório"
+
 #, python-format
 msgid "unknown key: %r"
 msgstr "chave desconhecida: %r"
@@ -29889,6 +30313,14 @@ msgstr "chave desconhecida: %r"
 #, python-format
 msgid "unexpected old value for %r"
 msgstr "valor antigo inesperado para %r"
+
+#, python-format
+msgid "cannot obsolete public changeset: %s"
+msgstr "não é possível tornar obsoleta a revisão pública: %s"
+
+#, python-format
+msgid "changeset %s cannot obsolete itself"
+msgstr "a revisão %s não pode tornar a si mesma obsoleta"
 
 msgid ""
 "'createmarkers' obsolete option must be enabled if other obsolete options "
@@ -29931,8 +30363,13 @@ msgstr ""
 msgid "at %s: %s"
 msgstr "em %s: %s"
 
-msgid "'$' not for alias arguments"
-msgstr "'$' só deve ser usado em argumentos de apelidos"
+#, python-format
+msgid "invalid symbol '%s'"
+msgstr "símbolo inválido '%s'"
+
+#, python-format
+msgid "invalid function '%s'"
+msgstr "função inválida '%s'"
 
 msgid "invalid argument list"
 msgstr "lista de argumentos inválida"
@@ -29944,12 +30381,12 @@ msgid "invalid format"
 msgstr "formato inválido"
 
 #, python-format
-msgid "failed to parse the declaration of %(section)s \"%(name)s\": %(error)s"
-msgstr "falha ao decodificar a declaração de %(section)s \"%(name)s\": %(error)s"
+msgid "bad declaration of %(section)s \"%(name)s\": %(error)s"
+msgstr "declaração ruim de %(section)s \"%(name)s\": %(error)s"
 
 #, python-format
-msgid "failed to parse the definition of %(section)s \"%(name)s\": %(error)s"
-msgstr "falha ao decodificar a definição de %(section)s \"%(name)s\": %(error)s"
+msgid "bad definition of %(section)s \"%(name)s\": %(error)s"
+msgstr "definição ruim de %(section)s \"%(name)s\": %(error)s"
 
 #, python-format
 msgid "infinite expansion of %(section)s \"%(name)s\" detected"
@@ -30011,8 +30448,29 @@ msgstr "este é um arquivo binário\n"
 msgid "%d hunks, %d lines changed\n"
 msgstr "%d trechos, %d linhas modificadas\n"
 
-msgid "record"
-msgstr "record"
+#, python-format
+msgid "discard change %d/%d to '%s'?"
+msgstr "descartar mudança %d/%d em '%s'?"
+
+#, python-format
+msgid "record change %d/%d to '%s'?"
+msgstr "gravar mudança %d/%d em '%s'?"
+
+#, python-format
+msgid "revert change %d/%d to '%s'?"
+msgstr "reverter mudança %d/%d em '%s'?"
+
+#, python-format
+msgid "discard this change to '%s'?"
+msgstr "descartar esta mudança em '%s'?"
+
+#, python-format
+msgid "record this change to '%s'?"
+msgstr "gravar esta mudança em '%s'?"
+
+#, python-format
+msgid "revert this change to '%s'?"
+msgstr "reverter esta mudança em '%s'?"
 
 msgid ""
 "[Ynesfdaq?]$$ &Yes, record this change$$ &No, skip this change$$ &Edit this "
@@ -30059,14 +30517,6 @@ msgstr "o editor terminou com o código de saída %d\n"
 #, python-format
 msgid "examine changes to %s?"
 msgstr "examinar mudanças em %s?"
-
-#, python-format
-msgid "record this change to '%s'?"
-msgstr "gravar esta mudança em '%s'?"
-
-#, python-format
-msgid "record change %d/%d to '%s'?"
-msgstr "gravar mudança %d/%d em '%s'?"
 
 #, python-format
 msgid "bad hunk #%d"
@@ -30320,6 +30770,9 @@ msgstr "o nó %s não é censurado"
 #, python-format
 msgid "syntax error in revset '%s'"
 msgstr "erro de sintaxe no revset '%s'"
+
+msgid "not a symbol"
+msgstr "não é um símbolo"
 
 msgid "see hg help \"revsets.x or y\""
 msgstr "veja hg help \"revsets.x or y\""
@@ -31203,31 +31656,6 @@ msgstr ""
 "``roots(conjunto)``\n"
 "    Revisões no conjunto sem revisões pais no conjunto."
 
-msgid ""
-"``sort(set[, [-]key...])``\n"
-"    Sort set by keys. The default sort order is ascending, specify a key\n"
-"    as ``-key`` to sort in descending order."
-msgstr ""
-"``sort(conjunto[, [-]chave...])``\n"
-"    Ordena conjunto de acordo com as chaves. A ordem padrão é ascendente,\n"
-"    especifique uma chave como ``-chave`` para ordem descendente."
-
-msgid "    The keys can be:"
-msgstr "    As chaves podem ser:"
-
-msgid ""
-"    - ``rev`` for the revision number,\n"
-"    - ``branch`` for the branch name,\n"
-"    - ``desc`` for the commit message (description),\n"
-"    - ``user`` for user name (``author`` can be used as an alias),\n"
-"    - ``date`` for the commit date"
-msgstr ""
-"    - ``rev`` para o número de revisão,\n"
-"    - ``branch`` para o nome do ramo,\n"
-"    - ``desc`` para a mensagem de consolidação (descrição),\n"
-"    - ``user`` para o nome do usuário (``author`` também pode ser usado),\n"
-"    - ``date`` para a data de consolidação"
-
 #. i18n: "sort" is a keyword
 msgid "sort requires one or two arguments"
 msgstr "sort exige um ou dois argumentos"
@@ -31239,6 +31667,49 @@ msgstr "especificação do sort deve ser uma string"
 #, python-format
 msgid "unknown sort key %r"
 msgstr "especificação de ordenação desconhecida: %r"
+
+msgid "topo sort order cannot be combined with other sort keys"
+msgstr "a ordem topo não pode ser combinada com outras formas de ordenação"
+
+msgid "topo.firstbranch can only be used when using the topo sort key"
+msgstr "topo.firstbranch só pode ser usada com a chave de ordenação topo"
+
+msgid ""
+"``sort(set[, [-]key... [, ...]])``\n"
+"    Sort set by keys. The default sort order is ascending, specify a key\n"
+"    as ``-key`` to sort in descending order."
+msgstr ""
+"``sort(conjunto[, [-]chave... [, ...]])``\n"
+"    Ordena conjunto de acordo com as chaves. A ordem padrão é ascendente,\n"
+"    especifique uma chave como ``-chave`` para ordem descendente."
+
+msgid "    The keys can be:"
+msgstr "    As chaves podem ser:"
+
+msgid ""
+"    - ``rev`` for the revision number,\n"
+"    - ``branch`` for the branch name,\n"
+"    - ``desc`` for the commit message (description),\n"
+"    - ``user`` for user name (``author`` can be used as an alias),\n"
+"    - ``date`` for the commit date\n"
+"    - ``topo`` for a reverse topographical sort"
+msgstr ""
+"    - ``rev`` para o número de revisão,\n"
+"    - ``branch`` para o nome do ramo,\n"
+"    - ``desc`` para a mensagem de consolidação (descrição),\n"
+"    - ``user`` para o nome do usuário (``author`` também pode ser usado),\n"
+"    - ``date`` para a data de consolidação\n"
+"    - ``topo`` para uma ordem topográfica reversa"
+
+msgid ""
+"    The ``topo`` sort order cannot be combined with other sort keys. This sort\n"
+"    takes one optional argument, ``topo.firstbranch``, which takes a revset that\n"
+"    specifies what topographical branches to prioritize in the sort."
+msgstr ""
+"    A ordenação ``topo`` não pode ser combinada com outras chaves\n"
+"    de ordenação. Ela recebe um argumento opcional, ``topo.firstbranch``,\n"
+"    um revset que especifica quais ramos topográficos devem ser\n"
+"    priorizados ao ordenar."
 
 msgid ""
 "``subrepo([pattern])``\n"
@@ -31314,9 +31785,6 @@ msgstr "wdir não tem argumentos"
 msgid "can't negate that"
 msgstr "não é possível negar essa expressão"
 
-msgid "not a symbol"
-msgstr "não é um símbolo"
-
 msgid "revset alias"
 msgstr "apelido de revset"
 
@@ -31326,6 +31794,10 @@ msgstr "\"##\" incapaz de concatenar elemento \"%s\""
 
 msgid "empty query"
 msgstr "consulta vazia"
+
+#, python-format
+msgid "unexpected revspec format character %s"
+msgstr "caractere de formato de revspec %s inesperado"
 
 #, python-format
 msgid "no changes found (ignored %d secret changesets)\n"
@@ -31346,9 +31818,22 @@ msgstr "o valor de ui.portablefilenames é inválido ('%s')"
 msgid "possible case-folding collision for %s"
 msgstr "possível colisão de maiúsculas e minúsculas para %s"
 
+msgid "can only have 1 active background file closer"
+msgstr "só pode haver um fechador de arquivos ativo em segundo plano"
+
+msgid ""
+"backgroundclose can only be used when a backgroundclosing context manager is"
+" active"
+msgstr ""
+"backgroundclose só pode ser usado se um gerenciador de contexto "
+"backgroundclosing estiver ativo"
+
 #, python-format
 msgid "could not symlink to %r: %s"
 msgstr "impossível criar link simbólico para %r: %s"
+
+msgid "this vfs is read only"
+msgstr "este vfs é somente leitura"
 
 msgid "empty revision range"
 msgstr "faixa de revisões vazia"
@@ -31383,6 +31868,9 @@ msgid ""
 "see https://mercurial-scm.org/wiki/MissingRequirement for more information"
 msgstr ""
 "veja https://mercurial-scm.org/wiki/MissingRequirement para mais informações"
+
+msgid "can only call close() when context manager active"
+msgstr "só pode chamar close() se um gerenciador de contexto estiver ativo"
 
 msgid "searching for changes\n"
 msgstr "procurando por mudanças\n"
@@ -31428,6 +31916,10 @@ msgstr "não foi possível criar repositório remoto"
 msgid "no suitable response from remote hg"
 msgstr "nenhuma resposta adequada do hg remoto"
 
+#, python-format
+msgid "unexpected remote reply: %s"
+msgstr "resposta remota inesperada: %s"
+
 msgid "check previous remote output"
 msgstr "verifique a saída remota anterior"
 
@@ -31436,28 +31928,178 @@ msgid "push refused: %s"
 msgstr "envio recusado: %s"
 
 #, python-format
+msgid "unexpected parameter %r"
+msgstr "parâmetro inesperado %r"
+
+msgid "capath not supported"
+msgstr "capath não suportado"
+
+msgid "cadata not supported"
+msgstr "cadata não suportado"
+
+msgid ""
+"setting ciphers in [hostsecurity] is not supported by this version of Python"
+msgstr ""
+"a definição de cifras em [hostsecurity] não é suportada nesta versão do "
+"Python"
+
+msgid ""
+"remove the config option or run Mercurial with a modern Python version "
+"(preferred)"
+msgstr ""
+"remova a opção de configuração ou (preferencialmente) execute o Mercurial "
+"com uma versão moderna do Python"
+
+#, python-format
+msgid "unsupported protocol from hostsecurity.%s: %s"
+msgstr "protocolo não suportado em hostsecurity.%s: %s"
+
+#, python-format
+msgid "valid protocols: %s"
+msgstr "protocolos válidos: %s"
+
+#, python-format
+msgid ""
+"warning: connecting to %s using legacy security technology (TLS 1.0); see "
+"https://mercurial-scm.org/wiki/SecureConnections for more info\n"
+msgstr ""
+"aviso: conectando a %s usando tecnologia legada de segurança (TLS 1.0); veja"
+" https://mercurial-scm.org/wiki/SecureConnections para mais informações\n"
+
+#, python-format
+msgid "invalid fingerprint for %s: %s"
+msgstr "impressão digital inválida para %s: %s"
+
+msgid "must begin with \"sha1:\", \"sha256:\", or \"sha512:\""
+msgstr "deve começar com \"sha1:\", \"sha256:\" ou \"sha512:\""
+
+#, python-format
+msgid ""
+"(hostsecurity.%s:verifycertsfile ignored when host fingerprints defined; "
+"using host fingerprints for verification)\n"
+msgstr ""
+"(hostsecurity.%s:verifycertsfile é ignorada se impressões digitais estiverem"
+" definidas; usando impressões digitais do servidor para verificação)\n"
+
+#, python-format
+msgid "path specified by %s does not exist: %s"
+msgstr "o caminho especificado por %s não existe: %s"
+
+#, python-format
+msgid "could not find web.cacerts: %s"
+msgstr "não foi possível encontrar web.cacerts: %s"
+
+#, python-format
+msgid "current Python does not support protocol setting %s"
+msgstr "o Python atual não suporta a configuração de protocolo %s"
+
+msgid "upgrade Python or disable setting since only TLS 1.0 is supported"
+msgstr ""
+"atualize o Python ou desabilite a configuração, pois apenas TLS 1.0 é "
+"suportado"
+
+msgid "this should not happen"
+msgstr "isto não deveria acontecer"
+
+msgid "serverhostname argument is required"
+msgstr "o argumento serverhostname é requerido"
+
+#, python-format
+msgid "could not set ciphers: %s"
+msgstr "não foi possível definir as cifras: %s"
+
+#, python-format
+msgid "change cipher string (%s) in config"
+msgstr "mude a configuração de cifras (%s)"
+
+#, python-format
 msgid "passphrase for %s: "
 msgstr "senha para %s: "
+
+#, python-format
+msgid "error loading CA file %s: %s"
+msgstr "erro ao carregar arquivo CA %s: %s"
+
+msgid "file is empty or malformed?"
+msgstr "o arquivo é vazio ou mal formado?"
+
+msgid ""
+"(an attempt was made to load CA certificates but none were loaded; see https"
+"://mercurial-scm.org/wiki/SecureConnections for how to configure Mercurial "
+"to avoid this error)\n"
+msgstr ""
+"(foi feita uma tentativa de leitura de certificados CA, mas nenhum foi "
+"carregado; veja https://mercurial-scm.org/wiki/SecureConnections para como "
+"configurar o Mercurial para evitar este erro)\n"
+
+msgid ""
+"(could not negotiate a common protocol; see https://mercurial-"
+"scm.org/wiki/SecureConnections for how to configure Mercurial to avoid this "
+"error)\n"
+msgstr ""
+"(não foi possível negociar um protocolo em comum; veja https://mercurial-"
+"scm.org/wiki/SecureConnections para como configurar o Mercurial para evitar "
+"este erro)\n"
 
 msgid "ssl connection failed"
 msgstr "a conexão ssl falhou"
 
+msgid "TLS 1.1 not supported by this Python"
+msgstr "TLS 1.1 não é suportado por esta versão do Python"
+
+msgid "TLS 1.2 not supported by this Python"
+msgstr "TLS 1.2 não é suportado por esta versão do Python"
+
+#, python-format
+msgid "invalid value for serverexactprotocol: %s"
+msgstr "valor inválido para serverexactprotocol: %s"
+
+#, python-format
+msgid "too many wildcards in certificate DNS name: %s"
+msgstr "excesso de caracteres curinga no nome DNS do certificado: %s"
+
 msgid "no certificate received"
 msgstr "nenhum certificado recebido"
+
+msgid "IDN in certificate not supported"
+msgstr "IDN no certificado não é suportado"
 
 #, python-format
 msgid "certificate is for %s"
 msgstr "o certificado é para %s"
 
-msgid "IDN in certificate not supported"
-msgstr "IDN no certificado não é suportado"
-
 msgid "no commonName or subjectAltName found in certificate"
 msgstr "nenhum commonName ou subjectAltName encontrado no certificado"
 
+msgid ""
+"(unable to load Windows CA certificates; see https://mercurial-"
+"scm.org/wiki/SecureConnections for how to configure Mercurial to avoid this "
+"message)\n"
+msgstr ""
+"(não foi possível carregar certificados CA do Windows; veja https"
+"://mercurial-scm.org/wiki/SecureConnections para como configurar o Mercurial"
+" para evitar este erro)\n"
+
+msgid ""
+"(unable to load CA certificates; see https://mercurial-"
+"scm.org/wiki/SecureConnections for how to configure Mercurial to avoid this "
+"message)\n"
+msgstr ""
+"(não foi possível carregar certificados CA; veja https://mercurial-"
+"scm.org/wiki/SecureConnections para como configurar o Mercurial para evitar "
+"este erro)\n"
+
 #, python-format
-msgid "could not find web.cacerts: %s"
-msgstr "não foi possível encontrar web.cacerts: %s"
+msgid ""
+"(using CA certificates from %s; if you see this message, your Mercurial "
+"install is not properly configured; see https://mercurial-"
+"scm.org/wiki/SecureConnections for how to configure Mercurial to avoid this "
+"message)\n"
+msgstr ""
+"(usando certificados CA de %s; se você vir esta mensagem, a sua instalação "
+"do Mercurial não está corretamente configurada; veja https://mercurial-"
+"scm.org/wiki/SecureConnections para como configurar o Mercurial para evitar "
+"esta mensagem)\n"
 
 #, python-format
 msgid "%s ssl connection error"
@@ -31468,37 +32110,50 @@ msgid "%s certificate error: no certificate received"
 msgstr "erro de certificado ssl em %s: nenhum certificado recebido"
 
 #, python-format
+msgid ""
+"warning: connection security to %s is disabled per current settings; "
+"communication is susceptible to eavesdropping and tampering\n"
+msgstr ""
+"aviso: a segurança de conexão para %s está desabilitada na configuração; a "
+"comunicação está sujeita a leitura e alteração por terceiros\n"
+
+#, python-format
 msgid "certificate for %s has unexpected fingerprint %s"
 msgstr "certificado para %s tem impressão digital inesperada %s"
 
-msgid "check hostfingerprint configuration"
-msgstr "verifique a configuração hostfingerprint"
+#, python-format
+msgid "check %s configuration"
+msgstr "verifique a configuração %s"
+
+#, python-format
+msgid ""
+"unable to verify security of %s (no loaded CA certificates); refusing to "
+"connect"
+msgstr ""
+"incapaz de verificar a segurança de %s (nenhum certificado CA carregado); "
+"conexão recusada"
+
+#, python-format
+msgid ""
+"see https://mercurial-scm.org/wiki/SecureConnections for how to configure "
+"Mercurial to avoid this error or set hostsecurity.%s:fingerprints=%s to "
+"trust this server"
+msgstr ""
+"veja https://mercurial-scm.org/wiki/SecureConnections para como configurar o"
+" Mercurial para evitar este erro, ou defina hostsecurity.%s:fingerprints=%s "
+"para confiar neste servidor"
 
 #, python-format
 msgid "%s certificate error: %s"
 msgstr "erro de certificado em %s: %s"
 
 #, python-format
-msgid "configure hostfingerprint %s or use --insecure to connect insecurely"
-msgstr ""
-"configure a hostfingerprint %s ou use --insecure para conectar de modo "
-"inseguro"
-
-#, python-format
-msgid "%s certificate with fingerprint %s not verified"
-msgstr ""
-"o certificado para o host %s com impressão digital %s não foi verificado"
-
-msgid "check hostfingerprints or web.cacerts config setting"
-msgstr "verifique as configurações hostfingerprints ou web.cacerts"
-
-#, python-format
 msgid ""
-"warning: %s certificate with fingerprint %s not verified (check "
-"hostfingerprints or web.cacerts config setting)\n"
+"set hostsecurity.%s:certfingerprints=%s config setting or use --insecure to "
+"connect insecurely"
 msgstr ""
-"aviso: o certificado %s com impressão digital %s não foi verificado "
-"(verifique as opções de configuração hostfingerprints e web.cacerts)\n"
+"defina a opção de configuração hostsecurity.%s:certfingerprints=%s ou use "
+"--insecure para conectar de modo inseguro"
 
 #, python-format
 msgid "'%s' does not appear to be an hg repository"
@@ -31671,6 +32326,10 @@ msgid "warning: removefiles not implemented (%s)"
 msgstr "aviso: removefiles não implementado (%s)"
 
 #, python-format
+msgid "%s: reverting %s subrepos is unsupported\n"
+msgstr "%s: a reversão de sub-repositórios %s não é suportada\n"
+
+#, python-format
 msgid "warning: error \"%s\" in subrepository \"%s\"\n"
 msgstr "aviso: erro \"%s\" no sub-repositório \"%s\"\n"
 
@@ -31754,6 +32413,10 @@ msgstr "sub-repositórios do git exigem a versão 1.6.0 ou posterior"
 
 msgid "git subrepo requires at least 1.6.0 or later\n"
 msgstr "sub-repositórios do git exigem a versão 1.6.0 ou posterior\n"
+
+#, python-format
+msgid "git %s error %d in %s"
+msgstr "git %s erro %d em %s"
 
 #, python-format
 msgid "revision %s does not exist in subrepo %s\n"
@@ -32470,6 +33133,14 @@ msgstr ":rstdoc(texto, estilo): Formata ReStructuredText."
 msgid "rstdoc expects two arguments"
 msgstr "rstdoc espera dois argumentos"
 
+msgid ":separate(sep, args): Add a separator between non-empty arguments."
+msgstr ""
+":separate(sep, args): Adiciona um separador entre argumentos não vazios."
+
+#. i18n: "separate" is a keyword
+msgid "separate expects at least one argument"
+msgstr "separate espera ao menos um argumento"
+
 msgid ""
 ":shortest(node, minlength=4): Obtain the shortest representation of\n"
 "    a node."
@@ -33094,6 +33765,159 @@ msgstr "procurar mudanças remotas"
 msgid "number of cpus must be an integer"
 msgstr "o número de cpus deve ser um inteiro"
 
+#~ msgid "hooks for integrating with the CIA.vc notification service"
+#~ msgstr "ganchos para integração com o serviço de notificação CIA.vc"
+
+#~ msgid ""
+#~ "This is meant to be run as a changegroup or incoming hook. To\n"
+#~ "configure it, set the following options in your hgrc::"
+#~ msgstr ""
+#~ "Isto deve ser executado como um gancho changegroup ou incoming.\n"
+#~ "Para configurá-lo, defina as seguintes opções em seu hgrc::"
+
+#~ msgid ""
+#~ "  [cia]\n"
+#~ "  # your registered CIA user name\n"
+#~ "  user = foo\n"
+#~ "  # the name of the project in CIA\n"
+#~ "  project = foo\n"
+#~ "  # the module (subproject) (optional)\n"
+#~ "  #module = foo\n"
+#~ "  # Append a diffstat to the log message (optional)\n"
+#~ "  #diffstat = False\n"
+#~ "  # Template to use for log messages (optional)\n"
+#~ "  #template = {desc}\\n{baseurl}{webroot}/rev/{node}-- {diffstat}\n"
+#~ "  # Style to use (optional)\n"
+#~ "  #style = foo\n"
+#~ "  # The URL of the CIA notification service (optional)\n"
+#~ "  # You can use mailto: URLs to send by email, e.g.\n"
+#~ "  # mailto:cia@cia.vc\n"
+#~ "  # Make sure to set email.from if you do this.\n"
+#~ "  #url = http://cia.vc/\n"
+#~ "  # print message instead of sending it (optional)\n"
+#~ "  #test = False\n"
+#~ "  # number of slashes to strip for url paths\n"
+#~ "  #strip = 0"
+#~ msgstr ""
+#~ "  [cia]\n"
+#~ "  # seu nome de usuário CIA registrado\n"
+#~ "  user = foo\n"
+#~ "  # o nome do projeto CIA\n"
+#~ "  project = foo\n"
+#~ "  # o módulo (subprojeto) (opcional)\n"
+#~ "  #module = foo\n"
+#~ "  # Anexa um diffstat à mensagem de log (opcional)\n"
+#~ "  #diffstat = False\n"
+#~ "  # Modelo a ser usado em mensagens de log (opcional)\n"
+#~ "  #template = {desc}\\n{baseurl}{webroot}/rev/{node}-- {diffstat}\n"
+#~ "  # Estilo a ser usado (opcional)\n"
+#~ "  #style = foo\n"
+#~ "  # A URL do serviço de notificação CIA (opcional)\n"
+#~ "  # Você pode usar URLs mailto: para enviar por e-mail, por exemplo\n"
+#~ "  # mailto:cia@cia.vc\n"
+#~ "  # Certifique-se de definir email.from se você fizer isso.\n"
+#~ "  #url = http://cia.vc/\n"
+#~ "  # imprime a mensagem ao invés de enviá-la (opcional)\n"
+#~ "  #test = False\n"
+#~ "  # número de barras a serem removidas de caminhos url\n"
+#~ "  #strip = 0"
+
+#~ msgid ""
+#~ "  [hooks]\n"
+#~ "  # one of these:\n"
+#~ "  changegroup.cia = python:hgcia.hook\n"
+#~ "  #incoming.cia = python:hgcia.hook"
+#~ msgstr ""
+#~ "  [hooks]\n"
+#~ "  # use um destes:\n"
+#~ "  changegroup.cia = python:hgcia.hook\n"
+#~ "  #incoming.cia = python:hgcia.hook"
+
+#~ msgid ""
+#~ "  [web]\n"
+#~ "  # If you want hyperlinks (optional)\n"
+#~ "  baseurl = http://server/path/to/repo\n"
+#~ msgstr ""
+#~ "  [web]\n"
+#~ "  # Se você desejar hyperlinks (opcional)\n"
+#~ "  baseurl = http://server/path/to/repo\n"
+
+#~ msgid "%s returned an error: %s"
+#~ msgstr "%s devolveu um erro: %s"
+
+#~ msgid "hgcia: sending update to %s\n"
+#~ msgstr "hgcia: enviando atualização para %s\n"
+
+#~ msgid "email.from must be defined when sending by email"
+#~ msgstr "email.from deve estar definido ao enviar por e-mail"
+
+#~ msgid "all requested changesets have equivalents or were marked as obsolete"
+#~ msgstr ""
+#~ "todas as revisões pedidas possuem equivalentes ou foram marcadas como "
+#~ "obsoletas"
+
+#~ msgid ""
+#~ "to force the rebase, set the config experimental.rebaseskipobsolete to False"
+#~ msgstr ""
+#~ "para forçar o rebaseamento, configure experimental.rebaseskipobsolete como "
+#~ "False"
+
+#~ msgid ""
+#~ "    Modified files are saved with a .orig suffix before reverting.\n"
+#~ "    To disable these backups, use --no-backup."
+#~ msgstr ""
+#~ "    Arquivos modificados são gravados com um sufixo .orig antes da\n"
+#~ "    reversão. Para desabilitar essas cópias, use --no-backup."
+
+#~ msgid "confirm"
+#~ msgstr "confirmar"
+
+#~ msgid ""
+#~ "``verifycert``\n"
+#~ "    Optional. Verification for the certificate of mail server, when\n"
+#~ "    ``tls`` is starttls or smtps. \"strict\", \"loose\" or False. For\n"
+#~ "    \"strict\" or \"loose\", the certificate is verified as same as the\n"
+#~ "    verification for HTTPS connections (see ``[hostfingerprints]`` and\n"
+#~ "    ``[web] cacerts`` also). For \"strict\", sending email is also\n"
+#~ "    aborted, if there is no configuration for mail server in\n"
+#~ "    ``[hostfingerprints]`` and ``[web] cacerts``.  --insecure for\n"
+#~ "    :hg:`email` overwrites this as \"loose\". (default: strict)"
+#~ msgstr ""
+#~ "``verifycert``\n"
+#~ "    Opcional. Verificação do certificado do servidor de emails, se\n"
+#~ "    ``tls`` for starttls ou smtps. Pode ser \"strict\", \"loose\" ou False.\n"
+#~ "    Para \"strict\" ou \"loose\", o certificado será verificado da mesma\n"
+#~ "    maneira que para conexões HTTPS (veja ``[hostfingerprints]`` e\n"
+#~ "    ``[web] cacerts``).\n"
+#~ "    Para \"strict\", o envio de emails também será abortado, se não\n"
+#~ "    houver configuração para o servidor de emails em\n"
+#~ "    ``[hostfingerprints]`` e ``[web] cacerts``.\n"
+#~ "    A opção --insecure de :hg:`email` força o valor \"loose\".\n"
+#~ "    (padrão: \"strict\")"
+
+#~ msgid "invalid smtp.verifycert configuration: %s"
+#~ msgstr "configuração smtp.verifycert inválida: %s"
+
+#~ msgid "'$' not for alias arguments"
+#~ msgstr "'$' só deve ser usado em argumentos de apelidos"
+
+#~ msgid "record"
+#~ msgstr "record"
+
+#~ msgid "%s certificate with fingerprint %s not verified"
+#~ msgstr ""
+#~ "o certificado para o host %s com impressão digital %s não foi verificado"
+
+#~ msgid "check hostfingerprints or web.cacerts config setting"
+#~ msgstr "verifique as configurações hostfingerprints ou web.cacerts"
+
+#~ msgid ""
+#~ "warning: %s certificate with fingerprint %s not verified (check "
+#~ "hostfingerprints or web.cacerts config setting)\n"
+#~ msgstr ""
+#~ "aviso: o certificado %s com impressão digital %s não foi verificado "
+#~ "(verifique as opções de configuração hostfingerprints e web.cacerts)\n"
+
 #~ msgid "%s, line %s: %s\n"
 #~ msgstr "%s, linha %s: %s\n"
 
@@ -33578,9 +34402,6 @@ msgstr "o número de cpus deve ser um inteiro"
 #~ msgid "mark a branch as closed, hiding it from the branch list"
 #~ msgstr "marca um ramo como fechado, escondendo-o da lista de ramos"
 
-#~ msgid "custom templates not yet supported"
-#~ msgstr "modelos personalizados ainda não são suportados"
-
 #~ msgid ""
 #~ "``reportoldssl``\n"
 #~ "    Warn if an SSL certificate is unable to be used due to using Python\n"
@@ -33607,9 +34428,6 @@ msgstr "o número de cpus deve ser um inteiro"
 
 #~ msgid "Python SSL support not found"
 #~ msgstr "suporte do Python a SSL não instalado"
-
-#~ msgid "certificate checking requires Python 2.6"
-#~ msgstr "verificação de certificado exige Python 2.6"
 
 #~ msgid "host fingerprint for %s can't be verified (Python too old)"
 #~ msgstr ""
