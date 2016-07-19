@@ -281,7 +281,7 @@ class rebaseruntime(object):
                   " unrebased descendants"),
                 hint=_('use --keep to keep original changesets'))
 
-        obsrevs = _filterobsoleterevs(self.repo, rebaseset)
+        obsrevs = _filterobsoleterevs(self.repo, set(rebaseset))
         self._handleskippingobsolete(rebaseset, obsrevs, dest)
 
         result = buildstate(self.repo, dest, rebaseset, self.collapsef,
