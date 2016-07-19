@@ -396,10 +396,26 @@ def versiontuple(v=None, n=4):
     (3, 6, None)
     >>> versiontuple(v, 4)
     (3, 6, None, None)
+
+    >>> v = '3.9-rc'
+    >>> versiontuple(v, 2)
+    (3, 9)
+    >>> versiontuple(v, 3)
+    (3, 9, None)
+    >>> versiontuple(v, 4)
+    (3, 9, None, 'rc')
+
+    >>> v = '3.9-rc+2-02a8fea4289b'
+    >>> versiontuple(v, 2)
+    (3, 9)
+    >>> versiontuple(v, 3)
+    (3, 9, None)
+    >>> versiontuple(v, 4)
+    (3, 9, None, 'rc+2-02a8fea4289b')
     """
     if not v:
         v = version()
-    parts = v.split('+', 1)
+    parts = remod.split('[\+-]', v, 1)
     if len(parts) == 1:
         vparts, extra = parts[0], None
     else:
