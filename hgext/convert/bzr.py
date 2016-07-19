@@ -228,9 +228,10 @@ class bzr_source(common.converter_source):
                     renaming = paths[0] != paths[1]
                     # neither an add nor an delete - a move
                     # rename all directory contents manually
-                    subdir = origin.inventory.path2id(paths[0])
+                    subdir = origin.root_inventory.path2id(paths[0])
                     # get all child-entries of the directory
-                    for name, entry in origin.inventory.iter_entries(subdir):
+                    for name, entry in origin.root_inventory.iter_entries(
+                            subdir):
                         # hg does not track directory renames
                         if entry.kind == 'directory':
                             continue
