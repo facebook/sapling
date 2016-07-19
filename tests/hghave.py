@@ -442,7 +442,7 @@ def has_defaultcacertsloaded():
 @check("tls1.2", "TLS 1.2 protocol support")
 def has_tls1_2():
     from mercurial import sslutil
-    return 'tls1.2' in sslutil.supportprotocols
+    return 'tls1.2' in sslutil.supportedprotocols
 
 @check("windows", "Windows")
 def has_windows():
