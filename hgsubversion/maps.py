@@ -662,7 +662,14 @@ class SqliteRevMap(collections.MutableMapping):
         if self._db is None:
             self._opendb()
         with self._db as db:
-            db.execute('BEGIN %s' % mode)
+            # wait indefinitely for database lock
+            while True:
+                try:
+                    db.execute('BEGIN %s' % mode)
+                    break
+                except sqlite3.OperationalError as ex:
+                    if str(ex) != 'database is locked':
+                        raise
             yield db
 
     def _query(self, sql, params=()):
