@@ -181,6 +181,12 @@ def _hostsettings(ui, hostname):
     protocol = ui.config('hostsecurity', key, protocol)
     validateprotocol(protocol, key)
 
+    # If --insecure is used, we allow the use of TLS 1.0 despite config options.
+    # We always print a "connection security to %s is disabled..." message when
+    # --insecure is used. So no need to print anything more here.
+    if ui.insecureconnections:
+        protocol = 'tls1.0'
+
     s['protocol'], s['ctxoptions'] = protocolsettings(protocol)
 
     ciphers = ui.config('hostsecurity', 'ciphers')

@@ -486,6 +486,12 @@ Clients requiring newer TLS version than what server supports fail
   abort: error: *unsupported protocol* (glob)
   [255]
 
+--insecure will allow TLS 1.0 connections and override configs
+
+  $ hg --config hostsecurity.minimumprotocol=tls1.2 id --insecure https://localhost:$HGPORT1/
+  warning: connection security to localhost is disabled per current settings; communication is susceptible to eavesdropping and tampering
+  5fed3813f7f5
+
 The per-host config option overrides the default
 
   $ P="$CERTSDIR" hg id https://localhost:$HGPORT/ \
