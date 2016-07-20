@@ -501,6 +501,17 @@ The per-host config option by itself works
   abort: error: *unsupported protocol* (glob)
   [255]
 
+.hg/hgrc file [hostsecurity] settings are applied to remote ui instances (issue5305)
+
+  $ cat >> copy-pull/.hg/hgrc << EOF
+  > [hostsecurity]
+  > localhost:minimumprotocol=tls1.2
+  > EOF
+  $ P="$CERTSDIR" hg -R copy-pull id https://localhost:$HGPORT/
+  (could not negotiate a common protocol; see https://mercurial-scm.org/wiki/SecureConnections for how to configure Mercurial to avoid this error)
+  abort: error: [SSL: UNSUPPORTED_PROTOCOL] unsupported protocol (_ssl.c:590)
+  [255]
+
   $ killdaemons.py hg0.pid
   $ killdaemons.py hg1.pid
   $ killdaemons.py hg2.pid
