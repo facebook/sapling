@@ -121,7 +121,11 @@ class _systemawarecachelimit(object):
                 st = os.statvfs(repo.root)
             else:
                 if util.safehasattr(opener, "vfs"):
-                    st = os.statvfs(opener.vfs.base)
+                    if (not util.safehasattr(opener.vfs, "base") and
+                        util.safehasattr(opener.vfs, "vfs")):
+                        st = os.statvfs(opener.vfs.vfs.base)
+                    else:
+                        st = os.statvfs(opener.vfs.base)
                 else:
                     st = os.statvfs(opener.base)
         except (OSError, IOError) as ex:
