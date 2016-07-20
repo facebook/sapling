@@ -139,6 +139,9 @@ def _hostsettings(ui, hostname):
         'legacyfingerprint': False,
         # PROTOCOL_* constant to use for SSLContext.__init__.
         'protocol': None,
+        # String representation of minimum protocol to be used for UI
+        # presentation.
+        'protocolui': None,
         # ssl.CERT_* constant used by SSLContext.verify_mode.
         'verifymode': None,
         # Defines extra ssl.OP* bitwise options to set.
@@ -187,7 +190,7 @@ def _hostsettings(ui, hostname):
     if ui.insecureconnections:
         protocol = 'tls1.0'
 
-    s['protocol'], s['ctxoptions'] = protocolsettings(protocol)
+    s['protocol'], s['ctxoptions'], s['protocolui'] = protocolsettings(protocol)
 
     ciphers = ui.config('hostsecurity', 'ciphers')
     ciphers = ui.config('hostsecurity', '%s:ciphers' % hostname, ciphers)
@@ -285,7 +288,12 @@ def _hostsettings(ui, hostname):
     return s
 
 def protocolsettings(protocol):
-    """Resolve the protocol and context options for a config value."""
+    """Resolve the protocol for a config value.
+
+    Returns a 3-tuple of (protocol, options, ui value) where the first
+    2 items are values used by SSLContext and the last is a string value
+    of the ``minimumprotocol`` config option equivalent.
+    """
     if protocol not in configprotocols:
         raise ValueError('protocol value not supported: %s' % protocol)
 
@@ -307,7 +315,7 @@ def protocolsettings(protocol):
                               hint=_('upgrade Python or disable setting since '
                                      'only TLS 1.0 is supported'))
 
-        return ssl.PROTOCOL_TLSv1, 0
+        return ssl.PROTOCOL_TLSv1, 0, 'tls1.0'
 
     # WARNING: returned options don't work unless the modern ssl module
     # is available. Be careful when adding options here.
@@ -329,7 +337,7 @@ def protocolsettings(protocol):
     # There is no guarantee this attribute is defined on the module.
     options |= getattr(ssl, 'OP_NO_COMPRESSION', 0)
 
-    return ssl.PROTOCOL_SSLv23, options
+    return ssl.PROTOCOL_SSLv23, options, protocol
 
 def wrapsocket(sock, keyfile, certfile, ui, serverhostname=None):
     """Add SSL/TLS to a socket.
@@ -445,7 +453,7 @@ def wrapserversocket(sock, ui, certfile=None, keyfile=None, cafile=None,
 
     Typically ``cafile`` is only defined if ``requireclientcert`` is true.
     """
-    protocol, options = protocolsettings('tls1.0')
+    protocol, options, _protocolui = protocolsettings('tls1.0')
 
     # This config option is intended for use in tests only. It is a giant
     # footgun to kill security. Don't define it.
