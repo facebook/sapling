@@ -417,11 +417,57 @@ def wrapsocket(sock, keyfile, certfile, ui, serverhostname=None):
                       'how to configure Mercurial to avoid this error)\n'))
         # Try to print more helpful error messages for known failures.
         if util.safehasattr(e, 'reason'):
+            # This error occurs when the client and server don't share a
+            # common/supported SSL/TLS protocol. We've disabled SSLv2 and SSLv3
+            # outright. Hopefully the reason for this error is that we require
+            # TLS 1.1+ and the server only supports TLS 1.0. Whatever the
+            # reason, try to emit an actionable warning.
             if e.reason == 'UNSUPPORTED_PROTOCOL':
-                ui.warn(_('(could not negotiate a common protocol; see '
-                          'https://mercurial-scm.org/wiki/SecureConnections '
-                          'for how to configure Mercurial to avoid this '
-                          'error)\n'))
+                # We attempted TLS 1.0+.
+                if settings['protocolui'] == 'tls1.0':
+                    # We support more than just TLS 1.0+. If this happens,
+                    # the likely scenario is either the client or the server
+                    # is really old. (e.g. server doesn't support TLS 1.0+ or
+                    # client doesn't support modern TLS versions introduced
+                    # several years from when this comment was written).
+                    if supportedprotocols != set(['tls1.0']):
+                        ui.warn(_(
+                            '(could not communicate with %s using security '
+                            'protocols %s; if you are using a modern Mercurial '
+                            'version, consider contacting the operator of this '
+                            'server; see '
+                            'https://mercurial-scm.org/wiki/SecureConnections '
+                            'for more info)\n') % (
+                                serverhostname,
+                                ', '.join(sorted(supportedprotocols))))
+                    else:
+                        ui.warn(_(
+                            '(could not communicate with %s using TLS 1.0; the '
+                            'likely cause of this is the server no longer '
+                            'supports TLS 1.0 because it has known security '
+                            'vulnerabilities; see '
+                            'https://mercurial-scm.org/wiki/SecureConnections '
+                            'for more info)\n') % serverhostname)
+                else:
+                    # We attempted TLS 1.1+. We can only get here if the client
+                    # supports the configured protocol. So the likely reason is
+                    # the client wants better security than the server can
+                    # offer.
+                    ui.warn(_(
+                        '(could not negotiate a common security protocol (%s+) '
+                        'with %s; the likely cause is Mercurial is configured '
+                        'to be more secure than the server can support)\n') % (
+                        settings['protocolui'], serverhostname))
+                    ui.warn(_('(consider contacting the operator of this '
+                              'server and ask them to support modern TLS '
+                              'protocol versions; or, set '
+                              'hostsecurity.%s:minimumprotocol=tls1.0 to allow '
+                              'use of legacy, less secure protocols when '
+                              'communicating with this server)\n') %
+                            serverhostname)
+                    ui.warn(_(
+                        '(see https://mercurial-scm.org/wiki/SecureConnections '
+                        'for more info)\n'))
         raise
 
     # check if wrap_socket failed silently because socket had been
