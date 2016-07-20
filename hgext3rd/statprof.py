@@ -600,8 +600,8 @@ def display_hotpath(fp, limit=0.05, **kwargs):
             self.count = 0
             self.children = {}
 
-        def add(self, stack):
-            self.count += 1
+        def add(self, stack, time):
+            self.count += time
             site = stack[0]
             child = self.children.get(site)
             if not child:
@@ -614,11 +614,13 @@ def display_hotpath(fp, limit=0.05, **kwargs):
                 while i < len(stack) and '%s:%s' % (stack[i].filename(), stack[i].function) in skips:
                     i += 1
                 if i < len(stack):
-                    child.add(stack[i:])
+                    child.add(stack[i:], time)
 
     root = HotNode(None)
+    lasttime = state.samples[0].time
     for sample in state.samples:
-        root.add(sample.stack[::-1])
+        root.add(sample.stack[::-1], sample.time - lasttime)
+        lasttime = sample.time
 
     def _write(node, depth, multiple_siblings):
         site = node.site
