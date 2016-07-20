@@ -29,7 +29,10 @@ from mercurial import error
 from mercurial import util as hgutil
 from mercurial.i18n import _
 
-from hgsubversion import util as svnutil
+try:
+    from hgsubversion import util as svnutil
+except ImportError:
+    svnutil = None
 
 import os
 import signal
@@ -188,7 +191,7 @@ def revsetdiff(repo, subset, diffid):
 
     repo.ui.debug('[diffrev] VCS is %s\n' % vcs)
 
-    if vcs == 'svn':
+    if vcs == 'svn' and svnutil:
         # commit has landed in svn, parse the description to get the SVN
         # revision and delegate to hgsubversion for the rest
 
