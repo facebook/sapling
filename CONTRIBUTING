@@ -7,7 +7,7 @@ The short version:
 The longer version:
 
 We use a variant of Mercurial's own contribution
-system. http://mercurial.selenic.com/wiki/ContributingChanges contains
+system. https://www.mercurial-scm.org/wiki/ContributingChanges contains
 their full guidelines. Key differences are (by rule number):
 
  1. For hg-git, I'm not strict about the "topic: a few words" format
