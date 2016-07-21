@@ -1082,7 +1082,7 @@ def batchget(repo, mctx, actions):
                     if e.errno != errno.ENOENT:
                         raise
 
-            if repo.wvfs.isdir(f):
+            if repo.wvfs.isdir(f) and not repo.wvfs.islink(f):
                 repo.wvfs.removedirs(f)
             wwrite(f, fctx(f).data(), flags, backgroundclose=True)
             if i == 100:

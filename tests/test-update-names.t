@@ -53,3 +53,22 @@ make sure that this does not erase untracked data
   abort: *: '$TESTTMP/r1/r2/name' (glob)
   [255]
   $ cd ..
+
+#if symlink
+
+Test update when two commits have symlinks that point to different folders
+  $ hg init r3 && cd r3
+  $ echo root > root && hg ci -Am root
+  adding root
+  $ mkdir folder1 && mkdir folder2
+  $ ln -s folder1 folder
+  $ hg ci -Am "symlink to folder1"
+  adding folder
+  $ rm folder
+  $ ln -s folder2 folder
+  $ hg ci -Am "symlink to folder2"
+  $ hg up 1
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cd ..
+
+#endif
