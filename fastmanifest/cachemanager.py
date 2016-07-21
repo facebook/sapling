@@ -120,14 +120,7 @@ class _systemawarecachelimit(object):
             if repo is not None:
                 st = os.statvfs(repo.root)
             else:
-                if util.safehasattr(opener, "vfs"):
-                    if (not util.safehasattr(opener.vfs, "base") and
-                        util.safehasattr(opener.vfs, "vfs")):
-                        st = os.statvfs(opener.vfs.vfs.base)
-                    else:
-                        st = os.statvfs(opener.vfs.base)
-                else:
-                    st = os.statvfs(opener.base)
+                st = os.statvfs(opener.join(None))
         except (OSError, IOError) as ex:
             if ex.errno == errno.EACCES:
                 self.free = 0
