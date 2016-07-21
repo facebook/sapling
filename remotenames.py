@@ -1245,10 +1245,6 @@ def readremotenames(repo):
     if not vfs.exists('remotenames'):
         return
 
-    # needed to heuristically determine if a file is in the old format
-    branches = repo.names['branches'].listnames(repo)
-    bookmarks = repo.names['bookmarks'].listnames(repo)
-
     f = vfs('remotenames')
     for line in f:
         nametype = None
@@ -1269,14 +1265,6 @@ def readremotenames(repo):
         # skip old data that didn't write the name (only wrote the alias)
         if not rname:
             continue
-
-        # old format didn't save the nametype, so check for the name in
-        # branches and bookmarks
-        if nametype is None:
-            if rname in branches:
-                nametype = 'branches'
-            elif rname in bookmarks:
-                nametype = 'bookmarks'
 
         yield node, nametype, remote, rname
 
