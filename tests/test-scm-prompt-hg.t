@@ -1,9 +1,20 @@
+To run this test against other shells, use the shell argument, eg:
+run-tests.py --shell=zsh test-scm-prompt*
+
 Initialize scm prompt
   $ . $TESTDIR/../scripts/scm-prompt.sh
 
   $ cmd() {
   >   "$@"
   >   _scm_prompt "(%s)\n"
+  > }
+
+Throw some ridiculous functions at it
+  $ grep() {
+  >   grep -V
+  > }
+  $ cat() {
+  >   true
   > }
 
 Outside of a repo, should have no output
@@ -58,7 +69,7 @@ Test rebase
   (4b6cc7d)
 
 Test histedit
-  $ cat > commands <<EOF
+  $ command cat > commands <<EOF
   > edit 4b6cc7d5194b
   > EOF
   $ cmd hg histedit --config "extensions.histedit=" --commands commands

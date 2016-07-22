@@ -44,6 +44,10 @@
 #
 # The default format string is " (%s)" (note the space)
 #
+# Notes to developers:
+#
+#  * Aliases can screw up the default commands; use "command" to prevent this
+#
 # =========================================================================
 #
 
@@ -74,7 +78,7 @@ _scm_prompt()
     fi
     test "$d" = / && break
     # portable "realpath" equivalent
-    d=$(cd -P "$d/.." && echo "$PWD")
+    d=$(cd -P "$d/.." && command echo "$PWD")
   done
 
   local br
@@ -94,37 +98,38 @@ _scm_prompt()
       extra="|MERGE"
     fi
     local dirstate=$(test -f "$hg/.hg/dirstate" && \
-      hexdump -vn 20 -e '1/1 "%02x"' "$hg/.hg/dirstate" || \
-      echo "empty")
+      command hexdump -vn 20 -e '1/1 "%02x"' "$hg/.hg/dirstate" || \
+      command echo "empty")
     local current="$hg/.hg/bookmarks.current"
     if  [[ -f "$current" ]]; then
-      br=$(cat "$current")
+      br=$(command cat "$current")
       # check to see if active bookmark needs update (eg, moved after pull)
       local marks="$hg/.hg/bookmarks"
       if [[ -f "$hg/.hg/sharedpath"  && -f "$hg/.hg/shared" ]] &&
-          grep -q '^bookmarks$' "$hg/.hg/shared"; then
-        marks="$(cat $hg/.hg/sharedpath)/bookmarks"
+          command grep -q '^bookmarks$' "$hg/.hg/shared"; then
+        marks="$(command cat $hg/.hg/sharedpath)/bookmarks"
       fi
       if [[ -z "$extra" ]] && [[ -f "$marks" ]]; then
-        local markstate=$(grep --color=never " $br$" "$marks" | cut -f 1 -d ' ')
+        local markstate=$(command grep " $br$" "$marks" | \
+          command cut -f 1 -d ' ')
         if [[ $markstate != "$dirstate" ]]; then
           extra="|UPDATE_NEEDED"
         fi
       fi
     else
-      br=$(echo "$dirstate" | cut -c 1-7)
+      br=$(command echo "$dirstate" | command cut -c 1-7)
     fi
     local remote="$hg/.hg/remotenames"
     if [[ -f "$remote" ]]; then
-      local marks=$(grep --color=never "^$dirstate bookmarks" "$remote" | \
-        cut -f 3 -d ' ' | tr '\n' '|' | sed -e 's/|$//')
+      local marks=$(command grep "^$dirstate bookmarks" "$remote" | \
+        command cut -f 3 -d ' ' | command tr '\n' '|' | command sed -e 's/|$//')
       if [[ -n "$marks" ]]; then
         br="$br|$marks"
       fi
     fi
     local branch
     if [[ -f "$hg/.hg/branch" ]]; then
-      branch=$(cat "$hg/.hg/branch")
+      branch=$(command cat "$hg/.hg/branch")
       if [[ $branch != "default" ]]; then
         br="$br|$branch"
       fi
@@ -135,20 +140,20 @@ _scm_prompt()
       read br < "$git/.git/HEAD"
       case $br in
         ref:\ refs/heads/*) br=${br#ref: refs/heads/} ;;
-        *) br=$(echo "$br" | cut -c 1-7) ;;
+        *) br=$(command echo "$br" | command cut -c 1-7) ;;
       esac
       if [ -f "$git/.git/rebase-merge/interactive" ]; then
-        b="$(cat "$git/.git/rebase-merge/head-name")"
+        b="$(command cat "$git/.git/rebase-merge/head-name")"
         b=${b#refs/heads/}
         br="$br|REBASE-i|$b"
       elif [ -d "$git/.git/rebase-merge" ]; then
-        b="$(cat "$git/.git/rebase-merge/head-name")"
+        b="$(command cat "$git/.git/rebase-merge/head-name")"
         b=${b#refs/heads/}
         br="$br|REBASE-m|$b"
       else
         if [ -d "$git/.git/rebase-apply" ]; then
           if [ -f "$git/.git/rebase-apply/rebasing" ]; then
-            b="$(cat "$git/.git/rebase-apply/head-name")"
+            b="$(command cat "$git/.git/rebase-apply/head-name")"
             b=${b#refs/heads/}
             br="$br|REBASE|$b"
           elif [ -f "$git/.git/rebase-apply/applying" ]; then
