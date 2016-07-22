@@ -23,13 +23,13 @@
 #   then the prompt won't change when you chdir or checkout different
 #   branches!
 #
-#   . /path/to/scm-prompt
 #   setopt PROMPT_SUBST
+#   source /path/to/scm-prompt
 #   export PS1='$(_scm_prompt)$USER@%m:%~%% '
 #
 # To use from bash:
 #
-#   . /path/to/scm-prompt
+#   source /path/to/scm-prompt
 #   export PS1="\$(_scm_prompt)\u@\h:\W\$ "
 #
 #   NOTE! You *EITHER* need to single-quote the whole thing *OR* back-slash
