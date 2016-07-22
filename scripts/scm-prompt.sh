@@ -94,9 +94,9 @@ _scm_prompt()
     local dirstate=$(test -f "$hg/.hg/dirstate" && \
       command hexdump -vn 20 -e '1/1 "%02x"' "$hg/.hg/dirstate" || \
       command echo "empty")
-    local current="$hg/.hg/bookmarks.current"
-    if  [[ -f "$current" ]]; then
-      br=$(command cat "$current")
+    local active="$hg/.hg/bookmarks.current"
+    if  [[ -f "$active" ]]; then
+      br=$(command cat "$active")
       # check to see if active bookmark needs update (eg, moved after pull)
       local marks="$hg/.hg/bookmarks"
       if [[ -f "$hg/.hg/sharedpath"  && -f "$hg/.hg/shared" ]] &&
