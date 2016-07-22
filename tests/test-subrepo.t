@@ -53,6 +53,15 @@ test handling .hgsubstate "added" explicitly.
   7cf8cfea66e410e8e3336508dfeec07b3192de51
   .hgsub .hgsubstate
 
+Subrepopath which overlaps with filepath, does not change warnings in remove()
+
+  $ mkdir snot
+  $ touch snot/file
+  $ hg remove -S snot/file
+  not removing snot/file: file is untracked
+  [1]
+  $ rm -r snot
+
 Revert subrepo and test subrepo fileset keyword:
 
   $ echo b > s/a
