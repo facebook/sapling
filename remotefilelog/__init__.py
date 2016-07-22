@@ -517,13 +517,12 @@ def filelogrevset(orig, repo, subset, x):
                     break
     else:
         # partial
-        for f in repo[None]:
-            filenode = m(f)
-            if filenode:
-                fctx = repo.filectx(f, fileid=filenode)
-                s.add(fctx.linkrev())
-                for actx in fctx.ancestors():
-                    s.add(actx.linkrev())
+        files = (f for f in repo[None] if m(f))
+        for f in files:
+            fctx = repo[None].filectx(f)
+            s.add(fctx.linkrev())
+            for actx in fctx.ancestors():
+                s.add(actx.linkrev())
 
     return [r for r in subset if r in s]
 
