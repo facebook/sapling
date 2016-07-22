@@ -687,7 +687,8 @@ def exchangepull(orig, repo, remote, *args, **kwargs):
     # Hook into the callstream/getbundle to insert bundle capabilities
     # during a pull.
     def remotecallstream(orig, command, **opts):
-        if command == 'getbundle' and 'remotefilelog' in remote._capabilities():
+        if (command == 'getbundle' and 'remotefilelog' in remote._capabilities()
+            and shallowrepo.requirement in repo.requirements):
             bundlecaps = opts.get('bundlecaps')
             if bundlecaps:
                 bundlecaps = [bundlecaps]
