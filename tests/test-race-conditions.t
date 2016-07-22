@@ -25,15 +25,15 @@
   $ cd ..
 
   $ cd master2
-  $ printf "[hooks]\npresyncdb.sleep = sleep 2\n" >> .hg/hgrc
+  $ printf "[hooks]\npresyncdb.sleep = sleep 5\n" >> .hg/hgrc
   $ hg log -l 2 --template "first:{rev}\n" --debug &
-  $ sleep 0.2
+  $ sleep 3
   syncing with mysql
-  running hook presyncdb.sleep: sleep 2
+  running hook presyncdb.sleep: sleep 5
   $ hg log -l 2 --template "second:{rev}\n" --debug
   skipping database sync because another process is already syncing
   second:0
-  $ sleep 4
+  $ sleep 5
   first:1
   first:0
   $ sed -i '/hooks/d' .hg/hgrc
