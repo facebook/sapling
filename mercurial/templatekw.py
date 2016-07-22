@@ -119,6 +119,16 @@ def _showlist(name, values, plural=None, separator=' ', **args):
     if endname in templ:
         yield templ(endname, **args)
 
+def _formatrevnode(ctx):
+    """Format changeset as '{rev}:{node|formatnode}', which is the default
+    template provided by cmdutil.changeset_templater"""
+    repo = ctx.repo()
+    if repo.ui.debugflag:
+        hexnode = ctx.hex()
+    else:
+        hexnode = ctx.hex()[:12]
+    return '%d:%s' % (scmutil.intrev(ctx.rev()), hexnode)
+
 def getfiles(repo, ctx, revcache):
     if 'files' not in revcache:
         revcache['files'] = repo.status(ctx.p1(), ctx)[:3]
@@ -523,7 +533,8 @@ def showparents(**args):
                 ('phase', p.phasestr())]
                for p in pctxs]
     f = _showlist('parent', parents, **args)
-    return _hybrid(f, prevs, lambda x: {'ctx': repo[int(x)], 'revcache': {}})
+    return _hybrid(f, prevs, lambda x: {'ctx': repo[int(x)], 'revcache': {}},
+                   lambda d: _formatrevnode(d['ctx']))
 
 @templatekeyword('phase')
 def showphase(repo, ctx, templ, **args):

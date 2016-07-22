@@ -3438,6 +3438,16 @@ join() should pick '{rev}' from revset items:
   $ hg log -R ../a -T '{join(revset("parents(%d)", rev), ", ")}\n' -r6
   4, 5
 
+on the other hand, parents are formatted as '{rev}:{node|formatnode}' by
+default. join() should agree with the default formatting:
+
+  $ hg log -R ../a -T '{join(parents, ", ")}\n' -r6
+  5:13207e5a10d9, 4:bbe44766e73d
+
+  $ hg log -R ../a -T '{join(parents, ",\n")}\n' -r6 --debug
+  5:13207e5a10d9fd28ec424934298e176197f2c67f,
+  4:bbe44766e73d5f11ed2177f1838de10c53ef3e74
+
 Test active bookmark templating
 
   $ hg book foo
