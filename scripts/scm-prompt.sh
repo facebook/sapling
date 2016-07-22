@@ -78,17 +78,17 @@ _scm_prompt()
   local br
   if test -n "$hg" ; then
     local extra
-    if [ -f "$hg/.hg/bisect.state" ]; then
+    if [[ -f "$hg/.hg/bisect.state" ]]; then
       extra="|BISECT"
-    elif [ -f "$hg/.hg/histedit-state" ]; then
+    elif [[ -f "$hg/.hg/histedit-state" ]]; then
       extra="|HISTEDIT"
-    elif [ -f "$hg/.hg/graftstate" ]; then
+    elif [[ -f "$hg/.hg/graftstate" ]]; then
       extra="|GRAFT"
-    elif [ -f "$hg/.hg/unshelverebasestate" ]; then
+    elif [[ -f "$hg/.hg/unshelverebasestate" ]]; then
       extra="|UNSHELVE"
-    elif [ -f "$hg/.hg/rebasestate" ]; then
+    elif [[ -f "$hg/.hg/rebasestate" ]]; then
       extra="|REBASE"
-    elif [ -d "$hg/.hg/merge" ]; then
+    elif [[ -d "$hg/.hg/merge" ]]; then
       extra="|MERGE"
     fi
     local dirstate=$(test -f "$hg/.hg/dirstate" && \
@@ -136,38 +136,39 @@ _scm_prompt()
         ref:\ refs/heads/*) br=${br#ref: refs/heads/} ;;
         *) br=$(command echo "$br" | command cut -c 1-7) ;;
       esac
-      if [ -f "$git/.git/rebase-merge/interactive" ]; then
+      if [[ -f "$git/.git/rebase-merge/interactive" ]]; then
         b="$(command cat "$git/.git/rebase-merge/head-name")"
         b=${b#refs/heads/}
         br="$br|REBASE-i|$b"
-      elif [ -d "$git/.git/rebase-merge" ]; then
+      elif [[ -d "$git/.git/rebase-merge" ]]; then
         b="$(command cat "$git/.git/rebase-merge/head-name")"
         b=${b#refs/heads/}
         br="$br|REBASE-m|$b"
       else
-        if [ -d "$git/.git/rebase-apply" ]; then
-          if [ -f "$git/.git/rebase-apply/rebasing" ]; then
+        if [[ -d "$git/.git/rebase-apply" ]]; then
+          if [[ -f "$git/.git/rebase-apply/rebasing" ]]; then
             b="$(command cat "$git/.git/rebase-apply/head-name")"
             b=${b#refs/heads/}
             br="$br|REBASE|$b"
-          elif [ -f "$git/.git/rebase-apply/applying" ]; then
+          elif [[ -f "$git/.git/rebase-apply/applying" ]]; then
             br="$br|AM"
           else
             br="$br|AM/REBASE"
           fi
-        elif [ -f "$git/.git/CHERRY_PICK_HEAD" ]; then
+        elif [[ -f "$git/.git/CHERRY_PICK_HEAD" ]]; then
           br="$br|CHERRY-PICKING"
-        elif [ -f "$git/.git/REVERT_HEAD" ]; then
+        elif [[ -f "$git/.git/REVERT_HEAD" ]]; then
           br="$br|REVERTING"
-        elif [ -f "$git/.git/MERGE_HEAD" ]; then
+        elif [[ -f "$git/.git/MERGE_HEAD" ]]; then
           br="$br|MERGE"
-        elif [ -f "$git/.git/BISECT_LOG" ]; then
+        elif [[ -f "$git/.git/BISECT_LOG" ]]; then
           br="$br|BISECT"
         fi
       fi
     fi
   fi
-  if [ -n "$br" ]; then
+
+  if [[ -n "$br" ]]; then
     printf "$fmt" "$br"
   fi
 }
