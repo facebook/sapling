@@ -53,20 +53,14 @@
 
 _scm_prompt()
 {
-  # find out if we're in a git or hg repo by looking for the control dir
   local d git hg fmt
-  fmt=$1
-  if [[ -z "$fmt" ]]; then
-    if [ -n "$WANT_OLD_SCM_PROMPT" ]; then
-      fmt="%s"
-    else
-      # Be compatable with __git_ps1. In particular:
-      # - provide a space for the user so that they don't have to have
-      #   random extra spaces in their prompt when not in a repo
-      # - provide parens so it's differentiated from other crap in their prompt
-      fmt=" (%s)"
-    fi
-  fi
+  # Defeault to be compatable with __git_ps1. In particular:
+  # - provide a space for the user so that they don't have to have
+  #   random extra spaces in their prompt when not in a repo
+  # - provide parens so it's differentiated from other crap in their prompt
+  fmt=${1:-' (%s)'}
+
+  # find out if we're in a git or hg repo by looking for the control dir
   d=$PWD
   while : ; do
     if test -d "$d/.git" ; then
@@ -176,4 +170,22 @@ _scm_prompt()
   if [ -n "$br" ]; then
     printf "$fmt" "$br"
   fi
+}
+
+#
+# Backwards-compatibility layer for odl scm-prompt script
+#
+# Older versions of this file at Facebook used a longer function name.
+# These versions also included support for an environmental directive
+# called $WANT_OLD_SCM_PROMPT. Support this to remain compatible.
+#
+
+_dotfiles_scm_info() {
+  local fmt
+  if [[ -z "$fmt" ]]; then
+    if [[ -n "$WANT_OLD_SCM_PROMPT" ]]; then
+      fmt="%s"
+    fi
+  fi
+  _scm_prompt $fmt
 }
