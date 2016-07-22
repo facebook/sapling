@@ -5,6 +5,12 @@ try:
 except ImportError:
     from distutils.core import setup, Extension
 
+hgext3rd = [
+    p[:-3].replace('/', '.')
+    for p in glob('hgext3rd/*.py')
+    if p != 'hgext3rd/__init__.py'
+]
+
 setup(
     name='fbhgext',
     version='0.1.2',
@@ -22,10 +28,8 @@ setup(
         'sqldirstate',
     ],
     py_modules=[
-        p[:-3].replace('/', '.')
-        for p in glob('hgext3rd/*.py')
-        if p != 'hgext3rd/__init__.py'
-    ],
+        'statprof'
+    ] + hgext3rd,
     ext_modules = [
         Extension('cfastmanifest',
                   sources=['cfastmanifest.c',
