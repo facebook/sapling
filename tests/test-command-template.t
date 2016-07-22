@@ -3433,6 +3433,11 @@ a revset item must be evaluated as an integer revision, not an offset from tip
   $ hg log -l 1 -T '{revset("%s", "null") % "{rev}:{node|short}"}\n'
   -1:000000000000
 
+join() should pick '{rev}' from revset items:
+
+  $ hg log -R ../a -T '{join(revset("parents(%d)", rev), ", ")}\n' -r6
+  4, 5
+
 Test active bookmark templating
 
   $ hg book foo

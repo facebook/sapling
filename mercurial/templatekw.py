@@ -547,7 +547,8 @@ def showrevslist(name, revs, **args):
     revs = [str(r) for r in revs]  # ifcontains() needs a list of str
     f = _showlist(name, revs, **args)
     return _hybrid(f, revs,
-                   lambda x: {name: x, 'ctx': repo[int(x)], 'revcache': {}})
+                   lambda x: {name: x, 'ctx': repo[int(x)], 'revcache': {}},
+                   lambda d: d[name])
 
 @templatekeyword('subrepos')
 def showsubrepos(**args):
