@@ -53,7 +53,7 @@
 
 _scm_prompt()
 {
-  local d git hg fmt
+  local dir git hg fmt
   # Defeault to be compatable with __git_ps1. In particular:
   # - provide a space for the user so that they don't have to have
   #   random extra spaces in their prompt when not in a repo
@@ -61,18 +61,18 @@ _scm_prompt()
   fmt=${1:-' (%s)'}
 
   # find out if we're in a git or hg repo by looking for the control dir
-  d=$PWD
+  dir=$PWD
   while : ; do
-    if test -d "$d/.git" ; then
-      git=$d
+    if test -d "$dir/.git" ; then
+      git=$dir
       break
-    elif test -d "$d/.hg" ; then
-      hg=$d
+    elif test -d "$dir/.hg" ; then
+      hg=$dir
       break
     fi
-    test "$d" = / && break
+    test "$dir" = / && break
     # portable "realpath" equivalent
-    d=$(cd -P "$d/.." && command echo "$PWD")
+    dir=$(cd -P "$dir/.." && command echo "$PWD")
   done
 
   local br
