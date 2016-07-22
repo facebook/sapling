@@ -20,26 +20,15 @@
  of the GNU General Public License, incorporated herein by reference.
 */
 
-#define PY_SSIZE_T_CLEAN
-#include <Python.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "util.h"
 #include "bitmanipulation.h"
 #include "compat.h"
+#include "mpatch.h"
 
-static char mpatch_doc[] = "Efficient binary patching.";
-static PyObject *mpatch_Error;
-
-struct mpatch_frag {
-	int start, end, len;
-	const char *data;
-};
-
-struct mpatch_flist {
-	struct mpatch_frag *base, *head, *tail;
-};
+char *mpatch_errors[] = {NULL, "invalid patch", "patch cannot be decoded",
+						"no memory"};
 
 struct mpatch_flist *lalloc(ssize_t size)
 {
@@ -56,10 +45,7 @@ struct mpatch_flist *lalloc(ssize_t size)
 			return a;
 		}
 		free(a);
-		a = NULL;
 	}
-	if (!PyErr_Occurred())
-		PyErr_NoMemory();
 	return NULL;
 }
 
@@ -202,7 +188,7 @@ static struct mpatch_flist *combine(struct mpatch_flist *a,
 }
 
 /* decode a binary patch into a hunk list */
-struct mpatch_flist *mpatch_decode(const char *bin, ssize_t len)
+int mpatch_decode(const char *bin, ssize_t len, struct mpatch_flist **res)
 {
 	struct mpatch_flist *l;
 	struct mpatch_frag *lt;
@@ -211,7 +197,7 @@ struct mpatch_flist *mpatch_decode(const char *bin, ssize_t len)
 	/* assume worst case size, we won't have many of these lists */
 	l = lalloc(len / 12 + 1);
 	if (!l)
-		return NULL;
+		return MPATCH_ERR_NO_MEM;
 
 	lt = l->tail;
 
@@ -227,14 +213,13 @@ struct mpatch_flist *mpatch_decode(const char *bin, ssize_t len)
 	}
 
 	if (pos != len) {
-		if (!PyErr_Occurred())
-			PyErr_SetString(mpatch_Error, "patch cannot be decoded");
 		mpatch_lfree(l);
-		return NULL;
+		return MPATCH_ERR_CANNOT_BE_DECODED;
 	}
 
 	l->tail = lt;
-	return l;
+	*res = l;
+	return 0;
 }
 
 /* calculate the size of resultant text */
@@ -245,10 +230,7 @@ ssize_t mpatch_calcsize(ssize_t len, struct mpatch_flist *l)
 
 	while (f != l->tail) {
 		if (f->start < last || f->end > len) {
-			if (!PyErr_Occurred())
-				PyErr_SetString(mpatch_Error,
-				                "invalid patch");
-			return -1;
+			return MPATCH_ERR_INVALID_PATCH;
 		}
 		outlen += f->start - last;
 		last = f->end;
@@ -269,10 +251,7 @@ int mpatch_apply(char *buf, const char *orig, ssize_t len,
 
 	while (f != l->tail) {
 		if (f->start < last || f->end > len) {
-			if (!PyErr_Occurred())
-				PyErr_SetString(mpatch_Error,
-				                "invalid patch");
-			return 0;
+			return MPATCH_ERR_INVALID_PATCH;
 		}
 		memcpy(p, orig + last, f->start - last);
 		p += f->start - last;
@@ -282,29 +261,24 @@ int mpatch_apply(char *buf, const char *orig, ssize_t len,
 		f++;
 	}
 	memcpy(p, orig + last, len - last);
-	return 1;
+	return 0;
 }
 
 /* recursively generate a patch of all bins between start and end */
-struct mpatch_flist *mpatch_fold(PyObject *bins, ssize_t start,
-	ssize_t end)
+struct mpatch_flist *mpatch_fold(void *bins,
+	struct mpatch_flist* (*get_next_item)(void*, ssize_t),
+	ssize_t start, ssize_t end)
 {
-	ssize_t len, blen;
-	const char *buffer;
+	ssize_t len;
 
 	if (start + 1 == end) {
 		/* trivial case, output a decoded list */
-		PyObject *tmp = PyList_GetItem(bins, start);
-		if (!tmp)
-			return NULL;
-		if (PyObject_AsCharBuffer(tmp, &buffer, &blen))
-			return NULL;
-		return mpatch_decode(buffer, blen);
+		return get_next_item(bins, start);
 	}
 
 	/* divide and conquer, memory management is elsewhere */
 	len = (end - start) / 2;
-	return combine(mpatch_fold(bins, start, start + len),
-		       mpatch_fold(bins, start + len, end));
+	return combine(mpatch_fold(bins, get_next_item, start, start + len),
+		       mpatch_fold(bins, get_next_item, start + len, end));
 }
 

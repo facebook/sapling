@@ -33,12 +33,33 @@
 static char mpatch_doc[] = "Efficient binary patching.";
 static PyObject *mpatch_Error;
 
+struct mpatch_flist *cpygetitem(void *bins, ssize_t pos)
+{
+	const char *buffer;
+	struct mpatch_flist *res;
+	ssize_t blen;
+	int r;
+
+	PyObject *tmp = PyList_GetItem((PyObject*)bins, pos);
+	if (!tmp)
+		return NULL;
+	if (PyObject_AsCharBuffer(tmp, &buffer, (Py_ssize_t*)&blen))
+		return NULL;
+	if ((r = mpatch_decode(buffer, blen, &res)) < 0) {
+		if (!PyErr_Occurred())
+			PyErr_SetString(mpatch_Error, mpatch_errors[-r]);
+ 		return NULL;
+	}
+	return res;
+}
+
 static PyObject *
 patches(PyObject *self, PyObject *args)
 {
 	PyObject *text, *bins, *result;
 	struct mpatch_flist *patch;
 	const char *in;
+	int r;
 	char *out;
 	Py_ssize_t len, outlen, inlen;
 
@@ -55,12 +76,16 @@ patches(PyObject *self, PyObject *args)
 	if (PyObject_AsCharBuffer(text, &in, &inlen))
 		return NULL;
 
-	patch = mpatch_fold(bins, 0, len);
-	if (!patch)
+	patch = mpatch_fold(bins, cpygetitem, 0, len);
+	if (!patch) { /* error already set or memory error */
+		if (!PyErr_Occurred())
+			PyErr_NoMemory();
 		return NULL;
+	}
 
 	outlen = mpatch_calcsize(inlen, patch);
 	if (outlen < 0) {
+		r = (int)outlen;
 		result = NULL;
 		goto cleanup;
 	}
@@ -70,12 +95,14 @@ patches(PyObject *self, PyObject *args)
 		goto cleanup;
 	}
 	out = PyBytes_AsString(result);
-	if (!mpatch_apply(out, in, inlen, patch)) {
+	if ((r = mpatch_apply(out, in, inlen, patch)) < 0) {
 		Py_DECREF(result);
 		result = NULL;
 	}
 cleanup:
 	mpatch_lfree(patch);
+	if (!result && !PyErr_Occurred())
+		PyErr_SetString(mpatch_Error, mpatch_errors[-r]);
 	return result;
 }
 
