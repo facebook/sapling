@@ -685,24 +685,6 @@ def pull(orig, ui, repo, *pats, **opts):
 def exchangepull(orig, repo, remote, *args, **kwargs):
     # Hook into the callstream/getbundle to insert bundle capabilities
     # during a pull.
-    def remotecallstream(orig, command, **opts):
-        if (command == 'getbundle' and 'remotefilelog' in remote._capabilities()
-            and shallowrepo.requirement in repo.requirements):
-            bundlecaps = opts.get('bundlecaps')
-            if bundlecaps:
-                bundlecaps = [bundlecaps]
-            else:
-                bundlecaps = []
-            bundlecaps.append('remotefilelog')
-            if repo.includepattern:
-                includecap = "includepattern=" + '\0'.join(repo.includepattern)
-                bundlecaps.append(includecap)
-            if repo.excludepattern:
-                excludecap = "excludepattern=" + '\0'.join(repo.excludepattern)
-                bundlecaps.append(excludecap)
-            opts['bundlecaps'] = ','.join(bundlecaps)
-        return orig(command, **opts)
-
     def localgetbundle(orig, source, heads=None, common=None, bundlecaps=None,
                        **kwargs):
         if not bundlecaps:
@@ -712,7 +694,9 @@ def exchangepull(orig, repo, remote, *args, **kwargs):
                     **kwargs)
 
     if util.safehasattr(remote, '_callstream'):
-        wrapfunction(remote, '_callstream', remotecallstream)
+        remote.shallow = shallowrepo.requirement in repo.requirements
+        remote.includepattern = repo.includepattern
+        remote.excludepattern = repo.excludepattern
     elif util.safehasattr(remote, 'getbundle'):
         wrapfunction(remote, 'getbundle', localgetbundle)
 

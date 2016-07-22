@@ -48,6 +48,38 @@ def peersetup(ui, peer):
             if int(code):
                 raise error.LookupError(file, node, data)
             yield data
+
+        def _callstream(self, command, **opts):
+            if (command == 'getbundle' and
+                'remotefilelog' in self._capabilities()):
+                bundlecaps = opts.get('bundlecaps')
+                if bundlecaps:
+                    bundlecaps = [bundlecaps]
+                else:
+                    bundlecaps = []
+
+                # shallow, includepattern, and excludepattern are a hacky way of
+                # carrying over data from the local repo to this getbundle
+                # command. We need to do it this way because bundle1 getbundle
+                # doesn't provide any other place we can hook in to manipulate
+                # getbundle args before it goes across the wire. Once we get rid
+                # of bundle1, we can use bundle2's _pullbundle2extraprepare to
+                # do this more cleanly.
+                if util.safehasattr(self, 'shallow') and self.shallow:
+                    bundlecaps.append('remotefilelog')
+                if util.safehasattr(self, 'includepattern'):
+                    if self.includepattern:
+                        patterns = '\0'.join(self.includepattern)
+                        includecap = "includepattern=" + patterns
+                        bundlecaps.append(includecap)
+                if util.safehasattr(self, 'excludepattern'):
+                    if self.excludepattern:
+                        patterns = '\0'.join(self.excludepattern)
+                        excludecap = "excludepattern=" + patterns
+                        bundlecaps.append(excludecap)
+                opts['bundlecaps'] = ','.join(bundlecaps)
+            return super(remotefilepeer, self)._callstream(command, **opts)
+
     peer.__class__ = remotefilepeer
 
 class cacheconnection(object):
