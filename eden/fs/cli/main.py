@@ -19,6 +19,7 @@ import thrift
 from . import config as config_mod
 from . import util
 from fb303.ttypes import fb_status
+from facebook.eden import EdenService
 
 # Relative to the user's $HOME/%USERPROFILE% directory.
 # TODO: This value should be .eden outside of Facebook devservers.
@@ -232,7 +233,7 @@ def do_unmount(args):
     config = create_config(args)
     try:
         return config.unmount(args.path)
-    except Exception as ex:
+    except EdenService.EdenError as ex:
         print_stderr('error: {}', ex)
         return 1
 
@@ -308,14 +309,13 @@ def do_shutdown(args):
     config = create_config(args)
     client = None
     try:
-        client = config.get_thrift_client()
-        pid = client.getPid()
+        with config.get_thrift_client() as client:
+            pid = client.getPid()
+            # Ask the client to shutdown
+            client.shutdown()
     except EdenNotRunningError:
         print_stderr('error: edenfs is not running')
         return 1
-
-    # Ask the client to shutdown
-    client.shutdown()
 
     if args.timeout == 0:
         print('Sent shutdown request to edenfs.')

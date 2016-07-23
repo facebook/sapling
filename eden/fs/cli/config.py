@@ -138,14 +138,8 @@ class Config:
 
     def checkout(self, path, snapshot_id):
         '''Switch the active snapshot id for a given client'''
-        client = self.get_thrift_client()
-        try:
+        with self.get_thrift_client() as client:
             client.checkOutRevision(path, snapshot_id)
-        except EdenService.EdenError as ex:
-            # str(ex) yields a rather ugly string, this reboxes the
-            # exception so that the error message looks nicer in
-            # the driver script.
-            raise Exception(ex.message)
 
     def add_repository(self, name, repo_type, source, with_buck=False):
         # Check if repository already exists
@@ -227,18 +221,15 @@ by hand to make changes to the repository or remove it.''' % name)
         mount_info = eden_ttypes.MountInfo(mountPoint=path,
                                            edenClientPath=client_dir,
                                            homeDir=self._home_dir)
-        client = self.get_thrift_client()
-        try:
+        with self.get_thrift_client() as client:
             client.mount(mount_info)
-        except EdenService.EdenError as ex:
-            raise Exception(ex.message)
 
         # Add mapping of mount path to client directory in config.json
         self._add_path_to_directory_map(path, dir_name)
 
     def unmount(self, path):
-        client = self.get_thrift_client()
-        client.unmount(path)
+        with self.get_thrift_client() as client:
+            client.unmount(path)
         shutil.rmtree(self._get_client_dir_for_mount_point(path))
         self._remove_path_from_directory_map(path)
 
@@ -248,17 +239,15 @@ by hand to make changes to the repository or remove it.''' % name)
 
         Returns a HealthStatus object containing health information.
         '''
-        try:
-            client = self.get_thrift_client()
-        except eden.thrift.EdenNotRunningError:
-            return HealthStatus(fb_status.DEAD, pid=None,
-                                detail='edenfs not running')
-
         pid = None
         status = fb_status.DEAD
         try:
-            pid = client.getPid()
-            status = client.getStatus()
+            with self.get_thrift_client() as client:
+                pid = client.getPid()
+                status = client.getStatus()
+        except eden.thrift.EdenNotRunningError:
+            return HealthStatus(fb_status.DEAD, pid=None,
+                                detail='edenfs not running')
         except thrift.Thrift.TException as ex:
             detail = 'error talking to edenfs: ' + str(ex)
             return HealthStatus(status, pid, detail)

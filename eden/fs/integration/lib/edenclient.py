@@ -88,9 +88,9 @@ class EdenFS(object):
         deadline = time.time() + timeout
         while time.time() < deadline:
             try:
-                client = self.get_thrift_client()
-                if client.getStatus() == fb_status.ALIVE:
-                    return
+                with self.get_thrift_client() as client:
+                    if client.getStatus() == fb_status.ALIVE:
+                        return
             except eden.thrift.EdenNotRunningError as ex:
                 pass
 
