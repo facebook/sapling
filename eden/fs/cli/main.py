@@ -170,19 +170,15 @@ def do_repository(args):
                                   repo_type=repo_type,
                                   source=source,
                                   with_buck=args.with_buck)
-        except Exception as ex:
+        except config_mod.UsageError as ex:
             print_stderr('error: {}', ex)
             return 1
     elif (args.name or args.path):
         print_stderr('repository command called with incorrect arguments')
         return 1
     else:
-        try:
-            repo_list = config.get_repository_list()
-        except Exception as ex:
-            print_stderr('error: {}', ex)
-            return 1
-        for repo in repo_list:
+        repo_list = config.get_repository_list()
+        for repo in sorted(repo_list):
             print(repo)
 
 

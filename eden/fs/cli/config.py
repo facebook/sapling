@@ -10,12 +10,14 @@
 import collections
 import configparser
 import errno
+import fcntl
 import hashlib
 import json
 import os
 import shutil
 import stat
 import subprocess
+import tempfile
 import time
 
 from . import util
@@ -46,6 +48,10 @@ SUDO_HELPER = '/var/www/scripts/testinfra/run_eden.sh'
 
 
 class EdenStartError(Exception):
+    pass
+
+
+class UsageError(Exception):
     pass
 
 
@@ -144,27 +150,24 @@ class Config:
     def add_repository(self, name, repo_type, source, with_buck=False):
         # Check if repository already exists
         config_ini = os.path.join(self._home_dir, HOME_CONFIG)
-        parser = configparser.ConfigParser()
-        parser.read(config_ini)
-        if name in self.get_repository_list(parser):
-            raise Exception('''\
+
+        with ConfigUpdater(config_ini) as config:
+            if name in self.get_repository_list(config):
+                raise UsageError('''\
 repository %s already exists. You will need to edit the ~/.edenrc config file \
 by hand to make changes to the repository or remove it.''' % name)
 
-        # Create a directory for client to store repository metadata
-        bind_mounts = {}
-        if with_buck:
-            bind_mount_name = 'buck-out'
-            bind_mounts[bind_mount_name] = 'buck-out'
+            # Create a directory for client to store repository metadata
+            bind_mounts = {}
+            if with_buck:
+                bind_mount_name = 'buck-out'
+                bind_mounts[bind_mount_name] = 'buck-out'
 
-        # Add repository to INI file
-        parser['repository ' + name] = {'type': repo_type,
-                                        'path': source}
-        if bind_mounts:
-            parser['bindmounts ' + name] = bind_mounts
-        mode = 'a' if os.path.isfile(config_ini) else 'w'
-        with open(config_ini, mode) as f:
-            parser.write(f)
+            # Add repository to INI file
+            config['repository ' + name] = {'type': repo_type, 'path': source}
+            if bind_mounts:
+                config['bindmounts ' + name] = bind_mounts
+            config.save()
 
     def clone(self, repo_name, path, snapshot_id):
         if path in self._get_directory_map():
@@ -200,11 +203,7 @@ by hand to make changes to the repository or remove it.''' % name)
         util.mkdir_p(client_dir)
 
         # Store repository name in local edenrc config file
-        config = os.path.join(client_dir, LOCAL_CONFIG)
-        parser = configparser.ConfigParser()
-        parser['repository'] = {'name': repo_name}
-        with open(config, 'w') as f:
-            parser.write(f)
+        self._store_repo_name(client_dir, repo_name)
 
         # Store snapshot ID
         if snapshot_id:
@@ -407,11 +406,10 @@ by hand to make changes to the repository or remove it.''' % name)
         return util.mkdir_p(rocks_db_dir)
 
     def _store_repo_name(self, client_dir, repo_name):
-        config = os.path.join(client_dir, LOCAL_CONFIG)
-        parser = configparser.ConfigParser()
-        parser['repository'] = {'name': repo_name}
-        with open(config, 'w') as f:
-            parser.write(f)
+        config_path = os.path.join(client_dir, LOCAL_CONFIG)
+        with ConfigUpdater(config_path) as config:
+            config['repository'] = {'name': repo_name}
+            config.save()
 
     def _get_repo_name(self, client_dir):
         config = os.path.join(client_dir, LOCAL_CONFIG)
@@ -477,6 +475,115 @@ class HealthStatus(object):
 
     def is_healthy(self):
         return self.status == fb_status.ALIVE
+
+
+class ConfigUpdater(object):
+    '''
+    A helper class to safely update an eden config file.
+
+    This acquires a lock on the config file, reads it in, and then provide APIs
+    to save it back.  This ensures that another process cannot change the file
+    in between the time that we read it and when we write it back.
+
+    This also saves the file to a temporary name first, then renames it into
+    place, so that the main config file is always in a good state, and never
+    has partially written contents.
+    '''
+    def __init__(self, path):
+        self.path = path
+        self._lock_path = self.path + '.lock'
+        self._lock_file = None
+        self.config = configparser.ConfigParser()
+        self.config.read(self.path)
+
+        # Acquire a lock.
+        # This makes sure that another process can't modify the config in the
+        # middle of a read-modify-write operation.  (We can't stop a user
+        # from manually editing the file while we work, but we can stop
+        # other eden CLI processes.)
+        self._acquire_lock()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, exc_traceback):
+        self.close()
+
+    def __del__(self):
+        self.close()
+
+    def sections(self):
+        return self.config.sections()
+
+    def __getitem__(self, key):
+        return self.config[key]
+
+    def __setitem__(self, key, value):
+        self.config[key] = value
+
+    def _acquire_lock(self):
+        while True:
+            self._lock_file = open(self._lock_path, 'w+')
+            fcntl.flock(self._lock_file.fileno(), fcntl.LOCK_EX)
+            # The original creator of the lock file will unlink it when
+            # it is finished.  Make sure we grab the lock on the file still on
+            # disk, and not an unlinked file.
+            st1 = os.fstat(self._lock_file.fileno())
+            st2 = os.lstat(self._lock_path)
+            if st1.st_dev == st2.st_dev and st1.st_ino == st2.st_ino:
+                # We got the real lock
+                return
+
+            # We acquired a lock on an old deleted file.
+            # Close it, and try to acquire the current lock file again.
+            self._lock_file.close()
+            self._lock_file = None
+            continue
+
+    def _unlock(self):
+        # Remove the file on disk before we unlock it.
+        # This way processes currently waiting in _acquire_lock() that already
+        # opened our lock file will see that it isn't the current file on disk
+        # once they acquire the lock.
+        os.unlink(self._lock_path)
+        self._lock_file.close()
+        self._lock_file = None
+
+    def close(self):
+        if self._lock_file is not None:
+            self._unlock()
+
+    def save(self):
+        if self._lock_file is None:
+            raise Exception('Cannot save the config without holding the lock')
+
+        try:
+            st = os.stat(self.path)
+            perms = (st.st_mode & 0o777)
+        except OSError as ex:
+            if ex.errno != errno.ENOENT:
+                raise
+            perms = 0o644
+
+        # Write the contents to a temporary file first, then atomically rename
+        # it to the desired destination.  This makes sure the .edenrc file
+        # always has valid contents at all points in time.
+        prefix = HOME_CONFIG + '.tmp.'
+        dirname = os.path.dirname(self.path)
+        tmpf = tempfile.NamedTemporaryFile('w', dir=dirname, prefix=prefix,
+                                           delete=False)
+        try:
+            self.config.write(tmpf)
+            tmpf.close()
+            os.chmod(tmpf.name, perms)
+            os.rename(tmpf.name, self.path)
+        except BaseException:
+            # Remove temporary file on error
+            try:
+                os.unlink(tmpf.name)
+            except Exception:
+                pass
+            raise
 
 
 def _verify_mount_point(mount_point):

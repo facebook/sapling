@@ -17,36 +17,6 @@ class RCTest:
         self.repo.write_file('readme.txt', 'test\n')
         self.repo.commit('Initial commit.')
 
-    def test_list_repository(self):
-        out = self.eden.repository_cmd().split('\n')[:-1]
-        expected = [self.repo_name]
-        self.assertEqual(expected, out)
-        config = '''\
-[repository fbsource]
-path = /data/users/carenthomas/fbsource
-type = git
-
-[bindmounts fbsource]
-fbcode-buck-out = fbcode/buck-out
-fbandroid-buck-out = fbandroid/buck-out
-fbobjc-buck-out = fbobjc/buck-out
-buck-out = buck-out
-
-[repository git]
-path = /home/carenthomas/src/git
-type = git
-
-[repository hg-crew]
-url = /data/users/carenthomas/facebook-hg-rpms/hg-crew
-type = hg
-'''
-        home_config_file = os.path.join(self.home_dir, '.edenrc')
-        with open(home_config_file, 'w') as f:
-            f.write(config)
-        out = self.eden.repository_cmd().split('\n')[:-1]
-        expected = ['fbsource', 'git', 'hg-crew']
-        self.assertEqual(expected, out)
-
     def test_eden_list(self):
         mount_paths = self.eden.list_cmd().split('\n')[:-1]
         self.assertEqual(1, len(mount_paths),

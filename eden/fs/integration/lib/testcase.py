@@ -87,6 +87,26 @@ class EdenTestCase(unittest.TestCase):
         '''
         return self.eden.get_thrift_client()
 
+    def create_repo(self, name, repo_class):
+        '''
+        Create a new repository.
+
+        Arguments:
+        - name
+          The repository name.  This determines the repository location inside
+          the self.repos_dir directory.  The full repository path can be
+          accessed as repo.path on the returned repo object.
+        - repo_class
+          The repository class object, such as hgrepo.HgRepository or
+          gitrepo.GitRepository.
+        '''
+        repo_path = os.path.join(self.repos_dir, name)
+        os.mkdir(repo_path)
+        repo = repo_class(repo_path)
+        repo.init()
+
+        return repo
+
 
 class EdenRepoTestBase(EdenTestCase):
     '''
@@ -98,15 +118,12 @@ class EdenRepoTestBase(EdenTestCase):
         super().setup_eden_test()
 
         self.repo_name = 'main'
-        repo_path = os.path.join(self.repos_dir, self.repo_name)
         self.mount = os.path.join(self.mounts_dir, self.repo_name)
 
-        os.mkdir(repo_path)
-        self.repo = self.create_repo(repo_path)
-        self.repo.init()
+        self.repo = self.create_repo(self.repo_name, self.get_repo_class())
         self.populate_repo()
 
-        self.eden.add_repository(self.repo_name, repo_path)
+        self.eden.add_repository(self.repo_name, self.repo.path)
         self.eden.clone(self.repo_name, self.mount)
 
     def populate_repo(self):
@@ -122,8 +139,8 @@ class EdenHgTest(EdenRepoTestBase):
     The repository is available as self.repo, and the client mount path is
     available as self.mount
     '''
-    def create_repo(self, path):
-        return hgrepo.HgRepository(path)
+    def get_repo_class(self):
+        return hgrepo.HgRepository
 
 
 class EdenGitTest(EdenRepoTestBase):
@@ -134,8 +151,8 @@ class EdenGitTest(EdenRepoTestBase):
     The repository is available as self.repo, and the client mount path is
     available as self.mount
     '''
-    def create_repo(self, path):
-        return gitrepo.GitRepository(path)
+    def get_repo_class(self):
+        return gitrepo.GitRepository
 
 
 def eden_repo_test(test_class):
