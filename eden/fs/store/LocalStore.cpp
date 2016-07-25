@@ -226,8 +226,20 @@ void LocalStore::putBlob(const Hash& id, ByteRange blobData, const Hash& sha1) {
   }
 }
 
-void LocalStore::putTree(const Hash& id, ByteRange treeData) {
+Hash LocalStore::putTree(const Tree* tree) {
+  GitTreeSerializer serializer;
+  for (auto& entry : tree->getTreeEntries()) {
+    serializer.addEntry(std::move(entry));
+  }
+  IOBuf treeBuf = serializer.finalize();
+  ByteRange treeData = treeBuf.coalesce();
+
+  auto id = tree->getHash();
+  if (id == Hash()) {
+    id = Hash::sha1(&treeBuf);
+  }
   put(id.getBytes(), treeData);
+  return id;
 }
 
 void LocalStore::put(folly::ByteRange key, folly::ByteRange value) {

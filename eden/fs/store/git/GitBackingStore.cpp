@@ -81,8 +81,6 @@ unique_ptr<Tree> GitBackingStore::getTree(const Hash& id) {
   };
 
   std::vector<TreeEntry> entries;
-  GitTreeSerializer serializer;
-
   size_t numEntries = git_tree_entrycount(gitTree);
   for (size_t i = 0; i < numEntries; ++i) {
     auto gitEntry = git_tree_entry_byindex(gitTree, i);
@@ -114,13 +112,12 @@ unique_ptr<Tree> GitBackingStore::getTree(const Hash& id) {
     }
     auto entryHash = oid2Hash(git_tree_entry_id(gitEntry));
     entries.emplace_back(entryHash, entryName, fileType, ownerPerms);
-    serializer.addEntry(entries.back());
   }
+  auto tree = make_unique<Tree>(std::move(entries), id);
+  auto hash = localStore_->putTree(tree.get());
+  DCHECK_EQ(id, hash);
 
-  auto buf = serializer.finalize();
-  localStore_->putTree(id, buf.coalesce());
-
-  return make_unique<Tree>(id, std::move(entries));
+  return tree;
 }
 
 unique_ptr<Blob> GitBackingStore::getBlob(const Hash& id) {

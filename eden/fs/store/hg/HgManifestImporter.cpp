@@ -12,6 +12,7 @@
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
 
+#include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/model/git/GitTree.h"
 #include "eden/fs/store/LocalStore.h"
@@ -48,11 +49,6 @@ class HgManifestImporter::PartialTree {
   RelativePath path_;
 
   // LocalStore currently requires that all data be stored in git tree format.
-  // TODO: The LocalStore get and put APIs are asymmetric at the moment: the
-  // get APIs return deserialized Tree and Blob objects, while put requires
-  // raw serialized bytes.  We should update LocalStore to perform the
-  // serialization internally, so that its users don't need to be aware of the
-  // internal serialization format.
   GitTreeSerializer serializer_;
   unsigned int numPaths_{0};
   std::vector<TreeEntry> entries_;
@@ -86,22 +82,12 @@ void HgManifestImporter::PartialTree::addEntry(TreeEntry&& entry) {
 }
 
 Hash HgManifestImporter::PartialTree::record(LocalStore* store) {
-  for (auto& entry : entries_) {
-    serializer_.addEntry(std::move(entry));
-  }
-  IOBuf treeBuf = serializer_.finalize();
-  auto hash = Hash::sha1(&treeBuf);
-
-  // Coalesce the buffer (in case we had to grow it to multiple buffers).
-  // (It would perhaps be nice if LocalStore and RocksDB had an API where
-  // we could store the data without having to coalesce it first.)
-  ByteRange treeBytes = treeBuf.coalesce();
+  auto tree = Tree(std::move(entries_));
+  auto hash = store->putTree(&tree);
 
   VLOG(6) << "record tree: '" << path_ << "' --> " << hash.toString() << " ("
-          << numPaths_ << " paths, " << treeBytes.size() << " bytes)";
+          << numPaths_ << " paths)";
 
-  // Save the entry to the store
-  store->putTree(hash, treeBytes);
   return hash;
 }
 

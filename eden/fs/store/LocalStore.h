@@ -82,7 +82,7 @@ class LocalStore {
    */
   std::unique_ptr<Hash> getSha1ForBlob(const Hash& id) const;
 
-  void putTree(const Hash& id, folly::ByteRange treeData);
+  Hash putTree(const Tree* tree);
   void putBlob(const Hash& id, const Blob* blob);
   void putBlob(const Hash& id, folly::ByteRange blobData, const Hash& sha1);
 

@@ -89,7 +89,7 @@ TEST(LocalStore, testReadsAndWriteTree) {
       string("100644 xdebug.ini\x00", 18),
       unhexlify("9ed5bbccd1b9b0077561d14c0130dc086ab27e04"));
 
-  store.putTree(hash, folly::StringPiece{gitTreeObject});
+  store.put(hash.getBytes(), folly::StringPiece{gitTreeObject});
   auto tree = store.getTree(hash);
   EXPECT_EQ(Hash("8e073e366ed82de6465d1209d3f07da7eebabb93"), tree->getHash());
   EXPECT_EQ(11, tree->getTreeEntries().size());

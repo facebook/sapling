@@ -19,7 +19,7 @@ namespace eden {
 
 class Tree {
  public:
-  explicit Tree(const Hash& hash, std::vector<TreeEntry>&& entries)
+  explicit Tree(std::vector<TreeEntry>&& entries, const Hash& hash = Hash())
       : hash_(hash), entries_(std::move(entries)) {}
 
   const Hash& getHash() const {

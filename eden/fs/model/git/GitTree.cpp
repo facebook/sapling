@@ -110,7 +110,7 @@ std::unique_ptr<Tree> deserializeGitTree(
         Hash(hashBytes), std::move(name), fileType, ownerPermissions);
   }
 
-  return std::make_unique<Tree>(hash, std::move(entries));
+  return std::make_unique<Tree>(std::move(entries), hash);
 }
 
 // Convenience wrapper which accepts a ByteRange
