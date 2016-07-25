@@ -404,7 +404,7 @@ static file
     display: none;
     position: absolute;
     background-color: #FFFFFF;
-    border: 1px solid #000000;
+    border: 1px solid #d9d8d1;
     text-align: left;
     color: #000000;
     padding: 5px;
