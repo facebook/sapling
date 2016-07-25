@@ -409,12 +409,18 @@ def wrapsocket(sock, keyfile, certfile, ui, serverhostname=None):
         # a hint to the user.
         # Only modern ssl module exposes SSLContext.get_ca_certs() so we can
         # only show this warning if modern ssl is available.
-        if (caloaded and settings['verifymode'] == ssl.CERT_REQUIRED and
-            modernssl and not sslcontext.get_ca_certs()):
-            ui.warn(_('(an attempt was made to load CA certificates but none '
-                      'were loaded; see '
-                      'https://mercurial-scm.org/wiki/SecureConnections for '
-                      'how to configure Mercurial to avoid this error)\n'))
+        # The exception handler is here because of
+        # https://bugs.python.org/issue20916.
+        try:
+            if (caloaded and settings['verifymode'] == ssl.CERT_REQUIRED and
+                modernssl and not sslcontext.get_ca_certs()):
+                ui.warn(_('(an attempt was made to load CA certificates but '
+                          'none were loaded; see '
+                          'https://mercurial-scm.org/wiki/SecureConnections '
+                          'for how to configure Mercurial to avoid this '
+                          'error)\n'))
+        except ssl.SSLError:
+            pass
         # Try to print more helpful error messages for known failures.
         if util.safehasattr(e, 'reason'):
             # This error occurs when the client and server don't share a
