@@ -1969,7 +1969,7 @@ Static files
     display: none;
     position: absolute;
     background-color: #FFFFFF;
-    border: 1px solid #000000;
+    border: 1px solid #888;
     text-align: left;
     color: #000000;
     padding: 5px;
