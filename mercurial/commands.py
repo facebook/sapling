@@ -4089,12 +4089,12 @@ def graft(ui, repo, *revs, **opts):
         return _dograft(ui, repo, *revs, **opts)
 
 def _dograft(ui, repo, *revs, **opts):
-    if revs and opts['rev']:
+    if revs and opts.get('rev'):
         ui.warn(_('warning: inconsistent use of --rev might give unexpected '
                   'revision ordering!\n'))
 
     revs = list(revs)
-    revs.extend(opts['rev'])
+    revs.extend(opts.get('rev'))
 
     if not opts.get('user') and opts.get('currentuser'):
         opts['user'] = ui.username()
@@ -4104,7 +4104,7 @@ def _dograft(ui, repo, *revs, **opts):
     editor = cmdutil.getcommiteditor(editform='graft', **opts)
 
     cont = False
-    if opts['continue']:
+    if opts.get('continue'):
         cont = True
         if revs:
             raise error.Abort(_("can't specify --continue and revisions"))
