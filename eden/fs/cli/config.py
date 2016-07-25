@@ -261,6 +261,7 @@ by hand to make changes to the repository or remove it.''' % name)
               daemon_binary,
               extra_args=None,
               gdb=False,
+              gdb_args=None,
               foreground=False):
         '''
         Start edenfs.
@@ -280,7 +281,8 @@ by hand to make changes to the repository or remove it.''' % name)
         # Run the eden server.
         cmd = [daemon_binary, '--edenDir', self._config_dir, ]
         if gdb:
-            cmd = ['gdb', '--args'] + cmd
+            gdb_args = gdb_args or []
+            cmd = ['gdb'] + gdb_args + ['--args'] + cmd
             foreground = True
         if extra_args:
             cmd.extend(extra_args)

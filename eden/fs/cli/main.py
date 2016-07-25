@@ -268,7 +268,8 @@ def do_daemon(args):
         edenfs_args = edenfs_args[1:]
 
     try:
-        health_info = config.spawn(daemon_binary, edenfs_args, gdb=args.gdb,
+        health_info = config.spawn(daemon_binary, edenfs_args,
+                                   gdb=args.gdb, gdb_args=args.gdb_arg,
                                    foreground=args.foreground)
     except config_mod.EdenStartError as ex:
         print_stderr('error: {}', ex)
@@ -387,6 +388,9 @@ def create_parser():
         help='Run eden in the foreground, rather than daemonizing')
     daemon_parser.add_argument(
         '--gdb', '-g', action='store_true', help='Run under gdb')
+    daemon_parser.add_argument(
+        '--gdb-arg', action='append', default=[],
+        help='Extra arguments to pass to gdb')
     daemon_parser.add_argument(
         'edenfs_args', nargs=argparse.REMAINDER,
         help='Any extra arguments after an "--" argument will be passed to the '

@@ -76,7 +76,7 @@ class EdenFS(object):
 
     def kill(self):
         '''Stops and unmounts this instance.'''
-        if self._process is None:
+        if self._process is None or self._process.returncode is not None:
             return
         self.shutdown()
 
@@ -158,13 +158,40 @@ class EdenFS(object):
         if self._process is not None:
             raise Exception('cannot start an already-running eden client')
 
-        self._process = subprocess.Popen(
-            self._get_eden_args(
+        args = self._get_eden_args(
                 'daemon',
                 '--daemon-binary', EDEN_DAEMON,
                 '--foreground',
             )
-        )
+        # If the EDEN_GDB environment variable is set, run eden inside gdb
+        # so a developer can debug crashes
+        if os.environ.get('EDEN_GDB'):
+            gdb_exit_handler = (
+                'python gdb.events.exited.connect('
+                'lambda event: '
+                'gdb.execute("quit") if getattr(event, "exit_code", None) == 0 '
+                'else False'
+                ')'
+            )
+            gdb_args = [
+                # Register a handler to exit gdb if the program finishes
+                # successfully.
+                # Start the program immediately when gdb starts
+                '-ex', gdb_exit_handler,
+                # Start the program immediately when gdb starts
+                '-ex', 'run'
+            ]
+            args.append('--gdb')
+            for arg in gdb_args:
+                args.append('--gdb-arg=' + arg)
+
+            # Starting up under GDB takes longer than normal.
+            # Allow an extra 90 seconds (for some reason GDB can take a very
+            # long time to load symbol information, particularly on dynamically
+            # linked builds).
+            timeout += 90
+
+        self._process = subprocess.Popen(args)
         self._wait_for_healthy(timeout)
 
     def shutdown(self):
