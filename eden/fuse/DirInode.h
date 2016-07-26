@@ -37,7 +37,7 @@ class DirInode : public InodeBase {
       PathComponentPiece name,
       std::shared_ptr<DirInode> newparent,
       PathComponentPiece newname);
-  virtual folly::Future<std::unique_ptr<DirHandle>> opendir(
+  virtual folly::Future<std::shared_ptr<DirHandle>> opendir(
       const struct fuse_file_info& fi);
   virtual folly::Future<struct statvfs> statfs();
 
@@ -52,7 +52,7 @@ class DirInode : public InodeBase {
     /// The newly created inode instance.
     std::shared_ptr<InodeBase> inode;
     /// The newly opened file handle.
-    std::unique_ptr<FileHandle> file;
+    std::shared_ptr<FileHandle> file;
     /// The newly created node record from the name manager.
     std::shared_ptr<InodeNameManager::Node> node;
   };

@@ -46,7 +46,7 @@ folly::Future<folly::Unit> DirInode::rename(
     PathComponentPiece) {
   FUSELL_NOT_IMPL();
 }
-folly::Future<std::unique_ptr<DirHandle>> DirInode::opendir(
+folly::Future<std::shared_ptr<DirHandle>> DirInode::opendir(
     const struct fuse_file_info& fi) {
   FUSELL_NOT_IMPL();
 }

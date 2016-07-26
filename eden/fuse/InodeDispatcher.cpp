@@ -242,7 +242,7 @@ folly::Future<Dispatcher::Attr> InodeDispatcher::getattr(fuse_ino_t ino) {
   return getInode(ino)->getattr();
 }
 
-folly::Future<std::unique_ptr<DirHandle>> InodeDispatcher::opendir(
+folly::Future<std::shared_ptr<DirHandle>> InodeDispatcher::opendir(
     fuse_ino_t ino,
     const struct fuse_file_info& fi) {
   return getDirInode(ino)->opendir(fi);
@@ -334,7 +334,7 @@ folly::Future<folly::Unit> InodeDispatcher::forget(
   return Unit{};
 }
 
-folly::Future<std::unique_ptr<FileHandle>> InodeDispatcher::open(
+folly::Future<std::shared_ptr<FileHandle>> InodeDispatcher::open(
     fuse_ino_t ino,
     const struct fuse_file_info& fi) {
   auto f = getFileInode(ino);

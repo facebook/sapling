@@ -128,9 +128,9 @@ fuse_ino_t TreeInode::getInode() const {
   return getNodeId();
 }
 
-folly::Future<std::unique_ptr<fusell::DirHandle>> TreeInode::opendir(
+folly::Future<std::shared_ptr<fusell::DirHandle>> TreeInode::opendir(
     const struct fuse_file_info&) {
-  return std::make_unique<TreeInodeDirHandle>(
+  return std::make_shared<TreeInodeDirHandle>(
       std::static_pointer_cast<TreeInode>(shared_from_this()));
 }
 
@@ -163,7 +163,7 @@ TreeInode::create(PathComponentPiece name, mode_t mode, int flags) {
   // The kernel wants an open operation to return the inode,
   // the file handle and some attribute information.
   // Let's open a file handle now.
-  return inode->open(fi).then([=](std::unique_ptr<fusell::FileHandle> handle) {
+  return inode->open(fi).then([=](std::shared_ptr<fusell::FileHandle> handle) {
     // Now that we have the file handle, let's look up the attributes.
     auto getattrResult = handle->getattr();
     return getattrResult.then([ =, handle = std::move(handle) ](

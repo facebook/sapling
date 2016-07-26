@@ -14,6 +14,7 @@
 #include <folly/Range.h>
 #include <folly/futures/Future.h>
 #include "eden/fuse/EdenStats.h"
+#include "eden/fuse/FileHandleMap.h"
 #include "eden/fuse/fuse_headers.h"
 #include "eden/utils/PathFuncs.h"
 
@@ -39,6 +40,7 @@ class Dispatcher {
   fuse_conn_info connInfo_;
   Channel* chan_{nullptr};
   EdenStats stats_;
+  FileHandleMap fileHandles_;
 
  public:
   virtual ~Dispatcher();
@@ -51,6 +53,14 @@ class Dispatcher {
   const EdenStats& getStats() const;
   Channel& getChannel() const;
   const fuse_conn_info& getConnInfo() const;
+  FileHandleMap& getFileHandles();
+
+  // delegates to FileHandleMap::getGenericFileHandle
+  std::shared_ptr<FileHandleBase> getGenericFileHandle(uint64_t fh);
+  // delegates to FileHandleMap::getFileHandle
+  std::shared_ptr<FileHandle> getFileHandle(uint64_t fh);
+  // delegates to FileHandleMap::getDirHandle
+  std::shared_ptr<DirHandle> getDirHandle(uint64_t dh);
 
   /**
    * Called during filesystem mounting.  It informs the filesystem
@@ -235,7 +245,7 @@ class Dispatcher {
    * @param ino the inode number
    * @param fi file information
    */
-  virtual folly::Future<std::unique_ptr<FileHandle>> open(
+  virtual folly::Future<std::shared_ptr<FileHandle>> open(
       fuse_ino_t ino,
       const struct fuse_file_info& fi);
 
@@ -255,7 +265,7 @@ class Dispatcher {
    * @param ino the inode number
    * @param fi file information
    */
-  virtual folly::Future<std::unique_ptr<DirHandle>> opendir(
+  virtual folly::Future<std::shared_ptr<DirHandle>> opendir(
       fuse_ino_t ino,
       const struct fuse_file_info& fi);
 
@@ -311,7 +321,7 @@ class Dispatcher {
 
   struct Create {
     fuse_entry_param entry;
-    std::unique_ptr<FileHandle> fh;
+    std::shared_ptr<FileHandle> fh;
   };
 
   /**

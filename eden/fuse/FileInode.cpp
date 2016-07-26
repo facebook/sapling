@@ -20,7 +20,7 @@ FileInode::FileInode(fuse_ino_t ino) : InodeBase(ino) {}
 folly::Future<std::string> FileInode::readlink() {
   FUSELL_NOT_IMPL();
 }
-folly::Future<std::unique_ptr<FileHandle>> FileInode::open(
+folly::Future<std::shared_ptr<FileHandle>> FileInode::open(
     const struct fuse_file_info& fi) {
   FUSELL_NOT_IMPL();
 }

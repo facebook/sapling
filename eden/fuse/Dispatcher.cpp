@@ -35,6 +35,21 @@ Dispatcher::~Dispatcher() {}
 
 void Dispatcher::initConnection(fuse_conn_info& conn) {}
 
+FileHandleMap& Dispatcher::getFileHandles() {
+  return fileHandles_;
+}
+
+std::shared_ptr<FileHandleBase> Dispatcher::getGenericFileHandle(uint64_t fh) {
+  return fileHandles_.getGenericFileHandle(fh);
+}
+
+std::shared_ptr<FileHandle> Dispatcher::getFileHandle(uint64_t fh) {
+  return fileHandles_.getFileHandle(fh);
+}
+std::shared_ptr<DirHandle> Dispatcher::getDirHandle(uint64_t dh) {
+  return fileHandles_.getDirHandle(dh);
+}
+
 static std::string flagsToLabel(
     const std::unordered_map<int32_t, const char*>& labels, uint32_t flags) {
   std::vector<const char*> bits;
@@ -171,29 +186,6 @@ static void disp_forget_multi(fuse_req_t req, size_t count, fuse_forget_data *fo
 }
 #endif
 
-static FileHandleBase* getGenericFileHandle(uint64_t fh) {
-  if (fh == 0) {
-    throwSystemErrorExplicit(EBADF);
-  }
-  return reinterpret_cast<FileHandleBase*>(fh);
-}
-
-static FileHandle* getFileHandle(uint64_t fh) {
-  auto f = dynamic_cast<FileHandle*>(getGenericFileHandle(fh));
-  if (!f) {
-    throwSystemErrorExplicit(EISDIR);
-  }
-  return f;
-}
-
-static DirHandle* getDirHandle(uint64_t fh) {
-  auto f = dynamic_cast<DirHandle*>(getGenericFileHandle(fh));
-  if (!f) {
-    throwSystemErrorExplicit(ENOTDIR);
-  }
-  return f;
-}
-
 folly::Future<Dispatcher::Attr> Dispatcher::getattr(fuse_ino_t ino) {
   throwSystemErrorExplicit(ENOENT);
 }
@@ -208,7 +200,7 @@ static void disp_getattr(fuse_req_t req,
     request.setRequestFuture(
         request.startRequest(dispatcher->getStats().getattr)
             .then([ =, &request, fi = *fi ] {
-              return getGenericFileHandle(fi.fh)->getattr();
+              return dispatcher->getGenericFileHandle(fi.fh)->getattr();
             })
             .then([](Dispatcher::Attr&& attr) {
               RequestData::get().replyAttr(attr.st, attr.timeout);
@@ -244,7 +236,8 @@ static void disp_setattr(fuse_req_t req,
     request.setRequestFuture(
         request.startRequest(dispatcher->getStats().setattr)
             .then([ =, &request, fi = *fi ]() {
-              return getGenericFileHandle(fi.fh)->setattr(*attr, to_set);
+              return dispatcher->getGenericFileHandle(fi.fh)->setattr(
+                  *attr, to_set);
             })
             .then([](Dispatcher::Attr&& attr) {
               RequestData::get().replyAttr(attr.st, attr.timeout);
@@ -433,7 +426,7 @@ static void disp_link(fuse_req_t req,
           .CATCH_ERRORS());
 }
 
-folly::Future<std::unique_ptr<FileHandle>> Dispatcher::open(
+folly::Future<std::shared_ptr<FileHandle>> Dispatcher::open(
     fuse_ino_t ino,
     const struct fuse_file_info& fi) {
   FUSELL_NOT_IMPL();
@@ -447,29 +440,28 @@ static void disp_open(fuse_req_t req,
   request.setRequestFuture(
       request.startRequest(dispatcher->getStats().open)
           .then([ =, &request, fi = *fi ] { return dispatcher->open(ino, fi); })
-          .then([ req, orig_info = *fi ](std::unique_ptr<FileHandle> fh) {
+          .then([ req, dispatcher, orig_info = *fi ](
+              std::shared_ptr<FileHandle> fh) {
             if (!fh) {
               throw std::runtime_error("Dispatcher::open failed to set fh");
             }
             fuse_file_info fi = orig_info;
-            fi.fh = reinterpret_cast<uint64_t>(fh.get());
             fi.direct_io = fh->usesDirectIO();
             fi.keep_cache = fh->preserveCache();
 #if FUSE_MINOR_VERSION >= 8
             fi.nonseekable = !fh->isSeekable();
 #endif
+            fi.fh = dispatcher->getFileHandles().recordHandle(std::move(fh));
             if (!RequestData::get().replyOpen(fi)) {
               // Was interrupted, tidy up.
-              fh->releasefile().then([fh = std::move(fh)]() mutable {
+              auto handle =
+                  dispatcher->getFileHandles().forgetFileHandle(fi.fh);
+              handle->releasefile().then([handle]() mutable {
                 // This reset() is going to happen when fh falls out of scope,
                 // we're just being clear that we want to extend the lifetime
                 // until after the FileHandle::releasefile has finished.
-                fh.reset();
+                handle.reset();
               });
-            } else {
-              // The kernel now owns the pointer and it is no longer tracked
-              // as a unique_ptr reference.
-              fh.release();
             }
           })
           .CATCH_ERRORS());
@@ -484,13 +476,13 @@ static void disp_read(fuse_req_t req,
   auto* dispatcher = request.getDispatcher();
   request.setRequestFuture(request.startRequest(dispatcher->getStats().read)
                                .then([ =, &request, fi = *fi ] {
-                                 auto fh = getFileHandle(fi.fh);
+                                 auto fh = dispatcher->getFileHandle(fi.fh);
                                  return fh->read(size, off);
                                })
                                .then([](BufVec&& buf) {
                                  auto iov = buf.getIov();
-                                 RequestData::get().replyIov(iov.data(),
-                                                             iov.size());
+                                 RequestData::get().replyIov(
+                                     iov.data(), iov.size());
                                })
                                .CATCH_ERRORS());
 }
@@ -506,7 +498,7 @@ static void disp_write(fuse_req_t req,
   request.setRequestFuture(
       request.startRequest(dispatcher->getStats().write)
           .then([ =, &request, fi = *fi ] {
-            auto fh = getFileHandle(fi.fh);
+            auto fh = dispatcher->getFileHandle(fi.fh);
 
             return fh->write(folly::StringPiece(buf, size), off);
           })
@@ -521,7 +513,8 @@ static void disp_flush(fuse_req_t req,
   auto* dispatcher = request.getDispatcher();
   request.setRequestFuture(request.startRequest(dispatcher->getStats().flush)
                                .then([ =, &request, fi = *fi ] {
-                                 auto fh = getFileHandle(fi.fh);
+                                 auto fh = dispatcher->getFileHandle(fi.fh);
+
                                  return fh->flush(fi.lock_owner);
                                })
                                .then([]() { RequestData::get().replyError(0); })
@@ -533,15 +526,16 @@ static void disp_release(fuse_req_t req,
                          struct fuse_file_info* fi) {
   auto& request = RequestData::create(req);
   auto* dispatcher = request.getDispatcher();
-  request.setRequestFuture(request.startRequest(dispatcher->getStats().release)
-                               .then([ =, &request, fi = *fi ] {
-                                 auto fh = getFileHandle(fi.fh);
-                                 return fh->releasefile().then([fh]() {
-                                   delete fh;
-                                   RequestData::get().replyError(0);
-                                 });
-                               })
-                               .CATCH_ERRORS());
+  request.setRequestFuture(
+      request.startRequest(dispatcher->getStats().release)
+          .then([ =, &request, fi = *fi ] {
+            auto handle = dispatcher->getFileHandles().forgetFileHandle(fi.fh);
+            return handle->releasefile().then([handle]() mutable {
+              handle.reset();
+              RequestData::get().replyError(0);
+            });
+          })
+          .CATCH_ERRORS());
 }
 
 static void disp_fsync(fuse_req_t req,
@@ -552,14 +546,14 @@ static void disp_fsync(fuse_req_t req,
   auto* dispatcher = request.getDispatcher();
   request.setRequestFuture(request.startRequest(dispatcher->getStats().fsync)
                                .then([ =, &request, fi = *fi ] {
-                                 auto fh = getFileHandle(fi.fh);
+                                 auto fh = dispatcher->getFileHandle(fi.fh);
                                  return fh->fsync(datasync);
                                })
                                .then([]() { RequestData::get().replyError(0); })
                                .CATCH_ERRORS());
 }
 
-folly::Future<std::unique_ptr<DirHandle>> Dispatcher::opendir(
+folly::Future<std::shared_ptr<DirHandle>> Dispatcher::opendir(
     fuse_ino_t ino,
     const struct fuse_file_info& fi) {
   FUSELL_NOT_IMPL();
@@ -575,24 +569,21 @@ static void disp_opendir(fuse_req_t req,
           .then([ =, &request, fi = *fi ] {
             return dispatcher->opendir(ino, fi);
           })
-          .then([orig_info = *fi](std::unique_ptr<DirHandle> dh) {
+          .then([ dispatcher, orig_info = *fi ](std::shared_ptr<DirHandle> dh) {
             if (!dh) {
               throw std::runtime_error("Dispatcher::opendir failed to set dh");
             }
             fuse_file_info fi = orig_info;
-            fi.fh = reinterpret_cast<uint64_t>(dh.get());
+            fi.fh = dispatcher->getFileHandles().recordHandle(std::move(dh));
             if (!RequestData::get().replyOpen(fi)) {
+              auto handle = dispatcher->getFileHandles().forgetDirHandle(fi.fh);
               // Was interrupted, tidy up
-              dh->releasedir().then([dh = std::move(dh)]() mutable {
+              handle->releasedir().then([handle]() mutable {
                 // This reset() is going to happen when dh falls out of scope,
                 // we're just being clear that we want to extend the lifetime
                 // until after the DirHandle::release() has finished.
-                dh.reset();
+                handle.reset();
               });
-            } else {
-              // The kernel now owns the pointer and it is no longer tracked
-              // as a unique_ptr reference.
-              dh.release();
             }
           })
           .CATCH_ERRORS());
@@ -607,13 +598,13 @@ static void disp_readdir(fuse_req_t req,
   auto* dispatcher = request.getDispatcher();
   request.setRequestFuture(request.startRequest(dispatcher->getStats().readdir)
                                .then([ =, &request, fi = *fi ] {
-                                 auto dh = getDirHandle(fi.fh);
+                                 auto dh = dispatcher->getDirHandle(fi.fh);
                                  return dh->readdir(DirList(size), off);
                                })
                                .then([](DirList&& list) {
                                  auto buf = list.getBuf();
-                                 RequestData::get().replyBuf(buf.data(),
-                                                             buf.size());
+                                 RequestData::get().replyBuf(
+                                     buf.data(), buf.size());
                                })
                                .CATCH_ERRORS());
 }
@@ -623,16 +614,16 @@ static void disp_releasedir(fuse_req_t req,
                             struct fuse_file_info* fi) {
   auto& request = RequestData::create(req);
   auto* dispatcher = request.getDispatcher();
-  request.setRequestFuture(request
-                               .startRequest(dispatcher->getStats().releasedir)
-                               .then([ =, &request, fi = *fi ] {
-                                 auto dh = getDirHandle(fi.fh);
-                                 return dh->releasedir().then([dh]() {
-                                   delete dh;
-                                   RequestData::get().replyError(0);
-                                 });
-                               })
-                               .CATCH_ERRORS());
+  request.setRequestFuture(
+      request.startRequest(dispatcher->getStats().releasedir)
+          .then([ =, &request, fi = *fi ] {
+            auto handle = dispatcher->getFileHandles().forgetDirHandle(fi.fh);
+            return handle->releasedir().then([handle]() mutable {
+              handle.reset();
+              RequestData::get().replyError(0);
+            });
+          })
+          .CATCH_ERRORS());
 }
 
 static void disp_fsyncdir(fuse_req_t req,
@@ -643,7 +634,7 @@ static void disp_fsyncdir(fuse_req_t req,
   auto* dispatcher = request.getDispatcher();
   request.setRequestFuture(request.startRequest(dispatcher->getStats().fsyncdir)
                                .then([ =, &request, fi = *fi ] {
-                                 auto dh = getDirHandle(fi.fh);
+                                 auto dh = dispatcher->getDirHandle(fi.fh);
                                  return dh->fsyncdir(datasync);
                                })
                                .then([]() { RequestData::get().replyError(0); })
@@ -840,26 +831,25 @@ static void disp_create(fuse_req_t req,
             return dispatcher->create(
                 parent, PathComponentPiece(name), mode, fi.flags);
           })
-          .then([orig_info = *fi](Dispatcher::Create info) {
+          .then([ dispatcher, orig_info = *fi ](Dispatcher::Create info) {
             fuse_file_info fi = orig_info;
-            fi.fh = reinterpret_cast<uint64_t>(info.fh.get());
             fi.direct_io = info.fh->usesDirectIO();
             fi.keep_cache = info.fh->preserveCache();
 #if FUSE_MINOR_VERSION >= 8
             fi.nonseekable = !info.fh->isSeekable();
 #endif
+            fi.fh =
+                dispatcher->getFileHandles().recordHandle(std::move(info.fh));
             if (!RequestData::get().replyCreate(info.entry, fi)) {
               // Interrupted, tidy up
-              info.fh->releasefile().then([fh = std::move(info.fh)]() mutable {
+              auto handle =
+                  dispatcher->getFileHandles().forgetFileHandle(fi.fh);
+              handle->releasefile().then([handle]() mutable {
                 // This reset() is going to happen when fh falls out of scope,
                 // we're just being clear that we want to extend the lifetime
                 // until after the FileHandle::releasefile has finished.
-                fh.reset();
+                handle.reset();
               });
-            } else {
-              // The kernel now owns the file handle and it is no longer
-              // tracked as a unique_ptr reference.
-              info.fh.release();
             }
           })
           .CATCH_ERRORS());
@@ -874,7 +864,7 @@ static void disp_getlk(fuse_req_t req,
   request.setRequestFuture(
       request.startRequest(dispatcher->getStats().getlk)
           .then([ =, &request, fi = *fi ] {
-            auto fh = getFileHandle(fi.fh);
+            auto fh = dispatcher->getFileHandle(fi.fh);
             return fh->getlk(*lock, fi.lock_owner);
           })
           .then([](struct flock lock) { RequestData::get().replyLock(lock); })
@@ -890,7 +880,7 @@ static void disp_setlk(fuse_req_t req,
   auto* dispatcher = request.getDispatcher();
   request.setRequestFuture(request.startRequest(dispatcher->getStats().setlk)
                                .then([ =, &request, fi = *fi ] {
-                                 auto fh = getFileHandle(fi.fh);
+                                 auto fh = dispatcher->getFileHandle(fi.fh);
 
                                  return fh->setlk(*lock, sleep, fi.lock_owner);
                                })
@@ -940,7 +930,7 @@ static void disp_ioctl(fuse_req_t req,
   request.setRequestFuture(
       request.startRequest(dispatcher->getStats().ioctl)
           .then([ =, &request, fi = *fi ] {
-            auto fh = getGenericFileHandle(fi.fh);
+            auto fh = dispatcher->getGenericFileHandle(fi.fh);
 
             return fh->ioctl(cmd,
                              arg,
@@ -966,7 +956,7 @@ static void disp_poll(fuse_req_t req,
   request.setRequestFuture(
       request.startRequest(dispatcher->getStats().poll)
           .then([ =, &request, fi = *fi ] {
-            auto fh = getGenericFileHandle(fi.fh);
+            auto fh = dispatcher->getGenericFileHandle(fi.fh);
 
             std::unique_ptr<PollHandle> poll_handle;
             if (ph) {

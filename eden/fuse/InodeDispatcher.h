@@ -72,7 +72,7 @@ class InodeDispatcher : public Dispatcher {
   folly::Future<Attr> setattr(fuse_ino_t ino,
                               const struct stat& attr,
                               int to_set) override;
-  folly::Future<std::unique_ptr<DirHandle>> opendir(
+  folly::Future<std::shared_ptr<DirHandle>> opendir(
       fuse_ino_t ino,
       const struct fuse_file_info& fi) override;
   folly::Future<fuse_entry_param> lookup(
@@ -87,7 +87,7 @@ class InodeDispatcher : public Dispatcher {
       PathComponentPiece name);
   folly::Future<folly::Unit> forget(fuse_ino_t ino,
                                     unsigned long nlookup) override;
-  folly::Future<std::unique_ptr<FileHandle>> open(
+  folly::Future<std::shared_ptr<FileHandle>> open(
       fuse_ino_t ino,
       const struct fuse_file_info& fi) override;
   folly::Future<std::string> readlink(fuse_ino_t ino) override;
