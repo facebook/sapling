@@ -63,8 +63,13 @@ std::string getPathToUnixDomainSocket(StringPiece edenDir);
 namespace facebook {
 namespace eden {
 
-EdenServer::EdenServer(StringPiece edenDir, StringPiece rocksPath)
-    : edenDir_(edenDir.str()), rocksPath_(rocksPath.str()) {}
+EdenServer::EdenServer(
+    StringPiece edenDir,
+    StringPiece configPath,
+    StringPiece rocksPath)
+    : edenDir_(edenDir.str()),
+      configPath_(configPath.str()),
+      rocksPath_(rocksPath.str()) {}
 
 EdenServer::~EdenServer() {
   // Stop all of the mount points.

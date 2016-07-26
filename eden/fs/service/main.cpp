@@ -11,6 +11,7 @@
 #include <folly/Conv.h>
 #include <folly/init/Init.h>
 #include <gflags/gflags.h>
+#include <pwd.h>
 #include <stdlib.h>
 #include <sysexits.h>
 #include "EdenServer.h"
@@ -18,6 +19,7 @@
 
 DEFINE_bool(allowRoot, false, "Allow running eden directly as root");
 DEFINE_string(edenDir, "", "The path to the .eden directory");
+DEFINE_string(configPath, "", "The path of the ~/.edenrc config file");
 DEFINE_string(rocksPath, "", "The path to the local RocksDB store");
 
 DEFINE_int32(
@@ -117,6 +119,31 @@ int main(int argc, char **argv) {
     return EX_USAGE;
   }
 
+  std::string configPath = FLAGS_configPath;
+  if (configPath.empty()) {
+    auto homeDir = getenv("HOME");
+    if (homeDir) {
+      configPath = homeDir;
+    } else {
+      struct passwd pwd;
+      struct passwd* result;
+      char buf[1024];
+      if (getpwuid_r(getuid(), &pwd, buf, sizeof(buf), &result) == 0) {
+        if (result != nullptr) {
+          configPath = pwd.pw_dir;
+        }
+      }
+    }
+    if (configPath.empty()) {
+      fprintf(
+          stderr,
+          "error: the --configPath argument was not specified and no $HOME\
+directory could be found for this user\n");
+      return EX_USAGE;
+    }
+    configPath.append("/.edenrc");
+  }
+
   std::string rocksPath = FLAGS_rocksPath;
   if (rocksPath.empty()) {
     rocksPath = FLAGS_edenDir + "/storage/rocks-db";
@@ -131,7 +158,7 @@ int main(int argc, char **argv) {
       1);
 
   // Run the eden server
-  EdenServer server(FLAGS_edenDir, rocksPath);
+  EdenServer server(FLAGS_edenDir, configPath, rocksPath);
   server.run();
 
   LOG(INFO) << "edenfs performing orderly shutdown";

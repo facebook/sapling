@@ -21,7 +21,6 @@ using std::string;
 namespace {
 // INI config files
 const facebook::eden::AbsolutePathPiece kGlobalConfig{"/etc/eden/config.d"};
-const facebook::eden::RelativePathPiece kHomeConfig{".edenrc"};
 const facebook::eden::RelativePathPiece kLocalConfig{"edenrc"};
 
 // Keys for the config INI file.
@@ -65,7 +64,7 @@ AbsolutePath ClientConfig::getOverlayPath() const {
 std::unique_ptr<ClientConfig> ClientConfig::loadFromClientDirectory(
     AbsolutePathPiece mountPoint,
     AbsolutePathPiece clientDirectory,
-    AbsolutePathPiece homeDirectory) {
+    AbsolutePathPiece configPath) {
   // Extract repo name from clientDirectory
   boost::property_tree::ptree repoData;
   auto clientConfigFile = clientDirectory + kLocalConfig;
@@ -84,8 +83,8 @@ std::unique_ptr<ClientConfig> ClientConfig::loadFromClientDirectory(
   sort(rcFiles.begin(), rcFiles.end());
 
   // Get home config file
-  auto userConfigFile = AbsolutePathPiece{homeDirectory} + kHomeConfig;
-  rcFiles.push_back(userConfigFile.c_str());
+  auto userConfigPath = AbsolutePath{configPath};
+  rcFiles.push_back(userConfigPath.c_str());
 
   // Find repository data in config files
   boost::property_tree::ptree configData;

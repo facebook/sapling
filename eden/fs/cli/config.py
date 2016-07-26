@@ -29,7 +29,7 @@ import thrift
 
 # These are INI files that hold config data.
 GLOBAL_CONFIG_DIR = '/etc/eden/config.d'
-HOME_CONFIG = '.edenrc'
+USER_CONFIG = '.edenrc'
 
 # These paths are relative to the user's client directory.
 CLIENTS_DIR = 'clients'
@@ -58,7 +58,7 @@ class UsageError(Exception):
 class Config:
     def __init__(self, config_dir, home_dir):
         self._config_dir = config_dir
-        self._home_dir = home_dir
+        self._user_config_path = os.path.join(home_dir, USER_CONFIG)
 
     def get_rc_files(self):
         rc_files = []
@@ -66,9 +66,7 @@ class Config:
             rc_files = os.listdir(GLOBAL_CONFIG_DIR)
             rc_files = [os.path.join(GLOBAL_CONFIG_DIR, f) for f in rc_files]
         sorted(rc_files)
-        config = os.path.join(self._home_dir, HOME_CONFIG)
-        if os.path.isfile(config):
-            rc_files.append(config)
+        rc_files.append(self._user_config_path)
         return rc_files
 
     def get_repository_list(self, parser=None):
@@ -143,9 +141,7 @@ class Config:
 
     def add_repository(self, name, repo_type, source, with_buck=False):
         # Check if repository already exists
-        config_ini = os.path.join(self._home_dir, HOME_CONFIG)
-
-        with ConfigUpdater(config_ini) as config:
+        with ConfigUpdater(self._user_config_path) as config:
             if name in self.get_repository_list(config):
                 raise UsageError('''\
 repository %s already exists. You will need to edit the ~/.edenrc config file \
@@ -219,8 +215,7 @@ by hand to make changes to the repository or remove it.''' % name)
 
         # Prepare to mount
         mount_info = eden_ttypes.MountInfo(mountPoint=path,
-                                           edenClientPath=client_dir,
-                                           homeDir=self._home_dir)
+                                           edenClientPath=client_dir)
         with self.get_thrift_client() as client:
             client.mount(mount_info)
 
@@ -279,7 +274,8 @@ by hand to make changes to the repository or remove it.''' % name)
                 health_info.pid))
 
         # Run the eden server.
-        cmd = [daemon_binary, '--edenDir', self._config_dir, ]
+        cmd = [daemon_binary, '--edenDir', self._config_dir,
+               '--configPath', self._user_config_path, ]
         if gdb:
             gdb_args = gdb_args or []
             cmd = ['gdb'] + gdb_args + ['--args'] + cmd
@@ -559,7 +555,7 @@ class ConfigUpdater(object):
         # Write the contents to a temporary file first, then atomically rename
         # it to the desired destination.  This makes sure the .edenrc file
         # always has valid contents at all points in time.
-        prefix = HOME_CONFIG + '.tmp.'
+        prefix = USER_CONFIG + '.tmp.'
         dirname = os.path.dirname(self.path)
         tmpf = tempfile.NamedTemporaryFile('w', dir=dirname, prefix=prefix,
                                            delete=False)

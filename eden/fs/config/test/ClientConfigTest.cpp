@@ -23,26 +23,26 @@ namespace {
 
 class ClientConfigTest : public ::testing::Test {
  protected:
-  boost::filesystem::path configDir_;
+  boost::filesystem::path clientDir_;
   boost::filesystem::path mountPoint_;
-  boost::filesystem::path homeDir_;
+  boost::filesystem::path userConfigPath_;
 
   virtual void SetUp() override {
-    configDir_ = boost::filesystem::temp_directory_path() /
+    clientDir_ = boost::filesystem::temp_directory_path() /
         boost::filesystem::unique_path();
-    boost::filesystem::create_directories(configDir_);
+    boost::filesystem::create_directories(clientDir_);
 
-    homeDir_ = boost::filesystem::temp_directory_path() /
+    auto homeDir = boost::filesystem::temp_directory_path() /
         boost::filesystem::unique_path();
-    boost::filesystem::create_directories(homeDir_);
+    boost::filesystem::create_directories(homeDir);
 
     mountPoint_ = "/tmp/someplace";
 
-    auto snapshotPath = configDir_ / "SNAPSHOT";
+    auto snapshotPath = clientDir_ / "SNAPSHOT";
     auto snapshot = "1234567812345678123456781234567812345678\n";
     folly::writeFile(folly::StringPiece{snapshot}, snapshotPath.c_str());
 
-    auto configPath = homeDir_ / ".edenrc";
+    userConfigPath_ = homeDir / ".edenrc";
     auto data =
         "; This INI has a comment\n"
         "[repository fbsource]\n"
@@ -50,9 +50,9 @@ class ClientConfigTest : public ::testing::Test {
         "type = git\n"
         "[bindmounts fbsource]\n"
         "my-path = path/to-my-path\n";
-    folly::writeFile(folly::StringPiece{data}, configPath.c_str());
+    folly::writeFile(folly::StringPiece{data}, userConfigPath_.c_str());
 
-    auto localConfigPath = configDir_ / "edenrc";
+    auto localConfigPath = clientDir_ / "edenrc";
     auto localData =
         "[repository]\n"
         "name = fbsource\n";
@@ -60,15 +60,15 @@ class ClientConfigTest : public ::testing::Test {
   }
 
   virtual void TearDown() override {
-    boost::filesystem::remove_all(configDir_);
+    boost::filesystem::remove_all(clientDir_);
   }
 };
 
 TEST_F(ClientConfigTest, testLoadFromClientDirectory) {
   auto config = ClientConfig::loadFromClientDirectory(
       AbsolutePath{mountPoint_.string()},
-      AbsolutePath{configDir_.string()},
-      AbsolutePath{homeDir_.string()});
+      AbsolutePath{clientDir_.string()},
+      AbsolutePath{userConfigPath_.string()});
 
   EXPECT_EQ(
       Hash{"1234567812345678123456781234567812345678"},
@@ -76,7 +76,7 @@ TEST_F(ClientConfigTest, testLoadFromClientDirectory) {
   EXPECT_EQ("/tmp/someplace", config->getMountPath());
 
   std::vector<BindMount> expectedBindMounts;
-  auto pathInClientDir = configDir_ / "bind-mounts" / "my-path";
+  auto pathInClientDir = clientDir_ / "bind-mounts" / "my-path";
 
   expectedBindMounts.emplace_back(
       BindMount{AbsolutePath{pathInClientDir.c_str()},
@@ -86,18 +86,17 @@ TEST_F(ClientConfigTest, testLoadFromClientDirectory) {
 
 TEST_F(ClientConfigTest, testLoadFromClientDirectoryWithNoBindMounts) {
   // Overwrite .edenrc with no bind-mounts entry.
-  auto configPath = homeDir_ / ".edenrc";
   auto data =
       "; This INI has a comment\n"
       "[repository fbsource]\n"
       "path = /data/users/carenthomas/fbsource\n"
       "type = git\n";
-  folly::writeFile(folly::StringPiece{data}, configPath.c_str());
+  folly::writeFile(folly::StringPiece{data}, userConfigPath_.c_str());
 
   auto config = ClientConfig::loadFromClientDirectory(
       AbsolutePath{mountPoint_.string()},
-      AbsolutePath{configDir_.string()},
-      AbsolutePath{homeDir_.string()});
+      AbsolutePath{clientDir_.string()},
+      AbsolutePath{userConfigPath_.string()});
 
   EXPECT_EQ(
       Hash{"1234567812345678123456781234567812345678"},

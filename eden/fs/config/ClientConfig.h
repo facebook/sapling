@@ -35,7 +35,7 @@ class ClientConfig {
   static std::unique_ptr<ClientConfig> loadFromClientDirectory(
       AbsolutePathPiece mountPoint,
       AbsolutePathPiece clientDirectory,
-      AbsolutePathPiece homeDirectory);
+      AbsolutePathPiece configPath);
 
   Hash getSnapshotID() const;
 

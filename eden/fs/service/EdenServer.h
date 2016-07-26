@@ -48,7 +48,10 @@ class EdenServer {
   using MountList = std::vector<std::shared_ptr<EdenMount>>;
   using MountMap = folly::StringKeyedMap<std::shared_ptr<EdenMount>>;
 
-  EdenServer(folly::StringPiece edenDir, folly::StringPiece rocksPath);
+  EdenServer(
+      folly::StringPiece edenDir,
+      folly::StringPiece configPath,
+      folly::StringPiece rocksPath);
   virtual ~EdenServer();
 
   void run();
@@ -76,6 +79,10 @@ class EdenServer {
 
   std::shared_ptr<LocalStore> getLocalStore() const {
     return localStore_;
+  }
+
+  const std::string& getConfigPath() const {
+    return configPath_;
   }
 
   /**
@@ -123,6 +130,7 @@ class EdenServer {
    */
 
   std::string edenDir_;
+  std::string configPath_;
   std::string rocksPath_;
   folly::File lockFile_;
   std::shared_ptr<EdenServiceHandler> handler_;
