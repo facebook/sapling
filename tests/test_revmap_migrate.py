@@ -6,6 +6,10 @@ from mercurial.node import hex
 
 class TestRevMapMigrate(test_util.TestBase):
 
+    def tearDown(self):
+        # revert changes to defaultrevmapclass
+        svnmeta.SVNMeta._defaultrevmapclass = maps.RevMap
+
     def _test_revmap_migrate(self, fromclass, toclass):
         # revmap interfaces to test
         getters = [
