@@ -78,6 +78,9 @@ target_link_libraries(tree_iterator_test bsearch fastmanifest)
 add_executable(tree_convert_rt tree_convert_rt.c)
 target_link_libraries(tree_convert_rt bsearch fastmanifest)
 
+add_executable(tree_dump tree_dump.c)
+target_link_libraries(tree_dump bsearch fastmanifest)
+
 add_executable(tree_iterate_rt tree_iterate_rt.c)
 target_link_libraries(tree_iterate_rt bsearch fastmanifest)
 

@@ -40,6 +40,7 @@ New errors are not allowed. Warnings are strongly discouraged.
   Skipping cfastmanifest/tree_diff_test.c it has no-che?k-code (glob)
   Skipping cfastmanifest/tree_disk.c it has no-che?k-code (glob)
   Skipping cfastmanifest/tree_disk_test.c it has no-che?k-code (glob)
+  Skipping cfastmanifest/tree_dump.c it has no-che?k-code (glob)
   Skipping cfastmanifest/tree_iterate_rt.c it has no-che?k-code (glob)
   Skipping cfastmanifest/tree_iterator.c it has no-che?k-code (glob)
   Skipping cfastmanifest/tree_iterator.h it has no-che?k-code (glob)
