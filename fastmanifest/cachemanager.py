@@ -217,53 +217,71 @@ def cachemanifestfillandtrim(ui, repo, revset):
             repo.ui.log("fastmanifest", "FM: trying to cache %s\n"
                         % str(sortedrevs))
 
-            revstomannodes = {}
-            mannodesprocessed = set()
-            for rev in sortedrevs:
-                mannode = revlog.hex(
-                    repo.changelog.changelogrevision(rev).manifest)
-                revstomannodes[rev] = mannode
-                mannodesprocessed.add(mannode)
-
-                if mannode in cache.ondiskcache:
-                    ui.debug("[FM] skipped %s, already cached (fast path)\n" %
-                             (mannode,))
-                    repo.ui.log("fastmanifest", "FM: skip(rev, man) %s->%s\n"
-                                %(rev, mannode))
-
-                    # Account for the fact that we access this manifest
-                    cache.ondiskcache.touch(mannode)
-                    continue
-                manifest = repo[rev].manifest()
-                fastmanifest = cfastmanifest.fastmanifest(manifest.text())
-
-                cache.makeroomfor(fastmanifest.bytes(), mannodesprocessed)
-
-                try:
-                    cache[mannode] = fastmanifest
-                    repo.ui.log("fastmanifest", "FM: cached(rev,man) %s->%s\n"
-                                %(rev, mannode))
-                except CacheFullException:
-                    repo.ui.log("fastmanifest", "FM: overflow\n")
-                    break
-
-            # Make the least relevant entries have an artificially older mtime
-            # than the more relevant ones. We use a resolution of 2 for time to
-            # work accross all platforms and ensure that the order is marked.
-            #
-            # Note that we use sortedrevs and not revs because here we don't
-            # care about the shuffling, we just want the most relevant revisions
-            # to have more recent mtime.
-            mtimemultiplier = 2
-            for offset, rev in enumerate(sortedrevs):
-                if rev in revstomannodes:
-                    hexnode = revstomannodes[rev]
-                    cache.ondiskcache.touch(hexnode,
-                            delay=offset * mtimemultiplier)
+            if len(sortedrevs) == 0:
+                # normally, we prune as we make space for new revisions to add
+                # to the cache.  however, if we're not adding any new elements,
+                # we'll never check the disk cache size.  this is an explicit
+                # check for that particular scenario.
+                before = cache.ondiskcache.items()
+                cache.prune()
+                after = cache.ondiskcache.items()
+                diff = set(after) - set(before)
+                if diff:
+                    ui.log("fastmanifest", "FM: removed entries %s\n" %
+                           str(diff))
                 else:
-                    metricscollector.get().recordsample("cacheoverflow",
-                            hit=True)
-                    pass # We didn't have enough space for that rev
+                    ui.log("fastmanifest", "FM: no entries removed\n")
+            else:
+                revstomannodes = {}
+                mannodesprocessed = set()
+                for rev in sortedrevs:
+                    mannode = revlog.hex(
+                        repo.changelog.changelogrevision(rev).manifest)
+                    revstomannodes[rev] = mannode
+                    mannodesprocessed.add(mannode)
+
+                    if mannode in cache.ondiskcache:
+                        ui.debug("[FM] skipped %s, already cached "
+                                "(fast path)\n" % (mannode,))
+                        repo.ui.log("fastmanifest",
+                                "FM: skip(rev, man) %s->%s\n" %
+                                (rev, mannode))
+
+                        # Account for the fact that we access this manifest
+                        cache.ondiskcache.touch(mannode)
+                        continue
+                    manifest = repo[rev].manifest()
+                    fastmanifest = cfastmanifest.fastmanifest(manifest.text())
+
+                    cache.makeroomfor(fastmanifest.bytes(), mannodesprocessed)
+
+                    try:
+                        cache[mannode] = fastmanifest
+                        repo.ui.log("fastmanifest", "FM: cached(rev,man) "
+                                    "%s->%s\n" %
+                                    (rev, mannode))
+                    except CacheFullException:
+                        repo.ui.log("fastmanifest", "FM: overflow\n")
+                        break
+
+                # Make the least relevant entries have an artificially older
+                # mtime than the more relevant ones. We use a resolution of 2
+                # for time to work accross all platforms and ensure that the
+                # order is marked.
+                #
+                # Note that we use sortedrevs and not revs because here we
+                # don't care about the shuffling, we just want the most relevant
+                # revisions to have more recent mtime.
+                mtimemultiplier = 2
+                for offset, rev in enumerate(sortedrevs):
+                    if rev in revstomannodes:
+                        hexnode = revstomannodes[rev]
+                        cache.ondiskcache.touch(hexnode,
+                                delay=offset * mtimemultiplier)
+                    else:
+                        metricscollector.get().recordsample("cacheoverflow",
+                                hit=True)
+                        pass # We didn't have enough space for that rev
     except error.LockHeld:
         return
     except (OSError, IOError) as ex:
@@ -273,16 +291,6 @@ def cachemanifestfillandtrim(ui, repo, revset):
             ui.warn(("(make sure that .hg/store is writeable)\n"))
             return
         raise
-
-    before = cache.ondiskcache.items()
-    cache.prune()
-    after = cache.ondiskcache.items()
-    diff = set(after) - set(before)
-    if diff:
-        ui.log("fastmanifest", "FM: removed entries %s\n" % str(diff))
-    else:
-        ui.log("fastmanifest", "FM: no entries removed\n")
-
 
     total, numentries = cache.ondiskcache.totalsize()
     if isinstance(cache.limit, _systemawarecachelimit):
