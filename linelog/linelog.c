@@ -135,3 +135,33 @@ static linelog_result reservelines(linelog_annotateresult *ar,
 	}
 	return LINELOG_RESULT_OK;
 }
+
+/* APIs declared in .h */
+
+void linelog_annotateresult_clear(linelog_annotateresult *ar) {
+	free(ar->lines);
+	memset(ar, 0, sizeof(linelog_annotateresult));
+}
+
+linelog_result linelog_clear(linelog_buf *buf) {
+	linelog_inst insts[2] = { { .offset = 2 }, { .offset = 0 } };
+	returnonerror(writeinst(buf, &insts[1], 1));
+	returnonerror(writeinst(buf, &insts[0], 0));
+	return LINELOG_RESULT_OK;
+}
+
+size_t linelog_getactualsize(const linelog_buf *buf) {
+	linelog_inst inst0;
+	linelog_result r = readinst(buf, &inst0, 0);
+	if (r != LINELOG_RESULT_OK)
+		return 0;
+	return (size_t)(inst0.offset) * INST_SIZE;
+}
+
+linelog_revnum linelog_getmaxrev(const linelog_buf *buf) {
+	linelog_inst inst0;
+	linelog_result r = readinst(buf, &inst0, 0);
+	if (r != LINELOG_RESULT_OK)
+		return 0;
+	return inst0.rev;
+}
