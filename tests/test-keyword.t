@@ -1,3 +1,15 @@
+Run kwdemo outside a repo
+  $ hg -q --config extensions.keyword= --config keywordmaps.Foo="{author|user}" kwdemo
+  [extensions]
+  keyword =
+  [keyword]
+  demo.txt = 
+  [keywordset]
+  svn = False
+  [keywordmaps]
+  Foo = {author|user}
+  $Foo: test $
+
   $ cat <<EOF >> $HGRCPATH
   > [extensions]
   > keyword =
