@@ -165,3 +165,47 @@ linelog_revnum linelog_getmaxrev(const linelog_buf *buf) {
 		return 0;
 	return inst0.rev;
 }
+
+linelog_result linelog_annotate(const linelog_buf *buf,
+		 linelog_annotateresult *ar, linelog_revnum rev) {
+	linelog_inst inst0;
+	returnonerror(readinst(buf, &inst0, 0));
+
+	linelog_offset pc, nextpc = 1, endoffset = 0;
+	linelog_linenum linenum = 0;
+	size_t step = (size_t)inst0.offset;
+
+	while ((pc = nextpc++) != 0 && --step) {
+		linelog_inst i;
+		returnonerror(readinst(buf, &i, pc));
+
+		switch (i.opcode) {
+		case JGE: case JL: /* conditional jump */
+			if (i.opcode == JGE ? rev >= i.rev : rev < i.rev) {
+				nextpc = i.offset;
+				if (nextpc == 0) /* met the END marker */
+					endoffset = pc;
+			}
+			break;
+		case LINE: /* append a line */
+			{
+				linelog_lineinfo info = {i.rev, i.linenum, pc};
+				returnonerror(reservelines(ar, linenum + 1));
+				ar->lines[linenum++] = info;
+			}
+			break;
+		default: /* unknown opcode */
+			return LINELOG_RESULT_EILLDATA;
+		}
+	}
+
+	if (endoffset == 0) /* didn't meet a valid END marker */
+		return LINELOG_RESULT_EILLDATA;
+
+	/* ar->lines[ar->linecount].offset records the endoffset */
+	returnonerror(reservelines(ar, linenum + 1));
+	linelog_lineinfo endlineinfo = { .offset = endoffset };
+	ar->lines[linenum] = endlineinfo;
+	ar->linecount = linenum;
+	return LINELOG_RESULT_OK;
+}
