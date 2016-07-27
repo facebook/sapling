@@ -440,7 +440,14 @@ def versiontuple(v=None, n=4):
 
 # used by parsedate
 defaultdateformats = (
-    '%Y-%m-%d %H:%M:%S',
+    '%Y-%m-%dT%H:%M:%S', # the 'real' ISO8601
+    '%Y-%m-%dT%H:%M',    #   without seconds
+    '%Y-%m-%dT%H%M%S',   # another awful but legal variant without :
+    '%Y-%m-%dT%H%M',     #   without seconds
+    '%Y-%m-%d %H:%M:%S', # our common legal variant
+    '%Y-%m-%d %H:%M',    #   without seconds
+    '%Y-%m-%d %H%M%S',   # without :
+    '%Y-%m-%d %H%M',     #   without seconds
     '%Y-%m-%d %I:%M:%S%p',
     '%Y-%m-%d %H:%M',
     '%Y-%m-%d %I:%M%p',

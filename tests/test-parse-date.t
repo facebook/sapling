@@ -258,3 +258,31 @@ Test issue 3764 (interpreting 'today' and 'yesterday')
   $ hg log -d today --template '{desc}\n'
   Explicitly committed now.
   today is a good day to code
+
+Test parsing various ISO8601 forms
+
+  $ hg debugdate "2016-07-27T12:10:21"
+  internal: 1469646621 * (glob)
+  standard: Wed Jul 27 12:10:21 2016 -0700
+  $ hg debugdate "2016-07-27T12:10:21Z"
+  internal: 1469621421 0
+  standard: Wed Jul 27 12:10:21 2016 +0000
+  $ hg debugdate "2016-07-27T12:10:21+00:00"
+  internal: 1469621421 0
+  standard: Wed Jul 27 12:10:21 2016 +0000
+  $ hg debugdate "2016-07-27T121021Z"
+  internal: 1469621421 0
+  standard: Wed Jul 27 12:10:21 2016 +0000
+
+  $ hg debugdate "2016-07-27 12:10:21"
+  internal: 1469646621 * (glob)
+  standard: Wed Jul 27 12:10:21 2016 -0700
+  $ hg debugdate "2016-07-27 12:10:21Z"
+  internal: 1469621421 0
+  standard: Wed Jul 27 12:10:21 2016 +0000
+  $ hg debugdate "2016-07-27 12:10:21+00:00"
+  internal: 1469621421 0
+  standard: Wed Jul 27 12:10:21 2016 +0000
+  $ hg debugdate "2016-07-27 121021Z"
+  internal: 1469621421 0
+  standard: Wed Jul 27 12:10:21 2016 +0000
