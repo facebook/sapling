@@ -2584,7 +2584,7 @@ def cat(ui, repo, ctx, matcher, prefix, **opts):
     # Don't warn about "missing" files that are really in subrepos
     def badfn(path, msg):
         for subpath in ctx.substate:
-            if path.startswith(subpath):
+            if path.startswith(subpath + '/'):
                 return
         matcher.bad(path, msg)
 

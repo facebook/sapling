@@ -60,6 +60,9 @@ Subrepopath which overlaps with filepath, does not change warnings in remove()
   $ hg remove -S snot/file
   not removing snot/file: file is untracked
   [1]
+  $ hg cat snot/filenot
+  snot/filenot: no such file in rev 7cf8cfea66e4
+  [1]
   $ rm -r snot
 
 Revert subrepo and test subrepo fileset keyword:
