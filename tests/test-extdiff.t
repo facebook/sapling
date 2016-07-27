@@ -31,10 +31,12 @@ Should diff cloned directories:
   $ hg help falabala
   hg falabala [OPTION]... [FILE]...
   
-  use 'echo' to diff repository (or selected files)
+  use external program to diff repository (or selected files)
   
       Show differences between revisions for the specified files, using the
-      'echo' program.
+      following program:
+  
+        'echo'
   
       When two revision arguments are given, then changes are shown between
       those revisions. If only one revision is specified then that revision is
@@ -407,5 +409,6 @@ Test handling of non-ASCII paths in generated docstrings (issue5301)
   (try "hg help" for a list of topics)
   [255]
 
-  $ LC_MESSAGES=ja_JP.UTF-8 hg --config hgext.extdiff= --config extdiff.cmd.td=$U help td | grep "^use"
-  use '\xa5\xa5' to diff repository (or selected files)
+  $ LC_MESSAGES=ja_JP.UTF-8 hg --config hgext.extdiff= --config extdiff.cmd.td=$U help td \
+  > | grep "^      '"
+        '\xa5\xa5'

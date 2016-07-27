@@ -325,10 +325,12 @@ def extdiff(ui, repo, *pats, **opts):
     return dodiff(ui, repo, cmdline, pats, opts)
 
 class savedcmd(object):
-    """use %(path)s to diff repository (or selected files)
+    """use external program to diff repository (or selected files)
 
     Show differences between revisions for the specified files, using
-    the %(path)s program.
+    the following program::
+
+        %(path)s
 
     When two revision arguments are given, then changes are shown
     between those revisions. If only one revision is specified then
