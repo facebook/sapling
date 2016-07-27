@@ -114,7 +114,7 @@ def docstrings(path):
         if func.__doc__:
             src = inspect.getsource(func)
             name = "%s.%s" % (path, func.__name__)
-            lineno = func.func_code.co_firstlineno
+            lineno = inspect.getsourcelines(func)[1]
             doc = func.__doc__
             if rstrip:
                 doc = doc.rstrip()
