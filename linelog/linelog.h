@@ -52,4 +52,17 @@ typedef struct {
 	linelog_linenum maxlinecount;
 } linelog_annotateresult;
 
+/* free memory used by ar, useful to reset ar from an invalid state */
+void linelog_annotateresult_clear(linelog_annotateresult *ar);
+
+/* (re-)initialize the buffer, make it represent an empty file */
+linelog_result linelog_clear(linelog_buf *buf);
+
+/* get the actual size needed for buf->data */
+size_t linelog_getactualsize(const linelog_buf *buf);
+
+/* get the max revision number covered by this linelog
+   return 0 if buf is not initialized (by linelog_clear). */
+linelog_revnum linelog_getmaxrev(const linelog_buf *buf);
+
 #endif /* end of include guard: LINELOG_H_ZUJREV4L */
