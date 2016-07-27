@@ -57,20 +57,12 @@ class FileHandleMap {
    **/
   uint64_t recordHandle(std::shared_ptr<FileHandleBase> fh);
 
-  /** Delete the association from the fh to a file handle instance.
-   * Throws EBADF if the file handle is not tracked by this map, or
-   * EISDIR if the instance is a DirHandle rather than a FileHandle.
+  /** Delete the association from the fh to a handle instance.
+   * Throws EBADF if the file handle is not tracked by this map.
    * On success, returns the instance. */
-  std::shared_ptr<FileHandle> forgetFileHandle(uint64_t fh);
-
-  /** Delete the association from the fh to a dir handle instance.
-   * Throws EBADF if the file handle is not tracked by this map, or
-   * ENOTDIR if the instance is a FileHandle rather than a DirHandle.
-   * On success, returns the instance. */
-  std::shared_ptr<DirHandle> forgetDirHandle(uint64_t dh);
+  std::shared_ptr<FileHandleBase> forgetGenericHandle(uint64_t fh);
 
  private:
-  std::shared_ptr<FileHandleBase> forgetGenericHandle(uint64_t fh);
 
   folly::Synchronized<
       std::unordered_map<uint64_t, std::shared_ptr<FileHandleBase>>>

@@ -80,21 +80,6 @@ class FileHandle : public FileHandleBase {
   virtual folly::Future<folly::Unit> flush(uint64_t lock_owner) = 0;
 
   /**
-   * Release an open file
-   *
-   * Release is called when there are no more references to an open
-   * file: all file descriptors are closed and all memory mappings
-   * are unmapped.
-   *
-   * For every open call there will be exactly one release call.
-   *
-   * The filesystem may reply with an error, but error values are
-   * not returned to close() or munmap() which triggered the
-   * release.
-   */
-  virtual folly::Future<folly::Unit> releasefile();
-
-  /**
    * Synchronize file contents
    *
    * If the datasync parameter is non-zero, then only the user data

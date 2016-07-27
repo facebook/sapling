@@ -18,9 +18,6 @@ namespace fusell {
 bool FileHandle::usesDirectIO() const { return false; }
 bool FileHandle::preserveCache() const { return false; }
 bool FileHandle::isSeekable() const { return true; }
-folly::Future<folly::Unit> FileHandle::releasefile() {
-  return Unit{};
-}
 
 folly::Future<struct flock> FileHandle::getlk(struct flock lock,
                                               uint64_t lock_owner) {

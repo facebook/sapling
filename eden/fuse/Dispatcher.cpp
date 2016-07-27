@@ -454,14 +454,7 @@ static void disp_open(fuse_req_t req,
             fi.fh = dispatcher->getFileHandles().recordHandle(std::move(fh));
             if (!RequestData::get().replyOpen(fi)) {
               // Was interrupted, tidy up.
-              auto handle =
-                  dispatcher->getFileHandles().forgetFileHandle(fi.fh);
-              handle->releasefile().then([handle]() mutable {
-                // This reset() is going to happen when fh falls out of scope,
-                // we're just being clear that we want to extend the lifetime
-                // until after the FileHandle::releasefile has finished.
-                handle.reset();
-              });
+              dispatcher->getFileHandles().forgetGenericHandle(fi.fh);
             }
           })
           .CATCH_ERRORS());
@@ -529,11 +522,8 @@ static void disp_release(fuse_req_t req,
   request.setRequestFuture(
       request.startRequest(dispatcher->getStats().release)
           .then([ =, &request, fi = *fi ] {
-            auto handle = dispatcher->getFileHandles().forgetFileHandle(fi.fh);
-            return handle->releasefile().then([handle]() mutable {
-              handle.reset();
-              RequestData::get().replyError(0);
-            });
+            dispatcher->getFileHandles().forgetGenericHandle(fi.fh);
+            RequestData::get().replyError(0);
           })
           .CATCH_ERRORS());
 }
@@ -576,14 +566,8 @@ static void disp_opendir(fuse_req_t req,
             fuse_file_info fi = orig_info;
             fi.fh = dispatcher->getFileHandles().recordHandle(std::move(dh));
             if (!RequestData::get().replyOpen(fi)) {
-              auto handle = dispatcher->getFileHandles().forgetDirHandle(fi.fh);
               // Was interrupted, tidy up
-              handle->releasedir().then([handle]() mutable {
-                // This reset() is going to happen when dh falls out of scope,
-                // we're just being clear that we want to extend the lifetime
-                // until after the DirHandle::release() has finished.
-                handle.reset();
-              });
+              dispatcher->getFileHandles().forgetGenericHandle(fi.fh);
             }
           })
           .CATCH_ERRORS());
@@ -617,11 +601,8 @@ static void disp_releasedir(fuse_req_t req,
   request.setRequestFuture(
       request.startRequest(dispatcher->getStats().releasedir)
           .then([ =, &request, fi = *fi ] {
-            auto handle = dispatcher->getFileHandles().forgetDirHandle(fi.fh);
-            return handle->releasedir().then([handle]() mutable {
-              handle.reset();
-              RequestData::get().replyError(0);
-            });
+            dispatcher->getFileHandles().forgetGenericHandle(fi.fh);
+            RequestData::get().replyError(0);
           })
           .CATCH_ERRORS());
 }
@@ -842,14 +823,7 @@ static void disp_create(fuse_req_t req,
                 dispatcher->getFileHandles().recordHandle(std::move(info.fh));
             if (!RequestData::get().replyCreate(info.entry, fi)) {
               // Interrupted, tidy up
-              auto handle =
-                  dispatcher->getFileHandles().forgetFileHandle(fi.fh);
-              handle->releasefile().then([handle]() mutable {
-                // This reset() is going to happen when fh falls out of scope,
-                // we're just being clear that we want to extend the lifetime
-                // until after the FileHandle::releasefile has finished.
-                handle.reset();
-              });
+              dispatcher->getFileHandles().forgetGenericHandle(fi.fh);
             }
           })
           .CATCH_ERRORS());

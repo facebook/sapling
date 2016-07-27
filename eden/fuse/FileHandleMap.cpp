@@ -102,24 +102,6 @@ std::shared_ptr<FileHandleBase> FileHandleMap::forgetGenericHandle(
   handles->erase(iter);
   return result;
 }
-
-std::shared_ptr<FileHandle> FileHandleMap::forgetFileHandle(uint64_t fh) {
-  auto handle = forgetGenericHandle(fh);
-  auto result = std::dynamic_pointer_cast<FileHandle>(handle);
-  if (result) {
-    return result;
-  }
-  folly::throwSystemErrorExplicit(EISDIR);
-}
-
-std::shared_ptr<DirHandle> FileHandleMap::forgetDirHandle(uint64_t dh) {
-  auto handle = forgetGenericHandle(dh);
-  auto result = std::dynamic_pointer_cast<DirHandle>(handle);
-  if (result) {
-    return result;
-  }
-  folly::throwSystemErrorExplicit(ENOTDIR);
-}
 }
 }
 }
