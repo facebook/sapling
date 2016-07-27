@@ -19,7 +19,7 @@ receiving fds from a simple unix socket server.
 
 This file is both a mercurial extension to start that tty server and an
 executable serving as the ssh-askpass script. Therefore its mode should
-has the +x (executable) bit.
+have the +x (executable) bit.
 """
 
 import contextlib
@@ -156,7 +156,9 @@ def _validaterepo(orig, self, sshcmd, args, remotecmd):
     pid = sockpath = None
     with _silentexception(terminate=False):
         pid, sockpath = _startttyserver()
-        scriptpath = os.path.abspath(__file__).replace('.pyc', '.py')
+        scriptpath = os.path.abspath(__file__)
+        if scriptpath[-4:].lower() in ('.pyc', '.pyo'):
+            scriptpath = scriptpath[:-1]
         parentpids = [os.getpid(), pid]
         env = {
             # ssh will not use SSH_ASKPASS if DISPLAY is not set
