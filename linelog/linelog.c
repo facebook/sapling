@@ -9,6 +9,7 @@
 
 #include "linelog.h"
 #include <assert.h> /* assert */
+#include <stdlib.h> /* realloc, free */
 #include <string.h> /* NULL, memcpy, memset */
 #include <arpa/inet.h> /* htonl, ntohl */
 
@@ -117,4 +118,20 @@ static inline linelog_result writeinst(linelog_buf *buf,
 	linelog_result result = (expr); \
 	if (result != LINELOG_RESULT_OK) \
 		return result; \
+}
+
+/* ensure `ar->lines[0:linecount]` are valid */
+static linelog_result reservelines(linelog_annotateresult *ar,
+		linelog_llinenum linecount) {
+	if (linecount >= MAX_LINENUM)
+		return LINELOG_RESULT_EOVERFLOW;
+	if (ar->maxlinecount < linecount) {
+		size_t size = sizeof(linelog_lineinfo) * linecount;
+		void *p = realloc(ar->lines, size);
+		if (p == NULL)
+			return LINELOG_RESULT_ENOMEM;
+		ar->lines = (linelog_lineinfo *)p;
+		ar->maxlinecount = (linelog_linenum)linecount;
+	}
+	return LINELOG_RESULT_OK;
 }
