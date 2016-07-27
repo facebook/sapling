@@ -1746,24 +1746,27 @@ def shortdate(date=None):
     """turn (timestamp, tzoff) tuple into iso 8631 date."""
     return datestr(date, format='%Y-%m-%d')
 
-def parsetimezone(tz):
-    """parse a timezone string and return an offset integer"""
-    if tz[0] in "+-" and len(tz) == 5 and tz[1:].isdigit():
-        sign = (tz[0] == "+") and 1 or -1
-        hours = int(tz[1:3])
-        minutes = int(tz[3:5])
-        return -sign * (hours * 60 + minutes) * 60
-    if tz == "GMT" or tz == "UTC":
-        return 0
-    return None
+def parsetimezone(s):
+    """find a trailing timezone, if any, in string, and return a
+       (offset, remainder) pair"""
+
+    if s.endswith("GMT") or s.endswith("UTC"):
+        return 0, s[:-3].rstrip()
+
+    # Unix-style timezones [+-]hhmm
+    if len(s) >= 5 and s[-5] in "+-" and s[-4:].isdigit():
+        sign = (s[-5] == "+") and 1 or -1
+        hours = int(s[-4:-2])
+        minutes = int(s[-2:])
+        return -sign * (hours * 60 + minutes) * 60, s[:-5].rstrip()
+
+    return None, s
 
 def strdate(string, format, defaults=[]):
     """parse a localized time string and return a (unixtime, offset) tuple.
     if the string cannot be parsed, ValueError is raised."""
     # NOTE: unixtime = localunixtime + offset
-    offset, date = parsetimezone(string.split()[-1]), string
-    if offset is not None:
-        date = " ".join(string.split()[:-1])
+    offset, date = parsetimezone(string)
 
     # add missing elements from defaults
     usenow = False # default to using biased defaults

@@ -670,7 +670,9 @@ def localdate(context, mapping, args):
         tzoffset = None
         tz = evalfuncarg(context, mapping, args[1])
         if isinstance(tz, str):
-            tzoffset = util.parsetimezone(tz)
+            tzoffset, remainder = util.parsetimezone(tz)
+            if remainder:
+                tzoffset = None
         if tzoffset is None:
             try:
                 tzoffset = int(tz)
