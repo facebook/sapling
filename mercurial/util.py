@@ -1760,6 +1760,18 @@ def parsetimezone(s):
         minutes = int(s[-2:])
         return -sign * (hours * 60 + minutes) * 60, s[:-5].rstrip()
 
+    # ISO8601 trailing Z
+    if s.endswith("Z") and s[-2:-1].isdigit():
+        return 0, s[:-1]
+
+    # ISO8601-style [+-]hh:mm
+    if (len(s) >= 6 and s[-6] in "+-" and s[-3] == ":" and
+        s[-5:-3].isdigit() and s[-2:].isdigit()):
+        sign = (s[-6] == "+") and 1 or -1
+        hours = int(s[-5:-3])
+        minutes = int(s[-2:])
+        return -sign * (hours * 60 + minutes) * 60, s[:-6]
+
     return None, s
 
 def strdate(string, format, defaults=[]):
