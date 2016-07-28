@@ -12,6 +12,10 @@ import difflib
 import re
 import struct
 
+from . import policy
+policynocffi = policy.policynocffi
+modulepolicy = policy.policy
+
 def splitnewlines(text):
     '''like str.splitlines, but only split on newlines.'''
     lines = [l + '\n' for l in text.split('\n')]
@@ -96,3 +100,37 @@ def fixws(text, allws):
         text = re.sub('[ \t\r]+', ' ', text)
         text = text.replace(' \n', '\n')
     return text
+
+if modulepolicy not in policynocffi:
+    try:
+        from _bdiff_cffi import ffi, lib
+    except ImportError:
+        if modulepolicy == 'cffi': # strict cffi import
+            raise
+    else:
+        def blocks(sa, sb):
+            a = ffi.new("struct bdiff_line**")
+            b = ffi.new("struct bdiff_line**")
+            ac = ffi.new("char[]", sa)
+            bc = ffi.new("char[]", sb)
+            try:
+                an = lib.bdiff_splitlines(ac, len(sa), a)
+                bn = lib.bdiff_splitlines(bc, len(sb), b)
+                if not a[0] or not b[0]:
+                    raise MemoryError
+                l = ffi.new("struct bdiff_hunk*")
+                count = lib.bdiff_diff(a[0], an, b[0], bn, l)
+                if count < 0:
+                    raise MemoryError
+                rl = [None] * count
+                h = l.next
+                i = 0
+                while h:
+                    rl[i] = (h.a1, h.a2, h.b1, h.b2)
+                    h = h.next
+                    i += 1
+            finally:
+                lib.free(a[0])
+                lib.free(b[0])
+                lib.bdiff_freehunks(l.next)
+            return rl

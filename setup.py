@@ -319,7 +319,9 @@ class hgbuildpy(build_py):
             self.distribution.ext_modules = []
         elif self.distribution.cffi:
             import setup_mpatch_cffi
-            exts = [setup_mpatch_cffi.ffi.distutils_extension()]
+            import setup_bdiff_cffi
+            exts = [setup_mpatch_cffi.ffi.distutils_extension(),
+                    setup_bdiff_cffi.ffi.distutils_extension()]
             # cffi modules go here
             if sys.platform == 'darwin':
                 import setup_osutil_cffi
