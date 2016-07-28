@@ -93,9 +93,8 @@ def wrappull(orig, ui, repo, *args, **kwargs):
     if ui.configbool('sqldirstate', 'upgrade', False) and \
             not issqldirstate(repo):
         ui.status(_('migrating your repo to sqldirstate which will make your '
-                'hg commands faster\n'))
+                'hg commands faster...\n'))
         upgrade(ui, repo)
-        ui.status(_('done\n'))
     return orig(ui, repo, *args, **kwargs)
 
 def featuresetup(ui, supported):
