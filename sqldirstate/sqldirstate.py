@@ -21,6 +21,7 @@ can fall back to copying things by setting sqldirstate.skipbackups to False.
 We commit sql transaction only when normal dirstate write would happen.
 """
 
+from exceptions import RuntimeError
 import os
 import sqlite3
 
@@ -36,6 +37,14 @@ dirstatetuple = parsers.dirstatetuple
 DBFILE = "dirstate.sqlite3"
 FAKEDIRSTATE = "dirstate"
 SQLITE_CACHE_SIZE = -100000 # 100MB
+SQL_SCHEMA_VERSION = 1
+
+class SQLSchemaVersionUnsupported(RuntimeError):
+    def __init__(self, version):
+        self._version = version
+
+    def __str__(self):
+        return "sqldirstate schema version not supported (%s)" % self._version
 
 def createotherschema(sqlconn):
     """ The storage for all misc small key value data """
@@ -44,14 +53,23 @@ def createotherschema(sqlconn):
                     value BLOB NOT NULL)
     ''')
     sqlconn.commit()
+
+def setversion(sqlconn, version):
+    sqlconn.execute('''INSERT OR REPLACE INTO other (key, value) VALUES
+                ("schema_version", ?)''', str(version))
+    sqlconn.commit()
+
+def getversion(sqlconn):
     cur = sqlconn.cursor()
-    cur.execute('''SELECT key, value FROM other
+    cur.execute('''SELECT value FROM other
                     WHERE key = "schema_version"''')
     row = cur.fetchone()
+    cur.close()
     if row is None:
-        sqlconn.execute('''INSERT OR REPLACE INTO other (key, value) VALUES
-                    ("schema_version", 1)''')
-        sqlconn.commit()
+        setversion(sqlconn, SQL_SCHEMA_VERSION)
+        return SQL_SCHEMA_VERSION
+    else:
+        return int(row[0])
 
 def dropotherschema(sqlconn):
     cur = sqlconn.cursor()
@@ -273,6 +291,7 @@ def makedirstate(cls):
             self._sqlconn.execute("PRAGMA cache_size = %d" % SQLITE_CACHE_SIZE)
             self._sqlconn.execute("PRAGMA synchronous = OFF")
             createotherschema(self._sqlconn)
+            self._sqlschemaversion = getversion(self._sqlconn)
             self._map = sqldirstatemap(self._sqlconn)
             self._dirs = sqldirs(self._sqlconn)
             self._copymap = sqlcopymap(self._sqlconn)
@@ -280,6 +299,12 @@ def makedirstate(cls):
             self._dirfoldmap = sqldirfoldmap(self._sqlconn)
             self.skipbackups = self._ui.configbool('sqldirstate', 'skipbackups',
                                                    True)
+
+            if self._sqlschemaversion > SQL_SCHEMA_VERSION:
+                # TODO: add recovery mechanism
+                raise SQLSchemaVersionUnsupported(self._sqlschemaversion)
+
+            self._sqlmigration()
 
         def _read(self):
             pass
@@ -437,6 +462,9 @@ def makedirstate(cls):
             return super(sqldirstate, self).walk(
                 match, subrepos, unknown, ignored, full)
 
+        def _sqlmigration(self):
+            pass
+
     return sqldirstate
 
 
@@ -472,6 +500,7 @@ def tosql(dirstate):
     sqlconn.execute("PRAGMA cache_size = %d" % SQLITE_CACHE_SIZE)
 
     createotherschema(sqlconn)
+    getversion(sqlconn)
     sqlmap = sqldirstatemap(sqlconn)
     copymap = sqlcopymap(sqlconn)
     filefoldmap = sqlfilefoldmap(sqlconn)
