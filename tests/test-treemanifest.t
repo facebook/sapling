@@ -62,6 +62,19 @@ Can add nested directories
   dir1/dir2/b (glob)
   e
 
+The manifest command works
+
+  $ hg manifest
+  a
+  b
+  dir1/a
+  dir1/b
+  dir1/dir1/a
+  dir1/dir1/b
+  dir1/dir2/a
+  dir1/dir2/b
+  e
+
 Revision is not created for unchanged directory
 
   $ mkdir dir2
