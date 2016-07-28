@@ -37,7 +37,7 @@ dirstatetuple = parsers.dirstatetuple
 DBFILE = "dirstate.sqlite3"
 FAKEDIRSTATE = "dirstate"
 SQLITE_CACHE_SIZE = -100000 # 100MB
-SQL_SCHEMA_VERSION = 1
+SQL_SCHEMA_VERSION = 2
 
 class SQLSchemaVersionUnsupported(RuntimeError):
     def __init__(self, version):
@@ -92,6 +92,22 @@ class sqldirstatemap(sqlmap):
                         size INTEGER NOT NULL,
                         mtime INTEGER NOT NULL)
         ''')
+
+        # The low cardinality of the status column makes it basically
+        # non-indexable.
+        # There is a feature we could use available sqlite 3.9 called partial
+        # indexes. Using it we could index only the files that have non-normal
+        # statuses.
+        # The sqlite 3.6 that we are using on centos6 unfortunately doesn't
+        # support it. So we are maintaining separate table with nonnormalfiles.
+        cur.execute('''CREATE TABLE IF NOT EXISTS nonnormalfiles (
+                        filename BLOB PRIMARY KEY,
+                        status BLOB NOT NULL,
+                        mode INTEGER NOT NULL,
+                        size INTEGER NOT NULL,
+                        mtime INTEGER NOT NULL)
+        ''')
+
         cur.execute('''CREATE INDEX IF NOT EXISTS
                     files_mtime ON files(mtime);''')
 
@@ -101,6 +117,7 @@ class sqldirstatemap(sqlmap):
     def dropschema(self):
         cur = self._sqlconn.cursor()
         cur.execute('''DROP TABLE IF EXISTS files''')
+        cur.execute('''DROP TABLE IF EXISTS nonnormalfiles''')
         cur.close()
         self._sqlconn.commit()
 
@@ -114,10 +131,13 @@ class sqldirstatemap(sqlmap):
         cur = self._sqlconn.cursor()
         # -1 means that we should check the file on next status
         cur.execute('''SELECT filename FROM files
-                    WHERE status != 'n' or mtime = -1''')
+                    WHERE mtime = -1''')
         rows = cur.fetchall()
+        cur.execute('''SELECT filename FROM nonnormalfiles''')
+        rows += cur.fetchall()
         cur.close()
         return set(row[0] for row in rows)
+
 
     def otherparententries(self):
         cur = self._sqlconn.cursor()
@@ -131,8 +151,8 @@ class sqldirstatemap(sqlmap):
 
     def modifiedentries(self):
         cur = self._sqlconn.cursor()
-        cur.execute('''SELECT filename, status, mode, size, mtime FROM files '''
-                    '''WHERE status = 'm';''')
+        cur.execute('''SELECT filename, status, mode, size, mtime FROM '''
+                    '''nonnormalfiles WHERE status = 'm';''')
         for r in cur:
             yield (r[0], self._rowtovalue(r[1:]))
         cur.close()
@@ -140,8 +160,45 @@ class sqldirstatemap(sqlmap):
     def resetnow(self, now):
         cur = self._sqlconn.cursor()
         cur.execute('''UPDATE files SET mtime = -1
-                    WHERE status = 'n' and mtime = ?''', (now,))
+                    WHERE mtime = ? and status = 'n' ''', (now,))
         cur.close()
+
+    def __setitem__(self, key, item):
+        super(sqldirstatemap, self).__setitem__(key, item)
+
+        status = item[0]
+        cur = self._sqlconn.cursor()
+        if status != 'n':
+            item = self._valuetorow(item)
+            cur.execute('''INSERT OR REPLACE INTO nonnormalfiles ({keyname},
+                        {valuenames}) VALUES ({placeholders})'''.format(
+                            **self._querytemplateargs), (key,) + item)
+        else:
+            cur.execute('''DELETE FROM nonnormalfiles
+                        WHERE {keyname}=?'''.format(
+                            **self._querytemplateargs), (key,))
+        cur.close()
+
+    def _update(self, otherdict):
+        super(sqldirstatemap, self)._update(otherdict)
+
+        updatelist = list()
+        deletelist = list()
+        for key, item in otherdict.iteritems():
+            if item[0] != 'n':
+                updatelist.append((key,) + self._valuetorow(item))
+            else:
+                deletelist.append((key,))
+        cur = self._sqlconn.cursor()
+        cur.executemany('''INSERT OR REPLACE INTO nonnormalfiles
+            ({keyname}, {valuenames}) VALUES ({placeholders})'''.format(
+            **self._querytemplateargs), updatelist)
+
+        cur.executemany('''DELETE FROM nonnormalfiles
+                        WHERE {keyname}=?'''.format(
+                            **self._querytemplateargs), deletelist)
+        cur.close()
+
 
 class sqlcopymap(sqlmap):
     """ all copy informations in dirstate """
@@ -463,7 +520,17 @@ def makedirstate(cls):
                 match, subrepos, unknown, ignored, full)
 
         def _sqlmigration(self):
-            pass
+            if self._sqlschemaversion == 1:
+                cur = self._sqlconn.cursor()
+                cur.execute('''SELECT filename, status, mode, size, mtime FROM files
+                            WHERE status != 'n' or mtime = -1''')
+                rows = cur.fetchall()
+                nonnormalfiles = dict()
+                for r in rows:
+                    nonnormalfiles[r[0]] = self._map._rowtovalue(r[1:])
+                self._map.update(nonnormalfiles)
+                setversion(self._sqlconn, 2)
+                self._sqlschemaversion = 2
 
     return sqldirstate
 
