@@ -31,6 +31,7 @@ from mercurial.node import nullid, hex, bin
 from mercurial.util import propertycache
 
 from sqlmap import sqlmap
+from sqltrace import tracewrapsqlconn
 
 dirstatetuple = parsers.dirstatetuple
 
@@ -345,6 +346,9 @@ def makedirstate(cls):
             self._sqlfilename = self._opener.join(DBFILE)
             self._sqlconn = sqlite3.connect(self._sqlfilename)
             self._sqlconn.text_factory = str
+            if self._ui.config('sqldirstate', 'tracefile', False):
+                self._sqlconn = tracewrapsqlconn(self._sqlconn,
+                                 self._ui.config('sqldirstate', 'tracefile'))
             self._sqlconn.execute("PRAGMA cache_size = %d" % SQLITE_CACHE_SIZE)
             self._sqlconn.execute("PRAGMA synchronous = OFF")
             createotherschema(self._sqlconn)
