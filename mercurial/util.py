@@ -881,6 +881,8 @@ def nogc(func):
 
     This garbage collector issue have been fixed in 2.7.
     """
+    if sys.version >= (2, 7):
+        return func
     def wrapper(*args, **kwargs):
         gcenabled = gc.isenabled()
         gc.disable()
