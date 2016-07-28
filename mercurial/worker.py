@@ -89,6 +89,20 @@ def _posixworker(ui, func, staticargs, args):
     oldhandler = signal.getsignal(signal.SIGINT)
     signal.signal(signal.SIGINT, signal.SIG_IGN)
     pids, problem = [], [0]
+    def killworkers():
+        # if one worker bails, there's no good reason to wait for the rest
+        for p in pids:
+            try:
+                os.kill(p, signal.SIGTERM)
+            except OSError as err:
+                if err.errno != errno.ESRCH:
+                    raise
+    def waitforworkers():
+        for _pid in pids:
+            st = _exitstatus(os.wait()[1])
+            if st and not problem[0]:
+                problem[0] = st
+                killworkers()
     for pargs in partition(args, workers):
         pid = os.fork()
         if pid == 0:
@@ -106,20 +120,6 @@ def _posixworker(ui, func, staticargs, args):
     pids.reverse()
     os.close(wfd)
     fp = os.fdopen(rfd, 'rb', 0)
-    def killworkers():
-        # if one worker bails, there's no good reason to wait for the rest
-        for p in pids:
-            try:
-                os.kill(p, signal.SIGTERM)
-            except OSError as err:
-                if err.errno != errno.ESRCH:
-                    raise
-    def waitforworkers():
-        for _pid in pids:
-            st = _exitstatus(os.wait()[1])
-            if st and not problem[0]:
-                problem[0] = st
-                killworkers()
     t = threading.Thread(target=waitforworkers)
     t.start()
     def cleanup():
