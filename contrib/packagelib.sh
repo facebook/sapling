@@ -8,7 +8,7 @@
 #
 # node: the node|short hg was built from, or empty if built from a tag
 gethgversion() {
-    make clean
+    make cleanbutpackages
     make local || make local PURE=--pure
     HG="$PWD/hg"
 
