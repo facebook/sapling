@@ -98,8 +98,8 @@ def _posixworker(ui, func, staticargs, args):
                 if err.errno != errno.ESRCH:
                     raise
     def waitforworkers():
-        for _pid in pids:
-            st = _exitstatus(os.wait()[1])
+        for pid in pids:
+            st = _exitstatus(os.waitpid(pid, 0)[1])
             if st and not problem[0]:
                 problem[0] = st
                 killworkers()
