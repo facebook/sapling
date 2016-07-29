@@ -9,8 +9,9 @@
 
 #include "linelog.h"
 #include <assert.h> /* assert */
+#include <stdbool.h> /* bool */
 #include <stdlib.h> /* realloc, free */
-#include <string.h> /* NULL, memcpy, memset */
+#include <string.h> /* NULL, memcpy, memmove, memset */
 #include <arpa/inet.h> /* htonl, ntohl */
 
 /* linelog_buf.data is a plain array of instructions.
@@ -119,6 +120,10 @@ static inline linelog_result writeinst(linelog_buf *buf,
 	if (result != LINELOG_RESULT_OK) \
 		return result; \
 }
+#define mustsuccess(expr) { \
+	linelog_result result = (expr); \
+	assert(result == LINELOG_RESULT_OK); \
+}
 
 /* ensure `ar->lines[0:linecount]` are valid */
 static linelog_result reservelines(linelog_annotateresult *ar,
@@ -208,4 +213,139 @@ linelog_result linelog_annotate(const linelog_buf *buf,
 	ar->lines[linenum] = endlineinfo;
 	ar->linecount = linenum;
 	return LINELOG_RESULT_OK;
+}
+
+static linelog_result replacelines(linelog_buf *buf, linelog_annotateresult *ar,
+		linelog_revnum brev, linelog_linenum a1, linelog_linenum a2,
+		linelog_linenum b1, linelog_linenum b2,
+		const linelog_revnum *brevs, const linelog_linenum *blinenums) {
+	/*       buf   before     after
+	               --------   --------
+	               ....       ....
+	      a1addr > (a1inst)   JGE     0 oldlen   [5]
+	    a1addr+1 > ...        ...
+	               ....       ....
+	      a2addr > ...        ...
+	               ....       ....
+	      oldlen > (end)      JL   brev pjge     [1]
+	                          LINE brev b1       [1]
+	                          LINE brev b1+1     [1]
+	                          ....               [1]
+	                          LINE brev b2-1     [1]
+	        pjge >            JGE  brev a2addr   [2]
+	   a1newaddr >            (a1inst)           [3]
+	                          JGE     0 a1addr+1 [4]
+	      newlen >            (end)
+
+	   [1]: insert new lines. only exist if b1 < b2
+	   [2]: delete old lines. only exist if a1 < a2
+	   [3]: move a1inst to new place, as it will be rewritten in [5]
+	   [4]: jump back. only exist if a1inst is not an unconditional jump
+	   [5]: rewrite the old instruction to jump to the new block */
+
+	/* sanity check */
+	linelog_inst inst0;
+	returnonerror(readinst(buf, &inst0, 0));
+	if (brev >= MAX_REVNUM || a2 >= MAX_LINENUM || b2 >= MAX_LINENUM)
+		return LINELOG_RESULT_EOVERFLOW;
+	if (a2 < a1 || b2 < b1 || !ar || a2 > ar->linecount)
+		return LINELOG_RESULT_EILLDATA;
+
+	/* useful variables for both step I and III */
+	linelog_offset oldlen = inst0.offset;
+	linelog_offset a1addr = ar->lines[a1].offset;
+	linelog_inst a1inst;
+	returnonerror(readinst(buf, &a1inst, a1addr));
+	bool a1instisjge0 = (a1inst.opcode == JGE && a1inst.rev == 0);
+
+	/* step I: reserve size for buf: (newlen - oldlen) more instructions */
+	linelog_loffset newlen = (linelog_loffset)oldlen
+		+ (b2 - b1 /* LINE */ + (b2 > b1) /* JL brev */) /* [1] */
+		+ (a2 > a1) /* JGE brev */                       /* [2] */
+		+ 1 /* a1inst */                                 /* [3] */
+		+ (a1instisjge0 ? 0 : 1) /* JGE 0  */            /* [4] */;
+	if (newlen >= MAX_OFFSET)
+		return LINELOG_RESULT_EOVERFLOW;
+	size_t neededsize = (size_t)newlen * INST_SIZE;
+	if (neededsize > buf->size) {
+		buf->neededsize = neededsize;
+		return LINELOG_RESULT_ENEEDRESIZE;
+	}
+
+	/* step II: reserve space for annotateresult */
+	linelog_llinenum newlinecount =
+		(linelog_llinenum)ar->linecount + b2 - b1 - (a2 - a1);
+	returnonerror(reservelines(ar, newlinecount + 1));
+	assert(ar->linecount < ar->maxlinecount);
+
+	/* writeinst should not fail for remaining steps - we have reserved
+	   enough space. any failure will be a huge headache for the caller. */
+
+	/* step III: update linelog_buf */
+	#define appendinst(inst) \
+		mustsuccess(writeinst(buf, &inst, inst0.offset++));
+	if (b1 < b2) { /* [1] */
+		linelog_offset pjge = oldlen + (b2 - b1 + 1);
+		linelog_inst jl = { .opcode = JL, .rev = brev, .offset = pjge };
+		appendinst(jl);
+		for (linelog_linenum i = b1; i < b2; ++i) {
+			linelog_inst lineinst = { .opcode = LINE,
+				.rev = brevs ? brevs[i] : brev,
+				.linenum = blinenums ? blinenums[i] : i };
+			appendinst(lineinst);
+		}
+	}
+	if (a1 < a2) { /* [2] */
+		linelog_inst jge = { .opcode = JGE, .rev = brev,
+			.offset = ar->lines[a2].offset };
+		appendinst(jge);
+	}
+	linelog_offset a1newaddr = inst0.offset;
+	appendinst(a1inst); /* [3] */
+	if (!a1instisjge0) { /* [4] */
+		linelog_inst ret = { .opcode = JGE, .offset = a1addr + 1 };
+		appendinst(ret);
+	}
+	#undef appendinst
+	linelog_inst jge0 = { .opcode = JGE, .rev = 0, .offset = oldlen };
+	mustsuccess(writeinst(buf, &jge0, a1addr)); /* [5] */
+
+	/* step IV: write back updated inst0 */
+	if (brev > inst0.rev)
+		inst0.rev = brev;
+	mustsuccess(writeinst(buf, &inst0, 0));
+
+	/* step V: update annotateresult */
+	ar->lines[a1].offset = a1newaddr; /* a1inst got moved */
+	if (a2 - a1 != b2 - b1) {
+		size_t movesize = sizeof(linelog_lineinfo) *
+			(ar->linecount + 1 - a2);
+		/* the memmove is safe as step II reserved the memory */
+		memmove(ar->lines + a1 + b2 - b1, ar->lines + a2, movesize);
+		ar->linecount = (linelog_linenum)newlinecount;
+	}
+	for (linelog_linenum i = b1; i < b2; ++i) {
+		linelog_lineinfo *li = ar->lines + a1 + i - b1;
+		li->rev = brevs ? brevs[i] : brev;
+		li->linenum = blinenums ? blinenums[i] : i;
+		li->offset = oldlen + i - b1 + 1;
+	}
+
+	return LINELOG_RESULT_OK;
+}
+
+linelog_result linelog_replacelines(linelog_buf *buf,
+		linelog_annotateresult *ar, linelog_revnum brev,
+		linelog_linenum a1, linelog_linenum a2,
+		linelog_linenum b1, linelog_linenum b2) {
+	return replacelines(buf, ar, brev, a1, a2, b1, b2, NULL, NULL);
+}
+
+linelog_result linelog_replacelines_vec(linelog_buf *buf,
+		linelog_annotateresult *ar, linelog_revnum brev,
+		linelog_linenum a1, linelog_linenum a2,
+		linelog_linenum blinecount, const linelog_revnum *brevs,
+		const linelog_linenum *blinenums) {
+	return replacelines(buf, ar, brev, a1, a2, 0, blinecount,
+			brevs, blinenums);
 }
