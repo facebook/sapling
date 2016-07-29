@@ -189,7 +189,14 @@ def parsefileblob(path, decompress):
 
     return size, firstnode, mapping
 
-def debugdatapack(ui, path):
+def debugdatapack(ui, path, **opts):
+    if opts.get('long'):
+        hashformatter = hex
+        hashlen = 42
+    else:
+        hashformatter = short
+        hashlen = 14
+
     dpack = datapack.datapack(path)
 
     lastfilename = None
@@ -197,11 +204,12 @@ def debugdatapack(ui, path):
         if filename != lastfilename:
             ui.write("\n%s\n" % filename)
             ui.write("%s%s%s\n" % (
-                "Node".ljust(14),
-                "Delta Base".ljust(14),
+                "Node".ljust(hashlen),
+                "Delta Base".ljust(hashlen),
                 "Delta Length".ljust(6)))
             lastfilename = filename
-        ui.write("%s  %s  %s\n" % (short(node), short(deltabase), deltalen))
+        ui.write("%s  %s  %s\n" % (
+            hashformatter(node), hashformatter(deltabase), deltalen))
 
 def debughistorypack(ui, path):
     hpack = historypack.historypack(path)

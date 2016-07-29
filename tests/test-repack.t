@@ -142,6 +142,13 @@
   1bb2e6237e03  000000000000  13
   d4a3ed9310e5  1bb2e6237e03  17
   aee31534993a  d4a3ed9310e5  17
+  $ hg debugdatapack --long $TESTTMP/hgcache/master/packs/92a06d8b76a23b6e6150cf877ea75ed993e0b2d8
+  
+  x
+  Node                                      Delta Base                                Delta Length
+  1bb2e6237e035c8f8ef508e281f1ce075bc6db72  0000000000000000000000000000000000000000  13
+  d4a3ed9310e5bd9887e3bf779da5077efab28216  1bb2e6237e035c8f8ef508e281f1ce075bc6db72  17
+  aee31534993a501858fb6dd96a065671922e7d51  d4a3ed9310e5bd9887e3bf779da5077efab28216  17
   $ hg debughistorypack $TESTTMP/hgcache/master/packs/3bebfba849e7aed8e598b92b296aeaff4784393b
   
   x
