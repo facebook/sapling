@@ -451,7 +451,7 @@ class httpbasicauthhandler(urlreq.httpbasicauthhandler):
         if pw is not None:
             raw = "%s:%s" % (user, pw)
             auth = 'Basic %s' % base64.b64encode(raw).strip()
-            if req.headers.get(self.auth_header, None) == auth:
+            if req.get_header(self.auth_header, None) == auth:
                 return None
             self.auth = auth
             req.add_unredirected_header(self.auth_header, auth)
