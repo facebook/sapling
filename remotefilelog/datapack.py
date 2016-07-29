@@ -201,7 +201,9 @@ class datapack(basepack.basepack):
             deltalen = struct.unpack('!Q', rawdeltalen)[0]
             offset += 8 + deltalen
 
-            self._pagedin += filenamelen + deltalen + 2 * constants.NODESIZE
+            self._pagedin += (2 + filenamelen +
+                              2 * constants.NODESIZE +
+                              8)
 
             yield (filename, node, deltabase, deltalen)
 
