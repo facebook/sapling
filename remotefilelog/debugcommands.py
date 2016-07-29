@@ -190,14 +190,20 @@ def parsefileblob(path, decompress):
     return size, firstnode, mapping
 
 def debugdatapack(ui, path, **opts):
+    dpack = datapack.datapack(path)
+
+    node = opts.get('node')
+    if node:
+        deltachain = dpack.getdeltachain('', bin(node))
+        dumpdeltachain(ui, deltachain, **opts)
+        return
+
     if opts.get('long'):
         hashformatter = hex
         hashlen = 42
     else:
         hashformatter = short
         hashlen = 14
-
-    dpack = datapack.datapack(path)
 
     lastfilename = None
     for filename, node, deltabase, deltalen in dpack.iterentries():
@@ -210,6 +216,28 @@ def debugdatapack(ui, path, **opts):
             lastfilename = filename
         ui.write("%s  %s  %s\n" % (
             hashformatter(node), hashformatter(deltabase), deltalen))
+
+def dumpdeltachain(ui, deltachain, **opts):
+    hashformatter = hex
+    hashlen = 40
+
+    lastfilename = None
+    for filename, node, filename, deltabasenode, delta in deltachain:
+        if filename != lastfilename:
+            ui.write("\n%s\n" % filename)
+            lastfilename = filename
+        ui.write("%s  %s  %s  %s\n" % (
+            "Node".ljust(hashlen),
+            "Delta Base".ljust(hashlen),
+            "Delta SHA1".ljust(hashlen),
+            "Delta Length".ljust(6),
+        ))
+
+        ui.write("%s  %s  %s  %s\n" % (
+            hashformatter(node),
+            hashformatter(deltabasenode),
+            hashlib.sha1(delta).hexdigest(),
+            len(delta)))
 
 def debughistorypack(ui, path):
     hpack = historypack.historypack(path)
