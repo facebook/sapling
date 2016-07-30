@@ -94,6 +94,23 @@ class _demandmod(object):
         if not self._module:
             head, globals, locals, after, level, modrefs = self._data
             mod = _hgextimport(_import, head, globals, locals, None, level)
+            if mod is self:
+                # In this case, _hgextimport() above should imply
+                # _demandimport(). Otherwise, _hgextimport() never
+                # returns _demandmod. This isn't intentional behavior,
+                # in fact. (see also issue5304 for detail)
+                #
+                # If self._module is already bound at this point, self
+                # should be already _load()-ed while _hgextimport().
+                # Otherwise, there is no way to import actual module
+                # as expected, because (re-)invoking _hgextimport()
+                # should cause same result.
+                # This is reason why _load() returns without any more
+                # setup but assumes self to be already bound.
+                mod = self._module
+                assert mod and mod is not self, "%s, %s" % (self, mod)
+                return
+
             # load submodules
             def subload(mod, p):
                 h, t = p, None
