@@ -30,7 +30,11 @@
 		#expr, __LINE__, errno, strerror(errno)); \
 	closefile(); exit(-1); }
 
+#ifdef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
+const size_t UNIT_SIZE = 1;
+#else
 const size_t UNIT_SIZE = 0x1000; /* 4KB, used when resizing the file */
+#endif
 
 static linelog_buf buf;
 static linelog_annotateresult ar;
@@ -39,6 +43,9 @@ static size_t maplen;
 static const char *filename;
 
 static const char helptext[] =
+#ifdef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
+	"(built for fuzz testing)\n"
+#endif
 	"usage: linelogcli FILE CMDLIST\n"
 	"where  CMDLIST := CMD | CMDLIST CMD\n"
 	"       CMD := init | info | dump | ANNOTATECMD | REPLACELINESCMD\n"
@@ -124,6 +131,47 @@ int cmdannotate(const char *args[]) {
 	return r;
 }
 
+#ifdef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
+static void doublecheckannotateresult(linelog_revnum rev) {
+	/* backup current ar for later comparison */
+	linelog_annotateresult ar2 = ar;
+	size_t arsize = (ar.linecount + 1) * sizeof(linelog_lineinfo);
+	ar2.lines = malloc(arsize);
+	ar2.maxlinecount = ar2.linecount + 1;
+	ensure(ar2.lines != NULL);
+	memcpy(ar2.lines, ar.lines, arsize);
+	linelog_result r;
+	eval(r, linelog_annotate(&buf, &ar2, rev));
+	if (r != LINELOG_RESULT_OK || (ar.linecount == ar2.linecount &&
+				memcmp(ar2.lines, ar.lines, arsize) == 0)) {
+		free(ar2.lines);
+		return;
+	}
+	fprintf(stderr, "unexpected: annotate results mismatch\n");
+	int cmddump(const char *args[]);
+	cmddump(NULL);
+
+	linelog_linenum maxlc = ar.linecount > ar2.linecount
+		? ar.linecount : ar2.linecount;
+	fprintf(stderr, "ar %d lines | ar2 %d lines\n",
+			ar.linecount, ar2.linecount);
+	for (uint32_t i = 0; i <= maxlc; ++i) {
+		linelog_lineinfo l[2];
+		memset(l, -1, sizeof(l));
+		if (i <= ar.linecount)
+			l[0] = ar.lines[i];
+		if (i <= ar2.linecount)
+			l[1] = ar2.lines[i];
+		char ch = memcmp(l, l + 1, sizeof(l[0])) ? '!' : '=';
+		fprintf(stderr, "%c %u: %u %u %u | %u %u %u\n",
+				ch, i,
+				l[0].rev, l[0].linenum, l[0].offset,
+				l[1].rev, l[1].linenum, l[1].offset);
+	}
+	abort();
+}
+#endif
+
 int cmdreplacelines(const char *args[]) {
 	linelog_result r;
 	unsigned rev = 0, b1 = 0, b2 = 0;
@@ -136,11 +184,23 @@ int cmdreplacelines(const char *args[]) {
 		a1 = (int)ar.linecount + 1 + a1;
 	if (a2 < 0)
 		a2 = (int)ar.linecount + 1 + a2;
+#ifdef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
+	/* make sure we use clean, up-to-date annotate result. this changes
+	   behavior a bit but reduces noise from fuzz testing */
+	eval(r, linelog_annotate(&buf, &ar, rev));
+	if (r != LINELOG_RESULT_OK)
+		return r;
+#endif
 	eval(r, linelog_replacelines(&buf, &ar, rev,
 				(uint32_t)a1, (uint32_t)a2, b1, b2));
 	if (r == LINELOG_RESULT_OK) {
 		printf("replacelines: rev %u, lines %u:%u -> %u:%u\n",
 				rev, a1, a2, b1, b2);
+#ifdef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
+		/* annotateresult updated by linelog_replacelines should be
+		   the same with running linelog_annotate directly */
+		doublecheckannotateresult(rev);
+#endif
 	}
 	return r;
 }
