@@ -896,7 +896,7 @@ def verify(repo):
                         ret = (ctx.sub(subpath, allowcreate=False).verify()
                                or ret)
                     except error.RepoError as e:
-                        repo.ui.warn(_('%s: %s\n') % (rev, e))
+                        repo.ui.warn(('%s: %s\n') % (rev, e))
             except Exception:
                 repo.ui.warn(_('.hgsubstate is corrupt in revision %s\n') %
                              node.short(ctx.node()))
