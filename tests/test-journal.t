@@ -148,32 +148,32 @@ Test that verbose, JSON and commit output work
     "command": "up",
     "date": "1970-01-01 00:00 +0000",
     "name": ".",
-    "newhashes": "1e6c11564562",
-    "oldhashes": "cb9a9f314b8b",
+    "newhashes": "1e6c11564562b4ed919baca798bc4338bd299d6a",
+    "oldhashes": "cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b",
     "user": "foobar"
    },
    {
     "command": "up 0",
     "date": "1970-01-01 00:00 +0000",
     "name": ".",
-    "newhashes": "cb9a9f314b8b",
-    "oldhashes": "1e6c11564562",
+    "newhashes": "cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b",
+    "oldhashes": "1e6c11564562b4ed919baca798bc4338bd299d6a",
     "user": "foobar"
    },
    {
     "command": "commit -Aqm b",
     "date": "1970-01-01 00:00 +0000",
     "name": ".",
-    "newhashes": "1e6c11564562",
-    "oldhashes": "cb9a9f314b8b",
+    "newhashes": "1e6c11564562b4ed919baca798bc4338bd299d6a",
+    "oldhashes": "cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b",
     "user": "foobar"
    },
    {
     "command": "commit -Aqm a",
     "date": "1970-01-01 00:00 +0000",
     "name": ".",
-    "newhashes": "cb9a9f314b8b",
-    "oldhashes": "000000000000",
+    "newhashes": "cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b",
+    "oldhashes": "0000000000000000000000000000000000000000",
     "user": "foobar"
    }
   ]

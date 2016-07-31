@@ -475,8 +475,8 @@ def journal(ui, repo, *args, **opts):
     for count, entry in enumerate(repo.journal.filtered(name=name)):
         if count == limit:
             break
-        newhashesstr = ','.join([node.short(hash) for hash in entry.newhashes])
-        oldhashesstr = ','.join([node.short(hash) for hash in entry.oldhashes])
+        newhashesstr = ','.join([fm.hexfunc(hash) for hash in entry.newhashes])
+        oldhashesstr = ','.join([fm.hexfunc(hash) for hash in entry.oldhashes])
 
         fm.startitem()
         fm.condwrite(ui.verbose, 'oldhashes', '%s -> ', oldhashesstr)
