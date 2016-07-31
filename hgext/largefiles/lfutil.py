@@ -89,7 +89,7 @@ def _usercachedir(ui):
             return os.path.join(home, '.cache', longname)
     else:
         raise error.Abort(_('unknown operating system: %s\n') % os.name)
-    raise error.Abort(_('unknown %s usercache location\n') % longname)
+    raise error.Abort(_('unknown %s usercache location') % longname)
 
 def inusercache(ui, hash):
     path = usercachepath(ui, hash)
