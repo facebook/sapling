@@ -4838,7 +4838,7 @@ def import_(ui, repo, patch1=None, *patches, **opts):
     resulting changeset has a different ID than the one recorded in
     the patch. This will guard against various ways that portable
     patch formats and mail systems might fail to transfer Mercurial
-    data or metadata. See ':hg: bundle' for lossless transmission.
+    data or metadata. See :hg:`bundle` for lossless transmission.
 
     Use --partial to ensure a changeset will be created from the patch
     even if some hunks fail to apply. Hunks that fail to apply will be

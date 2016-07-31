@@ -1742,7 +1742,7 @@ User interface controls.
     Possible values are 'text' and 'curses'.
 
 ``interface.chunkselector``
-    Select the interface for change recording (e.g. :hg:`commit` -i).
+    Select the interface for change recording (e.g. :hg:`commit -i`).
     Possible values are 'text' and 'curses'.
     This config overrides the interface specified by ui.interface.
 
