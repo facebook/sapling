@@ -47,6 +47,10 @@ class baseformatter(object):
             self._showitem()
         self._item = {}
     @staticmethod
+    def formatdate(date, fmt='%a %b %d %H:%M:%S %Y %1%2'):
+        '''convert date tuple to appropriate format'''
+        return date
+    @staticmethod
     def formatlist(data, name, fmt='%s', sep=' '):
         '''convert iterable to appropriate list format'''
         return list(data)
@@ -83,6 +87,10 @@ class plainformatter(baseformatter):
         return False
     def startitem(self):
         pass
+    @staticmethod
+    def formatdate(date, fmt='%a %b %d %H:%M:%S %Y %1%2'):
+        '''stringify date tuple in the given format'''
+        return util.datestr(date, fmt)
     @staticmethod
     def formatlist(data, name, fmt='%s', sep=' '):
         '''stringify iterable separated by sep'''
