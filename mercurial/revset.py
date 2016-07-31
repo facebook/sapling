@@ -1866,8 +1866,8 @@ def _getsortargs(x):
 
     if len(keyflags) > 1 and any(k == 'topo' for k, reverse in keyflags):
         # i18n: "topo" is a keyword
-        raise error.ParseError(_(
-            'topo sort order cannot be combined with other sort keys'))
+        raise error.ParseError(_('topo sort order cannot be combined '
+                                 'with other sort keys'))
 
     opts = {}
     if 'topo.firstbranch' in args:
@@ -1875,9 +1875,8 @@ def _getsortargs(x):
             opts['topo.firstbranch'] = args['topo.firstbranch']
         else:
             # i18n: "topo" and "topo.firstbranch" are keywords
-            raise error.ParseError(_(
-                'topo.firstbranch can only be used when using the topo sort '
-                'key'))
+            raise error.ParseError(_('topo.firstbranch can only be used '
+                                     'when using the topo sort key'))
 
     return args['set'], keyflags, opts
 
