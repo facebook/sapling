@@ -1082,7 +1082,7 @@ The following per-host settings can be defined.
     This option has no effect if the per-host ``fingerprints`` option
     is set.
 
-    The format of the file is as follows:
+    The format of the file is as follows::
 
         -----BEGIN CERTIFICATE-----
         ... (certificate in base64 PEM encoding) ...
