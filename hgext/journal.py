@@ -488,7 +488,7 @@ def journal(ui, repo, *args, **opts):
             opts.get('all') or name.startswith('re:'),
             'name', '  %-8s', entry.name)
 
-        timestring = util.datestr(entry.timestamp, '%Y-%m-%d %H:%M %1%2')
+        timestring = fm.formatdate(entry.timestamp, '%Y-%m-%d %H:%M %1%2')
         fm.condwrite(ui.verbose, 'date', ' %s', timestring)
         fm.write('command', '  %s\n', entry.command)
 

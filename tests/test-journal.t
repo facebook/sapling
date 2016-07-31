@@ -146,7 +146,7 @@ Test that verbose, JSON, template and commit output work
   [
    {
     "command": "up",
-    "date": "1970-01-01 00:00 +0000",
+    "date": [5.0, 0],
     "name": ".",
     "newhashes": ["1e6c11564562b4ed919baca798bc4338bd299d6a"],
     "oldhashes": ["cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b"],
@@ -154,7 +154,7 @@ Test that verbose, JSON, template and commit output work
    },
    {
     "command": "up 0",
-    "date": "1970-01-01 00:00 +0000",
+    "date": [2.0, 0],
     "name": ".",
     "newhashes": ["cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b"],
     "oldhashes": ["1e6c11564562b4ed919baca798bc4338bd299d6a"],
@@ -162,7 +162,7 @@ Test that verbose, JSON, template and commit output work
    },
    {
     "command": "commit -Aqm b",
-    "date": "1970-01-01 00:00 +0000",
+    "date": [1.0, 0],
     "name": ".",
     "newhashes": ["1e6c11564562b4ed919baca798bc4338bd299d6a"],
     "oldhashes": ["cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b"],
@@ -170,7 +170,7 @@ Test that verbose, JSON, template and commit output work
    },
    {
     "command": "commit -Aqm a",
-    "date": "1970-01-01 00:00 +0000",
+    "date": [0.0, 0],
     "name": ".",
     "newhashes": ["cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b"],
     "oldhashes": ["0000000000000000000000000000000000000000"],
@@ -183,6 +183,7 @@ Test that verbose, JSON, template and commit output work
   > j = "{oldhashes % '{node|upper}'} -> {newhashes % '{node|upper}'}
   >      - user: {user}
   >      - command: {command}
+  >      - date: {date|rfc3339date}
   >      - newhashes: {newhashes}
   >      - oldhashes: {oldhashes}
   >      "
@@ -192,6 +193,7 @@ Test that verbose, JSON, template and commit output work
   CB9A9F314B8B07BA71012FCDBC544B5A4D82FF5B -> 1E6C11564562B4ED919BACA798BC4338BD299D6A
   - user: foobar
   - command: up
+  - date: 1970-01-01T00:00:05+00:00
   - newhashes: 1e6c11564562b4ed919baca798bc4338bd299d6a
   - oldhashes: cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b
 
