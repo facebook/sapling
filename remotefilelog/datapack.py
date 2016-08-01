@@ -199,13 +199,25 @@ class datapack(basepack.basepack):
             # <8 byte len> + <delta>
             rawdeltalen = data[offset:offset + 8]
             deltalen = struct.unpack('!Q', rawdeltalen)[0]
-            offset += 8 + deltalen
+            offset += 8
 
-            self._pagedin += (2 + filenamelen +
-                              2 * constants.NODESIZE +
-                              8)
+            # it has to be at least long enough for the lz4 header.
+            assert deltalen >= 4
 
-            yield (filename, node, deltabase, deltalen)
+            # python-lz4 stores the length of the uncompressed field as a
+            # little-endian 32-bit integer at the start of the data.
+            uncompressedlen = struct.unpack('<I', data[offset:offset + 4])[0]
+            offset += deltalen
+
+            self._pagedin += (
+                2 +             # the filename length
+                filenamelen +   # the filename itself.
+                2 * constants.NODESIZE + # the two nodes.
+                8 +             # the delta length
+                4               # the uncompressed delta length
+            )
+
+            yield (filename, node, deltabase, uncompressedlen)
 
             # If we've read a lot of data from the mmap, free some memory.
             self.freememory()
