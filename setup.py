@@ -1,9 +1,38 @@
+from distutils.ccompiler import new_compiler
 from glob import glob
+import os
+import shutil
+import tempfile
 
 try:
     from setuptools import setup, Extensions
 except ImportError:
     from distutils.core import setup, Extension
+
+def cc_has_feature(code=None, cflags=None, ldflags=None, cc=None):
+    """test a C compiler feature, return True if supported, False otherwise"""
+    if code is None:
+        code = 'int main() { return 0; }'
+    if cflags is None:
+        cflags = []
+    if ldflags is None:
+        ldflags = []
+    if cc is None:
+        cc = new_compiler()
+
+    tmpdir = tempfile.mkdtemp(prefix='cc-feature-test')
+    try:
+        fname = os.path.join(tmpdir, 'a.c')
+        with open(fname, 'w') as f:
+            f.write(code)
+        objs = cc.compile([fname], output_dir=tmpdir, extra_postargs=cflags)
+        cc.link_executable(objs, os.path.join(tmpdir, 'a'),
+                           extra_postargs=ldflags)
+        return True
+    except Exception:
+        return False
+    finally:
+        shutil.rmtree(tmpdir)
 
 hgext3rd = [
     p[:-3].replace('/', '.')
