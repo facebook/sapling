@@ -87,6 +87,8 @@ extern delta_chain_t *getdeltachain(
     const datapack_handle_t *handle,
     uint8_t node[NODE_SZ]);
 
+extern void freedeltachain(delta_chain_t *chain);
+
 // this should really be private, but we need it for the cdatapack_dump tool.
 extern const uint8_t *getdeltachainlink(
     const uint8_t *ptr, delta_chain_link_t *link);

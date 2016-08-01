@@ -66,4 +66,6 @@ int main(int argc, char *argv[]) {
         NODE_SZ * 2, node_buffer, NODE_SZ * 2, deltabase_buffer,
         link.delta_sz);
   }
+
+  close_datapack(handle);
 }

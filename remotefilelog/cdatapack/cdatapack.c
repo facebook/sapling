@@ -276,7 +276,11 @@ error_cleanup:
   if (handle && handle->datafd != 0) {
     close(handle->datafd);
   }
-  free(handle->index_table);
+
+  if (handle != NULL) {
+    free(handle->fanout_table);
+  }
+
   free(handle);
 
   handle = NULL;
@@ -293,7 +297,7 @@ void close_datapack(datapack_handle_t *handle) {
   munmap(handle->data_mmap, handle->data_file_sz);
   close(handle->indexfd);
   close(handle->datafd);
-  free(handle->index_table);
+  free(handle->fanout_table);
   free(handle);
 }
 
@@ -409,4 +413,9 @@ delta_chain_t *getdeltachain(
   }
 
   return delta_chain;
+}
+
+void freedeltachain(delta_chain_t *chain) {
+  free(chain->delta_chain_links);
+  free(chain);
 }
