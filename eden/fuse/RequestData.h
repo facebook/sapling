@@ -31,12 +31,12 @@ class RequestData : public folly::RequestData {
   static void interrupter(fuse_req_t req, void* data);
   fuse_req_t stealReq();
 
- public:
-  struct CancelBase {
-    virtual ~CancelBase();
-    virtual void cancel() = 0;
+  struct Cancel {
+    folly::Future<folly::Unit> fut_;
+    explicit Cancel(folly::Future<folly::Unit>&& fut) : fut_(std::move(fut)) {}
   };
 
+ public:
   static const std::string kKey;
   RequestData(const RequestData&) = delete;
   RequestData& operator=(const RequestData&) = delete;
@@ -64,18 +64,37 @@ class RequestData : public folly::RequestData {
   // Check whether the request has already been interrupted
   bool wasInterrupted() const;
 
-  template <typename FUTURE>
-  struct Cancel : public CancelBase {
-    FUTURE fut_;
-    void cancel() override { fut_.cancel(); }
-    explicit Cancel(FUTURE&& fut) : fut_(std::move(fut)) {}
-  };
-
-  // Register the future chain associated with this request so that
-  // we can cancel it when we receive an interrupt
+  /** Register the future chain associated with this request so that
+   * we can cancel it when we receive an interrupt.
+   * This function will append error handling to the future chain by
+   * passing it to catchErrors() prior to registering the cancellation
+   * handler.
+   */
   template <typename FUTURE>
   void setRequestFuture(FUTURE&& fut) {
-    this->interrupter_ = std::make_unique<Cancel<FUTURE>>(std::move(fut));
+    this->interrupter_ =
+        std::make_unique<Cancel>(this->catchErrors(std::move(fut)));
+  }
+
+  /** Append error handling clauses to a future chain
+   * These clauses result in reporting a fuse request error back to the
+   * kernel. */
+  template <typename FUTURE>
+  folly::Future<folly::Unit> catchErrors(FUTURE&& fut) {
+    return fut
+        .onError([](const std::system_error& err) {
+          int errnum = EIO;
+          if (err.code().category() == std::system_category()) {
+            errnum = err.code().value();
+          }
+          VLOG(5) << folly::exceptionStr(err);
+          RequestData::get().replyError(errnum);
+        })
+        .onError([](const std::exception& err) {
+          VLOG(5) << folly::exceptionStr(err);
+          RequestData::get().replyError(EIO);
+        })
+        .ensure([] { RequestData::get().finishRequest(); });
   }
 
   // Returns the supplementary group IDs for the process making the
@@ -116,7 +135,7 @@ class RequestData : public folly::RequestData {
   void replyPoll(unsigned revents);
 
  private:
-  std::unique_ptr<CancelBase> interrupter_;
+  std::unique_ptr<Cancel> interrupter_;
 };
 }
 }

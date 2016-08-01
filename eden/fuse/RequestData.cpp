@@ -21,8 +21,6 @@ namespace fusell {
 
 const std::string RequestData::kKey("fusell");
 
-RequestData::CancelBase::~CancelBase() {}
-
 RequestData::RequestData(fuse_req_t req)
     : req_(req), requestContext_(folly::RequestContext::saveContext()) {
   fuse_req_interrupt_func(req, RequestData::interrupter, this);
@@ -39,7 +37,7 @@ void RequestData::interrupter(fuse_req_t req, void* data) {
   folly::RequestContext::setContext(request.requestContext_.lock());
 
   if (request.interrupter_) {
-    request.interrupter_->cancel();
+    request.interrupter_->fut_.cancel();
   }
 }
 

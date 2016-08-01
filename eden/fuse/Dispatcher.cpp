@@ -122,19 +122,6 @@ static void disp_destroy(void* userdata) {
   static_cast<Dispatcher*>(userdata)->destroy();
 }
 
-#define CATCH_ERRORS()                                     \
-  onError([](const std::system_error& err) {               \
-    int errnum = EIO;                                      \
-    if (err.code().category() == std::system_category()) { \
-      errnum = err.code().value();                         \
-    }                                                      \
-    RequestData::get().replyError(errnum);                 \
-  })                                                       \
-      .onError([](const std::exception& err) {             \
-        RequestData::get().replyError(EIO);                \
-      })                                                   \
-      .ensure([] { RequestData::get().finishRequest(); })
-
 folly::Future<fuse_entry_param> Dispatcher::lookup(
     fuse_ino_t parent,
     PathComponentPiece name) {
@@ -151,8 +138,7 @@ static void disp_lookup(fuse_req_t req, fuse_ino_t parent, const char* name) {
                                })
                                .then([](fuse_entry_param&& param) {
                                  RequestData::get().replyEntry(param);
-                               })
-                               .CATCH_ERRORS());
+                               }));
 }
 
 folly::Future<folly::Unit> Dispatcher::forget(fuse_ino_t ino,
@@ -163,10 +149,10 @@ folly::Future<folly::Unit> Dispatcher::forget(fuse_ino_t ino,
 static void disp_forget(fuse_req_t req, fuse_ino_t ino, unsigned long nlookup) {
   auto& request = RequestData::create(req);
   auto* dispatcher = request.getDispatcher();
-  request.startRequest(dispatcher->getStats().forget)
-      .then([=, &request] { return dispatcher->forget(ino, nlookup); })
-      .then([]() { RequestData::get().replyNone(); })
-      .CATCH_ERRORS();
+  request.catchErrors(
+      request.startRequest(dispatcher->getStats().forget)
+          .then([=, &request] { return dispatcher->forget(ino, nlookup); })
+          .then([]() { RequestData::get().replyNone(); }));
 }
 
 #if FUSE_MINOR_VERSION >= 9
@@ -174,15 +160,14 @@ static void disp_forget_multi(fuse_req_t req, size_t count, fuse_forget_data *fo
   auto& request = RequestData::create(req);
   std::vector<fuse_forget_data> forget(forgets, forgets + count);
   auto* dispatcher = request.getDispatcher();
-  request.startRequest(dispatcher->getStats().forgetmulti)
-      .then([ =, &request, forget = std::move(forget) ] {
-        for (auto &f:forget) {
-          dispatcher->forget(f.ino, f.nlookup);
-        }
-        return Unit{};
-      })
-      .then([]() { RequestData::get().replyNone(); })
-      .CATCH_ERRORS();
+  request.catchErrors(request.startRequest(dispatcher->getStats().forgetmulti)
+                          .then([ =, &request, forget = std::move(forget) ] {
+                            for (auto& f : forget) {
+                              dispatcher->forget(f.ino, f.nlookup);
+                            }
+                            return Unit{};
+                          })
+                          .then([]() { RequestData::get().replyNone(); }));
 }
 #endif
 
@@ -204,8 +189,7 @@ static void disp_getattr(fuse_req_t req,
             })
             .then([](Dispatcher::Attr&& attr) {
               RequestData::get().replyAttr(attr.st, attr.timeout);
-            })
-            .CATCH_ERRORS());
+            }));
 
   } else {
     request.setRequestFuture(
@@ -213,8 +197,7 @@ static void disp_getattr(fuse_req_t req,
             .then([=, &request] { return dispatcher->getattr(ino); })
             .then([](Dispatcher::Attr&& attr) {
               RequestData::get().replyAttr(attr.st, attr.timeout);
-            })
-            .CATCH_ERRORS());
+            }));
   }
 }
 
@@ -241,8 +224,7 @@ static void disp_setattr(fuse_req_t req,
             })
             .then([](Dispatcher::Attr&& attr) {
               RequestData::get().replyAttr(attr.st, attr.timeout);
-            })
-            .CATCH_ERRORS());
+            }));
 
   } else {
     request.setRequestFuture(
@@ -252,8 +234,7 @@ static void disp_setattr(fuse_req_t req,
             })
             .then([](Dispatcher::Attr&& attr) {
               RequestData::get().replyAttr(attr.st, attr.timeout);
-            })
-            .CATCH_ERRORS());
+            }));
   }
 }
 
@@ -267,9 +248,9 @@ static void disp_readlink(fuse_req_t req, fuse_ino_t ino) {
   request.setRequestFuture(
       request.startRequest(dispatcher->getStats().readlink)
           .then([=, &request] { return dispatcher->readlink(ino); })
-          .then(
-              [](std::string&& str) { RequestData::get().replyReadLink(str); })
-          .CATCH_ERRORS());
+          .then([](std::string&& str) {
+            RequestData::get().replyReadLink(str);
+          }));
 }
 
 folly::Future<fuse_entry_param> Dispatcher::mknod(
@@ -295,8 +276,7 @@ static void disp_mknod(fuse_req_t req,
           })
           .then([](fuse_entry_param&& param) {
             RequestData::get().replyEntry(param);
-          })
-          .CATCH_ERRORS());
+          }));
 }
 
 folly::Future<fuse_entry_param>
@@ -317,8 +297,7 @@ static void disp_mkdir(fuse_req_t req,
                                })
                                .then([](fuse_entry_param&& param) {
                                  RequestData::get().replyEntry(param);
-                               })
-                               .CATCH_ERRORS());
+                               }));
 }
 
 folly::Future<folly::Unit> Dispatcher::unlink(fuse_ino_t, PathComponentPiece) {
@@ -328,13 +307,12 @@ folly::Future<folly::Unit> Dispatcher::unlink(fuse_ino_t, PathComponentPiece) {
 static void disp_unlink(fuse_req_t req, fuse_ino_t parent, const char* name) {
   auto& request = RequestData::create(req);
   auto* dispatcher = request.getDispatcher();
-  request.setRequestFuture(request.startRequest(dispatcher->getStats().unlink)
-                               .then([=, &request] {
-                                 return dispatcher->unlink(
-                                     parent, PathComponentPiece(name));
-                               })
-                               .then([]() { RequestData::get().replyError(0); })
-                               .CATCH_ERRORS());
+  request.setRequestFuture(
+      request.startRequest(dispatcher->getStats().unlink)
+          .then([=, &request] {
+            return dispatcher->unlink(parent, PathComponentPiece(name));
+          })
+          .then([]() { RequestData::get().replyError(0); }));
 }
 
 folly::Future<folly::Unit> Dispatcher::rmdir(fuse_ino_t, PathComponentPiece) {
@@ -344,13 +322,12 @@ folly::Future<folly::Unit> Dispatcher::rmdir(fuse_ino_t, PathComponentPiece) {
 static void disp_rmdir(fuse_req_t req, fuse_ino_t parent, const char* name) {
   auto& request = RequestData::create(req);
   auto* dispatcher = request.getDispatcher();
-  request.setRequestFuture(request.startRequest(dispatcher->getStats().rmdir)
-                               .then([=, &request] {
-                                 return dispatcher->rmdir(
-                                     parent, PathComponentPiece(name));
-                               })
-                               .then([]() { RequestData::get().replyError(0); })
-                               .CATCH_ERRORS());
+  request.setRequestFuture(
+      request.startRequest(dispatcher->getStats().rmdir)
+          .then([=, &request] {
+            return dispatcher->rmdir(parent, PathComponentPiece(name));
+          })
+          .then([]() { RequestData::get().replyError(0); }));
 }
 
 folly::Future<fuse_entry_param>
@@ -372,8 +349,7 @@ static void disp_symlink(fuse_req_t req,
           })
           .then([](fuse_entry_param&& param) {
             RequestData::get().replyEntry(param);
-          })
-          .CATCH_ERRORS());
+          }));
 }
 
 folly::Future<folly::Unit> Dispatcher::rename(
@@ -399,8 +375,8 @@ static void disp_rename(fuse_req_t req,
                                      newparent,
                                      PathComponentPiece(newname));
                                })
-                               .then([]() { RequestData::get().replyError(0); })
-                               .CATCH_ERRORS());
+                               .then(
+                                   []() { RequestData::get().replyError(0); }));
 }
 
 folly::Future<fuse_entry_param>
@@ -422,8 +398,7 @@ static void disp_link(fuse_req_t req,
           })
           .then([](fuse_entry_param&& param) {
             RequestData::get().replyEntry(param);
-          })
-          .CATCH_ERRORS());
+          }));
 }
 
 folly::Future<std::shared_ptr<FileHandle>> Dispatcher::open(
@@ -456,8 +431,7 @@ static void disp_open(fuse_req_t req,
               // Was interrupted, tidy up.
               dispatcher->getFileHandles().forgetGenericHandle(fi.fh);
             }
-          })
-          .CATCH_ERRORS());
+          }));
 }
 
 static void disp_read(fuse_req_t req,
@@ -476,8 +450,7 @@ static void disp_read(fuse_req_t req,
                                  auto iov = buf.getIov();
                                  RequestData::get().replyIov(
                                      iov.data(), iov.size());
-                               })
-                               .CATCH_ERRORS());
+                               }));
 }
 
 static void disp_write(fuse_req_t req,
@@ -495,8 +468,7 @@ static void disp_write(fuse_req_t req,
 
             return fh->write(folly::StringPiece(buf, size), off);
           })
-          .then([](size_t wrote) { RequestData::get().replyWrite(wrote); })
-          .CATCH_ERRORS());
+          .then([](size_t wrote) { RequestData::get().replyWrite(wrote); }));
 }
 
 static void disp_flush(fuse_req_t req,
@@ -504,14 +476,14 @@ static void disp_flush(fuse_req_t req,
                        struct fuse_file_info* fi) {
   auto& request = RequestData::create(req);
   auto* dispatcher = request.getDispatcher();
-  request.setRequestFuture(request.startRequest(dispatcher->getStats().flush)
-                               .then([ =, &request, fi = *fi ] {
-                                 auto fh = dispatcher->getFileHandle(fi.fh);
+  request.setRequestFuture(
+      request.startRequest(dispatcher->getStats().flush)
+          .then([ =, &request, fi = *fi ] {
+            auto fh = dispatcher->getFileHandle(fi.fh);
 
-                                 return fh->flush(fi.lock_owner);
-                               })
-                               .then([]() { RequestData::get().replyError(0); })
-                               .CATCH_ERRORS());
+            return fh->flush(fi.lock_owner);
+          })
+          .then([]() { RequestData::get().replyError(0); }));
 }
 
 static void disp_release(fuse_req_t req,
@@ -524,8 +496,7 @@ static void disp_release(fuse_req_t req,
           .then([ =, &request, fi = *fi ] {
             dispatcher->getFileHandles().forgetGenericHandle(fi.fh);
             RequestData::get().replyError(0);
-          })
-          .CATCH_ERRORS());
+          }));
 }
 
 static void disp_fsync(fuse_req_t req,
@@ -534,13 +505,13 @@ static void disp_fsync(fuse_req_t req,
                        struct fuse_file_info* fi) {
   auto& request = RequestData::create(req);
   auto* dispatcher = request.getDispatcher();
-  request.setRequestFuture(request.startRequest(dispatcher->getStats().fsync)
-                               .then([ =, &request, fi = *fi ] {
-                                 auto fh = dispatcher->getFileHandle(fi.fh);
-                                 return fh->fsync(datasync);
-                               })
-                               .then([]() { RequestData::get().replyError(0); })
-                               .CATCH_ERRORS());
+  request.setRequestFuture(
+      request.startRequest(dispatcher->getStats().fsync)
+          .then([ =, &request, fi = *fi ] {
+            auto fh = dispatcher->getFileHandle(fi.fh);
+            return fh->fsync(datasync);
+          })
+          .then([]() { RequestData::get().replyError(0); }));
 }
 
 folly::Future<std::shared_ptr<DirHandle>> Dispatcher::opendir(
@@ -569,8 +540,7 @@ static void disp_opendir(fuse_req_t req,
               // Was interrupted, tidy up
               dispatcher->getFileHandles().forgetGenericHandle(fi.fh);
             }
-          })
-          .CATCH_ERRORS());
+          }));
 }
 
 static void disp_readdir(fuse_req_t req,
@@ -589,8 +559,7 @@ static void disp_readdir(fuse_req_t req,
                                  auto buf = list.getBuf();
                                  RequestData::get().replyBuf(
                                      buf.data(), buf.size());
-                               })
-                               .CATCH_ERRORS());
+                               }));
 }
 
 static void disp_releasedir(fuse_req_t req,
@@ -603,8 +572,7 @@ static void disp_releasedir(fuse_req_t req,
           .then([ =, &request, fi = *fi ] {
             dispatcher->getFileHandles().forgetGenericHandle(fi.fh);
             RequestData::get().replyError(0);
-          })
-          .CATCH_ERRORS());
+          }));
 }
 
 static void disp_fsyncdir(fuse_req_t req,
@@ -613,13 +581,13 @@ static void disp_fsyncdir(fuse_req_t req,
                           struct fuse_file_info* fi) {
   auto& request = RequestData::create(req);
   auto* dispatcher = request.getDispatcher();
-  request.setRequestFuture(request.startRequest(dispatcher->getStats().fsyncdir)
-                               .then([ =, &request, fi = *fi ] {
-                                 auto dh = dispatcher->getDirHandle(fi.fh);
-                                 return dh->fsyncdir(datasync);
-                               })
-                               .then([]() { RequestData::get().replyError(0); })
-                               .CATCH_ERRORS());
+  request.setRequestFuture(
+      request.startRequest(dispatcher->getStats().fsyncdir)
+          .then([ =, &request, fi = *fi ] {
+            auto dh = dispatcher->getDirHandle(fi.fh);
+            return dh->fsyncdir(datasync);
+          })
+          .then([]() { RequestData::get().replyError(0); }));
 }
 
 folly::Future<struct statvfs> Dispatcher::statfs(fuse_ino_t ino) {
@@ -640,8 +608,7 @@ static void disp_statfs(fuse_req_t req, fuse_ino_t ino) {
           .then([=, &request] { return dispatcher->statfs(ino); })
           .then([](struct statvfs&& info) {
             RequestData::get().replyStatfs(info);
-          })
-          .CATCH_ERRORS());
+          }));
 }
 
 folly::Future<folly::Unit> Dispatcher::setxattr(fuse_ino_t ino,
@@ -678,8 +645,7 @@ static void disp_setxattr(fuse_req_t req,
             return dispatcher->setxattr(
                 ino, name, folly::StringPiece(value, size), flags);
           })
-          .then([]() { RequestData::get().replyError(0); })
-          .CATCH_ERRORS());
+          .then([]() { RequestData::get().replyError(0); }));
 }
 
 const int Dispatcher::kENOATTR =
@@ -726,8 +692,7 @@ static void disp_getxattr(fuse_req_t req,
             } else {
               request.replyBuf(attr.data(), attr.size());
             }
-          })
-          .CATCH_ERRORS());
+          }));
 }
 
 folly::Future<std::vector<std::string>> Dispatcher::listxattr(fuse_ino_t ino) {
@@ -761,8 +726,7 @@ static void disp_listxattr(fuse_req_t req, fuse_ino_t ino, size_t size) {
               DCHECK(count == buf.size());
               request.replyBuf(buf.data(), count);
             }
-          })
-          .CATCH_ERRORS());
+          }));
 }
 
 folly::Future<folly::Unit> Dispatcher::removexattr(fuse_ino_t ino,
@@ -776,8 +740,7 @@ static void disp_removexattr(fuse_req_t req, fuse_ino_t ino, const char* name) {
   request.setRequestFuture(
       request.startRequest(dispatcher->getStats().removexattr)
           .then([=, &request] { return dispatcher->removexattr(ino, name); })
-          .then([]() { RequestData::get().replyError(0); })
-          .CATCH_ERRORS());
+          .then([]() { RequestData::get().replyError(0); }));
 }
 
 folly::Future<folly::Unit> Dispatcher::access(fuse_ino_t ino, int mask) {
@@ -790,8 +753,7 @@ static void disp_access(fuse_req_t req, fuse_ino_t ino, int mask) {
   request.setRequestFuture(
       request.startRequest(dispatcher->getStats().access)
           .then([=, &request] { return dispatcher->access(ino, mask); })
-          .then([]() { RequestData::get().replyError(0); })
-          .CATCH_ERRORS());
+          .then([]() { RequestData::get().replyError(0); }));
 }
 
 folly::Future<Dispatcher::Create>
@@ -825,8 +787,7 @@ static void disp_create(fuse_req_t req,
               // Interrupted, tidy up
               dispatcher->getFileHandles().forgetGenericHandle(fi.fh);
             }
-          })
-          .CATCH_ERRORS());
+          }));
 }
 
 static void disp_getlk(fuse_req_t req,
@@ -841,8 +802,7 @@ static void disp_getlk(fuse_req_t req,
             auto fh = dispatcher->getFileHandle(fi.fh);
             return fh->getlk(*lock, fi.lock_owner);
           })
-          .then([](struct flock lock) { RequestData::get().replyLock(lock); })
-          .CATCH_ERRORS());
+          .then([](struct flock lock) { RequestData::get().replyLock(lock); }));
 }
 
 static void disp_setlk(fuse_req_t req,
@@ -852,14 +812,14 @@ static void disp_setlk(fuse_req_t req,
                        int sleep) {
   auto& request = RequestData::create(req);
   auto* dispatcher = request.getDispatcher();
-  request.setRequestFuture(request.startRequest(dispatcher->getStats().setlk)
-                               .then([ =, &request, fi = *fi ] {
-                                 auto fh = dispatcher->getFileHandle(fi.fh);
+  request.setRequestFuture(
+      request.startRequest(dispatcher->getStats().setlk)
+          .then([ =, &request, fi = *fi ] {
+            auto fh = dispatcher->getFileHandle(fi.fh);
 
-                                 return fh->setlk(*lock, sleep, fi.lock_owner);
-                               })
-                               .then([]() { RequestData::get().replyError(0); })
-                               .CATCH_ERRORS());
+            return fh->setlk(*lock, sleep, fi.lock_owner);
+          })
+          .then([]() { RequestData::get().replyError(0); }));
 }
 
 folly::Future<uint64_t> Dispatcher::bmap(fuse_ino_t ino,
@@ -877,8 +837,7 @@ static void disp_bmap(fuse_req_t req,
   request.setRequestFuture(
       request.startRequest(dispatcher->getStats().bmap)
           .then([=, &request] { return dispatcher->bmap(ino, blocksize, idx); })
-          .then([](uint64_t idx) { RequestData::get().replyBmap(idx); })
-          .CATCH_ERRORS());
+          .then([](uint64_t idx) { RequestData::get().replyBmap(idx); }));
 }
 
 #if FUSE_MINOR_VERSION >= 8
@@ -915,8 +874,7 @@ static void disp_ioctl(fuse_req_t req,
             auto iov = result.buf.getIov();
             RequestData::get().replyIoctl(
                 result.result, iov.data(), iov.size());
-          })
-          .CATCH_ERRORS());
+          }));
 }
 #endif
 
@@ -939,8 +897,8 @@ static void disp_poll(fuse_req_t req,
 
             return fh->poll(std::move(poll_handle));
           })
-          .then([](unsigned revents) { RequestData::get().replyPoll(revents); })
-          .CATCH_ERRORS());
+          .then(
+              [](unsigned revents) { RequestData::get().replyPoll(revents); }));
 }
 #endif
 
