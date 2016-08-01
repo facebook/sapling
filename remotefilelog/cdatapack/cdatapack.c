@@ -107,8 +107,10 @@ static bool find(
     fanout_idx = node[0];
   }
 
-  index_offset_t start = handle->fanout_table[fanout_idx].start_index,
-      end = handle->fanout_table[fanout_idx].end_index;
+  index_offset_t start = handle->fanout_table[fanout_idx].start_index /
+                         sizeof(disk_index_entry_t);
+  index_offset_t end = handle->fanout_table[fanout_idx].end_index /
+                       sizeof(disk_index_entry_t);
 
   // indices are INCLUSIVE, so the search is <=
   while (start <= end) {
@@ -336,7 +338,7 @@ static pack_chain_t *build_pack_chain(
       &result->links_sz);
   // TODO: yeah, this desperately needs some error handling.
 
-  result->pack_chain_links[result->links_idx] = entry;
+  result->pack_chain_links[result->links_idx++] = entry;
 
   while (entry.deltabase_index_offset != FULLTEXTINDEXMARK &&
          entry.deltabase_index_offset != NOBASEINDEXMARK) {
@@ -349,7 +351,7 @@ static pack_chain_t *build_pack_chain(
         &result->links_sz);
     // TODO: yeah, this desperately needs some error handling.
 
-    result->pack_chain_links[result->links_idx] = entry;
+    result->pack_chain_links[result->links_idx++] = entry;
   }
 
   return result;
@@ -391,9 +393,9 @@ delta_chain_t *getdeltachain(
   // TODO: error handling
 
 
-  for (int ix = 0; ix < pack_chain->links_sz; ix ++) {
-    const uint8_t *ptr = (const uint8_t *)
-        pack_chain->pack_chain_links[ix].data_offset;
+  for (int ix = 0; ix < pack_chain->links_idx; ix ++) {
+    const uint8_t *ptr = handle->data_mmap;
+    ptr += pack_chain->pack_chain_links[ix].data_offset;
     const uint8_t *end = ptr +
         pack_chain->pack_chain_links[ix].data_sz;
 
