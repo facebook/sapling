@@ -526,8 +526,8 @@ def makedirstate(cls):
         def _sqlmigration(self):
             if self._sqlschemaversion == 1:
                 cur = self._sqlconn.cursor()
-                cur.execute('''SELECT filename, status, mode, size, mtime FROM files
-                            WHERE status != 'n' or mtime = -1''')
+                cur.execute('''SELECT filename, status, mode, size, mtime
+                               FROM files WHERE status != 'n' or mtime = -1''')
                 rows = cur.fetchall()
                 nonnormalfiles = dict()
                 for r in rows:

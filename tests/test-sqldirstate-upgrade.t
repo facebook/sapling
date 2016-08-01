@@ -27,8 +27,7 @@ Test automatic upgrade on pull
   > upgrade = True
   > EOF
   $ hg pull
-  migrating your repo to sqldirstate which will make your hg commands faster
-  done
+  migrating your repo to sqldirstate which will make your hg commands faster...
   pulling from default
   abort: repository default not found!
   [255]

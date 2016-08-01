@@ -6,13 +6,13 @@ HTTP server for use in conduit tests.
 
 from optparse import OptionParser
 from StringIO import StringIO
-import BaseHTTPServer, json, signal, sys, urlparse
+import json, signal, sys, urlparse
 
-from mercurial import cmdutil
+from mercurial import cmdutil, util
 
 known_translations = {}
 
-class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
+class RequestHandler(util.httpserver.BaseHTTPRequestHandler):
     def handle_request(self, param):
         from_repo = param['from_repo']
         from_scm = param['from_scm']

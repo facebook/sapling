@@ -14,8 +14,8 @@ def tracewrapsqlconn(sqlconn, tracefile):
 
     def logquery(q, paramtuple=()):
         # This is module for escaping the sql queries imported from postressql
-        # as sqllite doesn't provide one.  Still better than pretending to escape
-        # it manually over here.
+        # as sqllite doesn't provide one.  Still better than pretending to
+        # escape it manually over here.
         #
         # We are importing it here as it's only used for debugging purposes so
         # it's not considered as dependency for prod system.
