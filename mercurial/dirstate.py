@@ -74,8 +74,6 @@ def _trypending(root, vfs, filename):
                 raise
     return (vfs(filename), False)
 
-_token = object()
-
 class dirstate(object):
 
     def __init__(self, opener, ui, root, validate):
@@ -692,22 +690,12 @@ class dirstate(object):
         self._pl = (parent, nullid)
         self._dirty = True
 
-    def write(self, tr=_token):
+    def write(self, tr):
         if not self._dirty:
             return
 
         filename = self._filename
-        if tr is _token: # not explicitly specified
-            self._ui.deprecwarn('use dirstate.write with '
-                               'repo.currenttransaction()',
-                               '3.9')
-
-            if self._opener.lexists(self._pendingfilename):
-                # if pending file already exists, in-memory changes
-                # should be written into it, because it has priority
-                # to '.hg/dirstate' at reading under HG_PENDING mode
-                filename = self._pendingfilename
-        elif tr:
+        if tr:
             # 'dirstate.write()' is not only for writing in-memory
             # changes out, but also for dropping ambiguous timestamp.
             # delayed writing re-raise "ambiguous timestamp issue".
