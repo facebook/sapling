@@ -792,19 +792,15 @@ static PyTypeObject fastmanifestType = {
 
 /* iteration support */
 
-typedef struct {
-  PyObject_HEAD iterator_t *iterator;
-} lmIter;
-
 static void fmiter_dealloc(PyObject *o) {
-  lmIter *self = (lmIter *)o;
+  fmIter *self = (fmIter *)o;
   destroy_iterator(self->iterator);
   // TODO: lcharignon says this is suspicous.
   PyObject_Del(self);
 }
 
 static PyObject *fmiter_iterkeysnext(PyObject *o) {
-  lmIter *self = (lmIter *)o;
+  fmIter *self = (fmIter *)o;
   iterator_result_t iterator_result = iterator_next(self->iterator);
   if (!iterator_result.valid) {
     return NULL;
@@ -814,7 +810,7 @@ static PyObject *fmiter_iterkeysnext(PyObject *o) {
 }
 
 static PyObject *fmiter_iterentriesnext(PyObject *o) {
-  lmIter *self = (lmIter *)o;
+  fmIter *self = (fmIter *)o;
   iterator_result_t iterator_result = iterator_next(self->iterator);
   if (!iterator_result.valid) {
     return NULL;
