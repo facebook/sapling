@@ -260,10 +260,23 @@ def buildobsmarkerspart(bundler, markers):
 def _forcebundle1(op):
     """return true if a pull/push must use bundle1
 
-    Feel free to nuke this function when we drop the experimental option"""
-    return not (op.repo.ui.configbool('experimental', 'bundle2-exp', True)
-                and op.remote.capable('bundle2'))
+    This function is used to allow testing of the older bundle version"""
+    ui = op.repo.ui
+    forcebundle1 = False
+    # The goal is this config is to allow developper to choose the bundle
+    # version used during exchanged. This is especially handy during test.
+    # Value is a list of bundle version to be picked from, highest version
+    # should be used.
+    #
+    # developer config: devel.legacy.exchange
+    exchange = ui.configlist('devel', 'legacy.exchange')
+    if not exchange:
+        forcebundle1 = not ui.configbool('experimental', 'bundle2-exp', True)
+        # developer config: devel.legacy.exchange
+    else:
+        forcebundle1 = 'bundle2' not in exchange and 'bundle1' in exchange
 
+    return forcebundle1 or not op.remote.capable('bundle2')
 
 class pushoperation(object):
     """A object that represent a single push operation
