@@ -19,10 +19,6 @@ It contains all the testing of the basic concepts of large file in a single bloc
   > usercache=${USERCACHE}
   > [hooks]
   > precommit=sh -c "echo \\"Invoking status precommit hook\\"; hg status"
-  > [experimental]
-  > # drop me once bundle2 is the default,
-  > # added to get test change early.
-  > bundle2-exp = True
   > EOF
 
 Create the repo with a couple of revisions of both large and normal
