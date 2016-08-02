@@ -1,12 +1,6 @@
 commit hooks can see env vars
 (and post-transaction one are run unlocked)
 
-  $ cat << EOF >> $HGRCPATH
-  > [experimental]
-  > # drop me once bundle2 is the default,
-  > # added to get test change early.
-  > bundle2-exp = True
-  > EOF
 
   $ cat > $TESTTMP/txnabort.checkargs.py <<EOF
   > def showargs(ui, repo, hooktype, **kwargs):
