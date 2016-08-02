@@ -60,6 +60,7 @@ def onetimesetup(ui):
     onetime = True
 
     # support file content requests
+    wireproto.commands['getflogheads'] = (getflogheads, 'path')
     wireproto.commands['getfiles'] = (getfiles, '')
     wireproto.commands['getfile'] = (getfile, 'file node')
     wireproto.commands['getpackv1'] = (getpack, '*')
@@ -172,7 +173,8 @@ def onetimesetup(ui):
             if isinstance(proto, sshserver.sshserver):
                 # legacy getfiles method which only works over ssh
                 caps.append(shallowrepo.requirement)
-            caps.append("getfile")
+            caps.append('getflogheads')
+            caps.append('getfile')
         return caps
     wrapfunction(wireproto, '_capabilities', _capabilities)
 
@@ -232,6 +234,13 @@ def _loadfileblob(repo, cachepath, path, node):
         with open(filecachepath, "r") as f:
             text = f.read()
     return text
+
+def getflogheads(repo, proto, path):
+    """A server api for requesting a filelog's heads
+    """
+    flog = repo.file(path)
+    heads = flog.heads()
+    return '\n'.join((hex(head) for head in heads))
 
 def getfile(repo, proto, file, node):
     """A server api for requesting a particular version of a file. Can be used

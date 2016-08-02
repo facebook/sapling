@@ -49,6 +49,16 @@ def peersetup(ui, peer):
                 raise error.LookupError(file, node, data)
             yield data
 
+        @wireproto.batchable
+        def getflogheads(self, path):
+            if not self.capable('getflogheads'):
+                raise error.Abort('configured remotefile server does not '
+                                  'support getflogheads')
+            f = wireproto.future()
+            yield {'path': path}, f
+            heads = f.value.split('\n')
+            yield heads
+
         def _callstream(self, command, **opts):
             if (command == 'getbundle' and
                 'remotefilelog' in self._capabilities()):
