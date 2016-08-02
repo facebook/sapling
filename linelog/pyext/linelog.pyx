@@ -1,4 +1,6 @@
 from libc.stdint cimport uint32_t, uint8_t
+from libc.string cimport memcpy, memset
+from posix cimport unistd
 
 cdef extern from "../linelog.c":
     # (duplicated) declarations for Cython, as Cython cannot parse .h file
@@ -42,3 +44,81 @@ cdef extern from "../linelog.c":
             linelog_linenum a1, linelog_linenum a2,
             linelog_linenum blinecount, const linelog_revnum *brevs,
             const linelog_linenum *blinenums)
+
+cdef size_t pagesize = <size_t>unistd.sysconf(unistd._SC_PAGESIZE)
+cdef size_t unitsize = pagesize # used when resizing a buffer
+
+class LinelogError(Exception):
+    _messages = {
+        LINELOG_RESULT_EILLDATA: 'Illegal data',
+        LINELOG_RESULT_ENOMEM: 'Out of memory',
+        LINELOG_RESULT_EOVERFLOW: 'Overflow',
+    }
+
+    def __init__(self, result):
+        self.result = result
+
+    def __str__(self):
+        return self._messages.get(self.result, 'Unknown error %d' % self.result)
+
+cdef class _buffer: # thin wrapper around linelog_buf
+    cdef linelog_buf buf;
+
+    def __cinit__(self):
+        memset(&self.buf, 0, sizeof(linelog_buf))
+
+    cdef resize(self, size_t newsize):
+        raise NotImplementedError()
+
+    cdef flush(self):
+        pass
+
+    cdef close(self):
+        pass
+
+    cdef copyfrom(self, _buffer rhs):
+        if rhs.buf.size == 0:
+            return
+        if rhs.buf.size > self.buf.size:
+            self.resize(rhs.buf.size)
+        memcpy(self.buf.data, <const void *>rhs.buf.data, rhs.buf.size)
+
+    cdef getmaxrev(self):
+        return linelog_getmaxrev(&self.buf)
+
+    cdef getactualsize(self):
+        return linelog_getactualsize(&self.buf)
+
+    cdef clear(self):
+        self._eval(lambda: linelog_clear(&self.buf))
+
+    cdef annotate(self, linelog_annotateresult *ar, linelog_revnum rev):
+        self._eval(lambda: linelog_annotate(&self.buf, ar, rev))
+
+    cdef replacelines(self, linelog_annotateresult *ar, linelog_revnum brev,
+                      linelog_linenum a1, linelog_linenum a2,
+                      linelog_linenum b1, linelog_linenum b2):
+        self._eval(lambda: linelog_replacelines(&self.buf, ar, brev, a1, a2,
+                                                b1, b2))
+
+    cdef replacelines_vec(self, linelog_annotateresult *ar,
+                          linelog_revnum brev, linelog_linenum a1,
+                          linelog_linenum a2, linelog_linenum blinecount,
+                          const linelog_revnum *brevs,
+                          const linelog_linenum *blinenums):
+        self._eval(lambda: linelog_replacelines_vec(&self.buf, ar, brev,
+                                                    a1, a2, blinecount,
+                                                    brevs, blinenums))
+
+    cdef _eval(self, linelogfunc):
+        # linelogfunc should be a function returning linelog_result, which
+        # will be handled smartly: for LINELOG_RESULT_ENEEDRESIZE, resize
+        # automatically and retry. for other errors, raise them.
+        while True:
+            result = linelogfunc()
+            if result == LINELOG_RESULT_OK:
+                return
+            elif result == LINELOG_RESULT_ENEEDRESIZE:
+                self.resize((self.buf.neededsize / unitsize + 1) * unitsize)
+            else:
+                raise LinelogError(result)
