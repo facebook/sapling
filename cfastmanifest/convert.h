@@ -8,9 +8,8 @@
 #define __FASTMANIFEST_CONVERT_H__
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
-
-#include "node.h"
 
 static int8_t hextable[256] = {
     -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
@@ -40,7 +39,7 @@ static char chartable[16] = {
  * Turn a hex-encoded string into binary.  Returns false on failure.
  */
 static inline bool unhexlify(const char *input, int len, uint8_t *dst) {
-  if (len != SHA1_BYTES * 2) {
+  if (len % 2 != 0) {
     // wtf.
     return false;
   }
