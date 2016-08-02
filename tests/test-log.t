@@ -54,6 +54,14 @@ Log on a file with -f
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     y
   
+Log on a file with kind in path
+  $ hg log -r "filelog('path:dir/y')"
+  changeset:   1:2e73264fab97
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     y
+  
 Log on multiple files with -f
 
   $ hg log -f dir/y x

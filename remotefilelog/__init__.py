@@ -524,7 +524,7 @@ def filelogrevset(orig, repo, subset, x):
             for actx in fctx.ancestors():
                 s.add(actx.linkrev())
 
-    return [r for r in subset if r in s]
+    return revset.baseset([r for r in subset if r in s])
 
 @command('gc', [], _('hg gc [REPO...]'), norepo=True)
 def gc(ui, *args, **opts):
