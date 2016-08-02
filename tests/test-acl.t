@@ -44,13 +44,6 @@
   > EOF
   > }
 
-  $ cat << EOF >> $HGRCPATH
-  > [experimental]
-  > # drop me once bundle2 is the default,
-  > # added to get test change early.
-  > bundle2-exp = True
-  > EOF
-
   $ hg init a
   $ cd a
   $ mkdir foo foo/Bar quux
