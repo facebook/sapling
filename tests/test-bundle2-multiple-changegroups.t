@@ -33,8 +33,6 @@ Create an extension to test bundle2 with multiple changegroups
   > EOF
 
   $ cat >> $HGRCPATH << EOF
-  > [experimental]
-  > bundle2-exp=True
   > [ui]
   > logtemplate={rev}:{node|short} {phase} {author} {bookmarks} {desc|firstline}
   > EOF

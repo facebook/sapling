@@ -78,8 +78,6 @@ Start a simple HTTP server to serve bundles
   $ cat dumb.pid >> $DAEMON_PIDS
 
   $ cat >> $HGRCPATH << EOF
-  > [experimental]
-  > bundle2-exp=True
   > [ui]
   > ssh=python "$TESTDIR/dummyssh"
   > logtemplate={rev}:{node|short} {phase} {author} {bookmarks} {desc|firstline}
