@@ -4,10 +4,6 @@
   > publish=false
   > [ui]
   > logtemplate="{rev}:{node|short} ({phase}) [{tags} {bookmarks}] {desc|firstline}\n"
-  > [experimental]
-  > # drop me once bundle2 is the default,
-  > # added to get test change early.
-  > bundle2-exp = True
   > EOF
   $ mkcommit() {
   >    echo "$1" > "$1"
