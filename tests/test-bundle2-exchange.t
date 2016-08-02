@@ -969,7 +969,7 @@ Servers can disable bundle1 for clone/pull operations
   $ hg serve -p $HGPORT -d --pid-file=hg.pid
   $ cat hg.pid >> $DAEMON_PIDS
 
-  $ hg --config experimental.bundle2-exp=false clone http://localhost:$HGPORT/ not-bundle2
+  $ hg --config devel.legacy.exchange=bundle1 clone http://localhost:$HGPORT/ not-bundle2
   requesting all changes
   abort: remote error:
   incompatible Mercurial client; bundle2 required
@@ -992,7 +992,7 @@ bundle1 can still pull non-generaldelta repos when generaldelta bundle1 disabled
   $ hg serve -p $HGPORT -d --pid-file=hg.pid
   $ cat hg.pid >> $DAEMON_PIDS
 
-  $ hg --config experimental.bundle2-exp=false clone http://localhost:$HGPORT/ not-bundle2-1
+  $ hg --config devel.legacy.exchange=bundle1 clone http://localhost:$HGPORT/ not-bundle2-1
   requesting all changes
   adding changesets
   adding manifests
@@ -1013,7 +1013,7 @@ bundle1 pull can be disabled for generaldelta repos only
 
   $ hg serve -p $HGPORT -d --pid-file=hg.pid
   $ cat hg.pid >> $DAEMON_PIDS
-  $ hg --config experimental.bundle2-exp=false clone http://localhost:$HGPORT/ not-bundle2
+  $ hg --config devel.legacy.exchange=bundle1 clone http://localhost:$HGPORT/ not-bundle2
   requesting all changes
   abort: remote error:
   incompatible Mercurial client; bundle2 required
@@ -1030,7 +1030,7 @@ Verify the global server.bundle1 option works
   > EOF
   $ hg serve -p $HGPORT -d --pid-file=hg.pid
   $ cat hg.pid >> $DAEMON_PIDS
-  $ hg --config experimental.bundle2-exp=false clone http://localhost:$HGPORT not-bundle2
+  $ hg --config devel.legacy.exchange=bundle1 clone http://localhost:$HGPORT not-bundle2
   requesting all changes
   abort: remote error:
   incompatible Mercurial client; bundle2 required
@@ -1045,7 +1045,7 @@ Verify the global server.bundle1 option works
   $ hg serve -p $HGPORT -d --pid-file=hg.pid
   $ cat hg.pid >> $DAEMON_PIDS
 
-  $ hg --config experimental.bundle2-exp=false clone http://localhost:$HGPORT/ not-bundle2
+  $ hg --config devel.legacy.exchange=bundle1 clone http://localhost:$HGPORT/ not-bundle2
   requesting all changes
   abort: remote error:
   incompatible Mercurial client; bundle2 required
@@ -1062,7 +1062,7 @@ Verify the global server.bundle1 option works
   $ hg serve -p $HGPORT -d --pid-file=hg.pid
   $ cat hg.pid >> $DAEMON_PIDS
 
-  $ hg --config experimental.bundle2-exp=false clone http://localhost:$HGPORT/ not-bundle2-2
+  $ hg --config devel.legacy.exchange=bundle1 clone http://localhost:$HGPORT/ not-bundle2-2
   requesting all changes
   adding changesets
   adding manifests
@@ -1099,7 +1099,7 @@ Verify bundle1 pushes can be disabled
   $ cd bundle2-only
   $ echo commit > foo
   $ hg commit -m commit
-  $ hg --config experimental.bundle2-exp=false push
+  $ hg --config devel.legacy.exchange=bundle1 push
   pushing to http://localhost:$HGPORT/
   searching for changes
   abort: remote error:
