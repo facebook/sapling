@@ -645,10 +645,6 @@ Create a repository with tags data to test .hgtags fnodes transfer
 
   $ hg init tagsserver
   $ cd tagsserver
-  $ cat > .hg/hgrc << EOF
-  > [experimental]
-  > bundle2-exp=True
-  > EOF
   $ touch foo
   $ hg -q commit -A -m initial
   $ hg tag -m 'tag 0.1' 0.1
@@ -663,7 +659,7 @@ Create a repository with tags data to test .hgtags fnodes transfer
 
 Cloning should pull down hgtags fnodes mappings and write the cache file
 
-  $ hg --config experimental.bundle2-exp=True clone --pull tagsserver tagsclient
+  $ hg clone --pull tagsserver tagsclient
   requesting all changes
   adding changesets
   adding manifests
