@@ -56,7 +56,7 @@ def peersetup(ui, peer):
                                   'support getflogheads')
             f = wireproto.future()
             yield {'path': path}, f
-            heads = f.value.split('\n')
+            heads = f.value.split('\n') if f.value else []
             yield heads
 
         def _callstream(self, command, **opts):

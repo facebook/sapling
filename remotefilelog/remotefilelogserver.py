@@ -240,7 +240,7 @@ def getflogheads(repo, proto, path):
     """
     flog = repo.file(path)
     heads = flog.heads()
-    return '\n'.join((hex(head) for head in heads))
+    return '\n'.join((hex(head) for head in heads if head != nullid))
 
 def getfile(repo, proto, file, node):
     """A server api for requesting a particular version of a file. Can be used
