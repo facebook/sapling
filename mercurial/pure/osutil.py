@@ -173,30 +173,30 @@ if os.name != 'nt':
 
     class _iovec(ctypes.Structure):
         _fields_ = [
-            ('iov_base', ctypes.c_void_p),
-            ('iov_len', ctypes.c_size_t),
+            (u'iov_base', ctypes.c_void_p),
+            (u'iov_len', ctypes.c_size_t),
         ]
 
     class _msghdr(ctypes.Structure):
         _fields_ = [
-            ('msg_name', ctypes.c_void_p),
-            ('msg_namelen', _socklen_t),
-            ('msg_iov', ctypes.POINTER(_iovec)),
-            ('msg_iovlen', _msg_iovlen_t),
-            ('msg_control', ctypes.c_void_p),
-            ('msg_controllen', _msg_controllen_t),
-            ('msg_flags', ctypes.c_int),
+            (u'msg_name', ctypes.c_void_p),
+            (u'msg_namelen', _socklen_t),
+            (u'msg_iov', ctypes.POINTER(_iovec)),
+            (u'msg_iovlen', _msg_iovlen_t),
+            (u'msg_control', ctypes.c_void_p),
+            (u'msg_controllen', _msg_controllen_t),
+            (u'msg_flags', ctypes.c_int),
         ]
 
     class _cmsghdr(ctypes.Structure):
         _fields_ = [
-            ('cmsg_len', _cmsg_len_t),
-            ('cmsg_level', ctypes.c_int),
-            ('cmsg_type', ctypes.c_int),
-            ('cmsg_data', ctypes.c_ubyte * 0),
+            (u'cmsg_len', _cmsg_len_t),
+            (u'cmsg_level', ctypes.c_int),
+            (u'cmsg_type', ctypes.c_int),
+            (u'cmsg_data', ctypes.c_ubyte * 0),
         ]
 
-    _libc = ctypes.CDLL(ctypes.util.find_library('c'), use_errno=True)
+    _libc = ctypes.CDLL(ctypes.util.find_library(u'c'), use_errno=True)
     _recvmsg = getattr(_libc, 'recvmsg', None)
     if _recvmsg:
         _recvmsg.restype = getattr(ctypes, 'c_ssize_t', ctypes.c_long)
