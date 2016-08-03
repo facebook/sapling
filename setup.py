@@ -14,5 +14,15 @@ setup(
     license='GPLv2+',
     packages=['remotefilelog'],
     install_requires=['lz4'],
-    ext_modules = []
+    ext_modules = [
+        Extension('cdatapack',
+                  sources=[
+                      'remotefilelog/cdatapack/py-cdatapack.c',
+                  ],
+                  extra_compile_args=[
+                      "-std=c99",
+                      "-Wall",
+                      "-Werror", "-Werror=strict-prototypes"],
+        )
+    ],
 )
