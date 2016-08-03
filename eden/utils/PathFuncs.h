@@ -996,3 +996,31 @@ RelativePath operator+(
 
 }
 }
+
+namespace std {
+/* Allow std::hash to operate on these types */
+
+template <typename A>
+struct hash<facebook::eden::detail::PathComponentBase<A>> {
+  std::size_t operator()(
+      const facebook::eden::detail::PathComponentBase<A>& s) const {
+    return facebook::eden::detail::hash_value(s);
+  }
+};
+
+template <typename A>
+struct hash<facebook::eden::detail::RelativePathBase<A>> {
+  std::size_t operator()(
+      const facebook::eden::detail::RelativePathBase<A>& s) const {
+    return facebook::eden::detail::hash_value(s);
+  }
+};
+
+template <typename A>
+struct hash<facebook::eden::detail::AbsolutePathBase<A>> {
+  std::size_t operator()(
+      const facebook::eden::detail::AbsolutePathBase<A>& s) const {
+    return facebook::eden::detail::hash_value(s);
+  }
+};
+}

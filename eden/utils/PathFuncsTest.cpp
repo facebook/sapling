@@ -174,6 +174,15 @@ TEST(PathFuncs, Hash) {
   // namespace for boost::hash.
   boost::hash<PathComponentPiece> hasher;
   EXPECT_EQ(9188533406165618471, hasher(PathComponentPiece("foo")));
+
+  // Similarly for std::hash
+  std::set<PathComponent> pset;
+  std::set<RelativePath> rset;
+  std::set<AbsolutePath> aset;
+
+  std::unordered_set<PathComponent> upset;
+  std::unordered_set<RelativePath> urset;
+  std::unordered_set<AbsolutePath> uaset;
 }
 
 TEST(PathFuncs, Stream) {
