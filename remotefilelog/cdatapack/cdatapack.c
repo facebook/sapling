@@ -4,12 +4,15 @@
 //
 // no-check-code
 
+#include <errno.h>
 #include <fcntl.h>
 #include <memory.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/mman.h>
-#include <errno.h>
+
+#include <lz4.h>
+
 #include "cdatapack.h"
 #include "buffer.h"
 
@@ -357,6 +360,10 @@ static pack_chain_t *build_pack_chain(
   return result;
 }
 
+static inline uint32_t load_le32(const uint8_t *d) {
+  return d[0] | (d[1] << 8) | (d[2] << 16) | (d[3] << 24);
+}
+
 const uint8_t *getdeltachainlink(
     const uint8_t *ptr, delta_chain_link_t *link) {
   link->filename_sz = ntohs(*((uint16_t *) ptr));
@@ -371,11 +378,24 @@ const uint8_t *getdeltachainlink(
   link->deltabase_node = ptr;
   ptr += NODE_SZ;
 
-  link->delta_sz = ntohll(*((uint64_t *) ptr));
-  ptr += sizeof(uint64_t);
+  data_offset_t compressed_sz = ntohll(*((uint64_t *) ptr)) - sizeof(uint32_t);
+  ptr += sizeof(data_offset_t);
 
-  link->delta = ptr;
-  ptr += link->delta_sz;
+  link->delta_sz = load_le32(ptr);
+  ptr += sizeof(uint32_t);
+
+  uint8_t *decompress_output = malloc(link->delta_sz);
+  // TODO: error handling!
+
+  uint32_t outbytes = LZ4_decompress_fast(
+      (const char *) ptr,
+      (char *) decompress_output,
+      (int32_t) link->delta_sz);
+  // TODO: error handling
+  (void) outbytes;
+  link->delta = decompress_output;
+
+  ptr += compressed_sz;
 
   return ptr;
 }
