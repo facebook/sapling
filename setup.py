@@ -18,6 +18,20 @@ setup(
         Extension('cdatapack',
                   sources=[
                       'remotefilelog/cdatapack/py-cdatapack.c',
+                      'remotefilelog/cdatapack/cdatapack.c',
+                  ],
+                  include_dirs=[
+                      'remotefilelog/cdatapack',
+                      '/usr/local/include',
+                      '/opt/local/include',
+                  ],
+                  library_dirs=[
+                      '/usr/local/lib',
+                      '/opt/local/lib',
+                  ],
+                  libraries=[
+                      'crypto',
+                      'lz4',
                   ],
                   extra_compile_args=[
                       "-std=c99",
