@@ -480,7 +480,14 @@ def getremotechanges(ui, repo, other, onlyheads=None, bundlename=None,
     if bundlename or not localrepo:
         # create a bundle (uncompressed if other repo is not local)
 
-        canbundle2 = (ui.configbool('experimental', 'bundle2-exp', True)
+        # developer config: devel.legacy.exchange
+        legexc = ui.configlist('devel', 'legacy.exchange')
+        if not legexc:
+            forcebundle1 = not ui.configbool('experimental', 'bundle2-exp',
+                                             True)
+        else:
+            forcebundle1 = 'bundle2' not in legexc and 'bundle1' in legexc
+        canbundle2 = (not forcebundle1
                       and other.capable('getbundle')
                       and other.capable('bundle2'))
         if canbundle2:
