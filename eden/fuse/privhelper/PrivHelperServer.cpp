@@ -136,19 +136,19 @@ void PrivHelperServer::processUnmountMsg(PrivHelperConn::Message* msg) {
   string mountPath;
   conn_.parseUnmountRequest(msg, mountPath);
 
-  auto it = mountPoints_.find(mountPath);
-  if (it == mountPoints_.end()) {
-    throw std::domain_error(
-        folly::to<string>("No FUSE mount found for ", mountPath));
-  }
-
-  auto range = bindMountPoints_.equal_range(mountPath);
-  for (auto it = range.first; it != range.second; ++it) {
-    auto bindMount = it->second;
-    bindUnmount(bindMount.c_str());
-  }
-
   try {
+    auto it = mountPoints_.find(mountPath);
+    if (it == mountPoints_.end()) {
+      throw std::domain_error(
+          folly::to<string>("No FUSE mount found for ", mountPath));
+    }
+
+    auto range = bindMountPoints_.equal_range(mountPath);
+    for (auto it = range.first; it != range.second; ++it) {
+      auto bindMount = it->second;
+      bindUnmount(bindMount.c_str());
+    }
+
     fuseUnmount(mountPath.c_str());
     mountPoints_.erase(mountPath);
     conn_.serializeEmptyResponse(msg);

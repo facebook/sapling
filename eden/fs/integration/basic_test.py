@@ -202,3 +202,16 @@ class BasicTest:
         self.assertTrue(self.eden.in_proc_mounts(self.mount))
         entries = sorted(os.listdir(self.mount))
         self.assertEqual(['adir', 'bdir', 'hello', 'slink'], entries)
+
+    def test_double_unmount(self):
+        # Test calling "unmount -n" twice.  The second should fail, but edenfs
+        # should still work normally afterwards
+        self.eden.run_cmd('unmount', '-n', self.mount)
+        self.eden.run_unchecked('unmount', '-n', self.mount)
+
+        # Now remount it with the mount command
+        self.eden.run_cmd('mount', self.mount)
+
+        self.assertTrue(self.eden.in_proc_mounts(self.mount))
+        entries = sorted(os.listdir(self.mount))
+        self.assertEqual(['adir', 'bdir', 'hello', 'slink'], entries)
