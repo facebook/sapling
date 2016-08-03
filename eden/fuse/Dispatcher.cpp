@@ -744,6 +744,12 @@ static void disp_removexattr(fuse_req_t req, fuse_ino_t ino, const char* name) {
 }
 
 folly::Future<folly::Unit> Dispatcher::access(fuse_ino_t ino, int mask) {
+  // Note that if you mount with the "default_permissions" kernel mount option,
+  // the kernel will perform all permissions checks for you, and will never
+  // invoke access() directly.
+  //
+  // Implementing access() is only needed when not using the
+  // "default_permissions" option.
   FUSELL_NOT_IMPL();
 }
 

@@ -10,6 +10,7 @@
 import errno
 import os
 import stat
+import subprocess
 from .lib import testcase
 
 
@@ -25,12 +26,15 @@ class BasicTest:
     def populate_repo(self):
         self.repo.write_file('hello', 'hola\n')
         self.repo.write_file('adir/file', 'foo!\n')
+        self.repo.write_file('bdir/test.sh', '#!/bin/bash\necho test\n',
+                             mode=0o755)
+        self.repo.write_file('bdir/noexec.sh', '#!/bin/bash\necho test\n')
         self.repo.symlink('slink', 'hello')
         self.repo.commit('Initial commit.')
 
     def test_fileList(self):
         entries = sorted(os.listdir(self.mount))
-        self.assertEqual(['adir', 'hello', 'slink'], entries)
+        self.assertEqual(['adir', 'bdir', 'hello', 'slink'], entries)
 
         adir = os.path.join(self.mount, 'adir')
         st = os.lstat(adir)
@@ -69,7 +73,8 @@ class BasicTest:
             f.write('created\n')
 
         entries = sorted(os.listdir(self.mount))
-        self.assertEqual(['adir', 'hello', 'notinrepo', 'slink'], entries)
+        self.assertEqual(['adir', 'bdir', 'hello', 'notinrepo', 'slink'],
+                         entries)
 
         with open(filename, 'r') as f:
             self.assertEqual(f.read(), 'created\n')
@@ -118,7 +123,8 @@ class BasicTest:
         self.assertTrue(stat.S_ISDIR(st.st_mode))
 
         entries = sorted(os.listdir(self.mount))
-        self.assertEqual(['adir', 'buck-out', 'hello', 'slink'], entries)
+        self.assertEqual(['adir', 'bdir', 'buck-out', 'hello', 'slink'],
+                         entries)
 
         # Prove that we can recursively build out a directory tree
         deep_name = os.path.join(buckout, 'foo', 'bar', 'baz')
@@ -133,9 +139,36 @@ class BasicTest:
         st = os.lstat(deep_file)
         self.assertTrue(stat.S_ISREG(st.st_mode))
 
+    def test_access(self):
+        def check_access(path, mode):
+            return os.access(os.path.join(self.mount, path), mode)
+
+        self.assertTrue(check_access('hello', os.R_OK))
+        self.assertTrue(check_access('hello', os.W_OK))
+        self.assertFalse(check_access('hello', os.X_OK))
+
+        self.assertTrue(check_access('bdir/test.sh', os.R_OK))
+        self.assertTrue(check_access('bdir/test.sh', os.W_OK))
+        self.assertTrue(check_access('bdir/test.sh', os.X_OK))
+
+        self.assertTrue(check_access('bdir/noexec.sh', os.R_OK))
+        self.assertTrue(check_access('bdir/noexec.sh', os.W_OK))
+        self.assertFalse(check_access('bdir/noexec.sh', os.X_OK))
+
+        cmd = [os.path.join(self.mount, 'bdir/test.sh')]
+        out = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
+        self.assertEqual(out, b'test\n')
+
+        cmd = [os.path.join(self.mount, 'bdir/noexec.sh')]
+        with self.assertRaises(OSError) as context:
+            out = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
+        self.assertEqual(errno.EACCES, context.exception.errno,
+                         msg='attempting to run noexec.sh should fail with '
+                         'EACCES')
+
     def test_unmount(self):
         entries = sorted(os.listdir(self.mount))
-        self.assertEqual(['adir', 'hello', 'slink'], entries)
+        self.assertEqual(['adir', 'bdir', 'hello', 'slink'], entries)
 
         self.assertTrue(self.eden.in_proc_mounts(self.mount))
 
@@ -149,6 +182,6 @@ class BasicTest:
         self.eden.clone(self.repo_name, self.mount)
 
         entries = sorted(os.listdir(self.mount))
-        self.assertEqual(['adir', 'hello', 'slink'], entries)
+        self.assertEqual(['adir', 'bdir', 'hello', 'slink'], entries)
 
         self.assertTrue(self.eden.in_proc_mounts(self.mount))

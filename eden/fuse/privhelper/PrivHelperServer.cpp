@@ -71,7 +71,8 @@ folly::File PrivHelperServer::fuseMount(const char* mountPath) {
   // need for it, but we would need to validate their changes are safe.
   int rootMode = S_IFDIR;
   auto mountOpts = folly::sformat(
-      "allow_other,rootmode={:o},user_id={},group_id={},fd={}",
+      "allow_other,default_permissions,"
+      "rootmode={:o},user_id={},group_id={},fd={}",
       rootMode,
       uid_,
       gid_,
