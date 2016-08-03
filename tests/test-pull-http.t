@@ -48,7 +48,7 @@ expect error, cloning not allowed
   $ echo 'allowpull = false' >> .hg/hgrc
   $ hg serve -p $HGPORT -d --pid-file=hg.pid -E errors.log
   $ cat hg.pid >> $DAEMON_PIDS
-  $ hg clone http://localhost:$HGPORT/ test4 --config experimental.bundle2-exp=True
+  $ hg clone http://localhost:$HGPORT/ test4 # bundle2+
   requesting all changes
   abort: authorization failed
   [255]

@@ -650,7 +650,7 @@ List of both
 Test the debug output for exchange
 ----------------------------------
 
-  $ hg pull ../tmpb --config 'experimental.obsmarkers-exchange-debug=True' --config 'experimental.bundle2-exp=True'
+  $ hg pull ../tmpb --config 'experimental.obsmarkers-exchange-debug=True' # bundle2
   pulling from ../tmpb
   searching for changes
   no changes found

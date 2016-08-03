@@ -822,7 +822,7 @@ Local push
 Using ssh
 ---------
 
-  $ hg push -B @ ssh --config experimental.bundle2-exp=True
+  $ hg push -B @ ssh # bundle2+
   pushing to ssh://user@dummy/issue4455-dest
   searching for changes
   no changes found
@@ -845,7 +845,7 @@ Using ssh
 Using http
 ----------
 
-  $ hg push -B @ http --config experimental.bundle2-exp=True
+  $ hg push -B @ http # bundle2+
   pushing to http://localhost:$HGPORT/
   searching for changes
   no changes found

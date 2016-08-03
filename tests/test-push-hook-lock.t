@@ -38,7 +38,7 @@
 
   $ hg --cwd 1 --config extensions.strip= strip tip -q
   $ hg --cwd 2 --config extensions.strip= strip tip -q
-  $ hg --cwd 3 push ../2 --config experimental.bundle2-exp=True
+  $ hg --cwd 3 push ../2 # bundle2+
   pushing to ../2
   searching for changes
   adding changesets

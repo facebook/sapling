@@ -1539,7 +1539,7 @@ Courtesy phases synchronisation to publishing server does not block the push
   [1]
 # clean the push cache
   $ rm s/.hg/cache/storehash/*
-  $ hg push --config experimental.bundle2-exp=True
+  $ hg push # bundle2+
   pushing to $TESTTMP/issue3781-dest (glob)
   pushing subrepo s to $TESTTMP/issue3781-dest/s
   searching for changes
