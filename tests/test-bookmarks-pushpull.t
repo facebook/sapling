@@ -7,9 +7,6 @@
   > publish=False
   > [experimental]
   > evolution=createmarkers,exchange
-  > # drop me once bundle2 is the default,
-  > # added to get test change early.
-  > bundle2-exp = True
   > EOF
 
 initialize
