@@ -2,9 +2,9 @@ This test is a duplicate of 'test-http.t' feel free to factor out
 parts that are not bundle1/bundle2 specific.
 
   $ cat << EOF >> $HGRCPATH
-  > [experimental]
+  > [devel]
   > # This test is dedicated to interaction through old bundle
-  > bundle2-exp = False
+  > legacy.exchange = bundle1
   > [format] # temporary settings
   > usegeneraldelta=yes
   > EOF
