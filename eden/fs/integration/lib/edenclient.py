@@ -118,8 +118,14 @@ class EdenFS(object):
         Throws a subprocess.CalledProcessError if eden exits unsuccessfully.
         '''
         cmd = self._get_eden_args(command, *args)
-        completed_process = subprocess.run(cmd, stdout=subprocess.PIPE,
-                                           stderr=subprocess.PIPE, check=True)
+        try:
+            completed_process = subprocess.run(cmd, stdout=subprocess.PIPE,
+                                               stderr=subprocess.PIPE,
+                                               check=True)
+        except subprocess.CalledProcessError as ex:
+            # Re-raise our own exception type so we can include the error
+            # output.
+            raise EdenCommandError(ex)
         return completed_process.stdout.decode('utf-8')
 
     def run_unchecked(self, command, *args):
@@ -254,6 +260,16 @@ class EdenFS(object):
         '''Executes `eden health` and returns True if it exited with code 0.'''
         return_code = self.run_unchecked('health')
         return return_code == 0
+
+
+class EdenCommandError(subprocess.CalledProcessError):
+    def __init__(self, ex):
+        super().__init__(ex.returncode, ex.cmd, output=ex.output,
+                         stderr=ex.stderr)
+
+    def __str__(self):
+        return ("eden command '%s' returned non-zero exit status %d\n"
+                "stderr=%s" % (self.cmd, self.returncode, self.stderr))
 
 
 def can_run_eden():

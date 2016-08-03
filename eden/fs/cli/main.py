@@ -218,13 +218,9 @@ def do_clone(args):
 def do_mount(args):
     config = create_config(args)
     try:
-        return config.mount(args.name)
+        return config.mount(args.path)
     except EdenNotRunningError as ex:
-        # TODO: Eventually it would be nice to automatically start the edenfs
-        # daemon for the user, and run it in the background.
         print_stderr('error: {}', ex)
-        progname = os.path.basename(sys.argv[0])
-        print_stderr('Try starting edenfs first with "{} daemon"', progname)
         return 1
 
 
@@ -232,7 +228,7 @@ def do_unmount(args):
     args.path = normalize_path_arg(args.path)
     config = create_config(args)
     try:
-        return config.unmount(args.path)
+        return config.unmount(args.path, delete_config=not args.no_forget)
     except EdenService.EdenError as ex:
         print_stderr('error: {}', ex)
         return 1
@@ -442,7 +438,20 @@ def create_parser():
     shutdown_parser.set_defaults(func=do_shutdown)
 
     unmount_parser = subparsers.add_parser(
+        'mount', help='Remount an existing client (for instance, after it was '
+        'unmounted with "unmount -n")')
+    unmount_parser.add_argument(
+        'path', help='The client mount path')
+    unmount_parser.set_defaults(func=do_mount)
+
+    unmount_parser = subparsers.add_parser(
         'unmount', help='Unmount a specific client')
+    unmount_parser.add_argument(
+        '-n', '--no-forget',
+        action='store_true',
+        help='Only unmount the client, without forgetting about its '
+        'configuration.  The client can be re-mounted later using the mount '
+        'command.')
     unmount_parser.add_argument(
         'path', help='Path where client should be unmounted from')
     unmount_parser.set_defaults(func=do_unmount)

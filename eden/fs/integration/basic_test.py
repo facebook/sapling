@@ -174,10 +174,8 @@ class BasicTest:
 
         self.eden.unmount(self.mount)
 
-        entries = sorted(os.listdir(self.mount))
-        self.assertEqual([], entries)
-
         self.assertFalse(self.eden.in_proc_mounts(self.mount))
+        self.assertFalse(os.path.exists(self.mount))
 
         self.eden.clone(self.repo_name, self.mount)
 
@@ -185,3 +183,22 @@ class BasicTest:
         self.assertEqual(['adir', 'bdir', 'hello', 'slink'], entries)
 
         self.assertTrue(self.eden.in_proc_mounts(self.mount))
+
+    def test_unmount_remount(self):
+        entries = sorted(os.listdir(self.mount))
+        self.assertEqual(['adir', 'bdir', 'hello', 'slink'], entries)
+        self.assertTrue(self.eden.in_proc_mounts(self.mount))
+
+        # Unmount the client with --no-forget
+        self.eden.run_cmd('unmount', '-n', self.mount)
+
+        self.assertFalse(self.eden.in_proc_mounts(self.mount))
+        entries = sorted(os.listdir(self.mount))
+        self.assertEqual([], entries)
+
+        # Now remount it with the mount command
+        self.eden.run_cmd('mount', self.mount)
+
+        self.assertTrue(self.eden.in_proc_mounts(self.mount))
+        entries = sorted(os.listdir(self.mount))
+        self.assertEqual(['adir', 'bdir', 'hello', 'slink'], entries)

@@ -222,11 +222,31 @@ by hand to make changes to the repository or remove it.''' % name)
         # Add mapping of mount path to client directory in config.json
         self._add_path_to_directory_map(path, dir_name)
 
-    def unmount(self, path):
+    def mount(self, path):
+        # Load the config info for this client, to make sure we
+        # know about the client.
+        client_dir = self._get_client_dir_for_mount_point(path)
+        self._get_repo_name(client_dir)
+
+        # Make sure the mount path exists
+        util.mkdir_p(path)
+
+        # Ask eden to mount the path
+        mount_info = eden_ttypes.MountInfo(mountPoint=path,
+                                           edenClientPath=client_dir)
+        with self.get_thrift_client() as client:
+            client.mount(mount_info)
+
+    def unmount(self, path, delete_config=True):
         with self.get_thrift_client() as client:
             client.unmount(path)
-        shutil.rmtree(self._get_client_dir_for_mount_point(path))
-        self._remove_path_from_directory_map(path)
+
+        if delete_config:
+            shutil.rmtree(self._get_client_dir_for_mount_point(path))
+            self._remove_path_from_directory_map(path)
+
+            # Delete the now empty mount point
+            os.rmdir(path)
 
     def check_health(self):
         '''
