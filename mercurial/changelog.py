@@ -138,9 +138,10 @@ def _delayopener(opener, target, buf):
         return appender(opener, name, mode, buf)
     return _delay
 
-_changelogrevision = collections.namedtuple('changelogrevision',
-                                            ('manifest', 'user', 'date',
-                                             'files', 'description', 'extra'))
+_changelogrevision = collections.namedtuple(u'changelogrevision',
+                                            (u'manifest', u'user', u'date',
+                                             u'files', u'description',
+                                             u'extra'))
 
 class changelogrevision(object):
     """Holds results of a parsed changelog revision.
@@ -151,8 +152,8 @@ class changelogrevision(object):
     """
 
     __slots__ = (
-        '_offsets',
-        '_text',
+        u'_offsets',
+        u'_text',
     )
 
     def __new__(cls, text):
