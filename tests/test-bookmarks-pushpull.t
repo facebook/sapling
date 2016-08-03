@@ -832,7 +832,7 @@ Using ssh
   $ hg -R ../issue4455-dest/ bookmarks
   no bookmarks set
 
-  $ hg push -B @ ssh --config experimental.bundle2-exp=False
+  $ hg push -B @ ssh --config devel.legacy.exchange=bundle1
   pushing to ssh://user@dummy/issue4455-dest
   searching for changes
   no changes found
@@ -855,7 +855,7 @@ Using http
   $ hg -R ../issue4455-dest/ bookmarks
   no bookmarks set
 
-  $ hg push -B @ http --config experimental.bundle2-exp=False
+  $ hg push -B @ http --config devel.legacy.exchange=bundle1
   pushing to http://localhost:$HGPORT/
   searching for changes
   no changes found

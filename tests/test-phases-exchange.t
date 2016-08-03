@@ -1050,7 +1050,7 @@ same over the wire
 
 enforce bundle1
 
-  $ hg pull http://localhost:$HGPORT/ --config experimental.bundle2-exp=False
+  $ hg pull http://localhost:$HGPORT/ --config devel.legacy.exchange=bundle1
   pulling from http://localhost:$HGPORT/
   searching for changes
   no changes found

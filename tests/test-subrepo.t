@@ -1529,7 +1529,7 @@ Courtesy phases synchronisation to publishing server does not block the push
   > [paths]
   > default=../issue3781-dest/
   > EOF
-  $ hg push --config experimental.bundle2-exp=False
+  $ hg push --config devel.legacy.exchange=bundle1
   pushing to $TESTTMP/issue3781-dest (glob)
   pushing subrepo s to $TESTTMP/issue3781-dest/s
   searching for changes

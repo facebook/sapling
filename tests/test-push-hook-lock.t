@@ -26,7 +26,7 @@
   $ echo bar >> 3/foo
   $ hg --cwd 3 ci -m bar
 
-  $ hg --cwd 3 push ../2 --config experimental.bundle2-exp=False
+  $ hg --cwd 3 push ../2 --config devel.legacy.exchange=bundle1
   pushing to ../2
   searching for changes
   adding changesets

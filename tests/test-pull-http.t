@@ -52,7 +52,7 @@ expect error, cloning not allowed
   requesting all changes
   abort: authorization failed
   [255]
-  $ hg clone http://localhost:$HGPORT/ test4 --config experimental.bundle2-exp=False
+  $ hg clone http://localhost:$HGPORT/ test4 --config devel.legacy.exchange=bundle1
   abort: authorization failed
   [255]
   $ killdaemons.py
