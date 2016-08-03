@@ -270,12 +270,7 @@ def _forcebundle1(op):
     #
     # developer config: devel.legacy.exchange
     exchange = ui.configlist('devel', 'legacy.exchange')
-    if not exchange:
-        forcebundle1 = not ui.configbool('experimental', 'bundle2-exp', True)
-        # developer config: devel.legacy.exchange
-    else:
-        forcebundle1 = 'bundle2' not in exchange and 'bundle1' in exchange
-
+    forcebundle1 = 'bundle2' not in exchange and 'bundle1' in exchange
     return forcebundle1 or not op.remote.capable('bundle2')
 
 class pushoperation(object):
