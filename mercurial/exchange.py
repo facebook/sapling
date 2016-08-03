@@ -257,12 +257,12 @@ def buildobsmarkerspart(bundler, markers):
         return bundler.newpart('obsmarkers', data=stream)
     return None
 
-def _canusebundle2(op):
-    """return true if a pull/push can use bundle2
+def _forcebundle1(op):
+    """return true if a pull/push must use bundle1
 
     Feel free to nuke this function when we drop the experimental option"""
-    return (op.repo.ui.configbool('experimental', 'bundle2-exp', True)
-            and op.remote.capable('bundle2'))
+    return not (op.repo.ui.configbool('experimental', 'bundle2-exp', True)
+                and op.remote.capable('bundle2'))
 
 
 class pushoperation(object):
@@ -417,7 +417,7 @@ def push(repo, remote, force=False, revs=None, newbranch=False, bookmarks=(),
         # bundle2 push may receive a reply bundle touching bookmarks or other
         # things requiring the wlock. Take it now to ensure proper ordering.
         maypushback = pushop.ui.configbool('experimental', 'bundle2.pushback')
-        if _canusebundle2(pushop) and maypushback:
+        if (not _forcebundle1(pushop)) and maypushback:
             localwlock = pushop.repo.wlock()
         locallock = pushop.repo.lock()
         pushop.locallocked = True
@@ -442,7 +442,7 @@ def push(repo, remote, force=False, revs=None, newbranch=False, bookmarks=(),
             lock = pushop.remote.lock()
         try:
             _pushdiscovery(pushop)
-            if _canusebundle2(pushop):
+            if not _forcebundle1(pushop):
                 _pushbundle2(pushop)
             _pushchangeset(pushop)
             _pushsyncphase(pushop)
@@ -1099,7 +1099,7 @@ class pulloperation(object):
 
     @util.propertycache
     def canusebundle2(self):
-        return _canusebundle2(self)
+        return not _forcebundle1(self)
 
     @util.propertycache
     def remotebundle2caps(self):
