@@ -112,7 +112,7 @@ bool find(
  */
 extern delta_chain_t *getdeltachain(
     const datapack_handle_t *handle,
-    uint8_t node[NODE_SZ]);
+    const uint8_t node[NODE_SZ]);
 
 extern void freedeltachain(delta_chain_t *chain);
 

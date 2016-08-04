@@ -311,7 +311,7 @@ void close_datapack(datapack_handle_t *handle) {
 
 static pack_chain_t *build_pack_chain(
     const datapack_handle_t *handle,
-    uint8_t node[NODE_SZ]) {
+    const uint8_t node[NODE_SZ]) {
   pack_chain_t *result = malloc(sizeof(pack_chain_t));
   result->links_idx = 0;
   result->links_sz = DEFAULT_PACK_CHAIN_CAPACITY;
@@ -393,7 +393,7 @@ const uint8_t *getdeltachainlink(
 
 delta_chain_t *getdeltachain(
     const datapack_handle_t *handle,
-    uint8_t node[NODE_SZ]) {
+    const uint8_t node[NODE_SZ]) {
   pack_chain_t *pack_chain = build_pack_chain(handle, node);
   // TODO: error handling
 
