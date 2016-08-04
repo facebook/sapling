@@ -113,6 +113,10 @@ bool find(
     // peek at the hash at that location.
     int cmp = memcmp(node, handle->index_table[middle].node, NODE_SZ);
     if (cmp < 0) {
+      if (middle == 0) {
+        // don't wrap around.
+        break;
+      }
       end = middle - 1;
     } else if (cmp > 0) {
       start = middle + 1;
@@ -196,7 +200,7 @@ datapack_handle_t *open_datapack(
   if (header->version != VERSION) {
     goto error_cleanup;
   }
-  handle->large_fanout = ((header->config | LARGE_FANOUT) != 0);
+  handle->large_fanout = ((header->config & LARGE_FANOUT) != 0);
   int fanout_count = 1 << (handle->large_fanout ? 16 : 8);
   handle->fanout_table = (fanout_table_entry_t *) calloc(
       fanout_count, sizeof(fanout_table_entry_t));
@@ -226,10 +230,22 @@ datapack_handle_t *open_datapack(
     if (index_offset != prev_index_offset) {
       // backfill the start & end offsets
       for (int jx = last_fanout_increment; jx < ix; jx ++) {
+        index_offset_t written_index;
+
+        if (prev_index_offset == 0) {
+          // this is an unfortunate case because we cannot tell the
+          // difference between an empty fanout entry and the fanout
+          // entry for the first index entry.  they will both show '0'.
+          // therefore, if prev_index_offset is 0, we have to bisect from 0.
+          written_index = 0;
+        } else {
+          written_index = index_offset;
+        }
+
         // fill the "start" except for the last time we changed the index
         // offset.
         if (jx != last_fanout_increment) {
-          handle->fanout_table[jx].start_index = index_offset;
+          handle->fanout_table[jx].start_index = written_index;
         }
         handle->fanout_table[jx].end_index = index_offset;
       }
@@ -243,7 +259,7 @@ datapack_handle_t *open_datapack(
 
   // we may need to backfill the remaining offsets.
   index_offset_t last_offset = (index_offset_t)
-      (index_end - handle->index_table - 1);
+      ((index_end - handle->index_table - 1) * sizeof(disk_index_entry_t));
   for (int jx = last_fanout_increment; jx < fanout_count; jx ++) {
     // fill the "start" except for the last time we changed the index
     // offset.
