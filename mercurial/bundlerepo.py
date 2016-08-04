@@ -290,7 +290,8 @@ class bundlerepository(localrepo.localrepository):
                                                   "multiple changegroups")
                     cgstream = part
                     version = part.params.get('version', '01')
-                    if version not in changegroup.allsupportedversions(ui):
+                    legalcgvers = changegroup.supportedincomingversions(self)
+                    if version not in legalcgvers:
                         msg = _('Unsupported changegroup version: %s')
                         raise error.Abort(msg % version)
                     if self.bundle.compressed():
