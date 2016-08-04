@@ -946,17 +946,7 @@ def changegroupsubset(repo, roots, heads, source, version='01'):
     Another wrinkle is doing the reverse, figuring out which changeset in
     the changegroup a particular filenode or manifestnode belongs to.
     """
-    cl = repo.changelog
-    if not roots:
-        roots = [nullid]
-    discbases = []
-    for n in roots:
-        discbases.extend([p for p in cl.parents(n) if p != nullid])
-    # TODO: remove call to nodesbetween.
-    csets, roots, heads = cl.nodesbetween(roots, heads)
-    included = set(csets)
-    discbases = [n for n in discbases if n not in included]
-    outgoing = discovery.outgoing(cl, discbases, heads)
+    outgoing = discovery.outgoingbetween(repo, roots, heads)
     bundler = getbundler(version, repo)
     return getsubset(repo, outgoing, bundler, source)
 

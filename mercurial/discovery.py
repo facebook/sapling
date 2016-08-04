@@ -101,6 +101,27 @@ class outgoing(object):
             self._computecommonmissing()
         return self._missing
 
+def outgoingbetween(repo, roots, heads):
+    """create an ``outgoing`` consisting of nodes between roots and heads
+
+    The ``missing`` nodes will be descendants of any of the ``roots`` and
+    ancestors of any of the ``heads``, both are which are defined as a list
+    of binary nodes.
+    """
+    cl = repo.changelog
+    if not roots:
+        roots = [nullid]
+    discbases = []
+    for n in roots:
+        discbases.extend([p for p in cl.parents(n) if p != nullid])
+    # TODO remove call to nodesbetween.
+    # TODO populate attributes on outgoing instance instead of setting
+    # discbases.
+    csets, roots, heads = cl.nodesbetween(roots, heads)
+    included = set(csets)
+    discbases = [n for n in discbases if n not in included]
+    return outgoing(cl, discbases, heads)
+
 def findcommonoutgoing(repo, other, onlyheads=None, force=False,
                        commoninc=None, portable=False):
     '''Return an outgoing instance to identify the nodes present in repo but
