@@ -352,8 +352,10 @@ static pack_chain_t *build_pack_chain(
 
   while (entry.deltabase_index_offset != FULLTEXTINDEXMARK &&
          entry.deltabase_index_offset != NOBASEINDEXMARK) {
+    index_offset_t index_num = entry.deltabase_index_offset /
+        sizeof(disk_index_entry_t);
     unpack_disk_deltachunk(
-        &handle->index_table[entry.deltabase_index_offset], &entry);
+        &handle->index_table[index_num], &entry);
 
     PACK_CHAIN_EXPAND_TO_FIT(
         (void **)&result->pack_chain_links,
