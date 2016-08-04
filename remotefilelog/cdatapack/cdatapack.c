@@ -50,24 +50,6 @@ typedef struct _fanout_table_entry_t {
 } fanout_table_entry_t;
 
 /**
- * This is a post-processed index entry.  The node pointer is valid only if
- * the handle that generated this entry hasn't been closed.
- *
- * This is the counterpart of disk_index_entry_t.
- */
-typedef struct _pack_index_entry_t {
-  const uint8_t *node;
-
-  // offset and size of this current element in the delta chain in the data
-  // file.
-  data_offset_t data_offset;
-  data_offset_t data_sz;
-
-  // offset of the next element in the delta chain in the index file
-  index_offset_t deltabase_index_offset;
-} pack_index_entry_t;
-
-/**
  * This is a chain of index entries.
  */
 typedef struct _pack_chain_t {
@@ -103,9 +85,13 @@ static void unpack_disk_deltachunk(
       disk_deltachunk->deltabase_index_offset);
 }
 
-static bool find(
-    const datapack_handle_t * handle,
-    uint8_t node[NODE_SZ],
+/**
+ * Finds a node using the index, and fills out the packindex pointer.
+ * Returns true iff the node is found.
+ */
+bool find(
+    const datapack_handle_t *handle,
+    const uint8_t node[NODE_SZ],
     pack_index_entry_t *packindex) {
   uint16_t fanout_idx;
   if (handle->large_fanout) {

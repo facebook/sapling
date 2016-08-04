@@ -23,6 +23,24 @@ typedef uint64_t data_offset_t;
 struct _disk_index_entry_t;
 struct _fanout_table_entry_t;
 
+/**
+ * This is a post-processed index entry.  The node pointer is valid only if
+ * the handle that generated this entry hasn't been closed.
+ *
+ * This is the counterpart of disk_index_entry_t.
+ */
+typedef struct _pack_index_entry_t {
+  const uint8_t *node;
+
+  // offset and size of this current element in the delta chain in the data
+  // file.
+  data_offset_t data_offset;
+  data_offset_t data_sz;
+
+  // offset of the next element in the delta chain in the index file
+  index_offset_t deltabase_index_offset;
+} pack_index_entry_t;
+
 typedef struct _datapack_handle_t {
   int indexfd;
   int datafd;
@@ -79,6 +97,15 @@ extern datapack_handle_t *open_datapack(
  * Release a datapack + index file handle.
  */
 extern void close_datapack(datapack_handle_t *);
+
+/**
+ * Finds a node using the index, and fills out the packindex pointer.
+ * Returns true iff the node is found.
+ */
+bool find(
+    const datapack_handle_t *handle,
+    const uint8_t node[NODE_SZ],
+    pack_index_entry_t *packindex);
 
 /**
  * Retrieves a delta chain for a given node.
