@@ -54,7 +54,7 @@ https://bz.mercurial-scm.org/1175
   diff --git a/b b/b
   new file mode 100644
 
-http://bz.selenic.com/show_bug.cgi?id=4476
+https://bz.mercurial-scm.org/show_bug.cgi?id=4476
 
   $ hg init foo
   $ cd foo
