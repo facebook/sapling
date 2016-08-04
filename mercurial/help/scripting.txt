@@ -22,7 +22,7 @@ output, such as JSON. For more, see :hg:`help hgweb`.
 :hg:`serve` can also start a "command server." Clients can connect
 to this server and issue Mercurial commands over a special protocol.
 For more details on the command server, including links to client
-libraries, see https://mercurial.selenic.com/wiki/CommandServer.
+libraries, see https://www.mercurial-scm.org/wiki/CommandServer.
 
 :hg:`serve` based interfaces (the hgweb and command servers) have the
 advantage over simple ``hg`` process invocations in that they are
