@@ -158,10 +158,18 @@ class sqldirstatemap(sqlmap):
             yield (r[0], self._rowtovalue(r[1:]))
         cur.close()
 
-    def resetnow(self, now):
+    def resetnow(self, now, nonnormalset=None):
         cur = self._sqlconn.cursor()
         cur.execute('''UPDATE files SET mtime = -1
                     WHERE mtime = ? and status = 'n' ''', (now,))
+        if self._lookupcache is not None:
+            for k, v in self._lookupcache.iteritems():
+                status, mode, size, mtime = v
+                if status == 'n' and mtime == now:
+                    mtime = -1
+                    self._lookupcache[k] = status, mode, size, mtime
+                    if nonnormalset is not None:
+                        nonnormalset.add(k)
         cur.close()
 
     def __setitem__(self, key, item):
@@ -444,7 +452,7 @@ def makedirstate(cls):
                 return
             now = dirstate._getfsnow(self._opener)
 
-            self._map.resetnow(now)
+            self._map.resetnow(now, self._nonnormalset)
             if tr:
                 tr.addfinalize("sqldirstate.write", self._backupandwrite)
                 return
@@ -457,7 +465,7 @@ def makedirstate(cls):
             # if dirty dump to disk (db transaction commit)
             now = dirstate._getfsnow(self._opener)
 
-            self._map.resetnow(now)
+            self._map.resetnow(now, self._nonnormalset)
             self._sqlconn.commit()
             self._lastnormaltime = 0
             self._dirty = self._dirtypl = False
