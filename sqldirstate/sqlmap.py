@@ -50,6 +50,7 @@ class sqlmap(collections.MutableMapping):
         self._sqlconn = sqlconn
         self._lookupcache = None
         self.createschema()
+        self._readcount = 0
 
     def enablelookupcache(self):
         if self._lookupcache is None:
@@ -92,7 +93,9 @@ class sqlmap(collections.MutableMapping):
                 'placeholders': ', '.join(['?'] * self._numcols)}
 
     def __setitem__(self, key, item):
-        self.invalidatelookupcache()
+        if self._lookupcache is not None:
+            self._lookupcache[key] = item
+
         cur = self._sqlconn.cursor()
 
         item = self._valuetorow(item)
@@ -106,6 +109,13 @@ class sqlmap(collections.MutableMapping):
     @allowcachelookup
     def __getitem__(self, key):
         cur = self._sqlconn.cursor()
+        self._readcount += 1
+
+        if self._readcount > 10000:
+            self.enablelookupcache()
+            self._readcount = 0
+            return self[key]
+
         cur.execute('''SELECT {valuenames} FROM {table}
                     WHERE {keyname}=?'''.format(**self._querytemplateargs),
                     (key,))
@@ -117,7 +127,9 @@ class sqlmap(collections.MutableMapping):
         return self._rowtovalue(row)
 
     def __delitem__(self, key):
-        self.invalidatelookupcache()
+        if self._lookupcache is not None:
+            del self._lookupcache[key]
+
         cur = self._sqlconn.cursor()
         cur.execute('''DELETE FROM {table} WHERE {keyname}=?'''.format(
             **self._querytemplateargs), (key,))
@@ -146,7 +158,9 @@ class sqlmap(collections.MutableMapping):
         return dict(self.iteritems())
 
     def _update(self, otherdict):
-        self.invalidatelookupcache()
+        if self._lookupcache is not None:
+            self._lookupcache.update(otherdict)
+
         tuplelist = [(k,) + self._valuetorow(v)
                      for k, v in otherdict.iteritems()]
 
