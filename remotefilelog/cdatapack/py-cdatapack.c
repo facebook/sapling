@@ -331,24 +331,24 @@ static PyObject *cdatapack_deltas_iterator_iternext(
   iterator->ptr = getdeltachainlink(iterator->ptr, &link);
 
   PyObject *tuple = NULL;
-  PyObject *fn = NULL, *node = NULL, *deltabasenode = NULL, *delta = NULL;
+  PyObject *fn = NULL, *node = NULL, *deltabasenode = NULL, *deltalen = NULL;
 
   fn = PyString_FromStringAndSize(link.filename, link.filename_sz);
   node = PyString_FromStringAndSize((const char *) link.node, NODE_SZ);
   deltabasenode = PyString_FromStringAndSize((const char *) link.deltabase_node,
       NODE_SZ);
-  delta = PyString_FromStringAndSize((const char *) link.delta, link.delta_sz);
-  if (fn == NULL || node == NULL || deltabasenode == NULL || delta == NULL) {
+  deltalen = PyLong_FromLongLong(link.delta_sz);
+  if (fn == NULL || node == NULL || deltabasenode == NULL || deltalen == NULL) {
     goto cleanup;
   }
-  tuple = PyTuple_Pack(4, fn, node, deltabasenode, delta);
+  tuple = PyTuple_Pack(4, fn, node, deltabasenode, deltalen);
 
 cleanup:
 
   Py_XDECREF(fn);
   Py_XDECREF(node);
   Py_XDECREF(deltabasenode);
-  Py_XDECREF(delta);
+  Py_XDECREF(deltalen);
 
   return tuple;
 }
