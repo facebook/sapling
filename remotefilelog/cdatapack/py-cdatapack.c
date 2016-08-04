@@ -60,6 +60,12 @@ static int cdatapack_init(py_cdatapack *self, PyObject *args) {
   self->handle = open_datapack(
       idx_path, strlen(idx_path),
       data_path, strlen(data_path));
+
+  if (self->handle == NULL) {
+    PyErr_Format(PyExc_ValueError,
+        "Error setting up datapack");
+    return -1;
+  }
   // TODO: error handling
 
   return 0;
@@ -121,7 +127,7 @@ static py_cdatapack_iterator *cdatapack_getiterentries(py_cdatapack *self) {
 
 /**
  * Finds a node and returns a (node, deltabase index offset, data offset,
- * data size) tuple if found."
+ * data size) tuple if found.
  */
 static PyObject *cdatapack_find(
     py_cdatapack *self,
@@ -163,7 +169,7 @@ static PyObject *cdatapack_find(
   }
   tuple = PyTuple_Pack(4, retnode, deltabaseindexoffset, data_offset, data_size);
 
-cleanup:
+  cleanup:
 
   Py_XDECREF(retnode);
   Py_XDECREF(deltabaseindexoffset);

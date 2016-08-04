@@ -411,7 +411,10 @@ delta_chain_t *getdeltachain(
     const datapack_handle_t *handle,
     const uint8_t node[NODE_SZ]) {
   pack_chain_t *pack_chain = build_pack_chain(handle, node);
-  // TODO: error handling
+
+  if (pack_chain == NULL) {
+    return NULL;
+  }
 
   delta_chain_t *delta_chain = malloc(sizeof(delta_chain_t));
   delta_chain->links_count = pack_chain->links_idx;
