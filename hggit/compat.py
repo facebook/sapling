@@ -1,3 +1,8 @@
+from mercurial import (
+    url,
+    util as hgutil,
+)
+
 try:
     from mercurial import encoding
     hfsignoreclean = encoding.hfsignoreclean
@@ -22,3 +27,11 @@ except AttributeError:
             for c in _ignore:
                 s = s.replace(c, '')
         return s
+
+def passwordmgr(ui, passwddb):
+    try:
+        return url.passwordmgr(ui,
+                               hgutil.urlreq.httppasswordmgrwithdefaultrealm())
+    except TypeError:
+        # compat with hg < 3.9
+        return url.passwordmgr(ui)
