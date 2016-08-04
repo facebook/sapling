@@ -17,6 +17,7 @@
 // ====  Forward declarations ====
 
 static PyTypeObject cdatapack_iterator_type;
+static PyTypeObject cdatapack_deltas_iterator_type;
 
 // ====  py_cdatapack PyObject declaration ====
 
@@ -95,9 +96,36 @@ static py_cdatapack_iterator *cdatapack_getiter(py_cdatapack *self) {
   return iterator;
 }
 
+/**
+ * Returns a delta iterator for a cdatapack.
+ */
+static py_cdatapack_iterator *cdatapack_getiterentries(py_cdatapack *self) {
+  py_cdatapack_iterator *iterator;
+
+  iterator = PyObject_New(
+      py_cdatapack_iterator,
+      &cdatapack_deltas_iterator_type);
+  if (iterator == NULL) {
+    return NULL;
+  }
+
+  iterator->datapack = self;
+  Py_INCREF(iterator->datapack);
+  /* TODO: should have a data_version type and use sizeof(..) */
+  iterator->ptr = ((uint8_t *) self->handle->data_mmap) + 1;
+  iterator->end = ((uint8_t *) self->handle->data_mmap) +
+                  self->handle->data_file_sz;
+
+  return iterator;
+}
+
 // ====  cdatapack ctype declaration ====
 
 static PyMethodDef cdatapack_methods[] = {
+    {"iterentries", (PyCFunction)cdatapack_getiterentries,
+        METH_NOARGS,
+        "Iterate over (path, nodeid, deltabasenode, delta) tuples in this "
+            "datapack."},
     {NULL, NULL}
 };
 
@@ -213,6 +241,86 @@ static PyTypeObject cdatapack_iterator_type = {
   0,                                    /* tp_weaklistoffset */
   PyObject_SelfIter,                    /* tp_iter: __iter__() method */
   (iternextfunc) cdatapack_iterator_iternext, /* tp_iternext: next() method */
+};
+
+// ====  cdatapack_deltas_iterator class methods ====
+
+/**
+ * Deallocates a cdatapack deltas iterator
+ */
+static void cdatapack_deltas_iterator_dealloc(py_cdatapack_iterator *self) {
+  Py_XDECREF(self->datapack);
+  PyObject_Del(self);
+}
+
+/**
+ * Yields the next item from the iterator.
+ */
+static PyObject *cdatapack_deltas_iterator_iternext(
+    py_cdatapack_iterator *iterator) {
+  delta_chain_link_t link;
+
+  if (iterator->ptr >= iterator->end) {
+    return NULL;
+  }
+
+  iterator->ptr = getdeltachainlink(iterator->ptr, &link);
+
+  PyObject *tuple = NULL, *fn = NULL, *node = NULL, *deltabasenode, *delta;
+
+  fn = PyString_FromStringAndSize(link.filename, link.filename_sz);
+  node = PyString_FromStringAndSize((const char *) link.node, NODE_SZ);
+  deltabasenode = PyString_FromStringAndSize((const char *) link.deltabase_node,
+      NODE_SZ);
+  delta = PyString_FromStringAndSize((const char *) link.delta, link.delta_sz);
+  if (fn == NULL || node == NULL || deltabasenode == NULL || delta == NULL) {
+    goto cleanup;
+  }
+  tuple = PyTuple_Pack(4, fn, node, deltabasenode, delta);
+
+cleanup:
+
+  Py_XDECREF(fn);
+  Py_XDECREF(node);
+  Py_XDECREF(deltabasenode);
+  Py_XDECREF(delta);
+
+  return tuple;
+}
+
+// ====  cdatapack_deltas_iterator ctype declaration ====
+
+static PyTypeObject cdatapack_deltas_iterator_type = {
+    PyObject_HEAD_INIT(NULL)
+    0,                                    /* ob_size */
+    "cdatapack.datapack.iterentries",     /* tp_name */
+    sizeof(py_cdatapack_iterator),        /* tp_basicsize */
+    0,                                    /* tp_itemsize */
+    (destructor)cdatapack_deltas_iterator_dealloc, /* tp_dealloc */
+    0,                                    /* tp_print */
+    0,                                    /* tp_getattr */
+    0,                                    /* tp_setattr */
+    0,                                    /* tp_compare */
+    0,                                    /* tp_repr */
+    0,                                    /* tp_as_number */
+    0,                                    /* tp_as_sequence - length/contains */
+    0,                                    /* tp_as_mapping - getitem/setitem*/
+    0,                                    /* tp_hash */
+    0,                                    /* tp_call */
+    0,                                    /* tp_str */
+    0,                                    /* tp_getattro */
+    0,                                    /* tp_setattro */
+    0,                                    /* tp_as_buffer */
+
+    Py_TPFLAGS_DEFAULT,                   /* tp_flags */
+    "Iterator for delta chains in a datapack.", /* tp_doc */
+    0,                                    /* tp_traverse */
+    0,                                    /* tp_clear */
+    0,                                    /* tp_richcompare */
+    0,                                    /* tp_weaklistoffset */
+    PyObject_SelfIter,                    /* tp_iter: __iter__() method */
+    (iternextfunc) cdatapack_deltas_iterator_iternext, /* tp_iternext: next()
+                                                        * method */
 };
 
 static PyMethodDef mod_methods[] = {
