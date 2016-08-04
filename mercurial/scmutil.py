@@ -256,17 +256,15 @@ class abstractvfs(object):
                 raise
         return []
 
-    def open(self, path, mode="r", text=False, atomictemp=False,
-             notindexed=False, backgroundclose=False):
+    @util.propertycache
+    def open(self):
         '''Open ``path`` file, which is relative to vfs root.
 
         Newly created directories are marked as "not to be indexed by
         the content indexing service", if ``notindexed`` is specified
         for "write" mode access.
         '''
-        self.open = self.__call__
-        return self.__call__(path, mode, text, atomictemp, notindexed,
-                             backgroundclose=backgroundclose)
+        return self.__call__
 
     def read(self, path):
         with self(path, 'rb') as fp:
