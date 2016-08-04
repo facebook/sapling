@@ -45,7 +45,7 @@ static int cdatapack_init(py_cdatapack *self, PyObject *args) {
   self->handle = NULL;
 
   char *node;
-  ssize_t nodelen;
+  int nodelen;
 
   if (!PyArg_ParseTuple(args, "s#", &node, &nodelen)) {
     return -1;
