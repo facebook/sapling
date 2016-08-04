@@ -27,6 +27,7 @@ from mercurial import (
 )
 
 import _ssh
+import compat
 import git2hg
 import hg2git
 import util
@@ -1627,7 +1628,10 @@ class GitHandler(object):
             uri = uri[4:]
 
         if uri.startswith('http://') or uri.startswith('https://'):
-            auth = urllib2.HTTPBasicAuthHandler(url.passwordmgr(self.ui))
+            realm = hgutil.urlreq.httppasswordmgrwithdefaultrealm()
+            pmgr = compat.passwordmgr(self.ui, realm)
+            auth = urllib2.HTTPBasicAuthHandler(pmgr)
+
             opener = urllib2.build_opener(auth)
             ua = 'git/20x6 (hg-git ; uses dulwich and hg ; like git-core)'
             opener.addheaders = [('User-Agent', ua)]
