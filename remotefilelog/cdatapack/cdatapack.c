@@ -7,9 +7,14 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <memory.h>
-#include <stdlib.h>
 #include <unistd.h>
+#include <arpa/inet.h>
 #include <sys/mman.h>
+
+#if defined(__linux__)
+#include <endian.h>
+#define ntohll be64toh
+#endif /* #if defined(__linux__) */
 
 #include <lz4.h>
 
@@ -245,7 +250,7 @@ datapack_handle_t *open_datapack(
 
       handle->fanout_table[ix].start_index = index_offset;
       last_fanout_increment = ix;
-      
+
       prev_index_offset = index_offset;
     }
   }
