@@ -119,6 +119,60 @@ static py_cdatapack_iterator *cdatapack_getiterentries(py_cdatapack *self) {
   return iterator;
 }
 
+/**
+ * Finds a node and returns a (node, deltabase index offset, data offset,
+ * data size) tuple if found."
+ */
+static PyObject *cdatapack_find(
+    py_cdatapack *self,
+    PyObject *args) {
+  const char *node;
+  int node_sz;
+
+  if (!PyArg_ParseTuple(args, "s#", &node, &node_sz)) {
+    return NULL;
+  }
+
+  if (node_sz != NODE_SZ) {
+    PyErr_Format(PyExc_ValueError, "node must be %d bytes long", NODE_SZ);
+    return NULL;
+  }
+
+  pack_index_entry_t pack_index_entry;
+
+  if (find(self->handle, (const uint8_t *) node, &pack_index_entry) == false) {
+    Py_RETURN_NONE;
+  }
+
+  PyObject *tuple = NULL;
+  PyObject *retnode = NULL,
+      *deltabaseindexoffset = NULL,
+      *data_offset = NULL,
+      *data_size = NULL;
+
+  retnode = PyString_FromStringAndSize(
+      (const char *) pack_index_entry.node, NODE_SZ);
+  deltabaseindexoffset = PyInt_FromLong(
+      pack_index_entry.deltabase_index_offset);
+  data_offset = PyLong_FromLongLong(pack_index_entry.data_offset);
+  data_size = PyLong_FromLongLong(pack_index_entry.data_sz);
+
+  if (retnode == NULL || deltabaseindexoffset == NULL ||
+      data_offset == NULL || data_size == NULL) {
+    goto cleanup;
+  }
+  tuple = PyTuple_Pack(4, retnode, deltabaseindexoffset, data_offset, data_size);
+
+cleanup:
+
+  Py_XDECREF(retnode);
+  Py_XDECREF(deltabaseindexoffset);
+  Py_XDECREF(data_offset);
+  Py_XDECREF(data_size);
+
+  return tuple;
+}
+
 // ====  cdatapack ctype declaration ====
 
 static PyMethodDef cdatapack_methods[] = {
@@ -126,6 +180,10 @@ static PyMethodDef cdatapack_methods[] = {
         METH_NOARGS,
         "Iterate over (path, nodeid, deltabasenode, delta) tuples in this "
             "datapack."},
+    {"_find", (PyCFunction)cdatapack_find,
+        METH_VARARGS,
+        "Finds a node and returns a (node, deltabase index offset, "
+            "data offset, data size) tuple if found."},
     {NULL, NULL}
 };
 
@@ -266,7 +324,8 @@ static PyObject *cdatapack_deltas_iterator_iternext(
 
   iterator->ptr = getdeltachainlink(iterator->ptr, &link);
 
-  PyObject *tuple = NULL, *fn = NULL, *node = NULL, *deltabasenode, *delta;
+  PyObject *tuple = NULL;
+  PyObject *fn = NULL, *node = NULL, *deltabasenode = NULL, *delta = NULL;
 
   fn = PyString_FromStringAndSize(link.filename, link.filename_sz);
   node = PyString_FromStringAndSize((const char *) link.node, NODE_SZ);
