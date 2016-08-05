@@ -638,6 +638,14 @@ class auditvfs(object):
     def mustaudit(self, onoff):
         self.vfs.mustaudit = onoff
 
+    @property
+    def options(self):
+        return self.vfs.options
+
+    @options.setter
+    def options(self, value):
+        self.vfs.options = value
+
 class filtervfs(abstractvfs, auditvfs):
     '''Wrapper vfs for filtering filenames with a function.'''
 
