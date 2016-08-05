@@ -13,6 +13,7 @@
 #include <boost/range/adaptor/reversed.hpp>
 #include <folly/FileUtil.h>
 #include <folly/String.h>
+#include <folly/json.h>
 #include <pwd.h>
 #include <stdlib.h>
 
@@ -33,6 +34,9 @@ constexpr folly::StringPiece kRepoSourceKey{"path"};
 const facebook::eden::RelativePathPiece kSnapshotFile{"SNAPSHOT"};
 const facebook::eden::RelativePathPiece kBindMountsDir{"bind-mounts"};
 const facebook::eden::RelativePathPiece kOverlayDir{"local"};
+
+// File holding mapping of client directories.
+const facebook::eden::RelativePathPiece kClientDirectoryMap{"config.json"};
 }
 
 namespace facebook {
@@ -103,8 +107,9 @@ std::unique_ptr<ClientConfig> ClientConfig::loadFromClientDirectory(
     const ConfigData* configData) {
   // Extract repository name from the client config file
   ConfigData repoData;
-  auto configFile = clientDirectory + kLocalConfig;
-  boost::property_tree::ini_parser::read_ini(configFile.c_str(), repoData);
+  boost::filesystem::path configFile(
+      folly::to<string>(clientDirectory + kLocalConfig));
+  boost::property_tree::ini_parser::read_ini(configFile.string(), repoData);
   auto repoName = repoData.get(kRepoNameKey.toString(), "");
 
   // Get the data of repository repoName from config files
@@ -138,6 +143,22 @@ std::unique_ptr<ClientConfig> ClientConfig::loadFromClientDirectory(
   config->repoSource_ = repoData.get(kRepoSourceKey.toString(), "");
 
   return config;
+}
+
+folly::dynamic ClientConfig::loadClientDirectoryMap(AbsolutePathPiece edenDir) {
+  // Extract the JSON and strip any comments.
+  std::string jsonContents;
+  auto configJsonFile = edenDir + kClientDirectoryMap;
+  folly::readFile(configJsonFile.c_str(), jsonContents);
+  auto jsonWithoutComments = folly::json::stripComments(jsonContents);
+  if (jsonWithoutComments.empty()) {
+    return folly::dynamic::object();
+  }
+
+  // Parse the comment-free JSON while tolerating trailing commas.
+  folly::json::serialization_opts options;
+  options.allow_trailing_comma = true;
+  return folly::parseJson(jsonWithoutComments, options);
 }
 }
 }

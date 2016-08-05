@@ -103,6 +103,25 @@ void EdenServer::run() {
 
   reloadConfig();
 
+  // Remount existing mount points
+  folly::dynamic dirs = folly::dynamic::object();
+  try {
+    dirs = ClientConfig::loadClientDirectoryMap(AbsolutePathPiece{edenDir_});
+  } catch (const std::exception& ex) {
+    LOG(ERROR) << "Could not parse config.json file: " << ex.what()
+               << " Skipping remount step.";
+  }
+  for (auto& client : dirs.items()) {
+    auto mountInfo = std::make_unique<MountInfo>();
+    mountInfo->mountPoint = client.first.c_str();
+    mountInfo->edenClientPath = edenDir_ + "/clients/" + client.second.c_str();
+    try {
+      handler_->mount(std::move(mountInfo));
+    } catch (const std::exception& ex) {
+      LOG(ERROR) << "Failed to perform remount for " << client.first.c_str()
+                 << ": " << ex.what();
+    }
+  }
   prepareThriftAddress();
   runThriftServer();
 }

@@ -10,6 +10,7 @@
 #pragma once
 
 #include <boost/property_tree/ini_parser.hpp>
+#include <folly/dynamic.h>
 #include "eden/fs/model/Hash.h"
 #include "eden/utils/PathFuncs.h"
 
@@ -43,6 +44,8 @@ class ClientConfig {
   static ConfigData loadConfigData(
       AbsolutePathPiece systemConfigDir,
       AbsolutePathPiece homeDirectory);
+
+  static folly::dynamic loadClientDirectoryMap(AbsolutePathPiece edenDir);
 
   Hash getSnapshotID() const;
 
