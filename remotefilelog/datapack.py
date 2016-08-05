@@ -3,7 +3,7 @@ from collections import defaultdict
 from mercurial import mdiff, osutil, util
 from mercurial.node import nullid, bin, hex
 from mercurial.i18n import _
-import basepack, constants, shallowutil
+import basepack, cdatapack, constants, shallowutil
 
 # Index entry format is: <node><delta offset><pack data offset><pack data size>
 # See the mutabledatapack doccomment for more details.
@@ -22,8 +22,15 @@ class datapackstore(basepack.basepackstore):
     INDEXSUFFIX = INDEXSUFFIX
     PACKSUFFIX = PACKSUFFIX
 
+    def __init__(self, path, usecdatapack=False):
+        self.usecdatapack = usecdatapack
+        super(datapackstore, self).__init__(path)
+
     def getpack(self, path):
-        return datapack(path)
+        if self.usecdatapack:
+            return fastdatapack(path)
+        else:
+            return datapack(path)
 
     def get(self, name, node):
         raise RuntimeError("must use getdeltachain with datapackstore")
@@ -221,6 +228,60 @@ class datapack(basepack.basepack):
 
             # If we've read a lot of data from the mmap, free some memory.
             self.freememory()
+
+class fastdatapack(basepack.basepack):
+    INDEXSUFFIX = INDEXSUFFIX
+    PACKSUFFIX = PACKSUFFIX
+
+    def __init__(self, path):
+        self.path = path
+        self.packpath = path + self.PACKSUFFIX
+        self.indexpath = path + self.INDEXSUFFIX
+        self.datapack = cdatapack.datapack(path)
+
+    def getmissing(self, keys):
+        missing = []
+        for name, node in keys:
+            value = self.datapack._find(node)
+            if not value:
+                missing.append((name, node))
+
+        return missing
+
+    def get(self, name, node):
+        raise RuntimeError("must use getdeltachain with datapack (%s:%s)"
+                           % (name, hex(node)))
+
+    def getdeltachain(self, name, node):
+        result = self.datapack.getdeltachain(node)
+        if result is None:
+            raise KeyError((name, hex(node)))
+
+        return result
+
+    def add(self, name, node, data):
+        raise RuntimeError("cannot add to datapack (%s:%s)" % (name, node))
+
+    def markledger(self, ledger):
+        for filename, node in self:
+            ledger.markdataentry(self, filename, node)
+
+    def cleanup(self, ledger):
+        entries = ledger.sources.get(self, [])
+        allkeys = set(self)
+        repackedkeys = set((e.filename, e.node) for e in entries if
+                           e.datarepacked)
+
+        if len(allkeys - repackedkeys) == 0:
+            if self.path not in ledger.created:
+                util.unlinkpath(self.indexpath, ignoremissing=True)
+                util.unlinkpath(self.packpath, ignoremissing=True)
+
+    def __iter__(self):
+        return self.datapack.__iter__()
+
+    def iterentries(self):
+        return self.datapack.iterentries()
 
 class mutabledatapack(basepack.mutablebasepack):
     """A class for constructing and serializing a datapack file and index.

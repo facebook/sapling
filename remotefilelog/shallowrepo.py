@@ -174,7 +174,9 @@ def wraprepo(repo):
 
     # Instantiate pack stores
     packpath = shallowutil.getpackpath(repo)
-    packcontentstore = datapackstore(packpath)
+    packcontentstore = datapackstore(
+        packpath,
+        usecdatapack=repo.ui.configbool('remotefilelog', 'fastdatapack'))
     packmetadatastore = historypackstore(packpath)
 
     # Instantiate union stores
