@@ -74,70 +74,6 @@ def do_info(args):
     sys.stdout.write('\n')
 
 
-def _is_git_dir(path):
-    return (os.path.isdir(os.path.join(path, 'objects')) and
-            os.path.isdir(os.path.join(path, 'refs')) and
-            os.path.exists(os.path.join(path, 'HEAD')))
-
-
-def _get_git_dir(path):
-    '''
-    If path points to a git repository, return the path to the repository .git
-    directory.  Otherwise, if the path is not a git repository, return None.
-    '''
-    path = os.path.realpath(path)
-    if path.endswith('.git') and _is_git_dir(path):
-        return path
-
-    git_subdir = os.path.join(path, '.git')
-    if _is_git_dir(git_subdir):
-        return git_subdir
-
-    return None
-
-
-def _get_git_commit(git_dir):
-    cmd = ['git', '--git-dir', git_dir, 'rev-parse', 'HEAD']
-    out = subprocess.check_output(cmd)
-    return out.strip().decode('utf-8', errors='surrogateescape')
-
-
-def _get_hg_repo(path):
-    '''
-    If path points to a mercurial repository, return a normalized path to the
-    repository root.  Otherwise, if path is not a mercurial repository, return
-    None.
-    '''
-    repo_path = os.path.realpath(path)
-    hg_dir = os.path.join(repo_path, '.hg')
-    if not os.path.isdir(hg_dir):
-        return None
-
-    # Check to see if this is a shared working directory from another
-    # repository
-    try:
-        with open(os.path.join(hg_dir, 'sharedpath'), 'r') as f:
-            hg_dir = f.readline().rstrip('\n')
-            hg_dir = os.path.realpath(hg_dir)
-            repo_path = os.path.dirname(hg_dir)
-    except EnvironmentError as ex:
-        if ex.errno != errno.ENOENT:
-            raise
-
-    if not os.path.isdir(os.path.join(hg_dir, 'store')):
-        return None
-
-    return repo_path
-
-
-def _get_hg_commit(repo):
-    env = os.environ.copy()
-    env['HGPLAIN'] = '1'
-    cmd = ['hg', '--cwd', repo, 'log', '-T{node}\\n', '-r.']
-    out = subprocess.check_output(cmd, env=env)
-    return out.strip().decode('utf-8', errors='surrogateescape')
-
-
 def do_health(args):
     config = create_config(args)
     health_info = config.check_health()
@@ -152,16 +88,7 @@ def do_health(args):
 def do_repository(args):
     config = create_config(args)
     if (args.name and args.path):
-        repo_type = None
-        git_dir = _get_git_dir(args.path)
-        if git_dir:
-            repo_type = 'git'
-            source = git_dir
-        else:
-            hg_repo = _get_hg_repo(args.path)
-            if hg_repo:
-                repo_type = 'hg'
-                source = hg_repo
+        repo_source, repo_type = util.get_repo_source_and_type(args.path)
         if repo_type is None:
             print_stderr(
                 '%s does not look like a git or hg repository' % args.path)
@@ -169,7 +96,7 @@ def do_repository(args):
         try:
             config.add_repository(args.name,
                                   repo_type=repo_type,
-                                  source=source,
+                                  source=repo_source,
                                   with_buck=args.with_buck)
         except config_mod.UsageError as ex:
             print_stderr('error: {}', ex)
@@ -201,9 +128,9 @@ def do_clone(args):
             return 1
 
         if source['type'] == 'git':
-            snapshot_id = _get_git_commit(source['path'])
+            snapshot_id = util.get_git_commit(source['path'])
         elif source['type'] == 'hg':
-            snapshot_id = _get_hg_commit(source['path'])
+            snapshot_id = util.get_hg_commit(source['path'])
         else:
             print_stderr(
                 '%s does not look like a git or hg repository' % args.path)
@@ -350,6 +277,9 @@ def create_parser():
         '--config-dir',
         help='Path to directory where client data is stored.')
     parser.add_argument(
+        '--system-config-dir',
+        help='Path to directory that holds the system configuration files.')
+    parser.add_argument(
         '--home-dir',
         help='Path to directory where .edenrc config file is stored.')
     subparsers = parser.add_subparsers(dest='subparser_name')
@@ -478,7 +408,7 @@ def find_default_config_dir():
 def create_config(args):
     config = args.config_dir or find_default_config_dir()
     home_dir = args.home_dir or util.get_home_dir()
-    return config_mod.Config(config, home_dir)
+    return config_mod.Config(config, args.system_config_dir, home_dir)
 
 
 def main():

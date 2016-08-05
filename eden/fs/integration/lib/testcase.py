@@ -50,6 +50,9 @@ class EdenTestCase(unittest.TestCase):
         os.mkdir(self.home_dir)
         self.old_home = os.getenv('HOME')
         os.environ['HOME'] = self.home_dir
+        # The directory holding the system configuration files
+        self.system_config_dir = os.path.join(self.tmp_dir, 'config.d')
+        os.mkdir(self.system_config_dir)
         # Parent directory for any git/hg repositories created during the test
         self.repos_dir = os.path.join(self.tmp_dir, 'repos')
         os.mkdir(self.repos_dir)
@@ -57,7 +60,9 @@ class EdenTestCase(unittest.TestCase):
         self.mounts_dir = os.path.join(self.tmp_dir, 'mounts')
         os.mkdir(self.mounts_dir)
 
-        self.eden = edenclient.EdenFS(self.eden_dir, home_dir=self.home_dir)
+        self.eden = edenclient.EdenFS(self.eden_dir,
+                                      system_config_dir=self.system_config_dir,
+                                      home_dir=self.home_dir)
         self.eden.start()
 
     def tearDown(self):

@@ -65,9 +65,11 @@ namespace eden {
 
 EdenServer::EdenServer(
     StringPiece edenDir,
+    StringPiece systemConfigDir,
     StringPiece configPath,
     StringPiece rocksPath)
     : edenDir_(edenDir.str()),
+      systemConfigDir_(systemConfigDir.str()),
       configPath_(configPath.str()),
       rocksPath_(rocksPath.str()) {}
 
@@ -160,7 +162,7 @@ void EdenServer::unmount(StringPiece mountPath) {
   } catch (const std::exception& ex) {
     LOG(ERROR) << "Failed to perform unmount for \"" << mountPath
                << "\": " << folly::exceptionStr(ex);
-    throw;
+    throw ex;
   }
 }
 

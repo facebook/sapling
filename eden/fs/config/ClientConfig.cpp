@@ -8,8 +8,8 @@
  *
  */
 #include "ClientConfig.h"
+#include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
-#include <boost/property_tree/ini_parser.hpp>
 #include <boost/range/adaptor/reversed.hpp>
 #include <folly/FileUtil.h>
 #include <folly/String.h>
@@ -19,8 +19,7 @@
 using std::string;
 
 namespace {
-// INI config files
-const facebook::eden::AbsolutePathPiece kGlobalConfig{"/etc/eden/config.d"};
+// INI config file
 const facebook::eden::RelativePathPiece kLocalConfig{"edenrc"};
 
 // Keys for the config INI file.
@@ -38,6 +37,8 @@ const facebook::eden::RelativePathPiece kOverlayDir{"local"};
 
 namespace facebook {
 namespace eden {
+
+using defaultPtree = boost::property_tree::basic_ptree<string, string>;
 
 ClientConfig::ClientConfig(
     AbsolutePathPiece clientDirectory,
@@ -61,19 +62,12 @@ AbsolutePath ClientConfig::getOverlayPath() const {
   return clientDirectory_ + kOverlayDir;
 }
 
-std::unique_ptr<ClientConfig> ClientConfig::loadFromClientDirectory(
-    AbsolutePathPiece mountPoint,
-    AbsolutePathPiece clientDirectory,
+ClientConfig::ConfigData ClientConfig::loadConfigData(
+    AbsolutePathPiece systemConfigDir,
     AbsolutePathPiece configPath) {
-  // Extract repo name from clientDirectory
-  boost::property_tree::ptree repoData;
-  auto clientConfigFile = clientDirectory + kLocalConfig;
-  boost::property_tree::ini_parser::read_ini(
-      clientConfigFile.c_str(), repoData);
-  auto repo = repoData.get(kRepoNameKey.toString(), "");
-
+  ConfigData resultData;
   // Get global config files
-  boost::filesystem::path rcDir(folly::to<string>(kGlobalConfig));
+  boost::filesystem::path rcDir(folly::to<string>(systemConfigDir));
   std::vector<string> rcFiles;
   if (boost::filesystem::is_directory(rcDir)) {
     for (auto it : boost::filesystem::directory_iterator(rcDir)) {
@@ -86,47 +80,60 @@ std::unique_ptr<ClientConfig> ClientConfig::loadFromClientDirectory(
   auto userConfigPath = AbsolutePath{configPath};
   rcFiles.push_back(userConfigPath.c_str());
 
-  // Find repository data in config files
-  boost::property_tree::ptree configData;
-  string header = kRepositoryKey.toString() + repo;
-  // Find the first config file that defines the [repository]
+  // Parse repository data in order to compile them
   for (auto rc : boost::adaptors::reverse(rcFiles)) {
     if (access(rc.c_str(), R_OK) != 0) {
       continue;
     }
-
-    // Parse INI file into property tree
+    // Only add repository data from the first config file that references it
+    ConfigData configData;
     boost::property_tree::ini_parser::read_ini(rc, configData);
-    repoData = configData.get_child(
-        header, boost::property_tree::basic_ptree<string, string>());
-    if (!repoData.empty()) {
-      break;
+    for (auto& entry : configData) {
+      if (resultData.get_child(entry.first, defaultPtree()).empty()) {
+        resultData.put_child(entry.first, entry.second);
+      }
     }
   }
-  // Repository not found
+  return resultData;
+}
+
+std::unique_ptr<ClientConfig> ClientConfig::loadFromClientDirectory(
+    AbsolutePathPiece mountPoint,
+    AbsolutePathPiece clientDirectory,
+    AbsolutePathPiece systemConfigDir,
+    AbsolutePathPiece configPath) {
+  // Extract repository name from the client config file
+  ConfigData repoData;
+  auto configFile = clientDirectory + kLocalConfig;
+  boost::property_tree::ini_parser::read_ini(configFile.c_str(), repoData);
+  auto repoName = repoData.get(kRepoNameKey.toString(), "");
+
+  // Get the data of repository repoName from config files
+  string repoHeader = kRepositoryKey.toString() + repoName;
+  auto configData = loadConfigData(systemConfigDir, configPath);
+  repoData = configData.get_child(repoHeader, defaultPtree());
+
+  // Repository data not found
   if (repoData.empty()) {
-    throw std::runtime_error("Could not find repository data for " + repo);
+    throw std::runtime_error("Could not find repository data for " + repoName);
   }
-  auto mountPointPath = AbsolutePath{mountPoint};
 
   // Extract the bind mounts
   std::vector<BindMount> bindMounts;
-  header = kBindMountsKey.toString() + repo;
-  auto bindMountPoints = configData.get_child(
-      header, boost::property_tree::basic_ptree<string, string>());
-  if (!bindMountPoints.empty()) {
-    AbsolutePath bindMountsPath = clientDirectory + kBindMountsDir;
-    for (auto item : bindMountPoints) {
-      auto pathInClientDir = bindMountsPath + RelativePathPiece{item.first};
-      auto pathInMountDir =
-          mountPointPath + RelativePathPiece{item.second.data()};
-      bindMounts.emplace_back(BindMount{pathInClientDir, pathInMountDir});
-    }
+  string bindMountHeader = kBindMountsKey.toString() + repoName;
+  auto bindMountPoints = configData.get_child(bindMountHeader, defaultPtree());
+
+  AbsolutePath mountPath = AbsolutePath{mountPoint};
+  AbsolutePath bindMountsPath = clientDirectory + kBindMountsDir;
+  for (auto item : bindMountPoints) {
+    auto pathInClientDir = bindMountsPath + RelativePathPiece{item.first};
+    auto pathInMountDir = mountPath + RelativePathPiece{item.second.data()};
+    bindMounts.emplace_back(BindMount{pathInClientDir, pathInMountDir});
   }
 
   // Construct ClientConfig object
   auto config = std::make_unique<ClientConfig>(
-      ClientConfig(clientDirectory, mountPointPath, std::move(bindMounts)));
+      ClientConfig(clientDirectory, mountPath, std::move(bindMounts)));
 
   // Load repository information
   config->repoType_ = repoData.get(kRepoTypeKey.toString(), "");

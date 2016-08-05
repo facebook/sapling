@@ -9,6 +9,7 @@
  */
 #pragma once
 
+#include <boost/property_tree/ini_parser.hpp>
 #include "eden/fs/model/Hash.h"
 #include "eden/utils/PathFuncs.h"
 
@@ -32,10 +33,17 @@ inline void operator<<(std::ostream& out, const BindMount& bindMount) {
 
 class ClientConfig {
  public:
+  using ConfigData = boost::property_tree::ptree;
+
   static std::unique_ptr<ClientConfig> loadFromClientDirectory(
       AbsolutePathPiece mountPoint,
       AbsolutePathPiece clientDirectory,
+      AbsolutePathPiece systemConfigDir,
       AbsolutePathPiece configPath);
+
+  static ConfigData loadConfigData(
+      AbsolutePathPiece systemConfigDir,
+      AbsolutePathPiece homeDirectory);
 
   Hash getSnapshotID() const;
 

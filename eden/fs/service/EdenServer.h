@@ -50,6 +50,7 @@ class EdenServer {
 
   EdenServer(
       folly::StringPiece edenDir,
+      folly::StringPiece systemConfigDir,
       folly::StringPiece configPath,
       folly::StringPiece rocksPath);
   virtual ~EdenServer();
@@ -79,6 +80,10 @@ class EdenServer {
 
   std::shared_ptr<LocalStore> getLocalStore() const {
     return localStore_;
+  }
+
+  const std::string& getSystemConfigDir() const {
+    return systemConfigDir_;
   }
 
   const std::string& getConfigPath() const {
@@ -130,6 +135,7 @@ class EdenServer {
    */
 
   std::string edenDir_;
+  std::string systemConfigDir_;
   std::string configPath_;
   std::string rocksPath_;
   folly::File lockFile_;

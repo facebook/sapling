@@ -19,6 +19,10 @@
 
 DEFINE_bool(allowRoot, false, "Allow running eden directly as root");
 DEFINE_string(edenDir, "", "The path to the .eden directory");
+DEFINE_string(
+    systemConfigDir,
+    "/etc/eden/config.d",
+    "The directory holding all system configuration files");
 DEFINE_string(configPath, "", "The path of the ~/.edenrc config file");
 DEFINE_string(rocksPath, "", "The path to the local RocksDB store");
 
@@ -119,6 +123,11 @@ int main(int argc, char **argv) {
     return EX_USAGE;
   }
 
+  std::string systemConfigDir = FLAGS_systemConfigDir;
+  if (systemConfigDir.empty()) {
+    systemConfigDir = "/etc/eden/config.d";
+  }
+
   std::string configPath = FLAGS_configPath;
   if (configPath.empty()) {
     auto homeDir = getenv("HOME");
@@ -158,7 +167,7 @@ directory could be found for this user\n");
       1);
 
   // Run the eden server
-  EdenServer server(FLAGS_edenDir, configPath, rocksPath);
+  EdenServer server(FLAGS_edenDir, systemConfigDir, configPath, rocksPath);
   server.run();
 
   LOG(INFO) << "edenfs performing orderly shutdown";

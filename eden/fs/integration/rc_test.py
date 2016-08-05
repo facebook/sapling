@@ -8,7 +8,10 @@
 # of patent rights can be found in the PATENTS file in the same directory.
 
 import os
+import stat
+import tempfile
 from .lib import testcase
+from ..cli import util
 
 
 @testcase.eden_repo_test
@@ -64,3 +67,65 @@ class RCTest:
                          msg='The client directory should have been restored')
         self.assertEqual(self.mount, mount_paths[0],
                          msg='Client directory name should match client name')
+
+    def test_override_system_config(self):
+        system_repo = self.create_repo('system_repo', self.get_repo_class())
+
+        system_repo.write_file('hello.txt', 'hola\n')
+        system_repo.commit('Initial commit.')
+
+        system_repo_path, system_repo_type = \
+            util.get_repo_source_and_type(system_repo.path)
+
+        # Create temporary system config
+        f, path = tempfile.mkstemp(dir=self.system_config_dir)
+
+        # Add system_repo to system config file
+        config = '''\
+[repository ''' + self.repo_name + ''']
+path = ''' + system_repo_path + '''
+type = ''' + system_repo_type + '''
+'''
+        os.write(f, config.encode('utf-8'))
+        os.close(f)
+
+        # Clone repository
+        mount_path = os.path.join(self.mounts_dir, self.repo_name + '-1')
+        self.eden.clone(self.repo_name, mount_path)
+
+        # Verify that clone used repository data from user config
+        readme = os.path.join(mount_path, 'hello.txt')
+        self.assertFalse(os.path.exists(readme))
+
+        hello = os.path.join(mount_path, 'readme.txt')
+        st = os.lstat(hello)
+        self.assertTrue(stat.S_ISREG(st.st_mode))
+
+        with open(hello, 'r') as f:
+            self.assertEqual('test\n', f.read())
+
+        # Add system_repo to system config file with new name
+        repo_name = 'repo'
+        f = os.open(path, os.O_WRONLY)
+        config = '''\
+[repository ''' + repo_name + ''']
+path = ''' + system_repo_path + '''
+type = ''' + system_repo_type + '''
+'''
+        os.write(f, config.encode('utf-8'))
+        os.close(f)
+
+        # Clone repository
+        mount_path = os.path.join(self.mounts_dir, repo_name + '-1')
+        self.eden.clone(repo_name, mount_path)
+
+        # Verify that clone used repository data from system config
+        readme = os.path.join(mount_path, 'readme.txt')
+        self.assertFalse(os.path.exists(readme))
+
+        hello = os.path.join(mount_path, 'hello.txt')
+        st = os.lstat(hello)
+        self.assertTrue(stat.S_ISREG(st.st_mode))
+
+        with open(hello, 'r') as f:
+            self.assertEqual('hola\n', f.read())

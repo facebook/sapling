@@ -43,6 +43,7 @@ void EdenServiceHandler::mountImpl(const MountInfo& info) {
   auto config = ClientConfig::loadFromClientDirectory(
       AbsolutePathPiece{info.mountPoint},
       AbsolutePathPiece{info.edenClientPath},
+      AbsolutePathPiece{server_->getSystemConfigDir()},
       AbsolutePathPiece{server_->getConfigPath()});
   auto snapshotID = config->getSnapshotID();
 

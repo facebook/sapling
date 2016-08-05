@@ -28,7 +28,7 @@ from fb303.ttypes import fb_status
 import thrift
 
 # These are INI files that hold config data.
-GLOBAL_CONFIG_DIR = '/etc/eden/config.d'
+SYSTEM_CONFIG_DIR = '/etc/eden/config.d'
 USER_CONFIG = '.edenrc'
 
 # These paths are relative to the user's client directory.
@@ -56,18 +56,21 @@ class UsageError(Exception):
 
 
 class Config:
-    def __init__(self, config_dir, home_dir):
+    def __init__(self, config_dir, system_config_dir, home_dir):
         self._config_dir = config_dir
+        self._system_config_dir = system_config_dir
+        if not self._system_config_dir:
+            self._system_config_dir = SYSTEM_CONFIG_DIR
         self._user_config_path = os.path.join(home_dir, USER_CONFIG)
 
     def get_rc_files(self):
-        rc_files = []
-        if os.path.isdir(GLOBAL_CONFIG_DIR):
-            rc_files = os.listdir(GLOBAL_CONFIG_DIR)
-            rc_files = [os.path.join(GLOBAL_CONFIG_DIR, f) for f in rc_files]
-        sorted(rc_files)
-        rc_files.append(self._user_config_path)
-        return rc_files
+        result = []
+        if os.path.isdir(self._system_config_dir):
+            result = os.listdir(self._system_config_dir)
+            result = [os.path.join(self._system_config_dir, f) for f in result]
+            result.sort()
+        result.append(self._user_config_path)
+        return result
 
     def get_repository_list(self, parser=None):
         result = []
@@ -78,8 +81,7 @@ class Config:
             header = section.split(' ')
             if len(header) == 2 and header[0] == 'repository':
                 result.append(header[1])
-        sorted(result)
-        return result
+        return sorted(result)
 
     def get_repo_data(self, name):
         '''
@@ -92,17 +94,16 @@ class Config:
         rc_files = self.get_rc_files()
         parser = configparser.ConfigParser()
         parser.read(rc_files)
-        for section in parser.sections():
-            header = section.split(' ')
-            if len(header) == 2 and header[1] == name:
-                if header[0] == 'repository':
-                    result.update(parser[section])
-                if header[0] == 'bindmounts':
-                    result['bind-mounts'] = parser[section]
+        repository_header = 'repository ' + name
+        if repository_header in parser:
+            result.update(parser[repository_header])
+        bind_mounts_header = 'bindmounts ' + name
+        if bind_mounts_header in parser:
+            result['bind-mounts'] = parser[bind_mounts_header]
+        else:
+            result['bind-mounts'] = {}
         if not result:
             raise Exception('repository %s does not exist.' % name)
-        if 'bind-mounts' not in result:
-            result['bind-mounts'] = {}
         return result
 
     def get_mount_paths(self):
@@ -295,6 +296,7 @@ by hand to make changes to the repository or remove it.''' % name)
 
         # Run the eden server.
         cmd = [daemon_binary, '--edenDir', self._config_dir,
+               '--systemConfigDir', self._system_config_dir,
                '--configPath', self._user_config_path, ]
         if gdb:
             gdb_args = gdb_args or []

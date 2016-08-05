@@ -4,9 +4,9 @@ cpp_unittest(
   deps = [
     '@/eden/fs/config:config',
     '@/eden/utils:utils',
+    '@/folly/experimental:test_util',
   ],
   external_deps = [
-    ('boost', 'any'),
     'gtest',
   ],
 )

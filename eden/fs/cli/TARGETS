@@ -2,10 +2,19 @@ include_defs('//eden/DEFS')
 
 python_binary(
   name = 'cli',
-  srcs = glob(['*.py']),
+  srcs = ['main.py'],
   main_module = 'eden/fs/cli/main',
   deps = [
+    '@/eden/fs/cli:lib',
     '@/eden/fs/service:py-client',
+  ],
+)
+
+python_library(
+  name = 'lib',
+  srcs = [
+    'config.py',
+    'util.py',
   ],
 )
 
