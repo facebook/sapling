@@ -1028,7 +1028,7 @@ class localrepository(object):
         self._datafilters[name] = filter
 
     def wread(self, filename):
-        if self._link(filename):
+        if self.wvfs.islink(filename):
             data = self.wvfs.readlink(filename)
         else:
             data = self.wvfs.read(filename)
