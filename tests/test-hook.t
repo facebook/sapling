@@ -236,9 +236,9 @@ pushkey hook
   searching for changes
   no changes found
   pretxnopen hook: HG_TXNID=TXN:* HG_TXNNAME=push (glob)
-  pretxnclose hook: HG_BOOKMARK_MOVED=1 HG_BUNDLE2=1 HG_PENDING=$TESTTMP/a HG_SOURCE=push HG_TXNID=TXN:* HG_TXNNAME=push HG_URL=push (glob)
+  pretxnclose hook: HG_BOOKMARK_MOVED=1 HG_BUNDLE2=1 HG_PENDING=$TESTTMP/a HG_SOURCE=push HG_TXNID=TXN:* HG_TXNNAME=push HG_URL=file:$TESTTMP/a (glob)
   pushkey hook: HG_KEY=foo HG_NAMESPACE=bookmarks HG_NEW=0000000000000000000000000000000000000000 HG_RET=1
-  txnclose hook: HG_BOOKMARK_MOVED=1 HG_BUNDLE2=1 HG_SOURCE=push HG_TXNID=TXN:* HG_TXNNAME=push HG_URL=push (glob)
+  txnclose hook: HG_BOOKMARK_MOVED=1 HG_BUNDLE2=1 HG_SOURCE=push HG_TXNID=TXN:* HG_TXNNAME=push HG_URL=file:$TESTTMP/a (glob)
   exporting bookmark foo
   [1]
   $ cd ../a
@@ -271,7 +271,7 @@ test that prepushkey can prevent incoming keys
   listkeys hook: HG_NAMESPACE=bookmarks HG_VALUES={'bar': '0000000000000000000000000000000000000000', 'foo': '0000000000000000000000000000000000000000'}
   no changes found
   pretxnopen hook: HG_TXNID=TXN:* HG_TXNNAME=push (glob)
-  prepushkey.forbid hook: HG_BUNDLE2=1 HG_KEY=baz HG_NAMESPACE=bookmarks HG_NEW=0000000000000000000000000000000000000000 HG_SOURCE=push HG_TXNID=TXN:* HG_URL=push (glob)
+  prepushkey.forbid hook: HG_BUNDLE2=1 HG_KEY=baz HG_NAMESPACE=bookmarks HG_NEW=0000000000000000000000000000000000000000 HG_SOURCE=push HG_TXNID=TXN:* HG_URL=file:$TESTTMP/a (glob)
   pushkey-abort: prepushkey hook exited with status 1
   abort: exporting bookmark baz failed!
   [255]
