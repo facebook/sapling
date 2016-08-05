@@ -1012,10 +1012,7 @@ def system(cmd, environ=None, cwd=None, onerr=None, errprefix=None, out=None):
             proc = subprocess.Popen(cmd, shell=True, close_fds=closefds,
                                     env=env, cwd=cwd, stdout=subprocess.PIPE,
                                     stderr=subprocess.STDOUT)
-            while True:
-                line = proc.stdout.readline()
-                if not line:
-                    break
+            for line in iter(proc.stdout.readline, ''):
                 out.write(line)
             proc.wait()
             rc = proc.returncode
