@@ -41,7 +41,12 @@ errors = [
     (afterheader + r".{79,}", "summary line too long (limit is 78)"),
     (r"\n\+\n( |\+)\n", "adds double empty line"),
     (r"\n \n\+\n", "adds double empty line"),
-    (r"\n\+[ \t]+def [a-z]+_[a-z]", "adds a function with foo_bar naming"),
+    # Forbid "_" in function name.
+    #
+    # We skip the check for cffi related functions. They use names mapping the
+    # name of the C function. C function names may contain "_".
+    (r"\n\+[ \t]+def (?!cffi)[a-z]+_[a-z]",
+     "adds a function with foo_bar naming"),
 ]
 
 word = re.compile('\S')
