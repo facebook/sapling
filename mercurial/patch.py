@@ -410,11 +410,7 @@ class linereader(object):
         return self.fp.readline()
 
     def __iter__(self):
-        while True:
-            l = self.readline()
-            if not l:
-                break
-            yield l
+        return iter(self.readline, '')
 
 class abstractbackend(object):
     def __init__(self, ui):
@@ -1688,10 +1684,7 @@ def scanpatch(fp):
     def scanwhile(first, p):
         """scan lr while predicate holds"""
         lines = [first]
-        while True:
-            line = lr.readline()
-            if not line:
-                break
+        for line in iter(lr.readline, ''):
             if p(line):
                 lines.append(line)
             else:
@@ -1699,10 +1692,7 @@ def scanpatch(fp):
                 break
         return lines
 
-    while True:
-        line = lr.readline()
-        if not line:
-            break
+    for line in iter(lr.readline, ''):
         if line.startswith('diff --git a/') or line.startswith('diff -r '):
             def notheader(line):
                 s = line.split(None, 1)
@@ -1772,10 +1762,7 @@ def iterhunks(fp):
     context = None
     lr = linereader(fp)
 
-    while True:
-        x = lr.readline()
-        if not x:
-            break
+    for x in iter(lr.readline, ''):
         if state == BFILE and (
             (not context and x[0] == '@')
             or (context is not False and x.startswith('***************'))
