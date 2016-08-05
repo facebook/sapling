@@ -504,9 +504,6 @@ class localrepository(object):
     def manifest(self):
         return manifest.manifest(self.svfs)
 
-    def dirlog(self, dir):
-        return self.manifest.dirlog(dir)
-
     @repofilecache('dirstate')
     def dirstate(self):
         return dirstate.dirstate(self.vfs, self.ui, self.root,
