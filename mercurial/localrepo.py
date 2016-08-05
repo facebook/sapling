@@ -1007,8 +1007,7 @@ class localrepository(object):
     def transaction(self, desc, report=None):
         if (self.ui.configbool('devel', 'all-warnings')
                 or self.ui.configbool('devel', 'check-locks')):
-            l = self._lockref and self._lockref()
-            if l is None or not l.held:
+            if self._currentlock(self._lockref) is None:
                 raise RuntimeError('programming error: transaction requires '
                                    'locking')
         tr = self.currenttransaction()
@@ -1320,8 +1319,8 @@ class localrepository(object):
 
         If both 'lock' and 'wlock' must be acquired, ensure you always acquires
         'wlock' first to avoid a dead-lock hazard.'''
-        l = self._lockref and self._lockref()
-        if l is not None and l.held:
+        l = self._currentlock(self._lockref)
+        if l is not None:
             l.lock()
             return l
 
@@ -1352,8 +1351,7 @@ class localrepository(object):
         # acquisition would not cause dead-lock as they would just fail.
         if wait and (self.ui.configbool('devel', 'all-warnings')
                      or self.ui.configbool('devel', 'check-locks')):
-            l = self._lockref and self._lockref()
-            if l is not None and l.held:
+            if self._currentlock(self._lockref) is not None:
                 self.ui.develwarn('"wlock" acquired after "lock"')
 
         def unlock():
