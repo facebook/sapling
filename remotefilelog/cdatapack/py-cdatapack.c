@@ -179,6 +179,80 @@ static PyObject *cdatapack_find(
   return tuple;
 }
 
+/**
+ * Finds a node and returns a list of (filename, node, filename, delta base
+ * node, delta) tuples if found.
+ */
+static PyObject *cdatapack_getdeltachain(
+    py_cdatapack *self,
+    PyObject *args) {
+  const char *node;
+  int node_sz;
+
+  if (!PyArg_ParseTuple(args, "s#", &node, &node_sz)) {
+    return NULL;
+  }
+
+  if (node_sz != NODE_SZ) {
+    PyErr_Format(PyExc_ValueError, "node must be %d bytes long", NODE_SZ);
+    return NULL;
+  }
+
+  delta_chain_t *chain = getdeltachain(self->handle, (const uint8_t *) node);
+  if (chain == NULL) {
+    Py_RETURN_NONE;
+  }
+  PyObject *result = PyList_New(chain->links_count);
+  // TODO: error checking
+
+  for (int ix = 0; ix < chain->links_count; ix ++) {
+    PyObject *tuple = NULL;
+    PyObject *name = NULL, *retnode = NULL, *deltabasenode = NULL, *delta =
+        NULL;
+
+    delta_chain_link_t *link = &chain->delta_chain_links[ix];
+
+    name = PyString_FromStringAndSize(link->filename, link->filename_sz);
+    retnode = PyString_FromStringAndSize((const char *) link->node, NODE_SZ);
+    deltabasenode = PyString_FromStringAndSize(
+        (const char *) link->deltabase_node, NODE_SZ);
+    delta = PyString_FromStringAndSize(
+        (const char *) link->delta, link->delta_sz);
+
+    if (name == NULL ||
+        retnode == NULL ||
+        deltabasenode == NULL ||
+        delta == NULL) {
+      goto loop_cleanup;
+    }
+
+    tuple = PyTuple_Pack(5, name, retnode, name, deltabasenode, delta);
+
+    if (tuple == NULL) {
+      goto loop_cleanup;
+    }
+
+    PyList_SetItem(result, ix, tuple);
+
+    continue;
+
+loop_cleanup:
+    Py_XDECREF(name);
+    Py_XDECREF(retnode);
+    Py_XDECREF(deltabasenode);
+    Py_XDECREF(delta);
+    Py_XDECREF(tuple);
+    goto cleanup;
+  }
+
+  return result;
+
+cleanup:
+  Py_XDECREF(result);
+
+  return NULL;
+}
+
 // ====  cdatapack ctype declaration ====
 
 static PyMethodDef cdatapack_methods[] = {
@@ -190,6 +264,10 @@ static PyMethodDef cdatapack_methods[] = {
         METH_VARARGS,
         "Finds a node and returns a (node, deltabase index offset, "
             "data offset, data size) tuple if found."},
+    {"getdeltachain", (PyCFunction)cdatapack_getdeltachain,
+        METH_VARARGS,
+        "Finds a node and returns a list of (filename, node, filename, delta "
+            "base node, delta) tuples if found."},
     {NULL, NULL}
 };
 
