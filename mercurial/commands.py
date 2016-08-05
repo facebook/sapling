@@ -2102,10 +2102,7 @@ def _debugchangegroup(ui, gen, all=None, indent=0, **opts):
         def showchunks(named):
             ui.write("\n%s%s\n" % (indent_string, named))
             chain = None
-            while True:
-                chunkdata = gen.deltachunk(chain)
-                if not chunkdata:
-                    break
+            for chunkdata in iter(lambda: gen.deltachunk(chain), {}):
                 node = chunkdata['node']
                 p1 = chunkdata['p1']
                 p2 = chunkdata['p2']
@@ -2121,10 +2118,7 @@ def _debugchangegroup(ui, gen, all=None, indent=0, **opts):
         showchunks("changelog")
         chunkdata = gen.manifestheader()
         showchunks("manifest")
-        while True:
-            chunkdata = gen.filelogheader()
-            if not chunkdata:
-                break
+        for chunkdata in iter(gen.filelogheader, {}):
             fname = chunkdata['filename']
             showchunks(fname)
     else:
@@ -2132,10 +2126,7 @@ def _debugchangegroup(ui, gen, all=None, indent=0, **opts):
             raise error.Abort(_('use debugbundle2 for this file'))
         chunkdata = gen.changelogheader()
         chain = None
-        while True:
-            chunkdata = gen.deltachunk(chain)
-            if not chunkdata:
-                break
+        for chunkdata in iter(lambda: gen.deltachunk(chain), {}):
             node = chunkdata['node']
             ui.write("%s%s\n" % (indent_string, hex(node)))
             chain = node
