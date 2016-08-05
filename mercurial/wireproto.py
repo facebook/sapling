@@ -399,7 +399,7 @@ class wirepeer(peer.peerrepository):
         else:
             return changegroupmod.cg1unpacker(f, 'UN')
 
-    def unbundle(self, cg, heads, source):
+    def unbundle(self, cg, heads, url):
         '''Send cg (a readable file-like object representing the
         changegroup to push, typically a chunkbuffer object) to the
         remote server as a bundle.
@@ -407,7 +407,11 @@ class wirepeer(peer.peerrepository):
         When pushing a bundle10 stream, return an integer indicating the
         result of the push (see localrepository.addchangegroup()).
 
-        When pushing a bundle20 stream, return a bundle20 stream.'''
+        When pushing a bundle20 stream, return a bundle20 stream.
+
+        `url` is the url the client thinks it's pushing to, which is
+        visible to hooks.
+        '''
 
         if heads != ['force'] and self.capable('unbundlehash'):
             heads = encodelist(['hashed',
