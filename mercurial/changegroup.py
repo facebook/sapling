@@ -475,10 +475,7 @@ class cg3unpacker(cg2unpacker):
     def _unpackmanifests(self, repo, revmap, trp, prog, numchanges):
         super(cg3unpacker, self)._unpackmanifests(repo, revmap, trp, prog,
                                                   numchanges)
-        while True:
-            chunkdata = self.filelogheader()
-            if not chunkdata:
-                break
+        for chunkdata in iter(self.filelogheader, {}):
             # If we get here, there are directory manifests in the changegroup
             d = chunkdata["filename"]
             repo.ui.debug("adding %s revisions\n" % d)
@@ -1012,10 +1009,7 @@ def changegroup(repo, basenodes, source):
 def _addchangegroupfiles(repo, source, revmap, trp, expectedfiles, needfiles):
     revisions = 0
     files = 0
-    while True:
-        chunkdata = source.filelogheader()
-        if not chunkdata:
-            break
+    for chunkdata in iter(source.filelogheader, {}):
         files += 1
         f = chunkdata["filename"]
         repo.ui.debug("adding %s revisions\n" % f)
