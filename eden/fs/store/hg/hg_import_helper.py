@@ -101,6 +101,22 @@ def cmd(command_id):
     return decorator
 
 
+class HgUI(mercurial.ui.ui):
+    def __init__(self, src=None):
+        super(HgUI, self).__init__(src=src)
+        # Always print to stderr, never to stdout.
+        # We normally use stdout as the pipe to communicate with the main
+        # edenfs daemon, and if mercurial prints messages to stdout it can
+        # interfere with this communication.
+        # This also matches the logging behavior of the main edenfs process,
+        # which always logs to stderr.
+        self.fout = sys.stderr
+        self.ferr = sys.stderr
+
+    def interactive(self):
+        return False
+
+
 class HgServer(object):
     def __init__(self, repo_path):
         self.repo_path = repo_path
@@ -121,7 +137,7 @@ class HgServer(object):
 
     def initialize(self):
         hgrc = os.path.join(self.repo_path, b".hg", b"hgrc")
-        self.ui = mercurial.ui.ui()
+        self.ui = HgUI()
         self.ui.readconfig(hgrc, self.repo_path)
         mercurial.extensions.loadall(self.ui)
         repo = mercurial.hg.repository(self.ui, self.repo_path)
