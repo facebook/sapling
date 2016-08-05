@@ -470,48 +470,54 @@ class revbranchcache(object):
     def write(self, tr=None):
         """Save branch cache if it is dirty."""
         repo = self._repo
-        if self._rbcnamescount < len(self._names):
-            try:
-                if self._rbcnamescount != 0:
-                    f = repo.vfs.open(_rbcnames, 'ab')
-                    if f.tell() == self._rbcsnameslen:
-                        f.write('\0')
-                    else:
-                        f.close()
-                        repo.ui.debug("%s changed - rewriting it\n" % _rbcnames)
-                        self._rbcnamescount = 0
-                        self._rbcrevslen = 0
-                if self._rbcnamescount == 0:
-                    # before rewriting names, make sure references are removed
-                    repo.vfs.unlinkpath(_rbcrevs, ignoremissing=True)
-                    f = repo.vfs.open(_rbcnames, 'wb')
-                f.write('\0'.join(encoding.fromlocal(b)
-                                  for b in self._names[self._rbcnamescount:]))
-                self._rbcsnameslen = f.tell()
-                f.close()
-            except (IOError, OSError, error.Abort) as inst:
-                repo.ui.debug("couldn't write revision branch cache names: "
-                              "%s\n" % inst)
-                return
-            self._rbcnamescount = len(self._names)
+        if True:
+            if self._rbcnamescount < len(self._names):
+                try:
+                    if self._rbcnamescount != 0:
+                        f = repo.vfs.open(_rbcnames, 'ab')
+                        if f.tell() == self._rbcsnameslen:
+                            f.write('\0')
+                        else:
+                            f.close()
+                            repo.ui.debug("%s changed - rewriting it\n"
+                                          % _rbcnames)
+                            self._rbcnamescount = 0
+                            self._rbcrevslen = 0
+                    if self._rbcnamescount == 0:
+                        # before rewriting names, make sure references are
+                        # removed
+                        repo.vfs.unlinkpath(_rbcrevs, ignoremissing=True)
+                        f = repo.vfs.open(_rbcnames, 'wb')
+                    f.write('\0'.join(encoding.fromlocal(b)
+                                      for b in self._names[self._rbcnamescount:]
+                                      ))
+                    self._rbcsnameslen = f.tell()
+                    f.close()
+                except (IOError, OSError, error.Abort) as inst:
+                    repo.ui.debug("couldn't write revision branch cache names: "
+                                  "%s\n" % inst)
+                    return
+                self._rbcnamescount = len(self._names)
 
-        start = self._rbcrevslen * _rbcrecsize
-        if start != len(self._rbcrevs):
-            revs = min(len(repo.changelog), len(self._rbcrevs) // _rbcrecsize)
-            try:
-                f = repo.vfs.open(_rbcrevs, 'ab')
-                if f.tell() != start:
-                    repo.ui.debug("truncating %s to %s\n" % (_rbcrevs, start))
-                    f.seek(start)
+            start = self._rbcrevslen * _rbcrecsize
+            if start != len(self._rbcrevs):
+                revs = min(len(repo.changelog),
+                           len(self._rbcrevs) // _rbcrecsize)
+                try:
+                    f = repo.vfs.open(_rbcrevs, 'ab')
                     if f.tell() != start:
-                        start = 0
+                        repo.ui.debug("truncating %s to %s\n"
+                                      % (_rbcrevs, start))
                         f.seek(start)
-                    f.truncate()
-                end = revs * _rbcrecsize
-                f.write(self._rbcrevs[start:end])
-                f.close()
-            except (IOError, OSError, error.Abort) as inst:
-                repo.ui.debug("couldn't write revision branch cache: %s\n" %
-                              inst)
-                return
-            self._rbcrevslen = revs
+                        if f.tell() != start:
+                            start = 0
+                            f.seek(start)
+                        f.truncate()
+                    end = revs * _rbcrecsize
+                    f.write(self._rbcrevs[start:end])
+                    f.close()
+                except (IOError, OSError, error.Abort) as inst:
+                    repo.ui.debug("couldn't write revision branch cache: %s\n" %
+                                  inst)
+                    return
+                self._rbcrevslen = revs
