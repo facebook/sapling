@@ -981,6 +981,8 @@ class localrepository(object):
         return self.wvfs(f, mode)
 
     def _link(self, f):
+        self.ui.deprecwarn("use 'repo.wvfs.islink' instead of 'repo._link'",
+                           '4.0')
         return self.wvfs.islink(f)
 
     def _loadfilter(self, filter):
