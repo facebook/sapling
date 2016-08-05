@@ -678,8 +678,8 @@ def pull(orig, ui, repo, *pats, **opts):
             base = repo['.'].rev()
             repo.prefetch(revs, base=base)
 
-    if repo.ui.configbool('remotefilelog', 'backgroundrepack'):
-        repackmod.backgroundrepack(repo, incremental=True)
+        if repo.ui.configbool('remotefilelog', 'backgroundrepack'):
+            repackmod.backgroundrepack(repo, incremental=True)
     return result
 
 def exchangepull(orig, repo, remote, *args, **kwargs):
