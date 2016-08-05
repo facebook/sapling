@@ -292,10 +292,7 @@ class sshpeer(wireproto.wirepeer):
         r = self._call(cmd, **args)
         if r:
             return '', r
-        while True:
-            d = fp.read(4096)
-            if not d:
-                break
+        for d in iter(lambda: fp.read(4096), ''):
             self._send(d)
         self._send("", flush=True)
         r = self._recv()
@@ -308,10 +305,7 @@ class sshpeer(wireproto.wirepeer):
         if r:
             # XXX needs to be made better
             raise error.Abort(_('unexpected remote reply: %s') % r)
-        while True:
-            d = fp.read(4096)
-            if not d:
-                break
+        for d in iter(lambda: fp.read(4096), ''):
             self._send(d)
         self._send("", flush=True)
         return self.pipei
@@ -353,10 +347,7 @@ class sshpeer(wireproto.wirepeer):
         d = self._call("addchangegroup")
         if d:
             self._abort(error.RepoError(_("push refused: %s") % d))
-        while True:
-            d = cg.read(4096)
-            if not d:
-                break
+        for d in iter(lambda: cg.read(4096), ''):
             self.pipeo.write(d)
             self.readerr()
 
