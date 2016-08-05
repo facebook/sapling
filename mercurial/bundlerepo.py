@@ -188,10 +188,16 @@ class bundlechangelog(bundlerevlog, changelog.changelog):
             self.filteredrevs = oldfilter
 
 class bundlemanifest(bundlerevlog, manifest.manifest):
-    def __init__(self, opener, bundle, linkmapper):
-        manifest.manifest.__init__(self, opener)
+    def __init__(self, opener, bundle, linkmapper, dirlogstarts=None, dir=''):
+        manifest.manifest.__init__(self, opener, dir=dir)
         bundlerevlog.__init__(self, opener, self.indexfile, bundle,
                               linkmapper)
+        if dirlogstarts is None:
+            dirlogstarts = {}
+            if self.bundle.version == "03":
+                dirlogstarts = _getfilestarts(self.bundle)
+        self._dirlogstarts = dirlogstarts
+        self._linkmapper = linkmapper
 
     def baserevision(self, nodeorrev):
         node = nodeorrev
@@ -203,6 +209,14 @@ class bundlemanifest(bundlerevlog, manifest.manifest):
         else:
             result = manifest.manifest.revision(self, nodeorrev)
         return result
+
+    def dirlog(self, d):
+        if d in self._dirlogstarts:
+            self.bundle.seek(self._dirlogstarts[d])
+            return bundlemanifest(
+                self.opener, self.bundle, self._linkmapper,
+                self._dirlogstarts, dir=d)
+        return super(bundlemanifest, self).dirlog(d)
 
 class bundlefilelog(bundlerevlog, filelog.filelog):
     def __init__(self, opener, path, bundle, linkmapper):
@@ -336,10 +350,6 @@ class bundlerepository(localrepo.localrepository):
         self.bundle.manifestheader()
         linkmapper = self.unfiltered().changelog.rev
         m = bundlemanifest(self.svfs, self.bundle, linkmapper)
-        # XXX: hack to work with changegroup3, but we still don't handle
-        # tree manifests correctly
-        if self.bundle.version == "03":
-            self.bundle.filelogheader()
         self.filestart = self.bundle.tell()
         return m
 

@@ -913,7 +913,7 @@ class manifest(revlog.revlog):
         self._usemanifestv2 = usemanifestv2
         indexfile = "00manifest.i"
         if dir:
-            assert self._treeondisk
+            assert self._treeondisk, 'opts is %r' % opts
             if not dir.endswith('/'):
                 dir = dir + '/'
             indexfile = "meta/" + dir + "00manifest.i"
