@@ -662,7 +662,8 @@ def display_hotpath(fp, limit=0.05, **kwargs):
         for child in visiblechildren:
             _write(child, newdepth, len(visiblechildren) > 1)
 
-    _write(root, 0, False)
+    if root.count > 0:
+        _write(root, 0, False)
 
 def write_to_flame(fp):
     scriptpath = os.environ['HOME'] + '/flamegraph.pl'
