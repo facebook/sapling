@@ -881,7 +881,7 @@ class filecache(object):
         function to call the appropriate join function on 'obj' (an instance
         of the class that its member function was decorated).
         """
-        return obj.join(fname)
+        raise NotImplementedError
 
     def __call__(self, func):
         self.func = func
