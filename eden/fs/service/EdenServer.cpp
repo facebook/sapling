@@ -69,8 +69,8 @@ EdenServer::EdenServer(
     StringPiece configPath,
     StringPiece rocksPath)
     : edenDir_(edenDir.str()),
-      systemConfigDir_(systemConfigDir.str()),
-      configPath_(configPath.str()),
+      systemConfigDir_(systemConfigDir),
+      configPath_(configPath),
       rocksPath_(rocksPath.str()) {}
 
 EdenServer::~EdenServer() {
@@ -100,6 +100,8 @@ void EdenServer::run() {
   auto pool =
       make_shared<wangle::CPUThreadPoolExecutor>(FLAGS_num_eden_threads);
   wangle::setCPUExecutor(pool);
+
+  reloadConfig();
 
   prepareThriftAddress();
   runThriftServer();
@@ -195,6 +197,15 @@ shared_ptr<EdenMount> EdenServer::getMount(StringPiece mountPath) const {
     return nullptr;
   }
   return it->second;
+}
+
+void EdenServer::reloadConfig() {
+  *configData_.wlock() = make_shared<ConfigData>(ClientConfig::loadConfigData(
+      systemConfigDir_.piece(), configPath_.piece()));
+}
+
+shared_ptr<EdenServer::ConfigData> EdenServer::getConfig() {
+  return *configData_.rlock();
 }
 
 shared_ptr<BackingStore> EdenServer::getBackingStore(

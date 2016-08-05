@@ -100,8 +100,7 @@ ClientConfig::ConfigData ClientConfig::loadConfigData(
 std::unique_ptr<ClientConfig> ClientConfig::loadFromClientDirectory(
     AbsolutePathPiece mountPoint,
     AbsolutePathPiece clientDirectory,
-    AbsolutePathPiece systemConfigDir,
-    AbsolutePathPiece configPath) {
+    const ConfigData* configData) {
   // Extract repository name from the client config file
   ConfigData repoData;
   auto configFile = clientDirectory + kLocalConfig;
@@ -110,8 +109,7 @@ std::unique_ptr<ClientConfig> ClientConfig::loadFromClientDirectory(
 
   // Get the data of repository repoName from config files
   string repoHeader = kRepositoryKey.toString() + repoName;
-  auto configData = loadConfigData(systemConfigDir, configPath);
-  repoData = configData.get_child(repoHeader, defaultPtree());
+  repoData = configData->get_child(repoHeader, defaultPtree());
 
   // Repository data not found
   if (repoData.empty()) {
@@ -121,7 +119,7 @@ std::unique_ptr<ClientConfig> ClientConfig::loadFromClientDirectory(
   // Extract the bind mounts
   std::vector<BindMount> bindMounts;
   string bindMountHeader = kBindMountsKey.toString() + repoName;
-  auto bindMountPoints = configData.get_child(bindMountHeader, defaultPtree());
+  auto bindMountPoints = configData->get_child(bindMountHeader, defaultPtree());
 
   AbsolutePath mountPath = AbsolutePath{mountPoint};
   AbsolutePath bindMountsPath = clientDirectory + kBindMountsDir;

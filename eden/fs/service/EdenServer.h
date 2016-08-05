@@ -9,6 +9,7 @@
  */
 #pragma once
 
+#include <boost/property_tree/ptree.hpp>
 #include <folly/File.h>
 #include <folly/Range.h>
 #include <folly/SocketAddress.h>
@@ -20,6 +21,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include "eden/utils/PathFuncs.h"
 
 namespace apache {
 namespace thrift {
@@ -45,6 +47,7 @@ class LocalStore;
  */
 class EdenServer {
  public:
+  using ConfigData = boost::property_tree::ptree;
   using MountList = std::vector<std::shared_ptr<EdenMount>>;
   using MountMap = folly::StringKeyedMap<std::shared_ptr<EdenMount>>;
 
@@ -82,13 +85,8 @@ class EdenServer {
     return localStore_;
   }
 
-  const std::string& getSystemConfigDir() const {
-    return systemConfigDir_;
-  }
-
-  const std::string& getConfigPath() const {
-    return configPath_;
-  }
+  void reloadConfig();
+  std::shared_ptr<ConfigData> getConfig();
 
   /**
    * Look up the BackingStore object for the specified repository type+name.
@@ -135,10 +133,11 @@ class EdenServer {
    */
 
   std::string edenDir_;
-  std::string systemConfigDir_;
-  std::string configPath_;
+  AbsolutePath systemConfigDir_;
+  AbsolutePath configPath_;
   std::string rocksPath_;
   folly::File lockFile_;
+  folly::Synchronized<std::shared_ptr<ConfigData>> configData_;
   std::shared_ptr<EdenServiceHandler> handler_;
   std::shared_ptr<apache::thrift::ThriftServer> server_;
 

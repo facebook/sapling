@@ -40,11 +40,11 @@ facebook::fb303::cpp2::fb_status EdenServiceHandler::getStatus() {
 }
 
 void EdenServiceHandler::mountImpl(const MountInfo& info) {
+  server_->reloadConfig();
   auto config = ClientConfig::loadFromClientDirectory(
       AbsolutePathPiece{info.mountPoint},
       AbsolutePathPiece{info.edenClientPath},
-      AbsolutePathPiece{server_->getSystemConfigDir()},
-      AbsolutePathPiece{server_->getConfigPath()});
+      server_->getConfig().get());
   auto snapshotID = config->getSnapshotID();
 
   auto mountPoint =

@@ -70,11 +70,13 @@ class ClientConfigTest : public ::testing::Test {
 };
 
 TEST_F(ClientConfigTest, testLoadFromClientDirectory) {
+  auto configData = ClientConfig::loadConfigData(
+      AbsolutePath{systemConfigDir_.string()},
+      AbsolutePath{userConfigPath_.string()});
   auto config = ClientConfig::loadFromClientDirectory(
       AbsolutePath{mountPoint_.string()},
       AbsolutePath{clientDir_.string()},
-      AbsolutePath{systemConfigDir_.string()},
-      AbsolutePath{userConfigPath_.string()});
+      &configData);
 
   EXPECT_EQ(
       Hash{"1234567812345678123456781234567812345678"},
@@ -99,11 +101,13 @@ TEST_F(ClientConfigTest, testLoadFromClientDirectoryWithNoBindMounts) {
       "type = git\n";
   folly::writeFile(folly::StringPiece{data}, userConfigPath_.c_str());
 
+  auto configData = ClientConfig::loadConfigData(
+      AbsolutePath{systemConfigDir_.string()},
+      AbsolutePath{userConfigPath_.string()});
   auto config = ClientConfig::loadFromClientDirectory(
       AbsolutePath{mountPoint_.string()},
       AbsolutePath{clientDir_.string()},
-      AbsolutePath{systemConfigDir_.string()},
-      AbsolutePath{userConfigPath_.string()});
+      &configData);
 
   EXPECT_EQ(
       Hash{"1234567812345678123456781234567812345678"},
@@ -132,11 +136,13 @@ TEST_F(ClientConfigTest, testOverrideSystemConfigData) {
       "type = git\n";
   folly::writeFile(folly::StringPiece{data}, userConfigPath_.c_str());
 
+  auto configData = ClientConfig::loadConfigData(
+      AbsolutePath{systemConfigDir_.string()},
+      AbsolutePath{userConfigPath_.string()});
   auto config = ClientConfig::loadFromClientDirectory(
       AbsolutePath{mountPoint_.string()},
       AbsolutePath{clientDir_.string()},
-      AbsolutePath{systemConfigDir_.string()},
-      AbsolutePath{userConfigPath_.string()});
+      &configData);
 
   EXPECT_EQ(
       Hash{"1234567812345678123456781234567812345678"},
@@ -164,11 +170,13 @@ TEST_F(ClientConfigTest, testOnlySystemConfigData) {
 
   folly::writeFile(folly::StringPiece{""}, userConfigPath_.c_str());
 
+  auto configData = ClientConfig::loadConfigData(
+      AbsolutePath{systemConfigDir_.string()},
+      AbsolutePath{userConfigPath_.string()});
   auto config = ClientConfig::loadFromClientDirectory(
       AbsolutePath{mountPoint_.string()},
       AbsolutePath{clientDir_.string()},
-      AbsolutePath{systemConfigDir_.string()},
-      AbsolutePath{userConfigPath_.string()});
+      &configData);
 
   EXPECT_EQ(
       Hash{"1234567812345678123456781234567812345678"},

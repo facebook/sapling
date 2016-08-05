@@ -38,8 +38,7 @@ class ClientConfig {
   static std::unique_ptr<ClientConfig> loadFromClientDirectory(
       AbsolutePathPiece mountPoint,
       AbsolutePathPiece clientDirectory,
-      AbsolutePathPiece systemConfigDir,
-      AbsolutePathPiece configPath);
+      const ConfigData* configData);
 
   static ConfigData loadConfigData(
       AbsolutePathPiece systemConfigDir,
