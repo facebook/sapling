@@ -351,10 +351,7 @@ class bundlerepository(localrepo.localrepository):
     def file(self, f):
         if not self.bundlefilespos:
             self.bundle.seek(self.filestart)
-            while True:
-                chunkdata = self.bundle.filelogheader()
-                if not chunkdata:
-                    break
+            for chunkdata in iter(self.bundle.filelogheader, {}):
                 fname = chunkdata['filename']
                 self.bundlefilespos[fname] = self.bundle.tell()
                 while True:
