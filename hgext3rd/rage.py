@@ -172,8 +172,9 @@ def rage(ui, repo, *pats, **opts):
         ('first 20 lines of "hg status"',
             _failsafe(lambda:
                 '\n'.join(hgcmd(commands.status).splitlines()[:20]))),
-        ('hg blackbox -l40',
-            _failsafe(lambda: hgcmd(blackbox.blackbox, limit=40))),
+        ('last 40 lines of interesting blackbox.log',
+            _failsafe(lambda: shcmd('grep -Fv FM: %s | tail -n 40'
+                                    % util.shellquote(ui._bbfp.name)))),
         ('hg summary', _failsafe(lambda: hgcmd(commands.summary))),
         ('hg config (local)', _failsafe(lambda: '\n'.join(localconfig(ui)))),
         ('hg sparse',
