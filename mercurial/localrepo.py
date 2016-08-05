@@ -70,6 +70,8 @@ class repofilecache(scmutil.filecache):
     """All filecache usage on repo are done for logic that should be unfiltered
     """
 
+    def join(self, obj, fname):
+        return obj.join(fname)
     def __get__(self, repo, type=None):
         if repo is None:
             return self
