@@ -278,7 +278,7 @@ class localrepository(object):
         # This list it to be filled by extension during repo setup
         self._phasedefaults = []
         try:
-            self.ui.readconfig(self.join("hgrc"), self.root)
+            self.ui.readconfig(self.vfs.join("hgrc"), self.root)
             self._loadextensions()
         except IOError:
             pass
