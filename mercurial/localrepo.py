@@ -254,7 +254,12 @@ class localrepository(object):
 
     def __init__(self, baseui, path, create=False):
         self.requirements = set()
+        # vfs to access the working copy
         self.wvfs = scmutil.vfs(path, expandpath=True, realpath=True)
+        # vfs to access the content of the repository
+        self.vfs = None
+        # vfs to access the store part of the repository
+        self.svfs = None
         self.wopener = self.wvfs
         self.root = self.wvfs.base
         self.path = self.wvfs.join(".hg")
