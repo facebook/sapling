@@ -208,18 +208,14 @@ def _generic_proxytunnel(self):
         version, status, reason = res._read_status()
         if status != httplib.CONTINUE:
             break
-        while True:
-            skip = res.fp.readline().strip()
-            if not skip:
-                break
+        # skip lines that are all whitespace
+        list(iter(lambda: res.fp.readline().strip(), ''))
     res.status = status
     res.reason = reason.strip()
 
     if res.status == 200:
-        while True:
-            line = res.fp.readline()
-            if line == '\r\n':
-                break
+        # skip lines until we find a blank line
+        list(iter(res.fp.readline, '\r\n'))
         return True
 
     if version == 'HTTP/1.0':
