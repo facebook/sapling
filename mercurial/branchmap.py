@@ -476,27 +476,23 @@ class revbranchcache(object):
             if self._rbcnamescount < len(self._names):
                 step = ' names'
                 wlock = repo.wlock(wait=False)
-                if True:
-                    if self._rbcnamescount != 0:
-                        f = repo.vfs.open(_rbcnames, 'ab')
-                        if f.tell() == self._rbcsnameslen:
-                            f.write('\0')
-                        else:
-                            f.close()
-                            repo.ui.debug("%s changed - rewriting it\n"
-                                          % _rbcnames)
-                            self._rbcnamescount = 0
-                            self._rbcrevslen = 0
-                    if self._rbcnamescount == 0:
-                        # before rewriting names, make sure references are
-                        # removed
-                        repo.vfs.unlinkpath(_rbcrevs, ignoremissing=True)
-                        f = repo.vfs.open(_rbcnames, 'wb')
-                    f.write('\0'.join(encoding.fromlocal(b)
-                                      for b in self._names[self._rbcnamescount:]
-                                      ))
-                    self._rbcsnameslen = f.tell()
-                    f.close()
+                if self._rbcnamescount != 0:
+                    f = repo.vfs.open(_rbcnames, 'ab')
+                    if f.tell() == self._rbcsnameslen:
+                        f.write('\0')
+                    else:
+                        f.close()
+                        repo.ui.debug("%s changed - rewriting it\n" % _rbcnames)
+                        self._rbcnamescount = 0
+                        self._rbcrevslen = 0
+                if self._rbcnamescount == 0:
+                    # before rewriting names, make sure references are removed
+                    repo.vfs.unlinkpath(_rbcrevs, ignoremissing=True)
+                    f = repo.vfs.open(_rbcnames, 'wb')
+                f.write('\0'.join(encoding.fromlocal(b)
+                                  for b in self._names[self._rbcnamescount:]))
+                self._rbcsnameslen = f.tell()
+                f.close()
                 self._rbcnamescount = len(self._names)
 
             start = self._rbcrevslen * _rbcrecsize
@@ -506,19 +502,17 @@ class revbranchcache(object):
                     wlock = repo.wlock(wait=False)
                 revs = min(len(repo.changelog),
                            len(self._rbcrevs) // _rbcrecsize)
-                if True:
-                    f = repo.vfs.open(_rbcrevs, 'ab')
+                f = repo.vfs.open(_rbcrevs, 'ab')
+                if f.tell() != start:
+                    repo.ui.debug("truncating %s to %s\n" % (_rbcrevs, start))
+                    f.seek(start)
                     if f.tell() != start:
-                        repo.ui.debug("truncating %s to %s\n"
-                                      % (_rbcrevs, start))
+                        start = 0
                         f.seek(start)
-                        if f.tell() != start:
-                            start = 0
-                            f.seek(start)
-                        f.truncate()
-                    end = revs * _rbcrecsize
-                    f.write(self._rbcrevs[start:end])
-                    f.close()
+                    f.truncate()
+                end = revs * _rbcrecsize
+                f.write(self._rbcrevs[start:end])
+                f.close()
                 self._rbcrevslen = revs
         except (IOError, OSError, error.Abort, error.LockError) as inst:
             repo.ui.debug("couldn't write revision branch cache%s: %s\n"
