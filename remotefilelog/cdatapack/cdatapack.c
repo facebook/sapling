@@ -101,10 +101,8 @@ bool find(
     fanout_idx = node[0];
   }
 
-  index_offset_t start = handle->fanout_table[fanout_idx].start_index /
-                         sizeof(disk_index_entry_t);
-  index_offset_t end = handle->fanout_table[fanout_idx].end_index /
-                       sizeof(disk_index_entry_t);
+  index_offset_t start = handle->fanout_table[fanout_idx].start_index;
+  index_offset_t end = handle->fanout_table[fanout_idx].end_index;
 
   // indices are INCLUSIVE, so the search is <=
   while (start <= end) {
@@ -226,7 +224,8 @@ datapack_handle_t *open_datapack(
   int last_fanout_increment = 0;
 
   for (int ix = 0; ix < fanout_count; ix++) {
-    index_offset_t index_offset = ntoh_index_offset(index[ix]);
+    index_offset_t index_offset =
+            ntoh_index_offset(index[ix]) / sizeof(disk_index_entry_t);
     if (index_offset != prev_index_offset) {
       // backfill the start & end offsets
       for (int jx = last_fanout_increment; jx < ix; jx ++) {
@@ -259,7 +258,7 @@ datapack_handle_t *open_datapack(
 
   // we may need to backfill the remaining offsets.
   index_offset_t last_offset = (index_offset_t)
-      ((index_end - handle->index_table - 1) * sizeof(disk_index_entry_t));
+      (index_end - handle->index_table - 1);
   for (int jx = last_fanout_increment; jx < fanout_count; jx ++) {
     // fill the "start" except for the last time we changed the index
     // offset.
