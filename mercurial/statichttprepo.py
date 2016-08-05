@@ -181,6 +181,9 @@ class statichttprepository(localrepo.localrepository):
     def lock(self, wait=True):
         raise error.Abort(_('cannot lock static-http repository'))
 
+    def _writecaches(self):
+        pass # statichttprepository are read only
+
 def instance(ui, path, create):
     if create:
         raise error.Abort(_('cannot create new static-http repository'))
