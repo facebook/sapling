@@ -471,10 +471,12 @@ class revbranchcache(object):
         """Save branch cache if it is dirty."""
         repo = self._repo
         wlock = None
+        step = ''
         try:
             if self._rbcnamescount < len(self._names):
+                step = ' names'
                 wlock = repo.wlock(wait=False)
-                try:
+                if True:
                     if self._rbcnamescount != 0:
                         f = repo.vfs.open(_rbcnames, 'ab')
                         if f.tell() == self._rbcsnameslen:
@@ -495,19 +497,16 @@ class revbranchcache(object):
                                       ))
                     self._rbcsnameslen = f.tell()
                     f.close()
-                except (IOError, OSError, error.Abort) as inst:
-                    repo.ui.debug("couldn't write revision branch cache names: "
-                                  "%s\n" % inst)
-                    return
                 self._rbcnamescount = len(self._names)
 
             start = self._rbcrevslen * _rbcrecsize
             if start != len(self._rbcrevs):
+                step = ''
                 if wlock is None:
                     wlock = repo.wlock(wait=False)
                 revs = min(len(repo.changelog),
                            len(self._rbcrevs) // _rbcrecsize)
-                try:
+                if True:
                     f = repo.vfs.open(_rbcrevs, 'ab')
                     if f.tell() != start:
                         repo.ui.debug("truncating %s to %s\n"
@@ -520,13 +519,10 @@ class revbranchcache(object):
                     end = revs * _rbcrecsize
                     f.write(self._rbcrevs[start:end])
                     f.close()
-                except (IOError, OSError, error.Abort) as inst:
-                    repo.ui.debug("couldn't write revision branch cache: %s\n" %
-                                  inst)
-                    return
                 self._rbcrevslen = revs
-        except error.LockError as inst:
-            repo.ui.debug("couldn't write revision branch cache: %s\n" % inst)
+        except (IOError, OSError, error.Abort, error.LockError) as inst:
+            repo.ui.debug("couldn't write revision branch cache%s: %s\n"
+                          % (step, inst))
         finally:
             if wlock is not None:
                 wlock.release()
