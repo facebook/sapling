@@ -234,6 +234,15 @@ class bundlephasecache(phases.phasecache):
         self.invalidate()
         self.dirty = True
 
+def _getfilestarts(bundle):
+    bundlefilespos = {}
+    for chunkdata in iter(bundle.filelogheader, {}):
+        fname = chunkdata['filename']
+        bundlefilespos[fname] = bundle.tell()
+        for chunk in iter(lambda: bundle.deltachunk(None), {}):
+            pass
+    return bundlefilespos
+
 class bundlerepository(localrepo.localrepository):
     def __init__(self, ui, path, bundlename):
         def _writetempbundle(read, suffix, header=''):
@@ -349,13 +358,7 @@ class bundlerepository(localrepo.localrepository):
     def file(self, f):
         if not self.bundlefilespos:
             self.bundle.seek(self.filestart)
-            for chunkdata in iter(self.bundle.filelogheader, {}):
-                fname = chunkdata['filename']
-                self.bundlefilespos[fname] = self.bundle.tell()
-                while True:
-                    c = self.bundle.deltachunk(None)
-                    if not c:
-                        break
+            self.bundlefilespos = _getfilestarts(self.bundle)
 
         if f in self.bundlefilespos:
             self.bundle.seek(self.bundlefilespos[f])
