@@ -498,15 +498,20 @@ def print_stderr(message, *args, **kwargs):
     print(message, file=sys.stderr)
 
 
-def normalize_path_arg(path_arg):
-    '''
-    This ensures that path expansions such as ~ are handled properly and that
-    relative paths are made absolute.
+def normalize_path_arg(path_arg, may_need_tilde_expansion=False):
+    '''Normalizes a path by using os.path.realpath().
+
+    Note that this function is expected to be used with command-line arguments.
+    If the argument comes from a config file or GUI where tilde expansion is not
+    done by the shell, then may_need_tilde_expansion=True should be specified.
     '''
     if path_arg:
-        return os.path.abspath(os.path.normpath(os.path.expanduser(path_arg)))
-    else:
-        return path_arg
+        if may_need_tilde_expansion:
+            path_arg = os.path.expanduser(path_arg)
+
+        # Use the canonical version of the path.
+        path_arg = os.path.realpath(path_arg)
+    return path_arg
 
 
 if __name__ == '__main__':
