@@ -8,6 +8,7 @@
 from mercurial import templatekw, extensions
 from mercurial import util as hgutil
 from mercurial.i18n import _
+from mercurial import obsolete
 
 import re
 import subprocess
@@ -77,8 +78,9 @@ def getdiffstatus(repo, *diffid):
     timeout = repo.ui.configint('ssl', 'timeout', 5)
 
     try:
-        resp = conduit.call_conduit('differential.query', {'ids': diffid},
-            timeout=timeout)
+        resp = conduit.call_conduit('differential.querydiffhashes',
+                {'revisionIDs': diffid},
+                timeout=timeout)
 
     except conduit.ClientError as ex:
         msg = _('Error talking to phabricator. No diff information can be '
@@ -92,22 +94,22 @@ def getdiffstatus(repo, *diffid):
         return _fail(repo, diffid, msg, hint)
 
     if not resp:
-        resp = []
+        resp = {}
 
     # This makes the code more robust in case conduit does not return
     # what we need
     result = []
     for diff in diffid:
-        matchingresponse = [r for r in resp
-                              if r.get("id", None) == int(diff)]
+        matchingresponse = resp.get(diff)
         if not matchingresponse:
             result.append("Error")
         else:
-            result.append(matchingresponse[0].get('statusName'))
+            result.append(matchingresponse)
     return result
 
-def showphabstatus(repo, ctx, templ, **args):
-    """:phabstatus: String. Return the diff approval status for a given hg rev
+def populateresponseforphab(repo, ctx):
+    """:populateresponse: Runs the memoization function
+        for use of phabstatus and sync status
     """
     if hgutil.safehasattr(repo, '_smartlogrevs'):
         alldiffnumbers = [getdiffnum(repo, repo[rev])
@@ -118,9 +120,68 @@ def showphabstatus(repo, ctx, templ, **args):
         # Do this once per smartlog call, not for every revs to be displayed
         del repo._smartlogrevs
 
+def showphabstatus(repo, ctx, templ, **args):
+    """:phabstatus: String. Return the diff approval status for a given hg rev
+    """
+    populateresponseforphab(repo, ctx)
+
     diffnum = getdiffnum(repo, ctx)
     if diffnum is not None:
-        return getdiffstatus(repo, diffnum)[0]
+        result = getdiffstatus(repo, diffnum)[0]
+        if isinstance(result, dict) and "status" in result:
+            return result.get("status")
+        else:
+            return "Error"
+
+"""
+In order to determine whether the local commit is in sync with the
+remote one we compare the hash of the current commit with the one we
+get from the remote (phabricator) repo. There are three different cases
+and we deal with them seperately.
+1) If this is the first revision in a diff: We look at the count field and
+understand that this is the first commit, so we compare the hash we get
+from remote repo with the predessesor's hash from the local commit. The
+reason for that is the D number is ammended on the commit after it is
+sent to phabricator.
+2) If this is the last revision, i.e. it is alread committed: Then we
+don't say anything. All good.
+3) If this is a middle revision: Then we compare the hashes as regular.
+"""
+def showsyncstatus(repo, ctx, templ, **args):
+    """:syncstatus: String. Return whether the local revision is in sync
+        with the remote (phabricator) revision
+    """
+    populateresponseforphab(repo, ctx)
+
+    diffnum = getdiffnum(repo, ctx)
+    local = ctx.hex()
+    if diffnum is not None:
+        result = getdiffstatus(repo, diffnum)[0]
+
+        if isinstance(result, dict) and "hash" in result \
+        and "status" in result and "count" in result:
+            remote = getdiffstatus(repo, diffnum)[0].get("hash")
+            status = getdiffstatus(repo, diffnum)[0].get("status")
+            count = int(getdiffstatus(repo, diffnum)[0].get("count"))
+
+            if local == remote:
+                return "sync"
+            elif count == 1:
+                precursors = list(obsolete.allprecursors(repo.obsstore,
+                    [ctx.node()]))
+                hashes = [repo.unfiltered()[h].hex() for h in precursors]
+                # hashes[0] is the current
+                # hashes[1] is the previous
+                if len(hashes) > 1 and hashes[1] == remote:
+                    return "sync"
+                else:
+                    return "unsync"
+            elif status == "Committed":
+                return "committed"
+            else:
+                return "unsync"
+        else:
+            return "Error"
 
 def getdiffnum(repo, ctx):
     return diffprops.parserevfromcommitmsg(ctx.description())
@@ -134,5 +195,6 @@ def _getdag(orig, *args):
 
 def extsetup(ui):
     templatekw.keywords['phabstatus'] = showphabstatus
+    templatekw.keywords['syncstatus'] = showsyncstatus
     smartlog = extensions.find("smartlog")
     extensions.wrapfunction(smartlog, 'getdag', _getdag)
