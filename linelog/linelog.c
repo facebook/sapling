@@ -248,7 +248,8 @@ static linelog_result replacelines(linelog_buf *buf, linelog_annotateresult *ar,
 	returnonerror(readinst(buf, &inst0, 0));
 	if (brev >= MAX_REVNUM || a2 >= MAX_LINENUM || b2 >= MAX_LINENUM)
 		return LINELOG_RESULT_EOVERFLOW;
-	if (a2 < a1 || b2 < b1 || !ar || a2 > ar->linecount)
+	if (a2 < a1 || b2 < b1 || !ar || a2 > ar->linecount
+			|| ar->linecount >= ar->maxlinecount)
 		return LINELOG_RESULT_EILLDATA;
 
 	/* useful variables for both step I and III */
