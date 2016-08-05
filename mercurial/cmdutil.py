@@ -549,7 +549,7 @@ def openrevlog(repo, cmd, file_, opts):
             if 'treemanifest' not in repo.requirements:
                 raise error.Abort(_("--dir can only be used on repos with "
                                    "treemanifest enabled"))
-            dirlog = repo.dirlog(dir)
+            dirlog = repo.manifest.dirlog(dir)
             if len(dirlog):
                 r = dirlog
         elif mf:
