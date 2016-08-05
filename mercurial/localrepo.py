@@ -71,7 +71,7 @@ class repofilecache(scmutil.filecache):
     """
 
     def join(self, obj, fname):
-        return obj.join(fname)
+        return obj.vfs.join(fname)
     def __get__(self, repo, type=None):
         if repo is None:
             return self
