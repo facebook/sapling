@@ -188,7 +188,7 @@ by hand to make changes to the repository or remove it.''' % name)
                 raise OSError(errno.ENOTDIR, os.strerror(errno.ENOTDIR), path)
 
         # Create client directory
-        dir_name = hashlib.sha1(repo_name.encode('utf-8')).hexdigest()
+        dir_name = hashlib.sha1(path.encode('utf-8')).hexdigest()
         client_dir = os.path.join(self._get_clients_dir(), dir_name)
         util.mkdir_p(client_dir)
 
