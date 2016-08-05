@@ -22,8 +22,6 @@ using facebook::eden::RelativePath;
 namespace {
 
 using folly::test::TemporaryDirectory;
-using TemporaryDirectory::Scope::PERMANENT;
-using folly::test::TemporaryFile;
 
 class ClientConfigTest : public ::testing::Test {
  protected:
@@ -34,9 +32,7 @@ class ClientConfigTest : public ::testing::Test {
   folly::fs::path userConfigPath_;
 
   virtual void SetUp() override {
-    edenDir_ = std::make_unique<TemporaryDirectory>(
-        "eden_config_test_", "", PERMANENT);
-
+    edenDir_ = std::make_unique<TemporaryDirectory>("eden_config_test_");
     clientDir_ = edenDir_->path() / "client";
     folly::fs::create_directory(clientDir_);
     systemConfigDir_ = edenDir_->path() / "config.d";
