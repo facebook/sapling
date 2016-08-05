@@ -173,7 +173,7 @@ def strip(ui, repo, nodelist, backup=True, topic='backup'):
                     if (unencoded.startswith('meta/') and
                         unencoded.endswith('00manifest.i')):
                         dir = unencoded[5:-12]
-                        repo.dirlog(dir).strip(striprev, tr)
+                        repo.manifest.dirlog(dir).strip(striprev, tr)
             for fn in files:
                 repo.file(fn).strip(striprev, tr)
             tr.endgroup()
