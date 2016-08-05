@@ -554,6 +554,18 @@ no errors when revbranchcache is not writable
   $ rmdir .hg/cache/rbc-revs-v1
   $ mv .hg/cache/rbc-revs-v1_ .hg/cache/rbc-revs-v1
 
+no errors when wlock cannot be acquired
+
+#if unix-permissions
+  $ mv .hg/cache/rbc-revs-v1 .hg/cache/rbc-revs-v1_
+  $ rm -f .hg/cache/branch*
+  $ chmod 555 .hg
+  $ hg head a -T '{rev}\n'
+  5
+  $ chmod 755 .hg
+  $ mv .hg/cache/rbc-revs-v1_ .hg/cache/rbc-revs-v1
+#endif
+
 recovery from invalid cache revs file with trailing data
   $ echo >> .hg/cache/rbc-revs-v1
   $ rm -f .hg/cache/branch* && hg head a -T '{rev}\n' --debug

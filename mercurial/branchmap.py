@@ -470,8 +470,10 @@ class revbranchcache(object):
     def write(self, tr=None):
         """Save branch cache if it is dirty."""
         repo = self._repo
-        if True:
+        wlock = None
+        try:
             if self._rbcnamescount < len(self._names):
+                wlock = repo.wlock(wait=False)
                 try:
                     if self._rbcnamescount != 0:
                         f = repo.vfs.open(_rbcnames, 'ab')
@@ -501,6 +503,8 @@ class revbranchcache(object):
 
             start = self._rbcrevslen * _rbcrecsize
             if start != len(self._rbcrevs):
+                if wlock is None:
+                    wlock = repo.wlock(wait=False)
                 revs = min(len(repo.changelog),
                            len(self._rbcrevs) // _rbcrecsize)
                 try:
@@ -521,3 +525,8 @@ class revbranchcache(object):
                                   inst)
                     return
                 self._rbcrevslen = revs
+        except error.LockError as inst:
+            repo.ui.debug("couldn't write revision branch cache: %s\n" % inst)
+        finally:
+            if wlock is not None:
+                wlock.release()
