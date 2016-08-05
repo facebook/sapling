@@ -56,10 +56,8 @@ class bundlerevlog(revlog.revlog):
         self.repotiprev = n - 1
         chain = None
         self.bundlerevs = set() # used by 'bundle()' revset expression
-        while True:
-            chunkdata = bundle.deltachunk(chain)
-            if not chunkdata:
-                break
+        getchunk = lambda: bundle.deltachunk(chain)
+        for chunkdata in iter(getchunk, {}):
             node = chunkdata['node']
             p1 = chunkdata['p1']
             p2 = chunkdata['p2']
