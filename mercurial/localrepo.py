@@ -260,7 +260,6 @@ class localrepository(object):
         self.vfs = None
         # vfs to access the store part of the repository
         self.svfs = None
-        self.wopener = self.wvfs
         self.root = self.wvfs.base
         self.path = self.wvfs.join(".hg")
         self.origroot = path
@@ -379,6 +378,11 @@ class localrepository(object):
 
         # generic mapping between names and nodes
         self.names = namespaces.namespaces()
+
+    @property
+    def wopener(self):
+        self.ui.deprecwarn("use 'repo.wvfs' instead of 'repo.wopener'", '4.2')
+        return self.wvfs
 
     def close(self):
         self._writecaches()
