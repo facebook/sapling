@@ -1585,10 +1585,7 @@ class revlog(object):
         try:
             # loop through our set of deltas
             chain = None
-            while True:
-                chunkdata = cg.deltachunk(chain)
-                if not chunkdata:
-                    break
+            for chunkdata in iter(lambda: cg.deltachunk(chain), {}):
                 node = chunkdata['node']
                 p1 = chunkdata['p1']
                 p2 = chunkdata['p2']
