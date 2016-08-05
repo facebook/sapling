@@ -69,11 +69,7 @@ class sshserver(wireproto.abstractserverproto):
         pass
 
     def groupchunks(self, changegroup):
-        while True:
-            d = changegroup.read(4096)
-            if not d:
-                break
-            yield d
+        return iter(lambda: changegroup.read(4096), '')
 
     def sendresponse(self, v):
         self.fout.write("%d\n" % len(v))
