@@ -267,7 +267,6 @@ class localrepository(object):
         self.nofsauditor = pathutil.pathauditor(self.root, self._checknested,
                                                 realfs=False)
         self.vfs = scmutil.vfs(self.path)
-        self.opener = self.vfs
         self.baseui = baseui
         self.ui = baseui.copy()
         self.ui.copy = baseui.copy # prevent copying repo configuration
@@ -383,6 +382,11 @@ class localrepository(object):
     def wopener(self):
         self.ui.deprecwarn("use 'repo.wvfs' instead of 'repo.wopener'", '4.2')
         return self.wvfs
+
+    @property
+    def opener(self):
+        self.ui.deprecwarn("use 'repo.vfs' instead of 'repo.opener'", '4.2')
+        return self.vfs
 
     def close(self):
         self._writecaches()

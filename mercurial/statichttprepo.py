@@ -123,7 +123,6 @@ class statichttprepository(localrepo.localrepository):
 
         vfsclass = build_opener(ui, authinfo)
         self.vfs = vfsclass(self.path)
-        self.opener = self.vfs
         self._phasedefaults = []
 
         self.names = namespaces.namespaces()
