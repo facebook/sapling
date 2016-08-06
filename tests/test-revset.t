@@ -504,6 +504,15 @@ infix/suffix resolution of ^ operator (issue2884):
   1
   2
 
+  $ try '9^:'
+  (rangepost
+    (parentpost
+      ('symbol', '9')))
+  * set:
+  <spanset+ 8:9>
+  8
+  9
+
  x^:y should be resolved before omitting group operators
 
   $ try '1^(:2)'
@@ -559,6 +568,22 @@ infix/suffix resolution of ^ operator (issue2884):
   0
   1
   2
+
+  $ try '(9^:)^:'
+  (rangepost
+    (parentpost
+      (group
+        (rangepost
+          (parentpost
+            ('symbol', '9'))))))
+  * set:
+  <spanset+ 4:9>
+  4
+  5
+  6
+  7
+  8
+  9
 
  x^ in alias should also be resolved
 

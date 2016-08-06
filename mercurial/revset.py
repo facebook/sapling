@@ -2323,11 +2323,14 @@ def _fixops(x):
     op = x[0]
     if op == 'parent':
         # x^:y means (x^) : y, not x ^ (:y)
+        # x^:  means (x^) :,   not x ^ (:)
         post = ('parentpost', x[1])
         if x[2][0] == 'dagrangepre':
             return _fixops(('dagrange', post, x[2][1]))
         elif x[2][0] == 'rangepre':
             return _fixops(('range', post, x[2][1]))
+        elif x[2][0] == 'rangeall':
+            return _fixops(('rangepost', post))
 
     return (op,) + tuple(_fixops(y) for y in x[1:])
 
