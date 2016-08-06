@@ -482,12 +482,7 @@ infix/suffix resolution of ^ operator (issue2884):
 
  x^:y means (x^):y
 
-  $ try --optimize '1^:2'
-  (parent
-    ('symbol', '1')
-    (rangepre
-      ('symbol', '2')))
-  * optimized:
+  $ try '1^:2'
   (range
     (parentpost
       ('symbol', '1'))
@@ -498,12 +493,7 @@ infix/suffix resolution of ^ operator (issue2884):
   1
   2
 
-  $ try --optimize '1^::2'
-  (parent
-    ('symbol', '1')
-    (dagrangepre
-      ('symbol', '2')))
-  * optimized:
+  $ try '1^::2'
   (dagrange
     (parentpost
       ('symbol', '1'))
@@ -516,31 +506,18 @@ infix/suffix resolution of ^ operator (issue2884):
 
  x^:y should be resolved before omitting group operators
 
-  $ try --optimize '1^(:2)'
+  $ try '1^(:2)'
   (parent
     ('symbol', '1')
     (group
       (rangepre
         ('symbol', '2'))))
-  * optimized:
-  (parent
-    ('symbol', '1')
-    (range
-      ('string', '0')
-      ('symbol', '2')))
   hg: parse error: ^ expects a number 0, 1, or 2
   [255]
 
  x^:y should be resolved recursively
 
-  $ try --optimize 'sort(1^:2)'
-  (func
-    ('symbol', 'sort')
-    (parent
-      ('symbol', '1')
-      (rangepre
-        ('symbol', '2'))))
-  * optimized:
+  $ try 'sort(1^:2)'
   (func
     ('symbol', 'sort')
     (range
@@ -553,22 +530,14 @@ infix/suffix resolution of ^ operator (issue2884):
   1
   2
 
-  $ try --optimize '(3^:4)^:2'
-  (parent
-    (group
-      (parent
-        ('symbol', '3')
-        (rangepre
-          ('symbol', '4'))))
-    (rangepre
-      ('symbol', '2')))
-  * optimized:
+  $ try '(3^:4)^:2'
   (range
     (parentpost
-      (range
-        (parentpost
-          ('symbol', '3'))
-        ('symbol', '4')))
+      (group
+        (range
+          (parentpost
+            ('symbol', '3'))
+          ('symbol', '4'))))
     ('symbol', '2'))
   * set:
   <spanset+ 0:2>
@@ -576,22 +545,14 @@ infix/suffix resolution of ^ operator (issue2884):
   1
   2
 
-  $ try --optimize '(3^::4)^::2'
-  (parent
-    (group
-      (parent
-        ('symbol', '3')
-        (dagrangepre
-          ('symbol', '4'))))
-    (dagrangepre
-      ('symbol', '2')))
-  * optimized:
+  $ try '(3^::4)^::2'
   (dagrange
     (parentpost
-      (dagrange
-        (parentpost
-          ('symbol', '3'))
-        ('symbol', '4')))
+      (group
+        (dagrange
+          (parentpost
+            ('symbol', '3'))
+          ('symbol', '4'))))
     ('symbol', '2'))
   * set:
   <baseset+ [0, 1, 2]>
@@ -601,14 +562,9 @@ infix/suffix resolution of ^ operator (issue2884):
 
  x^ in alias should also be resolved
 
-  $ try --optimize 'A' --config 'revsetalias.A=1^:2'
+  $ try 'A' --config 'revsetalias.A=1^:2'
   ('symbol', 'A')
   * expanded:
-  (parent
-    ('symbol', '1')
-    (rangepre
-      ('symbol', '2')))
-  * optimized:
   (range
     (parentpost
       ('symbol', '1'))
@@ -619,16 +575,11 @@ infix/suffix resolution of ^ operator (issue2884):
   1
   2
 
-  $ try --optimize 'A:2' --config 'revsetalias.A=1^'
+  $ try 'A:2' --config 'revsetalias.A=1^'
   (range
     ('symbol', 'A')
     ('symbol', '2'))
   * expanded:
-  (range
-    (parentpost
-      ('symbol', '1'))
-    ('symbol', '2'))
-  * optimized:
   (range
     (parentpost
       ('symbol', '1'))
@@ -642,7 +593,7 @@ infix/suffix resolution of ^ operator (issue2884):
  but not beyond the boundary of alias expansion, because the resolution should
  be made at the parsing stage
 
-  $ try --optimize '1^A' --config 'revsetalias.A=:2'
+  $ try '1^A' --config 'revsetalias.A=:2'
   (parent
     ('symbol', '1')
     ('symbol', 'A'))
@@ -651,17 +602,8 @@ infix/suffix resolution of ^ operator (issue2884):
     ('symbol', '1')
     (rangepre
       ('symbol', '2')))
-  * optimized:
-  (range
-    (parentpost
-      ('symbol', '1'))
-    ('symbol', '2'))
-  * set:
-  <spanset+ 0:2>
-  0
-  1
-  2
-BROKEN: should be parsed as '1^(:2)'
+  hg: parse error: ^ expects a number 0, 1, or 2
+  [255]
 
 ancestor can accept 0 or more arguments
 

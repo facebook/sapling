@@ -2314,6 +2314,23 @@ def _matchonly(revs, bases):
         and getsymbol(bases[1][1]) == 'ancestors'):
         return ('list', revs[2], bases[1][2])
 
+def _fixops(x):
+    """Rewrite raw parsed tree to resolve ambiguous syntax which cannot be
+    handled well by our simple top-down parser"""
+    if not isinstance(x, tuple):
+        return x
+
+    op = x[0]
+    if op == 'parent':
+        # x^:y means (x^) : y, not x ^ (:y)
+        post = ('parentpost', x[1])
+        if x[2][0] == 'dagrangepre':
+            return _fixops(('dagrange', post, x[2][1]))
+        elif x[2][0] == 'rangepre':
+            return _fixops(('range', post, x[2][1]))
+
+    return (op,) + tuple(_fixops(y) for y in x[1:])
+
 def _optimize(x, small):
     if x is None:
         return 0, x
@@ -2407,14 +2424,6 @@ def _optimize(x, small):
     elif op == 'group':
         return _optimize(x[1], small)
     elif op in 'dagrange range parent ancestorspec':
-        if op == 'parent':
-            # x^:y means (x^) : y, not x ^ (:y)
-            post = ('parentpost', x[1])
-            if x[2][0] == 'dagrangepre':
-                return _optimize(('dagrange', post, x[2][1]), small)
-            elif x[2][0] == 'rangepre':
-                return _optimize(('range', post, x[2][1]), small)
-
         wa, ta = _optimize(x[1], small)
         wb, tb = _optimize(x[2], small)
         return wa + wb, (op, ta, tb)
@@ -2470,7 +2479,7 @@ def _parsewith(spec, lookup=None, syminitletters=None):
                                  syminitletters=syminitletters))
     if pos != len(spec):
         raise error.ParseError(_('invalid token'), pos)
-    return parser.simplifyinfixops(tree, ('list', 'or'))
+    return _fixops(parser.simplifyinfixops(tree, ('list', 'or')))
 
 class _aliasrules(parser.basealiasrules):
     """Parsing and expansion rule set of revset aliases"""
