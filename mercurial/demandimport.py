@@ -64,8 +64,12 @@ def _hgextimport(importfunc, name, globals, *args, **kwargs):
         return importfunc(hgextname, globals, *args, **kwargs)
 
 class _demandmod(object):
-    """module demand-loader and proxy"""
-    def __init__(self, name, globals, locals, level=level):
+    """module demand-loader and proxy
+
+    Specify 1 as 'level' argument at construction, to import module
+    relatively.
+    """
+    def __init__(self, name, globals, locals, level):
         if '.' in name:
             head, rest = name.split('.', 1)
             after = [rest]
