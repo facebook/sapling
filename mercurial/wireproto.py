@@ -745,12 +745,6 @@ def debugwireargs(repo, proto, one, two, others):
     opts = options('debugwireargs', ['three', 'four'], others)
     return repo.debugwireargs(one, two, **opts)
 
-# List of options accepted by getbundle.
-#
-# Meant to be extended by extensions. It is the extension's responsibility to
-# ensure such options are properly processed in exchange.getbundle.
-gboptslist = ['heads', 'common', 'bundlecaps']
-
 @wireprotocommand('getbundle', '*')
 def getbundle(repo, proto, others):
     opts = options('getbundle', gboptsmap.keys(), others)
