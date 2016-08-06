@@ -187,6 +187,16 @@ def unescapearg(escaped):
             .replace(':o', ',')
             .replace(':c', ':'))
 
+def encodebatchcmds(req):
+    """Return a ``cmds`` argument value for the ``batch`` command."""
+    cmds = []
+    for op, argsdict in req:
+        args = ','.join('%s=%s' % (escapearg(k), escapearg(v))
+                        for k, v in argsdict.iteritems())
+        cmds.append('%s %s' % (op, args))
+
+    return ';'.join(cmds)
+
 # mapping of options accepted by getbundle and their types
 #
 # Meant to be extended by extensions. It is extensions responsibility to ensure
@@ -226,12 +236,7 @@ class wirepeer(peer.peerrepository):
 
         Returns an iterator of the raw responses from the server.
         """
-        cmds = []
-        for op, argsdict in req:
-            args = ','.join('%s=%s' % (escapearg(k), escapearg(v))
-                            for k, v in argsdict.iteritems())
-            cmds.append('%s %s' % (op, args))
-        rsp = self._callstream("batch", cmds=';'.join(cmds))
+        rsp = self._callstream("batch", cmds=encodebatchcmds(req))
         chunk = rsp.read(1024)
         work = [chunk]
         while chunk:

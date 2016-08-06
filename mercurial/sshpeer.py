@@ -232,13 +232,7 @@ class sshpeer(wireproto.wirepeer):
     __del__ = cleanup
 
     def _submitbatch(self, req):
-        cmds = []
-        for op, argsdict in req:
-            args = ','.join('%s=%s' % (wireproto.escapearg(k),
-                                       wireproto.escapearg(v))
-                            for k, v in argsdict.iteritems())
-            cmds.append('%s %s' % (op, args))
-        rsp = self._callstream("batch", cmds=';'.join(cmds))
+        rsp = self._callstream("batch", cmds=wireproto.encodebatchcmds(req))
         available = self._getamount()
         # TODO this response parsing is probably suboptimal for large
         # batches with large responses.
