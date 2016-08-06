@@ -432,6 +432,36 @@ Examine module importing.
   REL: this is absextroot.xsub1.xsub2.called.func()
   REL: this relimporter imports 'this is absextroot.relimportee'
 
+Examine whether sub-module is imported relatively as expected.
+
+See also issue5208 for detail about example case on Python 3.x.
+
+  $ f -q $TESTTMP/extlibroot/lsub1/lsub2/notexist.py
+  $TESTTMP/extlibroot/lsub1/lsub2/notexist.py: file not found
+
+  $ cat > $TESTTMP/notexist.py <<EOF
+  > text = 'notexist.py at root is loaded unintentionally\n'
+  > EOF
+
+  $ cat > $TESTTMP/checkrelativity.py <<EOF
+  > from mercurial import cmdutil
+  > cmdtable = {}
+  > command = cmdutil.command(cmdtable)
+  > 
+  > # demand import avoids failure of importing notexist here
+  > import extlibroot.lsub1.lsub2.notexist
+  > 
+  > @command('checkrelativity', [], norepo=True)
+  > def checkrelativity(ui, *args, **opts):
+  >     try:
+  >         ui.write(extlibroot.lsub1.lsub2.notexist.text)
+  >         return 1 # unintentional success
+  >     except ImportError:
+  >         pass # intentional failure
+  > EOF
+
+  $ (PYTHONPATH=${PYTHONPATH}${PATHSEP}${TESTTMP}; hg --config extensions.checkrelativity=$TESTTMP/checkrelativity.py checkrelativity)
+
 #endif
 
   $ cd ..
