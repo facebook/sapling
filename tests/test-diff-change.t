@@ -50,6 +50,13 @@ as pairs even if x == y, but not for "f(x:y)" nor "x::y" (issue3474, issue4774)
   @@ -1,1 +1,1 @@
   -third
   +wdir
+  $ hg diff -r '(2:2)' --nodates
+  diff -r bf5ff72eb7e0 file.txt
+  --- a/file.txt
+  +++ b/file.txt
+  @@ -1,1 +1,1 @@
+  -third
+  +wdir
   $ hg diff -r 2::2 --nodates
   diff -r bf5ff72eb7e0 file.txt
   --- a/file.txt
