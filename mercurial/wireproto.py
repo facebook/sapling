@@ -191,6 +191,11 @@ def encodebatchcmds(req):
     """Return a ``cmds`` argument value for the ``batch`` command."""
     cmds = []
     for op, argsdict in req:
+        # Old servers didn't properly unescape argument names. So prevent
+        # the sending of argument names that may not be decoded properly by
+        # servers.
+        assert all(escapearg(k) == k for k in argsdict)
+
         args = ','.join('%s=%s' % (escapearg(k), escapearg(v))
                         for k, v in argsdict.iteritems())
         cmds.append('%s %s' % (op, args))
@@ -620,7 +625,7 @@ def batch(repo, proto, cmds, others):
         for a in args.split(','):
             if a:
                 n, v = a.split('=')
-                vals[n] = unescapearg(v)
+                vals[unescapearg(n)] = unescapearg(v)
         func, spec = commands[op]
         if spec:
             keys = spec.split()
