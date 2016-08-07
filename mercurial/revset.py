@@ -2463,7 +2463,7 @@ def _optimize(x, small):
         else:
             w = 1
         return w + wa, (op, x[1], ta)
-    return 1, x
+    raise ValueError('invalid operator %r' % op)
 
 def optimize(tree):
     _weight, newtree = _optimize(tree, small=True)
