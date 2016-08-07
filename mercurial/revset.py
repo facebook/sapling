@@ -1528,6 +1528,9 @@ def p2(repo, subset, x):
     # some optimisations from the fact this is a baseset.
     return subset & ps
 
+def parentpost(repo, subset, x):
+    return p1(repo, subset, x)
+
 @predicate('parents([set])', safe=True)
 def parents(repo, subset, x):
     """
@@ -2307,7 +2310,7 @@ methods = {
     "func": func,
     "ancestor": ancestorspec,
     "parent": parentspec,
-    "parentpost": p1,
+    "parentpost": parentpost,
 }
 
 # Constants for ordering requirement, used in _analyze():
