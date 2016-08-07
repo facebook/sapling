@@ -1987,8 +1987,9 @@ def debugbuilddag(ui, repo, text=None,
 
     tags = []
 
-    lock = tr = None
+    wlock = lock = tr = None
     try:
+        wlock = repo.wlock()
         lock = repo.lock()
         tr = repo.transaction("builddag")
 
@@ -2073,7 +2074,7 @@ def debugbuilddag(ui, repo, text=None,
             repo.vfs.write("localtags", "".join(tags))
     finally:
         ui.progress(_('building'), None)
-        release(tr, lock)
+        release(tr, lock, wlock)
 
 @command('debugbundle',
         [('a', 'all', None, _('show all details')),
