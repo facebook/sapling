@@ -3354,53 +3354,54 @@ def qqueue(ui, repo, name=None, **opts):
         raise error.Abort(
                 _('invalid queue name, may not contain the characters ":\\/."'))
 
-    existing = _getqueues()
+    with repo.wlock():
+        existing = _getqueues()
 
-    if opts.get('create'):
-        if name in existing:
-            raise error.Abort(_('queue "%s" already exists') % name)
-        if _noqueues():
-            _addqueue(_defaultqueue)
-        _addqueue(name)
-        _setactive(name)
-    elif opts.get('rename'):
-        current = _getcurrent()
-        if name == current:
-            raise error.Abort(_('can\'t rename "%s" to its current name')
-                              % name)
-        if name in existing:
-            raise error.Abort(_('queue "%s" already exists') % name)
+        if opts.get('create'):
+            if name in existing:
+                raise error.Abort(_('queue "%s" already exists') % name)
+            if _noqueues():
+                _addqueue(_defaultqueue)
+            _addqueue(name)
+            _setactive(name)
+        elif opts.get('rename'):
+            current = _getcurrent()
+            if name == current:
+                raise error.Abort(_('can\'t rename "%s" to its current name')
+                                  % name)
+            if name in existing:
+                raise error.Abort(_('queue "%s" already exists') % name)
 
-        olddir = _queuedir(current)
-        newdir = _queuedir(name)
+            olddir = _queuedir(current)
+            newdir = _queuedir(name)
 
-        if os.path.exists(newdir):
-            raise error.Abort(_('non-queue directory "%s" already exists') %
-                    newdir)
+            if os.path.exists(newdir):
+                raise error.Abort(_('non-queue directory "%s" already exists') %
+                        newdir)
 
-        fh = repo.vfs('patches.queues.new', 'w')
-        for queue in existing:
-            if queue == current:
-                fh.write('%s\n' % (name,))
-                if os.path.exists(olddir):
-                    util.rename(olddir, newdir)
-            else:
-                fh.write('%s\n' % (queue,))
-        fh.close()
-        util.rename(repo.join('patches.queues.new'), repo.join(_allqueues))
-        _setactivenocheck(name)
-    elif opts.get('delete'):
-        _delete(name)
-    elif opts.get('purge'):
-        if name in existing:
+            fh = repo.vfs('patches.queues.new', 'w')
+            for queue in existing:
+                if queue == current:
+                    fh.write('%s\n' % (name,))
+                    if os.path.exists(olddir):
+                        util.rename(olddir, newdir)
+                else:
+                    fh.write('%s\n' % (queue,))
+            fh.close()
+            util.rename(repo.join('patches.queues.new'), repo.join(_allqueues))
+            _setactivenocheck(name)
+        elif opts.get('delete'):
             _delete(name)
-        qdir = _queuedir(name)
-        if os.path.exists(qdir):
-            shutil.rmtree(qdir)
-    else:
-        if name not in existing:
-            raise error.Abort(_('use --create to create a new queue'))
-        _setactive(name)
+        elif opts.get('purge'):
+            if name in existing:
+                _delete(name)
+            qdir = _queuedir(name)
+            if os.path.exists(qdir):
+                shutil.rmtree(qdir)
+        else:
+            if name not in existing:
+                raise error.Abort(_('use --create to create a new queue'))
+            _setactive(name)
 
 def mqphasedefaults(repo, roots):
     """callback used to set mq changeset as secret when no phase data exists"""
