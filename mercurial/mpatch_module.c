@@ -59,7 +59,7 @@ patches(PyObject *self, PyObject *args)
 	PyObject *text, *bins, *result;
 	struct mpatch_flist *patch;
 	const char *in;
-	int r;
+	int r = 0;
 	char *out;
 	Py_ssize_t len, outlen, inlen;
 
