@@ -2423,6 +2423,9 @@ def _optimize(x, small):
     elif op == 'list':
         ws, ts = zip(*(_optimize(y, small) for y in x[1:]))
         return sum(ws), (op,) + ts
+    elif op == 'keyvalue':
+        w, t = _optimize(x[2], small)
+        return w, (op, x[1], t)
     elif op == 'func':
         f = getsymbol(x[1])
         wa, ta = _optimize(x[2], small)
