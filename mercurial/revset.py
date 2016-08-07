@@ -422,7 +422,10 @@ def keyvaluepair(repo, subset, k, v):
 def func(repo, subset, a, b, order):
     f = getsymbol(a)
     if f in symbols:
-        return symbols[f](repo, subset, b)
+        fn = symbols[f]
+        if getattr(fn, '_takeorder', False):
+            return fn(repo, subset, b, order)
+        return fn(repo, subset, b)
 
     keep = lambda fn: getattr(fn, '__doc__', None) is not None
 

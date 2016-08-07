@@ -108,6 +108,9 @@ class revsetpredicate(_funcregistrarbase):
     Optional argument 'safe' indicates whether a predicate is safe for
     DoS attack (False by default).
 
+    Optional argument 'takeorder' indicates whether a predicate function
+    takes ordering policy as the last argument.
+
     'revsetpredicate' instance in example above can be used to
     decorate multiple functions.
 
@@ -120,8 +123,9 @@ class revsetpredicate(_funcregistrarbase):
     _getname = _funcregistrarbase._parsefuncdecl
     _docformat = "``%s``\n    %s"
 
-    def _extrasetup(self, name, func, safe=False):
+    def _extrasetup(self, name, func, safe=False, takeorder=False):
         func._safe = safe
+        func._takeorder = takeorder
 
 class filesetpredicate(_funcregistrarbase):
     """Decorator to register fileset predicate
