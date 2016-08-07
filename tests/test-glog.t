@@ -1455,12 +1455,13 @@ glog always reorders nodes which explains the difference with log
   (group
     (group
       (or
-        (func
-          ('symbol', 'user')
-          ('string', 'test'))
-        (func
-          ('symbol', 'user')
-          ('string', 'not-a-user')))))
+        (list
+          (func
+            ('symbol', 'user')
+            ('string', 'test'))
+          (func
+            ('symbol', 'user')
+            ('string', 'not-a-user'))))))
   $ testlog -b not-a-branch
   abort: unknown revision 'not-a-branch'!
   abort: unknown revision 'not-a-branch'!
@@ -1470,26 +1471,28 @@ glog always reorders nodes which explains the difference with log
   (group
     (group
       (or
-        (func
-          ('symbol', 'branch')
-          ('string', 'default'))
-        (func
-          ('symbol', 'branch')
-          ('string', 'branch'))
-        (func
-          ('symbol', 'branch')
-          ('string', 'branch')))))
+        (list
+          (func
+            ('symbol', 'branch')
+            ('string', 'default'))
+          (func
+            ('symbol', 'branch')
+            ('string', 'branch'))
+          (func
+            ('symbol', 'branch')
+            ('string', 'branch'))))))
   $ testlog -k expand -k merge
   []
   (group
     (group
       (or
-        (func
-          ('symbol', 'keyword')
-          ('string', 'expand'))
-        (func
-          ('symbol', 'keyword')
-          ('string', 'merge')))))
+        (list
+          (func
+            ('symbol', 'keyword')
+            ('string', 'expand'))
+          (func
+            ('symbol', 'keyword')
+            ('string', 'merge'))))))
   $ testlog --only-merges
   []
   (group
@@ -1520,17 +1523,19 @@ glog always reorders nodes which explains the difference with log
         (not
           (group
             (or
-              ('string', '31')
-              (func
-                ('symbol', 'ancestors')
-                ('string', '31')))))
+              (list
+                ('string', '31')
+                (func
+                  ('symbol', 'ancestors')
+                  ('string', '31'))))))
         (not
           (group
             (or
-              ('string', '32')
-              (func
-                ('symbol', 'ancestors')
-                ('string', '32'))))))))
+              (list
+                ('string', '32')
+                (func
+                  ('symbol', 'ancestors')
+                  ('string', '32')))))))))
 
 Dedicated repo for --follow and paths filtering. The g is crafted to
 have 2 filelog topological heads in a linear changeset graph.
@@ -1587,12 +1592,13 @@ have 2 filelog topological heads in a linear changeset graph.
   (group
     (group
       (or
-        (func
-          ('symbol', 'filelog')
-          ('string', 'a'))
-        (func
-          ('symbol', 'filelog')
-          ('string', 'b')))))
+        (list
+          (func
+            ('symbol', 'filelog')
+            ('string', 'a'))
+          (func
+            ('symbol', 'filelog')
+            ('string', 'b'))))))
 
 Test falling back to slow path for non-existing files
 
@@ -1744,12 +1750,13 @@ Test --follow and multiple files
   (group
     (group
       (or
-        (func
-          ('symbol', 'follow')
-          ('string', 'g'))
-        (func
-          ('symbol', 'follow')
-          ('string', 'e')))))
+        (list
+          (func
+            ('symbol', 'follow')
+            ('string', 'g'))
+          (func
+            ('symbol', 'follow')
+            ('string', 'e'))))))
   $ cat log.nodes
   nodetag 4
   nodetag 3

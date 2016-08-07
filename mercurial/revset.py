@@ -397,14 +397,17 @@ def andset(repo, subset, x, y):
 def differenceset(repo, subset, x, y):
     return getset(repo, subset, x) - getset(repo, subset, y)
 
-def orset(repo, subset, *xs):
+def _orsetlist(repo, subset, xs):
     assert xs
     if len(xs) == 1:
         return getset(repo, subset, xs[0])
     p = len(xs) // 2
-    a = orset(repo, subset, *xs[:p])
-    b = orset(repo, subset, *xs[p:])
+    a = _orsetlist(repo, subset, xs[:p])
+    b = _orsetlist(repo, subset, xs[p:])
     return a + b
+
+def orset(repo, subset, x):
+    return _orsetlist(repo, subset, getlist(x))
 
 def notset(repo, subset, x):
     return subset - getset(repo, subset, x)
@@ -2339,6 +2342,10 @@ def _fixops(x):
             return _fixops(('range', post, x[2][1]))
         elif x[2][0] == 'rangeall':
             return _fixops(('rangepost', post))
+    elif op == 'or':
+        # make number of arguments deterministic:
+        # x + y + z -> (or x y z) -> (or (list x y z))
+        return (op, _fixops(('list',) + x[1:]))
 
     return (op,) + tuple(_fixops(y) for y in x[1:])
 
@@ -2374,7 +2381,7 @@ def _analyze(x):
         tb = _analyze(x[2])
         return (op, ta, tb)
     elif op == 'or':
-        return (op,) + tuple(_analyze(y) for y in x[1:])
+        return (op, _analyze(x[1]))
     elif op == 'not':
         return (op, _analyze(x[1]))
     elif op == 'parentpost':
@@ -2445,7 +2452,7 @@ def _optimize(x, small):
             ws.append(w)
             ts.append(t)
             del ss[:]
-        for y in x[1:]:
+        for y in getlist(x[1]):
             w, t = _optimize(y, False)
             if t is not None and (t[0] == 'string' or t[0] == 'symbol'):
                 ss.append((w, t))
@@ -2459,7 +2466,7 @@ def _optimize(x, small):
         # we can't reorder trees by weight because it would change the order.
         # ("sort(a + b)" == "sort(b + a)", but "a + b" != "b + a")
         #   ts = tuple(t for w, t in sorted(zip(ws, ts), key=lambda wt: wt[0]))
-        return max(ws), (op,) + tuple(ts)
+        return max(ws), (op, ('list',) + tuple(ts))
     elif op == 'not':
         # Optimize not public() to _notpublic() because we have a fast version
         if x[1] == ('func', ('symbol', 'public'), None):
@@ -2613,7 +2620,7 @@ def matchany(ui, specs, repo=None):
     if len(specs) == 1:
         tree = parse(specs[0], lookup)
     else:
-        tree = ('or',) + tuple(parse(s, lookup) for s in specs)
+        tree = ('or', ('list',) + tuple(parse(s, lookup) for s in specs))
 
     if ui:
         tree = expandaliases(ui, tree)
