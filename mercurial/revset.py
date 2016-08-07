@@ -2371,7 +2371,7 @@ def _optimize(x, small):
     elif op == 'negate':
         s = getstring(x[1], _("can't negate that"))
         return _optimize(('string', '-' + s), small)
-    elif op in 'string symbol negate':
+    elif op in 'string symbol':
         return smallbonus, x # single revisions are small
     elif op == 'and':
         wa, ta = _optimize(x[1], True)
