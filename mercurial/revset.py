@@ -2371,7 +2371,7 @@ def _optimize(x, small):
     elif op == 'negate':
         s = getstring(x[1], _("can't negate that"))
         return _optimize(('string', '-' + s), small)
-    elif op in 'string symbol':
+    elif op in ('string', 'symbol'):
         return smallbonus, x # single revisions are small
     elif op == 'and':
         wa, ta = _optimize(x[1], True)
@@ -2434,7 +2434,7 @@ def _optimize(x, small):
         return o[0], (op, o[1])
     elif op == 'group':
         return _optimize(x[1], small)
-    elif op in 'dagrange range parent ancestorspec':
+    elif op in ('dagrange', 'range', 'parent', 'ancestor'):
         wa, ta = _optimize(x[1], small)
         wb, tb = _optimize(x[2], small)
         return wa + wb, (op, ta, tb)
@@ -2447,18 +2447,18 @@ def _optimize(x, small):
     elif op == 'func':
         f = getsymbol(x[1])
         wa, ta = _optimize(x[2], small)
-        if f in ("author branch closed date desc file grep keyword "
-                 "outgoing user"):
+        if f in ('author', 'branch', 'closed', 'date', 'desc', 'file', 'grep',
+                 'keyword', 'outgoing', 'user'):
             w = 10 # slow
-        elif f in "modifies adds removes":
+        elif f in ('modifies', 'adds', 'removes'):
             w = 30 # slower
         elif f == "contains":
             w = 100 # very slow
         elif f == "ancestor":
             w = 1 * smallbonus
-        elif f in "reverse limit first _intlist":
+        elif f in ('reverse', 'limit', 'first', '_intlist'):
             w = 0
-        elif f in "sort":
+        elif f == "sort":
             w = 10 # assume most sorts look at changelog
         else:
             w = 1
