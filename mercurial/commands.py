@@ -4593,12 +4593,15 @@ def help_(ui, name=None, **opts):
     section = None
     subtopic = None
     if name and '.' in name:
-        name, section = name.split('.', 1)
-        section = encoding.lower(section)
-        if '.' in section:
-            subtopic, section = section.split('.', 1)
+        name, remaining = name.split('.', 1)
+        remaining = encoding.lower(remaining)
+        if '.' in remaining:
+            subtopic, section = remaining.split('.', 1)
         else:
-            subtopic = section
+            if name in help.subtopics:
+                subtopic = remaining
+            else:
+                section = remaining
 
     text = help.help_(ui, name, subtopic=subtopic, **opts)
 

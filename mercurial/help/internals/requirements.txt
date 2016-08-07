@@ -1,5 +1,3 @@
-Requirements
-============
 
 Repositories contain a file (``.hg/requires``) containing a list of
 features/capabilities that are *required* for clients to interface
@@ -19,7 +17,7 @@ The following sections describe the requirements defined by the
 Mercurial core distribution.
 
 revlogv1
---------
+========
 
 When present, revlogs are version 1 (RevlogNG). RevlogNG was introduced
 in 2006. The ``revlogv1`` requirement has been enabled by default
@@ -28,7 +26,7 @@ since the ``requires`` file was introduced in Mercurial 0.9.2.
 If this requirement is not present, version 0 revlogs are assumed.
 
 store
------
+=====
 
 The *store* repository layout should be used.
 
@@ -36,7 +34,7 @@ This requirement has been enabled by default since the ``requires`` file
 was introduced in Mercurial 0.9.2.
 
 fncache
--------
+=======
 
 The *fncache* repository layout should be used.
 
@@ -48,7 +46,7 @@ enabled (which is the default behavior). It was introduced in Mercurial
 1.1 (released December 2008).
 
 shared
-------
+======
 
 Denotes that the store for a repository is shared from another location
 (defined by the ``.hg/sharedpath`` file).
@@ -58,7 +56,7 @@ This requirement is set when a repository is created via :hg:`share`.
 The requirement was added in Mercurial 1.3 (released July 2009).
 
 dotencode
----------
+=========
 
 The *dotencode* repository layout should be used.
 
@@ -70,7 +68,7 @@ is enabled (which is the default behavior). It was introduced in
 Mercurial 1.7 (released November 2010).
 
 parentdelta
------------
+===========
 
 Denotes a revlog delta encoding format that was experimental and
 replaced by *generaldelta*. It should not be seen in the wild because
@@ -80,7 +78,7 @@ This requirement was added in Mercurial 1.7 and removed in Mercurial
 1.9.
 
 generaldelta
-------------
+============
 
 Revlogs should be created with the *generaldelta* flag enabled. The
 generaldelta flag will cause deltas to be encoded against a parent
@@ -91,7 +89,7 @@ July 2011). The requirement was disabled on new repositories by
 default until Mercurial 3.7 (released February 2016).
 
 manifestv2
-----------
+==========
 
 Denotes that version 2 of manifests are being used.
 
@@ -100,7 +98,7 @@ May 2015). The requirement is currently experimental and is disabled
 by default.
 
 treemanifest
-------------
+============
 
 Denotes that tree manifests are being used. Tree manifests are
 one manifest per directory (as opposed to a single flat manifest).

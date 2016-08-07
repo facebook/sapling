@@ -1,6 +1,3 @@
-Bundles
-=======
-
 A bundle is a container for repository data.
 
 Bundles are used as standalone files as well as the interchange format
@@ -8,7 +5,7 @@ over the wire protocol used when two Mercurial peers communicate with
 each other.
 
 Headers
--------
+=======
 
 Bundles produced since Mercurial 0.7 (September 2005) have a 4 byte
 header identifying the major bundle type. The header always begins with

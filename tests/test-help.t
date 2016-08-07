@@ -929,16 +929,16 @@ internals topic renders index of available sub-topics
   Technical implementation topics
   """""""""""""""""""""""""""""""
   
-       bundles       container for exchange of repository data
-       changegroups  representation of revlog data
-       requirements  repository requirements
-       revlogs       revision storage mechanism
+       bundles       Bundles
+       changegroups  Changegroups
+       requirements  Repository Requirements
+       revlogs       Revision Logs
 
 sub-topics can be accessed
 
   $ hg help internals.changegroups
-      Changegroups
-      ============
+  Changegroups
+  """"""""""""
   
       Changegroups are representations of repository revlog data, specifically
       the changelog, manifest, and filelogs.
@@ -974,7 +974,7 @@ sub-topics can be accessed
       this an *empty chunk*.
   
       Delta Groups
-      ------------
+      ============
   
       A *delta group* expresses the content of a revlog as a series of deltas,
       or patches against previous revisions.
@@ -1050,21 +1050,21 @@ sub-topics can be accessed
       which can result in smaller deltas and more efficient encoding of data.
   
       Changeset Segment
-      -----------------
+      =================
   
       The *changeset segment* consists of a single *delta group* holding
       changelog data. It is followed by an *empty chunk* to denote the boundary
       to the *manifests segment*.
   
       Manifest Segment
-      ----------------
+      ================
   
       The *manifest segment* consists of a single *delta group* holding manifest
       data. It is followed by an *empty chunk* to denote the boundary to the
       *filelogs segment*.
   
       Filelogs Segment
-      ----------------
+      ================
   
       The *filelogs* segment consists of multiple sub-segments, each
       corresponding to an individual file whose data is being described:
@@ -2872,28 +2872,28 @@ Sub-topic indexes rendered properly
   bundles
   </a>
   </td><td>
-  container for exchange of repository data
+  Bundles
   </td></tr>
   <tr><td>
   <a href="/help/internals.changegroups">
   changegroups
   </a>
   </td><td>
-  representation of revlog data
+  Changegroups
   </td></tr>
   <tr><td>
   <a href="/help/internals.requirements">
   requirements
   </a>
   </td><td>
-  repository requirements
+  Repository Requirements
   </td></tr>
   <tr><td>
   <a href="/help/internals.revlogs">
   revlogs
   </a>
   </td><td>
-  revision storage mechanism
+  Revision Logs
   </td></tr>
   
   
@@ -2957,8 +2957,7 @@ Sub-topic topics rendered properly
   number or hash, or <a href="/help/revsets">revset expression</a>.</div>
   </form>
   <div id="doc">
-  <h1>representation of revlog data</h1>
-  <h2>Changegroups</h2>
+  <h1>Changegroups</h1>
   <p>
   Changegroups are representations of repository revlog data, specifically
   the changelog, manifest, and filelogs.
@@ -3000,7 +2999,7 @@ Sub-topic topics rendered properly
   There is a special case chunk that has 0 length (&quot;0x00000000&quot;). We
   call this an *empty chunk*.
   </p>
-  <h3>Delta Groups</h3>
+  <h2>Delta Groups</h2>
   <p>
   A *delta group* expresses the content of a revlog as a series of deltas,
   or patches against previous revisions.
@@ -3091,19 +3090,19 @@ Sub-topic topics rendered properly
   changegroup. This allows the delta to be expressed against any parent,
   which can result in smaller deltas and more efficient encoding of data.
   </p>
-  <h3>Changeset Segment</h3>
+  <h2>Changeset Segment</h2>
   <p>
   The *changeset segment* consists of a single *delta group* holding
   changelog data. It is followed by an *empty chunk* to denote the
   boundary to the *manifests segment*.
   </p>
-  <h3>Manifest Segment</h3>
+  <h2>Manifest Segment</h2>
   <p>
   The *manifest segment* consists of a single *delta group* holding
   manifest data. It is followed by an *empty chunk* to denote the boundary
   to the *filelogs segment*.
   </p>
-  <h3>Filelogs Segment</h3>
+  <h2>Filelogs Segment</h2>
   <p>
   The *filelogs* segment consists of multiple sub-segments, each
   corresponding to an individual file whose data is being described:
