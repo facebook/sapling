@@ -30,7 +30,7 @@
 char *mpatch_errors[] = {NULL, "invalid patch", "patch cannot be decoded",
 						"no memory"};
 
-struct mpatch_flist *lalloc(ssize_t size)
+static struct mpatch_flist *lalloc(ssize_t size)
 {
 	struct mpatch_flist *a = NULL;
 
