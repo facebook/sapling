@@ -360,7 +360,7 @@ def stringset(repo, subset, x):
         return baseset([x])
     return baseset()
 
-def rangeset(repo, subset, x, y):
+def rangeset(repo, subset, x, y, order):
     m = getset(repo, fullreposet(repo), x)
     n = getset(repo, fullreposet(repo), y)
 
@@ -385,16 +385,16 @@ def rangeset(repo, subset, x, y):
     # would be more efficient.
     return r & subset
 
-def dagrange(repo, subset, x, y):
+def dagrange(repo, subset, x, y, order):
     r = fullreposet(repo)
     xs = reachableroots(repo, getset(repo, r, x), getset(repo, r, y),
                          includepath=True)
     return subset & xs
 
-def andset(repo, subset, x, y):
+def andset(repo, subset, x, y, order):
     return getset(repo, getset(repo, subset, x), y)
 
-def differenceset(repo, subset, x, y):
+def differenceset(repo, subset, x, y, order):
     return getset(repo, subset, x) - getset(repo, subset, y)
 
 def _orsetlist(repo, subset, xs):
@@ -406,10 +406,10 @@ def _orsetlist(repo, subset, xs):
     b = _orsetlist(repo, subset, xs[p:])
     return a + b
 
-def orset(repo, subset, x):
+def orset(repo, subset, x, order):
     return _orsetlist(repo, subset, getlist(x))
 
-def notset(repo, subset, x):
+def notset(repo, subset, x, order):
     return subset - getset(repo, subset, x)
 
 def listset(repo, subset, *xs):
@@ -419,7 +419,7 @@ def listset(repo, subset, *xs):
 def keyvaluepair(repo, subset, k, v):
     raise error.ParseError(_("can't use a key-value pair in this context"))
 
-def func(repo, subset, a, b):
+def func(repo, subset, a, b, order):
     f = getsymbol(a)
     if f in symbols:
         return symbols[f](repo, subset, b)
@@ -516,7 +516,7 @@ def _firstancestors(repo, subset, x):
     # Like ``ancestors(set)`` but follows only the first parents.
     return _ancestors(repo, subset, x, followfirst=True)
 
-def ancestorspec(repo, subset, x, n):
+def ancestorspec(repo, subset, x, n, order):
     """``set~n``
     Changesets that are the Nth ancestor (first parents only) of a changeset
     in set.
@@ -1528,7 +1528,7 @@ def p2(repo, subset, x):
     # some optimisations from the fact this is a baseset.
     return subset & ps
 
-def parentpost(repo, subset, x):
+def parentpost(repo, subset, x, order):
     return p1(repo, subset, x)
 
 @predicate('parents([set])', safe=True)
@@ -1581,7 +1581,7 @@ def secret(repo, subset, x):
     target = phases.secret
     return _phase(repo, subset, target)
 
-def parentspec(repo, subset, x, n):
+def parentspec(repo, subset, x, n, order):
     """``set^0``
     The set.
     ``set^1`` (or ``set^``), ``set^2``
@@ -2426,25 +2426,25 @@ def _analyze(x, order):
     elif op == 'and':
         ta = _analyze(x[1], order)
         tb = _analyze(x[2], _tofolloworder[order])
-        return (op, ta, tb)
+        return (op, ta, tb, order)
     elif op == 'or':
-        return (op, _analyze(x[1], order))
+        return (op, _analyze(x[1], order), order)
     elif op == 'not':
-        return (op, _analyze(x[1], anyorder))
+        return (op, _analyze(x[1], anyorder), order)
     elif op == 'parentpost':
-        return (op, _analyze(x[1], defineorder))
+        return (op, _analyze(x[1], defineorder), order)
     elif op == 'group':
         return _analyze(x[1], order)
     elif op in ('dagrange', 'range', 'parent', 'ancestor'):
         ta = _analyze(x[1], defineorder)
         tb = _analyze(x[2], defineorder)
-        return (op, ta, tb)
+        return (op, ta, tb, order)
     elif op == 'list':
         return (op,) + tuple(_analyze(y, order) for y in x[1:])
     elif op == 'keyvalue':
         return (op, x[1], _analyze(x[2], order))
     elif op == 'func':
-        return (op, x[1], _analyze(x[2], defineorder))
+        return (op, x[1], _analyze(x[2], defineorder), order)
     raise ValueError('invalid operator %r' % op)
 
 def analyze(x, order=defineorder):
@@ -2473,22 +2473,24 @@ def _optimize(x, small):
     elif op == 'and':
         wa, ta = _optimize(x[1], True)
         wb, tb = _optimize(x[2], True)
+        order = x[3]
         w = min(wa, wb)
 
         # (::x and not ::y)/(not ::y and ::x) have a fast path
         tm = _matchonly(ta, tb) or _matchonly(tb, ta)
         if tm:
-            return w, ('func', ('symbol', 'only'), tm)
+            return w, ('func', ('symbol', 'only'), tm, order)
 
         if tb is not None and tb[0] == 'not':
-            return wa, ('difference', ta, tb[1])
+            return wa, ('difference', ta, tb[1], order)
 
         if wa > wb:
-            return w, (op, tb, ta)
-        return w, (op, ta, tb)
+            return w, (op, tb, ta, order)
+        return w, (op, ta, tb, order)
     elif op == 'or':
         # fast path for machine-generated expression, that is likely to have
         # lots of trivial revisions: 'a + b + c()' to '_list(a b) + c()'
+        order = x[2]
         ws, ts, ss = [], [], []
         def flushss():
             if not ss:
@@ -2497,7 +2499,7 @@ def _optimize(x, small):
                 w, t = ss[0]
             else:
                 s = '\0'.join(t[1] for w, t in ss)
-                y = ('func', ('symbol', '_list'), ('string', s))
+                y = ('func', ('symbol', '_list'), ('string', s), order)
                 w, t = _optimize(y, False)
             ws.append(w)
             ts.append(t)
@@ -2516,23 +2518,27 @@ def _optimize(x, small):
         # we can't reorder trees by weight because it would change the order.
         # ("sort(a + b)" == "sort(b + a)", but "a + b" != "b + a")
         #   ts = tuple(t for w, t in sorted(zip(ws, ts), key=lambda wt: wt[0]))
-        return max(ws), (op, ('list',) + tuple(ts))
+        return max(ws), (op, ('list',) + tuple(ts), order)
     elif op == 'not':
         # Optimize not public() to _notpublic() because we have a fast version
-        if x[1] == ('func', ('symbol', 'public'), None):
-            newsym = ('func', ('symbol', '_notpublic'), None)
+        if x[1][:3] == ('func', ('symbol', 'public'), None):
+            order = x[1][3]
+            newsym = ('func', ('symbol', '_notpublic'), None, order)
             o = _optimize(newsym, not small)
             return o[0], o[1]
         else:
             o = _optimize(x[1], not small)
-            return o[0], (op, o[1])
+            order = x[2]
+            return o[0], (op, o[1], order)
     elif op == 'parentpost':
         o = _optimize(x[1], small)
-        return o[0], (op, o[1])
+        order = x[2]
+        return o[0], (op, o[1], order)
     elif op in ('dagrange', 'range', 'parent', 'ancestor'):
         wa, ta = _optimize(x[1], small)
         wb, tb = _optimize(x[2], small)
-        return wa + wb, (op, ta, tb)
+        order = x[3]
+        return wa + wb, (op, ta, tb, order)
     elif op == 'list':
         ws, ts = zip(*(_optimize(y, small) for y in x[1:]))
         return sum(ws), (op,) + ts
@@ -2557,7 +2563,8 @@ def _optimize(x, small):
             w = 10 # assume most sorts look at changelog
         else:
             w = 1
-        return w + wa, (op, x[1], ta)
+        order = x[3]
+        return w + wa, (op, x[1], ta, order)
     raise ValueError('invalid operator %r' % op)
 
 def optimize(tree):
