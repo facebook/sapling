@@ -48,7 +48,7 @@ struct mpatch_flist *cpygetitem(void *bins, ssize_t pos)
 	if ((r = mpatch_decode(buffer, blen, &res)) < 0) {
 		if (!PyErr_Occurred())
 			PyErr_SetString(mpatch_Error, mpatch_errors[-r]);
- 		return NULL;
+		return NULL;
 	}
 	return res;
 }

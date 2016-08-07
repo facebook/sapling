@@ -281,4 +281,3 @@ struct mpatch_flist *mpatch_fold(void *bins,
 	return combine(mpatch_fold(bins, get_next_item, start, start + len),
 		       mpatch_fold(bins, get_next_item, start + len, end));
 }
-
