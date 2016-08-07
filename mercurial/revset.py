@@ -2342,7 +2342,68 @@ def _fixops(x):
 
     return (op,) + tuple(_fixops(y) for y in x[1:])
 
+def _analyze(x):
+    """Transform raw parsed tree to evaluatable tree which can be fed to
+    optimize() or getset()
+
+    All pseudo operations should be mapped to real operations or functions
+    defined in methods or symbols table respectively.
+    """
+    if x is None:
+        return x
+
+    op = x[0]
+    if op == 'minus':
+        return _analyze(('and', x[1], ('not', x[2])))
+    elif op == 'only':
+        t = ('func', ('symbol', 'only'), ('list', x[1], x[2]))
+        return _analyze(t)
+    elif op == 'onlypost':
+        return _analyze(('func', ('symbol', 'only'), x[1]))
+    elif op == 'dagrangepre':
+        return _analyze(('func', ('symbol', 'ancestors'), x[1]))
+    elif op == 'dagrangepost':
+        return _analyze(('func', ('symbol', 'descendants'), x[1]))
+    elif op == 'rangeall':
+        return _analyze(('range', ('string', '0'), ('string', 'tip')))
+    elif op == 'rangepre':
+        return _analyze(('range', ('string', '0'), x[1]))
+    elif op == 'rangepost':
+        return _analyze(('range', x[1], ('string', 'tip')))
+    elif op == 'negate':
+        s = getstring(x[1], _("can't negate that"))
+        return _analyze(('string', '-' + s))
+    elif op in ('string', 'symbol'):
+        return x
+    elif op == 'and':
+        ta = _analyze(x[1])
+        tb = _analyze(x[2])
+        return (op, ta, tb)
+    elif op == 'or':
+        return (op,) + tuple(_analyze(y) for y in x[1:])
+    elif op == 'not':
+        return (op, _analyze(x[1]))
+    elif op == 'parentpost':
+        return (op, _analyze(x[1]))
+    elif op == 'group':
+        return _analyze(x[1])
+    elif op in ('dagrange', 'range', 'parent', 'ancestor'):
+        ta = _analyze(x[1])
+        tb = _analyze(x[2])
+        return (op, ta, tb)
+    elif op == 'list':
+        return (op,) + tuple(_analyze(y) for y in x[1:])
+    elif op == 'keyvalue':
+        return (op, x[1], _analyze(x[2]))
+    elif op == 'func':
+        return (op, x[1], _analyze(x[2]))
+    raise ValueError('invalid operator %r' % op)
+
 def _optimize(x, small):
+    """Optimize evaluatable tree
+
+    All pseudo operations should be transformed beforehand.
+    """
     if x is None:
         return 0, x
 
@@ -2351,27 +2412,7 @@ def _optimize(x, small):
         smallbonus = .5
 
     op = x[0]
-    if op == 'minus':
-        return _optimize(('and', x[1], ('not', x[2])), small)
-    elif op == 'only':
-        t = ('func', ('symbol', 'only'), ('list', x[1], x[2]))
-        return _optimize(t, small)
-    elif op == 'onlypost':
-        return _optimize(('func', ('symbol', 'only'), x[1]), small)
-    elif op == 'dagrangepre':
-        return _optimize(('func', ('symbol', 'ancestors'), x[1]), small)
-    elif op == 'dagrangepost':
-        return _optimize(('func', ('symbol', 'descendants'), x[1]), small)
-    elif op == 'rangeall':
-        return _optimize(('range', ('string', '0'), ('string', 'tip')), small)
-    elif op == 'rangepre':
-        return _optimize(('range', ('string', '0'), x[1]), small)
-    elif op == 'rangepost':
-        return _optimize(('range', x[1], ('string', 'tip')), small)
-    elif op == 'negate':
-        s = getstring(x[1], _("can't negate that"))
-        return _optimize(('string', '-' + s), small)
-    elif op in ('string', 'symbol'):
+    if op in ('string', 'symbol'):
         return smallbonus, x # single revisions are small
     elif op == 'and':
         wa, ta = _optimize(x[1], True)
@@ -2432,8 +2473,6 @@ def _optimize(x, small):
     elif op == 'parentpost':
         o = _optimize(x[1], small)
         return o[0], (op, o[1])
-    elif op == 'group':
-        return _optimize(x[1], small)
     elif op in ('dagrange', 'range', 'parent', 'ancestor'):
         wa, ta = _optimize(x[1], small)
         wb, tb = _optimize(x[2], small)
@@ -2466,6 +2505,7 @@ def _optimize(x, small):
     raise ValueError('invalid operator %r' % op)
 
 def optimize(tree):
+    tree = _analyze(tree)
     _weight, newtree = _optimize(tree, small=True)
     return newtree
 
