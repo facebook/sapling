@@ -259,10 +259,11 @@ def postshare(sourcerepo, destrepo, bookmarks=True):
         fp.write("default = %s\n" % default)
         fp.close()
 
-    if bookmarks:
-        fp = destrepo.vfs('shared', 'w')
-        fp.write(sharedbookmarks + '\n')
-        fp.close()
+    with destrepo.wlock():
+        if bookmarks:
+            fp = destrepo.vfs('shared', 'w')
+            fp.write(sharedbookmarks + '\n')
+            fp.close()
 
 def _postshareupdate(repo, update, checkout=None):
     """Maybe perform a working directory update after a shared repo is created.
