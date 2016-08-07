@@ -1,8 +1,6 @@
 #ifndef _HG_MPATCH_H_
 #define _HG_MPATCH_H_
 
-extern char *mpatch_errors[];
-
 #define MPATCH_ERR_NO_MEM -3
 #define MPATCH_ERR_CANNOT_BE_DECODED -2
 #define MPATCH_ERR_INVALID_PATCH -1

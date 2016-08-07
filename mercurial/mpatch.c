@@ -27,9 +27,6 @@
 #include "compat.h"
 #include "mpatch.h"
 
-char *mpatch_errors[] = {NULL, "invalid patch", "patch cannot be decoded",
-						"no memory"};
-
 static struct mpatch_flist *lalloc(ssize_t size)
 {
 	struct mpatch_flist *a = NULL;

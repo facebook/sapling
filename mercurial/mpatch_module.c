@@ -33,6 +33,21 @@
 static char mpatch_doc[] = "Efficient binary patching.";
 static PyObject *mpatch_Error;
 
+static void setpyerr(int r)
+{
+	switch (r) {
+	case MPATCH_ERR_NO_MEM:
+		PyErr_NoMemory();
+		break;
+	case MPATCH_ERR_CANNOT_BE_DECODED:
+		PyErr_SetString(mpatch_Error, "patch cannot be decoded");
+		break;
+	case MPATCH_ERR_INVALID_PATCH:
+		PyErr_SetString(mpatch_Error, "invalid patch");
+		break;
+	}
+}
+
 struct mpatch_flist *cpygetitem(void *bins, ssize_t pos)
 {
 	const char *buffer;
@@ -47,7 +62,7 @@ struct mpatch_flist *cpygetitem(void *bins, ssize_t pos)
 		return NULL;
 	if ((r = mpatch_decode(buffer, blen, &res)) < 0) {
 		if (!PyErr_Occurred())
-			PyErr_SetString(mpatch_Error, mpatch_errors[-r]);
+			setpyerr(r);
 		return NULL;
 	}
 	return res;
@@ -102,7 +117,7 @@ patches(PyObject *self, PyObject *args)
 cleanup:
 	mpatch_lfree(patch);
 	if (!result && !PyErr_Occurred())
-		PyErr_SetString(mpatch_Error, mpatch_errors[-r]);
+		setpyerr(r);
 	return result;
 }
 
