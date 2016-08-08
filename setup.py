@@ -37,6 +37,23 @@ setup(
                       "-std=c99",
                       "-Wall",
                       "-Werror", "-Werror=strict-prototypes"],
+        ),
+        Extension('ctreemanifest',
+                  sources=[
+                      'remotefilelog/ctreemanifest/treemanifest.cpp',
+                  ],
+                  include_dirs=[
+                      'remotefilelog/ctreemanifest',
+                  ],
+                  library_dirs=[
+                      '/usr/local/lib',
+                      '/opt/local/lib',
+                  ],
+                  libraries=[
+                  ],
+                  extra_compile_args=[
+                      "-Wall",
+                      "-Werror", "-Werror=strict-prototypes"],
         )
     ],
 )
