@@ -136,7 +136,7 @@
   mercurial/patch.py: error importing: <TypeError> getattr(): attribute name must be string (error at pycompat.py:*) (glob)
   mercurial/pathutil.py: error importing: <TypeError> getattr(): attribute name must be string (error at pycompat.py:*) (glob)
   mercurial/peer.py: error importing: <TypeError> getattr(): attribute name must be string (error at pycompat.py:*) (glob)
-  mercurial/pure/mpatch.py: error importing module: <ImportError> cannot import name 'pycompat' (line *) (glob)
+  mercurial/pure/mpatch.py: error importing module: <ImportError> cannot import name 'policy' (line *) (glob)
   mercurial/pure/osutil.py: error importing module: <ImportError> cannot import name 'policy' (line *) (glob)
   mercurial/pure/parsers.py: error importing module: <ImportError> No module named 'mercurial.pure.node' (line *) (glob)
   mercurial/pushkey.py: error importing: <TypeError> getattr(): attribute name must be string (error at pycompat.py:*) (glob)
