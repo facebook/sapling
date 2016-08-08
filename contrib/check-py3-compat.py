@@ -55,7 +55,7 @@ def check_compat_py3(f):
     # out module paths for things not in a package can be confusing.
     if f.startswith(('hgext/', 'mercurial/')) and not f.endswith('__init__.py'):
         assert f.endswith('.py')
-        name = f.replace('/', '.')[:-3]
+        name = f.replace('/', '.')[:-3].replace('.pure.', '.')
         with open(f, 'r') as fh:
             try:
                 imp.load_module(name, fh, '', ('py', 'r', imp.PY_SOURCE))
