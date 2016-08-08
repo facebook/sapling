@@ -45,6 +45,55 @@ class pyexception : public std::exception {
     }
 };
 
+/* Wrapper class for PyObject pointers.
+ * It is responsible for managing the Py_INCREF and Py_DECREF calls.
+ **/
+class PythonObj {
+  private:
+    PyObject *obj;
+  public:
+    PythonObj(PyObject *obj) {
+      if (!obj) {
+        if (!PyErr_Occurred()) {
+          PyErr_SetString(PyExc_RuntimeError,
+              "attempted to construct null PythonObj");
+        }
+        throw pyexception();
+      }
+      this->obj = obj;
+    }
+
+    PythonObj(const PythonObj& other) {
+      this->obj = other.obj;
+      Py_INCREF(this->obj);
+    }
+
+    ~PythonObj() {
+      Py_DECREF(this->obj);
+      this->obj = NULL;
+    }
+
+    PythonObj& operator=(const PythonObj &other) {
+      Py_DECREF(this->obj);
+      this->obj = other.obj;
+      Py_INCREF(this->obj);
+      return *this;
+    }
+
+    operator PyObject* () const {
+      return this->obj;
+    }
+
+    /* Function used to obtain a return value that will persist beyond the life
+     * of the PythonObj. This is useful for returning objects to Python C apis
+     * and letting them manage the remaining lifetime of the object.
+     **/
+    PyObject *returnval() {
+      Py_INCREF(this->obj);
+      return this->obj;
+    }
+};
+
 /*
  * A single instance of a treemanifest.
  * */
@@ -52,7 +101,7 @@ typedef struct {
   PyObject_HEAD;
 
   // A reference to the store that is used to fetch new content
-  PyObject *store;
+  PythonObj store;
 
   // The 20-byte root node of this manifest
   std::string node;
@@ -114,22 +163,28 @@ class ManifestEntry {
 /*
  * A helper struct representing the state of an iterator recursing over a tree.
  * */
-typedef struct {
-  PyObject *get;                // Function to fetch tree content
-  std::vector<PyObject*> data;  // Tree content for previous entries in the stack
+struct stackiter {
+  PythonObj get;                // Function to fetch tree content
+  std::vector<PythonObj> data;  // Tree content for previous entries in the stack
   std::vector<char*> location;    // The current iteration position for each stack entry
   std::string path;             // The fullpath for the top entry in the stack.
-} stackiter;
+
+  stackiter(PythonObj get) : get(get) {
+  }
+};
 
 /*
  * The python iteration object for iterating over a tree.  This is separate from
  * the stackiter above because it lets us just call the constructor on
  * stackiter, which will automatically populate all the members of stackiter.
  * */
-typedef struct {
+struct fileiter {
   PyObject_HEAD;
   stackiter iter;
-} fileiter;
+
+  fileiter(PythonObj get) : iter(get) {
+  }
+};
 
 static void fileiter_dealloc(fileiter *self);
 static PyObject* fileiter_iterentriesnext(fileiter *self);
@@ -184,24 +239,22 @@ static std::string binfromhex(const char *node) {
  * function. Returns a python string with the contents. The caller is
  * responsible for calling Py_DECREF on the result.
  * */
-static PyObject* getdata(PyObject *get, const std::string &dir, const std::string &node) {
-  PyObject *arglist, *result;
+static PythonObj getdata(const PythonObj &get, const std::string &dir, const std::string &node) {
+  PythonObj arglist = Py_BuildValue("s#s#", dir.c_str(), (Py_ssize_t)dir.size(),
+                                            node.c_str(), (Py_ssize_t)node.size());
 
-  arglist = Py_BuildValue("s#s#", dir.c_str(), (Py_ssize_t)dir.size(),
-                                  node.c_str(), (Py_ssize_t)node.size());
-  if (!arglist) {
-    throw pyexception();
-  }
-
-  result = PyEval_CallObject(get, arglist);
-  Py_DECREF(arglist);
+  PyObject *result = PyEval_CallObject(get, arglist);
 
   if (!result) {
+    if (PyErr_Occurred()) {
+      throw pyexception();
+    }
+
     PyErr_Format(PyExc_RuntimeError, "unable to find tree '%s:...'", dir.c_str());
     throw pyexception();
   }
 
-  return result;
+  return PythonObj(result);
 }
 
 class ManifestIterator {
@@ -247,15 +300,15 @@ static PyObject *treemanifest_getkeysiter(treemanifest *self) {
   fileiter *i = PyObject_New(fileiter, &fileiterType);
   if (i) {
     try {
+      // Keep a copy of the store's get function for accessing contents
+      PythonObj get = PyObject_GetAttrString(self->store, "get");
       // The provided fileiter struct hasn't initialized our stackiter member, so
       // we do it manually.
-      new (&i->iter) stackiter();
+      new (&i->iter) stackiter(get);
 
-      // Keep a copy of the store's get function for accessing contents
-      i->iter.get = PyObject_GetAttrString(self->store, "get");
 
       // Grab the root node's data and prep the iterator
-      PyObject *rawobj = getdata(i->iter.get, "", self->node);
+      PythonObj rawobj = getdata(i->iter.get, "", self->node);
 
       char *raw;
       Py_ssize_t rawsize;
@@ -268,6 +321,7 @@ static PyObject *treemanifest_getkeysiter(treemanifest *self) {
       Py_DECREF(i);
       return NULL;
     } catch (const std::exception &ex) {
+      Py_DECREF(i);
       PyErr_SetString(PyExc_RuntimeError, ex.what());
       Py_DECREF(i);
       return NULL;
@@ -314,7 +368,7 @@ class PathIterator {
 
 /* Constructs a result python tuple of the given diff data.
  * */
-static PyObject *treemanifest_diffentry(const std::string *anode, const char *aflag,
+static PythonObj treemanifest_diffentry(const std::string *anode, const char *aflag,
                                         const std::string *bnode, const char *bflag) {
   int aflaglen = 1;
   if (aflag == NULL) {
@@ -328,11 +382,8 @@ static PyObject *treemanifest_diffentry(const std::string *anode, const char *af
   Py_ssize_t alen = anode != NULL ? anode->length() : 0;
   const char *bstr = bnode != NULL ? bnode->c_str() : NULL;
   Py_ssize_t blen = bnode != NULL ? bnode->length() : 0;
-  PyObject *result = Py_BuildValue("((s#s#)(s#s#))", astr, alen, aflag, Py_ssize_t(aflag ? 1 : 0),
+  PythonObj result = Py_BuildValue("((s#s#)(s#s#))", astr, alen, aflag, Py_ssize_t(aflag ? 1 : 0),
                                                      bstr, blen, bflag, Py_ssize_t(bflag ? 1 : 0));
-  if (!result) {
-    throw pyexception();
-  }
   return result;
 }
 
@@ -354,42 +405,33 @@ class DiffEntry {
       this->otherflag = otherflag;
     }
 
-    void addtodiff(PyObject *diff, const std::string &path) {
-      PyObject *entry = treemanifest_diffentry(this->selfnode, this->selfflag,
+    void addtodiff(const PythonObj &diff, const std::string &path) {
+      PythonObj entry = treemanifest_diffentry(this->selfnode, this->selfflag,
                                                this->othernode, this->otherflag);
-      PyObject *pathObj = PyString_FromStringAndSize(path.c_str(), path.length());
-      if (!pathObj) {
-        Py_DECREF(entry);
-        throw pyexception();
-      }
+      PythonObj pathObj = PyString_FromStringAndSize(path.c_str(), path.length());
 
       PyDict_SetItem(diff, pathObj, entry);
-
-      Py_DECREF(pathObj);
-      Py_DECREF(entry);
     }
 };
 
 /* Helper function that performs the actual recursion on the tree entries.
  * */
 static void treemanifest_diffrecurse(std::string &path, const std::string *node1, const std::string *node2,
-                                     PyObject* diff, PyObject *get) {
+                                     const PythonObj &diff, const PythonObj &get) {
   char *selfraw = NULL;
   Py_ssize_t selfrawsize = 0;
-  PyObject *selfrawobj = NULL;
 
   char *otherraw = NULL;
   Py_ssize_t otherrawsize = 0;
-  PyObject *otherrawobj = NULL;
 
   try {
     if (node1 != NULL) {
-      selfrawobj = getdata(get, path, *node1);
+      PythonObj selfrawobj = getdata(get, path, *node1);
       PyString_AsStringAndSize(selfrawobj, &selfraw, &selfrawsize);
     }
 
     if (node2 != NULL) {
-      otherrawobj = getdata(get, path, *node2);
+      PythonObj otherrawobj = getdata(get, path, *node2);
       PyString_AsStringAndSize(otherrawobj, &otherraw, &otherrawsize);
     }
 
@@ -496,11 +538,7 @@ static void treemanifest_diffrecurse(std::string &path, const std::string *node1
       }
       path.erase(originalpathsize);
     }
-    Py_XDECREF(selfrawobj);
-    Py_XDECREF(otherrawobj);
   } catch (const std::exception &ex){
-    Py_XDECREF(selfrawobj);
-    Py_XDECREF(otherrawobj);
     throw;
   }
 }
@@ -515,9 +553,9 @@ static PyObject *treemanifest_diff(PyObject *o, PyObject *args) {
 
   treemanifest *other = (treemanifest*)otherObj;
 
-  PyObject *results = PyDict_New();
+  PythonObj results = PyDict_New();
 
-  PyObject *get = PyObject_GetAttrString(self->store, "get");
+  PythonObj get = PyObject_GetAttrString(self->store, "get");
 
   std::string path;
   try {
@@ -530,13 +568,12 @@ static PyObject *treemanifest_diff(PyObject *o, PyObject *args) {
     PyErr_SetString(PyExc_RuntimeError, ex.what());
     return NULL;
   }
-  Py_DECREF(get);
 
-  return results;
+  return results.returnval();
 }
 
 static void _treemanifest_find(const std::string &filename, const std::string &node,
-        PyObject *get, std::string *resultnode, char *resultflag) {
+        const PythonObj &get, std::string *resultnode, char *resultflag) {
   std::string curnode = node;
   const char *filenamecstr = filename.c_str();
 
@@ -549,7 +586,7 @@ static void _treemanifest_find(const std::string &filename, const std::string &n
     std::string curpath = filename.substr(0, word - filenamecstr);
 
     // Obtain the raw data for this directory
-    PyObject* rawobj = getdata(get, curpath, curnode);
+    PythonObj rawobj = getdata(get, curpath, curnode);
 
     char* raw;
     Py_ssize_t rawsize;
@@ -571,7 +608,6 @@ static void _treemanifest_find(const std::string &filename, const std::string &n
           if (!entry.isdirectory()) {
             resultnode->assign(binfromhex(entry.node));
             *resultflag = *entry.flag;
-            Py_DECREF(rawobj);
             return;
           } else {
             // Found a directory when expecting a file - give up
@@ -591,7 +627,6 @@ static void _treemanifest_find(const std::string &filename, const std::string &n
       }
     }
 
-    Py_DECREF(rawobj);
     if (!recurse) {
       // Failed to find a match
       return;
@@ -612,7 +647,7 @@ static PyObject *treemanifest_find(PyObject *o, PyObject *args) {
     return NULL;
   }
 
-  PyObject *get = PyObject_GetAttrString(self->store, "get");
+  PythonObj get = PyObject_GetAttrString(self->store, "get");
 
   std::string resultnode;
   char resultflag;
@@ -621,8 +656,6 @@ static PyObject *treemanifest_find(PyObject *o, PyObject *args) {
   } catch (const pyexception &ex) {
     return NULL;
   }
-
-  Py_DECREF(get);
 
   if (resultnode.empty()) {
     if (PyErr_Occurred()) {
@@ -643,7 +676,7 @@ static PyObject *treemanifest_find(PyObject *o, PyObject *args) {
  * */
 static void treemanifest_dealloc(treemanifest *self){
   self->node.std::string::~string();
-  Py_XDECREF(self->store);
+  self->store.~PythonObj();
   PyObject_Del(self);
 }
 
@@ -659,8 +692,9 @@ static int treemanifest_init(treemanifest *self, PyObject *args) {
     return -1;
   }
 
-  self->store = store;
   Py_INCREF(store);
+  new (&self->store) PythonObj(store);
+
   // We have to manually call the member constructor, since the provided 'self'
   // is just zerod out memory.
   try {
@@ -679,12 +713,6 @@ static int treemanifest_init(treemanifest *self, PyObject *args) {
  * iterator.
  * */
 static void fileiter_dealloc(fileiter *self) {
-  Py_XDECREF(self->iter.get);
-  while (self->iter.data.size() > 0) {
-    Py_XDECREF(self->iter.data.back());
-    self->iter.data.pop_back();
-  }
-
   self->iter.~stackiter();
   PyObject_Del(self);
 }
@@ -695,7 +723,7 @@ static void fileiter_dealloc(fileiter *self) {
  * Returns false if we've reached the end, or true if there's more work.
  * */
 static bool fileiter_popfinished(stackiter *iter) {
-  PyObject *rawobj = iter->data.back();
+  PythonObj rawobj = iter->data.back();
   char *raw;
   Py_ssize_t rawsize;
   PyString_AsStringAndSize(rawobj, &raw, &rawsize);
@@ -705,7 +733,6 @@ static bool fileiter_popfinished(stackiter *iter) {
   // Pop the stack of trees until we find one we haven't finished iterating
   // over.
   while (entrystart >= raw + rawsize) {
-    Py_DECREF(iter->data.back());
     iter->data.pop_back();
     iter->location.pop_back();
     if (iter->data.empty()) {
@@ -744,7 +771,7 @@ static PyObject *fileiter_iterentriesnext(fileiter *self) {
         return NULL;
       }
 
-      PyObject *rawobj = iter.data.back();
+      PythonObj rawobj = iter.data.back();
       char *raw;
       Py_ssize_t rawsize;
       PyString_AsStringAndSize(rawobj, &raw, &rawsize);
@@ -763,7 +790,7 @@ static PyObject *fileiter_iterentriesnext(fileiter *self) {
         iter.path.append(1, '/');
 
         // Fetch the directory contents
-        PyObject *subrawobj = getdata(iter.get, iter.path,
+        PythonObj subrawobj = getdata(iter.get, iter.path,
                                       binfromhex(entry.node));
         if (!subrawobj) {
           return NULL;
