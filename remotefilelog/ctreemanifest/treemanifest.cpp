@@ -131,7 +131,8 @@ static std::string binfromhex(const char *node) {
 static PyObject* getdata(PyObject *get, const std::string &dir, const std::string &node) {
   PyObject *arglist, *result;
 
-  arglist = Py_BuildValue("s#s#", dir.c_str(), dir.size(), node.c_str(), node.size());
+  arglist = Py_BuildValue("s#s#", dir.c_str(), (Py_ssize_t)dir.size(),
+                                  node.c_str(), (Py_ssize_t)node.size());
   if (!arglist) {
     return NULL;
   }
@@ -347,7 +348,7 @@ static void _treemanifest_find(const std::string &filename, const std::string &n
 static PyObject *treemanifest_find(PyObject *o, PyObject *args) {
   treemanifest *self = (treemanifest*)o;
   char *filename;
-  int filenamelen;
+  Py_ssize_t filenamelen;
 
   if (!PyArg_ParseTuple(args, "s#", &filename, &filenamelen)) {
     return NULL;
@@ -365,13 +366,13 @@ static PyObject *treemanifest_find(PyObject *o, PyObject *args) {
     if (PyErr_Occurred()) {
       return NULL;
     }
-    return Py_BuildValue("s#s#", NULL, 0, NULL, 0);
+    return Py_BuildValue("s#s#", NULL, (Py_ssize_t)0, NULL, (Py_ssize_t)0);
   } else {
     int flaglen = 0;
     if (resultflag != '\n') {
       flaglen = 1;
     }
-    return Py_BuildValue("s#s#", resultnode.c_str(), resultnode.length(), &resultflag, flaglen);
+    return Py_BuildValue("s#s#", resultnode.c_str(), (Py_ssize_t)resultnode.length(), &resultflag, (Py_ssize_t)flaglen);
   }
 }
 
@@ -390,7 +391,7 @@ static void treemanifest_dealloc(treemanifest *self){
 static int treemanifest_init(treemanifest *self, PyObject *args) {
   PyObject *store;
   char *node;
-  int nodelen;
+  Py_ssize_t nodelen;
 
   if (!PyArg_ParseTuple(args, "Os#", &store, &node, &nodelen)) {
     return -1;
