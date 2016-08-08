@@ -74,7 +74,7 @@ class webproto(wireproto.abstractserverproto):
         self.ui.ferr, self.ui.fout = self.oldio
         return val
     def groupchunks(self, cg):
-        z = zlib.compressobj()
+        z = zlib.compressobj(self.ui.configint('server', 'zliblevel', -1))
         while True:
             chunk = cg.read(4096)
             if not chunk:
