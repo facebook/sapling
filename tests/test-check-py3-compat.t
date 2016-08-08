@@ -81,7 +81,7 @@
   mercurial/archival.py: invalid syntax: invalid syntax (<unknown>, line *) (glob)
   mercurial/bookmarks.py: error importing: <TypeError> str expected, not bytes (error at encoding.py:*) (glob)
   mercurial/branchmap.py: error importing: <TypeError> str expected, not bytes (error at encoding.py:*) (glob)
-  mercurial/bundle2.py: invalid syntax: invalid syntax (<unknown>, line *) (glob)
+  mercurial/bundle2.py: error importing: <TypeError> str expected, not bytes (error at encoding.py:*) (glob)
   mercurial/bundlerepo.py: error importing: <TypeError> str expected, not bytes (error at encoding.py:*) (glob)
   mercurial/byterange.py: error importing: <TypeError> str expected, not bytes (error at encoding.py:*) (glob)
   mercurial/changegroup.py: error importing: <TypeError> str expected, not bytes (error at encoding.py:*) (glob)
@@ -141,7 +141,7 @@
   mercurial/pushkey.py: error importing: <TypeError> getattr(): attribute name must be string (error at pycompat.py:*) (glob)
   mercurial/pvec.py: error importing: <TypeError> getattr(): attribute name must be string (error at pycompat.py:*) (glob)
   mercurial/registrar.py: error importing: <TypeError> getattr(): attribute name must be string (error at util.py:*) (glob)
-  mercurial/repair.py: error importing module: <SyntaxError> invalid syntax (bundle2.py, line *) (line *) (glob)
+  mercurial/repair.py: error importing: <TypeError> getattr(): attribute name must be string (error at util.py:*) (glob)
   mercurial/repoview.py: error importing: <TypeError> getattr(): attribute name must be string (error at util.py:*) (glob)
   mercurial/revlog.py: error importing: <TypeError> getattr(): attribute name must be string (error at util.py:*) (glob)
   mercurial/revset.py: error importing: <TypeError> getattr(): attribute name must be string (error at util.py:*) (glob)
@@ -168,6 +168,6 @@
   mercurial/verify.py: error importing: <TypeError> attribute name must be string, not 'bytes' (error at mdiff.py:*) (glob)
   mercurial/win32.py: error importing module: <ImportError> No module named 'msvcrt' (line *) (glob)
   mercurial/windows.py: error importing module: <ImportError> No module named '_winreg' (line *) (glob)
-  mercurial/wireproto.py: error importing module: <SyntaxError> invalid syntax (bundle2.py, line *) (line *) (glob)
+  mercurial/wireproto.py: error importing module: <TypeError> a bytes-like object is required, not 'str' (line *) (glob)
 
 #endif
