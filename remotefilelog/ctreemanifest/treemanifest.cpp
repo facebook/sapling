@@ -48,7 +48,7 @@ typedef struct {
 
 typedef struct {
   char *filename;
-  int filenamelen;
+  size_t filenamelen;
   char *node;
   char *flag;
   char *nextentrystart;
@@ -139,6 +139,10 @@ static PyObject* getdata(PyObject *get, const std::string &dir, const std::strin
   result = PyEval_CallObject(get, arglist);
   Py_DECREF(arglist);
 
+  if (!result) {
+    PyErr_Format(PyExc_RuntimeError, "unable to find tree '%s:...'", dir.c_str());
+  }
+
   return result;
 }
 
@@ -170,6 +174,29 @@ static manifestentry parseentry(char *entrystart) {
   return result;
 }
 
+class ManifestIterator {
+  private:
+    char *raw;
+    char *entrystart;
+    int length;
+  public:
+    ManifestIterator(char *raw, size_t length) {
+      this->raw = raw;
+      this->entrystart = raw;
+      this->length = length;
+    }
+
+    bool next(manifestentry *entry) {
+      if (this->entrystart - this->raw >= this->length) {
+        return false;
+      }
+
+      *entry = parseentry(this->entrystart);
+      this->entrystart = entry->nextentrystart;
+      return true;
+    }
+};
+
 // ==== treemanifest functions ====
 
 /* Implementation of treemanifest.__iter__
@@ -189,9 +216,6 @@ static PyObject *treemanifest_getkeysiter(treemanifest *self) {
       // Grab the root node's data and prep the iterator
       PyObject *rawobj = getdata(i->iter.get, "", self->node);
       if (!rawobj) {
-        char message[1024];
-        snprintf(message, 1024, "unable to find tree %s", self->node.c_str());
-        PyErr_SetString(PyExc_RuntimeError, message);
         Py_DECREF(i);
         return NULL;
       }
@@ -213,6 +237,142 @@ static PyObject *treemanifest_getkeysiter(treemanifest *self) {
   }
 
   return (PyObject *)i;
+}
+
+class PathIterator {
+  private:
+    std::string path;
+    size_t position;
+  public:
+    PathIterator(std::string path) {
+      this->path = path;
+      this->position = 0;
+    }
+
+    bool next(char const ** word, size_t *wordlen) {
+      if (this->isfinished()) {
+        return false;
+      }
+
+      *word = this->path.c_str() + this->position;
+      size_t slashoffset = this->path.find('/', this->position);
+      if (slashoffset == std::string::npos) {
+        *wordlen = this->path.length() - this->position;
+      } else {
+        *wordlen = slashoffset - this->position;
+      }
+
+      this->position += *wordlen + 1;
+
+      return true;
+    }
+
+    bool isfinished() {
+      return this->position >= this->path.length();
+    }
+};
+
+/* Helper find function that perform the actual recursion on the tree entries.
+ * */
+static void _treemanifest_find(const std::string &filename, const std::string &node,
+        PyObject *get, std::string *resultnode, char *resultflag) {
+  std::string curnode = node;
+  const char *filenamecstr = filename.c_str();
+
+  // Loop over the parts of the query filename
+  PathIterator pathiter(filename);
+  const char *word;
+  size_t wordlen;
+  while (pathiter.next(&word, &wordlen)) {
+    // Get the fullpath of the current directory/file we're searching in
+    std::string curpath = filename.substr(0, word - filenamecstr);
+
+    // Obtain the raw data for this directory
+    PyObject* rawobj = getdata(get, curpath, curnode);
+    if (!rawobj) {
+        return;
+    }
+    char* raw;
+    Py_ssize_t rawsize;
+    PyString_AsStringAndSize(rawobj, &raw, &rawsize);
+
+    ManifestIterator mfiterator(raw, rawsize);
+    manifestentry entry;
+    bool recurse = false;
+
+    // Loop over the contents of the current directory looking for the
+    // next directory/file.
+    while (mfiterator.next(&entry)) {
+      // If the current entry matches the query file/directory, either recurse,
+      // return, or abort.
+      if (wordlen == entry.filenamelen && strncmp(word, entry.filename, wordlen) == 0) {
+        // If this is the last entry in the query path, either return or abort
+        if (pathiter.isfinished()) {
+          // If it's a file, it's our result
+          if (entry.flag && *entry.flag != 't') {
+            resultnode->assign(binfromhex(entry.node));
+            *resultflag = *entry.flag;
+            Py_DECREF(rawobj);
+            return;
+          } else {
+            // Found a directory when expecting a file - give up
+            break;
+          }
+        }
+
+        // If there's more in the query, either recurse or give up
+        if (entry.flag && *entry.flag == 't') {
+          curnode.assign(binfromhex(entry.node));
+          recurse = true;
+          break;
+        } else {
+          // Found a file when we expected a directory
+          break;
+        }
+      }
+    }
+
+    Py_DECREF(rawobj);
+    if (!recurse) {
+      // Failed to find a match
+      return;
+    }
+  }
+}
+
+/* Implementation of treemanifest.find()
+ * Takes a filename and returns a tuple of the binary hash and flag,
+ * or (None, None) if it doesn't exist.
+ * */
+static PyObject *treemanifest_find(PyObject *o, PyObject *args) {
+  treemanifest *self = (treemanifest*)o;
+  char *filename;
+  int filenamelen;
+
+  if (!PyArg_ParseTuple(args, "s#", &filename, &filenamelen)) {
+    return NULL;
+  }
+
+  PyObject *get = PyObject_GetAttrString(self->store, "get");
+
+  std::string resultnode;
+  char resultflag;
+  _treemanifest_find(std::string(filename, filenamelen), self->node, get, &resultnode, &resultflag);
+
+  Py_DECREF(get);
+
+  if (resultnode.empty()) {
+    if (PyErr_Occurred()) {
+      return NULL;
+    }
+    return Py_BuildValue("s#s#", NULL, 0, NULL, 0);
+  } else {
+    int flaglen = 0;
+    if (resultflag != '\n') {
+      flaglen = 1;
+    }
+    return Py_BuildValue("s#s#", resultnode.c_str(), resultnode.length(), &resultflag, flaglen);
+  }
 }
 
 /*
@@ -342,10 +502,6 @@ static PyObject *fileiter_iterentriesnext(fileiter *self) {
       PyObject *subrawobj = getdata(iter.get, iter.path,
                                     binfromhex(entry.node));
       if (!subrawobj) {
-        char message[1024];
-        snprintf(message, 1024, "unable to find tree '%s:%s'",
-                 iter.path.c_str(), std::string(entry.node, 40).c_str());
-        PyErr_SetString(PyExc_RuntimeError, message);
         return NULL;
       }
 
@@ -374,6 +530,7 @@ static PyObject *fileiter_iterentriesnext(fileiter *self) {
 // ====  treemanifest ctype declaration ====
 
 static PyMethodDef treemanifest_methods[] = {
+  {"find", treemanifest_find, METH_VARARGS, "returns the node and flag for the given filepath\n"},
   {NULL, NULL}
 };
 
