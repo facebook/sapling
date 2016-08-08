@@ -92,6 +92,12 @@ class PythonObj {
       Py_INCREF(this->obj);
       return this->obj;
     }
+
+    /* Get's the attribute from the python object.
+     **/
+    PythonObj getattr(const char *name) {
+      return PyObject_GetAttrString(this->obj, name);
+    }
 };
 
 /*
@@ -301,11 +307,10 @@ static PyObject *treemanifest_getkeysiter(treemanifest *self) {
   if (i) {
     try {
       // Keep a copy of the store's get function for accessing contents
-      PythonObj get = PyObject_GetAttrString(self->store, "get");
+      PythonObj get = self->store.getattr("get");
       // The provided fileiter struct hasn't initialized our stackiter member, so
       // we do it manually.
       new (&i->iter) stackiter(get);
-
 
       // Grab the root node's data and prep the iterator
       PythonObj rawobj = getdata(i->iter.get, "", self->node);
@@ -555,7 +560,7 @@ static PyObject *treemanifest_diff(PyObject *o, PyObject *args) {
 
   PythonObj results = PyDict_New();
 
-  PythonObj get = PyObject_GetAttrString(self->store, "get");
+  PythonObj get = self->store.getattr("get");
 
   std::string path;
   try {
@@ -647,7 +652,7 @@ static PyObject *treemanifest_find(PyObject *o, PyObject *args) {
     return NULL;
   }
 
-  PythonObj get = PyObject_GetAttrString(self->store, "get");
+  PythonObj get = self->store.getattr("get");
 
   std::string resultnode;
   char resultflag;
