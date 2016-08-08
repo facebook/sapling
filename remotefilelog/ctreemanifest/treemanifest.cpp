@@ -11,6 +11,7 @@
 #include <Python.h>
 #include <ctype.h>
 #include <iostream>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -31,6 +32,17 @@ static int8_t hextable[256] = {
 	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
 	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
 	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1
+};
+
+/* C++ exception that represents an issue at the python C api level.
+ * When this is thrown, it's assumed that the python error message has been set
+ * and that the catcher of the exception should just return an error code value
+ * to the python API.
+ * */
+class pyexception : public std::exception {
+  public:
+    pyexception() {
+    }
 };
 
 /*
@@ -300,8 +312,229 @@ class PathIterator {
     }
 };
 
-/* Helper find function that perform the actual recursion on the tree entries.
+/* Constructs a result python tuple of the given diff data.
  * */
+static PyObject *treemanifest_diffentry(const std::string *anode, const char *aflag,
+                                        const std::string *bnode, const char *bflag) {
+  int aflaglen = 1;
+  if (aflag == NULL) {
+    aflaglen = 0;
+  }
+  int bflaglen = 1;
+  if (bflag == NULL) {
+    bflaglen = 0;
+  }
+  const char *astr = anode != NULL ? anode->c_str() : NULL;
+  Py_ssize_t alen = anode != NULL ? anode->length() : 0;
+  const char *bstr = bnode != NULL ? bnode->c_str() : NULL;
+  Py_ssize_t blen = bnode != NULL ? bnode->length() : 0;
+  PyObject *result = Py_BuildValue("((s#s#)(s#s#))", astr, alen, aflag, Py_ssize_t(aflag ? 1 : 0),
+                                                     bstr, blen, bflag, Py_ssize_t(bflag ? 1 : 0));
+  if (!result) {
+    throw pyexception();
+  }
+  return result;
+}
+
+/* Simple class for representing a single diff between two files in the
+ * manifest.
+ * */
+class DiffEntry {
+  private:
+    const std::string *selfnode;
+    const std::string *othernode;
+    const char *selfflag;
+    const char *otherflag;
+  public:
+    DiffEntry(const std::string *selfnode, const char *selfflag,
+              const std::string *othernode, const char *otherflag) {
+      this->selfnode = selfnode;
+      this->othernode = othernode;
+      this->selfflag = selfflag;
+      this->otherflag = otherflag;
+    }
+
+    void addtodiff(PyObject *diff, const std::string &path) {
+      PyObject *entry = treemanifest_diffentry(this->selfnode, this->selfflag,
+                                               this->othernode, this->otherflag);
+      PyObject *pathObj = PyString_FromStringAndSize(path.c_str(), path.length());
+      if (!pathObj) {
+        Py_DECREF(entry);
+        throw pyexception();
+      }
+
+      PyDict_SetItem(diff, pathObj, entry);
+
+      Py_DECREF(pathObj);
+      Py_DECREF(entry);
+    }
+};
+
+/* Helper function that performs the actual recursion on the tree entries.
+ * */
+static void treemanifest_diffrecurse(std::string &path, const std::string *node1, const std::string *node2,
+                                     PyObject* diff, PyObject *get) {
+  char *selfraw = NULL;
+  Py_ssize_t selfrawsize = 0;
+  PyObject *selfrawobj = NULL;
+
+  char *otherraw = NULL;
+  Py_ssize_t otherrawsize = 0;
+  PyObject *otherrawobj = NULL;
+
+  try {
+    if (node1 != NULL) {
+      selfrawobj = getdata(get, path, *node1);
+      PyString_AsStringAndSize(selfrawobj, &selfraw, &selfrawsize);
+    }
+
+    if (node2 != NULL) {
+      otherrawobj = getdata(get, path, *node2);
+      PyString_AsStringAndSize(otherrawobj, &otherraw, &otherrawsize);
+    }
+
+    // It's ok if these receive a NULL pointer. They treat it as an empty
+    // manifest.
+    ManifestIterator selfiter(selfraw, selfrawsize);
+    ManifestIterator otheriter(otherraw, otherrawsize);
+
+    // Iterate through both directory contents
+    while (!selfiter.isfinished() || !otheriter.isfinished()) {
+      int cmp = 0;
+
+      ManifestEntry selfentry;
+      std::string selfbinnode;
+      if (!selfiter.isfinished()) {
+        cmp--;
+        selfentry = selfiter.currentvalue();
+        selfbinnode = binfromhex(selfentry.node);
+      }
+
+      ManifestEntry otherentry;
+      std::string otherbinnode;
+      if (!otheriter.isfinished()) {
+        cmp++;
+        otherentry = otheriter.currentvalue();
+        otherbinnode = binfromhex(otherentry.node);
+      }
+
+      // If both sides are present, cmp == 0, so do a filename comparison
+      if (cmp == 0) {
+        cmp = strcmp(selfentry.filename, otherentry.filename);
+      }
+
+      int originalpathsize = path.size();
+      if (cmp < 0) {
+        // selfentry should be processed first and only exists in self
+        selfentry.appendtopath(path);
+        if (selfentry.isdirectory()) {
+          treemanifest_diffrecurse(path, &selfbinnode, NULL, diff, get);
+        } else {
+          DiffEntry entry(&selfbinnode, selfentry.flag, NULL, NULL);
+          entry.addtodiff(diff, path);
+        }
+        selfiter.next(&selfentry);
+      } else if (cmp > 0) {
+        // otherentry should be processed first and only exists in other
+        otherentry.appendtopath(path);
+        if (otherentry.isdirectory()) {
+          treemanifest_diffrecurse(path, NULL, &otherbinnode, diff, get);
+        } else {
+          DiffEntry entry(NULL, NULL, &otherbinnode, otherentry.flag);
+          entry.addtodiff(diff, path);
+        }
+        otheriter.next(&otherentry);
+      } else {
+        // Filenames match - now compare directory vs file
+        if (selfentry.isdirectory() && otherentry.isdirectory()) {
+          // Both are directories - recurse
+          selfentry.appendtopath(path);
+
+          if (selfbinnode != otherbinnode) {
+            treemanifest_diffrecurse(path, &selfbinnode, &otherbinnode, diff, get);
+          }
+          selfiter.next(&selfentry);
+          otheriter.next(&otherentry);
+        } else if (selfentry.isdirectory() && !otherentry.isdirectory()) {
+          // self is directory, other is not - process other then self
+          otherentry.appendtopath(path);
+          DiffEntry entry(NULL, NULL, &otherbinnode, otherentry.flag);
+          entry.addtodiff(diff, path);
+
+          path.append(1, '/');
+          treemanifest_diffrecurse(path, &selfbinnode, NULL, diff, get);
+
+          selfiter.next(&selfentry);
+          otheriter.next(&otherentry);
+        } else if (!selfentry.isdirectory() && otherentry.isdirectory()) {
+          // self is not directory, other is - process self then other
+          selfentry.appendtopath(path);
+          DiffEntry entry(&selfbinnode, selfentry.flag, NULL, NULL);
+          entry.addtodiff(diff, path);
+
+          path.append(1, '/');
+          treemanifest_diffrecurse(path, NULL, &otherbinnode, diff, get);
+
+          selfiter.next(&selfentry);
+          otheriter.next(&otherentry);
+        } else {
+          // both are files
+          bool flagsdiffer = (
+            (selfentry.flag && otherentry.flag && *selfentry.flag != *otherentry.flag) ||
+            ((bool)selfentry.flag != (bool)selfentry.flag)
+          );
+
+          if (selfbinnode != otherbinnode || flagsdiffer) {
+            selfentry.appendtopath(path);
+            DiffEntry entry(&selfbinnode, selfentry.flag, &otherbinnode, otherentry.flag);
+            entry.addtodiff(diff, path);
+          }
+
+          selfiter.next(&selfentry);
+          otheriter.next(&otherentry);
+        }
+      }
+      path.erase(originalpathsize);
+    }
+    Py_XDECREF(selfrawobj);
+    Py_XDECREF(otherrawobj);
+  } catch (const std::exception &ex){
+    Py_XDECREF(selfrawobj);
+    Py_XDECREF(otherrawobj);
+    throw;
+  }
+}
+
+static PyObject *treemanifest_diff(PyObject *o, PyObject *args) {
+  treemanifest *self = (treemanifest*)o;
+  PyObject *otherObj;
+
+  if (!PyArg_ParseTuple(args, "O", &otherObj)) {
+    return NULL;
+  }
+
+  treemanifest *other = (treemanifest*)otherObj;
+
+  PyObject *results = PyDict_New();
+
+  PyObject *get = PyObject_GetAttrString(self->store, "get");
+
+  std::string path;
+  try {
+    path.reserve(1024);
+    treemanifest_diffrecurse(path, &self->node, &other->node, results, get);
+  } catch (const pyexception &ex) {
+    // Python has already set the error message
+    return NULL;
+  } catch (const std::exception &ex) {
+    PyErr_SetString(PyExc_RuntimeError, ex.what());
+    return NULL;
+  }
+  Py_DECREF(get);
+
+  return results;
+}
+
 static void _treemanifest_find(const std::string &filename, const std::string &node,
         PyObject *get, std::string *resultnode, char *resultflag) {
   std::string curnode = node;
@@ -558,6 +791,7 @@ static PyObject *fileiter_iterentriesnext(fileiter *self) {
 // ====  treemanifest ctype declaration ====
 
 static PyMethodDef treemanifest_methods[] = {
+  {"diff", treemanifest_diff, METH_VARARGS, "performs a diff of the given two manifests\n"},
   {"find", treemanifest_find, METH_VARARGS, "returns the node and flag for the given filepath\n"},
   {NULL, NULL}
 };
