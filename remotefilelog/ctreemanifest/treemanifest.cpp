@@ -52,6 +52,10 @@ class PythonObj {
   private:
     PyObject *obj;
   public:
+    PythonObj() :
+      obj(NULL) {
+    }
+
     PythonObj(PyObject *obj) {
       if (!obj) {
         if (!PyErr_Occurred()) {
@@ -65,18 +69,17 @@ class PythonObj {
 
     PythonObj(const PythonObj& other) {
       this->obj = other.obj;
-      Py_INCREF(this->obj);
+      Py_XINCREF(this->obj);
     }
 
     ~PythonObj() {
-      Py_DECREF(this->obj);
-      this->obj = NULL;
+      Py_XDECREF(this->obj);
     }
 
     PythonObj& operator=(const PythonObj &other) {
-      Py_DECREF(this->obj);
+      Py_XDECREF(this->obj);
       this->obj = other.obj;
-      Py_INCREF(this->obj);
+      Py_XINCREF(this->obj);
       return *this;
     }
 
@@ -89,7 +92,7 @@ class PythonObj {
      * and letting them manage the remaining lifetime of the object.
      **/
     PyObject *returnval() {
-      Py_INCREF(this->obj);
+      Py_XINCREF(this->obj);
       return this->obj;
     }
 
@@ -100,19 +103,63 @@ class PythonObj {
     }
 };
 
-/*
- * A single instance of a treemanifest.
+class Manifest;
+
+/* Class representing the contents of an in memory manifest (versus one that
+ * came from the data store). Each in memory instance is the owner of it's
+ * children in-memory manifests and will delete them during destruction.
+ **/
+class InMemoryManifest {
+  private:
+    char *_rawstr;
+    size_t _rawsize;
+    std::vector<InMemoryManifest*> _children;
+  public:
+    InMemoryManifest() :
+      _rawstr(NULL) {
+    }
+
+    ~InMemoryManifest() {
+      for (size_t i = 0; i < this->_children.size(); i++) {
+        InMemoryManifest *child = this->_children[i];
+        delete(child);
+      }
+      delete(this->_rawstr);
+    }
+
+    char *getdata() const {
+      return this->_rawstr;
+    }
+
+    size_t getdatasize() const {
+      return this->_rawsize;
+    }
+
+    const std::vector<InMemoryManifest*> &children() const {
+      return this->_children;
+    }
+};
+
+/* A key which can be used to look up a manifest, either from the store, or from
+ * in memory.
+ **/
+struct manifestkey {
+  std::string *path;
+  std::string *node;
+  const InMemoryManifest *memmanifest;
+
+  manifestkey(std::string *path, std::string *node,
+              const InMemoryManifest *memmanifest) :
+    path(path),
+    node(node),
+    memmanifest(memmanifest) {
+  }
+};
+
+/* Class representing a single entry in a given manifest.
+ * This class owns none of the memory it points at. It's just a view into a
+ * portion of memory someone else owns.
  * */
-typedef struct {
-  PyObject_HEAD;
-
-  // A reference to the store that is used to fetch new content
-  PythonObj store;
-
-  // The 20-byte root node of this manifest
-  std::string node;
-} treemanifest;
-
 class ManifestEntry {
   public:
     char *filename;
@@ -120,6 +167,11 @@ class ManifestEntry {
     char *node;
     char *flag;
     char *nextentrystart;
+    size_t index;
+
+    // Optional pointer to the in memory child
+    const InMemoryManifest *child;
+    // TODO: add hint storage here as well
 
     ManifestEntry() {
       this->filename = NULL;
@@ -127,12 +179,16 @@ class ManifestEntry {
       this->node = NULL;
       this->flag = NULL;
       this->nextentrystart = NULL;
+      this->index = -1;
+      this->child = NULL;
     }
 
     /* Given the start of a file/dir entry in a manifest, returns a
      * ManifestEntry structure with the parsed data.
      * */
-    ManifestEntry(char *entrystart) {
+    ManifestEntry(char *entrystart, size_t index, const InMemoryManifest *child = NULL) :
+      index(index),
+      child(child) {
       // Each entry is of the format:
       //
       //   <filename>\0<40-byte hash><optional 1 byte flag>\n
@@ -154,7 +210,7 @@ class ManifestEntry {
       }
     }
 
-    bool isdirectory() {
+    bool isdirectory() const {
       return this->flag && *this->flag == 't';
     }
 
@@ -166,16 +222,249 @@ class ManifestEntry {
     }
 };
 
+/* This class represents a view on a particular Manifest instance. It provides
+ * access to the list of files/directories at one level of the tree, not the
+ * entire tree.
+ *
+ * Instances of this class do not own the actual storage of manifest data. This
+ * class just provides a view onto that existing storage.
+ *
+ * If the actual manifest data comes from the store, this class refers to it via
+ * a PythonObj, and reference counting is used to determine when it's cleaned
+ * up.
+ *
+ * If the actual manifest data comes from an InMemoryManifest, then the life
+ * time of that InMemoryManifest is managed elsewhere, and is unaffected by the
+ * existence of Manifest objects that view into it.
+ **/
+class Manifest {
+  private:
+    PythonObj _rawobj;
+
+    // Optional: If this is set, this manifest refers to an in-memory-only
+    // pending manifest (instead of the Python string).
+    const InMemoryManifest *_memmanifest;
+
+    char *_firstentry;
+    Py_ssize_t _rawsize;
+  public:
+    Manifest() :
+      _memmanifest(NULL),
+      _firstentry(NULL),
+      _rawsize(0) {
+    }
+
+    Manifest(PythonObj &rawobj) :
+      _rawobj(rawobj),
+      _memmanifest(NULL) {
+      PyString_AsStringAndSize(this->_rawobj, &this->_firstentry, &this->_rawsize);
+    }
+
+    Manifest(const InMemoryManifest *memmanifest) :
+      _memmanifest(memmanifest),
+      // TODO: if the memmanifest reallocates its data, this pointer would be
+      // out of date. We should either A) allow the Manifest view to always see
+      // the latest InMemoryManifest data, or B) detect when the data is no
+      // longer up-to-date and block further operations on this view.
+      _firstentry(memmanifest->getdata()),
+      _rawsize(memmanifest->getdatasize()) {
+    }
+
+    bool empty() const {
+      return !this->_rawobj && !this->_memmanifest;
+    }
+
+    /* Returns the first ManifestEntry in this manifest. The nextentry function
+     * can then be used to continue iterating.
+     **/
+    ManifestEntry firstentry() const {
+      InMemoryManifest *child = NULL;
+      if (this->_memmanifest) {
+        const std::vector<InMemoryManifest*> children = this->_memmanifest->children();
+        if (children.size() > 0) {
+          child = children[0];
+        }
+      }
+      return ManifestEntry(this->_firstentry, 0, child);
+    }
+
+    /* Returns the ManifestEntry that follows the provided entry. If we're at
+     * the end of the chain an error is thrown.
+     **/
+    ManifestEntry nextentry(const ManifestEntry &entry) const {
+      if (this->islastentry(entry)) {
+        throw std::logic_error("called nextentry on the last entry");
+      }
+
+      size_t index = entry.index + 1;
+      InMemoryManifest *child = NULL;
+      if (this->_memmanifest) {
+        const std::vector<InMemoryManifest*> children = this->_memmanifest->children();
+        if (children.size() > index) {
+          child = children[index];
+        }
+      }
+
+      return ManifestEntry(entry.nextentrystart, index, child);
+    }
+
+    /* Returns true if the given ManifestEntry is the last entry in this
+     * Manifest.
+     **/
+    bool islastentry(const ManifestEntry &entry) const {
+      return entry.nextentrystart >= this->_firstentry + this->_rawsize;
+    }
+};
+
+/* Class that represents an iterator over the entries of an individual manifest.
+ **/
+class ManifestIterator {
+  private:
+    Manifest _manifest;
+    ManifestEntry _current;
+  public:
+    ManifestIterator() {
+    }
+
+    ManifestIterator(const Manifest &manifest) :
+      _manifest(manifest),
+      _current(manifest.firstentry()) {
+    }
+
+    bool next(ManifestEntry *nextentry) {
+      if (this->isfinished()) {
+        return false;
+      }
+
+      *nextentry = this->_current;
+
+      if (this->_manifest.islastentry(this->_current)) {
+        this->_current = ManifestEntry();
+      } else {
+        this->_current = this->_manifest.nextentry(this->_current);
+      }
+      return true;
+    }
+
+    ManifestEntry currentvalue() const {
+      if (this->isfinished()) {
+        throw std::logic_error("iterator has no current value");
+      }
+
+      return this->_current;
+    }
+
+    bool isfinished() const {
+      return this->_manifest.empty() || this->_current.filename == NULL;
+    }
+};
+
+/* Class used to obtain Manifests, given a path and node.
+ **/
+class ManifestFetcher {
+  private:
+    PythonObj _get;
+  public:
+    ManifestFetcher(PythonObj &store) :
+      _get(store.getattr("get")) {
+    }
+
+  /*
+   * Fetches the Manifest from the store for the provided manifest key.
+   * Returns the manifest if found, or throws an exception if not found.
+   **/
+  Manifest get(const manifestkey &key) const {
+    if (key.memmanifest) {
+      return Manifest(key.memmanifest);
+    }
+
+    PythonObj arglist = Py_BuildValue("s#s#", key.path->c_str(), (Py_ssize_t)key.path->size(),
+                                              key.node->c_str(), (Py_ssize_t)key.node->size());
+
+    PyObject *result = PyEval_CallObject(this->_get, arglist);
+
+    if (!result) {
+      if (PyErr_Occurred()) {
+        throw pyexception();
+      }
+
+      PyErr_Format(PyExc_RuntimeError, "unable to find tree '%s:...'", key.path->c_str());
+      throw pyexception();
+    }
+
+    PythonObj resultobj(result);
+    return Manifest(resultobj);
+  }
+};
+
+/*
+ * A single instance of a treemanifest.
+ * */
+struct treemanifest {
+  PyObject_HEAD;
+
+  // A reference to the store that is used to fetch new content
+  PythonObj store;
+
+  // The 20-byte root node of this manifest
+  std::string node;
+
+  // Optional in memory root of the tree
+  InMemoryManifest *root;
+};
+
+/*
+ * Represents a single stack frame in an iteration of the contents of the tree.
+ **/
+struct stackframe {
+  Manifest manifest;
+  ManifestIterator iterator;
+
+  stackframe(const Manifest &manifest) :
+    manifest(manifest),
+    iterator(manifest) {
+  }
+};
+
 /*
  * A helper struct representing the state of an iterator recursing over a tree.
  * */
 struct stackiter {
-  PythonObj get;                // Function to fetch tree content
-  std::vector<PythonObj> data;  // Tree content for previous entries in the stack
-  std::vector<char*> location;    // The current iteration position for each stack entry
+  // A reference to the tree is kept, so it is not freed while we're iterating
+  // over it.
+  const treemanifest *treemf;
+  ManifestFetcher fetcher;      // Instance to fetch tree content
+  std::vector<stackframe> frames;
   std::string path;             // The fullpath for the top entry in the stack.
 
-  stackiter(PythonObj get) : get(get) {
+  stackiter(const treemanifest *treemf, ManifestFetcher fetcher) :
+    treemf(treemf),
+    fetcher(fetcher) {
+      Py_INCREF(this->treemf);
+  }
+
+  stackiter(const stackiter &old) :
+    treemf(old.treemf),
+    fetcher(old.fetcher),
+    frames(old.frames),
+    path(old.path) {
+      Py_INCREF(this->treemf);
+  }
+
+  ~stackiter() {
+    Py_DECREF(this->treemf);
+  }
+
+  stackiter& operator=(const stackiter &other) {
+    Py_DECREF(this->treemf);
+    this->treemf = other.treemf;
+    Py_INCREF(this->treemf);
+
+    this->fetcher = other.fetcher;
+    this->frames = other.frames;
+    this->path = other.path;
+
+    return *this;
   }
 };
 
@@ -188,7 +477,8 @@ struct fileiter {
   PyObject_HEAD;
   stackiter iter;
 
-  fileiter(PythonObj get) : iter(get) {
+  fileiter(const treemanifest *treemanifest, ManifestFetcher fetcher) :
+    iter(treemanifest, fetcher) {
   }
 };
 
@@ -240,63 +530,6 @@ static std::string binfromhex(const char *node) {
   return std::string(binary, 20);
 }
 
-/*
- * Fetches the given directory/node pair from the store using the provided `get`
- * function. Returns a python string with the contents. The caller is
- * responsible for calling Py_DECREF on the result.
- * */
-static PythonObj getdata(const PythonObj &get, const std::string &dir, const std::string &node) {
-  PythonObj arglist = Py_BuildValue("s#s#", dir.c_str(), (Py_ssize_t)dir.size(),
-                                            node.c_str(), (Py_ssize_t)node.size());
-
-  PyObject *result = PyEval_CallObject(get, arglist);
-
-  if (!result) {
-    if (PyErr_Occurred()) {
-      throw pyexception();
-    }
-
-    PyErr_Format(PyExc_RuntimeError, "unable to find tree '%s:...'", dir.c_str());
-    throw pyexception();
-  }
-
-  return PythonObj(result);
-}
-
-class ManifestIterator {
-  private:
-    char *raw;
-    char *entrystart;
-    int length;
-  public:
-    ManifestIterator(char *raw, size_t length) {
-      this->raw = raw;
-      this->entrystart = raw;
-      this->length = length;
-    }
-
-    bool next(ManifestEntry *entry) {
-      if (this->isfinished()) {
-        return false;
-      }
-
-      *entry = ManifestEntry(this->entrystart);
-      this->entrystart = entry->nextentrystart;
-      return true;
-    }
-
-    ManifestEntry currentvalue() const {
-      if (this->isfinished()) {
-        throw std::logic_error("iterator has no current value");
-      }
-      return ManifestEntry(this->entrystart);
-    }
-
-    bool isfinished() const {
-      return this->raw == NULL || (this->entrystart - this->raw >= this->length);
-    }
-};
-
 // ==== treemanifest functions ====
 
 /* Implementation of treemanifest.__iter__
@@ -306,21 +539,16 @@ static PyObject *treemanifest_getkeysiter(treemanifest *self) {
   fileiter *i = PyObject_New(fileiter, &fileiterType);
   if (i) {
     try {
-      // Keep a copy of the store's get function for accessing contents
-      PythonObj get = self->store.getattr("get");
+      ManifestFetcher fetcher(self->store);
       // The provided fileiter struct hasn't initialized our stackiter member, so
       // we do it manually.
-      new (&i->iter) stackiter(get);
+      new (&i->iter) stackiter(self, fetcher);
 
       // Grab the root node's data and prep the iterator
-      PythonObj rawobj = getdata(i->iter.get, "", self->node);
+      std::string rootpath;
+      Manifest root = fetcher.get(manifestkey(&rootpath, &self->node, self->root));
+      i->iter.frames.push_back(stackframe(root));
 
-      char *raw;
-      Py_ssize_t rawsize;
-      PyString_AsStringAndSize(rawobj, &raw, &rawsize);
-
-      i->iter.data.push_back(rawobj);
-      i->iter.location.push_back(raw);
       i->iter.path.reserve(1024);
     } catch (const pyexception &ex) {
       Py_DECREF(i);
@@ -421,130 +649,129 @@ class DiffEntry {
 
 /* Helper function that performs the actual recursion on the tree entries.
  * */
-static void treemanifest_diffrecurse(std::string &path, const std::string *node1, const std::string *node2,
-                                     const PythonObj &diff, const PythonObj &get) {
-  char *selfraw = NULL;
-  Py_ssize_t selfrawsize = 0;
+static void treemanifest_diffrecurse(manifestkey *selfkey, manifestkey *otherkey,
+                                     const PythonObj &diff, const ManifestFetcher &fetcher) {
+  Manifest selfmf;
+  Manifest othermf;
+  ManifestIterator selfiter;
+  ManifestIterator otheriter;
 
-  char *otherraw = NULL;
-  Py_ssize_t otherrawsize = 0;
+  std::string *path = NULL;
+  if (selfkey) {
+    selfmf = fetcher.get(*selfkey);
+    selfiter = ManifestIterator(selfmf);
+    path = selfkey->path;
+  }
 
-  try {
-    if (node1 != NULL) {
-      PythonObj selfrawobj = getdata(get, path, *node1);
-      PyString_AsStringAndSize(selfrawobj, &selfraw, &selfrawsize);
+  if (otherkey) {
+    othermf = fetcher.get(*otherkey);
+    otheriter = ManifestIterator(othermf);
+    path = otherkey->path;
+  }
+
+  // Iterate through both directory contents
+  while (!selfiter.isfinished() || !otheriter.isfinished()) {
+    int cmp = 0;
+
+    ManifestEntry selfentry;
+    std::string selfbinnode;
+    if (!selfiter.isfinished()) {
+      cmp--;
+      selfentry = selfiter.currentvalue();
+      selfbinnode = binfromhex(selfentry.node);
     }
 
-    if (node2 != NULL) {
-      PythonObj otherrawobj = getdata(get, path, *node2);
-      PyString_AsStringAndSize(otherrawobj, &otherraw, &otherrawsize);
+    ManifestEntry otherentry;
+    std::string otherbinnode;
+    if (!otheriter.isfinished()) {
+      cmp++;
+      otherentry = otheriter.currentvalue();
+      otherbinnode = binfromhex(otherentry.node);
     }
 
-    // It's ok if these receive a NULL pointer. They treat it as an empty
-    // manifest.
-    ManifestIterator selfiter(selfraw, selfrawsize);
-    ManifestIterator otheriter(otherraw, otherrawsize);
+    // If both sides are present, cmp == 0, so do a filename comparison
+    if (cmp == 0) {
+      cmp = strcmp(selfentry.filename, otherentry.filename);
+    }
 
-    // Iterate through both directory contents
-    while (!selfiter.isfinished() || !otheriter.isfinished()) {
-      int cmp = 0;
-
-      ManifestEntry selfentry;
-      std::string selfbinnode;
-      if (!selfiter.isfinished()) {
-        cmp--;
-        selfentry = selfiter.currentvalue();
-        selfbinnode = binfromhex(selfentry.node);
+    int originalpathsize = path->size();
+    if (cmp < 0) {
+      // selfentry should be processed first and only exists in self
+      selfentry.appendtopath(*path);
+      if (selfentry.isdirectory()) {
+        manifestkey selfkey(path, &selfbinnode, selfentry.child);
+        treemanifest_diffrecurse(&selfkey, NULL, diff, fetcher);
+      } else {
+        DiffEntry entry(&selfbinnode, selfentry.flag, NULL, NULL);
+        entry.addtodiff(diff, *path);
       }
-
-      ManifestEntry otherentry;
-      std::string otherbinnode;
-      if (!otheriter.isfinished()) {
-        cmp++;
-        otherentry = otheriter.currentvalue();
-        otherbinnode = binfromhex(otherentry.node);
+      selfiter.next(&selfentry);
+    } else if (cmp > 0) {
+      // otherentry should be processed first and only exists in other
+      otherentry.appendtopath(*path);
+      if (otherentry.isdirectory()) {
+        manifestkey otherkey(path, &otherbinnode, otherentry.child);
+        treemanifest_diffrecurse(NULL, &otherkey, diff, fetcher);
+      } else {
+        DiffEntry entry(NULL, NULL, &otherbinnode, otherentry.flag);
+        entry.addtodiff(diff, *path);
       }
+      otheriter.next(&otherentry);
+    } else {
+      // Filenames match - now compare directory vs file
+      if (selfentry.isdirectory() && otherentry.isdirectory()) {
+        // Both are directories - recurse
+        selfentry.appendtopath(*path);
 
-      // If both sides are present, cmp == 0, so do a filename comparison
-      if (cmp == 0) {
-        cmp = strcmp(selfentry.filename, otherentry.filename);
-      }
-
-      int originalpathsize = path.size();
-      if (cmp < 0) {
-        // selfentry should be processed first and only exists in self
-        selfentry.appendtopath(path);
-        if (selfentry.isdirectory()) {
-          treemanifest_diffrecurse(path, &selfbinnode, NULL, diff, get);
-        } else {
-          DiffEntry entry(&selfbinnode, selfentry.flag, NULL, NULL);
-          entry.addtodiff(diff, path);
+        if (selfbinnode != otherbinnode) {
+          manifestkey selfkey(path, &selfbinnode, selfentry.child);
+          manifestkey otherkey(path, &otherbinnode, otherentry.child);
+          treemanifest_diffrecurse(&selfkey, &otherkey, diff, fetcher);
         }
         selfiter.next(&selfentry);
-      } else if (cmp > 0) {
-        // otherentry should be processed first and only exists in other
-        otherentry.appendtopath(path);
-        if (otherentry.isdirectory()) {
-          treemanifest_diffrecurse(path, NULL, &otherbinnode, diff, get);
-        } else {
-          DiffEntry entry(NULL, NULL, &otherbinnode, otherentry.flag);
-          entry.addtodiff(diff, path);
-        }
+        otheriter.next(&otherentry);
+      } else if (selfentry.isdirectory() && !otherentry.isdirectory()) {
+        // self is directory, other is not - process other then self
+        otherentry.appendtopath(*path);
+        DiffEntry entry(NULL, NULL, &otherbinnode, otherentry.flag);
+        entry.addtodiff(diff, *path);
+
+        path->append(1, '/');
+        manifestkey selfkey(path, &selfbinnode, selfentry.child);
+        treemanifest_diffrecurse(&selfkey, NULL, diff, fetcher);
+
+        selfiter.next(&selfentry);
+        otheriter.next(&otherentry);
+      } else if (!selfentry.isdirectory() && otherentry.isdirectory()) {
+        // self is not directory, other is - process self then other
+        selfentry.appendtopath(*path);
+        DiffEntry entry(&selfbinnode, selfentry.flag, NULL, NULL);
+        entry.addtodiff(diff, *path);
+
+        path->append(1, '/');
+        manifestkey otherkey(path, &otherbinnode, otherentry.child);
+        treemanifest_diffrecurse(NULL, &otherkey, diff, fetcher);
+
+        selfiter.next(&selfentry);
         otheriter.next(&otherentry);
       } else {
-        // Filenames match - now compare directory vs file
-        if (selfentry.isdirectory() && otherentry.isdirectory()) {
-          // Both are directories - recurse
-          selfentry.appendtopath(path);
+        // both are files
+        bool flagsdiffer = (
+          (selfentry.flag && otherentry.flag && *selfentry.flag != *otherentry.flag) ||
+          ((bool)selfentry.flag != (bool)selfentry.flag)
+        );
 
-          if (selfbinnode != otherbinnode) {
-            treemanifest_diffrecurse(path, &selfbinnode, &otherbinnode, diff, get);
-          }
-          selfiter.next(&selfentry);
-          otheriter.next(&otherentry);
-        } else if (selfentry.isdirectory() && !otherentry.isdirectory()) {
-          // self is directory, other is not - process other then self
-          otherentry.appendtopath(path);
-          DiffEntry entry(NULL, NULL, &otherbinnode, otherentry.flag);
-          entry.addtodiff(diff, path);
-
-          path.append(1, '/');
-          treemanifest_diffrecurse(path, &selfbinnode, NULL, diff, get);
-
-          selfiter.next(&selfentry);
-          otheriter.next(&otherentry);
-        } else if (!selfentry.isdirectory() && otherentry.isdirectory()) {
-          // self is not directory, other is - process self then other
-          selfentry.appendtopath(path);
-          DiffEntry entry(&selfbinnode, selfentry.flag, NULL, NULL);
-          entry.addtodiff(diff, path);
-
-          path.append(1, '/');
-          treemanifest_diffrecurse(path, NULL, &otherbinnode, diff, get);
-
-          selfiter.next(&selfentry);
-          otheriter.next(&otherentry);
-        } else {
-          // both are files
-          bool flagsdiffer = (
-            (selfentry.flag && otherentry.flag && *selfentry.flag != *otherentry.flag) ||
-            ((bool)selfentry.flag != (bool)selfentry.flag)
-          );
-
-          if (selfbinnode != otherbinnode || flagsdiffer) {
-            selfentry.appendtopath(path);
-            DiffEntry entry(&selfbinnode, selfentry.flag, &otherbinnode, otherentry.flag);
-            entry.addtodiff(diff, path);
-          }
-
-          selfiter.next(&selfentry);
-          otheriter.next(&otherentry);
+        if (selfbinnode != otherbinnode || flagsdiffer) {
+          selfentry.appendtopath(*path);
+          DiffEntry entry(&selfbinnode, selfentry.flag, &otherbinnode, otherentry.flag);
+          entry.addtodiff(diff, *path);
         }
+
+        selfiter.next(&selfentry);
+        otheriter.next(&otherentry);
       }
-      path.erase(originalpathsize);
     }
-  } catch (const std::exception &ex){
-    throw;
+    path->erase(originalpathsize);
   }
 }
 
@@ -560,12 +787,14 @@ static PyObject *treemanifest_diff(PyObject *o, PyObject *args) {
 
   PythonObj results = PyDict_New();
 
-  PythonObj get = self->store.getattr("get");
+  ManifestFetcher fetcher(self->store);
 
   std::string path;
   try {
     path.reserve(1024);
-    treemanifest_diffrecurse(path, &self->node, &other->node, results, get);
+    manifestkey selfkey(&path, &self->node, self->root);
+    manifestkey otherkey(&path, &other->node, other->root);
+    treemanifest_diffrecurse(&selfkey, &otherkey, results, fetcher);
   } catch (const pyexception &ex) {
     // Python has already set the error message
     return NULL;
@@ -577,27 +806,23 @@ static PyObject *treemanifest_diff(PyObject *o, PyObject *args) {
   return results.returnval();
 }
 
-static void _treemanifest_find(const std::string &filename, const std::string &node,
-        const PythonObj &get, std::string *resultnode, char *resultflag) {
-  std::string curnode = node;
-  const char *filenamecstr = filename.c_str();
+static void _treemanifest_find(const std::string &filename, const manifestkey &root,
+    const ManifestFetcher &fetcher, std::string *resultnode, char *resultflag) {
+  // Pre-allocate our curkey so we can reuse it for each iteration
+  std::string curname(*root.path);
+  curname.reserve(1024);
+  std::string curnode(*root.node);
+  manifestkey curkey(&curname, &curnode, root.memmanifest);
 
   // Loop over the parts of the query filename
   PathIterator pathiter(filename);
   const char *word;
   size_t wordlen;
   while (pathiter.next(&word, &wordlen)) {
-    // Get the fullpath of the current directory/file we're searching in
-    std::string curpath = filename.substr(0, word - filenamecstr);
-
     // Obtain the raw data for this directory
-    PythonObj rawobj = getdata(get, curpath, curnode);
+    Manifest manifest = fetcher.get(curkey);
 
-    char* raw;
-    Py_ssize_t rawsize;
-    PyString_AsStringAndSize(rawobj, &raw, &rawsize);
-
-    ManifestIterator mfiterator(raw, rawsize);
+    ManifestIterator mfiterator(manifest);
     ManifestEntry entry;
     bool recurse = false;
 
@@ -621,12 +846,17 @@ static void _treemanifest_find(const std::string &filename, const std::string &n
         }
 
         // If there's more in the query, either recurse or give up
-        if (entry.isdirectory()) {
-          curnode.assign(binfromhex(entry.node));
+        size_t nextpathlen = curkey.path->length() + wordlen + 1;
+        if (entry.isdirectory() && filename.length() > nextpathlen) {
+          // Get the fullpath of the current directory/file we're searching in
+          curkey.path->assign(filename, 0, nextpathlen);
+          curkey.node->assign(binfromhex(entry.node));
+          curkey.memmanifest = entry.child;
           recurse = true;
           break;
         } else {
-          // Found a file when we expected a directory
+          // Found a file when we expected a directory or
+          // found a directory when we expected a file.
           break;
         }
       }
@@ -652,12 +882,15 @@ static PyObject *treemanifest_find(PyObject *o, PyObject *args) {
     return NULL;
   }
 
-  PythonObj get = self->store.getattr("get");
+  ManifestFetcher fetcher(self->store);
 
   std::string resultnode;
   char resultflag;
   try {
-    _treemanifest_find(std::string(filename, filenamelen), self->node, get, &resultnode, &resultflag);
+    std::string rootpath;
+    manifestkey rootkey(&rootpath, &self->node, self->root);
+    _treemanifest_find(std::string(filename, filenamelen), rootkey, fetcher,
+                       &resultnode, &resultflag);
   } catch (const pyexception &ex) {
     return NULL;
   }
@@ -728,22 +961,17 @@ static void fileiter_dealloc(fileiter *self) {
  * Returns false if we've reached the end, or true if there's more work.
  * */
 static bool fileiter_popfinished(stackiter *iter) {
-  PythonObj rawobj = iter->data.back();
-  char *raw;
-  Py_ssize_t rawsize;
-  PyString_AsStringAndSize(rawobj, &raw, &rawsize);
-
-  char *entrystart = iter->location.back();
+  stackframe *frame = &iter->frames.back();
 
   // Pop the stack of trees until we find one we haven't finished iterating
   // over.
-  while (entrystart >= raw + rawsize) {
-    iter->data.pop_back();
-    iter->location.pop_back();
-    if (iter->data.empty()) {
+  while (frame->iterator.isfinished()) {
+    iter->frames.pop_back();
+    if (iter->frames.empty()) {
       // No more directories to pop means we've reached the end of the root
       return false;
     }
+    frame = &iter->frames.back();
 
     // Pop the top of the path off, to match the newly popped tree stack.
     size_t found = iter->path.rfind('/', iter->path.size() - 2);
@@ -752,11 +980,6 @@ static bool fileiter_popfinished(stackiter *iter) {
     } else {
       iter->path.erase(0);
     }
-
-    rawobj = iter->data.back();
-    PyString_AsStringAndSize(rawobj, &raw, &rawsize);
-
-    entrystart = iter->location.back();
   }
 
   return true;
@@ -776,37 +999,22 @@ static PyObject *fileiter_iterentriesnext(fileiter *self) {
         return NULL;
       }
 
-      PythonObj rawobj = iter.data.back();
-      char *raw;
-      Py_ssize_t rawsize;
-      PyString_AsStringAndSize(rawobj, &raw, &rawsize);
+      stackframe &frame = iter.frames.back();
+      ManifestIterator &iterator = frame.iterator;
 
-      // `entrystart` represents the location of the current item in the raw tree data
-      // we're iterating over.
-      char *entrystart = iter.location.back();
-      ManifestEntry entry(entrystart);
-
-      // Move to the next entry for next time
-      iter.location[iter.location.size() - 1] = entry.nextentrystart;
+      ManifestEntry entry;
+      iterator.next(&entry);
 
       // If a directory, push it and loop again
       if (entry.isdirectory()) {
         iter.path.append(entry.filename, entry.filenamelen);
         iter.path.append(1, '/');
 
-        // Fetch the directory contents
-        PythonObj subrawobj = getdata(iter.get, iter.path,
-                                      binfromhex(entry.node));
-        if (!subrawobj) {
-          return NULL;
-        }
+        std::string binnode = binfromhex(entry.node);
+        manifestkey key(&iter.path, &binnode, entry.child);
+        Manifest submanifest = iter.fetcher.get(key);
+        iter.frames.push_back(stackframe(submanifest));
 
-        // Push the new directory on the stack
-        char *subraw;
-        Py_ssize_t subrawsize;
-        PyString_AsStringAndSize(subrawobj, &subraw, &subrawsize);
-        iter.data.push_back(subrawobj);
-        iter.location.push_back(subraw);
       } else {
         // If a file, yield it
         int oldpathsize = iter.path.size();
