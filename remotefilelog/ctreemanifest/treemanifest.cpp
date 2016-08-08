@@ -46,14 +46,58 @@ typedef struct {
   std::string node;
 } treemanifest;
 
-typedef struct {
-  char *filename;
-  size_t filenamelen;
-  char *node;
-  char *flag;
-  char *nextentrystart;
+class ManifestEntry {
+  public:
+    char *filename;
+    size_t filenamelen;
+    char *node;
+    char *flag;
+    char *nextentrystart;
 
-} manifestentry;
+    ManifestEntry() {
+      this->filename = NULL;
+      filenamelen = 0;
+      this->node = NULL;
+      this->flag = NULL;
+      this->nextentrystart = NULL;
+    }
+
+    /* Given the start of a file/dir entry in a manifest, returns a
+     * ManifestEntry structure with the parsed data.
+     * */
+    ManifestEntry(char *entrystart) {
+      // Each entry is of the format:
+      //
+      //   <filename>\0<40-byte hash><optional 1 byte flag>\n
+      //
+      // Where flags can be 't' to represent a sub directory
+      this->filename = entrystart;
+      char *nulldelimiter = strchr(entrystart, '\0');
+      this->filenamelen = nulldelimiter - entrystart;
+
+      this->node = nulldelimiter + 1;
+
+      this->flag = nulldelimiter + 41;
+      if (*this->flag != '\n') {
+        this->nextentrystart = this->flag + 2;
+      } else {
+        // No flag
+        this->nextentrystart = this->flag + 1;
+        this->flag = NULL;
+      }
+    }
+
+    bool isdirectory() {
+      return this->flag && *this->flag == 't';
+    }
+
+    void appendtopath(std::string &path) {
+      path.append(this->filename, this->filenamelen);
+      if (this->isdirectory()) {
+        path.append(1, '/');
+      }
+    }
+};
 
 /*
  * A helper struct representing the state of an iterator recursing over a tree.
@@ -147,34 +191,6 @@ static PyObject* getdata(PyObject *get, const std::string &dir, const std::strin
   return result;
 }
 
-/* Given the start of a file/dir entry in a manifest, parsentry returns a
- * manifestentry structure with the parsed data.
- * */
-static manifestentry parseentry(char *entrystart) {
-  manifestentry result;
-  // Each entry is of the format:
-  //
-  //   <filename>\0<40-byte hash><optional 1 byte flag>\n
-  //
-  // Where flags can be 't' to represent a sub directory
-  result.filename = entrystart;
-  char *nulldelimiter = strchr(entrystart, '\0');
-  result.filenamelen = nulldelimiter - entrystart;
-
-  result.node = nulldelimiter + 1;
-
-  result.flag = nulldelimiter + 41;
-  if (*result.flag != '\n') {
-    result.nextentrystart = result.flag + 2;
-  } else {
-    // No flag
-    result.nextentrystart = result.flag + 1;
-    result.flag = NULL;
-  }
-
-  return result;
-}
-
 class ManifestIterator {
   private:
     char *raw;
@@ -187,14 +203,25 @@ class ManifestIterator {
       this->length = length;
     }
 
-    bool next(manifestentry *entry) {
-      if (this->entrystart - this->raw >= this->length) {
+    bool next(ManifestEntry *entry) {
+      if (this->isfinished()) {
         return false;
       }
 
-      *entry = parseentry(this->entrystart);
+      *entry = ManifestEntry(this->entrystart);
       this->entrystart = entry->nextentrystart;
       return true;
+    }
+
+    ManifestEntry currentvalue() const {
+      if (this->isfinished()) {
+        throw std::logic_error("iterator has no current value");
+      }
+      return ManifestEntry(this->entrystart);
+    }
+
+    bool isfinished() const {
+      return this->raw == NULL || (this->entrystart - this->raw >= this->length);
     }
 };
 
@@ -298,7 +325,7 @@ static void _treemanifest_find(const std::string &filename, const std::string &n
     PyString_AsStringAndSize(rawobj, &raw, &rawsize);
 
     ManifestIterator mfiterator(raw, rawsize);
-    manifestentry entry;
+    ManifestEntry entry;
     bool recurse = false;
 
     // Loop over the contents of the current directory looking for the
@@ -310,7 +337,7 @@ static void _treemanifest_find(const std::string &filename, const std::string &n
         // If this is the last entry in the query path, either return or abort
         if (pathiter.isfinished()) {
           // If it's a file, it's our result
-          if (entry.flag && *entry.flag != 't') {
+          if (!entry.isdirectory()) {
             resultnode->assign(binfromhex(entry.node));
             *resultflag = *entry.flag;
             Py_DECREF(rawobj);
@@ -322,7 +349,7 @@ static void _treemanifest_find(const std::string &filename, const std::string &n
         }
 
         // If there's more in the query, either recurse or give up
-        if (entry.flag && *entry.flag == 't') {
+        if (entry.isdirectory()) {
           curnode.assign(binfromhex(entry.node));
           recurse = true;
           break;
@@ -489,13 +516,13 @@ static PyObject *fileiter_iterentriesnext(fileiter *self) {
     // `entrystart` represents the location of the current item in the raw tree data
     // we're iterating over.
     char *entrystart = iter.location.back();
-    manifestentry entry = parseentry(entrystart);
+    ManifestEntry entry(entrystart);
 
     // Move to the next entry for next time
     iter.location[iter.location.size() - 1] = entry.nextentrystart;
 
     // If a directory, push it and loop again
-    if (entry.flag && *entry.flag == 't') {
+    if (entry.isdirectory()) {
       iter.path.append(entry.filename, entry.filenamelen);
       iter.path.append(1, '/');
 
