@@ -423,6 +423,12 @@ class localrepository(object):
         self.svfs = self.store.vfs
         self.sjoin = self.store.join
         self.vfs.createmode = self.store.createmode
+        if (self.ui.configbool('devel', 'all-warnings') or
+            self.ui.configbool('devel', 'check-locks')):
+            if util.safehasattr(self.svfs, 'vfs'): # this is filtervfs
+                self.svfs.vfs.audit = self._getsvfsward(self.svfs.vfs.audit)
+            else: # standard vfs
+                self.svfs.audit = self._getsvfsward(self.svfs.audit)
         self._applyopenerreqs()
         if create:
             self._writerequirements()
@@ -495,6 +501,25 @@ class localrepository(object):
                                   stacklevel=2)
             return ret
         return checkvfs
+
+    def _getsvfsward(self, origfunc):
+        """build a ward for self.svfs"""
+        rref = weakref.ref(self)
+        def checksvfs(path, mode=None):
+            ret = origfunc(path, mode=mode)
+            repo = rref()
+            if repo is None or not util.safehasattr(repo, '_lockref'):
+                return
+            if mode in (None, 'r', 'rb'):
+                return
+            if path.startswith(repo.sharedpath):
+                # truncate name relative to the repository (.hg)
+                path = path[len(repo.sharedpath) + 1:]
+            if repo._currentlock(repo._lockref) is None:
+                repo.ui.develwarn('write with no lock: "%s"' % path,
+                                  stacklevel=3)
+            return ret
+        return checksvfs
 
     def close(self):
         self._writecaches()
