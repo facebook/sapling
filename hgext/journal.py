@@ -165,9 +165,10 @@ def _mergeentriesiter(*iterables, **kwargs):
 
 def wrappostshare(orig, sourcerepo, destrepo, **kwargs):
     """Mark this shared working copy as sharing journal information"""
-    orig(sourcerepo, destrepo, **kwargs)
-    with destrepo.vfs('shared', 'a') as fp:
-        fp.write('journal\n')
+    with destrepo.wlock():
+        orig(sourcerepo, destrepo, **kwargs)
+        with destrepo.vfs('shared', 'a') as fp:
+            fp.write('journal\n')
 
 def unsharejournal(orig, ui, repo, repopath):
     """Copy shared journal entries into this repo when unsharing"""
