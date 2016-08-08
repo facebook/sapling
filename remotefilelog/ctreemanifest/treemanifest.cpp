@@ -29,6 +29,9 @@ static int8_t hextable[256] = {
 	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1
 };
 
+/*
+ * A single instance of a treemanifest.
+ * */
 typedef struct {
   PyObject_HEAD;
 
@@ -38,6 +41,60 @@ typedef struct {
   // The 20-byte root node of this manifest
   std::string node;
 } treemanifest;
+
+/*
+ * A helper struct representing the state of an iterator recursing over a tree.
+ * */
+typedef struct {
+  PyObject *get;                // Function to fetch tree content
+  std::vector<PyObject*> data;  // Tree content for previous entries in the stack
+  std::vector<char*> location;    // The current iteration position for each stack entry
+  std::string path;             // The fullpath for the top entry in the stack.
+} stackiter;
+
+/*
+ * The python iteration object for iterating over a tree.  This is separate from
+ * the stackiter above because it lets us just call the constructor on
+ * stackiter, which will automatically populate all the members of stackiter.
+ * */
+typedef struct {
+  PyObject_HEAD;
+  stackiter iter;
+} fileiter;
+
+static void fileiter_dealloc(fileiter *self);
+static PyTypeObject fileiterType = {
+  PyObject_HEAD_INIT(NULL)
+  0,                               /*ob_size */
+  "treemanifest.keyiter",          /*tp_name */
+  sizeof(fileiter),                /*tp_basicsize */
+  0,                               /*tp_itemsize */
+  (destructor)fileiter_dealloc,    /*tp_dealloc */
+  0,                               /*tp_print */
+  0,                               /*tp_getattr */
+  0,                               /*tp_setattr */
+  0,                               /*tp_compare */
+  0,                               /*tp_repr */
+  0,                               /*tp_as_number */
+  0,                               /*tp_as_sequence */
+  0,                               /*tp_as_mapping */
+  0,                               /*tp_hash */
+  0,                               /*tp_call */
+  0,                               /*tp_str */
+  0,                               /*tp_getattro */
+  0,                               /*tp_setattro */
+  0,                               /*tp_as_buffer */
+  /* tp_flags: Py_TPFLAGS_HAVE_ITER tells python to
+     use tp_iter and tp_iternext fields. */
+  Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_ITER,
+  "TODO",                          /* tp_doc */
+  0,                               /* tp_traverse */
+  0,                               /* tp_clear */
+  0,                               /* tp_richcompare */
+  0,                               /* tp_weaklistoffset */
+  PyObject_SelfIter,               /* tp_iter: __iter__() method */
+  0,                               /* tp_iternext: next() method */
+};
 
 /*
  * Converts a given 20-byte node into a 40-byte hex string
@@ -104,6 +161,22 @@ static int treemanifest_init(treemanifest *self, PyObject *args) {
   }
 
   return 0;
+}
+
+// ==== fileiter functions ====
+
+/* Destructor for the file iterator. Cleans up all the member data of the
+ * iterator.
+ * */
+static void fileiter_dealloc(fileiter *self) {
+  Py_XDECREF(self->iter.get);
+  while (self->iter.data.size() > 0) {
+    Py_XDECREF(self->iter.data.back());
+    self->iter.data.pop_back();
+  }
+
+  self->iter.~stackiter();
+  PyObject_Del(self);
 }
 
 // ====  treemanifest ctype declaration ====
