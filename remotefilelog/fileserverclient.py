@@ -8,7 +8,7 @@
 from mercurial.i18n import _
 from mercurial.node import hex, bin
 from mercurial import util, sshpeer, hg, error, util, wireproto, node, httppeer
-from mercurial import scmutil
+from mercurial import extensions, scmutil
 import hashlib, os, socket, lz4, time, io, struct
 import errno
 import itertools
@@ -252,15 +252,29 @@ class fileserverclient(object):
 
     def _connect(self):
         fallbackpath = self.repo.fallbackpath
+        needcreate = False
         if not self.remoteserver:
             if not fallbackpath:
                 raise error.Abort("no remotefilelog server "
                     "configured - is your .hg/hgrc trusted?")
-            self.remoteserver = hg.peer(self.ui, {}, fallbackpath)
+            needcreate = True
         elif (isinstance(self.remoteserver, sshpeer.sshpeer) and
                  self.remoteserver.subprocess.poll() is not None):
             # The ssh connection died, so recreate it.
-            self.remoteserver = hg.peer(self.ui, {}, fallbackpath)
+            needcreate = True
+
+        def _cleanup(orig):
+            # close pipee first so peer.cleanup reading it won't deadlock, if
+            # there are other processes with pipeo open (i.e. us).
+            peer = orig.im_self
+            if util.safehasattr(peer, 'pipee'):
+                peer.pipee.close()
+            return orig()
+
+        if needcreate:
+            peer = hg.peer(self.ui, {}, fallbackpath)
+            extensions.wrapfunction(peer, 'cleanup', _cleanup)
+            self.remoteserver = peer
 
         return self.remoteserver
 
