@@ -10,6 +10,25 @@
 #include <string>
 #include <vector>
 
+static int8_t hextable[256] = {
+	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+	 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, -1, -1, -1, -1, -1, -1, /* 0-9 */
+	-1, 10, 11, 12, 13, 14, 15, -1, -1, -1, -1, -1, -1, -1, -1, -1, /* A-F */
+	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+	-1, 10, 11, 12, 13, 14, 15, -1, -1, -1, -1, -1, -1, -1, -1, -1, /* a-f */
+	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1
+};
+
 typedef struct {
   PyObject_HEAD;
 
@@ -19,6 +38,38 @@ typedef struct {
   // The 20-byte root node of this manifest
   std::string node;
 } treemanifest;
+
+/*
+ * Converts a given 20-byte node into a 40-byte hex string
+ * */
+static std::string binfromhex(const char *node) {
+  char binary[20];
+  for (int i = 0; i < 40;) {
+    int hi = hextable[(unsigned char)node[i++]];
+    int lo = hextable[(unsigned char)node[i++]];
+    binary[(i - 2) / 2] = (hi << 4) | lo;
+  }
+  return std::string(binary, 20);
+}
+
+/*
+ * Fetches the given directory/node pair from the store using the provided `get`
+ * function. Returns a python string with the contents. The caller is
+ * responsible for calling Py_DECREF on the result.
+ * */
+static PyObject* getdata(PyObject *get, const std::string &dir, const std::string &node) {
+  PyObject *arglist, *result;
+
+  arglist = Py_BuildValue("s#s#", dir.c_str(), dir.size(), node.c_str(), node.size());
+  if (!arglist) {
+    return NULL;
+  }
+
+  result = PyEval_CallObject(get, arglist);
+  Py_DECREF(arglist);
+
+  return result;
+}
 
 /*
  * Deallocates the contents of the treemanifest
