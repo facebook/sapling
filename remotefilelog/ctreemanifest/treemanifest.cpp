@@ -4,6 +4,10 @@
 //
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
+
+// The PY_SSIZE_T_CLEAN define must be defined before the Python.h include,
+// as per the documentation.
+#define PY_SSIZE_T_CLEAN
 #include <Python.h>
 #include <ctype.h>
 #include <iostream>
@@ -42,6 +46,15 @@ typedef struct {
   std::string node;
 } treemanifest;
 
+typedef struct {
+  char *filename;
+  int filenamelen;
+  char *node;
+  char *flag;
+  char *nextentrystart;
+
+} manifestentry;
+
 /*
  * A helper struct representing the state of an iterator recursing over a tree.
  * */
@@ -63,6 +76,7 @@ typedef struct {
 } fileiter;
 
 static void fileiter_dealloc(fileiter *self);
+static PyObject* fileiter_iterentriesnext(fileiter *self);
 static PyTypeObject fileiterType = {
   PyObject_HEAD_INIT(NULL)
   0,                               /*ob_size */
@@ -93,7 +107,7 @@ static PyTypeObject fileiterType = {
   0,                               /* tp_richcompare */
   0,                               /* tp_weaklistoffset */
   PyObject_SelfIter,               /* tp_iter: __iter__() method */
-  0,                               /* tp_iternext: next() method */
+  (iternextfunc)fileiter_iterentriesnext, /* tp_iternext: next() method */
 };
 
 /*
@@ -126,6 +140,79 @@ static PyObject* getdata(PyObject *get, const std::string &dir, const std::strin
   Py_DECREF(arglist);
 
   return result;
+}
+
+/* Given the start of a file/dir entry in a manifest, parsentry returns a
+ * manifestentry structure with the parsed data.
+ * */
+static manifestentry parseentry(char *entrystart) {
+  manifestentry result;
+  // Each entry is of the format:
+  //
+  //   <filename>\0<40-byte hash><optional 1 byte flag>\n
+  //
+  // Where flags can be 't' to represent a sub directory
+  result.filename = entrystart;
+  char *nulldelimiter = strchr(entrystart, '\0');
+  result.filenamelen = nulldelimiter - entrystart;
+
+  result.node = nulldelimiter + 1;
+
+  result.flag = nulldelimiter + 41;
+  if (*result.flag != '\n') {
+    result.nextentrystart = result.flag + 2;
+  } else {
+    // No flag
+    result.nextentrystart = result.flag + 1;
+    result.flag = NULL;
+  }
+
+  return result;
+}
+
+// ==== treemanifest functions ====
+
+/* Implementation of treemanifest.__iter__
+ * Returns a PyObject iterator instance.
+ * */
+static PyObject *treemanifest_getkeysiter(treemanifest *self) {
+  fileiter *i = PyObject_New(fileiter, &fileiterType);
+  if (i) {
+    try {
+      // The provided fileiter struct hasn't initialized our stackiter member, so
+      // we do it manually.
+      new (&i->iter) stackiter();
+
+      // Keep a copy of the store's get function for accessing contents
+      i->iter.get = PyObject_GetAttrString(self->store, "get");
+
+      // Grab the root node's data and prep the iterator
+      PyObject *rawobj = getdata(i->iter.get, "", self->node);
+      if (!rawobj) {
+        char message[1024];
+        snprintf(message, 1024, "unable to find tree %s", self->node.c_str());
+        PyErr_SetString(PyExc_RuntimeError, message);
+        Py_DECREF(i);
+        return NULL;
+      }
+
+      char *raw;
+      Py_ssize_t rawsize;
+      PyString_AsStringAndSize(rawobj, &raw, &rawsize);
+
+      i->iter.data.push_back(rawobj);
+      i->iter.location.push_back(raw);
+      i->iter.path.reserve(1024);
+    } catch (const std::exception &ex) {
+      PyErr_SetString(PyExc_RuntimeError, ex.what());
+      Py_DECREF(i);
+      return NULL;
+    }
+  } else {
+    return NULL;
+  }
+
+  return (PyObject *)i;
 }
 
 /*
@@ -179,6 +266,111 @@ static void fileiter_dealloc(fileiter *self) {
   PyObject_Del(self);
 }
 
+/* Pops the data and location entries on the iter stack, for all stack entries
+ * that we've already fully processed.
+ *
+ * Returns false if we've reached the end, or true if there's more work.
+ * */
+static bool fileiter_popfinished(stackiter *iter) {
+  PyObject *rawobj = iter->data.back();
+  char *raw;
+  Py_ssize_t rawsize;
+  PyString_AsStringAndSize(rawobj, &raw, &rawsize);
+
+  char *entrystart = iter->location.back();
+
+  // Pop the stack of trees until we find one we haven't finished iterating
+  // over.
+  while (entrystart >= raw + rawsize) {
+    Py_DECREF(iter->data.back());
+    iter->data.pop_back();
+    iter->location.pop_back();
+    if (iter->data.empty()) {
+      // No more directories to pop means we've reached the end of the root
+      return false;
+    }
+
+    // Pop the top of the path off, to match the newly popped tree stack.
+    size_t found = iter->path.rfind('/', iter->path.size() - 2);
+    if (found != std::string::npos) {
+      iter->path.erase(found + 1);
+    } else {
+      iter->path.erase(0);
+    }
+
+    rawobj = iter->data.back();
+    PyString_AsStringAndSize(rawobj, &raw, &rawsize);
+
+    entrystart = iter->location.back();
+  }
+
+  return true;
+}
+
+/* Returns the next object in the iteration.
+ * */
+static PyObject *fileiter_iterentriesnext(fileiter *self) {
+  stackiter &iter = self->iter;
+
+  // Iterate over the current directory contents
+  while (true) {
+    // Pop off any directories that we're done processing
+    if (!fileiter_popfinished(&iter)) {
+      // popfinished returning false means we've finished processing
+      return NULL;
+    }
+
+    PyObject *rawobj = iter.data.back();
+    char *raw;
+    Py_ssize_t rawsize;
+    PyString_AsStringAndSize(rawobj, &raw, &rawsize);
+
+    // `entrystart` represents the location of the current item in the raw tree data
+    // we're iterating over.
+    char *entrystart = iter.location.back();
+    manifestentry entry = parseentry(entrystart);
+
+    // Move to the next entry for next time
+    iter.location[iter.location.size() - 1] = entry.nextentrystart;
+
+    // If a directory, push it and loop again
+    if (entry.flag && *entry.flag == 't') {
+      iter.path.append(entry.filename, entry.filenamelen);
+      iter.path.append(1, '/');
+
+      // Fetch the directory contents
+      PyObject *subrawobj = getdata(iter.get, iter.path,
+                                    binfromhex(entry.node));
+      if (!subrawobj) {
+        char message[1024];
+        snprintf(message, 1024, "unable to find tree '%s:%s'",
+                 iter.path.c_str(), std::string(entry.node, 40).c_str());
+        PyErr_SetString(PyExc_RuntimeError, message);
+        return NULL;
+      }
+
+      // Push the new directory on the stack
+      char *subraw;
+      Py_ssize_t subrawsize;
+      PyString_AsStringAndSize(subrawobj, &subraw, &subrawsize);
+      iter.data.push_back(subrawobj);
+      iter.location.push_back(subraw);
+    } else {
+      // If a file, yield it
+      int oldpathsize = iter.path.size();
+      iter.path.append(entry.filename, entry.filenamelen);
+      PyObject* result = PyString_FromStringAndSize(iter.path.c_str(), iter.path.length());
+      if (!result) {
+        PyErr_NoMemory();
+        return NULL;
+      }
+
+      iter.path.erase(oldpathsize);
+      return result;
+    }
+  }
+}
+
 // ====  treemanifest ctype declaration ====
 
 static PyMethodDef treemanifest_methods[] = {
@@ -212,7 +404,7 @@ static PyTypeObject treemanifestType = {
   0,                                                /* tp_clear */
   0,                                                /* tp_richcompare */
   0,                                                /* tp_weaklistoffset */
-  0,                                                /* tp_iter */
+  (getiterfunc)treemanifest_getkeysiter,            /* tp_iter */
   0,                                                /* tp_iternext */
   treemanifest_methods,                             /* tp_methods */
   0,                                                /* tp_members */
