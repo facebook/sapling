@@ -190,7 +190,7 @@ static PyObject* getdata(PyObject *get, const std::string &dir, const std::strin
   arglist = Py_BuildValue("s#s#", dir.c_str(), (Py_ssize_t)dir.size(),
                                   node.c_str(), (Py_ssize_t)node.size());
   if (!arglist) {
-    return NULL;
+    throw pyexception();
   }
 
   result = PyEval_CallObject(get, arglist);
@@ -198,6 +198,7 @@ static PyObject* getdata(PyObject *get, const std::string &dir, const std::strin
 
   if (!result) {
     PyErr_Format(PyExc_RuntimeError, "unable to find tree '%s:...'", dir.c_str());
+    throw pyexception();
   }
 
   return result;
@@ -255,10 +256,6 @@ static PyObject *treemanifest_getkeysiter(treemanifest *self) {
 
       // Grab the root node's data and prep the iterator
       PyObject *rawobj = getdata(i->iter.get, "", self->node);
-      if (!rawobj) {
-        Py_DECREF(i);
-        return NULL;
-      }
 
       char *raw;
       Py_ssize_t rawsize;
@@ -267,6 +264,9 @@ static PyObject *treemanifest_getkeysiter(treemanifest *self) {
       i->iter.data.push_back(rawobj);
       i->iter.location.push_back(raw);
       i->iter.path.reserve(1024);
+    } catch (const pyexception &ex) {
+      Py_DECREF(i);
+      return NULL;
     } catch (const std::exception &ex) {
       PyErr_SetString(PyExc_RuntimeError, ex.what());
       Py_DECREF(i);
@@ -550,9 +550,7 @@ static void _treemanifest_find(const std::string &filename, const std::string &n
 
     // Obtain the raw data for this directory
     PyObject* rawobj = getdata(get, curpath, curnode);
-    if (!rawobj) {
-        return;
-    }
+
     char* raw;
     Py_ssize_t rawsize;
     PyString_AsStringAndSize(rawobj, &raw, &rawsize);
@@ -618,7 +616,11 @@ static PyObject *treemanifest_find(PyObject *o, PyObject *args) {
 
   std::string resultnode;
   char resultflag;
-  _treemanifest_find(std::string(filename, filenamelen), self->node, get, &resultnode, &resultflag);
+  try {
+    _treemanifest_find(std::string(filename, filenamelen), self->node, get, &resultnode, &resultflag);
+  } catch (const pyexception &ex) {
+    return NULL;
+  }
 
   Py_DECREF(get);
 
@@ -733,58 +735,62 @@ static bool fileiter_popfinished(stackiter *iter) {
 static PyObject *fileiter_iterentriesnext(fileiter *self) {
   stackiter &iter = self->iter;
 
-  // Iterate over the current directory contents
-  while (true) {
-    // Pop off any directories that we're done processing
-    if (!fileiter_popfinished(&iter)) {
-      // popfinished returning false means we've finished processing
-      return NULL;
-    }
-
-    PyObject *rawobj = iter.data.back();
-    char *raw;
-    Py_ssize_t rawsize;
-    PyString_AsStringAndSize(rawobj, &raw, &rawsize);
-
-    // `entrystart` represents the location of the current item in the raw tree data
-    // we're iterating over.
-    char *entrystart = iter.location.back();
-    ManifestEntry entry(entrystart);
-
-    // Move to the next entry for next time
-    iter.location[iter.location.size() - 1] = entry.nextentrystart;
-
-    // If a directory, push it and loop again
-    if (entry.isdirectory()) {
-      iter.path.append(entry.filename, entry.filenamelen);
-      iter.path.append(1, '/');
-
-      // Fetch the directory contents
-      PyObject *subrawobj = getdata(iter.get, iter.path,
-                                    binfromhex(entry.node));
-      if (!subrawobj) {
+  try {
+    // Iterate over the current directory contents
+    while (true) {
+      // Pop off any directories that we're done processing
+      if (!fileiter_popfinished(&iter)) {
+        // No more directories means we've reached the end of the root
         return NULL;
       }
 
-      // Push the new directory on the stack
-      char *subraw;
-      Py_ssize_t subrawsize;
-      PyString_AsStringAndSize(subrawobj, &subraw, &subrawsize);
-      iter.data.push_back(subrawobj);
-      iter.location.push_back(subraw);
-    } else {
-      // If a file, yield it
-      int oldpathsize = iter.path.size();
-      iter.path.append(entry.filename, entry.filenamelen);
-      PyObject* result = PyString_FromStringAndSize(iter.path.c_str(), iter.path.length());
-      if (!result) {
-        PyErr_NoMemory();
-        return NULL;
-      }
+      PyObject *rawobj = iter.data.back();
+      char *raw;
+      Py_ssize_t rawsize;
+      PyString_AsStringAndSize(rawobj, &raw, &rawsize);
 
-      iter.path.erase(oldpathsize);
-      return result;
+      // `entrystart` represents the location of the current item in the raw tree data
+      // we're iterating over.
+      char *entrystart = iter.location.back();
+      ManifestEntry entry(entrystart);
+
+      // Move to the next entry for next time
+      iter.location[iter.location.size() - 1] = entry.nextentrystart;
+
+      // If a directory, push it and loop again
+      if (entry.isdirectory()) {
+        iter.path.append(entry.filename, entry.filenamelen);
+        iter.path.append(1, '/');
+
+        // Fetch the directory contents
+        PyObject *subrawobj = getdata(iter.get, iter.path,
+                                      binfromhex(entry.node));
+        if (!subrawobj) {
+          return NULL;
+        }
+
+        // Push the new directory on the stack
+        char *subraw;
+        Py_ssize_t subrawsize;
+        PyString_AsStringAndSize(subrawobj, &subraw, &subrawsize);
+        iter.data.push_back(subrawobj);
+        iter.location.push_back(subraw);
+      } else {
+        // If a file, yield it
+        int oldpathsize = iter.path.size();
+        iter.path.append(entry.filename, entry.filenamelen);
+        PyObject* result = PyString_FromStringAndSize(iter.path.c_str(), iter.path.length());
+        if (!result) {
+          PyErr_NoMemory();
+          return NULL;
+        }
+
+        iter.path.erase(oldpathsize);
+        return result;
+      }
     }
+  } catch (const pyexception &ex) {
+    return NULL;
   }
 }
 
