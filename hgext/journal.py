@@ -24,7 +24,6 @@ from mercurial import (
     bookmarks,
     cmdutil,
     commands,
-    dirstate,
     dispatch,
     error,
     extensions,
@@ -63,8 +62,6 @@ def extsetup(ui):
     extensions.wrapfunction(dispatch, 'runcommand', runcommand)
     extensions.wrapfunction(bookmarks.bmstore, '_write', recordbookmarks)
     extensions.wrapfunction(
-        dirstate.dirstate, '_writedirstate', recorddirstateparents)
-    extensions.wrapfunction(
         localrepo.localrepository.dirstate, 'func', wrapdirstate)
     extensions.wrapfunction(hg, 'postshare', wrappostshare)
     extensions.wrapfunction(hg, 'copystore', unsharejournal)
@@ -84,34 +81,19 @@ def wrapdirstate(orig, repo):
     dirstate = orig(repo)
     if util.safehasattr(repo, 'journal'):
         dirstate.journalstorage = repo.journal
+        dirstate.addparentchangecallback('journal', recorddirstateparents)
     return dirstate
 
-def recorddirstateparents(orig, dirstate, dirstatefp):
+def recorddirstateparents(dirstate, old, new):
     """Records all dirstate parent changes in the journal."""
+    old = list(old)
+    new = list(new)
     if util.safehasattr(dirstate, 'journalstorage'):
-        old = [node.nullid, node.nullid]
-        nodesize = len(node.nullid)
-        try:
-            # The only source for the old state is in the dirstate file still
-            # on disk; the in-memory dirstate object only contains the new
-            # state. dirstate._opendirstatefile() switches beteen .hg/dirstate
-            # and .hg/dirstate.pending depending on the transaction state.
-            with dirstate._opendirstatefile() as fp:
-                state = fp.read(2 * nodesize)
-            if len(state) == 2 * nodesize:
-                old = [state[:nodesize], state[nodesize:]]
-        except IOError:
-            pass
-
-        new = dirstate.parents()
-        if old != new:
-            # only record two hashes if there was a merge
-            oldhashes = old[:1] if old[1] == node.nullid else old
-            newhashes = new[:1] if new[1] == node.nullid else new
-            dirstate.journalstorage.record(
-                wdirparenttype, '.', oldhashes, newhashes)
-
-    return orig(dirstate, dirstatefp)
+        # only record two hashes if there was a merge
+        oldhashes = old[:1] if old[1] == node.nullid else old
+        newhashes = new[:1] if new[1] == node.nullid else new
+        dirstate.journalstorage.record(
+            wdirparenttype, '.', oldhashes, newhashes)
 
 # hooks to record bookmark changes (both local and remote)
 def recordbookmarks(orig, store, fp):
