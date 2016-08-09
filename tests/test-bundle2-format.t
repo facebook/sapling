@@ -112,7 +112,7 @@ Create an extension to test bundle2 API
   >             bundled = repo.revs('%ld::%ld', revs, revs)
   >             headmissing = [c.node() for c in repo.set('heads(%ld)', revs)]
   >             headcommon  = [c.node() for c in repo.set('parents(%ld) - %ld', revs, revs)]
-  >             outgoing = discovery.outgoing(repo.changelog, headcommon, headmissing)
+  >             outgoing = discovery.outgoing(repo, headcommon, headmissing)
   >             cg = changegroup.getlocalchangegroup(repo, 'test:bundle2', outgoing, None)
   >             bundler.newpart('changegroup', data=cg.getchunks(),
   >                             mandatory=False)

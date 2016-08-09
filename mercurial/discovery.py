@@ -76,10 +76,10 @@ class outgoing(object):
     The sets are computed on demand from the heads, unless provided upfront
     by discovery.'''
 
-    def __init__(self, revlog, commonheads, missingheads):
+    def __init__(self, repo, commonheads, missingheads):
         self.commonheads = commonheads
         self.missingheads = missingheads
-        self._revlog = revlog
+        self._revlog = repo.changelog
         self._common = None
         self._missing = None
         self.excluded = []
@@ -120,7 +120,7 @@ def outgoingbetween(repo, roots, heads):
     csets, roots, heads = cl.nodesbetween(roots, heads)
     included = set(csets)
     discbases = [n for n in discbases if n not in included]
-    return outgoing(cl, discbases, heads)
+    return outgoing(repo, discbases, heads)
 
 def findcommonoutgoing(repo, other, onlyheads=None, force=False,
                        commoninc=None, portable=False):
@@ -137,7 +137,7 @@ def findcommonoutgoing(repo, other, onlyheads=None, force=False,
     If portable is given, compute more conservative common and missingheads,
     to make bundles created from the instance more portable.'''
     # declare an empty outgoing object to be filled later
-    og = outgoing(repo.changelog, None, None)
+    og = outgoing(repo, None, None)
 
     # get common set if not provided
     if commoninc is None:

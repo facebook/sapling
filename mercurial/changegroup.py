@@ -985,7 +985,7 @@ def computeoutgoing(repo, heads, common):
         common = [nullid]
     if not heads:
         heads = cl.heads()
-    return discovery.outgoing(cl, common, heads)
+    return discovery.outgoing(repo, common, heads)
 
 def getchangegroup(repo, source, heads=None, common=None, bundlecaps=None,
                    version='01'):
