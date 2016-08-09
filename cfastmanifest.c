@@ -31,88 +31,6 @@ static PyTypeObject fastmanifestType;
 static PyTypeObject fastmanifestKeysIterator;
 static PyTypeObject fastmanifestEntriesIterator;
 
-/* ========================== */
-/* Fastmanifest: C Interface */
-/* ========================== */
-
-/* Deallocate all the nodes in the tree */
-static void ifastmanifest_dealloc(fastmanifest *self)
-{
-  destroy_tree(self->tree);
-}
-
-static fastmanifest *ifastmanifest_copy(fastmanifest *copy, fastmanifest *self)
-{
-  copy->tree = copy_tree(self->tree);
-  return copy;
-}
-
-static write_to_file_result_t ifastmanifest_save(
-    fastmanifest *copy, char *filename, size_t len)
-{
-  return write_to_file(copy->tree, filename, len);
-}
-
-static read_from_file_result_t ifastmanifest_load(
-    char *filename, size_t len)
-{
-  return read_from_file(filename, len);
-}
-
-static get_path_result_t ifastmanifest_getitem(
-    fastmanifest *self, char *path, ssize_t plen)
-{
-  get_path_result_t get_path_result = get_path(self->tree, path, plen);
-  return get_path_result;
-}
-
-static add_update_path_result_t ifastmanifest_insert(
-    fastmanifest *self,
-    char *path, ssize_t plen,
-    unsigned char *hash, ssize_t hlen,
-    char *flags, ssize_t flen)
-{
-  add_update_path_result_t result = add_or_update_path(
-      self->tree,
-      path, plen,
-      hash, hlen,
-      *flags);
-
-  return result;
-}
-
-
-static convert_from_flat_code_t ifastmanifest_init(
-    fastmanifest *self, char *data, ssize_t len)
-{
-  convert_from_flat_result_t from_result = convert_from_flat(
-      data, len);
-
-  if (from_result.code == CONVERT_FROM_FLAT_OK) {
-    tree_t *tree = from_result.tree;
-    self->tree = tree;
-  } else {
-    self->tree = NULL;
-  }
-
-  return from_result.code;
-}
-
-static ssize_t ifastmanifest_size(fastmanifest *self)
-{
-  return self->tree->num_leaf_nodes;
-}
-
-static remove_path_result_t ifastmanifest_delitem(
-    fastmanifest *self, char *path, size_t plen)
-{
-  remove_path_result_t remove_path_result =
-      remove_path(self->tree, path, plen);
-  return remove_path_result;
-}
-
-/* Fastmanifest: end of pure C layer | start of CPython layer */
-
 /* Fastmanifest: CPython helpers */
 
 static bool fastmanifest_is_valid_manifest_key(PyObject *key) {
@@ -177,22 +95,32 @@ static int fastmanifest_init(fastmanifest *self, PyObject *args) {
   int err = PyString_AsStringAndSize(pydata, &data, &len);
   if (err == -1)
     return -1;
-  convert_from_flat_code_t from_code = ifastmanifest_init(self, data, len);
-  switch(from_code) {
-  case CONVERT_FROM_FLAT_OOM:
-    PyErr_NoMemory();
-    return -1;
-  case CONVERT_FROM_FLAT_WTF:
-    PyErr_Format(PyExc_ValueError,
-           "Manifest did not end in a newline.");
-    return -1;
-  default:
-    return 0;
+
+  convert_from_flat_result_t from_result = convert_from_flat(
+      data, len);
+
+  if (from_result.code == CONVERT_FROM_FLAT_OK) {
+    tree_t *tree = from_result.tree;
+    self->tree = tree;
+  } else {
+    self->tree = NULL;
+  }
+
+  switch (from_result.code) {
+    case CONVERT_FROM_FLAT_OOM:
+      PyErr_NoMemory();
+      return -1;
+    case CONVERT_FROM_FLAT_WTF:
+      PyErr_Format(PyExc_ValueError,
+          "Manifest did not end in a newline.");
+      return -1;
+    default:
+      return 0;
   }
 }
 
 static void fastmanifest_dealloc(fastmanifest *self) {
-  ifastmanifest_dealloc(self);
+  destroy_tree(self->tree);
 }
 
 static PyObject *fastmanifest_getkeysiter(fastmanifest *self) {
@@ -242,7 +170,7 @@ static PyObject * fastmanifest_save(fastmanifest *self, PyObject *args){
     return NULL;
   }
   write_to_file_result_t result =
-      ifastmanifest_save(self, data, (size_t) len);
+      write_to_file(self->tree, data, (size_t) len);
 
   switch (result) {
     case WRITE_TO_FILE_OK:
@@ -270,7 +198,7 @@ static PyObject *fastmanifest_load(PyObject *cls, PyObject *args) {
     PyErr_Format(PyExc_ValueError, "Illegal filepath");
     return NULL;
   }
-  read_from_file_result_t result = ifastmanifest_load(data, (size_t) len);
+  read_from_file_result_t result = read_from_file(data, (size_t) len);
 
   switch (result.code) {
     case READ_FROM_FILE_OK: {
@@ -297,8 +225,9 @@ static PyObject *fastmanifest_load(PyObject *cls, PyObject *args) {
 
 static fastmanifest *fastmanifest_copy(fastmanifest *self) {
   fastmanifest *copy = PyObject_New(fastmanifest, &fastmanifestType);
-  if (copy)
-    ifastmanifest_copy(copy, self);
+  if (copy) {
+    copy->tree = copy_tree(self->tree);
+  }
 
   if (!copy)
     PyErr_NoMemory();
@@ -557,7 +486,7 @@ static PyObject *fastmanifest_text(fastmanifest *self) {
 }
 
 static Py_ssize_t fastmanifest_size(fastmanifest *self) {
-  return ifastmanifest_size(self);
+  return self->tree->num_leaf_nodes;
 }
 
 static PyObject *fastmanifest_bytes(fastmanifest *self) {
@@ -579,7 +508,7 @@ static PyObject *fastmanifest_getitem(fastmanifest *self, PyObject *key) {
     return NULL;
   }
 
-  get_path_result_t query = ifastmanifest_getitem(self, ckey, clen);
+  get_path_result_t query = get_path(self->tree, ckey, clen);
   switch (query.code) {
   case GET_PATH_NOT_FOUND:
     PyErr_Format(PyExc_KeyError,
@@ -624,7 +553,7 @@ static int fastmanifest_setitem(fastmanifest *self, PyObject *key,
 
   if (!value) {
     remove_path_result_t remove_path_result =
-        ifastmanifest_delitem(self, path, (size_t) plen);
+        remove_path(self->tree, path, (size_t) plen);
 
    switch(remove_path_result) {
 
@@ -665,9 +594,11 @@ static int fastmanifest_setitem(fastmanifest *self, PyObject *key,
     return -1;
   }
 
-  add_update_path_result_t add_update_path_result =
-      ifastmanifest_insert(self, path, plen,
-          (unsigned char *) hash, hlen, flags, flen);
+  add_update_path_result_t add_update_path_result = add_or_update_path(
+      self->tree,
+      path, plen,
+      (unsigned char *) hash, hlen,
+      *flags);
   switch (add_update_path_result) {
     case ADD_UPDATE_PATH_OOM:
     {
