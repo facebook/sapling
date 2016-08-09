@@ -76,11 +76,25 @@ class outgoing(object):
     The sets are computed on demand from the heads, unless provided upfront
     by discovery.'''
 
-    def __init__(self, repo, commonheads=None, missingheads=None):
+    def __init__(self, repo, commonheads=None, missingheads=None,
+                 missingroots=None):
+        # at least one of them must not be set
+        assert None in (commonheads, missingroots)
         cl = repo.changelog
         if not missingheads:
             missingheads = cl.heads()
-        if not commonheads:
+        if missingroots:
+            discbases = []
+            for n in missingroots:
+                discbases.extend([p for p in cl.parents(n) if p != nullid])
+            # TODO remove call to nodesbetween.
+            # TODO populate attributes on outgoing instance instead of setting
+            # discbases.
+            csets, roots, heads = cl.nodesbetween(missingroots, missingheads)
+            included = set(csets)
+            missingheads = heads
+            commonheads = [n for n in discbases if n not in included]
+        elif not commonheads:
             commonheads = [nullid]
         self.commonheads = commonheads
         self.missingheads = missingheads
@@ -105,27 +119,6 @@ class outgoing(object):
         if self._missing is None:
             self._computecommonmissing()
         return self._missing
-
-def outgoingbetween(repo, roots, heads):
-    """create an ``outgoing`` consisting of nodes between roots and heads
-
-    The ``missing`` nodes will be descendants of any of the ``roots`` and
-    ancestors of any of the ``heads``, both are which are defined as a list
-    of binary nodes.
-    """
-    cl = repo.changelog
-    if not roots:
-        roots = [nullid]
-    discbases = []
-    for n in roots:
-        discbases.extend([p for p in cl.parents(n) if p != nullid])
-    # TODO remove call to nodesbetween.
-    # TODO populate attributes on outgoing instance instead of setting
-    # discbases.
-    csets, roots, heads = cl.nodesbetween(roots, heads)
-    included = set(csets)
-    discbases = [n for n in discbases if n not in included]
-    return outgoing(repo, discbases, heads)
 
 def findcommonoutgoing(repo, other, onlyheads=None, force=False,
                        commoninc=None, portable=False):

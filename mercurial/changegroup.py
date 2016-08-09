@@ -942,7 +942,7 @@ def changegroupsubset(repo, roots, heads, source, version='01'):
     Another wrinkle is doing the reverse, figuring out which changeset in
     the changegroup a particular filenode or manifestnode belongs to.
     """
-    outgoing = discovery.outgoingbetween(repo, roots, heads)
+    outgoing = discovery.outgoing(repo, missingroots=roots, missingheads=heads)
     bundler = getbundler(version, repo)
     return getsubset(repo, outgoing, bundler, source)
 
