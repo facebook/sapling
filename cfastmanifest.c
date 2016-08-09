@@ -121,6 +121,7 @@ static int fastmanifest_init(fastmanifest *self, PyObject *args) {
 
 static void fastmanifest_dealloc(fastmanifest *self) {
   destroy_tree(self->tree);
+  PyObject_Del(self);
 }
 
 static PyObject *fastmanifest_getkeysiter(fastmanifest *self) {
@@ -726,7 +727,6 @@ static PyTypeObject fastmanifestType = {
 static void fmiter_dealloc(PyObject *o) {
   fmIter *self = (fmIter *)o;
   destroy_iterator(self->iterator);
-  // TODO: lcharignon says this is suspicous.
   PyObject_Del(self);
 }
 
