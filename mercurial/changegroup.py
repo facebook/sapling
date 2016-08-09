@@ -987,7 +987,7 @@ def computeoutgoing(repo, heads, common):
         heads = cl.heads()
     return discovery.outgoing(repo, common, heads)
 
-def getchangegroup(repo, source, heads=None, common=None, bundlecaps=None,
+def getchangegroup(repo, source, outgoing, bundlecaps=None,
                    version='01'):
     """Like changegroupsubset, but returns the set difference between the
     ancestors of heads and the ancestors common.
@@ -997,7 +997,6 @@ def getchangegroup(repo, source, heads=None, common=None, bundlecaps=None,
     The nodes in common might not all be known locally due to the way the
     current discovery protocol works.
     """
-    outgoing = computeoutgoing(repo, heads, common)
     return getlocalchangegroup(repo, source, outgoing, bundlecaps=bundlecaps,
                                version=version)
 

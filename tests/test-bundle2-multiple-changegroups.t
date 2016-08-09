@@ -3,7 +3,7 @@ Create an extension to test bundle2 with multiple changegroups
   $ cat > bundle2.py <<EOF
   > """
   > """
-  > from mercurial import changegroup, exchange
+  > from mercurial import changegroup, discovery, exchange
   > 
   > def _getbundlechangegrouppart(bundler, repo, source, bundlecaps=None,
   >                               b2caps=None, heads=None, common=None,
@@ -12,13 +12,14 @@ Create an extension to test bundle2 with multiple changegroups
   >     # changegroup part we are being requested. Use the parent of each head
   >     # in 'heads' as intermediate heads for the first changegroup.
   >     intermediates = [repo[r].p1().node() for r in heads]
-  >     cg = changegroup.getchangegroup(repo, source, heads=intermediates,
-  >                                      common=common, bundlecaps=bundlecaps)
+  >     outgoing = discovery.outgoing(repo, common, intermediates)
+  >     cg = changegroup.getchangegroup(repo, source, outgoing,
+  >                                     bundlecaps=bundlecaps)
   >     bundler.newpart('output', data='changegroup1')
   >     bundler.newpart('changegroup', data=cg.getchunks())
-  >     cg = changegroup.getchangegroup(repo, source, heads=heads,
-  >                                      common=common + intermediates,
-  >                                      bundlecaps=bundlecaps)
+  >     outgoing = discovery.outgoing(repo, common + intermediates, heads)
+  >     cg = changegroup.getchangegroup(repo, source, outgoing,
+  >                                     bundlecaps=bundlecaps)
   >     bundler.newpart('output', data='changegroup2')
   >     bundler.newpart('changegroup', data=cg.getchunks())
   > 

@@ -8,7 +8,7 @@ Create an extension to test bundle2 remote-changegroup parts
   > Current bundle2 implementation doesn't provide a way to generate those
   > parts, so they must be created by extensions.
   > """
-  > from mercurial import bundle2, changegroup, exchange, util
+  > from mercurial import bundle2, changegroup, discovery, exchange, util
   > 
   > def _getbundlechangegrouppart(bundler, repo, source, bundlecaps=None,
   >                               b2caps=None, heads=None, common=None,
@@ -22,7 +22,7 @@ Create an extension to test bundle2 remote-changegroup parts
   >     part to add:
   >       - changegroup common_revset heads_revset
   >           Creates a changegroup part based, using common_revset and
-  >           heads_revset for changegroup.getchangegroup.
+  >           heads_revset for outgoing
   >       - remote-changegroup url file
   >           Creates a remote-changegroup part for a bundle at the given
   >           url. Size and digest, as required by the client, are computed
@@ -63,8 +63,8 @@ Create an extension to test bundle2 remote-changegroup parts
   >             _common, heads = args.split()
   >             common.extend(repo.lookup(r) for r in repo.revs(_common))
   >             heads = [repo.lookup(r) for r in repo.revs(heads)]
-  >             cg = changegroup.getchangegroup(repo, 'changegroup',
-  >                 heads=heads, common=common)
+  >             outgoing = discovery.outgoing(repo, common, heads)
+  >             cg = changegroup.getchangegroup(repo, 'changegroup', outgoing)
   >             newpart('changegroup', cg.getchunks())
   >         else:
   >             raise Exception('unknown verb')

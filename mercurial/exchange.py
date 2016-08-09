@@ -1536,8 +1536,9 @@ def getbundle(repo, source, heads=None, common=None, bundlecaps=None,
         if kwargs:
             raise ValueError(_('unsupported getbundle arguments: %s')
                              % ', '.join(sorted(kwargs.keys())))
-        return changegroup.getchangegroup(repo, source, heads=heads,
-                                          common=common, bundlecaps=bundlecaps)
+        outgoing = changegroup.computeoutgoing(repo, heads, common)
+        return changegroup.getchangegroup(repo, source, outgoing,
+                                          bundlecaps=bundlecaps)
 
     # bundle20 case
     b2caps = {}

@@ -1412,9 +1412,10 @@ def bundle(ui, repo, fname, dest=None, **opts):
                                "a destination"))
         common = [repo.lookup(rev) for rev in base]
         heads = revs and map(repo.lookup, revs) or revs
-        cg = changegroup.getchangegroup(repo, 'bundle', heads=heads,
-                                         common=common, bundlecaps=bundlecaps,
-                                         version=cgversion)
+        outgoing = discovery.outgoing(repo, common, heads)
+        cg = changegroup.getchangegroup(repo, 'bundle', outgoing,
+                                        bundlecaps=bundlecaps,
+                                        version=cgversion)
         outgoing = None
     else:
         dest = ui.expandpath(dest or 'default-push', dest or 'default')
