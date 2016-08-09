@@ -146,7 +146,7 @@
   mercurial/revlog.py: error importing: <TypeError> getattr(): attribute name must be string (error at util.py:*) (glob)
   mercurial/revset.py: error importing: <TypeError> getattr(): attribute name must be string (error at util.py:*) (glob)
   mercurial/scmutil.py: error importing: <TypeError> getattr(): attribute name must be string (error at util.py:*) (glob)
-  mercurial/scmwindows.py: error importing module: <ImportError> No module named '_winreg' (line *) (glob)
+  mercurial/scmwindows.py: error importing: <TypeError> getattr(): attribute name must be string (error at util.py:*) (glob)
   mercurial/similar.py: error importing: <TypeError> getattr(): attribute name must be string (error at util.py:*) (glob)
   mercurial/simplemerge.py: error importing: <TypeError> getattr(): attribute name must be string (error at util.py:*) (glob)
   mercurial/sshpeer.py: error importing: <TypeError> getattr(): attribute name must be string (error at util.py:*) (glob)
@@ -167,7 +167,7 @@
   mercurial/url.py: error importing: <TypeError> getattr(): attribute name must be string (error at util.py:*) (glob)
   mercurial/verify.py: error importing: <TypeError> attribute name must be string, not 'bytes' (error at mdiff.py:*) (glob)
   mercurial/win32.py: error importing module: <ImportError> No module named 'msvcrt' (line *) (glob)
-  mercurial/windows.py: error importing module: <ImportError> No module named '_winreg' (line *) (glob)
+  mercurial/windows.py: error importing module: <ImportError> No module named 'msvcrt' (line *) (glob)
   mercurial/wireproto.py: error importing module: <TypeError> a bytes-like object is required, not 'str' (line *) (glob)
 
 #endif
