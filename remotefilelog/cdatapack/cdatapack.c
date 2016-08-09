@@ -449,6 +449,9 @@ delta_chain_t *getdeltachain(
 }
 
 void freedeltachain(delta_chain_t *chain) {
+  for (size_t ix = 0; ix < chain->links_count; ix ++) {
+    free((void *) chain->delta_chain_links[ix].delta);
+  }
   free(chain->delta_chain_links);
   free(chain);
 }
