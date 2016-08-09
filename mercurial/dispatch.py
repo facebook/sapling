@@ -150,7 +150,7 @@ def _runcatch(req):
     except ValueError:
         pass # happens if called in a thread
 
-    try:
+    def _runcatchfunc():
         try:
             debugger = 'pdb'
             debugtrace = {
@@ -212,6 +212,16 @@ def _runcatch(req):
             ui.traceback()
             raise
 
+    return callcatch(ui, _runcatchfunc)
+
+def callcatch(ui, func):
+    """call func() with global exception handling
+
+    return func() if no exception happens. otherwise do some error handling
+    and return an exit code accordingly.
+    """
+    try:
+        return func()
     # Global exception handling, alphabetically
     # Mercurial-specific first, followed by built-in and library exceptions
     except error.AmbiguousCommand as inst:
