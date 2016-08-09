@@ -16,9 +16,16 @@ from . import edenclient
 from . import hgrepo
 from . import gitrepo
 
+if 'SANDCASTLE' in os.environ and not edenclient.can_run_eden():
+    # This is avoiding a reporting noise issue in our CI that files
+    # tasks about skipped tests.  Let's just skip defining most of them
+    # to avoid the noise if we know that they won't work anyway.
+    TestParent = object
+else:
+    TestParent = unittest.TestCase
 
 @unittest.skipIf(not edenclient.can_run_eden(), "unable to run edenfs")
-class EdenTestCase(unittest.TestCase):
+class EdenTestCase(TestParent):
     '''
     Base class for eden integration test cases.
 
