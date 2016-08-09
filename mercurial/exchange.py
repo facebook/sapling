@@ -257,6 +257,25 @@ def buildobsmarkerspart(bundler, markers):
         return bundler.newpart('obsmarkers', data=stream)
     return None
 
+def _computeoutgoing(repo, heads, common):
+    """Computes which revs are outgoing given a set of common
+    and a set of heads.
+
+    This is a separate function so extensions can have access to
+    the logic.
+
+    Returns a discovery.outgoing object.
+    """
+    cl = repo.changelog
+    if common:
+        hasnode = cl.hasnode
+        common = [n for n in common if hasnode(n)]
+    else:
+        common = [nullid]
+    if not heads:
+        heads = cl.heads()
+    return discovery.outgoing(repo, common, heads)
+
 def _forcebundle1(op):
     """return true if a pull/push must use bundle1
 
@@ -1536,7 +1555,7 @@ def getbundle(repo, source, heads=None, common=None, bundlecaps=None,
         if kwargs:
             raise ValueError(_('unsupported getbundle arguments: %s')
                              % ', '.join(sorted(kwargs.keys())))
-        outgoing = changegroup.computeoutgoing(repo, heads, common)
+        outgoing = _computeoutgoing(repo, heads, common)
         return changegroup.getchangegroup(repo, source, outgoing,
                                           bundlecaps=bundlecaps)
 
@@ -1573,7 +1592,7 @@ def _getbundlechangegrouppart(bundler, repo, source, bundlecaps=None,
             if not cgversions:
                 raise ValueError(_('no common changegroup version'))
             version = max(cgversions)
-        outgoing = changegroup.computeoutgoing(repo, heads, common)
+        outgoing = _computeoutgoing(repo, heads, common)
         cg = changegroup.getlocalchangegroupraw(repo, source, outgoing,
                                                 bundlecaps=bundlecaps,
                                                 version=version)
@@ -1626,7 +1645,7 @@ def _getbundletagsfnodes(bundler, repo, source, bundlecaps=None,
     if not (kwargs.get('cg', True) and 'hgtagsfnodes' in b2caps):
         return
 
-    outgoing = changegroup.computeoutgoing(repo, heads, common)
+    outgoing = _computeoutgoing(repo, heads, common)
 
     if not outgoing.missingheads:
         return

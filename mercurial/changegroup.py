@@ -15,7 +15,6 @@ import weakref
 from .i18n import _
 from .node import (
     hex,
-    nullid,
     nullrev,
     short,
 )
@@ -967,25 +966,6 @@ def getlocalchangegroup(repo, source, outgoing, bundlecaps=None,
         return None
     bundler = getbundler(version, repo, bundlecaps)
     return getsubset(repo, outgoing, bundler, source)
-
-def computeoutgoing(repo, heads, common):
-    """Computes which revs are outgoing given a set of common
-    and a set of heads.
-
-    This is a separate function so extensions can have access to
-    the logic.
-
-    Returns a discovery.outgoing object.
-    """
-    cl = repo.changelog
-    if common:
-        hasnode = cl.hasnode
-        common = [n for n in common if hasnode(n)]
-    else:
-        common = [nullid]
-    if not heads:
-        heads = cl.heads()
-    return discovery.outgoing(repo, common, heads)
 
 def getchangegroup(repo, source, outgoing, bundlecaps=None,
                    version='01'):
