@@ -76,10 +76,15 @@ class outgoing(object):
     The sets are computed on demand from the heads, unless provided upfront
     by discovery.'''
 
-    def __init__(self, repo, commonheads, missingheads):
+    def __init__(self, repo, commonheads=None, missingheads=None):
+        cl = repo.changelog
+        if not missingheads:
+            missingheads = cl.heads()
+        if not commonheads:
+            commonheads = [nullid]
         self.commonheads = commonheads
         self.missingheads = missingheads
-        self._revlog = repo.changelog
+        self._revlog = cl
         self._common = None
         self._missing = None
         self.excluded = []
