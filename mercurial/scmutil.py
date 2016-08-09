@@ -948,17 +948,9 @@ def addremove(repo, matcher, prefix, opts=None, dry_run=None, similarity=None):
     ret = 0
     join = lambda f: os.path.join(prefix, f)
 
-    def matchessubrepo(matcher, subpath):
-        if matcher.exact(subpath):
-            return True
-        for f in matcher.files():
-            if f.startswith(subpath):
-                return True
-        return False
-
     wctx = repo[None]
     for subpath in sorted(wctx.substate):
-        if opts.get('subrepos') or matchessubrepo(m, subpath):
+        if opts.get('subrepos') or m.matchessubrepo(subpath):
             sub = wctx.sub(subpath)
             try:
                 submatch = matchmod.subdirmatcher(subpath, m)

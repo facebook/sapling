@@ -2415,11 +2415,7 @@ def files(ui, ctx, m, fm, fmt, subrepos):
         ret = 0
 
     for subpath in sorted(ctx.substate):
-        def matchessubrepo(subpath):
-            return (m.exact(subpath)
-                    or any(f.startswith(subpath + '/') for f in m.files()))
-
-        if subrepos or matchessubrepo(subpath):
+        if subrepos or m.matchessubrepo(subpath):
             sub = ctx.sub(subpath)
             try:
                 submatch = matchmod.subdirmatcher(subpath, m)
@@ -2450,16 +2446,8 @@ def remove(ui, repo, m, prefix, after, force, subrepos, warnings=None):
     total = len(subs)
     count = 0
     for subpath in subs:
-        def matchessubrepo(matcher, subpath):
-            if matcher.exact(subpath):
-                return True
-            for f in matcher.files():
-                if f.startswith(subpath):
-                    return True
-            return False
-
         count += 1
-        if subrepos or matchessubrepo(m, subpath):
+        if subrepos or m.matchessubrepo(subpath):
             ui.progress(_('searching'), count, total=total, unit=_('subrepos'))
 
             sub = wctx.sub(subpath)
