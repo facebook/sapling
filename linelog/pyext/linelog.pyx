@@ -172,7 +172,9 @@ cdef class _filebuffer(_buffer): # linelog_buf backed by filesystem
         if self.fd == -1:
             self._open()
         self._unmap()
-        unistd.ftruncate(self.fd, <off_t>newsize)
+        r = unistd.ftruncate(self.fd, <off_t>newsize)
+        if r != 0:
+            raise _excwitherrno(IOError, 'ftruncate')
         self._map()
 
     cdef flush(self):

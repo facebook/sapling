@@ -120,6 +120,7 @@ static inline linelog_result writeinst(linelog_buf *buf,
 }
 #define mustsuccess(expr) { \
 	linelog_result result = (expr); \
+	(void)result; /* eliminate "unused" warning with NDEBUG set */ \
 	assert(result == LINELOG_RESULT_OK); \
 }
 
