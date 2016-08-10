@@ -1,4 +1,5 @@
 from libc.stdint cimport uint32_t, uint8_t
+from libc.stdlib cimport free, realloc
 from libc.string cimport memcpy, memset
 from posix cimport unistd
 
@@ -122,3 +123,18 @@ cdef class _buffer: # thin wrapper around linelog_buf
                 self.resize((self.buf.neededsize / unitsize + 1) * unitsize)
             else:
                 raise LinelogError(result)
+
+cdef class _memorybuffer(_buffer): # linelog_buf backed by memory
+    def __dealloc__(self):
+        self.close()
+
+    cdef close(self):
+        free(self.buf.data)
+        memset(&self.buf, 0, sizeof(linelog_buf))
+
+    cdef resize(self, size_t newsize):
+        p = realloc(self.buf.data, newsize)
+        if p == NULL:
+            raise LinelogError(LINELOG_RESULT_ENOMEM)
+        self.buf.data = <uint8_t *>p
+        self.buf.size = newsize
