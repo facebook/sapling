@@ -7,3 +7,4 @@
 .testtimes*
 tests/getdb\.sh
 subinclude:cfastmanifest/.hgignore
+subinclude:linelog/.hgignore

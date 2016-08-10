@@ -1,0 +1,10 @@
+syntax:glob
+
+*.gch
+*.o
+pyext/*.c
+linelogcli
+
+# typical directory names for afl
+testdir/
+findingdir/
