@@ -1,6 +1,6 @@
 from libc.errno cimport errno
 from libc.stdint cimport uint32_t, uint8_t
-from libc.stdlib cimport free, realloc
+from libc.stdlib cimport malloc, free, realloc
 from libc.string cimport memcpy, memset, strdup
 from posix cimport fcntl, mman, stat, unistd
 from posix.types cimport off_t
@@ -226,3 +226,149 @@ cdef class _filebuffer(_buffer): # linelog_buf backed by filesystem
         memset(&self.buf, 0, sizeof(linelog_buf))
         self.maplen = 0
 
+cdef class linelog:
+    """Python wrapper around linelog"""
+
+    cdef linelog_annotateresult ar
+    cdef _buffer buf
+    cdef readonly bint closed
+    cdef readonly object path
+
+    def __cinit__(self):
+        self.closed = 0
+        memset(&self.ar, 0, sizeof(linelog_annotateresult))
+
+    def __init__(self, path=None):
+        """L(path : str?). Open a linelog.
+
+        If path is empty or None, the linelog will be in-memory. Otherwise
+        it's based on an on-disk file.
+
+        The linelog object does not protect concurrent accesses to a same
+        file. The caller should have some lock mechanism (like flock) to
+        ensure one file is only accessed by one linelog object.
+        """
+        self.path = path
+        if path:
+            self.buf = _filebuffer(path)
+        else:
+            self.buf = _memorybuffer()
+
+    def __dealloc__(self):
+        self._clearannotateresult()
+
+    def clear(self):
+        """L.close() -> None. Close the file and free resources."""
+        self._checkclosed()
+        self._clearannotateresult()
+        self.buf.clear()
+
+    def flush(self):
+        """L.flush() -> None. Flush changes to disk."""
+        self._checkclosed()
+        self.buf.flush()
+
+    def close(self):
+        """L.close() -> None. Close the file."""
+        if self.closed:
+            return
+        self.buf.resize(self.buf.getactualsize())
+        self.buf.close()
+        self.closed = 1
+
+    def copyfrom(self, rhs):
+        """L.copyfrom(R : linelog) -> None
+
+        Copy content from another linelog object."""
+        assert isinstance(rhs, linelog)
+        self.buf.copyfrom(rhs.buf)
+
+    @property
+    def maxrev(self):
+        """L.maxrev() -> int. Return the max revision number."""
+        self._checkclosed()
+        return self.buf.getmaxrev()
+
+    @property
+    def actualsize(self):
+        """L.maxrev() -> int. Return bytes used by the linelog."""
+        self._checkclosed()
+        return self.buf.getactualsize()
+
+    def annotate(self, rev):
+        """L.annotate(rev : int) -> None
+
+        Annotate lines for specified revision. The result can be obtained
+        via L.annotateresult.
+        """
+        self._checkclosed()
+        try:
+            self.buf.annotate(&self.ar, rev)
+        except LinelogError:
+            self._clearannotateresult()
+            raise
+
+    def replacelines(self, rev, a1, a2, b1, b2):
+        """L.replacelines(rev, a1, a2, b1, b2 : int) -> None
+
+        Replace lines[a1:a2] with lines[b1:b2] in rev. See comments above
+        linelog_replacelines in linelog.h for details.
+        """
+        self._checkclosed()
+        try:
+            self.buf.replacelines(&self.ar, rev, a1, a2, b1, b2)
+        except LinelogError:
+            self._clearannotateresult()
+            raise
+
+    def replacelines_vec(self, rev, a1, a2, blines):
+        """L.replacelines(rev, a1, a2 : int, blines: [(rev, linenum)]) -> None
+
+        Replace lines[a1:a2] with blines. The change is marked as introduced
+        by rev. See comments above linelog_replacelines_vec in linelog.h for
+        details.
+        """
+        self._checkclosed()
+        # prepare blinecount, brevs, blinenums
+        cdef linelog_linenum i = 0, blinecount = <linelog_linenum>len(blines)
+        cdef linelog_revnum *brevs = <linelog_revnum *>malloc(
+            sizeof(linelog_revnum) * blinecount)
+        cdef linelog_linenum *blinenums = <linelog_linenum *>malloc(
+            sizeof(linelog_linenum) * blinecount)
+        if blinecount > 0:
+            assert brevs != NULL and blinenums != NULL
+        for i in range(0, blinecount):
+            brevs[i] = blines[i][0]
+            blinenums[i] = blines[i][1]
+        try:
+            self.buf.replacelines_vec(&self.ar, rev, a1, a2,
+                                      blinecount, brevs, blinenums)
+        except LinelogError:
+            self._clearannotateresult()
+            raise
+        finally:
+            free(brevs)
+            free(blinenums)
+
+    @property
+    def annotateresult(self):
+        """L.annotateresult -> [(rev, linenum)]"""
+        result = []
+        cdef linelog_linenum i
+        for i in range(0, self.ar.linecount):
+            result.append((self.ar.lines[i].rev, self.ar.lines[i].linenum))
+        return result
+
+    cdef _checkclosed(self):
+        if self.closed:
+            raise ValueError('I/O operation on closed linelog')
+
+    cdef _clearannotateresult(self):
+        linelog_annotateresult_clear(&self.ar)
+
+    def __repr__(self):
+        return '<%s linelog %s at 0x%x>' % (
+            'closed' if self.closed else 'open',
+            '(in-memory)' if self.path is None else repr(self.path),
+            id(self)
+        )
