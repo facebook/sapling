@@ -309,6 +309,26 @@ def wrapfunction(container, funcname, wrapper):
     setattr(container, funcname, wrap)
     return origfn
 
+def unwrapfunction(container, funcname, wrapper=None):
+    '''undo wrapfunction
+
+    If wrappers is None, undo the last wrap. Otherwise removes the wrapper
+    from the chain of wrappers.
+
+    Return the removed wrapper.
+    Raise IndexError if wrapper is None and nothing to unwrap; ValueError if
+    wrapper is not None but is not found in the wrapper chain.
+    '''
+    chain = getwrapperchain(container, funcname)
+    origfn = chain.pop()
+    if wrapper is None:
+        wrapper = chain[0]
+    chain.remove(wrapper)
+    setattr(container, funcname, origfn)
+    for w in reversed(chain):
+        wrapfunction(container, funcname, w)
+    return wrapper
+
 def getwrapperchain(container, funcname):
     '''get a chain of wrappers of a function
 
