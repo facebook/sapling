@@ -309,6 +309,22 @@ def wrapfunction(container, funcname, wrapper):
     setattr(container, funcname, wrap)
     return origfn
 
+def getwrapperchain(container, funcname):
+    '''get a chain of wrappers of a function
+
+    Return a list of functions: [newest wrapper, ..., oldest wrapper, origfunc]
+
+    The wrapper functions are the ones passed to wrapfunction, whose first
+    argument is origfunc.
+    '''
+    result = []
+    fn = getattr(container, funcname)
+    while fn:
+        assert callable(fn)
+        result.append(getattr(fn, '_unboundwrapper', fn))
+        fn = getattr(fn, '_origfunc', None)
+    return result
+
 def _disabledpaths(strip_init=False):
     '''find paths of disabled extensions. returns a dict of {name: path}
     removes /__init__.py from packages if strip_init is True'''
