@@ -1175,6 +1175,7 @@ class ui(object):
                            % ((msg,) + calframe[stacklevel][1:4]))
             self.log('develwarn', '%s at: %s:%s (%s)\n',
                      msg, *calframe[stacklevel][1:4])
+            curframe = calframe = None  # avoid cycles
 
     def deprecwarn(self, msg, version):
         """issue a deprecation warning
