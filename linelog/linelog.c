@@ -37,16 +37,14 @@ typedef enum {
 
 typedef struct {
 	linelog_opcode opcode;
-	union {
-		uint32_t operand1;
-		linelog_revnum rev;
-	};
-	union {
-		uint32_t operand2;
-		linelog_linenum linenum;
-		linelog_offset offset;
-	};
+	linelog_revnum rev;    /* uint32_t operand1 */
+	linelog_offset offset; /* uint32_t operand2, linelog_linenum linenum */
 } linelog_inst;
+
+/* static assert uint32_t, linelog_{linenum,revnum,offset} have a same size */
+extern char linelog_assert_[1 / (sizeof(linelog_revnum) == sizeof(uint32_t))];
+extern char linelog_assert_[1 / (sizeof(linelog_linenum) == sizeof(uint32_t))];
+extern char linelog_assert_[1 / (sizeof(linelog_offset) == sizeof(uint32_t))];
 
 /* size of the encoded representation, not sizeof(linelog_inst) */
 #define INST_SIZE 8
@@ -72,15 +70,15 @@ static inline void decode(const uint8_t data[INST_SIZE], linelog_inst *inst) {
 	buf[0] = ntohl(buf[0]);
 	buf[1] = ntohl(buf[1]);
 	inst->opcode = (linelog_opcode)(buf[0] & 3);
-	inst->operand1 = (buf[0] >> 2) & 0x3fffffffu;
-	inst->operand2 = buf[1];
+	inst->rev = (buf[0] >> 2) & 0x3fffffffu;
+	inst->offset = buf[1];
 }
 
 /* uint8_t[8] <- linelog_inst */
 static inline void encode(uint8_t data[INST_SIZE], const linelog_inst *inst) {
 	uint32_t buf[2];
-	buf[0] = htonl((uint32_t)(inst->opcode) | (inst->operand1 << 2));
-	buf[1] = htonl(inst->operand2);
+	buf[0] = htonl((uint32_t)(inst->opcode) | (inst->rev << 2));
+	buf[1] = htonl(inst->offset);
 	memcpy(data, buf, sizeof(buf));
 }
 
@@ -194,7 +192,8 @@ linelog_result linelog_annotate(const linelog_buf *buf,
 			break;
 		case LINE: /* append a line */
 			{
-				linelog_lineinfo info = {i.rev, i.linenum, pc};
+				linelog_lineinfo info = { .rev = i.rev,
+					.linenum = i.offset, .offset = pc };
 				returnonerror(reservelines(ar, linenum + 1));
 				ar->lines[linenum++] = info;
 			}
@@ -292,7 +291,8 @@ static linelog_result replacelines(linelog_buf *buf, linelog_annotateresult *ar,
 		for (linelog_linenum i = b1; i < b2; ++i) {
 			linelog_inst lineinst = { .opcode = LINE,
 				.rev = brevs ? brevs[i] : brev,
-				.linenum = blinenums ? blinenums[i] : i };
+				.offset /* linenum */ =
+					blinenums ? blinenums[i] : i };
 			appendinst(lineinst);
 		}
 	}

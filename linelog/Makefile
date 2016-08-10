@@ -1,6 +1,6 @@
 .PHONY: all clean
 
-CFLAGS ?= -std=c11 -O2 -Wall -Wextra -Wconversion -Wpedantic -g
+CFLAGS ?= -std=c99 -O2 -Wall -Wextra -Wconversion -pedantic -g
 
 all: linelogcli
 

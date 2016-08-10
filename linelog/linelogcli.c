@@ -231,8 +231,8 @@ int cmddump(const char *args[]) {
 		}
 		printf("  %6u: %-4s ", (unsigned)offset, opname);
 		/* operand 1 */
-		if (i.operand1) {
-			printf("%5u ", (unsigned)i.operand1);
+		if (i.rev) {
+			printf("%5u ", (unsigned)i.rev);
 		} else {
 			printf("      ");
 		}
@@ -240,7 +240,7 @@ int cmddump(const char *args[]) {
 		if (opname[0] == 'E') { /* END */
 			printf("\n");
 		} else {
-			printf("%u\n", (unsigned)i.operand2);
+			printf("%u\n", (unsigned)i.offset);
 		}
 	}
 	return LINELOG_RESULT_OK;
