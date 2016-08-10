@@ -118,10 +118,16 @@ class HgUI(mercurial.ui.ui):
 
 
 class HgServer(object):
-    def __init__(self, repo_path):
+    def __init__(self, repo_path, in_fd=None, out_fd=None):
         self.repo_path = repo_path
-        self.in_file = sys.stdin
-        self.out_file = sys.stdout
+        if in_fd is None:
+            self.in_file = sys.stdin
+        else:
+            self.in_file = os.fdopen(in_fd, 'rb')
+        if out_fd is None:
+            self.out_file = sys.stdout
+        else:
+            self.out_file = os.fdopen(out_fd, 'wb')
 
         # The repository will be set during initialized()
         self.repo = None
@@ -350,13 +356,21 @@ def main():
                         metavar='PATH:REV',
                         help='Dump the file contents for the specified file '
                         'at the given file revision')
+    parser.add_argument('--in-fd',
+                        metavar='FILENO', type=int,
+                        help='Use the specified file descriptor to receive '
+                        'commands, rather than reading on stdin')
+    parser.add_argument('--out-fd',
+                        metavar='FILENO', type=int,
+                        help='Use the specified file descriptor to send '
+                        'command output, rather than writing to stdout')
 
     args = parser.parse_args()
 
     logging.basicConfig(stream=sys.stderr, level=logging.DEBUG,
                         format='%(asctime)s %(message)s')
 
-    server = HgServer(args.repo)
+    server = HgServer(args.repo, in_fd=args.in_fd, out_fd=args.out_fd)
 
     if args.manifest:
         server.initialize()

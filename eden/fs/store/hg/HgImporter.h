@@ -135,6 +135,16 @@ class HgImporter {
   folly::Subprocess helper_;
   LocalStore* store_{nullptr};
   uint32_t nextRequestID_{0};
+  /**
+   * The input and output file descriptors to the helper subprocess.
+   * We don't own these FDs, and don't need to close them--they will be closed
+   * automatically by the Subprocess object.
+   *
+   * We simply cache them as member variables to avoid having to look them up
+   * via helper_.parentFd() each time we need to use them.
+   */
+  int helperIn_{-1};
+  int helperOut_{-1};
 };
 }
 } // facebook::eden

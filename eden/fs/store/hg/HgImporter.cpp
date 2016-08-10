@@ -47,6 +47,22 @@ namespace {
 using namespace facebook::eden;
 
 /**
+ * File descriptor number to use for receiving output from the import helper
+ * process.
+ *
+ * This value is rather arbitrary.  It shouldn't be 0, 1, or 2 (stdin, stdout,
+ * or stderr, respectively), but other than that anything is probably fine,
+ * since the child shouldn't have any FDs open besides these 3 standard FDs
+ * when it starts.
+ *
+ * The only reason we don't simply use the child's stdout is to avoid
+ * communication problems if any of the mercurial helper code somehow ends up
+ * printing data to stdout.  We don't want arbitrary log message data from
+ * mercurial interfering with our normal communication protocol.
+ */
+constexpr int HELPER_PIPE_FD = 5;
+
+/**
  * HgBlobInfo manages mercurial (path, revHash) data in the LocalStore.
  *
  * Mercurial doesn't really have a blob hash the same way eden and git do.
@@ -293,19 +309,26 @@ namespace eden {
 HgImporter::HgImporter(StringPiece repoPath, LocalStore* store)
     : store_(store) {
   std::vector<string> cmd = {
-      getImportHelperPath(), repoPath.str(),
+      getImportHelperPath(),
+      repoPath.str(),
+      "--out-fd",
+      folly::to<string>(HELPER_PIPE_FD),
   };
 
   // In the future, it might be better to use some other arbitrary fd for
   // output from the helper process, rather than stdout (just in case anything
   // in the python code ends up printing to stdout).
   Subprocess::Options opts;
-  opts.stdin(Subprocess::PIPE).stdout(Subprocess::PIPE);
+  // Send commands to the child on its stdin.
+  // Receive output on HELPER_PIPE_FD.
+  opts.stdin(Subprocess::PIPE).fd(HELPER_PIPE_FD, Subprocess::PIPE_OUT);
   helper_ = Subprocess{cmd, opts};
   SCOPE_FAIL {
     helper_.closeParentFd(STDIN_FILENO);
     helper_.wait();
   };
+  helperIn_ = helper_.stdin();
+  helperOut_ = helper_.parentFd(HELPER_PIPE_FD);
 
   // Wait for the import helper to send the CMD_STARTED message indicating
   // that it has started successfully.
@@ -344,8 +367,7 @@ Hash HgImporter::importManifest(StringPiece revName) {
     } else {
       chunkData.clear();
     }
-    folly::readFull(
-        helper_.stdout(), chunkData.writableTail(), header.dataLength);
+    folly::readFull(helperOut_, chunkData.writableTail(), header.dataLength);
     chunkData.append(header.dataLength);
 
     // Now process the entries in the chunk
@@ -383,7 +405,7 @@ IOBuf HgImporter::importFileContents(Hash blobHash) {
   // the body data in fixed-size chunks, particularly for very large files.
   auto header = readChunkHeader();
   auto buf = IOBuf(IOBuf::CREATE, header.dataLength);
-  folly::readFull(helper_.stdout(), buf.writableTail(), header.dataLength);
+  folly::readFull(helperOut_, buf.writableTail(), header.dataLength);
   buf.append(header.dataLength);
 
   return buf;
@@ -442,7 +464,7 @@ void HgImporter::readManifestEntry(
 
 HgImporter::ChunkHeader HgImporter::readChunkHeader() {
   ChunkHeader header;
-  folly::readFull(helper_.stdout(), &header, sizeof(header));
+  folly::readFull(helperOut_, &header, sizeof(header));
   header.requestID = Endian::big(header.requestID);
   header.command = Endian::big(header.command);
   header.flags = Endian::big(header.flags);
@@ -452,7 +474,7 @@ HgImporter::ChunkHeader HgImporter::readChunkHeader() {
   // and throw an exception.
   if ((header.flags & FLAG_ERROR) != 0) {
     std::vector<char> errMsg(header.dataLength);
-    folly::readFull(helper_.stdout(), &errMsg.front(), header.dataLength);
+    folly::readFull(helperOut_, &errMsg.front(), header.dataLength);
     string errStr(&errMsg.front(), errMsg.size());
     LOG(WARNING) << "error received from hg helper process: " << errStr;
     throw std::runtime_error(errStr);
@@ -473,7 +495,7 @@ void HgImporter::sendManifestRequest(folly::StringPiece revName) {
   iov[0].iov_len = sizeof(header);
   iov[1].iov_base = const_cast<char*>(revName.data());
   iov[1].iov_len = revName.size();
-  folly::writevFull(helper_.stdin(), iov.data(), iov.size());
+  folly::writevFull(helperIn_, iov.data(), iov.size());
 }
 
 void HgImporter::sendFileRequest(RelativePathPiece path, Hash revHash) {
@@ -491,7 +513,7 @@ void HgImporter::sendFileRequest(RelativePathPiece path, Hash revHash) {
   iov[1].iov_len = Hash::RAW_SIZE;
   iov[2].iov_base = const_cast<char*>(pathStr.data());
   iov[2].iov_len = pathStr.size();
-  folly::writevFull(helper_.stdin(), iov.data(), iov.size());
+  folly::writevFull(helperIn_, iov.data(), iov.size());
 }
 }
 } // facebook::eden
