@@ -1,9 +1,6 @@
+from Cython.Build import cythonize
+from distutils.core import setup, Extension
 from glob import glob
-
-try:
-    from setuptools import setup, Extensions
-except ImportError:
-    from distutils.core import setup, Extension
 
 hgext3rd = [
     p[:-3].replace('/', '.')
@@ -60,6 +57,14 @@ setup(
                       "-std=c99",
                       "-Wall",
                       "-Werror", "-Werror=strict-prototypes"],
-        )
-    ],
+        ),
+    ] + cythonize([
+        Extension('linelog',
+                  sources=['linelog/pyext/linelog.pyx'],
+                  extra_compile_args=[
+                      '-std=c99',
+                      '-Wall', '-Wextra', '-Wconversion', '-pedantic',
+                  ],
+        ),
+    ]),
 )
