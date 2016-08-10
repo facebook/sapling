@@ -305,17 +305,25 @@ by hand to make changes to the repository or remove it.''' % name)
         if extra_args:
             cmd.extend(extra_args)
 
+        eden_env = self._build_eden_environment()
+
         # Run edenfs using sudo, unless we already have root privileges,
         # or the edenfs binary is setuid root.
         if os.geteuid() != 0:
             s = os.stat(daemon_binary)
             if not (s.st_uid == 0 and (s.st_mode & stat.S_ISUID)):
                 # We need to run edenfs under sudo
+                sudo_cmd = ['/usr/bin/sudo']
+                # Add environment variable settings
+                # Depending on the sudo configuration, these may not
+                # necessarily get passed through automatically even when
+                # using "sudo -E".
+                for key, value in eden_env.items():
+                    sudo_cmd.append('%s=%s' % (key, value))
+
                 if ('SANDCASTLE' in os.environ) and os.path.exists(SUDO_HELPER):
                     cmd = [SUDO_HELPER] + cmd
-                cmd = ['/usr/bin/sudo', '-E'] + cmd
-
-        eden_env = self._build_eden_environment()
+                cmd = sudo_cmd + cmd
 
         if foreground:
             # This call does not return
