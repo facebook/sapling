@@ -164,6 +164,16 @@ Test hg status is normal after rebase abort
   ? a.orig
   $ rm a.orig
 
+Test rebase with an interrupted update:
+  $ hg $breakupdateflag rebase -s 2977a57ce863 -d 79361b8cdbb5 -q
+  $ hg status
+  
+  # The repository is in an unfinished *rebase* state.
+  # To continue:                hg rebase --continue
+  # To abort:                   hg rebase --abort
+  $ hg rebase --abort -q
+  rebase aborted
+
 Test conflicted merge state
   $ hg merge -q
   warning: conflicts while merging a! (edit, then use 'hg resolve --mark')
@@ -240,4 +250,3 @@ Test interrupted update state, without active bookmark and REV is specified usin
 Test update state can be reset using .
   $ hg update . -q
   $ hg status
-

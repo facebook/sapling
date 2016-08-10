@@ -97,12 +97,13 @@ STATES = (
     ('bisect', fileexistspredicate('bisect.state'), bisectmsg),
     ('graft', fileexistspredicate('graftstate'), graftmsg),
     ('unshelve', fileexistspredicate('unshelverebasestate'), unshelvemsg),
-    ('update', fileexistspredicate('updatestate'), updatemsg),
     ('rebase', fileexistspredicate('rebasestate'), rebasemsg),
-    # The merge state is part of a list that will be iterated over. It needs to
-    # be last because some of the other unfinished states may also be in a merge
-    # state (eg.  histedit, graft, etc). We want those to have priority.
+    # The merge and update states are part of a list that will be iterated over.
+    # They need to be last because some of the other unfinished states may also
+    # be in a merge or update state (eg. rebase, histedit, graft, etc).
+    # We want those to have priority.
     ('merge', mergepredicate, mergemsg),
+    ('update', fileexistspredicate('updatestate'), updatemsg),
 )
 
 
