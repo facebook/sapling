@@ -17,9 +17,8 @@ When ssh is unable to use /dev/tty, it will try to run SSH_ASKPASS if DISPLAY
 is set, which is usually a GUI program. Here we set it to a special program
 receiving fds from a simple unix socket server.
 
-This file is both a mercurial extension to start that tty server and an
-executable serving as the ssh-askpass script. Therefore its mode should
-have the +x (executable) bit.
+This file is both a mercurial extension to start that tty server and a
+standalone ssh-askpass script.
 """
 
 import contextlib
@@ -153,12 +152,15 @@ def _validaterepo(orig, self, sshcmd, args, remotecmd):
     if not _isttyserverneeded():
         return orig(self, sshcmd, args, remotecmd)
 
-    pid = sockpath = None
+    pid = sockpath = scriptpath = None
     with _silentexception(terminate=False):
         pid, sockpath = _startttyserver()
-        scriptpath = os.path.abspath(__file__)
-        if scriptpath[-4:].lower() in ('.pyc', '.pyo'):
-            scriptpath = scriptpath[:-1]
+        scriptpath = sockpath + '.sh'
+        with open(scriptpath, 'w') as f:
+            f.write('#!/bin/bash\nexec %s %s "$@"'
+                    % (util.shellquote(sys.executable),
+                       util.shellquote(__file__)))
+        os.chmod(scriptpath, 0o755)
         parentpids = [os.getpid(), pid]
         env = {
             # ssh will not use SSH_ASKPASS if DISPLAY is not set
@@ -175,8 +177,9 @@ def _validaterepo(orig, self, sshcmd, args, remotecmd):
     finally:
         if pid:
             _killprocess(pid)
-        if sockpath and os.path.exists(sockpath):
-            util.unlinkpath(sockpath, ignoremissing=True)
+        for path in [scriptpath, sockpath]:
+            if path and os.path.exists(path):
+                util.unlinkpath(path, ignoremissing=True)
 
 def uisetup(ui):
     # _validaterepo runs ssh and needs to be wrapped
