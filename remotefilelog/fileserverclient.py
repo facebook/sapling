@@ -273,7 +273,8 @@ class fileserverclient(object):
 
         if needcreate:
             peer = hg.peer(self.ui, {}, fallbackpath)
-            extensions.wrapfunction(peer, 'cleanup', _cleanup)
+            if util.safehasattr(peer, 'cleanup'):
+                extensions.wrapfunction(peer, 'cleanup', _cleanup)
             self.remoteserver = peer
 
         return self.remoteserver
