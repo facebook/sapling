@@ -61,7 +61,7 @@ Without server extension
   $ hg --config experimental.bundle2-exp=False push --to default
   pushing to ssh://user@dummy/server
   searching for changes
-  abort: bundle2 needs to be enabled on client
+  abort: no server support for 'b2x:rebase'
   [255]
 
   $ echo "[experimental]" >> .hg/hgrc
