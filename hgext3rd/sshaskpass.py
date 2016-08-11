@@ -203,16 +203,20 @@ def _sshaskpassmain(prompt):
     """the ssh-askpass client"""
     rfd, wfd = _receivefds(os.environ['TTYSOCK'])
     r, w = os.fdopen(rfd, 'r'), os.fdopen(wfd, 'a')
-    w.write('==== SSH Authenticating ====\n')
+    w.write('\033[31;1m==== AUTHENTICATING FOR SSH  ====\033[0m\n')
     w.write(prompt)
     w.flush()
-    _setecho(r, not _shoulddisableecho(prompt))
+    shouldecho = not _shoulddisableecho(prompt)
+    _setecho(r, shouldecho)
     try:
         line = r.readline()
     finally:
+        if not shouldecho:
+            w.write('\n')
         _setecho(r, True)
     sys.stdout.write(line)
     sys.stdout.flush()
+    w.write('\033[31;1m==== AUTHENTICATION COMPLETE ====\033[0m\n')
 
 if __name__ == '__main__' and all(n in os.environ
                                   for n in ['SSH_ASKPASS', 'TTYSOCK']):
