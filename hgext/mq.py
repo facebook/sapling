@@ -1840,7 +1840,7 @@ class queue(object):
 
                     self.applied.append(statusentry(n, patchfn))
                 finally:
-                    lockmod.release(lock, tr)
+                    lockmod.release(tr, lock)
             except: # re-raises
                 ctx = repo[cparents[0]]
                 repo.dirstate.rebuild(ctx.node(), ctx.manifest())
