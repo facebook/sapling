@@ -575,8 +575,8 @@ def perffncachewrite(ui, repo, **opts):
         s.fncache._dirty = True
         s.fncache.write(tr)
     timer(d)
-    lock.release()
     tr.close()
+    lock.release()
     fm.end()
 
 @command('perffncacheencode', formatteropts)
