@@ -1,4 +1,4 @@
-  $ python -c 'import sparse' || exit 80
+  $ python -c 'import hgext3rd.sparse' || exit 80
 
   $ . "$TESTDIR/library.sh"
 
