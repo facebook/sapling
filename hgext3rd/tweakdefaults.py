@@ -8,6 +8,7 @@
 
 This extension changes defaults to be more user friendly.
 
+  hg bookmarks  always use unfiltered repo (--hidden)
   hg log        always follows history (-f)
   hg rebase     aborts without arguments
   hg update     aborts without arguments
@@ -121,6 +122,16 @@ def extsetup(ui):
     # metadata (e.g. 'amend', 'rebase' and so forth)
     wrapfunction(obsolete, 'createmarkers', _createmarkers)
 
+    # wrap bookmarks after remotenames
+    def afterloaded(loaded):
+        if loaded:
+            # remotenames is loaded, wrap its wrapper directly
+            remotenames = extensions.find('remotenames')
+            wrapfunction(remotenames, 'exbookmarks', unfilteredcmd)
+        else:
+            # otherwise wrap the bookmarks command
+            wrapcommand(commands.table, 'bookmarks', unfilteredcmd)
+    extensions.afterloaded('remotenames', afterloaded)
 
     # Tweak Behavior
     tweakbehaviors(ui)
@@ -697,6 +708,19 @@ def tagscmd(orig, ui, repo, **opts):
         ui.warn(message + '\n')
     return orig(ui, repo, **opts)
 
+def unfilteredcmd(orig, *args, **opts):
+    # use unfiltered repo for performance
+    #
+    # find the "repo" arg and change it to the unfiltered version.
+    # "repo" could in different location, for example:
+    #   args = [ui, repo, ...] for commands.bookmark
+    #   args = [orig, ui, repo, ...] for remotenames.exbookmarks
+    for i in [1, 2]:
+        if len(args) > i and util.safehasattr(args[i], 'unfiltered'):
+            args = list(args)
+            args[i] = args[i].unfiltered()
+            args = tuple(args)
+    return orig(*args, **opts)
 
 ### bookmarks api compatibility layer ###
 def bmactive(repo):
