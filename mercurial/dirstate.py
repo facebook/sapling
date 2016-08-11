@@ -101,6 +101,8 @@ class dirstate(object):
         self._parentwriters = 0
         self._filename = 'dirstate'
         self._pendingfilename = '%s.pending' % self._filename
+        self._plchangecallbacks = {}
+        self._origpl = None
 
         # for consistent view between _pl() and _read() invocations
         self._pendingmode = None
@@ -347,6 +349,8 @@ class dirstate(object):
 
         self._dirty = self._dirtypl = True
         oldp2 = self._pl[1]
+        if self._origpl is None:
+            self._origpl = self._pl
         self._pl = p1, p2
         copies = {}
         if oldp2 != nullid and p2 == nullid:
@@ -442,6 +446,7 @@ class dirstate(object):
         self._lastnormaltime = 0
         self._dirty = False
         self._parentwriters = 0
+        self._origpl = None
 
     def copy(self, source, dest):
         """Mark dest as a copy of source. Unmark dest if source is None."""
@@ -687,6 +692,8 @@ class dirstate(object):
                 if f in self._nonnormalset:
                     self._nonnormalset.remove(f)
 
+        if self._origpl is None:
+            self._origpl = self._pl
         self._pl = (parent, nullid)
         self._dirty = True
 
@@ -721,7 +728,23 @@ class dirstate(object):
         st = self._opener(filename, "w", atomictemp=True, checkambig=True)
         self._writedirstate(st)
 
+    def addparentchangecallback(self, category, callback):
+        """add a callback to be called when the wd parents are changed
+
+        Callback will be called with the following arguments:
+            dirstate, (oldp1, oldp2), (newp1, newp2)
+
+        Category is a unique identifier to allow overwriting an old callback
+        with a newer callback.
+        """
+        self._plchangecallbacks[category] = callback
+
     def _writedirstate(self, st):
+        # notify callbacks about parents change
+        if self._origpl is not None and self._origpl != self._pl:
+            for c, callback in sorted(self._plchangecallbacks.iteritems()):
+                callback(self, self._origpl, self._pl)
+            self._origpl = None
         # use the modification time of the newly created temporary file as the
         # filesystem's notion of 'now'
         now = util.fstat(st).st_mtime & _rangemask
