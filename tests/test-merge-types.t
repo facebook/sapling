@@ -173,7 +173,7 @@ Update to link with local change should cause a merge prompt (issue3200):
   (couldn't find merge tool hgmerge|tool hgmerge can't handle symlinks) (re)
   picked tool ':prompt' for a (binary False symlink True changedelete False)
   no tool found to merge a
-  keep (l)ocal, take (o)ther, or leave (u)nresolved? u
+  keep (l)ocal [working copy], take (o)ther [destination], or leave (u)nresolved? u
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges
   1 other heads for branch "default"

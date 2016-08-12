@@ -1535,11 +1535,13 @@ def update(repo, node, branchmerge, force, ancestor=None,
         if '.hgsubstate' in actionbyfile:
             f = '.hgsubstate'
             m, args, msg = actionbyfile[f]
+            prompts = filemerge.partextras(labels)
+            prompts['f'] = f
             if m == 'cd':
                 if repo.ui.promptchoice(
-                    _("local changed %s which remote deleted\n"
+                    _("local%(l)s changed %(f)s which remote%(o)s deleted\n"
                       "use (c)hanged version or (d)elete?"
-                      "$$ &Changed $$ &Delete") % f, 0):
+                      "$$ &Changed $$ &Delete") % prompts, 0):
                     actionbyfile[f] = ('r', None, "prompt delete")
                 elif f in p1:
                     actionbyfile[f] = ('am', None, "prompt keep")
@@ -1549,9 +1551,9 @@ def update(repo, node, branchmerge, force, ancestor=None,
                 f1, f2, fa, move, anc = args
                 flags = p2[f2].flags()
                 if repo.ui.promptchoice(
-                    _("remote changed %s which local deleted\n"
+                    _("remote%(o)s changed %(f)s which local%(l)s deleted\n"
                       "use (c)hanged version or leave (d)eleted?"
-                      "$$ &Changed $$ &Deleted") % f, 0) == 0:
+                      "$$ &Changed $$ &Deleted") % prompts, 0) == 0:
                     actionbyfile[f] = ('g', (flags, False), "prompt recreating")
                 else:
                     del actionbyfile[f]
