@@ -4,7 +4,14 @@
 #
 # Copyright 2015 Facebook, Inc.
 
-from mercurial import error, templater, extensions, revset, templatekw, node
+from mercurial import (
+    error,
+    extensions,
+    node,
+    revset,
+    templatekw,
+    templater,
+)
 from mercurial.i18n import _
 
 import re
@@ -29,16 +36,9 @@ phabhashre = re.compile('^r([A-Z]+)([0-9a-f]{12,40})$')
 fbsvnhash = re.compile('^r[A-Z]+(\d+)$')
 
 def extsetup(ui):
-    global conduit_host, conduit_path, conduit_protocol
-    conduit_host = ui.config('fbconduit', 'host')
-    conduit_path = ui.config('fbconduit', 'path')
-    conduit_protocol = ui.config('fbconduit', 'protocol')
-
-    if not conduit_host:
-        ui.warn(('No conduit host specified in config; disabling fbconduit\n'))
+    if not conduit_config(ui):
+        ui.warn(_('No conduit host specified in config; disabling fbconduit\n'))
         return
-    if not conduit_protocol:
-        conduit_protocol = 'https'
     templater.funcs['mirrornode'] = mirrornode
     templatekw.keywords['gitnode'] = showgitnode
 
@@ -48,7 +48,20 @@ def extsetup(ui):
     revset.methods['string'] = revset.stringset
     revset.methods['symbol'] = revset.stringset
 
-def _call_conduit(method, **kwargs):
+def conduit_config(ui, host=None, path=None, protocol=None):
+    global conduit_host, conduit_path, conduit_protocol
+    conduit_host = host or ui.config('fbconduit', 'host')
+    conduit_path = path or ui.config('fbconduit', 'path')
+    conduit_protocol = protocol or ui.config('fbconduit', 'protocol')
+    if conduit_host is None:
+        return False
+
+    if conduit_protocol is None:
+        conduit_protocol = 'https'
+
+    return True
+
+def call_conduit(method, **kwargs):
     global connection, conduit_host, conduit_path, conduit_protocol
 
     # start connection
@@ -109,7 +122,7 @@ def mirrornode(ctx, mapping, args):
         torepo, totype = args
 
     try:
-        result = _call_conduit('scmquery.get.mirrored.revs',
+        result = call_conduit('scmquery.get.mirrored.revs',
             from_repo=reponame,
             from_scm='hg',
             to_repo=torepo,
@@ -138,7 +151,7 @@ def showgitnode(repo, ctx, templ, **args):
     matches = []
     for backingrepo in backingrepos:
         try:
-            result = _call_conduit('scmquery.get.mirrored.revs',
+            result = call_conduit('scmquery.get.mirrored.revs',
                 from_repo=reponame,
                 from_scm='hg',
                 to_repo=backingrepo,
@@ -179,7 +192,7 @@ def gitnode(repo, subset, x):
     translationerror = False
     for backingrepo in backingrepos:
         try:
-            result = _call_conduit('scmquery.get.mirrored.revs',
+            result = call_conduit('scmquery.get.mirrored.revs',
                 from_repo=backingrepo,
                 from_scm='git',
                 to_repo=reponame,
