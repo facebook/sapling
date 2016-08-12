@@ -71,7 +71,6 @@ try:
         "unquote",
         "url2pathname",
         "urlencode",
-        "urlencode",
     ))
     _alias(urlreq, urllib2, (
         "AbstractHTTPHandler",
