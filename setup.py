@@ -577,7 +577,10 @@ cmdclass = {'build': hgbuild,
             'build_hgexe': buildhgexe,
             }
 
-packages = ['mercurial', 'mercurial.hgweb', 'mercurial.httpclient',
+packages = ['mercurial',
+            'mercurial.cext',
+            'mercurial.hgweb',
+            'mercurial.httpclient',
             'mercurial.pure',
             'hgext', 'hgext.convert', 'hgext.fsmonitor',
             'hgext.fsmonitor.pywatchman', 'hgext.highlight',
@@ -586,6 +589,7 @@ packages = ['mercurial', 'mercurial.hgweb', 'mercurial.httpclient',
 common_depends = ['mercurial/bitmanipulation.h',
                   'mercurial/compat.h',
                   'mercurial/util.h']
+common_include_dirs = ['mercurial']
 
 osutil_cflags = []
 osutil_ldflags = []
@@ -615,21 +619,27 @@ if sys.platform == 'darwin':
 
 extmodules = [
     Extension('mercurial.base85', ['mercurial/base85.c'],
+              include_dirs=common_include_dirs,
               depends=common_depends),
     Extension('mercurial.bdiff', ['mercurial/bdiff.c',
                                   'mercurial/bdiff_module.c'],
+              include_dirs=common_include_dirs,
               depends=common_depends + ['mercurial/bdiff.h']),
     Extension('mercurial.diffhelpers', ['mercurial/diffhelpers.c'],
+              include_dirs=common_include_dirs,
               depends=common_depends),
     Extension('mercurial.mpatch', ['mercurial/mpatch.c',
                                    'mercurial/mpatch_module.c'],
+              include_dirs=common_include_dirs,
               depends=common_depends),
     Extension('mercurial.parsers', ['mercurial/dirs.c',
                                     'mercurial/manifest.c',
                                     'mercurial/parsers.c',
                                     'mercurial/pathencode.c'],
+              include_dirs=common_include_dirs,
               depends=common_depends),
     Extension('mercurial.osutil', ['mercurial/osutil.c'],
+              include_dirs=common_include_dirs,
               extra_compile_args=osutil_cflags,
               extra_link_args=osutil_ldflags,
               depends=common_depends),
