@@ -16,7 +16,7 @@
           <File Name="mercurial.bdiff.pyd" />
           <File Name="mercurial.diffhelpers.pyd" />
           <File Name="mercurial.mpatch.pyd" />
-          <File Name="mercurial.osutil.pyd" />
+          <File Name="mercurial.cext.osutil.pyd" />
           <File Name="mercurial.parsers.pyd" />
           <File Name="pyexpat.pyd" />
           <File Name="bz2.pyd" />

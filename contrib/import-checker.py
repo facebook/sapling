@@ -30,7 +30,6 @@ _dualmodules = (
     'bdiff.py',
     'diffhelpers.py',
     'mpatch.py',
-    'osutil.py',
     'parsers.py',
 )
 

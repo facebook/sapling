@@ -641,7 +641,7 @@ extmodules = [
                                     'mercurial/pathencode.c'],
               include_dirs=common_include_dirs,
               depends=common_depends),
-    Extension('mercurial.osutil', ['mercurial/osutil.c'],
+    Extension('mercurial.cext.osutil', ['mercurial/cext/osutil.c'],
               include_dirs=common_include_dirs,
               extra_compile_args=osutil_cflags,
               extra_link_args=osutil_ldflags,

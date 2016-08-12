@@ -17,7 +17,7 @@ import sys
 from .i18n import _
 from . import (
     encoding,
-    osutil,
+    policy,
     pycompat,
     win32,
 )
@@ -27,6 +27,8 @@ try:
     winreg.CloseKey
 except ImportError:
     import winreg
+
+osutil = policy.importmod(r'osutil')
 
 executablepath = win32.executablepath
 getuser = win32.getuser

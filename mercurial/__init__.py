@@ -27,7 +27,6 @@ _dualmodules = {
     'mercurial.bdiff',
     'mercurial.diffhelpers',
     'mercurial.mpatch',
-    'mercurial.osutil',
     'mercurial.parsers',
 }
 

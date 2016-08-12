@@ -1029,6 +1029,8 @@ def debuginstall(ui, **opts):
                 base85,
                 bdiff,
                 mpatch,
+            )
+            from .cext import (
                 osutil,
             )
             dir(bdiff), dir(mpatch), dir(base85), dir(osutil) # quiet pyflakes

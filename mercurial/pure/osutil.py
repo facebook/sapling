@@ -13,7 +13,7 @@ import os
 import socket
 import stat as statmod
 
-from . import (
+from .. import (
     policy,
     pycompat,
 )
