@@ -24,6 +24,14 @@ import sys
 policy = b'allow'
 policynoc = (b'cffi', b'cffi-allow', b'py')
 policynocffi = (b'c', b'py')
+_packageprefs = {
+    # policy: (versioned package, pure package)
+    b'c': (r'cext', None),
+    b'allow': (r'cext', r'pure'),
+    b'cffi': (None, r'pure'),  # TODO: (r'cffi', None)
+    b'cffi-allow': (None, r'pure'),  # TODO: (r'cffi', r'pure')
+    b'py': (None, r'pure'),
+}
 
 try:
     from . import __modulepolicy__
@@ -49,3 +57,40 @@ if sys.version_info[0] >= 3:
         policy = os.environ[r'HGMODULEPOLICY'].encode(r'utf-8')
 else:
     policy = os.environ.get(r'HGMODULEPOLICY', policy)
+
+def _importfrom(pkgname, modname):
+    # from .<pkgname> import <modname> (where . is looked through this module)
+    fakelocals = {}
+    pkg = __import__(pkgname, globals(), fakelocals, [modname], level=1)
+    try:
+        fakelocals[modname] = mod = getattr(pkg, modname)
+    except AttributeError:
+        raise ImportError(r'cannot import name %s' % modname)
+    # force import; fakelocals[modname] may be replaced with the real module
+    getattr(mod, r'__doc__', None)
+    return fakelocals[modname]
+
+def _checkmod(pkgname, modname, mod):
+    expected = 1  # TODO: maybe defined in table?
+    actual = getattr(mod, r'version', None)
+    if actual != expected:
+        raise ImportError(r'cannot import module %s.%s '
+                          r'(expected version: %d, actual: %r)'
+                          % (pkgname, modname, expected, actual))
+
+def importmod(modname):
+    """Import module according to policy and check API version"""
+    try:
+        verpkg, purepkg = _packageprefs[policy]
+    except KeyError:
+        raise ImportError(r'invalid HGMODULEPOLICY %r' % policy)
+    assert verpkg or purepkg
+    if verpkg:
+        try:
+            mod = _importfrom(verpkg, modname)
+            _checkmod(verpkg, modname, mod)
+            return mod
+        except ImportError:
+            if not purepkg:
+                raise
+    return _importfrom(purepkg, modname)
