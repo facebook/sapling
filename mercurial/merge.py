@@ -1539,7 +1539,7 @@ def update(repo, node, branchmerge, force, ancestor=None,
             prompts['f'] = f
             if m == 'cd':
                 if repo.ui.promptchoice(
-                    _("local%(l)s changed %(f)s which remote%(o)s deleted\n"
+                    _("local%(l)s changed %(f)s which other%(o)s deleted\n"
                       "use (c)hanged version or (d)elete?"
                       "$$ &Changed $$ &Delete") % prompts, 0):
                     actionbyfile[f] = ('r', None, "prompt delete")
@@ -1551,7 +1551,7 @@ def update(repo, node, branchmerge, force, ancestor=None,
                 f1, f2, fa, move, anc = args
                 flags = p2[f2].flags()
                 if repo.ui.promptchoice(
-                    _("remote%(o)s changed %(f)s which local%(l)s deleted\n"
+                    _("other%(o)s changed %(f)s which local%(l)s deleted\n"
                       "use (c)hanged version or leave (d)eleted?"
                       "$$ &Changed $$ &Deleted") % prompts, 0) == 0:
                     actionbyfile[f] = ('g', (flags, False), "prompt recreating")

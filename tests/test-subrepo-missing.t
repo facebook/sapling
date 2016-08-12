@@ -62,7 +62,7 @@ delete .hgsubstate and update
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm .hgsubstate
   $ hg up 0
-  remote [destination] changed .hgsubstate which local [working copy] deleted
+  other [destination] changed .hgsubstate which local [working copy] deleted
   use (c)hanged version or leave (d)eleted? c
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg st

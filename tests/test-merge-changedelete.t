@@ -54,9 +54,9 @@ Make sure HGMERGE doesn't interfere with the test
 Non-interactive merge:
 
   $ hg merge -y
-  local changed file1 which remote deleted
+  local changed file1 which other deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? u
-  remote changed file2 which local deleted
+  other changed file2 which local deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   merging file3
   warning: conflicts while merging file3! (edit, then use 'hg resolve --mark')
@@ -117,9 +117,9 @@ Interactive merge:
   > c
   > d
   > EOF
-  local changed file1 which remote deleted
+  local changed file1 which other deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? c
-  remote changed file2 which local deleted
+  other changed file2 which local deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? d
   merging file3
   warning: conflicts while merging file3! (edit, then use 'hg resolve --mark')
@@ -181,18 +181,18 @@ Interactive merge with bad input:
   > baz
   > c
   > EOF
-  local changed file1 which remote deleted
+  local changed file1 which other deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? foo
   unrecognized response
-  local changed file1 which remote deleted
+  local changed file1 which other deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? bar
   unrecognized response
-  local changed file1 which remote deleted
+  local changed file1 which other deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? d
-  remote changed file2 which local deleted
+  other changed file2 which local deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? baz
   unrecognized response
-  remote changed file2 which local deleted
+  other changed file2 which local deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? c
   merging file3
   warning: conflicts while merging file3! (edit, then use 'hg resolve --mark')
@@ -250,9 +250,9 @@ Interactive merge with not enough input:
   $ hg merge --config ui.interactive=true <<EOF
   > d
   > EOF
-  local changed file1 which remote deleted
+  local changed file1 which other deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? d
-  remote changed file2 which local deleted
+  other changed file2 which local deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? 
   merging file3
   warning: conflicts while merging file3! (edit, then use 'hg resolve --mark')
@@ -445,9 +445,9 @@ Force prompts with no input (should be similar to :fail)
   1 other heads for branch "default"
 
   $ hg merge --config ui.interactive=True --tool :prompt
-  local changed file1 which remote deleted
+  local changed file1 which other deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? 
-  remote changed file2 which local deleted
+  other changed file2 which local deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? 
   no tool found to merge file3
   keep (l)ocal, take (o)ther, or leave (u)nresolved? 
@@ -501,9 +501,9 @@ Force prompts
   1 other heads for branch "default"
 
   $ hg merge --tool :prompt
-  local changed file1 which remote deleted
+  local changed file1 which other deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? u
-  remote changed file2 which local deleted
+  other changed file2 which local deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   no tool found to merge file3
   keep (l)ocal, take (o)ther, or leave (u)nresolved? u
@@ -555,9 +555,9 @@ Choose to merge all files
   1 other heads for branch "default"
 
   $ hg merge --tool :merge3
-  local changed file1 which remote deleted
+  local changed file1 which other deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? u
-  remote changed file2 which local deleted
+  other changed file2 which local deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   merging file3
   warning: conflicts while merging file3! (edit, then use 'hg resolve --mark')
@@ -642,9 +642,9 @@ invocations.)
   (status identical)
   
   === :other -> :prompt ===
-  local changed file1 which remote deleted
+  local changed file1 which other deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? 
-  remote changed file2 which local deleted
+  other changed file2 which local deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? 
   no tool found to merge file3
   keep (l)ocal, take (o)ther, or leave (u)nresolved? 
@@ -671,9 +671,9 @@ invocations.)
   (status identical)
   
   === :local -> :prompt ===
-  local changed file1 which remote deleted
+  local changed file1 which other deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? 
-  remote changed file2 which local deleted
+  other changed file2 which local deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? 
   no tool found to merge file3
   keep (l)ocal, take (o)ther, or leave (u)nresolved? 
@@ -690,9 +690,9 @@ invocations.)
   (status identical)
   
   === :fail -> :prompt ===
-  local changed file1 which remote deleted
+  local changed file1 which other deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? 
-  remote changed file2 which local deleted
+  other changed file2 which local deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? 
   no tool found to merge file3
   keep (l)ocal, take (o)ther, or leave (u)nresolved? 
@@ -717,9 +717,9 @@ Non-interactive linear update
   $ echo changed >> file1
   $ hg rm file2
   $ hg update 1 -y
-  local [working copy] changed file1 which remote [destination] deleted
+  local [working copy] changed file1 which other [destination] deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? u
-  remote [destination] changed file2 which local [working copy] deleted
+  other [destination] changed file2 which local [working copy] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   1 files updated, 0 files merged, 0 files removed, 2 files unresolved
   use 'hg resolve' to retry unresolved file merges
@@ -893,9 +893,9 @@ Force prompts with no input
   $ echo changed >> file1
   $ hg rm file2
   $ hg update 1 --config ui.interactive=True --tool :prompt
-  local [working copy] changed file1 which remote [destination] deleted
+  local [working copy] changed file1 which other [destination] deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? 
-  remote [destination] changed file2 which local [working copy] deleted
+  other [destination] changed file2 which local [working copy] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? 
   1 files updated, 0 files merged, 0 files removed, 2 files unresolved
   use 'hg resolve' to retry unresolved file merges
@@ -943,9 +943,9 @@ Choose to merge all files
   $ echo changed >> file1
   $ hg rm file2
   $ hg update 1 --tool :merge3
-  local [working copy] changed file1 which remote [destination] deleted
+  local [working copy] changed file1 which other [destination] deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? u
-  remote [destination] changed file2 which local [working copy] deleted
+  other [destination] changed file2 which local [working copy] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   1 files updated, 0 files merged, 0 files removed, 2 files unresolved
   use 'hg resolve' to retry unresolved file merges
@@ -999,9 +999,9 @@ Test transitions between different merge tools
   (status identical)
   
   === :other -> :prompt ===
-  local [working copy] changed file1 which remote [destination] deleted
+  local [working copy] changed file1 which other [destination] deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? 
-  remote [destination] changed file2 which local [working copy] deleted
+  other [destination] changed file2 which local [working copy] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? 
   --- diff of status ---
   (status identical)
@@ -1026,9 +1026,9 @@ Test transitions between different merge tools
   (status identical)
   
   === :local -> :prompt ===
-  local [working copy] changed file1 which remote [destination] deleted
+  local [working copy] changed file1 which other [destination] deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? 
-  remote [destination] changed file2 which local [working copy] deleted
+  other [destination] changed file2 which local [working copy] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? 
   --- diff of status ---
   (status identical)
@@ -1043,9 +1043,9 @@ Test transitions between different merge tools
   (status identical)
   
   === :fail -> :prompt ===
-  local [working copy] changed file1 which remote [destination] deleted
+  local [working copy] changed file1 which other [destination] deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? 
-  remote [destination] changed file2 which local [working copy] deleted
+  other [destination] changed file2 which local [working copy] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? 
   --- diff of status ---
   (status identical)

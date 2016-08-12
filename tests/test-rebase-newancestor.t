@@ -135,7 +135,7 @@ Full rebase all the way back from branching point:
   note: rebase of 1:1d1a643d390e created no changes to commit
   rebasing 2:ec2c14fb2984 "dev: f-dev stuff"
   rebasing 4:4b019212aaf6 "dev: merge default"
-  remote [source] changed f-default which local [dest] deleted
+  other [source] changed f-default which local [dest] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? c
   rebasing 6:9455ee510502 "dev: merge default"
   saved backup bundle to $TESTTMP/ancestor-merge/.hg/strip-backup/1d1a643d390e-43e9e04b-backup.hg (glob)
@@ -164,7 +164,7 @@ Grafty cherry picking rebasing:
   > EOF
   rebasing 2:ec2c14fb2984 "dev: f-dev stuff"
   rebasing 4:4b019212aaf6 "dev: merge default"
-  remote [source] changed f-default which local [dest] deleted
+  other [source] changed f-default which local [dest] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? c
   rebasing 6:9455ee510502 "dev: merge default"
   saved backup bundle to $TESTTMP/ancestor-merge-2/.hg/strip-backup/ec2c14fb2984-62d0b222-backup.hg (glob)

@@ -813,7 +813,7 @@ Amend a merge changeset (with manifest-level conflicts):
   $ hg merge -q bar --config ui.interactive=True << EOF
   > c
   > EOF
-  local changed aa which remote deleted
+  local changed aa which other deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? c
   $ hg ci -m 'merge bar (with conflicts)'
   $ hg log --config diff.git=1 -pr .
