@@ -41,11 +41,10 @@ def _alias(alias, origin, items):
 
     copies items from origin to alias
     """
-    def hgcase(item):
-        return item.replace('_', '').lower()
     for item in items:
         try:
-            setattr(alias, hgcase(item), getattr(origin, item))
+            lcase = item.replace('_', '').lower()
+            setattr(alias, lcase, getattr(origin, item))
         except AttributeError:
             pass
 
