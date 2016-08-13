@@ -15,10 +15,6 @@ import os
 import sys
 import traceback
 
-# Modules that have both Python and C implementations.
-_dualmodules = (
-)
-
 def check_compat_py2(f):
     """Check Python 3 compatibility for a file with Python 2"""
     with open(f, 'rb') as fh:
@@ -60,8 +56,6 @@ def check_compat_py3(f):
     if f.startswith(('hgext/', 'mercurial/')) and not f.endswith('__init__.py'):
         assert f.endswith('.py')
         name = f.replace('/', '.')[:-3]
-        if f.endswith(_dualmodules):
-            name = name.replace('.pure.', '.')
         try:
             importlib.import_module(name)
         except Exception as e:

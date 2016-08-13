@@ -24,10 +24,6 @@ allowsymbolimports = (
     'mercurial.node',
 )
 
-# Modules that have both Python and C implementations.
-_dualmodules = (
-)
-
 # Modules that must be aliased because they are commonly confused with
 # common variables and can create aliasing and readability issues.
 requirealias = {
@@ -59,13 +55,11 @@ def walklocal(root):
             todo.extend(ast.iter_child_nodes(node))
         yield node, newscope
 
-def dotted_name_of_path(path, trimpure=False):
+def dotted_name_of_path(path):
     """Given a relative path to a source file, return its dotted module name.
 
     >>> dotted_name_of_path('mercurial/error.py')
     'mercurial.error'
-    >>> dotted_name_of_path('mercurial/pure/parsers.py', trimpure=True)
-    'mercurial.parsers'
     >>> dotted_name_of_path('zlibmodule.so')
     'zlib'
     """
@@ -73,8 +67,6 @@ def dotted_name_of_path(path, trimpure=False):
     parts[-1] = parts[-1].split('.', 1)[0] # remove .py and .so and .ARCH.so
     if parts[-1].endswith('module'):
         parts[-1] = parts[-1][:-6]
-    if trimpure:
-        return '.'.join(p for p in parts if p != 'pure')
     return '.'.join(parts)
 
 def fromlocalfunc(modulename, localmods):
@@ -695,8 +687,7 @@ def main(argv):
     used_imports = {}
     any_errors = False
     for source_path in argv[1:]:
-        trimpure = source_path.endswith(_dualmodules)
-        modname = dotted_name_of_path(source_path, trimpure=trimpure)
+        modname = dotted_name_of_path(source_path)
         localmods[modname] = source_path
     for localmodname, source_path in sorted(localmods.items()):
         for src, modname, name, line in sources(source_path, localmodname):
