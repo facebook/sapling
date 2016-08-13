@@ -17,7 +17,6 @@ import traceback
 
 # Modules that have both Python and C implementations.
 _dualmodules = (
-    'base85.py',
     'bdiff.py',
     'diffhelpers.py',
     'mpatch.py',

@@ -621,7 +621,7 @@ if sys.platform == 'darwin':
     osutil_ldflags += ['-framework', 'ApplicationServices']
 
 extmodules = [
-    Extension('mercurial.base85', ['mercurial/base85.c'],
+    Extension('mercurial.cext.base85', ['mercurial/cext/base85.c'],
               include_dirs=common_include_dirs,
               depends=common_depends),
     Extension('mercurial.bdiff', ['mercurial/bdiff.c',

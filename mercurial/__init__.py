@@ -23,7 +23,6 @@ modulepolicy = policy.policy
 # Modules that have both Python and C implementations. See also the
 # set of .py files under mercurial/pure/.
 _dualmodules = {
-    'mercurial.base85',
     'mercurial.bdiff',
     'mercurial.diffhelpers',
     'mercurial.mpatch',

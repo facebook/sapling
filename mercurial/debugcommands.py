@@ -1026,11 +1026,11 @@ def debuginstall(ui, **opts):
         err = None
         try:
             from . import (
-                base85,
                 bdiff,
                 mpatch,
             )
             from .cext import (
+                base85,
                 osutil,
             )
             dir(bdiff), dir(mpatch), dir(base85), dir(osutil) # quiet pyflakes

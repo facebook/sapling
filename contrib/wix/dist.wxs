@@ -12,7 +12,7 @@
       <Directory Id="libdir" Name="lib" FileSource="$(var.SourceDir)/lib">
         <Component Id="libOutput" Guid="$(var.lib.guid)" Win64='$(var.IsX64)'>
           <File Name="library.zip" KeyPath="yes" />
-          <File Name="mercurial.base85.pyd" />
+          <File Name="mercurial.cext.base85.pyd" />
           <File Name="mercurial.bdiff.pyd" />
           <File Name="mercurial.diffhelpers.pyd" />
           <File Name="mercurial.mpatch.pyd" />

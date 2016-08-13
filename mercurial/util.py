@@ -42,7 +42,6 @@ import warnings
 import zlib
 
 from . import (
-    base85,
     encoding,
     error,
     i18n,
@@ -51,6 +50,7 @@ from . import (
     pycompat,
 )
 
+base85 = policy.importmod(r'base85')
 osutil = policy.importmod(r'osutil')
 
 b85decode = base85.b85decode
