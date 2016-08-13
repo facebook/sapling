@@ -10,8 +10,8 @@ from __future__ import absolute_import
 import struct
 import zlib
 
-from .node import nullid
-from . import pycompat
+from ..node import nullid
+from .. import pycompat
 stringio = pycompat.stringio
 
 

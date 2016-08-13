@@ -17,7 +17,6 @@ import traceback
 
 # Modules that have both Python and C implementations.
 _dualmodules = (
-    'parsers.py',
 )
 
 def check_compat_py2(f):

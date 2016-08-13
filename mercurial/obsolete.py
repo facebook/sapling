@@ -76,10 +76,12 @@ from .i18n import _
 from . import (
     error,
     node,
-    parsers,
     phases,
+    policy,
     util,
 )
+
+parsers = policy.importmod(r'parsers')
 
 _pack = struct.pack
 _unpack = struct.unpack

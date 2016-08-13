@@ -45,13 +45,13 @@ from . import (
     encoding,
     error,
     i18n,
-    parsers,
     policy,
     pycompat,
 )
 
 base85 = policy.importmod(r'base85')
 osutil = policy.importmod(r'osutil')
+parsers = policy.importmod(r'parsers')
 
 b85decode = base85.b85decode
 b85encode = base85.b85encode

@@ -32,11 +32,13 @@ from . import (
     ancestor,
     error,
     mdiff,
-    parsers,
+    policy,
     pycompat,
     templatefilters,
     util,
 )
+
+parsers = policy.importmod(r'parsers')
 
 _pack = struct.pack
 _unpack = struct.unpack

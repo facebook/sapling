@@ -14,6 +14,7 @@ import unicodedata
 
 from . import (
     error,
+    policy,
     pycompat,
 )
 
@@ -318,7 +319,7 @@ def _asciilower(s):
 def asciilower(s):
     # delay importing avoids cyclic dependency around "parsers" in
     # pure Python build (util => i18n => encoding => parsers => util)
-    from . import parsers
+    parsers = policy.importmod(r'parsers')
     impl = getattr(parsers, 'asciilower', _asciilower)
     global asciilower
     asciilower = impl
@@ -334,7 +335,7 @@ def _asciiupper(s):
 def asciiupper(s):
     # delay importing avoids cyclic dependency around "parsers" in
     # pure Python build (util => i18n => encoding => parsers => util)
-    from . import parsers
+    parsers = policy.importmod(r'parsers')
     impl = getattr(parsers, 'asciiupper', _asciiupper)
     global asciiupper
     asciiupper = impl

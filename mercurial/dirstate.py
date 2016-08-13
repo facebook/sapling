@@ -19,13 +19,15 @@ from . import (
     encoding,
     error,
     match as matchmod,
-    parsers,
     pathutil,
+    policy,
     pycompat,
     scmutil,
     txnutil,
     util,
 )
+
+parsers = policy.importmod(r'parsers')
 
 propertycache = util.propertycache
 filecache = scmutil.filecache

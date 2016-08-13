@@ -15,11 +15,13 @@ import stat
 from .i18n import _
 from . import (
     error,
-    parsers,
+    policy,
     pycompat,
     util,
     vfs as vfsmod,
 )
+
+parsers = policy.importmod(r'parsers')
 
 # This avoids a collision between a file named foo and a dir named
 # foo.i or foo.d

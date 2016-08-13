@@ -11,9 +11,11 @@ from mercurial import (
     context,
     dirstate,
     extensions,
-    parsers,
+    policy,
     util,
 )
+
+parsers = policy.importmod(r'parsers')
 
 def pack_dirstate(fakenow, orig, dmap, copymap, pl, now):
     # execute what original parsers.pack_dirstate should do actually

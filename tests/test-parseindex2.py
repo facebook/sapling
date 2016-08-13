@@ -14,8 +14,10 @@ from mercurial.node import (
     nullrev,
 )
 from mercurial import (
-    parsers,
+    policy,
 )
+
+parsers = policy.importmod(r'parsers')
 
 # original python implementation
 def gettype(q):
@@ -114,7 +116,7 @@ def importparsers(hexversion):
     # of the currently-running Python interpreter, so we monkey-patch
     # sys.hexversion to simulate using different versions.
     code = ("import sys; sys.hexversion=%s; "
-            "import mercurial.parsers" % hexversion)
+            "import mercurial.cext.parsers" % hexversion)
     cmd = "python -c \"%s\"" % code
     # We need to do these tests inside a subprocess because parser.c's
     # version-checking code happens inside the module init function, and

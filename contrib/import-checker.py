@@ -26,7 +26,6 @@ allowsymbolimports = (
 
 # Modules that have both Python and C implementations.
 _dualmodules = (
-    'parsers.py',
 )
 
 # Modules that must be aliased because they are commonly confused with

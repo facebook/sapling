@@ -19,11 +19,12 @@ from .node import (
 from . import (
     error,
     mdiff,
-    parsers,
+    policy,
     revlog,
     util,
 )
 
+parsers = policy.importmod(r'parsers')
 propertycache = util.propertycache
 
 def _parsev1(data):
