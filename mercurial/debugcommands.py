@@ -1025,12 +1025,10 @@ def debuginstall(ui, **opts):
     if policy.policy in ('c', 'allow'):
         err = None
         try:
-            from . import (
-                mpatch,
-            )
             from .cext import (
                 base85,
                 bdiff,
+                mpatch,
                 osutil,
             )
             dir(bdiff), dir(mpatch), dir(base85), dir(osutil) # quiet pyflakes

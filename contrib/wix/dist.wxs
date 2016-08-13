@@ -15,7 +15,7 @@
           <File Name="mercurial.cext.base85.pyd" />
           <File Name="mercurial.cext.bdiff.pyd" />
           <File Name="mercurial.cext.diffhelpers.pyd" />
-          <File Name="mercurial.mpatch.pyd" />
+          <File Name="mercurial.cext.mpatch.pyd" />
           <File Name="mercurial.cext.osutil.pyd" />
           <File Name="mercurial.parsers.pyd" />
           <File Name="pyexpat.pyd" />

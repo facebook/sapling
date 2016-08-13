@@ -14,13 +14,13 @@ import zlib
 from .i18n import _
 from . import (
     error,
-    mpatch,
     policy,
     pycompat,
     util,
 )
 
 bdiff = policy.importmod(r'bdiff')
+mpatch = policy.importmod(r'mpatch')
 
 blocks = bdiff.blocks
 fixws = bdiff.fixws

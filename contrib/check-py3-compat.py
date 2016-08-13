@@ -17,7 +17,6 @@ import traceback
 
 # Modules that have both Python and C implementations.
 _dualmodules = (
-    'mpatch.py',
     'parsers.py',
 )
 

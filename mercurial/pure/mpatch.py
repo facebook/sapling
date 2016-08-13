@@ -9,7 +9,7 @@ from __future__ import absolute_import
 
 import struct
 
-from . import policy, pycompat
+from .. import policy, pycompat
 stringio = pycompat.stringio
 modulepolicy = policy.policy
 policynocffi = policy.policynocffi
@@ -167,4 +167,3 @@ if modulepolicy not in policynocffi:
             res = ffi.buffer(buf, outlen)[:]
             lib.mpatch_lfree(patch)
             return res
-

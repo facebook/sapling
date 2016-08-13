@@ -179,7 +179,7 @@ PyMODINIT_FUNC PyInit_mpatch(void)
 	if (m == NULL)
 		return NULL;
 
-	mpatch_Error = PyErr_NewException("mercurial.mpatch.mpatchError",
+	mpatch_Error = PyErr_NewException("mercurial.cext.mpatch.mpatchError",
 					  NULL, NULL);
 	Py_INCREF(mpatch_Error);
 	PyModule_AddObject(m, "mpatchError", mpatch_Error);
@@ -193,7 +193,7 @@ initmpatch(void)
 {
 	PyObject *m;
 	m = Py_InitModule3("mpatch", methods, mpatch_doc);
-	mpatch_Error = PyErr_NewException("mercurial.mpatch.mpatchError",
+	mpatch_Error = PyErr_NewException("mercurial.cext.mpatch.mpatchError",
 					  NULL, NULL);
 	PyModule_AddIntConstant(m, "version", version);
 }
