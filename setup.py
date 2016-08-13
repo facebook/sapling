@@ -628,7 +628,7 @@ extmodules = [
                                        'mercurial/cext/bdiff.c'],
               include_dirs=common_include_dirs,
               depends=common_depends + ['mercurial/bdiff.h']),
-    Extension('mercurial.diffhelpers', ['mercurial/diffhelpers.c'],
+    Extension('mercurial.cext.diffhelpers', ['mercurial/cext/diffhelpers.c'],
               include_dirs=common_include_dirs,
               depends=common_depends),
     Extension('mercurial.mpatch', ['mercurial/mpatch.c',

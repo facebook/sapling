@@ -27,18 +27,20 @@ from .node import (
 )
 from . import (
     copies,
-    diffhelpers,
     encoding,
     error,
     mail,
     mdiff,
     pathutil,
+    policy,
     pycompat,
     scmutil,
     similar,
     util,
     vfs as vfsmod,
 )
+
+diffhelpers = policy.importmod(r'diffhelpers')
 stringio = util.stringio
 
 gitre = re.compile(br'diff --git a/(.*) b/(.*)')
