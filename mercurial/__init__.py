@@ -165,7 +165,8 @@ if sys.version_info[0] >= 3:
             if not spec:
                 return None
 
-            if fullname.startswith('mercurial.pure.'):
+            if (fullname.startswith('mercurial.pure.')
+                and fullname.replace('.pure.', '.') in _dualmodules):
                 spec.name = spec.name.replace('.pure.', '.')
 
             # TODO need to support loaders from alternate specs, like zip

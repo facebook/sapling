@@ -24,6 +24,16 @@ allowsymbolimports = (
     'mercurial.node',
 )
 
+# Modules that have both Python and C implementations.
+_dualmodules = (
+    'base85.py',
+    'bdiff.py',
+    'diffhelpers.py',
+    'mpatch.py',
+    'osutil.py',
+    'parsers.py',
+)
+
 # Modules that must be aliased because they are commonly confused with
 # common variables and can create aliasing and readability issues.
 requirealias = {
@@ -691,7 +701,8 @@ def main(argv):
     used_imports = {}
     any_errors = False
     for source_path in argv[1:]:
-        modname = dotted_name_of_path(source_path, trimpure=True)
+        trimpure = source_path.endswith(_dualmodules)
+        modname = dotted_name_of_path(source_path, trimpure=trimpure)
         localmods[modname] = source_path
     for localmodname, source_path in sorted(localmods.items()):
         for src, modname, name, line in sources(source_path, localmodname):
