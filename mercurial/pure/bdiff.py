@@ -11,7 +11,7 @@ import difflib
 import re
 import struct
 
-from . import policy
+from .. import policy
 policynocffi = policy.policynocffi
 modulepolicy = policy.policy
 

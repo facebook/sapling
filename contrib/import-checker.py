@@ -26,7 +26,6 @@ allowsymbolimports = (
 
 # Modules that have both Python and C implementations.
 _dualmodules = (
-    'bdiff.py',
     'diffhelpers.py',
     'mpatch.py',
     'parsers.py',
