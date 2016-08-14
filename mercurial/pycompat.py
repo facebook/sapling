@@ -29,6 +29,12 @@ else:
     import urllib.parse as urlparse
     import xmlrpc.client as xmlrpclib
 
+try:
+    xrange
+except NameError:
+    import builtins
+    builtins.xrange = range
+
 stringio = io.StringIO
 empty = _queue.Empty
 queue = _queue.Queue
@@ -143,9 +149,3 @@ except ImportError:
         "SimpleHTTPRequestHandler",
         "CGIHTTPRequestHandler",
     ))
-
-try:
-    xrange
-except NameError:
-    import builtins
-    builtins.xrange = range
