@@ -53,30 +53,32 @@ empty = _queue.Empty
 queue = _queue.Queue
 
 class _pycompatstub(object):
-    pass
+    def __init__(self):
+        self._aliases = {}
 
-def _alias(alias, origin, items):
-    """ populate a _pycompatstub
+    def _registeraliases(self, origin, items):
+        """Add items that will be populated at the first access"""
+        self._aliases.update((item.replace('_', '').lower(), (origin, item))
+                             for item in items)
 
-    copies items from origin to alias
-    """
-    for item in items:
+    def __getattr__(self, name):
         try:
-            lcase = item.replace('_', '').lower()
-            setattr(alias, lcase, getattr(origin, item))
-        except AttributeError:
-            pass
+            origin, item = self._aliases[name]
+        except KeyError:
+            raise AttributeError(name)
+        self.__dict__[name] = obj = getattr(origin, item)
+        return obj
 
 httpserver = _pycompatstub()
 urlreq = _pycompatstub()
 urlerr = _pycompatstub()
-try:
+if sys.version_info[0] < 3:
     import BaseHTTPServer
     import CGIHTTPServer
     import SimpleHTTPServer
     import urllib2
     import urllib
-    _alias(urlreq, urllib, (
+    urlreq._registeraliases(urllib, (
         "addclosehook",
         "addinfourl",
         "ftpwrapper",
@@ -90,7 +92,7 @@ try:
         "url2pathname",
         "urlencode",
     ))
-    _alias(urlreq, urllib2, (
+    urlreq._registeraliases(urllib2, (
         "AbstractHTTPHandler",
         "BaseHandler",
         "build_opener",
@@ -106,24 +108,24 @@ try:
         "Request",
         "urlopen",
     ))
-    _alias(urlerr, urllib2, (
+    urlerr._registeraliases(urllib2, (
         "HTTPError",
         "URLError",
     ))
-    _alias(httpserver, BaseHTTPServer, (
+    httpserver._registeraliases(BaseHTTPServer, (
         "HTTPServer",
         "BaseHTTPRequestHandler",
     ))
-    _alias(httpserver, SimpleHTTPServer, (
+    httpserver._registeraliases(SimpleHTTPServer, (
         "SimpleHTTPRequestHandler",
     ))
-    _alias(httpserver, CGIHTTPServer, (
+    httpserver._registeraliases(CGIHTTPServer, (
         "CGIHTTPRequestHandler",
     ))
 
-except ImportError:
+else:
     import urllib.request
-    _alias(urlreq, urllib.request, (
+    urlreq._registeraliases(urllib.request, (
         "AbstractHTTPHandler",
         "addclosehook",
         "addinfourl",
@@ -151,12 +153,12 @@ except ImportError:
         "urlopen",
     ))
     import urllib.error
-    _alias(urlerr, urllib.error, (
+    urlerr._registeraliases(urllib.error, (
         "HTTPError",
         "URLError",
     ))
     import http.server
-    _alias(httpserver, http.server, (
+    httpserver._registeraliases(http.server, (
         "HTTPServer",
         "BaseHTTPRequestHandler",
         "SimpleHTTPRequestHandler",
