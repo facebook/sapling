@@ -31,7 +31,21 @@ else:
 
 if sys.version_info[0] >= 3:
     import builtins
+    import functools
     builtins.xrange = range
+
+    def _wrapattrfunc(f):
+        @functools.wraps(f)
+        def w(object, name, *args):
+            if isinstance(name, bytes):
+                name = name.decode(u'utf-8')
+            return f(object, name, *args)
+        return w
+
+    delattr = _wrapattrfunc(builtins.delattr)
+    getattr = _wrapattrfunc(builtins.getattr)
+    hasattr = _wrapattrfunc(builtins.hasattr)
+    setattr = _wrapattrfunc(builtins.setattr)
 
 stringio = io.StringIO
 empty = _queue.Empty
