@@ -819,6 +819,10 @@ def _dispatch(req):
             for ui_ in uis:
                 ui_.setconfig('ui', opt, val, '--' + opt)
 
+    if options['profile']:
+        for ui_ in uis:
+            ui_.setconfig('profiling', 'enabled', 'true', '--profile')
+
     if options['traceback']:
         for ui_ in uis:
             ui_.setconfig('ui', 'traceback', 'on', '--traceback')
@@ -904,7 +908,7 @@ def _runcommand(ui, options, cmd, cmdfunc):
         except error.SignatureError:
             raise error.CommandError(cmd, _("invalid arguments"))
 
-    if options['profile'] or ui.configbool('profiling', 'enabled'):
+    if ui.configbool('profiling', 'enabled'):
         return profiling.profile(ui, checkargs)
     else:
         return checkargs()
