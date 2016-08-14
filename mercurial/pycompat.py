@@ -29,9 +29,7 @@ else:
     import urllib.parse as urlparse
     import xmlrpc.client as xmlrpclib
 
-try:
-    xrange
-except NameError:
+if sys.version_info[0] >= 3:
     import builtins
     builtins.xrange = range
 
