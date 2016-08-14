@@ -217,6 +217,9 @@ class hgwebdir(object):
         return False
 
     def run_wsgi(self, req):
+        return self._runwsgi(req)
+
+    def _runwsgi(self, req):
         try:
             self.refresh()
 
