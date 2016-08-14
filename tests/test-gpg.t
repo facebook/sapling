@@ -12,11 +12,13 @@ Test the GPG extension
   $ GNUPGHOME="$TESTTMP/gpg"; export GNUPGHOME
   $ cp -R "$TESTDIR/gpg" "$GNUPGHOME"
 
-Start gpg-agent, which is required by GnuPG v2
+Start gpg-agent, which is required by GnuPG v2, and migrate secret keys
 
 #if gpg2
   $ gpg-connect-agent -q --subst /serverpid '/echo ${get serverpid}' /bye \
   > >> $DAEMON_PIDS
+  $ gpg --no-permission-warning --no-secmem-warning --list-secret-keys \
+  > > /dev/null 2>&1
 #endif
 
   $ hg init r
