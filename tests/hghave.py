@@ -349,6 +349,10 @@ def has_tla():
 def has_gpg():
     return matchoutput('gpg --version 2>&1', br'GnuPG')
 
+@check("gpg2", "gpg client v2")
+def has_gpg2():
+    return matchoutput('gpg --version 2>&1', br'GnuPG[^0-9]+2\.')
+
 @check("unix-permissions", "unix-style permissions")
 def has_unix_permissions():
     d = tempfile.mkdtemp(dir='.', prefix=tempprefix)

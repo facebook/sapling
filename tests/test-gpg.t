@@ -12,6 +12,13 @@ Test the GPG extension
   $ GNUPGHOME="$TESTTMP/gpg"; export GNUPGHOME
   $ cp -R "$TESTDIR/gpg" "$GNUPGHOME"
 
+Start gpg-agent, which is required by GnuPG v2
+
+#if gpg2
+  $ gpg-connect-agent -q --subst /serverpid '/echo ${get serverpid}' /bye \
+  > >> $DAEMON_PIDS
+#endif
+
   $ hg init r
   $ cd r
   $ echo foo > foo
