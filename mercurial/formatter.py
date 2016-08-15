@@ -51,6 +51,12 @@ class baseformatter(object):
         '''convert date tuple to appropriate format'''
         return date
     @staticmethod
+    def formatdict(data, key='key', value='value', fmt='%s=%s', sep=' '):
+        '''convert dict or key-value pairs to appropriate dict format'''
+        # use plain dict instead of util.sortdict so that data can be
+        # serialized as a builtin dict in pickle output
+        return dict(data)
+    @staticmethod
     def formatlist(data, name, fmt='%s', sep=' '):
         '''convert iterable to appropriate list format'''
         return list(data)
@@ -75,6 +81,12 @@ class baseformatter(object):
         if self._item is not None:
             self._showitem()
 
+def _iteritems(data):
+    '''iterate key-value pairs in stable order'''
+    if isinstance(data, dict):
+        return sorted(data.iteritems())
+    return data
+
 class plainformatter(baseformatter):
     '''the default text output scheme'''
     def __init__(self, ui, topic, opts):
@@ -91,6 +103,10 @@ class plainformatter(baseformatter):
     def formatdate(date, fmt='%a %b %d %H:%M:%S %Y %1%2'):
         '''stringify date tuple in the given format'''
         return util.datestr(date, fmt)
+    @staticmethod
+    def formatdict(data, key='key', value='value', fmt='%s=%s', sep=' '):
+        '''stringify key-value pairs separated by sep'''
+        return sep.join(fmt % (k, v) for k, v in _iteritems(data))
     @staticmethod
     def formatlist(data, name, fmt='%s', sep=' '):
         '''stringify iterable separated by sep'''
@@ -129,7 +145,11 @@ class pickleformatter(baseformatter):
         self._ui.write(pickle.dumps(self._data))
 
 def _jsonifyobj(v):
-    if isinstance(v, (list, tuple)):
+    if isinstance(v, dict):
+        xs = ['"%s": %s' % (encoding.jsonescape(k), _jsonifyobj(u))
+              for k, u in sorted(v.iteritems())]
+        return '{' + ', '.join(xs) + '}'
+    elif isinstance(v, (list, tuple)):
         return '[' + ', '.join(_jsonifyobj(e) for e in v) + ']'
     elif v is None:
         return 'null'
@@ -174,6 +194,14 @@ class templateformatter(baseformatter):
     def _showitem(self):
         g = self._t(self._topic, ui=self._ui, **self._item)
         self._ui.write(templater.stringify(g))
+    @staticmethod
+    def formatdict(data, key='key', value='value', fmt='%s=%s', sep=' '):
+        '''build object that can be evaluated as either plain string or dict'''
+        data = util.sortdict(_iteritems(data))
+        def f():
+            yield plainformatter.formatdict(data, key, value, fmt, sep)
+        return templatekw._hybrid(f(), data, lambda k: {key: k, value: data[k]},
+                                  lambda d: fmt % (d[key], d[value]))
     @staticmethod
     def formatlist(data, name, fmt='%s', sep=' '):
         '''build object that can be evaluated as either plain string or list'''
