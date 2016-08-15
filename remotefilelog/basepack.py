@@ -45,7 +45,16 @@ class basepackstore(object):
         self.lastrefresh = 0
 
         for filepath in self._getavailablepackfiles():
-            self.packs.append(self.getpack(filepath))
+            try:
+                pack = self.getpack(filepath)
+            except (OSError, IOError) as ex:
+                # someone could have removed the file since we retrieved the
+                # list of paths.  if that happens, just don't add the pack to
+                # the list of available packs.
+                if ex.errno != errno.ENOENT:
+                    raise
+                continue
+            self.packs.append(pack)
 
     def _getavailablepackfiles(self):
         suffixlen = len(self.INDEXSUFFIX)
