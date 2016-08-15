@@ -102,7 +102,7 @@ significantly off if other threads' work patterns are not similar to the
 main thread's work patterns.
 """
 # no-check-code
-from __future__ import absolute_import, division
+from __future__ import absolute_import, division, print_function
 
 import collections
 import contextlib
@@ -434,7 +434,7 @@ def display(fp=None, format=3, **kwargs):
         import sys
         fp = sys.stdout
     if len(state.samples) == 0:
-        print >> fp, ('No samples recorded.')
+        print('No samples recorded.', file=fp)
         return
 
     if format == DisplayFormats.ByLine:
@@ -453,9 +453,9 @@ def display(fp=None, format=3, **kwargs):
         raise Exception("Invalid display format")
 
     if format != DisplayFormats.Json:
-        print >> fp, ('---')
-        print >> fp, ('Sample count: %d' % len(state.samples))
-        print >> fp, ('Total time: %f seconds' % state.accumulated_time)
+        print('---', file=fp)
+        print('Sample count: %d' % len(state.samples), file=fp)
+        print('Total time: %f seconds' % state.accumulated_time, file=fp)
 
 def display_by_line(fp):
     '''Print the profiler data with each sample line represented
@@ -463,27 +463,28 @@ def display_by_line(fp):
     stats = SiteStats.buildstats(state.samples)
     stats.sort(reverse=True, key=lambda x: x.selfseconds())
 
-    print >> fp, ('%5.5s %10.10s   %7.7s  %-8.8s' %
-                  ('%  ', 'cumulative', 'self', ''))
-    print >> fp, ('%5.5s  %9.9s  %8.8s  %-8.8s' %
-                  ("time", "seconds", "seconds", "name"))
+    print('%5.5s %10.10s   %7.7s  %-8.8s' %
+          ('%  ', 'cumulative', 'self', ''), file=fp)
+    print('%5.5s  %9.9s  %8.8s  %-8.8s' %
+          ("time", "seconds", "seconds", "name"), file=fp)
 
     for stat in stats:
         site = stat.site
         sitelabel = '%s:%d:%s' % (site.filename(), site.lineno, site.function)
-        print >> fp, ('%6.2f %9.2f %9.2f  %s' % (stat.selfpercent(),
-                                                 stat.totalseconds(),
-                                                 stat.selfseconds(),
-                                                 sitelabel))
+        print('%6.2f %9.2f %9.2f  %s' % (stat.selfpercent(),
+                                         stat.totalseconds(),
+                                         stat.selfseconds(),
+                                         sitelabel),
+              file=fp)
 
 def display_by_method(fp):
     '''Print the profiler data with each sample function represented
     as one row in a table.  Important lines within that function are
     output as nested rows.  Sorted by self-time per line.'''
-    print >> fp, ('%5.5s %10.10s   %7.7s  %-8.8s' %
-                  ('%  ', 'cumulative', 'self', ''))
-    print >> fp, ('%5.5s  %9.9s  %8.8s  %-8.8s' %
-                  ("time", "seconds", "seconds", "name"))
+    print('%5.5s %10.10s   %7.7s  %-8.8s' %
+          ('%  ', 'cumulative', 'self', ''), file=fp)
+    print('%5.5s  %9.9s  %8.8s  %-8.8s' %
+          ("time", "seconds", "seconds", "name"), file=fp)
 
     stats = SiteStats.buildstats(state.samples)
 
@@ -514,10 +515,11 @@ def display_by_method(fp):
     for function in functiondata:
         if function[3] < 0.05:
             continue
-        print >> fp, ('%6.2f %9.2f %9.2f  %s' % (function[3], # total percent
-                                                 function[1], # total cum sec
-                                                 function[2], # total self sec
-                                                 function[0])) # file:function
+        print('%6.2f %9.2f %9.2f  %s' % (function[3], # total percent
+                                         function[1], # total cum sec
+                                         function[2], # total self sec
+                                         function[0]), # file:function
+              file=fp)
         function[4].sort(reverse=True, key=lambda i: i.selfseconds())
         for stat in function[4]:
             # only show line numbers for significant locations (>1% time spent)
@@ -526,7 +528,7 @@ def display_by_method(fp):
                 stattuple = (stat.selfpercent(), stat.selfseconds(),
                              stat.site.lineno, source)
 
-                print >> fp, ('%33.0f%% %6.2f   line %s: %s' % (stattuple))
+                print('%33.0f%% %6.2f   line %s: %s' % (stattuple), file=fp)
 
 def display_about_method(fp, function=None, **kwargs):
     if function is None:
@@ -560,9 +562,9 @@ def display_about_method(fp, function=None, **kwargs):
     parents = [(parent, count) for parent, count in parents.iteritems()]
     parents.sort(reverse=True, key=lambda x: x[1])
     for parent, count in parents:
-        print >> fp, ('%6.2f%%   %s:%s   line %s: %s' %
+        print('%6.2f%%   %s:%s   line %s: %s' %
             (count / relevant_samples * 100, parent.filename(),
-            parent.function, parent.lineno, parent.getsource(50)))
+            parent.function, parent.lineno, parent.getsource(50)), file=fp)
 
     stats = SiteStats.buildstats(state.samples)
     stats = [s for s in stats
@@ -579,7 +581,7 @@ def display_about_method(fp, function=None, **kwargs):
         total_self_percent += stat.selfpercent()
         total_cum_percent += stat.totalpercent()
 
-    print >> fp, (
+    print(
         '\n    %s:%s    Total: %0.2fs (%0.2f%%)    Self: %0.2fs (%0.2f%%)\n' %
         (
         filename or '___',
@@ -588,13 +590,14 @@ def display_about_method(fp, function=None, **kwargs):
         total_cum_percent,
         total_self_sec,
         total_self_percent
-        ))
+        ), file=fp)
 
     children = [(child, count) for child, count in children.iteritems()]
     children.sort(reverse=True, key=lambda x: x[1])
     for child, count in children:
-        print >> fp, ('        %6.2f%%   line %s: %s' %
-            (count / relevant_samples * 100, child.lineno, child.getsource(50)))
+        print('        %6.2f%%   line %s: %s' %
+              (count / relevant_samples * 100, child.lineno,
+               child.getsource(50)), file=fp)
 
 def display_hotpath(fp, limit=0.05, **kwargs):
     class HotNode(object):
@@ -655,7 +658,7 @@ def display_hotpath(fp, limit=0.05, **kwargs):
             # Make frames that didn't actually perform work dark grey
             elif node.count - childrensamples == 0:
                 finalstring = '\033[90m' + finalstring + '\033[0m'
-            print >> fp, finalstring
+            print(finalstring, file=fp)
 
         newdepth = depth
         if len(visiblechildren) > 1 or multiple_siblings:
@@ -672,8 +675,9 @@ def write_to_flame(fp, scriptpath=None, outputfile=None, **kwargs):
     if scriptpath is None:
         scriptpath = os.environ['HOME'] + '/flamegraph.pl'
     if not os.path.exists(scriptpath):
-        print >> fp, "error: missing %s" % scriptpath
-        print >> fp, "get it here: https://github.com/brendangregg/FlameGraph"
+        print("error: missing %s" % scriptpath, file=fp)
+        print("get it here: https://github.com/brendangregg/FlameGraph",
+              file=fp)
         return
 
     fd, path = tempfile.mkstemp()
@@ -699,7 +703,7 @@ def write_to_flame(fp, scriptpath=None, outputfile=None, **kwargs):
         outputfile = '~/flamegraph.svg'
 
     os.system("perl ~/flamegraph.pl %s > %s" % (path, outputfile))
-    print "Written to %s" % outputfile
+    print("Written to %s" % outputfile, file=fp)
 
 def write_to_json(fp):
     samples = []
@@ -712,10 +716,10 @@ def write_to_json(fp):
 
         samples.append((sample.time, stack))
 
-    print >> fp, json.dumps(samples)
+    print(json.dumps(samples), file=fp)
 
 def printusage():
-    print """
+    print("""
 The statprof command line allows you to inspect the last profile's results in
 the following forms:
 
@@ -732,7 +736,7 @@ usage:
     flame [-s --script-path] [-o --output-file path]
         Writes out a flamegraph to output-file (defaults to ~/flamegraph.svg)
         Requires that ~/flamegraph.pl exist.
-        (Specify alternate script path with --script-path.)"""
+        (Specify alternate script path with --script-path.)""")
 
 def main(argv=None):
     if argv is None:
@@ -767,7 +771,7 @@ def main(argv=None):
         opts, args = getopt.getopt(sys.argv[optstart:], "hl:f:o:p:",
                                    ["help", "limit=", "file=", "output-file=", "script-path="])
     except getopt.error as msg:
-        print msg
+        print(msg)
         printusage()
         return 2
 
