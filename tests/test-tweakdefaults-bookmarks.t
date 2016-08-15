@@ -11,7 +11,7 @@ Set up
   > tweakdefaults=$TESTTMP/tweakdefaults.py
   > EOF
 
-Test hg bookmark rork with hidden commits
+Test hg bookmark works with hidden commits
 
   $ hg init repo1
   $ cd repo1
