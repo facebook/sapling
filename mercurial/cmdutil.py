@@ -1611,25 +1611,26 @@ def show_changeset(ui, repo, opts, buffered=False):
 
     return changeset_templater(ui, repo, matchfn, opts, tmpl, mapfile, buffered)
 
-def showmarker(ui, marker, index=None):
+def showmarker(fm, marker, index=None):
     """utility function to display obsolescence marker in a readable way
 
     To be used by debug function."""
     if index is not None:
-        ui.write("%i " % index)
-    ui.write(hex(marker.precnode()))
-    for repl in marker.succnodes():
-        ui.write(' ')
-        ui.write(hex(repl))
-    ui.write(' %X ' % marker.flags())
+        fm.write('index', '%i ', index)
+    fm.write('precnode', '%s ', hex(marker.precnode()))
+    succs = marker.succnodes()
+    fm.condwrite(succs, 'succnodes', '%s ',
+                 fm.formatlist(map(hex, succs), name='node'))
+    fm.write('flag', '%X ', marker.flags())
     parents = marker.parentnodes()
     if parents is not None:
-        ui.write('{%s} ' % ', '.join(hex(p) for p in parents))
-    ui.write('(%s) ' % util.datestr(marker.date()))
-    ui.write('{%s}' % (', '.join('%r: %r' % t for t in
-                                 sorted(marker.metadata().items())
-                                 if t[0] != 'date')))
-    ui.write('\n')
+        fm.write('parentnodes', '{%s} ',
+                 fm.formatlist(map(hex, parents), name='node', sep=', '))
+    fm.write('date', '(%s) ', fm.formatdate(marker.date()))
+    meta = marker.metadata().copy()
+    meta.pop('date', None)
+    fm.write('metadata', '{%s}', fm.formatdict(meta, fmt='%r: %r', sep=', '))
+    fm.plain('\n')
 
 def finddate(ui, repo, date):
     """Find the tipmost changeset that matches the given date spec"""

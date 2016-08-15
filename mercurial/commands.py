@@ -3044,7 +3044,7 @@ def debuglocks(ui, repo, **opts):
          ('r', 'rev', [], _('display markers relevant to REV')),
          ('', 'index', False, _('display index of the marker')),
          ('', 'delete', [], _('delete markers specified by indices')),
-        ] + commitopts2,
+        ] + commitopts2 + formatteropts,
          _('[OBSOLETED [REPLACEMENT ...]]'))
 def debugobsolete(ui, repo, precursor=None, *successors, **opts):
     """create arbitrary obsolete marker
@@ -3132,6 +3132,7 @@ def debugobsolete(ui, repo, precursor=None, *successors, **opts):
             markerset = set(markers)
             isrelevant = lambda m: m in markerset
 
+        fm = ui.formatter('debugobsolete', opts)
         for i, m in enumerate(markerstoiter):
             if not isrelevant(m):
                 # marker can be irrelevant when we're iterating over a set
@@ -3142,8 +3143,10 @@ def debugobsolete(ui, repo, precursor=None, *successors, **opts):
                 # to get the correct indices, but only display the ones that
                 # are relevant to --rev value
                 continue
+            fm.startitem()
             ind = i if opts.get('index') else None
-            cmdutil.showmarker(ui, m, index=ind)
+            cmdutil.showmarker(fm, m, index=ind)
+        fm.end()
 
 @command('debugpathcomplete',
          [('f', 'full', None, _('complete an entire path')),
