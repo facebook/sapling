@@ -298,8 +298,13 @@ static linelog_result replacelines(linelog_buf *buf, linelog_annotateresult *ar,
 		}
 	}
 	if (a1 < a2) { /* [2] */
+		linelog_offset a2addr = ar->lines[a2].offset;
+		/* delete a chunk of an old commit. be conservative, do not
+		   touch invisible lines between a2 - 1 and a2 */
+		if (a2 > 0 && brev < inst0.rev /* maxrev */)
+			a2addr = ar->lines[a2 - 1].offset + 1;
 		linelog_inst jge = { .opcode = JGE, .rev = brev,
-			.offset = ar->lines[a2].offset };
+			.offset = a2addr };
 		appendinst(jge);
 	}
 	linelog_offset a1newaddr = inst0.offset;
