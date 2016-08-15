@@ -88,7 +88,9 @@ def statprofile(ui, fp):
 
     freq = ui.configint('profiling', 'freq', default=1000)
     if freq > 0:
-        statprof.reset(freq)
+        # Cannot reset when profiler is already active. So silently no-op.
+        if statprof.state.profile_level == 0:
+            statprof.reset(freq)
     else:
         ui.warn(_("invalid sampling frequency '%s' - ignoring\n") % freq)
 
