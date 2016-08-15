@@ -67,7 +67,7 @@ class LinelogError(Exception):
         return self._messages.get(self.result, 'Unknown error %d' % self.result)
 
 cdef class _buffer: # thin wrapper around linelog_buf
-    cdef linelog_buf buf;
+    cdef linelog_buf buf
 
     def __cinit__(self):
         memset(&self.buf, 0, sizeof(linelog_buf))
@@ -82,7 +82,7 @@ cdef class _buffer: # thin wrapper around linelog_buf
         pass
 
     cdef copyfrom(self, _buffer rhs):
-        if rhs.buf.size == 0:
+        if rhs.buf.size == 0 or &rhs.buf == &self.buf:
             return
         if rhs.buf.size > self.buf.size:
             self.resize(rhs.buf.size)
@@ -232,7 +232,7 @@ cdef class linelog:
     """Python wrapper around linelog"""
 
     cdef linelog_annotateresult ar
-    cdef _buffer buf
+    cdef readonly _buffer buf
     cdef readonly bint closed
     cdef readonly object path
 
@@ -287,6 +287,7 @@ cdef class linelog:
 
         Copy content from another linelog object."""
         assert isinstance(rhs, linelog)
+        self._checkclosed()
         self.buf.copyfrom(rhs.buf)
 
     @property
