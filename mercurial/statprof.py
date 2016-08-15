@@ -311,13 +311,11 @@ def stop():
         state.accumulate_time(clock())
         state.last_start_time = None
         statprofpath = os.environ.get('STATPROF_DEST')
-        save_data(statprofpath)
+        if statprofpath:
+            save_data(statprofpath)
 
-def save_data(path=None):
-    try:
-        path = path or (os.environ['HOME'] + '/statprof.data')
-        file = open(path, "w+")
-
+def save_data(path):
+    with open(path, 'w+') as file:
         file.write(str(state.accumulated_time) + '\n')
         for sample in state.samples:
             time = str(sample.time)
@@ -326,13 +324,7 @@ def save_data(path=None):
                      for s in stack]
             file.write(time + '\0' + '\0'.join(sites) + '\n')
 
-        file.close()
-    except (IOError, OSError):
-        # The home directory probably didn't exist, or wasn't writable. Oh well.
-        pass
-
-def load_data(path=None):
-    path = path or (os.environ['HOME'] + '/statprof.data')
+def load_data(path):
     lines = open(path, 'r').read().splitlines()
 
     state.accumulated_time = float(lines[0])
