@@ -49,6 +49,9 @@ cdef extern from "../linelog.c":
             linelog_linenum a1, linelog_linenum a2,
             linelog_linenum blinecount, const linelog_revnum *brevs,
             const linelog_linenum *blinenums)
+    cdef linelog_result linelog_getalllines(linelog_buf *buf,
+            linelog_annotateresult *ar, linelog_offset offset1,
+            linelog_offset offset2)
 
 cdef size_t pagesize = <size_t>unistd.sysconf(unistd._SC_PAGESIZE)
 cdef size_t unitsize = pagesize # used when resizing a buffer
@@ -114,6 +117,11 @@ cdef class _buffer: # thin wrapper around linelog_buf
         self._eval(lambda: linelog_replacelines_vec(&self.buf, ar, brev,
                                                     a1, a2, blinecount,
                                                     brevs, blinenums))
+
+    cdef getalllines(self, linelog_annotateresult *ar, linelog_offset offset1,
+                     linelog_offset offset2):
+        self._eval(lambda: linelog_getalllines(&self.buf, ar,
+                                               offset1, offset2))
 
     cdef _eval(self, linelogfunc):
         # linelogfunc should be a function returning linelog_result, which
@@ -227,6 +235,14 @@ cdef class _filebuffer(_buffer): # linelog_buf backed by filesystem
             raise _excwitherrno(OSError, 'munmap')
         memset(&self.buf, 0, sizeof(linelog_buf))
         self.maplen = 0
+
+cdef _ar2list(const linelog_annotateresult *ar):
+    result = []
+    cdef linelog_linenum i
+    if ar != NULL:
+        for i in range(0, ar.linecount):
+            result.append((ar.lines[i].rev, ar.lines[i].linenum))
+    return result
 
 cdef class linelog:
     """Python wrapper around linelog"""
@@ -360,11 +376,22 @@ cdef class linelog:
     @property
     def annotateresult(self):
         """L.annotateresult -> [(rev, linenum)]"""
-        result = []
-        cdef linelog_linenum i
-        for i in range(0, self.ar.linecount):
-            result.append((self.ar.lines[i].rev, self.ar.lines[i].linenum))
+        return _ar2list(&self.ar)
+
+    def getalllines(self, offset1=0, offset2=0):
+        """L.getalllines(offset1, offset2 : int) -> [(rev, linenum)]"""
+        cdef linelog_annotateresult lines
+        memset(&lines, 0, sizeof(linelog_annotateresult))
+        self.buf.getalllines(&lines, offset1, offset2)
+        result = _ar2list(&lines)
+        linelog_annotateresult_clear(&lines)
         return result
+
+    def getoffset(self, linenum):
+        """L.getoffset(int) -> int"""
+        if linenum > self.ar.linecount:
+            raise IndexError('line number out of range')
+        return self.ar.lines[linenum].offset
 
     cdef _checkclosed(self):
         if self.closed:
