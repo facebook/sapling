@@ -255,6 +255,10 @@ cdef class linelog:
             self.buf = _filebuffer(path)
         else:
             self.buf = _memorybuffer()
+        if self.buf.getactualsize() == 0:
+            # initialize empty linelog automatically
+            self.clear()
+            self.annotate(0)
 
     def __dealloc__(self):
         self._clearannotateresult()
