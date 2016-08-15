@@ -6,3 +6,5 @@ syntax: regexp
 \.err$
 ^packages/
 ^tests/.testtimes$
+.idea
+.testtimes
