@@ -104,11 +104,10 @@ main thread's work patterns.
 # no-check-code
 from __future__ import division
 
-import inspect, json, os, signal, tempfile, sys, getopt, threading, traceback
+import inspect, json, os, signal, tempfile, sys, getopt, threading
 import time
 from collections import defaultdict
 from contextlib import contextmanager
-from subprocess import call
 
 __all__ = ['start', 'stop', 'reset', 'display', 'profile']
 
@@ -328,7 +327,7 @@ def save_data(path=None):
             file.write(time + '\0' + '\0'.join(sites) + '\n')
 
         file.close()
-    except (IOError, OSError) as ex:
+    except (IOError, OSError):
         # The home directory probably didn't exist, or wasn't writable. Oh well.
         pass
 
