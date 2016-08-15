@@ -143,3 +143,20 @@ def profile(ui):
                 val = val.replace('%', '%%')
                 ui.log('profile', val)
             fp.close()
+
+@contextlib.contextmanager
+def maybeprofile(ui):
+    """Profile if enabled, else do nothing.
+
+    This context manager can be used to optionally profile if profiling
+    is enabled. Otherwise, it does nothing.
+
+    The purpose of this context manager is to make calling code simpler:
+    just use a single code path for calling into code you may want to profile
+    and this function determines whether to start profiling.
+    """
+    if ui.configbool('profiling', 'enabled'):
+        with profile(ui):
+            yield
+    else:
+        yield

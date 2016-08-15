@@ -1393,6 +1393,12 @@ collected during profiling, while 'profiling report' stands for a
 statistical text report generated from the profiling data. The
 profiling is done using lsprof.
 
+``enabled``
+    Enable the profiler.
+    (default: false)
+
+    This is equivalent to passing ``--profile`` on the command line.
+
 ``type``
     The type of profiler to use.
     (default: ls)

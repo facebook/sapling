@@ -898,21 +898,12 @@ def _dispatch(req):
             repo.close()
 
 def _runcommand(ui, options, cmd, cmdfunc):
-    """Enables the profiler if applicable.
-
-    ``profiling.enabled`` - boolean config that enables or disables profiling
-    """
-    def checkargs():
+    """Run a command function, possibly with profiling enabled."""
+    with profiling.maybeprofile(ui):
         try:
             return cmdfunc()
         except error.SignatureError:
-            raise error.CommandError(cmd, _("invalid arguments"))
-
-    if ui.configbool('profiling', 'enabled'):
-        with profiling.profile(ui):
-            return checkargs()
-    else:
-        return checkargs()
+            raise error.CommandError(cmd, _('invalid arguments'))
 
 def _exceptionwarning(ui):
     """Produce a warning message for the current active exception"""
