@@ -79,10 +79,14 @@ class webproto(wireproto.abstractserverproto):
         # the server's network or CPU.
         z = zlib.compressobj(self.ui.configint('server', 'zliblevel', -1))
         while True:
-            chunk = cg.read(4096)
+            chunk = cg.read(32768)
             if not chunk:
                 break
-            yield z.compress(chunk)
+            data = z.compress(chunk)
+            # Not all calls to compress() emit data. It is cheaper to inspect
+            # that here than to send it via the generator.
+            if data:
+                yield data
         yield z.flush()
     def _client(self):
         return 'remote:%s:%s:%s' % (
