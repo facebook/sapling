@@ -462,6 +462,12 @@ def makedirstate(cls):
             self._writesqldirstate()
 
         def _writesqldirstate(self):
+            # notify callbacks about parents change
+            if self._origpl is not None:
+                if self._origpl != self._pl:
+                    for c, callback in sorted(self._plchangecallbacks.iteritems()):
+                        callback(self, self._origpl, self._pl)
+                    self._origpl = None
             # if dirty dump to disk (db transaction commit)
             now = dirstate._getfsnow(self._opener)
 
@@ -510,6 +516,8 @@ def makedirstate(cls):
 
             self._dirty = self._dirtypl = True
             oldp2 = self._pl[1]
+            if self._origpl is None:
+                self._origpl = self._pl
             self._pl = p1, p2
             copies = {}
             if oldp2 != nullid and p2 == nullid:

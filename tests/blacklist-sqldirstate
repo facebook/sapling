@@ -39,3 +39,6 @@ test-issue3084.t
 # and we don't support pending
 test-shelve.t
 test-import.t
+
+# we change the order in which boomarks and wd change is logged in sqldirstate
+test-journal-share.t
