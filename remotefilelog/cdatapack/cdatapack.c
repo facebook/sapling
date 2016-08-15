@@ -14,7 +14,18 @@
 #if defined(__linux__)
 #include <endian.h>
 #define ntohll be64toh
+
+// NOTE: we actually want MADV_FREE, because we only want to mark the page as
+// eligible for immediate reuse while retaining the data.  however, the exciting
+// centos6 machines we have too old of a version of linux for MADV_FREE.  LOL.
+#define MADVISE_FREE_CODE MADV_DONTNEED
+#define PAGE_SIZE 4096
 #endif /* #if defined(__linux__) */
+
+#if defined(__APPLE__)
+#define MADVISE_FREE_CODE MADV_FREE
+#endif /* #if defined(__APPLE__) */
+
 
 #include <lz4.h>
 
@@ -372,6 +383,26 @@ static inline uint32_t load_le32(const uint8_t *d) {
   return d[0] | (d[1] << 8) | (d[2] << 16) | (d[3] << 24);
 }
 
+static inline int platform_madvise_away(void *ptr, size_t len) {
+#if defined(__linux__)
+  // linux madvise insists on being on page boundaries.
+  intptr_t address = (intptr_t) ptr;
+  intptr_t end_address = address + len;
+
+  // round down the address to the nearest page.
+  address = address & ~((intptr_t) (PAGE_SIZE - 1));
+
+  // round up the end address to the nearest page.
+  end_address += (PAGE_SIZE - 1);
+  end_address = end_address & ~((intptr_t) (PAGE_SIZE - 1));
+
+  return madvise((void *) address, (end_address - address), MADVISE_FREE_CODE);
+#endif /* #if defined(__linux__) */
+#if defined(__APPLE__)
+  return madvise(ptr, len, MADVISE_FREE_CODE);
+#endif /* #if defined(__APPLE__) */
+}
+
 const uint8_t *getdeltachainlink(
     const uint8_t *ptr, delta_chain_link_t *link) {
   link->filename_sz = ntohs(*((uint16_t *) ptr));
@@ -437,6 +468,15 @@ delta_chain_t *getdeltachain(
     if (ptr > end) {
       abort();
     }
+  }
+
+  for (int ix = 0; ix < pack_chain->links_idx; ix ++) {
+    const uint8_t *ptr = handle->data_mmap;
+    ptr += pack_chain->pack_chain_links[ix].data_offset;
+    const uint8_t *end = ptr +
+        pack_chain->pack_chain_links[ix].data_sz;
+
+    platform_madvise_away((void *) ptr, end - ptr);
   }
 
   // free pack chain.
