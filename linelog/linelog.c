@@ -251,7 +251,7 @@ static linelog_result replacelines(linelog_buf *buf, linelog_annotateresult *ar,
 	returnonerror(readinst(buf, &inst0, 0));
 	if (brev >= MAX_REVNUM || a2 >= MAX_LINENUM || b2 >= MAX_LINENUM)
 		return LINELOG_RESULT_EOVERFLOW;
-	if (a2 < a1 || b2 < b1 || !ar || a2 > ar->linecount
+	if (a2 < a1 || b2 < b1 || !ar || a2 > ar->linecount || brev == 0
 			|| ar->linecount >= ar->maxlinecount)
 		return LINELOG_RESULT_EILLDATA;
 
@@ -358,4 +358,40 @@ linelog_result linelog_replacelines_vec(linelog_buf *buf,
 		const linelog_linenum *blinenums) {
 	return replacelines(buf, ar, brev, a1, a2, 0, blinecount,
 			brevs, blinenums);
+}
+
+linelog_result linelog_getalllines(linelog_buf *buf,
+		linelog_annotateresult *ar, linelog_offset offset1,
+		linelog_offset offset2) {
+	linelog_inst inst0;
+	returnonerror(readinst(buf, &inst0, 0));
+
+	linelog_offset pc, nextpc = offset1 ? offset1 : 1;
+	ar->linecount = 0;
+
+	for (linelog_offset step = inst0.offset; step; --step) {
+		pc = nextpc++;
+		if (pc == offset2 || pc == 0)
+			return LINELOG_RESULT_OK;
+
+		linelog_inst i;
+		returnonerror(readinst(buf, &i, pc));
+
+		switch (i.opcode) {
+		case JGE:
+			if (i.rev == 0)  /* unconditional jump */
+				nextpc = i.offset;
+			break;
+		case JL:
+			break;
+		case LINE: /* append a line */
+			returnonerror(appendline(ar, &i, pc));
+			break;
+		default: /* unknown opcode */
+			return LINELOG_RESULT_EILLDATA;
+		}
+	}
+
+	/* step reaches 0, didn't meet the end condition */
+	return LINELOG_RESULT_EILLDATA;
 }

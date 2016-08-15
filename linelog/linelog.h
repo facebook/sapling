@@ -18,7 +18,7 @@ extern char linelog_assert_sizet_[1 / (sizeof(size_t) >= 4)];
 
 typedef uint32_t linelog_linenum; /* line number, starting from 0 */
 typedef uint32_t linelog_revnum; /* rev x is the only parent of rev x + 1 */
-typedef uint32_t linelog_offset; /* internal use, index of linelog_buf.data */
+typedef uint32_t linelog_offset; /* index of linelog_buf.data */
 
 typedef int linelog_result; /* return value of some apis */
 
@@ -41,7 +41,7 @@ typedef struct {
 typedef struct {
 	linelog_revnum rev; /* revision number at the first appearance */
 	linelog_linenum linenum; /* line number at the first appearance */
-	linelog_offset offset; /* internal use, index of linelog_buf.data */
+	linelog_offset offset; /* index of linelog_buf.data */
 } linelog_lineinfo;
 
 /* annotate result, an dynamic array of linelog_lineinfo, allocated by callee
@@ -142,5 +142,16 @@ linelog_result linelog_replacelines_vec(linelog_buf *buf,
 		linelog_linenum a1, linelog_linenum a2,
 		linelog_linenum blinecount, const linelog_revnum *brevs,
 		const linelog_linenum *blinenums);
+
+/* get all lines, include deleted ones, output to ar
+
+   offsets can be obtained from annotateresult. if they are both 0,
+   all lines from the entire linelog will be returned.
+
+   internally, this is a traversal from offset1 (inclusive) to offset2
+   (exclusive) and conditional jumps are ignored. */
+linelog_result linelog_getalllines(linelog_buf *buf,
+		linelog_annotateresult *ar, linelog_offset offset1,
+		linelog_offset offset2);
 
 #endif /* end of include guard: LINELOG_H_ZUJREV4L */
