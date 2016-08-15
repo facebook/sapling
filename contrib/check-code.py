@@ -237,7 +237,7 @@ pypats = [
      "tuple parameter unpacking not available in Python 3+"),
     (r'(?<!def)\s+(cmp)\(', "cmp is not available in Python 3+"),
     (r'\breduce\s*\(.*', "reduce is not available in Python 3+"),
-    (r'dict\(.*=', 'dict() is different in Py2 and 3 and is slower than {}',
+    (r'\bdict\(.*=', 'dict() is different in Py2 and 3 and is slower than {}',
      'dict-from-generator'),
     (r'\.has_key\b', "dict.has_key is not available in Python 3+"),
     (r'\s<>\s', '<> operator is not available in Python 3+, use !='),
