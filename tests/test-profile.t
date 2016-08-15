@@ -31,4 +31,18 @@ test --profile
 
 #endif
 
+#if lsprof serve
+
+Profiling of HTTP requests works
+
+  $ hg --profile --config profiling.format=text --config profiling.output=../profile.log serve -d -p $HGPORT --pid-file ../hg.pid -A ../access.log
+  $ cat ../hg.pid >> $DAEMON_PIDS
+  $ hg -q clone -U http://localhost:$HGPORT ../clone
+
+A single profile is logged because file logging doesn't append
+  $ grep CallCount ../profile.log | wc -l
+  \s*1 (re)
+
+#endif
+
   $ cd ..

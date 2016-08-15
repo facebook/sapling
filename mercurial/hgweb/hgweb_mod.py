@@ -28,6 +28,7 @@ from .. import (
     error,
     hg,
     hook,
+    profiling,
     repoview,
     templatefilters,
     templater,
@@ -305,8 +306,9 @@ class hgweb(object):
         should be using instances of this class as the WSGI application.
         """
         with self._obtainrepo() as repo:
-            for r in self._runwsgi(req, repo):
-                yield r
+            with profiling.maybeprofile(repo.ui):
+                for r in self._runwsgi(req, repo):
+                    yield r
 
     def _runwsgi(self, req, repo):
         rctx = requestcontext(self, repo)
