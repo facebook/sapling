@@ -7,6 +7,7 @@
 
 from __future__ import absolute_import, print_function
 
+import contextlib
 import os
 import sys
 import time
@@ -17,7 +18,8 @@ from . import (
     util,
 )
 
-def lsprofile(ui, func, fp):
+@contextlib.contextmanager
+def lsprofile(ui, fp):
     format = ui.config('profiling', 'format', default='text')
     field = ui.config('profiling', 'sort', default='inlinetime')
     limit = ui.configint('profiling', 'limit', default=30)
@@ -37,7 +39,7 @@ def lsprofile(ui, func, fp):
     p = lsprof.Profiler()
     p.enable(subcalls=True)
     try:
-        return func()
+        yield
     finally:
         p.disable()
 
@@ -51,7 +53,8 @@ def lsprofile(ui, func, fp):
             stats.sort(field)
             stats.pprint(limit=limit, file=fp, climit=climit)
 
-def flameprofile(ui, func, fp):
+@contextlib.contextmanager
+def flameprofile(ui, fp):
     try:
         from flamegraph import flamegraph
     except ImportError:
@@ -67,7 +70,7 @@ def flameprofile(ui, func, fp):
     start_time = time.clock()
     try:
         thread.start()
-        func()
+        yield
     finally:
         thread.stop()
         thread.join()
@@ -75,7 +78,8 @@ def flameprofile(ui, func, fp):
             time.clock() - start_time, thread.num_frames(),
             thread.num_frames(unique=True)))
 
-def statprofile(ui, func, fp):
+@contextlib.contextmanager
+def statprofile(ui, fp):
     try:
         import statprof
     except ImportError:
@@ -90,13 +94,18 @@ def statprofile(ui, func, fp):
 
     statprof.start()
     try:
-        return func()
+        yield
     finally:
         statprof.stop()
         statprof.display(fp)
 
-def profile(ui, fn):
-    """Profile a function call."""
+@contextlib.contextmanager
+def profile(ui):
+    """Start profiling.
+
+    Profiling is active when the context manager is active. When the context
+    manager exits, profiling results will be written to the configured output.
+    """
     profiler = os.getenv('HGPROF')
     if profiler is None:
         profiler = ui.config('profiling', 'type', default='ls')
@@ -116,11 +125,15 @@ def profile(ui, fn):
 
     try:
         if profiler == 'ls':
-            return lsprofile(ui, fn, fp)
+            proffn = lsprofile
         elif profiler == 'flame':
-            return flameprofile(ui, fn, fp)
+            proffn = flameprofile
         else:
-            return statprofile(ui, fn, fp)
+            proffn = statprofile
+
+        with proffn(ui, fp):
+            yield
+
     finally:
         if output:
             if output == 'blackbox':

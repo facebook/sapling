@@ -909,7 +909,8 @@ def _runcommand(ui, options, cmd, cmdfunc):
             raise error.CommandError(cmd, _("invalid arguments"))
 
     if ui.configbool('profiling', 'enabled'):
-        return profiling.profile(ui, checkargs)
+        with profiling.profile(ui):
+            return checkargs()
     else:
         return checkargs()
 
