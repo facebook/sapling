@@ -470,6 +470,25 @@ keyword arguments
   hg: parse error: can't use a key-value pair in this context
   [255]
 
+ right-hand side should be optimized recursively
+
+  $ try --optimize 'foo=(not public())'
+  (keyvalue
+    ('symbol', 'foo')
+    (group
+      (not
+        (func
+          ('symbol', 'public')
+          None))))
+  * optimized:
+  (keyvalue
+    ('symbol', 'foo')
+    (func
+      ('symbol', '_notpublic')
+      None))
+  hg: parse error: can't use a key-value pair in this context
+  [255]
+
 Test that symbols only get parsed as functions if there's an opening
 parenthesis.
 
@@ -1800,6 +1819,11 @@ use the topo.firstbranch option when topo sort is not active:
   $ hg log -r 'sort(all(), user, topo.firstbranch=book1)'
   hg: parse error: topo.firstbranch can only be used when using the topo sort key
   [255]
+
+topo.firstbranch should accept any kind of expressions:
+
+  $ hg log -r 'sort(0, topo, topo.firstbranch=(book1))'
+  0 b12  m111 u112 111 10800
 
   $ cd ..
   $ cd repo

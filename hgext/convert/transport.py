@@ -34,8 +34,7 @@ from mercurial import (
 # won't work worth a darn against those libraries anyway!
 svn.ra.initialize()
 
-svn_config = svn.core.svn_config_get_config(None)
-
+svn_config = None
 
 def _create_auth_baton(pool):
     """Create a Subversion authentication baton. """
@@ -88,6 +87,9 @@ class SvnRaTransport(object):
                 svn.core.svn_auth_set_parameter(
                     ab, svn.core.SVN_AUTH_PARAM_DEFAULT_PASSWORD, self.password)
             self.client.auth_baton = ab
+            global svn_config
+            if svn_config is None:
+                svn_config = svn.core.svn_config_get_config(None)
             self.client.config = svn_config
             try:
                 self.ra = svn.client.open_ra_session(

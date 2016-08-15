@@ -1,6 +1,6 @@
 Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: mercurial
-Source: http://www.selenic.com/mercurial/
+Source: https://www.mercurial-scm.org/
 
 Files: *
 Copyright: 2005-2015, Matt Mackall <mpm@selenic.com> and others.

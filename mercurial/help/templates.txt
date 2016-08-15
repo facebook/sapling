@@ -71,6 +71,20 @@ For example,
 defines two symbol aliases, ``r`` and ``rn``, and a function alias
 ``leftpad()``.
 
+It's also possible to specify complete template strings, using the
+``templates`` section. The syntax used is the general template string syntax.
+
+For example,
+
+::
+
+  [templates]
+  nodedate = "{node|short}: {date(date, "%Y-%m-%d")}\n"
+
+defines a template, ``nodedate``, which can be called like::
+
+  $ hg log -r . -Tnodedate
+
 Some sample command line templates:
 
 - Format lists, e.g. files::

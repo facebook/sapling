@@ -1630,6 +1630,12 @@ relative path alone. The rules are applied in definition order.
 
 Alias definitions for templates. See :hg:`help templates` for details.
 
+``templates``
+-------------
+
+Use the ``[templates]`` section to define template strings.
+See :hg:`help templates` for details.
+
 ``trusted``
 -----------
 
