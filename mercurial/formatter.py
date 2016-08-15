@@ -25,12 +25,30 @@ from . import (
 
 pickle = util.pickle
 
+class _nullconverter(object):
+    '''convert non-primitive data types to be processed by formatter'''
+    @staticmethod
+    def formatdate(date, fmt):
+        '''convert date tuple to appropriate format'''
+        return date
+    @staticmethod
+    def formatdict(data, key, value, fmt, sep):
+        '''convert dict or key-value pairs to appropriate dict format'''
+        # use plain dict instead of util.sortdict so that data can be
+        # serialized as a builtin dict in pickle output
+        return dict(data)
+    @staticmethod
+    def formatlist(data, name, fmt, sep):
+        '''convert iterable to appropriate list format'''
+        return list(data)
+
 class baseformatter(object):
-    def __init__(self, ui, topic, opts):
+    def __init__(self, ui, topic, opts, converter):
         self._ui = ui
         self._topic = topic
         self._style = opts.get("style")
         self._template = opts.get("template")
+        self._converter = converter
         self._item = None
         # function to convert node to string suitable for this output
         self.hexfunc = hex
@@ -46,20 +64,17 @@ class baseformatter(object):
         if self._item is not None:
             self._showitem()
         self._item = {}
-    @staticmethod
-    def formatdate(date, fmt='%a %b %d %H:%M:%S %Y %1%2'):
+    def formatdate(self, date, fmt='%a %b %d %H:%M:%S %Y %1%2'):
         '''convert date tuple to appropriate format'''
-        return date
-    @staticmethod
-    def formatdict(data, key='key', value='value', fmt='%s=%s', sep=' '):
+        return self._converter.formatdate(date, fmt)
+    def formatdict(self, data, key='key', value='value', fmt='%s=%s', sep=' '):
         '''convert dict or key-value pairs to appropriate dict format'''
-        # use plain dict instead of util.sortdict so that data can be
-        # serialized as a builtin dict in pickle output
-        return dict(data)
-    @staticmethod
-    def formatlist(data, name, fmt='%s', sep=' '):
+        return self._converter.formatdict(data, key, value, fmt, sep)
+    def formatlist(self, data, name, fmt='%s', sep=' '):
         '''convert iterable to appropriate list format'''
-        return list(data)
+        # name is mandatory argument for now, but it could be optional if
+        # we have default template keyword, e.g. {item}
+        return self._converter.formatlist(data, name, fmt, sep)
     def data(self, **data):
         '''insert data into item that's not shown in default output'''
         self._item.update(data)
@@ -87,10 +102,25 @@ def _iteritems(data):
         return sorted(data.iteritems())
     return data
 
+class _plainconverter(object):
+    '''convert non-primitive data types to text'''
+    @staticmethod
+    def formatdate(date, fmt):
+        '''stringify date tuple in the given format'''
+        return util.datestr(date, fmt)
+    @staticmethod
+    def formatdict(data, key, value, fmt, sep):
+        '''stringify key-value pairs separated by sep'''
+        return sep.join(fmt % (k, v) for k, v in _iteritems(data))
+    @staticmethod
+    def formatlist(data, name, fmt, sep):
+        '''stringify iterable separated by sep'''
+        return sep.join(fmt % e for e in data)
+
 class plainformatter(baseformatter):
     '''the default text output scheme'''
     def __init__(self, ui, topic, opts):
-        baseformatter.__init__(self, ui, topic, opts)
+        baseformatter.__init__(self, ui, topic, opts, _plainconverter)
         if ui.debugflag:
             self.hexfunc = hex
         else:
@@ -99,18 +129,6 @@ class plainformatter(baseformatter):
         return False
     def startitem(self):
         pass
-    @staticmethod
-    def formatdate(date, fmt='%a %b %d %H:%M:%S %Y %1%2'):
-        '''stringify date tuple in the given format'''
-        return util.datestr(date, fmt)
-    @staticmethod
-    def formatdict(data, key='key', value='value', fmt='%s=%s', sep=' '):
-        '''stringify key-value pairs separated by sep'''
-        return sep.join(fmt % (k, v) for k, v in _iteritems(data))
-    @staticmethod
-    def formatlist(data, name, fmt='%s', sep=' '):
-        '''stringify iterable separated by sep'''
-        return sep.join(fmt % e for e in data)
     def data(self, **data):
         pass
     def write(self, fields, deftext, *fielddata, **opts):
@@ -126,7 +144,7 @@ class plainformatter(baseformatter):
 
 class debugformatter(baseformatter):
     def __init__(self, ui, topic, opts):
-        baseformatter.__init__(self, ui, topic, opts)
+        baseformatter.__init__(self, ui, topic, opts, _nullconverter)
         self._ui.write("%s = [\n" % self._topic)
     def _showitem(self):
         self._ui.write("    " + repr(self._item) + ",\n")
@@ -136,7 +154,7 @@ class debugformatter(baseformatter):
 
 class pickleformatter(baseformatter):
     def __init__(self, ui, topic, opts):
-        baseformatter.__init__(self, ui, topic, opts)
+        baseformatter.__init__(self, ui, topic, opts, _nullconverter)
         self._data = []
     def _showitem(self):
         self._data.append(self._item)
@@ -164,7 +182,7 @@ def _jsonifyobj(v):
 
 class jsonformatter(baseformatter):
     def __init__(self, ui, topic, opts):
-        baseformatter.__init__(self, ui, topic, opts)
+        baseformatter.__init__(self, ui, topic, opts, _nullconverter)
         self._ui.write("[")
         self._ui._first = True
     def _showitem(self):
@@ -186,32 +204,37 @@ class jsonformatter(baseformatter):
         baseformatter.end(self)
         self._ui.write("\n]\n")
 
+class _templateconverter(object):
+    '''convert non-primitive data types to be processed by templater'''
+    @staticmethod
+    def formatdate(date, fmt):
+        '''return date tuple'''
+        return date
+    @staticmethod
+    def formatdict(data, key, value, fmt, sep):
+        '''build object that can be evaluated as either plain string or dict'''
+        data = util.sortdict(_iteritems(data))
+        def f():
+            yield _plainconverter.formatdict(data, key, value, fmt, sep)
+        return templatekw._hybrid(f(), data, lambda k: {key: k, value: data[k]},
+                                  lambda d: fmt % (d[key], d[value]))
+    @staticmethod
+    def formatlist(data, name, fmt, sep):
+        '''build object that can be evaluated as either plain string or list'''
+        data = list(data)
+        def f():
+            yield _plainconverter.formatlist(data, name, fmt, sep)
+        return templatekw._hybrid(f(), data, lambda x: {name: x},
+                                  lambda d: fmt % d[name])
+
 class templateformatter(baseformatter):
     def __init__(self, ui, topic, opts):
-        baseformatter.__init__(self, ui, topic, opts)
+        baseformatter.__init__(self, ui, topic, opts, _templateconverter)
         self._topic = topic
         self._t = gettemplater(ui, topic, opts.get('template', ''))
     def _showitem(self):
         g = self._t(self._topic, ui=self._ui, **self._item)
         self._ui.write(templater.stringify(g))
-    @staticmethod
-    def formatdict(data, key='key', value='value', fmt='%s=%s', sep=' '):
-        '''build object that can be evaluated as either plain string or dict'''
-        data = util.sortdict(_iteritems(data))
-        def f():
-            yield plainformatter.formatdict(data, key, value, fmt, sep)
-        return templatekw._hybrid(f(), data, lambda k: {key: k, value: data[k]},
-                                  lambda d: fmt % (d[key], d[value]))
-    @staticmethod
-    def formatlist(data, name, fmt='%s', sep=' '):
-        '''build object that can be evaluated as either plain string or list'''
-        # name is mandatory argument for now, but it could be optional if
-        # we have default template keyword, e.g. {item}
-        data = list(data)
-        def f():
-            yield plainformatter.formatlist(data, name, fmt, sep)
-        return templatekw._hybrid(f(), data, lambda x: {name: x},
-                                  lambda d: fmt % d[name])
 
 def lookuptemplate(ui, topic, tmpl):
     # looks like a literal template?
