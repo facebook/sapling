@@ -48,9 +48,11 @@ static const char helptext[] =
 #endif
 	"usage: linelogcli FILE CMDLIST\n"
 	"where  CMDLIST := CMD | CMDLIST CMD\n"
-	"       CMD := init | info | dump | ANNOTATECMD | REPLACELINESCMD\n"
+	"       CMD := init | info | dump | ANNOTATECMD | REPLACELINESCMD | "
+		"GETALLLINESCMD\n"
 	"       ANNOTATECMD := annotate REV | annotate -\n"
-	"       REPLACELINESCMD := replacelines rev a1:a2 b1:b2\n";
+	"       REPLACELINESCMD := replacelines rev a1:a2 b1:b2\n"
+	"       GETALLLINESCMD := getalllines offset1:offset2\n";
 
 static void closefile(void) {
 	if (buf.data) {
@@ -246,24 +248,48 @@ int cmddump(const char *args[]) {
 	return LINELOG_RESULT_OK;
 }
 
+int cmdgetalllines(const char *args[]) {
+	unsigned offset1 = 0, offset2 = 0;
+	sscanf(args[0], "%u:%u", &offset1, &offset2);
+
+	linelog_result r;
+	linelog_annotateresult ar;
+	memset(&ar, 0, sizeof(ar));
+	eval(r, linelog_getalllines(&buf, &ar, offset1, offset2));
+	if (r == LINELOG_RESULT_OK) {
+		printf("getalllines: %u lines\n", ar.linecount);
+		for (uint32_t i = 0; i < ar.linecount; ++i) {
+			linelog_lineinfo l = ar.lines[i];
+			printf("  %u: rev %u, line %u, offset %u\n",
+					i, l.rev, l.linenum, l.offset);
+		}
+	}
+	linelog_annotateresult_clear(&ar);
+	return r;
+}
+
 typedef int cmdfunc(const char *args[]);
 typedef struct {
 	const char *name;
+	const char shortname;
 	int argcount;
 	cmdfunc *func;
 } cmdentry;
 
 static cmdentry cmdtable[] = {
-	{ "init", 0, cmdinit },
-	{ "info", 0, cmdinfo },
-	{ "annotate", 1, cmdannotate },
-	{ "replacelines", 3, cmdreplacelines },
-	{ "dump", 0, cmddump },
+	{ "init", 'i', 0, cmdinit },
+	{ "info", 'f', 0, cmdinfo },
+	{ "annotate", 'a', 1, cmdannotate },
+	{ "replacelines", 'r', 3, cmdreplacelines },
+	{ "dump", 'd', 0, cmddump },
+	{ "getalllines", 'l', 1, cmdgetalllines },
 };
 
 const cmdentry *findcmd(const char *name) {
+	size_t len = strlen(name);
 	for (size_t i = 0; i < sizeof(cmdtable) / sizeof(cmdtable[0]); ++i) {
-		if (strcmp(name, cmdtable[i].name) == 0)
+		if (len == 1 ? name[0] == cmdtable[i].shortname
+				: strcmp(name, cmdtable[i].name) == 0)
 			return &cmdtable[i];
 	}
 	return NULL;
