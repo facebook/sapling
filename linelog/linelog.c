@@ -170,13 +170,23 @@ linelog_revnum linelog_getmaxrev(const linelog_buf *buf) {
 	return inst0.rev;
 }
 
+inline static linelog_result appendline(linelog_annotateresult *ar,
+		const linelog_inst *inst, linelog_offset offset) {
+	linelog_lineinfo info = { .rev = inst ? inst->rev : 0,
+		.linenum = inst ? inst->offset /* linenum */ : 0,
+		.offset = offset };
+	returnonerror(reservelines(ar, ar->linecount + 1));
+	ar->lines[ar->linecount++] = info;
+	return LINELOG_RESULT_OK;
+}
+
 linelog_result linelog_annotate(const linelog_buf *buf,
 		 linelog_annotateresult *ar, linelog_revnum rev) {
 	linelog_inst inst0;
 	returnonerror(readinst(buf, &inst0, 0));
 
 	linelog_offset pc, nextpc = 1, endoffset = 0;
-	linelog_linenum linenum = 0;
+	ar->linecount = 0;
 	size_t step = (size_t)inst0.offset;
 
 	while ((pc = nextpc++) != 0 && --step) {
@@ -192,12 +202,7 @@ linelog_result linelog_annotate(const linelog_buf *buf,
 			}
 			break;
 		case LINE: /* append a line */
-			{
-				linelog_lineinfo info = { .rev = i.rev,
-					.linenum = i.offset, .offset = pc };
-				returnonerror(reservelines(ar, linenum + 1));
-				ar->lines[linenum++] = info;
-			}
+			returnonerror(appendline(ar, &i, pc));
 			break;
 		default: /* unknown opcode */
 			return LINELOG_RESULT_EILLDATA;
@@ -208,10 +213,8 @@ linelog_result linelog_annotate(const linelog_buf *buf,
 		return LINELOG_RESULT_EILLDATA;
 
 	/* ar->lines[ar->linecount].offset records the endoffset */
-	returnonerror(reservelines(ar, linenum + 1));
-	linelog_lineinfo endlineinfo = { .offset = endoffset };
-	ar->lines[linenum] = endlineinfo;
-	ar->linecount = linenum;
+	returnonerror(appendline(ar, NULL, endoffset));
+	ar->linecount--; /* do not include this special line */
 	return LINELOG_RESULT_OK;
 }
 
