@@ -320,10 +320,6 @@ class match(object):
             kindpats.append((kind, pat, ''))
         return kindpats
 
-    def matchessubrepo(self, subpath):
-        return (self.exact(subpath)
-                or any(f.startswith(subpath + '/') for f in self.files()))
-
 def exact(root, cwd, files, badfn=None):
     return match(root, cwd, files, exact=True, badfn=badfn)
 
