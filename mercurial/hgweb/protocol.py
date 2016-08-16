@@ -74,6 +74,9 @@ class webproto(wireproto.abstractserverproto):
         self.ui.ferr, self.ui.fout = self.oldio
         return val
     def groupchunks(self, cg):
+        # Don't allow untrusted settings because disabling compression or
+        # setting a very high compression level could lead to flooding
+        # the server's network or CPU.
         z = zlib.compressobj(self.ui.configint('server', 'zliblevel', -1))
         while True:
             chunk = cg.read(4096)
