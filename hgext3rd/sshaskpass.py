@@ -85,16 +85,7 @@ def _startttyserver():
     listens at sockpath: $TMPDIR/ttysrv$UID/$PID
     returns (pid, sockpath)
     """
-    # socket file should live in a user-owned directory with mode 0700
-    sockpath = os.path.join(tempfile.gettempdir(), 'ttysrv%d' % os.getuid(),
-                            str(os.getpid()))
-    util.unlinkpath(sockpath, ignoremissing=True)
-    try:
-        os.makedirs(os.path.dirname(sockpath), 0o700)
-    except OSError as e:
-        if e.errno != errno.EEXIST:
-            raise
-
+    sockpath = os.path.join(tempfile.mkdtemp('ttysrv'), str(os.getpid()))
     pipes = os.pipe()
     ppid = os.getpid()
     pid = os.fork()
