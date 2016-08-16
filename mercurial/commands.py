@@ -7255,21 +7255,21 @@ def version_(ui):
     ))
 
     ui.note(_("\nEnabled extensions:\n\n"))
-    if ui.verbose:
-        # format names and versions into columns
-        names = []
-        vers = []
-        place = []
-        for name, module in extensions.extensions():
-            names.append(name)
-            vers.append(extensions.moduleversion(module))
-            if extensions.ismoduleinternal(module):
-                place.append(_("internal"))
-            else:
-                place.append(_("external"))
-        if names:
-            maxnamelen = max(len(n) for n in names)
-            for i, name in enumerate(names):
+    # format names and versions into columns
+    names = []
+    vers = []
+    place = []
+    for name, module in extensions.extensions():
+        names.append(name)
+        vers.append(extensions.moduleversion(module))
+        if extensions.ismoduleinternal(module):
+            place.append(_("internal"))
+        else:
+            place.append(_("external"))
+    if names:
+        maxnamelen = max(len(n) for n in names)
+        for i, name in enumerate(names):
+            if ui.verbose:
                 ui.write("  %-*s  %s  %s\n" %
                          (maxnamelen, name, place[i], vers[i]))
 

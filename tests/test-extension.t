@@ -1236,6 +1236,9 @@ Test version number support in 'hg version':
   
     throw  external  1.twentythree
 
+  $ hg version -q --config extensions.throw=throw.py
+  Mercurial Distributed SCM (version *) (glob)
+
 Refuse to load extensions with minimum version requirements
 
   $ cat > minversion1.py << EOF
