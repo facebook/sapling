@@ -949,10 +949,10 @@ def addremove(repo, matcher, prefix, opts=None, dry_run=None, similarity=None):
 
     wctx = repo[None]
     for subpath in sorted(wctx.substate):
-        if opts.get('subrepos') or m.matchessubrepo(subpath):
+        submatch = matchmod.subdirmatcher(subpath, m)
+        if opts.get('subrepos') or m.exact(subpath) or any(submatch.files()):
             sub = wctx.sub(subpath)
             try:
-                submatch = matchmod.subdirmatcher(subpath, m)
                 if sub.addremove(submatch, prefix, opts, dry_run, similarity):
                     ret = 1
             except error.LookupError:
