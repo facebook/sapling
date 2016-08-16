@@ -1224,7 +1224,7 @@ Test version number support in 'hg version':
     throw  external  1.2.3
   $ echo 'getversion = lambda: "1.twentythree"' >> throw.py
   $ rm -f throw.pyc throw.pyo
-  $ hg version -v --config extensions.throw=throw.py
+  $ hg version -v --config extensions.throw=throw.py --config extensions.strip=
   Mercurial Distributed SCM (version *) (glob)
   (see https://mercurial-scm.org for more information)
   
@@ -1235,6 +1235,7 @@ Test version number support in 'hg version':
   Enabled extensions:
   
     throw  external  1.twentythree
+    strip  internal  
 
   $ hg version -q --config extensions.throw=throw.py
   Mercurial Distributed SCM (version *) (glob)

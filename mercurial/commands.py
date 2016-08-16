@@ -7258,20 +7258,19 @@ def version_(ui):
     # format names and versions into columns
     names = []
     vers = []
-    place = []
+    isinternals = []
     for name, module in extensions.extensions():
         names.append(name)
         vers.append(extensions.moduleversion(module))
-        if extensions.ismoduleinternal(module):
-            place.append(_("internal"))
-        else:
-            place.append(_("external"))
+        isinternals.append(extensions.ismoduleinternal(module))
     if names:
         maxnamelen = max(len(n) for n in names)
+        places = [_("external"), _("internal")]
         for i, name in enumerate(names):
+            p = isinternals[i]
             if ui.verbose:
                 ui.write("  %-*s  %s  %s\n" %
-                         (maxnamelen, name, place[i], vers[i]))
+                         (maxnamelen, name, places[p], vers[i]))
 
 def loadcmdtable(ui, name, cmdtable):
     """Load command functions from specified cmdtable
