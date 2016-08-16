@@ -7,9 +7,11 @@
 connect to scmquery servers for fast fetching of logs on files and directories.
 
 Configure it by adding the following config options to your .hg/hgrc.
+This relies on fbconduit being setup for the repo; this should already
+be configured if supported by your repo.
 
 [fastlog]
-repo=fbsource
+enabled=true
 """
 
 from mercurial import (
