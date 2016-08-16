@@ -32,7 +32,6 @@ else:
 if sys.version_info[0] >= 3:
     import builtins
     import functools
-    builtins.xrange = range
 
     def _wrapattrfunc(f):
         @functools.wraps(f)
@@ -42,10 +41,12 @@ if sys.version_info[0] >= 3:
             return f(object, name, *args)
         return w
 
+    # these wrappers are automagically imported by hgloader
     delattr = _wrapattrfunc(builtins.delattr)
     getattr = _wrapattrfunc(builtins.getattr)
     hasattr = _wrapattrfunc(builtins.hasattr)
     setattr = _wrapattrfunc(builtins.setattr)
+    xrange = builtins.range
 
 stringio = io.StringIO
 empty = _queue.Empty

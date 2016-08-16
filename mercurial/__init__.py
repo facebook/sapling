@@ -170,7 +170,7 @@ if sys.version_info[0] >= 3:
             spec.loader = hgloader(spec.name, spec.origin)
             return spec
 
-    def replacetokens(tokens):
+    def replacetokens(tokens, fullname):
         """Transform a stream of tokens from raw to Python 3.
 
         It is called by the custom module loading machinery to rewrite
@@ -184,6 +184,7 @@ if sys.version_info[0] >= 3:
         REMEMBER TO CHANGE ``BYTECODEHEADER`` WHEN CHANGING THIS FUNCTION
         OR CACHED FILES WON'T GET INVALIDATED PROPERLY.
         """
+        futureimpline = False
         for i, t in enumerate(tokens):
             # Convert most string literals to byte literals. String literals
             # in Python 2 are bytes. String literals in Python 3 are unicode.
@@ -215,6 +216,29 @@ if sys.version_info[0] >= 3:
                 # String literal. Prefix to make a b'' string.
                 yield tokenize.TokenInfo(t.type, 'b%s' % s, t.start, t.end,
                                           t.line)
+                continue
+
+            # Insert compatibility imports at "from __future__ import" line.
+            # No '\n' should be added to preserve line numbers.
+            if (t.type == token.NAME and t.string == 'import' and
+                all(u.type == token.NAME for u in tokens[i - 2:i]) and
+                [u.string for u in tokens[i - 2:i]] == ['from', '__future__']):
+                futureimpline = True
+            if t.type == token.NEWLINE and futureimpline:
+                futureimpline = False
+                if fullname == 'mercurial.pycompat':
+                    yield t
+                    continue
+                r, c = t.start
+                l = (b'; from mercurial.pycompat import '
+                     b'delattr, getattr, hasattr, setattr, xrange\n')
+                for u in tokenize.tokenize(io.BytesIO(l).readline):
+                    if u.type in (tokenize.ENCODING, token.ENDMARKER):
+                        continue
+                    yield tokenize.TokenInfo(u.type, u.string,
+                                             (r, c + u.start[1]),
+                                             (r, c + u.end[1]),
+                                             '')
                 continue
 
             try:
@@ -279,7 +303,7 @@ if sys.version_info[0] >= 3:
     # ``replacetoken`` or any mechanism that changes semantics of module
     # loading is changed. Otherwise cached bytecode may get loaded without
     # the new transformation mechanisms applied.
-    BYTECODEHEADER = b'HG\x00\x01'
+    BYTECODEHEADER = b'HG\x00\x02'
 
     class hgloader(importlib.machinery.SourceFileLoader):
         """Custom module loader that transforms source code.
@@ -338,7 +362,7 @@ if sys.version_info[0] >= 3:
             """Perform token transformation before compilation."""
             buf = io.BytesIO(data)
             tokens = tokenize.tokenize(buf.readline)
-            data = tokenize.untokenize(replacetokens(list(tokens)))
+            data = tokenize.untokenize(replacetokens(list(tokens), self.name))
             # Python's built-in importer strips frames from exceptions raised
             # for this code. Unfortunately, that mechanism isn't extensible
             # and our frame will be blamed for the import failure. There
