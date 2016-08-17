@@ -1,3 +1,8 @@
+from distutils.version import LooseVersion
+import Cython
+if LooseVersion(Cython.__version__) < LooseVersion('0.22'):
+    raise RuntimeError('Cython >= 0.22 is required')
+
 from Cython.Build import cythonize
 from distutils.core import setup, Extension
 from glob import glob
