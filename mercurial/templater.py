@@ -1026,6 +1026,16 @@ def _readmapfile(mapfile):
                 raise error.ParseError(_('unmatched quotes'),
                                        conf.source('', key))
             cache[key] = unquotestring(val)
+        elif key == "__base__":
+            # treat as a pointer to a base class for this style
+            path = util.normpath(os.path.join(base, val))
+            bcache, btmap = _readmapfile(path)
+            for k in bcache:
+                if k not in cache:
+                    cache[k] = bcache[k]
+            for k in btmap:
+                if k not in tmap:
+                    tmap[k] = btmap[k]
         else:
             val = 'default', val
             if ':' in val[1]:
