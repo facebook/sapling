@@ -38,20 +38,22 @@ static int8_t hextable[256] = {
 	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1
 };
 
-/* C++ exception that represents an issue at the python C api level.
+/**
+ * C++ exception that represents an issue at the python C api level.
  * When this is thrown, it's assumed that the python error message has been set
  * and that the catcher of the exception should just return an error code value
  * to the python API.
- * */
+ */
 class pyexception : public std::exception {
   public:
     pyexception() {
     }
 };
 
-/* Wrapper class for PyObject pointers.
+/**
+ * Wrapper class for PyObject pointers.
  * It is responsible for managing the Py_INCREF and Py_DECREF calls.
- **/
+ */
 class PythonObj {
   private:
     PyObject *obj;
@@ -91,17 +93,19 @@ class PythonObj {
       return this->obj;
     }
 
-    /* Function used to obtain a return value that will persist beyond the life
+    /**
+     * Function used to obtain a return value that will persist beyond the life
      * of the PythonObj. This is useful for returning objects to Python C apis
      * and letting them manage the remaining lifetime of the object.
-     **/
+     */
     PyObject *returnval() {
       Py_XINCREF(this->obj);
       return this->obj;
     }
 
-    /* Get's the attribute from the python object.
-     **/
+    /**
+     * Get's the attribute from the python object.
+     */
     PythonObj getattr(const char *name) {
       return PyObject_GetAttrString(this->obj, name);
     }
@@ -109,10 +113,11 @@ class PythonObj {
 
 class Manifest;
 
-/* Class representing the contents of an in memory manifest (versus one that
+/**
+ * Class representing the contents of an in memory manifest (versus one that
  * came from the data store). Each in memory instance is the owner of it's
  * children in-memory manifests and will delete them during destruction.
- **/
+ */
 class InMemoryManifest {
   private:
     char *_rawstr;
@@ -144,9 +149,10 @@ class InMemoryManifest {
     }
 };
 
-/* A key which can be used to look up a manifest, either from the store, or from
- * in memory.
- **/
+/**
+ * A key which can be used to look up a manifest, either from the store, or
+ * from in memory.
+ */
 struct manifestkey {
   string *path;
   string *node;
@@ -160,10 +166,11 @@ struct manifestkey {
   }
 };
 
-/* Class representing a single entry in a given manifest.
+/**
+ * Class representing a single entry in a given manifest.
  * This class owns none of the memory it points at. It's just a view into a
  * portion of memory someone else owns.
- * */
+ */
 class ManifestEntry {
   public:
     char *filename;
@@ -187,9 +194,10 @@ class ManifestEntry {
       this->child = NULL;
     }
 
-    /* Given the start of a file/dir entry in a manifest, returns a
+    /**
+     * Given the start of a file/dir entry in a manifest, returns a
      * ManifestEntry structure with the parsed data.
-     * */
+     */
     ManifestEntry(char *entrystart, size_t index, const InMemoryManifest *child = NULL) :
       index(index),
       child(child) {
@@ -226,7 +234,8 @@ class ManifestEntry {
     }
 };
 
-/* This class represents a view on a particular Manifest instance. It provides
+/**
+ * This class represents a view on a particular Manifest instance. It provides
  * access to the list of files/directories at one level of the tree, not the
  * entire tree.
  *
@@ -240,7 +249,7 @@ class ManifestEntry {
  * If the actual manifest data comes from an InMemoryManifest, then the life
  * time of that InMemoryManifest is managed elsewhere, and is unaffected by the
  * existence of Manifest objects that view into it.
- **/
+ */
 class Manifest {
   private:
     PythonObj _rawobj;
@@ -278,9 +287,10 @@ class Manifest {
       return !this->_rawobj && !this->_memmanifest;
     }
 
-    /* Returns the first ManifestEntry in this manifest. The nextentry function
+    /**
+     * Returns the first ManifestEntry in this manifest. The nextentry function
      * can then be used to continue iterating.
-     **/
+     */
     ManifestEntry firstentry() const {
       InMemoryManifest *child = NULL;
       if (this->_memmanifest) {
@@ -292,9 +302,10 @@ class Manifest {
       return ManifestEntry(this->_firstentry, 0, child);
     }
 
-    /* Returns the ManifestEntry that follows the provided entry. If we're at
+    /**
+     * Returns the ManifestEntry that follows the provided entry. If we're at
      * the end of the chain an error is thrown.
-     **/
+     */
     ManifestEntry nextentry(const ManifestEntry &entry) const {
       if (this->islastentry(entry)) {
         throw std::logic_error("called nextentry on the last entry");
@@ -312,16 +323,19 @@ class Manifest {
       return ManifestEntry(entry.nextentrystart, index, child);
     }
 
-    /* Returns true if the given ManifestEntry is the last entry in this
+    /**
+     * Returns true if the given ManifestEntry is the last entry in this
      * Manifest.
-     **/
+     */
     bool islastentry(const ManifestEntry &entry) const {
       return entry.nextentrystart >= this->_firstentry + this->_rawsize;
     }
 };
 
-/* Class that represents an iterator over the entries of an individual manifest.
- **/
+/**
+ * Class that represents an iterator over the entries of an individual
+ * manifest.
+ */
 class ManifestIterator {
   private:
     Manifest _manifest;
@@ -363,8 +377,9 @@ class ManifestIterator {
     }
 };
 
-/* Class used to obtain Manifests, given a path and node.
- **/
+/**
+ * Class used to obtain Manifests, given a path and node.
+ */
 class ManifestFetcher {
   private:
     PythonObj _get;
@@ -373,10 +388,10 @@ class ManifestFetcher {
       _get(store.getattr("get")) {
     }
 
-  /*
+  /**
    * Fetches the Manifest from the store for the provided manifest key.
    * Returns the manifest if found, or throws an exception if not found.
-   **/
+   */
   Manifest get(const manifestkey &key) const {
     if (key.memmanifest) {
       return Manifest(key.memmanifest);
@@ -401,9 +416,9 @@ class ManifestFetcher {
   }
 };
 
-/*
+/**
  * A single instance of a treemanifest.
- * */
+ */
 struct treemanifest {
   PyObject_HEAD;
 
@@ -417,9 +432,9 @@ struct treemanifest {
   InMemoryManifest *root;
 };
 
-/*
+/**
  * Represents a single stack frame in an iteration of the contents of the tree.
- **/
+ */
 struct stackframe {
   Manifest manifest;
   ManifestIterator iterator;
@@ -430,9 +445,9 @@ struct stackframe {
   }
 };
 
-/*
+/**
  * A helper struct representing the state of an iterator recursing over a tree.
- * */
+ */
 struct stackiter {
   // FIXME: This should be a reference to the C++ tree object, not the python
   // tree object.
@@ -468,11 +483,11 @@ struct stackiter {
   }
 };
 
-/*
+/**
  * The python iteration object for iterating over a tree.  This is separate from
  * the stackiter above because it lets us just call the constructor on
  * stackiter, which will automatically populate all the members of stackiter.
- * */
+ */
 struct fileiter {
   PyObject_HEAD;
   stackiter iter;
@@ -521,9 +536,9 @@ static PyTypeObject fileiterType = {
   (iternextfunc)fileiter_iterentriesnext, /* tp_iternext: next() method */
 };
 
-/*
+/**
  * Converts a given 20-byte node into a 40-byte hex string
- * */
+ */
 static string binfromhex(const char *node) {
   char binary[20];
   for (int i = 0; i < 40;) {
@@ -536,9 +551,10 @@ static string binfromhex(const char *node) {
 
 // ==== treemanifest functions ====
 
-/* Implementation of treemanifest.__iter__
+/**
+ * Implementation of treemanifest.__iter__
  * Returns a PyObject iterator instance.
- * */
+ */
 static PyObject *treemanifest_getkeysiter(treemanifest *self) {
   fileiter *i = PyObject_New(fileiter, &fileiterType);
   if (i) {
@@ -606,8 +622,9 @@ class PathIterator {
     }
 };
 
-/* Constructs a result python tuple of the given diff data.
- * */
+/**
+ * Constructs a result python tuple of the given diff data.
+ */
 static PythonObj treemanifest_diffentry(const string *anode, const char *aflag,
                                         const string *bnode, const char *bflag) {
   int aflaglen = 1;
@@ -627,9 +644,10 @@ static PythonObj treemanifest_diffentry(const string *anode, const char *aflag,
   return result;
 }
 
-/* Simple class for representing a single diff between two files in the
+/**
+ * Simple class for representing a single diff between two files in the
  * manifest.
- * */
+ */
 class DiffEntry {
   private:
     const string *selfnode;
@@ -654,8 +672,9 @@ class DiffEntry {
     }
 };
 
-/* Helper function that performs the actual recursion on the tree entries.
- * */
+/**
+ * Helper function that performs the actual recursion on the tree entries.
+ */
 static void treemanifest_diffrecurse(manifestkey *selfkey, manifestkey *otherkey,
                                      const PythonObj &diff, const ManifestFetcher &fetcher) {
   Manifest selfmf;
@@ -880,10 +899,11 @@ static void _treemanifest_find(const string &filename, const manifestkey &root,
   }
 }
 
-/* Implementation of treemanifest.find()
+/**
+ * Implementation of treemanifest.find()
  * Takes a filename and returns a tuple of the binary hash and flag,
  * or (None, None) if it doesn't exist.
- * */
+ */
 static PyObject *treemanifest_find(PyObject *o, PyObject *args) {
   treemanifest *self = (treemanifest*)o;
   char *filename;
@@ -922,7 +942,7 @@ static PyObject *treemanifest_find(PyObject *o, PyObject *args) {
 
 /*
  * Deallocates the contents of the treemanifest
- * */
+ */
 static void treemanifest_dealloc(treemanifest *self){
   self->node.~string();
   self->store.~PythonObj();
@@ -931,7 +951,7 @@ static void treemanifest_dealloc(treemanifest *self){
 
 /*
  * Initializes the contents of a treemanifest
- * */
+ */
 static int treemanifest_init(treemanifest *self, PyObject *args) {
   PyObject *store;
   char *node;
@@ -958,20 +978,22 @@ static int treemanifest_init(treemanifest *self, PyObject *args) {
 
 // ==== fileiter functions ====
 
-/* Destructor for the file iterator. Cleans up all the member data of the
+/**
+ * Destructor for the file iterator. Cleans up all the member data of the
  * iterator.
- * */
+ */
 static void fileiter_dealloc(fileiter *self) {
   self->iter.~stackiter();
   Py_XDECREF(self->treemf);
   PyObject_Del(self);
 }
 
-/* Pops the data and location entries on the iter stack, for all stack entries
+/**
+ * Pops the data and location entries on the iter stack, for all stack entries
  * that we've already fully processed.
  *
  * Returns false if we've reached the end, or true if there's more work.
- * */
+ */
 static bool fileiter_popfinished(stackiter *iter) {
   stackframe *frame = &iter->frames.back();
 
@@ -997,8 +1019,9 @@ static bool fileiter_popfinished(stackiter *iter) {
   return true;
 }
 
-/* Returns the next object in the iteration.
- * */
+/**
+ * Returns the next object in the iteration.
+ */
 static PyObject *fileiter_iterentriesnext(fileiter *self) {
   stackiter &iter = self->iter;
 
