@@ -12,7 +12,7 @@
   setup.py not using absolute_import
   tests/test-demandimport.py not using absolute_import
 
-#if py3exe
+#if py3exe py3pygments
   $ hg files 'set:(**.py)' | sed 's|\\|/|g' | xargs $PYTHON3 contrib/check-py3-compat.py
   doc/hgmanpage.py: invalid syntax: invalid syntax (<unknown>, line *) (glob)
   hgext/acl.py: error importing: <TypeError> str expected, not bytes (error at encoding.py:*) (glob)
@@ -48,7 +48,7 @@
   hgext/gpg.py: error importing: <TypeError> str expected, not bytes (error at encoding.py:*) (glob)
   hgext/graphlog.py: error importing: <TypeError> str expected, not bytes (error at encoding.py:*) (glob)
   hgext/hgk.py: error importing: <TypeError> str expected, not bytes (error at encoding.py:*) (glob)
-  hgext/highlight/highlight.py: error importing module: <ImportError> No module named 'pygments' (line 13)
+  hgext/highlight/highlight.py: error importing: <TypeError> str expected, not bytes (error at encoding.py:*) (glob)
   hgext/histedit.py: error importing: <TypeError> str expected, not bytes (error at encoding.py:*) (glob)
   hgext/journal.py: error importing: <TypeError> str expected, not bytes (error at encoding.py:*) (glob)
   hgext/keyword.py: error importing: <TypeError> str expected, not bytes (error at encoding.py:*) (glob)

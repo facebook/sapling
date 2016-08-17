@@ -544,6 +544,16 @@ def has_py3k():
 def has_python3exe():
     return 'PYTHON3' in os.environ
 
+@check("py3pygments", "Pygments available on Python 3.x")
+def has_py3pygments():
+    if has_py3k():
+        return has_pygments()
+    elif has_python3exe():
+        # just check exit status (ignoring output)
+        py3 = os.environ['PYTHON3']
+        return matchoutput('%s -c "import pygments"' % py3, br'')
+    return False
+
 @check("pure", "running with pure Python code")
 def has_pure():
     return any([
