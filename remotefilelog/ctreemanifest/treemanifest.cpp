@@ -844,7 +844,11 @@ static void _treemanifest_find(const string &filename, const manifestkey &root,
           // If it's a file, it's our result
           if (!entry.isdirectory()) {
             resultnode->assign(binfromhex(entry.node));
-            *resultflag = *entry.flag;
+            if (entry.flag == NULL) {
+              *resultflag = '\0';
+            } else {
+              *resultflag = *entry.flag;
+            }
             return;
           } else {
             // Found a directory when expecting a file - give up
@@ -909,7 +913,7 @@ static PyObject *treemanifest_find(PyObject *o, PyObject *args) {
     return Py_BuildValue("s#s#", NULL, (Py_ssize_t)0, NULL, (Py_ssize_t)0);
   } else {
     int flaglen = 0;
-    if (resultflag != '\n') {
+    if (resultflag != '\0') {
       flaglen = 1;
     }
     return Py_BuildValue("s#s#", resultnode.c_str(), (Py_ssize_t)resultnode.length(), &resultflag, (Py_ssize_t)flaglen);
