@@ -43,6 +43,17 @@ An extension that adds the 'hg amend --rebase' command. When working with a stac
 
 If 'hg amend' is run on a commit in the middle of a stack without using --rebase, the amend succeeds and the old version of the commit is left behind with a marker bookmark on it 'bookmarkname(preamend)'. The user can then run 'hg amend --fixup' to post-humously rebase the children onto the new version of the commit.
 
+uncommit
+========
+Adds a 'hg uncommit' command, which undoes the effect of a local commit. This allows you to either undo a mistake,
+or remove files from a commit which weren't intended for it.
+
+By default it uncommits all the files, and completely hides the changeset. However, if filenames are specified then
+it will create a new changeset excluding those files and leave the files in a dirty state in the working dir. In all cases, files are left unchanged in the working dir, so other local changes are unaffected.
+
+Uncommit does work in the middle of a stack of changes (possibly creating a new head), but cannot be used to undo
+a merge changeset.
+
 chistedit
 ==========
 An interactive ncurses interface to histedit.
