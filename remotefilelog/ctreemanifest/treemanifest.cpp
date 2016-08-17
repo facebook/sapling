@@ -434,8 +434,8 @@ struct stackframe {
  * A helper struct representing the state of an iterator recursing over a tree.
  * */
 struct stackiter {
-  // A reference to the tree is kept, so it is not freed while we're iterating
-  // over it.
+  // FIXME: This should be a reference to the C++ tree object, not the python
+  // tree object.
   const treemanifest *treemf;
   ManifestFetcher fetcher;      // Instance to fetch tree content
   std::vector<stackframe> frames;
@@ -444,7 +444,7 @@ struct stackiter {
   stackiter(const treemanifest *treemf, ManifestFetcher fetcher) :
     treemf(treemf),
     fetcher(fetcher) {
-      Py_INCREF(this->treemf);
+
   }
 
   stackiter(const stackiter &old) :
@@ -453,10 +453,6 @@ struct stackiter {
     frames(old.frames),
     path(old.path) {
       Py_INCREF(this->treemf);
-  }
-
-  ~stackiter() {
-    Py_DECREF(this->treemf);
   }
 
   stackiter& operator=(const stackiter &other) {
@@ -480,6 +476,10 @@ struct stackiter {
 struct fileiter {
   PyObject_HEAD;
   stackiter iter;
+
+  // A reference to the tree is kept, so it is not freed while we're iterating
+  // over it.
+  const treemanifest *treemf;
 
   fileiter(const treemanifest *treemanifest, ManifestFetcher fetcher) :
     iter(treemanifest, fetcher) {
@@ -543,6 +543,9 @@ static PyObject *treemanifest_getkeysiter(treemanifest *self) {
   fileiter *i = PyObject_New(fileiter, &fileiterType);
   if (i) {
     try {
+      i->treemf = self;
+      Py_INCREF(i->treemf);
+
       ManifestFetcher fetcher(self->store);
       // The provided fileiter struct hasn't initialized our stackiter member, so
       // we do it manually.
@@ -956,6 +959,7 @@ static int treemanifest_init(treemanifest *self, PyObject *args) {
  * */
 static void fileiter_dealloc(fileiter *self) {
   self->iter.~stackiter();
+  Py_XDECREF(self->treemf);
   PyObject_Del(self);
 }
 
