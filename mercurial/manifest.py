@@ -908,6 +908,7 @@ class manifest(revlog.revlog):
             usetreemanifest = opts.get('treemanifest', usetreemanifest)
             usemanifestv2 = opts.get('manifestv2', usemanifestv2)
         self._mancache = util.lrucachedict(cachesize)
+        self._fulltextcache = util.lrucachedict(cachesize)
         self._treeinmem = usetreemanifest
         self._treeondisk = usetreemanifest
         self._usemanifestv2 = usemanifestv2
@@ -1000,7 +1001,7 @@ class manifest(revlog.revlog):
         if node == revlog.nullid:
             return self._newmanifest() # don't upset local cache
         if node in self._mancache:
-            return self._mancache[node][0]
+            return self._mancache[node]
         if self._treeondisk:
             def gettext():
                 return self.revision(node)
@@ -1014,7 +1015,8 @@ class manifest(revlog.revlog):
             text = self.revision(node)
             m = self._newmanifest(text)
             arraytext = array.array('c', text)
-        self._mancache[node] = (m, arraytext)
+        self._mancache[node] = m
+        self._fulltextcache[node] = arraytext
         return m
 
     def readshallow(self, node):
@@ -1034,7 +1036,7 @@ class manifest(revlog.revlog):
             return None, None
 
     def add(self, m, transaction, link, p1, p2, added, removed):
-        if (p1 in self._mancache and not self._treeinmem
+        if (p1 in self._fulltextcache and not self._treeinmem
             and not self._usemanifestv2):
             # If our first parent is in the manifest cache, we can
             # compute a delta here using properties we know about the
@@ -1046,7 +1048,7 @@ class manifest(revlog.revlog):
             work = heapq.merge([(x, False) for x in added],
                                [(x, True) for x in removed])
 
-            arraytext, deltatext = m.fastdelta(self._mancache[p1][1], work)
+            arraytext, deltatext = m.fastdelta(self._fulltextcache[p1], work)
             cachedelta = self.rev(p1), deltatext
             text = util.buffer(arraytext)
             n = self.addrevision(text, transaction, link, p1, p2, cachedelta)
@@ -1065,7 +1067,8 @@ class manifest(revlog.revlog):
                 n = self.addrevision(text, transaction, link, p1, p2)
                 arraytext = array.array('c', text)
 
-        self._mancache[n] = (m, arraytext)
+        self._mancache[n] = m
+        self._fulltextcache[n] = arraytext
 
         return n
 
@@ -1092,5 +1095,6 @@ class manifest(revlog.revlog):
 
     def clearcaches(self):
         super(manifest, self).clearcaches()
+        self._fulltextcache.clear()
         self._mancache.clear()
         self._dirlogcache = {'': self}

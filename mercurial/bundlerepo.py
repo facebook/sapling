@@ -205,7 +205,7 @@ class bundlemanifest(bundlerevlog, manifest.manifest):
             node = self.node(node)
 
         if node in self._mancache:
-            result = self._mancache[node][0].text()
+            result = self._mancache[node].text()
         else:
             result = manifest.manifest.revision(self, nodeorrev)
         return result
