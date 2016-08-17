@@ -104,7 +104,7 @@ class PythonObj {
     }
 
     /**
-     * Get's the attribute from the python object.
+     * Invokes getattr to retrieve the attribute from the python object.
      */
     PythonObj getattr(const char *name) {
       return PyObject_GetAttrString(this->obj, name);
@@ -115,7 +115,7 @@ class Manifest;
 
 /**
  * Class representing the contents of an in memory manifest (versus one that
- * came from the data store). Each in memory instance is the owner of it's
+ * came from the data store). Each in memory instance is the owner of its
  * children in-memory manifests and will delete them during destruction.
  */
 class InMemoryManifest {
@@ -304,7 +304,7 @@ class Manifest {
 
     /**
      * Returns the ManifestEntry that follows the provided entry. If we're at
-     * the end of the chain an error is thrown.
+     * the end of the chain, an error is thrown.
      */
     ManifestEntry nextentry(const ManifestEntry &entry) const {
       if (this->islastentry(entry)) {
