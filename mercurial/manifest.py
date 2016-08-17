@@ -922,17 +922,23 @@ class manifestlog(object):
     of the list of files in the given commit. Consumers of the output of this
     class do not care about the implementation details of the actual manifests
     they receive (i.e. tree or flat or lazily loaded, etc)."""
-    def __init__(self, opener, oldmanifest):
-        self._revlog = oldmanifest
+    def __init__(self, opener, repo):
+        self._repo = repo
 
         # We'll separate this into it's own cache once oldmanifest is no longer
         # used
-        self._mancache = oldmanifest._mancache
+        self._mancache = repo.manifest._mancache
 
+    @property
+    def _revlog(self):
+        return self._repo.manifest
+
+    @property
+    def _oldmanifest(self):
         # _revlog is the same as _oldmanifest right now, but we eventually want
         # to delete _oldmanifest while still allowing manifestlog to access the
         # revlog specific apis.
-        self._oldmanifest = oldmanifest
+        return self._repo.manifest
 
     def __getitem__(self, node):
         """Retrieves the manifest instance for the given node. Throws a KeyError
