@@ -914,6 +914,70 @@ class manifestrevlog(revlog.revlog):
         super(manifestrevlog, self).clearcaches()
         self._fulltextcache.clear()
 
+class manifestlog(object):
+    """A collection class representing the collection of manifest snapshots
+    referenced by commits in the repository.
+
+    In this situation, 'manifest' refers to the abstract concept of a snapshot
+    of the list of files in the given commit. Consumers of the output of this
+    class do not care about the implementation details of the actual manifests
+    they receive (i.e. tree or flat or lazily loaded, etc)."""
+    def __init__(self, opener, oldmanifest):
+        self._revlog = oldmanifest
+
+        # We'll separate this into it's own cache once oldmanifest is no longer
+        # used
+        self._mancache = oldmanifest._mancache
+
+        # _revlog is the same as _oldmanifest right now, but we eventually want
+        # to delete _oldmanifest while still allowing manifestlog to access the
+        # revlog specific apis.
+        self._oldmanifest = oldmanifest
+
+    def __getitem__(self, node):
+        """Retrieves the manifest instance for the given node. Throws a KeyError
+        if not found.
+        """
+        if (self._oldmanifest._treeondisk
+            or self._oldmanifest._treeinmem):
+            # TODO: come back and support tree manifests directly
+            return self._oldmanifest.read(node)
+
+        if node == revlog.nullid:
+            return manifestdict()
+        if node in self._mancache:
+            cachemf = self._mancache[node]
+            # The old manifest may put non-ctx manifests in the cache, so skip
+            # those since they don't implement the full api.
+            if isinstance(cachemf, manifestctx):
+                return cachemf
+
+        m = manifestctx(self._revlog, node)
+        self._mancache[node] = m
+        return m
+
+class manifestctx(manifestdict):
+    """A class representing a single revision of a manifest, including its
+    contents, its parent revs, and its linkrev.
+    """
+    def __init__(self, revlog, node):
+        self._revlog = revlog
+
+        self._node = node
+        self.p1, self.p2 = revlog.parents(node)
+        rev = revlog.rev(node)
+        self.linkrev = revlog.linkrev(rev)
+
+        # This should eventually be made lazy loaded, so consumers can access
+        # the node/p1/linkrev data without having to parse the whole manifest.
+        data = revlog.revision(node)
+        arraytext = array.array('c', data)
+        revlog._fulltextcache[node] = arraytext
+        super(manifestctx, self).__init__(data)
+
+    def node(self):
+        return self._node
+
 class manifest(manifestrevlog):
     def __init__(self, opener, dir='', dirlogcache=None):
         '''The 'dir' and 'dirlogcache' arguments are for internal use by
