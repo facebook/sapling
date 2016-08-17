@@ -8,25 +8,27 @@ test --time
 
 test --profile
 
-  $ hg --profile st 2>../out
+  $ prof='hg --config profiling.type=ls --profile'
+
+  $ $prof st 2>../out
   $ grep CallCount ../out > /dev/null || cat ../out
 
-  $ hg --profile --config profiling.output=../out st
+  $ $prof --config profiling.output=../out st
   $ grep CallCount ../out > /dev/null || cat ../out
 
-  $ hg --profile --config profiling.output=blackbox --config extensions.blackbox= st
+  $ $prof --config profiling.output=blackbox --config extensions.blackbox= st
   $ grep CallCount .hg/blackbox.log > /dev/null || cat .hg/blackbox.log
 
-  $ hg --profile --config profiling.format=text st 2>../out
+  $ $prof --config profiling.format=text st 2>../out
   $ grep CallCount ../out > /dev/null || cat ../out
 
   $ echo "[profiling]" >> $HGRCPATH
   $ echo "format=kcachegrind" >> $HGRCPATH
 
-  $ hg --profile st 2>../out
+  $ $prof st 2>../out
   $ grep 'events: Ticks' ../out > /dev/null || cat ../out
 
-  $ hg --profile --config profiling.output=../out st
+  $ $prof --config profiling.output=../out st
   $ grep 'events: Ticks' ../out > /dev/null || cat ../out
 
 #endif
@@ -35,7 +37,7 @@ test --profile
 
 Profiling of HTTP requests works
 
-  $ hg --profile --config profiling.format=text --config profiling.output=../profile.log serve -d -p $HGPORT --pid-file ../hg.pid -A ../access.log
+  $ $prof --config profiling.format=text --config profiling.output=../profile.log serve -d -p $HGPORT --pid-file ../hg.pid -A ../access.log
   $ cat ../hg.pid >> $DAEMON_PIDS
   $ hg -q clone -U http://localhost:$HGPORT ../clone
 
