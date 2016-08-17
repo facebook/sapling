@@ -890,7 +890,31 @@ class treemanifest(object):
                 subp1, subp2 = subp2, subp1
             writesubtree(subm, subp1, subp2)
 
-class manifest(revlog.revlog):
+class manifestrevlog(revlog.revlog):
+    '''A revlog that stores manifest texts. This is responsible for caching the
+    full-text manifest contents.
+    '''
+    def __init__(self, opener, indexfile):
+        super(manifestrevlog, self).__init__(opener, indexfile)
+
+        # During normal operations, we expect to deal with not more than four
+        # revs at a time (such as during commit --amend). When rebasing large
+        # stacks of commits, the number can go up, hence the config knob below.
+        cachesize = 4
+        opts = getattr(opener, 'options', None)
+        if opts is not None:
+            cachesize = opts.get('manifestcachesize', cachesize)
+        self._fulltextcache = util.lrucachedict(cachesize)
+
+    @property
+    def fulltextcache(self):
+        return self._fulltextcache
+
+    def clearcaches(self):
+        super(manifestrevlog, self).clearcaches()
+        self._fulltextcache.clear()
+
+class manifest(manifestrevlog):
     def __init__(self, opener, dir='', dirlogcache=None):
         '''The 'dir' and 'dirlogcache' arguments are for internal use by
         manifest.manifest only. External users should create a root manifest
@@ -908,7 +932,6 @@ class manifest(revlog.revlog):
             usetreemanifest = opts.get('treemanifest', usetreemanifest)
             usemanifestv2 = opts.get('manifestv2', usemanifestv2)
         self._mancache = util.lrucachedict(cachesize)
-        self._fulltextcache = util.lrucachedict(cachesize)
         self._treeinmem = usetreemanifest
         self._treeondisk = usetreemanifest
         self._usemanifestv2 = usemanifestv2
@@ -918,7 +941,7 @@ class manifest(revlog.revlog):
             if not dir.endswith('/'):
                 dir = dir + '/'
             indexfile = "meta/" + dir + "00manifest.i"
-        revlog.revlog.__init__(self, opener, indexfile)
+        super(manifest, self).__init__(opener, indexfile)
         self._dir = dir
         # The dirlogcache is kept on the root manifest log
         if dir:
@@ -1016,7 +1039,7 @@ class manifest(revlog.revlog):
             m = self._newmanifest(text)
             arraytext = array.array('c', text)
         self._mancache[node] = m
-        self._fulltextcache[node] = arraytext
+        self.fulltextcache[node] = arraytext
         return m
 
     def readshallow(self, node):
@@ -1036,7 +1059,7 @@ class manifest(revlog.revlog):
             return None, None
 
     def add(self, m, transaction, link, p1, p2, added, removed):
-        if (p1 in self._fulltextcache and not self._treeinmem
+        if (p1 in self.fulltextcache and not self._treeinmem
             and not self._usemanifestv2):
             # If our first parent is in the manifest cache, we can
             # compute a delta here using properties we know about the
@@ -1048,7 +1071,7 @@ class manifest(revlog.revlog):
             work = heapq.merge([(x, False) for x in added],
                                [(x, True) for x in removed])
 
-            arraytext, deltatext = m.fastdelta(self._fulltextcache[p1], work)
+            arraytext, deltatext = m.fastdelta(self.fulltextcache[p1], work)
             cachedelta = self.rev(p1), deltatext
             text = util.buffer(arraytext)
             n = self.addrevision(text, transaction, link, p1, p2, cachedelta)
@@ -1068,7 +1091,7 @@ class manifest(revlog.revlog):
                 arraytext = array.array('c', text)
 
         self._mancache[n] = m
-        self._fulltextcache[n] = arraytext
+        self.fulltextcache[n] = arraytext
 
         return n
 
@@ -1095,6 +1118,5 @@ class manifest(revlog.revlog):
 
     def clearcaches(self):
         super(manifest, self).clearcaches()
-        self._fulltextcache.clear()
         self._mancache.clear()
         self._dirlogcache = {'': self}
