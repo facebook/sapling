@@ -27,6 +27,7 @@ from . import (
     revlog,
     scmutil,
     simplemerge,
+    streamclone,
 )
 
 release = lockmod.release
@@ -273,3 +274,22 @@ def _debugbundle2(ui, gen, all=None, **opts):
             version = part.params.get('version', '01')
             cg = changegroup.getunbundler(version, part, 'UN')
             _debugchangegroup(ui, cg, all=all, indent=4, **opts)
+
+@command('debugcreatestreamclonebundle', [], 'FILE')
+def debugcreatestreamclonebundle(ui, repo, fname):
+    """create a stream clone bundle file
+
+    Stream bundles are special bundles that are essentially archives of
+    revlog files. They are commonly used for cloning very quickly.
+    """
+    requirements, gen = streamclone.generatebundlev1(repo)
+    changegroup.writechunks(ui, gen, fname)
+
+    ui.write(_('bundle requirements: %s\n') % ', '.join(sorted(requirements)))
+
+@command('debugapplystreamclonebundle', [], 'FILE')
+def debugapplystreamclonebundle(ui, repo, fname):
+    """apply a stream clone bundle file"""
+    f = hg.openpath(ui, fname)
+    gen = exchange.readbundle(ui, f, fname)
+    gen.apply(repo)
