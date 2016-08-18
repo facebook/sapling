@@ -632,3 +632,48 @@ def debuggetbundle(ui, repopath, bundlepath, head=None, common=None, **opts):
     if bundletype not in bundle2.bundletypes:
         raise error.Abort(_('unknown bundle type specified with --type'))
     bundle2.writebundle(ui, bundle, bundlepath, bundletype)
+
+@command('debugignore', [], '[FILE]')
+def debugignore(ui, repo, *files, **opts):
+    """display the combined ignore pattern and information about ignored files
+
+    With no argument display the combined ignore pattern.
+
+    Given space separated file names, shows if the given file is ignored and
+    if so, show the ignore rule (file and line number) that matched it.
+    """
+    ignore = repo.dirstate._ignore
+    if not files:
+        # Show all the patterns
+        includepat = getattr(ignore, 'includepat', None)
+        if includepat is not None:
+            ui.write("%s\n" % includepat)
+        else:
+            raise error.Abort(_("no ignore patterns found"))
+    else:
+        for f in files:
+            nf = util.normpath(f)
+            ignored = None
+            ignoredata = None
+            if nf != '.':
+                if ignore(nf):
+                    ignored = nf
+                    ignoredata = repo.dirstate._ignorefileandline(nf)
+                else:
+                    for p in util.finddirs(nf):
+                        if ignore(p):
+                            ignored = p
+                            ignoredata = repo.dirstate._ignorefileandline(p)
+                            break
+            if ignored:
+                if ignored == nf:
+                    ui.write(_("%s is ignored\n") % f)
+                else:
+                    ui.write(_("%s is ignored because of "
+                               "containing folder %s\n")
+                             % (f, ignored))
+                ignorefile, lineno, line = ignoredata
+                ui.write(_("(ignore rule in %s, line %d: '%s')\n")
+                         % (ignorefile, lineno, line))
+            else:
+                ui.write(_("%s is not ignored\n") % f)
