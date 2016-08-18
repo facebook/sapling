@@ -999,12 +999,20 @@ def first(repo, subset, x):
     return limit(repo, subset, x)
 
 def _follow(repo, subset, x, name, followfirst=False):
-    l = getargs(x, 0, 1, _("%s takes no arguments or a pattern") % name)
+    l = getargs(x, 0, 2, _("%s takes no arguments or a pattern "
+                           "and an optional revset") % name)
     c = repo['.']
     if l:
         x = getstring(l[0], _("%s expected a pattern") % name)
+        rev = None
+        if len(l) >= 2:
+            rev = getset(repo, fullreposet(repo), l[1]).last()
+            if rev is None:
+                raise error.RepoLookupError(
+                        _("%s: starting revision set cannot be empty") % name)
+            c = repo[rev]
         matcher = matchmod.match(repo.root, repo.getcwd(), [x],
-                                 ctx=repo[None], default='path')
+                                 ctx=repo[rev], default='path')
 
         files = c.manifest().walk(matcher)
 
@@ -1019,20 +1027,20 @@ def _follow(repo, subset, x, name, followfirst=False):
 
     return subset & s
 
-@predicate('follow([pattern])', safe=True)
+@predicate('follow([pattern[, startrev]])', safe=True)
 def follow(repo, subset, x):
     """
     An alias for ``::.`` (ancestors of the working directory's first parent).
     If pattern is specified, the histories of files matching given
-    pattern is followed, including copies.
+    pattern in the revision given by startrev are followed, including copies.
     """
     return _follow(repo, subset, x, 'follow')
 
 @predicate('_followfirst', safe=True)
 def _followfirst(repo, subset, x):
-    # ``followfirst([pattern])``
-    # Like ``follow([pattern])`` but follows only the first parent of
-    # every revisions or files revisions.
+    # ``followfirst([pattern[, startrev]])``
+    # Like ``follow([pattern[, startrev]])`` but follows only the first parent
+    # of every revisions or files revisions.
     return _follow(repo, subset, x, '_followfirst', followfirst=True)
 
 @predicate('all()', safe=True)

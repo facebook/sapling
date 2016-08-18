@@ -717,6 +717,19 @@ log -r "follow('set:grep(b2)')"
   date:        Thu Jan 01 00:00:01 1970 +0000
   summary:     b2
   
+log -r "follow('set:grep(b2)', 4)"
+
+  $ hg up -qC 0
+  $ hg log -r "follow('set:grep(b2)', 4)"
+  changeset:   4:ddb82e70d1a1
+  tag:         tip
+  parent:      0:67e992f2c4f3
+  user:        test
+  date:        Thu Jan 01 00:00:01 1970 +0000
+  summary:     b2
+  
+  $ hg up -qC 4
+
 log -f -r null
 
   $ hg log -f -r null
