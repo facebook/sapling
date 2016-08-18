@@ -7,6 +7,7 @@
 
 from __future__ import absolute_import
 
+import operator
 import os
 import random
 
@@ -25,6 +26,7 @@ from . import (
     dagutil,
     error,
     exchange,
+    extensions,
     hg,
     localrepo,
     lock as lockmod,
@@ -523,3 +525,48 @@ def debugdiscovery(ui, repo, remoteurl="default", **opts):
                                                  opts.get('remote_head'))
         localrevs = opts.get('local_head')
         doit(localrevs, remoterevs)
+
+@command('debugextensions', commands.formatteropts, [], norepo=True)
+def debugextensions(ui, **opts):
+    '''show information about active extensions'''
+    exts = extensions.extensions(ui)
+    hgver = util.version()
+    fm = ui.formatter('debugextensions', opts)
+    for extname, extmod in sorted(exts, key=operator.itemgetter(0)):
+        isinternal = extensions.ismoduleinternal(extmod)
+        extsource = extmod.__file__
+        if isinternal:
+            exttestedwith = []  # never expose magic string to users
+        else:
+            exttestedwith = getattr(extmod, 'testedwith', '').split()
+        extbuglink = getattr(extmod, 'buglink', None)
+
+        fm.startitem()
+
+        if ui.quiet or ui.verbose:
+            fm.write('name', '%s\n', extname)
+        else:
+            fm.write('name', '%s', extname)
+            if isinternal or hgver in exttestedwith:
+                fm.plain('\n')
+            elif not exttestedwith:
+                fm.plain(_(' (untested!)\n'))
+            else:
+                lasttestedversion = exttestedwith[-1]
+                fm.plain(' (%s!)\n' % lasttestedversion)
+
+        fm.condwrite(ui.verbose and extsource, 'source',
+                 _('  location: %s\n'), extsource or "")
+
+        if ui.verbose:
+            fm.plain(_('  bundled: %s\n') % ['no', 'yes'][isinternal])
+        fm.data(bundled=isinternal)
+
+        fm.condwrite(ui.verbose and exttestedwith, 'testedwith',
+                     _('  tested with: %s\n'),
+                     fm.formatlist(exttestedwith, name='ver'))
+
+        fm.condwrite(ui.verbose and extbuglink, 'buglink',
+                 _('  bug reporting: %s\n'), extbuglink or "")
+
+    fm.end()
