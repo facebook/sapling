@@ -556,7 +556,7 @@ def _parse(ui, args):
         c.append((o[0], o[1], options[o[1]], o[3]))
 
     try:
-        args = fancyopts.fancyopts(args, c, cmdoptions, True)
+        args = fancyopts.fancyopts(args, c, cmdoptions, gnu=True)
     except fancyopts.getopt.GetoptError as inst:
         raise error.CommandError(cmd, inst)
 
