@@ -15,28 +15,11 @@
 #include <string>
 #include <vector>
 
+#include "convert.h"
+
 // this is necessary to explicitly call the destructor on clang compilers (see
 // https://llvm.org/bugs/show_bug.cgi?id=12350).
 using std::string;
-
-static int8_t hextable[256] = {
-	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-	 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, -1, -1, -1, -1, -1, -1, /* 0-9 */
-	-1, 10, 11, 12, 13, 14, 15, -1, -1, -1, -1, -1, -1, -1, -1, -1, /* A-F */
-	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-	-1, 10, 11, 12, 13, 14, 15, -1, -1, -1, -1, -1, -1, -1, -1, -1, /* a-f */
-	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1
-};
 
 /**
  * C++ exception that represents an issue at the python C api level.
@@ -535,19 +518,6 @@ static PyTypeObject fileiterType = {
   PyObject_SelfIter,               /* tp_iter: __iter__() method */
   (iternextfunc)fileiter_iterentriesnext, /* tp_iternext: next() method */
 };
-
-/**
- * Converts a given 20-byte node into a 40-byte hex string
- */
-static string binfromhex(const char *node) {
-  char binary[20];
-  for (int i = 0; i < 40;) {
-    int hi = hextable[(unsigned char)node[i++]];
-    int lo = hextable[(unsigned char)node[i++]];
-    binary[(i - 2) / 2] = (hi << 4) | lo;
-  }
-  return string(binary, 20);
-}
 
 // ==== treemanifest functions ====
 

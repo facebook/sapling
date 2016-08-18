@@ -17,4 +17,5 @@ New errors are not allowed. Warnings are strongly discouraged.
   Skipping remotefilelog/cdatapack/convert.h it has no-che?k-code (glob)
   Skipping remotefilelog/cdatapack/null_test.c it has no-che?k-code (glob)
   Skipping remotefilelog/cdatapack/py-cdatapack.c it has no-che?k-code (glob)
+  Skipping remotefilelog/ctreemanifest/convert.h it has no-che?k-code (glob)
   Skipping tests/test-bad-configs.t it has no-che?k-code (glob)
