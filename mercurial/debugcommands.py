@@ -14,11 +14,15 @@ from .node import (
     hex,
 )
 from . import (
+    bundle2,
+    changegroup,
     cmdutil,
     commands,
     context,
     dagparser,
     error,
+    exchange,
+    hg,
     lock as lockmod,
     revlog,
     scmutil,
@@ -201,3 +205,71 @@ def debugbuilddag(ui, repo, text=None,
     finally:
         ui.progress(_('building'), None)
         release(tr, lock, wlock)
+
+@command('debugbundle',
+        [('a', 'all', None, _('show all details')),
+         ('', 'spec', None, _('print the bundlespec of the bundle'))],
+        _('FILE'),
+        norepo=True)
+def debugbundle(ui, bundlepath, all=None, spec=None, **opts):
+    """lists the contents of a bundle"""
+    with hg.openpath(ui, bundlepath) as f:
+        if spec:
+            spec = exchange.getbundlespec(ui, f)
+            ui.write('%s\n' % spec)
+            return
+
+        gen = exchange.readbundle(ui, f, bundlepath)
+        if isinstance(gen, bundle2.unbundle20):
+            return _debugbundle2(ui, gen, all=all, **opts)
+        _debugchangegroup(ui, gen, all=all, **opts)
+
+def _debugchangegroup(ui, gen, all=None, indent=0, **opts):
+    indent_string = ' ' * indent
+    if all:
+        ui.write(("%sformat: id, p1, p2, cset, delta base, len(delta)\n")
+                 % indent_string)
+
+        def showchunks(named):
+            ui.write("\n%s%s\n" % (indent_string, named))
+            chain = None
+            for chunkdata in iter(lambda: gen.deltachunk(chain), {}):
+                node = chunkdata['node']
+                p1 = chunkdata['p1']
+                p2 = chunkdata['p2']
+                cs = chunkdata['cs']
+                deltabase = chunkdata['deltabase']
+                delta = chunkdata['delta']
+                ui.write("%s%s %s %s %s %s %s\n" %
+                         (indent_string, hex(node), hex(p1), hex(p2),
+                          hex(cs), hex(deltabase), len(delta)))
+                chain = node
+
+        chunkdata = gen.changelogheader()
+        showchunks("changelog")
+        chunkdata = gen.manifestheader()
+        showchunks("manifest")
+        for chunkdata in iter(gen.filelogheader, {}):
+            fname = chunkdata['filename']
+            showchunks(fname)
+    else:
+        if isinstance(gen, bundle2.unbundle20):
+            raise error.Abort(_('use debugbundle2 for this file'))
+        chunkdata = gen.changelogheader()
+        chain = None
+        for chunkdata in iter(lambda: gen.deltachunk(chain), {}):
+            node = chunkdata['node']
+            ui.write("%s%s\n" % (indent_string, hex(node)))
+            chain = node
+
+def _debugbundle2(ui, gen, all=None, **opts):
+    """lists the contents of a bundle2"""
+    if not isinstance(gen, bundle2.unbundle20):
+        raise error.Abort(_('not a bundle2 file'))
+    ui.write(('Stream params: %s\n' % repr(gen.params)))
+    for part in gen.iterparts():
+        ui.write('%s -- %r\n' % (part.type, repr(part.params)))
+        if part.type == 'changegroup':
+            version = part.params.get('version', '01')
+            cg = changegroup.getunbundler(version, part, 'UN')
+            _debugchangegroup(ui, cg, all=all, indent=4, **opts)
