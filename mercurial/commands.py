@@ -4397,20 +4397,20 @@ def grep(ui, repo, pattern, *pats, **opts):
         else:
             iter = [('', l) for l in states]
         for change, l in iter:
-            cols = [(fn, 'grep.filename'), (str(rev), 'grep.rev')]
+            cols = [(fn, 'filename'), (str(rev), 'rev')]
 
             if opts.get('line_number'):
-                cols.append((str(l.linenum), 'grep.linenumber'))
+                cols.append((str(l.linenum), 'linenumber'))
             if opts.get('all'):
-                cols.append((change, 'grep.change'))
+                cols.append((change, 'change'))
             if opts.get('user'):
-                cols.append((ui.shortuser(ctx.user()), 'grep.user'))
+                cols.append((ui.shortuser(ctx.user()), 'user'))
             if opts.get('date'):
-                cols.append((datefunc(ctx.date()), 'grep.date'))
-            for col, label in cols[:-1]:
-                ui.write(col, label=label)
+                cols.append((datefunc(ctx.date()), 'date'))
+            for col, field in cols[:-1]:
+                ui.write(col, label='grep.%s' % field)
                 ui.write(sep, label='grep.sep')
-            ui.write(cols[-1][0], label=cols[-1][1])
+            ui.write(cols[-1][0], label='grep.%s' % cols[-1][1])
             if not opts.get('files_with_matches'):
                 ui.write(sep, label='grep.sep')
                 if not opts.get('text') and binary():
