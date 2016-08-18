@@ -11,7 +11,6 @@ import difflib
 import errno
 import operator
 import os
-import random
 import re
 import shlex
 import socket
@@ -36,7 +35,6 @@ from . import (
     changegroup,
     cmdutil,
     copies,
-    dagutil,
     destutil,
     dirstateguard,
     discovery,
@@ -50,7 +48,6 @@ from . import (
     hbisect,
     help,
     hg,
-    localrepo,
     lock as lockmod,
     merge as mergemod,
     minirst,
@@ -65,13 +62,11 @@ from . import (
     revset,
     scmutil,
     server,
-    setdiscovery,
     sshserver,
     sslutil,
     streamclone,
     templatekw,
     templater,
-    treediscovery,
     ui as uimod,
     util,
 )
@@ -1864,72 +1859,6 @@ def copy(ui, repo, *pats, **opts):
     """
     with repo.wlock(False):
         return cmdutil.copy(ui, repo, pats, opts)
-
-@command('debugdiscovery',
-    [('', 'old', None, _('use old-style discovery')),
-    ('', 'nonheads', None,
-     _('use old-style discovery with non-heads included')),
-    ] + remoteopts,
-    _('[-l REV] [-r REV] [-b BRANCH]... [OTHER]'))
-def debugdiscovery(ui, repo, remoteurl="default", **opts):
-    """runs the changeset discovery protocol in isolation"""
-    remoteurl, branches = hg.parseurl(ui.expandpath(remoteurl),
-                                      opts.get('branch'))
-    remote = hg.peer(repo, opts, remoteurl)
-    ui.status(_('comparing with %s\n') % util.hidepassword(remoteurl))
-
-    # make sure tests are repeatable
-    random.seed(12323)
-
-    def doit(localheads, remoteheads, remote=remote):
-        if opts.get('old'):
-            if localheads:
-                raise error.Abort('cannot use localheads with old style '
-                                 'discovery')
-            if not util.safehasattr(remote, 'branches'):
-                # enable in-client legacy support
-                remote = localrepo.locallegacypeer(remote.local())
-            common, _in, hds = treediscovery.findcommonincoming(repo, remote,
-                                                                force=True)
-            common = set(common)
-            if not opts.get('nonheads'):
-                ui.write(("unpruned common: %s\n") %
-                         " ".join(sorted(short(n) for n in common)))
-                dag = dagutil.revlogdag(repo.changelog)
-                all = dag.ancestorset(dag.internalizeall(common))
-                common = dag.externalizeall(dag.headsetofconnecteds(all))
-        else:
-            common, any, hds = setdiscovery.findcommonheads(ui, repo, remote)
-        common = set(common)
-        rheads = set(hds)
-        lheads = set(repo.heads())
-        ui.write(("common heads: %s\n") %
-                 " ".join(sorted(short(n) for n in common)))
-        if lheads <= common:
-            ui.write(("local is subset\n"))
-        elif rheads <= common:
-            ui.write(("remote is subset\n"))
-
-    serverlogs = opts.get('serverlog')
-    if serverlogs:
-        for filename in serverlogs:
-            with open(filename, 'r') as logfile:
-                line = logfile.readline()
-                while line:
-                    parts = line.strip().split(';')
-                    op = parts[1]
-                    if op == 'cg':
-                        pass
-                    elif op == 'cgss':
-                        doit(parts[2].split(' '), parts[3].split(' '))
-                    elif op == 'unb':
-                        doit(parts[3].split(' '), parts[2].split(' '))
-                    line = logfile.readline()
-    else:
-        remoterevs, _checkout = hg.addbranchrevs(repo, remote, branches,
-                                                 opts.get('remote_head'))
-        localrevs = opts.get('local_head')
-        doit(localrevs, remoterevs)
 
 @command('debugextensions', formatteropts, [], norepo=True)
 def debugextensions(ui, **opts):
