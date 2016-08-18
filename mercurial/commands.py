@@ -4283,7 +4283,7 @@ def _dograft(ui, repo, *revs, **opts):
      _('only search files changed within revision range'), _('REV')),
     ('u', 'user', None, _('list the author (long with -v)')),
     ('d', 'date', None, _('list the date (short with -q)')),
-    ] + walkopts,
+    ] + formatteropts + walkopts,
     _('[OPTION]... PATTERN [FILE]...'),
     inferrepo=True)
 def grep(ui, repo, pattern, *pats, **opts):
@@ -4380,59 +4380,75 @@ def grep(ui, repo, pattern, *pats, **opts):
                 for i in xrange(blo, bhi):
                     yield ('+', b[i])
 
-    def display(fn, ctx, pstates, states):
+    def display(fm, fn, ctx, pstates, states):
         rev = ctx.rev()
-        if ui.quiet:
-            datefunc = util.shortdate
+        if fm:
+            formatuser = str
         else:
-            datefunc = util.datestr
+            formatuser = ui.shortuser
+        if ui.quiet:
+            datefmt = '%Y-%m-%d'
+        else:
+            datefmt = '%a %b %d %H:%M:%S %Y %1%2'
         found = False
         @util.cachefunc
         def binary():
             flog = getfile(fn)
             return util.binary(flog.read(ctx.filenode(fn)))
 
+        fieldnamemap = {'filename': 'file', 'linenumber': 'line_number'}
         if opts.get('all'):
             iter = difflinestates(pstates, states)
         else:
             iter = [('', l) for l in states]
         for change, l in iter:
+            fm.startitem()
+            fm.data(node=fm.hexfunc(ctx.node()))
             cols = [
                 ('filename', fn, True),
-                ('rev', str(rev), True),
-                ('linenumber', str(l.linenum), opts.get('line_number')),
+                ('rev', rev, True),
+                ('linenumber', l.linenum, opts.get('line_number')),
             ]
             if opts.get('all'):
                 cols.append(('change', change, True))
             cols.extend([
-                ('user', ui.shortuser(ctx.user()), opts.get('user')),
-                ('date', datefunc(ctx.date()), opts.get('date')),
+                ('user', formatuser(ctx.user()), opts.get('user')),
+                ('date', fm.formatdate(ctx.date(), datefmt), opts.get('date')),
             ])
             lastcol = next(name for name, data, cond in reversed(cols) if cond)
             for name, data, cond in cols:
-                if cond:
-                    ui.write(data, label='grep.%s' % name)
+                field = fieldnamemap.get(name, name)
+                fm.condwrite(cond, field, '%s', data, label='grep.%s' % name)
                 if cond and name != lastcol:
-                    ui.write(sep, label='grep.sep')
+                    fm.plain(sep, label='grep.sep')
             if not opts.get('files_with_matches'):
-                ui.write(sep, label='grep.sep')
+                fm.plain(sep, label='grep.sep')
                 if not opts.get('text') and binary():
-                    ui.write(_(" Binary file matches"))
+                    fm.plain(_(" Binary file matches"))
                 else:
-                    displaymatches(l)
-            ui.write(eol)
+                    displaymatches(fm.nested('texts'), l)
+            fm.plain(eol)
             found = True
             if opts.get('files_with_matches'):
                 break
         return found
 
-    def displaymatches(l):
+    def displaymatches(fm, l):
         p = 0
         for s, e in l.findpos():
-            ui.write(l.line[p:s])
-            ui.write(l.line[s:e], label='grep.match')
+            if p < s:
+                fm.startitem()
+                fm.write('text', '%s', l.line[p:s])
+                fm.data(matched=False)
+            fm.startitem()
+            fm.write('text', '%s', l.line[s:e], label='grep.match')
+            fm.data(matched=True)
             p = e
-        ui.write(l.line[p:])
+        if p < len(l.line):
+            fm.startitem()
+            fm.write('text', '%s', l.line[p:])
+            fm.data(matched=False)
+        fm.end()
 
     skip = {}
     revfiles = {}
@@ -4475,6 +4491,7 @@ def grep(ui, repo, pattern, *pats, **opts):
                 except error.LookupError:
                     pass
 
+    fm = ui.formatter('grep', opts)
     for ctx in cmdutil.walkchangerevs(repo, matchfn, opts, prep):
         rev = ctx.rev()
         parent = ctx.p1().rev()
@@ -4487,7 +4504,7 @@ def grep(ui, repo, pattern, *pats, **opts):
                 continue
             pstates = matches.get(parent, {}).get(copy or fn, [])
             if pstates or states:
-                r = display(fn, ctx, pstates, states)
+                r = display(fm, fn, ctx, pstates, states)
                 found = found or r
                 if r and not opts.get('all'):
                     skip[fn] = True
@@ -4495,6 +4512,7 @@ def grep(ui, repo, pattern, *pats, **opts):
                         skip[copy] = True
         del matches[rev]
         del revfiles[rev]
+    fm.end()
 
     return not found
 

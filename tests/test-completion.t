@@ -278,7 +278,7 @@ Show all commands + options
   debugwireargs: three, four, five, ssh, remotecmd, insecure
   files: rev, print0, include, exclude, template, subrepos
   graft: rev, continue, edit, log, force, currentdate, currentuser, date, user, tool, dry-run
-  grep: print0, all, text, follow, ignore-case, files-with-matches, line-number, rev, user, date, include, exclude
+  grep: print0, all, text, follow, ignore-case, files-with-matches, line-number, rev, user, date, template, include, exclude
   heads: rev, topo, active, closed, style, template
   help: extension, command, keyword, system
   identify: rev, num, id, branch, tags, bookmarks, ssh, remotecmd, insecure
