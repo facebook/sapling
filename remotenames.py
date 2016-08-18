@@ -74,7 +74,38 @@ def expushop(orig, pushop, repo, remote, force=False, revs=None,
         setattr(pushop, flag, kwargs.get(flag))
 
 def expull(orig, repo, remote, *args, **kwargs):
-    bookmarks = remote.listkeys('bookmarks')
+    isselectivepull = repo.ui.configbool('remotenames', 'selectivepull', False)
+    remotebookmarks = remote.listkeys('bookmarks')
+    if isselectivepull:
+        path = activepath(repo.ui, remote)
+        bookmarks = {}
+        for bookmark in readbookmarknames(repo, path):
+            if bookmark in remotebookmarks:
+                bookmarks[bookmark] = remotebookmarks[bookmark]
+        if not bookmarks:
+            default_book = repo.ui.config('remotenames', 'selectivepulldefault')
+            if not default_book:
+                raise error.Abort(
+                    _('no default bookmark specified for selectivepull'))
+            if default_book in remotebookmarks:
+                bookmarks = {default_book: remotebookmarks[default_book]}
+            else:
+                raise error.Abort(
+                    _('default bookmark %s is not found on remote') %
+                    default_book)
+
+        if kwargs.get('bookmarks'):
+            for bookmark in kwargs['bookmarks']:
+                bookmarks[bookmark] = remotebookmarks[bookmark]
+        else:
+            heads = kwargs.get('heads') or []
+            for bookmark in bookmarks:
+                heads.append(remote.lookup(remotebookmarks[bookmark]))
+            kwargs['bookmarks'] = bookmarks
+            kwargs['heads'] = heads
+    else:
+        bookmarks = remotebookmarks
+
     res = orig(repo, remote, *args, **kwargs)
     pullremotenames(repo, remote, bookmarks)
     return res
@@ -1238,6 +1269,11 @@ def shareawarevfs(repo):
         return scmutil.vfs(repo.sharedpath)
     else:
         return repo.vfs
+
+def readbookmarknames(repo, remote):
+    for node, nametype, remotename, rname in readremotenames(repo):
+        if nametype == 'bookmarks' and remotename == remote:
+            yield rname
 
 def readremotenames(repo):
     vfs = shareawarevfs(repo)
