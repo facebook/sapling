@@ -1865,22 +1865,6 @@ def copy(ui, repo, *pats, **opts):
     with repo.wlock(False):
         return cmdutil.copy(ui, repo, pats, opts)
 
-@command('debugdate',
-    [('e', 'extended', None, _('try extended date formats'))],
-    _('[-e] DATE [RANGE]'),
-    norepo=True, optionalrepo=True)
-def debugdate(ui, date, range=None, **opts):
-    """parse and display a date"""
-    if opts["extended"]:
-        d = util.parsedate(date, util.extendeddateformats)
-    else:
-        d = util.parsedate(date)
-    ui.write(("internal: %s %s\n") % d)
-    ui.write(("standard: %s\n") % util.datestr(d))
-    if range:
-        m = util.matchdate(range)
-        ui.write(("match: %s\n") % m(d[0]))
-
 @command('debugdiscovery',
     [('', 'old', None, _('use old-style discovery')),
     ('', 'nonheads', None,

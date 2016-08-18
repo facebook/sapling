@@ -28,6 +28,7 @@ from . import (
     scmutil,
     simplemerge,
     streamclone,
+    util,
 )
 
 release = lockmod.release
@@ -434,3 +435,19 @@ def debugdata(ui, repo, file_, rev=None, **opts):
         ui.write(r.revision(r.lookup(rev)))
     except KeyError:
         raise error.Abort(_('invalid revision identifier %s') % rev)
+
+@command('debugdate',
+    [('e', 'extended', None, _('try extended date formats'))],
+    _('[-e] DATE [RANGE]'),
+    norepo=True, optionalrepo=True)
+def debugdate(ui, date, range=None, **opts):
+    """parse and display a date"""
+    if opts["extended"]:
+        d = util.parsedate(date, util.extendeddateformats)
+    else:
+        d = util.parsedate(date)
+    ui.write(("internal: %s %s\n") % d)
+    ui.write(("standard: %s\n") % util.datestr(d))
+    if range:
+        m = util.matchdate(range)
+        ui.write(("match: %s\n") % m(d[0]))
