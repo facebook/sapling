@@ -26,6 +26,7 @@ from . import (
     error,
     exchange,
     extensions,
+    fileset,
     hg,
     localrepo,
     lock as lockmod,
@@ -571,3 +572,16 @@ def debugextensions(ui, **opts):
                  _('  bug reporting: %s\n'), extbuglink or "")
 
     fm.end()
+
+@command('debugfileset',
+    [('r', 'rev', '', _('apply the filespec on this revision'), _('REV'))],
+    _('[-r REV] FILESPEC'))
+def debugfileset(ui, repo, expr, **opts):
+    '''parse and apply a fileset specification'''
+    ctx = scmutil.revsingle(repo, opts.get('rev'), None)
+    if ui.verbose:
+        tree = fileset.parse(expr)
+        ui.note(fileset.prettyformat(tree), "\n")
+
+    for f in ctx.getfileset(expr):
+        ui.write("%s\n" % f)

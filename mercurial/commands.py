@@ -41,7 +41,6 @@ from . import (
     error,
     exchange,
     extensions,
-    fileset,
     formatter,
     graphmod,
     hbisect,
@@ -1858,19 +1857,6 @@ def copy(ui, repo, *pats, **opts):
     """
     with repo.wlock(False):
         return cmdutil.copy(ui, repo, pats, opts)
-
-@command('debugfileset',
-    [('r', 'rev', '', _('apply the filespec on this revision'), _('REV'))],
-    _('[-r REV] FILESPEC'))
-def debugfileset(ui, repo, expr, **opts):
-    '''parse and apply a fileset specification'''
-    ctx = scmutil.revsingle(repo, opts.get('rev'), None)
-    if ui.verbose:
-        tree = fileset.parse(expr)
-        ui.note(fileset.prettyformat(tree), "\n")
-
-    for f in ctx.getfileset(expr):
-        ui.write("%s\n" % f)
 
 @command('debugfsinfo', [], _('[PATH]'), norepo=True)
 def debugfsinfo(ui, path="."):
