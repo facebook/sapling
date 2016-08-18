@@ -8,6 +8,7 @@
 from __future__ import absolute_import
 
 import operator
+import os
 import random
 
 from .i18n import _
@@ -585,3 +586,14 @@ def debugfileset(ui, repo, expr, **opts):
 
     for f in ctx.getfileset(expr):
         ui.write("%s\n" % f)
+
+@command('debugfsinfo', [], _('[PATH]'), norepo=True)
+def debugfsinfo(ui, path="."):
+    """show information detected about current filesystem"""
+    util.writefile('.debugfsinfo', '')
+    ui.write(('exec: %s\n') % (util.checkexec(path) and 'yes' or 'no'))
+    ui.write(('symlink: %s\n') % (util.checklink(path) and 'yes' or 'no'))
+    ui.write(('hardlink: %s\n') % (util.checknlink(path) and 'yes' or 'no'))
+    ui.write(('case-sensitive: %s\n') % (util.fscasesensitive('.debugfsinfo')
+                                and 'yes' or 'no'))
+    os.unlink('.debugfsinfo')
