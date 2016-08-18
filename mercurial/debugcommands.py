@@ -293,3 +293,31 @@ def debugapplystreamclonebundle(ui, repo, fname):
     f = hg.openpath(ui, fname)
     gen = exchange.readbundle(ui, f, fname)
     gen.apply(repo)
+
+@command('debugcheckstate', [], '')
+def debugcheckstate(ui, repo):
+    """validate the correctness of the current dirstate"""
+    parent1, parent2 = repo.dirstate.parents()
+    m1 = repo[parent1].manifest()
+    m2 = repo[parent2].manifest()
+    errors = 0
+    for f in repo.dirstate:
+        state = repo.dirstate[f]
+        if state in "nr" and f not in m1:
+            ui.warn(_("%s in state %s, but not in manifest1\n") % (f, state))
+            errors += 1
+        if state in "a" and f in m1:
+            ui.warn(_("%s in state %s, but also in manifest1\n") % (f, state))
+            errors += 1
+        if state in "m" and f not in m1 and f not in m2:
+            ui.warn(_("%s in state %s, but not in either manifest\n") %
+                    (f, state))
+            errors += 1
+    for f in m1:
+        state = repo.dirstate[f]
+        if state not in "nrm":
+            ui.warn(_("%s in manifest1, but listed as state %s") % (f, state))
+            errors += 1
+    if errors:
+        error = _(".hg/dirstate inconsistent with current parent's manifest")
+        raise error.Abort(error)
