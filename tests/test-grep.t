@@ -111,6 +111,12 @@ follow
   color:2:-:orange
   color:1:+:orange
 
+test substring match: '^' should only match at the beginning
+
+  $ hg grep '^.' --config extensions.color= --color debug
+  [grep.filename|color][grep.sep|:][grep.rev|3][grep.sep|:][grep.match|b]lack
+  [grep.filename|color][grep.sep|:][grep.rev|3][grep.sep|:][grep.match|o]range
+  [grep.filename|color][grep.sep|:][grep.rev|3][grep.sep|:][grep.match|b]lue
 
 match in last "line" without newline
 

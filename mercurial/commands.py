@@ -4345,19 +4345,24 @@ def grep(ui, repo, pattern, *pats, **opts):
         def __eq__(self, other):
             return self.line == other.line
 
-        def __iter__(self):
-            yield (self.line[:self.colstart], '')
-            yield (self.line[self.colstart:self.colend], 'grep.match')
-            rest = self.line[self.colend:]
-            while rest != '':
-                match = regexp.search(rest)
-                if not match:
-                    yield (rest, '')
+        def findpos(self):
+            """Iterate all (start, end) indices of matches"""
+            yield self.colstart, self.colend
+            p = self.colend
+            while p < len(self.line):
+                m = regexp.search(self.line, p)
+                if not m:
                     break
-                mstart, mend = match.span()
-                yield (rest[:mstart], '')
-                yield (rest[mstart:mend], 'grep.match')
-                rest = rest[mend:]
+                yield m.span()
+                p = m.end()
+
+        def __iter__(self):
+            p = 0
+            for s, e in self.findpos():
+                yield self.line[p:s], ''
+                yield self.line[s:e], 'grep.match'
+                p = e
+            yield self.line[p:], ''
 
     matches = {}
     copies = {}
