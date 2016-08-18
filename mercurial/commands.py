@@ -1865,21 +1865,6 @@ def copy(ui, repo, *pats, **opts):
     with repo.wlock(False):
         return cmdutil.copy(ui, repo, pats, opts)
 
-@command('debugdata', debugrevlogopts, _('-c|-m|FILE REV'))
-def debugdata(ui, repo, file_, rev=None, **opts):
-    """dump the contents of a data file revision"""
-    if opts.get('changelog') or opts.get('manifest') or opts.get('dir'):
-        if rev is not None:
-            raise error.CommandError('debugdata', _('invalid arguments'))
-        file_, rev = None, file_
-    elif rev is None:
-        raise error.CommandError('debugdata', _('invalid arguments'))
-    r = cmdutil.openrevlog(repo, 'debugdata', file_, opts)
-    try:
-        ui.write(r.revision(r.lookup(rev)))
-    except KeyError:
-        raise error.Abort(_('invalid revision identifier %s') % rev)
-
 @command('debugdate',
     [('e', 'extended', None, _('try extended date formats'))],
     _('[-e] DATE [RANGE]'),

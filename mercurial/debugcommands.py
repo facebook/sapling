@@ -419,3 +419,18 @@ def debugdag(ui, repo, file_=None, *revs, **opts):
                                        maxlinewidth=70):
         ui.write(line)
         ui.write("\n")
+
+@command('debugdata', commands.debugrevlogopts, _('-c|-m|FILE REV'))
+def debugdata(ui, repo, file_, rev=None, **opts):
+    """dump the contents of a data file revision"""
+    if opts.get('changelog') or opts.get('manifest') or opts.get('dir'):
+        if rev is not None:
+            raise error.CommandError('debugdata', _('invalid arguments'))
+        file_, rev = None, file_
+    elif rev is None:
+        raise error.CommandError('debugdata', _('invalid arguments'))
+    r = cmdutil.openrevlog(repo, 'debugdata', file_, opts)
+    try:
+        ui.write(r.revision(r.lookup(rev)))
+    except KeyError:
+        raise error.Abort(_('invalid revision identifier %s') % rev)
