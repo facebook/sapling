@@ -4,7 +4,7 @@
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
-from mercurial import cmdutil, manifest, scmutil
+from mercurial import cmdutil, error, manifest, scmutil
 from remotefilelog import datapack, contentstore
 import pdb, hashlib, time
 from fastmanifest.implementation import fastmanifestcache
@@ -25,7 +25,7 @@ def testpackedtrees(ui, repo, *args, **opts):
     opener = scmutil.vfs('/tmp/durhampack')
     if opts.get('build'):
         with datapack.mutabledatapack(opener) as newpack:
-            buildtreepack(repo, newpack,opts.get('build'))
+            buildtreepack(repo, newpack, opts.get('build'))
             newpack.close()
 
     packstore = datapack.datapackstore(opener.base,
@@ -56,7 +56,7 @@ def buildtreepack(repo, pack, revs):
     store = contentstore.unioncontentstore(cache, packstore)
     ctxs = list(repo.set(revs))
     for count, ctx in enumerate(ctxs):
-        repo.ui.progress('manifests', count, total=len(ctxs))
+        repo.ui.progress(('manifests'), count, total=len(ctxs))
         mfnode = ctx.manifestnode()
         try:
             store.get('', mfnode)
@@ -73,8 +73,11 @@ def buildtreepack(repo, pack, revs):
 
             if p2 == nullid and mf.deltaparent(mfrev) == p1rev:
                 mfdelta = mf.readdelta(mfnode)
-                adds = list((filename, n, f) for (filename, n, f) in mfdelta.iterentries())
-                deletes = set(ctx.files()).difference(filename for filename, n, f in adds)
+                adds = list((filename, n, f)
+                            for (filename, n, f) in mfdelta.iterentries())
+                deletes = set(ctx.files()).difference(
+                    filename
+                    for filename, n, f in adds)
             else:
                 mfctx = ctx.manifest()
                 mfdiff = mf.read(p1).diff(mfctx)
@@ -96,7 +99,7 @@ def buildtreepack(repo, pack, revs):
         p1, p2 = mf.parents(mfnode)
         add(store, cache, pack, tmfctx, ctx.rev(), p1, p2,
                 forcenode=ctx.manifestnode())
-    repo.ui.progress('manifests', None)
+    repo.ui.progress(('manifests'), None)
 
 def add(store, cache, pack, mf, linkrev, p1, p2, forcenode=False):
     try:
@@ -111,7 +114,8 @@ def add(store, cache, pack, mf, linkrev, p1, p2, forcenode=False):
     except KeyError:
         p2mf = manifest.treemanifest()
 
-    return _addtree(store, cache, pack, mf, linkrev, p1mf, p2mf, forcenode=forcenode)
+    return _addtree(store, cache, pack, mf, linkrev,
+                    p1mf, p2mf, forcenode=forcenode)
 
 def read(store, dir, node):
     def gettext():
@@ -235,18 +239,18 @@ def profiletreepack(repo, store, rev1, rev2, opts):
     def diff(m1, m2):
         diff = m1.diff(m2)
         if len(diff) < 10000:
-            raise Exception("diff only found %s items" % len(diff))
+            raise error.Abort("diff only found %s items" % len(diff))
     def find(m1):
         findresult = m1.find('fbcode/hphp/test/run')
         if findresult == (None, None):
-            raise Exception("None find result")
+            raise error.Abort("None find result")
     def fulliter(m1):
         count = 0
         for x in m1:
             count += 1
 
         if count < 900000:
-            raise Exception("fulliter only found %s files" % count)
+            raise error.Abort("fulliter only found %s files" % count)
 
     kindconstructor = {
         'tree': treeconstructor,

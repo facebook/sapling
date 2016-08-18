@@ -8,7 +8,7 @@ New errors are not allowed. Warnings are strongly discouraged.
   $ EXTRAS=`python -c 'import lz4revlog' 2> /dev/null && echo "--config extensions.lz4revlog="`
   $ hg $EXTRAS locate | sed 's-\\-/-g' |
   >   xargs "$check_code" --warnings --per-file=0 || false
-  Skipping remotefilelog/cdatapack/CMakeLists.txt it has no-che?k-code (glob)
+  Skipping CMakeLists.txt it has no-che?k-code (glob)
   Skipping remotefilelog/cdatapack/buffer.h it has no-che?k-code (glob)
   Skipping remotefilelog/cdatapack/cdatapack.c it has no-che?k-code (glob)
   Skipping remotefilelog/cdatapack/cdatapack.h it has no-che?k-code (glob)
