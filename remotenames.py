@@ -73,10 +73,12 @@ def expushop(orig, pushop, repo, remote, force=False, revs=None,
     for flag in ['to', 'delete', 'create', 'allowanon', 'nonforwardmove']:
         setattr(pushop, flag, kwargs.get(flag))
 
+def _isselectivepull(ui):
+    return ui.configbool('remotenames', 'selectivepull', False)
+
 def expull(orig, repo, remote, *args, **kwargs):
-    isselectivepull = repo.ui.configbool('remotenames', 'selectivepull', False)
     remotebookmarks = remote.listkeys('bookmarks')
-    if isselectivepull:
+    if _isselectivepull(repo.ui):
         path = activepath(repo.ui, remote)
         bookmarks = {}
         for bookmark in readbookmarknames(repo, path):
