@@ -26,6 +26,7 @@ from .i18n import _
 from . import (
     cmdutil,
     commands,
+    debugcommands,
     demandimport,
     encoding,
     error,
@@ -767,6 +768,10 @@ def _dispatch(req):
         _loaded.add(name)
 
     # (reposetup is handled in hg.repository)
+
+    # Side-effect of accessing is debugcommands module is guaranteed to be
+    # imported and commands.table is populated.
+    debugcommands.command
 
     addaliases(lui, commands.table)
 
