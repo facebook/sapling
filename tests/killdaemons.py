@@ -82,7 +82,11 @@ def killdaemons(pidfile, tryhard=True, remove=False, logfn=None):
         for line in fp:
             try:
                 pid = int(line)
+                if pid <= 0:
+                    raise ValueError
             except ValueError:
+                logfn('# Not killing daemon process %s - invalid pid'
+                      % line.rstrip())
                 continue
             kill(pid, logfn, tryhard)
         fp.close()
