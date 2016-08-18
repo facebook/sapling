@@ -516,6 +516,8 @@ template output:
    }
   ]
 
+  $ hg branches --closed -T '{if(closed, "{branch}\n")}'
+  c
 
 Tests of revision branch name caching
 

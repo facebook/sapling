@@ -289,6 +289,15 @@ def evalfuncarg(context, mapping, arg):
         thing = stringify(thing)
     return thing
 
+def evalboolean(context, mapping, arg):
+    func, data = arg
+    thing = func(context, mapping, data)
+    if isinstance(thing, bool):
+        return thing
+    # other objects are evaluated as strings, which means 0 is True, but
+    # empty dict/list should be False as they are expected to be ''
+    return bool(stringify(thing))
+
 def evalinteger(context, mapping, arg, err):
     v = evalfuncarg(context, mapping, arg)
     try:
@@ -560,7 +569,7 @@ def if_(context, mapping, args):
         # i18n: "if" is a keyword
         raise error.ParseError(_("if expects two or three arguments"))
 
-    test = evalstring(context, mapping, args[0])
+    test = evalboolean(context, mapping, args[0])
     if test:
         yield args[1][0](context, mapping, args[1][1])
     elif len(args) == 3:
