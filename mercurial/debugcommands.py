@@ -357,3 +357,65 @@ def debugcomplete(ui, cmd='', **opts):
     if ui.verbose:
         cmdlist = [' '.join(c[0]) for c in cmdlist.values()]
     ui.write("%s\n" % "\n".join(sorted(cmdlist)))
+
+@command('debugdag',
+    [('t', 'tags', None, _('use tags as labels')),
+    ('b', 'branches', None, _('annotate with branch names')),
+    ('', 'dots', None, _('use dots for runs')),
+    ('s', 'spaces', None, _('separate elements by spaces'))],
+    _('[OPTION]... [FILE [REV]...]'),
+    optionalrepo=True)
+def debugdag(ui, repo, file_=None, *revs, **opts):
+    """format the changelog or an index DAG as a concise textual description
+
+    If you pass a revlog index, the revlog's DAG is emitted. If you list
+    revision numbers, they get labeled in the output as rN.
+
+    Otherwise, the changelog DAG of the current repo is emitted.
+    """
+    spaces = opts.get('spaces')
+    dots = opts.get('dots')
+    if file_:
+        rlog = revlog.revlog(scmutil.opener(os.getcwd(), audit=False), file_)
+        revs = set((int(r) for r in revs))
+        def events():
+            for r in rlog:
+                yield 'n', (r, list(p for p in rlog.parentrevs(r)
+                                        if p != -1))
+                if r in revs:
+                    yield 'l', (r, "r%i" % r)
+    elif repo:
+        cl = repo.changelog
+        tags = opts.get('tags')
+        branches = opts.get('branches')
+        if tags:
+            labels = {}
+            for l, n in repo.tags().items():
+                labels.setdefault(cl.rev(n), []).append(l)
+        def events():
+            b = "default"
+            for r in cl:
+                if branches:
+                    newb = cl.read(cl.node(r))[5]['branch']
+                    if newb != b:
+                        yield 'a', newb
+                        b = newb
+                yield 'n', (r, list(p for p in cl.parentrevs(r)
+                                        if p != -1))
+                if tags:
+                    ls = labels.get(r)
+                    if ls:
+                        for l in ls:
+                            yield 'l', (r, l)
+    else:
+        raise error.Abort(_('need repo for changelog dag'))
+
+    for line in dagparser.dagtextlines(events(),
+                                       addspaces=spaces,
+                                       wraplabels=True,
+                                       wrapannotations=True,
+                                       wrapnonlinear=dots,
+                                       usedots=dots,
+                                       maxlinewidth=70):
+        ui.write(line)
+        ui.write("\n")
