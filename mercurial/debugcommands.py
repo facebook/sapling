@@ -321,3 +321,11 @@ def debugcheckstate(ui, repo):
     if errors:
         error = _(".hg/dirstate inconsistent with current parent's manifest")
         raise error.Abort(error)
+
+@command('debugcommands', [], _('[COMMAND]'), norepo=True)
+def debugcommands(ui, cmd='', *args):
+    """list all available commands and options"""
+    for cmd, vals in sorted(commands.table.iteritems()):
+        cmd = cmd.split('|')[0].strip('^')
+        opts = ', '.join([i[1] for i in vals[1]])
+        ui.write('%s: %s\n' % (cmd, opts))

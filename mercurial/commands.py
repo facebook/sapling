@@ -1867,14 +1867,6 @@ def copy(ui, repo, *pats, **opts):
     with repo.wlock(False):
         return cmdutil.copy(ui, repo, pats, opts)
 
-@command('debugcommands', [], _('[COMMAND]'), norepo=True)
-def debugcommands(ui, cmd='', *args):
-    """list all available commands and options"""
-    for cmd, vals in sorted(table.iteritems()):
-        cmd = cmd.split('|')[0].strip('^')
-        opts = ', '.join([i[1] for i in vals[1]])
-        ui.write('%s: %s\n' % (cmd, opts))
-
 @command('debugcomplete',
     [('o', 'options', None, _('show the command options'))],
     _('[-o] CMD'),
