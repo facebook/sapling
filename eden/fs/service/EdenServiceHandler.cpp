@@ -123,36 +123,54 @@ void EdenServiceHandler::checkOutRevision(
 }
 
 void EdenServiceHandler::getSHA1(
-    string& hashInBytes,
-    unique_ptr<string> mountPoint,
-    unique_ptr<string> path) {
-  if (path.get()->empty()) {
-    throw EdenError("path cannot be the empty string");
+    std::vector<SHA1Result>& out,
+    std::unique_ptr<string> mountPoint,
+    std::unique_ptr<std::vector<string>> paths) {
+  // TODO(t12747617): Parallelize these requests.
+  for (auto& path : *paths.get()) {
+    out.push_back(getSHA1ForPathDefensively(*mountPoint.get(), path));
+  }
+}
+
+SHA1Result EdenServiceHandler::getSHA1ForPathDefensively(
+    const string& mountPoint,
+    const string& path) {
+  // Calls getSHA1ForPath() and traps all system_errors and returns the error
+  // variant of the SHA1Result union type rather than letting the exception
+  // bubble up.
+  try {
+    return getSHA1ForPath(mountPoint, path);
+  } catch (const std::system_error& e) {
+    EdenError err(e.what());
+    err.set_errorCode(e.code().value());
+    SHA1Result out;
+    out.set_error(err);
+    return out;
+  }
+}
+
+SHA1Result EdenServiceHandler::getSHA1ForPath(
+    const string& mountPoint,
+    const string& path) {
+  SHA1Result out;
+
+  if (path.empty()) {
+    out.set_error(EdenError("path cannot be the empty string"));
+    return out;
   }
 
-  auto edenMount = server_->getMount(*mountPoint);
-  auto relativePath = RelativePathPiece{*path};
+  auto edenMount = server_->getMount(mountPoint);
+  auto relativePath = RelativePathPiece{path};
   auto inodeDispatcher = edenMount->getMountPoint()->getDispatcher();
   auto parent = inodeDispatcher->getDirInode(FUSE_ROOT_ID);
 
   auto it = relativePath.paths().begin();
   while (true) {
     shared_ptr<fusell::InodeBase> inodeBase;
-    try {
-      inodeBase =
-          inodeDispatcher
-              ->lookupInodeBase(parent->getNodeId(), it.piece().basename())
-              .get();
-    } catch (const std::system_error& e) {
-      if (e.code().category() == std::system_category() &&
-          e.code().value() == ENOENT) {
-        auto error = EdenError(folly::to<string>(
-            "No such file or directory: ", it.piece().stringPiece()));
-        error.set_errorCode(e.code().value());
-        throw error;
-      }
-      throw;
-    }
+    inodeBase =
+        inodeDispatcher
+            ->lookupInodeBase(parent->getNodeId(), it.piece().basename())
+            .get();
 
     auto inodeNumber = inodeBase->getNodeId();
     auto currentPiece = it.piece();
@@ -161,31 +179,20 @@ void EdenServiceHandler::getSHA1(
       // inodeNumber must correspond to the last path component, which we expect
       // to correspond to a file.
       std::shared_ptr<fusell::FileInode> fileInode;
-      try {
-        fileInode = inodeDispatcher->getFileInode(inodeNumber);
-      } catch (const std::system_error& e) {
-        if (e.code().category() == std::system_category() &&
-            e.code().value() == EISDIR) {
-          auto error = EdenError(folly::to<string>(
-              "Found a directory instead of a file: ",
-              currentPiece.stringPiece()));
-          error.set_errorCode(e.code().value());
-          throw error;
-        }
-        throw;
-      }
+      fileInode = inodeDispatcher->getFileInode(inodeNumber);
 
       auto treeEntry =
           boost::polymorphic_downcast<TreeEntryFileInode*>(fileInode.get());
 
       if (treeEntry->getEntry()->getFileType() != FileType::REGULAR_FILE) {
-        throw EdenError(folly::to<string>(
-            "Not an ordinary file: ", currentPiece.stringPiece()));
+        out.set_error(EdenError(folly::to<string>(
+            "Not an ordinary file: ", currentPiece.stringPiece())));
+        return out;
       }
 
       auto hash = treeEntry->getSHA1().get();
-      hashInBytes = StringPiece(hash.getBytes()).str();
-      return;
+      out.set_sha1(StringPiece(hash.getBytes()).str());
+      return out;
     } else {
       parent = inodeDispatcher->getDirInode(inodeNumber);
     }

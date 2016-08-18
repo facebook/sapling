@@ -9,7 +9,7 @@
 
 import hashlib
 
-from facebook.eden.ttypes import EdenError
+from facebook.eden.ttypes import SHA1Result
 from .lib import testcase
 
 
@@ -41,40 +41,48 @@ class ThriftTest:
 
     def test_get_sha1(self):
         expected_sha1_for_hello = hashlib.sha1(b'hola\n').digest()
-        self.assertEqual(expected_sha1_for_hello,
-                         self.client.getSHA1(self.mount, 'hello'))
+        result_for_hello = SHA1Result()
+        result_for_hello.set_sha1(expected_sha1_for_hello)
 
         expected_sha1_for_adir_file = hashlib.sha1(b'foo!\n').digest()
-        self.assertEqual(expected_sha1_for_adir_file,
-                         self.client.getSHA1(self.mount, 'adir/file'))
+        result_for_adir_file = SHA1Result()
+        result_for_adir_file.set_sha1(expected_sha1_for_adir_file)
+
+        self.assertEqual(
+            [
+                result_for_hello,
+                result_for_adir_file,
+            ], self.client.getSHA1(self.mount, ['hello', 'adir/file'])
+        )
 
     def test_get_sha1_throws_for_empty_string(self):
-        def try_empty_string_for_path():
-            self.client.getSHA1(self.mount, '')
-
-        self.assertRaisesRegexp(EdenError, 'path cannot be the empty string',
-                                try_empty_string_for_path)
+        results = self.client.getSHA1(self.mount, [''])
+        self.assertEqual(1, len(results))
+        self.assert_error(results[0], 'path cannot be the empty string')
 
     def test_get_sha1_throws_for_directory(self):
-        def try_directory():
-            self.client.getSHA1(self.mount, 'adir')
-
-        self.assertRaisesRegexp(EdenError,
-                                'Found a directory instead of a file: adir',
-                                try_directory)
+        results = self.client.getSHA1(self.mount, ['adir'])
+        self.assertEqual(1, len(results))
+        self.assert_error(results[0], ': Is a directory')
 
     def test_get_sha1_throws_for_non_existent_file(self):
-        def try_non_existent_file():
-            self.client.getSHA1(self.mount, 'i_do_not_exist')
-
-        self.assertRaisesRegexp(EdenError,
-                                'No such file or directory: i_do_not_exist',
-                                try_non_existent_file)
+        results = self.client.getSHA1(self.mount, ['i_do_not_exist'])
+        self.assertEqual(1, len(results))
+        self.assert_error(results[0], ': No such file or directory')
 
     def test_get_sha1_throws_for_symlink(self):
         '''Fails because caller should resolve the symlink themselves.'''
-        def try_symlink():
-            self.client.getSHA1(self.mount, 'slink')
+        results = self.client.getSHA1(self.mount, ['slink'])
+        self.assertEqual(1, len(results))
+        self.assert_error(results[0], 'Not an ordinary file: slink')
 
-        self.assertRaisesRegexp(EdenError, 'Not an ordinary file: slink',
-                                try_symlink)
+    def assert_error(self, sha1result, error_message):
+        self.assertIsNotNone(sha1result, msg='Must pass a SHA1Result')
+        self.assertEqual(
+            SHA1Result.ERROR,
+            sha1result.getType(),
+            msg='SHA1Result must be an error'
+        )
+        error = sha1result.get_error()
+        self.assertIsNotNone(error)
+        self.assertEqual(error_message, error.message)

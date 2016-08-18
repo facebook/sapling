@@ -38,9 +38,9 @@ class EdenServiceHandler : virtual public EdenServiceSvIf,
       std::unique_ptr<std::string> hash) override;
 
   void getSHA1(
-      std::string& hashInBytes,
+      std::vector<SHA1Result>& out,
       std::unique_ptr<std::string> mountPoint,
-      std::unique_ptr<std::string> path) override;
+      std::unique_ptr<std::vector<std::string>> paths) override;
 
   /**
    * When this Thrift handler is notified to shutdown, it notifies the
@@ -52,6 +52,14 @@ class EdenServiceHandler : virtual public EdenServiceSvIf,
   // Forbidden copy constructor and assignment operator
   EdenServiceHandler(EdenServiceHandler const&) = delete;
   EdenServiceHandler& operator=(EdenServiceHandler const&) = delete;
+
+  SHA1Result getSHA1ForPath(
+      const std::string& mountPoint,
+      const std::string& path);
+
+  SHA1Result getSHA1ForPathDefensively(
+      const std::string& mountPoint,
+      const std::string& path);
 
   void mountImpl(const MountInfo& info);
 
