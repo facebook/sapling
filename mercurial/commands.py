@@ -4356,14 +4356,6 @@ def grep(ui, repo, pattern, *pats, **opts):
                 yield m.span()
                 p = m.end()
 
-        def __iter__(self):
-            p = 0
-            for s, e in self.findpos():
-                yield self.line[p:s], ''
-                yield self.line[s:e], 'grep.match'
-                p = e
-            yield self.line[p:], ''
-
     matches = {}
     copies = {}
     def grepbody(fn, rev, body):
@@ -4424,13 +4416,20 @@ def grep(ui, repo, pattern, *pats, **opts):
                 if not opts.get('text') and binary():
                     ui.write(_(" Binary file matches"))
                 else:
-                    for s, label in l:
-                        ui.write(s, label=label)
+                    displaymatches(l)
             ui.write(eol)
             found = True
             if opts.get('files_with_matches'):
                 break
         return found
+
+    def displaymatches(l):
+        p = 0
+        for s, e in l.findpos():
+            ui.write(l.line[p:s])
+            ui.write(l.line[s:e], label='grep.match')
+            p = e
+        ui.write(l.line[p:])
 
     skip = {}
     revfiles = {}
