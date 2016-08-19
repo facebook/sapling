@@ -26,6 +26,7 @@ from .node import (
     hex,
     nullid,
     nullrev,
+    wdirhex,
     wdirid,
     wdirrev,
 )
@@ -1038,10 +1039,17 @@ class revlog(object):
                 pass
 
     def _partialmatch(self, id):
+        maybewdir = wdirhex.startswith(id)
         try:
             partial = self.index.partialmatch(id)
             if partial and self.hasnode(partial):
+                if maybewdir:
+                    # single 'ff...' match in radix tree, ambiguous with wdir
+                    raise RevlogError
                 return partial
+            if maybewdir:
+                # no 'ff...' match in radix tree, wdir identified
+                raise error.WdirUnsupported
             return None
         except RevlogError:
             # parsers.c radix tree lookup gave multiple matches
@@ -1066,11 +1074,13 @@ class revlog(object):
                 nl = [n for n in nl if hex(n).startswith(id) and
                       self.hasnode(n)]
                 if len(nl) > 0:
-                    if len(nl) == 1:
+                    if len(nl) == 1 and not maybewdir:
                         self._pcache[id] = nl[0]
                         return nl[0]
                     raise LookupError(id, self.indexfile,
                                       _('ambiguous identifier'))
+                if maybewdir:
+                    raise error.WdirUnsupported
                 return None
             except TypeError:
                 pass

@@ -960,6 +960,9 @@ def shortest(context, mapping, args):
                 return True
         except error.RevlogError:
             return False
+        except error.WdirUnsupported:
+            # single 'ff...' match
+            return True
 
     shortest = node
     startlength = max(6, minlength)

@@ -3503,6 +3503,9 @@ Test shortest(node) function:
   hg: parse error: shortest() expects an integer minlength
   [255]
 
+  $ hg log -r 'wdir()' -T '{node|shortest}\n'
+  ffff
+
   $ cd ..
 
 Test shortest(node) with the repo having short hash collision:

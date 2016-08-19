@@ -1309,12 +1309,12 @@ def node_(repo, subset, x):
             rn = None
     else:
         rn = None
-        pm = repo.changelog._partialmatch(n)
-        if pm is not None:
-            try:
+        try:
+            pm = repo.changelog._partialmatch(n)
+            if pm is not None:
                 rn = repo.changelog.rev(pm)
-            except error.WdirUnsupported:
-                rn = node.wdirrev
+        except error.WdirUnsupported:
+            rn = node.wdirrev
 
     if rn is None:
         return baseset()

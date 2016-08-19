@@ -1289,12 +1289,63 @@ Test working-directory integer revision and node id
   2147483647
   $ hg debugrevspec '0:wdir() & ffffffffffffffffffffffffffffffffffffffff'
   2147483647
+  $ hg debugrevspec '0:wdir() & ffffffffffff'
+  2147483647
   $ hg debugrevspec '0:wdir() & id(ffffffffffffffffffffffffffffffffffffffff)'
   2147483647
   $ hg debugrevspec '0:wdir() & id(ffffffffffff)'
-BROKEN: should be '2147483647'
+  2147483647
+
+  $ cd ..
+
+Test short 'ff...' hash collision
+(BUG: '0:wdir()' is still needed to populate wdir revision)
+
+  $ hg init wdir-hashcollision
+  $ cd wdir-hashcollision
+  $ cat <<EOF >> .hg/hgrc
+  > [experimental]
+  > evolution = createmarkers
+  > EOF
+  $ echo 0 > a
+  $ hg ci -qAm 0
+  $ for i in 2463 2961 6726 78127; do
+  >   hg up -q 0
+  >   echo $i > a
+  >   hg ci -qm $i
+  > done
+  $ hg up -q null
+  $ hg log -r '0:wdir()' -T '{rev}:{node} {shortest(node, 3)}\n'
+  0:b4e73ffab476aa0ee32ed81ca51e07169844bc6a b4e
+  1:fffbae3886c8fbb2114296380d276fd37715d571 fffba
+  2:fffb6093b00943f91034b9bdad069402c834e572 fffb6
+  3:fff48a9b9de34a4d64120c29548214c67980ade3 fff4
+  4:ffff85cff0ff78504fcdc3c0bc10de0c65379249 ffff8
+  2147483647:ffffffffffffffffffffffffffffffffffffffff fffff
+  $ hg debugobsolete fffbae3886c8fbb2114296380d276fd37715d571
+
+  $ hg debugrevspec '0:wdir() & fff'
+  abort: 00changelog.i@fff: ambiguous identifier!
+  [255]
+  $ hg debugrevspec '0:wdir() & ffff'
+  abort: 00changelog.i@ffff: ambiguous identifier!
+  [255]
+  $ hg debugrevspec '0:wdir() & fffb'
+  abort: 00changelog.i@fffb: ambiguous identifier!
+  [255]
+BROKEN should be '2' (node lookup uses unfiltered repo since dc25ed84bee8)
+  $ hg debugrevspec '0:wdir() & id(fffb)'
+  2
+  $ hg debugrevspec '0:wdir() & ffff8'
+  4
+  $ hg debugrevspec '0:wdir() & fffff'
+  2147483647
+
+  $ cd ..
 
 Test branch() with wdir()
+
+  $ cd repo
 
   $ log '0:wdir() & branch("literal:é")'
   8
