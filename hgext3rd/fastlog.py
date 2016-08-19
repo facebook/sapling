@@ -20,7 +20,6 @@ from mercurial import (
     extensions,
     node,
     phases,
-    registrar,
     revset,
     scmutil,
     util
@@ -28,11 +27,9 @@ from mercurial import (
 from mercurial.i18n import _
 from mercurial.node import nullrev
 
-import os
 import heapq
 from threading import Thread, Event
 from collections import deque
-from time import sleep
 
 conduit = None
 
