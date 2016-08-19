@@ -1341,6 +1341,10 @@ def checknlink(testfile):
     try:
         posixfile(f1, 'w').close()
     except IOError:
+        try:
+            os.unlink(f1)
+        except OSError:
+            pass
         return False
 
     f2 = testfile + ".hgtmp2"
