@@ -20,7 +20,6 @@ from .node import (
     hex,
     nullid,
     short,
-    wdirrev,
 )
 from . import (
     bookmarks,
@@ -564,13 +563,17 @@ class localrepository(object):
             return nullid
 
     def __getitem__(self, changeid):
-        if changeid is None or changeid == wdirrev:
+        if changeid is None:
             return context.workingctx(self)
         if isinstance(changeid, slice):
+            # wdirrev isn't contiguous so the slice shouldn't include it
             return [context.changectx(self, i)
                     for i in xrange(*changeid.indices(len(self)))
                     if i not in self.changelog.filteredrevs]
-        return context.changectx(self, changeid)
+        try:
+            return context.changectx(self, changeid)
+        except error.WdirUnsupported:
+            return context.workingctx(self)
 
     def __contains__(self, changeid):
         """True if the given changeid exists
