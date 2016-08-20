@@ -120,13 +120,14 @@ if sys.platform == 'darwin' and ffi is not None:
                 if skip == name and tp == statmod.S_ISDIR:
                     return []
                 if stat:
-                    mtime = cur.time.tv_sec
+                    mtime = cur.mtime.tv_sec
                     mode = (cur.accessmask & ~lib.S_IFMT)| tp
                     ret.append((name, tp, stat_res(st_mode=mode, st_mtime=mtime,
                                 st_size=cur.datalength)))
                 else:
                     ret.append((name, tp))
-                cur += lgt
+                cur = ffi.cast("val_attrs_t*", int(ffi.cast("intptr_t", cur))
+                    + lgt)
         return ret
 
     def listdir(path, stat=False, skip=None):
