@@ -113,12 +113,12 @@ if modulepolicy not in policynocffi:
             b = ffi.new("struct bdiff_line**")
             ac = ffi.new("char[]", sa)
             bc = ffi.new("char[]", sb)
+            l = ffi.new("struct bdiff_hunk*")
             try:
                 an = lib.bdiff_splitlines(ac, len(sa), a)
                 bn = lib.bdiff_splitlines(bc, len(sb), b)
                 if not a[0] or not b[0]:
                     raise MemoryError
-                l = ffi.new("struct bdiff_hunk*")
                 count = lib.bdiff_diff(a[0], an, b[0], bn, l)
                 if count < 0:
                     raise MemoryError
@@ -134,3 +134,36 @@ if modulepolicy not in policynocffi:
                 lib.free(b[0])
                 lib.bdiff_freehunks(l.next)
             return rl
+
+        def bdiff(sa, sb):
+            a = ffi.new("struct bdiff_line**")
+            b = ffi.new("struct bdiff_line**")
+            ac = ffi.new("char[]", sa)
+            bc = ffi.new("char[]", sb)
+            l = ffi.new("struct bdiff_hunk*")
+            try:
+                an = lib.bdiff_splitlines(ac, len(sa), a)
+                bn = lib.bdiff_splitlines(bc, len(sb), b)
+                if not a[0] or not b[0]:
+                    raise MemoryError
+                count = lib.bdiff_diff(a[0], an, b[0], bn, l)
+                if count < 0:
+                    raise MemoryError
+                rl = []
+                h = l.next
+                la = lb = 0
+                while h:
+                    if h.a1 != la or h.b1 != lb:
+                        lgt = (b[0] + h.b1).l - (b[0] + lb).l
+                        rl.append(struct.pack(">lll", (a[0] + la).l - a[0].l,
+                            (a[0] + h.a1).l - a[0].l, lgt))
+                        rl.append(str(ffi.buffer((b[0] + lb).l, lgt)))
+                    la = h.a2
+                    lb = h.b2
+                    h = h.next
+
+            finally:
+                lib.free(a[0])
+                lib.free(b[0])
+                lib.bdiff_freehunks(l.next)
+            return "".join(rl)
