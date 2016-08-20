@@ -1344,6 +1344,26 @@ def _readmapfile(mapfile):
 
     cache = {}
     tmap = {}
+
+    val = conf.get('', '__base__')
+    if val and val[0] not in "'\"":
+        # treat as a pointer to a base class for this style
+        path = util.normpath(os.path.join(base, val))
+
+        # fallback check in template paths
+        if not os.path.exists(path):
+            for p in templatepaths():
+                p2 = util.normpath(os.path.join(p, val))
+                if os.path.isfile(p2):
+                    path = p2
+                    break
+                p3 = util.normpath(os.path.join(p2, "map"))
+                if os.path.isfile(p3):
+                    path = p3
+                    break
+
+        cache, tmap = _readmapfile(path)
+
     for key, val in conf[''].items():
         if not val:
             raise error.ParseError(_('missing value'), conf.source('', key))
@@ -1352,30 +1372,7 @@ def _readmapfile(mapfile):
                 raise error.ParseError(_('unmatched quotes'),
                                        conf.source('', key))
             cache[key] = unquotestring(val)
-        elif key == "__base__":
-            # treat as a pointer to a base class for this style
-            path = util.normpath(os.path.join(base, val))
-
-            # fallback check in template paths
-            if not os.path.exists(path):
-                for p in templatepaths():
-                    p2 = util.normpath(os.path.join(p, val))
-                    if os.path.isfile(p2):
-                        path = p2
-                        break
-                    p3 = util.normpath(os.path.join(p2, "map"))
-                    if os.path.isfile(p3):
-                        path = p3
-                        break
-
-            bcache, btmap = _readmapfile(path)
-            for k in bcache:
-                if k not in cache:
-                    cache[k] = bcache[k]
-            for k in btmap:
-                if k not in tmap:
-                    tmap[k] = btmap[k]
-        else:
+        elif key != '__base__':
             val = 'default', val
             if ':' in val[1]:
                 val = val[1].split(':', 1)
