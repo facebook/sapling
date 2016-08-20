@@ -2606,7 +2606,7 @@ def _optimize(x, small):
             w = 100 # very slow
         elif f == "ancestor":
             w = 1 * smallbonus
-        elif f in ('reverse', 'limit', 'first', '_intlist'):
+        elif f in ('reverse', 'limit', 'first', 'wdir', '_intlist'):
             w = 0
         elif f == "sort":
             w = 10 # assume most sorts look at changelog
