@@ -110,6 +110,12 @@ Test max chain len
       7     6    -1   ???   ???        ???  ???  ???    0     ???      ????           ?     1        2 (glob)
       8     7    -1   ???   ???        ???  ???  ???    0     ???      ????           ?     1        3 (glob)
 
+Test WdirUnsupported exception
+
+  $ hg debugdata -c ffffffffffffffffffffffffffffffffffffffff
+  abort: working directory revision cannot be specified
+  [255]
+
 Test cache warming command
 
   $ rm -rf .hg/cache/

@@ -26,6 +26,7 @@ from .node import (
     hex,
     nullid,
     nullrev,
+    wdirid,
     wdirrev,
 )
 from .i18n import _
@@ -416,6 +417,8 @@ class revlog(object):
             raise
         except RevlogError:
             # parsers.c radix tree lookup failed
+            if node == wdirid:
+                raise error.WdirUnsupported
             raise LookupError(node, self.indexfile, _('no node'))
         except KeyError:
             # pure python cache lookup failed
@@ -430,6 +433,8 @@ class revlog(object):
                 if v == node:
                     self._nodepos = r - 1
                     return r
+            if node == wdirid:
+                raise error.WdirUnsupported
             raise LookupError(node, self.indexfile, _('no node'))
 
     # Accessors for index entries.
