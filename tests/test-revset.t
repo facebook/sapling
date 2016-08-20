@@ -1294,6 +1294,35 @@ Test working-directory integer revision and node id
   $ hg debugrevspec '0:wdir() & id(ffffffffffff)'
 BROKEN: should be '2147483647'
 
+Test branch() with wdir()
+
+  $ log '0:wdir() & branch("literal:é")'
+  8
+  9
+  2147483647
+  $ log '0:wdir() & branch("re:é")'
+  8
+  9
+  2147483647
+  $ log '0:wdir() & branch("re:^a")'
+  0
+  2
+  $ log '0:wdir() & branch(8)'
+  8
+  9
+  2147483647
+
+branch(wdir()) returns all revisions belonging to the working branch. The wdir
+itself isn't returned unless it is explicitly populated.
+
+  $ log 'branch(wdir())'
+  8
+  9
+  $ log '0:wdir() & branch(wdir())'
+  8
+  9
+  2147483647
+
   $ log 'outgoing()'
   8
   9

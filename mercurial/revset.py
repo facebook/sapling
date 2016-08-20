@@ -474,6 +474,11 @@ def branch(repo, subset, x):
     :hg:`help revisions.patterns`.
     """
     getbi = repo.revbranchcache().branchinfo
+    def getbranch(r):
+        try:
+            return getbi(r)[0]
+        except error.WdirUnsupported:
+            return repo[r].branch()
 
     try:
         b = getstring(x, '')
@@ -486,21 +491,21 @@ def branch(repo, subset, x):
             # note: falls through to the revspec case if no branch with
             # this name exists and pattern kind is not specified explicitly
             if pattern in repo.branchmap():
-                return subset.filter(lambda r: matcher(getbi(r)[0]),
+                return subset.filter(lambda r: matcher(getbranch(r)),
                                      condrepr=('<branch %r>', b))
             if b.startswith('literal:'):
                 raise error.RepoLookupError(_("branch '%s' does not exist")
                                             % pattern)
         else:
-            return subset.filter(lambda r: matcher(getbi(r)[0]),
+            return subset.filter(lambda r: matcher(getbranch(r)),
                                  condrepr=('<branch %r>', b))
 
     s = getset(repo, fullreposet(repo), x)
     b = set()
     for r in s:
-        b.add(getbi(r)[0])
+        b.add(getbranch(r))
     c = s.__contains__
-    return subset.filter(lambda r: c(r) or getbi(r)[0] in b,
+    return subset.filter(lambda r: c(r) or getbranch(r) in b,
                          condrepr=lambda: '<branch %r>' % sorted(b))
 
 @predicate('bumped()', safe=True)
