@@ -1182,10 +1182,40 @@ server won't turn changeset public.
   cannot lock source repo, skipping local public phase update
   [1]
   $ chmod -R +w .hg
-  $ hgph Upsilon
 
   $ cd ..
 
-  $ killdaemons.py
-
 #endif
+
+Test that clone behaves like pull and doesn't
+publish changesets as plain push does
+
+  $ hg -R Upsilon phase -q --force --draft 2
+  $ hg clone -q Upsilon Pi -r 7
+  $ hgph Upsilon -r 'min(draft())'
+  o  2 draft a-C - 54acac6f23ab
+  |
+  ~
+
+  $ hg -R Upsilon push Pi -r 7
+  pushing to Pi
+  searching for changes
+  no changes found
+  [1]
+  $ hgph Upsilon -r 'min(draft())'
+  o  8 draft a-F - b740e3e5c05d
+  |
+  ~
+
+  $ hg -R Upsilon push Pi -r 8
+  pushing to Pi
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+
+  $ hgph Upsilon -r 'min(draft())'
+  o  9 draft a-G - 3e27b6f1eee1
+  |
+  ~
