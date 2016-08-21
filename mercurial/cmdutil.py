@@ -2604,6 +2604,18 @@ def commit(ui, repo, commitfunc, pats, opts):
 
     return commitfunc(ui, repo, message, matcher, opts)
 
+def samefile(f, ctx1, ctx2):
+    if f in ctx1.manifest():
+        a = ctx1.filectx(f)
+        if f in ctx2.manifest():
+            b = ctx2.filectx(f)
+            return (not a.cmp(b)
+                    and a.flags() == b.flags())
+        else:
+            return False
+    else:
+        return f not in ctx2.manifest()
+
 def amend(ui, repo, commitfunc, old, extra, pats, opts):
     # avoid cycle context -> subrepo -> cmdutil
     from . import context
@@ -2687,19 +2699,7 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
                 # we can discard X from our list of files. Likewise if X
                 # was deleted, it's no longer relevant
                 files.update(ctx.files())
-
-                def samefile(f):
-                    if f in ctx.manifest():
-                        a = ctx.filectx(f)
-                        if f in base.manifest():
-                            b = base.filectx(f)
-                            return (not a.cmp(b)
-                                    and a.flags() == b.flags())
-                        else:
-                            return False
-                    else:
-                        return f not in base.manifest()
-                files = [f for f in files if not samefile(f)]
+                files = [f for f in files if not samefile(f, ctx, base)]
 
                 def filectxfn(repo, ctx_, path):
                     try:
