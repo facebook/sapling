@@ -3525,7 +3525,8 @@ def debugrevspec(ui, repo, expr, **opts):
     """
     stages = [
         ('parsed', lambda tree: tree),
-        ('expanded', lambda tree: revset.expandaliases(ui, tree)),
+        ('expanded',
+         lambda tree: revset.expandaliases(ui, tree, showwarning=ui.warn)),
         ('concatenated', revset.foldconcat),
         ('analyzed', revset.analyze),
         ('optimized', revset.optimize),
@@ -3560,7 +3561,7 @@ def debugrevspec(ui, repo, expr, **opts):
             ui.write(revset.prettyformat(tree), "\n")
             printedtree = tree
 
-    func = revset.match(ui, expr, repo)
+    func = revset.makematcher(tree)
     revs = func(repo)
     if ui.verbose:
         ui.note(("* set:\n"), revset.prettyformatset(revs), "\n")
