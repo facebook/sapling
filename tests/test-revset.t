@@ -554,6 +554,37 @@ parsed tree at stages:
   abort: cannot use --optimize with --show-stage
   [255]
 
+verify optimized tree:
+
+  $ hg debugrevspec --verify '0|1'
+
+  $ hg debugrevspec --verify -v -p analyzed -p optimized 'r3232() & 2'
+  * analyzed:
+  (and
+    (func
+      ('symbol', 'r3232')
+      None)
+    ('symbol', '2'))
+  * optimized:
+  (and
+    ('symbol', '2')
+    (func
+      ('symbol', 'r3232')
+      None))
+  * analyzed set:
+  <baseset [2]>
+  * optimized set:
+  <baseset [2, 2]>
+  --- analyzed
+  +++ optimized
+   2
+  +2
+  [1]
+
+  $ hg debugrevspec --no-optimized --verify-optimized '0'
+  abort: cannot use --verify-optimized with --no-optimized
+  [255]
+
 Test that symbols only get parsed as functions if there's an opening
 parenthesis.
 
