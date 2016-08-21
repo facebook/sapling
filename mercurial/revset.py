@@ -2343,12 +2343,6 @@ def _fixops(x):
     return (op,) + tuple(_fixops(y) for y in x[1:])
 
 def _analyze(x):
-    """Transform raw parsed tree to evaluatable tree which can be fed to
-    optimize() or getset()
-
-    All pseudo operations should be mapped to real operations or functions
-    defined in methods or symbols table respectively.
-    """
     if x is None:
         return x
 
@@ -2399,11 +2393,16 @@ def _analyze(x):
         return (op, x[1], _analyze(x[2]))
     raise ValueError('invalid operator %r' % op)
 
-def _optimize(x, small):
-    """Optimize evaluatable tree
+def analyze(x):
+    """Transform raw parsed tree to evaluatable tree which can be fed to
+    optimize() or getset()
 
-    All pseudo operations should be transformed beforehand.
+    All pseudo operations should be mapped to real operations or functions
+    defined in methods or symbols table respectively.
     """
+    return _analyze(x)
+
+def _optimize(x, small):
     if x is None:
         return 0, x
 
@@ -2505,7 +2504,10 @@ def _optimize(x, small):
     raise ValueError('invalid operator %r' % op)
 
 def optimize(tree):
-    tree = _analyze(tree)
+    """Optimize evaluatable tree
+
+    All pseudo operations should be transformed beforehand.
+    """
     _weight, newtree = _optimize(tree, small=True)
     return newtree
 
@@ -2619,6 +2621,7 @@ def _makematcher(ui, tree, repo):
     if ui:
         tree = expandaliases(ui, tree, showwarning=ui.warn)
     tree = foldconcat(tree)
+    tree = analyze(tree)
     tree = optimize(tree)
     posttreebuilthook(tree, repo)
     def mfunc(repo, subset=None):

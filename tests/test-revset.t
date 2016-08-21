@@ -54,7 +54,7 @@ these predicates use '\0' as a separator:
   >         tree = revset.parse(expr, lookup=repo.__contains__)
   >         ui.note(revset.prettyformat(tree), "\n")
   >         if opts["optimize"]:
-  >             opttree = revset.optimize(tree)
+  >             opttree = revset.optimize(revset.analyze(tree))
   >             ui.note("* optimized:\n", revset.prettyformat(opttree), "\n")
   >     func = revset.match(ui, expr, repo)
   >     revs = func(repo)
