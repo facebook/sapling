@@ -3511,7 +3511,8 @@ def debugrevlog(ui, repo, file_=None, **opts):
                                                              numdeltas))
 
 @command('debugrevspec',
-    [('', 'optimize', None, _('print parsed tree after optimizing')),
+    [('', 'optimize', None,
+      _('print parsed tree after optimizing (DEPRECATED)')),
      ('p', 'show-stage', [],
       _('print parsed tree at the given stage'), _('NAME')),
      ],
