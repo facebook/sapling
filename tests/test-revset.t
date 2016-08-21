@@ -508,6 +508,21 @@ parsed tree at stages:
   hg: parse error: missing argument
   [255]
 
+  $ hg debugrevspec --no-optimized -p all '()'
+  * parsed:
+  (group
+    None)
+  * expanded:
+  (group
+    None)
+  * concatenated:
+  (group
+    None)
+  * analyzed:
+  None
+  hg: parse error: missing argument
+  [255]
+
   $ hg debugrevspec -p parsed -p analyzed -p optimized '(0|1)-1'
   * parsed:
   (minus
@@ -2057,6 +2072,32 @@ test optimization of trivial `or` operation
   4
   5
   6
+
+unoptimized `or` looks like this
+
+  $ try --no-optimized -p analyzed '0|1|2|3|4'
+  * analyzed:
+  (or
+    ('symbol', '0')
+    ('symbol', '1')
+    ('symbol', '2')
+    ('symbol', '3')
+    ('symbol', '4'))
+  * set:
+  <addset
+    <addset
+      <baseset [0]>,
+      <baseset [1]>>,
+    <addset
+      <baseset [2]>,
+      <addset
+        <baseset [3]>,
+        <baseset [4]>>>>
+  0
+  1
+  2
+  3
+  4
 
 test that `_list` should be narrowed by provided `subset`
 

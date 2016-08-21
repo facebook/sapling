@@ -3515,6 +3515,7 @@ def debugrevlog(ui, repo, file_=None, **opts):
       _('print parsed tree after optimizing (DEPRECATED)')),
      ('p', 'show-stage', [],
       _('print parsed tree at the given stage'), _('NAME')),
+     ('', 'no-optimized', False, _('evaluate tree without optimization')),
      ],
     ('REVSPEC'))
 def debugrevspec(ui, repo, expr, **opts):
@@ -3530,6 +3531,8 @@ def debugrevspec(ui, repo, expr, **opts):
         ('analyzed', revset.analyze),
         ('optimized', revset.optimize),
     ]
+    if opts['no_optimized']:
+        stages = stages[:-1]
     stagenames = set(n for n, f in stages)
 
     showalways = set()
