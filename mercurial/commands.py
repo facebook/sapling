@@ -3511,13 +3511,16 @@ def debugrevlog(ui, repo, file_=None, **opts):
                                                              numdeltas))
 
 @command('debugrevspec',
-    [('', 'optimize', None, _('print parsed tree after optimizing'))],
+    [('', 'optimize', None, _('print parsed tree after optimizing')),
+     ('p', 'show-stage', [],
+      _('print parsed tree at the given stage'), _('NAME')),
+     ],
     ('REVSPEC'))
 def debugrevspec(ui, repo, expr, **opts):
     """parse and apply a revision specification
 
-    Use --verbose to print the parsed tree before and after aliases
-    expansion.
+    Use -p/--show-stage option to print the parsed tree at the given stages.
+    Use -p all to print tree at every stage.
     """
     stages = [
         ('parsed', lambda tree: tree),
@@ -3526,20 +3529,34 @@ def debugrevspec(ui, repo, expr, **opts):
         ('analyzed', revset.analyze),
         ('optimized', revset.optimize),
     ]
+    stagenames = set(n for n, f in stages)
 
-    showalways = set(['parsed'])
-    showchanged = set(['expanded', 'concatenated'])
-    if opts['optimize']:
-        showalways.add('optimized')
+    showalways = set()
+    showchanged = set()
+    if ui.verbose and not opts['show_stage']:
+        # show parsed tree by --verbose (deprecated)
+        showalways.add('parsed')
+        showchanged.update(['expanded', 'concatenated'])
+        if opts['optimize']:
+            showalways.add('optimized')
+    if opts['show_stage'] and opts['optimize']:
+        raise error.Abort(_('cannot use --optimize with --show-stage'))
+    if opts['show_stage'] == ['all']:
+        showalways.update(stagenames)
+    else:
+        for n in opts['show_stage']:
+            if n not in stagenames:
+                raise error.Abort(_('invalid stage name: %s') % n)
+        showalways.update(opts['show_stage'])
 
     printedtree = None
     tree = revset.parse(expr, lookup=repo.__contains__)
     for n, f in stages:
         tree = f(tree)
         if n in showalways or (n in showchanged and tree != printedtree):
-            if n != 'parsed':
-                ui.note(("* %s:\n") % n)
-            ui.note(revset.prettyformat(tree), "\n")
+            if opts['show_stage'] or n != 'parsed':
+                ui.write(("* %s:\n") % n)
+            ui.write(revset.prettyformat(tree), "\n")
             printedtree = tree
 
     func = revset.match(ui, expr, repo)

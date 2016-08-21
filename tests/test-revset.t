@@ -489,6 +489,56 @@ keyword arguments
   hg: parse error: can't use a key-value pair in this context
   [255]
 
+parsed tree at stages:
+
+  $ hg debugrevspec -p all '()'
+  * parsed:
+  (group
+    None)
+  * expanded:
+  (group
+    None)
+  * concatenated:
+  (group
+    None)
+  * analyzed:
+  None
+  * optimized:
+  None
+  hg: parse error: missing argument
+  [255]
+
+  $ hg debugrevspec -p parsed -p analyzed -p optimized '(0|1)-1'
+  * parsed:
+  (minus
+    (group
+      (or
+        ('symbol', '0')
+        ('symbol', '1')))
+    ('symbol', '1'))
+  * analyzed:
+  (and
+    (or
+      ('symbol', '0')
+      ('symbol', '1'))
+    (not
+      ('symbol', '1')))
+  * optimized:
+  (difference
+    (func
+      ('symbol', '_list')
+      ('string', '0\x001'))
+    ('symbol', '1'))
+  0
+
+  $ hg debugrevspec -p unknown '0'
+  abort: invalid stage name: unknown
+  [255]
+
+  $ hg debugrevspec -p all --optimize '0'
+  abort: cannot use --optimize with --show-stage
+  [255]
+
 Test that symbols only get parsed as functions if there's an opening
 parenthesis.
 
