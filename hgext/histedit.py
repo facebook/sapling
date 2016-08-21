@@ -573,18 +573,7 @@ def collapse(repo, first, last, commitopts, skipprompt=False):
     copied = copies.pathcopies(base, last)
 
     # prune files which were reverted by the updates
-    def samefile(f):
-        if f in last.manifest():
-            a = last.filectx(f)
-            if f in base.manifest():
-                b = base.filectx(f)
-                return (a.data() == b.data()
-                        and a.flags() == b.flags())
-            else:
-                return False
-        else:
-            return f not in base.manifest()
-    files = [f for f in files if not samefile(f)]
+    files = [f for f in files if not cmdutil.samefile(f, last, base)]
     # commit version of these files as defined by head
     headmf = last.manifest()
     def filectxfn(repo, ctx, path):
