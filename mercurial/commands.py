@@ -3519,20 +3519,28 @@ def debugrevspec(ui, repo, expr, **opts):
     Use --verbose to print the parsed tree before and after aliases
     expansion.
     """
+    stages = [
+        ('parsed', lambda tree: tree),
+        ('expanded', lambda tree: revset.expandaliases(ui, tree)),
+        ('concatenated', revset.foldconcat),
+        ('analyzed', revset.analyze),
+        ('optimized', revset.optimize),
+    ]
+
+    showalways = set(['parsed'])
+    showchanged = set(['expanded', 'concatenated'])
+    if opts['optimize']:
+        showalways.add('optimized')
+
+    printedtree = None
     tree = revset.parse(expr, lookup=repo.__contains__)
-    ui.note(revset.prettyformat(tree), "\n")
-    newtree = revset.expandaliases(ui, tree)
-    if newtree != tree:
-        ui.note(("* expanded:\n"), revset.prettyformat(newtree), "\n")
-    tree = newtree
-    newtree = revset.foldconcat(tree)
-    if newtree != tree:
-        ui.note(("* concatenated:\n"), revset.prettyformat(newtree), "\n")
-    if opts["optimize"]:
-        newtree = revset.analyze(newtree)
-        optimizedtree = revset.optimize(newtree)
-        ui.note(("* optimized:\n"),
-                revset.prettyformat(optimizedtree), "\n")
+    for n, f in stages:
+        tree = f(tree)
+        if n in showalways or (n in showchanged and tree != printedtree):
+            if n != 'parsed':
+                ui.note(("* %s:\n") % n)
+            ui.note(revset.prettyformat(tree), "\n")
+            printedtree = tree
 
     func = revset.match(ui, expr, repo)
     revs = func(repo)
