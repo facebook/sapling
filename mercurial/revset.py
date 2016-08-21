@@ -2615,15 +2615,17 @@ def matchany(ui, specs, repo=None):
         tree = parse(specs[0], lookup)
     else:
         tree = ('or',) + tuple(parse(s, lookup) for s in specs)
-    return _makematcher(ui, tree, repo)
 
-def _makematcher(ui, tree, repo):
     if ui:
         tree = expandaliases(ui, tree, showwarning=ui.warn)
     tree = foldconcat(tree)
     tree = analyze(tree)
     tree = optimize(tree)
     posttreebuilthook(tree, repo)
+    return makematcher(tree)
+
+def makematcher(tree):
+    """Create a matcher from an evaluatable tree"""
     def mfunc(repo, subset=None):
         if subset is None:
             subset = fullreposet(repo)
