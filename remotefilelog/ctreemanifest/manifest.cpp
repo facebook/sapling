@@ -22,7 +22,7 @@ Manifest::Manifest(PythonObj &rawobj) :
   }
 }
 
-ManifestIterator Manifest::getIterator() const {
+ManifestIterator Manifest::getIterator() {
   return ManifestIterator(this->entries.begin(), this->entries.end());
 }
 
@@ -76,28 +76,28 @@ ManifestEntry& Manifest::addChild(
 }
 
 ManifestIterator::ManifestIterator(
-    std::list<ManifestEntry>::const_iterator iterator,
+    std::list<ManifestEntry>::iterator iterator,
     std::list<ManifestEntry>::const_iterator end) :
     iterator(iterator), end(end) {
 }
 
-bool ManifestIterator::next(ManifestEntry *entry) {
+bool ManifestIterator::next(ManifestEntry **entry) {
   if (this->isfinished()) {
     return false;
   }
 
-  *entry = *this->iterator;
+  *entry = &(*this->iterator);
   this->iterator++;
 
   return true;
 }
 
-ManifestEntry ManifestIterator::currentvalue() const {
+ManifestEntry *ManifestIterator::currentvalue() const {
   if (this->isfinished()) {
     throw std::logic_error("iterator has no current value");
   }
 
-  return *iterator;
+  return &(*iterator);
 }
 
 bool ManifestIterator::isfinished() const {

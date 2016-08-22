@@ -36,10 +36,10 @@ struct treemanifest {
  * Represents a single stack frame in an iteration of the contents of the tree.
  */
 struct stackframe {
-  const Manifest *manifest;
+  Manifest *manifest;
   ManifestIterator iterator;
 
-  stackframe(const Manifest *manifest) :
+  stackframe(Manifest *manifest) :
       manifest(manifest),
       iterator(manifest->getIterator()) {
   }

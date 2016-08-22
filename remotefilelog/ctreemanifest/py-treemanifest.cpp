@@ -165,8 +165,8 @@ class DiffEntry {
  * Helper function that performs the actual recursion on the tree entries.
  */
 static void treemanifest_diffrecurse(
-    const Manifest *selfmf,
-    const Manifest *othermf,
+    Manifest *selfmf,
+    Manifest *othermf,
     std::string *path,
     const PythonObj &diff,
     const ManifestFetcher &fetcher) {
@@ -184,57 +184,57 @@ static void treemanifest_diffrecurse(
   while (!selfiter.isfinished() || !otheriter.isfinished()) {
     int cmp = 0;
 
-    ManifestEntry selfentry;
+    ManifestEntry *selfentry;
     std::string selfbinnode;
     if (!selfiter.isfinished()) {
       cmp--;
       selfentry = selfiter.currentvalue();
-      selfbinnode = binfromhex(selfentry.node);
+      selfbinnode = binfromhex(selfentry->node);
     }
 
-    ManifestEntry otherentry;
+    ManifestEntry *otherentry;
     std::string otherbinnode;
     if (!otheriter.isfinished()) {
       cmp++;
       otherentry = otheriter.currentvalue();
-      otherbinnode = binfromhex(otherentry.node);
+      otherbinnode = binfromhex(otherentry->node);
     }
 
     // If both sides are present, cmp == 0, so do a filename comparison
     if (cmp == 0) {
-      cmp = strcmp(selfentry.filename, otherentry.filename);
+      cmp = strcmp(selfentry->filename, otherentry->filename);
     }
 
     int originalpathsize = path->size();
     if (cmp < 0) {
       // selfentry should be processed first and only exists in self
-      selfentry.appendtopath(*path);
-      if (selfentry.isdirectory()) {
-        Manifest *selfchildmanifest = selfentry.get_manifest(
+      selfentry->appendtopath(*path);
+      if (selfentry->isdirectory()) {
+        Manifest *selfchildmanifest = selfentry->get_manifest(
             fetcher, path->c_str(), path->size());
         treemanifest_diffrecurse(selfchildmanifest, NULL, path, diff, fetcher);
       } else {
-        DiffEntry entry(&selfbinnode, selfentry.flag, NULL, NULL);
+        DiffEntry entry(&selfbinnode, selfentry->flag, NULL, NULL);
         entry.addtodiff(diff, *path);
       }
       selfiter.next(&selfentry);
     } else if (cmp > 0) {
       // otherentry should be processed first and only exists in other
-      otherentry.appendtopath(*path);
-      if (otherentry.isdirectory()) {
-        Manifest *otherchildmanifest = otherentry.get_manifest(
+      otherentry->appendtopath(*path);
+      if (otherentry->isdirectory()) {
+        Manifest *otherchildmanifest = otherentry->get_manifest(
             fetcher, path->c_str(), path->size());
         treemanifest_diffrecurse(NULL, otherchildmanifest, path, diff, fetcher);
       } else {
-        DiffEntry entry(NULL, NULL, &otherbinnode, otherentry.flag);
+        DiffEntry entry(NULL, NULL, &otherbinnode, otherentry->flag);
         entry.addtodiff(diff, *path);
       }
       otheriter.next(&otherentry);
     } else {
       // Filenames match - now compare directory vs file
-      if (selfentry.isdirectory() && otherentry.isdirectory()) {
+      if (selfentry->isdirectory() && otherentry->isdirectory()) {
         // Both are directories - recurse
-        selfentry.appendtopath(*path);
+        selfentry->appendtopath(*path);
 
         if (selfbinnode != otherbinnode) {
           Manifest *selfchildmanifest = fetcher.get(
@@ -253,10 +253,10 @@ static void treemanifest_diffrecurse(
         }
         selfiter.next(&selfentry);
         otheriter.next(&otherentry);
-      } else if (selfentry.isdirectory() && !otherentry.isdirectory()) {
+      } else if (selfentry->isdirectory() && !otherentry->isdirectory()) {
         // self is directory, other is not - process other then self
-        otherentry.appendtopath(*path);
-        DiffEntry entry(NULL, NULL, &otherbinnode, otherentry.flag);
+        otherentry->appendtopath(*path);
+        DiffEntry entry(NULL, NULL, &otherbinnode, otherentry->flag);
         entry.addtodiff(diff, *path);
 
         path->append(1, '/');
@@ -267,10 +267,10 @@ static void treemanifest_diffrecurse(
 
         selfiter.next(&selfentry);
         otheriter.next(&otherentry);
-      } else if (!selfentry.isdirectory() && otherentry.isdirectory()) {
+      } else if (!selfentry->isdirectory() && otherentry->isdirectory()) {
         // self is not directory, other is - process self then other
-        selfentry.appendtopath(*path);
-        DiffEntry entry(&selfbinnode, selfentry.flag, NULL, NULL);
+        selfentry->appendtopath(*path);
+        DiffEntry entry(&selfbinnode, selfentry->flag, NULL, NULL);
         entry.addtodiff(diff, *path);
 
         path->append(1, '/');
@@ -285,13 +285,13 @@ static void treemanifest_diffrecurse(
       } else {
         // both are files
         bool flagsdiffer = (
-          (selfentry.flag && otherentry.flag && *selfentry.flag != *otherentry.flag) ||
-          ((bool)selfentry.flag != (bool)selfentry.flag)
+          (selfentry->flag && otherentry->flag && *selfentry->flag != *otherentry->flag) ||
+          ((bool)selfentry->flag != (bool)selfentry->flag)
         );
 
         if (selfbinnode != otherbinnode || flagsdiffer) {
-          selfentry.appendtopath(*path);
-          DiffEntry entry(&selfbinnode, selfentry.flag, &otherbinnode, otherentry.flag);
+          selfentry->appendtopath(*path);
+          DiffEntry entry(&selfbinnode, selfentry->flag, &otherbinnode, otherentry->flag);
           entry.addtodiff(diff, *path);
         }
 
@@ -480,15 +480,15 @@ static PyObject *fileiter_iterentriesnext(py_fileiter *self) {
       stackframe &frame = iter.frames.back();
       ManifestIterator &iterator = frame.iterator;
 
-      ManifestEntry entry;
+      ManifestEntry* entry;
       iterator.next(&entry);
 
       // If a directory, push it and loop again
-      if (entry.isdirectory()) {
-        iter.path.append(entry.filename, entry.filenamelen);
+      if (entry->isdirectory()) {
+        iter.path.append(entry->filename, entry->filenamelen);
         iter.path.append(1, '/');
 
-        Manifest *submanifest = entry.get_manifest(iter.fetcher,
+        Manifest *submanifest = entry->get_manifest(iter.fetcher,
             iter.path.c_str(), iter.path.size());
 
         // TODO: memory cleanup here is probably broken.
@@ -497,7 +497,7 @@ static PyObject *fileiter_iterentriesnext(py_fileiter *self) {
       } else {
         // If a file, yield it
         int oldpathsize = iter.path.size();
-        iter.path.append(entry.filename, entry.filenamelen);
+        iter.path.append(entry->filename, entry->filenamelen);
         PyObject* result = PyString_FromStringAndSize(iter.path.c_str(), iter.path.length());
         if (!result) {
           PyErr_NoMemory();

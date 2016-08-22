@@ -46,7 +46,7 @@ class Manifest {
 
     Manifest(PythonObj &rawobj);
 
-    ManifestIterator getIterator() const;
+    ManifestIterator getIterator();
 
     /**
      * Returns an iterator correctly positioned for a child of a given
@@ -76,19 +76,19 @@ class Manifest {
  */
 class ManifestIterator {
   private:
-    std::list<ManifestEntry>::const_iterator iterator;
+    std::list<ManifestEntry>::iterator iterator;
     std::list<ManifestEntry>::const_iterator end;
   public:
     ManifestIterator() {
     }
 
     ManifestIterator(
-        std::list<ManifestEntry>::const_iterator iterator,
+        std::list<ManifestEntry>::iterator iterator,
         std::list<ManifestEntry>::const_iterator end);
 
-    bool next(ManifestEntry *entry);
+    bool next(ManifestEntry **entry);
 
-    ManifestEntry currentvalue() const;
+    ManifestEntry *currentvalue() const;
 
     bool isfinished() const;
 };

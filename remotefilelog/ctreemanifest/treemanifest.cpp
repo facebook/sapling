@@ -28,7 +28,7 @@ void _treemanifest_find(
     // TODO: need to attach this manifest to the parent Manifest object.
 
     ManifestIterator mfiterator = manifest->getIterator();
-    ManifestEntry entry;
+    ManifestEntry *entry;
     bool recurse = false;
 
     // Loop over the contents of the current directory looking for the
@@ -36,16 +36,17 @@ void _treemanifest_find(
     while (mfiterator.next(&entry)) {
       // If the current entry matches the query file/directory, either recurse,
       // return, or abort.
-      if (wordlen == entry.filenamelen && strncmp(word, entry.filename, wordlen) == 0) {
+      if (wordlen == entry->filenamelen &&
+          strncmp(word, entry->filename, wordlen) == 0) {
         // If this is the last entry in the query path, either return or abort
         if (pathiter.isfinished()) {
           // If it's a file, it's our result
-          if (!entry.isdirectory()) {
-            resultnode->assign(binfromhex(entry.node));
-            if (entry.flag == NULL) {
+          if (!entry->isdirectory()) {
+            resultnode->assign(binfromhex(entry->node));
+            if (entry->flag == NULL) {
               *resultflag = '\0';
             } else {
-              *resultflag = *entry.flag;
+              *resultflag = *entry->flag;
             }
             return;
           } else {
@@ -56,9 +57,9 @@ void _treemanifest_find(
 
         // If there's more in the query, either recurse or give up
         curpathlen = curpathlen + wordlen + 1;
-        if (entry.isdirectory() && filename.length() > curpathlen) {
+        if (entry->isdirectory() && filename.length() > curpathlen) {
           curnode.erase();
-          curnode.append(binfromhex(entry.node));
+          curnode.append(binfromhex(entry->node));
           recurse = true;
           break;
         } else {
