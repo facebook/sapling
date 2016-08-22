@@ -18,19 +18,6 @@ class ManifestFetcher;
 #include "pythonutil.h"
 
 /**
- * A key which can be used to look up a manifest.
- */
-struct manifestkey {
-  std::string *path;
-  std::string *node;
-
-  manifestkey(std::string *path, std::string *node) :
-      path(path),
-      node(node) {
-  }
-};
-
-/**
  * Class used to obtain Manifests, given a path and node.
  */
 class ManifestFetcher {
@@ -43,7 +30,9 @@ class ManifestFetcher {
      * Fetches the Manifest from the store for the provided manifest key.
      * Returns the manifest if found, or throws an exception if not found.
      */
-    Manifest *get(const manifestkey &key) const;
+    Manifest *get(
+        const char *path, size_t pathlen,
+        std::string &node) const;
 };
 
 #endif //REMOTEFILELOG_MANIFEST_FETCHER_H

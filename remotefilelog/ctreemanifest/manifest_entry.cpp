@@ -95,11 +95,11 @@ void ManifestEntry::appendtopath(std::string &path) {
   }
 }
 
-Manifest *ManifestEntry::get_manifest(ManifestFetcher fetcher, std::string &path) {
+Manifest *ManifestEntry::get_manifest(
+    ManifestFetcher fetcher, const char *path, size_t pathlen) {
   if (this->resolved == NULL) {
     std::string binnode = binfromhex(node);
-    manifestkey key(&path, &binnode);
-    this->resolved = fetcher.get(key);
+    this->resolved = fetcher.get(path, pathlen, binnode);
   }
 
   return this->resolved;

@@ -156,8 +156,7 @@ static PyObject *treemanifest_getkeysiter(py_treemanifest *self) {
 
       // Grab the root node's data and prep the iterator
       std::string rootpath;
-      Manifest *root = fetcher.get(
-          manifestkey(&rootpath, &self->tm.node));
+      Manifest *root = fetcher.get(NULL, 0, self->tm.node);
 
       // TODO: root manifest should be stored in the treemanifest object and
       // used if it's available.
@@ -304,7 +303,8 @@ static void treemanifest_diffrecurse(
       // selfentry should be processed first and only exists in self
       selfentry.appendtopath(*path);
       if (selfentry.isdirectory()) {
-        Manifest *selfchildmanifest = selfentry.get_manifest(fetcher, *path);
+        Manifest *selfchildmanifest = selfentry.get_manifest(
+            fetcher, path->c_str(), path->size());
         treemanifest_diffrecurse(selfchildmanifest, NULL, path, diff, fetcher);
       } else {
         DiffEntry entry(&selfbinnode, selfentry.flag, NULL, NULL);
@@ -315,7 +315,8 @@ static void treemanifest_diffrecurse(
       // otherentry should be processed first and only exists in other
       otherentry.appendtopath(*path);
       if (otherentry.isdirectory()) {
-        Manifest *otherchildmanifest = otherentry.get_manifest(fetcher, *path);
+        Manifest *otherchildmanifest = otherentry.get_manifest(
+            fetcher, path->c_str(), path->size());
         treemanifest_diffrecurse(NULL, otherchildmanifest, path, diff, fetcher);
       } else {
         DiffEntry entry(NULL, NULL, &otherbinnode, otherentry.flag);
@@ -329,10 +330,12 @@ static void treemanifest_diffrecurse(
         selfentry.appendtopath(*path);
 
         if (selfbinnode != otherbinnode) {
-          manifestkey selfkey(path, &selfbinnode);
-          manifestkey otherkey(path, &otherbinnode);
-          Manifest *selfchildmanifest = fetcher.get(selfkey);
-          Manifest *otherchildmanifest = fetcher.get(otherkey);
+          Manifest *selfchildmanifest = fetcher.get(
+              path->c_str(), path->size(),
+              selfbinnode);
+          Manifest *otherchildmanifest = fetcher.get(
+              path->c_str(), path->size(),
+              otherbinnode);
 
           treemanifest_diffrecurse(
               selfchildmanifest,
@@ -350,8 +353,9 @@ static void treemanifest_diffrecurse(
         entry.addtodiff(diff, *path);
 
         path->append(1, '/');
-        manifestkey selfkey(path, &selfbinnode);
-        Manifest *selfchildmanifest = fetcher.get(selfkey);
+        Manifest *selfchildmanifest = fetcher.get(
+            path->c_str(), path->size(),
+            selfbinnode);
         treemanifest_diffrecurse(selfchildmanifest, NULL, path, diff, fetcher);
 
         selfiter.next(&selfentry);
@@ -363,8 +367,10 @@ static void treemanifest_diffrecurse(
         entry.addtodiff(diff, *path);
 
         path->append(1, '/');
-        manifestkey otherkey(path, &otherbinnode);
-        Manifest *otherchildmanifest = fetcher.get(otherkey);
+        Manifest *otherchildmanifest = fetcher.get(
+            path->c_str(), path->size(),
+            otherbinnode
+        );
         treemanifest_diffrecurse(NULL, otherchildmanifest, path, diff, fetcher);
 
         selfiter.next(&selfentry);
@@ -407,10 +413,14 @@ static PyObject *treemanifest_diff(PyObject *o, PyObject *args) {
   std::string path;
   try {
     path.reserve(1024);
-    manifestkey selfkey(&path, &self->tm.node);
-    manifestkey otherkey(&path, &other->tm.node);
-    Manifest *selfmanifest = fetcher.get(selfkey);
-    Manifest *othermanifest = fetcher.get(otherkey);
+    Manifest *selfmanifest = fetcher.get(
+        path.c_str(), path.size(),
+        self->tm.node
+    );
+    Manifest *othermanifest = fetcher.get(
+        path.c_str(), path.size(),
+        other->tm.node
+    );
     treemanifest_diffrecurse(
         selfmanifest, othermanifest, &path, results, fetcher);
   } catch (const pyexception &ex) {
@@ -424,13 +434,13 @@ static PyObject *treemanifest_diff(PyObject *o, PyObject *args) {
   return results.returnval();
 }
 
-static void _treemanifest_find(const std::string &filename, const manifestkey &root,
-    const ManifestFetcher &fetcher, std::string *resultnode, char *resultflag) {
-  // Pre-allocate our curkey so we can reuse it for each iteration
-  std::string curname(*root.path);
-  curname.reserve(1024);
-  std::string curnode(*root.node);
-  manifestkey curkey(&curname, &curnode);
+static void _treemanifest_find(
+    const std::string &filename,
+    const std::string &rootnode,
+    const ManifestFetcher &fetcher,
+    std::string *resultnode, char *resultflag) {
+  size_t curpathlen = 0;
+  std::string curnode(rootnode);
 
   // Loop over the parts of the query filename
   PathIterator pathiter(filename);
@@ -438,7 +448,7 @@ static void _treemanifest_find(const std::string &filename, const manifestkey &r
   size_t wordlen;
   while (pathiter.next(&word, &wordlen)) {
     // Obtain the raw data for this directory
-    Manifest *manifest = fetcher.get(curkey);
+    Manifest *manifest = fetcher.get(filename.c_str(), curpathlen, curnode);
 
     // TODO: need to attach this manifest to the parent Manifest object.
 
@@ -470,11 +480,10 @@ static void _treemanifest_find(const std::string &filename, const manifestkey &r
         }
 
         // If there's more in the query, either recurse or give up
-        size_t nextpathlen = curkey.path->length() + wordlen + 1;
-        if (entry.isdirectory() && filename.length() > nextpathlen) {
-          // Get the fullpath of the current directory/file we're searching in
-          curkey.path->assign(filename, 0, nextpathlen);
-          curkey.node->assign(binfromhex(entry.node));
+        curpathlen = curpathlen + wordlen + 1;
+        if (entry.isdirectory() && filename.length() > curpathlen) {
+          curnode.erase();
+          curnode.append(binfromhex(entry.node));
           recurse = true;
           break;
         } else {
@@ -512,9 +521,11 @@ static PyObject *treemanifest_find(PyObject *o, PyObject *args) {
   char resultflag;
   try {
     std::string rootpath;
-    manifestkey rootkey(&rootpath, &self->tm.node);
-    _treemanifest_find(std::string(filename, filenamelen), rootkey, fetcher,
-                       &resultnode, &resultflag);
+    _treemanifest_find(
+        std::string(filename, filenamelen),
+        self->tm.node,
+        fetcher,
+        &resultnode, &resultflag);
   } catch (const pyexception &ex) {
     return NULL;
   }
@@ -637,7 +648,8 @@ static PyObject *fileiter_iterentriesnext(py_fileiter *self) {
         iter.path.append(entry.filename, entry.filenamelen);
         iter.path.append(1, '/');
 
-        Manifest *submanifest = entry.get_manifest(iter.fetcher, iter.path);
+        Manifest *submanifest = entry.get_manifest(iter.fetcher,
+            iter.path.c_str(), iter.path.size());
 
         // TODO: memory cleanup here is probably broken.
         iter.frames.push_back(stackframe(submanifest));

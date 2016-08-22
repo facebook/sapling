@@ -53,7 +53,8 @@ class ManifestEntry {
 
     void appendtopath(std::string &path);
 
-    Manifest *get_manifest(ManifestFetcher fetcher, std::string &path);
+    Manifest *get_manifest(
+        ManifestFetcher fetcher, const char *path, size_t pathlen);
 };
 
 #endif //REMOTEFILELOG_MANIFEST_ENTRY_H

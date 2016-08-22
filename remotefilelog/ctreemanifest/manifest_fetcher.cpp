@@ -17,10 +17,12 @@ ManifestFetcher::ManifestFetcher(PythonObj &store) :
  * Fetches the Manifest from the store for the provided manifest key.
  * Returns the manifest if found, or throws an exception if not found.
  */
-Manifest *ManifestFetcher::get(const manifestkey &key) const {
+Manifest *ManifestFetcher::get(
+    const char *path, size_t pathlen,
+    std::string &node) const {
   PythonObj arglist = Py_BuildValue("s#s#",
-      key.path->c_str(), (Py_ssize_t)key.path->size(),
-      key.node->c_str(), (Py_ssize_t)key.node->size());
+      path, (Py_ssize_t) pathlen,
+      node.c_str(), (Py_ssize_t)node.size());
 
   PyObject *result = PyEval_CallObject(this->_get, arglist);
 
@@ -29,7 +31,8 @@ Manifest *ManifestFetcher::get(const manifestkey &key) const {
       throw pyexception();
     }
 
-    PyErr_Format(PyExc_RuntimeError, "unable to find tree '%s:...'", key.path->c_str());
+    PyErr_Format(PyExc_RuntimeError,
+        "unable to find tree '%.*s:...'", (int) pathlen, path);
     throw pyexception();
   }
 
