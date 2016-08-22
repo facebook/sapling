@@ -295,20 +295,18 @@ class LocalIteratorThread(Thread):
     * queue - self explanatory
     * id - tag to use when sending messages
     * generator - a generator which creates results to put on the queue
-    * limit - (optional) limit on number of results to generate
 
     If an exception is thrown, error result with the message from the
     exception will be passed along the queue.  Since local results are
     not expected to generate exceptions, this terminates iteration.
     """
 
-    def __init__(self, queue, id, generator, limit=0):
+    def __init__(self, queue, id, generator):
         Thread.__init__(self)
         self.daemon = True
         self.queue = queue
         self.id = id
         self.generator = generator
-        self.limit = limit
         self._stop = Event()
 
     def stop(self):
@@ -318,12 +316,10 @@ class LocalIteratorThread(Thread):
         return self._stop.isSet()
 
     def run(self):
-        count = 0
         try:
             for result in self.generator:
                 self.queue.put((self.id, True, result))
-                count += 1
-                if count == self.limit or self.stopped():
+                if self.stopped():
                     break
         except Exception as e:
             self.queue.put((self.id, False, str(e)))
@@ -350,11 +346,9 @@ class FastLogThread(Thread):
               we simply convert this to the common prefix, which
               means consumers of the queue may need to filter results
               if multiple paths are passed.
-    * limit - (optional) limit on results to generate.  Less useful
-              if additional filtering would be required.
     """
 
-    def __init__(self, queue, id, repo, scm, rev, paths, limit=0):
+    def __init__(self, queue, id, repo, scm, rev, paths):
         Thread.__init__(self)
         self.daemon = True
         self.queue = queue
@@ -363,7 +357,6 @@ class FastLogThread(Thread):
         self.scm = scm
         self.rev = rev
         self.paths = [os.path.commonprefix(paths)]
-        self.limit = limit
         self._stop = Event()
 
     def stop(self):
@@ -374,14 +367,13 @@ class FastLogThread(Thread):
 
     def run(self):
         skip = 0
-        limit = self.limit
 
         paths = self.paths
         rev = str(self.rev)
         repo = self.repo
 
         while True:
-            todo = min(FASTLOG_MAX, limit) if limit == 0 else FASTLOG_MAX
+            todo = FASTLOG_MAX
             results = None
             try:
                 if USE_FASTLOG:
@@ -420,7 +412,7 @@ class FastLogThread(Thread):
                         (self.id, False, 'Received bad hash %s' % hash))
                 skip += 1
 
-            if len(results) < todo or skip == limit or self.stopped():
+            if len(results) < todo or self.stopped():
                 # signal completion
                 self.queue.put((self.id, True, None))
                 return
