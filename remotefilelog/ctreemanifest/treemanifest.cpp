@@ -121,7 +121,6 @@ class ManifestEntry {
     size_t filenamelen;
     char *node;
     char *flag;
-    char *nextentrystart;
 
     // TODO: add hint storage here as well
 
@@ -130,14 +129,13 @@ class ManifestEntry {
       filenamelen = 0;
       this->node = NULL;
       this->flag = NULL;
-      this->nextentrystart = NULL;
     }
 
     /**
      * Given the start of a file/dir entry in a manifest, returns a
      * ManifestEntry structure with the parsed data.
      */
-    ManifestEntry(char *entrystart) {
+    ManifestEntry(char *&entrystart) {
       // Each entry is of the format:
       //
       //   <filename>\0<40-byte hash><optional 1 byte flag>\n
@@ -151,10 +149,10 @@ class ManifestEntry {
 
       this->flag = nulldelimiter + 41;
       if (*this->flag != '\n') {
-        this->nextentrystart = this->flag + 2;
+        entrystart = this->flag + 2;
       } else {
         // No flag
-        this->nextentrystart = this->flag + 1;
+        entrystart = this->flag + 1;
         this->flag = NULL;
       }
     }
@@ -234,30 +232,19 @@ class Manifest {
     PythonObj _rawobj;
 
     std::list<ManifestEntry> entries;
-
 public:
     Manifest() {
     }
 
     Manifest(PythonObj &rawobj) :
       _rawobj(rawobj) {
-      char *startptr, *endptr;
+      char *parseptr, *endptr;
       Py_ssize_t buf_sz;
-      PyString_AsStringAndSize(_rawobj, &startptr, &buf_sz);
-      endptr = startptr + buf_sz;
+      PyString_AsStringAndSize(_rawobj, &parseptr, &buf_sz);
+      endptr = parseptr + buf_sz;
 
-      if (buf_sz == 0) {
-        return;
-      }
-
-      ManifestEntry entry = ManifestEntry(startptr);
-      entries.push_back(entry);
-      while (entry.nextentrystart < endptr) {
-        if (entry.nextentrystart >= endptr) {
-            throw std::logic_error("called nextentry on the last entry");
-          }
-
-        entry = ManifestEntry(entry.nextentrystart);
+      while (parseptr < endptr) {
+        ManifestEntry entry = ManifestEntry(parseptr);
         entries.push_back(entry);
       }
     }
