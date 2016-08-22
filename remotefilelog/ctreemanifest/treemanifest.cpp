@@ -513,14 +513,6 @@ class PathIterator {
  */
 static PythonObj treemanifest_diffentry(const string *anode, const char *aflag,
                                         const string *bnode, const char *bflag) {
-  int aflaglen = 1;
-  if (aflag == NULL) {
-    aflaglen = 0;
-  }
-  int bflaglen = 1;
-  if (bflag == NULL) {
-    bflaglen = 0;
-  }
   const char *astr = anode != NULL ? anode->c_str() : NULL;
   Py_ssize_t alen = anode != NULL ? anode->length() : 0;
   const char *bstr = bnode != NULL ? bnode->c_str() : NULL;
