@@ -95,8 +95,6 @@ class PythonObj {
     }
 };
 
-class Manifest;
-
 /**
  * A key which can be used to look up a manifest.
  */
@@ -105,10 +103,28 @@ struct manifestkey {
   string *node;
 
   manifestkey(string *path, string *node) :
-    path(path),
-    node(node) {
+      path(path),
+      node(node) {
   }
 };
+
+class Manifest;
+/**
+ * Class used to obtain Manifests, given a path and node.
+ */
+class ManifestFetcher {
+private:
+  PythonObj _get;
+public:
+  ManifestFetcher(PythonObj &store);
+
+  /**
+   * Fetches the Manifest from the store for the provided manifest key.
+   * Returns the manifest if found, or throws an exception if not found.
+   */
+  Manifest *get(const manifestkey &key) const;
+};
+
 
 /**
  * Class representing a single entry in a given manifest.
@@ -254,40 +270,37 @@ public:
     }
 };
 
+////////////////////////////////////////////////////////////////////////////////
+// ManifestFetcher implementation
+////////////////////////////////////////////////////////////////////////////////
+
+ManifestFetcher::ManifestFetcher(PythonObj &store) :
+    _get(store.getattr("get")) {
+}
+
 /**
- * Class used to obtain Manifests, given a path and node.
+ * Fetches the Manifest from the store for the provided manifest key.
+ * Returns the manifest if found, or throws an exception if not found.
  */
-class ManifestFetcher {
-  private:
-    PythonObj _get;
-  public:
-    ManifestFetcher(PythonObj &store) :
-      _get(store.getattr("get")) {
-    }
+Manifest *ManifestFetcher::get(const manifestkey &key) const {
+  PythonObj arglist = Py_BuildValue("s#s#",
+      key.path->c_str(), (Py_ssize_t)key.path->size(),
+      key.node->c_str(), (Py_ssize_t)key.node->size());
 
-  /**
-   * Fetches the Manifest from the store for the provided manifest key.
-   * Returns the manifest if found, or throws an exception if not found.
-   */
-  Manifest *get(const manifestkey &key) const {
-    PythonObj arglist = Py_BuildValue("s#s#", key.path->c_str(), (Py_ssize_t)key.path->size(),
-                                              key.node->c_str(), (Py_ssize_t)key.node->size());
+  PyObject *result = PyEval_CallObject(this->_get, arglist);
 
-    PyObject *result = PyEval_CallObject(this->_get, arglist);
-
-    if (!result) {
-      if (PyErr_Occurred()) {
-        throw pyexception();
-      }
-
-      PyErr_Format(PyExc_RuntimeError, "unable to find tree '%s:...'", key.path->c_str());
+  if (!result) {
+    if (PyErr_Occurred()) {
       throw pyexception();
     }
 
-    PythonObj resultobj(result);
-    return new Manifest(resultobj);
+    PyErr_Format(PyExc_RuntimeError, "unable to find tree '%s:...'", key.path->c_str());
+    throw pyexception();
   }
-};
+
+  PythonObj resultobj(result);
+  return new Manifest(resultobj);
+}
 
 /**
  * A single instance of a treemanifest.
