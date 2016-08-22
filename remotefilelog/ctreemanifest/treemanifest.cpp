@@ -411,6 +411,11 @@ struct treemanifest {
 
   // Optional in memory root of the tree
   InMemoryManifest *root;
+
+  treemanifest(PythonObj store, string node) :
+    store(store),
+    node(node) {
+  }
 };
 
 struct py_treemanifest {
@@ -909,8 +914,7 @@ static PyObject *treemanifest_find(PyObject *o, PyObject *args) {
  * Deallocates the contents of the treemanifest
  */
 static void treemanifest_dealloc(py_treemanifest *self) {
-  self->tm.node.~string();
-  self->tm.store.~PythonObj();
+  self->tm.~treemanifest();
   PyObject_Del(self);
 }
 
@@ -927,13 +931,13 @@ static int treemanifest_init(py_treemanifest *self, PyObject *args) {
   }
 
   Py_INCREF(store);
-  new (&self->tm.store) PythonObj(store);
 
   // We have to manually call the member constructor, since the provided 'self'
   // is just zerod out memory.
   try {
-    new (&self->tm.node) string(node, nodelen);
+    new (&self->tm) treemanifest(PythonObj(store), string(node, nodelen));
   } catch (const std::exception &ex) {
+    Py_DECREF(store);
     PyErr_SetString(PyExc_RuntimeError, ex.what());
     return -1;
   }
