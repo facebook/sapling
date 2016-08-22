@@ -27,6 +27,7 @@ from mercurial import (
 from mercurial.i18n import _
 from mercurial.node import nullrev
 
+import os
 import heapq
 from threading import Thread, Event
 from collections import deque
