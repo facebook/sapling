@@ -247,15 +247,15 @@ class Manifest {
  */
 class ManifestIterator {
   private:
-    Manifest _manifest;
+    const Manifest *_manifest;
     ManifestEntry _current;
   public:
     ManifestIterator() {
     }
 
-    ManifestIterator(const Manifest &manifest) :
+    ManifestIterator(const Manifest *manifest) :
       _manifest(manifest),
-      _current(manifest.firstentry()) {
+      _current(manifest->firstentry()) {
     }
 
     bool next(ManifestEntry *nextentry) {
@@ -265,10 +265,10 @@ class ManifestIterator {
 
       *nextentry = this->_current;
 
-      if (this->_manifest.islastentry(this->_current)) {
+      if (this->_manifest->islastentry(this->_current)) {
         this->_current = ManifestEntry();
       } else {
-        this->_current = this->_manifest.nextentry(this->_current);
+        this->_current = this->_manifest->nextentry(this->_current);
       }
       return true;
     }
@@ -282,7 +282,7 @@ class ManifestIterator {
     }
 
     bool isfinished() const {
-      return this->_manifest.empty() || this->_current.filename == NULL;
+      return this->_manifest->empty() || this->_current.filename == NULL;
     }
 };
 
@@ -301,7 +301,7 @@ class ManifestFetcher {
    * Fetches the Manifest from the store for the provided manifest key.
    * Returns the manifest if found, or throws an exception if not found.
    */
-  Manifest get(const manifestkey &key) const {
+  Manifest *get(const manifestkey &key) const {
     PythonObj arglist = Py_BuildValue("s#s#", key.path->c_str(), (Py_ssize_t)key.path->size(),
                                               key.node->c_str(), (Py_ssize_t)key.node->size());
 
@@ -317,7 +317,7 @@ class ManifestFetcher {
     }
 
     PythonObj resultobj(result);
-    return Manifest(resultobj);
+    return new Manifest(resultobj);
   }
 };
 
@@ -347,10 +347,10 @@ struct py_treemanifest {
  * Represents a single stack frame in an iteration of the contents of the tree.
  */
 struct stackframe {
-  Manifest manifest;
+  const Manifest *manifest;
   ManifestIterator iterator;
 
-  stackframe(const Manifest &manifest) :
+  stackframe(const Manifest *manifest) :
     manifest(manifest),
     iterator(manifest) {
   }
@@ -457,8 +457,11 @@ static PyObject *treemanifest_getkeysiter(py_treemanifest *self) {
 
       // Grab the root node's data and prep the iterator
       string rootpath;
-      Manifest root = fetcher.get(
+      Manifest *root = fetcher.get(
           manifestkey(&rootpath, &self->tm.node));
+
+      // TODO: root manifest should be stored in the treemanifest object and
+      // used if it's available.
       i->iter.frames.push_back(stackframe(root));
 
       i->iter.path.reserve(1024);
@@ -566,8 +569,8 @@ class DiffEntry {
  */
 static void treemanifest_diffrecurse(manifestkey *selfkey, manifestkey *otherkey,
                                      const PythonObj &diff, const ManifestFetcher &fetcher) {
-  Manifest selfmf;
-  Manifest othermf;
+  Manifest *selfmf;
+  Manifest *othermf;
   ManifestIterator selfiter;
   ManifestIterator otheriter;
 
@@ -576,12 +579,16 @@ static void treemanifest_diffrecurse(manifestkey *selfkey, manifestkey *otherkey
     selfmf = fetcher.get(*selfkey);
     selfiter = ManifestIterator(selfmf);
     path = selfkey->path;
+
+    // TODO: need to attach selfmf to its parent.
   }
 
   if (otherkey) {
     othermf = fetcher.get(*otherkey);
     otheriter = ManifestIterator(othermf);
     path = otherkey->path;
+
+    // TODO: need to attach othermf to its parent.
   }
 
   // Iterate through both directory contents
@@ -735,7 +742,9 @@ static void _treemanifest_find(const string &filename, const manifestkey &root,
   size_t wordlen;
   while (pathiter.next(&word, &wordlen)) {
     // Obtain the raw data for this directory
-    Manifest manifest = fetcher.get(curkey);
+    Manifest *manifest = fetcher.get(curkey);
+
+    // TODO: need to attach this manifest to the parent Manifest object.
 
     ManifestIterator mfiterator(manifest);
     ManifestEntry entry;
@@ -934,7 +943,9 @@ static PyObject *fileiter_iterentriesnext(py_fileiter *self) {
 
         string binnode = binfromhex(entry.node);
         manifestkey key(&iter.path, &binnode);
-        Manifest submanifest = iter.fetcher.get(key);
+        Manifest *submanifest = iter.fetcher.get(key);
+
+        // TODO: memory cleanup here is probably broken.
         iter.frames.push_back(stackframe(submanifest));
 
       } else {
