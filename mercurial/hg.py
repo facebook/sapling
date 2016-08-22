@@ -738,20 +738,22 @@ def updatetotally(ui, repo, checkout, brev, clean=False, check=False):
             if movemarkfrom == repo['.'].node():
                 pass # no-op update
             elif bookmarks.update(repo, [movemarkfrom], repo['.'].node()):
-                ui.status(_("updating bookmark %s\n") % repo._activebookmark)
+                b = ui.label(repo._activebookmark, 'bookmarks.active')
+                ui.status(_("updating bookmark %s\n") % b)
             else:
                 # this can happen with a non-linear update
-                ui.status(_("(leaving bookmark %s)\n") %
-                          repo._activebookmark)
+                b = ui.label(repo._activebookmark, 'bookmarks')
+                ui.status(_("(leaving bookmark %s)\n") % b)
                 bookmarks.deactivate(repo)
         elif brev in repo._bookmarks:
             if brev != repo._activebookmark:
-                ui.status(_("(activating bookmark %s)\n") % brev)
+                b = ui.label(brev, 'bookmarks.active')
+                ui.status(_("(activating bookmark %s)\n") % b)
             bookmarks.activate(repo, brev)
         elif brev:
             if repo._activebookmark:
-                ui.status(_("(leaving bookmark %s)\n") %
-                          repo._activebookmark)
+                b = ui.label(repo._activebookmark, 'bookmarks')
+                ui.status(_("(leaving bookmark %s)\n") % b)
             bookmarks.deactivate(repo)
 
         if warndest:
