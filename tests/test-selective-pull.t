@@ -156,3 +156,47 @@ Delete bookmark on the server
   $ hg bookmarks --remote
      default/master            1:0238718db2b1
      secondremote/master       1:0238718db2b1
+
+Update to the remote bookmark
+  $ hg update thirdbook
+  `thirdbook` not found: assuming it is a remote bookmark and trying to pull it
+  pulling from ssh://user@dummy/remoterepo
+  no changes found
+  `thirdbook` found remotely
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg book --verbose
+  no bookmarks set
+  $ hg book --remote
+     default/master            1:0238718db2b1
+     default/thirdbook         0:1449e7934ec1
+     secondremote/master       1:0238718db2b1
+
+Trying to update to unknown bookmark
+  $ hg update unknownbook
+  `unknownbook` not found: assuming it is a remote bookmark and trying to pull it
+  pulling from ssh://user@dummy/remoterepo
+  pull failed: remote bookmark unknownbook not found!
+  abort: unknown revision 'unknownbook'!
+  [255]
+
+Update to the remote bookmark from secondremote
+  $ hg update secondremote/secondbook
+  `secondremote/secondbook` not found: assuming it is a remote bookmark and trying to pull it
+  pulling from ssh://user@dummy/secondremoterepo
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+  (run 'hg update' to get a working copy)
+  `secondremote/secondbook` found remotely
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg book --remote
+     default/master            1:0238718db2b1
+     default/thirdbook         0:1449e7934ec1
+     secondremote/master       1:0238718db2b1
+     secondremote/secondbook   4:0022441e80e5
+
+Update make sure revsets work
+  $ hg up '.^'
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
