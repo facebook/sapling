@@ -217,7 +217,7 @@ static void treemanifest_diffrecurse(
         DiffEntry entry(&selfbinnode, selfentry->flag, NULL, NULL);
         entry.addtodiff(diff, *path);
       }
-      selfiter.next(&selfentry);
+      selfiter.next();
     } else if (cmp > 0) {
       // otherentry should be processed first and only exists in other
       otherentry->appendtopath(*path);
@@ -229,7 +229,7 @@ static void treemanifest_diffrecurse(
         DiffEntry entry(NULL, NULL, &otherbinnode, otherentry->flag);
         entry.addtodiff(diff, *path);
       }
-      otheriter.next(&otherentry);
+      otheriter.next();
     } else {
       // Filenames match - now compare directory vs file
       if (selfentry->isdirectory() && otherentry->isdirectory()) {
@@ -251,8 +251,8 @@ static void treemanifest_diffrecurse(
               diff,
               fetcher);
         }
-        selfiter.next(&selfentry);
-        otheriter.next(&otherentry);
+        selfiter.next();
+        otheriter.next();
       } else if (selfentry->isdirectory() && !otherentry->isdirectory()) {
         // self is directory, other is not - process other then self
         otherentry->appendtopath(*path);
@@ -265,8 +265,8 @@ static void treemanifest_diffrecurse(
             selfbinnode);
         treemanifest_diffrecurse(selfchildmanifest, NULL, path, diff, fetcher);
 
-        selfiter.next(&selfentry);
-        otheriter.next(&otherentry);
+        selfiter.next();
+        otheriter.next();
       } else if (!selfentry->isdirectory() && otherentry->isdirectory()) {
         // self is not directory, other is - process self then other
         selfentry->appendtopath(*path);
@@ -280,8 +280,8 @@ static void treemanifest_diffrecurse(
         );
         treemanifest_diffrecurse(NULL, otherchildmanifest, path, diff, fetcher);
 
-        selfiter.next(&selfentry);
-        otheriter.next(&otherentry);
+        selfiter.next();
+        otheriter.next();
       } else {
         // both are files
         bool flagsdiffer = (
@@ -295,8 +295,8 @@ static void treemanifest_diffrecurse(
           entry.addtodiff(diff, *path);
         }
 
-        selfiter.next(&selfentry);
-        otheriter.next(&otherentry);
+        selfiter.next();
+        otheriter.next();
       }
     }
     path->erase(originalpathsize);
@@ -481,7 +481,7 @@ static PyObject *fileiter_iterentriesnext(py_fileiter *self) {
       ManifestIterator &iterator = frame.iterator;
 
       ManifestEntry* entry;
-      iterator.next(&entry);
+      entry = iterator.next();
 
       // If a directory, push it and loop again
       if (entry->isdirectory()) {

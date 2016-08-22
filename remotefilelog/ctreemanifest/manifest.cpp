@@ -81,15 +81,15 @@ ManifestIterator::ManifestIterator(
     iterator(iterator), end(end) {
 }
 
-bool ManifestIterator::next(ManifestEntry **entry) {
+ManifestEntry *ManifestIterator::next() {
   if (this->isfinished()) {
-    return false;
+    return NULL;
   }
 
-  *entry = &(*this->iterator);
-  this->iterator++;
+  ManifestEntry *result = &(*this->iterator);
+  this->iterator ++;
 
-  return true;
+  return result;
 }
 
 ManifestEntry *ManifestIterator::currentvalue() const {

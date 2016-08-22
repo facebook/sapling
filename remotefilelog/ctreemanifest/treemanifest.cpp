@@ -33,7 +33,7 @@ void _treemanifest_find(
 
     // Loop over the contents of the current directory looking for the
     // next directory/file.
-    while (mfiterator.next(&entry)) {
+    while ((entry = mfiterator.next()) != NULL) {
       // If the current entry matches the query file/directory, either recurse,
       // return, or abort.
       if (wordlen == entry->filenamelen &&

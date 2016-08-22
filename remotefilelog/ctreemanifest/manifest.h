@@ -86,7 +86,7 @@ class ManifestIterator {
         std::list<ManifestEntry>::iterator iterator,
         std::list<ManifestEntry>::const_iterator end);
 
-    bool next(ManifestEntry **entry);
+    ManifestEntry *next();
 
     ManifestEntry *currentvalue() const;
 
