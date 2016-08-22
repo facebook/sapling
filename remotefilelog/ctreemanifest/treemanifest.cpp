@@ -440,22 +440,22 @@ struct stackframe {
 /**
  * A helper struct representing the state of an iterator recursing over a tree.
  */
-struct stackiter {
+struct fileiter {
   ManifestFetcher fetcher;      // Instance to fetch tree content
   std::vector<stackframe> frames;
   string path;             // The fullpath for the top entry in the stack.
 
-  stackiter(ManifestFetcher fetcher) :
+  fileiter(ManifestFetcher fetcher) :
     fetcher(fetcher) {
   }
 
-  stackiter(const stackiter &old) :
+  fileiter(const fileiter &old) :
     fetcher(old.fetcher),
     frames(old.frames),
     path(old.path) {
   }
 
-  stackiter& operator=(const stackiter &other) {
+  fileiter& operator=(const fileiter &other) {
     this->fetcher = other.fetcher;
     this->frames = other.frames;
     this->path = other.path;
@@ -466,30 +466,30 @@ struct stackiter {
 
 /**
  * The python iteration object for iterating over a tree.  This is separate from
- * the stackiter above because it lets us just call the constructor on
- * stackiter, which will automatically populate all the members of stackiter.
+ * the fileiter above because it lets us just call the constructor on
+ * fileiter, which will automatically populate all the members of fileiter.
  */
-struct fileiter {
+struct py_fileiter {
   PyObject_HEAD;
 
-  stackiter iter;
+  fileiter iter;
 
   // A reference to the tree is kept, so it is not freed while we're iterating
   // over it.
   const py_treemanifest *treemf;
 
-  fileiter(ManifestFetcher fetcher) :
+  py_fileiter(ManifestFetcher fetcher) :
     iter(fetcher) {
   }
 };
 
-static void fileiter_dealloc(fileiter *self);
-static PyObject* fileiter_iterentriesnext(fileiter *self);
+static void fileiter_dealloc(py_fileiter *self);
+static PyObject* fileiter_iterentriesnext(py_fileiter *self);
 static PyTypeObject fileiterType = {
   PyObject_HEAD_INIT(NULL)
   0,                               /*ob_size */
   "treemanifest.keyiter",          /*tp_name */
-  sizeof(fileiter),                /*tp_basicsize */
+  sizeof(py_fileiter),                /*tp_basicsize */
   0,                               /*tp_itemsize */
   (destructor)fileiter_dealloc,    /*tp_dealloc */
   0,                               /*tp_print */
@@ -525,16 +525,16 @@ static PyTypeObject fileiterType = {
  * Returns a PyObject iterator instance.
  */
 static PyObject *treemanifest_getkeysiter(py_treemanifest *self) {
-  fileiter *i = PyObject_New(fileiter, &fileiterType);
+  py_fileiter *i = PyObject_New(py_fileiter, &fileiterType);
   if (i) {
     try {
       i->treemf = self;
       Py_INCREF(i->treemf);
 
       ManifestFetcher fetcher(self->tm.store);
-      // The provided fileiter struct hasn't initialized our stackiter member, so
+      // The provided py_fileiter struct hasn't initialized our fileiter member, so
       // we do it manually.
-      new (&i->iter) stackiter(fetcher);
+      new (&i->iter) fileiter(fetcher);
 
       // Grab the root node's data and prep the iterator
       string rootpath;
@@ -945,14 +945,14 @@ static int treemanifest_init(py_treemanifest *self, PyObject *args) {
   return 0;
 }
 
-// ==== fileiter functions ====
+// ==== py_fileiter functions ====
 
 /**
  * Destructor for the file iterator. Cleans up all the member data of the
  * iterator.
  */
-static void fileiter_dealloc(fileiter *self) {
-  self->iter.~stackiter();
+static void fileiter_dealloc(py_fileiter *self) {
+  self->iter.~fileiter();
   Py_XDECREF(self->treemf);
   PyObject_Del(self);
 }
@@ -963,7 +963,7 @@ static void fileiter_dealloc(fileiter *self) {
  *
  * Returns false if we've reached the end, or true if there's more work.
  */
-static bool fileiter_popfinished(stackiter *iter) {
+static bool fileiter_popfinished(fileiter *iter) {
   stackframe *frame = &iter->frames.back();
 
   // Pop the stack of trees until we find one we haven't finished iterating
@@ -991,8 +991,8 @@ static bool fileiter_popfinished(stackiter *iter) {
 /**
  * Returns the next object in the iteration.
  */
-static PyObject *fileiter_iterentriesnext(fileiter *self) {
-  stackiter &iter = self->iter;
+static PyObject *fileiter_iterentriesnext(py_fileiter *self) {
+  fileiter &iter = self->iter;
 
   try {
     // Iterate over the current directory contents
