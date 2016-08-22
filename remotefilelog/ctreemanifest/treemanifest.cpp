@@ -123,9 +123,9 @@ public:
 
 
 /**
- * Class representing a single entry in a given manifest.
- * This class owns none of the memory it points at. It's just a view into a
- * portion of memory someone else owns.
+ * Class representing a single entry in a given manifest.  Instances of this
+ * class may refer to that it does not own.  If it owns any memory, it is a
+ * single block referenced by the ownedmemory field.
  */
 class ManifestEntry {
   public:
@@ -134,6 +134,7 @@ class ManifestEntry {
     char *node;
     char *flag;
     Manifest *resolved;
+    char *ownedmemory;
 
     // TODO: add hint storage here as well
 
@@ -143,6 +144,46 @@ class ManifestEntry {
       this->node = NULL;
       this->flag = NULL;
       this->resolved = NULL;
+    }
+
+    ManifestEntry(
+        const char *filename, const size_t filenamelen,
+        const char *node,
+        char flag) {
+      this->ownedmemory = new char[
+        filenamelen +
+        1 +              // null character
+        40 +             // node hash
+        1 +              // flag
+        1                // NL
+      ];
+
+      // set up the pointers.
+      this->filename = (char *) this->ownedmemory;
+      if (node == NULL) {
+        this->node = NULL;
+      } else {
+        this->node = this->filename + filenamelen + 1;
+      }
+      this->flag = this->filename + filenamelen + 1 + 40;
+
+      // set up the null character and NL.
+      this->filename[filenamelen] = '\0';
+      *(this->flag + 1) = '\n';
+
+      // set up filenamelen
+      this->filenamelen = filenamelen;
+
+      // write the memory.
+      memcpy(this->filename, filename, filenamelen);
+      if (node != NULL) {
+        memcpy(this->node, node, 40);
+      }
+      if (flag == '\0') {
+        *this->flag = '\n';
+      } else {
+        *this->flag = flag;
+      }
     }
 
     /**
