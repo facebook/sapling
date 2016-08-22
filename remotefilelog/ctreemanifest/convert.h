@@ -36,7 +36,7 @@ static int8_t hextable[256] = {
 /**
  * Converts a given 20-byte node into a 40-byte hex string
  */
-static std::string binfromhex(const char *node) {
+inline std::string binfromhex(const char *node) {
   char binary[20];
   for (int i = 0; i < 40;) {
     int hi = hextable[(unsigned char)node[i++]];

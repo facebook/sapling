@@ -18,4 +18,8 @@ New errors are not allowed. Warnings are strongly discouraged.
   Skipping remotefilelog/cdatapack/null_test.c it has no-che?k-code (glob)
   Skipping remotefilelog/cdatapack/py-cdatapack.c it has no-che?k-code (glob)
   Skipping remotefilelog/ctreemanifest/convert.h it has no-che?k-code (glob)
+  Skipping remotefilelog/ctreemanifest/manifest.h it has no-che?k-code (glob)
+  Skipping remotefilelog/ctreemanifest/manifest_entry.h it has no-che?k-code (glob)
+  Skipping remotefilelog/ctreemanifest/manifest_fetcher.h it has no-che?k-code (glob)
+  Skipping remotefilelog/ctreemanifest/pythonutil.h it has no-che?k-code (glob)
   Skipping tests/test-bad-configs.t it has no-che?k-code (glob)

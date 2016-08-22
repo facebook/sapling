@@ -41,6 +41,10 @@ setup(
         Extension('ctreemanifest',
                   sources=[
                       'remotefilelog/ctreemanifest/treemanifest.cpp',
+                      'remotefilelog/ctreemanifest/manifest.cpp',
+                      'remotefilelog/ctreemanifest/manifest_entry.cpp',
+                      'remotefilelog/ctreemanifest/manifest_fetcher.cpp',
+                      'remotefilelog/ctreemanifest/pythonutil.cpp',
                   ],
                   include_dirs=[
                       'remotefilelog/ctreemanifest',

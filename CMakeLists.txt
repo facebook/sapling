@@ -19,7 +19,16 @@ SET(CMAKE_C_FLAGS_RELWITHDEBINFO "-O0 -g")
 add_library(ctreemanifest
         SHARED
         remotefilelog/ctreemanifest/convert.h
-        remotefilelog/ctreemanifest/treemanifest.cpp)
+        remotefilelog/ctreemanifest/manifest.cpp
+        remotefilelog/ctreemanifest/manifest.h
+        remotefilelog/ctreemanifest/manifest_entry.cpp
+        remotefilelog/ctreemanifest/manifest_entry.h
+        remotefilelog/ctreemanifest/manifest_fetcher.cpp
+        remotefilelog/ctreemanifest/manifest_fetcher.h
+        remotefilelog/ctreemanifest/pythonutil.cpp
+        remotefilelog/ctreemanifest/pythonutil.h
+        remotefilelog/ctreemanifest/treemanifest.cpp
+        )
 
 target_include_directories(ctreemanifest PUBLIC ${PYTHON_INCLUDE_DIRS})
 target_link_libraries(ctreemanifest PUBLIC ${PYTHON_LIBRARIES})
