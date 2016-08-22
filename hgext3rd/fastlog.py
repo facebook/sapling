@@ -147,7 +147,7 @@ def getfastlogrevs(orig, repo, pats, opts):
         wctx = repo[None]
         match, pats = scmutil.matchandpats(wctx, pats, opts)
         files = match.files()
-        if not files:
+        if not files or '.' in files:
             # Walking the whole repo - bail on fastlog
             return orig(repo, pats, opts)
 
@@ -257,9 +257,10 @@ def getfastlogrevs(orig, repo, pats, opts):
                 remote.stop()
 
         # Complex match - use a revset.
-        match = ['date', 'exclude', 'include', 'keyword', 'no_merges',
-                 'only_merges', 'prune', 'user']
-        if len(dirs) > 1 or any(opts.get(opt) for opt in match):
+        complex = ['date', 'exclude', 'include', 'keyword', 'no_merges',
+                    'only_merges', 'prune', 'user']
+        if match.anypats() or len(dirs) > 1 or \
+                any(opts.get(opt) for opt in complex):
             f = fastlog(repo, rev, dirs)
             revs = revset.generatorset(f, iterasc=False)
             revs.reverse()
