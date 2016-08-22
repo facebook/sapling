@@ -137,14 +137,16 @@ class ManifestEntry {
     size_t filenamelen;
     char *node;
     char *flag;
+    Manifest *resolved;
 
     // TODO: add hint storage here as well
 
     ManifestEntry() {
       this->filename = NULL;
-      filenamelen = 0;
+      this->filenamelen = 0;
       this->node = NULL;
       this->flag = NULL;
+      this->resolved = NULL;
     }
 
     /**
@@ -171,6 +173,7 @@ class ManifestEntry {
         entrystart = this->flag + 1;
         this->flag = NULL;
       }
+      this->resolved = NULL;
     }
 
     bool isdirectory() const {
@@ -182,6 +185,16 @@ class ManifestEntry {
       if (this->isdirectory()) {
         path.append(1, '/');
       }
+    }
+
+    Manifest *get_manifest(ManifestFetcher fetcher, std::string &path) {
+      if (this->resolved == NULL) {
+        std::string binnode = binfromhex(node);
+        manifestkey key(&path, &binnode);
+        this->resolved = fetcher.get(key);
+      }
+
+      return this->resolved;
     }
 };
 
@@ -594,8 +607,7 @@ static void treemanifest_diffrecurse(
       // selfentry should be processed first and only exists in self
       selfentry.appendtopath(*path);
       if (selfentry.isdirectory()) {
-        manifestkey selfkey(path, &selfbinnode);
-        Manifest *selfchildmanifest = fetcher.get(selfkey);
+        Manifest *selfchildmanifest = selfentry.get_manifest(fetcher, *path);
         treemanifest_diffrecurse(selfchildmanifest, NULL, path, diff, fetcher);
       } else {
         DiffEntry entry(&selfbinnode, selfentry.flag, NULL, NULL);
@@ -606,8 +618,7 @@ static void treemanifest_diffrecurse(
       // otherentry should be processed first and only exists in other
       otherentry.appendtopath(*path);
       if (otherentry.isdirectory()) {
-        manifestkey otherkey(path, &otherbinnode);
-        Manifest *otherchildmanifest = fetcher.get(otherkey);
+        Manifest *otherchildmanifest = otherentry.get_manifest(fetcher, *path);
         treemanifest_diffrecurse(NULL, otherchildmanifest, path, diff, fetcher);
       } else {
         DiffEntry entry(NULL, NULL, &otherbinnode, otherentry.flag);
@@ -929,9 +940,7 @@ static PyObject *fileiter_iterentriesnext(py_fileiter *self) {
         iter.path.append(entry.filename, entry.filenamelen);
         iter.path.append(1, '/');
 
-        string binnode = binfromhex(entry.node);
-        manifestkey key(&iter.path, &binnode);
-        Manifest *submanifest = iter.fetcher.get(key);
+        Manifest *submanifest = entry.get_manifest(iter.fetcher, iter.path);
 
         // TODO: memory cleanup here is probably broken.
         iter.frames.push_back(stackframe(submanifest));
