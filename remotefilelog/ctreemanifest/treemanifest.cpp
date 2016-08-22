@@ -403,8 +403,6 @@ class ManifestFetcher {
  * A single instance of a treemanifest.
  */
 struct treemanifest {
-  PyObject_HEAD;
-
   // A reference to the store that is used to fetch new content
   PythonObj store;
 
@@ -413,6 +411,12 @@ struct treemanifest {
 
   // Optional in memory root of the tree
   InMemoryManifest *root;
+};
+
+struct py_treemanifest {
+  PyObject_HEAD;
+
+  treemanifest tm;
 };
 
 /**
@@ -432,32 +436,21 @@ struct stackframe {
  * A helper struct representing the state of an iterator recursing over a tree.
  */
 struct stackiter {
-  // FIXME: This should be a reference to the C++ tree object, not the python
-  // tree object.
-  const treemanifest *treemf;
   ManifestFetcher fetcher;      // Instance to fetch tree content
   std::vector<stackframe> frames;
   string path;             // The fullpath for the top entry in the stack.
 
-  stackiter(const treemanifest *treemf, ManifestFetcher fetcher) :
-    treemf(treemf),
+  stackiter(ManifestFetcher fetcher) :
     fetcher(fetcher) {
-
   }
 
   stackiter(const stackiter &old) :
-    treemf(old.treemf),
     fetcher(old.fetcher),
     frames(old.frames),
     path(old.path) {
-      Py_INCREF(this->treemf);
   }
 
   stackiter& operator=(const stackiter &other) {
-    Py_DECREF(this->treemf);
-    this->treemf = other.treemf;
-    Py_INCREF(this->treemf);
-
     this->fetcher = other.fetcher;
     this->frames = other.frames;
     this->path = other.path;
@@ -473,14 +466,15 @@ struct stackiter {
  */
 struct fileiter {
   PyObject_HEAD;
+
   stackiter iter;
 
   // A reference to the tree is kept, so it is not freed while we're iterating
   // over it.
-  const treemanifest *treemf;
+  const py_treemanifest *treemf;
 
-  fileiter(const treemanifest *treemanifest, ManifestFetcher fetcher) :
-    iter(treemanifest, fetcher) {
+  fileiter(ManifestFetcher fetcher) :
+    iter(fetcher) {
   }
 };
 
@@ -525,21 +519,22 @@ static PyTypeObject fileiterType = {
  * Implementation of treemanifest.__iter__
  * Returns a PyObject iterator instance.
  */
-static PyObject *treemanifest_getkeysiter(treemanifest *self) {
+static PyObject *treemanifest_getkeysiter(py_treemanifest *self) {
   fileiter *i = PyObject_New(fileiter, &fileiterType);
   if (i) {
     try {
       i->treemf = self;
       Py_INCREF(i->treemf);
 
-      ManifestFetcher fetcher(self->store);
+      ManifestFetcher fetcher(self->tm.store);
       // The provided fileiter struct hasn't initialized our stackiter member, so
       // we do it manually.
-      new (&i->iter) stackiter(self, fetcher);
+      new (&i->iter) stackiter(fetcher);
 
       // Grab the root node's data and prep the iterator
       string rootpath;
-      Manifest root = fetcher.get(manifestkey(&rootpath, &self->node, self->root));
+      Manifest root = fetcher.get(
+          manifestkey(&rootpath, &self->tm.node, self->tm.root));
       i->iter.frames.push_back(stackframe(root));
 
       i->iter.path.reserve(1024);
@@ -772,24 +767,24 @@ static void treemanifest_diffrecurse(manifestkey *selfkey, manifestkey *otherkey
 }
 
 static PyObject *treemanifest_diff(PyObject *o, PyObject *args) {
-  treemanifest *self = (treemanifest*)o;
+  py_treemanifest *self = (py_treemanifest*)o;
   PyObject *otherObj;
 
   if (!PyArg_ParseTuple(args, "O", &otherObj)) {
     return NULL;
   }
 
-  treemanifest *other = (treemanifest*)otherObj;
+  py_treemanifest *other = (py_treemanifest*)otherObj;
 
   PythonObj results = PyDict_New();
 
-  ManifestFetcher fetcher(self->store);
+  ManifestFetcher fetcher(self->tm.store);
 
   string path;
   try {
     path.reserve(1024);
-    manifestkey selfkey(&path, &self->node, self->root);
-    manifestkey otherkey(&path, &other->node, other->root);
+    manifestkey selfkey(&path, &self->tm.node, self->tm.root);
+    manifestkey otherkey(&path, &other->tm.node, other->tm.root);
     treemanifest_diffrecurse(&selfkey, &otherkey, results, fetcher);
   } catch (const pyexception &ex) {
     // Python has already set the error message
@@ -875,7 +870,7 @@ static void _treemanifest_find(const string &filename, const manifestkey &root,
  * or (None, None) if it doesn't exist.
  */
 static PyObject *treemanifest_find(PyObject *o, PyObject *args) {
-  treemanifest *self = (treemanifest*)o;
+  py_treemanifest *self = (py_treemanifest*)o;
   char *filename;
   Py_ssize_t filenamelen;
 
@@ -883,13 +878,13 @@ static PyObject *treemanifest_find(PyObject *o, PyObject *args) {
     return NULL;
   }
 
-  ManifestFetcher fetcher(self->store);
+  ManifestFetcher fetcher(self->tm.store);
 
   string resultnode;
   char resultflag;
   try {
     string rootpath;
-    manifestkey rootkey(&rootpath, &self->node, self->root);
+    manifestkey rootkey(&rootpath, &self->tm.node, self->tm.root);
     _treemanifest_find(string(filename, filenamelen), rootkey, fetcher,
                        &resultnode, &resultflag);
   } catch (const pyexception &ex) {
@@ -913,16 +908,16 @@ static PyObject *treemanifest_find(PyObject *o, PyObject *args) {
 /*
  * Deallocates the contents of the treemanifest
  */
-static void treemanifest_dealloc(treemanifest *self){
-  self->node.~string();
-  self->store.~PythonObj();
+static void treemanifest_dealloc(py_treemanifest *self) {
+  self->tm.node.~string();
+  self->tm.store.~PythonObj();
   PyObject_Del(self);
 }
 
 /*
  * Initializes the contents of a treemanifest
  */
-static int treemanifest_init(treemanifest *self, PyObject *args) {
+static int treemanifest_init(py_treemanifest *self, PyObject *args) {
   PyObject *store;
   char *node;
   Py_ssize_t nodelen;
@@ -932,12 +927,12 @@ static int treemanifest_init(treemanifest *self, PyObject *args) {
   }
 
   Py_INCREF(store);
-  new (&self->store) PythonObj(store);
+  new (&self->tm.store) PythonObj(store);
 
   // We have to manually call the member constructor, since the provided 'self'
   // is just zerod out memory.
   try {
-    new (&self->node) string(node, nodelen);
+    new (&self->tm.node) string(node, nodelen);
   } catch (const std::exception &ex) {
     PyErr_SetString(PyExc_RuntimeError, ex.what());
     return -1;
@@ -1051,7 +1046,7 @@ static PyTypeObject treemanifestType = {
   PyObject_HEAD_INIT(NULL)
   0,                                                /* ob_size */
   "ctreemanifest.treemanifest",                     /* tp_name */
-  sizeof(treemanifest),                             /* tp_basicsize */
+  sizeof(py_treemanifest),                          /* tp_basicsize */
   0,                                                /* tp_itemsize */
   (destructor)treemanifest_dealloc,                 /* tp_dealloc */
   0,                                                /* tp_print */
