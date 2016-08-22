@@ -47,6 +47,27 @@ class Manifest {
     Manifest(PythonObj &rawobj);
 
     ManifestIterator getIterator() const;
+
+    /**
+     * Returns an iterator correctly positioned for a child of a given
+     * filename.  If a child with the same name already exists, *exacthit will
+     * be set to true.  Otherwise, it will be set to false.
+     */
+    std::list<ManifestEntry>::iterator findChild(
+        const char *filename, const size_t filenamelen,
+        bool *exacthit);
+
+    /**
+     * Adds a child with a given name.
+     * @param iterator iterator for this->entries, correctly positioned for
+     *                 the child.
+     * @param filename
+     * @param filenamelen
+     */
+    ManifestEntry& addChild(
+        std::list<ManifestEntry>::iterator iterator,
+        const char *filename, const size_t filenamelen,
+        const char flag);
 };
 
 /**
