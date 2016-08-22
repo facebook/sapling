@@ -23,7 +23,7 @@ Log on empty repo
 
 Create a directory and test some log commands
 
-  $ touch dir/a
+  $ echo "pug" > dir/a
   $ hg commit -Aqm a
   $ hg log dir -T '{rev} {desc}\n'
   0 a
@@ -34,7 +34,7 @@ Create a directory and test some log commands
   $ echo x >> dir/a
   $ hg commit -Aqm a2
   $ hg up -q 0
-  $ touch dir/b
+  $ echo "dog" > dir/b
   $ hg commit -Aqm b
   $ hg log dir -T '{rev} {desc}\n'
   2 b
@@ -123,3 +123,123 @@ Log on non-existent directory
   abort: cannot follow file not in parent revision: "dir2"
   [255]
 
+Start testing with files / multiple directories
+  $ mkdir dir2
+  $ echo "poo" > dir2/a
+  $ hg ci -Aqm dir2-a
+  $ hg log -T '{rev} {desc}\n' dir dir2
+  4 dir2-a
+  2 b
+  1 a2
+  0 a
+  $ echo "food" > dir2/b
+  $ hg ci -Aqm dir2-b
+  $ hg log -T '{rev} {desc}\n' dir dir2
+  5 dir2-b
+  4 dir2-a
+  2 b
+  1 a2
+  0 a
+
+Test globbing
+
+  $ hg log -T '{rev} {desc}\n' glob:**a
+  4 dir2-a
+  1 a2
+  0 a
+  $ hg log -T '{rev} {desc}\n' glob:dir2/**a
+  4 dir2-a
+
+Move directories
+
+  $ mkdir parent
+  $ mv dir dir2 parent
+  $ hg addremove -q
+  $ hg ci -Aqm 'major repo reorg'
+  $ hg log -T '{rev} {desc} {files}\n' parent
+  6 major repo reorg dir/a dir/b dir2/a dir2/b parent/dir/a parent/dir/b parent/dir2/a parent/dir2/b
+
+File follow behavior
+
+  $ hg log -f -T '{rev} {desc}\n' parent/dir/a
+  6 major repo reorg
+  1 a2
+  0 a
+
+Directory follow behavior - not ideal but we don't follow the directory
+
+  $ hg log -f -T '{rev} {desc}\n' parent/dir
+  6 major repo reorg
+
+Follow many files
+
+  $ find parent -type f | sort | xargs hg log -f -T '{rev} {desc}\n'
+  6 major repo reorg
+  5 dir2-b
+  4 dir2-a
+  2 b
+  1 a2
+  0 a
+
+Globbing with parent
+
+  $ hg log -f -T '{rev} {desc}\n' glob:parent/**a
+  6 major repo reorg
+
+Public follow
+
+  $ hg phase --public .
+  $ find parent -type f | sort | xargs hg log -f -T '{rev} {desc}\n'
+  6 major repo reorg
+  5 dir2-b
+  4 dir2-a
+  2 b
+  1 a2
+  0 a
+
+Multiple public / draft directories
+
+  $ echo "cookies" > parent/dir/c
+  $ hg ci -Aqm 'cookies'
+  $ echo "treats" > parent/dir2/d
+  $ hg ci -Aqm 'treats'
+  $ echo "toys" > parent/e
+  $ hg ci -Aqm 'toys'
+  $ hg log parent/dir -T '{rev} {desc}\n'
+  7 cookies
+  6 major repo reorg
+  $ hg log parent/dir2 -T '{rev} {desc}\n'
+  8 treats
+  6 major repo reorg
+  $ hg log parent -T '{rev} {desc}\n'
+  9 toys
+  8 treats
+  7 cookies
+  6 major repo reorg
+  $ hg log parent/dir parent/dir2 -T '{rev} {desc}\n'
+  8 treats
+  7 cookies
+  6 major repo reorg
+  $ hg phase --public .
+  $ hg log parent/dir -T '{rev} {desc}\n'
+  7 cookies
+  6 major repo reorg
+  $ hg log parent/dir2 -T '{rev} {desc}\n'
+  8 treats
+  6 major repo reorg
+  $ hg log parent -T '{rev} {desc}\n'
+  9 toys
+  8 treats
+  7 cookies
+  6 major repo reorg
+  $ hg log parent/dir parent/dir2 -T '{rev} {desc}\n'
+  8 treats
+  7 cookies
+  6 major repo reorg
+
+Globbing with public parent
+
+  $ hg log -T '{rev} {desc}\n' glob:parent/*/*
+  8 treats
+  7 cookies
+  6 major repo reorg
