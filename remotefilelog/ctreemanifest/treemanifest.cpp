@@ -535,28 +535,20 @@ class DiffEntry {
 /**
  * Helper function that performs the actual recursion on the tree entries.
  */
-static void treemanifest_diffrecurse(manifestkey *selfkey, manifestkey *otherkey,
-                                     const PythonObj &diff, const ManifestFetcher &fetcher) {
-  Manifest *selfmf;
-  Manifest *othermf;
+static void treemanifest_diffrecurse(
+    const Manifest *selfmf,
+    const Manifest *othermf,
+    std::string *path,
+    const PythonObj &diff,
+    const ManifestFetcher &fetcher) {
   ManifestIterator selfiter;
   ManifestIterator otheriter;
 
-  string *path = NULL;
-  if (selfkey) {
-    selfmf = fetcher.get(*selfkey);
+  if (selfmf != NULL) {
     selfiter = selfmf->getIterator();
-    path = selfkey->path;
-
-    // TODO: need to attach selfmf to its parent.
   }
-
-  if (otherkey) {
-    othermf = fetcher.get(*otherkey);
+  if (othermf != NULL) {
     otheriter = othermf->getIterator();
-    path = otherkey->path;
-
-    // TODO: need to attach othermf to its parent.
   }
 
   // Iterate through both directory contents
@@ -590,7 +582,8 @@ static void treemanifest_diffrecurse(manifestkey *selfkey, manifestkey *otherkey
       selfentry.appendtopath(*path);
       if (selfentry.isdirectory()) {
         manifestkey selfkey(path, &selfbinnode);
-        treemanifest_diffrecurse(&selfkey, NULL, diff, fetcher);
+        Manifest *selfchildmanifest = fetcher.get(selfkey);
+        treemanifest_diffrecurse(selfchildmanifest, NULL, path, diff, fetcher);
       } else {
         DiffEntry entry(&selfbinnode, selfentry.flag, NULL, NULL);
         entry.addtodiff(diff, *path);
@@ -601,7 +594,8 @@ static void treemanifest_diffrecurse(manifestkey *selfkey, manifestkey *otherkey
       otherentry.appendtopath(*path);
       if (otherentry.isdirectory()) {
         manifestkey otherkey(path, &otherbinnode);
-        treemanifest_diffrecurse(NULL, &otherkey, diff, fetcher);
+        Manifest *otherchildmanifest = fetcher.get(otherkey);
+        treemanifest_diffrecurse(NULL, otherchildmanifest, path, diff, fetcher);
       } else {
         DiffEntry entry(NULL, NULL, &otherbinnode, otherentry.flag);
         entry.addtodiff(diff, *path);
@@ -616,7 +610,15 @@ static void treemanifest_diffrecurse(manifestkey *selfkey, manifestkey *otherkey
         if (selfbinnode != otherbinnode) {
           manifestkey selfkey(path, &selfbinnode);
           manifestkey otherkey(path, &otherbinnode);
-          treemanifest_diffrecurse(&selfkey, &otherkey, diff, fetcher);
+          Manifest *selfchildmanifest = fetcher.get(selfkey);
+          Manifest *otherchildmanifest = fetcher.get(otherkey);
+
+          treemanifest_diffrecurse(
+              selfchildmanifest,
+              otherchildmanifest,
+              path,
+              diff,
+              fetcher);
         }
         selfiter.next(&selfentry);
         otheriter.next(&otherentry);
@@ -628,7 +630,8 @@ static void treemanifest_diffrecurse(manifestkey *selfkey, manifestkey *otherkey
 
         path->append(1, '/');
         manifestkey selfkey(path, &selfbinnode);
-        treemanifest_diffrecurse(&selfkey, NULL, diff, fetcher);
+        Manifest *selfchildmanifest = fetcher.get(selfkey);
+        treemanifest_diffrecurse(selfchildmanifest, NULL, path, diff, fetcher);
 
         selfiter.next(&selfentry);
         otheriter.next(&otherentry);
@@ -640,7 +643,8 @@ static void treemanifest_diffrecurse(manifestkey *selfkey, manifestkey *otherkey
 
         path->append(1, '/');
         manifestkey otherkey(path, &otherbinnode);
-        treemanifest_diffrecurse(NULL, &otherkey, diff, fetcher);
+        Manifest *otherchildmanifest = fetcher.get(otherkey);
+        treemanifest_diffrecurse(NULL, otherchildmanifest, path, diff, fetcher);
 
         selfiter.next(&selfentry);
         otheriter.next(&otherentry);
@@ -684,7 +688,10 @@ static PyObject *treemanifest_diff(PyObject *o, PyObject *args) {
     path.reserve(1024);
     manifestkey selfkey(&path, &self->tm.node);
     manifestkey otherkey(&path, &other->tm.node);
-    treemanifest_diffrecurse(&selfkey, &otherkey, results, fetcher);
+    Manifest *selfmanifest = fetcher.get(selfkey);
+    Manifest *othermanifest = fetcher.get(otherkey);
+    treemanifest_diffrecurse(
+        selfmanifest, othermanifest, &path, results, fetcher);
   } catch (const pyexception &ex) {
     // Python has already set the error message
     return NULL;
