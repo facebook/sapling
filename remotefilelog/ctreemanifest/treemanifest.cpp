@@ -11,6 +11,7 @@
 #include <Python.h>
 #include <ctype.h>
 #include <iostream>
+#include <list>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -171,6 +172,48 @@ class ManifestEntry {
 };
 
 /**
+ * Class that represents an iterator over the entries of an individual
+ * manifest.
+ */
+class ManifestIterator {
+private:
+  std::list<ManifestEntry>::const_iterator iterator;
+  std::list<ManifestEntry>::const_iterator end;
+public:
+  ManifestIterator() {
+  }
+
+  ManifestIterator(
+      std::list<ManifestEntry>::const_iterator iterator,
+      std::list<ManifestEntry>::const_iterator end) :
+      iterator(iterator), end(end) {
+  }
+
+  bool next(ManifestEntry *entry) {
+    if (this->isfinished()) {
+      return false;
+    }
+
+    *entry = *this->iterator;
+    this->iterator++;
+
+    return true;
+  }
+
+  ManifestEntry currentvalue() const {
+    if (this->isfinished()) {
+      throw std::logic_error("iterator has no current value");
+    }
+
+    return *iterator;
+  }
+
+  bool isfinished() const {
+    return iterator == end;
+  }
+};
+
+/**
  * This class represents a view on a particular Manifest instance. It provides
  * access to the list of files/directories at one level of the tree, not the
  * entire tree.
@@ -190,94 +233,37 @@ class Manifest {
   private:
     PythonObj _rawobj;
 
-    char *_firstentry;
-    Py_ssize_t _rawsize;
-  public:
-    Manifest() :
-      _firstentry(NULL),
-      _rawsize(0) {
+    std::list<ManifestEntry> entries;
+
+public:
+    Manifest() {
     }
 
     Manifest(PythonObj &rawobj) :
       _rawobj(rawobj) {
-      PyString_AsStringAndSize(this->_rawobj, &this->_firstentry, &this->_rawsize);
-    }
+      char *startptr, *endptr;
+      Py_ssize_t buf_sz;
+      PyString_AsStringAndSize(_rawobj, &startptr, &buf_sz);
+      endptr = startptr + buf_sz;
 
-    bool empty() const {
-      return !this->_rawobj;
-    }
-
-    /**
-     * Returns the first ManifestEntry in this manifest. The nextentry function
-     * can then be used to continue iterating.
-     */
-    ManifestEntry firstentry() const {
-      return ManifestEntry(this->_firstentry);
-    }
-
-    /**
-     * Returns the ManifestEntry that follows the provided entry. If we're at
-     * the end of the chain, an error is thrown.
-     */
-    ManifestEntry nextentry(const ManifestEntry &entry) const {
-      if (this->islastentry(entry)) {
-        throw std::logic_error("called nextentry on the last entry");
+      if (buf_sz == 0) {
+        return;
       }
 
-      return ManifestEntry(entry.nextentrystart);
-    }
+      ManifestEntry entry = ManifestEntry(startptr);
+      entries.push_back(entry);
+      while (entry.nextentrystart < endptr) {
+        if (entry.nextentrystart >= endptr) {
+            throw std::logic_error("called nextentry on the last entry");
+          }
 
-    /**
-     * Returns true if the given ManifestEntry is the last entry in this
-     * Manifest.
-     */
-    bool islastentry(const ManifestEntry &entry) const {
-      return entry.nextentrystart >= this->_firstentry + this->_rawsize;
-    }
-};
-
-/**
- * Class that represents an iterator over the entries of an individual
- * manifest.
- */
-class ManifestIterator {
-  private:
-    const Manifest *_manifest;
-    ManifestEntry _current;
-  public:
-    ManifestIterator() {
-    }
-
-    ManifestIterator(const Manifest *manifest) :
-      _manifest(manifest),
-      _current(manifest->firstentry()) {
-    }
-
-    bool next(ManifestEntry *nextentry) {
-      if (this->isfinished()) {
-        return false;
+        entry = ManifestEntry(entry.nextentrystart);
+        entries.push_back(entry);
       }
-
-      *nextentry = this->_current;
-
-      if (this->_manifest->islastentry(this->_current)) {
-        this->_current = ManifestEntry();
-      } else {
-        this->_current = this->_manifest->nextentry(this->_current);
-      }
-      return true;
     }
 
-    ManifestEntry currentvalue() const {
-      if (this->isfinished()) {
-        throw std::logic_error("iterator has no current value");
-      }
-
-      return this->_current;
-    }
-
-    bool isfinished() const {
-      return this->_manifest->empty() || this->_current.filename == NULL;
+    ManifestIterator getIterator() const {
+      return ManifestIterator(this->entries.begin(), this->entries.end());
     }
 };
 
@@ -347,7 +333,7 @@ struct stackframe {
 
   stackframe(const Manifest *manifest) :
     manifest(manifest),
-    iterator(manifest) {
+    iterator(manifest->getIterator()) {
   }
 };
 
@@ -572,7 +558,7 @@ static void treemanifest_diffrecurse(manifestkey *selfkey, manifestkey *otherkey
   string *path = NULL;
   if (selfkey) {
     selfmf = fetcher.get(*selfkey);
-    selfiter = ManifestIterator(selfmf);
+    selfiter = selfmf->getIterator();
     path = selfkey->path;
 
     // TODO: need to attach selfmf to its parent.
@@ -580,7 +566,7 @@ static void treemanifest_diffrecurse(manifestkey *selfkey, manifestkey *otherkey
 
   if (otherkey) {
     othermf = fetcher.get(*otherkey);
-    otheriter = ManifestIterator(othermf);
+    otheriter = othermf->getIterator();
     path = otherkey->path;
 
     // TODO: need to attach othermf to its parent.
@@ -741,7 +727,7 @@ static void _treemanifest_find(const string &filename, const manifestkey &root,
 
     // TODO: need to attach this manifest to the parent Manifest object.
 
-    ManifestIterator mfiterator(manifest);
+    ManifestIterator mfiterator = manifest->getIterator();
     ManifestEntry entry;
     bool recurse = false;
 
