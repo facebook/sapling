@@ -18,10 +18,6 @@
 
 #include "convert.h"
 
-// this is necessary to explicitly call the destructor on clang compilers (see
-// https://llvm.org/bugs/show_bug.cgi?id=12350).
-using std::string;
-
 /**
  * C++ exception that represents an issue at the python C api level.
  * When this is thrown, it's assumed that the python error message has been set
@@ -99,10 +95,10 @@ class PythonObj {
  * A key which can be used to look up a manifest.
  */
 struct manifestkey {
-  string *path;
-  string *node;
+  std::string *path;
+  std::string *node;
 
-  manifestkey(string *path, string *node) :
+  manifestkey(std::string *path, std::string *node) :
       path(path),
       node(node) {
   }
@@ -180,7 +176,7 @@ class ManifestEntry {
       return this->flag && *this->flag == 't';
     }
 
-    void appendtopath(string &path) {
+    void appendtopath(std::string &path) {
       path.append(this->filename, this->filenamelen);
       if (this->isdirectory()) {
         path.append(1, '/');
@@ -323,9 +319,9 @@ struct treemanifest {
   PythonObj store;
 
   // The 20-byte root node of this manifest
-  string node;
+  std::string node;
 
-  treemanifest(PythonObj store, string node) :
+  treemanifest(PythonObj store, std::string node) :
     store(store),
     node(node) {
   }
@@ -356,7 +352,7 @@ struct stackframe {
 struct fileiter {
   ManifestFetcher fetcher;      // Instance to fetch tree content
   std::vector<stackframe> frames;
-  string path;             // The fullpath for the top entry in the stack.
+  std::string path;             // The fullpath for the top entry in the stack.
 
   fileiter(ManifestFetcher fetcher) :
     fetcher(fetcher) {
@@ -450,7 +446,7 @@ static PyObject *treemanifest_getkeysiter(py_treemanifest *self) {
       new (&i->iter) fileiter(fetcher);
 
       // Grab the root node's data and prep the iterator
-      string rootpath;
+      std::string rootpath;
       Manifest *root = fetcher.get(
           manifestkey(&rootpath, &self->tm.node));
 
@@ -477,10 +473,10 @@ static PyObject *treemanifest_getkeysiter(py_treemanifest *self) {
 
 class PathIterator {
   private:
-    string path;
+    std::string path;
     size_t position;
   public:
-    PathIterator(string path) {
+    PathIterator(std::string path) {
       this->path = path;
       this->position = 0;
     }
@@ -492,7 +488,7 @@ class PathIterator {
 
       *word = this->path.c_str() + this->position;
       size_t slashoffset = this->path.find('/', this->position);
-      if (slashoffset == string::npos) {
+      if (slashoffset == std::string::npos) {
         *wordlen = this->path.length() - this->position;
       } else {
         *wordlen = slashoffset - this->position;
@@ -511,8 +507,8 @@ class PathIterator {
 /**
  * Constructs a result python tuple of the given diff data.
  */
-static PythonObj treemanifest_diffentry(const string *anode, const char *aflag,
-                                        const string *bnode, const char *bflag) {
+static PythonObj treemanifest_diffentry(const std::string *anode, const char *aflag,
+                                        const std::string *bnode, const char *bflag) {
   const char *astr = anode != NULL ? anode->c_str() : NULL;
   Py_ssize_t alen = anode != NULL ? anode->length() : 0;
   const char *bstr = bnode != NULL ? bnode->c_str() : NULL;
@@ -528,20 +524,20 @@ static PythonObj treemanifest_diffentry(const string *anode, const char *aflag,
  */
 class DiffEntry {
   private:
-    const string *selfnode;
-    const string *othernode;
+    const std::string *selfnode;
+    const std::string *othernode;
     const char *selfflag;
     const char *otherflag;
   public:
-    DiffEntry(const string *selfnode, const char *selfflag,
-              const string *othernode, const char *otherflag) {
+    DiffEntry(const std::string *selfnode, const char *selfflag,
+              const std::string *othernode, const char *otherflag) {
       this->selfnode = selfnode;
       this->othernode = othernode;
       this->selfflag = selfflag;
       this->otherflag = otherflag;
     }
 
-    void addtodiff(const PythonObj &diff, const string &path) {
+    void addtodiff(const PythonObj &diff, const std::string &path) {
       PythonObj entry = treemanifest_diffentry(this->selfnode, this->selfflag,
                                                this->othernode, this->otherflag);
       PythonObj pathObj = PyString_FromStringAndSize(path.c_str(), path.length());
@@ -574,7 +570,7 @@ static void treemanifest_diffrecurse(
     int cmp = 0;
 
     ManifestEntry selfentry;
-    string selfbinnode;
+    std::string selfbinnode;
     if (!selfiter.isfinished()) {
       cmp--;
       selfentry = selfiter.currentvalue();
@@ -582,7 +578,7 @@ static void treemanifest_diffrecurse(
     }
 
     ManifestEntry otherentry;
-    string otherbinnode;
+    std::string otherbinnode;
     if (!otheriter.isfinished()) {
       cmp++;
       otherentry = otheriter.currentvalue();
@@ -699,7 +695,7 @@ static PyObject *treemanifest_diff(PyObject *o, PyObject *args) {
 
   ManifestFetcher fetcher(self->tm.store);
 
-  string path;
+  std::string path;
   try {
     path.reserve(1024);
     manifestkey selfkey(&path, &self->tm.node);
@@ -719,12 +715,12 @@ static PyObject *treemanifest_diff(PyObject *o, PyObject *args) {
   return results.returnval();
 }
 
-static void _treemanifest_find(const string &filename, const manifestkey &root,
-    const ManifestFetcher &fetcher, string *resultnode, char *resultflag) {
+static void _treemanifest_find(const std::string &filename, const manifestkey &root,
+    const ManifestFetcher &fetcher, std::string *resultnode, char *resultflag) {
   // Pre-allocate our curkey so we can reuse it for each iteration
-  string curname(*root.path);
+  std::string curname(*root.path);
   curname.reserve(1024);
-  string curnode(*root.node);
+  std::string curnode(*root.node);
   manifestkey curkey(&curname, &curnode);
 
   // Loop over the parts of the query filename
@@ -803,12 +799,12 @@ static PyObject *treemanifest_find(PyObject *o, PyObject *args) {
 
   ManifestFetcher fetcher(self->tm.store);
 
-  string resultnode;
+  std::string resultnode;
   char resultflag;
   try {
-    string rootpath;
+    std::string rootpath;
     manifestkey rootkey(&rootpath, &self->tm.node);
-    _treemanifest_find(string(filename, filenamelen), rootkey, fetcher,
+    _treemanifest_find(std::string(filename, filenamelen), rootkey, fetcher,
                        &resultnode, &resultflag);
   } catch (const pyexception &ex) {
     return NULL;
@@ -853,7 +849,7 @@ static int treemanifest_init(py_treemanifest *self, PyObject *args) {
   // We have to manually call the member constructor, since the provided 'self'
   // is just zerod out memory.
   try {
-    new (&self->tm) treemanifest(PythonObj(store), string(node, nodelen));
+    new (&self->tm) treemanifest(PythonObj(store), std::string(node, nodelen));
   } catch (const std::exception &ex) {
     Py_DECREF(store);
     PyErr_SetString(PyExc_RuntimeError, ex.what());
@@ -896,7 +892,7 @@ static bool fileiter_popfinished(fileiter *iter) {
 
     // Pop the top of the path off, to match the newly popped tree stack.
     size_t found = iter->path.rfind('/', iter->path.size() - 2);
-    if (found != string::npos) {
+    if (found != std::string::npos) {
       iter->path.erase(found + 1);
     } else {
       iter->path.erase(0);
