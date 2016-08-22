@@ -121,7 +121,6 @@ class ManifestEntry {
     char *node;
     char *flag;
     char *nextentrystart;
-    size_t index;
 
     // TODO: add hint storage here as well
 
@@ -131,15 +130,13 @@ class ManifestEntry {
       this->node = NULL;
       this->flag = NULL;
       this->nextentrystart = NULL;
-      this->index = -1;
     }
 
     /**
      * Given the start of a file/dir entry in a manifest, returns a
      * ManifestEntry structure with the parsed data.
      */
-    ManifestEntry(char *entrystart, size_t index) :
-      index(index) {
+    ManifestEntry(char *entrystart) {
       // Each entry is of the format:
       //
       //   <filename>\0<40-byte hash><optional 1 byte flag>\n
@@ -215,7 +212,7 @@ class Manifest {
      * can then be used to continue iterating.
      */
     ManifestEntry firstentry() const {
-      return ManifestEntry(this->_firstentry, 0);
+      return ManifestEntry(this->_firstentry);
     }
 
     /**
@@ -227,9 +224,7 @@ class Manifest {
         throw std::logic_error("called nextentry on the last entry");
       }
 
-      size_t index = entry.index + 1;
-
-      return ManifestEntry(entry.nextentrystart, index);
+      return ManifestEntry(entry.nextentrystart);
     }
 
     /**
