@@ -97,55 +97,15 @@ class PythonObj {
 class Manifest;
 
 /**
- * Class representing the contents of an in memory manifest (versus one that
- * came from the data store). Each in memory instance is the owner of its
- * children in-memory manifests and will delete them during destruction.
- */
-class InMemoryManifest {
-  private:
-    char *_rawstr;
-    size_t _rawsize;
-    std::vector<InMemoryManifest*> _children;
-  public:
-    InMemoryManifest() :
-      _rawstr(NULL) {
-    }
-
-    ~InMemoryManifest() {
-      for (size_t i = 0; i < this->_children.size(); i++) {
-        InMemoryManifest *child = this->_children[i];
-        delete(child);
-      }
-      delete(this->_rawstr);
-    }
-
-    char *getdata() const {
-      return this->_rawstr;
-    }
-
-    size_t getdatasize() const {
-      return this->_rawsize;
-    }
-
-    const std::vector<InMemoryManifest*> &children() const {
-      return this->_children;
-    }
-};
-
-/**
- * A key which can be used to look up a manifest, either from the store, or
- * from in memory.
+ * A key which can be used to look up a manifest.
  */
 struct manifestkey {
   string *path;
   string *node;
-  const InMemoryManifest *memmanifest;
 
-  manifestkey(string *path, string *node,
-              const InMemoryManifest *memmanifest) :
+  manifestkey(string *path, string *node) :
     path(path),
-    node(node),
-    memmanifest(memmanifest) {
+    node(node) {
   }
 };
 
@@ -163,8 +123,6 @@ class ManifestEntry {
     char *nextentrystart;
     size_t index;
 
-    // Optional pointer to the in memory child
-    const InMemoryManifest *child;
     // TODO: add hint storage here as well
 
     ManifestEntry() {
@@ -174,16 +132,14 @@ class ManifestEntry {
       this->flag = NULL;
       this->nextentrystart = NULL;
       this->index = -1;
-      this->child = NULL;
     }
 
     /**
      * Given the start of a file/dir entry in a manifest, returns a
      * ManifestEntry structure with the parsed data.
      */
-    ManifestEntry(char *entrystart, size_t index, const InMemoryManifest *child = NULL) :
-      index(index),
-      child(child) {
+    ManifestEntry(char *entrystart, size_t index) :
+      index(index) {
       // Each entry is of the format:
       //
       //   <filename>\0<40-byte hash><optional 1 byte flag>\n
@@ -237,37 +193,21 @@ class Manifest {
   private:
     PythonObj _rawobj;
 
-    // Optional: If this is set, this manifest refers to an in-memory-only
-    // pending manifest (instead of the Python string).
-    const InMemoryManifest *_memmanifest;
-
     char *_firstentry;
     Py_ssize_t _rawsize;
   public:
     Manifest() :
-      _memmanifest(NULL),
       _firstentry(NULL),
       _rawsize(0) {
     }
 
     Manifest(PythonObj &rawobj) :
-      _rawobj(rawobj),
-      _memmanifest(NULL) {
+      _rawobj(rawobj) {
       PyString_AsStringAndSize(this->_rawobj, &this->_firstentry, &this->_rawsize);
     }
 
-    Manifest(const InMemoryManifest *memmanifest) :
-      _memmanifest(memmanifest),
-      // TODO: if the memmanifest reallocates its data, this pointer would be
-      // out of date. We should either A) allow the Manifest view to always see
-      // the latest InMemoryManifest data, or B) detect when the data is no
-      // longer up-to-date and block further operations on this view.
-      _firstentry(memmanifest->getdata()),
-      _rawsize(memmanifest->getdatasize()) {
-    }
-
     bool empty() const {
-      return !this->_rawobj && !this->_memmanifest;
+      return !this->_rawobj;
     }
 
     /**
@@ -275,14 +215,7 @@ class Manifest {
      * can then be used to continue iterating.
      */
     ManifestEntry firstentry() const {
-      InMemoryManifest *child = NULL;
-      if (this->_memmanifest) {
-        const std::vector<InMemoryManifest*> children = this->_memmanifest->children();
-        if (children.size() > 0) {
-          child = children[0];
-        }
-      }
-      return ManifestEntry(this->_firstentry, 0, child);
+      return ManifestEntry(this->_firstentry, 0);
     }
 
     /**
@@ -295,15 +228,8 @@ class Manifest {
       }
 
       size_t index = entry.index + 1;
-      InMemoryManifest *child = NULL;
-      if (this->_memmanifest) {
-        const std::vector<InMemoryManifest*> children = this->_memmanifest->children();
-        if (children.size() > index) {
-          child = children[index];
-        }
-      }
 
-      return ManifestEntry(entry.nextentrystart, index, child);
+      return ManifestEntry(entry.nextentrystart, index);
     }
 
     /**
@@ -376,10 +302,6 @@ class ManifestFetcher {
    * Returns the manifest if found, or throws an exception if not found.
    */
   Manifest get(const manifestkey &key) const {
-    if (key.memmanifest) {
-      return Manifest(key.memmanifest);
-    }
-
     PythonObj arglist = Py_BuildValue("s#s#", key.path->c_str(), (Py_ssize_t)key.path->size(),
                                               key.node->c_str(), (Py_ssize_t)key.node->size());
 
@@ -408,9 +330,6 @@ struct treemanifest {
 
   // The 20-byte root node of this manifest
   string node;
-
-  // Optional in memory root of the tree
-  InMemoryManifest *root;
 
   treemanifest(PythonObj store, string node) :
     store(store),
@@ -539,7 +458,7 @@ static PyObject *treemanifest_getkeysiter(py_treemanifest *self) {
       // Grab the root node's data and prep the iterator
       string rootpath;
       Manifest root = fetcher.get(
-          manifestkey(&rootpath, &self->tm.node, self->tm.root));
+          manifestkey(&rootpath, &self->tm.node));
       i->iter.frames.push_back(stackframe(root));
 
       i->iter.path.reserve(1024);
@@ -695,7 +614,7 @@ static void treemanifest_diffrecurse(manifestkey *selfkey, manifestkey *otherkey
       // selfentry should be processed first and only exists in self
       selfentry.appendtopath(*path);
       if (selfentry.isdirectory()) {
-        manifestkey selfkey(path, &selfbinnode, selfentry.child);
+        manifestkey selfkey(path, &selfbinnode);
         treemanifest_diffrecurse(&selfkey, NULL, diff, fetcher);
       } else {
         DiffEntry entry(&selfbinnode, selfentry.flag, NULL, NULL);
@@ -706,7 +625,7 @@ static void treemanifest_diffrecurse(manifestkey *selfkey, manifestkey *otherkey
       // otherentry should be processed first and only exists in other
       otherentry.appendtopath(*path);
       if (otherentry.isdirectory()) {
-        manifestkey otherkey(path, &otherbinnode, otherentry.child);
+        manifestkey otherkey(path, &otherbinnode);
         treemanifest_diffrecurse(NULL, &otherkey, diff, fetcher);
       } else {
         DiffEntry entry(NULL, NULL, &otherbinnode, otherentry.flag);
@@ -720,8 +639,8 @@ static void treemanifest_diffrecurse(manifestkey *selfkey, manifestkey *otherkey
         selfentry.appendtopath(*path);
 
         if (selfbinnode != otherbinnode) {
-          manifestkey selfkey(path, &selfbinnode, selfentry.child);
-          manifestkey otherkey(path, &otherbinnode, otherentry.child);
+          manifestkey selfkey(path, &selfbinnode);
+          manifestkey otherkey(path, &otherbinnode);
           treemanifest_diffrecurse(&selfkey, &otherkey, diff, fetcher);
         }
         selfiter.next(&selfentry);
@@ -733,7 +652,7 @@ static void treemanifest_diffrecurse(manifestkey *selfkey, manifestkey *otherkey
         entry.addtodiff(diff, *path);
 
         path->append(1, '/');
-        manifestkey selfkey(path, &selfbinnode, selfentry.child);
+        manifestkey selfkey(path, &selfbinnode);
         treemanifest_diffrecurse(&selfkey, NULL, diff, fetcher);
 
         selfiter.next(&selfentry);
@@ -745,7 +664,7 @@ static void treemanifest_diffrecurse(manifestkey *selfkey, manifestkey *otherkey
         entry.addtodiff(diff, *path);
 
         path->append(1, '/');
-        manifestkey otherkey(path, &otherbinnode, otherentry.child);
+        manifestkey otherkey(path, &otherbinnode);
         treemanifest_diffrecurse(NULL, &otherkey, diff, fetcher);
 
         selfiter.next(&selfentry);
@@ -788,8 +707,8 @@ static PyObject *treemanifest_diff(PyObject *o, PyObject *args) {
   string path;
   try {
     path.reserve(1024);
-    manifestkey selfkey(&path, &self->tm.node, self->tm.root);
-    manifestkey otherkey(&path, &other->tm.node, other->tm.root);
+    manifestkey selfkey(&path, &self->tm.node);
+    manifestkey otherkey(&path, &other->tm.node);
     treemanifest_diffrecurse(&selfkey, &otherkey, results, fetcher);
   } catch (const pyexception &ex) {
     // Python has already set the error message
@@ -808,7 +727,7 @@ static void _treemanifest_find(const string &filename, const manifestkey &root,
   string curname(*root.path);
   curname.reserve(1024);
   string curnode(*root.node);
-  manifestkey curkey(&curname, &curnode, root.memmanifest);
+  manifestkey curkey(&curname, &curnode);
 
   // Loop over the parts of the query filename
   PathIterator pathiter(filename);
@@ -851,7 +770,6 @@ static void _treemanifest_find(const string &filename, const manifestkey &root,
           // Get the fullpath of the current directory/file we're searching in
           curkey.path->assign(filename, 0, nextpathlen);
           curkey.node->assign(binfromhex(entry.node));
-          curkey.memmanifest = entry.child;
           recurse = true;
           break;
         } else {
@@ -889,7 +807,7 @@ static PyObject *treemanifest_find(PyObject *o, PyObject *args) {
   char resultflag;
   try {
     string rootpath;
-    manifestkey rootkey(&rootpath, &self->tm.node, self->tm.root);
+    manifestkey rootkey(&rootpath, &self->tm.node);
     _treemanifest_find(string(filename, filenamelen), rootkey, fetcher,
                        &resultnode, &resultflag);
   } catch (const pyexception &ex) {
@@ -1015,7 +933,7 @@ static PyObject *fileiter_iterentriesnext(py_fileiter *self) {
         iter.path.append(1, '/');
 
         string binnode = binfromhex(entry.node);
-        manifestkey key(&iter.path, &binnode, entry.child);
+        manifestkey key(&iter.path, &binnode);
         Manifest submanifest = iter.fetcher.get(key);
         iter.frames.push_back(stackframe(submanifest));
 
