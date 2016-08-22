@@ -1,4 +1,4 @@
-// treemanifest.cpp - c++ implementation of a tree manifest
+// py-treemanifest.cpp - c++ implementation of a tree manifest
 //
 // Copyright 2016 Facebook, Inc.
 //

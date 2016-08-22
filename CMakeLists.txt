@@ -27,7 +27,7 @@ add_library(ctreemanifest
         remotefilelog/ctreemanifest/manifest_fetcher.h
         remotefilelog/ctreemanifest/pythonutil.cpp
         remotefilelog/ctreemanifest/pythonutil.h
-        remotefilelog/ctreemanifest/treemanifest.cpp
+        remotefilelog/ctreemanifest/py-treemanifest.cpp
         )
 
 target_include_directories(ctreemanifest PUBLIC ${PYTHON_INCLUDE_DIRS})
