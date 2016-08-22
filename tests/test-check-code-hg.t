@@ -22,4 +22,5 @@ New errors are not allowed. Warnings are strongly discouraged.
   Skipping remotefilelog/ctreemanifest/manifest_entry.h it has no-che?k-code (glob)
   Skipping remotefilelog/ctreemanifest/manifest_fetcher.h it has no-che?k-code (glob)
   Skipping remotefilelog/ctreemanifest/pythonutil.h it has no-che?k-code (glob)
+  Skipping remotefilelog/ctreemanifest/treemanifest.h it has no-che?k-code (glob)
   Skipping tests/test-bad-configs.t it has no-che?k-code (glob)

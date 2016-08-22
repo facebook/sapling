@@ -45,6 +45,7 @@ setup(
                       'remotefilelog/ctreemanifest/manifest_entry.cpp',
                       'remotefilelog/ctreemanifest/manifest_fetcher.cpp',
                       'remotefilelog/ctreemanifest/pythonutil.cpp',
+                      'remotefilelog/ctreemanifest/treemanifest.cpp',
                   ],
                   include_dirs=[
                       'remotefilelog/ctreemanifest',

@@ -9,77 +9,17 @@
 // as per the documentation.
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
-#include <ctype.h>
-#include <iostream>
-#include <list>
-#include <stdexcept>
 #include <string>
-#include <vector>
 
 #include "convert.h"
 #include "manifest.h"
 #include "pythonutil.h"
-
-/**
- * A single instance of a treemanifest.
- */
-struct treemanifest {
-  // A reference to the store that is used to fetch new content
-  PythonObj store;
-
-  // The 20-byte root node of this manifest
-  std::string node;
-
-  treemanifest(PythonObj store, std::string node) :
-    store(store),
-    node(node) {
-  }
-};
+#include "treemanifest.h"
 
 struct py_treemanifest {
   PyObject_HEAD;
 
   treemanifest tm;
-};
-
-/**
- * Represents a single stack frame in an iteration of the contents of the tree.
- */
-struct stackframe {
-  const Manifest *manifest;
-  ManifestIterator iterator;
-
-  stackframe(const Manifest *manifest) :
-    manifest(manifest),
-    iterator(manifest->getIterator()) {
-  }
-};
-
-/**
- * A helper struct representing the state of an iterator recursing over a tree.
- */
-struct fileiter {
-  ManifestFetcher fetcher;      // Instance to fetch tree content
-  std::vector<stackframe> frames;
-  std::string path;             // The fullpath for the top entry in the stack.
-
-  fileiter(ManifestFetcher fetcher) :
-    fetcher(fetcher) {
-  }
-
-  fileiter(const fileiter &old) :
-    fetcher(old.fetcher),
-    frames(old.frames),
-    path(old.path) {
-  }
-
-  fileiter& operator=(const fileiter &other) {
-    this->fetcher = other.fetcher;
-    this->frames = other.frames;
-    this->path = other.path;
-
-    return *this;
-  }
 };
 
 /**
@@ -178,39 +118,6 @@ static PyObject *treemanifest_getkeysiter(py_treemanifest *self) {
 
   return (PyObject *)i;
 }
-
-class PathIterator {
-  private:
-    std::string path;
-    size_t position;
-  public:
-    PathIterator(std::string path) {
-      this->path = path;
-      this->position = 0;
-    }
-
-    bool next(char const ** word, size_t *wordlen) {
-      if (this->isfinished()) {
-        return false;
-      }
-
-      *word = this->path.c_str() + this->position;
-      size_t slashoffset = this->path.find('/', this->position);
-      if (slashoffset == std::string::npos) {
-        *wordlen = this->path.length() - this->position;
-      } else {
-        *wordlen = slashoffset - this->position;
-      }
-
-      this->position += *wordlen + 1;
-
-      return true;
-    }
-
-    bool isfinished() {
-      return this->position >= this->path.length();
-    }
-};
 
 /**
  * Constructs a result python tuple of the given diff data.
@@ -432,73 +339,6 @@ static PyObject *treemanifest_diff(PyObject *o, PyObject *args) {
   }
 
   return results.returnval();
-}
-
-static void _treemanifest_find(
-    const std::string &filename,
-    const std::string &rootnode,
-    const ManifestFetcher &fetcher,
-    std::string *resultnode, char *resultflag) {
-  size_t curpathlen = 0;
-  std::string curnode(rootnode);
-
-  // Loop over the parts of the query filename
-  PathIterator pathiter(filename);
-  const char *word;
-  size_t wordlen;
-  while (pathiter.next(&word, &wordlen)) {
-    // Obtain the raw data for this directory
-    Manifest *manifest = fetcher.get(filename.c_str(), curpathlen, curnode);
-
-    // TODO: need to attach this manifest to the parent Manifest object.
-
-    ManifestIterator mfiterator = manifest->getIterator();
-    ManifestEntry entry;
-    bool recurse = false;
-
-    // Loop over the contents of the current directory looking for the
-    // next directory/file.
-    while (mfiterator.next(&entry)) {
-      // If the current entry matches the query file/directory, either recurse,
-      // return, or abort.
-      if (wordlen == entry.filenamelen && strncmp(word, entry.filename, wordlen) == 0) {
-        // If this is the last entry in the query path, either return or abort
-        if (pathiter.isfinished()) {
-          // If it's a file, it's our result
-          if (!entry.isdirectory()) {
-            resultnode->assign(binfromhex(entry.node));
-            if (entry.flag == NULL) {
-              *resultflag = '\0';
-            } else {
-              *resultflag = *entry.flag;
-            }
-            return;
-          } else {
-            // Found a directory when expecting a file - give up
-            break;
-          }
-        }
-
-        // If there's more in the query, either recurse or give up
-        curpathlen = curpathlen + wordlen + 1;
-        if (entry.isdirectory() && filename.length() > curpathlen) {
-          curnode.erase();
-          curnode.append(binfromhex(entry.node));
-          recurse = true;
-          break;
-        } else {
-          // Found a file when we expected a directory or
-          // found a directory when we expected a file.
-          break;
-        }
-      }
-    }
-
-    if (!recurse) {
-      // Failed to find a match
-      return;
-    }
-  }
 }
 
 /**
