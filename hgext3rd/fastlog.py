@@ -241,17 +241,14 @@ def getfastlogrevs(orig, repo, pats, opts):
                         # Empty message means no more results
                         return
 
-                    rev = None
-                    if producer == LOCAL:
-                        if debug:
+                    rev = msg
+                    if debug:
+                        if producer == LOCAL:
                             repo.ui.debug('LOCAL:: %s\n' % msg)
-                        rev = msg
-                    elif producer == REMOTE:
-                        if debug:
+                        elif producer == REMOTE:
                             repo.ui.debug('REMOTE:: %s\n' % msg)
-                        rev = repo.changelog.rev(node.bin(msg))
 
-                    if rev is not None and rev not in seen:
+                    if rev not in seen:
                         seen.add(rev)
                         yield rev
             finally:
@@ -364,6 +361,7 @@ class FastLogThread(Thread):
         self.rev = rev
         self.paths = [os.path.commonprefix(paths)]
         self.ui = repo.ui
+        self.changelog = repo.changelog
         self._stop = Event()
 
     def stop(self):
@@ -375,9 +373,10 @@ class FastLogThread(Thread):
     def run(self):
         skip = 0
 
+        start = str(self.rev)
         paths = self.paths
-        rev = str(self.rev)
         reponame = self.reponame
+        revfn = self.changelog.rev
 
         while True:
             todo = FASTLOG_MAX
@@ -385,7 +384,7 @@ class FastLogThread(Thread):
             try:
                 if USE_FASTLOG:
                     results = conduit.call_conduit('fastlog.log',
-                        rev = rev,
+                        rev = start,
                         file_paths = paths,
                         skip = skip,
                         number = todo,
@@ -394,7 +393,7 @@ class FastLogThread(Thread):
                     results = conduit.call_conduit('scmquery.log_v2',
                         repo = reponame,
                         scm = self.scm,
-                        rev = rev,
+                        rev = start,
                         file_paths = paths,
                         skip = skip,
                         number = todo,
@@ -417,7 +416,10 @@ class FastLogThread(Thread):
                 try:
                     if len(hash) != 40:
                         raise ValueError('Received invalid hash %s' % hash)
-                    msg = (self.id, True, hash)
+                    rev = revfn(node.bin(hash))
+                    if rev is None:
+                        raise KeyError('Hash %s not in local repo' % hash)
+                    msg = (self.id, True, rev)
                 except Exception as e:
                     if self.ui.config('fastlog', 'debug'):
                         self.ui.traceback(force=True)
