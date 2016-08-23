@@ -651,7 +651,7 @@ class lrucachedict(object):
 
     def get(self, k, default=None):
         try:
-            return self._cache[k]
+            return self._cache[k].value
         except KeyError:
             return default
 

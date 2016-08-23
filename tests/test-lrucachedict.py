@@ -25,6 +25,9 @@ def test_lrucachedict():
     d['e'] = 've'
     printifpresent(d, ['a', 'b', 'c', 'd', 'e'])
 
+    assert d.get('a') is None
+    assert d.get('e') == 've'
+
     # touch entries in some order (get or set).
     d['e']
     d['c'] = 'vc2'
