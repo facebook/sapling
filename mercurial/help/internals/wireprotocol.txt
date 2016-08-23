@@ -9,3 +9,147 @@ return multiple response types.
 
 The protocol is synchronous and does not support multiplexing (concurrent
 commands).
+
+Transport Protocols
+===================
+
+HTTP Transport
+--------------
+
+Commands are issued as HTTP/1.0 or HTTP/1.1 requests. Commands are
+sent to the base URL of the repository with the command name sent in
+the ``cmd`` query string parameter. e.g.
+``https://example.com/repo?cmd=capabilities``. The HTTP method is ``GET``
+or ``POST`` depending on the command and whether there is a request
+body.
+
+Command arguments can be sent multiple ways.
+
+The simplest is part of the URL query string using ``x-www-form-urlencoded``
+encoding (see Python's ``urllib.urlencode()``. However, many servers impose
+length limitations on the URL. So this mechanism is typically only used if
+the server doesn't support other mechanisms.
+
+If the server supports the ``httpheader`` capability, command arguments can
+be sent in HTTP request headers named ``X-HgArg-<N>`` where ``<N>`` is an
+integer starting at 1. A ``x-www-form-urlencoded`` representation of the
+arguments is obtained. This full string is then split into chunks and sent
+in numbered ``X-HgArg-<N>`` headers. The maximum length of each HTTP header
+is defined by the server in the ``httpheader`` capability value, which defaults
+to ``1024``. The server reassembles the encoded arguments string by
+concatenating the ``X-HgArg-<N>`` headers then URL decodes them into a
+dictionary.
+
+The list of ``X-HgArg-<N>`` headers should be added to the ``Vary`` request
+header to instruct caches to take these headers into consideration when caching
+requests.
+
+If the server supports the ``httppostargs`` capability, the client
+may send command arguments in the HTTP request body as part of an
+HTTP POST request. The command arguments will be URL encoded just like
+they would for sending them via HTTP headers. However, no splitting is
+performed: the raw arguments are included in the HTTP request body.
+
+The client sends a ``X-HgArgs-Post`` header with the string length of the
+encoded arguments data. Additional data may be included in the HTTP
+request body immediately following the argument data. The offset of the
+non-argument data is defined by the ``X-HgArgs-Post`` header. The
+``X-HgArgs-Post`` header is not required if there is no argument data.
+
+Additional command data can be sent as part of the HTTP request body. The
+default ``Content-Type`` when sending data is ``application/mercurial-0.1``.
+A ``Content-Length`` header is currently always sent.
+
+Example HTTP requests::
+
+    GET /repo?cmd=capabilities
+    X-HgArg-1: foo=bar&baz=hello%20world
+
+The ``Content-Type`` HTTP response header identifies the response as coming
+from Mercurial and can also be used to signal an error has occurred.
+
+The ``application/mercurial-0.1`` media type indicates a generic Mercurial
+response. It matches the media type sent by the client.
+
+The ``application/hg-error`` media type indicates a generic error occurred.
+The content of the HTTP response body typically holds text describing the
+error.
+
+The ``application/hg-changegroup`` media type indicates a changegroup response
+type.
+
+Clients also accept the ``text/plain`` media type. All other media
+types should cause the client to error.
+
+Clients should issue a ``User-Agent`` request header that identifies the client.
+The server should not use the ``User-Agent`` for feature detection.
+
+A command returning a ``string`` response issues the
+``application/mercurial-0.1`` media type and the HTTP response body contains
+the raw string value. A ``Content-Length`` header is typically issued.
+
+A command returning a ``stream`` response issues the
+``application/mercurial-0.1`` media type and the HTTP response is typically
+using *chunked transfer* (``Transfer-Encoding: chunked``).
+
+SSH Transport
+=============
+
+The SSH transport is a custom text-based protocol suitable for use over any
+bi-directional stream transport. It is most commonly used with SSH.
+
+A SSH transport server can be started with ``hg serve --stdio``. The stdin,
+stderr, and stdout file descriptors of the started process are used to exchange
+data. When Mercurial connects to a remote server over SSH, it actually starts
+a ``hg serve --stdio`` process on the remote server.
+
+Commands are issued by sending the command name followed by a trailing newline
+``\n`` to the server. e.g. ``capabilities\n``.
+
+Command arguments are sent in the following format::
+
+    <argument> <length>\n<value>
+
+That is, the argument string name followed by a space followed by the
+integer length of the value (expressed as a string) followed by a newline
+(``\n``) followed by the raw argument value.
+
+Dictionary arguments are encoded differently::
+
+    <argument> <# elements>\n
+    <key1> <length1>\n<value1>
+    <key2> <length2>\n<value2>
+    ...
+
+Non-argument data is sent immediately after the final argument value. It is
+encoded in chunks::
+
+    <length>\n<data>
+
+Each command declares a list of supported arguments and their types. If a
+client sends an unknown argument to the server, the server should abort
+immediately. The special argument ``*`` in a command's definition indicates
+that all argument names are allowed.
+
+The definition of supported arguments and types is initially made when a
+new command is implemented. The client and server must initially independently
+agree on the arguments and their types. This initial set of arguments can be
+supplemented through the presence of *capabilities* advertised by the server.
+
+Each command has a defined expected response type.
+
+A ``string`` response type is a length framed value. The response consists of
+the string encoded integer length of a value followed by a newline (``\n``)
+followed by the value. Empty values are allowed (and are represented as
+``0\n``).
+
+A ``stream`` response type consists of raw bytes of data. There is no framing.
+
+A generic error response type is also supported. It consists of a an error
+message written to ``stderr`` followed by ``\n-\n``. In addition, ``\n`` is
+written to ``stdout``.
+
+If the server receives an unknown command, it will send an empty ``string``
+response.
+
+The server terminates if it receives an empty command (a ``\n`` character).
