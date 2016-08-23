@@ -169,7 +169,7 @@ from mercurial import (
     wireproto,
 )
 
-testedwith = 'internal'
+testedwith = 'ships-with-hg-core'
 
 def capabilities(orig, repo, proto):
     caps = orig(repo, proto)

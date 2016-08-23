@@ -2396,6 +2396,10 @@ def debugextensions(ui, **opts):
     for extname, extmod in sorted(exts, key=operator.itemgetter(0)):
         extsource = extmod.__file__
         exttestedwith = getattr(extmod, 'testedwith', '').split()
+        if exttestedwith == ['ships-with-hg-core']:
+            showtestedwith = ['internal']
+        else:
+            showtestedwith = exttestedwith
         extbuglink = getattr(extmod, 'buglink', None)
 
         fm.startitem()
@@ -2406,7 +2410,8 @@ def debugextensions(ui, **opts):
             fm.write('name', '%s', extname)
             if not exttestedwith:
                 fm.plain(_(' (untested!)\n'))
-            elif exttestedwith == ['internal'] or hgver in exttestedwith:
+            elif (exttestedwith == ['ships-with-hg-core']
+                  or hgver in exttestedwith):
                 fm.plain('\n')
             else:
                 lasttestedversion = exttestedwith[-1]
@@ -2415,9 +2420,9 @@ def debugextensions(ui, **opts):
         fm.condwrite(ui.verbose and extsource, 'source',
                  _('  location: %s\n'), extsource or "")
 
-        fm.condwrite(ui.verbose and exttestedwith, 'testedwith',
+        fm.condwrite(ui.verbose and showtestedwith, 'testedwith',
                      _('  tested with: %s\n'),
-                     fm.formatlist(exttestedwith, name='ver'))
+                     fm.formatlist(showtestedwith, name='ver'))
 
         fm.condwrite(ui.verbose and extbuglink, 'buglink',
                  _('  bug reporting: %s\n'), extbuglink or "")

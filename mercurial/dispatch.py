@@ -927,7 +927,7 @@ def _exceptionwarning(ui):
                 break
 
             # Never blame on extensions bundled with Mercurial.
-            if testedwith == 'internal':
+            if testedwith == 'ships-with-hg-core':
                 continue
 
             tested = [util.versiontuple(t, 2) for t in testedwith.split()]

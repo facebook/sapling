@@ -532,4 +532,4 @@ def moduleversion(module):
 
 def ismoduleinternal(module):
     exttestedwith = getattr(module, 'testedwith', None)
-    return exttestedwith == "internal"
+    return exttestedwith == "ships-with-hg-core"
