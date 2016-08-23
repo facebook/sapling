@@ -368,3 +368,50 @@ indicating which bundle types the server supports receiving. This value is a
 comma-delimited list. e.g. ``HG10GZ,HG10BZ,HG10UN``. The order of values
 reflects the priority/preference of that type, where the first value is the
 most preferred type.
+
+Handshake Protocol
+==================
+
+While not explicitly required, it is common for clients to perform a
+*handshake* when connecting to a server. The handshake accomplishes 2 things:
+
+* Obtaining capabilities and other server features
+* Flushing extra server output (e.g. SSH servers may print extra text
+  when connecting that may confuse the wire protocol)
+
+This isn't a traditional *handshake* as far as network protocols go because
+there is no persistent state as a result of the handshake: the handshake is
+simply the issuing of commands and commands are stateless.
+
+The canonical clients perform a capabilities lookup at connection establishment
+time. This is because clients must assume a server only supports the features
+of the original Mercurial server implementation until proven otherwise (from
+advertised capabilities). Nearly every server running today supports features
+that weren't present in the original Mercurial server implementation. Rather
+than wait for a client to perform functionality that needs to consult
+capabilities, it issues the lookup at connection start to avoid any delay later.
+
+For HTTP servers, the client sends a ``capabilities`` command request as
+soon as the connection is established. The server responds with a capabilities
+string, which the client parses.
+
+For SSH servers, the client sends the ``hello`` command (no arguments)
+and a ``between`` command with the ``pairs`` argument having the value
+``0000000000000000000000000000000000000000-0000000000000000000000000000000000000000``.
+
+The ``between`` command has been supported since the original Mercurial
+server. Requesting the empty range will return a ``\n`` string response,
+which will be encoded as ``1\n\n`` (value length of ``1`` followed by a newline
+followed by the value, which happens to  be a newline).
+
+The ``hello`` command was later introduced. Servers supporting it will issue
+a response to that command before sending the ``1\n\n`` response to the
+``between`` command. Servers not supporting ``hello`` will send an empty
+response (``0\n``).
+
+In addition to the expected output from the ``hello`` and ``between`` commands,
+servers may also send other output, such as *message of the day (MOTD)*
+announcements. Clients assume servers will send this output before the
+Mercurial server replies to the client-issued commands. So any server output
+not conforming to the expected command responses is assumed to be not related
+to Mercurial and can be ignored.
