@@ -15,6 +15,7 @@ enabled=true
 """
 
 from mercurial import (
+    changelog,
     cmdutil,
     error,
     extensions,
@@ -136,12 +137,11 @@ def dirmatches(files, paths):
                 return True
     return False
 
-def originator(repo, rev):
+def originator(parentfunc, rev):
     """originator(repo, rev)
     Yield parents of rev from repo in reverse order
     """
     # Use set(nullrev, rev) to iterate until termination
-    parentfunc = repo.changelog.parentrevs
     for p in lazyparents(rev, set([nullrev, rev]), parentfunc):
         if rev != p:
             yield p
@@ -220,7 +220,7 @@ def getfastlogrevs(orig, repo, pats, opts):
             queue = util.queue(FASTLOG_QUEUE_SIZE + 100)
             hash = repo[rev].hex()
 
-            local = LocalIteratorThread(queue, LOCAL, originator(repo, rev),
+            local = LocalIteratorThread(queue, LOCAL, rev, 
                                         dirs, localmatch, repo)
             remote = FastLogThread(queue, REMOTE, reponame, 'hg', hash, dirs,
                                     repo)
@@ -287,6 +287,20 @@ def getfastlogrevs(orig, repo, pats, opts):
     return orig(repo, pats, opts)
 
 
+class readonlychangelog(object):
+    def __init__(self, opener):
+        self._changelog = changelog.changelog(opener)
+
+    def parentrevs(self, rev):
+        return self._changelog.parentrevs(rev)
+
+    def readfiles(self, node):
+        return self._changelog.readfiles(node)
+
+    def rev(self, node):
+        return self._changelog.rev(node)
+
+
 class LocalIteratorThread(Thread):
     """Class which reads from an iterator and sends results to a queue.
 
@@ -302,7 +316,7 @@ class LocalIteratorThread(Thread):
 
     * queue - self explanatory
     * id - tag to use when sending messages
-    * generator - a generator which creates results to put on the queue
+    * rev - rev to start iterating at
     * dirs - directories against which to match
     * localmatch - a function to match candidate results
     * repo - mercurial repository object
@@ -312,17 +326,23 @@ class LocalIteratorThread(Thread):
     not expected to generate exceptions, this terminates iteration.
     """
 
-    def __init__(self, queue, id, generator, dirs, localmatch, repo):
+    def __init__(self, queue, id, rev, dirs, localmatch, repo):
         Thread.__init__(self)
         self.daemon = True
         self.queue = queue
         self.id = id
-        self.generator = generator
+        self.rev = rev
         self.dirs = dirs
         self.localmatch = localmatch
         self.ui = repo.ui
-        self.repo = repo
         self._stop = Event()
+
+        # Create a private instance of changelog to avoid trampling
+        # internal caches of other threads
+        c = readonlychangelog(repo.svfs)
+        self.generator = originator(c.parentrevs, rev)
+        self.filefunc = c.readfiles
+        self.ui = repo.ui
 
     def stop(self):
         self._stop.set()
@@ -334,7 +354,7 @@ class LocalIteratorThread(Thread):
         generator = self.generator
         match = self.localmatch
         dirs = self.dirs
-        filefunc = self.repo.changelog.readfiles
+        filefunc = self.filefunc
         queue = self.queue
 
         try:
@@ -379,7 +399,7 @@ class FastLogThread(Thread):
         self.rev = rev
         self.paths = list(paths)
         self.ui = repo.ui
-        self.changelog = repo.changelog
+        self.changelog = readonlychangelog(repo.svfs)
         self._stop = Event()
         self._paths_to_fetch = 0
 
