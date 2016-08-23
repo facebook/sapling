@@ -500,6 +500,8 @@ class cmdalias(object):
             ui.debug("alias '%s' shadows command '%s'\n" %
                      (self.name, self.cmdname))
 
+        ui.log('commandalias', "alias '%s' expands to '%s'\n",
+               self.name, self.definition)
         if util.safehasattr(self, 'shell'):
             return self.fn(ui, *args, **opts)
         else:
