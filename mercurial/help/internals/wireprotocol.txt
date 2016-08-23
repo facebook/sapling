@@ -415,3 +415,359 @@ announcements. Clients assume servers will send this output before the
 Mercurial server replies to the client-issued commands. So any server output
 not conforming to the expected command responses is assumed to be not related
 to Mercurial and can be ignored.
+
+Commands
+========
+
+This section contains a list of all wire protocol commands implemented by
+the canonical Mercurial server.
+
+batch
+-----
+
+Issue multiple commands while sending a single command request. The purpose
+of this command is to allow a client to issue multiple commands while avoiding
+multiple round trips to the server therefore enabling commands to complete
+quicker.
+
+The command accepts a ``cmds`` argument that contains a list of commands to
+execute.
+
+The value of ``cmds`` is a ``;`` delimited list of strings. Each string has the
+form ``<command> <arguments>``. That is, the command name followed by a space
+followed by an argument string.
+
+The argument string is a ``,`` delimited list of ``<key>=<value>`` values
+corresponding to command arguments. Both the argument name and value are
+escaped using a special substitution map::
+
+   : -> :c
+   , -> :o
+   ; -> :s
+   = -> :e
+
+The response type for this command is ``string``. The value contains a
+``;`` delimited list of responses for each requested command. Each value
+in this list is escaped using the same substitution map used for arguments.
+
+If an error occurs, the generic error response may be sent.
+
+between
+-------
+
+(Legacy command used for discovery in old clients)
+
+Obtain nodes between pairs of nodes.
+
+The ``pairs`` arguments contains a space-delimited list of ``-`` delimited
+hex node pairs. e.g.::
+
+   a072279d3f7fd3a4aa7ffa1a5af8efc573e1c896-6dc58916e7c070f678682bfe404d2e2d68291a18
+
+Return type is a ``string``. Value consists of lines corresponding to each
+requested range. Each line contains a space-delimited list of hex nodes.
+A newline ``\n`` terminates each line, including the last one.
+
+branchmap
+---------
+
+Obtain heads in named branches.
+
+Accepts no arguments. Return type is a ``string``.
+
+Return value contains lines with URL encoded branch names followed by a space
+followed by a space-delimited list of hex nodes of heads on that branch.
+e.g.::
+
+    default a072279d3f7fd3a4aa7ffa1a5af8efc573e1c896 6dc58916e7c070f678682bfe404d2e2d68291a18
+    stable baae3bf31522f41dd5e6d7377d0edd8d1cf3fccc
+
+There is no trailing newline.
+
+branches
+--------
+
+Obtain ancestor changesets of specific nodes back to a branch point.
+
+Despite the name, this command has nothing to do with Mercurial named branches.
+Instead, it is related to DAG branches.
+
+The command accepts a ``nodes`` argument, which is a string of space-delimited
+hex nodes.
+
+For each node requested, the server will find the first ancestor node that is
+a DAG root or is a merge.
+
+Return type is a ``string``. Return value contains lines with result data for
+each requested node. Each line contains space-delimited nodes followed by a
+newline (``\n``). The 4 nodes reported on each line correspond to the requested
+node, the ancestor node found, and its 2 parent nodes (which may be the null
+node).
+
+capabilities
+------------
+
+Obtain the capabilities string for the repo.
+
+Unlike the ``hello`` command, the capabilities string is not prefixed.
+There is no trailing newline.
+
+This command does not accept any arguments. Return type is a ``string``.
+
+changegroup
+-----------
+
+(Legacy command: use ``getbundle`` instead)
+
+Obtain a changegroup version 1 with data for changesets that are
+descendants of client-specified changesets.
+
+The ``roots`` arguments contains a list of space-delimited hex nodes.
+
+The server responds with a changegroup version 1 containing all
+changesets between the requested root/base nodes and the repo's head nodes
+at the time of the request.
+
+The return type is a ``stream``.
+
+changegroupsubset
+-----------------
+
+(Legacy command: use ``getbundle`` instead)
+
+Obtain a changegroup version 1 with data for changesetsets between
+client specified base and head nodes.
+
+The ``bases`` argument contains a list of space-delimited hex nodes.
+The ``heads`` argument contains a list of space-delimited hex nodes.
+
+The server responds with a changegroup version 1 containing all
+changesets between the requested base and head nodes at the time of the
+request.
+
+The return type is a ``stream``.
+
+clonebundles
+------------
+
+Obtains a manifest of bundle URLs available to seed clones.
+
+Each returned line contains a URL followed by metadata. See the
+documentation in the ``clonebundles`` extension for more.
+
+The return type is a ``string``.
+
+getbundle
+---------
+
+Obtain a bundle containing repository data.
+
+This command accepts the following arguments:
+
+heads
+   List of space-delimited hex nodes of heads to retrieve.
+common
+   List of space-delimited hex nodes that the client has in common with the
+   server.
+obsmarkers
+   Boolean indicating whether to include obsolescence markers as part
+   of the response. Only works with bundle2.
+bundlecaps
+   Comma-delimited set of strings defining client bundle capabilities.
+listkeys
+   Comma-delimited list of strings of ``pushkey`` namespaces. For each
+   namespace listed, a bundle2 part will be included with the content of
+   that namespace.
+cg
+   Boolean indicating whether changegroup data is requested.
+cbattempted
+   Boolean indicating whether the client attempted to use the *clone bundles*
+   feature before performing this request.
+
+The return type on success is a ``stream`` where the value is bundle.
+On the HTTP transport, the response is zlib compressed.
+
+If an error occurs, a generic error response can be sent.
+
+Unless the client sends a false value for the ``cg`` argument, the returned
+bundle contains a changegroup with the nodes between the specified ``common``
+and ``heads`` nodes. Depending on the command arguments, the type and content
+of the returned bundle can vary significantly.
+
+The default behavior is for the server to send a raw changegroup version
+``01`` response.
+
+If the ``bundlecaps`` provided by the client contain a value beginning
+with ``HG2``, a bundle2 will be returned. The bundle2 data may contain
+additional repository data, such as ``pushkey`` namespace values.
+
+heads
+-----
+
+Returns a list of space-delimited hex nodes of repository heads followed
+by a newline. e.g.
+``a9eeb3adc7ddb5006c088e9eda61791c777cbf7c 31f91a3da534dc849f0d6bfc00a395a97cf218a1\n``
+
+This command does not accept any arguments. The return type is a ``string``.
+
+hello
+-----
+
+Returns lines describing interesting things about the server in an RFC-822
+like format.
+
+Currently, the only line defines the server capabilities. It has the form::
+
+    capabilities: <value>
+
+See above for more about the capabilities string.
+
+SSH clients typically issue this command as soon as a connection is
+established.
+
+This command does not accept any arguments. The return type is a ``string``.
+
+listkeys
+--------
+
+List values in a specified ``pushkey`` namespace.
+
+The ``namespace`` argument defines the pushkey namespace to operate on.
+
+The return type is a ``string``. The value is an encoded dictionary of keys.
+
+Key-value pairs are delimited by newlines (``\n``). Within each line, keys and
+values are separated by a tab (``\t``). Keys and values are both strings.
+
+lookup
+------
+
+Try to resolve a value to a known repository revision.
+
+The ``key`` argument is converted from bytes to an
+``encoding.localstr`` instance then passed into
+``localrepository.__getitem__`` in an attempt to resolve it.
+
+The return type is a ``string``.
+
+Upon successful resolution, returns ``1 <hex node>\n``. On failure,
+returns ``0 <error string>\n``. e.g.::
+
+   1 273ce12ad8f155317b2c078ec75a4eba507f1fba\n
+
+   0 unknown revision 'foo'\n
+
+known
+-----
+
+Determine whether multiple nodes are known.
+
+The ``nodes`` argument is a list of space-delimited hex nodes to check
+for existence.
+
+The return type is ``string``.
+
+Returns a string consisting of ``0``s and ``1``s indicating whether nodes
+are known. If the Nth node specified in the ``nodes`` argument is known,
+a ``1`` will be returned at byte offset N. If the node isn't known, ``0``
+will be present at byte offset N.
+
+There is no trailing newline.
+
+pushkey
+-------
+
+Set a value using the ``pushkey`` protocol.
+
+Accepts arguments ``namespace``, ``key``, ``old``, and ``new``, which
+correspond to the pushkey namespace to operate on, the key within that
+namespace to change, the old value (which may be empty), and the new value.
+All arguments are string types.
+
+The return type is a ``string``. The value depends on the transport protocol.
+
+The SSH transport sends a string encoded integer followed by a newline
+(``\n``) which indicates operation result. The server may send additional
+output on the ``stderr`` stream that should be displayed to the user.
+
+The HTTP transport sends a string encoded integer followed by a newline
+followed by additional server output that should be displayed to the user.
+This may include output from hooks, etc.
+
+The integer result varies by namespace. ``0`` means an error has occurred
+and there should be additional output to display to the user.
+
+stream_out
+----------
+
+Obtain *streaming clone* data.
+
+The return type is either a ``string`` or a ``stream``, depending on
+whether the request was fulfilled properly.
+
+A return value of ``1\n`` indicates the server is not configured to serve
+this data. If this is seen by the client, they may not have verified the
+``stream`` capability is set before making the request.
+
+A return value of ``2\n`` indicates the server was unable to lock the
+repository to generate data.
+
+All other responses are a ``stream`` of bytes. The first line of this data
+contains 2 space-delimited integers corresponding to the path count and
+payload size, respectively::
+
+    <path count> <payload size>\n
+
+The ``<payload size>`` is the total size of path data: it does not include
+the size of the per-path header lines.
+
+Following that header are ``<path count>`` entries. Each entry consists of a
+line with metadata followed by raw revlog data. The line consists of::
+
+    <store path>\0<size>\n
+
+The ``<store path>`` is the encoded store path of the data that follows.
+``<size>`` is the amount of data for this store path/revlog that follows the
+newline.
+
+There is no trailer to indicate end of data. Instead, the client should stop
+reading after ``<path count>`` entries are consumed.
+
+unbundle
+--------
+
+Send a bundle containing data (usually changegroup data) to the server.
+
+Accepts the argument ``heads``, which is a space-delimited list of hex nodes
+corresponding to server repository heads observed by the client. This is used
+to detect race conditions and abort push operations before a server performs
+too much work or a client transfers too much data.
+
+The request payload consists of a bundle to be applied to the repository,
+similarly to as if :hg:`unbundle` were called.
+
+In most scenarios, a special ``push response`` type is returned. This type
+contains an integer describing the change in heads as a result of the
+operation. A value of ``0`` indicates nothing changed. ``1`` means the number
+of heads remained the same. Values ``2`` and larger indicate the number of
+added heads minus 1. e.g. ``3`` means 2 heads were added. Negative values
+indicate the number of fewer heads, also off by 1. e.g. ``-2`` means there
+is 1 fewer head.
+
+The encoding of the ``push response`` type varies by transport.
+
+For the SSH transport, this type is composed of 2 ``string`` responses: an
+empty response (``0\n``) followed by the integer result value. e.g.
+``1\n2``. So the full response might be ``0\n1\n2``.
+
+For the HTTP transport, the response is a ``string`` type composed of an
+integer result value followed by a newline (``\n``) followed by string
+content holding server output that should be displayed on the client (output
+hooks, etc).
+
+In some cases, the server may respond with a ``bundle2`` bundle. In this
+case, the response type is ``stream``. For the HTTP transport, the response
+is zlib compressed.
+
+The server may also respond with a generic error type, which contains a string
+indicating the failure.
