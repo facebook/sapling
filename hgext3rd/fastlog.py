@@ -27,7 +27,6 @@ from mercurial import (
 from mercurial.i18n import _
 from mercurial.node import nullrev
 
-import os
 import heapq
 from threading import Thread, Event
 from collections import deque
@@ -269,8 +268,7 @@ def getfastlogrevs(orig, repo, pats, opts):
         # Complex match - use a revset.
         complex = ['date', 'exclude', 'include', 'keyword', 'no_merges',
                     'only_merges', 'prune', 'user']
-        if match.anypats() or len(dirs) > 1 or \
-                any(opts.get(opt) for opt in complex):
+        if match.anypats() or any(opts.get(opt) for opt in complex):
             f = fastlog(repo, rev, dirs, None)
             revs = revset.generatorset(f, iterasc=False)
             revs.reverse()
@@ -367,10 +365,7 @@ class FastLogThread(Thread):
     * reponame - repository name (str)
     * scm - scm type (str)
     * rev - revision to start logging from
-    * paths - paths to request logs.  Due to missing implementation,
-              we simply convert this to the common prefix, which
-              means consumers of the queue may need to filter results
-              if multiple paths are passed.
+    * paths - paths to request logs
     * repo - mercurial repository object
     """
 
@@ -382,10 +377,11 @@ class FastLogThread(Thread):
         self.reponame = reponame
         self.scm = scm
         self.rev = rev
-        self.paths = [os.path.commonprefix(paths)]
+        self.paths = list(paths)
         self.ui = repo.ui
         self.changelog = repo.changelog
         self._stop = Event()
+        self._paths_to_fetch = 0
 
     def stop(self):
         self._stop.set()
@@ -393,22 +389,29 @@ class FastLogThread(Thread):
     def stopped(self):
         return self._stop.isSet()
 
-    def run(self):
-        skip = 0
+    def finishpath(self, path):
+        self._paths_to_fetch -= 1
 
+    def gettodo(self):
+        return max(FASTLOG_MAX / self._paths_to_fetch, 100)
+
+    def generate(self, path):
         start = str(self.rev)
-        paths = self.paths
         reponame = self.reponame
         revfn = self.changelog.rev
+        skip = 0
 
         while True:
-            todo = FASTLOG_MAX
+            if self.stopped():
+                break
+
             results = None
+            todo = self.gettodo()
             try:
                 if USE_FASTLOG:
                     results = conduit.call_conduit('fastlog.log',
                         rev = start,
-                        file_paths = paths,
+                        file_paths = [path],
                         skip = skip,
                         number = todo,
                     )
@@ -417,21 +420,20 @@ class FastLogThread(Thread):
                         repo = reponame,
                         scm = self.scm,
                         rev = start,
-                        file_paths = paths,
+                        file_paths = [path],
                         skip = skip,
                         number = todo,
                     )
-            except conduit.ConduitError as e:
-                self.queue.put((self.id, False, str(e)))
-                return
             except Exception as e:
                 if self.ui.config('fastlog', 'debug'):
                     self.ui.traceback(force=True)
                 self.queue.put((self.id, False, str(e)))
+                self.stop()
                 return
 
             if results is None:
                 self.queue.put((self.id, False, 'Unknown error'))
+                self.stop()
                 return
 
             for result in results:
@@ -442,20 +444,38 @@ class FastLogThread(Thread):
                     rev = revfn(node.bin(hash))
                     if rev is None:
                         raise KeyError('Hash %s not in local repo' % hash)
-                    msg = (self.id, True, rev)
                 except Exception as e:
                     if self.ui.config('fastlog', 'debug'):
                         self.ui.traceback(force=True)
-                    msg = (self.id, False, str(e))
-                finally:
-                    self.queue.put(msg)
-                skip += 1
+                    self.queue.put((self.id, False, str(e)))
+                else:
+                    yield rev
 
-            if len(results) < todo or self.stopped():
-                # signal completion
-                self.queue.put((self.id, True, None))
+            skip += todo
+            if len(results) < todo:
+                self.finishpath(path)
                 return
 
+    def run(self):
+        revs = None
+        paths = self.paths
+
+        self._paths_to_fetch = len(paths)
+        for path in paths:
+            g = self.generate(path)
+            gen = revset.generatorset(g, iterasc=False)
+            gen.reverse()
+            if revs:
+                revs = revset.addset(revs, gen, ascending=False)
+            else:
+                revs = gen
+
+        for rev in revs:
+            if self.stopped():
+                break
+            self.queue.put((self.id, True, rev))
+
+        self.queue.put((self.id, True, None))
 
 if __name__ == '__main__':
     import doctest
