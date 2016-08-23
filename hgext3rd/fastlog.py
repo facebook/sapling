@@ -116,13 +116,23 @@ def lazyparents(rev, public, parentfunc):
                     if published:
                         public.add(p)
 
-def matches(filefunc, rev, paths):
-    assert rev is not None
+def dirmatches(files, paths):
+    """dirmatches(files, paths)
+    Return true if any files match directories in paths
+    Expects paths to be appended by '/'
+
+    >>> dirmatches(['holy/grail'], ['holy/'])
+    True
+    >>> dirmatches(['holy/grail'], ['holly/'])
+    False
+    >>> try: dirmatches(['holy/grail'], ['holy'])
+    ... except AssertionError, e: print('caught')
+    caught
+    """
     assert paths
-    files = filefunc(rev)
-    for f in files:
-        for path in paths:
-            assert path[-1] == '/'
+    for path in paths:
+        assert path[-1] == '/'
+        for f in files:
             if f.startswith(path):
                 return True
     return False
@@ -190,17 +200,18 @@ def getfastlogrevs(orig, repo, pats, opts):
                     else:
                         public.add(cur)
 
-        def fastlog(repo, startrev, dirs):
+        def fastlog(repo, startrev, dirs, localmatch):
             filefunc = repo.changelog.readfiles
-            for p in lazyparents(startrev, public, parents):
-                if matches(filefunc, p, dirs):
-                    yield p
-            repo.ui.debug('found common parent at %s\n' % repo[p].hex())
-            for rev in combinator(repo, p, dirs):
+            for parent in lazyparents(startrev, public, parents):
+                files = filefunc(parent)
+                if dirmatches(files, dirs):
+                    yield parent
+            repo.ui.debug('found common parent at %s\n' % repo[parent].hex())
+            for rev in combinator(repo, parent, dirs, localmatch):
                 yield rev
 
-        def combinator(repo, rev, dirs):
-            """combinator(repo, rev, dirs)
+        def combinator(repo, rev, dirs, localmatch):
+            """combinator(repo, rev, dirs, localmatch)
             Make parallel local and remote queries along ancestors of
             rev along path and combine results, eliminating duplicates,
             restricting results to those which match dirs
@@ -211,7 +222,7 @@ def getfastlogrevs(orig, repo, pats, opts):
             hash = repo[rev].hex()
 
             local = LocalIteratorThread(queue, LOCAL, originator(repo, rev),
-                                        repo)
+                                        dirs, localmatch, repo)
             remote = FastLogThread(queue, REMOTE, reponame, 'hg', hash, dirs,
                                     repo)
 
@@ -260,7 +271,7 @@ def getfastlogrevs(orig, repo, pats, opts):
                     'only_merges', 'prune', 'user']
         if match.anypats() or len(dirs) > 1 or \
                 any(opts.get(opt) for opt in complex):
-            f = fastlog(repo, rev, dirs)
+            f = fastlog(repo, rev, dirs, None)
             revs = revset.generatorset(f, iterasc=False)
             revs.reverse()
             if not revs:
@@ -273,7 +284,7 @@ def getfastlogrevs(orig, repo, pats, opts):
             # Simple match without revset shaves ~0.5 seconds off
             # hg log -l 100 -T ' ' on common directories.
             expr = 'fastlog(%s)' % ','.join(dirs)
-            return fastlog(repo, rev, dirs), expr, None
+            return fastlog(repo, rev, dirs, dirmatches), expr, None
 
     return orig(repo, pats, opts)
 
@@ -294,6 +305,8 @@ class LocalIteratorThread(Thread):
     * queue - self explanatory
     * id - tag to use when sending messages
     * generator - a generator which creates results to put on the queue
+    * dirs - directories against which to match
+    * localmatch - a function to match candidate results
     * repo - mercurial repository object
 
     If an exception is thrown, error result with the message from the
@@ -301,13 +314,16 @@ class LocalIteratorThread(Thread):
     not expected to generate exceptions, this terminates iteration.
     """
 
-    def __init__(self, queue, id, generator, repo):
+    def __init__(self, queue, id, generator, dirs, localmatch, repo):
         Thread.__init__(self)
         self.daemon = True
         self.queue = queue
         self.id = id
         self.generator = generator
+        self.dirs = dirs
+        self.localmatch = localmatch
         self.ui = repo.ui
+        self.repo = repo
         self._stop = Event()
 
     def stop(self):
@@ -317,11 +333,18 @@ class LocalIteratorThread(Thread):
         return self._stop.isSet()
 
     def run(self):
+        generator = self.generator
+        match = self.localmatch
+        dirs = self.dirs
+        filefunc = self.repo.changelog.readfiles
+        queue = self.queue
+
         try:
-            for result in self.generator:
-                self.queue.put((self.id, True, result))
+            for result in generator:
                 if self.stopped():
                     break
+                if not match or match(filefunc(result), dirs):
+                    self.queue.put((self.id, True, result))
         except Exception as e:
             self.ui.traceback()
             self.queue.put((self.id, False, str(e)))
