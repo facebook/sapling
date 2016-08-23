@@ -609,3 +609,63 @@ class fixupstate(object):
         nodelist = self.replacemap.keys()
         if nodelist:
             repair.strip(self.repo.ui, self.repo, nodelist)
+
+def smartfixup(ui, repo, stack=None, targetctx=None, pats=None, opts=None):
+    """pick fixup chunks from targetctx, apply them to stack.
+
+    if targetctx is None, the working copy context will be used.
+    if stack is None, the current draft stack will be used.
+    return fixupstate.
+    """
+    if stack is None:
+        limit = ui.configint('smartfixup', 'maxstacksize', 50)
+        stack = getdraftstack(repo['.'], limit)
+        if limit and len(stack) >= limit:
+            ui.warn(_('smartfixup: only the recent %d changesets will '
+                      'be analysed\n')
+                    % limit)
+    if not stack:
+        raise error.Abort(_('no changset to change'))
+    if targetctx is None: # default to working copy
+        targetctx = repo[None]
+    if pats is None:
+        pats = ()
+    if opts is None:
+        opts = {}
+    state = fixupstate(stack, ui=ui)
+    matcher = scmutil.match(targetctx, pats, opts)
+    state.diffwith(destctx, matcher)
+    state.apply()
+    comittednode = state.commit()
+    if comittednode:
+        state.printchunkstats()
+    return state
+
+@command('^smartfixup|sf',
+         [] + commands.walkopts,
+         _('hg smartfixup [OPTION] [FILE]...'))
+def smartfixupcmd(ui, repo, *pats, **opts):
+    """incorporate corrections into the stack of draft changesets
+
+    Smartfixup analyzes each change in your working directory and attempts to
+    amend the changed lines into the changesets in your stack that first
+    introduced those lines.
+
+    If smartfixup cannot find an unambiguous changeset to amend for a change,
+    that change will be left in the working directory, untouched. They can be
+    observed by :hg:`status` or :hg:`diff` afterwards. In other words,
+    smartfixup does not write to the working directory.
+
+    Changesets outside the revset `::. and not public() and not merge()` will
+    not be changed.
+
+    Changesets that become empty after applying the changes will be deleted.
+
+    If in doubt, run :hg:`smartfixup -pn` to preview what changesets will
+    be amended by what changed lines, without actually changing anything.
+
+    Returns 0 on success, 1 if all chunks were ignored and nothing amended.
+    """
+    state = smartfixup(ui, repo, pats=pats, opts=opts)
+    if sum(s[0] for s in state.chunkstats.values()) == 0:
+        return 1
