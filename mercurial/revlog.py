@@ -1446,7 +1446,6 @@ class revlog(object):
 
         curr = len(self)
         prev = curr - 1
-        base = chainbase = curr
         offset = self.end(prev)
         delta = None
         if self._basecache is None:
