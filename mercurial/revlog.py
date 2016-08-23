@@ -225,9 +225,8 @@ class revlog(object):
         self.opener = opener
         # 3-tuple of (node, rev, text) for a raw revision.
         self._cache = None
-        # 2-tuple of (rev, baserev) defining the base revision the delta chain
-        # begins at for a revision.
-        self._basecache = None
+        # Maps rev to chain base rev.
+        self._chainbasecache = util.lrucachedict(100)
         # 2-tuple of (offset, data) of raw data from the revlog at an offset.
         self._chunkcache = (0, '')
         # How much data to read and cache into the raw revlog data cache.
@@ -340,7 +339,7 @@ class revlog(object):
 
     def clearcaches(self):
         self._cache = None
-        self._basecache = None
+        self._chainbasecache.clear()
         self._chunkcache = (0, '')
         self._pcache = {}
 
@@ -390,11 +389,17 @@ class revlog(object):
     def length(self, rev):
         return self.index[rev][1]
     def chainbase(self, rev):
+        base = self._chainbasecache.get(rev)
+        if base is not None:
+            return base
+
         index = self.index
         base = index[rev][3]
         while base != rev:
             rev = base
             base = index[rev][3]
+
+        self._chainbasecache[rev] = base
         return base
     def chainlen(self, rev):
         return self._chaininfo(rev)[0]
@@ -1430,10 +1435,7 @@ class revlog(object):
                     delta = mdiff.textdiff(ptext, t)
             data = self.compress(delta)
             l = len(data[1]) + len(data[0])
-            if basecache[0] == rev:
-                chainbase = basecache[1]
-            else:
-                chainbase = self.chainbase(rev)
+            chainbase = self.chainbase(rev)
             dist = l + offset - self.start(chainbase)
             if self._generaldelta:
                 base = rev
@@ -1448,9 +1450,6 @@ class revlog(object):
         prev = curr - 1
         offset = self.end(prev)
         delta = None
-        if self._basecache is None:
-            self._basecache = (prev, self.chainbase(prev))
-        basecache = self._basecache
         p1r, p2r = self.rev(p1), self.rev(p2)
 
         # full versions are inserted when the needed deltas
@@ -1514,7 +1513,7 @@ class revlog(object):
 
         if type(text) == str: # only accept immutable objects
             self._cache = (node, curr, text)
-        self._basecache = (curr, chainbase)
+        self._chainbasecache[curr] = chainbase
         return node
 
     def _writeentry(self, transaction, ifh, dfh, entry, data, link, offset):
