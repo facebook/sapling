@@ -933,6 +933,7 @@ internals topic renders index of available sub-topics
        changegroups  Changegroups
        requirements  Repository Requirements
        revlogs       Revision Logs
+       wireprotocol  Wire Protocol
 
 sub-topics can be accessed
 
@@ -2894,6 +2895,13 @@ Sub-topic indexes rendered properly
   </a>
   </td><td>
   Revision Logs
+  </td></tr>
+  <tr><td>
+  <a href="/help/internals.wireprotocol">
+  wireprotocol
+  </a>
+  </td><td>
+  Wire Protocol
   </td></tr>
   
   

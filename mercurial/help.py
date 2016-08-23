@@ -192,6 +192,8 @@ internalstable = sorted([
      loaddoc('requirements', subdir='internals')),
     (['revlogs'], _('Revision Logs'),
      loaddoc('revlogs', subdir='internals')),
+    (['wireprotocol'], _('Wire Protocol'),
+     loaddoc('wireprotocol', subdir='internals')),
 ])
 
 def internalshelp(ui):

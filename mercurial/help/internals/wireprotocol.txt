@@ -1,0 +1,11 @@
+The Mercurial wire protocol is a request-response based protocol
+with multiple wire representations.
+
+Each request is modeled as a command name, a dictionary of arguments, and
+optional raw input. Command arguments and their types are intrinsic
+properties of commands. So is the response type of the command. This means
+clients can't always send arbitrary arguments to servers and servers can't
+return multiple response types.
+
+The protocol is synchronous and does not support multiplexing (concurrent
+commands).
