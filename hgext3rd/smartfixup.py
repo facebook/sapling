@@ -653,6 +653,53 @@ class fixupstate(object):
         if nodelist:
             repair.strip(self.repo.ui, self.repo, nodelist)
 
+def _parsechunk(hunk):
+    """(crecord.uihunk or patch.recordhunk) -> (path, (a1, a2, [bline]))"""
+    if type(hunk) not in (crecord.uihunk, patch.recordhunk):
+        return None, None
+    path = hunk.header.filename()
+    a1 = hunk.fromline + len(hunk.before) - 1
+    # remove before and after context
+    hunk.before = hunk.after = []
+    buf = util.stringio()
+    hunk.write(buf)
+    patchlines = mdiff.splitnewlines(buf.getvalue())
+    # hunk.prettystr() will update hunk.removed
+    a2 = a1 + hunk.removed
+    blines = [l[1:] for l in patchlines[1:] if l[0] != '-']
+    return path, (a1, a2, blines)
+
+def overlaydiffcontext(ctx, chunks):
+    """(ctx, [crecord.uihunk]) -> memctx
+
+    return a memctx with some [1] patches (chunks) applied to ctx.
+    [1]: modifications are handled. renames, mode changes, etc. are ignored.
+    """
+    # sadly the applying-patch logic is hardly reusable, and messy:
+    # 1. the core logic "_applydiff" is too heavy - it writes .rej files, it
+    #    needs a file stream of a patch and will re-parse it, while we have
+    #    structured hunk objects at hand.
+    # 2. a lot of different implementations about "chunk" (patch.hunk,
+    #    patch.recordhunk, crecord.uihunk)
+    # as we only care about applying changes to modified files, no mode
+    # change, no binary diff, and no renames, it's probably okay to
+    # re-invent the logic using much simpler code here.
+    memworkingcopy = {} # {path: content}
+    patchmap = defaultdict(lambda: []) # {path: [(a1, a2, [bline])]}
+    for path, info in map(_parsechunk, chunks):
+        if not path or not info:
+            continue
+        patchmap[path].append(info)
+    for path, patches in patchmap.iteritems():
+        if path not in ctx or not patches:
+            continue
+        patches.sort(reverse=True)
+        lines = mdiff.splitnewlines(ctx[path].data())
+        for a1, a2, blines in patches:
+            lines[a1:a2] = blines
+        memworkingcopy[path] = ''.join(lines)
+    return overlaycontext(memworkingcopy, ctx)
+
 def smartfixup(ui, repo, stack=None, targetctx=None, pats=None, opts=None):
     """pick fixup chunks from targetctx, apply them to stack.
 
@@ -677,6 +724,11 @@ def smartfixup(ui, repo, stack=None, targetctx=None, pats=None, opts=None):
         opts = {}
     state = fixupstate(stack, ui=ui)
     matcher = scmutil.match(targetctx, pats, opts)
+    if opts.get('interactive'):
+        diff = patch.diff(repo, stack[-1].node(), targetctx.node(), matcher)
+        origchunks = patch.parsepatch(diff)
+        chunks = cmdutil.recordfilter(ui, origchunks)[0]
+        targetctx = overlaydiffcontext(stack[-1], chunks)
     state.diffwith(targetctx, matcher, showchanges=opts.get('print_changes'))
     if not opts.get('dry_run'):
         state.apply()
@@ -689,6 +741,8 @@ def smartfixup(ui, repo, stack=None, targetctx=None, pats=None, opts=None):
 @command('^smartfixup|sf',
          [('p', 'print-changes', None,
            _('print which changesets are modified by which changes')),
+          ('i', 'interactive', None,
+           _('interactively select which chunks to apply (EXPERIMENTAL)')),
          ] + commands.dryrunopts + commands.walkopts,
          _('hg smartfixup [OPTION] [FILE]...'))
 def smartfixupcmd(ui, repo, *pats, **opts):
