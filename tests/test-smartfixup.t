@@ -45,6 +45,24 @@ Change a few lines:
   > 4d
   > 5e
   > EOF
+
+Preview smartfixup changes:
+
+  $ hg smartfixup --print-changes --dry-run
+  showing changes for a
+          @@ -0,2 +0,2 @@
+  4ec16f8 -1
+  5c5f952 -2
+  4ec16f8 +1a
+  5c5f952 +2b
+          @@ -3,2 +3,2 @@
+  ad8b8b7 -4
+  4f55fa6 -5
+  ad8b8b7 +4d
+  4f55fa6 +5e
+
+Run smartfixup:
+
   $ hg smartfixup
   saved backup bundle to * (glob)
   2 of 2 chunks(s) applied
@@ -148,6 +166,14 @@ Public commits will not be changed:
 
   $ hg phase -p 1
   $ sedi 's/Insert/insert/' a
+  $ hg smartfixup -pn
+  showing changes for a
+          @@ -0,1 +0,1 @@
+          -Insert before 2b
+          +insert before 2b
+          @@ -3,1 +3,1 @@
+  85b4e0e -Insert aftert 4d
+  85b4e0e +insert aftert 4d
   $ hg smartfixup
   saved backup bundle to * (glob)
   1 of 2 chunks(s) applied

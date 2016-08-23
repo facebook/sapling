@@ -50,6 +50,11 @@ testedwith = 'internal'
 cmdtable = {}
 command = cmdutil.command(cmdtable)
 
+colortable = {
+    'smartfixup.node': 'blue bold',
+    'smartfixup.path': 'bold',
+}
+
 class nullui(object):
     """blank ui object doing nothing"""
     debugflag = False
@@ -181,7 +186,7 @@ class filefixupstate(object):
         self.fixups = [] # [(linelog rev, a1, a2, b1, b2)]
         self.finalcontents = [] # [str]
 
-    def diffwith(self, destfctx):
+    def diffwith(self, targetfctx, showchanges=False):
         """calculate fixups needed by examining the differences between
         self.fctxs[-1] and targetfctx, chunk by chunk.
 
@@ -213,6 +218,8 @@ class filefixupstate(object):
             self.chunkstats[0] += bool(newfixups) # 1 or 0
             self.chunkstats[1] += 1
             self.fixups += newfixups
+            if showchanges:
+                self._showchanges(alines, blines, chunk, newfixups)
 
     def apply(self):
         """apply self.fixups. update self.linelog, self.finalcontents.
@@ -372,6 +379,38 @@ class filefixupstate(object):
         pushchunk()
         return result
 
+    def _showchanges(self, alines, blines, chunk, fixups):
+        ui = self.ui
+        if ui.quiet:
+            return
+
+        def label(line, label):
+            if line.endswith('\n'):
+                line = line[:-1]
+            return ui.label(line, label)
+
+        # this is not optimized for perf but _showchanges only gets executed
+        # with an extra command-line flag.
+        a1, a2, b1, b2 = chunk
+        aidxs, bidxs = [0] * (a2 - a1), [0] * (b2 - b1)
+        for idx, fa1, fa2, fb1, fb2 in fixups:
+            for i in xrange(fa1, fa2):
+                aidxs[i - a1] = (max(idx, 1) - 1) // 2
+            for i in xrange(fb1, fb2):
+                bidxs[i - b1] = (max(idx, 1) - 1) // 2
+
+        buf = [] # [(idx, content)]
+        buf.append((0, label('@@ -%d,%d +%d,%d @@'
+                             % (a1, a2 - a1, b1, b2 - b1), 'diff.hunk')))
+        buf += [(aidxs[i - a1], label('-' + alines[i], 'diff.deleted'))
+                for i in xrange(a1, a2)]
+        buf += [(bidxs[i - b1], label('+' + blines[i], 'diff.inserted'))
+                for i in xrange(b1, b2)]
+        for idx, line in buf:
+            shortnode = idx and node.short(self.fctxs[idx].node()) or ''
+            ui.write(ui.label(shortnode[0:7].ljust(8), 'smartfixup.node') +
+                     line + '\n')
+
 class fixupstate(object):
     """state needed to run smartfixup
 
@@ -402,7 +441,7 @@ class fixupstate(object):
         self.replacemap = {} # {oldnode: newnode or None}
         self.finalnode = None # head after all fixups
 
-    def diffwith(self, destctx, match=None):
+    def diffwith(self, targetctx, match=None, showchanges=False):
         """diff and prepare fixups. update self.fixupmap, self.paths"""
         # only care about modified files
         self.paths = self.stack[-1].status(targetctx, match).modified
@@ -425,7 +464,11 @@ class fixupstate(object):
             else:
                 fctxs.insert(0, emptyfilecontext())
             fstate = filefixupstate(fctxs, ui=self.ui)
-            fstate.diffwith(destctx[path])
+            if showchanges:
+                colorpath = self.ui.label(path, 'smartfixup.path')
+                header = 'showing changes for ' + colorpath
+                self.ui.write(header + '\n')
+            fstate.diffwith(targetfctx, showchanges=showchanges)
             self.fixupmap[path] = fstate
 
     def apply(self):
@@ -634,15 +677,19 @@ def smartfixup(ui, repo, stack=None, targetctx=None, pats=None, opts=None):
         opts = {}
     state = fixupstate(stack, ui=ui)
     matcher = scmutil.match(targetctx, pats, opts)
-    state.diffwith(destctx, matcher)
-    state.apply()
-    comittednode = state.commit()
-    if comittednode:
-        state.printchunkstats()
+    state.diffwith(targetctx, matcher, showchanges=opts.get('print_changes'))
+    if not opts.get('dry_run'):
+        state.apply()
+        if state.commit():
+            state.printchunkstats()
+        elif not ui.quiet:
+            ui.write(_('nothing applied\n'))
     return state
 
 @command('^smartfixup|sf',
-         [] + commands.walkopts,
+         [('p', 'print-changes', None,
+           _('print which changesets are modified by which changes')),
+         ] + commands.dryrunopts + commands.walkopts,
          _('hg smartfixup [OPTION] [FILE]...'))
 def smartfixupcmd(ui, repo, *pats, **opts):
     """incorporate corrections into the stack of draft changesets
