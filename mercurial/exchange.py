@@ -1201,8 +1201,10 @@ def pull(repo, remote, heads=None, force=False, bookmarks=(), opargs=None,
                     " %s") % (', '.join(sorted(missing)))
             raise error.Abort(msg)
 
-    lock = pullop.repo.lock()
+    wlock = lock = None
     try:
+        wlock = pullop.repo.wlock()
+        lock = pullop.repo.lock()
         pullop.trmanager = transactionmanager(repo, 'pull', remote.url())
         streamclone.maybeperformlegacystreamclone(pullop)
         # This should ideally be in _pullbundle2(). However, it needs to run
@@ -1217,8 +1219,7 @@ def pull(repo, remote, heads=None, force=False, bookmarks=(), opargs=None,
         _pullobsolete(pullop)
         pullop.trmanager.close()
     finally:
-        pullop.trmanager.release()
-        lock.release()
+        lockmod.release(pullop.trmanager, lock, wlock)
 
     return pullop
 

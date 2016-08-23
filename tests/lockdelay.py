@@ -7,20 +7,16 @@ from __future__ import absolute_import
 import os
 import time
 
-from mercurial import (
-    lock as lockmod,
-)
+def reposetup(ui, repo):
 
-class delaylock(lockmod.lock):
-    def lock(self):
-        delay = float(os.environ.get('HGPRELOCKDELAY', '0.0'))
-        if delay:
-            time.sleep(delay)
-        res = super(delaylock, self).lock()
-        delay = float(os.environ.get('HGPOSTLOCKDELAY', '0.0'))
-        if delay:
-            time.sleep(delay)
-        return res
-
-def extsetup(ui):
-    lockmod.lock = delaylock
+    class delayedlockrepo(repo.__class__):
+        def lock(self):
+            delay = float(os.environ.get('HGPRELOCKDELAY', '0.0'))
+            if delay:
+                time.sleep(delay)
+            res = super(delayedlockrepo, self).lock()
+            delay = float(os.environ.get('HGPOSTLOCKDELAY', '0.0'))
+            if delay:
+                time.sleep(delay)
+            return res
+    repo.__class__ = delayedlockrepo
