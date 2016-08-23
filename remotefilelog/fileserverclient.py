@@ -13,7 +13,7 @@ import hashlib, os, socket, lz4, time, io, struct
 import errno
 import itertools
 
-import constants, datapack, historypack, shallowutil
+import constants, datapack, historypack, shallowutil, shallowrepo
 from shallowutil import readexactly, readunpack
 
 if os.name != 'nt':
@@ -59,35 +59,42 @@ def peersetup(ui, peer):
             heads = f.value.split('\n') if f.value else []
             yield heads
 
-        def _callstream(self, command, **opts):
-            if (command == 'getbundle' and
-                'remotefilelog' in self._capabilities()):
-                bundlecaps = opts.get('bundlecaps')
-                if bundlecaps:
-                    bundlecaps = [bundlecaps]
-                else:
-                    bundlecaps = []
+        def _updatecallstreamopts(self, command, opts):
+            if command != 'getbundle':
+                return
+            if 'remotefilelog' not in self._capabilities():
+                return
+            if not util.safehasattr(self, '_localrepo'):
+                return
+            if shallowrepo.requirement not in self._localrepo.requirements:
+                return
 
-                # shallow, includepattern, and excludepattern are a hacky way of
-                # carrying over data from the local repo to this getbundle
-                # command. We need to do it this way because bundle1 getbundle
-                # doesn't provide any other place we can hook in to manipulate
-                # getbundle args before it goes across the wire. Once we get rid
-                # of bundle1, we can use bundle2's _pullbundle2extraprepare to
-                # do this more cleanly.
-                if util.safehasattr(self, 'shallow') and self.shallow:
-                    bundlecaps.append('remotefilelog')
-                if util.safehasattr(self, 'includepattern'):
-                    if self.includepattern:
-                        patterns = '\0'.join(self.includepattern)
-                        includecap = "includepattern=" + patterns
-                        bundlecaps.append(includecap)
-                if util.safehasattr(self, 'excludepattern'):
-                    if self.excludepattern:
-                        patterns = '\0'.join(self.excludepattern)
-                        excludecap = "excludepattern=" + patterns
-                        bundlecaps.append(excludecap)
-                opts['bundlecaps'] = ','.join(bundlecaps)
+            bundlecaps = opts.get('bundlecaps')
+            if bundlecaps:
+                bundlecaps = [bundlecaps]
+            else:
+                bundlecaps = []
+
+            # shallow, includepattern, and excludepattern are a hacky way of
+            # carrying over data from the local repo to this getbundle
+            # command. We need to do it this way because bundle1 getbundle
+            # doesn't provide any other place we can hook in to manipulate
+            # getbundle args before it goes across the wire. Once we get rid
+            # of bundle1, we can use bundle2's _pullbundle2extraprepare to
+            # do this more cleanly.
+            bundlecaps.append('remotefilelog')
+            if self._localrepo.includepattern:
+                patterns = '\0'.join(self._localrepo.includepattern)
+                includecap = "includepattern=" + patterns
+                bundlecaps.append(includecap)
+            if self._localrepo.excludepattern:
+                patterns = '\0'.join(self._localrepo.excludepattern)
+                excludecap = "excludepattern=" + patterns
+                bundlecaps.append(excludecap)
+            opts['bundlecaps'] = ','.join(bundlecaps)
+
+        def _callstream(self, command, **opts):
+            self._updatecallstreamopts(command, opts)
             return super(remotefilepeer, self)._callstream(command, **opts)
 
     peer.__class__ = remotefilepeer

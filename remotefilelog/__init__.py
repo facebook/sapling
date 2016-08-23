@@ -694,9 +694,7 @@ def exchangepull(orig, repo, remote, *args, **kwargs):
                     **kwargs)
 
     if util.safehasattr(remote, '_callstream'):
-        remote.shallow = shallowrepo.requirement in repo.requirements
-        remote.includepattern = repo.includepattern
-        remote.excludepattern = repo.excludepattern
+        remote._localrepo = repo
     elif util.safehasattr(remote, 'getbundle'):
         wrapfunction(remote, 'getbundle', localgetbundle)
 
