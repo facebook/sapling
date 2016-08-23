@@ -210,8 +210,10 @@ def getfastlogrevs(orig, repo, pats, opts):
             queue = util.queue(FASTLOG_QUEUE_SIZE + 100)
             hash = repo[rev].hex()
 
-            local = LocalIteratorThread(queue, LOCAL, originator(repo, rev))
-            remote = FastLogThread(queue, REMOTE, reponame, 'hg', hash, dirs)
+            local = LocalIteratorThread(queue, LOCAL, originator(repo, rev),
+                                        repo)
+            remote = FastLogThread(queue, REMOTE, reponame, 'hg', hash, dirs,
+                                    repo)
 
             # Allow debugging either remote or local path
             debug = repo.ui.config('fastlog', 'debug')
@@ -295,18 +297,20 @@ class LocalIteratorThread(Thread):
     * queue - self explanatory
     * id - tag to use when sending messages
     * generator - a generator which creates results to put on the queue
+    * repo - mercurial repository object
 
     If an exception is thrown, error result with the message from the
     exception will be passed along the queue.  Since local results are
     not expected to generate exceptions, this terminates iteration.
     """
 
-    def __init__(self, queue, id, generator):
+    def __init__(self, queue, id, generator, repo):
         Thread.__init__(self)
         self.daemon = True
         self.queue = queue
         self.id = id
         self.generator = generator
+        self.ui = repo.ui
         self._stop = Event()
 
     def stop(self):
@@ -322,6 +326,7 @@ class LocalIteratorThread(Thread):
                 if self.stopped():
                     break
         except Exception as e:
+            self.ui.traceback()
             self.queue.put((self.id, False, str(e)))
         finally:
             self.queue.put((self.id, True, None))
@@ -339,24 +344,26 @@ class FastLogThread(Thread):
 
     * queue - self explanatory
     * id - tag to use when sending messages
-    * repo - repository name (str)
+    * reponame - repository name (str)
     * scm - scm type (str)
     * rev - revision to start logging from
     * paths - paths to request logs.  Due to missing implementation,
               we simply convert this to the common prefix, which
               means consumers of the queue may need to filter results
               if multiple paths are passed.
+    * repo - mercurial repository object
     """
 
-    def __init__(self, queue, id, repo, scm, rev, paths):
+    def __init__(self, queue, id, reponame, scm, rev, paths, repo):
         Thread.__init__(self)
         self.daemon = True
         self.queue = queue
         self.id = id
-        self.repo = repo
+        self.reponame = reponame
         self.scm = scm
         self.rev = rev
         self.paths = [os.path.commonprefix(paths)]
+        self.ui = repo.ui
         self._stop = Event()
 
     def stop(self):
@@ -370,7 +377,7 @@ class FastLogThread(Thread):
 
         paths = self.paths
         rev = str(self.rev)
-        repo = self.repo
+        reponame = self.reponame
 
         while True:
             todo = FASTLOG_MAX
@@ -385,7 +392,7 @@ class FastLogThread(Thread):
                     )
                 else:
                     results = conduit.call_conduit('scmquery.log_v2',
-                        repo = repo,
+                        repo = reponame,
                         scm = self.scm,
                         rev = rev,
                         file_paths = paths,
@@ -396,6 +403,8 @@ class FastLogThread(Thread):
                 self.queue.put((self.id, False, str(e)))
                 return
             except Exception as e:
+                if self.ui.config('fastlog', 'debug'):
+                    self.ui.traceback(force=True)
                 self.queue.put((self.id, False, str(e)))
                 return
 
@@ -405,11 +414,16 @@ class FastLogThread(Thread):
 
             for result in results:
                 hash = result['hash']
-                if len(hash) == 40:
-                    self.queue.put((self.id, True, hash))
-                else:
-                    self.queue.put(
-                        (self.id, False, 'Received bad hash %s' % hash))
+                try:
+                    if len(hash) != 40:
+                        raise ValueError('Received invalid hash %s' % hash)
+                    msg = (self.id, True, hash)
+                except Exception as e:
+                    if self.ui.config('fastlog', 'debug'):
+                        self.ui.traceback(force=True)
+                    msg = (self.id, False, str(e))
+                finally:
+                    self.queue.put(msg)
                 skip += 1
 
             if len(results) < todo or self.stopped():
