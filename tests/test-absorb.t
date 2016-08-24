@@ -1,7 +1,7 @@
   $ extpath=`dirname $TESTDIR`
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > smartfixup=$extpath/hgext3rd/smartfixup.py
+  > absorb=$extpath/hgext3rd/absorb.py
   > EOF
 
   $ sedi() { # workaround check-code
@@ -18,7 +18,7 @@
 
 Do not crash with empty repo:
 
-  $ hg sf
+  $ hg absorb
   abort: no changset to change
   [255]
 
@@ -46,9 +46,9 @@ Change a few lines:
   > 5e
   > EOF
 
-Preview smartfixup changes:
+Preview absorb changes:
 
-  $ hg smartfixup --print-changes --dry-run
+  $ hg absorb --print-changes --dry-run
   showing changes for a
           @@ -0,2 +0,2 @@
   4ec16f8 -1
@@ -61,9 +61,9 @@ Preview smartfixup changes:
   ad8b8b7 +4d
   4f55fa6 +5e
 
-Run smartfixup:
+Run absorb:
 
-  $ hg smartfixup
+  $ hg absorb
   saved backup bundle to * (glob)
   2 of 2 chunks(s) applied
   $ hg annotate a
@@ -79,7 +79,7 @@ Delete a few lines and related commits will be removed if they will be empty:
   > 2b
   > 4d
   > EOF
-  $ hg smartfixup
+  $ hg absorb
   saved backup bundle to * (glob)
   3 of 3 chunks(s) applied
   $ hg annotate a
@@ -107,7 +107,7 @@ Delete a few lines and related commits will be removed if they will be empty:
 Non 1:1 map changes will be ignored:
 
   $ echo 1 > a
-  $ hg smartfixup
+  $ hg absorb
   nothing applied
   [1]
 
@@ -119,7 +119,7 @@ Insertaions:
   > 4d
   > insert aftert 4d
   > EOF
-  $ hg smartfixup -q
+  $ hg absorb -q
   $ hg status
   $ hg annotate a
   1: insert before 2b
@@ -137,7 +137,7 @@ Bookmarks are moved:
      b2                        2:946e4bc87915
    * ba                        2:946e4bc87915
   $ sedi 's/insert/INSERT/' a
-  $ hg smartfixup -q
+  $ hg absorb -q
   $ hg status
   $ hg bookmarks
      b1                        1:a4183e9b3d31
@@ -151,11 +151,11 @@ Non-mofified files are ignored:
   $ touch c
   $ hg add c
   $ hg rm b
-  $ hg smartfixup
+  $ hg absorb
   nothing applied
   [1]
   $ sedi 's/INSERT/Insert/' a
-  $ hg smartfixup
+  $ hg absorb
   saved backup bundle to * (glob)
   2 of 2 chunks(s) applied
   $ hg status
@@ -166,7 +166,7 @@ Public commits will not be changed:
 
   $ hg phase -p 1
   $ sedi 's/Insert/insert/' a
-  $ hg smartfixup -pn
+  $ hg absorb -pn
   showing changes for a
           @@ -0,1 +0,1 @@
           -Insert before 2b
@@ -174,7 +174,7 @@ Public commits will not be changed:
           @@ -3,1 +3,1 @@
   85b4e0e -Insert aftert 4d
   85b4e0e +insert aftert 4d
-  $ hg smartfixup
+  $ hg absorb
   saved backup bundle to * (glob)
   1 of 2 chunks(s) applied
   $ hg diff -U 0
@@ -225,7 +225,7 @@ Merge commit will not be changed:
   
   $ echo 2 >> m1
   $ echo 2 >> m2
-  $ hg smartfixup
+  $ hg absorb
   abort: no changset to change
   [255]
   $ hg revert -q -C m1 m2
@@ -251,15 +251,15 @@ Use pattern to select files to be fixed up:
   $ hg status
   M a
   M b
-  $ hg smartfixup a
+  $ hg absorb a
   saved backup bundle to * (glob)
   1 of 1 chunks(s) applied
   $ hg status
   M b
-  $ hg smartfixup --exclude b
+  $ hg absorb --exclude b
   nothing applied
   [1]
-  $ hg smartfixup b
+  $ hg absorb b
   saved backup bundle to * (glob)
   1 of 1 chunks(s) applied
   $ hg status
@@ -269,7 +269,7 @@ Use pattern to select files to be fixed up:
   b Line 1
   b Line 2
 
-Test config option smartfixup.maxstacksize:
+Test config option absorb.maxstacksize:
 
   $ sedi 's/Line/line/' a b
   $ hg log -T '{rev}:{node} {desc}\n'
@@ -277,8 +277,8 @@ Test config option smartfixup.maxstacksize:
   2:74cfa6294160149d60adbf7582b99ce37a4597ec commit b 1
   1:28f10dcf96158f84985358a2e5d5b3505ca69c22 commit a 2
   0:f9a81da8dc53380ed91902e5b82c1b36255a4bd0 commit a 1
-  $ hg --config smartfixup.maxstacksize=1 smartfixup -pn
-  smartfixup: only the recent 1 changesets will be analysed
+  $ hg --config absorb.maxstacksize=1 absorb -pn
+  absorb: only the recent 1 changesets will be analysed
   showing changes for a
           @@ -0,2 +0,2 @@
           -a Line 1
@@ -297,27 +297,27 @@ Test obsolete markers creation:
   $ cat >> $HGRCPATH << EOF
   > [experimental]
   > evolution=createmarkers
-  > [smartfixup]
+  > [absorb]
   > addnoise=1
   > EOF
 
-  $ hg --config smartfixup.maxstacksize=3 sf
-  smartfixup: only the recent 3 changesets will be analysed
+  $ hg --config absorb.maxstacksize=3 sf
+  absorb: only the recent 3 changesets will be analysed
   2 of 2 chunks(s) applied
-  $ hg log -T '{rev}:{node|short} {desc} {get(extras, "smartfixup_source")}\n'
-  6:812fad2a366c commit b 2 712d16a8f445834e36145408eabc1d29df05ec09
-  5:851732d1c4d4 commit b 1 74cfa6294160149d60adbf7582b99ce37a4597ec
-  4:4438fcf42c60 commit a 2 28f10dcf96158f84985358a2e5d5b3505ca69c22
+  $ hg log -T '{rev}:{node|short} {desc} {get(extras, "absorb_source")}\n'
+  6:3dfde4199b46 commit b 2 712d16a8f445834e36145408eabc1d29df05ec09
+  5:99cfab7da5ff commit b 1 74cfa6294160149d60adbf7582b99ce37a4597ec
+  4:fec2b3bd9e08 commit a 2 28f10dcf96158f84985358a2e5d5b3505ca69c22
   0:f9a81da8dc53 commit a 1 
-  $ hg sf
+  $ hg absorb
   1 of 1 chunks(s) applied
-  $ hg log -T '{rev}:{node|short} {desc} {get(extras, "smartfixup_source")}\n'
-  10:1eaff5b07eb1 commit b 2 812fad2a366c62756eafd8e6b45d9e2f27985d11
-  9:9354aeb6e762 commit b 1 851732d1c4d433cdd984d6b295158224b81dd717
-  8:568249511984 commit a 2 4438fcf42c600562ce2e74062b0a8ad7d246573f
-  7:e56aca308c01 commit a 1 f9a81da8dc53380ed91902e5b82c1b36255a4bd0
+  $ hg log -T '{rev}:{node|short} {desc} {get(extras, "absorb_source")}\n'
+  10:e1c8c1e030a4 commit b 2 3dfde4199b4610ea6e3c6fa9f5bdad8939d69524
+  9:816c30955758 commit b 1 99cfab7da5ffdaf3b9fc6643b14333e194d87f46
+  8:5867d584106b commit a 2 fec2b3bd9e0834b7cb6a564348a0058171aed811
+  7:8c76602baf10 commit a 1 f9a81da8dc53380ed91902e5b82c1b36255a4bd0
 
-Test config option smartfixup.amendflag and running as a sub command of amend:
+Test config option absorb.amendflags and running as a sub command of amend:
 
   $ cat >> $TESTTMP/dummyamend.py << EOF
   > from mercurial import cmdutil, commands
@@ -330,7 +330,7 @@ Test config option smartfixup.amendflag and running as a sub command of amend:
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > fbamend=$TESTTMP/dummyamend.py
-  > [smartfixup]
+  > [absorb]
   > amendflag = correlated
   > EOF
 
@@ -341,8 +341,8 @@ Test config option smartfixup.amendflag and running as a sub command of amend:
   
   options:
   
-    --correlated incorporate corrections into stack. see 'hg help smartfixup'
-                 for details
+    --correlated incorporate corrections into stack. see 'hg help absorb' for
+                 details
   
   (some details hidden, use --verbose to show complete help)
 

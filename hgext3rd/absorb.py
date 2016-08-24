@@ -1,4 +1,4 @@
-# smartfixup.py
+# absorb.py
 #
 # Copyright 2016 Facebook, Inc.
 #
@@ -7,12 +7,12 @@
 
 """apply working directory changes to changesets
 
-The smartfixup extension provides a command to use annotate information to
+The absorb extension provides a command to use annotate information to
 amend modified chunks into the corresponding non-public changesets.
 
 ::
 
-    [smartfixup]
+    [absorb]
     # only check 50 recent non-public changesets at most
     maxstacksize = 50
     # whether to add noise to new commits to avoid obsolescence cycle
@@ -21,8 +21,8 @@ amend modified chunks into the corresponding non-public changesets.
     amendflag = correlated
 
     [color]
-    smartfixup.node = blue bold
-    smartfixup.path = bold
+    absorb.node = blue bold
+    absorb.path = bold
 """
 
 from __future__ import absolute_import
@@ -54,8 +54,8 @@ cmdtable = {}
 command = cmdutil.command(cmdtable)
 
 colortable = {
-    'smartfixup.node': 'blue bold',
-    'smartfixup.path': 'bold',
+    'absorb.node': 'blue bold',
+    'absorb.path': 'bold',
 }
 
 class nullui(object):
@@ -411,11 +411,11 @@ class filefixupstate(object):
                 for i in xrange(b1, b2)]
         for idx, line in buf:
             shortnode = idx and node.short(self.fctxs[idx].node()) or ''
-            ui.write(ui.label(shortnode[0:7].ljust(8), 'smartfixup.node') +
+            ui.write(ui.label(shortnode[0:7].ljust(8), 'absorb.node') +
                      line + '\n')
 
 class fixupstate(object):
-    """state needed to run smartfixup
+    """state needed to run absorb
 
     internally, it keeps paths and filefixupstates.
 
@@ -470,7 +470,7 @@ class fixupstate(object):
                 fctxs.insert(0, emptyfilecontext())
             fstate = filefixupstate(fctxs, ui=self.ui)
             if showchanges:
-                colorpath = self.ui.label(path, 'smartfixup.path')
+                colorpath = self.ui.label(path, 'absorb.path')
                 header = 'showing changes for ' + colorpath
                 self.ui.write(header + '\n')
             fstate.diffwith(targetfctx, showchanges=showchanges)
@@ -494,7 +494,7 @@ class fixupstate(object):
         """commit changes. update self.finalnode, self.replacemap"""
         with self.repo.wlock(): # update bookmarks
             with self.repo.lock(): # commit
-                with self.repo.transaction('smartfixup') as tr:
+                with self.repo.transaction('absorb') as tr:
                     self._commitstack()
                     self._movebookmarks(tr)
                     if self.repo['.'].node() in self.replacemap:
@@ -637,9 +637,9 @@ class fixupstate(object):
         """
         parents = p1 and (p1, node.nullid)
         extra = ctx.extra()
-        if self._useobsolete and self.ui.configbool('smartfixup', 'addnoise',
+        if self._useobsolete and self.ui.configbool('absorb', 'addnoise',
                                                     True):
-            extra['smartfixup_source'] = ctx.hex()
+            extra['absorb_source'] = ctx.hex()
         mctx = overlaycontext(memworkingcopy, ctx, parents, extra=extra)
         return mctx.commit()
 
@@ -706,7 +706,7 @@ def overlaydiffcontext(ctx, chunks):
         memworkingcopy[path] = ''.join(lines)
     return overlaycontext(memworkingcopy, ctx)
 
-def smartfixup(ui, repo, stack=None, targetctx=None, pats=None, opts=None):
+def absorb(ui, repo, stack=None, targetctx=None, pats=None, opts=None):
     """pick fixup chunks from targetctx, apply them to stack.
 
     if targetctx is None, the working copy context will be used.
@@ -714,10 +714,10 @@ def smartfixup(ui, repo, stack=None, targetctx=None, pats=None, opts=None):
     return fixupstate.
     """
     if stack is None:
-        limit = ui.configint('smartfixup', 'maxstacksize', 50)
+        limit = ui.configint('absorb', 'maxstacksize', 50)
         stack = getdraftstack(repo['.'], limit)
         if limit and len(stack) >= limit:
-            ui.warn(_('smartfixup: only the recent %d changesets will '
+            ui.warn(_('absorb: only the recent %d changesets will '
                       'be analysed\n')
                     % limit)
     if not stack:
@@ -744,41 +744,41 @@ def smartfixup(ui, repo, stack=None, targetctx=None, pats=None, opts=None):
             ui.write(_('nothing applied\n'))
     return state
 
-@command('^smartfixup|sf',
+@command('^absorb|sf',
          [('p', 'print-changes', None,
            _('print which changesets are modified by which changes')),
           ('i', 'interactive', None,
            _('interactively select which chunks to apply (EXPERIMENTAL)')),
          ] + commands.dryrunopts + commands.walkopts,
-         _('hg smartfixup [OPTION] [FILE]...'))
-def smartfixupcmd(ui, repo, *pats, **opts):
+         _('hg absorb [OPTION] [FILE]...'))
+def absorbcmd(ui, repo, *pats, **opts):
     """incorporate corrections into the stack of draft changesets
 
-    Smartfixup analyzes each change in your working directory and attempts to
+    absorb analyzes each change in your working directory and attempts to
     amend the changed lines into the changesets in your stack that first
     introduced those lines.
 
-    If smartfixup cannot find an unambiguous changeset to amend for a change,
+    If absorb cannot find an unambiguous changeset to amend for a change,
     that change will be left in the working directory, untouched. They can be
     observed by :hg:`status` or :hg:`diff` afterwards. In other words,
-    smartfixup does not write to the working directory.
+    absorb does not write to the working directory.
 
     Changesets outside the revset `::. and not public() and not merge()` will
     not be changed.
 
     Changesets that become empty after applying the changes will be deleted.
 
-    If in doubt, run :hg:`smartfixup -pn` to preview what changesets will
+    If in doubt, run :hg:`absorb -pn` to preview what changesets will
     be amended by what changed lines, without actually changing anything.
 
     Returns 0 on success, 1 if all chunks were ignored and nothing amended.
     """
-    state = smartfixup(ui, repo, pats=pats, opts=opts)
+    state = absorb(ui, repo, pats=pats, opts=opts)
     if sum(s[0] for s in state.chunkstats.values()) == 0:
         return 1
 
 def _wrapamend(flag):
-    """add flag to amend, which will be a shortcut to the smartfixup command"""
+    """add flag to amend, which will be a shortcut to the absorb command"""
     if not flag:
         return
     amendcmd = extensions.bind(_amendcmd, flag)
@@ -796,7 +796,7 @@ def _wrapamend(flag):
             entry = extensions.wrapcommand(cmdtable, 'amend', amendcmd)
             options = entry[1]
             msg = _('incorporate corrections into stack. '
-                    'see \'hg help smartfixup\' for details')
+                    'see \'hg help absorb\' for details')
             options.append(('', flag, None, msg))
             return
         except error.UnknownCommand:
@@ -805,16 +805,16 @@ def _wrapamend(flag):
 def _amendcmd(flag, orig, ui, repo, *pats, **opts):
     if not opts.get(flag):
         return orig(ui, repo, *pats, **opts)
-    # use smartfixup
+    # use absorb
     for k, v in opts.iteritems(): # check unsupported flags
         if v and k not in ['interactive', flag]:
-            raise error.Abort(_('smartfixup does not support --%s')
-                              % k.replace('_', '-'))
-    state = smartfixup(ui, repo, pats=pats, opts=opts)
-    # different from the original smartfixup, tell users what chunks were
+            raise error.Abort(_('--%s does not support --%s')
+                              % (flag, k.replace('_', '-')))
+    state = absorb(ui, repo, pats=pats, opts=opts)
+    # different from the original absorb, tell users what chunks were
     # ignored and were left. it's because users usually expect "amend" to
     # take all of their changes and will feel strange otherwise.
-    # the original "smartfixup" command faces more-advanced users knowing
+    # the original "absorb" command faces more-advanced users knowing
     # what's going on and is less verbose.
     adoptedsum = 0
     messages = []
@@ -845,4 +845,4 @@ def _amendcmd(flag, orig, ui, repo, *pats, **opts):
         return 1
 
 def extsetup(ui):
-    _wrapamend(ui.config('smartfixup', 'amendflag', None))
+    _wrapamend(ui.config('absorb', 'amendflag', None))
