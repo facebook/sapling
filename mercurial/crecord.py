@@ -1263,7 +1263,6 @@ class curseschunkselector(object):
             self.statuswin.resize(self.numstatuslines, self.xscreensize)
             self.numpadlines = self.getnumlinesdisplayed(ignorefolding=True) + 1
             self.chunkpad = curses.newpad(self.numpadlines, self.xscreensize)
-            # todo: try to resize commit message window if possible
         except curses.error:
             pass
 
@@ -1589,7 +1588,8 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
         method to be wrapped by curses.wrapper() for selecting chunks.
         """
 
-        signal.signal(signal.SIGWINCH, self.sigwinchhandler)
+        origsigwinchhandler = signal.signal(signal.SIGWINCH,
+                                            self.sigwinchhandler)
         self.stdscr = stdscr
         # error during initialization, cannot be printed in the curses
         # interface, it should be printed by the calling code
@@ -1640,3 +1640,4 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
                 keypressed = "foobar"
             if self.handlekeypressed(keypressed):
                 break
+        signal.signal(signal.SIGWINCH, origsigwinchhandler)
