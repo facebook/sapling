@@ -866,6 +866,20 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
 
     state = hbisect.load_state(repo)
 
+    # update state
+    if good or bad or skip:
+        if rev:
+            nodes = [repo.lookup(i) for i in scmutil.revrange(repo, [rev])]
+        else:
+            nodes = [repo.lookup('.')]
+        if good:
+            state['good'] += nodes
+        elif bad:
+            state['bad'] += nodes
+        elif skip:
+            state['skip'] += nodes
+        hbisect.save_state(repo, state)
+
     if command:
         changesets = 1
         if noupdate:
@@ -913,22 +927,6 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
         displayer = cmdutil.show_changeset(ui, repo, {})
         hbisect.printresult(ui, repo, state, displayer, nodes, bgood)
         return
-
-    # update state
-
-    if rev:
-        nodes = [repo.lookup(i) for i in scmutil.revrange(repo, [rev])]
-    else:
-        nodes = [repo.lookup('.')]
-
-    if good or bad or skip:
-        if good:
-            state['good'] += nodes
-        elif bad:
-            state['bad'] += nodes
-        elif skip:
-            state['skip'] += nodes
-        hbisect.save_state(repo, state)
 
     if not check_state(state):
         return
