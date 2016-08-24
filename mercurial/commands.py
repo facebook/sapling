@@ -835,33 +835,6 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
 
     Returns 0 on success.
     """
-    def print_result(nodes, good):
-        displayer = cmdutil.show_changeset(ui, repo, {})
-        if len(nodes) == 1:
-            # narrowed it down to a single revision
-            if good:
-                ui.write(_("The first good revision is:\n"))
-            else:
-                ui.write(_("The first bad revision is:\n"))
-            displayer.show(repo[nodes[0]])
-            extendnode = hbisect.extendrange(repo, state, nodes, good)
-            if extendnode is not None:
-                ui.write(_('Not all ancestors of this changeset have been'
-                           ' checked.\nUse bisect --extend to continue the '
-                           'bisection from\nthe common ancestor, %s.\n')
-                         % extendnode)
-        else:
-            # multiple possible revisions
-            if good:
-                ui.write(_("Due to skipped revisions, the first "
-                        "good revision could be any of:\n"))
-            else:
-                ui.write(_("Due to skipped revisions, the first "
-                        "bad revision could be any of:\n"))
-            for n in nodes:
-                displayer.show(repo[n])
-        displayer.close()
-
     def check_state(state, interactive=True):
         if not state['good'] or not state['bad']:
             if (good or bad or skip or reset) and interactive:
@@ -937,7 +910,8 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
         finally:
             state['current'] = [node]
             hbisect.save_state(repo, state)
-        print_result(nodes, bgood)
+        displayer = cmdutil.show_changeset(ui, repo, {})
+        hbisect.printresult(ui, repo, state, displayer, nodes, bgood)
         return
 
     # update state
@@ -976,7 +950,8 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
         raise error.Abort(_("nothing to extend"))
 
     if changesets == 0:
-        print_result(nodes, good)
+        displayer = cmdutil.show_changeset(ui, repo, {})
+        hbisect.printresult(ui, repo, state, displayer, nodes, good)
     else:
         assert len(nodes) == 1 # only a single node can be tested next
         node = nodes[0]

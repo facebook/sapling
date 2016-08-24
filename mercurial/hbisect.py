@@ -279,3 +279,29 @@ def shortlabel(label):
         return label[0].upper()
 
     return None
+
+def printresult(ui, repo, state, displayer, nodes, good):
+    if len(nodes) == 1:
+        # narrowed it down to a single revision
+        if good:
+            ui.write(_("The first good revision is:\n"))
+        else:
+            ui.write(_("The first bad revision is:\n"))
+        displayer.show(repo[nodes[0]])
+        extendnode = extendrange(repo, state, nodes, good)
+        if extendnode is not None:
+            ui.write(_('Not all ancestors of this changeset have been'
+                       ' checked.\nUse bisect --extend to continue the '
+                       'bisection from\nthe common ancestor, %s.\n')
+                     % extendnode)
+    else:
+        # multiple possible revisions
+        if good:
+            ui.write(_("Due to skipped revisions, the first "
+                    "good revision could be any of:\n"))
+        else:
+            ui.write(_("Due to skipped revisions, the first "
+                    "bad revision could be any of:\n"))
+        for n in nodes:
+            displayer.show(repo[n])
+    displayer.close()
