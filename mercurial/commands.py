@@ -872,6 +872,13 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
         if not (state['good'] and state['bad']):
             return
 
+    def mayupdate(repo, node, show_stats=True):
+        """common used update sequence"""
+        if noupdate:
+            return
+        cmdutil.bailifchanged(repo)
+        return hg.clean(repo, node, show_stats=show_stats)
+
     if command:
         changesets = 1
         if noupdate:
@@ -910,9 +917,7 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
                 nodes, changesets, bgood = hbisect.bisect(repo.changelog, state)
                 # update to next check
                 node = nodes[0]
-                if not noupdate:
-                    cmdutil.bailifchanged(repo)
-                    hg.clean(repo, node, show_stats=False)
+                mayupdate(repo, node, show_stats=False)
         finally:
             state['current'] = [node]
             hbisect.save_state(repo, state)
@@ -932,10 +937,7 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
                          % (extendnode.rev(), extendnode))
                 state['current'] = [extendnode.node()]
                 hbisect.save_state(repo, state)
-                if noupdate:
-                    return
-                cmdutil.bailifchanged(repo)
-                return hg.clean(repo, extendnode.node())
+                return mayupdate(repo, extendnode.node())
         raise error.Abort(_("nothing to extend"))
 
     if changesets == 0:
@@ -954,9 +956,7 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
                  % (rev, short(node), changesets, tests))
         state['current'] = [node]
         hbisect.save_state(repo, state)
-        if not noupdate:
-            cmdutil.bailifchanged(repo)
-            return hg.clean(repo, node)
+        return mayupdate(repo, node)
 
 @command('bookmarks|bookmark',
     [('f', 'force', False, _('force')),
