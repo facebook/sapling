@@ -177,6 +177,17 @@ def resetstate(repo):
     if repo.vfs.exists("bisect.state"):
         repo.vfs.unlink("bisect.state")
 
+def checkstate(state):
+    """check we have both 'good' and 'bad' to define a range
+
+    Raise Abort exception otherwise."""
+    if state['good'] and state['bad']:
+        return True
+    if not state['good']:
+        raise error.Abort(_('cannot bisect (no known good revisions)'))
+    else:
+        raise error.Abort(_('cannot bisect (no known bad revisions)'))
+
 def get(repo, status):
     """
     Return a list of revision(s) that match the given status:

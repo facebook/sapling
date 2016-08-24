@@ -835,14 +835,6 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
 
     Returns 0 on success.
     """
-    def checkstate(state):
-        if state['good'] and state['bad']:
-            return True
-        if not state['good']:
-            raise error.Abort(_('cannot bisect (no known good revisions)'))
-        else:
-            raise error.Abort(_('cannot bisect (no known bad revisions)'))
-
     # backward compatibility
     if rev in "good bad reset init".split():
         ui.warn(_("(use of 'hg bisect <cmd>' is deprecated)\n"))
@@ -913,7 +905,7 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
                 rev = None # clear for future iterations
                 state[transition].append(ctx.node())
                 ui.status(_('changeset %d:%s: %s\n') % (ctx, ctx, transition))
-                checkstate(state)
+                hbisect.checkstate(state)
                 # bisect
                 nodes, changesets, bgood = hbisect.bisect(repo.changelog, state)
                 # update to next check
@@ -928,7 +920,7 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
         hbisect.printresult(ui, repo, state, displayer, nodes, bgood)
         return
 
-    checkstate(state)
+    hbisect.checkstate(state)
 
     # actually bisect
     nodes, changesets, good = hbisect.bisect(repo.changelog, state)
