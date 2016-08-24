@@ -902,9 +902,8 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
     cmdutil.checkunfinished(repo)
 
     if reset:
-        p = repo.join("bisect.state")
-        if os.path.exists(p):
-            os.unlink(p)
+        if repo.vfs.exists("bisect.state"):
+            repo.vfs.unlink("bisect.state")
         return
 
     state = hbisect.load_state(repo)
