@@ -893,6 +893,8 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
             node, p2 = repo.dirstate.parents()
             if p2 != nullid:
                 raise error.Abort(_('current bisect revision is a merge'))
+        if rev:
+            node = repo[scmutil.revsingle(repo, rev, node)].node()
         try:
             while changesets:
                 # update state
@@ -910,9 +912,8 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
                     raise error.Abort(_("%s killed") % command)
                 else:
                     transition = "bad"
-                ctx = scmutil.revsingle(repo, rev, node)
-                rev = None # clear for future iterations
-                state[transition].append(ctx.node())
+                state[transition].append(node)
+                ctx = repo[node]
                 ui.status(_('changeset %d:%s: %s\n') % (ctx, ctx, transition))
                 hbisect.checkstate(state)
                 # bisect
