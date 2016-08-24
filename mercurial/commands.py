@@ -879,6 +879,8 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
         cmdutil.bailifchanged(repo)
         return hg.clean(repo, node, show_stats=show_stats)
 
+    displayer = cmdutil.show_changeset(ui, repo, {})
+
     if command:
         changesets = 1
         if noupdate:
@@ -921,7 +923,6 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
         finally:
             state['current'] = [node]
             hbisect.save_state(repo, state)
-        displayer = cmdutil.show_changeset(ui, repo, {})
         hbisect.printresult(ui, repo, state, displayer, nodes, bgood)
         return
 
@@ -941,7 +942,6 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
         raise error.Abort(_("nothing to extend"))
 
     if changesets == 0:
-        displayer = cmdutil.show_changeset(ui, repo, {})
         hbisect.printresult(ui, repo, state, displayer, nodes, good)
     else:
         assert len(nodes) == 1 # only a single node can be tested next
