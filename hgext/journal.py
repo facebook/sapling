@@ -162,12 +162,12 @@ def unsharejournal(orig, ui, repo, repopath):
             # there is a shared repository and there are shared journal entries
             # to copy. move shared date over from source to destination but
             # move the local file first
-            if repo.vfs.exists('journal'):
-                journalpath = repo.join('journal')
+            if repo.vfs.exists('namejournal'):
+                journalpath = repo.join('namejournal')
                 util.rename(journalpath, journalpath + '.bak')
             storage = repo.journal
             local = storage._open(
-                repo.vfs, filename='journal.bak', _newestfirst=False)
+                repo.vfs, filename='namejournal.bak', _newestfirst=False)
             shared = (
                 e for e in storage._open(sharedrepo.vfs, _newestfirst=False)
                 if sharednamespaces.get(e.namespace) in sharedfeatures)
@@ -273,13 +273,13 @@ class journalstorage(object):
             raise error.Abort(_('journal lock does not support nesting'))
         desc = _('journal of %s') % vfs.base
         try:
-            l = lock.lock(vfs, 'journal.lock', 0, desc=desc)
+            l = lock.lock(vfs, 'namejournal.lock', 0, desc=desc)
         except error.LockHeld as inst:
             self.ui.warn(
                 _("waiting for lock on %s held by %r\n") % (desc, inst.locker))
             # default to 600 seconds timeout
             l = lock.lock(
-                vfs, 'journal.lock',
+                vfs, 'namejournal.lock',
                 int(self.ui.config("ui", "timeout", "600")), desc=desc)
             self.ui.warn(_("got lock after %s seconds\n") % l.delay)
         self._lockref = weakref.ref(l)
@@ -319,7 +319,7 @@ class journalstorage(object):
         with self.jlock(vfs):
             version = None
             # open file in amend mode to ensure it is created if missing
-            with vfs('journal', mode='a+b', atomictemp=True) as f:
+            with vfs('namejournal', mode='a+b', atomictemp=True) as f:
                 f.seek(0, os.SEEK_SET)
                 # Read just enough bytes to get a version number (up to 2
                 # digits plus separator)
@@ -377,7 +377,7 @@ class journalstorage(object):
             if sharednamespaces.get(e.namespace) in self.sharedfeatures)
         return _mergeentriesiter(local, shared)
 
-    def _open(self, vfs, filename='journal', _newestfirst=True):
+    def _open(self, vfs, filename='namejournal', _newestfirst=True):
         if not vfs.exists(filename):
             return
 

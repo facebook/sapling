@@ -232,7 +232,7 @@ Test that verbose, JSON, template and commit output work
 
 Test for behaviour on unexpected storage version information
 
-  $ printf '42\0' > .hg/journal
+  $ printf '42\0' > .hg/namejournal
   $ hg journal
   previous locations of '.':
   abort: unknown journal file version '42'
