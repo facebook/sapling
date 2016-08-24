@@ -835,20 +835,6 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
 
     Returns 0 on success.
     """
-    def extendbisectrange(nodes, good):
-        # bisect is incomplete when it ends on a merge node and
-        # one of the parent was not checked.
-        parents = repo[nodes[0]].parents()
-        if len(parents) > 1:
-            if good:
-                side = state['bad']
-            else:
-                side = state['good']
-            num = len(set(i.node() for i in parents) & set(side))
-            if num == 1:
-                return parents[0].ancestor(parents[1])
-        return None
-
     def print_result(nodes, good):
         displayer = cmdutil.show_changeset(ui, repo, {})
         if len(nodes) == 1:
@@ -858,7 +844,7 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
             else:
                 ui.write(_("The first bad revision is:\n"))
             displayer.show(repo[nodes[0]])
-            extendnode = extendbisectrange(nodes, good)
+            extendnode = hbisect.extendrange(repo, state, nodes, good)
             if extendnode is not None:
                 ui.write(_('Not all ancestors of this changeset have been'
                            ' checked.\nUse bisect --extend to continue the '
@@ -977,7 +963,7 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
     nodes, changesets, good = hbisect.bisect(repo.changelog, state)
     if extend:
         if not changesets:
-            extendnode = extendbisectrange(nodes, good)
+            extendnode = hbisect.extendrange(repo, state, nodes, good)
             if extendnode is not None:
                 ui.write(_("Extending search to changeset %d:%s\n")
                          % (extendnode.rev(), extendnode))

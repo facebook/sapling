@@ -139,6 +139,19 @@ def bisect(changelog, state):
 
     return ([best_node], tot, good)
 
+def extendrange(repo, state, nodes, good):
+    # bisect is incomplete when it ends on a merge node and
+    # one of the parent was not checked.
+    parents = repo[nodes[0]].parents()
+    if len(parents) > 1:
+        if good:
+            side = state['bad']
+        else:
+            side = state['good']
+        num = len(set(i.node() for i in parents) & set(side))
+        if num == 1:
+            return parents[0].ancestor(parents[1])
+    return None
 
 def load_state(repo):
     state = {'current': [], 'good': [], 'bad': [], 'skip': []}
