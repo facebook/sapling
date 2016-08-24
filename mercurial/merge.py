@@ -1286,8 +1286,29 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
     removed += msremoved
 
     extraactions = ms.actions()
-    for k, acts in extraactions.iteritems():
-        actions[k].extend(acts)
+    if extraactions:
+        mfiles = set(a[0] for a in actions['m'])
+        for k, acts in extraactions.iteritems():
+            actions[k].extend(acts)
+            # Remove these files from actions['m'] as well. This is important
+            # because in recordupdates, files in actions['m'] are processed
+            # after files in other actions, and the merge driver might add
+            # files to those actions via extraactions above. This can lead to a
+            # file being recorded twice, with poor results. This is especially
+            # problematic for actions['r'] (currently only possible with the
+            # merge driver in the initial merge process; interrupted merges
+            # don't go through this flow).
+            #
+            # The real fix here is to have indexes by both file and action so
+            # that when the action for a file is changed it is automatically
+            # reflected in the other action lists. But that involves a more
+            # complex data structure, so this will do for now.
+            #
+            # We don't need to do the same operation for 'dc' and 'cd' because
+            # those lists aren't consulted again.
+            mfiles.difference_update(a[0] for a in acts)
+
+        actions['m'] = [a for a in actions['m'] if a[0] in mfiles]
 
     progress(_updating, None, total=numupdates, unit=_files)
 
