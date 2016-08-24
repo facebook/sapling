@@ -33,8 +33,8 @@ class hybridmanifest(object):
         self.loadflat = loadflat
 
         assert (self.__flatmanifest is not None or
-                self.__cachedmanifest is None or
-                self.loadflat is None)
+                self.__cachedmanifest is not None or
+                self.loadflat is not None)
 
         self.ui = ui
         self.opener = opener
