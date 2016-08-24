@@ -159,6 +159,11 @@ def save_state(repo, state):
                 f.write("%s %s\n" % (kind, hex(node)))
         f.close()
 
+def resetstate(repo):
+    """remove any bisect state from the repository"""
+    if repo.vfs.exists("bisect.state"):
+        repo.vfs.unlink("bisect.state")
+
 def get(repo, status):
     """
     Return a list of revision(s) that match the given status:
