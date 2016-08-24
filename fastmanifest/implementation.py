@@ -17,6 +17,12 @@ import cfastmanifest
 from metrics import metricscollector
 from constants import *
 
+try:
+    import ctreemanifest
+    supportsctree = True
+except ImportError:
+    supportsctree = False
+
 class hybridmanifest(object):
     """
     Hybrid manifest that behaves like a lazy manifest.
@@ -27,13 +33,19 @@ class hybridmanifest(object):
     - loadflat  a function to load a flat manifest from disk
     """
     def __init__(self, ui, opener,
-                 flat=None, fast=None, loadflat=None, node=None):
+                 flat=None, fast=None, loadflat=None, tree=None, node=None):
         self.__flatmanifest = flat
         self.__cachedmanifest = fast
         self.loadflat = loadflat
 
+        if supportsctree and ui.configbool("fastmanifest", "usetree", False):
+            self.__treemanifest = tree
+        else:
+            self.__treemanifest = False
+
         assert (self.__flatmanifest is not None or
                 self.__cachedmanifest is not None or
+                self.__treemanifest not in (None, False) or
                 self.loadflat is not None)
 
         self.ui = ui
@@ -93,6 +105,24 @@ class hybridmanifest(object):
 
         return self.__cachedmanifest
 
+    def _treemanifest(self):
+        if self.__treemanifest is False or self.node is None:
+            return None
+        assert supportsctree
+        if self.__treemanifest is None:
+            store = self.opener.manifestdatastore
+            missing = store.getmissing([('', self.node)])
+            if not missing:
+                self.__treemanifest = ctreemanifest.treemanifest(store,
+                                                                 self.node)
+            else:
+                # Record that it doesn't exist, so we don't keep checking the
+                # store.
+                self.__treemanifest = False
+                return None
+
+        return self.__treemanifest
+
     def _incache(self):
         if self.incache or self.debugfastmanifest:
             return True
@@ -107,8 +137,11 @@ class hybridmanifest(object):
         if c is not None:
             return c
 
-        r = self._flatmanifest()
+        t = self._treemanifest()
+        if t is not None:
+            return t
 
+        r = self._flatmanifest()
         return r
 
     # Proxy all the manifest methods to the flatmanifest except magic methods
@@ -144,6 +177,9 @@ class hybridmanifest(object):
         elif isinstance(m, manifest.manifestdict):
             return hybridmanifest(self.ui, self.opener, flat=m,
                                   node=self.node)
+        elif supportsctree and isinstance(m, ctreemanifest.treemanifest):
+            return hybridmanifest(self.ui, self.opener, tree=m,
+                                  node=self.node)
         else:
             raise ValueError("unknown manifest type {0}".format(type(m)))
 
@@ -174,8 +210,13 @@ class hybridmanifest(object):
                     hit = True
             # CACHE MISS
             else:
-                self.debug("[FM] %s: cache miss\n" % operation)
-                _m1, _m2 = self._flatmanifest(), m2._flatmanifest()
+                _m1, _m2 = self._treemanifest(), m2._treemanifest()
+                if _m1 is None or _m2 is None:
+                    self.debug("[FM] %s: cache miss\n" % operation)
+                    _m1, _m2 = self._flatmanifest(), m2._flatmanifest()
+                else:
+                    self.debug(("[FM] %s: loaded matching tree "
+                                "manifests\n") % operation)
         else:
             # This happens when diffing against a new manifest (like rev -1)
             self.debug("[FM] %s: other side not hybrid manifest\n" % operation)
