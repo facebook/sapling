@@ -577,6 +577,8 @@ class fastmanifestcache(object):
         return r
 
     def __contains__(self, hexnode):
+        if not self.ui.configbool("fastmanifest", "usecache", True):
+            return False
         return hexnode in self.inmemorycache or hexnode in self.ondiskcache
 
     def __setitem__(self, hexnode, manifest):
@@ -650,7 +652,9 @@ class manifestfactory(object):
         fastcache = fastmanifestcache.getinstance(origself.opener, self.ui)
 
         p1hexnode = revlog.hex(p1)
-        if (p1hexnode in fastcache and
+        cacheenabled = self.ui.configbool("fastmanifest", "usecache", True)
+        if (cacheenabled and
+            p1hexnode in fastcache and
             isinstance(m, hybridmanifest) and
             m._incache()):
             # yay, we can satisfy this from the fastmanifest.
