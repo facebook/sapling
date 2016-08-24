@@ -316,3 +316,47 @@ Test obsolete markers creation:
   9:9354aeb6e762 commit b 1 851732d1c4d433cdd984d6b295158224b81dd717
   8:568249511984 commit a 2 4438fcf42c600562ce2e74062b0a8ad7d246573f
   7:e56aca308c01 commit a 1 f9a81da8dc53380ed91902e5b82c1b36255a4bd0
+
+Test config option smartfixup.amendflag and running as a sub command of amend:
+
+  $ cat >> $TESTTMP/dummyamend.py << EOF
+  > from mercurial import cmdutil, commands
+  > cmdtable = {}
+  > command = cmdutil.command(cmdtable)
+  > @command('amend', [], '')
+  > def amend(ui, repo, *pats, **opts):
+  >     return 3
+  > EOF
+  $ cat >> $HGRCPATH << EOF
+  > [extensions]
+  > fbamend=$TESTTMP/dummyamend.py
+  > [smartfixup]
+  > amendflag = correlated
+  > EOF
+
+  $ hg amend -h
+  hg amend
+  
+  (no help text available)
+  
+  options:
+  
+    --correlated incorporate corrections into stack. see 'hg help smartfixup'
+                 for details
+  
+  (some details hidden, use --verbose to show complete help)
+
+  $ $PYTHON -c 'print("".join(map(chr, range(0,3))))' > c
+  $ hg commit -A c -m 'c is a binary file'
+  $ echo c >> c
+  $ sedi '2iINS' b
+  $ echo END >> b
+  $ hg rm a
+  $ hg amend --correlated
+  1 of 2 chunks(s) applied
+  
+  # changes not applied and left in working directory:
+  # M b : 1 modified chunks were ignored
+  # M c : unsupported file type (ex. binary or link)
+  # R a : removed files were ignored
+

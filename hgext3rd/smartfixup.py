@@ -17,6 +17,8 @@ amend modified chunks into the corresponding non-public changesets.
     maxstacksize = 50
     # whether to add noise to new commits to avoid obsolescence cycle
     addnoise = 1
+    # make `amend --correlated` a shortcut to the main command
+    amendflag = correlated
 
     [color]
     smartfixup.node = blue bold
@@ -34,6 +36,7 @@ from mercurial import (
     context,
     crecord,
     error,
+    extensions,
     mdiff,
     node,
     obsolete,
@@ -437,6 +440,7 @@ class fixupstate(object):
 
         # following fields will be filled later
         self.paths = [] # [str]
+        self.status = None # ctx.status output
         self.fixupmap = {} # {path: filefixupstate}
         self.replacemap = {} # {oldnode: newnode or None}
         self.finalnode = None # head after all fixups
@@ -444,10 +448,11 @@ class fixupstate(object):
     def diffwith(self, targetctx, match=None, showchanges=False):
         """diff and prepare fixups. update self.fixupmap, self.paths"""
         # only care about modified files
-        self.paths = self.stack[-1].status(targetctx, match).modified
+        self.status = self.stack[-1].status(targetctx, match)
+        self.paths = []
         # prepare the filefixupstate
         pctx = self.stack[0].p1()
-        for path in self.paths:
+        for path in self.status.modified:
             if self.ui.debugflag:
                 self.ui.write(_('calculating fixups for %s\n') % path)
             targetfctx = targetctx[path]
@@ -470,6 +475,7 @@ class fixupstate(object):
                 self.ui.write(header + '\n')
             fstate.diffwith(targetfctx, showchanges=showchanges)
             self.fixupmap[path] = fstate
+            self.paths.append(path)
 
     def apply(self):
         """apply fixups to individual filefixupstates"""
@@ -770,3 +776,73 @@ def smartfixupcmd(ui, repo, *pats, **opts):
     state = smartfixup(ui, repo, pats=pats, opts=opts)
     if sum(s[0] for s in state.chunkstats.values()) == 0:
         return 1
+
+def _wrapamend(flag):
+    """add flag to amend, which will be a shortcut to the smartfixup command"""
+    if not flag:
+        return
+    amendcmd = extensions.bind(_amendcmd, flag)
+    # the amend command can exist in evolve, or fbamend
+    for extname in ['evolve', 'fbamend', None]:
+        try:
+            if extname is None:
+                cmdtable = commands.table
+            else:
+                ext = extensions.find(extname)
+                cmdtable = ext.cmdtable
+        except (KeyError, AttributeError):
+            continue
+        try:
+            entry = extensions.wrapcommand(cmdtable, 'amend', amendcmd)
+            options = entry[1]
+            msg = _('incorporate corrections into stack. '
+                    'see \'hg help smartfixup\' for details')
+            options.append(('', flag, None, msg))
+            return
+        except error.UnknownCommand:
+            pass
+
+def _amendcmd(flag, orig, ui, repo, *pats, **opts):
+    if not opts.get(flag):
+        return orig(ui, repo, *pats, **opts)
+    # use smartfixup
+    for k, v in opts.iteritems(): # check unsupported flags
+        if v and k not in ['interactive', flag]:
+            raise error.Abort(_('smartfixup does not support --%s')
+                              % k.replace('_', '-'))
+    state = smartfixup(ui, repo, pats=pats, opts=opts)
+    # different from the original smartfixup, tell users what chunks were
+    # ignored and were left. it's because users usually expect "amend" to
+    # take all of their changes and will feel strange otherwise.
+    # the original "smartfixup" command faces more-advanced users knowing
+    # what's going on and is less verbose.
+    adoptedsum = 0
+    messages = []
+    for path, (adopted, total) in state.chunkstats.iteritems():
+        adoptedsum += adopted
+        if adopted == total:
+            continue
+        reason = _('%d modified chunks were ignored') % (total - adopted)
+        messages.append(('M', 'modified', path, reason))
+    for idx, word, symbol in [(0, 'modified', 'M'), (1, 'added', 'A'),
+                              (2, 'removed', 'R'), (3, 'deleted', '!')]:
+        paths = set(state.status[idx]) - set(state.paths)
+        for path in sorted(paths):
+            if word == 'modified':
+                reason = _('unsupported file type (ex. binary or link)')
+            else:
+                reason = _('%s files were ignored') % word
+            messages.append((symbol, word, path, reason))
+    if messages:
+        ui.write(_('\n# changes not applied and left in '
+                   'working directory:\n'))
+        for symbol, word, path, reason in messages:
+            ui.write(_('# %s %s : %s\n') % (
+                ui.label(symbol, 'status.' + word),
+                ui.label(path, 'status.' + word), reason))
+
+    if adoptedsum == 0:
+        return 1
+
+def extsetup(ui):
+    _wrapamend(ui.config('smartfixup', 'amendflag', None))
