@@ -836,12 +836,12 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
     Returns 0 on success.
     """
     def checkstate(state):
-        if not state['good'] or not state['bad']:
-            if not state['good']:
-                raise error.Abort(_('cannot bisect (no known good revisions)'))
-            else:
-                raise error.Abort(_('cannot bisect (no known bad revisions)'))
-        return True
+        if state['good'] and state['bad']:
+            return True
+        if not state['good']:
+            raise error.Abort(_('cannot bisect (no known good revisions)'))
+        else:
+            raise error.Abort(_('cannot bisect (no known bad revisions)'))
 
     # backward compatibility
     if rev in "good bad reset init".split():
