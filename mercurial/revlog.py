@@ -1440,18 +1440,19 @@ class revlog(object):
                         fh = dfh
                     ptext = self.revision(self.node(rev), _df=fh)
                     delta = mdiff.textdiff(ptext, t)
-            data = self.compress(delta)
-            l = len(data[1]) + len(data[0])
+            header, data = self.compress(delta)
+            deltalen = len(header) + len(data)
             chainbase = self.chainbase(rev)
-            dist = l + offset - self.start(chainbase)
+            dist = deltalen + offset - self.start(chainbase)
             if self._generaldelta:
                 base = rev
             else:
                 base = chainbase
             chainlen, compresseddeltalen = self._chaininfo(rev)
             chainlen += 1
-            compresseddeltalen += l
-            return dist, l, data, base, chainbase, chainlen, compresseddeltalen
+            compresseddeltalen += deltalen
+            return (dist, deltalen, (header, data), base,
+                    chainbase, chainlen, compresseddeltalen)
 
         curr = len(self)
         prev = curr - 1
