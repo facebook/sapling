@@ -10,6 +10,7 @@
 #pragma once
 #include <folly/Range.h>
 #include <sys/stat.h>
+#include "eden/utils/DirType.h"
 
 namespace facebook {
 namespace eden {
@@ -20,7 +21,6 @@ namespace fusell {
  */
 class DirList {
   std::unique_ptr<char[]> buf_;
-  char* start_;
   char* end_;
   char* cur_;
 
@@ -35,9 +35,14 @@ class DirList {
   /**
    * Add a new dirent to the list.
    * Returns true on success or false if the list is full.
+   */
+  bool add(folly::StringPiece name, ino_t inode, dtype_t type, off_t off);
+
+  /**
+   * Variant of add() which takes a struct stat.
    * Only st.st_ino and st.st_mode need be filled out.
    */
-  bool add(const char* name, const struct stat& st, off_t off);
+  bool add(folly::StringPiece name, const struct stat& st, off_t off);
 
   folly::StringPiece getBuf() const;
 };

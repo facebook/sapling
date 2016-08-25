@@ -8,30 +8,53 @@
  *
  */
 #include "DirList.h"
+
+#include <linux/fuse.h>
 #include "fuse_headers.h"
+
+using folly::StringPiece;
 
 namespace facebook {
 namespace eden {
 namespace fusell {
 
-DirList::DirList(size_t maxSize) : buf_(new char[maxSize]) {
-  start_ = buf_.get();
-  end_ = start_ + maxSize;
-  cur_ = start_;
-}
+DirList::DirList(size_t maxSize)
+    : buf_(new char[maxSize]), end_(buf_.get() + maxSize), cur_(buf_.get()) {}
 
-bool DirList::add(const char* name, const struct stat& st, off_t off) {
+bool DirList::add(StringPiece name, ino_t inode, dtype_t type, off_t off) {
+  // The libfuse APIs unfortunately only accept null terminated strings,
+  // so we manually add the fuse_dirent object here rather than using
+  // fuse_add_direntry().
+
   size_t avail = end_ - cur_;
-  size_t needed = fuse_add_direntry(nullptr, cur_, avail, name, &st, off);
-  if (needed <= avail) {
-    cur_ += needed;
-    return true;
+  auto entLength = FUSE_NAME_OFFSET + name.size();
+  auto fullSize = FUSE_DIRENT_ALIGN(entLength);
+  if (fullSize > avail) {
+    return false;
   }
-  return false;
+
+  fuse_dirent* dirent = reinterpret_cast<fuse_dirent*>(cur_);
+  dirent->ino = inode;
+  dirent->off = off;
+  dirent->namelen = name.size();
+  dirent->type = static_cast<decltype(dirent->type)>(type);
+  memcpy(dirent->name, name.data(), name.size());
+  if (fullSize > entLength) {
+    // 0 out any padding
+    memset(cur_ + entLength, 0, fullSize - entLength);
+  }
+
+  cur_ += fullSize;
+  DCHECK_LE(cur_, end_);
+  return true;
 }
 
-folly::StringPiece DirList::getBuf() const {
-  return folly::StringPiece(start_, cur_ - start_);
+bool DirList::add(StringPiece name, const struct stat& st, off_t off) {
+  return add(name, st.st_ino, mode_to_dtype(st.st_mode), off);
+}
+
+StringPiece DirList::getBuf() const {
+  return StringPiece(buf_.get(), cur_ - buf_.get());
 }
 }
 }
