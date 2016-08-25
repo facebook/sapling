@@ -617,16 +617,16 @@ Test that hooks are fired with the correct variables
   pushing to $TESTTMP/hookserver (glob)
   searching for changes
   prepushrebase hook: HG_BUNDLE2=1 HG_HOOK_BUNDLEPATH=* HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_SOURCE=push (glob)
-  prechangegroup hook: HG_BUNDLE2=1 HG_SOURCE=push HG_TXNID=TXN:* HG_URL=push (glob)
+  prechangegroup hook: HG_BUNDLE2=1 HG_SOURCE=push HG_TXNID=TXN:* HG_URL=file:$TESTTMP/hookserver (glob)
   pushing 1 commit:
       4fcee35c508c  first
-  pretxnchangegroup hook: HG_BUNDLE2=1 HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_PENDING=$TESTTMP/hookserver HG_SOURCE=push HG_TXNID=TXN:* HG_URL=push (glob)
-  prepushkey hook: HG_BUNDLE2=1 HG_KEY=4fcee35c508c1019667f72cae9b843efa8908701 HG_NAMESPACE=phases HG_NEW=0 HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_OLD=1 HG_PENDING=$TESTTMP/hookserver HG_PHASES_MOVED=1 HG_SOURCE=push HG_TXNID=TXN:* HG_URL=push (glob)
-  prepushkey hook: HG_BUNDLE2=1 HG_KEY=master HG_NAMESPACE=bookmarks HG_NEW=4fcee35c508c1019667f72cae9b843efa8908701 HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_OLD=e95be919ac60f0c114075e32a0a4301afabadb60 HG_PENDING=$TESTTMP/hookserver HG_PHASES_MOVED=1 HG_SOURCE=push HG_TXNID=TXN:* HG_URL=push (glob)
-  pretxnclose hook: HG_BOOKMARK_MOVED=1 HG_BUNDLE2=1 HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_PENDING=$TESTTMP/hookserver HG_PHASES_MOVED=1 HG_SOURCE=push HG_TXNID=TXN:* HG_TXNNAME=push HG_URL=push (glob)
-  txnclose hook: HG_BOOKMARK_MOVED=1 HG_BUNDLE2=1 HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_PHASES_MOVED=1 HG_SOURCE=push HG_TXNID=TXN:* HG_TXNNAME=push HG_URL=push (glob)
-  changegroup hook: HG_BUNDLE2=1 HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_SOURCE=push HG_TXNID=TXN:* HG_URL=push (glob)
-  incoming hook: HG_BUNDLE2=1 HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_SOURCE=push HG_TXNID=TXN:* HG_URL=push (glob)
+  pretxnchangegroup hook: HG_BUNDLE2=1 HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_PENDING=$TESTTMP/hookserver HG_SOURCE=push HG_TXNID=TXN:* HG_URL=file:$TESTTMP/hookserver (glob)
+  prepushkey hook: HG_BUNDLE2=1 HG_KEY=4fcee35c508c1019667f72cae9b843efa8908701 HG_NAMESPACE=phases HG_NEW=0 HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_OLD=1 HG_PENDING=$TESTTMP/hookserver HG_PHASES_MOVED=1 HG_SOURCE=push HG_TXNID=TXN:* HG_URL=file:$TESTTMP/hookserver (glob)
+  prepushkey hook: HG_BUNDLE2=1 HG_KEY=master HG_NAMESPACE=bookmarks HG_NEW=4fcee35c508c1019667f72cae9b843efa8908701 HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_OLD=e95be919ac60f0c114075e32a0a4301afabadb60 HG_PENDING=$TESTTMP/hookserver HG_PHASES_MOVED=1 HG_SOURCE=push HG_TXNID=TXN:* HG_URL=file:$TESTTMP/hookserver (glob)
+  pretxnclose hook: HG_BOOKMARK_MOVED=1 HG_BUNDLE2=1 HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_PENDING=$TESTTMP/hookserver HG_PHASES_MOVED=1 HG_SOURCE=push HG_TXNID=TXN:* HG_TXNNAME=push HG_URL=file:$TESTTMP/hookserver (glob)
+  txnclose hook: HG_BOOKMARK_MOVED=1 HG_BUNDLE2=1 HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_PHASES_MOVED=1 HG_SOURCE=push HG_TXNID=TXN:* HG_TXNNAME=push HG_URL=file:$TESTTMP/hookserver (glob)
+  changegroup hook: HG_BUNDLE2=1 HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_SOURCE=push HG_TXNID=TXN:* HG_URL=file:$TESTTMP/hookserver (glob)
+  incoming hook: HG_BUNDLE2=1 HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_SOURCE=push HG_TXNID=TXN:* HG_URL=file:$TESTTMP/hookserver (glob)
   updating bookmark master
 
 
