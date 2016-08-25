@@ -465,7 +465,8 @@ def makedirstate(cls):
             # notify callbacks about parents change
             if self._origpl is not None:
                 if self._origpl != self._pl:
-                    for c, callback in sorted(self._plchangecallbacks.iteritems()):
+                    for c, callback in sorted(
+                        self._plchangecallbacks.iteritems()):
                         callback(self, self._origpl, self._pl)
                     self._origpl = None
             # if dirty dump to disk (db transaction commit)

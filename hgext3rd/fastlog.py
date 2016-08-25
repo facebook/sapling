@@ -220,7 +220,7 @@ def getfastlogrevs(orig, repo, pats, opts):
             queue = util.queue(FASTLOG_QUEUE_SIZE + 100)
             hash = repo[rev].hex()
 
-            local = LocalIteratorThread(queue, LOCAL, rev, 
+            local = LocalIteratorThread(queue, LOCAL, rev,
                                         dirs, localmatch, repo)
             remote = FastLogThread(queue, REMOTE, reponame, 'hg', hash, dirs,
                                     repo)
