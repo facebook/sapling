@@ -67,6 +67,10 @@
   summary:     2
   
   $ hg --debug up 0
+  starting 4 threads for background file closing (?)
+    searching for copies back to rev 0
+    unmatched files in local (from topological common ancestor):
+     b
   resolving manifests
    branchmerge: False, force: False, partial: False
    ancestor: 1e71731e6fbb, local: 1e71731e6fbb+, remote: c19d34741b0a
@@ -221,5 +225,21 @@ test a local add
   added 1 changesets with 1 changes to 1 files
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg st
+
+test updating backwards through a rename
+
+  $ hg mv a b
+  $ hg ci -m b
+  $ echo b > b
+  $ hg up -q 0
+  $ hg st
+  M a
+  $ hg diff --nodates
+  diff -r cb9a9f314b8b a
+  --- a/a
+  +++ b/a
+  @@ -1,1 +1,1 @@
+  -a
+  +b
 
   $ cd ..

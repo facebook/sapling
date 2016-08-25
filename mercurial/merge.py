@@ -1555,15 +1555,16 @@ def update(repo, node, branchmerge, force, ancestor=None,
                     pas = [p1]
 
         # deprecated config: merge.followcopies
-        followcopies = False
+        followcopies = repo.ui.configbool('merge', 'followcopies', True)
         if overwrite:
             pas = [wc]
+            followcopies = False
         elif pas == [p2]: # backwards
-            pas = [wc.p1()]
-        elif not branchmerge and not wc.dirty(missing=True):
-            pass
-        elif pas[0] and repo.ui.configbool('merge', 'followcopies', True):
-            followcopies = True
+            pas = [p1]
+        elif not pas[0]:
+            followcopies = False
+        if not branchmerge and not wc.dirty(missing=True):
+            followcopies = False
 
         ### calculate phase
         actionbyfile, diverge, renamedelete = calculateupdates(
