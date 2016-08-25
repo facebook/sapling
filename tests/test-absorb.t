@@ -1,3 +1,6 @@
+  $ PYTHONPATH=$TESTDIR/../:$PYTHONPATH
+  $ export PYTHONPATH
+
   $ extpath=`dirname $TESTDIR`
   $ cat >> $HGRCPATH << EOF
   > [extensions]

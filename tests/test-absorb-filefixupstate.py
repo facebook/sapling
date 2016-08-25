@@ -5,7 +5,7 @@ import sys
 # make it runnable directly without run-tests.py
 sys.path[0:0] = [os.path.join(os.path.dirname(__file__), '..')]
 
-from hgext3rd import smartfixup
+from hgext3rd import absorb
 
 class simplefctx(object):
     def __init__(self, content):
@@ -46,7 +46,7 @@ def testfilefixup(oldcontents, workingcopy, expectedcontents, fixups=None):
     expectedcontents = insertreturns(expectedcontents)
     oldcontents = insertreturns(oldcontents)
     workingcopy = insertreturns(workingcopy)
-    state = smartfixup.filefixupstate(map(simplefctx, oldcontents))
+    state = absorb.filefixupstate(map(simplefctx, oldcontents))
     state.diffwith(simplefctx(workingcopy))
     if fixups is not None:
         assertlistequal(state.fixups, fixups)
