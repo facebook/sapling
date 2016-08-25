@@ -245,23 +245,25 @@ class Sample(object):
 
 def profile_signal_handler(signum, frame):
     if state.profile_level > 0:
-        state.accumulate_time(clock())
+        now = clock()
+        state.accumulate_time(now)
 
         state.samples.append(Sample.from_frame(frame, state.accumulated_time))
 
         signal.setitimer(signal.ITIMER_PROF,
             state.sample_interval, 0.0)
-        state.last_start_time = clock()
+        state.last_start_time = now
 
 stopthread = threading.Event()
 def samplerthread(tid):
     while not stopthread.is_set():
-        state.accumulate_time(clock())
+        now = clock()
+        state.accumulate_time(now)
 
         frame = sys._current_frames()[tid]
         state.samples.append(Sample.from_frame(frame, state.accumulated_time))
 
-        state.last_start_time = clock()
+        state.last_start_time = now
         time.sleep(state.sample_interval)
 
     stopthread.clear()
