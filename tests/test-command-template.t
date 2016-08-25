@@ -103,6 +103,18 @@ Test templates and style maps in files:
   $ hg log -l1 -T./map-simple
   8
 
+Test template map inheritance
+
+  $ echo "__base__ = map-cmdline.default" > map-simple
+  $ printf 'cset = "changeset: ***{rev}***\\n"\n' >> map-simple
+  $ hg log -l1 -T./map-simple
+  changeset: ***8***
+  tag:         tip
+  user:        test
+  date:        Wed Jan 01 10:01:00 2020 +0000
+  summary:     third
+  
+
 Template should precede style option
 
   $ hg log -l1 --style default -T '{rev}\n'

@@ -1047,6 +1047,19 @@ def _readmapfile(mapfile):
         elif key == "__base__":
             # treat as a pointer to a base class for this style
             path = util.normpath(os.path.join(base, val))
+
+            # fallback check in template paths
+            if not os.path.exists(path):
+                for p in templatepaths():
+                    p2 = util.normpath(os.path.join(p, val))
+                    if os.path.isfile(p2):
+                        path = p2
+                        break
+                    p3 = util.normpath(os.path.join(p2, "map"))
+                    if os.path.isfile(p3):
+                        path = p3
+                        break
+
             bcache, btmap = _readmapfile(path)
             for k in bcache:
                 if k not in cache:
