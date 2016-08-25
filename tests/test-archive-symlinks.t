@@ -29,6 +29,7 @@ tar
   $ readlink.py dangling
   dangling -> nothing
 
+#if unziplinks
 zip
 
   $ cd "$origdir"
@@ -36,5 +37,6 @@ zip
   $ cd zip
   $ readlink.py dangling
   dangling -> nothing
+#endif
 
   $ cd ..
