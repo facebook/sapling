@@ -110,6 +110,10 @@ def has_baz():
 def has_bzr():
     try:
         import bzrlib
+        import bzrlib.bzrdir
+        import bzrlib.errors
+        import bzrlib.revision
+        import bzrlib.revisionspec.RevisionSpec
         return bzrlib.__doc__ is not None
     except ImportError:
         return False
