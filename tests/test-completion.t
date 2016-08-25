@@ -301,7 +301,7 @@ Show all commands + options
   tip: patch, git, style, template
   unbundle: update
   verify: 
-  version: 
+  version: template
 
   $ hg init a
   $ cd a

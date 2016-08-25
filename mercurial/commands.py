@@ -7241,36 +7241,49 @@ def verify(ui, repo):
     """
     return hg.verify(repo)
 
-@command('version', [], norepo=True)
-def version_(ui):
+@command('version', [] + formatteropts, norepo=True)
+def version_(ui, **opts):
     """output version and copyright information"""
-    ui.write(_("Mercurial Distributed SCM (version %s)\n")
-             % util.version())
-    ui.status(_(
+    fm = ui.formatter("version", opts)
+    fm.startitem()
+    fm.write("ver", _("Mercurial Distributed SCM (version %s)\n"),
+             util.version())
+    license = _(
         "(see https://mercurial-scm.org for more information)\n"
         "\nCopyright (C) 2005-2016 Matt Mackall and others\n"
         "This is free software; see the source for copying conditions. "
         "There is NO\nwarranty; "
         "not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n"
-    ))
+    )
+    if not ui.quiet:
+        fm.plain(license)
 
-    ui.note(_("\nEnabled extensions:\n\n"))
+    if ui.verbose:
+        fm.plain(_("\nEnabled extensions:\n\n"))
     # format names and versions into columns
     names = []
     vers = []
     isinternals = []
     for name, module in extensions.extensions():
         names.append(name)
-        vers.append(extensions.moduleversion(module))
+        vers.append(extensions.moduleversion(module) or None)
         isinternals.append(extensions.ismoduleinternal(module))
+    fn = fm.nested("extensions")
     if names:
-        maxnamelen = max(len(n) for n in names)
-        places = [_("external"), _("internal")]
-        for i, name in enumerate(names):
-            p = isinternals[i]
+        namefmt = "  %%-%ds  " % max(len(n) for n in names)
+        if fn:
+            places = ["external", "internal"]
+        else:
+            places = [_("external"), _("internal")]
+        for n, v, p in zip(names, vers, isinternals):
+            fn.startitem()
+            fn.condwrite(ui.verbose, "name", namefmt, n)
+            fn.condwrite(ui.verbose, "place", "%s  ", places[p])
+            fn.condwrite(ui.verbose and v, "ver", "%s", v)
             if ui.verbose:
-                ui.write("  %-*s  %s  %s\n" %
-                         (maxnamelen, name, places[p], vers[i]))
+                fn.plain("\n")
+    fn.end()
+    fm.end()
 
 def loadcmdtable(ui, name, cmdtable):
     """Load command functions from specified cmdtable

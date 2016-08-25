@@ -1240,6 +1240,39 @@ Test version number support in 'hg version':
   $ hg version -q --config extensions.throw=throw.py
   Mercurial Distributed SCM (version *) (glob)
 
+Test JSON output of version:
+
+  $ hg version -Tjson
+  [
+   {
+    "extensions": [],
+    "ver": "*" (glob)
+   }
+  ]
+
+  $ hg version --config extensions.throw=throw.py -Tjson
+  [
+   {
+    "extensions": [{"name": "throw", "place": "external", "ver": "1.twentythree"}],
+    "ver": "3.2.2"
+   }
+  ]
+
+  $ LANGUAGE= LC_ALL=ja_JP.UTF-8 hg version --config extensions.strip= -Tjson
+  [
+   {
+    "extensions": [{"name": "strip", "place": "internal", "ver": null}],
+    "ver": "*" (glob)
+   }
+  ]
+
+Test template output of version:
+
+  $ hg version --config extensions.throw=throw.py --config extensions.strip= \
+  > -T'{extensions % "{name}  {pad(ver, 16)}  ({place})\n"}'
+  throw  1.twentythree     (external)
+  strip                    (internal)
+
 Refuse to load extensions with minimum version requirements
 
   $ cat > minversion1.py << EOF
