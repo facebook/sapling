@@ -748,3 +748,36 @@ XXX hg resolve --unmark --all doesn't cause the merge driver to be rerun
   -cfoo
   +abar
   +bbar
+
+delete all the files
+
+  $ hg update --clean 2
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cat > ../mergedriver-delete.py << EOF
+  > import os
+  > def preprocess(ui, repo, hooktype, mergestate, wctx, labels):
+  >     ui.status('* preprocess called\n')
+  >     for f in mergestate:
+  >         mergestate.mark(f, 'd')
+  > def conclude(ui, repo, hooktype, mergestate, wctx, labels):
+  >     ui.status('* conclude called\n')
+  >     for f in mergestate.driverresolved():
+  >         os.unlink(f)
+  >         mergestate.queueremove(f)
+  > EOF
+  $ cat >> $HGRCPATH << EOF
+  > [experimental]
+  > mergedriver = python:$TESTTMP/mergedriver-delete.py
+  > EOF
+  $ hg graft 1
+  grafting 1:e0cfe070a2bb "b"
+  * preprocess called
+  * conclude called
+  $ hg status --change .
+  R bar.txt
+  R foo.txt
+  $ f foo.txt bar.txt
+  bar.txt: file not found
+  foo.txt: file not found
+  $ hg files
+  [1]
