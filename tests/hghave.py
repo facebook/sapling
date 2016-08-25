@@ -530,6 +530,10 @@ def has_debhelper():
                          br'other supported Python versions')
     return dpkg and dh and dh_py2
 
+@check("demandimport", "demandimport enabled")
+def has_demandimport():
+    return os.environ.get('HGDEMANDIMPORT') != 'disable'
+
 @check("absimport", "absolute_import in __future__")
 def has_absimport():
     import __future__
