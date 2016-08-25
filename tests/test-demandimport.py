@@ -4,6 +4,14 @@ from mercurial import demandimport
 demandimport.enable()
 
 import os
+import subprocess
+import sys
+
+# Only run if demandimport is allowed
+if subprocess.call(['python', '%s/hghave' % os.environ['TESTDIR'],
+                    'demandimport']):
+    sys.exit(80)
+
 if os.name != 'nt':
     try:
         import distutils.msvc9compiler
