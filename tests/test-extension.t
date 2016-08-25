@@ -249,7 +249,7 @@ Check absolute/relative import of extension specific modules
   $TESTTMP/a (glob)
 #endif
 
-#if absimport
+#if demandimport absimport
 
 Examine whether module loading is delayed until actual refering, even
 though module is imported with "absolute_import" feature.
