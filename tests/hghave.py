@@ -573,3 +573,7 @@ def has_hypothesis():
         return True
     except ImportError:
         return False
+
+@check("unziplinks", "unzip(1) understands and extracts symlinks")
+def unzip_understands_symlinks():
+    return matchoutput('unzip --help', br'Info-ZIP')
