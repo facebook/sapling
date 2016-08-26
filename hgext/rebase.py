@@ -336,7 +336,8 @@ class rebaseruntime(object):
             bookmarks.deactivate(repo)
 
         sortedrevs = sorted(self.state)
-        total = len(self.state)
+        cands = [k for k, v in self.state.iteritems() if v == revtodo]
+        total = len(cands)
         pos = 0
         for rev in sortedrevs:
             ctx = repo[rev]
@@ -345,8 +346,8 @@ class rebaseruntime(object):
             names = repo.nodetags(ctx.node()) + repo.nodebookmarks(ctx.node())
             if names:
                 desc += ' (%s)' % ' '.join(names)
-            pos += 1
             if self.state[rev] == revtodo:
+                pos += 1
                 ui.status(_('rebasing %s\n') % desc)
                 ui.progress(_("rebasing"), pos, ("%d:%s" % (rev, ctx)),
                             _('changesets'), total)
