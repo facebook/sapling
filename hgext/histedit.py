@@ -1379,25 +1379,25 @@ def verifyactions(actions, state, ctxs):
     for action in actions:
         action.verify(prev)
         prev = action
-        constraints = action.constraints
-        for constraint in constraints:
+        constrs = action.constraints
+        for constraint in constrs:
             if constraint not in _constraints.known():
                 raise error.ParseError(_('unknown constraint "%s"') %
                         constraint)
 
         if action.node is not None:
             ha = node.hex(action.node)
-            if _constraints.noother in constraints and ha not in expected:
+            if _constraints.noother in constrs and ha not in expected:
                 raise error.ParseError(
                     _('%s "%s" changeset was not a candidate')
                      % (action.verb, ha[:12]),
                     hint=_('only use listed changesets'))
-            if _constraints.forceother in constraints and ha in expected:
+            if _constraints.forceother in constrs and ha in expected:
                 raise error.ParseError(
                     _('%s "%s" changeset was not an edited list candidate')
                      % (action.verb, ha[:12]),
                     hint=_('only use listed changesets'))
-            if _constraints.noduplicates in constraints and ha in seen:
+            if _constraints.noduplicates in constrs and ha in seen:
                 raise error.ParseError(_(
                         'duplicated command for changeset %s') %
                         ha[:12])
