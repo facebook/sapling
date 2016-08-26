@@ -1,0 +1,2 @@
+Install pytest: yum install py.test
+To run the test use py.test *.py in that folder
