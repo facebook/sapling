@@ -24,10 +24,10 @@ Test integration with simplecache for profile reads
   got value for key sparseprofile:.hgsparse:52fe6c0958d7d08df53bdf7ee62a261abb7f599e:v1 from local
 
 Test fsmonitor integration (if available)
-(disable the system watchman config)
-  $ export WATCHMAN_CONFIG_FILE
-  $ WATCHMAN_CONFIG_FILE=/dev/null
+TODO: make fully isolated integration test a'la https://github.com/facebook/watchman/blob/master/tests/integration/WatchmanInstance.py
+(this one is using the systemwide watchman instance)
 
+  $ touch .watchmanconfig
   $ $PYTHON -c 'import hgext.fsmonitor' || exit 80
   $ echo "ignoredir1/" >> .hgignore
   $ hg commit -Am ignoredir1
