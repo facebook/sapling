@@ -201,18 +201,6 @@ release = lock.release
 cmdtable = {}
 command = cmdutil.command(cmdtable)
 
-class _constraints(object):
-    # aborts if there are multiple rules for one node
-    noduplicates = 'noduplicates'
-    # abort if the node does belong to edited stack
-    forceother = 'forceother'
-    # abort if the node doesn't belong to edited stack
-    noother = 'noother'
-
-    @classmethod
-    def known(cls):
-        return set([v for k, v in cls.__dict__.items() if k[0] != '_'])
-
 # Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
 # be specifying the version(s) of Mercurial they are tested with, or
@@ -391,8 +379,6 @@ class histeditaction(object):
         self.state = state
         self.repo = state.repo
         self.node = node
-
-    constraints = set([_constraints.noduplicates, _constraints.noother])
 
     @classmethod
     def fromrule(cls, state, rule):
@@ -786,7 +772,6 @@ class fold(histeditaction):
         return repo[n], replacements
 
 class base(histeditaction):
-    constraints = set([_constraints.forceother])
 
     def run(self):
         if self.repo['.'].node() != self.node:
