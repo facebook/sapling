@@ -1373,7 +1373,7 @@ def verifyactions(actions, state, ctxs):
     Will abort if there are to many or too few rules, a malformed rule,
     or a rule on a changeset outside of the user-given range.
     """
-    expected = set(c.hex() for c in ctxs)
+    expected = set(c.node() for c in ctxs)
     seen = set()
     prev = None
     for action in actions:
@@ -1386,22 +1386,21 @@ def verifyactions(actions, state, ctxs):
                         constraint)
 
         if action.node is not None:
-            ha = node.hex(action.node)
-            if _constraints.noother in constrs and ha not in expected:
+            if _constraints.noother in constrs and action.node not in expected:
                 raise error.ParseError(
                     _('%s "%s" changeset was not a candidate')
-                     % (action.verb, ha[:12]),
+                     % (action.verb, node.short(action.node)),
                     hint=_('only use listed changesets'))
-            if _constraints.forceother in constrs and ha in expected:
+            if _constraints.forceother in constrs and action.node in expected:
                 raise error.ParseError(
                     _('%s "%s" changeset was not an edited list candidate')
-                     % (action.verb, ha[:12]),
+                     % (action.verb, node.short(action.node)),
                     hint=_('only use listed changesets'))
-            if _constraints.noduplicates in constrs and ha in seen:
+            if _constraints.noduplicates in constrs and action.node in seen:
                 raise error.ParseError(_(
                         'duplicated command for changeset %s') %
-                        ha[:12])
-            seen.add(ha)
+                        node.short(action.node))
+            seen.add(action.node)
     missing = sorted(expected - seen)  # sort to stabilize output
 
     if state.repo.ui.configbool('histedit', 'dropmissing'):
@@ -1409,15 +1408,16 @@ def verifyactions(actions, state, ctxs):
             raise error.ParseError(_('no rules provided'),
                     hint=_('use strip extension to remove commits'))
 
-        drops = [drop(state, node.bin(n)) for n in missing]
+        drops = [drop(state, n) for n in missing]
         # put the in the beginning so they execute immediately and
         # don't show in the edit-plan in the future
         actions[:0] = drops
     elif missing:
         raise error.ParseError(_('missing rules for changeset %s') %
-                missing[0][:12],
+                node.short(missing[0]),
                 hint=_('use "drop %s" to discard, see also: '
-                       '"hg help -e histedit.config"') % missing[0][:12])
+                       '"hg help -e histedit.config"')
+                       % node.short(missing[0]))
 
 def adjustreplacementsfrommarkers(repo, oldreplacements):
     """Adjust replacements from obsolescense markers
