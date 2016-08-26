@@ -58,14 +58,7 @@ std::list<ManifestEntry>::iterator Manifest::findChild(
   return this->entries.end();
 }
 
-/**
- * Adds a child with a given name.
- * @param iterator iterator for this->entries, correctly positioned for
- *                 the child.
- * @param filename
- * @param filenamelen
- */
-ManifestEntry& Manifest::addChild(
+ManifestEntry *Manifest::addChild(
     std::list<ManifestEntry>::iterator iterator,
     const char *filename, const size_t filenamelen,
     const char flag) {
@@ -76,7 +69,7 @@ ManifestEntry& Manifest::addChild(
   --iterator;
 
   // return a reference to the element we added, not the one on the stack.
-  return *iterator;
+  return &(*iterator);
 }
 
 ManifestIterator::ManifestIterator(
