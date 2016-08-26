@@ -49,6 +49,8 @@ class ManifestEntry {
      */
     ManifestEntry(char *&entrystart);
 
+    ~ManifestEntry();
+
     bool isdirectory() const;
 
     void appendtopath(std::string &path);

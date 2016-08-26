@@ -34,6 +34,8 @@ struct treemanifest {
       rootNode(rootNode),
       rootManifest(NULL) {
   }
+
+  ~treemanifest();
 };
 
 /**

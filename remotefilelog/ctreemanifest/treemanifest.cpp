@@ -9,6 +9,12 @@
 
 #include "treemanifest.h"
 
+treemanifest::~treemanifest() {
+  if (this->rootManifest != NULL) {
+    delete this->rootManifest;
+  }
+}
+
 void _treemanifest_find(
     const std::string &filename,
     const std::string &rootnode,

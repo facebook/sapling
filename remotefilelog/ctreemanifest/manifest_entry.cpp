@@ -87,6 +87,15 @@ ManifestEntry::ManifestEntry(char *&entrystart) {
   this->ownedmemory = NULL;
 }
 
+ManifestEntry::~ManifestEntry() {
+  if (this->resolved != NULL) {
+    delete this->resolved;
+  }
+  if (this->ownedmemory != NULL) {
+    delete [] this->ownedmemory;
+  }
+}
+
 bool ManifestEntry::isdirectory() const {
   return this->flag && *this->flag == 't';
 }
