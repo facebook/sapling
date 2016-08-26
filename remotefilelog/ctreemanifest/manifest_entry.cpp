@@ -22,7 +22,7 @@ ManifestEntry::ManifestEntry(
     const char *filename, const size_t filenamelen,
     const char *node,
     char flag) {
-  this->resolved = NULL;
+  this->resolved = new Manifest();
   this->ownedmemory = new char[
   filenamelen +
   1 +              // null character
