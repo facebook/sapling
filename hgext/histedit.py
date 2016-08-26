@@ -1385,9 +1385,8 @@ def verifyactions(actions, state, ctxs):
                 raise error.ParseError(_('unknown constraint "%s"') %
                         constraint)
 
-        nodetoverify = action.node
-        if nodetoverify is not None:
-            ha = node.hex(nodetoverify)
+        if action.node is not None:
+            ha = node.hex(action.node)
             if _constraints.noother in constraints and ha not in expected:
                 raise error.ParseError(
                     _('%s "%s" changeset was not a candidate')
