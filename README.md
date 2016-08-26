@@ -1,15 +1,17 @@
-hg-experimental
+fb-hgext
 =============
 
-This is a collection of proof-of-concept Mercurial extensions written at
-Facebook. While they are all in basic use, they are considered experimental,
-are unsupported, and may or may not receive updates in the future. We're making
-them open source as examples of some better workflows we've been experimenting
-with.
+This is a collection of Mercurial extensions written at Facebook. Many of them
+are in heavy use by thousands of users on a daily basis. However, some of them
+are very specific to Facebook's very large repositories so their value to
+others will vary. We're still making these open source as examples of the
+workflows we use and direction we are working.
 
 Note that there will be extensions included here that only work with Facebook's
-infrastructure; they are included to give you an idea of how we integrate
-mercurial with our workflows.
+internal infrastructure; they are included to give you an idea of how we
+integrate mercurial with our workflows.
+
+Below are snippets about some of the extensions contained here.
 
 
 smartlog
