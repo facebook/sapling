@@ -8,6 +8,7 @@ New errors are not allowed. Warnings are strongly discouraged.
 
   $ hg locate | sed 's-\\-/-g' |
   >   xargs "$check_code" --warnings --per-file=0 || false
+  Skipping CMakeLists.txt it has no-che?k-code (glob)
   Skipping cfastmanifest.c it has no-che?k-code (glob)
   Skipping cfastmanifest/CMakeLists.txt it has no-che?k-code (glob)
   Skipping cfastmanifest/bsearch.c it has no-che?k-code (glob)
@@ -48,8 +49,23 @@ New errors are not allowed. Warnings are strongly discouraged.
   Skipping cfastmanifest/tree_path.c it has no-che?k-code (glob)
   Skipping cfastmanifest/tree_path.h it has no-che?k-code (glob)
   Skipping cfastmanifest/tree_test.c it has no-che?k-code (glob)
+  Skipping remotefilelog/cdatapack/buffer.h it has no-che?k-code (glob)
+  Skipping remotefilelog/cdatapack/cdatapack.c it has no-che?k-code (glob)
+  Skipping remotefilelog/cdatapack/cdatapack.h it has no-che?k-code (glob)
+  Skipping remotefilelog/cdatapack/cdatapack_dump.c it has no-che?k-code (glob)
+  Skipping remotefilelog/cdatapack/cdatapack_get.c it has no-che?k-code (glob)
+  Skipping remotefilelog/cdatapack/convert.h it has no-che?k-code (glob)
+  Skipping remotefilelog/cdatapack/null_test.c it has no-che?k-code (glob)
+  Skipping remotefilelog/cdatapack/py-cdatapack.c it has no-che?k-code (glob)
+  Skipping remotefilelog/ctreemanifest/convert.h it has no-che?k-code (glob)
+  Skipping remotefilelog/ctreemanifest/manifest.h it has no-che?k-code (glob)
+  Skipping remotefilelog/ctreemanifest/manifest_entry.h it has no-che?k-code (glob)
+  Skipping remotefilelog/ctreemanifest/manifest_fetcher.h it has no-che?k-code (glob)
+  Skipping remotefilelog/ctreemanifest/pythonutil.h it has no-che?k-code (glob)
+  Skipping remotefilelog/ctreemanifest/treemanifest.h it has no-che?k-code (glob)
   Skipping statprof.py it has no-che?k-code (glob)
   Skipping tests/conduithttp.py it has no-che?k-code (glob)
+  Skipping tests/test-remotefilelog-bad-configs.t it has no-che?k-code (glob)
 
 Check foreign extensions are only used after checks
 
