@@ -7297,14 +7297,13 @@ def version_(ui, **opts):
     fn = fm.nested("extensions")
     if names:
         namefmt = "  %%-%ds  " % max(len(n) for n in names)
-        if fn:
-            places = ["external", "internal"]
-        else:
-            places = [_("external"), _("internal")]
+        places = [_("external"), _("internal")]
         for n, v, p in zip(names, vers, isinternals):
             fn.startitem()
             fn.condwrite(ui.verbose, "name", namefmt, n)
-            fn.condwrite(ui.verbose, "place", "%s  ", places[p])
+            if ui.verbose:
+                fn.plain("%s  " % places[p])
+            fn.data(bundled=p)
             fn.condwrite(ui.verbose and v, "ver", "%s", v)
             if ui.verbose:
                 fn.plain("\n")

@@ -1253,15 +1253,15 @@ Test JSON output of version:
   $ hg version --config extensions.throw=throw.py -Tjson
   [
    {
-    "extensions": [{"name": "throw", "place": "external", "ver": "1.twentythree"}],
+    "extensions": [{"bundled": false, "name": "throw", "ver": "1.twentythree"}],
     "ver": "3.2.2"
    }
   ]
 
-  $ LANGUAGE= LC_ALL=ja_JP.UTF-8 hg version --config extensions.strip= -Tjson
+  $ hg version --config extensions.strip= -Tjson
   [
    {
-    "extensions": [{"name": "strip", "place": "internal", "ver": null}],
+    "extensions": [{"bundled": true, "name": "strip", "ver": null}],
     "ver": "*" (glob)
    }
   ]
@@ -1269,7 +1269,7 @@ Test JSON output of version:
 Test template output of version:
 
   $ hg version --config extensions.throw=throw.py --config extensions.strip= \
-  > -T'{extensions % "{name}  {pad(ver, 16)}  ({place})\n"}'
+  > -T'{extensions % "{name}  {pad(ver, 16)}  ({if(bundled, "internal", "external")})\n"}'
   throw  1.twentythree     (external)
   strip                    (internal)
 
