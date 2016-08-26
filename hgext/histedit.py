@@ -405,7 +405,7 @@ class histeditaction(object):
             raise error.ParseError("invalid changeset %s" % rulehash)
         return cls(state, rev)
 
-    def verify(self, prev):
+    def verify(self, prev, expected, seen):
         """ Verifies semantic correctness of the rule"""
         repo = self.repo
         ha = node.hex(self.node)
@@ -414,6 +414,27 @@ class histeditaction(object):
         except error.RepoError:
             raise error.ParseError(_('unknown changeset %s listed')
                               % ha[:12])
+        for constraint in self.constraints:
+            if constraint not in _constraints.known():
+                raise error.ParseError(_('unknown constraint "%s"') %
+                        constraint)
+
+        if self.node is not None:
+            constrs = self.constraints
+            if _constraints.noother in constrs and self.node not in expected:
+                raise error.ParseError(
+                    _('%s "%s" changeset was not a candidate')
+                     % (self.verb, node.short(self.node)),
+                    hint=_('only use listed changesets'))
+            if _constraints.forceother in constrs and self.node in expected:
+                raise error.ParseError(
+                    _('%s "%s" changeset was not an edited list candidate')
+                     % (self.verb, node.short(self.node)),
+                    hint=_('only use listed changesets'))
+            if _constraints.noduplicates in constrs and self.node in seen:
+                raise error.ParseError(_(
+                        'duplicated command for changeset %s') %
+                        node.short(self.node))
 
     def torule(self):
         """build a histedit rule line for an action
@@ -661,9 +682,9 @@ class edit(histeditaction):
 @action(['fold', 'f'],
         _('use commit, but combine it with the one above'))
 class fold(histeditaction):
-    def verify(self, prev):
+    def verify(self, prev, expected, seen):
         """ Verifies semantic correctness of the fold rule"""
-        super(fold, self).verify(prev)
+        super(fold, self).verify(prev, expected, seen)
         repo = self.repo
         if not prev:
             c = repo[self.node].parents()[0]
@@ -1377,29 +1398,9 @@ def verifyactions(actions, state, ctxs):
     seen = set()
     prev = None
     for action in actions:
-        action.verify(prev)
+        action.verify(prev, expected, seen)
         prev = action
-        constrs = action.constraints
-        for constraint in constrs:
-            if constraint not in _constraints.known():
-                raise error.ParseError(_('unknown constraint "%s"') %
-                        constraint)
-
         if action.node is not None:
-            if _constraints.noother in constrs and action.node not in expected:
-                raise error.ParseError(
-                    _('%s "%s" changeset was not a candidate')
-                     % (action.verb, node.short(action.node)),
-                    hint=_('only use listed changesets'))
-            if _constraints.forceother in constrs and action.node in expected:
-                raise error.ParseError(
-                    _('%s "%s" changeset was not an edited list candidate')
-                     % (action.verb, node.short(action.node)),
-                    hint=_('only use listed changesets'))
-            if _constraints.noduplicates in constrs and action.node in seen:
-                raise error.ParseError(_(
-                        'duplicated command for changeset %s') %
-                        node.short(action.node))
             seen.add(action.node)
     missing = sorted(expected - seen)  # sort to stabilize output
 
