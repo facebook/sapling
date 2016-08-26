@@ -1,10 +1,15 @@
+syntax: regexp
 \.pyc$
+\.o$
 \.so$
 \.err$
 ^build/
 ^.*\.egg-info/
+^packages/
 ^dist/
-.testtimes*
 tests/getdb\.sh
+.idea
+.testtimes*
+
 subinclude:cfastmanifest/.hgignore
 subinclude:linelog/.hgignore
