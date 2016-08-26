@@ -34,16 +34,25 @@ static int8_t hextable[256] = {
 };
 
 /**
- * Converts a given 20-byte node into a 40-byte hex string
+ * Converts a given 40-byte hex string into a 20-byte node.
+ */
+inline void appendbinfromhex(const char *node, std::string &output) {
+  for (int i = 0; i < 40;) {
+    int8_t hi = hextable[(unsigned char)node[i++]];
+    int8_t lo = hextable[(unsigned char)node[i++]];
+    output.push_back((hi << 4) | lo);
+  }
+}
+
+/**
+ * Converts a given 40-byte hex string into a 20-byte node.
  */
 inline std::string binfromhex(const char *node) {
-  char binary[20];
-  for (int i = 0; i < 40;) {
-    int hi = hextable[(unsigned char)node[i++]];
-    int lo = hextable[(unsigned char)node[i++]];
-    binary[(i - 2) / 2] = (hi << 4) | lo;
-  }
-  return std::string(binary, 20);
+  std::string result;
+
+  result.reserve(20);
+  appendbinfromhex(node, result);
+  return result;
 }
 
 #endif //CTREEMANIFEST_CONVERT_H
