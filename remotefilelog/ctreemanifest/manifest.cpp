@@ -37,13 +37,17 @@ std::list<ManifestEntry>::iterator Manifest::findChild(
   for (std::list<ManifestEntry>::iterator iter = this->entries.begin();
        iter != this->entries.end();
        iter ++) {
+    size_t minlen = filenamelen < iter->filenamelen ?
+                    filenamelen : iter->filenamelen;
+
     // continue until we are lexicographically <= than the current location.
-    int cmp = strcmp(filename, iter->filename);
-    if (cmp > 0) {
-      continue;
-    } else if (cmp == 0) {
+    int cmp = strncmp(filename, iter->filename, minlen);
+    if (cmp == 0 && filenamelen == iter->filenamelen) {
       *exacthit = true;
       return iter;
+    } else if (cmp > 0 ||
+        (cmp == 0 && filenamelen > iter->filenamelen)) {
+      continue;
     } else {
       *exacthit = false;
       return iter;
