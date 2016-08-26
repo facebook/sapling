@@ -15,24 +15,71 @@ hgext3rd = [
 
 setup(
     name='fbhgext',
-    version='0.1.2',
-    author='Durham Goode',
-    maintainer='Durham Goode',
-    maintainer_email='durham@fb.com',
-    url='',
-    description='Facebook specific mercurial extensions',
+    version='1.0',
+    author='Facebook Source Control Team',
+    maintainer='Facebook Source Control Team',
+    maintainer_email='sourcecontrol-dev@fb.com',
+    url='https://bitbucket.org/facebook/hg-experimental/',
+    description='Facebook mercurial extensions',
     long_description="",
-    keywords='fb hg mercurial',
-    license='',
+    keywords='facebook fb hg mercurial shallow remote filelog',
+    license='GPLv2+',
     packages=[
         'fastmanifest',
         'phabricator',
         'sqldirstate',
+        'remotefilelog',
     ],
+    install_requires=['lz4'],
     py_modules=[
         'statprof'
     ] + hgext3rd,
     ext_modules = [
+        Extension('cdatapack',
+                  sources=[
+                      'remotefilelog/cdatapack/py-cdatapack.c',
+                      'remotefilelog/cdatapack/cdatapack.c',
+                  ],
+                  include_dirs=[
+                      'remotefilelog/cdatapack',
+                      '/usr/local/include',
+                      '/opt/local/include',
+                  ],
+                  library_dirs=[
+                      '/usr/local/lib',
+                      '/opt/local/lib',
+                  ],
+                  libraries=[
+                      'crypto',
+                      'lz4',
+                  ],
+                  extra_compile_args=[
+                      "-std=c99",
+                      "-Wall",
+                      "-Werror", "-Werror=strict-prototypes"],
+        ),
+        Extension('ctreemanifest',
+                  sources=[
+                      'remotefilelog/ctreemanifest/py-treemanifest.cpp',
+                      'remotefilelog/ctreemanifest/manifest.cpp',
+                      'remotefilelog/ctreemanifest/manifest_entry.cpp',
+                      'remotefilelog/ctreemanifest/manifest_fetcher.cpp',
+                      'remotefilelog/ctreemanifest/pythonutil.cpp',
+                      'remotefilelog/ctreemanifest/treemanifest.cpp',
+                  ],
+                  include_dirs=[
+                      'remotefilelog/ctreemanifest',
+                  ],
+                  library_dirs=[
+                      '/usr/local/lib',
+                      '/opt/local/lib',
+                  ],
+                  libraries=[
+                  ],
+                  extra_compile_args=[
+                      "-Wall",
+                      "-Werror", "-Werror=strict-prototypes"],
+        ),
         Extension('cfastmanifest',
                   sources=['cfastmanifest.c',
                            'cfastmanifest/bsearch.c',
