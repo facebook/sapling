@@ -2396,11 +2396,10 @@ def debugextensions(ui, **opts):
     for extname, extmod in sorted(exts, key=operator.itemgetter(0)):
         isinternal = extensions.ismoduleinternal(extmod)
         extsource = extmod.__file__
-        exttestedwith = getattr(extmod, 'testedwith', '').split()
         if isinternal:
-            showtestedwith = ['internal']
+            exttestedwith = []  # never expose magic string to users
         else:
-            showtestedwith = exttestedwith
+            exttestedwith = getattr(extmod, 'testedwith', '').split()
         extbuglink = getattr(extmod, 'buglink', None)
 
         fm.startitem()
@@ -2409,10 +2408,10 @@ def debugextensions(ui, **opts):
             fm.write('name', '%s\n', extname)
         else:
             fm.write('name', '%s', extname)
-            if not exttestedwith:
-                fm.plain(_(' (untested!)\n'))
-            elif isinternal or hgver in exttestedwith:
+            if isinternal or hgver in exttestedwith:
                 fm.plain('\n')
+            elif not exttestedwith:
+                fm.plain(_(' (untested!)\n'))
             else:
                 lasttestedversion = exttestedwith[-1]
                 fm.plain(' (%s!)\n' % lasttestedversion)
@@ -2424,9 +2423,9 @@ def debugextensions(ui, **opts):
             fm.plain(_('  bundled: %s\n') % ['no', 'yes'][isinternal])
         fm.data(bundled=isinternal)
 
-        fm.condwrite(ui.verbose and showtestedwith, 'testedwith',
+        fm.condwrite(ui.verbose and exttestedwith, 'testedwith',
                      _('  tested with: %s\n'),
-                     fm.formatlist(showtestedwith, name='ver'))
+                     fm.formatlist(exttestedwith, name='ver'))
 
         fm.condwrite(ui.verbose and extbuglink, 'buglink',
                  _('  bug reporting: %s\n'), extbuglink or "")
