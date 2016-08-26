@@ -42,6 +42,7 @@ Push patch with missing target:
   $ hg qpush
   applying changeb
   unable to find 'b' for patching
+  (use '--prefix' to apply patch relative to the current directory)
   2 out of 2 hunks FAILED -- saving rejects to file b.rej
   patch failed, unable to continue (try -v)
   patch failed, rejects left in working directory
@@ -147,6 +148,7 @@ Push git patch with missing target:
   $ hg qpush
   applying changeb
   unable to find 'b' for patching
+  (use '--prefix' to apply patch relative to the current directory)
   1 out of 1 hunks FAILED -- saving rejects to file b.rej
   patch failed, unable to continue (try -v)
   patch failed, rejects left in working directory

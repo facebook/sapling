@@ -669,6 +669,8 @@ class patchfile(object):
                 self.mode = (False, False)
         if self.missing:
             self.ui.warn(_("unable to find '%s' for patching\n") % self.fname)
+            self.ui.warn(_("(use '--prefix' to apply patch relative to the "
+                           "current directory)\n"))
 
         self.hash = {}
         self.dirty = 0

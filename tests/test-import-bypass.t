@@ -41,6 +41,7 @@ Test failure without --exact
   $ hg import --bypass ../test.diff
   applying ../test.diff
   unable to find 'a' for patching
+  (use '--prefix' to apply patch relative to the current directory)
   abort: patch failed to apply
   [255]
   $ hg st
