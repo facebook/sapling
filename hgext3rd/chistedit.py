@@ -397,7 +397,7 @@ pgup/K: move patch up, pgdn/J: move patch down, c: commit, q: abort
         maxy, maxx = win.getmaxyx()
         mode, _ = state['mode']
         for y, line in enumerate(helplines(mode)):
-            if y > maxy:
+            if y >= maxy:
                 break
             addln(win, y, 0, line, curses.color_pair(COLOR_HELP))
         win.noutrefresh()
@@ -430,7 +430,7 @@ pgup/K: move patch up, pgdn/J: move patch down, c: commit, q: abort
 
     def renderstring(win, state, output):
         maxy, maxx = win.getmaxyx()
-        length = min(maxy, len(output))
+        length = min(maxy - 1, len(output))
         for y in range(0, length):
             win.addstr(y, 0, output[y])
         win.noutrefresh()
