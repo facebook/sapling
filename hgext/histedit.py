@@ -439,14 +439,6 @@ class histeditaction(object):
         """
         return set([_constraints.noduplicates, _constraints.noother])
 
-    def nodetoverify(self):
-        """Returns a node associated with the action that will be used for
-        verification purposes.
-
-        If the action doesn't correspond to node it should return None
-        """
-        return self.node
-
     def run(self):
         """Runs the action. The default behavior is simply apply the action's
         rulectx onto the current parentctx."""
@@ -1199,8 +1191,8 @@ def _edithisteditplan(ui, repo, state, rules):
     else:
         rules = _readfile(rules)
     actions = parserules(rules, state)
-    ctxs = [repo[act.nodetoverify()] \
-            for act in state.actions if act.nodetoverify()]
+    ctxs = [repo[act.node] \
+            for act in state.actions if act.node]
     warnverifyactions(ui, repo, actions, state, ctxs)
     state.actions = actions
     state.write()
@@ -1397,7 +1389,7 @@ def verifyactions(actions, state, ctxs):
                 raise error.ParseError(_('unknown constraint "%s"') %
                         constraint)
 
-        nodetoverify = action.nodetoverify()
+        nodetoverify = action.node
         if nodetoverify is not None:
             ha = node.hex(nodetoverify)
             if _constraints.noother in constraints and ha not in expected:
@@ -1597,8 +1589,8 @@ def stripwrapper(orig, ui, repo, nodelist, *args, **kwargs):
     if os.path.exists(os.path.join(repo.path, 'histedit-state')):
         state = histeditstate(repo)
         state.read()
-        histedit_nodes = set([action.nodetoverify() for action
-                             in state.actions if action.nodetoverify()])
+        histedit_nodes = set([action.node for action
+                             in state.actions if action.node])
         strip_nodes = set([repo[n].node() for n in nodelist])
         common_nodes = histedit_nodes & strip_nodes
         if common_nodes:
