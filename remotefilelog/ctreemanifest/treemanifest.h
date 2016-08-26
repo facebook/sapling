@@ -26,9 +26,13 @@ struct treemanifest {
   // The 20-byte root node of this manifest
   std::string rootNode;
 
+  // The resolved Manifest node, if the root has already been resolved.
+  Manifest *rootManifest;
+
   treemanifest(PythonObj store, std::string rootNode) :
       store(store),
-      rootNode(rootNode) {
+      rootNode(rootNode),
+      rootManifest(NULL) {
   }
 };
 
@@ -108,6 +112,7 @@ class PathIterator {
 extern void _treemanifest_find(
     const std::string &filename,
     const std::string &rootnode,
+    Manifest **cachedlookup,
     const ManifestFetcher &fetcher,
     std::string *resultnode, char *resultflag);
 

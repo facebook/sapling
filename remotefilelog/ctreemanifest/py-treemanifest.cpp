@@ -95,12 +95,11 @@ static PyObject *treemanifest_getkeysiter(py_treemanifest *self) {
       new (&i->iter) fileiter(fetcher);
 
       // Grab the root node's data and prep the iterator
-      std::string rootpath;
-      Manifest *root = fetcher.get(NULL, 0, self->tm.rootNode);
+      if (self->tm.rootManifest == NULL) {
+        self->tm.rootManifest = fetcher.get(NULL, 0, self->tm.rootNode);
+      }
 
-      // TODO: root manifest should be stored in the treemanifest object and
-      // used if it's available.
-      i->iter.frames.push_back(stackframe(root));
+      i->iter.frames.push_back(stackframe(self->tm.rootManifest));
 
       i->iter.path.reserve(1024);
     } catch (const pyexception &ex) {
@@ -320,16 +319,23 @@ static PyObject *treemanifest_diff(PyObject *o, PyObject *args) {
   std::string path;
   try {
     path.reserve(1024);
-    Manifest *selfmanifest = fetcher.get(
-        path.c_str(), path.size(),
-        self->tm.rootNode
-    );
-    Manifest *othermanifest = fetcher.get(
-        path.c_str(), path.size(),
-        other->tm.rootNode
-    );
+
+    // Grab the root node's data
+    if (self->tm.rootManifest == NULL) {
+      self->tm.rootManifest = fetcher.get(NULL, 0, self->tm.rootNode);
+      // TODO: error handling
+    }
+
+    // Grab the root node's data
+    if (other->tm.rootManifest == NULL) {
+      other->tm.rootManifest = fetcher.get(NULL, 0, other->tm.rootNode);
+      // TODO: error handling
+    }
+
     treemanifest_diffrecurse(
-        selfmanifest, othermanifest, path, results, fetcher);
+        self->tm.rootManifest,
+        other->tm.rootManifest,
+        path, results, fetcher);
   } catch (const pyexception &ex) {
     // Python has already set the error message
     return NULL;
@@ -364,6 +370,7 @@ static PyObject *treemanifest_find(PyObject *o, PyObject *args) {
     _treemanifest_find(
         std::string(filename, filenamelen),
         self->tm.rootNode,
+        &self->tm.rootManifest,
         fetcher,
         &resultnode, &resultflag);
   } catch (const pyexception &ex) {

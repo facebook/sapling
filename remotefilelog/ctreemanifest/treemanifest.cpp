@@ -12,6 +12,7 @@
 void _treemanifest_find(
     const std::string &filename,
     const std::string &rootnode,
+    Manifest **cachedlookup,
     const ManifestFetcher &fetcher,
     std::string *resultnode, char *resultflag) {
   size_t curpathlen = 0;
@@ -22,10 +23,12 @@ void _treemanifest_find(
   const char *word;
   size_t wordlen;
   while (pathiter.next(&word, &wordlen)) {
-    // Obtain the raw data for this directory
-    Manifest *manifest = fetcher.get(filename.c_str(), curpathlen, curnode);
+    if (*cachedlookup == NULL) {
+      // Obtain the raw data for this directory
+      *cachedlookup = fetcher.get(filename.c_str(), curpathlen, curnode);
+    }
 
-    // TODO: need to attach this manifest to the parent Manifest object.
+    Manifest *manifest = *cachedlookup;
 
     ManifestIterator mfiterator = manifest->getIterator();
     ManifestEntry *entry;
@@ -60,6 +63,7 @@ void _treemanifest_find(
         if (entry->isdirectory() && filename.length() > curpathlen) {
           curnode.erase();
           curnode.append(binfromhex(entry->node));
+          cachedlookup = &entry->resolved;
           recurse = true;
           break;
         } else {
@@ -76,4 +80,3 @@ void _treemanifest_find(
     }
   }
 }
-
