@@ -18,7 +18,7 @@ def testaddingretrievingbundle(tmpdir):
     nodes = [getrandomid() for u in range(30)]
     fileindex.addbundle(bundleid, nodes)
     r = fileindex.getbundle(nodes[0])
-    assert(r == bundleid)
+    assert r == bundleid
 
 def testaddingretrievingbookmark(tmpdir):
     fileindex, repo = getfileindexandrepo(tmpdir)
@@ -26,7 +26,7 @@ def testaddingretrievingbookmark(tmpdir):
     node = getrandomid()
     fileindex.addbookmark(bookmark, node)
     n = fileindex.getnode(bookmark)
-    assert(n == node)
+    assert n == node
 
 def testretrievingnonexistingbookmark(tmpdir):
     fileindex, repo = getfileindexandrepo(tmpdir)

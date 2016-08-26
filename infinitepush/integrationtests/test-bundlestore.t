@@ -43,7 +43,7 @@ the history but is stored on disk
   searching for changes
   remote: pushing 1 commit:
   remote:     20759b6926ce  scratchcommit
-  $ hg log -G 
+  $ hg log -G
   @  changeset:   1:20759b6926ce
   |  tag:         tip
   |  user:        test
@@ -79,7 +79,7 @@ From another client we can get the scratchbranch if we ask for it explicitely
 
   $ cd ..
   $ hg clone ssh://user@dummy/repo client2 -q
-  $ cd client2 
+  $ cd client2
   $ hg pull -B scratch/mybranch --traceback
   pulling from ssh://user@dummy/repo
   searching for changes

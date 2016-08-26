@@ -13,5 +13,5 @@ def testwriteandread(tmpdir):
     _id = getrandomid()
     r = bundlestore.write(_id)
     data = bundlestore.read(r)
-    assert(_id == data)
+    assert _id == data
 

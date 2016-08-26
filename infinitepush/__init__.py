@@ -96,7 +96,8 @@ def clientextsetup(ui):
         entry[1].append(('', 'to', '', _('server scratchbranch to push to')))
 
     if not any(a for a in entry[1] if a[1] == 'create'):
-        entry[1].append(('', 'create', None, _('server scratchbranch to create')))
+        entry[1].append(
+            ('', 'create', None, _('server scratchbranch to create')))
 
     wrapcommand(commands.table, 'pull', _pull)
 
@@ -155,7 +156,8 @@ def validaterevset(repo, revset):
 
     heads = repo.revs('heads(%r)', revset)
     if len(heads) > 1:
-        raise error.Abort(_('cannot push more than one head to a scratch branch'))
+        raise error.Abort(
+            _('cannot push more than one head to a scratch branch'))
 
 def getscratchbranchpart(repo, peer, outgoing, bookmark, create):
     if not outgoing.missing:
