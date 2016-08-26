@@ -353,7 +353,7 @@ def processbundle(repo, unbundler, transactiongetter=None, op=None):
     try:
         for nbpart, part in iterparts:
             _processpart(op, part)
-    except BaseException as exc:
+    except Exception as exc:
         for nbpart, part in iterparts:
             # consume the bundle content
             part.seek(0, 2)
@@ -382,6 +382,7 @@ def _processpart(op, part):
     The part is guaranteed to have been fully consumed when the function exits
     (even if an exception is raised)."""
     status = 'unknown' # used by debug output
+    hardabort = False
     try:
         try:
             handler = parthandlermapping.get(part.type)
@@ -436,9 +437,15 @@ def _processpart(op, part):
                 outpart = op.reply.newpart('output', data=output,
                                            mandatory=False)
                 outpart.addparam('in-reply-to', str(part.id), mandatory=False)
+    # If exiting or interrupted, do not attempt to seek the stream in the
+    # finally block below. This makes abort faster.
+    except (SystemExit, KeyboardInterrupt):
+        hardabort = True
+        raise
     finally:
         # consume the part content to not corrupt the stream.
-        part.seek(0, 2)
+        if not hardabort:
+            part.seek(0, 2)
 
 
 def decodecaps(blob):
