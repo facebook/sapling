@@ -270,7 +270,7 @@ def event(state, ch):
     elif action == 'select':
         selected = oldpos if selected is None else None
         makeselection(state, selected)
-    elif action == 'goto' and int(ch) < len(rules):
+    elif action == 'goto' and int(ch) < len(rules) and len(rules) <= 10:
         newrule = next((r for r in rules if r.origpos == int(ch)))
         movecursor(state, oldpos, newrule.pos)
         if selected is not None:
