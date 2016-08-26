@@ -68,6 +68,20 @@ class Manifest {
         std::list<ManifestEntry>::iterator iterator,
         const char *filename, const size_t filenamelen,
         const char flag);
+
+    int children() const {
+      return entries.size();
+    }
+
+    /**
+     * Removes a child with referenced by the iterator.
+     * @param iterator iterator for this->entries, correctly positioned for
+     *                 the child.
+     */
+    void removeChild(
+        std::list<ManifestEntry>::iterator iterator) {
+      this->entries.erase(iterator);
+    }
 };
 
 /**
