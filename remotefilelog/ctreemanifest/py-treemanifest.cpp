@@ -96,7 +96,7 @@ static PyObject *treemanifest_getkeysiter(py_treemanifest *self) {
 
       // Grab the root node's data and prep the iterator
       std::string rootpath;
-      Manifest *root = fetcher.get(NULL, 0, self->tm.node);
+      Manifest *root = fetcher.get(NULL, 0, self->tm.rootNode);
 
       // TODO: root manifest should be stored in the treemanifest object and
       // used if it's available.
@@ -322,11 +322,11 @@ static PyObject *treemanifest_diff(PyObject *o, PyObject *args) {
     path.reserve(1024);
     Manifest *selfmanifest = fetcher.get(
         path.c_str(), path.size(),
-        self->tm.node
+        self->tm.rootNode
     );
     Manifest *othermanifest = fetcher.get(
         path.c_str(), path.size(),
-        other->tm.node
+        other->tm.rootNode
     );
     treemanifest_diffrecurse(
         selfmanifest, othermanifest, path, results, fetcher);
@@ -363,7 +363,7 @@ static PyObject *treemanifest_find(PyObject *o, PyObject *args) {
     std::string rootpath;
     _treemanifest_find(
         std::string(filename, filenamelen),
-        self->tm.node,
+        self->tm.rootNode,
         fetcher,
         &resultnode, &resultflag);
   } catch (const pyexception &ex) {

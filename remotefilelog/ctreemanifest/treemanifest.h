@@ -24,11 +24,11 @@ struct treemanifest {
   PythonObj store;
 
   // The 20-byte root node of this manifest
-  std::string node;
+  std::string rootNode;
 
-  treemanifest(PythonObj store, std::string node) :
+  treemanifest(PythonObj store, std::string rootNode) :
       store(store),
-      node(node) {
+      rootNode(rootNode) {
   }
 };
 
