@@ -392,6 +392,8 @@ class histeditaction(object):
         self.repo = state.repo
         self.node = node
 
+    constraints = set([_constraints.noduplicates, _constraints.noother])
+
     @classmethod
     def fromrule(cls, state, rule):
         """Parses the given rule, returning an instance of the histeditaction.
@@ -433,11 +435,6 @@ class histeditaction(object):
            (the first line is a verb, the remainder is the second)
         """
         return "%s\n%s" % (self.verb, node.hex(self.node))
-
-    def constraints(self):
-        """Return a set of constrains that this action should be verified for
-        """
-        return set([_constraints.noduplicates, _constraints.noother])
 
     def run(self):
         """Runs the action. The default behavior is simply apply the action's
@@ -776,8 +773,7 @@ class fold(histeditaction):
         return repo[n], replacements
 
 class base(histeditaction):
-    def constraints(self):
-        return set([_constraints.forceother])
+    constraints = set([_constraints.forceother])
 
     def run(self):
         if self.repo['.'].node() != self.node:
@@ -1383,7 +1379,7 @@ def verifyactions(actions, state, ctxs):
     for action in actions:
         action.verify(prev)
         prev = action
-        constraints = action.constraints()
+        constraints = action.constraints
         for constraint in constraints:
             if constraint not in _constraints.known():
                 raise error.ParseError(_('unknown constraint "%s"') %
