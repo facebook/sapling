@@ -122,7 +122,7 @@ Test unshelve
   unshelving change 'default'
   rebasing shelved changes
   rebasing 4:29190234e4ef "changes to: c3" (tip)
-  remote changed b which local deleted
+  other [source] changed b which local [dest] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   unresolved conflicts (see 'hg resolve', then 'hg unshelve --continue')
   (5cad84d|UNSHELVE)
