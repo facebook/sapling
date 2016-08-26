@@ -15,12 +15,14 @@ ManifestEntry::ManifestEntry() {
   this->node = NULL;
   this->flag = NULL;
   this->resolved = NULL;
+  this->ownedmemory = NULL;
 }
 
 ManifestEntry::ManifestEntry(
     const char *filename, const size_t filenamelen,
     const char *node,
     char flag) {
+  this->resolved = NULL;
   this->ownedmemory = new char[
   filenamelen +
   1 +              // null character
@@ -82,6 +84,7 @@ ManifestEntry::ManifestEntry(char *&entrystart) {
     this->flag = NULL;
   }
   this->resolved = NULL;
+  this->ownedmemory = NULL;
 }
 
 bool ManifestEntry::isdirectory() const {
@@ -104,4 +107,3 @@ Manifest *ManifestEntry::get_manifest(
 
   return this->resolved;
 }
-
