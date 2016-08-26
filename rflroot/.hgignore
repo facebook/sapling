@@ -1,0 +1,10 @@
+syntax: regexp
+\.pyc$
+\.o$
+\.so$
+^build/
+\.err$
+^packages/
+^tests/.testtimes$
+.idea
+.testtimes

@@ -1,0 +1,11 @@
+#!/usr/bin/make -f
+#
+# uncomment the next line for verbose mode
+#export DH_VERBOSE=1
+
+%:
+	dh $@ --with python2
+
+override_dh_auto_install:
+	python$(PYVERS) setup.py install --root $(CURDIR)/debian/remotefilelog --install-layout=deb
+	find $(CURDIR)/debian/remotefilelog -name '*.egg-info' -delete
