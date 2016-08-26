@@ -92,8 +92,8 @@ def onetimesetup(ui):
 
             # Force the first value to execute, so the file list is computed
             # within the try/finally scope
-            first = streamres.gen.next()
-            second = streamres.gen.next()
+            first = next(streamres.gen)
+            second = next(streamres.gen)
             def gen():
                 yield first
                 yield second

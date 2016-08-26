@@ -93,12 +93,12 @@ def debugindex(orig, ui, repo, file_=None, **opts):
         basehdr = '  base'
 
     if format == 0:
-        ui.write("   rev    offset  length " + basehdr + " linkrev"
-                 " nodeid       p1           p2\n")
+        ui.write(("   rev    offset  length " + basehdr + " linkrev"
+                  " nodeid       p1           p2\n"))
     elif format == 1:
-        ui.write("   rev flag   offset   length"
-                 "     size " + basehdr + "   link     p1     p2"
-                 "       nodeid\n")
+        ui.write(("   rev flag   offset   length"
+                  "     size " + basehdr + "   link     p1     p2"
+                  "       nodeid\n"))
 
     for i in r:
         node = r.node(i)

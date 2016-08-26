@@ -3,7 +3,9 @@
 """This does HTTP GET requests given a host:port and path and returns
 a subset of the headers plus the body of the result."""
 
-import httplib, sys
+import sys
+from mercurial import util
+httplib = util.httplib
 
 try:
     import json

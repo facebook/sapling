@@ -7,13 +7,13 @@ import datapack, historypack, contentstore, metadatastore, shallowutil
 
 def backgroundrepack(repo, incremental=True):
     cmd = util.hgcmd() + ['-R', repo.origroot, 'repack']
-    incrementalstr = ''
+    msg = _("(running background repack)\n")
     if incremental:
         cmd.append('--incremental')
-        incrementalstr = 'incremental '
+        msg = _("(running background incremental repack)\n")
     cmd = ' '.join(map(util.shellquote, cmd))
 
-    repo.ui.warn("(running background %srepack)\n" % incrementalstr)
+    repo.ui.warn(msg)
     shallowutil.runshellcommand(cmd, os.environ)
 
 def fullrepack(repo):

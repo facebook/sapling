@@ -280,7 +280,7 @@ def profiletreepack(repo, store, rev1, rev2, opts):
     for test in tests:
         prepfunc, func, iterations = testopts[test]
         teststr = ('%s (%s)' % (test, iterations)).ljust(14)
-        repo.ui.status("\n%sPrep           Run            Total\n" %
+        repo.ui.status(("\n%sPrep           Run            Total\n") %
                         (teststr))
         for kind in kinds:
             repo.ui.status(("%s" % (kind)).ljust(14))
