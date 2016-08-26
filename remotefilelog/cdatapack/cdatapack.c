@@ -12,6 +12,7 @@
 #include <sys/mman.h>
 
 #if defined(__linux__)
+#define _BSD_SOURCE
 #include <endian.h>
 #define ntohll be64toh
 
@@ -186,7 +187,7 @@ datapack_handle_t *open_datapack(
   lseek(handle->datafd, 0, SEEK_SET);
 
   handle->index_mmap = mmap(NULL, (size_t) handle->index_file_sz, PROT_READ,
-      MAP_FILE | MAP_PRIVATE, handle->indexfd, (off_t) 0);
+      MAP_PRIVATE, handle->indexfd, (off_t) 0);
   if (handle->index_mmap == MAP_FAILED) {
     int er = errno;
     (void) er;
@@ -194,7 +195,7 @@ datapack_handle_t *open_datapack(
   }
 
   handle->data_mmap = mmap(NULL, (size_t) handle->data_file_sz, PROT_READ,
-      MAP_FILE | MAP_PRIVATE, handle->datafd, (off_t) 0);
+      MAP_PRIVATE, handle->datafd, (off_t) 0);
   if (handle->data_mmap == MAP_FAILED) {
     goto error_cleanup;
   }
