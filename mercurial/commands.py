@@ -2394,9 +2394,10 @@ def debugextensions(ui, **opts):
     hgver = util.version()
     fm = ui.formatter('debugextensions', opts)
     for extname, extmod in sorted(exts, key=operator.itemgetter(0)):
+        isinternal = extensions.ismoduleinternal(extmod)
         extsource = extmod.__file__
         exttestedwith = getattr(extmod, 'testedwith', '').split()
-        if exttestedwith == ['ships-with-hg-core']:
+        if isinternal:
             showtestedwith = ['internal']
         else:
             showtestedwith = exttestedwith
@@ -2410,8 +2411,7 @@ def debugextensions(ui, **opts):
             fm.write('name', '%s', extname)
             if not exttestedwith:
                 fm.plain(_(' (untested!)\n'))
-            elif (exttestedwith == ['ships-with-hg-core']
-                  or hgver in exttestedwith):
+            elif isinternal or hgver in exttestedwith:
                 fm.plain('\n')
             else:
                 lasttestedversion = exttestedwith[-1]
