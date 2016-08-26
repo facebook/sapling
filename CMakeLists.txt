@@ -43,11 +43,11 @@ add_executable(bsearch_test cfastmanifest/bsearch_test.c)
 target_link_libraries(bsearch_test bsearch)
 
 add_library(fastmanifest
-        cfastmanifest/buffer.c
-        cfastmanifest/buffer.h
+        clib/buffer.c
+        clib/buffer.h
         cfastmanifest/checksum.c
         cfastmanifest/checksum.h
-        cfastmanifest/convert.h
+        clib/convert.h
         cfastmanifest/internal_result.h
         cfastmanifest/node.c
         cfastmanifest/result.h
@@ -64,7 +64,7 @@ add_library(fastmanifest
         cfastmanifest/tree_path.c
         cfastmanifest/tree_path.h)
 
-target_include_directories(fastmanifest PUBLIC /opt/local/include)
+target_include_directories(fastmanifest PUBLIC /opt/local/include clib)
 target_link_libraries(fastmanifest PUBLIC ${OPENSSL})
 
 SET(TEST_FILES
@@ -103,7 +103,7 @@ target_link_libraries(tree_dump bsearch fastmanifest)
 add_executable(tree_iterate_rt cfastmanifest/tree_iterate_rt.c)
 target_link_libraries(tree_iterate_rt bsearch fastmanifest)
 
-add_executable(null_test cfastmanifest/null_test.c)
+add_executable(null_test clib/null_test.c)
 
 # If we're making any sort of a release, tie the success of building to
 # whether or not unit tests pass.  Obviously, a strict Release build will not

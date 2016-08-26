@@ -83,7 +83,7 @@ setup(
         Extension('cfastmanifest',
                   sources=['cfastmanifest.c',
                            'cfastmanifest/bsearch.c',
-                           'cfastmanifest/buffer.c',
+                           'clib/buffer.c',
                            'cfastmanifest/checksum.c',
                            'cfastmanifest/node.c',
                            'cfastmanifest/tree.c',
@@ -95,9 +95,11 @@ setup(
                            'cfastmanifest/tree_iterator.c',
                            'cfastmanifest/tree_path.c',
                   ],
-                  include_dirs=['cfastmanifest',
-                                '/usr/local/include',
-                                '/opt/local/include',
+                  include_dirs=[
+                      'cfastmanifest',
+                      'clib',
+                      '/usr/local/include',
+                      '/opt/local/include',
                   ],
                   library_dirs=[
                       '/usr/local/lib',
