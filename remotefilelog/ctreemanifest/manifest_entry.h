@@ -38,11 +38,6 @@ class ManifestEntry {
 
     ManifestEntry();
 
-    ManifestEntry(
-        const char *filename, const size_t filenamelen,
-        const char *node,
-        char flag);
-
     /**
      * Given the start of a file/dir entry in a manifest, returns a
      * ManifestEntry structure with the parsed data.
@@ -57,6 +52,11 @@ class ManifestEntry {
 
     Manifest *get_manifest(
         ManifestFetcher fetcher, const char *path, size_t pathlen);
+
+    void initialize(
+        const char *filename, const size_t filenamelen,
+        const char *node,
+        char flag);
 };
 
 #endif //REMOTEFILELOG_MANIFEST_ENTRY_H

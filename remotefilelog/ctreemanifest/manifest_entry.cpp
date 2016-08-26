@@ -18,7 +18,7 @@ ManifestEntry::ManifestEntry() {
   this->ownedmemory = NULL;
 }
 
-ManifestEntry::ManifestEntry(
+void ManifestEntry::initialize(
     const char *filename, const size_t filenamelen,
     const char *node,
     char flag) {
@@ -32,7 +32,7 @@ ManifestEntry::ManifestEntry(
   ];
 
   // set up the pointers.
-  this->filename = (char *) this->ownedmemory;
+  this->filename = this->ownedmemory;
   if (node == NULL) {
     this->node = NULL;
   } else {

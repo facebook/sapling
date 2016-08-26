@@ -62,14 +62,18 @@ ManifestEntry *Manifest::addChild(
     std::list<ManifestEntry>::iterator iterator,
     const char *filename, const size_t filenamelen,
     const char flag) {
-  ManifestEntry entry(filename, filenamelen, NULL, flag);
+  ManifestEntry entry;
   this->entries.insert(iterator, entry);
 
   // move back to the element we just added.
   --iterator;
 
   // return a reference to the element we added, not the one on the stack.
-  return &(*iterator);
+  ManifestEntry *result = &(*iterator);
+
+  result->initialize(filename, filenamelen, NULL, flag);
+
+  return result;
 }
 
 ManifestIterator::ManifestIterator(
