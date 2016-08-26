@@ -414,27 +414,19 @@ class histeditaction(object):
         except error.RepoError:
             raise error.ParseError(_('unknown changeset %s listed')
                               % ha[:12])
-        for constraint in self.constraints:
-            if constraint not in _constraints.known():
-                raise error.ParseError(_('unknown constraint "%s"') %
-                        constraint)
-
         if self.node is not None:
-            constrs = self.constraints
-            if _constraints.noother in constrs and self.node not in expected:
-                raise error.ParseError(
-                    _('%s "%s" changeset was not a candidate')
-                     % (self.verb, node.short(self.node)),
-                    hint=_('only use listed changesets'))
-            if _constraints.forceother in constrs and self.node in expected:
-                raise error.ParseError(
-                    _('%s "%s" changeset was not an edited list candidate')
-                     % (self.verb, node.short(self.node)),
-                    hint=_('only use listed changesets'))
-            if _constraints.noduplicates in constrs and self.node in seen:
-                raise error.ParseError(_(
-                        'duplicated command for changeset %s') %
-                        node.short(self.node))
+            self._verifynodeconstraints(prev, expected, seen)
+
+    def _verifynodeconstraints(self, prev, expected, seen):
+        # by default command need a node in the edited list
+        if self.node not in expected:
+            raise error.ParseError(_('%s "%s" changeset was not a candidate')
+                                   % (self.verb, node.short(self.node)),
+                                   hint=_('only use listed changesets'))
+        # and only one command per node
+        if self.node in seen:
+            raise error.ParseError(_('duplicated command for changeset %s') %
+                                   node.short(self.node))
 
     def torule(self):
         """build a histedit rule line for an action
@@ -808,6 +800,13 @@ class base(histeditaction):
     def continueclean(self):
         basectx = self.repo['.']
         return basectx, []
+
+    def _verifynodeconstraints(self, prev, expected, seen):
+        # base can only be use with a node not in the edited set
+        if self.node in expected:
+            msg = _('%s "%s" changeset was not an edited list candidate')
+            raise error.ParseError(msg % (self.verb, node.short(self.node)),
+                                   hint=_('only use listed changesets'))
 
 @action(['_multifold'],
         _(
