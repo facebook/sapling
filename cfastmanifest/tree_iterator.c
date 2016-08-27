@@ -7,10 +7,10 @@
 
 #include <stdlib.h>
 
-#include "buffer.h"
 #include "node.h"
 #include "tree.h"
 #include "tree_iterator.h"
+#include "path_buffer.h"
 
 #define DEFAULT_PATH_RECORDS_SZ      1024
 

@@ -5,11 +5,11 @@
 //
 // no-check-code
 
-#include "buffer.h"
 #include "internal_result.h"
 #include "node.h"
 #include "tree.h"
 #include "tree_arena.h"
+#include "path_buffer.h"
 
 typedef enum {
   COPY_OK,

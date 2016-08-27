@@ -50,6 +50,7 @@ add_library(fastmanifest
         clib/convert.h
         cfastmanifest/internal_result.h
         cfastmanifest/node.c
+        cfastmanifest/path_buffer.h
         cfastmanifest/result.h
         cfastmanifest/tree.c
         cfastmanifest/tree.h
@@ -62,7 +63,8 @@ add_library(fastmanifest
         cfastmanifest/tree_iterator.c
         cfastmanifest/tree_iterator.h
         cfastmanifest/tree_path.c
-        cfastmanifest/tree_path.h)
+        cfastmanifest/tree_path.h
+        )
 
 target_include_directories(fastmanifest PUBLIC /opt/local/include clib)
 target_link_libraries(fastmanifest PUBLIC ${OPENSSL})
@@ -170,12 +172,12 @@ target_include_directories(cdatapack PUBLIC ${PYTHON_INCLUDE_DIRS})
 target_link_libraries(cdatapack PUBLIC ${PYTHON_LIBRARIES})
 
 add_library(cdatapack_lib
-        remotefilelog/cdatapack/buffer.h
+        clib/buffer.h
         remotefilelog/cdatapack/cdatapack.c
         remotefilelog/cdatapack/cdatapack.h
-        remotefilelog/cdatapack/convert.h)
+        clib/convert.h)
 
-target_include_directories(cdatapack_lib PUBLIC /opt/local/include)
+target_include_directories(cdatapack_lib PUBLIC /opt/local/include clib)
 target_link_libraries(cdatapack_lib PUBLIC ${LZ4})
 
 add_executable(cdatapack_dump remotefilelog/cdatapack/cdatapack_dump.c)

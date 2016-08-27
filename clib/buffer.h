@@ -12,46 +12,33 @@
 #include <stddef.h>
 #include <stdlib.h>
 
-// a common usage pattern for this module is to store a path.  the path can
-// be of any length, theoretically, so we have to support expansion.
-#define DEFAULT_PATH_BUFFER_SZ      16384
-#define PATH_BUFFER_GROWTH_FACTOR   1.2
-#define PATH_BUFFER_MINIMUM_GROWTH  65536
-#define PATH_BUFFER_MAXIMUM_GROWTH  (1024 * 1024)
-
-#define PATH_APPEND(buffer, buffer_idx, buffer_sz, input, input_sz)       \
-  buffer_append(buffer, buffer_idx, buffer_sz, input, input_sz,           \
-      PATH_BUFFER_GROWTH_FACTOR,                                          \
-      PATH_BUFFER_MINIMUM_GROWTH,                                         \
-      PATH_BUFFER_MAXIMUM_GROWTH)
-
 static inline bool expand_to_fit(
-    char **buffer, size_t *buffer_idx, size_t *buffer_sz,
-    size_t input_sz,
+    void **buffer, size_t num_slots_used, size_t *num_slots_total,
+    size_t input_count, size_t item_sz,
     const float factor,
     const size_t min_increment,
     const size_t max_increment) {
-  size_t remaining = *buffer_sz - *buffer_idx;
-  if (input_sz > remaining) {
+  size_t remaining = *num_slots_total - num_slots_used;
+  if (input_count > remaining) {
     // need realloc
-    size_t new_sz = factor * ((float) *buffer_sz);
-    if (new_sz < min_increment + *buffer_sz) {
-      new_sz = min_increment + *buffer_sz;
+    size_t new_slots_total = factor * ((float) *num_slots_total);
+    if (new_slots_total < min_increment + *num_slots_total) {
+      new_slots_total = min_increment + *num_slots_total;
     }
-    if (new_sz > max_increment + *buffer_sz) {
-      new_sz = max_increment + *buffer_sz;
+    if (new_slots_total > max_increment + *num_slots_total) {
+      new_slots_total = max_increment + *num_slots_total;
     }
-    if (new_sz < input_sz + *buffer_sz) {
-      new_sz = input_sz + *buffer_sz;
+    if (new_slots_total < input_count + *num_slots_total) {
+      new_slots_total = input_count + *num_slots_total;
     }
 
-    void *newbuffer = realloc(*buffer, new_sz);
+    void *newbuffer = realloc(*buffer, item_sz * new_slots_total);
     if (newbuffer == NULL) {
       return false;
     }
 
     *buffer = newbuffer;
-    *buffer_sz = new_sz;
+    *num_slots_total = new_slots_total;
   }
 
   return true;

@@ -41,6 +41,7 @@ setup(
                       'remotefilelog/cdatapack/cdatapack.c',
                   ],
                   include_dirs=[
+                      'clib',
                       'remotefilelog/cdatapack',
                       '/usr/local/include',
                       '/opt/local/include',

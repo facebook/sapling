@@ -16,8 +16,8 @@ bool buffer_append(
     const float factor,
     const size_t min_increment,
     const size_t max_increment) {
-  if (expand_to_fit(buffer, buffer_idx, buffer_sz, input_sz,
-      factor, min_increment, max_increment) == false) {
+  if (expand_to_fit((void **) buffer, *buffer_idx, buffer_sz, input_sz,
+      sizeof(char), factor, min_increment, max_increment) == false) {
     return false;
   }
 

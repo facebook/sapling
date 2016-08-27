@@ -17,9 +17,10 @@
 #define BUFFER_MINIMUM_GROWTH       16384
 #define BUFFER_MAXIMUM_GROWTH       65536
 
-#define DIFF_EXPAND_TO_FIT(buffer, buffer_idx, buffer_sz, input_sz)    \
-  expand_to_fit(buffer, buffer_idx, buffer_sz, input_sz,                  \
+#define DIFF_EXPAND_TO_FIT(buffer, buffer_idx, buffer_sz, input_sz)       \
+  expand_to_fit((void **) buffer, buffer_idx, buffer_sz, input_sz,        \
       BUFFER_GROWTH_FACTOR,                                               \
+      sizeof(char),                                                       \
       BUFFER_MINIMUM_GROWTH,                                              \
       BUFFER_MAXIMUM_GROWTH)
 
@@ -111,7 +112,7 @@ consider_children_result_t consider_children(
 
   if (DIFF_EXPAND_TO_FIT(
           &diff_context->path_build_buffer,
-          &diff_context->path_build_buffer_idx,
+          diff_context->path_build_buffer_idx,
           &diff_context->path_build_buffer_sz,
           name_sz) == false) {
     return CONSIDER_PROCESSED_OOM;

@@ -9,6 +9,7 @@
 
 #include "buffer.h"
 #include "convert.h"
+#include "path_buffer.h"
 #include "tree.h"
 #include "tree_arena.h"
 
@@ -20,7 +21,8 @@
 #define BUFFER_MAXIMUM_GROWTH       (32 * 1024 * 1024)
 
 #define CONVERT_EXPAND_TO_FIT(buffer, buffer_idx, buffer_sz, input_sz)    \
-  expand_to_fit(buffer, buffer_idx, buffer_sz, input_sz,                  \
+  expand_to_fit((void **) buffer, buffer_idx, buffer_sz, input_sz,        \
+      sizeof(char),                                                       \
       BUFFER_GROWTH_FACTOR,                                               \
       BUFFER_MINIMUM_GROWTH,                                              \
       BUFFER_MAXIMUM_GROWTH)
@@ -460,7 +462,7 @@ static convert_to_flat_code_t convert_to_flat_iterator(
 
       if (CONVERT_EXPAND_TO_FIT(
               &state->output_buffer,
-              &state->output_buffer_idx,
+              state->output_buffer_idx,
               &state->output_buffer_sz,
               space_needed) == false) {
         return CONVERT_TO_FLAT_OOM;
