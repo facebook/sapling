@@ -52,6 +52,11 @@ class baseformatter(object):
         self._item = None
         # function to convert node to string suitable for this output
         self.hexfunc = hex
+    def __enter__(self):
+        return self
+    def __exit__(self, exctype, excvalue, traceback):
+        if exctype is None:
+            self.end()
     def __nonzero__(self):
         '''return False if we're not doing real templating so we can
         skip extra work'''

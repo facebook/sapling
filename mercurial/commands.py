@@ -3963,15 +3963,11 @@ def files(ui, repo, *pats, **opts):
     end = '\n'
     if opts.get('print0'):
         end = '\0'
-    fm = ui.formatter('files', opts)
     fmt = '%s' + end
 
     m = scmutil.match(ctx, pats, opts)
-    ret = cmdutil.files(ui, ctx, m, fm, fmt, opts.get('subrepos'))
-
-    fm.end()
-
-    return ret
+    with ui.formatter('files', opts) as fm:
+        return cmdutil.files(ui, ctx, m, fm, fmt, opts.get('subrepos'))
 
 @command('^forget', walkopts, _('[OPTION]... FILE...'), inferrepo=True)
 def forget(ui, repo, *pats, **opts):
