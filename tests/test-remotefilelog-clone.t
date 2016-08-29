@@ -35,14 +35,21 @@
   $ cat x
   x
 
+  $ ls .hg/store/data
+  $ echo foo > f
+  $ hg add f
+  $ hg ci -m 'local content'
+  $ ls .hg/store/data
+  4a0a19218e082a343a1b17e5333409af9d98f0f5
+
   $ cd ..
 
 # shallow clone from shallow
 
   $ hgcloneshallow ssh://user@dummy/shallow shallow2  --noupdate
   streaming all changes
-  2 files to transfer, 227 bytes of data
-  transferred 227 bytes in 0.0 seconds (*/sec) (glob)
+  3 files to transfer, 564 bytes of data
+  transferred 564 bytes in 0.0 seconds (*/sec) (glob)
   searching for changes
   no changes found
   $ cd shallow2
@@ -53,9 +60,11 @@
   remotefilelog
   revlogv1
   store
+  $ ls .hg/store/data
+  4a0a19218e082a343a1b17e5333409af9d98f0f5
 
   $ hg update
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ cat x
   x
