@@ -10,12 +10,13 @@
 #ifndef REMOTEFILELOG_MANIFEST_FETCHER_H
 #define REMOTEFILELOG_MANIFEST_FETCHER_H
 
+#include "pythonutil.h"
+
 #include <string>
 
 class ManifestFetcher;
 
 #include "manifest.h"
-#include "pythonutil.h"
 
 /**
  * Class used to obtain Manifests, given a path and node.

@@ -10,13 +10,15 @@
 #ifndef REMOTEFILELOG_MANIFEST_H
 #define REMOTEFILELOG_MANIFEST_H
 
+#include "pythonutil.h"
+
 #include <list>
+#include <stdexcept>
 
 class Manifest;
 class ManifestIterator;
 
 #include "manifest_entry.h"
-#include "pythonutil.h"
 
 /**
  * This class represents a view on a particular Manifest instance. It provides

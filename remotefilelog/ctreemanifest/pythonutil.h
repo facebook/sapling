@@ -14,8 +14,8 @@
 // as per the documentation.
 #define PY_SSIZE_T_CLEAN
 
-#include <exception>
 #include <Python.h>
+#include <exception>
 
 /**
  * C++ exception that represents an issue at the python C api level.

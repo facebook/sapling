@@ -10,6 +10,8 @@
 #ifndef REMOTEFILELOG_MANIFEST_ENTRY_H
 #define REMOTEFILELOG_MANIFEST_ENTRY_H
 
+#include "pythonutil.h"
+
 #include <cstddef>
 #include <cstring>
 #include <string>

@@ -183,7 +183,7 @@ static void treemanifest_diffrecurse(
   while (!selfiter.isfinished() || !otheriter.isfinished()) {
     int cmp = 0;
 
-    ManifestEntry *selfentry;
+    ManifestEntry *selfentry = NULL;
     std::string selfbinnode;
     if (!selfiter.isfinished()) {
       cmp--;
@@ -191,7 +191,7 @@ static void treemanifest_diffrecurse(
       selfbinnode = binfromhex(selfentry->node);
     }
 
-    ManifestEntry *otherentry;
+    ManifestEntry *otherentry = NULL;
     std::string otherbinnode;
     if (!otheriter.isfinished()) {
       cmp++;

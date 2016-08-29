@@ -10,11 +10,12 @@
 #ifndef REMOTEFILELOG_TREEMANIFEST_H
 #define REMOTEFILELOG_TREEMANIFEST_H
 
+#include "pythonutil.h"
+
 #include <string>
 #include <vector>
 
 #include "manifest_fetcher.h"
-#include "pythonutil.h"
 
 /**
  * A single instance of a treemanifest.
