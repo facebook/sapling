@@ -441,12 +441,12 @@ def annotate(ui, repo, *pats, **opts):
     if linenumber and (not opts.get('changeset')) and (not opts.get('number')):
         raise error.Abort(_('at least one of -n/-c is required for -l'))
 
-    if fm:
-        def makefunc(get, fmt):
-            return get
-    else:
+    if fm.isplain():
         def makefunc(get, fmt):
             return lambda x: fmt(get(x))
+    else:
+        def makefunc(get, fmt):
+            return get
     funcmap = [(makefunc(get, fmt), sep) for op, sep, get, fmt in opmap
                if opts.get(op)]
     funcmap[0] = (funcmap[0][0], '') # no separator in front of first column
@@ -476,12 +476,12 @@ def annotate(ui, repo, *pats, **opts):
 
         for f, sep in funcmap:
             l = [f(n) for n, dummy in lines]
-            if fm:
-                formats.append(['%s' for x in l])
-            else:
+            if fm.isplain():
                 sizes = [encoding.colwidth(x) for x in l]
                 ml = max(sizes)
                 formats.append([sep + ' ' * (ml - w) + '%s' for w in sizes])
+            else:
+                formats.append(['%s' for x in l])
             pieces.append(l)
 
         for f, p, l in zip(zip(*formats), zip(*pieces), lines):
@@ -1185,7 +1185,7 @@ def bookmark(ui, repo, *names, **opts):
         fm = ui.formatter('bookmarks', opts)
         hexfn = fm.hexfunc
         marks = repo._bookmarks
-        if len(marks) == 0 and not fm:
+        if len(marks) == 0 and fm.isplain():
             ui.status(_("no bookmarks set\n"))
         for bmark, n in sorted(marks.iteritems()):
             active = repo._activebookmark
@@ -4442,10 +4442,10 @@ def grep(ui, repo, pattern, *pats, **opts):
 
     def display(fm, fn, ctx, pstates, states):
         rev = ctx.rev()
-        if fm:
-            formatuser = str
-        else:
+        if fm.isplain():
             formatuser = ui.shortuser
+        else:
+            formatuser = str
         if ui.quiet:
             datefmt = '%Y-%m-%d'
         else:
@@ -5695,10 +5695,10 @@ def paths(ui, repo, search=None, **opts):
         pathitems = sorted(ui.paths.iteritems())
 
     fm = ui.formatter('paths', opts)
-    if fm:
-        hidepassword = str
-    else:
+    if fm.isplain():
         hidepassword = util.hidepassword
+    else:
+        hidepassword = str
     if ui.quiet:
         namefmt = '%s\n'
     else:

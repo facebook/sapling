@@ -57,10 +57,6 @@ class baseformatter(object):
     def __exit__(self, exctype, excvalue, traceback):
         if exctype is None:
             self.end()
-    def __nonzero__(self):
-        '''return False if we're not doing real templating so we can
-        skip extra work'''
-        return True
     def _showitem(self):
         '''show a formatted item once all data is collected'''
         pass
@@ -96,6 +92,9 @@ class baseformatter(object):
     def plain(self, text, **opts):
         '''show raw text for non-templated mode'''
         pass
+    def isplain(self):
+        '''check for plain formatter usage'''
+        return False
     def nested(self, field):
         '''sub formatter to store nested data in the specified field'''
         self._item[field] = data = []
@@ -142,8 +141,6 @@ class plainformatter(baseformatter):
             self.hexfunc = hex
         else:
             self.hexfunc = short
-    def __nonzero__(self):
-        return False
     def startitem(self):
         pass
     def data(self, **data):
@@ -156,6 +153,8 @@ class plainformatter(baseformatter):
             self._ui.write(deftext % fielddata, **opts)
     def plain(self, text, **opts):
         self._ui.write(text, **opts)
+    def isplain(self):
+        return True
     def nested(self, field):
         # nested data will be directly written to ui
         return self
