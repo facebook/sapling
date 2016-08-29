@@ -1788,7 +1788,7 @@ def _docommit(ui, repo, *pats, **opts):
     [('u', 'untrusted', None, _('show untrusted configuration options')),
      ('e', 'edit', None, _('edit user config')),
      ('l', 'local', None, _('edit repository config')),
-     ('g', 'global', None, _('edit global config'))],
+     ('g', 'global', None, _('edit global config'))] + formatteropts,
     _('[-u] [NAME]...'),
     optionalrepo=True)
 def config(ui, repo, *values, **opts):
@@ -1849,6 +1849,7 @@ def config(ui, repo, *values, **opts):
                   onerr=error.Abort, errprefix=_("edit failed"))
         return
 
+    fm = ui.formatter('config', opts)
     for f in scmutil.rcpath():
         ui.debug('read config from: %s\n' % f)
     untrusted = bool(opts.get('untrusted'))
@@ -1859,25 +1860,32 @@ def config(ui, repo, *values, **opts):
             raise error.Abort(_('only one config item permitted'))
     matched = False
     for section, name, value in ui.walkconfig(untrusted=untrusted):
-        value = str(value).replace('\n', '\\n')
-        sectname = section + '.' + name
+        value = str(value)
+        if fm.isplain():
+            value = value.replace('\n', '\\n')
+        entryname = section + '.' + name
         if values:
             for v in values:
                 if v == section:
-                    ui.debug('%s: ' %
-                             ui.configsource(section, name, untrusted))
-                    ui.write('%s=%s\n' % (sectname, value))
+                    fm.startitem()
+                    fm.condwrite(ui.debugflag, 'source', '%s: ',
+                                 ui.configsource(section, name, untrusted))
+                    fm.write('name value', '%s=%s\n', entryname, value)
                     matched = True
-                elif v == sectname:
-                    ui.debug('%s: ' %
-                             ui.configsource(section, name, untrusted))
-                    ui.write(value, '\n')
+                elif v == entryname:
+                    fm.startitem()
+                    fm.condwrite(ui.debugflag, 'source', '%s: ',
+                                 ui.configsource(section, name, untrusted))
+                    fm.write('value', '%s\n', value)
+                    fm.data(name=entryname)
                     matched = True
         else:
-            ui.debug('%s: ' %
-                     ui.configsource(section, name, untrusted))
-            ui.write('%s=%s\n' % (sectname, value))
+            fm.startitem()
+            fm.condwrite(ui.debugflag, 'source', '%s: ',
+                         ui.configsource(section, name, untrusted))
+            fm.write('name value', '%s=%s\n', entryname, value)
             matched = True
+    fm.end()
     if matched:
         return 0
     return 1

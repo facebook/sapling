@@ -54,6 +54,36 @@ Test case sensitive configuration
   Section.KeY=Case Sensitive
   Section.key=lower case
 
+  $ hg showconfig Section -Tjson
+  [
+   {
+    "name": "Section.KeY",
+    "source": "*.hgrc:16", (glob)
+    "value": "Case Sensitive"
+   },
+   {
+    "name": "Section.key",
+    "source": "*.hgrc:17", (glob)
+    "value": "lower case"
+   }
+  ]
+  $ hg showconfig Section.KeY -Tjson
+  [
+   {
+    "name": "Section.KeY",
+    "source": "*.hgrc:16", (glob)
+    "value": "Case Sensitive"
+   }
+  ]
+  $ hg showconfig -Tjson | tail -7
+   },
+   {
+    "name": "*", (glob)
+    "source": "*", (glob)
+    "value": "*" (glob)
+   }
+  ]
+
 Test "%unset"
 
   $ cat >> $HGRCPATH <<EOF
