@@ -301,11 +301,13 @@ static void treemanifest_diffrecurse(
   }
 }
 
-static PyObject *treemanifest_diff(PyObject *o, PyObject *args) {
+static PyObject *treemanifest_diff(PyObject *o, PyObject *args, PyObject *kwargs) {
   py_treemanifest *self = (py_treemanifest*)o;
   PyObject *otherObj;
+  PyObject *cleanObj;
+  static char const *kwlist[] = {"m2", "clean", NULL};
 
-  if (!PyArg_ParseTuple(args, "O", &otherObj)) {
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|O", (char**)kwlist, &otherObj, &cleanObj)) {
     return NULL;
   }
 
@@ -699,7 +701,7 @@ static PyObject *treemanifest_matches(py_treemanifest *self, PyObject *args) {
 // ====  treemanifest ctype declaration ====
 
 static PyMethodDef treemanifest_methods[] = {
-  {"diff", treemanifest_diff, METH_VARARGS, "performs a diff of the given two manifests\n"},
+  {"diff", (PyCFunction)treemanifest_diff, METH_VARARGS|METH_KEYWORDS, "performs a diff of the given two manifests\n"},
   {"find", treemanifest_find, METH_VARARGS, "returns the node and flag for the given filepath\n"},
   {"flags", (PyCFunction)treemanifest_flags, METH_VARARGS|METH_KEYWORDS,
     "returns the flag for the given filepath\n"},
