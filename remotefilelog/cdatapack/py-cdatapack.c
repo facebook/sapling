@@ -219,38 +219,34 @@ static PyObject *cdatapack_getdeltachain(
     delta = PyString_FromStringAndSize(
         (const char *) link->delta, link->delta_sz);
 
-    if (name == NULL ||
-        retnode == NULL ||
-        deltabasenode == NULL ||
-        delta == NULL) {
-      goto loop_cleanup;
+    if (name != NULL &&
+        retnode != NULL &&
+        deltabasenode != NULL &&
+        delta != NULL) {
+      tuple = PyTuple_Pack(5, name, retnode, name, deltabasenode, delta);
     }
 
-    tuple = PyTuple_Pack(5, name, retnode, name, deltabasenode, delta);
-
-    if (tuple == NULL) {
-      goto loop_cleanup;
-    }
-
-    PyList_SetItem(result, ix, tuple);
-
-    continue;
-
-loop_cleanup:
     Py_XDECREF(name);
     Py_XDECREF(retnode);
     Py_XDECREF(deltabasenode);
     Py_XDECREF(delta);
-    Py_XDECREF(tuple);
-    goto cleanup;
+
+    if (tuple == NULL) {
+      goto err_cleanup;
+    }
+
+    PyList_SetItem(result, ix, tuple);
   }
 
-  return result;
+  goto cleanup;
+
+err_cleanup:
+  Py_XDECREF(result);
+  result = NULL;
 
 cleanup:
-  Py_XDECREF(result);
-
-  return NULL;
+  freedeltachain(chain);
+  return result;
 }
 
 // ====  cdatapack ctype declaration ====
