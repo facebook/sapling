@@ -366,7 +366,6 @@ static PyObject *treemanifest_find(PyObject *o, PyObject *args) {
   std::string resultnode;
   char resultflag;
   try {
-    std::string rootpath;
     _treemanifest_find(
         std::string(filename, filenamelen),
         self->tm.rootNode,
