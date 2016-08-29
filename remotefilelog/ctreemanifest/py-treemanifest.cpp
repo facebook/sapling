@@ -756,6 +756,32 @@ static PyObject *treemanifest_filesnotin(py_treemanifest *self, PyObject *args) 
   return result.returnval();
 }
 
+static int treemanifest_contains(py_treemanifest *self, PyObject *key) {
+  char *filename;
+  Py_ssize_t filenamelen;
+  PyString_AsStringAndSize(key, &filename, &filenamelen);
+
+  ManifestFetcher fetcher(self->tm.store);
+
+  std::string resultnode;
+  char resultflag;
+  try {
+    _treemanifest_find(
+        std::string(filename, filenamelen),
+        self->tm.rootNode,
+        &self->tm.rootManifest,
+        fetcher,
+        &resultnode, &resultflag);
+    if (resultnode.size() == 0) {
+      return 0;
+    } else {
+      return 1;
+    }
+  } catch (const pyexception &ex) {
+    return NULL;
+  }
+}
+
 // ====  treemanifest ctype declaration ====
 
 static PyMethodDef treemanifest_methods[] = {
@@ -775,6 +801,19 @@ static PyMappingMethods treemanifest_mapping_methods = {
   0,                                   /* mp_ass_subscript */
 };
 
+static PySequenceMethods treemanifest_sequence_methods = {
+	0,                                 /* sq_length */
+	0,                                 /* sq_concat */
+	0,                                 /* sq_repeat */
+	0,                                 /* sq_item */
+	0,                                 /* sq_slice */
+	0,                                 /* sq_ass_item */
+	0,                                 /* sq_ass_slice */
+	(objobjproc)treemanifest_contains, /* sq_contains */
+	0,                                 /* sq_inplace_concat */
+	0,                                 /* sq_inplace_repeat */
+};
+
 static PyTypeObject treemanifestType = {
   PyObject_HEAD_INIT(NULL)
   0,                                                /* ob_size */
@@ -788,7 +827,7 @@ static PyTypeObject treemanifestType = {
   0,                                                /* tp_compare */
   0,                                                /* tp_repr */
   0,                                                /* tp_as_number */
-  0,                                                /* tp_as_sequence - length/contains */
+  &treemanifest_sequence_methods,                   /* tp_as_sequence - length/contains */
   &treemanifest_mapping_methods,                    /* tp_as_mapping - getitem/setitem */
   0,                                                /* tp_hash */
   0,                                                /* tp_call */
