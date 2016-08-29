@@ -698,10 +698,69 @@ static PyObject *treemanifest_matches(py_treemanifest *self, PyObject *args) {
   return NULL;
 }
 
+static PyObject *treemanifest_filesnotin(py_treemanifest *self, PyObject *args) {
+  py_treemanifest* other;
+
+  if (!PyArg_ParseTuple(args, "O", &other)) {
+    return NULL;
+  }
+
+  PythonObj diffresults = PyDict_New();
+
+  ManifestFetcher fetcher(self->tm.store);
+
+  std::string path;
+  try {
+    path.reserve(1024);
+    Manifest *selfmanifest = fetcher.get(
+        path.c_str(), path.size(),
+        self->tm.rootNode
+    );
+    Manifest *othermanifest = fetcher.get(
+        path.c_str(), path.size(),
+        other->tm.rootNode
+    );
+    treemanifest_diffrecurse(
+        selfmanifest, othermanifest, path, diffresults, fetcher);
+  } catch (const pyexception &ex) {
+    // Python has already set the error message
+    return NULL;
+  } catch (const std::exception &ex) {
+    PyErr_SetString(PyExc_RuntimeError, ex.what());
+    return NULL;
+  }
+
+  PythonObj result = PySet_New(NULL);
+
+  // All of the PyObjects below are borrowed references, so no ref counting is
+  // required.
+  Py_ssize_t iterpos = 0;
+  PyObject *pathkey;
+  PyObject *diffentry;
+  while (PyDict_Next(diffresults, &iterpos, &pathkey, &diffentry)) {
+    // Each value is a `((m1node, m1flag), (m2node, m2flag))` tuple.
+    // If m2node is None, then this file doesn't exist in m2.
+    PyObject *targetvalue = PyTuple_GetItem(diffentry, 1);
+    if (!targetvalue) {
+      return NULL;
+    }
+    PyObject *targetnode = PyTuple_GetItem(targetvalue, 0);
+    if (!targetnode) {
+      return NULL;
+    }
+    if (targetnode == Py_None) {
+      PySet_Add(result, pathkey);
+    }
+  }
+
+  return result.returnval();
+}
+
 // ====  treemanifest ctype declaration ====
 
 static PyMethodDef treemanifest_methods[] = {
   {"diff", (PyCFunction)treemanifest_diff, METH_VARARGS|METH_KEYWORDS, "performs a diff of the given two manifests\n"},
+  {"filesnotin", (PyCFunction)treemanifest_filesnotin, METH_VARARGS, "returns the set of files in m1 but not m2\n"},
   {"find", treemanifest_find, METH_VARARGS, "returns the node and flag for the given filepath\n"},
   {"flags", (PyCFunction)treemanifest_flags, METH_VARARGS|METH_KEYWORDS,
     "returns the flag for the given filepath\n"},
