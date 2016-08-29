@@ -654,6 +654,9 @@ static PyObject *treemanifest_matches(py_treemanifest *self, PyObject *args) {
   if (!PyArg_ParseTuple(args, "O", &matcherObj)) {
     return NULL;
   }
+  // ParseTuple doesn't increment the ref, but the PythonObj will decrement on
+  // destruct, so let's increment now.
+  Py_INCREF(matcherObj);
   PythonObj matcher = matcherObj;
 
   PythonObj emptyargs = PyTuple_New(0);
