@@ -60,6 +60,9 @@ struct fileiter {
   std::vector<stackframe> frames;
   std::string path;             // The fullpath for the top entry in the stack.
 
+  // If provided, the given matcher filters the results by path
+  PythonObj matcher;
+
   fileiter(treemanifest &tm) :
       fetcher(tm.store) {
     if (tm.rootManifest == NULL) {

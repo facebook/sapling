@@ -77,7 +77,8 @@ static PyTypeObject fileiterType = {
   (iternextfunc)fileiter_iterentriesnext, /* tp_iternext: next() method */
 };
 
-static py_fileiter *createfileiter(py_treemanifest *pytm) {
+static py_fileiter *createfileiter(py_treemanifest *pytm,
+                                   PythonObj matcher) {
   py_fileiter *i = PyObject_New(py_fileiter, &fileiterType);
   if (i) {
     try {
@@ -87,6 +88,7 @@ static py_fileiter *createfileiter(py_treemanifest *pytm) {
       // The provided py_fileiter struct hasn't initialized our fileiter member, so
       // we do it manually.
       new (&i->iter) fileiter(pytm->tm);
+      i->iter.matcher = matcher;
       return i;
     } catch (const pyexception &ex) {
       Py_DECREF(i);
@@ -99,6 +101,10 @@ static py_fileiter *createfileiter(py_treemanifest *pytm) {
   } else {
     return NULL;
   }
+}
+
+static py_fileiter *createfileiter(py_treemanifest *pytm) {
+  return createfileiter(pytm, PythonObj());
 }
 
 // ==== treemanifest functions ====
@@ -510,7 +516,16 @@ static bool fileiter_next(fileiter &iter, char *path, size_t pathcapacity,
       iter.path.copy(path, iter.path.size());
       strncpy(path + iter.path.size(), entry->filename, entry->filenamelen);
 
-      path[iter.path.size() + entry->filenamelen] = '\0';
+      size_t pathlen = iter.path.size() + entry->filenamelen;
+      path[pathlen] = '\0';
+
+      if (!(PyObject*)iter.matcher) {
+        PythonObj matchArgs = Py_BuildValue("(s#)", path, pathlen);
+        PythonObj matched = iter.matcher.call(matchArgs);
+        if (!PyObject_IsTrue(matched)) {
+          continue;
+        }
+      }
 
       std::string binnode = binfromhex(entry->node);
       binnode.copy(node, BIN_NODE_SIZE);
@@ -631,6 +646,56 @@ static PyObject *treemanifest_flags(py_treemanifest *self, PyObject *args, PyObj
   }
 }
 
+static PyObject *treemanifest_matches(py_treemanifest *self, PyObject *args) {
+  PyObject* matcherObj;
+
+  if (!PyArg_ParseTuple(args, "O", &matcherObj)) {
+    return NULL;
+  }
+  PythonObj matcher = matcherObj;
+
+  PythonObj emptyargs = PyTuple_New(0);
+  if (PyObject_IsTrue(matcher.callmethod("always", emptyargs))) {
+    // TODO: make this return an actual copy
+    Py_INCREF((PyObject*)self);
+    return (PyObject*)self;
+  }
+
+  try {
+    PythonObj manifestmod = PyImport_ImportModule("mercurial.manifest");
+    PythonObj manifestdict = manifestmod.getattr("manifestdict");
+    PythonObj result = manifestdict.call(emptyargs);
+
+    fileiter iter = fileiter(self->tm);
+    iter.matcher = matcher;
+
+    char path[2048];
+    char node[40];
+    char flag[1];
+    while (fileiter_next(iter, path, 2048, node, flag)) {
+      size_t pathlen = strlen(path);
+      std::string binnode = binfromhex(node);
+
+      // Call manifestdict.__setitem__
+      PythonObj setArgs = Py_BuildValue("s#s#", path, pathlen, binnode.c_str(), 20);
+      result.callmethod("__setitem__", setArgs);
+
+      Py_ssize_t flaglen = *flag != '\0' ? 1 : 0;
+      PythonObj flagArgs = Py_BuildValue("s#s#", path, pathlen, flag, flaglen);
+      result.callmethod("setflag", flagArgs);
+    }
+
+    return result.returnval();
+  } catch (const pyexception &ex) {
+    return NULL;
+  } catch (const std::exception &ex) {
+    PyErr_SetString(PyExc_RuntimeError, ex.what());
+    return NULL;
+  }
+
+  return NULL;
+}
+
 // ====  treemanifest ctype declaration ====
 
 static PyMethodDef treemanifest_methods[] = {
@@ -638,6 +703,8 @@ static PyMethodDef treemanifest_methods[] = {
   {"find", treemanifest_find, METH_VARARGS, "returns the node and flag for the given filepath\n"},
   {"flags", (PyCFunction)treemanifest_flags, METH_VARARGS|METH_KEYWORDS,
     "returns the flag for the given filepath\n"},
+  {"matches", (PyCFunction)treemanifest_matches, METH_VARARGS,
+    "returns a manifest filtered by the matcher"},
   {NULL, NULL}
 };
 

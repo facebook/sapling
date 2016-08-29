@@ -60,3 +60,19 @@ PyObject *PythonObj::returnval() {
 PythonObj PythonObj::getattr(const char *name) {
   return PyObject_GetAttrString(this->obj, name);
 }
+
+/**
+ * Executes the current callable object if it's callable.
+ */
+PythonObj PythonObj::call(const PythonObj &args) {
+  PyObject *result = PyEval_CallObject(this->obj, args);
+  return PythonObj(result);
+}
+
+/**
+ * Invokes the specified method on this instance.
+ */
+PythonObj PythonObj::callmethod(const char *name, const PythonObj &args) {
+  PythonObj function = this->getattr(name);
+  return PyObject_CallObject(function, args);
+}

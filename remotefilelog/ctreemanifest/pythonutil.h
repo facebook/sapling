@@ -61,6 +61,16 @@ class PythonObj {
      * Invokes getattr to retrieve the attribute from the python object.
      */
     PythonObj getattr(const char *name);
+
+    /**
+     * Executes the current callable object if it's callable.
+     */
+    PythonObj call(const PythonObj &args);
+
+    /**
+     * Invokes the specified method on this instance.
+     */
+    PythonObj callmethod(const char *name, const PythonObj &args);
 };
 
 #endif //REMOTEFILELOG_PYTHONOBJ_H
