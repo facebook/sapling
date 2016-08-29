@@ -555,11 +555,65 @@ static PyObject *treemanifest_getitem(py_treemanifest *self, PyObject *key) {
   }
 }
 
+/**
+ * Implements treemanifest.flags(path)
+ * Returns the flag of the given file.
+ */
+static PyObject *treemanifest_flags(py_treemanifest *self, PyObject *args, PyObject *kwargs) {
+  char *filename;
+  Py_ssize_t filenamelen;
+  char *defaultval= NULL;
+  Py_ssize_t defaultvallen;
+  static char const *kwlist[] = {"key", "default", NULL};
+
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s#|s#", (char**)kwlist,
+                                   &filename, &filenamelen,
+                                   &defaultval, &defaultvallen)) {
+    return NULL;
+  }
+
+  ManifestFetcher fetcher(self->tm.store);
+
+  std::string resultnode;
+  char resultflag;
+  try {
+    _treemanifest_find(
+        std::string(filename, filenamelen),
+        self->tm.rootNode,
+        &self->tm.rootManifest,
+        fetcher,
+        &resultnode, &resultflag);
+  } catch (const pyexception &ex) {
+    return NULL;
+  }
+
+  if (resultnode.empty()) {
+    if (PyErr_Occurred()) {
+      return NULL;
+    }
+
+    PyErr_Format(PyExc_KeyError, "file '%s' not found", filename);
+    return NULL;
+  }
+
+  if (resultflag == '\0') {
+    if (defaultval) {
+      return PyString_FromStringAndSize(defaultval, defaultvallen);
+    } else {
+      return PyString_FromStringAndSize("", (Py_ssize_t)0);
+    }
+  } else {
+    return PyString_FromStringAndSize(&resultflag, (Py_ssize_t)1);
+  }
+}
+
 // ====  treemanifest ctype declaration ====
 
 static PyMethodDef treemanifest_methods[] = {
   {"diff", treemanifest_diff, METH_VARARGS, "performs a diff of the given two manifests\n"},
   {"find", treemanifest_find, METH_VARARGS, "returns the node and flag for the given filepath\n"},
+  {"flags", (PyCFunction)treemanifest_flags, METH_VARARGS|METH_KEYWORDS,
+    "returns the flag for the given filepath\n"},
   {NULL, NULL}
 };
 
