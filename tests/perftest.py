@@ -5,8 +5,9 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 from mercurial import cmdutil, error, manifest, scmutil
-from remotefilelog import datapack, contentstore
-import pdb, hashlib, time
+from mercurial.node import nullid
+from remotefilelog import datapack, contentstore, shallowutil
+import pdb, hashlib, os, time
 from fastmanifest.implementation import fastmanifestcache
 from fastmanifest import cachemanager
 import ctreemanifest
@@ -20,9 +21,13 @@ testedwith = ''
     ('', 'test', '', ''),
     ('', 'kind', '', ''),
     ('i', 'iterations', '10', ''),
+    ('', 'revs', 'master + master~5', ''),
     ], '')
 def testpackedtrees(ui, repo, *args, **opts):
-    opener = scmutil.vfs('/tmp/durhampack')
+    packpath = shallowutil.getpackpath(repo, 'manifest')
+    if not os.path.exists(packpath):
+        os.mkdir(packpath)
+    opener = scmutil.vfs(packpath)
     if opts.get('build'):
         with datapack.mutabledatapack(opener) as newpack:
             buildtreepack(repo, newpack, opts.get('build'))
@@ -32,8 +37,8 @@ def testpackedtrees(ui, repo, *args, **opts):
             usecdatapack=ui.configbool('remotefilelog', 'fastdatapack'))
     unionstore = contentstore.unioncontentstore(packstore)
 
-    # TODO: make these revs command options
-    profiletreepack(repo, unionstore, 'master~50000' , 'master~45000', opts)
+    ctxs = list(repo.set(opts.get('revs')))
+    profiletreepack(repo, unionstore, ctxs[0].hex(), ctxs[1].hex(), opts)
 
 class cachestore(object):
     def __init__(self):
@@ -203,7 +208,10 @@ def profiletreepack(repo, store, rev1, rev2, opts):
         repo.manifest.clearcaches()
         return repo.manifest.read(mfnode)._flatmanifest()
 
-    cacheopener = scmutil.vfs('/tmp/durhampack')
+    cacheopener = scmutil.vfs(repo.vfs.join('cache', 'fastmanifest_test'))
+    if not os.path.exists(cacheopener.base):
+        os.mkdir(cacheopener.base)
+
     manager = fastmanifestcache.getinstance(cacheopener, repo.ui)
     def fastconstructor(mfnode):
         repo.manifest.clearcaches()
