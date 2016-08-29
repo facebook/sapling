@@ -781,7 +781,7 @@ static int treemanifest_contains(py_treemanifest *self, PyObject *key) {
       return 1;
     }
   } catch (const pyexception &ex) {
-    return NULL;
+    return -1;
   }
 }
 
