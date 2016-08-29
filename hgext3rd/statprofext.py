@@ -1,4 +1,4 @@
-# fbamend.py - improved amend functionality
+# statprofext.py - improved statprof integration
 #
 # Copyright 2013 Facebook, Inc.
 #
@@ -14,12 +14,14 @@ This extension configures the statprof based on Mercurial config knobs.
                     (hotpath, json)
 """
 
-from mercurial import dispatch, extensions
+import contextlib
+from mercurial import profiling, extensions
 
 def extsetup(ui):
-    extensions.wrapfunction(dispatch, 'statprofile', statprofile)
+    extensions.wrapfunction(profiling, 'statprofile', statprofile)
 
-def statprofile(orig, ui, func, fp):
+@contextlib.contextmanager
+def statprofile(orig, ui, fp):
     try:
         import statprof
     except ImportError:
@@ -35,7 +37,7 @@ def statprofile(orig, ui, func, fp):
     mechanism = ui.config('statprof', 'mechanism', 'thread')
     statprof.start(mechanism=mechanism)
     try:
-        return func()
+        yield
     finally:
         statprof.stop()
 
