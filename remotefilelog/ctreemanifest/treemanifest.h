@@ -60,8 +60,14 @@ struct fileiter {
   std::vector<stackframe> frames;
   std::string path;             // The fullpath for the top entry in the stack.
 
-  fileiter(ManifestFetcher fetcher) :
-      fetcher(fetcher) {
+  fileiter(treemanifest &tm) :
+      fetcher(tm.store) {
+    if (tm.rootManifest == NULL) {
+      tm.rootManifest = this->fetcher.get(NULL, 0, tm.rootNode);
+    }
+
+    this->frames.push_back(stackframe(tm.rootManifest));
+    this->path.reserve(1024);
   }
 
   fileiter(const fileiter &old) :

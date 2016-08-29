@@ -40,10 +40,6 @@ struct py_fileiter {
   // A reference to the tree is kept, so it is not freed while we're iterating
   // over it.
   const py_treemanifest *treemf;
-
-  py_fileiter(ManifestFetcher fetcher) :
-    iter(fetcher) {
-  }
 };
 
 static void fileiter_dealloc(py_fileiter *self);
@@ -81,6 +77,30 @@ static PyTypeObject fileiterType = {
   (iternextfunc)fileiter_iterentriesnext, /* tp_iternext: next() method */
 };
 
+static py_fileiter *createfileiter(py_treemanifest *pytm) {
+  py_fileiter *i = PyObject_New(py_fileiter, &fileiterType);
+  if (i) {
+    try {
+      i->treemf = pytm;
+      Py_INCREF(pytm);
+
+      // The provided py_fileiter struct hasn't initialized our fileiter member, so
+      // we do it manually.
+      new (&i->iter) fileiter(pytm->tm);
+      return i;
+    } catch (const pyexception &ex) {
+      Py_DECREF(i);
+      return NULL;
+    } catch (const std::exception &ex) {
+      Py_DECREF(i);
+      PyErr_SetString(PyExc_RuntimeError, ex.what());
+      return NULL;
+    }
+  } else {
+    return NULL;
+  }
+}
+
 // ==== treemanifest functions ====
 
 /**
@@ -88,39 +108,7 @@ static PyTypeObject fileiterType = {
  * Returns a PyObject iterator instance.
  */
 static PyObject *treemanifest_getkeysiter(py_treemanifest *self) {
-  py_fileiter *i = PyObject_New(py_fileiter, &fileiterType);
-  if (i) {
-    try {
-      i->treemf = self;
-      Py_INCREF(i->treemf);
-
-      ManifestFetcher fetcher(self->tm.store);
-      // The provided py_fileiter struct hasn't initialized our fileiter member, so
-      // we do it manually.
-      new (&i->iter) fileiter(fetcher);
-
-      // Grab the root node's data and prep the iterator
-      if (self->tm.rootManifest == NULL) {
-        self->tm.rootManifest = fetcher.get(NULL, 0, self->tm.rootNode);
-      }
-
-      i->iter.frames.push_back(stackframe(self->tm.rootManifest));
-
-      i->iter.path.reserve(1024);
-    } catch (const pyexception &ex) {
-      Py_DECREF(i);
-      return NULL;
-    } catch (const std::exception &ex) {
-      Py_DECREF(i);
-      PyErr_SetString(PyExc_RuntimeError, ex.what());
-      Py_DECREF(i);
-      return NULL;
-    }
-  } else {
-    return NULL;
-  }
-
-  return (PyObject *)i;
+  return (PyObject*)createfileiter(self);
 }
 
 /**
