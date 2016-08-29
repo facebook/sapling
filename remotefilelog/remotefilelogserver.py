@@ -125,6 +125,12 @@ def onetimesetup(ui):
                         if kind == stat.S_IFDIR:
                             visit.append(fp)
 
+            if 'treemanifest' in repo.requirements:
+                for (u, e, s) in repo.store.datafiles():
+                    if (u.startswith('meta/') and
+                        (u.endswith('.i') or u.endswith('.d'))):
+                        yield (u, e, s)
+
             # Return .d and .i files that do not match the shallow pattern
             match = state.match
             if match and not match.always():

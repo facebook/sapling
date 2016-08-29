@@ -14,6 +14,8 @@ mq=
 ssh=python "$TESTDIR/dummyssh"
 [server]
 preferuncompressed=True
+[experimental]
+changegroup3=True
 EOF
 export HGRCPATH=$PWD/.hgrc
 
