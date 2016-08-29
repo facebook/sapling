@@ -519,12 +519,54 @@ static PyObject *fileiter_iterentriesnext(py_fileiter *self) {
   }
 }
 
+/**
+ * Implements treemanifest.__getitem__(path)
+ * Returns the node of the given file.
+ */
+static PyObject *treemanifest_getitem(py_treemanifest *self, PyObject *key) {
+  char *filename;
+  Py_ssize_t filenamelen;
+  PyString_AsStringAndSize(key, &filename, &filenamelen);
+
+  ManifestFetcher fetcher(self->tm.store);
+
+  std::string resultnode;
+  char resultflag;
+  try {
+    _treemanifest_find(
+        std::string(filename, filenamelen),
+        self->tm.rootNode,
+        &self->tm.rootManifest,
+        fetcher,
+        &resultnode, &resultflag);
+  } catch (const pyexception &ex) {
+    return NULL;
+  }
+
+  if (resultnode.empty()) {
+    if (PyErr_Occurred()) {
+      return NULL;
+    }
+
+    PyErr_Format(PyExc_KeyError, "file '%s' not found", filename);
+    return NULL;
+  } else {
+    return Py_BuildValue("s#", resultnode.c_str(), (Py_ssize_t)resultnode.length());
+  }
+}
+
 // ====  treemanifest ctype declaration ====
 
 static PyMethodDef treemanifest_methods[] = {
   {"diff", treemanifest_diff, METH_VARARGS, "performs a diff of the given two manifests\n"},
   {"find", treemanifest_find, METH_VARARGS, "returns the node and flag for the given filepath\n"},
   {NULL, NULL}
+};
+
+static PyMappingMethods treemanifest_mapping_methods = {
+  0,                                   /* mp_length */
+  (binaryfunc)treemanifest_getitem,    /* mp_subscript */
+  0,                                   /* mp_ass_subscript */
 };
 
 static PyTypeObject treemanifestType = {
@@ -541,7 +583,7 @@ static PyTypeObject treemanifestType = {
   0,                                                /* tp_repr */
   0,                                                /* tp_as_number */
   0,                                                /* tp_as_sequence - length/contains */
-  0,                                                /* tp_as_mapping - getitem/setitem*/
+  &treemanifest_mapping_methods,                    /* tp_as_mapping - getitem/setitem */
   0,                                                /* tp_hash */
   0,                                                /* tp_call */
   0,                                                /* tp_str */
