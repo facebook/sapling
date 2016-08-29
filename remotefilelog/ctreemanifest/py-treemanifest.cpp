@@ -16,6 +16,11 @@
 #include "pythonutil.h"
 #include "treemanifest.h"
 
+#define FILENAME_BUFFER_SIZE 16348
+#define HEX_NODE_SIZE 40
+#define BIN_NODE_SIZE 20
+#define FLAG_SIZE 1
+
 struct py_treemanifest {
   PyObject_HEAD;
 
@@ -469,51 +474,82 @@ static bool fileiter_popfinished(fileiter *iter) {
 }
 
 /**
+ * Moves the given iterator to the next file in the manifest.
+ * `path` - a character array with length `pathcapacity`
+ * `node` - a character array with length 20
+ * `flag` - a character array with length 1
+ *
+ * If the function returns true, the provided buffers have been filled in with
+ * path, node and flag data. The path field is null terminated. If there is no
+ * flag, the flag array is set to ['\0'].
+ *
+ * If the function return false, the buffers are left alone and we've reached
+ * the end of the iterator.
+ */
+static bool fileiter_next(fileiter &iter, char *path, size_t pathcapacity,
+                          char *node, char *flag) {
+  // Iterate over the current directory contents
+  while (true) {
+    // Pop off any directories that we're done processing
+    if (!fileiter_popfinished(&iter)) {
+      // No more directories means we've reached the end of the root
+      return false;
+    }
+
+    stackframe &frame = iter.frames.back();
+    ManifestIterator &iterator = frame.iterator;
+
+    ManifestEntry *entry;
+    entry = iterator.next();
+
+    // If a directory, push it and loop again
+    if (entry->isdirectory()) {
+      iter.path.append(entry->filename, entry->filenamelen);
+      iter.path.append(1, '/');
+
+      Manifest *submanifest = entry->get_manifest(iter.fetcher,
+          iter.path.c_str(), iter.path.size());
+
+      // TODO: memory cleanup here is probably broken.
+      iter.frames.push_back(stackframe(submanifest));
+
+    } else {
+      // If a file, yield it
+      if (iter.path.size() + entry->filenamelen + 1 > pathcapacity) {
+        throw std::logic_error("filename too long for buffer");
+      }
+
+      iter.path.copy(path, iter.path.size());
+      strncpy(path + iter.path.size(), entry->filename, entry->filenamelen);
+
+      path[iter.path.size() + entry->filenamelen] = '\0';
+
+      std::string binnode = binfromhex(entry->node);
+      binnode.copy(node, BIN_NODE_SIZE);
+      if (entry->flag) {
+        *flag = *entry->flag;
+      } else {
+        *flag = '\0';
+      }
+      return true;
+    }
+  }
+}
+
+/**
  * Returns the next object in the iteration.
  */
 static PyObject *fileiter_iterentriesnext(py_fileiter *self) {
   fileiter &iter = self->iter;
 
   try {
-    // Iterate over the current directory contents
-    while (true) {
-      // Pop off any directories that we're done processing
-      if (!fileiter_popfinished(&iter)) {
-        // No more directories means we've reached the end of the root
-        return NULL;
-      }
-
-      stackframe &frame = iter.frames.back();
-      ManifestIterator &iterator = frame.iterator;
-
-      ManifestEntry* entry;
-      entry = iterator.next();
-
-      // If a directory, push it and loop again
-      if (entry->isdirectory()) {
-        iter.path.append(entry->filename, entry->filenamelen);
-        iter.path.append(1, '/');
-
-        Manifest *submanifest = entry->get_manifest(iter.fetcher,
-            iter.path.c_str(), iter.path.size());
-
-        // TODO: memory cleanup here is probably broken.
-        iter.frames.push_back(stackframe(submanifest));
-
-      } else {
-        // If a file, yield it
-        int oldpathsize = iter.path.size();
-        iter.path.append(entry->filename, entry->filenamelen);
-        PyObject* result = PyString_FromStringAndSize(iter.path.c_str(), iter.path.length());
-        if (!result) {
-          PyErr_NoMemory();
-          return NULL;
-        }
-
-        iter.path.erase(oldpathsize);
-        return result;
-      }
+    char path[FILENAME_BUFFER_SIZE];
+    char node[BIN_NODE_SIZE];
+    char flag[FLAG_SIZE];
+    if (fileiter_next(iter, path, FILENAME_BUFFER_SIZE, node, flag)) {
+      return PyString_FromStringAndSize(path, strlen(path));
     }
+    return NULL;
   } catch (const pyexception &ex) {
     return NULL;
   }
