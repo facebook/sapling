@@ -3,7 +3,8 @@ from collections import defaultdict
 from mercurial import error, mdiff, osutil, scmutil, util
 from mercurial.node import nullid, bin, hex
 from mercurial.i18n import _
-import datapack, historypack, contentstore, metadatastore, shallowutil
+import constants, datapack, historypack, contentstore, metadatastore
+import shallowutil
 
 def backgroundrepack(repo, incremental=True):
     cmd = util.hgcmd() + ['-R', repo.origroot, 'repack']
@@ -28,7 +29,7 @@ def incrementalrepack(repo):
     repo and performing the most minimal repack to keep the repo in good shape.
     """
 
-    packpath = shallowutil.getpackpath(repo)
+    packpath = shallowutil.getpackpath(repo, constants.FILEPACK_CATEGORY)
     shallowutil.mkstickygroupdir(repo.ui, packpath)
 
     files = osutil.listdir(packpath, stat=True)
@@ -147,7 +148,7 @@ def _computeincrementalpack(ui, files, limits, packsuffix, indexsuffix,
     return []
 
 def _runrepack(repo, data, history):
-    packpath = shallowutil.getpackpath(repo)
+    packpath = shallowutil.getpackpath(repo, constants.FILEPACK_CATEGORY)
     shallowutil.mkstickygroupdir(repo.ui, packpath)
 
     packer = repacker(repo, data, history)

@@ -9,6 +9,8 @@ import errno, hashlib, os, platform, stat, struct, subprocess, sys, tempfile
 from mercurial import filelog, util, error
 from mercurial.i18n import _
 
+import constants
+
 if os.name != 'nt':
     import grp
 
@@ -59,9 +61,12 @@ def getcachepath(ui, allowempty=False):
                                 "remotefilelog.cachepath"))
     return util.expandpath(cachepath)
 
-def getpackpath(repo):
+def getpackpath(repo, category):
     cachepath = getcachepath(repo.ui)
-    return os.path.join(cachepath, repo.name, 'packs')
+    if category != constants.FILEPACK_CATEGORY:
+        return os.path.join(cachepath, repo.name, 'packs', category)
+    else:
+        return os.path.join(cachepath, repo.name, 'packs')
 
 def createrevlogtext(text, copyfrom=None, copyrev=None):
     """returns a string that matches the revlog contents in a
