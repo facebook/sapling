@@ -67,6 +67,8 @@ typedef struct _datapack_handle_t {
 
   // this points to the first index entry.
   struct _disk_index_entry_t* index_table;
+
+  size_t paged_in_datapack_memory;
 } datapack_handle_t;
 
 /**
@@ -126,7 +128,7 @@ bool find(
  * Retrieves a delta chain for a given node.
  */
 extern delta_chain_t getdeltachain(
-    const datapack_handle_t *handle,
+    datapack_handle_t *handle,
     const uint8_t node[NODE_SZ]);
 
 extern void freedeltachain(delta_chain_t chain);

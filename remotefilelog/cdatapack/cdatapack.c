@@ -29,11 +29,12 @@
 #define MADVISE_FREE_CODE MADV_FREE
 #endif /* #if defined(__APPLE__) */
 
-
 #include <lz4.h>
 
 #include "cdatapack.h"
 #include "buffer.h"
+
+#define MAX_PAGED_IN_DATAPACK  (100 * 1024 * 1024)
 
 /**
  * This is an exact representation of an index entry on disk.  Do not consume
@@ -475,7 +476,7 @@ const get_delta_chain_link_result_t getdeltachainlink(
 }
 
 delta_chain_t getdeltachain(
-    const datapack_handle_t *handle,
+    datapack_handle_t *handle,
     const uint8_t node[NODE_SZ]) {
   pack_chain_t pack_chain = build_pack_chain(handle, node);
 
@@ -535,7 +536,11 @@ delta_chain_t getdeltachain(
     const uint8_t *end = ptr +
         pack_chain.pack_chain_links[ix].data_sz;
 
-    platform_madvise_away((void *) ptr, end - ptr);
+    handle->paged_in_datapack_memory += (end - ptr);
+  }
+
+  if (handle->paged_in_datapack_memory > MAX_PAGED_IN_DATAPACK) {
+    platform_madvise_away(handle->data_mmap, handle->data_file_sz);
   }
 
   result.code = GET_DELTA_CHAIN_OK;
