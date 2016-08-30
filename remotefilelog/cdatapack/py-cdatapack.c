@@ -222,7 +222,7 @@ static PyObject *cdatapack_getdeltachain(
     // corrupt, etc.
     PyErr_Format(
         PyExc_ValueError,
-        "unknown error reading node %.*s", (int) node_sz, node);
+        "unknown error reading node %s", node);
     return NULL;
   }
   PyObject *result = PyList_New(chain.links_count);
@@ -354,6 +354,20 @@ static PyObject *cdatapack_iterator_iternext(py_cdatapack_iterator *iterator) {
   }
 
   get_delta_chain_link_result_t next = getdeltachainlink(iterator->ptr, &link);
+
+  switch (next.code) {
+    case GET_DELTA_CHAIN_LINK_OK:
+      break;
+
+    case GET_DELTA_CHAIN_LINK_OOM:
+      PyErr_NoMemory();
+      return NULL;
+
+    case GET_DELTA_CHAIN_LINK_CORRUPT:
+      PyErr_Format(PyExc_ValueError, "corruption in datapack");
+      return NULL;
+  }
+
   iterator->ptr = next.ptr;
 
   PyObject *tuple = NULL, *fn = NULL, *node = NULL;
@@ -429,6 +443,20 @@ static PyObject *cdatapack_deltas_iterator_iternext(
   }
 
   get_delta_chain_link_result_t next = getdeltachainlink(iterator->ptr, &link);
+
+  switch (next.code) {
+    case GET_DELTA_CHAIN_LINK_OK:
+      break;
+
+    case GET_DELTA_CHAIN_LINK_OOM:
+      PyErr_NoMemory();
+      return NULL;
+
+    case GET_DELTA_CHAIN_LINK_CORRUPT:
+      PyErr_Format(PyExc_ValueError, "corruption in datapack");
+      return NULL;
+  }
+
   iterator->ptr = next.ptr;
 
   PyObject *tuple = NULL;

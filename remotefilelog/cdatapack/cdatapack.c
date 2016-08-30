@@ -455,14 +455,18 @@ const get_delta_chain_link_result_t getdeltachainlink(
   ptr += sizeof(uint32_t);
 
   uint8_t *decompress_output = malloc(link->delta_sz);
-  // TODO: error handling!
+  if (decompress_output == NULL) {
+    return (get_delta_chain_link_result_t) { GET_DELTA_CHAIN_LINK_OOM, NULL };
+  }
 
-  uint32_t outbytes = LZ4_decompress_fast(
+  int32_t outbytes = LZ4_decompress_fast(
       (const char *) ptr,
       (char *) decompress_output,
       (int32_t) link->delta_sz);
-  // TODO: error handling
-  (void) outbytes;
+  if (outbytes != compressed_sz) {
+    return (get_delta_chain_link_result_t) { GET_DELTA_CHAIN_LINK_CORRUPT,
+                                             NULL };
+  }
   link->delta = decompress_output;
 
   ptr += compressed_sz;
@@ -507,6 +511,18 @@ delta_chain_t getdeltachain(
 
     next = getdeltachainlink(ptr, link);
 
+    switch (next.code) {
+      case GET_DELTA_CHAIN_LINK_OK:
+        break;
+
+      case GET_DELTA_CHAIN_LINK_OOM:
+        result.code = GET_DELTA_CHAIN_OOM;
+        goto error_cleanup;
+
+      case GET_DELTA_CHAIN_LINK_CORRUPT:
+        result.code = GET_DELTA_CHAIN_CORRUPT;
+        goto error_cleanup;
+    }
     if (next.ptr > end) {
       result.code = GET_DELTA_CHAIN_CORRUPT;
       goto error_cleanup;
