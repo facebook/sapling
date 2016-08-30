@@ -680,21 +680,15 @@ class dirstate(object):
             self.clear()
             self._lastnormaltime = lastnormaltime
 
-        for f in changedfiles:
-            mode = 0o666
-            if f in allfiles and 'x' in allfiles.flags(f):
-                mode = 0o777
-
-            if f in allfiles:
-                self._map[f] = dirstatetuple('n', mode, -1, 0)
-            else:
-                self._map.pop(f, None)
-                if f in self._nonnormalset:
-                    self._nonnormalset.remove(f)
-
         if self._origpl is None:
             self._origpl = self._pl
         self._pl = (parent, nullid)
+        for f in changedfiles:
+            if f in allfiles:
+                self.normallookup(f)
+            else:
+                self.drop(f)
+
         self._dirty = True
 
     def write(self, tr):
