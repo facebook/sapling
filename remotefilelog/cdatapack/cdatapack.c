@@ -61,10 +61,17 @@ typedef struct _fanout_table_entry_t {
   index_offset_t end_index;
 } fanout_table_entry_t;
 
+typedef enum {
+  PACK_CHAIN_OK,
+  PACK_CHAIN_NOT_FOUND,
+  PACK_CHAIN_OOM,
+} pack_chain_code_t;
+
 /**
  * This is a chain of index entries.
  */
 typedef struct _pack_chain_t {
+  pack_chain_code_t code;
   pack_index_entry_t *pack_chain_links;
   size_t links_idx;
   size_t links_sz;
@@ -336,30 +343,36 @@ void close_datapack(datapack_handle_t *handle) {
       PACK_CHAIN_MINIMUM_GROWTH,                                              \
       PACK_CHAIN_MAXIMUM_GROWTH)
 
-static pack_chain_t *build_pack_chain(
+static pack_chain_t build_pack_chain(
     const datapack_handle_t *handle,
     const uint8_t node[NODE_SZ]) {
-  pack_chain_t *result = malloc(sizeof(pack_chain_t));
-  result->links_idx = 0;
-  result->links_sz = DEFAULT_PACK_CHAIN_CAPACITY;
-  result->pack_chain_links = malloc(
-      result->links_sz * sizeof(pack_index_entry_t));
-  // TODO: error handling.
+  pack_chain_t pack_chain;
+  pack_chain.links_idx = 0;
+  pack_chain.links_sz = DEFAULT_PACK_CHAIN_CAPACITY;
+  pack_chain.pack_chain_links = malloc(
+      pack_chain.links_sz * sizeof(pack_index_entry_t));
+  if (pack_chain.pack_chain_links == NULL) {
+    pack_chain.code = PACK_CHAIN_OOM;
+    goto error_cleanup;
+  }
 
   pack_index_entry_t entry;
 
   // find the first entry.
   if (find(handle, node, &entry) == false) {
-    return NULL;
+    pack_chain.code = PACK_CHAIN_NOT_FOUND;
+    goto error_cleanup;
   }
 
-  PACK_CHAIN_EXPAND_TO_FIT(
-      (void **)&result->pack_chain_links,
-      result->links_idx,
-      &result->links_sz);
-  // TODO: yeah, this desperately needs some error handling.
+  if (PACK_CHAIN_EXPAND_TO_FIT(
+      (void **)&pack_chain.pack_chain_links,
+      pack_chain.links_idx,
+      &pack_chain.links_sz) == false) {
+    pack_chain.code = PACK_CHAIN_OOM;
+    goto error_cleanup;
+  }
 
-  result->pack_chain_links[result->links_idx++] = entry;
+  pack_chain.pack_chain_links[pack_chain.links_idx++] = entry;
 
   while (entry.deltabase_index_offset != FULLTEXTINDEXMARK &&
          entry.deltabase_index_offset != NOBASEINDEXMARK) {
@@ -368,16 +381,23 @@ static pack_chain_t *build_pack_chain(
     unpack_disk_deltachunk(
         &handle->index_table[index_num], &entry);
 
-    PACK_CHAIN_EXPAND_TO_FIT(
-        (void **)&result->pack_chain_links,
-        result->links_idx,
-        &result->links_sz);
-    // TODO: yeah, this desperately needs some error handling.
+    if (PACK_CHAIN_EXPAND_TO_FIT(
+        (void **)&pack_chain.pack_chain_links,
+        pack_chain.links_idx,
+        &pack_chain.links_sz) == false) {
+      pack_chain.code = PACK_CHAIN_OOM;
+      goto error_cleanup;
+    }
 
-    result->pack_chain_links[result->links_idx++] = entry;
+    pack_chain.pack_chain_links[pack_chain.links_idx++] = entry;
   }
 
-  return result;
+  return pack_chain;
+
+error_cleanup:
+  free(pack_chain.pack_chain_links);
+
+  return pack_chain;
 }
 
 static inline uint32_t load_le32(const uint8_t *d) {
@@ -443,15 +463,21 @@ const uint8_t *getdeltachainlink(
 delta_chain_t getdeltachain(
     const datapack_handle_t *handle,
     const uint8_t node[NODE_SZ]) {
-  pack_chain_t *pack_chain = build_pack_chain(handle, node);
+  pack_chain_t pack_chain = build_pack_chain(handle, node);
 
-  if (pack_chain == NULL) {
-    // TODO: build_pack_chain needs to return a more detailed error code.
-    return (delta_chain_t) { GET_DELTA_CHAIN_NOT_FOUND };
+  switch (pack_chain.code) {
+    case PACK_CHAIN_NOT_FOUND:
+      return (delta_chain_t) { GET_DELTA_CHAIN_NOT_FOUND };
+
+    case PACK_CHAIN_OOM:
+      return (delta_chain_t) { GET_DELTA_CHAIN_OOM };
+
+    case PACK_CHAIN_OK:
+      break;
   }
 
   delta_chain_t result;
-  result.links_count = pack_chain->links_idx;
+  result.links_count = pack_chain.links_idx;
   result.delta_chain_links = malloc(
       result.links_count * sizeof(delta_chain_link_t));
   if (result.delta_chain_links == NULL) {
@@ -460,11 +486,11 @@ delta_chain_t getdeltachain(
   }
 
 
-  for (int ix = 0; ix < pack_chain->links_idx; ix ++) {
+  for (int ix = 0; ix < pack_chain.links_idx; ix ++) {
     const uint8_t *ptr = handle->data_mmap;
-    ptr += pack_chain->pack_chain_links[ix].data_offset;
+    ptr += pack_chain.pack_chain_links[ix].data_offset;
     const uint8_t *end = ptr +
-        pack_chain->pack_chain_links[ix].data_sz;
+        pack_chain.pack_chain_links[ix].data_sz;
 
     delta_chain_link_t *link = &result.delta_chain_links[ix];
 
@@ -476,11 +502,11 @@ delta_chain_t getdeltachain(
     }
   }
 
-  for (int ix = 0; ix < pack_chain->links_idx; ix ++) {
+  for (int ix = 0; ix < pack_chain.links_idx; ix ++) {
     const uint8_t *ptr = handle->data_mmap;
-    ptr += pack_chain->pack_chain_links[ix].data_offset;
+    ptr += pack_chain.pack_chain_links[ix].data_offset;
     const uint8_t *end = ptr +
-        pack_chain->pack_chain_links[ix].data_sz;
+        pack_chain.pack_chain_links[ix].data_sz;
 
     platform_madvise_away((void *) ptr, end - ptr);
   }
@@ -495,8 +521,7 @@ error_cleanup:
 cleanup:
 
   // free pack chain.
-  free(pack_chain->pack_chain_links);
-  free(pack_chain);
+  free(pack_chain.pack_chain_links);
 
   return result;
 }
