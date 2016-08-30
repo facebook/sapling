@@ -67,10 +67,6 @@ typedef struct _datapack_handle_t {
 
   // this points to the first index entry.
   struct _disk_index_entry_t* index_table;
-
-  // this points to the entry one past the last.
-  struct _disk_index_entry_t* index_end;
-
 } datapack_handle_t;
 
 /**
