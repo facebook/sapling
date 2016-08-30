@@ -12,8 +12,8 @@
   setup.py not using absolute_import
   tests/test-demandimport.py not using absolute_import
 
-#if py3exe py3pygments
-  $ hg files 'set:(**.py)' | sed 's|\\|/|g' \
+#if py3exe
+  $ hg files 'set:(**.py) - grep(pygments)' | sed 's|\\|/|g' \
   > | xargs $PYTHON3 contrib/check-py3-compat.py \
   > | sed 's/[0-9][0-9]*)$/*)/'
   doc/hgmanpage.py: invalid syntax: invalid syntax (<unknown>, line *)
@@ -50,7 +50,6 @@
   hgext/gpg.py: error importing: <TypeError> str expected, not bytes (error at encoding.py:*)
   hgext/graphlog.py: error importing: <TypeError> str expected, not bytes (error at encoding.py:*)
   hgext/hgk.py: error importing: <TypeError> str expected, not bytes (error at encoding.py:*)
-  hgext/highlight/highlight.py: error importing: <TypeError> str expected, not bytes (error at encoding.py:*)
   hgext/histedit.py: error importing: <TypeError> str expected, not bytes (error at encoding.py:*)
   hgext/journal.py: error importing: <TypeError> str expected, not bytes (error at encoding.py:*)
   hgext/keyword.py: error importing: <TypeError> str expected, not bytes (error at encoding.py:*)
@@ -171,4 +170,11 @@
   mercurial/windows.py: error importing module: <ImportError> No module named 'msvcrt' (line *)
   mercurial/wireproto.py: error importing module: <TypeError> unorderable types: str() >= tuple() (line *)
 
+#endif
+
+#if py3exe py3pygments
+  $ hg files 'set:(**.py) and grep(pygments)' | sed 's|\\|/|g' \
+  > | xargs $PYTHON3 contrib/check-py3-compat.py \
+  > | sed 's/[0-9][0-9]*)$/*)/'
+  hgext/highlight/highlight.py: error importing: <TypeError> str expected, not bytes (error at encoding.py:*)
 #endif
