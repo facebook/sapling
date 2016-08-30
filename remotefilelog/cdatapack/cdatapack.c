@@ -196,8 +196,6 @@ datapack_handle_t *open_datapack(
   handle->index_mmap = mmap(NULL, (size_t) handle->index_file_sz, PROT_READ,
       MAP_PRIVATE, handle->indexfd, (off_t) 0);
   if (handle->index_mmap == MAP_FAILED) {
-    int er = errno;
-    (void) er;
     goto error_cleanup;
   }
 
