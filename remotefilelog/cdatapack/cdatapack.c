@@ -527,8 +527,6 @@ delta_chain_t getdeltachain(
       result.code = GET_DELTA_CHAIN_CORRUPT;
       goto error_cleanup;
     }
-
-    ptr = next.ptr;
   }
 
   for (int ix = 0; ix < pack_chain.links_idx; ix ++) {
