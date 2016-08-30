@@ -2144,7 +2144,14 @@ def difffeatureopts(ui, opts=None, untrusted=False, section='diff', git=False,
     def get(key, name=None, getter=ui.configbool, forceplain=None):
         if opts:
             v = opts.get(key)
-            if v:
+            # diffopts flags are either None-default (which is passed
+            # through unchanged, so we can identify unset values), or
+            # some other falsey default (eg --unified, which defaults
+            # to an empty string). We only want to override the config
+            # entries from hgrc with command line values if they
+            # appear to have been set, which is any truthy value,
+            # True, or False.
+            if v or isinstance(v, bool):
                 return v
         if forceplain is not None and ui.plain():
             return forceplain
