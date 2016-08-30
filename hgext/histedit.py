@@ -789,9 +789,10 @@ class base(histeditaction):
     def _verifynodeconstraints(self, prev, expected, seen):
         # base can only be use with a node not in the edited set
         if self.node in expected:
-            msg = _('%s "%s" changeset was not an edited list candidate')
-            raise error.ParseError(msg % (self.verb, node.short(self.node)),
-                                   hint=_('only use listed changesets'))
+            msg = _('%s "%s" changeset was an edited list candidate')
+            raise error.ParseError(
+                msg % (self.verb, node.short(self.node)),
+                hint=_('base must only use unlisted changesets'))
 
 @action(['_multifold'],
         _(
