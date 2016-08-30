@@ -353,7 +353,8 @@ static PyObject *cdatapack_iterator_iternext(py_cdatapack_iterator *iterator) {
     return NULL;
   }
 
-  iterator->ptr = getdeltachainlink(iterator->ptr, &link);
+  get_delta_chain_link_result_t next = getdeltachainlink(iterator->ptr, &link);
+  iterator->ptr = next.ptr;
 
   PyObject *tuple = NULL, *fn = NULL, *node = NULL;
 
@@ -427,7 +428,8 @@ static PyObject *cdatapack_deltas_iterator_iternext(
     return NULL;
   }
 
-  iterator->ptr = getdeltachainlink(iterator->ptr, &link);
+  get_delta_chain_link_result_t next = getdeltachainlink(iterator->ptr, &link);
+  iterator->ptr = next.ptr;
 
   PyObject *tuple = NULL;
   PyObject *fn = NULL, *node = NULL, *deltabasenode = NULL, *deltalen = NULL;

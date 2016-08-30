@@ -432,7 +432,7 @@ static inline int platform_madvise_away(void *ptr, size_t len) {
 #endif /* #if defined(__APPLE__) */
 }
 
-const uint8_t *getdeltachainlink(
+const get_delta_chain_link_result_t getdeltachainlink(
     const uint8_t *ptr, delta_chain_link_t *link) {
   link->filename_sz = ntohs(*((uint16_t *) ptr));
   ptr += sizeof(uint16_t);
@@ -465,7 +465,7 @@ const uint8_t *getdeltachainlink(
 
   ptr += compressed_sz;
 
-  return ptr;
+  return (get_delta_chain_link_result_t) { GET_DELTA_CHAIN_LINK_OK, ptr };
 }
 
 delta_chain_t getdeltachain(
@@ -501,13 +501,16 @@ delta_chain_t getdeltachain(
         pack_chain.pack_chain_links[ix].data_sz;
 
     delta_chain_link_t *link = &result.delta_chain_links[ix];
+    get_delta_chain_link_result_t next;
 
-    ptr = getdeltachainlink(ptr, link);
+    next = getdeltachainlink(ptr, link);
 
-    if (ptr > end) {
+    if (next.ptr > end) {
       result.code = GET_DELTA_CHAIN_CORRUPT;
       goto error_cleanup;
     }
+
+    ptr = next.ptr;
   }
 
   for (int ix = 0; ix < pack_chain.links_idx; ix ++) {

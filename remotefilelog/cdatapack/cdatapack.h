@@ -135,8 +135,22 @@ extern delta_chain_t getdeltachain(
 
 extern void freedeltachain(delta_chain_t chain);
 
+typedef enum {
+  GET_DELTA_CHAIN_LINK_OK,
+  GET_DELTA_CHAIN_LINK_OOM,
+  GET_DELTA_CHAIN_LINK_CORRUPT,
+} get_delta_chain_link_code_t;
+
+/**
+ * This represents an entire delta chain.
+ */
+typedef struct _get_delta_chain_link_result_t {
+  get_delta_chain_link_code_t code;
+  const uint8_t *ptr;
+} get_delta_chain_link_result_t;
+
 // this should really be private, but we need it for the cdatapack_dump tool.
-extern const uint8_t *getdeltachainlink(
+extern const get_delta_chain_link_result_t getdeltachainlink(
     const uint8_t *ptr, delta_chain_link_t *link);
 
 #endif //CDATAPACK_CDATAPACK_H

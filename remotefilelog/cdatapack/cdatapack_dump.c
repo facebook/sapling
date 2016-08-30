@@ -45,8 +45,10 @@ int main(int argc, char *argv[]) {
 
   while (ptr < end) {
     delta_chain_link_t link;
+    get_delta_chain_link_result_t next;
 
-    ptr = getdeltachainlink(ptr, &link);
+    next = getdeltachainlink(ptr, &link);
+    ptr = next.ptr;
 
     if (last_filename_sz != link.filename_sz ||
         memcmp(last_filename, link.filename, last_filename_sz) != 0) {
