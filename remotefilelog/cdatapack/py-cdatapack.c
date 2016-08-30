@@ -198,19 +198,30 @@ static PyObject *cdatapack_getdeltachain(
     return NULL;
   }
 
-  delta_chain_t *chain = getdeltachain(self->handle, (const uint8_t *) node);
-  if (chain == NULL) {
+  delta_chain_t chain = getdeltachain(self->handle, (const uint8_t *) node);
+  if (chain.code == GET_DELTA_CHAIN_OOM) {
+    PyErr_NoMemory();
+    return NULL;
+  } else if (chain.code == GET_DELTA_CHAIN_NOT_FOUND) {
     Py_RETURN_NONE;
+  } else if (chain.code != GET_DELTA_CHAIN_OK) {
+    // corrupt, etc.
+    PyErr_Format(
+        PyExc_ValueError,
+        "unknown error reading node %.*s", (int) node_sz, node);
+    return NULL;
   }
-  PyObject *result = PyList_New(chain->links_count);
-  // TODO: error checking
+  PyObject *result = PyList_New(chain.links_count);
+  if (result == NULL) {
+    goto err_cleanup;
+  }
 
-  for (int ix = 0; ix < chain->links_count; ix ++) {
+  for (int ix = 0; ix < chain.links_count; ix ++) {
     PyObject *tuple = NULL;
     PyObject *name = NULL, *retnode = NULL, *deltabasenode = NULL, *delta =
         NULL;
 
-    delta_chain_link_t *link = &chain->delta_chain_links[ix];
+    delta_chain_link_t *link = &chain.delta_chain_links[ix];
 
     name = PyString_FromStringAndSize(link->filename, link->filename_sz);
     retnode = PyString_FromStringAndSize((const char *) link->node, NODE_SZ);

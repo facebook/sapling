@@ -75,10 +75,18 @@ typedef struct _delta_chain_link_t {
   const uint8_t *delta;
 } delta_chain_link_t;
 
+typedef enum {
+  GET_DELTA_CHAIN_OK,
+  GET_DELTA_CHAIN_OOM,
+  GET_DELTA_CHAIN_NOT_FOUND,
+  GET_DELTA_CHAIN_CORRUPT,
+} get_delta_chain_code_t;
+
 /**
  * This represents an entire delta chain.
  */
 typedef struct _delta_chain_t {
+  get_delta_chain_code_t code;
   delta_chain_link_t *delta_chain_links;
   size_t links_count;
 } delta_chain_t;
@@ -110,11 +118,11 @@ bool find(
 /**
  * Retrieves a delta chain for a given node.
  */
-extern delta_chain_t *getdeltachain(
+extern delta_chain_t getdeltachain(
     const datapack_handle_t *handle,
     const uint8_t node[NODE_SZ]);
 
-extern void freedeltachain(delta_chain_t *chain);
+extern void freedeltachain(delta_chain_t chain);
 
 // this should really be private, but we need it for the cdatapack_dump tool.
 extern const uint8_t *getdeltachainlink(

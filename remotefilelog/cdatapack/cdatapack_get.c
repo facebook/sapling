@@ -41,7 +41,12 @@ int main(int argc, char *argv[]) {
 
   unhexlify(argv[2], NODE_SZ * 2, binhash);
 
-  delta_chain_t *chain = getdeltachain(handle, binhash);
+  delta_chain_t chain = getdeltachain(handle, binhash);
+
+  if (chain.code != GET_DELTA_CHAIN_OK) {
+    fprintf(stderr, "error retrieving delta chain (code=%d)\n", chain.code);
+    return 1;
+  }
 
   const char *last_filename = NULL;
   uint16_t last_filename_sz = 0;
@@ -52,8 +57,8 @@ int main(int argc, char *argv[]) {
   char deltabase_buffer[NODE_SZ * 2];
   char sha_buffer[NODE_SZ * 2];
 
-  for (int ix = 0; ix < chain->links_count; ix ++) {
-    delta_chain_link_t *link = &chain->delta_chain_links[ix];
+  for (int ix = 0; ix < chain.links_count; ix ++) {
+    delta_chain_link_t *link = &chain.delta_chain_links[ix];
 
     SHA_CTX ctx;
     SHA1_Init(&ctx);

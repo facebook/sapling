@@ -440,20 +440,24 @@ const uint8_t *getdeltachainlink(
   return ptr;
 }
 
-delta_chain_t *getdeltachain(
+delta_chain_t getdeltachain(
     const datapack_handle_t *handle,
     const uint8_t node[NODE_SZ]) {
   pack_chain_t *pack_chain = build_pack_chain(handle, node);
 
   if (pack_chain == NULL) {
-    return NULL;
+    // TODO: build_pack_chain needs to return a more detailed error code.
+    return (delta_chain_t) { GET_DELTA_CHAIN_NOT_FOUND };
   }
 
-  delta_chain_t *delta_chain = malloc(sizeof(delta_chain_t));
-  delta_chain->links_count = pack_chain->links_idx;
-  delta_chain->delta_chain_links = malloc(
-      delta_chain->links_count * sizeof(delta_chain_link_t));
-  // TODO: error handling
+  delta_chain_t result;
+  result.links_count = pack_chain->links_idx;
+  result.delta_chain_links = malloc(
+      result.links_count * sizeof(delta_chain_link_t));
+  if (result.delta_chain_links == NULL) {
+    result.code = GET_DELTA_CHAIN_OOM;
+    goto error_cleanup;
+  }
 
 
   for (int ix = 0; ix < pack_chain->links_idx; ix ++) {
@@ -462,12 +466,13 @@ delta_chain_t *getdeltachain(
     const uint8_t *end = ptr +
         pack_chain->pack_chain_links[ix].data_sz;
 
-    delta_chain_link_t *link = &delta_chain->delta_chain_links[ix];
+    delta_chain_link_t *link = &result.delta_chain_links[ix];
 
     ptr = getdeltachainlink(ptr, link);
 
     if (ptr > end) {
-      abort();
+      result.code = GET_DELTA_CHAIN_CORRUPT;
+      goto error_cleanup;
     }
   }
 
@@ -480,19 +485,25 @@ delta_chain_t *getdeltachain(
     platform_madvise_away((void *) ptr, end - ptr);
   }
 
-  // free pack chain.
-  if (pack_chain != NULL) {
-    free(pack_chain->pack_chain_links);
-    free(pack_chain);
-  }
+  result.code = GET_DELTA_CHAIN_OK;
 
-  return delta_chain;
+  goto cleanup;
+
+error_cleanup:
+  free(result.delta_chain_links);
+
+cleanup:
+
+  // free pack chain.
+  free(pack_chain->pack_chain_links);
+  free(pack_chain);
+
+  return result;
 }
 
-void freedeltachain(delta_chain_t *chain) {
-  for (size_t ix = 0; ix < chain->links_count; ix ++) {
-    free((void *) chain->delta_chain_links[ix].delta);
+void freedeltachain(delta_chain_t chain) {
+  for (size_t ix = 0; ix < chain.links_count; ix ++) {
+    free((void *) chain.delta_chain_links[ix].delta);
   }
-  free(chain->delta_chain_links);
-  free(chain);
+  free(chain.delta_chain_links);
 }
