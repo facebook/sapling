@@ -882,6 +882,8 @@ class treemanifest(object):
 
     def writesubtrees(self, m1, m2, writesubtree):
         self._load() # for consistency; should never have any effect here
+        m1._load()
+        m2._load()
         emptytree = treemanifest()
         for d, subm in self._dirs.iteritems():
             subp1 = m1._dirs.get(d, emptytree)._node
