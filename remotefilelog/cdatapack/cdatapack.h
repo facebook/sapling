@@ -41,7 +41,18 @@ typedef struct _pack_index_entry_t {
   index_offset_t deltabase_index_offset;
 } pack_index_entry_t;
 
+typedef enum {
+  DATAPACK_HANDLE_OK,
+  DATAPACK_HANDLE_OOM,
+  DATAPACK_HANDLE_IO_ERROR,
+  DATAPACK_HANDLE_MMAP_ERROR,
+  DATAPACK_HANDLE_CORRUPT,
+  DATAPACK_HANDLE_VERSION_MISMATCH,
+} datapack_handle_status_t;
+
 typedef struct _datapack_handle_t {
+  datapack_handle_status_t status;
+
   int indexfd;
   int datafd;
   void* index_mmap;

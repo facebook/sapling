@@ -157,9 +157,7 @@ datapack_handle_t *open_datapack(
 
   handle = malloc(sizeof(datapack_handle_t));
   if (handle == NULL) {
-    // TODO: at some future point in time, it might be nice to add some
-    // better error reporting like we have in cfastmanifest.
-    goto error_cleanup;
+    return NULL;
   }
 
   // can't just use memset because MAP_FAILED is the error result code, not
@@ -170,6 +168,7 @@ datapack_handle_t *open_datapack(
 
   buffer = malloc(1 + (indexfp_sz > datafp_sz ? indexfp_sz : datafp_sz));
   if (buffer == NULL) {
+    handle->status = DATAPACK_HANDLE_OOM;
     goto error_cleanup;
   }
 
@@ -177,6 +176,7 @@ datapack_handle_t *open_datapack(
   buffer[indexfp_sz] = '\0';
   handle->indexfd = open(buffer, O_RDONLY);
   if (handle->indexfd < 0) {
+    handle->status = DATAPACK_HANDLE_IO_ERROR;
     goto error_cleanup;
   }
 
@@ -187,6 +187,7 @@ datapack_handle_t *open_datapack(
   buffer[datafp_sz] = '\0';
   handle->datafd = open(buffer, O_RDONLY);
   if (handle->datafd < 0) {
+    handle->status = DATAPACK_HANDLE_IO_ERROR;
     goto error_cleanup;
   }
 
@@ -196,23 +197,27 @@ datapack_handle_t *open_datapack(
   handle->index_mmap = mmap(NULL, (size_t) handle->index_file_sz, PROT_READ,
       MAP_PRIVATE, handle->indexfd, (off_t) 0);
   if (handle->index_mmap == MAP_FAILED) {
+    handle->status = DATAPACK_HANDLE_MMAP_ERROR;
     goto error_cleanup;
   }
 
   handle->data_mmap = mmap(NULL, (size_t) handle->data_file_sz, PROT_READ,
       MAP_PRIVATE, handle->datafd, (off_t) 0);
   if (handle->data_mmap == MAP_FAILED) {
+    handle->status = DATAPACK_HANDLE_MMAP_ERROR;
     goto error_cleanup;
   }
 
   // read the headers and ensure that the file length is at least somewhat
   // sane.
   if (handle->index_file_sz < sizeof(disk_index_header_t)) {
+    handle->status = DATAPACK_HANDLE_CORRUPT;
     goto error_cleanup;
   }
   const disk_index_header_t *header = (const disk_index_header_t *)
       handle->index_mmap;
   if (header->version != VERSION) {
+    handle->status = DATAPACK_HANDLE_VERSION_MISMATCH;
     goto error_cleanup;
   }
   handle->large_fanout = ((header->config & LARGE_FANOUT) != 0);
@@ -220,6 +225,7 @@ datapack_handle_t *open_datapack(
   handle->fanout_table = (fanout_table_entry_t *) calloc(
       fanout_count, sizeof(fanout_table_entry_t));
   if (handle->fanout_table == NULL) {
+    handle->status = DATAPACK_HANDLE_OOM;
     goto error_cleanup;
   }
   handle->index_table = (disk_index_entry_t *)
@@ -230,6 +236,7 @@ datapack_handle_t *open_datapack(
       (((const char *) handle->index_mmap) + handle->index_file_sz);
   if (handle->index_table > index_end) {
     // ensure the file is at least big enough to include the fanout table.
+    handle->status = DATAPACK_HANDLE_CORRUPT;
     goto error_cleanup;
   }
 
@@ -284,6 +291,7 @@ datapack_handle_t *open_datapack(
     }
     handle->fanout_table[jx].end_index = last_offset;
   }
+  handle->status = DATAPACK_HANDLE_OK;
 
   goto success_cleanup;
 
@@ -308,10 +316,6 @@ error_cleanup:
   if (handle != NULL) {
     free(handle->fanout_table);
   }
-
-  free(handle);
-
-  handle = NULL;
 
 success_cleanup:
 

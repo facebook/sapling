@@ -62,13 +62,23 @@ static int cdatapack_init(py_cdatapack *self, PyObject *args) {
       data_path, strlen(data_path));
 
   if (self->handle == NULL) {
-    PyErr_Format(PyExc_ValueError,
-        "Error setting up datapack");
+    PyErr_NoMemory();
     return -1;
+  } else if (self->handle->status == DATAPACK_HANDLE_OK) {
+    return 0;
   }
-  // TODO: error handling
 
-  return 0;
+  if (self->handle->status == DATAPACK_HANDLE_VERSION_MISMATCH) {
+    PyErr_Format(PyExc_RuntimeError, "Unsupported version");
+  } else if (self->handle->status != DATAPACK_HANDLE_OK) {
+    PyErr_Format(PyExc_ValueError,
+        "Error setting up datapack (status=%d)", self->handle->status);
+  }
+
+  free(self->handle);
+  self->handle = NULL;
+  return -1;
+
 }
 
 /**
