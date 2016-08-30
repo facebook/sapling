@@ -12,7 +12,9 @@
 #include <sys/mman.h>
 
 #if defined(__linux__)
+#if !defined(_BSD_SOURCE)
 #define _BSD_SOURCE
+#endif /* #if !defined(_BSD_SOURCE) */
 #include <endian.h>
 #define ntohll be64toh
 
