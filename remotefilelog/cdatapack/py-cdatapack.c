@@ -7,6 +7,10 @@
 //
 // no-check-code
 
+// The PY_SSIZE_T_CLEAN define must be defined before the Python.h include,
+// as per the documentation.
+#define PY_SSIZE_T_CLEAN
+
 #include <Python.h>
 
 #include "cdatapack.h"
@@ -45,7 +49,7 @@ static int cdatapack_init(py_cdatapack *self, PyObject *args) {
   self->handle = NULL;
 
   char *node;
-  int nodelen;
+  Py_ssize_t nodelen;
 
   if (!PyArg_ParseTuple(args, "s#", &node, &nodelen)) {
     return -1;
@@ -143,7 +147,7 @@ static PyObject *cdatapack_find(
     py_cdatapack *self,
     PyObject *args) {
   const char *node;
-  int node_sz;
+  Py_ssize_t node_sz;
 
   if (!PyArg_ParseTuple(args, "s#", &node, &node_sz)) {
     return NULL;
@@ -197,7 +201,7 @@ static PyObject *cdatapack_getdeltachain(
     py_cdatapack *self,
     PyObject *args) {
   const char *node;
-  int node_sz;
+  Py_ssize_t node_sz;
 
   if (!PyArg_ParseTuple(args, "s#", &node, &node_sz)) {
     return NULL;
@@ -238,7 +242,7 @@ static PyObject *cdatapack_getdeltachain(
     deltabasenode = PyString_FromStringAndSize(
         (const char *) link->deltabase_node, NODE_SZ);
     delta = PyString_FromStringAndSize(
-        (const char *) link->delta, link->delta_sz);
+        (const char *) link->delta, (Py_ssize_t) link->delta_sz);
 
     if (name != NULL &&
         retnode != NULL &&
