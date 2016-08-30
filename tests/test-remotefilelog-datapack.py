@@ -13,6 +13,7 @@ import silenttestrunner
 from remotefilelog.datapack import (
     datapack,
     datapackstore,
+    fastdatapack,
     mutabledatapack,
 )
 from remotefilelog.basepack import (
@@ -24,7 +25,11 @@ from remotefilelog.basepack import (
 from mercurial import scmutil
 from mercurial.node import hex, bin, nullid
 
-class datapacktests(unittest.TestCase):
+class datapacktestsbase(object):
+    def __init__(self, datapackreader, paramsavailable):
+        self.datapackreader = datapackreader
+        self.paramsavailable = paramsavailable
+
     def setUp(self):
         self.tempdirs = []
 
@@ -55,7 +60,7 @@ class datapacktests(unittest.TestCase):
             packer.add(filename, node, base, content)
 
         path = packer.close()
-        return datapack(path)
+        return self.datapackreader(path)
 
     def testAddSingle(self):
         """Test putting a simple blob into a pack and reading it out.
@@ -66,7 +71,8 @@ class datapacktests(unittest.TestCase):
 
         revisions = [(filename, node, nullid, content)]
         pack = self.createPack(revisions)
-        self.assertEquals(pack.params.fanoutprefix, SMALLFANOUTPREFIX)
+        if self.paramsavailable:
+            self.assertEquals(pack.params.fanoutprefix, SMALLFANOUTPREFIX)
 
         chain = pack.getdeltachain(filename, node)
         self.assertEquals(content, chain[0][4])
@@ -180,7 +186,7 @@ class datapacktests(unittest.TestCase):
             f.write(raw)
 
         try:
-            pack = datapack(pack.path)
+            pack = self.datapackreader(pack.path)
             self.assertTrue(False, "bad version number should have thrown")
         except RuntimeError:
             pass
@@ -206,7 +212,8 @@ class datapacktests(unittest.TestCase):
             revisions.append((filename, node, nullid, content))
 
         pack = self.createPack(revisions)
-        self.assertEquals(pack.params.fanoutprefix, LARGEFANOUTPREFIX)
+        if self.paramsavailable:
+            self.assertEquals(pack.params.fanoutprefix, LARGEFANOUTPREFIX)
 
         for (filename, node), content in blobs.iteritems():
             actualcontent = pack.getdeltachain(filename, node)[0][4]
@@ -245,7 +252,7 @@ class datapacktests(unittest.TestCase):
             # Perf of large multi-get
             import gc
             gc.disable()
-            pack = datapack(path)
+            pack = self.datapackreader(path)
             for lookupsize in lookupsizes:
                 if lookupsize > packsize:
                     continue
@@ -266,6 +273,16 @@ class datapacktests(unittest.TestCase):
         # The perf test is meant to produce output, so we always fail the test
         # so the user sees the output.
         raise RuntimeError("perf test always fails")
+
+class datapacktests(datapacktestsbase, unittest.TestCase):
+    def __init__(self, *args, **kwargs):
+        datapacktestsbase.__init__(self, datapack, True)
+        unittest.TestCase.__init__(self, *args, **kwargs)
+
+class fastdatapacktests(datapacktestsbase, unittest.TestCase):
+    def __init__(self, *args, **kwargs):
+        datapacktestsbase.__init__(self, fastdatapack, False)
+        unittest.TestCase.__init__(self, *args, **kwargs)
 
 # TODO:
 # datapack store:
