@@ -1290,8 +1290,15 @@ class localrepository(object):
         except error.LockHeld as inst:
             if not wait:
                 raise
-            self.ui.warn(_("waiting for lock on %s held by %r\n") %
-                         (desc, inst.locker))
+            # show more details for new-style locks
+            if ':' in inst.locker:
+                host, pid = inst.locker.split(":", 1)
+                self.ui.warn(
+                    _("waiting for lock on %s held by process %r "
+                      "on host %r\n") % (desc, pid, host))
+            else:
+                self.ui.warn(_("waiting for lock on %s held by %r\n") %
+                             (desc, inst.locker))
             # default to 600 seconds timeout
             l = lockmod.lock(vfs, lockname,
                              int(self.ui.config("ui", "timeout", "600")),
