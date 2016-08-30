@@ -1586,7 +1586,7 @@ def update(repo, node, branchmerge, force, ancestor=None,
                 actions[m] = []
             actions[m].append((f, args, msg))
 
-        if not util.checkcase(repo.path):
+        if not util.fscasesensitive(repo.path):
             # check collision between files only in p2 for clean update
             if (not branchmerge and
                 (force or not wc.dirty(missing=True, branch=False))):

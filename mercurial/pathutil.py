@@ -40,7 +40,7 @@ class pathauditor(object):
         self.root = root
         self._realfs = realfs
         self.callback = callback
-        if os.path.lexists(root) and not util.checkcase(root):
+        if os.path.lexists(root) and not util.fscasesensitive(root):
             self.normcase = util.normcase
         else:
             self.normcase = lambda x: x

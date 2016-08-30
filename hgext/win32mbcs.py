@@ -148,8 +148,8 @@ def wrapname(name, wrapper):
 # NOTE: os.path.dirname() and os.path.basename() are safe because
 #       they use result of os.path.split()
 funcs = '''os.path.join os.path.split os.path.splitext
- os.path.normpath os.makedirs
- mercurial.util.endswithsep mercurial.util.splitpath mercurial.util.checkcase
+ os.path.normpath os.makedirs mercurial.util.endswithsep
+ mercurial.util.splitpath mercurial.util.fscasesensitive
  mercurial.util.fspath mercurial.util.pconvert mercurial.util.normpath
  mercurial.util.checkwinfilename mercurial.util.checkosfilename
  mercurial.util.split'''

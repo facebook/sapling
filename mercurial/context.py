@@ -1501,7 +1501,7 @@ class workingctx(committablectx):
 
         # Only a case insensitive filesystem needs magic to translate user input
         # to actual case in the filesystem.
-        if not util.checkcase(r.root):
+        if not util.fscasesensitive(r.root):
             return matchmod.icasefsmatcher(r.root, r.getcwd(), pats, include,
                                            exclude, default, r.auditor, self,
                                            listsubrepos=listsubrepos,

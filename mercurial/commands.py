@@ -2449,7 +2449,7 @@ def debugfsinfo(ui, path="."):
     ui.write(('exec: %s\n') % (util.checkexec(path) and 'yes' or 'no'))
     ui.write(('symlink: %s\n') % (util.checklink(path) and 'yes' or 'no'))
     ui.write(('hardlink: %s\n') % (util.checknlink(path) and 'yes' or 'no'))
-    ui.write(('case-sensitive: %s\n') % (util.checkcase('.debugfsinfo')
+    ui.write(('case-sensitive: %s\n') % (util.fscasesensitive('.debugfsinfo')
                                 and 'yes' or 'no'))
     os.unlink('.debugfsinfo')
 

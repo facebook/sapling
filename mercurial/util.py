@@ -1213,7 +1213,7 @@ def fstat(fp):
 
 # File system features
 
-def checkcase(path):
+def fscasesensitive(path):
     """
     Return true if the given path is on a case-sensitive filesystem
 
