@@ -220,6 +220,12 @@ datapack_handle_t *open_datapack(
     handle->status = DATAPACK_HANDLE_VERSION_MISMATCH;
     goto error_cleanup;
   }
+
+  if (((const char *) handle->data_mmap)[0] != VERSION) {
+    handle->status = DATAPACK_HANDLE_VERSION_MISMATCH;
+    goto error_cleanup;
+  }
+
   handle->large_fanout = ((header->config & LARGE_FANOUT) != 0);
   int fanout_count = 1 << (handle->large_fanout ? 16 : 8);
   handle->fanout_table = (fanout_table_entry_t *) calloc(
