@@ -463,7 +463,7 @@ const get_delta_chain_link_result_t getdeltachainlink(
       (const char *) ptr,
       (char *) decompress_output,
       (int32_t) link->delta_sz);
-  if (outbytes != compressed_sz) {
+  if (link->delta_sz != 0 && outbytes != compressed_sz) {
     return (get_delta_chain_link_result_t) { GET_DELTA_CHAIN_LINK_CORRUPT,
                                              NULL };
   }
