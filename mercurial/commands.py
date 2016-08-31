@@ -3381,9 +3381,9 @@ def debugrevlog(ui, repo, file_=None, **opts):
     nump2prev = 0
     chainlengths = []
 
-    datasize = [None, 0, 0L]
-    fullsize = [None, 0, 0L]
-    deltasize = [None, 0, 0L]
+    datasize = [None, 0, 0]
+    fullsize = [None, 0, 0]
+    deltasize = [None, 0, 0]
 
     def addsize(size, l):
         if l[0] is None or size < l[0]:

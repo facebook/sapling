@@ -558,8 +558,8 @@ else:
                     ('srWindow', _SMALL_RECT),
                     ('dwMaximumWindowSize', _COORD)]
 
-    _STD_OUTPUT_HANDLE = 0xfffffff5L # (DWORD)-11
-    _STD_ERROR_HANDLE = 0xfffffff4L  # (DWORD)-12
+    _STD_OUTPUT_HANDLE = 0xfffffff5 # (DWORD)-11
+    _STD_ERROR_HANDLE = 0xfffffff4  # (DWORD)-12
 
     _FOREGROUND_BLUE = 0x0001
     _FOREGROUND_GREEN = 0x0002

@@ -231,7 +231,7 @@ class zipit(object):
         if islink:
             mode = 0o777
             ftype = _UNX_IFLNK
-        i.external_attr = (mode | ftype) << 16L
+        i.external_attr = (mode | ftype) << 16
         # add "extended-timestamp" extra block, because zip archives
         # without this will be extracted with unexpected timestamp,
         # if TZ is not configured as GMT
