@@ -48,8 +48,6 @@ configcreate = 'server-bundlestore-create'
 
 class bundlestore(object):
     def __init__(self, repo):
-        if not repo.local():
-            return
         self._repo = repo
         self.store = store.filebundlestore(self._repo.ui, self._repo)
         indextype = self._repo.ui.config('infinitepush', 'indextype', 'disk')
@@ -60,7 +58,8 @@ class bundlestore(object):
                               indextype)
 
 def reposetup(ui, repo):
-    repo.bundlestore = bundlestore(repo)
+    if repo.local():
+        repo.bundlestore = bundlestore(repo)
 
 def uisetup(ui):
     # remotenames circumvents the default push implementation entirely, so make
