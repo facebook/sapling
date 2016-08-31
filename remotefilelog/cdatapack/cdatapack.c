@@ -402,6 +402,7 @@ static pack_chain_t build_pack_chain(
 
     pack_chain.pack_chain_links[pack_chain.links_idx++] = entry;
   }
+  pack_chain.code = PACK_CHAIN_OK;
 
   return pack_chain;
 
