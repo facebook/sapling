@@ -4,6 +4,17 @@
 //
 // no-check-code
 
+// be64toh is only available if _DEFAULT_SOURCE is defined for glibc >= 2.19,
+// or _BSD_SOURCE is defined for glibc < 2.19. These have to be defined before
+// #include <features.h>. Macros testing glibc version are defined by
+// features.h, so they cannot be used here.
+#ifndef _DEFAULT_SOURCE
+#define _DEFAULT_SOURCE
+#endif /* ndef _DEFAULT_SOURCE */
+#ifndef _BSD_SOURCE
+#define _BSD_SOURCE
+#endif /* ndef _BSD_SOURCE */
+
 #include <errno.h>
 #include <fcntl.h>
 #include <memory.h>
@@ -12,9 +23,6 @@
 #include <sys/mman.h>
 
 #if defined(__linux__)
-#if !defined(_BSD_SOURCE)
-#define _BSD_SOURCE
-#endif /* #if !defined(_BSD_SOURCE) */
 #include <endian.h>
 #define ntohll be64toh
 
