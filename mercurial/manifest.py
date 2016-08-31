@@ -946,22 +946,20 @@ class manifestlog(object):
         """Retrieves the manifest instance for the given node. Throws a KeyError
         if not found.
         """
-        if (self._oldmanifest._treeondisk
-            or self._oldmanifest._treeinmem):
-            # TODO: come back and support tree manifests directly
-            return self._oldmanifest.read(node)
-
-        if node == revlog.nullid:
-            return manifestdict()
         if node in self._mancache:
             cachemf = self._mancache[node]
             # The old manifest may put non-ctx manifests in the cache, so skip
             # those since they don't implement the full api.
-            if isinstance(cachemf, manifestctx):
+            if (isinstance(cachemf, manifestctx) or
+                isinstance(cachemf, treemanifestctx)):
                 return cachemf
 
-        m = manifestctx(self._revlog, node)
-        self._mancache[node] = m
+        if self._oldmanifest._treeinmem:
+            m = treemanifestctx(self._revlog, '', node)
+        else:
+            m = manifestctx(self._revlog, node)
+        if node != revlog.nullid:
+            self._mancache[node] = m
         return m
 
 class manifestctx(manifestdict):
@@ -972,9 +970,13 @@ class manifestctx(manifestdict):
         self._revlog = revlog
 
         self._node = node
-        self.p1, self.p2 = revlog.parents(node)
-        rev = revlog.rev(node)
-        self.linkrev = revlog.linkrev(rev)
+
+        # TODO: We eventually want p1, p2, and linkrev exposed on this class,
+        # but let's add it later when something needs it and we can load it
+        # lazily.
+        #self.p1, self.p2 = revlog.parents(node)
+        #rev = revlog.rev(node)
+        #self.linkrev = revlog.linkrev(rev)
 
         # This should eventually be made lazy loaded, so consumers can access
         # the node/p1/linkrev data without having to parse the whole manifest.
@@ -982,6 +984,38 @@ class manifestctx(manifestdict):
         arraytext = array.array('c', data)
         revlog._fulltextcache[node] = arraytext
         super(manifestctx, self).__init__(data)
+
+    def node(self):
+        return self._node
+
+class treemanifestctx(treemanifest):
+    def __init__(self, revlog, dir, node):
+        revlog = revlog.dirlog(dir)
+        self._revlog = revlog
+        self._dir = dir
+
+        self._node = node
+
+        # TODO: Load p1/p2/linkrev lazily. They need to be lazily loaded so that
+        # we can instantiate treemanifestctx objects for directories we don't
+        # have on disk.
+        #self.p1, self.p2 = revlog.parents(node)
+        #rev = revlog.rev(node)
+        #self.linkrev = revlog.linkrev(rev)
+
+        if revlog._treeondisk:
+            super(treemanifestctx, self).__init__(dir=dir)
+            def gettext():
+                return revlog.revision(node)
+            def readsubtree(dir, subm):
+                return revlog.dirlog(dir).read(subm)
+            self.read(gettext, readsubtree)
+            self.setnode(node)
+        else:
+            text = revlog.revision(node)
+            arraytext = array.array('c', text)
+            revlog.fulltextcache[node] = arraytext
+            super(treemanifestctx, self).__init__(dir=dir, text=text)
 
     def node(self):
         return self._node
