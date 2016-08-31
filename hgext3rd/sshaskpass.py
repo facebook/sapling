@@ -31,12 +31,6 @@ import tempfile
 
 from multiprocessing.reduction import recv_handle, send_handle
 
-from mercurial import (
-    extensions,
-    sshpeer,
-    util,
-)
-
 @contextlib.contextmanager
 def _silentexception(terminate=False):
     """silent common exceptions
@@ -214,3 +208,10 @@ if __name__ == '__main__' and all(n in os.environ
     # started by ssh as ssh-askpass
     with _silentexception(terminate=True):
         _sshaskpassmain(' '.join(sys.argv[1:]))
+else:
+    # imported as a mercurial extension
+    from mercurial import (
+        extensions,
+        sshpeer,
+        util,
+    )
