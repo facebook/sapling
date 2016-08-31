@@ -1,7 +1,7 @@
 Create an ondisk bundlestore in .hg/scratchbranches
 
   $ extpath=`dirname $TESTDIR`
-  $ cp -r $extpath/../infinitepush $TESTTMP # use $TESTTMP substitution in message
+  $ cp -r $extpath/infinitepush $TESTTMP # use $TESTTMP substitution in message
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > infinitepush=$TESTTMP/infinitepush
