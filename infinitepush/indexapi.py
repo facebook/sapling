@@ -36,6 +36,10 @@ class indexapi(object):
         """Returns the node for the given bookmark. None if it doesn't exist."""
         raise NotImplementedError()
 
+    def getbookmarks(self, query):
+        """Returns bookmarks that match the query"""
+        raise NotImplementedError()
+
 class fileindexapi(indexapi):
     def __init__(self, repo):
         super(fileindexapi, self).__init__()
