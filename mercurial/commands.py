@@ -2420,6 +2420,10 @@ def debugextensions(ui, **opts):
         fm.condwrite(ui.verbose and extsource, 'source',
                  _('  location: %s\n'), extsource or "")
 
+        if ui.verbose:
+            fm.plain(_('  bundled: %s\n') % ['no', 'yes'][isinternal])
+        fm.data(bundled=isinternal)
+
         fm.condwrite(ui.verbose and showtestedwith, 'testedwith',
                      _('  tested with: %s\n'),
                      fm.formatlist(showtestedwith, name='ver'))

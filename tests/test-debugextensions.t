@@ -32,66 +32,80 @@
   $ hg debugextensions -v
   color
     location: */hgext/color.py* (glob)
+    bundled: yes
     tested with: internal
   ext1
     location: */extwithoutinfos.py* (glob)
+    bundled: no
   ext2
     location: */extwithinfos.py* (glob)
+    bundled: no
     tested with: 3.0 3.1 3.2.1
     bug reporting: https://example.org/bts
   histedit
     location: */hgext/histedit.py* (glob)
+    bundled: yes
     tested with: internal
   mq
     location: */hgext/mq.py* (glob)
+    bundled: yes
     tested with: internal
   patchbomb
     location: */hgext/patchbomb.py* (glob)
+    bundled: yes
     tested with: internal
   rebase
     location: */hgext/rebase.py* (glob)
+    bundled: yes
     tested with: internal
 
   $ hg debugextensions -Tjson | sed 's|\\\\|/|g'
   [
    {
     "buglink": "",
+    "bundled": true,
     "name": "color",
     "source": "*/hgext/color.py*", (glob)
     "testedwith": ["internal"]
    },
    {
     "buglink": "",
+    "bundled": false,
     "name": "ext1",
     "source": "*/extwithoutinfos.py*", (glob)
     "testedwith": []
    },
    {
     "buglink": "https://example.org/bts",
+    "bundled": false,
     "name": "ext2",
     "source": "*/extwithinfos.py*", (glob)
     "testedwith": ["3.0", "3.1", "3.2.1"]
    },
    {
     "buglink": "",
+    "bundled": true,
     "name": "histedit",
     "source": "*/hgext/histedit.py*", (glob)
     "testedwith": ["internal"]
    },
    {
     "buglink": "",
+    "bundled": true,
     "name": "mq",
     "source": "*/hgext/mq.py*", (glob)
     "testedwith": ["internal"]
    },
    {
     "buglink": "",
+    "bundled": true,
     "name": "patchbomb",
     "source": "*/hgext/patchbomb.py*", (glob)
     "testedwith": ["internal"]
    },
    {
     "buglink": "",
+    "bundled": true,
     "name": "rebase",
     "source": "*/hgext/rebase.py*", (glob)
     "testedwith": ["internal"]
