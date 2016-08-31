@@ -284,7 +284,7 @@ static void treemanifest_diffrecurse(
         // both are files
         bool flagsdiffer = (
           (selfentry->flag && otherentry->flag && *selfentry->flag != *otherentry->flag) ||
-          ((bool)selfentry->flag != (bool)selfentry->flag)
+          ((bool)selfentry->flag != (bool)otherentry->flag)
         );
 
         if (selfbinnode != otherbinnode || flagsdiffer) {
