@@ -41,10 +41,8 @@ class fileindexapi(indexapi):
         super(fileindexapi, self).__init__()
         self._repo = repo
         root = repo.ui.config('infinitepush', 'indexpath')
-        if root:
-            root = os.path.join(repo.root, root)
-        else:
-            root = self._repo.vfs.join("scratchbranches", "index")
+        if not root:
+            root = os.path.join('scratchbranches', 'index')
 
         self._nodemap = os.path.join(root, 'nodemap')
         self._bookmarkmap = os.path.join(root, 'bookmarkmap')
@@ -67,14 +65,15 @@ class fileindexapi(indexapi):
         return self._read(bookmarkpath)
 
     def _write(self, path, value):
-        dirname = os.path.dirname(path)
-        if not os.path.exists(dirname):
-            os.makedirs(dirname)
-        with open(path, 'w') as f:
-            f.write(value)
+        vfs = self._repo.vfs
+        dirname = vfs.dirname(path)
+        if not vfs.exists(dirname):
+            vfs.makedirs(dirname)
+
+        vfs.write(path, value)
 
     def _read(self, path):
-        if not os.path.exists(path):
+        vfs = self._repo.vfs
+        if not vfs.exists(path):
             return None
-        with open(path, 'r') as f:
-            return f.read()
+        return vfs.read(path)
