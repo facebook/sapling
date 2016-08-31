@@ -15,6 +15,11 @@
 #define DATAIDX_EXT  ".dataidx"
 #define DATAPACK_EXT ".datapack"
 
+// if the platform uses XMM registers to run strlen, then we might load
+// beyond the memory region allocated for the strings.  to ensure we keep
+// valgrind happy, we pad the strings with extra space and initialize the areas.
+#define XMM_SZ 16
+
 int main(int argc, char *argv[]) {
   if (argc < 3) {
     fprintf(stderr, "%s <path> <node>\n", argv[0]);
@@ -53,9 +58,16 @@ int main(int argc, char *argv[]) {
 
   uint8_t sha[NODE_SZ];
 
-  char node_buffer[NODE_SZ * 2];
-  char deltabase_buffer[NODE_SZ * 2];
-  char sha_buffer[NODE_SZ * 2];
+  char node_buffer[NODE_SZ * 2 + XMM_SZ];
+  char deltabase_buffer[NODE_SZ * 2 + XMM_SZ];
+  char sha_buffer[NODE_SZ * 2 + + XMM_SZ];
+
+  // to keep valgrind happy, we initialize the memory *beyond* what hexlify
+  // will write to.  that way, when a parallelized strnlen comes along, it
+  // does not find the memory beyond our string uninitialized.
+  memset(&node_buffer[NODE_SZ * 2], 0, XMM_SZ);
+  memset(&deltabase_buffer[NODE_SZ * 2], 0, XMM_SZ);
+  memset(&sha_buffer[NODE_SZ * 2], 0, XMM_SZ);
 
   for (int ix = 0; ix < chain.links_count; ix ++) {
     delta_chain_link_t *link = &chain.delta_chain_links[ix];
@@ -82,10 +94,13 @@ int main(int argc, char *argv[]) {
         NODE_SZ * 2, "Delta Base",
         NODE_SZ * 2, "Delta SHA1",
         "Delta Length");
-    printf("%-.*s  %-.*s  %-.*s  %" PRIu64 "\n",
-        NODE_SZ * 2, node_buffer,
-        NODE_SZ * 2, deltabase_buffer,
-        NODE_SZ * 2, sha_buffer,
+    printf("%-.*s  ",
+        NODE_SZ * 2, node_buffer);
+    printf("%-.*s  ",
+        NODE_SZ * 2, deltabase_buffer);
+    printf("%-.*s  ",
+        NODE_SZ * 2, sha_buffer);
+    printf("%" PRIu64 "\n",
         link->delta_sz);
 
   }
