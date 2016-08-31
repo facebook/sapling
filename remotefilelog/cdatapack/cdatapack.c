@@ -42,7 +42,7 @@
 #include "cdatapack.h"
 #include "buffer.h"
 
-#define MAX_PAGED_IN_DATAPACK  (100 * 1024 * 1024)
+#define MAX_PAGED_IN_DATAPACK  (1024 * 1024 * 1024)
 
 /**
  * This is an exact representation of an index entry on disk.  Do not consume
