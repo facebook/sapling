@@ -92,11 +92,11 @@ def clientextsetup(ui):
     entry = wrapcommand(commands.table, 'push', _push)
     # Don't add the 'to' arg if it already exists
     if not any(a for a in entry[1] if a[1] == 'to'):
-        entry[1].append(('', 'to', '', _('server scratchbranch to push to')))
+        entry[1].append(('', 'to', '', _('server bookmark to push to')))
 
     if not any(a for a in entry[1] if a[1] == 'create'):
         entry[1].append(
-            ('', 'create', None, _('server scratchbranch to create')))
+            ('', 'create', None, _('create server bookmark is does not exist')))
 
     wrapcommand(commands.table, 'pull', _pull)
 
