@@ -46,11 +46,12 @@ class sqlmap(collections.MutableMapping):
     """ a dictionary-like object backed by sqllite db."""
     __metaclass__ = ABCMeta
 
-    def __init__(self, sqlconn):
+    def __init__(self, sqlconn, cachebuildtreshold=10000):
         self._sqlconn = sqlconn
         self._lookupcache = None
         self.createschema()
         self._readcount = 0
+        self._cachebuildtreshold = cachebuildtreshold
 
     def enablelookupcache(self):
         if self._lookupcache is None:
@@ -111,7 +112,8 @@ class sqlmap(collections.MutableMapping):
         cur = self._sqlconn.cursor()
         self._readcount += 1
 
-        if self._readcount > 10000:
+        if self._cachebuildtreshold and\
+                self._readcount > self._cachebuildtreshold:
             self.enablelookupcache()
             self._readcount = 0
             return self[key]

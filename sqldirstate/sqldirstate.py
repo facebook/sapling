@@ -304,10 +304,11 @@ class sqldirs(object):
     """ Reimplementaion of util.dirs which is not resuseable because it's
         replaced by c code if available. Probably with a small upstream
         change we could reuse it """
-    def __init__(self, sqlconn, skip=None, filemap=None, dirsdict=None):
+    def __init__(self, sqlconn, skip=None, filemap=None, dirsdict=None,
+                 **mapkwargs):
         self._dirs = dirsdict
         if self._dirs is None:
-            self._dirs = sqldirsdict(sqlconn)
+            self._dirs = sqldirsdict(sqlconn, **mapkwargs)
         if filemap:
             for f, s in filemap.iteritems():
                 self.addpath(f)
@@ -357,15 +358,20 @@ def makedirstate(cls):
             if self._ui.config('sqldirstate', 'tracefile', False):
                 self._sqlconn = tracewrapsqlconn(self._sqlconn,
                                  self._ui.config('sqldirstate', 'tracefile'))
+
             self._sqlconn.execute("PRAGMA cache_size = %d" % SQLITE_CACHE_SIZE)
             self._sqlconn.execute("PRAGMA synchronous = OFF")
             createotherschema(self._sqlconn)
             self._sqlschemaversion = getversion(self._sqlconn)
-            self._map = sqldirstatemap(self._sqlconn)
-            self._dirs = sqldirs(self._sqlconn)
-            self._copymap = sqlcopymap(self._sqlconn)
-            self._filefoldmap = sqlfilefoldmap(self._sqlconn)
-            self._dirfoldmap = sqldirfoldmap(self._sqlconn)
+
+            cachebuildtreshold = self._ui.config('sqldirstate',
+                                                 'cachebuildtreshold', 10000)
+            mapkwargs = {'cachebuildtreshold': cachebuildtreshold }
+            self._map = sqldirstatemap(self._sqlconn, **mapkwargs)
+            self._dirs = sqldirs(self._sqlconn, **mapkwargs)
+            self._copymap = sqlcopymap(self._sqlconn, **mapkwargs)
+            self._filefoldmap = sqlfilefoldmap(self._sqlconn, **mapkwargs)
+            self._dirfoldmap = sqldirfoldmap(self._sqlconn, **mapkwargs)
             self.skipbackups = self._ui.configbool('sqldirstate', 'skipbackups',
                                                    True)
 
