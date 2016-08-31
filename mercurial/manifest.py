@@ -962,12 +962,13 @@ class manifestlog(object):
             self._mancache[node] = m
         return m
 
-class manifestctx(manifestdict):
+class manifestctx(object):
     """A class representing a single revision of a manifest, including its
     contents, its parent revs, and its linkrev.
     """
     def __init__(self, revlog, node):
         self._revlog = revlog
+        self._data = None
 
         self._node = node
 
@@ -978,21 +979,26 @@ class manifestctx(manifestdict):
         #rev = revlog.rev(node)
         #self.linkrev = revlog.linkrev(rev)
 
-        # This should eventually be made lazy loaded, so consumers can access
-        # the node/p1/linkrev data without having to parse the whole manifest.
-        data = revlog.revision(node)
-        arraytext = array.array('c', data)
-        revlog._fulltextcache[node] = arraytext
-        super(manifestctx, self).__init__(data)
-
     def node(self):
         return self._node
 
-class treemanifestctx(treemanifest):
+    def read(self):
+        if not self._data:
+            if self._node == revlog.nullid:
+                self._data = manifestdict()
+            else:
+                text = self._revlog.revision(self._node)
+                arraytext = array.array('c', text)
+                self._revlog._fulltextcache[self._node] = arraytext
+                self._data = manifestdict(text)
+        return self._data
+
+class treemanifestctx(object):
     def __init__(self, revlog, dir, node):
         revlog = revlog.dirlog(dir)
         self._revlog = revlog
         self._dir = dir
+        self._data = None
 
         self._node = node
 
@@ -1003,19 +1009,26 @@ class treemanifestctx(treemanifest):
         #rev = revlog.rev(node)
         #self.linkrev = revlog.linkrev(rev)
 
-        if revlog._treeondisk:
-            super(treemanifestctx, self).__init__(dir=dir)
-            def gettext():
-                return revlog.revision(node)
-            def readsubtree(dir, subm):
-                return revlog.dirlog(dir).read(subm)
-            self.read(gettext, readsubtree)
-            self.setnode(node)
-        else:
-            text = revlog.revision(node)
-            arraytext = array.array('c', text)
-            revlog.fulltextcache[node] = arraytext
-            super(treemanifestctx, self).__init__(dir=dir, text=text)
+    def read(self):
+        if not self._data:
+            if self._node == revlog.nullid:
+                self._data = treemanifest()
+            elif self._revlog._treeondisk:
+                m = treemanifest(dir=self._dir)
+                def gettext():
+                    return self._revlog.revision(self._node)
+                def readsubtree(dir, subm):
+                    return treemanifestctx(self._revlog, dir, subm).read()
+                m.read(gettext, readsubtree)
+                m.setnode(self._node)
+                self._data = m
+            else:
+                text = self._revlog.revision(self._node)
+                arraytext = array.array('c', text)
+                self._revlog.fulltextcache[self._node] = arraytext
+                self._data = treemanifest(dir=self._dir, text=text)
+
+        return self._data
 
     def node(self):
         return self._node
