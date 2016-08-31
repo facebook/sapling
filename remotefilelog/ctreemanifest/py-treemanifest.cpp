@@ -521,7 +521,7 @@ static bool fileiter_next(fileiter &iter, char *path, size_t pathcapacity,
       size_t pathlen = iter.path.size() + entry->filenamelen;
       path[pathlen] = '\0';
 
-      if (!(PyObject*)iter.matcher) {
+      if ((PyObject*)iter.matcher) {
         PythonObj matchArgs = Py_BuildValue("(s#)", path, pathlen);
         PythonObj matched = iter.matcher.call(matchArgs);
         if (!PyObject_IsTrue(matched)) {
