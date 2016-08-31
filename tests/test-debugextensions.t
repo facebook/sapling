@@ -4,6 +4,10 @@
 
   $ cat > extwithoutinfos.py <<EOF
   > EOF
+  $ cat > extwithinfos.py <<EOF
+  > testedwith = '3.0 3.1 3.2.1'
+  > buglink = 'https://example.org/bts'
+  > EOF
 
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
@@ -13,11 +17,13 @@
   > rebase=
   > mq=
   > ext1 = $debugpath
+  > ext2 = `pwd`/extwithinfos.py
   > EOF
 
   $ hg debugextensions
   color
   ext1 (untested!)
+  ext2 (3.2.1!)
   histedit
   mq
   patchbomb
@@ -29,6 +35,10 @@
     tested with: internal
   ext1
     location: */extwithoutinfos.py* (glob)
+  ext2
+    location: */extwithinfos.py* (glob)
+    tested with: 3.0 3.1 3.2.1
+    bug reporting: https://example.org/bts
   histedit
     location: */hgext/histedit.py* (glob)
     tested with: internal
@@ -57,6 +67,12 @@
     "testedwith": []
    },
    {
+    "buglink": "https://example.org/bts",
+    "name": "ext2",
+    "source": "*/extwithinfos.py*", (glob)
+    "testedwith": ["3.0", "3.1", "3.2.1"]
+   },
+   {
     "buglink": "",
     "name": "histedit",
     "source": "*/hgext/histedit.py*", (glob)
@@ -82,5 +98,7 @@
    }
   ]
 
-  $ hg debugextensions -T '{ifcontains("internal", testedwith, "", "{name}\n")}'
-  ext1
+  $ hg debugextensions -T '{ifcontains("3.1", testedwith, "{name}\n")}'
+  ext2
+  $ hg debugextensions \
+  > -T '{ifcontains("3.2", testedwith, "no substring match: {name}\n")}'
