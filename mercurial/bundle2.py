@@ -1471,7 +1471,7 @@ def handlecheckheads(op, inpart):
 def handleoutput(op, inpart):
     """forward output captured on the server to the client"""
     for line in inpart.read().splitlines():
-        op.ui.status(('remote: %s\n' % line))
+        op.ui.status(_('remote: %s\n') % line)
 
 @parthandler('replycaps')
 def handlereplycaps(op, inpart):
