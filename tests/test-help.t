@@ -1624,6 +1624,17 @@ such str.lower().
   > ambiguous = !
   > EOF
 
+Show help content of disabled extensions
+
+  $ cat >> $HGRCPATH <<EOF
+  > [extensions]
+  > ambiguous = !./ambiguous.py
+  > EOF
+  $ hg help -e ambiguous
+  ambiguous extension - (no help text available)
+  
+  (use "hg help extensions" for information on enabling extensions)
+
 Test dynamic list of merge tools only shows up once
   $ hg help merge-tools
   Merge Tools

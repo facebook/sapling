@@ -22,6 +22,7 @@ from . import (
 )
 
 _extensions = {}
+_disabledextensions = {}
 _aftercallbacks = {}
 _order = []
 _builtin = set(['hbisect', 'bookmarks', 'parentrevspec', 'progress', 'interhg',
@@ -148,6 +149,7 @@ def loadall(ui):
     for (name, path) in result:
         if path:
             if path[0] == '!':
+                _disabledextensions[name] = path[1:]
                 continue
         try:
             load(ui, name, path)
@@ -370,6 +372,7 @@ def _disabledpaths(strip_init=False):
         if name in exts or name in _order or name == '__init__':
             continue
         exts[name] = path
+    exts.update(_disabledextensions)
     return exts
 
 def _moduledoc(file):
