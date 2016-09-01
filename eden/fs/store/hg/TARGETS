@@ -24,6 +24,7 @@ cpp_library(
 
 cpp_binary(
   name = 'tester',
+  headers = AutoHeaders.RECURSIVE_GLOB,  # https://fburl.com/424819295
   srcs = TESTER_SRCS,
   deps = [
     ':hg',

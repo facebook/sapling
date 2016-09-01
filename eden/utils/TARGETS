@@ -12,6 +12,7 @@ cpp_library(
 
 cpp_unittest(
     name = "test_utils",
+    headers = AutoHeaders.RECURSIVE_GLOB,  # https://fburl.com/424819295
     srcs = glob(['**/*Test.cpp']),
     deps = [
         ':utils'

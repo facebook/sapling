@@ -13,6 +13,7 @@ cpp_library(
 
 cpp_unittest(
     name = "test_overlay",
+    headers = AutoHeaders.RECURSIVE_GLOB,  # https://fburl.com/424819295
     srcs = glob(['test/*Test.cpp']),
     deps = [
         ':overlay',
