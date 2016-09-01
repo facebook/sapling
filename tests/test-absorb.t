@@ -363,3 +363,33 @@ Test config option absorb.amendflags and running as a sub command of amend:
   # M c : unsupported file type (ex. binary or link)
   # R a : removed files were ignored
 
+Executable files:
+
+  $ cat >> $HGRCPATH << EOF
+  > [diff]
+  > git=True
+  > EOF
+  $ cd ..
+  $ hg init repo3
+  $ cd repo3
+  $ echo > foo.py
+  $ chmod +x foo.py
+  $ hg add foo.py
+  $ hg commit -mfoo
+
+  $ echo bla > foo.py
+  $ hg absorb --dry-run --print-changes
+  showing changes for foo.py
+          @@ -0,1 +0,1 @@
+  99b4ae7 -
+  99b4ae7 +bla
+  $ hg absorb
+  1 of 1 chunks(s) applied
+  $ hg diff -c .
+  diff --git a/foo.py b/foo.py
+  new file mode 100755
+  --- /dev/null
+  +++ b/foo.py
+  @@ -0,0 +1,1 @@
+  +bla
+  $ hg diff

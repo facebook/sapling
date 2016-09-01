@@ -124,7 +124,7 @@ class overlaystore(object):
             content = self.memworkingcopy[path]
         else:
             content = fctx.data()
-        mode = (fctx.islink(), fctx.isbinary())
+        mode = (fctx.islink(), fctx.isexec())
         renamed = fctx.renamed() # False or (path, node)
         return content, mode, (renamed and renamed[0])
 
