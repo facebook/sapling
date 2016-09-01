@@ -348,7 +348,7 @@ def main(repo, rules, stdscr):
         rule = rules[pos]
 
         ctx = rule.ctx
-        win.box(0, 0)
+        win.box()
 
         maxy, maxx = win.getmaxyx()
         length = maxx - 3
