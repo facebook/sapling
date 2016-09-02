@@ -62,12 +62,18 @@ class SetAttrTest:
     def test_utime(self):
         filename = os.path.join(self.mount, 'hello')
 
-        now = time.time()
-        os.utime(filename)
+        # Update the atime and mtime to a time 5 seconds in the past.
+        #
+        # We round to the nearest second to avoid timestamp granularity issues.
+        # (Eden currently uses the underlying overlay filesystem to store the
+        # timestamps, and it might not necessarily support high resolution
+        # timestamps.)
+        timestamp = int(time.time() - 5)
+        os.utime(filename, (timestamp, timestamp))
         st = os.lstat(filename)
 
-        self.assertGreaterEqual(st.st_atime, now)
-        self.assertGreaterEqual(st.st_mtime, now)
+        self.assertEqual(st.st_atime, timestamp)
+        self.assertEqual(st.st_mtime, timestamp)
 
     def test_touch(self):
         filename = os.path.join(self.mount, 'hello')
