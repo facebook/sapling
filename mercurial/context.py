@@ -990,15 +990,29 @@ class basefilectx(object):
         # bit recursion-hostile. Instead we do an iterative
         # depth-first search.
 
+        # 1st DFS pre-calculates pcache and needed
         visit = [base]
-        hist = {}
         pcache = {}
         needed = {base: 1}
         while visit:
+            f = visit.pop()
+            if f in pcache:
+                continue
+            pl = parents(f)
+            pcache[f] = pl
+            for p in pl:
+                needed[p] = needed.get(p, 0) + 1
+                if p not in pcache:
+                    visit.append(p)
+
+        # 2nd DFS does the actual annotate
+        visit[:] = [base]
+        hist = {}
+        while visit:
             f = visit[-1]
-            pcached = f in pcache
-            if not pcached:
-                pcache[f] = parents(f)
+            if f in hist:
+                visit.pop()
+                continue
 
             ready = True
             pl = pcache[f]
@@ -1006,18 +1020,11 @@ class basefilectx(object):
                 if p not in hist:
                     ready = False
                     visit.append(p)
-                if not pcached:
-                    needed[p] = needed.get(p, 0) + 1
             if ready:
                 visit.pop()
-                reusable = f in hist
-                if reusable:
-                    curr = hist[f]
-                else:
-                    curr = decorate(f.data(), f)
+                curr = decorate(f.data(), f)
                 for p in pl:
-                    if not reusable:
-                        curr = pair(hist[p], curr)
+                    curr = pair(hist[p], curr)
                     if needed[p] == 1:
                         del hist[p]
                         del needed[p]
@@ -1025,7 +1032,7 @@ class basefilectx(object):
                         needed[p] -= 1
 
                 hist[f] = curr
-                pcache[f] = []
+                del pcache[f]
 
         return zip(hist[base][0], hist[base][1].splitlines(True))
 
