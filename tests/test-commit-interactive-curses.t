@@ -9,6 +9,21 @@ Set up a repo
   > crecordtest = testModeCommands
   > EOF
 
+Record with noeol at eof (issue5268)
+  $ hg init noeol
+  $ cd noeol
+  $ printf '0' > a
+  $ printf '0\n' > b
+  $ hg ci -Aqm initial
+  $ printf '1\n0' > a
+  $ printf '1\n0\n' > b
+  $ cat <<EOF >testModeCommands
+  > c
+  > EOF
+  $ HGEDITOR="\"sh\" \"`pwd`/editor.sh\"" hg commit  -i -m "add hunks" -d "0 0"
+  $ cd ..
+
+Normal repo
   $ hg init a
   $ cd a
 
