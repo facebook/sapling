@@ -57,6 +57,10 @@ folly::Future<folly::Unit> InodeBase::removexattr(folly::StringPiece name) {
 folly::Future<folly::Unit> InodeBase::access(int mask) {
   FUSELL_NOT_IMPL();
 }
+
+bool InodeBase::canForget() {
+  return true;
+}
 }
 }
 }

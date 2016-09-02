@@ -58,6 +58,10 @@ class InodeBase : public std::enable_shared_from_this<InodeBase> {
   virtual folly::Future<std::vector<std::string>> listxattr();
   virtual folly::Future<folly::Unit> removexattr(folly::StringPiece name);
   virtual folly::Future<folly::Unit> access(int mask);
+
+  /** Return true if Dispatcher should honor a FORGET and free
+   * this inode object.  Return false if we should preserve it anyway. */
+  virtual bool canForget();
 };
 }
 }

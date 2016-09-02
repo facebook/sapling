@@ -326,7 +326,13 @@ folly::Future<folly::Unit> InodeDispatcher::forget(
   // No more refs; remove it
   {
     std::unique_lock<SharedMutex> g(lock_);
-    inodes_.erase(ino);
+    auto it = inodes_.find(ino);
+
+    if (it != inodes_.end() || !it->second->canForget()) {
+      return Unit{};
+    }
+
+    inodes_.erase(it);
     LOG_EVERY_N(INFO, FLAGS_inode_reserve / 100)
         << "FORGET, now have " << inodes_.size() << " live inodes";
   }
