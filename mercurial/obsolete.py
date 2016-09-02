@@ -42,9 +42,9 @@ Examples:
 
     (A, ())
 
-- When changeset A is split into B and C, a single marker are used:
+- When changeset A is split into B and C, a single marker is used:
 
-    (A, (C, C))
+    (A, (B, C))
 
   We use a single marker to distinguish the "split" case from the "divergence"
   case. If two independent operations rewrite the same changeset A in to A' and
