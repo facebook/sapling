@@ -91,6 +91,18 @@ class BasicTest:
         st = os.lstat(hello)
         self.assertEqual(st.st_size, len('replaced\n'))
 
+    def test_append(self):
+        hello = os.path.join(self.mount, 'bdir/test.sh')
+        with open(hello, 'a') as f:
+            f.write('echo more commands\n')
+
+        expected_data = '#!/bin/bash\necho test\necho more commands\n'
+        st = os.lstat(hello)
+        with open(hello, 'r') as f:
+            read_back = f.read()
+        self.assertEqual(expected_data, read_back)
+        self.assertEqual(len(expected_data), st.st_size)
+
     def test_materialize(self):
         hello = os.path.join(self.mount, 'hello')
         # Opening for write should materialize the file with the same
