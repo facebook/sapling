@@ -50,7 +50,7 @@ the table cases
   \r (no-eol) (esc)
   skipping [===========================================>] 1/1\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
-  not removing bar: file has been marked for add (use forget to undo)
+  not removing bar: file has been marked for add (use 'hg forget' to undo add)
   exit code: 1
   A bar
   ./bar

@@ -2509,8 +2509,8 @@ def remove(ui, repo, m, prefix, after, force, subrepos, warnings=None):
         for f in added:
             count += 1
             ui.progress(_('skipping'), count, total=total, unit=_('files'))
-            warnings.append(_('not removing %s: file has been marked for add'
-                      ' (use forget to undo)\n') % m.rel(f))
+            warnings.append(_("not removing %s: file has been marked for add"
+                      " (use 'hg forget' to undo add)\n") % m.rel(f))
             ret = 1
         ui.progress(_('skipping'), None)
 

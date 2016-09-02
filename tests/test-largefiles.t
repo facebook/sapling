@@ -112,7 +112,7 @@ Test messages and exit codes for remove warning cases
   normalnew already tracked!
   $ hg remove normalnew largenew
   not removing largenew: file is untracked
-  not removing normalnew: file has been marked for add (use forget to undo)
+  not removing normalnew: file has been marked for add (use 'hg forget' to undo add)
   [1]
   $ rm normalnew largenew
   $ hg up -Cq
