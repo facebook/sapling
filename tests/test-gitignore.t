@@ -5,6 +5,11 @@ Load commonly used test logic
 
   $ hg init
 
+We should only read .gitignore files in a hg-git repo (i.e. one with .hg/git
+directory) otherwise, a rogue .gitignore could slow down a hg-only repo
+
+  $ mkdir .hg/git
+
   $ touch foo
   $ touch foobar
   $ touch bar
