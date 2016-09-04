@@ -113,9 +113,10 @@ def has_bzr():
         import bzrlib.bzrdir
         import bzrlib.errors
         import bzrlib.revision
-        import bzrlib.revisionspec.RevisionSpec
+        import bzrlib.revisionspec
+        bzrlib.revisionspec.RevisionSpec
         return bzrlib.__doc__ is not None
-    except ImportError:
+    except (AttributeError, ImportError):
         return False
 
 @checkvers("bzr", "Canonical's Bazaar client >= %s", (1.14,))
