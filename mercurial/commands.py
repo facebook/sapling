@@ -4140,9 +4140,7 @@ def _dograft(ui, repo, *revs, **opts):
         # check for ancestors of dest branch
         crev = repo['.'].rev()
         ancestors = repo.changelog.ancestors([crev], inclusive=True)
-        # Cannot use x.remove(y) on smart set, this has to be a list.
         # XXX make this lazy in the future
-        revs = list(revs)
         # don't mutate while iterating, create a copy
         for rev in list(revs):
             if rev in ancestors:
