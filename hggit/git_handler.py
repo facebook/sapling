@@ -464,6 +464,11 @@ class GitHandler(object):
             self.export_hg_commit(ctx.node(), exporter)
         self.ui.progress('exporting', None, total=total)
 
+    def set_commiter_from_author(self, commit):
+        commit.committer = commit.author
+        commit.commit_time = commit.author_time
+        commit.commit_timezone = commit.author_timezone
+
     # convert this commit into git objects
     # go through the manifest, convert all blobs/trees we don't have
     # write the commit object (with metadata info)
@@ -489,25 +494,26 @@ class GitHandler(object):
         commit.author_timezone = -timezone
 
         if 'committer' in extra:
-            # fixup timezone
-            (name, timestamp, timezone) = extra['committer'].rsplit(' ', 2)
-            commit.committer = name
-            commit.commit_time = timestamp
+            try:
+                # fixup timezone
+                (name, timestamp, timezone) = extra['committer'].rsplit(' ', 2)
+                commit.committer = name
+                commit.commit_time = timestamp
 
-            # work around a timezone format change
-            if int(timezone) % 60 != 0:  # pragma: no cover
-                timezone = parse_timezone(timezone)
-                # Newer versions of Dulwich return a tuple here
-                if isinstance(timezone, tuple):
-                    timezone, neg_utc = timezone
-                    commit._commit_timezone_neg_utc = neg_utc
-            else:
-                timezone = -int(timezone)
-            commit.commit_timezone = timezone
+                # work around a timezone format change
+                if int(timezone) % 60 != 0:  # pragma: no cover
+                    timezone = parse_timezone(timezone)
+                    # Newer versions of Dulwich return a tuple here
+                    if isinstance(timezone, tuple):
+                        timezone, neg_utc = timezone
+                        commit._commit_timezone_neg_utc = neg_utc
+                else:
+                    timezone = -int(timezone)
+                commit.commit_timezone = timezone
+            except: # extra is essentially user-supplied, we must be careful
+                self.set_commiter_from_author(commit)
         else:
-            commit.committer = commit.author
-            commit.commit_time = commit.author_time
-            commit.commit_timezone = commit.author_timezone
+            self.set_commiter_from_author(commit)
 
         commit.parents = []
         for parent in self.get_git_parents(ctx):
