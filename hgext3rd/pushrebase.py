@@ -465,8 +465,7 @@ def _addpushbackparts(op, replacements):
     if (op.records[commonheadsparttype]
         and op.reply
         and 'pushback' in op.reply.capabilities):
-        outgoing = discovery.outgoing(op.repo.changelog,
-                                      op.records[commonheadsparttype],
+        outgoing = discovery.outgoing(op.repo, op.records[commonheadsparttype],
                                       [new for old, new in replacements.items()
                                        if old != new])
 
