@@ -1,4 +1,4 @@
-  $ $PYTHON -c 'import pushrebase' || exit 80
+  $ $PYTHON -c 'import hgext3rd.pushrebase' || exit 80
 
   $ . "$TESTDIR/library.sh"
 
