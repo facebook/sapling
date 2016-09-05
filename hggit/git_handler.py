@@ -411,13 +411,27 @@ class GitHandler(object):
     # CHANGESET CONVERSION METHODS
 
     def export_git_objects(self):
+        self.ui.note(_("finding hg commits to export\n"))
         repo = self.repo
         clnode = repo.changelog.node
+
         nodes = (clnode(n) for n in repo)
-        export = (repo[node] for node in nodes if not hex(node) in
+        to_export = (repo[node] for node in nodes if not hex(node) in
                   self._map_hg)
-        export = [ctx for ctx in export
-                  if ctx.extra().get('hg-git', None) != 'octopus']
+
+        todo_total = len(repo) - len(self._map_hg)
+        topic = 'find commits to export'
+        pos = 0
+        unit = 'commits'
+
+        export = []
+        for ctx in to_export:
+            item = hex(ctx.node())
+            pos += 1
+            repo.ui.progress(topic, pos, item, unit, todo_total)
+            if ctx.extra().get('hg-git', None) != 'octopus':
+                export.append(ctx)
+
         total = len(export)
         if not total:
             return
