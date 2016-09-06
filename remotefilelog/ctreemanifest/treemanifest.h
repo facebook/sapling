@@ -95,8 +95,8 @@ class PathIterator {
  * A single instance of a treemanifest.
  */
 struct treemanifest {
-  // A reference to the store that is used to fetch new content
-  PythonObj store;
+  // Fetcher for the manifests.
+  ManifestFetcher fetcher;
 
   // The 20-byte root node of this manifest
   std::string rootNode;
@@ -105,7 +105,7 @@ struct treemanifest {
   Manifest *rootManifest;
 
   treemanifest(PythonObj store, std::string rootNode) :
-      store(store),
+      fetcher(store),
       rootNode(rootNode),
       rootManifest(NULL) {
   }
@@ -138,7 +138,7 @@ struct fileiter {
   PythonObj matcher;
 
   fileiter(treemanifest &tm) :
-      fetcher(tm.store) {
+      fetcher(tm.fetcher) {
     if (tm.rootManifest == NULL) {
       tm.rootManifest = this->fetcher.get(NULL, 0, tm.rootNode);
     }

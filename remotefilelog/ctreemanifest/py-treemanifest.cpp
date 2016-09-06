@@ -132,7 +132,7 @@ static PyObject *treemanifest_diff(
 
   PythonObj results = PyDict_New();
 
-  ManifestFetcher fetcher(self->tm.store);
+  ManifestFetcher fetcher = self->tm.fetcher;
 
   std::string path;
   try {
@@ -179,7 +179,7 @@ static PyObject *treemanifest_find(PyObject *o, PyObject *args) {
     return NULL;
   }
 
-  ManifestFetcher fetcher(self->tm.store);
+  ManifestFetcher fetcher = self->tm.fetcher;
 
   std::string resultnode;
   char resultflag;
@@ -390,7 +390,7 @@ static PyObject *treemanifest_getitem(py_treemanifest *self, PyObject *key) {
   Py_ssize_t filenamelen;
   PyString_AsStringAndSize(key, &filename, &filenamelen);
 
-  ManifestFetcher fetcher(self->tm.store);
+  ManifestFetcher fetcher = self->tm.fetcher;
 
   std::string resultnode;
   char resultflag;
@@ -438,7 +438,7 @@ static PyObject *treemanifest_flags(py_treemanifest *self, PyObject *args, PyObj
     return NULL;
   }
 
-  ManifestFetcher fetcher(self->tm.store);
+  ManifestFetcher fetcher = self->tm.fetcher;
 
   std::string resultnode;
   char resultflag;
@@ -539,7 +539,7 @@ static PyObject *treemanifest_filesnotin(py_treemanifest *self, PyObject *args) 
 
   PythonObj diffresults = PyDict_New();
 
-  ManifestFetcher fetcher(self->tm.store);
+  ManifestFetcher fetcher = self->tm.fetcher;
 
   std::string path;
   try {
@@ -593,7 +593,7 @@ static int treemanifest_contains(py_treemanifest *self, PyObject *key) {
   Py_ssize_t filenamelen;
   PyString_AsStringAndSize(key, &filename, &filenamelen);
 
-  ManifestFetcher fetcher(self->tm.store);
+  ManifestFetcher fetcher = self->tm.fetcher;
 
   std::string resultnode;
   char resultflag;
