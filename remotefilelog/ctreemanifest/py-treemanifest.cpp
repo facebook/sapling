@@ -186,7 +186,7 @@ static PyObject *treemanifest_find(PyObject *o, PyObject *args) {
   try {
     // Grab the root node's data
 
-    self->tm.treemanifest_get(
+    self->tm.get(
         std::string(filename, filenamelen),
         &resultnode, &resultflag);
   } catch (const pyexception &ex) {
@@ -390,7 +390,7 @@ static PyObject *treemanifest_getitem(py_treemanifest *self, PyObject *key) {
   std::string resultnode;
   char resultflag;
   try {
-    self->tm.treemanifest_get(
+    self->tm.get(
         std::string(filename, filenamelen),
         &resultnode, &resultflag);
   } catch (const pyexception &ex) {
@@ -431,7 +431,7 @@ static PyObject *treemanifest_flags(py_treemanifest *self, PyObject *args, PyObj
   std::string resultnode;
   char resultflag;
   try {
-    self->tm.treemanifest_get(
+    self->tm.get(
         std::string(filename, filenamelen),
         &resultnode, &resultflag);
   } catch (const pyexception &ex) {
@@ -579,7 +579,7 @@ static int treemanifest_contains(py_treemanifest *self, PyObject *key) {
   std::string resultnode;
   char resultflag;
   try {
-    self->tm.treemanifest_get(
+    self->tm.get(
         std::string(filename, filenamelen),
         &resultnode, &resultflag);
     if (resultnode.size() == 0) {

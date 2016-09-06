@@ -200,7 +200,7 @@ void treemanifest_diffrecurse(
   }
 }
 
-FindResult treemanifest::treemanifest_find(
+FindResult treemanifest::find(
     Manifest *manifest,
     PathIterator &path,
     FindMode findMode,
@@ -255,7 +255,7 @@ FindResult treemanifest::treemanifest_find(
     }
 
     // now find the next subdir
-    FindResult result = treemanifest_find(
+    FindResult result = find(
         entry->resolved,
         path,
         findMode,
@@ -279,7 +279,7 @@ struct GetResult {
   char *resultflag;
 };
 
-static FindResult treemanifest_get_callback(
+static FindResult get_callback(
     Manifest *manifest,
     const char *filename, size_t filenamelen,
     FindContext *context) {
@@ -310,7 +310,7 @@ static FindResult treemanifest_get_callback(
   return FIND_PATH_OK;
 }
 
-void treemanifest::treemanifest_get(
+void treemanifest::get(
     const std::string &filename,
     std::string *resultnode, char *resultflag) {
   resolveRootManifest();
@@ -321,11 +321,11 @@ void treemanifest::treemanifest_get(
   changes.nodebuffer.reserve(20);
   changes.extras = &extras;
 
-  this->treemanifest_find(
+  this->find(
       this->rootManifest,
       pathiter,
       BASIC_WALK,
       &changes,
-      treemanifest_get_callback
+      get_callback
   );
 }

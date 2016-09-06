@@ -112,7 +112,7 @@ struct treemanifest {
 
     ~treemanifest();
 
-    void treemanifest_get(
+    void get(
         const std::string &filename,
         std::string *resultnode, char *resultflag);
 
@@ -133,7 +133,7 @@ struct treemanifest {
      * callback is executed with the manifest of /abc/def, and the filename
      * passed in will be "ghi".
      */
-    FindResult treemanifest_find(
+    FindResult find(
         Manifest *manifest,
         PathIterator &path,
         FindMode findMode,
