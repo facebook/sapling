@@ -58,9 +58,8 @@ std::list<ManifestEntry>::iterator Manifest::findChild(
   return this->entries.end();
 }
 
-ManifestEntry *Manifest::addChild(
-    std::list<ManifestEntry>::iterator iterator,
-    const char *filename, const size_t filenamelen,
+ManifestEntry *Manifest::addChild(std::list<ManifestEntry>::iterator iterator,
+    const char *filename, const size_t filenamelen, const char *node,
     const char flag) {
   ManifestEntry entry;
   this->entries.insert(iterator, entry);
@@ -71,7 +70,7 @@ ManifestEntry *Manifest::addChild(
   // return a reference to the element we added, not the one on the stack.
   ManifestEntry *result = &(*iterator);
 
-  result->initialize(filename, filenamelen, NULL, flag);
+  result->initialize(filename, filenamelen, node, flag);
 
   return result;
 }

@@ -66,10 +66,9 @@ class Manifest {
      * @param filename
      * @param filenamelen
      */
-    ManifestEntry *addChild(
-        std::list<ManifestEntry>::iterator iterator,
-        const char *filename, const size_t filenamelen,
-        const char flag);
+    ManifestEntry *addChild(std::list<ManifestEntry>::iterator iterator,
+    const char *filename, const size_t filenamelen, const char *node,
+    const char flag);
 
     int children() const {
       return entries.size();
