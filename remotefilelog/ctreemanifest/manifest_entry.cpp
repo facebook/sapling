@@ -22,7 +22,9 @@ void ManifestEntry::initialize(
     const char *filename, const size_t filenamelen,
     const char *node,
     char flag) {
-  this->resolved = new Manifest();
+  if (flag == MANIFEST_DIRECTORY_FLAG) {
+    this->resolved = new Manifest();
+  }
   this->ownedmemory = new char[
   filenamelen +
   1 +              // null character
