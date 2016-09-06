@@ -122,6 +122,26 @@ struct treemanifest {
         this->rootManifest = fetcher.get(NULL, 0, this->rootNode);
       }
     }
+
+    /**
+     * Basic mechanism to traverse a tree.  Once the deepest directory in the
+     * path has been located, the supplied callback is executed.  That callback
+     * is called with the manifest of the deepest directory and the leaf node's
+     * filename.
+     *
+     * For instance, if treemanifest_find is called on /abc/def/ghi, then the
+     * callback is executed with the manifest of /abc/def, and the filename
+     * passed in will be "ghi".
+     */
+    FindResult treemanifest_find(
+        Manifest *manifest,
+        PathIterator &path,
+        FindMode findMode,
+        FindContext *findContext,
+        FindResult (*callback)(
+            Manifest *manifest,
+            const char *filename, size_t filenamelen,
+            FindContext *findContext));
 };
 
 /**

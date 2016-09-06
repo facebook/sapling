@@ -200,20 +200,9 @@ void treemanifest_diffrecurse(
   }
 }
 
-/**
- * Basic mechanism to traverse a tree.  Once the deepest directory in the
- * path has been located, the supplied callback is executed.  That callback
- * is called with the manifest of the deepest directory and the leaf node's
- * filename.
- *
- * For instance, if treemanifest_find is called on /abc/def/ghi, then the
- * callback is executed with the manifest of /abc/def, and the filename
- * passed in will be "ghi".
- */
-static FindResult treemanifest_find(
+FindResult treemanifest::treemanifest_find(
     Manifest *manifest,
     PathIterator &path,
-    const ManifestFetcher &fetcher,
     FindMode findMode,
     FindContext *findContext,
     FindResult (*callback)(
@@ -260,7 +249,7 @@ static FindResult treemanifest_find(
         path.getPathToPosition(&pathstart, &pathlen);
         findContext->nodebuffer.erase();
         appendbinfromhex(entry->node, findContext->nodebuffer);
-        entry->resolved = fetcher.get(pathstart, pathlen,
+        entry->resolved = this->fetcher.get(pathstart, pathlen,
             findContext->nodebuffer);
       }
     }
@@ -269,7 +258,6 @@ static FindResult treemanifest_find(
     FindResult result = treemanifest_find(
         entry->resolved,
         path,
-        fetcher,
         findMode,
         findContext,
         callback);
@@ -333,10 +321,9 @@ void treemanifest::treemanifest_get(
   changes.nodebuffer.reserve(20);
   changes.extras = &extras;
 
-  treemanifest_find(
+  this->treemanifest_find(
       this->rootManifest,
       pathiter,
-      fetcher,
       BASIC_WALK,
       &changes,
       treemanifest_get_callback
