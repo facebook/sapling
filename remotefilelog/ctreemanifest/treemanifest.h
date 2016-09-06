@@ -110,6 +110,11 @@ struct treemanifest {
         rootManifest(NULL) {
     }
 
+    treemanifest(PythonObj store) :
+        fetcher(store),
+        rootManifest(new Manifest()) {
+    }
+
     ~treemanifest();
 
     void get(

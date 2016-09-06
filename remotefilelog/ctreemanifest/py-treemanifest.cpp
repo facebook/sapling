@@ -220,10 +220,10 @@ static void treemanifest_dealloc(py_treemanifest *self) {
  */
 static int treemanifest_init(py_treemanifest *self, PyObject *args) {
   PyObject *store;
-  char *node;
+  char *node = NULL;
   Py_ssize_t nodelen;
 
-  if (!PyArg_ParseTuple(args, "Os#", &store, &node, &nodelen)) {
+  if (!PyArg_ParseTuple(args, "O|s#", &store, &node, &nodelen)) {
     return -1;
   }
 
@@ -232,7 +232,12 @@ static int treemanifest_init(py_treemanifest *self, PyObject *args) {
   // We have to manually call the member constructor, since the provided 'self'
   // is just zerod out memory.
   try {
-    new (&self->tm) treemanifest(PythonObj(store), std::string(node, nodelen));
+    if (node != NULL) {
+      new(&self->tm) treemanifest(
+          PythonObj(store), std::string(node, nodelen));
+    } else {
+      new(&self->tm) treemanifest(PythonObj(store));
+    }
   } catch (const std::exception &ex) {
     Py_DECREF(store);
     PyErr_SetString(PyExc_RuntimeError, ex.what());
