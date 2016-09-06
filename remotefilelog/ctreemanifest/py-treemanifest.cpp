@@ -367,10 +367,14 @@ static PyObject *treemanifest_find(PyObject *o, PyObject *args) {
   std::string resultnode;
   char resultflag;
   try {
-    _treemanifest_find(
+    // Grab the root node's data
+    if (self->tm.rootManifest == NULL) {
+      self->tm.rootManifest = fetcher.get(NULL, 0, self->tm.rootNode);
+    }
+
+    treemanifest_get(
         std::string(filename, filenamelen),
-        self->tm.rootNode,
-        &self->tm.rootManifest,
+        self->tm.rootManifest,
         fetcher,
         &resultnode, &resultflag);
   } catch (const pyexception &ex) {
@@ -574,10 +578,14 @@ static PyObject *treemanifest_getitem(py_treemanifest *self, PyObject *key) {
   std::string resultnode;
   char resultflag;
   try {
-    _treemanifest_find(
+    // Grab the root node's data
+    if (self->tm.rootManifest == NULL) {
+      self->tm.rootManifest = fetcher.get(NULL, 0, self->tm.rootNode);
+    }
+
+    treemanifest_get(
         std::string(filename, filenamelen),
-        self->tm.rootNode,
-        &self->tm.rootManifest,
+        self->tm.rootManifest,
         fetcher,
         &resultnode, &resultflag);
   } catch (const pyexception &ex) {
@@ -618,10 +626,14 @@ static PyObject *treemanifest_flags(py_treemanifest *self, PyObject *args, PyObj
   std::string resultnode;
   char resultflag;
   try {
-    _treemanifest_find(
+    // Grab the root node's data
+    if (self->tm.rootManifest == NULL) {
+      self->tm.rootManifest = fetcher.get(NULL, 0, self->tm.rootNode);
+    }
+
+    treemanifest_get(
         std::string(filename, filenamelen),
-        self->tm.rootNode,
-        &self->tm.rootManifest,
+        self->tm.rootManifest,
         fetcher,
         &resultnode, &resultflag);
   } catch (const pyexception &ex) {
@@ -769,10 +781,14 @@ static int treemanifest_contains(py_treemanifest *self, PyObject *key) {
   std::string resultnode;
   char resultflag;
   try {
-    _treemanifest_find(
+    // Grab the root node's data
+    if (self->tm.rootManifest == NULL) {
+      self->tm.rootManifest = fetcher.get(NULL, 0, self->tm.rootNode);
+    }
+
+    treemanifest_get(
         std::string(filename, filenamelen),
-        self->tm.rootNode,
-        &self->tm.rootManifest,
+        self->tm.rootManifest,
         fetcher,
         &resultnode, &resultflag);
     if (resultnode.size() == 0) {

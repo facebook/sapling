@@ -15,74 +15,145 @@ treemanifest::~treemanifest() {
   }
 }
 
-void _treemanifest_find(
-    const std::string &filename,
-    const std::string &rootnode,
-    Manifest **cachedlookup,
+/**
+ * Basic mechanism to traverse a tree.  Once the deepest directory in the
+ * path has been located, the supplied callback is executed.  That callback
+ * is called with the manifest of the deepest directory and the leaf node's
+ * filename.
+ *
+ * For instance, if treemanifest_find is called on /abc/def/ghi, then the
+ * callback is executed with the manifest of /abc/def, and the filename
+ * passed in will be "ghi".
+ */
+static FindResult treemanifest_find(
+    Manifest *manifest,
+    PathIterator &path,
     const ManifestFetcher &fetcher,
-    std::string *resultnode, char *resultflag) {
-  size_t curpathlen = 0;
-  std::string curnode(rootnode);
+    FindMode findMode,
+    FindContext *findContext,
+    FindResult (*callback)(
+        Manifest *manifest,
+        const char *filename, size_t filenamelen,
+        FindContext *findContext)) {
 
-  // Loop over the parts of the query filename
-  PathIterator pathiter(filename);
   const char *word;
   size_t wordlen;
-  while (pathiter.next(&word, &wordlen)) {
-    if (*cachedlookup == NULL) {
-      // Obtain the raw data for this directory
-      *cachedlookup = fetcher.get(filename.c_str(), curpathlen, curnode);
-    }
 
-    Manifest *manifest = *cachedlookup;
+  path.next(&word, &wordlen);
+  if (path.isfinished()) {
+    // time to execute the callback.
+    return callback(manifest,
+        word, wordlen,
+        findContext);
+  } else {
+    // position the iterator at the right location
+    bool exacthit;
+    std::list<ManifestEntry>::iterator iterator = manifest->findChild(
+        word, wordlen, &exacthit);
 
-    ManifestIterator mfiterator = manifest->getIterator();
     ManifestEntry *entry;
-    bool recurse = false;
 
-    // Loop over the contents of the current directory looking for the
-    // next directory/file.
-    while ((entry = mfiterator.next()) != NULL) {
-      // If the current entry matches the query file/directory, either recurse,
-      // return, or abort.
-      if (wordlen == entry->filenamelen &&
-          strncmp(word, entry->filename, wordlen) == 0) {
-        // If this is the last entry in the query path, either return or abort
-        if (pathiter.isfinished()) {
-          // If it's a file, it's our result
-          if (!entry->isdirectory()) {
-            resultnode->assign(binfromhex(entry->node));
-            if (entry->flag == NULL) {
-              *resultflag = '\0';
-            } else {
-              *resultflag = *entry->flag;
-            }
-            return;
-          } else {
-            // Found a directory when expecting a file - give up
-            break;
-          }
-        }
+    if (!exacthit) {
+      // do we create the intermediate node?
+      if (findMode != CREATE_IF_MISSING) {
+        return FIND_PATH_NOT_FOUND;
+      }
 
-        // If there's more in the query, either recurse or give up
-        curpathlen = curpathlen + wordlen + 1;
-        if (entry->isdirectory() && filename.length() > curpathlen) {
-          curnode.erase();
-          curnode.append(binfromhex(entry->node));
-          cachedlookup = &entry->resolved;
-          recurse = true;
-          break;
-        } else {
-          // Found a file when we expected a directory or
-          // found a directory when we expected a file.
-          break;
-        }
+      // create the intermediate node...
+      entry = manifest->addChild(iterator, word, wordlen, 't');
+    } else {
+      entry = &(*iterator);
+
+      if (!entry->isdirectory()) {
+        return FIND_PATH_CONFLICT;
+      }
+
+      if (entry->resolved == NULL) {
+        const char *pathstart;
+        size_t pathlen;
+
+        path.getPathToPosition(&pathstart, &pathlen);
+        findContext->nodebuffer.erase();
+        appendbinfromhex(entry->node, findContext->nodebuffer);
+        entry->resolved = fetcher.get(pathstart, pathlen,
+            findContext->nodebuffer);
       }
     }
 
-    if (!recurse) {
-      // Failed to find a match
-      return;
+    // now find the next subdir
+    FindResult result = treemanifest_find(
+        entry->resolved,
+        path,
+        fetcher,
+        findMode,
+        findContext,
+        callback);
+
+    // if entry->resolved has 0 entries, we may want to prune it, if the mode
+    // indicates that we should.
+    if (findMode == REMOVE_EMPTY_IMPLICIT_NODES) {
+      if (entry->resolved->children() == 0) {
+        manifest->removeChild(iterator);
+      }
     }
+
+    return result;
   }
+}
+
+struct GetResult {
+  std::string *resultnode;
+  char *resultflag;
+};
+
+static FindResult treemanifest_get_callback(
+    Manifest *manifest,
+    const char *filename, size_t filenamelen,
+    FindContext *context) {
+  // position the iterator at the right location
+  bool exacthit;
+  std::list<ManifestEntry>::iterator iterator = manifest->findChild(
+      filename, filenamelen, &exacthit);
+
+  if (!exacthit) {
+    // TODO: not found. :( :(
+    return FIND_PATH_NOT_FOUND;
+  }
+
+  ManifestEntry &entry = *iterator;
+  GetResult *result = (GetResult *) context->extras;
+
+  result->resultnode->erase();
+  if (entry.node != NULL) {
+    result->resultnode->append(entry.node);
+  }
+
+  if (entry.flag != NULL) {
+    *result->resultflag = *entry.flag;
+  } else {
+    *result->resultflag = '\0';
+  }
+
+  return FIND_PATH_OK;
+}
+
+void treemanifest_get(
+    const std::string &filename,
+    Manifest *rootmanifest,
+    const ManifestFetcher &fetcher,
+    std::string *resultnode, char *resultflag) {
+  GetResult extras = {resultnode, resultflag};
+  PathIterator pathiter(filename);
+  FindContext changes;
+  changes.nodebuffer.reserve(20);
+  changes.extras = &extras;
+
+  treemanifest_find(
+      rootmanifest,
+      pathiter,
+      fetcher,
+      BASIC_WALK,
+      &changes,
+      treemanifest_get_callback
+  );
 }
