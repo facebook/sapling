@@ -185,14 +185,9 @@ static PyObject *treemanifest_find(PyObject *o, PyObject *args) {
   char resultflag;
   try {
     // Grab the root node's data
-    if (self->tm.rootManifest == NULL) {
-      self->tm.rootManifest = fetcher.get(NULL, 0, self->tm.rootNode);
-    }
 
-    treemanifest_get(
+    self->tm.treemanifest_get(
         std::string(filename, filenamelen),
-        self->tm.rootManifest,
-        fetcher,
         &resultnode, &resultflag);
   } catch (const pyexception &ex) {
     return NULL;
@@ -395,15 +390,8 @@ static PyObject *treemanifest_getitem(py_treemanifest *self, PyObject *key) {
   std::string resultnode;
   char resultflag;
   try {
-    // Grab the root node's data
-    if (self->tm.rootManifest == NULL) {
-      self->tm.rootManifest = fetcher.get(NULL, 0, self->tm.rootNode);
-    }
-
-    treemanifest_get(
+    self->tm.treemanifest_get(
         std::string(filename, filenamelen),
-        self->tm.rootManifest,
-        fetcher,
         &resultnode, &resultflag);
   } catch (const pyexception &ex) {
     return NULL;
@@ -443,15 +431,8 @@ static PyObject *treemanifest_flags(py_treemanifest *self, PyObject *args, PyObj
   std::string resultnode;
   char resultflag;
   try {
-    // Grab the root node's data
-    if (self->tm.rootManifest == NULL) {
-      self->tm.rootManifest = fetcher.get(NULL, 0, self->tm.rootNode);
-    }
-
-    treemanifest_get(
+    self->tm.treemanifest_get(
         std::string(filename, filenamelen),
-        self->tm.rootManifest,
-        fetcher,
         &resultnode, &resultflag);
   } catch (const pyexception &ex) {
     return NULL;
@@ -598,15 +579,8 @@ static int treemanifest_contains(py_treemanifest *self, PyObject *key) {
   std::string resultnode;
   char resultflag;
   try {
-    // Grab the root node's data
-    if (self->tm.rootManifest == NULL) {
-      self->tm.rootManifest = fetcher.get(NULL, 0, self->tm.rootNode);
-    }
-
-    treemanifest_get(
+    self->tm.treemanifest_get(
         std::string(filename, filenamelen),
-        self->tm.rootManifest,
-        fetcher,
         &resultnode, &resultflag);
     if (resultnode.size() == 0) {
       return 0;

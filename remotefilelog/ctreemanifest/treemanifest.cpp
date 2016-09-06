@@ -322,11 +322,11 @@ static FindResult treemanifest_get_callback(
   return FIND_PATH_OK;
 }
 
-void treemanifest_get(
+void treemanifest::treemanifest_get(
     const std::string &filename,
-    Manifest *rootmanifest,
-    const ManifestFetcher &fetcher,
     std::string *resultnode, char *resultflag) {
+  resolveRootManifest();
+
   GetResult extras = {resultnode, resultflag};
   PathIterator pathiter(filename);
   FindContext changes;
@@ -334,7 +334,7 @@ void treemanifest_get(
   changes.extras = &extras;
 
   treemanifest_find(
-      rootmanifest,
+      this->rootManifest,
       pathiter,
       fetcher,
       BASIC_WALK,

@@ -95,22 +95,33 @@ class PathIterator {
  * A single instance of a treemanifest.
  */
 struct treemanifest {
-  // Fetcher for the manifests.
-  ManifestFetcher fetcher;
+    // Fetcher for the manifests.
+    ManifestFetcher fetcher;
 
-  // The 20-byte root node of this manifest
-  std::string rootNode;
+    // The 20-byte root node of this manifest
+    std::string rootNode;
 
-  // The resolved Manifest node, if the root has already been resolved.
-  Manifest *rootManifest;
+    // The resolved Manifest node, if the root has already been resolved.
+    Manifest *rootManifest;
 
-  treemanifest(PythonObj store, std::string rootNode) :
-      fetcher(store),
-      rootNode(rootNode),
-      rootManifest(NULL) {
-  }
+    treemanifest(PythonObj store, std::string rootNode) :
+        fetcher(store),
+        rootNode(rootNode),
+        rootManifest(NULL) {
+    }
 
-  ~treemanifest();
+    ~treemanifest();
+
+    void treemanifest_get(
+        const std::string &filename,
+        std::string *resultnode, char *resultflag);
+
+  private:
+    void resolveRootManifest() {
+      if (this->rootManifest == NULL) {
+        this->rootManifest = fetcher.get(NULL, 0, this->rootNode);
+      }
+    }
 };
 
 /**
@@ -161,12 +172,6 @@ struct fileiter {
     return *this;
   }
 };
-
-extern void treemanifest_get(
-    const std::string &filename,
-    Manifest *rootmanifest,
-    const ManifestFetcher &fetcher,
-    std::string *resultnode, char *resultflag);
 
 extern void treemanifest_diffrecurse(
     Manifest *selfmf,
