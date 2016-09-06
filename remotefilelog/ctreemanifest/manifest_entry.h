@@ -22,6 +22,8 @@ class ManifestEntry;
 #include "manifest.h"
 #include "manifest_fetcher.h"
 
+#define MANIFEST_DIRECTORY_FLAG 't'
+
 /**
  * Class representing a single entry in a given manifest.  Instances of this
  * class may refer to that it does not own.  If it owns any memory, it is a

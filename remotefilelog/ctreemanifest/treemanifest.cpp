@@ -234,7 +234,8 @@ FindResult treemanifest::find(
       }
 
       // create the intermediate node...
-      entry = manifest->addChild(iterator, word, wordlen, 't');
+      entry = manifest->addChild(
+          iterator, word, wordlen, MANIFEST_DIRECTORY_FLAG);
     } else {
       entry = &(*iterator);
 

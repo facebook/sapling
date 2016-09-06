@@ -97,7 +97,7 @@ ManifestEntry::~ManifestEntry() {
 }
 
 bool ManifestEntry::isdirectory() const {
-  return this->flag && *this->flag == 't';
+  return this->flag && *this->flag == MANIFEST_DIRECTORY_FLAG;
 }
 
 void ManifestEntry::appendtopath(std::string &path) {
