@@ -81,7 +81,7 @@ class outgoing(object):
         # at least one of them must not be set
         assert None in (commonheads, missingroots)
         cl = repo.changelog
-        if not missingheads:
+        if missingheads is None:
             missingheads = cl.heads()
         if missingroots:
             discbases = []

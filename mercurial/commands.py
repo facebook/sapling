@@ -1411,7 +1411,7 @@ def bundle(ui, repo, fname, dest=None, **opts):
             raise error.Abort(_("--base is incompatible with specifying "
                                "a destination"))
         common = [repo.lookup(rev) for rev in base]
-        heads = revs and map(repo.lookup, revs) or revs
+        heads = revs and map(repo.lookup, revs) or None
         outgoing = discovery.outgoing(repo, common, heads)
         cg = changegroup.getchangegroup(repo, 'bundle', outgoing,
                                         bundlecaps=bundlecaps,
