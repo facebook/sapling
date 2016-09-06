@@ -168,4 +168,11 @@ extern void treemanifest_get(
     const ManifestFetcher &fetcher,
     std::string *resultnode, char *resultflag);
 
+extern void treemanifest_diffrecurse(
+    Manifest *selfmf,
+    Manifest *othermf,
+    std::string &path,
+    const PythonObj &diff,
+    const ManifestFetcher &fetcher);
+
 #endif //REMOTEFILELOG_TREEMANIFEST_H
