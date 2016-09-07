@@ -8,6 +8,12 @@ import hashlib
 import os
 from mercurial import util
 
+class BundleWriteException(Exception):
+    pass
+
+class BundleReadException(Exception):
+    pass
+
 class abstractbundlestore(object):
     """Defines the interface for bundle stores.
 
@@ -23,7 +29,7 @@ class abstractbundlestore(object):
         """Write bundle data to the store.
 
         This function receives the raw data to be written as a str.
-
+        Throws BundleWriteException
         The key of the written data MUST be returned.
         """
 
@@ -32,7 +38,7 @@ class abstractbundlestore(object):
         """Obtain bundle data for a key.
 
         Returns None if the bundle isn't known.
-
+        Throws BundleReadException
         The returned object should be a file object supporting read()
         and close().
         """
