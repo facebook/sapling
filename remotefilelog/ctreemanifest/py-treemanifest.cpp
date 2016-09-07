@@ -138,21 +138,9 @@ static PyObject *treemanifest_diff(
   try {
     path.reserve(1024);
 
-    // Grab the root node's data
-    if (self->tm.rootManifest == NULL) {
-      self->tm.rootManifest = fetcher.get(NULL, 0, self->tm.rootNode);
-      // TODO: error handling
-    }
-
-    // Grab the root node's data
-    if (other->tm.rootManifest == NULL) {
-      other->tm.rootManifest = fetcher.get(NULL, 0, other->tm.rootNode);
-      // TODO: error handling
-    }
-
     treemanifest_diffrecurse(
-        self->tm.rootManifest,
-        other->tm.rootManifest,
+        self->tm.getRootManifest(),
+        other->tm.getRootManifest(),
         path, results, fetcher);
   } catch (const pyexception &ex) {
     // Python has already set the error message

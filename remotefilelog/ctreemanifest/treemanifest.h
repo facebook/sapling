@@ -101,18 +101,15 @@ struct treemanifest {
     // The 20-byte root node of this manifest
     std::string rootNode;
 
-    // The resolved Manifest node, if the root has already been resolved.
-    Manifest *rootManifest;
-
     treemanifest(PythonObj store, std::string rootNode) :
         fetcher(store),
         rootNode(rootNode),
-        rootManifest(NULL) {
+        rootManifest_DO_NOT_ACCESS_DIRECTLY(NULL) {
     }
 
     treemanifest(PythonObj store) :
         fetcher(store),
-        rootManifest(new Manifest()) {
+        rootManifest_DO_NOT_ACCESS_DIRECTLY(new Manifest()) {
     }
 
     ~treemanifest();
@@ -121,12 +118,20 @@ struct treemanifest {
         const std::string &filename,
         std::string *resultnode, char *resultflag);
 
-  private:
-    void resolveRootManifest() {
-      if (this->rootManifest == NULL) {
-        this->rootManifest = fetcher.get(NULL, 0, this->rootNode);
+    Manifest *getRootManifest() {
+      if (this->rootManifest_DO_NOT_ACCESS_DIRECTLY == NULL) {
+        this->rootManifest_DO_NOT_ACCESS_DIRECTLY =
+            fetcher.get(NULL, 0, this->rootNode);
       }
+
+      return this->rootManifest_DO_NOT_ACCESS_DIRECTLY;
     }
+
+  private:
+    // The resolved Manifest node, if the root has already been resolved.
+    // Avoid accessing this directly as it may not be set.  Instead, use
+    // getRootManifest() to retrieve the root manifest.
+    Manifest *rootManifest_DO_NOT_ACCESS_DIRECTLY;
 
     /**
      * Basic mechanism to traverse a tree.  Once the deepest directory in the
@@ -175,11 +180,7 @@ struct fileiter {
 
   fileiter(treemanifest &tm) :
       fetcher(tm.fetcher) {
-    if (tm.rootManifest == NULL) {
-      tm.rootManifest = this->fetcher.get(NULL, 0, tm.rootNode);
-    }
-
-    this->frames.push_back(stackframe(tm.rootManifest));
+    this->frames.push_back(stackframe(tm.getRootManifest()));
     this->path.reserve(1024);
   }
 

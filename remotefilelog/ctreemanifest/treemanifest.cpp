@@ -10,8 +10,8 @@
 #include "treemanifest.h"
 
 treemanifest::~treemanifest() {
-  if (this->rootManifest != NULL) {
-    delete this->rootManifest;
+  if (this->rootManifest_DO_NOT_ACCESS_DIRECTLY != NULL) {
+    delete this->rootManifest_DO_NOT_ACCESS_DIRECTLY;
   }
 }
 
@@ -314,7 +314,7 @@ static FindResult get_callback(
 void treemanifest::get(
     const std::string &filename,
     std::string *resultnode, char *resultflag) {
-  resolveRootManifest();
+  getRootManifest();
 
   GetResult extras = {resultnode, resultflag};
   PathIterator pathiter(filename);
@@ -323,7 +323,7 @@ void treemanifest::get(
   changes.extras = &extras;
 
   this->find(
-      this->rootManifest,
+      this->getRootManifest(),
       pathiter,
       BASIC_WALK,
       &changes,
