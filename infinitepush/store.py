@@ -6,7 +6,9 @@
 import abc
 import hashlib
 import os
+import subprocess
 from mercurial import util
+from tempfile import NamedTemporaryFile
 
 class BundleWriteException(Exception):
     pass
@@ -86,3 +88,66 @@ class filebundlestore(object):
             return None
 
         return f.read()
+
+class externalbundlestore(abstractbundlestore):
+    def __init__(self, put_binary, put_args, get_binary, get_args):
+        """
+        `put_binary` - path to binary file which uploads bundle to external
+            storage and prints key to stdout
+        `put_args` - format string with additional args to `put_binary`
+                     {filename} replacement field can be used.
+        `get_binary` - path to binary file which accepts filename and key
+            (in that order), downloads bundle from store and saves it to file
+        `get_args` - format string with additional args to `get_binary`.
+                     {filename} and {handle} replacement field can be used.
+        """
+
+        self.put_args = put_args
+        self.get_args = get_args
+        self.put_binary = put_binary
+        self.get_binary = get_binary
+
+    def _call_binary(self, args):
+        p = subprocess.Popen(
+            args, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            close_fds=True)
+        stdout, stderr = p.communicate()
+        returncode = p.returncode
+        return returncode, stdout, stderr
+
+    def write(self, data):
+        # Won't work on windows because you can't open file second time without
+        # closing it
+        with NamedTemporaryFile() as temp:
+            temp.write(data)
+            temp.flush()
+            temp.seek(0)
+            formatted_args = [arg.format(filename=temp.name)
+                              for arg in self.put_args]
+            returncode, stdout, stderr = self._call_binary(
+                [self.put_binary] + formatted_args)
+
+            if returncode != 0:
+                raise BundleWriteException(
+                    'Failed to upload to external store: %s' % stderr)
+            stdout_lines = stdout.splitlines()
+            if len(stdout_lines) == 1:
+                return stdout_lines[0]
+            else:
+                raise BundleWriteException(
+                    'Bad output from %s: %s' % (self.put_binary, stdout))
+
+    def read(self, handle):
+        # Won't work on windows because you can't open file second time without
+        # closing it
+        with NamedTemporaryFile() as temp:
+            formatted_args = [arg.format(filename=temp.name, handle=handle)
+                              for arg in self.get_args]
+            returncode, stdout, stderr = self._call_binary(
+                [self.get_binary] + formatted_args)
+
+            if returncode != 0:
+                raise BundleReadException(
+                    'Failed to download from external store: %s' %
+                    (self.get_binary, stderr))
+            return temp.read()

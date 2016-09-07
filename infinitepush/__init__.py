@@ -49,7 +49,20 @@ configcreate = 'server-bundlestore-create'
 class bundlestore(object):
     def __init__(self, repo):
         self._repo = repo
-        self.store = store.filebundlestore(self._repo.ui, self._repo)
+        storetype = self._repo.ui.config('infinitepush', 'storetype', 'disk')
+        if storetype == 'disk':
+            self.store = store.filebundlestore(self._repo.ui, self._repo)
+        elif storetype == 'external':
+            put_args = self._repo.ui.configlist('infinitepush', 'put_args', [])
+            put_binary = self._repo.ui.config('infinitepush', 'put_binary')
+            if not put_binary:
+                raise error.Abort('put binary is not specified')
+            get_args = self._repo.ui.configlist('infinitepush', 'get_args', [])
+            get_binary = self._repo.ui.config('infinitepush', 'get_binary')
+            if not get_binary:
+                raise error.Abort('get binary is not specified')
+            self.store = store.externalbundlestore(
+                put_binary, put_args, get_binary, get_args)
         indextype = self._repo.ui.config('infinitepush', 'indextype', 'disk')
         if indextype == 'disk':
             self.index = indexapi.fileindexapi(self._repo)
