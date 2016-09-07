@@ -26,6 +26,10 @@ import struct
 class CorruptedFileError(Exception):
     pass
 
+# whether the changeset is in the side branch. i.e. not in the linear main
+# branch but only got referenced by lines in merge changesets.
+sidebranchflag = 1
+
 class revmap(object):
     """trivial hg bin hash - linelog rev bidirectional map
 
@@ -132,3 +136,16 @@ class revmap(object):
                     self._rev2flag.append(flag)
                 else:
                     raise CorruptedFileError()
+
+    def __contains__(self, f):
+        """(fctx or node) -> bool.
+        test if f is in the map and is not in a side branch.
+        """
+        if isinstance(f, str):
+            hsh = f
+        else:
+            hsh = f.node()
+        rev = self.hsh2rev(hsh)
+        if rev is None:
+            return False
+        return (self.rev2flag(rev) & sidebranchflag) == 0
