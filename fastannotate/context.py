@@ -7,9 +7,19 @@
 
 from __future__ import absolute_import
 
+import contextlib
+import os
+
+from fastannotate import (
+    revmap as revmapmod,
+)
+
 from mercurial import (
+    lock as lockmod,
     util,
 )
+
+import linelog as linelogmod
 
 # extracted from mercurial.context.basefilectx.annotate
 def _getbase(fctx):
@@ -92,3 +102,67 @@ class annotateopts(object):
         return result or 'default'
 
 defaultopts = annotateopts()
+
+class _annotatecontext(object):
+    """do not use this class directly as it does not use lock to protect
+    writes. use "with annotatecontext(...)" instead.
+    """
+
+    def __init__(self, repo, path, linelog, revmap, opts):
+        self.repo = repo
+        self.ui = repo.ui
+        self.path = path
+        self.linelog = linelog
+        self.revmap = revmap
+        self.opts = opts
+
+def _unlinkpaths(paths):
+    """silent, best-effort unlink"""
+    for path in paths:
+        try:
+            util.unlink(path)
+        except OSError:
+            pass
+
+@contextlib.contextmanager
+def annotatecontext(repo, path, opts=defaultopts, rebuild=False):
+    """context needed to perform (fast) annotate on a file
+
+    an annotatecontext of a single file consists of two structures: the
+    linelog and the revmap. this function takes care of locking. only 1
+    process is allowed to write that file's linelog and revmap at a time.
+
+    when something goes wrong, this function will assume the linelog and the
+    revmap are in a bad state, and remove them from disk.
+
+    use this function in the following way:
+
+        with annotatecontext(...) as actx:
+            actx. ....
+    """
+    # different options use different directories
+    subpath = os.path.join('fastannotate', opts.shortstr, path)
+    util.makedirs(repo.vfs.join(os.path.dirname(subpath)))
+    lockpath = subpath + '.lock'
+    lock = lockmod.lock(repo.vfs, lockpath)
+    fullpath = repo.vfs.join(subpath)
+    revmappath = fullpath + '.m'
+    linelogpath = fullpath + '.l'
+    linelog = revmap = None
+    try:
+        with lock:
+            if rebuild:
+                _unlinkpaths([revmappath, linelogpath])
+            revmap = revmapmod.revmap(revmappath)
+            linelog = linelogmod.linelog(linelogpath)
+            yield _annotatecontext(repo, path, linelog, revmap, opts)
+    except Exception:
+        revmap = linelog = None
+        _unlinkpaths([revmappath, linelogpath])
+        repo.ui.debug('fastannotate: %s: cache broken and deleted\n' % path)
+        raise
+    finally:
+        if revmap:
+            revmap.flush()
+        if linelog:
+            linelog.close()
