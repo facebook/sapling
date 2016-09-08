@@ -299,7 +299,7 @@ static FindResult get_callback(
 
   result->resultnode->erase();
   if (entry.node != NULL) {
-    result->resultnode->append(entry.node);
+    appendbinfromhex(entry.node, *result->resultnode);
   }
 
   if (entry.flag != NULL) {
