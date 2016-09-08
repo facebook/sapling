@@ -23,7 +23,7 @@ from mercurial import (
 from mercurial.i18n import _
 
 def _localrepoinit(orig, self, baseui, path=None, create=False):
-    result = orig(self, baseui, path, create)
+    orig(self, baseui, path, create)
     kwargs = {'repo': path}
     self.ui.log("reporootlog",
                 "",           # ui.log requires a format string as args[0].
