@@ -35,6 +35,8 @@ struct py_fileiter {
 
   fileiter iter;
 
+  bool includenodeflag;
+
   // A reference to the tree is kept, so it is not freed while we're iterating
   // over it.
   const py_treemanifest *treemf;
@@ -76,12 +78,14 @@ static PyTypeObject fileiterType = {
 };
 
 static py_fileiter *createfileiter(py_treemanifest *pytm,
+                                   bool includenodeflag,
                                    PythonObj matcher) {
   py_fileiter *i = PyObject_New(py_fileiter, &fileiterType);
   if (i) {
     try {
       i->treemf = pytm;
       Py_INCREF(pytm);
+      i->includenodeflag = includenodeflag;
 
       // The provided py_fileiter struct hasn't initialized our fileiter member, so
       // we do it manually.
@@ -101,8 +105,9 @@ static py_fileiter *createfileiter(py_treemanifest *pytm,
   }
 }
 
-static py_fileiter *createfileiter(py_treemanifest *pytm) {
-  return createfileiter(pytm, PythonObj());
+static py_fileiter *createfileiter(py_treemanifest *pytm,
+                                   bool includenodeflag) {
+  return createfileiter(pytm, includenodeflag, PythonObj());
 }
 
 // ==== treemanifest functions ====
@@ -112,7 +117,7 @@ static py_fileiter *createfileiter(py_treemanifest *pytm) {
  * Returns a PyObject iterator instance.
  */
 static PyObject *treemanifest_getkeysiter(py_treemanifest *self) {
-  return (PyObject*)createfileiter(self);
+  return (PyObject*)createfileiter(self, false);
 }
 
 static PyObject *treemanifest_diff(
@@ -357,7 +362,17 @@ static PyObject *fileiter_iterentriesnext(py_fileiter *self) {
     char node[BIN_NODE_SIZE];
     char flag[FLAG_SIZE];
     if (fileiter_next(iter, path, FILENAME_BUFFER_SIZE, node, flag)) {
-      return PyString_FromStringAndSize(path, strlen(path));
+      if (self->includenodeflag) {
+        size_t flaglen = 0;
+        if (flag[0] != '\0') {
+          flaglen = 1;
+        }
+        return Py_BuildValue("(s#s#s#)", path, strlen(path),
+                                         node, BIN_NODE_SIZE,
+                                         flag, flaglen);
+      } else {
+        return PyString_FromStringAndSize(path, strlen(path));
+      }
     }
     return NULL;
   } catch (const pyexception &ex) {
@@ -575,6 +590,10 @@ static int treemanifest_contains(py_treemanifest *self, PyObject *key) {
   }
 }
 
+static PyObject *treemanifest_getentriesiter(py_treemanifest *self) {
+  return (PyObject*)createfileiter(self, true);
+}
+
 // ====  treemanifest ctype declaration ====
 
 static PyMethodDef treemanifest_methods[] = {
@@ -583,6 +602,10 @@ static PyMethodDef treemanifest_methods[] = {
   {"find", treemanifest_find, METH_VARARGS, "returns the node and flag for the given filepath\n"},
   {"flags", (PyCFunction)treemanifest_flags, METH_VARARGS|METH_KEYWORDS,
     "returns the flag for the given filepath\n"},
+  {"iterentries", (PyCFunction)treemanifest_getentriesiter, METH_NOARGS,
+   "iterate over (path, nodeid, flags) tuples in this manifest."},
+  {"iterkeys", (PyCFunction)treemanifest_getkeysiter, METH_NOARGS,
+   "iterate over file names in this manifest."},
   {"matches", (PyCFunction)treemanifest_matches, METH_VARARGS,
     "returns a manifest filtered by the matcher"},
   {NULL, NULL}
