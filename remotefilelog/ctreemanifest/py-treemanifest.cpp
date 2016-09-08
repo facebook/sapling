@@ -167,15 +167,13 @@ static PyObject *treemanifest_find(PyObject *o, PyObject *args) {
     return NULL;
   }
 
-  ManifestFetcher fetcher = self->tm.fetcher;
-
   std::string resultnode;
   char resultflag;
   try {
     // Grab the root node's data
 
     self->tm.get(
-        std::string(filename, filenamelen),
+        std::string(filename, (size_t) filenamelen),
         &resultnode, &resultflag);
   } catch (const pyexception &ex) {
     return NULL;
@@ -222,7 +220,7 @@ static int treemanifest_init(py_treemanifest *self, PyObject *args) {
   try {
     if (node != NULL) {
       new(&self->tm) treemanifest(
-          PythonObj(store), std::string(node, nodelen));
+          PythonObj(store), std::string(node, (size_t) nodelen));
     } else {
       new(&self->tm) treemanifest(PythonObj(store));
     }
@@ -378,13 +376,11 @@ static PyObject *treemanifest_getitem(py_treemanifest *self, PyObject *key) {
   Py_ssize_t filenamelen;
   PyString_AsStringAndSize(key, &filename, &filenamelen);
 
-  ManifestFetcher fetcher = self->tm.fetcher;
-
   std::string resultnode;
   char resultflag;
   try {
     self->tm.get(
-        std::string(filename, filenamelen),
+        std::string(filename, (size_t) filenamelen),
         &resultnode, &resultflag);
   } catch (const pyexception &ex) {
     return NULL;
@@ -419,13 +415,11 @@ static PyObject *treemanifest_flags(py_treemanifest *self, PyObject *args, PyObj
     return NULL;
   }
 
-  ManifestFetcher fetcher = self->tm.fetcher;
-
   std::string resultnode;
   char resultflag;
   try {
     self->tm.get(
-        std::string(filename, filenamelen),
+        std::string(filename, (size_t) filenamelen),
         &resultnode, &resultflag);
   } catch (const pyexception &ex) {
     return NULL;
@@ -567,13 +561,11 @@ static int treemanifest_contains(py_treemanifest *self, PyObject *key) {
   Py_ssize_t filenamelen;
   PyString_AsStringAndSize(key, &filename, &filenamelen);
 
-  ManifestFetcher fetcher = self->tm.fetcher;
-
   std::string resultnode;
   char resultflag;
   try {
     self->tm.get(
-        std::string(filename, filenamelen),
+        std::string(filename, (size_t) filenamelen),
         &resultnode, &resultflag);
     if (resultnode.size() == 0) {
       return 0;
