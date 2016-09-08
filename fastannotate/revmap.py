@@ -48,6 +48,7 @@ class revmap(object):
         self._rev2hsh = [None]
         self._rev2flag = [None]
         self._hsh2rev = {}
+        self._lastmaxrev = -1
         if path:
             if os.path.exists(path):
                 self._load()
@@ -74,6 +75,7 @@ class revmap(object):
             with open(self.path, 'a') as f:
                 f.write(hsh)
                 f.write(struct.pack('B', flag))
+            self._lastmaxrev = self.maxrev
         return idx
 
     def rev2hsh(self, rev):
@@ -105,7 +107,7 @@ class revmap(object):
 
     def flush(self):
         """write the state down to the file"""
-        if not self.path:
+        if not self.path or self.maxrev == self._lastmaxrev: # nothing changed
             return
         with open(self.path, 'wb') as f:
             f.write(self.HEADER)
@@ -114,6 +116,7 @@ class revmap(object):
                     continue
                 f.write(hsh)
                 f.write(struct.pack('B', self._rev2flag[i]))
+        self._lastmaxrev = self.maxrev
 
     def _load(self):
         """load state from file"""
@@ -135,6 +138,7 @@ class revmap(object):
                     self._rev2flag.append(flag)
                 else:
                     raise error.CorruptedFileError()
+        self._lastmaxrev = self.maxrev
 
     def __contains__(self, f):
         """(fctx or node) -> bool.
