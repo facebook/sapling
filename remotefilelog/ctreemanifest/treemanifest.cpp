@@ -210,8 +210,8 @@ FindResult treemanifest::find(
         const char *filename, size_t filenamelen,
         FindContext *findContext)) {
 
-  const char *word;
-  size_t wordlen;
+  const char *word = NULL;
+  size_t wordlen = 0;
 
   path.next(&word, &wordlen);
   if (path.isfinished()) {
