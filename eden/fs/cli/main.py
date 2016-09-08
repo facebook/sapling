@@ -12,13 +12,10 @@ from eden.thrift import EdenNotRunningError
 import errno
 import json
 import os
-import subprocess
 import sys
-import thrift
 
 from . import config as config_mod
 from . import util
-from fb303.ttypes import fb_status
 from facebook.eden import EdenService
 
 # Relative to the user's $HOME/%USERPROFILE% directory.

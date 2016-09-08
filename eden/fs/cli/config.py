@@ -22,7 +22,6 @@ import time
 
 from . import util
 import eden.thrift
-from facebook.eden import EdenService
 import facebook.eden.ttypes as eden_ttypes
 from fb303.ttypes import fb_status
 import thrift
