@@ -3525,8 +3525,7 @@ def debugrevspec(ui, repo, expr, **opts):
     """
     stages = [
         ('parsed', lambda tree: tree),
-        ('expanded',
-         lambda tree: revset.expandaliases(ui, tree, showwarning=ui.warn)),
+        ('expanded', lambda tree: revset.expandaliases(ui, tree)),
         ('concatenated', revset.foldconcat),
         ('analyzed', revset.analyze),
         ('optimized', revset.optimize),

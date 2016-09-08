@@ -2556,15 +2556,14 @@ class _aliasrules(parser.basealiasrules):
         if tree[0] == 'func' and tree[1][0] == 'symbol':
             return tree[1][1], getlist(tree[2])
 
-def expandaliases(ui, tree, showwarning=None):
+def expandaliases(ui, tree):
     aliases = _aliasrules.buildmap(ui.configitems('revsetalias'))
     tree = _aliasrules.expand(aliases, tree)
-    if showwarning:
-        # warn about problematic (but not referred) aliases
-        for name, alias in sorted(aliases.iteritems()):
-            if alias.error and not alias.warned:
-                showwarning(_('warning: %s\n') % (alias.error))
-                alias.warned = True
+    # warn about problematic (but not referred) aliases
+    for name, alias in sorted(aliases.iteritems()):
+        if alias.error and not alias.warned:
+            ui.warn(_('warning: %s\n') % (alias.error))
+            alias.warned = True
     return tree
 
 def foldconcat(tree):
@@ -2617,7 +2616,7 @@ def matchany(ui, specs, repo=None):
         tree = ('or',) + tuple(parse(s, lookup) for s in specs)
 
     if ui:
-        tree = expandaliases(ui, tree, showwarning=ui.warn)
+        tree = expandaliases(ui, tree)
     tree = foldconcat(tree)
     tree = analyze(tree)
     tree = optimize(tree)
