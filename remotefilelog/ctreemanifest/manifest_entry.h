@@ -34,6 +34,9 @@ class ManifestEntry {
     char *filename;
     size_t filenamelen;
     char *node;
+
+    // unlike filename/node, this is not always a valid pointer.  if the flag
+    // is unset, flag will be set to NULL.
     char *flag;
     Manifest *resolved;
     char *ownedmemory;

@@ -40,11 +40,10 @@ void ManifestEntry::initialize(
   } else {
     this->node = this->filename + filenamelen + 1;
   }
-  this->flag = this->filename + filenamelen + 1 + 40;
 
   // set up the null character and NL.
   this->filename[filenamelen] = '\0';
-  *(this->flag + 1) = '\n';
+  *(this->filename + filenamelen + 1 + HEX_NODE_SIZE + 1) = '\n';
 
   // set up filenamelen
   this->filenamelen = filenamelen;
@@ -55,8 +54,10 @@ void ManifestEntry::initialize(
     memcpy(this->node, node, 40);
   }
   if (flag == '\0') {
-    *this->flag = '\n';
+    *(this->filename + filenamelen + 1 + HEX_NODE_SIZE) = '\n';
+    this->flag = NULL;
   } else {
+    this->flag = this->filename + filenamelen + 1 + HEX_NODE_SIZE;
     *this->flag = flag;
   }
 }
