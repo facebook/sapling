@@ -117,6 +117,20 @@ config option "fastannotate.mainbranch"
   2: 3
   4: 4
 
+config option "fastannotate.commands"
+
+  $ hg annotate -r 1 --debug a
+  0: 1
+  1: 2
+  $ hg annotate --config fastannotate.commands=annotate -r 1 --debug a
+  fastannotate: a: no need to update linelog
+  0: 1
+  1: 2
+  $ hg fastannotate --config fastannotate.commands=annotate -h -q
+  hg: unknown command 'fastannotate'
+  (did you mean *) (glob)
+  [255]
+
 rename
 
   $ hg mv a b

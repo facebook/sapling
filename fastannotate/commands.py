@@ -16,6 +16,7 @@ from fastannotate import (
 from mercurial import (
     commands,
     error,
+    extensions,
     scmutil,
 )
 
@@ -116,3 +117,35 @@ def fastannotate(ui, repo, *pats, **opts):
             result, lines = result
 
         formatter.write(result, lines)
+
+_newopts = set([])
+_knownopts = set([opt[1].replace('-', '_') for opt in
+                  (fastannotatecommandargs['options'] + commands.globalopts)])
+
+def _annotatewrapper(orig, ui, repo, *pats, **opts):
+    """use this in extensions.wrapcommand"""
+    nonemptyopts = set(k for k, v in opts.iteritems() if v)
+    unknownopts = nonemptyopts.difference(_knownopts)
+    if unknownopts:
+        ui.debug('fastannotate: option %r is not supported, falling back '
+                 'to the original annotate\n' % list(unknownopts))
+        unsafeopts = _newopts.intersection(nonemptyopts)
+        if unsafeopts:
+            raise error.Abort(_('--%s cannot be used together with --%s')
+                              % (list(unknownopts)[0].replace('_', '-'),
+                                 list(unsafeopts)[0].replace('_', '-')))
+        return orig(ui, repo, *pats, **opts)
+    return fastannotate(ui, repo, *pats, **opts)
+
+def _appendoptions(origopts):
+    """append our options to the original amend option list"""
+    for newopt in fastannotatecommandargs['options']:
+        if any([o[1] == newopt[1] for o in origopts]):
+            continue
+        origopts.append(newopt)
+        _newopts.add(newopt[1].replace('-', '_'))
+
+def replacedefault():
+    """replace the default annotate command"""
+    entry = extensions.wrapcommand(commands.table, 'annotate', _annotatewrapper)
+    _appendoptions(entry[1])

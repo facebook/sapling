@@ -20,6 +20,8 @@ be faster than the vanilla 'annotate' if the cache is present.
     # backwards without a rebuild, this should be something that always moves
     # forward, usually it is "master" or "@".
     mainbranch = master
+    # add a "fastannotate" command, and replace the default "annotate" command
+    commands = fastannotate, annotate
     # use unfiltered repo for better performance
     unfilteredrepo = True
 """
@@ -30,6 +32,7 @@ from fastannotate import commands
 
 from mercurial import (
     cmdutil,
+    error as hgerror,
 )
 
 testedwith = 'internal'
@@ -37,7 +40,15 @@ testedwith = 'internal'
 cmdtable = {}
 command = cmdutil.command(cmdtable)
 
-command('^fastannotate|fastblame|fa',
-        **commands.fastannotatecommandargs
-       )(commands.fastannotate)
-
+def uisetup(ui):
+    cmdnames = ui.configlist('fastannotate', 'commands', ['fastannotate'])
+    for name in set(cmdnames):
+        if name == 'fastannotate':
+            command('^fastannotate|fastblame|fa',
+                    **commands.fastannotatecommandargs
+                   )(commands.fastannotate)
+        elif name == 'annotate':
+            commands.replacedefault()
+        else:
+            raise hgerror.Abort(_('%s: invalid fastannotate.commands option')
+                                % name)
