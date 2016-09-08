@@ -594,6 +594,20 @@ static PyObject *treemanifest_getentriesiter(py_treemanifest *self) {
   return (PyObject*)createfileiter(self, true);
 }
 
+static PyObject *treemanifest_walk(py_treemanifest *self, PyObject *args) {
+  PyObject* matcherObj;
+
+  if (!PyArg_ParseTuple(args, "O", &matcherObj)) {
+    return NULL;
+  }
+  // ParseTuple doesn't increment the ref, but the PythonObj will decrement on
+  // destruct, so let's increment now.
+  Py_INCREF(matcherObj);
+  PythonObj matcher = matcherObj;
+
+  return (PyObject*)createfileiter(self, false, matcher);
+}
+
 // ====  treemanifest ctype declaration ====
 
 static PyMethodDef treemanifest_methods[] = {
@@ -608,6 +622,8 @@ static PyMethodDef treemanifest_methods[] = {
    "iterate over file names in this manifest."},
   {"matches", (PyCFunction)treemanifest_matches, METH_VARARGS,
     "returns a manifest filtered by the matcher"},
+  {"walk", (PyCFunction)treemanifest_walk, METH_VARARGS,
+    "returns a iterator for walking the manifest"},
   {NULL, NULL}
 };
 
