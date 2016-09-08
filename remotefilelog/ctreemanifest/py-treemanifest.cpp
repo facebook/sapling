@@ -17,8 +17,6 @@
 #include "treemanifest.h"
 
 #define FILENAME_BUFFER_SIZE 16348
-#define HEX_NODE_SIZE 40
-#define BIN_NODE_SIZE 20
 #define FLAG_SIZE 1
 
 struct py_treemanifest {

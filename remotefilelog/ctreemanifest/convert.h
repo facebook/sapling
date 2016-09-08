@@ -14,6 +14,9 @@
 
 #include <string>
 
+#define HEX_NODE_SIZE 40
+#define BIN_NODE_SIZE 20
+
 static int8_t hextable[256] = {
     -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
@@ -31,6 +34,11 @@ static int8_t hextable[256] = {
     -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1
+};
+
+static char chartable[16] = {
+    '0', '1', '2', '3', '4', '5', '6', '7',
+    '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'
 };
 
 /**
@@ -53,6 +61,20 @@ inline std::string binfromhex(const char *node) {
   result.reserve(20);
   appendbinfromhex(node, result);
   return result;
+}
+
+/**
+ * Converts a given 20-byte node into a 40-byte hex string.
+ */
+inline void hexfrombin(const char *binnode, std::string &output) {
+  for (size_t ix = 0; ix < BIN_NODE_SIZE; ix++) {
+    unsigned char ch = (unsigned char) binnode[ix];
+    char hi = chartable[ch >> 4];
+    char lo = chartable[ch & 0xf];
+
+    output.push_back(hi);
+    output.push_back(lo);
+  }
 }
 
 #endif //CTREEMANIFEST_CONVERT_H
