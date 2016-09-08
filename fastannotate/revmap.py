@@ -8,6 +8,8 @@
 import os
 import struct
 
+from fastannotate import error
+
 # the revmap file format is straightforward:
 #
 #    8 bytes: header
@@ -22,9 +24,6 @@ import struct
 # seconds, which looks enough for our use-case. if this implementation
 # becomes a bottleneck, we can change it to lazily read the file
 # from the end.
-
-class CorruptedFileError(Exception):
-    pass
 
 # whether the changeset is in the side branch. i.e. not in the linear main
 # branch but only got referenced by lines in merge changesets.
@@ -122,7 +121,7 @@ class revmap(object):
             return
         with open(self.path, 'rb') as f:
             if f.read(len(self.HEADER)) != self.HEADER:
-                raise CorruptedFileError()
+                raise error.CorruptedFileError()
             self.clear(flush=False)
             while True:
                 buf = f.read(21)
@@ -135,7 +134,7 @@ class revmap(object):
                     self._rev2hsh.append(hsh)
                     self._rev2flag.append(flag)
                 else:
-                    raise CorruptedFileError()
+                    raise error.CorruptedFileError()
 
     def __contains__(self, f):
         """(fctx or node) -> bool.
