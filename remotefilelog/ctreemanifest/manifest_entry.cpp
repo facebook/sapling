@@ -119,3 +119,33 @@ Manifest *ManifestEntry::get_manifest(
 
   return this->resolved;
 }
+
+void ManifestEntry::update(const char *node, char flag) {
+  // we cannot flip between file and directory.
+  bool wasdir = this->flag != NULL && *this->flag == MANIFEST_DIRECTORY_FLAG;
+  bool willbedir = flag == MANIFEST_DIRECTORY_FLAG;
+
+  if (wasdir != willbedir) {
+    throw std::logic_error("changing to/from directory is not permitted");
+  }
+
+  // if we didn't previously own the memory, we should now.
+  if (this->ownedmemory == NULL) {
+    this->initialize(this->filename, this->filenamelen, node, flag);
+    return;
+  }
+
+  // initialize node if it's not already done.
+  if (this->node == NULL) {
+    this->node = this->filename + this->filenamelen + 1;
+  }
+  memcpy(this->node, node, HEX_NODE_SIZE);
+
+  if (flag == '\0') {
+    *(this->filename + this->filenamelen + 1 + HEX_NODE_SIZE) = '\n';
+    this->flag = NULL;
+  } else {
+    this->flag = this->filename + filenamelen + 1 + HEX_NODE_SIZE;
+    *this->flag = flag;
+  }
+}

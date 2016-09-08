@@ -64,6 +64,8 @@ class ManifestEntry {
         const char *filename, const size_t filenamelen,
         const char *node,
         char flag);
+
+    void update(const char *node, char flag);
 };
 
 #endif //REMOTEFILELOG_MANIFEST_ENTRY_H
