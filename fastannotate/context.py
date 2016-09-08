@@ -64,3 +64,31 @@ def _pair(parent, child, blocks):
         if t == '=':
             child[0][b1:b2] = parent[0][a1:a2]
     return child
+
+class annotateopts(object):
+    """like mercurial.mdiff.diffopts, but is for annotate
+
+    followrename: follow renames, like "hg annotate -f"
+    followmerge: follow p2 of a merge changeset, otherwise p2 is ignored
+    """
+
+    defaults = {
+        'followrename': True,
+        'followmerge': True,
+    }
+
+    def __init__(self, **opts):
+        for k, v in self.defaults.iteritems():
+            setattr(self, k, opts.get(k, v))
+
+    @property
+    def shortstr(self):
+        """represent opts in a short string, suitable for a directory name"""
+        result = ''
+        if not self.followrename:
+            result += 'r0'
+        if not self.followmerge:
+            result += 'm0'
+        return result or 'default'
+
+defaultopts = annotateopts()
