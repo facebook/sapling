@@ -189,6 +189,11 @@ class FastManifestExtension(object):
         extensions.wrapfunction(manifest.manifest, 'rev', logger.revwrap)
 
         factory = manifestfactory(FastManifestExtension.get_ui())
+
+        extensions.wrapfunction(
+            manifest.manifestlog, '__getitem__', factory.newgetitem)
+        extensions.wrapfunction(manifest.manifest, 'add', factory.add)
+
         # Wraps all the function creating a manifestdict
         # We have to do that because the logic to create manifest can take
         # 7 different codepaths and we want to retain the node information
@@ -211,8 +216,6 @@ class FastManifestExtension(object):
         # The recursion level is at most 2 because we wrap the two top
         # level functions and _newmanifest
         # (wrapped only for the case of -1)
-        extensions.wrapfunction(dispatch, 'runcommand',
-                                FastManifestExtension._logonexit)
         extensions.wrapfunction(manifest.manifest, '_newmanifest',
                                 factory.newmanifest)
         extensions.wrapfunction(manifest.manifest, 'read', factory.read)
@@ -223,7 +226,6 @@ class FastManifestExtension(object):
             # The function didn't use to be defined in previous versions
             # of hg
             pass
-        extensions.wrapfunction(manifest.manifest, 'add', factory.add)
 
         revsetmod.symbols['fastmanifesttocache'] = (
                 cachemanager.fastmanifesttocache
@@ -250,8 +252,13 @@ class FastManifestExtension(object):
                     'saveremotenames',
                     cachemanager.triggers.onremotenameschange)
 
-        extensions.wrapfunction(dispatch, 'runcommand',
-                        cachemanager.triggers.runcommandtrigger)
+        extensions.wrapfunction(
+            dispatch, 'runcommand',
+            FastManifestExtension._logonexit)
+
+        extensions.wrapfunction(
+            dispatch, 'runcommand',
+            cachemanager.triggers.runcommandtrigger)
 
 def extsetup(ui):
     # always update the ui object.  this is probably a bogus ui object, but we

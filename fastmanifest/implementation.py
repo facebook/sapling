@@ -672,6 +672,32 @@ class fastmanifestcache(object):
             self.debug("[FM] removing cached manifest fast%s\n" % (candidate,))
             del self.ondiskcache[candidate]
 
+class hybridmanifestctx(hybridmanifest):
+    """A class representing a single revision of a manifest, including its
+    contents, its parent revs, and its linkrev.
+    """
+    def __init__(self, ui, opener, revlog, node):
+        self._revlog = revlog
+
+        self._node = node
+        self.p1, self.p2 = revlog.parents(node)
+        rev = revlog.rev(node)
+        self.linkrev = revlog.linkrev(rev)
+
+        def loadflat():
+            # This should eventually be made lazy loaded, so consumers can
+            # access the node/p1/linkrev data without having to parse the whole
+            # manifest.
+            data = revlog.revision(node)
+            arraytext = array.array('c', data)
+            revlog._fulltextcache[node] = arraytext
+            return manifest.manifestdict(data)
+
+        super(hybridmanifestctx, self).__init__(
+            ui, opener, loadflat=loadflat, node=node)
+
+    def node(self):
+        return self._node
 
 class manifestfactory(object):
     def __init__(self, ui):
@@ -687,6 +713,15 @@ class manifestfactory(object):
                               args[0].opener,
                               loadflat=lambda: orig(*args, **kwargs),
                               node=args[1])
+
+    def newgetitem(self, orig, *args, **kwargs):
+        # args[0] == instance of manifestlog
+        # args[1] = node
+        return hybridmanifestctx(
+            self.ui,
+            args[0]._repo.svfs,
+            args[0]._revlog,
+            args[1])
 
     def add(self, orig, *args, **kwargs):
         origself, m, transaction, link, p1, p2, added, removed = args[:8]
