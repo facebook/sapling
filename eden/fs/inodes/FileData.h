@@ -10,7 +10,9 @@
 #pragma once
 #include <folly/File.h>
 #include <mutex>
+#include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/model/Tree.h"
+#include "eden/fs/overlay/Overlay.h"
 #include "eden/fuse/BufVec.h"
 
 namespace facebook {
@@ -32,15 +34,19 @@ class Hash;
  */
 class FileData {
  public:
-  /** Construct a FileData from an optional entry (it may be nullptr) */
-  FileData(std::mutex& mutex, EdenMount* mount, const TreeEntry* entry);
+  /** Construct a FileData from an overlay entry */
+  FileData(std::mutex& mutex, EdenMount* mount, TreeInode::Entry* entry);
 
   /** Construct a freshly created FileData from a pre-opened File object.
    * file must be moved in (it has no copy constructor) and must have
-   * been created by a call to Overlay::openFile.  This constructor
+   * been created by a call to Overlay::createFile.  This constructor
    * is used in the DirInode::create case and is required to implement
    * O_EXCL correctly. */
-  FileData(std::mutex& mutex, EdenMount* mount, folly::File&& file);
+  FileData(
+      std::mutex& mutex,
+      EdenMount* mount,
+      TreeInode::Entry* entry,
+      folly::File&& file);
 
   fusell::BufVec read(size_t size, off_t off);
   size_t write(fusell::BufVec&& buf, off_t off);
@@ -68,7 +74,19 @@ class FileData {
   // copy it locally to the overlay.  If we are truncating we just
   // need to create an empty file in the overlay.  Otherwise we
   // need to go out to the LocalStore to obtain the backing data.
-  void materialize(int open_flags, RelativePathPiece path);
+  void materializeForWrite(
+      int open_flags,
+      RelativePathPiece path,
+      std::shared_ptr<Overlay> overlay);
+
+  /** Materializes the file data.
+   * This variant is optimized for the read case; if there is
+   * no locally available version of the file in the overlay,
+   * this method will fetch it from the LocalStore. */
+  void materializeForRead(
+      int open_flags,
+      RelativePathPiece path,
+      std::shared_ptr<Overlay> overlay);
 
  private:
   // Reference to the mutex in the associated inode.
@@ -87,8 +105,10 @@ class FileData {
    */
   EdenMount* const mount_{nullptr};
 
-  /// The TreeEntry for this file.
-  const TreeEntry* entry_;
+  /** Metadata about the file.
+   * This points to the entry that is owned by the parent TreeInode
+   * of this file.  It will always be non-null. */
+  TreeInode::Entry* entry_;
 
   /// if backed by tree, the data from the tree, else nullptr.
   std::unique_ptr<Blob> blob_;

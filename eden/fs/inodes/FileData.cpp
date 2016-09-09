@@ -28,11 +28,15 @@ namespace eden {
 
 using folly::checkUnixError;
 
-FileData::FileData(std::mutex& mutex, EdenMount* mount, const TreeEntry* entry)
+FileData::FileData(std::mutex& mutex, EdenMount* mount, TreeInode::Entry* entry)
     : mutex_(mutex), mount_(mount), entry_(entry) {}
 
-FileData::FileData(std::mutex& mutex, EdenMount* mount, folly::File&& file)
-    : mutex_(mutex), mount_(mount), entry_(nullptr), file_(std::move(file)) {}
+FileData::FileData(
+    std::mutex& mutex,
+    EdenMount* mount,
+    TreeInode::Entry* entry,
+    folly::File&& file)
+    : mutex_(mutex), mount_(mount), entry_(entry), file_(std::move(file)) {}
 
 // Conditionally updates target with either the value provided by
 // the caller, or with the current time value, depending on the value
@@ -128,29 +132,9 @@ struct stat FileData::stat() {
   }
 
   CHECK(blob_);
-  CHECK_NOTNULL(entry_);
+  CHECK(entry_);
 
-  switch (entry_->getFileType()) {
-    case FileType::SYMLINK:
-      st.st_mode = S_IFLNK;
-      break;
-    case FileType::REGULAR_FILE:
-      st.st_mode = S_IFREG;
-      break;
-    default:
-      folly::throwSystemErrorExplicit(
-          EINVAL,
-          "TreeEntry has an invalid file type: ",
-          entry_->getFileType());
-  }
-
-  // Bit 1 is the executable flag.  Flesh out all the permission bits based on
-  // the executable bit being set or not.
-  if (entry_->getOwnerPermissions() & 1) {
-    st.st_mode |= 0755;
-  } else {
-    st.st_mode |= 0644;
-  }
+  st.st_mode = entry_->mode;
 
   auto buf = blob_->getContents();
   st.st_size = buf.computeChainDataLength();
@@ -241,62 +225,91 @@ size_t FileData::write(folly::StringPiece data, off_t off) {
   return xfer;
 }
 
-void FileData::materialize(int open_flags, RelativePathPiece path) {
+void FileData::materializeForRead(
+    int open_flags,
+    RelativePathPiece path,
+    std::shared_ptr<Overlay> overlay) {
+  DCHECK((open_flags & (O_WRONLY | O_RDWR | O_CREAT | O_TRUNC)) == 0)
+      << "this is the read only materialization method";
   std::unique_lock<std::mutex> lock(mutex_);
 
   // If we have a tree entry, assume that we will need the blob data...
-  bool need_blob = entry_ != nullptr;
-  // ... and that we don't need an overlay file handle.
-  bool need_file = false;
+  bool needBlob = entry_->hash.hasValue();
 
-  if ((open_flags & O_TRUNC) != 0) {
-    // Truncation is a write operation, so we will need an overlay file.
-    need_file = true;
-    // No need to materialize the blob from the store if we're just
-    // going to truncate it anyway.
-    need_blob = false;
-  }
-  if ((open_flags & (O_RDWR | O_WRONLY)) != 0) {
-    // Write operations require an overlay file.
-    need_file = true;
-  }
+  if (entry_->materialized) {
+    // Canonical data for this entry lives in the file in the overlay, so there
+    // is not need to go to the store to satisfy it.
+    needBlob = false;
 
-  if (need_blob && mount_->getOverlay()->isWhiteout(path)) {
-    // Data was deleted, no need to go to the store to satisfy it.
-    need_blob = false;
-  }
-
-  // If we have a pre-existing overlay file, we do not need to go to
-  // the store at all.
-  if (!file_) {
-    try {
-      // Test whether an overlay file exists by trying to open it.
+    // If we have a pre-existing overlay file, we do not need to go to
+    // the store at all.
+    if (!file_) {
+      auto filePath = overlay->getContentDir() + path;
       // O_NOFOLLOW because it never makes sense for the kernel to ask
       // a fuse server to open a file that is a symlink to something else.
-      //
-      // TODO: This currently ends up creating new directories in the overlay
-      // for all parent directories of this file.  We shouldn't create these if
-      // they don't already exist.
-      file_ = mount_->getOverlay()->openFile(path, O_RDWR | O_NOFOLLOW, 0600);
-      // since we have a pre-existing overlay file, we don't need the blob.
-      need_blob = false;
+      file_ = folly::File(filePath.c_str(), O_RDWR | O_NOFOLLOW);
       // A freshly opened file has a valid sha1 attribute (assuming no
       // outside interference)
       sha1Valid_ = true;
-    } catch (const std::system_error& err) {
-      if (err.code().value() != ENOENT) {
-        throw;
-      }
-      // Else: doesn't exist in the overlay right now
     }
   }
 
-  if (need_blob && !blob_) {
+  if (needBlob && !blob_) {
     // Load the blob data.
-    blob_ = mount_->getObjectStore()->getBlob(entry_->getHash());
+    blob_ = mount_->getObjectStore()->getBlob(entry_->hash.value());
+  }
+}
+
+void FileData::materializeForWrite(
+    int open_flags,
+    RelativePathPiece path,
+    std::shared_ptr<Overlay> overlay) {
+  std::unique_lock<std::mutex> lock(mutex_);
+
+  // If we have a tree entry, assume that we will need the blob data...
+  bool needBlob = entry_->hash.hasValue();
+  // ... and that we don't need an overlay file handle.
+  bool needFile = false;
+
+  if ((open_flags & O_TRUNC) != 0) {
+    // Truncation is a write operation, so we will need an overlay file.
+    needFile = true;
+    // No need to materialize the blob from the store if we're just
+    // going to truncate it anyway.
+    needBlob = false;
+  }
+  if ((open_flags & (O_RDWR | O_WRONLY)) != 0) {
+    // Write operations require an overlay file.
+    needFile = true;
   }
 
-  if (need_file && !file_) {
+  if (needBlob && entry_->materialized) {
+    // Data was deleted, no need to go to the store to satisfy it.
+    needBlob = false;
+  }
+
+  auto filePath = overlay->getContentDir() + path;
+
+  // If we have a pre-existing overlay file, we do not need to go to
+  // the store at all.
+  if (!file_ && entry_->materialized) {
+    // O_NOFOLLOW because it never makes sense for the kernel to ask
+    // a fuse server to open a file that is a symlink to something else.
+    file_ = folly::File(filePath.c_str(), O_RDWR | O_NOFOLLOW, 0600);
+    entry_->materialized = true;
+    // since we have a pre-existing overlay file, we don't need the blob.
+    needBlob = false;
+    // A freshly opened file has a valid sha1 attribute (assuming no
+    // outside interference)
+    sha1Valid_ = true;
+  }
+
+  if (needBlob && !blob_) {
+    // Load the blob data.
+    blob_ = mount_->getObjectStore()->getBlob(entry_->hash.value());
+  }
+
+  if (needFile && !file_) {
     if (!entry_ && (open_flags & O_CREAT) == 0) {
       // If we get here, we do not have any usable backing from the store
       // and do not have a pre-existing overlay file.
@@ -310,13 +323,14 @@ void FileData::materialize(int open_flags, RelativePathPiece path) {
     // We need an overlay file and don't yet have one.
     // We always create our internal file handle read/write regardless of
     // the mode that the client is requesting.
-    auto file = mount_->getOverlay()->openFile(path, O_RDWR | O_CREAT, 0600);
+    auto file = folly::File(filePath.c_str(), O_RDWR | O_CREAT, 0600);
+    entry_->materialized = true;
 
     // We typically need to populate our newly opened file with the data
-    // from the overlay.  The O_TRUNC check above may have set need_blob
+    // from the overlay.  The O_TRUNC check above may have set needBlob
     // to false, so we'll end up just creating an empty file and skipping
     // the blob copy.
-    if (need_blob) {
+    if (needBlob) {
       auto buf = blob_->getContents();
       auto iov = buf.getIov();
       auto wrote = folly::writevNoInt(file.fd(), iov.data(), iov.size());
@@ -329,7 +343,8 @@ void FileData::materialize(int open_flags, RelativePathPiece path) {
       // Copy and apply the sha1 to the new file.  This saves us from
       // recomputing it again in the case that something opens the file
       // read/write and closes it without changing it.
-      auto sha1 = mount_->getObjectStore()->getSha1ForBlob(entry_->getHash());
+      auto sha1 =
+          mount_->getObjectStore()->getSha1ForBlob(entry_->hash.value());
       fsetxattr(file.fd(), kXattrSha1, sha1->toString());
       sha1Valid_ = true;
     }
@@ -364,8 +379,8 @@ Hash FileData::getSha1Locked(const std::unique_lock<std::mutex>&) {
     }
   }
 
-  CHECK_NOTNULL(entry_);
-  auto sha1 = mount_->getObjectStore()->getSha1ForBlob(entry_->getHash());
+  CHECK(entry_->hash.hasValue());
+  auto sha1 = mount_->getObjectStore()->getSha1ForBlob(entry_->hash.value());
   return *sha1.get();
 }
 

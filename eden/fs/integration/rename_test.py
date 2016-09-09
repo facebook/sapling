@@ -28,14 +28,21 @@ class RenameTest:
         self.assertEqual(errno.ENOENT, context.exception.errno,
                          msg='Renaming a bogus file -> ENOENT')
 
-        # We don't yet support renaming dirs; check our behavior.
+    def test_rename_dir(self):
         filename = os.path.join(self.mount, 'adir')
         targetname = os.path.join(self.mount, 'a-new-target')
+        os.rename(filename, targetname)
 
         with self.assertRaises(OSError) as context:
-            os.rename(filename, targetname)
-        self.assertEqual(errno.ENOSYS, context.exception.errno,
-                         msg='Renaming dirs not supported')
+            os.lstat(filename)
+        self.assertEqual(errno.ENOENT, context.exception.errno,
+                         msg='no longer visible as old name')
+
+        os.lstat(targetname)
+        # Check that adir/file is now visible in the new location
+        targetfile = os.path.join(targetname, 'file')
+        with open(targetfile, 'r') as f:
+            self.assertEqual('foo!\n', f.read())
 
     def test_rename_away_tree_entry(self):
         ''' Rename a tree entry away and back again '''

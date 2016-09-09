@@ -29,30 +29,38 @@ namespace eden {
 TreeEntryFileInode::TreeEntryFileInode(
     fuse_ino_t ino,
     std::shared_ptr<TreeInode> parentInode,
-    const TreeEntry* entry)
-    : fusell::FileInode(ino), parentInode_(parentInode), entry_(entry) {}
+    TreeInode::Entry* entry)
+    : fusell::FileInode(ino),
+      parentInode_(parentInode),
+      entry_(entry),
+      data_(
+          std::make_shared<FileData>(mutex_, parentInode_->getMount(), entry)) {
+}
 
 TreeEntryFileInode::TreeEntryFileInode(
     fuse_ino_t ino,
     std::shared_ptr<TreeInode> parentInode,
+    TreeInode::Entry* entry,
     folly::File&& file)
     : fusell::FileInode(ino),
       parentInode_(parentInode),
-      entry_(nullptr),
+      entry_(entry),
       data_(std::make_shared<FileData>(
           mutex_,
           parentInode_->getMount(),
+          entry_,
           std::move(file))) {}
 
 folly::Future<fusell::Dispatcher::Attr> TreeEntryFileInode::getattr() {
   auto data = getOrLoadData();
+  auto path = parentInode_->getNameMgr()->resolvePathToNode(getNodeId());
 
   // Future optimization opportunity: right now, if we have not already
   // materialized the data from the entry_, we have to materialize it
   // from the store.  If we augmented our metadata we could avoid this,
   // and this would speed up operations like `ls`.
-  data->materialize(
-      O_RDONLY, parentInode_->getNameMgr()->resolvePathToNode(getNodeId()));
+  auto overlay = parentInode_->getOverlay();
+  data->materializeForRead(O_RDONLY, path, overlay);
 
   fusell::Dispatcher::Attr attr;
   attr.st = data->stat();
@@ -73,8 +81,11 @@ folly::Future<fusell::Dispatcher::Attr> TreeEntryFileInode::setattr(
     open_flags |= O_TRUNC;
   }
 
-  data->materialize(
-      open_flags, parentInode_->getNameMgr()->resolvePathToNode(getNodeId()));
+  parentInode_->materializeDirAndParents();
+
+  auto path = parentInode_->getNameMgr()->resolvePathToNode(getNodeId());
+  auto overlay = parentInode_->getOverlay();
+  data->materializeForWrite(open_flags, path, overlay);
 
   fusell::Dispatcher::Attr result;
   result.st = data->setAttr(attr, to_set);
@@ -85,7 +96,13 @@ folly::Future<fusell::Dispatcher::Attr> TreeEntryFileInode::setattr(
 folly::Future<std::string> TreeEntryFileInode::readlink() {
   std::unique_lock<std::mutex> lock(mutex_);
 
-  if (!entry_) {
+  DCHECK_NOTNULL(entry_);
+  if (!S_ISLNK(entry_->mode)) {
+    // man 2 readlink says:  EINVAL The named file is not a symbolic link.
+    folly::throwSystemErrorExplicit(EINVAL);
+  }
+
+  if (entry_->materialized) {
     struct stat st;
     auto localPath = getLocalPath();
 
@@ -105,17 +122,10 @@ folly::Future<std::string> TreeEntryFileInode::readlink() {
     return buf;
   }
 
-  switch (entry_->getFileType()) {
-    case FileType::SYMLINK: {
-      auto blob = parentInode_->getStore()->getBlob(entry_->getHash());
-      auto buf = blob->getContents();
-      return buf.moveToFbString().toStdString();
-    }
-
-    default:
-      // man 2 readlink says:  EINVAL The named file is not a symbolic link.
-      folly::throwSystemErrorExplicit(EINVAL);
-  }
+  // Load the symlink contents from the store
+  auto blob = parentInode_->getStore()->getBlob(entry_->hash.value());
+  auto buf = blob->getContents();
+  return buf.moveToFbString().toStdString();
 }
 
 std::shared_ptr<FileData> TreeEntryFileInode::getOrLoadData() {
@@ -137,7 +147,7 @@ void TreeEntryFileInode::fileHandleDidClose() {
 }
 
 AbsolutePath TreeEntryFileInode::getLocalPath() const {
-  return parentInode_->getOverlay()->getLocalDir() +
+  return parentInode_->getOverlay()->getContentDir() +
       parentInode_->getNameMgr()->resolvePathToNode(getNodeId());
 }
 
@@ -148,8 +158,19 @@ folly::Future<std::shared_ptr<fusell::FileHandle>> TreeEntryFileInode::open(
     data.reset();
     fileHandleDidClose();
   };
-  data->materialize(
-      fi.flags, parentInode_->getNameMgr()->resolvePathToNode(getNodeId()));
+  auto overlay = parentInode_->getOverlay();
+  if (fi.flags & (O_RDWR | O_WRONLY | O_CREAT | O_TRUNC)) {
+    parentInode_->materializeDirAndParents();
+    data->materializeForWrite(
+        fi.flags,
+        parentInode_->getNameMgr()->resolvePathToNode(getNodeId()),
+        overlay);
+  } else {
+    data->materializeForRead(
+        fi.flags,
+        parentInode_->getNameMgr()->resolvePathToNode(getNodeId()),
+        overlay);
+  }
 
   return std::make_shared<TreeEntryFileHandle>(
       std::static_pointer_cast<TreeEntryFileInode>(shared_from_this()),
@@ -157,15 +178,31 @@ folly::Future<std::shared_ptr<fusell::FileHandle>> TreeEntryFileInode::open(
       fi.flags);
 }
 
+std::shared_ptr<fusell::FileHandle> TreeEntryFileInode::finishCreate() {
+  auto data = getOrLoadData();
+  SCOPE_EXIT {
+    data.reset();
+    fileHandleDidClose();
+  };
+  data->materializeForWrite(
+      0,
+      parentInode_->getNameMgr()->resolvePathToNode(getNodeId()),
+      parentInode_->getOverlay());
+
+  return std::make_shared<TreeEntryFileHandle>(
+      std::static_pointer_cast<TreeEntryFileInode>(shared_from_this()),
+      data,
+      0);
+}
+
 Future<vector<string>> TreeEntryFileInode::listxattr() {
   // Currently, we only return a non-empty vector for regular files, and we
   // assume that the SHA-1 is present without checking the ObjectStore.
   vector<string> attributes;
-  if (!entry_ || entry_->getFileType() != FileType::REGULAR_FILE) {
-    return attributes;
-  }
 
-  attributes.emplace_back(kXattrSha1.str());
+  if (S_ISREG(entry_->mode)) {
+    attributes.emplace_back(kXattrSha1.str());
+  }
   return attributes;
 }
 
@@ -186,43 +223,32 @@ Future<Hash> TreeEntryFileInode::getSHA1() {
     // We already have context, ask it to supply the results.
     return data_->getSha1Locked(lock);
   }
+  CHECK_NOTNULL(entry_);
 
-  // If we have an overlay, look at that.
-  // In the future we'll have a trie to make this seem like a less expensive
-  // operation.  It is cheaper than materializing the file contents just to
-  // query the sha1.
-  try {
-    auto path = parentInode_->getNameMgr()->resolvePathToNode(getNodeId());
+  if (!S_ISREG(entry_->mode)) {
+    // We only define a SHA-1 value for regular files
+    folly::throwSystemErrorExplicit(kENOATTR);
+  }
+
+  if (entry_->materialized) {
     // The O_NOFOLLOW here prevents us from attempting to read attributes
     // from a symlink.
-    auto file =
-        parentInode_->getOverlay()->openFile(path, O_RDONLY | O_NOFOLLOW, 0600);
+    auto filePath = getLocalPath();
+    folly::File file(filePath.c_str(), O_RDONLY | O_NOFOLLOW);
 
     // Return the property from the existing file.
     // If it isn't set it means that someone was poking into the overlay and
     // we'll return the standard kENOATTR back to the caller in that case.
     return Hash(fgetxattr(file.fd(), kXattrSha1));
-  } catch (const std::system_error& err) {
-    if (err.code().value() != ENOENT) {
-      throw;
-    }
-    // Else: doesn't exist in the overlay
-  }
-
-  CHECK_NOTNULL(entry_);
-
-  if (entry_->getFileType() != FileType::REGULAR_FILE) {
-    // We only define a SHA-1 value for regular files
-    folly::throwSystemErrorExplicit(kENOATTR);
   }
 
   // TODO(mbolin): Make this more fault-tolerant. Currently, there is no logic
   // to account for the case where we don't have the SHA-1 for the blob, the
   // hash doesn't correspond to a blob, etc.
-  return *parentInode_->getStore()->getSha1ForBlob(entry_->getHash()).get();
+  return *parentInode_->getStore()->getSha1ForBlob(entry_->hash.value()).get();
 }
 
-const TreeEntry* TreeEntryFileInode::getEntry() const {
+const TreeInode::Entry* TreeEntryFileInode::getEntry() const {
   return entry_;
 }
 }

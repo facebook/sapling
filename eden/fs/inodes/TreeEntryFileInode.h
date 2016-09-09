@@ -23,11 +23,11 @@ class Hash;
 
 class TreeEntryFileInode : public fusell::FileInode {
  public:
-  /** Construct an inode using an optional entry (it may be nullptr) */
+  /** Construct an inode using an overlay entry */
   TreeEntryFileInode(
       fuse_ino_t ino,
       std::shared_ptr<TreeInode> parentInode_,
-      const TreeEntry* entry);
+      TreeInode::Entry* entry);
 
   /** Construct an inode using a freshly created overlay file.
    * file must be moved in and must have been created by a call to
@@ -36,6 +36,7 @@ class TreeEntryFileInode : public fusell::FileInode {
   TreeEntryFileInode(
       fuse_ino_t ino,
       std::shared_ptr<TreeInode> parentInode,
+      TreeInode::Entry* entry,
       folly::File&& file);
 
   folly::Future<fusell::Dispatcher::Attr> getattr() override;
@@ -46,11 +47,17 @@ class TreeEntryFileInode : public fusell::FileInode {
   folly::Future<std::shared_ptr<fusell::FileHandle>> open(
       const struct fuse_file_info& fi) override;
 
+  /** Specialized helper to finish a file creation operation.
+   * Intended to be called immediately after invoking the constructor
+   * that accepts a File object, this returns an opened FileHandle
+   * for the file that was passed to the constructor. */
+  std::shared_ptr<fusell::FileHandle> finishCreate();
+
   folly::Future<std::vector<std::string>> listxattr() override;
   folly::Future<std::string> getxattr(folly::StringPiece name) override;
   folly::Future<Hash> getSHA1();
 
-  const TreeEntry* getEntry() const;
+  const TreeInode::Entry* getEntry() const;
 
   /// Ensure that underlying storage information is loaded
   std::shared_ptr<FileData> getOrLoadData();
@@ -66,7 +73,7 @@ class TreeEntryFileInode : public fusell::FileInode {
   // We hold the ref on the parentInode so that entry_ remains
   // valid while we're both alive
   std::shared_ptr<TreeInode> parentInode_;
-  const TreeEntry* entry_;
+  TreeInode::Entry* entry_;
 
   std::shared_ptr<FileData> data_;
   /// for managing consistency, especially when materializing.

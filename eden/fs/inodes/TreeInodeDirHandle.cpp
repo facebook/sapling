@@ -41,9 +41,8 @@ folly::Future<fusell::DirList> TreeInodeDirHandle::readdir(
   //
   // There are three components to the DirList that we need to populate:
   // 1. The "." and ".." entries
-  // 2. The non-whiteout entries from the overlay
-  // 3. If the overlay is not opaque, the entries from the tree that are
-  //    not listed as whiteout in the overlay
+  // 2. The overlay entries if we have any
+  // 3. The tree entries if we do not have an overlay entry for this dir.
   //
   // We're going to build a vector of this combined information,
   // then we can paginate sanely using the off parameter.
@@ -64,59 +63,19 @@ folly::Future<fusell::DirList> TreeInodeDirHandle::readdir(
   // Fetch some info now so that we can be more efficient
   // while populating entries.
   auto myname = inode_->getNameMgr()->resolvePathToNode(dir_inode);
-  auto overlay_contents = inode_->getOverlay()->readDir(myname);
-  auto tree = inode_->getTree();
 
-  // Reserve enough space for the worst case.
-  entries.reserve(
-      2 /* "." and ".." */ + ((tree == nullptr || overlay_contents.isOpaque)
-                                  ? 0
-                                  : tree->getTreeEntries().size()) +
-      overlay_contents.entries.size());
+  inode_->getContents().withRLock([&](const auto& dir) {
+    entries.reserve(2 /* "." and ".." */ + dir.entries.size());
 
-  // Now we can populate it.
+    // Reserved entries for linking to parent and self.
+    entries.emplace_back(".", dtype_t::Dir, dir_inode);
+    entries.emplace_back("..", dtype_t::Dir, inode_->getParent());
 
-  // 1. Reserved entries for linking to parent and self.
-  entries.emplace_back(".", dtype_t::Dir, dir_inode);
-  entries.emplace_back("..", dtype_t::Dir, inode_->getParent());
-
-  // 2. Non-whiteout entries from the overlay.
-  for (const auto& entry : overlay_contents.entries) {
-    if (entry.second != dtype_t::Whiteout) {
-      entries.emplace_back(entry.first.value().c_str(), entry.second);
+    for (const auto& entry : dir.entries) {
+      entries.emplace_back(
+          entry.first.value().c_str(), mode_to_dtype(entry.second->mode));
     }
-  }
-
-  // 3. anything from the tree if it isn't obscured by the overlay.
-  if (!overlay_contents.isOpaque && tree) {
-    for (auto& ent : tree->getTreeEntries()) {
-      // Is it masked by a deleted entry?
-      auto white = overlay_contents.entries.find(ent.getName());
-      if (white != overlay_contents.entries.end()) {
-        // This entry has been deleted; skip it!
-        continue;
-      }
-
-      dtype_t dt = dtype_t::Unknown;
-      switch (ent.getFileType()) {
-        case FileType::DIRECTORY:
-          dt = dtype_t::Dir;
-          break;
-        case FileType::REGULAR_FILE:
-          dt = dtype_t::Regular;
-          break;
-        case FileType::SYMLINK:
-          dt = dtype_t::Symlink;
-          break;
-        default:
-          // Shouldn't happen, but just in case, we can safely return no
-          // type information up to readdir.
-          dt = dtype_t::Unknown;
-      }
-
-      entries.emplace_back(ent.getName().value().c_str(), dt);
-    }
-  }
+  });
 
   // And now the easy part: seek to the provided offset and fill up
   // the DirList with the entries that remain.

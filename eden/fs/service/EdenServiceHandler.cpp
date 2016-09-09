@@ -178,19 +178,23 @@ SHA1Result EdenServiceHandler::getSHA1ForPath(
     if (it == relativePath.paths().end()) {
       // inodeNumber must correspond to the last path component, which we expect
       // to correspond to a file.
-      std::shared_ptr<fusell::FileInode> fileInode;
-      fileInode = inodeDispatcher->getFileInode(inodeNumber);
+      auto fileInode = std::dynamic_pointer_cast<TreeEntryFileInode>(
+          inodeDispatcher->getFileInode(inodeNumber));
 
-      auto treeEntry =
-          boost::polymorphic_downcast<TreeEntryFileInode*>(fileInode.get());
+      if (!fileInode) {
+        out.set_error(EdenError(folly::to<string>(
+            "Wrong FileInode type: ", currentPiece.stringPiece())));
+        return out;
+      }
 
-      if (treeEntry->getEntry()->getFileType() != FileType::REGULAR_FILE) {
+      auto entry = fileInode->getEntry();
+      if (!S_ISREG(entry->mode)) {
         out.set_error(EdenError(folly::to<string>(
             "Not an ordinary file: ", currentPiece.stringPiece())));
         return out;
       }
 
-      auto hash = treeEntry->getSHA1().get();
+      auto hash = fileInode->getSHA1().get();
       out.set_sha1(StringPiece(hash.getBytes()).str());
       return out;
     } else {
