@@ -127,7 +127,8 @@ class Config:
         repo_data = self.get_repo_data(repo_name)
 
         snapshot_file = os.path.join(client_dir, SNAPSHOT)
-        snapshot = open(snapshot_file).read().strip()
+        with open(snapshot_file) as f:
+            snapshot = f.read().strip()
 
         return collections.OrderedDict([
             ['bind-mounts', repo_data['bind-mounts']],
