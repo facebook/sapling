@@ -13,9 +13,9 @@ class FakeStore(object):
         return "abcabcabc"
 
 @contextmanager
-def hashflags():
+def hashflags(requireflag=False):
     h = ''.join([chr(random.randint(0, 255)) for x in range(20)])
-    if random.randint(0, 1) == 0:
+    if random.randint(0, 1) == 0 and requireflag is False:
         f = ''
     else:
         f = chr(random.randint(0, 255))
@@ -56,6 +56,65 @@ class ctreemanifesttests(unittest.TestCase):
                 TypeError,
                 lambda: a.set("abc/def", h, f)
             )
+
+    def testDeeplyNested(self):
+        a = ctreemanifest.treemanifest(FakeStore())
+        with hashflags() as (h, f):
+            a.set("abc/def/ghi/jkl", h, f)
+            out = a.find("abc/def/ghi/jkl")
+            self.assertEquals((h, f), out)
+
+        with hashflags() as (h, f):
+            a.set("abc/def/ghi/jkl2", h, f)
+            out = a.find("abc/def/ghi/jkl2")
+            self.assertEquals((h, f), out)
+
+    def testDeeplyNested(self):
+        a = ctreemanifest.treemanifest(FakeStore())
+        with hashflags() as (h, f):
+            a.set("abc/def/ghi/jkl", h, f)
+            out = a.find("abc/def/ghi/jkl")
+            self.assertEquals((h, f), out)
+
+        with hashflags() as (h, f):
+            a.set("abc/def/ghi/jkl2", h, f)
+            out = a.find("abc/def/ghi/jkl2")
+            self.assertEquals((h, f), out)
+
+    def testBushyTrees(self):
+        a = ctreemanifest.treemanifest(FakeStore())
+        nodes = {}
+        for ix in range(111):
+            nodes["abc/def/ghi/jkl%d" % ix] = hashflags()
+
+        for fp, (h, f) in nodes.items():
+            a.set(fp, h, f)
+
+        for fp, (h, f) in nodes.items():
+            out = a.find(fp, h, f)
+            self.assertEquals((h, f), out)
+
+    def testFlagChanges(self):
+        a = ctreemanifest.treemanifest(FakeStore())
+
+        # go from no flags to with flags, back to no flags.
+        with hashflags(requireflag=True) as (h, f):
+            self.assertEquals(len(f), 1)
+
+            a.set("abc", h, '')
+            out = a.find("abc")
+            self.assertEquals(h, out[0])
+            self.assertEquals('', out[1])
+
+            a.set("abc", h, f)
+            out = a.find("abc")
+            self.assertEquals(h, out[0])
+            self.assertEquals(f, out[1])
+
+            a.set("abc", h, '')
+            out = a.find("abc")
+            self.assertEquals(h, out[0])
+            self.assertEquals('', out[1])
 
 if __name__ == '__main__':
     silenttestrunner.main(__name__)
