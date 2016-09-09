@@ -528,7 +528,7 @@ class changectx(basectx):
 
     @propertycache
     def _manifest(self):
-        return self._repo.manifestlog[self._changeset.manifest].read()
+        return self._repo.manifestlog[self._changeset.manifest]
 
     @propertycache
     def _manifestdelta(self):
