@@ -167,7 +167,7 @@ class filefixupstate(object):
         4. read results from "finalcontents", or call getfinalcontent
     """
 
-    def __init__(self, fctxs, ui=None):
+    def __init__(self, fctxs, ui=None, opts=None):
         """([fctx], ui or None) -> None
 
         fctxs should be linear, and sorted by topo order - oldest first.
@@ -175,6 +175,7 @@ class filefixupstate(object):
         """
         self.fctxs = fctxs
         self.ui = ui or nullui()
+        self.opts = opts or {}
 
         # following fields are built from fctxs. they exist for perf reason
         self.contents = [f.data() for f in fctxs]
@@ -239,7 +240,10 @@ class filefixupstate(object):
                               % (node.short(self.fctxs[idx].node()),
                                  a1, a2, len(blines)))
             self.linelog.replacelines(rev, a1, a2, b1, b2)
-        self.finalcontents = self._checkoutlinelog()
+        if self.opts.get('edit_lines', False):
+            self.finalcontents = self._checkoutlinelogwithedits()
+        else:
+            self.finalcontents = self._checkoutlinelog()
 
     def getfinalcontent(self, fctx):
         """(fctx) -> str. get modified file content for a given filecontext"""
@@ -328,6 +332,59 @@ class filefixupstate(object):
             self.linelog.annotate(rev)
             content = ''.join(map(self._getline, self.linelog.annotateresult))
             contents.append(content)
+        return contents
+
+    def _checkoutlinelogwithedits(self):
+        """() -> [str]. prompt all lines for edit"""
+        alllines = self.linelog.getalllines()
+        # header
+        editortext = (_('HG: editing %s\nHG: "y" means the line to the right '
+                        'exists in the changeset to the top\nHG:\n')
+                      % self.fctxs[-1].path())
+        # [(idx, fctx)]. hide the dummy emptyfilecontext
+        visiblefctxs = [(i, f)
+                        for i, f in enumerate(self.fctxs)
+                        if not isinstance(f, emptyfilecontext)]
+        for i, (j, f) in enumerate(visiblefctxs):
+            editortext += (_('HG: %s/%s %s %s\n') %
+                           ('|' * i, '-' * (len(visiblefctxs) - i + 1),
+                            node.short(f.node()),
+                            f.description().split('\n',1)[0]))
+        editortext += _('HG: %s\n') % ('|' * len(visiblefctxs))
+        # figure out the lifetime of a line, this is relatively inefficient,
+        # but probably fine
+        lineset = defaultdict(lambda: set()) # {(llrev, linenum): {llrev}}
+        for i, f in visiblefctxs:
+            self.linelog.annotate((i + 1) * 2)
+            for l in self.linelog.annotateresult:
+                lineset[l].add(i)
+        # append lines
+        for l in alllines:
+            editortext += ('    %s : %s' %
+                           (''.join([('y' if i in lineset[l] else ' ')
+                                     for i, _f in visiblefctxs]),
+                            self._getline(l)))
+        # run editor
+        editedtext = self.ui.edit(editortext, '')
+        if not editedtext:
+            raise error.Abort(_('empty editor text'))
+        # parse edited result
+        contents = ['' for i in self.fctxs]
+        leftpadpos = 4
+        colonpos = leftpadpos + len(visiblefctxs) + 1
+        for l in mdiff.splitnewlines(editedtext):
+            if l.startswith('HG:'):
+                continue
+            if l[colonpos - 1:colonpos + 2] != ' : ':
+                raise error.Abort(_('malformed line: %s') % l)
+            linecontent = l[colonpos + 2:]
+            for i, ch in enumerate(l[leftpadpos:colonpos - 1]):
+                if ch == 'y':
+                    contents[visiblefctxs[i][0]] += linecontent
+        # chunkstats is hard to calculate if anything changes, therefore
+        # set them to just a simple value (1, 1).
+        if editedtext != editortext:
+            self.chunkstats = [1, 1]
         return contents
 
     def _getline(self, lineinfo):
@@ -427,7 +484,7 @@ class fixupstate(object):
         4. call commit, to commit changes to hg database
     """
 
-    def __init__(self, stack, ui=None):
+    def __init__(self, stack, ui=None, opts=None):
         """([ctx], ui or None) -> None
 
         stack: should be linear, and sorted by topo order - oldest first.
@@ -435,6 +492,7 @@ class fixupstate(object):
         """
         assert stack
         self.ui = ui or nullui()
+        self.opts = opts or {}
         self.stack = stack
         self.repo = stack[-1].repo().unfiltered()
 
@@ -450,9 +508,16 @@ class fixupstate(object):
         # only care about modified files
         self.status = self.stack[-1].status(targetctx, match)
         self.paths = []
+        # but if --edit-lines is used, the user may want to edit files
+        # even if they are not modified
+        editopt = self.opts.get('edit_lines')
+        if not self.status.modified and editopt and match:
+            interestingpaths = match.files()
+        else:
+            interestingpaths = self.status.modified
         # prepare the filefixupstate
         pctx = self.stack[0].p1()
-        for path in self.status.modified:
+        for path in interestingpaths:
             if self.ui.debugflag:
                 self.ui.write(_('calculating fixups for %s\n') % path)
             targetfctx = targetctx[path]
@@ -461,14 +526,14 @@ class fixupstate(object):
             if any(f.islink() or util.binary(f.data())
                    for f in [targetfctx] + fctxs):
                 continue
-            if targetfctx.data() == fctxs[-1].data():
+            if targetfctx.data() == fctxs[-1].data() and not editopt:
                 continue
             # insert an immutable (public) fctx at the beginning
             if path in pctx:
                 fctxs.insert(0, pctx[path])
             else:
                 fctxs.insert(0, emptyfilecontext())
-            fstate = filefixupstate(fctxs, ui=self.ui)
+            fstate = filefixupstate(fctxs, ui=self.ui, opts=self.opts)
             if showchanges:
                 colorpath = self.ui.label(path, 'absorb.path')
                 header = 'showing changes for ' + colorpath
@@ -728,7 +793,7 @@ def absorb(ui, repo, stack=None, targetctx=None, pats=None, opts=None):
         pats = ()
     if opts is None:
         opts = {}
-    state = fixupstate(stack, ui=ui)
+    state = fixupstate(stack, ui=ui, opts=opts)
     matcher = scmutil.match(targetctx, pats, opts)
     if opts.get('interactive'):
         diff = patch.diff(repo, stack[-1].node(), targetctx.node(), matcher)
@@ -749,6 +814,9 @@ def absorb(ui, repo, stack=None, targetctx=None, pats=None, opts=None):
            _('print which changesets are modified by which changes')),
           ('i', 'interactive', None,
            _('interactively select which chunks to apply (EXPERIMENTAL)')),
+          ('e', 'edit-lines', None,
+           _('edit what lines belong to which changesets before commit '
+             '(EXPERIMENTAL)')),
          ] + commands.dryrunopts + commands.walkopts,
          _('hg absorb [OPTION] [FILE]...'))
 def absorbcmd(ui, repo, *pats, **opts):
