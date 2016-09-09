@@ -14,10 +14,10 @@
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
 #include <openssl/sha.h>
+#include "Overlay.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Hash.h"
-#include "eden/fs/overlay/Overlay.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fuse/MountPoint.h"
 #include "eden/fuse/fuse_headers.h"

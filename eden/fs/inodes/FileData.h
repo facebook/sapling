@@ -10,9 +10,9 @@
 #pragma once
 #include <folly/File.h>
 #include <mutex>
+#include "Overlay.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/model/Tree.h"
-#include "eden/fs/overlay/Overlay.h"
 #include "eden/fuse/BufVec.h"
 
 namespace facebook {

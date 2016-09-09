@@ -10,13 +10,13 @@
 #include "TreeInode.h"
 
 #include "EdenMount.h"
+#include "Overlay.h"
 #include "TreeEntryFileInode.h"
 #include "TreeInodeDirHandle.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileData.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
-#include "eden/fs/overlay/Overlay.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fuse/MountPoint.h"
 #include "eden/fuse/RequestData.h"
@@ -35,10 +35,14 @@ TreeInode::TreeInode(
       contents_(buildDirFromTree(tree.get())),
       parent_(parent) {}
 
-TreeInode::TreeInode(EdenMount* mount, fuse_ino_t parent, fuse_ino_t ino)
+TreeInode::TreeInode(
+    EdenMount* mount,
+    TreeInode::Dir&& dir,
+    fuse_ino_t parent,
+    fuse_ino_t ino)
     : DirInode(ino),
       mount_(mount),
-      contents_(buildDirFromTree(nullptr)),
+      contents_(std::move(dir)),
       parent_(parent) {}
 
 TreeInode::~TreeInode() {}
@@ -67,14 +71,20 @@ std::shared_ptr<fusell::InodeBase> TreeInode::getChildByNameLocked(
   auto entry = iter->second.get();
 
   if (S_ISDIR(entry->mode)) {
-    if (entry->hash) {
+    if (!entry->materialized && entry->hash) {
       auto tree = getStore()->getTree(entry->hash.value());
       return std::make_shared<TreeInode>(
           mount_, std::move(tree), getNodeId(), node->getNodeId());
     }
 
     // No corresponding TreeEntry, this exists only in the overlay.
-    return std::make_shared<TreeInode>(mount_, getNodeId(), node->getNodeId());
+    auto targetName = getNameMgr()->resolvePathToNode(node->getNodeId());
+    auto overlayDir = getOverlay()->loadOverlayDir(targetName);
+    if (!overlayDir) {
+      LOG(ERROR) << "missing overlay for " << targetName;
+    }
+    return std::make_shared<TreeInode>(
+        mount_, std::move(overlayDir.value()), getNodeId(), node->getNodeId());
   }
 
   return std::make_shared<TreeEntryFileInode>(
@@ -127,14 +137,15 @@ void TreeInode::materializeDirAndParents() {
       // Someone else materialized it in the meantime
       return;
     }
+    auto myname = getNameMgr()->resolvePathToNode(getNodeId());
     auto wlock = ulock.moveFromUpgradeToWrite();
     wlock->materialized = true;
 
-    auto myname = getNameMgr()->resolvePathToNode(getNodeId());
     auto dirPath = getOverlay()->getContentDir() + myname;
     if (::mkdir(dirPath.c_str(), 0755) != 0 && errno != EEXIST) {
       folly::throwSystemError("while materializing, mkdir: ", dirPath);
     }
+    getOverlay()->saveOverlayDir(myname, &*wlock);
   });
 }
 
@@ -227,6 +238,8 @@ TreeInode::create(PathComponentPiece name, mode_t mode, int flags) {
     // the file handle and some attribute information.
     // Let's open a file handle now.
     handle = inode->finishCreate();
+
+    getOverlay()->saveOverlayDir(myname, &contents);
   });
 
   // Now that we have the file handle, let's look up the attributes.
@@ -281,6 +294,13 @@ folly::Future<fuse_entry_param> TreeInode::mkdir(
     entry->materialized = true;
 
     contents.entries.emplace(name, std::move(entry));
+    getOverlay()->saveOverlayDir(myname, &contents);
+
+    // Create the overlay entry for this dir before the lookup call
+    // below tries to load it (and fails)
+    Dir emptyDir;
+    emptyDir.materialized = true;
+    getOverlay()->saveOverlayDir(targetName, &emptyDir);
   });
 
   // Look up the inode for this new dir and return its entry info.
@@ -332,6 +352,7 @@ folly::Future<folly::Unit> TreeInode::unlink(PathComponentPiece name) {
 
     // And actually remove it
     contents.entries.erase(entIter);
+    getOverlay()->saveOverlayDir(myname, &contents);
   });
 
   return folly::Unit{};
@@ -445,6 +466,8 @@ folly::Future<folly::Unit> TreeInode::rmdir(PathComponentPiece name) {
 
     // And actually remove it
     contents.entries.erase(entIter);
+    getOverlay()->saveOverlayDir(myname, &contents);
+    getOverlay()->removeOverlayDir(targetName);
   });
 
   return folly::Unit{};
@@ -526,6 +549,10 @@ void TreeInode::renameHelper(
 
   // Now remove the source information
   sourceContents->entries.erase(sourceEntIter);
+
+  auto myname = getNameMgr()->resolvePathToNode(getNodeId());
+  getOverlay()->saveOverlayDir(myname, sourceContents);
+  getOverlay()->saveOverlayDir(myname, destContents);
 }
 
 folly::Future<folly::Unit> TreeInode::rename(

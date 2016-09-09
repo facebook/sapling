@@ -9,8 +9,10 @@
  */
 #pragma once
 #include <folly/File.h>
+#include <folly/Optional.h>
 #include <folly/String.h>
 #include <map>
+#include "TreeInode.h"
 #include "eden/utils/DirType.h"
 #include "eden/utils/PathFuncs.h"
 #include "eden/utils/PathMap.h"
@@ -47,11 +49,14 @@ class Overlay {
    * This is a sub-directory of the local dir */
   const AbsolutePath& getContentDir() const;
 
+  void saveOverlayDir(RelativePathPiece path, const TreeInode::Dir* dir) const;
+  void removeOverlayDir(RelativePathPiece path) const;
+
+  folly::Optional<TreeInode::Dir> loadOverlayDir(RelativePathPiece path) const;
+
  private:
   /** path to ".eden/CLIENT/local" */
   AbsolutePath localDir_;
-  /** location of the serialized metadata file */
-  AbsolutePath metaFile_;
   /** location of the materialized files/dirs */
   AbsolutePath contentDir_;
 };

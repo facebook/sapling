@@ -197,8 +197,15 @@ class BasicTest:
         self.assertTrue(self.eden.in_proc_mounts(self.mount))
 
     def test_unmount_remount(self):
+        # write a file into the overlay to test that it is still visible
+        # when we remount.
+        filename = os.path.join(self.mount, 'overlayonly')
+        with open(filename, 'w') as f:
+            f.write('foo!\n')
+
         entries = sorted(os.listdir(self.mount))
-        self.assertEqual(['adir', 'bdir', 'hello', 'slink'], entries)
+        self.assertEqual(['adir', 'bdir', 'hello', 'overlayonly', 'slink'],
+                         entries)
         self.assertTrue(self.eden.in_proc_mounts(self.mount))
 
         # Unmount the client with --no-forget
@@ -213,7 +220,11 @@ class BasicTest:
 
         self.assertTrue(self.eden.in_proc_mounts(self.mount))
         entries = sorted(os.listdir(self.mount))
-        self.assertEqual(['adir', 'bdir', 'hello', 'slink'], entries)
+        self.assertEqual(['adir', 'bdir', 'hello', 'overlayonly', 'slink'],
+                         entries)
+
+        with open(filename, 'r') as f:
+            self.assertEqual('foo!\n', f.read(), msg='overlay file is correct')
 
     def test_double_unmount(self):
         # Test calling "unmount -n" twice.  The second should fail, but edenfs

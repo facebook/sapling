@@ -15,10 +15,10 @@
 #include "EdenServer.h"
 #include "eden/fs/config/ClientConfig.h"
 #include "eden/fs/inodes/EdenMount.h"
+#include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/TreeEntryFileInode.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/model/Hash.h"
-#include "eden/fs/overlay/Overlay.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fuse/MountPoint.h"
 #include "eden/utils/PathFuncs.h"
@@ -60,11 +60,21 @@ void EdenServiceHandler::mountImpl(const MountInfo& info) {
   auto edenMount =
       std::make_shared<EdenMount>(mountPoint, std::move(objectStore), overlay);
 
+  // Load the overlay, if present.
+  auto rootOverlayDir = overlay->loadOverlayDir(RelativePathPiece());
+
   // Create the inode for the root of the tree using the hash contained
   // within the snapshotPath file
-  auto rootInode = std::make_shared<TreeInode>(
-      edenMount.get(), std::move(rootTree), FUSE_ROOT_ID, FUSE_ROOT_ID);
-  mountPoint->setRootInode(rootInode);
+  if (rootOverlayDir) {
+    mountPoint->setRootInode(std::make_shared<TreeInode>(
+        edenMount.get(),
+        std::move(rootOverlayDir.value()),
+        FUSE_ROOT_ID,
+        FUSE_ROOT_ID));
+  } else {
+    mountPoint->setRootInode(std::make_shared<TreeInode>(
+        edenMount.get(), std::move(rootTree), FUSE_ROOT_ID, FUSE_ROOT_ID));
+  }
 
   // TODO(mbolin): Use the result of config.getBindMounts() to perform the
   // appropriate bind mounts for the client.

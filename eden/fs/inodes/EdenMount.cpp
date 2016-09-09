@@ -11,7 +11,7 @@
 
 #include <glog/logging.h>
 
-#include "eden/fs/overlay/Overlay.h"
+#include "Overlay.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fuse/MountPoint.h"
 

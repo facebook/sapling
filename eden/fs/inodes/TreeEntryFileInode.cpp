@@ -10,10 +10,10 @@
 #include "TreeEntryFileInode.h"
 
 #include "FileData.h"
+#include "Overlay.h"
 #include "TreeEntryFileHandle.h"
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Hash.h"
-#include "eden/fs/overlay/Overlay.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/utils/XAttr.h"
 

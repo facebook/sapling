@@ -63,7 +63,7 @@ class TreeInode : public fusell::DirInode {
       fuse_ino_t ino);
 
   /// Construct an inode that only has backing in the Overlay area
-  TreeInode(EdenMount* mount, fuse_ino_t parent, fuse_ino_t ino);
+  TreeInode(EdenMount* mount, Dir&& dir, fuse_ino_t parent, fuse_ino_t ino);
 
   ~TreeInode();
 

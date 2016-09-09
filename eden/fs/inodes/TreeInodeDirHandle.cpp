@@ -9,8 +9,8 @@
  */
 #include "TreeInodeDirHandle.h"
 
+#include "Overlay.h"
 #include "eden/fs/model/Tree.h"
-#include "eden/fs/overlay/Overlay.h"
 #include "eden/utils/DirType.h"
 
 namespace facebook {
