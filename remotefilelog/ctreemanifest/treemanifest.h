@@ -24,6 +24,12 @@ enum FindResult {
   FIND_PATH_WTF,
 };
 
+enum SetResult {
+  SET_OK,
+  SET_CONFLICT,
+  SET_WTF,
+};
+
 enum FindMode {
   // walks the tree and searches for a leaf node.  if the path cannot be found,
   // exit with `FIND_PATH_NOT_FOUND`.
@@ -117,6 +123,10 @@ struct treemanifest {
     void get(
         const std::string &filename,
         std::string *resultnode, char *resultflag);
+
+    SetResult set(
+        const std::string &filename,
+        const std::string &resultnode, char resultflag);
 
     Manifest *getRootManifest() {
       if (this->rootManifest_DO_NOT_ACCESS_DIRECTLY == NULL) {

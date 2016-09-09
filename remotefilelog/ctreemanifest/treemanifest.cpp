@@ -330,3 +330,62 @@ void treemanifest::get(
       get_callback
   );
 }
+
+struct SetParams {
+  const std::string &resultnode;
+  char resultflag;
+};
+
+static FindResult set_callback(
+    Manifest *manifest,
+    const char *filename, size_t filenamelen,
+    FindContext *context) {
+  SetParams *params = (SetParams *) context->extras;
+
+  // position the iterator at the right location
+  bool exacthit;
+  std::list<ManifestEntry>::iterator iterator = manifest->findChild(
+      filename, filenamelen, &exacthit);
+
+  if (!exacthit) {
+    // create the entry, insert it.
+    manifest->addChild(
+        iterator,
+        filename, filenamelen,
+        params->resultnode.c_str(), params->resultflag);
+  } else {
+    ManifestEntry *entry = &(*iterator);
+
+    entry->update(params->resultnode.c_str(), params->resultflag);
+  }
+
+  return FIND_PATH_OK;
+}
+
+SetResult treemanifest::set(
+    const std::string &filename,
+    const std::string &resultnode,
+    char resultflag) {
+  SetParams extras = {resultnode, resultflag};
+  PathIterator pathiter(filename);
+  FindContext changes;
+  changes.nodebuffer.reserve(20);
+  changes.extras = &extras;
+
+  FindResult result = this->find(
+      this->getRootManifest(),
+      pathiter,
+      CREATE_IF_MISSING,
+      &changes,
+      set_callback
+  );
+
+  switch (result) {
+    case FIND_PATH_OK:
+      return SET_OK;
+    case FIND_PATH_CONFLICT:
+      return SET_CONFLICT;
+    default:
+      return SET_WTF;
+  }
+}
