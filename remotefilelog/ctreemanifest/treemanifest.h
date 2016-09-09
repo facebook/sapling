@@ -128,6 +128,12 @@ struct treemanifest {
         const std::string &filename,
         const std::string &resultnode, char resultflag);
 
+    /**
+     * Removes a file from the treemanifest.  Returns true iff the file was
+     * found and removed.
+     */
+    bool remove(const std::string &filename);
+
     Manifest *getRootManifest() {
       if (this->rootManifest_DO_NOT_ACCESS_DIRECTLY == NULL) {
         this->rootManifest_DO_NOT_ACCESS_DIRECTLY =

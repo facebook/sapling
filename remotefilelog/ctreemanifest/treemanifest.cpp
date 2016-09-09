@@ -389,3 +389,45 @@ SetResult treemanifest::set(
       return SET_WTF;
   }
 }
+
+struct RemoveResult {
+  bool found;
+};
+
+static FindResult remove_callback(
+    Manifest *manifest,
+    const char *filename, size_t filenamelen,
+    FindContext *context) {
+  RemoveResult *params = (RemoveResult *) context->extras;
+
+  // position the iterator at the right location
+  bool exacthit;
+  std::list<ManifestEntry>::iterator iterator = manifest->findChild(
+      filename, filenamelen, &exacthit);
+
+  if (exacthit) {
+    manifest->removeChild(iterator);
+    params->found = true;
+  }
+
+  return FIND_PATH_OK;
+}
+
+bool treemanifest::remove(
+    const std::string &filename) {
+  RemoveResult extras = {false};
+  PathIterator pathiter(filename);
+  FindContext changes;
+  changes.nodebuffer.reserve(20);
+  changes.extras = &extras;
+
+  FindResult result = this->find(
+      this->getRootManifest(),
+      pathiter,
+      REMOVE_EMPTY_IMPLICIT_NODES,
+      &changes,
+      remove_callback
+  );
+
+  return (result == FIND_PATH_OK) && extras.found;
+}
