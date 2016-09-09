@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+#
 # Copyright (c) 2016, Facebook, Inc.
 # All rights reserved.
 #
@@ -23,12 +25,22 @@ class HgRepository(repobase.Repository):
         self.hg_environment = os.environ.copy()
         self.hg_environment['HGPLAIN'] = '1'
 
-    def hg(self, *args):
+    def hg(self, *args, stdout_charset='utf-8'):
         cmd = ['hg'] + list(args)
-        subprocess.check_call(cmd, cwd=self.path, env=self.hg_environment)
+        completed_process = subprocess.run(cmd, stdout=subprocess.PIPE,
+                                           stderr=subprocess.PIPE,
+                                           check=True, cwd=self.path,
+                                           env=self.hg_environment)
+        return completed_process.stdout.decode(stdout_charset)
 
     def init(self):
         self.hg('init')
+
+    def get_type(self):
+        return 'hg'
+
+    def get_head_hash(self):
+        return self.hg('log', '-r.', '-T{node}')
 
     def add_file(self, path):
         # add_file() may be called for files that are already tracked.

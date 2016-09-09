@@ -42,6 +42,14 @@ class Repository(object):
     def init(self):
         raise NotImplementedError('subclasses must implement init()')
 
+    def get_type(self):
+        '''Returns the type of this repo as a string: "git" or "hg".'''
+        raise NotImplementedError('subclasses must implement get_type()')
+
+    def get_head_hash(self):
+        '''Returns the 40-character hex hash for HEAD.'''
+        raise NotImplementedError('subclasses must implement get_head_hash()')
+
     def add_file(self, path):
         raise NotImplementedError('subclasses must implement add_file()')
 

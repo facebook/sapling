@@ -19,7 +19,7 @@ class GitRepository(repobase.Repository):
     def __init__(self, path):
         super().__init__(path)
 
-    def git(self, *args, **kwargs):
+    def git(self, *args, stdout_charset='utf-8', **kwargs):
         '''
         Invoke a git command inside the repository.
 
@@ -47,10 +47,20 @@ class GitRepository(repobase.Repository):
             raise Exception('unexpected keyword argumnts to git(): %r' %
                             list(kwargs.keys))
 
-        subprocess.check_call(cmd, cwd=self.path, env=env)
+        completed_process = subprocess.run(cmd, stdout=subprocess.PIPE,
+                                           stderr=subprocess.PIPE,
+                                           check=True, cwd=self.path,
+                                           env=env)
+        return completed_process.stdout.decode(stdout_charset)
 
     def init(self):
         self.git('init')
+
+    def get_type(self):
+        return 'git'
+
+    def get_head_hash(self):
+        return self.git('rev-parse', 'HEAD').rstrip()
 
     def add_file(self, path):
         self.git('add', path)

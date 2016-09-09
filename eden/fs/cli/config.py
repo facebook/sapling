@@ -98,7 +98,9 @@ class Config:
             result.update(parser[repository_header])
         bind_mounts_header = 'bindmounts ' + name
         if bind_mounts_header in parser:
-            result['bind-mounts'] = parser[bind_mounts_header]
+            # Convert the ConfigParser section into a dict so it is JSON
+            # serializable for the `eden info` command.
+            result['bind-mounts'] = dict(parser[bind_mounts_header].items())
         else:
             result['bind-mounts'] = {}
         if not result:
