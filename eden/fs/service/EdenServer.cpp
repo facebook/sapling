@@ -194,8 +194,15 @@ void EdenServer::mountFinished(EdenMount* edenMount) {
     std::lock_guard<std::mutex> guard(mountPointsMutex_);
     auto numErased = mountPoints_.erase(mountPath);
     CHECK_EQ(numErased, 1);
+    // This notify and the erase above MUST happen while holding
+    // mountPointsMutex_ otherwise we can have a race in the case that there
+    // are two threads in mountFinished().  If the erasure and the notify are
+    // not done under the lock, the predicate check in ~EdenServer will see
+    // that mountPoints_ is empty and proceed to delete mountPointsCV_ out
+    // from under the other thread(s) as they attempt to call notify_all() on
+    // it.
+    mountPointsCV_.notify_all();
   }
-  mountPointsCV_.notify_all();
 }
 
 EdenServer::MountList EdenServer::getMountPoints() const {
