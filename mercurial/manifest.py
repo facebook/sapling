@@ -1130,11 +1130,7 @@ class manifest(manifestrevlog):
         if node == revlog.nullid:
             return self._newmanifest() # don't upset local cache
         if node in self._mancache:
-            cached = self._mancache[node]
-            if (isinstance(cached, manifestctx) or
-                isinstance(cached, treemanifestctx)):
-                cached = cached.read()
-            return cached
+            return self._mancache[node]
         if self._treeondisk:
             def gettext():
                 return self.revision(node)

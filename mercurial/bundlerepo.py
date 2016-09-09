@@ -204,8 +204,8 @@ class bundlemanifest(bundlerevlog, manifest.manifest):
         if isinstance(node, int):
             node = self.node(node)
 
-        if node in self.fulltextcache:
-            result = self.fulltextcache[node].tostring()
+        if node in self._mancache:
+            result = self._mancache[node].text()
         else:
             result = manifest.manifest.revision(self, nodeorrev)
         return result
