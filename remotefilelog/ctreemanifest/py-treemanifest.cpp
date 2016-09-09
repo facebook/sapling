@@ -196,6 +196,65 @@ static PyObject *treemanifest_find(PyObject *o, PyObject *args) {
   }
 }
 
+/**
+ * Implementation of treemanifest.set()
+ * Takes a binary hash and flag and sets it for a given filename.
+ */
+static PyObject *treemanifest_set(PyObject *o, PyObject *args) {
+  py_treemanifest *self = (py_treemanifest*)o;
+  char *filename;
+  Py_ssize_t filenamelen;
+  char *hash;
+  Py_ssize_t hashlen;
+  char *flagstr;
+  Py_ssize_t flagstrlen;
+  char flag;
+
+  if (!PyArg_ParseTuple(args, "s#s#s#",
+      &filename, &filenamelen,
+      &hash, &hashlen,
+      &flagstr, &flagstrlen)) {
+    return NULL;
+  }
+
+  // verify that the lengths of the fields are sane.
+  if (hashlen != BIN_NODE_SIZE) {
+    PyErr_Format(PyExc_ValueError,
+        "hash length must be %d bytes long", BIN_NODE_SIZE);
+    return NULL;
+  } else if (flagstrlen > 1) {
+    PyErr_Format(PyExc_ValueError,
+        "flags must either be 0 or 1 byte long");
+    return NULL;
+  }
+
+  if (flagstrlen == 0) {
+    flag = '\0';
+  } else {
+    flag = *flagstr;
+  }
+
+  try {
+    std::string hashstr;
+    hashstr.reserve(HEX_NODE_SIZE);
+    hexfrombin(hash, hashstr);
+
+    SetResult result = self->tm.set(
+        std::string(filename, (size_t) filenamelen),
+        hashstr,
+        flag);
+
+    if (result == SET_OK) {
+      Py_RETURN_NONE;
+    } else {
+      PyErr_Format(PyExc_TypeError, "unexpected stuff happened");
+      return NULL;
+    }
+  } catch (const pyexception &ex) {
+    return NULL;
+  }
+}
+
 /*
  * Deallocates the contents of the treemanifest
  */
@@ -622,6 +681,8 @@ static PyMethodDef treemanifest_methods[] = {
    "iterate over file names in this manifest."},
   {"matches", (PyCFunction)treemanifest_matches, METH_VARARGS,
     "returns a manifest filtered by the matcher"},
+  {"set", treemanifest_set, METH_VARARGS,
+      "sets the node and flag for the given filepath\n"},
   {"walk", (PyCFunction)treemanifest_walk, METH_VARARGS,
     "returns a iterator for walking the manifest"},
   {NULL, NULL}
