@@ -7,6 +7,7 @@
 
 from __future__ import absolute_import
 import errno
+import logging
 import os
 import resource
 import tempfile
@@ -45,6 +46,37 @@ experimental = 'experimental'
 configbookmark = 'server-bundlestore-bookmark'
 configcreate = 'server-bundlestore-create'
 
+def _buildexternalbundlestore(ui):
+    put_args = ui.configlist('infinitepush', 'put_args', [])
+    put_binary = ui.config('infinitepush', 'put_binary')
+    if not put_binary:
+        raise error.Abort('put binary is not specified')
+    get_args = ui.configlist('infinitepush', 'get_args', [])
+    get_binary = ui.config('infinitepush', 'get_binary')
+    if not get_binary:
+        raise error.Abort('get binary is not specified')
+    return store.externalbundlestore(put_binary, put_args, get_binary, get_args)
+
+def _buildsqlindex(ui):
+    sqlhost = ui.config('infinitepush', 'sqlhost')
+    if not sqlhost:
+        raise error.Abort(_('please set infinitepush.sqlhost'))
+    host, port, db, user, password = sqlhost.split(':')
+    reponame = ui.config('infinitepush', 'reponame')
+    if not reponame:
+        raise error.Abort(_('please set infinitepush.reponame'))
+
+    logfile = ui.config('infinitepush', 'logfile', '')
+    return indexapi.sqlindexapi(
+        reponame, host, port, db, user, password,
+        logfile, _getloglevel(ui))
+
+def _getloglevel(ui):
+    loglevel = ui.config('infinitepush', 'loglevel', 'DEBUG')
+    numeric_loglevel = getattr(logging, loglevel.upper(), None)
+    if not isinstance(numeric_loglevel, int):
+        raise error.Abort(_('invalid log level %s') % loglevel)
+    return numeric_loglevel
 
 class bundlestore(object):
     def __init__(self, repo):
@@ -53,22 +85,16 @@ class bundlestore(object):
         if storetype == 'disk':
             self.store = store.filebundlestore(self._repo.ui, self._repo)
         elif storetype == 'external':
-            put_args = self._repo.ui.configlist('infinitepush', 'put_args', [])
-            put_binary = self._repo.ui.config('infinitepush', 'put_binary')
-            if not put_binary:
-                raise error.Abort('put binary is not specified')
-            get_args = self._repo.ui.configlist('infinitepush', 'get_args', [])
-            get_binary = self._repo.ui.config('infinitepush', 'get_binary')
-            if not get_binary:
-                raise error.Abort('get binary is not specified')
-            self.store = store.externalbundlestore(
-                put_binary, put_args, get_binary, get_args)
+            self.store = _buildexternalbundlestore(self._repo.ui)
+
         indextype = self._repo.ui.config('infinitepush', 'indextype', 'disk')
         if indextype == 'disk':
             self.index = indexapi.fileindexapi(self._repo)
+        elif indextype == 'sql':
+            self.index = _buildsqlindex(self._repo.ui)
         else:
-            raise error.Abort("unknown infinitepush index type specified %s" %
-                              indextype)
+            raise error.Abort(
+                _('unknown infinitepush index type specified %s') % indextype)
 
 def reposetup(ui, repo):
     if repo.local():
