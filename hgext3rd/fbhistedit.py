@@ -56,6 +56,7 @@ def defineactions():
             self.repo = state.repo
             self.command = command
             self.cwd = state.repo.root
+            self.node = None
 
         @classmethod
         def fromrule(cls, state, rule):
@@ -73,7 +74,7 @@ def defineactions():
             """
             return "%s\n%s" % (self.verb, self.command)
 
-        def verify(self, prev):
+        def verify(self, *args, **kwds):
             pass
 
         def constraints(self):
