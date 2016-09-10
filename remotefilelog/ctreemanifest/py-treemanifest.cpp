@@ -590,16 +590,10 @@ static PyObject *treemanifest_filesnotin(py_treemanifest *self, PyObject *args) 
   std::string path;
   try {
     path.reserve(1024);
-    Manifest *selfmanifest = fetcher.get(
-        path.c_str(), path.size(),
-        self->tm.rootNode
-    );
-    Manifest *othermanifest = fetcher.get(
-        path.c_str(), path.size(),
-        other->tm.rootNode
-    );
     treemanifest_diffrecurse(
-        selfmanifest, othermanifest, path, diffresults, fetcher);
+        self->tm.getRootManifest(),
+        other->tm.getRootManifest(),
+        path, diffresults, fetcher);
   } catch (const pyexception &ex) {
     // Python has already set the error message
     return NULL;

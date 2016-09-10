@@ -9,12 +9,6 @@
 
 #include "treemanifest.h"
 
-treemanifest::~treemanifest() {
-  if (this->rootManifest_DO_NOT_ACCESS_DIRECTLY != NULL) {
-    delete this->rootManifest_DO_NOT_ACCESS_DIRECTLY;
-  }
-}
-
 /**
  * Constructs a result python tuple of the given diff data.
  */
@@ -201,7 +195,7 @@ void treemanifest_diffrecurse(
 }
 
 FindResult treemanifest::find(
-    Manifest *manifest,
+    ManifestEntry *manifestentry,
     PathIterator &path,
     FindMode findMode,
     FindContext *findContext,
@@ -209,6 +203,17 @@ FindResult treemanifest::find(
         Manifest *manifest,
         const char *filename, size_t filenamelen,
         FindContext *findContext)) {
+  if (manifestentry->resolved == NULL) {
+    const char *pathstart;
+    size_t pathlen;
+
+    path.getPathToPosition(&pathstart, &pathlen);
+    findContext->nodebuffer.erase();
+    appendbinfromhex(manifestentry->node, findContext->nodebuffer);
+    manifestentry->resolved = this->fetcher.get(pathstart, pathlen,
+        findContext->nodebuffer);
+  }
+  Manifest *manifest = manifestentry->resolved;
 
   const char *word = NULL;
   size_t wordlen = 0;
@@ -242,22 +247,11 @@ FindResult treemanifest::find(
       if (!entry->isdirectory()) {
         return FIND_PATH_CONFLICT;
       }
-
-      if (entry->resolved == NULL) {
-        const char *pathstart;
-        size_t pathlen;
-
-        path.getPathToPosition(&pathstart, &pathlen);
-        findContext->nodebuffer.erase();
-        appendbinfromhex(entry->node, findContext->nodebuffer);
-        entry->resolved = this->fetcher.get(pathstart, pathlen,
-            findContext->nodebuffer);
-      }
     }
 
     // now find the next subdir
     FindResult result = find(
-        entry->resolved,
+        entry,
         path,
         findMode,
         findContext,
@@ -323,7 +317,7 @@ void treemanifest::get(
   changes.extras = &extras;
 
   this->find(
-      this->getRootManifest(),
+      &this->root,
       pathiter,
       BASIC_WALK,
       &changes,
@@ -373,7 +367,7 @@ SetResult treemanifest::set(
   changes.extras = &extras;
 
   FindResult result = this->find(
-      this->getRootManifest(),
+      &this->root,
       pathiter,
       CREATE_IF_MISSING,
       &changes,
@@ -422,7 +416,7 @@ bool treemanifest::remove(
   changes.extras = &extras;
 
   FindResult result = this->find(
-      this->getRootManifest(),
+      &this->root,
       pathiter,
       REMOVE_EMPTY_IMPLICIT_NODES,
       &changes,

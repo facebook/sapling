@@ -104,21 +104,26 @@ struct treemanifest {
     // Fetcher for the manifests.
     ManifestFetcher fetcher;
 
-    // The 20-byte root node of this manifest
-    std::string rootNode;
+    ManifestEntry root;
 
     treemanifest(PythonObj store, std::string rootNode) :
-        fetcher(store),
-        rootNode(rootNode),
-        rootManifest_DO_NOT_ACCESS_DIRECTLY(NULL) {
+        fetcher(store) {
+      std::string hexnode;
+      hexnode.reserve(HEX_NODE_SIZE);
+
+      hexfrombin(rootNode.c_str(), hexnode);
+      root.initialize(NULL, 0, hexnode.c_str(), MANIFEST_DIRECTORY_FLAG);
     }
 
     treemanifest(PythonObj store) :
-        fetcher(store),
-        rootManifest_DO_NOT_ACCESS_DIRECTLY(new Manifest()) {
-    }
+        fetcher(store) {
+      std::string hexnode;
+      hexnode.assign(HEX_NODE_SIZE, '\0');
 
-    ~treemanifest();
+      root.initialize(NULL, 0, hexnode.c_str(), MANIFEST_DIRECTORY_FLAG);
+
+      root.resolved = new Manifest();
+    }
 
     void get(
         const std::string &filename,
@@ -135,19 +140,18 @@ struct treemanifest {
     bool remove(const std::string &filename);
 
     Manifest *getRootManifest() {
-      if (this->rootManifest_DO_NOT_ACCESS_DIRECTLY == NULL) {
-        this->rootManifest_DO_NOT_ACCESS_DIRECTLY =
-            fetcher.get(NULL, 0, this->rootNode);
+      if (this->root.resolved == NULL) {
+        std::string binnode;
+        binnode.reserve(BIN_NODE_SIZE);
+
+        appendbinfromhex(this->root.node, binnode);
+        this->root.resolved = this->fetcher.get("", 0, binnode);
       }
 
-      return this->rootManifest_DO_NOT_ACCESS_DIRECTLY;
+      return this->root.resolved;
     }
 
   private:
-    // The resolved Manifest node, if the root has already been resolved.
-    // Avoid accessing this directly as it may not be set.  Instead, use
-    // getRootManifest() to retrieve the root manifest.
-    Manifest *rootManifest_DO_NOT_ACCESS_DIRECTLY;
 
     /**
      * Basic mechanism to traverse a tree.  Once the deepest directory in the
@@ -160,7 +164,7 @@ struct treemanifest {
      * passed in will be "ghi".
      */
     FindResult find(
-        Manifest *manifest,
+        ManifestEntry *manifestentry,
         PathIterator &path,
         FindMode findMode,
         FindContext *findContext,
