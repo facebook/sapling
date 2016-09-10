@@ -210,7 +210,7 @@ static PyObject *treemanifest_set(PyObject *o, PyObject *args) {
   Py_ssize_t flagstrlen;
   char flag;
 
-  if (!PyArg_ParseTuple(args, "s#s#s#",
+  if (!PyArg_ParseTuple(args, "s#z#z#",
       &filename, &filenamelen,
       &hash, &hashlen,
       &flagstr, &flagstrlen)) {
@@ -218,7 +218,11 @@ static PyObject *treemanifest_set(PyObject *o, PyObject *args) {
   }
 
   // verify that the lengths of the fields are sane.
-  if (hashlen != BIN_NODE_SIZE) {
+  if (hash == NULL && flagstr == NULL) {
+    // this is a remove operation!!
+    self->tm.remove(std::string(filename, (size_t) filenamelen));
+    Py_RETURN_NONE;
+  } else if (hashlen != BIN_NODE_SIZE) {
     PyErr_Format(PyExc_ValueError,
         "hash length must be %d bytes long", BIN_NODE_SIZE);
     return NULL;
