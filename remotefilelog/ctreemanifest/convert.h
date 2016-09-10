@@ -45,7 +45,7 @@ static char chartable[16] = {
  * Converts a given 40-byte hex string into a 20-byte node.
  */
 inline void appendbinfromhex(const char *node, std::string &output) {
-  for (int i = 0; i < 40;) {
+  for (int i = 0; i < HEX_NODE_SIZE;) {
     int8_t hi = hextable[(unsigned char)node[i++]];
     int8_t lo = hextable[(unsigned char)node[i++]];
     output.push_back((hi << 4) | lo);
@@ -58,7 +58,7 @@ inline void appendbinfromhex(const char *node, std::string &output) {
 inline std::string binfromhex(const char *node) {
   std::string result;
 
-  result.reserve(20);
+  result.reserve(BIN_NODE_SIZE);
   appendbinfromhex(node, result);
   return result;
 }

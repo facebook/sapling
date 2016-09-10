@@ -319,7 +319,7 @@ void treemanifest::get(
   GetResult extras = {resultnode, resultflag};
   PathIterator pathiter(filename);
   FindContext changes;
-  changes.nodebuffer.reserve(20);
+  changes.nodebuffer.reserve(BIN_NODE_SIZE);
   changes.extras = &extras;
 
   this->find(
@@ -369,7 +369,7 @@ SetResult treemanifest::set(
   SetParams extras = {resultnode, resultflag};
   PathIterator pathiter(filename);
   FindContext changes;
-  changes.nodebuffer.reserve(20);
+  changes.nodebuffer.reserve(BIN_NODE_SIZE);
   changes.extras = &extras;
 
   FindResult result = this->find(
@@ -418,7 +418,7 @@ bool treemanifest::remove(
   RemoveResult extras = {false};
   PathIterator pathiter(filename);
   FindContext changes;
-  changes.nodebuffer.reserve(20);
+  changes.nodebuffer.reserve(BIN_NODE_SIZE);
   changes.extras = &extras;
 
   FindResult result = this->find(

@@ -28,7 +28,7 @@ void ManifestEntry::initialize(
   this->ownedmemory = new char[
   filenamelen +
   1 +              // null character
-  40 +             // node hash
+  HEX_NODE_SIZE +  // node hash
   1 +              // flag
   1                // NL
   ];
@@ -51,7 +51,7 @@ void ManifestEntry::initialize(
   // write the memory.
   memcpy(this->filename, filename, filenamelen);
   if (node != NULL) {
-    memcpy(this->node, node, 40);
+    memcpy(this->node, node, HEX_NODE_SIZE);
   }
   if (flag == '\0') {
     *(this->filename + filenamelen + 1 + HEX_NODE_SIZE) = '\n';
