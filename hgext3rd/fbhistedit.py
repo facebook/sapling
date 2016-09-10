@@ -98,7 +98,7 @@ def defineactions():
                 if shell and self.repo.ui.config('fbhistedit',
                                                  'exec_in_user_shell'):
                     cmd = "%s -c -i %s" % (shell, quote(cmd))
-                rc = util.system(cmd,  environ={'HGNODE': ctx.hex()},
+                rc = repo.ui.system(cmd,  environ={'HGNODE': ctx.hex()},
                                     cwd=self.cwd)
             except OSError as ose:
                 raise error.InterventionRequired(
