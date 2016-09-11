@@ -1279,6 +1279,7 @@ class localrepository(object):
         self.invalidate()
         self.invalidatedirstate()
 
+    @unfilteredmethod
     def _refreshfilecachestats(self, tr):
         """Reload stats of cached files so that they are flagged as valid"""
         for k, ce in self._filecache.items():
