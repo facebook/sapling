@@ -323,7 +323,7 @@ def consumev1(repo, fp, filecount, bytecount):
                             ofp.write(chunk)
 
         # Writing straight to files circumvented the inmemory caches
-        repo.invalidate()
+        repo.invalidate(clearfilecache=True)
 
         elapsed = time.time() - start
         if elapsed <= 0:
