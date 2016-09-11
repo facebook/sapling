@@ -310,9 +310,51 @@ Unpacking packed1 bundles with "hg unbundle" isn't allowed
 
 packed1 can be consumed from debug command
 
+(this also confirms that streamclone-ed changes are visible via
+@filecache properties to in-process procedures before closing
+transaction)
+
+  $ cat > $TESTTMP/showtip.py <<EOF
+  > from __future__ import absolute_import
+  > 
+  > def showtip(ui, repo, hooktype, **kwargs):
+  >     ui.warn('%s: %s\n' % (hooktype, repo['tip'].hex()[:12]))
+  > 
+  > def reposetup(ui, repo):
+  >     # this confirms (and ensures) that (empty) 00changelog.i
+  >     # before streamclone is already cached as repo.changelog
+  >     ui.setconfig('hooks', 'pretxnopen.showtip', showtip)
+  > 
+  >     # this confirms that streamclone-ed changes are visible to
+  >     # in-process procedures before closing transaction
+  >     ui.setconfig('hooks', 'pretxnclose.showtip', showtip)
+  > 
+  >     # this confirms that streamclone-ed changes are still visible
+  >     # after closing transaction
+  >     ui.setconfig('hooks', 'txnclose.showtip', showtip)
+  > EOF
+  $ cat >> $HGRCPATH <<EOF
+  > [extensions]
+  > showtip = $TESTTMP/showtip.py
+  > EOF
+
   $ hg -R packed debugapplystreamclonebundle packed.hg
   6 files to transfer, 2.60 KB of data
+  pretxnopen: 000000000000
+  pretxnclose: aa35859c02ea
   transferred 2.60 KB in *.* seconds (* */sec) (glob)
+  txnclose: aa35859c02ea
+
+(for safety, confirm visibility of streamclone-ed changes by another
+process, too)
+
+  $ hg -R packed tip -T "{node|short}\n"
+  aa35859c02ea
+
+  $ cat >> $HGRCPATH <<EOF
+  > [extensions]
+  > showtip = !
+  > EOF
 
 Does not work on non-empty repo
 
