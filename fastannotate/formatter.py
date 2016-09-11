@@ -41,8 +41,8 @@ class defaultformatter(object):
         self.ui = ui
         self.funcmap = funcmap
 
-    def write(self, annotatedresult, lines=None):
-        """(annotateresult, [str]) -> None. write content out.
+    def write(self, annotatedresult, lines=None, existinglines=None):
+        """(annotateresult, [str], set([rev, linenum])) -> None. write output.
         annotateresult can be [(node, linenum, path)], or [(node, linenum)]
         """
         pieces = [] # [[str]]
@@ -64,7 +64,15 @@ class defaultformatter(object):
                 padding = ' ' * (maxwidths[j] - len(p[i]))
                 msg += sep + padding + p[i]
             if lines:
-                msg += ': ' + lines[i]
+                if existinglines is None:
+                    msg += ': ' + lines[i]
+                else: # extra formatting showing whether a line exists
+                    key = (annotatedresult[i][0], annotatedresult[i][1])
+                    if key in existinglines:
+                        msg += ':  ' + lines[i]
+                    else:
+                        msg += ': ' + self.ui.label('-' + lines[i],
+                                                    'diff.deleted')
 
             if msg[-1] != '\n':
                 msg += '\n'

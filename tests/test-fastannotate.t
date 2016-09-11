@@ -150,3 +150,18 @@ rename
   0: 1
   1: 2
   2: 3
+
+fastannotate --deleted
+
+  $ hg fastannotate --deleted -nf b
+  3 a:  0
+  5 b:  11
+  0 a: -1
+  1 a: -2
+  2 a:  3
+  5 b:  44
+  4 a: -4
+  $ hg fastannotate --deleted -r 3 -nf a
+  3 a:  0
+  0 a:  1
+  1 a:  2

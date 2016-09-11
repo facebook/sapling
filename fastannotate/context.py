@@ -7,6 +7,7 @@
 
 from __future__ import absolute_import
 
+from collections import defaultdict
 import contextlib
 import os
 
@@ -304,6 +305,122 @@ class _annotatecontext(object):
             f = _getbase(scmutil.revsingle(self.repo, rev)[self.path])
             result = f in self.revmap
         return result, f
+
+    def annotatealllines(self, rev, showpath=False, showlines=False):
+        """(rev : str) -> [(node : str, linenum : int, path : str)]
+
+        the result has the same format with annotate, but include all (including
+        deleted) lines up to rev. call this after calling annotate(rev, ...) for
+        better performance and accuracy.
+        """
+        revfctx = _getbase(scmutil.revsingle(self.repo, rev)[self.path])
+
+        # find a chain from rev to anything in the mainbranch
+        if revfctx not in self.revmap:
+            chain = [revfctx]
+            a = ''
+            while True:
+                f = chain[-1]
+                pl = self._parentfunc(f)
+                if not pl:
+                    break
+                if pl[0] in self.revmap:
+                    a = pl[0].data()
+                    break
+                chain.append(pl[0])
+
+            # both self.linelog and self.revmap is backed by filesystem. now
+            # we want to modify them but do not want to write changes back to
+            # files. so we create in-memory objects and copy them. it's like
+            # a "fork".
+            linelog = linelogmod.linelog()
+            linelog.copyfrom(self.linelog)
+            revmap = revmapmod.revmap()
+            revmap.copyfrom(self.revmap)
+
+            for f in reversed(chain):
+                b = f.data()
+                blocks = list(mdiff.allblocks(a, b))
+                self._doappendrev(linelog, revmap, f, blocks)
+                a = b
+        else:
+            # fastpath: use existing linelog, revmap as we don't write to them
+            linelog = self.linelog
+            revmap = self.revmap
+
+        lines = linelog.getalllines()
+        hsh = revfctx.node()
+        llrev = revmap.hsh2rev(hsh)
+        result = [(revmap.rev2hsh(r), l) for r, l in lines if r <= llrev]
+        # cannot use _refineannotateresult since we need custom logic for
+        # resolving line contents
+        if showpath:
+            result = self._addpathtoresult(result, revmap)
+        if showlines:
+            linecontents = self._resolvelines(result, revmap, linelog)
+            result = (result, linecontents)
+        return result
+
+    def _resolvelines(self, annotateresult, revmap, linelog):
+        """(annotateresult) -> [line]. designed for annotatealllines.
+        this is probably the most inefficient code in the whole fastannotate
+        directory. but we have made a decision that the linelog does not
+        store line contents. so getting them requires random accesses to
+        the revlog data, since they can be many, it can be very slow.
+        """
+        # [llrev]
+        revs = [revmap.hsh2rev(l[0]) for l in annotateresult]
+        result = [None] * len(annotateresult)
+        # {(rev, linenum): [lineindex]}
+        key2idxs = defaultdict(list)
+        for i in xrange(len(result)):
+            key2idxs[(revs[i], annotateresult[i][1])].append(i)
+        while key2idxs:
+            # find an unresolved line and its linelog rev to annotate
+            hsh = None
+            try:
+                for (rev, _linenum), idxs in key2idxs.iteritems():
+                    if revmap.rev2flag(rev) & revmapmod.sidebranchflag:
+                        continue
+                    hsh = annotateresult[idxs[0]][0]
+                    break
+            except StopIteration: # no more unresolved lines
+                return result
+            if hsh is None:
+                # the remaining key2idxs are not in main branch, resolving them
+                # using the hard way...
+                revlines = {}
+                for (rev, linenum), idxs in key2idxs.iteritems():
+                    if rev not in revlines:
+                        hsh = annotateresult[idxs[0]][0]
+                        if self.ui.debugflag:
+                            self.ui.debug('fastannotate: reading %s line #%d '
+                                          'to resolve lines %r\n'
+                                          % (node.short(hsh), linenum, idxs))
+                        fctx = self.repo[hsh][revmap.rev2path(rev)]
+                        lines = mdiff.splitnewlines(fctx.data())
+                        revlines[rev] = lines
+                    for idx in idxs:
+                        result[idx] = revlines[rev][linenum]
+                assert all(x is not None for x in result)
+                return result
+
+            # run the annotate and the lines should match to the file content
+            self.ui.debug('fastannotate: annotate %s to resolve lines\n'
+                          % node.short(hsh))
+            linelog.annotate(rev)
+            fctx = self.repo[hsh][revmap.rev2path(rev)]
+            annotated = linelog.annotateresult
+            lines = mdiff.splitnewlines(fctx.data())
+            assert len(lines) == len(annotated)
+            # resolve lines from the annotate result
+            for i, line in enumerate(lines):
+                k = annotated[i]
+                if k in key2idxs:
+                    for idx in key2idxs[k]:
+                        result[idx] = line
+                    del key2idxs[k]
+        return result
 
     def annotatedirectly(self, f, showpath, showlines):
         """like annotate, but when we know that f is in linelog.

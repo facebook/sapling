@@ -32,6 +32,7 @@ fastannotatecommandargs = {
         ('c', 'changeset', None, _('list the changeset')),
         ('l', 'line-number', None, _('show line number at the first '
                                      'appearance')),
+        ('e', 'deleted', None, _('show deleted lines (slow)')),
         ('h', 'no-content', None, _('do not show file content')),
         ('', 'no-follow', None, _("don't follow copies and renames")),
         ('', 'linear', None, _('enforce linear history, ignore second parent '
@@ -88,6 +89,7 @@ def fastannotate(ui, repo, *pats, **opts):
             opts[name] = True
 
     formatter = faformatter.defaultformatter(ui, repo, opts)
+    showdeleted = opts.get('deleted', False)
     showlines = not bool(opts.get('no_content'))
     showpath = opts.get('file', False)
 
@@ -99,12 +101,17 @@ def fastannotate(ui, repo, *pats, **opts):
         master = rev
 
     for path in ctx.walk(m):
-        result = lines = None
+        result = lines = existinglines = None
         while True:
             try:
                 with facontext.annotatecontext(repo, path, aopts, rebuild) as a:
                     result = a.annotate(rev, master=master, showpath=showpath,
-                                        showlines=showlines)
+                                        showlines=(showlines and
+                                                   not showdeleted))
+                    if showdeleted:
+                        existinglines = set((l[0], l[1]) for l in result)
+                        result = a.annotatealllines(
+                            rev, showpath=showpath, showlines=showlines)
                 break
             except faerror.CannotReuseError: # happens if master moves backwards
                 if rebuild: # give up since we have tried rebuild alreadyraise
@@ -116,7 +123,7 @@ def fastannotate(ui, repo, *pats, **opts):
         if showlines:
             result, lines = result
 
-        formatter.write(result, lines)
+        formatter.write(result, lines, existinglines=existinglines)
 
 _newopts = set([])
 _knownopts = set([opt[1].replace('-', '_') for opt in
