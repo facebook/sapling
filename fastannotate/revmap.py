@@ -70,6 +70,15 @@ class revmap(object):
                 # write the header so "append" can do incremental updates
                 self.flush()
 
+    def copyfrom(self, rhs):
+        """copy the map data from another revmap. do not affect self.path"""
+        self._rev2hsh = rhs._rev2hsh[:]
+        self._rev2flag = rhs._rev2flag[:]
+        self._hsh2rev = rhs._hsh2rev.copy()
+        self._renamerevs = rhs._renamerevs[:]
+        self._renamepaths = rhs._renamepaths[:]
+        self._lastmaxrev = -1
+
     @property
     def maxrev(self):
         """return max linelog revision number"""
