@@ -1246,6 +1246,13 @@ class localrepository(object):
             delattr(self.unfiltered(), 'dirstate')
 
     def invalidate(self, clearfilecache=False):
+        '''Invalidates both store and non-store parts other than dirstate
+
+        If a transaction is running, invalidation of store is omitted,
+        because discarding in-memory changes might cause inconsistency
+        (e.g. incomplete fncache causes unintentional failure, but
+        redundant one doesn't).
+        '''
         unfiltered = self.unfiltered() # all file caches are stored unfiltered
         for k in self._filecache.keys():
             # dirstate is invalidated separately in invalidatedirstate()
@@ -1259,7 +1266,11 @@ class localrepository(object):
             except AttributeError:
                 pass
         self.invalidatecaches()
-        self.store.invalidatecaches()
+        if not self.currenttransaction():
+            # TODO: Changing contents of store outside transaction
+            # causes inconsistency. We should make in-memory store
+            # changes detectable, and abort if changed.
+            self.store.invalidatecaches()
 
     def invalidateall(self):
         '''Fully invalidates both store and non-store parts, causing the
