@@ -25,6 +25,7 @@ from mercurial import (
     hg,
     localrepo,
     util,
+    pushkey,
     revset,
     phases,
     wireproto,
@@ -34,6 +35,8 @@ from mercurial.extensions import wrapcommand, wrapfunction
 from mercurial.hg import repository
 from mercurial.node import bin, hex
 from mercurial.i18n import _
+from mercurial.peer import batchable, future
+from mercurial.wireproto import encodelist, decodelist
 from . import store, indexapi
 
 
@@ -109,11 +112,16 @@ def uisetup(ui):
     extensions._order = order
 
 def extsetup(ui):
+    commonsetup(ui)
     isserver = ui.configbool('infinitepush', 'server')
     if isserver:
         serverextsetup(ui)
     else:
         clientextsetup(ui)
+
+def commonsetup(ui):
+    wireproto.commands['listkeyspatterns'] = (
+        wireprotolistkeyspatterns, 'namespace patterns')
 
 def serverextsetup(ui):
     origpushkeyhandler = bundle2.parthandlermapping['pushkey']
@@ -123,6 +131,7 @@ def serverextsetup(ui):
     newpushkeyhandler.params = origpushkeyhandler.params
     bundle2.parthandlermapping['pushkey'] = newpushkeyhandler
 
+    wrapfunction(localrepo.localrepository, 'listkeys', localrepolistkeys)
     wireproto.commands['lookup'] = (
         _lookupwrap(wireproto.commands['lookup'][0]), 'key')
     wrapfunction(exchange, 'getbundle', getbundle)
@@ -139,9 +148,57 @@ def clientextsetup(ui):
 
     wrapcommand(commands.table, 'pull', _pull)
 
+    wireproto.wirepeer.listkeyspatterns = listkeyspatterns
+
     partorder = exchange.b2partsgenorder
     partorder.insert(partorder.index('changeset'),
                      partorder.pop(partorder.index(scratchbranchparttype)))
+
+def wireprotolistkeyspatterns(repo, proto, namespace, patterns):
+    patterns = decodelist(patterns)
+    d = repo.listkeys(encoding.tolocal(namespace), patterns).items()
+    return pushkey.encodekeys(d)
+
+def localrepolistkeys(orig, self, namespace, patterns=None):
+    if namespace == 'bookmarks' and patterns:
+        scratchbranchpat = self.ui.config('infinitepush',
+                                          'branchpattern', '')
+        kind, pat, matcher = util.stringmatcher(scratchbranchpat)
+        index = self.bundlestore.index
+        results = {}
+        patterns = set(patterns)
+        # TODO(stash): this function has a limitation:
+        # patterns are not actually patterns, just simple string comparison
+        for bookmark in patterns:
+            if matcher(bookmark):
+                # TODO(stash): use `getbookmarks()` method
+                node = index.getnode(bookmark)
+                if node:
+                    results[bookmark] = node
+
+        bookmarks = orig(self, namespace)
+        for bookmark, node in bookmarks.items():
+            if bookmark in patterns:
+                results[bookmark] = node
+        return results
+    else:
+        return orig(self, namespace)
+
+@batchable
+def listkeyspatterns(self, namespace, patterns):
+    if not self.capable('pushkey'):
+        yield {}, None
+    f = future()
+    self.ui.debug('preparing listkeys for "%s" with pattern "%s"\n' %
+                  (namespace, patterns))
+    yield {
+        'namespace': encoding.fromlocal(namespace),
+        'patterns': encodelist(patterns)
+    }, f
+    d = f.value
+    self.ui.debug('received listkey for "%s": %i bytes\n'
+                  % (namespace, len(d)))
+    yield pushkey.decodekeys(d)
 
 def getbundle(orig, repo, source, heads=None, common=None, bundlecaps=None,
               **kwargs):
@@ -231,17 +288,16 @@ def _pull(orig, ui, repo, source="default", **opts):
         revs = opts.get('rev') or []
         for bookmark in opts.get('bookmark'):
             if matcher(bookmark):
-                try:
-                    if hasscratchbookmarks:
-                        raise error.Abort(
-                            'not implemented: not possible to pull more than '
-                            'one scratch branch')
-                    scratchbookmarkrev = other.lookup(bookmark)
-                    revs.append(hex(scratchbookmarkrev))
-                    hasscratchbookmarks = True
-                except error.RepoLookupError:
-                    raise error.abort(
-                        'remote bookmark %s not found!' % bookmark)
+                if hasscratchbookmarks:
+                    raise error.Abort('not implemented: not possible to pull '
+                                      'more than one scratch branch')
+                fetchedbookmarks = other.listkeyspatterns('bookmarks',
+                                                          patterns=[bookmark])
+                if bookmark not in fetchedbookmarks:
+                    raise error.Abort('remote bookmark %s not found!' %
+                                      bookmark)
+                revs.append(fetchedbookmarks[bookmark])
+                hasscratchbookmarks = True
             else:
                 bookmarks.append(bookmark)
         opts['bookmark'] = bookmarks
