@@ -94,6 +94,13 @@ class Manifest {
         std::list<ManifestEntry>::iterator iterator) {
       this->entries.erase(iterator);
     }
+
+    /**
+     * Serializes the current manifest into the given string. The serialization
+     * format matches upstream Mercurial's Manifest format and is appropriate
+     * for putting in a store.
+     */
+    void serialize(std::string &result);
 };
 
 /**

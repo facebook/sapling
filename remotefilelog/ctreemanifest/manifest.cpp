@@ -132,3 +132,19 @@ ManifestEntry *ManifestIterator::currentvalue() const {
 bool ManifestIterator::isfinished() const {
   return iterator == end;
 }
+
+void Manifest::serialize(std::string &result) {
+  result.erase();
+  result.reserve(16 * 1024 * 1024);
+  ManifestIterator iterator = this->getIterator();
+  ManifestEntry *entry;
+  while ((entry = iterator.next()) != NULL) {
+    result.append(entry->filename, entry->filenamelen);
+    result.append("\0");
+    result.append(entry->node, HEX_NODE_SIZE);
+    if (entry->flag) {
+      result.append(1, *entry->flag);
+    }
+    result.append("\n");
+  }
+}
