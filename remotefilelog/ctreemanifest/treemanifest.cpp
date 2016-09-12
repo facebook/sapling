@@ -215,13 +215,15 @@ FindResult treemanifest::find(
   }
   Manifest *manifest = manifestentry->resolved;
 
+  FindResult result;
+
   const char *word = NULL;
   size_t wordlen = 0;
 
   path.next(&word, &wordlen);
   if (path.isfinished()) {
     // time to execute the callback.
-    return callback(manifest,
+    result = callback(manifest,
         word, wordlen,
         findContext);
   } else {
@@ -250,7 +252,7 @@ FindResult treemanifest::find(
     }
 
     // now find the next subdir
-    FindResult result = find(
+    result = find(
         entry,
         path,
         findMode,
@@ -264,9 +266,13 @@ FindResult treemanifest::find(
         manifest->removeChild(iterator);
       }
     }
-
-    return result;
   }
+
+  if (findContext->invalidate_checksums) {
+    manifestentry->node = NULL;
+  }
+
+  return result;
 }
 
 struct GetResult {
@@ -352,6 +358,7 @@ static FindResult set_callback(
 
     entry->update(params->resultnode.c_str(), params->resultflag);
   }
+  context->invalidate_checksums = true;
 
   return FIND_PATH_OK;
 }
@@ -402,6 +409,7 @@ static FindResult remove_callback(
   if (exacthit) {
     manifest->removeChild(iterator);
     params->found = true;
+    context->invalidate_checksums = true;
   }
 
   return FIND_PATH_OK;
