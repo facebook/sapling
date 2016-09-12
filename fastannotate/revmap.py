@@ -101,10 +101,8 @@ class revmap(object):
         self._rev2hsh.append(hsh)
         self._rev2flag.append(flag)
         self._hsh2rev[hsh] = idx
-        if flush and self.path: # incremental update
-            with open(self.path, 'a') as f:
-                self._writerev(idx, f)
-            self._lastmaxrev = self.maxrev
+        if flush:
+            self.flush()
         return idx
 
     def rev2hsh(self, rev):
@@ -141,17 +139,23 @@ class revmap(object):
         self._rev2flag = [None]
         self._hsh2rev = {}
         self._rev2path = ['']
+        self._lastmaxrev = -1
         if flush:
             self.flush()
 
     def flush(self):
         """write the state down to the file"""
-        if not self.path or self.maxrev == self._lastmaxrev: # nothing changed
+        if not self.path:
             return
-        with open(self.path, 'wb') as f:
-            f.write(self.HEADER)
-            for i in xrange(1, len(self._rev2hsh)):
-                self._writerev(i, f)
+        if self._lastmaxrev == -1: # write the entire file
+            with open(self.path, 'wb') as f:
+                f.write(self.HEADER)
+                for i in xrange(1, len(self._rev2hsh)):
+                    self._writerev(i, f)
+        else: # append incrementally
+            with open(self.path, 'ab') as f:
+                for i in xrange(self._lastmaxrev + 1, len(self._rev2hsh)):
+                    self._writerev(i, f)
         self._lastmaxrev = self.maxrev
 
     def _load(self):
