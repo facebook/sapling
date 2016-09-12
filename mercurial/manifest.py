@@ -104,68 +104,299 @@ def _textv2(it):
     _checkforbidden(files)
     return ''.join(lines)
 
-class _lazymanifest(dict):
-    """This is the pure implementation of lazymanifest.
-
-    It has not been optimized *at all* and is not lazy.
-    """
-
-    def __init__(self, data):
-        dict.__init__(self)
-        for f, n, fl in _parse(data):
-            self[f] = n, fl
-
-    def __setitem__(self, k, v):
-        node, flag = v
-        assert node is not None
-        if len(node) > 21:
-            node = node[:21] # match c implementation behavior
-        dict.__setitem__(self, k, (node, flag))
+class lazymanifestiter(object):
+    def __init__(self, lm):
+        self.pos = 0
+        self.lm = lm
 
     def __iter__(self):
-        return iter(sorted(dict.keys(self)))
+        return self
 
-    def iterkeys(self):
-        return iter(sorted(dict.keys(self)))
+    def next(self):
+        try:
+            data, pos = self.lm._get(self.pos)
+        except IndexError:
+            raise StopIteration
+        if pos == -1:
+            self.pos += 1
+            return data[0]
+        self.pos += 1
+        zeropos = data.find('\x00', pos)
+        return data[pos:zeropos]
 
-    def iterentries(self):
-        return ((f, e[0], e[1]) for f, e in sorted(self.iteritems()))
+class lazymanifestiterentries(object):
+    def __init__(self, lm):
+        self.lm = lm
+        self.pos = 0
+
+    def __iter__(self):
+        return self
+
+    def next(self):
+        try:
+            data, pos = self.lm._get(self.pos)
+        except IndexError:
+            raise StopIteration
+        if pos == -1:
+            self.pos += 1
+            return data
+        zeropos = data.find('\x00', pos)
+        hashval = unhexlify(data, self.lm.extrainfo[self.pos],
+                            zeropos + 1, 40)
+        flags = self.lm._getflags(data, self.pos, zeropos)
+        self.pos += 1
+        return (data[pos:zeropos], hashval, flags)
+
+def unhexlify(data, extra, pos, length):
+    s = data[pos:pos + length].decode('hex')
+    if extra:
+        s += chr(extra & 0xff)
+    return s
+
+def _cmp(a, b):
+    return (a > b) - (a < b)
+
+class _lazymanifest(object):
+    def __init__(self, data, positions=None, extrainfo=None, extradata=None):
+        if positions is None:
+            self.positions = self.findlines(data)
+            self.extrainfo = [0] * len(self.positions)
+            self.data = data
+            self.extradata = []
+        else:
+            self.positions = positions[:]
+            self.extrainfo = extrainfo[:]
+            self.extradata = extradata[:]
+            self.data = data
+
+    def findlines(self, data):
+        if not data:
+            return []
+        pos = data.find("\n")
+        if pos == -1 or data[-1] != '\n':
+            raise ValueError("Manifest did not end in a newline.")
+        positions = [0]
+        prev = data[:data.find('\x00')]
+        while pos < len(data) - 1 and pos != -1:
+            positions.append(pos + 1)
+            nexts = data[pos + 1:data.find('\x00', pos + 1)]
+            if nexts < prev:
+                raise ValueError("Manifest lines not in sorted order.")
+            prev = nexts
+            pos = data.find("\n", pos + 1)
+        return positions
+
+    def _get(self, index):
+        # get the position encoded in pos:
+        #   positive number is an index in 'data'
+        #   negative number is in extrapieces
+        pos = self.positions[index]
+        if pos >= 0:
+            return self.data, pos
+        return self.extradata[-pos - 1], -1
+
+    def _getkey(self, pos):
+        if pos >= 0:
+            return self.data[pos:self.data.find('\x00', pos + 1)]
+        return self.extradata[-pos - 1][0]
+
+    def bsearch(self, key):
+        first = 0
+        last = len(self.positions) - 1
+
+        while first <= last:
+            midpoint = (first + last)//2
+            nextpos = self.positions[midpoint]
+            candidate = self._getkey(nextpos)
+            r = _cmp(key, candidate)
+            if r == 0:
+                return midpoint
+            else:
+                if r < 0:
+                    last = midpoint - 1
+                else:
+                    first = midpoint + 1
+        return -1
+
+    def bsearch2(self, key):
+        # same as the above, but will always return the position
+        # done for performance reasons
+        first = 0
+        last = len(self.positions) - 1
+
+        while first <= last:
+            midpoint = (first + last)//2
+            nextpos = self.positions[midpoint]
+            candidate = self._getkey(nextpos)
+            r = _cmp(key, candidate)
+            if r == 0:
+                return (midpoint, True)
+            else:
+                if r < 0:
+                    last = midpoint - 1
+                else:
+                    first = midpoint + 1
+        return (first, False)
+
+    def __contains__(self, key):
+        return self.bsearch(key) != -1
+
+    def _getflags(self, data, needle, pos):
+        start = pos + 41
+        end = data.find("\n", start)
+        if end == -1:
+            end = len(data) - 1
+        if start == end:
+            return ''
+        return self.data[start:end]
+
+    def __getitem__(self, key):
+        if not isinstance(key, str):
+            raise TypeError("getitem: manifest keys must be a string.")
+        needle = self.bsearch(key)
+        if needle == -1:
+            raise KeyError
+        data, pos = self._get(needle)
+        if pos == -1:
+            return (data[1], data[2])
+        zeropos = data.find('\x00', pos)
+        assert 0 <= needle <= len(self.positions)
+        assert len(self.extrainfo) == len(self.positions)
+        hashval = unhexlify(data, self.extrainfo[needle], zeropos + 1, 40)
+        flags = self._getflags(data, needle, zeropos)
+        return (hashval, flags)
+
+    def __delitem__(self, key):
+        needle, found = self.bsearch2(key)
+        if not found:
+            raise KeyError
+        cur = self.positions[needle]
+        self.positions = self.positions[:needle] + self.positions[needle + 1:]
+        self.extrainfo = self.extrainfo[:needle] + self.extrainfo[needle + 1:]
+        if cur >= 0:
+            self.data = self.data[:cur] + '\x00' + self.data[cur + 1:]
+
+    def __setitem__(self, key, value):
+        if not isinstance(key, str):
+            raise TypeError("setitem: manifest keys must be a string.")
+        if not isinstance(value, tuple) or len(value) != 2:
+            raise TypeError("Manifest values must be a tuple of (node, flags).")
+        hashval = value[0]
+        if not isinstance(hashval, str) or not 20 <= len(hashval) <= 22:
+            raise TypeError("node must be a 20-byte string")
+        flags = value[1]
+        if len(hashval) == 22:
+            hashval = hashval[:-1]
+        if not isinstance(flags, str) or len(flags) > 1:
+            raise TypeError("flags must a 0 or 1 byte string, got %r", flags)
+        needle, found = self.bsearch2(key)
+        if found:
+            # put the item
+            pos = self.positions[needle]
+            if pos < 0:
+                self.extradata[-pos - 1] = (key, hashval, value[1])
+            else:
+                # just don't bother
+                self.extradata.append((key, hashval, value[1]))
+                self.positions[needle] = -len(self.extradata)
+        else:
+            # not found, put it in with extra positions
+            self.extradata.append((key, hashval, value[1]))
+            self.positions = (self.positions[:needle] + [-len(self.extradata)]
+                              + self.positions[needle:])
+            self.extrainfo = (self.extrainfo[:needle] + [0] +
+                              self.extrainfo[needle:])
 
     def copy(self):
-        c = _lazymanifest('')
-        c.update(self)
-        return c
+        # XXX call _compact like in C?
+        return _lazymanifest(self.data, self.positions, self.extrainfo,
+            self.extradata)
+
+    def _compact(self):
+        # hopefully not called TOO often
+        if len(self.extradata) == 0:
+            return
+        l = []
+        last_cut = 0
+        i = 0
+        offset = 0
+        self.extrainfo = [0] * len(self.positions)
+        while i < len(self.positions):
+            if self.positions[i] >= 0:
+                cur = self.positions[i]
+                last_cut = cur
+                while True:
+                    self.positions[i] = offset
+                    i += 1
+                    if i == len(self.positions) or self.positions[i] < 0:
+                        break
+                    offset += self.positions[i] - cur
+                    cur = self.positions[i]
+                end_cut = self.data.find('\n', cur)
+                if end_cut != -1:
+                    end_cut += 1
+                offset += end_cut - cur
+                l.append(self.data[last_cut:end_cut])
+            else:
+                while i < len(self.positions) and self.positions[i] < 0:
+                    cur = self.positions[i]
+                    t = self.extradata[-cur - 1]
+                    l.append(self._pack(t))
+                    self.positions[i] = offset
+                    if len(t[1]) > 20:
+                        self.extrainfo[i] = ord(t[1][21])
+                    offset += len(l[-1])
+                    i += 1
+        self.data = ''.join(l)
+        self.extradata = []
+
+    def _pack(self, d):
+        return d[0] + '\x00' + d[1][:20].encode('hex') + d[2] + '\n'
+
+    def text(self):
+        self._compact()
+        return self.data
 
     def diff(self, m2, clean=False):
         '''Finds changes between the current manifest and m2.'''
+        # XXX think whether efficiency matters here
         diff = {}
 
-        for fn, e1 in self.iteritems():
+        for fn, e1, flags in self.iterentries():
             if fn not in m2:
-                diff[fn] = e1, (None, '')
+                diff[fn] = (e1, flags), (None, '')
             else:
                 e2 = m2[fn]
-                if e1 != e2:
-                    diff[fn] = e1, e2
+                if (e1, flags) != e2:
+                    diff[fn] = (e1, flags), e2
                 elif clean:
                     diff[fn] = None
 
-        for fn, e2 in m2.iteritems():
+        for fn, e2, flags in m2.iterentries():
             if fn not in self:
-                diff[fn] = (None, ''), e2
+                diff[fn] = (None, ''), (e2, flags)
 
         return diff
 
+    def iterentries(self):
+        return lazymanifestiterentries(self)
+
+    def iterkeys(self):
+        return lazymanifestiter(self)
+
+    def __iter__(self):
+        return lazymanifestiter(self)
+
+    def __len__(self):
+        return len(self.positions)
+
     def filtercopy(self, filterfn):
+        # XXX should be optimized
         c = _lazymanifest('')
         for f, n, fl in self.iterentries():
             if filterfn(f):
                 c[f] = n, fl
         return c
-
-    def text(self):
-        """Get the full data of this manifest as a bytestring."""
-        return _textv1(self.iterentries())
 
 try:
     _lazymanifest = parsers.lazymanifest

@@ -111,8 +111,8 @@ if modulepolicy not in policynocffi:
         def blocks(sa, sb):
             a = ffi.new("struct bdiff_line**")
             b = ffi.new("struct bdiff_line**")
-            ac = ffi.new("char[]", sa)
-            bc = ffi.new("char[]", sb)
+            ac = ffi.new("char[]", str(sa))
+            bc = ffi.new("char[]", str(sb))
             l = ffi.new("struct bdiff_hunk*")
             try:
                 an = lib.bdiff_splitlines(ac, len(sa), a)
@@ -138,8 +138,8 @@ if modulepolicy not in policynocffi:
         def bdiff(sa, sb):
             a = ffi.new("struct bdiff_line**")
             b = ffi.new("struct bdiff_line**")
-            ac = ffi.new("char[]", sa)
-            bc = ffi.new("char[]", sb)
+            ac = ffi.new("char[]", str(sa))
+            bc = ffi.new("char[]", str(sb))
             l = ffi.new("struct bdiff_hunk*")
             try:
                 an = lib.bdiff_splitlines(ac, len(sa), a)
