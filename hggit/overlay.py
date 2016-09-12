@@ -314,6 +314,9 @@ class overlaymanifestlog(overlayrevlog):
             return manifest.manifestdict()
         return overlaymanifest(self.repo, sha)
 
+    def __getitem__(self, sha):
+        return self.read(sha)
+
 class overlaychangelog(overlayrevlog):
     def read(self, sha):
         if isinstance(sha, int):
@@ -334,6 +337,8 @@ class overlayrepo(object):
 
         self.changelog = overlaychangelog(self, handler.repo.changelog)
         self.manifest = overlaymanifestlog(self, handler.repo.manifest)
+        # new as of mercurial 3.9+
+        self.manifestlog = self.manifest
 
         # for incoming -p
         self.root = handler.repo.root
