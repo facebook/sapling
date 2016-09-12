@@ -96,6 +96,11 @@ class basepackstore(object):
         for pack in self.packs:
             pack.markledger(ledger)
 
+    def markforrefresh(self):
+        """Tells the store that there may be new pack files, so the next time it
+        has a lookup miss it should check for new files."""
+        self.lastrefresh = 0
+
     def refresh(self):
         """Checks for any new packs on disk, adds them to the main pack list,
         and returns a list of just the new packs."""

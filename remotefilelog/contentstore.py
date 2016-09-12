@@ -113,6 +113,11 @@ class unioncontentstore(object):
         for store in self.stores:
             store.markledger(ledger)
 
+    def markforrefresh(self):
+        for store in self.stores:
+            if util.safehasattr(store, 'markforrefresh'):
+                store.markforrefresh()
+
 class remotefilelogcontentstore(basestore.basestore):
     def get(self, name, node):
         data = self._getdata(name, node)
