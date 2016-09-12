@@ -18,6 +18,14 @@ ManifestEntry::ManifestEntry() {
   this->ownedmemory = NULL;
 }
 
+/**
+ * Given the start of a file/dir entry in a manifest, returns a
+ * ManifestEntry structure with the parsed data.
+ */
+ManifestEntry::ManifestEntry(char *&entrystart) {
+  this->initialize(entrystart);
+}
+
 void ManifestEntry::initialize(
     const char *filename, const size_t filenamelen,
     const char *node,
@@ -62,11 +70,7 @@ void ManifestEntry::initialize(
   }
 }
 
-/**
- * Given the start of a file/dir entry in a manifest, returns a
- * ManifestEntry structure with the parsed data.
- */
-ManifestEntry::ManifestEntry(char *&entrystart) {
+void ManifestEntry::initialize(char *&entrystart) {
   // Each entry is of the format:
   //
   //   <filename>\0<40-byte hash><optional 1 byte flag>\n
@@ -88,6 +92,23 @@ ManifestEntry::ManifestEntry(char *&entrystart) {
   }
   this->resolved = NULL;
   this->ownedmemory = NULL;
+}
+
+void ManifestEntry::initialize(ManifestEntry *other) {
+  if (other->ownedmemory) {
+    char otherFlag = '\0';
+    if (other->flag) {
+      otherFlag = *other->flag;
+    }
+    this->initialize(other->filename, other->filenamelen, other->node, otherFlag);
+  } else {
+    // Else it points at a piece of memory owned by something else
+    this->initialize(other->filename);
+  }
+
+  if (other->resolved) {
+    this->resolved = other->resolved->copy();
+  }
 }
 
 ManifestEntry::~ManifestEntry() {

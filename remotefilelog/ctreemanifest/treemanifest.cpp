@@ -425,3 +425,7 @@ bool treemanifest::remove(
 
   return (result == FIND_PATH_OK) && extras.found;
 }
+
+treemanifest *treemanifest::copy() {
+  return new treemanifest(this->fetcher, &this->root);
+}

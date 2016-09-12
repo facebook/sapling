@@ -48,6 +48,11 @@ class Manifest {
 
     Manifest(PythonObj &rawobj);
 
+    /**
+     * Returns a deep copy of this Manifest.
+     */
+    Manifest *copy();
+
     ManifestIterator getIterator();
 
     /**
@@ -67,8 +72,14 @@ class Manifest {
      * @param filenamelen
      */
     ManifestEntry *addChild(std::list<ManifestEntry>::iterator iterator,
-    const char *filename, const size_t filenamelen, const char *node,
-    const char flag);
+        const char *filename, const size_t filenamelen, const char *node,
+        const char flag);
+
+    /**
+     * Adds a deep copy of the given ManifestEntry as a child.
+     */
+    ManifestEntry *addChild(std::list<ManifestEntry>::iterator iterator,
+        ManifestEntry *otherChild);
 
     int children() const {
       return entries.size();

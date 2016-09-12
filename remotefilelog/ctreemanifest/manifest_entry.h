@@ -65,6 +65,10 @@ class ManifestEntry {
         const char *node,
         char flag);
 
+    void initialize(char *&entrystart);
+
+    void initialize(ManifestEntry *other);
+
     void update(const char *node, char flag);
 };
 

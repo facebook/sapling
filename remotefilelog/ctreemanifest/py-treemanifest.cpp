@@ -521,6 +521,17 @@ static PyObject *treemanifest_flags(py_treemanifest *self, PyObject *args, PyObj
   }
 }
 
+static PyObject *treemanifest_copy(py_treemanifest *self) {
+  PythonObj module = PyImport_ImportModule("ctreemanifest");
+  PythonObj treetype = module.getattr("treemanifest");
+  py_treemanifest *copy = PyObject_New(py_treemanifest, (PyTypeObject*)(PyObject*)treetype);
+  PythonObj copyObj((PyObject*)copy);
+
+  new(&copy->tm) treemanifest(self->tm);
+
+  return copyObj.returnval();
+}
+
 static PyObject *treemanifest_matches(py_treemanifest *self, PyObject *args) {
   PyObject* matcherObj;
 
@@ -534,9 +545,7 @@ static PyObject *treemanifest_matches(py_treemanifest *self, PyObject *args) {
 
   PythonObj emptyargs = PyTuple_New(0);
   if (PyObject_IsTrue(matcher.callmethod("always", emptyargs))) {
-    // TODO: make this return an actual copy
-    Py_INCREF((PyObject*)self);
-    return (PyObject*)self;
+    return treemanifest_copy(self);
   }
 
   try {
@@ -670,6 +679,7 @@ static PyObject *treemanifest_walk(py_treemanifest *self, PyObject *args) {
 // ====  treemanifest ctype declaration ====
 
 static PyMethodDef treemanifest_methods[] = {
+  {"copy", (PyCFunction)treemanifest_copy, METH_NOARGS, "copies the treemanifest"},
   {"diff", (PyCFunction)treemanifest_diff, METH_VARARGS|METH_KEYWORDS, "performs a diff of the given two manifests\n"},
   {"filesnotin", (PyCFunction)treemanifest_filesnotin, METH_VARARGS, "returns the set of files in m1 but not m2\n"},
   {"find", treemanifest_find, METH_VARARGS, "returns the node and flag for the given filepath\n"},

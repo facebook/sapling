@@ -22,6 +22,19 @@ Manifest::Manifest(PythonObj &rawobj) :
   }
 }
 
+Manifest *Manifest::copy() {
+  Manifest *copied = new Manifest(this->_rawobj);
+  std::list<ManifestEntry>::iterator copyIter = copied->entries.begin();
+
+  for (std::list<ManifestEntry>::iterator thisIter = this->entries.begin();
+       thisIter != this->entries.end();
+       thisIter ++) {
+    copied->addChild(copyIter, &(*thisIter));
+  }
+
+  return copied;
+}
+
 ManifestIterator Manifest::getIterator() {
   return ManifestIterator(this->entries.begin(), this->entries.end());
 }
@@ -71,6 +84,22 @@ ManifestEntry *Manifest::addChild(std::list<ManifestEntry>::iterator iterator,
   ManifestEntry *result = &(*iterator);
 
   result->initialize(filename, filenamelen, node, flag);
+
+  return result;
+}
+
+ManifestEntry *Manifest::addChild(std::list<ManifestEntry>::iterator iterator,
+        ManifestEntry *otherChild) {
+  ManifestEntry entry;
+  this->entries.insert(iterator, entry);
+
+  // move back to the element we just added.
+  --iterator;
+
+  // return a reference to the element we added, not the one on the stack.
+  ManifestEntry *result = &(*iterator);
+
+  result->initialize(otherChild);
 
   return result;
 }
