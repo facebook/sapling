@@ -16,11 +16,11 @@ Load commonly used test logic
   $ git add alpha
   $ fn_git_commit -m 'add alpha'
   $ git submodule add ../gitsubrepo subrepo1
-  Cloning into 'subrepo1'...
+  Cloning into '*subrepo1'... (glob)
   done.
   $ fn_git_commit -m 'add subrepo1'
   $ git submodule add ../gitsubrepo xyz/subrepo2
-  Cloning into 'xyz/subrepo2'...
+  Cloning into '*xyz/subrepo2'... (glob)
   done.
   $ fn_git_commit -m 'add subrepo2'
 we are going to push to this repo from our hg clone,
