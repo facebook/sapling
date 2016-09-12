@@ -542,7 +542,7 @@ class fixupstate(object):
                 self.replacemap[ctx.node()] = None
                 msg = _('became empty and was dropped')
             else:
-                # changset needs re-commit
+                # changeset needs re-commit
                 nodestr = self._commitsingle(memworkingcopy, ctx, p1=nextp1)
                 lastcommitted = self.repo[nodestr]
                 nextp1 = lastcommitted
@@ -721,7 +721,7 @@ def absorb(ui, repo, stack=None, targetctx=None, pats=None, opts=None):
                       'be analysed\n')
                     % limit)
     if not stack:
-        raise error.Abort(_('no changset to change'))
+        raise error.Abort(_('no changeset to change'))
     if targetctx is None: # default to working copy
         targetctx = repo[None]
     if pats is None:

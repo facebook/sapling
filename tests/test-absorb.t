@@ -22,7 +22,7 @@
 Do not crash with empty repo:
 
   $ hg absorb
-  abort: no changset to change
+  abort: no changeset to change
   [255]
 
 Make some commits:
@@ -229,7 +229,7 @@ Merge commit will not be changed:
   $ echo 2 >> m1
   $ echo 2 >> m2
   $ hg absorb
-  abort: no changset to change
+  abort: no changeset to change
   [255]
   $ hg revert -q -C m1 m2
 
