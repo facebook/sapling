@@ -332,7 +332,7 @@ class cg1unpacker(object):
                     for cset in xrange(clstart, clend):
                         mfnode = repo.changelog.read(
                             repo.changelog.node(cset))[0]
-                        mfest = repo.manifest.readdelta(mfnode)
+                        mfest = repo.manifestlog[mfnode].readdelta()
                         # store file nodes we must see
                         for f, n in mfest.iteritems():
                             needfiles.setdefault(f, set()).add(n)

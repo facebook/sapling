@@ -993,6 +993,25 @@ class manifestctx(object):
                 self._data = manifestdict(text)
         return self._data
 
+    def readdelta(self):
+        revlog = self._revlog
+        if revlog._usemanifestv2:
+            # Need to perform a slow delta
+            r0 = revlog.deltaparent(revlog.rev(self._node))
+            m0 = manifestctx(revlog, revlog.node(r0)).read()
+            m1 = self.read()
+            md = manifestdict()
+            for f, ((n0, fl0), (n1, fl1)) in m0.diff(m1).iteritems():
+                if n1:
+                    md[f] = n1
+                    if fl1:
+                        md.setflag(f, fl1)
+            return md
+
+        r = revlog.rev(self._node)
+        d = mdiff.patchtext(revlog.revdiff(revlog.deltaparent(r), r))
+        return manifestdict(d)
+
 class treemanifestctx(object):
     def __init__(self, revlog, dir, node):
         revlog = revlog.dirlog(dir)
@@ -1032,6 +1051,20 @@ class treemanifestctx(object):
 
     def node(self):
         return self._node
+
+    def readdelta(self):
+        # Need to perform a slow delta
+        revlog = self._revlog
+        r0 = revlog.deltaparent(revlog.rev(self._node))
+        m0 = treemanifestctx(revlog, revlog.node(r0), dir=self._dir).read()
+        m1 = self.read()
+        md = treemanifest(dir=self._dir)
+        for f, ((n0, fl0), (n1, fl1)) in m0.diff(m1).iteritems():
+            if n1:
+                md[f] = n1
+                if fl1:
+                    md.setflag(f, fl1)
+        return md
 
 class manifest(manifestrevlog):
     def __init__(self, opener, dir='', dirlogcache=None):

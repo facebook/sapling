@@ -532,7 +532,8 @@ class changectx(basectx):
 
     @propertycache
     def _manifestdelta(self):
-        return self._repo.manifest.readdelta(self._changeset.manifest)
+        mfnode = self._changeset.manifest
+        return self._repo.manifestlog[mfnode].readdelta()
 
     @propertycache
     def _parents(self):
