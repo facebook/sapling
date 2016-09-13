@@ -1198,7 +1198,7 @@ def buildstate(repo, dest, rebaseset, collapse, obsoletenotrebased):
                 repo.ui.debug('source is a child of destination\n')
                 return None
 
-        repo.ui.debug('rebase onto %d starting from %s\n' % (dest, root))
+        repo.ui.debug('rebase onto %s starting from %s\n' % (dest, root))
         state.update(dict.fromkeys(rebaseset, revtodo))
         # Rebase tries to turn <dest> into a parent of <root> while
         # preserving the number of parents of rebased changesets:
