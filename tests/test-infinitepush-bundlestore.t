@@ -110,7 +110,7 @@ Push to non-scratch bookmark
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ mkcommit newcommit
   created new head
-  $ hg push -r . --to book --create
+  $ hg push -r .
   pushing to ssh://user@dummy/repo
   searching for changes
   remote: adding changesets
@@ -124,7 +124,37 @@ Push to non-scratch bookmark
   |/
   o  initialcommit public
   
+ 
+Push to scratch branch
+  $ cd ../client2
+  $ hg up -q scratch/mybranch
+  $ mkcommit 'new scratch commit'
+  $ hg push -r . --to scratch/mybranch
+  pushing to ssh://user@dummy/repo
+  searching for changes
+  remote: pushing 2 commits:
+  remote:     20759b6926ce  scratchcommit
+  remote:     1de1d7d92f89  new scratch commit
 
-  $ hg pull -B scratch/mybranch -B book
-  abort: not implemented: not possible to pull scratch and non-scratch branches at the same time
-  [255]
+Pull scratch and non-scratch bookmark at the same time
+
+  $ hg -R ../repo book newbook
+  $ cd ../client
+  $ hg pull -B newbook -B scratch/mybranch --traceback
+  pulling from ssh://user@dummy/repo
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 2 files
+  adding remote bookmark newbook
+  (run 'hg update' to get a working copy)
+  $ hg log -G -T '{desc} {phase}'
+  o  new scratch commit draft
+  |
+  | @  newcommit public
+  | |
+  o |  scratchcommit draft
+  |/
+  o  initialcommit public
+  

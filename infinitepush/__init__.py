@@ -203,16 +203,22 @@ def listkeyspatterns(self, namespace, patterns):
 def getbundle(orig, repo, source, heads=None, common=None, bundlecaps=None,
               **kwargs):
     # Check if heads exists, if not, check bundle store
-    if len(heads) == 1:
-        if heads[0] not in repo.changelog.nodemap:
+    hasscratchnode = False
+    for head in heads:
+        if head not in repo.changelog.nodemap:
+            if hasscratchnode:
+                raise error.Abort(
+                    'not implemented: not possible to pull more than '
+                    'one scratch branch')
             index = repo.bundlestore.index
             store = repo.bundlestore.store
-            bundleid = index.getbundle(hex(heads[0]))
+            bundleid = index.getbundle(hex(head))
             bundleraw = store.read(bundleid)
             bundlefile = _makebundlefromraw(bundleraw)
             bundlepath = "bundle:%s+%s" % (repo.root, bundlefile)
             bundlerepo = repository(repo.ui, bundlepath)
             repo = bundlerepo
+            hasscratchnode = True
 
     return orig(repo, source, heads=heads, common=common,
                 bundlecaps=bundlecaps, **kwargs)
@@ -305,10 +311,6 @@ def _pull(orig, ui, repo, source="default", **opts):
         opts['bookmark'] = bookmarks
         opts['rev'] = revs
     if hasscratchbookmarks:
-        if len(opts.get('bookmark')) > 0:
-            raise error.Abort(
-                'not implemented: not possible to pull scratch ' +
-                'and non-scratch branches at the same time')
         # Set anyincoming to True
         oldfindcommonincoming = wrapfunction(discovery,
                                              'findcommonincoming',
