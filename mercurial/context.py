@@ -824,7 +824,7 @@ class basefilectx(object):
         """
         repo = self._repo
         cl = repo.unfiltered().changelog
-        ma = repo.manifest
+        mfl = repo.manifestlog
         # fetch the linkrev
         fr = filelog.rev(fnode)
         lkr = filelog.linkrev(fr)
@@ -849,7 +849,7 @@ class basefilectx(object):
                 if path in ac[3]: # checking the 'files' field.
                     # The file has been touched, check if the content is
                     # similar to the one we search for.
-                    if fnode == ma.readfast(ac[0]).get(path):
+                    if fnode == mfl[ac[0]].readfast().get(path):
                         return a
             # In theory, we should never get out of that loop without a result.
             # But if manifest uses a buggy file revision (not children of the

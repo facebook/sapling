@@ -993,6 +993,14 @@ class manifestctx(object):
                 self._data = manifestdict(text)
         return self._data
 
+    def readfast(self):
+        rl = self._revlog
+        r = rl.rev(self._node)
+        deltaparent = rl.deltaparent(r)
+        if deltaparent != revlog.nullrev and deltaparent in rl.parentrevs(r):
+            return self.readdelta()
+        return self.read()
+
     def readdelta(self):
         revlog = self._revlog
         if revlog._usemanifestv2:
@@ -1065,6 +1073,14 @@ class treemanifestctx(object):
                 if fl1:
                     md.setflag(f, fl1)
         return md
+
+    def readfast(self):
+        rl = self._revlog
+        r = rl.rev(self._node)
+        deltaparent = rl.deltaparent(r)
+        if deltaparent != revlog.nullrev and deltaparent in rl.parentrevs(r):
+            return self.readdelta()
+        return self.read()
 
 class manifest(manifestrevlog):
     def __init__(self, opener, dir='', dirlogcache=None):
@@ -1148,20 +1164,6 @@ class manifest(manifestrevlog):
         r = self.rev(node)
         d = mdiff.patchtext(self.revdiff(self.deltaparent(r), r))
         return manifestdict(d)
-
-    def readfast(self, node):
-        '''use the faster of readdelta or read
-
-        This will return a manifest which is either only the files
-        added/modified relative to p1, or all files in the
-        manifest. Which one is returned depends on the codepath used
-        to retrieve the data.
-        '''
-        r = self.rev(node)
-        deltaparent = self.deltaparent(r)
-        if deltaparent != revlog.nullrev and deltaparent in self.parentrevs(r):
-            return self.readdelta(node)
-        return self.read(node)
 
     def readshallowfast(self, node):
         '''like readfast(), but calls readshallowdelta() instead of readdelta()
