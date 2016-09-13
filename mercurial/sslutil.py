@@ -390,8 +390,12 @@ def wrapsocket(sock, keyfile, certfile, ui, serverhostname=None):
         try:
             sslcontext.load_verify_locations(cafile=settings['cafile'])
         except ssl.SSLError as e:
+            if len(e.args) == 1: # pypy has different SSLError args
+                msg = e.args[0]
+            else:
+                msg = e.args[1]
             raise error.Abort(_('error loading CA file %s: %s') % (
-                              settings['cafile'], e.args[1]),
+                              settings['cafile'], msg),
                               hint=_('file is empty or malformed?'))
         caloaded = True
     elif settings['allowloaddefaultcerts']:
