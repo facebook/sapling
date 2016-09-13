@@ -896,17 +896,33 @@ class manifestrevlog(revlog.revlog):
     '''A revlog that stores manifest texts. This is responsible for caching the
     full-text manifest contents.
     '''
-    def __init__(self, opener, indexfile):
-        super(manifestrevlog, self).__init__(opener, indexfile)
-
+    def __init__(self, opener, dir=''):
         # During normal operations, we expect to deal with not more than four
         # revs at a time (such as during commit --amend). When rebasing large
         # stacks of commits, the number can go up, hence the config knob below.
         cachesize = 4
+        usetreemanifest = False
+        usemanifestv2 = False
         opts = getattr(opener, 'options', None)
         if opts is not None:
             cachesize = opts.get('manifestcachesize', cachesize)
+            usetreemanifest = opts.get('treemanifest', usetreemanifest)
+            usemanifestv2 = opts.get('manifestv2', usemanifestv2)
+
+        self._treeondisk = usetreemanifest
+        self._usemanifestv2 = usemanifestv2
+
         self._fulltextcache = util.lrucachedict(cachesize)
+
+        indexfile = "00manifest.i"
+        if dir:
+            assert self._treeondisk, 'opts is %r' % opts
+            if not dir.endswith('/'):
+                dir = dir + '/'
+            indexfile = "meta/" + dir + "00manifest.i"
+        self._dir = dir
+
+        super(manifestrevlog, self).__init__(opener, indexfile)
 
     @property
     def fulltextcache(self):
@@ -1093,24 +1109,13 @@ class manifest(manifestrevlog):
         # stacks of commits, the number can go up, hence the config knob below.
         cachesize = 4
         usetreemanifest = False
-        usemanifestv2 = False
         opts = getattr(opener, 'options', None)
         if opts is not None:
             cachesize = opts.get('manifestcachesize', cachesize)
             usetreemanifest = opts.get('treemanifest', usetreemanifest)
-            usemanifestv2 = opts.get('manifestv2', usemanifestv2)
         self._mancache = util.lrucachedict(cachesize)
         self._treeinmem = usetreemanifest
-        self._treeondisk = usetreemanifest
-        self._usemanifestv2 = usemanifestv2
-        indexfile = "00manifest.i"
-        if dir:
-            assert self._treeondisk, 'opts is %r' % opts
-            if not dir.endswith('/'):
-                dir = dir + '/'
-            indexfile = "meta/" + dir + "00manifest.i"
-        super(manifest, self).__init__(opener, indexfile)
-        self._dir = dir
+        super(manifest, self).__init__(opener, dir=dir)
         # The dirlogcache is kept on the root manifest log
         if dir:
             self._dirlogcache = dirlogcache
