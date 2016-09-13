@@ -267,9 +267,21 @@ class journalstorage(object):
         # with a non-local repo (cloning for example).
         cls._currentcommand = fullargs
 
+    def _currentlock(self, lockref):
+        """Returns the lock if it's held, or None if it's not.
+
+        (This is copied from the localrepo class)
+        """
+        if lockref is None:
+            return None
+        l = lockref()
+        if l is None or not l.held:
+            return None
+        return l
+
     def jlock(self, vfs):
         """Create a lock for the journal file"""
-        if self._lockref and self._lockref():
+        if self._currentlock(self._lockref) is not None:
             raise error.Abort(_('journal lock does not support nesting'))
         desc = _('journal of %s') % vfs.base
         try:
