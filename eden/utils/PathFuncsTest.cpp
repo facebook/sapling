@@ -7,8 +7,8 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
-#include <gtest/gtest.h>
 #include <boost/functional/hash.hpp>
+#include <gtest/gtest.h>
 #include <sstream>
 #include "PathFuncs.h"
 
@@ -288,6 +288,16 @@ TEST(PathFuncs, AbsolutePath) {
   EXPECT_EQ("/", AbsolutePathPiece("/").stringPiece());
   auto comp4 = AbsolutePathPiece() + RelativePathPiece("foo");
   EXPECT_EQ("/foo", comp4.stringPiece());
+
+  AbsolutePath root("/");
+  EXPECT_EQ(RelativePathPiece(), root.relativize(root));
+  EXPECT_EQ(RelativePathPiece(), abs.relativize(abs));
+
+  EXPECT_EQ(
+      RelativePathPiece("foo"), abs.relativize(abs + RelativePathPiece("foo")));
+  EXPECT_EQ(
+      RelativePathPiece("foo/bar"),
+      abs.relativize(abs + RelativePathPiece("foo/bar")));
 
   // auto bad = rel + abs; doesn't compile; invalid for ABS to be on RHS
 }

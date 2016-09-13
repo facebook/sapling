@@ -8,9 +8,9 @@
  *
  */
 #pragma once
+#include <boost/operators.hpp>
 #include <folly/Hash.h>
 #include <folly/String.h>
-#include <boost/operators.hpp>
 #include <type_traits>
 
 namespace facebook {
@@ -472,6 +472,13 @@ class ComposedPathIterator
     return piece();
   }
 
+  /**
+   * Returns a RelativePathPiece that corresponds to the characters in the path
+   * "to the right of" the current iterator position. Note that this is true
+   * whether this is a forward or reverse iterator.
+   */
+  RelativePathPiece remainder() const;
+
   /*
    * TODO: operator->() is not implemented
    *
@@ -849,6 +856,44 @@ class AbsolutePathBase : public ComposedPathBase<
         reverse_iterator{p, nullptr});
   }
 
+  /**
+   * This must be equal to or an ancestor of the specified path.
+   * If `this` is "/foo" and `child` is "/foo/bar/baz", then this returns
+   * `RelativePathPiece("bar/baz")`. If `this` and `child` are equal, then this
+   * returns `RelativePathPiece()`.
+   */
+  RelativePathPiece relativize(AbsolutePath child) const {
+    auto myPaths = this->paths();
+    auto childPaths = child.paths();
+    auto myIter = myPaths.begin();
+    auto childIter = childPaths.begin();
+    while (true) {
+      if (childIter == childPaths.end()) {
+        throw std::runtime_error(folly::to<std::string>(
+            child.c_str(), " should be under ", this->stringPiece()));
+      }
+
+      // Note that a RelativePath cannot contain "../" path elements.
+      if (myIter.piece() != childIter.piece()) {
+        throw std::runtime_error(folly::to<std::string>(
+            this->stringPiece(),
+            " does not seem to be a prefix of ",
+            child.c_str()));
+      }
+
+      myIter++;
+      if (myIter != myPaths.end()) {
+        childIter++;
+      } else {
+        // We do not want to increment childIter here or else we will be missing
+        // a path component when we call remainder() after the while loop.
+        break;
+      }
+    }
+
+    return childIter.remainder();
+  }
+
   /** Compose an AbsolutePath with a RelativePath */
   template <typename B>
   AbsolutePath operator+(const detail::RelativePathBase<B>& b) const {
@@ -994,8 +1039,21 @@ RelativePath operator+(
   return a + RelativePathPiece(b);
 }
 
+namespace detail {
+template <typename Piece, bool IsReverse>
+RelativePathPiece ComposedPathIterator<Piece, IsReverse>::remainder() const {
+  CHECK_NOTNULL(pos_);
+  if (pos_ < path_.end()) {
+    return RelativePathPiece(
+        folly::StringPiece(pos_ + 1, path_.end()),
+        detail::SkipPathSanityCheck());
+  } else {
+    return RelativePathPiece();
+  }
 }
 }
+}
+} // facebook::eden
 
 namespace std {
 /* Allow std::hash to operate on these types */
