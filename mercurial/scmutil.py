@@ -35,6 +35,7 @@ from . import (
     pycompat,
     revsetlang,
     similar,
+    url,
     util,
 )
 
@@ -1015,6 +1016,56 @@ class filecache(object):
             del obj.__dict__[self.name]
         except KeyError:
             raise AttributeError(self.name)
+
+def extdatasource(repo, source):
+    """Gather a map of rev -> value dict from the specified source
+
+    A source spec is treated as a URL, with a special case shell: type
+    for parsing the output from a shell command.
+
+    The data is parsed as a series of newline-separated records where
+    each record is a revision specifier optionally followed by a space
+    and a freeform string value. If the revision is known locally, it
+    is converted to a rev, otherwise the record is skipped.
+
+    Note that both key and value are treated as UTF-8 and converted to
+    the local encoding. This allows uniformity between local and
+    remote data sources.
+    """
+
+    spec = repo.ui.config("extdata", source)
+    if not spec:
+        raise error.Abort(_("unknown extdata source '%s'") % source)
+
+    data = {}
+    if spec.startswith("shell:"):
+        # external commands should be run relative to the repo root
+        cmd = spec[6:]
+        cwd = os.getcwd()
+        os.chdir(repo.root)
+        try:
+            src = util.popen(cmd)
+        finally:
+            os.chdir(cwd)
+    else:
+        # treat as a URL or file
+        src = url.open(repo.ui, spec)
+
+    try:
+        for l in src.readlines():
+            if " " in l:
+                k, v = l.strip().split(" ", 1)
+            else:
+                k, v = l.strip(), ""
+
+            k = encoding.tolocal(k)
+            if k in repo:
+                # we ignore data for nodes that don't exist locally
+                data[repo[k].rev()] = encoding.tolocal(v)
+    finally:
+        src.close()
+
+    return data
 
 def _locksub(repo, lock, envvar, cmd, environ=None, *args, **kwargs):
     if lock is None:
