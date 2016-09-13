@@ -137,15 +137,16 @@ void TreeInode::materializeDirAndParents() {
       // Someone else materialized it in the meantime
       return;
     }
-    auto myname = getNameMgr()->resolvePathToNode(getNodeId());
+    auto myname = this->getNameMgr()->resolvePathToNode(this->getNodeId());
     auto wlock = ulock.moveFromUpgradeToWrite();
     wlock->materialized = true;
 
-    auto dirPath = getOverlay()->getContentDir() + myname;
+    auto overlay = this->getOverlay();
+    auto dirPath = overlay->getContentDir() + myname;
     if (::mkdir(dirPath.c_str(), 0755) != 0 && errno != EEXIST) {
       folly::throwSystemError("while materializing, mkdir: ", dirPath);
     }
-    getOverlay()->saveOverlayDir(myname, &*wlock);
+    overlay->saveOverlayDir(myname, &*wlock);
   });
 }
 
@@ -225,12 +226,12 @@ TreeInode::create(PathComponentPiece name, mode_t mode, int flags) {
     entry->mode = st.st_mode;
 
     // Generate an inode number for this new entry.
-    node = getNameMgr()->getNodeByName(getNodeId(), name);
+    node = this->getNameMgr()->getNodeByName(this->getNodeId(), name);
 
     // build a corresponding TreeEntryFileInode
     inode = std::make_shared<TreeEntryFileInode>(
         node->getNodeId(),
-        std::static_pointer_cast<TreeInode>(shared_from_this()),
+        std::static_pointer_cast<TreeInode>(this->shared_from_this()),
         entry.get(),
         std::move(file));
 
@@ -239,7 +240,7 @@ TreeInode::create(PathComponentPiece name, mode_t mode, int flags) {
     // Let's open a file handle now.
     handle = inode->finishCreate();
 
-    getOverlay()->saveOverlayDir(myname, &contents);
+    this->getOverlay()->saveOverlayDir(myname, &contents);
   });
 
   // Now that we have the file handle, let's look up the attributes.
@@ -279,8 +280,9 @@ folly::Future<fuse_entry_param> TreeInode::mkdir(
       folly::throwSystemErrorExplicit(
           EEXIST, "mkdir: ", targetName, " already exists in the overlay");
     }
+    auto overlay = this->getOverlay();
 
-    auto dirPath = getOverlay()->getContentDir() + targetName;
+    auto dirPath = overlay->getContentDir() + targetName;
 
     folly::checkUnixError(
         ::mkdir(dirPath.c_str(), mode), "mkdir: ", dirPath, " mode=", mode);
@@ -294,13 +296,13 @@ folly::Future<fuse_entry_param> TreeInode::mkdir(
     entry->materialized = true;
 
     contents.entries.emplace(name, std::move(entry));
-    getOverlay()->saveOverlayDir(myname, &contents);
+    overlay->saveOverlayDir(myname, &contents);
 
     // Create the overlay entry for this dir before the lookup call
     // below tries to load it (and fails)
     Dir emptyDir;
     emptyDir.materialized = true;
-    getOverlay()->saveOverlayDir(targetName, &emptyDir);
+    overlay->saveOverlayDir(targetName, &emptyDir);
   });
 
   // Look up the inode for this new dir and return its entry info.
@@ -345,14 +347,16 @@ folly::Future<folly::Unit> TreeInode::unlink(PathComponentPiece name) {
           EISDIR, "unlink: ", targetName, " is a directory");
     }
 
+    auto overlay = this->getOverlay();
+
     if (ent->materialized) {
-      auto filePath = getOverlay()->getContentDir() + targetName;
+      auto filePath = overlay->getContentDir() + targetName;
       folly::checkUnixError(::unlink(filePath.c_str()), "unlink: ", filePath);
     }
 
     // And actually remove it
     contents.entries.erase(entIter);
-    getOverlay()->saveOverlayDir(myname, &contents);
+    overlay->saveOverlayDir(myname, &contents);
   });
 
   return folly::Unit{};
@@ -398,7 +402,7 @@ folly::Future<folly::Unit> TreeInode::rmdir(PathComponentPiece name) {
       folly::throwSystemErrorExplicit(
           EISDIR, "rmdir: ", targetName, " is not a directory");
     }
-    auto targetInode = lookupChildByNameLocked(&contents, name);
+    auto targetInode = this->lookupChildByNameLocked(&contents, name);
     if (!targetInode) {
       folly::throwSystemErrorExplicit(
           EIO,
@@ -438,7 +442,7 @@ folly::Future<folly::Unit> TreeInode::rmdir(PathComponentPiece name) {
       folly::throwSystemErrorExplicit(
           EISDIR, "rmdir: ", targetName, " is not a directory");
     }
-    auto targetInode = lookupChildByNameLocked(&contents, name);
+    auto targetInode = this->lookupChildByNameLocked(&contents, name);
     if (!targetInode) {
       folly::throwSystemErrorExplicit(
           EIO,
@@ -459,15 +463,16 @@ folly::Future<folly::Unit> TreeInode::rmdir(PathComponentPiece name) {
           ENOTEMPTY, "rmdir: ", targetName, " is not empty");
     }
 
+    auto overlay = this->getOverlay();
     if (ent->materialized) {
-      auto dirPath = getOverlay()->getContentDir() + targetName;
+      auto dirPath = overlay->getContentDir() + targetName;
       folly::checkUnixError(::rmdir(dirPath.c_str()), "rmdir: ", dirPath);
     }
 
     // And actually remove it
     contents.entries.erase(entIter);
-    getOverlay()->saveOverlayDir(myname, &contents);
-    getOverlay()->removeOverlayDir(targetName);
+    overlay->saveOverlayDir(myname, &contents);
+    overlay->removeOverlayDir(targetName);
   });
 
   return folly::Unit{};
@@ -593,7 +598,7 @@ folly::Future<folly::Unit> TreeInode::rename(
   // to wlock the same thing twice
   if (targetDir.get() == this) {
     contents_.withWLock([&](auto& contents) {
-      renameHelper(&contents, sourceName, &contents, targetName);
+      this->renameHelper(&contents, sourceName, &contents, targetName);
     });
   } else {
     targetDir->materializeDirAndParents();
