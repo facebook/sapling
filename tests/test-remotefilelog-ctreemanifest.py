@@ -85,13 +85,14 @@ class ctreemanifesttests(unittest.TestCase):
         a = ctreemanifest.treemanifest(FakeStore())
         nodes = {}
         for ix in range(111):
-            nodes["abc/def/ghi/jkl%d" % ix] = hashflags()
+            with hashflags() as (h, f):
+                nodes["abc/def/ghi/jkl%d" % ix] = (h, f)
 
         for fp, (h, f) in nodes.items():
             a.set(fp, h, f)
 
         for fp, (h, f) in nodes.items():
-            out = a.find(fp, h, f)
+            out = a.find(fp)
             self.assertEquals((h, f), out)
 
     def testFlagChanges(self):
@@ -123,7 +124,7 @@ class ctreemanifesttests(unittest.TestCase):
             out = a.find("abc")
             self.assertEquals((h, f), out)
 
-            a.set(None, None)
+            a.set("abc", None, None)
             out = a.find("abc")
             self.assertEquals((None, None), out)
 
