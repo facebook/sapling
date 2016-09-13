@@ -281,6 +281,7 @@ def _pull(orig, ui, repo, source="default", **opts):
     other = hg.peer(repo, opts, source)
 
     hasscratchbookmarks = False
+    scratchbookmarks = {}
     scratchbranchpat = ui.config('infinitepush', 'branchpattern')
     if opts.get('bookmark') and scratchbranchpat:
         kind, pat, matcher = util.stringmatcher(scratchbranchpat)
@@ -296,6 +297,7 @@ def _pull(orig, ui, repo, source="default", **opts):
                 if bookmark not in fetchedbookmarks:
                     raise error.Abort('remote bookmark %s not found!' %
                                       bookmark)
+                scratchbookmarks[bookmark] = fetchedbookmarks[bookmark]
                 revs.append(fetchedbookmarks[bookmark])
                 hasscratchbookmarks = True
             else:
@@ -313,6 +315,15 @@ def _pull(orig, ui, repo, source="default", **opts):
                                              _findcommonincoming)
     try:
         result = orig(ui, repo, source, **opts)
+        # TODO(stash): race condition is possible
+        # if scratch bookmarks was updated right after orig.
+        # But that's unlikely and shouldn't be harmful.
+        with repo.wlock():
+            with repo.lock():
+                with repo.transaction('bookmark') as tr:
+                    for scratchbook, node in scratchbookmarks.items():
+                        repo._bookmarks[scratchbook] = bin(node)
+                    repo._bookmarks.recordchange(tr)
         return result
     finally:
         if hasscratchbookmarks:

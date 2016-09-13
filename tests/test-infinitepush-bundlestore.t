@@ -90,6 +90,7 @@ From another client we can get the scratchbranch if we ask for it explicitely
   (run 'hg update' to get a working copy)
   $ hg log -G
   o  changeset:   1:20759b6926ce
+  |  bookmark:    scratch/mybranch
   |  tag:         tip
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
@@ -123,3 +124,7 @@ Push to non-scratch bookmark
   |/
   o  initialcommit public
   
+
+  $ hg pull -B scratch/mybranch -B book
+  abort: not implemented: not possible to pull scratch and non-scratch branches at the same time
+  [255]
