@@ -896,7 +896,7 @@ class manifestrevlog(revlog.revlog):
     '''A revlog that stores manifest texts. This is responsible for caching the
     full-text manifest contents.
     '''
-    def __init__(self, opener, dir=''):
+    def __init__(self, opener, dir='', dirlogcache=None):
         # During normal operations, we expect to deal with not more than four
         # revs at a time (such as during commit --amend). When rebasing large
         # stacks of commits, the number can go up, hence the config knob below.
@@ -921,6 +921,11 @@ class manifestrevlog(revlog.revlog):
                 dir = dir + '/'
             indexfile = "meta/" + dir + "00manifest.i"
         self._dir = dir
+        # The dirlogcache is kept on the root manifest log
+        if dir:
+            self._dirlogcache = dirlogcache
+        else:
+            self._dirlogcache = {'': self}
 
         super(manifestrevlog, self).__init__(opener, indexfile)
 
@@ -931,6 +936,15 @@ class manifestrevlog(revlog.revlog):
     def clearcaches(self):
         super(manifestrevlog, self).clearcaches()
         self._fulltextcache.clear()
+        self._dirlogcache = {'': self}
+
+    def dirlog(self, dir):
+        if dir:
+            assert self._treeondisk
+        if dir not in self._dirlogcache:
+            self._dirlogcache[dir] = manifestrevlog(self.opener, dir,
+                                                    self._dirlogcache)
+        return self._dirlogcache[dir]
 
 class manifestlog(object):
     """A collection class representing the collection of manifest snapshots
@@ -1115,12 +1129,7 @@ class manifest(manifestrevlog):
             usetreemanifest = opts.get('treemanifest', usetreemanifest)
         self._mancache = util.lrucachedict(cachesize)
         self._treeinmem = usetreemanifest
-        super(manifest, self).__init__(opener, dir=dir)
-        # The dirlogcache is kept on the root manifest log
-        if dir:
-            self._dirlogcache = dirlogcache
-        else:
-            self._dirlogcache = {'': self}
+        super(manifest, self).__init__(opener, dir=dir, dirlogcache=dirlogcache)
 
     def _newmanifest(self, data=''):
         if self._treeinmem:
@@ -1128,6 +1137,9 @@ class manifest(manifestrevlog):
         return manifestdict(data)
 
     def dirlog(self, dir):
+        """This overrides the base revlog implementation to allow construction
+        'manifest' types instead of manifestrevlog types. This is only needed
+        until we migrate off the 'manifest' type."""
         if dir:
             assert self._treeondisk
         if dir not in self._dirlogcache:
@@ -1282,4 +1294,3 @@ class manifest(manifestrevlog):
     def clearcaches(self):
         super(manifest, self).clearcaches()
         self._mancache.clear()
-        self._dirlogcache = {'': self}
