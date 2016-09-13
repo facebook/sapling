@@ -39,4 +39,9 @@ service EdenService extends fb303.FacebookService {
    *   or directory).
    */
   list<SHA1Result> getSHA1(1: string mountPoint, 2: list<string> paths)
+
+  /**
+   * Returns a list of paths relative to the mountPoint.
+   */
+  list<string> getBindMounts(1: string mountPoint)
 }

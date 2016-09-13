@@ -126,9 +126,7 @@ void EdenServer::run() {
   runThriftServer();
 }
 
-void EdenServer::mount(
-    shared_ptr<EdenMount> edenMount,
-    unique_ptr<ClientConfig> config) {
+void EdenServer::mount(shared_ptr<EdenMount> edenMount) {
   // Add the mount point to mountPoints_.
   // This also makes sure we don't have this path mounted already
   auto mountPath = edenMount->getPath().stringPiece();
@@ -157,7 +155,7 @@ void EdenServer::mount(
   }
 
   // Perform all of the bind mounts associated with the client.
-  for (auto bindMount : config->getBindMounts()) {
+  for (auto& bindMount : edenMount->getBindMounts()) {
     auto pathInMountDir = bindMount.pathInMountDir;
     try {
       // If pathInMountDir does not exist, then it must be created before the

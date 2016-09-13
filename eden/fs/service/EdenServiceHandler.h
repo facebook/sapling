@@ -37,6 +37,10 @@ class EdenServiceHandler : virtual public EdenServiceSvIf,
       std::unique_ptr<std::string> mountPoint,
       std::unique_ptr<std::string> hash) override;
 
+  void getBindMounts(
+      std::vector<std::string>& out,
+      std::unique_ptr<std::string> mountPoint) override;
+
   void getSHA1(
       std::vector<SHA1Result>& out,
       std::unique_ptr<std::string> mountPoint,

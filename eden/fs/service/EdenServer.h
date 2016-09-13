@@ -65,9 +65,7 @@ class EdenServer {
    */
   void stop() const;
 
-  void mount(
-      std::shared_ptr<EdenMount> edenMount,
-      std::unique_ptr<ClientConfig> config);
+  void mount(std::shared_ptr<EdenMount> edenMount);
 
   void unmount(folly::StringPiece mountPath);
 

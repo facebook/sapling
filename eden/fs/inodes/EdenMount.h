@@ -18,6 +18,8 @@ namespace fusell {
 class MountPoint;
 }
 
+class BindMount;
+class ClientConfig;
 class ObjectStore;
 class Overlay;
 
@@ -36,7 +38,8 @@ class EdenMount {
   EdenMount(
       std::shared_ptr<fusell::MountPoint> mountPoint,
       std::unique_ptr<ObjectStore> objectStore,
-      std::shared_ptr<Overlay> overlay);
+      std::shared_ptr<Overlay> overlay,
+      std::unique_ptr<const ClientConfig> clientConfig);
   virtual ~EdenMount();
 
   /*
@@ -54,6 +57,12 @@ class EdenMount {
    * Return the path to the mount point.
    */
   const AbsolutePath& getPath() const;
+
+  /*
+   * Return bind mounts that are applied for this mount. These are based on the
+   * state of the ClientConfig when this EdenMount was created.
+   */
+  const std::vector<BindMount>& getBindMounts() const;
 
   /*
    * Return the ObjectStore used by this mount point.
@@ -77,6 +86,12 @@ class EdenMount {
   std::shared_ptr<fusell::MountPoint> mountPoint_;
   std::unique_ptr<ObjectStore> objectStore_;
   std::shared_ptr<Overlay> overlay_;
+
+  /*
+   * Note that this config will not be updated if the user modifies the
+   * underlying config files after the ClientConfig was created.
+   */
+  const std::unique_ptr<const ClientConfig> clientConfig_;
 };
 }
 }

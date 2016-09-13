@@ -57,8 +57,8 @@ void EdenServiceHandler::mountImpl(const MountInfo& info) {
   auto objectStore =
       make_unique<ObjectStore>(server_->getLocalStore(), backingStore);
   auto rootTree = objectStore->getTreeForCommit(snapshotID);
-  auto edenMount =
-      std::make_shared<EdenMount>(mountPoint, std::move(objectStore), overlay);
+  auto edenMount = std::make_shared<EdenMount>(
+      mountPoint, std::move(objectStore), overlay, std::move(config));
 
   // Load the overlay, if present.
   auto rootOverlayDir = overlay->loadOverlayDir(RelativePathPiece());
@@ -78,7 +78,7 @@ void EdenServiceHandler::mountImpl(const MountInfo& info) {
 
   // TODO(mbolin): Use the result of config.getBindMounts() to perform the
   // appropriate bind mounts for the client.
-  server_->mount(std::move(edenMount), std::move(config));
+  server_->mount(std::move(edenMount));
 }
 
 void EdenServiceHandler::mount(std::unique_ptr<MountInfo> info) {
@@ -210,6 +210,20 @@ SHA1Result EdenServiceHandler::getSHA1ForPath(
     } else {
       parent = inodeDispatcher->getDirInode(inodeNumber);
     }
+  }
+}
+
+void EdenServiceHandler::getBindMounts(
+    std::vector<string>& out,
+    std::unique_ptr<string> mountPointPtr) {
+  auto mountPoint = *mountPointPtr.get();
+  auto mountPointPath = AbsolutePathPiece{mountPoint};
+  auto edenMount = server_->getMount(mountPoint);
+
+  for (auto& bindMount : edenMount->getBindMounts()) {
+    out.emplace_back(mountPointPath.relativize(bindMount.pathInMountDir)
+                         .stringPiece()
+                         .str());
   }
 }
 
