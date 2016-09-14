@@ -379,3 +379,14 @@ Test experimental revset support
 
   $ hg log -r '_destupdate()'
   2:bd10386d478c 2 (no-eol)
+
+Test that boolean flags allow --no-flag specification to override [defaults]
+  $ cat >> $HGRCPATH <<EOF
+  > [defaults]
+  > update = --check
+  > EOF
+  $ hg co 2
+  abort: uncommitted changes
+  [255]
+  $ hg co --no-check 2
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
