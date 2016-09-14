@@ -719,7 +719,7 @@ class curseschunkselector(object):
         "scroll the screen to fully show the currently-selected"
         selstart = self.selecteditemstartline
         selend = self.selecteditemendline
-        #selnumlines = selend - selstart
+
         padstart = self.firstlineofpadtoprint
         padend = padstart + self.yscreensize - self.numstatuslines - 1
         # 'buffered' pad start/end values which scroll with a certain
