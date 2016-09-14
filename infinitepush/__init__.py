@@ -386,13 +386,13 @@ def partgen(pushop, bundler):
         pushop.cgresult = 0
         return
 
-    rebasepart = getscratchbranchpart(pushop.repo,
-                                   pushop.remote,
-                                   pushop.outgoing,
-                                   bookmark,
-                                   create)
+    scratchpart = getscratchbranchpart(pushop.repo,
+                                       pushop.remote,
+                                       pushop.outgoing,
+                                       bookmark,
+                                       create)
 
-    bundler.addpart(rebasepart)
+    bundler.addpart(scratchpart)
 
     def handlereply(op):
         # server either succeeds or aborts; no code to read
