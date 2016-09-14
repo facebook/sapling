@@ -59,22 +59,22 @@ help record (record)
   
   options ([+] can be repeated):
   
-   -A --addremove           mark new/missing files as added/removed before
-                            committing
-      --close-branch        mark a branch head as closed
-      --amend               amend the parent of the working directory
-   -s --secret              use the secret phase for committing
-   -e --edit                invoke editor on commit messages
-   -I --include PATTERN [+] include names matching the given patterns
-   -X --exclude PATTERN [+] exclude names matching the given patterns
-   -m --message TEXT        use text as commit message
-   -l --logfile FILE        read commit message from file
-   -d --date DATE           record the specified date as commit date
-   -u --user USER           record the specified user as committer
-   -S --subrepos            recurse into subrepositories
-   -w --ignore-all-space    ignore white space when comparing lines
-   -b --ignore-space-change ignore changes in the amount of white space
-   -B --ignore-blank-lines  ignore changes whose lines are all blank
+   -A --[no-]addremove           mark new/missing files as added/removed before
+                                 committing
+      --[no-]close-branch        mark a branch head as closed
+      --[no-]amend               amend the parent of the working directory
+   -s --[no-]secret              use the secret phase for committing
+   -e --[no-]edit                invoke editor on commit messages
+   -I --include PATTERN [+]      include names matching the given patterns
+   -X --exclude PATTERN [+]      exclude names matching the given patterns
+   -m --message TEXT             use text as commit message
+   -l --logfile FILE             read commit message from file
+   -d --date DATE                record the specified date as commit date
+   -u --user USER                record the specified user as committer
+   -S --[no-]subrepos            recurse into subrepositories
+   -w --[no-]ignore-all-space    ignore white space when comparing lines
+   -b --[no-]ignore-space-change ignore changes in the amount of white space
+   -B --[no-]ignore-blank-lines  ignore changes whose lines are all blank
   
   (some details hidden, use --verbose to show complete help)
 
@@ -135,20 +135,20 @@ help (mq present)
   
   options ([+] can be repeated):
   
-   -e --edit                invoke editor on commit messages
-   -g --git                 use git extended diff format
-   -U --currentuser         add "From: <current user>" to patch
-   -u --user USER           add "From: <USER>" to patch
-   -D --currentdate         add "Date: <current date>" to patch
-   -d --date DATE           add "Date: <DATE>" to patch
-   -I --include PATTERN [+] include names matching the given patterns
-   -X --exclude PATTERN [+] exclude names matching the given patterns
-   -m --message TEXT        use text as commit message
-   -l --logfile FILE        read commit message from file
-   -w --ignore-all-space    ignore white space when comparing lines
-   -b --ignore-space-change ignore changes in the amount of white space
-   -B --ignore-blank-lines  ignore changes whose lines are all blank
-      --mq                  operate on patch repository
+   -e --[no-]edit                invoke editor on commit messages
+   -g --[no-]git                 use git extended diff format
+   -U --[no-]currentuser         add "From: <current user>" to patch
+   -u --user USER                add "From: <USER>" to patch
+   -D --[no-]currentdate         add "Date: <current date>" to patch
+   -d --date DATE                add "Date: <DATE>" to patch
+   -I --include PATTERN [+]      include names matching the given patterns
+   -X --exclude PATTERN [+]      exclude names matching the given patterns
+   -m --message TEXT             use text as commit message
+   -l --logfile FILE             read commit message from file
+   -w --[no-]ignore-all-space    ignore white space when comparing lines
+   -b --[no-]ignore-space-change ignore changes in the amount of white space
+   -B --[no-]ignore-blank-lines  ignore changes whose lines are all blank
+      --[no-]mq                  operate on patch repository
   
   (some details hidden, use --verbose to show complete help)
 

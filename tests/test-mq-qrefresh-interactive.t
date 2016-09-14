@@ -31,13 +31,13 @@ help qrefresh (no record)
   
   options ([+] can be repeated):
   
-   -e --edit                invoke editor on commit messages
-   -g --git                 use git extended diff format
-   -s --short               refresh only files already in the patch and
+   -e --[no-]edit           invoke editor on commit messages
+   -g --[no-]git            use git extended diff format
+   -s --[no-]short          refresh only files already in the patch and
                             specified files
-   -U --currentuser         add/update author field in patch with current user
+   -U --[no-]currentuser    add/update author field in patch with current user
    -u --user USER           add/update author field in patch with given user
-   -D --currentdate         add/update date field in patch with current date
+   -D --[no-]currentdate    add/update date field in patch with current date
    -d --date DATE           add/update date field in patch with given date
    -I --include PATTERN [+] include names matching the given patterns
    -X --exclude PATTERN [+] exclude names matching the given patterns
@@ -73,19 +73,19 @@ help qrefresh (record)
   
   options ([+] can be repeated):
   
-   -e --edit                invoke editor on commit messages
-   -g --git                 use git extended diff format
-   -s --short               refresh only files already in the patch and
+   -e --[no-]edit           invoke editor on commit messages
+   -g --[no-]git            use git extended diff format
+   -s --[no-]short          refresh only files already in the patch and
                             specified files
-   -U --currentuser         add/update author field in patch with current user
+   -U --[no-]currentuser    add/update author field in patch with current user
    -u --user USER           add/update author field in patch with given user
-   -D --currentdate         add/update date field in patch with current date
+   -D --[no-]currentdate    add/update date field in patch with current date
    -d --date DATE           add/update date field in patch with given date
    -I --include PATTERN [+] include names matching the given patterns
    -X --exclude PATTERN [+] exclude names matching the given patterns
    -m --message TEXT        use text as commit message
    -l --logfile FILE        read commit message from file
-   -i --interactive         interactively select changes to refresh
+   -i --[no-]interactive    interactively select changes to refresh
   
   (some details hidden, use --verbose to show complete help)
 

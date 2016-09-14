@@ -530,19 +530,19 @@ hide outer repo
       --cwd DIR           change working directory
    -y --noninteractive    do not prompt, automatically pick the first choice for
                           all prompts
-   -q --quiet             suppress output
-   -v --verbose           enable additional output
+   -q --[no-]quiet        suppress output
+   -v --[no-]verbose      enable additional output
       --config CONFIG [+] set/override config option (use 'section.name=value')
-      --debug             enable debugging output
-      --debugger          start debugger
+      --[no-]debug        enable debugging output
+      --[no-]debugger     start debugger
       --encoding ENCODE   set the charset encoding (default: ascii)
       --encodingmode MODE set the charset encoding mode (default: strict)
-      --traceback         always print a traceback on exception
-      --time              time how long the command takes
-      --profile           print command execution profile
+      --[no-]traceback    always print a traceback on exception
+      --[no-]time         time how long the command takes
+      --[no-]profile      print command execution profile
       --version           output version information and exit
    -h --help              display help and exit
-      --hidden            consider hidden changesets
+      --[no-]hidden       consider hidden changesets
 
 
 
@@ -565,19 +565,19 @@ hide outer repo
       --cwd DIR           change working directory
    -y --noninteractive    do not prompt, automatically pick the first choice for
                           all prompts
-   -q --quiet             suppress output
-   -v --verbose           enable additional output
+   -q --[no-]quiet        suppress output
+   -v --[no-]verbose      enable additional output
       --config CONFIG [+] set/override config option (use 'section.name=value')
-      --debug             enable debugging output
-      --debugger          start debugger
+      --[no-]debug        enable debugging output
+      --[no-]debugger     start debugger
       --encoding ENCODE   set the charset encoding (default: ascii)
       --encodingmode MODE set the charset encoding mode (default: strict)
-      --traceback         always print a traceback on exception
-      --time              time how long the command takes
-      --profile           print command execution profile
+      --[no-]traceback    always print a traceback on exception
+      --[no-]time         time how long the command takes
+      --[no-]profile      print command execution profile
       --version           output version information and exit
    -h --help              display help and exit
-      --hidden            consider hidden changesets
+      --[no-]hidden       consider hidden changesets
 
 
 
@@ -624,10 +624,10 @@ Extension module help vs command help:
    -o --option OPT [+]      pass option to comparison program
    -r --rev REV [+]         revision
    -c --change REV          change made by revision
-      --patch               compare patches for two revisions
+      --[no-]patch          compare patches for two revisions
    -I --include PATTERN [+] include names matching the given patterns
    -X --exclude PATTERN [+] exclude names matching the given patterns
-   -S --subrepos            recurse into subrepositories
+   -S --[no-]subrepos       recurse into subrepositories
   
   (some details hidden, use --verbose to show complete help)
 
@@ -851,19 +851,19 @@ extension help itself
       --cwd DIR           change working directory
    -y --noninteractive    do not prompt, automatically pick the first choice for
                           all prompts
-   -q --quiet             suppress output
-   -v --verbose           enable additional output
+   -q --[no-]quiet        suppress output
+   -v --[no-]verbose      enable additional output
       --config CONFIG [+] set/override config option (use 'section.name=value')
-      --debug             enable debugging output
-      --debugger          start debugger
+      --[no-]debug        enable debugging output
+      --[no-]debugger     start debugger
       --encoding ENCODE   set the charset encoding (default: ascii)
       --encodingmode MODE set the charset encoding mode (default: strict)
-      --traceback         always print a traceback on exception
-      --time              time how long the command takes
-      --profile           print command execution profile
+      --[no-]traceback    always print a traceback on exception
+      --[no-]time         time how long the command takes
+      --[no-]profile      print command execution profile
       --version           output version information and exit
    -h --help              display help and exit
-      --hidden            consider hidden changesets
+      --[no-]hidden       consider hidden changesets
 
 Make sure that single '-v' option shows help and built-ins only for 'dodo' command
   $ hg help -v dodo
@@ -875,7 +875,7 @@ Make sure that single '-v' option shows help and built-ins only for 'dodo' comma
   
   options:
   
-    --mq operate on patch repository
+    --[no-]mq operate on patch repository
   
   global options ([+] can be repeated):
   
@@ -884,19 +884,19 @@ Make sure that single '-v' option shows help and built-ins only for 'dodo' comma
       --cwd DIR           change working directory
    -y --noninteractive    do not prompt, automatically pick the first choice for
                           all prompts
-   -q --quiet             suppress output
-   -v --verbose           enable additional output
+   -q --[no-]quiet        suppress output
+   -v --[no-]verbose      enable additional output
       --config CONFIG [+] set/override config option (use 'section.name=value')
-      --debug             enable debugging output
-      --debugger          start debugger
+      --[no-]debug        enable debugging output
+      --[no-]debugger     start debugger
       --encoding ENCODE   set the charset encoding (default: ascii)
       --encodingmode MODE set the charset encoding mode (default: strict)
-      --traceback         always print a traceback on exception
-      --time              time how long the command takes
-      --profile           print command execution profile
+      --[no-]traceback    always print a traceback on exception
+      --[no-]time         time how long the command takes
+      --[no-]profile      print command execution profile
       --version           output version information and exit
    -h --help              display help and exit
-      --hidden            consider hidden changesets
+      --[no-]hidden       consider hidden changesets
 
 In case when extension name doesn't match any of its commands,
 help message should ask for '-v' to get list of built-in aliases
@@ -955,19 +955,19 @@ help options '-v' and '-v -e' should be equivalent
       --cwd DIR           change working directory
    -y --noninteractive    do not prompt, automatically pick the first choice for
                           all prompts
-   -q --quiet             suppress output
-   -v --verbose           enable additional output
+   -q --[no-]quiet        suppress output
+   -v --[no-]verbose      enable additional output
       --config CONFIG [+] set/override config option (use 'section.name=value')
-      --debug             enable debugging output
-      --debugger          start debugger
+      --[no-]debug        enable debugging output
+      --[no-]debugger     start debugger
       --encoding ENCODE   set the charset encoding (default: ascii)
       --encodingmode MODE set the charset encoding mode (default: strict)
-      --traceback         always print a traceback on exception
-      --time              time how long the command takes
-      --profile           print command execution profile
+      --[no-]traceback    always print a traceback on exception
+      --[no-]time         time how long the command takes
+      --[no-]profile      print command execution profile
       --version           output version information and exit
    -h --help              display help and exit
-      --hidden            consider hidden changesets
+      --[no-]hidden       consider hidden changesets
 
   $ hg help -v -e dudu
   dudu extension -
@@ -987,19 +987,19 @@ help options '-v' and '-v -e' should be equivalent
       --cwd DIR           change working directory
    -y --noninteractive    do not prompt, automatically pick the first choice for
                           all prompts
-   -q --quiet             suppress output
-   -v --verbose           enable additional output
+   -q --[no-]quiet        suppress output
+   -v --[no-]verbose      enable additional output
       --config CONFIG [+] set/override config option (use 'section.name=value')
-      --debug             enable debugging output
-      --debugger          start debugger
+      --[no-]debug        enable debugging output
+      --[no-]debugger     start debugger
       --encoding ENCODE   set the charset encoding (default: ascii)
       --encodingmode MODE set the charset encoding mode (default: strict)
-      --traceback         always print a traceback on exception
-      --time              time how long the command takes
-      --profile           print command execution profile
+      --[no-]traceback    always print a traceback on exception
+      --[no-]time         time how long the command takes
+      --[no-]profile      print command execution profile
       --version           output version information and exit
    -h --help              display help and exit
-      --hidden            consider hidden changesets
+      --[no-]hidden       consider hidden changesets
 
 Disabled extension commands:
 

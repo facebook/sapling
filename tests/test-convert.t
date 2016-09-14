@@ -327,13 +327,13 @@
    -r --rev REV [+]      import up to source revision REV
    -A --authormap FILE   remap usernames using this file
       --filemap FILE     remap file names using contents of file
-      --full             apply filemap changes by converting all files again
+      --[no-]full        apply filemap changes by converting all files again
       --splicemap FILE   splice synthesized history into place
       --branchmap FILE   change branch names while converting
-      --branchsort       try to sort changesets by branches
-      --datesort         try to sort changesets by date
-      --sourcesort       preserve source changesets order
-      --closesort        try to reorder closed revisions
+      --[no-]branchsort  try to sort changesets by branches
+      --[no-]datesort    try to sort changesets by date
+      --[no-]sourcesort  preserve source changesets order
+      --[no-]closesort   try to reorder closed revisions
   
   (some details hidden, use --verbose to show complete help)
   $ hg init a
