@@ -672,29 +672,28 @@ class fastmanifestcache(object):
             self.debug("[FM] removing cached manifest fast%s\n" % (candidate,))
             del self.ondiskcache[candidate]
 
-class hybridmanifestctx(hybridmanifest):
+class hybridmanifestctx(object):
     """A class representing a single revision of a manifest, including its
     contents, its parent revs, and its linkrev.
     """
     def __init__(self, ui, opener, revlog, node):
+        self._ui = ui
+        self._opener = opener
         self._revlog = revlog
-
         self._node = node
-        self.p1, self.p2 = revlog.parents(node)
-        rev = revlog.rev(node)
-        self.linkrev = revlog.linkrev(rev)
 
+    def read(self):
         def loadflat():
             # This should eventually be made lazy loaded, so consumers can
             # access the node/p1/linkrev data without having to parse the whole
             # manifest.
-            data = revlog.revision(node)
+            data = self._revlog.revision(self._node)
             arraytext = array.array('c', data)
-            revlog._fulltextcache[node] = arraytext
+            self._revlog._fulltextcache[self._node] = arraytext
             return manifest.manifestdict(data)
 
-        super(hybridmanifestctx, self).__init__(
-            ui, opener, loadflat=loadflat, node=node)
+        return hybridmanifest(self._ui, self._opener, loadflat=loadflat,
+                                 node=self._node)
 
     def node(self):
         return self._node
