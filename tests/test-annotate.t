@@ -606,3 +606,35 @@ Even when the starting revision is the linkrev-shadowed one:
   3: B
 
   $ cd ..
+
+Issue5360: Deleted chunk in p1 of a merge changeset
+
+  $ hg init repo-5360
+  $ cd repo-5360
+  $ echo 1 > a
+  $ hg commit -A a -m 1
+  $ echo 2 >> a
+  $ hg commit -m 2
+  $ echo a > a
+  $ hg commit -m a
+  $ hg update '.^' -q
+  $ echo 3 >> a
+  $ hg commit -m 3 -q
+  $ hg merge 2 -q
+  $ cat > a << EOF
+  > b
+  > 1
+  > 2
+  > 3
+  > a
+  > EOF
+  $ hg resolve --mark -q
+  $ hg commit -m m
+  $ hg annotate a
+  4: b
+  0: 1
+  1: 2
+  3: 3
+  2: a
+
+  $ cd ..

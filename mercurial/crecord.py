@@ -387,7 +387,7 @@ class uihunk(patchnode):
 
         contextlen = (len(self.before) + len(self.after) +
                       removedconvertedtocontext)
-        if self.after and self.after[-1] == '\\ no newline at end of file\n':
+        if self.after and self.after[-1] == '\\ No newline at end of file\n':
             contextlen -= 1
         fromlen = contextlen + self.removed
         tolen = contextlen + self.added
