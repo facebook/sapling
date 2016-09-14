@@ -272,7 +272,7 @@ class filefixupstate(object):
         a1, a2, b1, b2 = chunk
         # find involved indexes from annotate result
         involved = annotated[a1:a2]
-        if not involved: # a1 == a2
+        if not involved and annotated: # a1 == a2 and a is not empty
             # pure insertion, check nearby lines. ignore lines belong
             # to the public (first) changeset (i.e. annotated[i][0] == 1)
             nearbylinenums = set([a2, max(0, a1 - 1)])

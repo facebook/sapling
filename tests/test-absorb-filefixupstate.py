@@ -204,3 +204,8 @@ testfilefixup(case6, 'abcdefg', ['1357', 'a1c5e7g'])
 testfilefixup(case6, 'abcdef', case6)
 testfilefixup(case6, '', ['1357', '157'])
 testfilefixup(case6, '0123456789', ['1357', '0123456789'])
+
+# input case 7: change an empty file
+case7 = ['']
+
+testfilefixup(case7, '1', case7)
