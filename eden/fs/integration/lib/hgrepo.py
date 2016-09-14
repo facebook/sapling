@@ -12,6 +12,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import distutils.spawn
 import os
 import subprocess
 import tempfile
@@ -24,9 +25,11 @@ class HgRepository(repobase.Repository):
         super().__init__(path)
         self.hg_environment = os.environ.copy()
         self.hg_environment['HGPLAIN'] = '1'
+        self.hg_bin = distutils.spawn.find_executable(
+            'hg.real') or distutils.spawn.find_executable('hg')
 
     def hg(self, *args, stdout_charset='utf-8'):
-        cmd = ['hg'] + list(args)
+        cmd = [self.hg_bin] + list(args)
         completed_process = subprocess.run(cmd, stdout=subprocess.PIPE,
                                            stderr=subprocess.PIPE,
                                            check=True, cwd=self.path,

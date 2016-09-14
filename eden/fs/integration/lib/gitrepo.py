@@ -7,6 +7,7 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
+import distutils.spawn
 import os
 import subprocess
 import tempfile
@@ -18,6 +19,8 @@ from . import repobase
 class GitRepository(repobase.Repository):
     def __init__(self, path):
         super().__init__(path)
+        self.git_bin = distutils.spawn.find_executable(
+            'git.real') or distutils.spawn.find_executable('git')
 
     def git(self, *args, stdout_charset='utf-8', **kwargs):
         '''
@@ -36,7 +39,7 @@ class GitRepository(repobase.Repository):
           repo.git('commit', '-m', 'my new commit',
                    env={'GIT_AUTHOR_NAME': 'John Doe'})
         '''
-        cmd = ['git'] + list(args)
+        cmd = [self.git_bin] + list(args)
 
         env = os.environ.copy()
         env_args = kwargs.pop('env', None)
