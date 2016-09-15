@@ -230,7 +230,7 @@ def strip(ui, repo, nodelist, backup=True, topic='backup'):
         if backupfile:
             ui.warn(_("strip failed, full bundle stored in '%s'\n")
                     % vfs.join(backupfile))
-        elif chgrpfile:
+        if chgrpfile:
             ui.warn(_("strip failed, partial bundle stored in '%s'\n")
                     % vfs.join(chgrpfile))
         raise
