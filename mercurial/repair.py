@@ -147,7 +147,8 @@ def strip(ui, repo, nodelist, backup=True, topic='backup'):
                        vfs.join(backupfile))
         repo.ui.log("backupbundle", "saved backup bundle to %s\n",
                     vfs.join(backupfile))
-    if saveheads or savebases:
+    chgrpfile = None
+    if saveheads:
         # do not compress partial bundle if we remove it from disk later
         chgrpfile = _bundle(repo, savebases, saveheads, node, 'temp',
                             compress=False)
@@ -184,7 +185,7 @@ def strip(ui, repo, nodelist, backup=True, topic='backup'):
                 if troffset == 0:
                     repo.store.markremoved(file)
 
-        if saveheads or savebases:
+        if chgrpfile:
             ui.note(_("adding branch\n"))
             f = vfs.open(chgrpfile, "rb")
             gen = exchange.readbundle(ui, f, chgrpfile, vfs)
@@ -229,12 +230,12 @@ def strip(ui, repo, nodelist, backup=True, topic='backup'):
         if backupfile:
             ui.warn(_("strip failed, full bundle stored in '%s'\n")
                     % vfs.join(backupfile))
-        elif saveheads:
+        elif chgrpfile:
             ui.warn(_("strip failed, partial bundle stored in '%s'\n")
                     % vfs.join(chgrpfile))
         raise
     else:
-        if saveheads or savebases:
+        if chgrpfile:
             # Remove partial backup only if there were no exceptions
             vfs.unlink(chgrpfile)
 
