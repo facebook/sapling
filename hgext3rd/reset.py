@@ -30,6 +30,7 @@ def _isahash(rev):
 @command("reset", [
         ('C', 'clean', None, _('wipe the working copy clean when resetting')),
         ('k', 'keep', None, _('keeps the old commits the bookmark pointed to')),
+        ('r', 'rev', '', _('revision to reset to')),
     ], _('hg reset [REV]'))
 def reset(ui, repo, *args, **opts):
     """moves the active bookmark and working copy parent to the desired rev
@@ -46,7 +47,11 @@ def reset(ui, repo, *args, **opts):
     delete any commits that belonged only to that bookmark. Use --keep/-k to
     avoid deleting any commits.
     """
-    rev = args[0] if args else '.'
+    if args and args[0] and opts.get('rev'):
+        e = _('do not use both --rev and positional argument for revision')
+        raise error.Abort(e)
+
+    rev = opts.get('rev') or (args[0] if args else '.')
     oldctx = repo['.']
 
     wlock = None
