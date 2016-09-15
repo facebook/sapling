@@ -48,6 +48,7 @@ scratchbranchparttype = 'b2x:infinitepush'
 experimental = 'experimental'
 configbookmark = 'server-bundlestore-bookmark'
 configcreate = 'server-bundlestore-create'
+configscratchpush = 'infinitepush-scratchpush'
 
 def _buildexternalbundlestore(ui):
     put_args = ui.configlist('infinitepush', 'put_args', [])
@@ -344,15 +345,19 @@ def _push(orig, ui, repo, *args, **opts):
         bookmark = opts.get('to')
         create = opts.get('create') or False
 
+        scratchpush = False
         scratchbranchpat = ui.config('infinitepush', 'branchpattern', '')
         kind, pat, matcher = util.stringmatcher(scratchbranchpat)
         if matcher(bookmark):
             ui.setconfig(experimental, configbookmark, bookmark, '--to')
             ui.setconfig(experimental, configcreate, create, '--create')
-            if ui.config(experimental, configbookmark):
-                oldphasemove = wrapfunction(exchange,
-                                            '_localphasemove',
-                                            _phasemove)
+            scratchpush = True
+
+        if scratchpush:
+            ui.setconfig(experimental, configscratchpush, True)
+            oldphasemove = wrapfunction(exchange,
+                                        '_localphasemove',
+                                        _phasemove)
         result = orig(ui, repo, *args, **opts)
     finally:
         ui.restoreconfig(oldbookmark)
@@ -374,7 +379,8 @@ def _phasemove(orig, pushop, nodes, phase=phases.public):
 def partgen(pushop, bundler):
     bookmark = pushop.ui.config(experimental, configbookmark)
     create = pushop.ui.configbool(experimental, configcreate)
-    if 'changesets' in pushop.stepsdone or not bookmark:
+    scratchpush = pushop.ui.configbool(experimental, configscratchpush)
+    if 'changesets' in pushop.stepsdone or not scratchpush:
         return
 
     if scratchbranchparttype not in bundle2.bundle2caps(pushop.remote):
