@@ -17,6 +17,8 @@ to the user.
     # (remote) names to show
     repos = , remote/, default/
     names = @, master, stable
+    # move the top non-public stack to the second column
+    indentnonpublic = True
 """
 
 from __future__ import absolute_import
@@ -33,6 +35,7 @@ from mercurial import (
     extensions,
     graphmod,
     obsolete,
+    phases,
     revset,
     scmutil,
     templatekw,
@@ -74,7 +77,7 @@ def uisetup(ui):
     def ascii(orig, ui, state, type, char, text, coldata):
         # Show : for fake nodes
         if type == 'F':
-            char = ui.config('experimental', 'graphstyle.grandparent', ':')
+            char = ui.config('experimental', 'graphstyle.grandparent', ':')[-1]
             # fallback to the old "." so the test will pass with
             # --extra-config-opt=experimental.graphstyle.grandparent="|"
             if char == '|':
@@ -190,6 +193,8 @@ def getdag(ui, repo, revs, master):
             return "..."
         def obsolete(self):
             return False
+        def phase(self):
+            return None
         def rev(self):
             return self._rev
         def files(self):
@@ -245,6 +250,23 @@ def getdag(ui, repo, revs, master):
                     parents.append((graphmod.PARENT, fakes[g][0]))
 
         results.append((ctx.rev(), 'C', ctx, parents))
+
+    # indent the top non-public stack
+    if ui.configbool('smartlog', 'indentnonpublic', False):
+        rev, ch, ctx, parents = results[-1]
+        if ctx.phase() != phases.public:
+            # find a public parent and add a fake node, so the non-public nodes
+            # will be shown in the non-first column
+            prev = None
+            for i in xrange(2, len(results) + 1):
+                pctx = results[-i][2]
+                if pctx.phase() == phases.public:
+                    prev = results[-i][0]
+                    break
+            # append the fake node to occupy the first column
+            if prev:
+                fakerev = rev + 1
+                results.append((fakerev, 'F', fakectx(fakerev), [('G', prev)]))
 
     # Compute parent rev->parents mapping
     lookup = {}

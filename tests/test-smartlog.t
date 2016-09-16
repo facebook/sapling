@@ -380,3 +380,34 @@ Test singlepublicsuccessor  template keyword
   x  SPS: 2b5806c2ca1e228838315bbffeb7d1504c38c9d6
   |
 
+A draft stack at the top
+  $ cd ..
+  $ hg init repo2
+  $ cd repo2
+  $ hg debugbuilddag '+4'
+  $ hg bookmark curr
+  $ hg bookmark master -r 1
+  $ hg phase --public -r 1
+  $ hg smartlog -T compact --all
+  o  3[tip]   2dc09a01254d   1970-01-01 00:00 +0000   debugbuilddag
+  |    r3
+  |
+  o  2   01241442b3c2   1970-01-01 00:00 +0000   debugbuilddag
+  |    r2
+  |
+  o  1[master]   66f7d451a68b   1970-01-01 00:00 +0000   debugbuilddag
+  |    r1
+  |
+  $ hg smartlog -T compact --all --config smartlog.indentnonpublic=1
+  .
+  .
+  |
+  | o  3[tip]   2dc09a01254d   1970-01-01 00:00 +0000   debugbuilddag
+  | |    r3
+  | |
+  | o  2   01241442b3c2   1970-01-01 00:00 +0000   debugbuilddag
+  |/     r2
+  |
+  o  1[master]   66f7d451a68b   1970-01-01 00:00 +0000   debugbuilddag
+  |    r1
+  |
