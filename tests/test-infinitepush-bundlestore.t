@@ -124,7 +124,7 @@ Push to non-scratch bookmark
   |/
   o  initialcommit public
   
- 
+
 Push to scratch branch
   $ cd ../client2
   $ hg up -q scratch/mybranch

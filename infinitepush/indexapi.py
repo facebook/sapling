@@ -2,7 +2,6 @@ import os
 import time
 import logging
 
-from mercurial import error
 import warnings
 import mysql.connector
 
@@ -41,6 +40,8 @@ class indexapi(object):
         """Returns bookmarks that match the query"""
         raise NotImplementedError()
 
+class indexexception(Exception):
+    pass
 
 class sqlindexapi(indexapi):
     '''
@@ -86,9 +87,9 @@ class sqlindexapi(indexapi):
 
     def sqlconnect(self):
         if self.sqlconn:
-            raise Exception("SQL connection already open")
+            raise indexexception("SQL connection already open")
         if self.sqlcursor:
-            raise Exception("SQL cursor already open without connection")
+            raise indexexception("SQL cursor already open without connection")
         retry = 3
         while True:
             try:
