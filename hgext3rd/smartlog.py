@@ -5,6 +5,20 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
+"""command to display a relevant subgraph
+
+With this extension installed, Mercurial gains one new command: smartlog.
+It displays a subgraph of changesets containing only the changesets relevant
+to the user.
+
+::
+
+    [smartlog]
+    # (remote) names to show
+    repos = , remote/, default/
+    names = @, master, stable
+"""
+
 from __future__ import absolute_import
 
 from itertools import chain
@@ -435,23 +449,22 @@ def smartlogrevset(repo, subset, x):
     ('', 'template', '', _('display with template'), _('TEMPLATE')),
     ('', 'master', '', _('master bookmark'), ''),
     ('r', 'rev', [], _('show the specified revisions or range'), _('REV')),
-    ('', 'all', False, _('don\'t hide old local commits'), ''),
-    ('', 'commit-info', False, _('show changes in current commit'), ''),
+    ('', 'all', False, _('don\'t hide old local changesets'), ''),
+    ('', 'commit-info', False, _('show changes in current changeset'), ''),
 ] + commands.logopts, _('hg smartlog|slog'))
 def smartlog(ui, repo, *pats, **opts):
-    '''displays the graph of commits that are relevant to you
-Also highlights your current commit in purple.
+    '''displays the graph of changesets that are relevant to you
 
 Includes:
 
 - Your bookmarks
 - The @ or master bookmark (or tip if no bookmarks present).
-- Your local commit heads that don't have bookmarks.
+- Your local heads that don't have bookmarks.
 
 Excludes:
 
-- All commits under @/master/tip that aren't related to your commits.
-- Your local commit heads that are older than 2 weeks.
+- All changesets under @/master/tip that aren't related to your changesets.
+- Your local heads that are older than 2 weeks.
     '''
     masterstring = opts.get('master')
     masterrevset = _masterrevset(ui, repo, masterstring)
