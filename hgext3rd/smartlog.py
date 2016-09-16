@@ -25,7 +25,6 @@ from __future__ import absolute_import
 
 from itertools import chain
 import re
-import inspect
 
 from mercurial import (
     bookmarks,
@@ -75,28 +74,11 @@ def uisetup(ui):
     extensions.wrapfunction(cmdutil.changeset_templater, '_show', show)
 
     def ascii(orig, ui, state, type, char, text, coldata):
-        # Show : for fake nodes
         if type == 'F':
-            char = ui.config('experimental', 'graphstyle.grandparent', ':')[-1]
-            # fallback to the old "." so the test will pass with
-            # --extra-config-opt=experimental.graphstyle.grandparent="|"
-            if char == '|':
-                char = '.'
+            char = '.'
         return orig(ui, state, type, char, text, coldata)
 
     extensions.wrapfunction(graphmod, 'ascii', ascii)
-
-    def drawedges(orig, echars, edges, nodeline, interline):
-        orig(echars, edges, nodeline, interline)
-        if enabled:
-            for (start, end) in edges:
-                if start == end:
-                    # terrible hack, but this makes the line below
-                    # the commit marker (.) also be a .
-                    if '.' in nodeline:
-                        interline[2 * start] = "."
-
-    extensions.wrapfunction(graphmod, '_drawedges', drawedges)
 
     revset.symbols['smartlog'] = smartlogrevset
     revset.safesymbols.add('smartlog')
@@ -240,14 +222,7 @@ def getdag(ui, repo, revs, master):
             else:
                 gp = [g for g in gp if g not in unzip(parents)]
                 for g in gp:
-                    # Insert fake nodes in between children and grandparents.
-                    # Reuse them across multiple children when the grandparent
-                    # is the same.
-                    if g not in fakes:
-                        fakes[g] = (mpar, 'F', fakectx(mpar),
-                                    [(graphmod.GRANDPARENT, g)])
-                        results.append(fakes[g])
-                    parents.append((graphmod.PARENT, fakes[g][0]))
+                    parents.append((graphmod.GRANDPARENT, g))
 
         results.append((ctx.rev(), 'C', ctx, parents))
 
@@ -551,7 +526,10 @@ Excludes:
 
     # Print it!
     global enabled
+    backupconfig = ui.backupconfig('experimental', 'graphstyle.grandparent')
     try:
+        if ui.config('experimental', 'graphstyle.grandparent') == '|':
+            ui.setconfig('experimental', 'graphstyle.grandparent', '2.')
         enabled = True
         if masterrevset == 'tip':
             # 'tip' is what _masterrevset always returns when it can't find
@@ -561,14 +539,8 @@ Excludes:
 
         revdag = getdag(ui, repo, revs, masterrev)
         displayer = cmdutil.show_changeset(ui, repo, opts, buffered=True)
-        if 'repo' in inspect.getargspec(cmdutil.displaygraph).args:
-            cmdutil.displaygraph(
-                ui, repo, revdag, displayer, graphmod.asciiedges, None, None)
-        else:
-            showparents = [ctx.node() for ctx in repo[None].parents()]
-            cmdutil.displaygraph(
-                ui, revdag, displayer, showparents, graphmod.asciiedges, None,
-                None)
+        cmdutil.displaygraph(
+            ui, repo, revdag, displayer, graphmod.asciiedges, None, None)
 
         try:
             with open(repo.join('completionhints'), 'w+') as f:
@@ -581,6 +553,7 @@ Excludes:
             # No write access. No big deal.
             pass
     finally:
+        ui.restoreconfig(backupconfig)
         enabled = False
 
     if hiddenchanges:

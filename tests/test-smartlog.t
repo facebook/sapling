@@ -53,11 +53,8 @@ Basic test
   |    d
   |
   o  4[master]   38d85b506754   1970-01-01 00:00 +0000   test
-  |    c2
-  |
+  .    c2
   .
-  .
-  |
   | o  2[feature1]   49cdb4091aca   1970-01-01 00:00 +0000   test
   |/     b
   |
@@ -76,11 +73,8 @@ With commit info
   |   A d
   |
   o  4[master]   38d85b506754   1970-01-01 00:00 +0000   test
-  |    c2
-  |
+  .    c2
   .
-  .
-  |
   | o  2[feature1]   49cdb4091aca   1970-01-01 00:00 +0000   test
   |/     b
   |
@@ -121,11 +115,8 @@ With --master
 Specific revs
   $ hg smartlog -T compact -r 2 -r 4
   o  4[master]   38d85b506754   1970-01-01 00:00 +0000   test
-  |    c2
-  |
+  .    c2
   .
-  .
-  |
   | o  2[feature1]   49cdb4091aca   1970-01-01 00:00 +0000   test
   |/     b
   |
@@ -138,13 +129,10 @@ Specific revs
   |    d
   |
   o  4[master]   38d85b506754   1970-01-01 00:00 +0000   test
-  |    c2
-  |
+  .    c2
+  .
   | o  2[feature1]   49cdb4091aca   1970-01-01 00:00 +0000   test
   |/     b
-  |
-  .
-  .
   |
   o  0   df4fd610a3d6   1970-01-01 00:00 +0000   test
        a1
@@ -176,11 +164,8 @@ Test overriding master
   |    d
   |
   o  4[master]   38d85b506754   1970-01-01 00:00 +0000   test
-  |    c2
-  |
+  .    c2
   .
-  .
-  |
   | o  2[feature1]   49cdb4091aca   1970-01-01 00:00 +0000   test
   |/     b
   |
@@ -252,20 +237,14 @@ Test draft branches
   |  tag:         tip
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     create branch foo
-  |
+  .  summary:     create branch foo
   .
-  .
-  |
   o  changeset:   4:38d85b506754
   |  bookmark:    master
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     c2
-  |
+  .  summary:     c2
   .
-  .
-  |
   | o  changeset:   2:49cdb4091aca
   |/   bookmark:    feature1
   |    user:        test
@@ -283,11 +262,8 @@ Test with weird bookmark names
   $ hg book -r 2 foo-bar
   $ hg smartlog -r 'foo-bar + .' -T compact
   @  6[tip][feature2]   26d4a421c339   1970-01-01 00:00 +0000   test
-  |    create branch foo
-  |
+  .    create branch foo
   .
-  .
-  |
   | o  2[feature1,foo-bar]   49cdb4091aca   1970-01-01 00:00 +0000   test
   |/     b
   |
@@ -299,11 +275,8 @@ Test with weird bookmark names
   |    b
   |
   | @  6[tip][feature2]   26d4a421c339   1970-01-01 00:00 +0000   test
-  | |    create branch foo
-  | |
+  | .    create branch foo
   | .
-  | .
-  | |
   | o  4[master]   38d85b506754   1970-01-01 00:00 +0000   test
   | |    c2
   | |
@@ -333,17 +306,11 @@ Test with two unrelated histories
        u1
   
   o  6[feature2]   26d4a421c339   1970-01-01 00:00 +0000   test
-  |    create branch foo
-  |
+  .    create branch foo
   .
-  .
-  |
   o  4[master]   38d85b506754   1970-01-01 00:00 +0000   test
-  |    c2
-  |
+  .    c2
   .
-  .
-  |
   | o  2[feature1,foo-bar]   49cdb4091aca   1970-01-01 00:00 +0000   test
   |/     b
   |
@@ -401,7 +368,7 @@ A draft stack at the top
   $ hg smartlog -T compact --all --config smartlog.indentnonpublic=1
   .
   .
-  |
+  .
   | o  3[tip]   2dc09a01254d   1970-01-01 00:00 +0000   debugbuilddag
   | |    r3
   | |
