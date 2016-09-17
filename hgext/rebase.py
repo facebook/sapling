@@ -335,7 +335,7 @@ class rebaseruntime(object):
         if self.activebookmark:
             bookmarks.deactivate(repo)
 
-        sortedrevs = sorted(self.state)
+        sortedrevs = repo.revs('sort(%ld, -topo)', self.state)
         cands = [k for k, v in self.state.iteritems() if v == revtodo]
         total = len(cands)
         pos = 0

@@ -418,16 +418,16 @@ Test multiple root handling
 ------------------------------------
 
   $ hg rebase --dest 4 --rev '7+11+9'
-  rebasing 7:02de42196ebe "H"
   rebasing 9:cf44d2f5a9f4 "D"
+  rebasing 7:02de42196ebe "H"
   not rebasing ignored 10:7c6027df6a99 "B"
   rebasing 11:0d8f238b634c "C" (tip)
   $ hg log -G
   o  14:1e8370e38cca C
   |
-  | o  13:102b4c1d889b D
-  | |
-  @ |  12:bfe264faf697 H
+  @  13:bfe264faf697 H
+  |
+  | o  12:102b4c1d889b D
   |/
   | o  10:7c6027df6a99 B
   | |
