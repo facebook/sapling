@@ -53,6 +53,27 @@ enabled = False
 commit_info = False
 hiddenchanges = 0
 
+def _drawendinglines(orig, lines, extra, edgemap, seen):
+    # if we are going to have only one single column, draw the missing '|'s
+    # and restore everything to normal. see comment in 'ascii' below for an
+    # example of what will be changed. note: we do not respect 'graphstyle'
+    # but always draw '|' here, for simplicity.
+    if len(seen) == 1 or any(l[0:2] != [' ', ' '] for l in lines):
+        # draw '|' from bottom to top in the 1st column to connect to
+        # something, like a '/' in the 2nd column, or a '+' in the 1st column.
+        for line in reversed(lines):
+            if line[0:2] != [' ', ' ']:
+                break
+            line[0] = '|'
+        # undo the wrapfunction
+        extensions.unwrapfunction(graphmod, '_drawendinglines',
+                                  _drawendinglines)
+        # restore the space to '|'
+        for k, v in edgemap.iteritems():
+            if v == ' ':
+                edgemap[k] = '|'
+    orig(lines, extra, edgemap, seen)
+
 def uisetup(ui):
     # Hide output for fake nodes
     def show(orig, self, ctx, copies, matchfn, props):
@@ -75,8 +96,26 @@ def uisetup(ui):
 
     def ascii(orig, ui, state, type, char, text, coldata):
         if type == 'F':
-            char = '.'
-        return orig(ui, state, type, char, text, coldata)
+            # the fake node is used to move draft changesets to the 2nd column.
+            # there can be at most one fake node, which should also be at the
+            # top of the graph.
+            # we should not draw the fake node and its edges, so change its
+            # edge style to a space, and return directly.
+            # these are very hacky but it seems to work well and it seems there
+            # is no other easy choice for now.
+            edgemap = state['edges']
+            for k in edgemap.iterkeys():
+                edgemap[k] = ' '
+            # also we need to hack _drawendinglines to draw the missing '|'s:
+            #    (before)      (after)
+            #     o draft       o draft
+            #    /             /
+            #                 |
+            #   o             o
+            extensions.wrapfunction(graphmod, '_drawendinglines',
+                                    _drawendinglines)
+            return
+        orig(ui, state, type, char, text, coldata)
 
     extensions.wrapfunction(graphmod, 'ascii', ascii)
 
@@ -226,23 +265,6 @@ def getdag(ui, repo, revs, master):
 
         results.append((ctx.rev(), 'C', ctx, parents))
 
-    # indent the top non-public stack
-    if ui.configbool('smartlog', 'indentnonpublic', False):
-        rev, ch, ctx, parents = results[-1]
-        if ctx.phase() != phases.public:
-            # find a public parent and add a fake node, so the non-public nodes
-            # will be shown in the non-first column
-            prev = None
-            for i in xrange(2, len(results) + 1):
-                pctx = results[-i][2]
-                if pctx.phase() == phases.public:
-                    prev = results[-i][0]
-                    break
-            # append the fake node to occupy the first column
-            if prev:
-                fakerev = rev + 1
-                results.append((fakerev, 'F', fakectx(fakerev), [('G', prev)]))
-
     # Compute parent rev->parents mapping
     lookup = {}
     for r in results:
@@ -260,19 +282,40 @@ def getdag(ui, repo, revs, master):
             masters.add(m)
             queue.extend(lookup.get(m, []))
 
-    # Topologically sort the noderev numbers
+    # Topologically sort the noderev numbers. Note: unlike the vanilla
+    # topological sorting, we move master to the top.
     order = sortnodes([r[0] for r in results], parentfunc, masters)
     order = dict((e[1], e[0]) for e in enumerate(order))
 
     # Sort the actual results based on their position in the 'order'
     try:
-        return sorted(results, key=lambda x: order[x[0]], reverse=True)
+        results.sort(key=lambda x: order[x[0]], reverse=True)
     except ValueError:  # Happened when 'order' is empty
         msg = _('note: smartlog encountered an error\n')
         hint = _('(so the sorting might be wrong.\n\n)')
         ui.warn(msg)
         ui.warn(hint)
-        return sorted(results, reverse=True)
+        results.reverse()
+
+    # indent the top non-public stack
+    if ui.configbool('smartlog', 'indentnonpublic', False):
+        rev, ch, ctx, parents = results[0]
+        if ctx.phase() != phases.public:
+            # find a public parent and add a fake node, so the non-public nodes
+            # will be shown in the non-first column
+            prev = None
+            for i in xrange(1, len(results)):
+                pctx = results[i][2]
+                if pctx.phase() == phases.public:
+                    prev = results[i][0]
+                    break
+            # append the fake node to occupy the first column
+            if prev:
+                fakerev = rev + 1
+                results.insert(0, (fakerev, 'F', fakectx(fakerev),
+                                   [('P', prev)]))
+
+    return results
 
 def _masterrevset(ui, repo, masterstring):
     """

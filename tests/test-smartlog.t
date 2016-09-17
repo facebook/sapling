@@ -366,11 +366,65 @@ A draft stack at the top
   |    r1
   |
   $ hg smartlog -T compact --all --config smartlog.indentnonpublic=1
-  .
-  .
-  .
-  | o  3[tip]   2dc09a01254d   1970-01-01 00:00 +0000   debugbuilddag
-  | |    r3
+    o  3[tip]   2dc09a01254d   1970-01-01 00:00 +0000   debugbuilddag
+    |    r3
+    |
+    o  2   01241442b3c2   1970-01-01 00:00 +0000   debugbuilddag
+   /     r2
+  |
+  o  1[master]   66f7d451a68b   1970-01-01 00:00 +0000   debugbuilddag
+  |    r1
+  |
+
+Different number of lines per node
+
+  $ hg smartlog -T '{rev}' --all --config smartlog.indentnonpublic=1
+    o  3
+    |
+    o  2
+   /
+  o  1
+  |
+  $ hg smartlog -T 'default' --all --config smartlog.indentnonpublic=1
+    o  changeset:   3:2dc09a01254d
+    |  tag:         tip
+    |  user:        debugbuilddag
+    |  date:        Thu Jan 01 00:00:03 1970 +0000
+    |  summary:     r3
+    |
+    o  changeset:   2:01241442b3c2
+   /   user:        debugbuilddag
+  |    date:        Thu Jan 01 00:00:02 1970 +0000
+  |    summary:     r2
+  |
+  o  changeset:   1:66f7d451a68b
+  |  bookmark:    master
+  |  user:        debugbuilddag
+  |  date:        Thu Jan 01 00:00:01 1970 +0000
+  |  summary:     r1
+  |
+
+Add other draft stacks
+  $ hg up 1 -q
+  $ echo 1 > a
+  $ hg ci -A a -m a -q
+  $ echo 2 >> a
+  $ hg ci -A a -m a -q
+  $ hg up 2 -q
+  $ echo 2 > b
+  $ hg ci -A b -m b -q
+  $ hg smartlog -T compact --all --config smartlog.indentnonpublic=1
+    o  5   a60fccdcd9e9   1970-01-01 00:00 +0000   test
+    |    a
+    |
+    o  4:1   8d92afe5abfd   1970-01-01 00:00 +0000   test
+   /     a
+  |
+  | @  6[tip]:2   401cd6213b51   1970-01-01 00:00 +0000   test
+  | |    b
+  | |
+  | | o  3   2dc09a01254d   1970-01-01 00:00 +0000   debugbuilddag
+  | |/     r3
   | |
   | o  2   01241442b3c2   1970-01-01 00:00 +0000   debugbuilddag
   |/     r2
