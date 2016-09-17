@@ -90,6 +90,6 @@ java_binary(
   ],
   deps = [
     '//common/fb303/if:fb303-java',
-    '//thrift/lib/java/src:thrift',
+    '//thrift/lib/java:thrift',
   ],
 )
