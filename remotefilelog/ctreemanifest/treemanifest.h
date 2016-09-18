@@ -112,7 +112,7 @@ struct treemanifest {
       hexnode.reserve(HEX_NODE_SIZE);
 
       hexfrombin(rootNode.c_str(), hexnode);
-      root.initialize(NULL, 0, hexnode.c_str(), MANIFEST_DIRECTORY_FLAG);
+      root.initialize(NULL, 0, hexnode.c_str(), MANIFEST_DIRECTORY_FLAGPTR);
 
       // ManifestEntry.initialize will create a blank manifest in .resolved.
       // however, we actually want the resolution to happen through
@@ -131,18 +131,18 @@ struct treemanifest {
       std::string hexnode;
       hexnode.assign(HEX_NODE_SIZE, '\0');
 
-      root.initialize(NULL, 0, hexnode.c_str(), MANIFEST_DIRECTORY_FLAG);
+      root.initialize(NULL, 0, hexnode.c_str(), MANIFEST_DIRECTORY_FLAGPTR);
     }
 
     treemanifest *copy();
 
     void get(
         const std::string &filename,
-        std::string *resultnode, char *resultflag);
+        std::string *resultnode, const char **resultflag);
 
     SetResult set(
         const std::string &filename,
-        const std::string &resultnode, char resultflag);
+        const std::string &resultnode, const char *resultflag);
 
     /**
      * Removes a file from the treemanifest.  Returns true iff the file was

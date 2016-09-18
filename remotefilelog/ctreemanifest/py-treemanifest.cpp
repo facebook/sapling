@@ -19,6 +19,9 @@
 #define FILENAME_BUFFER_SIZE 16348
 #define FLAG_SIZE 1
 
+// Py_BuildValue treats NULL as NONE, so we have to have a non-null pointer.
+#define MAGIC_EMPTY_STRING ""
+
 struct py_treemanifest {
   PyObject_HEAD;
 
@@ -171,7 +174,7 @@ static PyObject *treemanifest_find(PyObject *o, PyObject *args) {
   }
 
   std::string resultnode;
-  char resultflag;
+  const char *resultflag;
   try {
     // Grab the root node's data
 
@@ -188,11 +191,16 @@ static PyObject *treemanifest_find(PyObject *o, PyObject *args) {
     }
     return Py_BuildValue("s#s#", NULL, (Py_ssize_t)0, NULL, (Py_ssize_t)0);
   } else {
-    int flaglen = 0;
-    if (resultflag != '\0') {
+    Py_ssize_t flaglen;
+    if (resultflag == NULL) {
+      flaglen = 0;
+      resultflag = MAGIC_EMPTY_STRING;
+    } else {
       flaglen = 1;
     }
-    return Py_BuildValue("s#s#", resultnode.c_str(), (Py_ssize_t)resultnode.length(), &resultflag, (Py_ssize_t)flaglen);
+    return Py_BuildValue("s#s#",
+        resultnode.c_str(), (Py_ssize_t)resultnode.length(),
+        resultflag, flaglen);
   }
 }
 
@@ -208,7 +216,7 @@ static PyObject *treemanifest_set(PyObject *o, PyObject *args) {
   Py_ssize_t hashlen;
   char *flagstr;
   Py_ssize_t flagstrlen;
-  char flag;
+  const char *flag;
 
   if (!PyArg_ParseTuple(args, "s#z#z#",
       &filename, &filenamelen,
@@ -233,9 +241,9 @@ static PyObject *treemanifest_set(PyObject *o, PyObject *args) {
   }
 
   if (flagstrlen == 0) {
-    flag = '\0';
+    flag = NULL;
   } else {
-    flag = *flagstr;
+    flag = flagstr;
   }
 
   try {
@@ -453,7 +461,7 @@ static PyObject *treemanifest_getitem(py_treemanifest *self, PyObject *key) {
   PyString_AsStringAndSize(key, &filename, &filenamelen);
 
   std::string resultnode;
-  char resultflag;
+  const char *resultflag;
   try {
     self->tm.get(
         std::string(filename, (size_t) filenamelen),
@@ -492,7 +500,7 @@ static PyObject *treemanifest_flags(py_treemanifest *self, PyObject *args, PyObj
   }
 
   std::string resultnode;
-  char resultflag;
+  const char *resultflag;
   try {
     self->tm.get(
         std::string(filename, (size_t) filenamelen),
@@ -510,14 +518,14 @@ static PyObject *treemanifest_flags(py_treemanifest *self, PyObject *args, PyObj
     return NULL;
   }
 
-  if (resultflag == '\0') {
+  if (resultflag == NULL) {
     if (defaultval) {
       return PyString_FromStringAndSize(defaultval, defaultvallen);
     } else {
-      return PyString_FromStringAndSize("", (Py_ssize_t)0);
+      return PyString_FromStringAndSize(MAGIC_EMPTY_STRING, (Py_ssize_t)0);
     }
   } else {
-    return PyString_FromStringAndSize(&resultflag, (Py_ssize_t)1);
+    return PyString_FromStringAndSize(resultflag, (Py_ssize_t)1);
   }
 }
 
@@ -643,7 +651,7 @@ static int treemanifest_contains(py_treemanifest *self, PyObject *key) {
   PyString_AsStringAndSize(key, &filename, &filenamelen);
 
   std::string resultnode;
-  char resultflag;
+  const char *resultflag;
   try {
     self->tm.get(
         std::string(filename, (size_t) filenamelen),

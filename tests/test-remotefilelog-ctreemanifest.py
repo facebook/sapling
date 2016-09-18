@@ -25,6 +25,22 @@ class ctreemanifesttests(unittest.TestCase):
     def testInitialization(self):
         a = ctreemanifest.treemanifest(FakeStore())
 
+    def testEmptyFlag(self):
+        a = ctreemanifest.treemanifest(FakeStore())
+        with hashflags() as (h, _):
+            f = ''
+            a.set("abc", h, f)
+            out = a.find("abc")
+            self.assertEquals((h, f), out)
+
+    def testNullFlag(self):
+        a = ctreemanifest.treemanifest(FakeStore())
+        with hashflags() as (h, _):
+            f = '\0'
+            a.set("abc", h, f)
+            out = a.find("abc")
+            self.assertEquals((h, f), out)
+
     def testSetGet(self):
         a = ctreemanifest.treemanifest(FakeStore())
         with hashflags() as (h, f):

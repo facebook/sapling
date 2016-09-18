@@ -73,7 +73,7 @@ std::list<ManifestEntry>::iterator Manifest::findChild(
 
 ManifestEntry *Manifest::addChild(std::list<ManifestEntry>::iterator iterator,
     const char *filename, const size_t filenamelen, const char *node,
-    const char flag) {
+    const char *flag) {
   ManifestEntry entry;
   this->entries.insert(iterator, entry);
 

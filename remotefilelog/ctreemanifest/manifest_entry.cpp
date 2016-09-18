@@ -29,8 +29,8 @@ ManifestEntry::ManifestEntry(char *&entrystart) {
 void ManifestEntry::initialize(
     const char *filename, const size_t filenamelen,
     const char *node,
-    char flag) {
-  if (flag == MANIFEST_DIRECTORY_FLAG) {
+    const char *flag) {
+  if (flag != NULL && *flag == MANIFEST_DIRECTORY_FLAG) {
     this->resolved = new Manifest();
   }
   this->ownedmemory = new char[
@@ -61,12 +61,12 @@ void ManifestEntry::initialize(
   if (node != NULL) {
     memcpy(this->node, node, HEX_NODE_SIZE);
   }
-  if (flag == '\0') {
+  if (flag == NULL) {
     *(this->filename + filenamelen + 1 + HEX_NODE_SIZE) = '\n';
     this->flag = NULL;
   } else {
     this->flag = this->filename + filenamelen + 1 + HEX_NODE_SIZE;
-    *this->flag = flag;
+    *this->flag = *flag;
   }
 }
 
@@ -96,11 +96,8 @@ void ManifestEntry::initialize(char *&entrystart) {
 
 void ManifestEntry::initialize(ManifestEntry *other) {
   if (other->ownedmemory) {
-    char otherFlag = '\0';
-    if (other->flag) {
-      otherFlag = *other->flag;
-    }
-    this->initialize(other->filename, other->filenamelen, other->node, otherFlag);
+    this->initialize(other->filename, other->filenamelen,
+        other->node, other->flag);
   } else {
     // Else it points at a piece of memory owned by something else
     this->initialize(other->filename);
@@ -141,10 +138,10 @@ Manifest *ManifestEntry::get_manifest(
   return this->resolved;
 }
 
-void ManifestEntry::update(const char *node, char flag) {
+void ManifestEntry::update(const char *node, const char *flag) {
   // we cannot flip between file and directory.
   bool wasdir = this->flag != NULL && *this->flag == MANIFEST_DIRECTORY_FLAG;
-  bool willbedir = flag == MANIFEST_DIRECTORY_FLAG;
+  bool willbedir = flag != NULL && *flag == MANIFEST_DIRECTORY_FLAG;
 
   if (wasdir != willbedir) {
     throw std::logic_error("changing to/from directory is not permitted");
@@ -162,11 +159,11 @@ void ManifestEntry::update(const char *node, char flag) {
   }
   memcpy(this->node, node, HEX_NODE_SIZE);
 
-  if (flag == '\0') {
+  if (flag == NULL) {
     *(this->filename + this->filenamelen + 1 + HEX_NODE_SIZE) = '\n';
     this->flag = NULL;
   } else {
     this->flag = this->filename + filenamelen + 1 + HEX_NODE_SIZE;
-    *this->flag = flag;
+    *this->flag = *flag;
   }
 }

@@ -73,7 +73,7 @@ class Manifest {
      */
     ManifestEntry *addChild(std::list<ManifestEntry>::iterator iterator,
         const char *filename, const size_t filenamelen, const char *node,
-        const char flag);
+        const char *flag);
 
     /**
      * Adds a deep copy of the given ManifestEntry as a child.

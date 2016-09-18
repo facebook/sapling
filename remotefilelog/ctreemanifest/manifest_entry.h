@@ -23,6 +23,7 @@ class ManifestEntry;
 #include "manifest_fetcher.h"
 
 #define MANIFEST_DIRECTORY_FLAG 't'
+#define MANIFEST_DIRECTORY_FLAGPTR (&"t"[0])
 
 /**
  * Class representing a single entry in a given manifest.  Instances of this
@@ -63,13 +64,13 @@ class ManifestEntry {
     void initialize(
         const char *filename, const size_t filenamelen,
         const char *node,
-        char flag);
+        const char *flag);
 
     void initialize(char *&entrystart);
 
     void initialize(ManifestEntry *other);
 
-    void update(const char *node, char flag);
+    void update(const char *node, const char *flag);
 };
 
 #endif //REMOTEFILELOG_MANIFEST_ENTRY_H

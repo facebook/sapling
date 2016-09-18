@@ -242,7 +242,7 @@ FindResult treemanifest::find(
 
       // create the intermediate node...
       entry = manifest->addChild(
-          iterator, word, wordlen, NULL, MANIFEST_DIRECTORY_FLAG);
+          iterator, word, wordlen, NULL, MANIFEST_DIRECTORY_FLAGPTR);
     } else {
       entry = &(*iterator);
 
@@ -277,7 +277,7 @@ FindResult treemanifest::find(
 
 struct GetResult {
   std::string *resultnode;
-  char *resultflag;
+  const char **resultflag;
 };
 
 static FindResult get_callback(
@@ -302,18 +302,14 @@ static FindResult get_callback(
     appendbinfromhex(entry.node, *result->resultnode);
   }
 
-  if (entry.flag != NULL) {
-    *result->resultflag = *entry.flag;
-  } else {
-    *result->resultflag = '\0';
-  }
+  *result->resultflag = entry.flag;
 
   return FIND_PATH_OK;
 }
 
 void treemanifest::get(
     const std::string &filename,
-    std::string *resultnode, char *resultflag) {
+    std::string *resultnode, const char **resultflag) {
   getRootManifest();
 
   GetResult extras = {resultnode, resultflag};
@@ -333,7 +329,7 @@ void treemanifest::get(
 
 struct SetParams {
   const std::string &resultnode;
-  char resultflag;
+  const char *resultflag;
 };
 
 static FindResult set_callback(
@@ -366,7 +362,7 @@ static FindResult set_callback(
 SetResult treemanifest::set(
     const std::string &filename,
     const std::string &resultnode,
-    char resultflag) {
+    const char *resultflag) {
   SetParams extras = {resultnode, resultflag};
   PathIterator pathiter(filename);
   FindContext changes;
