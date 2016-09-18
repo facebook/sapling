@@ -132,8 +132,6 @@ struct treemanifest {
       hexnode.assign(HEX_NODE_SIZE, '\0');
 
       root.initialize(NULL, 0, hexnode.c_str(), MANIFEST_DIRECTORY_FLAG);
-
-      root.resolved = new Manifest();
     }
 
     treemanifest *copy();
