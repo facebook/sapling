@@ -11,12 +11,20 @@ class FakeStore(object):
     def get(self, xyz):
         return "abcabcabc"
 
+def getvalidflag():
+    # t is reserved as a directory entry, so don't go around setting that as the
+    # flag.
+    while True:
+        r = random.randint(0, 255)
+        if r != ord('t'):
+            return chr(r)
+
 def hashflags(requireflag=False):
     h = ''.join([chr(random.randint(0, 255)) for x in range(20)])
     if random.randint(0, 1) == 0 and requireflag is False:
         f = ''
     else:
-        f = chr(random.randint(0, 255))
+        f = getvalidflag()
     return h, f
 
 class ctreemanifesttests(unittest.TestCase):
