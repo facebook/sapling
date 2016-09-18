@@ -19,9 +19,6 @@
 #define FILENAME_BUFFER_SIZE 16348
 #define FLAG_SIZE 1
 
-// Py_BuildValue treats NULL as NONE, so we have to have a non-null pointer.
-#define MAGIC_EMPTY_STRING ""
-
 struct py_treemanifest {
   PyObject_HEAD;
 

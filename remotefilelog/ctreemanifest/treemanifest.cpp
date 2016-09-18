@@ -19,8 +19,12 @@ static PythonObj treemanifest_diffentry(
   Py_ssize_t alen = anode != NULL ? anode->length() : 0;
   const char *bstr = bnode != NULL ? bnode->c_str() : NULL;
   Py_ssize_t blen = bnode != NULL ? bnode->length() : 0;
-  PythonObj result = Py_BuildValue("((s#s#)(s#s#))", astr, alen, aflag, Py_ssize_t(aflag ? 1 : 0),
-      bstr, blen, bflag, Py_ssize_t(bflag ? 1 : 0));
+  PythonObj result = Py_BuildValue(
+      "((s#s#)(s#s#))",
+      astr, alen,
+      (aflag == NULL) ? MAGIC_EMPTY_STRING : aflag, Py_ssize_t(aflag ? 1 : 0),
+      bstr, blen,
+      (bflag == NULL) ? MAGIC_EMPTY_STRING : bflag, Py_ssize_t(bflag ? 1 : 0));
   return result;
 }
 

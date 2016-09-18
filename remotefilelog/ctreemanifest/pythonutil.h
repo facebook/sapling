@@ -17,6 +17,9 @@
 #include <Python.h>
 #include <exception>
 
+// Py_BuildValue treats NULL as NONE, so we have to have a non-null pointer.
+#define MAGIC_EMPTY_STRING ""
+
 /**
  * C++ exception that represents an issue at the python C api level.
  * When this is thrown, it's assumed that the python error message has been set
