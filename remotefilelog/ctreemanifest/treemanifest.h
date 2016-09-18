@@ -113,6 +113,12 @@ struct treemanifest {
 
       hexfrombin(rootNode.c_str(), hexnode);
       root.initialize(NULL, 0, hexnode.c_str(), MANIFEST_DIRECTORY_FLAG);
+
+      // ManifestEntry.initialize will create a blank manifest in .resolved.
+      // however, we actually want the resolution to happen through
+      // manifestfetcher.  therefore, let's delete the field and clear it.
+      delete root.resolved;
+      root.resolved = NULL;
     }
 
     treemanifest(ManifestFetcher fetcher, ManifestEntry *otherRoot) :
