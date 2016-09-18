@@ -64,7 +64,7 @@ SortedManifestIterator Manifest::getSortedIterator() {
  * be set to true.  Otherwise, it will be set to false.
  */
 std::list<ManifestEntry>::iterator Manifest::findChild(
-    const char *filename, const size_t filenamelen,
+    const char *filename, const size_t filenamelen, bool isdir,
     bool *exacthit) {
   for (std::list<ManifestEntry>::iterator iter = this->entries.begin();
        iter != this->entries.end();
@@ -74,9 +74,19 @@ std::list<ManifestEntry>::iterator Manifest::findChild(
 
     // continue until we are lexicographically <= than the current location.
     int cmp = strncmp(filename, iter->filename, minlen);
+    bool current_isdir = iter->isdirectory();
     if (cmp == 0 && filenamelen == iter->filenamelen) {
-      *exacthit = true;
-      return iter;
+      if (current_isdir == isdir) {
+        *exacthit = true;
+        return iter;
+      } else if (current_isdir) {
+        // the current entry we're looking at is a directory, but we want to
+        // insert a file.  we need to move to the next entry.
+        continue;
+      } else {
+        *exacthit = false;
+        return iter;
+      }
     } else if (cmp > 0 ||
         (cmp == 0 && filenamelen > iter->filenamelen)) {
       continue;

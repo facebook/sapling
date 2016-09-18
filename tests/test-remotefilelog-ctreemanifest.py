@@ -64,18 +64,35 @@ class ctreemanifesttests(unittest.TestCase):
         out = a.find("abc")
         self.assertEquals((h, f), out)
 
-    def testConflict(self):
+    def testDirAfterFile(self):
         a = ctreemanifest.treemanifest(FakeStore())
-        h, f = hashflags()
-        a.set("abc", h, f)
+        file_h, file_f = hashflags()
+        a.set("abc", file_h, file_f)
         out = a.find("abc")
-        self.assertEquals((h, f), out)
+        self.assertEquals((file_h, file_f), out)
 
-        h, f = hashflags()
-        self.assertRaises(
-            TypeError,
-            lambda: a.set("abc/def", h, f)
-        )
+        dir_h, dir_f = hashflags()
+        a.set("abc/def", dir_h, dir_f)
+        out = a.find("abc/def")
+        self.assertEquals((dir_h, dir_f), out)
+
+        out = a.find("abc")
+        self.assertEquals((file_h, file_f), out)
+
+    def testFileAfterDir(self):
+        a = ctreemanifest.treemanifest(FakeStore())
+        dir_h, dir_f = hashflags()
+        a.set("abc/def", dir_h, dir_f)
+        out = a.find("abc/def")
+        self.assertEquals((dir_h, dir_f), out)
+
+        file_h, file_f = hashflags()
+        a.set("abc", file_h, file_f)
+        out = a.find("abc")
+        self.assertEquals((file_h, file_f), out)
+
+        out = a.find("abc/def")
+        self.assertEquals((dir_h, dir_f), out)
 
     def testDeeplyNested(self):
         a = ctreemanifest.treemanifest(FakeStore())

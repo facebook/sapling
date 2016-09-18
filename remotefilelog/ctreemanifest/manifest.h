@@ -61,11 +61,12 @@ class Manifest {
 
     /**
      * Returns an iterator correctly positioned for a child of a given
-     * filename.  If a child with the same name already exists, *exacthit will
-     * be set to true.  Otherwise, it will be set to false.
+     * filename and directory/file status.  If a child with the same name
+     * and directory/file status already exists, *exacthit will be set to
+     * true.  Otherwise, it will be set to false.
      */
     std::list<ManifestEntry>::iterator findChild(
-        const char *filename, const size_t filenamelen,
+        const char *filename, const size_t filenamelen, bool isdir,
         bool *exacthit);
 
     /**

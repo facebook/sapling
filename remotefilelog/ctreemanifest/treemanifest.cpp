@@ -230,7 +230,7 @@ FindResult treemanifest::find(
     // position the iterator at the right location
     bool exacthit;
     std::list<ManifestEntry>::iterator iterator = manifest->findChild(
-        word, wordlen, &exacthit);
+        word, wordlen, true, &exacthit);
 
     ManifestEntry *entry;
 
@@ -245,10 +245,6 @@ FindResult treemanifest::find(
           iterator, word, wordlen, NULL, MANIFEST_DIRECTORY_FLAGPTR);
     } else {
       entry = &(*iterator);
-
-      if (!entry->isdirectory()) {
-        return FIND_PATH_CONFLICT;
-      }
     }
 
     // now find the next subdir
@@ -287,7 +283,7 @@ static FindResult get_callback(
   // position the iterator at the right location
   bool exacthit;
   std::list<ManifestEntry>::iterator iterator = manifest->findChild(
-      filename, filenamelen, &exacthit);
+      filename, filenamelen, false, &exacthit);
 
   if (!exacthit) {
     // TODO: not found. :( :(
@@ -341,7 +337,7 @@ static FindResult set_callback(
   // position the iterator at the right location
   bool exacthit;
   std::list<ManifestEntry>::iterator iterator = manifest->findChild(
-      filename, filenamelen, &exacthit);
+      filename, filenamelen, false, &exacthit);
 
   if (!exacthit) {
     // create the entry, insert it.
@@ -400,7 +396,7 @@ static FindResult remove_callback(
   // position the iterator at the right location
   bool exacthit;
   std::list<ManifestEntry>::iterator iterator = manifest->findChild(
-      filename, filenamelen, &exacthit);
+      filename, filenamelen, false, &exacthit);
 
   if (exacthit) {
     manifest->removeChild(iterator);
