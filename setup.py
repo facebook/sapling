@@ -7,11 +7,21 @@ from Cython.Build import cythonize
 from distutils.core import setup, Extension
 from glob import glob
 
+import os
+
 hgext3rd = [
     p[:-3].replace('/', '.')
     for p in glob('hgext3rd/*.py')
     if p != 'hgext3rd/__init__.py'
 ]
+
+# if this is set, compile all C extensions with -O0 -g for easy debugging.  note
+# that this is not manifested in any way in the Makefile dependencies.
+# therefore, if you already have build products, they won't be rebuilt!
+if os.getenv('FB_HGEXT_CDEBUG') is not None:
+    cdebugflags = ["-O0", "-g"]
+else:
+    cdebugflags = []
 
 setup(
     name='fbhgext',
@@ -57,7 +67,8 @@ setup(
                   extra_compile_args=[
                       "-std=c99",
                       "-Wall",
-                      "-Werror", "-Werror=strict-prototypes"],
+                      "-Werror", "-Werror=strict-prototypes",
+                  ] + cdebugflags,
         ),
         Extension('ctreemanifest',
                   sources=[
@@ -79,7 +90,8 @@ setup(
                   ],
                   extra_compile_args=[
                       "-Wall",
-                      "-Werror", "-Werror=strict-prototypes"],
+                      "-Werror", "-Werror=strict-prototypes",
+                  ] + cdebugflags,
         ),
         Extension('cfastmanifest',
                   sources=['cfastmanifest.c',
@@ -111,7 +123,8 @@ setup(
                   extra_compile_args=[
                       "-std=c99",
                       "-Wall",
-                      "-Werror", "-Werror=strict-prototypes"],
+                      "-Werror", "-Werror=strict-prototypes",
+                  ] + cdebugflags,
         ),
     ] + cythonize([
         Extension('linelog',
@@ -119,7 +132,7 @@ setup(
                   extra_compile_args=[
                       '-std=c99',
                       '-Wall', '-Wextra', '-Wconversion', '-pedantic',
-                  ],
+                  ] + cdebugflags,
         ),
     ]),
 )
