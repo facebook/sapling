@@ -39,6 +39,25 @@ ManifestIterator Manifest::getIterator() {
   return ManifestIterator(this->entries.begin(), this->entries.end());
 }
 
+SortedManifestIterator Manifest::getSortedIterator() {
+  // populate the sorted list if it's not present.
+  if (this->entries.size() != this->mercurialSortedEntries.size()) {
+    this->mercurialSortedEntries.clear();
+
+    for (std::list<ManifestEntry>::iterator iterator = this->entries.begin();
+         iterator != this->entries.end();
+         iterator ++) {
+      this->mercurialSortedEntries.push_back(&(*iterator));
+    }
+
+    this->mercurialSortedEntries.sort(ManifestEntry::compareMercurialOrder);
+  }
+
+  return SortedManifestIterator(
+      this->mercurialSortedEntries.begin(),
+      this->mercurialSortedEntries.end());
+}
+
 /**
  * Returns an iterator correctly positioned for a child of a given
  * filename.  If a child with the same name already exists, *exacthit will
@@ -85,6 +104,9 @@ ManifestEntry *Manifest::addChild(std::list<ManifestEntry>::iterator iterator,
 
   result->initialize(filename, filenamelen, node, flag);
 
+  // invalidate the mercurial-ordered list of entries
+  this->mercurialSortedEntries.clear();
+
   return result;
 }
 
@@ -100,6 +122,9 @@ ManifestEntry *Manifest::addChild(std::list<ManifestEntry>::iterator iterator,
   ManifestEntry *result = &(*iterator);
 
   result->initialize(otherChild);
+
+  // invalidate the mercurial-ordered list of entries
+  this->mercurialSortedEntries.clear();
 
   return result;
 }
@@ -130,6 +155,35 @@ ManifestEntry *ManifestIterator::currentvalue() const {
 }
 
 bool ManifestIterator::isfinished() const {
+  return iterator == end;
+}
+
+SortedManifestIterator::SortedManifestIterator(
+    std::list<ManifestEntry *>::iterator iterator,
+    std::list<ManifestEntry *>::const_iterator end) :
+    iterator(iterator),
+    end(end) {
+}
+
+ManifestEntry *SortedManifestIterator::next() {
+  if (this->isfinished()) {
+    return NULL;
+  }
+
+  ManifestEntry *result = *this->iterator;
+  this->iterator ++;
+  return result;
+}
+
+ManifestEntry *SortedManifestIterator::currentvalue() const {
+  if (this->isfinished()) {
+    throw std::logic_error("iterator has no current value");
+  }
+
+  return *iterator;
+}
+
+bool SortedManifestIterator::isfinished() const {
   return iterator == end;
 }
 

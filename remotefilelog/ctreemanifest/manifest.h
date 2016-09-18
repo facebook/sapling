@@ -17,6 +17,7 @@
 
 class Manifest;
 class ManifestIterator;
+class SortedManifestIterator;
 
 #include "manifest_entry.h"
 
@@ -41,6 +42,7 @@ class Manifest {
     PythonObj _rawobj;
 
     std::list<ManifestEntry> entries;
+    std::list<ManifestEntry *> mercurialSortedEntries;
 
   public:
     Manifest() {
@@ -54,6 +56,8 @@ class Manifest {
     Manifest *copy();
 
     ManifestIterator getIterator();
+
+    SortedManifestIterator getSortedIterator();
 
     /**
      * Returns an iterator correctly positioned for a child of a given
@@ -93,6 +97,9 @@ class Manifest {
     void removeChild(
         std::list<ManifestEntry>::iterator iterator) {
       this->entries.erase(iterator);
+
+      // invalidate the mercurial-ordered list of entries
+      this->mercurialSortedEntries.clear();
     }
 
     /**
@@ -118,6 +125,29 @@ class ManifestIterator {
     ManifestIterator(
         std::list<ManifestEntry>::iterator iterator,
         std::list<ManifestEntry>::const_iterator end);
+
+    ManifestEntry *next();
+
+    ManifestEntry *currentvalue() const;
+
+    bool isfinished() const;
+};
+
+/**
+ * Class that represents an iterator over the entries of an individual
+ * manifest, sorted by mercurial's ordering.
+ */
+class SortedManifestIterator {
+  private:
+    std::list<ManifestEntry *>::iterator iterator;
+    std::list<ManifestEntry *>::const_iterator end;
+  public:
+    SortedManifestIterator() {
+    }
+
+    SortedManifestIterator(
+        std::list<ManifestEntry *>::iterator iterator,
+        std::list<ManifestEntry *>::const_iterator end);
 
     ManifestEntry *next();
 

@@ -167,3 +167,47 @@ void ManifestEntry::update(const char *node, const char *flag) {
     *this->flag = *flag;
   }
 }
+
+static size_t mercurialOrderFilenameLength(const ManifestEntry &entry) {
+  return entry.filenamelen +
+         ((entry.flag != NULL && *entry.flag == MANIFEST_DIRECTORY_FLAG) ?
+          1 : 0);
+}
+
+static char mercurialOrderFilenameCharAt(
+    const ManifestEntry &entry, size_t offset) {
+  if (offset < entry.filenamelen) {
+    return entry.filename[offset];
+  } else if (offset == entry.filenamelen &&
+      (entry.flag != NULL && *entry.flag == MANIFEST_DIRECTORY_FLAG)) {
+    return '/';
+  }
+
+  throw std::out_of_range("Illegal index for manifest entry");
+}
+
+bool ManifestEntry::compareMercurialOrder(
+    ManifestEntry * const &left,
+    ManifestEntry * const &right) {
+  size_t leftlen = mercurialOrderFilenameLength(*left);
+  size_t rightlen = mercurialOrderFilenameLength(*right);
+  size_t minlen = (leftlen < rightlen) ? leftlen : rightlen;
+
+  for (size_t ix = 0; ix < minlen; ix ++) {
+    char leftchar = mercurialOrderFilenameCharAt(*left, ix);
+    char rightchar = mercurialOrderFilenameCharAt(*right, ix);
+
+    if (leftchar < rightchar) {
+      return true;
+    } else if (leftchar > rightchar) {
+      return false;
+    }
+  }
+
+  // same up to minlen.
+  if (leftlen < rightlen) {
+    return true;
+  }
+
+  return false;
+}

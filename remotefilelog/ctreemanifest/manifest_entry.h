@@ -71,6 +71,14 @@ class ManifestEntry {
     void initialize(ManifestEntry *other);
 
     void update(const char *node, const char *flag);
+
+    /**
+     * Returns true iff the left precedes right.
+     */
+    static bool compareMercurialOrder(
+        ManifestEntry * const & left,
+        ManifestEntry * const & right
+    );
 };
 
 #endif //REMOTEFILELOG_MANIFEST_ENTRY_H
