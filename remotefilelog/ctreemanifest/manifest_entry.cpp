@@ -194,8 +194,8 @@ bool ManifestEntry::compareMercurialOrder(
   size_t minlen = (leftlen < rightlen) ? leftlen : rightlen;
 
   for (size_t ix = 0; ix < minlen; ix ++) {
-    char leftchar = mercurialOrderFilenameCharAt(*left, ix);
-    char rightchar = mercurialOrderFilenameCharAt(*right, ix);
+    unsigned char leftchar = mercurialOrderFilenameCharAt(*left, ix);
+    unsigned char rightchar = mercurialOrderFilenameCharAt(*right, ix);
 
     if (leftchar < rightchar) {
       return true;

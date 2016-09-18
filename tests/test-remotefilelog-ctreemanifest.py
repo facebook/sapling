@@ -189,5 +189,15 @@ class ctreemanifesttests(unittest.TestCase):
         self.assertEquals(results[0], "abc/def.ghi")
         self.assertEquals(results[1], "abc/def/ghi")
 
+    def testIterOrderSigned(self):
+        a = ctreemanifest.treemanifest(FakeStore())
+        h, f = hashflags()
+        a.set("abc/def/\xe6\xe9", h, f)
+        a.set("abc/def/gh", h, f)
+
+        results = [fp for fp in a]
+        self.assertEquals(results[0], "abc/def/gh")
+        self.assertEquals(results[1], "abc/def/\xe6\xe9")
+
 if __name__ == '__main__':
     silenttestrunner.main(__name__)
