@@ -144,5 +144,19 @@ class ctreemanifesttests(unittest.TestCase):
             out = a.find("abc")
             self.assertEquals((None, None), out)
 
+    def testCleanupAfterRemove(self):
+        a = ctreemanifest.treemanifest(FakeStore())
+        with hashflags() as (h, f):
+            a.set("abc/def/ghi", h, f)
+            out = a.find("abc/def/ghi")
+            self.assertEquals((h, f), out)
+
+        a.set("abc/def/ghi", None, None)
+
+        with hashflags() as (h, f):
+            a.set("abc", h, f)
+            out = a.find("abc")
+            self.assertEquals((h, f), out)
+
 if __name__ == '__main__':
     silenttestrunner.main(__name__)
