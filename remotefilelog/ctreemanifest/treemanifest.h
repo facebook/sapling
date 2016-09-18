@@ -189,13 +189,47 @@ struct treemanifest {
  * Represents a single stack frame in an iteration of the contents of the tree.
  */
 struct stackframe {
-  Manifest *manifest;
-  ManifestIterator iterator;
+  private:
+    ManifestIterator iterator;
+    SortedManifestIterator sortedIterator;
 
-  stackframe(Manifest *manifest) :
-      manifest(manifest),
-      iterator(manifest->getIterator()) {
-  }
+  public:
+    Manifest *manifest;
+    bool sorted;
+
+    stackframe(Manifest *manifest, bool sorted) :
+        manifest(manifest),
+        sorted(sorted) {
+      if (sorted) {
+        sortedIterator = manifest->getSortedIterator();
+      } else {
+        iterator = manifest->getIterator();
+      }
+    }
+
+    ManifestEntry *next() {
+      if (sorted) {
+        return sortedIterator.next();
+      } else {
+        return iterator.next();
+      }
+    }
+
+    ManifestEntry *currentvalue() const {
+      if (sorted) {
+        return sortedIterator.currentvalue();
+      } else {
+        return iterator.currentvalue();
+      }
+    }
+
+    bool isfinished() const {
+      if (sorted) {
+        return sortedIterator.isfinished();
+      } else {
+        return iterator.isfinished();
+      }
+    }
 };
 
 /**
@@ -205,13 +239,15 @@ struct fileiter {
   ManifestFetcher fetcher;      // Instance to fetch tree content
   std::vector<stackframe> frames;
   std::string path;             // The fullpath for the top entry in the stack.
+  bool sorted;                  // enable mercurial sorting?
 
   // If provided, the given matcher filters the results by path
   PythonObj matcher;
 
-  fileiter(treemanifest &tm) :
-      fetcher(tm.fetcher) {
-    this->frames.push_back(stackframe(tm.getRootManifest()));
+  fileiter(treemanifest &tm, bool sorted) :
+      fetcher(tm.fetcher),
+      sorted(sorted) {
+    this->frames.push_back(stackframe(tm.getRootManifest(), this->sorted));
     this->path.reserve(1024);
   }
 

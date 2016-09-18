@@ -82,6 +82,7 @@ static PyTypeObject fileiterType = {
 
 static py_fileiter *createfileiter(py_treemanifest *pytm,
                                    bool includenodeflag,
+                                   bool sorted,
                                    PythonObj matcher) {
   py_fileiter *i = PyObject_New(py_fileiter, &fileiterType);
   if (i) {
@@ -92,7 +93,7 @@ static py_fileiter *createfileiter(py_treemanifest *pytm,
 
       // The provided py_fileiter struct hasn't initialized our fileiter member, so
       // we do it manually.
-      new (&i->iter) fileiter(pytm->tm);
+      new (&i->iter) fileiter(pytm->tm, sorted);
       i->iter.matcher = matcher;
       return i;
     } catch (const pyexception &ex) {
@@ -110,7 +111,11 @@ static py_fileiter *createfileiter(py_treemanifest *pytm,
 
 static py_fileiter *createfileiter(py_treemanifest *pytm,
                                    bool includenodeflag) {
-  return createfileiter(pytm, includenodeflag, PythonObj());
+  return createfileiter(
+      pytm,
+      includenodeflag,
+      true,                       // we care about sort order.
+      PythonObj());
 }
 
 // ==== treemanifest functions ====
@@ -330,7 +335,7 @@ static bool fileiter_popfinished(fileiter *iter) {
 
   // Pop the stack of trees until we find one we haven't finished iterating
   // over.
-  while (frame->iterator.isfinished()) {
+  while (frame->isfinished()) {
     iter->frames.pop_back();
     if (iter->frames.empty()) {
       // No more directories to pop means we've reached the end of the root
@@ -374,10 +379,9 @@ static bool fileiter_next(fileiter &iter, char *path, size_t pathcapacity,
     }
 
     stackframe &frame = iter.frames.back();
-    ManifestIterator &iterator = frame.iterator;
 
     ManifestEntry *entry;
-    entry = iterator.next();
+    entry = frame.next();
 
     // If a directory, push it and loop again
     if (entry->isdirectory()) {
@@ -388,8 +392,7 @@ static bool fileiter_next(fileiter &iter, char *path, size_t pathcapacity,
           iter.path.c_str(), iter.path.size());
 
       // TODO: memory cleanup here is probably broken.
-      iter.frames.push_back(stackframe(submanifest));
-
+      iter.frames.push_back(stackframe(submanifest, iter.sorted));
     } else {
       // If a file, yield it
       if (iter.path.size() + entry->filenamelen + 1 > pathcapacity) {
@@ -561,7 +564,7 @@ static PyObject *treemanifest_matches(py_treemanifest *self, PyObject *args) {
     PythonObj manifestdict = manifestmod.getattr("manifestdict");
     PythonObj result = manifestdict.call(emptyargs);
 
-    fileiter iter = fileiter(self->tm);
+    fileiter iter = fileiter(self->tm, false);
     iter.matcher = matcher;
 
     char path[2048];
@@ -681,7 +684,11 @@ static PyObject *treemanifest_walk(py_treemanifest *self, PyObject *args) {
   Py_INCREF(matcherObj);
   PythonObj matcher = matcherObj;
 
-  return (PyObject*)createfileiter(self, false, matcher);
+  return (PyObject*)createfileiter(
+      self,
+      false,
+      false,                  // walk does not care about sort order.
+      matcher);
 }
 
 // ====  treemanifest ctype declaration ====
