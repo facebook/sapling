@@ -5,6 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
+import bisect
 import os
 import struct
 
@@ -13,10 +14,13 @@ from fastannotate import error
 # the revmap file format is straightforward:
 #
 #    8 bytes: header
-#   20 bytes: hg hash for linelog revision 1
 #    1 byte : flag for linelog revision 1
-#   20 bytes: hg hash for linelog revision 2
+#    ? bytes: (optional) '\0'-terminated path string
+#             only exists if (flag & renameflag) != 0
+#   20 bytes: hg hash for linelog revision 1
 #    1 byte : flag for linelog revision 2
+#    ? bytes: (optional) '\0'-terminated path string
+#   20 bytes: hg hash for linelog revision 2
 #   ....
 #
 # the implementation is kinda stupid: __init__ loads the whole revmap.
@@ -29,13 +33,19 @@ from fastannotate import error
 # branch but only got referenced by lines in merge changesets.
 sidebranchflag = 1
 
+# whether the changeset changes the file path (ie. is a rename)
+renameflag = 2
+
+# len(mercurial.node.nullid)
+_hshlen = 20
+
 class revmap(object):
     """trivial hg bin hash - linelog rev bidirectional map
 
-    also stores a flag (uint8) for each revision.
+    also stores a flag (uint8) for each revision, and track renames.
     """
 
-    HEADER = b'REVMAP0\0'
+    HEADER = b'REVMAP1\0'
 
     def __init__(self, path=None):
         """create or load the revmap, optionally associate to a file
@@ -48,6 +58,10 @@ class revmap(object):
         self._rev2hsh = [None]
         self._rev2flag = [None]
         self._hsh2rev = {}
+        # since rename does not happen frequently, do not store path for every
+        # revision. self._renamerevs can be used for bisecting.
+        self._renamerevs = [0]
+        self._renamepaths = ['']
         self._lastmaxrev = -1
         if path:
             if os.path.exists(path):
@@ -61,20 +75,26 @@ class revmap(object):
         """return max linelog revision number"""
         return len(self._rev2hsh) - 1
 
-    def append(self, hsh, flag=0, flush=False):
+    def append(self, hsh, sidebranch=False, path=None, flush=False):
         """add a binary hg hash and return the mapped linelog revision.
         if flush is True, incrementally update the file.
         """
         assert hsh not in self._hsh2rev
-        assert len(hsh) == 20
+        assert len(hsh) == _hshlen
         idx = len(self._rev2hsh)
+        flag = 0
+        if sidebranch:
+            flag |= sidebranchflag
+        if path is not None and path != self._renamepaths[-1]:
+            flag |= renameflag
+            self._renamerevs.append(idx)
+            self._renamepaths.append(path)
         self._rev2hsh.append(hsh)
         self._rev2flag.append(flag)
         self._hsh2rev[hsh] = idx
         if flush and self.path: # incremental update
             with open(self.path, 'a') as f:
-                f.write(hsh)
-                f.write(struct.pack('B', flag))
+                self._writerev(idx, f)
             self._lastmaxrev = self.maxrev
         return idx
 
@@ -92,6 +112,15 @@ class revmap(object):
             return None
         return self._rev2flag[rev]
 
+    def rev2path(self, rev):
+        """get the path for a given linelog revision.
+        return None if revision does not exist.
+        """
+        if rev > self.maxrev or rev < 0:
+            return None
+        idx = bisect.bisect_right(self._renamerevs, rev) - 1
+        return self._renamepaths[idx]
+
     def hsh2rev(self, hsh):
         """convert hg hash to linelog revision. return None if not found."""
         return self._hsh2rev.get(hsh)
@@ -102,6 +131,7 @@ class revmap(object):
         self._rev2hsh = [None]
         self._rev2flag = [None]
         self._hsh2rev = {}
+        self._rev2path = ['']
         if flush:
             self.flush()
 
@@ -111,34 +141,63 @@ class revmap(object):
             return
         with open(self.path, 'wb') as f:
             f.write(self.HEADER)
-            for i, hsh in enumerate(self._rev2hsh):
-                if i == 0:
-                    continue
-                f.write(hsh)
-                f.write(struct.pack('B', self._rev2flag[i]))
+            for i in xrange(1, len(self._rev2hsh)):
+                self._writerev(i, f)
         self._lastmaxrev = self.maxrev
 
     def _load(self):
         """load state from file"""
         if not self.path:
             return
+        # use local variables in a loop. CPython uses LOAD_FAST for them,
+        # which is faster than both LOAD_CONST and LOAD_GLOBAL.
+        flaglen = 1
+        hshlen = _hshlen
         with open(self.path, 'rb') as f:
             if f.read(len(self.HEADER)) != self.HEADER:
                 raise error.CorruptedFileError()
             self.clear(flush=False)
             while True:
-                buf = f.read(21)
-                if len(buf) == 0:
+                buf = f.read(flaglen)
+                if not buf:
                     break
-                elif len(buf) == 21: # 20-byte hash + 1-byte flag
-                    hsh = buf[0:20]
-                    flag = struct.unpack('B', buf[20])[0]
-                    self._hsh2rev[hsh] = len(self._rev2hsh)
-                    self._rev2hsh.append(hsh)
-                    self._rev2flag.append(flag)
-                else:
+                flag = ord(buf)
+                rev = len(self._rev2hsh)
+                if flag & renameflag:
+                    path = self._readcstr(f)
+                    self._renamerevs.append(rev)
+                    self._renamepaths.append(path)
+                hsh = f.read(hshlen)
+                if len(hsh) != hshlen:
                     raise error.CorruptedFileError()
+                self._hsh2rev[hsh] = rev
+                self._rev2flag.append(flag)
+                self._rev2hsh.append(hsh)
         self._lastmaxrev = self.maxrev
+
+    def _writerev(self, rev, f):
+        """append a revision data to file"""
+        flag = self._rev2flag[rev]
+        hsh = self._rev2hsh[rev]
+        f.write(struct.pack('B', flag))
+        if flag & renameflag:
+            path = self.rev2path(rev)
+            assert path is not None
+            f.write(path + '\0')
+        f.write(hsh)
+
+    @staticmethod
+    def _readcstr(f):
+        """read a C-language-like '\0'-terminated string"""
+        buf = ''
+        while True:
+            ch = f.read(1)
+            if not ch: # unexpected eof
+                raise error.CorruptedFileError()
+            if ch == '\0':
+                break
+            buf += ch
+        return buf
 
     def __contains__(self, f):
         """(fctx or node) -> bool.
