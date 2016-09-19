@@ -202,12 +202,12 @@ void Manifest::serialize(std::string &result) {
   ManifestEntry *entry;
   while ((entry = iterator.next()) != NULL) {
     result.append(entry->filename, entry->filenamelen);
-    result.append("\0");
+    result.append("\0", 1);
     result.append(entry->node, HEX_NODE_SIZE);
     if (entry->flag) {
-      result.append(1, *entry->flag);
+      result.append(entry->flag, 1);
     }
-    result.append("\n");
+    result.append("\n", 1);
   }
 }
 
