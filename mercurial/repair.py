@@ -231,8 +231,10 @@ def strip(ui, repo, nodelist, backup=True, topic='backup'):
             ui.warn(_("strip failed, full bundle stored in '%s'\n")
                     % vfs.join(backupfile))
         if chgrpfile:
-            ui.warn(_("strip failed, partial bundle stored in '%s'\n")
+            ui.warn(_("strip failed, unrecovered changes stored in '%s'\n")
                     % vfs.join(chgrpfile))
+            ui.warn(_("(fix the problem, then recover the changesets with "
+                      "\"hg unbundle '%s'\")\n") % vfs.join(chgrpfile))
         raise
     else:
         if chgrpfile:

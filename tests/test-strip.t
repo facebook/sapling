@@ -375,7 +375,8 @@ Failed hook while applying "saveheads" bundle.
   transaction abort!
   rollback completed
   strip failed, full bundle stored in '$TESTTMP/test/.hg/strip-backup/*-backup.hg' (glob)
-  strip failed, partial bundle stored in '$TESTTMP/test/.hg/strip-backup/*-temp.hg' (glob)
+  strip failed, unrecovered changes stored in '$TESTTMP/test/.hg/strip-backup/*-temp.hg' (glob)
+  (fix the problem, then recover the changesets with "hg unbundle '$TESTTMP/test/.hg/strip-backup/*-temp.hg'") (glob)
   abort: pretxnchangegroup.bad hook exited with status 1
   [255]
   $ restore
