@@ -224,6 +224,9 @@ copy --after on an added file
 foo was clean:
   $ hg st -AC foo
   C foo
+Trying to copy on top of an existing file fails,
+  $ hg copy -A bar foo
+  foo: not overwriting - file exists
 but it's considered modified after a copy --after --force
   $ hg copy -Af bar foo
   $ hg st -AC foo
