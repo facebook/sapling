@@ -128,11 +128,6 @@ struct treemanifest {
       root.resolved = NULL;
     }
 
-    treemanifest(ManifestFetcher fetcher, ManifestEntry *otherRoot) :
-        fetcher(fetcher) {
-      root.initialize(otherRoot);
-    }
-
     treemanifest(PythonObj store) :
         fetcher(store) {
       std::string hexnode;
@@ -141,7 +136,10 @@ struct treemanifest {
       root.initialize(NULL, 0, hexnode.c_str(), MANIFEST_DIRECTORY_FLAGPTR);
     }
 
-    treemanifest *copy();
+    treemanifest(treemanifest &other) :
+        fetcher(other.fetcher) {
+      root.initialize(&other.root);
+    }
 
     void get(
         const std::string &filename,
