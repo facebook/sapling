@@ -211,3 +211,28 @@ bool ManifestEntry::compareMercurialOrder(
 
   return false;
 }
+
+int ManifestEntry::compareName(ManifestEntry *left, ManifestEntry *right) {
+  assert(left || right);
+
+  // If left is empty, then it is greater than right. This makes this function
+  // useful for iterating right after left has already finished.
+  if (!left) {
+    return 1;
+  }
+  else if (!right) {
+    return -1;
+  }
+
+  size_t minlen = left->filenamelen < right->filenamelen ?
+                  left->filenamelen : right->filenamelen;
+  int cmp = strncmp(left->filename, right->filename, minlen);
+  if (cmp == 0 && left->filenamelen == right->filenamelen) {
+    return 0;
+  } else if (cmp > 0 ||
+             (cmp == 0 && left->filenamelen > right->filenamelen)) {
+    return 1;
+  } else {
+    return -1;
+  }
+}

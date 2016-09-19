@@ -79,6 +79,12 @@ class ManifestEntry {
         ManifestEntry * const & left,
         ManifestEntry * const & right
     );
+
+    /**
+     * Compares the name of two entries. This is useful when
+     * iterating through ManifestEntries simultaneously.
+     */
+    static int compareName(ManifestEntry *left, ManifestEntry *right);
 };
 
 #endif //REMOTEFILELOG_MANIFEST_ENTRY_H
