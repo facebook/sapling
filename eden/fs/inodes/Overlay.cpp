@@ -127,6 +127,11 @@ void Overlay::saveOverlayDir(RelativePathPiece path, const TreeInode::Dir* dir)
   if (result != 0 && errno != EEXIST) {
     folly::throwSystemError("failed to mkdir ", metaPath);
   }
+  auto dataPath = localDir_ + PathComponentPiece(kOverlayTree) + path;
+  result = ::mkdir(dataPath.c_str(), 0755);
+  if (result != 0 && errno != EEXIST) {
+    folly::throwSystemError("failed to mkdir ", dataPath);
+  }
 
   // and the path to the file that we're going to store in here
   auto metaFile = metaPath + PathComponentPiece(kMetaFile);
@@ -163,9 +168,18 @@ void Overlay::saveOverlayDir(RelativePathPiece path, const TreeInode::Dir* dir)
 void Overlay::removeOverlayDir(RelativePathPiece path) const {
   auto metaPath = localDir_ + PathComponentPiece(kMetaDir) + path;
   auto metaFile = metaPath + PathComponentPiece(kMetaFile);
+  auto dataPath = localDir_ + PathComponentPiece(kOverlayTree) + path;
 
+  // In the metadata tree, we know that the file that we store the data
+  // and its containing dir must exist, so we bubble up any and all errors.
   folly::checkUnixError(::unlink(metaFile.c_str()), "unlink: ", metaFile);
   folly::checkUnixError(::rmdir(metaPath.c_str()), "rmdir: ", metaPath);
+  // In the file contents storage portion of the overlay, we may not
+  // have created a directory so we allow for it not being there at
+  // the time that we're doing cleanup.
+  if (::rmdir(dataPath.c_str()) != 0 && errno != ENOENT) {
+    folly::throwSystemError("rmdir: ", dataPath);
+  }
 }
 
 const AbsolutePath& Overlay::getLocalDir() const {

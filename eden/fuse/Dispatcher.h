@@ -35,6 +35,7 @@ class Channel;
 class RequestData;
 class FileHandle;
 class DirHandle;
+class MountPoint;
 
 class Dispatcher {
   fuse_conn_info connInfo_;
@@ -115,7 +116,7 @@ class Dispatcher {
     struct stat st;
     double timeout;
 
-    Attr();
+    explicit Attr(const MountPoint* mountPoint);
   };
 
   /**

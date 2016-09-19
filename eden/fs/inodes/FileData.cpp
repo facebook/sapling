@@ -296,7 +296,6 @@ void FileData::materializeForWrite(
     // O_NOFOLLOW because it never makes sense for the kernel to ask
     // a fuse server to open a file that is a symlink to something else.
     file_ = folly::File(filePath.c_str(), O_RDWR | O_NOFOLLOW, 0600);
-    entry_->materialized = true;
     // since we have a pre-existing overlay file, we don't need the blob.
     needBlob = false;
     // A freshly opened file has a valid sha1 attribute (assuming no

@@ -11,11 +11,13 @@
 
 #include "common/fb303/cpp/FacebookBase2.h"
 #include "eden/fs/service/gen-cpp2/EdenService.h"
+#include "eden/utils/PathFuncs.h"
 
 namespace facebook {
 namespace eden {
 
 class EdenServer;
+class TreeInode;
 
 /*
  * Handler for the EdenService thrift interface
@@ -46,6 +48,10 @@ class EdenServiceHandler : virtual public EdenServiceSvIf,
       std::unique_ptr<std::string> mountPoint,
       std::unique_ptr<std::vector<std::string>> paths) override;
 
+  void getMaterializedEntries(
+      std::map<std::string, FileInformation>& out,
+      std::unique_ptr<std::string> mountPoint) override;
+
   /**
    * When this Thrift handler is notified to shutdown, it notifies the
    * EdenServer to shut down, as well.
@@ -66,6 +72,11 @@ class EdenServiceHandler : virtual public EdenServiceSvIf,
       const std::string& path);
 
   void mountImpl(const MountInfo& info);
+
+  void getMaterializedEntriesRecursive(
+      std::map<std::string, FileInformation>& out,
+      RelativePathPiece dirPath,
+      TreeInode* dir);
 
   EdenServer* const server_;
 };

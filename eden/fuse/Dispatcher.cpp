@@ -25,9 +25,7 @@ namespace facebook {
 namespace eden {
 namespace fusell {
 
-Dispatcher::Attr::Attr() : timeout(1.0) {
-  auto& req = RequestData::get();
-  auto mount = req.getChannel().getMountPoint();
+Dispatcher::Attr::Attr(const MountPoint* mount) : timeout(1.0) {
   st = mount->initStatData();
 }
 

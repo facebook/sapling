@@ -21,7 +21,6 @@
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fuse/MountPoint.h"
-#include "eden/utils/PathFuncs.h"
 
 using std::shared_ptr;
 using std::string;
@@ -69,11 +68,16 @@ void EdenServiceHandler::mountImpl(const MountInfo& info) {
     mountPoint->setRootInode(std::make_shared<TreeInode>(
         edenMount.get(),
         std::move(rootOverlayDir.value()),
+        nullptr,
         FUSE_ROOT_ID,
         FUSE_ROOT_ID));
   } else {
     mountPoint->setRootInode(std::make_shared<TreeInode>(
-        edenMount.get(), std::move(rootTree), FUSE_ROOT_ID, FUSE_ROOT_ID));
+        edenMount.get(),
+        std::move(rootTree),
+        nullptr,
+        FUSE_ROOT_ID,
+        FUSE_ROOT_ID));
   }
 
   // TODO(mbolin): Use the result of config.getBindMounts() to perform the
@@ -211,6 +215,75 @@ SHA1Result EdenServiceHandler::getSHA1ForPath(
       parent = inodeDispatcher->getDirInode(inodeNumber);
     }
   }
+}
+
+void EdenServiceHandler::getMaterializedEntries(
+    std::map<std::string, FileInformation>& out,
+    std::unique_ptr<std::string> mountPoint) {
+  auto edenMount = server_->getMount(*mountPoint);
+  auto inodeDispatcher = edenMount->getMountPoint()->getDispatcher();
+  auto rootInode = inodeDispatcher->getDirInode(FUSE_ROOT_ID);
+
+  auto treeInode = std::dynamic_pointer_cast<TreeInode>(rootInode);
+  if (treeInode) {
+    getMaterializedEntriesRecursive(out, RelativePathPiece(), treeInode.get());
+  }
+}
+
+// Convert from a system timespec to our thrift TimeSpec
+static inline void timespecToTimeSpec(const timespec& src, TimeSpec& dest) {
+  dest.seconds = src.tv_sec;
+  dest.nanoSeconds = src.tv_nsec;
+}
+
+void EdenServiceHandler::getMaterializedEntriesRecursive(
+    std::map<std::string, FileInformation>& out,
+    RelativePathPiece dirPath,
+    TreeInode* dir) {
+  dir->getContents().withRLock([&](const auto& contents) mutable {
+    if (contents.materialized) {
+      FileInformation dirInfo;
+      auto attr = dir->getAttrLocked(&contents);
+
+      dirInfo.mode = attr.st.st_mode;
+      timespecToTimeSpec(attr.st.st_mtim, dirInfo.mtime);
+
+      out[dirPath.value().toString()] = std::move(dirInfo);
+    } else {
+      return;
+    }
+
+    for (auto& entIter : contents.entries) {
+      const auto& name = entIter.first;
+      const auto& ent = entIter.second;
+
+      if (!ent->materialized) {
+        continue;
+      }
+
+      auto childInode = dir->lookupChildByNameLocked(&contents, name);
+      auto childPath = dirPath + name;
+
+      if (S_ISDIR(ent->mode)) {
+        auto childDir = std::dynamic_pointer_cast<TreeInode>(childInode);
+        DCHECK(childDir->getContents().rlock()->materialized)
+            << (dirPath + name) << " entry " << ent.get()
+            << " materialized is true, but the contained dir is !materialized";
+        getMaterializedEntriesRecursive(out, childPath, childDir.get());
+      } else {
+        auto fileInode =
+            std::dynamic_pointer_cast<TreeEntryFileInode>(childInode);
+        auto attr = fileInode->getattr().get();
+
+        FileInformation fileInfo;
+        fileInfo.mode = attr.st.st_mode;
+        fileInfo.size = attr.st.st_size;
+        timespecToTimeSpec(attr.st.st_mtim, fileInfo.mtime);
+
+        out[childPath.value().toStdString()] = std::move(fileInfo);
+      }
+    }
+  });
 }
 
 void EdenServiceHandler::getBindMounts(

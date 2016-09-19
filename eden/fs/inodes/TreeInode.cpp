@@ -28,33 +28,49 @@ namespace eden {
 TreeInode::TreeInode(
     EdenMount* mount,
     std::unique_ptr<Tree>&& tree,
+    TreeInode::Entry* entry,
     fuse_ino_t parent,
     fuse_ino_t ino)
     : DirInode(ino),
       mount_(mount),
       contents_(buildDirFromTree(tree.get())),
-      parent_(parent) {}
+      entry_(entry),
+      parent_(parent) {
+  DCHECK(ino == FUSE_ROOT_ID || entry_ != nullptr)
+      << "only the root dir can have a null entry_";
+}
 
 TreeInode::TreeInode(
     EdenMount* mount,
     TreeInode::Dir&& dir,
+    TreeInode::Entry* entry,
     fuse_ino_t parent,
     fuse_ino_t ino)
     : DirInode(ino),
       mount_(mount),
       contents_(std::move(dir)),
-      parent_(parent) {}
+      entry_(entry),
+      parent_(parent) {
+  DCHECK(ino == FUSE_ROOT_ID || entry_ != nullptr)
+      << "only the root dir can have a null entry_";
+}
 
 TreeInode::~TreeInode() {}
 
 folly::Future<fusell::Dispatcher::Attr> TreeInode::getattr() {
-  fusell::Dispatcher::Attr attr;
+  return getAttrLocked(&*contents_.rlock());
+}
+
+fusell::Dispatcher::Attr TreeInode::getAttrLocked(const Dir* contents) {
+  fusell::Dispatcher::Attr attr(getMount()->getMountPoint());
 
   attr.st.st_mode = S_IFDIR | 0755;
   attr.st.st_ino = getNodeId();
-  // TODO: set nlink.  It should be 2 plus the number of subdirectories
   // TODO: set atime, mtime, and ctime
 
+  // For directories, nlink is the number of entries including the
+  // "." and ".." links.
+  attr.st.st_nlink = contents->entries.size() + 2;
   return attr;
 }
 
@@ -74,17 +90,19 @@ std::shared_ptr<fusell::InodeBase> TreeInode::getChildByNameLocked(
     if (!entry->materialized && entry->hash) {
       auto tree = getStore()->getTree(entry->hash.value());
       return std::make_shared<TreeInode>(
-          mount_, std::move(tree), getNodeId(), node->getNodeId());
+          mount_, std::move(tree), entry, getNodeId(), node->getNodeId());
     }
 
     // No corresponding TreeEntry, this exists only in the overlay.
     auto targetName = getNameMgr()->resolvePathToNode(node->getNodeId());
     auto overlayDir = getOverlay()->loadOverlayDir(targetName);
-    if (!overlayDir) {
-      LOG(ERROR) << "missing overlay for " << targetName;
-    }
+    DCHECK(overlayDir) << "missing overlay for " << targetName;
     return std::make_shared<TreeInode>(
-        mount_, std::move(overlayDir.value()), getNodeId(), node->getNodeId());
+        mount_,
+        std::move(overlayDir.value()),
+        entry,
+        getNodeId(),
+        node->getNodeId());
   }
 
   return std::make_shared<TreeEntryFileInode>(
@@ -132,22 +150,44 @@ void TreeInode::materializeDirAndParents() {
     parentInode->materializeDirAndParents();
   }
 
-  contents_.withULockPtr([&](auto ulock) {
-    if (ulock->materialized) {
+  // Atomically, wrt. to concurrent callers, cause the materialized flag
+  // to be set to true both for this directory and for our entry in the
+  // parent directory in the in-memory state.
+  bool updateParent = contents_.withWLockPtr([&](auto wlock) {
+    if (wlock->materialized) {
       // Someone else materialized it in the meantime
-      return;
+      return false;
     }
+
     auto myname = this->getNameMgr()->resolvePathToNode(this->getNodeId());
-    auto wlock = ulock.moveFromUpgradeToWrite();
-    wlock->materialized = true;
 
     auto overlay = this->getOverlay();
     auto dirPath = overlay->getContentDir() + myname;
     if (::mkdir(dirPath.c_str(), 0755) != 0 && errno != EEXIST) {
       folly::throwSystemError("while materializing, mkdir: ", dirPath);
     }
+    wlock->materialized = true;
     overlay->saveOverlayDir(myname, &*wlock);
+
+    if (entry_ && !entry_->materialized) {
+      entry_->materialized = true;
+      return true;
+    }
+
+    return false;
   });
+
+  // If we just set materialized on the entry, we need to arrange for that
+  // state to be saved to disk.  This is not atomic wrt. to the property
+  // change, but definitely does not have a lock-order-acquisition deadlock.
+  // This means that there is a small window of time where our in-memory and
+  // on-disk state for the overlay are not in sync.
+  if (updateParent) {
+    auto parentInode = std::dynamic_pointer_cast<TreeInode>(
+        getMount()->getMountPoint()->getDispatcher()->getDirInode(parent_));
+    auto parentName = getNameMgr()->resolvePathToNode(parentInode->getNodeId());
+    getOverlay()->saveOverlayDir(parentName, &*parentInode->contents_.wlock());
+  }
 }
 
 TreeInode::Dir TreeInode::buildDirFromTree(const Tree* tree) {
@@ -247,7 +287,7 @@ TreeInode::create(PathComponentPiece name, mode_t mode, int flags) {
   auto getattrResult = handle->getattr();
   return getattrResult.then(
       [ =, handle = std::move(handle) ](fusell::Dispatcher::Attr attr) mutable {
-        fusell::DirInode::CreateResult result;
+        fusell::DirInode::CreateResult result(getMount()->getMountPoint());
 
         // Return all of the results back to the kernel.
         result.inode = inode;

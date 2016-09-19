@@ -55,6 +55,8 @@ class DirInode : public InodeBase {
     std::shared_ptr<FileHandle> file;
     /// The newly created node record from the name manager.
     std::shared_ptr<InodeNameManager::Node> node;
+
+    explicit CreateResult(const MountPoint* mount) : attr(mount) {}
   };
 
   virtual folly::Future<CreateResult>

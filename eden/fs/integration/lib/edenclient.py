@@ -200,6 +200,10 @@ class EdenFS(object):
             # linked builds).
             timeout += 90
 
+        # Turn up the VLOG level for the fuse server so that errors are logged
+        # with an explanation when they bubble up to RequestData::catchErrors
+        args.extend(['--', '--vmodule=RequestData=5'])
+
         self._process = subprocess.Popen(args)
         self._wait_for_healthy(timeout)
 

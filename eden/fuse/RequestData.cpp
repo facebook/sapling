@@ -44,6 +44,7 @@ void RequestData::interrupter(fuse_req_t req, void* data) {
 RequestData& RequestData::get() {
   auto data = folly::RequestContext::get()->getContextData(kKey);
   if (UNLIKELY(!data)) {
+    LOG(FATAL) << "boom for missing RequestData";
     throw std::runtime_error("no fuse request data set in this context!");
   }
   return *dynamic_cast<RequestData*>(data);

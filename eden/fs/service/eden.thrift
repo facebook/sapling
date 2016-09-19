@@ -20,6 +20,19 @@ union SHA1Result {
   2: EdenError error
 }
 
+// Effectively a `struct timespec`
+struct TimeSpec {
+  1: i64 seconds
+  2: i64 nanoSeconds
+}
+
+// Information that we return when querying entries
+struct FileInformation {
+  1: i64 size        // wish thrift had unsigned numbers
+  2: TimeSpec mtime
+  3: i32 mode        // mode_t
+}
+
 service EdenService extends fb303.FacebookService {
   list<MountInfo> listMounts() throws (1: EdenError ex)
   void mount(1: MountInfo info) throws (1: EdenError ex)
@@ -44,4 +57,9 @@ service EdenService extends fb303.FacebookService {
    * Returns a list of paths relative to the mountPoint.
    */
   list<string> getBindMounts(1: string mountPoint)
+
+  /**
+   * Returns the current set of files (and dirs) materialized in the overlay
+   */
+  map<string, FileInformation> getMaterializedEntries(1: string mountPoint)
 }

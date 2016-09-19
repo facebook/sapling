@@ -59,15 +59,22 @@ class TreeInode : public fusell::DirInode {
   TreeInode(
       EdenMount* mount,
       std::unique_ptr<Tree>&& tree,
+      Entry* entry,
       fuse_ino_t parent,
       fuse_ino_t ino);
 
   /// Construct an inode that only has backing in the Overlay area
-  TreeInode(EdenMount* mount, Dir&& dir, fuse_ino_t parent, fuse_ino_t ino);
+  TreeInode(
+      EdenMount* mount,
+      Dir&& dir,
+      Entry* entry,
+      fuse_ino_t parent,
+      fuse_ino_t ino);
 
   ~TreeInode();
 
   folly::Future<fusell::Dispatcher::Attr> getattr() override;
+  fusell::Dispatcher::Attr getAttrLocked(const Dir* contents);
 
   /** Implements the InodeBase method used by the Dispatcher
    * to create the Inode instance for a given name */
@@ -138,6 +145,15 @@ class TreeInode : public fusell::DirInode {
 
   fusell::InodeNameManager* getNameMgr() const;
 
+  /** Horribly named function that resolves the existing inode for a name,
+   * falling back to creating and populating it, while we hold a lock
+   * on the Dir object.  This is needed because the equivalent lookupInodeBase
+   * functionality in the dispatcher will call in to getChildByName and
+   * attempt to acquire the lock */
+  std::shared_ptr<fusell::InodeBase> lookupChildByNameLocked(
+      const Dir* contents,
+      PathComponentPiece name);
+
  private:
   /** Translates a Tree object from our store into a Dir object
    * used to track the directory in the inode */
@@ -148,14 +164,6 @@ class TreeInode : public fusell::DirInode {
       const Dir* contents,
       PathComponentPiece name);
 
-  /** Horribly named function that resolves the existing inode for a name,
-   * falling back to creating and populating it, while we hold a lock
-   * on the Dir object.  This is needed because the equivalent lookupInodeBase
-   * functionality in the dispatcher will call in to getChildByName and
-   * attempt to acquire the lock */
-  std::shared_ptr<fusell::InodeBase> lookupChildByNameLocked(
-      const Dir* contents,
-      PathComponentPiece name);
 
   // The EdenMount object that this inode belongs to.
   // We store this as a raw pointer since the TreeInode is part of the mount
@@ -165,6 +173,8 @@ class TreeInode : public fusell::DirInode {
   EdenMount* const mount_{nullptr};
 
   folly::Synchronized<Dir> contents_;
+  /** Can be nullptr for the root inode only, otherwise will be non-null */
+  TreeInode::Entry* entry_{nullptr};
   fuse_ino_t parent_;
 };
 }

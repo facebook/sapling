@@ -9,6 +9,7 @@
  */
 #include "TreeEntryFileInode.h"
 
+#include "EdenMount.h"
 #include "FileData.h"
 #include "Overlay.h"
 #include "TreeEntryFileHandle.h"
@@ -62,7 +63,7 @@ folly::Future<fusell::Dispatcher::Attr> TreeEntryFileInode::getattr() {
   auto overlay = parentInode_->getOverlay();
   data->materializeForRead(O_RDONLY, path, overlay);
 
-  fusell::Dispatcher::Attr attr;
+  fusell::Dispatcher::Attr attr(parentInode_->getMount()->getMountPoint());
   attr.st = data->stat();
   attr.st.st_ino = getNodeId();
   return attr;
@@ -87,7 +88,7 @@ folly::Future<fusell::Dispatcher::Attr> TreeEntryFileInode::setattr(
   auto overlay = parentInode_->getOverlay();
   data->materializeForWrite(open_flags, path, overlay);
 
-  fusell::Dispatcher::Attr result;
+  fusell::Dispatcher::Attr result(parentInode_->getMount()->getMountPoint());
   result.st = data->setAttr(attr, to_set);
   result.st.st_ino = getNodeId();
   return result;
