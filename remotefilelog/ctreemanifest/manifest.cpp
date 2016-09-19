@@ -24,13 +24,13 @@ Manifest::Manifest(PythonObj &rawobj) :
 }
 
 Manifest *Manifest::copy() {
-  Manifest *copied = new Manifest(this->_rawobj);
-  std::list<ManifestEntry>::iterator copyIter = copied->entries.begin();
+  Manifest *copied = new Manifest();
+  copied->_rawobj = this->_rawobj;
 
   for (std::list<ManifestEntry>::iterator thisIter = this->entries.begin();
        thisIter != this->entries.end();
        thisIter ++) {
-    copied->addChild(copyIter, &(*thisIter));
+    copied->addChild(copied->entries.end(), &(*thisIter));
   }
 
   return copied;
@@ -124,10 +124,7 @@ ManifestEntry *Manifest::addChild(std::list<ManifestEntry>::iterator iterator,
 ManifestEntry *Manifest::addChild(std::list<ManifestEntry>::iterator iterator,
         ManifestEntry *otherChild) {
   ManifestEntry entry;
-  this->entries.insert(iterator, entry);
-
-  // move back to the element we just added.
-  --iterator;
+  iterator = this->entries.insert(iterator, entry);
 
   // return a reference to the element we added, not the one on the stack.
   ManifestEntry *result = &(*iterator);
