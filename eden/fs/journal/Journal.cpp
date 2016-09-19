@@ -21,6 +21,14 @@ void Journal::addDelta(std::unique_ptr<JournalDelta>&& delta) {
 
   delta->previous = latest_;
 
+  // If the hashes were not set to anything, default to copying
+  // the value from the prior journal entry
+  if (delta->previous && delta->fromHash == kZeroHash &&
+      delta->toHash == kZeroHash) {
+    delta->fromHash = delta->previous->toHash;
+    delta->toHash = delta->fromHash;
+  }
+
   latest_ = std::shared_ptr<const JournalDelta>(std::move(delta));
 }
 

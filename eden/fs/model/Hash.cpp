@@ -26,6 +26,8 @@ using folly::ssl::OpenSSLHash;
 namespace facebook {
 namespace eden {
 
+const Hash kZeroHash;
+
 namespace {
 Hash::Storage hexToBytes(StringPiece hex);
 Hash::Storage byteRangeToArray(ByteRange bytes);

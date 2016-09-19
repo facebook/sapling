@@ -66,6 +66,9 @@ class Hash : boost::totally_ordered<Hash> {
   Storage bytes_;
 };
 
+/** A hash object initialized to all zeroes */
+extern const Hash kZeroHash;
+
 /**
  * Output stream operator for Hash.
  *

@@ -80,6 +80,13 @@ void EdenServiceHandler::mountImpl(const MountInfo& info) {
         FUSE_ROOT_ID));
   }
 
+  // Record the transition from no snapshot to the current snapshot in
+  // the journal.  This also sets things up so that we can carry the
+  // snapshot id forward through subsequent journal entries.
+  auto delta = std::make_unique<JournalDelta>();
+  delta->toHash = snapshotID;
+  edenMount->getJournal().wlock()->addDelta(std::move(delta));
+
   // TODO(mbolin): Use the result of config.getBindMounts() to perform the
   // appropriate bind mounts for the client.
   server_->mount(std::move(edenMount));
