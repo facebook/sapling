@@ -8,8 +8,14 @@ import silenttestrunner
 import ctreemanifest
 
 class FakeStore(object):
-    def get(self, xyz):
-        return "abcabcabc"
+    def __init__(self):
+        self._data = {}
+
+    def get(self, path, node):
+        return self._data[(path, node)]
+
+    def add(self, path, node, deltabase, value):
+        self._data[(path, node)] = value
 
 def getvalidflag():
     # t is reserved as a directory entry, so don't go around setting that as the
@@ -28,6 +34,9 @@ def hashflags(requireflag=False):
     return h, f
 
 class ctreemanifesttests(unittest.TestCase):
+    def setUp(self):
+        random.seed(0)
+
     def testInitialization(self):
         a = ctreemanifest.treemanifest(FakeStore())
 
@@ -198,6 +207,27 @@ class ctreemanifesttests(unittest.TestCase):
         results = [fp for fp in a]
         self.assertEquals(results[0], "abc/def/gh")
         self.assertEquals(results[1], "abc/def/\xe6\xe9")
+
+    def testWrite(self):
+        a = ctreemanifest.treemanifest(FakeStore())
+        a.set("abc/def/x", *hashflags())
+        a.set("abc/def/y", *hashflags())
+        a.set("abc/z", *hashflags())
+
+        store = FakeStore()
+        anode = a.write(store)
+
+        a2 = ctreemanifest.treemanifest(store, anode)
+        self.assertEquals(list(a.iterentries()), list(a2.iterentries()))
+
+        b = a2.copy()
+        b.set("lmn/v", *hashflags())
+        b.set("abc/z", *hashflags())
+
+        bnode = b.write(store)
+
+        b2 = ctreemanifest.treemanifest(store, bnode)
+        self.assertEquals(list(b.iterentries()), list(b2.iterentries()))
 
 if __name__ == '__main__':
     silenttestrunner.main(__name__)
