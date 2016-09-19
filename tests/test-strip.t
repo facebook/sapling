@@ -374,7 +374,7 @@ Failed hook while applying "saveheads" bundle.
   saved backup bundle to $TESTTMP/test/.hg/strip-backup/*-backup.hg (glob)
   transaction abort!
   rollback completed
-  strip failed, full bundle stored in '$TESTTMP/test/.hg/strip-backup/*-backup.hg' (glob)
+  strip failed, backup bundle stored in '$TESTTMP/test/.hg/strip-backup/*-backup.hg' (glob)
   strip failed, unrecovered changes stored in '$TESTTMP/test/.hg/strip-backup/*-temp.hg' (glob)
   (fix the problem, then recover the changesets with "hg unbundle '$TESTTMP/test/.hg/strip-backup/*-temp.hg'") (glob)
   abort: pretxnchangegroup.bad hook exited with status 1
@@ -931,7 +931,7 @@ Error during post-close callback of the strip transaction
   > EOF
   $ hg strip tip --config extensions.crash=$TESTTMP/crashstrip.py
   saved backup bundle to $TESTTMP/issue4736/.hg/strip-backup/5c51d8d6557d-70daef06-backup.hg (glob)
-  strip failed, full bundle stored in '$TESTTMP/issue4736/.hg/strip-backup/5c51d8d6557d-70daef06-backup.hg' (glob)
+  strip failed, backup bundle stored in '$TESTTMP/issue4736/.hg/strip-backup/5c51d8d6557d-70daef06-backup.hg' (glob)
   abort: boom
   [255]
 

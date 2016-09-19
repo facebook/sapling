@@ -147,10 +147,10 @@ def strip(ui, repo, nodelist, backup=True, topic='backup'):
                        vfs.join(backupfile))
         repo.ui.log("backupbundle", "saved backup bundle to %s\n",
                     vfs.join(backupfile))
-    chgrpfile = None
+    tmpbundlefile = None
     if saveheads:
-        # do not compress partial bundle if we remove it from disk later
-        chgrpfile = _bundle(repo, savebases, saveheads, node, 'temp',
+        # do not compress temporary bundle if we remove it from disk later
+        tmpbundlefile = _bundle(repo, savebases, saveheads, node, 'temp',
                             compress=False)
 
     mfst = repo.manifest
@@ -185,21 +185,22 @@ def strip(ui, repo, nodelist, backup=True, topic='backup'):
                 if troffset == 0:
                     repo.store.markremoved(file)
 
-        if chgrpfile:
+        if tmpbundlefile:
             ui.note(_("adding branch\n"))
-            f = vfs.open(chgrpfile, "rb")
-            gen = exchange.readbundle(ui, f, chgrpfile, vfs)
+            f = vfs.open(tmpbundlefile, "rb")
+            gen = exchange.readbundle(ui, f, tmpbundlefile, vfs)
             if not repo.ui.verbose:
                 # silence internal shuffling chatter
                 repo.ui.pushbuffer()
             if isinstance(gen, bundle2.unbundle20):
                 with repo.transaction('strip') as tr:
                     tr.hookargs = {'source': 'strip',
-                                   'url': 'bundle:' + vfs.join(chgrpfile)}
+                                   'url': 'bundle:' + vfs.join(tmpbundlefile)}
                     bundle2.applybundle(repo, gen, tr, source='strip',
-                                        url='bundle:' + vfs.join(chgrpfile))
+                                        url='bundle:' + vfs.join(tmpbundlefile))
             else:
-                gen.apply(repo, 'strip', 'bundle:' + vfs.join(chgrpfile), True)
+                gen.apply(repo, 'strip', 'bundle:' + vfs.join(tmpbundlefile),
+                          True)
             if not repo.ui.verbose:
                 repo.ui.popbuffer()
             f.close()
@@ -228,18 +229,18 @@ def strip(ui, repo, nodelist, backup=True, topic='backup'):
 
     except: # re-raises
         if backupfile:
-            ui.warn(_("strip failed, full bundle stored in '%s'\n")
+            ui.warn(_("strip failed, backup bundle stored in '%s'\n")
                     % vfs.join(backupfile))
-        if chgrpfile:
+        if tmpbundlefile:
             ui.warn(_("strip failed, unrecovered changes stored in '%s'\n")
-                    % vfs.join(chgrpfile))
+                    % vfs.join(tmpbundlefile))
             ui.warn(_("(fix the problem, then recover the changesets with "
-                      "\"hg unbundle '%s'\")\n") % vfs.join(chgrpfile))
+                      "\"hg unbundle '%s'\")\n") % vfs.join(tmpbundlefile))
         raise
     else:
-        if chgrpfile:
-            # Remove partial backup only if there were no exceptions
-            vfs.unlink(chgrpfile)
+        if tmpbundlefile:
+            # Remove temporary bundle only if there were no exceptions
+            vfs.unlink(tmpbundlefile)
 
     repo.destroyed()
 

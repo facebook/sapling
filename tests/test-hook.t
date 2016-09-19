@@ -802,7 +802,7 @@ pretxnclose hook failure should abort the transaction
   saved backup bundle to * (glob)
   transaction abort!
   rollback completed
-  strip failed, full bundle stored in * (glob)
+  strip failed, backup bundle stored in * (glob)
   abort: pretxnclose.error hook exited with status 1
   [255]
   $ hg recover
