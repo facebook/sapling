@@ -18,14 +18,6 @@ ManifestEntry::ManifestEntry() {
   this->ownedmemory = NULL;
 }
 
-/**
- * Given the start of a file/dir entry in a manifest, returns a
- * ManifestEntry structure with the parsed data.
- */
-ManifestEntry::ManifestEntry(char *&entrystart) {
-  this->initialize(entrystart);
-}
-
 void ManifestEntry::initialize(
     const char *filename, const size_t filenamelen,
     const char *node,
@@ -70,7 +62,7 @@ void ManifestEntry::initialize(
   }
 }
 
-void ManifestEntry::initialize(char *&entrystart) {
+char *ManifestEntry::initialize(char *entrystart) {
   // Each entry is of the format:
   //
   //   <filename>\0<40-byte hash><optional 1 byte flag>\n
@@ -83,15 +75,18 @@ void ManifestEntry::initialize(char *&entrystart) {
   this->node = nulldelimiter + 1;
 
   this->flag = nulldelimiter + 41;
+  char *nextpointer;
   if (*this->flag != '\n') {
-    entrystart = this->flag + 2;
+    nextpointer = this->flag + 2;
   } else {
     // No flag
-    entrystart = this->flag + 1;
+    nextpointer = this->flag + 1;
     this->flag = NULL;
   }
   this->resolved = NULL;
   this->ownedmemory = NULL;
+
+  return nextpointer;
 }
 
 void ManifestEntry::initialize(ManifestEntry *other) {

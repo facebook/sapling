@@ -17,7 +17,8 @@ Manifest::Manifest(PythonObj &rawobj) :
   endptr = parseptr + buf_sz;
 
   while (parseptr < endptr) {
-    ManifestEntry entry = ManifestEntry(parseptr);
+    ManifestEntry entry;
+    parseptr = entry.initialize(parseptr);
     entries.push_back(entry);
   }
 }

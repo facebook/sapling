@@ -46,12 +46,6 @@ class ManifestEntry {
 
     ManifestEntry();
 
-    /**
-     * Given the start of a file/dir entry in a manifest, returns a
-     * ManifestEntry structure with the parsed data.
-     */
-    ManifestEntry(char *&entrystart);
-
     ~ManifestEntry();
 
     bool isdirectory() const;
@@ -66,7 +60,7 @@ class ManifestEntry {
         const char *node,
         const char *flag);
 
-    void initialize(char *&entrystart);
+    char *initialize(char *entrystart);
 
     void initialize(ManifestEntry *other);
 
