@@ -212,3 +212,17 @@ void Manifest::serialize(std::string &result) {
     result.append("\n");
   }
 }
+
+void Manifest::computeNode(const char *p1, const char *p2, char *result) {
+  std::string content;
+  this->serialize(content);
+
+  SHA_CTX ctx;
+  SHA1_Init(&ctx);
+
+  SHA1_Update(&ctx, p1, BIN_NODE_SIZE);
+  SHA1_Update(&ctx, p2, BIN_NODE_SIZE);
+  SHA1_Update(&ctx, content.c_str(), content.size());
+
+  SHA1_Final((unsigned char*)result, &ctx);
+}

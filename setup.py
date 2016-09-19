@@ -87,6 +87,7 @@ setup(
                       '/opt/local/lib',
                   ],
                   libraries=[
+                      'crypto',
                   ],
                   extra_compile_args=[
                       "-Wall",

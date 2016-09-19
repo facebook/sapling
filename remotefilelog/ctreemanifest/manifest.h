@@ -14,6 +14,7 @@
 
 #include <list>
 #include <stdexcept>
+#include <openssl/sha.h>
 
 class Manifest;
 class ManifestIterator;
@@ -102,6 +103,12 @@ class Manifest {
       // invalidate the mercurial-ordered list of entries
       this->mercurialSortedEntries.clear();
     }
+
+    /**
+     * Computes the hash of this manifest, given the two parent nodes. The input
+     * and output nodes are 20 bytes.
+     */
+    void computeNode(const char *p1, const char *p2, char *result);
 
     /**
      * Serializes the current manifest into the given string. The serialization
