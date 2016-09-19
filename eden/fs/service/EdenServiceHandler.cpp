@@ -285,7 +285,7 @@ void EdenServiceHandler::getMaterializedEntriesRecursive(
         DCHECK(childDir->getContents().rlock()->materialized)
             << (dirPath + name) << " entry " << ent.get()
             << " materialized is true, but the contained dir is !materialized";
-        getMaterializedEntriesRecursive(out, childPath, childDir.get());
+        this->getMaterializedEntriesRecursive(out, childPath, childDir.get());
       } else {
         auto fileInode =
             std::dynamic_pointer_cast<TreeEntryFileInode>(childInode);
