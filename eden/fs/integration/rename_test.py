@@ -138,3 +138,20 @@ class RenameTest:
         with open(to_name, 'r') as f:
             self.assertEqual('overlay-a\n', f.read(),
                              msg='holds correct data')
+
+    def test_rename_between_different_dirs(self):
+        adir = os.path.join(self.mount, 'adir')
+        bdir = os.path.join(self.mount, 'bdir')
+        os.mkdir(bdir)
+
+        os.rename(os.path.join(adir, 'file'), os.path.join(bdir, 'FILE'))
+
+        self.assertEqual([], sorted(os.listdir(adir)))
+        self.assertEqual(['FILE'], sorted(os.listdir(bdir)))
+
+        # Restart to ensure that our serialized state is correct
+        self.eden.shutdown()
+        self.eden.start()
+
+        self.assertEqual([], sorted(os.listdir(adir)))
+        self.assertEqual(['FILE'], sorted(os.listdir(bdir)))

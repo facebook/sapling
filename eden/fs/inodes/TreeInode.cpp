@@ -608,9 +608,12 @@ void TreeInode::renameHelper(
   // Now remove the source information
   sourceContents->entries.erase(sourceEntIter);
 
-  auto myname = getNameMgr()->resolvePathToNode(getNodeId());
-  getOverlay()->saveOverlayDir(myname, sourceContents);
-  getOverlay()->saveOverlayDir(myname, destContents);
+  getOverlay()->saveOverlayDir(sourceName.dirname(), sourceContents);
+  if (sourceContents != destContents) {
+    // Don't saved the same thing twice if the rename is within the
+    // same directory.
+    getOverlay()->saveOverlayDir(destName.dirname(), destContents);
+  }
 }
 
 folly::Future<folly::Unit> TreeInode::rename(
