@@ -378,6 +378,52 @@ void EdenServiceHandler::getFilesChangedSince(
   }
 }
 
+void EdenServiceHandler::getFileInformation(
+    std::vector<FileInformationOrError>& out,
+    std::unique_ptr<std::string> mountPoint,
+    std::unique_ptr<std::vector<std::string>> paths) {
+  auto edenMount = server_->getMount(*mountPoint);
+  auto inodeDispatcher = edenMount->getMountPoint()->getDispatcher();
+  auto rootInode = inodeDispatcher->getInode(FUSE_ROOT_ID);
+
+  for (auto& path : *paths) {
+    FileInformationOrError result;
+
+    try {
+      auto inodeBase = rootInode;
+      auto relativePath = RelativePathPiece{path};
+
+      // Walk down to the path of interest.
+      auto it = relativePath.paths().begin();
+      while (it != relativePath.paths().end()) {
+        // This will throw if there is no such entry.
+        inodeBase =
+            inodeDispatcher
+                ->lookupInodeBase(inodeBase->getNodeId(), it.piece().basename())
+                .get();
+        ++it;
+      }
+
+      // we've reached the item of interest.
+      auto attr = inodeBase->getattr().get();
+      FileInformation info;
+      info.size = attr.st.st_size;
+      info.mtime.seconds = attr.st.st_mtim.tv_sec;
+      info.mtime.nanoSeconds = attr.st.st_mtim.tv_nsec;
+      info.mode = attr.st.st_mode;
+
+      result.set_info(info);
+      out.emplace_back(std::move(result));
+
+    } catch (const std::system_error& e) {
+      EdenError err(e.what());
+      err.set_errorCode(e.code().value());
+      result.set_error(err);
+      out.emplace_back(std::move(result));
+    }
+  }
+}
+
 void EdenServiceHandler::shutdown() {
   server_->stop();
 }

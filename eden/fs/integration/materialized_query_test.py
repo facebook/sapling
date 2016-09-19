@@ -12,6 +12,7 @@ import os
 import stat
 from .lib import testcase
 from facebook.eden import EdenService
+from facebook.eden.ttypes import FileInformationOrError
 
 @testcase.eden_repo_test
 class MaterializedQueryTest:
@@ -47,6 +48,34 @@ class MaterializedQueryTest:
         self.assertEqual(0, len(changed.paths))
         self.assertEqual(pos, changed.fromPosition)
         self.assertEqual(pos, changed.toPosition)
+
+    def test_getFileInformation(self):
+        """ verify that getFileInformation is consistent with the VFS """
+
+        paths = ['', 'not-exist', 'hello', 'adir',
+                 'adir/file', 'bdir/test.sh', 'slink']
+        info_list = self.client.getFileInformation(self.mount, paths)
+        self.assertEqual(len(paths), len(info_list))
+
+        for idx, path in enumerate(paths):
+            try:
+                st = os.lstat(os.path.join(self.mount, path))
+                self.assertEqual(FileInformationOrError.INFO, info_list[
+                                 idx].getType(),
+                                 msg='have non-error result for ' + path)
+                info = info_list[idx].get_info()
+                self.assertEqual(st.st_mode, info.mode,
+                                 msg='mode matches for ' + path)
+                self.assertEqual(st.st_size, info.size,
+                                 msg='size matches for ' + path)
+                self.assertEqual(st.st_mtime, info.mtime.seconds)
+            except OSError as e:
+                self.assertEqual(FileInformationOrError.ERROR, info_list[
+                                 idx].getType(),
+                                 msg='have error result for ' + path)
+                err = info_list[idx].get_error()
+                self.assertEqual(e.errno, err.errorCode,
+                                 msg='error code matches for ' + path)
 
     def test_invalidProcessGeneration(self):
         # Get a candidate position
