@@ -93,6 +93,10 @@ void ManifestEntry::initialize(ManifestEntry *other) {
   if (other->ownedmemory) {
     this->initialize(other->filename, other->filenamelen,
         other->node, other->flag);
+    if (!other->resolved) {
+      delete(this->resolved);
+      this->resolved = NULL;
+    }
   } else {
     // Else it points at a piece of memory owned by something else
     this->initialize(other->filename);
@@ -144,7 +148,10 @@ void ManifestEntry::update(const char *node, const char *flag) {
 
   // if we didn't previously own the memory, we should now.
   if (this->ownedmemory == NULL) {
+    Manifest *oldresolved = this->resolved;
     this->initialize(this->filename, this->filenamelen, node, flag);
+    delete(this->resolved);
+    this->resolved = oldresolved;
     return;
   }
 
