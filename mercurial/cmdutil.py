@@ -646,8 +646,26 @@ def copy(ui, repo, pats, opts, rename=False):
 
         if not after and exists or after and state in 'mn':
             if not opts['force']:
-                ui.warn(_('%s: not overwriting - file exists\n') %
-                        reltarget)
+                if state in 'mn':
+                    msg = _('%s: not overwriting - file already committed\n')
+                    if after:
+                        flags = '--after --force'
+                    else:
+                        flags = '--force'
+                    if rename:
+                        hint = _('(hg rename %s to replace the file by '
+                                 'recording a rename)\n') % flags
+                    else:
+                        hint = _('(hg copy %s to replace the file by '
+                                 'recording a copy)\n') % flags
+                else:
+                    msg = _('%s: not overwriting - file exists\n')
+                    if rename:
+                        hint = _('(hg rename --after to record the rename)\n')
+                    else:
+                        hint = _('(hg copy --after to record the copy)\n')
+                ui.warn(msg % reltarget)
+                ui.warn(hint)
                 return
 
         if after:
