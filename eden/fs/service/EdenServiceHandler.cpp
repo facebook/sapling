@@ -218,7 +218,7 @@ SHA1Result EdenServiceHandler::getSHA1ForPath(
 }
 
 void EdenServiceHandler::getMaterializedEntries(
-    std::map<std::string, FileInformation>& out,
+    MaterializedResult& out,
     std::unique_ptr<std::string> mountPoint) {
   auto edenMount = server_->getMount(*mountPoint);
   auto inodeDispatcher = edenMount->getMountPoint()->getDispatcher();
@@ -226,7 +226,8 @@ void EdenServiceHandler::getMaterializedEntries(
 
   auto treeInode = std::dynamic_pointer_cast<TreeInode>(rootInode);
   if (treeInode) {
-    getMaterializedEntriesRecursive(out, RelativePathPiece(), treeInode.get());
+    getMaterializedEntriesRecursive(
+        out.fileInfo, RelativePathPiece(), treeInode.get());
   }
 }
 

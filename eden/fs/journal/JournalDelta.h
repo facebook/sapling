@@ -12,6 +12,7 @@
 
 #include <chrono>
 #include <unordered_set>
+#include "eden/fs/model/Hash.h"
 #include "eden/utils/PathFuncs.h"
 
 namespace facebook {
@@ -32,6 +33,12 @@ class JournalDelta {
    * This is a range to accommodate merging a range into a single entry. */
   std::chrono::steady_clock::time_point fromTime;
   std::chrono::steady_clock::time_point toTime;
+
+  /** The snapshot hash that we started and ended up on.
+   * This will often be the same unless we perform a checkout or make
+   * a new snapshot from the snapshotable files in the overlay. */
+  Hash fromHash;
+  Hash toHash;
 
   /** The set of files that changed in the overlay in this update */
   std::unordered_set<RelativePath> changedFilesInOverlay;

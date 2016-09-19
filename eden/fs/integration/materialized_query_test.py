@@ -36,14 +36,15 @@ class MaterializedQueryTest:
 
     def test_noEntries(self):
         items = self.client.getMaterializedEntries(self.mount)
-        self.assertEqual({}, items)
+        self.assertEqual({}, items.fileInfo)
 
     def test_addFile(self):
         name = os.path.join(self.mount, 'overlaid')
         with open(name, 'w+') as f:
             f.write('NAME!\n')
 
-        items = self.client.getMaterializedEntries(self.mount)
+        info = self.client.getMaterializedEntries(self.mount)
+        items = info.fileInfo
         self.assertEqual(2, len(items))
 
         self.assertTrue(stat.S_ISDIR(items[''].mode))
@@ -56,8 +57,8 @@ class MaterializedQueryTest:
         with open(name, 'a') as f:
             f.write('more stuff on the end\n')
 
-        items = self.client.getMaterializedEntries(self.mount)
-        print(items)
+        info = self.client.getMaterializedEntries(self.mount)
+        items = info.fileInfo
         self.assertEqual(4, len(items))
 
         self.assertTrue(stat.S_ISDIR(items[''].mode))

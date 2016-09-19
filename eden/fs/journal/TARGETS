@@ -5,6 +5,7 @@ cpp_library(
   deps = [
     '@/folly:folly',
     '@/eden/utils:utils',
+    '@/eden/fs/model:model',
   ],
   external_deps = [
     ('boost', 'any'),

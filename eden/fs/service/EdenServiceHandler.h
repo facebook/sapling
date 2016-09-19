@@ -49,7 +49,7 @@ class EdenServiceHandler : virtual public EdenServiceSvIf,
       std::unique_ptr<std::vector<std::string>> paths) override;
 
   void getMaterializedEntries(
-      std::map<std::string, FileInformation>& out,
+      MaterializedResult& out,
       std::unique_ptr<std::string> mountPoint) override;
 
   /**

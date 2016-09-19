@@ -19,6 +19,17 @@ thrift_library(
   deps = ['@/common/fb303/if:fb303'],
 )
 
+thrift_library(
+  name = 'thrift-streaming',
+  thrift_args = ['--strict'],
+  thrift_srcs = {
+    'eden.thrift': ['EdenService'],
+  },
+  py_base_module = 'facebook',
+  languages = ['cpp2'],
+  deps = [':thrift'],
+)
+
 python_library(
   name = 'py-client',
   srcs = [
