@@ -9,7 +9,9 @@
  */
 #pragma once
 
+#include <folly/Synchronized.h>
 #include <memory>
+#include "eden/fs/journal/JournalDelta.h"
 #include "eden/utils/PathFuncs.h"
 
 namespace facebook {
@@ -22,6 +24,7 @@ class BindMount;
 class ClientConfig;
 class ObjectStore;
 class Overlay;
+class Journal;
 
 /*
  * EdenMount contains all of the data about a specific eden mount point.
@@ -78,6 +81,10 @@ class EdenMount {
     return overlay_;
   }
 
+  folly::Synchronized<Journal>& getJournal() {
+    return journal_;
+  }
+
  private:
   // Forbidden copy constructor and assignment operator
   EdenMount(EdenMount const&) = delete;
@@ -92,6 +99,8 @@ class EdenMount {
    * underlying config files after the ClientConfig was created.
    */
   const std::unique_ptr<const ClientConfig> clientConfig_;
+
+  folly::Synchronized<Journal> journal_;
 };
 }
 }

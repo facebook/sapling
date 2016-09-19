@@ -9,6 +9,7 @@
  */
 #include "TreeEntryFileHandle.h"
 
+#include "EdenMount.h"
 #include "FileData.h"
 #include "TreeEntryFileInode.h"
 #include "eden/fs/store/LocalStore.h"
@@ -58,12 +59,24 @@ folly::Future<fusell::BufVec> TreeEntryFileHandle::read(
 folly::Future<size_t> TreeEntryFileHandle::write(
     fusell::BufVec&& buf,
     off_t off) {
+  SCOPE_SUCCESS {
+    auto myname = inode_->parentInode_->getNameMgr()->resolvePathToNode(
+        inode_->getNodeId());
+    inode_->parentInode_->getMount()->getJournal().wlock()->addDelta(
+        std::make_unique<JournalDelta>(JournalDelta{myname}));
+  };
   return data_->write(std::move(buf), off);
 }
 
 folly::Future<size_t> TreeEntryFileHandle::write(
     folly::StringPiece str,
     off_t off) {
+  SCOPE_SUCCESS {
+    auto myname = inode_->parentInode_->getNameMgr()->resolvePathToNode(
+        inode_->getNodeId());
+    inode_->parentInode_->getMount()->getJournal().wlock()->addDelta(
+        std::make_unique<JournalDelta>(JournalDelta{myname}));
+  };
   return data_->write(str, off);
 }
 

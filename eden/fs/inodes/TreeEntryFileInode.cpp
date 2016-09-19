@@ -91,6 +91,10 @@ folly::Future<fusell::Dispatcher::Attr> TreeEntryFileInode::setattr(
   fusell::Dispatcher::Attr result(parentInode_->getMount()->getMountPoint());
   result.st = data->setAttr(attr, to_set);
   result.st.st_ino = getNodeId();
+
+  parentInode_->getMount()->getJournal().wlock()->addDelta(
+      std::make_unique<JournalDelta>(JournalDelta{path}));
+
   return result;
 }
 

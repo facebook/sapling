@@ -15,6 +15,7 @@
 #include "TreeInodeDirHandle.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileData.h"
+#include "eden/fs/journal/JournalDelta.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/store/ObjectStore.h"
@@ -283,6 +284,9 @@ TreeInode::create(PathComponentPiece name, mode_t mode, int flags) {
     this->getOverlay()->saveOverlayDir(myname, &contents);
   });
 
+  getMount()->getJournal().wlock()->addDelta(
+      std::make_unique<JournalDelta>(JournalDelta{targetName}));
+
   // Now that we have the file handle, let's look up the attributes.
   auto getattrResult = handle->getattr();
   return getattrResult.then(
@@ -345,6 +349,9 @@ folly::Future<fuse_entry_param> TreeInode::mkdir(
     overlay->saveOverlayDir(targetName, &emptyDir);
   });
 
+  getMount()->getJournal().wlock()->addDelta(
+      std::make_unique<JournalDelta>(JournalDelta{targetName}));
+
   // Look up the inode for this new dir and return its entry info.
   return getMount()->getMountPoint()->getDispatcher()->lookup(
       getNodeId(), name);
@@ -398,6 +405,9 @@ folly::Future<folly::Unit> TreeInode::unlink(PathComponentPiece name) {
     contents.entries.erase(entIter);
     overlay->saveOverlayDir(myname, &contents);
   });
+
+  getMount()->getJournal().wlock()->addDelta(
+      std::make_unique<JournalDelta>(JournalDelta{targetName}));
 
   return folly::Unit{};
 }
@@ -514,6 +524,9 @@ folly::Future<folly::Unit> TreeInode::rmdir(PathComponentPiece name) {
     overlay->saveOverlayDir(myname, &contents);
     overlay->removeOverlayDir(targetName);
   });
+
+  getMount()->getJournal().wlock()->addDelta(
+      std::make_unique<JournalDelta>(JournalDelta{targetName}));
 
   return folly::Unit{};
 }
@@ -649,6 +662,8 @@ folly::Future<folly::Unit> TreeInode::rename(
     }
   }
 
+  getMount()->getJournal().wlock()->addDelta(
+      std::make_unique<JournalDelta>(JournalDelta{sourceName, targetName}));
   return folly::Unit{};
 }
 

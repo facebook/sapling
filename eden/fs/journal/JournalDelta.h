@@ -19,6 +19,9 @@ namespace eden {
 
 class JournalDelta {
  public:
+  JournalDelta() = default;
+  JournalDelta(std::initializer_list<RelativePath> overlayFileNames);
+
   /** the prior delta and its chain */
   std::shared_ptr<const JournalDelta> previous;
   /** The current sequence range.

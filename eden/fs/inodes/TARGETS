@@ -15,6 +15,7 @@ cpp_library(
     '@/folly:folly',
     '@/eden/fs/config:config',
     '@/eden/fs/model:model',
+    '@/eden/fs/journal:journal',
     '@/eden/fs/store:store',
     '@/eden/fuse:fusell',
     ':serialization-cpp2',

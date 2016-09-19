@@ -12,6 +12,9 @@
 namespace facebook {
 namespace eden {
 
+JournalDelta::JournalDelta(std::initializer_list<RelativePath> overlayFileNames)
+    : changedFilesInOverlay(overlayFileNames) {}
+
 std::unique_ptr<JournalDelta> JournalDelta::merge(
     Journal::SequenceNumber limitSequence,
     bool pruneAfterLimit) const {
