@@ -1,6 +1,6 @@
 import os, shutil
 import basestore, shallowutil
-from mercurial import error, mdiff
+from mercurial import error, mdiff, util
 from mercurial.i18n import _
 from mercurial.node import hex, nullid
 
