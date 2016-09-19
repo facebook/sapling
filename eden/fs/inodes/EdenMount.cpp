@@ -23,6 +23,22 @@ using std::vector;
 namespace facebook {
 namespace eden {
 
+// We compute this when the process is initialized, but stash a copy
+// in each EdenMount.  We may in the future manage to propagate enough
+// state across upgrades or restarts that we can preserve this, but
+// as implemented today, a process restart will invalidate any cached
+// mountGeneration that a client may be holding on to.
+// We take the bottom 16-bits of the pid and 32-bits of the current
+// time and shift them up, leaving 16 bits for a mount point generation
+// number.
+static const uint64_t globalProcessGeneration =
+    (uint64_t(getpid()) << 48) | (uint64_t(time(nullptr)) << 16);
+
+// Each time we create an EdenMount we bump this up and OR it together
+// with the globalProcessGeneration to come up with a generation number
+// for a given mount instance.
+static std::atomic<uint16_t> mountGeneration{0};
+
 EdenMount::EdenMount(
     shared_ptr<fusell::MountPoint> mountPoint,
     unique_ptr<ObjectStore> objectStore,
@@ -31,7 +47,8 @@ EdenMount::EdenMount(
     : mountPoint_(std::move(mountPoint)),
       objectStore_(std::move(objectStore)),
       overlay_(std::move(overlay)),
-      clientConfig_(std::move(clientConfig)) {
+      clientConfig_(std::move(clientConfig)),
+      mountGeneration_(globalProcessGeneration | ++mountGeneration) {
   CHECK_NOTNULL(mountPoint_.get());
   CHECK_NOTNULL(objectStore_.get());
   CHECK_NOTNULL(overlay_.get());

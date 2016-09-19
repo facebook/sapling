@@ -231,6 +231,13 @@ void EdenServiceHandler::getMaterializedEntries(
   auto inodeDispatcher = edenMount->getMountPoint()->getDispatcher();
   auto rootInode = inodeDispatcher->getDirInode(FUSE_ROOT_ID);
 
+  auto latest = edenMount->getJournal().rlock()->getLatest();
+
+  out.currentPosition.mountGeneration = edenMount->getMountGeneration();
+  out.currentPosition.sequenceNumber = latest->toSequence;
+  out.currentPosition.snapshotHash =
+      StringPiece(latest->toHash.getBytes()).str();
+
   auto treeInode = std::dynamic_pointer_cast<TreeInode>(rootInode);
   if (treeInode) {
     getMaterializedEntriesRecursive(
@@ -306,6 +313,19 @@ void EdenServiceHandler::getBindMounts(
                          .stringPiece()
                          .str());
   }
+}
+
+void EdenServiceHandler::getCurrentJournalPosition(
+    JournalPosition& out,
+    std::unique_ptr<std::string> mountPoint) {
+  auto edenMount = server_->getMount(*mountPoint);
+  auto inodeDispatcher = edenMount->getMountPoint()->getDispatcher();
+
+  auto latest = edenMount->getJournal().rlock()->getLatest();
+
+  out.mountGeneration = edenMount->getMountGeneration();
+  out.sequenceNumber = latest->toSequence;
+  out.snapshotHash = StringPiece(latest->toHash.getBytes()).str();
 }
 
 void EdenServiceHandler::shutdown() {

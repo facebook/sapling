@@ -38,12 +38,29 @@ class MaterializedQueryTest:
         items = self.client.getMaterializedEntries(self.mount)
         self.assertEqual({}, items.fileInfo)
 
+        pos = self.client.getCurrentJournalPosition(self.mount)
+        self.assertEqual(1, pos.sequenceNumber)
+        self.assertNotEqual(0, pos.mountGeneration)
+
     def test_addFile(self):
+        pos = self.client.getCurrentJournalPosition(self.mount)
+        self.assertEqual(1, pos.sequenceNumber)
+
         name = os.path.join(self.mount, 'overlaid')
         with open(name, 'w+') as f:
+            pos = self.client.getCurrentJournalPosition(self.mount)
+            self.assertEqual(2, pos.sequenceNumber,
+                             msg='creating a file bumps the journal')
+
             f.write('NAME!\n')
 
+        pos = self.client.getCurrentJournalPosition(self.mount)
+        self.assertEqual(3, pos.sequenceNumber, msg='writing bumps the journal')
+
         info = self.client.getMaterializedEntries(self.mount)
+        self.assertEqual(pos, info.currentPosition,
+                         msg='consistent with getCurrentJournalPosition')
+
         items = info.fileInfo
         self.assertEqual(2, len(items))
 
@@ -55,9 +72,18 @@ class MaterializedQueryTest:
 
         name = os.path.join(self.mount, 'adir', 'file')
         with open(name, 'a') as f:
+            pos = self.client.getCurrentJournalPosition(self.mount)
+            self.assertEqual(3, pos.sequenceNumber,
+                             msg='journal still in same place for append')
             f.write('more stuff on the end\n')
 
+        pos = self.client.getCurrentJournalPosition(self.mount)
+        self.assertEqual(4, pos.sequenceNumber,
+                         msg='appending bumps the journal')
+
         info = self.client.getMaterializedEntries(self.mount)
+        self.assertEqual(pos, info.currentPosition,
+                         msg='consistent with getCurrentJournalPosition')
         items = info.fileInfo
         self.assertEqual(4, len(items))
 

@@ -85,6 +85,10 @@ class EdenMount {
     return journal_;
   }
 
+  uint64_t getMountGeneration() const {
+    return mountGeneration_;
+  }
+
  private:
   // Forbidden copy constructor and assignment operator
   EdenMount(EdenMount const&) = delete;
@@ -101,6 +105,12 @@ class EdenMount {
   const std::unique_ptr<const ClientConfig> clientConfig_;
 
   folly::Synchronized<Journal> journal_;
+
+  /*
+   * A number to uniquely identify this particular incarnation of this mount.
+   * We use bits from the process id and the time at which we were mounted.
+   */
+  const uint64_t mountGeneration_;
 };
 }
 }

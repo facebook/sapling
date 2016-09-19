@@ -54,12 +54,12 @@ union FileInformationOrError {
 
 /** reference a point in time in the journal.
  * This can be used to reason about a point in time in a given mount point.
- * The processGeneration value is opaque to the client.
+ * The mountGeneration value is opaque to the client.
  */
 struct JournalPosition {
   /** An opaque but unique number within the scope of a given mount point.
    * This is used to determine when sequenceNumber has been invalidated. */
-  1: i64 processGeneration
+  1: i64 mountGeneration
 
   /** Monotonically incrementing number
    * Each journalled change causes this number to increment. */
@@ -134,8 +134,8 @@ service EdenService extends fb303.FacebookService {
   JournalPosition getCurrentJournalPosition(1: string mountPoint)
 
   /** Returns the set of files (and dirs) that changed since a prior point.
-   * If fromPosition.processGeneration is mismatched with the current
-   * processGeneration, throws an EdenError with errorCode = ERANGE.
+   * If fromPosition.mountGeneration is mismatched with the current
+   * mountGeneration, throws an EdenError with errorCode = ERANGE.
    * This indicates that eden cannot compute the delta for the requested
    * range.  The client will need to recompute a new baseline using
    * other available functions in EdenService.
