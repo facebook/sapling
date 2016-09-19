@@ -143,6 +143,7 @@ service EdenService extends fb303.FacebookService {
   FileDelta getFilesChangedSince(
     1: string mountPoint,
     2: JournalPosition fromPosition)
+      throws (1: EdenError ex)
 
   /** Returns a subset of the stat() information for a list of paths.
    * The returned list of information corresponds to the input list of

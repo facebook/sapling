@@ -7,10 +7,11 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
+import errno
 import os
 import stat
 from .lib import testcase
-
+from facebook.eden import EdenService
 
 @testcase.eden_repo_test
 class MaterializedQueryTest:
@@ -42,9 +43,26 @@ class MaterializedQueryTest:
         self.assertEqual(1, pos.sequenceNumber)
         self.assertNotEqual(0, pos.mountGeneration)
 
-    def test_addFile(self):
+        changed = self.client.getFilesChangedSince(self.mount, pos)
+        self.assertEqual(0, len(changed.paths))
+        self.assertEqual(pos, changed.fromPosition)
+        self.assertEqual(pos, changed.toPosition)
+
+    def test_invalidProcessGeneration(self):
+        # Get a candidate position
         pos = self.client.getCurrentJournalPosition(self.mount)
-        self.assertEqual(1, pos.sequenceNumber)
+
+        # poke the generation to a value that will never manifest in practice
+        pos.mountGeneration = 0
+
+        with self.assertRaises(EdenService.EdenError) as context:
+            self.client.getFilesChangedSince(self.mount, pos)
+        self.assertEqual(errno.ERANGE, context.exception.errorCode,
+                         msg='Must return ERANGE')
+
+    def test_addFile(self):
+        initial_pos = self.client.getCurrentJournalPosition(self.mount)
+        self.assertEqual(1, initial_pos.sequenceNumber)
 
         name = os.path.join(self.mount, 'overlaid')
         with open(name, 'w+') as f:
@@ -52,13 +70,25 @@ class MaterializedQueryTest:
             self.assertEqual(2, pos.sequenceNumber,
                              msg='creating a file bumps the journal')
 
+            changed = self.client.getFilesChangedSince(self.mount, initial_pos)
+            self.assertEqual(['overlaid'], changed.paths)
+            self.assertEqual(initial_pos.sequenceNumber + 1,
+                             changed.fromPosition.sequenceNumber,
+                             msg='changes start AFTER initial_pos')
+
             f.write('NAME!\n')
 
-        pos = self.client.getCurrentJournalPosition(self.mount)
-        self.assertEqual(3, pos.sequenceNumber, msg='writing bumps the journal')
+        pos_after_overlaid = self.client.getCurrentJournalPosition(self.mount)
+        self.assertEqual(3, pos_after_overlaid.sequenceNumber,
+                         msg='writing bumps the journal')
+        changed = self.client.getFilesChangedSince(self.mount, initial_pos)
+        self.assertEqual(['overlaid'], changed.paths)
+        self.assertEqual(initial_pos.sequenceNumber + 1,
+                         changed.fromPosition.sequenceNumber,
+                         msg='changes start AFTER initial_pos')
 
         info = self.client.getMaterializedEntries(self.mount)
-        self.assertEqual(pos, info.currentPosition,
+        self.assertEqual(pos_after_overlaid, info.currentPosition,
                          msg='consistent with getCurrentJournalPosition')
 
         items = info.fileInfo
@@ -80,6 +110,13 @@ class MaterializedQueryTest:
         pos = self.client.getCurrentJournalPosition(self.mount)
         self.assertEqual(4, pos.sequenceNumber,
                          msg='appending bumps the journal')
+
+        changed = self.client.getFilesChangedSince(
+            self.mount, pos_after_overlaid)
+        self.assertEqual(['adir/file'], changed.paths)
+        self.assertEqual(pos_after_overlaid.sequenceNumber + 1,
+                         changed.fromPosition.sequenceNumber,
+                         msg='changes start AFTER pos_after_overlaid')
 
         info = self.client.getMaterializedEntries(self.mount)
         self.assertEqual(pos, info.currentPosition,

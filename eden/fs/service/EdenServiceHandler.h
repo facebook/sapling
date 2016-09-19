@@ -56,6 +56,11 @@ class EdenServiceHandler : virtual public EdenServiceSvIf,
       JournalPosition& out,
       std::unique_ptr<std::string> mountPoint) override;
 
+  void getFilesChangedSince(
+      FileDelta& out,
+      std::unique_ptr<std::string> mountPoint,
+      std::unique_ptr<JournalPosition> fromPosition) override;
+
   /**
    * When this Thrift handler is notified to shutdown, it notifies the
    * EdenServer to shut down, as well.

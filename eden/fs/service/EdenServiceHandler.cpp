@@ -12,6 +12,7 @@
 #include <boost/polymorphic_cast.hpp>
 #include <folly/FileUtil.h>
 #include <folly/String.h>
+#include <unordered_set>
 #include "EdenServer.h"
 #include "eden/fs/config/ClientConfig.h"
 #include "eden/fs/inodes/EdenMount.h"
@@ -326,6 +327,55 @@ void EdenServiceHandler::getCurrentJournalPosition(
   out.mountGeneration = edenMount->getMountGeneration();
   out.sequenceNumber = latest->toSequence;
   out.snapshotHash = StringPiece(latest->toHash.getBytes()).str();
+}
+
+void EdenServiceHandler::getFilesChangedSince(
+    FileDelta& out,
+    std::unique_ptr<std::string> mountPoint,
+    std::unique_ptr<JournalPosition> fromPosition) {
+  auto edenMount = server_->getMount(*mountPoint);
+  auto inodeDispatcher = edenMount->getMountPoint()->getDispatcher();
+
+  auto delta = edenMount->getJournal().rlock()->getLatest();
+
+  if (fromPosition->mountGeneration != edenMount->getMountGeneration()) {
+    throw EdenError(
+        apache::thrift::FragileConstructor(),
+        "fromPosition.mountGeneration does not match the current "
+        "mountGeneration.  "
+        "You need to compute a new basis for delta queries.",
+        ERANGE);
+  }
+
+  std::unordered_set<RelativePath> changedFiles;
+
+  out.toPosition.sequenceNumber = delta->toSequence;
+  out.toPosition.snapshotHash = StringPiece(delta->toHash.getBytes()).str();
+  out.toPosition.mountGeneration = edenMount->getMountGeneration();
+
+  out.fromPosition = out.toPosition;
+
+  while (delta) {
+    if (delta->toSequence <= fromPosition->sequenceNumber) {
+      // We've reached the end of the interesting section
+      break;
+    }
+
+    changedFiles.insert(
+        delta->changedFilesInOverlay.begin(),
+        delta->changedFilesInOverlay.end());
+
+    out.fromPosition.sequenceNumber = delta->fromSequence;
+    out.fromPosition.snapshotHash =
+        StringPiece(delta->fromHash.getBytes()).str();
+    out.fromPosition.mountGeneration = edenMount->getMountGeneration();
+
+    delta = delta->previous;
+  }
+
+  for (auto& path : changedFiles) {
+    out.paths.emplace_back(path.stringPiece().str());
+  }
 }
 
 void EdenServiceHandler::shutdown() {
