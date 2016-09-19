@@ -132,12 +132,10 @@ void treemanifest_diffrecurse(
         selfentry->appendtopath(path);
 
         if (selfbinnode != otherbinnode) {
-          Manifest *selfchildmanifest = fetcher.get(
-              path.c_str(), path.size(),
-              selfbinnode);
-          Manifest *otherchildmanifest = fetcher.get(
-              path.c_str(), path.size(),
-              otherbinnode);
+          Manifest *selfchildmanifest = selfentry->get_manifest(fetcher,
+              path.c_str(), path.size());
+          Manifest *otherchildmanifest = otherentry->get_manifest(fetcher,
+              path.c_str(), path.size());
 
           treemanifest_diffrecurse(
               selfchildmanifest,
@@ -155,9 +153,8 @@ void treemanifest_diffrecurse(
         entry.addtodiff(diff, path);
 
         path.append(1, '/');
-        Manifest *selfchildmanifest = fetcher.get(
-            path.c_str(), path.size(),
-            selfbinnode);
+        Manifest *selfchildmanifest = selfentry->get_manifest(fetcher,
+            path.c_str(), path.size());
         treemanifest_diffrecurse(selfchildmanifest, NULL, path, diff, fetcher);
 
         selfiter.next();
@@ -169,9 +166,8 @@ void treemanifest_diffrecurse(
         entry.addtodiff(diff, path);
 
         path.append(1, '/');
-        Manifest *otherchildmanifest = fetcher.get(
-            path.c_str(), path.size(),
-            otherbinnode
+        Manifest *otherchildmanifest = otherentry->get_manifest(fetcher,
+            path.c_str(), path.size()
         );
         treemanifest_diffrecurse(NULL, otherchildmanifest, path, diff, fetcher);
 
