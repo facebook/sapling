@@ -57,6 +57,13 @@ struct FindContext {
 
   // any extra data the callback needs to complete the operation.
   void *extras;
+
+  FindContext() :
+    invalidate_checksums(false),
+    num_leaf_node_changes(0),
+    mode(BASIC_WALK),
+    extras(NULL) {
+  }
 };
 
 class PathIterator {
