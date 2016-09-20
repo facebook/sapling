@@ -93,7 +93,7 @@ Abort: old will still be an head because it's public.
   pushing to $TESTTMP/remote (glob)
   searching for changes
   abort: push creates new remote head 71e3228bffe1!
-  (merge or see "hg help push" for details about pushing new heads)
+  (merge or see 'hg help push' for details about pushing new heads)
   [255]
 
 old head is now public (public remote version)
@@ -153,7 +153,7 @@ Push should abort on new head
   pushing to $TESTTMP/remote (glob)
   searching for changes
   abort: push creates new remote head d7d41ccbd4de!
-  (merge or see "hg help push" for details about pushing new heads)
+  (merge or see 'hg help push' for details about pushing new heads)
   [255]
 
 

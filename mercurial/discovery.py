@@ -401,7 +401,7 @@ def checkheads(pushop):
                     errormsg = (_("push creates new branch '%s' "
                                   "with multiple heads") % (branch))
                     hint = _("merge or"
-                             " see \"hg help push\" for details about"
+                             " see 'hg help push' for details about"
                              " pushing new heads")
         elif len(newhs) > len(oldhs):
             # remove bookmarked or existing remote heads from the new heads list
@@ -420,11 +420,11 @@ def checkheads(pushop):
                                  ) % short(dhs[0])
                 if unsyncedheads:
                     hint = _("pull and merge or"
-                             " see \"hg help push\" for details about"
+                             " see 'hg help push' for details about"
                              " pushing new heads")
                 else:
                     hint = _("merge or"
-                             " see \"hg help push\" for details about"
+                             " see 'hg help push' for details about"
                              " pushing new heads")
             if branch is None:
                 repo.ui.note(_("new remote heads:\n"))
