@@ -102,7 +102,7 @@ Normal range
 Negative range
 
   $ hg log -d "--2"
-  abort: -2 must be nonnegative (see "hg help dates")
+  abort: -2 must be nonnegative (see 'hg help dates')
   [255]
 
 Whitespace only
