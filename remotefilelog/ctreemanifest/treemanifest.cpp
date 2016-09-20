@@ -433,3 +433,217 @@ bool treemanifest::remove(
 treemanifest *treemanifest::copy() {
   return new treemanifest(this->fetcher, &this->root);
 }
+NewTreeIterator::NewTreeIterator(Manifest *mainRoot,
+                const std::vector<char*> &cmpNodes,
+                const std::vector<Manifest*> &cmpRoots,
+                const ManifestFetcher &fetcher) :
+    mainRoot(mainRoot),
+    cmpNodes(cmpNodes),
+    fetcher(fetcher) {
+  this->mainStack.push_back(stackframe(mainRoot, false));
+
+  for (size_t i = 0; i < cmpRoots.size(); i++) {
+    Manifest *cmpRoot = cmpRoots[i];
+
+    std::vector<stackframe> stack;
+    stack.push_back(stackframe(cmpRoot, false));
+    this->cmpStacks.push_back(stack);
+  }
+}
+
+bool NewTreeIterator::popResult(std::string **path, Manifest **result, std::string **node) {
+  stackframe &mainFrame = this->mainStack.back();
+  Manifest *mainManifest = mainFrame.manifest;
+  std::string mainSerialized;
+
+  // When we loop over the cmpStacks, record the cmp nodes that are parents
+  // of the level we're about to return.
+  char parentNodes[2][BIN_NODE_SIZE];
+  memcpy(parentNodes[0], NULLID, BIN_NODE_SIZE);
+  memcpy(parentNodes[1], NULLID, BIN_NODE_SIZE);
+
+  bool alreadyExists = false;
+
+  // Record the nodes of all cmp manifest equivalents
+  for (size_t i = 0; i < cmpStacks.size(); i++) {
+    // If a cmpstack is at the same level as the main stack, it represents
+    // the same diretory and should be inspected.
+    if (this->mainStack.size() == cmpStacks[i].size()) {
+      std::vector<stackframe> &cmpStack = cmpStacks[i];
+      Manifest *cmpManifest = cmpStack.back().manifest;
+
+      if (!alreadyExists) {
+        std::string cmpSerialized;
+        cmpManifest->serialize(cmpSerialized);
+        mainManifest->serialize(mainSerialized);
+
+        // If the main manifest content is identical to a cmp content, we
+        // shouldn't return it. Note: We already do this check when pushing
+        // directories onto the stack, but for in-memory manifests we don't
+        // know the node until after we've traversed the children, so we can't
+        // verify their content until now.
+        if (cmpSerialized.compare(mainSerialized) == 0) {
+          alreadyExists = true;
+        }
+      }
+
+      // Record the cmp parent nodes so later we can compute the main node
+      if (cmpStack.size() > 1) {
+        stackframe &priorCmpFrame = cmpStack[cmpStack.size() - 2];
+        ManifestEntry *priorCmpEntry = priorCmpFrame.currentvalue();
+        memcpy(parentNodes[i], binfromhex(priorCmpEntry->node).c_str(), BIN_NODE_SIZE);
+      } else {
+        // Use the original passed in parent nodes
+        memcpy(parentNodes[i], binfromhex(this->cmpNodes[i]).c_str(), BIN_NODE_SIZE);
+      }
+    }
+  }
+
+  // We've finished processing this frame, so pop all the stacks
+  this->mainStack.pop_back();
+  for (size_t i = 0; i < cmpStacks.size(); i++) {
+    if (this->mainStack.size() < cmpStacks[i].size()) {
+      cmpStacks[i].pop_back();
+    }
+  }
+
+  // If the current manifest has the same contents as a cmp manifest,
+  // just give up now. Unless we're the root node (because the root node
+  // will always change based on the parent nodes).
+  if (alreadyExists && this->mainStack.size() > 1) {
+    assert(this->node != NULL);
+    return false;
+  }
+
+  // Update the node on the manifest entry
+  char tempnode[BIN_NODE_SIZE];
+  mainManifest->computeNode(parentNodes[0], parentNodes[1], tempnode);
+  this->node.assign(tempnode, 20);
+  if (mainStack.size() > 0) {
+    // Peek back up the stack so we can put the right node on the
+    // ManifestEntry.
+    stackframe &priorFrame = mainStack[mainStack.size() - 1];
+    ManifestEntry *priorEntry = priorFrame.currentvalue();
+
+    std::string hexnode;
+    hexfrombin(tempnode, hexnode);
+    priorEntry->update(hexnode.c_str(), MANIFEST_DIRECTORY_FLAGPTR);
+  }
+
+  *path = &this->path;
+  *result = mainManifest;
+  *node = &this->node;
+  return true;
+}
+
+bool NewTreeIterator::processDirectory(ManifestEntry *mainEntry) {
+  // mainEntry is a new entry we need to compare against each cmpEntry, and
+  // then push if it is different from all of them.
+
+  // First move all the cmp iterators forward to the same name as mainEntry.
+  bool alreadyExists = false;
+  std::vector<std::vector<stackframe>*> requirePush;
+  for (size_t i = 0; i < cmpStacks.size(); i++) {
+    std::vector<stackframe> &cmpStack = cmpStacks[i];
+
+    // If the cmpStack is at a different level, it is not at the same
+    // location as main, so don't bother searching it.
+    if (cmpStack.size() < mainStack.size()) {
+      continue;
+    }
+
+    stackframe &cmpFrame = cmpStack.back();
+
+    // Move cmp iterator forward until we match or pass the current
+    // mainEntry filename.
+    while (!cmpFrame.isfinished()) {
+      ManifestEntry *cmpEntry = cmpFrame.currentvalue();
+      int cmp = ManifestEntry::compareName(cmpEntry, mainEntry);
+      if (cmp >= 0) {
+        // If the directory names match...
+        if (cmp == 0) {
+          // And the nodes match...
+          if (!alreadyExists &&
+              (mainEntry->node && strncmp(mainEntry->node, cmpEntry->node, 40) == 0)) {
+            // Skip this entry
+            alreadyExists = true;
+          }
+          // Remember this stack so we can push to it later
+          requirePush.push_back(&cmpStack);
+        }
+        break;
+      }
+      cmpFrame.next();
+    }
+  }
+
+  // If mainEntry matched any of the cmpEntries, we should skip mainEntry.
+  if (alreadyExists) {
+    assert(mainEntry->node != NULL);
+    return false;
+  }
+
+  // Otherwise, push to the main stack
+  mainEntry->appendtopath(this->path);
+  Manifest *mainManifest = mainEntry->get_manifest(this->fetcher,
+      this->path.c_str(), this->path.size());
+  this->mainStack.push_back(stackframe(mainManifest, false));
+
+  // And push all cmp stacks we remembered that have the same directory.
+  for (size_t i = 0; i < requirePush.size(); i++) {
+    std::vector<stackframe> *cmpStack = requirePush[i];
+    ManifestEntry *cmpEntry = cmpStack->back().currentvalue();
+    Manifest *cmpManifest = cmpEntry->get_manifest(this->fetcher,
+        this->path.c_str(), this->path.size());
+    cmpStack->push_back(stackframe(cmpManifest, false));
+  }
+
+  return true;
+}
+
+bool NewTreeIterator::next(std::string **path, Manifest **result, std::string **node) {
+  // Pop the last returned directory off the path
+  size_t slashoffset = this->path.find_last_of('/', this->path.size() - 2);
+  if (slashoffset == std::string::npos) {
+    this->path.erase();
+  } else {
+    this->path.erase(slashoffset + 1);
+  }
+
+  while (true) {
+    if (this->mainStack.empty()) {
+      return false;
+    }
+
+    stackframe &mainFrame = this->mainStack.back();
+
+    // If we've reached the end of this manifest, we've processed all the
+    // children, so we can now return it.
+    if (mainFrame.isfinished()) {
+      // This can return false if this manifest ended up being equivalent to
+      // a cmp parent manifest, which means we should skip it.
+      if (this->popResult(path, result, node)) {
+        if (this->mainStack.size() > 0) {
+          this->mainStack.back().next();
+        }
+        return true;
+      }
+      if (this->mainStack.size() > 0) {
+        this->mainStack.back().next();
+      }
+    } else {
+      // Use currentvalue instead of next so that the stack of frames match the
+      // actual current filepath.
+      ManifestEntry *mainEntry = mainFrame.currentvalue();
+      if (mainEntry->isdirectory()) {
+        // If we're at a directory, process it, either by pushing it on the
+        // stack, or by skipping it if it already matches a cmp parent.
+        if (!this->processDirectory(mainEntry)) {
+          mainFrame.next();
+        }
+      } else {
+        mainFrame.next();
+      }
+    }
+  }
+}

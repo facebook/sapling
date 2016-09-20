@@ -688,6 +688,64 @@ static PyObject *treemanifest_walk(py_treemanifest *self, PyObject *args) {
       matcher);
 }
 
+void writestore(Manifest *mainManifest, const std::vector<char*> &cmpNodes,
+                const std::vector<Manifest*> &cmpManifests,
+                PythonObj &pack, const ManifestFetcher &fetcher) {
+  NewTreeIterator iterator(mainManifest, cmpNodes, cmpManifests, fetcher);
+
+  std::string *path = NULL;
+  Manifest *result = NULL;
+  std::string *node = NULL;
+  std::string raw;
+  while (iterator.next(&path, &result, &node)) {
+    // TODO: find an appropriate delta base and compute the delta
+    result->serialize(raw);
+    PythonObj args = Py_BuildValue("(s#s#s#s#)",
+                                   path->c_str(), (Py_ssize_t)path->size(),
+                                   node->c_str(), (Py_ssize_t)BIN_NODE_SIZE,
+                                   NULLID, (Py_ssize_t)BIN_NODE_SIZE,
+                                   raw.c_str(), (Py_ssize_t)raw.size());
+
+    pack.callmethod("add", args);
+  }
+}
+
+static PyObject *treemanifest_write(py_treemanifest *self, PyObject *args) {
+  PyObject* packObj;
+  py_treemanifest* p1tree = NULL;
+
+  if (!PyArg_ParseTuple(args, "O|O", &packObj, &p1tree)) {
+    return NULL;
+  }
+
+  // ParseTuple doesn't increment the ref, but the PythonObj will decrement on
+  // destruct, so let's increment now.
+  Py_INCREF(packObj);
+  PythonObj pack = packObj;
+
+  try {
+    std::vector<char*> cmpNodes;
+    std::vector<Manifest*> cmpManifests;
+    if (p1tree) {
+      assert(p1tree->tm.root.node);
+      cmpNodes.push_back(p1tree->tm.root.node);
+      cmpManifests.push_back(p1tree->tm.getRootManifest());
+    }
+
+    writestore(self->tm.getRootManifest(), cmpNodes, cmpManifests, pack, self->tm.fetcher);
+
+    char tempnode[20];
+    self->tm.getRootManifest()->computeNode(p1tree ? binfromhex(p1tree->tm.root.node).c_str() : NULLID, NULLID, tempnode);
+    std::string hexnode;
+    hexfrombin(tempnode, hexnode);
+    self->tm.root.update(hexnode.c_str(), MANIFEST_DIRECTORY_FLAGPTR);
+
+    return PyString_FromStringAndSize(tempnode, BIN_NODE_SIZE);
+  } catch (const pyexception &ex) {
+    return NULL;
+  }
+}
+
 // ====  treemanifest ctype declaration ====
 
 static PyMethodDef treemanifest_methods[] = {
@@ -707,6 +765,8 @@ static PyMethodDef treemanifest_methods[] = {
       "sets the node and flag for the given filepath\n"},
   {"walk", (PyCFunction)treemanifest_walk, METH_VARARGS,
     "returns a iterator for walking the manifest"},
+  {"write", (PyCFunction)treemanifest_write, METH_VARARGS,
+    "writes any pending tree changes to the given store"},
   {NULL, NULL}
 };
 

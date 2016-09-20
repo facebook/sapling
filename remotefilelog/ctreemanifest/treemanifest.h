@@ -233,6 +233,46 @@ struct stackframe {
 };
 
 /**
+ * An iterator that takes a main treemanifest and a vector of comparison
+ * treemanifests and iterates over the Manifests that only exist in the main
+ * treemanifest.
+ */
+class NewTreeIterator {
+  private:
+    Manifest *mainRoot;
+    std::vector<stackframe> mainStack;
+    std::vector<char*> cmpNodes;
+    std::vector<std::vector<stackframe> > cmpStacks;
+    std::string path;
+    std::string node;
+    ManifestFetcher fetcher;
+  public:
+    NewTreeIterator(Manifest *mainRoot,
+                    const std::vector<char*> &cmpNodes,
+                    const std::vector<Manifest*> &cmpRoots,
+                    const ManifestFetcher &fetcher);
+
+    /**
+     * Outputs the next new Manifest and its corresponding path and node.
+     *
+     * Return true if a manifest was returned, or false if we've reached the
+     * end.
+     */
+    bool next(std::string **path, Manifest **result, std::string **node);
+  private:
+    /**
+     * Pops the current Manifest, populating the output values and returning true
+     * if the current Manifest is different from all comparison manifests.
+     */
+    bool popResult(std::string **path, Manifest **result, std::string **node);
+
+    /** Pushes the given Manifest onto the stacks. If the given Manifest equals
+     * one of the comparison Manifests, the function does nothing.
+     */
+    bool processDirectory(ManifestEntry *mainEntry);
+};
+
+/**
  * A helper struct representing the state of an iterator recursing over a tree.
  */
 struct fileiter {
