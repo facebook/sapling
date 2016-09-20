@@ -34,7 +34,7 @@ Correct the conflict without marking the file as resolved
 
   $ echo "ABCD" > A
   $ hg commit -m "Merged"
-  abort: unresolved merge conflicts (see "hg help resolve")
+  abort: unresolved merge conflicts (see 'hg help resolve')
   [255]
 
 Mark the conflict as resolved and commit
@@ -56,7 +56,7 @@ Test that if a file is removed but not marked resolved, the commit still fails
   [1]
   $ hg rm --force A
   $ hg commit -m merged
-  abort: unresolved merge conflicts (see "hg help resolve")
+  abort: unresolved merge conflicts (see 'hg help resolve')
   [255]
 
   $ hg resolve -ma
