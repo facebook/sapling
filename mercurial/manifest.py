@@ -946,6 +946,63 @@ class manifestrevlog(revlog.revlog):
                                                     self._dirlogcache)
         return self._dirlogcache[dir]
 
+    def add(self, m, transaction, link, p1, p2, added, removed):
+        if (p1 in self.fulltextcache and util.safehasattr(m, 'fastdelta')
+            and not self._usemanifestv2):
+            # If our first parent is in the manifest cache, we can
+            # compute a delta here using properties we know about the
+            # manifest up-front, which may save time later for the
+            # revlog layer.
+
+            _checkforbidden(added)
+            # combine the changed lists into one sorted iterator
+            work = heapq.merge([(x, False) for x in added],
+                               [(x, True) for x in removed])
+
+            arraytext, deltatext = m.fastdelta(self.fulltextcache[p1], work)
+            cachedelta = self.rev(p1), deltatext
+            text = util.buffer(arraytext)
+            n = self.addrevision(text, transaction, link, p1, p2, cachedelta)
+        else:
+            # The first parent manifest isn't already loaded, so we'll
+            # just encode a fulltext of the manifest and pass that
+            # through to the revlog layer, and let it handle the delta
+            # process.
+            if self._treeondisk:
+                m1 = self.read(p1)
+                m2 = self.read(p2)
+                n = self._addtree(m, transaction, link, m1, m2)
+                arraytext = None
+            else:
+                text = m.text(self._usemanifestv2)
+                n = self.addrevision(text, transaction, link, p1, p2)
+                arraytext = array.array('c', text)
+
+        self.fulltextcache[n] = arraytext
+
+        return n
+
+    def _addtree(self, m, transaction, link, m1, m2):
+        # If the manifest is unchanged compared to one parent,
+        # don't write a new revision
+        if m.unmodifiedsince(m1) or m.unmodifiedsince(m2):
+            return m.node()
+        def writesubtree(subm, subp1, subp2):
+            sublog = self.dirlog(subm.dir())
+            sublog.add(subm, transaction, link, subp1, subp2, None, None)
+        m.writesubtrees(m1, m2, writesubtree)
+        text = m.dirtext(self._usemanifestv2)
+        # Double-check whether contents are unchanged to one parent
+        if text == m1.dirtext(self._usemanifestv2):
+            n = m1.node()
+        elif text == m2.dirtext(self._usemanifestv2):
+            n = m2.node()
+        else:
+            n = self.addrevision(text, transaction, link, m1.node(), m2.node())
+        # Save nodeid so parent manifest can calculate its nodeid
+        m.setnode(n)
+        return n
+
 class manifestlog(object):
     """A collection class representing the collection of manifest snapshots
     referenced by commits in the repository.
@@ -1232,64 +1289,6 @@ class manifest(manifestrevlog):
             return m.find(f)
         except KeyError:
             return None, None
-
-    def add(self, m, transaction, link, p1, p2, added, removed):
-        if (p1 in self.fulltextcache and util.safehasattr(m, 'fastdelta')
-            and not self._usemanifestv2):
-            # If our first parent is in the manifest cache, we can
-            # compute a delta here using properties we know about the
-            # manifest up-front, which may save time later for the
-            # revlog layer.
-
-            _checkforbidden(added)
-            # combine the changed lists into one sorted iterator
-            work = heapq.merge([(x, False) for x in added],
-                               [(x, True) for x in removed])
-
-            arraytext, deltatext = m.fastdelta(self.fulltextcache[p1], work)
-            cachedelta = self.rev(p1), deltatext
-            text = util.buffer(arraytext)
-            n = self.addrevision(text, transaction, link, p1, p2, cachedelta)
-        else:
-            # The first parent manifest isn't already loaded, so we'll
-            # just encode a fulltext of the manifest and pass that
-            # through to the revlog layer, and let it handle the delta
-            # process.
-            if self._treeondisk:
-                m1 = self.read(p1)
-                m2 = self.read(p2)
-                n = self._addtree(m, transaction, link, m1, m2)
-                arraytext = None
-            else:
-                text = m.text(self._usemanifestv2)
-                n = self.addrevision(text, transaction, link, p1, p2)
-                arraytext = array.array('c', text)
-
-        self._mancache[n] = m
-        self.fulltextcache[n] = arraytext
-
-        return n
-
-    def _addtree(self, m, transaction, link, m1, m2):
-        # If the manifest is unchanged compared to one parent,
-        # don't write a new revision
-        if m.unmodifiedsince(m1) or m.unmodifiedsince(m2):
-            return m.node()
-        def writesubtree(subm, subp1, subp2):
-            sublog = self.dirlog(subm.dir())
-            sublog.add(subm, transaction, link, subp1, subp2, None, None)
-        m.writesubtrees(m1, m2, writesubtree)
-        text = m.dirtext(self._usemanifestv2)
-        # Double-check whether contents are unchanged to one parent
-        if text == m1.dirtext(self._usemanifestv2):
-            n = m1.node()
-        elif text == m2.dirtext(self._usemanifestv2):
-            n = m2.node()
-        else:
-            n = self.addrevision(text, transaction, link, m1.node(), m2.node())
-        # Save nodeid so parent manifest can calculate its nodeid
-        m.setnode(n)
-        return n
 
     def clearcaches(self):
         super(manifest, self).clearcaches()
