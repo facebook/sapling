@@ -1383,8 +1383,8 @@ def bundle(ui, repo, fname, dest=None, **opts):
                 repo, bundletype, strict=False)
     except error.UnsupportedBundleSpecification as e:
         raise error.Abort(str(e),
-                          hint=_('see "hg help bundle" for supported '
-                                 'values for --type'))
+                          hint=_("see 'hg help bundle' for supported "
+                                 "values for --type"))
 
     # Packed bundles are a pseudo bundle format for now.
     if cgversion == 's1':
