@@ -1562,7 +1562,7 @@ class queue(object):
             if not repo[self.applied[-1].node].mutable():
                 raise error.Abort(
                     _("popping would remove a public revision"),
-                    hint=_('see "hg help phases" for details'))
+                    hint=_("see 'hg help phases' for details"))
 
             # we know there are no local changes, so we can make a simplified
             # form of hg.update.
@@ -1631,7 +1631,7 @@ class queue(object):
                 raise error.Abort(_("cannot qrefresh a revision with children"))
             if not repo[top].mutable():
                 raise error.Abort(_("cannot qrefresh public revision"),
-                                 hint=_('see "hg help phases" for details'))
+                                 hint=_("see 'hg help phases' for details"))
 
             cparents = repo.changelog.parents(top)
             patchparent = self.qparents(repo, top)
@@ -2117,7 +2117,7 @@ class queue(object):
                 for r in rev:
                     if not repo[r].mutable():
                         raise error.Abort(_('revision %d is not mutable') % r,
-                                         hint=_('see "hg help phases" '
+                                         hint=_("see 'hg help phases' "
                                                 'for details'))
                     p1, p2 = repo.changelog.parentrevs(r)
                     n = repo.changelog.node(r)
