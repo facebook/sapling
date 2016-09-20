@@ -45,6 +45,9 @@ class HgRepository(repobase.Repository):
     def get_head_hash(self):
         return self.hg('log', '-r.', '-T{node}')
 
+    def get_canonical_root(self):
+        return self.path
+
     def add_file(self, path):
         # add_file() may be called for files that are already tracked.
         # hg will print a warning, but this is fine.

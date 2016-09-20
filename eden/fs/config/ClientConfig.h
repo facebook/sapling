@@ -10,6 +10,7 @@
 #pragma once
 
 #include <boost/property_tree/ini_parser.hpp>
+#include <folly/Optional.h>
 #include <folly/dynamic.h>
 #include "eden/fs/model/Hash.h"
 #include "eden/utils/PathFuncs.h"
@@ -80,6 +81,12 @@ class ClientConfig {
     return repoSource_;
   }
 
+  /** Path to the directory where the scripts for the hooks are defined. */
+  AbsolutePathPiece getRepoHooks() const;
+
+  /** File that will be written once the clone for this client has succeeded. */
+  AbsolutePath getCloneSuccessPath() const;
+
  private:
   ClientConfig(
       AbsolutePathPiece clientDirectory,
@@ -91,6 +98,7 @@ class ClientConfig {
   std::vector<BindMount> bindMounts_;
   std::string repoType_;
   std::string repoSource_;
+  folly::Optional<AbsolutePath> repoHooks_;
 };
 }
 }

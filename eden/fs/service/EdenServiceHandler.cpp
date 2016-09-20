@@ -12,6 +12,7 @@
 #include <boost/polymorphic_cast.hpp>
 #include <folly/FileUtil.h>
 #include <folly/String.h>
+#include <folly/Subprocess.h>
 #include <unordered_set>
 #include "EdenServer.h"
 #include "eden/fs/config/ClientConfig.h"
@@ -50,10 +51,16 @@ void EdenServiceHandler::mountImpl(const MountInfo& info) {
   auto mountPoint =
       std::make_shared<fusell::MountPoint>(AbsolutePathPiece{info.mountPoint});
 
+  // Read some values before transferring the config.
+  auto repoSource = config->getRepoSource();
+  auto cloneSuccessPath = config->getCloneSuccessPath();
+  auto repoHooks = config->getRepoHooks();
+  auto repoType = config->getRepoType();
+
   auto overlayPath = config->getOverlayPath();
   auto overlay = std::make_shared<Overlay>(overlayPath);
   auto backingStore =
-      server_->getBackingStore(config->getRepoType(), config->getRepoSource());
+      server_->getBackingStore(repoType, config->getRepoSource());
   auto objectStore =
       make_unique<ObjectStore>(server_->getLocalStore(), backingStore);
   auto rootTree = objectStore->getTreeForCommit(snapshotID);
@@ -91,6 +98,37 @@ void EdenServiceHandler::mountImpl(const MountInfo& info) {
   // TODO(mbolin): Use the result of config.getBindMounts() to perform the
   // appropriate bind mounts for the client.
   server_->mount(std::move(edenMount));
+
+  bool isInitialMount = access(cloneSuccessPath.c_str(), F_OK) != 0;
+  if (isInitialMount) {
+    auto postCloneScript = repoHooks + RelativePathPiece("post-clone");
+
+    LOG(INFO) << "Running post-clone hook '" << postCloneScript << "' for "
+              << info.mountPoint;
+    try {
+      // TODO(mbolin): It would be preferable to pass the name of the repository
+      // as defined in ~/.edenrc so that the script can derive the repoType and
+      // repoSource from that. Then the hook would only take two args.
+      folly::Subprocess proc(
+          {postCloneScript.c_str(), repoType, info.mountPoint, repoSource},
+          folly::Subprocess::pipeStdin());
+      proc.closeParentFd(STDIN_FILENO);
+      proc.waitChecked();
+    } catch (const folly::SubprocessSpawnError& ex) {
+      // If this failed because postCloneScript does not exist, then ignore the
+      // error because we are tolerant of the case where /etc/eden/hooks does
+      // not exist, by design.
+      if (ex.errnoValue() != ENOENT) {
+        // TODO(13448173): If clone fails, then we should roll back the mount.
+        throw;
+      }
+    }
+    LOG(INFO) << "Finished post-clone hook '" << postCloneScript << "' for "
+              << info.mountPoint;
+  }
+
+  // The equivalent of `touch` to signal that clone completed successfully.
+  folly::writeFile(string(), cloneSuccessPath.c_str());
 }
 
 void EdenServiceHandler::mount(std::unique_ptr<MountInfo> info) {

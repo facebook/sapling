@@ -35,7 +35,7 @@ type = {repo_type}
 [bindmounts {repo_name}]
 buck-out = buck-out
 '''.format(repo_name=repo_name,
-             repo_path=self.repo.path,
+             repo_path=self.repo.get_canonical_root(),
              repo_type=self.repo.get_type()))
 
         tmp = os.path.join(self.tmp_dir, 'eden_mount')

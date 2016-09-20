@@ -87,8 +87,8 @@ def get_git_dir(path):
 
 
 def get_git_commit(git_dir):
-    cmd = ['git', '--git-dir', git_dir, 'rev-parse', 'HEAD']
-    out = subprocess.check_output(cmd)
+    cmd = ['git', 'rev-parse', 'HEAD']
+    out = subprocess.check_output(cmd, cwd=git_dir)
     return out.strip().decode('utf-8', errors='surrogateescape')
 
 

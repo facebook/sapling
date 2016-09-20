@@ -1,0 +1,7 @@
+python_binary(
+  name = 'post-clone',
+  main_module = 'eden/hooks/hg/post-clone',
+  srcs = [
+    'post-clone.py',
+  ],
+)

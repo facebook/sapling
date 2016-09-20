@@ -65,6 +65,9 @@ class GitRepository(repobase.Repository):
     def get_head_hash(self):
         return self.git('rev-parse', 'HEAD').rstrip()
 
+    def get_canonical_root(self):
+        return os.path.join(self.path, '.git')
+
     def add_file(self, path):
         self.git('add', path)
 

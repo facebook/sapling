@@ -27,12 +27,14 @@ const facebook::eden::RelativePathPiece kLocalConfig{"edenrc"};
 constexpr folly::StringPiece kBindMountsKey{"bindmounts "};
 constexpr folly::StringPiece kRepositoryKey{"repository "};
 constexpr folly::StringPiece kRepoNameKey{"repository.name"};
+constexpr folly::StringPiece kRepoHooksKey{"hooks"};
 constexpr folly::StringPiece kRepoTypeKey{"type"};
 constexpr folly::StringPiece kRepoSourceKey{"path"};
 
 // Files of interest in the client directory.
 const facebook::eden::RelativePathPiece kSnapshotFile{"SNAPSHOT"};
 const facebook::eden::RelativePathPiece kBindMountsDir{"bind-mounts"};
+const facebook::eden::RelativePathPiece kCloneSuccessFile{"clone-succeeded"};
 const facebook::eden::RelativePathPiece kOverlayDir{"local"};
 
 // File holding mapping of client directories.
@@ -64,6 +66,10 @@ Hash ClientConfig::getSnapshotID() const {
 
 AbsolutePath ClientConfig::getOverlayPath() const {
   return clientDirectory_ + kOverlayDir;
+}
+
+AbsolutePath ClientConfig::getCloneSuccessPath() const {
+  return clientDirectory_ + kCloneSuccessFile;
 }
 
 ClientConfig::ConfigData ClientConfig::loadConfigData(
@@ -141,6 +147,10 @@ std::unique_ptr<ClientConfig> ClientConfig::loadFromClientDirectory(
   // Load repository information
   config->repoType_ = repoData.get(kRepoTypeKey.toString(), "");
   config->repoSource_ = repoData.get(kRepoSourceKey.toString(), "");
+  auto hooksPath = repoData.get(kRepoHooksKey.toString(), "");
+  if (hooksPath != "") {
+    config->repoHooks_ = AbsolutePath{hooksPath};
+  }
 
   return config;
 }
@@ -159,6 +169,11 @@ folly::dynamic ClientConfig::loadClientDirectoryMap(AbsolutePathPiece edenDir) {
   folly::json::serialization_opts options;
   options.allow_trailing_comma = true;
   return folly::parseJson(jsonWithoutComments, options);
+}
+
+AbsolutePathPiece ClientConfig::getRepoHooks() const {
+  return repoHooks_.hasValue() ? repoHooks_.value()
+                               : AbsolutePathPiece{"/etc/eden/hooks"};
 }
 }
 }

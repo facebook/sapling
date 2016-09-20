@@ -55,8 +55,14 @@ class Repository(object):
 
     def get_path(self, *args):
         for arg in args:
-            assert not os.path.isabs(arg), 'must not be absolute: %r' % (arg,)
+            assert not os.path.isabs(arg), 'must not be absolute: %r' % (arg, )
         return os.path.join(self.path, *args)
+
+    def get_canonical_root(self):
+        '''Returns cwd to use when calling scm commands.'''
+        raise NotImplementedError(
+            'subclasses must implement get_canonical_root()'
+        )
 
     def mkdir(self, path):
         full_path = self.get_path(path)
