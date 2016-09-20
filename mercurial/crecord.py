@@ -1338,6 +1338,7 @@ the following are valid keystrokes:
  shift-left-arrow   [H] : go to parent header / fold selected header
                       f : fold / unfold item, hiding/revealing its children
                       F : fold / unfold parent item and all of its ancestors
+                 ctrl-l : scroll the selected line to the top of the screen
                       m : edit / resume editing the commit message
                       e : edit the currently selected hunk
                       a : toggle amend mode, only with commit -i
@@ -1582,6 +1583,9 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
             self.helpwindow()
             self.stdscr.clear()
             self.stdscr.refresh()
+        elif curses.unctrl(keypressed) in ["^L"]:
+            # scroll the current line to the top of the screen
+            self.scrolllines(self.selecteditemstartline)
 
     def main(self, stdscr):
         """
