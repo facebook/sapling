@@ -361,7 +361,7 @@ Testing -h/--help:
    templating    Template Usage
    urls          URL Paths
   
-  (use "hg help -v" to show built-in aliases and global options)
+  (use 'hg help -v' to show built-in aliases and global options)
 
 
 
@@ -444,7 +444,7 @@ Testing -h/--help:
    templating    Template Usage
    urls          URL Paths
   
-  (use "hg help -v" to show built-in aliases and global options)
+  (use 'hg help -v' to show built-in aliases and global options)
 
 Not tested: --debugger
 

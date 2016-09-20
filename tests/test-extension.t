@@ -592,7 +592,7 @@ Asking for help about a deprecated extension should do something useful:
   
       graphlog      command to view revision graphs from a shell (DEPRECATED)
   
-  (use "hg help extensions" for information on enabling extensions)
+  (use 'hg help extensions' for information on enabling extensions)
 
 Extension module help vs command help:
 
@@ -616,7 +616,7 @@ Extension module help vs command help:
       compared to the working directory, and, when no revisions are specified,
       the working directory files are compared to its parent.
   
-  (use "hg help -e extdiff" to show help for the extdiff extension)
+  (use 'hg help -e extdiff' to show help for the extdiff extension)
   
   options ([+] can be repeated):
   
@@ -696,7 +696,7 @@ Extension module help vs command help:
   
    extdiff       use external program to diff repository (or selected files)
   
-  (use "hg help -v -e extdiff" to show built-in aliases and global options)
+  (use 'hg help -v -e extdiff' to show built-in aliases and global options)
 
 
 
@@ -748,7 +748,7 @@ Test help topic with same name as extension
       A range acts as a closed interval. This means that a range of 3:5 gives 3,
       4 and 5. Similarly, a range of 9:6 gives 9, 8, 7, and 6.
   
-  use "hg help -c multirevs" to see help for the multirevs command
+  use 'hg help -c multirevs' to see help for the multirevs command
 
 
 
@@ -770,7 +770,7 @@ Test help topic with same name as extension
   
   multirevs command
   
-  (use "hg multirevs -h" to show more help)
+  (use 'hg multirevs -h' to show more help)
   [255]
 
 
@@ -830,7 +830,7 @@ Make sure that user is asked to enter '-v -e' to get list of built-in aliases
    dodo          Does nothing
    foofoo        Writes 'Foo foo'
   
-  (use "hg help -v -e dodo" to show built-in aliases and global options)
+  (use 'hg help -v -e dodo' to show built-in aliases and global options)
 
 Make sure that '-v -e' prints list of built-in aliases along with
 extension help itself
@@ -871,7 +871,7 @@ Make sure that single '-v' option shows help and built-ins only for 'dodo' comma
   
   Does nothing
   
-  (use "hg help -e dodo" to show help for the dodo extension)
+  (use 'hg help -e dodo' to show help for the dodo extension)
   
   options:
   
@@ -933,7 +933,7 @@ along with extension help
    beep          Writes 'Beep beep'
    something     Does something
   
-  (use "hg help -v dudu" to show built-in aliases and global options)
+  (use 'hg help -v dudu' to show built-in aliases and global options)
 
 In case when extension name doesn't match any of its commands,
 help options '-v' and '-v -e' should be equivalent
@@ -1011,7 +1011,7 @@ Disabled extension commands:
   
       patchbomb     command to send changesets as (a series of) patch emails
   
-  (use "hg help extensions" for information on enabling extensions)
+  (use 'hg help extensions' for information on enabling extensions)
 
 
   $ hg qdel
@@ -1020,7 +1020,7 @@ Disabled extension commands:
   
       mq            manage a stack of patches
   
-  (use "hg help extensions" for information on enabling extensions)
+  (use 'hg help extensions' for information on enabling extensions)
   [255]
 
 
@@ -1030,7 +1030,7 @@ Disabled extension commands:
   
       churn         command to display statistics about repository history
   
-  (use "hg help extensions" for information on enabling extensions)
+  (use 'hg help extensions' for information on enabling extensions)
   [255]
 
 
@@ -1040,12 +1040,12 @@ Disabled extensions:
   $ hg help churn
   churn extension - command to display statistics about repository history
   
-  (use "hg help extensions" for information on enabling extensions)
+  (use 'hg help extensions' for information on enabling extensions)
 
   $ hg help patchbomb
   patchbomb extension - command to send changesets as (a series of) patch emails
   
-  (use "hg help extensions" for information on enabling extensions)
+  (use 'hg help extensions' for information on enabling extensions)
 
 
 Broken disabled extension and command:
@@ -1065,7 +1065,7 @@ Broken disabled extension and command:
   $ hg --config extensions.path=./path.py help broken
   broken extension - (no help text available)
   
-  (use "hg help extensions" for information on enabling extensions)
+  (use 'hg help extensions' for information on enabling extensions)
 
 
   $ cat > hgext/forest.py <<EOF
@@ -1074,7 +1074,7 @@ Broken disabled extension and command:
   $ hg --config extensions.path=./path.py help foo > /dev/null
   warning: error finding commands in $TESTTMP/hgext/forest.py (glob)
   abort: no such help topic: foo
-  (try "hg help --keyword foo")
+  (try 'hg help --keyword foo')
   [255]
 
   $ cat > throw.py <<EOF

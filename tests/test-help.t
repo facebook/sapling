@@ -23,7 +23,7 @@ Short help:
    summary       summarize working directory state
    update        update working directory (or switch revisions)
   
-  (use "hg help" for the full list of commands or "hg -v" for details)
+  (use 'hg help' for the full list of commands or 'hg -v' for details)
 
   $ hg -q
    add           add the specified files on the next commit
@@ -123,7 +123,7 @@ Short help:
    templating    Template Usage
    urls          URL Paths
   
-  (use "hg help -v" to show built-in aliases and global options)
+  (use 'hg help -v' to show built-in aliases and global options)
 
   $ hg -q help
    add           add the specified files on the next commit
@@ -332,7 +332,7 @@ Test short command list with verbose option
    -h --help              display help and exit
       --hidden            consider hidden changesets
   
-  (use "hg help" for the full list of commands)
+  (use 'hg help' for the full list of commands)
 
   $ hg add -h
   hg add [OPTION]... [FILE]...
@@ -467,7 +467,7 @@ Test help option with version option
    -S --subrepos            recurse into subrepositories
    -n --dry-run             do not perform actions, just print output
   
-  (use "hg add -h" to show more help)
+  (use 'hg add -h' to show more help)
   [255]
 
 Test ambiguous command help
@@ -478,7 +478,7 @@ Test ambiguous command help
    add           add the specified files on the next commit
    addremove     add all new files, delete all missing files
   
-  (use "hg help -v ad" to show built-in aliases and global options)
+  (use 'hg help -v ad' to show built-in aliases and global options)
 
 Test command without options
 
@@ -622,7 +622,7 @@ Test command without options
 
   $ hg help foo
   abort: no such help topic: foo
-  (try "hg help --keyword foo")
+  (try 'hg help --keyword foo')
   [255]
 
   $ hg skjdfks
@@ -649,7 +649,7 @@ Test command without options
    summary       summarize working directory state
    update        update working directory (or switch revisions)
   
-  (use "hg help" for the full list of commands or "hg -v" for details)
+  (use 'hg help' for the full list of commands or 'hg -v' for details)
   [255]
 
 
@@ -842,7 +842,7 @@ Test that default list of commands omits extension commands
    templating    Template Usage
    urls          URL Paths
   
-  (use "hg help -v" to show built-in aliases and global options)
+  (use 'hg help -v' to show built-in aliases and global options)
 
 
 Test list of internal help commands
@@ -921,7 +921,7 @@ Test list of internal help commands
    debugwireargs
                  (no help text available)
   
-  (use "hg help -v debug" to show built-in aliases and global options)
+  (use 'hg help -v debug' to show built-in aliases and global options)
 
 internals topic renders index of available sub-topics
 
@@ -1104,7 +1104,7 @@ Test list of commands with command with no help text
   
    nohelp        (no help text available)
   
-  (use "hg help -v helpext" to show built-in aliases and global options)
+  (use 'hg help -v helpext' to show built-in aliases and global options)
 
 
 test deprecated and experimental options are hidden in command help
@@ -1330,7 +1330,7 @@ Test -e / -c / -k combinations
   Extension Commands:
   $ hg help -c schemes
   abort: no such help topic: schemes
-  (try "hg help --keyword schemes")
+  (try 'hg help --keyword schemes')
   [255]
   $ hg help -e schemes |head -1
   schemes extension - extend schemes with shortcuts to repository swarms
@@ -1345,7 +1345,7 @@ Test -e / -c / -k combinations
   $ hg help -e -c commit > /dev/null
   $ hg help -e commit > /dev/null
   abort: no such help topic: commit
-  (try "hg help --keyword commit")
+  (try 'hg help --keyword commit')
   [255]
 
 Test keyword search help
@@ -1387,14 +1387,14 @@ Test unfound topic
 
   $ hg help nonexistingtopicthatwillneverexisteverever
   abort: no such help topic: nonexistingtopicthatwillneverexisteverever
-  (try "hg help --keyword nonexistingtopicthatwillneverexisteverever")
+  (try 'hg help --keyword nonexistingtopicthatwillneverexisteverever')
   [255]
 
 Test unfound keyword
 
   $ hg help --keyword nonexistingwordthatwillneverexisteverever
   abort: no matches
-  (try "hg help" for a list of topics)
+  (try 'hg help' for a list of topics)
   [255]
 
 Test omit indicating for help
@@ -1633,7 +1633,7 @@ Show help content of disabled extensions
   $ hg help -e ambiguous
   ambiguous extension - (no help text available)
   
-  (use "hg help extensions" for information on enabling extensions)
+  (use 'hg help extensions' for information on enabling extensions)
 
 Test dynamic list of merge tools only shows up once
   $ hg help merge-tools

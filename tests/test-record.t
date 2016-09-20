@@ -41,7 +41,7 @@ Record help
   
       This command is not available when committing a merge.
   
-  (use "hg help -e record" to show help for the record extension)
+  (use 'hg help -e record' to show help for the record extension)
   
   options ([+] can be repeated):
   

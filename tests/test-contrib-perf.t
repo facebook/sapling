@@ -105,7 +105,7 @@ perfstatus
                  benchmark the computation of various volatile set
    perfwalk      (no help text available)
   
-  (use "hg help -v perfstatusext" to show built-in aliases and global options)
+  (use 'hg help -v perfstatusext' to show built-in aliases and global options)
   $ hg perfaddremove
   $ hg perfancestors
   $ hg perfancestorset 2
