@@ -296,7 +296,7 @@ class rebaseruntime(object):
         if not self.keepf and not self.repo[root].mutable():
             raise error.Abort(_("can't rebase public changeset %s")
                              % self.repo[root],
-                             hint=_('see "hg help phases" for details'))
+                             hint=_("see 'hg help phases' for details"))
 
         (self.originalwd, self.target, self.state) = result
         if self.collapsef:
@@ -1128,7 +1128,7 @@ def abort(repo, originalwd, target, state, activebookmark=None):
         if immutable:
             repo.ui.warn(_("warning: can't clean up public changesets %s\n")
                         % ', '.join(str(repo[r]) for r in immutable),
-                        hint=_('see "hg help phases" for details'))
+                        hint=_("see 'hg help phases' for details"))
             cleanup = False
 
         descendants = set()
