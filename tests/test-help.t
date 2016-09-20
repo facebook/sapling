@@ -1250,12 +1250,12 @@ Last item in help config.*:
 
   $ hg help config.`hg help config|grep '^    "'| \
   >       tail -1|sed 's![ "]*!!g'`| \
-  >   grep "hg help -c config" > /dev/null
+  >   grep 'hg help -c config' > /dev/null
   [1]
 
 note to use help -c for general hg help config:
 
-  $ hg help config |grep "hg help -c config" > /dev/null
+  $ hg help config |grep 'hg help -c config' > /dev/null
 
 Test templating help
 
@@ -1589,7 +1589,7 @@ such str.lower().
   > subsequent section
   > ------------------
   > 
-  > This should be hidden at "hg help ambiguous" with section name.
+  > This should be hidden at 'hg help ambiguous' with section name.
   > '''
   > """ % (escape(upper), escape(lower)))
   > EOF

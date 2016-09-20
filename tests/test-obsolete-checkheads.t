@@ -122,7 +122,7 @@ TODO: Not implemented yet.
 #   pushing to $TESTTMP/remote
 #   searching for changes
 #   abort: push creates new remote head 71e3228bffe1!
-#   (merge or see "hg help push" for details about pushing new heads)
+#   (merge or see 'hg help push' for details about pushing new heads)
 #   [255]
 
 old head is obsolete but replacement is not pushed
