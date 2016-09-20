@@ -957,19 +957,19 @@ class manifestlog(object):
     def __init__(self, opener, repo):
         self._repo = repo
 
+        usetreemanifest = False
+
+        opts = getattr(opener, 'options', None)
+        if opts is not None:
+            usetreemanifest = opts.get('treemanifest', usetreemanifest)
+        self._treeinmem = usetreemanifest
+
         # We'll separate this into it's own cache once oldmanifest is no longer
         # used
         self._mancache = repo.manifest._mancache
 
     @property
     def _revlog(self):
-        return self._repo.manifest
-
-    @property
-    def _oldmanifest(self):
-        # _revlog is the same as _oldmanifest right now, but we eventually want
-        # to delete _oldmanifest while still allowing manifestlog to access the
-        # revlog specific apis.
         return self._repo.manifest
 
     def __getitem__(self, node):
@@ -984,7 +984,7 @@ class manifestlog(object):
                 isinstance(cachemf, treemanifestctx)):
                 return cachemf
 
-        if self._oldmanifest._treeinmem:
+        if self._treeinmem:
             m = treemanifestctx(self._revlog, '', node)
         else:
             m = manifestctx(self._revlog, node)
