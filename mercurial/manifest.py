@@ -1049,6 +1049,9 @@ class manifestlog(object):
             self._mancache[node] = m
         return m
 
+    def add(self, m, transaction, link, p1, p2, added, removed):
+        return self._revlog.add(m, transaction, link, p1, p2, added, removed)
+
 class manifestctx(object):
     """A class representing a single revision of a manifest, including its
     contents, its parent revs, and its linkrev.
