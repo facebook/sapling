@@ -1234,7 +1234,7 @@ class manifest(manifestrevlog):
             return None, None
 
     def add(self, m, transaction, link, p1, p2, added, removed):
-        if (p1 in self.fulltextcache and not self._treeinmem
+        if (p1 in self.fulltextcache and util.safehasattr(m, 'fastdelta')
             and not self._usemanifestv2):
             # If our first parent is in the manifest cache, we can
             # compute a delta here using properties we know about the
