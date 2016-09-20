@@ -6028,7 +6028,7 @@ def push(ui, repo, dest=None, **opts):
     path = ui.paths.getpath(dest, default=('default-push', 'default'))
     if not path:
         raise error.Abort(_('default repository not configured!'),
-                         hint=_('see the "path" section in "hg help config"'))
+                         hint=_("see 'hg help config.paths'"))
     dest = path.pushloc or path.loc
     branches = (path.branch, opts.get('branch') or [])
     ui.status(_('pushing to %s\n') % util.hidepassword(dest))
