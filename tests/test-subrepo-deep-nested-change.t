@@ -127,12 +127,12 @@ Clone main
 
 Largefiles is NOT enabled in the clone if the source repo doesn't require it
   $ cat cloned/.hg/hgrc
-  # example repository config (see "hg help config" for more info)
+  # example repository config (see 'hg help config' for more info)
   [paths]
   default = $TESTTMP/main (glob)
   
   # path aliases to other clones of this repo in URLs or filesystem paths
-  # (see "hg help config.paths" for more info)
+  # (see 'hg help config.paths' for more info)
   #
   # default-push = ssh://jdoe@example.net/hg/jdoes-fork
   # my-fork      = ssh://jdoe@example.net/hg/jdoes-fork
@@ -688,12 +688,12 @@ The local repo enables largefiles if a largefiles repo is cloned
   [255]
   $ hg --config extensions.largefiles= clone -qU . ../lfclone
   $ cat ../lfclone/.hg/hgrc
-  # example repository config (see "hg help config" for more info)
+  # example repository config (see 'hg help config' for more info)
   [paths]
   default = $TESTTMP/cloned (glob)
   
   # path aliases to other clones of this repo in URLs or filesystem paths
-  # (see "hg help config.paths" for more info)
+  # (see 'hg help config.paths' for more info)
   #
   # default-push = ssh://jdoe@example.net/hg/jdoes-fork
   # my-fork      = ssh://jdoe@example.net/hg/jdoes-fork
