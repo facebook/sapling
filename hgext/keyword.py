@@ -24,7 +24,7 @@
 # Files to act upon/ignore are specified in the [keyword] section.
 # Customized keyword template mappings in the [keywordmaps] section.
 #
-# Run "hg help keyword" and "hg kwdemo" to get info on configuration.
+# Run 'hg help keyword' and 'hg kwdemo' to get info on configuration.
 
 '''expand keywords in tracked files
 
