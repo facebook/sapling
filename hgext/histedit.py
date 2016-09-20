@@ -854,7 +854,7 @@ def findoutgoing(ui, repo, remote=None, force=False, opts=None):
     roots = list(repo.revs("roots(%ln)", outgoing.missing))
     if 1 < len(roots):
         msg = _('there are ambiguous outgoing revisions')
-        hint = _('see "hg help histedit" for more detail')
+        hint = _("see 'hg help histedit' for more detail")
         raise error.Abort(msg, hint=hint)
     return repo.lookup(roots[0])
 
@@ -1290,7 +1290,7 @@ def between(repo, old, new, keep):
         root = ctxs[0] # list is already sorted by repo.set
         if not root.mutable():
             raise error.Abort(_('cannot edit public changeset: %s') % root,
-                             hint=_('see "hg help phases" for details'))
+                             hint=_("see 'hg help phases' for details"))
     return [c.node() for c in ctxs]
 
 def ruleeditor(repo, ui, actions, editcomment=""):
@@ -1402,7 +1402,7 @@ def verifyactions(actions, state, ctxs):
         raise error.ParseError(_('missing rules for changeset %s') %
                 node.short(missing[0]),
                 hint=_('use "drop %s" to discard, see also: '
-                       '"hg help -e histedit.config"')
+                       "'hg help -e histedit.config'")
                        % node.short(missing[0]))
 
 def adjustreplacementsfrommarkers(repo, oldreplacements):
