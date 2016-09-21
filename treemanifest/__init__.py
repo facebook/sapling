@@ -81,6 +81,12 @@ def recordmanifest(pack, repo, oldtip, newtip):
     message = _('priming tree cache')
     ui.progress(message, 0, total=total)
 
+    refcount = {}
+    for rev in xrange(oldtip, newtip):
+        p1 = mf.parentrevs(rev)[0]
+        p1node = mf.node(p1)
+        refcount[p1node] = refcount.get(p1node, 0) + 1
+
     for rev in xrange(oldtip, newtip):
         ui.progress(message, rev - oldtip, total=total)
         p1 = mf.parentrevs(rev)[0]
@@ -89,7 +95,7 @@ def recordmanifest(pack, repo, oldtip, newtip):
         if p1node in builttrees:
             origtree = builttrees[p1node]
         else:
-            origtree = mf.read(mf.node(p1))._treemanifest()
+            origtree = mf.read(p1node)._treemanifest()
 
         if not origtree:
             p1mf = mf.read(p1node)
@@ -98,6 +104,13 @@ def recordmanifest(pack, repo, oldtip, newtip):
                 origtree.set(filename, node, flag)
             origtree.write(InterceptedMutablePack(pack, p1node))
             builttrees[p1node] = origtree
+
+        # Remove the tree from the cache once we've processed its final use.
+        # Otherwise memory explodes
+        p1refcount = refcount[p1node] - 1
+        if p1refcount == 0:
+            builttrees.pop(p1node, None)
+        refcount[p1node] = p1refcount
 
         # This will generally be very quick, since p1 == deltabase
         delta = mf.revdiff(p1, rev)
@@ -169,5 +182,9 @@ def recordmanifest(pack, repo, oldtip, newtip):
                     pdb.set_trace()
                     pass
         builttrees[mf.node(rev)] = newtree
+
+        mfnode = mf.node(rev)
+        if refcount.get(mfnode) > 0:
+            builttrees[mfnode] = newtree
 
     ui.progress(message, None)
