@@ -153,15 +153,6 @@ fileannotateparent = '
     </td>
   </tr>'
 changesetchild = ' <a href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}">{node|short}</a>'
-changelogchild = '
-  <tr>
-    <th class="child">child</th>
-    <td class="child">
-      <a href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}">
-        {node|short}
-      </a>
-    </td>
-  </tr>'
 fileannotatechild = '
   <tr>
     <td class="metatag">child:</td>
