@@ -437,8 +437,8 @@ class fileserverclient(object):
         opener = scmutil.vfs(packpath)
         # Packs should be write-once files, so set them to read-only.
         opener.createmode = 0o444
-        with datapack.mutabledatapack(opener) as dpack:
-            with historypack.mutablehistorypack(opener) as hpack:
+        with datapack.mutabledatapack(self.ui, opener) as dpack:
+            with historypack.mutablehistorypack(self.ui, opener) as hpack:
                 for filename in self.readfiles(remote):
                     i += 1
                     self.ui.progress(_downloading, i, total=len(groupedfiles))

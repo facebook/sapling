@@ -55,7 +55,7 @@ def _unpackmanifests(orig, self, repo, *args, **kwargs):
         repo.ui.configbool('treemanifest', 'autocreatetrees')):
         packpath = shallowutil.getpackpath(repo, PACK_CATEGORY)
         opener = scmutil.vfs(packpath)
-        with mutabledatapack(opener) as dpack:
+        with mutabledatapack(repo.ui, opener) as dpack:
             recordmanifest(dpack, repo, oldtip, len(mf))
             dpack.close()
 

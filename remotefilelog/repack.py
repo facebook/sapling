@@ -156,8 +156,8 @@ def _runrepack(repo, data, history):
     opener = scmutil.vfs(packpath)
     # Packs should be write-once files, so set them to read-only.
     opener.createmode = 0o444
-    with datapack.mutabledatapack(opener) as dpack:
-        with historypack.mutablehistorypack(opener) as hpack:
+    with datapack.mutabledatapack(repo.ui, opener) as dpack:
+        with historypack.mutablehistorypack(repo.ui, opener) as hpack:
             try:
                 packer.run(dpack, hpack)
             except error.LockHeld:

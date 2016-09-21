@@ -2,6 +2,7 @@ import errno, hashlib, mmap, os, struct, time
 from mercurial import osutil
 
 import constants
+import shallowutil
 
 # The pack version supported by this implementation. This will need to be
 # rev'd whenever the byte format changes. Ex: changing the fanout prefix,
@@ -200,9 +201,11 @@ class basepack(object):
         raise NotImplemented()
 
 class mutablebasepack(object):
-    def __init__(self, opener):
+    def __init__(self, ui, opener):
         self.opener = opener
         self.entries = {}
+
+        shallowutil.mkstickygroupdir(ui, opener.base)
         self.packfp, self.packpath = opener.mkstemp(
             suffix=self.PACKSUFFIX + '-tmp')
         self.idxfp, self.idxpath = opener.mkstemp(
