@@ -149,25 +149,25 @@ def recordmanifest(pack, repo, oldtip, newtip):
 
         newtree.write(InterceptedMutablePack(pack, mf.node(rev)), origtree)
         diff = newtree.diff(origtree)
-        if len(diff) != len(adds) + len(deletes):
-            import pdb
-            pdb.set_trace()
 
-        for fname in deletes:
-            l, r = diff[fname]
-            if l != (None, None):
-                import pdb
-                pdb.set_trace()
-                pass
-
-        for fname, fnode, fflags in adds:
-            l, r = diff[fname]
-            if not fflags:
-                fflags = None
-            if l != (fnode, fflags):
+        if ui.configbool('treemanifest', 'verifyautocreate', True):
+            if len(diff) != len(adds) + len(deletes):
                 import pdb
                 pdb.set_trace()
 
+            for fname in deletes:
+                l, r = diff[fname]
+                if l != (None, ''):
+                    import pdb
+                    pdb.set_trace()
+                    pass
+
+            for fname, fnode, fflags in adds:
+                l, r = diff[fname]
+                if l != (fnode, fflags):
+                    import pdb
+                    pdb.set_trace()
+                    pass
         builttrees[mf.node(rev)] = newtree
 
     ui.progress(message, None)
