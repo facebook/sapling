@@ -1,10 +1,14 @@
 #!/usr/bin/env python2.7
 
+import os
 import random
+import sys
 import unittest
 
 import silenttestrunner
 
+# Add the repo root to the path so we can find the built ctreemanifest
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 import ctreemanifest
 
 class FakeStore(object):
