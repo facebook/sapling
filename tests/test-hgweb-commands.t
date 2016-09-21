@@ -1687,7 +1687,7 @@ Overviews
   </td>
   </tr>
   <tr class="light">
-    <td colspan="4"><a class="list"  href="/branches?style=gitweb">...</a></td>
+    <td colspan="3"><a class="list" href="/branches?style=gitweb">...</a></td>
   </tr>
   </table>
   <script type="text/javascript">process_dates()</script>
