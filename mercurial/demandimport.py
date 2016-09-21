@@ -284,7 +284,7 @@ ignore = [
     'mimetools',
     'sqlalchemy.events', # has import-time side effects (issue5085)
     # setuptools 8 expects this module to explode early when not on windows
-    'distutils.msvc9compiler'
+    'distutils.msvc9compiler',
     ]
 
 def isenabled():
