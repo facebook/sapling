@@ -55,7 +55,7 @@ Without server extension
   searching for changes
   remote has heads on branch 'default' that are not known locally: add0c792bfce
   abort: push creates new remote head 0e3997dc0733!
-  (pull and merge or see "hg help push" for details about pushing new heads)
+  (pull and merge or see 'hg help push' for details about pushing new heads)
   [255]
 
   $ hg --config experimental.bundle2-exp=False push --to default
@@ -128,10 +128,10 @@ Stack of non-conflicting commits should be accepted
   46a2df24e27273bb06dbf28b085fcc2e911bf986
   0e3997dc073308e42715a44d345466690abfd09a
   sending unbundle command
-  remote: pushing 2 commits:
+  remote: pushing 2 changsets:
   remote:     46a2df24e272  b => xxx
   remote:     0e3997dc0733  b => baz
-  remote: 3 new commits from the server will be downloaded
+  remote: 3 new changesets from the server will be downloaded
   adding changesets
   add changeset add0c792bfce
   add changeset 6a6d9484552c
@@ -141,10 +141,10 @@ Stack of non-conflicting commits should be accepted
   adding a revisions
   adding b revisions
   added 3 changesets with 1 changes to 2 files (+1 heads)
+  updating the branch cache
   preparing listkeys for "phases"
   sending listkeys command
   received listkey for "phases": 15 bytes
-  updating the branch cache
 
 Check that we did not generate any check:heads parts
 
@@ -192,7 +192,7 @@ Regular commits should go through without changing hash
   $ hg push --to default
   pushing to ssh://user@dummy/server
   searching for changes
-  remote: pushing 1 commit:
+  remote: pushing 1 changset:
   remote:     741fd2094512  b => quux
 
   $ cd ../server
@@ -331,13 +331,13 @@ Pushing a merge should rebase only the latest side of the merge
   $ hg push --to master -B master
   pushing to ssh://user@dummy/server
   searching for changes
-  remote: pushing 5 commits:
+  remote: pushing 5 changsets:
   remote:     e6b7549904cd  branch left
   remote:     add5ec74853d  branch start
   remote:     5a0cbf3df4ef  branch middle
   remote:     2c0c699d7086  merge
   remote:     9007d6a204f8  on top of merge
-  remote: 6 new commits from the server will be downloaded
+  remote: 6 new changesets from the server will be downloaded
   adding changesets
   adding manifests
   adding file changes
@@ -416,10 +416,10 @@ With evolution enabled, should set obsolescence markers
   $ hg push --to default
   pushing to ssh://user@dummy/server
   searching for changes
-  remote: pushing 2 commits:
+  remote: pushing 2 changsets:
   remote:     9467a8ee5d0d  b => k
   remote:     e73acfaeee82  b => foobar
-  remote: 4 new commits from the server will be downloaded
+  remote: 4 new changesets from the server will be downloaded
   adding changesets
   adding manifests
   adding file changes
@@ -489,7 +489,7 @@ Test pushing master bookmark, fast forward
   $ hg push --to master
   pushing to ssh://user@dummy/server
   searching for changes
-  remote: pushing 1 commit:
+  remote: pushing 1 changset:
   remote:     56b2e0949966  b => babar
   updating bookmark master
   $ hg log -r master -R ../server -T"{node}\n"
@@ -618,7 +618,7 @@ Test that hooks are fired with the correct variables
   searching for changes
   prepushrebase hook: HG_BUNDLE2=1 HG_HOOK_BUNDLEPATH=* HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_SOURCE=push (glob)
   prechangegroup hook: HG_BUNDLE2=1 HG_SOURCE=push HG_TXNID=TXN:* HG_URL=file:$TESTTMP/hookserver (glob)
-  pushing 1 commit:
+  pushing 1 changset:
       4fcee35c508c  first
   pretxnchangegroup hook: HG_BUNDLE2=1 HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_PENDING=$TESTTMP/hookserver HG_SOURCE=push HG_TXNID=TXN:* HG_URL=file:$TESTTMP/hookserver (glob)
   prepushkey hook: HG_BUNDLE2=1 HG_KEY=4fcee35c508c1019667f72cae9b843efa8908701 HG_NAMESPACE=phases HG_NEW=0 HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_OLD=1 HG_PENDING=$TESTTMP/hookserver HG_PHASES_MOVED=1 HG_SOURCE=push HG_TXNID=TXN:* HG_URL=file:$TESTTMP/hookserver (glob)
@@ -676,9 +676,9 @@ Test date rewriting
   $ hg push --to master
   pushing to $TESTTMP/rewritedate (glob)
   searching for changes
-  pushing 1 commit:
+  pushing 1 changset:
       d5e255ef74f8  c
-  1 new commit from the server will be downloaded
+  1 new changeset from the server will be downloaded
   adding changesets
   adding manifests
   adding file changes
@@ -706,11 +706,11 @@ Test date rewriting with a merge commit
   $ hg push --to master
   pushing to $TESTTMP/rewritedate (glob)
   searching for changes
-  pushing 3 commits:
+  pushing 3 changsets:
       a5f9a9a43049  x
       c1392466a61e  y
       4514adb1f536  merge
-  3 new commits from the server will be downloaded
+  3 new changesets from the server will be downloaded
   adding changesets
   adding manifests
   adding file changes
@@ -749,7 +749,7 @@ Test force pushes
   $ hg push -f --to master -B master
   pushing to $TESTTMP/forcepushserver (glob)
   searching for changes
-  pushing 1 commit:
+  pushing 1 changset:
       1846eede8b68  b
   exporting bookmark master
   $ hg pull

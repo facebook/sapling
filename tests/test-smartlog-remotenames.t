@@ -91,7 +91,7 @@ is shown to the user
   > 6dd477f76ca35ae46e82972648735867cf335d3e bookmarks remote/master
   > EOF
   $ hg sl
-  warning: there is no master commit locally, try pulling from server
+  warning: there is no master changeset locally, try pulling from server
   o  changeset:   3:8e2253d950ae
   |  tag:         tip
   |  parent:      0:b292c1e3311f

@@ -7,12 +7,12 @@
 
 """extends the existing commit amend functionality
 
-Adds an hg amend command that amends the current parent commit with the
+Adds an hg amend command that amends the current parent changeset with the
 changes in the working copy.  Similiar to the existing hg commit --amend
 except it doesn't prompt for the commit message unless --edit is provided.
 
-Allows amending commits that have children and can automatically rebase
-the children onto the new version of the commit
+Allows amending changesets that have children and can automatically rebase
+the children onto the new version of the changeset.
 
 This extension is incompatible with changeset evolution. The command will
 automatically disable itself if changeset evolution is enabled.
@@ -34,8 +34,8 @@ testedwith = 'internal'
 rebasemod = None
 
 amendopts = [
-    ('', 'rebase', None, _('rebases children commits after the amend')),
-    ('', 'fixup', None, _('rebase children commits from a previous amend')),
+    ('', 'rebase', None, _('rebases children after the amend')),
+    ('', 'fixup', None, _('rebase children from a previous amend')),
 ]
 
 def uisetup(ui):
@@ -87,9 +87,9 @@ def commit(orig, ui, repo, *pats, **opts):
         return orig(ui, repo, *pats, **opts)
 
 def unamend(ui, repo, **opts):
-    """undo the amend operation on a current commit
+    """undo the amend operation on a current changeset
 
-    This command will roll back to the previous version of a commit,
+    This command will roll back to the previous version of a changeset,
     leaving working directory in state in which it was before running
     `hg amend` (e.g. files modified as part of an amend will be
     marked as modified `hg status`)"""
@@ -109,7 +109,7 @@ def unamend(ui, repo, **opts):
     # identify the commit to which to unamend
     markers = list(obsolete.precursormarkers(curctx))
     if len(markers) != 1:
-        e = _("commit must have one precursor, found %i precursors")
+        e = _("changeset must have one precursor, found %i precursors")
         raise error.Abort(e % len(markers))
 
     precnode = markers[0].precnode()
@@ -152,7 +152,7 @@ def unamend(ui, repo, **opts):
         obsolete.createmarkers(repo, [(curctx, ())])
 
 def amend(ui, repo, *pats, **opts):
-    '''amend the current commit with more changes
+    '''amend the current changeset with more changes
     '''
     if obsolete.isenabled(repo, 'allnewcommands'):
         msg = ('fbamend and evolve extension are incompatible, '
@@ -253,7 +253,7 @@ def amend(ui, repo, *pats, **opts):
             return 0
 
         if haschildren and not rebase:
-            msg = _("warning: the commit's children were left behind\n")
+            msg = _("warning: the changeset's children were left behind\n")
             if _histediting(repo):
                 ui.warn(msg)
                 ui.status(_('(this is okay since a histedit is in progress)\n'))
@@ -289,8 +289,8 @@ def amend(ui, repo, *pats, **opts):
         lockmod.release(wlock, lock, tr)
 
 def fixupamend(ui, repo):
-    """rebases any children found on the preamend commit and strips the
-    preamend commit
+    """rebases any children found on the preamend changset and strips the
+    preamend changset
     """
     wlock = None
     lock = None
@@ -307,9 +307,10 @@ def fixupamend(ui, repo):
 
         old = repo[preamendname]
         if old == current:
-            hint = _('please examine smartlog and rebase your commits manually')
+            hint = _('please examine smartlog and rebase your changsets '
+                     'manually')
             err = _('cannot automatically determine what to rebase '
-                    'because bookmark "%s" points to the current commit') % \
+                    'because bookmark "%s" points to the current changset') % \
                    preamendname
             raise error.Abort(err, hint=hint)
         oldbookmarks = old.bookmarks()

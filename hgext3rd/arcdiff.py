@@ -51,12 +51,13 @@ def _diff(orig, ui, repo, *pats, **opts):
     phabrev = diffprops.parserevfromcommitmsg(ctx.description())
 
     if phabrev is None:
-        mess = _('local commit is not associated with a differential revision')
+        mess = _('local changeset is not associated with a differential '
+                 'revision')
         raise error.Abort(mess)
 
     rev = _differentialhash(ui, repo, phabrev)
     if rev is None:
-        mess = _('unable to determine previous commit hash')
+        mess = _('unable to determine previous changeset hash')
         raise error.Abort(mess)
 
     rev = str(rev)

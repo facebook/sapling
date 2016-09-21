@@ -185,7 +185,7 @@ def _setupcommit(ui):
 def _setuplog(ui):
     entry = commands.table['^log|history']
     entry[1].append(('', 'sparse', None,
-        "limit to commits affecting the sparse checkout"))
+        "limit to changesets affecting the sparse checkout"))
 
     def _logrevs(orig, repo, opts):
         revs = orig(repo, opts)
@@ -640,7 +640,7 @@ def sparse(ui, repo, *pats, **opts):
     repository. This is useful for defining commonly used sparse checkouts for
     many people to use. As the profile definition changes over time, the sparse
     checkout will automatically be updated appropriately, depending on which
-    commit is checked out. Changes to .hgsparse are not applied until they
+    changeset is checked out. Changes to .hgsparse are not applied until they
     have been committed.
 
     Returns 0 if editing the sparse checkout succeeds.

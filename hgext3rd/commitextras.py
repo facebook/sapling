@@ -19,7 +19,7 @@ def extsetup(ui):
     entry = extensions.wrapcommand(commands.table, 'commit', _commit)
     options = entry[1]
     options.append(('', 'extra', [],
-        _('set a commit\'s extra values'), _("KEY=VALUE")))
+        _('set a changeset\'s extra values'), _("KEY=VALUE")))
 
 def _commit(orig, ui, repo, *pats, **opts):
     origcommit = repo.commit

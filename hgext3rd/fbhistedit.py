@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 """extends the existing histedit functionality
 
-Adds a s/stop verb to histedit to stop after a commit was picked.
+Adds a s/stop verb to histedit to stop after a changeset was picked.
 """
 
 import os
@@ -30,7 +30,7 @@ testedwith = 'internal'
 def defineactions():
     histedit = extensions.find('histedit')
     @histedit.action(['stop', 's'],
-                     _('pick commit, and stop after committing changes'))
+                     _('pick changeset, and stop after committing changes'))
     class stop(histedit.histeditaction):
         def run(self):
             parentctx, replacements = super(stop, self).run()
@@ -38,7 +38,7 @@ def defineactions():
             self.state.replacements.extend(replacements)
             self.state.write()
             raise error.InterventionRequired(
-                _('Changes commited as %s. You may amend the commit now.\n'
+                _('Changes commited as %s. You may amend the changeset now.\n'
                   'When you are done, run hg histedit --continue to resume') %
                 parentctx)
 

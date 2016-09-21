@@ -11,11 +11,11 @@ This extensions allows you to interactively move around changesets
 or change the action to perform while keeping track of possible
 conflicts.
 
-Use up/down or j/k to move up and down. Select a commit via space and move
-it around. You can use d/e/f/m/r to change the action of a commit. You
+Use up/down or j/k to move up and down. Select a changeset via space and move
+it around. You can use d/e/f/m/r to change the action of a changeset. You
 can cycle through available commands with left/h or right/l.
 
-The diff for the current commit can be viewed by pressing v. To apply
+The diff for the current changeset can be viewed by pressing v. To apply
 the commands press C, which will call histedit.
 
 The current conflict detection mechanism is based on a per-file
@@ -148,7 +148,7 @@ class histeditrule(object):
 
 # ============ EVENTS ===============
 def movecursor(state, oldpos, newpos):
-    '''Change the rule/commit that the cursor is pointing to, regardless of
+    '''Change the rule/changeset that the cursor is pointing to, regardless of
     current mode (you can switch between patches from the view patch window).'''
     state['pos'] = newpos
 

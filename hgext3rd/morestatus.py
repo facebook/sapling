@@ -80,8 +80,8 @@ def mergemsg(repo, ui):
     helpmessage(ui, 'hg commit', HG_UPDATE_CLEAN)
 
 def bisectmsg(repo, ui):
-    msg = _('To mark the commit good:       hg bisect --good\n'
-            'To mark the commit bad:        hg bisect --bad\n'
+    msg = _('To mark the changeset good:    hg bisect --good\n'
+            'To mark the changeset bad:     hg bisect --bad\n'
             'To abort:                      hg bisect --reset\n')
     ui.warn(prefixlines(msg))
 

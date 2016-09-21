@@ -134,14 +134,14 @@ def showphabstatus(repo, ctx, templ, **args):
             return "Error"
 
 """
-In order to determine whether the local commit is in sync with the
-remote one we compare the hash of the current commit with the one we
+In order to determine whether the local changeset is in sync with the
+remote one we compare the hash of the current changeset with the one we
 get from the remote (phabricator) repo. There are three different cases
 and we deal with them seperately.
 1) If this is the first revision in a diff: We look at the count field and
-understand that this is the first commit, so we compare the hash we get
-from remote repo with the predessesor's hash from the local commit. The
-reason for that is the D number is ammended on the commit after it is
+understand that this is the first changeset, so we compare the hash we get
+from remote repo with the predessesor's hash from the local changeset. The
+reason for that is the D number is ammended on the changeset after it is
 sent to phabricator.
 2) If this is the last revision, i.e. it is alread committed: Then we
 don't say anything. All good.

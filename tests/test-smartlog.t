@@ -376,7 +376,7 @@ Test singlepublicsuccessor  template keyword
   rebasing 2:d36c0562f908 "c" (tip)
   $ hg phase -r 3 --public
   $ hg smartlog -r 2 -T "SPS: {singlepublicsuccessor}" --hidden
-  warning: there is no master commit locally, try pulling from server
+  warning: there is no master changeset locally, try pulling from server
   x  SPS: 2b5806c2ca1e228838315bbffeb7d1504c38c9d6
   |
 

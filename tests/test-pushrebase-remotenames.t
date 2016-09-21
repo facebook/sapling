@@ -60,9 +60,9 @@ Test that pushing to a remotename gets rebased
   $ hg push --to master
   pushing rev 5c3cfb78df2f to destination ssh://user@dummy/server bookmark master
   searching for changes
-  remote: pushing 1 commit:
+  remote: pushing 1 changset:
   remote:     5c3cfb78df2f  client's commit
-  remote: 2 new commits from the server will be downloaded
+  remote: 2 new changesets from the server will be downloaded
   adding changesets
   adding manifests
   adding file changes
@@ -99,7 +99,7 @@ Test pushing a new bookmark
   $ hg -R client push --to newbook --create
   pushing rev 5c3cfb78df2f to destination ssh://user@dummy/server bookmark newbook
   searching for changes
-  remote: pushing 1 commit:
+  remote: pushing 1 changset:
   remote:     5c3cfb78df2f  client's commit
   exporting bookmark newbook
   $ hg -R server book
@@ -186,9 +186,9 @@ Test a push that comes with out-of-date bookmark discovery
   pushing rev 5db65b93a12b to destination ssh://user@dummy/server bookmark bm
   searching for changes
   remote: moved bookmark to rev 1
-  remote: pushing 1 commit:
+  remote: pushing 1 changset:
   remote:     5db65b93a12b  cc
-  remote: 2 new commits from the server will be downloaded
+  remote: 2 new changesets from the server will be downloaded
   adding changesets
   adding manifests
   adding file changes
@@ -231,10 +231,10 @@ Test that we still don't allow non-ff bm changes
   pushing rev efec53e7b035 to destination ssh://user@dummy/server bookmark bm
   searching for changes
   remote: moved bookmark to rev 1
-  remote: pushing 2 commits:
+  remote: pushing 2 changsets:
   remote:     5db65b93a12b  cc
   remote:     efec53e7b035  dd
-  remote: 1 new commit from the server will be downloaded
+  remote: 1 new changeset from the server will be downloaded
   remote: transaction abort!
   remote: rollback completed
   abort: updating bookmark bm failed!
@@ -276,7 +276,7 @@ Test force pushes
   $ hg push -f --to master
   pushing rev 1846eede8b68 to destination * (glob)
   searching for changes
-  remote: pushing 1 commit:
+  remote: pushing 1 changset:
   remote:     1846eede8b68  b
   updating bookmark master
   $ hg pull
@@ -330,9 +330,9 @@ Test 'hg push' with a tracking bookmark
   $ hg push
   pushing rev d2ae7f538514 to destination ssh://user@dummy/trackingserver bookmark master
   searching for changes
-  remote: pushing 1 commit:
+  remote: pushing 1 changset:
   remote:     d2ae7f538514  b
-  remote: 2 new commits from the server will be downloaded
+  remote: 2 new changesets from the server will be downloaded
   adding changesets
   adding manifests
   adding file changes

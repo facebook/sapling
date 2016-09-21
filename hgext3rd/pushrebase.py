@@ -1,4 +1,4 @@
-# pushrebase.py - server-side rebasing of pushed commits
+# pushrebase.py - server-side rebasing of pushed changesets
 #
 # Copyright 2014 Facebook, Inc.
 #
@@ -126,7 +126,7 @@ def validaterevset(repo, revset):
 
 def getrebasepart(repo, peer, outgoing, onto, newhead):
     if not outgoing.missing:
-        raise error.Abort(_('no commits to rebase'))
+        raise error.Abort(_('no changesets to rebase'))
 
     if rebaseparttype not in bundle2.bundle2caps(peer):
         raise error.Abort(_('no server support for %r') % rebaseparttype)
@@ -212,7 +212,7 @@ def _push(orig, ui, repo, *args, **opts):
     return result
 
 def _phasemove(orig, pushop, nodes, phase=phases.public):
-    """prevent commits from being marked public
+    """prevent changesets from being marked public
 
     Since these are going to be mutated on the server, they aren't really being
     published, their successors are.  If we mark these as public now, hg evolve
@@ -342,8 +342,9 @@ def _getrevs(bundle, onto):
             sharedparents = list(bundle.set('parents(bundle()) - bundle()'))
             if not sharedparents:
                 return revs, bundle[nullid]
-            raise error.Abort(_('pushed commits do not branch from an ancestor '
-                               'of the desired destination %s') % onto.hex())
+            raise error.Abort(_('pushed changesets do not branch from an '
+                                'ancestor of the desired destination %s')
+                              % onto.hex())
         oldonto = oldonto[0]
 
         # Computes a list of all files that are in the changegroup, and diffs it
@@ -471,7 +472,7 @@ def _addpushbackparts(op, replacements):
 
         if outgoing.missing:
             plural = 's' if len(outgoing.missing) > 1 else ''
-            op.repo.ui.warn(_("%s new commit%s from the server will be "
+            op.repo.ui.warn(_("%s new changeset%s from the server will be "
                               "downloaded\n") % (len(outgoing.missing), plural))
             _addpushbackchangegroup(op.repo, op.reply, outgoing)
             _addpushbackobsolete(op.repo, op.reply, replacements.values())
@@ -547,7 +548,7 @@ def bundle2rebase(op, part):
 
         # Notify the user of what is being pushed
         plural = 's' if len(revs) > 1 else ''
-        op.repo.ui.warn(_("pushing %s commit%s:\n") % (len(revs), plural))
+        op.repo.ui.warn(_("pushing %s changset%s:\n") % (len(revs), plural))
         maxoutput = 10
         for i in range(0, min(len(revs), maxoutput)):
             firstline = bundle[revs[i]].description().split('\n')[0][:50]

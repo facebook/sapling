@@ -49,20 +49,20 @@ def grepdiffpredicate(repo, subset, x):
 
     Sample usages are:
       $ hg log --rev "grepdiff('add:command')" mercurial/commands.py
-          will only match commits that add 'command' somewhere in the diff
+          will only match changesets that add 'command' somewhere in the diff
       $ hg log --rev "grepdiff('remove:command')" mercurial/commands.py
-          will match commits which remove 'command' somewhere in the diff
+          will match changesets which remove 'command' somewhere in the diff
       $ hg log --rev "grepdiff('delta:command') mercurial/commands.py"
-          will mathc commits where the number of 'command' adds is different
+          will mathc changesets where the number of 'command' adds is different
           from the number of 'command' removes in the diff
       $ hg log --rev "grepdiff('touch:command')"
-          will only match commits which either add or remove 'command' at
+          will only match changesets which either add or remove 'command' at
           least once in the diff
       $ hg log --rev "grepdiff('inc:command')" folder/file1.py folder/file2.py
-          will match commits which increase the number of occurrences
+          will match changesets which increase the number of occurrences
           of 'command' in the specified files
       $ hg log --rev "grepdiff('dec:command')"
-          will match commits which decrease the number of occurrences
+          will match changesets which decrease the number of occurrences
           of 'command'
     """
     err = _("wrong set of arguments passed to grepdiff revset")

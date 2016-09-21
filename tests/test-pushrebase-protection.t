@@ -58,7 +58,7 @@ Pushrebase pushes should be allowed
   $ hg push --config 'extensions.bundle2hooks=' --config 'extensions.pushrebase=' --to master -B master
   pushing to $TESTTMP/server (glob)
   searching for changes
-  pushing 1 commit:
+  pushing 1 changset:
       1846eede8b68  b
   exporting bookmark master
 

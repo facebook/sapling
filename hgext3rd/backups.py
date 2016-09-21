@@ -4,7 +4,7 @@
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
-"""display recently made backups to recover stripped commits"""
+"""display recently made backups to recover stripped changesets"""
 
 from mercurial import extensions, cmdutil, commands, error, bundlerepo
 from mercurial import hg, changegroup, exchange, obsolete
@@ -20,24 +20,25 @@ pager.attended.append('backups')
 cmdtable = {}
 command = cmdutil.command(cmdtable)
 testedwith = 'internal'
-msgwithcreatermarkers = """Marker creation is enabled so no commit should be
+msgwithcreatermarkers = """Marker creation is enabled so no changeset should be
 stripped unless you explicitly called hg strip. hg backups will show you the
-stripped commits.  If you are trying to recover a commit hidden from a previous
-command, use hg journal to get its sha1 and you will be able to access it
-directly without recovering a backup."""
+stripped changesets. If you are trying to recover a changeset hidden from a
+previous command, use hg journal to get its sha1 and you will be able to access
+it directly without recovering a backup."""
 verbosetemplate = "{label('status.modified', node|short)} {desc|firstline}\n"
 
 @command('^backups', [
-    ('', 'recover', '', 'brings the specified commit back into the repository')
+    ('', 'recover', '',
+     'brings the specified changeset back into the repository')
     ] + commands.logopts, _('hg backups [--recover HASH]'))
 def backups(ui, repo, *pats, **opts):
-    '''lists the commits available in backup bundles
+    '''lists the changesets available in backup bundles
 
-    Without any arguments, this command prints a list of the commits in each
+    Without any arguments, this command prints a list of the changesets in each
     backup bundle.
 
-    --recover takes a commit hash and unbundles the first bundle that contains
-    that commit hash, which puts that commit back in your repository.
+    --recover takes a changeset hash and unbundles the first bundle that
+    contains that hash, which puts that changeset back in your repository.
 
     --verbose will print the entire commit message and the bundle path for that
     backup.
@@ -74,7 +75,8 @@ def backups(ui, repo, *pats, **opts):
             ui.warn(_("%s already exists in the repo\n") % recovernode)
             return
     else:
-        msg = _("Recover commits using: hg backups --recover <commit hash>\n")
+        msg = _('Recover changesets using: hg backups --recover '
+                '<changeset hash>\n')
         ui.status(msg, label="status.removed")
 
     for backup in backups:

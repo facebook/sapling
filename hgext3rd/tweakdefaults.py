@@ -36,7 +36,7 @@ globaldata = 'globaldata'
 createmarkersoperation = 'createmarkersoperation'
 
 logopts = [
-    ('', 'all', None, _('shows all commits in the repo')),
+    ('', 'all', None, _('shows all changesets in the repo')),
 ]
 
 def uisetup(ui):

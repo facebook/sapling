@@ -17,13 +17,13 @@ Test functionality is present
 
 
   $ hg help commit | grep -- --fixup
-      --fixup               (with --amend) rebase children commits from a
+      --fixup               (with --amend) rebase children from a previous amend
   $ hg help commit | grep -- --rebase
-      --rebase              (with --amend) rebases children commits after the
+      --rebase              (with --amend) rebases children after the amend
   $ hg help amend
   hg amend [OPTION]...
   
-  amend the current commit with more changes
+  amend the current changeset with more changes
   
   options ([+] can be repeated):
   
@@ -31,8 +31,8 @@ Test functionality is present
                             committing
    -e --edit                prompt to edit the commit message
    -i --interactive         use interactive mode
-      --rebase              rebases children commits after the amend
-      --fixup               rebase children commits from a previous amend
+      --rebase              rebases children after the amend
+      --fixup               rebase children from a previous amend
    -I --include PATTERN [+] include names matching the given patterns
    -X --exclude PATTERN [+] exclude names matching the given patterns
    -m --message TEXT        use text as commit message
@@ -56,7 +56,7 @@ Test basic functions
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo a >> a
   $ hg amend
-  warning: the commit's children were left behind
+  warning: the changeset's children were left behind
   (use 'hg amend --fixup' to rebase them)
   $ hg up 0
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -105,7 +105,7 @@ Test that bookmarked re-amends work well
   $ hg amend
   user education
   second line
-  warning: the commit's children were left behind
+  warning: the changeset's children were left behind
   (use 'hg amend --fixup' to rebase them)
   $ hg log -G -T '{node|short} {desc} {bookmarks}\n'
   @  edf5fd2f5332 aa bm
@@ -156,7 +156,7 @@ Test that unbookmarked re-amends work well
   $ hg amend
   user education
   second line
-  warning: the commit's children were left behind
+  warning: the changeset's children were left behind
   (use 'hg amend --fixup' to rebase them)
   $ hg log -G -T '{node|short} {desc} {bookmarks}\n'
   @  94eb429c9465 aa
@@ -224,9 +224,9 @@ Test interaction with histedit
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   amending from exec
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  warning: the commit's children were left behind
+  warning: the changeset's children were left behind
   (this is okay since a histedit is in progress)
-  Changes commited as a2329fab3fab. You may amend the commit now.
+  Changes commited as a2329fab3fab. You may amend the changeset now.
   When you are done, run hg histedit --continue to resume
   [1]
   $ hg log -G -T '{node|short} {desc} {bookmarks}\n'
@@ -357,7 +357,7 @@ Fbamend respects the createmarkers option
   committing changelog
   user education
   second line
-  warning: the commit's children were left behind
+  warning: the changeset's children were left behind
   (use 'hg amend --fixup' to rebase them)
   $ hg amend --fixup
   rebasing the children of 3a4d2824efc1.preamend
@@ -405,7 +405,7 @@ Just commit the file in interactive mode
   > X
   > EOF
   $ hg amend -i --config "fbamend.education=" -q
-  warning: the commit's children were left behind
+  warning: the changeset's children were left behind
 preamend bookmark exists
   $ hg log -G -T '{bookmarks}' | grep 'preamend'
   | x  6cd3bb4b4ada.preamend
@@ -423,7 +423,7 @@ test hg commit -i --amend works in a stack
   > X
   > EOF
   $ hg commit -i --amend --config "fbamend.education=" -q -m 'a commit msg'
-  warning: the commit's children were left behind
+  warning: the changeset's children were left behind
   1 new unstable changesets
 preamend bookmark exists
   $ hg log -G -T '{bookmarks}' | grep 'preamend'
@@ -499,7 +499,7 @@ Test fbamend with inhibit
   $ hg amend
   user education
   second line
-  warning: the commit's children were left behind
+  warning: the changeset's children were left behind
   (use 'hg amend --fixup' to rebase them)
   $ hg amend --fixup
   rebasing the children of f2d4abddbbcd.preamend
@@ -665,8 +665,8 @@ bookmark
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (activating bookmark activebook)
   $ hg amend --fixup
-  abort: cannot automatically determine what to rebase because bookmark "activebook.preamend" points to the current commit
-  (please examine smartlog and rebase your commits manually)
+  abort: cannot automatically determine what to rebase because bookmark "activebook.preamend" points to the current changset
+  (please examine smartlog and rebase your changsets manually)
   [255]
 
 
