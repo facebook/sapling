@@ -47,12 +47,12 @@ setup(
     ext_modules = [
         Extension('cdatapack',
                   sources=[
-                      'remotefilelog/cdatapack/py-cdatapack.c',
-                      'remotefilelog/cdatapack/cdatapack.c',
+                      'cdatapack/py-cdatapack.c',
+                      'cdatapack/cdatapack.c',
                   ],
                   include_dirs=[
                       'clib',
-                      'remotefilelog/cdatapack',
+                      'cdatapack',
                       '/usr/local/include',
                       '/opt/local/include',
                   ],
@@ -72,15 +72,15 @@ setup(
         ),
         Extension('ctreemanifest',
                   sources=[
-                      'remotefilelog/ctreemanifest/py-treemanifest.cpp',
-                      'remotefilelog/ctreemanifest/manifest.cpp',
-                      'remotefilelog/ctreemanifest/manifest_entry.cpp',
-                      'remotefilelog/ctreemanifest/manifest_fetcher.cpp',
-                      'remotefilelog/ctreemanifest/pythonutil.cpp',
-                      'remotefilelog/ctreemanifest/treemanifest.cpp',
+                      'ctreemanifest/py-treemanifest.cpp',
+                      'ctreemanifest/manifest.cpp',
+                      'ctreemanifest/manifest_entry.cpp',
+                      'ctreemanifest/manifest_fetcher.cpp',
+                      'ctreemanifest/pythonutil.cpp',
+                      'ctreemanifest/treemanifest.cpp',
                   ],
                   include_dirs=[
-                      'remotefilelog/ctreemanifest',
+                      'ctreemanifest',
                   ],
                   library_dirs=[
                       '/usr/local/lib',

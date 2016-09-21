@@ -164,7 +164,7 @@ ENDIF(CMAKE_BUILD_TYPE MATCHES RelWithDebInfo OR CMAKE_BUILD_TYPE MATCHES Releas
 
 add_library(cdatapack
         SHARED
-        remotefilelog/cdatapack/py-cdatapack.c)
+        cdatapack/py-cdatapack.c)
 
 target_link_libraries(cdatapack
         PUBLIC cdatapack_lib)
@@ -173,17 +173,17 @@ target_link_libraries(cdatapack PUBLIC ${PYTHON_LIBRARIES})
 
 add_library(cdatapack_lib
         clib/buffer.h
-        remotefilelog/cdatapack/cdatapack.c
-        remotefilelog/cdatapack/cdatapack.h
+        cdatapack/cdatapack.c
+        cdatapack/cdatapack.h
         clib/convert.h)
 
 target_include_directories(cdatapack_lib PUBLIC /opt/local/include clib)
 target_link_libraries(cdatapack_lib PUBLIC ${LZ4})
 
-add_executable(cdatapack_dump remotefilelog/cdatapack/cdatapack_dump.c)
+add_executable(cdatapack_dump cdatapack/cdatapack_dump.c)
 target_link_libraries(cdatapack_dump cdatapack_lib)
 
-add_executable(cdatapack_get remotefilelog/cdatapack/cdatapack_get.c)
+add_executable(cdatapack_get cdatapack/cdatapack_get.c)
 target_link_libraries(cdatapack_get cdatapack_lib)
 
 target_include_directories(cdatapack_get PUBLIC /opt/local/include)
