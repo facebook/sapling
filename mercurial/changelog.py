@@ -257,7 +257,8 @@ class changelogrevision(object):
 
 class changelog(revlog.revlog):
     def __init__(self, opener):
-        revlog.revlog.__init__(self, opener, "00changelog.i")
+        revlog.revlog.__init__(self, opener, "00changelog.i",
+                               checkambig=True)
         if self._initempty:
             # changelogs don't benefit from generaldelta
             self.version &= ~revlog.REVLOGGENERALDELTA
