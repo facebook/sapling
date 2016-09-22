@@ -909,14 +909,13 @@ def first(repo, subset, x, order):
     return limit(repo, subset, x, order)
 
 def _follow(repo, subset, x, name, followfirst=False):
-    l = getargs(x, 0, 2, _("%s takes no arguments or a pattern "
-                           "and an optional revset") % name)
+    args = getargsdict(x, name, 'file startrev')
     c = repo['.']
-    if l:
-        x = getstring(l[0], _("%s expected a pattern") % name)
+    if 'file' in args:
+        x = getstring(args['file'], _("%s expected a pattern") % name)
         revs = [None]
-        if len(l) >= 2:
-            revs = getset(repo, fullreposet(repo), l[1])
+        if 'startrev' in args:
+            revs = getset(repo, fullreposet(repo), args['startrev'])
             if not revs:
                 raise error.RepoLookupError(
                     _("%s expected at least one starting revision") % name)
@@ -930,23 +929,26 @@ def _follow(repo, subset, x, name, followfirst=False):
             fctxs.extend(ctx[f].introfilectx() for f in ctx.manifest().walk(m))
         s = dagop.filerevancestors(fctxs, followfirst)
     else:
+        if 'startrev' in args:
+            raise error.ParseError(_("%s takes no arguments or a pattern "
+                                     "and an optional revset") % name)
         s = dagop.revancestors(repo, baseset([c.rev()]), followfirst)
 
     return subset & s
 
-@predicate('follow([pattern[, startrev]])', safe=True)
+@predicate('follow([file[, startrev]])', safe=True)
 def follow(repo, subset, x):
     """
     An alias for ``::.`` (ancestors of the working directory's first parent).
-    If pattern is specified, the histories of files matching given
+    If file pattern is specified, the histories of files matching given
     pattern in the revision given by startrev are followed, including copies.
     """
     return _follow(repo, subset, x, 'follow')
 
 @predicate('_followfirst', safe=True)
 def _followfirst(repo, subset, x):
-    # ``followfirst([pattern[, startrev]])``
-    # Like ``follow([pattern[, startrev]])`` but follows only the first parent
+    # ``followfirst([file[, startrev]])``
+    # Like ``follow([file[, startrev]])`` but follows only the first parent
     # of every revisions or files revisions.
     return _follow(repo, subset, x, '_followfirst', followfirst=True)
 

@@ -735,14 +735,20 @@ log -r "follow('set:grep(b2)', 4)"
 
 follow files starting from multiple revisions:
 
-  $ hg log -T '{rev}: {files}\n' -r "follow('glob:b?', 2+3+4)"
+  $ hg log -T '{rev}: {files}\n' -r "follow('glob:b?', startrev=2+3+4)"
   3: b1
   4: b2
 
 follow files starting from empty revision:
 
-  $ hg log -T '{rev}: {files}\n' -r "follow('glob:*', .-.)"
+  $ hg log -T '{rev}: {files}\n' -r "follow('glob:*', startrev=.-.)"
   abort: follow expected at least one starting revision!
+  [255]
+
+follow starting from revisions:
+
+  $ hg log -Gq -r "follow(startrev=2+4)"
+  hg: parse error: follow takes no arguments or a pattern and an optional revset
   [255]
 
   $ hg up -qC 4
