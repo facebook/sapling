@@ -732,6 +732,19 @@ log -r "follow('set:grep(b2)', 4)"
   date:        Thu Jan 01 00:00:01 1970 +0000
   summary:     b2
   
+
+follow files starting from multiple revisions:
+
+  $ hg log -T '{rev}: {files}\n' -r "follow('glob:b?', 2+3+4)"
+  3: b1
+  4: b2
+
+follow files starting from empty revision:
+
+  $ hg log -T '{rev}: {files}\n' -r "follow('glob:*', .-.)"
+  abort: follow expected at least one starting revision!
+  [255]
+
   $ hg up -qC 4
 
 log -f -r null

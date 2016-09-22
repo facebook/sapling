@@ -914,20 +914,20 @@ def _follow(repo, subset, x, name, followfirst=False):
     c = repo['.']
     if l:
         x = getstring(l[0], _("%s expected a pattern") % name)
-        rev = None
+        revs = [None]
         if len(l) >= 2:
             revs = getset(repo, fullreposet(repo), l[1])
-            if len(revs) != 1:
+            if not revs:
                 raise error.RepoLookupError(
-                        _("%s expected one starting revision") % name)
-            rev = revs.last()
-            c = repo[rev]
-        matcher = matchmod.match(repo.root, repo.getcwd(), [x],
-                                 ctx=repo[rev], default='path')
-
-        files = c.manifest().walk(matcher)
-
-        fctxs = [c[f].introfilectx() for f in files]
+                    _("%s expected at least one starting revision") % name)
+        fctxs = []
+        for r in revs:
+            ctx = mctx = repo[r]
+            if r is None:
+                ctx = repo['.']
+            m = matchmod.match(repo.root, repo.getcwd(), [x],
+                               ctx=mctx, default='path')
+            fctxs.extend(ctx[f].introfilectx() for f in ctx.manifest().walk(m))
         s = dagop.filerevancestors(fctxs, followfirst)
     else:
         s = dagop.revancestors(repo, baseset([c.rev()]), followfirst)
