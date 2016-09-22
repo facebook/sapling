@@ -124,7 +124,7 @@ class appender(object):
 
 def _divertopener(opener, target):
     """build an opener that writes in 'target.a' instead of 'target'"""
-    def _divert(name, mode='r'):
+    def _divert(name, mode='r', checkambig=False):
         if name != target:
             return opener(name, mode)
         return opener(name + ".a", mode)
@@ -132,7 +132,7 @@ def _divertopener(opener, target):
 
 def _delayopener(opener, target, buf):
     """build an opener that stores chunks in 'buf' instead of 'target'"""
-    def _delay(name, mode='r'):
+    def _delay(name, mode='r', checkambig=False):
         if name != target:
             return opener(name, mode)
         return appender(opener, name, mode, buf)

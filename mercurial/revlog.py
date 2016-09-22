@@ -212,8 +212,11 @@ class revlog(object):
     fashion, which means we never need to rewrite a file to insert or
     remove data, and can use some simple techniques to avoid the need
     for locking while reading.
+
+    If checkambig, indexfile is opened with checkambig=True at
+    writing, to avoid file stat ambiguity.
     """
-    def __init__(self, opener, indexfile):
+    def __init__(self, opener, indexfile, checkambig=False):
         """
         create a revlog object
 
@@ -223,6 +226,9 @@ class revlog(object):
         self.indexfile = indexfile
         self.datafile = indexfile[:-2] + ".d"
         self.opener = opener
+        #  When True, indexfile is opened with checkambig=True at writing, to
+        #  avoid file stat ambiguity.
+        self._checkambig = checkambig
         # 3-tuple of (node, rev, text) for a raw revision.
         self._cache = None
         # Maps rev to chain base rev.
@@ -1276,7 +1282,8 @@ class revlog(object):
         finally:
             df.close()
 
-        fp = self.opener(self.indexfile, 'w', atomictemp=True)
+        fp = self.opener(self.indexfile, 'w', atomictemp=True,
+                         checkambig=self._checkambig)
         self.version &= ~(REVLOGNGINLINEDATA)
         self._inline = False
         for i in self:
@@ -1319,7 +1326,7 @@ class revlog(object):
         dfh = None
         if not self._inline:
             dfh = self.opener(self.datafile, "a+")
-        ifh = self.opener(self.indexfile, "a+")
+        ifh = self.opener(self.indexfile, "a+", checkambig=self._checkambig)
         try:
             return self._addrevision(node, text, transaction, link, p1, p2,
                                      REVIDX_DEFAULT_FLAGS, cachedelta, ifh, dfh)
@@ -1567,7 +1574,7 @@ class revlog(object):
         end = 0
         if r:
             end = self.end(r - 1)
-        ifh = self.opener(self.indexfile, "a+")
+        ifh = self.opener(self.indexfile, "a+", checkambig=self._checkambig)
         isize = r * self._io.size
         if self._inline:
             transaction.add(self.indexfile, end + isize, r)
@@ -1641,7 +1648,8 @@ class revlog(object):
                     # reopen the index
                     ifh.close()
                     dfh = self.opener(self.datafile, "a+")
-                    ifh = self.opener(self.indexfile, "a+")
+                    ifh = self.opener(self.indexfile, "a+",
+                                      checkambig=self._checkambig)
         finally:
             if dfh:
                 dfh.close()
