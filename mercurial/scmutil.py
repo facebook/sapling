@@ -1300,15 +1300,13 @@ def gddeltaconfig(ui):
     # experimental config: format.generaldelta
     return ui.configbool('format', 'generaldelta', False)
 
-class delayclosedfile(object):
-    """Proxy for a file object whose close is delayed.
+class closewrapbase(object):
+    """Base class of wrapper, which hooks closing
 
     Do not instantiate outside of the vfs layer.
     """
-
-    def __init__(self, fh, closer):
+    def __init__(self, fh):
         object.__setattr__(self, '_origfh', fh)
-        object.__setattr__(self, '_closer', closer)
 
     def __getattr__(self, attr):
         return getattr(self._origfh, attr)
@@ -1321,6 +1319,21 @@ class delayclosedfile(object):
 
     def __enter__(self):
         return self._origfh.__enter__()
+
+    def __exit__(self, exc_type, exc_value, exc_tb):
+        raise NotImplementedError('attempted instantiating ' + str(type(self)))
+
+    def close(self):
+        raise NotImplementedError('attempted instantiating ' + str(type(self)))
+
+class delayclosedfile(closewrapbase):
+    """Proxy for a file object whose close is delayed.
+
+    Do not instantiate outside of the vfs layer.
+    """
+    def __init__(self, fh, closer):
+        super(delayclosedfile, self).__init__(fh)
+        object.__setattr__(self, '_closer', closer)
 
     def __exit__(self, exc_type, exc_value, exc_tb):
         self._closer.close(self._origfh)
