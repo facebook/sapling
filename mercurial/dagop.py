@@ -75,8 +75,9 @@ def _walkrevtree(pfunc, revs, startdepth, stopdepth, reverse):
                 if prev != node.nullrev:
                     heapq.heappush(pendingheap, (heapsign * prev, pdepth))
 
-def filectxancestors(fctx, followfirst=False):
-    """Like filectx.ancestors(), but includes the given fctx itself"""
+def filectxancestors(fctxs, followfirst=False):
+    """Like filectx.ancestors(), but can walk from multiple files/revisions,
+    and includes the given fctxs themselves"""
     visit = {}
     def addvisit(fctx):
         rev = fctx.rev()
@@ -89,7 +90,8 @@ def filectxancestors(fctx, followfirst=False):
     else:
         cut = None
 
-    addvisit(fctx)
+    for c in fctxs:
+        addvisit(c)
     while visit:
         rev = max(visit)
         c = visit[rev].pop()
