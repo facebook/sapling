@@ -87,7 +87,7 @@ def filectxancestors(fctx, followfirst=False):
     yield c
     while True:
         for parent in c.parents()[:cut]:
-            visit[(parent.linkrev(), parent.filenode())] = parent
+            visit[(parent.rev(), parent.filenode())] = parent
         if not visit:
             break
         c = visit.pop(max(visit))
