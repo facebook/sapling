@@ -913,9 +913,6 @@ def _follow(repo, subset, x, name, followfirst=False):
     revs = None
     if 'startrev' in args:
         revs = getset(repo, fullreposet(repo), args['startrev'])
-        if not revs:
-            raise error.RepoLookupError(
-                _("%s expected at least one starting revision") % name)
     if 'file' in args:
         x = getstring(args['file'], _("%s expected a pattern") % name)
         if revs is None:

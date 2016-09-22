@@ -742,8 +742,6 @@ follow files starting from multiple revisions:
 follow files starting from empty revision:
 
   $ hg log -T '{rev}: {files}\n' -r "follow('glob:*', startrev=.-.)"
-  abort: follow expected at least one starting revision!
-  [255]
 
 follow starting from revisions:
 
