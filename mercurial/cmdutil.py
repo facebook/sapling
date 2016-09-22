@@ -2152,12 +2152,8 @@ def getgraphlogrevs(repo, pats, opts):
         if not (revs.isdescending() or revs.istopo()):
             revs.sort(reverse=True)
     if expr:
-        # Revset matchers often operate faster on revisions in changelog
-        # order, because most filters deal with the changelog.
-        revs.reverse()
         matcher = revset.match(repo.ui, expr, order=revset.followorder)
         revs = matcher(repo, revs)
-        revs.reverse()
     if limit is not None:
         limitedrevs = []
         for idx, rev in enumerate(revs):
@@ -2182,14 +2178,8 @@ def getlogrevs(repo, pats, opts):
         return revset.baseset([]), None, None
     expr, filematcher = _makelogrevset(repo, pats, opts, revs)
     if expr:
-        # Revset matchers often operate faster on revisions in changelog
-        # order, because most filters deal with the changelog.
-        if not opts.get('rev'):
-            revs.reverse()
         matcher = revset.match(repo.ui, expr, order=revset.followorder)
         revs = matcher(repo, revs)
-        if not opts.get('rev'):
-            revs.reverse()
     if limit is not None:
         limitedrevs = []
         for idx, r in enumerate(revs):
