@@ -382,9 +382,9 @@ class changelog(revlog.revlog):
             tmpname = self.indexfile + ".a"
             nfile = self.opener.open(tmpname)
             nfile.close()
-            self.opener.rename(tmpname, self.indexfile)
+            self.opener.rename(tmpname, self.indexfile, checkambig=True)
         elif self._delaybuf:
-            fp = self.opener(self.indexfile, 'a')
+            fp = self.opener(self.indexfile, 'a', checkambig=True)
             fp.write("".join(self._delaybuf))
             fp.close()
             self._delaybuf = None
