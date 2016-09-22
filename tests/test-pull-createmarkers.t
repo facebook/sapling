@@ -60,7 +60,7 @@ The first client works on several diffs while the second client lands one of her
   $ hg push --to master
   pushing rev 2e73b79a63d8 to destination ssh://user@dummy/server bookmark master
   searching for changes
-  remote: pushing 1 commit:
+  remote: pushing 1 changset:
   remote:     2e73b79a63d8  add b
   updating bookmark master
   $ cd ../client
@@ -84,11 +84,11 @@ The first client works on several diffs while the second client lands one of her
   $ hg push --to master
   pushing rev d5895ab36037 to destination ssh://user@dummy/server bookmark master
   searching for changes
-  remote: pushing 3 commits:
+  remote: pushing 3 changsets:
   remote:     1a07332e9fa1  add c
   remote:     ee96b78ae17d  add d
   remote:     d5895ab36037  add e
-  remote: 4 new commits from the server will be downloaded
+  remote: 4 new changesets from the server will be downloaded
   adding changesets
   adding manifests
   adding file changes

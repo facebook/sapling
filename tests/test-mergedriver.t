@@ -361,7 +361,7 @@ XXX shouldn't output a warning
     ancestor path: foo.txt (node ad59c7ac23656632da079904d4d40d0bab4aeb80)
     other path: foo.txt (node 0b0743b512ba9b7c5db411597cf374a73b9f00ac)
   $ hg commit -m 'merged'
-  abort: unresolved merge conflicts (see "hg help resolve")
+  abort: unresolved merge conflicts (see 'hg help resolve')
   [255]
   $ hg update 2
   abort: outstanding uncommitted merge

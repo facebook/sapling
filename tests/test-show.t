@@ -271,7 +271,7 @@ Confirm that --help works (it didn't when we used an alias)
       See 'hg help templates' for more about pre-packaged styles and specifying
       custom templates.
   
-  (use "hg help -e show" to show help for the show extension)
+  (use 'hg help -e show' to show help for the show extension)
   
   options ([+] can be repeated):
   
@@ -294,7 +294,7 @@ Confirm that --help works (it didn't when we used an alias)
       See 'hg help templates' for more about pre-packaged styles and specifying
       custom templates.
   
-  (use "hg help -e show" to show help for the show extension)
+  (use 'hg help -e show' to show help for the show extension)
   
   options ([+] can be repeated):
   

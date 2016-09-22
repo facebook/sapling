@@ -55,7 +55,7 @@ shelve has a help message
       To delete specific shelved changes, use "--delete". To delete all shelved
       changes, use "--cleanup".
   
-  (use "hg help -e shelve" to show help for the shelve extension)
+  (use 'hg help -e shelve' to show help for the shelve extension)
   
   options ([+] can be repeated):
   

@@ -22,17 +22,17 @@ Test backups list and recover
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/d2ae7f538514-2953539b-backup.hg (glob)
   $ hg backups
-  Recover commits using: hg backups --recover <commit hash>
+  Recover changesets using: hg backups --recover <changeset hash>
   
   * (glob)
   d2ae7f538514 b
 
   $ hg backups --config experimental.evolution=createmarkers
-  Marker creation is enabled so no commit should be
+  Marker creation is enabled so no changeset should be
   * (glob)
-  stripped commits.  If you are trying to recover a commit hidden from a previous
-  command, use hg journal to get its sha1 and you will be able to access it
-  directly without recovering a backup.Recover commits using: hg backups --recover <commit hash>
+  stripped changesets. If you are trying to recover a changeset hidden from a
+  previous command, use hg journal to get its sha1 and you will be able to access
+  it directly without recovering a backup.Recover changesets using: hg backups --recover <changeset hash>
   
   * (glob)
   d2ae7f538514 b

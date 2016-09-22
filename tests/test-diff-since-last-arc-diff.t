@@ -16,7 +16,7 @@ Diff with no revision
   $ hg add foo
   $ hg ci -qm 'No rev'
   $ hg diff --since-last-arc-diff
-  abort: local commit is not associated with a differential revision
+  abort: local changeset is not associated with a differential revision
   [255]
 
 Fake a diff
@@ -38,14 +38,14 @@ Now progressively test the response handling for variations of missing data
   > [{"cmd": ["differential.query", {"ids": ["1"]}], "result": null}]
   > EOF
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg diff --since-last-arc-diff
-  abort: unable to determine previous commit hash
+  abort: unable to determine previous changeset hash
   [255]
 
   $ cat > $TESTTMP/mockduit << EOF
   > [{"cmd": ["differential.query", {"ids": ["1"]}], "result": [{"diffs": []}]}]
   > EOF
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg diff --since-last-arc-diff
-  abort: unable to determine previous commit hash
+  abort: unable to determine previous changeset hash
   [255]
 
   $ cat > $TESTTMP/mockduit << EOF
@@ -57,7 +57,7 @@ Now progressively test the response handling for variations of missing data
   > }]
   > EOF
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg diff --since-last-arc-diff
-  abort: unable to determine previous commit hash
+  abort: unable to determine previous changeset hash
   [255]
 
   $ cat > $TESTTMP/mockduit << EOF
@@ -69,7 +69,7 @@ Now progressively test the response handling for variations of missing data
   > }]
   > EOF
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg diff --since-last-arc-diff
-  abort: unable to determine previous commit hash
+  abort: unable to determine previous changeset hash
   [255]
 
 This is the case when the diff is up to date with the current commit;

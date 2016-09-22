@@ -85,7 +85,7 @@ when a diff is landed with landcastle.
   $ hg push -r . --to master
   pushing rev cc68f5e5f8d6 to destination ssh://user@dummy/server bookmark master
   searching for changes
-  remote: pushing 2 commits:
+  remote: pushing 2 changsets:
   remote:     e0672eeeb97c  add b
   remote:     cc68f5e5f8d6  add c
   updating bookmark master
@@ -145,7 +145,7 @@ Now land the last diff.
   $ hg push -r . --to master
   pushing rev 296f9d37d5c1 to destination ssh://user@dummy/server bookmark master
   searching for changes
-  remote: pushing 1 commit:
+  remote: pushing 1 changset:
   remote:     296f9d37d5c1  add d
   updating bookmark master
 
