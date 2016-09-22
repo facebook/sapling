@@ -62,6 +62,9 @@ folly::Optional<TreeInode::Dir> Overlay::loadOverlayDir(
       CompactSerializer::deserialize<overlay::OverlayDir>(serializedData);
 
   TreeInode::Dir result;
+  // The fact that we have a serialized data file for this dir implies that
+  // it is materialized, so ensure that we set that bit!
+  result.materialized = true;
 
   // The treeHash, if present, identifies the Tree from which this directory
   // was derived.

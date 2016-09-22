@@ -158,3 +158,16 @@ class MaterializedQueryTest:
         self.assertTrue(stat.S_ISREG(items['overlaid'].mode))
         self.assertEqual(6, items['overlaid'].size)
         self.assertNotEqual(0, items['overlaid'].mtime.seconds)
+
+    def test_rename_overlay_dir(self):
+        srcname = os.path.join(self.mount, 'overlay-1')
+        targetname = os.path.join(self.mount, 'overlay-2')
+        os.mkdir(srcname)
+
+        info = self.client.getMaterializedEntries(self.mount)
+        self.assertEqual(['', 'overlay-1'], sorted(info.fileInfo.keys()))
+
+        os.rename(srcname, targetname)
+
+        info = self.client.getMaterializedEntries(self.mount)
+        self.assertEqual(['', 'overlay-2'], sorted(info.fileInfo.keys()))
