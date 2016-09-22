@@ -774,7 +774,8 @@ def _dispatch(req):
     # Check abbreviation/ambiguity of shell alias.
     shellaliasfn = _checkshellalias(lui, ui, args)
     if shellaliasfn:
-        return shellaliasfn()
+        with profiling.maybeprofile(lui):
+            return shellaliasfn()
 
     # check for fallback encoding
     fallback = lui.config('ui', 'fallbackencoding')
@@ -844,7 +845,7 @@ def _dispatch(req):
     elif not cmd:
         return commands.help_(ui, 'shortlist')
 
-    if True:
+    with profiling.maybeprofile(lui):
         repo = None
         cmdpats = args[:]
         if not _cmdattr(ui, cmd, func, 'norepo'):
@@ -904,11 +905,10 @@ def _dispatch(req):
 
 def _runcommand(ui, options, cmd, cmdfunc):
     """Run a command function, possibly with profiling enabled."""
-    with profiling.maybeprofile(ui):
-        try:
-            return cmdfunc()
-        except error.SignatureError:
-            raise error.CommandError(cmd, _('invalid arguments'))
+    try:
+        return cmdfunc()
+    except error.SignatureError:
+        raise error.CommandError(cmd, _('invalid arguments'))
 
 def _exceptionwarning(ui):
     """Produce a warning message for the current active exception"""
