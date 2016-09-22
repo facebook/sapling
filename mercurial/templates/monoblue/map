@@ -136,13 +136,6 @@ comparisonline = '
   </tr>'
 
 changesetlink = '<a href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}">{node|short}</a>'
-changelogparent = '
-  <tr>
-    <th class="parent">parent {rev}:</th>
-    <td class="parent">
-      {changesetlink}
-    </td>
-  </tr>'
 changesetbranch = '<dt>branch</dt><dd>{name|escape}</dd>'
 changesetparent = '
   <dt>parent {rev}</dt>
@@ -221,22 +214,12 @@ filediffparent = '
 filecompparent = '
   <dt>parent {rev}</dt>
   <dd><a href="{url|urlescape}comparison/{node|short}/{file|urlescape}{sessionvars%urlparameter}">{node|short}</a></dd>'
-filelogparent = '
-  <tr>
-    <td align="right">parent {rev}:&nbsp;</td>
-    <td><a href="{url|urlescape}file/{node|short}/{file|urlescape}{sessionvars%urlparameter}">{node|short}</a></td>
-  </tr>'
 filediffchild = '
   <dt>child {rev}</dt>
   <dd><a href="{url|urlescape}diff/{node|short}/{file|urlescape}{sessionvars%urlparameter}">{node|short}</a></dd>'
 filecompchild = '
   <dt>child {rev}</dt>
   <dd><a href="{url|urlescape}comparison/{node|short}/{file|urlescape}{sessionvars%urlparameter}">{node|short}</a></dd>'
-filelogchild = '
-  <tr>
-    <td align="right">child {rev}:&nbsp;</td>
-    <td><a href="{url|urlescape}file{node|short}/{file|urlescape}{sessionvars%urlparameter}">{node|short}</a></td>
-  </tr>'
 shortlog = shortlog.tmpl
 tagtag = '<span class="tagtag" title="{name|escape}">{name|escape}</span> '
 branchtag = '<span class="branchtag" title="{name|escape}">{name|escape}</span> '
