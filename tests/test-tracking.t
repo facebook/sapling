@@ -14,7 +14,7 @@ Make sure we don't fail when rebase doesn't exist
   
       rebase        command to move sets of revisions to a different ancestor
   
-  (use "hg help extensions" for information on enabling extensions)
+  (use 'hg help extensions' for information on enabling extensions)
   [255]
   $ echo "rebase=" >> $HGRCPATH
 
