@@ -1009,6 +1009,77 @@ log --follow --patch FILE in repository where linkrev isn't trustworthy
 
   $ cd ..
 
+Multiple copy sources of a file:
+
+  $ hg init follow-multi
+  $ cd follow-multi
+  $ echo 0 >> a
+  $ hg ci -qAm 'a'
+  $ hg cp a b
+  $ hg ci -m 'a->b'
+  $ echo 2 >> a
+  $ hg ci -m 'a'
+  $ echo 3 >> b
+  $ hg ci -m 'b'
+  $ echo 4 >> a
+  $ echo 4 >> b
+  $ hg ci -m 'a,b'
+  $ echo 5 >> a
+  $ hg ci -m 'a0'
+  $ echo 6 >> b
+  $ hg ci -m 'b0'
+  $ hg up -q 4
+  $ echo 7 >> b
+  $ hg ci -m 'b1'
+  created new head
+  $ echo 8 >> a
+  $ hg ci -m 'a1'
+  $ hg rm a
+  $ hg mv b a
+  $ hg ci -m 'b1->a1'
+  $ hg merge -qt :local
+  $ hg ci -m '(a0,b1->a1)->a'
+
+  $ hg log -GT '{rev}: {desc}\n'
+  @    10: (a0,b1->a1)->a
+  |\
+  | o  9: b1->a1
+  | |
+  | o  8: a1
+  | |
+  | o  7: b1
+  | |
+  o |  6: b0
+  | |
+  o |  5: a0
+  |/
+  o  4: a,b
+  |
+  o  3: b
+  |
+  o  2: a
+  |
+  o  1: a->b
+  |
+  o  0: a
+  
+
+ since file 'a' has multiple copy sources at the revision 4, ancestors can't
+ be indexed solely by fctx.linkrev().
+
+  $ hg log -T '{rev}: {desc}\n' -f a
+  10: (a0,b1->a1)->a
+  9: b1->a1
+  7: b1
+  5: a0
+  4: a,b
+  3: b
+  2: a
+  1: a->b
+  0: a
+
+  $ cd ..
+
 Test that log should respect the order of -rREV even if multiple OR conditions
 are specified (issue5100):
 
