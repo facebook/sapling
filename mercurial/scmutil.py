@@ -1431,3 +1431,34 @@ class backgroundfilecloser(object):
             return
 
         self._queue.put(fh, block=True, timeout=None)
+
+class checkambigatclosing(closewrapbase):
+    """Proxy for a file object, to avoid ambiguity of file stat
+
+    See also util.filestat for detail about "ambiguity of file stat".
+
+    This proxy is useful only if the target file is guarded by any
+    lock (e.g. repo.lock or repo.wlock)
+
+    Do not instantiate outside of the vfs layer.
+    """
+    def __init__(self, fh):
+        super(checkambigatclosing, self).__init__(fh)
+        object.__setattr__(self, '_oldstat', util.filestat(fh.name))
+
+    def _checkambig(self):
+        oldstat = self._oldstat
+        if oldstat.stat:
+            newstat = util.filestat(self._origfh.name)
+            if newstat.isambig(oldstat):
+                # stat of changed file is ambiguous to original one
+                advanced = (oldstat.stat.st_mtime + 1) & 0x7fffffff
+                os.utime(self._origfh.name, (advanced, advanced))
+
+    def __exit__(self, exc_type, exc_value, exc_tb):
+        self._origfh.__exit__(exc_type, exc_value, exc_tb)
+        self._checkambig()
+
+    def close(self):
+        self._origfh.close()
+        self._checkambig()
