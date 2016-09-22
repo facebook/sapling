@@ -76,7 +76,7 @@ def _walkrevtree(pfunc, revs, startdepth, stopdepth, reverse):
                     heapq.heappush(pendingheap, (heapsign * prev, pdepth))
 
 def filectxancestors(fctx, followfirst=False):
-    """Like filectx.ancestors()"""
+    """Like filectx.ancestors(), but includes the given fctx itself"""
     visit = {}
     c = fctx
     if followfirst:
@@ -84,6 +84,7 @@ def filectxancestors(fctx, followfirst=False):
     else:
         cut = None
 
+    yield c
     while True:
         for parent in c.parents()[:cut]:
             visit[(parent.linkrev(), parent.filenode())] = parent
