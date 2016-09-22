@@ -78,6 +78,12 @@ def _walkrevtree(pfunc, revs, startdepth, stopdepth, reverse):
 def filectxancestors(fctx, followfirst=False):
     """Like filectx.ancestors(), but includes the given fctx itself"""
     visit = {}
+    def addvisit(fctx):
+        rev = fctx.rev()
+        if rev not in visit:
+            visit[rev] = set()
+        visit[rev].add(fctx)
+
     c = fctx
     if followfirst:
         cut = 1
@@ -87,10 +93,13 @@ def filectxancestors(fctx, followfirst=False):
     yield c
     while True:
         for parent in c.parents()[:cut]:
-            visit[(parent.rev(), parent.filenode())] = parent
+            addvisit(parent)
         if not visit:
             break
-        c = visit.pop(max(visit))
+        rev = max(visit)
+        c = visit[rev].pop()
+        if not visit[rev]:
+            del visit[rev]
         yield c
 
 def _genrevancestors(repo, revs, followfirst, startdepth, stopdepth, cutfunc):
