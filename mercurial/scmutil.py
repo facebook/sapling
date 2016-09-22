@@ -587,6 +587,12 @@ class vfs(abstractvfs):
         if nlink == 0:
             self._fixfilemode(f)
 
+        if checkambig:
+            if mode in ('r', 'rb'):
+                raise error.Abort(_('implementation error: mode %s is not'
+                                    ' valid for checkambig=True') % mode)
+            fp = checkambigatclosing(fp)
+
         if backgroundclose:
             if not self._backgroundfilecloser:
                 raise error.Abort(_('backgroundclose can only be used when a '
