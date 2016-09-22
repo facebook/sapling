@@ -82,10 +82,12 @@ def filectxancestors(fctxs, followfirst=False):
     Yields (rev, {fctx, ...}) pairs in descending order.
     """
     visit = {}
+    visitheap = []
     def addvisit(fctx):
         rev = fctx.rev()
         if rev not in visit:
             visit[rev] = set()
+            heapq.heappush(visitheap, -rev)  # max heap
         visit[rev].add(fctx)
 
     if followfirst:
@@ -96,12 +98,13 @@ def filectxancestors(fctxs, followfirst=False):
     for c in fctxs:
         addvisit(c)
     while visit:
-        currev = max(visit)
+        currev = -heapq.heappop(visitheap)
         curfctxs = visit.pop(currev)
         yield currev, curfctxs
         for c in curfctxs:
             for parent in c.parents()[:cut]:
                 addvisit(parent)
+    assert not visitheap
 
 def filerevancestors(fctxs, followfirst=False):
     """Like filectx.ancestors(), but can walk from multiple files/revisions,
