@@ -930,7 +930,8 @@ def _follow(repo, subset, x, name, followfirst=False):
         s = set()
         for fname in files:
             fctx = c[fname]
-            s = s.union(set(c.rev() for c in fctx.ancestors(followfirst)))
+            a = dagop.filectxancestors(fctx, followfirst)
+            s = s.union(set(c.rev() for c in a))
             # include the revision responsible for the most recent version
             s.add(fctx.introrev())
     else:

@@ -75,6 +75,23 @@ def _walkrevtree(pfunc, revs, startdepth, stopdepth, reverse):
                 if prev != node.nullrev:
                     heapq.heappush(pendingheap, (heapsign * prev, pdepth))
 
+def filectxancestors(fctx, followfirst=False):
+    """Like filectx.ancestors()"""
+    visit = {}
+    c = fctx
+    if followfirst:
+        cut = 1
+    else:
+        cut = None
+
+    while True:
+        for parent in c.parents()[:cut]:
+            visit[(parent.linkrev(), parent.filenode())] = parent
+        if not visit:
+            break
+        c = visit.pop(max(visit))
+        yield c
+
 def _genrevancestors(repo, revs, followfirst, startdepth, stopdepth, cutfunc):
     if followfirst:
         cut = 1
