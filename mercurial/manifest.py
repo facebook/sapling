@@ -927,7 +927,8 @@ class manifestrevlog(revlog.revlog):
         else:
             self._dirlogcache = {'': self}
 
-        super(manifestrevlog, self).__init__(opener, indexfile)
+        super(manifestrevlog, self).__init__(opener, indexfile,
+                                             checkambig=bool(dir))
 
     @property
     def fulltextcache(self):
