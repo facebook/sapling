@@ -910,15 +910,16 @@ def first(repo, subset, x, order):
 
 def _follow(repo, subset, x, name, followfirst=False):
     args = getargsdict(x, name, 'file startrev')
-    c = repo['.']
+    revs = None
+    if 'startrev' in args:
+        revs = getset(repo, fullreposet(repo), args['startrev'])
+        if not revs:
+            raise error.RepoLookupError(
+                _("%s expected at least one starting revision") % name)
     if 'file' in args:
         x = getstring(args['file'], _("%s expected a pattern") % name)
-        revs = [None]
-        if 'startrev' in args:
-            revs = getset(repo, fullreposet(repo), args['startrev'])
-            if not revs:
-                raise error.RepoLookupError(
-                    _("%s expected at least one starting revision") % name)
+        if revs is None:
+            revs = [None]
         fctxs = []
         for r in revs:
             ctx = mctx = repo[r]
@@ -929,10 +930,9 @@ def _follow(repo, subset, x, name, followfirst=False):
             fctxs.extend(ctx[f].introfilectx() for f in ctx.manifest().walk(m))
         s = dagop.filerevancestors(fctxs, followfirst)
     else:
-        if 'startrev' in args:
-            raise error.ParseError(_("%s takes no arguments or a pattern "
-                                     "and an optional revset") % name)
-        s = dagop.revancestors(repo, baseset([c.rev()]), followfirst)
+        if revs is None:
+            revs = baseset([repo['.'].rev()])
+        s = dagop.revancestors(repo, revs, followfirst)
 
     return subset & s
 

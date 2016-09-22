@@ -748,8 +748,20 @@ follow files starting from empty revision:
 follow starting from revisions:
 
   $ hg log -Gq -r "follow(startrev=2+4)"
-  hg: parse error: follow takes no arguments or a pattern and an optional revset
-  [255]
+  o  4:ddb82e70d1a1
+  |
+  | o  2:60c670bf5b30
+  | |
+  | o  1:3d5bf5654eda
+  |/
+  @  0:67e992f2c4f3
+  
+
+follow the current revision:
+
+  $ hg log -Gq -r "follow()"
+  @  0:67e992f2c4f3
+  
 
   $ hg up -qC 4
 
