@@ -2155,12 +2155,9 @@ def getgraphlogrevs(repo, pats, opts):
         # Revset matchers often operate faster on revisions in changelog
         # order, because most filters deal with the changelog.
         revs.reverse()
-        matcher = revset.match(repo.ui, expr)
-        # Revset matches can reorder revisions. "A or B" typically returns
-        # returns the revision matching A then the revision matching B. Sort
-        # again to fix that.
+        matcher = revset.match(repo.ui, expr, order=revset.followorder)
         revs = matcher(repo, revs)
-        revs.sort(reverse=True)
+        revs.reverse()
     if limit is not None:
         limitedrevs = []
         for idx, rev in enumerate(revs):
