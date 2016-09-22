@@ -84,23 +84,20 @@ def filectxancestors(fctx, followfirst=False):
             visit[rev] = set()
         visit[rev].add(fctx)
 
-    c = fctx
     if followfirst:
         cut = 1
     else:
         cut = None
 
-    yield c
-    while True:
-        for parent in c.parents()[:cut]:
-            addvisit(parent)
-        if not visit:
-            break
+    addvisit(fctx)
+    while visit:
         rev = max(visit)
         c = visit[rev].pop()
         if not visit[rev]:
             del visit[rev]
         yield c
+        for parent in c.parents()[:cut]:
+            addvisit(parent)
 
 def _genrevancestors(repo, revs, followfirst, startdepth, stopdepth, cutfunc):
     if followfirst:
