@@ -118,12 +118,6 @@ comparisonline = '
     <td class="source {type}"><a href="#{lineid}">{rightlinenumber}</a> {rightline|escape}</td>
   </tr>'
 
-changelogparent = '
-  <tr>
-    <th class="parent">parent {rev}:</th>
-    <td class="parent"><a href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}">{node|short}</a></td>
-  </tr>'
-
 changesetparent = '<a href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}">{node|short}</a> '
 
 changesetparentdiff = '
@@ -215,21 +209,11 @@ filediffparent = '
     <th class="parent">parent {rev}:</th>
     <td class="parent"><a href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}">{node|short}</a></td>
   </tr>'
-filelogparent = '
-  <tr>
-    <th>parent {rev}:</th>
-    <td><a href="{url|urlescape}file/{node|short}/{file|urlescape}{sessionvars%urlparameter}">{node|short}</a></td>
-  </tr>'
 filediffchild = '
   <tr>
     <th class="child">child {rev}:</th>
     <td class="child"><a href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}">{node|short}</a>
   </td>
-  </tr>'
-filelogchild = '
-  <tr>
-    <th>child {rev}:</th>
-    <td><a href="{url|urlescape}file/{node|short}/{file|urlescape}{sessionvars%urlparameter}">{node|short}</a></td>
   </tr>'
 
 indexentry = '
