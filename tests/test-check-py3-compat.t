@@ -137,6 +137,7 @@
   mercurial/pathutil.py: error importing: <TypeError> '_fields_' must be a sequence of (name, C type) pairs (error at osutil.py:*) (glob)
   mercurial/peer.py: error importing: <TypeError> '_fields_' must be a sequence of (name, C type) pairs (error at osutil.py:*) (glob)
   mercurial/pure/mpatch.py: error importing module: <AttributeError> 'VendorImporter' object has no attribute 'find_spec' (line *) (glob)
+  mercurial/pure/osutil.py: error importing module: <AttributeError> 'VendorImporter' object has no attribute 'find_spec' (line *) (glob)
   mercurial/pure/parsers.py: error importing module: <AttributeError> 'VendorImporter' object has no attribute 'find_spec' (line *) (glob)
   mercurial/pushkey.py: error importing: <TypeError> '_fields_' must be a sequence of (name, C type) pairs (error at osutil.py:*) (glob)
   mercurial/pvec.py: error importing: <TypeError> '_fields_' must be a sequence of (name, C type) pairs (error at osutil.py:*) (glob)
