@@ -307,7 +307,7 @@ Testing -h/--help:
    files         list tracked files
    forget        forget the specified files on the next commit
    graft         copy changes from other branches onto the current branch
-   grep          search for a pattern in specified files and revisions
+   grep          search revision history for a pattern in specified files
    heads         show branch heads
    help          show help for a given topic or a help overview
    identify      identify the working directory or specified revision
@@ -390,7 +390,7 @@ Testing -h/--help:
    files         list tracked files
    forget        forget the specified files on the next commit
    graft         copy changes from other branches onto the current branch
-   grep          search for a pattern in specified files and revisions
+   grep          search revision history for a pattern in specified files
    heads         show branch heads
    help          show help for a given topic or a help overview
    identify      identify the working directory or specified revision

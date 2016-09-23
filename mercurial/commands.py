@@ -4288,20 +4288,23 @@ def _dograft(ui, repo, *revs, **opts):
     _('[OPTION]... PATTERN [FILE]...'),
     inferrepo=True)
 def grep(ui, repo, pattern, *pats, **opts):
-    """search for a pattern in specified files and revisions
+    """search revision history for a pattern in specified files
 
-    Search revisions of files for a regular expression.
+    Search revision history for a regular expression in the specified
+    files or the entire project.
 
-    This command behaves differently than Unix grep. It only accepts
-    Python/Perl regexps. It searches repository history, not the
-    working directory. It always prints the revision number in which a
-    match appears.
-
-    By default, grep only prints output for the first revision of a
+    By default, grep prints the most recent revision number for each
     file in which it finds a match. To get it to print every revision
-    that contains a change in match status ("-" for a match that
-    becomes a non-match, or "+" for a non-match that becomes a match),
-    use the --all flag.
+    that contains a change in match status ("-" for a match that becomes
+    a non-match, or "+" for a non-match that becomes a match), use the
+    --all flag.
+
+    PATTERN can be any Python (roughly Perl-compatible) regular
+    expression.
+
+    If no FILEs are specified (and -f/--follow isn't set), all files in
+    the repository are searched, including those that don't exist in the
+    current branch or have been deleted in a prior changeset.
 
     Returns 0 if a match is found, 1 otherwise.
     """

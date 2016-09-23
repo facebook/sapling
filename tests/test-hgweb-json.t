@@ -1467,7 +1467,7 @@ help/ shows help topics
         "topic": "graft"
       },
       {
-        "summary": "search for a pattern in specified files and revisions",
+        "summary": "search revision history for a pattern in specified files",
         "topic": "grep"
       },
       {
