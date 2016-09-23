@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import json
 import multiprocessing
 import os
 import re
@@ -124,3 +125,6 @@ if __name__ == '__main__':
         sys.exit(runtests(tests, jsonpath))
     else:
         info('no tests to run\n')
+        # Write out an empty results file
+        with open(jsonpath, 'w') as fp:
+            json.dump({}, fp)
