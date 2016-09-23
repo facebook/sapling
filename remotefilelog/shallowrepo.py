@@ -90,8 +90,9 @@ def wraprepo(repo):
                 localrevs = repo
 
             mf = repo.manifest
+            mfl = repo.manifestlog
             if base is not None:
-                mfdict = mf.read(repo[base].manifestnode())
+                mfdict = mfl[repo[base].manifestnode()].read()
                 skip = set(mfdict.iteritems())
             else:
                 skip = set()
@@ -115,9 +116,9 @@ def wraprepo(repo):
                 # When possible, only read the deltas.
                 p1, p2 = mf.parentrevs(mfrev)
                 if p1 in visited and p2 in visited:
-                    mfdict = mf.readfast(mfnode)
+                    mfdict = mfl[mfnode].readfast()
                 else:
-                    mfdict = mf.read(mfnode)
+                    mfdict = mfl[mfnode].read()
 
                 diff = mfdict.iteritems()
                 if pats:

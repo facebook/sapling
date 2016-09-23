@@ -60,7 +60,7 @@ class remotefilectx(context.filectx):
         path = self._path
         fileid = self._fileid
         cl = self._repo.unfiltered().changelog
-        ma = self._repo.manifest
+        mfl = self._repo.manifestlog
 
         for rev in range(len(cl) - 1, 0, -1):
             node = cl.node(rev)
@@ -68,7 +68,7 @@ class remotefilectx(context.filectx):
             if path in data[3]: # checking the 'files' field.
                 # The file has been touched, check if the hash is what we're
                 # looking for.
-                if fileid == ma.readfast(data[0]).get(path):
+                if fileid == mfl[data[0]].readfast().get(path):
                     return rev
 
         # Couldn't find the linkrev. This should generally not happen, and will
@@ -178,7 +178,7 @@ class remotefilectx(context.filectx):
         """
         repo = self._repo
         cl = repo.unfiltered().changelog
-        ma = repo.manifest
+        mfl = repo.manifestlog
         ancestormap = self.ancestormap()
         p1, p2, linknode, copyfrom = ancestormap[fnode]
 
@@ -215,7 +215,7 @@ class remotefilectx(context.filectx):
             if path in ac[3]: # checking the 'files' field.
                 # The file has been touched, check if the content is
                 # similar to the one we search for.
-                if fnode == ma.readfast(ac[0]).get(path):
+                if fnode == mfl[ac[0]].readfast().get(path):
                     return cl.node(a)
 
         return linknode
