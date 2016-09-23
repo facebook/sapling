@@ -91,7 +91,7 @@ setup(
                   ],
                   extra_compile_args=[
                       "-Wall",
-                      "-Werror", "-Werror=strict-prototypes",
+                      "-Werror",
                   ] + cdebugflags,
         ),
         Extension('cfastmanifest',
