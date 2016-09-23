@@ -15,12 +15,8 @@ by MercurialTestEngine.php
 reporoot = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
 
 def info(message):
-    """print info. try to write to tty to escape from pipes"""
-    if os.access('/dev/tty', os.W_OK):
-        with open('/dev/tty', 'w') as f:
-            f.write(message)
-    else:
-        sys.stderr.write(message)
+    """print message to stderr"""
+    sys.stderr.write(message)
 
 def getrunner():
     """return the path of run-tests.py. best-effort"""
