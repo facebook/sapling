@@ -345,7 +345,7 @@ static bool fileiter_popfinished(fileiter *iter) {
     if (found != std::string::npos) {
       iter->path.erase(found + 1);
     } else {
-      iter->path.erase(0);
+      iter->path.erase(size_t(0));
     }
   }
 
