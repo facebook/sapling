@@ -1551,6 +1551,9 @@ Test section lookup
   $ hg help template.files
       files         List of strings. All files modified, added, or removed by
                     this changeset.
+      files(pattern)
+                    All files of the current changeset matching the pattern. See
+                    'hg help patterns'.
 
 Test section lookup by translated message
 

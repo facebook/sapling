@@ -480,6 +480,20 @@ def diff(context, mapping, args):
 
     return ''.join(chunks)
 
+@templatefunc('files(pattern)')
+def files(context, mapping, args):
+    """All files of the current changeset matching the pattern. See
+    :hg:`help patterns`."""
+    if not len(args) == 1:
+        # i18n: "files" is a keyword
+        raise error.ParseError(_("files expects one argument"))
+
+    raw = evalstring(context, mapping, args[0])
+    ctx = mapping['ctx']
+    m = ctx.match([raw])
+    files = list(ctx.matches(m))
+    return templatekw.showlist("file", files, **mapping)
+
 @templatefunc('fill(text[, width[, initialident[, hangindent]]])')
 def fill(context, mapping, args):
     """Fill many
