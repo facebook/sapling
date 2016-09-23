@@ -50,6 +50,7 @@ def uisetup(ui):
     for opt in amendopts:
         opt = (opt[0], opt[1], opt[2], "(with --amend) " + opt[3])
         entry[1].append(opt)
+
     # manual call of the decorator
     command('^amend', [
             ('A', 'addremove', None,
@@ -71,6 +72,25 @@ def uisetup(ui):
              _('disable automatic file move detection')))
     extensions.afterloaded('automv', has_automv)
 
+    # If the evolve extension is enabled, wrap the `next` command to
+    # add the --rebase flag.
+    def wrapnext(loaded):
+        if not loaded:
+            return
+        evolvemod = extensions.find('evolve')
+        entry = extensions.wrapcommand(evolvemod.cmdtable, 'next', nextrebase)
+
+        # Remove `hg next --evolve` and add `hg next --rebase`.
+        # Can't use a list comprehension since the list is in a tuple.
+        for i, opt in enumerate(entry[1]):
+            if opt[1] == 'evolve':
+                del entry[1][i]
+                break
+        entry[1].append((
+            '', 'rebase', False, _('rebase the changeset if necessary')
+        ))
+
+    extensions.afterloaded('evolve', wrapnext)
 
 def commit(orig, ui, repo, *pats, **opts):
     if opts.get("amend"):
@@ -346,6 +366,58 @@ def fixupamend(ui, repo):
             bmactivate(repo, active)
     finally:
         lockmod.release(wlock, lock, tr)
+
+def nextrebase(orig, ui, repo, **opts):
+    """Wrapper around the evolve extension's next command, adding the
+       --rebase option, which detects whether the current changeset has
+       any children on an obsolete precursor, and if so, rebases those
+       children onto the current version.
+    """
+    # Just perform `hg next` if no --rebase option.
+    if not opts['rebase']:
+        return orig(ui, repo, **opts)
+
+    # Abort if there is an unfinished operation or changes to the
+    # working copy, to be consistent with the behavior of `hg next`.
+    cmdutil.checkunfinished(repo)
+    cmdutil.bailifchanged(repo)
+
+    # Find any child changesets on the changeset's precursor, if one exists.
+    children = []
+    for p in repo.set('allprecursors(.)'):
+        children.extend(d.hex() for d in p.descendants())
+
+    # If doing a dry run, just print out the corresponding commands.
+    if opts['dry_run']:
+        if children:
+            rev = '+'.join(children)
+            dest = repo['.'].hex()
+            ui.write(('hg rebase -r %s -d %s -k\n' % (rev, dest)))
+        # Since we don't know what the new hashes will be until we actually
+        # perform the rebase, the dry run output can't explicitly say
+        # `hg update %s`. This is different from the normal output
+        # of `hg next --dry-run`.
+        ui.write(('hg next\n'))
+        return 0
+
+    # Rebase any children of the obsolete changesets.
+    if children:
+        rebaseopts = {
+            'rev': children,
+            'dest': repo['.'].hex(),
+            'keep': True,
+        }
+        try:
+            rebasemod.rebase(ui, repo, **rebaseopts)
+        except error.InterventionRequired:
+            ui.status(_(
+                "please resolve any conflicts, run 'hg rebase --continue', "
+                "and then run 'hg next'\n"
+            ))
+            raise
+
+    # Only call `hg next` if there were no conflicts.
+    return orig(ui, repo, **opts)
 
 def _preamendname(repo, node):
     suffix = '.preamend'
