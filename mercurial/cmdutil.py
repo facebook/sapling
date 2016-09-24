@@ -1941,7 +1941,7 @@ def _makefollowlogfilematcher(repo, files, followfirst):
     # --follow, we want the names of the ancestors of FILE in the
     # revision, stored in "fcache". "fcache" is populated by
     # reproducing the graph traversal already done by --follow revset
-    # and relating linkrevs to file names (which is not "correct" but
+    # and relating revs to file names (which is not "correct" but
     # good enough).
     fcache = {}
     fcacheready = [False]
@@ -1950,9 +1950,9 @@ def _makefollowlogfilematcher(repo, files, followfirst):
     def populate():
         for fn in files:
             fctx = pctx[fn]
-            fcache.setdefault(fctx.linkrev(), set()).add(fctx.path())
+            fcache.setdefault(fctx.introrev(), set()).add(fctx.path())
             for c in fctx.ancestors(followfirst=followfirst):
-                fcache.setdefault(c.linkrev(), set()).add(c.path())
+                fcache.setdefault(c.rev(), set()).add(c.path())
 
     def filematcher(rev):
         if not fcacheready[0]:

@@ -933,6 +933,78 @@ log -r tip --stat
 
   $ cd ..
 
+log --follow --patch FILE in repository where linkrev isn't trustworthy
+(issue5376)
+
+  $ hg init follow-dup
+  $ cd follow-dup
+  $ cat <<EOF >> .hg/hgrc
+  > [ui]
+  > logtemplate = '=== {rev}: {desc}\n'
+  > [diff]
+  > nodates = True
+  > EOF
+  $ echo 0 >> a
+  $ hg ci -qAm 'a0'
+  $ echo 1 >> a
+  $ hg ci -m 'a1'
+  $ hg up -q 0
+  $ echo 1 >> a
+  $ touch b
+  $ hg ci -qAm 'a1 with b'
+  $ echo 3 >> a
+  $ hg ci -m 'a3'
+
+ fctx.rev() == 2, but fctx.linkrev() == 1
+
+  $ hg log -pf a
+  === 3: a3
+  diff -r 4ea02ba94d66 -r e7a6331a34f0 a
+  --- a/a
+  +++ b/a
+  @@ -1,2 +1,3 @@
+   0
+   1
+  +3
+  
+  === 2: a1 with b
+  diff -r 49b5e81287e2 -r 4ea02ba94d66 a
+  --- a/a
+  +++ b/a
+  @@ -1,1 +1,2 @@
+   0
+  +1
+  
+  === 0: a0
+  diff -r 000000000000 -r 49b5e81287e2 a
+  --- /dev/null
+  +++ b/a
+  @@ -0,0 +1,1 @@
+  +0
+  
+
+ fctx.introrev() == 2, but fctx.linkrev() == 1
+
+  $ hg up -q 2
+  $ hg log -pf a
+  === 2: a1 with b
+  diff -r 49b5e81287e2 -r 4ea02ba94d66 a
+  --- a/a
+  +++ b/a
+  @@ -1,1 +1,2 @@
+   0
+  +1
+  
+  === 0: a0
+  diff -r 000000000000 -r 49b5e81287e2 a
+  --- /dev/null
+  +++ b/a
+  @@ -0,0 +1,1 @@
+  +0
+  
+
+  $ cd ..
+
 Test that log should respect the order of -rREV even if multiple OR conditions
 are specified (issue5100):
 
