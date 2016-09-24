@@ -53,6 +53,8 @@ perfstatus
    perfbranchmap
                  benchmark the update of a branchmap
    perfcca       (no help text available)
+   perfchangegroupchangelog
+                 Benchmark producing a changelog group for a changegroup.
    perfchangeset
                  (no help text available)
    perfctxfiles  (no help text available)
@@ -112,6 +114,7 @@ perfstatus
   $ hg perfannotate a
   $ hg perfbranchmap
   $ hg perfcca
+  $ hg perfchangegroupchangelog
   $ hg perfchangeset 2
   $ hg perfctxfiles 2
   $ hg perfdiffwd

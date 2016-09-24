@@ -25,6 +25,7 @@ import random
 import sys
 import time
 from mercurial import (
+    changegroup,
     cmdutil,
     commands,
     copies,
@@ -276,6 +277,37 @@ def perfancestorset(ui, repo, revset, **opts):
         s = repo.changelog.ancestors(heads)
         for rev in revs:
             rev in s
+    timer(d)
+    fm.end()
+
+@command('perfchangegroupchangelog', formatteropts +
+         [('', 'version', '02', 'changegroup version'),
+          ('r', 'rev', '', 'revisions to add to changegroup')])
+def perfchangegroupchangelog(ui, repo, version='02', rev=None, **opts):
+    """Benchmark producing a changelog group for a changegroup.
+
+    This measures the time spent processing the changelog during a
+    bundle operation. This occurs during `hg bundle` and on a server
+    processing a `getbundle` wire protocol request (handles clones
+    and pull requests).
+
+    By default, all revisions are added to the changegroup.
+    """
+    cl = repo.changelog
+    revs = [cl.lookup(r) for r in repo.revs(rev or 'all()')]
+    bundler = changegroup.getbundler(version, repo)
+
+    def lookup(node):
+        # The real bundler reads the revision in order to access the
+        # manifest node and files list. Do that here.
+        cl.read(node)
+        return node
+
+    def d():
+        for chunk in bundler.group(revs, cl, lookup):
+            pass
+
+    timer, fm = gettimer(ui, opts)
     timer(d)
     fm.end()
 
