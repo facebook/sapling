@@ -1949,9 +1949,10 @@ def _makefollowlogfilematcher(repo, files, followfirst):
 
     def populate():
         for fn in files:
-            for i in ((pctx[fn],), pctx[fn].ancestors(followfirst=followfirst)):
-                for c in i:
-                    fcache.setdefault(c.linkrev(), set()).add(c.path())
+            fctx = pctx[fn]
+            fcache.setdefault(fctx.linkrev(), set()).add(fctx.path())
+            for c in fctx.ancestors(followfirst=followfirst):
+                fcache.setdefault(c.linkrev(), set()).add(c.path())
 
     def filematcher(rev):
         if not fcacheready[0]:
