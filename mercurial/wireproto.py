@@ -78,10 +78,11 @@ class abstractserverproto(object):
     #    """
     #    raise NotImplementedError()
 
-    def groupchunks(self, cg):
-        """return 4096 chunks from a changegroup object
+    def groupchunks(self, fh):
+        """Generator of chunks to send to the client.
 
-        Some protocols may have compressed the contents."""
+        Some protocols may have compressed the contents.
+        """
         raise NotImplementedError()
 
 class remotebatch(peer.batcher):

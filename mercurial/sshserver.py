@@ -68,8 +68,8 @@ class sshserver(wireproto.abstractserverproto):
     def redirect(self):
         pass
 
-    def groupchunks(self, changegroup):
-        return iter(lambda: changegroup.read(4096), '')
+    def groupchunks(self, fh):
+        return iter(lambda: fh.read(4096), '')
 
     def sendresponse(self, v):
         self.fout.write("%d\n" % len(v))
