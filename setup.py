@@ -90,6 +90,7 @@ setup(
                       'crypto',
                   ],
                   extra_compile_args=[
+                      "-std=c++0x",
                       "-Wall",
                       "-Werror",
                   ] + cdebugflags,
