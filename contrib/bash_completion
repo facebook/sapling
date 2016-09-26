@@ -89,9 +89,11 @@ _hg_debugpathcomplete()
 
 _hg_status()
 {
-    local files="$(_hg_cmd status -n$1 "glob:$cur**")"
-    local IFS=$'\n'
-    COMPREPLY=(${COMPREPLY[@]:-} $(compgen -W '$files' -- "$cur"))
+    if [ -z "$HGCOMPLETE_NOSTATUS" ]; then
+        local files="$(_hg_cmd status -n$1 "glob:$cur**")"
+        local IFS=$'\n'
+        COMPREPLY=(${COMPREPLY[@]:-} $(compgen -W '$files' -- "$cur"))
+    fi
 }
 
 _hg_branches()
