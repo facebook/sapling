@@ -5,17 +5,11 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import errno, os, tempfile, sys, operator, resource, collections, time
-
-try:
-    import json
-except ImportError:
-    import simplejson as json
+import errno, os, tempfile, resource, time
 
 from mercurial import bundle2, cmdutil, hg, scmutil, exchange, commands
 from mercurial import util, error, discovery, changegroup, context, revset
 from mercurial import obsolete, pushkey, phases, extensions
-from mercurial import bookmarks, lock as lockmod
 from mercurial.extensions import wrapcommand, wrapfunction
 from mercurial.hg import repository
 from mercurial.node import nullid, hex, bin
@@ -159,7 +153,7 @@ def _checkheads(orig, pushop):
         # we're pushing a new head, which isn't normally allowed
         if not repo.ui.configbool('experimental', 'bundle2-exp', False):
             raise error.Abort(_('bundle2 needs to be enabled on client'))
-        if not remote.capable('bundle2-exp'):
+        if not pushop.remote.capable('bundle2-exp'):
             raise error.Abort(_('bundle2 needs to be enabled on server'))
         return
     else:

@@ -392,4 +392,24 @@ Test push --to to a repo without pushrebase on (i.e. the default remotenames beh
   o  d2ae serverfeature
   |
   @  cb9a
-  
+
+Remotenames are turned off and bundle1 is enabled
+  $ cd ..
+  $ cat >> client/.hg/hgrc <<EOF
+  > [extensions]
+  > remotenames = !
+  > [devel]
+  > legacy.exchange = bundle1
+  > EOF
+  $ cat >> server/.hg/hgrc <<EOF
+  > [experimental]
+  > bundle2-exp=False
+  > EOF
+  $ cd client
+  $ echo foo > a
+  $ hg commit -Aqm 'new commit'
+  $ hg push -r . --to somebook
+  pushing to ssh://user@dummy/server
+  searching for changes
+  abort: bundle2 needs to be enabled on server
+  [255]
