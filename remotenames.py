@@ -1047,7 +1047,7 @@ def displaylocalbookmarks(ui, repo, opts):
     fm = ui.formatter('bookmarks', opts)
     hexfn = fm.hexfunc
     marks = repo._bookmarks
-    if len(marks) == 0 and not fm:
+    if len(marks) == 0 and (not fm or fm.isplain()) :
         ui.status(_("no bookmarks set\n"))
 
     tracking = _readtracking(repo)
