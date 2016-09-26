@@ -1828,7 +1828,7 @@ Dish up an empty repo; serve it cold.
   number or hash, or <a href="/help/revsets">revset expression</a>.</div>
   </form>
   <table class="bigtable">
-  <tr><td colspan="2"><h2><a name="main" href="#topics">Topics</a></h2></td></tr>
+  <tr><td colspan="2"><h2><a name="topics" href="#topics">Topics</a></h2></td></tr>
   
   <tr><td>
   <a href="/help/config">
@@ -2880,7 +2880,7 @@ Sub-topic indexes rendered properly
   number or hash, or <a href="/help/revsets">revset expression</a>.</div>
   </form>
   <table class="bigtable">
-  <tr><td colspan="2"><h2><a name="main" href="#topics">Topics</a></h2></td></tr>
+  <tr><td colspan="2"><h2><a name="topics" href="#topics">Topics</a></h2></td></tr>
   
   <tr><td>
   <a href="/help/internals.bundles">
