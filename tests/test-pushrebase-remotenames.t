@@ -392,6 +392,7 @@ Test push --to to a repo without pushrebase on (i.e. the default remotenames beh
   o  d2ae serverfeature
   |
   @  cb9a
+  
 
 Remotenames are turned off and bundle1 is enabled
   $ cd ..
