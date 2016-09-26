@@ -31,12 +31,12 @@
   revlogv1
   store
   treemanifest
-  $ find .hg/store/meta
+  $ find .hg/store/meta | sort
   .hg/store/meta
   .hg/store/meta/_a
+  .hg/store/meta/_a/00manifest.i
   .hg/store/meta/_a/_b
   .hg/store/meta/_a/_b/00manifest.i
-  .hg/store/meta/_a/00manifest.i
 
   $ hg update
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
