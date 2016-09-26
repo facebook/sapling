@@ -191,11 +191,16 @@ def _demandimport(name, globals=None, locals=None, fromlist=None, level=level):
         def processfromitem(mod, attr):
             """Process an imported symbol in the import statement.
 
-            If the symbol doesn't exist in the parent module, it must be a
-            module. We set missing modules up as _demandmod instances.
+            If the symbol doesn't exist in the parent module, and if the
+            parent module is a package, it must be a module. We set missing
+            modules up as _demandmod instances.
             """
             symbol = getattr(mod, attr, nothing)
+            nonpkg = getattr(mod, '__path__', nothing) is nothing
             if symbol is nothing:
+                if nonpkg:
+                    # do not try relative import, which would raise ValueError
+                    raise ImportError('cannot import name %s' % attr)
                 mn = '%s.%s' % (mod.__name__, attr)
                 if mn in ignore:
                     importfunc = _origimport
