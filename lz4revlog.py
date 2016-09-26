@@ -31,7 +31,7 @@ from mercurial import error, extensions, localrepo, revlog, util
 from mercurial.i18n import _
 import lz4
 
-testedwith = 'internal'
+testedwith = '3.9.1'
 
 def replaceclass(container, classname):
     '''Replace a class with another in a module, and interpose it into
@@ -102,8 +102,8 @@ if usable:
 
     @replaceclass(revlog, 'revlog')
     class lz4revlog(revlog.revlog):
-        def __init__(self, opener, indexfile):
-            super(lz4revlog, self).__init__(opener, indexfile)
+        def __init__(self, opener, indexfile, **kwds):
+            super(lz4revlog, self).__init__(opener, indexfile, **kwds)
             opts = getattr(opener, 'options', None)
             self._lz4 = opts and 'lz4revlog' in opts
 
