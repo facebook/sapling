@@ -940,8 +940,7 @@ class basefilectx(object):
                 return ([(rev, False)] * lines(text), text)
 
         def pair(parent, child):
-            blocks = mdiff.allblocks(parent[1], child[1], opts=diffopts,
-                                     refine=True)
+            blocks = mdiff.allblocks(parent[1], child[1], opts=diffopts)
             for (a1, a2, b1, b2), t in blocks:
                 # Changed blocks ('!') or blocks made only of blank lines ('~')
                 # belong to the child.

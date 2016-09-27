@@ -113,12 +113,11 @@ def splitblock(base1, lines1, base2, lines2, opts):
         s1 = i1
         s2 = i2
 
-def allblocks(text1, text2, opts=None, lines1=None, lines2=None, refine=False):
+def allblocks(text1, text2, opts=None, lines1=None, lines2=None):
     """Return (block, type) tuples, where block is an mdiff.blocks
     line entry. type is '=' for blocks matching exactly one another
     (bdiff blocks), '!' for non-matching blocks and '~' for blocks
-    matching only after having filtered blank lines. If refine is True,
-    then '~' blocks are refined and are only made of blank lines.
+    matching only after having filtered blank lines.
     line1 and line2 are text1 and text2 split with splitnewlines() if
     they are already available.
     """
