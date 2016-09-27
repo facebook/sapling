@@ -240,9 +240,7 @@ def unidiff(a, ad, b, bd, fn1, fn2, opts=defaultopts):
         l3 = "@@ -1,%d +0,0 @@\n" % len(a)
         l = [l1, l2, l3] + ["-" + e for e in a]
     else:
-        al = splitnewlines(a)
-        bl = splitnewlines(b)
-        l = list(_unidiff(a, b, al, bl, opts=opts))
+        l = list(_unidiff(a, b, opts=opts))
         if not l:
             return ""
 
@@ -257,8 +255,9 @@ def unidiff(a, ad, b, bd, fn1, fn2, opts=defaultopts):
 
 # creates a headerless unified diff
 # t1 and t2 are the text to be diffed
-# l1 and l2 are the text broken up into lines
-def _unidiff(t1, t2, l1, l2, opts=defaultopts):
+def _unidiff(t1, t2, opts=defaultopts):
+    l1 = splitnewlines(t1)
+    l2 = splitnewlines(t2)
     def contextend(l, len):
         ret = l + opts.context
         if ret > len:
