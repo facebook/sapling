@@ -264,6 +264,7 @@ ignore = [
     '_imp',
     '_xmlplus',
     'fcntl',
+    'nt', # pathlib2 tests the existence of built-in 'nt' module
     'win32com.gen_py',
     '_winreg', # 2.7 mimetypes needs immediate ImportError
     'pythoncom',
