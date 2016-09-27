@@ -287,6 +287,12 @@ ignore = [
     'distutils.msvc9compiler',
     ]
 
+if _pypy:
+    ignore.extend([
+        # _ctypes.pointer is shadowed by "from ... import pointer" (PyPy 5)
+        '_ctypes.pointer',
+    ])
+
 def isenabled():
     return builtins.__import__ == _demandimport
 
