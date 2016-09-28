@@ -35,12 +35,22 @@ if ispy3:
     import builtins
     import functools
 
+    def sysstr(s):
+        """Return a keyword str to be passed to Python functions such as
+        getattr() and str.encode()
+
+        This never raises UnicodeDecodeError. Non-ascii characters are
+        considered invalid and mapped to arbitrary but unique code points
+        such that 'sysstr(a) != sysstr(b)' for all 'a != b'.
+        """
+        if isinstance(s, builtins.str):
+            return s
+        return s.decode(u'latin-1')
+
     def _wrapattrfunc(f):
         @functools.wraps(f)
         def w(object, name, *args):
-            if isinstance(name, bytes):
-                name = name.decode(u'utf-8')
-            return f(object, name, *args)
+            return f(object, sysstr(name), *args)
         return w
 
     # these wrappers are automagically imported by hgloader
@@ -49,6 +59,10 @@ if ispy3:
     hasattr = _wrapattrfunc(builtins.hasattr)
     setattr = _wrapattrfunc(builtins.setattr)
     xrange = builtins.range
+
+else:
+    def sysstr(s):
+        return s
 
 stringio = io.StringIO
 empty = _queue.Empty
