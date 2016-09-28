@@ -47,6 +47,19 @@ def hfsignoreclean(s):
             s = s.replace(c, '')
     return s
 
+# encoding.environ is provided read-only, which may not be used to modify
+# the process environment
+_nativeenviron = (not pycompat.ispy3 or os.supports_bytes_environ)
+if not pycompat.ispy3:
+    environ = os.environ
+elif _nativeenviron:
+    environ = os.environb
+else:
+    # preferred encoding isn't known yet; use utf-8 to avoid unicode error
+    # and recreate it once encoding is settled
+    environ = dict((k.encode(u'utf-8'), v.encode(u'utf-8'))
+                   for k, v in os.environ.items())
+
 def _getpreferredencoding():
     '''
     On darwin, getpreferredencoding ignores the locale environment and
@@ -78,13 +91,13 @@ _encodingfixers = {
 }
 
 try:
-    encoding = os.environ.get("HGENCODING")
+    encoding = environ.get("HGENCODING")
     if not encoding:
         encoding = locale.getpreferredencoding() or 'ascii'
         encoding = _encodingfixers.get(encoding, lambda: encoding)()
 except locale.Error:
     encoding = 'ascii'
-encodingmode = os.environ.get("HGENCODINGMODE", "strict")
+encodingmode = environ.get("HGENCODINGMODE", "strict")
 fallbackencoding = 'ISO-8859-1'
 
 class localstr(str):
@@ -183,8 +196,14 @@ def fromlocal(s):
     except LookupError as k:
         raise error.Abort(k, hint="please check your locale settings")
 
+if not _nativeenviron:
+    # now encoding and helper functions are available, recreate the environ
+    # dict to be exported to other modules
+    environ = dict((tolocal(k.encode(u'utf-8')), tolocal(v.encode(u'utf-8')))
+                   for k, v in os.environ.items())
+
 # How to treat ambiguous-width characters. Set to 'wide' to treat as wide.
-wide = (os.environ.get("HGENCODINGAMBIGUOUS", "narrow") == "wide"
+wide = (environ.get("HGENCODINGAMBIGUOUS", "narrow") == "wide"
         and "WFA" or "WF")
 
 def colwidth(s):
