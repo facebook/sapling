@@ -1572,8 +1572,7 @@ def stripwrapper(orig, ui, repo, nodelist, *args, **kwargs):
         state.read()
         histedit_nodes = set([action.node for action
                              in state.actions if action.node])
-        strip_nodes = set([repo[n].node() for n in nodelist])
-        common_nodes = histedit_nodes & strip_nodes
+        common_nodes = histedit_nodes & set(nodelist)
         if common_nodes:
             raise error.Abort(_("histedit in progress, can't strip %s")
                              % ', '.join(node.short(x) for x in common_nodes))
