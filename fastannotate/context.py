@@ -17,6 +17,8 @@ from fastannotate import (
 )
 
 from mercurial import (
+    context as hgcontext,
+    error,
     lock as lockmod,
     mdiff,
     node,
@@ -27,18 +29,10 @@ from mercurial.i18n import _
 
 import linelog as linelogmod
 
-# extracted from mercurial.context.basefilectx.annotate
-def _getbase(fctx):
-    introrev = fctx.introrev()
-    if fctx.rev() == introrev:
-        return fctx
-    else:
-        return fctx.filectx(fctx.filenode(), changeid=introrev)
-
-# extracted from mercurial.context.basefilectx.annotate
+# given path, get filelog, cached
 @util.lrucachefunc
-def _getlog(f, x):
-    return f._repo.file(x)
+def _getflog(repo, path):
+    return repo.file(path)
 
 # extracted from mercurial.context.basefilectx.annotate
 def _parents(f, follow=True):
@@ -57,7 +51,7 @@ def _parents(f, follow=True):
     # from the cache to save time
     for p in pl:
         if not '_filelog' in p.__dict__:
-            p._filelog = _getlog(f, p.path())
+            p._filelog = _getflog(f._repo, p.path())
 
     return pl
 
@@ -80,6 +74,45 @@ def _pair(parent, child, blocks):
         if t == '=':
             child[0][b1:b2] = parent[0][a1:a2]
     return child
+
+# like scmutil.revsingle, but with lru cache, so their states (like manifests)
+# could be reused
+_revsingle = util.lrucachefunc(scmutil.revsingle)
+
+def resolvefctx(repo, rev, path, resolverev=False, adjustctx=None):
+    """(repo, str, str) -> fctx
+
+    get the filectx object from repo, rev, path, in an efficient way.
+
+    if resolverev is True, "rev" is a revision specified by the revset
+    language, otherwise "rev" is a nodeid, or a revision number that can
+    be consumed by repo.__getitem__.
+
+    if adjustctx is not None, the returned fctx will point to a changeset
+    that introduces the change (last modified the file).
+    """
+    if resolverev:
+        ctx = _revsingle(repo, rev)
+    else:
+        ctx = repo[rev]
+    # manifest.find is optimized for single file resolution. use it instead
+    # of manifest.get or ctx.__getitem__ or ctx.filectx for better performance.
+    # note: this is kind of reinventing ctx.filectx.
+    try:
+        fnode, flag = ctx.manifest().find(path)
+    except KeyError:
+        raise error.ManifestLookupError(rev, path, _('not found in manifest'))
+    # TODO: remotefilelog compatibility - remotefilelog does not have a real
+    # filelog - need a different approach
+    flog = _getflog(repo, path)
+    fctx = hgcontext.filectx(repo, path, fileid=fnode, filelog=flog,
+                             changeid=ctx.rev(), changectx=ctx)
+    if adjustctx is not None:
+        introrev = fctx.introrev()
+        if introrev != ctx.rev():
+            fctx._changeid = introrev
+            fctx._changectx = repo[introrev]
+    return fctx
 
 class annotateopts(object):
     """like mercurial.mdiff.diffopts, but is for annotate
@@ -127,9 +160,7 @@ class _annotatecontext(object):
         branch till 'master'. and run annotate on 'rev', which may or may not be
         included in the main branch.
 
-        if master is None, do not update linelog. if master is a callable, call
-        it to get the actual master, which can save some time if we don't need
-        to resolve the master.
+        if master is None, do not update linelog.
 
         the first value returned is the annotate result, it is [(node, linenum)]
         by default. [(node, linenum, path)] if showpath is True.
@@ -149,11 +180,9 @@ class _annotatecontext(object):
         # resolve master
         masterfctx = None
         if master:
-            if callable(master):
-                master = master()
-            masterfctx = _getbase(scmutil.revsingle(self.repo,
-                                                    master)[self.path])
-            if masterfctx in self.revmap:
+            masterfctx = self._resolvefctx(master, resolverev=True,
+                                           adjustctx=True)
+            if masterfctx in self.revmap: # no need to update linelog
                 masterfctx = None
 
         #                  ... - @ <- rev (can be an arbitrary changeset,
@@ -302,7 +331,8 @@ class _annotatecontext(object):
         elif len(rev) == 40 and node.bin(rev) in self.revmap:
             f = node.bin(rev)
         else:
-            f = _getbase(scmutil.revsingle(self.repo, rev)[self.path])
+            adjustctx = True
+            f = self._resolvefctx(rev, adjustctx=adjustctx, resolverev=True)
             result = f in self.revmap
         return result, f
 
@@ -313,7 +343,7 @@ class _annotatecontext(object):
         deleted) lines up to rev. call this after calling annotate(rev, ...) for
         better performance and accuracy.
         """
-        revfctx = _getbase(scmutil.revsingle(self.repo, rev)[self.path])
+        revfctx = self._resolvefctx(rev, resolverev=True, adjustctx=True)
 
         # find a chain from rev to anything in the mainbranch
         if revfctx not in self.revmap:
@@ -397,7 +427,7 @@ class _annotatecontext(object):
                             self.ui.debug('fastannotate: reading %s line #%d '
                                           'to resolve lines %r\n'
                                           % (node.short(hsh), linenum, idxs))
-                        fctx = self.repo[hsh][revmap.rev2path(rev)]
+                        fctx = self._resolvefctx(hsh, revmap.rev2path(rev))
                         lines = mdiff.splitnewlines(fctx.data())
                         revlines[rev] = lines
                     for idx in idxs:
@@ -409,7 +439,7 @@ class _annotatecontext(object):
             self.ui.debug('fastannotate: annotate %s to resolve lines\n'
                           % node.short(hsh))
             linelog.annotate(rev)
-            fctx = self.repo[hsh][revmap.rev2path(rev)]
+            fctx = self._resolvefctx(hsh, revmap.rev2path(rev))
             annotated = linelog.annotateresult
             lines = mdiff.splitnewlines(fctx.data())
             assert len(lines) == len(annotated)
@@ -449,7 +479,7 @@ class _annotatecontext(object):
         if showlines:
             if isinstance(f, str): # f: node or fctx
                 llrev = self.revmap.hsh2rev(f)
-                fctx = self.repo[f][self.revmap.rev2path(llrev)]
+                fctx = self._resolvefctx(f, self.revmap.rev2path(llrev))
             else:
                 fctx = f
             lines = mdiff.splitnewlines(fctx.data())
@@ -533,6 +563,9 @@ class _annotatecontext(object):
                 pl = pl[:1]
             return pl
         return parents
+
+    def _resolvefctx(self, rev, path=None, **kwds):
+        return resolvefctx(self.repo, rev, (path or self.path), **kwds)
 
 def _unlinkpaths(paths):
     """silent, best-effort unlink"""

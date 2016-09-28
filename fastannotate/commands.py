@@ -94,11 +94,7 @@ def fastannotate(ui, repo, *pats, **opts):
     showpath = opts.get('file', False)
 
     # find the head of the main (master) branch
-    masterrev = ui.config('fastannotate', 'mainbranch')
-    if masterrev:
-        master = lambda: scmutil.revsingle(repo, masterrev).rev()
-    else:
-        master = rev
+    master = ui.config('fastannotate', 'mainbranch', rev)
 
     for path in ctx.walk(m):
         result = lines = existinglines = None
