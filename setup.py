@@ -23,6 +23,31 @@ if os.getenv('FB_HGEXT_CDEBUG') is not None:
 else:
     cdebugflags = []
 
+def get_env_path_list(var_name, default=None):
+    '''Get a path list from an environment variable.  The variable is parsed as
+    a colon-separated list.'''
+    value = os.environ.get(var_name)
+    if not value:
+        return default
+    return value.split(os.path.pathsep)
+
+include_dirs = get_env_path_list('INCLUDE_DIRS')
+library_dirs = get_env_path_list('LIBRARY_DIRS')
+
+# Historical default values.
+# We should perhaps clean these up in the future after verifying that it
+# doesn't break the build on any platforms.
+#
+# The /usr/local/* directories shouldn't actually be needed--the compiler
+# should already use these directories when appropriate (e.g., if we are
+# using the standard system compiler that has them in its default paths).
+#
+# The /opt/local paths may be necessary on Darwin builds.
+if include_dirs is None:
+    include_dirs = ['/usr/local/include', '/opt/local/include']
+if library_dirs is None:
+    library_dirs = ['/usr/local/lib', '/opt/local/lib']
+
 setup(
     name='fbhgext',
     version='1.0',
@@ -53,13 +78,8 @@ setup(
                   include_dirs=[
                       'clib',
                       'cdatapack',
-                      '/usr/local/include',
-                      '/opt/local/include',
-                  ],
-                  library_dirs=[
-                      '/usr/local/lib',
-                      '/opt/local/lib',
-                  ],
+                  ] + include_dirs,
+                  library_dirs=library_dirs,
                   libraries=[
                       'crypto',
                       'lz4',
@@ -81,11 +101,8 @@ setup(
                   ],
                   include_dirs=[
                       'ctreemanifest',
-                  ],
-                  library_dirs=[
-                      '/usr/local/lib',
-                      '/opt/local/lib',
-                  ],
+                  ] + include_dirs,
+                  library_dirs=library_dirs,
                   libraries=[
                       'crypto',
                   ],
@@ -113,13 +130,8 @@ setup(
                   include_dirs=[
                       'cfastmanifest',
                       'clib',
-                      '/usr/local/include',
-                      '/opt/local/include',
-                  ],
-                  library_dirs=[
-                      '/usr/local/lib',
-                      '/opt/local/lib',
-                  ],
+                  ] + include_dirs,
+                  library_dirs=library_dirs,
                   libraries=['crypto',
                   ],
                   extra_compile_args=[
