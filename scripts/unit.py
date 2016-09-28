@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import json
 import multiprocessing
+import optparse
 import os
 import re
 import subprocess
@@ -89,38 +90,91 @@ def reporequires():
         return [s.rstrip() for s in open(requirespath, 'r')]
     return []
 
-def runtests(tests=[], jsonpath=None):
-    """run given tests, optionally write the result to the given json path"""
+def runtests(tests=None):
+    """run given tests
+
+    Returns a tuple of (exitcode, report)
+    exitcode will be 0 on success, and non-zero on failure
+    report is a dictionary of test results.
+    """
     cpucount = multiprocessing.cpu_count()
-    cmd = [getrunner(), '-j%d' % cpucount, '-l']
+    cmd = [getrunner(), '-j%d' % cpucount, '-l', '--json']
     requires = reporequires()
     if 'lz4revlog' in requires:
         cmd += ['--extra-config-opt=extensions.lz4revlog=']
-    if jsonpath:
-        cmd += ['--json']
-    cmd += tests
-    shellcmd = subprocess.list2cmdline(cmd)
-    os.chdir(os.path.join(reporoot, 'tests'))
-    exitcode = os.system(shellcmd)
-    # move report.json to jsonpath
-    if jsonpath:
-        reportpath = os.path.join(reporoot, 'tests', 'report.json')
-        report = open(reportpath).read()
-        with open(jsonpath, 'w') as f:
-            # strip the "testreport =" header which makes the JSON illegal
-            f.write(re.sub('^testreport =', '', report))
-        os.unlink(reportpath)
-    return exitcode
+    if tests:
+        cmd += tests
 
-if __name__ == '__main__':
-    jsonpath = (sys.argv + [None, None])[1]
+    # Include the repository root in PYTHONPATH so the unit tests will find
+    # the extensions from the local repository, rather than the versions
+    # already installed on the system.
+    env = os.environ.copy()
+    if 'PYTHONPATH' in env:
+        existing_pypath = [env['PYTHONPATH']]
+    else:
+        existing_pypath = []
+    env['PYTHONPATH'] = os.path.pathsep.join([reporoot] + existing_pypath)
+
+    # Run the tests.
+    #
+    # We ignore KeyboardInterrupt while running the tests: when the user hits
+    # Ctrl-C the interrupt will also be delivered to the test runner, which
+    # should cause it to exit soon.  We want to wait for the test runner to
+    # exit before we quit.  Otherwise may keep printing data even after we have
+    # exited and returned control of the terminal to the user's shell.
+    proc = subprocess.Popen(cmd, cwd=os.path.join(reporoot, 'tests'), env=env)
+    interruptcount = 0
+    maxinterrupts = 3
+    while True:
+        try:
+            exitcode = proc.wait()
+            break
+        except KeyboardInterrupt:
+            interruptcount += 1
+            if interruptcount >= maxinterrupts:
+                sys.stderr.write('Warning: test runner has not exited after '
+                                 'multiple interrupts.  Giving up on it and '
+                                 'quiting anyway.\n')
+                raise
+
+    try:
+        reportpath = os.path.join(reporoot, 'tests', 'report.json')
+        with open(reportpath) as rf:
+            report_contents = rf.read()
+
+        # strip the "testreport =" header which makes the JSON illegal
+        report = json.loads(re.sub('^testreport =', '', report_contents))
+        os.unlink(reportpath)
+    except (EnvironmentError, ValueError) as ex:
+        # If anything goes wrong parsing the report.json file, build our own
+        # fake failure report, and make sure we have non-zero exit code.
+        sys.stderr.write('warning: error reading results: %s\n' % (ex,))
+        report = {'run-tests': {'result': 'failure'}}
+        if exitcode == 0:
+            exitcode = 1
+
+    return exitcode, report
+
+def main():
+    op = optparse.OptionParser()
+    opts, args = op.parse_args()
+    jsonpath = args[0] if args else None
+
     tests = interestingtests()
     if tests:
         info('%d test%s to run: %s\n'
              % (len(tests), ('' if len(tests) == 1 else 's'), ' '.join(tests)))
-        sys.exit(runtests(tests, jsonpath))
+        exitcode, report = runtests(tests)
     else:
         info('no tests to run\n')
-        # Write out an empty results file
+        exitcode = 0
+        report = {}
+
+    if jsonpath:
         with open(jsonpath, 'w') as fp:
-            json.dump({}, fp)
+            json.dump(report, fp)
+    return exitcode
+
+if __name__ == '__main__':
+    exitcode = main()
+    sys.exit(exitcode)
