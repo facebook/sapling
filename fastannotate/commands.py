@@ -7,6 +7,8 @@
 
 from __future__ import absolute_import
 
+import os
+
 from fastannotate import (
     context as facontext,
     error as faerror,
@@ -21,6 +23,39 @@ from mercurial import (
 )
 
 from mercurial.i18n import _
+
+def _matchpaths(repo, rev, pats, opts, aopts):
+    """generate paths matching given patterns"""
+    perfhack = repo.ui.configbool('fastannotate', 'perfhack')
+
+    # disable perfhack if:
+    # a) any walkopt is used
+    # b) if we treat pats as plain file names, some of them do not have
+    #    corresponding linelog files
+    if perfhack:
+        # cwd related to reporoot
+        reldir = os.path.relpath(os.getcwd(), os.path.dirname(repo.path))
+        if reldir == '.':
+            reldir = ''
+        if any(opts.get(o[1]) for o in commands.walkopts): # a)
+            perfhack = False
+        else: # b)
+            # fadir: fastannotate directory that contains linelogs
+            fadir = repo.vfs.join('fastannotate', aopts.shortstr, reldir)
+            if not all(os.path.isfile(os.path.join(fadir, '%s.l' % f))
+                       for f in pats):
+                perfhack = False
+
+    # perfhack: emit paths directory without checking with manifest
+    # this can be incorrect if the rev dos not have file.
+    if perfhack:
+        for p in pats:
+            yield os.path.join(reldir, p)
+    else:
+        ctx = scmutil.revsingle(repo, rev)
+        m = scmutil.match(ctx, pats, opts)
+        for p in ctx.walk(m):
+            yield p
 
 fastannotatecommandargs = {
     'options': [
@@ -74,9 +109,6 @@ def fastannotate(ui, repo, *pats, **opts):
     rev = opts.get('rev', '.')
     rebuild = opts.get('rebuild', False)
 
-    ctx = scmutil.revsingle(repo, rev)
-    m = scmutil.match(ctx, pats, opts)
-
     aopts = facontext.annotateopts(
         followmerge=not opts.get('linear', False),
         followrename=not opts.get('no_follow', False))
@@ -96,7 +128,7 @@ def fastannotate(ui, repo, *pats, **opts):
     # find the head of the main (master) branch
     master = ui.config('fastannotate', 'mainbranch', rev)
 
-    for path in ctx.walk(m):
+    for path in _matchpaths(repo, rev, pats, opts, aopts):
         result = lines = existinglines = None
         while True:
             try:
