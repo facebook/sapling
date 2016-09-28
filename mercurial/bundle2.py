@@ -159,6 +159,7 @@ from . import (
     error,
     obsolete,
     pushkey,
+    pycompat,
     tags,
     url,
     util,
@@ -996,7 +997,7 @@ class bundlepart(object):
             outdebug(ui, 'closing payload chunk')
             # abort current part payload
             yield _pack(_fpayloadsize, 0)
-            if sys.version_info[0] >= 3:
+            if pycompat.ispy3:
                 raise exc_info[0](exc_info[1]).with_traceback(exc_info[2])
             else:
                 exec("""raise exc_info[0], exc_info[1], exc_info[2]""")

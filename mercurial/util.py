@@ -232,7 +232,7 @@ class digestchecker(object):
 try:
     buffer = buffer
 except NameError:
-    if sys.version_info[0] < 3:
+    if not pycompat.ispy3:
         def buffer(sliceable, offset=0):
             return sliceable[offset:]
     else:

@@ -10,14 +10,14 @@ from __future__ import absolute_import
 import array
 import locale
 import os
-import sys
 import unicodedata
 
 from . import (
     error,
+    pycompat,
 )
 
-if sys.version_info[0] >= 3:
+if pycompat.ispy3:
     unichr = chr
 
 # These unicode characters are ignored by HFS+ (Apple Technote 1150,
@@ -27,7 +27,7 @@ _ignore = [unichr(int(x, 16)).encode("utf-8") for x in
            "200c 200d 200e 200f 202a 202b 202c 202d 202e "
            "206a 206b 206c 206d 206e 206f feff".split()]
 # verify the next function will work
-if sys.version_info[0] >= 3:
+if pycompat.ispy3:
     assert set(i[0] for i in _ignore) == set([ord(b'\xe2'), ord(b'\xef')])
 else:
     assert set(i[0] for i in _ignore) == set(["\xe2", "\xef"])

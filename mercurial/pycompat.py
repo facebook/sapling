@@ -12,7 +12,9 @@ from __future__ import absolute_import
 
 import sys
 
-if sys.version_info[0] < 3:
+ispy3 = (sys.version_info[0] >= 3)
+
+if not ispy3:
     import cPickle as pickle
     import cStringIO as io
     import httplib
@@ -29,7 +31,7 @@ else:
     import urllib.parse as urlparse
     import xmlrpc.client as xmlrpclib
 
-if sys.version_info[0] >= 3:
+if ispy3:
     import builtins
     import functools
 
@@ -72,7 +74,7 @@ class _pycompatstub(object):
 httpserver = _pycompatstub()
 urlreq = _pycompatstub()
 urlerr = _pycompatstub()
-if sys.version_info[0] < 3:
+if not ispy3:
     import BaseHTTPServer
     import CGIHTTPServer
     import SimpleHTTPServer
