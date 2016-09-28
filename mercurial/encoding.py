@@ -17,6 +17,8 @@ from . import (
     pycompat,
 )
 
+_sysstr = pycompat.sysstr
+
 if pycompat.ispy3:
     unichr = chr
 
@@ -136,23 +138,24 @@ def tolocal(s):
             if encoding == 'UTF-8':
                 # fast path
                 return s
-            r = u.encode(encoding, "replace")
-            if u == r.decode(encoding):
+            r = u.encode(_sysstr(encoding), u"replace")
+            if u == r.decode(_sysstr(encoding)):
                 # r is a safe, non-lossy encoding of s
                 return r
             return localstr(s, r)
         except UnicodeDecodeError:
             # we should only get here if we're looking at an ancient changeset
             try:
-                u = s.decode(fallbackencoding)
-                r = u.encode(encoding, "replace")
-                if u == r.decode(encoding):
+                u = s.decode(_sysstr(fallbackencoding))
+                r = u.encode(_sysstr(encoding), u"replace")
+                if u == r.decode(_sysstr(encoding)):
                     # r is a safe, non-lossy encoding of s
                     return r
                 return localstr(u.encode('UTF-8'), r)
             except UnicodeDecodeError:
                 u = s.decode("utf-8", "replace") # last ditch
-                return u.encode(encoding, "replace") # can't round-trip
+                # can't round-trip
+                return u.encode(_sysstr(encoding), u"replace")
     except LookupError as k:
         raise error.Abort(k, hint="please check your locale settings")
 
@@ -172,7 +175,8 @@ def fromlocal(s):
         return s._utf8
 
     try:
-        return s.decode(encoding, encodingmode).encode("utf-8")
+        u = s.decode(_sysstr(encoding), _sysstr(encodingmode))
+        return u.encode("utf-8")
     except UnicodeDecodeError as inst:
         sub = s[max(0, inst.start - 10):inst.start + 10]
         raise error.Abort("decoding near '%s': %s!" % (sub, inst))
@@ -185,7 +189,7 @@ wide = (os.environ.get("HGENCODINGAMBIGUOUS", "narrow") == "wide"
 
 def colwidth(s):
     "Find the column width of a string for display in the local encoding"
-    return ucolwidth(s.decode(encoding, 'replace'))
+    return ucolwidth(s.decode(_sysstr(encoding), u'replace'))
 
 def ucolwidth(d):
     "Find the column width of a Unicode string for display"
@@ -265,7 +269,7 @@ def trim(s, width, ellipsis='', leftside=False):
     +
     """
     try:
-        u = s.decode(encoding)
+        u = s.decode(_sysstr(encoding))
     except UnicodeDecodeError:
         if len(s) <= width: # trimming is not needed
             return s
@@ -292,7 +296,7 @@ def trim(s, width, ellipsis='', leftside=False):
     for i in xrange(1, len(u)):
         usub = uslice(i)
         if ucolwidth(usub) <= width:
-            return concat(usub.encode(encoding))
+            return concat(usub.encode(_sysstr(encoding)))
     return ellipsis # no enough room for multi-column characters
 
 def _asciilower(s):
@@ -337,12 +341,12 @@ def lower(s):
         if isinstance(s, localstr):
             u = s._utf8.decode("utf-8")
         else:
-            u = s.decode(encoding, encodingmode)
+            u = s.decode(_sysstr(encoding), _sysstr(encodingmode))
 
         lu = u.lower()
         if u == lu:
             return s # preserve localstring
-        return lu.encode(encoding)
+        return lu.encode(_sysstr(encoding))
     except UnicodeError:
         return s.lower() # we don't know how to fold this except in ASCII
     except LookupError as k:
@@ -360,12 +364,12 @@ def upperfallback(s):
         if isinstance(s, localstr):
             u = s._utf8.decode("utf-8")
         else:
-            u = s.decode(encoding, encodingmode)
+            u = s.decode(_sysstr(encoding), _sysstr(encodingmode))
 
         uu = u.upper()
         if u == uu:
             return s # preserve localstring
-        return uu.encode(encoding)
+        return uu.encode(_sysstr(encoding))
     except UnicodeError:
         return s.upper() # we don't know how to fold this except in ASCII
     except LookupError as k:
