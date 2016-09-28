@@ -47,6 +47,10 @@ class remotefilectx(context.filectx):
                              filelog=self._filelog, changeid=changeid)
 
     def linkrev(self):
+        return self._linkrev
+
+    @propertycache
+    def _linkrev(self):
         if self._fileid == nullid:
             return nullrev
 
