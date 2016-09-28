@@ -49,9 +49,9 @@ def changedfiles(rev='wdir() + .'):
     """return a list of paths (relative to repo root) that rev touches.
     by default, check the working directory and its parent.
     """
-    cmd = ['hg', 'log', '-T', '{join(files,"\\0")}', '-r', rev]
+    cmd = ['hg', 'log', '-T', '{join(files,"\\0")}\\0', '-r', rev]
     out, err = checkoutput(cmd, cwd=reporoot)
-    return out.split('\0')
+    return set(out.rstrip('\0').split('\0'))
 
 def words(path):
     """strip extension and split it to words.
