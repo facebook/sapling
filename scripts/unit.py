@@ -63,12 +63,25 @@ def interestingtests():
     """return a list of interesting test filenames"""
     tests = [p for p in os.listdir(os.path.join(reporoot, 'tests'))
              if p.startswith('test-') and p[-2:] in ['py', '.t']]
-    # Convert ['test-foo-bar.t', 'test-baz.t'] to [{'foo', 'bar'}, {'baz'}]
-    testwords = [set(words(t)[1:]) for t in tests]
-    # Include test-check*, except for test-check-code-hg.t used by arc lint.
-    result = set([t for t in tests
-                  if (t.startswith('test-check')
-                      and t != 'test-check-code-hg.t')])
+
+    result = set()
+
+    # Build a dictionary mapping words to the relevant tests
+    # (tests whose name contains that word)
+    testwords = {}
+    for t in tests:
+        # Include all tests starting with test-check*,
+        # except for test-check-code-hg.t used by arc lint.
+        if t == 'test-check-code-hg.t':
+            continue
+        if t.startswith('test-check'):
+            result.add(t)
+            continue
+
+        for word in words(t)[1:]:
+            test_set = testwords.setdefault(word, set())
+            test_set.add(t)
+
     # A test is interesting if there is a common word in both the path of the
     # changed source file and the name of the test file. For example:
     # - test-githelp.t is interesting if githelp.py is changed
@@ -79,8 +92,9 @@ def interestingtests():
             # for a test file, do not enable other tests but only itself
             result.add(os.path.basename(path))
             continue
-        result.update(t for t, s in zip(tests, testwords)
-                      if any(c in s for c in words(path)))
+        for w in words(path):
+            result.update(testwords.get(w, []))
+
     return result
 
 def reporequires():
