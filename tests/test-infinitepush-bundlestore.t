@@ -17,6 +17,11 @@ Create an ondisk bundlestore in .hg/scratchbranches
   >    hg add "$1"
   >    hg ci -m "$1"
   > }
+  $ scratchnodes() {
+  >    for node in `find ../repo/.hg/scratchbranches/index/nodemap/* | sort`; do
+  >        echo ${node##*/}
+  >    done
+  > }
   $ hg init repo
   $ cd repo
   $ ls -1 .hg/scratchbranches
@@ -137,6 +142,9 @@ Push to scratch branch
   remote: pushing 2 commits:
   remote:     20759b6926ce  scratchcommit
   remote:     1de1d7d92f89  new scratch commit
+  $ scratchnodes
+  1de1d7d92f8965260391d0513fe8a8d5973d3042
+  20759b6926ce827d5a8c73eb1fa9726d6f7defb2
 
 Pull scratch and non-scratch bookmark at the same time
 
@@ -160,3 +168,36 @@ Pull scratch and non-scratch bookmark at the same time
   |/
   o  initialcommit public
   
+
+Push scratch revision without bookmark with --force-scratch
+
+  $ hg up -q tip
+  $ mkcommit scratchcommitnobook
+  $ hg log -G -T '{desc} {phase}'
+  @  scratchcommitnobook draft
+  |
+  o  new scratch commit draft
+  |
+  | o  newcommit public
+  | |
+  o |  scratchcommit draft
+  |/
+  o  initialcommit public
+  
+  $ hg push -r . --bundle-store
+  pushing to ssh://user@dummy/repo
+  searching for changes
+  remote: pushing 3 commits:
+  remote:     20759b6926ce  scratchcommit
+  remote:     1de1d7d92f89  new scratch commit
+  remote:     2b5d271c7e0d  scratchcommitnobook
+  $ hg -R ../repo log -G -T '{desc} {phase}'
+  o  newcommit public
+  |
+  o  initialcommit public
+  
+
+  $ scratchnodes
+  1de1d7d92f8965260391d0513fe8a8d5973d3042
+  20759b6926ce827d5a8c73eb1fa9726d6f7defb2
+  2b5d271c7e0d25d811359a314d413ebcc75c9524

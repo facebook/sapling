@@ -147,13 +147,24 @@ def clientextsetup(ui):
         entry[1].append(
             ('', 'create', None, _('create a new remote bookmark')))
 
+    entry[1].append(
+        ('', 'bundle-store', None,
+         _('force push to go to bundle store (EXPERIMENTAL)')))
+
     wrapcommand(commands.table, 'pull', _pull)
+
+    wrapfunction(discovery, 'checkheads', _checkheads)
 
     wireproto.wirepeer.listkeyspatterns = listkeyspatterns
 
     partorder = exchange.b2partsgenorder
     partorder.insert(partorder.index('changeset'),
                      partorder.pop(partorder.index(scratchbranchparttype)))
+
+def _checkheads(orig, pushop):
+    if pushop.ui.configbool(experimental, configscratchpush, False):
+        return
+    return orig(pushop)
 
 def wireprotolistkeyspatterns(repo, proto, namespace, patterns):
     patterns = decodelist(patterns)
@@ -272,14 +283,15 @@ def getscratchbranchpart(repo, peer, outgoing, bookmark, create):
 
     cg = changegroup.getlocalchangegroupraw(repo, 'push', outgoing)
 
+    params = {}
+    if bookmark:
+        params['bookmark'] = bookmark
+        params['create'] = '1' if create else '0'
     # .upper() marks this as a mandatory part: server will abort if there's no
     #  handler
     return bundle2.bundlepart(
         scratchbranchparttype.upper(),
-        mandatoryparams={
-            'bookmark': bookmark,
-            'create': "1" if create else "0",
-        }.items(),
+        advisoryparams=params.items(),
         data=cg)
 
 def _pull(orig, ui, repo, source="default", **opts):
@@ -345,7 +357,7 @@ def _push(orig, ui, repo, *args, **opts):
         bookmark = opts.get('to')
         create = opts.get('create') or False
 
-        scratchpush = False
+        scratchpush = opts.get('bundle_store')
         scratchbranchpat = ui.config('infinitepush', 'branchpattern', '')
         kind, pat, matcher = util.stringmatcher(scratchbranchpat)
         if matcher(bookmark):
@@ -490,11 +502,14 @@ def bundle2scratchbranch(op, part):
         bookmark = params.get('bookmark')
         create = params.get('create')
 
-        oldnode = index.getnode(bookmark)
+        if bookmark:
+            oldnode = index.getnode(bookmark)
 
-        if not oldnode and create != "1":
-            raise error.Abort("unknown bookmark %s" % bookmark,
-                              hint="use --create if you want to create one")
+            if not oldnode and create != "1":
+                raise error.Abort("unknown bookmark %s" % bookmark,
+                                  hint="use --create if you want to create one")
+        else:
+            oldnode = None
         revs = _getrevs(bundle, oldnode)
 
         # Notify the user of what is being pushed
@@ -515,10 +530,15 @@ def bundle2scratchbranch(op, part):
         newnodes = filter(lambda node: not index.getbundle(node), nodes)
         with open(bundlefile, 'r') as f:
             key = store.write(f.read())
-        try:
-            index.addbookmarkandbundle(key, newnodes, bookmark, newnodes[-1])
-        except NotImplementedError:
-            index.addbookmark(bookmark, newnodes[-1])
+
+        if bookmark:
+            try:
+                index.addbookmarkandbundle(key, newnodes,
+                                           bookmark, newnodes[-1])
+            except NotImplementedError:
+                index.addbookmark(bookmark, newnodes[-1])
+                index.addbundle(key, newnodes)
+        else:
             index.addbundle(key, newnodes)
     finally:
         try:
