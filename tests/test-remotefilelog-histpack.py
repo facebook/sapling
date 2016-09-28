@@ -14,6 +14,7 @@ from remotefilelog.historypack import historypackstore
 
 from mercurial import scmutil
 from mercurial.node import hex, bin, nullid
+import mercurial.ui
 
 from remotefilelog.basepack import (
     SMALLFANOUTCUTOFF,
@@ -52,7 +53,7 @@ class histpacktests(unittest.TestCase):
 
         packdir = self.makeTempDir()
         opener = scmutil.vfs(packdir)
-        packer = mutablehistorypack(opener)
+        packer = mutablehistorypack(mercurial.ui.ui(), opener)
 
         for filename, node, p1, p2, linknode, copyfrom in revisions:
             packer.add(filename, node, p1, p2, linknode, copyfrom)

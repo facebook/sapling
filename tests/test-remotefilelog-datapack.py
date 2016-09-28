@@ -24,6 +24,7 @@ from remotefilelog.basepack import (
 
 from mercurial import scmutil
 from mercurial.node import hex, bin, nullid
+import mercurial.ui
 
 class datapacktestsbase(object):
     def __init__(self, datapackreader, paramsavailable):
@@ -54,7 +55,7 @@ class datapacktestsbase(object):
 
         packdir = self.makeTempDir()
         opener = scmutil.vfs(packdir)
-        packer = mutabledatapack(opener)
+        packer = mutabledatapack(mercurial.ui.ui(), opener)
 
         for filename, node, base, content in revisions:
             packer.add(filename, node, base, content)
