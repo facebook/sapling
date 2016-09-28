@@ -109,6 +109,85 @@ def getdraftstack(headctx, limit=None):
     result.reverse()
     return result
 
+def getfilestack(stack, path, seenfctxs=set()):
+    """([ctx], str, set) -> [fctx], {ctx: fctx}
+
+    stack is a list of contexts, from old to new. usually they are what
+    "getdraftstack" returns.
+
+    follows renames, but not copies.
+
+    seenfctxs is a set of filecontexts that will be considered "immutable".
+    they are usually what this function returned in earlier calls, useful
+    to avoid issues that a file was "moved" to multiple places and was then
+    modified differently, like: "a" was copied to "b", "a" was also copied to
+    "c" and then "a" was deleted, then both "b" and "c" were "moved" from "a"
+    and we enforce only one of them to be able to affect "a"'s content.
+
+    return an empty list and an empty dict, if the specified path does not
+    exist in stack[-1] (the top of the stack).
+
+    otherwise, return a list of de-duplicated filecontexts, and the map to
+    convert ctx in the stack to fctx, for possible mutable fctxs. the first item
+    of the list would be outside the stack and should be considered immutable.
+    the remaining items are within the stack.
+
+    for example, given the following changelog and corresponding filelog
+    revisions:
+
+      changelog: 3----4----5----6----7
+      filelog:   x    0----1----1----2 (x: no such file yet)
+
+    - if stack = [5, 6, 7], returns ([0, 1, 2], {5: 1, 6: 1, 7: 2})
+    - if stack = [3, 4, 5], returns ([e, 0, 1], {4: 0, 5: 1}), where "e" is a
+      dummy empty filecontext.
+    - if stack = [2], returns ([], {})
+    - if stack = [7], returns ([1, 2], {7: 2})
+    - if stack = [6, 7], returns ([1, 2], {6: 1, 7: 2}), although {6: 1} can be
+      removed, since 1 is immutable.
+    """
+    assert stack
+
+    if path not in stack[-1]:
+        return [], {}
+
+    fctxs = []
+    fctxmap = {}
+
+    pctx = stack[0].p1() # the public (immutable) ctx we stop at
+    for ctx in reversed(stack):
+        if path not in ctx: # the file is added in the next commit
+            pctx = ctx
+            break
+        fctx = ctx[path]
+        fctxs.append(fctx)
+        if fctx in seenfctxs: # treat fctx as the immutable one
+            pctx = None # do not add another immutable fctx
+            break
+        fctxmap[ctx] = fctx # only for mutable fctxs
+        renamed = fctx.renamed()
+        if renamed:
+            path = renamed[0] # follow rename
+            if path in ctx: # but do not follow copy
+                pctx = ctx.p1()
+                break
+
+    if pctx is not None: # need an extra immutable fctx
+        if path in pctx:
+            fctxs.append(pctx[path])
+        else:
+            fctxs.append(emptyfilecontext())
+
+    fctxs.reverse()
+    # note: we rely on a property of hg: filerev is not reused for linear
+    # history. i.e. it's impossible to have:
+    #   changelog:  4----5----6 (linear, no merges)
+    #   filelog:    1----2----1
+    #                         ^ reuse filerev (impossible)
+    # because parents are part of the hash. if that's not true, we need to
+    # remove uniq and find a different way to identify fctxs.
+    return uniq(fctxs), fctxmap
+
 class overlaystore(object):
     """read-only, hybrid store based on a dict and ctx.
     memworkingcopy: {path: content}, overrides file contents.
@@ -119,6 +198,8 @@ class overlaystore(object):
 
     def getfile(self, path):
         """comply with mercurial.patch.filestore.getfile"""
+        if path not in self.basectx:
+            return None, None, None
         fctx = self.basectx[path]
         if path in self.memworkingcopy:
             content = self.memworkingcopy[path]
@@ -441,8 +522,6 @@ class filefixupstate(object):
 
     def _showchanges(self, alines, blines, chunk, fixups):
         ui = self.ui
-        if ui.quiet:
-            return
 
         def label(line, label):
             if line.endswith('\n'):
@@ -499,6 +578,7 @@ class fixupstate(object):
         # following fields will be filled later
         self.paths = [] # [str]
         self.status = None # ctx.status output
+        self.fctxmap = {} # {path: {ctx: fctx}}
         self.fixupmap = {} # {path: filefixupstate}
         self.replacemap = {} # {oldnode: newnode or None}
         self.finalnode = None # head after all fixups
@@ -516,23 +596,23 @@ class fixupstate(object):
         else:
             interestingpaths = self.status.modified
         # prepare the filefixupstate
-        pctx = self.stack[0].p1()
-        for path in interestingpaths:
+        seenfctxs = set()
+        # sorting is necessary to eliminate ambiguity for the "double move"
+        # case: "hg cp A B; hg cp A C; hg rm A", then only "B" can affect "A".
+        for path in sorted(interestingpaths):
             if self.ui.debugflag:
                 self.ui.write(_('calculating fixups for %s\n') % path)
             targetfctx = targetctx[path]
-            fctxs = uniq(ctx[path] for ctx in self.stack if path in ctx)
-            # ignore symbolic links or binary files
+            fctxs, ctx2fctx = getfilestack(self.stack, path, seenfctxs)
+            # ignore symbolic links or binary, or unchanged files
             if any(f.islink() or util.binary(f.data())
-                   for f in [targetfctx] + fctxs):
+                   for f in [targetfctx] + fctxs
+                   if not isinstance(f, emptyfilecontext)):
                 continue
             if targetfctx.data() == fctxs[-1].data() and not editopt:
                 continue
-            # insert an immutable (public) fctx at the beginning
-            if path in pctx:
-                fctxs.insert(0, pctx[path])
-            else:
-                fctxs.insert(0, emptyfilecontext())
+            seenfctxs.update(fctxs[1:])
+            self.fctxmap[path] = ctx2fctx
             fstate = filefixupstate(fctxs, ui=self.ui, opts=self.opts)
             if showchanges:
                 colorpath = self.ui.label(path, 'absorb.path')
@@ -635,13 +715,14 @@ class fixupstate(object):
         """
         result = {}
         for path in self.paths:
-            if path not in ctx:
+            ctx2fctx = self.fctxmap[path] # {ctx: fctx}
+            if ctx not in ctx2fctx:
                 continue
-            fctx = ctx[path]
+            fctx = ctx2fctx[ctx]
             content = fctx.data()
             newcontent = self.fixupmap[path].getfinalcontent(fctx)
             if content != newcontent:
-                result[path] = newcontent
+                result[fctx.path()] = newcontent
         return result
 
     def _movebookmarks(self, tr):
