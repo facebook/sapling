@@ -27,10 +27,10 @@ except NameError:
 
 _languages = None
 if (os.name == 'nt'
-    and 'LANGUAGE' not in os.environ
-    and 'LC_ALL' not in os.environ
-    and 'LC_MESSAGES' not in os.environ
-    and 'LANG' not in os.environ):
+    and 'LANGUAGE' not in encoding.environ
+    and 'LC_ALL' not in encoding.environ
+    and 'LC_MESSAGES' not in encoding.environ
+    and 'LANG' not in encoding.environ):
     # Try to detect UI language by "User Interface Language Management" API
     # if no locale variables are set. Note that locale.getdefaultlocale()
     # uses GetLocaleInfo(), which may be different from UI language.
@@ -92,9 +92,10 @@ def gettext(message):
     return _msgcache[message]
 
 def _plain():
-    if 'HGPLAIN' not in os.environ and 'HGPLAINEXCEPT' not in os.environ:
+    if ('HGPLAIN' not in encoding.environ
+        and 'HGPLAINEXCEPT' not in encoding.environ):
         return False
-    exceptions = os.environ.get('HGPLAINEXCEPT', '').strip().split(',')
+    exceptions = encoding.environ.get('HGPLAINEXCEPT', '').strip().split(',')
     return 'i18n' not in exceptions
 
 if _plain():
