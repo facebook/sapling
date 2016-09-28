@@ -89,7 +89,9 @@ def resolvefctx(repo, rev, path, resolverev=False, adjustctx=None):
     be consumed by repo.__getitem__.
 
     if adjustctx is not None, the returned fctx will point to a changeset
-    that introduces the change (last modified the file).
+    that introduces the change (last modified the file). if adjustctx
+    is 'linkrev', trust the linkrev and do not adjust it. this is noticeably
+    faster for big repos but is incorrect for some cases.
     """
     if resolverev:
         ctx = _revsingle(repo, rev)
@@ -108,7 +110,10 @@ def resolvefctx(repo, rev, path, resolverev=False, adjustctx=None):
     fctx = hgcontext.filectx(repo, path, fileid=fnode, filelog=flog,
                              changeid=ctx.rev(), changectx=ctx)
     if adjustctx is not None:
-        introrev = fctx.introrev()
+        if adjustctx == 'linkrev':
+            introrev = fctx.linkrev()
+        else:
+            introrev = fctx.introrev()
         if introrev != ctx.rev():
             fctx._changeid = introrev
             fctx._changectx = repo[introrev]
@@ -331,9 +336,13 @@ class _annotatecontext(object):
         elif len(rev) == 40 and node.bin(rev) in self.revmap:
             f = node.bin(rev)
         else:
-            adjustctx = True
+            adjustctx = 'linkrev' if self._perfhack else True
             f = self._resolvefctx(rev, adjustctx=adjustctx, resolverev=True)
             result = f in self.revmap
+            if not result and self._perfhack:
+                # redo the resolution without perfhack - as we are going to
+                # do write operations, we need a correct fctx.
+                f = self._resolvefctx(rev, adjustctx=True, resolverev=True)
         return result, f
 
     def annotatealllines(self, rev, showpath=False, showlines=False):
@@ -563,6 +572,10 @@ class _annotatecontext(object):
                 pl = pl[:1]
             return pl
         return parents
+
+    @util.propertycache
+    def _perfhack(self):
+        return self.ui.configbool('fastannotate', 'perfhack')
 
     def _resolvefctx(self, rev, path=None, **kwds):
         return resolvefctx(self.repo, rev, (path or self.path), **kwds)

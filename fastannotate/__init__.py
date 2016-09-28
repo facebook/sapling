@@ -24,6 +24,8 @@ be faster than the vanilla 'annotate' if the cache is present.
     commands = fastannotate, annotate
     # use unfiltered repo for better performance
     unfilteredrepo = True
+    # sacrifice correctness in some cases for performance (default: False)
+    perfhack = True
 """
 
 from __future__ import absolute_import
