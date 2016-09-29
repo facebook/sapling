@@ -165,3 +165,28 @@ fastannotate --deleted
   3 a:  0
   0 a:  1
   1 a:  2
+
+file and directories with ".l", ".m" suffixes
+
+  $ cd ..
+  $ hg init repo2
+  $ cd repo2
+
+  $ mkdir a.l b.m c.lock a.l.hg b.hg
+  $ for i in a b c d d.l d.m a.l/a b.m/a c.lock/a a.l.hg/a b.hg/a; do
+  >   echo $i > $i
+  > done
+  $ hg add . -q
+  $ hg commit -m init
+  $ hg fastannotate a.l/a b.m/a c.lock/a a.l.hg/a b.hg/a d.l d.m a b c d
+  0: a
+  0: a.l.hg/a
+  0: a.l/a
+  0: b
+  0: b.hg/a
+  0: b.m/a
+  0: c
+  0: c.lock/a
+  0: d
+  0: d.l
+  0: d.m

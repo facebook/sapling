@@ -42,7 +42,8 @@ def _matchpaths(repo, rev, pats, opts, aopts):
         else: # b)
             # fadir: fastannotate directory that contains linelogs
             fadir = repo.vfs.join('fastannotate', aopts.shortstr, reldir)
-            if not all(os.path.isfile(os.path.join(fadir, '%s.l' % f))
+            if not all(os.path.isfile(os.path.join(fadir, '%s.l'
+                                                   % facontext.encodedir(f)))
                        for f in pats):
                 perfhack = False
 

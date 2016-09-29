@@ -119,6 +119,14 @@ def resolvefctx(repo, rev, path, resolverev=False, adjustctx=None):
             fctx._changectx = repo[introrev]
     return fctx
 
+# like mercurial.store.encodedir, but use linelog suffixes: .m, .l, .lock
+def encodedir(path):
+    return (path
+            .replace('.hg/', '.hg.hg/')
+            .replace('.l/', '.l.hg/')
+            .replace('.m/', '.m.hg/')
+            .replace('.lock/', '.lock.hg/'))
+
 class annotateopts(object):
     """like mercurial.mdiff.diffopts, but is for annotate
 
@@ -605,7 +613,7 @@ def annotatecontext(repo, path, opts=defaultopts, rebuild=False):
             actx. ....
     """
     # different options use different directories
-    subpath = os.path.join('fastannotate', opts.shortstr, path)
+    subpath = os.path.join('fastannotate', opts.shortstr, encodedir(path))
     util.makedirs(repo.vfs.join(os.path.dirname(subpath)))
     lockpath = subpath + '.lock'
     lock = lockmod.lock(repo.vfs, lockpath)
