@@ -190,3 +190,9 @@ file and directories with ".l", ".m" suffixes
   0: d
   0: d.l
   0: d.m
+
+empty file
+
+  $ touch empty
+  $ hg commit -A empty -m empty
+  $ hg fastannotate empty

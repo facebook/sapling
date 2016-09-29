@@ -60,7 +60,7 @@ def _parents(f, follow=True):
 def _decorate(fctx):
     text = fctx.data()
     linecount = text.count('\n')
-    if not text.endswith('\n'):
+    if text and not text.endswith('\n'):
         linecount += 1
     return ([(fctx, i) for i in xrange(linecount)], text)
 
