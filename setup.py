@@ -60,6 +60,7 @@ setup(
     keywords='facebook fb hg mercurial shallow remote filelog',
     license='GPLv2+',
     packages=[
+        'fastannotate',
         'fastmanifest',
         'phabricator',
         'sqldirstate',
