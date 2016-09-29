@@ -105,7 +105,7 @@ def load(ui, name, path):
         try:
             mod = _importh("hgext.%s" % name)
         except ImportError as err:
-            _reportimporterror(ui, err, "hgext.%s" % name, name)
+            _reportimporterror(ui, err, "hgext.%s" % name, "hgext3rd.%s" % name)
             try:
                 mod = _importh("hgext3rd.%s" % name)
             except ImportError as err:
