@@ -144,8 +144,12 @@ def rage(ui, repo, *pats, **opts):
         return fmt % pair
 
     def hgcmd(func, *args, **opts):
-        ui.pushbuffer()
-        func(ui, repo, *args, **opts)
+        _repo = repo
+        if '_repo' in opts:
+            _repo = opts['_repo']
+            del opts['_repo']
+        ui.pushbuffer(error=True)
+        func(ui, _repo, *args, **opts)
         return ui.popbuffer()
 
     if opts.get('oncall') and opts.get('preview'):
@@ -168,7 +172,9 @@ def rage(ui, repo, *pats, **opts):
 
     detailed = [
         ('df -h', _failsafe(lambda: shcmd('df -h', check=False))),
-        ('hg sl', _failsafe(lambda: hgcmd(smartlog.smartlog, all=True))),
+        # unfiltered smartlog for recent hidden changesets
+        ('hg sl', _failsafe(lambda: hgcmd(
+            smartlog.smartlog, _repo=repo.unfiltered(), template='{sl}'))),
         ('first 20 lines of "hg status"',
             _failsafe(lambda:
                 '\n'.join(hgcmd(commands.status).splitlines()[:20]))),
