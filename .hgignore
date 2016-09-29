@@ -49,6 +49,7 @@ mercurial.egg-info
 tags
 cscope.*
 .idea/*
+.asv/*
 i18n/hg.pot
 locale/*/LC_MESSAGES/hg.mo
 hgext/__index__.py
