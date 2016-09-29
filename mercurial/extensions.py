@@ -81,6 +81,8 @@ def _importh(name):
     return mod
 
 def _reportimporterror(ui, err, failed, next):
+    # note: this ui.debug happens before --debug is processed,
+    #       Use --config ui.debug=1 to see them.
     ui.debug('could not import %s (%s): trying %s\n'
              % (failed, err, next))
     if ui.debugflag:
