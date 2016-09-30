@@ -336,3 +336,14 @@ Use the cache in a commit.
   $ hg debugcachemanifest -a
   $ mkcommit g
   $ cd ..
+
+Amend a changeset which probably requires readdelta to be implemented
+  $ hg init amendtest
+  $ cd  amendtest
+  $ cat >> .hg/hgrc << EOF
+  > [extensions]
+  > fastmanifest=
+  > EOF
+  $ mkcommit a
+  $ hg commit --amend -m amend -q
+  $ cd ..
