@@ -320,3 +320,12 @@ Test handling common incoming revisions between "default" and
   remote: 1 outgoing
 
   $ cd ..
+
+Test url#rev syntax of local destination path, which should be taken as
+a 'url#rev' path
+
+  $ hg clone repo '#foo'
+  updating to branch default
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg root -R '#foo'
+  $TESTTMP/#foo (glob)

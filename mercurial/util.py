@@ -2377,6 +2377,22 @@ class url(object):
     <url scheme: 'http', host: 'host', path: 'a', query: 'b', fragment: 'c'>
     >>> url('http://host/a?b#c', parsequery=False, parsefragment=False)
     <url scheme: 'http', host: 'host', path: 'a?b#c'>
+
+    Empty path:
+
+    >>> url('')
+    <url path: ''>
+    >>> url('#a')
+    <url path: '', fragment: 'a'>
+    >>> url('http://host/')
+    <url scheme: 'http', host: 'host', path: ''>
+    >>> url('http://host/#a')
+    <url scheme: 'http', host: 'host', path: '', fragment: 'a'>
+
+    Only scheme:
+
+    >>> url('http:')
+    <url scheme: 'http'>
     """
 
     _safechars = "!~*'()+"
@@ -2393,8 +2409,6 @@ class url(object):
 
         if parsefragment and '#' in path:
             path, self.fragment = path.split('#', 1)
-            if not path:
-                path = None
 
         # special case for Windows drive letters and UNC paths
         if hasdriveletter(path) or path.startswith(r'\\'):
