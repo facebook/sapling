@@ -18,7 +18,15 @@ This extension is incompatible with changeset evolution. The command will
 automatically disable itself if changeset evolution is enabled.
 """
 
-from mercurial import util, cmdutil, phases, commands, bookmarks, repair
+from mercurial import (
+    bookmarks,
+    cmdutil,
+    commands,
+    obsolete,
+    phases,
+    repair,
+    util,
+)
 from mercurial import merge, extensions, error, scmutil, hg, util
 from mercurial.node import hex, nullid
 from mercurial import obsolete
@@ -32,6 +40,7 @@ command = cmdutil.command(cmdtable)
 testedwith = 'internal'
 
 rebasemod = None
+inhibitmod = None
 
 amendopts = [
     ('', 'rebase', None, _('rebases children after the amend')),
@@ -77,19 +86,18 @@ def uisetup(ui):
     def wrapnext(loaded):
         if not loaded:
             return
+
+        global inhibitmod
+        try:
+            inhibitmod = extensions.find('inhibit')
+        except KeyError:
+            pass
+
         evolvemod = extensions.find('evolve')
         entry = extensions.wrapcommand(evolvemod.cmdtable, 'next', nextrebase)
-
-        # Remove `hg next --evolve` and add `hg next --rebase`.
-        # Can't use a list comprehension since the list is in a tuple.
-        for i, opt in enumerate(entry[1]):
-            if opt[1] == 'evolve':
-                del entry[1][i]
-                break
         entry[1].append((
             '', 'rebase', False, _('rebase the changeset if necessary')
         ))
-
     extensions.afterloaded('evolve', wrapnext)
 
 def commit(orig, ui, repo, *pats, **opts):
@@ -368,55 +376,121 @@ def fixupamend(ui, repo):
         lockmod.release(wlock, lock, tr)
 
 def nextrebase(orig, ui, repo, **opts):
+    # Disable `hg next --evolve`. The --rebase flag takes its place.
+    if opts['evolve']:
+        raise error.Abort(
+            _("the --evolve flag is not supported"),
+            hint=_("use 'hg next --rebase' instead")
+        )
+
+    # Just perform `hg next` if no --rebase option.
+    if not opts['rebase']:
+        return orig(ui, repo, **opts)
+
+    with nested(repo.wlock(), repo.lock()):
+        _nextrebase(orig, ui, repo, **opts)
+
+def _nextrebase(orig, ui, repo, **opts):
     """Wrapper around the evolve extension's next command, adding the
        --rebase option, which detects whether the current changeset has
        any children on an obsolete precursor, and if so, rebases those
        children onto the current version.
     """
-    # Just perform `hg next` if no --rebase option.
-    if not opts['rebase']:
-        return orig(ui, repo, **opts)
-
     # Abort if there is an unfinished operation or changes to the
     # working copy, to be consistent with the behavior of `hg next`.
     cmdutil.checkunfinished(repo)
     cmdutil.bailifchanged(repo)
 
-    # Find any child changesets on the changeset's precursor, if one exists.
+    # Find all children on the current changeset's obsolete precursors.
+    precursors = list(repo.set('allprecursors(.)'))
     children = []
-    for p in repo.set('allprecursors(.)'):
-        children.extend(d.hex() for d in p.descendants())
+    for p in precursors:
+        children.extend(p.children())
+
+    # If there are no children on precursors, just do `hg next` normally.
+    if not children:
+        ui.warn(_("found no changesets to rebase, "
+                  "doing normal 'hg next' instead\n"))
+        return orig(ui, repo, **opts)
+
+    current = repo['.']
+    child = children[0]
+
+    showopts = {'template': '[{shortest(node)}] {desc|firstline}\n'}
+    displayer = cmdutil.show_changeset(ui, repo, showopts)
+
+    # Catch the case where there are children on precursors, but
+    # there are also children on the current changeset.
+    if list(current.children()):
+        ui.warn(_("there are child changesets on one or more previous "
+                  "versions of the current changeset, but the current "
+                  "version also has children\n"))
+        ui.status(_("skipping rebasing the following child changesets:\n"))
+        for c in children:
+            displayer.show(c)
+        return orig(ui, repo, **opts)
+
+    # If there are several children on one or more precusors, it is
+    # ambiguous which changeset to rebase and update to.
+    if len(children) > 1:
+        ui.warn(_("there are multiple child changesets on previous versions "
+                  "of the current changeset, namely:\n"))
+        for c in children:
+            displayer.show(c)
+        raise error.Abort(
+            _("ambiguous next changeset to rebase"),
+            hint=_("please rebase the desired one manually")
+        )
 
     # If doing a dry run, just print out the corresponding commands.
     if opts['dry_run']:
-        if children:
-            rev = '+'.join(children)
-            dest = repo['.'].hex()
-            ui.write(('hg rebase -r %s -d %s -k\n' % (rev, dest)))
+        ui.write(('hg rebase -r %s -d %s -k\n' % (child.hex(), current.hex())))
         # Since we don't know what the new hashes will be until we actually
         # perform the rebase, the dry run output can't explicitly say
         # `hg update %s`. This is different from the normal output
         # of `hg next --dry-run`.
         ui.write(('hg next\n'))
-        return 0
+        return
 
-    # Rebase any children of the obsolete changesets.
-    if children:
-        rebaseopts = {
-            'rev': children,
-            'dest': repo['.'].hex(),
-            'keep': True,
-        }
+    # When the transaction closes, inhibition markers will be added back to
+    # changesets that have non-obsolete descendents, so those won't be
+    # "stripped". As such, we're relying on the inhibition markers to take
+    # care of the hard work of identifying which changesets not to strip.
+    with repo.transaction('nextrebase') as tr:
+        # Rebase any children of the obsolete changesets.
         try:
-            rebasemod.rebase(ui, repo, **rebaseopts)
+            rebasemod.rebase(ui, repo, rev=[child.rev()], dest=current.rev(),
+                             keep=True)
         except error.InterventionRequired:
             ui.status(_(
                 "please resolve any conflicts, run 'hg rebase --continue', "
                 "and then run 'hg next'\n"
             ))
+            tr.close()
             raise
 
-    # Only call `hg next` if there were no conflicts.
+        # There isn't a good way of getting the newly rebased child changeset
+        # from rebasemod.rebase(), so just assume that it's the current
+        # changeset's only child. (This should always be the case.)
+        rebasedchild = current.children()[0]
+        ancestors = [r.node() for r in repo.set('%d %% .', child.rev())]
+
+        # Mark the old child changeset as obsolete, and remove the
+        # the inhibition markers from it and its ancestors. This
+        # effectively "strips" all of the obsoleted changesets in the
+        # stack below the child.
+        obsolete.createmarkers(repo, [(child, [rebasedchild])])
+        if inhibitmod:
+            inhibitmod._deinhibitmarkers(repo, ancestors)
+
+        # Remove any preamend bookmarks on precursors, as these would
+        # create unnecessary inhibition markers.
+        for p in precursors:
+            for bookmark in repo.nodebookmarks(p.node()):
+                if bookmark.endswith('.preamend'):
+                    repo._bookmarks.pop(bookmark, None)
+
+    # Run `hg next` to update to the newly rebased child.
     return orig(ui, repo, **opts)
 
 def _preamendname(repo, node):
