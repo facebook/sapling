@@ -38,7 +38,9 @@ Stripping normally should fail
   saved backup bundle to $TESTTMP/master2/.hg/strip-backup/d34c38483be9-3839604f-backup.hg (glob)
   transaction abort!
   rollback completed
-  strip failed, full bundle stored in '$TESTTMP/master2/.hg/strip-backup/d34c38483be9-3839604f-backup.hg'
+  strip failed, backup bundle stored in '$TESTTMP/master2/.hg/strip-backup/d34c38483be9-3839604f-backup.hg'
+  strip failed, unrecovered changes stored in '$TESTTMP/master2/.hg/strip-backup/d34c38483be9-48128f20-temp.hg'
+  (fix the problem, then recover the changesets with "hg unbundle '$TESTTMP/master2/.hg/strip-backup/d34c38483be9-48128f20-temp.hg'")
   abort: invalid repo change - only hg push and pull are allowed
   [255]
 

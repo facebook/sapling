@@ -50,7 +50,7 @@ with demandimport.deactivated():
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
-testedwith = 'internal'
+testedwith = '3.9.1'
 
 writelock = 'write_lock'
 

@@ -19,7 +19,7 @@
   saved backup bundle to $TESTTMP/master/.hg/strip-backup/b292c1e3311f-9981e2ad-backup.hg (glob)
   transaction abort!
   rollback completed
-  strip failed, full bundle stored in '$TESTTMP/master/.hg/strip-backup/b292c1e3311f-9981e2ad-backup.hg'
+  strip failed, backup bundle stored in '$TESTTMP/master/.hg/strip-backup/b292c1e3311f-9981e2ad-backup.hg'
   abort: invalid repo change - only hg push and pull are allowed
   [255]
 
