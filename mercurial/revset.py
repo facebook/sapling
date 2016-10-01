@@ -366,8 +366,9 @@ def rangeset(repo, subset, x, y, order):
 
     if not m or not n:
         return baseset()
-    m, n = m.first(), n.last()
+    return _makerangeset(repo, subset, m.first(), n.last(), order)
 
+def _makerangeset(repo, subset, m, n, order):
     if m == n:
         r = baseset([m])
     elif n == node.wdirrev:
