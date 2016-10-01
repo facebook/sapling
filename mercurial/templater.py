@@ -596,18 +596,18 @@ def if_(context, mapping, args):
     elif len(args) == 3:
         yield args[2][0](context, mapping, args[2][1])
 
-@templatefunc('ifcontains(search, thing, then[, else])')
+@templatefunc('ifcontains(needle, haystack, then[, else])')
 def ifcontains(context, mapping, args):
     """Conditionally execute based
-    on whether the item "search" is in "thing"."""
+    on whether the item "needle" is in "haystack"."""
     if not (3 <= len(args) <= 4):
         # i18n: "ifcontains" is a keyword
         raise error.ParseError(_("ifcontains expects three or four arguments"))
 
-    item = evalstring(context, mapping, args[0])
-    items = evalfuncarg(context, mapping, args[1])
+    needle = evalstring(context, mapping, args[0])
+    haystack = evalfuncarg(context, mapping, args[1])
 
-    if item in items:
+    if needle in haystack:
         yield args[2][0](context, mapping, args[2][1])
     elif len(args) == 4:
         yield args[3][0](context, mapping, args[3][1])
