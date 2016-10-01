@@ -122,6 +122,7 @@ class Config:
         return eden.thrift.create_thrift_client(self._config_dir)
 
     def get_client_info(self, path):
+        path = os.path.realpath(path)
         client_dir = self._get_client_dir_for_mount_point(path)
         repo_name = self._get_repo_name(client_dir)
         repo_data = self.get_repo_data(repo_name)
@@ -228,6 +229,7 @@ by hand to make changes to the repository or remove it.''' % name)
     def mount(self, path):
         # Load the config info for this client, to make sure we
         # know about the client.
+        path = os.path.realpath(path)
         client_dir = self._get_client_dir_for_mount_point(path)
         self._get_repo_name(client_dir)
 
@@ -241,6 +243,7 @@ by hand to make changes to the repository or remove it.''' % name)
             client.mount(mount_info)
 
     def unmount(self, path, delete_config=True):
+        path = os.path.realpath(path)
         with self.get_thrift_client() as client:
             client.unmount(path)
 
@@ -470,6 +473,10 @@ by hand to make changes to the repository or remove it.''' % name)
             f.write('\n')
 
     def _get_client_dir_for_mount_point(self, path):
+        # The caller is responsible for making sure the path is already
+        # a normalized, absolute path.
+        assert os.path.isabs(path)
+
         config_data = self._get_directory_map()
         if path not in config_data:
             raise Exception('could not find mount path %s' % path)
