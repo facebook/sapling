@@ -927,7 +927,7 @@ def mainfrozen():
     """
     return (safehasattr(sys, "frozen") or # new py2exe
             safehasattr(sys, "importers") or # old py2exe
-            imp.is_frozen("__main__")) # tools/freeze
+            imp.is_frozen(u"__main__")) # tools/freeze
 
 # the location of data files matching the source code
 if mainfrozen() and getattr(sys, 'frozen', None) != 'macosx_app':
