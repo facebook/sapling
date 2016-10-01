@@ -161,8 +161,7 @@ trivial
   (rangeall
     None)
   * optimized:
-  (range
-    ('string', '0')
+  (rangepre
     ('string', 'tip')
     define)
   * set:
@@ -611,6 +610,63 @@ parenthesis.
   $ log 'only(only)'   # Outer "only" is a function, inner "only" is the bookmark
   8
   9
+
+':y' behaves like '0:y', but can't be rewritten as such since the revision '0'
+may be hidden (issue5385)
+
+  $ try -p parsed -p analyzed ':'
+  * parsed:
+  (rangeall
+    None)
+  * analyzed:
+  (rangepre
+    ('string', 'tip')
+    define)
+  * set:
+  <spanset+ 0:9>
+  0
+  1
+  2
+  3
+  4
+  5
+  6
+  7
+  8
+  9
+  $ try -p analyzed ':1'
+  * analyzed:
+  (rangepre
+    ('symbol', '1')
+    define)
+  * set:
+  <spanset+ 0:1>
+  0
+  1
+  $ try -p analyzed ':(1|2)'
+  * analyzed:
+  (rangepre
+    (or
+      (list
+        ('symbol', '1')
+        ('symbol', '2'))
+      define)
+    define)
+  * set:
+  <spanset+ 0:2>
+  0
+  1
+  2
+  $ try -p analyzed ':(1&2)'
+  * analyzed:
+  (rangepre
+    (and
+      ('symbol', '1')
+      ('symbol', '2')
+      define)
+    define)
+  * set:
+  <baseset []>
 
 infix/suffix resolution of ^ operator (issue2884):
 

@@ -368,6 +368,13 @@ def rangeset(repo, subset, x, y, order):
         return baseset()
     return _makerangeset(repo, subset, m.first(), n.last(), order)
 
+def rangepre(repo, subset, y, order):
+    # ':y' can't be rewritten to '0:y' since '0' may be hidden
+    n = getset(repo, fullreposet(repo), y)
+    if not n:
+        return baseset()
+    return _makerangeset(repo, subset, 0, n.last(), order)
+
 def _makerangeset(repo, subset, m, n, order):
     if m == n:
         r = baseset([m])
@@ -2329,6 +2336,7 @@ def _hexlist(repo, subset, x, order):
 
 methods = {
     "range": rangeset,
+    "rangepre": rangepre,
     "dagrange": dagrange,
     "string": stringset,
     "symbol": stringset,
@@ -2444,9 +2452,7 @@ def _analyze(x, order):
     elif op == 'dagrangepost':
         return _analyze(('func', ('symbol', 'descendants'), x[1]), order)
     elif op == 'rangeall':
-        return _analyze(('range', ('string', '0'), ('string', 'tip')), order)
-    elif op == 'rangepre':
-        return _analyze(('range', ('string', '0'), x[1]), order)
+        return _analyze(('rangepre', ('string', 'tip')), order)
     elif op == 'rangepost':
         return _analyze(('range', x[1], ('string', 'tip')), order)
     elif op == 'negate':
@@ -2462,7 +2468,7 @@ def _analyze(x, order):
         return (op, _analyze(x[1], order), order)
     elif op == 'not':
         return (op, _analyze(x[1], anyorder), order)
-    elif op == 'parentpost':
+    elif op in ('rangepre', 'parentpost'):
         return (op, _analyze(x[1], defineorder), order)
     elif op == 'group':
         return _analyze(x[1], order)
@@ -2567,7 +2573,7 @@ def _optimize(x, small):
             o = _optimize(x[1], not small)
             order = x[2]
             return o[0], (op, o[1], order)
-    elif op == 'parentpost':
+    elif op in ('rangepre', 'parentpost'):
         o = _optimize(x[1], small)
         order = x[2]
         return o[0], (op, o[1], order)

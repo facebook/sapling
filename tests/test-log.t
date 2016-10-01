@@ -1747,6 +1747,34 @@ divergent bookmarks are not hidden
   1:a765632148dc55d38c35c4f247c618701886cb2f
   0:9f758d63dcde62d547ebfb08e1e7ee96535f2b05
 
+test hidden revision 0 (issue5385)
+
+  $ hg bookmark -d X@foo
+  $ hg up null -q
+  $ hg debugobsolete 9f758d63dcde62d547ebfb08e1e7ee96535f2b05
+  $ echo f > b
+  $ hg ci -Am'b' -d '2 0'
+  adding b
+  $ echo f >> b
+  $ hg ci -m'b bis' -d '3 0'
+  $ hg log -T'{rev}:{node}\n'
+  3:d7d28b288a6b83d5d2cf49f10c5974deed3a1d2e
+  2:94375ec45bddd2a824535fc04855bd058c926ec0
+
+  $ hg log -T'{rev}:{node}\n' -r:
+  2:94375ec45bddd2a824535fc04855bd058c926ec0
+  3:d7d28b288a6b83d5d2cf49f10c5974deed3a1d2e
+  $ hg log -T'{rev}:{node}\n' -r:tip
+  2:94375ec45bddd2a824535fc04855bd058c926ec0
+  3:d7d28b288a6b83d5d2cf49f10c5974deed3a1d2e
+  $ hg log -T'{rev}:{node}\n' -r:0
+  abort: hidden revision '0'!
+  (use --hidden to access hidden revisions)
+  [255]
+  $ hg log -T'{rev}:{node}\n' -f
+  3:d7d28b288a6b83d5d2cf49f10c5974deed3a1d2e
+  2:94375ec45bddd2a824535fc04855bd058c926ec0
+
 clear extensions configuration
   $ echo '[extensions]' >> $HGRCPATH
   $ echo "obs=!" >> $HGRCPATH
