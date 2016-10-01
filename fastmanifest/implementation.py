@@ -698,6 +698,9 @@ class hybridmanifestctx(object):
     def readdelta(self):
         return self._slowmanifestctx.readdelta()
 
+    def readfast(self):
+        return self.read()
+
     @util.propertycache
     def _slowmanifestctx(self):
         return manifest.manifestctx(self._revlog, self._node)
