@@ -561,7 +561,7 @@ class _lrucachenode(object):
     Holds a reference to nodes on either side as well as a key-value
     pair for the dictionary entry.
     """
-    __slots__ = ('next', 'prev', 'key', 'value')
+    __slots__ = (u'next', u'prev', u'key', u'value')
 
     def __init__(self):
         self.next = None
