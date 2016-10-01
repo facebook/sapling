@@ -69,7 +69,7 @@ Short help:
    files         list tracked files
    forget        forget the specified files on the next commit
    graft         copy changes from other branches onto the current branch
-   grep          search for a pattern in specified files and revisions
+   grep          search revision history for a pattern in specified files
    heads         show branch heads
    help          show help for a given topic or a help overview
    identify      identify the working directory or specified revision
@@ -146,7 +146,7 @@ Short help:
    files         list tracked files
    forget        forget the specified files on the next commit
    graft         copy changes from other branches onto the current branch
-   grep          search for a pattern in specified files and revisions
+   grep          search revision history for a pattern in specified files
    heads         show branch heads
    help          show help for a given topic or a help overview
    identify      identify the working directory or specified revision
@@ -784,7 +784,7 @@ Test that default list of commands omits extension commands
    files         list tracked files
    forget        forget the specified files on the next commit
    graft         copy changes from other branches onto the current branch
-   grep          search for a pattern in specified files and revisions
+   grep          search revision history for a pattern in specified files
    heads         show branch heads
    help          show help for a given topic or a help overview
    identify      identify the working directory or specified revision
@@ -2201,7 +2201,7 @@ Dish up an empty repo; serve it cold.
   grep
   </a>
   </td><td>
-  search for a pattern in specified files and revisions
+  search revision history for a pattern in specified files
   </td></tr>
   <tr><td>
   <a href="/help/heads">
