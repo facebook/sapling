@@ -930,7 +930,7 @@ class basefilectx(object):
         def lines(text):
             if text.endswith("\n"):
                 return text.count("\n")
-            return text.count("\n") + 1
+            return text.count("\n") + int(bool(text))
 
         if linenumber:
             def decorate(text, rev):
