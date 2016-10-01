@@ -53,7 +53,7 @@ class EdenClient(EdenService.Client):
         self._socket.setTimeout(60000)  # in milliseconds
         self._transport = THeaderTransport(self._socket)
         self._protocol = THeaderProtocol(self._transport)
-        super().__init__(self._protocol)
+        super(EdenClient, self).__init__(self._protocol)
 
     def __enter__(self):
         self.open()
