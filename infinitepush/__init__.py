@@ -367,6 +367,16 @@ def _push(orig, ui, repo, *args, **opts):
         scratchbranchpat = ui.config('infinitepush', 'branchpattern', '')
         kind, pat, matcher = util.stringmatcher(scratchbranchpat)
         if matcher(bookmark):
+            # Hack to fix interaction with remotenames. Remotenames push
+            # '--to' bookmark to the server but we don't want to push scratch
+            # bookmark to the server. Let's delete '--to' and '--create' and
+            # also set allow_anon to True (because if --to is not set
+            # remotenames will think that we are pushing anonymoush head)
+            if 'to' in opts:
+                del opts['to']
+            if 'create' in opts:
+                del opts['create']
+            opts['allow_anon'] = True
             ui.setconfig(experimental, configbookmark, bookmark, '--to')
             ui.setconfig(experimental, configcreate, create, '--create')
             scratchpush = True

@@ -2,6 +2,7 @@
 
 Create an ondisk bundlestore in .hg/scratchbranches
 
+  $ . $TESTDIR/require-ext.sh remotenames
   $ extpath=`dirname $TESTDIR`
   $ cp -r $extpath/infinitepush $TESTTMP # use $TESTTMP substitution in message
   $ cp $extpath/hgext3rd/pushrebase.py $TESTTMP # use $TESTTMP substitution in message
@@ -286,3 +287,15 @@ Change the order of pushrebase and infinitepush
   2b5d271c7e0d25d811359a314d413ebcc75c9524
   6c10d49fe92751666c40263f96721b918170d3da
   d8c4f54ab678fd67cb90bb3f272a2dc6513a59a7
+
+  $ mkcommit scratchcommitwithremotenames
+  $ hg push --config extensions.remotenames= -r . --to scratch/mybranch
+  pushing to ssh://user@dummy/repo
+  searching for changes
+  remote: pushing 6 commits:
+  remote:     20759b6926ce  scratchcommit
+  remote:     1de1d7d92f89  new scratch commit
+  remote:     2b5d271c7e0d  scratchcommitnobook
+  remote:     d8c4f54ab678  scratchcommitwithpushrebase
+  remote:     6c10d49fe927  scratchcommitwithpushrebase2
+  remote:     9558d6761412  scratchcommitwithremotenames
