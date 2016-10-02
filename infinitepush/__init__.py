@@ -43,6 +43,7 @@ from . import store, indexapi
 cmdtable = {}
 command = cmdutil.command(cmdtable)
 
+pushrebaseparttype = 'b2x:rebase'
 scratchbranchparttype = 'b2x:infinitepush'
 
 experimental = 'experimental'
@@ -157,9 +158,14 @@ def clientextsetup(ui):
 
     wireproto.wirepeer.listkeyspatterns = listkeyspatterns
 
+    # Move infinitepush part before pushrebase part
+    # to avoid generation of both parts.
     partorder = exchange.b2partsgenorder
-    partorder.insert(partorder.index('changeset'),
-                     partorder.pop(partorder.index(scratchbranchparttype)))
+    index = partorder.index('changeset')
+    if pushrebaseparttype in partorder:
+        index = min(index, partorder.index(pushrebaseparttype))
+    partorder.insert(
+        index, partorder.pop(partorder.index(scratchbranchparttype)))
 
 def _checkheads(orig, pushop):
     if pushop.ui.configbool(experimental, configscratchpush, False):

@@ -4,6 +4,8 @@ Create an ondisk bundlestore in .hg/scratchbranches
 
   $ extpath=`dirname $TESTDIR`
   $ cp -r $extpath/infinitepush $TESTTMP # use $TESTTMP substitution in message
+  $ cp $extpath/hgext3rd/pushrebase.py $TESTTMP # use $TESTTMP substitution in message
+  $ cp $HGRCPATH $TESTTMP/defaulthgrc
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > infinitepush=$TESTTMP/infinitepush
@@ -201,3 +203,67 @@ Push scratch revision without bookmark with --force-scratch
   1de1d7d92f8965260391d0513fe8a8d5973d3042
   20759b6926ce827d5a8c73eb1fa9726d6f7defb2
   2b5d271c7e0d25d811359a314d413ebcc75c9524
+
+Test with pushrebase
+  $ cp $TESTTMP/defaulthgrc $HGRCPATH
+  $ cat >> $HGRCPATH << EOF
+  > [extensions]
+  > pushrebase=$TESTTMP/pushrebase.py
+  > infinitepush=$TESTTMP/infinitepush
+  > [infinitepush]
+  > branchpattern=re:scratch/.+
+  > [ui]
+  > ssh = python "$TESTDIR/dummyssh"
+  > EOF
+  $ mkcommit scratchcommitwithpushrebase
+  $ hg push -r . --to scratch/mybranch
+  pushing to ssh://user@dummy/repo
+  searching for changes
+  remote: pushing 4 commits:
+  remote:     20759b6926ce  scratchcommit
+  remote:     1de1d7d92f89  new scratch commit
+  remote:     2b5d271c7e0d  scratchcommitnobook
+  remote:     d8c4f54ab678  scratchcommitwithpushrebase
+  $ hg -R ../repo log -G -T '{desc} {phase}'
+  o  newcommit public
+  |
+  o  initialcommit public
+  
+  $ scratchnodes
+  1de1d7d92f8965260391d0513fe8a8d5973d3042
+  20759b6926ce827d5a8c73eb1fa9726d6f7defb2
+  2b5d271c7e0d25d811359a314d413ebcc75c9524
+  d8c4f54ab678fd67cb90bb3f272a2dc6513a59a7
+
+Change the order of pushrebase and infinitepush
+  $ cp $TESTTMP/defaulthgrc $HGRCPATH
+  $ cat >> $HGRCPATH << EOF
+  > [extensions]
+  > infinitepush=$TESTTMP/infinitepush
+  > pushrebase=$TESTTMP/pushrebase.py
+  > [infinitepush]
+  > branchpattern=re:scratch/.+
+  > [ui]
+  > ssh = python "$TESTDIR/dummyssh"
+  > EOF
+  $ mkcommit scratchcommitwithpushrebase2
+  $ hg push -r . --to scratch/mybranch
+  pushing to ssh://user@dummy/repo
+  searching for changes
+  remote: pushing 5 commits:
+  remote:     20759b6926ce  scratchcommit
+  remote:     1de1d7d92f89  new scratch commit
+  remote:     2b5d271c7e0d  scratchcommitnobook
+  remote:     d8c4f54ab678  scratchcommitwithpushrebase
+  remote:     6c10d49fe927  scratchcommitwithpushrebase2
+  $ hg -R ../repo log -G -T '{desc} {phase}'
+  o  newcommit public
+  |
+  o  initialcommit public
+  
+  $ scratchnodes
+  1de1d7d92f8965260391d0513fe8a8d5973d3042
+  20759b6926ce827d5a8c73eb1fa9726d6f7defb2
+  2b5d271c7e0d25d811359a314d413ebcc75c9524
+  6c10d49fe92751666c40263f96721b918170d3da
+  d8c4f54ab678fd67cb90bb3f272a2dc6513a59a7
