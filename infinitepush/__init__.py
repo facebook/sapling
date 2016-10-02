@@ -534,18 +534,22 @@ def bundle2scratchbranch(op, part):
         nodes = [hex(rev.node()) for rev in revs]
 
         newnodes = filter(lambda node: not index.getbundle(node), nodes)
-        with open(bundlefile, 'r') as f:
-            key = store.write(f.read())
-
-        if bookmark:
-            try:
-                index.addbookmarkandbundle(key, newnodes,
-                                           bookmark, newnodes[-1])
-            except NotImplementedError:
-                index.addbookmark(bookmark, newnodes[-1])
+        if newnodes:
+            with open(bundlefile, 'r') as f:
+                key = store.write(f.read())
+            if bookmark:
+                try:
+                    index.addbookmarkandbundle(key, newnodes,
+                                               bookmark, newnodes[-1])
+                except NotImplementedError:
+                    index.addbookmark(bookmark, newnodes[-1])
+                    index.addbundle(key, newnodes)
+            else:
+                # Push new scratch commits with no bookmark
                 index.addbundle(key, newnodes)
-        else:
-            index.addbundle(key, newnodes)
+        elif bookmark:
+            # Push new scratch bookmark to known scratch commits
+            index.addbookmark(bookmark, nodes[-1])
     finally:
         try:
             if bundlefile:

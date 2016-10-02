@@ -24,6 +24,11 @@ Create an ondisk bundlestore in .hg/scratchbranches
   >        echo ${node##*/}
   >    done
   > }
+  $ scratchbookmarks() {
+  >    for bookmark in `find ../repo/.hg/scratchbranches/index/bookmarkmap/* -type f | sort`; do
+  >        echo ${bookmark##*/bookmarkmap/}
+  >    done
+  > }
   $ hg init repo
   $ cd repo
   $ ls -1 .hg/scratchbranches
@@ -147,6 +152,20 @@ Push to scratch branch
   $ scratchnodes
   1de1d7d92f8965260391d0513fe8a8d5973d3042
   20759b6926ce827d5a8c73eb1fa9726d6f7defb2
+
+  $ scratchbookmarks
+  scratch/mybranch
+
+Push scratch bookmark with no new revs
+  $ hg push -r . --to scratch/anotherbranch --create
+  pushing to ssh://user@dummy/repo
+  searching for changes
+  remote: pushing 2 commits:
+  remote:     20759b6926ce  scratchcommit
+  remote:     1de1d7d92f89  new scratch commit
+  $ scratchbookmarks
+  scratch/anotherbranch
+  scratch/mybranch
 
 Pull scratch and non-scratch bookmark at the same time
 
