@@ -136,7 +136,9 @@ class sqlindexapi(indexapi):
         for node in nodes:
             self.sqlcursor.execute(
                 "INSERT INTO nodestobundle(node, bundle, reponame) "
-                "VALUES (%s, %s, %s)", params=(node, bundleid, self.reponame))
+                "VALUES (%s, %s, %s) ON DUPLICATE KEY UPDATE "
+                "bundle=VALUES(bundle)",
+                params=(node, bundleid, self.reponame))
         self.sqlconn.commit()
 
     def addbookmark(self, bookmark, node):
@@ -149,7 +151,8 @@ class sqlindexapi(indexapi):
             (self.reponame, bookmark, node))
         self.sqlcursor.execute(
             "INSERT INTO bookmarkstonode(bookmark, node, reponame) "
-            "VALUES (%s, %s, %s)", params=(bookmark, node, self.reponame))
+            "VALUES (%s, %s, %s) ON DUPLICATE KEY UPDATE node=VALUES(node)",
+            params=(bookmark, node, self.reponame))
 
         self.sqlconn.commit()
 
