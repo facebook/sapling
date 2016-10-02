@@ -781,7 +781,7 @@ def driverconclude(repo, ms, wctx, labels=None):
 def manifestmerge(repo, wctx, p2, pa, branchmerge, force, matcher,
                   acceptremote, followcopies):
     """
-    Merge p1 and p2 with ancestor pa and generate merge action list
+    Merge wctx and p2 with ancestor pa and generate merge action list
 
     branchmerge and force are as passed in to update
     matcher = matcher to filter file lists
