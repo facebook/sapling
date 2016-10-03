@@ -275,8 +275,8 @@ Confirm that --help works (it didn't when we used an alias)
   
   options ([+] can be repeated):
   
-   -g --git                 use git extended diff format
-      --stat                output diffstat-style summary of changes
+   -g --[no-]git            use git extended diff format
+      --[no-]stat           output diffstat-style summary of changes
    -T --template TEMPLATE   display with template
    -I --include PATTERN [+] include names matching the given patterns
    -X --exclude PATTERN [+] exclude names matching the given patterns
@@ -298,8 +298,8 @@ Confirm that --help works (it didn't when we used an alias)
   
   options ([+] can be repeated):
   
-   -g --git                 use git extended diff format
-      --stat                output diffstat-style summary of changes
+   -g --[no-]git            use git extended diff format
+      --[no-]stat           output diffstat-style summary of changes
       --style STYLE         display using template map file (DEPRECATED)
    -T --template TEMPLATE   display with template
    -I --include PATTERN [+] include names matching the given patterns
@@ -312,16 +312,16 @@ Confirm that --help works (it didn't when we used an alias)
       --cwd DIR           change working directory
    -y --noninteractive    do not prompt, automatically pick the first choice for
                           all prompts
-   -q --quiet             suppress output
-   -v --verbose           enable additional output
+   -q --[no-]quiet        suppress output
+   -v --[no-]verbose      enable additional output
       --config CONFIG [+] set/override config option (use 'section.name=value')
-      --debug             enable debugging output
-      --debugger          start debugger
+      --[no-]debug        enable debugging output
+      --[no-]debugger     start debugger
       --encoding ENCODE   set the charset encoding (default: ascii)
       --encodingmode MODE set the charset encoding mode (default: strict)
-      --traceback         always print a traceback on exception
-      --time              time how long the command takes
-      --profile           print command execution profile
+      --[no-]traceback    always print a traceback on exception
+      --[no-]time         time how long the command takes
+      --[no-]profile      print command execution profile
       --version           output version information and exit
    -h --help              display help and exit
-      --hidden            consider hidden changesets
+      --[no-]hidden       consider hidden changesets
