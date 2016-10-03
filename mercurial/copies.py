@@ -465,6 +465,11 @@ def checkcopies(ctx, f, m1, m2, ca, limit, diverge, copy, fullcopy):
     diverge = record all diverges in this dict
     copy = record all non-divergent copies in this dict
     fullcopy = record all copies in this dict
+
+    note: limit is only an optimization, and there is no guarantee that
+    irrelevant revisions will not be limited
+    there is no easy way to make this algorithm stop in a guaranteed way
+    once it "goes behind a certain revision".
     """
 
     ma = ca.manifest()
