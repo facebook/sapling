@@ -251,10 +251,10 @@ def _computenonoverlap(repo, c1, c2, addedinm1, addedinm2):
     return u1, u2
 
 def _makegetfctx(ctx):
-    """return a 'getfctx' function suitable for checkcopies usage
+    """return a 'getfctx' function suitable for _checkcopies usage
 
     We have to re-setup the function building 'filectx' for each
-    'checkcopies' to ensure the linkrev adjustment is properly setup for
+    '_checkcopies' to ensure the linkrev adjustment is properly setup for
     each. Linkrev adjustment is important to avoid bug in rename
     detection. Moreover, having a proper '_ancestrycontext' setup ensures
     the performance impact of this adjustment is kept limited. Without it,
@@ -331,7 +331,7 @@ def mergecopies(repo, c1, c2, ca):
     m2 = c2.manifest()
     ma = ca.manifest()
 
-    # see checkcopies documentation below for these dicts
+    # see _checkcopies documentation below for these dicts
     copy1, copy2 = {}, {}
     movewithdir1, movewithdir2 = {}, {}
     fullcopy1, fullcopy2 = {}, {}
@@ -345,10 +345,10 @@ def mergecopies(repo, c1, c2, ca):
     bothnew = sorted(addedinm1 & addedinm2)
 
     for f in u1u:
-        checkcopies(c1, f, m1, m2, ca, limit, diverge, copy1, fullcopy1)
+        _checkcopies(c1, f, m1, m2, ca, limit, diverge, copy1, fullcopy1)
 
     for f in u2u:
-        checkcopies(c2, f, m2, m1, ca, limit, diverge, copy2, fullcopy2)
+        _checkcopies(c2, f, m2, m1, ca, limit, diverge, copy2, fullcopy2)
 
     copy = dict(copy1.items() + copy2.items())
     movewithdir = dict(movewithdir1.items() + movewithdir2.items())
@@ -373,8 +373,8 @@ def mergecopies(repo, c1, c2, ca):
                       % "\n   ".join(bothnew))
     bothdiverge, _copy, _fullcopy = {}, {}, {}
     for f in bothnew:
-        checkcopies(c1, f, m1, m2, ca, limit, bothdiverge, _copy, _fullcopy)
-        checkcopies(c2, f, m2, m1, ca, limit, bothdiverge, _copy, _fullcopy)
+        _checkcopies(c1, f, m1, m2, ca, limit, bothdiverge, _copy, _fullcopy)
+        _checkcopies(c2, f, m2, m1, ca, limit, bothdiverge, _copy, _fullcopy)
     for of, fl in bothdiverge.items():
         if len(fl) == 2 and fl[0] == fl[1]:
             copy[fl[0]] = of # not actually divergent, just matching renames
@@ -454,7 +454,7 @@ def mergecopies(repo, c1, c2, ca):
 
     return copy, movewithdir, diverge, renamedelete
 
-def checkcopies(ctx, f, m1, m2, ca, limit, diverge, copy, fullcopy):
+def _checkcopies(ctx, f, m1, m2, ca, limit, diverge, copy, fullcopy):
     """
     check possible copies of f from m1 to m2
 
