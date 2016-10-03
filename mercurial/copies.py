@@ -331,7 +331,8 @@ def mergecopies(repo, c1, c2, ca):
     m2 = c2.manifest()
     ma = ca.manifest()
 
-    copy1, copy2, = {}, {}
+    # see checkcopies documentation below for these dicts
+    copy1, copy2 = {}, {}
     movewithdir1, movewithdir2 = {}, {}
     fullcopy1, fullcopy2 = {}, {}
     diverge = {}
