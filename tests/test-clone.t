@@ -829,7 +829,7 @@ We only get bookmarks from the remote, not everything in the share
 Default path should be source, not share.
 
   $ hg -R share-dest1b config paths.default
-  $TESTTMP/source1a (glob)
+  $TESTTMP/source1b (glob)
 
 Checked out revision should be head of default branch
 
