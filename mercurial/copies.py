@@ -340,13 +340,14 @@ def mergecopies(repo, c1, c2, ca):
     # find interesting file sets from manifests
     addedinm1 = m1.filesnotin(ma)
     addedinm2 = m2.filesnotin(ma)
-    u1, u2 = _computenonoverlap(repo, c1, c2, addedinm1, addedinm2)
+    u1r, u2r = _computenonoverlap(repo, c1, c2, addedinm1, addedinm2)
+    u1u, u2u = u1r, u2r
     bothnew = sorted(addedinm1 & addedinm2)
 
-    for f in u1:
+    for f in u1u:
         checkcopies(c1, f, m1, m2, ca, limit, diverge, copy1, fullcopy1)
 
-    for f in u2:
+    for f in u2u:
         checkcopies(c2, f, m2, m1, ca, limit, diverge, copy2, fullcopy2)
 
     copy = dict(copy1.items() + copy2.items())
@@ -439,7 +440,7 @@ def mergecopies(repo, c1, c2, ca):
                       (d, dirmove[d]))
 
     # check unaccounted nonoverlapping files against directory moves
-    for f in u1 + u2:
+    for f in u1r + u2r:
         if f not in fullcopy:
             for d in dirmove:
                 if f.startswith(d):
