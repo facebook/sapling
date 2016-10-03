@@ -62,6 +62,7 @@ setup(
     packages=[
         'fastannotate',
         'fastmanifest',
+        'infinitepush',
         'phabricator',
         'sqldirstate',
         'remotefilelog',
