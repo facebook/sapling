@@ -524,13 +524,12 @@ def _checkcopies(ctx, f, m1, m2, ca, limit, diverge, copy, fullcopy):
         if of not in m2:
             continue # no match, keep looking
         if m2[of] == ma.get(of):
-            break # no merge needed, quit early
+            return # no merge needed, quit early
         c2 = getfctx(of, m2[of])
         cr = _related(oc, c2, ca.rev())
         if cr and (of == f or of == c2.path()): # non-divergent
             copy[f] = of
-            of = None
-            break
+            return
 
     if of in ma:
         diverge.setdefault(of, []).append(f)
