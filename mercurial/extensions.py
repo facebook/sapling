@@ -80,6 +80,26 @@ def _importh(name):
         mod = getattr(mod, comp)
     return mod
 
+def _importext(name, path=None, reportfunc=None):
+    if path:
+        # the module will be loaded in sys.modules
+        # choose an unique name so that it doesn't
+        # conflicts with other modules
+        mod = loadpath(path, 'hgext.%s' % name)
+    else:
+        try:
+            mod = _importh("hgext.%s" % name)
+        except ImportError as err:
+            if reportfunc:
+                reportfunc(err, "hgext.%s" % name, "hgext3rd.%s" % name)
+            try:
+                mod = _importh("hgext3rd.%s" % name)
+            except ImportError as err:
+                if reportfunc:
+                    reportfunc(err, "hgext3rd.%s" % name, name)
+                mod = _importh(name)
+    return mod
+
 def _reportimporterror(ui, err, failed, next):
     # note: this ui.debug happens before --debug is processed,
     #       Use --config ui.debug=1 to see them.
@@ -98,21 +118,7 @@ def load(ui, name, path):
     if shortname in _extensions:
         return _extensions[shortname]
     _extensions[shortname] = None
-    if path:
-        # the module will be loaded in sys.modules
-        # choose an unique name so that it doesn't
-        # conflicts with other modules
-        mod = loadpath(path, 'hgext.%s' % name)
-    else:
-        try:
-            mod = _importh("hgext.%s" % name)
-        except ImportError as err:
-            _reportimporterror(ui, err, "hgext.%s" % name, "hgext3rd.%s" % name)
-            try:
-                mod = _importh("hgext3rd.%s" % name)
-            except ImportError as err:
-                _reportimporterror(ui, err, "hgext3rd.%s" % name, name)
-                mod = _importh(name)
+    mod = _importext(name, path, bind(_reportimporterror, ui))
 
     # Before we do anything with the extension, check against minimum stated
     # compatibility. This gives extension authors a mechanism to have their
