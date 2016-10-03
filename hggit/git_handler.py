@@ -459,9 +459,13 @@ class GitHandler(object):
         exporter = hg2git.IncrementalChangesetExporter(
             self.repo, pctx, self.git.object_store, gitcommit)
 
+        mapsavefreq = self.ui.configint('hggit', 'mapsavefrequency', 0)
         for i, ctx in enumerate(export):
             self.ui.progress('exporting', i, total=total)
             self.export_hg_commit(ctx.node(), exporter)
+            if mapsavefreq and i % mapsavefreq == 0:
+                self.ui.debug(_("saving mapfile\n"))
+                self.save_map(self.map_file)
         self.ui.progress('exporting', None, total=total)
 
     def set_commiter_from_author(self, commit):
