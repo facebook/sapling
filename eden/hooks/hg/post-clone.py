@@ -44,6 +44,17 @@ def setup_eden_hg_dir(eden_hg_dir, repo_hg_dir, eden_ext_path):
     # TODO: It would probably be nicer to just append an %include pointing to a
     # file with the extra settings we need.
     extra_hgrc_settings = '''\
+[ui]
+# For now, ignore the portablefilenames check and trust the user not to check in
+# files in the same directory with the same name when doing a case-insensitive
+# equals comparison. The current implementation of casecollisionauditor in
+# scmutil.py reads a private _map property of the dirstate that we would prefer
+# not to support in edendirstate.
+# TODO(t13694345): Provide an alternative implementation of casecollisionauditor
+# that provides equivalent functionality, but in a more performant way using
+# Eden and monkey-patch it in.
+portablefilenames = ignore
+
 # Extension settings required by eden
 [extensions]
 share =
