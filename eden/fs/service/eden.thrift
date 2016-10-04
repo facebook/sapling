@@ -117,21 +117,25 @@ service EdenService extends fb303.FacebookService {
    *   or directory).
    */
   list<SHA1Result> getSHA1(1: string mountPoint, 2: list<string> paths)
+    throws (1: EdenError ex)
 
   /**
    * Returns a list of paths relative to the mountPoint.
    */
   list<string> getBindMounts(1: string mountPoint)
+    throws (1: EdenError ex)
 
   /**
    * Returns the current set of files (and dirs) materialized in the overlay
    */
   MaterializedResult getMaterializedEntries(1: string mountPoint)
+    throws (1: EdenError ex)
 
   /** Returns the sequence position at the time the method is called.
    * Returns the instantaneous value of the journal sequence number.
    */
   JournalPosition getCurrentJournalPosition(1: string mountPoint)
+    throws (1: EdenError ex)
 
   /** Returns the set of files (and dirs) that changed since a prior point.
    * If fromPosition.mountGeneration is mismatched with the current
@@ -155,6 +159,7 @@ service EdenService extends fb303.FacebookService {
   list<FileInformationOrError> getFileInformation(
     1: string mountPoint,
     2: list<string> paths)
+      throws (1: EdenError ex)
 
   /** Returns a list of files that match the input globs.
    * There are no duplicate values in the result.
@@ -164,4 +169,5 @@ service EdenService extends fb303.FacebookService {
     1: string mountPoint,
     2: list<string> globs,
     3: i32 wildMatchFlags)
+      throws (1: EdenError ex)
 }

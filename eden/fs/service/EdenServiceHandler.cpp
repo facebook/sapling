@@ -14,6 +14,7 @@
 #include <folly/String.h>
 #include <folly/Subprocess.h>
 #include <unordered_set>
+#include "EdenError.h"
 #include "EdenServer.h"
 #include "eden/fs/config/ClientConfig.h"
 #include "eden/fs/inodes/EdenMount.h"
@@ -137,7 +138,7 @@ void EdenServiceHandler::mount(std::unique_ptr<MountInfo> info) {
   } catch (const EdenError& ex) {
     throw;
   } catch (const std::exception& ex) {
-    throw EdenError(folly::exceptionStr(ex).toStdString());
+    throw newEdenError(ex);
   }
 }
 
@@ -147,7 +148,7 @@ void EdenServiceHandler::unmount(std::unique_ptr<std::string> mountPoint) {
   } catch (const EdenError& ex) {
     throw;
   } catch (const std::exception& ex) {
-    throw EdenError(folly::exceptionStr(ex).toStdString());
+    throw newEdenError(ex);
   }
 }
 
@@ -201,10 +202,8 @@ SHA1Result EdenServiceHandler::getSHA1ForPathDefensively(
   try {
     return getSHA1ForPath(mountPoint, path);
   } catch (const std::system_error& e) {
-    EdenError err(e.what());
-    err.set_errorCode(e.code().value());
     SHA1Result out;
-    out.set_error(err);
+    out.set_error(newEdenError(e));
     return out;
   }
 }
@@ -215,7 +214,7 @@ SHA1Result EdenServiceHandler::getSHA1ForPath(
   SHA1Result out;
 
   if (path.empty()) {
-    out.set_error(EdenError("path cannot be the empty string"));
+    out.set_error(newEdenError(EINVAL, "path cannot be the empty string"));
     return out;
   }
 
@@ -242,15 +241,15 @@ SHA1Result EdenServiceHandler::getSHA1ForPath(
           inodeDispatcher->getFileInode(inodeNumber));
 
       if (!fileInode) {
-        out.set_error(EdenError(folly::to<string>(
-            "Wrong FileInode type: ", currentPiece.stringPiece())));
+        out.set_error(newEdenError(
+            EISDIR, "Wrong FileInode type: {}", currentPiece.stringPiece()));
         return out;
       }
 
       auto entry = fileInode->getEntry();
       if (!S_ISREG(entry->mode)) {
-        out.set_error(EdenError(folly::to<string>(
-            "Not an ordinary file: ", currentPiece.stringPiece())));
+        out.set_error(newEdenError(
+            EISDIR, "Not an ordinary file: {}", currentPiece.stringPiece()));
         return out;
       }
 
@@ -377,12 +376,11 @@ void EdenServiceHandler::getFilesChangedSince(
   auto delta = edenMount->getJournal().rlock()->getLatest();
 
   if (fromPosition->mountGeneration != edenMount->getMountGeneration()) {
-    throw EdenError(
-        apache::thrift::FragileConstructor(),
+    throw newEdenError(
+        ERANGE,
         "fromPosition.mountGeneration does not match the current "
         "mountGeneration.  "
-        "You need to compute a new basis for delta queries.",
-        ERANGE);
+        "You need to compute a new basis for delta queries.");
   }
 
   std::unordered_set<RelativePath> changedFiles;
@@ -454,9 +452,7 @@ void EdenServiceHandler::getFileInformation(
       out.emplace_back(std::move(result));
 
     } catch (const std::system_error& e) {
-      EdenError err(e.what());
-      err.set_errorCode(e.code().value());
-      result.set_error(err);
+      result.set_error(newEdenError(e));
       out.emplace_back(std::move(result));
     }
   }
