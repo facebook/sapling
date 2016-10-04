@@ -37,7 +37,6 @@ from mercurial.node import bin, hex
 from mercurial.i18n import _
 from mercurial.peer import batchable, future
 from mercurial.wireproto import encodelist, decodelist
-from . import store, indexapi
 
 
 cmdtable = {}
@@ -60,6 +59,7 @@ def _buildexternalbundlestore(ui):
     get_binary = ui.config('infinitepush', 'get_binary')
     if not get_binary:
         raise error.Abort('get binary is not specified')
+    from . import store
     return store.externalbundlestore(put_binary, put_args, get_binary, get_args)
 
 def _buildsqlindex(ui):
@@ -72,6 +72,7 @@ def _buildsqlindex(ui):
         raise error.Abort(_('please set infinitepush.reponame'))
 
     logfile = ui.config('infinitepush', 'logfile', '')
+    from . import indexapi
     return indexapi.sqlindexapi(
         reponame, host, port, db, user, password,
         logfile, _getloglevel(ui))
@@ -88,12 +89,14 @@ class bundlestore(object):
         self._repo = repo
         storetype = self._repo.ui.config('infinitepush', 'storetype', 'disk')
         if storetype == 'disk':
+            from . import store
             self.store = store.filebundlestore(self._repo.ui, self._repo)
         elif storetype == 'external':
             self.store = _buildexternalbundlestore(self._repo.ui)
 
         indextype = self._repo.ui.config('infinitepush', 'indextype', 'disk')
         if indextype == 'disk':
+            from . import indexapi
             self.index = indexapi.fileindexapi(self._repo)
         elif indextype == 'sql':
             self.index = _buildsqlindex(self._repo.ui)
@@ -101,8 +104,11 @@ class bundlestore(object):
             raise error.Abort(
                 _('unknown infinitepush index type specified %s') % indextype)
 
+def _isserver(ui):
+    return ui.configbool('infinitepush', 'server')
+
 def reposetup(ui, repo):
-    if repo.local():
+    if _isserver(ui) and repo.local():
         repo.bundlestore = bundlestore(repo)
 
 def uisetup(ui):
@@ -115,8 +121,7 @@ def uisetup(ui):
 
 def extsetup(ui):
     commonsetup(ui)
-    isserver = ui.configbool('infinitepush', 'server')
-    if isserver:
+    if _isserver(ui):
         serverextsetup(ui)
     else:
         clientextsetup(ui)

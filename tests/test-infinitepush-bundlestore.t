@@ -32,8 +32,6 @@ Create an ondisk bundlestore in .hg/scratchbranches
   > }
   $ hg init repo
   $ cd repo
-  $ ls -1 .hg/scratchbranches
-  filebundlestore
 
 Check that we can send a scratch on the server and it does not show there in
 the history but is stored on disk
