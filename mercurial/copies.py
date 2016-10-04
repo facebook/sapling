@@ -289,6 +289,22 @@ def _makegetfctx(ctx):
         return fctx
     return util.lrucachefunc(makectx)
 
+def _combinecopies(copyfrom, copyto, finalcopy, diverge, incompletediverge):
+    """combine partial copy paths"""
+    remainder = {}
+    for f in copyfrom:
+        if f in copyto:
+            finalcopy[copyto[f]] = copyfrom[f]
+            del copyto[f]
+    for f in incompletediverge:
+        assert f not in diverge
+        ic = incompletediverge[f]
+        if ic[0] in copyto:
+            diverge[f] = [copyto[ic[0]], ic[1]]
+        else:
+            remainder[f] = ic
+    return remainder
+
 def mergecopies(repo, c1, c2, base):
     """
     Find moves and copies between context c1 and c2 that are relevant
@@ -360,14 +376,21 @@ def mergecopies(repo, c1, c2, base):
     # - diverge = record all diverges in this dict
     # - copy = record all non-divergent copies in this dict
     # - fullcopy = record all copies in this dict
+    # - incomplete = record non-divergent partial copies here
+    # - incompletediverge = record divergent partial copies here
     diverge = {} # divergence data is shared
+    incompletediverge  = {}
     data1 = {'copy': {},
              'fullcopy': {},
+             'incomplete': {},
              'diverge': diverge,
+             'incompletediverge': incompletediverge,
             }
     data2 = {'copy': {},
              'fullcopy': {},
+             'incomplete': {},
              'diverge': diverge,
+             'incompletediverge': incompletediverge,
             }
 
     # find interesting file sets from manifests
@@ -398,6 +421,13 @@ def mergecopies(repo, c1, c2, base):
     copy = dict(data1['copy'].items() + data2['copy'].items())
     fullcopy = dict(data1['fullcopy'].items() + data2['fullcopy'].items())
 
+    if dirtyc1:
+        _combinecopies(data2['incomplete'], data1['incomplete'], copy, diverge,
+                       incompletediverge)
+    else:
+        _combinecopies(data1['incomplete'], data2['incomplete'], copy, diverge,
+                       incompletediverge)
+
     renamedelete = {}
     renamedeleteset = set()
     divergeset = set()
@@ -416,13 +446,36 @@ def mergecopies(repo, c1, c2, base):
         repo.ui.debug("  unmatched files new in both:\n   %s\n"
                       % "\n   ".join(bothnew))
     bothdiverge = {}
-    bothdata = {'copy': {},
-                'fullcopy': {},
-                'diverge': bothdiverge,
-               }
+    bothincompletediverge = {}
+    both1 = {'copy': {},
+             'fullcopy': {},
+             'incomplete': {},
+             'diverge': bothdiverge,
+             'incompletediverge': bothincompletediverge
+            }
+    both2 = {'copy': {},
+             'fullcopy': {},
+             'incomplete': {},
+             'diverge': bothdiverge,
+             'incompletediverge': bothincompletediverge
+            }
     for f in bothnew:
-        _checkcopies(c1, f, m1, m2, base, tca, limit, bothdata)
-        _checkcopies(c2, f, m2, m1, base, tca, limit, bothdata)
+        _checkcopies(c1, f, m1, m2, base, tca, limit, both1)
+        _checkcopies(c2, f, m2, m1, base, tca, limit, both2)
+    if dirtyc1:
+        assert both2['incomplete'] == {}
+        remainder = _combinecopies({}, both1['incomplete'], copy, bothdiverge,
+                                   bothincompletediverge)
+    else:
+        assert both1['incomplete'] == {}
+        remainder = _combinecopies({}, both2['incomplete'], copy, bothdiverge,
+                                   bothincompletediverge)
+    for f in remainder:
+        assert f not in bothdiverge
+        ic = remainder[f]
+        if ic[0] in (m1 if dirtyc1 else m2):
+            # backed-out rename on one side, but watch out for deleted files
+            bothdiverge[f] = ic
     for of, fl in bothdiverge.items():
         if len(fl) == 2 and fl[0] == fl[1]:
             copy[fl[0]] = of # not actually divergent, just matching renames
