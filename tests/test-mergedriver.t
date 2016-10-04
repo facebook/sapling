@@ -484,8 +484,8 @@ this should abort
   [255]
 
 this should disable the merge driver
-  $ hg help resolve | grep -- '--skip'
-      --skip                skip merge driver
+  $ hg help resolve | grep -- 'skip'
+      --[no-]skip           skip merge driver
   $ hg resolve --all --skip
   warning: skipping merge driver (you MUST regenerate artifacts afterwards)
   (no more unresolved files)

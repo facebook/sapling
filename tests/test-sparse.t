@@ -320,7 +320,7 @@ Test debugrebuilddirstate
   $ cp ../dirstateboth .hg/dirstate
   $ hg debugrebuilddirstate
   $ hg debugdirstate
-  n * -1 * included (glob)
+  n   0         -1 unset               included
 
 Test debugdirstate --minimal where file is in the parent manifest but not the
 dirstate
@@ -336,7 +336,7 @@ dirstate
   a   0         -1 unset               includedadded
   $ hg debugrebuilddirstate --minimal
   $ hg debugdirstate --nodates
-  n * -1 * included (glob)
+  n   0         -1 unset               included
   a   0         -1 * includedadded (glob)
 
 Test debugdirstate --minimal where a file is not in parent manifest
