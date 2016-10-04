@@ -22,17 +22,16 @@ from mercurial import (
     bookmarks,
     cmdutil,
     commands,
+    error,
+    extensions,
+    merge,
     obsolete,
     phases,
     repair,
-    util,
 )
-from mercurial import merge, extensions, error, scmutil, hg, util
-from mercurial.node import hex, nullid
-from mercurial import obsolete
+from mercurial.node import hex
 from mercurial import lock as lockmod
 from mercurial.i18n import _
-import errno, os, re
 from contextlib import nested
 
 cmdtable = {}
