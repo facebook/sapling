@@ -171,3 +171,11 @@ class MaterializedQueryTest:
 
         info = self.client.getMaterializedEntries(self.mount)
         self.assertEqual(['', 'overlay-2'], sorted(info.fileInfo.keys()))
+
+    def test_bad_mount_path(self):
+        self.assertRaisesRegexp(EdenService.EdenError,
+                                'no such mount point "foobar"',
+                                self.client.getMaterializedEntries, 'foobar')
+        self.assertRaisesRegexp(EdenService.EdenError,
+                                'no such mount point ""',
+                                self.client.getMaterializedEntries, '')

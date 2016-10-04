@@ -266,6 +266,9 @@ void EdenServiceHandler::getMaterializedEntries(
     MaterializedResult& out,
     std::unique_ptr<std::string> mountPoint) {
   auto edenMount = server_->getMount(*mountPoint);
+  if (!edenMount) {
+    throw newEdenError(ENODEV, "no such mount point \"{}\"", *mountPoint);
+  }
   auto inodeDispatcher = edenMount->getMountPoint()->getDispatcher();
   auto rootInode = inodeDispatcher->getDirInode(FUSE_ROOT_ID);
 
