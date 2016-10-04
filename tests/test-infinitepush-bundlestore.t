@@ -38,6 +38,8 @@ the history but is stored on disk
   $ cat >> .hg/hgrc << EOF
   > [infinitepush]
   > server=yes
+  > indextype=disk
+  > storetype=disk
   > EOF
   $ cd ..
   $ hg clone ssh://user@dummy/repo client -q

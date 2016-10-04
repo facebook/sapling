@@ -87,14 +87,17 @@ def _getloglevel(ui):
 class bundlestore(object):
     def __init__(self, repo):
         self._repo = repo
-        storetype = self._repo.ui.config('infinitepush', 'storetype', 'disk')
+        storetype = self._repo.ui.config('infinitepush', 'storetype', '')
         if storetype == 'disk':
             from . import store
             self.store = store.filebundlestore(self._repo.ui, self._repo)
         elif storetype == 'external':
             self.store = _buildexternalbundlestore(self._repo.ui)
+        else:
+            raise error.Abort(
+                _('unknown infinitepush store type specified %s') % storetype)
 
-        indextype = self._repo.ui.config('infinitepush', 'indextype', 'disk')
+        indextype = self._repo.ui.config('infinitepush', 'indextype', '')
         if indextype == 'disk':
             from . import indexapi
             self.index = indexapi.fileindexapi(self._repo)
