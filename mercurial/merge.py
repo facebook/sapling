@@ -1038,6 +1038,12 @@ def batchremove(repo, actions):
     unlink = util.unlinkpath
     wjoin = repo.wjoin
     audit = repo.wvfs.audit
+    try:
+        cwd = os.getcwd()
+    except OSError as err:
+        if err.errno != errno.ENOENT:
+            raise
+        cwd = None
     i = 0
     for f, args, msg in actions:
         repo.ui.debug(" %s: %s -> r\n" % (f, msg))
@@ -1055,6 +1061,18 @@ def batchremove(repo, actions):
         i += 1
     if i > 0:
         yield i, f
+    if cwd:
+        # cwd was present before we started to remove files
+        # let's check if it is present after we removed them
+        try:
+            os.getcwd()
+        except OSError as err:
+            if err.errno != errno.ENOENT:
+                raise
+            # Print a warning if cwd was deleted
+            repo.ui.warn(_("current directory was removed\n"
+                           "(consider changing to repo root: %s)\n") %
+                         repo.root)
 
 def batchget(repo, mctx, actions):
     """apply gets to the working directory

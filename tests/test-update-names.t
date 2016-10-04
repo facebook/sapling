@@ -72,3 +72,15 @@ Test update when two commits have symlinks that point to different folders
   $ cd ..
 
 #endif
+
+Test that warning is printed if cwd is deleted during update
+  $ hg init r4 && cd r4
+  $ mkdir dir
+  $ cd dir
+  $ echo a > a
+  $ echo b > b
+  $ hg add a b
+  $ hg ci -m "file and dir"
+  $ hg up -q null
+  current directory was removed
+  (consider changing to repo root: $TESTTMP/r1/r4)
