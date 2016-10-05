@@ -430,7 +430,6 @@ NewTreeIterator::NewTreeIterator(Manifest *mainRoot,
                 const std::vector<char*> &cmpNodes,
                 const std::vector<Manifest*> &cmpRoots,
                 const ManifestFetcher &fetcher) :
-    mainRoot(mainRoot),
     cmpNodes(cmpNodes),
     fetcher(fetcher) {
   (void)(this->mainRoot);

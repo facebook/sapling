@@ -244,7 +244,6 @@ struct stackframe {
  */
 class NewTreeIterator {
   private:
-    Manifest *mainRoot;
     std::vector<stackframe> mainStack;
     std::vector<char*> cmpNodes;
     std::vector<std::vector<stackframe> > cmpStacks;
