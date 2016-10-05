@@ -35,7 +35,7 @@ errors = [
      "summary line doesn't start with 'topic: '"),
     (afterheader + r"[A-Z][a-z]\S+", "don't capitalize summary lines"),
     (afterheader + r"[^\n]*: *[A-Z][a-z]\S+", "don't capitalize summary lines"),
-    (afterheader + r"\S*[^A-Za-z0-9-]\S*: ",
+    (afterheader + r"\S*[^A-Za-z0-9-_]\S*: ",
      "summary keyword should be most user-relevant one-word command or topic"),
     (afterheader + r".*\.\s*\n", "don't add trailing period on summary line"),
     (afterheader + r".{79,}", "summary line too long (limit is 78)"),
