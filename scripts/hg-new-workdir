@@ -55,6 +55,11 @@ if [[ -e $src/.hg/sparse  ]]; then
 fi
 
 echo "Updating new repository..."
-hg --cwd "$dst" update $(hg --cwd "$src" log -r . -T '{node}')
+# Disable the watchman integration during the initial checkout;
+# to start with there is no .watchmanconfig and the local policy
+# may be to disallow watching the repo without one, leading to a
+# harmless but confusing error message.
+hg --cwd "$dst" --config fsmonitor.mode=off \
+  update $(hg --cwd "$src" log -r . -T '{node}')
 
 echo "Set up new Mercurial Working Directory in '$dst' based on '$src'..."
