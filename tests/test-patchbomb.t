@@ -632,7 +632,7 @@ iso-8859-1 patch:
   $ hg commit -A -d '5 0' -m 'isolatin 8-bit encoding'
   adding isolatin
 
-fake ascii mbox:
+iso-8859-1 mbox:
   $ hg email --date '1970-1-1 0:5' -f quux -t foo -c bar -r tip -m mbox
   this patch series consists of 1 patches.
   
@@ -640,9 +640,9 @@ fake ascii mbox:
   sending [PATCH] isolatin 8-bit encoding ...
   $ cat mbox
   From quux ... ... .. ..:..:.. .... (re)
-  Content-Type: text/plain; charset="us-ascii"
+  Content-Type: text/plain; charset="iso-8859-1"
   MIME-Version: 1.0
-  Content-Transfer-Encoding: 8bit
+  Content-Transfer-Encoding: quoted-printable
   Subject: [PATCH] isolatin 8-bit encoding
   X-Mercurial-Node: 240fb913fc1b7ff15ddb9f33e73d82bf5277c720
   X-Mercurial-Series-Index: 1
@@ -667,7 +667,7 @@ fake ascii mbox:
   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
   +++ b/isolatin	Thu Jan 01 00:00:05 1970 +0000
   @@ -0,0 +1,1 @@
-  +h\xf6mma! (esc)
+  +h=F6mma!
   
   
 
