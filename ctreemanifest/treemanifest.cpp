@@ -432,7 +432,6 @@ NewTreeIterator::NewTreeIterator(Manifest *mainRoot,
                 const ManifestFetcher &fetcher) :
     cmpNodes(cmpNodes),
     fetcher(fetcher) {
-  (void)(this->mainRoot);
   this->mainStack.push_back(stackframe(mainRoot, false));
 
   for (size_t i = 0; i < cmpRoots.size(); i++) {
