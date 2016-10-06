@@ -90,11 +90,16 @@ def downgrade(ui, repo):
         wlock.release()
 
 def wrappull(orig, ui, repo, *args, **kwargs):
-    if ui.configbool('sqldirstate', 'upgrade', False) and \
+    if ui.configbool('sqldirstate', 'downgrade', False) and \
+            issqldirstate(repo):
+        ui.status(_('disabling sqldirstate...\n'))
+        downgrade(ui, repo)
+    elif ui.configbool('sqldirstate', 'upgrade', False) and \
             not issqldirstate(repo):
         ui.status(_('migrating your repo to sqldirstate which will make your '
                 'hg commands faster...\n'))
         upgrade(ui, repo)
+
     return orig(ui, repo, *args, **kwargs)
 
 def featuresetup(ui, supported):
