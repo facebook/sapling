@@ -30,6 +30,7 @@ import util
 from bisect import insort
 from git_handler import GitHandler
 from mercurial.node import hex
+from mercurial.error import LookupError
 from mercurial.i18n import _
 from mercurial import (
     bundlerepo,
@@ -382,7 +383,9 @@ def revset_fromgit(repo, subset, x):
 
 def revset_gitnode(repo, subset, x):
     '''``gitnode(hash)``
-    Select changesets that originate in the given Git revision.
+    Select the changeset that originates in the given Git revision. The hash
+    may be abbreviated: `gitnode(a5b)` selects the revision whose Git hash
+    starts with `a5b`. Aborts if multiple changesets match the abbreviation.
     '''
     args = revset.getargs(x, 1, 1, "gitnode takes one argument")
     rev = revset.getstring(args[0],
@@ -394,8 +397,11 @@ def revset_gitnode(repo, subset, x):
         gitnode = git.map_git_get(hex(node(r)))
         if gitnode is None:
             return False
-        return rev in [gitnode, gitnode[:12]]
-    return baseset(r for r in subset if matches(r))
+        return gitnode.startswith(rev)
+    result = baseset(r for r in subset if matches(r))
+    if 0 <= len(result) < 2:
+        return result
+    raise LookupError(rev, git.map_file, _('ambiguous identifier'))
 
 def gitnodekw(**args):
     """:gitnode: String.  The Git changeset identification hash, as a 40 hexadecimal digit string."""
