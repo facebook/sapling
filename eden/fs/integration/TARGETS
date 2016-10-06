@@ -10,4 +10,7 @@ for daemon_target, suffix in get_daemon_versions():
         '@/eden/fs/cli:cli',
         '@/eden/fs/integration/lib:lib',
       ],
+      external_deps = [
+        'py-hypothesis'
+      ],
     )
