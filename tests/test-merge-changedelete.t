@@ -54,9 +54,9 @@ Make sure HGMERGE doesn't interfere with the test
 Non-interactive merge:
 
   $ hg merge -y
-  local changed file1 which other deleted
+  local [working copy] changed file1 which other [merge rev] deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? u
-  other changed file2 which local deleted
+  other [merge rev] changed file2 which local [working copy] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   merging file3
   warning: conflicts while merging file3! (edit, then use 'hg resolve --mark')
@@ -77,6 +77,9 @@ Non-interactive merge:
   * version 2 records
   local: 13910f48cf7bdb2a0ba6e24b4900e4fdd5739dd4
   other: 10f9a0a634e82080907e62f075ab119cbc565ea6
+  labels:
+    local: working copy
+    other: merge rev
   file extras: file1 (ancestorlinknode = ab57bf49aa276a22d35a473592d4c34b5abc3eff)
   file: file1 (record type "C", state "u", hash 60b27f004e454aca81b0480209cce5081ec52390)
     local path: file1 (flags "")
@@ -100,11 +103,11 @@ Non-interactive merge:
   changed
   --- file3 ---
   3
-  <<<<<<< local: 13910f48cf7b - test: changed file1, removed file2, changed file3
+  <<<<<<< working copy: 13910f48cf7b - test: changed file1, removed file2, chan...
   changed2
   =======
   changed1
-  >>>>>>> other: 10f9a0a634e8  - test: removed file1, changed file2, changed file3
+  >>>>>>> merge rev:    10f9a0a634e8  - test: removed file1, changed file2, cha...
 
 
 Interactive merge:
@@ -117,9 +120,9 @@ Interactive merge:
   > c
   > d
   > EOF
-  local changed file1 which other deleted
+  local [working copy] changed file1 which other [merge rev] deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? c
-  other changed file2 which local deleted
+  other [merge rev] changed file2 which local [working copy] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? d
   merging file3
   warning: conflicts while merging file3! (edit, then use 'hg resolve --mark')
@@ -140,6 +143,9 @@ Interactive merge:
   * version 2 records
   local: 13910f48cf7bdb2a0ba6e24b4900e4fdd5739dd4
   other: 10f9a0a634e82080907e62f075ab119cbc565ea6
+  labels:
+    local: working copy
+    other: merge rev
   file extras: file1 (ancestorlinknode = ab57bf49aa276a22d35a473592d4c34b5abc3eff)
   file: file1 (record type "C", state "r", hash 60b27f004e454aca81b0480209cce5081ec52390)
     local path: file1 (flags "")
@@ -161,11 +167,11 @@ Interactive merge:
   *** file2 does not exist
   --- file3 ---
   3
-  <<<<<<< local: 13910f48cf7b - test: changed file1, removed file2, changed file3
+  <<<<<<< working copy: 13910f48cf7b - test: changed file1, removed file2, chan...
   changed2
   =======
   changed1
-  >>>>>>> other: 10f9a0a634e8  - test: removed file1, changed file2, changed file3
+  >>>>>>> merge rev:    10f9a0a634e8  - test: removed file1, changed file2, cha...
 
 
 Interactive merge with bad input:
@@ -181,18 +187,18 @@ Interactive merge with bad input:
   > baz
   > c
   > EOF
-  local changed file1 which other deleted
+  local [working copy] changed file1 which other [merge rev] deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? foo
   unrecognized response
-  local changed file1 which other deleted
+  local [working copy] changed file1 which other [merge rev] deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? bar
   unrecognized response
-  local changed file1 which other deleted
+  local [working copy] changed file1 which other [merge rev] deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? d
-  other changed file2 which local deleted
+  other [merge rev] changed file2 which local [working copy] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? baz
   unrecognized response
-  other changed file2 which local deleted
+  other [merge rev] changed file2 which local [working copy] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? c
   merging file3
   warning: conflicts while merging file3! (edit, then use 'hg resolve --mark')
@@ -213,6 +219,9 @@ Interactive merge with bad input:
   * version 2 records
   local: 13910f48cf7bdb2a0ba6e24b4900e4fdd5739dd4
   other: 10f9a0a634e82080907e62f075ab119cbc565ea6
+  labels:
+    local: working copy
+    other: merge rev
   file extras: file1 (ancestorlinknode = ab57bf49aa276a22d35a473592d4c34b5abc3eff)
   file: file1 (record type "C", state "r", hash 60b27f004e454aca81b0480209cce5081ec52390)
     local path: file1 (flags "")
@@ -234,11 +243,11 @@ Interactive merge with bad input:
   changed
   --- file3 ---
   3
-  <<<<<<< local: 13910f48cf7b - test: changed file1, removed file2, changed file3
+  <<<<<<< working copy: 13910f48cf7b - test: changed file1, removed file2, chan...
   changed2
   =======
   changed1
-  >>>>>>> other: 10f9a0a634e8  - test: removed file1, changed file2, changed file3
+  >>>>>>> merge rev:    10f9a0a634e8  - test: removed file1, changed file2, cha...
 
 
 Interactive merge with not enough input:
@@ -250,9 +259,9 @@ Interactive merge with not enough input:
   $ hg merge --config ui.interactive=true <<EOF
   > d
   > EOF
-  local changed file1 which other deleted
+  local [working copy] changed file1 which other [merge rev] deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? d
-  other changed file2 which local deleted
+  other [merge rev] changed file2 which local [working copy] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? 
   merging file3
   warning: conflicts while merging file3! (edit, then use 'hg resolve --mark')
@@ -273,6 +282,9 @@ Interactive merge with not enough input:
   * version 2 records
   local: 13910f48cf7bdb2a0ba6e24b4900e4fdd5739dd4
   other: 10f9a0a634e82080907e62f075ab119cbc565ea6
+  labels:
+    local: working copy
+    other: merge rev
   file extras: file1 (ancestorlinknode = ab57bf49aa276a22d35a473592d4c34b5abc3eff)
   file: file1 (record type "C", state "r", hash 60b27f004e454aca81b0480209cce5081ec52390)
     local path: file1 (flags "")
@@ -294,11 +306,11 @@ Interactive merge with not enough input:
   changed
   --- file3 ---
   3
-  <<<<<<< local: 13910f48cf7b - test: changed file1, removed file2, changed file3
+  <<<<<<< working copy: 13910f48cf7b - test: changed file1, removed file2, chan...
   changed2
   =======
   changed1
-  >>>>>>> other: 10f9a0a634e8  - test: removed file1, changed file2, changed file3
+  >>>>>>> merge rev:    10f9a0a634e8  - test: removed file1, changed file2, cha...
 
 Choose local versions of files
 
@@ -322,6 +334,9 @@ Choose local versions of files
   * version 2 records
   local: 13910f48cf7bdb2a0ba6e24b4900e4fdd5739dd4
   other: 10f9a0a634e82080907e62f075ab119cbc565ea6
+  labels:
+    local: working copy
+    other: merge rev
   file extras: file1 (ancestorlinknode = ab57bf49aa276a22d35a473592d4c34b5abc3eff)
   file: file1 (record type "C", state "r", hash 60b27f004e454aca81b0480209cce5081ec52390)
     local path: file1 (flags "")
@@ -367,6 +382,9 @@ Choose other versions of files
   * version 2 records
   local: 13910f48cf7bdb2a0ba6e24b4900e4fdd5739dd4
   other: 10f9a0a634e82080907e62f075ab119cbc565ea6
+  labels:
+    local: working copy
+    other: merge rev
   file extras: file1 (ancestorlinknode = ab57bf49aa276a22d35a473592d4c34b5abc3eff)
   file: file1 (record type "C", state "r", hash 60b27f004e454aca81b0480209cce5081ec52390)
     local path: file1 (flags "")
@@ -413,6 +431,9 @@ Fail
   * version 2 records
   local: 13910f48cf7bdb2a0ba6e24b4900e4fdd5739dd4
   other: 10f9a0a634e82080907e62f075ab119cbc565ea6
+  labels:
+    local: working copy
+    other: merge rev
   file extras: file1 (ancestorlinknode = ab57bf49aa276a22d35a473592d4c34b5abc3eff)
   file: file1 (record type "C", state "u", hash 60b27f004e454aca81b0480209cce5081ec52390)
     local path: file1 (flags "")
@@ -445,12 +466,12 @@ Force prompts with no input (should be similar to :fail)
   1 other heads for branch "default"
 
   $ hg merge --config ui.interactive=True --tool :prompt
-  local changed file1 which other deleted
+  local [working copy] changed file1 which other [merge rev] deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? 
-  other changed file2 which local deleted
+  other [merge rev] changed file2 which local [working copy] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? 
   no tool found to merge file3
-  keep (l)ocal, take (o)ther, or leave (u)nresolved? 
+  keep (l)ocal [working copy], take (o)ther [merge rev], or leave (u)nresolved? 
   0 files updated, 0 files merged, 0 files removed, 3 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
@@ -467,6 +488,9 @@ Force prompts with no input (should be similar to :fail)
   * version 2 records
   local: 13910f48cf7bdb2a0ba6e24b4900e4fdd5739dd4
   other: 10f9a0a634e82080907e62f075ab119cbc565ea6
+  labels:
+    local: working copy
+    other: merge rev
   file extras: file1 (ancestorlinknode = ab57bf49aa276a22d35a473592d4c34b5abc3eff)
   file: file1 (record type "C", state "u", hash 60b27f004e454aca81b0480209cce5081ec52390)
     local path: file1 (flags "")
@@ -501,12 +525,12 @@ Force prompts
   1 other heads for branch "default"
 
   $ hg merge --tool :prompt
-  local changed file1 which other deleted
+  local [working copy] changed file1 which other [merge rev] deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? u
-  other changed file2 which local deleted
+  other [merge rev] changed file2 which local [working copy] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   no tool found to merge file3
-  keep (l)ocal, take (o)ther, or leave (u)nresolved? u
+  keep (l)ocal [working copy], take (o)ther [merge rev], or leave (u)nresolved? u
   0 files updated, 0 files merged, 0 files removed, 3 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
@@ -523,6 +547,9 @@ Force prompts
   * version 2 records
   local: 13910f48cf7bdb2a0ba6e24b4900e4fdd5739dd4
   other: 10f9a0a634e82080907e62f075ab119cbc565ea6
+  labels:
+    local: working copy
+    other: merge rev
   file extras: file1 (ancestorlinknode = ab57bf49aa276a22d35a473592d4c34b5abc3eff)
   file: file1 (record type "C", state "u", hash 60b27f004e454aca81b0480209cce5081ec52390)
     local path: file1 (flags "")
@@ -555,9 +582,9 @@ Choose to merge all files
   1 other heads for branch "default"
 
   $ hg merge --tool :merge3
-  local changed file1 which other deleted
+  local [working copy] changed file1 which other [merge rev] deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? u
-  other changed file2 which local deleted
+  other [merge rev] changed file2 which local [working copy] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   merging file3
   warning: conflicts while merging file3! (edit, then use 'hg resolve --mark')
@@ -577,6 +604,9 @@ Choose to merge all files
   * version 2 records
   local: 13910f48cf7bdb2a0ba6e24b4900e4fdd5739dd4
   other: 10f9a0a634e82080907e62f075ab119cbc565ea6
+  labels:
+    local: working copy
+    other: merge rev
   file extras: file1 (ancestorlinknode = ab57bf49aa276a22d35a473592d4c34b5abc3eff)
   file: file1 (record type "C", state "u", hash 60b27f004e454aca81b0480209cce5081ec52390)
     local path: file1 (flags "")
@@ -600,12 +630,12 @@ Choose to merge all files
   changed
   --- file3 ---
   3
-  <<<<<<< local: 13910f48cf7b - test: changed file1, removed file2, changed file3
+  <<<<<<< working copy: 13910f48cf7b - test: changed file1, removed file2, chan...
   changed2
   ||||||| base
   =======
   changed1
-  >>>>>>> other: 10f9a0a634e8  - test: removed file1, changed file2, changed file3
+  >>>>>>> merge rev:    10f9a0a634e8  - test: removed file1, changed file2, cha...
 
 Exercise transitions between local, other, fail and prompt, and make sure the
 dirstate stays consistent. (Compare with each other and to the above
@@ -642,12 +672,12 @@ invocations.)
   (status identical)
   
   === :other -> :prompt ===
-  local changed file1 which other deleted
+  local [working copy] changed file1 which other [merge rev] deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? 
-  other changed file2 which local deleted
+  other [merge rev] changed file2 which local [working copy] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? 
   no tool found to merge file3
-  keep (l)ocal, take (o)ther, or leave (u)nresolved? 
+  keep (l)ocal [working copy], take (o)ther [merge rev], or leave (u)nresolved? 
   --- diff of status ---
   (status identical)
   
@@ -671,12 +701,12 @@ invocations.)
   (status identical)
   
   === :local -> :prompt ===
-  local changed file1 which other deleted
+  local [working copy] changed file1 which other [merge rev] deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? 
-  other changed file2 which local deleted
+  other [merge rev] changed file2 which local [working copy] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? 
   no tool found to merge file3
-  keep (l)ocal, take (o)ther, or leave (u)nresolved? 
+  keep (l)ocal [working copy], take (o)ther [merge rev], or leave (u)nresolved? 
   --- diff of status ---
   (status identical)
   
@@ -690,12 +720,12 @@ invocations.)
   (status identical)
   
   === :fail -> :prompt ===
-  local changed file1 which other deleted
+  local [working copy] changed file1 which other [merge rev] deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? 
-  other changed file2 which local deleted
+  other [merge rev] changed file2 which local [working copy] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? 
   no tool found to merge file3
-  keep (l)ocal, take (o)ther, or leave (u)nresolved? 
+  keep (l)ocal [working copy], take (o)ther [merge rev], or leave (u)nresolved? 
   --- diff of status ---
   (status identical)
   

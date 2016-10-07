@@ -171,7 +171,7 @@ user a pulls, merges, commits
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg merge 2>/dev/null
    subrepository s diverged (local revision: 7969594, remote revision: aa84837)
-  (M)erge, keep (l)ocal or keep (r)emote? m
+  (M)erge, keep (l)ocal [working copy] or keep (r)emote [merge rev]? m
   pulling subrepo s from $TESTTMP/gitroot
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)

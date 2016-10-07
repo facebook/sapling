@@ -356,18 +356,18 @@ h: l vs l, different
   U h
   $ tellmeabout a
   a is a plain file with content:
-  <<<<<<< local: 0139c5610547 - test: 2
+  <<<<<<< working copy: 0139c5610547 - test: 2
   2
   =======
   1
-  >>>>>>> other: 97e29675e796  - test: 1
+  >>>>>>> merge rev:    97e29675e796  - test: 1
   $ tellmeabout b
   b is a plain file with content:
-  <<<<<<< local: 0139c5610547 - test: 2
+  <<<<<<< working copy: 0139c5610547 - test: 2
   2
   =======
   1
-  >>>>>>> other: 97e29675e796  - test: 1
+  >>>>>>> merge rev:    97e29675e796  - test: 1
   $ tellmeabout c
   c is a plain file with content:
   x
@@ -409,18 +409,18 @@ h: l vs l, different
   [1]
   $ tellmeabout a
   a is a plain file with content:
-  <<<<<<< local: 97e29675e796  - test: 1
+  <<<<<<< working copy: 97e29675e796  - test: 1
   1
   =======
   2
-  >>>>>>> other: 0139c5610547 - test: 2
+  >>>>>>> merge rev:    0139c5610547 - test: 2
   $ tellmeabout b
   b is an executable file with content:
-  <<<<<<< local: 97e29675e796  - test: 1
+  <<<<<<< working copy: 97e29675e796  - test: 1
   1
   =======
   2
-  >>>>>>> other: 0139c5610547 - test: 2
+  >>>>>>> merge rev:    0139c5610547 - test: 2
   $ tellmeabout c
   c is an executable file with content:
   x

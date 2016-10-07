@@ -768,10 +768,11 @@ def updatetotally(ui, repo, checkout, brev, clean=False, check=False):
 
     return ret
 
-def merge(repo, node, force=None, remind=True, mergeforce=False):
+def merge(repo, node, force=None, remind=True, mergeforce=False, labels=None):
     """Branch merge with node, resolving changes. Return true if any
     unresolved conflicts."""
-    stats = mergemod.update(repo, node, True, force, mergeforce=mergeforce)
+    stats = mergemod.update(repo, node, True, force, mergeforce=mergeforce,
+                            labels=labels)
     _showstats(repo, stats)
     if stats[3]:
         repo.ui.status(_("use 'hg resolve' to retry unresolved file merges "

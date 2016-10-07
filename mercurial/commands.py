@@ -5532,7 +5532,9 @@ def merge(ui, repo, node=None, **opts):
         # ui.forcemerge is an internal variable, do not document
         repo.ui.setconfig('ui', 'forcemerge', opts.get('tool', ''), 'merge')
         force = opts.get('force')
-        return hg.merge(repo, node, force=force, mergeforce=force)
+        labels = ['working copy', 'merge rev']
+        return hg.merge(repo, node, force=force, mergeforce=force,
+                        labels=labels)
     finally:
         ui.setconfig('ui', 'forcemerge', '', 'merge')
 

@@ -304,7 +304,7 @@ merge tests
     subrepo t: both sides changed 
    subrepository t diverged (local revision: 20a0db6fbf6c, remote revision: 7af322bc1198)
   starting 4 threads for background file closing (?)
-  (M)erge, keep (l)ocal or keep (r)emote? m
+  (M)erge, keep (l)ocal [working copy] or keep (r)emote [merge rev]? m
   merging subrepo t
     searching for copies back to rev 2
   resolving manifests
@@ -349,7 +349,7 @@ should conflict
 local removed, remote changed, keep changed
 
   $ hg merge 6
-   remote changed subrepository s which local removed
+   remote [merge rev] changed subrepository s which local [working copy] removed
   use (c)hanged version or (d)elete? c
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
@@ -380,7 +380,7 @@ local removed, remote changed, keep removed
   $ hg merge --config ui.interactive=true 6 <<EOF
   > d
   > EOF
-   remote changed subrepository s which local removed
+   remote [merge rev] changed subrepository s which local [working copy] removed
   use (c)hanged version or (d)elete? d
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
@@ -404,7 +404,7 @@ local changed, remote removed, keep changed
   $ hg co -C 6
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg merge 11
-   local changed subrepository s which remote removed
+   local [working copy] changed subrepository s which remote [merge rev] removed
   use (c)hanged version or (d)elete? c
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
@@ -436,7 +436,7 @@ local changed, remote removed, keep removed
   $ hg merge --config ui.interactive=true 11 <<EOF
   > d
   > EOF
-   local changed subrepository s which remote removed
+   local [working copy] changed subrepository s which remote [merge rev] removed
   use (c)hanged version or (d)elete? d
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
@@ -860,7 +860,7 @@ shouldn't need merging
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg merge 4    # try to merge default into br again
    subrepository s diverged (local revision: f8f13b33206e, remote revision: a3f9062a4f88)
-  (M)erge, keep (l)ocal or keep (r)emote? m
+  (M)erge, keep (l)ocal [working copy] or keep (r)emote [merge rev]? m
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ cd ..

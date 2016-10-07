@@ -638,7 +638,7 @@ Amend a merge changeset (with renames and conflicts from the second parent):
   (no more unresolved files)
   $ hg ci -m 'merge bar'
   $ hg log --config diff.git=1 -pr .
-  changeset:   23:93cd4445f720
+  changeset:   23:69c24fe01e35
   tag:         tip
   parent:      22:30d96aeaf27b
   parent:      21:1aa437659d19
@@ -653,11 +653,11 @@ Amend a merge changeset (with renames and conflicts from the second parent):
   --- a/cc
   +++ b/cc
   @@ -1,1 +1,5 @@
-  +<<<<<<< local: 30d96aeaf27b - test: aa
+  +<<<<<<< working copy: 30d96aeaf27b - test: aa
    dd
   +=======
   +cc
-  +>>>>>>> other: 1aa437659d19  bar - test: aazzcc
+  +>>>>>>> merge rev:    1aa437659d19  bar - test: aazzcc
   diff --git a/z b/zz
   rename from z
   rename to zz
@@ -671,7 +671,7 @@ Amend a merge changeset (with renames and conflicts from the second parent):
   $ HGEDITOR="sh .hg/checkeditform.sh" hg ci --amend -m 'merge bar (amend message)' --edit
   HGEDITFORM=commit.amend.merge
   $ hg log --config diff.git=1 -pr .
-  changeset:   24:832b50f2c271
+  changeset:   24:cfa2fbef3169
   tag:         tip
   parent:      22:30d96aeaf27b
   parent:      21:1aa437659d19
@@ -686,11 +686,11 @@ Amend a merge changeset (with renames and conflicts from the second parent):
   --- a/cc
   +++ b/cc
   @@ -1,1 +1,5 @@
-  +<<<<<<< local: 30d96aeaf27b - test: aa
+  +<<<<<<< working copy: 30d96aeaf27b - test: aa
    dd
   +=======
   +cc
-  +>>>>>>> other: 1aa437659d19  bar - test: aazzcc
+  +>>>>>>> merge rev:    1aa437659d19  bar - test: aazzcc
   diff --git a/z b/zz
   rename from z
   rename to zz
@@ -704,7 +704,7 @@ Amend a merge changeset (with renames and conflicts from the second parent):
   $ hg mv zz z
   $ hg ci --amend -m 'merge bar (undo rename)'
   $ hg log --config diff.git=1 -pr .
-  changeset:   26:bdafc5c72f74
+  changeset:   26:c34de68b014c
   tag:         tip
   parent:      22:30d96aeaf27b
   parent:      21:1aa437659d19
@@ -719,11 +719,11 @@ Amend a merge changeset (with renames and conflicts from the second parent):
   --- a/cc
   +++ b/cc
   @@ -1,1 +1,5 @@
-  +<<<<<<< local: 30d96aeaf27b - test: aa
+  +<<<<<<< working copy: 30d96aeaf27b - test: aa
    dd
   +=======
   +cc
-  +>>>>>>> other: 1aa437659d19  bar - test: aazzcc
+  +>>>>>>> merge rev:    1aa437659d19  bar - test: aazzcc
   
   $ hg debugrename z
   z not renamed
@@ -740,9 +740,9 @@ Amend a merge changeset (with renames during the merge):
   $ echo aa >> aaa
   $ hg ci -m 'merge bar again'
   $ hg log --config diff.git=1 -pr .
-  changeset:   28:32f19415b634
+  changeset:   28:37d40dcef03b
   tag:         tip
-  parent:      26:bdafc5c72f74
+  parent:      26:c34de68b014c
   parent:      27:4c94d5bc65f5
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -775,9 +775,9 @@ Amend a merge changeset (with renames during the merge):
   $ hg mv aaa aa
   $ hg ci --amend -m 'merge bar again (undo rename)'
   $ hg log --config diff.git=1 -pr .
-  changeset:   30:1e2a06b3d312
+  changeset:   30:537c6d1b3633
   tag:         tip
-  parent:      26:bdafc5c72f74
+  parent:      26:c34de68b014c
   parent:      27:4c94d5bc65f5
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -813,13 +813,13 @@ Amend a merge changeset (with manifest-level conflicts):
   $ hg merge -q bar --config ui.interactive=True << EOF
   > c
   > EOF
-  local changed aa which other deleted
+  local [working copy] changed aa which other [merge rev] deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? c
   $ hg ci -m 'merge bar (with conflicts)'
   $ hg log --config diff.git=1 -pr .
-  changeset:   33:97a298b0c59f
+  changeset:   33:7afcba911942
   tag:         tip
-  parent:      32:3d78ce4226b8
+  parent:      32:6075d69d215d
   parent:      31:67db8847a540
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -829,9 +829,9 @@ Amend a merge changeset (with manifest-level conflicts):
   $ hg rm aa
   $ hg ci --amend -m 'merge bar (with conflicts, amended)'
   $ hg log --config diff.git=1 -pr .
-  changeset:   35:6de0c1bde1c8
+  changeset:   35:376965e47ddd
   tag:         tip
-  parent:      32:3d78ce4226b8
+  parent:      32:6075d69d215d
   parent:      31:67db8847a540
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -927,7 +927,7 @@ Test that "diff()" in committemplate works correctly for amending
   HG: M: 
   HG: A: foo
   HG: R: 
-  HG: diff -r 6de0c1bde1c8 foo
+  HG: diff -r 376965e47ddd foo
   HG: --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
   HG: +++ b/foo	Thu Jan 01 00:00:00 1970 +0000
   HG: @@ -0,0 +1,1 @@
@@ -941,12 +941,12 @@ Test that "diff()" in committemplate works correctly for amending
   HG: M: 
   HG: A: foo y
   HG: R: 
-  HG: diff -r 6de0c1bde1c8 foo
+  HG: diff -r 376965e47ddd foo
   HG: --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
   HG: +++ b/foo	Thu Jan 01 00:00:00 1970 +0000
   HG: @@ -0,0 +1,1 @@
   HG: +foo
-  HG: diff -r 6de0c1bde1c8 y
+  HG: diff -r 376965e47ddd y
   HG: --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
   HG: +++ b/y	Thu Jan 01 00:00:00 1970 +0000
   HG: @@ -0,0 +1,1 @@
@@ -959,18 +959,18 @@ Test that "diff()" in committemplate works correctly for amending
   HG: M: 
   HG: A: foo y
   HG: R: a
-  HG: diff -r 6de0c1bde1c8 a
+  HG: diff -r 376965e47ddd a
   HG: --- a/a	Thu Jan 01 00:00:00 1970 +0000
   HG: +++ /dev/null	Thu Jan 01 00:00:00 1970 +0000
   HG: @@ -1,2 +0,0 @@
   HG: -a
   HG: -a
-  HG: diff -r 6de0c1bde1c8 foo
+  HG: diff -r 376965e47ddd foo
   HG: --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
   HG: +++ b/foo	Thu Jan 01 00:00:00 1970 +0000
   HG: @@ -0,0 +1,1 @@
   HG: +foo
-  HG: diff -r 6de0c1bde1c8 y
+  HG: diff -r 376965e47ddd y
   HG: --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
   HG: +++ b/y	Thu Jan 01 00:00:00 1970 +0000
   HG: @@ -0,0 +1,1 @@
@@ -983,23 +983,23 @@ Test that "diff()" in committemplate works correctly for amending
   HG: M: 
   HG: A: foo y
   HG: R: a x
-  HG: diff -r 6de0c1bde1c8 a
+  HG: diff -r 376965e47ddd a
   HG: --- a/a	Thu Jan 01 00:00:00 1970 +0000
   HG: +++ /dev/null	Thu Jan 01 00:00:00 1970 +0000
   HG: @@ -1,2 +0,0 @@
   HG: -a
   HG: -a
-  HG: diff -r 6de0c1bde1c8 foo
+  HG: diff -r 376965e47ddd foo
   HG: --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
   HG: +++ b/foo	Thu Jan 01 00:00:00 1970 +0000
   HG: @@ -0,0 +1,1 @@
   HG: +foo
-  HG: diff -r 6de0c1bde1c8 x
+  HG: diff -r 376965e47ddd x
   HG: --- a/x	Thu Jan 01 00:00:00 1970 +0000
   HG: +++ /dev/null	Thu Jan 01 00:00:00 1970 +0000
   HG: @@ -1,1 +0,0 @@
   HG: -x
-  HG: diff -r 6de0c1bde1c8 y
+  HG: diff -r 376965e47ddd y
   HG: --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
   HG: +++ b/y	Thu Jan 01 00:00:00 1970 +0000
   HG: @@ -0,0 +1,1 @@
@@ -1014,23 +1014,23 @@ Test that "diff()" in committemplate works correctly for amending
   HG: M: 
   HG: A: foo y
   HG: R: a x
-  HG: diff -r 6de0c1bde1c8 a
+  HG: diff -r 376965e47ddd a
   HG: --- a/a	Thu Jan 01 00:00:00 1970 +0000
   HG: +++ /dev/null	Thu Jan 01 00:00:00 1970 +0000
   HG: @@ -1,2 +0,0 @@
   HG: -a
   HG: -a
-  HG: diff -r 6de0c1bde1c8 foo
+  HG: diff -r 376965e47ddd foo
   HG: --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
   HG: +++ b/foo	Thu Jan 01 00:00:00 1970 +0000
   HG: @@ -0,0 +1,1 @@
   HG: +foo
-  HG: diff -r 6de0c1bde1c8 x
+  HG: diff -r 376965e47ddd x
   HG: --- a/x	Thu Jan 01 00:00:00 1970 +0000
   HG: +++ /dev/null	Thu Jan 01 00:00:00 1970 +0000
   HG: @@ -1,1 +0,0 @@
   HG: -x
-  HG: diff -r 6de0c1bde1c8 y
+  HG: diff -r 376965e47ddd y
   HG: --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
   HG: +++ b/y	Thu Jan 01 00:00:00 1970 +0000
   HG: @@ -0,0 +1,1 @@
