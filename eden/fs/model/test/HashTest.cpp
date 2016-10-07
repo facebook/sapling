@@ -21,6 +21,7 @@ using folly::IOBuf;
 using folly::StringPiece;
 using std::string;
 
+namespace {
 string testHashHex = folly::to<string>(
     "faceb00c",
     "deadbeef",
@@ -29,6 +30,7 @@ string testHashHex = folly::to<string>(
     "8badf00d");
 
 Hash testHash(testHashHex);
+}
 
 TEST(Hash, testDefaultConstructor) {
   EXPECT_EQ("0000000000000000000000000000000000000000", Hash().toString());
