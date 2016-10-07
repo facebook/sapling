@@ -28,6 +28,7 @@ import re as remod
 import shutil
 import signal
 import socket
+import string
 import subprocess
 import sys
 import tempfile
@@ -2297,9 +2298,8 @@ def parsebool(s):
     """
     return _booleans.get(s.lower(), None)
 
-_hexdig = '0123456789ABCDEFabcdef'
 _hextochr = dict((a + b, chr(int(a + b, 16)))
-                 for a in _hexdig for b in _hexdig)
+                 for a in string.hexdigits for b in string.hexdigits)
 
 def _urlunquote(s):
     """Decode HTTP/HTML % encoding.
