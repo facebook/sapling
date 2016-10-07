@@ -8,6 +8,7 @@
 from __future__ import absolute_import, print_function
 
 import email
+import email.header
 import os
 import quopri
 import smtplib
@@ -23,7 +24,7 @@ from . import (
     util,
 )
 
-_oldheaderinit = email.Header.Header.__init__
+_oldheaderinit = email.header.Header.__init__
 def _unifiedheaderinit(self, *args, **kw):
     """
     Python 2.7 introduces a backwards incompatible change
@@ -279,7 +280,7 @@ def headencode(ui, s, charsets=None, display=False):
     if not display:
         # split into words?
         s, cs = _encode(ui, s, charsets)
-        return str(email.Header.Header(s, cs))
+        return str(email.header.Header(s, cs))
     return s
 
 def _addressencode(ui, name, addr, charsets=None):
@@ -330,7 +331,7 @@ def mimeencode(ui, s, charsets=None, display=False):
 def headdecode(s):
     '''Decodes RFC-2047 header'''
     uparts = []
-    for part, charset in email.Header.decode_header(s):
+    for part, charset in email.header.decode_header(s):
         if charset is not None:
             try:
                 uparts.append(part.decode(charset))
