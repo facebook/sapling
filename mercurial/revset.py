@@ -177,8 +177,7 @@ _syminitletters = set(c for c in [chr(i) for i in xrange(256)]
                       if c.isalnum() or c in '._@' or ord(c) > 127)
 
 # default set of valid characters for non-initial letters of symbols
-_symletters = set(c for c in [chr(i) for i in xrange(256)]
-                  if c.isalnum() or c in '-._/@' or ord(c) > 127)
+_symletters = _syminitletters | set('-/')
 
 def tokenize(program, lookup=None, syminitletters=None, symletters=None):
     '''
