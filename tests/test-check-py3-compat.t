@@ -162,10 +162,10 @@
   mercurial/ui.py: error importing: <TypeError> int() can't convert non-string with explicit base (error at util.py:*)
   mercurial/unionrepo.py: error importing: <TypeError> int() can't convert non-string with explicit base (error at util.py:*)
   mercurial/url.py: error importing: <TypeError> int() can't convert non-string with explicit base (error at util.py:*)
-  mercurial/verify.py: error importing module: <TypeError> unorderable types: str() >= tuple() (line *)
+  mercurial/verify.py: error importing: <TypeError> a bytes-like object is required, not 'str' (error at revset.py:*)
   mercurial/win32.py: error importing module: <ImportError> No module named 'msvcrt' (line *)
   mercurial/windows.py: error importing module: <ImportError> No module named 'msvcrt' (line *)
-  mercurial/wireproto.py: error importing module: <TypeError> unorderable types: str() >= tuple() (line *)
+  mercurial/wireproto.py: error importing: <TypeError> a bytes-like object is required, not 'str' (error at revset.py:*)
 
 #endif
 
