@@ -8,6 +8,7 @@
 from __future__ import absolute_import
 
 from . import (
+    pycompat,
     util,
 )
 
@@ -121,7 +122,7 @@ class revsetpredicate(_funcregistrarbase):
     Otherwise, explicit 'revset.loadpredicate()' is needed.
     """
     _getname = _funcregistrarbase._parsefuncdecl
-    _docformat = "``%s``\n    %s"
+    _docformat = pycompat.sysstr("``%s``\n    %s")
 
     def _extrasetup(self, name, func, safe=False, takeorder=False):
         func._safe = safe
@@ -160,7 +161,7 @@ class filesetpredicate(_funcregistrarbase):
     Otherwise, explicit 'fileset.loadpredicate()' is needed.
     """
     _getname = _funcregistrarbase._parsefuncdecl
-    _docformat = "``%s``\n    %s"
+    _docformat = pycompat.sysstr("``%s``\n    %s")
 
     def _extrasetup(self, name, func, callstatus=False, callexisting=False):
         func._callstatus = callstatus
@@ -169,7 +170,7 @@ class filesetpredicate(_funcregistrarbase):
 class _templateregistrarbase(_funcregistrarbase):
     """Base of decorator to register functions as template specific one
     """
-    _docformat = ":%s: %s"
+    _docformat = pycompat.sysstr(":%s: %s")
 
 class templatekeyword(_templateregistrarbase):
     """Decorator to register template keyword
