@@ -16,7 +16,6 @@
   $ hg files 'set:(**.py) - grep(pygments)' | sed 's|\\|/|g' \
   > | xargs $PYTHON3 contrib/check-py3-compat.py \
   > | sed 's/[0-9][0-9]*)$/*)/'
-  doc/hgmanpage.py: invalid syntax: invalid syntax (<unknown>, line *)
   hgext/acl.py: error importing: <TypeError> Can't mix strings and bytes in path components (error at i18n.py:*)
   hgext/automv.py: error importing: <TypeError> Can't mix strings and bytes in path components (error at i18n.py:*)
   hgext/blackbox.py: error importing: <TypeError> Can't mix strings and bytes in path components (error at i18n.py:*)
