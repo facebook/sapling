@@ -12,7 +12,10 @@ import locale
 import os
 import sys
 
-from . import encoding
+from . import (
+    encoding,
+    pycompat,
+)
 
 # modelled after templater.templatepath:
 if getattr(sys, 'frozen', None) is not None:
@@ -85,7 +88,8 @@ def gettext(message):
             # means u.encode(sys.getdefaultencoding()).decode(enc). Since
             # the Python encoding defaults to 'ascii', this fails if the
             # translated string use non-ASCII characters.
-            _msgcache[message] = u.encode(encoding.encoding, "replace")
+            encodingstr = pycompat.sysstr(encoding.encoding)
+            _msgcache[message] = u.encode(encodingstr, "replace")
         except LookupError:
             # An unknown encoding results in a LookupError.
             _msgcache[message] = message
