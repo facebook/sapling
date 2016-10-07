@@ -54,10 +54,10 @@ def link(src, dest):
         util.oslink(src, dest)
     except OSError:
         # if hardlinks fail, fallback on atomic copy
-        dst = util.atomictempfile(dest)
-        for chunk in util.filechunkiter(open(src, 'rb')):
-            dst.write(chunk)
-        dst.close()
+        with open(src, 'rb') as srcf:
+            with util.atomictempfile(dest) as dstf:
+                for chunk in util.filechunkiter(srcf):
+                    dstf.write(chunk)
         os.chmod(dest, os.stat(src).st_mode)
 
 def usercachepath(ui, hash):
@@ -264,11 +264,11 @@ def copytostoreabsolute(repo, file, hash):
         link(usercachepath(repo.ui, hash), storepath(repo, hash))
     else:
         util.makedirs(os.path.dirname(storepath(repo, hash)))
-        dst = util.atomictempfile(storepath(repo, hash),
-                                  createmode=repo.store.createmode)
-        for chunk in util.filechunkiter(open(file, 'rb')):
-            dst.write(chunk)
-        dst.close()
+        with open(file, 'rb') as srcf:
+            with util.atomictempfile(storepath(repo, hash),
+                                     createmode=repo.store.createmode) as dstf:
+                for chunk in util.filechunkiter(srcf):
+                    dstf.write(chunk)
         linktousercache(repo, hash)
 
 def linktousercache(repo, hash):
@@ -370,10 +370,9 @@ def hashfile(file):
     if not os.path.exists(file):
         return ''
     hasher = hashlib.sha1('')
-    fd = open(file, 'rb')
-    for data in util.filechunkiter(fd, 128 * 1024):
-        hasher.update(data)
-    fd.close()
+    with open(file, 'rb') as fd:
+        for data in util.filechunkiter(fd, 128 * 1024):
+            hasher.update(data)
     return hasher.hexdigest()
 
 def getexecutable(filename):

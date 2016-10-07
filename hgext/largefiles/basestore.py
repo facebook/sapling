@@ -91,15 +91,13 @@ class basestore(object):
         storefilename = lfutil.storepath(self.repo, hash)
 
         tmpname = storefilename + '.tmp'
-        tmpfile = util.atomictempfile(tmpname,
-                                      createmode=self.repo.store.createmode)
-
-        try:
-            gothash = self._getfile(tmpfile, filename, hash)
-        except StoreError as err:
-            self.ui.warn(err.longmessage())
-            gothash = ""
-        tmpfile.close()
+        with util.atomictempfile(tmpname,
+                createmode=self.repo.store.createmode) as tmpfile:
+            try:
+                gothash = self._getfile(tmpfile, filename, hash)
+            except StoreError as err:
+                self.ui.warn(err.longmessage())
+                gothash = ""
 
         if gothash != hash:
             if gothash != "":

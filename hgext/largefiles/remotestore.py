@@ -45,17 +45,13 @@ class remotestore(basestore.basestore):
 
     def sendfile(self, filename, hash):
         self.ui.debug('remotestore: sendfile(%s, %s)\n' % (filename, hash))
-        fd = None
         try:
-            fd = lfutil.httpsendfile(self.ui, filename)
-            return self._put(hash, fd)
+            with lfutil.httpsendfile(self.ui, filename) as fd:
+                return self._put(hash, fd)
         except IOError as e:
             raise error.Abort(
                 _('remotestore: could not open file %s: %s')
                 % (filename, str(e)))
-        finally:
-            if fd:
-                fd.close()
 
     def _getfile(self, tmpfile, filename, hash):
         try:

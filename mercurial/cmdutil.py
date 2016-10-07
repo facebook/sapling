@@ -499,6 +499,12 @@ class _unclosablefile(object):
     def __getattr__(self, attr):
         return getattr(self._fp, attr)
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, exc_tb):
+        pass
+
 def makefileobj(repo, pat, node=None, desc=None, total=None,
                 seqno=None, revwidth=None, mode='wb', modemap=None,
                 pathname=None):
