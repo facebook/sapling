@@ -9,6 +9,7 @@ from __future__ import absolute_import
 
 import heapq
 import re
+import string
 
 from .i18n import _
 from . import (
@@ -22,6 +23,7 @@ from . import (
     parser,
     pathutil,
     phases,
+    pycompat,
     registrar,
     repoview,
     util,
@@ -173,11 +175,12 @@ elements = {
 keywords = set(['and', 'or', 'not'])
 
 # default set of valid characters for the initial letter of symbols
-_syminitletters = set(c for c in [chr(i) for i in xrange(256)]
-                      if c.isalnum() or c in '._@' or ord(c) > 127)
+_syminitletters = set(
+    string.ascii_letters +
+    string.digits + pycompat.sysstr('._@')) | set(map(chr, xrange(128, 256)))
 
 # default set of valid characters for non-initial letters of symbols
-_symletters = _syminitletters | set('-/')
+_symletters = _syminitletters | set(pycompat.sysstr('-/'))
 
 def tokenize(program, lookup=None, syminitletters=None, symletters=None):
     '''
@@ -2619,8 +2622,7 @@ def optimize(tree):
 
 # the set of valid characters for the initial letter of symbols in
 # alias declarations and definitions
-_aliassyminitletters = set(c for c in [chr(i) for i in xrange(256)]
-                           if c.isalnum() or c in '._@$' or ord(c) > 127)
+_aliassyminitletters = _syminitletters | set(pycompat.sysstr('$'))
 
 def _parsewith(spec, lookup=None, syminitletters=None):
     """Generate a parse tree of given spec with given tokenizing options
