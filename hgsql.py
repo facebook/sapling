@@ -574,6 +574,8 @@ def wraprepo(repo):
                 wlock = self.wlock(wait=waitforlock)
                 lock = self.lock(wait=waitforlock)
             except error.LockHeld:
+                if waitforlock:
+                    raise
                 # Oh well. Don't block this non-critical read-only operation.
                 ui.debug("skipping sync for current operation\n")
                 return
