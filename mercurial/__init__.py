@@ -305,6 +305,13 @@ if sys.version_info[0] >= 3:
                     except IndexError:
                         pass
 
+                # It changes iteritems to items as iteritems is not
+                # present in Python 3 world.
+                if fn == 'iteritems':
+                    yield tokenize.TokenInfo(t.type, 'items',
+                                             t.start, t.end, t.line)
+                    continue
+
             # Emit unmodified token.
             yield t
 
@@ -312,7 +319,7 @@ if sys.version_info[0] >= 3:
     # ``replacetoken`` or any mechanism that changes semantics of module
     # loading is changed. Otherwise cached bytecode may get loaded without
     # the new transformation mechanisms applied.
-    BYTECODEHEADER = b'HG\x00\x03'
+    BYTECODEHEADER = b'HG\x00\x04'
 
     class hgloader(importlib.machinery.SourceFileLoader):
         """Custom module loader that transforms source code.
