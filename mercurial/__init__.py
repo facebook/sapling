@@ -278,21 +278,30 @@ if sys.version_info[0] >= 3:
                 # .encode() and .decode() on str/bytes/unicode don't accept
                 # byte strings on Python 3. Rewrite the token to include the
                 # unicode literal prefix so the string transformer above doesn't
-                # add the byte prefix.
+                # add the byte prefix. The loop helps in handling multiple
+                # arguments.
                 if (fn in ('encode', 'decode') and
                     prevtoken.type == token.OP and prevtoken.string == '.'):
                     # (OP, '.')
                     # (NAME, 'encode')
                     # (OP, '(')
+                    # [(VARIABLE, encoding)]
+                    # [(OP, '.')]
+                    # [(VARIABLE, encoding)]
+                    # [(OP, ',')]
                     # (STRING, 'utf-8')
                     # (OP, ')')
+                    j = i
                     try:
-                        st = tokens[i + 2]
-                        if (st.type == token.STRING and
-                            st.string[0] in ("'", '"')):
-                            rt = tokenize.TokenInfo(st.type, 'u%s' % st.string,
+                        while (tokens[j + 1].string in ('(', ',', '.')):
+                            st = tokens[j + 2]
+                            if (st.type == token.STRING and
+                                st.string[0] in ("'", '"')):
+                                rt = tokenize.TokenInfo(st.type,
+                                                    'u%s' % st.string,
                                                     st.start, st.end, st.line)
-                            tokens[i + 2] = rt
+                                tokens[j + 2] = rt
+                            j = j + 2
                     except IndexError:
                         pass
 
@@ -303,7 +312,7 @@ if sys.version_info[0] >= 3:
     # ``replacetoken`` or any mechanism that changes semantics of module
     # loading is changed. Otherwise cached bytecode may get loaded without
     # the new transformation mechanisms applied.
-    BYTECODEHEADER = b'HG\x00\x02'
+    BYTECODEHEADER = b'HG\x00\x03'
 
     class hgloader(importlib.machinery.SourceFileLoader):
         """Custom module loader that transforms source code.
