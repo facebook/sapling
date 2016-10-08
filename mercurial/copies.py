@@ -454,7 +454,7 @@ def mergecopies(repo, c1, c2, ca):
 
     return copy, movewithdir, diverge, renamedelete
 
-def _checkcopies(ctx, f, m1, m2, ca, limit, diverge, copy, fullcopy):
+def _checkcopies(ctx, f, m1, m2, base, limit, diverge, copy, fullcopy):
     """
     check possible copies of f from m1 to m2
 
@@ -462,7 +462,7 @@ def _checkcopies(ctx, f, m1, m2, ca, limit, diverge, copy, fullcopy):
     f = the filename to check
     m1 = the source manifest
     m2 = the destination manifest
-    ca = the changectx of the common ancestor
+    base = the changectx used as a merge base
     limit = the rev number to not search beyond
     diverge = record all diverges in this dict
     copy = record all non-divergent copies in this dict
@@ -474,7 +474,7 @@ def _checkcopies(ctx, f, m1, m2, ca, limit, diverge, copy, fullcopy):
     once it "goes behind a certain revision".
     """
 
-    ma = ca.manifest()
+    mb = base.manifest()
     getfctx = _makegetfctx(ctx)
 
     def _related(f1, f2, limit):
@@ -523,15 +523,15 @@ def _checkcopies(ctx, f, m1, m2, ca, limit, diverge, copy, fullcopy):
         fullcopy[f] = of # remember for dir rename detection
         if of not in m2:
             continue # no match, keep looking
-        if m2[of] == ma.get(of):
+        if m2[of] == mb.get(of):
             return # no merge needed, quit early
         c2 = getfctx(of, m2[of])
-        cr = _related(oc, c2, ca.rev())
+        cr = _related(oc, c2, base.rev())
         if cr and (of == f or of == c2.path()): # non-divergent
             copy[f] = of
             return
 
-    if of in ma:
+    if of in mb:
         diverge.setdefault(of, []).append(f)
 
 def duplicatecopies(repo, rev, fromrev, skiprev=None):
