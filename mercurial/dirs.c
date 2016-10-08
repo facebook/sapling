@@ -52,6 +52,14 @@ static int _addpath(PyObject *dirs, PyObject *path)
 	PyObject *key = NULL;
 	int ret = -1;
 
+	/* This loop is super critical for performance. That's why we inline
+	* access to Python structs instead of going through a supported API.
+	* The implementation, therefore, is heavily dependent on CPython
+	* implementation details. We also commit violations of the Python
+	* "protocol" such as mutating immutable objects. But since we only
+	* mutate objects created in this function or in other well-defined
+	* locations, the references are known so these violations should go
+	* unnoticed. */
 	while ((pos = _finddir(cpath, pos - 1)) != -1) {
 		PyObject *val;
 
