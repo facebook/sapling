@@ -1,0 +1,13 @@
+Our full contribution guidelines are in our wiki, please see:
+
+https://www.mercurial-scm.org/wiki/ContributingChanges
+
+If you just want a checklist to follow, you can go straight to
+
+https://www.mercurial-scm.org/wiki/ContributingChanges#Submission_checklist
+
+If you can't run the entire testsuite for some reason (it can be
+difficult on Windows), please at least run `contrib/check-code.py` on
+any files you've modified and run `python contrib/check-commit` on any
+commits you've made (for example, `python contrib/check-commit
+273ce12ad8f1` will report some style violations on a very old commit).
