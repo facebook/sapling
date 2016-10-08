@@ -304,6 +304,35 @@ def getvfs(repo):
     else:
         return getattr(repo, 'opener')
 
+def repocleartagscachefunc(repo):
+    """Return the function to clear tags cache according to repo internal API
+    """
+    if util.safehasattr(repo, '_tagscache'): # since 2.0 (or 9dca7653b525)
+        # in this case, setattr(repo, '_tagscache', None) or so isn't
+        # correct way to clear tags cache, because existing code paths
+        # expect _tagscache to be a structured object.
+        def clearcache():
+            # _tagscache has been filteredpropertycache since 2.5 (or
+            # 98c867ac1330), and delattr() can't work in such case
+            if '_tagscache' in vars(repo):
+                del repo.__dict__['_tagscache']
+        return clearcache
+
+    repotags = safeattrsetter(repo, '_tags', ignoremissing=True)
+    if repotags: # since 1.4 (or 5614a628d173)
+        return lambda : repotags.set(None)
+
+    repotagscache = safeattrsetter(repo, 'tagscache', ignoremissing=True)
+    if repotagscache: # since 0.6 (or d7df759d0e97)
+        return lambda : repotagscache.set(None)
+
+    # Mercurial earlier than 0.6 (or d7df759d0e97) logically reaches
+    # this point, but it isn't so problematic, because:
+    # - repo.tags of such Mercurial isn't "callable", and repo.tags()
+    #   in perftags() causes failure soon
+    # - perf.py itself has been available since 1.1 (or eb240755386d)
+    raise error.Abort(("tags API of this hg command is unknown"))
+
 # perf commands
 
 @command('perfwalk', formatteropts)
@@ -375,10 +404,11 @@ def perftags(ui, repo, **opts):
     import mercurial.manifest
     timer, fm = gettimer(ui, opts)
     svfs = getsvfs(repo)
+    repocleartagscache = repocleartagscachefunc(repo)
     def t():
         repo.changelog = mercurial.changelog.changelog(svfs)
         repo.manifest = mercurial.manifest.manifest(svfs)
-        repo._tags = None
+        repocleartagscache()
         return len(repo.tags())
     timer(t)
     fm.end()
