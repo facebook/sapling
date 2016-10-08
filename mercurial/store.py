@@ -65,7 +65,7 @@ def _reserved():
 
     these characters will be escaped by encodefunctions
     '''
-    winreserved = [ord(x) for x in '\\:*?"<>|']
+    winreserved = [ord(x) for x in u'\\:*?"<>|']
     for x in range(32):
         yield x
     for x in range(126, 256):
