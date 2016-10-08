@@ -19,6 +19,7 @@ from mercurial import (
     commands,
     error,
     extensions,
+    patch,
     scmutil,
 )
 
@@ -76,7 +77,7 @@ fastannotatecommandargs = {
         ('', 'long-hash', None, _('show long changeset hash (EXPERIMENTAL)')),
         ('', 'rebuild', None, _('rebuild cache even if it exists '
                                 '(EXPERIMENTAL)')),
-    ] + commands.walkopts,
+    ] + commands.diffwsopts + commands.walkopts,
     'synopsis': _('[-r REV] [-f] [-a] [-u] [-d] [-n] [-c] [-l] FILE...'),
     'inferrepo': True,
 }
@@ -110,7 +111,10 @@ def fastannotate(ui, repo, *pats, **opts):
     rev = opts.get('rev', '.')
     rebuild = opts.get('rebuild', False)
 
+    diffopts = patch.difffeatureopts(ui, opts, section='annotate',
+                                     whitespace=True)
     aopts = facontext.annotateopts(
+        diffopts=diffopts,
         followmerge=not opts.get('linear', False),
         followrename=not opts.get('no_follow', False))
 

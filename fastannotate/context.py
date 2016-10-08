@@ -9,6 +9,7 @@ from __future__ import absolute_import
 
 from collections import defaultdict
 import contextlib
+import hashlib
 import os
 
 from fastannotate import (
@@ -127,6 +128,12 @@ def encodedir(path):
             .replace('.m/', '.m.hg/')
             .replace('.lock/', '.lock.hg/'))
 
+def hashdiffopts(diffopts):
+    diffoptstr = str(sorted(diffopts.__dict__.iteritems()))
+    return hashlib.sha1(diffoptstr).hexdigest()[:6]
+
+_defaultdiffopthash = hashdiffopts(mdiff.defaultopts)
+
 class annotateopts(object):
     """like mercurial.mdiff.diffopts, but is for annotate
 
@@ -135,6 +142,7 @@ class annotateopts(object):
     """
 
     defaults = {
+        'diffopts': None,
         'followrename': True,
         'followmerge': True,
     }
@@ -143,7 +151,7 @@ class annotateopts(object):
         for k, v in self.defaults.iteritems():
             setattr(self, k, opts.get(k, v))
 
-    @property
+    @util.propertycache
     def shortstr(self):
         """represent opts in a short string, suitable for a directory name"""
         result = ''
@@ -151,6 +159,11 @@ class annotateopts(object):
             result += 'r0'
         if not self.followmerge:
             result += 'm0'
+        if self.diffopts is not None:
+            assert isinstance(self.diffopts, mdiff.diffopts)
+            diffopthash = hashdiffopts(self.diffopts)
+            if diffopthash != _defaultdiffopthash:
+                result += 'i' + diffopthash
         return result or 'default'
 
 defaultopts = annotateopts()
@@ -297,7 +310,7 @@ class _annotatecontext(object):
             assert f not in hist
             curr = _decorate(f)
             for i, p in enumerate(pl):
-                bs = list(mdiff.allblocks(hist[p][1], curr[1]))
+                bs = list(self._diffblocks(hist[p][1], curr[1]))
                 if i == 0 and ismainbranch:
                     blocks = bs
                 curr = _pair(hist[p], curr, bs)
@@ -319,7 +332,7 @@ class _annotatecontext(object):
                 if len(pl) == 2 and self.opts.followmerge: # merge
                     bannotated = curr[0]
                 if blocks is None: # no parents, add an empty one
-                    blocks = list(mdiff.allblocks('', curr[1]))
+                    blocks = list(self._diffblocks('', curr[1]))
                 self._appendrev(f, blocks, bannotated)
 
         if progress: # clean progress bar
@@ -388,7 +401,7 @@ class _annotatecontext(object):
 
             for f in reversed(chain):
                 b = f.data()
-                blocks = list(mdiff.allblocks(a, b))
+                blocks = list(self._diffblocks(a, b))
                 self._doappendrev(linelog, revmap, f, blocks)
                 a = b
         else:
@@ -507,6 +520,9 @@ class _annotatecontext(object):
 
     def _appendrev(self, fctx, blocks, bannotated=None):
         self._doappendrev(self.linelog, self.revmap, fctx, blocks, bannotated)
+
+    def _diffblocks(self, a, b):
+        return mdiff.allblocks(a, b, self.opts.diffopts)
 
     @staticmethod
     def _doappendrev(linelog, revmap, fctx, blocks, bannotated=None):
