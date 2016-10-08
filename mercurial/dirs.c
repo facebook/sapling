@@ -11,6 +11,12 @@
 #include <Python.h>
 #include "util.h"
 
+#ifdef IS_PY3K
+#define PYLONG_VALUE(o) ((PyLongObject *)o)->ob_digit[1]
+#else
+#define PYLONG_VALUE(o) PyInt_AS_LONG(o)
+#endif
+
 /*
  * This is a multiset of directory names, built from the files that
  * appear in a dirstate or manifest.
@@ -66,17 +72,21 @@ static int _addpath(PyObject *dirs, PyObject *path)
 
 		val = PyDict_GetItem(dirs, key);
 		if (val != NULL) {
-			PyInt_AS_LONG(val) += 1;
+			PYLONG_VALUE(val) += 1;
 			break;
 		}
 
 		/* Force Python to not reuse a small shared int. */
+#ifdef IS_PY3K
+		val = PyLong_FromLong(0x1eadbeef);
+#else
 		val = PyInt_FromLong(0x1eadbeef);
+#endif
 
 		if (val == NULL)
 			goto bail;
 
-		PyInt_AS_LONG(val) = 1;
+		PYLONG_VALUE(val) = 1;
 		ret = PyDict_SetItem(dirs, key, val);
 		Py_DECREF(val);
 		if (ret == -1)
@@ -113,7 +123,7 @@ static int _delpath(PyObject *dirs, PyObject *path)
 			goto bail;
 		}
 
-		if (--PyInt_AS_LONG(val) <= 0) {
+		if (--PYLONG_VALUE(val) <= 0) {
 			if (PyDict_DelItem(dirs, key) == -1)
 				goto bail;
 		} else
