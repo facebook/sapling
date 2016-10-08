@@ -182,6 +182,40 @@ def _timer(fm, func, title=None):
     fm.write('count',  ' (best of %d)', count)
     fm.plain('\n')
 
+# utilities for historical portability
+
+def safeattrsetter(obj, name, ignoremissing=False):
+    """Ensure that 'obj' has 'name' attribute before subsequent setattr
+
+    This function is aborted, if 'obj' doesn't have 'name' attribute
+    at runtime. This avoids overlooking removal of an attribute, which
+    breaks assumption of performance measurement, in the future.
+
+    This function returns the object to (1) assign a new value, and
+    (2) restore an original value to the attribute.
+
+    If 'ignoremissing' is true, missing 'name' attribute doesn't cause
+    abortion, and this function returns None. This is useful to
+    examine an attribute, which isn't ensured in all Mercurial
+    versions.
+    """
+    if not util.safehasattr(obj, name):
+        if ignoremissing:
+            return None
+        raise error.Abort(("missing attribute %s of %s might break assumption"
+                           " of performance measurement") % (name, obj))
+
+    origvalue = getattr(obj, name)
+    class attrutil(object):
+        def set(self, newvalue):
+            setattr(obj, name, newvalue)
+        def restore(self):
+            setattr(obj, name, origvalue)
+
+    return attrutil()
+
+# perf commands
+
 @command('perfwalk', formatteropts)
 def perfwalk(ui, repo, *pats, **opts):
     timer, fm = gettimer(ui, opts)
