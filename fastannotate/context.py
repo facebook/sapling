@@ -382,6 +382,7 @@ class _annotatecontext(object):
             # a "fork".
             linelog = linelogmod.linelog()
             linelog.copyfrom(self.linelog)
+            linelog.annotate(linelog.maxrev)
             revmap = revmapmod.revmap()
             revmap.copyfrom(self.revmap)
 
