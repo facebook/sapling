@@ -12,6 +12,8 @@ perfpypats = [
   [
     (r'(branchmap|repoview)\.subsettable',
      "use getbranchmapsubsettable() for early Mercurial"),
+    (r'\.(vfs|svfs|opener|sopener)',
+     "use getvfs()/getsvfs() for early Mercurial"),
   ],
   # warnings
   [

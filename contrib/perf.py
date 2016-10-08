@@ -232,6 +232,28 @@ def getbranchmapsubsettable():
     raise error.Abort(("perfbranchmap not available with this Mercurial"),
                       hint="use 2.5 or later")
 
+def getsvfs(repo):
+    """Return appropriate object to access files under .hg/store
+    """
+    # for "historical portability":
+    # repo.svfs has been available since 2.3 (or 7034365089bf)
+    svfs = getattr(repo, 'svfs', None)
+    if svfs:
+        return svfs
+    else:
+        return getattr(repo, 'sopener')
+
+def getvfs(repo):
+    """Return appropriate object to access files under .hg
+    """
+    # for "historical portability":
+    # repo.vfs has been available since 2.3 (or 7034365089bf)
+    vfs = getattr(repo, 'vfs', None)
+    if vfs:
+        return vfs
+    else:
+        return getattr(repo, 'opener')
+
 # perf commands
 
 @command('perfwalk', formatteropts)
@@ -302,9 +324,10 @@ def perftags(ui, repo, **opts):
     import mercurial.changelog
     import mercurial.manifest
     timer, fm = gettimer(ui, opts)
+    svfs = getsvfs(repo)
     def t():
-        repo.changelog = mercurial.changelog.changelog(repo.svfs)
-        repo.manifest = mercurial.manifest.manifest(repo.svfs)
+        repo.changelog = mercurial.changelog.changelog(svfs)
+        repo.manifest = mercurial.manifest.manifest(svfs)
         repo._tags = None
         return len(repo.tags())
     timer(t)
@@ -483,8 +506,9 @@ def perfindex(ui, repo, **opts):
     timer, fm = gettimer(ui, opts)
     mercurial.revlog._prereadsize = 2**24 # disable lazy parser in old hg
     n = repo["tip"].node()
+    svfs = getsvfs(repo)
     def d():
-        cl = mercurial.revlog.revlog(repo.svfs, "00changelog.i")
+        cl = mercurial.revlog.revlog(svfs, "00changelog.i")
         cl.rev(n)
     timer(d)
     fm.end()
@@ -556,7 +580,7 @@ def perfnodelookup(ui, repo, rev, **opts):
     import mercurial.revlog
     mercurial.revlog._prereadsize = 2**24 # disable lazy parser in old hg
     n = repo[rev].node()
-    cl = mercurial.revlog.revlog(repo.svfs, "00changelog.i")
+    cl = mercurial.revlog.revlog(getsvfs(repo), "00changelog.i")
     def d():
         cl.rev(n)
         clearcaches(cl)
@@ -903,7 +927,8 @@ def perfloadmarkers(ui, repo):
 
     Result is the number of markers in the repo."""
     timer, fm = gettimer(ui)
-    timer(lambda: len(obsolete.obsstore(repo.svfs)))
+    svfs = getsvfs(repo)
+    timer(lambda: len(obsolete.obsstore(svfs)))
     fm.end()
 
 @command('perflrucachedict', formatteropts +
