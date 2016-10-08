@@ -526,6 +526,8 @@ def _checkcopies(ctx, f, m1, m2, base, limit, diverge, copy, fullcopy):
         if m2[of] == mb.get(of):
             return # no merge needed, quit early
         c2 = getfctx(of, m2[of])
+        # c2 might be a plain new file on added on destination side that is
+        # unrelated to the droids we are looking for.
         cr = _related(oc, c2, base.rev())
         if cr and (of == f or of == c2.path()): # non-divergent
             copy[f] = of
