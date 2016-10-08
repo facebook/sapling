@@ -19,6 +19,7 @@ from . import (
     error,
     formatter,
     match,
+    pycompat,
     scmutil,
     simplemerge,
     tagmerge,
@@ -93,7 +94,8 @@ def internaltool(name, mergetype, onfailure=None, precheck=None):
     '''return a decorator for populating internal merge tool table'''
     def decorator(func):
         fullname = ':' + name
-        func.__doc__ = "``%s``\n" % fullname + func.__doc__.strip()
+        func.__doc__ = (pycompat.sysstr("``%s``\n" % fullname)
+                        + func.__doc__.strip())
         internals[fullname] = func
         internals['internal:' + name] = func
         internalsdoc[fullname] = func
