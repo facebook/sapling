@@ -10,6 +10,8 @@ import sys
 # write static check patterns here
 perfpypats = [
   [
+    (r'(branchmap|repoview)\.subsettable',
+     "use getbranchmapsubsettable() for early Mercurial"),
   ],
   # warnings
   [

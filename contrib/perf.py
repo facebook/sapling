@@ -214,6 +214,24 @@ def safeattrsetter(obj, name, ignoremissing=False):
 
     return attrutil()
 
+# utilities to examine each internal API changes
+
+def getbranchmapsubsettable():
+    # for "historical portability":
+    # subsettable is defined in:
+    # - branchmap since 2.9 (or 175c6fd8cacc)
+    # - repoview since 2.5 (or 59a9f18d4587)
+    for mod in (branchmap, repoview):
+        subsettable = getattr(mod, 'subsettable', None)
+        if subsettable:
+            return subsettable
+
+    # bisecting in bcee63733aad::59a9f18d4587 can reach here (both
+    # branchmap and repoview modules exist, but subsettable attribute
+    # doesn't)
+    raise error.Abort(("perfbranchmap not available with this Mercurial"),
+                      hint="use 2.5 or later")
+
 # perf commands
 
 @command('perfwalk', formatteropts)
@@ -848,10 +866,11 @@ def perfbranchmap(ui, repo, full=False, **opts):
         return d
     # add filter in smaller subset to bigger subset
     possiblefilters = set(repoview.filtertable)
+    subsettable = getbranchmapsubsettable()
     allfilters = []
     while possiblefilters:
         for name in possiblefilters:
-            subset = branchmap.subsettable.get(name)
+            subset = subsettable.get(name)
             if subset not in possiblefilters:
                 break
         else:
