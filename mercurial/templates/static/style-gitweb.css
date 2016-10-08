@@ -55,6 +55,9 @@ div.index_include { border:solid #d9d8d1; border-width:0px 0px 1px; padding:12px
 div.search { margin:4px 8px; position:absolute; top:56px; right:12px }
 tr.thisrev a { color:#999999; text-decoration: none; }
 tr.thisrev pre { color:#009900; }
+td.annotate {
+  white-space: nowrap;
+}
 div.annotate-info {
   display: none;
   position: absolute;

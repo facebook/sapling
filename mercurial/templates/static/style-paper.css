@@ -210,6 +210,9 @@ h3 {
 .bigtable td.source { font-size: inherit; }
 tr.thisrev a { color:#999999; text-decoration: none; }
 tr.thisrev td.source { color:#009900; }
+td.annotate {
+  white-space: nowrap;
+}
 div.annotate-info {
   display: none;
   position: absolute;
