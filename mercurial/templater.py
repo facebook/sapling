@@ -713,6 +713,18 @@ def localdate(context, mapping, args):
         tzoffset = util.makedate()[1]
     return (date[0], tzoffset)
 
+@templatefunc('relpath(path)')
+def relpath(context, mapping, args):
+    """Convert a repository-absolute path into a filesystem path relative to
+    the current working directory."""
+    if len(args) != 1:
+        # i18n: "relpath" is a keyword
+        raise error.ParseError(_("relpath expects one argument"))
+
+    repo = mapping['ctx'].repo()
+    path = evalstring(context, mapping, args[0])
+    return repo.pathto(path)
+
 @templatefunc('revset(query[, formatargs...])')
 def revset(context, mapping, args):
     """Execute a revision set query. See

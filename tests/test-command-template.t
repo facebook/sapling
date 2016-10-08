@@ -3521,6 +3521,15 @@ Test files function
   0
   
 
+Test relpath function
+
+  $ hg log -r0 -T '{files % "{file|relpath}\n"}'
+  a
+  $ cd ..
+  $ hg log -R r -r0 -T '{files % "{file|relpath}\n"}'
+  r/a (glob)
+  $ cd r
+
 Test active bookmark templating
 
   $ hg book foo
