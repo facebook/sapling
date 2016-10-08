@@ -2880,7 +2880,7 @@ PyMODINIT_FUNC PyInit_parsers(void)
 	PyObject *mod;
 
 	if (check_python_version() == -1)
-		return;
+		return NULL;
 	mod = PyModule_Create(&parsers_module);
 	module_init(mod);
 	return mod;
