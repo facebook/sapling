@@ -137,7 +137,11 @@ def gettimer(ui, opts=None):
         opts = {}
     # redirect all to stderr
     ui = ui.copy()
-    ui.fout = ui.ferr
+    uifout = safeattrsetter(ui, 'fout', ignoremissing=True)
+    if uifout:
+        # for "historical portability":
+        # ui.fout/ferr have been available since 1.9 (or 4e1ccd4c2b6d)
+        uifout.set(ui.ferr)
 
     # get a formatter
     uiformatter = getattr(ui, 'formatter', None)
