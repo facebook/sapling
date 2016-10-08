@@ -41,8 +41,8 @@ static inline Py_ssize_t _finddir(const char *path, Py_ssize_t pos)
 
 static int _addpath(PyObject *dirs, PyObject *path)
 {
-	const char *cpath = PyString_AS_STRING(path);
-	Py_ssize_t pos = PyString_GET_SIZE(path);
+	const char *cpath = PyBytes_AS_STRING(path);
+	Py_ssize_t pos = PyBytes_GET_SIZE(path);
 	PyObject *key = NULL;
 	int ret = -1;
 
@@ -53,16 +53,16 @@ static int _addpath(PyObject *dirs, PyObject *path)
 		   in our dict. Try to avoid allocating and
 		   deallocating a string for each prefix we check. */
 		if (key != NULL)
-			((PyStringObject *)key)->ob_shash = -1;
+			((PyBytesObject *)key)->ob_shash = -1;
 		else {
 			/* Force Python to not reuse a small shared string. */
-			key = PyString_FromStringAndSize(cpath,
+			key = PyBytes_FromStringAndSize(cpath,
 							 pos < 2 ? 2 : pos);
 			if (key == NULL)
 				goto bail;
 		}
 		Py_SIZE(key) = pos;
-		((PyStringObject *)key)->ob_sval[pos] = '\0';
+		((PyBytesObject *)key)->ob_sval[pos] = '\0';
 
 		val = PyDict_GetItem(dirs, key);
 		if (val != NULL) {
@@ -93,15 +93,15 @@ bail:
 
 static int _delpath(PyObject *dirs, PyObject *path)
 {
-	char *cpath = PyString_AS_STRING(path);
-	Py_ssize_t pos = PyString_GET_SIZE(path);
+	char *cpath = PyBytes_AS_STRING(path);
+	Py_ssize_t pos = PyBytes_GET_SIZE(path);
 	PyObject *key = NULL;
 	int ret = -1;
 
 	while ((pos = _finddir(cpath, pos - 1)) != -1) {
 		PyObject *val;
 
-		key = PyString_FromStringAndSize(cpath, pos);
+		key = PyBytes_FromStringAndSize(cpath, pos);
 
 		if (key == NULL)
 			goto bail;
@@ -134,7 +134,7 @@ static int dirs_fromdict(PyObject *dirs, PyObject *source, char skipchar)
 	Py_ssize_t pos = 0;
 
 	while (PyDict_Next(source, &pos, &key, &value)) {
-		if (!PyString_Check(key)) {
+		if (!PyBytes_Check(key)) {
 			PyErr_SetString(PyExc_TypeError, "expected string key");
 			return -1;
 		}
@@ -165,7 +165,7 @@ static int dirs_fromiter(PyObject *dirs, PyObject *source)
 		return -1;
 
 	while ((item = PyIter_Next(iter)) != NULL) {
-		if (!PyString_Check(item)) {
+		if (!PyBytes_Check(item)) {
 			PyErr_SetString(PyExc_TypeError, "expected string");
 			break;
 		}
@@ -224,7 +224,7 @@ PyObject *dirs_addpath(dirsObject *self, PyObject *args)
 {
 	PyObject *path;
 
-	if (!PyArg_ParseTuple(args, "O!:addpath", &PyString_Type, &path))
+	if (!PyArg_ParseTuple(args, "O!:addpath", &PyBytes_Type, &path))
 		return NULL;
 
 	if (_addpath(self->dict, path) == -1)
@@ -237,7 +237,7 @@ static PyObject *dirs_delpath(dirsObject *self, PyObject *args)
 {
 	PyObject *path;
 
-	if (!PyArg_ParseTuple(args, "O!:delpath", &PyString_Type, &path))
+	if (!PyArg_ParseTuple(args, "O!:delpath", &PyBytes_Type, &path))
 		return NULL;
 
 	if (_delpath(self->dict, path) == -1)
@@ -248,7 +248,7 @@ static PyObject *dirs_delpath(dirsObject *self, PyObject *args)
 
 static int dirs_contains(dirsObject *self, PyObject *value)
 {
-	return PyString_Check(value) ? PyDict_Contains(self->dict, value) : 0;
+	return PyBytes_Check(value) ? PyDict_Contains(self->dict, value) : 0;
 }
 
 static void dirs_dealloc(dirsObject *self)
