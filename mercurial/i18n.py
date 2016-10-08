@@ -49,7 +49,7 @@ if (os.name == 'nt'
 _ugettext = None
 
 def setdatapath(datapath):
-    localedir = os.path.join(datapath, 'locale')
+    localedir = os.path.join(datapath, pycompat.sysstr('locale'))
     t = gettextmod.translation('hg', localedir, _languages, fallback=True)
     global _ugettext
     try:
