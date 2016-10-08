@@ -3214,6 +3214,11 @@ Test recursive evaluation:
   hg: parse error: fill expects an integer width
   [255]
 
+  $ COLUMNS=25 hg log -l1 --template '{fill(desc, termwidth, "{node|short}:", "termwidth.{rev}:")}'
+  bcc7ff960b8e:desc to be
+  termwidth.1:wrapped desc
+  termwidth.1:to be wrapped (no-eol)
+
   $ hg log -l 1 --template '{sub(r"[0-9]", "-", author)}'
   {node|short} (no-eol)
   $ hg log -l 1 --template '{sub(r"[0-9]", "-", "{node|short}")}'

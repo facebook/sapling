@@ -589,5 +589,10 @@ def loadkeyword(ui, extname, registrarobj):
     for name, func in registrarobj._table.iteritems():
         keywords[name] = func
 
+@templatekeyword('termwidth')
+def termwidth(repo, ctx, templ, **args):
+    """Integer. The width of the current terminal."""
+    return repo.ui.termwidth()
+
 # tell hggettext to extract docstrings from these functions:
 i18nfunctions = keywords.values()
