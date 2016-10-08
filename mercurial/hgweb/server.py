@@ -263,7 +263,7 @@ def openlog(opt, default):
         return open(opt, 'a')
     return default
 
-class MercurialHTTPServer(object, _mixin, httpservermod.httpserver):
+class MercurialHTTPServer(_mixin, httpservermod.httpserver, object):
 
     # SO_REUSEADDR has broken semantics on windows
     if os.name == 'nt':
