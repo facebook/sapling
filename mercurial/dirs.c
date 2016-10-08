@@ -61,8 +61,8 @@ static int _addpath(PyObject *dirs, PyObject *path)
 			if (key == NULL)
 				goto bail;
 		}
-		PyString_GET_SIZE(key) = pos;
-		PyString_AS_STRING(key)[pos] = '\0';
+		Py_SIZE(key) = pos;
+		((PyStringObject *)key)->ob_sval[pos] = '\0';
 
 		val = PyDict_GetItem(dirs, key);
 		if (val != NULL) {
