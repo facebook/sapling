@@ -76,6 +76,8 @@ static int _addpath(PyObject *dirs, PyObject *path)
 			if (key == NULL)
 				goto bail;
 		}
+		/* Py_SIZE(o) refers to the ob_size member of the struct. Yes,
+		* assigning to what looks like a function seems wrong. */
 		Py_SIZE(key) = pos;
 		((PyBytesObject *)key)->ob_sval[pos] = '\0';
 
