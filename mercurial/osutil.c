@@ -624,7 +624,7 @@ static PyObject *statfiles(PyObject *self, PyObject *args)
 		pypath = PySequence_GetItem(names, i);
 		if (!pypath)
 			goto bail;
-		path = PyString_AsString(pypath);
+		path = PyBytes_AsString(pypath);
 		if (path == NULL) {
 			Py_DECREF(pypath);
 			PyErr_SetString(PyExc_TypeError, "not a string");
