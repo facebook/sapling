@@ -60,7 +60,8 @@ for attr in (
     'socketserver',
     'xmlrpclib',
 ):
-    globals()[attr] = getattr(pycompat, attr)
+    a = pycompat.sysstr(attr)
+    globals()[a] = getattr(pycompat, a)
 
 # This line is to make pyflakes happy:
 urlreq = pycompat.urlreq
