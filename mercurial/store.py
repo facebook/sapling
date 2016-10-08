@@ -16,6 +16,7 @@ from .i18n import _
 from . import (
     error,
     parsers,
+    pycompat,
     scmutil,
     util,
 )
@@ -98,11 +99,20 @@ def _buildencodefun():
     'the\\x07quick\\xadshot'
     '''
     e = '_'
-    cmap = dict([(chr(x), chr(x)) for x in xrange(127)])
+    if pycompat.ispy3:
+        xchr = lambda x: bytes([x])
+        asciistr = bytes(xrange(127))
+    else:
+        xchr = chr
+        asciistr = map(chr, xrange(127))
+    capitals = list(range(ord("A"), ord("Z") + 1))
+
+    cmap = {x:x for x in asciistr}
     for x in _reserved():
-        cmap[chr(x)] = "~%02x" % x
-    for x in list(range(ord("A"), ord("Z") + 1)) + [ord(e)]:
-        cmap[chr(x)] = e + chr(x).lower()
+        cmap[xchr(x)] = "~%02x" % x
+    for x in capitals + [ord(e)]:
+        cmap[xchr(x)] = e + xchr(x).lower()
+
     dmap = {}
     for k, v in cmap.iteritems():
         dmap[v] = k

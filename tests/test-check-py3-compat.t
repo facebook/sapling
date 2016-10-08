@@ -134,7 +134,6 @@
   mercurial/sshserver.py: error importing: <AttributeError> module 'mercurial.util' has no attribute 'stringio' (error at patch.py:*)
   mercurial/statichttprepo.py: error importing: <AttributeError> module 'mercurial.util' has no attribute 'urlerr' (error at byterange.py:*)
   mercurial/store.py: error importing module: <NameError> name 'xrange' is not defined (line *)
-  mercurial/streamclone.py: error importing: <TypeError> can't concat bytes to str (error at store.py:*)
   mercurial/subrepo.py: error importing: <AttributeError> module 'mercurial.util' has no attribute 'stringio' (error at patch.py:*)
   mercurial/templatefilters.py: error importing: <AttributeError> module 'mercurial.util' has no attribute 'stringio' (error at patch.py:*)
   mercurial/templatekw.py: error importing: <AttributeError> module 'mercurial.util' has no attribute 'stringio' (error at patch.py:*)
