@@ -138,8 +138,42 @@ def gettimer(ui, opts=None):
     # redirect all to stderr
     ui = ui.copy()
     ui.fout = ui.ferr
+
     # get a formatter
-    fm = ui.formatter('perf', opts)
+    uiformatter = getattr(ui, 'formatter', None)
+    if uiformatter:
+        fm = uiformatter('perf', opts)
+    else:
+        # for "historical portability":
+        # define formatter locally, because ui.formatter has been
+        # available since 2.2 (or ae5f92e154d3)
+        from mercurial import node
+        class defaultformatter(object):
+            """Minimized composition of baseformatter and plainformatter
+            """
+            def __init__(self, ui, topic, opts):
+                self._ui = ui
+                if ui.debugflag:
+                    self.hexfunc = node.hex
+                else:
+                    self.hexfunc = node.short
+            def __nonzero__(self):
+                return False
+            def startitem(self):
+                pass
+            def data(self, **data):
+                pass
+            def write(self, fields, deftext, *fielddata, **opts):
+                self._ui.write(deftext % fielddata, **opts)
+            def condwrite(self, cond, fields, deftext, *fielddata, **opts):
+                if cond:
+                    self._ui.write(deftext % fielddata, **opts)
+            def plain(self, text, **opts):
+                self._ui.write(text, **opts)
+            def end(self):
+                pass
+        fm = defaultformatter(ui, 'perf', opts)
+
     # stub function, runs code only once instead of in a loop
     # experimental config: perf.stub
     if ui.configbool("perf", "stub"):
