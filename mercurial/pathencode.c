@@ -156,7 +156,7 @@ PyObject *encodedir(PyObject *self, PyObject *args)
 	if (!PyArg_ParseTuple(args, "O:encodedir", &pathobj))
 		return NULL;
 
-	if (PyString_AsStringAndSize(pathobj, &path, &len) == -1) {
+	if (PyBytes_AsStringAndSize(pathobj, &path, &len) == -1) {
 		PyErr_SetString(PyExc_TypeError, "expected a string");
 		return NULL;
 	}
@@ -168,11 +168,11 @@ PyObject *encodedir(PyObject *self, PyObject *args)
 		return pathobj;
 	}
 
-	newobj = PyString_FromStringAndSize(NULL, newlen);
+	newobj = PyBytes_FromStringAndSize(NULL, newlen);
 
 	if (newobj) {
-		PyString_GET_SIZE(newobj)--;
-		_encodedir(PyString_AS_STRING(newobj), newlen, path,
+		PyBytes_GET_SIZE(newobj)--;
+		_encodedir(PyBytes_AS_STRING(newobj), newlen, path,
 			   len + 1);
 	}
 
@@ -515,9 +515,9 @@ PyObject *lowerencode(PyObject *self, PyObject *args)
 		return NULL;
 
 	newlen = _lowerencode(NULL, 0, path, len);
-	ret = PyString_FromStringAndSize(NULL, newlen);
+	ret = PyBytes_FromStringAndSize(NULL, newlen);
 	if (ret)
-		_lowerencode(PyString_AS_STRING(ret), newlen, path, len);
+		_lowerencode(PyBytes_AS_STRING(ret), newlen, path, len);
 
 	return ret;
 }
@@ -568,11 +568,11 @@ static PyObject *hashmangle(const char *src, Py_ssize_t len, const char sha[20])
 	if (lastdot >= 0)
 		destsize += len - lastdot - 1;
 
-	ret = PyString_FromStringAndSize(NULL, destsize);
+	ret = PyBytes_FromStringAndSize(NULL, destsize);
 	if (ret == NULL)
 		return NULL;
 
-	dest = PyString_AS_STRING(ret);
+	dest = PyBytes_AS_STRING(ret);
 	memcopy(dest, &destlen, destsize, "dh/", 3);
 
 	/* Copy up to dirprefixlen bytes of each path component, up to
@@ -638,7 +638,7 @@ static PyObject *hashmangle(const char *src, Py_ssize_t len, const char sha[20])
 		memcopy(dest, &destlen, destsize, &src[lastdot],
 			len - lastdot - 1);
 
-	PyString_GET_SIZE(ret) = destlen;
+	PyBytes_GET_SIZE(ret) = destlen;
 
 	return ret;
 }
@@ -653,7 +653,7 @@ static int sha1hash(char hash[20], const char *str, Py_ssize_t len)
 	PyObject *shaobj, *hashobj;
 
 	if (shafunc == NULL) {
-		PyObject *hashlib, *name = PyString_FromString("hashlib");
+		PyObject *hashlib, *name = PyBytes_FromString("hashlib");
 
 		if (name == NULL)
 			return -1;
@@ -686,14 +686,14 @@ static int sha1hash(char hash[20], const char *str, Py_ssize_t len)
 	if (hashobj == NULL)
 		return -1;
 
-	if (!PyString_Check(hashobj) || PyString_GET_SIZE(hashobj) != 20) {
+	if (!PyBytes_Check(hashobj) || PyBytes_GET_SIZE(hashobj) != 20) {
 		PyErr_SetString(PyExc_TypeError,
 				"result of digest is not a 20-byte hash");
 		Py_DECREF(hashobj);
 		return -1;
 	}
 
-	memcpy(hash, PyString_AS_STRING(hashobj), 20);
+	memcpy(hash, PyBytes_AS_STRING(hashobj), 20);
 	Py_DECREF(hashobj);
 	return 0;
 }
@@ -731,7 +731,7 @@ PyObject *pathencode(PyObject *self, PyObject *args)
 	if (!PyArg_ParseTuple(args, "O:pathencode", &pathobj))
 		return NULL;
 
-	if (PyString_AsStringAndSize(pathobj, &path, &len) == -1) {
+	if (PyBytes_AsStringAndSize(pathobj, &path, &len) == -1) {
 		PyErr_SetString(PyExc_TypeError, "expected a string");
 		return NULL;
 	}
@@ -747,11 +747,11 @@ PyObject *pathencode(PyObject *self, PyObject *args)
 			return pathobj;
 		}
 
-		newobj = PyString_FromStringAndSize(NULL, newlen);
+		newobj = PyBytes_FromStringAndSize(NULL, newlen);
 
 		if (newobj) {
-			PyString_GET_SIZE(newobj)--;
-			basicencode(PyString_AS_STRING(newobj), newlen, path,
+			PyBytes_GET_SIZE(newobj)--;
+			basicencode(PyBytes_AS_STRING(newobj), newlen, path,
 				    len + 1);
 		}
 	}
