@@ -507,7 +507,7 @@ Sticky subrepositories, file changes
   $ cd ..
   $ hg update 4
    subrepository s diverged (local revision: da5f5b1, remote revision: aa84837)
-  (M)erge, keep (l)ocal or keep (r)emote? m
+  (M)erge, keep (l)ocal [working copy] or keep (r)emote [destination]? m
    subrepository sources for s differ
   use (l)ocal source (da5f5b1) or (r)emote source (aa84837)? l
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -533,7 +533,7 @@ Sticky subrepository, revision updates
   $ cd ..
   $ hg update 1
    subrepository s diverged (local revision: 32a3438, remote revision: da5f5b1)
-  (M)erge, keep (l)ocal or keep (r)emote? m
+  (M)erge, keep (l)ocal [working copy] or keep (r)emote [destination]? m
    subrepository sources for s differ (in checked out version)
   use (l)ocal source (32a3438) or (r)emote source (da5f5b1)? l
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -555,7 +555,7 @@ Sticky subrepository, file changes and revision updates
   1+
   $ hg update 7
    subrepository s diverged (local revision: 32a3438, remote revision: 32a3438)
-  (M)erge, keep (l)ocal or keep (r)emote? m
+  (M)erge, keep (l)ocal [working copy] or keep (r)emote [destination]? m
    subrepository sources for s differ
   use (l)ocal source (32a3438) or (r)emote source (32a3438)? l
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved

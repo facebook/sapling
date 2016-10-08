@@ -1150,7 +1150,7 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
     numupdates = sum(len(l) for m, l in actions.items() if m != 'k')
 
     if [a for a in actions['r'] if a[0] == '.hgsubstate']:
-        subrepo.submerge(repo, wctx, mctx, wctx, overwrite)
+        subrepo.submerge(repo, wctx, mctx, wctx, overwrite, labels)
 
     # remove in parallel (must come first)
     z = 0
@@ -1168,7 +1168,7 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
     updated = len(actions['g'])
 
     if [a for a in actions['g'] if a[0] == '.hgsubstate']:
-        subrepo.submerge(repo, wctx, mctx, wctx, overwrite)
+        subrepo.submerge(repo, wctx, mctx, wctx, overwrite, labels)
 
     # forget (manifest only, just log it) (must come first)
     for f, args, msg in actions['f']:
@@ -1253,7 +1253,7 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
         progress(_updating, z, item=f, total=numupdates, unit=_files)
         if f == '.hgsubstate': # subrepo states need updating
             subrepo.submerge(repo, wctx, mctx, wctx.ancestor(mctx),
-                             overwrite)
+                             overwrite, labels)
             continue
         audit(f)
         complete, r = ms.preresolve(f, wctx)

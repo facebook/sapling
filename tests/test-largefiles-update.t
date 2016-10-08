@@ -546,7 +546,7 @@ Test that the internal linear merging works correctly
   > l
   > EOF
    subrepository sub diverged (local revision: f74e50bd9e55, remote revision: d65e59e952a9)
-  (M)erge, keep (l)ocal or keep (r)emote? m
+  (M)erge, keep (l)ocal [working copy] or keep (r)emote [destination]? m
    subrepository sources for sub differ (in checked out version)
   use (l)ocal source (f74e50bd9e55) or (r)emote source (d65e59e952a9)? r
   remote turned local largefile large2 into a normal file

@@ -26,6 +26,7 @@ from . import (
     config,
     error,
     exchange,
+    filemerge,
     match as matchmod,
     node,
     pathutil,
@@ -174,7 +175,7 @@ def writestate(repo, state):
                                                 if state[s][1] != nullstate[1]]
     repo.wwrite('.hgsubstate', ''.join(lines), '')
 
-def submerge(repo, wctx, mctx, actx, overwrite):
+def submerge(repo, wctx, mctx, actx, overwrite, labels=None):
     """delegated from merge.applyupdates: merging of .hgsubstate file
     in working context, merging context and ancestor context"""
     if mctx == actx: # backwards?
@@ -200,6 +201,8 @@ def submerge(repo, wctx, mctx, actx, overwrite):
             a = ld
 
         if s in s2:
+            prompts = filemerge.partextras(labels)
+            prompts['s'] = s
             r = s2[s]
             if ld == r or r == a: # no change or local is newer
                 sm[s] = l
@@ -209,10 +212,13 @@ def submerge(repo, wctx, mctx, actx, overwrite):
                 wctx.sub(s).get(r, overwrite)
                 sm[s] = r
             elif ld[0] != r[0]: # sources differ
+                prompts['lo'] = l[0]
+                prompts['ro'] = r[0]
                 if repo.ui.promptchoice(
-                    _(' subrepository sources for %s differ\n'
-                      'use (l)ocal source (%s) or (r)emote source (%s)?'
-                      '$$ &Local $$ &Remote') % (s, l[0], r[0]), 0):
+                    _(' subrepository sources for %(s)s differ\n'
+                      'use (l)ocal%(l)s source (%(lo)s)'
+                      ' or (r)emote%(o)s source (%(ro)s)?'
+                      '$$ &Local $$ &Remote') % prompts, 0):
                     debug(s, "prompt changed, get", r)
                     wctx.sub(s).get(r, overwrite)
                     sm[s] = r
@@ -223,12 +229,14 @@ def submerge(repo, wctx, mctx, actx, overwrite):
             else:
                 debug(s, "both sides changed")
                 srepo = wctx.sub(s)
+                prompts['sl'] = srepo.shortid(l[1])
+                prompts['sr'] = srepo.shortid(r[1])
                 option = repo.ui.promptchoice(
-                    _(' subrepository %s diverged (local revision: %s, '
-                      'remote revision: %s)\n'
-                      '(M)erge, keep (l)ocal or keep (r)emote?'
+                    _(' subrepository %(s)s diverged (local revision: %(sl)s, '
+                      'remote revision: %(sr)s)\n'
+                      '(M)erge, keep (l)ocal%(l)s or keep (r)emote%(o)s?'
                       '$$ &Merge $$ &Local $$ &Remote')
-                    % (s, srepo.shortid(l[1]), srepo.shortid(r[1])), 0)
+                    % prompts, 0)
                 if option == 0:
                     wctx.sub(s).merge(r)
                     sm[s] = l
@@ -249,9 +257,10 @@ def submerge(repo, wctx, mctx, actx, overwrite):
             continue
         else:
             if repo.ui.promptchoice(
-                _(' local changed subrepository %s which remote removed\n'
+                _(' local%(l)s changed subrepository %(s)s'
+                  ' which remote%(o)s removed\n'
                   'use (c)hanged version or (d)elete?'
-                  '$$ &Changed $$ &Delete') % s, 0):
+                  '$$ &Changed $$ &Delete') % prompts, 0):
                 debug(s, "prompt remove")
                 wctx.sub(s).remove()
 
@@ -264,9 +273,10 @@ def submerge(repo, wctx, mctx, actx, overwrite):
             sm[s] = r
         elif r != sa[s]:
             if repo.ui.promptchoice(
-                _(' remote changed subrepository %s which local removed\n'
+                _(' remote%(o)s changed subrepository %(s)s'
+                  ' which local%(l)s removed\n'
                   'use (c)hanged version or (d)elete?'
-                  '$$ &Changed $$ &Delete') % s, 0) == 0:
+                  '$$ &Changed $$ &Delete') % prompts, 0) == 0:
                 debug(s, "prompt recreate", r)
                 mctx.sub(s).get(r)
                 sm[s] = r
