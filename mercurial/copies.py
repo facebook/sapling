@@ -459,7 +459,7 @@ def _checkcopies(ctx, f, m1, m2, base, limit, diverge, copy, fullcopy):
     check possible copies of f from m1 to m2
 
     ctx = starting context for f in m1
-    f = the filename to check
+    f = the filename to check (as in m1)
     m1 = the source manifest
     m2 = the destination manifest
     base = the changectx used as a merge base
