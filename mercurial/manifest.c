@@ -254,6 +254,13 @@ done:
 	return ret;
 }
 
+#ifdef IS_PY3K
+#define LAZYMANIFESTENTRIESITERATOR_TPFLAGS Py_TPFLAGS_DEFAULT
+#else
+#define LAZYMANIFESTENTRIESITERATOR_TPFLAGS Py_TPFLAGS_DEFAULT \
+	| Py_TPFLAGS_HAVE_ITER
+#endif
+
 static PyTypeObject lazymanifestEntriesIterator = {
 	PyObject_HEAD_INIT(NULL)
 	0,                               /*ob_size */
@@ -275,9 +282,7 @@ static PyTypeObject lazymanifestEntriesIterator = {
 	0,                               /*tp_getattro */
 	0,                               /*tp_setattro */
 	0,                               /*tp_as_buffer */
-	/* tp_flags: Py_TPFLAGS_HAVE_ITER tells python to
-	   use tp_iter and tp_iternext fields. */
-	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_ITER,
+	LAZYMANIFESTENTRIESITERATOR_TPFLAGS, /* tp_flags */
 	"Iterator for 3-tuples in a lazymanifest.",  /* tp_doc */
 	0,                               /* tp_traverse */
 	0,                               /* tp_clear */
@@ -297,6 +302,13 @@ static PyObject *lmiter_iterkeysnext(PyObject *o)
 	pl = pathlen(l);
 	return PyString_FromStringAndSize(l->start, pl);
 }
+
+#ifdef IS_PY3K
+#define LAZYMANIFESTKEYSITERATOR_TPFLAGS Py_TPFLAGS_DEFAULT
+#else
+#define LAZYMANIFESTKEYSITERATOR_TPFLAGS Py_TPFLAGS_DEFAULT \
+	| Py_TPFLAGS_HAVE_ITER
+#endif
 
 static PyTypeObject lazymanifestKeysIterator = {
 	PyObject_HEAD_INIT(NULL)
@@ -319,9 +331,7 @@ static PyTypeObject lazymanifestKeysIterator = {
 	0,                               /*tp_getattro */
 	0,                               /*tp_setattro */
 	0,                               /*tp_as_buffer */
-	/* tp_flags: Py_TPFLAGS_HAVE_ITER tells python to
-	   use tp_iter and tp_iternext fields. */
-	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_ITER,
+	LAZYMANIFESTKEYSITERATOR_TPFLAGS, /* tp_flags */
 	"Keys iterator for a lazymanifest.",  /* tp_doc */
 	0,                               /* tp_traverse */
 	0,                               /* tp_clear */
@@ -873,6 +883,12 @@ static PyMethodDef lazymanifest_methods[] = {
 	{NULL},
 };
 
+#ifdef IS_PY3K
+#define LAZYMANIFEST_TPFLAGS Py_TPFLAGS_DEFAULT
+#else
+#define LAZYMANIFEST_TPFLAGS Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_SEQUENCE_IN
+#endif
+
 static PyTypeObject lazymanifestType = {
 	PyObject_HEAD_INIT(NULL)
 	0,                                                /* ob_size */
@@ -894,7 +910,7 @@ static PyTypeObject lazymanifestType = {
 	0,                                                /* tp_getattro */
 	0,                                                /* tp_setattro */
 	0,                                                /* tp_as_buffer */
-	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_SEQUENCE_IN, /* tp_flags */
+	LAZYMANIFEST_TPFLAGS,                             /* tp_flags */
 	"TODO(augie)",                                    /* tp_doc */
 	0,                                                /* tp_traverse */
 	0,                                                /* tp_clear */
