@@ -884,16 +884,17 @@ def perfbranchmap(ui, repo, full=False, **opts):
             repo.filtered(name).branchmap()
     # add unfiltered
     allfilters.append(None)
-    oldread = branchmap.read
-    oldwrite = branchmap.branchcache.write
+
+    branchcacheread = safeattrsetter(branchmap, 'read')
+    branchcachewrite = safeattrsetter(branchmap.branchcache, 'write')
+    branchcacheread.set(lambda repo: None)
+    branchcachewrite.set(lambda bc, repo: None)
     try:
-        branchmap.read = lambda repo: None
-        branchmap.write = lambda repo: None
         for name in allfilters:
             timer(getbranchmap(name), title=str(name))
     finally:
-        branchmap.read = oldread
-        branchmap.branchcache.write = oldwrite
+        branchcacheread.restore()
+        branchcachewrite.restore()
     fm.end()
 
 @command('perfloadmarkers')
