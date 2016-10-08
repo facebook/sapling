@@ -131,7 +131,7 @@ def gettimer(ui, opts=None):
 
     # enforce an idle period before execution to counteract power management
     # experimental config: perf.presleep
-    time.sleep(ui.configint("perf", "presleep", 1))
+    time.sleep(getint(ui, "perf", "presleep", 1))
 
     if opts is None:
         opts = {}
@@ -221,6 +221,18 @@ def _timer(fm, func, title=None):
     fm.plain('\n')
 
 # utilities for historical portability
+
+def getint(ui, section, name, default):
+    # for "historical portability":
+    # ui.configint has been available since 1.9 (or fa2b596db182)
+    v = ui.config(section, name, None)
+    if v is None:
+        return default
+    try:
+        return int(v)
+    except ValueError:
+        raise error.ConfigError(("%s.%s is not an integer ('%s')")
+                                % (section, name, v))
 
 def safeattrsetter(obj, name, ignoremissing=False):
     """Ensure that 'obj' has 'name' attribute before subsequent setattr
@@ -569,7 +581,7 @@ def perfparents(ui, repo, **opts):
     timer, fm = gettimer(ui, opts)
     # control the number of commits perfparents iterates over
     # experimental config: perf.parentscount
-    count = ui.configint("perf", "parentscount", 1000)
+    count = getint(ui, "perf", "parentscount", 1000)
     if len(repo.changelog) < count:
         raise error.Abort("repo needs %d commits for this test" % count)
     repo = repo.unfiltered()

@@ -14,6 +14,8 @@ perfpypats = [
      "use getbranchmapsubsettable() for early Mercurial"),
     (r'\.(vfs|svfs|opener|sopener)',
      "use getvfs()/getsvfs() for early Mercurial"),
+    (r'ui\.configint',
+     "use getint() instead of ui.configint() for early Mercurial"),
   ],
   # warnings
   [
