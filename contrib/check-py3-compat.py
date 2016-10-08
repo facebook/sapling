@@ -56,33 +56,32 @@ def check_compat_py3(f):
     if f.startswith(('hgext/', 'mercurial/')) and not f.endswith('__init__.py'):
         assert f.endswith('.py')
         name = f.replace('/', '.')[:-3].replace('.pure.', '.')
-        if True:
-            try:
-                importlib.import_module(name)
-            except Exception as e:
-                exc_type, exc_value, tb = sys.exc_info()
-                # We walk the stack and ignore frames from our custom importer,
-                # import mechanisms, and stdlib modules. This kinda/sorta
-                # emulates CPython behavior in import.c while also attempting
-                # to pin blame on a Mercurial file.
-                for frame in reversed(traceback.extract_tb(tb)):
-                    if frame.name == '_call_with_frames_removed':
-                        continue
-                    if 'importlib' in frame.filename:
-                        continue
-                    if 'mercurial/__init__.py' in frame.filename:
-                        continue
-                    if frame.filename.startswith(sys.prefix):
-                        continue
-                    break
+        try:
+            importlib.import_module(name)
+        except Exception as e:
+            exc_type, exc_value, tb = sys.exc_info()
+            # We walk the stack and ignore frames from our custom importer,
+            # import mechanisms, and stdlib modules. This kinda/sorta
+            # emulates CPython behavior in import.c while also attempting
+            # to pin blame on a Mercurial file.
+            for frame in reversed(traceback.extract_tb(tb)):
+                if frame.name == '_call_with_frames_removed':
+                    continue
+                if 'importlib' in frame.filename:
+                    continue
+                if 'mercurial/__init__.py' in frame.filename:
+                    continue
+                if frame.filename.startswith(sys.prefix):
+                    continue
+                break
 
-                if frame.filename:
-                    filename = os.path.basename(frame.filename)
-                    print('%s: error importing: <%s> %s (error at %s:%d)' % (
-                          f, type(e).__name__, e, filename, frame.lineno))
-                else:
-                    print('%s: error importing module: <%s> %s (line %d)' % (
-                          f, type(e).__name__, e, frame.lineno))
+            if frame.filename:
+                filename = os.path.basename(frame.filename)
+                print('%s: error importing: <%s> %s (error at %s:%d)' % (
+                      f, type(e).__name__, e, filename, frame.lineno))
+            else:
+                print('%s: error importing module: <%s> %s (line %d)' % (
+                      f, type(e).__name__, e, frame.lineno))
 
 if __name__ == '__main__':
     if sys.version_info[0] == 2:
