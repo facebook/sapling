@@ -10,7 +10,7 @@
 from __future__ import absolute_import, print_function
 
 import ast
-import imp
+import importlib
 import os
 import sys
 import traceback
@@ -56,9 +56,9 @@ def check_compat_py3(f):
     if f.startswith(('hgext/', 'mercurial/')) and not f.endswith('__init__.py'):
         assert f.endswith('.py')
         name = f.replace('/', '.')[:-3].replace('.pure.', '.')
-        with open(f, 'r') as fh:
+        if True:
             try:
-                imp.load_module(name, fh, f, ('py', 'r', imp.PY_SOURCE))
+                importlib.import_module(name)
             except Exception as e:
                 exc_type, exc_value, tb = sys.exc_info()
                 # We walk the stack and ignore frames from our custom importer,
