@@ -1793,3 +1793,13 @@ repository when file not found for patching
   1 out of 1 hunks FAILED -- saving rejects to file file1.rej
   abort: patch failed to apply
   [255]
+
+test import crash (issue5375)
+  $ cd ..
+  $ hg init repo
+  $ cd repo
+  $ printf "diff --git a/a b/b\nrename from a\nrename to b" | hg import -
+  applying patch from stdin
+  a not tracked!
+  abort: source file 'a' does not exist
+  [255]

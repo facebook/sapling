@@ -1952,8 +1952,10 @@ def _applydiff(ui, fp, patcher, backend, store, strip=1, prefix='',
                 data, mode = None, None
                 if gp.op in ('RENAME', 'COPY'):
                     data, mode = store.getfile(gp.oldpath)[:2]
-                    # FIXME: failing getfile has never been handled here
-                    assert data is not None
+                    if data is None:
+                        # This means that the old path does not exist
+                        raise PatchError(_("source file '%s' does not exist")
+                                           % gp.oldpath)
                 if gp.mode:
                     mode = gp.mode
                     if gp.op == 'ADD':
