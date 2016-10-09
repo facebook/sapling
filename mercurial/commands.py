@@ -2787,7 +2787,7 @@ def debuginstall(ui, **opts):
     if not problems:
         fm.data(problems=problems)
     fm.condwrite(problems, 'problems',
-                 _("%s problems detected,"
+                 _("%d problems detected,"
                    " please check your install!\n"), problems)
     fm.end()
 
