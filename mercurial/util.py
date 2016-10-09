@@ -2472,7 +2472,7 @@ class url(object):
                   'path', 'fragment'):
             v = getattr(self, a)
             if v is not None:
-                setattr(self, a, pycompat.urlparse.unquote(v))
+                setattr(self, a, pycompat.urlunquote(v))
 
     def __repr__(self):
         attrs = []
