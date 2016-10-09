@@ -10,7 +10,6 @@
 from __future__ import absolute_import, print_function
 
 import ast
-import importlib
 import os
 import sys
 import traceback
@@ -41,6 +40,7 @@ def check_compat_py2(f):
 
 def check_compat_py3(f):
     """Check Python 3 compatibility of a file with Python 3."""
+    import importlib  # not available on Python 2.6
     with open(f, 'rb') as fh:
         content = fh.read()
 
