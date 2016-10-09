@@ -58,7 +58,7 @@ def check_compat_py3(f):
         name = f.replace('/', '.')[:-3].replace('.pure.', '.')
         with open(f, 'r') as fh:
             try:
-                imp.load_module(name, fh, '', ('py', 'r', imp.PY_SOURCE))
+                imp.load_module(name, fh, f, ('py', 'r', imp.PY_SOURCE))
             except Exception as e:
                 exc_type, exc_value, tb = sys.exc_info()
                 # We walk the stack and ignore frames from our custom importer,
