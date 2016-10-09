@@ -439,7 +439,10 @@ def runarithmetic(context, mapping, data):
                        _('arithmetic only defined on integers'))
     right = evalinteger(context, mapping, right,
                         _('arithmetic only defined on integers'))
-    return func(left, right)
+    try:
+        return func(left, right)
+    except ZeroDivisionError:
+        raise error.Abort(_('division by zero is not defined'))
 
 def buildfunc(exp, context):
     n = getsymbol(exp[1])
@@ -741,12 +744,8 @@ def mod(context, mapping, args):
         # i18n: "mod" is a keyword
         raise error.ParseError(_("mod expects two arguments"))
 
-    left = evalinteger(context, mapping, args[0],
-                       _('arithmetic only defined on integers'))
-    right = evalinteger(context, mapping, args[1],
-                        _('arithmetic only defined on integers'))
-
-    return left % right
+    func = lambda a, b: a % b
+    return runarithmetic(context, mapping, (func, args[0], args[1]))
 
 @templatefunc('relpath(path)')
 def relpath(context, mapping, args):
