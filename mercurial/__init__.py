@@ -305,6 +305,24 @@ if sys.version_info[0] >= 3:
                     except IndexError:
                         pass
 
+                # Bare open call (not an attribute on something else)
+                if (fn == 'open' and not (prevtoken.type == token.OP and
+                                          prevtoken.string == '.')):
+                    try:
+                        # (NAME, 'open')
+                        # (OP, '(')
+                        # (NAME|STRING, 'filename')
+                        # (OP, ',')
+                        # (NAME|STRING, mode)
+                        st = tokens[i + 4]
+                        if (st.type == token.STRING and
+                                st.string[0] in ("'", '"')):
+                            rt = tokenize.TokenInfo(st.type, 'u%s' % st.string,
+                                                    st.start, st.end, st.line)
+                            tokens[i + 4] = rt
+                    except IndexError:
+                        pass
+
                 # It changes iteritems to items as iteritems is not
                 # present in Python 3 world.
                 if fn == 'iteritems':
@@ -319,7 +337,7 @@ if sys.version_info[0] >= 3:
     # ``replacetoken`` or any mechanism that changes semantics of module
     # loading is changed. Otherwise cached bytecode may get loaded without
     # the new transformation mechanisms applied.
-    BYTECODEHEADER = b'HG\x00\x04'
+    BYTECODEHEADER = b'HG\x00\x05'
 
     class hgloader(importlib.machinery.SourceFileLoader):
         """Custom module loader that transforms source code.
