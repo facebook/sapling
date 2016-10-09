@@ -11,16 +11,8 @@
 #include "compat.h"
 
 #if PY_MAJOR_VERSION >= 3
-
 #define IS_PY3K
-/* The mapping of Python types is meant to be temporary to get Python
- * 3 to compile. We should remove this once Python 3 support is fully
- * supported and proper types are used in the extensions themselves. */
-#define PyInt_Type PyLong_Type
-#define PyInt_FromLong PyLong_FromLong
-#define PyInt_AsLong PyLong_AsLong
-
-#endif /* PY_MAJOR_VERSION */
+#endif
 
 typedef struct {
 	PyObject_HEAD
