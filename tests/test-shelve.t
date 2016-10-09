@@ -58,22 +58,22 @@ shelve has a help message
   
   options ([+] can be repeated):
   
-   -A --[no-]addremove      mark new/missing files as added/removed before
+   -A --addremove           mark new/missing files as added/removed before
                             shelving
-   -u --[no-]unknown        store unknown files in the shelve
-      --[no-]cleanup        delete all shelved changes
+   -u --unknown             store unknown files in the shelve
+      --cleanup             delete all shelved changes
       --date DATE           shelve with the specified commit date
-   -d --[no-]delete         delete the named shelved change(s)
-   -e --[no-]edit           invoke editor on commit messages
-   -l --[no-]list           list current shelves
+   -d --delete              delete the named shelved change(s)
+   -e --edit                invoke editor on commit messages
+   -l --list                list current shelves
    -m --message TEXT        use text as shelve message
    -n --name NAME           use the given name for the shelved commit
-   -p --[no-]patch          show patch
-   -i --[no-]interactive    interactive mode, only works while creating a shelve
-      --[no-]stat           output diffstat-style summary of changes
+   -p --patch               show patch
+   -i --interactive         interactive mode, only works while creating a shelve
+      --stat                output diffstat-style summary of changes
    -I --include PATTERN [+] include names matching the given patterns
    -X --exclude PATTERN [+] exclude names matching the given patterns
-      --[no-]mq             operate on patch repository
+      --mq                  operate on patch repository
   
   (some details hidden, use --verbose to show complete help)
 

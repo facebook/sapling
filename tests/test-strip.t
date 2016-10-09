@@ -710,12 +710,12 @@ Make sure no one adds back a -b option:
   
    -r --rev REV [+]        strip specified revision (optional, can specify
                            revisions without this option)
-   -f --[no-]force         force removal of changesets, discard uncommitted
+   -f --force              force removal of changesets, discard uncommitted
                            changes (no backup)
-      --[no-]backup        no backups
-   -k --[no-]keep          do not modify working directory during strip
+      --no-backup          no backups
+   -k --keep               do not modify working directory during strip
    -B --bookmark VALUE [+] remove revs only reachable from given bookmark
-      --[no-]mq            operate on patch repository
+      --mq                 operate on patch repository
   
   (use 'hg strip -h' to show more help)
   [255]

@@ -45,22 +45,22 @@ Record help
   
   options ([+] can be repeated):
   
-   -A --[no-]addremove           mark new/missing files as added/removed before
-                                 committing
-      --[no-]close-branch        mark a branch head as closed
-      --[no-]amend               amend the parent of the working directory
-   -s --[no-]secret              use the secret phase for committing
-   -e --[no-]edit                invoke editor on commit messages
-   -I --include PATTERN [+]      include names matching the given patterns
-   -X --exclude PATTERN [+]      exclude names matching the given patterns
-   -m --message TEXT             use text as commit message
-   -l --logfile FILE             read commit message from file
-   -d --date DATE                record the specified date as commit date
-   -u --user USER                record the specified user as committer
-   -S --[no-]subrepos            recurse into subrepositories
-   -w --[no-]ignore-all-space    ignore white space when comparing lines
-   -b --[no-]ignore-space-change ignore changes in the amount of white space
-   -B --[no-]ignore-blank-lines  ignore changes whose lines are all blank
+   -A --addremove           mark new/missing files as added/removed before
+                            committing
+      --close-branch        mark a branch head as closed
+      --amend               amend the parent of the working directory
+   -s --secret              use the secret phase for committing
+   -e --edit                invoke editor on commit messages
+   -I --include PATTERN [+] include names matching the given patterns
+   -X --exclude PATTERN [+] exclude names matching the given patterns
+   -m --message TEXT        use text as commit message
+   -l --logfile FILE        read commit message from file
+   -d --date DATE           record the specified date as commit date
+   -u --user USER           record the specified user as committer
+   -S --subrepos            recurse into subrepositories
+   -w --ignore-all-space    ignore white space when comparing lines
+   -b --ignore-space-change ignore changes in the amount of white space
+   -B --ignore-blank-lines  ignore changes whose lines are all blank
   
   (some details hidden, use --verbose to show complete help)
 

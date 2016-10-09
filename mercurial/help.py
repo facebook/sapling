@@ -20,7 +20,6 @@ from . import (
     encoding,
     error,
     extensions,
-    fancyopts,
     filemerge,
     fileset,
     minirst,
@@ -66,7 +65,6 @@ def extshelp(ui):
 def optrst(header, options, verbose):
     data = []
     multioccur = False
-    alllong = set(o[1] for o in options)
     for option in options:
         if len(option) == 5:
             shortopt, longopt, default, desc, optlabel = option
@@ -89,16 +87,6 @@ def optrst(header, options, verbose):
             multioccur = True
         elif (default is not None) and not isinstance(default, bool):
             lo += " %s" % optlabel
-        elif longopt not in fancyopts.nevernegate:
-            if longopt.startswith('no-'):
-                # This odd if statement guards against showing
-                # --no-commit and --commit on backout (as a practical
-                # example) as --[no-]commit in help.
-                if (longopt[3:]) not in alllong:
-                    lo = '--[no-]' + lo[5:]
-            else:
-                if ('no-' + longopt) not in alllong:
-                    lo = '--[no-]' + lo[2:]
 
         data.append((so, lo, desc))
 
