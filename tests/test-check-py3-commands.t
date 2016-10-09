@@ -9,6 +9,6 @@ The full traceback is hidden to have a stable output.
   >   $PYTHON3 `which hg` $cmd 2>&1 2>&1 | tail -1
   > done
   version
-  TypeError: startswith first arg must be str or a tuple of str, not bytes
+  TypeError: cannot use a string pattern on a bytes-like object
   debuginstall
-  TypeError: startswith first arg must be str or a tuple of str, not bytes
+  TypeError: cannot use a string pattern on a bytes-like object

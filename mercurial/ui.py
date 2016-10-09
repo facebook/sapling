@@ -176,7 +176,7 @@ class ui(object):
     def readconfig(self, filename, root=None, trust=False,
                    sections=None, remap=None):
         try:
-            fp = open(filename)
+            fp = open(filename, u'rb')
         except IOError:
             if not sections: # ignore unless we were looking for something
                 return
