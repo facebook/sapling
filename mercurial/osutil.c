@@ -706,7 +706,7 @@ static PyObject *recvfds(PyObject *self, PyObject *args)
 	if (!rfdslist)
 		goto bail;
 	for (i = 0; i < rfdscount; i++) {
-		PyObject *obj = PyInt_FromLong(rfds[i]);
+		PyObject *obj = PyLong_FromLong(rfds[i]);
 		if (!obj)
 			goto bail;
 		PyList_SET_ITEM(rfdslist, i, obj);
