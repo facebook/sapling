@@ -43,6 +43,15 @@ In addition to filters, there are some basic built-in functions:
 
 .. functionsmarker
 
+We provide a limited set of infix arithmetic operations on integers::
+
+  + for addition
+  - for subtraction
+  * for multiplication
+  / for floor division (division rounded to integer nearest -infinity)
+
+Division fulfils the law x = x / y + mod(x, y).
+
 Also, for any expression that returns a list, there is a list operator::
 
     expr % "{template}"

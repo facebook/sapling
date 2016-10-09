@@ -33,6 +33,10 @@ elements = {
     "|": (5, None, None, ("|", 5), None),
     "%": (6, None, None, ("%", 6), None),
     ")": (0, None, None, None, None),
+    "+": (3, None, None, ("+", 3), None),
+    "-": (3, None, ("negate", 10), ("-", 3), None),
+    "*": (4, None, None, ("*", 4), None),
+    "/": (4, None, None, ("/", 4), None),
     "integer": (0, "integer", None, None, None),
     "symbol": (0, "symbol", None, None, None),
     "string": (0, "string", None, None, None),
@@ -48,7 +52,7 @@ def tokenize(program, start, end, term=None):
         c = program[pos]
         if c.isspace(): # skip inter-token whitespace
             pass
-        elif c in "(,)%|": # handle simple operators
+        elif c in "(,)%|+-*/": # handle simple operators
             yield (c, None, pos)
         elif c in '"\'': # handle quoted templates
             s = pos + 1
@@ -70,13 +74,8 @@ def tokenize(program, start, end, term=None):
                 pos += 1
             else:
                 raise error.ParseError(_("unterminated string"), s)
-        elif c.isdigit() or c == '-':
+        elif c.isdigit():
             s = pos
-            if c == '-': # simply take negate operator as part of integer
-                pos += 1
-            if pos >= end or not program[pos].isdigit():
-                raise error.ParseError(_("integer literal without digits"), s)
-            pos += 1
             while pos < end:
                 d = program[pos]
                 if not d.isdigit():
@@ -420,6 +419,28 @@ def runmap(context, mapping, data):
             # If so, return the expanded value.
             yield i
 
+def buildnegate(exp, context):
+    arg = compileexp(exp[1], context, exprmethods)
+    return (runnegate, arg)
+
+def runnegate(context, mapping, data):
+    data = evalinteger(context, mapping, data,
+                       _('negation needs an integer argument'))
+    return -data
+
+def buildarithmetic(exp, context, func):
+    left = compileexp(exp[1], context, exprmethods)
+    right = compileexp(exp[2], context, exprmethods)
+    return (runarithmetic, (func, left, right))
+
+def runarithmetic(context, mapping, data):
+    func, left, right = data
+    left = evalinteger(context, mapping, left,
+                       _('arithmetic only defined on integers'))
+    right = evalinteger(context, mapping, right,
+                        _('arithmetic only defined on integers'))
+    return func(left, right)
+
 def buildfunc(exp, context):
     n = getsymbol(exp[1])
     args = [compileexp(x, context, exprmethods) for x in getlist(exp[2])]
@@ -713,6 +734,20 @@ def localdate(context, mapping, args):
         tzoffset = util.makedate()[1]
     return (date[0], tzoffset)
 
+@templatefunc('mod(a, b)')
+def mod(context, mapping, args):
+    """Calculate a mod b such that a / b + a mod b == a"""
+    if not len(args) == 2:
+        # i18n: "mod" is a keyword
+        raise error.ParseError(_("mod expects two arguments"))
+
+    left = evalinteger(context, mapping, args[0],
+                       _('arithmetic only defined on integers'))
+    right = evalinteger(context, mapping, args[1],
+                        _('arithmetic only defined on integers'))
+
+    return left % right
+
 @templatefunc('relpath(path)')
 def relpath(context, mapping, args):
     """Convert a repository-absolute path into a filesystem path relative to
@@ -926,6 +961,11 @@ exprmethods = {
     "|": buildfilter,
     "%": buildmap,
     "func": buildfunc,
+    "+": lambda e, c: buildarithmetic(e, c, lambda a, b: a + b),
+    "-": lambda e, c: buildarithmetic(e, c, lambda a, b: a - b),
+    "negate": buildnegate,
+    "*": lambda e, c: buildarithmetic(e, c, lambda a, b: a * b),
+    "/": lambda e, c: buildarithmetic(e, c, lambda a, b: a // b),
     }
 
 # methods to interpret top-level template (e.g. {x}, {x|_}, {x % "y"})

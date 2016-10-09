@@ -29,6 +29,111 @@
   $ hg merge -q foo
   $ hg commit -m 'merge' -d '1500001 0' -u 'person'
 
+Test arithmetic operators have the right precedence:
+
+  $ hg log -l 1 -T '{date(date, "%s") + 5 * 10} {date(date, "%s") - 2 * 3}\n'
+  1500051 1499995
+  $ hg log -l 1 -T '{date(date, "%s") * 5 + 10} {date(date, "%s") * 3 - 2}\n'
+  7500015 4500001
+
+Test division:
+
+  $ hg debugtemplate -r0 -v '{5 / 2} {mod(5, 2)}\n'
+  (template
+    (/
+      ('integer', '5')
+      ('integer', '2'))
+    ('string', ' ')
+    (func
+      ('symbol', 'mod')
+      (list
+        ('integer', '5')
+        ('integer', '2')))
+    ('string', '\n'))
+  2 1
+  $ hg debugtemplate -r0 -v '{5 / -2} {mod(5, -2)}\n'
+  (template
+    (/
+      ('integer', '5')
+      (negate
+        ('integer', '2')))
+    ('string', ' ')
+    (func
+      ('symbol', 'mod')
+      (list
+        ('integer', '5')
+        (negate
+          ('integer', '2'))))
+    ('string', '\n'))
+  -3 -1
+  $ hg debugtemplate -r0 -v '{-5 / 2} {mod(-5, 2)}\n'
+  (template
+    (/
+      (negate
+        ('integer', '5'))
+      ('integer', '2'))
+    ('string', ' ')
+    (func
+      ('symbol', 'mod')
+      (list
+        (negate
+          ('integer', '5'))
+        ('integer', '2')))
+    ('string', '\n'))
+  -3 1
+  $ hg debugtemplate -r0 -v '{-5 / -2} {mod(-5, -2)}\n'
+  (template
+    (/
+      (negate
+        ('integer', '5'))
+      (negate
+        ('integer', '2')))
+    ('string', ' ')
+    (func
+      ('symbol', 'mod')
+      (list
+        (negate
+          ('integer', '5'))
+        (negate
+          ('integer', '2'))))
+    ('string', '\n'))
+  2 -1
+
+Filters bind closer than arithmetic:
+
+  $ hg debugtemplate -r0 -v '{revset(".")|count - 1}\n'
+  (template
+    (-
+      (|
+        (func
+          ('symbol', 'revset')
+          ('string', '.'))
+        ('symbol', 'count'))
+      ('integer', '1'))
+    ('string', '\n'))
+  0
+
+But negate binds closer still:
+
+  $ hg debugtemplate -r0 -v '{1-3|stringify}\n'
+  (template
+    (-
+      ('integer', '1')
+      (|
+        ('integer', '3')
+        ('symbol', 'stringify')))
+    ('string', '\n'))
+  hg: parse error: arithmetic only defined on integers
+  [255]
+  $ hg debugtemplate -r0 -v '{-3|stringify}\n'
+  (template
+    (|
+      (negate
+        ('integer', '3'))
+      ('symbol', 'stringify'))
+    ('string', '\n'))
+  -3
+
 Second branch starting at nullrev:
 
   $ hg update null
@@ -2890,14 +2995,15 @@ Test integer literal:
   $ hg debugtemplate -v '{(-4)}\n'
   (template
     (group
-      ('integer', '-4'))
+      (negate
+        ('integer', '4')))
     ('string', '\n'))
   -4
   $ hg debugtemplate '{(-)}\n'
-  hg: parse error at 2: integer literal without digits
+  hg: parse error at 3: not a prefix: )
   [255]
   $ hg debugtemplate '{(-a)}\n'
-  hg: parse error at 2: integer literal without digits
+  hg: parse error: negation needs an integer argument
   [255]
 
 top-level integer literal is interpreted as symbol (i.e. variable name):
