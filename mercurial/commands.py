@@ -835,7 +835,7 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
 
     Returns 0 on success.
     """
-    def check_state(state, interactive=True):
+    def checkstate(state, interactive=True):
         if not state['good'] or not state['bad']:
             if (good or bad or skip or reset) and interactive:
                 return
@@ -913,7 +913,7 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
                 rev = None # clear for future iterations
                 state[transition].append(ctx.node())
                 ui.status(_('changeset %d:%s: %s\n') % (ctx, ctx, transition))
-                check_state(state, interactive=False)
+                checkstate(state, interactive=False)
                 # bisect
                 nodes, changesets, bgood = hbisect.bisect(repo.changelog, state)
                 # update to next check
@@ -928,7 +928,7 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
         hbisect.printresult(ui, repo, state, displayer, nodes, bgood)
         return
 
-    if not check_state(state):
+    if not checkstate(state):
         return
 
     # actually bisect
