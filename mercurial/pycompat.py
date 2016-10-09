@@ -34,6 +34,8 @@ else:
 if ispy3:
     import builtins
     import functools
+    import os
+    fsencode = os.fsencode
 
     def sysstr(s):
         """Return a keyword str to be passed to Python functions such as
@@ -63,6 +65,34 @@ if ispy3:
 else:
     def sysstr(s):
         return s
+
+    # Partial backport from os.py in Python 3
+    def _fscodec():
+        encoding = sys.getfilesystemencoding()
+        if encoding == 'mbcs':
+            errors = 'strict'
+        else:
+            errors = 'surrogateescape'
+
+        def fsencode(filename):
+            """
+            Encode filename to the filesystem encoding with 'surrogateescape'
+            error handler, return bytes unchanged. On Windows, use 'strict'
+            error handler if the file system encoding is 'mbcs' (which is the
+            default encoding).
+            """
+            if isinstance(filename, str):
+                return filename
+            elif isinstance(filename, unicode):
+                return filename.encode(encoding, errors)
+            else:
+                raise TypeError(
+                    "expect str or unicode, not %s" % type(filename).__name__)
+
+        return fsencode
+
+    fsencode = _fscodec()
+    del _fscodec
 
 stringio = io.StringIO
 empty = _queue.Empty
