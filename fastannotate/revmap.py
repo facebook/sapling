@@ -213,14 +213,17 @@ class revmap(object):
         return buf
 
     def __contains__(self, f):
-        """(fctx or node) -> bool.
-        test if f is in the map and is not in a side branch.
+        """(fctx or (node, path)) -> bool.
+        test if (node, path) is in the map, and is not in a side branch.
+        f can be either a tuple of (node, path), or a fctx.
         """
-        if isinstance(f, str):
-            hsh = f
-        else:
-            hsh = f.node()
+        if isinstance(f, tuple): # f: (node, path)
+            hsh, path = f
+        else: # f: fctx
+            hsh, path = f.node(), f.path()
         rev = self.hsh2rev(hsh)
         if rev is None:
+            return False
+        if path is not None and path != self.rev2path(rev):
             return False
         return (self.rev2flag(rev) & sidebranchflag) == 0

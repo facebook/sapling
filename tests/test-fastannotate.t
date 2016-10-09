@@ -68,7 +68,7 @@ a simple merge case
 incrementally updating
 
   $ hg fastannotate -r 0 a --debug
-  fastannotate: a: no need to update linelog
+  fastannotate: a: using fast path (resolved fctx: True)
   0: 1
   $ hg fastannotate -r 0 a --debug --rebuild
   fastannotate: a: 1 new changesets in the main branch
@@ -90,7 +90,7 @@ incrementally updating
   2: 3
   4: 4
   $ hg fastannotate -r 1 a --debug
-  fastannotate: a: no need to update linelog
+  fastannotate: a: using fast path (resolved fctx: True)
   0: 1
   1: 2
 
@@ -110,7 +110,7 @@ config option "fastannotate.mainbranch"
   0: 1
   1: 2
   $ hg fastannotate -r 4 a --debug
-  fastannotate: a: no need to update linelog
+  fastannotate: a: using fast path (resolved fctx: True)
   3: 0
   0: 1
   1: 2
@@ -123,7 +123,7 @@ config option "fastannotate.commands"
   0: 1
   1: 2
   $ hg annotate --config fastannotate.commands=annotate -r 1 --debug a
-  fastannotate: a: no need to update linelog
+  fastannotate: a: using fast path (resolved fctx: True)
   0: 1
   1: 2
   $ hg fastannotate --config fastannotate.commands=annotate -h -q

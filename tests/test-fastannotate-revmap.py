@@ -141,11 +141,15 @@ def testcopyfrom():
     os.unlink(path2)
 
 class fakefctx(object):
-    def __init__(self, node):
+    def __init__(self, node, path=None):
         self._node = node
+        self._path = path
 
     def node(self):
         return self._node
+
+    def path(self):
+        return self._path
 
 def testcontains():
     path = gettemppath()
@@ -156,11 +160,19 @@ def testcontains():
         ensure(rm.append(genhsh(i), sidebranch=(i & 1)) == i)
 
     for i in xrange(1, 5):
-        ensure((genhsh(i) in rm) == ((i & 1) == 0))
+        ensure(((genhsh(i), None) in rm) == ((i & 1) == 0))
         ensure((fakefctx(genhsh(i)) in rm) == ((i & 1) == 0))
     for i in xrange(5, 10):
         ensure(fakefctx(genhsh(i)) not in rm)
-        ensure(genhsh(i) not in rm)
+        ensure((genhsh(i), None) not in rm)
+
+    # "contains" checks paths
+    rm = revmap.revmap()
+    for i in xrange(1, 5):
+        ensure(rm.append(genhsh(i), path=str(i // 2)) == i)
+    for i in xrange(1, 5):
+        ensure(fakefctx(genhsh(i), path=str(i // 2)) in rm)
+        ensure(fakefctx(genhsh(i), path='a') not in rm)
 
 testbasicreadwrite()
 testcorruptformat()

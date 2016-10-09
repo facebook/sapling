@@ -180,6 +180,7 @@ class _annotatecontext(object):
         self.linelog = linelog
         self.revmap = revmap
         self.opts = opts
+        self._node2path = {} # {str: str}
 
     def annotate(self, rev, master=None, showpath=False, showlines=False):
         """incrementally update the cache so it includes revisions in the main
@@ -199,17 +200,22 @@ class _annotatecontext(object):
         directly, revfctx = self.canannotatedirectly(rev)
         if directly:
             if self.ui.debugflag:
-                self.ui.debug('fastannotate: %s: no need to update linelog\n'
-                              % self.path)
+                self.ui.debug('fastannotate: %s: using fast path '
+                              '(resolved fctx: %s)\n'
+                              % (self.path, util.safehasattr(revfctx, 'node')))
             return self.annotatedirectly(revfctx, showpath, showlines)
 
         # resolve master
         masterfctx = None
         if master:
-            masterfctx = self._resolvefctx(master, resolverev=True,
-                                           adjustctx=True)
-            if masterfctx in self.revmap: # no need to update linelog
-                masterfctx = None
+            try:
+                masterfctx = self._resolvefctx(master, resolverev=True,
+                                               adjustctx=True)
+            except LookupError: # master does not have the file
+                pass
+            else:
+                if masterfctx in self.revmap: # no need to update linelog
+                    masterfctx = None
 
         #                  ... - @ <- rev (can be an arbitrary changeset,
         #                 /                not necessarily a descendant
@@ -277,8 +283,12 @@ class _annotatecontext(object):
             self._checklastmasterhead(f)
 
         if self.ui.debugflag:
-            self.ui.debug('fastannotate: %s: %d new changesets in the main '
-                          'branch\n' % (self.path, len(newmainbranch)))
+            if newmainbranch:
+                self.ui.debug('fastannotate: %s: %d new changesets in the main'
+                              ' branch\n' % (self.path, len(newmainbranch)))
+            elif not hist: # no joints, no updates
+                self.ui.debug('fastannotate: %s: linelog cannot help in '
+                              'annotating this revision\n' % self.path)
 
         # prepare annotateresult so we can update linelog incrementally
         self.linelog.annotate(self.linelog.maxrev)
@@ -288,7 +298,7 @@ class _annotatecontext(object):
         progress = 0
         while visit:
             f = visit[-1]
-            if f in hist or f in self.revmap:
+            if f in hist:
                 visit.pop()
                 continue
 
@@ -334,6 +344,8 @@ class _annotatecontext(object):
                 if blocks is None: # no parents, add an empty one
                     blocks = list(self._diffblocks('', curr[1]))
                 self._appendrev(f, blocks, bannotated)
+            elif showpath: # not append linelog, but we need to record path
+                self._node2path[f.node()] = f.path()
 
         if progress: # clean progress bar
             self.ui.write()
@@ -353,10 +365,9 @@ class _annotatecontext(object):
         result = True
         f = None
         if not isinstance(rev, int):
-            if len(rev) == 20 and rev in self.revmap:
-                f = rev
-            elif len(rev) == 40 and node.bin(rev) in self.revmap:
-                f = node.bin(rev)
+            hsh = {20: bytes, 40: node.bin}.get(len(rev), lambda x: None)(rev)
+            if hsh is not None and (hsh, self.path) in self.revmap:
+                f = hsh
         if f is None:
             adjustctx = 'linkrev' if self._perfhack else True
             f = self._resolvefctx(rev, adjustctx=adjustctx, resolverev=True)
@@ -573,9 +584,15 @@ class _annotatecontext(object):
         """(revmap, [(node, linenum)]) -> [(node, linenum, path)]"""
         if revmap is None:
             revmap = self.revmap
-        nodes = set([n for n, l in annotateresult])
-        paths = dict((n, revmap.rev2path(revmap.hsh2rev(n))) for n in nodes)
-        return [(n, l, paths[n]) for n, l in annotateresult]
+
+        def _getpath(nodeid):
+            path = self._node2path.get(nodeid)
+            if path is None:
+                path = revmap.rev2path(revmap.hsh2rev(nodeid))
+                self._node2path[nodeid] = path
+            return path
+
+        return [(n, l, _getpath(n)) for n, l in annotateresult]
 
     def _checklastmasterhead(self, fctx):
         """check if fctx is the master's head last time, raise if not"""
