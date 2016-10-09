@@ -107,7 +107,7 @@ def _buildencodefun():
         asciistr = map(chr, xrange(127))
     capitals = list(range(ord("A"), ord("Z") + 1))
 
-    cmap = {x:x for x in asciistr}
+    cmap = dict((x, x) for x in asciistr)
     for x in _reserved():
         cmap[xchr(x)] = "~%02x" % x
     for x in capitals + [ord(e)]:
