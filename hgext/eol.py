@@ -305,9 +305,9 @@ def reposetup(ui, repo):
             return eol.match
 
         def _hgcleardirstate(self):
-            self._eolfile = self.loadeol([None, 'tip'])
-            if not self._eolfile:
-                self._eolfile = util.never
+            self._eolmatch = self.loadeol([None, 'tip'])
+            if not self._eolmatch:
+                self._eolmatch = util.never
                 return
 
             try:
@@ -344,7 +344,7 @@ def reposetup(ui, repo):
 
         def commitctx(self, ctx, haserror=False):
             for f in sorted(ctx.added() + ctx.modified()):
-                if not self._eolfile(f):
+                if not self._eolmatch(f):
                     continue
                 fctx = ctx[f]
                 if fctx is None:
