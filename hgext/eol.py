@@ -312,10 +312,15 @@ def reposetup(ui, repo):
                 self._eolmatch = util.never
                 return
 
+            oldeol = None
             try:
                 cachemtime = os.path.getmtime(self.join("eol.cache"))
             except OSError:
                 cachemtime = 0
+            else:
+                olddata = self.vfs.read("eol.cache")
+                if olddata:
+                    oldeol = eolfile(self.ui, self.root, olddata)
 
             try:
                 eolmtime = os.path.getmtime(self.wjoin(".hgeol"))
@@ -324,17 +329,37 @@ def reposetup(ui, repo):
 
             if eolmtime > cachemtime:
                 self.ui.debug("eol: detected change in .hgeol\n")
+
+                hgeoldata = self.wvfs.read('.hgeol')
+                neweol = eolfile(self.ui, self.root, hgeoldata)
+
                 wlock = None
                 try:
                     wlock = self.wlock()
                     for f in self.dirstate:
-                        if self.dirstate[f] == 'n':
-                            # all normal files need to be looked at
-                            # again since the new .hgeol file might no
-                            # longer match a file it matched before
-                            self.dirstate.normallookup(f)
-                    # Create or touch the cache to update mtime
-                    self.vfs("eol.cache", "w").close()
+                        if self.dirstate[f] != 'n':
+                            continue
+                        if oldeol is not None:
+                            if not oldeol.match(f) and not neweol.match(f):
+                                continue
+                            oldkey = None
+                            for pattern, key, m in oldeol.patterns:
+                                if m(f):
+                                    oldkey = key
+                                    break
+                            newkey = None
+                            for pattern, key, m in neweol.patterns:
+                                if m(f):
+                                    newkey = key
+                                    break
+                            if oldkey == newkey:
+                                continue
+                        # all normal files need to be looked at again since
+                        # the new .hgeol file specify a different filter
+                        self.dirstate.normallookup(f)
+                    # Write the cache to update mtime and cache .hgeol
+                    with self.vfs("eol.cache", "w") as f:
+                        f.write(hgeoldata)
                     wlock.release()
                 except error.LockUnavailable:
                     # If we cannot lock the repository and clear the
