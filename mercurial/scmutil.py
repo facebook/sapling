@@ -753,7 +753,7 @@ def rcpath():
     if no HGRCPATH, use default os-specific path.'''
     global _rcpath
     if _rcpath is None:
-        if 'HGRCPATH' in os.environ:
+        if 'HGRCPATH' in encoding.environ:
             _rcpath = []
             for p in os.environ['HGRCPATH'].split(os.pathsep):
                 if not p:
