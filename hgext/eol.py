@@ -175,25 +175,27 @@ class eolfile(object):
 
         include = []
         exclude = []
+        self.patterns = []
         for pattern, style in self.cfg.items('patterns'):
             key = style.upper()
             if key == 'BIN':
                 exclude.append(pattern)
             else:
                 include.append(pattern)
+            m = match.match(root, '', [pattern])
+            self.patterns.append((pattern, key, m))
         # This will match the files for which we need to care
         # about inconsistent newlines.
         self.match = match.match(root, '', [], include, exclude)
 
     def copytoui(self, ui):
-        for pattern, style in self.cfg.items('patterns'):
-            key = style.upper()
+        for pattern, key, m in self.patterns:
             try:
                 ui.setconfig('decode', pattern, self._decode[key], 'eol')
                 ui.setconfig('encode', pattern, self._encode[key], 'eol')
             except KeyError:
                 ui.warn(_("ignoring unknown EOL style '%s' from %s\n")
-                        % (style, self.cfg.source('patterns', pattern)))
+                        % (key, self.cfg.source('patterns', pattern)))
         # eol.only-consistent can be specified in ~/.hgrc or .hgeol
         for k, v in self.cfg.items('eol'):
             ui.setconfig('eol', k, v, 'eol')
@@ -203,10 +205,10 @@ class eolfile(object):
         for f in (files or ctx.files()):
             if f not in ctx:
                 continue
-            for pattern, style in self.cfg.items('patterns'):
-                if not match.match(repo.root, '', [pattern])(f):
+            for pattern, key, m in self.patterns:
+                if not m(f):
                     continue
-                target = self._encode[style.upper()]
+                target = self._encode[key]
                 data = ctx[f].data()
                 if (target == "to-lf" and "\r\n" in data
                     or target == "to-crlf" and singlelf.search(data)):
