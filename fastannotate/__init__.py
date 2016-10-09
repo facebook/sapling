@@ -22,6 +22,11 @@ be faster than the vanilla 'annotate' if the cache is present.
     mainbranch = master
     # add a "fastannotate" command, and replace the default "annotate" command
     commands = fastannotate, annotate
+    # replace hgweb's annotate implementation (default: False)
+    # note: mainbranch should be set to a forward-only name, otherwise the
+    # linelog cache may be rebuilt frequently, which leads to errors and
+    # poor performance
+    hgweb = True
     # use unfiltered repo for better performance
     unfilteredrepo = True
     # sacrifice correctness in some cases for performance (default: False)
@@ -54,3 +59,7 @@ def uisetup(ui):
         else:
             raise hgerror.Abort(_('%s: invalid fastannotate.commands option')
                                 % name)
+    if ui.configbool('fastannotate', 'hgweb'):
+        # local import to avoid overhead of loading hgweb for non-hgweb usages
+        from fastannotate import hgwebsupport
+        hgwebsupport.replacehgwebannotate()

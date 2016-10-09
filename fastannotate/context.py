@@ -94,7 +94,7 @@ def resolvefctx(repo, rev, path, resolverev=False, adjustctx=None):
     is 'linkrev', trust the linkrev and do not adjust it. this is noticeably
     faster for big repos but is incorrect for some cases.
     """
-    if resolverev:
+    if resolverev and not isinstance(rev, int):
         ctx = _revsingle(repo, rev)
     else:
         ctx = repo[rev]
@@ -352,11 +352,12 @@ class _annotatecontext(object):
         """
         result = True
         f = None
-        if len(rev) == 20 and rev in self.revmap:
-            f = rev
-        elif len(rev) == 40 and node.bin(rev) in self.revmap:
-            f = node.bin(rev)
-        else:
+        if not isinstance(rev, int):
+            if len(rev) == 20 and rev in self.revmap:
+                f = rev
+            elif len(rev) == 40 and node.bin(rev) in self.revmap:
+                f = node.bin(rev)
+        if f is None:
             adjustctx = 'linkrev' if self._perfhack else True
             f = self._resolvefctx(rev, adjustctx=adjustctx, resolverev=True)
             result = f in self.revmap
