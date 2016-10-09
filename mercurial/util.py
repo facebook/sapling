@@ -2380,7 +2380,7 @@ class url(object):
 
     _safechars = "!~*'()+"
     _safepchars = "/!~*'()+:\\"
-    _matchscheme = remod.compile(r'^[a-zA-Z0-9+.\-]+:').match
+    _matchscheme = remod.compile('^[a-zA-Z0-9+.\\-]+:').match
 
     def __init__(self, path, parsequery=True, parsefragment=True):
         # We slowly chomp away at path until we have only the path left
@@ -2394,7 +2394,7 @@ class url(object):
             path, self.fragment = path.split('#', 1)
 
         # special case for Windows drive letters and UNC paths
-        if hasdriveletter(path) or path.startswith(r'\\'):
+        if hasdriveletter(path) or path.startswith('\\\\'):
             self.path = path
             return
 
