@@ -63,11 +63,19 @@ struct listdir_stat {
 };
 #endif
 
+#ifdef IS_PY3K
+#define listdir_slot(name) \
+	static PyObject *listdir_stat_##name(PyObject *self, void *x) \
+	{ \
+		return PyLong_FromLong(((struct listdir_stat *)self)->st.name); \
+	}
+#else
 #define listdir_slot(name) \
 	static PyObject *listdir_stat_##name(PyObject *self, void *x) \
 	{ \
 		return PyInt_FromLong(((struct listdir_stat *)self)->st.name); \
 	}
+#endif
 
 listdir_slot(st_dev)
 listdir_slot(st_mode)
