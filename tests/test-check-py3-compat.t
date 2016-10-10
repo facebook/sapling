@@ -23,7 +23,6 @@
   hgext/fsmonitor/pywatchman/capabilities.py: error importing: <ImportError> No module named 'pybser' (error at __init__.py:*)
   hgext/fsmonitor/pywatchman/pybser.py: error importing: <ImportError> No module named 'pybser' (error at __init__.py:*)
   hgext/fsmonitor/watchmanclient.py: error importing: <ImportError> No module named 'pybser' (error at __init__.py:*)
-  hgext/journal.py: error importing: <ValueError> Type names and field names must be valid identifiers: "b'journalentry'" (error at journal.py:*)
   hgext/largefiles/basestore.py: error importing: <SyntaxError> cannot mix bytes and nonbytes literals (subversion.py, line 533) (error at convcmd.py:*)
   hgext/largefiles/lfcommands.py: error importing: <SyntaxError> cannot mix bytes and nonbytes literals (subversion.py, line 533) (error at convcmd.py:*)
   hgext/largefiles/lfutil.py: error importing: <SyntaxError> cannot mix bytes and nonbytes literals (subversion.py, line 533) (error at convcmd.py:*)
