@@ -1027,10 +1027,11 @@ def _follow(repo, subset, x, name, followfirst=False):
         x = getstring(l[0], _("%s expected a pattern") % name)
         rev = None
         if len(l) >= 2:
-            rev = getset(repo, fullreposet(repo), l[1]).last()
-            if rev is None:
+            revs = getset(repo, fullreposet(repo), l[1])
+            if len(revs) != 1:
                 raise error.RepoLookupError(
-                        _("%s: starting revision set cannot be empty") % name)
+                        _("%s expected one starting revision") % name)
+            rev = revs.last()
             c = repo[rev]
         matcher = matchmod.match(repo.root, repo.getcwd(), [x],
                                  ctx=repo[rev], default='path')
