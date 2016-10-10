@@ -454,6 +454,40 @@ def mergecopies(repo, c1, c2, ca):
 
     return copy, movewithdir, diverge, renamedelete
 
+def _related(f1, f2, limit):
+    """return True if f1 and f2 filectx have a common ancestor
+
+    Walk back to common ancestor to see if the two files originate
+    from the same file. Since workingfilectx's rev() is None it messes
+    up the integer comparison logic, hence the pre-step check for
+    None (f1 and f2 can only be workingfilectx's initially).
+    """
+
+    if f1 == f2:
+        return f1 # a match
+
+    g1, g2 = f1.ancestors(), f2.ancestors()
+    try:
+        f1r, f2r = f1.linkrev(), f2.linkrev()
+
+        if f1r is None:
+            f1 = next(g1)
+        if f2r is None:
+            f2 = next(g2)
+
+        while True:
+            f1r, f2r = f1.linkrev(), f2.linkrev()
+            if f1r > f2r:
+                f1 = next(g1)
+            elif f2r > f1r:
+                f2 = next(g2)
+            elif f1 == f2:
+                return f1 # a match
+            elif f1r == f2r or f1r < limit or f2r < limit:
+                return False # copy no longer relevant
+    except StopIteration:
+        return False
+
 def _checkcopies(ctx, f, m1, m2, base, limit, diverge, copy, fullcopy):
     """
     check possible copies of f from m1 to m2
@@ -476,37 +510,6 @@ def _checkcopies(ctx, f, m1, m2, base, limit, diverge, copy, fullcopy):
 
     mb = base.manifest()
     getfctx = _makegetfctx(ctx)
-
-    def _related(f1, f2, limit):
-        # Walk back to common ancestor to see if the two files originate
-        # from the same file. Since workingfilectx's rev() is None it messes
-        # up the integer comparison logic, hence the pre-step check for
-        # None (f1 and f2 can only be workingfilectx's initially).
-
-        if f1 == f2:
-            return f1 # a match
-
-        g1, g2 = f1.ancestors(), f2.ancestors()
-        try:
-            f1r, f2r = f1.linkrev(), f2.linkrev()
-
-            if f1r is None:
-                f1 = next(g1)
-            if f2r is None:
-                f2 = next(g2)
-
-            while True:
-                f1r, f2r = f1.linkrev(), f2.linkrev()
-                if f1r > f2r:
-                    f1 = next(g1)
-                elif f2r > f1r:
-                    f2 = next(g2)
-                elif f1 == f2:
-                    return f1 # a match
-                elif f1r == f2r or f1r < limit or f2r < limit:
-                    return False # copy no longer relevant
-        except StopIteration:
-            return False
 
     of = None
     seen = set([f])
