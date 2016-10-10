@@ -299,3 +299,52 @@ Change the order of pushrebase and infinitepush
   remote:     d8c4f54ab678  scratchcommitwithpushrebase
   remote:     6c10d49fe927  scratchcommitwithpushrebase2
   remote:     9558d6761412  scratchcommitwithremotenames
+
+Non-fastforward scratch bookmark push
+  $ hg up 9558d6761412
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ echo 1 > amend
+  $ hg add amend
+  $ hg ci --amend -m 'scratch amended commit'
+  saved backup bundle to $TESTTMP/client/.hg/strip-backup/9558d6761412-64a1e69b-amend-backup.hg (glob)
+  $ hg log -G -T '{desc} {phase}'
+  @  scratch amended commit draft
+  |
+  o  scratchcommitwithpushrebase2 draft
+  |
+  o  scratchcommitwithpushrebase draft
+  |
+  o  scratchcommitnobook draft
+  |
+  o  new scratch commit draft
+  |
+  | o  newcommit public
+  | |
+  o |  scratchcommit draft
+  |/
+  o  initialcommit public
+  
+
+  $ scratchbookmarks
+  scratch/anotherbranch 1de1d7d92f8965260391d0513fe8a8d5973d3042
+  scratch/mybranch 9558d6761412a5513b30c67ef930af0d86e70e1d
+  $ hg push -r . --to scratch/mybranch
+  pushing to ssh://user@dummy/repo
+  searching for changes
+  remote: non-forward push. Use --force to override
+  abort: push failed on remote
+  [255]
+
+  $ hg push -r . --to scratch/mybranch --force
+  pushing to ssh://user@dummy/repo
+  searching for changes
+  remote: pushing 6 commits:
+  remote:     20759b6926ce  scratchcommit
+  remote:     1de1d7d92f89  new scratch commit
+  remote:     2b5d271c7e0d  scratchcommitnobook
+  remote:     d8c4f54ab678  scratchcommitwithpushrebase
+  remote:     6c10d49fe927  scratchcommitwithpushrebase2
+  remote:     5da7ed61b032  scratch amended commit
+  $ scratchbookmarks
+  scratch/anotherbranch 1de1d7d92f8965260391d0513fe8a8d5973d3042
+  scratch/mybranch 5da7ed61b032f9701238753f48ffd5873fce5970

@@ -286,7 +286,7 @@ def validaterevset(repo, revset):
         raise error.Abort(
             _('cannot push more than one head to a scratch branch'))
 
-def getscratchbranchpart(repo, peer, outgoing, bookmark, create):
+def getscratchbranchpart(repo, peer, outgoing, force, bookmark, create):
     if not outgoing.missing:
         raise error.Abort(_('no commits to push'))
 
@@ -301,6 +301,8 @@ def getscratchbranchpart(repo, peer, outgoing, bookmark, create):
     if bookmark:
         params['bookmark'] = bookmark
         params['create'] = '1' if create else '0'
+    if force:
+        params['force'] = '1' if force else '0'
     # .upper() marks this as a mandatory part: server will abort if there's no
     #  handler
     return bundle2.bundlepart(
@@ -431,6 +433,7 @@ def partgen(pushop, bundler):
     scratchpart = getscratchbranchpart(pushop.repo,
                                        pushop.remote,
                                        pushop.outgoing,
+                                       pushop.force,
                                        bookmark,
                                        create)
 
@@ -491,7 +494,7 @@ def _makebundlefromraw(data):
 
     return bundlefile
 
-def _getrevs(bundle, oldnode):
+def _getrevs(bundle, oldnode, force):
     'extracts and validates the revs to be imported'
     validaterevset(bundle, 'bundle()')
     revs = [bundle[r] for r in bundle.revs('sort(bundle())')]
@@ -504,10 +507,13 @@ def _getrevs(bundle, oldnode):
     if oldnode in bundle and list(bundle.set('bundle() & %s::', oldnode)):
         return revs
 
-    raise error.Abort(
-        _('non-forward pushes are not allowed for scratch branches'))
+    # Forced non-fast forward update
+    if force:
+        return revs
+    else:
+        raise error.Abort(_('non-forward push. Use --force to override'))
 
-@bundle2.parthandler(scratchbranchparttype, ('bookmark', 'create',))
+@bundle2.parthandler(scratchbranchparttype, ('bookmark', 'create', 'force',))
 def bundle2scratchbranch(op, part):
     '''unbundle a bundle2 part containing a changegroup to store'''
 
@@ -525,6 +531,7 @@ def bundle2scratchbranch(op, part):
 
         bookmark = params.get('bookmark')
         create = params.get('create')
+        force = params.get('force')
 
         if bookmark:
             oldnode = index.getnode(bookmark)
@@ -534,7 +541,7 @@ def bundle2scratchbranch(op, part):
                                   hint="use --create if you want to create one")
         else:
             oldnode = None
-        revs = _getrevs(bundle, oldnode)
+        revs = _getrevs(bundle, oldnode, force)
 
         # Notify the user of what is being pushed
         plural = 's' if len(revs) > 1 else ''
