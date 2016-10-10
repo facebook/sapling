@@ -614,6 +614,7 @@ Test that rewriting leaving instability behind is allowed
   parent:      11:3334b7925910
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
+  trouble:     unstable
   summary:     babar
   
 

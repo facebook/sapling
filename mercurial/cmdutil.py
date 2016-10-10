@@ -1144,6 +1144,10 @@ def diffordiffstat(ui, repo, diffopts, node1, node2, match,
 
 def _changesetlabels(ctx):
     labels = ['log.changeset', 'changeset.%s' % ctx.phasestr()]
+    if ctx.troubled():
+        labels.append('changeset.troubled')
+        for trouble in ctx.troubles():
+            labels.append('trouble.%s' % trouble)
     return ' '.join(labels)
 
 class changeset_printer(object):
@@ -1251,6 +1255,10 @@ class changeset_printer(object):
         # i18n: column positioning for "hg log"
         self.ui.write(_("date:        %s\n") % date,
                       label='log.date')
+
+        if ctx.troubled():
+            self.ui.write(_("trouble:     %s\n") % ', '.join(ctx.troubles()),
+                          label='ui.note log.trouble')
 
         if self.ui.debugflag:
             files = ctx.p1().status(ctx)[:3]
