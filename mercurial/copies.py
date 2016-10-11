@@ -413,10 +413,10 @@ def mergecopies(repo, c1, c2, base):
                                       baselabel='topological common ancestor')
 
     for f in u1u:
-        _checkcopies(c1, f, m1, m2, base, tca, limit, data1)
+        _checkcopies(c1, f, m1, m2, base, tca, dirtyc1, limit, data1)
 
     for f in u2u:
-        _checkcopies(c2, f, m2, m1, base, tca, limit, data2)
+        _checkcopies(c2, f, m2, m1, base, tca, dirtyc2, limit, data2)
 
     copy = dict(data1['copy'].items() + data2['copy'].items())
     fullcopy = dict(data1['fullcopy'].items() + data2['fullcopy'].items())
@@ -460,8 +460,8 @@ def mergecopies(repo, c1, c2, base):
              'incompletediverge': bothincompletediverge
             }
     for f in bothnew:
-        _checkcopies(c1, f, m1, m2, base, tca, limit, both1)
-        _checkcopies(c2, f, m2, m1, base, tca, limit, both2)
+        _checkcopies(c1, f, m1, m2, base, tca, dirtyc1, limit, both1)
+        _checkcopies(c2, f, m2, m1, base, tca, dirtyc2, limit, both2)
     if dirtyc1:
         assert both2['incomplete'] == {}
         remainder = _combinecopies({}, both1['incomplete'], copy, bothdiverge,
@@ -590,7 +590,7 @@ def _related(f1, f2, limit):
     except StopIteration:
         return False
 
-def _checkcopies(ctx, f, m1, m2, base, tca, limit, data):
+def _checkcopies(ctx, f, m1, m2, base, tca, remotebase, limit, data):
     """
     check possible copies of f from m1 to m2
 
@@ -600,6 +600,7 @@ def _checkcopies(ctx, f, m1, m2, base, tca, limit, data):
     m2 = the destination manifest
     base = the changectx used as a merge base
     tca = topological common ancestor for graft-like scenarios
+    remotebase = True if base is outside tca::ctx, False otherwise
     limit = the rev number to not search beyond
     data = dictionary of dictionary to store copy data. (see mergecopies)
 
@@ -619,7 +620,7 @@ def _checkcopies(ctx, f, m1, m2, base, tca, limit, data):
     # In the case there is both backward and forward renames (before and after
     # the base) this is more complicated as we must detect a divergence.
     # We use 'backwards = False' in that case.
-    backwards = base != tca and f in mb
+    backwards = not remotebase and base != tca and f in mb
     getfctx = _makegetfctx(ctx)
 
     of = None
@@ -652,6 +653,10 @@ def _checkcopies(ctx, f, m1, m2, base, tca, limit, data):
                 data['copy'][of] = f
             elif of in mb:
                 data['copy'][f] = of
+            elif remotebase: # special case: a <- b <- a -> b "ping-pong" rename
+                data['copy'][of] = f
+                del data['fullcopy'][f]
+                data['fullcopy'][of] = f
             else: # divergence w.r.t. graft CA on one side of topological CA
                 for sf in seen:
                     if sf in mb:
