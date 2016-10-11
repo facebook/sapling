@@ -611,6 +611,7 @@ def _checkcopies(ctx, f, m1, m2, base, tca, remotebase, limit, data):
     """
 
     mb = base.manifest()
+    mta = tca.manifest()
     # Might be true if this call is about finding backward renames,
     # This happens in the case of grafts because the DAG is then rotated.
     # If the file exists in both the base and the source, we are not looking
@@ -665,8 +666,17 @@ def _checkcopies(ctx, f, m1, m2, base, tca, remotebase, limit, data):
                         break
             return
 
-    if of in mb:
-        data['diverge'].setdefault(of, []).append(f)
+    if of in mta:
+        if backwards or remotebase:
+            data['incomplete'][of] = f
+        else:
+            for sf in seen:
+                if sf in mb:
+                    if tca == base:
+                        data['diverge'].setdefault(sf, []).append(f)
+                    else:
+                        data['incompletediverge'][sf] = [of, f]
+                    return
 
 def duplicatecopies(repo, rev, fromrev, skiprev=None):
     '''reproduce copies from fromrev to rev in the dirstate
