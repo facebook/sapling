@@ -333,7 +333,6 @@ def mergecopies(repo, c1, c2, ca):
 
     # see _checkcopies documentation below for these dicts
     copy1, copy2 = {}, {}
-    movewithdir1, movewithdir2 = {}, {}
     fullcopy1, fullcopy2 = {}, {}
     diverge = {}
 
@@ -351,7 +350,6 @@ def mergecopies(repo, c1, c2, ca):
         _checkcopies(c2, f, m2, m1, ca, limit, diverge, copy2, fullcopy2)
 
     copy = dict(copy1.items() + copy2.items())
-    movewithdir = dict(movewithdir1.items() + movewithdir2.items())
     fullcopy = dict(fullcopy1.items() + fullcopy2.items())
 
     renamedelete = {}
@@ -395,7 +393,7 @@ def mergecopies(repo, c1, c2, ca):
     del divergeset
 
     if not fullcopy:
-        return copy, movewithdir, diverge, renamedelete
+        return copy, {}, diverge, renamedelete
 
     repo.ui.debug("  checking for directory renames\n")
 
@@ -433,12 +431,13 @@ def mergecopies(repo, c1, c2, ca):
     del d1, d2, invalid
 
     if not dirmove:
-        return copy, movewithdir, diverge, renamedelete
+        return copy, {}, diverge, renamedelete
 
     for d in dirmove:
         repo.ui.debug("   discovered dir src: '%s' -> dst: '%s'\n" %
                       (d, dirmove[d]))
 
+    movewithdir = {}
     # check unaccounted nonoverlapping files against directory moves
     for f in u1r + u2r:
         if f not in fullcopy:
