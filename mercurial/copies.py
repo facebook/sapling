@@ -332,9 +332,15 @@ def mergecopies(repo, c1, c2, ca):
     ma = ca.manifest()
 
     # see _checkcopies documentation below for these dicts
-    copy1, copy2 = {}, {}
-    fullcopy1, fullcopy2 = {}, {}
-    diverge = {}
+    diverge = {} # divergence data is shared
+    data1 = {'copy': {},
+             'fullcopy': {},
+             'diverge': diverge,
+            }
+    data2 = {'copy': {},
+             'fullcopy': {},
+             'diverge': diverge,
+            }
 
     # find interesting file sets from manifests
     addedinm1 = m1.filesnotin(ma)
@@ -344,13 +350,13 @@ def mergecopies(repo, c1, c2, ca):
     bothnew = sorted(addedinm1 & addedinm2)
 
     for f in u1u:
-        _checkcopies(c1, f, m1, m2, ca, limit, diverge, copy1, fullcopy1)
+        _checkcopies(c1, f, m1, m2, ca, limit, data1)
 
     for f in u2u:
-        _checkcopies(c2, f, m2, m1, ca, limit, diverge, copy2, fullcopy2)
+        _checkcopies(c2, f, m2, m1, ca, limit, data2)
 
-    copy = dict(copy1.items() + copy2.items())
-    fullcopy = dict(fullcopy1.items() + fullcopy2.items())
+    copy = dict(data1['copy'].items() + data2['copy'].items())
+    fullcopy = dict(data1['fullcopy'].items() + data2['fullcopy'].items())
 
     renamedelete = {}
     renamedeleteset = set()
@@ -369,10 +375,14 @@ def mergecopies(repo, c1, c2, ca):
     if bothnew:
         repo.ui.debug("  unmatched files new in both:\n   %s\n"
                       % "\n   ".join(bothnew))
-    bothdiverge, _copy, _fullcopy = {}, {}, {}
+    bothdiverge = {}
+    bothdata = {'copy': {},
+                'fullcopy': {},
+                'diverge': bothdiverge,
+               }
     for f in bothnew:
-        _checkcopies(c1, f, m1, m2, ca, limit, bothdiverge, _copy, _fullcopy)
-        _checkcopies(c2, f, m2, m1, ca, limit, bothdiverge, _copy, _fullcopy)
+        _checkcopies(c1, f, m1, m2, ca, limit, bothdata)
+        _checkcopies(c2, f, m2, m1, ca, limit, bothdata)
     for of, fl in bothdiverge.items():
         if len(fl) == 2 and fl[0] == fl[1]:
             copy[fl[0]] = of # not actually divergent, just matching renames
@@ -487,7 +497,7 @@ def _related(f1, f2, limit):
     except StopIteration:
         return False
 
-def _checkcopies(ctx, f, m1, m2, base, limit, diverge, copy, fullcopy):
+def _checkcopies(ctx, f, m1, m2, base, limit, data):
     """
     check possible copies of f from m1 to m2
 
@@ -497,9 +507,10 @@ def _checkcopies(ctx, f, m1, m2, base, limit, diverge, copy, fullcopy):
     m2 = the destination manifest
     base = the changectx used as a merge base
     limit = the rev number to not search beyond
-    diverge = record all diverges in this dict
-    copy = record all non-divergent copies in this dict
-    fullcopy = record all copies in this dict
+    data = dictionary of dictionary to store copy data. The keys are:
+    - diverge = record all diverges in this dict
+    - copy = record all non-divergent copies in this dict
+    - fullcopy = record all copies in this dict
 
     note: limit is only an optimization, and there is no guarantee that
     irrelevant revisions will not be limited
@@ -522,7 +533,7 @@ def _checkcopies(ctx, f, m1, m2, base, limit, diverge, copy, fullcopy):
             continue
         seen.add(of)
 
-        fullcopy[f] = of # remember for dir rename detection
+        data['fullcopy'][f] = of # remember for dir rename detection
         if of not in m2:
             continue # no match, keep looking
         if m2[of] == mb.get(of):
@@ -532,11 +543,11 @@ def _checkcopies(ctx, f, m1, m2, base, limit, diverge, copy, fullcopy):
         # unrelated to the droids we are looking for.
         cr = _related(oc, c2, base.rev())
         if cr and (of == f or of == c2.path()): # non-divergent
-            copy[f] = of
+            data['copy'][f] = of
             return
 
     if of in mb:
-        diverge.setdefault(of, []).append(f)
+        data['diverge'].setdefault(of, []).append(f)
 
 def duplicatecopies(repo, rev, fromrev, skiprev=None):
     '''reproduce copies from fromrev to rev in the dirstate
