@@ -115,7 +115,7 @@ def forksearch(repo, diffid):
 
         if rev is None:
             # walked the entire repo and couldn't find the diff
-            return ([], None)
+            raise error.Abort('Could not find diff D%s in changelog' % diffid)
 
         return ([rev], None)
 
@@ -219,7 +219,15 @@ def revsetdiff(repo, subset, diffid):
     elif vcs == 'hg':
         rev = parsedesc(repo, resp, ignoreparsefailure=True)
         if rev:
-            return [rev.encode('utf-8')]
+            # The response from phabricator contains a changeset ID.
+            # Convert it back to a rev number.
+            try:
+                node = repo[rev.encode('utf-8')]
+            except error.RepoLookupError:
+                raise error.Abort('Landed commit for diff D%s not available '
+                                  'in current repository: run "hg pull" '
+                                  'to retrieve it' % diffid)
+            return [node.rev()]
 
         # commit is still local, get its hash
 
