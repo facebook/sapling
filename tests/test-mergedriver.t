@@ -86,6 +86,9 @@ merge driver that always takes other versions
   local: ede3d67b8d0fb0052854c85fb16823c825d21060
   other: e0cfe070a2bbd0b727903026b7026cb0917e63b3
   merge driver: python:$TESTTMP/mergedriver-other.py (state "s")
+  labels:
+    local: working copy
+    other: merge rev
   file extras: bar.txt (ancestorlinknode = b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92)
   file: bar.txt (record type "F", state "r", hash 9d6caa30f54d05af0edb194bfa26137b109f2112)
     local path: bar.txt (flags "")
@@ -142,6 +145,9 @@ mark a file driver-resolved, and leave others unresolved
   local: ede3d67b8d0fb0052854c85fb16823c825d21060
   other: e0cfe070a2bbd0b727903026b7026cb0917e63b3
   merge driver: python:$TESTTMP/mergedriver-auto1.py (state "m")
+  labels:
+    local: working copy
+    other: merge rev
   file extras: bar.txt (ancestorlinknode = b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92)
   file: bar.txt (record type "F", state "u", hash 9d6caa30f54d05af0edb194bfa26137b109f2112)
     local path: bar.txt (flags "")
@@ -162,6 +168,9 @@ mark a file driver-resolved, and leave others unresolved
   local: ede3d67b8d0fb0052854c85fb16823c825d21060
   other: e0cfe070a2bbd0b727903026b7026cb0917e63b3
   merge driver: python:$TESTTMP/mergedriver-auto1.py (state "m")
+  labels:
+    local: working copy
+    other: merge rev
   file extras: bar.txt (ancestorlinknode = b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92)
   file: bar.txt (record type "F", state "r", hash 9d6caa30f54d05af0edb194bfa26137b109f2112)
     local path: bar.txt (flags "")
@@ -247,6 +256,9 @@ implicitly makes them resolved
   local: ede3d67b8d0fb0052854c85fb16823c825d21060
   other: e0cfe070a2bbd0b727903026b7026cb0917e63b3
   merge driver: python:$TESTTMP/mergedriver-driveronly.py (state "m")
+  labels:
+    local: working copy
+    other: merge rev
   file extras: bar.txt (ancestorlinknode = b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92)
   file: bar.txt (record type "D", state "d", hash 9d6caa30f54d05af0edb194bfa26137b109f2112)
     local path: bar.txt (flags "")
@@ -304,6 +316,9 @@ XXX shouldn't output a warning
   local: ede3d67b8d0fb0052854c85fb16823c825d21060
   other: e0cfe070a2bbd0b727903026b7026cb0917e63b3
   merge driver: python:$TESTTMP/mergedriver-special.py (state "s")
+  labels:
+    local: working copy
+    other: merge rev
   file extras: bar.txt (ancestorlinknode = b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92)
   file: bar.txt (record type "F", state "r", hash 9d6caa30f54d05af0edb194bfa26137b109f2112)
     local path: bar.txt (flags "")
@@ -350,6 +365,9 @@ XXX shouldn't output a warning
   local: ede3d67b8d0fb0052854c85fb16823c825d21060
   other: e0cfe070a2bbd0b727903026b7026cb0917e63b3
   merge driver: python:$TESTTMP/mergedriver-exit.py (state "m")
+  labels:
+    local: working copy
+    other: merge rev
   file extras: bar.txt (ancestorlinknode = b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92)
   file: bar.txt (record type "F", state "u", hash 9d6caa30f54d05af0edb194bfa26137b109f2112)
     local path: bar.txt (flags "")
@@ -402,6 +420,9 @@ raise an error
   local: ede3d67b8d0fb0052854c85fb16823c825d21060
   other: e0cfe070a2bbd0b727903026b7026cb0917e63b3
   merge driver: python:$TESTTMP/mergedriver-mark-and-raise.py (state "u")
+  labels:
+    local: working copy
+    other: merge rev
   file extras: bar.txt (ancestorlinknode = b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92)
   file: bar.txt (record type "F", state "r", hash 9d6caa30f54d05af0edb194bfa26137b109f2112)
     local path: bar.txt (flags "")
@@ -546,6 +567,9 @@ verify behavior with different merge driver
   local: ede3d67b8d0fb0052854c85fb16823c825d21060
   other: e0cfe070a2bbd0b727903026b7026cb0917e63b3
   merge driver: python:fail (state "s")
+  labels:
+    local: working copy
+    other: merge rev
   file extras: bar.txt (ancestorlinknode = b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92)
   file: bar.txt (record type "F", state "u", hash 9d6caa30f54d05af0edb194bfa26137b109f2112)
     local path: bar.txt (flags "")
@@ -562,6 +586,9 @@ verify behavior with different merge driver
   * version 2 records
   local: ede3d67b8d0fb0052854c85fb16823c825d21060
   other: e0cfe070a2bbd0b727903026b7026cb0917e63b3
+  labels:
+    local: working copy
+    other: merge rev
   file extras: bar.txt (ancestorlinknode = b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92)
   file: bar.txt (record type "F", state "r", hash 9d6caa30f54d05af0edb194bfa26137b109f2112)
     local path: bar.txt (flags "")
