@@ -126,7 +126,7 @@ class sqlindexapi(indexapi):
         self.sqlcursor = None
         self.sqlconn = None
 
-    def addbundle(self, bundleid, nodes):
+    def addbundle(self, bundleid, nodes, commit=True):
         """Takes a bundleid and a list of nodes in that bundle and records that
         each node is contained in that bundle."""
         if not self._connected:
@@ -141,9 +141,10 @@ class sqlindexapi(indexapi):
                 "VALUES (%s, %s, %s) ON DUPLICATE KEY UPDATE "
                 "bundle=VALUES(bundle)",
                 params=(node, bundleid, self.reponame))
-        self.sqlconn.commit()
+        if commit:
+            self.sqlconn.commit()
 
-    def addbookmark(self, bookmark, node):
+    def addbookmark(self, bookmark, node, commit=True):
         """Takes a bookmark name and hash, and records mapping in the metadata
         store."""
         if not self._connected:
@@ -155,7 +156,14 @@ class sqlindexapi(indexapi):
             "INSERT INTO bookmarkstonode(bookmark, node, reponame) "
             "VALUES (%s, %s, %s) ON DUPLICATE KEY UPDATE node=VALUES(node)",
             params=(bookmark, node, self.reponame))
+        if commit:
+            self.sqlconn.commit()
 
+    def addbookmarkandbundle(self, bundleid, nodes, bookmark, bookmarknode):
+        if not self._connected:
+            self.sqlconnect()
+        self.addbundle(bundleid, nodes, commit=False)
+        self.addbookmark(bookmark, bookmarknode, commit=False)
         self.sqlconn.commit()
 
     def listbookmarks(self):
@@ -224,6 +232,10 @@ class fileindexapi(indexapi):
     def addbookmark(self, bookmark, node):
         bookmarkpath = os.path.join(self._bookmarkmap, bookmark)
         self._write(bookmarkpath, node)
+
+    def addbookmarkandbundle(self, bundleid, nodes, bookmark, bookmarknode):
+        self.addbookmark(bookmark, bookmarknode)
+        self.addbundle(bundleid, nodes)
 
     def getbundle(self, node):
         nodepath = os.path.join(self._nodemap, node)

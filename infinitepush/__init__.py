@@ -564,12 +564,8 @@ def bundle2scratchbranch(op, part):
             with open(bundlefile, 'r') as f:
                 key = store.write(f.read())
             if bookmark:
-                try:
-                    index.addbookmarkandbundle(key, newnodes,
-                                               bookmark, newnodes[-1])
-                except NotImplementedError:
-                    index.addbookmark(bookmark, newnodes[-1])
-                    index.addbundle(key, newnodes)
+                index.addbookmarkandbundle(key, newnodes,
+                                           bookmark, newnodes[-1])
             else:
                 # Push new scratch commits with no bookmark
                 index.addbundle(key, newnodes)
