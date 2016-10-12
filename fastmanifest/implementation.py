@@ -761,8 +761,13 @@ class manifestfactory(object):
             node = origself.addrevision(
                 text, transaction, link, p1, p2, cachedelta)
             hexnode = revlog.hex(node)
-            fastcache.put_inmemory(hexnode,
-                                   m._cachedmanifest())
+
+            # Even though we checked 'm._incache()' above, it may have since
+            # disappeared, since background processes could be modifying the
+            # cache.
+            cachedmf = m._cachedmanifest()
+            if cachedmf:
+                fastcache.put_inmemory(hexnode, cachedmf)
 
             self.ui.debug("[FM] wrote manifest %s\n" % (hexnode,))
 
