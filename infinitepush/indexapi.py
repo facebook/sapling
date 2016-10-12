@@ -129,6 +129,8 @@ class sqlindexapi(indexapi):
     def addbundle(self, bundleid, nodes):
         """Takes a bundleid and a list of nodes in that bundle and records that
         each node is contained in that bundle."""
+        if not self._connected:
+            self.sqlconnect()
         self.log.info("ADD BUNDLE %r %r %r" % (self.reponame, bundleid, nodes))
         self.sqlcursor.execute(
             "INSERT INTO bundles(bundle, reponame) VALUES "
