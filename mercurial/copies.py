@@ -285,10 +285,10 @@ def _makegetfctx(ctx):
         return fctx
     return util.lrucachefunc(makectx)
 
-def mergecopies(repo, c1, c2, ca):
+def mergecopies(repo, c1, c2, base):
     """
     Find moves and copies between context c1 and c2 that are relevant
-    for merging.
+    for merging. 'base' will be used as the merge base.
 
     Returns four dicts: "copy", "movewithdir", "diverge", and
     "renamedelete".
@@ -329,7 +329,7 @@ def mergecopies(repo, c1, c2, ca):
 
     m1 = c1.manifest()
     m2 = c2.manifest()
-    ma = ca.manifest()
+    mb = base.manifest()
 
     # gather data from _checkcopies:
     # - diverge = record all diverges in this dict
@@ -346,17 +346,17 @@ def mergecopies(repo, c1, c2, ca):
             }
 
     # find interesting file sets from manifests
-    addedinm1 = m1.filesnotin(ma)
-    addedinm2 = m2.filesnotin(ma)
+    addedinm1 = m1.filesnotin(mb)
+    addedinm2 = m2.filesnotin(mb)
     u1r, u2r = _computenonoverlap(repo, c1, c2, addedinm1, addedinm2)
     u1u, u2u = u1r, u2r
     bothnew = sorted(addedinm1 & addedinm2)
 
     for f in u1u:
-        _checkcopies(c1, f, m1, m2, ca, limit, data1)
+        _checkcopies(c1, f, m1, m2, base, limit, data1)
 
     for f in u2u:
-        _checkcopies(c2, f, m2, m1, ca, limit, data2)
+        _checkcopies(c2, f, m2, m1, base, limit, data2)
 
     copy = dict(data1['copy'].items() + data2['copy'].items())
     fullcopy = dict(data1['fullcopy'].items() + data2['fullcopy'].items())
@@ -384,8 +384,8 @@ def mergecopies(repo, c1, c2, ca):
                 'diverge': bothdiverge,
                }
     for f in bothnew:
-        _checkcopies(c1, f, m1, m2, ca, limit, bothdata)
-        _checkcopies(c2, f, m2, m1, ca, limit, bothdata)
+        _checkcopies(c1, f, m1, m2, base, limit, bothdata)
+        _checkcopies(c2, f, m2, m1, base, limit, bothdata)
     for of, fl in bothdiverge.items():
         if len(fl) == 2 and fl[0] == fl[1]:
             copy[fl[0]] = of # not actually divergent, just matching renames
