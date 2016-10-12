@@ -564,9 +564,8 @@ def _checkcopies(ctx, f, m1, m2, base, tca, limit, data):
     # traversed backwards.
     #
     # In the case there is both backward and forward renames (before and after
-    # the base) this is more complicated as we must detect a divergence. This
-    # is currently broken and hopefully some later code update will make that
-    # work (we use 'backwards = False' in that case)
+    # the base) this is more complicated as we must detect a divergence.
+    # We use 'backwards = False' in that case.
     backwards = base != tca and f in mb
     getfctx = _makegetfctx(ctx)
 
@@ -600,6 +599,12 @@ def _checkcopies(ctx, f, m1, m2, base, tca, limit, data):
                 data['copy'][of] = f
             elif of in mb:
                 data['copy'][f] = of
+            else: # divergence w.r.t. graft CA on one side of topological CA
+                for sf in seen:
+                    if sf in mb:
+                        assert sf not in data['diverge']
+                        data['diverge'][sf] = [f, of]
+                        break
             return
 
     if of in mb:

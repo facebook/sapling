@@ -982,6 +982,9 @@ Test the cases A.0 (f4x) and A.6 (f3x)
 
   $ HGEDITOR="echo D1 >" hg graft -r 'desc("D0")' --edit
   grafting 3:b69f5839d2d9 "D0"
+  note: possible conflict - f3b was renamed multiple times to:
+   f3d
+   f3a
   warning: can't find ancestor for 'f3d' copied from 'f3b'!
 
 Set up the repository for some further tests
