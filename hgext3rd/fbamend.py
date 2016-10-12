@@ -32,6 +32,7 @@ from mercurial import (
 from mercurial.node import hex
 from mercurial import lock as lockmod
 from mercurial.i18n import _
+from itertools import chain
 from contextlib import nested
 
 cmdtable = {}
@@ -98,6 +99,18 @@ def uisetup(ui):
             '', 'rebase', False, _('rebase the changeset if necessary')
         ))
     extensions.afterloaded('evolve', wrapnext)
+
+    def wraprebase(loaded):
+        if not loaded:
+            return
+        entry = extensions.wrapcommand(rebasemod.cmdtable, 'rebase',
+                                       restack)
+        entry[1].append((
+            '', 'restack', False, _('rebase all changesets in the current '
+                                    'stack onto the latest version of their '
+                                    'respective parents')
+        ))
+    extensions.afterloaded('rebase', wraprebase)
 
 def commit(orig, ui, repo, *pats, **opts):
     if opts.get("amend"):
@@ -452,7 +465,7 @@ def _nextrebase(orig, ui, repo, **opts):
         return
 
     # When the transaction closes, inhibition markers will be added back to
-    # changesets that have non-obsolete descendents, so those won't be
+    # changesets that have non-obsolete descendants, so those won't be
     # "stripped". As such, we're relying on the inhibition markers to take
     # care of the hard work of identifying which changesets not to strip.
     with repo.transaction('nextrebase') as tr:
@@ -484,13 +497,64 @@ def _nextrebase(orig, ui, repo, **opts):
 
         # Remove any preamend bookmarks on precursors, as these would
         # create unnecessary inhibition markers.
-        for p in precursors:
-            for bookmark in repo.nodebookmarks(p.node()):
-                if bookmark.endswith('.preamend'):
-                    repo._bookmarks.pop(bookmark, None)
+        _clearpreamend(repo, precursors)
 
     # Run `hg next` to update to the newly rebased child.
     return orig(ui, repo, **opts)
+
+def restack(orig, ui, repo, **opts):
+    """Wrapper around `hg rebase` adding the `--restack` option, which rebases
+    all "unstable" descendants of an obsolete changeset onto the latest
+    version of that changeset. This is similar to (and intended as a
+    replacement for) the `hg evolve --all` command.
+    """
+    if not opts['restack']:
+        return orig(ui, repo, **opts)
+
+    if opts['rev']:
+        raise error.Abort(_("cannot use both --rev and --restack"))
+
+    if opts['dest']:
+        raise error.Abort(_("cannot use both --dest and --restack"))
+
+    if opts['source']:
+        raise error.Abort(_("cannot use both --source and --restack"))
+
+    if opts['base']:
+        raise error.Abort(_("cannot use both --base and --restack"))
+
+    if opts['abort']:
+        raise error.Abort(_("cannot use both --abort and --restack"))
+
+    if opts['continue']:
+        raise error.Abort(_("cannot use both --continue and --restack"))
+
+    with nested(repo.wlock(), repo.lock()):
+        cmdutil.checkunfinished(repo)
+        cmdutil.bailifchanged(repo)
+
+        base = repo['.']
+        precursors = list(repo.set('allprecursors(%d)', base.rev()))
+        descendants = chain.from_iterable(p.descendants() for p in precursors)
+
+        # Overwrite source and destination, leave all other options.
+        opts['rev'] = [d.rev() for d in descendants]
+        opts['dest'] = base.rev()
+
+        ret = None
+        with repo.transaction('restack') as tr:
+            try:
+                ret = orig(ui, repo, **opts)
+            except error.InterventionRequired:
+                tr.close()
+                raise
+            _clearpreamend(repo, precursors)
+            if inhibitmod:
+                inhibitmod._deinhibitmarkers(
+                    repo,
+                    (p.node() for p in precursors)
+                )
+        return ret
 
 def _preamendname(repo, node):
     suffix = '.preamend'
@@ -509,6 +573,13 @@ def _usereducation(ui):
     education = ui.config('fbamend', 'education')
     if education:
         ui.warn(education + "\n")
+
+def _clearpreamend(repo, contexts):
+    """Remove any preamend bookmarks on the given change contexts."""
+    for ctx in contexts:
+        for bookmark in repo.nodebookmarks(ctx.node()):
+            if bookmark.endswith('.preamend'):
+                repo._bookmarks.pop(bookmark, None)
 
 ### bookmarks api compatibility layer ###
 def bmactivate(repo, mark):

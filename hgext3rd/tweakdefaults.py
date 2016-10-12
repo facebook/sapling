@@ -547,7 +547,7 @@ def _rebase(orig, ui, repo, **opts):
                                                   'rebasekeepdate'):
         opts['date'] = currentdate()
 
-    if opts.get('continue') or opts.get('abort'):
+    if opts.get('continue') or opts.get('abort') or opts.get('restack'):
         return orig(ui, repo, **opts)
 
     # 'hg rebase' w/o args should do nothing
