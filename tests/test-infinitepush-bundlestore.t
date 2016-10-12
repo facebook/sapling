@@ -331,8 +331,9 @@ Non-fastforward scratch bookmark push
   $ hg push -r . --to scratch/mybranch
   pushing to ssh://user@dummy/repo
   searching for changes
-  remote: non-forward push. Use --force to override
+  remote: non-forward push
   abort: push failed on remote
+  (use --force to override)
   [255]
 
   $ hg push -r . --to scratch/mybranch --force

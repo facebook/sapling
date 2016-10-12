@@ -511,7 +511,8 @@ def _getrevs(bundle, oldnode, force):
     if force:
         return revs
     else:
-        raise error.Abort(_('non-forward push. Use --force to override'))
+        raise error.Abort(_('non-forward push'),
+                          hint=_('use --force to override'))
 
 @bundle2.parthandler(scratchbranchparttype, ('bookmark', 'create', 'force',))
 def bundle2scratchbranch(op, part):
