@@ -241,3 +241,11 @@ githelp for apply with no options
 githelp for apply with directory strip custom
   $ hg githelp -- apply -p 5
   hg import -p 5
+
+git merge-base
+  $ hg githelp -- git merge-base --is-ancestor
+  ignoring unknown option --is-ancestor
+  NOTE: ancestors() is part of the revset language.
+  Learn more about revsets with 'hg help revsets'
+  
+  hg log -T '{node}\n' -r 'ancestor(A,B)'

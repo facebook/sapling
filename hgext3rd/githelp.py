@@ -647,8 +647,8 @@ def mergebase(ui, repo, *args, **kwargs):
     cmd = Command("log -T '{node}\\n' -r 'ancestor(%s,%s)'"
                   % (args[0], args[1]))
 
-    ui.status(_('NOTE: ancestors() is part of the revset language.\n',
-              "Learn more about revsets with 'hg help revsets'\n\n"))
+    ui.status(_('NOTE: ancestors() is part of the revset language.\n'),
+              _("Learn more about revsets with 'hg help revsets'\n\n"))
     ui.status((str(cmd)), "\n")
 
 def mergetool(ui, repo, *args, **kwargs):
