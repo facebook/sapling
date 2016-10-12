@@ -427,8 +427,8 @@ Graft with --log
   $ hg graft 3 --log -u foo
   grafting 3:4c60f11aa304 "3"
   warning: can't find ancestor for 'c' copied from 'b'!
-  $ hg log --template '{rev} {parents} {desc}\n' -r tip
-  14 1:5d205f8b35b6  3
+  $ hg log --template '{rev}:{node|short} {parents} {desc}\n' -r tip
+  14:0c921c65ef1e 1:5d205f8b35b6  3
   (grafted from 4c60f11aa304a54ae1c199feb94e7fc771e51ed8)
 
 Resolve conflicted graft
@@ -620,7 +620,7 @@ Test simple destination
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     2
   
-  changeset:   14:f64defefacee
+  changeset:   14:0c921c65ef1e
   parent:      1:5d205f8b35b6
   user:        foo
   date:        Thu Jan 01 00:00:00 1970 +0000

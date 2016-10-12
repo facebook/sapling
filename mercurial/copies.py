@@ -543,7 +543,8 @@ def _checkcopies(ctx, f, m1, m2, base, limit, data):
         # unrelated to the droids we are looking for.
         cr = _related(oc, c2, base.rev())
         if cr and (of == f or of == c2.path()): # non-divergent
-            data['copy'][f] = of
+            if of in mb:
+                data['copy'][f] = of
             return
 
     if of in mb:
