@@ -331,7 +331,10 @@ def mergecopies(repo, c1, c2, ca):
     m2 = c2.manifest()
     ma = ca.manifest()
 
-    # see _checkcopies documentation below for these dicts
+    # gather data from _checkcopies:
+    # - diverge = record all diverges in this dict
+    # - copy = record all non-divergent copies in this dict
+    # - fullcopy = record all copies in this dict
     diverge = {} # divergence data is shared
     data1 = {'copy': {},
              'fullcopy': {},
@@ -507,10 +510,7 @@ def _checkcopies(ctx, f, m1, m2, base, limit, data):
     m2 = the destination manifest
     base = the changectx used as a merge base
     limit = the rev number to not search beyond
-    data = dictionary of dictionary to store copy data. The keys are:
-    - diverge = record all diverges in this dict
-    - copy = record all non-divergent copies in this dict
-    - fullcopy = record all copies in this dict
+    data = dictionary of dictionary to store copy data. (see mergecopies)
 
     note: limit is only an optimization, and there is no guarantee that
     irrelevant revisions will not be limited
