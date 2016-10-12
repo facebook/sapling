@@ -307,6 +307,8 @@ h: l vs l, different
   $ echo 1 > a
   $ echo 1 > b
   $ chmod +x b
+  $ echo 1 > bx
+  $ chmod +x bx
   $ echo x > c
   $ chmod +x c
   $ echo 1 > d
@@ -321,6 +323,8 @@ h: l vs l, different
   $ hg up -qr0
   $ echo 2 > a
   $ echo 2 > b
+  $ echo 2 > bx
+  $ chmod +x bx
   $ echo x > c
   $ ln -s 2 d
   $ ln -s x e
@@ -333,6 +337,8 @@ h: l vs l, different
   merging a
   warning: cannot merge flags for b
   merging b
+  warning: cannot merge flags for bx
+  merging bx
   warning: cannot merge flags for c
   merging d
   warning: internal :merge cannot merge symlinks for d
@@ -345,29 +351,31 @@ h: l vs l, different
   warning: conflicts while merging h! (edit, then use 'hg resolve --mark')
   warning: conflicts while merging a! (edit, then use 'hg resolve --mark')
   warning: conflicts while merging b! (edit, then use 'hg resolve --mark')
-  3 files updated, 0 files merged, 0 files removed, 5 files unresolved
+  warning: conflicts while merging bx! (edit, then use 'hg resolve --mark')
+  3 files updated, 0 files merged, 0 files removed, 6 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
   $ hg resolve -l
   U a
   U b
+  U bx
   U d
   U f
   U h
   $ tellmeabout a
   a is a plain file with content:
-  <<<<<<< working copy: 0139c5610547 - test: 2
+  <<<<<<< working copy: 0c617753b41b - test: 2
   2
   =======
   1
-  >>>>>>> merge rev:    97e29675e796  - test: 1
+  >>>>>>> merge rev:    2e60aa20b912  - test: 1
   $ tellmeabout b
   b is a plain file with content:
-  <<<<<<< working copy: 0139c5610547 - test: 2
+  <<<<<<< working copy: 0c617753b41b - test: 2
   2
   =======
   1
-  >>>>>>> merge rev:    97e29675e796  - test: 1
+  >>>>>>> merge rev:    2e60aa20b912  - test: 1
   $ tellmeabout c
   c is a plain file with content:
   x
@@ -392,6 +400,8 @@ h: l vs l, different
   merging a
   warning: cannot merge flags for b
   merging b
+  warning: cannot merge flags for bx
+  merging bx
   warning: cannot merge flags for c
   merging d
   warning: internal :merge cannot merge symlinks for d
@@ -404,23 +414,24 @@ h: l vs l, different
   warning: conflicts while merging h! (edit, then use 'hg resolve --mark')
   warning: conflicts while merging a! (edit, then use 'hg resolve --mark')
   warning: conflicts while merging b! (edit, then use 'hg resolve --mark')
-  3 files updated, 0 files merged, 0 files removed, 5 files unresolved
+  warning: conflicts while merging bx! (edit, then use 'hg resolve --mark')
+  3 files updated, 0 files merged, 0 files removed, 6 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
   $ tellmeabout a
   a is a plain file with content:
-  <<<<<<< working copy: 97e29675e796  - test: 1
+  <<<<<<< working copy: 2e60aa20b912  - test: 1
   1
   =======
   2
-  >>>>>>> merge rev:    0139c5610547 - test: 2
+  >>>>>>> merge rev:    0c617753b41b - test: 2
   $ tellmeabout b
   b is an executable file with content:
-  <<<<<<< working copy: 97e29675e796  - test: 1
+  <<<<<<< working copy: 2e60aa20b912  - test: 1
   1
   =======
   2
-  >>>>>>> merge rev:    0139c5610547 - test: 2
+  >>>>>>> merge rev:    0c617753b41b - test: 2
   $ tellmeabout c
   c is an executable file with content:
   x
