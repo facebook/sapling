@@ -118,7 +118,7 @@ class remotestore(basestore.basestore):
         raise NotImplementedError('abstract method')
 
     def _get(self, hash):
-        '''Get file with the given hash from the remote store.'''
+        '''Get a iterator for content with the given hash.'''
         raise NotImplementedError('abstract method')
 
     def _stat(self, hashes):

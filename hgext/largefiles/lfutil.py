@@ -231,7 +231,8 @@ def copyfromcache(repo, hash, filename):
     # don't use atomic writes in the working copy.
     with open(path, 'rb') as srcfd:
         with wvfs(filename, 'wb') as destfd:
-            gothash = copyandhash(srcfd, destfd)
+            gothash = copyandhash(
+                util.filechunkiter(srcfd), destfd)
     if gothash != hash:
         repo.ui.warn(_('%s: data corruption in %s with hash %s\n')
                      % (filename, path, gothash))
