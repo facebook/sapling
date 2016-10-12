@@ -183,3 +183,10 @@ TEST(Hash, assignment) {
   h2 = Hash();
   EXPECT_EQ("0000000000000000000000000000000000000000", h2.toString());
 }
+
+TEST(Hash, getHashCode) {
+  // This isn't so much because we care about the exact value of the hash code,
+  // but because we want to make sure that (at least on 64-bit machines), we are
+  // using 64 bits of data to contribute to the hash code.
+  EXPECT_EQ(folly::Endian::big(0xfaceb00cdeadbeef), testHash.getHashCode());
+}

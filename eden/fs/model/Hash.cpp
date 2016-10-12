@@ -51,6 +51,13 @@ std::string Hash::toString() const {
   return result;
 }
 
+std::size_t Hash::getHashCode() const {
+  static_assert(sizeof(size_t) <= RAW_SIZE, "crazy size_t type");
+  size_t result;
+  memcpy(&result, bytes_.data(), sizeof(size_t));
+  return result;
+}
+
 bool Hash::operator==(const Hash& otherHash) const {
   return bytes_ == otherHash.bytes_;
 }

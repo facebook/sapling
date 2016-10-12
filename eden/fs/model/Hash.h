@@ -59,6 +59,8 @@ class Hash : boost::totally_ordered<Hash> {
   /** @return 40-character [lowercase] hex representation of this hash. */
   std::string toString() const;
 
+  std::size_t getHashCode() const;
+
   bool operator==(const Hash&) const;
   bool operator<(const Hash&) const;
 
@@ -79,4 +81,13 @@ std::ostream& operator<<(std::ostream& os, const Hash& hash);
 /* Define toAppend() so folly::to<string>(Hash) will work */
 void toAppend(const Hash& hash, std::string* result);
 }
+}
+
+namespace std {
+template <>
+struct hash<facebook::eden::Hash> {
+  std::size_t operator()(const facebook::eden::Hash& hash) const {
+    return hash.getHashCode();
+  }
+};
 }
