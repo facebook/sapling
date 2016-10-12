@@ -478,7 +478,9 @@ class mergestate(object):
             if fca.node() == nullid and flags != flo:
                 if preresolve:
                     self._repo.ui.warn(
-                        _('warning: cannot merge flags for %s\n') % afile)
+                        _('warning: cannot merge flags for %s '
+                          'without common ancestor - keeping local flags\n')
+                        % afile)
             elif flags == fla:
                 flags = flo
         if preresolve:

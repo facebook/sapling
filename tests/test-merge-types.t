@@ -335,10 +335,10 @@ h: l vs l, different
 
   $ hg merge
   merging a
-  warning: cannot merge flags for b
+  warning: cannot merge flags for b without common ancestor - keeping local flags
   merging b
   merging bx
-  warning: cannot merge flags for c
+  warning: cannot merge flags for c without common ancestor - keeping local flags
   merging d
   warning: internal :merge cannot merge symlinks for d
   warning: conflicts while merging d! (edit, then use 'hg resolve --mark')
@@ -397,10 +397,10 @@ h: l vs l, different
   $ hg up -Cqr1
   $ hg merge
   merging a
-  warning: cannot merge flags for b
+  warning: cannot merge flags for b without common ancestor - keeping local flags
   merging b
   merging bx
-  warning: cannot merge flags for c
+  warning: cannot merge flags for c without common ancestor - keeping local flags
   merging d
   warning: internal :merge cannot merge symlinks for d
   warning: conflicts while merging d! (edit, then use 'hg resolve --mark')
