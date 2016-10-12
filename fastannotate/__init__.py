@@ -20,15 +20,22 @@ be faster than the vanilla 'annotate' if the cache is present.
     # backwards without a rebuild, this should be something that always moves
     # forward, usually it is "master" or "@".
     mainbranch = master
+
     # add a "fastannotate" command, and replace the default "annotate" command
     commands = fastannotate, annotate
+
+    # default format when no format flags are used (default: number)
+    defaultformat = changeset, user, date
+
     # replace hgweb's annotate implementation (default: False)
     # note: mainbranch should be set to a forward-only name, otherwise the
     # linelog cache may be rebuilt frequently, which leads to errors and
     # poor performance
     hgweb = True
+
     # use unfiltered repo for better performance
     unfilteredrepo = True
+
     # sacrifice correctness in some cases for performance (default: False)
     perfhack = True
 """
