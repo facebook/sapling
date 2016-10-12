@@ -70,7 +70,7 @@ def record(ui, repo, *pats, **opts):
     backup = ui.backupconfig('experimental', 'crecord')
     try:
         ui.setconfig('experimental', 'crecord', False, 'record')
-        commands.commit(ui, repo, *pats, **opts)
+        return commands.commit(ui, repo, *pats, **opts)
     finally:
         ui.restoreconfig(backup)
 

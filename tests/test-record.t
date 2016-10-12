@@ -77,6 +77,7 @@ Select no files
   examine changes to 'empty-rw'? [Ynesfdaq?] n
   
   no changes to record
+  [1]
 
   $ hg tip -p
   changeset:   -1:000000000000
