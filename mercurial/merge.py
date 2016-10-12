@@ -475,7 +475,7 @@ class mergestate(object):
         flo = fco.flags()
         fla = fca.flags()
         if 'x' in flags + flo + fla and 'l' not in flags + flo + fla:
-            if fca.node() == nullid:
+            if fca.node() == nullid and flags != flo:
                 if preresolve:
                     self._repo.ui.warn(
                         _('warning: cannot merge flags for %s\n') % afile)

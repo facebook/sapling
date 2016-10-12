@@ -337,7 +337,6 @@ h: l vs l, different
   merging a
   warning: cannot merge flags for b
   merging b
-  warning: cannot merge flags for bx
   merging bx
   warning: cannot merge flags for c
   merging d
@@ -400,7 +399,6 @@ h: l vs l, different
   merging a
   warning: cannot merge flags for b
   merging b
-  warning: cannot merge flags for bx
   merging bx
   warning: cannot merge flags for c
   merging d
