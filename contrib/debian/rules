@@ -7,5 +7,5 @@
 	dh $@ --with python2
 
 override_dh_auto_install:
-	python$(PYVERS) setup.py install --root $(CURDIR)/debian/remotefilelog --install-layout=deb
+	python$(PYVERS) setup.py install --root $(CURDIR)/debian/remotefilelog --install-layout=deb --component remotefilelog
 	find $(CURDIR)/debian/remotefilelog -name '*.egg-info' -delete
