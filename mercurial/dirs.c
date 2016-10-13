@@ -291,7 +291,7 @@ static PyMethodDef dirs_methods[] = {
 	{NULL} /* Sentinel */
 };
 
-static PyTypeObject dirsType = { PyObject_HEAD_INIT(NULL) };
+static PyTypeObject dirsType = { PyVarObject_HEAD_INIT(NULL, 0) };
 
 void dirs_module_init(PyObject *mod)
 {
