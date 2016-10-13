@@ -639,7 +639,7 @@ static PyObject *hashmangle(const char *src, Py_ssize_t len, const char sha[20])
 		memcopy(dest, &destlen, destsize, &src[lastdot],
 			len - lastdot - 1);
 
-	PyBytes_Check(ret);
+	assert(PyBytes_Check(ret));
 	Py_SIZE(ret) = destlen;
 
 	return ret;
@@ -752,7 +752,7 @@ PyObject *pathencode(PyObject *self, PyObject *args)
 		newobj = PyBytes_FromStringAndSize(NULL, newlen);
 
 		if (newobj) {
-			PyBytes_Check(newobj);
+			assert(PyBytes_Check(newobj));
 			Py_SIZE(newobj)--;
 			basicencode(PyBytes_AS_STRING(newobj), newlen, path,
 				    len + 1);
