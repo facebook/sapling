@@ -233,9 +233,7 @@ if sys.version_info[0] >= 3:
             """
             st = tokens[j]
             if st.type == token.STRING and st.string.startswith(("'", '"')):
-                rt = tokenize.TokenInfo(st.type, 'u%s' % st.string,
-                                        st.start, st.end, st.line)
-                tokens[j] = rt
+                tokens[j] = st._replace(string='u%s' % st.string)
 
         for i, t in enumerate(tokens):
             # Convert most string literals to byte literals. String literals
@@ -266,8 +264,7 @@ if sys.version_info[0] >= 3:
                     continue
 
                 # String literal. Prefix to make a b'' string.
-                yield tokenize.TokenInfo(t.type, 'b%s' % s, t.start, t.end,
-                                          t.line)
+                yield t._replace(string='b%s' % t.string)
                 continue
 
             # Insert compatibility imports at "from __future__ import" line.
@@ -287,10 +284,8 @@ if sys.version_info[0] >= 3:
                 for u in tokenize.tokenize(io.BytesIO(l).readline):
                     if u.type in (tokenize.ENCODING, token.ENDMARKER):
                         continue
-                    yield tokenize.TokenInfo(u.type, u.string,
-                                             (r, c + u.start[1]),
-                                             (r, c + u.end[1]),
-                                             '')
+                    yield u._replace(
+                        start=(r, c + u.start[1]), end=(r, c + u.end[1]))
                 continue
 
             # This looks like a function call.
@@ -322,8 +317,7 @@ if sys.version_info[0] >= 3:
                 # It changes iteritems to items as iteritems is not
                 # present in Python 3 world.
                 elif fn == 'iteritems':
-                    yield tokenize.TokenInfo(t.type, 'items',
-                                             t.start, t.end, t.line)
+                    yield t._replace(string='items')
                     continue
 
             # Emit unmodified token.
