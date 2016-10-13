@@ -315,11 +315,11 @@ datapack_handle_t *open_datapack(
 error_cleanup:
 
   if (handle->index_mmap != MAP_FAILED) {
-    munmap(handle->index_mmap, handle->index_file_sz);
+    munmap(handle->index_mmap, (size_t) handle->index_file_sz);
   }
 
   if (handle->data_mmap != MAP_FAILED) {
-    munmap(handle->data_mmap, handle->data_file_sz);
+    munmap(handle->data_mmap, (size_t) handle->data_file_sz);
   }
 
   if (handle && handle->indexfd != 0) {
@@ -342,8 +342,8 @@ success_cleanup:
 }
 
 void close_datapack(datapack_handle_t *handle) {
-  munmap(handle->index_mmap, handle->index_file_sz);
-  munmap(handle->data_mmap, handle->data_file_sz);
+  munmap(handle->index_mmap, (size_t) handle->index_file_sz);
+  munmap(handle->data_mmap, (size_t) handle->data_file_sz);
   close(handle->indexfd);
   close(handle->datafd);
   free(handle->fanout_table);
@@ -464,7 +464,7 @@ const get_delta_chain_link_result_t getdeltachainlink(
   link->delta_sz = load_le32(ptr);
   ptr += sizeof(uint32_t);
 
-  uint8_t *decompress_output = malloc(link->delta_sz);
+  uint8_t *decompress_output = malloc((size_t) link->delta_sz);
   if (decompress_output == NULL) {
     return (get_delta_chain_link_result_t) { GET_DELTA_CHAIN_LINK_OOM, NULL };
   }
@@ -549,7 +549,7 @@ delta_chain_t getdeltachain(
   }
 
   if (handle->paged_in_datapack_memory > MAX_PAGED_IN_DATAPACK) {
-    platform_madvise_away(handle->data_mmap, handle->data_file_sz);
+    platform_madvise_away(handle->data_mmap, (size_t) handle->data_file_sz);
   }
 
   result.code = GET_DELTA_CHAIN_OK;
