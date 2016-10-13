@@ -378,7 +378,10 @@ def _effect_str(effect):
     if effect.endswith('_background'):
         bg = True
         effect = effect[:-11]
-    attr, val, termcode = _terminfo_params[effect]
+    try:
+        attr, val, termcode = _terminfo_params[effect]
+    except KeyError:
+        return ''
     if attr:
         if termcode:
             return termcode
