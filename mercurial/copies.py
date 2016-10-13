@@ -338,6 +338,10 @@ def mergecopies(repo, c1, c2, base):
     dirtyc1 = not (base == _c1 or base.descendant(_c1))
     dirtyc2 = not (base== _c2 or base.descendant(_c2))
     graft = dirtyc1 or dirtyc2
+    tca = base
+    if graft:
+        tca = _c1.ancestor(_c2)
+
     limit = _findlimit(repo, c1.rev(), c2.rev())
     if limit is None:
         # no common ancestor, no copies
