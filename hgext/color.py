@@ -533,10 +533,16 @@ def debugcolor(ui, repo, **opts):
     _styles = {}
     for effect in _effects.keys():
         _styles[effect] = effect
+    if _terminfo_params:
+        for k, v in ui.configitems('color'):
+            if k.startswith('color.'):
+                _styles[k] = k[6:]
+            elif k.startswith('terminfo.'):
+                _styles[k] = k[9:]
     ui.write(('color mode: %s\n') % ui._colormode)
     ui.write(_('available colors:\n'))
-    for label, colors in _styles.items():
-        ui.write(('%s\n') % colors, label=label)
+    for colorname, label in _styles.items():
+        ui.write(('%s\n') % colorname, label=label)
 
 if os.name != 'nt':
     w32effects = None
