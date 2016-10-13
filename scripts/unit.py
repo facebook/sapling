@@ -59,7 +59,7 @@ def words(path):
     """
     return re.split('[^\w]+', os.path.splitext(path)[0])
 
-def interestingtests():
+def interestingtests(changed_files):
     """return a list of interesting test filenames"""
     tests = [p for p in os.listdir(os.path.join(reporoot, 'tests'))
              if p.startswith('test-') and p[-2:] in ['py', '.t']]
@@ -87,7 +87,7 @@ def interestingtests():
     # - test-githelp.t is interesting if githelp.py is changed
     # - test-remotefilelog-sparse.t is interesting if sparse.py is changed
     # - test-remotefilelog-foo.t is interesting if remotefilelog/* is changed
-    for path in changedfiles():
+    for path in changed_files:
         if path.startswith('tests/test-'):
             # for a test file, do not enable other tests but only itself
             result.add(os.path.basename(path))
@@ -171,10 +171,17 @@ def runtests(tests=None):
 
 def main():
     op = optparse.OptionParser()
+    op.add_option('-j', '--json',
+                  metavar='FILE',
+                  help='Write a JSON result file at the specified location')
     opts, args = op.parse_args()
-    jsonpath = args[0] if args else None
 
-    tests = interestingtests()
+    if args:
+        changed_files = args
+    else:
+        changed_files = changedfiles()
+
+    tests = interestingtests(changed_files)
     if tests:
         info('%d test%s to run: %s\n'
              % (len(tests), ('' if len(tests) == 1 else 's'), ' '.join(tests)))
@@ -184,8 +191,8 @@ def main():
         exitcode = 0
         report = {}
 
-    if jsonpath:
-        with open(jsonpath, 'w') as fp:
+    if opts.json:
+        with open(opts.json, 'w') as fp:
             json.dump(report, fp)
     return exitcode
 
