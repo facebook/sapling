@@ -179,6 +179,11 @@ Graft out of order, skipping a merge and a duplicate
   committing changelog
   grafting 5:97f8bfe72746 "5"
     searching for copies back to rev 1
+    unmatched files in other (from topological common ancestor):
+     c
+    all copies found (* = to merge, ! = divergent, % = renamed and deleted):
+     src: 'c' -> dst: 'b' *
+    checking for directory renames
   resolving manifests
    branchmerge: True, force: True, partial: False
    ancestor: 4c60f11aa304, local: 6b9e5368ca4e+, remote: 97f8bfe72746
@@ -193,6 +198,11 @@ Graft out of order, skipping a merge and a duplicate
   scanning for duplicate grafts
   grafting 4:9c233e8e184d "4"
     searching for copies back to rev 1
+    unmatched files in other (from topological common ancestor):
+     c
+    all copies found (* = to merge, ! = divergent, % = renamed and deleted):
+     src: 'c' -> dst: 'b' *
+    checking for directory renames
   resolving manifests
    branchmerge: True, force: True, partial: False
    ancestor: 4c60f11aa304, local: 1905859650ec+, remote: 9c233e8e184d
@@ -945,6 +955,7 @@ two renames actually converge to the same name (thus no actual divergence).
   $ hg up -q 'desc("A0")'
   $ HGEDITOR="echo C1 >" hg graft -r 'desc("C0")' --edit
   grafting 2:f58c7e2b28fa "C0"
+  merging f1a and f1b to f1a
   merging f5a
   warning: conflicts while merging f5a! (edit, then use 'hg resolve --mark')
   abort: unresolved conflicts, can't continue
@@ -957,14 +968,15 @@ two renames actually converge to the same name (thus no actual divergence).
   grafting 2:f58c7e2b28fa "C0"
   warning: can't find ancestor for 'f5a' copied from 'f5b'!
   $ hg status --change .
+  M f1a
   M f5a
-  A f1b
   A f2c
   R f2a
   $ hg cat f1a
-  c1a
-  $ hg cat f1b
   c1c
+  $ hg cat f1b
+  f1b: no such file in rev 43e4b415492d
+  [1]
 
 Test the cases A.0 (f4x) and A.6 (f3x)
 
@@ -989,12 +1001,12 @@ Set up the repository for some further tests
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     E0
   |
-  | o  changeset:   5:573bb6b4b56d
+  | o  changeset:   5:4f4ba7a6e606
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
   | |  summary:     D1
   | |
-  | o  changeset:   4:af23416e619b
+  | o  changeset:   4:43e4b415492d
   |/   parent:      0:11f7a1b56675
   |    user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
@@ -1029,6 +1041,7 @@ and A.3 with a local content change to be preserved (f2x).
   other [graft] changed f1b which local [local] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   merging f2a and f2c to f2c
+  merging f5b and f5a to f5a
   abort: unresolved conflicts, can't continue
   (use 'hg resolve' and 'hg graft --continue')
   [255]
@@ -1037,7 +1050,8 @@ and A.3 with a local content change to be preserved (f2x).
   continue: hg graft --continue
   $ hg graft --continue # XXX work around failure
   grafting 2:f58c7e2b28fa "C0"
-  grafting 4:af23416e619b "C0"
+  grafting 4:43e4b415492d "C0"
+  merging f1e and f1a to f1e
   merging f2c
   warning: can't find ancestor for 'f2c' copied from 'f2a'!
 
@@ -1051,7 +1065,7 @@ Test the cases A.1 (f4x) and A.7 (f3x).
 Check the results of the grafts tested
 
   $ hg log -CGv --patch --git
-  @  changeset:   9:6d76b84e6e84
+  @  changeset:   9:100f4d78e056
   |  tag:         tip
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
@@ -1073,13 +1087,30 @@ Check the results of the grafts tested
   |  -c4a
   |  +c4d
   |
-  o  changeset:   8:3079ba7d03f0
+  o  changeset:   8:84915a7da133
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  files:       f1e f5a.orig
   |  description:
   |  C0
   |
   |
+  |  diff --git a/f1e b/f1e
+  |  --- a/f1e
+  |  +++ b/f1e
+  |  @@ -1,1 +1,1 @@
+  |  -c1a
+  |  +c1c
+  |  diff --git a/f5a.orig b/f5a.orig
+  |  deleted file mode 100644
+  |  --- a/f5a.orig
+  |  +++ /dev/null
+  |  @@ -1,5 +0,0 @@
+  |  -<<<<<<< local: 11f7a1b56675  - test: A0
+  |  -c5a
+  |  -=======
+  |  -c5c
+  |  ->>>>>>> graft: f58c7e2b28fa  - test: C0
   |
   o  changeset:   7:dc778749ee9a
   |  user:        test
@@ -1147,7 +1178,7 @@ Check the results of the grafts tested
   |  rename from f5a
   |  rename to f5b
   |
-  | o  changeset:   5:573bb6b4b56d
+  | o  changeset:   5:4f4ba7a6e606
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
   | |  files:       f3d f4a
@@ -1168,21 +1199,21 @@ Check the results of the grafts tested
   | |  -c4a
   | |  +c4d
   | |
-  | o  changeset:   4:af23416e619b
+  | o  changeset:   4:43e4b415492d
   |/   parent:      0:11f7a1b56675
   |    user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    files:       f1b f2a f2c f5a
+  |    files:       f1a f2a f2c f5a
   |    copies:      f2c (f2a)
   |    description:
   |    C0
   |
   |
-  |    diff --git a/f1b b/f1b
-  |    new file mode 100644
-  |    --- /dev/null
-  |    +++ b/f1b
-  |    @@ -0,0 +1,1 @@
+  |    diff --git a/f1a b/f1a
+  |    --- a/f1a
+  |    +++ b/f1a
+  |    @@ -1,1 +1,1 @@
+  |    -c1a
   |    +c1c
   |    diff --git a/f2a b/f2c
   |    rename from f2a

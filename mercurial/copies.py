@@ -373,9 +373,21 @@ def mergecopies(repo, c1, c2, base):
     # find interesting file sets from manifests
     addedinm1 = m1.filesnotin(mb)
     addedinm2 = m2.filesnotin(mb)
-    u1r, u2r = _computenonoverlap(repo, c1, c2, addedinm1, addedinm2)
-    u1u, u2u = u1r, u2r
     bothnew = sorted(addedinm1 & addedinm2)
+    if tca == base:
+        # unmatched file from base
+        u1r, u2r = _computenonoverlap(repo, c1, c2, addedinm1, addedinm2)
+        u1u, u2u = u1r, u2r
+    else:
+        # unmatched file from base (DAG rotation in the graft case)
+        u1r, u2r = _computenonoverlap(repo, c1, c2, addedinm1, addedinm2,
+                                      baselabel='base')
+        # unmatched file from topological common ancestors (no DAG rotation)
+        # need to recompute this for directory move handling when grafting
+        mta = tca.manifest()
+        u1u, u2u = _computenonoverlap(repo, c1, c2, m1.filesnotin(mta),
+                                                    m2.filesnotin(mta),
+                                      baselabel='topological common ancestor')
 
     for f in u1u:
         _checkcopies(c1, f, m1, m2, base, tca, limit, data1)
