@@ -2276,7 +2276,12 @@ static int index_slice_del(indexObject *self, PyObject *item)
 	Py_ssize_t length = index_length(self);
 	int ret = 0;
 
+/* Argument changed from PySliceObject* to PyObject* in Python 3. */
+#ifdef IS_PY3K
+	if (PySlice_GetIndicesEx(item, length,
+#else
 	if (PySlice_GetIndicesEx((PySliceObject*)item, length,
+#endif
 				 &start, &stop, &step, &slicelength) < 0)
 		return -1;
 
