@@ -106,6 +106,8 @@ def _setupupdates(ui):
                 if type != 'k':
                     temporaryfiles.append(file)
                     prunedactions[file] = action
+            elif type == 'f':
+                prunedactions[file] = action
             elif file in wctx:
                 prunedactions[file] = ('r', args, msg)
 
