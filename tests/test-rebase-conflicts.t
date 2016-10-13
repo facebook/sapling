@@ -303,7 +303,7 @@ Check that the right ancestors is used while rebasing a merge (issue4041)
   adding file changes
   adding f1.txt revisions
   added 2 changesets with 2 changes to 1 files
-  bundle2-input-part: total payload size 1713
+  bundle2-input-part: total payload size 1686
   bundle2-input-bundle: 0 parts total
   invalid branchheads cache (served): tip differs
   history modification detected - truncating revision branch cache to revision 9

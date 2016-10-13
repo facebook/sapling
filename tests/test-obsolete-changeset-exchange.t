@@ -145,7 +145,7 @@ client only pulls down 1 changeset
   adding foo revisions
   added 1 changesets with 1 changes to 1 files (+1 heads)
   updating the branch cache
-  bundle2-input-part: total payload size 474
+  bundle2-input-part: total payload size 476
   bundle2-input-part: "listkeys" (params: 1 mandatory) supported
   bundle2-input-part: total payload size 58
   bundle2-input-part: "listkeys" (params: 1 mandatory) supported

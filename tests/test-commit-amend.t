@@ -120,13 +120,13 @@ No changes, just a different message:
   stripping amended changeset 74609c7f506e
   1 changesets found
   uncompressed size of bundle content:
-       270 (changelog)
+       254 (changelog)
        163 (manifests)
        129  a
   saved backup bundle to $TESTTMP/.hg/strip-backup/74609c7f506e-1bfde511-amend-backup.hg (glob)
   1 changesets found
   uncompressed size of bundle content:
-       266 (changelog)
+       250 (changelog)
        163 (manifests)
        129  a
   adding branch
@@ -264,13 +264,13 @@ then, test editing custom commit message
   stripping amended changeset 5f357c7560ab
   1 changesets found
   uncompressed size of bundle content:
-       258 (changelog)
+       249 (changelog)
        163 (manifests)
        131  a
   saved backup bundle to $TESTTMP/.hg/strip-backup/5f357c7560ab-e7c84ade-amend-backup.hg (glob)
   1 changesets found
   uncompressed size of bundle content:
-       266 (changelog)
+       257 (changelog)
        163 (manifests)
        131  a
   adding branch
@@ -307,13 +307,13 @@ Same, but with changes in working dir (different code path):
   stripping amended changeset 7ab3bf440b54
   2 changesets found
   uncompressed size of bundle content:
-       490 (changelog)
+       464 (changelog)
        322 (manifests)
        249  a
   saved backup bundle to $TESTTMP/.hg/strip-backup/7ab3bf440b54-8e3b5088-amend-backup.hg (glob)
   1 changesets found
   uncompressed size of bundle content:
-       266 (changelog)
+       257 (changelog)
        163 (manifests)
        133  a
   adding branch

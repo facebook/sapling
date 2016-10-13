@@ -818,18 +818,24 @@ class cg2packer(cg1packer):
 
     def deltaparent(self, revlog, rev, p1, p2, prev):
         dp = revlog.deltaparent(rev)
-        # Avoid sending full revisions when delta parent is null. Pick
-        # prev in that case. It's tempting to pick p1 in this case, as p1
-        # will be smaller in the common case. However, computing a delta
-        # against p1 may require resolving the raw text of p1, which could
-        # be expensive. The revlog caches should have prev cached, meaning
-        # less CPU for changegroup generation. There is likely room to add
-        # a flag and/or config option to control this behavior.
-        #
-        # Pick prev when we can't be sure remote has the base revision.
-        if dp == nullrev or (dp != p1 and dp != p2 and dp != prev):
+        if dp == nullrev and revlog.storedeltachains:
+            # Avoid sending full revisions when delta parent is null. Pick prev
+            # in that case. It's tempting to pick p1 in this case, as p1 will
+            # be smaller in the common case. However, computing a delta against
+            # p1 may require resolving the raw text of p1, which could be
+            # expensive. The revlog caches should have prev cached, meaning
+            # less CPU for changegroup generation. There is likely room to add
+            # a flag and/or config option to control this behavior.
             return prev
-        return dp
+        elif dp == nullrev:
+            # revlog is configured to use full snapshot for a reason,
+            # stick to full snapshot.
+            return nullrev
+        elif dp not in (p1, p2, prev):
+            # Pick prev when we can't be sure remote has the base revision.
+            return prev
+        else:
+            return dp
 
     def builddeltaheader(self, node, p1n, p2n, basenode, linknode, flags):
         # Do nothing with flags, it is implicitly 0 in cg1 and cg2
