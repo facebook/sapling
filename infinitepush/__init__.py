@@ -349,16 +349,20 @@ def _pull(orig, ui, repo, source="default", **opts):
         # TODO(stash): race condition is possible
         # if scratch bookmarks was updated right after orig.
         # But that's unlikely and shouldn't be harmful.
-        with repo.wlock():
-            with repo.lock():
-                with repo.transaction('bookmark') as tr:
-                    for scratchbook, node in scratchbookmarks.items():
-                        repo._bookmarks[scratchbook] = bin(node)
-                    repo._bookmarks.recordchange(tr)
+        _savebookmarks(repo, scratchbookmarks)
         return result
     finally:
         if hasscratchbookmarks:
             discovery.findcommonincoming = oldfindcommonincoming
+
+def _savebookmarks(repo, bookmarks):
+    with repo.wlock():
+        with repo.lock():
+            with repo.transaction('bookmark') as tr:
+                for scratchbook, node in bookmarks.items():
+                    changectx = repo[node]
+                    repo._bookmarks[scratchbook] = changectx.node()
+                repo._bookmarks.recordchange(tr)
 
 def _findcommonincoming(orig, *args, **kwargs):
     common, inc, remoteheads = orig(*args, **kwargs)
