@@ -3526,10 +3526,11 @@ class dirstateguard(object):
 
     def __init__(self, repo, name):
         self._repo = repo
+        self._active = False
+        self._closed = False
         self._suffix = '.backup.%s.%d' % (name, id(self))
         repo.dirstate.savebackup(repo.currenttransaction(), self._suffix)
         self._active = True
-        self._closed = False
 
     def __del__(self):
         if self._active: # still active
