@@ -59,7 +59,8 @@ static int _addpath(PyObject *dirs, PyObject *path)
 	* "protocol" such as mutating immutable objects. But since we only
 	* mutate objects created in this function or in other well-defined
 	* locations, the references are known so these violations should go
-	* unnoticed. */
+	* unnoticed. The code for adjusting the length of a PyBytesObject is
+	* essentially a minimal version of _PyBytes_Resize. */
 	while ((pos = _finddir(cpath, pos - 1)) != -1) {
 		PyObject *val;
 
