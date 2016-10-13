@@ -374,10 +374,10 @@ def mergecopies(repo, c1, c2, base):
     bothnew = sorted(addedinm1 & addedinm2)
 
     for f in u1u:
-        _checkcopies(c1, f, m1, m2, base, limit, data1)
+        _checkcopies(c1, f, m1, m2, base, tca, limit, data1)
 
     for f in u2u:
-        _checkcopies(c2, f, m2, m1, base, limit, data2)
+        _checkcopies(c2, f, m2, m1, base, tca, limit, data2)
 
     copy = dict(data1['copy'].items() + data2['copy'].items())
     fullcopy = dict(data1['fullcopy'].items() + data2['fullcopy'].items())
@@ -405,8 +405,8 @@ def mergecopies(repo, c1, c2, base):
                 'diverge': bothdiverge,
                }
     for f in bothnew:
-        _checkcopies(c1, f, m1, m2, base, limit, bothdata)
-        _checkcopies(c2, f, m2, m1, base, limit, bothdata)
+        _checkcopies(c1, f, m1, m2, base, tca, limit, bothdata)
+        _checkcopies(c2, f, m2, m1, base, tca, limit, bothdata)
     for of, fl in bothdiverge.items():
         if len(fl) == 2 and fl[0] == fl[1]:
             copy[fl[0]] = of # not actually divergent, just matching renames
@@ -521,7 +521,7 @@ def _related(f1, f2, limit):
     except StopIteration:
         return False
 
-def _checkcopies(ctx, f, m1, m2, base, limit, data):
+def _checkcopies(ctx, f, m1, m2, base, tca, limit, data):
     """
     check possible copies of f from m1 to m2
 
@@ -530,6 +530,7 @@ def _checkcopies(ctx, f, m1, m2, base, limit, data):
     m1 = the source manifest
     m2 = the destination manifest
     base = the changectx used as a merge base
+    tca = topological common ancestor for graft-like scenarios
     limit = the rev number to not search beyond
     data = dictionary of dictionary to store copy data. (see mergecopies)
 
@@ -540,6 +541,17 @@ def _checkcopies(ctx, f, m1, m2, base, limit, data):
     """
 
     mb = base.manifest()
+    # Might be true if this call is about finding backward renames,
+    # This happens in the case of grafts because the DAG is then rotated.
+    # If the file exists in both the base and the source, we are not looking
+    # for a rename on the source side, but on the part of the DAG that is
+    # traversed backwards.
+    #
+    # In the case there is both backward and forward renames (before and after
+    # the base) this is more complicated as we must detect a divergence. This
+    # is currently broken and hopefully some later code update will make that
+    # work (we use 'backwards = False' in that case)
+    backwards = base != tca and f in mb
     getfctx = _makegetfctx(ctx)
 
     of = None
@@ -554,7 +566,11 @@ def _checkcopies(ctx, f, m1, m2, base, limit, data):
             continue
         seen.add(of)
 
-        data['fullcopy'][f] = of # remember for dir rename detection
+        # remember for dir rename detection
+        if backwards:
+            data['fullcopy'][of] = f # grafting backwards through renames
+        else:
+            data['fullcopy'][f] = of
         if of not in m2:
             continue # no match, keep looking
         if m2[of] == mb.get(of):
@@ -562,9 +578,11 @@ def _checkcopies(ctx, f, m1, m2, base, limit, data):
         c2 = getfctx(of, m2[of])
         # c2 might be a plain new file on added on destination side that is
         # unrelated to the droids we are looking for.
-        cr = _related(oc, c2, base.rev())
+        cr = _related(oc, c2, tca.rev())
         if cr and (of == f or of == c2.path()): # non-divergent
-            if of in mb:
+            if backwards:
+                data['copy'][of] = f
+            elif of in mb:
                 data['copy'][f] = of
             return
 
