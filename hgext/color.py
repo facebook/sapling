@@ -196,9 +196,12 @@ def _terminfosetup(ui, mode):
     if mode not in ('auto', 'terminfo'):
         return
 
-    _terminfo_params.update((key[6:], (False, int(val)))
+    _terminfo_params.update((key[6:], (False, int(val), ''))
         for key, val in ui.configitems('color')
         if key.startswith('color.'))
+    _terminfo_params.update((key[9:], (True, '', val.replace('\\E', '\x1b')))
+        for key, val in ui.configitems('color')
+        if key.startswith('terminfo.'))
 
     try:
         curses.setupterm()
@@ -206,10 +209,10 @@ def _terminfosetup(ui, mode):
         _terminfo_params = {}
         return
 
-    for key, (b, e) in _terminfo_params.items():
+    for key, (b, e, c) in _terminfo_params.items():
         if not b:
             continue
-        if not curses.tigetstr(e):
+        if not c and not curses.tigetstr(e):
             # Most terminals don't support dim, invis, etc, so don't be
             # noisy and use ui.debug().
             ui.debug("no terminfo entry for %s\n" % e)
@@ -290,26 +293,26 @@ def _modesetup(ui, coloropt):
 
 try:
     import curses
-    # Mapping from effect name to terminfo attribute name or color number.
-    # This will also force-load the curses module.
-    _terminfo_params = {'none': (True, 'sgr0'),
-                        'standout': (True, 'smso'),
-                        'underline': (True, 'smul'),
-                        'reverse': (True, 'rev'),
-                        'inverse': (True, 'rev'),
-                        'blink': (True, 'blink'),
-                        'dim': (True, 'dim'),
-                        'bold': (True, 'bold'),
-                        'invisible': (True, 'invis'),
-                        'italic': (True, 'sitm'),
-                        'black': (False, curses.COLOR_BLACK),
-                        'red': (False, curses.COLOR_RED),
-                        'green': (False, curses.COLOR_GREEN),
-                        'yellow': (False, curses.COLOR_YELLOW),
-                        'blue': (False, curses.COLOR_BLUE),
-                        'magenta': (False, curses.COLOR_MAGENTA),
-                        'cyan': (False, curses.COLOR_CYAN),
-                        'white': (False, curses.COLOR_WHITE)}
+    # Mapping from effect name to terminfo attribute name (or raw code) or
+    # color number.  This will also force-load the curses module.
+    _terminfo_params = {'none': (True, 'sgr0', ''),
+                        'standout': (True, 'smso', ''),
+                        'underline': (True, 'smul', ''),
+                        'reverse': (True, 'rev', ''),
+                        'inverse': (True, 'rev', ''),
+                        'blink': (True, 'blink', ''),
+                        'dim': (True, 'dim', ''),
+                        'bold': (True, 'bold', ''),
+                        'invisible': (True, 'invis', ''),
+                        'italic': (True, 'sitm', ''),
+                        'black': (False, curses.COLOR_BLACK, ''),
+                        'red': (False, curses.COLOR_RED, ''),
+                        'green': (False, curses.COLOR_GREEN, ''),
+                        'yellow': (False, curses.COLOR_YELLOW, ''),
+                        'blue': (False, curses.COLOR_BLUE, ''),
+                        'magenta': (False, curses.COLOR_MAGENTA, ''),
+                        'cyan': (False, curses.COLOR_CYAN, ''),
+                        'white': (False, curses.COLOR_WHITE, '')}
 except ImportError:
     _terminfo_params = {}
 
@@ -375,9 +378,12 @@ def _effect_str(effect):
     if effect.endswith('_background'):
         bg = True
         effect = effect[:-11]
-    attr, val = _terminfo_params[effect]
+    attr, val, termcode = _terminfo_params[effect]
     if attr:
-        return curses.tigetstr(val)
+        if termcode:
+            return termcode
+        else:
+            return curses.tigetstr(val)
     elif bg:
         return curses.tparm(curses.tigetstr('setab'), val)
     else:
@@ -412,7 +418,7 @@ def valideffect(effect):
 
 def configstyles(ui):
     for status, cfgeffects in ui.configitems('color'):
-        if '.' not in status or status.startswith('color.'):
+        if '.' not in status or status.startswith(('color.', 'terminfo.')):
             continue
         cfgeffects = ui.configlist('color', status)
         if cfgeffects:

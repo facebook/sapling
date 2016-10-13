@@ -237,6 +237,25 @@ hg status -A (with terminfo color):
   \x1b[30m\x1b[30mC \x1b[30m\x1b[30m\x1b[30m.hgignore\x1b[30m (esc)
   \x1b[30m\x1b[30mC \x1b[30m\x1b[30m\x1b[30mmodified\x1b[30m (esc)
 
+The user can define effects with raw terminfo codes:
+
+  $ cat <<EOF >> $HGRCPATH
+  > # Completely bogus code for dim
+  > terminfo.dim = \E[88m
+  > # We can override what's in the terminfo database, too
+  > terminfo.bold = \E[2m
+  > EOF
+  $ TERM=hgterm TERMINFO="$TESTTMP/terminfo" hg status --config color.mode=terminfo --config color.status.clean=dim --color=always -A
+  \x1b[30m\x1b[32m\x1b[2mA \x1b[30m\x1b[30m\x1b[32m\x1b[2madded\x1b[30m (esc)
+  \x1b[30m\x1b[32m\x1b[2mA \x1b[30m\x1b[30m\x1b[32m\x1b[2mcopied\x1b[30m (esc)
+  \x1b[30m\x1b[30m  modified\x1b[30m (esc)
+  \x1b[30m\x1b[31m\x1b[2mR \x1b[30m\x1b[30m\x1b[31m\x1b[2mremoved\x1b[30m (esc)
+  \x1b[30m\x1b[36m\x1b[2m\x1b[4m! \x1b[30m\x1b[30m\x1b[36m\x1b[2m\x1b[4mdeleted\x1b[30m (esc)
+  \x1b[30m\x1b[35m\x1b[2m\x1b[4m? \x1b[30m\x1b[30m\x1b[35m\x1b[2m\x1b[4munknown\x1b[30m (esc)
+  \x1b[30m\x1b[30m\x1b[2mI \x1b[30m\x1b[30m\x1b[30m\x1b[2mignored\x1b[30m (esc)
+  \x1b[30m\x1b[88mC \x1b[30m\x1b[30m\x1b[88m.hgignore\x1b[30m (esc)
+  \x1b[30m\x1b[88mC \x1b[30m\x1b[30m\x1b[88mmodified\x1b[30m (esc)
+
 #endif
 
 
