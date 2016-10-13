@@ -300,6 +300,10 @@ def getscratchbranchpart(repo, peer, outgoing, force, bookmark, create):
     params = {}
     if bookmark:
         params['bookmark'] = bookmark
+        # 'prevbooknode' is necessary for pushkey reply part
+        params['bookprevnode'] = ''
+        if bookmark in repo:
+            params['bookprevnode'] = repo[bookmark].hex()
         params['create'] = '1' if create else '0'
     if force:
         params['force'] = '1' if force else '0'
@@ -394,6 +398,9 @@ def _push(orig, ui, repo, *args, **opts):
             ui.setconfig(experimental, configbookmark, bookmark, '--to')
             ui.setconfig(experimental, configcreate, create, '--create')
             scratchpush = True
+            # bundle2 can be sent back after push (for example, bundle2
+            # containing `pushkey` part to update bookmarks)
+            ui.setconfig(experimental, 'bundle2.pushback', True)
 
         if scratchpush:
             ui.setconfig(experimental, configscratchpush, True)
@@ -518,7 +525,8 @@ def _getrevs(bundle, oldnode, force):
         raise error.Abort(_('non-forward push'),
                           hint=_('use --force to override'))
 
-@bundle2.parthandler(scratchbranchparttype, ('bookmark', 'create', 'force',))
+@bundle2.parthandler(scratchbranchparttype,
+                     ('bookmark', 'bookprevnode' 'create', 'force',))
 def bundle2scratchbranch(op, part):
     '''unbundle a bundle2 part containing a changegroup to store'''
 
@@ -535,6 +543,7 @@ def bundle2scratchbranch(op, part):
         bundle = repository(op.repo.ui, bundlepath)
 
         bookmark = params.get('bookmark')
+        bookprevnode = params.get('bookprevnode', '')
         create = params.get('create')
         force = params.get('force')
 
@@ -570,12 +579,15 @@ def bundle2scratchbranch(op, part):
             if bookmark:
                 index.addbookmarkandbundle(key, newnodes,
                                            bookmark, newnodes[-1])
+                _addbookmarkpushbackpart(op, bookmark,
+                                         newnodes[-1], bookprevnode)
             else:
                 # Push new scratch commits with no bookmark
                 index.addbundle(key, newnodes)
         elif bookmark:
             # Push new scratch bookmark to known scratch commits
             index.addbookmark(bookmark, nodes[-1])
+            _addbookmarkpushbackpart(op, bookmark, nodes[-1], bookprevnode)
     finally:
         try:
             if bundlefile:
@@ -585,6 +597,16 @@ def bundle2scratchbranch(op, part):
                 raise
 
     return 1
+
+def _addbookmarkpushbackpart(op, bookmark, newnode, oldnode):
+    if op.reply and 'pushback' in op.reply.capabilities:
+        params = {
+            'namespace': 'bookmarks',
+            'key': bookmark,
+            'new': newnode,
+            'old': oldnode,
+        }
+        op.reply.newpart('pushkey', mandatoryparams=params.items())
 
 def bundle2pushkey(orig, op, part):
     if op.records[scratchbranchparttype + '_skippushkey']:

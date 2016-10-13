@@ -60,6 +60,7 @@ the history but is stored on disk
   remote:     20759b6926ce  scratchcommit
   $ hg log -G
   @  changeset:   1:20759b6926ce
+  |  bookmark:    scratch/mybranch
   |  tag:         tip
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
@@ -132,10 +133,10 @@ Push to non-scratch bookmark
   remote: adding manifests
   remote: adding file changes
   remote: added 1 changesets with 1 changes to 1 files
-  $ hg log -G -T '{desc} {phase}'
+  $ hg log -G -T '{desc} {phase} {bookmarks}'
   @  newcommit public
   |
-  | o  scratchcommit draft
+  | o  scratchcommit draft scratch/mybranch
   |/
   o  initialcommit public
   
@@ -150,6 +151,13 @@ Push to scratch branch
   remote: pushing 2 commits:
   remote:     20759b6926ce  scratchcommit
   remote:     1de1d7d92f89  new scratch commit
+  $ hg log -G -T '{desc} {phase} {bookmarks}'
+  @  new scratch commit draft scratch/mybranch
+  |
+  o  scratchcommit draft
+  |
+  o  initialcommit public
+  
   $ scratchnodes
   1de1d7d92f8965260391d0513fe8a8d5973d3042
   20759b6926ce827d5a8c73eb1fa9726d6f7defb2
@@ -164,6 +172,13 @@ Push scratch bookmark with no new revs
   remote: pushing 2 commits:
   remote:     20759b6926ce  scratchcommit
   remote:     1de1d7d92f89  new scratch commit
+  $ hg log -G -T '{desc} {phase} {bookmarks}'
+  @  new scratch commit draft scratch/anotherbranch scratch/mybranch
+  |
+  o  scratchcommit draft
+  |
+  o  initialcommit public
+  
   $ scratchbookmarks
   scratch/anotherbranch 1de1d7d92f8965260391d0513fe8a8d5973d3042
   scratch/mybranch 1de1d7d92f8965260391d0513fe8a8d5973d3042
@@ -181,8 +196,8 @@ Pull scratch and non-scratch bookmark at the same time
   added 1 changesets with 1 changes to 2 files
   adding remote bookmark newbook
   (run 'hg update' to get a working copy)
-  $ hg log -G -T '{desc} {phase}'
-  o  new scratch commit draft
+  $ hg log -G -T '{desc} {phase} {bookmarks}'
+  o  new scratch commit draft scratch/mybranch
   |
   | @  newcommit public
   | |
@@ -191,14 +206,14 @@ Pull scratch and non-scratch bookmark at the same time
   o  initialcommit public
   
 
-Push scratch revision without bookmark with --force-scratch
+Push scratch revision without bookmark with --bundle-store
 
   $ hg up -q tip
   $ mkcommit scratchcommitnobook
-  $ hg log -G -T '{desc} {phase}'
+  $ hg log -G -T '{desc} {phase} {bookmarks}'
   @  scratchcommitnobook draft
   |
-  o  new scratch commit draft
+  o  new scratch commit draft scratch/mybranch
   |
   | o  newcommit public
   | |
@@ -307,8 +322,8 @@ Non-fastforward scratch bookmark push
   $ hg add amend
   $ hg ci --amend -m 'scratch amended commit'
   saved backup bundle to $TESTTMP/client/.hg/strip-backup/9558d6761412-64a1e69b-amend-backup.hg (glob)
-  $ hg log -G -T '{desc} {phase}'
-  @  scratch amended commit draft
+  $ hg log -G -T '{desc} {phase} {bookmarks}'
+  @  scratch amended commit draft scratch/mybranch
   |
   o  scratchcommitwithpushrebase2 draft
   |
@@ -349,3 +364,20 @@ Non-fastforward scratch bookmark push
   $ scratchbookmarks
   scratch/anotherbranch 1de1d7d92f8965260391d0513fe8a8d5973d3042
   scratch/mybranch 5da7ed61b032f9701238753f48ffd5873fce5970
+  $ hg log -G -T '{desc} {phase} {bookmarks}'
+  @  scratch amended commit draft scratch/mybranch
+  |
+  o  scratchcommitwithpushrebase2 draft
+  |
+  o  scratchcommitwithpushrebase draft
+  |
+  o  scratchcommitnobook draft
+  |
+  o  new scratch commit draft
+  |
+  | o  newcommit public
+  | |
+  o |  scratchcommit draft
+  |/
+  o  initialcommit public
+  
