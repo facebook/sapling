@@ -1684,9 +1684,9 @@ class chunkbuffer(object):
 
         return ''.join(buf)
 
-def filechunkiter(f, size=65536, limit=None):
+def filechunkiter(f, size=131072, limit=None):
     """Create a generator that produces the data in the file size
-    (default 65536) bytes at a time, up to optional limit (default is
+    (default 131072) bytes at a time, up to optional limit (default is
     to read all data).  Chunks may be less than size bytes if the
     chunk is the last chunk in the file, or the file is a socket or
     some other type of file that sometimes reads less data than is

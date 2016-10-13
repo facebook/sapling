@@ -11,7 +11,7 @@ Test how largefiles abort in case the disk runs full
   > shutil.copyfileobj = copyfileobj
   > #
   > # this makes the rewritten code abort:
-  > def filechunkiter(f, size=65536, limit=None):
+  > def filechunkiter(f, size=131072, limit=None):
   >     yield f.read(4)
   >     raise IOError(errno.ENOSPC, os.strerror(errno.ENOSPC))
   > util.filechunkiter = filechunkiter

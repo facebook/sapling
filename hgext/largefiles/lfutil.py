@@ -372,7 +372,7 @@ def hashfile(file):
         return ''
     hasher = hashlib.sha1('')
     with open(file, 'rb') as fd:
-        for data in util.filechunkiter(fd, 128 * 1024):
+        for data in util.filechunkiter(fd):
             hasher.update(data)
     return hasher.hexdigest()
 
