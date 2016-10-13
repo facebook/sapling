@@ -360,7 +360,6 @@ def reposetup(ui, repo):
                     # Write the cache to update mtime and cache .hgeol
                     with self.vfs("eol.cache", "w") as f:
                         f.write(hgeoldata)
-                    wlock.release()
                 except error.LockUnavailable:
                     # If we cannot lock the repository and clear the
                     # dirstate, then a commit might not see all files
@@ -368,6 +367,9 @@ def reposetup(ui, repo):
                     # repository, then we can also not make a commit,
                     # so ignore the error.
                     pass
+                finally:
+                    if wlock is not None:
+                        wlock.release()
 
         def commitctx(self, ctx, haserror=False):
             for f in sorted(ctx.added() + ctx.modified()):
