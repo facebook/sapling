@@ -263,6 +263,12 @@ class changelog(revlog.revlog):
             # changelogs don't benefit from generaldelta
             self.version &= ~revlog.REVLOGGENERALDELTA
             self._generaldelta = False
+
+        # Delta chains for changelogs tend to be very small because entries
+        # tend to be small and don't delta well with each. So disable delta
+        # chains.
+        self._storedeltachains = False
+
         self._realopener = opener
         self._delayed = False
         self._delaybuf = None

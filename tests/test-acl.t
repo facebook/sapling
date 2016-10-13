@@ -1509,7 +1509,7 @@ No branch acls specified
   acl: branch access granted: "e8fc755d4d82" on branch "foobar"
   acl: path access granted: "e8fc755d4d82"
   updating the branch cache
-  bundle2-input-part: total payload size 2101
+  bundle2-input-part: total payload size 2139
   bundle2-input-part: "pushkey" (params: 4 mandatory) supported
   pushing key for "phases:911600dab2ae7a9baff75958b84fe606851ce955"
   bundle2-input-part: "pushkey" (params: 4 mandatory) supported
@@ -1595,7 +1595,7 @@ Branch acl deny test
   acl: branch access granted: "911600dab2ae" on branch "default"
   acl: path access granted: "911600dab2ae"
   error: pretxnchangegroup.acl hook failed: acl: user "astro" denied on branch "foobar" (changeset "e8fc755d4d82")
-  bundle2-input-part: total payload size 2101
+  bundle2-input-part: total payload size 2139
   bundle2-input-bundle: 4 parts total
   transaction abort!
   rollback completed
@@ -1663,7 +1663,7 @@ Branch acl empty allow test
   acl: acl.allow not enabled
   acl: acl.deny not enabled
   error: pretxnchangegroup.acl hook failed: acl: user "astro" not allowed on branch "default" (changeset "ef1ea85a6374")
-  bundle2-input-part: total payload size 2101
+  bundle2-input-part: total payload size 2139
   bundle2-input-bundle: 4 parts total
   transaction abort!
   rollback completed
@@ -1733,7 +1733,7 @@ Branch acl allow other
   acl: acl.allow not enabled
   acl: acl.deny not enabled
   error: pretxnchangegroup.acl hook failed: acl: user "astro" not allowed on branch "default" (changeset "ef1ea85a6374")
-  bundle2-input-part: total payload size 2101
+  bundle2-input-part: total payload size 2139
   bundle2-input-bundle: 4 parts total
   transaction abort!
   rollback completed
@@ -1805,7 +1805,7 @@ Branch acl allow other
   acl: branch access granted: "e8fc755d4d82" on branch "foobar"
   acl: path access granted: "e8fc755d4d82"
   updating the branch cache
-  bundle2-input-part: total payload size 2101
+  bundle2-input-part: total payload size 2139
   bundle2-input-part: "pushkey" (params: 4 mandatory) supported
   pushing key for "phases:911600dab2ae7a9baff75958b84fe606851ce955"
   bundle2-input-part: "pushkey" (params: 4 mandatory) supported
@@ -1898,7 +1898,7 @@ push foobar into the remote
   acl: branch access granted: "e8fc755d4d82" on branch "foobar"
   acl: path access granted: "e8fc755d4d82"
   updating the branch cache
-  bundle2-input-part: total payload size 2101
+  bundle2-input-part: total payload size 2139
   bundle2-input-part: "pushkey" (params: 4 mandatory) supported
   pushing key for "phases:911600dab2ae7a9baff75958b84fe606851ce955"
   bundle2-input-part: "pushkey" (params: 4 mandatory) supported
@@ -1982,7 +1982,7 @@ Branch acl conflicting deny
   acl: acl.allow not enabled
   acl: acl.deny not enabled
   error: pretxnchangegroup.acl hook failed: acl: user "george" denied on branch "default" (changeset "ef1ea85a6374")
-  bundle2-input-part: total payload size 2101
+  bundle2-input-part: total payload size 2139
   bundle2-input-bundle: 4 parts total
   transaction abort!
   rollback completed
@@ -2059,7 +2059,7 @@ User 'astro' must not be denied
   acl: branch access granted: "e8fc755d4d82" on branch "foobar"
   acl: path access granted: "e8fc755d4d82"
   updating the branch cache
-  bundle2-input-part: total payload size 2101
+  bundle2-input-part: total payload size 2139
   bundle2-input-part: "pushkey" (params: 4 mandatory) supported
   pushing key for "phases:911600dab2ae7a9baff75958b84fe606851ce955"
   bundle2-input-part: "pushkey" (params: 4 mandatory) supported
@@ -2137,7 +2137,7 @@ Non-astro users must be denied
   acl: acl.allow not enabled
   acl: acl.deny not enabled
   error: pretxnchangegroup.acl hook failed: acl: user "george" denied on branch "default" (changeset "ef1ea85a6374")
-  bundle2-input-part: total payload size 2101
+  bundle2-input-part: total payload size 2139
   bundle2-input-bundle: 4 parts total
   transaction abort!
   rollback completed
