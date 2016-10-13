@@ -823,7 +823,7 @@ def wraprepo(repo):
                 self.sqlconn.commit()
 
                 # Compute new heads, and delete old heads
-                newheads = set(self.heads())
+                newheads = set(hex(n) for n in self.heads())
                 oldheads = []
                 cursor.execute(
                     "SELECT value FROM revision_references "
@@ -848,7 +848,8 @@ def wraprepo(repo):
                     )
 
                 # Compute new bookmarks, and delete old bookmarks
-                newbookmarks = self._bookmarks.copy()
+                newbookmarks = dict((k, hex(v)) for k, v in
+                                    self._bookmarks.iteritems())
                 oldbookmarks = []
                 cursor.execute(
                     "SELECT name, value FROM revision_references "
@@ -876,13 +877,13 @@ def wraprepo(repo):
                 for head in newheads:
                     tmpl.append("(%s, 'heads', NULL, %s)")
                     values.append(reponame)
-                    values.append(hex(head))
+                    values.append(head)
 
                 for k, v in newbookmarks.iteritems():
                     tmpl.append("(%s, 'bookmarks', %s, %s)")
                     values.append(repo.sqlreponame)
                     values.append(k)
-                    values.append(hex(v))
+                    values.append(v)
 
                 if tmpl:
                     cursor.execute("INSERT INTO revision_references(repo, namespace, name, value) " +

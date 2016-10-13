@@ -75,7 +75,9 @@
   
 # Verify that --forcesync works
 
-  $ cd ../master
+  $ cd ../
+  $ cp $HGRCPATH backup.hgrc
+  $ cd master
   $ echo '[hooks]' >> $HGRCPATH
   $ echo 'presyncdb=$TESTTMP/hook.sh' >> $HGRCPATH
   $ echo 'sleep 2' > $TESTTMP/hook.sh
@@ -92,3 +94,32 @@
   3 a
   got lock after ? seconds (glob)
   3 a
+  $ cd ..
+  $ cp backup.hgrc $HGRCPATH
+
+# Update one bookmark but not the other
+  $ cat >> $TESTTMP/inspectsql.py <<EOF
+  > import os, sys
+  > from mercurial import demandimport, extensions
+  > with demandimport.deactivated():
+  >     import mysql.connector
+  > watchstrings = os.environ.get("INSPECTSQL")
+  > if watchstrings:
+  >     watchstrings = watchstrings.split(',')
+  > def printsql(orig, *args, **kwargs):
+  >     if not watchstrings or any(s for s in watchstrings if s in args[1]):
+  >         print >> sys.stderr, args[1] % args[2]
+  >     return orig(*args, **kwargs)
+  > extensions.wrapfunction(mysql.connector.cursor.MySQLCursor, "execute", printsql)
+  > EOF
+  $ cat >> $HGRCPATH <<EOF
+  > [extensions]
+  > inspectsql=$TESTTMP/inspectsql.py
+  > EOF
+  $ cd master
+  $ INSPECTSQL=DELETE,INSERT hg book mybook2
+  INSERT INTO revision_references(repo, namespace, name, value) VALUES (masterrepo, 'bookmarks', mybook2, 0000000000000000000000000000000000000000)
+  INSERT INTO revision_references(repo, namespace, name, value)
+                                 VALUES(masterrepo, 'tip', 'tip', 3) ON DUPLICATE KEY UPDATE value=3
+  $ cd ..
+  $ cp backup.hgrc $HGRCPATH
