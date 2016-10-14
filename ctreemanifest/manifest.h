@@ -20,6 +20,27 @@ class Manifest;
 class ManifestIterator;
 class SortedManifestIterator;
 
+class ManifestPtr {
+  private:
+    Manifest *manifest;
+  public:
+    ManifestPtr();
+
+    ManifestPtr(Manifest *manifest);
+
+    ManifestPtr(const ManifestPtr &other);
+
+    ~ManifestPtr();
+
+    ManifestPtr& operator= (const ManifestPtr& other);
+
+    operator Manifest* () const;
+
+    Manifest *operator-> ();
+
+    bool isnull() const;
+};
+
 #include "manifest_entry.h"
 
 /**
@@ -59,7 +80,7 @@ class Manifest {
     /**
      * Returns a deep copy of this Manifest.
      */
-    Manifest *copy();
+    ManifestPtr copy();
 
     ManifestIterator getIterator();
 
@@ -121,21 +142,6 @@ class Manifest {
      * for putting in a store.
      */
     void serialize(std::string &result);
-};
-
-class ManifestPtr {
-  private:
-    Manifest *manifest;
-  public:
-    ManifestPtr(Manifest *manifest);
-
-    ManifestPtr(const ManifestPtr &other);
-
-    ~ManifestPtr();
-
-    ManifestPtr& operator= (const ManifestPtr& other);
-
-    operator Manifest* () const;
 };
 
 /**

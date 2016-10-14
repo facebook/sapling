@@ -123,9 +123,8 @@ struct treemanifest {
 
       // ManifestEntry.initialize will create a blank manifest in .resolved.
       // however, we actually want the resolution to happen through
-      // manifestfetcher.  therefore, let's delete the field and clear it.
-      delete root.resolved;
-      root.resolved = NULL;
+      // manifestfetcher.  therefore, let's clear it.
+      root.resolved = ManifestPtr();
     }
 
     treemanifest(PythonObj store) :
@@ -155,8 +154,8 @@ struct treemanifest {
      */
     bool remove(const std::string &filename);
 
-    Manifest *getRootManifest() {
-      if (this->root.resolved == NULL) {
+    Manifest* getRootManifest() {
+      if (this->root.resolved.isnull()) {
         std::string binnode;
         binnode.reserve(BIN_NODE_SIZE);
 

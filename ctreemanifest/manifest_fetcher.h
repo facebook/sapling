@@ -31,7 +31,7 @@ class ManifestFetcher {
      * Fetches the Manifest from the store for the provided manifest key.
      * Returns the manifest if found, or throws an exception if not found.
      */
-    Manifest *get(
+    ManifestPtr get(
         const char *path, size_t pathlen,
         std::string &node) const;
 };

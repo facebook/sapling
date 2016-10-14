@@ -17,7 +17,7 @@ ManifestFetcher::ManifestFetcher(PythonObj &store) :
  * Fetches the Manifest from the store for the provided manifest key.
  * Returns the manifest if found, or throws an exception if not found.
  */
-Manifest *ManifestFetcher::get(
+ManifestPtr ManifestFetcher::get(
     const char *path, size_t pathlen,
     std::string &node) const {
   PythonObj arglist = Py_BuildValue("s#s#",
@@ -37,5 +37,5 @@ Manifest *ManifestFetcher::get(
   }
 
   PythonObj resultobj(result);
-  return new Manifest(resultobj);
+  return ManifestPtr(new Manifest(resultobj));
 }

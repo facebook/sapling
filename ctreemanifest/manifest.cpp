@@ -24,8 +24,8 @@ Manifest::Manifest(PythonObj &rawobj) :
   }
 }
 
-Manifest *Manifest::copy() {
-  Manifest *copied = new Manifest();
+ManifestPtr Manifest::copy() {
+  ManifestPtr copied(new Manifest());
   copied->_rawobj = this->_rawobj;
 
   for (std::list<ManifestEntry>::iterator thisIter = this->entries.begin();
@@ -226,6 +226,10 @@ void Manifest::computeNode(const char *p1, const char *p2, char *result) {
   SHA1_Final((unsigned char*)result, &ctx);
 }
 
+ManifestPtr::ManifestPtr() :
+  manifest(NULL) {
+}
+
 ManifestPtr::ManifestPtr(Manifest *manifest) :
   manifest(manifest) {
   if (!manifest) {
@@ -236,24 +240,38 @@ ManifestPtr::ManifestPtr(Manifest *manifest) :
 
 ManifestPtr::ManifestPtr(const ManifestPtr &other) :
   manifest(other.manifest) {
-  this->manifest->incref();
+  if (this->manifest) {
+    this->manifest->incref();
+  }
 }
 
 ManifestPtr::~ManifestPtr() {
-  if (this->manifest->decref() == 0) {
+  if (this->manifest && this->manifest->decref() == 0) {
     delete(this->manifest);
   }
 }
 
 ManifestPtr& ManifestPtr::operator= (const ManifestPtr& other) {
-  this->manifest->decref();
+  if (this->manifest) {
+    this->manifest->decref();
+  }
   this->manifest = other.manifest;
-  this->manifest->incref();
+  if (this->manifest) {
+    this->manifest->incref();
+  }
   return *this;
 }
 
 ManifestPtr::operator Manifest* () const {
   return this->manifest;
+}
+
+Manifest *ManifestPtr::operator-> () {
+  return this->manifest;
+}
+
+bool ManifestPtr::isnull() const {
+  return this->manifest == NULL;
 }
 
 void Manifest::incref() {

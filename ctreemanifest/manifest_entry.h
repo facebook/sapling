@@ -39,7 +39,7 @@ class ManifestEntry {
     // unlike filename/node, this is not always a valid pointer.  if the flag
     // is unset, flag will be set to NULL.
     char *flag;
-    Manifest *resolved;
+    ManifestPtr resolved;
     char *ownedmemory;
 
     // TODO: add hint storage here as well
@@ -52,7 +52,7 @@ class ManifestEntry {
 
     void appendtopath(std::string &path);
 
-    Manifest *get_manifest(
+    ManifestPtr get_manifest(
         ManifestFetcher fetcher, const char *path, size_t pathlen);
 
     void initialize(

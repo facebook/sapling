@@ -14,7 +14,6 @@ ManifestEntry::ManifestEntry() {
   this->filenamelen = 0;
   this->node = NULL;
   this->flag = NULL;
-  this->resolved = NULL;
   this->ownedmemory = NULL;
 }
 
@@ -23,7 +22,7 @@ void ManifestEntry::initialize(
     const char *node,
     const char *flag) {
   if (flag != NULL && *flag == MANIFEST_DIRECTORY_FLAG) {
-    this->resolved = new Manifest();
+    this->resolved = ManifestPtr(new Manifest());
   }
   this->ownedmemory = new char[
   filenamelen +
@@ -83,7 +82,7 @@ char *ManifestEntry::initialize(char *entrystart) {
     nextpointer = this->flag + 1;
     this->flag = NULL;
   }
-  this->resolved = NULL;
+  this->resolved = ManifestPtr();
   this->ownedmemory = NULL;
 
   return nextpointer;
@@ -93,24 +92,20 @@ void ManifestEntry::initialize(ManifestEntry *other) {
   if (other->ownedmemory) {
     this->initialize(other->filename, other->filenamelen,
         other->node, other->flag);
-    if (!other->resolved) {
-      delete(this->resolved);
-      this->resolved = NULL;
+    if (other->resolved.isnull()) {
+      this->resolved = ManifestPtr();
     }
   } else {
     // Else it points at a piece of memory owned by something else
     this->initialize(other->filename);
   }
 
-  if (other->resolved) {
+  if (!other->resolved.isnull()) {
     this->resolved = other->resolved->copy();
   }
 }
 
 ManifestEntry::~ManifestEntry() {
-  if (this->resolved != NULL) {
-    delete this->resolved;
-  }
   if (this->ownedmemory != NULL) {
     delete [] this->ownedmemory;
   }
@@ -127,9 +122,9 @@ void ManifestEntry::appendtopath(std::string &path) {
   }
 }
 
-Manifest *ManifestEntry::get_manifest(
+ManifestPtr ManifestEntry::get_manifest(
     ManifestFetcher fetcher, const char *path, size_t pathlen) {
-  if (this->resolved == NULL) {
+  if (this->resolved.isnull()) {
     std::string binnode = binfromhex(node);
     this->resolved = fetcher.get(path, pathlen, binnode);
   }
@@ -148,9 +143,8 @@ void ManifestEntry::update(const char *node, const char *flag) {
 
   // if we didn't previously own the memory, we should now.
   if (this->ownedmemory == NULL) {
-    Manifest *oldresolved = this->resolved;
+    ManifestPtr oldresolved = this->resolved;
     this->initialize(this->filename, this->filenamelen, node, flag);
-    delete(this->resolved);
     this->resolved = oldresolved;
     return;
   }

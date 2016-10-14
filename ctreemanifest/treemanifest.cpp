@@ -203,7 +203,7 @@ FindResult treemanifest::find(
         Manifest *manifest,
         const char *filename, size_t filenamelen,
         FindContext *findContext)) {
-  if (manifestentry->resolved == NULL) {
+  if (manifestentry->resolved.isnull()) {
     const char *pathstart;
     size_t pathlen;
 
