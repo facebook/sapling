@@ -2750,6 +2750,7 @@ parentrevspec
   5
   $ log 'merge()^2'
   4
+  $ log '(not merge())^2'
   $ log 'merge()^^'
   3
   $ log 'merge()^1^'

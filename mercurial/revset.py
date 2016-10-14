@@ -1621,7 +1621,7 @@ def parentspec(repo, subset, x, n, order):
             ps.add(cl.parentrevs(r)[0])
         elif n == 2:
             parents = cl.parentrevs(r)
-            if len(parents) > 1:
+            if parents[1] != node.nullrev:
                 ps.add(parents[1])
     return subset & ps
 
