@@ -8,7 +8,8 @@ import unittest
 import silenttestrunner
 
 # Add the repo root to the path so we can find the built ctreemanifest
-sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+fullpath = os.path.join(os.getcwd(), __file__)
+sys.path.insert(0, os.path.dirname(os.path.dirname(fullpath)))
 import ctreemanifest
 
 class FakeStore(object):
