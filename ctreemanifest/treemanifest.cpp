@@ -567,18 +567,10 @@ bool NewTreeIterator::popResult(std::string **path, Manifest **result, std::stri
     }
   }
 
-  // If the current manifest has the same contents as a cmp manifest,
-  // just give up now. Unless we're the root node (because the root node
-  // will always change based on the parent nodes).
-  if (alreadyExists && this->mainStack.size() > 1) {
-    assert(this->node != NULL);
-    return false;
-  }
-
-  // Update the node on the manifest entry
   char tempnode[BIN_NODE_SIZE];
   mainManifest->computeNode(parentNodes[0], parentNodes[1], tempnode);
-  this->node.assign(tempnode, 20);
+
+  // Update the node on the manifest entry
   if (mainStack.size() > 0) {
     // Peek back up the stack so we can put the right node on the
     // ManifestEntry.
@@ -592,6 +584,15 @@ bool NewTreeIterator::popResult(std::string **path, Manifest **result, std::stri
     // Now that it has a node, it is permanent and shouldn't be modified.
     priorEntry->resolved->markPermanent();
   }
+
+  // If the current manifest has the same contents as a cmp manifest,
+  // just give up now. Unless we're the root node (because the root node
+  // will always change based on the parent nodes).
+  if (alreadyExists && this->mainStack.size() > 1) {
+    return false;
+  }
+
+  this->node.assign(tempnode, 20);
 
   *path = &this->path;
   *result = mainManifest;
