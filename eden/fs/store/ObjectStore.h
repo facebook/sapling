@@ -10,6 +10,7 @@
 #pragma once
 
 #include <memory>
+#include "eden/fs/store/IObjectStore.h"
 
 namespace facebook {
 namespace eden {
@@ -30,26 +31,17 @@ class Tree;
  *   data.  The BackingStore is generally more expensive to query for object
  *   data, and may not be available during offline operation.
  */
-class ObjectStore {
+class ObjectStore : public IObjectStore {
  public:
   ObjectStore(
       std::shared_ptr<LocalStore> localStore,
       std::shared_ptr<BackingStore> backingStore);
   virtual ~ObjectStore();
 
-  std::unique_ptr<Tree> getTree(const Hash& id) const;
-  std::unique_ptr<Blob> getBlob(const Hash& id) const;
-
-  std::unique_ptr<Tree> getTreeForCommit(const Hash& commitID) const;
-
-  /**
-   * Return the SHA1 hash of the blob contents.
-   *
-   * (Note that this is different than the Hash identifying the blob.  The
-   * hash identifying the blob may be computed using a separate mechanism, and
-   * may not be the same as the SHA1-hash of its contents.)
-   */
-  std::unique_ptr<Hash> getSha1ForBlob(const Hash& id) const;
+  std::unique_ptr<Tree> getTree(const Hash& id) const override;
+  std::unique_ptr<Blob> getBlob(const Hash& id) const override;
+  std::unique_ptr<Tree> getTreeForCommit(const Hash& commitID) const override;
+  std::unique_ptr<Hash> getSha1ForBlob(const Hash& id) const override;
 
  private:
   // Forbidden copy constructor and assignment operator

@@ -1,0 +1,10 @@
+cpp_library(
+  name = 'testutil',
+  headers = AutoHeaders.RECURSIVE_GLOB,  # https://fburl.com/424819295
+  srcs = glob(['*.cpp']),
+  deps = [
+    '//eden/fs/model:model',
+    '//eden/fs/store:store',
+    '//folly:folly',
+  ],
+)
