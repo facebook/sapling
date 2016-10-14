@@ -55,17 +55,17 @@ TEST(FakeObjectStore, getObjectsOfAllTypesFromStore) {
   entries2.emplace_back(fileHash, "a_file", FileType::REGULAR_FILE, rw_);
   Tree tree2(std::move(entries2), tree2Hash);
   store.setTreeForCommit(commHash, std::move(tree2));
-  auto foundTreeForCommit = store.getTreeForCommit(commHash).get();
-  EXPECT_TRUE(foundTreeForCommit);
+  auto foundTreeForCommit = store.getTreeForCommit(commHash);
+  ASSERT_NE(nullptr, foundTreeForCommit.get());
   EXPECT_EQ(tree2Hash, foundTreeForCommit->getHash());
 
   // Test getSha1ForBlob().
   unique_ptr<IOBuf> buf2(IOBuf::create(0));
   Blob blob2(blobHash, *buf2.get());
   store.setSha1ForBlob(blob2, sha1Hash);
-  auto foundSha1 = store.getSha1ForBlob(blob2.getHash()).get();
-  EXPECT_TRUE(foundSha1);
-  EXPECT_EQ(sha1Hash, *foundSha1);
+  auto foundSha1 = store.getSha1ForBlob(blob2.getHash());
+  ASSERT_NE(nullptr, foundSha1.get());
+  EXPECT_EQ(sha1Hash, *foundSha1.get());
 }
 
 TEST(FakeObjectStore, getMissingObjectReturnsNullptr) {
