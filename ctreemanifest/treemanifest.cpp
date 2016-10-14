@@ -54,6 +54,12 @@ class DiffEntry {
 
       PyDict_SetItem(diff, pathObj, entry);
     }
+
+    void addcleantodiff(const PythonObj &diff, const std::string &path) {
+      PythonObj pathObj = PyString_FromStringAndSize(path.c_str(), path.length());
+      Py_INCREF(Py_None);
+      PyDict_SetItem(diff, pathObj, Py_None);
+    }
 };
 
 /**
@@ -64,7 +70,8 @@ void treemanifest_diffrecurse(
     Manifest *othermf,
     std::string &path,
     const PythonObj &diff,
-    const ManifestFetcher &fetcher) {
+    const ManifestFetcher &fetcher,
+    bool clean) {
   ManifestIterator selfiter;
   ManifestIterator otheriter;
 
@@ -107,7 +114,7 @@ void treemanifest_diffrecurse(
       if (selfentry->isdirectory()) {
         Manifest *selfchildmanifest = selfentry->get_manifest(
             fetcher, path.c_str(), path.size());
-        treemanifest_diffrecurse(selfchildmanifest, NULL, path, diff, fetcher);
+        treemanifest_diffrecurse(selfchildmanifest, NULL, path, diff, fetcher, clean);
       } else {
         DiffEntry entry(&selfbinnode, selfentry->flag, NULL, NULL);
         entry.addtodiff(diff, path);
@@ -119,7 +126,7 @@ void treemanifest_diffrecurse(
       if (otherentry->isdirectory()) {
         Manifest *otherchildmanifest = otherentry->get_manifest(
             fetcher, path.c_str(), path.size());
-        treemanifest_diffrecurse(NULL, otherchildmanifest, path, diff, fetcher);
+        treemanifest_diffrecurse(NULL, otherchildmanifest, path, diff, fetcher, clean);
       } else {
         DiffEntry entry(NULL, NULL, &otherbinnode, otherentry->flag);
         entry.addtodiff(diff, path);
@@ -131,7 +138,7 @@ void treemanifest_diffrecurse(
         // Both are directories - recurse
         selfentry->appendtopath(path);
 
-        if (selfbinnode != otherbinnode) {
+        if (selfbinnode != otherbinnode || clean) {
           Manifest *selfchildmanifest = selfentry->get_manifest(fetcher,
               path.c_str(), path.size());
           Manifest *otherchildmanifest = otherentry->get_manifest(fetcher,
@@ -142,7 +149,8 @@ void treemanifest_diffrecurse(
               otherchildmanifest,
               path,
               diff,
-              fetcher);
+              fetcher,
+              clean);
         }
         selfiter.next();
         otheriter.next();
@@ -155,7 +163,7 @@ void treemanifest_diffrecurse(
         path.append(1, '/');
         Manifest *selfchildmanifest = selfentry->get_manifest(fetcher,
             path.c_str(), path.size());
-        treemanifest_diffrecurse(selfchildmanifest, NULL, path, diff, fetcher);
+        treemanifest_diffrecurse(selfchildmanifest, NULL, path, diff, fetcher, clean);
 
         selfiter.next();
         otheriter.next();
@@ -169,7 +177,7 @@ void treemanifest_diffrecurse(
         Manifest *otherchildmanifest = otherentry->get_manifest(fetcher,
             path.c_str(), path.size()
         );
-        treemanifest_diffrecurse(NULL, otherchildmanifest, path, diff, fetcher);
+        treemanifest_diffrecurse(NULL, otherchildmanifest, path, diff, fetcher, clean);
 
         selfiter.next();
         otheriter.next();
@@ -184,6 +192,10 @@ void treemanifest_diffrecurse(
           selfentry->appendtopath(path);
           DiffEntry entry(&selfbinnode, selfentry->flag, &otherbinnode, otherentry->flag);
           entry.addtodiff(diff, path);
+        } else if (clean) {
+          selfentry->appendtopath(path);
+          DiffEntry entry(&selfbinnode, selfentry->flag, &otherbinnode, otherentry->flag);
+          entry.addcleantodiff(diff, path);
         }
 
         selfiter.next();

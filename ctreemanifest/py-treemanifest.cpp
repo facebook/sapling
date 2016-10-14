@@ -129,7 +129,7 @@ static PyObject *treemanifest_diff(
     PyObject *o, PyObject *args, PyObject *kwargs) {
   py_treemanifest *self = (py_treemanifest*)o;
   PyObject *otherObj;
-  PyObject *cleanObj;
+  PyObject *cleanObj = NULL;
   static char const *kwlist[] = {"m2", "clean", NULL};
 
   if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|O", (char**)kwlist, &otherObj, &cleanObj)) {
@@ -137,6 +137,11 @@ static PyObject *treemanifest_diff(
   }
 
   py_treemanifest *other = (py_treemanifest*)otherObj;
+
+  bool clean = false;
+  if (cleanObj && PyObject_IsTrue(cleanObj)) {
+    clean = true;
+  }
 
   PythonObj results = PyDict_New();
 
@@ -149,7 +154,7 @@ static PyObject *treemanifest_diff(
     treemanifest_diffrecurse(
         self->tm.getRootManifest(),
         other->tm.getRootManifest(),
-        path, results, fetcher);
+        path, results, fetcher, clean);
   } catch (const pyexception &ex) {
     // Python has already set the error message
     return NULL;
@@ -751,7 +756,7 @@ static PyObject *treemanifest_filesnotin(py_treemanifest *self, PyObject *args) 
     treemanifest_diffrecurse(
         self->tm.getRootManifest(),
         other->tm.getRootManifest(),
-        path, diffresults, fetcher);
+        path, diffresults, fetcher, /*clean=*/false);
   } catch (const pyexception &ex) {
     // Python has already set the error message
     return NULL;

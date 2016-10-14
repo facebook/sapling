@@ -316,6 +316,7 @@ extern void treemanifest_diffrecurse(
     Manifest *othermf,
     std::string &path,
     const PythonObj &diff,
-    const ManifestFetcher &fetcher);
+    const ManifestFetcher &fetcher,
+    bool clean);
 
 #endif //REMOTEFILELOG_TREEMANIFEST_H

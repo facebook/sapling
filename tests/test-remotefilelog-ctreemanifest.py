@@ -291,5 +291,46 @@ class ctreemanifesttests(unittest.TestCase):
         self.assertEquals(treetext, fulltext)
         self.assertEquals(treetextv2, fulltextv2)
 
+    def testDiff(self):
+        a = ctreemanifest.treemanifest(FakeStore())
+        zflags = hashflags()
+        mflags = hashflags()
+        a.set("abc/z", *zflags)
+        a.set("xyz/m", *mflags)
+
+        b = ctreemanifest.treemanifest(FakeStore())
+        b.set("abc/z", *zflags)
+        b.set("xyz/m", *mflags)
+
+        # Diff committed trees
+        store = FakeStore()
+        a.write(store)
+        b.write(store)
+        diff = a.diff(b)
+        self.assertEquals(diff, {})
+
+        # Diff with modifications
+        newfileflags = hashflags()
+        newzflags = hashflags()
+        b.set("newfile", *newfileflags)
+        b.set("abc/z", *newzflags)
+
+        a.write(store)
+        b.write(store)
+
+        diff = a.diff(b)
+        self.assertEquals(diff, {
+            "newfile": ((None, ''), newfileflags),
+            "abc/z": (zflags, newzflags)
+        })
+
+        # Diff with clean
+        diff = a.diff(b, clean=True)
+        self.assertEquals(diff, {
+            "newfile": ((None, ''), newfileflags),
+            "abc/z": (zflags, newzflags),
+            "xyz/m": None
+        })
+
 if __name__ == '__main__':
     silenttestrunner.main(__name__)
