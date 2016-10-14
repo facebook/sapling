@@ -43,6 +43,12 @@ class ManifestPtr {
 
 #include "manifest_entry.h"
 
+enum FindResultType {
+  RESULT_FILE,
+  RESULT_DIRECTORY,
+  RESULT_FILE_OR_DIRECTORY,
+};
+
 /**
  * This class represents a view on a particular Manifest instance. It provides
  * access to the list of files/directories at one level of the tree, not the
@@ -98,7 +104,7 @@ class Manifest {
      * true.  Otherwise, it will be set to false.
      */
     std::list<ManifestEntry>::iterator findChild(
-        const char *filename, const size_t filenamelen, bool isdir,
+        const char *filename, const size_t filenamelen, FindResultType resulttype,
         bool *exacthit);
 
     /**

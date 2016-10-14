@@ -254,7 +254,7 @@ FindResult treemanifest::find(
     // position the iterator at the right location
     bool exacthit;
     std::list<ManifestEntry>::iterator iterator = manifest->findChild(
-        word, wordlen, true, &exacthit);
+        word, wordlen, RESULT_DIRECTORY, &exacthit);
 
     ManifestEntry *entry;
 
@@ -266,7 +266,8 @@ FindResult treemanifest::find(
 
       if (!manifest->isMutable()) {
         manifest = ManifestPtr(manifest->copy());
-        iterator = manifest->findChild(word, wordlen, true, &exacthit);
+        iterator = manifest->findChild(word, wordlen, RESULT_DIRECTORY,
+                                       &exacthit);
       }
 
       // create the intermediate node...
@@ -292,7 +293,8 @@ FindResult treemanifest::find(
       if (!manifest->isMutable()) {
         manifest = ManifestPtr(manifest->copy());
         // Refind the entry in the new iterator
-        iterator = manifest->findChild(word, wordlen, true, &exacthit);
+        iterator = manifest->findChild(word, wordlen, RESULT_DIRECTORY,
+                                       &exacthit);
         entry = &(*iterator);
       }
 
@@ -306,7 +308,8 @@ FindResult treemanifest::find(
       if (newChildManifest->children() == 0) {
         if (!manifest->isMutable()) {
           manifest = ManifestPtr(manifest->copy());
-          iterator = manifest->findChild(word, wordlen, true, &exacthit);
+          iterator = manifest->findChild(word, wordlen, RESULT_DIRECTORY,
+                                         &exacthit);
           entry = &(*iterator);
         }
 
@@ -330,6 +333,7 @@ FindResult treemanifest::find(
 struct GetResult {
   std::string *resultnode;
   const char **resultflag;
+  FindResultType resulttype;
 };
 
 static FindResult get_callback(
@@ -337,10 +341,12 @@ static FindResult get_callback(
     const char *filename, size_t filenamelen,
     FindContext *context,
     ManifestPtr *resultManifest) {
+  GetResult *result = (GetResult *) context->extras;
+
   // position the iterator at the right location
   bool exacthit;
   std::list<ManifestEntry>::iterator iterator = manifest->findChild(
-      filename, filenamelen, false, &exacthit);
+      filename, filenamelen, result->resulttype, &exacthit);
 
   if (!exacthit) {
     // TODO: not found. :( :(
@@ -348,7 +354,6 @@ static FindResult get_callback(
   }
 
   ManifestEntry &entry = *iterator;
-  GetResult *result = (GetResult *) context->extras;
 
   result->resultnode->erase();
   if (entry.node != NULL) {
@@ -362,10 +367,11 @@ static FindResult get_callback(
 
 void treemanifest::get(
     const std::string &filename,
-    std::string *resultnode, const char **resultflag) {
+    std::string *resultnode, const char **resultflag,
+    FindResultType resulttype) {
   getRootManifest();
 
-  GetResult extras = {resultnode, resultflag};
+  GetResult extras = {resultnode, resultflag, resulttype};
   PathIterator pathiter(filename);
   FindContext changes;
   changes.nodebuffer.reserve(BIN_NODE_SIZE);
@@ -402,7 +408,7 @@ static FindResult set_callback(
   // position the iterator at the right location
   bool exacthit;
   std::list<ManifestEntry>::iterator iterator = manifest->findChild(
-      filename, filenamelen, false, &exacthit);
+      filename, filenamelen, RESULT_FILE, &exacthit);
 
   if (!exacthit) {
     // create the entry, insert it.
@@ -469,7 +475,7 @@ static FindResult remove_callback(
   // position the iterator at the right location
   bool exacthit;
   std::list<ManifestEntry>::iterator iterator = manifest->findChild(
-      filename, filenamelen, false, &exacthit);
+      filename, filenamelen, RESULT_FILE, &exacthit);
 
   if (exacthit) {
     if (!manifest->isMutable()) {
@@ -477,7 +483,7 @@ static FindResult remove_callback(
       manifest = *resultManifest;
 
       iterator = manifest->findChild(
-        filename, filenamelen, false, &exacthit);
+        filename, filenamelen, RESULT_FILE, &exacthit);
     }
 
     manifest->removeChild(iterator);

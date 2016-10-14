@@ -15,6 +15,7 @@
 #include <string>
 #include <vector>
 
+#include "manifest.h"
 #include "manifest_fetcher.h"
 
 enum FindResult {
@@ -142,7 +143,8 @@ struct treemanifest {
 
     void get(
         const std::string &filename,
-        std::string *resultnode, const char **resultflag);
+        std::string *resultnode, const char **resultflag,
+        FindResultType resulttype = RESULT_FILE);
 
     SetResult set(
         const std::string &filename,

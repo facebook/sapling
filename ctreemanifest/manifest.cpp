@@ -67,7 +67,7 @@ SortedManifestIterator Manifest::getSortedIterator() {
  * be set to true.  Otherwise, it will be set to false.
  */
 std::list<ManifestEntry>::iterator Manifest::findChild(
-    const char *filename, const size_t filenamelen, bool isdir,
+    const char *filename, const size_t filenamelen, FindResultType resulttype,
     bool *exacthit) {
   for (std::list<ManifestEntry>::iterator iter = this->entries.begin();
        iter != this->entries.end();
@@ -79,7 +79,8 @@ std::list<ManifestEntry>::iterator Manifest::findChild(
     int cmp = strncmp(filename, iter->filename, minlen);
     bool current_isdir = iter->isdirectory();
     if (cmp == 0 && filenamelen == iter->filenamelen) {
-      if (current_isdir == isdir) {
+      if ((current_isdir && resulttype != RESULT_FILE) ||
+          (!current_isdir && resulttype != RESULT_DIRECTORY)) {
         *exacthit = true;
         return iter;
       } else if (current_isdir) {
