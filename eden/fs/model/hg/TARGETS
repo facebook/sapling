@@ -1,0 +1,12 @@
+cpp_library(
+  name = 'hg',
+  srcs = glob(['*.cpp']),
+  headers = glob(['*.h']),
+  deps = [
+    '//eden/fs/inodes:inodes',
+    '//eden/fs/model:model',
+    '//eden/fs/store:store',
+    '//eden/utils:utils',
+    '//folly:folly',
+  ],
+)
