@@ -811,6 +811,32 @@ static PyObject *treemanifest_getentriesiter(py_treemanifest *self) {
   return (PyObject*)createfileiter(self, true);
 }
 
+static PyObject *treemanifest_text(py_treemanifest *self, PyObject *args, PyObject *kwargs) {
+  PyObject *usemanifestv2 = NULL;
+  static char const *kwlist[] = {"usemanifestv2", NULL};
+
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|O", (char**)kwlist,
+                                   &usemanifestv2)) {
+    return NULL;
+  }
+
+  if (!usemanifestv2) {
+    Py_INCREF(Py_False);
+    usemanifestv2 = Py_False;
+  }
+
+  try {
+    PythonObj manifestmod = PyImport_ImportModule("mercurial.manifest");
+    PythonObj textfunc = manifestmod.getattr("_text");
+
+    PythonObj iterator = treemanifest_getentriesiter(self);
+    PythonObj textargs = Py_BuildValue("(OO)", (PyObject*)iterator, usemanifestv2);
+    return textfunc.call(textargs).returnval();
+  } catch (const pyexception &ex) {
+    return NULL;
+  }
+}
+
 static PyObject *treemanifest_walk(py_treemanifest *self, PyObject *args) {
   PyObject* matcherObj;
 
@@ -908,6 +934,8 @@ static PyMethodDef treemanifest_methods[] = {
       "sets the node and flag for the given filepath\n"},
   {"setflag", treemanifest_setflag, METH_VARARGS,
       "sets the flag for the given filepath\n"},
+  {"text", (PyCFunction)treemanifest_text, METH_VARARGS|METH_KEYWORDS,
+    "returns the text form of the manifest"},
   {"walk", (PyCFunction)treemanifest_walk, METH_VARARGS,
     "returns a iterator for walking the manifest"},
   {"write", (PyCFunction)treemanifest_write, METH_VARARGS,

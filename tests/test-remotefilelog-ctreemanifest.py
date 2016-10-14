@@ -12,6 +12,8 @@ fullpath = os.path.join(os.getcwd(), __file__)
 sys.path.insert(0, os.path.dirname(os.path.dirname(fullpath)))
 import ctreemanifest
 
+from mercurial import manifest
+
 class FakeStore(object):
     def __init__(self):
         self._data = {}
@@ -271,6 +273,23 @@ class ctreemanifesttests(unittest.TestCase):
         newnode = hashflags()[0]
         a["abc/z"] = newnode
         self.assertEquals(a.find('abc/z'), (newnode, zflags[1]))
+
+    def testText(self):
+        a = ctreemanifest.treemanifest(FakeStore())
+        zflags = hashflags(requireflag=True)
+        a.set("abc/z", *zflags)
+
+        treetext = a.text()
+        treetextv2 = a.text(usemanifestv2=True)
+
+        b = manifest.manifestdict()
+        b["abc/z"] = zflags[0]
+        b.setflag("abc/z", zflags[1])
+        fulltext = b.text()
+        fulltextv2 = b.text(usemanifestv2=True)
+
+        self.assertEquals(treetext, fulltext)
+        self.assertEquals(treetextv2, fulltextv2)
 
 if __name__ == '__main__':
     silenttestrunner.main(__name__)
