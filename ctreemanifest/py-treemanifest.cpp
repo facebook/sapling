@@ -35,7 +35,8 @@ struct py_fileiter {
 
   fileiter iter;
 
-  bool includenodeflag;
+  bool includenode;
+  bool includeflag;
 
   // A reference to the tree is kept, so it is not freed while we're iterating
   // over it.
@@ -78,7 +79,8 @@ static PyTypeObject fileiterType = {
 };
 
 static py_fileiter *createfileiter(py_treemanifest *pytm,
-                                   bool includenodeflag,
+                                   bool includenode,
+                                   bool includeflag,
                                    bool sorted,
                                    PythonObj matcher) {
   py_fileiter *i = PyObject_New(py_fileiter, &fileiterType);
@@ -86,7 +88,8 @@ static py_fileiter *createfileiter(py_treemanifest *pytm,
     try {
       i->treemf = pytm;
       Py_INCREF(pytm);
-      i->includenodeflag = includenodeflag;
+      i->includenode = includenode;
+      i->includeflag = includeflag;
 
       // The provided py_fileiter struct hasn't initialized our fileiter member, so
       // we do it manually.
@@ -107,10 +110,12 @@ static py_fileiter *createfileiter(py_treemanifest *pytm,
 }
 
 static py_fileiter *createfileiter(py_treemanifest *pytm,
-                                   bool includenodeflag) {
+                                   bool includenode,
+                                   bool includeflag) {
   return createfileiter(
       pytm,
-      includenodeflag,
+      includenode,
+      includeflag,
       true,                       // we care about sort order.
       PythonObj());
 }
@@ -122,11 +127,11 @@ static py_fileiter *createfileiter(py_treemanifest *pytm,
  * Returns a PyObject iterator instance.
  */
 static PyObject *treemanifest_getkeysiter(py_treemanifest *self) {
-  return (PyObject*)createfileiter(self, false);
+  return (PyObject*)createfileiter(self, false, false);
 }
 
 static PyObject *treemanifest_keys(py_treemanifest *self) {
-  PythonObj iter = (PyObject*)createfileiter(self, false);
+  PythonObj iter = (PyObject*)createfileiter(self, false, false);
   PythonObj args = Py_BuildValue("(O)", (PyObject*)iter);
   PyObject *result = PyEval_CallObject((PyObject *) &PyList_Type, (PyObject*)args);
   return result;
@@ -572,7 +577,7 @@ static PyObject *fileiter_iterentriesnext(py_fileiter *self) {
     char node[BIN_NODE_SIZE];
     char flag[FLAG_SIZE];
     if (fileiter_next(iter, path, FILENAME_BUFFER_SIZE, node, flag)) {
-      if (self->includenodeflag) {
+      if (self->includenode && self->includeflag) {
         size_t flaglen = 0;
         if (flag[0] != '\0') {
           flaglen = 1;
@@ -580,6 +585,16 @@ static PyObject *fileiter_iterentriesnext(py_fileiter *self) {
         return Py_BuildValue("(s#s#s#)", path, strlen(path),
                                          node, BIN_NODE_SIZE,
                                          flag, flaglen);
+      } if (self->includenode) {
+        return Py_BuildValue("(s#s#)", path, strlen(path),
+                                       node, BIN_NODE_SIZE);
+      } if (self->includeflag) {
+        size_t flaglen = 0;
+        if (flag[0] != '\0') {
+          flaglen = 1;
+        }
+        return Py_BuildValue("(s#s#)", path, strlen(path),
+                                       flag, flaglen);
       } else {
         return PyString_FromStringAndSize(path, strlen(path));
       }
@@ -866,7 +881,11 @@ static int treemanifest_contains(py_treemanifest *self, PyObject *key) {
 }
 
 static PyObject *treemanifest_getentriesiter(py_treemanifest *self) {
-  return (PyObject*)createfileiter(self, true);
+  return (PyObject*)createfileiter(self, true, true);
+}
+
+static PyObject *treemanifest_iteritems(py_treemanifest *self) {
+  return (PyObject*)createfileiter(self, true, false);
 }
 
 static PyObject *treemanifest_text(py_treemanifest *self, PyObject *args, PyObject *kwargs) {
@@ -908,6 +927,7 @@ static PyObject *treemanifest_walk(py_treemanifest *self, PyObject *args) {
 
   return (PyObject*)createfileiter(
       self,
+      false,
       false,
       false,                  // walk does not care about sort order.
       matcher);
@@ -997,6 +1017,8 @@ static PyMethodDef treemanifest_methods[] = {
    "iterate over (path, nodeid, flags) tuples in this manifest."},
   {"iterkeys", (PyCFunction)treemanifest_getkeysiter, METH_NOARGS,
    "iterate over file names in this manifest."},
+  {"iteritems", (PyCFunction)treemanifest_iteritems, METH_NOARGS,
+   "iterate over file names and nodes in this manifest."},
   {"keys", (PyCFunction)treemanifest_keys, METH_NOARGS,
    "list of the file names in this manifest."},
   {"matches", (PyCFunction)treemanifest_matches, METH_VARARGS,
