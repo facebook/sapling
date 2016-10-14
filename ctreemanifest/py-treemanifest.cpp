@@ -571,6 +571,58 @@ static PyObject *treemanifest_getitem(py_treemanifest *self, PyObject *key) {
   }
 }
 
+static int treemanifest_setitem(py_treemanifest *self, PyObject *key, PyObject *value) {
+  char *filename;
+  Py_ssize_t filenamelen;
+  PyString_AsStringAndSize(key, &filename, &filenamelen);
+  std::string filenamestr(filename, filenamelen);
+
+  if (!value) {
+    // No value means a delete operation
+    try {
+      self->tm.remove(std::string(filename, (size_t) filenamelen));
+      return 0;
+    } catch (const pyexception &ex) {
+      return -1;
+    }
+  }
+
+  char *node;
+  Py_ssize_t nodelen;
+  PyString_AsStringAndSize(value, &node, &nodelen);
+
+  if (nodelen != BIN_NODE_SIZE) {
+      PyErr_Format(PyExc_ValueError, "invalid node length %d", nodelen);
+      return -1;
+  }
+
+  // Get the current flag so we don't overwrite it
+  std::string existingnode;
+  const char *existingflag = NULL;
+  try {
+    self->tm.get(filenamestr, &existingnode, &existingflag);
+  } catch (const pyexception &ex) {
+    return -1;
+  }
+
+  try {
+    std::string hashstr;
+    hashstr.reserve(HEX_NODE_SIZE);
+    hexfrombin(node, hashstr);
+
+    SetResult result = self->tm.set(filenamestr, hashstr, existingflag);
+
+    if (result == SET_OK) {
+      return 0;
+    } else {
+      PyErr_Format(PyExc_TypeError, "unexpected error during setitem");
+      return -1;
+    }
+  } catch (const pyexception &ex) {
+    return -1;
+  }
+}
+
 /**
  * Implements treemanifest.flags(path)
  * Returns the flag of the given file.
@@ -866,7 +918,7 @@ static PyMethodDef treemanifest_methods[] = {
 static PyMappingMethods treemanifest_mapping_methods = {
   0,                                   /* mp_length */
   (binaryfunc)treemanifest_getitem,    /* mp_subscript */
-  0,                                   /* mp_ass_subscript */
+  (objobjargproc)treemanifest_setitem, /* mp_ass_subscript */
 };
 
 static PySequenceMethods treemanifest_sequence_methods = {

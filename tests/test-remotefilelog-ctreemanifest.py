@@ -259,5 +259,18 @@ class ctreemanifesttests(unittest.TestCase):
         except KeyError:
             pass
 
+    def testSetItem(self):
+        a = ctreemanifest.treemanifest(FakeStore())
+        zflags = hashflags(requireflag=True)
+        a.set("abc/z", *zflags)
+
+        fooflags = hashflags()
+        a["foo"] = fooflags[0]
+        self.assertEquals(a.find('foo'), (fooflags[0], ''))
+
+        newnode = hashflags()[0]
+        a["abc/z"] = newnode
+        self.assertEquals(a.find('abc/z'), (newnode, zflags[1]))
+
 if __name__ == '__main__':
     silenttestrunner.main(__name__)
