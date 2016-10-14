@@ -965,6 +965,14 @@ static PyObject *treemanifest_write(py_treemanifest *self, PyObject *args) {
   }
 }
 
+static int treemanifest_nonzero(py_treemanifest *self) {
+  if (self->tm.getRootManifest()->children() > 0) {
+    return 1;
+  } else {
+    return 0;
+  }
+}
+
 // ====  treemanifest ctype declaration ====
 
 static PyMethodDef treemanifest_methods[] = {
@@ -1017,6 +1025,20 @@ static PySequenceMethods treemanifest_sequence_methods = {
 	0,                                 /* sq_inplace_repeat */
 };
 
+static PyNumberMethods treemanifest_number_methods = {
+  0,                                 /* binaryfunc nb_add; */
+  0,                                 /* binaryfunc nb_subtract; */
+  0,                                 /* binaryfunc nb_multiply; */
+  0,                                 /* binaryfunc nb_divide; */
+  0,                                 /* binaryfunc nb_remainder; */
+  0,                                 /* binaryfunc nb_divmod; */
+  0,                                 /* ternaryfunc nb_power; */
+  0,                                 /* unaryfunc nb_negative; */
+  0,                                 /* unaryfunc nb_positive; */
+  0,                                 /* unaryfunc nb_absolute; */
+  (inquiry)treemanifest_nonzero,     /* inquiry nb_nonzero; */
+};
+
 static PyTypeObject treemanifestType = {
   PyObject_HEAD_INIT(NULL)
   0,                                                /* ob_size */
@@ -1029,7 +1051,7 @@ static PyTypeObject treemanifestType = {
   0,                                                /* tp_setattr */
   0,                                                /* tp_compare */
   0,                                                /* tp_repr */
-  0,                                                /* tp_as_number */
+  &treemanifest_number_methods,                     /* tp_as_number */
   &treemanifest_sequence_methods,                   /* tp_as_sequence - length/contains */
   &treemanifest_mapping_methods,                    /* tp_as_mapping - getitem/setitem */
   0,                                                /* tp_hash */

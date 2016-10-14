@@ -165,6 +165,9 @@ class hybridmanifest(object):
     def __delitem__(self, key):
         return self._manifest('__delitem__').__delitem__(key)
 
+    def __nonzero__(self):
+        return self._manifest('__nonzero__').__nonzero__()
+
     def __len__(self):
         return self._manifest('__len__').__len__()
 
@@ -246,6 +249,11 @@ class fastmanifestdict(object):
 
     def find(self, key):
         return self._fm[key]
+
+    def __nonzero__(self):
+        for x in self:
+            return True
+        return False
 
     def __len__(self):
         return len(self._fm)
