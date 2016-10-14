@@ -29,6 +29,7 @@ Select no files
   examine changes to 'empty-rw'? [Ynesfdaq?] n
   
   no changes to record
+  [1]
 
   $ hg tip -p
   changeset:   -1:000000000000
@@ -1376,6 +1377,7 @@ Removing changes from patch
   record this change to 'editedfile'? [Ynesfdaq?] e
   
   no changes to record
+  [1]
   $ cat editedfile
   This change will not be committed
   This is the second line
@@ -1487,6 +1489,7 @@ session
   record this change to 'editedfile'? [Ynesfdaq?] n
   
   no changes to record
+  [1]
 
 
 random text in random positions is still an error

@@ -37,6 +37,7 @@ Committing some changes but stopping on the way
   > EOF
   $ hg commit -i  -m "a" -d "0 0"
   no changes to record
+  [1]
   $ hg tip
   changeset:   -1:000000000000
   tag:         tip
@@ -60,6 +61,7 @@ Committing some changes
 Check that commit -i works with no changes
   $ hg commit -i
   no changes to record
+  [1]
 
 Committing only one file
 
