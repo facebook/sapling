@@ -186,7 +186,9 @@ struct treemanifest {
         FindResult (*callback)(
             Manifest *manifest,
             const char *filename, size_t filenamelen,
-            FindContext *findContext));
+            FindContext *findContext,
+            ManifestPtr *resultManifest),
+        ManifestPtr *resultManifest);
 };
 
 /**

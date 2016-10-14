@@ -63,13 +63,15 @@ class Manifest {
   private:
     PythonObj _rawobj;
     size_t _refcount;
+    bool _mutable;
 
     std::list<ManifestEntry> entries;
     std::list<ManifestEntry *> mercurialSortedEntries;
 
   public:
     Manifest() :
-      _refcount(0) {
+      _refcount(0),
+      _mutable(true) {
     }
 
     Manifest(PythonObj &rawobj);
@@ -81,6 +83,9 @@ class Manifest {
      * Returns a deep copy of this Manifest.
      */
     ManifestPtr copy();
+
+    bool isMutable() const;
+    void markPermanent();
 
     ManifestIterator getIterator();
 
@@ -124,6 +129,10 @@ class Manifest {
      */
     void removeChild(
         std::list<ManifestEntry>::iterator iterator) {
+      if (!this->isMutable()) {
+        throw std::logic_error("attempting to mutate immutable Manifest");
+      }
+
       this->entries.erase(iterator);
 
       // invalidate the mercurial-ordered list of entries

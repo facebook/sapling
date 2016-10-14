@@ -202,7 +202,9 @@ FindResult treemanifest::find(
     FindResult (*callback)(
         Manifest *manifest,
         const char *filename, size_t filenamelen,
-        FindContext *findContext)) {
+        FindContext *findContext,
+        ManifestPtr *resultManifest),
+    ManifestPtr *resultManifest) {
   if (manifestentry->resolved.isnull()) {
     const char *pathstart;
     size_t pathlen;
@@ -213,7 +215,7 @@ FindResult treemanifest::find(
     manifestentry->resolved = this->fetcher.get(pathstart, pathlen,
         findContext->nodebuffer);
   }
-  Manifest *manifest = manifestentry->resolved;
+  ManifestPtr manifest = manifestentry->resolved;
 
   FindResult result;
 
@@ -225,7 +227,8 @@ FindResult treemanifest::find(
     // time to execute the callback.
     result = callback(manifest,
         word, wordlen,
-        findContext);
+        findContext,
+        resultManifest);
   } else {
     // position the iterator at the right location
     bool exacthit;
@@ -240,6 +243,11 @@ FindResult treemanifest::find(
         return FIND_PATH_NOT_FOUND;
       }
 
+      if (!manifest->isMutable()) {
+        manifest = ManifestPtr(manifest->copy());
+        iterator = manifest->findChild(word, wordlen, true, &exacthit);
+      }
+
       // create the intermediate node...
       entry = manifest->addChild(
           iterator, word, wordlen, NULL, MANIFEST_DIRECTORY_FLAGPTR);
@@ -248,23 +256,47 @@ FindResult treemanifest::find(
     }
 
     // now find the next subdir
+    ManifestPtr newChildManifest;
     result = find(
         entry,
         path,
         findMode,
         findContext,
-        callback);
+        callback,
+        &newChildManifest);
 
-    // if entry->resolved has 0 entries, we may want to prune it, if the mode
+    // If the child was changed, apply it to this manifest
+    if (!entry->resolved->isMutable() && newChildManifest->isMutable()) {
+      // If we're not mutable, copy ourselves
+      if (!manifest->isMutable()) {
+        manifest = ManifestPtr(manifest->copy());
+        // Refind the entry in the new iterator
+        iterator = manifest->findChild(word, wordlen, true, &exacthit);
+        entry = &(*iterator);
+      }
+
+      // Replace the reference to the child
+      entry->resolved = newChildManifest;
+    }
+
+    // if the child manifest has 0 entries, we may want to prune it, if the mode
     // indicates that we should.
     if (findMode == REMOVE_EMPTY_IMPLICIT_NODES) {
-      if (entry->resolved->children() == 0) {
+      if (newChildManifest->children() == 0) {
+        if (!manifest->isMutable()) {
+          manifest = ManifestPtr(manifest->copy());
+        }
+
         manifest->removeChild(iterator);
       }
     }
+    *resultManifest = manifest;
   }
 
   if (findContext->invalidate_checksums) {
+    if (!manifestentry->resolved->isMutable()) {
+      throw std::logic_error("attempting to null node on immutable manifest");
+    }
     manifestentry->node = NULL;
   }
 
@@ -279,7 +311,8 @@ struct GetResult {
 static FindResult get_callback(
     Manifest *manifest,
     const char *filename, size_t filenamelen,
-    FindContext *context) {
+    FindContext *context,
+    ManifestPtr *resultManifest) {
   // position the iterator at the right location
   bool exacthit;
   std::list<ManifestEntry>::iterator iterator = manifest->findChild(
@@ -314,12 +347,14 @@ void treemanifest::get(
   changes.nodebuffer.reserve(BIN_NODE_SIZE);
   changes.extras = &extras;
 
+  ManifestPtr resultManifest;
   this->find(
       &this->root,
       pathiter,
       BASIC_WALK,
       &changes,
-      get_callback
+      get_callback,
+      &resultManifest
   );
 }
 
@@ -331,8 +366,14 @@ struct SetParams {
 static FindResult set_callback(
     Manifest *manifest,
     const char *filename, size_t filenamelen,
-    FindContext *context) {
+    FindContext *context,
+    ManifestPtr *resultManifest) {
   SetParams *params = (SetParams *) context->extras;
+
+  if (!manifest->isMutable()) {
+    *resultManifest = ManifestPtr(manifest->copy());
+    manifest = *resultManifest;
+  }
 
   // position the iterator at the right location
   bool exacthit;
@@ -365,12 +406,14 @@ SetResult treemanifest::set(
   changes.nodebuffer.reserve(BIN_NODE_SIZE);
   changes.extras = &extras;
 
+  ManifestPtr resultManifest;
   FindResult result = this->find(
       &this->root,
       pathiter,
       CREATE_IF_MISSING,
       &changes,
-      set_callback
+      set_callback,
+      &resultManifest
   );
 
   switch (result) {
@@ -390,7 +433,8 @@ struct RemoveResult {
 static FindResult remove_callback(
     Manifest *manifest,
     const char *filename, size_t filenamelen,
-    FindContext *context) {
+    FindContext *context,
+    ManifestPtr *resultManifest) {
   RemoveResult *params = (RemoveResult *) context->extras;
 
   // position the iterator at the right location
@@ -399,6 +443,14 @@ static FindResult remove_callback(
       filename, filenamelen, false, &exacthit);
 
   if (exacthit) {
+    if (!manifest->isMutable()) {
+      *resultManifest = ManifestPtr(manifest->copy());
+      manifest = *resultManifest;
+
+      iterator = manifest->findChild(
+        filename, filenamelen, false, &exacthit);
+    }
+
     manifest->removeChild(iterator);
     params->found = true;
     context->invalidate_checksums = true;
@@ -415,12 +467,14 @@ bool treemanifest::remove(
   changes.nodebuffer.reserve(BIN_NODE_SIZE);
   changes.extras = &extras;
 
+  ManifestPtr resultManifest;
   FindResult result = this->find(
       &this->root,
       pathiter,
       REMOVE_EMPTY_IMPLICIT_NODES,
       &changes,
-      remove_callback
+      remove_callback,
+      &resultManifest
   );
 
   return (result == FIND_PATH_OK) && extras.found;
@@ -520,6 +574,9 @@ bool NewTreeIterator::popResult(std::string **path, Manifest **result, std::stri
     std::string hexnode;
     hexfrombin(tempnode, hexnode);
     priorEntry->update(hexnode.c_str(), MANIFEST_DIRECTORY_FLAGPTR);
+
+    // Now that it has a node, it is permanent and shouldn't be modified.
+    priorEntry->resolved->markPermanent();
   }
 
   *path = &this->path;

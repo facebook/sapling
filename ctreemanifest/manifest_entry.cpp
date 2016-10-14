@@ -101,7 +101,11 @@ void ManifestEntry::initialize(ManifestEntry *other) {
   }
 
   if (!other->resolved.isnull()) {
-    this->resolved = other->resolved->copy();
+    if (other->resolved->isMutable()) {
+      this->resolved = other->resolved->copy();
+    } else {
+      this->resolved = other->resolved;
+    }
   }
 }
 

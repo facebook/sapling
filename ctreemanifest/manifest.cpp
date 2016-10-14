@@ -11,7 +11,8 @@
 
 Manifest::Manifest(PythonObj &rawobj) :
     _rawobj(rawobj),
-    _refcount(0) {
+    _refcount(0),
+    _mutable(false) {
   char *parseptr, *endptr;
   Py_ssize_t buf_sz;
   PyString_AsStringAndSize(_rawobj, &parseptr, &buf_sz);
@@ -105,6 +106,10 @@ std::list<ManifestEntry>::iterator Manifest::findChild(
 ManifestEntry *Manifest::addChild(std::list<ManifestEntry>::iterator iterator,
     const char *filename, const size_t filenamelen, const char *node,
     const char *flag) {
+  if (!this->isMutable()) {
+    throw std::logic_error("attempting to mutate immutable Manifest");
+  }
+
   ManifestEntry entry;
   this->entries.insert(iterator, entry);
 
@@ -124,6 +129,10 @@ ManifestEntry *Manifest::addChild(std::list<ManifestEntry>::iterator iterator,
 
 ManifestEntry *Manifest::addChild(std::list<ManifestEntry>::iterator iterator,
         ManifestEntry *otherChild) {
+  if (!this->isMutable()) {
+    throw std::logic_error("attempting to mutate immutable Manifest");
+  }
+
   ManifestEntry entry;
   iterator = this->entries.insert(iterator, entry);
 
@@ -281,4 +290,12 @@ void Manifest::incref() {
 size_t Manifest::decref() {
   this->_refcount--;
   return this->_refcount;
+}
+
+bool Manifest::isMutable() const {
+  return this->_mutable;
+}
+
+void Manifest::markPermanent() {
+  this->_mutable = false;
 }
