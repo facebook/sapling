@@ -216,6 +216,7 @@ FindResult treemanifest::find(
         findContext->nodebuffer);
   }
   ManifestPtr manifest = manifestentry->resolved;
+  *resultManifest = manifest;
 
   FindResult result;
 
@@ -285,19 +286,22 @@ FindResult treemanifest::find(
       if (newChildManifest->children() == 0) {
         if (!manifest->isMutable()) {
           manifest = ManifestPtr(manifest->copy());
+          iterator = manifest->findChild(word, wordlen, true, &exacthit);
+          entry = &(*iterator);
         }
 
         manifest->removeChild(iterator);
       }
     }
-    *resultManifest = manifest;
-  }
 
-  if (findContext->invalidate_checksums) {
-    if (!manifestentry->resolved->isMutable()) {
-      throw std::logic_error("attempting to null node on immutable manifest");
+    *resultManifest = manifest;
+
+    if (findContext->invalidate_checksums) {
+      if (!manifest->isMutable()) {
+        throw std::logic_error("attempting to null node on immutable manifest");
+      }
+      entry->node = NULL;
     }
-    manifestentry->node = NULL;
   }
 
   return result;
@@ -416,6 +420,11 @@ SetResult treemanifest::set(
       &resultManifest
   );
 
+  this->root.resolved = resultManifest;
+  if (changes.invalidate_checksums) {
+    this->root.node = NULL;
+  }
+
   switch (result) {
     case FIND_PATH_OK:
       return SET_OK;
@@ -476,6 +485,11 @@ bool treemanifest::remove(
       remove_callback,
       &resultManifest
   );
+
+  this->root.resolved = resultManifest;
+  if (changes.invalidate_checksums) {
+    this->root.node = NULL;
+  }
 
   return (result == FIND_PATH_OK) && extras.found;
 }
