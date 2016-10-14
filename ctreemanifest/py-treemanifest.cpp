@@ -578,7 +578,9 @@ static PyObject *fileiter_iterentriesnext(py_fileiter *self) {
 static PyObject *treemanifest_getitem(py_treemanifest *self, PyObject *key) {
   char *filename;
   Py_ssize_t filenamelen;
-  PyString_AsStringAndSize(key, &filename, &filenamelen);
+  if (PyString_AsStringAndSize(key, &filename, &filenamelen)) {
+    return NULL;
+  }
 
   std::string resultnode;
   const char *resultflag;
@@ -605,7 +607,9 @@ static PyObject *treemanifest_getitem(py_treemanifest *self, PyObject *key) {
 static int treemanifest_setitem(py_treemanifest *self, PyObject *key, PyObject *value) {
   char *filename;
   Py_ssize_t filenamelen;
-  PyString_AsStringAndSize(key, &filename, &filenamelen);
+  if (PyString_AsStringAndSize(key, &filename, &filenamelen)) {
+    return -1;
+  }
   std::string filenamestr(filename, filenamelen);
 
   if (!value) {
@@ -620,7 +624,9 @@ static int treemanifest_setitem(py_treemanifest *self, PyObject *key, PyObject *
 
   char *node;
   Py_ssize_t nodelen;
-  PyString_AsStringAndSize(value, &node, &nodelen);
+  if (PyString_AsStringAndSize(value, &node, &nodelen)) {
+    return -1;
+  }
 
   if (nodelen != BIN_NODE_SIZE) {
       PyErr_Format(PyExc_ValueError, "invalid node length %d", nodelen);
@@ -820,7 +826,9 @@ static PyObject *treemanifest_filesnotin(py_treemanifest *self, PyObject *args) 
 static int treemanifest_contains(py_treemanifest *self, PyObject *key) {
   char *filename;
   Py_ssize_t filenamelen;
-  PyString_AsStringAndSize(key, &filename, &filenamelen);
+  if (PyString_AsStringAndSize(key, &filename, &filenamelen)) {
+    return -1;
+  }
 
   std::string resultnode;
   const char *resultflag;
