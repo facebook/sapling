@@ -125,6 +125,15 @@ static PyObject *treemanifest_getkeysiter(py_treemanifest *self) {
   return (PyObject*)createfileiter(self, false);
 }
 
+static PyObject *treemanifest_dirs(py_treemanifest *self) {
+  PythonObj module = PyImport_ImportModule("mercurial.util");
+  PythonObj dirstype = module.getattr("dirs");
+
+  PyObject *args = Py_BuildValue("(O)", self);
+  PythonObj result = dirstype.call(args);
+  return result.returnval();
+}
+
 static PyObject *treemanifest_diff(
     PyObject *o, PyObject *args, PyObject *kwargs) {
   py_treemanifest *self = (py_treemanifest*)o;
@@ -961,6 +970,7 @@ static PyObject *treemanifest_write(py_treemanifest *self, PyObject *args) {
 static PyMethodDef treemanifest_methods[] = {
   {"copy", (PyCFunction)treemanifest_copy, METH_NOARGS, "copies the treemanifest"},
   {"diff", (PyCFunction)treemanifest_diff, METH_VARARGS|METH_KEYWORDS, "performs a diff of the given two manifests\n"},
+  {"dirs", (PyCFunction)treemanifest_dirs, METH_NOARGS, "gets a collection of all the directories in this manifest"},
   {"filesnotin", (PyCFunction)treemanifest_filesnotin, METH_VARARGS, "returns the set of files in m1 but not m2\n"},
   {"find", treemanifest_find, METH_VARARGS, "returns the node and flag for the given filepath\n"},
   {"flags", (PyCFunction)treemanifest_flags, METH_VARARGS|METH_KEYWORDS,
