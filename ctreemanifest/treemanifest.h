@@ -141,7 +141,7 @@ struct treemanifest {
       root.initialize(&other.root);
     }
 
-    void get(
+    bool get(
         const std::string &filename,
         std::string *resultnode, const char **resultflag,
         FindResultType resulttype = RESULT_FILE);

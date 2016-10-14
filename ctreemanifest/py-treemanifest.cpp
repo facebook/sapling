@@ -190,15 +190,16 @@ static PyObject *treemanifest_get(
 
   std::string resultnode;
   const char *resultflag;
+  bool found;
   try {
-    self->tm.get(
+    found = self->tm.get(
         std::string(filename, (size_t) filenamelen),
         &resultnode, &resultflag);
   } catch (const pyexception &ex) {
     return NULL;
   }
 
-  if (resultnode.empty()) {
+  if (!found) {
     if (PyErr_Occurred()) {
       return NULL;
     }
@@ -226,14 +227,15 @@ static PyObject *treemanifest_hasdir(py_treemanifest *self, PyObject *args) {
 
   std::string resultnode;
   const char *resultflag = NULL;
+  bool found;
   try {
-    self->tm.get(directorystr, &resultnode, &resultflag,
+    found = self->tm.get(directorystr, &resultnode, &resultflag,
                  RESULT_DIRECTORY);
   } catch (const pyexception &ex) {
     return NULL;
   }
 
-  if (resultflag && *resultflag == MANIFEST_DIRECTORY_FLAG) {
+  if (found && resultflag && *resultflag == MANIFEST_DIRECTORY_FLAG) {
     Py_RETURN_TRUE;
   } else {
     Py_RETURN_FALSE;
@@ -256,17 +258,18 @@ static PyObject *treemanifest_find(PyObject *o, PyObject *args) {
 
   std::string resultnode;
   const char *resultflag;
+  bool found;
   try {
     // Grab the root node's data
 
-    self->tm.get(
+    found = self->tm.get(
         std::string(filename, (size_t) filenamelen),
         &resultnode, &resultflag);
   } catch (const pyexception &ex) {
     return NULL;
   }
 
-  if (resultnode.empty()) {
+  if (!found) {
     if (PyErr_Occurred()) {
       return NULL;
     }
@@ -593,15 +596,16 @@ static PyObject *treemanifest_getitem(py_treemanifest *self, PyObject *key) {
 
   std::string resultnode;
   const char *resultflag;
+  bool found;
   try {
-    self->tm.get(
+    found = self->tm.get(
         std::string(filename, (size_t) filenamelen),
         &resultnode, &resultflag);
   } catch (const pyexception &ex) {
     return NULL;
   }
 
-  if (resultnode.empty()) {
+  if (!found) {
     if (PyErr_Occurred()) {
       return NULL;
     }
@@ -687,32 +691,28 @@ static PyObject *treemanifest_flags(py_treemanifest *self, PyObject *args, PyObj
   }
 
   std::string resultnode;
-  const char *resultflag;
+  const char *resultflag = NULL;
+  bool found;
   try {
-    self->tm.get(
+    found = self->tm.get(
         std::string(filename, (size_t) filenamelen),
         &resultnode, &resultflag);
   } catch (const pyexception &ex) {
     return NULL;
   }
 
-  if (resultnode.empty()) {
-    if (PyErr_Occurred()) {
-      return NULL;
-    }
-
-    PyErr_Format(PyExc_KeyError, "file '%s' not found", filename);
-    return NULL;
-  }
-
-  if (resultflag == NULL) {
+  if (!found) {
     if (defaultval) {
       return PyString_FromStringAndSize(defaultval, defaultvallen);
     } else {
       return PyString_FromStringAndSize(MAGIC_EMPTY_STRING, (Py_ssize_t)0);
     }
   } else {
-    return PyString_FromStringAndSize(resultflag, (Py_ssize_t)1);
+    if (resultflag) {
+      return PyString_FromStringAndSize(resultflag, (Py_ssize_t)1);
+    } else {
+      return PyString_FromStringAndSize(MAGIC_EMPTY_STRING, (Py_ssize_t)0);
+    }
   }
 }
 
@@ -846,10 +846,10 @@ static int treemanifest_contains(py_treemanifest *self, PyObject *key) {
   std::string resultnode;
   const char *resultflag;
   try {
-    self->tm.get(
+    bool found = self->tm.get(
         std::string(filename, (size_t) filenamelen),
         &resultnode, &resultflag);
-    if (resultnode.size() == 0) {
+    if (!found) {
       return 0;
     } else {
       return 1;

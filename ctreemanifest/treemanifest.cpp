@@ -365,7 +365,7 @@ static FindResult get_callback(
   return FIND_PATH_OK;
 }
 
-void treemanifest::get(
+bool treemanifest::get(
     const std::string &filename,
     std::string *resultnode, const char **resultflag,
     FindResultType resulttype) {
@@ -378,7 +378,7 @@ void treemanifest::get(
   changes.extras = &extras;
 
   ManifestPtr resultManifest;
-  this->find(
+  FindResult result = this->find(
       &this->root,
       pathiter,
       BASIC_WALK,
@@ -386,6 +386,8 @@ void treemanifest::get(
       get_callback,
       &resultManifest
   );
+
+  return result == FIND_PATH_OK;
 }
 
 struct SetParams {
