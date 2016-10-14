@@ -125,6 +125,13 @@ static PyObject *treemanifest_getkeysiter(py_treemanifest *self) {
   return (PyObject*)createfileiter(self, false);
 }
 
+static PyObject *treemanifest_keys(py_treemanifest *self) {
+  PythonObj iter = (PyObject*)createfileiter(self, false);
+  PythonObj args = Py_BuildValue("(O)", (PyObject*)iter);
+  PyObject *result = PyEval_CallObject((PyObject *) &PyList_Type, (PyObject*)args);
+  return result;
+}
+
 static PyObject *treemanifest_dirs(py_treemanifest *self) {
   PythonObj module = PyImport_ImportModule("mercurial.util");
   PythonObj dirstype = module.getattr("dirs");
@@ -990,6 +997,8 @@ static PyMethodDef treemanifest_methods[] = {
    "iterate over (path, nodeid, flags) tuples in this manifest."},
   {"iterkeys", (PyCFunction)treemanifest_getkeysiter, METH_NOARGS,
    "iterate over file names in this manifest."},
+  {"keys", (PyCFunction)treemanifest_keys, METH_NOARGS,
+   "list of the file names in this manifest."},
   {"matches", (PyCFunction)treemanifest_matches, METH_VARARGS,
     "returns a manifest filtered by the matcher"},
   {"set", treemanifest_set, METH_VARARGS,

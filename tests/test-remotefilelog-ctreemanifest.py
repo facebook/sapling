@@ -407,5 +407,15 @@ class ctreemanifesttests(unittest.TestCase):
         result = a.matches(match)
         self.assertEquals(list(result.iterentries()), [])
 
+    def testKeys(self):
+        a = ctreemanifest.treemanifest(FakeStore())
+        self.assertEquals(a.keys(), [])
+
+        zflags = hashflags()
+        a.set("abc/z", *zflags)
+        a.set("foo", *hashflags())
+
+        self.assertEquals(a.keys(), ["abc/z", "foo"])
+
 if __name__ == '__main__':
     silenttestrunner.main(__name__)
