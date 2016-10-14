@@ -185,6 +185,58 @@ if sys.version_info[0] >= 3:
         OR CACHED FILES WON'T GET INVALIDATED PROPERLY.
         """
         futureimpline = False
+
+        # The following utility functions access the tokens list and i index of
+        # the for i, t enumerate(tokens) loop below
+        def _isop(j, *o):
+            """Assert that tokens[j] is an OP with one of the given values"""
+            try:
+                return tokens[j].type == token.OP and tokens[j].string in o
+            except IndexError:
+                return False
+
+        def _findargnofcall(n):
+            """Find arg n of a call expression (start at 0)
+
+            Returns index of the first token of that argument, or None if
+            there is not that many arguments.
+
+            Assumes that token[i + 1] is '('.
+
+            """
+            nested = 0
+            for j in range(i + 2, len(tokens)):
+                if _isop(j, ')', ']', '}'):
+                    # end of call, tuple, subscription or dict / set
+                    nested -= 1
+                    if nested < 0:
+                        return None
+                elif n == 0:
+                    # this is the starting position of arg
+                    return j
+                elif _isop(j, '(', '[', '{'):
+                    nested += 1
+                elif _isop(j, ',') and nested == 0:
+                    n -= 1
+
+            return None
+
+        def _ensureunicode(j):
+            """Make sure the token at j is a unicode string
+
+            This rewrites a string token to include the unicode literal prefix
+            so the string transformer won't add the byte prefix.
+
+            Ignores tokens that are not strings. Assumes bounds checking has
+            already been done.
+
+            """
+            st = tokens[j]
+            if st.type == token.STRING and st.string.startswith(("'", '"')):
+                rt = tokenize.TokenInfo(st.type, 'u%s' % st.string,
+                                        st.start, st.end, st.line)
+                tokens[j] = rt
+
         for i, t in enumerate(tokens):
             # Convert most string literals to byte literals. String literals
             # in Python 2 are bytes. String literals in Python 3 are unicode.
@@ -241,91 +293,35 @@ if sys.version_info[0] >= 3:
                                              '')
                 continue
 
-            try:
-                nexttoken = tokens[i + 1]
-            except IndexError:
-                nexttoken = None
-
-            try:
-                prevtoken = tokens[i - 1]
-            except IndexError:
-                prevtoken = None
-
             # This looks like a function call.
-            if (t.type == token.NAME and nexttoken and
-                nexttoken.type == token.OP and nexttoken.string == '('):
+            if t.type == token.NAME and _isop(i + 1, '('):
                 fn = t.string
 
                 # *attr() builtins don't accept byte strings to 2nd argument.
-                # Rewrite the token to include the unicode literal prefix so
-                # the string transformer above doesn't add the byte prefix.
-                if fn in ('getattr', 'setattr', 'hasattr', 'safehasattr'):
-                    try:
-                        # (NAME, 'getattr')
-                        # (OP, '(')
-                        # (NAME, 'foo')
-                        # (OP, ',')
-                        # (NAME|STRING, foo)
-                        st = tokens[i + 4]
-                        if (st.type == token.STRING and
-                            st.string[0] in ("'", '"')):
-                            rt = tokenize.TokenInfo(st.type, 'u%s' % st.string,
-                                                    st.start, st.end, st.line)
-                            tokens[i + 4] = rt
-                    except IndexError:
-                        pass
+                if (fn in ('getattr', 'setattr', 'hasattr', 'safehasattr') and
+                        not _isop(i - 1, '.')):
+                    arg1idx = _findargnofcall(1)
+                    if arg1idx is not None:
+                        _ensureunicode(arg1idx)
 
                 # .encode() and .decode() on str/bytes/unicode don't accept
-                # byte strings on Python 3. Rewrite the token to include the
-                # unicode literal prefix so the string transformer above doesn't
-                # add the byte prefix. The loop helps in handling multiple
-                # arguments.
-                if (fn in ('encode', 'decode') and
-                    prevtoken.type == token.OP and prevtoken.string == '.'):
-                    # (OP, '.')
-                    # (NAME, 'encode')
-                    # (OP, '(')
-                    # [(VARIABLE, encoding)]
-                    # [(OP, '.')]
-                    # [(VARIABLE, encoding)]
-                    # [(OP, ',')]
-                    # (STRING, 'utf-8')
-                    # (OP, ')')
-                    j = i
-                    try:
-                        while (tokens[j + 1].string in ('(', ',', '.')):
-                            st = tokens[j + 2]
-                            if (st.type == token.STRING and
-                                st.string[0] in ("'", '"')):
-                                rt = tokenize.TokenInfo(st.type,
-                                                    'u%s' % st.string,
-                                                    st.start, st.end, st.line)
-                                tokens[j + 2] = rt
-                            j = j + 2
-                    except IndexError:
-                        pass
+                # byte strings on Python 3.
+                elif fn in ('encode', 'decode') and _isop(i - 1, '.'):
+                    for argn in range(2):
+                        argidx = _findargnofcall(argn)
+                        if argidx is not None:
+                            _ensureunicode(argidx)
 
-                # Bare open call (not an attribute on something else)
-                if (fn == 'open' and not (prevtoken.type == token.OP and
-                                          prevtoken.string == '.')):
-                    try:
-                        # (NAME, 'open')
-                        # (OP, '(')
-                        # (NAME|STRING, 'filename')
-                        # (OP, ',')
-                        # (NAME|STRING, mode)
-                        st = tokens[i + 4]
-                        if (st.type == token.STRING and
-                                st.string[0] in ("'", '"')):
-                            rt = tokenize.TokenInfo(st.type, 'u%s' % st.string,
-                                                    st.start, st.end, st.line)
-                            tokens[i + 4] = rt
-                    except IndexError:
-                        pass
+                # Bare open call (not an attribute on something else), the
+                # second argument (mode) must be a string, not bytes
+                elif fn == 'open' and not _isop(i - 1, '.'):
+                    arg1idx = _findargnofcall(1)
+                    if arg1idx is not None:
+                        _ensureunicode(arg1idx)
 
                 # It changes iteritems to items as iteritems is not
                 # present in Python 3 world.
-                if fn == 'iteritems':
+                elif fn == 'iteritems':
                     yield tokenize.TokenInfo(t.type, 'items',
                                              t.start, t.end, t.line)
                     continue
@@ -337,7 +333,7 @@ if sys.version_info[0] >= 3:
     # ``replacetoken`` or any mechanism that changes semantics of module
     # loading is changed. Otherwise cached bytecode may get loaded without
     # the new transformation mechanisms applied.
-    BYTECODEHEADER = b'HG\x00\x05'
+    BYTECODEHEADER = b'HG\x00\x06'
 
     class hgloader(importlib.machinery.SourceFileLoader):
         """Custom module loader that transforms source code.
