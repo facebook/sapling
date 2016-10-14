@@ -354,5 +354,14 @@ class ctreemanifesttests(unittest.TestCase):
         self.assertTrue(a.hasdir('abc'))
         self.assertFalse(a.hasdir('xyz'))
 
+    def testContains(self):
+        a = ctreemanifest.treemanifest(FakeStore())
+        zflags = hashflags()
+        a.set("abc/z", *zflags)
+
+        self.assertTrue("abc/z" in a)
+        self.assertFalse("abc" in a)
+        self.assertFalse(None in a)
+
 if __name__ == '__main__':
     silenttestrunner.main(__name__)

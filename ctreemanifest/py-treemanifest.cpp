@@ -824,6 +824,10 @@ static PyObject *treemanifest_filesnotin(py_treemanifest *self, PyObject *args) 
 }
 
 static int treemanifest_contains(py_treemanifest *self, PyObject *key) {
+  if (key == Py_None) {
+    return 0;
+  }
+
   char *filename;
   Py_ssize_t filenamelen;
   if (PyString_AsStringAndSize(key, &filename, &filenamelen)) {
