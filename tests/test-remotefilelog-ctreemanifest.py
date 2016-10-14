@@ -302,7 +302,12 @@ class ctreemanifesttests(unittest.TestCase):
         b.set("abc/z", *zflags)
         b.set("xyz/m", *mflags)
 
-        # Diff committed trees
+        # Diff matching trees
+        # - uncommitted trees
+        diff = a.diff(b)
+        self.assertEquals(diff, {})
+
+        # - committed trees
         store = FakeStore()
         a.write(store)
         b.write(store)
@@ -315,6 +320,14 @@ class ctreemanifesttests(unittest.TestCase):
         b.set("newfile", *newfileflags)
         b.set("abc/z", *newzflags)
 
+        # - uncommitted trees
+        diff = a.diff(b)
+        self.assertEquals(diff, {
+            "newfile": ((None, ''), newfileflags),
+            "abc/z": (zflags, newzflags)
+        })
+
+        # - committed trees
         a.write(store)
         b.write(store)
 

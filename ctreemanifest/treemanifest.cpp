@@ -91,7 +91,11 @@ void treemanifest_diffrecurse(
     if (!selfiter.isfinished()) {
       cmp--;
       selfentry = selfiter.currentvalue();
-      selfbinnode = binfromhex(selfentry->node);
+      if (selfentry->node) {
+        selfbinnode = binfromhex(selfentry->node);
+      } else {
+        assert(selfentry->isdirectory());
+      }
     }
 
     ManifestEntry *otherentry = NULL;
@@ -99,7 +103,11 @@ void treemanifest_diffrecurse(
     if (!otheriter.isfinished()) {
       cmp++;
       otherentry = otheriter.currentvalue();
-      otherbinnode = binfromhex(otherentry->node);
+      if (otherentry->node) {
+        otherbinnode = binfromhex(otherentry->node);
+      } else {
+        assert(otherentry->isdirectory());
+      }
     }
 
     // If both sides are present, cmp == 0, so do a filename comparison
@@ -138,7 +146,7 @@ void treemanifest_diffrecurse(
         // Both are directories - recurse
         selfentry->appendtopath(path);
 
-        if (selfbinnode != otherbinnode || clean) {
+        if (selfbinnode != otherbinnode || clean || selfbinnode.size() == 0) {
           Manifest *selfchildmanifest = selfentry->get_manifest(fetcher,
               path.c_str(), path.size());
           Manifest *otherchildmanifest = otherentry->get_manifest(fetcher,
