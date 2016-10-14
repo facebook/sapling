@@ -756,12 +756,11 @@ static PyObject *treemanifest_matches(py_treemanifest *self, PyObject *args) {
     char flag[1];
     while (fileiter_next(iter, path, 2048, node, flag)) {
       size_t pathlen = strlen(path);
-      std::string binnode = binfromhex(node);
 
       // Call manifestdict.__setitem__
       PythonObj setArgs = Py_BuildValue(
           "s#s#",
-          path, pathlen, binnode.c_str(), BIN_NODE_SIZE);
+          path, pathlen, node, BIN_NODE_SIZE);
       result.callmethod("__setitem__", setArgs);
 
       Py_ssize_t flaglen = *flag != '\0' ? 1 : 0;

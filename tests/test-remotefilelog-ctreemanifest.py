@@ -12,7 +12,10 @@ fullpath = os.path.join(os.getcwd(), __file__)
 sys.path.insert(0, os.path.dirname(os.path.dirname(fullpath)))
 import ctreemanifest
 
-from mercurial import manifest
+from mercurial import (
+    manifest,
+    match as matchmod
+)
 
 class FakeStore(object):
     def __init__(self):
@@ -387,6 +390,22 @@ class ctreemanifesttests(unittest.TestCase):
         self.assertEquals(a.flags('x'), '')
         self.assertEquals(a.flags('x', default='z'), 'z')
         self.assertEquals(a.flags('abc/z'), zflags[1])
+
+    def testMatches(self):
+        a = ctreemanifest.treemanifest(FakeStore())
+        zflags = hashflags()
+        a.set("abc/z", *zflags)
+        a.set("foo", *hashflags())
+
+        match = matchmod.match('/', '/', ['abc/z'])
+
+        result = a.matches(match)
+        self.assertEquals(list(result.iterentries()),
+                          [('abc/z', zflags[0], zflags[1])])
+
+        match = matchmod.match('/', '/', ['x'])
+        result = a.matches(match)
+        self.assertEquals(list(result.iterentries()), [])
 
 if __name__ == '__main__':
     silenttestrunner.main(__name__)
