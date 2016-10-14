@@ -41,15 +41,20 @@ class SortedManifestIterator;
 class Manifest {
   private:
     PythonObj _rawobj;
+    size_t _refcount;
 
     std::list<ManifestEntry> entries;
     std::list<ManifestEntry *> mercurialSortedEntries;
 
   public:
-    Manifest() {
+    Manifest() :
+      _refcount(0) {
     }
 
     Manifest(PythonObj &rawobj);
+
+    void incref();
+    size_t decref();
 
     /**
      * Returns a deep copy of this Manifest.
@@ -116,6 +121,21 @@ class Manifest {
      * for putting in a store.
      */
     void serialize(std::string &result);
+};
+
+class ManifestPtr {
+  private:
+    Manifest *manifest;
+  public:
+    ManifestPtr(Manifest *manifest);
+
+    ManifestPtr(const ManifestPtr &other);
+
+    ~ManifestPtr();
+
+    ManifestPtr& operator= (const ManifestPtr& other);
+
+    operator Manifest* () const;
 };
 
 /**

@@ -10,7 +10,8 @@
 #include "manifest.h"
 
 Manifest::Manifest(PythonObj &rawobj) :
-    _rawobj(rawobj) {
+    _rawobj(rawobj),
+    _refcount(0) {
   char *parseptr, *endptr;
   Py_ssize_t buf_sz;
   PyString_AsStringAndSize(_rawobj, &parseptr, &buf_sz);
@@ -223,4 +224,43 @@ void Manifest::computeNode(const char *p1, const char *p2, char *result) {
   SHA1_Update(&ctx, content.c_str(), content.size());
 
   SHA1_Final((unsigned char*)result, &ctx);
+}
+
+ManifestPtr::ManifestPtr(Manifest *manifest) :
+  manifest(manifest) {
+  if (!manifest) {
+    throw std::logic_error("passed NULL manifest pointer");
+  }
+  this->manifest->incref();
+}
+
+ManifestPtr::ManifestPtr(const ManifestPtr &other) :
+  manifest(other.manifest) {
+  this->manifest->incref();
+}
+
+ManifestPtr::~ManifestPtr() {
+  if (this->manifest->decref() == 0) {
+    delete(this->manifest);
+  }
+}
+
+ManifestPtr& ManifestPtr::operator= (const ManifestPtr& other) {
+  this->manifest->decref();
+  this->manifest = other.manifest;
+  this->manifest->incref();
+  return *this;
+}
+
+ManifestPtr::operator Manifest* () const {
+  return this->manifest;
+}
+
+void Manifest::incref() {
+  this->_refcount++;
+}
+
+size_t Manifest::decref() {
+  this->_refcount--;
+  return this->_refcount;
 }
