@@ -563,7 +563,7 @@ def makedirstate(cls):
 
 
 def writefakedirstate(dirstate):
-    st = dirstate._opener(FAKEDIRSTATE, "w", atomictemp=True)
+    st = dirstate._opener(FAKEDIRSTATE, "w", atomictemp=True, checkambig=True)
     st.write("".join(dirstate._pl))
     st.write("\nThis is fake dirstate put here by the sqldirsate.")
     st.write("\nIt contains only working copy parents info.")
@@ -629,7 +629,7 @@ def toflat(sqldirstate):
     it's not touching anything but the dirstate file
     """
     # converts a sqldirstate to a flat one
-    st = sqldirstate._opener("dirstate", "w", atomictemp=True)
+    st = sqldirstate._opener("dirstate", "w", atomictemp=True, checkambig=True)
     newmap = {}
     for k, v in sqldirstate._map.iteritems():
         newmap[k] = v
