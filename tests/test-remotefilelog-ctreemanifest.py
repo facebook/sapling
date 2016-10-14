@@ -345,5 +345,14 @@ class ctreemanifesttests(unittest.TestCase):
             "xyz/m": None
         })
 
+    def testHasDir(self):
+        a = ctreemanifest.treemanifest(FakeStore())
+        zflags = hashflags()
+        a.set("abc/z", *zflags)
+
+        self.assertFalse(a.hasdir('abc/z'))
+        self.assertTrue(a.hasdir('abc'))
+        self.assertFalse(a.hasdir('xyz'))
+
 if __name__ == '__main__':
     silenttestrunner.main(__name__)

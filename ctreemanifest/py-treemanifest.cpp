@@ -205,6 +205,32 @@ static PyObject *treemanifest_get(
   }
 }
 
+static PyObject *treemanifest_hasdir(py_treemanifest *self, PyObject *args) {
+  char *directory;
+  Py_ssize_t directorylen;
+
+  if (!PyArg_ParseTuple(args, "s#", &directory, &directorylen)) {
+    return NULL;
+  }
+
+  std::string directorystr(directory, directorylen);
+
+  std::string resultnode;
+  const char *resultflag = NULL;
+  try {
+    self->tm.get(directorystr, &resultnode, &resultflag,
+                 RESULT_DIRECTORY);
+  } catch (const pyexception &ex) {
+    return NULL;
+  }
+
+  if (resultflag && *resultflag == MANIFEST_DIRECTORY_FLAG) {
+    Py_RETURN_TRUE;
+  } else {
+    Py_RETURN_FALSE;
+  }
+}
+
 /**
  * Implementation of treemanifest.find()
  * Takes a filename and returns a tuple of the binary hash and flag,
@@ -929,6 +955,8 @@ static PyMethodDef treemanifest_methods[] = {
     "returns the flag for the given filepath\n"},
   {"get", (PyCFunction)treemanifest_get, METH_VARARGS|METH_KEYWORDS,
     "gets the node for the given filename; returns default if it doesn't exist"},
+  {"hasdir", (PyCFunction)treemanifest_hasdir, METH_VARARGS,
+    "returns true if the directory exists in the manifest"},
   {"iterentries", (PyCFunction)treemanifest_getentriesiter, METH_NOARGS,
    "iterate over (path, nodeid, flags) tuples in this manifest."},
   {"iterkeys", (PyCFunction)treemanifest_getkeysiter, METH_NOARGS,
