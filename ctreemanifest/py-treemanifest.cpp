@@ -308,6 +308,56 @@ static PyObject *treemanifest_set(PyObject *o, PyObject *args) {
   }
 }
 
+static PyObject *treemanifest_setflag(PyObject *o, PyObject *args) {
+  py_treemanifest *self = (py_treemanifest*)o;
+  char *filename;
+  Py_ssize_t filenamelen;
+  char *flag;
+  Py_ssize_t flaglen;
+
+  if (!PyArg_ParseTuple(args, "s#s#",
+      &filename, &filenamelen,
+      &flag, &flaglen)) {
+    return NULL;
+  }
+
+  std::string filenamestr(filename, filenamelen);
+
+  // Get the current node so we don't overwrite it
+  std::string existingnode;
+  const char *existingflag = NULL;
+  try {
+    std::string existingbinnode;
+    self->tm.get(filenamestr, &existingbinnode, &existingflag);
+    if (!existingbinnode.empty()) {
+      hexfrombin(existingbinnode.c_str(), existingnode);
+    }
+  } catch (const pyexception &ex) {
+    return NULL;
+  }
+
+  if (existingnode.empty()) {
+      PyErr_Format(PyExc_KeyError, "cannot setflag on file that is not in manifest");
+      return NULL;
+  }
+
+  try {
+    if (!flaglen) {
+      flag = NULL;
+    }
+    SetResult result = self->tm.set(filenamestr, existingnode, flag);
+
+    if (result == SET_OK) {
+      Py_RETURN_NONE;
+    } else {
+      PyErr_Format(PyExc_TypeError, "unexpected error during setitem");
+      return NULL;
+    }
+  } catch (const pyexception &ex) {
+    return NULL;
+  }
+}
+
 /*
  * Deallocates the contents of the treemanifest
  */
@@ -804,6 +854,8 @@ static PyMethodDef treemanifest_methods[] = {
     "returns a manifest filtered by the matcher"},
   {"set", treemanifest_set, METH_VARARGS,
       "sets the node and flag for the given filepath\n"},
+  {"setflag", treemanifest_setflag, METH_VARARGS,
+      "sets the flag for the given filepath\n"},
   {"walk", (PyCFunction)treemanifest_walk, METH_VARARGS,
     "returns a iterator for walking the manifest"},
   {"write", (PyCFunction)treemanifest_write, METH_VARARGS,
