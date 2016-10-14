@@ -297,7 +297,7 @@ class revlog(object):
             raise RevlogError(_("index %s unknown format %d")
                               % (self.indexfile, fmt))
 
-        self._storedeltachains = True
+        self.storedeltachains = True
 
         self._io = revlogio()
         if self.version == REVLOGV0:
@@ -1471,7 +1471,7 @@ class revlog(object):
             textlen = len(text)
 
         # should we try to build a delta?
-        if prev != nullrev and self._storedeltachains:
+        if prev != nullrev and self.storedeltachains:
             tested = set()
             # This condition is true most of the time when processing
             # changegroup data into a generaldelta repo. The only time it
