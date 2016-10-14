@@ -7,22 +7,69 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
+import atexit
 import inspect
 import os
 import shutil
 import tempfile
 import unittest
+from hypothesis import settings, HealthCheck
+import hypothesis.strategies as st
+from hypothesis.internal.detection import is_hypothesis_test
+from hypothesis.configuration import (
+    set_hypothesis_home_dir,
+    hypothesis_home_dir)
+
 from . import edenclient
 from . import hgrepo
 from . import gitrepo
 
-if 'SANDCASTLE' in os.environ and not edenclient.can_run_eden():
+
+def is_sandcastle():
+    return 'SANDCASTLE' in os.environ
+
+default_settings = settings(
+    # Turn off the health checks because setUp/tearDown are too slow
+    suppress_health_check=[HealthCheck.too_slow],
+
+    # Turn off the example database; we don't have a way to persist this
+    # or share this across runs, so we don't derive any benefit from it at
+    # this time.
+    database=None,
+)
+
+# Configure Hypothesis to run faster when iterating locally
+settings.register_profile("dev", settings(default_settings, max_examples=5))
+# ... and use the defaults (which have more combinations) when running
+# on CI, which we want to be more deterministic.
+settings.register_profile("ci", settings(default_settings, derandomize=True))
+
+# Use the dev profile by default, but use the ci profile on sandcastle.
+settings.load_profile('ci' if is_sandcastle()
+                      else os.getenv('HYPOTHESIS_PROFILE', 'dev'))
+
+# Some helpers for Hypothesis decorators
+FILENAME_STRATEGY = st.text(
+    st.characters(min_codepoint=1,
+                  max_codepoint=1000,
+                  blacklist_characters="/:\\",
+                  ),
+    min_size=1)
+
+# We need to set a global (but non-conflicting) path to store some state
+# during hypothesis example runs.  We want to avoid putting this state in
+# the repo.
+set_hypothesis_home_dir(tempfile.mkdtemp(prefix='eden_hypothesis.'))
+atexit.register(shutil.rmtree, hypothesis_home_dir())
+
+if is_sandcastle() and not edenclient.can_run_eden():
     # This is avoiding a reporting noise issue in our CI that files
     # tasks about skipped tests.  Let's just skip defining most of them
     # to avoid the noise if we know that they won't work anyway.
     TestParent = object
 else:
     TestParent = unittest.TestCase
+
 
 @unittest.skipIf(not edenclient.can_run_eden(), "unable to run edenfs")
 class EdenTestCase(TestParent):
@@ -32,6 +79,30 @@ class EdenTestCase(TestParent):
     This starts an eden daemon during setUp(), and cleans it up during
     tearDown().
     '''
+
+    def run(self, report=None):
+        ''' Some slightly awful magic here to arrange for setUp and
+            tearDown to be called at the appropriate times when hypothesis
+            is enabled for a test case.
+            This can be removed once a future version of hypothesis
+            ships with support for this baked in. '''
+        if is_hypothesis_test(getattr(self, self._testMethodName)):
+            try:
+                old_setUp = self.setUp
+                old_tearDown = self.tearDown
+                self.setUp = lambda: None
+                self.tearDown = lambda: None
+                self.setup_example = old_setUp
+                self.teardown_example = lambda _: old_tearDown()
+                return super(EdenTestCase, self).run(report)
+            finally:
+                self.setUp = old_setUp
+                self.tearDown = old_tearDown
+                del self.setup_example
+                del self.teardown_example
+        else:
+            return super(EdenTestCase, self).run(report)
+
     def setUp(self):
         self.tmp_dir = None
         self.eden = None

@@ -4,7 +4,10 @@ for daemon_target, suffix in get_daemon_versions():
     python_unittest(
       name = 'integration%s' % suffix,
       srcs = glob(['*.py']),
-      env = {'EDENFS_SUFFIX': suffix},
+      env = {
+        'EDENFS_SUFFIX': suffix,
+      #  'HYPOTHESIS_VERBOSITY_LEVEL': 'verbose',
+      },
       deps = [
         daemon_target,
         '@/eden/fs/cli:cli',
