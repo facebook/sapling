@@ -234,5 +234,14 @@ class ctreemanifesttests(unittest.TestCase):
         b2 = ctreemanifest.treemanifest(store, bnode)
         self.assertEquals(list(b.iterentries()), list(b2.iterentries()))
 
+    def testGet(self):
+        a = ctreemanifest.treemanifest(FakeStore())
+        zflags = hashflags()
+        a.set("abc/z", *zflags)
+
+        self.assertEquals(a.get('abc/z'), zflags[0])
+        self.assertEquals(a.get('abc/x'), None)
+        self.assertEquals(a.get('abc'), None)
+
 if __name__ == '__main__':
     silenttestrunner.main(__name__)

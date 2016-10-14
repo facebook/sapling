@@ -161,6 +161,45 @@ static PyObject *treemanifest_diff(
   return results.returnval();
 }
 
+static PyObject *treemanifest_get(
+    py_treemanifest *self, PyObject *args, PyObject *kwargs) {
+  char *filename;
+  Py_ssize_t filenamelen;
+
+  PyObject *defaultObj = NULL;
+  static char const *kwlist[] = {"key", "default", NULL};
+
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s#|O", (char**)kwlist,
+                                   &filename, &filenamelen, &defaultObj)) {
+    return NULL;
+  }
+
+  std::string resultnode;
+  const char *resultflag;
+  try {
+    self->tm.get(
+        std::string(filename, (size_t) filenamelen),
+        &resultnode, &resultflag);
+  } catch (const pyexception &ex) {
+    return NULL;
+  }
+
+  if (resultnode.empty()) {
+    if (PyErr_Occurred()) {
+      return NULL;
+    }
+
+    if (defaultObj) {
+      Py_INCREF(defaultObj);
+      return defaultObj;
+    }
+    Py_RETURN_NONE;
+  } else {
+    return Py_BuildValue("s#",
+        resultnode.c_str(), (Py_ssize_t)resultnode.length());
+  }
+}
+
 /**
  * Implementation of treemanifest.find()
  * Takes a filename and returns a tuple of the binary hash and flag,
@@ -755,6 +794,8 @@ static PyMethodDef treemanifest_methods[] = {
   {"find", treemanifest_find, METH_VARARGS, "returns the node and flag for the given filepath\n"},
   {"flags", (PyCFunction)treemanifest_flags, METH_VARARGS|METH_KEYWORDS,
     "returns the flag for the given filepath\n"},
+  {"get", (PyCFunction)treemanifest_get, METH_VARARGS|METH_KEYWORDS,
+    "gets the node for the given filename; returns default if it doesn't exist"},
   {"iterentries", (PyCFunction)treemanifest_getentriesiter, METH_NOARGS,
    "iterate over (path, nodeid, flags) tuples in this manifest."},
   {"iterkeys", (PyCFunction)treemanifest_getkeysiter, METH_NOARGS,
