@@ -485,8 +485,7 @@ def makedirstate(cls):
             if '_nonnormalset' in self.__dict__:
                 delattr(self, '_nonnormalset')
 
-            if self._ui.configbool('sqldirstate', 'fakedirstate', True):
-                writefakedirstate(self)
+            writefakedirstate(self)
 
         def _backupandwrite(self, tr):
             if not self.skipbackups:

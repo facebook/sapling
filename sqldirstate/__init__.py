@@ -67,10 +67,7 @@ def upgrade(ui, repo):
         tosql(repo.dirstate)
         repo.requirements.add('sqldirstate')
         repo._writerequirements()
-        if ui.configbool('sqldirstate', 'fakedirstate', True):
-            writefakedirstate(repo.dirstate)
-        else:
-            repo.dirstate._opener.unlink('dirstate')
+        writefakedirstate(repo.dirstate)
         del repo.dirstate
 
     finally:
