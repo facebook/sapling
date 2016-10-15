@@ -113,14 +113,14 @@ _cmdservicemap = {
     'unix': commandserver.unixforkingservice,
 }
 
-def createcmdservice(ui, repo, opts):
+def _createcmdservice(ui, repo, opts):
     mode = opts['cmdserver']
     try:
         return _cmdservicemap[mode](ui, repo, opts)
     except KeyError:
         raise error.Abort(_('unknown mode %s') % mode)
 
-def createhgwebservice(ui, repo, opts):
+def _createhgwebservice(ui, repo, opts):
     # this way we can check if something was given in the command-line
     if opts.get('port'):
         opts['port'] = util.getport(opts.get('port'))
@@ -152,3 +152,9 @@ def createhgwebservice(ui, repo, opts):
 
     app = hgweb.createapp(baseui, repo, webconf)
     return hgweb.httpservice(servui, app, opts)
+
+def createservice(ui, repo, opts):
+    if opts["cmdserver"]:
+        return _createcmdservice(ui, repo, opts)
+    else:
+        return _createhgwebservice(ui, repo, opts)

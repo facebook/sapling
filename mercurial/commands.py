@@ -6296,10 +6296,7 @@ def serve(ui, repo, **opts):
         s = sshserver.sshserver(ui, repo)
         s.serve_forever()
 
-    if opts["cmdserver"]:
-        service = server.createcmdservice(ui, repo, opts)
-    else:
-        service = server.createhgwebservice(ui, repo, opts)
+    service = server.createservice(ui, repo, opts)
     return server.runservice(opts, initfn=service.init, runfn=service.run)
 
 @command('^status|st',
