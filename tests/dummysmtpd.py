@@ -11,7 +11,7 @@ import ssl
 import sys
 
 from mercurial import (
-    cmdutil,
+    server,
     sslutil,
     ui as uimod,
 )
@@ -75,8 +75,8 @@ def main():
             dummysmtpsecureserver(addr, opts.certificate)
         log('listening at %s:%d\n' % addr)
 
-    cmdutil.service(vars(opts), initfn=init, runfn=run,
-                    runargs=[sys.executable, __file__] + sys.argv[1:])
+    server.runservice(vars(opts), initfn=init, runfn=run,
+                      runargs=[sys.executable, __file__] + sys.argv[1:])
 
 if __name__ == '__main__':
     main()

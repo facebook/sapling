@@ -11,7 +11,7 @@ import signal
 import sys
 
 from mercurial import (
-    cmdutil,
+    server,
     util,
 )
 
@@ -51,5 +51,5 @@ if __name__ == '__main__':
             'daemon': not options.foreground,
             'daemon_postexec': options.daemon_postexec}
     service = simplehttpservice(options.host, options.port)
-    cmdutil.service(opts, initfn=service.init, runfn=service.run,
-                    runargs=[sys.executable, __file__] + sys.argv[1:])
+    server.runservice(opts, initfn=service.init, runfn=service.run,
+                      runargs=[sys.executable, __file__] + sys.argv[1:])

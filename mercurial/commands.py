@@ -67,6 +67,7 @@ from . import (
     revlog,
     revset,
     scmutil,
+    server,
     setdiscovery,
     sshserver,
     sslutil,
@@ -6301,7 +6302,7 @@ def serve(ui, repo, **opts):
         service = commandserver.createservice(ui, repo, opts)
     else:
         service = hgweb.createservice(ui, repo, opts)
-    return cmdutil.service(opts, initfn=service.init, runfn=service.run)
+    return server.runservice(opts, initfn=service.init, runfn=service.run)
 
 @command('^status|st',
     [('A', 'all', None, _('show status of all files')),
