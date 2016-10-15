@@ -51,7 +51,6 @@ from . import (
     hbisect,
     help,
     hg,
-    hgweb,
     localrepo,
     lock as lockmod,
     merge as mergemod,
@@ -6300,7 +6299,7 @@ def serve(ui, repo, **opts):
     if opts["cmdserver"]:
         service = server.createcmdservice(ui, repo, opts)
     else:
-        service = hgweb.createservice(ui, repo, opts)
+        service = server.createhgwebservice(ui, repo, opts)
     return server.runservice(opts, initfn=service.init, runfn=service.run)
 
 @command('^status|st',
