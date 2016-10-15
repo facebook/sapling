@@ -54,9 +54,7 @@ from mercurial.i18n import _
 
 from mercurial import (
     cmdutil,
-    commands,
     commandserver,
-    dispatch,
     error,
     extensions,
     osutil,
@@ -181,6 +179,8 @@ class hashstate(object):
 
 # copied from hgext/pager.py:uisetup()
 def _setuppagercmd(ui, options, cmd):
+    from mercurial import commands  # avoid cycle
+
     if not ui.formatted():
         return
 
@@ -260,6 +260,8 @@ def _newchgui(srcui, csystem):
     return chgui(srcui)
 
 def _loadnewui(srcui, args):
+    from mercurial import dispatch  # avoid cycle
+
     newui = srcui.__class__()
     for a in ['fin', 'fout', 'ferr', 'environ']:
         setattr(newui, a, getattr(srcui, a))
@@ -439,6 +441,8 @@ class chgcmdserver(commandserver.server):
         list, the client can continue with this server after completing all
         the instructions.
         """
+        from mercurial import dispatch  # avoid cycle
+
         args = self._readlist()
         try:
             self.ui, lui = _loadnewui(self.ui, args)
@@ -486,6 +490,8 @@ class chgcmdserver(commandserver.server):
         If pager isn't enabled, this writes '\0' because channeledoutput
         does not allow to write empty data.
         """
+        from mercurial import dispatch  # avoid cycle
+
         args = self._readlist()
         try:
             cmd, _func, args, options, _cmdoptions = dispatch._parse(self.ui,
