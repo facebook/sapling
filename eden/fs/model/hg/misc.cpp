@@ -18,10 +18,12 @@
 namespace facebook {
 namespace eden {
 
-const TreeEntry*
-getEntryForFile(RelativePathPiece file, Tree* root, IObjectStore* objectStore) {
+std::unique_ptr<TreeEntry> getEntryForFile(
+    RelativePathPiece file,
+    const Tree* root,
+    const IObjectStore* objectStore) {
   auto iter = file.paths();
-  Tree* currentDirectory = root;
+  auto currentDirectory = std::make_unique<Tree>(*root);
   for (auto it = iter.begin(); it != iter.end();) {
     auto piece = it.piece();
 
@@ -36,14 +38,14 @@ getEntryForFile(RelativePathPiece file, Tree* root, IObjectStore* objectStore) {
       if (entry->getType() != TreeEntryType::TREE) {
         return nullptr;
       }
-      currentDirectory = objectStore->getTree(entry->getHash()).get();
+      currentDirectory = objectStore->getTree(entry->getHash());
     } else {
       // This should be the last path component, so it should correspond
       // to a file.
       if (entry->getType() != TreeEntryType::BLOB) {
         return nullptr;
       }
-      return entry;
+      return std::make_unique<TreeEntry>(*entry);
     }
   }
 

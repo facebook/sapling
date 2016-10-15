@@ -22,9 +22,9 @@ class TreeEntry;
  * Given a Tree and a RelativePathPiece, returns the corresponding TreeEntry in
  * the ObjectStore, if it exists.
  */
-const TreeEntry* getEntryForFile(
+std::unique_ptr<TreeEntry> getEntryForFile(
     RelativePathPiece file,
-    Tree* baseCommit,
-    IObjectStore* objectStore);
+    const Tree* baseCommit,
+    const IObjectStore* objectStore);
 }
 }

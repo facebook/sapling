@@ -36,11 +36,11 @@ unique_ptr<FakeObjectStore> createObjectStoreForTest(Hash& hashForRootTree);
 
 TEST(getEntryForFile, specifyingAnEmptyFilePathDoesNotThrowAnException) {
   auto store = createObjectStoreForTest(rootTreeHash);
-  auto rootTree = store->getTree(rootTreeHash).get();
+  auto rootTree = store->getTree(rootTreeHash);
 
   RelativePathPiece emptyPath("");
   auto noCorrespondingTreeEntry =
-      getEntryForFile(emptyPath, rootTree, store.get());
+      getEntryForFile(emptyPath, rootTree.get(), store.get());
   EXPECT_EQ(nullptr, noCorrespondingTreeEntry)
       << "Should be nullptr because "
       << "there is no file that corresponds to the empty string.";
@@ -48,42 +48,44 @@ TEST(getEntryForFile, specifyingAnEmptyFilePathDoesNotThrowAnException) {
 
 TEST(getEntryForFile, fileEntryInRoot) {
   auto store = createObjectStoreForTest(rootTreeHash);
-  auto rootTree = store->getTree(rootTreeHash).get();
+  auto rootTree = store->getTree(rootTreeHash);
 
   RelativePathPiece file("a_file");
-  auto treeEntry = getEntryForFile(file, rootTree, store.get());
+  auto treeEntry = getEntryForFile(file, rootTree.get(), store.get());
   ASSERT_NE(nullptr, treeEntry) << "There should be an entry for " << file;
 
   CHECK_EQ("a_file", treeEntry->getName());
   CHECK_EQ(aFileHash, treeEntry->getHash());
 
   RelativePathPiece notAFile("not_a_file");
-  auto nonExistentTreeEntry = getEntryForFile(notAFile, rootTree, store.get());
+  auto nonExistentTreeEntry =
+      getEntryForFile(notAFile, rootTree.get(), store.get());
   EXPECT_EQ(nullptr, nonExistentTreeEntry)
       << "Should be nullptr because not found.";
 }
 
 TEST(getEntryForFile, directoryEntryInRoot) {
   auto store = createObjectStoreForTest(rootTreeHash);
-  auto rootTree = store->getTree(rootTreeHash).get();
+  auto rootTree = store->getTree(rootTreeHash);
 
   RelativePathPiece file("a_dir");
-  auto treeEntry = getEntryForFile(file, rootTree, store.get());
+  auto treeEntry = getEntryForFile(file, rootTree.get(), store.get());
   EXPECT_EQ(nullptr, treeEntry)
       << "Should be nullptr because a_dir is a directory, not a file.";
 
   RelativePathPiece notADir("not_a_dir");
-  auto nonExistentTreeEntry = getEntryForFile(notADir, rootTree, store.get());
+  auto nonExistentTreeEntry =
+      getEntryForFile(notADir, rootTree.get(), store.get());
   EXPECT_EQ(nullptr, nonExistentTreeEntry)
       << "Should be nullptr because not found.";
 }
 
 TEST(getEntryForFile, fileEntryInDeepDirectory) {
   auto store = createObjectStoreForTest(rootTreeHash);
-  auto rootTree = store->getTree(rootTreeHash).get();
+  auto rootTree = store->getTree(rootTreeHash);
 
   RelativePathPiece file("a_dir/deep_dir/deep_file");
-  auto treeEntry = getEntryForFile(file, rootTree, store.get());
+  auto treeEntry = getEntryForFile(file, rootTree.get(), store.get());
   ASSERT_NE(nullptr, treeEntry) << "There should be an entry for " << file;
 
   CHECK_EQ("deep_file", treeEntry->getName());
