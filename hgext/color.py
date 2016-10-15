@@ -29,6 +29,15 @@ ECMA-48 mode, the options are 'bold', 'inverse', 'italic', and
 Some may not be available for a given terminal type, and will be
 silently ignored.
 
+If the terminfo entry for your terminal is missing codes for an effect
+or has the wrong codes, you can add or override those codes in your
+configuration::
+
+  [color]
+  terminfo.dim = \E[2m
+
+where '\E' is substituted with an escape character.
+
 Labels
 ------
 
