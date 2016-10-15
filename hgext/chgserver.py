@@ -629,6 +629,11 @@ class chgunixservicehandler(object):
                             self._hashstate, self._baseaddress)
 
 def chgunixservice(ui, repo, opts):
+    # CHGINTERNALMARK is temporarily set by chg client to detect if chg will
+    # start another chg. drop it to avoid possible side effects.
+    if 'CHGINTERNALMARK' in os.environ:
+        del os.environ['CHGINTERNALMARK']
+
     if repo:
         # one chgserver can serve multiple repos. drop repo information
         ui.setconfig('bundle', 'mainreporoot', '', 'repo')
@@ -637,8 +642,3 @@ def chgunixservice(ui, repo, opts):
 
 def uisetup(ui):
     server._cmdservicemap['chgunix'] = chgunixservice
-
-    # CHGINTERNALMARK is temporarily set by chg client to detect if chg will
-    # start another chg. drop it to avoid possible side effects.
-    if 'CHGINTERNALMARK' in os.environ:
-        del os.environ['CHGINTERNALMARK']
