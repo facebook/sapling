@@ -46,7 +46,6 @@ Issue1199: Can't use '%' in hgrc (eg url encoded username)
   default = $TESTTMP/foo%bar (glob)
   $ hg showconfig
   bundle.mainreporoot=$TESTTMP/foobar (glob)
-  extensions.chgserver= (?)
   paths.default=$TESTTMP/foo%bar (glob)
   $ cd ..
 
@@ -81,7 +80,6 @@ make sure global options given on the cmdline take precedence
 
   $ hg showconfig --config ui.verbose=True --quiet
   bundle.mainreporoot=$TESTTMP
-  extensions.chgserver= (?)
   ui.verbose=False
   ui.debug=False
   ui.quiet=True
@@ -113,7 +111,6 @@ username expansion
 
   $ hg showconfig
   bundle.mainreporoot=$TESTTMP
-  extensions.chgserver= (?)
   ui.username=$FAKEUSER
 
   $ unset FAKEUSER
@@ -159,7 +156,6 @@ customized hgrc
   $TESTTMP/hgrc:13: alias.log=log -g
   repo: bundle.mainreporoot=$TESTTMP
   $TESTTMP/hgrc:11: defaults.identify=-n
-  --config: extensions.chgserver= (?)
   $TESTTMP/hgrc:2: ui.debug=true
   $TESTTMP/hgrc:3: ui.fallbackencoding=ASCII
   $TESTTMP/hgrc:4: ui.quiet=true
@@ -175,7 +171,6 @@ plain hgrc
   $ hg showconfig --config ui.traceback=True --debug
   read config from: $TESTTMP/hgrc
   repo: bundle.mainreporoot=$TESTTMP
-  --config: extensions.chgserver= (?)
   --config: ui.traceback=True
   --verbose: ui.verbose=False
   --debug: ui.debug=True
@@ -199,7 +194,6 @@ plain mode with exceptions
   read config from: $TESTTMP/hgrc
   repo: bundle.mainreporoot=$TESTTMP
   $TESTTMP/hgrc:15: extensions.plain=./plain.py
-  --config: extensions.chgserver= (?)
   --config: ui.traceback=True
   --verbose: ui.verbose=False
   --debug: ui.debug=True
@@ -210,7 +204,6 @@ plain mode with exceptions
   read config from: $TESTTMP/hgrc
   repo: bundle.mainreporoot=$TESTTMP
   $TESTTMP/hgrc:15: extensions.plain=./plain.py
-  --config: extensions.chgserver= (?)
   --config: ui.traceback=True
   --verbose: ui.verbose=False
   --debug: ui.debug=True
@@ -221,7 +214,6 @@ plain mode with exceptions
   read config from: $TESTTMP/hgrc
   repo: bundle.mainreporoot=$TESTTMP
   $TESTTMP/hgrc:15: extensions.plain=./plain.py
-  --config: extensions.chgserver= (?)
   --config: ui.traceback=True
   --verbose: ui.verbose=False
   --debug: ui.debug=True

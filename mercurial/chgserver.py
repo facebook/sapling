@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-"""command server extension for cHg (EXPERIMENTAL)
+"""command server extension for cHg
 
 'S' channel (read/write)
     propagate ui.system() request to client
@@ -50,23 +50,16 @@ import struct
 import sys
 import time
 
-from mercurial.i18n import _
+from .i18n import _
 
-from mercurial import (
+from . import (
     cmdutil,
     commandserver,
     error,
     extensions,
     osutil,
-    server,
     util,
 )
-
-# Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for
-# extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
-# be specifying the version(s) of Mercurial they are tested with, or
-# leave the attribute unspecified.
-testedwith = 'ships-with-hg-core'
 
 _log = commandserver.log
 
@@ -123,7 +116,7 @@ def _getmtimepaths(ui):
     """
     modules = [m for n, m in extensions.extensions(ui)]
     try:
-        from mercurial import __version__
+        from . import __version__
         modules.append(__version__)
     except ImportError:
         pass
@@ -179,7 +172,7 @@ class hashstate(object):
 
 # copied from hgext/pager.py:uisetup()
 def _setuppagercmd(ui, options, cmd):
-    from mercurial import commands  # avoid cycle
+    from . import commands  # avoid cycle
 
     if not ui.formatted():
         return
@@ -260,17 +253,13 @@ def _newchgui(srcui, csystem):
     return chgui(srcui)
 
 def _loadnewui(srcui, args):
-    from mercurial import dispatch  # avoid cycle
+    from . import dispatch  # avoid cycle
 
     newui = srcui.__class__()
     for a in ['fin', 'fout', 'ferr', 'environ']:
         setattr(newui, a, getattr(srcui, a))
     if util.safehasattr(srcui, '_csystem'):
         newui._csystem = srcui._csystem
-
-    # internal config: extensions.chgserver
-    newui.setconfig('extensions', 'chgserver',
-                    srcui.config('extensions', 'chgserver'), '--config')
 
     # command line args
     args = args[:]
@@ -441,7 +430,7 @@ class chgcmdserver(commandserver.server):
         list, the client can continue with this server after completing all
         the instructions.
         """
-        from mercurial import dispatch  # avoid cycle
+        from . import dispatch  # avoid cycle
 
         args = self._readlist()
         try:
@@ -490,7 +479,7 @@ class chgcmdserver(commandserver.server):
         If pager isn't enabled, this writes '\0' because channeledoutput
         does not allow to write empty data.
         """
-        from mercurial import dispatch  # avoid cycle
+        from . import dispatch  # avoid cycle
 
         args = self._readlist()
         try:
@@ -645,6 +634,3 @@ def chgunixservice(ui, repo, opts):
         ui.setconfig('bundle', 'mainreporoot', '', 'repo')
     h = chgunixservicehandler(ui)
     return commandserver.unixforkingservice(ui, repo=None, opts=opts, handler=h)
-
-def uisetup(ui):
-    server._cmdservicemap['chgunix'] = chgunixservice

@@ -15,6 +15,7 @@ import tempfile
 from .i18n import _
 
 from . import (
+    chgserver,
     commandserver,
     error,
     hgweb,
@@ -109,6 +110,7 @@ def runservice(opts, parentfn=None, initfn=None, runfn=None, logfile=None,
         return runfn()
 
 _cmdservicemap = {
+    'chgunix': chgserver.chgunixservice,
     'pipe': commandserver.pipeservice,
     'unix': commandserver.unixforkingservice,
 }

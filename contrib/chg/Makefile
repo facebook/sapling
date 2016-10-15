@@ -40,7 +40,6 @@ serve:
 	[ -d $(CHGSOCKDIR) ] || ( umask 077; mkdir $(CHGSOCKDIR) )
 	$(HG) serve --cwd / --cmdserver chgunix \
 		--address $(CHGSOCKNAME) \
-		--config extensions.chgserver= \
 		--config cmdserver.log=/dev/stderr
 
 .PHONY: clean

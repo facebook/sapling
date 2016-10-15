@@ -225,7 +225,6 @@ static void execcmdserver(const struct cmdserveropts *opts)
 		"--cmdserver", "chgunix",
 		"--address", opts->sockname,
 		"--daemon-postexec", "chdir:/",
-		"--config", "extensions.chgserver=",
 	};
 	size_t baseargvsize = sizeof(baseargv) / sizeof(baseargv[0]);
 	size_t argsize = baseargvsize + opts->argsize + 1;
