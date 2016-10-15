@@ -60,6 +60,7 @@ from mercurial import (
     error,
     extensions,
     osutil,
+    server,
     util,
 )
 
@@ -635,7 +636,7 @@ def chgunixservice(ui, repo, opts):
     return commandserver.unixforkingservice(ui, repo=None, opts=opts, handler=h)
 
 def uisetup(ui):
-    commandserver._servicemap['chgunix'] = chgunixservice
+    server._cmdservicemap['chgunix'] = chgunixservice
 
     # CHGINTERNALMARK is temporarily set by chg client to detect if chg will
     # start another chg. drop it to avoid possible side effects.

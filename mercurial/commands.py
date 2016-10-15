@@ -35,7 +35,6 @@ from . import (
     bundle2,
     changegroup,
     cmdutil,
-    commandserver,
     copies,
     dagparser,
     dagutil,
@@ -6299,7 +6298,7 @@ def serve(ui, repo, **opts):
         s.serve_forever()
 
     if opts["cmdserver"]:
-        service = commandserver.createservice(ui, repo, opts)
+        service = server.createcmdservice(ui, repo, opts)
     else:
         service = hgweb.createservice(ui, repo, opts)
     return server.runservice(opts, initfn=service.init, runfn=service.run)

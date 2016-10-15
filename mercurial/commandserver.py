@@ -529,15 +529,3 @@ class unixforkingservice(object):
             _serverequest(self.ui, self.repo, conn, h.createcmdserver)
         finally:
             gc.collect()  # trigger __del__ since worker process uses os._exit
-
-_servicemap = {
-    'pipe': pipeservice,
-    'unix': unixforkingservice,
-    }
-
-def createservice(ui, repo, opts):
-    mode = opts['cmdserver']
-    try:
-        return _servicemap[mode](ui, repo, opts)
-    except KeyError:
-        raise error.Abort(_('unknown mode %s') % mode)

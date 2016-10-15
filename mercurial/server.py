@@ -15,6 +15,7 @@ import tempfile
 from .i18n import _
 
 from . import (
+    commandserver,
     error,
     util,
 )
@@ -105,3 +106,15 @@ def runservice(opts, parentfn=None, initfn=None, runfn=None, logfile=None,
 
     if runfn:
         return runfn()
+
+_cmdservicemap = {
+    'pipe': commandserver.pipeservice,
+    'unix': commandserver.unixforkingservice,
+}
+
+def createcmdservice(ui, repo, opts):
+    mode = opts['cmdserver']
+    try:
+        return _cmdservicemap[mode](ui, repo, opts)
+    except KeyError:
+        raise error.Abort(_('unknown mode %s') % mode)
