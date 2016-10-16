@@ -93,7 +93,9 @@ def writechunks(ui, chunks, filename, vfs=None):
             if vfs:
                 fh = vfs.open(filename, "wb")
             else:
-                fh = open(filename, "wb")
+                # Increase default buffer size because default is usually
+                # small (4k is common on Linux).
+                fh = open(filename, "wb", 131072)
         else:
             fd, filename = tempfile.mkstemp(prefix="hg-bundle-", suffix=".hg")
             fh = os.fdopen(fd, "wb")
