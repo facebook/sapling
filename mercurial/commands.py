@@ -59,6 +59,7 @@ from . import (
     revset,
     scmutil,
     server,
+    smartset,
     sshserver,
     sslutil,
     streamclone,
@@ -2804,8 +2805,8 @@ def debugrevspec(ui, repo, expr, **opts):
         arevs = revset.makematcher(treebystage['analyzed'])(repo)
         brevs = revset.makematcher(treebystage['optimized'])(repo)
         if ui.verbose:
-            ui.note(("* analyzed set:\n"), revset.prettyformatset(arevs), "\n")
-            ui.note(("* optimized set:\n"), revset.prettyformatset(brevs), "\n")
+            ui.note(("* analyzed set:\n"), smartset.prettyformat(arevs), "\n")
+            ui.note(("* optimized set:\n"), smartset.prettyformat(brevs), "\n")
         arevs = list(arevs)
         brevs = list(brevs)
         if arevs == brevs:
@@ -2828,7 +2829,7 @@ def debugrevspec(ui, repo, expr, **opts):
     func = revset.makematcher(tree)
     revs = func(repo)
     if ui.verbose:
-        ui.note(("* set:\n"), revset.prettyformatset(revs), "\n")
+        ui.note(("* set:\n"), smartset.prettyformat(revs), "\n")
     for c in revs:
         ui.write("%s\n" % c)
 

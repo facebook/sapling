@@ -40,6 +40,7 @@ these predicates use '\0' as a separator:
   >     cmdutil,
   >     node as nodemod,
   >     revset,
+  >     smartset,
   > )
   > cmdtable = {}
   > command = cmdutil.command(cmdtable)
@@ -59,7 +60,7 @@ these predicates use '\0' as a separator:
   >     func = revset.match(ui, expr, repo)
   >     revs = func(repo)
   >     if ui.verbose:
-  >         ui.note("* set:\n", revset.prettyformatset(revs), "\n")
+  >         ui.note("* set:\n", smartset.prettyformat(revs), "\n")
   >     for c in revs:
   >         ui.write("%s\n" % c)
   > EOF
