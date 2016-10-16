@@ -14,7 +14,6 @@ from mercurial import (
     error,
     pycompat,
     scmutil,
-    strutil,
     util,
 )
 
@@ -1239,7 +1238,8 @@ class svn_sink(converter_sink, commandline):
         for f in files:
             if os.path.isdir(self.wjoin(f)):
                 dirs.add(f)
-            for i in strutil.rfindall(f, '/'):
+            i = len(f)
+            for i in iter(lambda: f.rfind('/', 0, i), -1):
                 dirs.add(f[:i])
         return dirs
 
