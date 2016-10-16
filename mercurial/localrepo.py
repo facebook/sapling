@@ -149,14 +149,18 @@ class localpeer(peer.peerrepository):
 
     def getbundle(self, source, heads=None, common=None, bundlecaps=None,
                   **kwargs):
-        cg = exchange.getbundle(self._repo, source, heads=heads,
-                                common=common, bundlecaps=bundlecaps, **kwargs)
+        chunks = exchange.getbundlechunks(self._repo, source, heads=heads,
+                                          common=common, bundlecaps=bundlecaps,
+                                          **kwargs)
+        cb = util.chunkbuffer(chunks)
+
         if bundlecaps is not None and 'HG20' in bundlecaps:
             # When requesting a bundle2, getbundle returns a stream to make the
             # wire level function happier. We need to build a proper object
             # from it in local peer.
-            cg = bundle2.getunbundler(self.ui, cg)
-        return cg
+            return bundle2.getunbundler(self.ui, cb)
+        else:
+            return changegroup.getunbundler('01', cb, None)
 
     # TODO We might want to move the next two calls into legacypeer and add
     # unbundle instead.

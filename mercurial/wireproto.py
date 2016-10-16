@@ -772,8 +772,10 @@ def getbundle(repo, proto, others):
         if not exchange.bundle2requested(opts.get('bundlecaps')):
             return ooberror(bundle2required)
 
-    cg = exchange.getbundle(repo, 'serve', **opts)
-    return streamres(proto.groupchunks(cg))
+    chunks = exchange.getbundlechunks(repo, 'serve', **opts)
+    # TODO avoid util.chunkbuffer() here since it is adding overhead to
+    # what is fundamentally a generator proxying operation.
+    return streamres(proto.groupchunks(util.chunkbuffer(chunks)))
 
 @wireprotocommand('heads')
 def heads(repo, proto):

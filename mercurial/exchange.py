@@ -1532,20 +1532,14 @@ def bundle2requested(bundlecaps):
         return any(cap.startswith('HG2') for cap in bundlecaps)
     return False
 
-def getbundle(repo, source, heads=None, common=None, bundlecaps=None,
-              **kwargs):
-    """return a full bundle (with potentially multiple kind of parts)
+def getbundlechunks(repo, source, heads=None, common=None, bundlecaps=None,
+                    **kwargs):
+    """Return chunks constituting a bundle's raw data.
 
     Could be a bundle HG10 or a bundle HG20 depending on bundlecaps
-    passed. For now, the bundle can contain only changegroup, but this will
-    changes when more part type will be available for bundle2.
+    passed.
 
-    This is different from changegroup.getchangegroup that only returns an HG10
-    changegroup bundle. They may eventually get reunited in the future when we
-    have a clearer idea of the API we what to query different data.
-
-    The implementation is at a very early stage and will get massive rework
-    when the API of bundle is refined.
+    Returns an iterator over raw chunks (of varying sizes).
     """
     usebundle2 = bundle2requested(bundlecaps)
     # bundle10 case
@@ -1557,8 +1551,8 @@ def getbundle(repo, source, heads=None, common=None, bundlecaps=None,
             raise ValueError(_('unsupported getbundle arguments: %s')
                              % ', '.join(sorted(kwargs.keys())))
         outgoing = _computeoutgoing(repo, heads, common)
-        return changegroup.getchangegroup(repo, source, outgoing,
-                                          bundlecaps=bundlecaps)
+        bundler = changegroup.getbundler('01', repo, bundlecaps)
+        return changegroup.getsubsetraw(repo, outgoing, bundler, source)
 
     # bundle20 case
     b2caps = {}
@@ -1576,7 +1570,7 @@ def getbundle(repo, source, heads=None, common=None, bundlecaps=None,
         func(bundler, repo, source, bundlecaps=bundlecaps, b2caps=b2caps,
              **kwargs)
 
-    return util.chunkbuffer(bundler.getchunks())
+    return bundler.getchunks()
 
 @getbundle2partsgenerator('changegroup')
 def _getbundlechangegrouppart(bundler, repo, source, bundlecaps=None,
