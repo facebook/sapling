@@ -21,7 +21,7 @@ from __future__ import absolute_import
 
 from .node import nullrev
 from . import (
-    revset,
+    dagop,
     smartset,
     util,
 )
@@ -70,7 +70,7 @@ def dagwalker(repo, revs):
                 # through all revs (issue4782)
                 if not isinstance(revs, smartset.baseset):
                     revs = smartset.baseset(revs)
-                gp = gpcache[mpar] = sorted(set(revset.reachableroots(
+                gp = gpcache[mpar] = sorted(set(dagop.reachableroots(
                     repo, revs, [mpar])))
             if not gp:
                 parents.append((MISSINGPARENT, mpar))
