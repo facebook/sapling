@@ -73,21 +73,30 @@ class webproto(wireproto.abstractserverproto):
         val = self.ui.fout.getvalue()
         self.ui.ferr, self.ui.fout = self.oldio
         return val
+
     def groupchunks(self, fh):
+        def getchunks():
+            while True:
+                chunk = fh.read(32768)
+                if not chunk:
+                    break
+                yield chunk
+
+        return self.compresschunks(getchunks())
+
+    def compresschunks(self, chunks):
         # Don't allow untrusted settings because disabling compression or
         # setting a very high compression level could lead to flooding
         # the server's network or CPU.
         z = zlib.compressobj(self.ui.configint('server', 'zliblevel', -1))
-        while True:
-            chunk = fh.read(32768)
-            if not chunk:
-                break
+        for chunk in chunks:
             data = z.compress(chunk)
             # Not all calls to compress() emit data. It is cheaper to inspect
             # that here than to send it via the generator.
             if data:
                 yield data
         yield z.flush()
+
     def _client(self):
         return 'remote:%s:%s:%s' % (
             self.req.env.get('wsgi.url_scheme') or 'http',

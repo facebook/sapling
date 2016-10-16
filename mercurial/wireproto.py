@@ -85,6 +85,14 @@ class abstractserverproto(object):
         """
         raise NotImplementedError()
 
+    def compresschunks(self, chunks):
+        """Generator of possible compressed chunks to send to the client.
+
+        This is like ``groupchunks()`` except it accepts a generator as
+        its argument.
+        """
+        raise NotImplementedError()
+
 class remotebatch(peer.batcher):
     '''batches the queued calls; uses as few roundtrips as possible'''
     def __init__(self, remote):
@@ -773,9 +781,7 @@ def getbundle(repo, proto, others):
             return ooberror(bundle2required)
 
     chunks = exchange.getbundlechunks(repo, 'serve', **opts)
-    # TODO avoid util.chunkbuffer() here since it is adding overhead to
-    # what is fundamentally a generator proxying operation.
-    return streamres(proto.groupchunks(util.chunkbuffer(chunks)))
+    return streamres(proto.compresschunks(chunks))
 
 @wireprotocommand('heads')
 def heads(repo, proto):
