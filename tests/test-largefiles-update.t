@@ -732,16 +732,16 @@ bit correctly on the platform being unaware of it.
 
 #endif
 
-Test a fatal error interrupting an update. lfdirstate doesn't realize that
-.hglf has been updated while the largefile hasn't. Status thus shows a clean
-state ... but rebuilding lfdirstate and checking all hashes reveals it isn't
-clean.
+Test a fatal error interrupting an update. Verify that status report dirty
+files correctly after an interrupted update. Also verify that checking all
+hashes reveals it isn't clean.
 
 Start with clean dirstates:
   $ hg up -qcr "8^"
   $ sleep 1
   $ hg st
-Update standins without updating largefiles:
+Update standins without updating largefiles - large1 is modified and largeX is
+added:
   $ cat << EOF > ../crashupdatelfiles.py
   > import hgext.largefiles.lfutil
   > def getlfilestoupdate(oldstandins, newstandins):
@@ -750,29 +750,31 @@ Update standins without updating largefiles:
   > EOF
   $ hg up -Cr "8" --config extensions.crashupdatelfiles=../crashupdatelfiles.py
   [7]
-Check large1 content and status:
-BUG: largeX is R and large1 is not M and update does nothing
+Check large1 content and status ... and that update will undo modifications:
+BUG: large is R
   $ cat large1
   large1 in #3
   $ hg st
+  M large1
   R largeX
   $ hg up -Cr .
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  getting changed largefiles
+  1 largefiles updated, 0 removed
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cat large1
+  manually modified before 'hg transplant --continue'
   $ hg st
   R largeX
-Force largefiles rehashing and check again - revealing modifications that
-update now can remove:
+Force largefiles rehashing and check again - which makes it realize that largeX
+not has been removed but just doesn't exist:
   $ rm .hg/largefiles/dirstate
   $ hg st
-  M large1
   ! largeX
   $ hg up -Cr .
   getting changed largefiles
-  2 largefiles updated, 0 removed
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  1 largefiles updated, 0 removed
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg st
-  $ cat large1
-  manually modified before 'hg transplant --continue'
 
   $ cd ..
 
