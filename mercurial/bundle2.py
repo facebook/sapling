@@ -573,7 +573,9 @@ class bundle20(object):
             yield param
         # starting compression
         for chunk in self._getcorechunk():
-            yield self._compressor.compress(chunk)
+            data = self._compressor.compress(chunk)
+            if data:
+                yield data
         yield self._compressor.flush()
 
     def _paramchunk(self):
@@ -1324,7 +1326,9 @@ def writebundle(ui, cg, filename, bundletype, vfs=None, compression=None):
         def chunkiter():
             yield header
             for chunk in subchunkiter:
-                yield z.compress(chunk)
+                data = z.compress(chunk)
+                if data:
+                    yield data
             yield z.flush()
         chunkiter = chunkiter()
 
