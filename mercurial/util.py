@@ -2794,32 +2794,6 @@ def finddirs(path):
         yield path[:pos]
         pos = path.rfind('/', 0, pos)
 
-# compression utility
-
-class nocompress(object):
-    def compress(self, x):
-        return x
-    def flush(self):
-        return ""
-
-compressors = {
-    None: nocompress,
-    # lambda to prevent early import
-    'BZ': lambda: bz2.BZ2Compressor(),
-    'GZ': lambda: zlib.compressobj(),
-    }
-# also support the old form by courtesies
-compressors['UN'] = compressors[None]
-
-def _makedecompressor(decompcls):
-    def generator(f):
-        d = decompcls()
-        for chunk in filechunkiter(f):
-            yield d.decompress(chunk)
-    def func(fh):
-        return chunkbuffer(generator(fh))
-    return func
-
 class ctxmanager(object):
     '''A context manager for use in 'with' blocks to allow multiple
     contexts to be entered at once.  This is both safer and more
@@ -2879,6 +2853,32 @@ class ctxmanager(object):
         if pending:
             raise exc_val
         return received and suppressed
+
+# compression utility
+
+class nocompress(object):
+    def compress(self, x):
+        return x
+    def flush(self):
+        return ""
+
+compressors = {
+    None: nocompress,
+    # lambda to prevent early import
+    'BZ': lambda: bz2.BZ2Compressor(),
+    'GZ': lambda: zlib.compressobj(),
+    }
+# also support the old form by courtesies
+compressors['UN'] = compressors[None]
+
+def _makedecompressor(decompcls):
+    def generator(f):
+        d = decompcls()
+        for chunk in filechunkiter(f):
+            yield d.decompress(chunk)
+    def func(fh):
+        return chunkbuffer(generator(fh))
+    return func
 
 def _bz2():
     d = bz2.BZ2Decompressor()
