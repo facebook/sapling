@@ -2,7 +2,6 @@
 
 Create an ondisk bundlestore in .hg/scratchbranches
 
-  $ . $TESTDIR/require-ext.sh remotenames
   $ extpath=`dirname $TESTDIR`
   $ cp -r $extpath/infinitepush $TESTTMP # use $TESTTMP substitution in message
   $ cp $extpath/hgext3rd/pushrebase.py $TESTTMP # use $TESTTMP substitution in message
@@ -303,29 +302,15 @@ Change the order of pushrebase and infinitepush
   6c10d49fe92751666c40263f96721b918170d3da
   d8c4f54ab678fd67cb90bb3f272a2dc6513a59a7
 
-  $ mkcommit scratchcommitwithremotenames
-  $ hg push --config extensions.remotenames= -r . --to scratch/mybranch
-  pushing to ssh://user@dummy/repo
-  searching for changes
-  remote: pushing 6 commits:
-  remote:     20759b6926ce  scratchcommit
-  remote:     1de1d7d92f89  new scratch commit
-  remote:     2b5d271c7e0d  scratchcommitnobook
-  remote:     d8c4f54ab678  scratchcommitwithpushrebase
-  remote:     6c10d49fe927  scratchcommitwithpushrebase2
-  remote:     9558d6761412  scratchcommitwithremotenames
-
 Non-fastforward scratch bookmark push
-  $ hg up 9558d6761412
+  $ hg up 6c10d49fe927
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo 1 > amend
   $ hg add amend
   $ hg ci --amend -m 'scratch amended commit'
-  saved backup bundle to $TESTTMP/client/.hg/strip-backup/9558d6761412-64a1e69b-amend-backup.hg (glob)
+  saved backup bundle to $TESTTMP/client/.hg/strip-backup/6c10d49fe927-a7adb791-amend-backup.hg (glob)
   $ hg log -G -T '{desc} {phase} {bookmarks}'
   @  scratch amended commit draft scratch/mybranch
-  |
-  o  scratchcommitwithpushrebase2 draft
   |
   o  scratchcommitwithpushrebase draft
   |
@@ -342,7 +327,7 @@ Non-fastforward scratch bookmark push
 
   $ scratchbookmarks
   scratch/anotherbranch 1de1d7d92f8965260391d0513fe8a8d5973d3042
-  scratch/mybranch 9558d6761412a5513b30c67ef930af0d86e70e1d
+  scratch/mybranch 6c10d49fe92751666c40263f96721b918170d3da
   $ hg push -r . --to scratch/mybranch
   pushing to ssh://user@dummy/repo
   searching for changes
@@ -354,20 +339,17 @@ Non-fastforward scratch bookmark push
   $ hg push -r . --to scratch/mybranch --force
   pushing to ssh://user@dummy/repo
   searching for changes
-  remote: pushing 6 commits:
+  remote: pushing 5 commits:
   remote:     20759b6926ce  scratchcommit
   remote:     1de1d7d92f89  new scratch commit
   remote:     2b5d271c7e0d  scratchcommitnobook
   remote:     d8c4f54ab678  scratchcommitwithpushrebase
-  remote:     6c10d49fe927  scratchcommitwithpushrebase2
-  remote:     5da7ed61b032  scratch amended commit
+  remote:     8872775dd97a  scratch amended commit
   $ scratchbookmarks
   scratch/anotherbranch 1de1d7d92f8965260391d0513fe8a8d5973d3042
-  scratch/mybranch 5da7ed61b032f9701238753f48ffd5873fce5970
+  scratch/mybranch 8872775dd97a750e1533dc1fbbca665644b32547
   $ hg log -G -T '{desc} {phase} {bookmarks}'
   @  scratch amended commit draft scratch/mybranch
-  |
-  o  scratchcommitwithpushrebase2 draft
   |
   o  scratchcommitwithpushrebase draft
   |
