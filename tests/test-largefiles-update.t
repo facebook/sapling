@@ -751,29 +751,21 @@ added:
   $ hg up -Cr "8" --config extensions.crashupdatelfiles=../crashupdatelfiles.py
   [7]
 Check large1 content and status ... and that update will undo modifications:
-BUG: large is R
   $ cat large1
   large1 in #3
   $ hg st
   M large1
-  R largeX
-  $ hg up -Cr .
-  getting changed largefiles
-  1 largefiles updated, 0 removed
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ cat large1
-  manually modified before 'hg transplant --continue'
-  $ hg st
-  R largeX
-Force largefiles rehashing and check again - which makes it realize that largeX
-not has been removed but just doesn't exist:
-  $ rm .hg/largefiles/dirstate
-  $ hg st
   ! largeX
   $ hg up -Cr .
   getting changed largefiles
-  1 largefiles updated, 0 removed
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  2 largefiles updated, 0 removed
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cat large1
+  manually modified before 'hg transplant --continue'
+  $ hg st
+Force largefiles rehashing and check that all changes have been caught by
+status and update:
+  $ rm .hg/largefiles/dirstate
   $ hg st
 
   $ cd ..

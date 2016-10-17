@@ -164,8 +164,8 @@ def reposetup(ui, repo):
                     # files from lfdirstate
                     unsure, s = lfdirstate.status(match, [], False, listclean,
                                                   False)
-                    (modified, added, removed, clean) = (s.modified, s.added,
-                                                         s.removed, s.clean)
+                    (modified, added, removed, deleted, clean) = (
+                        s.modified, s.added, s.removed, s.deleted, s.clean)
                     if parentworking:
                         for lfile in unsure:
                             standin = lfutil.standin(lfile)
@@ -206,14 +206,18 @@ def reposetup(ui, repo):
                         removed = [lfile for lfile in removed
                                    if lfutil.standin(lfile) in ctx1]
 
-                    # Standins no longer found in lfdirstate has been
-                    # removed
+                    # Standins no longer found in lfdirstate have been deleted
                     for standin in ctx1.walk(lfutil.getstandinmatcher(self)):
                         lfile = lfutil.splitstandin(standin)
                         if not match(lfile):
                             continue
                         if lfile not in lfdirstate:
-                            removed.append(lfile)
+                            deleted.append(lfile)
+                            # Sync "largefile has been removed" back to the
+                            # standin. Removing a file as a side effect of
+                            # running status is gross, but the alternatives (if
+                            # any) are worse.
+                            self.wvfs.unlink(standin)
 
                     # Filter result lists
                     result = list(result)
@@ -237,7 +241,7 @@ def reposetup(ui, repo):
                     normals = [[fn for fn in filelist
                                 if not lfutil.isstandin(fn)]
                                for filelist in result]
-                    lfstatus = (modified, added, removed, s.deleted, [], [],
+                    lfstatus = (modified, added, removed, deleted, [], [],
                                 clean)
                     result = [sorted(list1 + list2)
                               for (list1, list2) in zip(normals, lfstatus)]
