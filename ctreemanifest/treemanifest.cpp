@@ -115,7 +115,7 @@ void treemanifest_diffrecurse(
       cmp = strcmp(selfentry->filename, otherentry->filename);
     }
 
-    int originalpathsize = path.size();
+    size_t originalpathsize = path.size();
     if (cmp < 0) {
       // selfentry should be processed first and only exists in self
       selfentry->appendtopath(path);

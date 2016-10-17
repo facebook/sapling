@@ -52,9 +52,17 @@ library_dirs = get_env_path_list('LIBRARY_DIRS')
 #
 # The /opt/local paths may be necessary on Darwin builds.
 if include_dirs is None:
-    include_dirs = ['/usr/local/include', '/opt/local/include']
+    include_dirs = [
+        '/usr/local/include',
+        '/opt/local/include',
+        '/opt/homebrew/include/',
+    ]
 if library_dirs is None:
-    library_dirs = ['/usr/local/lib', '/opt/local/lib']
+    library_dirs = [
+        '/usr/local/lib',
+        '/opt/local/lib',
+        '/opt/homebrew/lib/',
+    ]
 
 hgext3rd = [
     p[:-3].replace('/', '.')

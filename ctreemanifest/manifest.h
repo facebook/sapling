@@ -124,7 +124,7 @@ class Manifest {
     ManifestEntry *addChild(std::list<ManifestEntry>::iterator iterator,
         ManifestEntry *otherChild);
 
-    int children() const {
+    size_t children() const {
       return entries.size();
     }
 
