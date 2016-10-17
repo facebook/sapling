@@ -664,7 +664,7 @@ static int treemanifest_setitem(py_treemanifest *self, PyObject *key, PyObject *
   }
 
   if (nodelen != BIN_NODE_SIZE) {
-      PyErr_Format(PyExc_ValueError, "invalid node length %d", nodelen);
+      PyErr_Format(PyExc_ValueError, "invalid node length %zd", nodelen);
       return -1;
   }
 
