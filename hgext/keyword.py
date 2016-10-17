@@ -737,6 +737,8 @@ def reposetup(ui, repo):
             return ret
 
     def kwfilectx_cmp(orig, self, fctx):
+        if fctx._customcmp:
+            return fctx.cmp(self)
         # keyword affects data size, comparing wdir and filelog size does
         # not make sense
         if (fctx._filenode is None and
