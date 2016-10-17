@@ -72,8 +72,8 @@ def _buildsqlindex(ui):
         raise error.Abort(_('please set infinitepush.reponame'))
 
     logfile = ui.config('infinitepush', 'logfile', '')
-    from . import indexapi
-    return indexapi.sqlindexapi(
+    from . import sqlindexapi
+    return sqlindexapi.sqlindexapi(
         reponame, host, port, db, user, password,
         logfile, _getloglevel(ui))
 
@@ -99,8 +99,8 @@ class bundlestore(object):
 
         indextype = self._repo.ui.config('infinitepush', 'indextype', '')
         if indextype == 'disk':
-            from . import indexapi
-            self.index = indexapi.fileindexapi(self._repo)
+            from . import fileindexapi
+            self.index = fileindexapi.fileindexapi(self._repo)
         elif indextype == 'sql':
             self.index = _buildsqlindex(self._repo.ui)
         else:

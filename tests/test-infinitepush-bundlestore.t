@@ -1,4 +1,3 @@
-  $ . $TESTDIR/require-ext.sh mysql
 
 Create an ondisk bundlestore in .hg/scratchbranches
 
