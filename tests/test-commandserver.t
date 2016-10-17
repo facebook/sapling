@@ -817,7 +817,7 @@ cases.
   $ echo foo > foo
   $ hg add foo
 
-(failuer before finalization)
+(failure before finalization)
 
   >>> from hgclient import readchannel, runcommand, check
   >>> @check
@@ -836,7 +836,7 @@ cases.
   *** runcommand log
   *** runcommand verify -q
 
-(failuer after finalization)
+(failure after finalization)
 
   >>> from hgclient import readchannel, runcommand, check
   >>> @check

@@ -272,7 +272,7 @@ external hook process
 
 (1) update to REV1 (REV2 => REV1)
 (2) revert by REV1^1
-(3) commit backnig out revision (REV3)
+(3) commit backing out revision (REV3)
 (4) update to REV2 (REV3 => REV2)
 (5) merge with REV3 (REV2 => REV2, REV3)
 
@@ -287,7 +287,7 @@ external hook process
   > preupdate.visibility = sh $TESTTMP/checkvisibility.sh preupdate
   > EOF
 
-("-m" is needed to avoid writing dirstte changes out at other than
+("-m" is needed to avoid writing dirstate changes out at other than
 invocation of the hook to be examined)
 
   $ hg backout --merge -d '3 0' 1 --tool=true -m 'fixed comment'

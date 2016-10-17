@@ -8,7 +8,7 @@
 #
 # Please update this file with any revsets you use for benchmarking a change so
 # that future contributors can easily find and retest it when doing further
-# modification. Feel free to highlight interresting variants if needed.
+# modification. Feel free to highlight interesting variants if needed.
 
 
 ## Revset from this section are all extracted from changelog when this file was

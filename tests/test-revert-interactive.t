@@ -137,7 +137,7 @@ Test that --interactive lift the need for --all
   $ ls folder1/
   g
 
-Test that a noop revert doesn't do an unecessary backup
+Test that a noop revert doesn't do an unnecessary backup
   $ (echo y; echo n) | hg revert -i -r 2 folder1/g
   diff --git a/folder1/g b/folder1/g
   1 hunks, 1 lines changed

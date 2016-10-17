@@ -248,7 +248,7 @@ class basealiasrules(object):
     This is a helper for fileset/revset/template aliases. A concrete rule set
     should be made by sub-classing this and implementing class/static methods.
 
-    It supports alias expansion of symbol and funciton-call styles::
+    It supports alias expansion of symbol and function-call styles::
 
         # decl = defn
         h = heads(default)

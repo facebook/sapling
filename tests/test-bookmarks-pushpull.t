@@ -550,7 +550,7 @@ hgweb
 
   $ cd ..
 
-Test to show result of bookmarks comparision
+Test to show result of bookmarks comparison
 
   $ mkdir bmcomparison
   $ cd bmcomparison

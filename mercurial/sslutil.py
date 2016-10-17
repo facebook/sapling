@@ -638,7 +638,7 @@ def _verifycert(cert, hostname):
                 # According to RFC 2818 the most specific Common Name must
                 # be used.
                 if key == 'commonName':
-                    # 'subject' entries are unicide.
+                    # 'subject' entries are unicode.
                     try:
                         value = value.encode('ascii')
                     except UnicodeEncodeError:
@@ -764,7 +764,7 @@ def _defaultcacerts(ui):
     return None
 
 def validatesocket(sock):
-    """Validate a socket meets security requiremnets.
+    """Validate a socket meets security requirements.
 
     The passed socket must have been created with ``wrapsocket()``.
     """

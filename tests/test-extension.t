@@ -251,10 +251,10 @@ Check absolute/relative import of extension specific modules
 
 #if demandimport absimport
 
-Examine whether module loading is delayed until actual refering, even
+Examine whether module loading is delayed until actual referring, even
 though module is imported with "absolute_import" feature.
 
-Files below in each packages are used for descirbed purpose:
+Files below in each packages are used for described purpose:
 
 - "called": examine whether "from MODULE import ATTR" works correctly
 - "unused": examine whether loading is delayed correctly

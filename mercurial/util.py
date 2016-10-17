@@ -1456,7 +1456,7 @@ class filestat(object):
     def __eq__(self, old):
         try:
             # if ambiguity between stat of new and old file is
-            # avoided, comparision of size, ctime and mtime is enough
+            # avoided, comparison of size, ctime and mtime is enough
             # to exactly detect change of a file regardless of platform
             return (self.stat.st_size == old.stat.st_size and
                     self.stat.st_ctime == old.stat.st_ctime and

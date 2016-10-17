@@ -199,7 +199,7 @@ Test saving last-message.txt:
   
   test saving last-message.txt
 
-Test visibility of in-memory distate changes outside transaction to
+Test visibility of in-memory dirstate changes outside transaction to
 external process
 
   $ cat > $TESTTMP/checkvisibility.sh <<EOF

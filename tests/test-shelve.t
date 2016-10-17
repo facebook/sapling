@@ -1493,7 +1493,7 @@ test branch.
 When i unshelve resulting in merge conflicts and makes saved
 file shelvedstate looks like in previous versions in
 mercurial(without restore branch information in 7th line) i
-expect that after resolving conflicts and succesfully
+expect that after resolving conflicts and successfully
 running 'shelve --continue' the branch information won't be
 restored and branch will be unchanged.
 
@@ -1587,7 +1587,7 @@ On non bare shelve the branch information shouldn't be restored
   default
   $ cd ..
 
-Prepare unshleve with a corrupted shelvedstate
+Prepare unshelve with a corrupted shelvedstate
   $ hg init r1 && cd r1
   $ echo text1 > file && hg add file
   $ hg shelve

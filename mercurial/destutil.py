@@ -133,7 +133,7 @@ def _destupdatebranchfallback(repo, clean, check):
         assert node is not None, "'tip' exists even in empty repository"
     return node, movemark, None
 
-# order in which each step should be evalutated
+# order in which each step should be evaluated
 # steps are run until one finds a destination
 destupdatesteps = ['evolution', 'bookmark', 'branch', 'branchfallback']
 # mapping to ease extension overriding steps.

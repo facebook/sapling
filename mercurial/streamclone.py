@@ -286,11 +286,11 @@ def generatebundlev1(repo, compression='UN'):
 def consumev1(repo, fp, filecount, bytecount):
     """Apply the contents from version 1 of a streaming clone file handle.
 
-    This takes the output from "streamout" and applies it to the specified
+    This takes the output from "stream_out" and applies it to the specified
     repository.
 
-    Like "streamout," the status line added by the wire protocol is not handled
-    by this function.
+    Like "stream_out," the status line added by the wire protocol is not
+    handled by this function.
     """
     with repo.lock():
         repo.ui.status(_('%d files to transfer, %s of data\n') %

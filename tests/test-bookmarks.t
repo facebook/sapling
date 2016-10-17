@@ -734,7 +734,7 @@ tipmost surviving ancestor of the stripped revision.
      summary:     0
   
 
-no-op update doesn't deactive bookmarks
+no-op update doesn't deactivate bookmarks
 
   $ hg bookmarks
    * four                      3:9ba5f110a0b3

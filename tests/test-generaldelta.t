@@ -74,7 +74,7 @@ commit.
   $ cd ..
 
 Test "usegeneraldelta" config
-(repo are general delta, but incoming bundle are not re-deltified)
+(repo are general delta, but incoming bundle are not re-deltafied)
 
 delta coming from the server base delta server are not recompressed.
 (also include the aggressive version for comparison)

@@ -1502,7 +1502,7 @@ class localrepository(object):
         return fparent1
 
     def checkcommitpatterns(self, wctx, vdirs, match, status, fail):
-        """check for commit arguments that aren't commitable"""
+        """check for commit arguments that aren't committable"""
         if match.isexact() or match.prefix():
             matched = set(status.modified + status.added + status.removed)
 

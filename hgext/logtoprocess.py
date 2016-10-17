@@ -27,7 +27,7 @@ For example::
 
 would log the warning message and traceback of any failed command dispatch.
 
-Scripts are run asychronously as detached daemon processes; mercurial will
+Scripts are run asynchronously as detached daemon processes; mercurial will
 not ensure that they exit cleanly.
 
 """

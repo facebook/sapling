@@ -1,4 +1,4 @@
-# extension to emulate interupting filemerge._filemerge
+# extension to emulate interrupting filemerge._filemerge
 
 from __future__ import absolute_import
 

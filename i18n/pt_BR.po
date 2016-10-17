@@ -6761,7 +6761,7 @@ msgstr ""
 "falhasse."
 
 msgid ""
-"Scripts are run asychronously as detached daemon processes; mercurial will\n"
+"Scripts are run asynchronously as detached daemon processes; mercurial will\n"
 "not ensure that they exit cleanly."
 msgstr ""
 "Os scripts são executados assincronamente como processos desanexados;\n"
@@ -14438,7 +14438,7 @@ msgstr ""
 "não é possível apagar marcações de obsolescência durante uma transação."
 
 #, python-format
-msgid "deleted %i obsolescense markers\n"
+msgid "deleted %i obsolescence markers\n"
 msgstr "%i marcações de obsolescência apagadas\n"
 
 #, python-format
@@ -33523,8 +33523,8 @@ msgstr ""
 msgid "revset expects one or more arguments"
 msgstr "revset espera um ou mais argumentos"
 
-msgid ":rstdoc(text, style): Format ReStructuredText."
-msgstr ":rstdoc(texto, estilo): Formata ReStructuredText."
+msgid ":rstdoc(text, style): Format reStructuredText."
+msgstr ":rstdoc(texto, estilo): Formata reStructuredText."
 
 #. i18n: "rstdoc" is a keyword
 msgid "rstdoc expects two arguments"

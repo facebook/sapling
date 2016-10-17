@@ -1401,13 +1401,13 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
                    "Press any key to continue.")
         elif opts.get('amend') is None:
             opts['amend'] = True
-            msg = ("Amend option is turned on -- commiting the currently "
+            msg = ("Amend option is turned on -- committing the currently "
                    "selected changes will not create a new changeset, but "
                    "instead update the most recently committed changeset.\n\n"
                    "Press any key to continue.")
         elif opts.get('amend') is True:
             opts['amend'] = None
-            msg = ("Amend option is turned off -- commiting the currently "
+            msg = ("Amend option is turned off -- committing the currently "
                    "selected changes will create a new changeset.\n\n"
                    "Press any key to continue.")
         if not test:
@@ -1610,7 +1610,7 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
         except curses.error:
             self.initerr = _('this diff is too large to be displayed')
             return
-        # initialize selecteitemendline (initial start-line is 0)
+        # initialize selecteditemendline (initial start-line is 0)
         self.selecteditemendline = self.getnumlinesdisplayed(
             self.currentselecteditem, recursechildren=False)
 

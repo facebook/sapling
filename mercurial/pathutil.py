@@ -84,7 +84,7 @@ class pathauditor(object):
         normparts.pop()
         prefixes = []
         # It's important that we check the path parts starting from the root.
-        # This means we won't accidentaly traverse a symlink into some other
+        # This means we won't accidentally traverse a symlink into some other
         # filesystem (which is potentially expensive to access).
         for i in range(len(parts)):
             prefix = os.sep.join(parts[:i + 1])

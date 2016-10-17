@@ -838,7 +838,7 @@ Test experimental revset
 
   $ cd ..
 
-Make the repo a bit more interresting
+Make the repo a bit more interesting
 
   $ hg up 1
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved

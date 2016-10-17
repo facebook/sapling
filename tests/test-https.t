@@ -379,7 +379,7 @@ Changing the cipher string works
 
 Fingerprints
 
-- works without cacerts (hostkeyfingerprints)
+- works without cacerts (hostfingerprints)
   $ hg -R copy-pull id https://localhost:$HGPORT/ --insecure --config hostfingerprints.localhost=ec:d8:7c:d6:b3:86:d0:4f:c1:b8:b4:1c:9d:8f:5e:16:8e:ef:1c:03
   warning: connecting to localhost using legacy security technology (TLS 1.0); see https://mercurial-scm.org/wiki/SecureConnections for more info (?)
   5fed3813f7f5

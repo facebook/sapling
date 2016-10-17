@@ -197,7 +197,7 @@ def antiambiguity():
         repetition = 3
 
         # repeat changing via checkambigatclosing, to examine whether
-        # st_mtime is advanced multiple times as expecetd
+        # st_mtime is advanced multiple times as expected
         for i in xrange(repetition):
             # explicit closing
             fp = scmutil.checkambigatclosing(open(filename, 'a'))
@@ -214,7 +214,7 @@ def antiambiguity():
             continue
 
         # st_mtime should be advanced "repetition * 2" times, because
-        # all changes occured at same time (in sec)
+        # all changes occurred at same time (in sec)
         expected = (oldstat.st_mtime + repetition * 2) & 0x7fffffff
         if newstat.st_mtime != expected:
             print("'newstat.st_mtime %s is not %s (as %s + %s * 2)" %

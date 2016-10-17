@@ -66,7 +66,7 @@ class mergestate(object):
        (experimental)
     m: the external merge driver defined for this merge plus its run state
        (experimental)
-    f: a (filename, dictonary) tuple of optional values for a given file
+    f: a (filename, dictionary) tuple of optional values for a given file
     X: unsupported mandatory record type (used in tests)
     x: unsupported advisory record type (used in tests)
     l: the labels for the parts of the merge.

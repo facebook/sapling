@@ -629,7 +629,7 @@ class chgunixservicehandler(object):
 
 def chgunixservice(ui, repo, opts):
     if repo:
-        # one chgserver can serve multiple repos. drop repo infomation
+        # one chgserver can serve multiple repos. drop repo information
         ui.setconfig('bundle', 'mainreporoot', '', 'repo')
     h = chgunixservicehandler(ui)
     return commandserver.unixforkingservice(ui, repo=None, opts=opts, handler=h)

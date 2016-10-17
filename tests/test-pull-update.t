@@ -130,7 +130,7 @@ explicit destination of the update.
 
 Test that updating deactivates current active bookmark, if the
 destination of the update is explicitly specified, and it doesn't
-match with the name of any exsiting bookmarks.
+match with the name of any existing bookmarks.
 
   $ cd ../t
   $ hg bookmark -d active-after-pull

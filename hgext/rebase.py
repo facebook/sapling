@@ -1385,7 +1385,7 @@ def _computeobsoletenotrebased(repo, rebaseobsrevs, dest):
     """return a mapping obsolete => successor for all obsolete nodes to be
     rebased that have a successors in the destination
 
-    obsolete => None entries in the mapping indicate nodes with no succesor"""
+    obsolete => None entries in the mapping indicate nodes with no successor"""
     obsoletenotrebased = {}
 
     # Build a mapping successor => obsolete nodes for the obsolete

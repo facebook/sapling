@@ -3068,7 +3068,7 @@ def debugobsolete(ui, repo, precursor=None, *successors, **opts):
 
         with repo.lock():
             n = repair.deleteobsmarkers(repo.obsstore, indices)
-            ui.write(_('deleted %i obsolescense markers\n') % n)
+            ui.write(_('deleted %i obsolescence markers\n') % n)
 
         return
 

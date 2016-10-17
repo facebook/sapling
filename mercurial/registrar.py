@@ -13,7 +13,7 @@ from . import (
 )
 
 class _funcregistrarbase(object):
-    """Base of decorator to register a fuction for specific purpose
+    """Base of decorator to register a function for specific purpose
 
     This decorator stores decorated functions into own dict 'table'.
 
@@ -177,7 +177,7 @@ class templatekeyword(_templateregistrarbase):
 
     Usage::
 
-        templaetkeyword = registrar.templatekeyword()
+        templatekeyword = registrar.templatekeyword()
 
         @templatekeyword('mykeyword')
         def mykeywordfunc(repo, ctx, templ, cache, revcache, **args):

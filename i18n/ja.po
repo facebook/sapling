@@ -6747,7 +6747,7 @@ msgid ""
 msgstr ""
 
 msgid ""
-"Scripts are run asychronously as detached daemon processes; mercurial will\n"
+"Scripts are run asynchronously as detached daemon processes; mercurial will\n"
 "not ensure that they exit cleanly."
 msgstr ""
 
@@ -10366,7 +10366,7 @@ msgid "corrupted shelved state file"
 msgstr "shelve 状態管理ファイルが破損しています"
 
 msgid "please run hg unshelve --abort to abort unshelve operation"
-msgstr "'hg unshelve --abort' を実施して unshleve 操作を中断してください"
+msgstr "'hg unshelve --abort' を実施して unshelve 操作を中断してください"
 
 msgid ""
 "could not read shelved state file, your working copy may be in an unexpected "
@@ -14200,7 +14200,7 @@ msgid "cannot delete obsmarkers in the middle of transaction."
 msgstr "トランザクション実施途中は廃止マーカを破棄できません"
 
 #, python-format
-msgid "deleted %i obsolescense markers\n"
+msgid "deleted %i obsolescence markers\n"
 msgstr "%i 個の廃止マーカを破棄\n"
 
 #, python-format
@@ -32665,8 +32665,8 @@ msgstr ""
 msgid "revset expects one or more arguments"
 msgstr "revset の引数は1個以上です"
 
-msgid ":rstdoc(text, style): Format ReStructuredText."
-msgstr ":rstdoc(text, style): 出力を ReStructuredText として整形します。"
+msgid ":rstdoc(text, style): Format reStructuredText."
+msgstr ":rstdoc(text, style): 出力を reStructuredText として整形します。"
 
 #. i18n: "rstdoc" is a keyword
 msgid "rstdoc expects two arguments"

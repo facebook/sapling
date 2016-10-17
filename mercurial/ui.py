@@ -736,7 +736,7 @@ class ui(object):
         is curses, the interface for histedit is text and the interface for
         selecting chunk is crecord (the best curses interface available).
 
-        Consider the following exemple:
+        Consider the following example:
         ui.interface = curses
         ui.interface.histedit = text
 

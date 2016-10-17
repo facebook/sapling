@@ -3471,7 +3471,7 @@ def howtocontinue(repo):
     '''Check for an unfinished operation and return the command to finish
     it.
 
-    afterresolvedstates tupples define a .hg/{file} and the corresponding
+    afterresolvedstates tuples define a .hg/{file} and the corresponding
     command needed to finish it.
 
     Returns a (msg, warning) tuple. 'msg' is a string and 'warning' is

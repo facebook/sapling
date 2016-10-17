@@ -68,7 +68,7 @@ class testatomictempfile(unittest.TestCase):
             repetition = 3
 
             # repeat atomic write with checkambig=True, to examine
-            # whether st_mtime is advanced multiple times as expecetd
+            # whether st_mtime is advanced multiple times as expected
             for j in xrange(repetition):
                 atomicwrite(True)
             newstat = os.stat(self._filename)
@@ -77,7 +77,7 @@ class testatomictempfile(unittest.TestCase):
                 continue
 
             # st_mtime should be advanced "repetition" times, because
-            # all atomicwrite() occured at same time (in sec)
+            # all atomicwrite() occurred at same time (in sec)
             self.assertTrue(newstat.st_mtime ==
                             ((oldstat.st_mtime + repetition) & 0x7fffffff))
             # no more examination is needed, if assumption above is true

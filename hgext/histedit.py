@@ -1405,12 +1405,12 @@ def verifyactions(actions, state, ctxs):
                        % node.short(missing[0]))
 
 def adjustreplacementsfrommarkers(repo, oldreplacements):
-    """Adjust replacements from obsolescense markers
+    """Adjust replacements from obsolescence markers
 
     Replacements structure is originally generated based on
     histedit's state and does not account for changes that are
     not recorded there. This function fixes that by adding
-    data read from obsolescense markers"""
+    data read from obsolescence markers"""
     if not obsolete.isenabled(repo, obsolete.createmarkersopt):
         return oldreplacements
 

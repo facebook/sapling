@@ -720,7 +720,7 @@ function! <SID>_GenericReview(argslist)                                   "{{{
     let s:origtabpagenr = tabpagenr()
     silent! exe 'tabedit ' . StrippedRelativeFilePath
     if exists('patchcmd')
-      " modelines in loaded files mess with diff comparision
+      " modelines in loaded files mess with diff comparison
       let s:keep_modeline=&modeline
       let &modeline=0
       silent! exe 'vert diffsplit ' . tmpname . '.file'

@@ -1079,7 +1079,7 @@ Test '%' operator
   8
   9
 
-Test opreand of '%' is optimized recursively (issue4670)
+Test operand of '%' is optimized recursively (issue4670)
 
   $ try --optimize '8:9-8%'
   (onlypost
@@ -3085,7 +3085,7 @@ far away.
   [255]
 
 test scope of alias expansion: 'universe' is expanded prior to 'shadowall(0)',
-but 'all()' should never be substituded to '0()'.
+but 'all()' should never be substituted to '0()'.
 
   $ echo 'universe = all()' >> .hg/hgrc
   $ echo 'shadowall(all) = all and universe' >> .hg/hgrc

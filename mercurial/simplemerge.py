@@ -274,7 +274,7 @@ class Merge3Text(object):
     def minimize(self, merge_regions):
         """Trim conflict regions of lines where A and B sides match.
 
-        Lines where both A and B have made the same changes at the begining
+        Lines where both A and B have made the same changes at the beginning
         or the end of each merge region are eliminated from the conflict
         region and are instead considered the same.
         """

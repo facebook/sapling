@@ -563,7 +563,7 @@ def wrapsymlink(orig, source, link_name):
             pass
 
 class state_update(object):
-    ''' This context mananger is responsible for dispatching the state-enter
+    ''' This context manager is responsible for dispatching the state-enter
         and state-leave signals to the watchman service '''
 
     def __init__(self, repo, node, distance, partial):

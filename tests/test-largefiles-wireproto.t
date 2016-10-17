@@ -388,7 +388,7 @@ available locally.
 
   $ killdaemons.py
 
-largefiles should not ask for password again after succesfull authorization
+largefiles should not ask for password again after successful authorization
 
   $ hg init credentialmain
   $ cd credentialmain

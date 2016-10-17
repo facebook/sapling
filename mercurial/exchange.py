@@ -64,7 +64,7 @@ def parsebundlespec(repo, spec, strict=True, externalnames=False):
 
     Where <compression> is one of the supported compression formats
     and <type> is (currently) a version string. A ";" can follow the type and
-    all text afterwards is interpretted as URI encoded, ";" delimited key=value
+    all text afterwards is interpreted as URI encoded, ";" delimited key=value
     pairs.
 
     If ``strict`` is True (the default) <compression> is required. Otherwise,
@@ -282,7 +282,7 @@ def _forcebundle1(op):
     This function is used to allow testing of the older bundle version"""
     ui = op.repo.ui
     forcebundle1 = False
-    # The goal is this config is to allow developper to choose the bundle
+    # The goal is this config is to allow developer to choose the bundle
     # version used during exchanged. This is especially handy during test.
     # Value is a list of bundle version to be picked from, highest version
     # should be used.
@@ -1425,7 +1425,7 @@ def _pullapplyphases(pullop, remotephases):
     pullop.stepsdone.add('phases')
     publishing = bool(remotephases.get('publishing', False))
     if remotephases and not publishing:
-        # remote is new and unpublishing
+        # remote is new and non-publishing
         pheads, _dr = phases.analyzeremotephases(pullop.repo,
                                                  pullop.pulledsubset,
                                                  remotephases)

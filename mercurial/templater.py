@@ -792,7 +792,7 @@ def revset(context, mapping, args):
 
 @templatefunc('rstdoc(text, style)')
 def rstdoc(context, mapping, args):
-    """Format ReStructuredText."""
+    """Format reStructuredText."""
     if len(args) != 2:
         # i18n: "rstdoc" is a keyword
         raise error.ParseError(_("rstdoc expects two arguments"))
