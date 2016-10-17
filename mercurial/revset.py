@@ -2595,7 +2595,7 @@ def _optimize(x, small):
         f = getsymbol(x[1])
         wa, ta = _optimize(x[2], small)
         if f in ('author', 'branch', 'closed', 'date', 'desc', 'file', 'grep',
-                 'keyword', 'outgoing', 'user'):
+                 'keyword', 'outgoing', 'user', 'destination'):
             w = 10 # slow
         elif f in ('modifies', 'adds', 'removes'):
             w = 30 # slower
