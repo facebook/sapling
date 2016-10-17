@@ -352,7 +352,7 @@ Test config option absorb.amendflags and running as a sub command of amend:
   $ $PYTHON -c 'print("".join(map(chr, range(0,3))))' > c
   $ hg commit -A c -m 'c is a binary file'
   $ echo c >> c
-  $ sedi '2iINS' b
+  $ sedi $'2i\\\nINS\n' b
   $ echo END >> b
   $ hg rm a
   $ hg amend --correlated
