@@ -31,6 +31,9 @@ import tempfile
 
 from multiprocessing.reduction import recv_handle, send_handle
 
+# backup tty fds. useful if we lose them later, like chg starting the pager
+_ttyfds = []
+
 @contextlib.contextmanager
 def _silentexception(terminate=False):
     """silent common exceptions
@@ -64,8 +67,8 @@ def _isttyserverneeded():
     except Exception:
         pass
 
-    # if neither stdin nor stderr are tty, give up
-    if not all(f.isatty() for f in [sys.stdin, sys.stderr]):
+    # if no backup tty fds, and neither stdin nor stderr are tty, give up
+    if not _ttyfds and not all(f.isatty() for f in [sys.stdin, sys.stderr]):
         return False
 
     # tty server is needed
@@ -91,8 +94,7 @@ def _startttyserver():
         return pid, sockpath
 
     # child, starts the server
-    ttyr = sys.stdin
-    ttyw = sys.stderr
+    ttyrfd, ttywfd = _ttyfds or [sys.stdin.fileno(), sys.stderr.fileno()]
 
     sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     getattr(util, 'bindunixsocket', _sockbind)(sock, sockpath)
@@ -106,8 +108,8 @@ def _startttyserver():
         while True:
             conn, addr = sock.accept()
             # 0: a dummy destination_pid, is ignored on posix systems
-            send_handle(conn, ttyr.fileno(), 0)
-            send_handle(conn, ttyw.fileno(), 0)
+            send_handle(conn, ttyrfd, 0)
+            send_handle(conn, ttywfd, 0)
             conn.close()
 
 def _killprocess(pid):
@@ -166,9 +168,35 @@ def _validaterepo(orig, self, sshcmd, args, remotecmd):
             if path and os.path.exists(path):
                 util.unlinkpath(path, ignoremissing=True)
 
+def _attachio(orig, self):
+    orig(self)
+    # backup read, write tty fds to _ttyfds
+    if _ttyfds:
+        return
+    ui = self.ui
+    if ui.fin.isatty() and ui.ferr.isatty():
+        rfd = os.dup(ui.fin.fileno())
+        wfd = os.dup(ui.ferr.fileno())
+        _ttyfds[:] = [rfd, wfd]
+
+def _patchchgserver():
+    """patch chgserver so we can backup tty fds before they are replaced if
+    chg starts the pager.
+    """
+    try:
+        chgserver = extensions.find('chgserver')
+    except KeyError:
+        pass
+    else:
+        server = getattr(chgserver, 'chgcmdserver', None)
+        if server and 'attachio' in server.capabilities:
+            orig = server.attachio
+            server.capabilities['attachio'] = extensions.bind(_attachio, orig)
+
 def uisetup(ui):
     # _validaterepo runs ssh and needs to be wrapped
     extensions.wrapfunction(sshpeer.sshpeer, '_validaterepo', _validaterepo)
+    _patchchgserver()
 
 def _setecho(ttyr, enableecho):
     import termios
