@@ -1386,7 +1386,7 @@ class treemanifestctx(object):
         # Need to perform a slow delta
         revlog = self._revlog
         r0 = revlog.deltaparent(revlog.rev(self._node))
-        m0 = treemanifestctx(revlog, revlog.node(r0), dir=self._dir).read()
+        m0 = treemanifestctx(revlog, self._dir, revlog.node(r0)).read()
         m1 = self.read()
         md = treemanifest(dir=self._dir)
         for f, ((n0, fl0), (n1, fl1)) in m0.diff(m1).iteritems():
