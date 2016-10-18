@@ -445,7 +445,7 @@ def display(fp=None, format=3, **kwargs):
     elif format == DisplayFormats.Hotpath:
         display_hotpath(fp, **kwargs)
     elif format == DisplayFormats.FlameGraph:
-        write_to_flame(fp)
+        write_to_flame(fp, **kwargs)
     elif format == DisplayFormats.Json:
         write_to_json(fp)
     else:
@@ -667,10 +667,11 @@ def display_hotpath(fp, limit=0.05, **kwargs):
     if root.count > 0:
         _write(root, 0, False)
 
-def write_to_flame(fp):
-    scriptpath = os.environ['HOME'] + '/flamegraph.pl'
+def write_to_flame(fp, scriptpath=None, outputfile=None, **kwargs):
+    if scriptpath is None:
+        scriptpath = os.environ['HOME'] + '/flamegraph.pl'
     if not os.path.exists(scriptpath):
-        print >> fp, "error: missing ~/flamegraph.pl"
+        print >> fp, "error: missing %s" % scriptpath
         print >> fp, "get it here: https://github.com/brendangregg/FlameGraph"
         return
 
@@ -693,8 +694,11 @@ def write_to_flame(fp):
 
     file.close()
 
-    os.system("perl ~/flamegraph.pl %s > ~/flamegraph.svg" % path)
-    print "Written to ~/flamegraph.svg"
+    if outputfile is None:
+        outputfile = '~/flamegraph.svg'
+
+    os.system("perl ~/flamegraph.pl %s > %s" % (path, outputfile))
+    print "Written to %s" % outputfile
 
 def write_to_json(fp):
     samples = []
@@ -724,9 +728,10 @@ usage:
         Shows the samples grouped by function.
     function [filename:]functionname
         Shows the callers and callees of a particular function.
-    flame
-        Writes out a flamegraph to ~/flamegraph.svg
-        Requires that ~/flamegraph.pl exist."""
+    flame [-s --script-path] [-o --output-file path]
+        Writes out a flamegraph to output-file (defaults to ~/flamegraph.svg)
+        Requires that ~/flamegraph.pl exist.
+        (Specify alternate script path with --script-path.)"""
 
 def main(argv=None):
     if argv is None:
@@ -736,46 +741,55 @@ def main(argv=None):
         printusage()
         return 0
 
+    displayargs = {}
+
     optstart = 2
-    function = None
+    displayargs['function'] = None
     if argv[1] == 'hotpath':
-        mode = DisplayFormats.Hotpath
+        displayargs['format'] = DisplayFormats.Hotpath
     elif argv[1] == 'lines':
-        mode = DisplayFormats.ByLine
+        displayargs['format'] = DisplayFormats.ByLine
     elif argv[1] == 'functions':
-        mode = DisplayFormats.ByMethod
+        displayargs['format'] = DisplayFormats.ByMethod
     elif argv[1] == 'function':
-        mode = DisplayFormats.AboutMethod
-        function = argv[2]
+        displayargs['format'] = DisplayFormats.AboutMethod
+        displayargs['function'] = argv[2]
         optstart = 3
     elif argv[1] == 'flame':
-        mode = DisplayFormats.FlameGraph
+        displayargs['format'] = DisplayFormats.FlameGraph
     else:
         printusage()
         return 0
 
     # process options
     try:
-        opts, args = getopt.getopt(sys.argv[optstart:], "hl:",
-                                   ["help", "limit="])
+        opts, args = getopt.getopt(sys.argv[optstart:], "hl:f:o:p:",
+                                   ["help", "limit=", "file=", "output-file=", "script-path="])
     except getopt.error as msg:
         print msg
         printusage()
         return 2
 
-    limit = 0.05
+    displayargs['limit'] = 0.05
+    path = None
     for o, value in opts:
         if o in ("-l", "--limit"):
-            limit = float(value)
+            displayargs['limit'] = float(value)
+        elif o in ("-f", "--file"):
+            path = value
+        elif o in ("-o", "--output-file"):
+            displayargs['outputfile'] = value
+        elif o in ("-p", "--script-path"):
+            displayargs['scriptpath'] = value
         elif o in ("-h", "help"):
             printusage()
             return 0
         else:
-            assert False, "unhandled option"
+            assert False, "unhandled option %s" % o
 
-    load_data()
+    load_data(path=path)
 
-    display(format = mode, limit = limit, function = function)
+    display(**displayargs)
 
     return 0
 
