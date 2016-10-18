@@ -1,4 +1,4 @@
-#!/bin/sh -eu
+#!/bin/sh -e
 #
 # Build a remotefilelog debian package from the current repo
 
@@ -8,7 +8,6 @@ if [ ! -d .hg ]; then
 fi
 
 cp -r contrib/debian debian
-trap "rm -r '$PWD/debian'" EXIT
 
 version=$(hg log -r . -T'{latesttag}+{latesttagdistance}-{node|short}')
 
@@ -20,6 +19,11 @@ sed "s/__VERSION__/$version/" < $changelog > $changelog.tmp
 date=$(date --rfc-2822)
 sed "s/__DATE__/$date/" < $changelog.tmp > $changelog
 rm $changelog.tmp
+
+if [ ! -z "${DEBPREPONLY}" ] ; then
+  exit 0
+fi
+trap "rm -r '$PWD/debian'" EXIT
 
 debuild -us -uc -b || exit 1
 OUTPUTDIR=${OUTPUTDIR:=packages/debian-unknown}
