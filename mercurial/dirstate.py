@@ -757,6 +757,7 @@ class dirstate(object):
                     start = int(clock) - (int(clock) % delaywrite)
                     end = start + delaywrite
                     time.sleep(end - clock)
+                    now = end # trust our estimate that the end is near now
                     break
 
         st.write(parsers.pack_dirstate(self._map, self._copymap, self._pl, now))
