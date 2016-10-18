@@ -1210,7 +1210,8 @@ class manifestrevlog(revlog.revlog):
                 n = self.addrevision(text, transaction, link, p1, p2)
                 arraytext = array.array('c', text)
 
-        self.fulltextcache[n] = arraytext
+        if arraytext is not None:
+            self.fulltextcache[n] = arraytext
 
         return n
 
@@ -1506,7 +1507,8 @@ class manifest(manifestrevlog):
             m = self._newmanifest(text)
             arraytext = array.array('c', text)
         self._mancache[node] = m
-        self.fulltextcache[node] = arraytext
+        if arraytext is not None:
+            self.fulltextcache[node] = arraytext
         return m
 
     def readshallow(self, node):
