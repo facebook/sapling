@@ -336,9 +336,10 @@ def getscratchbranchpart(repo, peer, outgoing, force, bookmark, create):
         params['bookprevnode'] = ''
         if bookmark in repo:
             params['bookprevnode'] = repo[bookmark].hex()
-        params['create'] = '1' if create else '0'
+        if create:
+            params['create'] = '1'
     if force:
-        params['force'] = '1' if force else '0'
+        params['force'] = '1'
     # .upper() marks this as a mandatory part: server will abort if there's no
     #  handler
     return bundle2.bundlepart(
@@ -578,7 +579,7 @@ def bundle2scratchbranch(op, part):
         if bookmark:
             oldnode = index.getnode(bookmark)
 
-            if not oldnode and create != "1":
+            if not oldnode and not create:
                 raise error.Abort("unknown bookmark %s" % bookmark,
                                   hint="use --create if you want to create one")
         else:
