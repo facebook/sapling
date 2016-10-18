@@ -44,10 +44,21 @@ EdenMount::EdenMount(
     unique_ptr<ObjectStore> objectStore,
     shared_ptr<Overlay> overlay,
     unique_ptr<const ClientConfig> clientConfig)
+    : EdenMount(
+          mountPoint,
+          std::move(objectStore),
+          overlay,
+          clientConfig->getBindMounts()) {}
+
+EdenMount::EdenMount(
+    shared_ptr<fusell::MountPoint> mountPoint,
+    unique_ptr<ObjectStore> objectStore,
+    shared_ptr<Overlay> overlay,
+    vector<BindMount> bindMounts)
     : mountPoint_(std::move(mountPoint)),
       objectStore_(std::move(objectStore)),
       overlay_(std::move(overlay)),
-      clientConfig_(std::move(clientConfig)),
+      bindMounts_(std::move(bindMounts)),
       mountGeneration_(globalProcessGeneration | ++mountGeneration) {
   CHECK_NOTNULL(mountPoint_.get());
   CHECK_NOTNULL(objectStore_.get());
@@ -61,7 +72,7 @@ const AbsolutePath& EdenMount::getPath() const {
 }
 
 const vector<BindMount>& EdenMount::getBindMounts() const {
-  return clientConfig_->getBindMounts();
+  return bindMounts_;
 }
 }
 } // facebook::eden

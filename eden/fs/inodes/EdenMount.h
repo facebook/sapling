@@ -43,6 +43,11 @@ class EdenMount {
       std::unique_ptr<ObjectStore> objectStore,
       std::shared_ptr<Overlay> overlay,
       std::unique_ptr<const ClientConfig> clientConfig);
+  EdenMount(
+      std::shared_ptr<fusell::MountPoint> mountPoint,
+      std::unique_ptr<ObjectStore> objectStore,
+      std::shared_ptr<Overlay> overlay,
+      const std::vector<BindMount> bindMounts);
   virtual ~EdenMount();
 
   /*
@@ -102,7 +107,7 @@ class EdenMount {
    * Note that this config will not be updated if the user modifies the
    * underlying config files after the ClientConfig was created.
    */
-  const std::unique_ptr<const ClientConfig> clientConfig_;
+  const std::vector<BindMount> bindMounts_;
 
   folly::Synchronized<Journal> journal_;
 
