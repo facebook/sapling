@@ -26,8 +26,21 @@ Set up repository
   > sleepext = ../sleepext.py
   > EOF
 
+#if osx
+  $ TIMEOUT=gtimeout
+#else
+  $ TIMEOUT=timeout
+#endif
+
+  $ hash $TIMEOUT 2>/dev/null
+  > HASHSTATUS=$?
+  > if [ $HASHSTATUS -ne 0 ] ; then
+  >     echo "skipped: missing feature: $TIMEOUT"
+  >     exit 80
+  > fi
+
 Test ctrl-c
-  $ timeout -s 2 1 hg sleep 2
+  $ $TIMEOUT -s 2 1 hg sleep 2
   interrupted!
   [124]
 
@@ -40,7 +53,7 @@ Test ctrl-c
   > attend-update = True
   > EOF
 
-  $ timeout -s 2 1 hg sleep 2
+  $ $TIMEOUT -s 2 1 hg sleep 2
   interrupted!
   [124]
 
@@ -48,7 +61,7 @@ Test ctrl-c
   > interactiveonly = False
   > EOF
 
-  $ timeout -s 2 1 hg sleep 2
+  $ $TIMEOUT -s 2 1 hg sleep 2
   ==========================
   Interrupting Mercurial may leave your repo in a bad state.
   If you really want to interrupt your current command, press
@@ -57,7 +70,7 @@ Test ctrl-c
   2 second(s) passed
   [124]
 
-  $ timeout -s 2 1 hg slum 2
+  $ $TIMEOUT -s 2 1 hg slum 2
   ==========================
   Interrupting Mercurial may leave your repo in a bad state.
   If you really want to interrupt your current command, press
