@@ -8,8 +8,6 @@ Create an ondisk bundlestore in .hg/scratchbranches
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > infinitepush=$TESTTMP/infinitepush
-  > [infinitepush]
-  > branchpattern=re:scratch/.+
   > [ui]
   > ssh = python "$TESTDIR/dummyssh"
   > EOF
@@ -50,6 +48,10 @@ the history but is stored on disk
   remote: adding manifests
   remote: adding file changes
   remote: added 1 changesets with 1 changes to 1 files
+  $ cat >> $HGRCPATH << EOF
+  > [infinitepush]
+  > branchpattern=re:scratch/.*
+  > EOF
   $ mkcommit scratchcommit
   $ hg push -r . --to scratch/mybranch --create
   pushing to ssh://user@dummy/repo

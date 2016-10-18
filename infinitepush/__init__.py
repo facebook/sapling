@@ -50,6 +50,8 @@ configbookmark = 'server-bundlestore-bookmark'
 configcreate = 'server-bundlestore-create'
 configscratchpush = 'infinitepush-scratchpush'
 
+_scratchbranchmatcher = lambda x: False
+
 def _buildexternalbundlestore(ui):
     put_args = ui.configlist('infinitepush', 'put_args', [])
     put_binary = ui.config('infinitepush', 'put_binary')
@@ -132,6 +134,10 @@ def extsetup(ui):
 def commonsetup(ui):
     wireproto.commands['listkeyspatterns'] = (
         wireprotolistkeyspatterns, 'namespace patterns')
+    scratchbranchpat = ui.config('infinitepush', 'branchpattern')
+    if scratchbranchpat:
+        global _scratchbranchmatcher
+        kind, pat, _scratchbranchmatcher = util.stringmatcher(scratchbranchpat)
 
 def serverextsetup(ui):
     origpushkeyhandler = bundle2.parthandlermapping['pushkey']
@@ -187,16 +193,13 @@ def wireprotolistkeyspatterns(repo, proto, namespace, patterns):
 
 def localrepolistkeys(orig, self, namespace, patterns=None):
     if namespace == 'bookmarks' and patterns:
-        scratchbranchpat = self.ui.config('infinitepush',
-                                          'branchpattern', '')
-        kind, pat, matcher = util.stringmatcher(scratchbranchpat)
         index = self.bundlestore.index
         results = {}
         patterns = set(patterns)
         # TODO(stash): this function has a limitation:
         # patterns are not actually patterns, just simple string comparison
         for bookmark in patterns:
-            if matcher(bookmark):
+            if _scratchbranchmatcher(bookmark):
                 # TODO(stash): use `getbookmarks()` method
                 node = index.getnode(bookmark)
                 if node:
@@ -284,13 +287,9 @@ def getbundle(orig, repo, source, heads=None, common=None, bundlecaps=None,
 
 def _lookupwrap(orig):
     def _lookup(repo, proto, key):
-        scratchbranchpat = repo.ui.config('infinitepush', 'branchpattern')
-        if not scratchbranchpat:
-            return orig(repo, proto, key)
-        kind, pat, matcher = util.stringmatcher(scratchbranchpat)
         localkey = encoding.tolocal(key)
 
-        if isinstance(localkey, str) and matcher(localkey):
+        if isinstance(localkey, str) and _scratchbranchmatcher(localkey):
             scratchnode = repo.bundlestore.index.getnode(localkey)
             if scratchnode:
                 return "%s %s\n" % (1, scratchnode)
@@ -354,13 +353,11 @@ def _pull(orig, ui, repo, source="default", **opts):
 
     hasscratchbookmarks = False
     scratchbookmarks = {}
-    scratchbranchpat = ui.config('infinitepush', 'branchpattern')
-    if opts.get('bookmark') and scratchbranchpat:
-        kind, pat, matcher = util.stringmatcher(scratchbranchpat)
+    if opts.get('bookmark'):
         bookmarks = []
         revs = opts.get('rev') or []
         for bookmark in opts.get('bookmark'):
-            if matcher(bookmark):
+            if _scratchbranchmatcher(bookmark):
                 if hasscratchbookmarks:
                     raise error.Abort('not implemented: not possible to pull '
                                       'more than one scratch branch')
@@ -415,9 +412,7 @@ def _push(orig, ui, repo, *args, **opts):
         create = opts.get('create') or False
 
         scratchpush = opts.get('bundle_store')
-        scratchbranchpat = ui.config('infinitepush', 'branchpattern', '')
-        kind, pat, matcher = util.stringmatcher(scratchbranchpat)
-        if matcher(bookmark):
+        if _scratchbranchmatcher(bookmark):
             # Hack to fix interaction with remotenames. Remotenames push
             # '--to' bookmark to the server but we don't want to push scratch
             # bookmark to the server. Let's delete '--to' and '--create' and
