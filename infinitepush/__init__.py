@@ -226,6 +226,37 @@ def listkeyspatterns(self, namespace, patterns):
                   % (namespace, len(d)))
     yield pushkey.decodekeys(d)
 
+def _includefilelogstobundle(bundlecaps, bundlerepo, ui):
+    '''Tells remotefilelog to include all changed files to the changegroup
+
+    By default remotefilelog doesn't include file content to the changegroup.
+    But we need to include it if we are fetching from bundlestore.
+    '''
+
+    revs = bundlerepo.revs('bundle()')
+    cl = bundlerepo.changelog
+    changedfiles = set()
+    for r in revs:
+        # [3] means changed files
+        changedfiles.update(cl.read(r)[3])
+    if not changedfiles:
+        return bundlecaps
+
+    changedfiles = '\0'.join(changedfiles)
+    newcaps = []
+    appended = False
+    for cap in (bundlecaps or []):
+        if cap.startswith('excludepattern='):
+            newcaps.append('\0'.join((cap, changedfiles)))
+            appended = True
+        else:
+            newcaps.append(cap)
+    if not appended:
+        # Not found excludepattern cap. Just append it
+        newcaps.append('excludepattern=' + changedfiles)
+
+    return newcaps
+
 def getbundle(orig, repo, source, heads=None, common=None, bundlecaps=None,
               **kwargs):
     # Check if heads exists, if not, check bundle store
@@ -245,6 +276,8 @@ def getbundle(orig, repo, source, heads=None, common=None, bundlecaps=None,
             bundlerepo = repository(repo.ui, bundlepath)
             repo = bundlerepo
             hasscratchnode = True
+            bundlecaps = _includefilelogstobundle(bundlecaps, bundlerepo,
+                                                  repo.ui)
 
     return orig(repo, source, heads=heads, common=common,
                 bundlecaps=bundlecaps, **kwargs)
