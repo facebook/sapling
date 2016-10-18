@@ -429,19 +429,9 @@ void EdenServiceHandler::getFileInformation(
     FileInformationOrError result;
 
     try {
-      auto inodeBase = rootInode;
       auto relativePath = RelativePathPiece{path};
-
-      // Walk down to the path of interest.
-      auto it = relativePath.paths().begin();
-      while (it != relativePath.paths().end()) {
-        // This will throw if there is no such entry.
-        inodeBase =
-            inodeDispatcher
-                ->lookupInodeBase(inodeBase->getNodeId(), it.piece().basename())
-                .get();
-        ++it;
-      }
+      auto inodeBase =
+          edenMount->getMountPoint()->getInodeBaseForPath(relativePath);
 
       // we've reached the item of interest.
       auto attr = inodeBase->getattr().get();
