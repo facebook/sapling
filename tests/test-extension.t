@@ -249,7 +249,7 @@ Check absolute/relative import of extension specific modules
   $TESTTMP/a (glob)
 #endif
 
-#if absimport
+#if demandimport absimport
 
 Examine whether module loading is delayed until actual refering, even
 though module is imported with "absolute_import" feature.
@@ -432,6 +432,36 @@ Examine module importing.
   REL: this is absextroot.xsub1.xsub2.called.func()
   REL: this relimporter imports 'this is absextroot.relimportee'
 
+Examine whether sub-module is imported relatively as expected.
+
+See also issue5208 for detail about example case on Python 3.x.
+
+  $ f -q $TESTTMP/extlibroot/lsub1/lsub2/notexist.py
+  $TESTTMP/extlibroot/lsub1/lsub2/notexist.py: file not found
+
+  $ cat > $TESTTMP/notexist.py <<EOF
+  > text = 'notexist.py at root is loaded unintentionally\n'
+  > EOF
+
+  $ cat > $TESTTMP/checkrelativity.py <<EOF
+  > from mercurial import cmdutil
+  > cmdtable = {}
+  > command = cmdutil.command(cmdtable)
+  > 
+  > # demand import avoids failure of importing notexist here
+  > import extlibroot.lsub1.lsub2.notexist
+  > 
+  > @command('checkrelativity', [], norepo=True)
+  > def checkrelativity(ui, *args, **opts):
+  >     try:
+  >         ui.write(extlibroot.lsub1.lsub2.notexist.text)
+  >         return 1 # unintentional success
+  >     except ImportError:
+  >         pass # intentional failure
+  > EOF
+
+  $ (PYTHONPATH=${PYTHONPATH}${PATHSEP}${TESTTMP}; hg --config extensions.checkrelativity=$TESTTMP/checkrelativity.py checkrelativity)
+
 #endif
 
   $ cd ..
@@ -562,7 +592,7 @@ Asking for help about a deprecated extension should do something useful:
   
       graphlog      command to view revision graphs from a shell (DEPRECATED)
   
-  (use "hg help extensions" for information on enabling extensions)
+  (use 'hg help extensions' for information on enabling extensions)
 
 Extension module help vs command help:
 
@@ -586,7 +616,7 @@ Extension module help vs command help:
       compared to the working directory, and, when no revisions are specified,
       the working directory files are compared to its parent.
   
-  (use "hg help -e extdiff" to show help for the extdiff extension)
+  (use 'hg help -e extdiff' to show help for the extdiff extension)
   
   options ([+] can be repeated):
   
@@ -666,7 +696,7 @@ Extension module help vs command help:
   
    extdiff       use external program to diff repository (or selected files)
   
-  (use "hg help -v -e extdiff" to show built-in aliases and global options)
+  (use 'hg help -v -e extdiff' to show built-in aliases and global options)
 
 
 
@@ -718,7 +748,7 @@ Test help topic with same name as extension
       A range acts as a closed interval. This means that a range of 3:5 gives 3,
       4 and 5. Similarly, a range of 9:6 gives 9, 8, 7, and 6.
   
-  use "hg help -c multirevs" to see help for the multirevs command
+  use 'hg help -c multirevs' to see help for the multirevs command
 
 
 
@@ -740,7 +770,7 @@ Test help topic with same name as extension
   
   multirevs command
   
-  (use "hg multirevs -h" to show more help)
+  (use 'hg multirevs -h' to show more help)
   [255]
 
 
@@ -800,7 +830,7 @@ Make sure that user is asked to enter '-v -e' to get list of built-in aliases
    dodo          Does nothing
    foofoo        Writes 'Foo foo'
   
-  (use "hg help -v -e dodo" to show built-in aliases and global options)
+  (use 'hg help -v -e dodo' to show built-in aliases and global options)
 
 Make sure that '-v -e' prints list of built-in aliases along with
 extension help itself
@@ -841,7 +871,7 @@ Make sure that single '-v' option shows help and built-ins only for 'dodo' comma
   
   Does nothing
   
-  (use "hg help -e dodo" to show help for the dodo extension)
+  (use 'hg help -e dodo' to show help for the dodo extension)
   
   options:
   
@@ -903,7 +933,7 @@ along with extension help
    beep          Writes 'Beep beep'
    something     Does something
   
-  (use "hg help -v dudu" to show built-in aliases and global options)
+  (use 'hg help -v dudu' to show built-in aliases and global options)
 
 In case when extension name doesn't match any of its commands,
 help options '-v' and '-v -e' should be equivalent
@@ -981,7 +1011,7 @@ Disabled extension commands:
   
       patchbomb     command to send changesets as (a series of) patch emails
   
-  (use "hg help extensions" for information on enabling extensions)
+  (use 'hg help extensions' for information on enabling extensions)
 
 
   $ hg qdel
@@ -990,7 +1020,7 @@ Disabled extension commands:
   
       mq            manage a stack of patches
   
-  (use "hg help extensions" for information on enabling extensions)
+  (use 'hg help extensions' for information on enabling extensions)
   [255]
 
 
@@ -1000,7 +1030,7 @@ Disabled extension commands:
   
       churn         command to display statistics about repository history
   
-  (use "hg help extensions" for information on enabling extensions)
+  (use 'hg help extensions' for information on enabling extensions)
   [255]
 
 
@@ -1010,12 +1040,12 @@ Disabled extensions:
   $ hg help churn
   churn extension - command to display statistics about repository history
   
-  (use "hg help extensions" for information on enabling extensions)
+  (use 'hg help extensions' for information on enabling extensions)
 
   $ hg help patchbomb
   patchbomb extension - command to send changesets as (a series of) patch emails
   
-  (use "hg help extensions" for information on enabling extensions)
+  (use 'hg help extensions' for information on enabling extensions)
 
 
 Broken disabled extension and command:
@@ -1035,7 +1065,7 @@ Broken disabled extension and command:
   $ hg --config extensions.path=./path.py help broken
   broken extension - (no help text available)
   
-  (use "hg help extensions" for information on enabling extensions)
+  (use 'hg help extensions' for information on enabling extensions)
 
 
   $ cat > hgext/forest.py <<EOF
@@ -1044,7 +1074,7 @@ Broken disabled extension and command:
   $ hg --config extensions.path=./path.py help foo > /dev/null
   warning: error finding commands in $TESTTMP/hgext/forest.py (glob)
   abort: no such help topic: foo
-  (try "hg help --keyword foo")
+  (try 'hg help --keyword foo')
   [255]
 
   $ cat > throw.py <<EOF
@@ -1194,7 +1224,7 @@ Test version number support in 'hg version':
     throw  external  1.2.3
   $ echo 'getversion = lambda: "1.twentythree"' >> throw.py
   $ rm -f throw.pyc throw.pyo
-  $ hg version -v --config extensions.throw=throw.py
+  $ hg version -v --config extensions.throw=throw.py --config extensions.strip=
   Mercurial Distributed SCM (version *) (glob)
   (see https://mercurial-scm.org for more information)
   
@@ -1205,6 +1235,43 @@ Test version number support in 'hg version':
   Enabled extensions:
   
     throw  external  1.twentythree
+    strip  internal  
+
+  $ hg version -q --config extensions.throw=throw.py
+  Mercurial Distributed SCM (version *) (glob)
+
+Test JSON output of version:
+
+  $ hg version -Tjson
+  [
+   {
+    "extensions": [],
+    "ver": "*" (glob)
+   }
+  ]
+
+  $ hg version --config extensions.throw=throw.py -Tjson
+  [
+   {
+    "extensions": [{"bundled": false, "name": "throw", "ver": "1.twentythree"}],
+    "ver": "3.2.2"
+   }
+  ]
+
+  $ hg version --config extensions.strip= -Tjson
+  [
+   {
+    "extensions": [{"bundled": true, "name": "strip", "ver": null}],
+    "ver": "*" (glob)
+   }
+  ]
+
+Test template output of version:
+
+  $ hg version --config extensions.throw=throw.py --config extensions.strip= \
+  > -T'{extensions % "{name}  {pad(ver, 16)}  ({if(bundled, "internal", "external")})\n"}'
+  throw  1.twentythree     (external)
+  strip                    (internal)
 
 Refuse to load extensions with minimum version requirements
 

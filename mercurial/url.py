@@ -151,35 +151,6 @@ def _gen_sendfile(orgsend):
     return _sendfile
 
 has_https = util.safehasattr(urlreq, 'httpshandler')
-if has_https:
-    try:
-        _create_connection = socket.create_connection
-    except AttributeError:
-        _GLOBAL_DEFAULT_TIMEOUT = object()
-
-        def _create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT,
-                               source_address=None):
-            # lifted from Python 2.6
-
-            msg = "getaddrinfo returns an empty list"
-            host, port = address
-            for res in socket.getaddrinfo(host, port, 0, socket.SOCK_STREAM):
-                af, socktype, proto, canonname, sa = res
-                sock = None
-                try:
-                    sock = socket.socket(af, socktype, proto)
-                    if timeout is not _GLOBAL_DEFAULT_TIMEOUT:
-                        sock.settimeout(timeout)
-                    if source_address:
-                        sock.bind(source_address)
-                    sock.connect(sa)
-                    return sock
-
-                except socket.error as msg:
-                    if sock is not None:
-                        sock.close()
-
-            raise socket.error(msg)
 
 class httpconnection(keepalive.HTTPConnection):
     # must be able to send big bundle as stream.
@@ -237,18 +208,14 @@ def _generic_proxytunnel(self):
         version, status, reason = res._read_status()
         if status != httplib.CONTINUE:
             break
-        while True:
-            skip = res.fp.readline().strip()
-            if not skip:
-                break
+        # skip lines that are all whitespace
+        list(iter(lambda: res.fp.readline().strip(), ''))
     res.status = status
     res.reason = reason.strip()
 
     if res.status == 200:
-        while True:
-            line = res.fp.readline()
-            if line == '\r\n':
-                break
+        # skip lines until we find a blank line
+        list(iter(res.fp.readline, '\r\n'))
         return True
 
     if version == 'HTTP/1.0':
@@ -337,7 +304,7 @@ if has_https:
             self.cert_file = cert_file
 
         def connect(self):
-            self.sock = _create_connection((self.host, self.port))
+            self.sock = socket.create_connection((self.host, self.port))
 
             host = self.host
             if self.realhostport: # use CONNECT proxy

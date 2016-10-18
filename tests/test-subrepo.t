@@ -303,14 +303,14 @@ merge tests
   subrepo merge e45c8b14af55+ f94576341bcf 1831e14459c4
     subrepo t: both sides changed 
    subrepository t diverged (local revision: 20a0db6fbf6c, remote revision: 7af322bc1198)
-  (M)erge, keep (l)ocal or keep (r)emote? m
+  starting 4 threads for background file closing (?)
+  (M)erge, keep (l)ocal [working copy] or keep (r)emote [merge rev]? m
   merging subrepo t
     searching for copies back to rev 2
   resolving manifests
    branchmerge: True, force: False, partial: False
    ancestor: 6747d179aa9a, local: 20a0db6fbf6c+, remote: 7af322bc1198
    preserving t for resolve of t
-  starting 4 threads for background file closing (?)
    t: versions differ -> m (premerge)
   picked tool ':merge' for t (binary False symlink False changedelete False)
   merging t
@@ -349,7 +349,7 @@ should conflict
 local removed, remote changed, keep changed
 
   $ hg merge 6
-   remote changed subrepository t which local removed
+   remote [merge rev] changed subrepository s which local [working copy] removed
   use (c)hanged version or (d)elete? c
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
@@ -380,7 +380,7 @@ local removed, remote changed, keep removed
   $ hg merge --config ui.interactive=true 6 <<EOF
   > d
   > EOF
-   remote changed subrepository t which local removed
+   remote [merge rev] changed subrepository s which local [working copy] removed
   use (c)hanged version or (d)elete? d
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
@@ -404,7 +404,7 @@ local changed, remote removed, keep changed
   $ hg co -C 6
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg merge 11
-   local changed subrepository t which remote removed
+   local [working copy] changed subrepository s which remote [merge rev] removed
   use (c)hanged version or (d)elete? c
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
@@ -436,7 +436,7 @@ local changed, remote removed, keep removed
   $ hg merge --config ui.interactive=true 11 <<EOF
   > d
   > EOF
-   local changed subrepository t which remote removed
+   local [working copy] changed subrepository s which remote [merge rev] removed
   use (c)hanged version or (d)elete? d
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
@@ -516,7 +516,7 @@ push -f
   pushing subrepo s to $TESTTMP/t/s
   searching for changes
   abort: push creates new remote head 12a213df6fa9! (in subrepo s)
-  (merge or see "hg help push" for details about pushing new heads)
+  (merge or see 'hg help push' for details about pushing new heads)
   [255]
   $ hg push -f
   pushing to $TESTTMP/t (glob)
@@ -860,7 +860,7 @@ shouldn't need merging
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg merge 4    # try to merge default into br again
    subrepository s diverged (local revision: f8f13b33206e, remote revision: a3f9062a4f88)
-  (M)erge, keep (l)ocal or keep (r)emote? m
+  (M)erge, keep (l)ocal [working copy] or keep (r)emote [merge rev]? m
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ cd ..
@@ -952,7 +952,7 @@ Issue1977: multirepo push should fail if subrepo push fails
   $ hg -R repo2 ci -m3
   $ hg -q -R repo2 push
   abort: push creates new remote head cc505f09a8b2! (in subrepo s)
-  (merge or see "hg help push" for details about pushing new heads)
+  (merge or see 'hg help push' for details about pushing new heads)
   [255]
   $ hg -R repo update
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -1129,7 +1129,7 @@ Check that merge of a new subrepo doesn't write the uncommitted state to
   adding file changes
   added 1 changesets with 2 changes to 2 files
    subrepository sub/repo diverged (local revision: f42d5c7504a8, remote revision: 46cd4aac504c)
-  (M)erge, keep (l)ocal or keep (r)emote? m
+  (M)erge, keep (l)ocal [working copy] or keep (r)emote [destination]? m
   pulling subrepo sub/repo from $TESTTMP/issue1852a/sub/repo (glob)
   searching for changes
   adding changesets
@@ -1238,11 +1238,11 @@ Sticky subrepositories, file changes
   e95bcfa18a35+
   $ hg update tip
    subrepository s diverged (local revision: fc627a69481f, remote revision: 12a213df6fa9)
-  (M)erge, keep (l)ocal or keep (r)emote? m
+  (M)erge, keep (l)ocal [working copy] or keep (r)emote [destination]? m
    subrepository sources for s differ
   use (l)ocal source (fc627a69481f) or (r)emote source (12a213df6fa9)? l
    subrepository t diverged (local revision: e95bcfa18a35, remote revision: 52c0adc0515a)
-  (M)erge, keep (l)ocal or keep (r)emote? m
+  (M)erge, keep (l)ocal [working copy] or keep (r)emote [destination]? m
    subrepository sources for t differ
   use (l)ocal source (e95bcfa18a35) or (r)emote source (52c0adc0515a)? l
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -1271,9 +1271,9 @@ Sticky subrepository, revision updates
   $ cd ..
   $ hg update 10
    subrepository s diverged (local revision: 12a213df6fa9, remote revision: fc627a69481f)
-  (M)erge, keep (l)ocal or keep (r)emote? m
+  (M)erge, keep (l)ocal [working copy] or keep (r)emote [destination]? m
    subrepository t diverged (local revision: 52c0adc0515a, remote revision: 20a0db6fbf6c)
-  (M)erge, keep (l)ocal or keep (r)emote? m
+  (M)erge, keep (l)ocal [working copy] or keep (r)emote [destination]? m
    subrepository sources for t differ (in checked out version)
   use (l)ocal source (7af322bc1198) or (r)emote source (20a0db6fbf6c)? l
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -1297,11 +1297,11 @@ Sticky subrepository, file changes and revision updates
   7af322bc1198+
   $ hg update tip
    subrepository s diverged (local revision: 12a213df6fa9, remote revision: 12a213df6fa9)
-  (M)erge, keep (l)ocal or keep (r)emote? m
+  (M)erge, keep (l)ocal [working copy] or keep (r)emote [destination]? m
    subrepository sources for s differ
   use (l)ocal source (02dcf1d70411) or (r)emote source (12a213df6fa9)? l
    subrepository t diverged (local revision: 52c0adc0515a, remote revision: 52c0adc0515a)
-  (M)erge, keep (l)ocal or keep (r)emote? m
+  (M)erge, keep (l)ocal [working copy] or keep (r)emote [destination]? m
    subrepository sources for t differ
   use (l)ocal source (7af322bc1198) or (r)emote source (52c0adc0515a)? l
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -1329,7 +1329,7 @@ Test subrepo already at intended revision:
   $ cd ..
   $ hg update 11
    subrepository s diverged (local revision: 12a213df6fa9, remote revision: fc627a69481f)
-  (M)erge, keep (l)ocal or keep (r)emote? m
+  (M)erge, keep (l)ocal [working copy] or keep (r)emote [destination]? m
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg id -n
@@ -1529,7 +1529,7 @@ Courtesy phases synchronisation to publishing server does not block the push
   > [paths]
   > default=../issue3781-dest/
   > EOF
-  $ hg push --config experimental.bundle2-exp=False
+  $ hg push --config devel.legacy.exchange=bundle1
   pushing to $TESTTMP/issue3781-dest (glob)
   pushing subrepo s to $TESTTMP/issue3781-dest/s
   searching for changes
@@ -1539,7 +1539,7 @@ Courtesy phases synchronisation to publishing server does not block the push
   [1]
 # clean the push cache
   $ rm s/.hg/cache/storehash/*
-  $ hg push --config experimental.bundle2-exp=True
+  $ hg push # bundle2+
   pushing to $TESTTMP/issue3781-dest (glob)
   pushing subrepo s to $TESTTMP/issue3781-dest/s
   searching for changes

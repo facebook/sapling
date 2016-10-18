@@ -7,9 +7,6 @@
   > publish=False
   > [experimental]
   > evolution=createmarkers,exchange
-  > # drop me once bundle2 is the default,
-  > # added to get test change early.
-  > bundle2-exp = True
   > EOF
 
 initialize
@@ -430,7 +427,7 @@ diverging a remote bookmark fails
   pushing to http://localhost:$HGPORT2/
   searching for changes
   abort: push creates new remote head c922c0139ca0 with bookmark 'Y'!
-  (merge or see "hg help push" for details about pushing new heads)
+  (merge or see 'hg help push' for details about pushing new heads)
   [255]
   $ hg -R ../a book
      @                         1:0d2164f0ce0d
@@ -446,7 +443,7 @@ Unrelated marker does not alter the decision
   pushing to http://localhost:$HGPORT2/
   searching for changes
   abort: push creates new remote head c922c0139ca0 with bookmark 'Y'!
-  (merge or see "hg help push" for details about pushing new heads)
+  (merge or see 'hg help push' for details about pushing new heads)
   [255]
   $ hg -R ../a book
      @                         1:0d2164f0ce0d
@@ -736,7 +733,7 @@ pushing an existing but divergent bookmark with -B still requires -f
   searching for changes
   remote has heads on branch 'default' that are not known locally: a2a606d9ff1b
   abort: push creates new remote head 54694f811df9 with bookmark 'X'!
-  (pull and merge or see "hg help push" for details about pushing new heads)
+  (pull and merge or see 'hg help push' for details about pushing new heads)
   [255]
   $ cd ../addmarks
 
@@ -825,7 +822,7 @@ Local push
 Using ssh
 ---------
 
-  $ hg push -B @ ssh --config experimental.bundle2-exp=True
+  $ hg push -B @ ssh # bundle2+
   pushing to ssh://user@dummy/issue4455-dest
   searching for changes
   no changes found
@@ -835,7 +832,7 @@ Using ssh
   $ hg -R ../issue4455-dest/ bookmarks
   no bookmarks set
 
-  $ hg push -B @ ssh --config experimental.bundle2-exp=False
+  $ hg push -B @ ssh --config devel.legacy.exchange=bundle1
   pushing to ssh://user@dummy/issue4455-dest
   searching for changes
   no changes found
@@ -848,7 +845,7 @@ Using ssh
 Using http
 ----------
 
-  $ hg push -B @ http --config experimental.bundle2-exp=True
+  $ hg push -B @ http # bundle2+
   pushing to http://localhost:$HGPORT/
   searching for changes
   no changes found
@@ -858,7 +855,7 @@ Using http
   $ hg -R ../issue4455-dest/ bookmarks
   no bookmarks set
 
-  $ hg push -B @ http --config experimental.bundle2-exp=False
+  $ hg push -B @ http --config devel.legacy.exchange=bundle1
   pushing to http://localhost:$HGPORT/
   searching for changes
   no changes found

@@ -10,6 +10,7 @@
 from __future__ import absolute_import
 
 from mercurial.i18n import _
+from mercurial import util
 
 from . import (
     basestore,
@@ -42,7 +43,8 @@ class localstore(basestore.basestore):
             raise basestore.StoreError(filename, hash, self.url,
                 _("can't get file locally"))
         with open(path, 'rb') as fd:
-            return lfutil.copyandhash(fd, tmpfile)
+            return lfutil.copyandhash(
+                util.filechunkiter(fd), tmpfile)
 
     def _verifyfiles(self, contents, filestocheck):
         failed = False

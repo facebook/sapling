@@ -130,7 +130,7 @@ Test that you can list all entries as well as limit the list or filter on them
   cb9a9f314b8b  bar       book -f bar
   1e6c11564562  bar       book -r tip bar
 
-Test that verbose, JSON and commit output work
+Test that verbose, JSON, template and commit output work
 
   $ hg journal --verbose --all
   previous locations of the working copy and bookmarks:
@@ -146,37 +146,57 @@ Test that verbose, JSON and commit output work
   [
    {
     "command": "up",
-    "date": "1970-01-01 00:00 +0000",
+    "date": [5.0, 0],
     "name": ".",
-    "newhashes": "1e6c11564562",
-    "oldhashes": "cb9a9f314b8b",
+    "newhashes": ["1e6c11564562b4ed919baca798bc4338bd299d6a"],
+    "oldhashes": ["cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b"],
     "user": "foobar"
    },
    {
     "command": "up 0",
-    "date": "1970-01-01 00:00 +0000",
+    "date": [2.0, 0],
     "name": ".",
-    "newhashes": "cb9a9f314b8b",
-    "oldhashes": "1e6c11564562",
+    "newhashes": ["cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b"],
+    "oldhashes": ["1e6c11564562b4ed919baca798bc4338bd299d6a"],
     "user": "foobar"
    },
    {
     "command": "commit -Aqm b",
-    "date": "1970-01-01 00:00 +0000",
+    "date": [1.0, 0],
     "name": ".",
-    "newhashes": "1e6c11564562",
-    "oldhashes": "cb9a9f314b8b",
+    "newhashes": ["1e6c11564562b4ed919baca798bc4338bd299d6a"],
+    "oldhashes": ["cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b"],
     "user": "foobar"
    },
    {
     "command": "commit -Aqm a",
-    "date": "1970-01-01 00:00 +0000",
+    "date": [0.0, 0],
     "name": ".",
-    "newhashes": "cb9a9f314b8b",
-    "oldhashes": "000000000000",
+    "newhashes": ["cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b"],
+    "oldhashes": ["0000000000000000000000000000000000000000"],
     "user": "foobar"
    }
   ]
+
+  $ cat <<EOF >> $HGRCPATH
+  > [templates]
+  > j = "{oldhashes % '{node|upper}'} -> {newhashes % '{node|upper}'}
+  >      - user: {user}
+  >      - command: {command}
+  >      - date: {date|rfc3339date}
+  >      - newhashes: {newhashes}
+  >      - oldhashes: {oldhashes}
+  >      "
+  > EOF
+  $ hg journal -Tj -l1
+  previous locations of '.':
+  CB9A9F314B8B07BA71012FCDBC544B5A4D82FF5B -> 1E6C11564562B4ED919BACA798BC4338BD299D6A
+  - user: foobar
+  - command: up
+  - date: 1970-01-01T00:00:05+00:00
+  - newhashes: 1e6c11564562b4ed919baca798bc4338bd299d6a
+  - oldhashes: cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b
+
   $ hg journal --commit
   previous locations of '.':
   1e6c11564562  up
@@ -212,7 +232,7 @@ Test that verbose, JSON and commit output work
 
 Test for behaviour on unexpected storage version information
 
-  $ printf '42\0' > .hg/journal
+  $ printf '42\0' > .hg/namejournal
   $ hg journal
   previous locations of '.':
   abort: unknown journal file version '42'

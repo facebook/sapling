@@ -179,6 +179,11 @@ Graft out of order, skipping a merge and a duplicate
   committing changelog
   grafting 5:97f8bfe72746 "5"
     searching for copies back to rev 1
+    unmatched files in other (from topological common ancestor):
+     c
+    all copies found (* = to merge, ! = divergent, % = renamed and deleted):
+     src: 'c' -> dst: 'b' *
+    checking for directory renames
   resolving manifests
    branchmerge: True, force: True, partial: False
    ancestor: 4c60f11aa304, local: 6b9e5368ca4e+, remote: 97f8bfe72746
@@ -193,6 +198,11 @@ Graft out of order, skipping a merge and a duplicate
   scanning for duplicate grafts
   grafting 4:9c233e8e184d "4"
     searching for copies back to rev 1
+    unmatched files in other (from topological common ancestor):
+     c
+    all copies found (* = to merge, ! = divergent, % = renamed and deleted):
+     src: 'c' -> dst: 'b' *
+    checking for directory renames
   resolving manifests
    branchmerge: True, force: True, partial: False
    ancestor: 4c60f11aa304, local: 1905859650ec+, remote: 9c233e8e184d
@@ -253,7 +263,7 @@ Continue without resolve should fail:
 
   $ hg graft -c
   grafting 4:9c233e8e184d "4"
-  abort: unresolved merge conflicts (see "hg help resolve")
+  abort: unresolved merge conflicts (see 'hg help resolve')
   [255]
 
 Fix up:
@@ -427,8 +437,8 @@ Graft with --log
   $ hg graft 3 --log -u foo
   grafting 3:4c60f11aa304 "3"
   warning: can't find ancestor for 'c' copied from 'b'!
-  $ hg log --template '{rev} {parents} {desc}\n' -r tip
-  14 1:5d205f8b35b6  3
+  $ hg log --template '{rev}:{node|short} {parents} {desc}\n' -r tip
+  14:0c921c65ef1e 1:5d205f8b35b6  3
   (grafted from 4c60f11aa304a54ae1c199feb94e7fc771e51ed8)
 
 Resolve conflicted graft
@@ -620,7 +630,7 @@ Test simple destination
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     2
   
-  changeset:   14:f64defefacee
+  changeset:   14:0c921c65ef1e
   parent:      1:5d205f8b35b6
   user:        foo
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -842,3 +852,431 @@ Graft to duplicate a commit twice
   |/
   o  0
   
+Graft from behind a move or rename
+==================================
+
+NOTE: This is affected by issue5343, and will need updating when it's fixed
+
+Possible cases during a regular graft (when ca is between cta and c2):
+
+name | c1<-cta | cta<->ca | ca->c2
+A.0  |         |          |
+A.1  |    X    |          |
+A.2  |         |     X    |
+A.3  |         |          |   X
+A.4  |    X    |     X    |
+A.5  |    X    |          |   X
+A.6  |         |     X    |   X
+A.7  |    X    |     X    |   X
+
+A.0 is trivial, and doesn't need copy tracking.
+For A.1, a forward rename is recorded in the c1 pass, to be followed later.
+In A.2, the rename is recorded in the c2 pass and followed backwards.
+A.3 is recorded in the c2 pass as a forward rename to be duplicated on target.
+In A.4, both passes of checkcopies record incomplete renames, which are
+then joined in mergecopies to record a rename to be followed.
+In A.5 and A.7, the c1 pass records an incomplete rename, while the c2 pass
+records an incomplete divergence. The incomplete rename is then joined to the
+appropriate side of the incomplete divergence, and the result is recorded as a
+divergence. The code doesn't distinguish at all between these two cases, since
+the end result of them is the same: an incomplete divergence joined with an
+incomplete rename into a divergence.
+Finally, A.6 records a divergence entirely in the c2 pass.
+
+A.4 has a degenerate case a<-b<-a->a, where checkcopies isn't needed at all.
+A.5 has a special case a<-b<-b->a, which is treated like a<-b->a in a merge.
+A.6 has a special case a<-a<-b->a. Here, checkcopies will find a spurious
+incomplete divergence, which is in fact complete. This is handled later in
+mergecopies.
+A.7 has 4 special cases: a<-b<-a->b (the "ping-pong" case), a<-b<-c->b,
+a<-b<-a->c and a<-b<-c->a. Of these, only the "ping-pong" case is interesting,
+the others are fairly trivial (a<-b<-c->b and a<-b<-a->c proceed like the base
+case, a<-b<-c->a is treated the same as a<-b<-b->a).
+
+f5a therefore tests the "ping-pong" rename case, where a file is renamed to the
+same name on both branches, then the rename is backed out on one branch, and
+the backout is grafted to the other branch. This creates a challenging rename
+sequence of a<-b<-a->b in the graft target, topological CA, graft CA and graft
+source, respectively. Since rename detection will run on the c1 side for such a
+sequence (as for technical reasons, we split the c1 and c2 sides not at the
+graft CA, but rather at the topological CA), it will pick up a false rename,
+and cause a spurious merge conflict. This false rename is always exactly the
+reverse of the true rename that would be detected on the c2 side, so we can
+correct for it by detecting this condition and reversing as necessary.
+
+First, set up the repository with commits to be grafted
+
+  $ hg init ../graftmove
+  $ cd ../graftmove
+  $ echo c1a > f1a
+  $ echo c2a > f2a
+  $ echo c3a > f3a
+  $ echo c4a > f4a
+  $ echo c5a > f5a
+  $ hg ci -qAm A0
+  $ hg mv f1a f1b
+  $ hg mv f3a f3b
+  $ hg mv f5a f5b
+  $ hg ci -qAm B0
+  $ echo c1c > f1b
+  $ hg mv f2a f2c
+  $ hg mv f5b f5a
+  $ echo c5c > f5a
+  $ hg ci -qAm C0
+  $ hg mv f3b f3d
+  $ echo c4d > f4a
+  $ hg ci -qAm D0
+  $ hg log -G
+  @  changeset:   3:b69f5839d2d9
+  |  tag:         tip
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     D0
+  |
+  o  changeset:   2:f58c7e2b28fa
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     C0
+  |
+  o  changeset:   1:3d7bba921b5d
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     B0
+  |
+  o  changeset:   0:11f7a1b56675
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     A0
+  
+
+Test the cases A.2 (f1x), A.3 (f2x) and a special case of A.6 (f5x) where the
+two renames actually converge to the same name (thus no actual divergence).
+
+  $ hg up -q 'desc("A0")'
+  $ HGEDITOR="echo C1 >" hg graft -r 'desc("C0")' --edit
+  grafting 2:f58c7e2b28fa "C0"
+  merging f1a and f1b to f1a
+  merging f5a
+  warning: can't find ancestor for 'f5a' copied from 'f5b'!
+  $ hg status --change .
+  M f1a
+  M f5a
+  A f2c
+  R f2a
+  $ hg cat f1a
+  c1c
+  $ hg cat f1b
+  f1b: no such file in rev c9763722f9bd
+  [1]
+
+Test the cases A.0 (f4x) and A.6 (f3x)
+
+  $ HGEDITOR="echo D1 >" hg graft -r 'desc("D0")' --edit
+  grafting 3:b69f5839d2d9 "D0"
+  note: possible conflict - f3b was renamed multiple times to:
+   f3d
+   f3a
+  warning: can't find ancestor for 'f3d' copied from 'f3b'!
+
+Set up the repository for some further tests
+
+  $ hg up -q "min(desc("A0"))"
+  $ hg mv f1a f1e
+  $ echo c2e > f2a
+  $ hg mv f3a f3e
+  $ hg mv f4a f4e
+  $ hg mv f5a f5b
+  $ hg ci -qAm "E0"
+  $ hg log -G
+  @  changeset:   6:6bd1736cab86
+  |  tag:         tip
+  |  parent:      0:11f7a1b56675
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     E0
+  |
+  | o  changeset:   5:560daee679da
+  | |  user:        test
+  | |  date:        Thu Jan 01 00:00:00 1970 +0000
+  | |  summary:     D1
+  | |
+  | o  changeset:   4:c9763722f9bd
+  |/   parent:      0:11f7a1b56675
+  |    user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    summary:     C1
+  |
+  | o  changeset:   3:b69f5839d2d9
+  | |  user:        test
+  | |  date:        Thu Jan 01 00:00:00 1970 +0000
+  | |  summary:     D0
+  | |
+  | o  changeset:   2:f58c7e2b28fa
+  | |  user:        test
+  | |  date:        Thu Jan 01 00:00:00 1970 +0000
+  | |  summary:     C0
+  | |
+  | o  changeset:   1:3d7bba921b5d
+  |/   user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    summary:     B0
+  |
+  o  changeset:   0:11f7a1b56675
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     A0
+  
+
+Test the cases A.4 (f1x), the "ping-pong" special case of A.7 (f5x),
+and A.3 with a local content change to be preserved (f2x).
+
+  $ HGEDITOR="echo C2 >" hg graft -r 'desc("C0")' --edit
+  grafting 2:f58c7e2b28fa "C0"
+  merging f1e and f1b to f1e
+  merging f2a and f2c to f2c
+  merging f5b and f5a to f5a
+
+Test the cases A.1 (f4x) and A.7 (f3x).
+
+  $ HGEDITOR="echo D2 >" hg graft -r 'desc("D0")' --edit
+  grafting 3:b69f5839d2d9 "D0"
+  note: possible conflict - f3b was renamed multiple times to:
+   f3e
+   f3d
+  merging f4e and f4a to f4e
+  warning: can't find ancestor for 'f3d' copied from 'f3b'!
+
+Check the results of the grafts tested
+
+  $ hg log -CGv --patch --git
+  @  changeset:   8:93ee502e8b0a
+  |  tag:         tip
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  files:       f3d f4e
+  |  description:
+  |  D2
+  |
+  |
+  |  diff --git a/f3d b/f3d
+  |  new file mode 100644
+  |  --- /dev/null
+  |  +++ b/f3d
+  |  @@ -0,0 +1,1 @@
+  |  +c3a
+  |  diff --git a/f4e b/f4e
+  |  --- a/f4e
+  |  +++ b/f4e
+  |  @@ -1,1 +1,1 @@
+  |  -c4a
+  |  +c4d
+  |
+  o  changeset:   7:539cf145f496
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  files:       f1e f2a f2c f5a f5b
+  |  copies:      f2c (f2a) f5a (f5b)
+  |  description:
+  |  C2
+  |
+  |
+  |  diff --git a/f1e b/f1e
+  |  --- a/f1e
+  |  +++ b/f1e
+  |  @@ -1,1 +1,1 @@
+  |  -c1a
+  |  +c1c
+  |  diff --git a/f2a b/f2c
+  |  rename from f2a
+  |  rename to f2c
+  |  diff --git a/f5b b/f5a
+  |  rename from f5b
+  |  rename to f5a
+  |  --- a/f5b
+  |  +++ b/f5a
+  |  @@ -1,1 +1,1 @@
+  |  -c5a
+  |  +c5c
+  |
+  o  changeset:   6:6bd1736cab86
+  |  parent:      0:11f7a1b56675
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  files:       f1a f1e f2a f3a f3e f4a f4e f5a f5b
+  |  copies:      f1e (f1a) f3e (f3a) f4e (f4a) f5b (f5a)
+  |  description:
+  |  E0
+  |
+  |
+  |  diff --git a/f1a b/f1e
+  |  rename from f1a
+  |  rename to f1e
+  |  diff --git a/f2a b/f2a
+  |  --- a/f2a
+  |  +++ b/f2a
+  |  @@ -1,1 +1,1 @@
+  |  -c2a
+  |  +c2e
+  |  diff --git a/f3a b/f3e
+  |  rename from f3a
+  |  rename to f3e
+  |  diff --git a/f4a b/f4e
+  |  rename from f4a
+  |  rename to f4e
+  |  diff --git a/f5a b/f5b
+  |  rename from f5a
+  |  rename to f5b
+  |
+  | o  changeset:   5:560daee679da
+  | |  user:        test
+  | |  date:        Thu Jan 01 00:00:00 1970 +0000
+  | |  files:       f3d f4a
+  | |  description:
+  | |  D1
+  | |
+  | |
+  | |  diff --git a/f3d b/f3d
+  | |  new file mode 100644
+  | |  --- /dev/null
+  | |  +++ b/f3d
+  | |  @@ -0,0 +1,1 @@
+  | |  +c3a
+  | |  diff --git a/f4a b/f4a
+  | |  --- a/f4a
+  | |  +++ b/f4a
+  | |  @@ -1,1 +1,1 @@
+  | |  -c4a
+  | |  +c4d
+  | |
+  | o  changeset:   4:c9763722f9bd
+  |/   parent:      0:11f7a1b56675
+  |    user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    files:       f1a f2a f2c f5a
+  |    copies:      f2c (f2a)
+  |    description:
+  |    C1
+  |
+  |
+  |    diff --git a/f1a b/f1a
+  |    --- a/f1a
+  |    +++ b/f1a
+  |    @@ -1,1 +1,1 @@
+  |    -c1a
+  |    +c1c
+  |    diff --git a/f2a b/f2c
+  |    rename from f2a
+  |    rename to f2c
+  |    diff --git a/f5a b/f5a
+  |    --- a/f5a
+  |    +++ b/f5a
+  |    @@ -1,1 +1,1 @@
+  |    -c5a
+  |    +c5c
+  |
+  | o  changeset:   3:b69f5839d2d9
+  | |  user:        test
+  | |  date:        Thu Jan 01 00:00:00 1970 +0000
+  | |  files:       f3b f3d f4a
+  | |  copies:      f3d (f3b)
+  | |  description:
+  | |  D0
+  | |
+  | |
+  | |  diff --git a/f3b b/f3d
+  | |  rename from f3b
+  | |  rename to f3d
+  | |  diff --git a/f4a b/f4a
+  | |  --- a/f4a
+  | |  +++ b/f4a
+  | |  @@ -1,1 +1,1 @@
+  | |  -c4a
+  | |  +c4d
+  | |
+  | o  changeset:   2:f58c7e2b28fa
+  | |  user:        test
+  | |  date:        Thu Jan 01 00:00:00 1970 +0000
+  | |  files:       f1b f2a f2c f5a f5b
+  | |  copies:      f2c (f2a) f5a (f5b)
+  | |  description:
+  | |  C0
+  | |
+  | |
+  | |  diff --git a/f1b b/f1b
+  | |  --- a/f1b
+  | |  +++ b/f1b
+  | |  @@ -1,1 +1,1 @@
+  | |  -c1a
+  | |  +c1c
+  | |  diff --git a/f2a b/f2c
+  | |  rename from f2a
+  | |  rename to f2c
+  | |  diff --git a/f5b b/f5a
+  | |  rename from f5b
+  | |  rename to f5a
+  | |  --- a/f5b
+  | |  +++ b/f5a
+  | |  @@ -1,1 +1,1 @@
+  | |  -c5a
+  | |  +c5c
+  | |
+  | o  changeset:   1:3d7bba921b5d
+  |/   user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    files:       f1a f1b f3a f3b f5a f5b
+  |    copies:      f1b (f1a) f3b (f3a) f5b (f5a)
+  |    description:
+  |    B0
+  |
+  |
+  |    diff --git a/f1a b/f1b
+  |    rename from f1a
+  |    rename to f1b
+  |    diff --git a/f3a b/f3b
+  |    rename from f3a
+  |    rename to f3b
+  |    diff --git a/f5a b/f5b
+  |    rename from f5a
+  |    rename to f5b
+  |
+  o  changeset:   0:11f7a1b56675
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     files:       f1a f2a f3a f4a f5a
+     description:
+     A0
+  
+  
+     diff --git a/f1a b/f1a
+     new file mode 100644
+     --- /dev/null
+     +++ b/f1a
+     @@ -0,0 +1,1 @@
+     +c1a
+     diff --git a/f2a b/f2a
+     new file mode 100644
+     --- /dev/null
+     +++ b/f2a
+     @@ -0,0 +1,1 @@
+     +c2a
+     diff --git a/f3a b/f3a
+     new file mode 100644
+     --- /dev/null
+     +++ b/f3a
+     @@ -0,0 +1,1 @@
+     +c3a
+     diff --git a/f4a b/f4a
+     new file mode 100644
+     --- /dev/null
+     +++ b/f4a
+     @@ -0,0 +1,1 @@
+     +c4a
+     diff --git a/f5a b/f5a
+     new file mode 100644
+     --- /dev/null
+     +++ b/f5a
+     @@ -0,0 +1,1 @@
+     +c5a
+  
+  $ hg cat f2c
+  c2e

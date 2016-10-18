@@ -16,4 +16,6 @@ fred = <proxied module 're'>
 re = <unloaded module 'sys'>
 re.stderr = <open file '<whatever>', mode 'w' at 0x?>
 re = <proxied module 'sys'>
+contextlib = <unloaded module 'contextlib'>
+contextlib.unknownattr = ImportError: cannot import name unknownattr
 node = <module 'mercurial.node' from '?'>

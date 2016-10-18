@@ -41,12 +41,12 @@ Test basic functionality of url#rev syntax
   summary:     change a
   
   $ cat clone/.hg/hgrc
-  # example repository config (see "hg help config" for more info)
+  # example repository config (see 'hg help config' for more info)
   [paths]
   default = $TESTTMP/repo#foo (glob)
   
   # path aliases to other clones of this repo in URLs or filesystem paths
-  # (see "hg help config.paths" for more info)
+  # (see 'hg help config.paths' for more info)
   #
   # default-push = ssh://jdoe@example.net/hg/jdoes-fork
   # my-fork      = ssh://jdoe@example.net/hg/jdoes-fork
@@ -320,3 +320,12 @@ Test handling common incoming revisions between "default" and
   remote: 1 outgoing
 
   $ cd ..
+
+Test url#rev syntax of local destination path, which should be taken as
+a 'url#rev' path
+
+  $ hg clone repo '#foo'
+  updating to branch default
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg root -R '#foo'
+  $TESTTMP/#foo (glob)

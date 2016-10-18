@@ -159,6 +159,7 @@ from . import (
     error,
     obsolete,
     pushkey,
+    pycompat,
     tags,
     url,
     util,
@@ -572,7 +573,9 @@ class bundle20(object):
             yield param
         # starting compression
         for chunk in self._getcorechunk():
-            yield self._compressor.compress(chunk)
+            data = self._compressor.compress(chunk)
+            if data:
+                yield data
         yield self._compressor.flush()
 
     def _paramchunk(self):
@@ -996,7 +999,10 @@ class bundlepart(object):
             outdebug(ui, 'closing payload chunk')
             # abort current part payload
             yield _pack(_fpayloadsize, 0)
-            raise exc_info[0], exc_info[1], exc_info[2]
+            if pycompat.ispy3:
+                raise exc_info[0](exc_info[1]).with_traceback(exc_info[2])
+            else:
+                exec("""raise exc_info[0], exc_info[1], exc_info[2]""")
         # end of payload
         outdebug(ui, 'closing payload chunk')
         yield _pack(_fpayloadsize, 0)
@@ -1320,7 +1326,9 @@ def writebundle(ui, cg, filename, bundletype, vfs=None, compression=None):
         def chunkiter():
             yield header
             for chunk in subchunkiter:
-                yield z.compress(chunk)
+                data = z.compress(chunk)
+                if data:
+                    yield data
             yield z.flush()
         chunkiter = chunkiter()
 

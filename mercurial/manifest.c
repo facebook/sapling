@@ -56,10 +56,10 @@ static PyObject *nodeof(line *l) {
 	}
 	if (l->hash_suffix != '\0') {
 		char newhash[21];
-		memcpy(newhash, PyString_AsString(hash), 20);
+		memcpy(newhash, PyBytes_AsString(hash), 20);
 		Py_DECREF(hash);
 		newhash[20] = l->hash_suffix;
-		hash = PyString_FromStringAndSize(newhash, 21);
+		hash = PyBytes_FromStringAndSize(newhash, 21);
 	}
 	return hash;
 }
@@ -79,7 +79,7 @@ static PyObject *hashflags(line *l)
 
 	if (!hash)
 		return NULL;
-	flags = PyString_FromStringAndSize(s + hplen - 1, flen);
+	flags = PyBytes_FromStringAndSize(s + hplen - 1, flen);
 	if (!flags) {
 		Py_DECREF(hash);
 		return NULL;
@@ -144,7 +144,7 @@ static int lazymanifest_init(lazymanifest *self, PyObject *args)
 	if (!PyArg_ParseTuple(args, "S", &pydata)) {
 		return -1;
 	}
-	err = PyString_AsStringAndSize(pydata, &data, &len);
+	err = PyBytes_AsStringAndSize(pydata, &data, &len);
 
 	self->dirty = false;
 	if (err == -1)
@@ -238,10 +238,10 @@ static PyObject *lmiter_iterentriesnext(PyObject *o)
 		goto done;
 	}
 	pl = pathlen(l);
-	path = PyString_FromStringAndSize(l->start, pl);
+	path = PyBytes_FromStringAndSize(l->start, pl);
 	hash = nodeof(l);
 	consumed = pl + 41;
-	flags = PyString_FromStringAndSize(l->start + consumed,
+	flags = PyBytes_FromStringAndSize(l->start + consumed,
 					   l->len - consumed - 1);
 	if (!path || !hash || !flags) {
 		goto done;
@@ -254,9 +254,15 @@ done:
 	return ret;
 }
 
+#ifdef IS_PY3K
+#define LAZYMANIFESTENTRIESITERATOR_TPFLAGS Py_TPFLAGS_DEFAULT
+#else
+#define LAZYMANIFESTENTRIESITERATOR_TPFLAGS Py_TPFLAGS_DEFAULT \
+	| Py_TPFLAGS_HAVE_ITER
+#endif
+
 static PyTypeObject lazymanifestEntriesIterator = {
-	PyObject_HEAD_INIT(NULL)
-	0,                               /*ob_size */
+	PyVarObject_HEAD_INIT(NULL, 0)
 	"parsers.lazymanifest.entriesiterator", /*tp_name */
 	sizeof(lmIter),                  /*tp_basicsize */
 	0,                               /*tp_itemsize */
@@ -275,9 +281,7 @@ static PyTypeObject lazymanifestEntriesIterator = {
 	0,                               /*tp_getattro */
 	0,                               /*tp_setattro */
 	0,                               /*tp_as_buffer */
-	/* tp_flags: Py_TPFLAGS_HAVE_ITER tells python to
-	   use tp_iter and tp_iternext fields. */
-	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_ITER,
+	LAZYMANIFESTENTRIESITERATOR_TPFLAGS, /* tp_flags */
 	"Iterator for 3-tuples in a lazymanifest.",  /* tp_doc */
 	0,                               /* tp_traverse */
 	0,                               /* tp_clear */
@@ -295,12 +299,18 @@ static PyObject *lmiter_iterkeysnext(PyObject *o)
 		return NULL;
 	}
 	pl = pathlen(l);
-	return PyString_FromStringAndSize(l->start, pl);
+	return PyBytes_FromStringAndSize(l->start, pl);
 }
 
+#ifdef IS_PY3K
+#define LAZYMANIFESTKEYSITERATOR_TPFLAGS Py_TPFLAGS_DEFAULT
+#else
+#define LAZYMANIFESTKEYSITERATOR_TPFLAGS Py_TPFLAGS_DEFAULT \
+	| Py_TPFLAGS_HAVE_ITER
+#endif
+
 static PyTypeObject lazymanifestKeysIterator = {
-	PyObject_HEAD_INIT(NULL)
-	0,                               /*ob_size */
+	PyVarObject_HEAD_INIT(NULL, 0)
 	"parsers.lazymanifest.keysiterator", /*tp_name */
 	sizeof(lmIter),                  /*tp_basicsize */
 	0,                               /*tp_itemsize */
@@ -319,9 +329,7 @@ static PyTypeObject lazymanifestKeysIterator = {
 	0,                               /*tp_getattro */
 	0,                               /*tp_setattro */
 	0,                               /*tp_as_buffer */
-	/* tp_flags: Py_TPFLAGS_HAVE_ITER tells python to
-	   use tp_iter and tp_iternext fields. */
-	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_ITER,
+	LAZYMANIFESTKEYSITERATOR_TPFLAGS, /* tp_flags */
 	"Keys iterator for a lazymanifest.",  /* tp_doc */
 	0,                               /* tp_traverse */
 	0,                               /* tp_clear */
@@ -388,12 +396,12 @@ static PyObject *lazymanifest_getitem(lazymanifest *self, PyObject *key)
 {
 	line needle;
 	line *hit;
-	if (!PyString_Check(key)) {
+	if (!PyBytes_Check(key)) {
 		PyErr_Format(PyExc_TypeError,
 			     "getitem: manifest keys must be a string.");
 		return NULL;
 	}
-	needle.start = PyString_AsString(key);
+	needle.start = PyBytes_AsString(key);
 	hit = bsearch(&needle, self->lines, self->numlines, sizeof(line),
 		      &linecmp);
 	if (!hit || hit->deleted) {
@@ -407,12 +415,12 @@ static int lazymanifest_delitem(lazymanifest *self, PyObject *key)
 {
 	line needle;
 	line *hit;
-	if (!PyString_Check(key)) {
+	if (!PyBytes_Check(key)) {
 		PyErr_Format(PyExc_TypeError,
 			     "delitem: manifest keys must be a string.");
 		return -1;
 	}
-	needle.start = PyString_AsString(key);
+	needle.start = PyBytes_AsString(key);
 	hit = bsearch(&needle, self->lines, self->numlines, sizeof(line),
 		      &linecmp);
 	if (!hit || hit->deleted) {
@@ -476,7 +484,7 @@ static int lazymanifest_setitem(
 	char *dest;
 	int i;
 	line new;
-	if (!PyString_Check(key)) {
+	if (!PyBytes_Check(key)) {
 		PyErr_Format(PyExc_TypeError,
 			     "setitem: manifest keys must be a string.");
 		return -1;
@@ -489,17 +497,17 @@ static int lazymanifest_setitem(
 			     "Manifest values must be a tuple of (node, flags).");
 		return -1;
 	}
-	if (PyString_AsStringAndSize(key, &path, &plen) == -1) {
+	if (PyBytes_AsStringAndSize(key, &path, &plen) == -1) {
 		return -1;
 	}
 
 	pyhash = PyTuple_GetItem(value, 0);
-	if (!PyString_Check(pyhash)) {
+	if (!PyBytes_Check(pyhash)) {
 		PyErr_Format(PyExc_TypeError,
 			     "node must be a 20-byte string");
 		return -1;
 	}
-	hlen = PyString_Size(pyhash);
+	hlen = PyBytes_Size(pyhash);
 	/* Some parts of the codebase try and set 21 or 22
 	 * byte "hash" values in order to perturb things for
 	 * status. We have to preserve at least the 21st
@@ -511,15 +519,15 @@ static int lazymanifest_setitem(
 			     "node must be a 20-byte string");
 		return -1;
 	}
-	hash = PyString_AsString(pyhash);
+	hash = PyBytes_AsString(pyhash);
 
 	pyflags = PyTuple_GetItem(value, 1);
-	if (!PyString_Check(pyflags) || PyString_Size(pyflags) > 1) {
+	if (!PyBytes_Check(pyflags) || PyBytes_Size(pyflags) > 1) {
 		PyErr_Format(PyExc_TypeError,
 			     "flags must a 0 or 1 byte string");
 		return -1;
 	}
-	if (PyString_AsStringAndSize(pyflags, &flags, &flen) == -1) {
+	if (PyBytes_AsStringAndSize(pyflags, &flags, &flen) == -1) {
 		return -1;
 	}
 	/* one null byte and one newline */
@@ -564,12 +572,12 @@ static int lazymanifest_contains(lazymanifest *self, PyObject *key)
 {
 	line needle;
 	line *hit;
-	if (!PyString_Check(key)) {
+	if (!PyBytes_Check(key)) {
 		/* Our keys are always strings, so if the contains
 		 * check is for a non-string, just return false. */
 		return 0;
 	}
-	needle.start = PyString_AsString(key);
+	needle.start = PyBytes_AsString(key);
 	hit = bsearch(&needle, self->lines, self->numlines, sizeof(line),
 		      &linecmp);
 	if (!hit || hit->deleted) {
@@ -609,10 +617,10 @@ static int compact(lazymanifest *self) {
 			need += self->lines[i].len;
 		}
 	}
-	pydata = PyString_FromStringAndSize(NULL, need);
+	pydata = PyBytes_FromStringAndSize(NULL, need);
 	if (!pydata)
 		return -1;
-	data = PyString_AsString(pydata);
+	data = PyBytes_AsString(pydata);
 	if (!data) {
 		return -1;
 	}
@@ -747,7 +755,7 @@ static PyObject *lazymanifest_diff(lazymanifest *self, PyObject *args)
 		return NULL;
 	}
 	listclean = (!pyclean) ? false : PyObject_IsTrue(pyclean);
-	es = PyString_FromString("");
+	es = PyBytes_FromString("");
 	if (!es) {
 		goto nomem;
 	}
@@ -787,8 +795,8 @@ static PyObject *lazymanifest_diff(lazymanifest *self, PyObject *args)
 			result = linecmp(left, right);
 		}
 		key = result <= 0 ?
-			PyString_FromString(left->start) :
-			PyString_FromString(right->start);
+			PyBytes_FromString(left->start) :
+			PyBytes_FromString(right->start);
 		if (!key)
 			goto nomem;
 		if (result < 0) {
@@ -873,9 +881,14 @@ static PyMethodDef lazymanifest_methods[] = {
 	{NULL},
 };
 
+#ifdef IS_PY3K
+#define LAZYMANIFEST_TPFLAGS Py_TPFLAGS_DEFAULT
+#else
+#define LAZYMANIFEST_TPFLAGS Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_SEQUENCE_IN
+#endif
+
 static PyTypeObject lazymanifestType = {
-	PyObject_HEAD_INIT(NULL)
-	0,                                                /* ob_size */
+	PyVarObject_HEAD_INIT(NULL, 0)
 	"parsers.lazymanifest",                           /* tp_name */
 	sizeof(lazymanifest),                             /* tp_basicsize */
 	0,                                                /* tp_itemsize */
@@ -894,7 +907,7 @@ static PyTypeObject lazymanifestType = {
 	0,                                                /* tp_getattro */
 	0,                                                /* tp_setattro */
 	0,                                                /* tp_as_buffer */
-	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_SEQUENCE_IN, /* tp_flags */
+	LAZYMANIFEST_TPFLAGS,                             /* tp_flags */
 	"TODO(augie)",                                    /* tp_doc */
 	0,                                                /* tp_traverse */
 	0,                                                /* tp_clear */

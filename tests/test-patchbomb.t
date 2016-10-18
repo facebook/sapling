@@ -352,14 +352,14 @@ test bundle and description:
   Content-Disposition: attachment; filename="bundle.hg"
   Content-Transfer-Encoding: base64
   
-  SEcyMAAAAA5Db21wcmVzc2lvbj1CWkJaaDkxQVkmU1kIqE7KAAAKf//7vFYQWD1/4H7R09C/470I
-  Ak0E4peoSIYIgQCgGUQOcLABGY2hqoTTCYaBqaYAAACaaMAATIwAA1MIYDaQaqn6p+jRop+oJkA2
-  oNqD1PU0PUBoxqaMmjMUepoBoDT1GmQNBKmlTT1GTCNMEAYTQ0NNDI0BoMQHpAZAA8o2pkyNJHfX
-  RRbXoyxKRUlAg41B3lpmMOnr77dEpFKAvEUGEkWuC4wioiMjC2Y2a84EXhsNCFIrbXUGId07PJnS
-  ELAOIpL/gE8R8CUeXuw2NKMtkFoLPkcTSomXtgHSg1IKaCNlWwVU3CpmMYqh5gkFYJKOD4UhVVQ6
-  SiF1DpE8ghWvF1ih+fYgagfYHI96w/QsrRATpYiP7VRbINFrQy2c21mZ7M4pXXrPBypoXAIhtum7
-  aKDJCpUqMDF5dfiDChMfgH9nQ4B60Uvgb4AK9dsbSYc+O3tEyNq9g9gZeA5Je2T82GzjC4DbY4F2
-  0kdrTBwslErFshCgDzeEBwICg13oQaQawQA1WWd3F3JFOFCQCKhOyg==
+  SEcyMAAAAA5Db21wcmVzc2lvbj1CWkJaaDkxQVkmU1nYvy2xAAAJf//7vFYQXD1/4H7R09C/470I
+  Ak0E4pe4SIIIgQSgGEQOcLAA5VBKqeppMxTI0YjQNBgQMQDI0GgMhtR6I0GI2p6I0yeSEVT9MiYn
+  qjCYQwCBtARptARgBNDEwAGiDCMA40NGjQaNA0AAAAADIAAAA0BkABktCk6qObVxZ2A/33KHibLr
+  UQ4BwkgcPcmuCUAQZCztIWgR1SpBS6IqbIij4UFwhnnMkElcFTqoucIWbsBPK3l+6c+xYaVBWsJo
+  aT0OV/YAOvLrziifDQMJOMIaaYce9agtI2EwQBAq089UiRU+evFHSLRBT7Wa/D/YBaUtU5ezvtr3
+  6yrIS4Iyp9VWESdWPEi6VjRjdcEY4HvbmDIVEAEVJIUrHNIBx/MmnBBRkw8tSlCQ8ABZxf5ejgBI
+  pP5TSQPLVMYbq1qbBPmWN0LYVlAvRbP4X512kDQZ9y4TQbvoZmhe+54sRsEJ8GW3hMJjERh0NNlg
+  aB+3Cw/4u5IpwoSGxfltiA==
   --===============*==-- (glob)
 
 with a specific bundle type
@@ -632,7 +632,7 @@ iso-8859-1 patch:
   $ hg commit -A -d '5 0' -m 'isolatin 8-bit encoding'
   adding isolatin
 
-fake ascii mbox:
+iso-8859-1 mbox:
   $ hg email --date '1970-1-1 0:5' -f quux -t foo -c bar -r tip -m mbox
   this patch series consists of 1 patches.
   
@@ -640,9 +640,9 @@ fake ascii mbox:
   sending [PATCH] isolatin 8-bit encoding ...
   $ cat mbox
   From quux ... ... .. ..:..:.. .... (re)
-  Content-Type: text/plain; charset="us-ascii"
+  Content-Type: text/plain; charset="iso-8859-1"
   MIME-Version: 1.0
-  Content-Transfer-Encoding: 8bit
+  Content-Transfer-Encoding: quoted-printable
   Subject: [PATCH] isolatin 8-bit encoding
   X-Mercurial-Node: 240fb913fc1b7ff15ddb9f33e73d82bf5277c720
   X-Mercurial-Series-Index: 1
@@ -667,7 +667,7 @@ fake ascii mbox:
   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
   +++ b/isolatin	Thu Jan 01 00:00:05 1970 +0000
   @@ -0,0 +1,1 @@
-  +h\xf6mma! (esc)
+  +h=F6mma!
   
   
 

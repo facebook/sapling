@@ -179,6 +179,56 @@ def setbeforeget(repo):
     print("* file y created")
     print(repo.cached)
 
+def antiambiguity():
+    filename = 'ambigcheck'
+
+    # try some times, because reproduction of ambiguity depends on
+    # "filesystem time"
+    for i in xrange(5):
+        fp = open(filename, 'w')
+        fp.write('FOO')
+        fp.close()
+
+        oldstat = os.stat(filename)
+        if oldstat.st_ctime != oldstat.st_mtime:
+            # subsequent changing never causes ambiguity
+            continue
+
+        repetition = 3
+
+        # repeat changing via checkambigatclosing, to examine whether
+        # st_mtime is advanced multiple times as expecetd
+        for i in xrange(repetition):
+            # explicit closing
+            fp = scmutil.checkambigatclosing(open(filename, 'a'))
+            fp.write('FOO')
+            fp.close()
+
+            # implicit closing by "with" statement
+            with scmutil.checkambigatclosing(open(filename, 'a')) as fp:
+                fp.write('BAR')
+
+        newstat = os.stat(filename)
+        if oldstat.st_ctime != newstat.st_ctime:
+            # timestamp ambiguity was naturally avoided while repetition
+            continue
+
+        # st_mtime should be advanced "repetition * 2" times, because
+        # all changes occured at same time (in sec)
+        expected = (oldstat.st_mtime + repetition * 2) & 0x7fffffff
+        if newstat.st_mtime != expected:
+            print("'newstat.st_mtime %s is not %s (as %s + %s * 2)" %
+                  (newstat.st_mtime, expected, oldstat.st_mtime, repetition))
+
+        # no more examination is needed regardless of result
+        break
+    else:
+        # This platform seems too slow to examine anti-ambiguity
+        # of file timestamp (or test happened to be executed at
+        # bad timing). Exit silently in this case, because running
+        # on other faster platforms can detect problems
+        pass
+
 print('basic:')
 print()
 basic(fakerepo())
@@ -191,3 +241,7 @@ print()
 print('setbeforeget:')
 print()
 setbeforeget(fakerepo())
+print()
+print('antiambiguity:')
+print()
+antiambiguity()

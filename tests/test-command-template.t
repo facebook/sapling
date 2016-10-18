@@ -29,6 +29,111 @@
   $ hg merge -q foo
   $ hg commit -m 'merge' -d '1500001 0' -u 'person'
 
+Test arithmetic operators have the right precedence:
+
+  $ hg log -l 1 -T '{date(date, "%s") + 5 * 10} {date(date, "%s") - 2 * 3}\n'
+  1500051 1499995
+  $ hg log -l 1 -T '{date(date, "%s") * 5 + 10} {date(date, "%s") * 3 - 2}\n'
+  7500015 4500001
+
+Test division:
+
+  $ hg debugtemplate -r0 -v '{5 / 2} {mod(5, 2)}\n'
+  (template
+    (/
+      ('integer', '5')
+      ('integer', '2'))
+    ('string', ' ')
+    (func
+      ('symbol', 'mod')
+      (list
+        ('integer', '5')
+        ('integer', '2')))
+    ('string', '\n'))
+  2 1
+  $ hg debugtemplate -r0 -v '{5 / -2} {mod(5, -2)}\n'
+  (template
+    (/
+      ('integer', '5')
+      (negate
+        ('integer', '2')))
+    ('string', ' ')
+    (func
+      ('symbol', 'mod')
+      (list
+        ('integer', '5')
+        (negate
+          ('integer', '2'))))
+    ('string', '\n'))
+  -3 -1
+  $ hg debugtemplate -r0 -v '{-5 / 2} {mod(-5, 2)}\n'
+  (template
+    (/
+      (negate
+        ('integer', '5'))
+      ('integer', '2'))
+    ('string', ' ')
+    (func
+      ('symbol', 'mod')
+      (list
+        (negate
+          ('integer', '5'))
+        ('integer', '2')))
+    ('string', '\n'))
+  -3 1
+  $ hg debugtemplate -r0 -v '{-5 / -2} {mod(-5, -2)}\n'
+  (template
+    (/
+      (negate
+        ('integer', '5'))
+      (negate
+        ('integer', '2')))
+    ('string', ' ')
+    (func
+      ('symbol', 'mod')
+      (list
+        (negate
+          ('integer', '5'))
+        (negate
+          ('integer', '2'))))
+    ('string', '\n'))
+  2 -1
+
+Filters bind closer than arithmetic:
+
+  $ hg debugtemplate -r0 -v '{revset(".")|count - 1}\n'
+  (template
+    (-
+      (|
+        (func
+          ('symbol', 'revset')
+          ('string', '.'))
+        ('symbol', 'count'))
+      ('integer', '1'))
+    ('string', '\n'))
+  0
+
+But negate binds closer still:
+
+  $ hg debugtemplate -r0 -v '{1-3|stringify}\n'
+  (template
+    (-
+      ('integer', '1')
+      (|
+        ('integer', '3')
+        ('symbol', 'stringify')))
+    ('string', '\n'))
+  hg: parse error: arithmetic only defined on integers
+  [255]
+  $ hg debugtemplate -r0 -v '{-3|stringify}\n'
+  (template
+    (|
+      (negate
+        ('integer', '3'))
+      ('symbol', 'stringify'))
+    ('string', '\n'))
+  -3
+
 Second branch starting at nullrev:
 
   $ hg update null
@@ -102,6 +207,18 @@ Test templates and style maps in files:
   $ printf 'changeset = "{rev}\\n"\n' > map-simple
   $ hg log -l1 -T./map-simple
   8
+
+Test template map inheritance
+
+  $ echo "__base__ = map-cmdline.default" > map-simple
+  $ printf 'cset = "changeset: ***{rev}***\\n"\n' >> map-simple
+  $ hg log -l1 -T./map-simple
+  changeset: ***8***
+  tag:         tip
+  user:        test
+  date:        Wed Jan 01 10:01:00 2020 +0000
+  summary:     third
+  
 
 Template should precede style option
 
@@ -2878,14 +2995,15 @@ Test integer literal:
   $ hg debugtemplate -v '{(-4)}\n'
   (template
     (group
-      ('integer', '-4'))
+      (negate
+        ('integer', '4')))
     ('string', '\n'))
   -4
   $ hg debugtemplate '{(-)}\n'
-  hg: parse error at 2: integer literal without digits
+  hg: parse error at 3: not a prefix: )
   [255]
   $ hg debugtemplate '{(-a)}\n'
-  hg: parse error at 2: integer literal without digits
+  hg: parse error: negation needs an integer argument
   [255]
 
 top-level integer literal is interpreted as symbol (i.e. variable name):
@@ -3202,6 +3320,11 @@ Test recursive evaluation:
   hg: parse error: fill expects an integer width
   [255]
 
+  $ COLUMNS=25 hg log -l1 --template '{fill(desc, termwidth, "{node|short}:", "termwidth.{rev}:")}'
+  bcc7ff960b8e:desc to be
+  termwidth.1:wrapped desc
+  termwidth.1:to be wrapped (no-eol)
+
   $ hg log -l 1 --template '{sub(r"[0-9]", "-", author)}'
   {node|short} (no-eol)
   $ hg log -l 1 --template '{sub(r"[0-9]", "-", "{node|short}")}'
@@ -3323,6 +3446,27 @@ Test width argument passed to pad function
   hg: parse error: pad() expects an integer width
   [255]
 
+Test boolean argument passed to pad function
+
+ no crash
+
+  $ hg log -r 0 -T '{pad(rev, 10, "-", "f{"oo"}")}\n'
+  ---------0
+
+ string/literal
+
+  $ hg log -r 0 -T '{pad(rev, 10, "-", "false")}\n'
+  ---------0
+  $ hg log -r 0 -T '{pad(rev, 10, "-", false)}\n'
+  0---------
+  $ hg log -r 0 -T '{pad(rev, 10, "-", "")}\n'
+  0---------
+
+ unknown keyword is evaluated to ''
+
+  $ hg log -r 0 -T '{pad(rev, 10, "-", unknownkeyword)}\n'
+  0---------
+
 Test separate function
 
   $ hg log -r 0 -T '{separate("-", "", "a", "b", "", "", "c", "")}\n'
@@ -3331,6 +3475,23 @@ Test separate function
   0:f7769ec2ab97 test default
   $ hg log -r 0 --color=always -T '{separate(" ", "a", label(red, "b"), "c", label(red, ""), "d")}\n'
   a \x1b[0;31mb\x1b[0m c d (esc)
+
+Test boolean expression/literal passed to if function
+
+  $ hg log -r 0 -T '{if(rev, "rev 0 is True")}\n'
+  rev 0 is True
+  $ hg log -r 0 -T '{if(0, "literal 0 is True as well")}\n'
+  literal 0 is True as well
+  $ hg log -r 0 -T '{if("", "", "empty string is False")}\n'
+  empty string is False
+  $ hg log -r 0 -T '{if(revset(r"0 - 0"), "", "empty list is False")}\n'
+  empty list is False
+  $ hg log -r 0 -T '{if(true, "true is True")}\n'
+  true is True
+  $ hg log -r 0 -T '{if(false, "", "false is False")}\n'
+  false is False
+  $ hg log -r 0 -T '{if("false", "non-empty string is True")}\n'
+  non-empty string is True
 
 Test ifcontains function
 
@@ -3450,6 +3611,35 @@ default. join() should agree with the default formatting:
   $ hg log -R ../a -T '{join(parents, ",\n")}\n' -r6 --debug
   5:13207e5a10d9fd28ec424934298e176197f2c67f,
   4:bbe44766e73d5f11ed2177f1838de10c53ef3e74
+
+Test files function
+
+  $ hg log -T "{rev}\n{join(files('*'), '\n')}\n"
+  2
+  a
+  aa
+  b
+  1
+  a
+  0
+  a
+
+  $ hg log -T "{rev}\n{join(files('aa'), '\n')}\n"
+  2
+  aa
+  1
+  
+  0
+  
+
+Test relpath function
+
+  $ hg log -r0 -T '{files % "{file|relpath}\n"}'
+  a
+  $ cd ..
+  $ hg log -R r -r0 -T '{files % "{file|relpath}\n"}'
+  r/a (glob)
+  $ cd r
 
 Test active bookmark templating
 

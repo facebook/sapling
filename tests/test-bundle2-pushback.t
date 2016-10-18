@@ -50,8 +50,6 @@ Enable extension
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > bundle2=$TESTTMP/bundle2.py
-  > [experimental]
-  > bundle2-exp = True
   > EOF
 
 Without config

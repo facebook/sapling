@@ -43,6 +43,15 @@ In addition to filters, there are some basic built-in functions:
 
 .. functionsmarker
 
+We provide a limited set of infix arithmetic operations on integers::
+
+  + for addition
+  - for subtraction
+  * for multiplication
+  / for floor division (division rounded to integer nearest -infinity)
+
+Division fulfils the law x = x / y + mod(x, y).
+
 Also, for any expression that returns a list, there is a list operator::
 
     expr % "{template}"
@@ -94,6 +103,10 @@ Some sample command line templates:
 - Join the list of files with a ", "::
 
    $ hg log -r 0 --template "files: {join(files, ', ')}\n"
+
+- Join the list of files ending with ".py" with a ", "::
+
+   $ hg log -r 0 --template "pythonfiles: {join(files('**.py'), ', ')}\n"
 
 - Separate non-empty arguments by a " "::
 

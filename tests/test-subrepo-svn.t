@@ -310,7 +310,7 @@ Sticky subrepositories, file changes
   $ cd ..
   $ hg update tip
    subrepository s diverged (local revision: 2, remote revision: 3)
-  (M)erge, keep (l)ocal or keep (r)emote? m
+  (M)erge, keep (l)ocal [working copy] or keep (r)emote [destination]? m
    subrepository sources for s differ
   use (l)ocal source (2) or (r)emote source (3)? l
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -341,7 +341,7 @@ Sticky subrepository, revision updates
   $ cd ..
   $ hg update 1
    subrepository s diverged (local revision: 3, remote revision: 2)
-  (M)erge, keep (l)ocal or keep (r)emote? m
+  (M)erge, keep (l)ocal [working copy] or keep (r)emote [destination]? m
    subrepository sources for s differ (in checked out version)
   use (l)ocal source (1) or (r)emote source (2)? l
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -364,7 +364,7 @@ Sticky subrepository, file changes and revision updates
   1+
   $ hg update tip
    subrepository s diverged (local revision: 3, remote revision: 3)
-  (M)erge, keep (l)ocal or keep (r)emote? m
+  (M)erge, keep (l)ocal [working copy] or keep (r)emote [destination]? m
    subrepository sources for s differ
   use (l)ocal source (1) or (r)emote source (3)? l
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -398,7 +398,7 @@ Test subrepo already at intended revision:
   $ cd ..
   $ hg update 1
    subrepository s diverged (local revision: 3, remote revision: 2)
-  (M)erge, keep (l)ocal or keep (r)emote? m
+  (M)erge, keep (l)ocal [working copy] or keep (r)emote [destination]? m
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg id -n
   1+

@@ -24,7 +24,6 @@ from mercurial import (
     bookmarks,
     cmdutil,
     commands,
-    dirstate,
     dispatch,
     error,
     extensions,
@@ -40,11 +39,11 @@ from . import share
 cmdtable = {}
 command = cmdutil.command(cmdtable)
 
-# Note for extension authors: ONLY specify testedwith = 'internal' for
+# Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
 # be specifying the version(s) of Mercurial they are tested with, or
 # leave the attribute unspecified.
-testedwith = 'internal'
+testedwith = 'ships-with-hg-core'
 
 # storage format version; increment when the format changes
 storageversion = 0
@@ -62,8 +61,6 @@ sharednamespaces = {
 def extsetup(ui):
     extensions.wrapfunction(dispatch, 'runcommand', runcommand)
     extensions.wrapfunction(bookmarks.bmstore, '_write', recordbookmarks)
-    extensions.wrapfunction(
-        dirstate.dirstate, '_writedirstate', recorddirstateparents)
     extensions.wrapfunction(
         localrepo.localrepository.dirstate, 'func', wrapdirstate)
     extensions.wrapfunction(hg, 'postshare', wrappostshare)
@@ -84,34 +81,19 @@ def wrapdirstate(orig, repo):
     dirstate = orig(repo)
     if util.safehasattr(repo, 'journal'):
         dirstate.journalstorage = repo.journal
+        dirstate.addparentchangecallback('journal', recorddirstateparents)
     return dirstate
 
-def recorddirstateparents(orig, dirstate, dirstatefp):
+def recorddirstateparents(dirstate, old, new):
     """Records all dirstate parent changes in the journal."""
+    old = list(old)
+    new = list(new)
     if util.safehasattr(dirstate, 'journalstorage'):
-        old = [node.nullid, node.nullid]
-        nodesize = len(node.nullid)
-        try:
-            # The only source for the old state is in the dirstate file still
-            # on disk; the in-memory dirstate object only contains the new
-            # state. dirstate._opendirstatefile() switches beteen .hg/dirstate
-            # and .hg/dirstate.pending depending on the transaction state.
-            with dirstate._opendirstatefile() as fp:
-                state = fp.read(2 * nodesize)
-            if len(state) == 2 * nodesize:
-                old = [state[:nodesize], state[nodesize:]]
-        except IOError:
-            pass
-
-        new = dirstate.parents()
-        if old != new:
-            # only record two hashes if there was a merge
-            oldhashes = old[:1] if old[1] == node.nullid else old
-            newhashes = new[:1] if new[1] == node.nullid else new
-            dirstate.journalstorage.record(
-                wdirparenttype, '.', oldhashes, newhashes)
-
-    return orig(dirstate, dirstatefp)
+        # only record two hashes if there was a merge
+        oldhashes = old[:1] if old[1] == node.nullid else old
+        newhashes = new[:1] if new[1] == node.nullid else new
+        dirstate.journalstorage.record(
+            wdirparenttype, '.', oldhashes, newhashes)
 
 # hooks to record bookmark changes (both local and remote)
 def recordbookmarks(orig, store, fp):
@@ -165,9 +147,10 @@ def _mergeentriesiter(*iterables, **kwargs):
 
 def wrappostshare(orig, sourcerepo, destrepo, **kwargs):
     """Mark this shared working copy as sharing journal information"""
-    orig(sourcerepo, destrepo, **kwargs)
-    with destrepo.vfs('shared', 'a') as fp:
-        fp.write('journal\n')
+    with destrepo.wlock():
+        orig(sourcerepo, destrepo, **kwargs)
+        with destrepo.vfs('shared', 'a') as fp:
+            fp.write('journal\n')
 
 def unsharejournal(orig, ui, repo, repopath):
     """Copy shared journal entries into this repo when unsharing"""
@@ -179,12 +162,12 @@ def unsharejournal(orig, ui, repo, repopath):
             # there is a shared repository and there are shared journal entries
             # to copy. move shared date over from source to destination but
             # move the local file first
-            if repo.vfs.exists('journal'):
-                journalpath = repo.join('journal')
+            if repo.vfs.exists('namejournal'):
+                journalpath = repo.join('namejournal')
                 util.rename(journalpath, journalpath + '.bak')
             storage = repo.journal
             local = storage._open(
-                repo.vfs, filename='journal.bak', _newestfirst=False)
+                repo.vfs, filename='namejournal.bak', _newestfirst=False)
             shared = (
                 e for e in storage._open(sharedrepo.vfs, _newestfirst=False)
                 if sharednamespaces.get(e.namespace) in sharedfeatures)
@@ -194,8 +177,8 @@ def unsharejournal(orig, ui, repo, repopath):
     return orig(ui, repo, repopath)
 
 class journalentry(collections.namedtuple(
-        'journalentry',
-        'timestamp user command namespace name oldhashes newhashes')):
+        u'journalentry',
+        u'timestamp user command namespace name oldhashes newhashes')):
     """Individual journal entry
 
     * timestamp: a mercurial (time, timezone) tuple
@@ -284,19 +267,31 @@ class journalstorage(object):
         # with a non-local repo (cloning for example).
         cls._currentcommand = fullargs
 
+    def _currentlock(self, lockref):
+        """Returns the lock if it's held, or None if it's not.
+
+        (This is copied from the localrepo class)
+        """
+        if lockref is None:
+            return None
+        l = lockref()
+        if l is None or not l.held:
+            return None
+        return l
+
     def jlock(self, vfs):
         """Create a lock for the journal file"""
-        if self._lockref and self._lockref():
+        if self._currentlock(self._lockref) is not None:
             raise error.Abort(_('journal lock does not support nesting'))
         desc = _('journal of %s') % vfs.base
         try:
-            l = lock.lock(vfs, 'journal.lock', 0, desc=desc)
+            l = lock.lock(vfs, 'namejournal.lock', 0, desc=desc)
         except error.LockHeld as inst:
             self.ui.warn(
                 _("waiting for lock on %s held by %r\n") % (desc, inst.locker))
             # default to 600 seconds timeout
             l = lock.lock(
-                vfs, 'journal.lock',
+                vfs, 'namejournal.lock',
                 int(self.ui.config("ui", "timeout", "600")), desc=desc)
             self.ui.warn(_("got lock after %s seconds\n") % l.delay)
         self._lockref = weakref.ref(l)
@@ -336,7 +331,7 @@ class journalstorage(object):
         with self.jlock(vfs):
             version = None
             # open file in amend mode to ensure it is created if missing
-            with vfs('journal', mode='a+b', atomictemp=True) as f:
+            with vfs('namejournal', mode='a+b', atomictemp=True) as f:
                 f.seek(0, os.SEEK_SET)
                 # Read just enough bytes to get a version number (up to 2
                 # digits plus separator)
@@ -394,7 +389,7 @@ class journalstorage(object):
             if sharednamespaces.get(e.namespace) in self.sharedfeatures)
         return _mergeentriesiter(local, shared)
 
-    def _open(self, vfs, filename='journal', _newestfirst=True):
+    def _open(self, vfs, filename='namejournal', _newestfirst=True):
         if not vfs.exists(filename):
             return
 
@@ -475,8 +470,10 @@ def journal(ui, repo, *args, **opts):
     for count, entry in enumerate(repo.journal.filtered(name=name)):
         if count == limit:
             break
-        newhashesstr = ','.join([node.short(hash) for hash in entry.newhashes])
-        oldhashesstr = ','.join([node.short(hash) for hash in entry.oldhashes])
+        newhashesstr = fm.formatlist(map(fm.hexfunc, entry.newhashes),
+                                     name='node', sep=',')
+        oldhashesstr = fm.formatlist(map(fm.hexfunc, entry.oldhashes),
+                                     name='node', sep=',')
 
         fm.startitem()
         fm.condwrite(ui.verbose, 'oldhashes', '%s -> ', oldhashesstr)
@@ -486,7 +483,7 @@ def journal(ui, repo, *args, **opts):
             opts.get('all') or name.startswith('re:'),
             'name', '  %-8s', entry.name)
 
-        timestring = util.datestr(entry.timestamp, '%Y-%m-%d %H:%M %1%2')
+        timestring = fm.formatdate(entry.timestamp, '%Y-%m-%d %H:%M %1%2')
         fm.condwrite(ui.verbose, 'date', ' %s', timestring)
         fm.write('command', '  %s\n', entry.command)
 

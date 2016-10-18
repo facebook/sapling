@@ -48,7 +48,7 @@ def _playback(journal, report, opener, vfsmap, entries, backupentries,
     for f, o, _ignore in entries:
         if o or not unlink:
             try:
-                fp = opener(f, 'a')
+                fp = opener(f, 'a', checkambig=True)
                 fp.truncate(o)
                 fp.close()
             except IOError:

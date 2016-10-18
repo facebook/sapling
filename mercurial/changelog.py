@@ -124,7 +124,7 @@ class appender(object):
 
 def _divertopener(opener, target):
     """build an opener that writes in 'target.a' instead of 'target'"""
-    def _divert(name, mode='r'):
+    def _divert(name, mode='r', checkambig=False):
         if name != target:
             return opener(name, mode)
         return opener(name + ".a", mode)
@@ -132,15 +132,16 @@ def _divertopener(opener, target):
 
 def _delayopener(opener, target, buf):
     """build an opener that stores chunks in 'buf' instead of 'target'"""
-    def _delay(name, mode='r'):
+    def _delay(name, mode='r', checkambig=False):
         if name != target:
             return opener(name, mode)
         return appender(opener, name, mode, buf)
     return _delay
 
-_changelogrevision = collections.namedtuple('changelogrevision',
-                                            ('manifest', 'user', 'date',
-                                             'files', 'description', 'extra'))
+_changelogrevision = collections.namedtuple(u'changelogrevision',
+                                            (u'manifest', u'user', u'date',
+                                             u'files', u'description',
+                                             u'extra'))
 
 class changelogrevision(object):
     """Holds results of a parsed changelog revision.
@@ -151,8 +152,8 @@ class changelogrevision(object):
     """
 
     __slots__ = (
-        '_offsets',
-        '_text',
+        u'_offsets',
+        u'_text',
     )
 
     def __new__(cls, text):
@@ -256,11 +257,18 @@ class changelogrevision(object):
 
 class changelog(revlog.revlog):
     def __init__(self, opener):
-        revlog.revlog.__init__(self, opener, "00changelog.i")
+        revlog.revlog.__init__(self, opener, "00changelog.i",
+                               checkambig=True)
         if self._initempty:
             # changelogs don't benefit from generaldelta
             self.version &= ~revlog.REVLOGGENERALDELTA
             self._generaldelta = False
+
+        # Delta chains for changelogs tend to be very small because entries
+        # tend to be small and don't delta well with each. So disable delta
+        # chains.
+        self.storedeltachains = False
+
         self._realopener = opener
         self._delayed = False
         self._delaybuf = None
@@ -381,9 +389,9 @@ class changelog(revlog.revlog):
             tmpname = self.indexfile + ".a"
             nfile = self.opener.open(tmpname)
             nfile.close()
-            self.opener.rename(tmpname, self.indexfile)
+            self.opener.rename(tmpname, self.indexfile, checkambig=True)
         elif self._delaybuf:
-            fp = self.opener(self.indexfile, 'a')
+            fp = self.opener(self.indexfile, 'a', checkambig=True)
             fp.write("".join(self._delaybuf))
             fp.close()
             self._delaybuf = None

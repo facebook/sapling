@@ -17,6 +17,7 @@
 
 #include "bdiff.h"
 #include "bitmanipulation.h"
+#include "util.h"
 
 
 static PyObject *blocks(PyObject *self, PyObject *args)

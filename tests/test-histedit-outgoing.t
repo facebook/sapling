@@ -130,7 +130,7 @@ test to check number of roots in outgoing revisions
   
   $ HGEDITOR=cat hg -q histedit --outgoing '../r'
   abort: there are ambiguous outgoing revisions
-  (see "hg help histedit" for more detail)
+  (see 'hg help histedit' for more detail)
   [255]
 
   $ hg -q update -C 2
@@ -147,7 +147,7 @@ test to check number of roots in outgoing revisions
   
   $ HGEDITOR=cat hg -q histedit --outgoing '../r#default'
   abort: there are ambiguous outgoing revisions
-  (see "hg help histedit" for more detail)
+  (see 'hg help histedit' for more detail)
   [255]
 
   $ cd ..

@@ -144,11 +144,11 @@ client only pulls down 1 changeset
   adding file changes
   adding foo revisions
   added 1 changesets with 1 changes to 1 files (+1 heads)
-  bundle2-input-part: total payload size 474
+  updating the branch cache
+  bundle2-input-part: total payload size 476
   bundle2-input-part: "listkeys" (params: 1 mandatory) supported
   bundle2-input-part: total payload size 58
   bundle2-input-part: "listkeys" (params: 1 mandatory) supported
   bundle2-input-bundle: 2 parts total
   checking for updated bookmarks
-  updating the branch cache
   (run 'hg heads' to see heads, 'hg merge' to merge)

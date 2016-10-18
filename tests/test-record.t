@@ -41,7 +41,7 @@ Record help
   
       This command is not available when committing a merge.
   
-  (use "hg help -e record" to show help for the record extension)
+  (use 'hg help -e record' to show help for the record extension)
   
   options ([+] can be repeated):
   
@@ -77,6 +77,7 @@ Select no files
   examine changes to 'empty-rw'? [Ynesfdaq?] n
   
   no changes to record
+  [1]
 
   $ hg tip -p
   changeset:   -1:000000000000

@@ -64,8 +64,12 @@ def _hgextimport(importfunc, name, globals, *args, **kwargs):
         return importfunc(hgextname, globals, *args, **kwargs)
 
 class _demandmod(object):
-    """module demand-loader and proxy"""
-    def __init__(self, name, globals, locals, level=level):
+    """module demand-loader and proxy
+
+    Specify 1 as 'level' argument at construction, to import module
+    relatively.
+    """
+    def __init__(self, name, globals, locals, level):
         if '.' in name:
             head, rest = name.split('.', 1)
             after = [rest]
@@ -117,7 +121,8 @@ class _demandmod(object):
                 if '.' in p:
                     h, t = p.split('.', 1)
                 if getattr(mod, h, nothing) is nothing:
-                    setattr(mod, h, _demandmod(p, mod.__dict__, mod.__dict__))
+                    setattr(mod, h, _demandmod(p, mod.__dict__, mod.__dict__,
+                                               level=1))
                 elif t:
                     subload(getattr(mod, h), t)
 
@@ -186,11 +191,16 @@ def _demandimport(name, globals=None, locals=None, fromlist=None, level=level):
         def processfromitem(mod, attr):
             """Process an imported symbol in the import statement.
 
-            If the symbol doesn't exist in the parent module, it must be a
-            module. We set missing modules up as _demandmod instances.
+            If the symbol doesn't exist in the parent module, and if the
+            parent module is a package, it must be a module. We set missing
+            modules up as _demandmod instances.
             """
             symbol = getattr(mod, attr, nothing)
+            nonpkg = getattr(mod, '__path__', nothing) is nothing
             if symbol is nothing:
+                if nonpkg:
+                    # do not try relative import, which would raise ValueError
+                    raise ImportError('cannot import name %s' % attr)
                 mn = '%s.%s' % (mod.__name__, attr)
                 if mn in ignore:
                     importfunc = _origimport
@@ -210,8 +220,8 @@ def _demandimport(name, globals=None, locals=None, fromlist=None, level=level):
             mod = rootmod
             for comp in modname.split('.')[1:]:
                 if getattr(mod, comp, nothing) is nothing:
-                    setattr(mod, comp,
-                            _demandmod(comp, mod.__dict__, mod.__dict__))
+                    setattr(mod, comp, _demandmod(comp, mod.__dict__,
+                                                  mod.__dict__, level=1))
                 mod = getattr(mod, comp)
             return mod
 
@@ -259,6 +269,7 @@ ignore = [
     '_imp',
     '_xmlplus',
     'fcntl',
+    'nt', # pathlib2 tests the existence of built-in 'nt' module
     'win32com.gen_py',
     '_winreg', # 2.7 mimetypes needs immediate ImportError
     'pythoncom',
@@ -279,8 +290,16 @@ ignore = [
     'mimetools',
     'sqlalchemy.events', # has import-time side effects (issue5085)
     # setuptools 8 expects this module to explode early when not on windows
-    'distutils.msvc9compiler'
+    'distutils.msvc9compiler',
+    '__builtin__',
+    'builtins',
     ]
+
+if _pypy:
+    ignore.extend([
+        # _ctypes.pointer is shadowed by "from ... import pointer" (PyPy 5)
+        '_ctypes.pointer',
+    ])
 
 def isenabled():
     return builtins.__import__ == _demandimport

@@ -499,6 +499,12 @@ class _unclosablefile(object):
     def __getattr__(self, attr):
         return getattr(self._fp, attr)
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, exc_tb):
+        pass
+
 def makefileobj(repo, pat, node=None, desc=None, total=None,
                 seqno=None, revwidth=None, mode='wb', modemap=None,
                 pathname=None):
@@ -549,7 +555,7 @@ def openrevlog(repo, cmd, file_, opts):
             if 'treemanifest' not in repo.requirements:
                 raise error.Abort(_("--dir can only be used on repos with "
                                    "treemanifest enabled"))
-            dirlog = repo.dirlog(dir)
+            dirlog = repo.manifest.dirlog(dir)
             if len(dirlog):
                 r = dirlog
         elif mf:
@@ -640,8 +646,26 @@ def copy(ui, repo, pats, opts, rename=False):
 
         if not after and exists or after and state in 'mn':
             if not opts['force']:
-                ui.warn(_('%s: not overwriting - file exists\n') %
-                        reltarget)
+                if state in 'mn':
+                    msg = _('%s: not overwriting - file already committed\n')
+                    if after:
+                        flags = '--after --force'
+                    else:
+                        flags = '--force'
+                    if rename:
+                        hint = _('(hg rename %s to replace the file by '
+                                 'recording a rename)\n') % flags
+                    else:
+                        hint = _('(hg copy %s to replace the file by '
+                                 'recording a copy)\n') % flags
+                else:
+                    msg = _('%s: not overwriting - file exists\n')
+                    if rename:
+                        hint = _('(hg rename --after to record the rename)\n')
+                    else:
+                        hint = _('(hg copy --after to record the copy)\n')
+                ui.warn(msg % reltarget)
+                ui.warn(hint)
                 return
 
         if after:
@@ -1611,25 +1635,26 @@ def show_changeset(ui, repo, opts, buffered=False):
 
     return changeset_templater(ui, repo, matchfn, opts, tmpl, mapfile, buffered)
 
-def showmarker(ui, marker, index=None):
+def showmarker(fm, marker, index=None):
     """utility function to display obsolescence marker in a readable way
 
     To be used by debug function."""
     if index is not None:
-        ui.write("%i " % index)
-    ui.write(hex(marker.precnode()))
-    for repl in marker.succnodes():
-        ui.write(' ')
-        ui.write(hex(repl))
-    ui.write(' %X ' % marker.flags())
+        fm.write('index', '%i ', index)
+    fm.write('precnode', '%s ', hex(marker.precnode()))
+    succs = marker.succnodes()
+    fm.condwrite(succs, 'succnodes', '%s ',
+                 fm.formatlist(map(hex, succs), name='node'))
+    fm.write('flag', '%X ', marker.flags())
     parents = marker.parentnodes()
     if parents is not None:
-        ui.write('{%s} ' % ', '.join(hex(p) for p in parents))
-    ui.write('(%s) ' % util.datestr(marker.date()))
-    ui.write('{%s}' % (', '.join('%r: %r' % t for t in
-                                 sorted(marker.metadata().items())
-                                 if t[0] != 'date')))
-    ui.write('\n')
+        fm.write('parentnodes', '{%s} ',
+                 fm.formatlist(map(hex, parents), name='node', sep=', '))
+    fm.write('date', '(%s) ', fm.formatdate(marker.date()))
+    meta = marker.metadata().copy()
+    meta.pop('date', None)
+    fm.write('metadata', '{%s}', fm.formatdict(meta, fmt='%r: %r', sep=', '))
+    fm.plain('\n')
 
 def finddate(ui, repo, date):
     """Find the tipmost changeset that matches the given date spec"""
@@ -1940,7 +1965,7 @@ def _makefollowlogfilematcher(repo, files, followfirst):
     # --follow, we want the names of the ancestors of FILE in the
     # revision, stored in "fcache". "fcache" is populated by
     # reproducing the graph traversal already done by --follow revset
-    # and relating linkrevs to file names (which is not "correct" but
+    # and relating revs to file names (which is not "correct" but
     # good enough).
     fcache = {}
     fcacheready = [False]
@@ -1948,9 +1973,10 @@ def _makefollowlogfilematcher(repo, files, followfirst):
 
     def populate():
         for fn in files:
-            for i in ((pctx[fn],), pctx[fn].ancestors(followfirst=followfirst)):
-                for c in i:
-                    fcache.setdefault(c.linkrev(), set()).add(c.path())
+            fctx = pctx[fn]
+            fcache.setdefault(fctx.introrev(), set()).add(fctx.path())
+            for c in fctx.ancestors(followfirst=followfirst):
+                fcache.setdefault(c.rev(), set()).add(c.path())
 
     def filematcher(rev):
         if not fcacheready[0]:
@@ -2151,15 +2177,8 @@ def getgraphlogrevs(repo, pats, opts):
         if not (revs.isdescending() or revs.istopo()):
             revs.sort(reverse=True)
     if expr:
-        # Revset matchers often operate faster on revisions in changelog
-        # order, because most filters deal with the changelog.
-        revs.reverse()
-        matcher = revset.match(repo.ui, expr)
-        # Revset matches can reorder revisions. "A or B" typically returns
-        # returns the revision matching A then the revision matching B. Sort
-        # again to fix that.
+        matcher = revset.match(repo.ui, expr, order=revset.followorder)
         revs = matcher(repo, revs)
-        revs.sort(reverse=True)
     if limit is not None:
         limitedrevs = []
         for idx, rev in enumerate(revs):
@@ -2184,23 +2203,8 @@ def getlogrevs(repo, pats, opts):
         return revset.baseset([]), None, None
     expr, filematcher = _makelogrevset(repo, pats, opts, revs)
     if expr:
-        # Revset matchers often operate faster on revisions in changelog
-        # order, because most filters deal with the changelog.
-        if not opts.get('rev'):
-            revs.reverse()
-        matcher = revset.match(repo.ui, expr)
-        # Revset matches can reorder revisions. "A or B" typically returns
-        # returns the revision matching A then the revision matching B. Sort
-        # again to fix that.
-        fixopts = ['branch', 'only_branch', 'keyword', 'user']
-        oldrevs = revs
+        matcher = revset.match(repo.ui, expr, order=revset.followorder)
         revs = matcher(repo, revs)
-        if not opts.get('rev'):
-            revs.sort(reverse=True)
-        elif len(pats) > 1 or any(len(opts.get(op, [])) > 1 for op in fixopts):
-            # XXX "A or B" is known to change the order; fix it by filtering
-            # matched set again (issue5100)
-            revs = oldrevs & revs
     if limit is not None:
         limitedrevs = []
         for idx, r in enumerate(revs):
@@ -2415,14 +2419,10 @@ def files(ui, ctx, m, fm, fmt, subrepos):
         ret = 0
 
     for subpath in sorted(ctx.substate):
-        def matchessubrepo(subpath):
-            return (m.exact(subpath)
-                    or any(f.startswith(subpath + '/') for f in m.files()))
-
-        if subrepos or matchessubrepo(subpath):
+        submatch = matchmod.subdirmatcher(subpath, m)
+        if (subrepos or m.exact(subpath) or any(submatch.files())):
             sub = ctx.sub(subpath)
             try:
-                submatch = matchmod.subdirmatcher(subpath, m)
                 recurse = m.exact(subpath) or subrepos
                 if sub.printfiles(ui, submatch, fm, fmt, recurse) == 0:
                     ret = 0
@@ -2450,21 +2450,12 @@ def remove(ui, repo, m, prefix, after, force, subrepos, warnings=None):
     total = len(subs)
     count = 0
     for subpath in subs:
-        def matchessubrepo(matcher, subpath):
-            if matcher.exact(subpath):
-                return True
-            for f in matcher.files():
-                if f.startswith(subpath):
-                    return True
-            return False
-
         count += 1
-        if subrepos or matchessubrepo(m, subpath):
+        submatch = matchmod.subdirmatcher(subpath, m)
+        if subrepos or m.exact(subpath) or any(submatch.files()):
             ui.progress(_('searching'), count, total=total, unit=_('subrepos'))
-
             sub = wctx.sub(subpath)
             try:
-                submatch = matchmod.subdirmatcher(subpath, m)
                 if sub.removefiles(submatch, prefix, after, force, subrepos,
                                    warnings):
                     ret = 1
@@ -2530,8 +2521,8 @@ def remove(ui, repo, m, prefix, after, force, subrepos, warnings=None):
         for f in added:
             count += 1
             ui.progress(_('skipping'), count, total=total, unit=_('files'))
-            warnings.append(_('not removing %s: file has been marked for add'
-                      ' (use forget to undo)\n') % m.rel(f))
+            warnings.append(_("not removing %s: file has been marked for add"
+                      " (use 'hg forget' to undo add)\n") % m.rel(f))
             ret = 1
         ui.progress(_('skipping'), None)
 
@@ -2581,14 +2572,7 @@ def cat(ui, repo, ctx, matcher, prefix, **opts):
             write(file)
             return 0
 
-    # Don't warn about "missing" files that are really in subrepos
-    def badfn(path, msg):
-        for subpath in ctx.substate:
-            if path.startswith(subpath + '/'):
-                return
-        matcher.bad(path, msg)
-
-    for abs in ctx.walk(matchmod.badmatch(matcher, badfn)):
+    for abs in ctx.walk(matcher):
         write(abs)
         err = 0
 
@@ -2622,6 +2606,18 @@ def commit(ui, repo, commitfunc, pats, opts):
                 _("failed to mark all new/missing files as added/removed"))
 
     return commitfunc(ui, repo, message, matcher, opts)
+
+def samefile(f, ctx1, ctx2):
+    if f in ctx1.manifest():
+        a = ctx1.filectx(f)
+        if f in ctx2.manifest():
+            b = ctx2.filectx(f)
+            return (not a.cmp(b)
+                    and a.flags() == b.flags())
+        else:
+            return False
+    else:
+        return f not in ctx2.manifest()
 
 def amend(ui, repo, commitfunc, old, extra, pats, opts):
     # avoid cycle context -> subrepo -> cmdutil
@@ -2706,19 +2702,7 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
                 # we can discard X from our list of files. Likewise if X
                 # was deleted, it's no longer relevant
                 files.update(ctx.files())
-
-                def samefile(f):
-                    if f in ctx.manifest():
-                        a = ctx.filectx(f)
-                        if f in base.manifest():
-                            b = base.filectx(f)
-                            return (not a.cmp(b)
-                                    and a.flags() == b.flags())
-                        else:
-                            return False
-                    else:
-                        return f not in base.manifest()
-                files = [f for f in files if not samefile(f)]
+                files = [f for f in files if not samefile(f, ctx, base)]
 
                 def filectxfn(repo, ctx_, path):
                     try:
@@ -3542,10 +3526,11 @@ class dirstateguard(object):
 
     def __init__(self, repo, name):
         self._repo = repo
+        self._active = False
+        self._closed = False
         self._suffix = '.backup.%s.%d' % (name, id(self))
         repo.dirstate.savebackup(repo.currenttransaction(), self._suffix)
         self._active = True
-        self._closed = False
 
     def __del__(self):
         if self._active: # still active

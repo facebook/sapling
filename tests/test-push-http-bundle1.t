@@ -5,9 +5,9 @@ to change with bundle2. Feel free to factor out any part of the test
 which does not need to exist to keep bundle1 working.
 
   $ cat << EOF >> $HGRCPATH
-  > [experimental]
+  > [devel]
   > # This test is dedicated to interaction through old bundle
-  > bundle2-exp = False
+  > legacy.exchange = bundle1
   > EOF
 
   $ hg init test

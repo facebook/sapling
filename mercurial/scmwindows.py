@@ -1,12 +1,17 @@
 from __future__ import absolute_import
 
-import _winreg
 import os
 
 from . import (
     osutil,
     util,
 )
+
+try:
+    import _winreg as winreg
+    winreg.CloseKey
+except ImportError:
+    import winreg
 
 def systemrcpath():
     '''return default os-specific hgrc search path'''
@@ -23,7 +28,7 @@ def systemrcpath():
                 rcpath.append(os.path.join(progrcd, f))
     # else look for a system rcpath in the registry
     value = util.lookupreg('SOFTWARE\\Mercurial', None,
-                           _winreg.HKEY_LOCAL_MACHINE)
+                           winreg.HKEY_LOCAL_MACHINE)
     if not isinstance(value, str) or not value:
         return rcpath
     value = util.localpath(value)

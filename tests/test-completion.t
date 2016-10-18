@@ -232,7 +232,7 @@ Show all commands + options
   branches: active, closed, template
   bundle: force, rev, branch, base, all, type, ssh, remotecmd, insecure
   cat: output, rev, decode, include, exclude
-  config: untrusted, edit, local, global
+  config: untrusted, edit, local, global, template
   copy: after, force, include, exclude, dry-run
   debugancestor: 
   debugapplystreamclonebundle: 
@@ -261,7 +261,7 @@ Show all commands + options
   debuglocks: force-lock, force-wlock
   debugmergestate: 
   debugnamecomplete: 
-  debugobsolete: flags, record-parents, rev, index, delete, date, user
+  debugobsolete: flags, record-parents, rev, index, delete, date, user, template
   debugpathcomplete: full, normal, added, removed
   debugpushkey: 
   debugpvec: 
@@ -269,7 +269,7 @@ Show all commands + options
   debugrebuildfncache: 
   debugrename: rev
   debugrevlog: changelog, manifest, dir, dump
-  debugrevspec: optimize
+  debugrevspec: optimize, show-stage, no-optimized, verify-optimized
   debugsetparents: 
   debugsub: rev
   debugsuccessorssets: 
@@ -278,7 +278,7 @@ Show all commands + options
   debugwireargs: three, four, five, ssh, remotecmd, insecure
   files: rev, print0, include, exclude, template, subrepos
   graft: rev, continue, edit, log, force, currentdate, currentuser, date, user, tool, dry-run
-  grep: print0, all, text, follow, ignore-case, files-with-matches, line-number, rev, user, date, include, exclude
+  grep: print0, all, text, follow, ignore-case, files-with-matches, line-number, rev, user, date, template, include, exclude
   heads: rev, topo, active, closed, style, template
   help: extension, command, keyword, system
   identify: rev, num, id, branch, tags, bookmarks, ssh, remotecmd, insecure
@@ -301,7 +301,7 @@ Show all commands + options
   tip: patch, git, style, template
   unbundle: update
   verify: 
-  version: 
+  version: template
 
   $ hg init a
   $ cd a

@@ -256,17 +256,15 @@ class abstractvfs(object):
                 raise
         return []
 
-    def open(self, path, mode="r", text=False, atomictemp=False,
-             notindexed=False, backgroundclose=False):
+    @util.propertycache
+    def open(self):
         '''Open ``path`` file, which is relative to vfs root.
 
         Newly created directories are marked as "not to be indexed by
         the content indexing service", if ``notindexed`` is specified
         for "write" mode access.
         '''
-        self.open = self.__call__
-        return self.__call__(path, mode, text, atomictemp, notindexed,
-                             backgroundclose=backgroundclose)
+        return self.__call__
 
     def read(self, path):
         with self(path, 'rb') as fp:
@@ -589,6 +587,12 @@ class vfs(abstractvfs):
         if nlink == 0:
             self._fixfilemode(f)
 
+        if checkambig:
+            if mode in ('r', 'rb'):
+                raise error.Abort(_('implementation error: mode %s is not'
+                                    ' valid for checkambig=True') % mode)
+            fp = checkambigatclosing(fp)
+
         if backgroundclose:
             if not self._backgroundfilecloser:
                 raise error.Abort(_('backgroundclose can only be used when a '
@@ -637,6 +641,14 @@ class auditvfs(object):
     @mustaudit.setter
     def mustaudit(self, onoff):
         self.vfs.mustaudit = onoff
+
+    @property
+    def options(self):
+        return self.vfs.options
+
+    @options.setter
+    def options(self, value):
+        self.vfs.options = value
 
 class filtervfs(abstractvfs, auditvfs):
     '''Wrapper vfs for filtering filenames with a function.'''
@@ -741,7 +753,7 @@ def rcpath():
     if no HGRCPATH, use default os-specific path.'''
     global _rcpath
     if _rcpath is None:
-        if 'HGRCPATH' in os.environ:
+        if 'HGRCPATH' in encoding.environ:
             _rcpath = []
             for p in os.environ['HGRCPATH'].split(os.pathsep):
                 if not p:
@@ -775,7 +787,6 @@ def revsingle(repo, revspec, default='.'):
 
 def _pairspec(revspec):
     tree = revset.parse(revspec)
-    tree = revset.optimize(tree)  # fix up "x^:y" -> "(x^):y"
     return tree and tree[0] in ('range', 'rangepre', 'rangepost', 'rangeall')
 
 def revpair(repo, revs):
@@ -942,20 +953,12 @@ def addremove(repo, matcher, prefix, opts=None, dry_run=None, similarity=None):
     ret = 0
     join = lambda f: os.path.join(prefix, f)
 
-    def matchessubrepo(matcher, subpath):
-        if matcher.exact(subpath):
-            return True
-        for f in matcher.files():
-            if f.startswith(subpath):
-                return True
-        return False
-
     wctx = repo[None]
     for subpath in sorted(wctx.substate):
-        if opts.get('subrepos') or matchessubrepo(m, subpath):
+        submatch = matchmod.subdirmatcher(subpath, m)
+        if opts.get('subrepos') or m.exact(subpath) or any(submatch.files()):
             sub = wctx.sub(subpath)
             try:
-                submatch = matchmod.subdirmatcher(subpath, m)
                 if sub.addremove(submatch, prefix, opts, dry_run, similarity):
                     ret = 1
             except error.LookupError:
@@ -1303,15 +1306,13 @@ def gddeltaconfig(ui):
     # experimental config: format.generaldelta
     return ui.configbool('format', 'generaldelta', False)
 
-class delayclosedfile(object):
-    """Proxy for a file object whose close is delayed.
+class closewrapbase(object):
+    """Base class of wrapper, which hooks closing
 
     Do not instantiate outside of the vfs layer.
     """
-
-    def __init__(self, fh, closer):
+    def __init__(self, fh):
         object.__setattr__(self, '_origfh', fh)
-        object.__setattr__(self, '_closer', closer)
 
     def __getattr__(self, attr):
         return getattr(self._origfh, attr)
@@ -1324,6 +1325,21 @@ class delayclosedfile(object):
 
     def __enter__(self):
         return self._origfh.__enter__()
+
+    def __exit__(self, exc_type, exc_value, exc_tb):
+        raise NotImplementedError('attempted instantiating ' + str(type(self)))
+
+    def close(self):
+        raise NotImplementedError('attempted instantiating ' + str(type(self)))
+
+class delayclosedfile(closewrapbase):
+    """Proxy for a file object whose close is delayed.
+
+    Do not instantiate outside of the vfs layer.
+    """
+    def __init__(self, fh, closer):
+        super(delayclosedfile, self).__init__(fh)
+        object.__setattr__(self, '_closer', closer)
 
     def __exit__(self, exc_type, exc_value, exc_tb):
         self._closer.close(self._origfh)
@@ -1421,3 +1437,34 @@ class backgroundfilecloser(object):
             return
 
         self._queue.put(fh, block=True, timeout=None)
+
+class checkambigatclosing(closewrapbase):
+    """Proxy for a file object, to avoid ambiguity of file stat
+
+    See also util.filestat for detail about "ambiguity of file stat".
+
+    This proxy is useful only if the target file is guarded by any
+    lock (e.g. repo.lock or repo.wlock)
+
+    Do not instantiate outside of the vfs layer.
+    """
+    def __init__(self, fh):
+        super(checkambigatclosing, self).__init__(fh)
+        object.__setattr__(self, '_oldstat', util.filestat(fh.name))
+
+    def _checkambig(self):
+        oldstat = self._oldstat
+        if oldstat.stat:
+            newstat = util.filestat(self._origfh.name)
+            if newstat.isambig(oldstat):
+                # stat of changed file is ambiguous to original one
+                advanced = (oldstat.stat.st_mtime + 1) & 0x7fffffff
+                os.utime(self._origfh.name, (advanced, advanced))
+
+    def __exit__(self, exc_type, exc_value, exc_tb):
+        self._origfh.__exit__(exc_type, exc_value, exc_tb)
+        self._checkambig()
+
+    def close(self):
+        self._origfh.close()
+        self._checkambig()

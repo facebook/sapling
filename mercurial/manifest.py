@@ -104,68 +104,299 @@ def _textv2(it):
     _checkforbidden(files)
     return ''.join(lines)
 
-class _lazymanifest(dict):
-    """This is the pure implementation of lazymanifest.
-
-    It has not been optimized *at all* and is not lazy.
-    """
-
-    def __init__(self, data):
-        dict.__init__(self)
-        for f, n, fl in _parse(data):
-            self[f] = n, fl
-
-    def __setitem__(self, k, v):
-        node, flag = v
-        assert node is not None
-        if len(node) > 21:
-            node = node[:21] # match c implementation behavior
-        dict.__setitem__(self, k, (node, flag))
+class lazymanifestiter(object):
+    def __init__(self, lm):
+        self.pos = 0
+        self.lm = lm
 
     def __iter__(self):
-        return iter(sorted(dict.keys(self)))
+        return self
 
-    def iterkeys(self):
-        return iter(sorted(dict.keys(self)))
+    def next(self):
+        try:
+            data, pos = self.lm._get(self.pos)
+        except IndexError:
+            raise StopIteration
+        if pos == -1:
+            self.pos += 1
+            return data[0]
+        self.pos += 1
+        zeropos = data.find('\x00', pos)
+        return data[pos:zeropos]
 
-    def iterentries(self):
-        return ((f, e[0], e[1]) for f, e in sorted(self.iteritems()))
+class lazymanifestiterentries(object):
+    def __init__(self, lm):
+        self.lm = lm
+        self.pos = 0
+
+    def __iter__(self):
+        return self
+
+    def next(self):
+        try:
+            data, pos = self.lm._get(self.pos)
+        except IndexError:
+            raise StopIteration
+        if pos == -1:
+            self.pos += 1
+            return data
+        zeropos = data.find('\x00', pos)
+        hashval = unhexlify(data, self.lm.extrainfo[self.pos],
+                            zeropos + 1, 40)
+        flags = self.lm._getflags(data, self.pos, zeropos)
+        self.pos += 1
+        return (data[pos:zeropos], hashval, flags)
+
+def unhexlify(data, extra, pos, length):
+    s = data[pos:pos + length].decode('hex')
+    if extra:
+        s += chr(extra & 0xff)
+    return s
+
+def _cmp(a, b):
+    return (a > b) - (a < b)
+
+class _lazymanifest(object):
+    def __init__(self, data, positions=None, extrainfo=None, extradata=None):
+        if positions is None:
+            self.positions = self.findlines(data)
+            self.extrainfo = [0] * len(self.positions)
+            self.data = data
+            self.extradata = []
+        else:
+            self.positions = positions[:]
+            self.extrainfo = extrainfo[:]
+            self.extradata = extradata[:]
+            self.data = data
+
+    def findlines(self, data):
+        if not data:
+            return []
+        pos = data.find("\n")
+        if pos == -1 or data[-1] != '\n':
+            raise ValueError("Manifest did not end in a newline.")
+        positions = [0]
+        prev = data[:data.find('\x00')]
+        while pos < len(data) - 1 and pos != -1:
+            positions.append(pos + 1)
+            nexts = data[pos + 1:data.find('\x00', pos + 1)]
+            if nexts < prev:
+                raise ValueError("Manifest lines not in sorted order.")
+            prev = nexts
+            pos = data.find("\n", pos + 1)
+        return positions
+
+    def _get(self, index):
+        # get the position encoded in pos:
+        #   positive number is an index in 'data'
+        #   negative number is in extrapieces
+        pos = self.positions[index]
+        if pos >= 0:
+            return self.data, pos
+        return self.extradata[-pos - 1], -1
+
+    def _getkey(self, pos):
+        if pos >= 0:
+            return self.data[pos:self.data.find('\x00', pos + 1)]
+        return self.extradata[-pos - 1][0]
+
+    def bsearch(self, key):
+        first = 0
+        last = len(self.positions) - 1
+
+        while first <= last:
+            midpoint = (first + last)//2
+            nextpos = self.positions[midpoint]
+            candidate = self._getkey(nextpos)
+            r = _cmp(key, candidate)
+            if r == 0:
+                return midpoint
+            else:
+                if r < 0:
+                    last = midpoint - 1
+                else:
+                    first = midpoint + 1
+        return -1
+
+    def bsearch2(self, key):
+        # same as the above, but will always return the position
+        # done for performance reasons
+        first = 0
+        last = len(self.positions) - 1
+
+        while first <= last:
+            midpoint = (first + last)//2
+            nextpos = self.positions[midpoint]
+            candidate = self._getkey(nextpos)
+            r = _cmp(key, candidate)
+            if r == 0:
+                return (midpoint, True)
+            else:
+                if r < 0:
+                    last = midpoint - 1
+                else:
+                    first = midpoint + 1
+        return (first, False)
+
+    def __contains__(self, key):
+        return self.bsearch(key) != -1
+
+    def _getflags(self, data, needle, pos):
+        start = pos + 41
+        end = data.find("\n", start)
+        if end == -1:
+            end = len(data) - 1
+        if start == end:
+            return ''
+        return self.data[start:end]
+
+    def __getitem__(self, key):
+        if not isinstance(key, str):
+            raise TypeError("getitem: manifest keys must be a string.")
+        needle = self.bsearch(key)
+        if needle == -1:
+            raise KeyError
+        data, pos = self._get(needle)
+        if pos == -1:
+            return (data[1], data[2])
+        zeropos = data.find('\x00', pos)
+        assert 0 <= needle <= len(self.positions)
+        assert len(self.extrainfo) == len(self.positions)
+        hashval = unhexlify(data, self.extrainfo[needle], zeropos + 1, 40)
+        flags = self._getflags(data, needle, zeropos)
+        return (hashval, flags)
+
+    def __delitem__(self, key):
+        needle, found = self.bsearch2(key)
+        if not found:
+            raise KeyError
+        cur = self.positions[needle]
+        self.positions = self.positions[:needle] + self.positions[needle + 1:]
+        self.extrainfo = self.extrainfo[:needle] + self.extrainfo[needle + 1:]
+        if cur >= 0:
+            self.data = self.data[:cur] + '\x00' + self.data[cur + 1:]
+
+    def __setitem__(self, key, value):
+        if not isinstance(key, str):
+            raise TypeError("setitem: manifest keys must be a string.")
+        if not isinstance(value, tuple) or len(value) != 2:
+            raise TypeError("Manifest values must be a tuple of (node, flags).")
+        hashval = value[0]
+        if not isinstance(hashval, str) or not 20 <= len(hashval) <= 22:
+            raise TypeError("node must be a 20-byte string")
+        flags = value[1]
+        if len(hashval) == 22:
+            hashval = hashval[:-1]
+        if not isinstance(flags, str) or len(flags) > 1:
+            raise TypeError("flags must a 0 or 1 byte string, got %r", flags)
+        needle, found = self.bsearch2(key)
+        if found:
+            # put the item
+            pos = self.positions[needle]
+            if pos < 0:
+                self.extradata[-pos - 1] = (key, hashval, value[1])
+            else:
+                # just don't bother
+                self.extradata.append((key, hashval, value[1]))
+                self.positions[needle] = -len(self.extradata)
+        else:
+            # not found, put it in with extra positions
+            self.extradata.append((key, hashval, value[1]))
+            self.positions = (self.positions[:needle] + [-len(self.extradata)]
+                              + self.positions[needle:])
+            self.extrainfo = (self.extrainfo[:needle] + [0] +
+                              self.extrainfo[needle:])
 
     def copy(self):
-        c = _lazymanifest('')
-        c.update(self)
-        return c
+        # XXX call _compact like in C?
+        return _lazymanifest(self.data, self.positions, self.extrainfo,
+            self.extradata)
+
+    def _compact(self):
+        # hopefully not called TOO often
+        if len(self.extradata) == 0:
+            return
+        l = []
+        last_cut = 0
+        i = 0
+        offset = 0
+        self.extrainfo = [0] * len(self.positions)
+        while i < len(self.positions):
+            if self.positions[i] >= 0:
+                cur = self.positions[i]
+                last_cut = cur
+                while True:
+                    self.positions[i] = offset
+                    i += 1
+                    if i == len(self.positions) or self.positions[i] < 0:
+                        break
+                    offset += self.positions[i] - cur
+                    cur = self.positions[i]
+                end_cut = self.data.find('\n', cur)
+                if end_cut != -1:
+                    end_cut += 1
+                offset += end_cut - cur
+                l.append(self.data[last_cut:end_cut])
+            else:
+                while i < len(self.positions) and self.positions[i] < 0:
+                    cur = self.positions[i]
+                    t = self.extradata[-cur - 1]
+                    l.append(self._pack(t))
+                    self.positions[i] = offset
+                    if len(t[1]) > 20:
+                        self.extrainfo[i] = ord(t[1][21])
+                    offset += len(l[-1])
+                    i += 1
+        self.data = ''.join(l)
+        self.extradata = []
+
+    def _pack(self, d):
+        return d[0] + '\x00' + d[1][:20].encode('hex') + d[2] + '\n'
+
+    def text(self):
+        self._compact()
+        return self.data
 
     def diff(self, m2, clean=False):
         '''Finds changes between the current manifest and m2.'''
+        # XXX think whether efficiency matters here
         diff = {}
 
-        for fn, e1 in self.iteritems():
+        for fn, e1, flags in self.iterentries():
             if fn not in m2:
-                diff[fn] = e1, (None, '')
+                diff[fn] = (e1, flags), (None, '')
             else:
                 e2 = m2[fn]
-                if e1 != e2:
-                    diff[fn] = e1, e2
+                if (e1, flags) != e2:
+                    diff[fn] = (e1, flags), e2
                 elif clean:
                     diff[fn] = None
 
-        for fn, e2 in m2.iteritems():
+        for fn, e2, flags in m2.iterentries():
             if fn not in self:
-                diff[fn] = (None, ''), e2
+                diff[fn] = (None, ''), (e2, flags)
 
         return diff
 
+    def iterentries(self):
+        return lazymanifestiterentries(self)
+
+    def iterkeys(self):
+        return lazymanifestiter(self)
+
+    def __iter__(self):
+        return lazymanifestiter(self)
+
+    def __len__(self):
+        return len(self.positions)
+
     def filtercopy(self, filterfn):
+        # XXX should be optimized
         c = _lazymanifest('')
         for f, n, fl in self.iterentries():
             if filterfn(f):
                 c[f] = n, fl
         return c
-
-    def text(self):
-        """Get the full data of this manifest as a bytestring."""
-        return _textv1(self.iterentries())
 
 try:
     _lazymanifest = parsers.lazymanifest
@@ -882,6 +1113,8 @@ class treemanifest(object):
 
     def writesubtrees(self, m1, m2, writesubtree):
         self._load() # for consistency; should never have any effect here
+        m1._load()
+        m2._load()
         emptytree = treemanifest()
         for d, subm in self._dirs.iteritems():
             subp1 = m1._dirs.get(d, emptytree)._node
@@ -890,12 +1123,11 @@ class treemanifest(object):
                 subp1, subp2 = subp2, subp1
             writesubtree(subm, subp1, subp2)
 
-class manifest(revlog.revlog):
+class manifestrevlog(revlog.revlog):
+    '''A revlog that stores manifest texts. This is responsible for caching the
+    full-text manifest contents.
+    '''
     def __init__(self, opener, dir='', dirlogcache=None):
-        '''The 'dir' and 'dirlogcache' arguments are for internal use by
-        manifest.manifest only. External users should create a root manifest
-        log with manifest.manifest(opener) and call dirlog() on it.
-        '''
         # During normal operations, we expect to deal with not more than four
         # revs at a time (such as during commit --amend). When rebasing large
         # stacks of commits, the number can go up, hence the config knob below.
@@ -907,17 +1139,18 @@ class manifest(revlog.revlog):
             cachesize = opts.get('manifestcachesize', cachesize)
             usetreemanifest = opts.get('treemanifest', usetreemanifest)
             usemanifestv2 = opts.get('manifestv2', usemanifestv2)
-        self._mancache = util.lrucachedict(cachesize)
-        self._treeinmem = usetreemanifest
+
         self._treeondisk = usetreemanifest
         self._usemanifestv2 = usemanifestv2
+
+        self._fulltextcache = util.lrucachedict(cachesize)
+
         indexfile = "00manifest.i"
         if dir:
-            assert self._treeondisk
+            assert self._treeondisk, 'opts is %r' % opts
             if not dir.endswith('/'):
                 dir = dir + '/'
             indexfile = "meta/" + dir + "00manifest.i"
-        revlog.revlog.__init__(self, opener, indexfile)
         self._dir = dir
         # The dirlogcache is kept on the root manifest log
         if dir:
@@ -925,12 +1158,281 @@ class manifest(revlog.revlog):
         else:
             self._dirlogcache = {'': self}
 
+        super(manifestrevlog, self).__init__(opener, indexfile,
+                                             checkambig=bool(dir))
+
+    @property
+    def fulltextcache(self):
+        return self._fulltextcache
+
+    def clearcaches(self):
+        super(manifestrevlog, self).clearcaches()
+        self._fulltextcache.clear()
+        self._dirlogcache = {'': self}
+
+    def dirlog(self, dir):
+        if dir:
+            assert self._treeondisk
+        if dir not in self._dirlogcache:
+            self._dirlogcache[dir] = manifestrevlog(self.opener, dir,
+                                                    self._dirlogcache)
+        return self._dirlogcache[dir]
+
+    def add(self, m, transaction, link, p1, p2, added, removed):
+        if (p1 in self.fulltextcache and util.safehasattr(m, 'fastdelta')
+            and not self._usemanifestv2):
+            # If our first parent is in the manifest cache, we can
+            # compute a delta here using properties we know about the
+            # manifest up-front, which may save time later for the
+            # revlog layer.
+
+            _checkforbidden(added)
+            # combine the changed lists into one sorted iterator
+            work = heapq.merge([(x, False) for x in added],
+                               [(x, True) for x in removed])
+
+            arraytext, deltatext = m.fastdelta(self.fulltextcache[p1], work)
+            cachedelta = self.rev(p1), deltatext
+            text = util.buffer(arraytext)
+            n = self.addrevision(text, transaction, link, p1, p2, cachedelta)
+        else:
+            # The first parent manifest isn't already loaded, so we'll
+            # just encode a fulltext of the manifest and pass that
+            # through to the revlog layer, and let it handle the delta
+            # process.
+            if self._treeondisk:
+                m1 = self.read(p1)
+                m2 = self.read(p2)
+                n = self._addtree(m, transaction, link, m1, m2)
+                arraytext = None
+            else:
+                text = m.text(self._usemanifestv2)
+                n = self.addrevision(text, transaction, link, p1, p2)
+                arraytext = array.array('c', text)
+
+        if arraytext is not None:
+            self.fulltextcache[n] = arraytext
+
+        return n
+
+    def _addtree(self, m, transaction, link, m1, m2):
+        # If the manifest is unchanged compared to one parent,
+        # don't write a new revision
+        if m.unmodifiedsince(m1) or m.unmodifiedsince(m2):
+            return m.node()
+        def writesubtree(subm, subp1, subp2):
+            sublog = self.dirlog(subm.dir())
+            sublog.add(subm, transaction, link, subp1, subp2, None, None)
+        m.writesubtrees(m1, m2, writesubtree)
+        text = m.dirtext(self._usemanifestv2)
+        # Double-check whether contents are unchanged to one parent
+        if text == m1.dirtext(self._usemanifestv2):
+            n = m1.node()
+        elif text == m2.dirtext(self._usemanifestv2):
+            n = m2.node()
+        else:
+            n = self.addrevision(text, transaction, link, m1.node(), m2.node())
+        # Save nodeid so parent manifest can calculate its nodeid
+        m.setnode(n)
+        return n
+
+class manifestlog(object):
+    """A collection class representing the collection of manifest snapshots
+    referenced by commits in the repository.
+
+    In this situation, 'manifest' refers to the abstract concept of a snapshot
+    of the list of files in the given commit. Consumers of the output of this
+    class do not care about the implementation details of the actual manifests
+    they receive (i.e. tree or flat or lazily loaded, etc)."""
+    def __init__(self, opener, repo):
+        self._repo = repo
+
+        usetreemanifest = False
+
+        opts = getattr(opener, 'options', None)
+        if opts is not None:
+            usetreemanifest = opts.get('treemanifest', usetreemanifest)
+        self._treeinmem = usetreemanifest
+
+        # We'll separate this into it's own cache once oldmanifest is no longer
+        # used
+        self._mancache = repo.manifest._mancache
+
+    @property
+    def _revlog(self):
+        return self._repo.manifest
+
+    def __getitem__(self, node):
+        """Retrieves the manifest instance for the given node. Throws a KeyError
+        if not found.
+        """
+        if node in self._mancache:
+            cachemf = self._mancache[node]
+            # The old manifest may put non-ctx manifests in the cache, so skip
+            # those since they don't implement the full api.
+            if (isinstance(cachemf, manifestctx) or
+                isinstance(cachemf, treemanifestctx)):
+                return cachemf
+
+        if self._treeinmem:
+            m = treemanifestctx(self._revlog, '', node)
+        else:
+            m = manifestctx(self._revlog, node)
+        if node != revlog.nullid:
+            self._mancache[node] = m
+        return m
+
+    def add(self, m, transaction, link, p1, p2, added, removed):
+        return self._revlog.add(m, transaction, link, p1, p2, added, removed)
+
+class manifestctx(object):
+    """A class representing a single revision of a manifest, including its
+    contents, its parent revs, and its linkrev.
+    """
+    def __init__(self, revlog, node):
+        self._revlog = revlog
+        self._data = None
+
+        self._node = node
+
+        # TODO: We eventually want p1, p2, and linkrev exposed on this class,
+        # but let's add it later when something needs it and we can load it
+        # lazily.
+        #self.p1, self.p2 = revlog.parents(node)
+        #rev = revlog.rev(node)
+        #self.linkrev = revlog.linkrev(rev)
+
+    def node(self):
+        return self._node
+
+    def read(self):
+        if not self._data:
+            if self._node == revlog.nullid:
+                self._data = manifestdict()
+            else:
+                text = self._revlog.revision(self._node)
+                arraytext = array.array('c', text)
+                self._revlog._fulltextcache[self._node] = arraytext
+                self._data = manifestdict(text)
+        return self._data
+
+    def readfast(self):
+        rl = self._revlog
+        r = rl.rev(self._node)
+        deltaparent = rl.deltaparent(r)
+        if deltaparent != revlog.nullrev and deltaparent in rl.parentrevs(r):
+            return self.readdelta()
+        return self.read()
+
+    def readdelta(self):
+        revlog = self._revlog
+        if revlog._usemanifestv2:
+            # Need to perform a slow delta
+            r0 = revlog.deltaparent(revlog.rev(self._node))
+            m0 = manifestctx(revlog, revlog.node(r0)).read()
+            m1 = self.read()
+            md = manifestdict()
+            for f, ((n0, fl0), (n1, fl1)) in m0.diff(m1).iteritems():
+                if n1:
+                    md[f] = n1
+                    if fl1:
+                        md.setflag(f, fl1)
+            return md
+
+        r = revlog.rev(self._node)
+        d = mdiff.patchtext(revlog.revdiff(revlog.deltaparent(r), r))
+        return manifestdict(d)
+
+class treemanifestctx(object):
+    def __init__(self, revlog, dir, node):
+        revlog = revlog.dirlog(dir)
+        self._revlog = revlog
+        self._dir = dir
+        self._data = None
+
+        self._node = node
+
+        # TODO: Load p1/p2/linkrev lazily. They need to be lazily loaded so that
+        # we can instantiate treemanifestctx objects for directories we don't
+        # have on disk.
+        #self.p1, self.p2 = revlog.parents(node)
+        #rev = revlog.rev(node)
+        #self.linkrev = revlog.linkrev(rev)
+
+    def read(self):
+        if not self._data:
+            if self._node == revlog.nullid:
+                self._data = treemanifest()
+            elif self._revlog._treeondisk:
+                m = treemanifest(dir=self._dir)
+                def gettext():
+                    return self._revlog.revision(self._node)
+                def readsubtree(dir, subm):
+                    return treemanifestctx(self._revlog, dir, subm).read()
+                m.read(gettext, readsubtree)
+                m.setnode(self._node)
+                self._data = m
+            else:
+                text = self._revlog.revision(self._node)
+                arraytext = array.array('c', text)
+                self._revlog.fulltextcache[self._node] = arraytext
+                self._data = treemanifest(dir=self._dir, text=text)
+
+        return self._data
+
+    def node(self):
+        return self._node
+
+    def readdelta(self):
+        # Need to perform a slow delta
+        revlog = self._revlog
+        r0 = revlog.deltaparent(revlog.rev(self._node))
+        m0 = treemanifestctx(revlog, self._dir, revlog.node(r0)).read()
+        m1 = self.read()
+        md = treemanifest(dir=self._dir)
+        for f, ((n0, fl0), (n1, fl1)) in m0.diff(m1).iteritems():
+            if n1:
+                md[f] = n1
+                if fl1:
+                    md.setflag(f, fl1)
+        return md
+
+    def readfast(self):
+        rl = self._revlog
+        r = rl.rev(self._node)
+        deltaparent = rl.deltaparent(r)
+        if deltaparent != revlog.nullrev and deltaparent in rl.parentrevs(r):
+            return self.readdelta()
+        return self.read()
+
+class manifest(manifestrevlog):
+    def __init__(self, opener, dir='', dirlogcache=None):
+        '''The 'dir' and 'dirlogcache' arguments are for internal use by
+        manifest.manifest only. External users should create a root manifest
+        log with manifest.manifest(opener) and call dirlog() on it.
+        '''
+        # During normal operations, we expect to deal with not more than four
+        # revs at a time (such as during commit --amend). When rebasing large
+        # stacks of commits, the number can go up, hence the config knob below.
+        cachesize = 4
+        usetreemanifest = False
+        opts = getattr(opener, 'options', None)
+        if opts is not None:
+            cachesize = opts.get('manifestcachesize', cachesize)
+            usetreemanifest = opts.get('treemanifest', usetreemanifest)
+        self._mancache = util.lrucachedict(cachesize)
+        self._treeinmem = usetreemanifest
+        super(manifest, self).__init__(opener, dir=dir, dirlogcache=dirlogcache)
+
     def _newmanifest(self, data=''):
         if self._treeinmem:
             return treemanifest(self._dir, data)
         return manifestdict(data)
 
     def dirlog(self, dir):
+        """This overrides the base revlog implementation to allow construction
+        'manifest' types instead of manifestrevlog types. This is only needed
+        until we migrate off the 'manifest' type."""
         if dir:
             assert self._treeondisk
         if dir not in self._dirlogcache:
@@ -973,20 +1475,6 @@ class manifest(revlog.revlog):
         d = mdiff.patchtext(self.revdiff(self.deltaparent(r), r))
         return manifestdict(d)
 
-    def readfast(self, node):
-        '''use the faster of readdelta or read
-
-        This will return a manifest which is either only the files
-        added/modified relative to p1, or all files in the
-        manifest. Which one is returned depends on the codepath used
-        to retrieve the data.
-        '''
-        r = self.rev(node)
-        deltaparent = self.deltaparent(r)
-        if deltaparent != revlog.nullrev and deltaparent in self.parentrevs(r):
-            return self.readdelta(node)
-        return self.read(node)
-
     def readshallowfast(self, node):
         '''like readfast(), but calls readshallowdelta() instead of readdelta()
         '''
@@ -1000,7 +1488,11 @@ class manifest(revlog.revlog):
         if node == revlog.nullid:
             return self._newmanifest() # don't upset local cache
         if node in self._mancache:
-            return self._mancache[node][0]
+            cached = self._mancache[node]
+            if (isinstance(cached, manifestctx) or
+                isinstance(cached, treemanifestctx)):
+                cached = cached.read()
+            return cached
         if self._treeondisk:
             def gettext():
                 return self.revision(node)
@@ -1014,7 +1506,9 @@ class manifest(revlog.revlog):
             text = self.revision(node)
             m = self._newmanifest(text)
             arraytext = array.array('c', text)
-        self._mancache[node] = (m, arraytext)
+        self._mancache[node] = m
+        if arraytext is not None:
+            self.fulltextcache[node] = arraytext
         return m
 
     def readshallow(self, node):
@@ -1033,64 +1527,6 @@ class manifest(revlog.revlog):
         except KeyError:
             return None, None
 
-    def add(self, m, transaction, link, p1, p2, added, removed):
-        if (p1 in self._mancache and not self._treeinmem
-            and not self._usemanifestv2):
-            # If our first parent is in the manifest cache, we can
-            # compute a delta here using properties we know about the
-            # manifest up-front, which may save time later for the
-            # revlog layer.
-
-            _checkforbidden(added)
-            # combine the changed lists into one sorted iterator
-            work = heapq.merge([(x, False) for x in added],
-                               [(x, True) for x in removed])
-
-            arraytext, deltatext = m.fastdelta(self._mancache[p1][1], work)
-            cachedelta = self.rev(p1), deltatext
-            text = util.buffer(arraytext)
-            n = self.addrevision(text, transaction, link, p1, p2, cachedelta)
-        else:
-            # The first parent manifest isn't already loaded, so we'll
-            # just encode a fulltext of the manifest and pass that
-            # through to the revlog layer, and let it handle the delta
-            # process.
-            if self._treeondisk:
-                m1 = self.read(p1)
-                m2 = self.read(p2)
-                n = self._addtree(m, transaction, link, m1, m2)
-                arraytext = None
-            else:
-                text = m.text(self._usemanifestv2)
-                n = self.addrevision(text, transaction, link, p1, p2)
-                arraytext = array.array('c', text)
-
-        self._mancache[n] = (m, arraytext)
-
-        return n
-
-    def _addtree(self, m, transaction, link, m1, m2):
-        # If the manifest is unchanged compared to one parent,
-        # don't write a new revision
-        if m.unmodifiedsince(m1) or m.unmodifiedsince(m2):
-            return m.node()
-        def writesubtree(subm, subp1, subp2):
-            sublog = self.dirlog(subm.dir())
-            sublog.add(subm, transaction, link, subp1, subp2, None, None)
-        m.writesubtrees(m1, m2, writesubtree)
-        text = m.dirtext(self._usemanifestv2)
-        # Double-check whether contents are unchanged to one parent
-        if text == m1.dirtext(self._usemanifestv2):
-            n = m1.node()
-        elif text == m2.dirtext(self._usemanifestv2):
-            n = m2.node()
-        else:
-            n = self.addrevision(text, transaction, link, m1.node(), m2.node())
-        # Save nodeid so parent manifest can calculate its nodeid
-        m.setnode(n)
-        return n
-
     def clearcaches(self):
         super(manifest, self).clearcaches()
         self._mancache.clear()
-        self._dirlogcache = {'': self}

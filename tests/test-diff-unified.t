@@ -333,4 +333,20 @@ showfunc diff
   +    return a + b + c + e;
    }
 
+If [diff] git is set to true, but the user says --no-git, we should
+*not* get git diffs
+  $ hg diff --nodates --config diff.git=1 --no-git
+  diff -r f2c7c817fa55 f1
+  --- a/f1
+  +++ b/f1
+  @@ -2,6 +2,6 @@
+       int a = 0;
+       int b = 1;
+       int c = 2;
+  -    int d = 3;
+  -    return a + b + c + d;
+  +    int e = 3;
+  +    return a + b + c + e;
+   }
+
   $ cd ..

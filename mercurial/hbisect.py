@@ -139,6 +139,19 @@ def bisect(changelog, state):
 
     return ([best_node], tot, good)
 
+def extendrange(repo, state, nodes, good):
+    # bisect is incomplete when it ends on a merge node and
+    # one of the parent was not checked.
+    parents = repo[nodes[0]].parents()
+    if len(parents) > 1:
+        if good:
+            side = state['bad']
+        else:
+            side = state['good']
+        num = len(set(i.node() for i in parents) & set(side))
+        if num == 1:
+            return parents[0].ancestor(parents[1])
+    return None
 
 def load_state(repo):
     state = {'current': [], 'good': [], 'bad': [], 'skip': []}
@@ -158,6 +171,22 @@ def save_state(repo, state):
             for node in state[kind]:
                 f.write("%s %s\n" % (kind, hex(node)))
         f.close()
+
+def resetstate(repo):
+    """remove any bisect state from the repository"""
+    if repo.vfs.exists("bisect.state"):
+        repo.vfs.unlink("bisect.state")
+
+def checkstate(state):
+    """check we have both 'good' and 'bad' to define a range
+
+    Raise Abort exception otherwise."""
+    if state['good'] and state['bad']:
+        return True
+    if not state['good']:
+        raise error.Abort(_('cannot bisect (no known good revisions)'))
+    else:
+        raise error.Abort(_('cannot bisect (no known bad revisions)'))
 
 def get(repo, status):
     """
@@ -261,3 +290,29 @@ def shortlabel(label):
         return label[0].upper()
 
     return None
+
+def printresult(ui, repo, state, displayer, nodes, good):
+    if len(nodes) == 1:
+        # narrowed it down to a single revision
+        if good:
+            ui.write(_("The first good revision is:\n"))
+        else:
+            ui.write(_("The first bad revision is:\n"))
+        displayer.show(repo[nodes[0]])
+        extendnode = extendrange(repo, state, nodes, good)
+        if extendnode is not None:
+            ui.write(_('Not all ancestors of this changeset have been'
+                       ' checked.\nUse bisect --extend to continue the '
+                       'bisection from\nthe common ancestor, %s.\n')
+                     % extendnode)
+    else:
+        # multiple possible revisions
+        if good:
+            ui.write(_("Due to skipped revisions, the first "
+                    "good revision could be any of:\n"))
+        else:
+            ui.write(_("Due to skipped revisions, the first "
+                    "bad revision could be any of:\n"))
+        for n in nodes:
+            displayer.show(repo[n])
+    displayer.close()

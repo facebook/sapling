@@ -56,10 +56,8 @@ class bundlerevlog(revlog.revlog):
         self.repotiprev = n - 1
         chain = None
         self.bundlerevs = set() # used by 'bundle()' revset expression
-        while True:
-            chunkdata = bundle.deltachunk(chain)
-            if not chunkdata:
-                break
+        getchunk = lambda: bundle.deltachunk(chain)
+        for chunkdata in iter(getchunk, {}):
             node = chunkdata['node']
             p1 = chunkdata['p1']
             p2 = chunkdata['p2']
@@ -190,21 +188,35 @@ class bundlechangelog(bundlerevlog, changelog.changelog):
             self.filteredrevs = oldfilter
 
 class bundlemanifest(bundlerevlog, manifest.manifest):
-    def __init__(self, opener, bundle, linkmapper):
-        manifest.manifest.__init__(self, opener)
+    def __init__(self, opener, bundle, linkmapper, dirlogstarts=None, dir=''):
+        manifest.manifest.__init__(self, opener, dir=dir)
         bundlerevlog.__init__(self, opener, self.indexfile, bundle,
                               linkmapper)
+        if dirlogstarts is None:
+            dirlogstarts = {}
+            if self.bundle.version == "03":
+                dirlogstarts = _getfilestarts(self.bundle)
+        self._dirlogstarts = dirlogstarts
+        self._linkmapper = linkmapper
 
     def baserevision(self, nodeorrev):
         node = nodeorrev
         if isinstance(node, int):
             node = self.node(node)
 
-        if node in self._mancache:
-            result = self._mancache[node][0].text()
+        if node in self.fulltextcache:
+            result = self.fulltextcache[node].tostring()
         else:
             result = manifest.manifest.revision(self, nodeorrev)
         return result
+
+    def dirlog(self, d):
+        if d in self._dirlogstarts:
+            self.bundle.seek(self._dirlogstarts[d])
+            return bundlemanifest(
+                self.opener, self.bundle, self._linkmapper,
+                self._dirlogstarts, dir=d)
+        return super(bundlemanifest, self).dirlog(d)
 
 class bundlefilelog(bundlerevlog, filelog.filelog):
     def __init__(self, opener, path, bundle, linkmapper):
@@ -235,6 +247,15 @@ class bundlephasecache(phases.phasecache):
         self.phaseroots[phase] = newroots
         self.invalidate()
         self.dirty = True
+
+def _getfilestarts(bundle):
+    bundlefilespos = {}
+    for chunkdata in iter(bundle.filelogheader, {}):
+        fname = chunkdata['filename']
+        bundlefilespos[fname] = bundle.tell()
+        for chunk in iter(lambda: bundle.deltachunk(None), {}):
+            pass
+    return bundlefilespos
 
 class bundlerepository(localrepo.localrepository):
     def __init__(self, ui, path, bundlename):
@@ -283,7 +304,8 @@ class bundlerepository(localrepo.localrepository):
                                                   "multiple changegroups")
                     cgstream = part
                     version = part.params.get('version', '01')
-                    if version not in changegroup.allsupportedversions(ui):
+                    legalcgvers = changegroup.supportedincomingversions(self)
+                    if version not in legalcgvers:
                         msg = _('Unsupported changegroup version: %s')
                         raise error.Abort(msg % version)
                     if self.bundle.compressed():
@@ -328,10 +350,6 @@ class bundlerepository(localrepo.localrepository):
         self.bundle.manifestheader()
         linkmapper = self.unfiltered().changelog.rev
         m = bundlemanifest(self.svfs, self.bundle, linkmapper)
-        # XXX: hack to work with changegroup3, but we still don't handle
-        # tree manifests correctly
-        if self.bundle.version == "03":
-            self.bundle.filelogheader()
         self.filestart = self.bundle.tell()
         return m
 
@@ -351,16 +369,7 @@ class bundlerepository(localrepo.localrepository):
     def file(self, f):
         if not self.bundlefilespos:
             self.bundle.seek(self.filestart)
-            while True:
-                chunkdata = self.bundle.filelogheader()
-                if not chunkdata:
-                    break
-                fname = chunkdata['filename']
-                self.bundlefilespos[fname] = self.bundle.tell()
-                while True:
-                    c = self.bundle.deltachunk(None)
-                    if not c:
-                        break
+            self.bundlefilespos = _getfilestarts(self.bundle)
 
         if f in self.bundlefilespos:
             self.bundle.seek(self.bundlefilespos[f])
@@ -480,7 +489,10 @@ def getremotechanges(ui, repo, other, onlyheads=None, bundlename=None,
     if bundlename or not localrepo:
         # create a bundle (uncompressed if other repo is not local)
 
-        canbundle2 = (ui.configbool('experimental', 'bundle2-exp', True)
+        # developer config: devel.legacy.exchange
+        legexc = ui.configlist('devel', 'legacy.exchange')
+        forcebundle1 = 'bundle2' not in legexc and 'bundle1' in legexc
+        canbundle2 = (not forcebundle1
                       and other.capable('getbundle')
                       and other.capable('bundle2'))
         if canbundle2:

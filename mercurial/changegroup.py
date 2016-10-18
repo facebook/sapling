@@ -15,7 +15,6 @@ import weakref
 from .i18n import _
 from .node import (
     hex,
-    nullid,
     nullrev,
     short,
 )
@@ -94,7 +93,9 @@ def writechunks(ui, chunks, filename, vfs=None):
             if vfs:
                 fh = vfs.open(filename, "wb")
             else:
-                fh = open(filename, "wb")
+                # Increase default buffer size because default is usually
+                # small (4k is common on Linux).
+                fh = open(filename, "wb", 131072)
         else:
             fd, filename = tempfile.mkstemp(prefix="hg-bundle-", suffix=".hg")
             fh = os.fdopen(fd, "wb")
@@ -333,7 +334,7 @@ class cg1unpacker(object):
                     for cset in xrange(clstart, clend):
                         mfnode = repo.changelog.read(
                             repo.changelog.node(cset))[0]
-                        mfest = repo.manifest.readdelta(mfnode)
+                        mfest = repo.manifestlog[mfnode].readdelta()
                         # store file nodes we must see
                         for f, n in mfest.iteritems():
                             needfiles.setdefault(f, set()).add(n)
@@ -404,6 +405,7 @@ class cg1unpacker(object):
                         # coming call to `destroyed` will repair it.
                         # In other case we can safely update cache on
                         # disk.
+                        repo.ui.debug('updating the branch cache\n')
                         branchmap.updatecache(repo.filtered('served'))
 
                     def runhooks():
@@ -413,8 +415,6 @@ class cg1unpacker(object):
                         if clstart >= len(repo):
                             return
 
-                        # forcefully update the on-disk branch cache
-                        repo.ui.debug("updating the branch cache\n")
                         repo.hook("changegroup", **hookargs)
 
                         for n in added:
@@ -475,10 +475,7 @@ class cg3unpacker(cg2unpacker):
     def _unpackmanifests(self, repo, revmap, trp, prog, numchanges):
         super(cg3unpacker, self)._unpackmanifests(repo, revmap, trp, prog,
                                                   numchanges)
-        while True:
-            chunkdata = self.filelogheader()
-            if not chunkdata:
-                break
+        for chunkdata in iter(self.filelogheader, {}):
             # If we get here, there are directory manifests in the changegroup
             d = chunkdata["filename"]
             repo.ui.debug("adding %s revisions\n" % d)
@@ -823,11 +820,24 @@ class cg2packer(cg1packer):
 
     def deltaparent(self, revlog, rev, p1, p2, prev):
         dp = revlog.deltaparent(rev)
-        # avoid storing full revisions; pick prev in those cases
-        # also pick prev when we can't be sure remote has dp
-        if dp == nullrev or (dp != p1 and dp != p2 and dp != prev):
+        if dp == nullrev and revlog.storedeltachains:
+            # Avoid sending full revisions when delta parent is null. Pick prev
+            # in that case. It's tempting to pick p1 in this case, as p1 will
+            # be smaller in the common case. However, computing a delta against
+            # p1 may require resolving the raw text of p1, which could be
+            # expensive. The revlog caches should have prev cached, meaning
+            # less CPU for changegroup generation. There is likely room to add
+            # a flag and/or config option to control this behavior.
             return prev
-        return dp
+        elif dp == nullrev:
+            # revlog is configured to use full snapshot for a reason,
+            # stick to full snapshot.
+            return nullrev
+        elif dp not in (p1, p2, prev):
+            # Pick prev when we can't be sure remote has the base revision.
+            return prev
+        else:
+            return dp
 
     def builddeltaheader(self, node, p1n, p2n, basenode, linknode, flags):
         # Do nothing with flags, it is implicitly 0 in cg1 and cg2
@@ -946,17 +956,7 @@ def changegroupsubset(repo, roots, heads, source, version='01'):
     Another wrinkle is doing the reverse, figuring out which changeset in
     the changegroup a particular filenode or manifestnode belongs to.
     """
-    cl = repo.changelog
-    if not roots:
-        roots = [nullid]
-    discbases = []
-    for n in roots:
-        discbases.extend([p for p in cl.parents(n) if p != nullid])
-    # TODO: remove call to nodesbetween.
-    csets, roots, heads = cl.nodesbetween(roots, heads)
-    included = set(csets)
-    discbases = [n for n in discbases if n not in included]
-    outgoing = discovery.outgoing(cl, discbases, heads)
+    outgoing = discovery.outgoing(repo, missingroots=roots, missingheads=heads)
     bundler = getbundler(version, repo)
     return getsubset(repo, outgoing, bundler, source)
 
@@ -982,26 +982,7 @@ def getlocalchangegroup(repo, source, outgoing, bundlecaps=None,
     bundler = getbundler(version, repo, bundlecaps)
     return getsubset(repo, outgoing, bundler, source)
 
-def computeoutgoing(repo, heads, common):
-    """Computes which revs are outgoing given a set of common
-    and a set of heads.
-
-    This is a separate function so extensions can have access to
-    the logic.
-
-    Returns a discovery.outgoing object.
-    """
-    cl = repo.changelog
-    if common:
-        hasnode = cl.hasnode
-        common = [n for n in common if hasnode(n)]
-    else:
-        common = [nullid]
-    if not heads:
-        heads = cl.heads()
-    return discovery.outgoing(cl, common, heads)
-
-def getchangegroup(repo, source, heads=None, common=None, bundlecaps=None,
+def getchangegroup(repo, source, outgoing, bundlecaps=None,
                    version='01'):
     """Like changegroupsubset, but returns the set difference between the
     ancestors of heads and the ancestors common.
@@ -1011,7 +992,6 @@ def getchangegroup(repo, source, heads=None, common=None, bundlecaps=None,
     The nodes in common might not all be known locally due to the way the
     current discovery protocol works.
     """
-    outgoing = computeoutgoing(repo, heads, common)
     return getlocalchangegroup(repo, source, outgoing, bundlecaps=bundlecaps,
                                version=version)
 
@@ -1022,10 +1002,7 @@ def changegroup(repo, basenodes, source):
 def _addchangegroupfiles(repo, source, revmap, trp, expectedfiles, needfiles):
     revisions = 0
     files = 0
-    while True:
-        chunkdata = source.filelogheader()
-        if not chunkdata:
-            break
+    for chunkdata in iter(source.filelogheader, {}):
         files += 1
         f = chunkdata["filename"]
         repo.ui.debug("adding %s revisions\n" % f)

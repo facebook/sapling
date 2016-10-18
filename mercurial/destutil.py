@@ -416,8 +416,8 @@ def _statusotherbranchheads(ui, repo):
                         'updating to a closed head\n') %
                       (currentbranch))
             if otherheads:
-                ui.warn(_('(committing will reopen the head, '
-                            'use `hg heads .` to see %i other heads)\n') %
+                ui.warn(_("(committing will reopen the head, "
+                            "use 'hg heads .' to see %i other heads)\n") %
                           (len(otherheads)))
             else:
                 ui.warn(_('(committing will reopen branch "%s")\n') %

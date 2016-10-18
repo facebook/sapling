@@ -195,7 +195,7 @@ if on the closed branch head:
   $ norevtest "on closed branch head" clean 6
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   no open descendant heads on branch "default", updating to a closed head
-  (committing will reopen the head, use `hg heads .` to see 1 other heads)
+  (committing will reopen the head, use 'hg heads .' to see 1 other heads)
   parent=6
 
 if descendant non-closed branch head exists, and it is only one branch head:
@@ -214,7 +214,7 @@ if all descendant branch heads are closed, but there is another branch head:
   $ norevtest "all descendant branch heads are closed" clean 3
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   no open descendant heads on branch "default", updating to a closed head
-  (committing will reopen the head, use `hg heads .` to see 1 other heads)
+  (committing will reopen the head, use 'hg heads .' to see 1 other heads)
   parent=6
 
 Test updating if all branch heads are closed
@@ -379,3 +379,14 @@ Test experimental revset support
 
   $ hg log -r '_destupdate()'
   2:bd10386d478c 2 (no-eol)
+
+Test that boolean flags allow --no-flag specification to override [defaults]
+  $ cat >> $HGRCPATH <<EOF
+  > [defaults]
+  > update = --check
+  > EOF
+  $ hg co 2
+  abort: uncommitted changes
+  [255]
+  $ hg co --no-check 2
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved

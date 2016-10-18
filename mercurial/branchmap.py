@@ -470,8 +470,12 @@ class revbranchcache(object):
     def write(self, tr=None):
         """Save branch cache if it is dirty."""
         repo = self._repo
-        if self._rbcnamescount < len(self._names):
-            try:
+        wlock = None
+        step = ''
+        try:
+            if self._rbcnamescount < len(self._names):
+                step = ' names'
+                wlock = repo.wlock(wait=False)
                 if self._rbcnamescount != 0:
                     f = repo.vfs.open(_rbcnames, 'ab')
                     if f.tell() == self._rbcsnameslen:
@@ -489,16 +493,15 @@ class revbranchcache(object):
                                   for b in self._names[self._rbcnamescount:]))
                 self._rbcsnameslen = f.tell()
                 f.close()
-            except (IOError, OSError, error.Abort) as inst:
-                repo.ui.debug("couldn't write revision branch cache names: "
-                              "%s\n" % inst)
-                return
-            self._rbcnamescount = len(self._names)
+                self._rbcnamescount = len(self._names)
 
-        start = self._rbcrevslen * _rbcrecsize
-        if start != len(self._rbcrevs):
-            revs = min(len(repo.changelog), len(self._rbcrevs) // _rbcrecsize)
-            try:
+            start = self._rbcrevslen * _rbcrecsize
+            if start != len(self._rbcrevs):
+                step = ''
+                if wlock is None:
+                    wlock = repo.wlock(wait=False)
+                revs = min(len(repo.changelog),
+                           len(self._rbcrevs) // _rbcrecsize)
                 f = repo.vfs.open(_rbcrevs, 'ab')
                 if f.tell() != start:
                     repo.ui.debug("truncating %s to %s\n" % (_rbcrevs, start))
@@ -510,8 +513,10 @@ class revbranchcache(object):
                 end = revs * _rbcrecsize
                 f.write(self._rbcrevs[start:end])
                 f.close()
-            except (IOError, OSError, error.Abort) as inst:
-                repo.ui.debug("couldn't write revision branch cache: %s\n" %
-                              inst)
-                return
-            self._rbcrevslen = revs
+                self._rbcrevslen = revs
+        except (IOError, OSError, error.Abort, error.LockError) as inst:
+            repo.ui.debug("couldn't write revision branch cache%s: %s\n"
+                          % (step, inst))
+        finally:
+            if wlock is not None:
+                wlock.release()

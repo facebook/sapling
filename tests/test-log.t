@@ -717,6 +717,19 @@ log -r "follow('set:grep(b2)')"
   date:        Thu Jan 01 00:00:01 1970 +0000
   summary:     b2
   
+log -r "follow('set:grep(b2)', 4)"
+
+  $ hg up -qC 0
+  $ hg log -r "follow('set:grep(b2)', 4)"
+  changeset:   4:ddb82e70d1a1
+  tag:         tip
+  parent:      0:67e992f2c4f3
+  user:        test
+  date:        Thu Jan 01 00:00:01 1970 +0000
+  summary:     b2
+  
+  $ hg up -qC 4
+
 log -f -r null
 
   $ hg log -f -r null
@@ -916,6 +929,78 @@ log -r tip --stat
   
    b1 |  1 +
    1 files changed, 1 insertions(+), 0 deletions(-)
+  
+
+  $ cd ..
+
+log --follow --patch FILE in repository where linkrev isn't trustworthy
+(issue5376)
+
+  $ hg init follow-dup
+  $ cd follow-dup
+  $ cat <<EOF >> .hg/hgrc
+  > [ui]
+  > logtemplate = '=== {rev}: {desc}\n'
+  > [diff]
+  > nodates = True
+  > EOF
+  $ echo 0 >> a
+  $ hg ci -qAm 'a0'
+  $ echo 1 >> a
+  $ hg ci -m 'a1'
+  $ hg up -q 0
+  $ echo 1 >> a
+  $ touch b
+  $ hg ci -qAm 'a1 with b'
+  $ echo 3 >> a
+  $ hg ci -m 'a3'
+
+ fctx.rev() == 2, but fctx.linkrev() == 1
+
+  $ hg log -pf a
+  === 3: a3
+  diff -r 4ea02ba94d66 -r e7a6331a34f0 a
+  --- a/a
+  +++ b/a
+  @@ -1,2 +1,3 @@
+   0
+   1
+  +3
+  
+  === 2: a1 with b
+  diff -r 49b5e81287e2 -r 4ea02ba94d66 a
+  --- a/a
+  +++ b/a
+  @@ -1,1 +1,2 @@
+   0
+  +1
+  
+  === 0: a0
+  diff -r 000000000000 -r 49b5e81287e2 a
+  --- /dev/null
+  +++ b/a
+  @@ -0,0 +1,1 @@
+  +0
+  
+
+ fctx.introrev() == 2, but fctx.linkrev() == 1
+
+  $ hg up -q 2
+  $ hg log -pf a
+  === 2: a1 with b
+  diff -r 49b5e81287e2 -r 4ea02ba94d66 a
+  --- a/a
+  +++ b/a
+  @@ -1,1 +1,2 @@
+   0
+  +1
+  
+  === 0: a0
+  diff -r 000000000000 -r 49b5e81287e2 a
+  --- /dev/null
+  +++ b/a
+  @@ -0,0 +1,1 @@
+  +0
   
 
   $ cd ..
@@ -1661,6 +1746,34 @@ divergent bookmarks are not hidden
   $ hg log --template '{rev}:{node}\n'
   1:a765632148dc55d38c35c4f247c618701886cb2f
   0:9f758d63dcde62d547ebfb08e1e7ee96535f2b05
+
+test hidden revision 0 (issue5385)
+
+  $ hg bookmark -d X@foo
+  $ hg up null -q
+  $ hg debugobsolete 9f758d63dcde62d547ebfb08e1e7ee96535f2b05
+  $ echo f > b
+  $ hg ci -Am'b' -d '2 0'
+  adding b
+  $ echo f >> b
+  $ hg ci -m'b bis' -d '3 0'
+  $ hg log -T'{rev}:{node}\n'
+  3:d7d28b288a6b83d5d2cf49f10c5974deed3a1d2e
+  2:94375ec45bddd2a824535fc04855bd058c926ec0
+
+  $ hg log -T'{rev}:{node}\n' -r:
+  2:94375ec45bddd2a824535fc04855bd058c926ec0
+  3:d7d28b288a6b83d5d2cf49f10c5974deed3a1d2e
+  $ hg log -T'{rev}:{node}\n' -r:tip
+  2:94375ec45bddd2a824535fc04855bd058c926ec0
+  3:d7d28b288a6b83d5d2cf49f10c5974deed3a1d2e
+  $ hg log -T'{rev}:{node}\n' -r:0
+  abort: hidden revision '0'!
+  (use --hidden to access hidden revisions)
+  [255]
+  $ hg log -T'{rev}:{node}\n' -f
+  3:d7d28b288a6b83d5d2cf49f10c5974deed3a1d2e
+  2:94375ec45bddd2a824535fc04855bd058c926ec0
 
 clear extensions configuration
   $ echo '[extensions]' >> $HGRCPATH

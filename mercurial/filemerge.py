@@ -19,6 +19,7 @@ from . import (
     error,
     formatter,
     match,
+    pycompat,
     scmutil,
     simplemerge,
     tagmerge,
@@ -93,7 +94,8 @@ def internaltool(name, mergetype, onfailure=None, precheck=None):
     '''return a decorator for populating internal merge tool table'''
     def decorator(func):
         fullname = ':' + name
-        func.__doc__ = "``%s``\n" % fullname + func.__doc__.strip()
+        func.__doc__ = (pycompat.sysstr("``%s``\n" % fullname)
+                        + func.__doc__.strip())
         internals[fullname] = func
         internals['internal:' + name] = func
         internalsdoc[fullname] = func
@@ -230,50 +232,56 @@ def _matcheol(file, origfile):
                 util.writefile(file, newdata)
 
 @internaltool('prompt', nomerge)
-def _iprompt(repo, mynode, orig, fcd, fco, fca, toolconf):
+def _iprompt(repo, mynode, orig, fcd, fco, fca, toolconf, labels=None):
     """Asks the user which of the local `p1()` or the other `p2()` version to
     keep as the merged version."""
     ui = repo.ui
     fd = fcd.path()
 
+    prompts = partextras(labels)
+    prompts['fd'] = fd
     try:
         if fco.isabsent():
             index = ui.promptchoice(
-                _("local changed %s which remote deleted\n"
+                _("local%(l)s changed %(fd)s which other%(o)s deleted\n"
                   "use (c)hanged version, (d)elete, or leave (u)nresolved?"
-                  "$$ &Changed $$ &Delete $$ &Unresolved") % fd, 2)
+                  "$$ &Changed $$ &Delete $$ &Unresolved") % prompts, 2)
             choice = ['local', 'other', 'unresolved'][index]
         elif fcd.isabsent():
             index = ui.promptchoice(
-                _("remote changed %s which local deleted\n"
+                _("other%(o)s changed %(fd)s which local%(l)s deleted\n"
                   "use (c)hanged version, leave (d)eleted, or "
                   "leave (u)nresolved?"
-                  "$$ &Changed $$ &Deleted $$ &Unresolved") % fd, 2)
+                  "$$ &Changed $$ &Deleted $$ &Unresolved") % prompts, 2)
             choice = ['other', 'local', 'unresolved'][index]
         else:
             index = ui.promptchoice(
-                _("no tool found to merge %s\n"
-                  "keep (l)ocal, take (o)ther, or leave (u)nresolved?"
-                  "$$ &Local $$ &Other $$ &Unresolved") % fd, 2)
+                _("no tool found to merge %(fd)s\n"
+                  "keep (l)ocal%(l)s, take (o)ther%(o)s, or leave (u)nresolved?"
+                  "$$ &Local $$ &Other $$ &Unresolved") % prompts, 2)
             choice = ['local', 'other', 'unresolved'][index]
 
         if choice == 'other':
-            return _iother(repo, mynode, orig, fcd, fco, fca, toolconf)
+            return _iother(repo, mynode, orig, fcd, fco, fca, toolconf,
+                           labels)
         elif choice == 'local':
-            return _ilocal(repo, mynode, orig, fcd, fco, fca, toolconf)
+            return _ilocal(repo, mynode, orig, fcd, fco, fca, toolconf,
+                           labels)
         elif choice == 'unresolved':
-            return _ifail(repo, mynode, orig, fcd, fco, fca, toolconf)
+            return _ifail(repo, mynode, orig, fcd, fco, fca, toolconf,
+                          labels)
     except error.ResponseExpected:
         ui.write("\n")
-        return _ifail(repo, mynode, orig, fcd, fco, fca, toolconf)
+        return _ifail(repo, mynode, orig, fcd, fco, fca, toolconf,
+                      labels)
 
 @internaltool('local', nomerge)
-def _ilocal(repo, mynode, orig, fcd, fco, fca, toolconf):
+def _ilocal(repo, mynode, orig, fcd, fco, fca, toolconf, labels=None):
     """Uses the local `p1()` version of files as the merged version."""
     return 0, fcd.isabsent()
 
 @internaltool('other', nomerge)
-def _iother(repo, mynode, orig, fcd, fco, fca, toolconf):
+def _iother(repo, mynode, orig, fcd, fco, fca, toolconf, labels=None):
     """Uses the other `p2()` version of files as the merged version."""
     if fco.isabsent():
         # local changed, remote deleted -- 'deleted' picked
@@ -285,7 +293,7 @@ def _iother(repo, mynode, orig, fcd, fco, fca, toolconf):
     return 0, deleted
 
 @internaltool('fail', nomerge)
-def _ifail(repo, mynode, orig, fcd, fco, fca, toolconf):
+def _ifail(repo, mynode, orig, fcd, fco, fca, toolconf, labels=None):
     """
     Rather than attempting to merge files that were modified on both
     branches, it marks them as unresolved. The resolve command must be
@@ -508,11 +516,11 @@ def _formatconflictmarker(repo, ctx, template, label, pad):
     # 8 for the prefix of conflict marker lines (e.g. '<<<<<<< ')
     return util.ellipsis(mark, 80 - 8)
 
-_defaultconflictmarker = ('{node|short} ' +
-    '{ifeq(tags, "tip", "", "{tags} ")}' +
-    '{if(bookmarks, "{bookmarks} ")}' +
-    '{ifeq(branch, "default", "", "{branch} ")}' +
-    '- {author|user}: {desc|firstline}')
+_defaultconflictmarker = ('{node|short} '
+                          '{ifeq(tags, "tip", "", "{tags} ")}'
+                          '{if(bookmarks, "{bookmarks} ")}'
+                          '{ifeq(branch, "default", "", "{branch} ")}'
+                          '- {author|user}: {desc|firstline}')
 
 _defaultconflictlabels = ['local', 'other']
 
@@ -536,6 +544,22 @@ def _formatlabels(repo, fcd, fco, fca, labels):
     if len(labels) > 2:
         newlabels.append(_formatconflictmarker(repo, ca, tmpl, labels[2], pad))
     return newlabels
+
+def partextras(labels):
+    """Return a dictionary of extra labels for use in prompts to the user
+
+    Intended use is in strings of the form "(l)ocal%(l)s".
+    """
+    if labels is None:
+        return {
+            "l": "",
+            "o": "",
+        }
+
+    return {
+        "l": " [%s]" % labels[0],
+        "o": " [%s]" % labels[1],
+    }
 
 def _filemerge(premerge, repo, mynode, orig, fcd, fco, fca, labels=None):
     """perform a 3-way merge in the working directory
@@ -588,7 +612,7 @@ def _filemerge(premerge, repo, mynode, orig, fcd, fco, fca, labels=None):
     toolconf = tool, toolpath, binary, symlink
 
     if mergetype == nomerge:
-        r, deleted = func(repo, mynode, orig, fcd, fco, fca, toolconf)
+        r, deleted = func(repo, mynode, orig, fcd, fco, fca, toolconf, labels)
         return True, r, deleted
 
     if premerge:

@@ -142,55 +142,55 @@ Merge with remote
 #   in the same way, so it could potentially be left alone
 
   $ hg merge -f --tool internal:merge3 'desc("remote")' 2>&1 | tee $TESTTMP/merge-output-1
-  local changed content1_missing_content1_content4-tracked which remote deleted
+  local [working copy] changed content1_missing_content1_content4-tracked which other [merge rev] deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? u
-  local changed content1_missing_content3_content3-tracked which remote deleted
+  local [working copy] changed content1_missing_content3_content3-tracked which other [merge rev] deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? u
-  local changed content1_missing_content3_content4-tracked which remote deleted
+  local [working copy] changed content1_missing_content3_content4-tracked which other [merge rev] deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? u
-  local changed content1_missing_missing_content4-tracked which remote deleted
+  local [working copy] changed content1_missing_missing_content4-tracked which other [merge rev] deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? u
-  remote changed content1_content2_content1_content1-untracked which local deleted
+  other [merge rev] changed content1_content2_content1_content1-untracked which local [working copy] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
-  remote changed content1_content2_content1_content2-untracked which local deleted
+  other [merge rev] changed content1_content2_content1_content2-untracked which local [working copy] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
-  remote changed content1_content2_content1_content4-untracked which local deleted
+  other [merge rev] changed content1_content2_content1_content4-untracked which local [working copy] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
-  remote changed content1_content2_content1_missing-tracked which local deleted
+  other [merge rev] changed content1_content2_content1_missing-tracked which local [working copy] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
-  remote changed content1_content2_content1_missing-untracked which local deleted
+  other [merge rev] changed content1_content2_content1_missing-untracked which local [working copy] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
-  remote changed content1_content2_content2_content1-untracked which local deleted
+  other [merge rev] changed content1_content2_content2_content1-untracked which local [working copy] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
-  remote changed content1_content2_content2_content2-untracked which local deleted
+  other [merge rev] changed content1_content2_content2_content2-untracked which local [working copy] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
-  remote changed content1_content2_content2_content4-untracked which local deleted
+  other [merge rev] changed content1_content2_content2_content4-untracked which local [working copy] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
-  remote changed content1_content2_content2_missing-tracked which local deleted
+  other [merge rev] changed content1_content2_content2_missing-tracked which local [working copy] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
-  remote changed content1_content2_content2_missing-untracked which local deleted
+  other [merge rev] changed content1_content2_content2_missing-untracked which local [working copy] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
-  remote changed content1_content2_content3_content1-untracked which local deleted
+  other [merge rev] changed content1_content2_content3_content1-untracked which local [working copy] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
-  remote changed content1_content2_content3_content2-untracked which local deleted
+  other [merge rev] changed content1_content2_content3_content2-untracked which local [working copy] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
-  remote changed content1_content2_content3_content3-untracked which local deleted
+  other [merge rev] changed content1_content2_content3_content3-untracked which local [working copy] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
-  remote changed content1_content2_content3_content4-untracked which local deleted
+  other [merge rev] changed content1_content2_content3_content4-untracked which local [working copy] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
-  remote changed content1_content2_content3_missing-tracked which local deleted
+  other [merge rev] changed content1_content2_content3_missing-tracked which local [working copy] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
-  remote changed content1_content2_content3_missing-untracked which local deleted
+  other [merge rev] changed content1_content2_content3_missing-untracked which local [working copy] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
-  remote changed content1_content2_missing_content1-untracked which local deleted
+  other [merge rev] changed content1_content2_missing_content1-untracked which local [working copy] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
-  remote changed content1_content2_missing_content2-untracked which local deleted
+  other [merge rev] changed content1_content2_missing_content2-untracked which local [working copy] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
-  remote changed content1_content2_missing_content4-untracked which local deleted
+  other [merge rev] changed content1_content2_missing_content4-untracked which local [working copy] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
-  remote changed content1_content2_missing_missing-tracked which local deleted
+  other [merge rev] changed content1_content2_missing_missing-tracked which local [working copy] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
-  remote changed content1_content2_missing_missing-untracked which local deleted
+  other [merge rev] changed content1_content2_missing_missing-untracked which local [working copy] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   merging content1_content2_content1_content4-tracked
   merging content1_content2_content2_content1-tracked
@@ -373,13 +373,13 @@ the remote side did not touch the file
   content2
   
   M content1_content2_content1_content4-tracked
-  <<<<<<< local: 0447570f1af6 - test: local
+  <<<<<<< working copy: 0447570f1af6 - test: local
   content4
   ||||||| base
   content1
   =======
   content2
-  >>>>>>> other: 85100b8c675b  - test: remote
+  >>>>>>> merge rev:    85100b8c675b  - test: remote
   
   M content1_content2_content1_content4-untracked
   content2
@@ -403,13 +403,13 @@ the remote side did not touch the file
   content2
   
   M content1_content2_content2_content4-tracked
-  <<<<<<< local: 0447570f1af6 - test: local
+  <<<<<<< working copy: 0447570f1af6 - test: local
   content4
   ||||||| base
   content1
   =======
   content2
-  >>>>>>> other: 85100b8c675b  - test: remote
+  >>>>>>> merge rev:    85100b8c675b  - test: remote
   
   M content1_content2_content2_content4-untracked
   content2
@@ -433,25 +433,25 @@ the remote side did not touch the file
   content2
   
   M content1_content2_content3_content3-tracked
-  <<<<<<< local: 0447570f1af6 - test: local
+  <<<<<<< working copy: 0447570f1af6 - test: local
   content3
   ||||||| base
   content1
   =======
   content2
-  >>>>>>> other: 85100b8c675b  - test: remote
+  >>>>>>> merge rev:    85100b8c675b  - test: remote
   
   M content1_content2_content3_content3-untracked
   content2
   
   M content1_content2_content3_content4-tracked
-  <<<<<<< local: 0447570f1af6 - test: local
+  <<<<<<< working copy: 0447570f1af6 - test: local
   content4
   ||||||| base
   content1
   =======
   content2
-  >>>>>>> other: 85100b8c675b  - test: remote
+  >>>>>>> merge rev:    85100b8c675b  - test: remote
   
   M content1_content2_content3_content4-untracked
   content2
@@ -475,13 +475,13 @@ the remote side did not touch the file
   content2
   
   M content1_content2_missing_content4-tracked
-  <<<<<<< local: 0447570f1af6 - test: local
+  <<<<<<< working copy: 0447570f1af6 - test: local
   content4
   ||||||| base
   content1
   =======
   content2
-  >>>>>>> other: 85100b8c675b  - test: remote
+  >>>>>>> merge rev:    85100b8c675b  - test: remote
   
   M content1_content2_missing_content4-untracked
   content2
@@ -559,12 +559,12 @@ the remote side did not touch the file
   content2
   
   M missing_content2_content2_content4-tracked
-  <<<<<<< local: 0447570f1af6 - test: local
+  <<<<<<< working copy: 0447570f1af6 - test: local
   content4
   ||||||| base
   =======
   content2
-  >>>>>>> other: 85100b8c675b  - test: remote
+  >>>>>>> merge rev:    85100b8c675b  - test: remote
   
   M missing_content2_content2_content4-untracked
   content2
@@ -582,23 +582,23 @@ the remote side did not touch the file
   content2
   
   M missing_content2_content3_content3-tracked
-  <<<<<<< local: 0447570f1af6 - test: local
+  <<<<<<< working copy: 0447570f1af6 - test: local
   content3
   ||||||| base
   =======
   content2
-  >>>>>>> other: 85100b8c675b  - test: remote
+  >>>>>>> merge rev:    85100b8c675b  - test: remote
   
   M missing_content2_content3_content3-untracked
   content2
   
   M missing_content2_content3_content4-tracked
-  <<<<<<< local: 0447570f1af6 - test: local
+  <<<<<<< working copy: 0447570f1af6 - test: local
   content4
   ||||||| base
   =======
   content2
-  >>>>>>> other: 85100b8c675b  - test: remote
+  >>>>>>> merge rev:    85100b8c675b  - test: remote
   
   M missing_content2_content3_content4-untracked
   content2
@@ -616,20 +616,20 @@ the remote side did not touch the file
   content2
   
   M missing_content2_missing_content4-tracked
-  <<<<<<< local: 0447570f1af6 - test: local
+  <<<<<<< working copy: 0447570f1af6 - test: local
   content4
   ||||||| base
   =======
   content2
-  >>>>>>> other: 85100b8c675b  - test: remote
+  >>>>>>> merge rev:    85100b8c675b  - test: remote
   
   M missing_content2_missing_content4-untracked
-  <<<<<<< local: 0447570f1af6 - test: local
+  <<<<<<< working copy: 0447570f1af6 - test: local
   content4
   ||||||| base
   =======
   content2
-  >>>>>>> other: 85100b8c675b  - test: remote
+  >>>>>>> merge rev:    85100b8c675b  - test: remote
   
   M missing_content2_missing_missing-tracked
   content2
@@ -703,63 +703,63 @@ Re-resolve and check status
   (no more unresolved files)
   $ hg resolve --unmark --all
   $ hg resolve --all --tool internal:merge3
-  remote changed content1_content2_content1_content1-untracked which local deleted
+  other [merge rev] changed content1_content2_content1_content1-untracked which local [working copy] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
-  remote changed content1_content2_content1_content2-untracked which local deleted
+  other [merge rev] changed content1_content2_content1_content2-untracked which local [working copy] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   merging content1_content2_content1_content4-tracked
-  remote changed content1_content2_content1_content4-untracked which local deleted
+  other [merge rev] changed content1_content2_content1_content4-untracked which local [working copy] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
-  remote changed content1_content2_content1_missing-tracked which local deleted
+  other [merge rev] changed content1_content2_content1_missing-tracked which local [working copy] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
-  remote changed content1_content2_content1_missing-untracked which local deleted
+  other [merge rev] changed content1_content2_content1_missing-untracked which local [working copy] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   merging content1_content2_content2_content1-tracked
-  remote changed content1_content2_content2_content1-untracked which local deleted
+  other [merge rev] changed content1_content2_content2_content1-untracked which local [working copy] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
-  remote changed content1_content2_content2_content2-untracked which local deleted
+  other [merge rev] changed content1_content2_content2_content2-untracked which local [working copy] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   merging content1_content2_content2_content4-tracked
-  remote changed content1_content2_content2_content4-untracked which local deleted
+  other [merge rev] changed content1_content2_content2_content4-untracked which local [working copy] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
-  remote changed content1_content2_content2_missing-tracked which local deleted
+  other [merge rev] changed content1_content2_content2_missing-tracked which local [working copy] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
-  remote changed content1_content2_content2_missing-untracked which local deleted
+  other [merge rev] changed content1_content2_content2_missing-untracked which local [working copy] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   merging content1_content2_content3_content1-tracked
-  remote changed content1_content2_content3_content1-untracked which local deleted
+  other [merge rev] changed content1_content2_content3_content1-untracked which local [working copy] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
-  remote changed content1_content2_content3_content2-untracked which local deleted
+  other [merge rev] changed content1_content2_content3_content2-untracked which local [working copy] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   merging content1_content2_content3_content3-tracked
-  remote changed content1_content2_content3_content3-untracked which local deleted
+  other [merge rev] changed content1_content2_content3_content3-untracked which local [working copy] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   merging content1_content2_content3_content4-tracked
-  remote changed content1_content2_content3_content4-untracked which local deleted
+  other [merge rev] changed content1_content2_content3_content4-untracked which local [working copy] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
-  remote changed content1_content2_content3_missing-tracked which local deleted
+  other [merge rev] changed content1_content2_content3_missing-tracked which local [working copy] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
-  remote changed content1_content2_content3_missing-untracked which local deleted
+  other [merge rev] changed content1_content2_content3_missing-untracked which local [working copy] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   merging content1_content2_missing_content1-tracked
-  remote changed content1_content2_missing_content1-untracked which local deleted
+  other [merge rev] changed content1_content2_missing_content1-untracked which local [working copy] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
-  remote changed content1_content2_missing_content2-untracked which local deleted
+  other [merge rev] changed content1_content2_missing_content2-untracked which local [working copy] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   merging content1_content2_missing_content4-tracked
-  remote changed content1_content2_missing_content4-untracked which local deleted
+  other [merge rev] changed content1_content2_missing_content4-untracked which local [working copy] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
-  remote changed content1_content2_missing_missing-tracked which local deleted
+  other [merge rev] changed content1_content2_missing_missing-tracked which local [working copy] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
-  remote changed content1_content2_missing_missing-untracked which local deleted
+  other [merge rev] changed content1_content2_missing_missing-untracked which local [working copy] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
-  local changed content1_missing_content1_content4-tracked which remote deleted
+  local [working copy] changed content1_missing_content1_content4-tracked which other [merge rev] deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? u
-  local changed content1_missing_content3_content3-tracked which remote deleted
+  local [working copy] changed content1_missing_content3_content3-tracked which other [merge rev] deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? u
-  local changed content1_missing_content3_content4-tracked which remote deleted
+  local [working copy] changed content1_missing_content3_content4-tracked which other [merge rev] deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? u
-  local changed content1_missing_missing_content4-tracked which remote deleted
+  local [working copy] changed content1_missing_missing_content4-tracked which other [merge rev] deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? u
   merging missing_content2_content2_content4-tracked
   merging missing_content2_content3_content3-tracked

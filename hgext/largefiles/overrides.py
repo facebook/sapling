@@ -883,11 +883,8 @@ def hgclone(orig, ui, opts, *args, **kwargs):
 
         # If largefiles is required for this repo, permanently enable it locally
         if 'largefiles' in repo.requirements:
-            fp = repo.vfs('hgrc', 'a', text=True)
-            try:
+            with repo.vfs('hgrc', 'a', text=True) as fp:
                 fp.write('\n[extensions]\nlargefiles=\n')
-            finally:
-                fp.close()
 
         # Caching is implicitly limited to 'rev' option, since the dest repo was
         # truncated at that point.  The user may expect a download count with
@@ -1339,30 +1336,28 @@ def overridecat(orig, ui, repo, file1, *pats, **opts):
     m.visitdir = lfvisitdirfn
 
     for f in ctx.walk(m):
-        fp = cmdutil.makefileobj(repo, opts.get('output'), ctx.node(),
-                                 pathname=f)
-        lf = lfutil.splitstandin(f)
-        if lf is None or origmatchfn(f):
-            # duplicating unreachable code from commands.cat
-            data = ctx[f].data()
-            if opts.get('decode'):
-                data = repo.wwritedata(f, data)
-            fp.write(data)
-        else:
-            hash = lfutil.readstandin(repo, lf, ctx.rev())
-            if not lfutil.inusercache(repo.ui, hash):
-                store = storefactory.openstore(repo)
-                success, missing = store.get([(lf, hash)])
-                if len(success) != 1:
-                    raise error.Abort(
-                        _('largefile %s is not in cache and could not be '
-                          'downloaded')  % lf)
-            path = lfutil.usercachepath(repo.ui, hash)
-            fpin = open(path, "rb")
-            for chunk in util.filechunkiter(fpin, 128 * 1024):
-                fp.write(chunk)
-            fpin.close()
-        fp.close()
+        with cmdutil.makefileobj(repo, opts.get('output'), ctx.node(),
+                                 pathname=f) as fp:
+            lf = lfutil.splitstandin(f)
+            if lf is None or origmatchfn(f):
+                # duplicating unreachable code from commands.cat
+                data = ctx[f].data()
+                if opts.get('decode'):
+                    data = repo.wwritedata(f, data)
+                fp.write(data)
+            else:
+                hash = lfutil.readstandin(repo, lf, ctx.rev())
+                if not lfutil.inusercache(repo.ui, hash):
+                    store = storefactory.openstore(repo)
+                    success, missing = store.get([(lf, hash)])
+                    if len(success) != 1:
+                        raise error.Abort(
+                            _('largefile %s is not in cache and could not be '
+                              'downloaded')  % lf)
+                path = lfutil.usercachepath(repo.ui, hash)
+                with open(path, "rb") as fpin:
+                    for chunk in util.filechunkiter(fpin):
+                        fp.write(chunk)
         err = 0
     return err
 

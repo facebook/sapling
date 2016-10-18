@@ -195,7 +195,7 @@ def defaultdest(source):
         return ''
     return os.path.basename(os.path.normpath(path))
 
-def share(ui, source, dest=None, update=True, bookmarks=True):
+def share(ui, source, dest=None, update=True, bookmarks=True, defaultpath=None):
     '''create a shared repository'''
 
     if not islocal(source):
@@ -240,10 +240,10 @@ def share(ui, source, dest=None, update=True, bookmarks=True):
     destvfs.write('sharedpath', sharedpath)
 
     r = repository(ui, destwvfs.base)
-    postshare(srcrepo, r, bookmarks=bookmarks)
+    postshare(srcrepo, r, bookmarks=bookmarks, defaultpath=defaultpath)
     _postshareupdate(r, update, checkout=checkout)
 
-def postshare(sourcerepo, destrepo, bookmarks=True):
+def postshare(sourcerepo, destrepo, bookmarks=True, defaultpath=None):
     """Called after a new shared repo is created.
 
     The new repo only has a requirements file and pointer to the source.
@@ -252,17 +252,18 @@ def postshare(sourcerepo, destrepo, bookmarks=True):
     Extensions can wrap this function and write additional entries to
     destrepo/.hg/shared to indicate additional pieces of data to be shared.
     """
-    default = sourcerepo.ui.config('paths', 'default')
+    default = defaultpath or sourcerepo.ui.config('paths', 'default')
     if default:
         fp = destrepo.vfs("hgrc", "w", text=True)
         fp.write("[paths]\n")
         fp.write("default = %s\n" % default)
         fp.close()
 
-    if bookmarks:
-        fp = destrepo.vfs('shared', 'w')
-        fp.write(sharedbookmarks + '\n')
-        fp.close()
+    with destrepo.wlock():
+        if bookmarks:
+            fp = destrepo.vfs('shared', 'w')
+            fp.write(sharedbookmarks + '\n')
+            fp.close()
 
 def _postshareupdate(repo, update, checkout=None):
     """Maybe perform a working directory update after a shared repo is created.
@@ -373,8 +374,15 @@ def clonewithshare(ui, peeropts, sharepath, source, srcpeer, dest, pull=False,
             clone(ui, peeropts, source, dest=sharepath, pull=True,
                   rev=rev, update=False, stream=stream)
 
+    # Resolve the value to put in [paths] section for the source.
+    if islocal(source):
+        defaultpath = os.path.abspath(util.urllocalpath(source))
+    else:
+        defaultpath = source
+
     sharerepo = repository(ui, path=sharepath)
-    share(ui, sharerepo, dest=dest, update=False, bookmarks=False)
+    share(ui, sharerepo, dest=dest, update=False, bookmarks=False,
+          defaultpath=defaultpath)
 
     # We need to perform a pull against the dest repo to fetch bookmarks
     # and other non-store data that isn't shared by default. In the case of
@@ -737,20 +745,22 @@ def updatetotally(ui, repo, checkout, brev, clean=False, check=False):
             if movemarkfrom == repo['.'].node():
                 pass # no-op update
             elif bookmarks.update(repo, [movemarkfrom], repo['.'].node()):
-                ui.status(_("updating bookmark %s\n") % repo._activebookmark)
+                b = ui.label(repo._activebookmark, 'bookmarks.active')
+                ui.status(_("updating bookmark %s\n") % b)
             else:
                 # this can happen with a non-linear update
-                ui.status(_("(leaving bookmark %s)\n") %
-                          repo._activebookmark)
+                b = ui.label(repo._activebookmark, 'bookmarks')
+                ui.status(_("(leaving bookmark %s)\n") % b)
                 bookmarks.deactivate(repo)
         elif brev in repo._bookmarks:
             if brev != repo._activebookmark:
-                ui.status(_("(activating bookmark %s)\n") % brev)
+                b = ui.label(brev, 'bookmarks.active')
+                ui.status(_("(activating bookmark %s)\n") % b)
             bookmarks.activate(repo, brev)
         elif brev:
             if repo._activebookmark:
-                ui.status(_("(leaving bookmark %s)\n") %
-                          repo._activebookmark)
+                b = ui.label(repo._activebookmark, 'bookmarks')
+                ui.status(_("(leaving bookmark %s)\n") % b)
             bookmarks.deactivate(repo)
 
         if warndest:
@@ -758,10 +768,11 @@ def updatetotally(ui, repo, checkout, brev, clean=False, check=False):
 
     return ret
 
-def merge(repo, node, force=None, remind=True, mergeforce=False):
+def merge(repo, node, force=None, remind=True, mergeforce=False, labels=None):
     """Branch merge with node, resolving changes. Return true if any
     unresolved conflicts."""
-    stats = mergemod.update(repo, node, True, force, mergeforce=mergeforce)
+    stats = mergemod.update(repo, node, True, force, mergeforce=mergeforce,
+                            labels=labels)
     _showstats(repo, stats)
     if stats[3]:
         repo.ui.status(_("use 'hg resolve' to retry unresolved file merges "

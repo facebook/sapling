@@ -1113,11 +1113,11 @@ conflict: keyword should stay outside conflict zone
   [1]
   $ cat m
   $Id$
-  <<<<<<< local: 88a80c8d172e - test: 8bar
+  <<<<<<< working copy: 88a80c8d172e - test: 8bar
   bar
   =======
   foo
-  >>>>>>> other: 85d2d2d732a5  - test: simplemerge
+  >>>>>>> merge rev:    85d2d2d732a5  - test: simplemerge
 
 resolve to local, m must contain hash of last change (local parent)
 

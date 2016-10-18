@@ -345,10 +345,10 @@ def _sizetomax(s):
 def size(mctx, x):
     """File size matches the given expression. Examples:
 
-    - 1k (files from 1024 to 2047 bytes)
-    - < 20k (files less than 20480 bytes)
-    - >= .5MB (files at least 524288 bytes)
-    - 4k - 1MB (files from 4096 bytes to 1048576 bytes)
+    - size('1k') - files from 1024 to 2047 bytes
+    - size('< 20k') - files less than 20480 bytes
+    - size('>= .5MB') - files at least 524288 bytes
+    - size('4k - 1MB') - files from 4096 bytes to 1048576 bytes
     """
 
     # i18n: "size" is a keyword

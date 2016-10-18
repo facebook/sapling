@@ -29,6 +29,15 @@ ECMA-48 mode, the options are 'bold', 'inverse', 'italic', and
 Some may not be available for a given terminal type, and will be
 silently ignored.
 
+If the terminfo entry for your terminal is missing codes for an effect
+or has the wrong codes, you can add or override those codes in your
+configuration::
+
+  [color]
+  terminfo.dim = \E[2m
+
+where '\E' is substituted with an escape character.
+
 Labels
 ------
 
@@ -170,11 +179,11 @@ from mercurial import (
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
-# Note for extension authors: ONLY specify testedwith = 'internal' for
+# Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
 # be specifying the version(s) of Mercurial they are tested with, or
 # leave the attribute unspecified.
-testedwith = 'internal'
+testedwith = 'ships-with-hg-core'
 
 # start and stop parameters for effects
 _effects = {'none': 0, 'black': 30, 'red': 31, 'green': 32, 'yellow': 33,
@@ -196,9 +205,12 @@ def _terminfosetup(ui, mode):
     if mode not in ('auto', 'terminfo'):
         return
 
-    _terminfo_params.update((key[6:], (False, int(val)))
+    _terminfo_params.update((key[6:], (False, int(val), ''))
         for key, val in ui.configitems('color')
         if key.startswith('color.'))
+    _terminfo_params.update((key[9:], (True, '', val.replace('\\E', '\x1b')))
+        for key, val in ui.configitems('color')
+        if key.startswith('terminfo.'))
 
     try:
         curses.setupterm()
@@ -206,10 +218,10 @@ def _terminfosetup(ui, mode):
         _terminfo_params = {}
         return
 
-    for key, (b, e) in _terminfo_params.items():
+    for key, (b, e, c) in _terminfo_params.items():
         if not b:
             continue
-        if not curses.tigetstr(e):
+        if not c and not curses.tigetstr(e):
             # Most terminals don't support dim, invis, etc, so don't be
             # noisy and use ui.debug().
             ui.debug("no terminfo entry for %s\n" % e)
@@ -290,26 +302,26 @@ def _modesetup(ui, coloropt):
 
 try:
     import curses
-    # Mapping from effect name to terminfo attribute name or color number.
-    # This will also force-load the curses module.
-    _terminfo_params = {'none': (True, 'sgr0'),
-                        'standout': (True, 'smso'),
-                        'underline': (True, 'smul'),
-                        'reverse': (True, 'rev'),
-                        'inverse': (True, 'rev'),
-                        'blink': (True, 'blink'),
-                        'dim': (True, 'dim'),
-                        'bold': (True, 'bold'),
-                        'invisible': (True, 'invis'),
-                        'italic': (True, 'sitm'),
-                        'black': (False, curses.COLOR_BLACK),
-                        'red': (False, curses.COLOR_RED),
-                        'green': (False, curses.COLOR_GREEN),
-                        'yellow': (False, curses.COLOR_YELLOW),
-                        'blue': (False, curses.COLOR_BLUE),
-                        'magenta': (False, curses.COLOR_MAGENTA),
-                        'cyan': (False, curses.COLOR_CYAN),
-                        'white': (False, curses.COLOR_WHITE)}
+    # Mapping from effect name to terminfo attribute name (or raw code) or
+    # color number.  This will also force-load the curses module.
+    _terminfo_params = {'none': (True, 'sgr0', ''),
+                        'standout': (True, 'smso', ''),
+                        'underline': (True, 'smul', ''),
+                        'reverse': (True, 'rev', ''),
+                        'inverse': (True, 'rev', ''),
+                        'blink': (True, 'blink', ''),
+                        'dim': (True, 'dim', ''),
+                        'bold': (True, 'bold', ''),
+                        'invisible': (True, 'invis', ''),
+                        'italic': (True, 'sitm', ''),
+                        'black': (False, curses.COLOR_BLACK, ''),
+                        'red': (False, curses.COLOR_RED, ''),
+                        'green': (False, curses.COLOR_GREEN, ''),
+                        'yellow': (False, curses.COLOR_YELLOW, ''),
+                        'blue': (False, curses.COLOR_BLUE, ''),
+                        'magenta': (False, curses.COLOR_MAGENTA, ''),
+                        'cyan': (False, curses.COLOR_CYAN, ''),
+                        'white': (False, curses.COLOR_WHITE, '')}
 except ImportError:
     _terminfo_params = {}
 
@@ -375,9 +387,15 @@ def _effect_str(effect):
     if effect.endswith('_background'):
         bg = True
         effect = effect[:-11]
-    attr, val = _terminfo_params[effect]
+    try:
+        attr, val, termcode = _terminfo_params[effect]
+    except KeyError:
+        return ''
     if attr:
-        return curses.tigetstr(val)
+        if termcode:
+            return termcode
+        else:
+            return curses.tigetstr(val)
     elif bg:
         return curses.tparm(curses.tigetstr('setab'), val)
     else:
@@ -412,7 +430,7 @@ def valideffect(effect):
 
 def configstyles(ui):
     for status, cfgeffects in ui.configitems('color'):
-        if '.' not in status or status.startswith('color.'):
+        if '.' not in status or status.startswith(('color.', 'terminfo.')):
             continue
         cfgeffects = ui.configlist('color', status)
         if cfgeffects:
@@ -524,10 +542,16 @@ def debugcolor(ui, repo, **opts):
     _styles = {}
     for effect in _effects.keys():
         _styles[effect] = effect
+    if _terminfo_params:
+        for k, v in ui.configitems('color'):
+            if k.startswith('color.'):
+                _styles[k] = k[6:]
+            elif k.startswith('terminfo.'):
+                _styles[k] = k[9:]
     ui.write(('color mode: %s\n') % ui._colormode)
     ui.write(_('available colors:\n'))
-    for label, colors in _styles.items():
-        ui.write(('%s\n') % colors, label=label)
+    for colorname, label in _styles.items():
+        ui.write(('%s\n') % colorname, label=label)
 
 if os.name != 'nt':
     w32effects = None
@@ -558,8 +582,8 @@ else:
                     ('srWindow', _SMALL_RECT),
                     ('dwMaximumWindowSize', _COORD)]
 
-    _STD_OUTPUT_HANDLE = 0xfffffff5L # (DWORD)-11
-    _STD_ERROR_HANDLE = 0xfffffff4L  # (DWORD)-12
+    _STD_OUTPUT_HANDLE = 0xfffffff5 # (DWORD)-11
+    _STD_ERROR_HANDLE = 0xfffffff4  # (DWORD)-12
 
     _FOREGROUND_BLUE = 0x0001
     _FOREGROUND_GREEN = 0x0002

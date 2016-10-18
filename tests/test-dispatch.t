@@ -27,7 +27,7 @@ Missing arg:
    -I --include PATTERN [+] include names matching the given patterns
    -X --exclude PATTERN [+] exclude names matching the given patterns
   
-  (use "hg cat -h" to show more help)
+  (use 'hg cat -h' to show more help)
   [255]
 
 [defaults]

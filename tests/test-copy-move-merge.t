@@ -85,7 +85,7 @@ Test disabling copy tracing
   > c
   > EOF
   rebasing 2:add3f11052fa "other" (tip)
-  remote changed a which local deleted
+  other [source] changed a which local [dest] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? c
 
   $ cat b

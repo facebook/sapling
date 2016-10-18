@@ -102,7 +102,7 @@ Merge should not overwrite local file that is untracked after remove
 Those who use force will lose
 
   $ hg merge -f
-  remote changed bar which local deleted
+  other [merge rev] changed bar which local [working copy] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   merging foo1 and foo to foo1
   0 files updated, 1 files merged, 0 files removed, 1 files unresolved

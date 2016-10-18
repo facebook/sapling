@@ -18,25 +18,45 @@ from .node import (
 from . import (
     encoding,
     error,
+    templatekw,
     templater,
     util,
 )
 
 pickle = util.pickle
 
+class _nullconverter(object):
+    '''convert non-primitive data types to be processed by formatter'''
+    @staticmethod
+    def formatdate(date, fmt):
+        '''convert date tuple to appropriate format'''
+        return date
+    @staticmethod
+    def formatdict(data, key, value, fmt, sep):
+        '''convert dict or key-value pairs to appropriate dict format'''
+        # use plain dict instead of util.sortdict so that data can be
+        # serialized as a builtin dict in pickle output
+        return dict(data)
+    @staticmethod
+    def formatlist(data, name, fmt, sep):
+        '''convert iterable to appropriate list format'''
+        return list(data)
+
 class baseformatter(object):
-    def __init__(self, ui, topic, opts):
+    def __init__(self, ui, topic, opts, converter):
         self._ui = ui
         self._topic = topic
         self._style = opts.get("style")
         self._template = opts.get("template")
+        self._converter = converter
         self._item = None
         # function to convert node to string suitable for this output
         self.hexfunc = hex
-    def __nonzero__(self):
-        '''return False if we're not doing real templating so we can
-        skip extra work'''
-        return True
+    def __enter__(self):
+        return self
+    def __exit__(self, exctype, excvalue, traceback):
+        if exctype is None:
+            self.end()
     def _showitem(self):
         '''show a formatted item once all data is collected'''
         pass
@@ -45,6 +65,17 @@ class baseformatter(object):
         if self._item is not None:
             self._showitem()
         self._item = {}
+    def formatdate(self, date, fmt='%a %b %d %H:%M:%S %Y %1%2'):
+        '''convert date tuple to appropriate format'''
+        return self._converter.formatdate(date, fmt)
+    def formatdict(self, data, key='key', value='value', fmt='%s=%s', sep=' '):
+        '''convert dict or key-value pairs to appropriate dict format'''
+        return self._converter.formatdict(data, key, value, fmt, sep)
+    def formatlist(self, data, name, fmt='%s', sep=' '):
+        '''convert iterable to appropriate list format'''
+        # name is mandatory argument for now, but it could be optional if
+        # we have default template keyword, e.g. {item}
+        return self._converter.formatlist(data, name, fmt, sep)
     def data(self, **data):
         '''insert data into item that's not shown in default output'''
         self._item.update(data)
@@ -61,21 +92,55 @@ class baseformatter(object):
     def plain(self, text, **opts):
         '''show raw text for non-templated mode'''
         pass
+    def isplain(self):
+        '''check for plain formatter usage'''
+        return False
+    def nested(self, field):
+        '''sub formatter to store nested data in the specified field'''
+        self._item[field] = data = []
+        return _nestedformatter(self._ui, self._converter, data)
     def end(self):
         '''end output for the formatter'''
         if self._item is not None:
             self._showitem()
 
+class _nestedformatter(baseformatter):
+    '''build sub items and store them in the parent formatter'''
+    def __init__(self, ui, converter, data):
+        baseformatter.__init__(self, ui, topic='', opts={}, converter=converter)
+        self._data = data
+    def _showitem(self):
+        self._data.append(self._item)
+
+def _iteritems(data):
+    '''iterate key-value pairs in stable order'''
+    if isinstance(data, dict):
+        return sorted(data.iteritems())
+    return data
+
+class _plainconverter(object):
+    '''convert non-primitive data types to text'''
+    @staticmethod
+    def formatdate(date, fmt):
+        '''stringify date tuple in the given format'''
+        return util.datestr(date, fmt)
+    @staticmethod
+    def formatdict(data, key, value, fmt, sep):
+        '''stringify key-value pairs separated by sep'''
+        return sep.join(fmt % (k, v) for k, v in _iteritems(data))
+    @staticmethod
+    def formatlist(data, name, fmt, sep):
+        '''stringify iterable separated by sep'''
+        return sep.join(fmt % e for e in data)
+
 class plainformatter(baseformatter):
     '''the default text output scheme'''
     def __init__(self, ui, topic, opts):
-        baseformatter.__init__(self, ui, topic, opts)
+        baseformatter.__init__(self, ui, topic, opts, _plainconverter)
         if ui.debugflag:
             self.hexfunc = hex
         else:
             self.hexfunc = short
-    def __nonzero__(self):
-        return False
     def startitem(self):
         pass
     def data(self, **data):
@@ -88,12 +153,17 @@ class plainformatter(baseformatter):
             self._ui.write(deftext % fielddata, **opts)
     def plain(self, text, **opts):
         self._ui.write(text, **opts)
+    def isplain(self):
+        return True
+    def nested(self, field):
+        # nested data will be directly written to ui
+        return self
     def end(self):
         pass
 
 class debugformatter(baseformatter):
     def __init__(self, ui, topic, opts):
-        baseformatter.__init__(self, ui, topic, opts)
+        baseformatter.__init__(self, ui, topic, opts, _nullconverter)
         self._ui.write("%s = [\n" % self._topic)
     def _showitem(self):
         self._ui.write("    " + repr(self._item) + ",\n")
@@ -103,7 +173,7 @@ class debugformatter(baseformatter):
 
 class pickleformatter(baseformatter):
     def __init__(self, ui, topic, opts):
-        baseformatter.__init__(self, ui, topic, opts)
+        baseformatter.__init__(self, ui, topic, opts, _nullconverter)
         self._data = []
     def _showitem(self):
         self._data.append(self._item)
@@ -112,7 +182,11 @@ class pickleformatter(baseformatter):
         self._ui.write(pickle.dumps(self._data))
 
 def _jsonifyobj(v):
-    if isinstance(v, tuple):
+    if isinstance(v, dict):
+        xs = ['"%s": %s' % (encoding.jsonescape(k), _jsonifyobj(u))
+              for k, u in sorted(v.iteritems())]
+        return '{' + ', '.join(xs) + '}'
+    elif isinstance(v, (list, tuple)):
         return '[' + ', '.join(_jsonifyobj(e) for e in v) + ']'
     elif v is None:
         return 'null'
@@ -127,7 +201,7 @@ def _jsonifyobj(v):
 
 class jsonformatter(baseformatter):
     def __init__(self, ui, topic, opts):
-        baseformatter.__init__(self, ui, topic, opts)
+        baseformatter.__init__(self, ui, topic, opts, _nullconverter)
         self._ui.write("[")
         self._ui._first = True
     def _showitem(self):
@@ -149,9 +223,32 @@ class jsonformatter(baseformatter):
         baseformatter.end(self)
         self._ui.write("\n]\n")
 
+class _templateconverter(object):
+    '''convert non-primitive data types to be processed by templater'''
+    @staticmethod
+    def formatdate(date, fmt):
+        '''return date tuple'''
+        return date
+    @staticmethod
+    def formatdict(data, key, value, fmt, sep):
+        '''build object that can be evaluated as either plain string or dict'''
+        data = util.sortdict(_iteritems(data))
+        def f():
+            yield _plainconverter.formatdict(data, key, value, fmt, sep)
+        return templatekw._hybrid(f(), data, lambda k: {key: k, value: data[k]},
+                                  lambda d: fmt % (d[key], d[value]))
+    @staticmethod
+    def formatlist(data, name, fmt, sep):
+        '''build object that can be evaluated as either plain string or list'''
+        data = list(data)
+        def f():
+            yield _plainconverter.formatlist(data, name, fmt, sep)
+        return templatekw._hybrid(f(), data, lambda x: {name: x},
+                                  lambda d: fmt % d[name])
+
 class templateformatter(baseformatter):
     def __init__(self, ui, topic, opts):
-        baseformatter.__init__(self, ui, topic, opts)
+        baseformatter.__init__(self, ui, topic, opts, _templateconverter)
         self._topic = topic
         self._t = gettemplater(ui, topic, opts.get('template', ''))
     def _showitem(self):

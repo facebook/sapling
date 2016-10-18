@@ -35,13 +35,18 @@ errors = [
      "summary line doesn't start with 'topic: '"),
     (afterheader + r"[A-Z][a-z]\S+", "don't capitalize summary lines"),
     (afterheader + r"[^\n]*: *[A-Z][a-z]\S+", "don't capitalize summary lines"),
-    (afterheader + r"\S*[^A-Za-z0-9-]\S*: ",
+    (afterheader + r"\S*[^A-Za-z0-9-_]\S*: ",
      "summary keyword should be most user-relevant one-word command or topic"),
     (afterheader + r".*\.\s*\n", "don't add trailing period on summary line"),
     (afterheader + r".{79,}", "summary line too long (limit is 78)"),
     (r"\n\+\n( |\+)\n", "adds double empty line"),
     (r"\n \n\+\n", "adds double empty line"),
-    (r"\n\+[ \t]+def [a-z]+_[a-z]", "adds a function with foo_bar naming"),
+    # Forbid "_" in function name.
+    #
+    # We skip the check for cffi related functions. They use names mapping the
+    # name of the C function. C function names may contain "_".
+    (r"\n\+[ \t]+def (?!cffi)[a-z]+_[a-z]",
+     "adds a function with foo_bar naming"),
 ]
 
 word = re.compile('\S')

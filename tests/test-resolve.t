@@ -290,6 +290,9 @@ insert unsupported advisory merge record
   * version 2 records
   local: 57653b9f834a4493f7240b0681efcb9ae7cab745
   other: dc77451844e37f03f5c559e3b8529b2b48d381d1
+  labels:
+    local: working copy
+    other: merge rev
   unrecognized entry: x	advisory record
   file extras: file1 (ancestorlinknode = 99726c03216e233810a2564cbc0adfe395007eac)
   file: file1 (record type "F", state "r", hash 60b27f004e454aca81b0480209cce5081ec52390)
@@ -312,6 +315,9 @@ insert unsupported mandatory merge record
   * version 2 records
   local: 57653b9f834a4493f7240b0681efcb9ae7cab745
   other: dc77451844e37f03f5c559e3b8529b2b48d381d1
+  labels:
+    local: working copy
+    other: merge rev
   file extras: file1 (ancestorlinknode = 99726c03216e233810a2564cbc0adfe395007eac)
   file: file1 (record type "F", state "r", hash 60b27f004e454aca81b0480209cce5081ec52390)
     local path: file1 (flags "")

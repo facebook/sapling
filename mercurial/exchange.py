@@ -257,13 +257,40 @@ def buildobsmarkerspart(bundler, markers):
         return bundler.newpart('obsmarkers', data=stream)
     return None
 
-def _canusebundle2(op):
-    """return true if a pull/push can use bundle2
+def _computeoutgoing(repo, heads, common):
+    """Computes which revs are outgoing given a set of common
+    and a set of heads.
 
-    Feel free to nuke this function when we drop the experimental option"""
-    return (op.repo.ui.configbool('experimental', 'bundle2-exp', True)
-            and op.remote.capable('bundle2'))
+    This is a separate function so extensions can have access to
+    the logic.
 
+    Returns a discovery.outgoing object.
+    """
+    cl = repo.changelog
+    if common:
+        hasnode = cl.hasnode
+        common = [n for n in common if hasnode(n)]
+    else:
+        common = [nullid]
+    if not heads:
+        heads = cl.heads()
+    return discovery.outgoing(repo, common, heads)
+
+def _forcebundle1(op):
+    """return true if a pull/push must use bundle1
+
+    This function is used to allow testing of the older bundle version"""
+    ui = op.repo.ui
+    forcebundle1 = False
+    # The goal is this config is to allow developper to choose the bundle
+    # version used during exchanged. This is especially handy during test.
+    # Value is a list of bundle version to be picked from, highest version
+    # should be used.
+    #
+    # developer config: devel.legacy.exchange
+    exchange = ui.configlist('devel', 'legacy.exchange')
+    forcebundle1 = 'bundle2' not in exchange and 'bundle1' in exchange
+    return forcebundle1 or not op.remote.capable('bundle2')
 
 class pushoperation(object):
     """A object that represent a single push operation
@@ -417,7 +444,7 @@ def push(repo, remote, force=False, revs=None, newbranch=False, bookmarks=(),
         # bundle2 push may receive a reply bundle touching bookmarks or other
         # things requiring the wlock. Take it now to ensure proper ordering.
         maypushback = pushop.ui.configbool('experimental', 'bundle2.pushback')
-        if _canusebundle2(pushop) and maypushback:
+        if (not _forcebundle1(pushop)) and maypushback:
             localwlock = pushop.repo.wlock()
         locallock = pushop.repo.lock()
         pushop.locallocked = True
@@ -442,7 +469,7 @@ def push(repo, remote, force=False, revs=None, newbranch=False, bookmarks=(),
             lock = pushop.remote.lock()
         try:
             _pushdiscovery(pushop)
-            if _canusebundle2(pushop):
+            if not _forcebundle1(pushop):
                 _pushbundle2(pushop)
             _pushchangeset(pushop)
             _pushsyncphase(pushop)
@@ -1100,7 +1127,7 @@ class pulloperation(object):
 
     @util.propertycache
     def canusebundle2(self):
-        return _canusebundle2(self)
+        return not _forcebundle1(self)
 
     @util.propertycache
     def remotebundle2caps(self):
@@ -1174,8 +1201,10 @@ def pull(repo, remote, heads=None, force=False, bookmarks=(), opargs=None,
                     " %s") % (', '.join(sorted(missing)))
             raise error.Abort(msg)
 
-    lock = pullop.repo.lock()
+    wlock = lock = None
     try:
+        wlock = pullop.repo.wlock()
+        lock = pullop.repo.lock()
         pullop.trmanager = transactionmanager(repo, 'pull', remote.url())
         streamclone.maybeperformlegacystreamclone(pullop)
         # This should ideally be in _pullbundle2(). However, it needs to run
@@ -1190,8 +1219,7 @@ def pull(repo, remote, heads=None, force=False, bookmarks=(), opargs=None,
         _pullobsolete(pullop)
         pullop.trmanager.close()
     finally:
-        pullop.trmanager.release()
-        lock.release()
+        lockmod.release(pullop.trmanager, lock, wlock)
 
     return pullop
 
@@ -1504,20 +1532,14 @@ def bundle2requested(bundlecaps):
         return any(cap.startswith('HG2') for cap in bundlecaps)
     return False
 
-def getbundle(repo, source, heads=None, common=None, bundlecaps=None,
-              **kwargs):
-    """return a full bundle (with potentially multiple kind of parts)
+def getbundlechunks(repo, source, heads=None, common=None, bundlecaps=None,
+                    **kwargs):
+    """Return chunks constituting a bundle's raw data.
 
     Could be a bundle HG10 or a bundle HG20 depending on bundlecaps
-    passed. For now, the bundle can contain only changegroup, but this will
-    changes when more part type will be available for bundle2.
+    passed.
 
-    This is different from changegroup.getchangegroup that only returns an HG10
-    changegroup bundle. They may eventually get reunited in the future when we
-    have a clearer idea of the API we what to query different data.
-
-    The implementation is at a very early stage and will get massive rework
-    when the API of bundle is refined.
+    Returns an iterator over raw chunks (of varying sizes).
     """
     usebundle2 = bundle2requested(bundlecaps)
     # bundle10 case
@@ -1528,8 +1550,9 @@ def getbundle(repo, source, heads=None, common=None, bundlecaps=None,
         if kwargs:
             raise ValueError(_('unsupported getbundle arguments: %s')
                              % ', '.join(sorted(kwargs.keys())))
-        return changegroup.getchangegroup(repo, source, heads=heads,
-                                          common=common, bundlecaps=bundlecaps)
+        outgoing = _computeoutgoing(repo, heads, common)
+        bundler = changegroup.getbundler('01', repo, bundlecaps)
+        return changegroup.getsubsetraw(repo, outgoing, bundler, source)
 
     # bundle20 case
     b2caps = {}
@@ -1547,7 +1570,7 @@ def getbundle(repo, source, heads=None, common=None, bundlecaps=None,
         func(bundler, repo, source, bundlecaps=bundlecaps, b2caps=b2caps,
              **kwargs)
 
-    return util.chunkbuffer(bundler.getchunks())
+    return bundler.getchunks()
 
 @getbundle2partsgenerator('changegroup')
 def _getbundlechangegrouppart(bundler, repo, source, bundlecaps=None,
@@ -1564,7 +1587,7 @@ def _getbundlechangegrouppart(bundler, repo, source, bundlecaps=None,
             if not cgversions:
                 raise ValueError(_('no common changegroup version'))
             version = max(cgversions)
-        outgoing = changegroup.computeoutgoing(repo, heads, common)
+        outgoing = _computeoutgoing(repo, heads, common)
         cg = changegroup.getlocalchangegroupraw(repo, source, outgoing,
                                                 bundlecaps=bundlecaps,
                                                 version=version)
@@ -1617,7 +1640,7 @@ def _getbundletagsfnodes(bundler, repo, source, bundlecaps=None,
     if not (kwargs.get('cg', True) and 'hgtagsfnodes' in b2caps):
         return
 
-    outgoing = changegroup.computeoutgoing(repo, heads, common)
+    outgoing = _computeoutgoing(repo, heads, common)
 
     if not outgoing.missingheads:
         return

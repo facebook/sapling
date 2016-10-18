@@ -26,14 +26,11 @@ from . import (
 #  "{get(extras, key)}"
 
 class _hybrid(object):
-    def __init__(self, gen, values, makemap, joinfmt=None):
+    def __init__(self, gen, values, makemap, joinfmt):
         self.gen = gen
         self.values = values
         self._makemap = makemap
-        if joinfmt:
-            self.joinfmt = joinfmt
-        else:
-            self.joinfmt = lambda x: x.values()[0]
+        self.joinfmt = joinfmt
     def __iter__(self):
         return self.gen
     def itermaps(self):
@@ -53,7 +50,7 @@ def showlist(name, values, plural=None, element=None, separator=' ', **args):
     if not element:
         element = name
     f = _showlist(name, values, plural, separator, **args)
-    return _hybrid(f, values, lambda x: {element: x})
+    return _hybrid(f, values, lambda x: {element: x}, lambda d: d[element])
 
 def _showlist(name, values, plural=None, separator=' ', **args):
     '''expand set of values.
@@ -591,6 +588,11 @@ def loadkeyword(ui, extname, registrarobj):
     """
     for name, func in registrarobj._table.iteritems():
         keywords[name] = func
+
+@templatekeyword('termwidth')
+def termwidth(repo, ctx, templ, **args):
+    """Integer. The width of the current terminal."""
+    return repo.ui.termwidth()
 
 # tell hggettext to extract docstrings from these functions:
 i18nfunctions = keywords.values()

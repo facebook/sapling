@@ -84,11 +84,11 @@ from mercurial import (
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
-# Note for extension authors: ONLY specify testedwith = 'internal' for
+# Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
 # be specifying the version(s) of Mercurial they are tested with, or
 # leave the attribute unspecified.
-testedwith = 'internal'
+testedwith = 'ships-with-hg-core'
 
 def snapshot(ui, repo, files, node, tmproot, listsubrepos):
     '''snapshot files as of some revision
@@ -324,6 +324,34 @@ def extdiff(ui, repo, *pats, **opts):
     cmdline = ' '.join(map(util.shellquote, [program] + option))
     return dodiff(ui, repo, cmdline, pats, opts)
 
+class savedcmd(object):
+    """use external program to diff repository (or selected files)
+
+    Show differences between revisions for the specified files, using
+    the following program::
+
+        %(path)s
+
+    When two revision arguments are given, then changes are shown
+    between those revisions. If only one revision is specified then
+    that revision is compared to the working directory, and, when no
+    revisions are specified, the working directory files are compared
+    to its parent.
+    """
+
+    def __init__(self, path, cmdline):
+        # We can't pass non-ASCII through docstrings (and path is
+        # in an unknown encoding anyway)
+        docpath = path.encode("string-escape")
+        self.__doc__ = self.__doc__ % {'path': util.uirepr(docpath)}
+        self._cmdline = cmdline
+
+    def __call__(self, ui, repo, *pats, **opts):
+        options = ' '.join(map(util.shellquote, opts['option']))
+        if options:
+            options = ' ' + options
+        return dodiff(ui, repo, self._cmdline + options, pats, opts)
+
 def uisetup(ui):
     for cmd, path in ui.configitems('extdiff'):
         path = util.expandpath(path)
@@ -357,28 +385,8 @@ def uisetup(ui):
                    ui.config('merge-tools', cmd+'.diffargs')
             if args:
                 cmdline += ' ' + args
-        def save(cmdline):
-            '''use closure to save diff command to use'''
-            def mydiff(ui, repo, *pats, **opts):
-                options = ' '.join(map(util.shellquote, opts['option']))
-                if options:
-                    options = ' ' + options
-                return dodiff(ui, repo, cmdline + options, pats, opts)
-            # We can't pass non-ASCII through docstrings (and path is
-            # in an unknown encoding anyway)
-            docpath = path.encode("string-escape")
-            mydiff.__doc__ = '''\
-use %(path)s to diff repository (or selected files)
-
-    Show differences between revisions for the specified files, using
-    the %(path)s program.
-
-    When two revision arguments are given, then changes are shown
-    between those revisions. If only one revision is specified then
-    that revision is compared to the working directory, and, when no
-    revisions are specified, the working directory files are compared
-    to its parent.\
-''' % {'path': util.uirepr(docpath)}
-            return mydiff
         command(cmd, extdiffopts[:], _('hg %s [OPTION]... [FILE]...') % cmd,
-                inferrepo=True)(save(cmdline))
+                inferrepo=True)(savedcmd(path, cmdline))
+
+# tell hggettext to extract docstrings from these functions:
+i18nfunctions = [savedcmd]

@@ -515,9 +515,13 @@ def updatelfiles(ui, repo, filelist=None, printmessage=None,
             rellfile = lfile
             relstandin = lfutil.standin(lfile)
             if wvfs.exists(relstandin):
-                mode = wvfs.stat(relstandin).st_mode
-                if mode != wvfs.stat(rellfile).st_mode:
-                    wvfs.chmod(rellfile, mode)
+                standinexec = wvfs.stat(relstandin).st_mode & 0o100
+                st = wvfs.stat(rellfile).st_mode
+                if standinexec != st & 0o100:
+                    st &= ~0o111
+                    if standinexec:
+                        st |= (st >> 2) & 0o111 & ~util.umask
+                    wvfs.chmod(rellfile, st)
                     update1 = 1
 
             updated += update1

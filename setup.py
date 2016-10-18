@@ -318,7 +318,10 @@ class hgbuildpy(build_py):
         if self.distribution.pure:
             self.distribution.ext_modules = []
         elif self.distribution.cffi:
-            exts = []
+            import setup_mpatch_cffi
+            import setup_bdiff_cffi
+            exts = [setup_mpatch_cffi.ffi.distutils_extension(),
+                    setup_bdiff_cffi.ffi.distutils_extension()]
             # cffi modules go here
             if sys.platform == 'darwin':
                 import setup_osutil_cffi
@@ -561,7 +564,8 @@ extmodules = [
               depends=common_depends + ['mercurial/bdiff.h']),
     Extension('mercurial.diffhelpers', ['mercurial/diffhelpers.c'],
               depends=common_depends),
-    Extension('mercurial.mpatch', ['mercurial/mpatch.c'],
+    Extension('mercurial.mpatch', ['mercurial/mpatch.c',
+                                   'mercurial/mpatch_module.c'],
               depends=common_depends),
     Extension('mercurial.parsers', ['mercurial/dirs.c',
                                     'mercurial/manifest.c',

@@ -475,10 +475,12 @@ class mergestate(object):
         flo = fco.flags()
         fla = fca.flags()
         if 'x' in flags + flo + fla and 'l' not in flags + flo + fla:
-            if fca.node() == nullid:
+            if fca.node() == nullid and flags != flo:
                 if preresolve:
                     self._repo.ui.warn(
-                        _('warning: cannot merge flags for %s\n') % afile)
+                        _('warning: cannot merge flags for %s '
+                          'without common ancestor - keeping local flags\n')
+                        % afile)
             elif flags == fla:
                 flags = flo
         if preresolve:
@@ -781,7 +783,7 @@ def driverconclude(repo, ms, wctx, labels=None):
 def manifestmerge(repo, wctx, p2, pa, branchmerge, force, matcher,
                   acceptremote, followcopies):
     """
-    Merge p1 and p2 with ancestor pa and generate merge action list
+    Merge wctx and p2 with ancestor pa and generate merge action list
 
     branchmerge and force are as passed in to update
     matcher = matcher to filter file lists
@@ -1036,6 +1038,12 @@ def batchremove(repo, actions):
     unlink = util.unlinkpath
     wjoin = repo.wjoin
     audit = repo.wvfs.audit
+    try:
+        cwd = os.getcwd()
+    except OSError as err:
+        if err.errno != errno.ENOENT:
+            raise
+        cwd = None
     i = 0
     for f, args, msg in actions:
         repo.ui.debug(" %s: %s -> r\n" % (f, msg))
@@ -1053,6 +1061,18 @@ def batchremove(repo, actions):
         i += 1
     if i > 0:
         yield i, f
+    if cwd:
+        # cwd was present before we started to remove files
+        # let's check if it is present after we removed them
+        try:
+            os.getcwd()
+        except OSError as err:
+            if err.errno != errno.ENOENT:
+                raise
+            # Print a warning if cwd was deleted
+            repo.ui.warn(_("current directory was removed\n"
+                           "(consider changing to repo root: %s)\n") %
+                         repo.root)
 
 def batchget(repo, mctx, actions):
     """apply gets to the working directory
@@ -1150,7 +1170,7 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
     numupdates = sum(len(l) for m, l in actions.items() if m != 'k')
 
     if [a for a in actions['r'] if a[0] == '.hgsubstate']:
-        subrepo.submerge(repo, wctx, mctx, wctx, overwrite)
+        subrepo.submerge(repo, wctx, mctx, wctx, overwrite, labels)
 
     # remove in parallel (must come first)
     z = 0
@@ -1168,7 +1188,7 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
     updated = len(actions['g'])
 
     if [a for a in actions['g'] if a[0] == '.hgsubstate']:
-        subrepo.submerge(repo, wctx, mctx, wctx, overwrite)
+        subrepo.submerge(repo, wctx, mctx, wctx, overwrite, labels)
 
     # forget (manifest only, just log it) (must come first)
     for f, args, msg in actions['f']:
@@ -1253,7 +1273,7 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
         progress(_updating, z, item=f, total=numupdates, unit=_files)
         if f == '.hgsubstate': # subrepo states need updating
             subrepo.submerge(repo, wctx, mctx, wctx.ancestor(mctx),
-                             overwrite)
+                             overwrite, labels)
             continue
         audit(f)
         complete, r = ms.preresolve(f, wctx)
@@ -1286,8 +1306,29 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
     removed += msremoved
 
     extraactions = ms.actions()
-    for k, acts in extraactions.iteritems():
-        actions[k].extend(acts)
+    if extraactions:
+        mfiles = set(a[0] for a in actions['m'])
+        for k, acts in extraactions.iteritems():
+            actions[k].extend(acts)
+            # Remove these files from actions['m'] as well. This is important
+            # because in recordupdates, files in actions['m'] are processed
+            # after files in other actions, and the merge driver might add
+            # files to those actions via extraactions above. This can lead to a
+            # file being recorded twice, with poor results. This is especially
+            # problematic for actions['r'] (currently only possible with the
+            # merge driver in the initial merge process; interrupted merges
+            # don't go through this flow).
+            #
+            # The real fix here is to have indexes by both file and action so
+            # that when the action for a file is changed it is automatically
+            # reflected in the other action lists. But that involves a more
+            # complex data structure, so this will do for now.
+            #
+            # We don't need to do the same operation for 'dc' and 'cd' because
+            # those lists aren't consulted again.
+            mfiles.difference_update(a[0] for a in acts)
+
+        actions['m'] = [a for a in actions['m'] if a[0] in mfiles]
 
     progress(_updating, None, total=numupdates, unit=_files)
 
@@ -1514,15 +1555,16 @@ def update(repo, node, branchmerge, force, ancestor=None,
                     pas = [p1]
 
         # deprecated config: merge.followcopies
-        followcopies = False
+        followcopies = repo.ui.configbool('merge', 'followcopies', True)
         if overwrite:
             pas = [wc]
+            followcopies = False
         elif pas == [p2]: # backwards
-            pas = [wc.p1()]
-        elif not branchmerge and not wc.dirty(missing=True):
-            pass
-        elif pas[0] and repo.ui.configbool('merge', 'followcopies', True):
-            followcopies = True
+            pas = [p1]
+        elif not pas[0]:
+            followcopies = False
+        if not branchmerge and not wc.dirty(missing=True):
+            followcopies = False
 
         ### calculate phase
         actionbyfile, diverge, renamedelete = calculateupdates(
@@ -1535,11 +1577,13 @@ def update(repo, node, branchmerge, force, ancestor=None,
         if '.hgsubstate' in actionbyfile:
             f = '.hgsubstate'
             m, args, msg = actionbyfile[f]
+            prompts = filemerge.partextras(labels)
+            prompts['f'] = f
             if m == 'cd':
                 if repo.ui.promptchoice(
-                    _("local changed %s which remote deleted\n"
+                    _("local%(l)s changed %(f)s which other%(o)s deleted\n"
                       "use (c)hanged version or (d)elete?"
-                      "$$ &Changed $$ &Delete") % f, 0):
+                      "$$ &Changed $$ &Delete") % prompts, 0):
                     actionbyfile[f] = ('r', None, "prompt delete")
                 elif f in p1:
                     actionbyfile[f] = ('am', None, "prompt keep")
@@ -1549,9 +1593,9 @@ def update(repo, node, branchmerge, force, ancestor=None,
                 f1, f2, fa, move, anc = args
                 flags = p2[f2].flags()
                 if repo.ui.promptchoice(
-                    _("remote changed %s which local deleted\n"
+                    _("other%(o)s changed %(f)s which local%(l)s deleted\n"
                       "use (c)hanged version or leave (d)eleted?"
-                      "$$ &Changed $$ &Deleted") % f, 0) == 0:
+                      "$$ &Changed $$ &Deleted") % prompts, 0) == 0:
                     actionbyfile[f] = ('g', (flags, False), "prompt recreating")
                 else:
                     del actionbyfile[f]
@@ -1563,7 +1607,7 @@ def update(repo, node, branchmerge, force, ancestor=None,
                 actions[m] = []
             actions[m].append((f, args, msg))
 
-        if not util.checkcase(repo.path):
+        if not util.fscasesensitive(repo.path):
             # check collision between files only in p2 for clean update
             if (not branchmerge and
                 (force or not wc.dirty(missing=True, branch=False))):

@@ -33,6 +33,10 @@ elements = {
     "|": (5, None, None, ("|", 5), None),
     "%": (6, None, None, ("%", 6), None),
     ")": (0, None, None, None, None),
+    "+": (3, None, None, ("+", 3), None),
+    "-": (3, None, ("negate", 10), ("-", 3), None),
+    "*": (4, None, None, ("*", 4), None),
+    "/": (4, None, None, ("/", 4), None),
     "integer": (0, "integer", None, None, None),
     "symbol": (0, "symbol", None, None, None),
     "string": (0, "string", None, None, None),
@@ -48,7 +52,7 @@ def tokenize(program, start, end, term=None):
         c = program[pos]
         if c.isspace(): # skip inter-token whitespace
             pass
-        elif c in "(,)%|": # handle simple operators
+        elif c in "(,)%|+-*/": # handle simple operators
             yield (c, None, pos)
         elif c in '"\'': # handle quoted templates
             s = pos + 1
@@ -70,13 +74,8 @@ def tokenize(program, start, end, term=None):
                 pos += 1
             else:
                 raise error.ParseError(_("unterminated string"), s)
-        elif c.isdigit() or c == '-':
+        elif c.isdigit():
             s = pos
-            if c == '-': # simply take negate operator as part of integer
-                pos += 1
-            if pos >= end or not program[pos].isdigit():
-                raise error.ParseError(_("integer literal without digits"), s)
-            pos += 1
             while pos < end:
                 d = program[pos]
                 if not d.isdigit():
@@ -289,6 +288,22 @@ def evalfuncarg(context, mapping, arg):
         thing = stringify(thing)
     return thing
 
+def evalboolean(context, mapping, arg):
+    """Evaluate given argument as boolean, but also takes boolean literals"""
+    func, data = arg
+    if func is runsymbol:
+        thing = func(context, mapping, data, default=None)
+        if thing is None:
+            # not a template keyword, takes as a boolean literal
+            thing = util.parsebool(data)
+    else:
+        thing = func(context, mapping, data)
+    if isinstance(thing, bool):
+        return thing
+    # other objects are evaluated as strings, which means 0 is True, but
+    # empty dict/list should be False as they are expected to be ''
+    return bool(stringify(thing))
+
 def evalinteger(context, mapping, arg, err):
     v = evalfuncarg(context, mapping, arg)
     try:
@@ -404,6 +419,31 @@ def runmap(context, mapping, data):
             # If so, return the expanded value.
             yield i
 
+def buildnegate(exp, context):
+    arg = compileexp(exp[1], context, exprmethods)
+    return (runnegate, arg)
+
+def runnegate(context, mapping, data):
+    data = evalinteger(context, mapping, data,
+                       _('negation needs an integer argument'))
+    return -data
+
+def buildarithmetic(exp, context, func):
+    left = compileexp(exp[1], context, exprmethods)
+    right = compileexp(exp[2], context, exprmethods)
+    return (runarithmetic, (func, left, right))
+
+def runarithmetic(context, mapping, data):
+    func, left, right = data
+    left = evalinteger(context, mapping, left,
+                       _('arithmetic only defined on integers'))
+    right = evalinteger(context, mapping, right,
+                        _('arithmetic only defined on integers'))
+    try:
+        return func(left, right)
+    except ZeroDivisionError:
+        raise error.Abort(_('division by zero is not defined'))
+
 def buildfunc(exp, context):
     n = getsymbol(exp[1])
     args = [compileexp(x, context, exprmethods) for x in getlist(exp[2])]
@@ -464,6 +504,20 @@ def diff(context, mapping, args):
 
     return ''.join(chunks)
 
+@templatefunc('files(pattern)')
+def files(context, mapping, args):
+    """All files of the current changeset matching the pattern. See
+    :hg:`help patterns`."""
+    if not len(args) == 1:
+        # i18n: "files" is a keyword
+        raise error.ParseError(_("files expects one argument"))
+
+    raw = evalstring(context, mapping, args[0])
+    ctx = mapping['ctx']
+    m = ctx.match([raw])
+    files = list(ctx.matches(m))
+    return templatekw.showlist("file", files, **mapping)
+
 @templatefunc('fill(text[, width[, initialident[, hangindent]]])')
 def fill(context, mapping, args):
     """Fill many
@@ -488,7 +542,7 @@ def fill(context, mapping, args):
 
     return templatefilters.fill(text, width, initindent, hangindent)
 
-@templatefunc('pad(text, width[, fillchar=\' \'[, right=False]])')
+@templatefunc('pad(text, width[, fillchar=\' \'[, left=False]])')
 def pad(context, mapping, args):
     """Pad text with a
     fill character."""
@@ -502,14 +556,14 @@ def pad(context, mapping, args):
 
     text = evalstring(context, mapping, args[0])
 
-    right = False
+    left = False
     fillchar = ' '
     if len(args) > 2:
         fillchar = evalstring(context, mapping, args[2])
     if len(args) > 3:
-        right = util.parsebool(args[3][1])
+        left = evalboolean(context, mapping, args[3])
 
-    if right:
+    if left:
         return text.rjust(width, fillchar)
     else:
         return text.ljust(width, fillchar)
@@ -560,24 +614,24 @@ def if_(context, mapping, args):
         # i18n: "if" is a keyword
         raise error.ParseError(_("if expects two or three arguments"))
 
-    test = evalstring(context, mapping, args[0])
+    test = evalboolean(context, mapping, args[0])
     if test:
         yield args[1][0](context, mapping, args[1][1])
     elif len(args) == 3:
         yield args[2][0](context, mapping, args[2][1])
 
-@templatefunc('ifcontains(search, thing, then[, else])')
+@templatefunc('ifcontains(needle, haystack, then[, else])')
 def ifcontains(context, mapping, args):
     """Conditionally execute based
-    on whether the item "search" is in "thing"."""
+    on whether the item "needle" is in "haystack"."""
     if not (3 <= len(args) <= 4):
         # i18n: "ifcontains" is a keyword
         raise error.ParseError(_("ifcontains expects three or four arguments"))
 
-    item = evalstring(context, mapping, args[0])
-    items = evalfuncarg(context, mapping, args[1])
+    needle = evalstring(context, mapping, args[0])
+    haystack = evalfuncarg(context, mapping, args[1])
 
-    if item in items:
+    if needle in haystack:
         yield args[2][0](context, mapping, args[2][1])
     elif len(args) == 4:
         yield args[3][0](context, mapping, args[3][1])
@@ -682,6 +736,28 @@ def localdate(context, mapping, args):
     else:
         tzoffset = util.makedate()[1]
     return (date[0], tzoffset)
+
+@templatefunc('mod(a, b)')
+def mod(context, mapping, args):
+    """Calculate a mod b such that a / b + a mod b == a"""
+    if not len(args) == 2:
+        # i18n: "mod" is a keyword
+        raise error.ParseError(_("mod expects two arguments"))
+
+    func = lambda a, b: a % b
+    return runarithmetic(context, mapping, (func, args[0], args[1]))
+
+@templatefunc('relpath(path)')
+def relpath(context, mapping, args):
+    """Convert a repository-absolute path into a filesystem path relative to
+    the current working directory."""
+    if len(args) != 1:
+        # i18n: "relpath" is a keyword
+        raise error.ParseError(_("relpath expects one argument"))
+
+    repo = mapping['ctx'].repo()
+    path = evalstring(context, mapping, args[0])
+    return repo.pathto(path)
 
 @templatefunc('revset(query[, formatargs...])')
 def revset(context, mapping, args):
@@ -884,6 +960,11 @@ exprmethods = {
     "|": buildfilter,
     "%": buildmap,
     "func": buildfunc,
+    "+": lambda e, c: buildarithmetic(e, c, lambda a, b: a + b),
+    "-": lambda e, c: buildarithmetic(e, c, lambda a, b: a - b),
+    "negate": buildnegate,
+    "*": lambda e, c: buildarithmetic(e, c, lambda a, b: a * b),
+    "/": lambda e, c: buildarithmetic(e, c, lambda a, b: a // b),
     }
 
 # methods to interpret top-level template (e.g. {x}, {x|_}, {x % "y"})
@@ -917,17 +998,19 @@ def _flatten(thing):
     '''yield a single stream from a possibly nested set of iterators'''
     if isinstance(thing, str):
         yield thing
+    elif thing is None:
+        pass
     elif not util.safehasattr(thing, '__iter__'):
-        if thing is not None:
-            yield str(thing)
+        yield str(thing)
     else:
         for i in thing:
             if isinstance(i, str):
                 yield i
+            elif i is None:
+                pass
             elif not util.safehasattr(i, '__iter__'):
-                if i is not None:
-                    yield str(i)
-            elif i is not None:
+                yield str(i)
+            else:
                 for j in _flatten(i):
                     yield j
 
@@ -1026,6 +1109,29 @@ def _readmapfile(mapfile):
                 raise error.ParseError(_('unmatched quotes'),
                                        conf.source('', key))
             cache[key] = unquotestring(val)
+        elif key == "__base__":
+            # treat as a pointer to a base class for this style
+            path = util.normpath(os.path.join(base, val))
+
+            # fallback check in template paths
+            if not os.path.exists(path):
+                for p in templatepaths():
+                    p2 = util.normpath(os.path.join(p, val))
+                    if os.path.isfile(p2):
+                        path = p2
+                        break
+                    p3 = util.normpath(os.path.join(p2, "map"))
+                    if os.path.isfile(p3):
+                        path = p3
+                        break
+
+            bcache, btmap = _readmapfile(path)
+            for k in bcache:
+                if k not in cache:
+                    cache[k] = bcache[k]
+            for k in btmap:
+                if k not in tmap:
+                    tmap[k] = btmap[k]
         else:
             val = 'default', val
             if ':' in val[1]:

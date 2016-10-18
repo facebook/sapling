@@ -60,6 +60,20 @@ later.
   o  0
   
 
+(display nodes filtered by log options)
+
+  $ hg log -G -r 'sort(all(), topo)' -k '.3'
+  o  8
+  |
+  o  3
+  |
+  ~
+  o  7
+  |
+  o  6
+  |
+  ~
+
 (revset skipping nodes)
 
   $ hg log -G --rev 'sort(not (2+6), topo)'

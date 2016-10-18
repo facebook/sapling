@@ -12,6 +12,17 @@ import getopt
 from .i18n import _
 from . import error
 
+# Set of flags to not apply boolean negation logic on
+nevernegate = set([
+    # avoid --no-noninteractive
+    'noninteractive',
+    # These two flags are special because they cause hg to do one
+    # thing and then exit, and so aren't suitable for use in things
+    # like aliases anyway.
+    'help',
+    'version',
+    ])
+
 def gnugetopt(args, options, longoptions):
     """Parse options mostly like getopt.gnu_getopt.
 
@@ -64,6 +75,8 @@ def fancyopts(args, options, state, gnu=False):
     shortlist = ''
     argmap = {}
     defmap = {}
+    negations = {}
+    alllong = set(o[1] for o in options)
 
     for option in options:
         if len(option) == 5:
@@ -91,6 +104,18 @@ def fancyopts(args, options, state, gnu=False):
                 short += ':'
             if oname:
                 oname += '='
+        elif oname not in nevernegate:
+            if oname.startswith('no-'):
+                insert = oname[3:]
+            else:
+                insert = 'no-' + oname
+            # backout (as a practical example) has both --commit and
+            # --no-commit options, so we don't want to allow the
+            # negations of those flags.
+            if insert not in alllong:
+                assert ('--' + oname) not in negations
+                negations['--' + insert] = '--' + oname
+                namelist.append(insert)
         if short:
             shortlist += short
         if name:
@@ -105,6 +130,11 @@ def fancyopts(args, options, state, gnu=False):
 
     # transfer result to state
     for opt, val in opts:
+        boolval = True
+        negation = negations.get(opt, False)
+        if negation:
+            opt = negation
+            boolval = False
         name = argmap[opt]
         obj = defmap[name]
         t = type(obj)
@@ -121,7 +151,7 @@ def fancyopts(args, options, state, gnu=False):
         elif t is type([]):
             state[name].append(val)
         elif t is type(None) or t is type(False):
-            state[name] = True
+            state[name] = boolval
 
     # return unparsed args
     return args

@@ -87,11 +87,11 @@ stringio = util.stringio
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
-# Note for extension authors: ONLY specify testedwith = 'internal' for
+# Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
 # be specifying the version(s) of Mercurial they are tested with, or
 # leave the attribute unspecified.
-testedwith = 'internal'
+testedwith = 'ships-with-hg-core'
 
 def _addpullheader(seq, ctx):
     """Add a header pointing to a public URL where the changeset is available

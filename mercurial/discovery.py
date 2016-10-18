@@ -76,10 +76,29 @@ class outgoing(object):
     The sets are computed on demand from the heads, unless provided upfront
     by discovery.'''
 
-    def __init__(self, revlog, commonheads, missingheads):
+    def __init__(self, repo, commonheads=None, missingheads=None,
+                 missingroots=None):
+        # at least one of them must not be set
+        assert None in (commonheads, missingroots)
+        cl = repo.changelog
+        if missingheads is None:
+            missingheads = cl.heads()
+        if missingroots:
+            discbases = []
+            for n in missingroots:
+                discbases.extend([p for p in cl.parents(n) if p != nullid])
+            # TODO remove call to nodesbetween.
+            # TODO populate attributes on outgoing instance instead of setting
+            # discbases.
+            csets, roots, heads = cl.nodesbetween(missingroots, missingheads)
+            included = set(csets)
+            missingheads = heads
+            commonheads = [n for n in discbases if n not in included]
+        elif not commonheads:
+            commonheads = [nullid]
         self.commonheads = commonheads
         self.missingheads = missingheads
-        self._revlog = revlog
+        self._revlog = cl
         self._common = None
         self._missing = None
         self.excluded = []
@@ -116,7 +135,7 @@ def findcommonoutgoing(repo, other, onlyheads=None, force=False,
     If portable is given, compute more conservative common and missingheads,
     to make bundles created from the instance more portable.'''
     # declare an empty outgoing object to be filled later
-    og = outgoing(repo.changelog, None, None)
+    og = outgoing(repo, None, None)
 
     # get common set if not provided
     if commoninc is None:
@@ -382,7 +401,7 @@ def checkheads(pushop):
                     errormsg = (_("push creates new branch '%s' "
                                   "with multiple heads") % (branch))
                     hint = _("merge or"
-                             " see \"hg help push\" for details about"
+                             " see 'hg help push' for details about"
                              " pushing new heads")
         elif len(newhs) > len(oldhs):
             # remove bookmarked or existing remote heads from the new heads list
@@ -401,11 +420,11 @@ def checkheads(pushop):
                                  ) % short(dhs[0])
                 if unsyncedheads:
                     hint = _("pull and merge or"
-                             " see \"hg help push\" for details about"
+                             " see 'hg help push' for details about"
                              " pushing new heads")
                 else:
                     hint = _("merge or"
-                             " see \"hg help push\" for details about"
+                             " see 'hg help push' for details about"
                              " pushing new heads")
             if branch is None:
                 repo.ui.note(_("new remote heads:\n"))

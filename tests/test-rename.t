@@ -265,7 +265,8 @@ move everything under directory d1 to existing directory d2, do not
 overwrite existing files (d2/b)
 
   $ hg rename d1/* d2
-  d2/b: not overwriting - file exists
+  d2/b: not overwriting - file already committed
+  (hg rename --force to replace the file by recording a rename)
   moving d1/d11/a1 to d2/d11/a1 (glob)
   $ hg status -C
   A d2/a
@@ -370,6 +371,7 @@ attempt to overwrite an existing file
   $ echo "ca" > d1/ca
   $ hg rename d1/ba d1/ca
   d1/ca: not overwriting - file exists
+  (hg rename --after to record the rename)
   $ hg status -C
   ? d1/ca
   $ hg update -C
@@ -393,6 +395,7 @@ attempt to overwrite an existing broken symlink
   $ ln -s ba d1/ca
   $ hg rename --traceback d1/ba d1/ca
   d1/ca: not overwriting - file exists
+  (hg rename --after to record the rename)
   $ hg status -C
   ? d1/ca
   $ hg update -C

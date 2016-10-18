@@ -60,7 +60,7 @@ One process waiting for another
   > > preup 2>&1
   $ wait
   $ cat preup
-  waiting for lock on working directory of b held by '*:*' (glob)
+  waiting for lock on working directory of b held by process '*' on host '*' (glob)
   got lock after * seconds (glob)
   $ cat stdout
   adding b

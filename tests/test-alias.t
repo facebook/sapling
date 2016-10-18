@@ -99,7 +99,7 @@ disabled
   
       patchbomb     command to send changesets as (a series of) patch emails
   
-  (use "hg help extensions" for information on enabling extensions)
+  (use 'hg help extensions' for information on enabling extensions)
 
 
 no definition
@@ -441,7 +441,7 @@ invalid arguments
   
   alias for: hg root
   
-  (use "hg rt -h" to show more help)
+  (use 'hg rt -h' to show more help)
   [255]
 
 invalid global arguments for normal commands, aliases, and shell aliases
@@ -470,7 +470,7 @@ invalid global arguments for normal commands, aliases, and shell aliases
    summary       summarize working directory state
    update        update working directory (or switch revisions)
   
-  (use "hg help" for the full list of commands or "hg -v" for details)
+  (use 'hg help' for the full list of commands or 'hg -v' for details)
   [255]
   $ hg --invalid mylog
   hg: option --invalid not recognized
@@ -496,7 +496,7 @@ invalid global arguments for normal commands, aliases, and shell aliases
    summary       summarize working directory state
    update        update working directory (or switch revisions)
   
-  (use "hg help" for the full list of commands or "hg -v" for details)
+  (use 'hg help' for the full list of commands or 'hg -v' for details)
   [255]
   $ hg --invalid blank
   hg: option --invalid not recognized
@@ -522,7 +522,7 @@ invalid global arguments for normal commands, aliases, and shell aliases
    summary       summarize working directory state
    update        update working directory (or switch revisions)
   
-  (use "hg help" for the full list of commands or "hg -v" for details)
+  (use 'hg help' for the full list of commands or 'hg -v' for details)
   [255]
 
 environment variable changes in alias commands

@@ -40,6 +40,61 @@ simple with color
   \x1b[0;35mport\x1b[0m\x1b[0;36m:\x1b[0m\x1b[0;32m4\x1b[0m\x1b[0;36m:\x1b[0mva\x1b[0;31;1mport\x1b[0might (esc)
   \x1b[0;35mport\x1b[0m\x1b[0;36m:\x1b[0m\x1b[0;32m4\x1b[0m\x1b[0;36m:\x1b[0mim\x1b[0;31;1mport\x1b[0m/ex\x1b[0;31;1mport\x1b[0m (esc)
 
+simple templated
+
+  $ hg grep port \
+  > -T '{file}:{rev}:{node|short}:{texts % "{if(matched, text|upper, text)}"}\n'
+  port:4:914fa752cdea:exPORT
+  port:4:914fa752cdea:vaPORTight
+  port:4:914fa752cdea:imPORT/exPORT
+
+simple JSON (no "change" field)
+
+  $ hg grep -Tjson port
+  [
+   {
+    "date": [4.0, 0],
+    "file": "port",
+    "line_number": 1,
+    "node": "914fa752cdea87777ac1a8d5c858b0c736218f6c",
+    "rev": 4,
+    "texts": [{"matched": false, "text": "ex"}, {"matched": true, "text": "port"}],
+    "user": "spam"
+   },
+   {
+    "date": [4.0, 0],
+    "file": "port",
+    "line_number": 2,
+    "node": "914fa752cdea87777ac1a8d5c858b0c736218f6c",
+    "rev": 4,
+    "texts": [{"matched": false, "text": "va"}, {"matched": true, "text": "port"}, {"matched": false, "text": "ight"}],
+    "user": "spam"
+   },
+   {
+    "date": [4.0, 0],
+    "file": "port",
+    "line_number": 3,
+    "node": "914fa752cdea87777ac1a8d5c858b0c736218f6c",
+    "rev": 4,
+    "texts": [{"matched": false, "text": "im"}, {"matched": true, "text": "port"}, {"matched": false, "text": "/ex"}, {"matched": true, "text": "port"}],
+    "user": "spam"
+   }
+  ]
+
+simple JSON without matching lines
+
+  $ hg grep -Tjson -l port
+  [
+   {
+    "date": [4.0, 0],
+    "file": "port",
+    "line_number": 1,
+    "node": "914fa752cdea87777ac1a8d5c858b0c736218f6c",
+    "rev": 4,
+    "user": "spam"
+   }
+  ]
+
 all
 
   $ hg grep --traceback --all -nu port port
@@ -52,6 +107,102 @@ all
   port:2:3:+:spam:import/export
   port:1:2:+:eggs:export
   port:0:1:+:spam:import
+
+all JSON
+
+  $ hg grep --all -Tjson port port
+  [
+   {
+    "change": "-",
+    "date": [4.0, 0],
+    "file": "port",
+    "line_number": 4,
+    "node": "914fa752cdea87777ac1a8d5c858b0c736218f6c",
+    "rev": 4,
+    "texts": [{"matched": false, "text": "im"}, {"matched": true, "text": "port"}, {"matched": false, "text": "/ex"}, {"matched": true, "text": "port"}],
+    "user": "spam"
+   },
+   {
+    "change": "+",
+    "date": [3.0, 0],
+    "file": "port",
+    "line_number": 4,
+    "node": "95040cfd017d658c536071c6290230a613c4c2a6",
+    "rev": 3,
+    "texts": [{"matched": false, "text": "im"}, {"matched": true, "text": "port"}, {"matched": false, "text": "/ex"}, {"matched": true, "text": "port"}],
+    "user": "eggs"
+   },
+   {
+    "change": "-",
+    "date": [2.0, 0],
+    "file": "port",
+    "line_number": 1,
+    "node": "3b325e3481a1f07435d81dfdbfa434d9a0245b47",
+    "rev": 2,
+    "texts": [{"matched": false, "text": "im"}, {"matched": true, "text": "port"}],
+    "user": "spam"
+   },
+   {
+    "change": "-",
+    "date": [2.0, 0],
+    "file": "port",
+    "line_number": 2,
+    "node": "3b325e3481a1f07435d81dfdbfa434d9a0245b47",
+    "rev": 2,
+    "texts": [{"matched": false, "text": "ex"}, {"matched": true, "text": "port"}],
+    "user": "spam"
+   },
+   {
+    "change": "+",
+    "date": [2.0, 0],
+    "file": "port",
+    "line_number": 1,
+    "node": "3b325e3481a1f07435d81dfdbfa434d9a0245b47",
+    "rev": 2,
+    "texts": [{"matched": false, "text": "ex"}, {"matched": true, "text": "port"}],
+    "user": "spam"
+   },
+   {
+    "change": "+",
+    "date": [2.0, 0],
+    "file": "port",
+    "line_number": 2,
+    "node": "3b325e3481a1f07435d81dfdbfa434d9a0245b47",
+    "rev": 2,
+    "texts": [{"matched": false, "text": "va"}, {"matched": true, "text": "port"}, {"matched": false, "text": "ight"}],
+    "user": "spam"
+   },
+   {
+    "change": "+",
+    "date": [2.0, 0],
+    "file": "port",
+    "line_number": 3,
+    "node": "3b325e3481a1f07435d81dfdbfa434d9a0245b47",
+    "rev": 2,
+    "texts": [{"matched": false, "text": "im"}, {"matched": true, "text": "port"}, {"matched": false, "text": "/ex"}, {"matched": true, "text": "port"}],
+    "user": "spam"
+   },
+   {
+    "change": "+",
+    "date": [1.0, 0],
+    "file": "port",
+    "line_number": 2,
+    "node": "8b20f75c158513ff5ac80bd0e5219bfb6f0eb587",
+    "rev": 1,
+    "texts": [{"matched": false, "text": "ex"}, {"matched": true, "text": "port"}],
+    "user": "eggs"
+   },
+   {
+    "change": "+",
+    "date": [0.0, 0],
+    "file": "port",
+    "line_number": 1,
+    "node": "f31323c9217050ba245ee8b537c713ec2e8ab226",
+    "rev": 0,
+    "texts": [{"matched": false, "text": "im"}, {"matched": true, "text": "port"}],
+    "user": "spam"
+   }
+  ]
 
 other
 
@@ -111,6 +262,12 @@ follow
   color:2:-:orange
   color:1:+:orange
 
+test substring match: '^' should only match at the beginning
+
+  $ hg grep '^.' --config extensions.color= --color debug
+  [grep.filename|color][grep.sep|:][grep.rev|3][grep.sep|:][grep.match|b]lack
+  [grep.filename|color][grep.sep|:][grep.rev|3][grep.sep|:][grep.match|o]range
+  [grep.filename|color][grep.sep|:][grep.rev|3][grep.sep|:][grep.match|b]lue
 
 match in last "line" without newline
 

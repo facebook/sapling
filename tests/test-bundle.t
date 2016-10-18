@@ -279,26 +279,26 @@ packed1 is produced properly
   $ hg debugbundle --spec packed.hg
   none-packed1;requirements%3Dgeneraldelta%2Crevlogv1
 
-generaldelta requirement is listed in stream clone bundles
+generaldelta requirement is not listed in stream clone bundles unless used
 
-  $ hg --config format.generaldelta=true init testgd
-  $ cd testgd
+  $ hg --config format.usegeneraldelta=false init testnongd
+  $ cd testnongd
   $ touch foo
   $ hg -q commit -A -m initial
   $ cd ..
-  $ hg -R testgd debugcreatestreamclonebundle packedgd.hg
+  $ hg -R testnongd debugcreatestreamclonebundle packednongd.hg
   writing 301 bytes for 3 files
-  bundle requirements: generaldelta, revlogv1
+  bundle requirements: revlogv1
 
-  $ f -B 64 --size --sha1 --hexdump packedgd.hg
-  packedgd.hg: size=396, sha1=981f9e589799335304a5a9a44caa3623a48d2a9f
+  $ f -B 64 --size --sha1 --hexdump packednongd.hg
+  packednongd.hg: size=383, sha1=1d9c230238edd5d38907100b729ba72b1831fe6f
   0000: 48 47 53 31 55 4e 00 00 00 00 00 00 00 03 00 00 |HGS1UN..........|
-  0010: 00 00 00 00 01 2d 00 16 67 65 6e 65 72 61 6c 64 |.....-..generald|
-  0020: 65 6c 74 61 2c 72 65 76 6c 6f 67 76 31 00 64 61 |elta,revlogv1.da|
-  0030: 74 61 2f 66 6f 6f 2e 69 00 36 34 0a 00 03 00 01 |ta/foo.i.64.....|
+  0010: 00 00 00 00 01 2d 00 09 72 65 76 6c 6f 67 76 31 |.....-..revlogv1|
+  0020: 00 64 61 74 61 2f 66 6f 6f 2e 69 00 36 34 0a 00 |.data/foo.i.64..|
+  0030: 01 00 01 00 00 00 00 00 00 00 00 00 00 00 00 00 |................|
 
-  $ hg debugbundle --spec packedgd.hg
-  none-packed1;requirements%3Dgeneraldelta%2Crevlogv1
+  $ hg debugbundle --spec packednongd.hg
+  none-packed1;requirements%3Drevlogv1
 
 Unpacking packed1 bundles with "hg unbundle" isn't allowed
 
@@ -310,9 +310,51 @@ Unpacking packed1 bundles with "hg unbundle" isn't allowed
 
 packed1 can be consumed from debug command
 
+(this also confirms that streamclone-ed changes are visible via
+@filecache properties to in-process procedures before closing
+transaction)
+
+  $ cat > $TESTTMP/showtip.py <<EOF
+  > from __future__ import absolute_import
+  > 
+  > def showtip(ui, repo, hooktype, **kwargs):
+  >     ui.warn('%s: %s\n' % (hooktype, repo['tip'].hex()[:12]))
+  > 
+  > def reposetup(ui, repo):
+  >     # this confirms (and ensures) that (empty) 00changelog.i
+  >     # before streamclone is already cached as repo.changelog
+  >     ui.setconfig('hooks', 'pretxnopen.showtip', showtip)
+  > 
+  >     # this confirms that streamclone-ed changes are visible to
+  >     # in-process procedures before closing transaction
+  >     ui.setconfig('hooks', 'pretxnclose.showtip', showtip)
+  > 
+  >     # this confirms that streamclone-ed changes are still visible
+  >     # after closing transaction
+  >     ui.setconfig('hooks', 'txnclose.showtip', showtip)
+  > EOF
+  $ cat >> $HGRCPATH <<EOF
+  > [extensions]
+  > showtip = $TESTTMP/showtip.py
+  > EOF
+
   $ hg -R packed debugapplystreamclonebundle packed.hg
   6 files to transfer, 2.60 KB of data
+  pretxnopen: 000000000000
+  pretxnclose: aa35859c02ea
   transferred 2.60 KB in *.* seconds (* */sec) (glob)
+  txnclose: aa35859c02ea
+
+(for safety, confirm visibility of streamclone-ed changes by another
+process, too)
+
+  $ hg -R packed tip -T "{node|short}\n"
+  aa35859c02ea
+
+  $ cat >> $HGRCPATH <<EOF
+  > [extensions]
+  > showtip = !
+  > EOF
 
 Does not work on non-empty repo
 

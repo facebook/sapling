@@ -164,10 +164,12 @@ osx:
 	  --install-lib=/Library/Python/2.7/site-packages/
 	make -C doc all install DESTDIR="$(PWD)/build/mercurial/"
 	mkdir -p $${OUTPUTDIR:-dist}
-	pkgbuild --root build/mercurial/ --identifier org.mercurial-scm.mercurial \
-	  build/mercurial.pkg
 	HGVER=$$((cat build/mercurial/Library/Python/2.7/site-packages/mercurial/__version__.py; echo 'print(version)') | python) && \
 	OSXVER=$$(sw_vers -productVersion | cut -d. -f1,2) && \
+	pkgbuild --root build/mercurial/ \
+	  --identifier org.mercurial-scm.mercurial \
+	  --version "$${HGVER}" \
+	  build/mercurial.pkg && \
 	productbuild --distribution contrib/macosx/distribution.xml \
 	  --package-path build/ \
 	  --version "$${HGVER}" \

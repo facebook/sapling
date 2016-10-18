@@ -549,7 +549,7 @@ Test that the internal linear merging works correctly
   > l
   > EOF
    subrepository sub diverged (local revision: f74e50bd9e55, remote revision: d65e59e952a9)
-  (M)erge, keep (l)ocal or keep (r)emote? m
+  (M)erge, keep (l)ocal [working copy] or keep (r)emote [destination]? m
    subrepository sources for sub differ (in checked out version)
   use (l)ocal source (f74e50bd9e55) or (r)emote source (d65e59e952a9)? r
   remote turned local largefile large2 into a normal file
@@ -615,7 +615,7 @@ the 1st commit of resuming.
   > EOF
   rebasing 1:72518492caa6 "#1"
   rebasing 4:07d6153b5c04 "#4"
-  local changed .hglf/large1 which remote deleted
+  local [dest] changed .hglf/large1 which other [source] deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? c
 
   $ hg diff -c "tip~1" --nodates .hglf/large1 | grep '^[+-][0-9a-z]'

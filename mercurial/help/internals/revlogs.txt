@@ -1,6 +1,3 @@
-Revlogs
-=======
-
 Revision logs - or *revlogs* - are an append only data structure for
 storing discrete entries, or *revisions*. They are the primary storage
 mechanism of repository data.
@@ -28,7 +25,7 @@ revision #0 and the second is revision #1. The revision -1 is typically
 used to mean *does not exist* or *not defined*.
 
 File Format
------------
+===========
 
 A revlog begins with a 32-bit big endian integer holding version info
 and feature flags. This integer is shared with the first revision
@@ -77,7 +74,7 @@ possibly located between index entries. More on this layout is described
 below.
 
 RevlogNG Format
----------------
+===============
 
 RevlogNG (version 1) begins with an index describing the revisions in
 the revlog. If the ``inline`` flag is set, revision data is stored inline,
@@ -129,7 +126,7 @@ The first 4 bytes of the revlog are shared between the revlog header
 and the 6 byte absolute offset field from the first revlog entry.
 
 Delta Chains
-------------
+============
 
 Revision data is encoded as a chain of *chunks*. Each chain begins with
 the compressed original full text for that revision. Each subsequent
@@ -153,7 +150,7 @@ by default in Mercurial 3.7) activates the mode where deltas are
 computed against an arbitrary revision (almost certainly a parent revision).
 
 File Storage
-------------
+============
 
 Revlogs logically consist of an index (metadata of entries) and
 revision data. This data may be stored together in a single file or in
@@ -172,7 +169,7 @@ The actual layout of revlog files on disk is governed by the repository's
 (possibly containing inline data) and a ``.d`` file holds the revision data.
 
 Revision Entries
-----------------
+================
 
 Revision entries consist of an optional 1 byte header followed by an
 encoding of the revision data. The headers are as follows:
@@ -187,7 +184,7 @@ x (0x78)
    The 0x78 value is actually the first byte of the zlib header (CMF byte).
 
 Hash Computation
-----------------
+================
 
 The hash of the revision is stored in the index and is used both as a primary
 key and for data integrity verification.

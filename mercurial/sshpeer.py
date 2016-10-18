@@ -232,13 +232,7 @@ class sshpeer(wireproto.wirepeer):
     __del__ = cleanup
 
     def _submitbatch(self, req):
-        cmds = []
-        for op, argsdict in req:
-            args = ','.join('%s=%s' % (wireproto.escapearg(k),
-                                       wireproto.escapearg(v))
-                            for k, v in argsdict.iteritems())
-            cmds.append('%s %s' % (op, args))
-        rsp = self._callstream("batch", cmds=';'.join(cmds))
+        rsp = self._callstream("batch", cmds=wireproto.encodebatchcmds(req))
         available = self._getamount()
         # TODO this response parsing is probably suboptimal for large
         # batches with large responses.
@@ -292,10 +286,7 @@ class sshpeer(wireproto.wirepeer):
         r = self._call(cmd, **args)
         if r:
             return '', r
-        while True:
-            d = fp.read(4096)
-            if not d:
-                break
+        for d in iter(lambda: fp.read(4096), ''):
             self._send(d)
         self._send("", flush=True)
         r = self._recv()
@@ -308,10 +299,7 @@ class sshpeer(wireproto.wirepeer):
         if r:
             # XXX needs to be made better
             raise error.Abort(_('unexpected remote reply: %s') % r)
-        while True:
-            d = fp.read(4096)
-            if not d:
-                break
+        for d in iter(lambda: fp.read(4096), ''):
             self._send(d)
         self._send("", flush=True)
         return self.pipei
@@ -353,10 +341,7 @@ class sshpeer(wireproto.wirepeer):
         d = self._call("addchangegroup")
         if d:
             self._abort(error.RepoError(_("push refused: %s") % d))
-        while True:
-            d = cg.read(4096)
-            if not d:
-                break
+        for d in iter(lambda: cg.read(4096), ''):
             self.pipeo.write(d)
             self.readerr()
 

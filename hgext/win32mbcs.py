@@ -55,11 +55,11 @@ from mercurial import (
     error,
 )
 
-# Note for extension authors: ONLY specify testedwith = 'internal' for
+# Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
 # be specifying the version(s) of Mercurial they are tested with, or
 # leave the attribute unspecified.
-testedwith = 'internal'
+testedwith = 'ships-with-hg-core'
 
 _encoding = None                                # see extsetup
 
@@ -148,8 +148,8 @@ def wrapname(name, wrapper):
 # NOTE: os.path.dirname() and os.path.basename() are safe because
 #       they use result of os.path.split()
 funcs = '''os.path.join os.path.split os.path.splitext
- os.path.normpath os.makedirs
- mercurial.util.endswithsep mercurial.util.splitpath mercurial.util.checkcase
+ os.path.normpath os.makedirs mercurial.util.endswithsep
+ mercurial.util.splitpath mercurial.util.fscasesensitive
  mercurial.util.fspath mercurial.util.pconvert mercurial.util.normpath
  mercurial.util.checkwinfilename mercurial.util.checkosfilename
  mercurial.util.split'''

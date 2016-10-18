@@ -11,6 +11,12 @@
 #include <Python.h>
 #include "util.h"
 
+#ifdef IS_PY3K
+#define PYLONG_VALUE(o) ((PyLongObject *)o)->ob_digit[1]
+#else
+#define PYLONG_VALUE(o) PyInt_AS_LONG(o)
+#endif
+
 /*
  * This is a multiset of directory names, built from the files that
  * appear in a dirstate or manifest.
@@ -41,11 +47,20 @@ static inline Py_ssize_t _finddir(const char *path, Py_ssize_t pos)
 
 static int _addpath(PyObject *dirs, PyObject *path)
 {
-	const char *cpath = PyString_AS_STRING(path);
-	Py_ssize_t pos = PyString_GET_SIZE(path);
+	const char *cpath = PyBytes_AS_STRING(path);
+	Py_ssize_t pos = PyBytes_GET_SIZE(path);
 	PyObject *key = NULL;
 	int ret = -1;
 
+	/* This loop is super critical for performance. That's why we inline
+	* access to Python structs instead of going through a supported API.
+	* The implementation, therefore, is heavily dependent on CPython
+	* implementation details. We also commit violations of the Python
+	* "protocol" such as mutating immutable objects. But since we only
+	* mutate objects created in this function or in other well-defined
+	* locations, the references are known so these violations should go
+	* unnoticed. The code for adjusting the length of a PyBytesObject is
+	* essentially a minimal version of _PyBytes_Resize. */
 	while ((pos = _finddir(cpath, pos - 1)) != -1) {
 		PyObject *val;
 
@@ -53,30 +68,36 @@ static int _addpath(PyObject *dirs, PyObject *path)
 		   in our dict. Try to avoid allocating and
 		   deallocating a string for each prefix we check. */
 		if (key != NULL)
-			((PyStringObject *)key)->ob_shash = -1;
+			((PyBytesObject *)key)->ob_shash = -1;
 		else {
 			/* Force Python to not reuse a small shared string. */
-			key = PyString_FromStringAndSize(cpath,
+			key = PyBytes_FromStringAndSize(cpath,
 							 pos < 2 ? 2 : pos);
 			if (key == NULL)
 				goto bail;
 		}
-		PyString_GET_SIZE(key) = pos;
-		PyString_AS_STRING(key)[pos] = '\0';
+		/* Py_SIZE(o) refers to the ob_size member of the struct. Yes,
+		* assigning to what looks like a function seems wrong. */
+		Py_SIZE(key) = pos;
+		((PyBytesObject *)key)->ob_sval[pos] = '\0';
 
 		val = PyDict_GetItem(dirs, key);
 		if (val != NULL) {
-			PyInt_AS_LONG(val) += 1;
+			PYLONG_VALUE(val) += 1;
 			break;
 		}
 
 		/* Force Python to not reuse a small shared int. */
+#ifdef IS_PY3K
+		val = PyLong_FromLong(0x1eadbeef);
+#else
 		val = PyInt_FromLong(0x1eadbeef);
+#endif
 
 		if (val == NULL)
 			goto bail;
 
-		PyInt_AS_LONG(val) = 1;
+		PYLONG_VALUE(val) = 1;
 		ret = PyDict_SetItem(dirs, key, val);
 		Py_DECREF(val);
 		if (ret == -1)
@@ -93,15 +114,15 @@ bail:
 
 static int _delpath(PyObject *dirs, PyObject *path)
 {
-	char *cpath = PyString_AS_STRING(path);
-	Py_ssize_t pos = PyString_GET_SIZE(path);
+	char *cpath = PyBytes_AS_STRING(path);
+	Py_ssize_t pos = PyBytes_GET_SIZE(path);
 	PyObject *key = NULL;
 	int ret = -1;
 
 	while ((pos = _finddir(cpath, pos - 1)) != -1) {
 		PyObject *val;
 
-		key = PyString_FromStringAndSize(cpath, pos);
+		key = PyBytes_FromStringAndSize(cpath, pos);
 
 		if (key == NULL)
 			goto bail;
@@ -113,7 +134,7 @@ static int _delpath(PyObject *dirs, PyObject *path)
 			goto bail;
 		}
 
-		if (--PyInt_AS_LONG(val) <= 0) {
+		if (--PYLONG_VALUE(val) <= 0) {
 			if (PyDict_DelItem(dirs, key) == -1)
 				goto bail;
 		} else
@@ -134,7 +155,7 @@ static int dirs_fromdict(PyObject *dirs, PyObject *source, char skipchar)
 	Py_ssize_t pos = 0;
 
 	while (PyDict_Next(source, &pos, &key, &value)) {
-		if (!PyString_Check(key)) {
+		if (!PyBytes_Check(key)) {
 			PyErr_SetString(PyExc_TypeError, "expected string key");
 			return -1;
 		}
@@ -165,7 +186,7 @@ static int dirs_fromiter(PyObject *dirs, PyObject *source)
 		return -1;
 
 	while ((item = PyIter_Next(iter)) != NULL) {
-		if (!PyString_Check(item)) {
+		if (!PyBytes_Check(item)) {
 			PyErr_SetString(PyExc_TypeError, "expected string");
 			break;
 		}
@@ -224,7 +245,7 @@ PyObject *dirs_addpath(dirsObject *self, PyObject *args)
 {
 	PyObject *path;
 
-	if (!PyArg_ParseTuple(args, "O!:addpath", &PyString_Type, &path))
+	if (!PyArg_ParseTuple(args, "O!:addpath", &PyBytes_Type, &path))
 		return NULL;
 
 	if (_addpath(self->dict, path) == -1)
@@ -237,7 +258,7 @@ static PyObject *dirs_delpath(dirsObject *self, PyObject *args)
 {
 	PyObject *path;
 
-	if (!PyArg_ParseTuple(args, "O!:delpath", &PyString_Type, &path))
+	if (!PyArg_ParseTuple(args, "O!:delpath", &PyBytes_Type, &path))
 		return NULL;
 
 	if (_delpath(self->dict, path) == -1)
@@ -248,7 +269,7 @@ static PyObject *dirs_delpath(dirsObject *self, PyObject *args)
 
 static int dirs_contains(dirsObject *self, PyObject *value)
 {
-	return PyString_Check(value) ? PyDict_Contains(self->dict, value) : 0;
+	return PyBytes_Check(value) ? PyDict_Contains(self->dict, value) : 0;
 }
 
 static void dirs_dealloc(dirsObject *self)
@@ -270,7 +291,7 @@ static PyMethodDef dirs_methods[] = {
 	{NULL} /* Sentinel */
 };
 
-static PyTypeObject dirsType = { PyObject_HEAD_INIT(NULL) };
+static PyTypeObject dirsType = { PyVarObject_HEAD_INIT(NULL, 0) };
 
 void dirs_module_init(PyObject *mod)
 {

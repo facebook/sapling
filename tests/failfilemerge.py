@@ -9,7 +9,7 @@ from mercurial import (
 )
 
 def failfilemerge(filemergefn,
-        premerge, repo, mynode, orig, fcd, fco, fca, labels=None):
+                  premerge, repo, mynode, orig, fcd, fco, fca, labels=None):
     raise error.Abort("^C")
     return filemergefn(premerge, repo, mynode, orig, fcd, fco, fca, labels)
 

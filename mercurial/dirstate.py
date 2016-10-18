@@ -74,8 +74,6 @@ def _trypending(root, vfs, filename):
                 raise
     return (vfs(filename), False)
 
-_token = object()
-
 class dirstate(object):
 
     def __init__(self, opener, ui, root, validate):
@@ -103,6 +101,8 @@ class dirstate(object):
         self._parentwriters = 0
         self._filename = 'dirstate'
         self._pendingfilename = '%s.pending' % self._filename
+        self._plchangecallbacks = {}
+        self._origpl = None
 
         # for consistent view between _pl() and _read() invocations
         self._pendingmode = None
@@ -227,7 +227,7 @@ class dirstate(object):
 
     @propertycache
     def _checkcase(self):
-        return not util.checkcase(self._join('.hg'))
+        return not util.fscasesensitive(self._join('.hg'))
 
     def _join(self, f):
         # much faster than os.path.join()
@@ -349,6 +349,8 @@ class dirstate(object):
 
         self._dirty = self._dirtypl = True
         oldp2 = self._pl[1]
+        if self._origpl is None:
+            self._origpl = self._pl
         self._pl = p1, p2
         copies = {}
         if oldp2 != nullid and p2 == nullid:
@@ -444,6 +446,7 @@ class dirstate(object):
         self._lastnormaltime = 0
         self._dirty = False
         self._parentwriters = 0
+        self._origpl = None
 
     def copy(self, source, dest):
         """Mark dest as a copy of source. Unmark dest if source is None."""
@@ -677,37 +680,23 @@ class dirstate(object):
             self.clear()
             self._lastnormaltime = lastnormaltime
 
-        for f in changedfiles:
-            mode = 0o666
-            if f in allfiles and 'x' in allfiles.flags(f):
-                mode = 0o777
-
-            if f in allfiles:
-                self._map[f] = dirstatetuple('n', mode, -1, 0)
-            else:
-                self._map.pop(f, None)
-                if f in self._nonnormalset:
-                    self._nonnormalset.remove(f)
-
+        if self._origpl is None:
+            self._origpl = self._pl
         self._pl = (parent, nullid)
+        for f in changedfiles:
+            if f in allfiles:
+                self.normallookup(f)
+            else:
+                self.drop(f)
+
         self._dirty = True
 
-    def write(self, tr=_token):
+    def write(self, tr):
         if not self._dirty:
             return
 
         filename = self._filename
-        if tr is _token: # not explicitly specified
-            self._ui.deprecwarn('use dirstate.write with '
-                               'repo.currenttransaction()',
-                               '3.9')
-
-            if self._opener.lexists(self._pendingfilename):
-                # if pending file already exists, in-memory changes
-                # should be written into it, because it has priority
-                # to '.hg/dirstate' at reading under HG_PENDING mode
-                filename = self._pendingfilename
-        elif tr:
+        if tr:
             # 'dirstate.write()' is not only for writing in-memory
             # changes out, but also for dropping ambiguous timestamp.
             # delayed writing re-raise "ambiguous timestamp issue".
@@ -733,7 +722,23 @@ class dirstate(object):
         st = self._opener(filename, "w", atomictemp=True, checkambig=True)
         self._writedirstate(st)
 
+    def addparentchangecallback(self, category, callback):
+        """add a callback to be called when the wd parents are changed
+
+        Callback will be called with the following arguments:
+            dirstate, (oldp1, oldp2), (newp1, newp2)
+
+        Category is a unique identifier to allow overwriting an old callback
+        with a newer callback.
+        """
+        self._plchangecallbacks[category] = callback
+
     def _writedirstate(self, st):
+        # notify callbacks about parents change
+        if self._origpl is not None and self._origpl != self._pl:
+            for c, callback in sorted(self._plchangecallbacks.iteritems()):
+                callback(self, self._origpl, self._pl)
+            self._origpl = None
         # use the modification time of the newly created temporary file as the
         # filesystem's notion of 'now'
         now = util.fstat(st).st_mtime & _rangemask

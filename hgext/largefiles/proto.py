@@ -134,7 +134,7 @@ def wirereposetup(ui, repo):
                                                 length))
 
             # SSH streams will block if reading more than length
-            for chunk in util.filechunkiter(stream, 128 * 1024, length):
+            for chunk in util.filechunkiter(stream, limit=length):
                 yield chunk
             # HTTP streams must hit the end to process the last empty
             # chunk of Chunked-Encoding so the connection can be reused.

@@ -144,11 +144,11 @@ and committed in local target directory.
   C b/a
   C b/b
   $ cat b/c
-  <<<<<<< local: f1c50ca4f127 - test: new file in target directory
+  <<<<<<< working copy: f1c50ca4f127 - test: new file in target directory
   target
   =======
   baz
-  >>>>>>> other: ce36d17b18fb  - test: 2 add a/c
+  >>>>>>> merge rev:    ce36d17b18fb  - test: 2 add a/c
   $ rm b/c.orig
 
 Remote directory rename with conflicting file added in remote target directory
@@ -177,11 +177,11 @@ and committed in local source directory.
   ? a/d
   ? b/c.orig
   $ cat b/c
-  <<<<<<< local: ce36d17b18fb  - test: 2 add a/c
+  <<<<<<< working copy: ce36d17b18fb  - test: 2 add a/c
   baz
   =======
   target
-  >>>>>>> other: f1c50ca4f127 - test: new file in target directory
+  >>>>>>> merge rev:    f1c50ca4f127 - test: new file in target directory
 
 Second scenario with two repos:
 

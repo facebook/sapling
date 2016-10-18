@@ -104,11 +104,11 @@ from mercurial import (
     util,
 )
 
-# Note for extension authors: ONLY specify testedwith = 'internal' for
+# Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
 # be specifying the version(s) of Mercurial they are tested with, or
 # leave the attribute unspecified.
-testedwith = 'internal'
+testedwith = 'ships-with-hg-core'
 
 # Matches a lone LF, i.e., one that is not part of CRLF.
 singlelf = re.compile('(^|[^\r])\n')
@@ -175,25 +175,27 @@ class eolfile(object):
 
         include = []
         exclude = []
+        self.patterns = []
         for pattern, style in self.cfg.items('patterns'):
             key = style.upper()
             if key == 'BIN':
                 exclude.append(pattern)
             else:
                 include.append(pattern)
+            m = match.match(root, '', [pattern])
+            self.patterns.append((pattern, key, m))
         # This will match the files for which we need to care
         # about inconsistent newlines.
         self.match = match.match(root, '', [], include, exclude)
 
     def copytoui(self, ui):
-        for pattern, style in self.cfg.items('patterns'):
-            key = style.upper()
+        for pattern, key, m in self.patterns:
             try:
                 ui.setconfig('decode', pattern, self._decode[key], 'eol')
                 ui.setconfig('encode', pattern, self._encode[key], 'eol')
             except KeyError:
                 ui.warn(_("ignoring unknown EOL style '%s' from %s\n")
-                        % (style, self.cfg.source('patterns', pattern)))
+                        % (key, self.cfg.source('patterns', pattern)))
         # eol.only-consistent can be specified in ~/.hgrc or .hgeol
         for k, v in self.cfg.items('eol'):
             ui.setconfig('eol', k, v, 'eol')
@@ -203,10 +205,10 @@ class eolfile(object):
         for f in (files or ctx.files()):
             if f not in ctx:
                 continue
-            for pattern, style in self.cfg.items('patterns'):
-                if not match.match(repo.root, '', [pattern])(f):
+            for pattern, key, m in self.patterns:
+                if not m(f):
                     continue
-                target = self._encode[style.upper()]
+                target = self._encode[key]
                 data = ctx[f].data()
                 if (target == "to-lf" and "\r\n" in data
                     or target == "to-crlf" and singlelf.search(data)):
@@ -305,15 +307,20 @@ def reposetup(ui, repo):
             return eol.match
 
         def _hgcleardirstate(self):
-            self._eolfile = self.loadeol([None, 'tip'])
-            if not self._eolfile:
-                self._eolfile = util.never
+            self._eolmatch = self.loadeol([None, 'tip'])
+            if not self._eolmatch:
+                self._eolmatch = util.never
                 return
 
+            oldeol = None
             try:
                 cachemtime = os.path.getmtime(self.join("eol.cache"))
             except OSError:
                 cachemtime = 0
+            else:
+                olddata = self.vfs.read("eol.cache")
+                if olddata:
+                    oldeol = eolfile(self.ui, self.root, olddata)
 
             try:
                 eolmtime = os.path.getmtime(self.wjoin(".hgeol"))
@@ -322,18 +329,37 @@ def reposetup(ui, repo):
 
             if eolmtime > cachemtime:
                 self.ui.debug("eol: detected change in .hgeol\n")
+
+                hgeoldata = self.wvfs.read('.hgeol')
+                neweol = eolfile(self.ui, self.root, hgeoldata)
+
                 wlock = None
                 try:
                     wlock = self.wlock()
                     for f in self.dirstate:
-                        if self.dirstate[f] == 'n':
-                            # all normal files need to be looked at
-                            # again since the new .hgeol file might no
-                            # longer match a file it matched before
-                            self.dirstate.normallookup(f)
-                    # Create or touch the cache to update mtime
-                    self.vfs("eol.cache", "w").close()
-                    wlock.release()
+                        if self.dirstate[f] != 'n':
+                            continue
+                        if oldeol is not None:
+                            if not oldeol.match(f) and not neweol.match(f):
+                                continue
+                            oldkey = None
+                            for pattern, key, m in oldeol.patterns:
+                                if m(f):
+                                    oldkey = key
+                                    break
+                            newkey = None
+                            for pattern, key, m in neweol.patterns:
+                                if m(f):
+                                    newkey = key
+                                    break
+                            if oldkey == newkey:
+                                continue
+                        # all normal files need to be looked at again since
+                        # the new .hgeol file specify a different filter
+                        self.dirstate.normallookup(f)
+                    # Write the cache to update mtime and cache .hgeol
+                    with self.vfs("eol.cache", "w") as f:
+                        f.write(hgeoldata)
                 except error.LockUnavailable:
                     # If we cannot lock the repository and clear the
                     # dirstate, then a commit might not see all files
@@ -341,10 +367,13 @@ def reposetup(ui, repo):
                     # repository, then we can also not make a commit,
                     # so ignore the error.
                     pass
+                finally:
+                    if wlock is not None:
+                        wlock.release()
 
         def commitctx(self, ctx, haserror=False):
             for f in sorted(ctx.added() + ctx.modified()):
-                if not self._eolfile(f):
+                if not self._eolmatch(f):
                     continue
                 fctx = ctx[f]
                 if fctx is None:

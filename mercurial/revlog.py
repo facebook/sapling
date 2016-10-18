@@ -212,8 +212,11 @@ class revlog(object):
     fashion, which means we never need to rewrite a file to insert or
     remove data, and can use some simple techniques to avoid the need
     for locking while reading.
+
+    If checkambig, indexfile is opened with checkambig=True at
+    writing, to avoid file stat ambiguity.
     """
-    def __init__(self, opener, indexfile):
+    def __init__(self, opener, indexfile, checkambig=False):
         """
         create a revlog object
 
@@ -223,11 +226,13 @@ class revlog(object):
         self.indexfile = indexfile
         self.datafile = indexfile[:-2] + ".d"
         self.opener = opener
+        #  When True, indexfile is opened with checkambig=True at writing, to
+        #  avoid file stat ambiguity.
+        self._checkambig = checkambig
         # 3-tuple of (node, rev, text) for a raw revision.
         self._cache = None
-        # 2-tuple of (rev, baserev) defining the base revision the delta chain
-        # begins at for a revision.
-        self._basecache = None
+        # Maps rev to chain base rev.
+        self._chainbasecache = util.lrucachedict(100)
         # 2-tuple of (offset, data) of raw data from the revlog at an offset.
         self._chunkcache = (0, '')
         # How much data to read and cache into the raw revlog data cache.
@@ -292,6 +297,8 @@ class revlog(object):
             raise RevlogError(_("index %s unknown format %d")
                               % (self.indexfile, fmt))
 
+        self.storedeltachains = True
+
         self._io = revlogio()
         if self.version == REVLOGV0:
             self._io = revlogoldio()
@@ -340,7 +347,7 @@ class revlog(object):
 
     def clearcaches(self):
         self._cache = None
-        self._basecache = None
+        self._chainbasecache.clear()
         self._chunkcache = (0, '')
         self._pcache = {}
 
@@ -390,11 +397,17 @@ class revlog(object):
     def length(self, rev):
         return self.index[rev][1]
     def chainbase(self, rev):
+        base = self._chainbasecache.get(rev)
+        if base is not None:
+            return base
+
         index = self.index
         base = index[rev][3]
         while base != rev:
             rev = base
             base = index[rev][3]
+
+        self._chainbasecache[rev] = base
         return base
     def chainlen(self, rev):
         return self._chaininfo(rev)[0]
@@ -1271,7 +1284,8 @@ class revlog(object):
         finally:
             df.close()
 
-        fp = self.opener(self.indexfile, 'w', atomictemp=True)
+        fp = self.opener(self.indexfile, 'w', atomictemp=True,
+                         checkambig=self._checkambig)
         self.version &= ~(REVLOGNGINLINEDATA)
         self._inline = False
         for i in self:
@@ -1314,7 +1328,7 @@ class revlog(object):
         dfh = None
         if not self._inline:
             dfh = self.opener(self.datafile, "a+")
-        ifh = self.opener(self.indexfile, "a+")
+        ifh = self.opener(self.indexfile, "a+", checkambig=self._checkambig)
         try:
             return self._addrevision(node, text, transaction, link, p1, p2,
                                      REVIDX_DEFAULT_FLAGS, cachedelta, ifh, dfh)
@@ -1428,30 +1442,24 @@ class revlog(object):
                         fh = dfh
                     ptext = self.revision(self.node(rev), _df=fh)
                     delta = mdiff.textdiff(ptext, t)
-            data = self.compress(delta)
-            l = len(data[1]) + len(data[0])
-            if basecache[0] == rev:
-                chainbase = basecache[1]
-            else:
-                chainbase = self.chainbase(rev)
-            dist = l + offset - self.start(chainbase)
+            header, data = self.compress(delta)
+            deltalen = len(header) + len(data)
+            chainbase = self.chainbase(rev)
+            dist = deltalen + offset - self.start(chainbase)
             if self._generaldelta:
                 base = rev
             else:
                 base = chainbase
             chainlen, compresseddeltalen = self._chaininfo(rev)
             chainlen += 1
-            compresseddeltalen += l
-            return dist, l, data, base, chainbase, chainlen, compresseddeltalen
+            compresseddeltalen += deltalen
+            return (dist, deltalen, (header, data), base,
+                    chainbase, chainlen, compresseddeltalen)
 
         curr = len(self)
         prev = curr - 1
-        base = chainbase = curr
         offset = self.end(prev)
         delta = None
-        if self._basecache is None:
-            self._basecache = (prev, self.chainbase(prev))
-        basecache = self._basecache
         p1r, p2r = self.rev(p1), self.rev(p2)
 
         # full versions are inserted when the needed deltas
@@ -1463,8 +1471,12 @@ class revlog(object):
             textlen = len(text)
 
         # should we try to build a delta?
-        if prev != nullrev:
+        if prev != nullrev and self.storedeltachains:
             tested = set()
+            # This condition is true most of the time when processing
+            # changegroup data into a generaldelta repo. The only time it
+            # isn't true is if this is the first revision in a delta chain
+            # or if ``format.generaldelta=true`` disabled ``lazydeltabase``.
             if cachedelta and self._generaldelta and self._lazydeltabase:
                 # Assume what we received from the server is a good choice
                 # build delta will reuse the cache
@@ -1515,7 +1527,7 @@ class revlog(object):
 
         if type(text) == str: # only accept immutable objects
             self._cache = (node, curr, text)
-        self._basecache = (curr, chainbase)
+        self._chainbasecache[curr] = chainbase
         return node
 
     def _writeentry(self, transaction, ifh, dfh, entry, data, link, offset):
@@ -1569,7 +1581,7 @@ class revlog(object):
         end = 0
         if r:
             end = self.end(r - 1)
-        ifh = self.opener(self.indexfile, "a+")
+        ifh = self.opener(self.indexfile, "a+", checkambig=self._checkambig)
         isize = r * self._io.size
         if self._inline:
             transaction.add(self.indexfile, end + isize, r)
@@ -1585,10 +1597,7 @@ class revlog(object):
         try:
             # loop through our set of deltas
             chain = None
-            while True:
-                chunkdata = cg.deltachunk(chain)
-                if not chunkdata:
-                    break
+            for chunkdata in iter(lambda: cg.deltachunk(chain), {}):
                 node = chunkdata['node']
                 p1 = chunkdata['p1']
                 p2 = chunkdata['p2']
@@ -1646,7 +1655,8 @@ class revlog(object):
                     # reopen the index
                     ifh.close()
                     dfh = self.opener(self.datafile, "a+")
-                    ifh = self.opener(self.indexfile, "a+")
+                    ifh = self.opener(self.indexfile, "a+",
+                                      checkambig=self._checkambig)
         finally:
             if dfh:
                 dfh.close()

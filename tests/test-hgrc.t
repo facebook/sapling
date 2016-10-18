@@ -28,12 +28,12 @@ Issue1199: Can't use '%' in hgrc (eg url encoded username)
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd foobar
   $ cat .hg/hgrc
-  # example repository config (see "hg help config" for more info)
+  # example repository config (see 'hg help config' for more info)
   [paths]
   default = $TESTTMP/foo%bar (glob)
   
   # path aliases to other clones of this repo in URLs or filesystem paths
-  # (see "hg help config.paths" for more info)
+  # (see 'hg help config.paths' for more info)
   #
   # default-push = ssh://jdoe@example.net/hg/jdoes-fork
   # my-fork      = ssh://jdoe@example.net/hg/jdoes-fork

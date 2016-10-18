@@ -34,10 +34,7 @@ for filename in sys.argv[1:]:
 
     m = md5()
     try:
-        while True:
-            data = fp.read(8192)
-            if not data:
-                break
+        for data in iter(lambda: fp.read(8192), ''):
             m.update(data)
     except IOError as msg:
         sys.stderr.write('%s: I/O error: %s\n' % (filename, msg))

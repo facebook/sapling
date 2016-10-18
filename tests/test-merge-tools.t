@@ -75,11 +75,11 @@ running from a devel copy, not a temp installation
   [1]
   $ aftermerge
   # cat f
-  <<<<<<< local: ef83787e2614  - test: revision 1
+  <<<<<<< working copy: ef83787e2614  - test: revision 1
   revision 1
   =======
   revision 2
-  >>>>>>> other: 0185f4e0cf02  - test: revision 2
+  >>>>>>> merge rev:    0185f4e0cf02  - test: revision 2
   space
   # hg stat
   M f
@@ -532,7 +532,7 @@ ui.merge specifies internal:prompt:
   # hg update -C 1
   $ hg merge -r 2 --config ui.merge=internal:prompt
   no tool found to merge f
-  keep (l)ocal, take (o)ther, or leave (u)nresolved? u
+  keep (l)ocal [working copy], take (o)ther [merge rev], or leave (u)nresolved? u
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
@@ -557,7 +557,7 @@ ui.merge specifies :prompt, with 'leave unresolved' chosen
   > u
   > EOF
   no tool found to merge f
-  keep (l)ocal, take (o)ther, or leave (u)nresolved? u
+  keep (l)ocal [working copy], take (o)ther [merge rev], or leave (u)nresolved? u
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
@@ -580,7 +580,7 @@ prompt with EOF
   # hg update -C 1
   $ hg merge -r 2 --config ui.merge=internal:prompt --config ui.interactive=true
   no tool found to merge f
-  keep (l)ocal, take (o)ther, or leave (u)nresolved? 
+  keep (l)ocal [working copy], take (o)ther [merge rev], or leave (u)nresolved? 
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
@@ -594,7 +594,7 @@ prompt with EOF
   U f
   $ hg resolve --all --config ui.merge=internal:prompt --config ui.interactive=true
   no tool found to merge f
-  keep (l)ocal, take (o)ther, or leave (u)nresolved? 
+  keep (l)ocal [working copy], take (o)ther [merge rev], or leave (u)nresolved? 
   [1]
   $ aftermerge
   # cat f
@@ -608,7 +608,7 @@ prompt with EOF
   $ rm f
   $ hg resolve --all --config ui.merge=internal:prompt --config ui.interactive=true
   no tool found to merge f
-  keep (l)ocal, take (o)ther, or leave (u)nresolved? 
+  keep (l)ocal [working copy], take (o)ther [merge rev], or leave (u)nresolved? 
   [1]
   $ aftermerge
   # cat f
@@ -620,7 +620,7 @@ prompt with EOF
   U f
   $ hg resolve --all --config ui.merge=internal:prompt
   no tool found to merge f
-  keep (l)ocal, take (o)ther, or leave (u)nresolved? u
+  keep (l)ocal [working copy], take (o)ther [merge rev], or leave (u)nresolved? u
   [1]
   $ aftermerge
   # cat f
@@ -935,12 +935,12 @@ premerge=keep keeps conflict markers in:
   # hg update -C 1
   $ hg merge -r 4 --config merge-tools.true.premerge=keep
   merging f
-  <<<<<<< local: ef83787e2614  - test: revision 1
+  <<<<<<< working copy: ef83787e2614  - test: revision 1
   revision 1
   space
   =======
   revision 4
-  >>>>>>> other: 81448d39c9a0 - test: revision 4
+  >>>>>>> merge rev:    81448d39c9a0 - test: revision 4
   revision 0
   space
   revision 4
@@ -948,12 +948,12 @@ premerge=keep keeps conflict markers in:
   (branch merge, don't forget to commit)
   $ aftermerge
   # cat f
-  <<<<<<< local: ef83787e2614  - test: revision 1
+  <<<<<<< working copy: ef83787e2614  - test: revision 1
   revision 1
   space
   =======
   revision 4
-  >>>>>>> other: 81448d39c9a0 - test: revision 4
+  >>>>>>> merge rev:    81448d39c9a0 - test: revision 4
   # hg stat
   M f
   # hg resolve --list
@@ -969,7 +969,7 @@ premerge=keep-merge3 keeps conflict markers with base content:
   # hg update -C 1
   $ hg merge -r 4 --config merge-tools.true.premerge=keep-merge3
   merging f
-  <<<<<<< local: ef83787e2614  - test: revision 1
+  <<<<<<< working copy: ef83787e2614  - test: revision 1
   revision 1
   space
   ||||||| base
@@ -977,7 +977,7 @@ premerge=keep-merge3 keeps conflict markers with base content:
   space
   =======
   revision 4
-  >>>>>>> other: 81448d39c9a0 - test: revision 4
+  >>>>>>> merge rev:    81448d39c9a0 - test: revision 4
   revision 0
   space
   revision 4
@@ -985,7 +985,7 @@ premerge=keep-merge3 keeps conflict markers with base content:
   (branch merge, don't forget to commit)
   $ aftermerge
   # cat f
-  <<<<<<< local: ef83787e2614  - test: revision 1
+  <<<<<<< working copy: ef83787e2614  - test: revision 1
   revision 1
   space
   ||||||| base
@@ -993,7 +993,7 @@ premerge=keep-merge3 keeps conflict markers with base content:
   space
   =======
   revision 4
-  >>>>>>> other: 81448d39c9a0 - test: revision 4
+  >>>>>>> merge rev:    81448d39c9a0 - test: revision 4
   # hg stat
   M f
   # hg resolve --list

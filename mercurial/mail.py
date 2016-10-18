@@ -8,6 +8,8 @@
 from __future__ import absolute_import, print_function
 
 import email
+import email.charset
+import email.header
 import os
 import quopri
 import smtplib
@@ -23,7 +25,7 @@ from . import (
     util,
 )
 
-_oldheaderinit = email.Header.Header.__init__
+_oldheaderinit = email.header.Header.__init__
 def _unifiedheaderinit(self, *args, **kw):
     """
     Python 2.7 introduces a backwards incompatible change
@@ -203,24 +205,33 @@ def validateconfig(ui):
             raise error.Abort(_('%r specified as email transport, '
                                'but not in PATH') % method)
 
+def codec2iana(cs):
+    ''''''
+    cs = email.charset.Charset(cs).input_charset.lower()
+
+    # "latin1" normalizes to "iso8859-1", standard calls for "iso-8859-1"
+    if cs.startswith("iso") and not cs.startswith("iso-"):
+        return "iso-" + cs[3:]
+    return cs
+
 def mimetextpatch(s, subtype='plain', display=False):
     '''Return MIME message suitable for a patch.
-    Charset will be detected as utf-8 or (possibly fake) us-ascii.
+    Charset will be detected by first trying to decode as us-ascii, then utf-8,
+    and finally the global encodings. If all those fail, fall back to
+    ISO-8859-1, an encoding with that allows all byte sequences.
     Transfer encodings will be used if necessary.'''
 
-    cs = 'us-ascii'
-    if not display:
+    cs = ['us-ascii', 'utf-8', encoding.encoding, encoding.fallbackencoding]
+    if display:
+        return mimetextqp(s, subtype, 'us-ascii')
+    for charset in cs:
         try:
-            s.decode('us-ascii')
+            s.decode(charset)
+            return mimetextqp(s, subtype, codec2iana(charset))
         except UnicodeDecodeError:
-            try:
-                s.decode('utf-8')
-                cs = 'utf-8'
-            except UnicodeDecodeError:
-                # We'll go with us-ascii as a fallback.
-                pass
+            pass
 
-    return mimetextqp(s, subtype, cs)
+    return mimetextqp(s, subtype, "iso-8859-1")
 
 def mimetextqp(body, subtype, charset):
     '''Return MIME message.
@@ -279,7 +290,7 @@ def headencode(ui, s, charsets=None, display=False):
     if not display:
         # split into words?
         s, cs = _encode(ui, s, charsets)
-        return str(email.Header.Header(s, cs))
+        return str(email.header.Header(s, cs))
     return s
 
 def _addressencode(ui, name, addr, charsets=None):
@@ -330,7 +341,7 @@ def mimeencode(ui, s, charsets=None, display=False):
 def headdecode(s):
     '''Decodes RFC-2047 header'''
     uparts = []
-    for part, charset in email.Header.decode_header(s):
+    for part, charset in email.header.decode_header(s):
         if charset is not None:
             try:
                 uparts.append(part.decode(charset))

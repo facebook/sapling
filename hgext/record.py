@@ -22,11 +22,11 @@ from mercurial import (
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
-# Note for extension authors: ONLY specify testedwith = 'internal' for
+# Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
 # be specifying the version(s) of Mercurial they are tested with, or
 # leave the attribute unspecified.
-testedwith = 'internal'
+testedwith = 'ships-with-hg-core'
 
 
 @command("record",
@@ -70,7 +70,7 @@ def record(ui, repo, *pats, **opts):
     backup = ui.backupconfig('experimental', 'crecord')
     try:
         ui.setconfig('experimental', 'crecord', False, 'record')
-        commands.commit(ui, repo, *pats, **opts)
+        return commands.commit(ui, repo, *pats, **opts)
     finally:
         ui.restoreconfig(backup)
 

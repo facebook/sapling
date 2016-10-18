@@ -20,49 +20,33 @@
  of the GNU General Public License, incorporated herein by reference.
 */
 
-#define PY_SSIZE_T_CLEAN
-#include <Python.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "util.h"
 #include "bitmanipulation.h"
+#include "compat.h"
+#include "mpatch.h"
 
-static char mpatch_doc[] = "Efficient binary patching.";
-static PyObject *mpatch_Error;
-
-struct frag {
-	int start, end, len;
-	const char *data;
-};
-
-struct flist {
-	struct frag *base, *head, *tail;
-};
-
-static struct flist *lalloc(Py_ssize_t size)
+static struct mpatch_flist *lalloc(ssize_t size)
 {
-	struct flist *a = NULL;
+	struct mpatch_flist *a = NULL;
 
 	if (size < 1)
 		size = 1;
 
-	a = (struct flist *)malloc(sizeof(struct flist));
+	a = (struct mpatch_flist *)malloc(sizeof(struct mpatch_flist));
 	if (a) {
-		a->base = (struct frag *)malloc(sizeof(struct frag) * size);
+		a->base = (struct mpatch_frag *)malloc(sizeof(struct mpatch_frag) * size);
 		if (a->base) {
 			a->head = a->tail = a->base;
 			return a;
 		}
 		free(a);
-		a = NULL;
 	}
-	if (!PyErr_Occurred())
-		PyErr_NoMemory();
 	return NULL;
 }
 
-static void lfree(struct flist *a)
+void mpatch_lfree(struct mpatch_flist *a)
 {
 	if (a) {
 		free(a->base);
@@ -70,7 +54,7 @@ static void lfree(struct flist *a)
 	}
 }
 
-static Py_ssize_t lsize(struct flist *a)
+static ssize_t lsize(struct mpatch_flist *a)
 {
 	return a->tail - a->head;
 }
@@ -78,9 +62,10 @@ static Py_ssize_t lsize(struct flist *a)
 /* move hunks in source that are less cut to dest, compensating
    for changes in offset. the last hunk may be split if necessary.
 */
-static int gather(struct flist *dest, struct flist *src, int cut, int offset)
+static int gather(struct mpatch_flist *dest, struct mpatch_flist *src, int cut,
+	int offset)
 {
-	struct frag *d = dest->tail, *s = src->head;
+	struct mpatch_frag *d = dest->tail, *s = src->head;
 	int postend, c, l;
 
 	while (s != src->tail) {
@@ -123,9 +108,9 @@ static int gather(struct flist *dest, struct flist *src, int cut, int offset)
 }
 
 /* like gather, but with no output list */
-static int discard(struct flist *src, int cut, int offset)
+static int discard(struct mpatch_flist *src, int cut, int offset)
 {
-	struct frag *s = src->head;
+	struct mpatch_frag *s = src->head;
 	int postend, c, l;
 
 	while (s != src->tail) {
@@ -160,10 +145,11 @@ static int discard(struct flist *src, int cut, int offset)
 
 /* combine hunk lists a and b, while adjusting b for offset changes in a/
    this deletes a and b and returns the resultant list. */
-static struct flist *combine(struct flist *a, struct flist *b)
+static struct mpatch_flist *combine(struct mpatch_flist *a,
+	struct mpatch_flist *b)
 {
-	struct flist *c = NULL;
-	struct frag *bh, *ct;
+	struct mpatch_flist *c = NULL;
+	struct mpatch_frag *bh, *ct;
 	int offset = 0, post;
 
 	if (a && b)
@@ -189,26 +175,26 @@ static struct flist *combine(struct flist *a, struct flist *b)
 		}
 
 		/* hold on to tail from a */
-		memcpy(c->tail, a->head, sizeof(struct frag) * lsize(a));
+		memcpy(c->tail, a->head, sizeof(struct mpatch_frag) * lsize(a));
 		c->tail += lsize(a);
 	}
 
-	lfree(a);
-	lfree(b);
+	mpatch_lfree(a);
+	mpatch_lfree(b);
 	return c;
 }
 
 /* decode a binary patch into a hunk list */
-static struct flist *decode(const char *bin, Py_ssize_t len)
+int mpatch_decode(const char *bin, ssize_t len, struct mpatch_flist **res)
 {
-	struct flist *l;
-	struct frag *lt;
+	struct mpatch_flist *l;
+	struct mpatch_frag *lt;
 	int pos = 0;
 
 	/* assume worst case size, we won't have many of these lists */
 	l = lalloc(len / 12 + 1);
 	if (!l)
-		return NULL;
+		return MPATCH_ERR_NO_MEM;
 
 	lt = l->tail;
 
@@ -224,28 +210,24 @@ static struct flist *decode(const char *bin, Py_ssize_t len)
 	}
 
 	if (pos != len) {
-		if (!PyErr_Occurred())
-			PyErr_SetString(mpatch_Error, "patch cannot be decoded");
-		lfree(l);
-		return NULL;
+		mpatch_lfree(l);
+		return MPATCH_ERR_CANNOT_BE_DECODED;
 	}
 
 	l->tail = lt;
-	return l;
+	*res = l;
+	return 0;
 }
 
 /* calculate the size of resultant text */
-static Py_ssize_t calcsize(Py_ssize_t len, struct flist *l)
+ssize_t mpatch_calcsize(ssize_t len, struct mpatch_flist *l)
 {
-	Py_ssize_t outlen = 0, last = 0;
-	struct frag *f = l->head;
+	ssize_t outlen = 0, last = 0;
+	struct mpatch_frag *f = l->head;
 
 	while (f != l->tail) {
 		if (f->start < last || f->end > len) {
-			if (!PyErr_Occurred())
-				PyErr_SetString(mpatch_Error,
-				                "invalid patch");
-			return -1;
+			return MPATCH_ERR_INVALID_PATCH;
 		}
 		outlen += f->start - last;
 		last = f->end;
@@ -257,18 +239,16 @@ static Py_ssize_t calcsize(Py_ssize_t len, struct flist *l)
 	return outlen;
 }
 
-static int apply(char *buf, const char *orig, Py_ssize_t len, struct flist *l)
+int mpatch_apply(char *buf, const char *orig, ssize_t len,
+	struct mpatch_flist *l)
 {
-	struct frag *f = l->head;
+	struct mpatch_frag *f = l->head;
 	int last = 0;
 	char *p = buf;
 
 	while (f != l->tail) {
 		if (f->start < last || f->end > len) {
-			if (!PyErr_Occurred())
-				PyErr_SetString(mpatch_Error,
-				                "invalid patch");
-			return 0;
+			return MPATCH_ERR_INVALID_PATCH;
 		}
 		memcpy(p, orig + last, f->start - last);
 		p += f->start - last;
@@ -278,146 +258,23 @@ static int apply(char *buf, const char *orig, Py_ssize_t len, struct flist *l)
 		f++;
 	}
 	memcpy(p, orig + last, len - last);
-	return 1;
+	return 0;
 }
 
 /* recursively generate a patch of all bins between start and end */
-static struct flist *fold(PyObject *bins, Py_ssize_t start, Py_ssize_t end)
+struct mpatch_flist *mpatch_fold(void *bins,
+	struct mpatch_flist* (*get_next_item)(void*, ssize_t),
+	ssize_t start, ssize_t end)
 {
-	Py_ssize_t len, blen;
-	const char *buffer;
+	ssize_t len;
 
 	if (start + 1 == end) {
 		/* trivial case, output a decoded list */
-		PyObject *tmp = PyList_GetItem(bins, start);
-		if (!tmp)
-			return NULL;
-		if (PyObject_AsCharBuffer(tmp, &buffer, &blen))
-			return NULL;
-		return decode(buffer, blen);
+		return get_next_item(bins, start);
 	}
 
 	/* divide and conquer, memory management is elsewhere */
 	len = (end - start) / 2;
-	return combine(fold(bins, start, start + len),
-		       fold(bins, start + len, end));
+	return combine(mpatch_fold(bins, get_next_item, start, start + len),
+		       mpatch_fold(bins, get_next_item, start + len, end));
 }
-
-static PyObject *
-patches(PyObject *self, PyObject *args)
-{
-	PyObject *text, *bins, *result;
-	struct flist *patch;
-	const char *in;
-	char *out;
-	Py_ssize_t len, outlen, inlen;
-
-	if (!PyArg_ParseTuple(args, "OO:mpatch", &text, &bins))
-		return NULL;
-
-	len = PyList_Size(bins);
-	if (!len) {
-		/* nothing to do */
-		Py_INCREF(text);
-		return text;
-	}
-
-	if (PyObject_AsCharBuffer(text, &in, &inlen))
-		return NULL;
-
-	patch = fold(bins, 0, len);
-	if (!patch)
-		return NULL;
-
-	outlen = calcsize(inlen, patch);
-	if (outlen < 0) {
-		result = NULL;
-		goto cleanup;
-	}
-	result = PyBytes_FromStringAndSize(NULL, outlen);
-	if (!result) {
-		result = NULL;
-		goto cleanup;
-	}
-	out = PyBytes_AsString(result);
-	if (!apply(out, in, inlen, patch)) {
-		Py_DECREF(result);
-		result = NULL;
-	}
-cleanup:
-	lfree(patch);
-	return result;
-}
-
-/* calculate size of a patched file directly */
-static PyObject *
-patchedsize(PyObject *self, PyObject *args)
-{
-	long orig, start, end, len, outlen = 0, last = 0, pos = 0;
-	Py_ssize_t patchlen;
-	char *bin;
-
-	if (!PyArg_ParseTuple(args, "ls#", &orig, &bin, &patchlen))
-		return NULL;
-
-	while (pos >= 0 && pos < patchlen) {
-		start = getbe32(bin + pos);
-		end = getbe32(bin + pos + 4);
-		len = getbe32(bin + pos + 8);
-		if (start > end)
-			break; /* sanity check */
-		pos += 12 + len;
-		outlen += start - last;
-		last = end;
-		outlen += len;
-	}
-
-	if (pos != patchlen) {
-		if (!PyErr_Occurred())
-			PyErr_SetString(mpatch_Error, "patch cannot be decoded");
-		return NULL;
-	}
-
-	outlen += orig - last;
-	return Py_BuildValue("l", outlen);
-}
-
-static PyMethodDef methods[] = {
-	{"patches", patches, METH_VARARGS, "apply a series of patches\n"},
-	{"patchedsize", patchedsize, METH_VARARGS, "calculed patched size\n"},
-	{NULL, NULL}
-};
-
-#ifdef IS_PY3K
-static struct PyModuleDef mpatch_module = {
-	PyModuleDef_HEAD_INIT,
-	"mpatch",
-	mpatch_doc,
-	-1,
-	methods
-};
-
-PyMODINIT_FUNC PyInit_mpatch(void)
-{
-	PyObject *m;
-
-	m = PyModule_Create(&mpatch_module);
-	if (m == NULL)
-		return NULL;
-
-	mpatch_Error = PyErr_NewException("mercurial.mpatch.mpatchError",
-					  NULL, NULL);
-	Py_INCREF(mpatch_Error);
-	PyModule_AddObject(m, "mpatchError", mpatch_Error);
-
-	return m;
-}
-#else
-PyMODINIT_FUNC
-initmpatch(void)
-{
-	Py_InitModule3("mpatch", methods, mpatch_doc);
-	mpatch_Error = PyErr_NewException("mercurial.mpatch.mpatchError",
-					  NULL, NULL);
-}
-#endif

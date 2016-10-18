@@ -34,6 +34,7 @@ from . import (
     fileset,
     hg,
     hook,
+    profiling,
     revset,
     templatefilters,
     templatekw,
@@ -150,7 +151,7 @@ def _runcatch(req):
     except ValueError:
         pass # happens if called in a thread
 
-    try:
+    def _runcatchfunc():
         try:
             debugger = 'pdb'
             debugtrace = {
@@ -212,6 +213,16 @@ def _runcatch(req):
             ui.traceback()
             raise
 
+    return callcatch(ui, _runcatchfunc)
+
+def callcatch(ui, func):
+    """call func() with global exception handling
+
+    return func() if no exception happens. otherwise do some error handling
+    and return an exit code accordingly.
+    """
+    try:
+        return func()
     # Global exception handling, alphabetically
     # Mercurial-specific first, followed by built-in and library exceptions
     except error.AmbiguousCommand as inst:
@@ -489,6 +500,8 @@ class cmdalias(object):
             ui.debug("alias '%s' shadows command '%s'\n" %
                      (self.name, self.cmdname))
 
+        ui.log('commandalias', "alias '%s' expands to '%s'\n",
+               self.name, self.definition)
         if util.safehasattr(self, 'shell'):
             return self.fn(ui, *args, **opts)
         else:
@@ -545,7 +558,7 @@ def _parse(ui, args):
         c.append((o[0], o[1], options[o[1]], o[3]))
 
     try:
-        args = fancyopts.fancyopts(args, c, cmdoptions, True)
+        args = fancyopts.fancyopts(args, c, cmdoptions, gnu=True)
     except fancyopts.getopt.GetoptError as inst:
         raise error.CommandError(cmd, inst)
 
@@ -761,7 +774,8 @@ def _dispatch(req):
     # Check abbreviation/ambiguity of shell alias.
     shellaliasfn = _checkshellalias(lui, ui, args)
     if shellaliasfn:
-        return shellaliasfn()
+        with profiling.maybeprofile(lui):
+            return shellaliasfn()
 
     # check for fallback encoding
     fallback = lui.config('ui', 'fallbackencoding')
@@ -808,6 +822,10 @@ def _dispatch(req):
             for ui_ in uis:
                 ui_.setconfig('ui', opt, val, '--' + opt)
 
+    if options['profile']:
+        for ui_ in uis:
+            ui_.setconfig('profiling', 'enabled', 'true', '--profile')
+
     if options['traceback']:
         for ui_ in uis:
             ui_.setconfig('ui', 'traceback', 'on', '--traceback')
@@ -827,187 +845,70 @@ def _dispatch(req):
     elif not cmd:
         return commands.help_(ui, 'shortlist')
 
-    repo = None
-    cmdpats = args[:]
-    if not _cmdattr(ui, cmd, func, 'norepo'):
-        # use the repo from the request only if we don't have -R
-        if not rpath and not cwd:
-            repo = req.repo
+    with profiling.maybeprofile(lui):
+        repo = None
+        cmdpats = args[:]
+        if not _cmdattr(ui, cmd, func, 'norepo'):
+            # use the repo from the request only if we don't have -R
+            if not rpath and not cwd:
+                repo = req.repo
 
-        if repo:
-            # set the descriptors of the repo ui to those of ui
-            repo.ui.fin = ui.fin
-            repo.ui.fout = ui.fout
-            repo.ui.ferr = ui.ferr
-        else:
-            try:
-                repo = hg.repository(ui, path=path)
-                if not repo.local():
-                    raise error.Abort(_("repository '%s' is not local") % path)
-                repo.ui.setconfig("bundle", "mainreporoot", repo.root, 'repo')
-            except error.RequirementError:
-                raise
-            except error.RepoError:
-                if rpath and rpath[-1]: # invalid -R path
+            if repo:
+                # set the descriptors of the repo ui to those of ui
+                repo.ui.fin = ui.fin
+                repo.ui.fout = ui.fout
+                repo.ui.ferr = ui.ferr
+            else:
+                try:
+                    repo = hg.repository(ui, path=path)
+                    if not repo.local():
+                        raise error.Abort(_("repository '%s' is not local")
+                                          % path)
+                    repo.ui.setconfig("bundle", "mainreporoot", repo.root,
+                                      'repo')
+                except error.RequirementError:
                     raise
-                if not _cmdattr(ui, cmd, func, 'optionalrepo'):
-                    if (_cmdattr(ui, cmd, func, 'inferrepo') and
-                        args and not path):
-                        # try to infer -R from command args
-                        repos = map(cmdutil.findrepo, args)
-                        guess = repos[0]
-                        if guess and repos.count(guess) == len(repos):
-                            req.args = ['--repository', guess] + fullargs
-                            return _dispatch(req)
-                    if not path:
-                        raise error.RepoError(_("no repository found in '%s'"
-                                                " (.hg not found)")
-                                              % os.getcwd())
-                    raise
-        if repo:
-            ui = repo.ui
-            if options['hidden']:
-                repo = repo.unfiltered()
-        args.insert(0, repo)
-    elif rpath:
-        ui.warn(_("warning: --repository ignored\n"))
+                except error.RepoError:
+                    if rpath and rpath[-1]: # invalid -R path
+                        raise
+                    if not _cmdattr(ui, cmd, func, 'optionalrepo'):
+                        if (_cmdattr(ui, cmd, func, 'inferrepo') and
+                            args and not path):
+                            # try to infer -R from command args
+                            repos = map(cmdutil.findrepo, args)
+                            guess = repos[0]
+                            if guess and repos.count(guess) == len(repos):
+                                req.args = ['--repository', guess] + fullargs
+                                return _dispatch(req)
+                        if not path:
+                            raise error.RepoError(_("no repository found in"
+                                                    " '%s' (.hg not found)")
+                                                  % os.getcwd())
+                        raise
+            if repo:
+                ui = repo.ui
+                if options['hidden']:
+                    repo = repo.unfiltered()
+            args.insert(0, repo)
+        elif rpath:
+            ui.warn(_("warning: --repository ignored\n"))
 
-    msg = ' '.join(' ' in a and repr(a) or a for a in fullargs)
-    ui.log("command", '%s\n', msg)
-    d = lambda: util.checksignature(func)(ui, *args, **cmdoptions)
-    try:
-        return runcommand(lui, repo, cmd, fullargs, ui, options, d,
-                          cmdpats, cmdoptions)
-    finally:
-        if repo and repo != req.repo:
-            repo.close()
-
-def lsprofile(ui, func, fp):
-    format = ui.config('profiling', 'format', default='text')
-    field = ui.config('profiling', 'sort', default='inlinetime')
-    limit = ui.configint('profiling', 'limit', default=30)
-    climit = ui.configint('profiling', 'nested', default=0)
-
-    if format not in ['text', 'kcachegrind']:
-        ui.warn(_("unrecognized profiling format '%s'"
-                    " - Ignored\n") % format)
-        format = 'text'
-
-    try:
-        from . import lsprof
-    except ImportError:
-        raise error.Abort(_(
-            'lsprof not available - install from '
-            'http://codespeak.net/svn/user/arigo/hack/misc/lsprof/'))
-    p = lsprof.Profiler()
-    p.enable(subcalls=True)
-    try:
-        return func()
-    finally:
-        p.disable()
-
-        if format == 'kcachegrind':
-            from . import lsprofcalltree
-            calltree = lsprofcalltree.KCacheGrind(p)
-            calltree.output(fp)
-        else:
-            # format == 'text'
-            stats = lsprof.Stats(p.getstats())
-            stats.sort(field)
-            stats.pprint(limit=limit, file=fp, climit=climit)
-
-def flameprofile(ui, func, fp):
-    try:
-        from flamegraph import flamegraph
-    except ImportError:
-        raise error.Abort(_(
-            'flamegraph not available - install from '
-            'https://github.com/evanhempel/python-flamegraph'))
-    # developer config: profiling.freq
-    freq = ui.configint('profiling', 'freq', default=1000)
-    filter_ = None
-    collapse_recursion = True
-    thread = flamegraph.ProfileThread(fp, 1.0 / freq,
-                                      filter_, collapse_recursion)
-    start_time = time.clock()
-    try:
-        thread.start()
-        func()
-    finally:
-        thread.stop()
-        thread.join()
-        print('Collected %d stack frames (%d unique) in %2.2f seconds.' % (
-            time.clock() - start_time, thread.num_frames(),
-            thread.num_frames(unique=True)))
-
-
-def statprofile(ui, func, fp):
-    try:
-        import statprof
-    except ImportError:
-        raise error.Abort(_(
-            'statprof not available - install using "easy_install statprof"'))
-
-    freq = ui.configint('profiling', 'freq', default=1000)
-    if freq > 0:
-        statprof.reset(freq)
-    else:
-        ui.warn(_("invalid sampling frequency '%s' - ignoring\n") % freq)
-
-    statprof.start()
-    try:
-        return func()
-    finally:
-        statprof.stop()
-        statprof.display(fp)
+        msg = ' '.join(' ' in a and repr(a) or a for a in fullargs)
+        ui.log("command", '%s\n', msg)
+        d = lambda: util.checksignature(func)(ui, *args, **cmdoptions)
+        try:
+            return runcommand(lui, repo, cmd, fullargs, ui, options, d,
+                              cmdpats, cmdoptions)
+        finally:
+            if repo and repo != req.repo:
+                repo.close()
 
 def _runcommand(ui, options, cmd, cmdfunc):
-    """Enables the profiler if applicable.
-
-    ``profiling.enabled`` - boolean config that enables or disables profiling
-    """
-    def checkargs():
-        try:
-            return cmdfunc()
-        except error.SignatureError:
-            raise error.CommandError(cmd, _("invalid arguments"))
-
-    if options['profile'] or ui.configbool('profiling', 'enabled'):
-        profiler = os.getenv('HGPROF')
-        if profiler is None:
-            profiler = ui.config('profiling', 'type', default='ls')
-        if profiler not in ('ls', 'stat', 'flame'):
-            ui.warn(_("unrecognized profiler '%s' - ignored\n") % profiler)
-            profiler = 'ls'
-
-        output = ui.config('profiling', 'output')
-
-        if output == 'blackbox':
-            fp = util.stringio()
-        elif output:
-            path = ui.expandpath(output)
-            fp = open(path, 'wb')
-        else:
-            fp = sys.stderr
-
-        try:
-            if profiler == 'ls':
-                return lsprofile(ui, checkargs, fp)
-            elif profiler == 'flame':
-                return flameprofile(ui, checkargs, fp)
-            else:
-                return statprofile(ui, checkargs, fp)
-        finally:
-            if output:
-                if output == 'blackbox':
-                    val = "Profile:\n%s" % fp.getvalue()
-                    # ui.log treats the input as a format string,
-                    # so we need to escape any % signs.
-                    val = val.replace('%', '%%')
-                    ui.log('profile', val)
-                fp.close()
-    else:
-        return checkargs()
+    """Run a command function, possibly with profiling enabled."""
+    try:
+        return cmdfunc()
+    except error.SignatureError:
+        raise error.CommandError(cmd, _('invalid arguments'))
 
 def _exceptionwarning(ui):
     """Produce a warning message for the current active exception"""
@@ -1031,7 +932,7 @@ def _exceptionwarning(ui):
                 break
 
             # Never blame on extensions bundled with Mercurial.
-            if testedwith == 'internal':
+            if extensions.ismoduleinternal(mod):
                 continue
 
             tested = [util.versiontuple(t, 2) for t in testedwith.split()]

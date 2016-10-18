@@ -4,6 +4,10 @@
 
   $ cat > extwithoutinfos.py <<EOF
   > EOF
+  $ cat > extwithinfos.py <<EOF
+  > testedwith = '3.0 3.1 3.2.1'
+  > buglink = 'https://example.org/bts'
+  > EOF
 
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
@@ -13,11 +17,13 @@
   > rebase=
   > mq=
   > ext1 = $debugpath
+  > ext2 = `pwd`/extwithinfos.py
   > EOF
 
   $ hg debugextensions
   color
   ext1 (untested!)
+  ext2 (3.2.1!)
   histedit
   mq
   patchbomb
@@ -26,58 +32,82 @@
   $ hg debugextensions -v
   color
     location: */hgext/color.py* (glob)
-    tested with: internal
+    bundled: yes
   ext1
     location: */extwithoutinfos.py* (glob)
+    bundled: no
+  ext2
+    location: */extwithinfos.py* (glob)
+    bundled: no
+    tested with: 3.0 3.1 3.2.1
+    bug reporting: https://example.org/bts
   histedit
     location: */hgext/histedit.py* (glob)
-    tested with: internal
+    bundled: yes
   mq
     location: */hgext/mq.py* (glob)
-    tested with: internal
+    bundled: yes
   patchbomb
     location: */hgext/patchbomb.py* (glob)
-    tested with: internal
+    bundled: yes
   rebase
     location: */hgext/rebase.py* (glob)
-    tested with: internal
+    bundled: yes
 
   $ hg debugextensions -Tjson | sed 's|\\\\|/|g'
   [
    {
     "buglink": "",
+    "bundled": true,
     "name": "color",
     "source": "*/hgext/color.py*", (glob)
-    "testedwith": "internal"
+    "testedwith": []
    },
    {
     "buglink": "",
+    "bundled": false,
     "name": "ext1",
     "source": "*/extwithoutinfos.py*", (glob)
-    "testedwith": ""
+    "testedwith": []
+   },
+   {
+    "buglink": "https://example.org/bts",
+    "bundled": false,
+    "name": "ext2",
+    "source": "*/extwithinfos.py*", (glob)
+    "testedwith": ["3.0", "3.1", "3.2.1"]
    },
    {
     "buglink": "",
+    "bundled": true,
     "name": "histedit",
     "source": "*/hgext/histedit.py*", (glob)
-    "testedwith": "internal"
+    "testedwith": []
    },
    {
     "buglink": "",
+    "bundled": true,
     "name": "mq",
     "source": "*/hgext/mq.py*", (glob)
-    "testedwith": "internal"
+    "testedwith": []
    },
    {
     "buglink": "",
+    "bundled": true,
     "name": "patchbomb",
     "source": "*/hgext/patchbomb.py*", (glob)
-    "testedwith": "internal"
+    "testedwith": []
    },
    {
     "buglink": "",
+    "bundled": true,
     "name": "rebase",
     "source": "*/hgext/rebase.py*", (glob)
-    "testedwith": "internal"
+    "testedwith": []
    }
   ]
+
+  $ hg debugextensions -T '{ifcontains("3.1", testedwith, "{name}\n")}'
+  ext2
+  $ hg debugextensions \
+  > -T '{ifcontains("3.2", testedwith, "no substring match: {name}\n")}'

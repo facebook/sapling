@@ -28,6 +28,7 @@ import re as remod
 import shutil
 import signal
 import socket
+import string
 import subprocess
 import sys
 import tempfile
@@ -59,7 +60,8 @@ for attr in (
     'socketserver',
     'xmlrpclib',
 ):
-    globals()[attr] = getattr(pycompat, attr)
+    a = pycompat.sysstr(attr)
+    globals()[a] = getattr(pycompat, a)
 
 # This line is to make pyflakes happy:
 urlreq = pycompat.urlreq
@@ -232,7 +234,7 @@ class digestchecker(object):
 try:
     buffer = buffer
 except NameError:
-    if sys.version_info[0] < 3:
+    if not pycompat.ispy3:
         def buffer(sliceable, offset=0):
             return sliceable[offset:]
     else:
@@ -561,7 +563,7 @@ class _lrucachenode(object):
     Holds a reference to nodes on either side as well as a key-value
     pair for the dictionary entry.
     """
-    __slots__ = ('next', 'prev', 'key', 'value')
+    __slots__ = (u'next', u'prev', u'key', u'value')
 
     def __init__(self):
         self.next = None
@@ -651,7 +653,7 @@ class lrucachedict(object):
 
     def get(self, k, default=None):
         try:
-            return self._cache[k]
+            return self._cache[k].value
         except KeyError:
             return default
 
@@ -881,6 +883,8 @@ def nogc(func):
 
     This garbage collector issue have been fixed in 2.7.
     """
+    if sys.version_info >= (2, 7):
+        return func
     def wrapper(*args, **kwargs):
         gcenabled = gc.isenabled()
         gc.disable()
@@ -925,7 +929,7 @@ def mainfrozen():
     """
     return (safehasattr(sys, "frozen") or # new py2exe
             safehasattr(sys, "importers") or # old py2exe
-            imp.is_frozen("__main__")) # tools/freeze
+            imp.is_frozen(u"__main__")) # tools/freeze
 
 # the location of data files matching the source code
 if mainfrozen() and getattr(sys, 'frozen', None) != 'macosx_app':
@@ -1012,10 +1016,7 @@ def system(cmd, environ=None, cwd=None, onerr=None, errprefix=None, out=None):
             proc = subprocess.Popen(cmd, shell=True, close_fds=closefds,
                                     env=env, cwd=cwd, stdout=subprocess.PIPE,
                                     stderr=subprocess.STDOUT)
-            while True:
-                line = proc.stdout.readline()
-                if not line:
-                    break
+            for line in iter(proc.stdout.readline, ''):
                 out.write(line)
             proc.wait()
             rc = proc.returncode
@@ -1214,7 +1215,7 @@ def fstat(fp):
 
 # File system features
 
-def checkcase(path):
+def fscasesensitive(path):
     """
     Return true if the given path is on a case-sensitive filesystem
 
@@ -1342,6 +1343,10 @@ def checknlink(testfile):
     try:
         posixfile(f1, 'w').close()
     except IOError:
+        try:
+            os.unlink(f1)
+        except OSError:
+            pass
         return False
 
     f2 = testfile + ".hgtmp2"
@@ -1679,9 +1684,9 @@ class chunkbuffer(object):
 
         return ''.join(buf)
 
-def filechunkiter(f, size=65536, limit=None):
+def filechunkiter(f, size=131072, limit=None):
     """Create a generator that produces the data in the file size
-    (default 65536) bytes at a time, up to optional limit (default is
+    (default 131072) bytes at a time, up to optional limit (default is
     to read all data).  Chunks may be less than size bytes if the
     chunk is the last chunk in the file, or the file is a socket or
     some other type of file that sometimes reads less data than is
@@ -1950,7 +1955,7 @@ def matchdate(date):
         except ValueError:
             raise Abort(_("invalid day spec: %s") % date[1:])
         if days < 0:
-            raise Abort(_('%s must be nonnegative (see "hg help dates")')
+            raise Abort(_("%s must be nonnegative (see 'hg help dates')")
                 % date[1:])
         when = makedate()[0] - days * 3600 * 24
         return lambda x: x >= when
@@ -2294,29 +2299,8 @@ def parsebool(s):
     """
     return _booleans.get(s.lower(), None)
 
-_hexdig = '0123456789ABCDEFabcdef'
 _hextochr = dict((a + b, chr(int(a + b, 16)))
-                 for a in _hexdig for b in _hexdig)
-
-def _urlunquote(s):
-    """Decode HTTP/HTML % encoding.
-
-    >>> _urlunquote('abc%20def')
-    'abc def'
-    """
-    res = s.split('%')
-    # fastpath
-    if len(res) == 1:
-        return s
-    s = res[0]
-    for item in res[1:]:
-        try:
-            s += _hextochr[item[:2]] + item[2:]
-        except KeyError:
-            s += '%' + item
-        except UnicodeDecodeError:
-            s += unichr(int(item[:2], 16)) + item[2:]
-    return s
+                 for a in string.hexdigits for b in string.hexdigits)
 
 class url(object):
     r"""Reliable URL parser.
@@ -2374,6 +2358,22 @@ class url(object):
     <url scheme: 'http', host: 'host', path: 'a', query: 'b', fragment: 'c'>
     >>> url('http://host/a?b#c', parsequery=False, parsefragment=False)
     <url scheme: 'http', host: 'host', path: 'a?b#c'>
+
+    Empty path:
+
+    >>> url('')
+    <url path: ''>
+    >>> url('#a')
+    <url path: '', fragment: 'a'>
+    >>> url('http://host/')
+    <url scheme: 'http', host: 'host', path: ''>
+    >>> url('http://host/#a')
+    <url scheme: 'http', host: 'host', path: '', fragment: 'a'>
+
+    Only scheme:
+
+    >>> url('http:')
+    <url scheme: 'http'>
     """
 
     _safechars = "!~*'()+"
@@ -2390,8 +2390,6 @@ class url(object):
 
         if parsefragment and '#' in path:
             path, self.fragment = path.split('#', 1)
-            if not path:
-                path = None
 
         # special case for Windows drive letters and UNC paths
         if hasdriveletter(path) or path.startswith(r'\\'):
@@ -2472,7 +2470,7 @@ class url(object):
                   'path', 'fragment'):
             v = getattr(self, a)
             if v is not None:
-                setattr(self, a, _urlunquote(v))
+                setattr(self, a, pycompat.urlparse.unquote(v))
 
     def __repr__(self):
         attrs = []

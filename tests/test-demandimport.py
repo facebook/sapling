@@ -4,6 +4,14 @@ from mercurial import demandimport
 demandimport.enable()
 
 import os
+import subprocess
+import sys
+
+# Only run if demandimport is allowed
+if subprocess.call(['python', '%s/hghave' % os.environ['TESTDIR'],
+                    'demandimport']):
+    sys.exit(80)
+
 if os.name != 'nt':
     try:
         import distutils.msvc9compiler
@@ -55,8 +63,18 @@ print("re =", f(re))
 print("re.stderr =", f(re.stderr))
 print("re =", f(re))
 
+import contextlib
+print("contextlib =", f(contextlib))
+try:
+    from contextlib import unknownattr
+    print('no demandmod should be created for attribute of non-package '
+          'module:\ncontextlib.unknownattr =', f(unknownattr))
+except ImportError as inst:
+    print('contextlib.unknownattr = ImportError: %s' % inst)
+
 demandimport.disable()
 os.environ['HGDEMANDIMPORT'] = 'disable'
+# this enable call should not actually enable demandimport!
 demandimport.enable()
 from mercurial import node
 print("node =", f(node))

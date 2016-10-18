@@ -9,6 +9,7 @@ from __future__ import absolute_import
 
 import heapq
 import re
+import string
 
 from .i18n import _
 from . import (
@@ -22,6 +23,7 @@ from . import (
     parser,
     pathutil,
     phases,
+    pycompat,
     registrar,
     repoview,
     util,
@@ -149,18 +151,16 @@ elements = {
     "(": (21, None, ("group", 1, ")"), ("func", 1, ")"), None),
     "##": (20, None, None, ("_concat", 20), None),
     "~": (18, None, None, ("ancestor", 18), None),
-    "^": (18, None, None, ("parent", 18), ("parentpost", 18)),
+    "^": (18, None, None, ("parent", 18), "parentpost"),
     "-": (5, None, ("negate", 19), ("minus", 5), None),
-    "::": (17, None, ("dagrangepre", 17), ("dagrange", 17),
-           ("dagrangepost", 17)),
-    "..": (17, None, ("dagrangepre", 17), ("dagrange", 17),
-           ("dagrangepost", 17)),
-    ":": (15, "rangeall", ("rangepre", 15), ("range", 15), ("rangepost", 15)),
+    "::": (17, None, ("dagrangepre", 17), ("dagrange", 17), "dagrangepost"),
+    "..": (17, None, ("dagrangepre", 17), ("dagrange", 17), "dagrangepost"),
+    ":": (15, "rangeall", ("rangepre", 15), ("range", 15), "rangepost"),
     "not": (10, None, ("not", 10), None, None),
     "!": (10, None, ("not", 10), None, None),
     "and": (5, None, None, ("and", 5), None),
     "&": (5, None, None, ("and", 5), None),
-    "%": (5, None, None, ("only", 5), ("onlypost", 5)),
+    "%": (5, None, None, ("only", 5), "onlypost"),
     "or": (4, None, None, ("or", 4), None),
     "|": (4, None, None, ("or", 4), None),
     "+": (4, None, None, ("or", 4), None),
@@ -175,12 +175,12 @@ elements = {
 keywords = set(['and', 'or', 'not'])
 
 # default set of valid characters for the initial letter of symbols
-_syminitletters = set(c for c in [chr(i) for i in xrange(256)]
-                      if c.isalnum() or c in '._@' or ord(c) > 127)
+_syminitletters = set(
+    string.ascii_letters +
+    string.digits + pycompat.sysstr('._@')) | set(map(chr, xrange(128, 256)))
 
 # default set of valid characters for non-initial letters of symbols
-_symletters = set(c for c in  [chr(i) for i in xrange(256)]
-                  if c.isalnum() or c in '-._/@' or ord(c) > 127)
+_symletters = _syminitletters | set(pycompat.sysstr('-/'))
 
 def tokenize(program, lookup=None, syminitletters=None, symletters=None):
     '''
@@ -362,14 +362,22 @@ def stringset(repo, subset, x):
         return baseset([x])
     return baseset()
 
-def rangeset(repo, subset, x, y):
+def rangeset(repo, subset, x, y, order):
     m = getset(repo, fullreposet(repo), x)
     n = getset(repo, fullreposet(repo), y)
 
     if not m or not n:
         return baseset()
-    m, n = m.first(), n.last()
+    return _makerangeset(repo, subset, m.first(), n.last(), order)
 
+def rangepre(repo, subset, y, order):
+    # ':y' can't be rewritten to '0:y' since '0' may be hidden
+    n = getset(repo, fullreposet(repo), y)
+    if not n:
+        return baseset()
+    return _makerangeset(repo, subset, 0, n.last(), order)
+
+def _makerangeset(repo, subset, m, n, order):
     if m == n:
         r = baseset([m])
     elif n == node.wdirrev:
@@ -380,35 +388,43 @@ def rangeset(repo, subset, x, y):
         r = spanset(repo, m, n + 1)
     else:
         r = spanset(repo, m, n - 1)
-    # XXX We should combine with subset first: 'subset & baseset(...)'. This is
-    # necessary to ensure we preserve the order in subset.
-    #
-    # This has performance implication, carrying the sorting over when possible
-    # would be more efficient.
-    return r & subset
 
-def dagrange(repo, subset, x, y):
+    if order == defineorder:
+        return r & subset
+    else:
+        # carrying the sorting over when possible would be more efficient
+        return subset & r
+
+def dagrange(repo, subset, x, y, order):
     r = fullreposet(repo)
     xs = reachableroots(repo, getset(repo, r, x), getset(repo, r, y),
                          includepath=True)
     return subset & xs
 
-def andset(repo, subset, x, y):
+def andset(repo, subset, x, y, order):
     return getset(repo, getset(repo, subset, x), y)
 
-def differenceset(repo, subset, x, y):
+def differenceset(repo, subset, x, y, order):
     return getset(repo, subset, x) - getset(repo, subset, y)
 
-def orset(repo, subset, *xs):
+def _orsetlist(repo, subset, xs):
     assert xs
     if len(xs) == 1:
         return getset(repo, subset, xs[0])
     p = len(xs) // 2
-    a = orset(repo, subset, *xs[:p])
-    b = orset(repo, subset, *xs[p:])
+    a = _orsetlist(repo, subset, xs[:p])
+    b = _orsetlist(repo, subset, xs[p:])
     return a + b
 
-def notset(repo, subset, x):
+def orset(repo, subset, x, order):
+    xs = getlist(x)
+    if order == followorder:
+        # slow path to take the subset order
+        return subset & _orsetlist(repo, fullreposet(repo), xs)
+    else:
+        return _orsetlist(repo, subset, xs)
+
+def notset(repo, subset, x, order):
     return subset - getset(repo, subset, x)
 
 def listset(repo, subset, *xs):
@@ -418,10 +434,13 @@ def listset(repo, subset, *xs):
 def keyvaluepair(repo, subset, k, v):
     raise error.ParseError(_("can't use a key-value pair in this context"))
 
-def func(repo, subset, a, b):
+def func(repo, subset, a, b, order):
     f = getsymbol(a)
     if f in symbols:
-        return symbols[f](repo, subset, b)
+        fn = symbols[f]
+        if getattr(fn, '_takeorder', False):
+            return fn(repo, subset, b, order)
+        return fn(repo, subset, b)
 
     keep = lambda fn: getattr(fn, '__doc__', None) is not None
 
@@ -515,7 +534,7 @@ def _firstancestors(repo, subset, x):
     # Like ``ancestors(set)`` but follows only the first parents.
     return _ancestors(repo, subset, x, followfirst=True)
 
-def ancestorspec(repo, subset, x, n):
+def ancestorspec(repo, subset, x, n, order):
     """``set~n``
     Changesets that are the Nth ancestor (first parents only) of a changeset
     in set.
@@ -1001,12 +1020,21 @@ def first(repo, subset, x):
     return limit(repo, subset, x)
 
 def _follow(repo, subset, x, name, followfirst=False):
-    l = getargs(x, 0, 1, _("%s takes no arguments or a pattern") % name)
+    l = getargs(x, 0, 2, _("%s takes no arguments or a pattern "
+                           "and an optional revset") % name)
     c = repo['.']
     if l:
         x = getstring(l[0], _("%s expected a pattern") % name)
+        rev = None
+        if len(l) >= 2:
+            revs = getset(repo, fullreposet(repo), l[1])
+            if len(revs) != 1:
+                raise error.RepoLookupError(
+                        _("%s expected one starting revision") % name)
+            rev = revs.last()
+            c = repo[rev]
         matcher = matchmod.match(repo.root, repo.getcwd(), [x],
-                                 ctx=repo[None], default='path')
+                                 ctx=repo[rev], default='path')
 
         files = c.manifest().walk(matcher)
 
@@ -1021,20 +1049,20 @@ def _follow(repo, subset, x, name, followfirst=False):
 
     return subset & s
 
-@predicate('follow([pattern])', safe=True)
+@predicate('follow([pattern[, startrev]])', safe=True)
 def follow(repo, subset, x):
     """
     An alias for ``::.`` (ancestors of the working directory's first parent).
     If pattern is specified, the histories of files matching given
-    pattern is followed, including copies.
+    pattern in the revision given by startrev are followed, including copies.
     """
     return _follow(repo, subset, x, 'follow')
 
 @predicate('_followfirst', safe=True)
 def _followfirst(repo, subset, x):
-    # ``followfirst([pattern])``
-    # Like ``follow([pattern])`` but follows only the first parent of
-    # every revisions or files revisions.
+    # ``followfirst([pattern[, startrev]])``
+    # Like ``follow([pattern[, startrev]])`` but follows only the first parent
+    # of every revisions or files revisions.
     return _follow(repo, subset, x, '_followfirst', followfirst=True)
 
 @predicate('all()', safe=True)
@@ -1519,6 +1547,9 @@ def p2(repo, subset, x):
     # some optimisations from the fact this is a baseset.
     return subset & ps
 
+def parentpost(repo, subset, x, order):
+    return p1(repo, subset, x)
+
 @predicate('parents([set])', safe=True)
 def parents(repo, subset, x):
     """
@@ -1569,7 +1600,7 @@ def secret(repo, subset, x):
     target = phases.secret
     return _phase(repo, subset, target)
 
-def parentspec(repo, subset, x, n):
+def parentspec(repo, subset, x, n, order):
     """``set^0``
     The set.
     ``set^1`` (or ``set^``), ``set^2``
@@ -1590,7 +1621,7 @@ def parentspec(repo, subset, x, n):
             ps.add(cl.parentrevs(r)[0])
         elif n == 2:
             parents = cl.parentrevs(r)
-            if len(parents) > 1:
+            if parents[1] != node.nullrev:
                 ps.add(parents[1])
     return subset & ps
 
@@ -1813,12 +1844,13 @@ def matching(repo, subset, x):
 
     return subset.filter(matches, condrepr=('<matching%r %r>', fields, revs))
 
-@predicate('reverse(set)', safe=True)
-def reverse(repo, subset, x):
+@predicate('reverse(set)', safe=True, takeorder=True)
+def reverse(repo, subset, x, order):
     """Reverse order of set.
     """
     l = getset(repo, subset, x)
-    l.reverse()
+    if order == defineorder:
+        l.reverse()
     return l
 
 @predicate('roots(set)', safe=True)
@@ -1880,8 +1912,8 @@ def _getsortargs(x):
 
     return args['set'], keyflags, opts
 
-@predicate('sort(set[, [-]key... [, ...]])', safe=True)
-def sort(repo, subset, x):
+@predicate('sort(set[, [-]key... [, ...]])', safe=True, takeorder=True)
+def sort(repo, subset, x, order):
     """Sort set by keys. The default sort order is ascending, specify a key
     as ``-key`` to sort in descending order.
 
@@ -1902,7 +1934,7 @@ def sort(repo, subset, x):
     s, keyflags, opts = _getsortargs(x)
     revs = getset(repo, subset, s)
 
-    if not keyflags:
+    if not keyflags or order != defineorder:
         return revs
     if len(keyflags) == 1 and keyflags[0][0] == "rev":
         revs.sort(reverse=keyflags[0][1])
@@ -2233,9 +2265,7 @@ def wdir(repo, subset, x):
         return baseset([node.wdirrev])
     return baseset()
 
-# for internal use
-@predicate('_list', safe=True)
-def _list(repo, subset, x):
+def _orderedlist(repo, subset, x):
     s = getstring(x, "internal error")
     if not s:
         return baseset()
@@ -2264,8 +2294,15 @@ def _list(repo, subset, x):
     return baseset(ls)
 
 # for internal use
-@predicate('_intlist', safe=True)
-def _intlist(repo, subset, x):
+@predicate('_list', safe=True, takeorder=True)
+def _list(repo, subset, x, order):
+    if order == followorder:
+        # slow path to take the subset order
+        return subset & _orderedlist(repo, fullreposet(repo), x)
+    else:
+        return _orderedlist(repo, subset, x)
+
+def _orderedintlist(repo, subset, x):
     s = getstring(x, "internal error")
     if not s:
         return baseset()
@@ -2274,8 +2311,15 @@ def _intlist(repo, subset, x):
     return baseset([r for r in ls if r in s])
 
 # for internal use
-@predicate('_hexlist', safe=True)
-def _hexlist(repo, subset, x):
+@predicate('_intlist', safe=True, takeorder=True)
+def _intlist(repo, subset, x, order):
+    if order == followorder:
+        # slow path to take the subset order
+        return subset & _orderedintlist(repo, fullreposet(repo), x)
+    else:
+        return _orderedintlist(repo, subset, x)
+
+def _orderedhexlist(repo, subset, x):
     s = getstring(x, "internal error")
     if not s:
         return baseset()
@@ -2284,8 +2328,18 @@ def _hexlist(repo, subset, x):
     s = subset
     return baseset([r for r in ls if r in s])
 
+# for internal use
+@predicate('_hexlist', safe=True, takeorder=True)
+def _hexlist(repo, subset, x, order):
+    if order == followorder:
+        # slow path to take the subset order
+        return subset & _orderedhexlist(repo, fullreposet(repo), x)
+    else:
+        return _orderedhexlist(repo, subset, x)
+
 methods = {
     "range": rangeset,
+    "rangepre": rangepre,
     "dagrange": dagrange,
     "string": stringset,
     "symbol": stringset,
@@ -2298,7 +2352,51 @@ methods = {
     "func": func,
     "ancestor": ancestorspec,
     "parent": parentspec,
-    "parentpost": p1,
+    "parentpost": parentpost,
+}
+
+# Constants for ordering requirement, used in _analyze():
+#
+# If 'define', any nested functions and operations can change the ordering of
+# the entries in the set. If 'follow', any nested functions and operations
+# should take the ordering specified by the first operand to the '&' operator.
+#
+# For instance,
+#
+#   X & (Y | Z)
+#   ^   ^^^^^^^
+#   |   follow
+#   define
+#
+# will be evaluated as 'or(y(x()), z(x()))', where 'x()' can change the order
+# of the entries in the set, but 'y()', 'z()' and 'or()' shouldn't.
+#
+# 'any' means the order doesn't matter. For instance,
+#
+#   X & !Y
+#        ^
+#        any
+#
+# 'y()' can either enforce its ordering requirement or take the ordering
+# specified by 'x()' because 'not()' doesn't care the order.
+#
+# Transition of ordering requirement:
+#
+# 1. starts with 'define'
+# 2. shifts to 'follow' by 'x & y'
+# 3. changes back to 'define' on function call 'f(x)' or function-like
+#    operation 'x (f) y' because 'f' may have its own ordering requirement
+#    for 'x' and 'y' (e.g. 'first(x)')
+#
+anyorder = 'any'        # don't care the order
+defineorder = 'define'  # should define the order
+followorder = 'follow'  # must follow the current order
+
+# transition table for 'x & y', from the current expression 'x' to 'y'
+_tofolloworder = {
+    anyorder: anyorder,
+    defineorder: followorder,
+    followorder: followorder,
 }
 
 def _matchonly(revs, bases):
@@ -2316,6 +2414,97 @@ def _matchonly(revs, bases):
         and getsymbol(bases[1][1]) == 'ancestors'):
         return ('list', revs[2], bases[1][2])
 
+def _fixops(x):
+    """Rewrite raw parsed tree to resolve ambiguous syntax which cannot be
+    handled well by our simple top-down parser"""
+    if not isinstance(x, tuple):
+        return x
+
+    op = x[0]
+    if op == 'parent':
+        # x^:y means (x^) : y, not x ^ (:y)
+        # x^:  means (x^) :,   not x ^ (:)
+        post = ('parentpost', x[1])
+        if x[2][0] == 'dagrangepre':
+            return _fixops(('dagrange', post, x[2][1]))
+        elif x[2][0] == 'rangepre':
+            return _fixops(('range', post, x[2][1]))
+        elif x[2][0] == 'rangeall':
+            return _fixops(('rangepost', post))
+    elif op == 'or':
+        # make number of arguments deterministic:
+        # x + y + z -> (or x y z) -> (or (list x y z))
+        return (op, _fixops(('list',) + x[1:]))
+
+    return (op,) + tuple(_fixops(y) for y in x[1:])
+
+def _analyze(x, order):
+    if x is None:
+        return x
+
+    op = x[0]
+    if op == 'minus':
+        return _analyze(('and', x[1], ('not', x[2])), order)
+    elif op == 'only':
+        t = ('func', ('symbol', 'only'), ('list', x[1], x[2]))
+        return _analyze(t, order)
+    elif op == 'onlypost':
+        return _analyze(('func', ('symbol', 'only'), x[1]), order)
+    elif op == 'dagrangepre':
+        return _analyze(('func', ('symbol', 'ancestors'), x[1]), order)
+    elif op == 'dagrangepost':
+        return _analyze(('func', ('symbol', 'descendants'), x[1]), order)
+    elif op == 'rangeall':
+        return _analyze(('rangepre', ('string', 'tip')), order)
+    elif op == 'rangepost':
+        return _analyze(('range', x[1], ('string', 'tip')), order)
+    elif op == 'negate':
+        s = getstring(x[1], _("can't negate that"))
+        return _analyze(('string', '-' + s), order)
+    elif op in ('string', 'symbol'):
+        return x
+    elif op == 'and':
+        ta = _analyze(x[1], order)
+        tb = _analyze(x[2], _tofolloworder[order])
+        return (op, ta, tb, order)
+    elif op == 'or':
+        return (op, _analyze(x[1], order), order)
+    elif op == 'not':
+        return (op, _analyze(x[1], anyorder), order)
+    elif op in ('rangepre', 'parentpost'):
+        return (op, _analyze(x[1], defineorder), order)
+    elif op == 'group':
+        return _analyze(x[1], order)
+    elif op in ('dagrange', 'range', 'parent', 'ancestor'):
+        ta = _analyze(x[1], defineorder)
+        tb = _analyze(x[2], defineorder)
+        return (op, ta, tb, order)
+    elif op == 'list':
+        return (op,) + tuple(_analyze(y, order) for y in x[1:])
+    elif op == 'keyvalue':
+        return (op, x[1], _analyze(x[2], order))
+    elif op == 'func':
+        f = getsymbol(x[1])
+        d = defineorder
+        if f == 'present':
+            # 'present(set)' is known to return the argument set with no
+            # modification, so forward the current order to its argument
+            d = order
+        return (op, x[1], _analyze(x[2], d), order)
+    raise ValueError('invalid operator %r' % op)
+
+def analyze(x, order=defineorder):
+    """Transform raw parsed tree to evaluatable tree which can be fed to
+    optimize() or getset()
+
+    All pseudo operations should be mapped to real operations or functions
+    defined in methods or symbols table respectively.
+
+    'order' specifies how the current expression 'x' is ordered (see the
+    constants defined above.)
+    """
+    return _analyze(x, order)
+
 def _optimize(x, small):
     if x is None:
         return 0, x
@@ -2325,47 +2514,29 @@ def _optimize(x, small):
         smallbonus = .5
 
     op = x[0]
-    if op == 'minus':
-        return _optimize(('and', x[1], ('not', x[2])), small)
-    elif op == 'only':
-        t = ('func', ('symbol', 'only'), ('list', x[1], x[2]))
-        return _optimize(t, small)
-    elif op == 'onlypost':
-        return _optimize(('func', ('symbol', 'only'), x[1]), small)
-    elif op == 'dagrangepre':
-        return _optimize(('func', ('symbol', 'ancestors'), x[1]), small)
-    elif op == 'dagrangepost':
-        return _optimize(('func', ('symbol', 'descendants'), x[1]), small)
-    elif op == 'rangeall':
-        return _optimize(('range', ('string', '0'), ('string', 'tip')), small)
-    elif op == 'rangepre':
-        return _optimize(('range', ('string', '0'), x[1]), small)
-    elif op == 'rangepost':
-        return _optimize(('range', x[1], ('string', 'tip')), small)
-    elif op == 'negate':
-        s = getstring(x[1], _("can't negate that"))
-        return _optimize(('string', '-' + s), small)
-    elif op in 'string symbol negate':
+    if op in ('string', 'symbol'):
         return smallbonus, x # single revisions are small
     elif op == 'and':
         wa, ta = _optimize(x[1], True)
         wb, tb = _optimize(x[2], True)
+        order = x[3]
         w = min(wa, wb)
 
         # (::x and not ::y)/(not ::y and ::x) have a fast path
         tm = _matchonly(ta, tb) or _matchonly(tb, ta)
         if tm:
-            return w, ('func', ('symbol', 'only'), tm)
+            return w, ('func', ('symbol', 'only'), tm, order)
 
         if tb is not None and tb[0] == 'not':
-            return wa, ('difference', ta, tb[1])
+            return wa, ('difference', ta, tb[1], order)
 
         if wa > wb:
-            return w, (op, tb, ta)
-        return w, (op, ta, tb)
+            return w, (op, tb, ta, order)
+        return w, (op, ta, tb, order)
     elif op == 'or':
         # fast path for machine-generated expression, that is likely to have
         # lots of trivial revisions: 'a + b + c()' to '_list(a b) + c()'
+        order = x[2]
         ws, ts, ss = [], [], []
         def flushss():
             if not ss:
@@ -2374,12 +2545,12 @@ def _optimize(x, small):
                 w, t = ss[0]
             else:
                 s = '\0'.join(t[1] for w, t in ss)
-                y = ('func', ('symbol', '_list'), ('string', s))
+                y = ('func', ('symbol', '_list'), ('string', s), order)
                 w, t = _optimize(y, False)
             ws.append(w)
             ts.append(t)
             del ss[:]
-        for y in x[1:]:
+        for y in getlist(x[1]):
             w, t = _optimize(y, False)
             if t is not None and (t[0] == 'string' or t[0] == 'symbol'):
                 ss.append((w, t))
@@ -2393,33 +2564,27 @@ def _optimize(x, small):
         # we can't reorder trees by weight because it would change the order.
         # ("sort(a + b)" == "sort(b + a)", but "a + b" != "b + a")
         #   ts = tuple(t for w, t in sorted(zip(ws, ts), key=lambda wt: wt[0]))
-        return max(ws), (op,) + tuple(ts)
+        return max(ws), (op, ('list',) + tuple(ts), order)
     elif op == 'not':
         # Optimize not public() to _notpublic() because we have a fast version
-        if x[1] == ('func', ('symbol', 'public'), None):
-            newsym = ('func', ('symbol', '_notpublic'), None)
+        if x[1][:3] == ('func', ('symbol', 'public'), None):
+            order = x[1][3]
+            newsym = ('func', ('symbol', '_notpublic'), None, order)
             o = _optimize(newsym, not small)
             return o[0], o[1]
         else:
             o = _optimize(x[1], not small)
-            return o[0], (op, o[1])
-    elif op == 'parentpost':
+            order = x[2]
+            return o[0], (op, o[1], order)
+    elif op in ('rangepre', 'parentpost'):
         o = _optimize(x[1], small)
-        return o[0], (op, o[1])
-    elif op == 'group':
-        return _optimize(x[1], small)
-    elif op in 'dagrange range parent ancestorspec':
-        if op == 'parent':
-            # x^:y means (x^) : y, not x ^ (:y)
-            post = ('parentpost', x[1])
-            if x[2][0] == 'dagrangepre':
-                return _optimize(('dagrange', post, x[2][1]), small)
-            elif x[2][0] == 'rangepre':
-                return _optimize(('range', post, x[2][1]), small)
-
+        order = x[2]
+        return o[0], (op, o[1], order)
+    elif op in ('dagrange', 'range', 'parent', 'ancestor'):
         wa, ta = _optimize(x[1], small)
         wb, tb = _optimize(x[2], small)
-        return wa + wb, (op, ta, tb)
+        order = x[3]
+        return wa + wb, (op, ta, tb, order)
     elif op == 'list':
         ws, ts = zip(*(_optimize(y, small) for y in x[1:]))
         return sum(ws), (op,) + ts
@@ -2429,32 +2594,36 @@ def _optimize(x, small):
     elif op == 'func':
         f = getsymbol(x[1])
         wa, ta = _optimize(x[2], small)
-        if f in ("author branch closed date desc file grep keyword "
-                 "outgoing user"):
+        if f in ('author', 'branch', 'closed', 'date', 'desc', 'file', 'grep',
+                 'keyword', 'outgoing', 'user', 'destination'):
             w = 10 # slow
-        elif f in "modifies adds removes":
+        elif f in ('modifies', 'adds', 'removes'):
             w = 30 # slower
         elif f == "contains":
             w = 100 # very slow
         elif f == "ancestor":
             w = 1 * smallbonus
-        elif f in "reverse limit first _intlist":
+        elif f in ('reverse', 'limit', 'first', '_intlist'):
             w = 0
-        elif f in "sort":
+        elif f == "sort":
             w = 10 # assume most sorts look at changelog
         else:
             w = 1
-        return w + wa, (op, x[1], ta)
-    return 1, x
+        order = x[3]
+        return w + wa, (op, x[1], ta, order)
+    raise ValueError('invalid operator %r' % op)
 
 def optimize(tree):
+    """Optimize evaluatable tree
+
+    All pseudo operations should be transformed beforehand.
+    """
     _weight, newtree = _optimize(tree, small=True)
     return newtree
 
 # the set of valid characters for the initial letter of symbols in
 # alias declarations and definitions
-_aliassyminitletters = set(c for c in [chr(i) for i in xrange(256)]
-                           if c.isalnum() or c in '._@$' or ord(c) > 127)
+_aliassyminitletters = _syminitletters | set(pycompat.sysstr('$'))
 
 def _parsewith(spec, lookup=None, syminitletters=None):
     """Generate a parse tree of given spec with given tokenizing options
@@ -2475,7 +2644,7 @@ def _parsewith(spec, lookup=None, syminitletters=None):
                                  syminitletters=syminitletters))
     if pos != len(spec):
         raise error.ParseError(_('invalid token'), pos)
-    return parser.simplifyinfixops(tree, ('list', 'or'))
+    return _fixops(parser.simplifyinfixops(tree, ('list', 'or')))
 
 class _aliasrules(parser.basealiasrules):
     """Parsing and expansion rule set of revset aliases"""
@@ -2496,15 +2665,14 @@ class _aliasrules(parser.basealiasrules):
         if tree[0] == 'func' and tree[1][0] == 'symbol':
             return tree[1][1], getlist(tree[2])
 
-def expandaliases(ui, tree, showwarning=None):
+def expandaliases(ui, tree):
     aliases = _aliasrules.buildmap(ui.configitems('revsetalias'))
     tree = _aliasrules.expand(aliases, tree)
-    if showwarning:
-        # warn about problematic (but not referred) aliases
-        for name, alias in sorted(aliases.iteritems()):
-            if alias.error and not alias.warned:
-                showwarning(_('warning: %s\n') % (alias.error))
-                alias.warned = True
+    # warn about problematic (but not referred) aliases
+    for name, alias in sorted(aliases.iteritems()):
+        if alias.error and not alias.warned:
+            ui.warn(_('warning: %s\n') % (alias.error))
+            alias.warned = True
     return tree
 
 def foldconcat(tree):
@@ -2535,13 +2703,21 @@ def posttreebuilthook(tree, repo):
     # hook for extensions to execute code on the optimized tree
     pass
 
-def match(ui, spec, repo=None):
-    """Create a matcher for a single revision spec."""
-    return matchany(ui, [spec], repo=repo)
+def match(ui, spec, repo=None, order=defineorder):
+    """Create a matcher for a single revision spec
 
-def matchany(ui, specs, repo=None):
+    If order=followorder, a matcher takes the ordering specified by the input
+    set.
+    """
+    return matchany(ui, [spec], repo=repo, order=order)
+
+def matchany(ui, specs, repo=None, order=defineorder):
     """Create a matcher that will include any revisions matching one of the
-    given specs"""
+    given specs
+
+    If order=followorder, a matcher takes the ordering specified by the input
+    set.
+    """
     if not specs:
         def mfunc(repo, subset=None):
             return baseset()
@@ -2554,15 +2730,18 @@ def matchany(ui, specs, repo=None):
     if len(specs) == 1:
         tree = parse(specs[0], lookup)
     else:
-        tree = ('or',) + tuple(parse(s, lookup) for s in specs)
-    return _makematcher(ui, tree, repo)
+        tree = ('or', ('list',) + tuple(parse(s, lookup) for s in specs))
 
-def _makematcher(ui, tree, repo):
     if ui:
-        tree = expandaliases(ui, tree, showwarning=ui.warn)
+        tree = expandaliases(ui, tree)
     tree = foldconcat(tree)
+    tree = analyze(tree, order)
     tree = optimize(tree)
     posttreebuilthook(tree, repo)
+    return makematcher(tree)
+
+def makematcher(tree):
+    """Create a matcher from an evaluatable tree"""
     def mfunc(repo, subset=None):
         if subset is None:
             subset = fullreposet(repo)

@@ -3,11 +3,11 @@
 Test wire protocol unbundle with hashed heads (capability: unbundlehash)
 
   $ cat << EOF >> $HGRCPATH
-  > [experimental]
+  > [devel]
   > # This tests is intended for bundle1 only.
   > # bundle2 carries the head information inside the bundle itself and
   > # always uses 'force' as the heads value.
-  > bundle2-exp = False
+  > legacy.exchange = bundle1
   > EOF
 
 Create a remote repository.

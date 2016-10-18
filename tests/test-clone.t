@@ -829,7 +829,7 @@ We only get bookmarks from the remote, not everything in the share
 Default path should be source, not share.
 
   $ hg -R share-dest1b config paths.default
-  $TESTTMP/source1a (glob)
+  $TESTTMP/source1b (glob)
 
 Checked out revision should be head of default branch
 
@@ -1060,7 +1060,12 @@ Cloning into pooled storage doesn't race (issue5104)
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1a
   
-  $ cat race1.log
+One repo should be new, the other should be shared from the pool. We
+don't care which is which, so we just make sure we always print the
+one containing "new pooled" first, then one one containing "existing
+pooled".
+
+  $ (grep 'new pooled' race1.log > /dev/null && cat race1.log || cat race2.log) | grep -v lock
   (sharing from new pooled repository b5f04eac9d8f7a6a9fcb070243cccea7dc5ea0c1)
   requesting all changes
   adding changesets
@@ -1073,10 +1078,8 @@ Cloning into pooled storage doesn't race (issue5104)
   updating working directory
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
-  $ cat race2.log
+  $ (grep 'existing pooled' race1.log > /dev/null && cat race1.log || cat race2.log) | grep -v lock
   (sharing from existing pooled repository b5f04eac9d8f7a6a9fcb070243cccea7dc5ea0c1)
-  waiting for lock on repository share-destrace2 held by * (glob)
-  got lock after \d+ seconds (re)
   searching for changes
   no changes found
   adding remote bookmark bookA

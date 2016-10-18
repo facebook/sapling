@@ -694,7 +694,7 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   starting 4 threads for background file closing (?)
    a: prompt deleted/changed -> m (premerge)
   picked tool ':prompt' for a (binary False symlink False changedelete True)
-  remote changed a which local deleted
+  other [merge rev] changed a which local [working copy] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
    b: both created -> m (premerge)
   picked tool 'python ../merge' for b (binary False symlink False changedelete False)
@@ -719,7 +719,7 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   --------------
   M a
   M b
-  abort: unresolved merge conflicts (see "hg help resolve")
+  abort: unresolved merge conflicts (see 'hg help resolve')
   --------------
   
   $ tm "up a b" "nm a b" "      " "19 merge b no ancestor, prompt remove a"
@@ -739,7 +739,7 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   starting 4 threads for background file closing (?)
    a: prompt changed/deleted -> m (premerge)
   picked tool ':prompt' for a (binary False symlink False changedelete True)
-  local changed a which remote deleted
+  local [working copy] changed a which other [merge rev] deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? u
    b: both created -> m (premerge)
   picked tool 'python ../merge' for b (binary False symlink False changedelete False)
@@ -764,7 +764,7 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   --------------
   M b
   C a
-  abort: unresolved merge conflicts (see "hg help resolve")
+  abort: unresolved merge conflicts (see 'hg help resolve')
   --------------
   
   $ tm "up a  " "um a b" "      " "20 merge a and b to b, remove a"

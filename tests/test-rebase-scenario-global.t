@@ -326,7 +326,7 @@ Check rebasing public changeset
   [1]
   $ hg rebase -d 5 -b 6
   abort: can't rebase public changeset e1c4361dd923
-  (see "hg help phases" for details)
+  (see 'hg help phases' for details)
   [255]
 
   $ hg rebase -d 5 -b 6 --keep
@@ -758,8 +758,73 @@ Test that rebase is not confused by $CWD disappearing during rebase (issue4121)
   $ hg commit -m 'second source with subdir'
   $ hg rebase -b . -d 1 --traceback
   rebasing 2:779a07b1b7a0 "first source commit"
+  current directory was removed
+  (consider changing to repo root: $TESTTMP/cwd-vanish)
   rebasing 3:a7d6f3a00bf3 "second source with subdir" (tip)
   saved backup bundle to $TESTTMP/cwd-vanish/.hg/strip-backup/779a07b1b7a0-853e0073-backup.hg (glob)
+
+Test that rebase is done in topo order (issue5370)
+
+  $ cd ..
+  $ hg init order
+  $ cd order
+  $ touch a && hg add a && hg ci -m A
+  $ touch b && hg add b && hg ci -m B
+  $ touch c && hg add c && hg ci -m C
+  $ hg up 1
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ touch d && hg add d && hg ci -m D
+  created new head
+  $ hg up 2
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ touch e && hg add e && hg ci -m E
+  $ hg up 3
+  1 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  $ touch f && hg add f && hg ci -m F
+  $ hg up 0
+  0 files updated, 0 files merged, 3 files removed, 0 files unresolved
+  $ touch g && hg add g && hg ci -m G
+  created new head
+
+  $ hg tglog
+  @  6: 'G'
+  |
+  | o  5: 'F'
+  | |
+  | | o  4: 'E'
+  | | |
+  | o |  3: 'D'
+  | | |
+  | | o  2: 'C'
+  | |/
+  | o  1: 'B'
+  |/
+  o  0: 'A'
+  
+
+  $ hg rebase -s 1 -d 6
+  rebasing 1:76035bbd54bd "B"
+  rebasing 2:d84f5cfaaf14 "C"
+  rebasing 4:82ae8dc7a9b7 "E"
+  rebasing 3:ab709c9f7171 "D"
+  rebasing 5:412b391de760 "F"
+  saved backup bundle to $TESTTMP/cwd-vanish/order/.hg/strip-backup/76035bbd54bd-e341bc99-backup.hg (glob)
+
+  $ hg tglog
+  o  6: 'F'
+  |
+  o  5: 'D'
+  |
+  | o  4: 'E'
+  | |
+  | o  3: 'C'
+  |/
+  o  2: 'B'
+  |
+  @  1: 'G'
+  |
+  o  0: 'A'
+  
 
 Test experimental revset
 ========================

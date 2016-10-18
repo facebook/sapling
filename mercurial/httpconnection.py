@@ -58,6 +58,12 @@ class httpsendfile(object):
                          unit=_('kb'), total=self._total)
         return ret
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+
 # moved here from url.py to avoid a cycle
 def readauthforuri(ui, uri, user):
     # Read configuration

@@ -28,7 +28,7 @@ stringio = util.stringio
 
 # This is required for ncurses to display non-ASCII characters in default user
 # locale encoding correctly.  --immerrr
-locale.setlocale(locale.LC_ALL, '')
+locale.setlocale(locale.LC_ALL, u'')
 
 # patch comments based on the git one
 diffhelptext = _("""# To remove '-' lines, make them ' ' lines (context).
@@ -719,7 +719,7 @@ class curseschunkselector(object):
         "scroll the screen to fully show the currently-selected"
         selstart = self.selecteditemstartline
         selend = self.selecteditemendline
-        #selnumlines = selend - selstart
+
         padstart = self.firstlineofpadtoprint
         padend = padstart + self.yscreensize - self.numstatuslines - 1
         # 'buffered' pad start/end values which scroll with a certain
@@ -1263,7 +1263,6 @@ class curseschunkselector(object):
             self.statuswin.resize(self.numstatuslines, self.xscreensize)
             self.numpadlines = self.getnumlinesdisplayed(ignorefolding=True) + 1
             self.chunkpad = curses.newpad(self.numpadlines, self.xscreensize)
-            # todo: try to resize commit message window if possible
         except curses.error:
             pass
 
@@ -1339,6 +1338,7 @@ the following are valid keystrokes:
  shift-left-arrow   [H] : go to parent header / fold selected header
                       f : fold / unfold item, hiding/revealing its children
                       F : fold / unfold parent item and all of its ancestors
+                 ctrl-l : scroll the selected line to the top of the screen
                       m : edit / resume editing the commit message
                       e : edit the currently selected hunk
                       a : toggle amend mode, only with commit -i
@@ -1583,13 +1583,17 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
             self.helpwindow()
             self.stdscr.clear()
             self.stdscr.refresh()
+        elif curses.unctrl(keypressed) in ["^L"]:
+            # scroll the current line to the top of the screen
+            self.scrolllines(self.selecteditemstartline)
 
     def main(self, stdscr):
         """
         method to be wrapped by curses.wrapper() for selecting chunks.
         """
 
-        signal.signal(signal.SIGWINCH, self.sigwinchhandler)
+        origsigwinchhandler = signal.signal(signal.SIGWINCH,
+                                            self.sigwinchhandler)
         self.stdscr = stdscr
         # error during initialization, cannot be printed in the curses
         # interface, it should be printed by the calling code
@@ -1640,3 +1644,4 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
                 keypressed = "foobar"
             if self.handlekeypressed(keypressed):
                 break
+        signal.signal(signal.SIGWINCH, origsigwinchhandler)

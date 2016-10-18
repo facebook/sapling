@@ -528,11 +528,12 @@ class changectx(basectx):
 
     @propertycache
     def _manifest(self):
-        return self._repo.manifest.read(self._changeset.manifest)
+        return self._repo.manifestlog[self._changeset.manifest].read()
 
     @propertycache
     def _manifestdelta(self):
-        return self._repo.manifest.readdelta(self._changeset.manifest)
+        mfnode = self._changeset.manifest
+        return self._repo.manifestlog[mfnode].readdelta()
 
     @propertycache
     def _parents(self):
@@ -823,7 +824,7 @@ class basefilectx(object):
         """
         repo = self._repo
         cl = repo.unfiltered().changelog
-        ma = repo.manifest
+        mfl = repo.manifestlog
         # fetch the linkrev
         fr = filelog.rev(fnode)
         lkr = filelog.linkrev(fr)
@@ -848,7 +849,7 @@ class basefilectx(object):
                 if path in ac[3]: # checking the 'files' field.
                     # The file has been touched, check if the content is
                     # similar to the one we search for.
-                    if fnode == ma.readfast(ac[0]).get(path):
+                    if fnode == mfl[ac[0]].readfast().get(path):
                         return a
             # In theory, we should never get out of that loop without a result.
             # But if manifest uses a buggy file revision (not children of the
@@ -929,7 +930,7 @@ class basefilectx(object):
         def lines(text):
             if text.endswith("\n"):
                 return text.count("\n")
-            return text.count("\n") + 1
+            return text.count("\n") + int(bool(text))
 
         if linenumber:
             def decorate(text, rev):
@@ -939,8 +940,7 @@ class basefilectx(object):
                 return ([(rev, False)] * lines(text), text)
 
         def pair(parent, child):
-            blocks = mdiff.allblocks(parent[1], child[1], opts=diffopts,
-                                     refine=True)
+            blocks = mdiff.allblocks(parent[1], child[1], opts=diffopts)
             for (a1, a2, b1, b2), t in blocks:
                 # Changed blocks ('!') or blocks made only of blank lines ('~')
                 # belong to the child.
@@ -1508,7 +1508,7 @@ class workingctx(committablectx):
 
         # Only a case insensitive filesystem needs magic to translate user input
         # to actual case in the filesystem.
-        if not util.checkcase(r.root):
+        if not util.fscasesensitive(r.root):
             return matchmod.icasefsmatcher(r.root, r.getcwd(), pats, include,
                                            exclude, default, r.auditor, self,
                                            listsubrepos=listsubrepos,

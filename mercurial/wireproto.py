@@ -78,10 +78,19 @@ class abstractserverproto(object):
     #    """
     #    raise NotImplementedError()
 
-    def groupchunks(self, cg):
-        """return 4096 chunks from a changegroup object
+    def groupchunks(self, fh):
+        """Generator of chunks to send to the client.
 
-        Some protocols may have compressed the contents."""
+        Some protocols may have compressed the contents.
+        """
+        raise NotImplementedError()
+
+    def compresschunks(self, chunks):
+        """Generator of possible compressed chunks to send to the client.
+
+        This is like ``groupchunks()`` except it accepts a generator as
+        its argument.
+        """
         raise NotImplementedError()
 
 class remotebatch(peer.batcher):
@@ -187,6 +196,21 @@ def unescapearg(escaped):
             .replace(':o', ',')
             .replace(':c', ':'))
 
+def encodebatchcmds(req):
+    """Return a ``cmds`` argument value for the ``batch`` command."""
+    cmds = []
+    for op, argsdict in req:
+        # Old servers didn't properly unescape argument names. So prevent
+        # the sending of argument names that may not be decoded properly by
+        # servers.
+        assert all(escapearg(k) == k for k in argsdict)
+
+        args = ','.join('%s=%s' % (escapearg(k), escapearg(v))
+                        for k, v in argsdict.iteritems())
+        cmds.append('%s %s' % (op, args))
+
+    return ';'.join(cmds)
+
 # mapping of options accepted by getbundle and their types
 #
 # Meant to be extended by extensions. It is extensions responsibility to ensure
@@ -226,12 +250,7 @@ class wirepeer(peer.peerrepository):
 
         Returns an iterator of the raw responses from the server.
         """
-        cmds = []
-        for op, argsdict in req:
-            args = ','.join('%s=%s' % (escapearg(k), escapearg(v))
-                            for k, v in argsdict.iteritems())
-            cmds.append('%s %s' % (op, args))
-        rsp = self._callstream("batch", cmds=';'.join(cmds))
+        rsp = self._callstream("batch", cmds=encodebatchcmds(req))
         chunk = rsp.read(1024)
         work = [chunk]
         while chunk:
@@ -399,7 +418,7 @@ class wirepeer(peer.peerrepository):
         else:
             return changegroupmod.cg1unpacker(f, 'UN')
 
-    def unbundle(self, cg, heads, source):
+    def unbundle(self, cg, heads, url):
         '''Send cg (a readable file-like object representing the
         changegroup to push, typically a chunkbuffer object) to the
         remote server as a bundle.
@@ -407,7 +426,11 @@ class wirepeer(peer.peerrepository):
         When pushing a bundle10 stream, return an integer indicating the
         result of the push (see localrepository.addchangegroup()).
 
-        When pushing a bundle20 stream, return a bundle20 stream.'''
+        When pushing a bundle20 stream, return a bundle20 stream.
+
+        `url` is the url the client thinks it's pushing to, which is
+        visible to hooks.
+        '''
 
         if heads != ['force'] and self.capable('unbundlehash'):
             heads = encodelist(['hashed',
@@ -611,7 +634,7 @@ def batch(repo, proto, cmds, others):
         for a in args.split(','):
             if a:
                 n, v = a.split('=')
-                vals[n] = unescapearg(v)
+                vals[unescapearg(n)] = unescapearg(v)
         func, spec = commands[op]
         if spec:
             keys = spec.split()
@@ -731,12 +754,6 @@ def debugwireargs(repo, proto, one, two, others):
     opts = options('debugwireargs', ['three', 'four'], others)
     return repo.debugwireargs(one, two, **opts)
 
-# List of options accepted by getbundle.
-#
-# Meant to be extended by extensions. It is the extension's responsibility to
-# ensure such options are properly processed in exchange.getbundle.
-gboptslist = ['heads', 'common', 'bundlecaps']
-
 @wireprotocommand('getbundle', '*')
 def getbundle(repo, proto, others):
     opts = options('getbundle', gboptsmap.keys(), others)
@@ -763,8 +780,8 @@ def getbundle(repo, proto, others):
         if not exchange.bundle2requested(opts.get('bundlecaps')):
             return ooberror(bundle2required)
 
-    cg = exchange.getbundle(repo, 'serve', **opts)
-    return streamres(proto.groupchunks(cg))
+    chunks = exchange.getbundlechunks(repo, 'serve', **opts)
+    return streamres(proto.compresschunks(chunks))
 
 @wireprotocommand('heads')
 def heads(repo, proto):

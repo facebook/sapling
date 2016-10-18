@@ -123,6 +123,6 @@ test invalid bundle type
   $ cd t1
   $ hg bundle -a -t garbage ../bgarbage
   abort: garbage is not a recognized bundle specification
-  (see "hg help bundle" for supported values for --type)
+  (see 'hg help bundle' for supported values for --type)
   [255]
   $ cd ..

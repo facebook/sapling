@@ -36,7 +36,7 @@ valid patches before fail added to series
   $ hg pull -q -r 0 . # update phase
   $ hg qimport -r 0
   abort: revision 0 is not mutable
-  (see "hg help phases" for details)
+  (see 'hg help phases' for details)
   [255]
 
   $ cd ..

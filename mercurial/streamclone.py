@@ -299,6 +299,20 @@ def consumev1(repo, fp, filecount, bytecount):
         repo.ui.progress(_('clone'), 0, total=bytecount, unit=_('bytes'))
         start = time.time()
 
+        # TODO: get rid of (potential) inconsistency
+        #
+        # If transaction is started and any @filecache property is
+        # changed at this point, it causes inconsistency between
+        # in-memory cached property and streamclone-ed file on the
+        # disk. Nested transaction prevents transaction scope "clone"
+        # below from writing in-memory changes out at the end of it,
+        # even though in-memory changes are discarded at the end of it
+        # regardless of transaction nesting.
+        #
+        # But transaction nesting can't be simply prohibited, because
+        # nesting occurs also in ordinary case (e.g. enabling
+        # clonebundles).
+
         with repo.transaction('clone'):
             with repo.svfs.backgroundclosing(repo.ui, expectedcount=filecount):
                 for i in xrange(filecount):
@@ -322,8 +336,9 @@ def consumev1(repo, fp, filecount, bytecount):
                                              total=bytecount, unit=_('bytes'))
                             ofp.write(chunk)
 
-        # Writing straight to files circumvented the inmemory caches
-        repo.invalidate()
+            # force @filecache properties to be reloaded from
+            # streamclone-ed file at next access
+            repo.invalidate(clearfilecache=True)
 
         elapsed = time.time() - start
         if elapsed <= 0:

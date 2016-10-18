@@ -12,7 +12,9 @@ from __future__ import absolute_import
 
 import sys
 
-if sys.version_info[0] < 3:
+ispy3 = (sys.version_info[0] >= 3)
+
+if not ispy3:
     import cPickle as pickle
     import cStringIO as io
     import httplib
@@ -29,36 +31,84 @@ else:
     import urllib.parse as urlparse
     import xmlrpc.client as xmlrpclib
 
+if ispy3:
+    import builtins
+    import functools
+    import os
+    fsencode = os.fsencode
+
+    def sysstr(s):
+        """Return a keyword str to be passed to Python functions such as
+        getattr() and str.encode()
+
+        This never raises UnicodeDecodeError. Non-ascii characters are
+        considered invalid and mapped to arbitrary but unique code points
+        such that 'sysstr(a) != sysstr(b)' for all 'a != b'.
+        """
+        if isinstance(s, builtins.str):
+            return s
+        return s.decode(u'latin-1')
+
+    def _wrapattrfunc(f):
+        @functools.wraps(f)
+        def w(object, name, *args):
+            return f(object, sysstr(name), *args)
+        return w
+
+    # these wrappers are automagically imported by hgloader
+    delattr = _wrapattrfunc(builtins.delattr)
+    getattr = _wrapattrfunc(builtins.getattr)
+    hasattr = _wrapattrfunc(builtins.hasattr)
+    setattr = _wrapattrfunc(builtins.setattr)
+    xrange = builtins.range
+
+else:
+    def sysstr(s):
+        return s
+
+    # Partial backport from os.py in Python 3, which only accepts bytes.
+    # In Python 2, our paths should only ever be bytes, a unicode path
+    # indicates a bug.
+    def fsencode(filename):
+        if isinstance(filename, str):
+            return filename
+        else:
+            raise TypeError(
+                "expect str, not %s" % type(filename).__name__)
+
 stringio = io.StringIO
 empty = _queue.Empty
 queue = _queue.Queue
 
 class _pycompatstub(object):
-    pass
+    def __init__(self):
+        self._aliases = {}
 
-def _alias(alias, origin, items):
-    """ populate a _pycompatstub
+    def _registeraliases(self, origin, items):
+        """Add items that will be populated at the first access"""
+        items = map(sysstr, items)
+        self._aliases.update(
+            (item.replace(sysstr('_'), sysstr('')).lower(), (origin, item))
+            for item in items)
 
-    copies items from origin to alias
-    """
-    def hgcase(item):
-        return item.replace('_', '').lower()
-    for item in items:
+    def __getattr__(self, name):
         try:
-            setattr(alias, hgcase(item), getattr(origin, item))
-        except AttributeError:
-            pass
+            origin, item = self._aliases[name]
+        except KeyError:
+            raise AttributeError(name)
+        self.__dict__[name] = obj = getattr(origin, item)
+        return obj
 
 httpserver = _pycompatstub()
 urlreq = _pycompatstub()
 urlerr = _pycompatstub()
-try:
+if not ispy3:
     import BaseHTTPServer
     import CGIHTTPServer
     import SimpleHTTPServer
     import urllib2
     import urllib
-    _alias(urlreq, urllib, (
+    urlreq._registeraliases(urllib, (
         "addclosehook",
         "addinfourl",
         "ftpwrapper",
@@ -71,9 +121,8 @@ try:
         "unquote",
         "url2pathname",
         "urlencode",
-        "urlencode",
     ))
-    _alias(urlreq, urllib2, (
+    urlreq._registeraliases(urllib2, (
         "AbstractHTTPHandler",
         "BaseHandler",
         "build_opener",
@@ -89,24 +138,24 @@ try:
         "Request",
         "urlopen",
     ))
-    _alias(urlerr, urllib2, (
+    urlerr._registeraliases(urllib2, (
         "HTTPError",
         "URLError",
     ))
-    _alias(httpserver, BaseHTTPServer, (
+    httpserver._registeraliases(BaseHTTPServer, (
         "HTTPServer",
         "BaseHTTPRequestHandler",
     ))
-    _alias(httpserver, SimpleHTTPServer, (
+    httpserver._registeraliases(SimpleHTTPServer, (
         "SimpleHTTPRequestHandler",
     ))
-    _alias(httpserver, CGIHTTPServer, (
+    httpserver._registeraliases(CGIHTTPServer, (
         "CGIHTTPRequestHandler",
     ))
 
-except ImportError:
+else:
     import urllib.request
-    _alias(urlreq, urllib.request, (
+    urlreq._registeraliases(urllib.request, (
         "AbstractHTTPHandler",
         "addclosehook",
         "addinfourl",
@@ -134,20 +183,14 @@ except ImportError:
         "urlopen",
     ))
     import urllib.error
-    _alias(urlerr, urllib.error, (
+    urlerr._registeraliases(urllib.error, (
         "HTTPError",
         "URLError",
     ))
     import http.server
-    _alias(httpserver, http.server, (
+    httpserver._registeraliases(http.server, (
         "HTTPServer",
         "BaseHTTPRequestHandler",
         "SimpleHTTPRequestHandler",
         "CGIHTTPRequestHandler",
     ))
-
-try:
-    xrange
-except NameError:
-    import builtins
-    builtins.xrange = range

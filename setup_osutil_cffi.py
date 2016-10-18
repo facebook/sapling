@@ -45,6 +45,8 @@ typedef struct attrreference {
     ...;
 } attrreference_t;
 
+typedef int ... off_t;
+
 typedef struct val_attrs {
     uint32_t          length;
     attribute_set_t   returned;
@@ -52,14 +54,13 @@ typedef struct val_attrs {
     uint32_t          obj_type;
     struct timespec   mtime;
     uint32_t          accessmask;
-    int               datalength;
+    off_t             datalength;
     ...;
 } val_attrs_t;
 
 /* the exact layout of the above struct will be figured out during build time */
 
 typedef int ... time_t;
-typedef int ... off_t;
 
 typedef struct timespec {
     time_t tv_sec;

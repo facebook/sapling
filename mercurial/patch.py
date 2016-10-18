@@ -410,11 +410,7 @@ class linereader(object):
         return self.fp.readline()
 
     def __iter__(self):
-        while True:
-            l = self.readline()
-            if not l:
-                break
-            yield l
+        return iter(self.readline, '')
 
 class abstractbackend(object):
     def __init__(self, ui):
@@ -673,6 +669,8 @@ class patchfile(object):
                 self.mode = (False, False)
         if self.missing:
             self.ui.warn(_("unable to find '%s' for patching\n") % self.fname)
+            self.ui.warn(_("(use '--prefix' to apply patch relative to the "
+                           "current directory)\n"))
 
         self.hash = {}
         self.dirty = 0
@@ -1688,10 +1686,7 @@ def scanpatch(fp):
     def scanwhile(first, p):
         """scan lr while predicate holds"""
         lines = [first]
-        while True:
-            line = lr.readline()
-            if not line:
-                break
+        for line in iter(lr.readline, ''):
             if p(line):
                 lines.append(line)
             else:
@@ -1699,10 +1694,7 @@ def scanpatch(fp):
                 break
         return lines
 
-    while True:
-        line = lr.readline()
-        if not line:
-            break
+    for line in iter(lr.readline, ''):
         if line.startswith('diff --git a/') or line.startswith('diff -r '):
             def notheader(line):
                 s = line.split(None, 1)
@@ -1772,10 +1764,7 @@ def iterhunks(fp):
     context = None
     lr = linereader(fp)
 
-    while True:
-        x = lr.readline()
-        if not x:
-            break
+    for x in iter(lr.readline, ''):
         if state == BFILE and (
             (not context and x[0] == '@')
             or (context is not False and x.startswith('***************'))
@@ -1963,8 +1952,10 @@ def _applydiff(ui, fp, patcher, backend, store, strip=1, prefix='',
                 data, mode = None, None
                 if gp.op in ('RENAME', 'COPY'):
                     data, mode = store.getfile(gp.oldpath)[:2]
-                    # FIXME: failing getfile has never been handled here
-                    assert data is not None
+                    if data is None:
+                        # This means that the old path does not exist
+                        raise PatchError(_("source file '%s' does not exist")
+                                           % gp.oldpath)
                 if gp.mode:
                     mode = gp.mode
                     if gp.op == 'ADD':
@@ -2155,7 +2146,14 @@ def difffeatureopts(ui, opts=None, untrusted=False, section='diff', git=False,
     def get(key, name=None, getter=ui.configbool, forceplain=None):
         if opts:
             v = opts.get(key)
-            if v:
+            # diffopts flags are either None-default (which is passed
+            # through unchanged, so we can identify unset values), or
+            # some other falsey default (eg --unified, which defaults
+            # to an empty string). We only want to override the config
+            # entries from hgrc with command line values if they
+            # appear to have been set, which is any truthy value,
+            # True, or False.
+            if v or isinstance(v, bool):
                 return v
         if forceplain is not None and ui.plain():
             return forceplain

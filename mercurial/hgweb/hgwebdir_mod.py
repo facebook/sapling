@@ -31,6 +31,7 @@ from .. import (
     encoding,
     error,
     hg,
+    profiling,
     scmutil,
     templater,
     ui as uimod,
@@ -217,6 +218,11 @@ class hgwebdir(object):
         return False
 
     def run_wsgi(self, req):
+        with profiling.maybeprofile(self.ui):
+            for r in self._runwsgi(req):
+                yield r
+
+    def _runwsgi(self, req):
         try:
             self.refresh()
 

@@ -149,14 +149,18 @@ class localpeer(peer.peerrepository):
 
     def getbundle(self, source, heads=None, common=None, bundlecaps=None,
                   **kwargs):
-        cg = exchange.getbundle(self._repo, source, heads=heads,
-                                common=common, bundlecaps=bundlecaps, **kwargs)
+        chunks = exchange.getbundlechunks(self._repo, source, heads=heads,
+                                          common=common, bundlecaps=bundlecaps,
+                                          **kwargs)
+        cb = util.chunkbuffer(chunks)
+
         if bundlecaps is not None and 'HG20' in bundlecaps:
             # When requesting a bundle2, getbundle returns a stream to make the
             # wire level function happier. We need to build a proper object
             # from it in local peer.
-            cg = bundle2.getunbundler(self.ui, cg)
-        return cg
+            return bundle2.getunbundler(self.ui, cb)
+        else:
+            return changegroup.getunbundler('01', cb, None)
 
     # TODO We might want to move the next two calls into legacypeer and add
     # unbundle instead.
@@ -504,8 +508,9 @@ class localrepository(object):
     def manifest(self):
         return manifest.manifest(self.svfs)
 
-    def dirlog(self, dir):
-        return self.manifest.dirlog(dir)
+    @property
+    def manifestlog(self):
+        return manifest.manifestlog(self.svfs, self)
 
     @repofilecache('dirstate')
     def dirstate(self):
@@ -1007,8 +1012,7 @@ class localrepository(object):
     def transaction(self, desc, report=None):
         if (self.ui.configbool('devel', 'all-warnings')
                 or self.ui.configbool('devel', 'check-locks')):
-            l = self._lockref and self._lockref()
-            if l is None or not l.held:
+            if self._currentlock(self._lockref) is None:
                 raise RuntimeError('programming error: transaction requires '
                                    'locking')
         tr = self.currenttransaction()
@@ -1246,6 +1250,13 @@ class localrepository(object):
             delattr(self.unfiltered(), 'dirstate')
 
     def invalidate(self, clearfilecache=False):
+        '''Invalidates both store and non-store parts other than dirstate
+
+        If a transaction is running, invalidation of store is omitted,
+        because discarding in-memory changes might cause inconsistency
+        (e.g. incomplete fncache causes unintentional failure, but
+        redundant one doesn't).
+        '''
         unfiltered = self.unfiltered() # all file caches are stored unfiltered
         for k in self._filecache.keys():
             # dirstate is invalidated separately in invalidatedirstate()
@@ -1259,7 +1270,11 @@ class localrepository(object):
             except AttributeError:
                 pass
         self.invalidatecaches()
-        self.store.invalidatecaches()
+        if not self.currenttransaction():
+            # TODO: Changing contents of store outside transaction
+            # causes inconsistency. We should make in-memory store
+            # changes detectable, and abort if changed.
+            self.store.invalidatecaches()
 
     def invalidateall(self):
         '''Fully invalidates both store and non-store parts, causing the
@@ -1268,6 +1283,7 @@ class localrepository(object):
         self.invalidate()
         self.invalidatedirstate()
 
+    @unfilteredmethod
     def _refreshfilecachestats(self, tr):
         """Reload stats of cached files so that they are flagged as valid"""
         for k, ce in self._filecache.items():
@@ -1290,8 +1306,15 @@ class localrepository(object):
         except error.LockHeld as inst:
             if not wait:
                 raise
-            self.ui.warn(_("waiting for lock on %s held by %r\n") %
-                         (desc, inst.locker))
+            # show more details for new-style locks
+            if ':' in inst.locker:
+                host, pid = inst.locker.split(":", 1)
+                self.ui.warn(
+                    _("waiting for lock on %s held by process %r "
+                      "on host %r\n") % (desc, pid, host))
+            else:
+                self.ui.warn(_("waiting for lock on %s held by %r\n") %
+                             (desc, inst.locker))
             # default to 600 seconds timeout
             l = lockmod.lock(vfs, lockname,
                              int(self.ui.config("ui", "timeout", "600")),
@@ -1320,8 +1343,8 @@ class localrepository(object):
 
         If both 'lock' and 'wlock' must be acquired, ensure you always acquires
         'wlock' first to avoid a dead-lock hazard.'''
-        l = self._lockref and self._lockref()
-        if l is not None and l.held:
+        l = self._currentlock(self._lockref)
+        if l is not None:
             l.lock()
             return l
 
@@ -1352,8 +1375,7 @@ class localrepository(object):
         # acquisition would not cause dead-lock as they would just fail.
         if wait and (self.ui.configbool('devel', 'all-warnings')
                      or self.ui.configbool('devel', 'check-locks')):
-            l = self._lockref and self._lockref()
-            if l is not None and l.held:
+            if self._currentlock(self._lockref) is not None:
                 self.ui.develwarn('"wlock" acquired after "lock"')
 
         def unlock():
@@ -1607,8 +1629,8 @@ class localrepository(object):
             ms = mergemod.mergestate.read(self)
 
             if list(ms.unresolved()):
-                raise error.Abort(_('unresolved merge conflicts '
-                                    '(see "hg help resolve")'))
+                raise error.Abort(_("unresolved merge conflicts "
+                                    "(see 'hg help resolve')"))
             if ms.mdstate() != 's' or list(ms.driverresolved()):
                 raise error.Abort(_('driver-resolved merge conflicts'),
                                   hint=_('run "hg resolve --all" to resolve'))
@@ -1714,9 +1736,9 @@ class localrepository(object):
                 drop = [f for f in removed if f in m]
                 for f in drop:
                     del m[f]
-                mn = self.manifest.add(m, trp, linkrev,
-                                       p1.manifestnode(), p2.manifestnode(),
-                                       added, drop)
+                mn = self.manifestlog.add(m, trp, linkrev,
+                                          p1.manifestnode(), p2.manifestnode(),
+                                          added, drop)
                 files = changed + removed
             else:
                 mn = p1.manifestnode()

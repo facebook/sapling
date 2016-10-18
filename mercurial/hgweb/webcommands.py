@@ -31,7 +31,6 @@ from .. import (
     encoding,
     error,
     graphmod,
-    patch,
     revset,
     scmutil,
     templatefilters,
@@ -861,8 +860,6 @@ def annotate(web, req, tmpl):
     fctx = webutil.filectx(web.repo, req)
     f = fctx.path()
     parity = paritygen(web.stripecount)
-    diffopts = patch.difffeatureopts(web.repo.ui, untrusted=True,
-                                     section='annotate', whitespace=True)
 
     def parents(f):
         for p in f.parents():
@@ -877,8 +874,8 @@ def annotate(web, req, tmpl):
                   or 'application/octet-stream')
             lines = [((fctx.filectx(fctx.filerev()), 1), '(binary:%s)' % mt)]
         else:
-            lines = fctx.annotate(follow=True, linenumber=True,
-                                  diffopts=diffopts)
+            lines = webutil.annotate(fctx, web.repo.ui)
+
         previousrev = None
         blockparitygen = paritygen(1)
         for lineno, ((f, targetline), l) in enumerate(lines):

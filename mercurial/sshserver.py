@@ -68,12 +68,12 @@ class sshserver(wireproto.abstractserverproto):
     def redirect(self):
         pass
 
-    def groupchunks(self, changegroup):
-        while True:
-            d = changegroup.read(4096)
-            if not d:
-                break
-            yield d
+    def groupchunks(self, fh):
+        return iter(lambda: fh.read(4096), '')
+
+    def compresschunks(self, chunks):
+        for chunk in chunks:
+            yield chunk
 
     def sendresponse(self, v):
         self.fout.write("%d\n" % len(v))

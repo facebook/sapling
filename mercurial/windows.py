@@ -7,7 +7,6 @@
 
 from __future__ import absolute_import
 
-import _winreg
 import errno
 import msvcrt
 import os
@@ -21,6 +20,12 @@ from . import (
     osutil,
     win32,
 )
+
+try:
+    import _winreg as winreg
+    winreg.CloseKey
+except ImportError:
+    import winreg
 
 executablepath = win32.executablepath
 getuser = win32.getuser
@@ -432,12 +437,12 @@ def lookupreg(key, valname=None, scope=None):
     LOCAL_MACHINE).
     '''
     if scope is None:
-        scope = (_winreg.HKEY_CURRENT_USER, _winreg.HKEY_LOCAL_MACHINE)
+        scope = (winreg.HKEY_CURRENT_USER, winreg.HKEY_LOCAL_MACHINE)
     elif not isinstance(scope, (list, tuple)):
         scope = (scope,)
     for s in scope:
         try:
-            val = _winreg.QueryValueEx(_winreg.OpenKey(s, key), valname)[0]
+            val = winreg.QueryValueEx(winreg.OpenKey(s, key), valname)[0]
             # never let a Unicode string escape into the wild
             return encoding.tolocal(val.encode('UTF-8'))
         except EnvironmentError:

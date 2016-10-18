@@ -1,12 +1,5 @@
 #require killdaemons
 
-  $ cat << EOF >> $HGRCPATH
-  > [experimental]
-  > # drop me once bundle2 is the default,
-  > # added to get test change early.
-  > bundle2-exp = True
-  > EOF
-
   $ hgph() { hg log -G --template "{rev} {phase} {desc} - {node|short}\n" $*; }
 
   $ mkcommit() {
@@ -772,7 +765,7 @@ Bare push with next changeset and common changeset needing sync (issue3575)
   searching for changes
   1 changesets found
   uncompressed size of bundle content:
-       192 (changelog)
+       178 (changelog)
        165 (manifests)
        131  a-H
   adding changesets
@@ -927,7 +920,7 @@ appear on the remote side.
   pushing to ../mu
   searching for changes
   abort: push creates new remote head 435b5d83910c!
-  (merge or see "hg help push" for details about pushing new heads)
+  (merge or see 'hg help push' for details about pushing new heads)
   [255]
   $ hg push -fr 435b5d83910c ../mu # because the push will create new visible head
   pushing to ../mu
@@ -1048,7 +1041,7 @@ same over the wire
   $ cat ../beta.pid >> $DAEMON_PIDS
   $ cd ../gamma
 
-  $ hg pull http://localhost:$HGPORT/ --config experimental.bundle2-exp=True
+  $ hg pull http://localhost:$HGPORT/ # bundle2+
   pulling from http://localhost:$HGPORT/
   searching for changes
   no changes found
@@ -1057,7 +1050,7 @@ same over the wire
 
 enforce bundle1
 
-  $ hg pull http://localhost:$HGPORT/ --config experimental.bundle2-exp=False
+  $ hg pull http://localhost:$HGPORT/ --config devel.legacy.exchange=bundle1
   pulling from http://localhost:$HGPORT/
   searching for changes
   no changes found
@@ -1189,10 +1182,40 @@ server won't turn changeset public.
   cannot lock source repo, skipping local public phase update
   [1]
   $ chmod -R +w .hg
-  $ hgph Upsilon
 
   $ cd ..
 
-  $ killdaemons.py
-
 #endif
+
+Test that clone behaves like pull and doesn't
+publish changesets as plain push does
+
+  $ hg -R Upsilon phase -q --force --draft 2
+  $ hg clone -q Upsilon Pi -r 7
+  $ hgph Upsilon -r 'min(draft())'
+  o  2 draft a-C - 54acac6f23ab
+  |
+  ~
+
+  $ hg -R Upsilon push Pi -r 7
+  pushing to Pi
+  searching for changes
+  no changes found
+  [1]
+  $ hgph Upsilon -r 'min(draft())'
+  o  8 draft a-F - b740e3e5c05d
+  |
+  ~
+
+  $ hg -R Upsilon push Pi -r 8
+  pushing to Pi
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+
+  $ hgph Upsilon -r 'min(draft())'
+  o  9 draft a-G - 3e27b6f1eee1
+  |
+  ~

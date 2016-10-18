@@ -201,23 +201,11 @@ release = lock.release
 cmdtable = {}
 command = cmdutil.command(cmdtable)
 
-class _constraints(object):
-    # aborts if there are multiple rules for one node
-    noduplicates = 'noduplicates'
-    # abort if the node does belong to edited stack
-    forceother = 'forceother'
-    # abort if the node doesn't belong to edited stack
-    noother = 'noother'
-
-    @classmethod
-    def known(cls):
-        return set([v for k, v in cls.__dict__.items() if k[0] != '_'])
-
-# Note for extension authors: ONLY specify testedwith = 'internal' for
+# Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
 # be specifying the version(s) of Mercurial they are tested with, or
 # leave the attribute unspecified.
-testedwith = 'internal'
+testedwith = 'ships-with-hg-core'
 
 actiontable = {}
 primaryactions = set()
@@ -403,7 +391,7 @@ class histeditaction(object):
             raise error.ParseError("invalid changeset %s" % rulehash)
         return cls(state, rev)
 
-    def verify(self, prev):
+    def verify(self, prev, expected, seen):
         """ Verifies semantic correctness of the rule"""
         repo = self.repo
         ha = node.hex(self.node)
@@ -412,6 +400,19 @@ class histeditaction(object):
         except error.RepoError:
             raise error.ParseError(_('unknown changeset %s listed')
                               % ha[:12])
+        if self.node is not None:
+            self._verifynodeconstraints(prev, expected, seen)
+
+    def _verifynodeconstraints(self, prev, expected, seen):
+        # by default command need a node in the edited list
+        if self.node not in expected:
+            raise error.ParseError(_('%s "%s" changeset was not a candidate')
+                                   % (self.verb, node.short(self.node)),
+                                   hint=_('only use listed changesets'))
+        # and only one command per node
+        if self.node in seen:
+            raise error.ParseError(_('duplicated command for changeset %s') %
+                                   node.short(self.node))
 
     def torule(self):
         """build a histedit rule line for an action
@@ -433,19 +434,6 @@ class histeditaction(object):
            (the first line is a verb, the remainder is the second)
         """
         return "%s\n%s" % (self.verb, node.hex(self.node))
-
-    def constraints(self):
-        """Return a set of constrains that this action should be verified for
-        """
-        return set([_constraints.noduplicates, _constraints.noother])
-
-    def nodetoverify(self):
-        """Returns a node associated with the action that will be used for
-        verification purposes.
-
-        If the action doesn't correspond to node it should return None
-        """
-        return self.node
 
     def run(self):
         """Runs the action. The default behavior is simply apply the action's
@@ -573,18 +561,7 @@ def collapse(repo, first, last, commitopts, skipprompt=False):
     copied = copies.pathcopies(base, last)
 
     # prune files which were reverted by the updates
-    def samefile(f):
-        if f in last.manifest():
-            a = last.filectx(f)
-            if f in base.manifest():
-                b = base.filectx(f)
-                return (a.data() == b.data()
-                        and a.flags() == b.flags())
-            else:
-                return False
-        else:
-            return f not in base.manifest()
-    files = [f for f in files if not samefile(f)]
+    files = [f for f in files if not cmdutil.samefile(f, last, base)]
     # commit version of these files as defined by head
     headmf = last.manifest()
     def filectxfn(repo, ctx, path):
@@ -683,9 +660,9 @@ class edit(histeditaction):
 @action(['fold', 'f'],
         _('use commit, but combine it with the one above'))
 class fold(histeditaction):
-    def verify(self, prev):
+    def verify(self, prev, expected, seen):
         """ Verifies semantic correctness of the fold rule"""
-        super(fold, self).verify(prev)
+        super(fold, self).verify(prev, expected, seen)
         repo = self.repo
         if not prev:
             c = repo[self.node].parents()[0]
@@ -795,8 +772,6 @@ class fold(histeditaction):
         return repo[n], replacements
 
 class base(histeditaction):
-    def constraints(self):
-        return set([_constraints.forceother])
 
     def run(self):
         if self.repo['.'].node() != self.node:
@@ -810,6 +785,14 @@ class base(histeditaction):
     def continueclean(self):
         basectx = self.repo['.']
         return basectx, []
+
+    def _verifynodeconstraints(self, prev, expected, seen):
+        # base can only be use with a node not in the edited set
+        if self.node in expected:
+            msg = _('%s "%s" changeset was an edited list candidate')
+            raise error.ParseError(
+                msg % (self.verb, node.short(self.node)),
+                hint=_('base must only use unlisted changesets'))
 
 @action(['_multifold'],
         _(
@@ -871,7 +854,7 @@ def findoutgoing(ui, repo, remote=None, force=False, opts=None):
     roots = list(repo.revs("roots(%ln)", outgoing.missing))
     if 1 < len(roots):
         msg = _('there are ambiguous outgoing revisions')
-        hint = _('see "hg help histedit" for more detail')
+        hint = _("see 'hg help histedit' for more detail")
         raise error.Abort(msg, hint=hint)
     return repo.lookup(roots[0])
 
@@ -1210,8 +1193,8 @@ def _edithisteditplan(ui, repo, state, rules):
     else:
         rules = _readfile(rules)
     actions = parserules(rules, state)
-    ctxs = [repo[act.nodetoverify()] \
-            for act in state.actions if act.nodetoverify()]
+    ctxs = [repo[act.node] \
+            for act in state.actions if act.node]
     warnverifyactions(ui, repo, actions, state, ctxs)
     state.actions = actions
     state.write()
@@ -1307,7 +1290,7 @@ def between(repo, old, new, keep):
         root = ctxs[0] # list is already sorted by repo.set
         if not root.mutable():
             raise error.Abort(_('cannot edit public changeset: %s') % root,
-                             hint=_('see "hg help phases" for details'))
+                             hint=_("see 'hg help phases' for details"))
     return [c.node() for c in ctxs]
 
 def ruleeditor(repo, ui, actions, editcomment=""):
@@ -1396,36 +1379,14 @@ def verifyactions(actions, state, ctxs):
     Will abort if there are to many or too few rules, a malformed rule,
     or a rule on a changeset outside of the user-given range.
     """
-    expected = set(c.hex() for c in ctxs)
+    expected = set(c.node() for c in ctxs)
     seen = set()
     prev = None
     for action in actions:
-        action.verify(prev)
+        action.verify(prev, expected, seen)
         prev = action
-        constraints = action.constraints()
-        for constraint in constraints:
-            if constraint not in _constraints.known():
-                raise error.ParseError(_('unknown constraint "%s"') %
-                        constraint)
-
-        nodetoverify = action.nodetoverify()
-        if nodetoverify is not None:
-            ha = node.hex(nodetoverify)
-            if _constraints.noother in constraints and ha not in expected:
-                raise error.ParseError(
-                    _('%s "%s" changeset was not a candidate')
-                     % (action.verb, ha[:12]),
-                    hint=_('only use listed changesets'))
-            if _constraints.forceother in constraints and ha in expected:
-                raise error.ParseError(
-                    _('%s "%s" changeset was not an edited list candidate')
-                     % (action.verb, ha[:12]),
-                    hint=_('only use listed changesets'))
-            if _constraints.noduplicates in constraints and ha in seen:
-                raise error.ParseError(_(
-                        'duplicated command for changeset %s') %
-                        ha[:12])
-            seen.add(ha)
+        if action.node is not None:
+            seen.add(action.node)
     missing = sorted(expected - seen)  # sort to stabilize output
 
     if state.repo.ui.configbool('histedit', 'dropmissing'):
@@ -1433,15 +1394,16 @@ def verifyactions(actions, state, ctxs):
             raise error.ParseError(_('no rules provided'),
                     hint=_('use strip extension to remove commits'))
 
-        drops = [drop(state, node.bin(n)) for n in missing]
+        drops = [drop(state, n) for n in missing]
         # put the in the beginning so they execute immediately and
         # don't show in the edit-plan in the future
         actions[:0] = drops
     elif missing:
         raise error.ParseError(_('missing rules for changeset %s') %
-                missing[0][:12],
+                node.short(missing[0]),
                 hint=_('use "drop %s" to discard, see also: '
-                       '"hg help -e histedit.config"') % missing[0][:12])
+                       "'hg help -e histedit.config'")
+                       % node.short(missing[0]))
 
 def adjustreplacementsfrommarkers(repo, oldreplacements):
     """Adjust replacements from obsolescense markers
@@ -1608,10 +1570,9 @@ def stripwrapper(orig, ui, repo, nodelist, *args, **kwargs):
     if os.path.exists(os.path.join(repo.path, 'histedit-state')):
         state = histeditstate(repo)
         state.read()
-        histedit_nodes = set([action.nodetoverify() for action
-                             in state.actions if action.nodetoverify()])
-        strip_nodes = set([repo[n].node() for n in nodelist])
-        common_nodes = histedit_nodes & strip_nodes
+        histedit_nodes = set([action.node for action
+                             in state.actions if action.node])
+        common_nodes = histedit_nodes & set(nodelist)
         if common_nodes:
             raise error.Abort(_("histedit in progress, can't strip %s")
                              % ', '.join(node.short(x) for x in common_nodes))

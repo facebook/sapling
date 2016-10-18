@@ -15,6 +15,18 @@
 #include "util.h"
 #include "bitmanipulation.h"
 
+#ifdef IS_PY3K
+/* The mapping of Python types is meant to be temporary to get Python
+ * 3 to compile. We should remove this once Python 3 support is fully
+ * supported and proper types are used in the extensions themselves. */
+#define PyInt_Type PyLong_Type
+#define PyInt_Check PyLong_Check
+#define PyInt_FromLong PyLong_FromLong
+#define PyInt_FromSsize_t PyLong_FromSsize_t
+#define PyInt_AS_LONG PyLong_AS_LONG
+#define PyInt_AsLong PyLong_AsLong
+#endif
+
 static char *versionerrortext = "Python minor version mismatch";
 
 static int8_t hextable[256] = {
@@ -610,37 +622,37 @@ static PyObject *pack_dirstate(PyObject *self, PyObject *args)
 	/* Figure out how much we need to allocate. */
 	for (nbytes = 40, pos = 0; PyDict_Next(map, &pos, &k, &v);) {
 		PyObject *c;
-		if (!PyString_Check(k)) {
+		if (!PyBytes_Check(k)) {
 			PyErr_SetString(PyExc_TypeError, "expected string key");
 			goto bail;
 		}
-		nbytes += PyString_GET_SIZE(k) + 17;
+		nbytes += PyBytes_GET_SIZE(k) + 17;
 		c = PyDict_GetItem(copymap, k);
 		if (c) {
-			if (!PyString_Check(c)) {
+			if (!PyBytes_Check(c)) {
 				PyErr_SetString(PyExc_TypeError,
 						"expected string key");
 				goto bail;
 			}
-			nbytes += PyString_GET_SIZE(c) + 1;
+			nbytes += PyBytes_GET_SIZE(c) + 1;
 		}
 	}
 
-	packobj = PyString_FromStringAndSize(NULL, nbytes);
+	packobj = PyBytes_FromStringAndSize(NULL, nbytes);
 	if (packobj == NULL)
 		goto bail;
 
-	p = PyString_AS_STRING(packobj);
+	p = PyBytes_AS_STRING(packobj);
 
 	pn = PySequence_ITEM(pl, 0);
-	if (PyString_AsStringAndSize(pn, &s, &l) == -1 || l != 20) {
+	if (PyBytes_AsStringAndSize(pn, &s, &l) == -1 || l != 20) {
 		PyErr_SetString(PyExc_TypeError, "expected a 20-byte hash");
 		goto bail;
 	}
 	memcpy(p, s, l);
 	p += 20;
 	pn = PySequence_ITEM(pl, 1);
-	if (PyString_AsStringAndSize(pn, &s, &l) == -1 || l != 20) {
+	if (PyBytes_AsStringAndSize(pn, &s, &l) == -1 || l != 20) {
 		PyErr_SetString(PyExc_TypeError, "expected a 20-byte hash");
 		goto bail;
 	}
@@ -685,21 +697,21 @@ static PyObject *pack_dirstate(PyObject *self, PyObject *args)
 		putbe32((uint32_t)mtime, p + 8);
 		t = p + 12;
 		p += 16;
-		len = PyString_GET_SIZE(k);
-		memcpy(p, PyString_AS_STRING(k), len);
+		len = PyBytes_GET_SIZE(k);
+		memcpy(p, PyBytes_AS_STRING(k), len);
 		p += len;
 		o = PyDict_GetItem(copymap, k);
 		if (o) {
 			*p++ = '\0';
-			l = PyString_GET_SIZE(o);
-			memcpy(p, PyString_AS_STRING(o), l);
+			l = PyBytes_GET_SIZE(o);
+			memcpy(p, PyBytes_AS_STRING(o), l);
 			p += l;
 			len += l + 1;
 		}
 		putbe32((uint32_t)len, t);
 	}
 
-	pos = p - PyString_AS_STRING(packobj);
+	pos = p - PyBytes_AS_STRING(packobj);
 	if (pos != nbytes) {
 		PyErr_Format(PyExc_SystemError, "bad dirstate size: %ld != %ld",
                              (long)pos, (long)nbytes);
@@ -796,7 +808,7 @@ static const char *index_deref(indexObject *self, Py_ssize_t pos)
 		return self->offsets[pos];
 	}
 
-	return PyString_AS_STRING(self->data) + pos * v1_hdrsize;
+	return PyBytes_AS_STRING(self->data) + pos * v1_hdrsize;
 }
 
 static inline int index_get_parents(indexObject *self, Py_ssize_t rev,
@@ -926,7 +938,7 @@ static const char *index_node(indexObject *self, Py_ssize_t pos)
 		PyObject *tuple, *str;
 		tuple = PyList_GET_ITEM(self->added, pos - self->length + 1);
 		str = PyTuple_GetItem(tuple, 7);
-		return str ? PyString_AS_STRING(str) : NULL;
+		return str ? PyBytes_AS_STRING(str) : NULL;
 	}
 
 	data = index_deref(self, pos);
@@ -937,7 +949,7 @@ static int nt_insert(indexObject *self, const char *node, int rev);
 
 static int node_check(PyObject *obj, char **node, Py_ssize_t *nodelen)
 {
-	if (PyString_AsStringAndSize(obj, node, nodelen) == -1)
+	if (PyBytes_AsStringAndSize(obj, node, nodelen) == -1)
 		return -1;
 	if (*nodelen == 20)
 		return 0;
@@ -1825,7 +1837,7 @@ static PyObject *index_partialmatch(indexObject *self, PyObject *args)
 	case -2:
 		Py_RETURN_NONE;
 	case -1:
-		return PyString_FromStringAndSize(nullid, 20);
+		return PyBytes_FromStringAndSize(nullid, 20);
 	}
 
 	fullnode = index_node(self, rev);
@@ -1834,7 +1846,7 @@ static PyObject *index_partialmatch(indexObject *self, PyObject *args)
 			     "could not access rev %d", rev);
 		return NULL;
 	}
-	return PyString_FromStringAndSize(fullnode, 20);
+	return PyBytes_FromStringAndSize(fullnode, 20);
 }
 
 static PyObject *index_m_get(indexObject *self, PyObject *args)
@@ -2247,7 +2259,7 @@ static void nt_invalidate_added(indexObject *self, Py_ssize_t start)
 		PyObject *tuple = PyList_GET_ITEM(self->added, i);
 		PyObject *node = PyTuple_GET_ITEM(tuple, 7);
 
-		nt_insert(self, PyString_AS_STRING(node), -1);
+		nt_insert(self, PyBytes_AS_STRING(node), -1);
 	}
 
 	if (start == 0)
@@ -2264,7 +2276,12 @@ static int index_slice_del(indexObject *self, PyObject *item)
 	Py_ssize_t length = index_length(self);
 	int ret = 0;
 
+/* Argument changed from PySliceObject* to PyObject* in Python 3. */
+#ifdef IS_PY3K
+	if (PySlice_GetIndicesEx(item, length,
+#else
 	if (PySlice_GetIndicesEx((PySliceObject*)item, length,
+#endif
 				 &start, &stop, &step, &slicelength) < 0)
 		return -1;
 
@@ -2372,9 +2389,9 @@ static int index_assign_subscript(indexObject *self, PyObject *item,
  */
 static Py_ssize_t inline_scan(indexObject *self, const char **offsets)
 {
-	const char *data = PyString_AS_STRING(self->data);
+	const char *data = PyBytes_AS_STRING(self->data);
 	Py_ssize_t pos = 0;
-	Py_ssize_t end = PyString_GET_SIZE(self->data);
+	Py_ssize_t end = PyBytes_GET_SIZE(self->data);
 	long incr = v1_hdrsize;
 	Py_ssize_t len = 0;
 
@@ -2416,11 +2433,11 @@ static int index_init(indexObject *self, PyObject *args)
 
 	if (!PyArg_ParseTuple(args, "OO", &data_obj, &inlined_obj))
 		return -1;
-	if (!PyString_Check(data_obj)) {
+	if (!PyBytes_Check(data_obj)) {
 		PyErr_SetString(PyExc_TypeError, "data is not a string");
 		return -1;
 	}
-	size = PyString_GET_SIZE(data_obj);
+	size = PyBytes_GET_SIZE(data_obj);
 
 	self->inlined = inlined_obj && PyObject_IsTrue(inlined_obj);
 	self->data = data_obj;
@@ -2516,8 +2533,7 @@ static PyGetSetDef index_getset[] = {
 };
 
 static PyTypeObject indexType = {
-	PyObject_HEAD_INIT(NULL)
-	0,                         /* ob_size */
+	PyVarObject_HEAD_INIT(NULL, 0)
 	"parsers.index",           /* tp_name */
 	sizeof(indexObject),       /* tp_basicsize */
 	0,                         /* tp_itemsize */
@@ -2613,7 +2629,7 @@ static PyObject *readshas(
 		return NULL;
 	}
 	for (i = 0; i < num; i++) {
-		PyObject *hash = PyString_FromStringAndSize(source, hashwidth);
+		PyObject *hash = PyBytes_FromStringAndSize(source, hashwidth);
 		if (hash == NULL) {
 			Py_DECREF(list);
 			return NULL;
@@ -2669,7 +2685,7 @@ static PyObject *fm1readmarker(const char *databegin, const char *dataend,
 	if (data + hashwidth > dataend) {
 		goto overflow;
 	}
-	prec = PyString_FromStringAndSize(data, hashwidth);
+	prec = PyBytes_FromStringAndSize(data, hashwidth);
 	data += hashwidth;
 	if (prec == NULL) {
 		goto bail;
@@ -2712,9 +2728,9 @@ static PyObject *fm1readmarker(const char *databegin, const char *dataend,
 		if (meta + leftsize + rightsize > dataend) {
 			goto overflow;
 		}
-		left = PyString_FromStringAndSize(meta, leftsize);
+		left = PyBytes_FromStringAndSize(meta, leftsize);
 		meta += leftsize;
-		right = PyString_FromStringAndSize(meta, rightsize);
+		right = PyBytes_FromStringAndSize(meta, rightsize);
 		meta += rightsize;
 		tmp = PyTuple_New(2);
 		if (!left || !right || !tmp) {
@@ -2880,7 +2896,7 @@ PyMODINIT_FUNC PyInit_parsers(void)
 	PyObject *mod;
 
 	if (check_python_version() == -1)
-		return;
+		return NULL;
 	mod = PyModule_Create(&parsers_module);
 	module_init(mod);
 	return mod;

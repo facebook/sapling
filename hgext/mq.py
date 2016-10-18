@@ -99,11 +99,11 @@ seriesopts = [('s', 'summary', None, _('print first line of patch header'))]
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
-# Note for extension authors: ONLY specify testedwith = 'internal' for
+# Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
 # be specifying the version(s) of Mercurial they are tested with, or
 # leave the attribute unspecified.
-testedwith = 'internal'
+testedwith = 'ships-with-hg-core'
 
 # force load strip extension formerly included in mq and import some utility
 try:
@@ -1562,7 +1562,7 @@ class queue(object):
             if not repo[self.applied[-1].node].mutable():
                 raise error.Abort(
                     _("popping would remove a public revision"),
-                    hint=_('see "hg help phases" for details'))
+                    hint=_("see 'hg help phases' for details"))
 
             # we know there are no local changes, so we can make a simplified
             # form of hg.update.
@@ -1631,7 +1631,7 @@ class queue(object):
                 raise error.Abort(_("cannot qrefresh a revision with children"))
             if not repo[top].mutable():
                 raise error.Abort(_("cannot qrefresh public revision"),
-                                 hint=_('see "hg help phases" for details'))
+                                 hint=_("see 'hg help phases' for details"))
 
             cparents = repo.changelog.parents(top)
             patchparent = self.qparents(repo, top)
@@ -1840,7 +1840,7 @@ class queue(object):
 
                     self.applied.append(statusentry(n, patchfn))
                 finally:
-                    lockmod.release(lock, tr)
+                    lockmod.release(tr, lock)
             except: # re-raises
                 ctx = repo[cparents[0]]
                 repo.dirstate.rebuild(ctx.node(), ctx.manifest())
@@ -2117,7 +2117,7 @@ class queue(object):
                 for r in rev:
                     if not repo[r].mutable():
                         raise error.Abort(_('revision %d is not mutable') % r,
-                                         hint=_('see "hg help phases" '
+                                         hint=_("see 'hg help phases' "
                                                 'for details'))
                     p1, p2 = repo.changelog.parentrevs(r)
                     n = repo.changelog.node(r)
@@ -3354,53 +3354,54 @@ def qqueue(ui, repo, name=None, **opts):
         raise error.Abort(
                 _('invalid queue name, may not contain the characters ":\\/."'))
 
-    existing = _getqueues()
+    with repo.wlock():
+        existing = _getqueues()
 
-    if opts.get('create'):
-        if name in existing:
-            raise error.Abort(_('queue "%s" already exists') % name)
-        if _noqueues():
-            _addqueue(_defaultqueue)
-        _addqueue(name)
-        _setactive(name)
-    elif opts.get('rename'):
-        current = _getcurrent()
-        if name == current:
-            raise error.Abort(_('can\'t rename "%s" to its current name')
-                              % name)
-        if name in existing:
-            raise error.Abort(_('queue "%s" already exists') % name)
+        if opts.get('create'):
+            if name in existing:
+                raise error.Abort(_('queue "%s" already exists') % name)
+            if _noqueues():
+                _addqueue(_defaultqueue)
+            _addqueue(name)
+            _setactive(name)
+        elif opts.get('rename'):
+            current = _getcurrent()
+            if name == current:
+                raise error.Abort(_('can\'t rename "%s" to its current name')
+                                  % name)
+            if name in existing:
+                raise error.Abort(_('queue "%s" already exists') % name)
 
-        olddir = _queuedir(current)
-        newdir = _queuedir(name)
+            olddir = _queuedir(current)
+            newdir = _queuedir(name)
 
-        if os.path.exists(newdir):
-            raise error.Abort(_('non-queue directory "%s" already exists') %
-                    newdir)
+            if os.path.exists(newdir):
+                raise error.Abort(_('non-queue directory "%s" already exists') %
+                        newdir)
 
-        fh = repo.vfs('patches.queues.new', 'w')
-        for queue in existing:
-            if queue == current:
-                fh.write('%s\n' % (name,))
-                if os.path.exists(olddir):
-                    util.rename(olddir, newdir)
-            else:
-                fh.write('%s\n' % (queue,))
-        fh.close()
-        util.rename(repo.join('patches.queues.new'), repo.join(_allqueues))
-        _setactivenocheck(name)
-    elif opts.get('delete'):
-        _delete(name)
-    elif opts.get('purge'):
-        if name in existing:
+            fh = repo.vfs('patches.queues.new', 'w')
+            for queue in existing:
+                if queue == current:
+                    fh.write('%s\n' % (name,))
+                    if os.path.exists(olddir):
+                        util.rename(olddir, newdir)
+                else:
+                    fh.write('%s\n' % (queue,))
+            fh.close()
+            util.rename(repo.join('patches.queues.new'), repo.join(_allqueues))
+            _setactivenocheck(name)
+        elif opts.get('delete'):
             _delete(name)
-        qdir = _queuedir(name)
-        if os.path.exists(qdir):
-            shutil.rmtree(qdir)
-    else:
-        if name not in existing:
-            raise error.Abort(_('use --create to create a new queue'))
-        _setactive(name)
+        elif opts.get('purge'):
+            if name in existing:
+                _delete(name)
+            qdir = _queuedir(name)
+            if os.path.exists(qdir):
+                shutil.rmtree(qdir)
+        else:
+            if name not in existing:
+                raise error.Abort(_('use --create to create a new queue'))
+            _setactive(name)
 
 def mqphasedefaults(repo, roots):
     """callback used to set mq changeset as secret when no phase data exists"""

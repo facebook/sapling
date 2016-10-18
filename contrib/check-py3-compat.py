@@ -10,7 +10,6 @@
 from __future__ import absolute_import, print_function
 
 import ast
-import imp
 import os
 import sys
 import traceback
@@ -41,6 +40,7 @@ def check_compat_py2(f):
 
 def check_compat_py3(f):
     """Check Python 3 compatibility of a file with Python 3."""
+    import importlib  # not available on Python 2.6
     with open(f, 'rb') as fh:
         content = fh.read()
 
@@ -55,34 +55,33 @@ def check_compat_py3(f):
     # out module paths for things not in a package can be confusing.
     if f.startswith(('hgext/', 'mercurial/')) and not f.endswith('__init__.py'):
         assert f.endswith('.py')
-        name = f.replace('/', '.')[:-3]
-        with open(f, 'r') as fh:
-            try:
-                imp.load_module(name, fh, '', ('py', 'r', imp.PY_SOURCE))
-            except Exception as e:
-                exc_type, exc_value, tb = sys.exc_info()
-                # We walk the stack and ignore frames from our custom importer,
-                # import mechanisms, and stdlib modules. This kinda/sorta
-                # emulates CPython behavior in import.c while also attempting
-                # to pin blame on a Mercurial file.
-                for frame in reversed(traceback.extract_tb(tb)):
-                    if frame.name == '_call_with_frames_removed':
-                        continue
-                    if 'importlib' in frame.filename:
-                        continue
-                    if 'mercurial/__init__.py' in frame.filename:
-                        continue
-                    if frame.filename.startswith(sys.prefix):
-                        continue
-                    break
+        name = f.replace('/', '.')[:-3].replace('.pure.', '.')
+        try:
+            importlib.import_module(name)
+        except Exception as e:
+            exc_type, exc_value, tb = sys.exc_info()
+            # We walk the stack and ignore frames from our custom importer,
+            # import mechanisms, and stdlib modules. This kinda/sorta
+            # emulates CPython behavior in import.c while also attempting
+            # to pin blame on a Mercurial file.
+            for frame in reversed(traceback.extract_tb(tb)):
+                if frame.name == '_call_with_frames_removed':
+                    continue
+                if 'importlib' in frame.filename:
+                    continue
+                if 'mercurial/__init__.py' in frame.filename:
+                    continue
+                if frame.filename.startswith(sys.prefix):
+                    continue
+                break
 
-                if frame.filename:
-                    filename = os.path.basename(frame.filename)
-                    print('%s: error importing: <%s> %s (error at %s:%d)' % (
-                          f, type(e).__name__, e, filename, frame.lineno))
-                else:
-                    print('%s: error importing module: <%s> %s (line %d)' % (
-                          f, type(e).__name__, e, frame.lineno))
+            if frame.filename:
+                filename = os.path.basename(frame.filename)
+                print('%s: error importing: <%s> %s (error at %s:%d)' % (
+                      f, type(e).__name__, e, filename, frame.lineno))
+            else:
+                print('%s: error importing module: <%s> %s (line %d)' % (
+                      f, type(e).__name__, e, frame.lineno))
 
 if __name__ == '__main__':
     if sys.version_info[0] == 2:

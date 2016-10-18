@@ -1,6 +1,3 @@
-Changegroups
-============
-
 Changegroups are representations of repository revlog data, specifically
 the changelog, manifest, and filelogs.
 
@@ -35,7 +32,7 @@ There is a special case chunk that has 0 length (``0x00000000``). We
 call this an *empty chunk*.
 
 Delta Groups
-------------
+============
 
 A *delta group* expresses the content of a revlog as a series of deltas,
 or patches against previous revisions.
@@ -111,21 +108,21 @@ changegroup. This allows the delta to be expressed against any parent,
 which can result in smaller deltas and more efficient encoding of data.
 
 Changeset Segment
------------------
+=================
 
 The *changeset segment* consists of a single *delta group* holding
 changelog data. It is followed by an *empty chunk* to denote the
 boundary to the *manifests segment*.
 
 Manifest Segment
-----------------
+================
 
 The *manifest segment* consists of a single *delta group* holding
 manifest data. It is followed by an *empty chunk* to denote the boundary
 to the *filelogs segment*.
 
 Filelogs Segment
-----------------
+================
 
 The *filelogs* segment consists of multiple sub-segments, each
 corresponding to an individual file whose data is being described::
@@ -154,4 +151,3 @@ Each filelog sub-segment consists of the following::
 
 That is, a *chunk* consisting of the filename (not terminated or padded)
 followed by N chunks constituting the *delta group* for this file.
-

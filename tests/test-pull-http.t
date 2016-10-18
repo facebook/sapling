@@ -26,12 +26,12 @@ Cloning with a password in the URL should not save the password in .hg/hgrc:
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cat test3/.hg/hgrc
-  # example repository config (see "hg help config" for more info)
+  # example repository config (see 'hg help config' for more info)
   [paths]
   default = http://foo@localhost:$HGPORT/
   
   # path aliases to other clones of this repo in URLs or filesystem paths
-  # (see "hg help config.paths" for more info)
+  # (see 'hg help config.paths' for more info)
   #
   # default-push = ssh://jdoe@example.net/hg/jdoes-fork
   # my-fork      = ssh://jdoe@example.net/hg/jdoes-fork
@@ -48,11 +48,11 @@ expect error, cloning not allowed
   $ echo 'allowpull = false' >> .hg/hgrc
   $ hg serve -p $HGPORT -d --pid-file=hg.pid -E errors.log
   $ cat hg.pid >> $DAEMON_PIDS
-  $ hg clone http://localhost:$HGPORT/ test4 --config experimental.bundle2-exp=True
+  $ hg clone http://localhost:$HGPORT/ test4 # bundle2+
   requesting all changes
   abort: authorization failed
   [255]
-  $ hg clone http://localhost:$HGPORT/ test4 --config experimental.bundle2-exp=False
+  $ hg clone http://localhost:$HGPORT/ test4 --config devel.legacy.exchange=bundle1
   abort: authorization failed
   [255]
   $ killdaemons.py

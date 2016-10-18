@@ -49,13 +49,13 @@
   1
   2
   3
-  <<<<<<< local: 618808747361 - test: branch2
+  <<<<<<< working copy: 618808747361 - test: branch2
   6
   8
   =======
   4
   5
-  >>>>>>> other: c0c68e4fe667  - test: branch1
+  >>>>>>> merge rev:    c0c68e4fe667  - test: branch1
   Hop we are done.
 
   $ hg status
@@ -79,13 +79,13 @@ Verify custom conflict markers
   1
   2
   3
-  <<<<<<< local: test 2
+  <<<<<<< working copy: test 2
   6
   8
   =======
   4
   5
-  >>>>>>> other: test 1
+  >>>>>>> merge rev:    test 1
   Hop we are done.
 
 Verify line splitting of custom conflict marker which causes multiple lines
@@ -105,13 +105,13 @@ Verify line splitting of custom conflict marker which causes multiple lines
   1
   2
   3
-  <<<<<<< local: test 2
+  <<<<<<< working copy: test 2
   6
   8
   =======
   4
   5
-  >>>>>>> other: test 1
+  >>>>>>> merge rev:    test 1
   Hop we are done.
 
 Verify line trimming of custom conflict marker using multi-byte characters
@@ -144,13 +144,13 @@ Verify line trimming of custom conflict marker using multi-byte characters
   1
   2
   3
-  <<<<<<< local: 123456789012345678901234567890123456789012345678901234567890\xe3\x81\x82... (esc)
+  <<<<<<< working copy: 1234567890123456789012345678901234567890123456789012345...
   6
   8
   =======
   4
   5
-  >>>>>>> other: branch1
+  >>>>>>> merge rev:    branch1
   Hop we are done.
 
 Verify basic conflict markers
@@ -170,13 +170,13 @@ Verify basic conflict markers
   1
   2
   3
-  <<<<<<< local
+  <<<<<<< working copy
   6
   8
   =======
   4
   5
-  >>>>>>> other
+  >>>>>>> merge rev
   Hop we are done.
 
 internal:merge3
@@ -191,7 +191,7 @@ internal:merge3
   [1]
   $ cat a
   Small Mathematical Series.
-  <<<<<<< local
+  <<<<<<< working copy
   1
   2
   3
@@ -209,7 +209,7 @@ internal:merge3
   3
   4
   5
-  >>>>>>> other
+  >>>>>>> merge rev
   Hop we are done.
 
 Add some unconflicting changes on each head, to make sure we really

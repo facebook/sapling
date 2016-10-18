@@ -62,6 +62,19 @@ Can add nested directories
   dir1/dir2/b (glob)
   e
 
+The manifest command works
+
+  $ hg manifest
+  a
+  b
+  dir1/a
+  dir1/b
+  dir1/dir1/a
+  dir1/dir1/b
+  dir1/dir2/a
+  dir1/dir2/b
+  e
+
 Revision is not created for unchanged directory
 
   $ mkdir dir2
@@ -313,6 +326,25 @@ Stripping and recovering changes should work
      rev    offset  length  delta linkrev nodeid       p1           p2
        0         0     127     -1       4 064927a0648a 000000000000 000000000000
        1       127     111      0       5 25ecb8cb8618 000000000000 000000000000
+  $ hg incoming .hg/strip-backup/*
+  comparing with .hg/strip-backup/*-backup.hg (glob)
+  searching for changes
+  changeset:   6:51cfd7b1e13b
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     modify dir1/a
+  
+  $ hg pull .hg/strip-backup/*
+  pulling from .hg/strip-backup/51cfd7b1e13b-78a2f3ed-backup.hg
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+  (run 'hg update' to get a working copy)
+  $ hg --config extensions.strip= strip tip
+  saved backup bundle to $TESTTMP/repo-mixed/.hg/strip-backup/*-backup.hg (glob)
   $ hg unbundle -q .hg/strip-backup/*
   $ hg debugindex --dir dir1
      rev    offset  length  delta linkrev nodeid       p1           p2

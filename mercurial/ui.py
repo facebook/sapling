@@ -33,7 +33,7 @@ urlreq = util.urlreq
 
 samplehgrcs = {
     'user':
-"""# example user config (see "hg help config" for more info)
+"""# example user config (see 'hg help config' for more info)
 [ui]
 # name and email, e.g.
 # username = Jane Doe <jdoe@example.com>
@@ -41,18 +41,18 @@ username =
 
 [extensions]
 # uncomment these lines to enable some popular extensions
-# (see "hg help extensions" for more info)
+# (see 'hg help extensions' for more info)
 #
 # pager =
 # color =""",
 
     'cloned':
-"""# example repository config (see "hg help config" for more info)
+"""# example repository config (see 'hg help config' for more info)
 [paths]
 default = %s
 
 # path aliases to other clones of this repo in URLs or filesystem paths
-# (see "hg help config.paths" for more info)
+# (see 'hg help config.paths' for more info)
 #
 # default-push = ssh://jdoe@example.net/hg/jdoes-fork
 # my-fork      = ssh://jdoe@example.net/hg/jdoes-fork
@@ -64,10 +64,10 @@ default = %s
 """,
 
     'local':
-"""# example repository config (see "hg help config" for more info)
+"""# example repository config (see 'hg help config' for more info)
 [paths]
 # path aliases to other clones of this repo in URLs or filesystem paths
-# (see "hg help config.paths" for more info)
+# (see 'hg help config.paths' for more info)
 #
 # default      = http://example.com/hg/example-repo
 # default-push = ssh://jdoe@example.net/hg/jdoes-fork
@@ -80,11 +80,11 @@ default = %s
 """,
 
     'global':
-"""# example system-wide hg config (see "hg help config" for more info)
+"""# example system-wide hg config (see 'hg help config' for more info)
 
 [extensions]
 # uncomment these lines to enable some popular extensions
-# (see "hg help extensions" for more info)
+# (see 'hg help extensions' for more info)
 #
 # blackbox =
 # color =
@@ -1175,6 +1175,7 @@ class ui(object):
                            % ((msg,) + calframe[stacklevel][1:4]))
             self.log('develwarn', '%s at: %s:%s (%s)\n',
                      msg, *calframe[stacklevel][1:4])
+            curframe = calframe = None  # avoid cycles
 
     def deprecwarn(self, msg, version):
         """issue a deprecation warning

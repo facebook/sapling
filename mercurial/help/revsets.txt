@@ -12,10 +12,16 @@ Special characters can be used in quoted identifiers by escaping them,
 e.g., ``\n`` is interpreted as a newline. To prevent them from being
 interpreted, strings can be prefixed with ``r``, e.g. ``r'...'``.
 
+Prefix
+======
+
 There is a single prefix operator:
 
 ``not x``
   Changesets not in x. Short form is ``! x``.
+
+Infix
+=====
 
 These are the supported infix operators:
 
@@ -55,15 +61,39 @@ These are the supported infix operators:
 ``x~n``
   The nth first ancestor of x; ``x~0`` is x; ``x~3`` is ``x^^^``.
 
+``x ## y``
+  Concatenate strings and identifiers into one string.
+
+  All other prefix, infix and postfix operators have lower priority than
+  ``##``. For example, ``a1 ## a2~2`` is equivalent to ``(a1 ## a2)~2``.
+
+  For example::
+
+    [revsetalias]
+    issue(a1) = grep(r'\bissue[ :]?' ## a1 ## r'\b|\bbug\(' ## a1 ## r'\)')
+
+    ``issue(1234)`` is equivalent to
+    ``grep(r'\bissue[ :]?1234\b|\bbug\(1234\)')``
+    in this case. This matches against all of "issue 1234", "issue:1234",
+    "issue1234" and "bug(1234)".
+
+Postfix
+=======
+
 There is a single postfix operator:
 
 ``x^``
   Equivalent to ``x^1``, the first parent of each changeset in x.
 
+Predicates
+==========
 
 The following predicates are supported:
 
 .. predicatesmarker
+
+Aliases
+=======
 
 New predicates (known as "aliases") can be defined, using any combination of
 existing predicates or other aliases. An alias definition looks like::
@@ -86,18 +116,8 @@ For example,
 defines three aliases, ``h``, ``d``, and ``rs``. ``rs(0:tip, author)`` is
 exactly equivalent to ``reverse(sort(0:tip, author))``.
 
-An infix operator ``##`` can concatenate strings and identifiers into
-one string. For example::
-
-  [revsetalias]
-  issue(a1) = grep(r'\bissue[ :]?' ## a1 ## r'\b|\bbug\(' ## a1 ## r'\)')
-
-``issue(1234)`` is equivalent to ``grep(r'\bissue[ :]?1234\b|\bbug\(1234\)')``
-in this case. This matches against all of "issue 1234", "issue:1234",
-"issue1234" and "bug(1234)".
-
-All other prefix, infix and postfix operators have lower priority than
-``##``. For example, ``a1 ## a2~2`` is equivalent to ``(a1 ## a2)~2``.
+Equivalents
+===========
 
 Command line equivalents for :hg:`log`::
 
@@ -109,6 +129,9 @@ Command line equivalents for :hg:`log`::
   -b x  ->  branch(x)
   -P x  ->  !::x
   -l x  ->  limit(expr, x)
+
+Examples
+========
 
 Some sample queries:
 

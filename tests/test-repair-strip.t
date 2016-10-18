@@ -51,7 +51,7 @@
   transaction abort!
   failed to truncate data/b.i
   rollback failed - please run hg recover
-  strip failed, full bundle
+  strip failed, backup bundle
   abort: Permission denied .hg/store/data/b.i
   % after update 0, strip 2
   abandoned transaction found - run hg recover
@@ -104,7 +104,7 @@
   transaction abort!
   failed to truncate 00manifest.i
   rollback failed - please run hg recover
-  strip failed, full bundle
+  strip failed, backup bundle
   abort: Permission denied .hg/store/00manifest.i
   % after update 0, strip 2
   abandoned transaction found - run hg recover

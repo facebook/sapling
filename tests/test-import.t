@@ -1623,6 +1623,7 @@ Importing with unknown file:
   $ hg export --rev 'desc("extended jungle")' | hg import --partial -
   applying patch from stdin
   unable to find 'jungle' for patching
+  (use '--prefix' to apply patch relative to the current directory)
   1 out of 1 hunks FAILED -- saving rejects to file jungle.rej
   patch applied partially
   (fix the .rej files and run `hg commit --amend`)
@@ -1764,3 +1765,41 @@ Importing some extra header
   $ hg log --debug -r . | grep extra
   extra:       branch=default
   extra:       foo=bar
+
+Warn the user that paths are relative to the root of
+repository when file not found for patching
+
+  $ mkdir filedir
+  $ echo "file1" >> filedir/file1
+  $ hg add filedir/file1
+  $ hg commit -m "file1"
+  $ cd filedir
+  $ hg import -p 2 - <<EOF
+  > # HG changeset patch
+  > # User test
+  > # Date 0 0
+  > file2
+  > 
+  > diff --git a/filedir/file1 b/filedir/file1
+  > --- a/filedir/file1
+  > +++ b/filedir/file1
+  > @@ -1,1 +1,2 @@
+  >  file1
+  > +file2
+  > EOF
+  applying patch from stdin
+  unable to find 'file1' for patching
+  (use '--prefix' to apply patch relative to the current directory)
+  1 out of 1 hunks FAILED -- saving rejects to file file1.rej
+  abort: patch failed to apply
+  [255]
+
+test import crash (issue5375)
+  $ cd ..
+  $ hg init repo
+  $ cd repo
+  $ printf "diff --git a/a b/b\nrename from a\nrename to b" | hg import -
+  applying patch from stdin
+  a not tracked!
+  abort: source file 'a' does not exist
+  [255]

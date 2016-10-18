@@ -164,6 +164,11 @@ class _siblings(object):
     def __len__(self):
         return len(self.siblings)
 
+def annotate(fctx, ui):
+    diffopts = patch.difffeatureopts(ui, untrusted=True,
+                                     section='annotate', whitespace=True)
+    return fctx.annotate(follow=True, linenumber=True, diffopts=diffopts)
+
 def parents(ctx, hide=None):
     if isinstance(ctx, context.basefilectx):
         introrev = ctx.introrev()

@@ -12,7 +12,10 @@ import locale
 import os
 import sys
 
-from . import encoding
+from . import (
+    encoding,
+    pycompat,
+)
 
 # modelled after templater.templatepath:
 if getattr(sys, 'frozen', None) is not None:
@@ -27,10 +30,10 @@ except NameError:
 
 _languages = None
 if (os.name == 'nt'
-    and 'LANGUAGE' not in os.environ
-    and 'LC_ALL' not in os.environ
-    and 'LC_MESSAGES' not in os.environ
-    and 'LANG' not in os.environ):
+    and 'LANGUAGE' not in encoding.environ
+    and 'LC_ALL' not in encoding.environ
+    and 'LC_MESSAGES' not in encoding.environ
+    and 'LANG' not in encoding.environ):
     # Try to detect UI language by "User Interface Language Management" API
     # if no locale variables are set. Note that locale.getdefaultlocale()
     # uses GetLocaleInfo(), which may be different from UI language.
@@ -46,7 +49,7 @@ if (os.name == 'nt'
 _ugettext = None
 
 def setdatapath(datapath):
-    localedir = os.path.join(datapath, 'locale')
+    localedir = os.path.join(datapath, pycompat.sysstr('locale'))
     t = gettextmod.translation('hg', localedir, _languages, fallback=True)
     global _ugettext
     try:
@@ -85,16 +88,18 @@ def gettext(message):
             # means u.encode(sys.getdefaultencoding()).decode(enc). Since
             # the Python encoding defaults to 'ascii', this fails if the
             # translated string use non-ASCII characters.
-            _msgcache[message] = u.encode(encoding.encoding, "replace")
+            encodingstr = pycompat.sysstr(encoding.encoding)
+            _msgcache[message] = u.encode(encodingstr, "replace")
         except LookupError:
             # An unknown encoding results in a LookupError.
             _msgcache[message] = message
     return _msgcache[message]
 
 def _plain():
-    if 'HGPLAIN' not in os.environ and 'HGPLAINEXCEPT' not in os.environ:
+    if ('HGPLAIN' not in encoding.environ
+        and 'HGPLAINEXCEPT' not in encoding.environ):
         return False
-    exceptions = os.environ.get('HGPLAINEXCEPT', '').strip().split(',')
+    exceptions = encoding.environ.get('HGPLAINEXCEPT', '').strip().split(',')
     return 'i18n' not in exceptions
 
 if _plain():

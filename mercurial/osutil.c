@@ -63,11 +63,19 @@ struct listdir_stat {
 };
 #endif
 
+#ifdef IS_PY3K
+#define listdir_slot(name) \
+	static PyObject *listdir_stat_##name(PyObject *self, void *x) \
+	{ \
+		return PyLong_FromLong(((struct listdir_stat *)self)->st.name); \
+	}
+#else
 #define listdir_slot(name) \
 	static PyObject *listdir_stat_##name(PyObject *self, void *x) \
 	{ \
 		return PyInt_FromLong(((struct listdir_stat *)self)->st.name); \
 	}
+#endif
 
 listdir_slot(st_dev)
 listdir_slot(st_mode)
@@ -624,7 +632,7 @@ static PyObject *statfiles(PyObject *self, PyObject *args)
 		pypath = PySequence_GetItem(names, i);
 		if (!pypath)
 			goto bail;
-		path = PyString_AsString(pypath);
+		path = PyBytes_AsString(pypath);
 		if (path == NULL) {
 			Py_DECREF(pypath);
 			PyErr_SetString(PyExc_TypeError, "not a string");
@@ -706,7 +714,7 @@ static PyObject *recvfds(PyObject *self, PyObject *args)
 	if (!rfdslist)
 		goto bail;
 	for (i = 0; i < rfdscount; i++) {
-		PyObject *obj = PyInt_FromLong(rfds[i]);
+		PyObject *obj = PyLong_FromLong(rfds[i]);
 		if (!obj)
 			goto bail;
 		PyList_SET_ITEM(rfdslist, i, obj);

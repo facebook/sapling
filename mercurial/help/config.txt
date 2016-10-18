@@ -1393,6 +1393,12 @@ collected during profiling, while 'profiling report' stands for a
 statistical text report generated from the profiling data. The
 profiling is done using lsprof.
 
+``enabled``
+    Enable the profiler.
+    (default: false)
+
+    This is equivalent to passing ``--profile`` on the command line.
+
 ``type``
     The type of profiler to use.
     (default: ls)
@@ -1556,6 +1562,21 @@ Controls generic server settings.
     consider setting this option because converting *generaldelta*
     repositories to the exchange format required by the bundle1 data
     format can consume a lot of CPU.
+
+``zliblevel``
+    Integer between ``-1`` and ``9`` that controls the zlib compression level
+    for wire protocol commands that send zlib compressed output (notably the
+    commands that send repository history data).
+
+    The default (``-1``) uses the default zlib compression level, which is
+    likely equivalent to ``6``. ``0`` means no compression. ``9`` means
+    maximum compression.
+
+    Setting this option allows server operators to make trade-offs between
+    bandwidth and CPU used. Lowering the compression lowers CPU utilization
+    but sends more bytes to clients.
+
+    This option only impacts the HTTP server.
 
 ``smtp``
 --------

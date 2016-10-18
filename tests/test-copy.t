@@ -224,10 +224,25 @@ copy --after on an added file
 foo was clean:
   $ hg st -AC foo
   C foo
+Trying to copy on top of an existing file fails,
+  $ hg copy -A bar foo
+  foo: not overwriting - file already committed
+  (hg copy --after --force to replace the file by recording a copy)
+same error without the --after, so the user doesn't have to go through
+two hints:
+  $ hg copy bar foo
+  foo: not overwriting - file already committed
+  (hg copy --force to replace the file by recording a copy)
 but it's considered modified after a copy --after --force
   $ hg copy -Af bar foo
   $ hg st -AC foo
   M foo
     bar
+The hint for a file that exists but is not in file history doesn't
+mention --force:
+  $ touch xyzzy
+  $ hg cp bar xyzzy
+  xyzzy: not overwriting - file exists
+  (hg copy --after to record the copy)
 
   $ cd ..

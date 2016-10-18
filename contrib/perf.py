@@ -25,6 +25,7 @@ import random
 import sys
 import time
 from mercurial import (
+    changegroup,
     cmdutil,
     commands,
     copies,
@@ -130,15 +131,53 @@ def gettimer(ui, opts=None):
 
     # enforce an idle period before execution to counteract power management
     # experimental config: perf.presleep
-    time.sleep(ui.configint("perf", "presleep", 1))
+    time.sleep(getint(ui, "perf", "presleep", 1))
 
     if opts is None:
         opts = {}
     # redirect all to stderr
     ui = ui.copy()
-    ui.fout = ui.ferr
+    uifout = safeattrsetter(ui, 'fout', ignoremissing=True)
+    if uifout:
+        # for "historical portability":
+        # ui.fout/ferr have been available since 1.9 (or 4e1ccd4c2b6d)
+        uifout.set(ui.ferr)
+
     # get a formatter
-    fm = ui.formatter('perf', opts)
+    uiformatter = getattr(ui, 'formatter', None)
+    if uiformatter:
+        fm = uiformatter('perf', opts)
+    else:
+        # for "historical portability":
+        # define formatter locally, because ui.formatter has been
+        # available since 2.2 (or ae5f92e154d3)
+        from mercurial import node
+        class defaultformatter(object):
+            """Minimized composition of baseformatter and plainformatter
+            """
+            def __init__(self, ui, topic, opts):
+                self._ui = ui
+                if ui.debugflag:
+                    self.hexfunc = node.hex
+                else:
+                    self.hexfunc = node.short
+            def __nonzero__(self):
+                return False
+            def startitem(self):
+                pass
+            def data(self, **data):
+                pass
+            def write(self, fields, deftext, *fielddata, **opts):
+                self._ui.write(deftext % fielddata, **opts)
+            def condwrite(self, cond, fields, deftext, *fielddata, **opts):
+                if cond:
+                    self._ui.write(deftext % fielddata, **opts)
+            def plain(self, text, **opts):
+                self._ui.write(text, **opts)
+            def end(self):
+                pass
+        fm = defaultformatter(ui, 'perf', opts)
+
     # stub function, runs code only once instead of in a loop
     # experimental config: perf.stub
     if ui.configbool("perf", "stub"):
@@ -180,6 +219,121 @@ def _timer(fm, func, title=None):
     fm.write('sys',  ' sys %f', m[2])
     fm.write('count',  ' (best of %d)', count)
     fm.plain('\n')
+
+# utilities for historical portability
+
+def getint(ui, section, name, default):
+    # for "historical portability":
+    # ui.configint has been available since 1.9 (or fa2b596db182)
+    v = ui.config(section, name, None)
+    if v is None:
+        return default
+    try:
+        return int(v)
+    except ValueError:
+        raise error.ConfigError(("%s.%s is not an integer ('%s')")
+                                % (section, name, v))
+
+def safeattrsetter(obj, name, ignoremissing=False):
+    """Ensure that 'obj' has 'name' attribute before subsequent setattr
+
+    This function is aborted, if 'obj' doesn't have 'name' attribute
+    at runtime. This avoids overlooking removal of an attribute, which
+    breaks assumption of performance measurement, in the future.
+
+    This function returns the object to (1) assign a new value, and
+    (2) restore an original value to the attribute.
+
+    If 'ignoremissing' is true, missing 'name' attribute doesn't cause
+    abortion, and this function returns None. This is useful to
+    examine an attribute, which isn't ensured in all Mercurial
+    versions.
+    """
+    if not util.safehasattr(obj, name):
+        if ignoremissing:
+            return None
+        raise error.Abort(("missing attribute %s of %s might break assumption"
+                           " of performance measurement") % (name, obj))
+
+    origvalue = getattr(obj, name)
+    class attrutil(object):
+        def set(self, newvalue):
+            setattr(obj, name, newvalue)
+        def restore(self):
+            setattr(obj, name, origvalue)
+
+    return attrutil()
+
+# utilities to examine each internal API changes
+
+def getbranchmapsubsettable():
+    # for "historical portability":
+    # subsettable is defined in:
+    # - branchmap since 2.9 (or 175c6fd8cacc)
+    # - repoview since 2.5 (or 59a9f18d4587)
+    for mod in (branchmap, repoview):
+        subsettable = getattr(mod, 'subsettable', None)
+        if subsettable:
+            return subsettable
+
+    # bisecting in bcee63733aad::59a9f18d4587 can reach here (both
+    # branchmap and repoview modules exist, but subsettable attribute
+    # doesn't)
+    raise error.Abort(("perfbranchmap not available with this Mercurial"),
+                      hint="use 2.5 or later")
+
+def getsvfs(repo):
+    """Return appropriate object to access files under .hg/store
+    """
+    # for "historical portability":
+    # repo.svfs has been available since 2.3 (or 7034365089bf)
+    svfs = getattr(repo, 'svfs', None)
+    if svfs:
+        return svfs
+    else:
+        return getattr(repo, 'sopener')
+
+def getvfs(repo):
+    """Return appropriate object to access files under .hg
+    """
+    # for "historical portability":
+    # repo.vfs has been available since 2.3 (or 7034365089bf)
+    vfs = getattr(repo, 'vfs', None)
+    if vfs:
+        return vfs
+    else:
+        return getattr(repo, 'opener')
+
+def repocleartagscachefunc(repo):
+    """Return the function to clear tags cache according to repo internal API
+    """
+    if util.safehasattr(repo, '_tagscache'): # since 2.0 (or 9dca7653b525)
+        # in this case, setattr(repo, '_tagscache', None) or so isn't
+        # correct way to clear tags cache, because existing code paths
+        # expect _tagscache to be a structured object.
+        def clearcache():
+            # _tagscache has been filteredpropertycache since 2.5 (or
+            # 98c867ac1330), and delattr() can't work in such case
+            if '_tagscache' in vars(repo):
+                del repo.__dict__['_tagscache']
+        return clearcache
+
+    repotags = safeattrsetter(repo, '_tags', ignoremissing=True)
+    if repotags: # since 1.4 (or 5614a628d173)
+        return lambda : repotags.set(None)
+
+    repotagscache = safeattrsetter(repo, 'tagscache', ignoremissing=True)
+    if repotagscache: # since 0.6 (or d7df759d0e97)
+        return lambda : repotagscache.set(None)
+
+    # Mercurial earlier than 0.6 (or d7df759d0e97) logically reaches
+    # this point, but it isn't so problematic, because:
+    # - repo.tags of such Mercurial isn't "callable", and repo.tags()
+    #   in perftags() causes failure soon
+    # - perf.py itself has been available since 1.1 (or eb240755386d)
+    raise error.Abort(("tags API of this hg command is unknown"))
+
+# perf commands
 
 @command('perfwalk', formatteropts)
 def perfwalk(ui, repo, *pats, **opts):
@@ -249,10 +403,12 @@ def perftags(ui, repo, **opts):
     import mercurial.changelog
     import mercurial.manifest
     timer, fm = gettimer(ui, opts)
+    svfs = getsvfs(repo)
+    repocleartagscache = repocleartagscachefunc(repo)
     def t():
-        repo.changelog = mercurial.changelog.changelog(repo.svfs)
-        repo.manifest = mercurial.manifest.manifest(repo.svfs)
-        repo._tags = None
+        repo.changelog = mercurial.changelog.changelog(svfs)
+        repo.manifest = mercurial.manifest.manifest(svfs)
+        repocleartagscache()
         return len(repo.tags())
     timer(t)
     fm.end()
@@ -276,6 +432,37 @@ def perfancestorset(ui, repo, revset, **opts):
         s = repo.changelog.ancestors(heads)
         for rev in revs:
             rev in s
+    timer(d)
+    fm.end()
+
+@command('perfchangegroupchangelog', formatteropts +
+         [('', 'version', '02', 'changegroup version'),
+          ('r', 'rev', '', 'revisions to add to changegroup')])
+def perfchangegroupchangelog(ui, repo, version='02', rev=None, **opts):
+    """Benchmark producing a changelog group for a changegroup.
+
+    This measures the time spent processing the changelog during a
+    bundle operation. This occurs during `hg bundle` and on a server
+    processing a `getbundle` wire protocol request (handles clones
+    and pull requests).
+
+    By default, all revisions are added to the changegroup.
+    """
+    cl = repo.changelog
+    revs = [cl.lookup(r) for r in repo.revs(rev or 'all()')]
+    bundler = changegroup.getbundler(version, repo)
+
+    def lookup(node):
+        # The real bundler reads the revision in order to access the
+        # manifest node and files list. Do that here.
+        cl.read(node)
+        return node
+
+    def d():
+        for chunk in bundler.group(revs, cl, lookup):
+            pass
+
+    timer, fm = gettimer(ui, opts)
     timer(d)
     fm.end()
 
@@ -399,8 +586,9 @@ def perfindex(ui, repo, **opts):
     timer, fm = gettimer(ui, opts)
     mercurial.revlog._prereadsize = 2**24 # disable lazy parser in old hg
     n = repo["tip"].node()
+    svfs = getsvfs(repo)
     def d():
-        cl = mercurial.revlog.revlog(repo.svfs, "00changelog.i")
+        cl = mercurial.revlog.revlog(svfs, "00changelog.i")
         cl.rev(n)
     timer(d)
     fm.end()
@@ -423,7 +611,7 @@ def perfparents(ui, repo, **opts):
     timer, fm = gettimer(ui, opts)
     # control the number of commits perfparents iterates over
     # experimental config: perf.parentscount
-    count = ui.configint("perf", "parentscount", 1000)
+    count = getint(ui, "perf", "parentscount", 1000)
     if len(repo.changelog) < count:
         raise error.Abort("repo needs %d commits for this test" % count)
     repo = repo.unfiltered()
@@ -472,7 +660,7 @@ def perfnodelookup(ui, repo, rev, **opts):
     import mercurial.revlog
     mercurial.revlog._prereadsize = 2**24 # disable lazy parser in old hg
     n = repo[rev].node()
-    cl = mercurial.revlog.revlog(repo.svfs, "00changelog.i")
+    cl = mercurial.revlog.revlog(getsvfs(repo), "00changelog.i")
     def d():
         cl.rev(n)
         clearcaches(cl)
@@ -543,8 +731,8 @@ def perffncachewrite(ui, repo, **opts):
         s.fncache._dirty = True
         s.fncache.write(tr)
     timer(d)
-    lock.release()
     tr.close()
+    lock.release()
     fm.end()
 
 @command('perffncacheencode', formatteropts)
@@ -580,9 +768,10 @@ def perfdiffwd(ui, repo, **opts):
 
 @command('perfrevlog', revlogopts + formatteropts +
          [('d', 'dist', 100, 'distance between the revisions'),
-          ('s', 'startrev', 0, 'revision to start reading at')],
+          ('s', 'startrev', 0, 'revision to start reading at'),
+          ('', 'reverse', False, 'read in reverse')],
          '-c|-m|FILE')
-def perfrevlog(ui, repo, file_=None, startrev=0, **opts):
+def perfrevlog(ui, repo, file_=None, startrev=0, reverse=False, **opts):
     """Benchmark reading a series of revisions from a revlog.
 
     By default, we read every ``-d/--dist`` revision from 0 to tip of
@@ -591,11 +780,20 @@ def perfrevlog(ui, repo, file_=None, startrev=0, **opts):
     The start revision can be defined via ``-s/--startrev``.
     """
     timer, fm = gettimer(ui, opts)
-    dist = opts['dist']
     _len = getlen(ui)
+
     def d():
         r = cmdutil.openrevlog(repo, 'perfrevlog', file_, opts)
-        for x in xrange(startrev, _len(r), dist):
+
+        startrev = 0
+        endrev = _len(r)
+        dist = opts['dist']
+
+        if reverse:
+            startrev, endrev = endrev, startrev
+            dist = -1 * dist
+
+        for x in xrange(startrev, endrev, dist):
             r.revision(r.node(x))
 
     timer(d)
@@ -772,10 +970,11 @@ def perfbranchmap(ui, repo, full=False, **opts):
         return d
     # add filter in smaller subset to bigger subset
     possiblefilters = set(repoview.filtertable)
+    subsettable = getbranchmapsubsettable()
     allfilters = []
     while possiblefilters:
         for name in possiblefilters:
-            subset = branchmap.subsettable.get(name)
+            subset = subsettable.get(name)
             if subset not in possiblefilters:
                 break
         else:
@@ -789,16 +988,17 @@ def perfbranchmap(ui, repo, full=False, **opts):
             repo.filtered(name).branchmap()
     # add unfiltered
     allfilters.append(None)
-    oldread = branchmap.read
-    oldwrite = branchmap.branchcache.write
+
+    branchcacheread = safeattrsetter(branchmap, 'read')
+    branchcachewrite = safeattrsetter(branchmap.branchcache, 'write')
+    branchcacheread.set(lambda repo: None)
+    branchcachewrite.set(lambda bc, repo: None)
     try:
-        branchmap.read = lambda repo: None
-        branchmap.write = lambda repo: None
         for name in allfilters:
             timer(getbranchmap(name), title=str(name))
     finally:
-        branchmap.read = oldread
-        branchmap.branchcache.write = oldwrite
+        branchcacheread.restore()
+        branchcachewrite.restore()
     fm.end()
 
 @command('perfloadmarkers')
@@ -807,7 +1007,8 @@ def perfloadmarkers(ui, repo):
 
     Result is the number of markers in the repo."""
     timer, fm = gettimer(ui)
-    timer(lambda: len(obsolete.obsstore(repo.svfs)))
+    svfs = getsvfs(repo)
+    timer(lambda: len(obsolete.obsstore(svfs)))
     fm.end()
 
 @command('perflrucachedict', formatteropts +

@@ -75,7 +75,7 @@ Try to continue without solving the conflict:
   $ hg rebase --continue
   already rebased 3:3163e20567cc "L1" as 3e046f2ecedb
   rebasing 4:46f0b057b5c0 "L2"
-  abort: unresolved merge conflicts (see "hg help resolve")
+  abort: unresolved merge conflicts (see 'hg help resolve')
   [255]
 
 Conclude rebase:
@@ -219,7 +219,7 @@ Check that the right ancestors is used while rebasing a merge (issue4041)
      summary:     added default.txt
   
   $ hg rebase -s9 -d2 --debug # use debug to really check merge base used
-  rebase onto 2 starting from e31216eec445
+  rebase onto 4bc80088dc6b starting from e31216eec445
   ignoring null merge rebase of 3
   ignoring null merge rebase of 4
   ignoring null merge rebase of 6
@@ -238,6 +238,8 @@ Check that the right ancestors is used while rebasing a merge (issue4041)
    merge against 9:e31216eec445
      detach base 8:8e4e2c1a07ae
     searching for copies back to rev 3
+    unmatched files in other (from topological common ancestor):
+     f2.txt
   resolving manifests
    branchmerge: True, force: True, partial: False
    ancestor: 8e4e2c1a07ae, local: 4bc80088dc6b+, remote: e31216eec445
@@ -255,6 +257,8 @@ Check that the right ancestors is used while rebasing a merge (issue4041)
    merge against 10:2f2496ddf49d
      detach base 9:e31216eec445
     searching for copies back to rev 3
+    unmatched files in other (from topological common ancestor):
+     f2.txt
   resolving manifests
    branchmerge: True, force: True, partial: False
    ancestor: e31216eec445, local: 19c888675e13+, remote: 2f2496ddf49d
@@ -299,12 +303,11 @@ Check that the right ancestors is used while rebasing a merge (issue4041)
   adding file changes
   adding f1.txt revisions
   added 2 changesets with 2 changes to 1 files
-  bundle2-input-part: total payload size 1713
+  bundle2-input-part: total payload size 1686
   bundle2-input-bundle: 0 parts total
   invalid branchheads cache (served): tip differs
   history modification detected - truncating revision branch cache to revision 9
   rebase completed
-  updating the branch cache
   truncating cache/rbc-revs-v1 to 72
 
 Test minimization of merge conflicts

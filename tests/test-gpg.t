@@ -7,8 +7,25 @@ Test the GPG extension
   > gpg=
   > 
   > [gpg]
-  > cmd=gpg --no-permission-warning --no-secmem-warning --no-auto-check-trustdb --homedir "$TESTDIR/gpg"
+  > cmd=gpg --no-permission-warning --no-secmem-warning --no-auto-check-trustdb
   > EOF
+  $ GNUPGHOME="$TESTTMP/gpg"; export GNUPGHOME
+  $ cp -R "$TESTDIR/gpg" "$GNUPGHOME"
+
+Start gpg-agent, which is required by GnuPG v2
+
+#if gpg21
+  $ gpg-connect-agent -q --subst /serverpid '/echo ${get serverpid}' /bye \
+  > >> $DAEMON_PIDS
+#endif
+
+and migrate secret keys
+
+#if gpg2
+  $ gpg --no-permission-warning --no-secmem-warning --list-secret-keys \
+  > > /dev/null 2>&1
+#endif
+
   $ hg init r
   $ cd r
   $ echo foo > foo
@@ -35,13 +52,5 @@ Test the GPG extension
   $ hg sigcheck 0
   e63c23eaa88a is signed by:
    hgtest
-
-verify that this test has not modified the trustdb.gpg file back in
-the main hg working dir
-  $ md5sum.py "$TESTDIR/gpg/trustdb.gpg"
-  f6b9c78c65fa9536e7512bb2ceb338ae  */gpg/trustdb.gpg (glob)
-
-don't leak any state to next test run
-  $ rm -f "$TESTDIR/gpg/random_seed"
 
   $ cd ..

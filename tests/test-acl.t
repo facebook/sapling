@@ -44,13 +44,6 @@
   > EOF
   > }
 
-  $ cat << EOF >> $HGRCPATH
-  > [experimental]
-  > # drop me once bundle2 is the default,
-  > # added to get test change early.
-  > bundle2-exp = True
-  > EOF
-
   $ hg init a
   $ cd a
   $ mkdir foo foo/Bar quux
@@ -119,11 +112,11 @@ Extension disabled for lack of a hook
   adding foo/file.txt revisions
   adding quux/file.py revisions
   added 3 changesets with 3 changes to 3 files
-  bundle2-input-part: total payload size 1606
+  updating the branch cache
+  bundle2-input-part: total payload size 1553
   bundle2-input-part: "pushkey" (params: 4 mandatory) supported
   pushing key for "phases:911600dab2ae7a9baff75958b84fe606851ce955"
   bundle2-input-bundle: 3 parts total
-  updating the branch cache
   bundle2-output-bundle: "HG20", 2 parts total
   bundle2-output-part: "reply:changegroup" (advisory) (params: 0 advisory) empty payload
   bundle2-output-part: "reply:pushkey" (params: 0 advisory) empty payload
@@ -184,11 +177,11 @@ Extension disabled for lack of acl.sources
   added 3 changesets with 3 changes to 3 files
   calling hook pretxnchangegroup.acl: hgext.acl.hook
   acl: changes have source "push" - skipping
-  bundle2-input-part: total payload size 1606
+  updating the branch cache
+  bundle2-input-part: total payload size 1553
   bundle2-input-part: "pushkey" (params: 4 mandatory) supported
   pushing key for "phases:911600dab2ae7a9baff75958b84fe606851ce955"
   bundle2-input-bundle: 3 parts total
-  updating the branch cache
   bundle2-output-bundle: "HG20", 2 parts total
   bundle2-output-part: "reply:changegroup" (advisory) (params: 0 advisory) empty payload
   bundle2-output-part: "reply:pushkey" (params: 0 advisory) empty payload
@@ -260,11 +253,11 @@ No [acl.allow]/[acl.deny]
   acl: path access granted: "f9cafe1212c8"
   acl: branch access granted: "911600dab2ae" on branch "default"
   acl: path access granted: "911600dab2ae"
-  bundle2-input-part: total payload size 1606
+  updating the branch cache
+  bundle2-input-part: total payload size 1553
   bundle2-input-part: "pushkey" (params: 4 mandatory) supported
   pushing key for "phases:911600dab2ae7a9baff75958b84fe606851ce955"
   bundle2-input-bundle: 3 parts total
-  updating the branch cache
   bundle2-output-bundle: "HG20", 2 parts total
   bundle2-output-part: "reply:changegroup" (advisory) (params: 0 advisory) empty payload
   bundle2-output-part: "reply:pushkey" (params: 0 advisory) empty payload
@@ -332,7 +325,7 @@ Empty [acl.allow]
   acl: acl.deny not enabled
   acl: branch access granted: "ef1ea85a6374" on branch "default"
   error: pretxnchangegroup.acl hook failed: acl: user "fred" not allowed on "foo/file.txt" (changeset "ef1ea85a6374")
-  bundle2-input-part: total payload size 1606
+  bundle2-input-part: total payload size 1553
   bundle2-input-bundle: 3 parts total
   transaction abort!
   rollback completed
@@ -401,7 +394,7 @@ fred is allowed inside foo/
   acl: path access granted: "f9cafe1212c8"
   acl: branch access granted: "911600dab2ae" on branch "default"
   error: pretxnchangegroup.acl hook failed: acl: user "fred" not allowed on "quux/file.py" (changeset "911600dab2ae")
-  bundle2-input-part: total payload size 1606
+  bundle2-input-part: total payload size 1553
   bundle2-input-bundle: 3 parts total
   transaction abort!
   rollback completed
@@ -467,7 +460,7 @@ Empty [acl.deny]
   acl: acl.deny enabled, 0 entries for user barney
   acl: branch access granted: "ef1ea85a6374" on branch "default"
   error: pretxnchangegroup.acl hook failed: acl: user "barney" not allowed on "foo/file.txt" (changeset "ef1ea85a6374")
-  bundle2-input-part: total payload size 1606
+  bundle2-input-part: total payload size 1553
   bundle2-input-bundle: 3 parts total
   transaction abort!
   rollback completed
@@ -538,7 +531,7 @@ fred is allowed inside foo/, but not foo/bar/ (case matters)
   acl: path access granted: "f9cafe1212c8"
   acl: branch access granted: "911600dab2ae" on branch "default"
   error: pretxnchangegroup.acl hook failed: acl: user "fred" not allowed on "quux/file.py" (changeset "911600dab2ae")
-  bundle2-input-part: total payload size 1606
+  bundle2-input-part: total payload size 1553
   bundle2-input-bundle: 3 parts total
   transaction abort!
   rollback completed
@@ -608,7 +601,7 @@ fred is allowed inside foo/, but not foo/Bar/
   acl: path access granted: "ef1ea85a6374"
   acl: branch access granted: "f9cafe1212c8" on branch "default"
   error: pretxnchangegroup.acl hook failed: acl: user "fred" denied on "foo/Bar/file.txt" (changeset "f9cafe1212c8")
-  bundle2-input-part: total payload size 1606
+  bundle2-input-part: total payload size 1553
   bundle2-input-bundle: 3 parts total
   transaction abort!
   rollback completed
@@ -675,7 +668,7 @@ fred is allowed inside foo/, but not foo/Bar/
   acl: acl.deny enabled, 0 entries for user barney
   acl: branch access granted: "ef1ea85a6374" on branch "default"
   error: pretxnchangegroup.acl hook failed: acl: user "barney" not allowed on "foo/file.txt" (changeset "ef1ea85a6374")
-  bundle2-input-part: total payload size 1606
+  bundle2-input-part: total payload size 1553
   bundle2-input-bundle: 3 parts total
   transaction abort!
   rollback completed
@@ -750,11 +743,11 @@ barney is allowed everywhere
   acl: path access granted: "f9cafe1212c8"
   acl: branch access granted: "911600dab2ae" on branch "default"
   acl: path access granted: "911600dab2ae"
-  bundle2-input-part: total payload size 1606
+  updating the branch cache
+  bundle2-input-part: total payload size 1553
   bundle2-input-part: "pushkey" (params: 4 mandatory) supported
   pushing key for "phases:911600dab2ae7a9baff75958b84fe606851ce955"
   bundle2-input-bundle: 3 parts total
-  updating the branch cache
   bundle2-output-bundle: "HG20", 2 parts total
   bundle2-output-part: "reply:changegroup" (advisory) (params: 0 advisory) empty payload
   bundle2-output-part: "reply:pushkey" (params: 0 advisory) empty payload
@@ -833,7 +826,7 @@ wilma can change files with a .txt extension
   acl: path access granted: "f9cafe1212c8"
   acl: branch access granted: "911600dab2ae" on branch "default"
   error: pretxnchangegroup.acl hook failed: acl: user "wilma" not allowed on "quux/file.py" (changeset "911600dab2ae")
-  bundle2-input-part: total payload size 1606
+  bundle2-input-part: total payload size 1553
   bundle2-input-bundle: 3 parts total
   transaction abort!
   rollback completed
@@ -902,7 +895,7 @@ file specified by acl.config does not exist
   calling hook pretxnchangegroup.acl: hgext.acl.hook
   acl: checking access for user "barney"
   error: pretxnchangegroup.acl hook raised an exception: [Errno 2] No such file or directory: '../acl.config'
-  bundle2-input-part: total payload size 1606
+  bundle2-input-part: total payload size 1553
   bundle2-input-bundle: 3 parts total
   transaction abort!
   rollback completed
@@ -984,7 +977,7 @@ betty is allowed inside foo/ by a acl.config file
   acl: path access granted: "f9cafe1212c8"
   acl: branch access granted: "911600dab2ae" on branch "default"
   error: pretxnchangegroup.acl hook failed: acl: user "betty" not allowed on "quux/file.py" (changeset "911600dab2ae")
-  bundle2-input-part: total payload size 1606
+  bundle2-input-part: total payload size 1553
   bundle2-input-bundle: 3 parts total
   transaction abort!
   rollback completed
@@ -1068,11 +1061,11 @@ acl.config can set only [acl.allow]/[acl.deny]
   acl: path access granted: "f9cafe1212c8"
   acl: branch access granted: "911600dab2ae" on branch "default"
   acl: path access granted: "911600dab2ae"
-  bundle2-input-part: total payload size 1606
+  updating the branch cache
+  bundle2-input-part: total payload size 1553
   bundle2-input-part: "pushkey" (params: 4 mandatory) supported
   pushing key for "phases:911600dab2ae7a9baff75958b84fe606851ce955"
   bundle2-input-bundle: 3 parts total
-  updating the branch cache
   bundle2-output-bundle: "HG20", 2 parts total
   bundle2-output-part: "reply:changegroup" (advisory) (params: 0 advisory) empty payload
   bundle2-output-part: "reply:pushkey" (params: 0 advisory) empty payload
@@ -1154,11 +1147,11 @@ fred is always allowed
   acl: path access granted: "f9cafe1212c8"
   acl: branch access granted: "911600dab2ae" on branch "default"
   acl: path access granted: "911600dab2ae"
-  bundle2-input-part: total payload size 1606
+  updating the branch cache
+  bundle2-input-part: total payload size 1553
   bundle2-input-part: "pushkey" (params: 4 mandatory) supported
   pushing key for "phases:911600dab2ae7a9baff75958b84fe606851ce955"
   bundle2-input-bundle: 3 parts total
-  updating the branch cache
   bundle2-output-bundle: "HG20", 2 parts total
   bundle2-output-part: "reply:changegroup" (advisory) (params: 0 advisory) empty payload
   bundle2-output-part: "reply:pushkey" (params: 0 advisory) empty payload
@@ -1234,7 +1227,7 @@ no one is allowed inside foo/Bar/
   acl: path access granted: "ef1ea85a6374"
   acl: branch access granted: "f9cafe1212c8" on branch "default"
   error: pretxnchangegroup.acl hook failed: acl: user "fred" denied on "foo/Bar/file.txt" (changeset "f9cafe1212c8")
-  bundle2-input-part: total payload size 1606
+  bundle2-input-part: total payload size 1553
   bundle2-input-bundle: 3 parts total
   transaction abort!
   rollback completed
@@ -1313,11 +1306,11 @@ OS-level groups
   acl: path access granted: "f9cafe1212c8"
   acl: branch access granted: "911600dab2ae" on branch "default"
   acl: path access granted: "911600dab2ae"
-  bundle2-input-part: total payload size 1606
+  updating the branch cache
+  bundle2-input-part: total payload size 1553
   bundle2-input-part: "pushkey" (params: 4 mandatory) supported
   pushing key for "phases:911600dab2ae7a9baff75958b84fe606851ce955"
   bundle2-input-bundle: 3 parts total
-  updating the branch cache
   bundle2-output-bundle: "HG20", 2 parts total
   bundle2-output-part: "reply:changegroup" (advisory) (params: 0 advisory) empty payload
   bundle2-output-part: "reply:pushkey" (params: 0 advisory) empty payload
@@ -1395,7 +1388,7 @@ OS-level groups
   acl: path access granted: "ef1ea85a6374"
   acl: branch access granted: "f9cafe1212c8" on branch "default"
   error: pretxnchangegroup.acl hook failed: acl: user "fred" denied on "foo/Bar/file.txt" (changeset "f9cafe1212c8")
-  bundle2-input-part: total payload size 1606
+  bundle2-input-part: total payload size 1553
   bundle2-input-bundle: 3 parts total
   transaction abort!
   rollback completed
@@ -1515,13 +1508,13 @@ No branch acls specified
   acl: path access granted: "911600dab2ae"
   acl: branch access granted: "e8fc755d4d82" on branch "foobar"
   acl: path access granted: "e8fc755d4d82"
-  bundle2-input-part: total payload size 2101
+  updating the branch cache
+  bundle2-input-part: total payload size 2068
   bundle2-input-part: "pushkey" (params: 4 mandatory) supported
   pushing key for "phases:911600dab2ae7a9baff75958b84fe606851ce955"
   bundle2-input-part: "pushkey" (params: 4 mandatory) supported
   pushing key for "phases:e8fc755d4d8217ee5b0c2bb41558c40d43b92c01"
   bundle2-input-bundle: 4 parts total
-  updating the branch cache
   bundle2-output-bundle: "HG20", 3 parts total
   bundle2-output-part: "reply:changegroup" (advisory) (params: 0 advisory) empty payload
   bundle2-output-part: "reply:pushkey" (params: 0 advisory) empty payload
@@ -1602,7 +1595,7 @@ Branch acl deny test
   acl: branch access granted: "911600dab2ae" on branch "default"
   acl: path access granted: "911600dab2ae"
   error: pretxnchangegroup.acl hook failed: acl: user "astro" denied on branch "foobar" (changeset "e8fc755d4d82")
-  bundle2-input-part: total payload size 2101
+  bundle2-input-part: total payload size 2068
   bundle2-input-bundle: 4 parts total
   transaction abort!
   rollback completed
@@ -1670,7 +1663,7 @@ Branch acl empty allow test
   acl: acl.allow not enabled
   acl: acl.deny not enabled
   error: pretxnchangegroup.acl hook failed: acl: user "astro" not allowed on branch "default" (changeset "ef1ea85a6374")
-  bundle2-input-part: total payload size 2101
+  bundle2-input-part: total payload size 2068
   bundle2-input-bundle: 4 parts total
   transaction abort!
   rollback completed
@@ -1740,7 +1733,7 @@ Branch acl allow other
   acl: acl.allow not enabled
   acl: acl.deny not enabled
   error: pretxnchangegroup.acl hook failed: acl: user "astro" not allowed on branch "default" (changeset "ef1ea85a6374")
-  bundle2-input-part: total payload size 2101
+  bundle2-input-part: total payload size 2068
   bundle2-input-bundle: 4 parts total
   transaction abort!
   rollback completed
@@ -1811,13 +1804,13 @@ Branch acl allow other
   acl: path access granted: "911600dab2ae"
   acl: branch access granted: "e8fc755d4d82" on branch "foobar"
   acl: path access granted: "e8fc755d4d82"
-  bundle2-input-part: total payload size 2101
+  updating the branch cache
+  bundle2-input-part: total payload size 2068
   bundle2-input-part: "pushkey" (params: 4 mandatory) supported
   pushing key for "phases:911600dab2ae7a9baff75958b84fe606851ce955"
   bundle2-input-part: "pushkey" (params: 4 mandatory) supported
   pushing key for "phases:e8fc755d4d8217ee5b0c2bb41558c40d43b92c01"
   bundle2-input-bundle: 4 parts total
-  updating the branch cache
   bundle2-output-bundle: "HG20", 3 parts total
   bundle2-output-part: "reply:changegroup" (advisory) (params: 0 advisory) empty payload
   bundle2-output-part: "reply:pushkey" (params: 0 advisory) empty payload
@@ -1904,13 +1897,13 @@ push foobar into the remote
   acl: path access granted: "911600dab2ae"
   acl: branch access granted: "e8fc755d4d82" on branch "foobar"
   acl: path access granted: "e8fc755d4d82"
-  bundle2-input-part: total payload size 2101
+  updating the branch cache
+  bundle2-input-part: total payload size 2068
   bundle2-input-part: "pushkey" (params: 4 mandatory) supported
   pushing key for "phases:911600dab2ae7a9baff75958b84fe606851ce955"
   bundle2-input-part: "pushkey" (params: 4 mandatory) supported
   pushing key for "phases:e8fc755d4d8217ee5b0c2bb41558c40d43b92c01"
   bundle2-input-bundle: 4 parts total
-  updating the branch cache
   bundle2-output-bundle: "HG20", 3 parts total
   bundle2-output-part: "reply:changegroup" (advisory) (params: 0 advisory) empty payload
   bundle2-output-part: "reply:pushkey" (params: 0 advisory) empty payload
@@ -1989,7 +1982,7 @@ Branch acl conflicting deny
   acl: acl.allow not enabled
   acl: acl.deny not enabled
   error: pretxnchangegroup.acl hook failed: acl: user "george" denied on branch "default" (changeset "ef1ea85a6374")
-  bundle2-input-part: total payload size 2101
+  bundle2-input-part: total payload size 2068
   bundle2-input-bundle: 4 parts total
   transaction abort!
   rollback completed
@@ -2065,13 +2058,13 @@ User 'astro' must not be denied
   acl: path access granted: "911600dab2ae"
   acl: branch access granted: "e8fc755d4d82" on branch "foobar"
   acl: path access granted: "e8fc755d4d82"
-  bundle2-input-part: total payload size 2101
+  updating the branch cache
+  bundle2-input-part: total payload size 2068
   bundle2-input-part: "pushkey" (params: 4 mandatory) supported
   pushing key for "phases:911600dab2ae7a9baff75958b84fe606851ce955"
   bundle2-input-part: "pushkey" (params: 4 mandatory) supported
   pushing key for "phases:e8fc755d4d8217ee5b0c2bb41558c40d43b92c01"
   bundle2-input-bundle: 4 parts total
-  updating the branch cache
   bundle2-output-bundle: "HG20", 3 parts total
   bundle2-output-part: "reply:changegroup" (advisory) (params: 0 advisory) empty payload
   bundle2-output-part: "reply:pushkey" (params: 0 advisory) empty payload
@@ -2144,7 +2137,7 @@ Non-astro users must be denied
   acl: acl.allow not enabled
   acl: acl.deny not enabled
   error: pretxnchangegroup.acl hook failed: acl: user "george" denied on branch "default" (changeset "ef1ea85a6374")
-  bundle2-input-part: total payload size 2101
+  bundle2-input-part: total payload size 2068
   bundle2-input-bundle: 4 parts total
   transaction abort!
   rollback completed
