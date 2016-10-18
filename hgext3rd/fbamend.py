@@ -594,7 +594,7 @@ def _findrestackbase(repo):
     # Move down current stack until we find a changeset with visible
     # precursors or successors, indicating that we may need to stabilize
     # some descendants of this changeset or its precursors.
-    stack = repo.revs('. %% public()')
+    stack = repo.revs('::. & draft()')
     stack.reverse()
     for rev in stack:
         # Is this the latest version of this changeset? If not, we need
