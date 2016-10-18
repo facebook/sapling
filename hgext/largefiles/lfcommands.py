@@ -510,18 +510,21 @@ def updatelfiles(ui, repo, filelist=None, printmessage=None,
                 lfdirstate.normal(lfile)
                 update1 = 1
 
-            # copy the state of largefile standin from the repository's
+            # copy the exec mode of largefile standin from the repository's
             # dirstate to its state in the lfdirstate.
             rellfile = lfile
             relstandin = lfutil.standin(lfile)
             if wvfs.exists(relstandin):
+                # exec is decided by the users permissions using mask 0o100
                 standinexec = wvfs.stat(relstandin).st_mode & 0o100
-                st = wvfs.stat(rellfile).st_mode
-                if standinexec != st & 0o100:
-                    st &= ~0o111
+                st = wvfs.stat(rellfile)
+                mode = st.st_mode
+                if standinexec != mode & 0o100:
+                    # first remove all X bits, then shift all R bits to X
+                    mode &= ~0o111
                     if standinexec:
-                        st |= (st >> 2) & 0o111 & ~util.umask
-                    wvfs.chmod(rellfile, st)
+                        mode |= (mode >> 2) & 0o111 & ~util.umask
+                    wvfs.chmod(rellfile, mode)
                     update1 = 1
 
             updated += update1
