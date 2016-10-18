@@ -19,7 +19,7 @@ def _annotate(orig, fctx, ui):
     diffopts = patch.difffeatureopts(ui, untrusted=True,
                                      section='annotate', whitespace=True)
     aopts = context.annotateopts(diffopts=diffopts)
-    master = ui.config('fastannotate', 'mainbranch', 'default')
+    master = ui.config('fastannotate', 'mainbranch') or 'default'
     with context.annotatecontext(fctx.repo(), fctx.path(), aopts) as ac:
         # fastannotate returns: [(nodeid, linenum, path)], [linecontent]
         annotated, contents = ac.annotate(fctx.rev(), master=master,

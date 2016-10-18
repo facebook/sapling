@@ -131,7 +131,7 @@ def fastannotate(ui, repo, *pats, **opts):
     showpath = opts.get('file', False)
 
     # find the head of the main (master) branch
-    master = ui.config('fastannotate', 'mainbranch', rev)
+    master = ui.config('fastannotate', 'mainbranch') or rev
 
     for path in _matchpaths(repo, rev, pats, opts, aopts):
         result = lines = existinglines = None
