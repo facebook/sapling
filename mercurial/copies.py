@@ -447,6 +447,7 @@ def mergecopies(repo, c1, c2, base):
                       % "\n   ".join(bothnew))
     bothdiverge = {}
     bothincompletediverge = {}
+    remainder = {}
     both1 = {'copy': {},
              'fullcopy': {},
              'incomplete': {},
@@ -463,13 +464,19 @@ def mergecopies(repo, c1, c2, base):
         _checkcopies(c1, f, m1, m2, base, tca, dirtyc1, limit, both1)
         _checkcopies(c2, f, m2, m1, base, tca, dirtyc2, limit, both2)
     if dirtyc1:
-        assert both2['incomplete'] == {}
+        # incomplete copies may only be found on the "dirty" side for bothnew
+        assert not both2['incomplete']
         remainder = _combinecopies({}, both1['incomplete'], copy, bothdiverge,
                                    bothincompletediverge)
-    else:
-        assert both1['incomplete'] == {}
+    elif dirtyc2:
+        assert not both1['incomplete']
         remainder = _combinecopies({}, both2['incomplete'], copy, bothdiverge,
                                    bothincompletediverge)
+    else:
+        # incomplete copies and divergences can't happen outside grafts
+        assert not both1['incomplete']
+        assert not both2['incomplete']
+        assert not bothincompletediverge
     for f in remainder:
         assert f not in bothdiverge
         ic = remainder[f]
