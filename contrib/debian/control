@@ -18,7 +18,7 @@ Depends:
  python-lz4
 Enhances: mercurial
 Breaks: mercurial (<< 3.5)
-Architecture: all
+Architecture: any
 Description: allows Mercurial to clone shallow copies of a repository and
  load files on demand.
  .
