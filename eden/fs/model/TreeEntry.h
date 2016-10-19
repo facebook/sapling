@@ -64,8 +64,19 @@ class TreeEntry {
     return fileType_;
   }
 
-  mode_t getOwnerPermissions() const {
+  uint8_t getOwnerPermissions() const {
     return ownerPermissions_;
+  }
+
+  mode_t getMode() const {
+    mode_t mode = static_cast<mode_t>(fileType_) << 9;
+    // We should always honor the explicit owner permissions.
+    mode |= ownerPermissions_ << 6;
+
+    // We propagate the 'r' and 'x' values for the owner to group and other.
+    mode |= (ownerPermissions_ & 0b101) << 3;
+    mode |= (ownerPermissions_ & 0b101);
+    return mode;
   }
 
  private:

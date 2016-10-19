@@ -207,24 +207,7 @@ TreeInode::Dir TreeInode::buildDirFromTree(const Tree* tree) {
     Entry entry;
 
     entry.hash = treeEntry.getHash();
-    switch (treeEntry.getFileType()) {
-      case FileType::DIRECTORY:
-        entry.mode = S_IFDIR;
-        break;
-      case FileType::REGULAR_FILE:
-        entry.mode = S_IFREG;
-        break;
-      case FileType::SYMLINK:
-        entry.mode = S_IFLNK;
-        break;
-      default:
-        LOG(FATAL) << "Impossible treeEntry FileType value "
-                   << int(treeEntry.getFileType()) << " for entry with name "
-                   << treeEntry.getName() << " in dir " << myname;
-    }
-    // Bit 1 is executable; expand that out to the typical executable or
-    // readable file mode.
-    entry.mode |= (treeEntry.getOwnerPermissions() & 1) ? 0744 : 0644;
+    entry.mode |= treeEntry.getMode();
 
     dir.entries.emplace(
         treeEntry.getName(), std::make_unique<Entry>(std::move(entry)));
