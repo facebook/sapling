@@ -23,8 +23,8 @@ from . import (
 )
 
 calcsize = struct.calcsize
-pack = struct.pack
-unpack = struct.unpack
+pack_into = struct.pack_into
+unpack_from = struct.unpack_from
 
 def _filename(repo):
     """name of a branchcache file for a given repo or repoview"""
@@ -406,8 +406,7 @@ class revbranchcache(object):
 
         # fast path: extract data from cache, use it if node is matching
         reponode = changelog.node(rev)[:_rbcnodelen]
-        cachenode, branchidx = unpack(
-            _rbcrecfmt, util.buffer(self._rbcrevs, rbcrevidx, _rbcrecsize))
+        cachenode, branchidx = unpack_from(_rbcrecfmt, self._rbcrevs, rbcrevidx)
         close = bool(branchidx & _rbccloseflag)
         if close:
             branchidx &= _rbcbranchidxmask
@@ -451,12 +450,11 @@ class revbranchcache(object):
     def _setcachedata(self, rev, node, branchidx):
         """Writes the node's branch data to the in-memory cache data."""
         rbcrevidx = rev * _rbcrecsize
-        rec = bytearray(pack(_rbcrecfmt, node, branchidx))
         if len(self._rbcrevs) < rbcrevidx + _rbcrecsize:
             self._rbcrevs.extend('\0' *
                                  (len(self._repo.changelog) * _rbcrecsize -
                                   len(self._rbcrevs)))
-        self._rbcrevs[rbcrevidx:rbcrevidx + _rbcrecsize] = rec
+        pack_into(_rbcrecfmt, self._rbcrevs, rbcrevidx, node, branchidx)
         self._rbcrevslen = min(self._rbcrevslen, rev)
 
         tr = self._repo.currenttransaction()
