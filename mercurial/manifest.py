@@ -1274,7 +1274,7 @@ class manifestlog(object):
                 return cachemf
 
         if self._treeinmem:
-            m = treemanifestctx(self._revlog, '', node)
+            m = treemanifestctx(self._repo, '', node)
         else:
             m = manifestctx(self._repo, node)
         if node != revlog.nullid:
@@ -1344,9 +1344,8 @@ class manifestctx(object):
         return manifestdict(d)
 
 class treemanifestctx(object):
-    def __init__(self, revlog, dir, node):
-        revlog = revlog.dirlog(dir)
-        self._revlog = revlog
+    def __init__(self, repo, dir, node):
+        self._repo = repo
         self._dir = dir
         self._data = None
 
@@ -1359,23 +1358,27 @@ class treemanifestctx(object):
         #rev = revlog.rev(node)
         #self.linkrev = revlog.linkrev(rev)
 
+    def _revlog(self):
+        return self._repo.manifestlog._revlog.dirlog(self._dir)
+
     def read(self):
         if not self._data:
+            rl = self._revlog()
             if self._node == revlog.nullid:
                 self._data = treemanifest()
-            elif self._revlog._treeondisk:
+            elif rl._treeondisk:
                 m = treemanifest(dir=self._dir)
                 def gettext():
-                    return self._revlog.revision(self._node)
+                    return rl.revision(self._node)
                 def readsubtree(dir, subm):
-                    return treemanifestctx(self._revlog, dir, subm).read()
+                    return treemanifestctx(self._repo, dir, subm).read()
                 m.read(gettext, readsubtree)
                 m.setnode(self._node)
                 self._data = m
             else:
-                text = self._revlog.revision(self._node)
+                text = revlog.revision(self._node)
                 arraytext = array.array('c', text)
-                self._revlog.fulltextcache[self._node] = arraytext
+                rl.fulltextcache[self._node] = arraytext
                 self._data = treemanifest(dir=self._dir, text=text)
 
         return self._data
@@ -1385,9 +1388,9 @@ class treemanifestctx(object):
 
     def readdelta(self):
         # Need to perform a slow delta
-        revlog = self._revlog
+        revlog = self._revlog()
         r0 = revlog.deltaparent(revlog.rev(self._node))
-        m0 = treemanifestctx(revlog, self._dir, revlog.node(r0)).read()
+        m0 = treemanifestctx(self._repo, self._dir, revlog.node(r0)).read()
         m1 = self.read()
         md = treemanifest(dir=self._dir)
         for f, ((n0, fl0), (n1, fl1)) in m0.diff(m1).iteritems():
@@ -1398,7 +1401,7 @@ class treemanifestctx(object):
         return md
 
     def readfast(self):
-        rl = self._revlog
+        rl = self._revlog()
         r = rl.rev(self._node)
         deltaparent = rl.deltaparent(r)
         if deltaparent != revlog.nullrev and deltaparent in rl.parentrevs(r):
