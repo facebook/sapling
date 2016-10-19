@@ -9,11 +9,11 @@ from __future__ import absolute_import
 
 from mercurial import (
     extensions,
+    hgweb,
     patch,
 )
-from mercurial.hgweb import webutil
 
-from fastannotate import context
+from . import context
 
 def _annotate(orig, fctx, ui):
     diffopts = patch.difffeatureopts(ui, untrusted=True,
@@ -37,4 +37,4 @@ def _annotate(orig, fctx, ui):
     return results
 
 def replacehgwebannotate():
-    extensions.wrapfunction(webutil, 'annotate', _annotate)
+    extensions.wrapfunction(hgweb.webutil, 'annotate', _annotate)

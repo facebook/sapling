@@ -7,15 +7,10 @@
 
 from __future__ import absolute_import
 
-from collections import defaultdict
+import collections
 import contextlib
 import hashlib
 import os
-
-from fastannotate import (
-    revmap as revmapmod,
-    error as faerror,
-)
 
 from mercurial import (
     context as hgcontext,
@@ -27,6 +22,11 @@ from mercurial import (
     util,
 )
 from mercurial.i18n import _
+
+from . import (
+    error as faerror,
+    revmap as revmapmod,
+)
 
 import linelog as linelogmod
 
@@ -445,7 +445,7 @@ class _annotatecontext(object):
         revs = [revmap.hsh2rev(l[0]) for l in annotateresult]
         result = [None] * len(annotateresult)
         # {(rev, linenum): [lineindex]}
-        key2idxs = defaultdict(list)
+        key2idxs = collections.defaultdict(list)
         for i in xrange(len(result)):
             key2idxs[(revs[i], annotateresult[i][1])].append(i)
         while key2idxs:

@@ -42,12 +42,13 @@ be faster than the vanilla 'annotate' if the cache is present.
 
 from __future__ import absolute_import
 
-from fastannotate import commands
-
+from mercurial.i18n import _
 from mercurial import (
     cmdutil,
     error as hgerror,
 )
+
+from . import commands
 
 testedwith = 'internal'
 
@@ -68,5 +69,5 @@ def uisetup(ui):
                                 % name)
     if ui.configbool('fastannotate', 'hgweb'):
         # local import to avoid overhead of loading hgweb for non-hgweb usages
-        from fastannotate import hgwebsupport
+        from . import hgwebsupport
         hgwebsupport.replacehgwebannotate()

@@ -222,11 +222,9 @@ run pyflakes on all tracked files ending in .py or without a file ending
   remotefilelog/shallowbundle.py:321: local variable 'copyfl' is assigned to but never used
   tests/perftest.py:232: local variable 'fakestore' is assigned to but never used
   tests/test-absorb-filefixupstate.py:58: local variable 'result' is assigned to but never used
-  tests/test-fastannotate-revmap.py:159: local variable 'flag' is assigned to but never used
   tests/test-remotefilelog-ctreemanifest.py:51: local variable 'a' is assigned to but never used
   tests/test-remotefilelog-datapack.py:264: local variable 'result' is assigned to but never used
   fastmanifest/implementation.py:18: 'from constants import *' used; unable to detect undefined names
-  fastannotate/__init__.py:67: undefined name '_'
   hgext3rd/fbconduit.py:187: undefined name 'false'
   hgext3rd/gitlookup.py:130: undefined name 'ui'
   hgext3rd/grepdiff.py:36: undefined name 'repo'

@@ -9,12 +9,7 @@ from __future__ import absolute_import
 
 import os
 
-from fastannotate import (
-    context as facontext,
-    error as faerror,
-    formatter as faformatter,
-)
-
+from mercurial.i18n import _
 from mercurial import (
     commands,
     error,
@@ -23,7 +18,11 @@ from mercurial import (
     scmutil,
 )
 
-from mercurial.i18n import _
+from . import (
+    context as facontext,
+    error as faerror,
+    formatter as faformatter,
+)
 
 def _matchpaths(repo, rev, pats, opts, aopts):
     """generate paths matching given patterns"""

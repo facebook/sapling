@@ -16,18 +16,7 @@ modules, or change the whitelist (allowsymbolimports).
   $ cd $TESTDIR/..
   $ hg locate 'set:**.py or grep(r"^#!.*?python")' | sed 's-\\-/-g' | $PYTHON "$import_checker" - \
   > | egrep -v 'symbol import .* (mercurial|hgext)$'
-  fastannotate/__init__.py:45: import should be relative: fastannotate
-  fastannotate/__init__.py:71: import should be relative: fastannotate
-  fastannotate/commands.py:12: import should be relative: fastannotate
-  fastannotate/commands.py:26: symbol import follows non-symbol import: mercurial.i18n
-  fastannotate/context.py:10: relative import of stdlib module
-  fastannotate/context.py:10: direct symbol import defaultdict from collections
-  fastannotate/context.py:15: import should be relative: fastannotate
-  fastannotate/context.py:15: imports from fastannotate not lexically sorted: error < revmap
-  fastannotate/context.py:29: symbol import follows non-symbol import: mercurial.i18n
   fastannotate/context.py:31: imports not lexically sorted: linelog < os
-  fastannotate/hgwebsupport.py:14: direct symbol import webutil from mercurial.hgweb
-  fastannotate/hgwebsupport.py:16: import should be relative: fastannotate
   hgext3rd/absorb.py:30: relative import of stdlib module
   hgext3rd/absorb.py:30: direct symbol import defaultdict from collections
   hgext3rd/smartlog.py:26: relative import of stdlib module
@@ -51,6 +40,5 @@ modules, or change the whitelist (allowsymbolimports).
   remotefilelog/shallowrepo.py:12: mixed imports
      stdlib:    os
      relative:  fileserverclient, remotefilectx, remotefilelog, shallowbundle
-  tests/test-fastannotate-revmap.py:3: multiple imported names: os, sys, tempfile
   Import cycle: fastmanifest.cachemanager -> fastmanifest.implementation -> fastmanifest.cachemanager
   Import cycle: remotefilelog.fileserverclient -> remotefilelog.shallowrepo -> remotefilelog.fileserverclient
