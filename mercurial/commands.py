@@ -68,6 +68,7 @@ from . import (
     setdiscovery,
     simplemerge,
     sshserver,
+    sslutil,
     streamclone,
     templatekw,
     templater,
@@ -2702,6 +2703,25 @@ def debuginstall(ui, **opts):
              ("%s.%s.%s" % sys.version_info[:3]))
     fm.write('pythonlib', _("checking Python lib (%s)...\n"),
              os.path.dirname(os.__file__))
+
+    security = set(sslutil.supportedprotocols)
+    if sslutil.hassni:
+        security.add('sni')
+
+    fm.write('pythonsecurity', _("checking Python security support (%s)\n"),
+             fm.formatlist(sorted(security), name='protocol',
+                           fmt='%s', sep=','))
+
+    # These are warnings, not errors. So don't increment problem count. This
+    # may change in the future.
+    if 'tls1.2' not in security:
+        fm.plain(_('  TLS 1.2 not supported by Python install; '
+                   'network connections lack modern security\n'))
+    if 'sni' not in security:
+        fm.plain(_('  SNI not supported by Python install; may have '
+                   'connectivity issues with some servers\n'))
+
+    # TODO print CA cert info
 
     # hg version
     hgver = util.version()
