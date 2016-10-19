@@ -690,14 +690,15 @@ def _defaultcacerts(ui):
     We don't print a message when the Python is able to load default
     CA certs because this scenario is detected at socket connect time.
     """
-    # The "certifi" Python package provides certificates. If it is installed,
-    # assume the user intends it to be used and use it.
+    # The "certifi" Python package provides certificates. If it is installed
+    # and usable, assume the user intends it to be used and use it.
     try:
         import certifi
         certs = certifi.where()
-        ui.debug('using ca certificates from certifi\n')
-        return certs
-    except ImportError:
+        if os.path.exists(certs):
+            ui.debug('using ca certificates from certifi\n')
+            return certs
+    except (ImportError, AttributeError):
         pass
 
     # On Windows, only the modern ssl module is capable of loading the system
