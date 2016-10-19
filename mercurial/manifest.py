@@ -1254,13 +1254,12 @@ class manifestlog(object):
             usetreemanifest = opts.get('treemanifest', usetreemanifest)
         self._treeinmem = usetreemanifest
 
+        self._oldmanifest = repo._constructmanifest()
+        self._revlog = self._oldmanifest
+
         # We'll separate this into it's own cache once oldmanifest is no longer
         # used
-        self._mancache = repo.manifest._mancache
-
-    @property
-    def _revlog(self):
-        return self._repo.manifest
+        self._mancache = self._oldmanifest._mancache
 
     def __getitem__(self, node):
         """Retrieves the manifest instance for the given node. Throws a KeyError

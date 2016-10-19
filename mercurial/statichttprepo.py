@@ -155,7 +155,7 @@ class statichttprepository(localrepo.localrepository):
         self._filecache = {}
         self.requirements = requirements
 
-        self.manifest = manifest.manifest(self.svfs)
+        self.manifestlog = manifest.manifestlog(self.svfs, self)
         self.changelog = changelog.changelog(self.svfs)
         self._tags = None
         self.nodetagscache = None

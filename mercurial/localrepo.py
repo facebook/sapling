@@ -504,9 +504,9 @@ class localrepository(object):
                 c.readpending('00changelog.i.a')
         return c
 
-    @storecache('00manifest.i')
+    @property
     def manifest(self):
-        return self._constructmanifest()
+        return self.manifestlog._oldmanifest
 
     def _constructmanifest(self):
         # This is a temporary function while we migrate from manifest to
@@ -514,7 +514,7 @@ class localrepository(object):
         # manifest creation.
         return manifest.manifest(self.svfs)
 
-    @property
+    @storecache('00manifest.i')
     def manifestlog(self):
         return manifest.manifestlog(self.svfs, self)
 
