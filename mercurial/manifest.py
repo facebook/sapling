@@ -1276,7 +1276,7 @@ class manifestlog(object):
         if self._treeinmem:
             m = treemanifestctx(self._revlog, '', node)
         else:
-            m = manifestctx(self._revlog, node)
+            m = manifestctx(self._repo, node)
         if node != revlog.nullid:
             self._mancache[node] = m
         return m
@@ -1288,8 +1288,8 @@ class manifestctx(object):
     """A class representing a single revision of a manifest, including its
     contents, its parent revs, and its linkrev.
     """
-    def __init__(self, revlog, node):
-        self._revlog = revlog
+    def __init__(self, repo, node):
+        self._repo = repo
         self._data = None
 
         self._node = node
@@ -1309,14 +1309,15 @@ class manifestctx(object):
             if self._node == revlog.nullid:
                 self._data = manifestdict()
             else:
-                text = self._revlog.revision(self._node)
+                rl = self._repo.manifestlog._revlog
+                text = rl.revision(self._node)
                 arraytext = array.array('c', text)
-                self._revlog._fulltextcache[self._node] = arraytext
+                rl._fulltextcache[self._node] = arraytext
                 self._data = manifestdict(text)
         return self._data
 
     def readfast(self):
-        rl = self._revlog
+        rl = self._repo.manifestlog._revlog
         r = rl.rev(self._node)
         deltaparent = rl.deltaparent(r)
         if deltaparent != revlog.nullrev and deltaparent in rl.parentrevs(r):
@@ -1324,11 +1325,11 @@ class manifestctx(object):
         return self.read()
 
     def readdelta(self):
-        revlog = self._revlog
+        revlog = self._repo.manifestlog._revlog
         if revlog._usemanifestv2:
             # Need to perform a slow delta
             r0 = revlog.deltaparent(revlog.rev(self._node))
-            m0 = manifestctx(revlog, revlog.node(r0)).read()
+            m0 = manifestctx(self._repo, revlog.node(r0)).read()
             m1 = self.read()
             md = manifestdict()
             for f, ((n0, fl0), (n1, fl1)) in m0.diff(m1).iteritems():
