@@ -343,8 +343,7 @@ class bundlerepository(localrepo.localrepository):
         self.manstart = self.bundle.tell()
         return c
 
-    @localrepo.unfilteredpropertycache
-    def manifest(self):
+    def _constructmanifest(self):
         self.bundle.seek(self.manstart)
         # consume the header if it exists
         self.bundle.manifestheader()

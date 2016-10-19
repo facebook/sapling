@@ -208,8 +208,7 @@ class unionrepository(localrepo.localrepository):
         node = self.repo2.changelog.node(rev2)
         return self.changelog.rev(node)
 
-    @localrepo.unfilteredpropertycache
-    def manifest(self):
+    def _constructmanifest(self):
         return unionmanifest(self.svfs, self.repo2.svfs,
                              self.unfiltered()._clrev)
 
