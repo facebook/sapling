@@ -48,25 +48,17 @@ from . import (
     pycompat,
 )
 
-for attr in (
-    'empty',
-    'httplib',
-    'httpserver',
-    'pickle',
-    'queue',
-    'urlerr',
-    'urlparse',
-    # we do import urlreq, but we do it outside the loop
-    #'urlreq',
-    'stringio',
-    'socketserver',
-    'xmlrpclib',
-):
-    a = pycompat.sysstr(attr)
-    globals()[a] = getattr(pycompat, a)
-
-# This line is to make pyflakes happy:
+empty = pycompat.empty
+httplib = pycompat.httplib
+httpserver = pycompat.httpserver
+pickle = pycompat.pickle
+queue = pycompat.queue
+socketserver = pycompat.socketserver
+stringio = pycompat.stringio
+urlerr = pycompat.urlerr
+urlparse = pycompat.urlparse
 urlreq = pycompat.urlreq
+xmlrpclib = pycompat.xmlrpclib
 
 if os.name == 'nt':
     from . import windows as platform
