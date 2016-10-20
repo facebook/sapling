@@ -207,7 +207,7 @@ TreeInode::Dir TreeInode::buildDirFromTree(const Tree* tree) {
     Entry entry;
 
     entry.hash = treeEntry.getHash();
-    entry.mode |= treeEntry.getMode();
+    entry.mode = treeEntry.getMode();
 
     dir.entries.emplace(
         treeEntry.getName(), std::make_unique<Entry>(std::move(entry)));
