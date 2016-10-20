@@ -44,6 +44,12 @@ if ispy3:
     ospathsep = os.pathsep.encode('ascii')
     ossep = os.sep.encode('ascii')
 
+    # TODO: .buffer might not exist if std streams were replaced; we'll need
+    # a silly wrapper to make a bytes stream backed by a unicode one.
+    stdin = sys.stdin.buffer
+    stdout = sys.stdout.buffer
+    stderr = sys.stderr.buffer
+
     # Since Python 3 converts argv to wchar_t type by Py_DecodeLocale() on Unix,
     # we can use os.fsencode() to get back bytes argv.
     #
@@ -100,6 +106,9 @@ else:
     osname = os.name
     ospathsep = os.pathsep
     ossep = os.sep
+    stdin = sys.stdin
+    stdout = sys.stdout
+    stderr = sys.stderr
     sysargv = sys.argv
 
 stringio = io.StringIO

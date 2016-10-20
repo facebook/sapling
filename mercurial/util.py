@@ -54,6 +54,9 @@ httpserver = pycompat.httpserver
 pickle = pycompat.pickle
 queue = pycompat.queue
 socketserver = pycompat.socketserver
+stderr = pycompat.stderr
+stdin = pycompat.stdin
+stdout = pycompat.stdout
 stringio = pycompat.stringio
 urlerr = pycompat.urlerr
 urlparse = pycompat.urlparse
@@ -62,6 +65,7 @@ xmlrpclib = pycompat.xmlrpclib
 
 if os.name == 'nt':
     from . import windows as platform
+    stdout = platform.winstdout(pycompat.stdout)
 else:
     from . import posix as platform
 
