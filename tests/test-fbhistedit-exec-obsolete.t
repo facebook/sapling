@@ -235,3 +235,31 @@ amend should just work fine
   |
   o  cb9a9f314b8b a a
   
+amend should just work fine when sqldirstate is loaded but disabled
+  $ echo "[extensions]" >> .hg/hgrc
+  $ echo "sqldirstate=$extpath/sqldirstate" >> .hg/hgrc
+  $ echo "[sqldirstate]" >> .hg/hgrc
+  $ echo "enabled=False" >> .hg/hgrc
+
+  $ hg histedit 177f92b77385 --commands - 2>&1 << EOF
+  > pick 177f92b77385 c
+  > pick 055a42cdd887 d
+  > pick 8a564dc5ed88 e
+  > exec echo "NEW2" > NEW2 && hg add NEW2 && hg commit --amend
+  > pick 3cc63bf64c8d f
+  > EOF
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+
+  $ hg log --template '{node|short} {files} {desc}' --graph
+  @  f79e219dbfd3 f f
+  |
+  o  dc941479f5ce NEW NEW2 e e
+  |
+  o  055a42cdd887 d d
+  |
+  o  177f92b77385 c c
+  |
+  o  d2ae7f538514 b b
+  |
+  o  cb9a9f314b8b a a
+  
