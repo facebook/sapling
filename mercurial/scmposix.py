@@ -41,11 +41,11 @@ def userrcpath():
     else:
         return [os.path.expanduser('~/.hgrc')]
 
-def termwidth():
+def termwidth(ui):
     try:
         import array
         import termios
-        for dev in (sys.stderr, sys.stdout, sys.stdin):
+        for dev in (ui.ferr, ui.fout, ui.fin):
             try:
                 try:
                     fd = dev.fileno()

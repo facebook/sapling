@@ -53,5 +53,5 @@ def userrcpath():
         path.append(os.path.join(userprofile, '.hgrc'))
     return path
 
-def termwidth():
+def termwidth(ui):
     return win32.termwidth()

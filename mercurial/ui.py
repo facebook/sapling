@@ -822,7 +822,7 @@ class ui(object):
                 return int(encoding.environ['COLUMNS'])
             except ValueError:
                 pass
-        return scmutil.termwidth()
+        return scmutil.termwidth(self)
 
     def formatted(self):
         '''should formatted output be used?
