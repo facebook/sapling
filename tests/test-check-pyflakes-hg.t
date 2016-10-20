@@ -63,7 +63,6 @@ run pyflakes on all tracked files ending in .py or without a file ending
   hgext3rd/inhibitwarn.py:15: 'localrepo' imported but unused
   hgext3rd/logginghelper.py:17: '_' imported but unused
   hgext3rd/mergedriver.py:15: 'util' imported but unused
-  hgext3rd/patchpython.py:72: 'signal' imported but unused
   hgext3rd/perftweaks.py:9: 'util' imported but unused
   hgext3rd/perftweaks.py:10: 'wrapcommand' imported but unused
   hgext3rd/perftweaks.py:11: '_' imported but unused
@@ -179,7 +178,6 @@ run pyflakes on all tracked files ending in .py or without a file ending
   remotefilelog/shallowrepo.py:12: 'shallowbundle' imported but unused
   sqldirstate/__init__.py:10: 'DBFILE' imported but unused
   tests/perftest.py:10: 'pdb' imported but unused
-  tests/test-patchpython.py:15: 'patchpython' imported but unused
   tests/test-remotefilelog-datapack.py:1: 'binascii' imported but unused
   tests/test-remotefilelog-datapack.py:3: 'itertools' imported but unused
   tests/test-remotefilelog-datapack.py:13: 'datapackstore' imported but unused
@@ -233,9 +231,6 @@ run pyflakes on all tracked files ending in .py or without a file ending
   hgext3rd/gitlookup.py:130: undefined name 'ui'
   hgext3rd/grepdiff.py:36: undefined name 'repo'
   hgext3rd/mergedriver.py:156: undefined name 'origcls'
-  hgext3rd/patchpython.py:183: undefined name 'errno'
-  hgext3rd/patchpython.py:186: undefined name 'errno'
-  hgext3rd/patchpython.py:197: undefined name 'errno'
   hgext3rd/statprofext.py:28: undefined name '_'
   hgext3rd/statprofext.py:28: undefined name 'error'
   hgext3rd/statprofext.py:35: undefined name '_'

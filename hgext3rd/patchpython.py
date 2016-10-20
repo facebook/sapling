@@ -67,9 +67,9 @@ This extension patches some buggy python libraries.
 It does not provide new commands or new features.
 """
 
+import errno
 import os
 import select
-import signal
 import sys
 
 from mercurial import util

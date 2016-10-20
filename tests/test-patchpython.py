@@ -14,6 +14,8 @@ except ImportError:
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../hgext3rd'))
 import patchpython
 
+assert patchpython # pass pyflakes "import but unused" check
+
 def testnozombies():
     class reportpidhandler(SocketServer.StreamRequestHandler):
         def handle(self):
