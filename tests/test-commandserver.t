@@ -236,8 +236,6 @@ check that local configs for the cached repo aren't inherited when -R is used:
   ...                         'id'],
   ...                input=stringio('some input'))
   *** runcommand --config hooks.pre-identify=python:hook.hook id
-  hook talking
-  now try to read something: 'some input'
   eff892de26ec tip
 
   $ rm hook.py*

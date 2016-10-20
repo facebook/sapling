@@ -90,12 +90,6 @@ def _pythonhook(ui, repo, name, hname, funcname, args, throw):
     starttime = time.time()
 
     try:
-        # redirect IO descriptors to the ui descriptors so hooks
-        # that write directly to these don't mess up the command
-        # protocol when running through the command server
-        old = sys.stdout, sys.stderr, sys.stdin
-        sys.stdout, sys.stderr, sys.stdin = ui.fout, ui.ferr, ui.fin
-
         r = obj(ui=ui, repo=repo, hooktype=name, **args)
     except Exception as exc:
         if isinstance(exc, error.Abort):
@@ -111,7 +105,6 @@ def _pythonhook(ui, repo, name, hname, funcname, args, throw):
         ui.traceback()
         return True, True
     finally:
-        sys.stdout, sys.stderr, sys.stdin = old
         duration = time.time() - starttime
         ui.log('pythonhook', 'pythonhook-%s: %s finished in %0.2f seconds\n',
                name, funcname, duration)
