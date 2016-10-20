@@ -9,7 +9,6 @@ from __future__ import absolute_import, print_function
 
 import contextlib
 import os
-import sys
 import time
 
 from .i18n import _
@@ -136,7 +135,7 @@ def profile(ui):
         path = ui.expandpath(output)
         fp = open(path, 'wb')
     else:
-        fp = sys.stderr
+        fp = ui.ferr
 
     try:
         if profiler == 'ls':
