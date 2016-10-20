@@ -19,7 +19,6 @@
 from __future__ import absolute_import
 
 import os
-import sys
 
 from .i18n import _
 from . import (
@@ -441,7 +440,7 @@ def simplemerge(ui, local, base, other, **opts):
         opener = scmutil.opener(os.path.dirname(local))
         out = opener(os.path.basename(local), "w", atomictemp=True)
     else:
-        out = sys.stdout
+        out = ui.fout
 
     m3 = Merge3Text(basetext, localtext, othertext)
     extrakwargs = {
