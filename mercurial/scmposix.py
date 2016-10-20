@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 
+import array
 import errno
 import fcntl
 import os
@@ -43,8 +44,11 @@ def userrcpath():
 
 def termwidth(ui):
     try:
-        import array
         import termios
+        TIOCGWINSZ = termios.TIOCGWINSZ  # unavailable on IRIX (issue3449)
+    except (AttributeError, ImportError):
+        return 80
+    if True:
         for dev in (ui.ferr, ui.fout, ui.fin):
             try:
                 try:
@@ -53,13 +57,11 @@ def termwidth(ui):
                     continue
                 if not os.isatty(fd):
                     continue
-                try:
-                    arri = fcntl.ioctl(fd, termios.TIOCGWINSZ, '\0' * 8)
+                if True:
+                    arri = fcntl.ioctl(fd, TIOCGWINSZ, '\0' * 8)
                     width = array.array('h', arri)[1]
                     if width > 0:
                         return width
-                except AttributeError:
-                    pass
             except ValueError:
                 pass
             except IOError as e:
@@ -67,6 +69,4 @@ def termwidth(ui):
                     pass
                 else:
                     raise
-    except ImportError:
-        pass
     return 80
