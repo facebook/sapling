@@ -171,7 +171,7 @@ class winstdout(object):
             self.close()
             raise IOError(errno.EPIPE, 'Broken pipe')
 
-sys.__stdout__ = sys.stdout = winstdout(sys.stdout)
+sys.stdout = winstdout(sys.stdout)
 
 def _is_win_9x():
     '''return true if run on windows 95, 98 or me.'''
