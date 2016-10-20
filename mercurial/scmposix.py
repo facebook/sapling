@@ -48,25 +48,24 @@ def termwidth(ui):
         TIOCGWINSZ = termios.TIOCGWINSZ  # unavailable on IRIX (issue3449)
     except (AttributeError, ImportError):
         return 80
-    if True:
-        for dev in (ui.ferr, ui.fout, ui.fin):
+
+    for dev in (ui.ferr, ui.fout, ui.fin):
+        try:
             try:
-                try:
-                    fd = dev.fileno()
-                except AttributeError:
-                    continue
-                if not os.isatty(fd):
-                    continue
-                if True:
-                    arri = fcntl.ioctl(fd, TIOCGWINSZ, '\0' * 8)
-                    width = array.array('h', arri)[1]
-                    if width > 0:
-                        return width
-            except ValueError:
+                fd = dev.fileno()
+            except AttributeError:
+                continue
+            if not os.isatty(fd):
+                continue
+            arri = fcntl.ioctl(fd, TIOCGWINSZ, '\0' * 8)
+            width = array.array('h', arri)[1]
+            if width > 0:
+                return width
+        except ValueError:
+            pass
+        except IOError as e:
+            if e[0] == errno.EINVAL:
                 pass
-            except IOError as e:
-                if e[0] == errno.EINVAL:
-                    pass
-                else:
-                    raise
+            else:
+                raise
     return 80
