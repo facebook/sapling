@@ -888,8 +888,8 @@ def service(opts, parentfn=None, initfn=None, runfn=None, logfile=None,
                 raise error.Abort(_('invalid value for --daemon-postexec: %s')
                                   % inst)
         util.hidewindow()
-        sys.stdout.flush()
-        sys.stderr.flush()
+        util.stdout.flush()
+        util.stderr.flush()
 
         nullfd = os.open(os.devnull, os.O_RDWR)
         logfilefd = nullfd

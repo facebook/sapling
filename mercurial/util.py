@@ -986,7 +986,7 @@ def system(cmd, environ=None, cwd=None, onerr=None, errprefix=None, out=None):
     if environ is None:
         environ = {}
     try:
-        sys.stdout.flush()
+        stdout.flush()
     except Exception:
         pass
     def py2shell(val):
@@ -2759,9 +2759,9 @@ def timed(func):
         finally:
             elapsed = time.time() - start
             _timenesting[0] -= indent
-            sys.stderr.write('%s%s: %s\n' %
-                             (' ' * _timenesting[0], func.__name__,
-                              timecount(elapsed)))
+            stderr.write('%s%s: %s\n' %
+                         (' ' * _timenesting[0], func.__name__,
+                          timecount(elapsed)))
     return wrapper
 
 _sizeunits = (('m', 2**20), ('k', 2**10), ('g', 2**30),
@@ -2826,7 +2826,7 @@ def getstackframes(skip=0, line=' %-*s in %s\n', fileline='%s:%s'):
             else:
                 yield line % (fnmax, fnln, func)
 
-def debugstacktrace(msg='stacktrace', skip=0, f=sys.stderr, otherf=sys.stdout):
+def debugstacktrace(msg='stacktrace', skip=0, f=stderr, otherf=stdout):
     '''Writes a message to f (stderr) with a nicely formatted stacktrace.
     Skips the 'skip' last entries. By default it will flush stdout first.
     It can be used everywhere and intentionally does not require an ui object.

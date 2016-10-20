@@ -209,11 +209,11 @@ def runhooks(ui, repo, name, hooks, throw=False, **args):
         for hname, cmd in hooks:
             if oldstdout == -1 and _redirect:
                 try:
-                    stdoutno = sys.stdout.fileno()
-                    stderrno = sys.stderr.fileno()
+                    stdoutno = util.stdout.fileno()
+                    stderrno = util.stderr.fileno()
                     # temporarily redirect stdout to stderr, if possible
                     if stdoutno >= 0 and stderrno >= 0:
-                        sys.stdout.flush()
+                        util.stdout.flush()
                         oldstdout = os.dup(stdoutno)
                         os.dup2(stderrno, stdoutno)
                 except (OSError, AttributeError):
@@ -255,10 +255,10 @@ def runhooks(ui, repo, name, hooks, throw=False, **args):
             # The stderr is fully buffered on Windows when connected to a pipe.
             # A forcible flush is required to make small stderr data in the
             # remote side available to the client immediately.
-            sys.stderr.flush()
+            util.stderr.flush()
     finally:
         if _redirect and oldstdout >= 0:
-            sys.stdout.flush()  # write hook output to stderr fd
+            util.stdout.flush()  # write hook output to stderr fd
             os.dup2(oldstdout, stdoutno)
             os.close(oldstdout)
 

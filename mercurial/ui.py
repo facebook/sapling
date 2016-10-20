@@ -130,9 +130,9 @@ class ui(object):
 
             self.httppasswordmgrdb = src.httppasswordmgrdb
         else:
-            self.fout = sys.stdout
-            self.ferr = sys.stderr
-            self.fin = sys.stdin
+            self.fout = util.stdout
+            self.ferr = util.stderr
+            self.fin = util.stdin
 
             # shared read-only environment
             self.environ = os.environ

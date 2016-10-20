@@ -660,14 +660,14 @@ def continuity(url):
 def comp(N, url):
     print('  making %i connections to:\n  %s' % (N, url))
 
-    sys.stdout.write('  first using the normal urllib handlers')
+    util.stdout.write('  first using the normal urllib handlers')
     # first use normal opener
     opener = urlreq.buildopener()
     urlreq.installopener(opener)
     t1 = fetch(N, url)
     print('  TIME: %.3f s' % t1)
 
-    sys.stdout.write('  now using the keepalive handler       ')
+    util.stdout.write('  now using the keepalive handler       ')
     # now install the keepalive handler and try again
     opener = urlreq.buildopener(HTTPHandler())
     urlreq.installopener(opener)
@@ -712,11 +712,11 @@ def test_timeout(url):
     i = 20
     print("  waiting %i seconds for the server to close the connection" % i)
     while i > 0:
-        sys.stdout.write('\r  %2i' % i)
-        sys.stdout.flush()
+        util.stdout.write('\r  %2i' % i)
+        util.stdout.flush()
         time.sleep(1)
         i -= 1
-    sys.stderr.write('\r')
+    util.stderr.write('\r')
 
     print("  fetching the file a second time")
     fo = urlreq.urlopen(url)

@@ -15,7 +15,6 @@ import select
 import signal
 import socket
 import struct
-import sys
 import traceback
 
 from .i18n import _
@@ -304,8 +303,8 @@ def _protectio(ui):
     ui.flush()
     newfiles = []
     nullfd = os.open(os.devnull, os.O_RDWR)
-    for f, sysf, mode in [(ui.fin, sys.stdin, 'rb'),
-                          (ui.fout, sys.stdout, 'wb')]:
+    for f, sysf, mode in [(ui.fin, util.stdin, 'rb'),
+                          (ui.fout, util.stdout, 'wb')]:
         if f is sysf:
             newfd = os.dup(f.fileno())
             os.dup2(nullfd, f.fileno())

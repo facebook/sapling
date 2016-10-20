@@ -97,7 +97,7 @@ def dispatch(req):
     elif req.ui:
         ferr = req.ui.ferr
     else:
-        ferr = sys.stderr
+        ferr = util.stderr
 
     try:
         if not req.ui:

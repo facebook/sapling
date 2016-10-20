@@ -84,19 +84,19 @@ testedwith = 'ships-with-hg-core'
 def _runpager(ui, p):
     pager = subprocess.Popen(p, shell=True, bufsize=-1,
                              close_fds=util.closefds, stdin=subprocess.PIPE,
-                             stdout=sys.stdout, stderr=sys.stderr)
+                             stdout=util.stdout, stderr=util.stderr)
 
     # back up original file objects and descriptors
     olduifout = ui.fout
-    oldstdout = sys.stdout
-    stdoutfd = os.dup(sys.stdout.fileno())
-    stderrfd = os.dup(sys.stderr.fileno())
+    oldstdout = util.stdout
+    stdoutfd = os.dup(util.stdout.fileno())
+    stderrfd = os.dup(util.stderr.fileno())
 
     # create new line-buffered stdout so that output can show up immediately
-    ui.fout = sys.stdout = newstdout = os.fdopen(sys.stdout.fileno(), 'wb', 1)
-    os.dup2(pager.stdin.fileno(), sys.stdout.fileno())
-    if ui._isatty(sys.stderr):
-        os.dup2(pager.stdin.fileno(), sys.stderr.fileno())
+    ui.fout = util.stdout = newstdout = os.fdopen(util.stdout.fileno(), 'wb', 1)
+    os.dup2(pager.stdin.fileno(), util.stdout.fileno())
+    if ui._isatty(util.stderr):
+        os.dup2(pager.stdin.fileno(), util.stderr.fileno())
 
     @atexit.register
     def killpager():
@@ -104,13 +104,13 @@ def _runpager(ui, p):
             signal.signal(signal.SIGINT, signal.SIG_IGN)
         pager.stdin.close()
         ui.fout = olduifout
-        sys.stdout = oldstdout
+        util.stdout = oldstdout
         # close new stdout while it's associated with pager; otherwise stdout
         # fd would be closed when newstdout is deleted
         newstdout.close()
         # restore original fds: stdout is open again
-        os.dup2(stdoutfd, sys.stdout.fileno())
-        os.dup2(stderrfd, sys.stderr.fileno())
+        os.dup2(stdoutfd, util.stdout.fileno())
+        os.dup2(stderrfd, util.stderr.fileno())
         pager.wait()
 
 def uisetup(ui):

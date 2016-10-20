@@ -10,7 +10,6 @@ from __future__ import absolute_import
 import hashlib
 import itertools
 import os
-import sys
 import tempfile
 
 from .i18n import _
@@ -575,8 +574,8 @@ def options(cmd, keys, others):
             opts[k] = others[k]
             del others[k]
     if others:
-        sys.stderr.write("warning: %s ignored unexpected arguments %s\n"
-                         % (cmd, ",".join(others)))
+        util.stderr.write("warning: %s ignored unexpected arguments %s\n"
+                          % (cmd, ",".join(others)))
     return opts
 
 def bundle1allowed(repo, action):
@@ -907,11 +906,11 @@ def unbundle(repo, proto, heads):
             try:
                 raise
             except error.Abort:
-                # The old code we moved used sys.stderr directly.
+                # The old code we moved used util.stderr directly.
                 # We did not change it to minimise code change.
                 # This need to be moved to something proper.
                 # Feel free to do it.
-                sys.stderr.write("abort: %s\n" % exc)
+                util.stderr.write("abort: %s\n" % exc)
                 return pushres(0)
             except error.PushRaced:
                 return pusherr(str(exc))

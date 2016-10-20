@@ -232,7 +232,7 @@ def _newchgui(srcui, csystem):
             # these situations and will behave differently (write to stdout).
             if (any(s[1] for s in self._bufferstates)
                 or not util.safehasattr(self.fout, 'fileno')
-                or self.fout.fileno() != sys.stdout.fileno()):
+                or self.fout.fileno() != util.stdout.fileno()):
                 return super(chgui, self).system(cmd, environ, cwd, onerr,
                                                  errprefix)
             # copied from mercurial/util.py:system()
