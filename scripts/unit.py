@@ -71,9 +71,6 @@ def interestingtests(changed_files):
     testwords = {}
     for t in tests:
         # Include all tests starting with test-check*,
-        # except for test-check-code-hg.t used by arc lint.
-        if t == 'test-check-code-hg.t':
-            continue
         if t.startswith('test-check'):
             result.add(t)
             continue

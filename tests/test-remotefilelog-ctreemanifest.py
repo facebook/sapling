@@ -260,7 +260,7 @@ class ctreemanifesttests(unittest.TestCase):
 
         try:
             a.setflag("foo", 'd')
-            raise Exception("setflag should throw")
+            raise RuntimeError("setflag should throw")
         except KeyError:
             pass
 
