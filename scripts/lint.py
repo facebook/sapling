@@ -24,7 +24,9 @@ for path in sys.argv[1:]:
     wanted.add(os.path.relpath(path))
 
 try:
-    args = [runner, '-j8', '-l', 'test-check-code-hg.t']
+    args = [runner, '-j2', '-l',
+            'test-check-code-hg.t',
+            'test-check-pyflakes-hg.t']
 
     # Check lz4revlog requirement
     reporoot = os.path.join(os.path.dirname(os.path.dirname(__file__)), '.hg')
@@ -53,6 +55,15 @@ while lines:
     line = lines[0]
     lines.pop(0)
 
+    # test-check-pyflakes-hg style output
+    m = re.match('^\+  ([a-zA-Z0-9_./-]+):(\d+): (.*)$', line)
+    if m:
+        filename, location, why = m.groups()
+        if filename in wanted:
+            print '%s:%s: ERROR:Pyflakes: %s' % (filename, location, why)
+        continue
+
+    # test-check-code-hg style output
     if re.match('^--- (.*)$', line):
         context_file = os.path.relpath(line[4:])
         continue
