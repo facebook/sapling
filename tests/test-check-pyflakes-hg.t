@@ -241,7 +241,6 @@ run pyflakes on all tracked files ending in .py or without a file ending
   remotefilelog/debugcommands.py:87: undefined name 'error'
   remotefilelog/debugcommands.py:151: undefined name 'fileserverclient'
   remotefilelog/debugcommands.py:151: undefined name 'repo'
-  tests/lint.py:33: undefined name 'runner'
   tests/perftest.py:165: undefined name 'mdiff'
   tests/treemanifest_correctness.py:163: undefined name 'mdiff'
   treemanifest/__init__.py:141: undefined name 'mpatchError'
