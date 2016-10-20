@@ -14,14 +14,13 @@ import locale
 import os
 import re
 import signal
-import struct
-import sys
 
 from .i18n import _
 from . import (
     encoding,
     error,
     patch as patchmod,
+    scmutil,
     util,
 )
 stringio = util.stringio
@@ -52,11 +51,7 @@ patchhelptext = _("""#
 
 try:
     import curses
-    import fcntl
-    import termios
     curses.error
-    fcntl.ioctl
-    termios.TIOCGWINSZ
 except ImportError:
     # I have no idea if wcurses works with crecord...
     try:
@@ -74,8 +69,6 @@ def checkcurses(ui):
     it) and that the user has the correct flag for the ui.
     """
     return curses and ui.interface("chunkselector") == "curses"
-
-_origstdout = sys.__stdout__ # used by gethw()
 
 class patchnode(object):
     """abstract class for patch graph nodes
@@ -472,18 +465,6 @@ def filterpatch(ui, chunks, chunkselector):
                     fixoffset += hnk.removed - hnk.added
 
     return (appliedhunklist, ret)
-
-def gethw():
-    """
-    magically get the current height and width of the window (without initscr)
-
-    this is a rip-off of a rip-off - taken from the bpython code.  it is
-    useful / necessary because otherwise curses.initscr() must be called,
-    which can leave the terminal in a nasty state after exiting.
-    """
-    h, w = struct.unpack(
-        "hhhh", fcntl.ioctl(_origstdout, termios.TIOCGWINSZ, "\000"*8))[0:2]
-    return h, w
 
 def chunkselector(ui, headerlist):
     """
@@ -1259,7 +1240,7 @@ class curseschunkselector(object):
         "handle window resizing"
         try:
             curses.endwin()
-            self.yscreensize, self.xscreensize = gethw()
+            self.xscreensize, self.yscreensize = scmutil.termsize(self.ui)
             self.statuswin.resize(self.numstatuslines, self.xscreensize)
             self.numpadlines = self.getnumlinesdisplayed(ignorefolding=True) + 1
             self.chunkpad = curses.newpad(self.numpadlines, self.xscreensize)
