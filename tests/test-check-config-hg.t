@@ -100,7 +100,6 @@ New errors are not allowed. Warnings are strongly discouraged.
   undocumented: smartlog.ignorebookmarks (str) ['!']
   undocumented: sqldirstate.cachebuildtreshold (str) [10000]
   undocumented: sqldirstate.downgrade (bool)
-  undocumented: sqldirstate.fakedirstate (bool) [True]
   undocumented: sqldirstate.skipbackups (bool) [True]
   undocumented: sqldirstate.tracefile (str)
   undocumented: sqldirstate.upgrade (bool)
