@@ -7,7 +7,6 @@
 
 from __future__ import absolute_import
 
-import sys
 import threading
 import time
 
@@ -19,7 +18,7 @@ def spacejoin(*args):
 
 def shouldprint(ui):
     return not (ui.quiet or ui.plain('progress')) and (
-        ui._isatty(sys.stderr) or ui.configbool('progress', 'assume-tty'))
+        ui._isatty(ui.ferr) or ui.configbool('progress', 'assume-tty'))
 
 def fmtremaining(seconds):
     """format a number of remaining seconds in human readable way
@@ -158,14 +157,14 @@ class progbar(object):
             out = spacejoin(head, prog, tail)
         else:
             out = spacejoin(head, tail)
-        sys.stderr.write('\r' + encoding.trim(out, termwidth))
+        self.ui.ferr.write('\r' + encoding.trim(out, termwidth))
         self.lasttopic = topic
-        sys.stderr.flush()
+        self.ui.ferr.flush()
 
     def clear(self):
         if not self.printed or not self.lastprint or not shouldprint(self.ui):
             return
-        sys.stderr.write('\r%s\r' % (' ' * self.width()))
+        self.ui.ferr.write('\r%s\r' % (' ' * self.width()))
         if self.printed:
             # force immediate re-paint of progress bar
             self.lastprint = 0
@@ -176,8 +175,8 @@ class progbar(object):
         if self.ui.configbool('progress', 'clear-complete', default=True):
             self.clear()
         else:
-            sys.stderr.write('\n')
-        sys.stderr.flush()
+            self.ui.ferr.write('\n')
+        self.ui.ferr.flush()
 
     def width(self):
         tw = self.ui.termwidth()
