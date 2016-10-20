@@ -23,6 +23,10 @@ wanted = set()
 for path in sys.argv[1:]:
     wanted.add(os.path.relpath(path))
 
+# Export LINTFILES so tests can skip unrelated files
+if wanted:
+    os.environ['LINTFILES'] = '\n'.join(sorted(wanted))
+
 try:
     args = [runner, '-j2', '-l',
             'test-check-code-hg.t',

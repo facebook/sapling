@@ -6,7 +6,7 @@
 New errors are not allowed. Warnings are strongly discouraged.
 (The writing "no-che?k-code" is for not skipping this file when checking.)
 
-  $ hg locate | sed 's-\\-/-g' |
+  $ echo ${LINTFILES:-`hg locate`} | sed 's-\\-/-g' |
   >   xargs "$check_code" --warnings --per-file=0 || false
   Skipping CMakeLists.txt it has no-che?k-code (glob)
   Skipping cdatapack/cdatapack.c it has no-che?k-code (glob)
