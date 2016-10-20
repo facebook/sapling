@@ -42,12 +42,12 @@ def userrcpath():
     else:
         return [os.path.expanduser('~/.hgrc')]
 
-def termwidth(ui):
+def termsize(ui):
     try:
         import termios
         TIOCGWINSZ = termios.TIOCGWINSZ  # unavailable on IRIX (issue3449)
     except (AttributeError, ImportError):
-        return 80
+        return 80, 24
 
     for dev in (ui.ferr, ui.fout, ui.fin):
         try:
@@ -58,9 +58,9 @@ def termwidth(ui):
             if not os.isatty(fd):
                 continue
             arri = fcntl.ioctl(fd, TIOCGWINSZ, '\0' * 8)
-            width = array.array('h', arri)[1]
-            if width > 0:
-                return width
+            height, width = array.array('h', arri)[:2]
+            if width > 0 and height > 0:
+                return width, height
         except ValueError:
             pass
         except IOError as e:
@@ -68,4 +68,4 @@ def termwidth(ui):
                 pass
             else:
                 raise
-    return 80
+    return 80, 24

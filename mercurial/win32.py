@@ -347,23 +347,25 @@ def hidewindow():
     pid = _kernel32.GetCurrentProcessId()
     _user32.EnumWindows(_WNDENUMPROC(callback), pid)
 
-def termwidth():
+def termsize():
     # cmd.exe does not handle CR like a unix console, the CR is
     # counted in the line length. On 80 columns consoles, if 80
     # characters are written, the following CR won't apply on the
     # current line but on the new one. Keep room for it.
     width = 80 - 1
+    height = 25
     # Query stderr to avoid problems with redirections
     screenbuf = _kernel32.GetStdHandle(
                   _STD_ERROR_HANDLE) # don't close the handle returned
     if screenbuf is None or screenbuf == _INVALID_HANDLE_VALUE:
-        return width
+        return width, height
     csbi = _CONSOLE_SCREEN_BUFFER_INFO()
     if not _kernel32.GetConsoleScreenBufferInfo(
                         screenbuf, ctypes.byref(csbi)):
-        return width
+        return width, height
     width = csbi.srWindow.Right - csbi.srWindow.Left  # don't '+ 1'
-    return width
+    height = csbi.srWindow.Bottom - csbi.srWindow.Top + 1
+    return width, height
 
 def _1stchild(pid):
     '''return the 1st found child of the given pid
