@@ -40,6 +40,7 @@ else:
 
 systemrcpath = scmplatform.systemrcpath
 userrcpath = scmplatform.userrcpath
+termwidth = scmplatform.termwidth
 
 class status(tuple):
     '''Named tuple with a list of files per status. The 'deleted', 'unknown'

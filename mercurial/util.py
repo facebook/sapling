@@ -122,7 +122,6 @@ sshargs = platform.sshargs
 statfiles = getattr(osutil, 'statfiles', platform.statfiles)
 statisexec = platform.statisexec
 statislink = platform.statislink
-termwidth = platform.termwidth
 testpid = platform.testpid
 umask = platform.umask
 unlink = platform.unlink
