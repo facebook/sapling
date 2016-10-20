@@ -352,7 +352,7 @@ def termwidth():
     # counted in the line length. On 80 columns consoles, if 80
     # characters are written, the following CR won't apply on the
     # current line but on the new one. Keep room for it.
-    width = 79
+    width = 80 - 1
     # Query stderr to avoid problems with redirections
     screenbuf = _kernel32.GetStdHandle(
                   _STD_ERROR_HANDLE) # don't close the handle returned
@@ -362,7 +362,7 @@ def termwidth():
     if not _kernel32.GetConsoleScreenBufferInfo(
                         screenbuf, ctypes.byref(csbi)):
         return width
-    width = csbi.srWindow.Right - csbi.srWindow.Left
+    width = csbi.srWindow.Right - csbi.srWindow.Left  # don't '+ 1'
     return width
 
 def _1stchild(pid):
