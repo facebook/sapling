@@ -17,8 +17,6 @@ modules, or change the whitelist (allowsymbolimports).
   $ hg locate 'set:**.py or grep(r"^#!.*?python")' | sed 's-\\-/-g' | $PYTHON "$import_checker" - \
   > | egrep -v 'symbol import .* (mercurial|hgext)$'
   fastannotate/context.py:31: imports not lexically sorted: linelog < os
-  hgext3rd/absorb.py:30: relative import of stdlib module
-  hgext3rd/absorb.py:30: direct symbol import defaultdict from collections
   hgext3rd/smartlog.py:26: relative import of stdlib module
   hgext3rd/smartlog.py:26: direct symbol import chain from itertools
   infinitepush/__init__.py:15: imports from mercurial not lexically sorted: pushkey < util

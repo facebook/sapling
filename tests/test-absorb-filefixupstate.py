@@ -55,7 +55,6 @@ def testfilefixup(oldcontents, workingcopy, expectedcontents, fixups=None):
 
 def buildcontents(linesrevs):
     # linesrevs: [(linecontent : str, revs : [int])]
-    result = ['']
     revs = set(itertools.chain(*[revs for line, revs in linesrevs]))
     return [''] + [
         ''.join([l for l, rs in linesrevs if r in rs])

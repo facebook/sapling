@@ -221,7 +221,6 @@ run pyflakes on all tracked files ending in .py or without a file ending
   remotefilelog/remotefilelogserver.py:277: local variable 'opener' is assigned to but never used
   remotefilelog/shallowbundle.py:321: local variable 'copyfl' is assigned to but never used
   tests/perftest.py:232: local variable 'fakestore' is assigned to but never used
-  tests/test-absorb-filefixupstate.py:58: local variable 'result' is assigned to but never used
   tests/test-remotefilelog-ctreemanifest.py:51: local variable 'a' is assigned to but never used
   tests/test-remotefilelog-datapack.py:264: local variable 'result' is assigned to but never used
   fastmanifest/implementation.py:18: 'from constants import *' used; unable to detect undefined names

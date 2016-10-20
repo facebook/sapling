@@ -27,7 +27,7 @@ amend modified chunks into the corresponding non-public changesets.
 
 from __future__ import absolute_import
 
-from collections import defaultdict
+import collections
 import linelog
 
 from mercurial import (
@@ -57,6 +57,8 @@ colortable = {
     'absorb.node': 'blue bold',
     'absorb.path': 'bold',
 }
+
+defaultdict = collections.defaultdict
 
 class nullui(object):
     """blank ui object doing nothing"""
