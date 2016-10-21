@@ -51,7 +51,8 @@ test changing case of path components
   $ echo b > D/b
   $ hg ci -Am addb D/b
   $ hg mv D/b d/b
-  D/b: not overwriting - file exists
+  D/b: not overwriting - file already committed
+  (hg rename --force to replace the file by recording a rename)
   $ hg mv D/b d/c
   $ hg st
   A D/c
