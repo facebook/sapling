@@ -55,6 +55,7 @@ class hybridmanifest(object):
         self.cachekey = revlog.hex(self.node) if self.node is not None else None
 
         self.fastcache = fastmanifestcache.getinstance(opener, self.ui)
+        self.treecache = treemanifestcache.getinstance(opener, self.ui)
         self.debugfastmanifest = self.ui.configbool("fastmanifest",
                                                      "debugfastmanifest", False)
 
@@ -114,16 +115,19 @@ class hybridmanifest(object):
             return None
         assert supportsctree
         if self.__treemanifest is None:
-            store = self.opener.manifestdatastore
-            missing = store.getmissing([('', self.node)])
-            if not missing:
-                self.__treemanifest = ctreemanifest.treemanifest(store,
-                                                                 self.node)
+            if self.node in self.treecache:
+                self.__treemanifest = self.treecache[self.node]
             else:
-                # Record that it doesn't exist, so we don't keep checking the
-                # store.
-                self.__treemanifest = False
-                return None
+                store = self.opener.manifestdatastore
+                missing = store.getmissing([('', self.node)])
+                if not missing:
+                    self.__treemanifest = ctreemanifest.treemanifest(store,
+                                                                     self.node)
+                else:
+                    # Record that it doesn't exist, so we don't keep checking
+                    # the store.
+                    self.__treemanifest = False
+                    return None
 
         return self.__treemanifest
 
@@ -592,6 +596,32 @@ class ondiskcache(object):
 
 class CacheFullException(Exception):
     pass
+
+class treemanifestcache(object):
+    @staticmethod
+    def getinstance(opener, ui):
+        if not util.safehasattr(opener, 'treemanifestcache'):
+            opener.treemanifestcache = treemanifestcache(opener, ui)
+        return opener.treemanifestcache
+
+    def __init__(self, opener, ui):
+        self.ui = ui
+        self._cache = {}
+
+    def clear(self):
+        self._cache.clear()
+
+    def __contains__(self, node):
+        return node in self._cache
+
+    def get(self, node, default=None):
+        return self._cache.get(node, default=default)
+
+    def __getitem__(self, node):
+        return self._cache[node]
+
+    def __setitem__(self, node, value):
+        self._cache[node] = value
 
 class fastmanifestcache(object):
     @staticmethod
