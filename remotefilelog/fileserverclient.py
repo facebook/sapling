@@ -7,17 +7,13 @@
 
 from mercurial.i18n import _
 from mercurial.node import hex, bin
-from mercurial import util, sshpeer, hg, error, util, wireproto, node, httppeer
+from mercurial import util, sshpeer, hg, error, util, wireproto, httppeer
 from mercurial import extensions, scmutil
-import hashlib, os, socket, lz4, time, io, struct
-import errno
+import hashlib, os, lz4, time, io, struct
 import itertools
 
-import constants, datapack, historypack, shallowutil, shallowrepo
+import constants, datapack, historypack, shallowutil
 from shallowutil import readexactly, readunpack
-
-if os.name != 'nt':
-    import grp
 
 # Statistics for debugging
 fetchcost = 0
@@ -66,7 +62,7 @@ def peersetup(ui, peer):
                 return
             if not util.safehasattr(self, '_localrepo'):
                 return
-            if shallowrepo.requirement not in self._localrepo.requirements:
+            if constants.REQUIREMENT not in self._localrepo.requirements:
                 return
 
             bundlecaps = opts.get('bundlecaps')
@@ -552,7 +548,6 @@ class fileserverclient(object):
         """downloads the given file versions to the cache
         """
         repo = self.repo
-        reponame = repo.name
         idstocheck = []
         for file, id in fileids:
             # hack

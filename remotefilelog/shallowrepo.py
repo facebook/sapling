@@ -5,11 +5,9 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from mercurial.node import hex, nullid, nullrev, bin
-from mercurial.i18n import _
-from mercurial import localrepo, context, util, match, scmutil
-from mercurial.extensions import wrapfunction
-import remotefilelog, remotefilectx, fileserverclient, shallowbundle, os
+from mercurial.node import hex, nullid, nullrev
+from mercurial import localrepo, util, match, scmutil
+from . import remotefilelog, remotefilectx, fileserverclient
 import constants, shallowutil
 from contentstore import remotefilelogcontentstore, unioncontentstore
 from contentstore import remotecontentstore
@@ -17,6 +15,8 @@ from metadatastore import remotefilelogmetadatastore, unionmetadatastore
 from metadatastore import remotemetadatastore
 from datapack import datapackstore
 from historypack import historypackstore
+
+import os
 
 requirement = "remotefilelog"
 

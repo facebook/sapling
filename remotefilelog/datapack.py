@@ -1,9 +1,9 @@
-import errno, lz4, mmap, os, struct, tempfile
-from collections import defaultdict
-from mercurial import mdiff, osutil, util
-from mercurial.node import nullid, bin, hex
+import lz4, struct
+from mercurial import util
+from mercurial.node import nullid, hex
 from mercurial.i18n import _
-import basepack, cdatapack, constants, shallowutil
+import basepack, constants
+import cdatapack
 
 # Index entry format is: <node><delta offset><pack data offset><pack data size>
 # See the mutabledatapack doccomment for more details.

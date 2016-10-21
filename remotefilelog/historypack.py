@@ -1,9 +1,7 @@
-import errno, hashlib, lz4, mmap, os, struct, tempfile
-from collections import defaultdict, deque
-from mercurial import mdiff, osutil, util
-from mercurial.node import nullid, bin, hex
-from mercurial.i18n import _
-import basepack, constants, shallowutil
+import hashlib, struct
+from mercurial import util
+from mercurial.node import hex
+import basepack, constants
 
 # (filename hash, offset, size)
 INDEXFORMAT = '!20sQQ'
@@ -36,7 +34,7 @@ class historypackstore(basepack.basepackstore):
         for pack in self.packs:
             try:
                 return pack.getancestors(name, node)
-            except KeyError as ex:
+            except KeyError:
                 pass
 
         for pack in self.refresh():
@@ -60,7 +58,7 @@ class historypack(basepack.basepack):
         for name, node in keys:
             try:
                 section = self._findsection(name)
-                value = self._findnode(section, node)
+                self._findnode(section, node)
             except KeyError:
                 missing.append((name, node))
 
@@ -153,7 +151,6 @@ class historypack(basepack.basepack):
             end = self.indexsize
 
         # Bisect between start and end to find node
-        index = self._index
         startnode = self._index[start:start + NODELENGTH]
         endnode = self._index[end:end + NODELENGTH]
         if startnode == namehash:
@@ -191,8 +188,8 @@ class historypack(basepack.basepack):
             raise KeyError("found file name %s when looking for %s" %
                            (actualname, name))
 
-        revcount = struct.unpack('!I', self._data[offset:offset +
-                                                  OFFSETSIZE])[0]
+        struct.unpack('!I', self._data[offset:offset +
+                                       OFFSETSIZE])[0]
         offset += OFFSETSIZE
 
         return (name, offset, size - constants.FILENAMESIZE - filenamelength

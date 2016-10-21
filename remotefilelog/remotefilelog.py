@@ -7,9 +7,9 @@
 # GNU General Public License version 2 or any later version.
 
 import fileserverclient, shallowutil
-import collections, errno, os, shutil
-from mercurial.node import bin, hex, nullid, nullrev
-from mercurial import revlog, mdiff, filelog, ancestor, error, util
+import collections, os
+from mercurial.node import bin, nullid
+from mercurial import revlog, mdiff, ancestor, error
 from mercurial.i18n import _
 
 class remotefilelog(object):

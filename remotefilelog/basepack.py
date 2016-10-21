@@ -1,7 +1,6 @@
 import errno, hashlib, mmap, os, struct, time
 from mercurial import osutil
 
-import constants
 import shallowutil
 
 # The pack version supported by this implementation. This will need to be

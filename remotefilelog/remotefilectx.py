@@ -5,9 +5,9 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import collections, os
-from mercurial.node import bin, hex, nullid, nullrev, short
-from mercurial import revlog, mdiff, filelog, context, util, error, ancestor
+import collections
+from mercurial.node import bin, hex, nullid, nullrev
+from mercurial import context, util, error, ancestor
 
 propertycache = util.propertycache
 
@@ -225,9 +225,6 @@ class remotefilectx(context.filectx):
         return linknode
 
     def ancestors(self, followfirst=False):
-        repo = self._repo
-        clrev = repo.changelog.rev
-
         ancestors = []
         queue = collections.deque((self,))
         while queue:

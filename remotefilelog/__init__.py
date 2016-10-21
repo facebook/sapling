@@ -5,23 +5,20 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import fileserverclient, remotefilelog, remotefilectx, shallowstore, shallowrepo
+from . import fileserverclient, remotefilelog, remotefilectx, shallowstore
 import shallowbundle, debugcommands, remotefilelogserver, shallowverifier
-import shallowutil, historypack, datapack, basestore, contentstore
-import metadatastore
+import shallowutil, shallowrepo
 import repack as repackmod
-from mercurial.node import bin, hex, nullid, nullrev, short
+from mercurial.node import hex
 from mercurial.i18n import _
 from mercurial.extensions import wrapfunction
-from mercurial import ancestor, mdiff, parsers, error, util, dagutil
-from mercurial import repair, extensions, filelog, revlog, wireproto, cmdutil
+from mercurial import error, util
+from mercurial import repair, extensions, revlog, cmdutil
 from mercurial import copies, store, context, changegroup, localrepo, changelog
-from mercurial import commands, sshpeer, scmutil, dispatch, merge, context
-from mercurial import templatekw, repoview, revset, hg, patch, verify
+from mercurial import commands, scmutil, dispatch, merge, context
+from mercurial import templatekw, repoview, revset, hg, patch
 from mercurial import match, exchange
-import struct, zlib, errno, collections, time, os, socket, subprocess, lz4
-import stat
-import sys
+import os
 import traceback
 
 try:
@@ -774,7 +771,6 @@ def prefetch(ui, repo, *pats, **opts):
     if not opts.get('rev'):
         opts['rev'] = '.'
 
-    m = scmutil.matchall(repo)
     revs = scmutil.revrange(repo, opts.get('rev'))
 
     repo.prefetch(revs, pats=pats, opts=opts)

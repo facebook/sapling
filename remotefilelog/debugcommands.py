@@ -5,10 +5,10 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from mercurial import filelog, revlog
-from mercurial.node import bin, hex, nullid, nullrev, short
+from mercurial import error, filelog, revlog
+from mercurial.node import bin, hex, nullid, short
 from mercurial.i18n import _
-import datapack, historypack, shallowrepo
+import datapack, historypack, shallowrepo, fileserverclient
 import hashlib, os, lz4
 
 def debugremotefilelog(ui, path, **opts):
@@ -148,7 +148,7 @@ def verifyremotefilelog(ui, path, **opts):
             for p1, p2, linknode, copyfrom in mapping.itervalues():
                 if linknode == nullid:
                     actualpath = os.path.relpath(root, path)
-                    key = fileserverclient.getcachekey(repo.name, actualpath,
+                    key = fileserverclient.getcachekey("reponame", actualpath,
                                                        file)
                     ui.status("%s %s\n" % (key, os.path.relpath(filepath,
                                                                 path)))
@@ -166,7 +166,6 @@ def parsefileblob(path, decompress):
 
     index = raw.index('\0')
     size = int(raw[:index])
-    data = raw[(index + 1):(index + 1 + size)]
     start = index + 1 + size
 
     firstnode = None

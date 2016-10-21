@@ -11,7 +11,8 @@
 # the python-memcached library: https://pypi.python.org/pypi/python-memcached/
 # A better implementation would make all of the requests non-blocking.
 
-import os, sys, memcache
+import os, sys
+import memcache
 
 stdin = sys.stdin
 stdout = sys.stdout

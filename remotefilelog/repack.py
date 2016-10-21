@@ -1,7 +1,7 @@
 import os
 from collections import defaultdict
 from mercurial import error, mdiff, osutil, scmutil, util
-from mercurial.node import nullid, bin, hex
+from mercurial.node import nullid
 from mercurial.i18n import _
 import constants, datapack, historypack, contentstore, metadatastore
 import shallowutil

@@ -1,5 +1,7 @@
 import struct
 
+REQUIREMENT = "remotefilelog"
+
 FILENAMESTRUCT = '!H'
 FILENAMESIZE = struct.calcsize(FILENAMESTRUCT)
 

@@ -1,7 +1,5 @@
-import os, shutil
 import basestore, shallowutil
-from mercurial import error, mdiff, util
-from mercurial.i18n import _
+from mercurial import mdiff, util
 from mercurial.node import hex, nullid
 
 class ChainIndicies(object):

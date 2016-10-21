@@ -5,10 +5,10 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import fileserverclient, remotefilelog, shallowutil
-import collections, os
+from . import fileserverclient, remotefilelog, shallowutil
+import os
 from mercurial.node import bin, hex, nullid, nullrev
-from mercurial import changegroup, phases, mdiff, match, bundlerepo
+from mercurial import changegroup, mdiff, match, bundlerepo
 from mercurial import util, error
 from mercurial.i18n import _
 
@@ -318,7 +318,6 @@ def addchangegroupfiles(orig, repo, source, revmap, trp, expectedfiles, *args):
         if 'copy' in meta:
             copyfrom = meta['copy']
             copynode = bin(meta['copyrev'])
-            copyfl = repo.file(copyfrom)
             if not available(f, node, copyfrom, copynode):
                 continue
 

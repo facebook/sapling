@@ -11,8 +11,8 @@ from mercurial.extensions import wrapfunction
 from mercurial.hgweb import protocol as httpprotocol
 from mercurial.node import bin, hex, nullid, nullrev
 from mercurial.i18n import _
-import constants, shallowrepo, shallowutil
-import errno, stat, os, lz4, struct, time, sys
+import constants, shallowrepo
+import errno, stat, os, lz4, struct, time
 from shallowutil import readexactly, readunpack
 
 try:
@@ -274,7 +274,6 @@ def getfiles(repo, proto):
 
     def streamer():
         fin = proto.fin
-        opener = repo.svfs
 
         cachepath = repo.ui.config("remotefilelog", "servercachepath")
         if not cachepath:

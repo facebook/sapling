@@ -90,91 +90,6 @@ run pyflakes on all tracked files ending in .py or without a file ending
   infinitepush/tests/util.py:7: 'getpass' imported but unused
   infinitepush/tests/util.py:9: 'subprocess' imported but unused
   phabricator/conduit.py:12: 'sys' imported but unused
-  remotefilelog/__init__.py:10: 'basestore' imported but unused
-  remotefilelog/__init__.py:10: 'contentstore' imported but unused
-  remotefilelog/__init__.py:10: 'datapack' imported but unused
-  remotefilelog/__init__.py:10: 'historypack' imported but unused
-  remotefilelog/__init__.py:11: 'metadatastore' imported but unused
-  remotefilelog/__init__.py:13: 'bin' imported but unused
-  remotefilelog/__init__.py:13: 'nullid' imported but unused
-  remotefilelog/__init__.py:13: 'nullrev' imported but unused
-  remotefilelog/__init__.py:13: 'short' imported but unused
-  remotefilelog/__init__.py:16: 'ancestor' imported but unused
-  remotefilelog/__init__.py:16: 'dagutil' imported but unused
-  remotefilelog/__init__.py:16: 'mdiff' imported but unused
-  remotefilelog/__init__.py:16: 'parsers' imported but unused
-  remotefilelog/__init__.py:17: 'filelog' imported but unused
-  remotefilelog/__init__.py:17: 'wireproto' imported but unused
-  remotefilelog/__init__.py:19: 'sshpeer' imported but unused
-  remotefilelog/__init__.py:20: 'verify' imported but unused
-  remotefilelog/__init__.py:22: 'collections' imported but unused
-  remotefilelog/__init__.py:22: 'errno' imported but unused
-  remotefilelog/__init__.py:22: 'lz4' imported but unused
-  remotefilelog/__init__.py:22: 'socket' imported but unused
-  remotefilelog/__init__.py:22: 'struct' imported but unused
-  remotefilelog/__init__.py:22: 'subprocess' imported but unused
-  remotefilelog/__init__.py:22: 'time' imported but unused
-  remotefilelog/__init__.py:22: 'zlib' imported but unused
-  remotefilelog/__init__.py:23: 'stat' imported but unused
-  remotefilelog/__init__.py:24: 'sys' imported but unused
-  remotefilelog/basepack.py:4: 'constants' imported but unused
-  remotefilelog/contentstore.py:1: 'os' imported but unused
-  remotefilelog/contentstore.py:1: 'shutil' imported but unused
-  remotefilelog/contentstore.py:3: 'error' imported but unused
-  remotefilelog/contentstore.py:4: '_' imported but unused
-  remotefilelog/datapack.py:1: 'errno' imported but unused
-  remotefilelog/datapack.py:1: 'mmap' imported but unused
-  remotefilelog/datapack.py:1: 'os' imported but unused
-  remotefilelog/datapack.py:1: 'tempfile' imported but unused
-  remotefilelog/datapack.py:2: 'defaultdict' imported but unused
-  remotefilelog/datapack.py:3: 'mdiff' imported but unused
-  remotefilelog/datapack.py:3: 'osutil' imported but unused
-  remotefilelog/datapack.py:4: 'bin' imported but unused
-  remotefilelog/datapack.py:6: 'shallowutil' imported but unused
-  remotefilelog/debugcommands.py:9: 'nullrev' imported but unused
-  remotefilelog/fileserverclient.py:10: 'node' imported but unused
-  remotefilelog/fileserverclient.py:12: 'socket' imported but unused
-  remotefilelog/fileserverclient.py:13: 'errno' imported but unused
-  remotefilelog/fileserverclient.py:20: 'grp' imported but unused
-  remotefilelog/historypack.py:1: 'errno' imported but unused
-  remotefilelog/historypack.py:1: 'lz4' imported but unused
-  remotefilelog/historypack.py:1: 'mmap' imported but unused
-  remotefilelog/historypack.py:1: 'os' imported but unused
-  remotefilelog/historypack.py:1: 'tempfile' imported but unused
-  remotefilelog/historypack.py:2: 'defaultdict' imported but unused
-  remotefilelog/historypack.py:2: 'deque' imported but unused
-  remotefilelog/historypack.py:3: 'mdiff' imported but unused
-  remotefilelog/historypack.py:3: 'osutil' imported but unused
-  remotefilelog/historypack.py:4: 'bin' imported but unused
-  remotefilelog/historypack.py:4: 'nullid' imported but unused
-  remotefilelog/historypack.py:5: '_' imported but unused
-  remotefilelog/historypack.py:6: 'shallowutil' imported but unused
-  remotefilelog/metadatastore.py:1: 'os' imported but unused
-  remotefilelog/metadatastore.py:3: 'error' imported but unused
-  remotefilelog/metadatastore.py:3: 'util' imported but unused
-  remotefilelog/metadatastore.py:4: '_' imported but unused
-  remotefilelog/remotefilectx.py:8: 'os' imported but unused
-  remotefilelog/remotefilectx.py:9: 'short' imported but unused
-  remotefilelog/remotefilectx.py:10: 'filelog' imported but unused
-  remotefilelog/remotefilectx.py:10: 'mdiff' imported but unused
-  remotefilelog/remotefilectx.py:10: 'revlog' imported but unused
-  remotefilelog/remotefilelog.py:10: 'errno' imported but unused
-  remotefilelog/remotefilelog.py:10: 'shutil' imported but unused
-  remotefilelog/remotefilelog.py:11: 'hex' imported but unused
-  remotefilelog/remotefilelog.py:11: 'nullrev' imported but unused
-  remotefilelog/remotefilelog.py:12: 'filelog' imported but unused
-  remotefilelog/remotefilelog.py:12: 'util' imported but unused
-  remotefilelog/remotefilelogserver.py:14: 'shallowutil' imported but unused
-  remotefilelog/remotefilelogserver.py:15: 'sys' imported but unused
-  remotefilelog/repack.py:4: 'bin' imported but unused
-  remotefilelog/repack.py:4: 'hex' imported but unused
-  remotefilelog/shallowbundle.py:9: 'collections' imported but unused
-  remotefilelog/shallowbundle.py:11: 'phases' imported but unused
-  remotefilelog/shallowrepo.py:8: 'bin' imported but unused
-  remotefilelog/shallowrepo.py:9: '_' imported but unused
-  remotefilelog/shallowrepo.py:10: 'context' imported but unused
-  remotefilelog/shallowrepo.py:11: 'wrapfunction' imported but unused
-  remotefilelog/shallowrepo.py:12: 'shallowbundle' imported but unused
   sqldirstate/__init__.py:10: 'DBFILE' imported but unused
   tests/perftest.py:10: 'pdb' imported but unused
   tests/test-remotefilelog-datapack.py:1: 'binascii' imported but unused
@@ -212,16 +127,6 @@ run pyflakes on all tracked files ending in .py or without a file ending
   hgext3rd/sshaskpass.py:151: local variable 'parentpids' is assigned to but never used
   hgext3rd/tweakdefaults.py:208: local variable 'rebasehint' is assigned to but never used
   hgext3rd/uncommit.py:146: local variable 'wm' is assigned to but never used
-  remotefilelog/__init__.py:777: local variable 'm' is assigned to but never used
-  remotefilelog/debugcommands.py:169: local variable 'data' is assigned to but never used
-  remotefilelog/fileserverclient.py:555: local variable 'reponame' is assigned to but never used
-  remotefilelog/historypack.py:39: local variable 'ex' is assigned to but never used
-  remotefilelog/historypack.py:63: local variable 'value' is assigned to but never used
-  remotefilelog/historypack.py:156: local variable 'index' is assigned to but never used
-  remotefilelog/historypack.py:194: local variable 'revcount' is assigned to but never used
-  remotefilelog/remotefilectx.py:229: local variable 'clrev' is assigned to but never used
-  remotefilelog/remotefilelogserver.py:277: local variable 'opener' is assigned to but never used
-  remotefilelog/shallowbundle.py:321: local variable 'copyfl' is assigned to but never used
   tests/perftest.py:232: local variable 'fakestore' is assigned to but never used
   tests/test-remotefilelog-ctreemanifest.py:51: local variable 'a' is assigned to but never used
   tests/test-remotefilelog-datapack.py:264: local variable 'result' is assigned to but never used
@@ -237,9 +142,6 @@ run pyflakes on all tracked files ending in .py or without a file ending
   hgext3rd/upgradegeneraldelta.py:63: undefined name '_'
   hgext3rd/upgradegeneraldelta.py:77: undefined name '_'
   hgext3rd/upgradegeneraldelta.py:109: undefined name '_'
-  remotefilelog/debugcommands.py:87: undefined name 'error'
-  remotefilelog/debugcommands.py:151: undefined name 'fileserverclient'
-  remotefilelog/debugcommands.py:151: undefined name 'repo'
   tests/perftest.py:165: undefined name 'mdiff'
   tests/treemanifest_correctness.py:163: undefined name 'mdiff'
   treemanifest/__init__.py:141: undefined name 'mpatchError'
