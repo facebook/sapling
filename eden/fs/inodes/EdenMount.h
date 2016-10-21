@@ -25,6 +25,7 @@ class ClientConfig;
 class ObjectStore;
 class Overlay;
 class Journal;
+class Tree;
 
 /*
  * EdenMount contains all of the data about a specific eden mount point.
@@ -93,6 +94,9 @@ class EdenMount {
   uint64_t getMountGeneration() const {
     return mountGeneration_;
   }
+
+  /** Convenience method for getting the Tree for the root of the mount. */
+  std::unique_ptr<Tree> getRootTree() const;
 
  private:
   // Forbidden copy constructor and assignment operator

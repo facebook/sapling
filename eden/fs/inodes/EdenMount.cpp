@@ -13,6 +13,7 @@
 
 #include "Overlay.h"
 #include "eden/fs/config/ClientConfig.h"
+#include "eden/fs/model/Tree.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fuse/MountPoint.h"
 
@@ -73,6 +74,17 @@ const AbsolutePath& EdenMount::getPath() const {
 
 const vector<BindMount>& EdenMount::getBindMounts() const {
   return bindMounts_;
+}
+
+std::unique_ptr<Tree> EdenMount::getRootTree() const {
+  auto root = mountPoint_->getDirInodeForPath(RelativePathPiece(""));
+  auto dirTreeEntry = std::dynamic_pointer_cast<TreeInode>(root);
+  {
+    auto dir = dirTreeEntry->getContents().rlock();
+    auto& rootTreeHash = dir->treeHash.value();
+    auto tree = getObjectStore()->getTree(rootTreeHash);
+    return tree;
+  }
 }
 }
 } // facebook::eden

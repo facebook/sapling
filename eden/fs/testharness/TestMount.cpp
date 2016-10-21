@@ -198,15 +198,7 @@ std::shared_ptr<TreeEntryFileInode> TestMount::getFileInodeForPath(
 }
 
 std::unique_ptr<Tree> TestMount::getRootTree() const {
-  auto root = getDirInodeForPath("");
-  auto dirTreeEntry = std::dynamic_pointer_cast<TreeInode>(root);
-  DCHECK(dirTreeEntry != nullptr);
-  {
-    auto dir = dirTreeEntry->getContents().rlock();
-    auto& rootTreeHash = dir->treeHash.value();
-    auto tree = edenMount_->getObjectStore()->getTree(rootTreeHash);
-    return tree;
-  }
+  return edenMount_->getRootTree();
 }
 }
 }
