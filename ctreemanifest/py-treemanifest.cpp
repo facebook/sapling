@@ -773,10 +773,10 @@ static PyObject *treemanifest_matches(py_treemanifest *self, PyObject *args) {
     fileiter iter = fileiter(self->tm, false);
     iter.matcher = matcher;
 
-    char path[2048];
-    char node[HEX_NODE_SIZE];
+    char path[FILENAME_BUFFER_SIZE];
+    char node[BIN_NODE_SIZE];
     char flag[1];
-    while (fileiter_next(iter, path, 2048, node, flag)) {
+    while (fileiter_next(iter, path, FILENAME_BUFFER_SIZE, node, flag)) {
       size_t pathlen = strlen(path);
 
       // Call manifestdict.__setitem__
@@ -903,12 +903,35 @@ static PyObject *treemanifest_text(py_treemanifest *self, PyObject *args, PyObje
   }
 
   try {
-    PythonObj manifestmod = PyImport_ImportModule("mercurial.manifest");
-    PythonObj textfunc = manifestmod.getattr("_text");
+    // Use slow manifest._text() to handle manifestv2 serialization
+    if (PyObject_IsTrue(usemanifestv2)) {
+        PythonObj manifestmod = PyImport_ImportModule("mercurial.manifest");
+        PythonObj textfunc = manifestmod.getattr("_text");
 
-    PythonObj iterator = treemanifest_getentriesiter(self);
-    PythonObj textargs = Py_BuildValue("(OO)", (PyObject*)iterator, usemanifestv2);
-    return textfunc.call(textargs).returnval();
+        PythonObj iterator = treemanifest_getentriesiter(self);
+        PythonObj textargs = Py_BuildValue("(OO)", (PyObject*)iterator, usemanifestv2);
+        return textfunc.call(textargs).returnval();
+    }
+
+    std::string result;
+    result.reserve(150 * 1024 * 1024);
+
+    fileiter iter = fileiter(self->tm, true);
+
+    char path[FILENAME_BUFFER_SIZE];
+    char node[BIN_NODE_SIZE];
+    char flag[1];
+    while (fileiter_next(iter, path, FILENAME_BUFFER_SIZE, node, flag)) {
+      result.append(path, strlen(path));
+      result.append(1, '\0');
+      hexfrombin(node, result);
+
+      size_t flaglen = flag[0] != '\0' ? 1 : 0;
+      result.append(flag, flaglen);
+      result.append(1, '\n');
+    }
+
+    return PyString_FromStringAndSize(result.c_str(), result.size());
   } catch (const pyexception &ex) {
     return NULL;
   }
