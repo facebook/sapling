@@ -24,7 +24,7 @@ testedwith = ''
     ('', 'revs', 'master + master~5', ''),
     ], '')
 def testpackedtrees(ui, repo, *args, **opts):
-    packpath = shallowutil.getpackpath(repo, 'manifest')
+    packpath = shallowutil.getcachepackpath(repo, 'manifest')
     if not os.path.exists(packpath):
         os.mkdir(packpath)
     opener = scmutil.vfs(packpath)

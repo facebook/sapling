@@ -174,7 +174,7 @@ def wraprepo(repo):
                                          cachemetadata)
 
     # Instantiate pack stores
-    packpath = shallowutil.getpackpath(repo, constants.FILEPACK_CATEGORY)
+    packpath = shallowutil.getcachepackpath(repo, constants.FILEPACK_CATEGORY)
     packcontentstore = datapackstore(
         packpath,
         usecdatapack=repo.ui.configbool('remotefilelog', 'fastdatapack'))

@@ -29,7 +29,7 @@ def incrementalrepack(repo):
     repo and performing the most minimal repack to keep the repo in good shape.
     """
 
-    packpath = shallowutil.getpackpath(repo, constants.FILEPACK_CATEGORY)
+    packpath = shallowutil.getcachepackpath(repo, constants.FILEPACK_CATEGORY)
     shallowutil.mkstickygroupdir(repo.ui, packpath)
 
     files = osutil.listdir(packpath, stat=True)
@@ -148,7 +148,7 @@ def _computeincrementalpack(ui, files, limits, packsuffix, indexsuffix,
     return []
 
 def _runrepack(repo, data, history):
-    packpath = shallowutil.getpackpath(repo, constants.FILEPACK_CATEGORY)
+    packpath = shallowutil.getcachepackpath(repo, constants.FILEPACK_CATEGORY)
     shallowutil.mkstickygroupdir(repo.ui, packpath)
 
     packer = repacker(repo, data, history)

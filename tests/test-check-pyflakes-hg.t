@@ -140,5 +140,4 @@ run pyflakes on all tracked files ending in .py or without a file ending
   hgext3rd/upgradegeneraldelta.py:109: undefined name '_'
   tests/perftest.py:165: undefined name 'mdiff'
   tests/treemanifest_correctness.py:163: undefined name 'mdiff'
-  treemanifest/__init__.py:141: undefined name 'mpatchError'
   

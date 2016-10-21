@@ -39,7 +39,7 @@ def wraprepo(repo):
     if not isinstance(repo, localrepo.localrepository):
         return
 
-    packpath = shallowutil.getpackpath(repo, PACK_CATEGORY)
+    packpath = shallowutil.getcachepackpath(repo, PACK_CATEGORY)
     datastore = datapackstore(
         packpath,
         usecdatapack=repo.ui.configbool('remotefilelog', 'fastdatapack'))
@@ -53,7 +53,9 @@ def _unpackmanifests(orig, self, repo, *args, **kwargs):
 
     if (util.safehasattr(repo.svfs, "manifestdatastore") and
         repo.ui.configbool('treemanifest', 'autocreatetrees')):
-        packpath = shallowutil.getpackpath(repo, PACK_CATEGORY)
+
+        # TODO: only put in cache if pulling from main server
+        packpath = shallowutil.getcachepackpath(repo, PACK_CATEGORY)
         opener = scmutil.vfs(packpath)
         with mutabledatapack(repo.ui, opener) as dpack:
             recordmanifest(dpack, repo, oldtip, len(mf))
@@ -138,7 +140,7 @@ def recordmanifest(pack, repo, oldtip, newtip):
                     block = delta[current:current + blocklen]
                     current += blocklen
             except struct.error:
-                raise mpatchError("patch cannot be decoded")
+                raise RuntimeError("patch cannot be decoded")
 
             # An individual delta block may contain multiple newline delimited
             # entries.

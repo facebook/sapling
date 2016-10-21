@@ -426,8 +426,8 @@ class fileserverclient(object):
         i = 0
         self.ui.progress(_downloading, i, total=len(groupedfiles))
 
-        packpath = shallowutil.getpackpath(self.repo,
-                                           constants.FILEPACK_CATEGORY)
+        packpath = shallowutil.getcachepackpath(self.repo,
+                                                constants.FILEPACK_CATEGORY)
         shallowutil.mkstickygroupdir(self.repo.ui, packpath)
 
         opener = scmutil.vfs(packpath)

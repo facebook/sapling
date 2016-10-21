@@ -61,7 +61,7 @@ def getcachepath(ui, allowempty=False):
                                 "remotefilelog.cachepath"))
     return util.expandpath(cachepath)
 
-def getpackpath(repo, category):
+def getcachepackpath(repo, category):
     cachepath = getcachepath(repo.ui)
     if category != constants.FILEPACK_CATEGORY:
         return os.path.join(cachepath, repo.name, 'packs', category)
