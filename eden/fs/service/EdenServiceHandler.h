@@ -87,11 +87,6 @@ class EdenServiceHandler : virtual public EdenServiceSvIf,
 
   void mountImpl(const MountInfo& info);
 
-  void getMaterializedEntriesRecursive(
-      std::map<std::string, FileInformation>& out,
-      RelativePathPiece dirPath,
-      TreeInode* dir);
-
   EdenServer* const server_;
 };
 }

@@ -22,6 +22,7 @@
 #include "eden/fs/inodes/TreeEntryFileInode.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/model/Hash.h"
+#include "eden/fs/service/EdenMountHandler.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fuse/MountPoint.h"
 
@@ -267,79 +268,10 @@ void EdenServiceHandler::getMaterializedEntries(
     std::unique_ptr<std::string> mountPoint) {
   auto edenMount = server_->getMount(*mountPoint);
   if (!edenMount) {
-    throw newEdenError(ENODEV, "no such mount point \"{}\"", *mountPoint);
+    throw newEdenError(ENODEV, "no such mount point \"{}\"", mountPoint.get());
   }
-  auto inodeDispatcher = edenMount->getMountPoint()->getDispatcher();
-  auto rootInode = inodeDispatcher->getDirInode(FUSE_ROOT_ID);
 
-  auto latest = edenMount->getJournal().rlock()->getLatest();
-
-  out.currentPosition.mountGeneration = edenMount->getMountGeneration();
-  out.currentPosition.sequenceNumber = latest->toSequence;
-  out.currentPosition.snapshotHash =
-      StringPiece(latest->toHash.getBytes()).str();
-
-  auto treeInode = std::dynamic_pointer_cast<TreeInode>(rootInode);
-  if (treeInode) {
-    getMaterializedEntriesRecursive(
-        out.fileInfo, RelativePathPiece(), treeInode.get());
-  }
-}
-
-// Convert from a system timespec to our thrift TimeSpec
-static inline void timespecToTimeSpec(const timespec& src, TimeSpec& dest) {
-  dest.seconds = src.tv_sec;
-  dest.nanoSeconds = src.tv_nsec;
-}
-
-void EdenServiceHandler::getMaterializedEntriesRecursive(
-    std::map<std::string, FileInformation>& out,
-    RelativePathPiece dirPath,
-    TreeInode* dir) {
-  dir->getContents().withRLock([&](const auto& contents) mutable {
-    if (contents.materialized) {
-      FileInformation dirInfo;
-      auto attr = dir->getAttrLocked(&contents);
-
-      dirInfo.mode = attr.st.st_mode;
-      timespecToTimeSpec(attr.st.st_mtim, dirInfo.mtime);
-
-      out[dirPath.value().toString()] = std::move(dirInfo);
-    } else {
-      return;
-    }
-
-    for (auto& entIter : contents.entries) {
-      const auto& name = entIter.first;
-      const auto& ent = entIter.second;
-
-      if (!ent->materialized) {
-        continue;
-      }
-
-      auto childInode = dir->lookupChildByNameLocked(&contents, name);
-      auto childPath = dirPath + name;
-
-      if (S_ISDIR(ent->mode)) {
-        auto childDir = std::dynamic_pointer_cast<TreeInode>(childInode);
-        DCHECK(childDir->getContents().rlock()->materialized)
-            << (dirPath + name) << " entry " << ent.get()
-            << " materialized is true, but the contained dir is !materialized";
-        this->getMaterializedEntriesRecursive(out, childPath, childDir.get());
-      } else {
-        auto fileInode =
-            std::dynamic_pointer_cast<TreeEntryFileInode>(childInode);
-        auto attr = fileInode->getattr().get();
-
-        FileInformation fileInfo;
-        fileInfo.mode = attr.st.st_mode;
-        fileInfo.size = attr.st.st_size;
-        timespecToTimeSpec(attr.st.st_mtim, fileInfo.mtime);
-
-        out[childPath.value().toStdString()] = std::move(fileInfo);
-      }
-    }
-  });
+  return getMaterializedEntriesForMount(edenMount.get(), out);
 }
 
 void EdenServiceHandler::getBindMounts(

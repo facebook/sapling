@@ -42,6 +42,23 @@ python_library(
   ],
 )
 
+cpp_library(
+  name = 'EdenMountHandler',
+  headers = [
+    'EdenMountHandler.h',
+  ],
+  srcs = [
+    'EdenMountHandler.cpp',
+  ],
+  deps = [
+    ':thrift-cpp2',
+    '//eden/fs/inodes:inodes',
+    '//eden/fuse:fusell',
+    '//eden/utils:utils',
+    '//folly:folly',
+  ],
+)
+
 if is_facebook_internal():
     include_defs('//eden/fs/service/facebook/DEFS')
     create_eden_fs_rules(
