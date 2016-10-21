@@ -217,14 +217,14 @@ Test amending a change where there has already been a sync before
   stripping amended changeset a6e4f018e982
   2 changesets found
   uncompressed size of bundle content:
-       478 (changelog)
+       468 (changelog)
        442 (manifests)
        317  dir1/b
        331  dir2/subdir/b
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/a6e4f018e982-f4dc39cf-amend-backup.hg (glob)
   1 changesets found
   uncompressed size of bundle content:
-       303 (changelog)
+       282 (changelog)
        223 (manifests)
        199  dir1/b
        213  dir2/subdir/b

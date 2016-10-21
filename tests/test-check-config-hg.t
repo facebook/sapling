@@ -90,6 +90,7 @@ New errors are not allowed. Warnings are strongly discouraged.
   undocumented: remotefilelog.serverexpiration (int) [30]
   undocumented: remotefilelog.validatecache (str) ['on']
   undocumented: remotefilelog.validatecachelog (str)
+  undocumented: remotenames.bookmarks (bool) [True]
   undocumented: simplecache.cachedir (str)
   undocumented: simplecache.caches (list) [['local']]
   undocumented: simplecache.evictionpercent (int) [50]

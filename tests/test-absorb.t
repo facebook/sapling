@@ -344,8 +344,8 @@ Test config option absorb.amendflags and running as a sub command of amend:
   
   options:
   
-    --[no-]correlated incorporate corrections into stack. see 'hg help absorb'
-                      for details
+    --correlated incorporate corrections into stack. see 'hg help absorb' for
+                 details
   
   (some details hidden, use --verbose to show complete help)
 

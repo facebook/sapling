@@ -17,10 +17,10 @@ Test functionality is present
 
 
   $ hg help commit | grep -- fixup
-      --[no-]fixup          (with --amend) rebase children from a previous amend
+      --fixup               (with --amend) rebase children from a previous amend
   $ hg help commit | grep -- rebase
-      --[no-]rebase         (with --amend) rebases children after the amend
-      --[no-]fixup          (with --amend) rebase children from a previous amend
+      --rebase              (with --amend) rebases children after the amend
+      --fixup               (with --amend) rebase children from a previous amend
   $ hg help amend
   hg amend [OPTION]...
   
@@ -28,12 +28,12 @@ Test functionality is present
   
   options ([+] can be repeated):
   
-   -A --[no-]addremove      mark new/missing files as added/removed before
+   -A --addremove           mark new/missing files as added/removed before
                             committing
-   -e --[no-]edit           prompt to edit the commit message
-   -i --[no-]interactive    use interactive mode
-      --[no-]rebase         rebases children after the amend
-      --[no-]fixup          rebase children from a previous amend
+   -e --edit                prompt to edit the commit message
+   -i --interactive         use interactive mode
+      --rebase              rebases children after the amend
+      --fixup               rebase children from a previous amend
    -I --include PATTERN [+] include names matching the given patterns
    -X --exclude PATTERN [+] exclude names matching the given patterns
    -m --message TEXT        use text as commit message
