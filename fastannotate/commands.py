@@ -53,8 +53,10 @@ def _matchpaths(repo, rev, pats, opts, aopts):
         for p in pats:
             yield os.path.join(reldir, p)
     else:
+        def bad(x, y):
+            raise error.Abort("%s: %s" % (x, y))
         ctx = scmutil.revsingle(repo, rev)
-        m = scmutil.match(ctx, pats, opts)
+        m = scmutil.match(ctx, pats, opts, badfn=bad)
         for p in ctx.walk(m):
             yield p
 

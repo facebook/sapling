@@ -1,5 +1,19 @@
 (this file is backported from core hg tests/test-annotate.t)
 
+  $ extpath=`dirname $TESTDIR`
+  $ PYTHONPATH=$extpath:$TESTDIR/../:$PYTHONPATH
+  $ export PYTHONPATH
+
+  $ cat >> $HGRCPATH << EOF
+  > [diff]
+  > git=1
+  > [extensions]
+  > fastannotate=
+  > [fastannotate]
+  > commands=annotate
+  > mainbranch=.
+  > EOF
+
   $ HGMERGE=true; export HGMERGE
 
 init
@@ -156,8 +170,11 @@ annotate -nlf b
   $ hg ci -mmergeb -d '3 0'
 
 annotate after merge
+(note: the first one falls back to the vanilla annotate which does not use linelog)
 
-  $ hg annotate -nf b
+  $ hg annotate -nf b --debug
+  fastannotate: b: cache broken and deleted
+  fastannotate: b: 5 new changesets in the main branch
   0 a: a
   1 a: a
   1 a: a
@@ -165,15 +182,68 @@ annotate after merge
   4 b: c
   3 b: b5
 
-annotate after merge with -l
+(difference explained below)
 
-  $ hg annotate -nlf b
+  $ hg annotate -nf b --debug
+  fastannotate: b: using fast path (resolved fctx: True)
+  0 a: a
+  1 a: a
+  1 a: a
+  4 b: b4
+  4 b: c
+  4 b: b5
+
+annotate after merge with -l
+(fastannotate differs from annotate)
+
+  $ hg log -Gp -T '{rev}:{node}' -r '2..5'
+  @    5:64afcdf8e29e063c635be123d8d2fb160af00f7e
+  |\
+  | o  4:5fbdc1152d97597717021ad9e063061b200f146bdiff --git a/b b/b
+  | |  --- a/b
+  | |  +++ b/b
+  | |  @@ -1,3 +1,6 @@
+  | |   a
+  | |   a
+  | |   a
+  | |  +b4
+  | |  +c
+  | |  +b5
+  | |
+  o |  3:37ec9f5c3d1f99572d7075971cb4876e2139b52fdiff --git a/b b/b
+  |/   --- a/b
+  |    +++ b/b
+  |    @@ -1,3 +1,6 @@
+  |     a
+  |     a
+  |     a
+  |    +b4
+  |    +b5
+  |    +b6
+  |
+  o  2:3086dbafde1ce745abfc8d2d367847280aabae9ddiff --git a/a b/b
+  |  copy from a
+  ~  copy to b
+  
+
+(in this case, "b4", "b5" could be considered introduced by either rev 3, or rev 4.
+ and that causes the rev number difference)
+
+  $ hg annotate -nlf b --config fastannotate.commands=
   0 a:1: a
   1 a:2: a
   1 a:3: a
   3 b:4: b4
   4 b:5: c
   3 b:5: b5
+
+  $ hg annotate -nlf b
+  0 a:1: a
+  1 a:2: a
+  1 a:3: a
+  4 b:4: b4
+  4 b:5: c
+  4 b:6: b5
 
   $ hg up -C 1
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
@@ -209,8 +279,53 @@ annotate after rename merge
   7 b: d
 
 annotate after rename merge with -l
+(fastannotate differs from annotate)
 
-  $ hg annotate -nlf b
+  $ hg log -Gp -T '{rev}:{node}' -r '0+1+6+7'
+  @    7:6284bb6c38fef984a929862a53bbc71ce9eafa81diff --git a/b b/b
+  |\   --- a/b
+  | :  +++ b/b
+  | :  @@ -1,3 +1,7 @@
+  | :   a
+  | :   z
+  | :   a
+  | :  +b4
+  | :  +c
+  | :  +b5
+  | :  +d
+  | :
+  o :  6:b80e3e32f75a6a67cd4ac85496a11511e9112816diff --git a/a b/b
+  :/   copy from a
+  :    copy to b
+  :    --- a/a
+  :    +++ b/b
+  :    @@ -1,3 +1,3 @@
+  :     a
+  :    +z
+  :     a
+  :    -a
+  :
+  o  1:762f04898e6684ff713415f7b8a8d53d33f96c92diff --git a/a b/a
+  |  --- a/a
+  |  +++ b/a
+  |  @@ -1,1 +1,3 @@
+  |   a
+  |  +a
+  |  +a
+  |
+  o  0:8435f90966e442695d2ded29fdade2bac5ad8065diff --git a/a b/a
+     new file mode 100644
+     --- /dev/null
+     +++ b/a
+     @@ -0,0 +1,1 @@
+     +a
+  
+
+(rev 1 adds two "a"s and rev 6 deletes one "a".
+ the "a" that rev 6 deletes could be either the first or the second "a" of those two "a"s added by rev 1.
+ and that causes the line number difference)
+
+  $ hg annotate -nlf b --config fastannotate.commands=
   0 a:1: a
   6 b:2: z
   1 a:3: a
@@ -219,7 +334,17 @@ annotate after rename merge with -l
   3 b:5: b5
   7 b:7: d
 
+  $ hg annotate -nlf b
+  0 a:1: a
+  6 b:2: z
+  1 a:2: a
+  3 b:4: b4
+  4 b:5: c
+  3 b:5: b5
+  7 b:7: d
+
 Issue2807: alignment of line numbers with -l
+(fastannotate differs from annotate, same reason as above)
 
   $ echo more >> b
   $ hg ci -mmore -d '5 0'
@@ -230,7 +355,7 @@ Issue2807: alignment of line numbers with -l
   $ hg annotate -nlf b
    0 a: 1: a
    6 b: 2: z
-   1 a: 3: a
+   1 a: 2: a
    3 b: 4: b4
    4 b: 5: c
    3 b: 5: b5
