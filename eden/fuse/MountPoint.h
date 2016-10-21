@@ -36,6 +36,8 @@ class MountPoint {
 
   void setRootInode(std::shared_ptr<DirInode> inode);
 
+  std::shared_ptr<DirInode> getRootInode() const;
+
   const AbsolutePath& getPath() const {
     return path_;
   }

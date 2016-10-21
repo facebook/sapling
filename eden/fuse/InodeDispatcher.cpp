@@ -181,6 +181,11 @@ void InodeDispatcher::setRootInode(std::shared_ptr<DirInode> inode) {
   recordInode(root_);
 }
 
+std::shared_ptr<DirInode> InodeDispatcher::getRootInode() const {
+  DCHECK(root_);
+  return root_;
+}
+
 void InodeDispatcher::recordInode(std::shared_ptr<InodeBase> inode) {
   auto ino = inode->getNodeId();
   std::unique_lock<SharedMutex> g(lock_);

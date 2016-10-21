@@ -65,6 +65,10 @@ class InodeDispatcher : public Dispatcher {
    * using the InodeDispatcher.
    */
   void setRootInode(std::shared_ptr<DirInode> inode);
+
+  /** Throws if setRootInode() has not been invoked yet. */
+  std::shared_ptr<DirInode> getRootInode() const;
+
   void recordInode(std::shared_ptr<InodeBase> inode);
 
   void initConnection(fuse_conn_info& conn) override;

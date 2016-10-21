@@ -37,6 +37,10 @@ void MountPoint::setRootInode(std::shared_ptr<DirInode> inode) {
   dispatcher_->setRootInode(std::move(inode));
 }
 
+std::shared_ptr<DirInode> MountPoint::getRootInode() const {
+  return dispatcher_->getRootInode();
+}
+
 std::shared_ptr<InodeBase> MountPoint::getInodeBaseForPath(
     RelativePathPiece path) const {
   auto inodeDispatcher = getDispatcher();

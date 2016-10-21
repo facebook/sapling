@@ -77,10 +77,10 @@ const vector<BindMount>& EdenMount::getBindMounts() const {
 }
 
 std::unique_ptr<Tree> EdenMount::getRootTree() const {
-  auto root = mountPoint_->getDirInodeForPath(RelativePathPiece(""));
-  auto dirTreeEntry = std::dynamic_pointer_cast<TreeInode>(root);
+  auto rootAsDirInode = mountPoint_->getRootInode();
+  auto rootAsTreeInode = std::dynamic_pointer_cast<TreeInode>(rootAsDirInode);
   {
-    auto dir = dirTreeEntry->getContents().rlock();
+    auto dir = rootAsTreeInode->getContents().rlock();
     auto& rootTreeHash = dir->treeHash.value();
     auto tree = getObjectStore()->getTree(rootTreeHash);
     return tree;
