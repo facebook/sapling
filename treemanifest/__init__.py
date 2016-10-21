@@ -71,6 +71,10 @@ def _unpackmanifests(orig, self, repo, *args, **kwargs):
         repo.svfs.manifestdatastore.markforrefresh()
 
 class InterceptedMutablePack(object):
+    """This classes intercepts pack writes and replaces the node for the root
+    with the provided node. This is useful for forcing a tree manifest to be
+    referencable via its flat hash.
+    """
     def __init__(self, pack, node):
         self._pack = pack
         self._node = node

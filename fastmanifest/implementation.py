@@ -11,7 +11,7 @@ import os
 import time
 import heapq
 
-from mercurial import manifest, mdiff, revlog, util
+from mercurial import manifest, mdiff, revlog, scmutil, util
 import cachemanager
 import cfastmanifest
 from metrics import metricscollector
@@ -19,6 +19,8 @@ from constants import *
 
 try:
     import ctreemanifest
+    import treemanifest
+    from remotefilelog import datapack, shallowutil
     supportsctree = True
 except ImportError:
     supportsctree = False
@@ -812,10 +814,48 @@ class manifestfactory(object):
                 fastcache.put_inmemory(hexnode, cachedmf)
 
             self.ui.debug("[FM] wrote manifest %s\n" % (hexnode,))
-
-            return node
         else:
-            return orig(*args, **kwargs)
+            node = orig(*args, **kwargs)
+
+        if (supportsctree and
+            self.ui.configbool("fastmanifest", "usetree", False)):
+            tree = origself.read(p1)._treemanifest()
+            if tree:
+                newtree = tree.copy()
+                for filename in removed:
+                    del newtree[filename]
+
+                for filename in added:
+                    fnode = m[filename]
+                    fflag = m.flags(filename)
+                    newtree.set(filename, fnode, fflag)
+
+                if not util.safehasattr(transaction, 'treepack'):
+                    packpath = shallowutil.getlocalpackpath(
+                            origself.opener.vfs.base,
+                            'manifests')
+                    opener = scmutil.vfs(packpath)
+                    transaction.treepack = datapack.mutabledatapack(
+                            self.ui,
+                            opener)
+                    def postclose(tr):
+                        tr.treepack.close()
+                        treemanifestcache.getinstance(origself.opener,
+                                                      self.ui).clear()
+                        origself.opener.manifestdatastore.markforrefresh()
+                    def abort(tr):
+                        tr.treepack.abort()
+                    transaction.addpostclose('treepack', postclose)
+                    transaction.addabort('treepack', abort)
+
+                pack = treemanifest.InterceptedMutablePack(
+                        transaction.treepack,
+                        node)
+                newtree.write(pack, tree)
+
+                treemanifestcache.getinstance(opener, self.ui)[node] = newtree
+
+        return node
 
 def _silent_debug(*args, **kwargs):
     """Replacement for ui.debug that silently swallows the arguments.
