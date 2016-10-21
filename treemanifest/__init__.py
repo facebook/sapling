@@ -26,7 +26,7 @@ import struct
 cmdtable = {}
 command = cmdutil.command(cmdtable)
 
-PACK_CATEGORY='manifest'
+PACK_CATEGORY='manifests'
 
 def extsetup(ui):
     extensions.wrapfunction(changegroup.cg1unpacker, '_unpackmanifests',
@@ -39,11 +39,17 @@ def wraprepo(repo):
     if not isinstance(repo, localrepo.localrepository):
         return
 
+    usecdatapack = repo.ui.configbool('remotefilelog', 'fastdatapack')
+
     packpath = shallowutil.getcachepackpath(repo, PACK_CATEGORY)
-    datastore = datapackstore(
-        packpath,
-        usecdatapack=repo.ui.configbool('remotefilelog', 'fastdatapack'))
-    repo.svfs.manifestdatastore = unioncontentstore(datastore)
+    datastore = datapackstore(packpath, usecdatapack=usecdatapack)
+
+    localpackpath = shallowutil.getlocalpackpath(repo.svfs.vfs.base,
+                                                 PACK_CATEGORY)
+    localdatastore = datapackstore(localpackpath, usecdatapack=usecdatapack)
+
+    repo.svfs.manifestdatastore = unioncontentstore(localdatastore, datastore,
+        writestore=localdatastore)
 
 def _unpackmanifests(orig, self, repo, *args, **kwargs):
     mf = repo.manifest

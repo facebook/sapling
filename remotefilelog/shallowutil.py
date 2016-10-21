@@ -68,6 +68,9 @@ def getcachepackpath(repo, category):
     else:
         return os.path.join(cachepath, repo.name, 'packs')
 
+def getlocalpackpath(base, category):
+    return os.path.join(base, 'packs', category)
+
 def createrevlogtext(text, copyfrom=None, copyrev=None):
     """returns a string that matches the revlog contents in a
     traditional revlog
