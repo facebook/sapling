@@ -108,8 +108,6 @@ run pyflakes on all tracked files ending in .py or without a file ending
   treemanifest/__init__.py:17: 'nullrev' imported but unused
   hgext3rd/catnotate.py:26: local variable 'files' is assigned to but never used
   hgext3rd/fastlog.py:358: local variable 'queue' is assigned to but never used
-  hgext3rd/fbamend.py:148: local variable 'currev' is assigned to but never used
-  hgext3rd/fbamend.py:158: local variable 'precrev' is assigned to but never used
   hgext3rd/fbconduit.py:191: local variable 'peerpath' is assigned to but never used
   hgext3rd/fbconduit.py:205: local variable 'e' is assigned to but never used
   hgext3rd/fbhistedit.py:144: local variable 'histedit' is assigned to but never used

@@ -145,7 +145,6 @@ def unamend(ui, repo, **opts):
 
     # identify the commit from which to unamend
     curctx = repo['.']
-    currev = curctx.rev()
 
     # identify the commit to which to unamend
     markers = list(obsolete.precursormarkers(curctx))
@@ -155,7 +154,6 @@ def unamend(ui, repo, **opts):
 
     precnode = markers[0].precnode()
     precctx = unfi[precnode]
-    precrev = precctx.rev()
 
     if curctx.children():
         raise error.Abort(_("cannot unamend in the middle of a stack"))
