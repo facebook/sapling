@@ -98,6 +98,9 @@ def resolvefctx(repo, rev, path, resolverev=False, adjustctx=None):
         ctx = _revsingle(repo, rev)
     else:
         ctx = repo[rev]
+    # special handling working copy context
+    if ctx.rev() is None:
+        return ctx[path]
     # manifest.find is optimized for single file resolution. use it instead
     # of manifest.get or ctx.__getitem__ or ctx.filectx for better performance.
     # note: this is kind of reinventing ctx.filectx.
@@ -241,6 +244,9 @@ class _annotatecontext(object):
         # "hist", reducing its memory usage otherwise could be huge.
         initvisit = [revfctx]
         if masterfctx:
+            if masterfctx.rev() is None:
+                raise error.Abort(_('cannot update linelog to wdir()'),
+                                  hint=_('set fastannotate.mainbranch'))
             initvisit.append(masterfctx)
         visit = initvisit[:]
         pcache = {}

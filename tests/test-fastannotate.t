@@ -228,3 +228,40 @@ json format
     "rev": 0
    }
   ]
+
+working copy
+
+  $ echo a >> a
+  $ hg fastannotate -r 'wdir()' a
+  abort: cannot update linelog to wdir()
+  (set fastannotate.mainbranch)
+  [255]
+  $ cat >> $HGRCPATH << EOF
+  > [fastannotate]
+  > mainbranch = .
+  > EOF
+  $ hg fastannotate -r 'wdir()' a
+  0 : a
+  1+: a
+  $ hg fastannotate -cludn -r 'wdir()' a
+  test 0 1fd620b16252  Thu Jan 01 00:00:00 1970 +0000:1: a
+  test 1 720582f5bdb6+ *:2: a (glob)
+  $ hg fastannotate -cludn -r 'wdir()' -Tjson a
+  [
+   {
+    "date": [0.0, 0],
+    "line": "a\n",
+    "line_number": 1,
+    "node": "1fd620b16252aecb54c6aa530dff5ed6e6ec3d21",
+    "rev": 0,
+    "user": "test"
+   },
+   {
+    "date": [*, 0], (glob)
+    "line": "a\n",
+    "line_number": 2,
+    "node": null,
+    "rev": null,
+    "user": "test"
+   }
+  ]
