@@ -7,7 +7,7 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
-#include "eden/fs/model/hg/misc.h"
+#include "eden/fs/store/ObjectStores.h"
 #include "eden/fs/store/testutil/FakeObjectStore.h"
 
 #include <gtest/gtest.h>
@@ -90,6 +90,24 @@ TEST(getEntryForFile, fileEntryInDeepDirectory) {
 
   CHECK_EQ("deep_file", treeEntry->getName());
   CHECK_EQ(deepFileHash, treeEntry->getHash());
+}
+
+TEST(getTreeForDirectory, getRootDirectory) {
+  auto store = createObjectStoreForTest(rootTreeHash);
+  auto rootTree = store->getTree(rootTreeHash);
+
+  RelativePathPiece emptyPath("");
+  auto treeForDir = getTreeForDirectory(emptyPath, rootTree.get(), store.get());
+  EXPECT_EQ(rootTreeHash, treeForDir->getHash());
+}
+
+TEST(getTreeForDirectory, getDeepDirectory) {
+  auto store = createObjectStoreForTest(rootTreeHash);
+  auto rootTree = store->getTree(rootTreeHash);
+
+  RelativePathPiece deepDir("a_dir/deep_dir");
+  auto treeForDir = getTreeForDirectory(deepDir, rootTree.get(), store.get());
+  EXPECT_EQ(deepDirHash, treeForDir->getHash());
 }
 
 namespace {

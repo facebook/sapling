@@ -19,6 +19,16 @@ class Tree;
 class TreeEntry;
 
 /**
+ * Given a Tree and a RelativePathPiece, returns the corresponding Tree in the
+ * ObjectStore, if it exists. Note the `path` is relative to the specified
+ * `tree`.
+ */
+std::unique_ptr<Tree> getTreeForDirectory(
+    RelativePathPiece path,
+    const Tree* tree,
+    const IObjectStore* objectStore);
+
+/**
  * Given a Tree and a RelativePathPiece, returns the corresponding TreeEntry in
  * the ObjectStore, if it exists.
  */
