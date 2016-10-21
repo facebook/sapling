@@ -202,7 +202,7 @@ run pyflakes on all tracked files ending in .py or without a file ending
   hgext3rd/fbamend.py:158: local variable 'precrev' is assigned to but never used
   hgext3rd/fbconduit.py:191: local variable 'peerpath' is assigned to but never used
   hgext3rd/fbconduit.py:205: local variable 'e' is assigned to but never used
-  hgext3rd/fbhistedit.py:145: local variable 'histedit' is assigned to but never used
+  hgext3rd/fbhistedit.py:144: local variable 'histedit' is assigned to but never used
   hgext3rd/grepdiff.py:74: local variable 'res' is assigned to but never used
   hgext3rd/pullcreatemarkers.py:62: local variable 'l' is assigned to but never used
   hgext3rd/pullcreatemarkers.py:63: local variable 't' is assigned to but never used

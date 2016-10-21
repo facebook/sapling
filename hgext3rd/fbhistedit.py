@@ -107,8 +107,7 @@ def defineactions():
                 # relock the repository
                 state.wlock = repo.wlock()
                 state.lock = repo.lock()
-                repo.invalidate()
-                repo.invalidatedirstate()
+                repo.invalidateall()
 
             if rc != 0:
                 raise error.InterventionRequired(

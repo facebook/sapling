@@ -447,6 +447,8 @@ def makedirstate(cls):
                     delattr(self, a)
             self._lastnormaltime = 0
             self._dirty = False
+            self._dirtypl = False
+            self._origpl = None
             self._parentwriters = 0
             self._sqlinit()
             if util.safehasattr(self, '_fsmonitorstate'):

@@ -2,15 +2,17 @@
 
   $ extpath=`dirname $TESTDIR`
   $ cp $extpath/hgext3rd/fbhistedit.py $TESTTMP # use $TESTTMP substitution in message
-  $ cat >> $HGRCPATH <<EOF
+  $ cat <<EOF >> $HGRCPATH
   > [extensions]
   > histedit=
+  > sqldirstate=$(dirname $TESTDIR)/sqldirstate
   > fbhistedit=$TESTTMP/fbhistedit.py
+  > [shelve]
   > EOF
 
   $ initrepo ()
   > {
-  >     hg init r
+  >     hg init --config format.sqldirstate=True r
   >     cd r
   >     for x in a b c d e f ; do
   >         echo $x > $x
