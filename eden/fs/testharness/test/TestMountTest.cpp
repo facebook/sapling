@@ -80,3 +80,50 @@ TEST(TestMount, addFileAfterMountIsCreated) {
   EXPECT_EQ(1, rootTree->getTreeEntries().size())
       << "New entry is not in the Tree, though.";
 }
+
+TEST(TestMount, overwriteFile) {
+  TestMountBuilder builder;
+  builder.addFile({"file.txt", "original contents"});
+  auto testMount = builder.build();
+
+  testMount->overwriteFile("file.txt", "new contents");
+  // TODO(mbolin): Need method to read the file and verify its contents.
+}
+
+TEST(TestMount, mkdir) {
+  TestMountBuilder builder;
+  auto testMount = builder.build();
+
+  testMount->mkdir("a");
+  testMount->addFile("a/file.txt", "original contents");
+  // TODO(mbolin): Need method to read the file and verify its contents.
+}
+
+TEST(TestMount, deleteFile) {
+  TestMountBuilder builder;
+  builder.addFile({"file.txt", "original contents"});
+  auto testMount = builder.build();
+
+  testMount->deleteFile("file.txt");
+  // TODO(mbolin): Need method to verify the file has been removed.
+}
+
+TEST(TestMount, createFileInSubdirectory) {
+  TestMountBuilder builder;
+  builder.addFile({"a/b/c.txt", "I am in the a/b/ directory."});
+  auto testMount = builder.build();
+
+  testMount->addFile("a/b/d.txt", "Another file in the a/b directory.");
+}
+
+TEST(TestMount, mkdirWithoutParentShouldThrowENOENT) {
+  TestMountBuilder builder;
+  auto testMount = builder.build();
+
+  try {
+    testMount->mkdir("x/y/z");
+    FAIL() << "ENOENT should be thrown";
+  } catch (const std::system_error& expected) {
+    ASSERT_EQ(ENOENT, expected.code().value());
+  }
+}

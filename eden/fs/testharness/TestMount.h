@@ -57,6 +57,13 @@ class TestMount {
    */
   void addFile(folly::StringPiece path, std::string contents);
 
+  void mkdir(folly::StringPiece path);
+
+  /** Overwrites the contents of an existing file. */
+  void overwriteFile(folly::StringPiece path, std::string contents);
+
+  void deleteFile(folly::StringPiece path);
+
   std::shared_ptr<TreeInode> getDirInodeForPath(folly::StringPiece path) const;
   std::shared_ptr<TreeEntryFileInode> getFileInodeForPath(
       folly::StringPiece path) const;

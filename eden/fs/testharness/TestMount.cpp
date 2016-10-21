@@ -136,6 +136,41 @@ void TestMount::addFile(folly::StringPiece path, std::string contents) {
   createResult.fh->fsync(/*datasync*/ true);
 }
 
+void TestMount::overwriteFile(folly::StringPiece path, std::string contents) {
+  auto relativePath = RelativePathPiece{path};
+  auto directory =
+      edenMount_->getMountPoint()->getDirInodeForPath(relativePath.dirname());
+  auto dispatcher = edenMount_->getMountPoint()->getDispatcher();
+  auto child =
+      dispatcher
+          ->lookupInodeBase(directory->getNodeId(), relativePath.basename())
+          .get();
+  auto file = std::dynamic_pointer_cast<TreeEntryFileInode>(child);
+
+  fuse_file_info info;
+  info.flags = O_RDWR | O_TRUNC;
+  info.fh = file->getNodeId();
+  auto fileHandle = file->open(info).get();
+  off_t offset = 0;
+  fileHandle->write(contents, offset);
+  fileHandle->fsync(/*datasync*/ true);
+}
+
+void TestMount::mkdir(folly::StringPiece path) {
+  auto relativePath = RelativePathPiece{path};
+  auto treeInode = getDirInodeForPath(relativePath.dirname().stringPiece());
+  mode_t mode = 0755;
+  auto dispatcher = edenMount_->getMountPoint()->getDispatcher();
+  dispatcher->mkdir(treeInode->getInode(), relativePath.basename(), mode).get();
+}
+
+void TestMount::deleteFile(folly::StringPiece path) {
+  auto relativePath = RelativePathPiece{path};
+  auto treeInode = getDirInodeForPath(relativePath.dirname().stringPiece());
+  auto dispatcher = edenMount_->getMountPoint()->getDispatcher();
+  dispatcher->unlink(treeInode->getInode(), relativePath.basename()).get();
+}
+
 std::shared_ptr<TreeInode> TestMount::getDirInodeForPath(
     folly::StringPiece path) const {
   auto directory =
