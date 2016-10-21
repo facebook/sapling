@@ -640,8 +640,8 @@ class fastmanifestcache(object):
                 self.debug("[FM] skipped %s, cache full\n" % hexnode)
             else:
                 self.debug("[FM] caching revision %s\n" % hexnode)
-                ret = self.ondiskcache.setwithlimit(hexnode, manifest,
-                                                    self.limit.bytes())
+                self.ondiskcache.setwithlimit(hexnode, manifest,
+                                              self.limit.bytes())
         else:
             self.debug("[FM] caching revision %s\n" % hexnode)
             self.ondiskcache[hexnode] = manifest

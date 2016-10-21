@@ -6,7 +6,6 @@
 # GNU General Public License version 2 or any later version.
 
 import errno
-import resource
 import os
 import platform
 import socket

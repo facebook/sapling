@@ -7,7 +7,6 @@
 
 import os
 import errno
-import sys
 
 from mercurial import extensions, revlog, scmutil, util, error
 
@@ -209,7 +208,7 @@ def cachemanifestfillandtrim(ui, repo, revset):
     try:
         with concurrency.looselock(repo.vfs,
                 "fastmanifest",
-                constants.WORKER_SPAWN_LOCK_STEAL_TIMEOUT) as lock:
+                constants.WORKER_SPAWN_LOCK_STEAL_TIMEOUT):
             cache = fastmanifestcache.getinstance(repo.store.opener, ui)
 
             computedrevs = scmutil.revrange(repo, revset)

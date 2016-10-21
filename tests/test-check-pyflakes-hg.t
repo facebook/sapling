@@ -19,8 +19,6 @@ run pyflakes on all tracked files ending in .py or without a file ending
   >   cat "$TESTTMP/files1"
   > fi \
   > | xargs pyflakes 2>/dev/null | "$RUNTESTDIR/filterpyflakes.py"
-  fastmanifest/cachemanager.py:10: 'sys' imported but unused
-  fastmanifest/concurrency.py:9: 'resource' imported but unused
   hgext3rd/arcdiff.py:9: 'cmdutil' imported but unused
   hgext3rd/arcdiff.py:9: 'hg' imported but unused
   hgext3rd/arcdiff.py:9: 'scmutil' imported but unused
@@ -108,8 +106,6 @@ run pyflakes on all tracked files ending in .py or without a file ending
   tests/treemanifest_correctness.py:12: 'fastmanifestcache' imported but unused
   treemanifest/__init__.py:17: 'hex' imported but unused
   treemanifest/__init__.py:17: 'nullrev' imported but unused
-  fastmanifest/cachemanager.py:212: local variable 'lock' is assigned to but never used
-  fastmanifest/implementation.py:643: local variable 'ret' is assigned to but never used
   hgext3rd/catnotate.py:26: local variable 'files' is assigned to but never used
   hgext3rd/fastlog.py:358: local variable 'queue' is assigned to but never used
   hgext3rd/fbamend.py:148: local variable 'currev' is assigned to but never used
