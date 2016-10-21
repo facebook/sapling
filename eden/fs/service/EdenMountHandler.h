@@ -10,6 +10,7 @@
 #pragma once
 
 #include "eden/fs/service/gen-cpp2/EdenService.h"
+#include "eden/utils/PathFuncs.h"
 
 namespace facebook {
 namespace eden {
@@ -19,5 +20,13 @@ class EdenMount;
 void getMaterializedEntriesForMount(
     EdenMount* edenMount,
     MaterializedResult& out);
+
+/**
+ * @return vector with the RelativePath of every directory that is modified
+ *     according to the overlay in the mount. The vector will be ordered as a
+ *     depth-first traversal of the overlay.
+ */
+std::unique_ptr<std::vector<RelativePath>> getModifiedDirectoriesForMount(
+    EdenMount* edenMount);
 }
 }
