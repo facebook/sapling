@@ -196,3 +196,35 @@ empty file
   $ touch empty
   $ hg commit -A empty -m empty
   $ hg fastannotate empty
+
+json format
+
+  $ hg fastannotate -Tjson -cludn b a empty
+  [
+   {
+    "date": [0.0, 0],
+    "line": "a\n",
+    "line_number": 1,
+    "node": "1fd620b16252aecb54c6aa530dff5ed6e6ec3d21",
+    "rev": 0,
+    "user": "test"
+   },
+   {
+    "date": [0.0, 0],
+    "line": "b\n",
+    "line_number": 1,
+    "node": "1fd620b16252aecb54c6aa530dff5ed6e6ec3d21",
+    "rev": 0,
+    "user": "test"
+   }
+  ]
+
+  $ hg fastannotate -Tjson -cludn empty
+  [
+  ]
+  $ hg fastannotate -Tjson --no-content -n a
+  [
+   {
+    "rev": 0
+   }
+  ]

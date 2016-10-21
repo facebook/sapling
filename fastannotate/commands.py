@@ -76,7 +76,7 @@ fastannotatecommandargs = {
         ('', 'long-hash', None, _('show long changeset hash (EXPERIMENTAL)')),
         ('', 'rebuild', None, _('rebuild cache even if it exists '
                                 '(EXPERIMENTAL)')),
-    ] + commands.diffwsopts + commands.walkopts,
+    ] + commands.diffwsopts + commands.walkopts + commands.formatteropts,
     'synopsis': _('[-r REV] [-f] [-a] [-u] [-d] [-n] [-c] [-l] FILE...'),
     'inferrepo': True,
 }
@@ -124,7 +124,11 @@ def fastannotate(ui, repo, *pats, **opts):
         for name in ui.configlist('fastannotate', 'defaultformat', ['number']):
             opts[name] = True
 
-    formatter = faformatter.defaultformatter(ui, repo, opts)
+    template = opts.get('template')
+    if template == 'json':
+        formatter = faformatter.jsonformatter(ui, repo, opts)
+    else:
+        formatter = faformatter.defaultformatter(ui, repo, opts)
     showdeleted = opts.get('deleted', False)
     showlines = not bool(opts.get('no_content'))
     showpath = opts.get('file', False)
@@ -156,6 +160,7 @@ def fastannotate(ui, repo, *pats, **opts):
             result, lines = result
 
         formatter.write(result, lines, existinglines=existinglines)
+    formatter.end()
 
 _newopts = set([])
 _knownopts = set([opt[1].replace('-', '_') for opt in
@@ -165,6 +170,9 @@ def _annotatewrapper(orig, ui, repo, *pats, **opts):
     """use this in extensions.wrapcommand"""
     nonemptyopts = set(k for k, v in opts.iteritems() if v)
     unknownopts = nonemptyopts.difference(_knownopts)
+    if opts.get('template', '') not in ['json', '']:
+        # if -T is used, fastannotate only supports -Tjson
+        unknownopts.add('template')
     if unknownopts:
         ui.debug('fastannotate: option %r is not supported, falling back '
                  'to the original annotate\n' % list(unknownopts))
