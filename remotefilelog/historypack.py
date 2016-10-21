@@ -354,6 +354,9 @@ class mutablehistorypack(basepack.mutablebasepack):
         self.entries[node] = node
 
     def close(self, ledger=None):
+        if self._closed:
+            return
+
         if self.currentfile:
             self._writependingsection()
 

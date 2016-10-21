@@ -231,21 +231,26 @@ class mutablebasepack(object):
 
     def __exit__(self, exc_type, exc_value, traceback):
         if exc_type is None:
-            if not self._closed:
-                self.close()
+            self.close()
         else:
-            # Unclean exit
-            try:
-                self.opener.unlink(self.packpath)
-                self.opener.unlink(self.idxpath)
-            except Exception:
-                pass
+            self.abort()
+
+    def abort(self):
+        # Unclean exit
+        try:
+            self.opener.unlink(self.packpath)
+            self.opener.unlink(self.idxpath)
+        except Exception:
+            pass
 
     def writeraw(self, data):
         self.packfp.write(data)
         self.sha.update(data)
 
     def close(self, ledger=None):
+        if self._closed:
+            return
+
         sha = self.sha.hexdigest()
         self.packfp.close()
         self.writeindex()
