@@ -12,6 +12,7 @@ import os
 import resource
 import tempfile
 
+from collections import defaultdict
 from mercurial import (
     bundle2,
     changegroup,
@@ -318,7 +319,7 @@ def validaterevset(repo, revset):
         raise error.Abort(
             _('cannot push more than one head to a scratch branch'))
 
-def getscratchbranchpart(repo, peer, outgoing, force, bookmark, create):
+def getscratchbranchpart(repo, peer, outgoing, force, ui, bookmark, create):
     if not outgoing.missing:
         raise error.Abort(_('no commits to push'))
 
@@ -340,6 +341,12 @@ def getscratchbranchpart(repo, peer, outgoing, force, bookmark, create):
             params['create'] = '1'
     if force:
         params['force'] = '1'
+
+    # Do not send pushback bundle2 part with bookmarks if remotenames extension
+    # is enabled. It will be handled manually in `_push()`
+    if not _isremotebooksenabled(ui):
+        params['pushbackbookmarks'] = '1'
+
     # .upper() marks this as a mandatory part: server will abort if there's no
     #  handler
     return bundle2.bundlepart(
@@ -350,7 +357,6 @@ def getscratchbranchpart(repo, peer, outgoing, force, bookmark, create):
 def _pull(orig, ui, repo, source="default", **opts):
     # Copy paste from `pull` command
     source, branches = hg.parseurl(ui.expandpath(source), opts.get('branch'))
-    other = hg.peer(repo, opts, source)
 
     hasscratchbookmarks = False
     scratchbookmarks = {}
@@ -359,6 +365,7 @@ def _pull(orig, ui, repo, source="default", **opts):
         revs = opts.get('rev') or []
         for bookmark in opts.get('bookmark'):
             if _scratchbranchmatcher(bookmark):
+                other = hg.peer(repo, opts, source)
                 if hasscratchbookmarks:
                     raise error.Abort('not implemented: not possible to pull '
                                       'more than one scratch branch')
@@ -380,17 +387,67 @@ def _pull(orig, ui, repo, source="default", **opts):
                                              'findcommonincoming',
                                              _findcommonincoming)
     try:
+        # Remote scratch bookmarks will be deleted because remotenames doesn't
+        # know about them. Let's save it before pull and restore after
+        remotescratchbookmarks = _readscratchremotebookmarks(ui, repo, source)
         result = orig(ui, repo, source, **opts)
         # TODO(stash): race condition is possible
         # if scratch bookmarks was updated right after orig.
         # But that's unlikely and shouldn't be harmful.
-        _savebookmarks(repo, scratchbookmarks)
+        if _isremotebooksenabled(ui):
+            remotescratchbookmarks.update(scratchbookmarks)
+            _saveremotebookmarks(repo, remotescratchbookmarks, source)
+        else:
+            _savelocalbookmarks(repo, scratchbookmarks)
         return result
     finally:
         if hasscratchbookmarks:
             discovery.findcommonincoming = oldfindcommonincoming
 
-def _savebookmarks(repo, bookmarks):
+def _isremotebooksenabled(ui):
+    return ('remotenames' in extensions._extensions and
+            ui.configbool('remotenames', 'bookmarks', True))
+
+def _readscratchremotebookmarks(ui, repo, other):
+    if _isremotebooksenabled(ui):
+        remotenamesext = extensions.find('remotenames')
+        remotepath = remotenamesext.activepath(repo.ui, other)
+        result = {}
+        for remotebookmark in repo.names['remotebookmarks'].listnames(repo):
+            path, bookname = remotenamesext.splitremotename(remotebookmark)
+            if path == remotepath and _scratchbranchmatcher(bookname):
+                nodes = repo.names['remotebookmarks'].nodes(repo,
+                                                            remotebookmark)
+                result[bookname] = hex(nodes[0])
+        return result
+    else:
+        return {}
+
+def _saveremotebookmarks(repo, newbookmarks, remote):
+    remotenamesext = extensions.find('remotenames')
+    remotepath = remotenamesext.activepath(repo.ui, remote)
+    branches = defaultdict(list)
+    bookmarks = {}
+    remotenames = remotenamesext.readremotenames(repo)
+    for hexnode, nametype, remote, rname in remotenames:
+        if remote != remotepath:
+            continue
+        if nametype == 'bookmarks':
+            if rname in newbookmarks:
+                # It's possible if we have a normal bookmark that matches
+                # scratch branch pattern. In this case just use the current
+                # bookmark node
+                del newbookmarks[rname]
+            bookmarks[rname] = hexnode
+        elif nametype == 'branches':
+            # saveremotenames expects 20 byte binary nodes for branches
+            branches[rname].append(bin(hexnode))
+
+    for bookmark, hexnode in newbookmarks.items():
+        bookmarks[bookmark] = hexnode
+    remotenamesext.saveremotenames(repo, remotepath, branches, bookmarks)
+
+def _savelocalbookmarks(repo, bookmarks):
     with repo.wlock():
         with repo.lock():
             with repo.transaction('bookmark') as tr:
@@ -403,7 +460,7 @@ def _findcommonincoming(orig, *args, **kwargs):
     common, inc, remoteheads = orig(*args, **kwargs)
     return common, True, remoteheads
 
-def _push(orig, ui, repo, *args, **opts):
+def _push(orig, ui, repo, dest=None, *args, **opts):
     oldbookmark = ui.backupconfig(experimental, configbookmark)
     oldcreate = ui.backupconfig(experimental, configcreate)
     oldphasemove = None
@@ -436,7 +493,20 @@ def _push(orig, ui, repo, *args, **opts):
             oldphasemove = wrapfunction(exchange,
                                         '_localphasemove',
                                         _phasemove)
+        # Copy-paste from `push` command
+        path = ui.paths.getpath(dest, default=('default-push', 'default'))
+        destpath = path.pushloc or path.loc
+        # Remote scratch bookmarks will be deleted because remotenames doesn't
+        # know about them. Let's save it before push and restore after
+        remotescratchbookmarks = _readscratchremotebookmarks(ui, repo, destpath)
         result = orig(ui, repo, *args, **opts)
+        if _isremotebooksenabled(ui):
+            if bookmark and scratchpush:
+                other = hg.peer(repo, opts, destpath)
+                fetchedbookmarks = other.listkeyspatterns('bookmarks',
+                                                          patterns=[bookmark])
+                remotescratchbookmarks.update(fetchedbookmarks)
+            _saveremotebookmarks(repo, remotescratchbookmarks, destpath)
     finally:
         ui.restoreconfig(oldbookmark)
         ui.restoreconfig(oldcreate)
@@ -474,6 +544,7 @@ def partgen(pushop, bundler):
                                        pushop.remote,
                                        pushop.outgoing,
                                        pushop.force,
+                                       pushop.ui,
                                        bookmark,
                                        create)
 
@@ -555,7 +626,8 @@ def _getrevs(bundle, oldnode, force):
                           hint=_('use --force to override'))
 
 @bundle2.parthandler(scratchbranchparttype,
-                     ('bookmark', 'bookprevnode' 'create', 'force',))
+                     ('bookmark', 'bookprevnode' 'create', 'force',
+                      'pushbackbookmarks'))
 def bundle2scratchbranch(op, part):
     '''unbundle a bundle2 part containing a changegroup to store'''
 
@@ -608,15 +680,17 @@ def bundle2scratchbranch(op, part):
             if bookmark:
                 index.addbookmarkandbundle(key, newnodes,
                                            bookmark, newnodes[-1])
-                _addbookmarkpushbackpart(op, bookmark,
-                                         newnodes[-1], bookprevnode)
+                if params.get('pushbackbookmarks'):
+                    _addbookmarkpushbackpart(op, bookmark,
+                                             newnodes[-1], bookprevnode)
             else:
                 # Push new scratch commits with no bookmark
                 index.addbundle(key, newnodes)
         elif bookmark:
             # Push new scratch bookmark to known scratch commits
             index.addbookmark(bookmark, nodes[-1])
-            _addbookmarkpushbackpart(op, bookmark, nodes[-1], bookprevnode)
+            if params.get('pushbackbookmarks'):
+                _addbookmarkpushbackpart(op, bookmark, nodes[-1], bookprevnode)
     finally:
         try:
             if bundlefile:
