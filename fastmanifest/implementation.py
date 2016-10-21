@@ -78,6 +78,10 @@ class hybridmanifest(object):
                 # build a flat manifest from the text of the fastmanifest.
                 self.__flatmanifest = manifest.manifestdict(
                     self.__cachedmanifest.text())
+            elif self.__treemanifest is not None:
+                # build a flat manifest from the text of the fastmanifest.
+                self.__flatmanifest = manifest.manifestdict(
+                    self.__treemanifest.text())
 
             assert isinstance(self.__flatmanifest, manifest.manifestdict)
         return self.__flatmanifest
