@@ -37,7 +37,7 @@ class dummysmtpsecureserver(dummysmtpserver):
         if not pair:
             return
         conn, addr = pair
-        ui = uimod.ui()
+        ui = uimod.ui.load()
         try:
             # wrap_socket() would block, but we don't care
             conn = sslutil.wrapserversocket(conn, ui, certfile=self._certfile)

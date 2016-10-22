@@ -96,6 +96,12 @@ default = %s
 
 class ui(object):
     def __init__(self, src=None):
+        """Create a fresh new ui object if no src given
+
+        Use uimod.ui.load() to create a ui which knows global and user configs.
+        In most cases, you should use ui.copy() to create a copy of an existing
+        ui object.
+        """
         # _buffers: used for temporary capture of output
         self._buffers = []
         # 3-tuple describing how each buffer in the stack behaves.
@@ -138,11 +144,17 @@ class ui(object):
 
             # shared read-only environment
             self.environ = os.environ
-            # we always trust global config files
-            for f in scmutil.rcpath():
-                self.readconfig(f, trust=True)
 
             self.httppasswordmgrdb = urlreq.httppasswordmgrwithdefaultrealm()
+
+    @classmethod
+    def load(cls):
+        """Create a ui and load global and user configs"""
+        u = cls()
+        # we always trust global config files
+        for f in scmutil.rcpath():
+            u.readconfig(f, trust=True)
+        return u
 
     def copy(self):
         return self.__class__(self)

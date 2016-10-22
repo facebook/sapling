@@ -17,7 +17,7 @@ BUNDLEPATH = os.path.join(TESTDIR, 'bundles', 'test-no-symlinks.hg')
 if not getattr(os, "symlink", False):
     sys.exit(80) # SKIPPED_STATUS defined in run-tests.py
 
-u = uimod.ui()
+u = uimod.ui.load()
 # hide outer repo
 hg.peer(u, {}, '.', create=True)
 
@@ -48,10 +48,10 @@ for f in 'test0/a.lnk', 'test0/d/b.lnk':
     fp.close()
 
 # reload repository
-u = uimod.ui()
+u = uimod.ui.load()
 repo = hg.repository(u, 'test0')
 commands.status(u, repo)
 
 # try cloning a repo which contains symlinks
-u = uimod.ui()
+u = uimod.ui.load()
 hg.clone(u, {}, BUNDLEPATH, 'test1')

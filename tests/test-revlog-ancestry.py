@@ -6,7 +6,7 @@ from mercurial import (
     ui as uimod,
 )
 
-u = uimod.ui()
+u = uimod.ui.load()
 
 repo = hg.repository(u, 'test1', create=1)
 os.chdir('test1')

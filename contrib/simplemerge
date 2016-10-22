@@ -54,7 +54,7 @@ try:
         sys.exit(0)
     if len(args) != 3:
             raise ParseError(_('wrong number of arguments'))
-    sys.exit(simplemerge.simplemerge(ui.ui(), *args, **opts))
+    sys.exit(simplemerge.simplemerge(ui.ui.load(), *args, **opts))
 except ParseError as e:
     sys.stdout.write("%s: %s\n" % (sys.argv[0], e))
     showhelp()

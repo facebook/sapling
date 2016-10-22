@@ -92,7 +92,7 @@ now test that we fixed the bug for all scripts/extensions
   > def printfiles(repo, rev):
   >     print "revision %s files: %s" % (rev, repo[rev].files())
   > 
-  > repo = hg.repository(ui.ui(), '.')
+  > repo = hg.repository(ui.ui.load(), '.')
   > assert len(repo) == 6, \
   >        "initial: len(repo): %d, expected: 6" % len(repo)
   > 

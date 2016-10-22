@@ -50,7 +50,7 @@ outputre = re.compile((r'! wall (\d+.\d+) comb \d+.\d+ user \d+.\d+ sys '
 
 def runperfcommand(reponame, command, *args, **kwargs):
     os.environ["HGRCPATH"] = os.environ.get("ASVHGRCPATH", "")
-    ui = uimod.ui()
+    ui = uimod.ui.load()
     repo = hg.repository(ui, os.path.join(reposdir, reponame))
     perfext = extensions.load(ui, 'perfext',
                               os.path.join(basedir, 'contrib', 'perf.py'))

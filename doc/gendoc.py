@@ -217,7 +217,7 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         doc = sys.argv[1]
 
-    ui = uimod.ui()
+    ui = uimod.ui.load()
     if doc == 'hg.1.gendoc':
         showdoc(ui)
     else:

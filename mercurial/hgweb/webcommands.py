@@ -1302,7 +1302,7 @@ def help(web, req, tmpl):
         return tmpl('helptopics', topics=topics, title=topicname,
                     subindex=True)
 
-    u = webutil.wsgiui()
+    u = webutil.wsgiui.load()
     u.verbose = True
 
     # Render a page from a sub-topic.

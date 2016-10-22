@@ -46,7 +46,7 @@ localrepo.localrepository.testcachedunfifoobar = testcachedunfifoobar
 # these tests on the real object to detect regression.
 repopath = os.path.join(os.environ['TESTTMP'], 'repo')
 assert subprocess.call(['hg', 'init', repopath]) == 0
-ui = uimod.ui()
+ui = uimod.ui.load()
 repo = hg.repository(ui, path=repopath).unfiltered()
 
 

@@ -136,7 +136,7 @@ class hgwebdir(object):
         if self.baseui:
             u = self.baseui.copy()
         else:
-            u = uimod.ui()
+            u = uimod.ui.load()
             u.setconfig('ui', 'report_untrusted', 'off', 'hgwebdir')
             u.setconfig('ui', 'nontty', 'true', 'hgwebdir')
             # displaying bundling progress bar while serving feels wrong and may

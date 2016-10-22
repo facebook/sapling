@@ -66,7 +66,7 @@ def testui(user='foo', group='bar', tusers=(), tgroups=(),
     print('# %s user, %s group%s' % (kind[user == cuser], kind[group == cgroup],
                                      trusted))
 
-    u = uimod.ui()
+    u = uimod.ui.load()
     u.setconfig('ui', 'debug', str(bool(debug)))
     u.setconfig('ui', 'report_untrusted', str(bool(report)))
     u.readconfig('.hg/hgrc')
@@ -156,7 +156,7 @@ print(u.config('foobar', 'baz'))
 
 print()
 print("# read trusted, untrusted, new ui, trusted")
-u = uimod.ui()
+u = uimod.ui.load()
 u.setconfig('ui', 'debug', 'on')
 u.readconfig(filename)
 u2 = u.copy()

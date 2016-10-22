@@ -23,7 +23,7 @@ hgrc.write('[extensions]\n')
 hgrc.write('color=\n')
 hgrc.close()
 
-ui_ = uimod.ui()
+ui_ = uimod.ui.load()
 ui_.setconfig('ui', 'formatted', 'True')
 
 # we're not interested in the output, so write that to devnull

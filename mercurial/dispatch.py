@@ -101,7 +101,7 @@ def dispatch(req):
 
     try:
         if not req.ui:
-            req.ui = uimod.ui()
+            req.ui = uimod.ui.load()
         if '--traceback' in req.args:
             req.ui.setconfig('ui', 'traceback', 'on', '--traceback')
 

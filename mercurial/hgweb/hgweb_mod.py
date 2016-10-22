@@ -224,7 +224,7 @@ class hgweb(object):
             if baseui:
                 u = baseui.copy()
             else:
-                u = uimod.ui()
+                u = uimod.ui.load()
             r = hg.repository(u, repo)
         else:
             # we trust caller to give us a private copy
@@ -467,4 +467,3 @@ def getwebview(repo):
         return repo.filtered(viewconfig)
     else:
         return repo.filtered('served')
-

@@ -5,7 +5,7 @@ from mercurial import (
     ui as uimod,
 )
 
-testui = uimod.ui()
+testui = uimod.ui.load()
 parsed = dispatch._parseconfig(testui, [
     'values.string=string value',
     'values.bool1=true',

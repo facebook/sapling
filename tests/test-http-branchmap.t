@@ -81,7 +81,7 @@ verify 7e7d56fe4833 (encoding fallback in branchmap to maintain compatibility wi
   > sys.stdout = StdoutWrapper(sys.stdout)
   > sys.stderr = StdoutWrapper(sys.stderr)
   > 
-  > myui = ui.ui()
+  > myui = ui.ui.load()
   > repo = hg.repository(myui, 'a')
   > commands.serve(myui, repo, stdio=True, cmdserver=False)
   > EOF

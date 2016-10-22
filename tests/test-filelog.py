@@ -13,7 +13,7 @@ from mercurial import (
     ui as uimod,
 )
 
-myui = uimod.ui()
+myui = uimod.ui.load()
 repo = hg.repository(myui, path='.', create=True)
 
 fl = repo.file('foobar')

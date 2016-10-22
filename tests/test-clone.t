@@ -515,7 +515,7 @@ iterable in addbranchrevs()
 
   $ cat <<EOF > simpleclone.py
   > from mercurial import ui, hg
-  > myui = ui.ui()
+  > myui = ui.ui.load()
   > repo = hg.repository(myui, 'a')
   > hg.clone(myui, {}, repo, dest="ua")
   > EOF
@@ -528,7 +528,7 @@ iterable in addbranchrevs()
 
   $ cat <<EOF > branchclone.py
   > from mercurial import ui, hg, extensions
-  > myui = ui.ui()
+  > myui = ui.ui.load()
   > extensions.loadall(myui)
   > repo = hg.repository(myui, 'a')
   > hg.clone(myui, {}, repo, dest="ua", branch=["stable",])

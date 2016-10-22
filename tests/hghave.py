@@ -449,7 +449,7 @@ def has_sslcontext():
 @check("defaultcacerts", "can verify SSL certs by system's CA certs store")
 def has_defaultcacerts():
     from mercurial import sslutil, ui as uimod
-    ui = uimod.ui()
+    ui = uimod.ui.load()
     return sslutil._defaultcacerts(ui) or sslutil._canloaddefaultcerts
 
 @check("defaultcacertsloaded", "detected presence of loaded system CA certs")
@@ -462,7 +462,7 @@ def has_defaultcacertsloaded():
     if not has_sslcontext():
         return False
 
-    ui = uimod.ui()
+    ui = uimod.ui.load()
     cafile = sslutil._defaultcacerts(ui)
     ctx = ssl.create_default_context()
     if cafile:

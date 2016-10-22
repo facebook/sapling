@@ -15,7 +15,7 @@ os.chdir('webdir')
 
 webdir = os.path.realpath('.')
 
-u = uimod.ui()
+u = uimod.ui.load()
 hg.repository(u, 'a', create=1)
 hg.repository(u, 'b', create=1)
 os.chdir('b')

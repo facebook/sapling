@@ -32,7 +32,7 @@ for i in xrange(64):
         f.write('debug = True\n')
     f.close()
 
-    u = uimod.ui()
+    u = uimod.ui.load()
     if cmd_quiet or cmd_debug or cmd_verbose:
         u.setconfig('ui', 'quiet', str(bool(cmd_quiet)))
         u.setconfig('ui', 'verbose', str(bool(cmd_verbose)))

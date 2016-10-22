@@ -15,7 +15,7 @@ class myui(uimod.ui):
     def interactive(self):
         return False
 
-origui = myui()
+origui = myui.load()
 
 def writeauth(items):
     ui = origui.copy()

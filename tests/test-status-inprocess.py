@@ -7,7 +7,7 @@ from mercurial import (
     ui as uimod,
 )
 
-u = uimod.ui()
+u = uimod.ui.load()
 
 print('% creating repo')
 repo = localrepo.localrepository(u, '.', create=True)

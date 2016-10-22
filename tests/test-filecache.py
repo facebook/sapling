@@ -141,7 +141,7 @@ def fakeuncacheable():
 def test_filecache_synced():
     # test old behavior that caused filecached properties to go out of sync
     os.system('hg init && echo a >> a && hg ci -qAm.')
-    repo = hg.repository(uimod.ui())
+    repo = hg.repository(uimod.ui.load())
     # first rollback clears the filecache, but changelog to stays in __dict__
     repo.rollback()
     repo.commit('.')

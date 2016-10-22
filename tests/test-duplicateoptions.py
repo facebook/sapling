@@ -21,7 +21,7 @@ for ext in disabled:
 
 hgrc.close()
 
-u = uimod.ui()
+u = uimod.ui.load()
 extensions.loadall(u)
 
 globalshort = set()

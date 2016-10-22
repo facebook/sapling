@@ -456,7 +456,7 @@ test bisecting command
   > #!/usr/bin/env python
   > import sys
   > from mercurial import ui, hg
-  > repo = hg.repository(ui.ui(), '.')
+  > repo = hg.repository(ui.ui.load(), '.')
   > if repo['.'].rev() < 6:
   >     sys.exit(1)
   > EOF

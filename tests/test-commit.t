@@ -609,7 +609,7 @@ verify pathauditor blocks evil filepaths
   $ cat > evil-commit.py <<EOF
   > from mercurial import ui, hg, context, node
   > notrc = u".h\u200cg".encode('utf-8') + '/hgrc'
-  > u = ui.ui()
+  > u = ui.ui.load()
   > r = hg.repository(u, '.')
   > def filectxfn(repo, memctx, path):
   >     return context.memfilectx(repo, path, '[hooks]\nupdate = echo owned')
@@ -633,7 +633,7 @@ verify pathauditor blocks evil filepaths
   $ cat > evil-commit.py <<EOF
   > from mercurial import ui, hg, context, node
   > notrc = "HG~1/hgrc"
-  > u = ui.ui()
+  > u = ui.ui.load()
   > r = hg.repository(u, '.')
   > def filectxfn(repo, memctx, path):
   >     return context.memfilectx(repo, path, '[hooks]\nupdate = echo owned')
@@ -651,7 +651,7 @@ verify pathauditor blocks evil filepaths
   $ cat > evil-commit.py <<EOF
   > from mercurial import ui, hg, context, node
   > notrc = "HG8B6C~2/hgrc"
-  > u = ui.ui()
+  > u = ui.ui.load()
   > r = hg.repository(u, '.')
   > def filectxfn(repo, memctx, path):
   >     return context.memfilectx(repo, path, '[hooks]\nupdate = echo owned')

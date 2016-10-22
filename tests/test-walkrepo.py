@@ -16,7 +16,7 @@ pjoin = os.path.join
 walkrepos = scmutil.walkrepos
 checklink = util.checklink
 
-u = uimod.ui()
+u = uimod.ui.load()
 sym = checklink('.')
 
 hg.repository(u, 'top1', create=1)
