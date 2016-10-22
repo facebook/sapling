@@ -262,8 +262,8 @@ def onetimeclientsetup(ui):
     wrapfunction(scmutil, '_findrenames', findrenames)
 
     # prefetch files before mergecopies check
-    def computenonoverlap(orig, repo, c1, c2, addedinm1, addedinm2):
-        u1, u2 = orig(repo, c1, c2, addedinm1, addedinm2)
+    def computenonoverlap(orig, repo, c1, c2, *args, **kwargs):
+        u1, u2 = orig(repo, c1, c2, *args, **kwargs)
         if shallowrepo.requirement in repo.requirements:
             m1 = c1.manifest()
             m2 = c2.manifest()
