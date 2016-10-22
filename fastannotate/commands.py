@@ -40,11 +40,11 @@ def _matchpaths(repo, rev, pats, opts, aopts):
         if any(opts.get(o[1]) for o in commands.walkopts): # a)
             perfhack = False
         else: # b)
-            # fadir: fastannotate directory that contains linelogs
-            fadir = repo.vfs.join('fastannotate', aopts.shortstr, reldir)
-            if not all(os.path.isfile(os.path.join(fadir, '%s.l'
-                                                   % facontext.encodedir(f)))
-                       for f in pats):
+            # disable perfhack on '..' since it allows escaping from the repo
+            if any(('..' in f or
+                    not os.path.isfile(
+                        facontext.pathhelper(repo, f, aopts).linelogpath))
+                   for f in pats):
                 perfhack = False
 
     # perfhack: emit paths directory without checking with manifest

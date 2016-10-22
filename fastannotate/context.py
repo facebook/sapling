@@ -640,6 +640,30 @@ def _unlinkpaths(paths):
         except OSError:
             pass
 
+class pathhelper(object):
+    """helper for getting paths for lockfile, linelog and revmap"""
+
+    def __init__(self, repo, path, opts):
+        # different options use different directories
+        self._vfspath = os.path.join('fastannotate',
+                                     opts.shortstr, encodedir(path))
+        self._repo = repo
+
+    @property
+    def dirname(self):
+        return os.path.dirname(self._repo.vfs.join(self._vfspath))
+
+    @property
+    def linelogpath(self):
+        return self._repo.vfs.join(self._vfspath + '.l')
+
+    def lock(self):
+        return lockmod.lock(self._repo.vfs, self._vfspath + '.lock')
+
+    @property
+    def revmappath(self):
+        return self._repo.vfs.join(self._vfspath + '.m')
+
 @contextlib.contextmanager
 def annotatecontext(repo, path, opts=defaultopts, rebuild=False):
     """context needed to perform (fast) annotate on a file
@@ -656,17 +680,13 @@ def annotatecontext(repo, path, opts=defaultopts, rebuild=False):
         with annotatecontext(...) as actx:
             actx. ....
     """
-    # different options use different directories
-    subpath = os.path.join('fastannotate', opts.shortstr, encodedir(path))
-    util.makedirs(repo.vfs.join(os.path.dirname(subpath)))
-    lockpath = subpath + '.lock'
-    lock = lockmod.lock(repo.vfs, lockpath)
-    fullpath = repo.vfs.join(subpath)
-    revmappath = fullpath + '.m'
-    linelogpath = fullpath + '.l'
+    helper = pathhelper(repo, path, opts)
+    util.makedirs(helper.dirname)
+    revmappath = helper.revmappath
+    linelogpath = helper.linelogpath
     linelog = revmap = None
     try:
-        with lock:
+        with helper.lock():
             if rebuild:
                 _unlinkpaths([revmappath, linelogpath])
             revmap = revmapmod.revmap(revmappath)
