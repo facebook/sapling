@@ -5,6 +5,101 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
+"""Generic output formatting for Mercurial
+
+The formatter provides API to show data in various ways. The following
+functions should be used in place of ui.write():
+
+- fm.write() for unconditional output
+- fm.condwrite() to show some extra data conditionally in plain output
+- fm.data() to provide extra data to JSON or template output
+- fm.plain() to show raw text that isn't provided to JSON or template output
+
+To show structured data (e.g. date tuples, dicts, lists), apply fm.format*()
+beforehand so the data is converted to the appropriate data type. Use
+fm.isplain() if you need to convert or format data conditionally which isn't
+supported by the formatter API.
+
+To build nested structure (i.e. a list of dicts), use fm.nested().
+
+See also https://www.mercurial-scm.org/wiki/GenericTemplatingPlan
+
+fm.condwrite() vs 'if cond:':
+
+In most cases, use fm.condwrite() so users can selectively show the data
+in template output. If it's costly to build data, use plain 'if cond:' with
+fm.write().
+
+fm.nested() vs fm.formatdict() (or fm.formatlist()):
+
+fm.nested() should be used to form a tree structure (a list of dicts of
+lists of dicts...) which can be accessed through template keywords, e.g.
+"{foo % "{bar % {...}} {baz % {...}}"}". On the other hand, fm.formatdict()
+exports a dict-type object to template, which can be accessed by e.g.
+"{get(foo, key)}" function.
+
+Doctest helper:
+
+>>> def show(fn, verbose=False, **opts):
+...     import sys
+...     from . import ui as uimod
+...     ui = uimod.ui()
+...     ui.fout = sys.stdout  # redirect to doctest
+...     ui.verbose = verbose
+...     return fn(ui, ui.formatter(fn.__name__, opts))
+
+Basic example:
+
+>>> def files(ui, fm):
+...     files = [('foo', 123, (0, 0)), ('bar', 456, (1, 0))]
+...     for f in files:
+...         fm.startitem()
+...         fm.write('path', '%s', f[0])
+...         fm.condwrite(ui.verbose, 'date', '  %s',
+...                      fm.formatdate(f[2], '%Y-%m-%d %H:%M:%S'))
+...         fm.data(size=f[1])
+...         fm.plain('\\n')
+...     fm.end()
+>>> show(files)
+foo
+bar
+>>> show(files, verbose=True)
+foo  1970-01-01 00:00:00
+bar  1970-01-01 00:00:01
+>>> show(files, template='json')
+[
+ {
+  "date": [0, 0],
+  "path": "foo",
+  "size": 123
+ },
+ {
+  "date": [1, 0],
+  "path": "bar",
+  "size": 456
+ }
+]
+>>> show(files, template='path: {path}\\ndate: {date|rfc3339date}\\n')
+path: foo
+date: 1970-01-01T00:00:00+00:00
+path: bar
+date: 1970-01-01T00:00:01+00:00
+
+Nested example:
+
+>>> def subrepos(ui, fm):
+...     fm.startitem()
+...     fm.write('repo', '[%s]\\n', 'baz')
+...     files(ui, fm.nested('files'))
+...     fm.end()
+>>> show(subrepos)
+[baz]
+foo
+bar
+>>> show(subrepos, template='{repo}: {join(files % "{path}", ", ")}\\n')
+baz: foo, bar
+"""
+
 from __future__ import absolute_import
 
 import os
