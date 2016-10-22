@@ -491,7 +491,11 @@ def _nextrebase(orig, ui, repo, **opts):
         # effectively "strips" all of the obsoleted changesets in the
         # stack below the child.
         _deinhibit(repo, ancestors)
-        obsolete.createmarkers(repo, [(child, [rebasedchild])])
+        obsolete.createmarkers(
+            repo,
+            [(child, [rebasedchild])],
+            metadata={'operation': 'rebase'}
+        )
 
         # Remove any preamend bookmarks on precursors, as these would
         # create unnecessary inhibition markers.
