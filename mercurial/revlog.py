@@ -1109,8 +1109,14 @@ class revlog(object):
         Callers will need to call ``self.start(rev)`` and ``self.length(rev)``
         to determine where each revision's data begins and ends.
         """
-        start = self.start(startrev)
-        end = self.end(endrev)
+        # Inlined self.start(startrev) & self.end(endrev) for perf reasons
+        # (functions are expensive).
+        index = self.index
+        istart = index[startrev]
+        iend = index[endrev]
+        start = int(istart[0] >> 16)
+        end = int(iend[0] >> 16) + iend[1]
+
         if self._inline:
             start += (startrev + 1) * self._io.size
             end += (endrev + 1) * self._io.size
