@@ -271,9 +271,6 @@ def _loadnewui(srcui, args):
         if ':' in source or source == '--config':
             # path:line or command line
             continue
-        if source == 'none':
-            # ui.configsource returns 'none' by default
-            source = ''
         newui.setconfig(section, name, value, source)
 
     # load wd and repo config, copied from dispatch.py

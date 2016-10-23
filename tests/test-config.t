@@ -84,6 +84,32 @@ Test case sensitive configuration
    }
   ]
 
+Test empty config source:
+
+  $ cat <<EOF > emptysource.py
+  > def reposetup(ui, repo):
+  >     ui.setconfig('empty', 'source', 'value')
+  > EOF
+  $ cp .hg/hgrc .hg/hgrc.orig
+  $ cat <<EOF >> .hg/hgrc
+  > [extensions]
+  > emptysource = `pwd`/emptysource.py
+  > EOF
+
+  $ hg config --debug empty.source
+  read config from: * (glob)
+  none: value
+  $ hg config empty.source -Tjson
+  [
+   {
+    "name": "empty.source",
+    "source": "",
+    "value": "value"
+   }
+  ]
+
+  $ cp .hg/hgrc.orig .hg/hgrc
+
 Test "%unset"
 
   $ cat >> $HGRCPATH <<EOF

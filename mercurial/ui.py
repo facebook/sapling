@@ -249,8 +249,9 @@ class ui(object):
                     if not p:
                         continue
                     if '%%' in p:
+                        s = self.configsource('paths', n) or 'none'
                         self.warn(_("(deprecated '%%' in path %s=%s from %s)\n")
-                                  % (n, p, self.configsource('paths', n)))
+                                  % (n, p, s))
                         p = p.replace('%%', '%')
                     p = util.expandpath(p)
                     if not util.hasscheme(p) and not os.path.isabs(p):
@@ -291,7 +292,7 @@ class ui(object):
         return untrusted and self._ucfg or self._tcfg
 
     def configsource(self, section, name, untrusted=False):
-        return self._data(untrusted).source(section, name) or 'none'
+        return self._data(untrusted).source(section, name)
 
     def config(self, section, name, default=None, untrusted=False):
         if isinstance(name, list):
