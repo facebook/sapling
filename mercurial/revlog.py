@@ -1113,9 +1113,12 @@ class revlog(object):
         # (functions are expensive).
         index = self.index
         istart = index[startrev]
-        iend = index[endrev]
         start = int(istart[0] >> 16)
-        end = int(iend[0] >> 16) + iend[1]
+        if startrev == endrev:
+            end = start + istart[1]
+        else:
+            iend = index[endrev]
+            end = int(iend[0] >> 16) + iend[1]
 
         if self._inline:
             start += (startrev + 1) * self._io.size
