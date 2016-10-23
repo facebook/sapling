@@ -380,22 +380,29 @@ class revlog(object):
                     return r
             raise LookupError(node, self.indexfile, _('no node'))
 
-    def node(self, rev):
-        return self.index[rev][7]
-    def linkrev(self, rev):
-        return self.index[rev][4]
-    def parents(self, node):
-        i = self.index
-        d = i[self.rev(node)]
-        return i[d[5]][7], i[d[6]][7] # map revisions to nodes inline
-    def parentrevs(self, rev):
-        return self.index[rev][5:7]
+    # Accessors for index entries.
+
+    # First tuple entry is 8 bytes. First 6 bytes are offset. Last 2 bytes
+    # are flags.
     def start(self, rev):
         return int(self.index[rev][0] >> 16)
-    def end(self, rev):
-        return self.start(rev) + self.length(rev)
+
+    def flags(self, rev):
+        return self.index[rev][0] & 0xFFFF
+
     def length(self, rev):
         return self.index[rev][1]
+
+    def rawsize(self, rev):
+        """return the length of the uncompressed text for a given revision"""
+        l = self.index[rev][2]
+        if l >= 0:
+            return l
+
+        t = self.revision(self.node(rev))
+        return len(t)
+    size = rawsize
+
     def chainbase(self, rev):
         base = self._chainbasecache.get(rev)
         if base is not None:
@@ -409,6 +416,26 @@ class revlog(object):
 
         self._chainbasecache[rev] = base
         return base
+
+    def linkrev(self, rev):
+        return self.index[rev][4]
+
+    def parentrevs(self, rev):
+        return self.index[rev][5:7]
+
+    def node(self, rev):
+        return self.index[rev][7]
+
+    # Derived from index values.
+
+    def end(self, rev):
+        return self.start(rev) + self.length(rev)
+
+    def parents(self, node):
+        i = self.index
+        d = i[self.rev(node)]
+        return i[d[5]][7], i[d[6]][7] # map revisions to nodes inline
+
     def chainlen(self, rev):
         return self._chaininfo(rev)[0]
 
@@ -477,18 +504,6 @@ class revlog(object):
 
         chain.reverse()
         return chain, stopped
-
-    def flags(self, rev):
-        return self.index[rev][0] & 0xFFFF
-    def rawsize(self, rev):
-        """return the length of the uncompressed text for a given revision"""
-        l = self.index[rev][2]
-        if l >= 0:
-            return l
-
-        t = self.revision(self.node(rev))
-        return len(t)
-    size = rawsize
 
     def ancestors(self, revs, stoprev=0, inclusive=False):
         """Generate the ancestors of 'revs' in reverse topological order.
