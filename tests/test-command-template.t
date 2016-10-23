@@ -3413,7 +3413,75 @@ Test shortest(node) function:
   hg: parse error: shortest() expects an integer minlength
   [255]
 
+  $ cd ..
+
+Test shortest(node) with the repo having short hash collision:
+
+  $ hg init hashcollision
+  $ cd hashcollision
+  $ cat <<EOF >> .hg/hgrc
+  > [experimental]
+  > evolution = createmarkers
+  > EOF
+  $ echo 0 > a
+  $ hg ci -qAm 0
+  $ for i in 17 129 248 242 480 580 617 1057 2857 4025; do
+  >   hg up -q 0
+  >   echo $i > a
+  >   hg ci -qm $i
+  > done
+  $ hg up -q null
+  $ hg log -r0: -T '{rev}:{node}\n'
+  0:b4e73ffab476aa0ee32ed81ca51e07169844bc6a
+  1:11424df6dc1dd4ea255eae2b58eaca7831973bbc
+  2:11407b3f1b9c3e76a79c1ec5373924df096f0499
+  3:11dd92fe0f39dfdaacdaa5f3997edc533875cfc4
+  4:10776689e627b465361ad5c296a20a487e153ca4
+  5:a00be79088084cb3aff086ab799f8790e01a976b
+  6:a0b0acd79b4498d0052993d35a6a748dd51d13e6
+  7:a0457b3450b8e1b778f1163b31a435802987fe5d
+  8:c56256a09cd28e5764f32e8e2810d0f01e2e357a
+  9:c5623987d205cd6d9d8389bfc40fff9dbb670b48
+  10:c562ddd9c94164376c20b86b0b4991636a3bf84f
+  $ hg debugobsolete a00be79088084cb3aff086ab799f8790e01a976b
+  $ hg debugobsolete c5623987d205cd6d9d8389bfc40fff9dbb670b48
+  $ hg debugobsolete c562ddd9c94164376c20b86b0b4991636a3bf84f
+
+ nodes starting with '11' (we don't have the revision number '11' though)
+
+  $ hg log -r 1:3 -T '{rev}:{shortest(node, 0)}\n'
+  1:1142
+  2:1140
+  3:11d
+
+ '5:a00' is hidden, but still we have two nodes starting with 'a0'
+
+  $ hg log -r 6:7 -T '{rev}:{shortest(node, 0)}\n'
+  6:a0b
+  7:a04
+
+ node '10' conflicts with the revision number '10' even if it is hidden
+ (we could exclude hidden revision numbers, but currently we don't)
+
+  $ hg log -r 4 -T '{rev}:{shortest(node, 0)}\n'
+  4:107
+  $ hg log -r 4 -T '{rev}:{shortest(node, 0)}\n' --hidden
+  4:107
+
+ node 'c562' should be unique if the other 'c562' nodes are hidden
+
+  $ hg log -r 8 -T '{rev}:{node|shortest}\n'
+  8:c562
+  $ hg log -r 8:10 -T '{rev}:{node|shortest}\n' --hidden
+  8:c5625
+  9:c5623
+  10:c562d
+
+  $ cd ..
+
 Test pad function
+
+  $ cd r
 
   $ hg log --template '{pad(rev, 20)} {author|user}\n'
   2                    test
