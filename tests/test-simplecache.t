@@ -1,3 +1,5 @@
+#require no-osx
+
 Setup the extension
 
   $ extpath=`dirname $TESTDIR`
