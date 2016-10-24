@@ -2,7 +2,6 @@ import os
 
 from indexapi import (
     indexapi,
-    indexexception,
 )
 
 class fileindexapi(indexapi):

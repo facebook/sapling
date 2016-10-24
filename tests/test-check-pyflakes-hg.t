@@ -82,11 +82,6 @@ run pyflakes on all tracked files ending in .py or without a file ending
   hgext3rd/sparse.py:17: 're' imported but unused
   hgext3rd/sshaskpass.py:25: 'errno' imported but unused
   hgext3rd/tweakdefaults.py:29: 'errno' imported but unused
-  infinitepush/fileindexapi.py:3: 'indexexception' imported but unused
-  infinitepush/store.py:10: 'util' imported but unused
-  infinitepush/tests/util.py:6: 'time' imported but unused
-  infinitepush/tests/util.py:7: 'getpass' imported but unused
-  infinitepush/tests/util.py:9: 'subprocess' imported but unused
   phabricator/conduit.py:12: 'sys' imported but unused
   sqldirstate/__init__.py:10: 'DBFILE' imported but unused
   tests/perftest.py:10: 'pdb' imported but unused

@@ -3,10 +3,7 @@ import string
 import random
 from .. import indexapi
 from .. import store
-import time
-import getpass
 from mercurial import hg, ui
-import subprocess
 
 def getrandomid():
     return ''.join(random.choice("abcdef" + string.digits)

@@ -7,7 +7,6 @@ import abc
 import hashlib
 import os
 import subprocess
-from mercurial import util
 from tempfile import NamedTemporaryFile
 
 class BundleWriteException(Exception):
