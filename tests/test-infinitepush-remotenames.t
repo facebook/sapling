@@ -61,6 +61,7 @@ Push scratch commit and scratch bookmark
      default/scratch/mybranch  1:620472ff5c0c
      default/scratch/serverbook 0:ac312cb08db5
   $ hg book
+  no bookmarks set
   $ hg -R ../repo log -G
   @  changeset:   0:ac312cb08db5
      bookmark:    scratch/serverbook
@@ -93,6 +94,7 @@ Clone server one more time and pull scratch bookmark. Make sure it is remote
      default/scratch/mybranch  1:620472ff5c0c
      default/scratch/serverbook 0:ac312cb08db5
   $ hg book
+  no bookmarks set
 
 Make sure that next non-scratch pull doesn't override remote scratch bookmarks
   $ hg pull
@@ -170,6 +172,7 @@ Push from another client, make sure that push doesn't override scratch bookmarks
      default/scratch/secondbranch 2:36667a3f76e4
      default/scratch/serverbook 0:ac312cb08db5
   $ hg book
+  no bookmarks set
 
 Try to push with remotebookmarks disabled
   $ hg push --config remotenames.bookmarks=False -r . --to scratch/secondbranch
