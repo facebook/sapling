@@ -151,7 +151,7 @@ def serverextsetup(ui):
     wrapfunction(localrepo.localrepository, 'listkeys', localrepolistkeys)
     wireproto.commands['lookup'] = (
         _lookupwrap(wireproto.commands['lookup'][0]), 'key')
-    wrapfunction(exchange, 'getbundle', getbundle)
+    wrapfunction(exchange, 'getbundlechunks', getbundlechunks)
 
 def clientextsetup(ui):
     entry = wrapcommand(commands.table, 'push', _push)
@@ -261,8 +261,8 @@ def _includefilelogstobundle(bundlecaps, bundlerepo, ui):
 
     return newcaps
 
-def getbundle(orig, repo, source, heads=None, common=None, bundlecaps=None,
-              **kwargs):
+def getbundlechunks(orig, repo, source, heads=None, common=None,
+                    bundlecaps=None, **kwargs):
     # Check if heads exists, if not, check bundle store
     hasscratchnode = False
     for head in heads:
