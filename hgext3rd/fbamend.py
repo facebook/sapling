@@ -16,6 +16,13 @@ the children onto the new version of the changeset.
 
 This extension is incompatible with changeset evolution. The command will
 automatically disable itself if changeset evolution is enabled.
+
+To disable the creation of preamend bookmarks and use obsolescence
+markers instead to fix up amends, enable the following config option::
+
+    [fbamend]
+    userestack=true
+
 """
 
 from mercurial import (
@@ -32,7 +39,6 @@ from mercurial import (
 from mercurial.node import hex, nullrev
 from mercurial import lock as lockmod
 from mercurial.i18n import _
-from itertools import chain
 from collections import defaultdict, deque
 from contextlib import nested
 
@@ -105,7 +111,7 @@ def uisetup(ui):
         if not loaded:
             return
         entry = extensions.wrapcommand(rebasemod.cmdtable, 'rebase',
-                                       restack)
+                                       rebaserestack)
         entry[1].append((
             '', 'restack', False, _('rebase all changesets in the current '
                                     'stack onto the latest version of their '
@@ -307,7 +313,8 @@ def amend(ui, repo, *pats, **opts):
         for bm in oldbookmarks:
             newbookmarks[bm] = node
 
-        if not _histediting(repo):
+        userestack = ui.configbool('fbamend', 'userestack')
+        if not _histediting(repo) and not userestack:
             preamendname = _preamendname(repo, node)
             if haschildren:
                 newbookmarks[preamendname] = old.node()
@@ -338,8 +345,19 @@ def fixupamend(ui, repo):
         wlock = repo.wlock()
         lock = repo.lock()
         current = repo['.']
-        preamendname = _preamendname(repo, current.node())
 
+        # Use obsolescence information to fix up the amend instead of relying
+        # on the preamend bookmark if the user enables this feature.
+        if ui.configbool('fbamend', 'userestack'):
+            with repo.transaction('fixupamend') as tr:
+                try:
+                    _restackonce(ui, repo, current.rev())
+                except error.InterventionRequired:
+                    tr.close()
+                    raise
+                return
+
+        preamendname = _preamendname(repo, current.node())
         if not preamendname in repo._bookmarks:
             raise error.Abort(_('no bookmark %s') % preamendname,
                              hint=_('check if your bookmark is active'))
@@ -504,7 +522,7 @@ def _nextrebase(orig, ui, repo, **opts):
     # Run `hg next` to update to the newly rebased child.
     return orig(ui, repo, **opts)
 
-def restack(orig, ui, repo, **opts):
+def rebaserestack(orig, ui, repo, **opts):
     """Wrapper around `hg rebase` adding the `--restack` option, which rebases
        all "unstable" descendants of an obsolete changeset onto the latest
        version of that changeset. This is similar to (and intended as a
@@ -531,6 +549,17 @@ def restack(orig, ui, repo, **opts):
     if opts['continue']:
         raise error.Abort(_("cannot use both --continue and --restack"))
 
+    restack(ui, repo, opts)
+
+def restack(ui, repo, rebaseopts=None):
+    """Repair a situation in which one or more changesets in a stack
+       have been obsoleted (thereby leaving their descendants in the stack
+       unstable) by finding any such changesets and rebasing their descendants
+       onto the latest version of each respective changeset.
+    """
+    if rebaseopts is None:
+        rebaseopts = {}
+
     with nested(repo.wlock(), repo.lock()):
         cmdutil.checkunfinished(repo)
         cmdutil.bailifchanged(repo)
@@ -544,7 +573,7 @@ def restack(orig, ui, repo, **opts):
             # rebasing) descendants of base.
             for rev in targets:
                 try:
-                    _restackonce(ui, repo, rev, opts)
+                    _restackonce(ui, repo, rev, rebaseopts)
                 except error.InterventionRequired:
                     tr.close()
                     raise
@@ -586,7 +615,6 @@ def _restackonce(ui, repo, rev, rebaseopts=None):
     contexts = [repo[r] for r in allprecursors]
     _clearpreamend(repo, contexts)
     _deinhibit(repo, contexts)
-
 
 def _findrestackbase(repo):
     """Search backwards through history to find a changeset in the current

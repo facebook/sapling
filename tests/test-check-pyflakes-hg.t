@@ -44,7 +44,6 @@ run pyflakes on all tracked files ending in .py or without a file ending
   hgext3rd/commitextras.py:12: 'subprocess' imported but unused
   hgext3rd/dirsync.py:35: 'commands' imported but unused
   hgext3rd/errorredirect.py:35: 'sys' imported but unused
-  hgext3rd/fbamend.py:35: 'chain' imported but unused
   hgext3rd/fbhistedit.py:22: 'util' imported but unused
   hgext3rd/githelp.py:15: 'commands' imported but unused
   hgext3rd/githelp.py:15: 'extensions' imported but unused
