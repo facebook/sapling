@@ -740,14 +740,26 @@ class hybridmanifestctx(object):
                                  node=self._node)
 
     def readdelta(self):
-        return self._slowmanifestctx.readdelta()
+        rl = self._revlog
+        if rl._usemanifestv2:
+            # Need to perform a slow delta
+            r0 = revlog.deltaparent(revlog.rev(self._node))
+            m0 = manifest.manifestctx(self._repo, rl.node(r0)).read()
+            m1 = self.read()
+            md = manifestdict()
+            for f, ((n0, fl0), (n1, fl1)) in m0.diff(m1).iteritems():
+                if n1:
+                    md[f] = n1
+                    if fl1:
+                        md.setflag(f, fl1)
+            return md
+
+        r = rl.rev(self._node)
+        d = mdiff.patchtext(rl.revdiff(rl.deltaparent(r), r))
+        return manifest.manifestdict(d)
 
     def readfast(self):
         return self.read()
-
-    @util.propertycache
-    def _slowmanifestctx(self):
-        return manifest.manifestctx(self._revlog, self._node)
 
     def node(self):
         return self._node
