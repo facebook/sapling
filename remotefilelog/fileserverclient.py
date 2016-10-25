@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 from mercurial.i18n import _
-from mercurial.node import hex, bin
+from mercurial.node import hex, bin, nullid
 from mercurial import util, sshpeer, hg, error, util, wireproto, httppeer
 from mercurial import extensions, scmutil
 import hashlib, os, lz4, time, io, struct
@@ -572,6 +572,15 @@ class fileserverclient(object):
         if fetchhistory:
             missingids.update(historystore.getmissing(idstocheck))
 
+        # partition missing nodes into nullid and not-nullid so we can
+        # warn about this filtering potentially shadowing bugs.
+        nullids = len([None for unused, id in missingids if id == nullid])
+        if nullids:
+            missingids = [(f, id) for f, id in missingids if id != nullid]
+            repo.ui.develwarn(
+                ('remotefilelog not fetching %d null revs'
+                 ' - this is likely hiding bugs' % nullids),
+                config='remotefilelog-ext')
         if missingids:
             global fetches, fetched, fetchcost
             fetches += 1
