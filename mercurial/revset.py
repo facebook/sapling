@@ -2924,23 +2924,29 @@ class abstractsmartset(object):
         """True if the set will iterate in topographical order"""
         raise NotImplementedError()
 
-    @util.cachefunc
     def min(self):
         """return the minimum element in the set"""
-        if self.fastasc is not None:
-            for r in self.fastasc():
-                return r
-            raise ValueError('arg is an empty sequence')
-        return min(self)
+        if self.fastasc is None:
+            v = min(self)
+        else:
+            for v in self.fastasc():
+                break
+            else:
+                raise ValueError('arg is an empty sequence')
+        self.min = lambda: v
+        return v
 
-    @util.cachefunc
     def max(self):
         """return the maximum element in the set"""
-        if self.fastdesc is not None:
-            for r in self.fastdesc():
-                return r
-            raise ValueError('arg is an empty sequence')
-        return max(self)
+        if self.fastdesc is None:
+            return max(self)
+        else:
+            for v in self.fastdesc():
+                break
+            else:
+                raise ValueError('arg is an empty sequence')
+        self.max = lambda: v
+        return v
 
     def first(self):
         """return the first element in the set (user iteration perspective)
