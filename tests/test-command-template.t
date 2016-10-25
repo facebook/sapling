@@ -3469,9 +3469,10 @@ Test shortest(node) with the repo having short hash collision:
   4:107
 
  node 'c562' should be unique if the other 'c562' nodes are hidden
+ (but we don't try the slow path to filter out hidden nodes for now)
 
   $ hg log -r 8 -T '{rev}:{node|shortest}\n'
-  8:c562
+  8:c5625
   $ hg log -r 8:10 -T '{rev}:{node|shortest}\n' --hidden
   8:c5625
   9:c5623

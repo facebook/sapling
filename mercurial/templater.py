@@ -837,7 +837,10 @@ def shortest(context, mapping, args):
                                 # i18n: "shortest" is a keyword
                                 _("shortest() expects an integer minlength"))
 
-    cl = mapping['ctx']._repo.changelog
+    # _partialmatch() of filtered changelog could take O(len(repo)) time,
+    # which would be unacceptably slow. so we look for hash collision in
+    # unfiltered space, which means some hashes may be slightly longer.
+    cl = mapping['ctx']._repo.unfiltered().changelog
     def isvalid(test):
         try:
             if cl._partialmatch(test) is None:
