@@ -650,6 +650,10 @@ bool NewTreeIterator::processDirectory(ManifestEntry *mainEntry) {
     // mainEntry filename.
     while (!cmpFrame.isfinished()) {
       ManifestEntry *cmpEntry = cmpFrame.currentvalue();
+      if (!cmpEntry->isdirectory() ) {
+        cmpFrame.next();
+        continue;
+      }
       int cmp = ManifestEntry::compareName(cmpEntry, mainEntry);
       if (cmp >= 0) {
         // If the directory names match...

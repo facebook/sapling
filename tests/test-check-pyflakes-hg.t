@@ -116,7 +116,6 @@ run pyflakes on all tracked files ending in .py or without a file ending
   hgext3rd/tweakdefaults.py:208: local variable 'rebasehint' is assigned to but never used
   hgext3rd/uncommit.py:146: local variable 'wm' is assigned to but never used
   tests/perftest.py:232: local variable 'fakestore' is assigned to but never used
-  tests/test-remotefilelog-ctreemanifest.py:51: local variable 'a' is assigned to but never used
   tests/test-remotefilelog-datapack.py:264: local variable 'result' is assigned to but never used
   fastmanifest/implementation.py:18: 'from constants import *' used; unable to detect undefined names
   hgext3rd/fbconduit.py:187: undefined name 'false'

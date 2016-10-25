@@ -48,7 +48,7 @@ class ctreemanifesttests(unittest.TestCase):
         random.seed(0)
 
     def testInitialization(self):
-        a = ctreemanifest.treemanifest(FakeStore())
+        ctreemanifest.treemanifest(FakeStore())
 
     def testEmptyFlag(self):
         a = ctreemanifest.treemanifest(FakeStore())
@@ -235,6 +235,24 @@ class ctreemanifesttests(unittest.TestCase):
         b.set("abc/z", *hashflags())
 
         bnode = b.write(store)
+
+        b2 = ctreemanifest.treemanifest(store, bnode)
+        self.assertEquals(list(b.iterentries()), list(b2.iterentries()))
+
+    def testWriteReplaceFile(self):
+        """Tests writing a manifest which replaces a file with a directory."""
+        a = ctreemanifest.treemanifest(FakeStore())
+        a.set("abc/a", *hashflags())
+        a.set("abc/z", *hashflags())
+
+        store = FakeStore()
+        a.write(store)
+
+        b = a.copy()
+        b.set("abc/a", None, None)
+        b.set("abc/a/foo", *hashflags())
+
+        bnode = b.write(store, a)
 
         b2 = ctreemanifest.treemanifest(store, bnode)
         self.assertEquals(list(b.iterentries()), list(b2.iterentries()))
