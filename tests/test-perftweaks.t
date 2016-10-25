@@ -35,6 +35,8 @@ Test disabling the tag cache
 
   $ cd ..
 
+#if osx
+#else
 Test disabling the case conflict check (only fails on case sensitive systems)
   $ hg init casecheck
   $ cd casecheck
@@ -50,6 +52,7 @@ Test disabling the case conflict check (only fails on case sensitive systems)
   warning: possible case-folding collision for A
   $ hg commit -m A
   $ cd ..
+#endif
 
 Test disabling the branchcache
   $ hg init branchcache
@@ -114,6 +117,6 @@ Test file permissions
   $ hg commit -qAm a
   $ ls -la .hg/cache/noderevs/
   total * (glob)
-  drwxrwsr-x.? 2 .* \. (re)
-  drwxrwsr-x.? 3 .* \.\. (re)
+  drwxrw[sx]r-x.? [0-9]+ .* \. (re)
+  drwxrw[sx]r-x.? [0-9]+ .* \.\. (re)
   -rw-rw-r--.? 1 .* branchheads-served (re)
