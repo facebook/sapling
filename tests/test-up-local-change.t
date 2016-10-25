@@ -242,4 +242,11 @@ test updating backwards through a rename
   -a
   +b
 
+test for superfluous filemerge of clean files renamed in the past
+
+  $ hg up -qC tip
+  $ echo c > c
+  $ hg add c
+  $ hg up -qt:fail 0
+
   $ cd ..

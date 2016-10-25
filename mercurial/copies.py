@@ -631,6 +631,10 @@ def _checkcopies(ctx, f, m1, m2, base, tca, remotebase, limit, data):
     backwards = not remotebase and base != tca and f in mb
     getfctx = _makegetfctx(ctx)
 
+    if m1[f] == mb.get(f) and not remotebase:
+        # Nothing to merge
+        return
+
     of = None
     seen = set([f])
     for oc in getfctx(f, m1[f]).ancestors():

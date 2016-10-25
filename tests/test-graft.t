@@ -181,9 +181,6 @@ Graft out of order, skipping a merge and a duplicate
     searching for copies back to rev 1
     unmatched files in other (from topological common ancestor):
      c
-    all copies found (* = to merge, ! = divergent, % = renamed and deleted):
-     src: 'c' -> dst: 'b' *
-    checking for directory renames
   resolving manifests
    branchmerge: True, force: True, partial: False
    ancestor: 4c60f11aa304, local: 6b9e5368ca4e+, remote: 97f8bfe72746
@@ -200,9 +197,6 @@ Graft out of order, skipping a merge and a duplicate
     searching for copies back to rev 1
     unmatched files in other (from topological common ancestor):
      c
-    all copies found (* = to merge, ! = divergent, % = renamed and deleted):
-     src: 'c' -> dst: 'b' *
-    checking for directory renames
   resolving manifests
    branchmerge: True, force: True, partial: False
    ancestor: 4c60f11aa304, local: 1905859650ec+, remote: 9c233e8e184d
@@ -1280,3 +1274,15 @@ Check the results of the grafts tested
   
   $ hg cat f2c
   c2e
+
+Check superfluous filemerge of files renamed in the past but untouched by graft
+
+  $ echo a > a
+  $ hg ci -qAma
+  $ hg mv a b
+  $ echo b > b
+  $ hg ci -qAmb
+  $ echo c > c
+  $ hg ci -qAmc
+  $ hg up -q .~2
+  $ hg graft tip -qt:fail
