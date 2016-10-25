@@ -166,8 +166,12 @@ Grep options work
   a
   $ hg grep -n x
   a:1:x
+#if osx
+  $ hg grep -V ''
+#else
   $ hg grep -V ''
   [123]
+#endif
 
 Make sure grep works in subdirectories and with strange filenames
   $ cd dir1
@@ -181,15 +185,25 @@ Make sure grep works in subdirectories and with strange filenames
   subdir1/subf1:str1sub
 
 Basic vs extended regular expressions
+#if osx
+  $ hg grep 'str([0-9])'
+  [1]
+#else
   $ hg grep 'str([0-9])'
   [123]
+#endif
   $ hg grep 'str\([0-9]\)'
   -v:str1-v
   f1:str1f1
   file with space:str1space
   subdir1/subf1:str1sub
+#if osx
+  $ hg grep -F 'str[0-9]'
+  [1]
+#else
   $ hg grep -F 'str[0-9]'
   [123]
+#endif
   $ hg grep -E 'str([0-9])'
   -v:str1-v
   f1:str1f1

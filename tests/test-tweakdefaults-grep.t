@@ -61,8 +61,13 @@ Test using alternative grep commands
   $ hg grep -i FooBarB
   grepfile1:foobarbaz
   grepfile2:foobarboo
+#if osx
+  $ hg grep FooBarB
+  [1]
+#else
   $ hg grep FooBarB
   [123]
+#endif
   $ hg grep --config grep.command='grep -i' FooBarB
   grepfile1:foobarbaz
   grepfile2:foobarboo
