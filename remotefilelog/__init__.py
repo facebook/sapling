@@ -595,6 +595,16 @@ def gcclient(ui, cachepath):
 
         validrepos.append(path)
 
+        # Protect against any repo or config changes that have happened since
+        # this repo was added to the repos file. We'd rather this loop succeed
+        # and too much be deleted, than the loop fail and nothing gets deleted.
+        if shallowrepo.requirement not in peer._repo.requirements:
+            continue
+
+        if not util.safehasattr(peer._repo, 'name'):
+            ui.warn(_("repo %s is a misconfigured remotefilelog repo\n") % path)
+            continue
+
         reponame = peer._repo.name
         if not sharedcache:
             sharedcache = peer._repo.sharedstore
