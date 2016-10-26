@@ -499,7 +499,7 @@ def _push(orig, ui, repo, dest=None, *args, **opts):
         # Remote scratch bookmarks will be deleted because remotenames doesn't
         # know about them. Let's save it before push and restore after
         remotescratchbookmarks = _readscratchremotebookmarks(ui, repo, destpath)
-        result = orig(ui, repo, *args, **opts)
+        result = orig(ui, repo, dest, *args, **opts)
         if _isremotebooksenabled(ui):
             if bookmark and scratchpush:
                 other = hg.peer(repo, opts, destpath)

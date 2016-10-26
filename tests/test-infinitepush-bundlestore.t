@@ -364,3 +364,37 @@ Non-fastforward scratch bookmark push
   |/
   o  initialcommit public
   
+Check that push path is not ignored. Add new path to the hgrc
+  $ cat >> .hg/hgrc << EOF
+  > [paths]
+  > peer=ssh://user@dummy/client2
+  > EOF
+
+Checkout last non-scrath commit
+  $ hg up 91894e11e8255
+  1 files updated, 0 files merged, 6 files removed, 0 files unresolved
+  $ mkcommit peercommit
+Use --force because this push creates new head
+  $ hg push peer -r . -f
+  pushing to ssh://user@dummy/client2
+  searching for changes
+  remote: adding changesets
+  remote: adding manifests
+  remote: adding file changes
+  remote: added 2 changesets with 2 changes to 2 files (+1 heads)
+  $ hg -R ../repo log -G -T '{desc} {phase} {bookmarks}'
+  o  newcommit public
+  |
+  o  initialcommit public
+  
+  $ hg -R ../client2 log -G -T '{desc} {phase} {bookmarks}'
+  o  peercommit public
+  |
+  o  newcommit public
+  |
+  | @  new scratch commit draft scratch/anotherbranch scratch/mybranch
+  | |
+  | o  scratchcommit draft
+  |/
+  o  initialcommit public
+  
