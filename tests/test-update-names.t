@@ -73,6 +73,8 @@ Test update when two commits have symlinks that point to different folders
 
 #endif
 
+#if rmcwd
+
 Test that warning is printed if cwd is deleted during update
   $ hg init r4 && cd r4
   $ mkdir dir
@@ -84,3 +86,5 @@ Test that warning is printed if cwd is deleted during update
   $ hg up -q null
   current directory was removed
   (consider changing to repo root: $TESTTMP/r1/r4)
+
+#endif

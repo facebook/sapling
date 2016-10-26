@@ -346,6 +346,21 @@ def has_hardlink():
     finally:
         os.unlink(fn)
 
+@check("rmcwd", "can remove current working directory")
+def has_rmcwd():
+    ocwd = os.getcwd()
+    temp = tempfile.mkdtemp(dir='.', prefix=tempprefix)
+    try:
+        os.chdir(temp)
+        # On Linux, 'rmdir .' isn't allowed, but the other names are okay.
+        # On Solaris and Windows, the cwd can't be removed by any names.
+        os.rmdir(os.getcwd())
+        return True
+    except OSError:
+        return False
+    finally:
+        os.chdir(ocwd)
+
 @check("tla", "GNU Arch tla client")
 def has_tla():
     return matchoutput('tla --version 2>&1', br'The GNU Arch Revision')
