@@ -132,7 +132,10 @@ def encodedir(path):
             .replace('.lock/', '.lock.hg/'))
 
 def hashdiffopts(diffopts):
-    diffoptstr = str(sorted(diffopts.__dict__.iteritems()))
+    diffoptstr = str(sorted(
+        (k, getattr(diffopts, k))
+        for k in mdiff.diffopts.defaults.iterkeys()
+    ))
     return hashlib.sha1(diffoptstr).hexdigest()[:6]
 
 _defaultdiffopthash = hashdiffopts(mdiff.defaultopts)
