@@ -167,6 +167,16 @@ def clientextsetup(ui):
         ('', 'bundle-store', None,
          _('force push to go to bundle store (EXPERIMENTAL)')))
 
+    bookcmd = extensions.wrapcommand(commands.table, 'bookmarks', exbookmarks)
+    bookcmd[1].append(
+        ('', 'list-remote', '',
+         'list remote bookmarks. '
+         'Use \'*\' to find all bookmarks with the same prefix',
+         'PATTERN'))
+    bookcmd[1].append(
+        ('', 'remote-path', '',
+         'name of the remote path to list the bookmarks'))
+
     wrapcommand(commands.table, 'pull', _pull)
 
     wrapfunction(discovery, 'checkheads', _checkheads)
@@ -182,6 +192,32 @@ def clientextsetup(ui):
     partorder.insert(
         index, partorder.pop(partorder.index(scratchbranchparttype)))
 
+def _showbookmarks(ui, bookmarks, **opts):
+    # Copy-paste from commands.py
+    fm = ui.formatter('bookmarks', opts)
+    for bmark, n in sorted(bookmarks.iteritems()):
+        fm.startitem()
+        if not ui.quiet:
+            fm.plain('   ')
+        fm.write('bookmark', '%s', bmark)
+        pad = ' ' * (25 - encoding.colwidth(bmark))
+        fm.condwrite(not ui.quiet, 'node', pad + ' %s', n)
+        fm.plain('\n')
+    fm.end()
+
+def exbookmarks(orig, ui, repo, *names, **opts):
+    pattern = opts.get('list_remote')
+    if pattern:
+        remotepath = opts.get('remote_path')
+        path = ui.paths.getpath(remotepath or None, default=('default'))
+        destpath = path.pushloc or path.loc
+        other = hg.peer(repo, opts, destpath)
+        fetchedbookmarks = other.listkeyspatterns('bookmarks',
+                                                  patterns=[pattern])
+        _showbookmarks(ui, fetchedbookmarks, **opts)
+        return
+    return orig(ui, repo, *names, **opts)
+
 def _checkheads(orig, pushop):
     if pushop.ui.configbool(experimental, configscratchpush, False):
         return
@@ -196,20 +232,15 @@ def localrepolistkeys(orig, self, namespace, patterns=None):
     if namespace == 'bookmarks' and patterns:
         index = self.bundlestore.index
         results = {}
-        patterns = set(patterns)
-        # TODO(stash): this function has a limitation:
-        # patterns are not actually patterns, just simple string comparison
-        for bookmark in patterns:
-            if _scratchbranchmatcher(bookmark):
-                # TODO(stash): use `getbookmarks()` method
-                node = index.getnode(bookmark)
-                if node:
-                    results[bookmark] = node
-
         bookmarks = orig(self, namespace)
-        for bookmark, node in bookmarks.items():
-            if bookmark in patterns:
-                results[bookmark] = node
+        for pattern in patterns:
+            results.update(index.getbookmarks(pattern))
+            if pattern.endswith('*'):
+                pattern = 're:^' + pattern[:-1] + '.*'
+            kind, pat, matcher = util.stringmatcher(pattern)
+            for bookmark, node in bookmarks.items():
+                if matcher(bookmark):
+                    results[bookmark] = node
         return results
     else:
         return orig(self, namespace)

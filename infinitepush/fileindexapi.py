@@ -4,6 +4,8 @@ from indexapi import (
     indexapi,
 )
 
+from mercurial import util
+
 class fileindexapi(indexapi):
     def __init__(self, repo):
         super(fileindexapi, self).__init__()
@@ -35,6 +37,20 @@ class fileindexapi(indexapi):
     def getnode(self, bookmark):
         bookmarkpath = os.path.join(self._bookmarkmap, bookmark)
         return self._read(bookmarkpath)
+
+    def getbookmarks(self, query):
+        result = {}
+        if query.endswith('*'):
+            query = 're:^' + query[:-1] + '.*'
+        kind, pat, matcher = util.stringmatcher(query)
+        prefixlen = len(self._bookmarkmap) + 1
+        for dirpath, _, books in self._repo.vfs.walk(self._bookmarkmap):
+            for book in books:
+                bookmark = os.path.join(dirpath, book)[prefixlen:]
+                if not matcher(bookmark):
+                    continue
+                result[bookmark] = self._read(os.path.join(dirpath, book))
+        return result
 
     def _write(self, path, value):
         vfs = self._repo.vfs

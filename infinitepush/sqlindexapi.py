@@ -176,9 +176,31 @@ class sqlindexapi(indexapi):
         if len(result) != 1 or len(result[0]) != 1:
             self.log.info("No matching bookmark")
             return None
-        bookmark = result[0][0]
-        self.log.info("Found node %r" % bookmark)
-        return bookmark
+        node = result[0][0]
+        self.log.info("Found node %r" % node)
+        return node
+
+    def getbookmarks(self, query):
+        if not self._connected:
+            self.sqlconnect()
+        self.log.info(
+            "QUERY BOOKMARKS reponame: %r query: %r" % (self.reponame, query))
+        query = query.replace('_', '\\_')
+        query = query.replace('%', '\\%')
+        if query.endswith('*'):
+            query = query[:-1] + '%'
+        self.sqlcursor.execute(
+            "SELECT bookmark, node from bookmarkstonode WHERE "
+            "reponame = %s AND bookmark LIKE %s",
+            params=(self.reponame, query))
+        result = self.sqlcursor.fetchall()
+        bookmarks = {}
+        for row in result:
+            if len(row) != 2:
+                self.log.info("Bad row returned: %s" % row)
+                continue
+            bookmarks[row[0]] = row[1]
+        return bookmarks
 
 class CustomConverter(mysql.connector.conversion.MySQLConverter):
     """Ensure that all values being returned are returned as python string

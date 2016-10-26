@@ -398,3 +398,35 @@ Use --force because this push creates new head
   |/
   o  initialcommit public
   
+  $ hg book --list-remote scratch/*
+     scratch/anotherbranch     1de1d7d92f8965260391d0513fe8a8d5973d3042
+     scratch/mybranch          8872775dd97a750e1533dc1fbbca665644b32547
+  $ hg book --list-remote scratch/my
+  $ hg book --list-remote scratch/my*
+     scratch/mybranch          8872775dd97a750e1533dc1fbbca665644b32547
+  $ hg book --list-remote scratch/my* -T json
+  [
+   {
+    "bookmark": "scratch/mybranch",
+    "node": "8872775dd97a750e1533dc1fbbca665644b32547"
+   }
+  ]
+  $ cd ../repo
+  $ hg book scratch/serversidebook
+  $ hg book serversidebook
+  $ cd ../client
+  $ hg book --list-remote scratch/* -T json
+  [
+   {
+    "bookmark": "scratch/anotherbranch",
+    "node": "1de1d7d92f8965260391d0513fe8a8d5973d3042"
+   },
+   {
+    "bookmark": "scratch/mybranch",
+    "node": "8872775dd97a750e1533dc1fbbca665644b32547"
+   },
+   {
+    "bookmark": "scratch/serversidebook",
+    "node": "0000000000000000000000000000000000000000"
+   }
+  ]
