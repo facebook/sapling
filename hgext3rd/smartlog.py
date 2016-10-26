@@ -153,7 +153,7 @@ def uisetup(ui):
     def showgraphnode(orig, repo, ctx, **args):
         """Show obsolete nodes as 'x', even when inhibited."""
         char = orig(repo, ctx, **args)
-        if char != 'o':
+        if char != 'o' or ctx.node() == '...':
             return char
         return 'x' if repo.revs('allsuccessors(%d)', ctx.rev()) else char
 
