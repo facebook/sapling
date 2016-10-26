@@ -109,7 +109,6 @@ run pyflakes on all tracked files ending in .py or without a file ending
   hgext3rd/pullcreatemarkers.py:62: local variable 'l' is assigned to but never used
   hgext3rd/pullcreatemarkers.py:63: local variable 't' is assigned to but never used
   hgext3rd/pushvars.py:33: local variable 'e' is assigned to but never used
-  hgext3rd/smartlog.py:226: local variable 'fakes' is assigned to but never used
   hgext3rd/sparse.py:766: local variable 'wctx' is assigned to but never used
   hgext3rd/sshaskpass.py:87: local variable 'ppid' is assigned to but never used
   hgext3rd/sshaskpass.py:151: local variable 'parentpids' is assigned to but never used

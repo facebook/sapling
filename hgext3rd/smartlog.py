@@ -150,6 +150,25 @@ def uisetup(ui):
         return templatekw.showlist('amendsuccessor', asnodes, **args)
     templatekw.keywords['amendsuccessors'] = amendsuccessors
 
+    def showgraphnode(orig, repo, ctx, **args):
+        """Show obsolete nodes as 'x', even when inhibited."""
+        char = orig(repo, ctx, **args)
+        if char != 'o':
+            return char
+        return 'x' if repo.revs('allsuccessors(%d)', ctx.rev()) else char
+
+    def wrapshowgraphnode(loaded):
+        """Ensure that evolve is loaded before wrapping showgraph() because
+           the wrapper functions uses the 'allsuccessors' revset symbol,
+           which is provided by the evolve extension.
+        """
+        if loaded:
+            # Some callers directly call showgraphnode(), so wrap the original
+            # function in addition to updating templatekw.keywords.
+            extensions.wrapfunction(templatekw, 'showgraphnode', showgraphnode)
+            templatekw.keywords['graphnode'] = templatekw.showgraphnode
+    extensions.afterloaded('evolve', wrapshowgraphnode)
+
 def modifysuccessors(ctx, operation):
     """Return all of the node's successors which were created as a result
     of a given modification operation (amend/rebase)"""
@@ -223,7 +242,6 @@ def getdag(ui, repo, revs, master):
         def closesbranch(self):
             return False
 
-    fakes = {}
     knownrevs = set(revs)
     gpcache = {}
     results = []
