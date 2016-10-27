@@ -779,6 +779,23 @@ class manifestfactory(object):
                               loadflat=lambda: orig(*args, **kwargs),
                               node=args[1])
 
+    def readshallowfast(self, orig, *args, **kwargs):
+        # copy-paste from manifest.readshallowfast
+        manifest = args[0]
+        if len(args) == 2:
+            node = args[1]
+        else:
+            node = kwargs['node']
+        r = manifest.rev(node)
+        deltaparent = manifest.deltaparent(r)
+        if (deltaparent != revlog.nullrev and
+                deltaparent in manifest.parentrevs(r)):
+            return manifest.readshallowdelta(node)
+        return hybridmanifest(self.ui,
+                              args[0].opener,
+                              loadflat=lambda: orig(*args, **kwargs),
+                              node=args[1])
+
     def newgetitem(self, orig, *args, **kwargs):
         # args[0] == instance of manifestlog
         # args[1] = node

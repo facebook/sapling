@@ -221,7 +221,7 @@ class FastManifestExtension(object):
         extensions.wrapfunction(manifest.manifest, 'read', factory.read)
         try:
             extensions.wrapfunction(manifest.manifest, 'readshallowfast',
-                                    factory.read)
+                                    factory.readshallowfast)
         except AttributeError:
             # The function didn't use to be defined in previous versions
             # of hg
