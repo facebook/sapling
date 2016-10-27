@@ -66,3 +66,22 @@ Test autocreatetrees
   
   Node          Delta Base    Delta Length
   70f2c6726cec  000000000000  92
+
+Test that commit creates local trees
+  $ hg up -q tip
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  $ echo z >> subdir/z
+  $ hg commit -qAm 'modify subdir/z'
+  $ ls -l .hg/store/packs/manifests
+  * (glob)
+  * 1106 * b031abfd8f5fb59940caa0d7d66e9bd5e0efe085.dataidx (glob)
+  * 255 * b031abfd8f5fb59940caa0d7d66e9bd5e0efe085.datapack (glob)
+  $ hg debugdatapack .hg/store/packs/manifests/b031abfd8f5fb59940caa0d7d66e9bd5e0efe085
+  
+  subdir/
+  Node          Delta Base    Delta Length
+  07b387b95108  000000000000  43
+  
+  
+  Node          Delta Base    Delta Length
+  7a911436836f  000000000000  92
