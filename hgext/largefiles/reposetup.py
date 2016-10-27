@@ -217,7 +217,7 @@ def reposetup(ui, repo):
                             # standin. Removing a file as a side effect of
                             # running status is gross, but the alternatives (if
                             # any) are worse.
-                            self.wvfs.unlink(standin)
+                            self.wvfs.unlinkpath(standin, ignoremissing=True)
 
                     # Filter result lists
                     result = list(result)
