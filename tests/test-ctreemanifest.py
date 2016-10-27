@@ -435,7 +435,6 @@ class ctreemanifesttests(unittest.TestCase):
 
         self.assertEquals(a.keys(), ["abc/z", "foo"])
 
-
     def testIterItems(self):
         a = ctreemanifest.treemanifest(FakeStore())
         self.assertEquals(list(a.iteritems()), [])
