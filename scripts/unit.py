@@ -1,11 +1,4 @@
 #!/usr/bin/env python
-import json
-import multiprocessing
-import optparse
-import os
-import re
-import subprocess
-import sys
 
 """run a subset of tests that related to the current change
 
@@ -13,25 +6,21 @@ Optionally write result using JSON format. The JSON format can be parsed
 by MercurialTestEngine.php
 """
 
-reporoot = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
+import json
+import optparse
+import os
+import re
+import subprocess
+import sys
+
+sys.path.insert(0, os.path.dirname(__file__))
+import utils
+
+reporoot = utils.reporoot
 
 def info(message):
     """print message to stderr"""
     sys.stderr.write(message)
-
-def getrunner():
-    """return the path of run-tests.py. best-effort"""
-    runner = os.environ.get('MERCURIALRUNTEST', 'run-tests.py')
-    if os.path.exists(runner):
-        return runner
-    # Search some common places for run-tests.py
-    for prefix in ['..', os.path.expanduser('~')]:
-        for hgrepo in ['hg', 'hg-crew', 'hg-committed']:
-            path = os.path.abspath(os.path.join(prefix, hgrepo,
-                                                'tests', 'run-tests.py'))
-            if os.path.exists(path):
-                return path
-    return runner
 
 def checkoutput(*args, **kwds):
     """like subprocess.checked_output, but raise RuntimeError and return
@@ -94,13 +83,6 @@ def interestingtests(changed_files):
 
     return result
 
-def reporequires():
-    """return a list of string, which are the requirements of the hg repo"""
-    requirespath = os.path.join(reporoot, '.hg', 'requires')
-    if os.path.exists(requirespath):
-        return [s.rstrip() for s in open(requirespath, 'r')]
-    return []
-
 def runtests(tests=None):
     """run given tests
 
@@ -108,23 +90,9 @@ def runtests(tests=None):
     exitcode will be 0 on success, and non-zero on failure
     report is a dictionary of test results.
     """
-    cpucount = multiprocessing.cpu_count()
-    cmd = [getrunner(), '-j%d' % cpucount, '-l', '--json']
-    requires = reporequires()
-    if 'lz4revlog' in requires:
-        cmd += ['--extra-config-opt=extensions.lz4revlog=']
+    args = ['-l', '--json']
     if tests:
-        cmd += tests
-
-    # Include the repository root in PYTHONPATH so the unit tests will find
-    # the extensions from the local repository, rather than the versions
-    # already installed on the system.
-    env = os.environ.copy()
-    if 'PYTHONPATH' in env:
-        existing_pypath = [env['PYTHONPATH']]
-    else:
-        existing_pypath = []
-    env['PYTHONPATH'] = os.path.pathsep.join([reporoot] + existing_pypath)
+        args += tests
 
     # Run the tests.
     #
@@ -133,7 +101,7 @@ def runtests(tests=None):
     # should cause it to exit soon.  We want to wait for the test runner to
     # exit before we quit.  Otherwise may keep printing data even after we have
     # exited and returned control of the terminal to the user's shell.
-    proc = subprocess.Popen(cmd, cwd=os.path.join(reporoot, 'tests'), env=env)
+    proc = utils.spawnruntests(args)
     interruptcount = 0
     maxinterrupts = 3
     while True:
