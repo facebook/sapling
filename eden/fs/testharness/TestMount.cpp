@@ -10,7 +10,9 @@
 #include "TestMount.h"
 
 #include <folly/experimental/TestUtil.h>
+#include <folly/io/IOBuf.h>
 #include "eden/fs/config/ClientConfig.h"
+#include "eden/fs/inodes/FileData.h"
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/TreeEntryFileInode.h"
 #include "eden/fs/model/Blob.h"
@@ -89,12 +91,27 @@ unique_ptr<TestMount> TestMountBuilder::build() {
   HgManifestImporter manifestImporter(localStore.get());
   for (auto& file : files_) {
     auto dirname = file.path.dirname();
+
     // For simplicity, we use the SHA-1 of the contents as the Hash id of the
     // Blob. Note this differs from Git where the id of a Blob is the SHA-1 of a
     // header plus the contents.
     auto bytes = ByteRange(StringPiece(file.contents));
     auto sha1 = Hash::sha1(bytes);
-    localStore->putBlob(sha1, bytes, sha1);
+
+    Hash dummyHash;
+    auto buf = folly::IOBuf::copyBuffer(file.contents);
+    auto blobWithDummyHash = Blob(dummyHash, *buf);
+    // There's a few issues here:
+    // 1. Apparently putBlob() does not look at blob.getHash(). It seems
+    //    dangerous that we can construct a Blob with an arbitrary id that has
+    //    nothing to do with its contents.
+    // 2. putBlob() computes the SHA-1 of the blob's contents, which duplicates
+    //    what we have done above.
+    // 3. We cannot easily use the 3-arg form of putBlob() because it takes raw
+    //    blobData instead of inserting the required header as the two-arg form
+    //    of putBlob() does. The way the header insertion logic, as written, is
+    //    not easy to extract out.
+    localStore->putBlob(sha1, &blobWithDummyHash);
 
     TreeEntry treeEntry(
         sha1, file.path.basename().stringPiece(), file.type, file.rwx);
@@ -141,11 +158,7 @@ void TestMount::overwriteFile(folly::StringPiece path, std::string contents) {
   auto directory =
       edenMount_->getMountPoint()->getDirInodeForPath(relativePath.dirname());
   auto dispatcher = edenMount_->getMountPoint()->getDispatcher();
-  auto child =
-      dispatcher
-          ->lookupInodeBase(directory->getNodeId(), relativePath.basename())
-          .get();
-  auto file = std::dynamic_pointer_cast<TreeEntryFileInode>(child);
+  auto file = getFileInodeForPath(path);
 
   fuse_file_info info;
   info.flags = O_RDWR | O_TRUNC;
@@ -154,6 +167,18 @@ void TestMount::overwriteFile(folly::StringPiece path, std::string contents) {
   off_t offset = 0;
   fileHandle->write(contents, offset);
   fileHandle->fsync(/*datasync*/ true);
+}
+
+std::string TestMount::readFile(folly::StringPiece path) {
+  auto relativePath = RelativePathPiece{path};
+  auto directory =
+      edenMount_->getMountPoint()->getDirInodeForPath(relativePath.dirname());
+  auto file = getFileInodeForPath(path);
+  auto fileData = file->getOrLoadData();
+  auto attr = file->getattr().get();
+  auto buf = fileData->readIntoBuffer(
+      /* size */ attr.st.st_size, /* off */ 0);
+  return std::string(reinterpret_cast<const char*>(buf->data()), buf->length());
 }
 
 void TestMount::mkdir(folly::StringPiece path) {

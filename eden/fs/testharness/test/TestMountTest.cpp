@@ -85,9 +85,10 @@ TEST(TestMount, overwriteFile) {
   TestMountBuilder builder;
   builder.addFile({"file.txt", "original contents"});
   auto testMount = builder.build();
+  EXPECT_EQ("original contents", testMount->readFile("file.txt"));
 
   testMount->overwriteFile("file.txt", "new contents");
-  // TODO(mbolin): Need method to read the file and verify its contents.
+  EXPECT_EQ("new contents", testMount->readFile("file.txt"));
 }
 
 TEST(TestMount, mkdir) {
@@ -96,7 +97,7 @@ TEST(TestMount, mkdir) {
 
   testMount->mkdir("a");
   testMount->addFile("a/file.txt", "original contents");
-  // TODO(mbolin): Need method to read the file and verify its contents.
+  EXPECT_EQ("original contents", testMount->readFile("a/file.txt"));
 }
 
 TEST(TestMount, deleteFile) {

@@ -172,7 +172,7 @@ void FileData::fsync(bool datasync) {
   }
 }
 
-fusell::BufVec FileData::read(size_t size, off_t off) {
+std::unique_ptr<folly::IOBuf> FileData::readIntoBuffer(size_t size, off_t off) {
   std::unique_lock<std::mutex> lock(mutex_);
 
   if (file_) {
@@ -180,7 +180,7 @@ fusell::BufVec FileData::read(size_t size, off_t off) {
     auto res = ::pread(file_.fd(), buf->writableBuffer(), size, off);
     checkUnixError(res);
     buf->append(res);
-    return fusell::BufVec(std::move(buf));
+    return buf;
   }
 
   auto buf = blob_->getContents();
@@ -188,14 +188,19 @@ fusell::BufVec FileData::read(size_t size, off_t off) {
 
   if (!cursor.canAdvance(off)) {
     // Seek beyond EOF.  Return an empty result.
-    return fusell::BufVec(folly::IOBuf::wrapBuffer("", 0));
+    return folly::IOBuf::wrapBuffer("", 0);
   }
 
   cursor.skip(off);
 
   std::unique_ptr<folly::IOBuf> result;
   cursor.cloneAtMost(result, size);
-  return fusell::BufVec(std::move(result));
+  return result;
+}
+
+fusell::BufVec FileData::read(size_t size, off_t off) {
+  auto buf = readIntoBuffer(size, off);
+  return fusell::BufVec(std::move(buf));
 }
 
 size_t FileData::write(fusell::BufVec&& buf, off_t off) {

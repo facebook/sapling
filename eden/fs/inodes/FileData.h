@@ -9,6 +9,7 @@
  */
 #pragma once
 #include <folly/File.h>
+#include <folly/io/IOBuf.h>
 #include <mutex>
 #include "Overlay.h"
 #include "eden/fs/inodes/TreeInode.h"
@@ -48,6 +49,7 @@ class FileData {
       TreeInode::Entry* entry,
       folly::File&& file);
 
+  std::unique_ptr<folly::IOBuf> readIntoBuffer(size_t size, off_t off);
   fusell::BufVec read(size_t size, off_t off);
   size_t write(fusell::BufVec&& buf, off_t off);
   size_t write(folly::StringPiece data, off_t off);
