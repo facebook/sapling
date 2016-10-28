@@ -71,11 +71,11 @@ fastannotatecommandargs = {
         ('c', 'changeset', None, _('list the changeset')),
         ('l', 'line-number', None, _('show line number at the first '
                                      'appearance')),
-        ('e', 'deleted', None, _('show deleted lines (slow)')),
-        ('h', 'no-content', None, _('do not show file content')),
+        ('e', 'deleted', None, _('show deleted lines (slow) (EXPERIMENTAL)')),
+        ('h', 'no-content', None, _('do not show file content (EXPERIMENTAL)')),
         ('', 'no-follow', None, _("don't follow copies and renames")),
         ('', 'linear', None, _('enforce linear history, ignore second parent '
-                               'of merges (faster)')),
+                               'of merges (EXPERIMENTAL)')),
         ('', 'long-hash', None, _('show long changeset hash (EXPERIMENTAL)')),
         ('', 'rebuild', None, _('rebuild cache even if it exists '
                                 '(EXPERIMENTAL)')),
@@ -91,17 +91,29 @@ def fastannotate(ui, repo, *pats, **opts):
 
     This command is useful for discovering when a change was made and by whom.
 
-    If you include --file, --user, or --date, the revision number is suppressed
-    unless you also include --number.
-
-    This command uses an implementation different from the vanilla annotate
-    command, which may produce slightly different (while still reasonable)
-    output for some cases.
-
-    For the best performance, use -c, -l, avoid -u, -d, -n. Use --linear
-    and --no-content to make it even faster.
+    By default this command prints revision numbers. If you include --file,
+    --user, or --date, the revision number is suppressed unless you also
+    include --number. The default format can also be customized by setting
+    fastannotate.defaultformat.
 
     Returns 0 on success.
+
+    .. container:: verbose
+
+        This command uses an implementation different from the vanilla annotate
+        command, which may produce slightly different (while still reasonable)
+        outputs for some cases.
+
+        Unlike the vanilla anootate, fastannotate follows rename regardless of
+        the existence of --file.
+
+        For the best performance when running on a full repo, use -c, -l,
+        avoid -u, -d, -n. Use --linear and --no-content to make it even faster.
+
+        For the best performance when running on a shallow (remotefilelog)
+        repo, avoid --linear, --no-follow, or any diff options. As the server
+        won't be able to populate annotate cache when non-default options
+        affecting results are used.
     """
     if not pats:
         raise error.Abort(_('at least one filename or pattern is required'))
