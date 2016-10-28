@@ -181,6 +181,23 @@ std::string TestMount::readFile(folly::StringPiece path) {
   return std::string(reinterpret_cast<const char*>(buf->data()), buf->length());
 }
 
+bool TestMount::hasFileAt(folly::StringPiece path) {
+  auto relativePath = RelativePathPiece{path};
+  mode_t mode;
+  try {
+    auto child = edenMount_->getMountPoint()->getInodeBaseForPath(relativePath);
+    mode = child->getattr().get().st.st_mode;
+  } catch (const std::system_error& e) {
+    if (e.code().value() == ENOENT) {
+      return false;
+    } else {
+      throw;
+    }
+  }
+
+  return S_ISREG(mode);
+}
+
 void TestMount::mkdir(folly::StringPiece path) {
   auto relativePath = RelativePathPiece{path};
   auto treeInode = getDirInodeForPath(relativePath.dirname().stringPiece());

@@ -91,6 +91,33 @@ TEST(TestMount, overwriteFile) {
   EXPECT_EQ("new contents", testMount->readFile("file.txt"));
 }
 
+TEST(TestMount, hasFileAt) {
+  TestMountBuilder builder;
+  builder.addFile({"file.txt", "contents"});
+  builder.addFile({"a/file.txt", "contents"});
+  auto testMount = builder.build();
+
+  // Verify hasFileAt() works properly on files added to the Tree.
+  EXPECT_TRUE(testMount->hasFileAt("file.txt"));
+  EXPECT_FALSE(testMount->hasFileAt("iDoNotExist.txt"));
+  EXPECT_TRUE(testMount->hasFileAt("a/file.txt"));
+  EXPECT_FALSE(testMount->hasFileAt("a"))
+      << "hasFileAt(directory) should return false rather than throw";
+
+  testMount->addFile("newFile.txt", "contents");
+  testMount->mkdir("b");
+  testMount->addFile("b/newFile.txt", "contents");
+
+  // Verify hasFileAt() works properly on files added to the Overlay.
+  EXPECT_TRUE(testMount->hasFileAt("newFile.txt"));
+  EXPECT_FALSE(testMount->hasFileAt("iDoNotExist.txt"));
+  EXPECT_TRUE(testMount->hasFileAt("b/newFile.txt"));
+  EXPECT_FALSE(testMount->hasFileAt("b"))
+      << "hasFileAt(directory) should return false rather than throw";
+  EXPECT_FALSE(testMount->hasFileAt("b/c/oneLevelBeyondLastExistingDirectory"))
+      << "hasFileAt(directory) should return false rather than throw";
+}
+
 TEST(TestMount, mkdir) {
   TestMountBuilder builder;
   auto testMount = builder.build();
@@ -104,9 +131,10 @@ TEST(TestMount, deleteFile) {
   TestMountBuilder builder;
   builder.addFile({"file.txt", "original contents"});
   auto testMount = builder.build();
+  EXPECT_TRUE(testMount->hasFileAt("file.txt"));
 
   testMount->deleteFile("file.txt");
-  // TODO(mbolin): Need method to verify the file has been removed.
+  EXPECT_FALSE(testMount->hasFileAt("file.txt"));
 }
 
 TEST(TestMount, createFileInSubdirectory) {

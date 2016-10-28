@@ -64,6 +64,9 @@ class TestMount {
 
   std::string readFile(folly::StringPiece path);
 
+  /** Returns true if path identifies a regular file in the tree. */
+  bool hasFileAt(folly::StringPiece path);
+
   void deleteFile(folly::StringPiece path);
 
   std::shared_ptr<TreeInode> getDirInodeForPath(folly::StringPiece path) const;
