@@ -203,8 +203,10 @@ Inability to verify peer certificate will result in abort
 pull without cacert
 
   $ cd copy-pull
-  $ echo '[hooks]' >> .hg/hgrc
-  $ echo "changegroup = printenv.py changegroup" >> .hg/hgrc
+  $ cat >> .hg/hgrc <<EOF
+  > [hooks]
+  > changegroup = sh -c "printenv.py changegroup"
+  > EOF
   $ hg pull $DISABLECACERTS
   pulling from https://localhost:$HGPORT/
   warning: connecting to localhost using legacy security technology (TLS 1.0); see https://mercurial-scm.org/wiki/SecureConnections for more info (?)

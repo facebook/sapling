@@ -216,8 +216,10 @@ Make sure bundlerepo doesn't leak tempfiles (issue2491)
 
 Pull ../full.hg into empty (with hook)
 
-  $ echo "[hooks]" >> .hg/hgrc
-  $ echo "changegroup = printenv.py changegroup" >> .hg/hgrc
+  $ cat >> .hg/hgrc <<EOF
+  > [hooks]
+  > changegroup = sh -c "printenv.py changegroup"
+  > EOF
 
 doesn't work (yet ?)
 

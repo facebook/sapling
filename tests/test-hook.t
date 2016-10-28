@@ -16,9 +16,9 @@ commit hooks can see env vars
   > precommit = sh -c  "HG_LOCAL= HG_NODE= HG_TAG= printenv.py precommit"
   > pretxncommit = sh -c "HG_LOCAL= HG_TAG= printenv.py pretxncommit"
   > pretxncommit.tip = hg -q tip
-  > pre-identify = printenv.py pre-identify 1
-  > pre-cat = printenv.py pre-cat
-  > post-cat = printenv.py post-cat
+  > pre-identify = sh -c "printenv.py pre-identify 1"
+  > pre-cat = sh -c "printenv.py pre-cat"
+  > post-cat = sh -c "printenv.py post-cat"
   > pretxnopen = sh -c "HG_LOCAL= HG_TAG= printenv.py pretxnopen"
   > pretxnclose = sh -c "HG_LOCAL= HG_TAG= printenv.py pretxnclose"
   > txnclose = sh -c "HG_LOCAL= HG_TAG= printenv.py txnclose"
@@ -47,9 +47,9 @@ changegroup hooks can see env vars
 
   $ cat > .hg/hgrc <<EOF
   > [hooks]
-  > prechangegroup = printenv.py prechangegroup
-  > changegroup = printenv.py changegroup
-  > incoming = printenv.py incoming
+  > prechangegroup = sh -c "printenv.py prechangegroup"
+  > changegroup = sh -c "printenv.py changegroup"
+  > incoming = sh -c "printenv.py incoming"
   > EOF
 
 pretxncommit and commit hooks can see both parents of merge
@@ -122,7 +122,7 @@ tag hooks can see env vars
 
   $ cd ../a
   $ cat >> .hg/hgrc <<EOF
-  > pretag = printenv.py pretag
+  > pretag = sh -c "printenv.py pretag"
   > tag = sh -c "HG_PARENT1= HG_PARENT2= printenv.py tag"
   > EOF
   $ hg tag -d '3 0' a
@@ -142,7 +142,9 @@ tag hooks can see env vars
 
 pretag hook can forbid tagging
 
-  $ echo "pretag.forbid = printenv.py pretag.forbid 1" >> .hg/hgrc
+  $ cat >> .hg/hgrc <<EOF
+  > pretag.forbid = sh -c "printenv.py pretag.forbid 1"
+  > EOF
   $ hg tag -d '4 0' fa
   pretag hook: HG_LOCAL=0 HG_NODE=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_TAG=fa
   pretag.forbid hook: HG_LOCAL=0 HG_NODE=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_TAG=fa
@@ -157,8 +159,10 @@ pretag hook can forbid tagging
 pretxncommit hook can see changeset, can roll back txn, changeset no
 more there after
 
-  $ echo "pretxncommit.forbid0 = hg tip -q" >> .hg/hgrc
-  $ echo "pretxncommit.forbid1 = printenv.py pretxncommit.forbid 1" >> .hg/hgrc
+  $ cat >> .hg/hgrc <<EOF
+  > pretxncommit.forbid0 = sh -c "hg tip -q"
+  > pretxncommit.forbid1 = sh -c "printenv.py pretxncommit.forbid 1"
+  > EOF
   $ echo z > z
   $ hg add z
   $ hg -q tip
@@ -196,7 +200,9 @@ more there after
 
 precommit hook can prevent commit
 
-  $ echo "precommit.forbid = printenv.py precommit.forbid 1" >> .hg/hgrc
+  $ cat >> .hg/hgrc <<EOF
+  > precommit.forbid = sh -c "printenv.py precommit.forbid 1"
+  > EOF
   $ hg commit -m 'fail' -d '4 0'
   precommit hook: HG_PARENT1=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10
   precommit.forbid hook: HG_PARENT1=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10
@@ -207,14 +213,18 @@ precommit hook can prevent commit
 
 preupdate hook can prevent update
 
-  $ echo "preupdate = printenv.py preupdate" >> .hg/hgrc
+  $ cat >> .hg/hgrc <<EOF
+  > preupdate = sh -c "printenv.py preupdate"
+  > EOF
   $ hg update 1
   preupdate hook: HG_PARENT1=ab228980c14d
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
 
 update hook
 
-  $ echo "update = printenv.py update" >> .hg/hgrc
+  $ cat >> .hg/hgrc <<EOF
+  > update = sh -c "printenv.py update"
+  > EOF
   $ hg update
   preupdate hook: HG_PARENT1=539e4b31b6dc
   update hook: HG_ERROR=0 HG_PARENT1=539e4b31b6dc
@@ -222,7 +232,9 @@ update hook
 
 pushkey hook
 
-  $ echo "pushkey = printenv.py pushkey" >> .hg/hgrc
+  $ cat >> .hg/hgrc <<EOF
+  > pushkey = sh -c "printenv.py pushkey"
+  > EOF
   $ cd ../b
   $ hg bookmark -r null foo
   $ hg push -B foo ../a
@@ -239,7 +251,9 @@ pushkey hook
 
 listkeys hook
 
-  $ echo "listkeys = printenv.py listkeys" >> .hg/hgrc
+  $ cat >> .hg/hgrc <<EOF
+  > listkeys = sh -c "printenv.py listkeys"
+  > EOF
   $ hg bookmark -r null bar
   pretxnopen hook: HG_TXNID=TXN:* HG_TXNNAME=bookmark (glob)
   pretxnclose hook: HG_BOOKMARK_MOVED=1 HG_PENDING=$TESTTMP/a HG_TXNID=TXN:* HG_TXNNAME=bookmark (glob)
@@ -255,7 +269,9 @@ listkeys hook
 
 test that prepushkey can prevent incoming keys
 
-  $ echo "prepushkey = printenv.py prepushkey.forbid 1" >> .hg/hgrc
+  $ cat >> .hg/hgrc <<EOF
+  > prepushkey = sh -c "printenv.py prepushkey.forbid 1"
+  > EOF
   $ cd ../b
   $ hg bookmark -r null baz
   $ hg push -B baz ../a
@@ -273,7 +289,9 @@ test that prepushkey can prevent incoming keys
 
 test that prelistkeys can prevent listing keys
 
-  $ echo "prelistkeys = printenv.py prelistkeys.forbid 1" >> .hg/hgrc
+  $ cat >> .hg/hgrc <<EOF
+  > prelistkeys = sh -c "printenv.py prelistkeys.forbid 1"
+  > EOF
   $ hg bookmark -r null quux
   pretxnopen hook: HG_TXNID=TXN:* HG_TXNNAME=bookmark (glob)
   pretxnclose hook: HG_BOOKMARK_MOVED=1 HG_PENDING=$TESTTMP/a HG_TXNID=TXN:* HG_TXNNAME=bookmark (glob)
@@ -294,7 +312,7 @@ prechangegroup hook can prevent incoming changes
   3:07f3376c1e65
   $ cat > .hg/hgrc <<EOF
   > [hooks]
-  > prechangegroup.forbid = printenv.py prechangegroup.forbid 1
+  > prechangegroup.forbid = sh -c "printenv.py prechangegroup.forbid 1"
   > EOF
   $ hg pull ../a
   pulling from ../a
@@ -309,7 +327,7 @@ incoming changes no longer there after
   $ cat > .hg/hgrc <<EOF
   > [hooks]
   > pretxnchangegroup.forbid0 = hg tip -q
-  > pretxnchangegroup.forbid1 = printenv.py pretxnchangegroup.forbid 1
+  > pretxnchangegroup.forbid1 = sh -c "printenv.py pretxnchangegroup.forbid 1"
   > EOF
   $ hg pull ../a
   pulling from ../a
@@ -332,8 +350,8 @@ outgoing hooks can see env vars
   $ rm .hg/hgrc
   $ cat > ../a/.hg/hgrc <<EOF
   > [hooks]
-  > preoutgoing = printenv.py preoutgoing
-  > outgoing = printenv.py outgoing
+  > preoutgoing = sh -c "printenv.py preoutgoing"
+  > outgoing = sh -c "printenv.py outgoing"
   > EOF
   $ hg pull ../a
   pulling from ../a
@@ -351,7 +369,9 @@ outgoing hooks can see env vars
 
 preoutgoing hook can prevent outgoing changes
 
-  $ echo "preoutgoing.forbid = printenv.py preoutgoing.forbid 1" >> ../a/.hg/hgrc
+  $ cat >> ../a/.hg/hgrc <<EOF
+  > preoutgoing.forbid = sh -c "printenv.py preoutgoing.forbid 1"
+  > EOF
   $ hg pull ../a
   pulling from ../a
   searching for changes
@@ -365,8 +385,8 @@ outgoing hooks work for local clones
   $ cd ..
   $ cat > a/.hg/hgrc <<EOF
   > [hooks]
-  > preoutgoing = printenv.py preoutgoing
-  > outgoing = printenv.py outgoing
+  > preoutgoing = sh -c "printenv.py preoutgoing"
+  > outgoing = sh -c "printenv.py outgoing"
   > EOF
   $ hg clone a c
   preoutgoing hook: HG_SOURCE=clone
@@ -377,7 +397,9 @@ outgoing hooks work for local clones
 
 preoutgoing hook can prevent outgoing changes for local clones
 
-  $ echo "preoutgoing.forbid = printenv.py preoutgoing.forbid 1" >> a/.hg/hgrc
+  $ cat >> a/.hg/hgrc <<EOF
+  > preoutgoing.forbid = sh -c "printenv.py preoutgoing.forbid 1"
+  > EOF
   $ hg clone a zzz
   preoutgoing hook: HG_SOURCE=clone
   preoutgoing.forbid hook: HG_SOURCE=clone
@@ -750,7 +772,7 @@ This also creates the `to` repo for the next test block.
   $ cd ..
   $ cat << EOF >> hgrc-with-post-init-hook
   > [hooks]
-  > post-init = printenv.py post-init
+  > post-init = sh -c "printenv.py post-init"
   > EOF
   $ HGRCPATH=hgrc-with-post-init-hook hg init to
   post-init hook: HG_ARGS=init to HG_OPTS={'insecure': None, 'remotecmd': '', 'ssh': ''} HG_PATS=['to'] HG_RESULT=0
