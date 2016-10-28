@@ -49,7 +49,7 @@ Test autocreatetrees
   added 1 changesets with 0 changes to 0 files
   (run 'hg update' to get a working copy)
   $ ls -l $CACHEDIR/master/packs/manifests
-  total 8
+  total * (glob)
   * 1146 * 61f86a9a8f327cb2d9928e5678665f9a6d26b3f9.dataidx (glob)
   *  354 * 61f86a9a8f327cb2d9928e5678665f9a6d26b3f9.datapack (glob)
 
