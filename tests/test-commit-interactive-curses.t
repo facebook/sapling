@@ -1,3 +1,5 @@
+#require tic
+
 Set up a repo
 
   $ cp $HGRCPATH $HGRCPATH.pretest
