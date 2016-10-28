@@ -168,7 +168,8 @@ version = ''
 # to not use any hgrc files and do no localization.
 env = {'HGMODULEPOLICY': 'py',
        'HGRCPATH': '',
-       'LANGUAGE': 'C'}
+       'LANGUAGE': 'C',
+       'PATH': ''} # make pypi modules that use os.environ['PATH'] happy
 if 'LD_LIBRARY_PATH' in os.environ:
     env['LD_LIBRARY_PATH'] = os.environ['LD_LIBRARY_PATH']
 if 'SystemRoot' in os.environ:
