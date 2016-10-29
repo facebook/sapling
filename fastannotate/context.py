@@ -179,14 +179,44 @@ class _annotatecontext(object):
     writes. use "with annotatecontext(...)" instead.
     """
 
-    def __init__(self, repo, path, linelog, revmap, opts):
+    def __init__(self, repo, path, linelogpath, revmappath, opts):
         self.repo = repo
         self.ui = repo.ui
         self.path = path
-        self.linelog = linelog
-        self.revmap = revmap
         self.opts = opts
+        self.linelogpath = linelogpath
+        self.revmappath = revmappath
+        self._linelog = None
+        self._revmap = None
         self._node2path = {} # {str: str}
+
+    @property
+    def linelog(self):
+        if self._linelog is None:
+            self._linelog = linelogmod.linelog(self.linelogpath)
+        return self._linelog
+
+    @property
+    def revmap(self):
+        if self._revmap is None:
+            self._revmap = revmapmod.revmap(self.revmappath)
+        return self._revmap
+
+    def close(self):
+        if self._revmap is not None:
+            self._revmap.flush()
+            self._revmap = None
+        if self._linelog is not None:
+            self._linelog.close()
+            self._linelog = None
+
+    __del__ = close
+
+    def rebuild(self):
+        """delete linelog and revmap, useful for rebuilding"""
+        self.close()
+        self._node2path.clear()
+        _unlinkpaths([self.revmappath, self.linelogpath])
 
     def annotate(self, rev, master=None, showpath=False, showlines=False):
         """incrementally update the cache so it includes revisions in the main
@@ -684,21 +714,18 @@ def annotatecontext(repo, path, opts=defaultopts, rebuild=False):
     util.makedirs(helper.dirname)
     revmappath = helper.revmappath
     linelogpath = helper.linelogpath
-    linelog = revmap = None
+    actx = None
     try:
         with helper.lock():
+            actx = _annotatecontext(repo, path, linelogpath, revmappath, opts)
             if rebuild:
-                _unlinkpaths([revmappath, linelogpath])
-            revmap = revmapmod.revmap(revmappath)
-            linelog = linelogmod.linelog(linelogpath)
-            yield _annotatecontext(repo, path, linelog, revmap, opts)
+                actx.rebuild()
+            yield actx
     except Exception:
-        revmap = linelog = None
-        _unlinkpaths([revmappath, linelogpath])
+        if actx is not None:
+            actx.rebuild()
         repo.ui.debug('fastannotate: %s: cache broken and deleted\n' % path)
         raise
     finally:
-        if revmap:
-            revmap.flush()
-        if linelog:
-            linelog.close()
+        if actx is not None:
+            actx.close()
