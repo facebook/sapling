@@ -1156,6 +1156,8 @@ directory)
      rev    offset  length  delta linkrev nodeid       p1           p2
        0         0      88     -1       3 34a4d536c0c0 000000000000 000000000000
 
+#if execbit
+
 Test if amend preserves executable bit changes
   $ chmod +x newdirname/commonfile.py
   $ hg ci -m chmod
@@ -1174,3 +1176,4 @@ Test if amend preserves executable bit changes
   old mode 100644
   new mode 100755
   
+#endif
