@@ -175,7 +175,20 @@ def testcontains():
         ensure(fakefctx(genhsh(i), path=str(i // 2)) in rm)
         ensure(fakefctx(genhsh(i), path='a') not in rm)
 
+def testlastnode():
+    path = gettemppath()
+    ensure(revmap.getlastnode(path) is None)
+    rm = revmap.revmap(path)
+    ensure(revmap.getlastnode(path) is None)
+    for i in xrange(1, 10):
+        hsh = genhsh(i)
+        rm.append(hsh, path=str(i // 2), flush=True)
+        ensure(revmap.getlastnode(path) == hsh)
+        rm2 = revmap.revmap(path)
+        ensure(rm2.rev2hsh(rm2.maxrev) == hsh)
+
 testbasicreadwrite()
 testcorruptformat()
 testcopyfrom()
 testcontains()
+testlastnode()

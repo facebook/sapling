@@ -227,3 +227,17 @@ class revmap(object):
         if path is not None and path != self.rev2path(rev):
             return False
         return (self.rev2flag(rev) & sidebranchflag) == 0
+
+def getlastnode(path):
+    """return the last hash in a revmap, without loading its full content.
+    this is equivalent to `m = revmap(path); m.rev2hsh(m.maxrev)`, but faster.
+    """
+    hsh = None
+    try:
+        with open(path, 'rb') as f:
+            f.seek(-_hshlen, 2)
+            if f.tell() > len(revmap.HEADER):
+                hsh = f.read(_hshlen)
+    except IOError:
+        pass
+    return hsh
