@@ -16,6 +16,7 @@ from mercurial import (
     extensions,
     patch,
     scmutil,
+    util,
 )
 
 from . import (
@@ -138,7 +139,15 @@ def fastannotate(ui, repo, *pats, **opts):
     # find the head of the main (master) branch
     master = ui.config('fastannotate', 'mainbranch') or rev
 
-    for path in _matchpaths(repo, rev, pats, opts, aopts):
+    # paths will be used for prefetching and the real annotating
+    paths = list(_matchpaths(repo, rev, pats, opts, aopts))
+
+    # for client, prefetch from the server and do not update linelog
+    if util.safehasattr(repo, 'prefetchfastannotate'):
+        repo.prefetchfastannotate(paths)
+        master = None
+
+    for path in paths:
         result = lines = existinglines = None
         while True:
             try:
