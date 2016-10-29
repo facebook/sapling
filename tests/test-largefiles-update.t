@@ -712,7 +712,7 @@ bit correctly on the platform being unaware of it.
 
   $ hg update -q -C 4
 
-  $ cat > exec-bit.patch <<EOF
+  $ cat > ../exec-bit.patch <<EOF
   > # HG changeset patch
   > # User test
   > # Date 0 0
@@ -725,8 +725,8 @@ bit correctly on the platform being unaware of it.
   > old mode 100644
   > new mode 100755
   > EOF
-  $ hg import --exact --bypass exec-bit.patch
-  applying exec-bit.patch
+  $ hg import --exact --bypass ../exec-bit.patch
+  applying ../exec-bit.patch
   $ hg status -A --rev tip large2
   C large2
 
