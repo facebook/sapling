@@ -218,6 +218,34 @@ class _annotatecontext(object):
         self._node2path.clear()
         _unlinkpaths([self.revmappath, self.linelogpath])
 
+    @util.propertycache
+    def lastnode(self):
+        """return last node in revmap, or None if revmap is empty"""
+        if self._revmap is None:
+            # fast path, read revmap without loading its full content
+            return revmapmod.getlastnode(self.revmappath)
+        else:
+            return self._revmap.rev2hsh(self._revmap.maxrev)
+
+    def isuptodate(self, master):
+        """return True if the revmap / linelog is up-to-date, or the file
+        does not exist in the master revision. False otherwise.
+
+        it tries to be fast and could return false negatives.
+
+        useful for both server and client to decide whether to update
+        fastannotate cache or not.
+        """
+        lastnode = self.lastnode
+        try:
+            f = self._resolvefctx(master, resolverev=True)
+            # avoid resolving old manifest, or slow adjustlinkrev to be fast,
+            # false negatives are acceptable in this case.
+            return self.repo.changelog.rev(f.linkrev())[-1] == lastnode
+        except LookupError:
+            # master does not have the file, or the revmap is ahead
+            return True
+
     def annotate(self, rev, master=None, showpath=False, showlines=False):
         """incrementally update the cache so it includes revisions in the main
         branch till 'master'. and run annotate on 'rev', which may or may not be
