@@ -35,12 +35,12 @@ Journal extension test: tests the share extension support
   $ cd repo
   $ hg bookmark bm
   $ touch file0
-  $ hg commit -Am 'file0 added'
+  $ hg commit -Am file0-added
   adding file0
   $ hg journal --all
   previous locations of the working copy and bookmarks:
-  5640b525682e  .         commit -Am 'file0 added'
-  5640b525682e  bm        commit -Am 'file0 added'
+  0fd3805711f9  .         commit -Am file0-added
+  0fd3805711f9  bm        commit -Am file0-added
 
 A shared working copy initially receives the same bookmarks and working copy
 
@@ -51,7 +51,7 @@ A shared working copy initially receives the same bookmarks and working copy
   $ cd shared1
   $ hg journal --all
   previous locations of the working copy and bookmarks:
-  5640b525682e  .         share repo shared1
+  0fd3805711f9  .         share repo shared1
 
 unless you explicitly share bookmarks
 
@@ -62,26 +62,26 @@ unless you explicitly share bookmarks
   $ cd shared2
   $ hg journal --all
   previous locations of the working copy and bookmarks:
-  5640b525682e  .         share --bookmarks repo shared2
-  5640b525682e  bm        commit -Am 'file0 added'
+  0fd3805711f9  .         share --bookmarks repo shared2
+  0fd3805711f9  bm        commit -Am file0-added
 
 Moving the bookmark in the original repository is only shown in the repository
 that shares bookmarks
 
   $ cd ../repo
   $ touch file1
-  $ hg commit -Am "file1 added"
+  $ hg commit -Am file1-added
   adding file1
   $ cd ../shared1
   $ hg journal --all
   previous locations of the working copy and bookmarks:
-  5640b525682e  .         share repo shared1
+  0fd3805711f9  .         share repo shared1
   $ cd ../shared2
   $ hg journal --all
   previous locations of the working copy and bookmarks:
-  6432d239ac5d  bm        commit -Am 'file1 added'
-  5640b525682e  .         share --bookmarks repo shared2
-  5640b525682e  bm        commit -Am 'file0 added'
+  4f354088b094  bm        commit -Am file1-added
+  0fd3805711f9  .         share --bookmarks repo shared2
+  0fd3805711f9  bm        commit -Am file0-added
 
 But working copy changes are always 'local'
 
@@ -91,26 +91,26 @@ But working copy changes are always 'local'
   (leaving bookmark bm)
   $ hg journal --all
   previous locations of the working copy and bookmarks:
-  5640b525682e  .         up 0
-  6432d239ac5d  .         commit -Am 'file1 added'
-  6432d239ac5d  bm        commit -Am 'file1 added'
-  5640b525682e  .         commit -Am 'file0 added'
-  5640b525682e  bm        commit -Am 'file0 added'
+  0fd3805711f9  .         up 0
+  4f354088b094  .         commit -Am file1-added
+  4f354088b094  bm        commit -Am file1-added
+  0fd3805711f9  .         commit -Am file0-added
+  0fd3805711f9  bm        commit -Am file0-added
   $ cd ../shared2
   $ hg journal --all
   previous locations of the working copy and bookmarks:
-  6432d239ac5d  bm        commit -Am 'file1 added'
-  5640b525682e  .         share --bookmarks repo shared2
-  5640b525682e  bm        commit -Am 'file0 added'
+  4f354088b094  bm        commit -Am file1-added
+  0fd3805711f9  .         share --bookmarks repo shared2
+  0fd3805711f9  bm        commit -Am file0-added
   $ hg up tip
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg up 0
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg journal
   previous locations of '.':
-  5640b525682e  up 0
-  6432d239ac5d  up tip
-  5640b525682e  share --bookmarks repo shared2
+  0fd3805711f9  up 0
+  4f354088b094  up tip
+  0fd3805711f9  share --bookmarks repo shared2
 
 Unsharing works as expected; the journal remains consistent
 
@@ -118,16 +118,16 @@ Unsharing works as expected; the journal remains consistent
   $ hg unshare
   $ hg journal --all
   previous locations of the working copy and bookmarks:
-  5640b525682e  .         share repo shared1
+  0fd3805711f9  .         share repo shared1
   $ cd ../shared2
   $ hg unshare
   $ hg journal --all
   previous locations of the working copy and bookmarks:
-  5640b525682e  .         up 0
-  6432d239ac5d  .         up tip
-  6432d239ac5d  bm        commit -Am 'file1 added'
-  5640b525682e  .         share --bookmarks repo shared2
-  5640b525682e  bm        commit -Am 'file0 added'
+  0fd3805711f9  .         up 0
+  4f354088b094  .         up tip
+  4f354088b094  bm        commit -Am file1-added
+  0fd3805711f9  .         share --bookmarks repo shared2
+  0fd3805711f9  bm        commit -Am file0-added
 
 New journal entries in the source repo no longer show up in the other working copies
 
@@ -135,7 +135,7 @@ New journal entries in the source repo no longer show up in the other working co
   $ hg bookmark newbm -r tip
   $ hg journal newbm
   previous locations of 'newbm':
-  6432d239ac5d  bookmark newbm -r tip
+  4f354088b094  bookmark newbm -r tip
   $ cd ../shared2
   $ hg journal newbm
   previous locations of 'newbm':
@@ -146,7 +146,7 @@ This applies for both directions
   $ hg bookmark shared2bm -r tip
   $ hg journal shared2bm
   previous locations of 'shared2bm':
-  6432d239ac5d  bookmark shared2bm -r tip
+  4f354088b094  bookmark shared2bm -r tip
   $ cd ../repo
   $ hg journal shared2bm
   previous locations of 'shared2bm':
