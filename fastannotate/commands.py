@@ -152,7 +152,7 @@ def fastannotate(ui, repo, *pats, **opts):
                             rev, showpath=showpath, showlines=showlines)
                 break
             except faerror.CannotReuseError: # happens if master moves backwards
-                if rebuild: # give up since we have tried rebuild alreadyraise
+                if rebuild: # give up since we have tried rebuild already
                     raise
                 else: # try a second time rebuilding the cache (slow)
                     rebuild = True

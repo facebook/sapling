@@ -38,6 +38,17 @@ be faster than the vanilla 'annotate' if the cache is present.
 
     # sacrifice correctness in some cases for performance (default: False)
     perfhack = True
+
+    # serve the annotate cache via wire protocol (default: False)
+    # tip: the .hg/fastannotate directory is portable - can be rsynced
+    server = True
+
+    # update local annotate cache from remote on demand
+    # (default: True for remotefilelog repo, False otherwise)
+    client = True
+
+    # path to use when connecting to the remote server (default: default)
+    remotepath = default
 """
 
 from __future__ import absolute_import
@@ -46,9 +57,13 @@ from mercurial.i18n import _
 from mercurial import (
     cmdutil,
     error as hgerror,
+    util,
 )
 
-from . import commands
+from . import (
+    commands,
+    protocol,
+)
 
 testedwith = 'internal'
 
@@ -71,3 +86,14 @@ def uisetup(ui):
         # local import to avoid overhead of loading hgweb for non-hgweb usages
         from . import hgwebsupport
         hgwebsupport.replacehgwebannotate()
+
+    if ui.configbool('fastannotate', 'server'):
+        protocol.serveruisetup(ui)
+
+def reposetup(ui, repo):
+    client = ui.configbool('fastannotate', 'client', default=None)
+    if client is None:
+        if util.safehasattr(repo, 'requirements'):
+            client = 'remotefilelog' in repo.requirements
+    if client:
+        protocol.clientreposetup(ui, repo)

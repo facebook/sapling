@@ -701,7 +701,7 @@ def _unlinkpaths(paths):
 class pathhelper(object):
     """helper for getting paths for lockfile, linelog and revmap"""
 
-    def __init__(self, repo, path, opts):
+    def __init__(self, repo, path, opts=defaultopts):
         # different options use different directories
         self._vfspath = os.path.join('fastannotate',
                                      opts.shortstr, encodedir(path))
