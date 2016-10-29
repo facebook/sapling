@@ -31,10 +31,10 @@
 
 Test arithmetic operators have the right precedence:
 
-  $ hg log -l 1 -T '{date(date, "%s") + 5 * 10} {date(date, "%s") - 2 * 3}\n'
-  1500051 1499995
-  $ hg log -l 1 -T '{date(date, "%s") * 5 + 10} {date(date, "%s") * 3 - 2}\n'
-  7500015 4500001
+  $ hg log -l 1 -T '{date(date, "%Y") + 5 * 10} {date(date, "%Y") - 2 * 3}\n'
+  2020 1964
+  $ hg log -l 1 -T '{date(date, "%Y") * 5 + 10} {date(date, "%Y") * 3 - 2}\n'
+  9860 5908
 
 Test division:
 
