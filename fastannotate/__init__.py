@@ -33,12 +33,6 @@ be faster than the vanilla 'annotate' if the cache is present.
     # poor performance
     hgweb = True
 
-    # use unfiltered repo for better performance
-    unfilteredrepo = True
-
-    # sacrifice correctness in some cases for performance (default: False)
-    perfhack = True
-
     # serve the annotate cache via wire protocol (default: False)
     # tip: the .hg/fastannotate directory is portable - can be rsynced
     server = True
@@ -49,6 +43,21 @@ be faster than the vanilla 'annotate' if the cache is present.
 
     # path to use when connecting to the remote server (default: default)
     remotepath = default
+
+    # use flock instead of the file existence lock
+    # flock may not work well on some network filesystems, but they avoid
+    # creating and deleting files frequently, which is faster when updating
+    # the annotate cache in batch. if you have issues with this option, set it
+    # to False. (default: True if flock is supported, False otherwise)
+    useflock = True
+
+    # use unfiltered repo for better performance
+    unfilteredrepo = True
+
+    # sacrifice correctness in some corner cases for performance. it does not
+    # affect the correctness of the annotate cache being built. the option
+    # is experimental and may disappear in the future (default: False)
+    perfhack = True
 """
 
 from __future__ import absolute_import
@@ -61,12 +70,22 @@ from mercurial import (
 
 from . import (
     commands,
+    context,
     protocol,
 )
 
 testedwith = 'internal'
 
 cmdtable = commands.cmdtable
+
+def _flockavailable():
+    try:
+        import fcntl
+        fcntl.flock
+    except StandardError:
+        return False
+    else:
+        return True
 
 def uisetup(ui):
     cmdnames = ui.configlist('fastannotate', 'commands', ['fastannotate'])
@@ -85,6 +104,9 @@ def uisetup(ui):
 
     if ui.configbool('fastannotate', 'server'):
         protocol.serveruisetup(ui)
+
+    if ui.configbool('fastannotate', 'useflock', _flockavailable()):
+        context.pathhelper.lock = context.pathhelper._lockflock
 
 def reposetup(ui, repo):
     client = ui.configbool('fastannotate', 'client', default=None)

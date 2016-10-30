@@ -718,6 +718,21 @@ class pathhelper(object):
     def lock(self):
         return lockmod.lock(self._repo.vfs, self._vfspath + '.lock')
 
+    @contextlib.contextmanager
+    def _lockflock(self):
+        """the same as 'lock' but use flock instead of lockmod.lock, to avoid
+        creating temporary symlinks."""
+        import fcntl
+        lockpath = self.linelogpath
+        util.makedirs(os.path.dirname(lockpath))
+        lockfd = os.open(lockpath, os.O_RDONLY | os.O_CREAT, 0o664)
+        fcntl.flock(lockfd, fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(lockfd, fcntl.LOCK_UN)
+            os.close(lockfd)
+
     @property
     def revmappath(self):
         return self._repo.vfs.join(self._vfspath + '.m')
