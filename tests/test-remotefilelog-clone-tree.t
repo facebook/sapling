@@ -83,11 +83,11 @@
   $ cd ..
 
 # full clone from shallow
-
-  $ hg clone --noupdate ssh://user@dummy/shallow full
+# - send stderr to /dev/null because the order of stdout/err causes
+#   flakiness here
+  $ hg clone --noupdate ssh://user@dummy/shallow full 2>/dev/null
   streaming all changes
   remote: abort: Cannot clone from a shallow repo to a full repo.
-  abort: unexpected response from remote server: empty string
   [255]
 
 # getbundle full clone
