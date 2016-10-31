@@ -109,7 +109,7 @@ tagging on a non-head revision
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg tag -l localblah
   $ hg tag "foobar"
-  abort: not at a branch head (use -f to force)
+  abort: working directory is not at a branch head (use -f to force)
   [255]
   $ hg tag -f "foobar"
   $ cat .hgtags
@@ -339,7 +339,7 @@ tagging on null rev
   $ hg up null
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ hg tag nullrev
-  abort: not at a branch head (use -f to force)
+  abort: working directory is not at a branch head (use -f to force)
   [255]
 
   $ hg init empty

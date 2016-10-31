@@ -7077,7 +7077,8 @@ def tag(ui, repo, name1, *names, **opts):
                 raise error.Abort(_('uncommitted merge'))
             bheads = repo.branchheads()
             if not opts.get('force') and bheads and p1 not in bheads:
-                raise error.Abort(_('not at a branch head (use -f to force)'))
+                raise error.Abort(_('working directory is not at a branch head '
+                                    '(use -f to force)'))
         r = scmutil.revsingle(repo, rev_).node()
 
         if not message:
