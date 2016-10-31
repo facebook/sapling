@@ -63,8 +63,9 @@ class httppeer(wireproto.wirepeer):
         self.requestbuilder = urlreq.request
 
     def __del__(self):
-        if self.urlopener:
-            for h in self.urlopener.handlers:
+        urlopener = getattr(self, 'urlopener', None)
+        if urlopener:
+            for h in urlopener.handlers:
                 h.close()
                 getattr(h, "close_all", lambda : None)()
 
