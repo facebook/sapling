@@ -244,6 +244,9 @@ def strip(ui, repo, nodelist, backup=True, topic='backup'):
             vfs.unlink(tmpbundlefile)
 
     repo.destroyed()
+    # return the backup file path (or None if 'backup' was False) so
+    # extensions can use it
+    return backupfile
 
 def rebuildfncache(ui, repo):
     """Rebuilds the fncache file from repo history.
