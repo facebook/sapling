@@ -63,4 +63,11 @@ is not shallow.)
   $ cat y
   y
 
+Test that bundle works in a non-remotefilelog repo w/ remotefilelog loaded
+
+  $ echo y >> y
+  $ hg commit -qAm "modify y"
+  $ hg bundle --base ".^" --rev . mybundle.hg --config extensions.setuprfl=$TESTTMP/setupremotefilelog.py
+  1 changesets found
+
   $ cd ..

@@ -177,16 +177,15 @@ if util.safehasattr(changegroup, 'cg2packer'):
             return shallowgroup(shallowcg2packer, self, nodelist, rlog, lookup,
                                 units=units)
 
-def getchangegroup(orig, repo, source, heads=None, bundlecaps=None,
-                   *args, **kwargs):
+def getchangegroup(orig, repo, source, *args, **kwargs):
     if not requirement in repo.requirements:
-        return orig(repo, source, heads=heads,
-                    bundlecaps=bundlecaps, *args, **kwargs)
+        return orig(repo, source, *args, **kwargs)
 
     original = repo.shallowmatch
     try:
         # if serving, only send files the clients has patterns for
         if source == 'serve':
+            bundlecaps = kwargs.get('bundlecaps')
             includepattern = None
             excludepattern = None
             for cap in (bundlecaps or []):
@@ -203,7 +202,7 @@ def getchangegroup(orig, repo, source, heads=None, bundlecaps=None,
                     includepattern, excludepattern)
             else:
                 repo.shallowmatch = match.always(repo.root, '')
-        return orig(repo, source, heads, bundlecaps, *args, **kwargs)
+        return orig(repo, source, *args, **kwargs)
     finally:
         repo.shallowmatch = original
 
