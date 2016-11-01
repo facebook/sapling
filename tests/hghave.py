@@ -360,6 +360,11 @@ def has_rmcwd():
         return False
     finally:
         os.chdir(ocwd)
+        # clean up temp dir on platforms where cwd can't be removed
+        try:
+            os.rmdir(temp)
+        except OSError:
+            pass
 
 @check("tla", "GNU Arch tla client")
 def has_tla():
