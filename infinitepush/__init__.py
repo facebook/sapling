@@ -492,6 +492,11 @@ def _readscratchremotebookmarks(ui, repo, other):
         remotenamesext = extensions.find('remotenames')
         remotepath = remotenamesext.activepath(repo.ui, other)
         result = {}
+        # Let's refresh remotenames to make sure we have it up to date
+        # Seems that `repo.names['remotebookmarks']` may return stale bookmarks
+        # and it results in deleting scratch bookmarks. Our best guess how to
+        # fix it is to use `clearnames()`
+        repo._remotenames.clearnames()
         for remotebookmark in repo.names['remotebookmarks'].listnames(repo):
             path, bookname = remotenamesext.splitremotename(remotebookmark)
             if path == remotepath and _scratchbranchmatcher(bookname):
