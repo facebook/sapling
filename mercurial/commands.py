@@ -1520,7 +1520,7 @@ def clone(ui, source, dest=None, **opts):
 
       - clone a remote repository to a new directory named hg/::
 
-          hg clone http://selenic.com/hg
+          hg clone https://www.mercurial-scm.org/repo/hg/
 
       - create a lightweight local clone::
 
@@ -1541,7 +1541,7 @@ def clone(ui, source, dest=None, **opts):
 
       - clone (and track) a particular named branch::
 
-          hg clone http://selenic.com/hg#stable
+          hg clone https://www.mercurial-scm.org/repo/hg/#stable
 
     See :hg:`help urls` for details on specifying URLs.
 
@@ -4740,7 +4740,7 @@ def identify(ui, repo, source=None, rev=None,
 
       - check the most recent revision of a remote repository::
 
-          hg id -r tip http://selenic.com/hg/
+          hg id -r tip https://www.mercurial-scm.org/repo/hg/
 
     See :hg:`log` for generating more information about specific revisions,
     including full hash identifiers.
@@ -4943,7 +4943,7 @@ def import_(ui, repo, patch1=None, *patches, **opts):
 
       - import a changeset from an hgweb server::
 
-          hg import http://www.selenic.com/hg/rev/5ca8c111e9aa
+          hg import https://www.mercurial-scm.org/repo/hg/rev/5ca8c111e9aa
 
       - import all the patches in an Unix-style mbox::
 
