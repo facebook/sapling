@@ -680,8 +680,7 @@ class basefilectx(object):
         elif '_descendantrev' in self.__dict__:
             # this file context was created from a revision with a known
             # descendant, we can (lazily) correct for linkrev aliases
-            return self._adjustlinkrev(self._path, self._filelog,
-                                       self._filenode, self._descendantrev)
+            return self._adjustlinkrev(self._descendantrev)
         else:
             return self._filelog.linkrev(self._filerev)
 
@@ -811,17 +810,13 @@ class basefilectx(object):
 
         return True
 
-    def _adjustlinkrev(self, path, filelog, fnode, srcrev, inclusive=False):
+    def _adjustlinkrev(self, srcrev, inclusive=False):
         """return the first ancestor of <srcrev> introducing <fnode>
 
         If the linkrev of the file revision does not point to an ancestor of
         srcrev, we'll walk down the ancestors until we find one introducing
         this file revision.
 
-        :repo: a localrepository object (used to access changelog and manifest)
-        :path: the file path
-        :fnode: the nodeid of the file revision
-        :filelog: the filelog of this path
         :srcrev: the changeset revision we search ancestors from
         :inclusive: if true, the src revision will also be checked
         """
@@ -829,8 +824,7 @@ class basefilectx(object):
         cl = repo.unfiltered().changelog
         mfl = repo.manifestlog
         # fetch the linkrev
-        fr = filelog.rev(fnode)
-        lkr = filelog.linkrev(fr)
+        lkr = self.linkrev()
         # hack to reuse ancestor computation when searching for renames
         memberanc = getattr(self, '_ancestrycontext', None)
         iteranc = None
@@ -847,6 +841,8 @@ class basefilectx(object):
         if lkr not in memberanc:
             if iteranc is None:
                 iteranc = cl.ancestors(revs, lkr, inclusive=inclusive)
+            fnode = self._filenode
+            path = self._path
             for a in iteranc:
                 ac = cl.read(a) # get changeset data (we avoid object creation)
                 if path in ac[3]: # checking the 'files' field.
@@ -874,8 +870,7 @@ class basefilectx(object):
         noctx = not ('_changeid' in attrs or '_changectx' in attrs)
         if noctx or self.rev() == lkr:
             return self.linkrev()
-        return self._adjustlinkrev(self._path, self._filelog, self._filenode,
-                                   self.rev(), inclusive=True)
+        return self._adjustlinkrev(self.rev(), inclusive=True)
 
     def _parentfilectx(self, path, fileid, filelog):
         """create parent filectx keeping ancestry info for _adjustlinkrev()"""
