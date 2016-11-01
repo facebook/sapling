@@ -435,3 +435,77 @@ Push to svn server should fail
   abort: infinite push does not work with svn repo
   (did you forget to `hg push default`?)
   [255]
+
+Scratch pull of pruned commits
+  $ . $TESTDIR/require-ext.sh inhibit directaccess evolve
+  $ cat >> .hg/hgrc << EOF
+  > [extensions]
+  > directaccess=
+  > evolve=
+  > inhibit=
+  > [experimental]
+  > evolution=createmarkers
+  > evolutioncommands=obsolete
+  > EOF
+  $ hg prune -r scratch/mybranch
+  1 changesets pruned
+  $ hg log -r 'reverse(::scratch/mybranch)' -T '{desc}\n'
+  scratchcommitwithpushrebase
+  scratchcommitnobook
+  new scratch commit
+  scratchcommit
+  initialcommit
+  $ hg pull -B scratch/mybranch
+  pulling from ssh://user@dummy/repo
+  no changes found
+  adding remote bookmark scratch/serversidebook
+  adding remote bookmark serversidebook
+  $ hg log -r 'reverse(::scratch/mybranch)' -T '{desc}\n'
+  scratch amended commit
+  scratchcommitwithpushrebase
+  scratchcommitnobook
+  new scratch commit
+  scratchcommit
+  initialcommit
+
+Prune it again and pull it via commit hash
+  $ hg log -r scratch/mybranch -T '{node}\n'
+  8872775dd97a750e1533dc1fbbca665644b32547
+  $ hg prune -r scratch/mybranch
+  1 changesets pruned
+  $ hg log -G -T '{node|short} {desc} {bookmarks}'
+  @  fe8283fe1190 peercommit
+  |
+  | o  d8c4f54ab678 scratchcommitwithpushrebase scratch/mybranch
+  | |
+  | o  2b5d271c7e0d scratchcommitnobook
+  | |
+  | o  1de1d7d92f89 new scratch commit
+  | |
+  o |  91894e11e825 newcommit
+  | |
+  | o  20759b6926ce scratchcommit
+  |/
+  o  67145f466344 initialcommit
+  
+Have to use full hash because short hashes are not supported yet
+  $ hg pull -r 8872775dd97a750e1533dc1fbbca665644b32547
+  pulling from ssh://user@dummy/repo
+  no changes found
+  $ hg log -G -T '{node|short} {desc} {bookmarks}'
+  @  fe8283fe1190 peercommit
+  |
+  | o  8872775dd97a scratch amended commit
+  | |
+  | o  d8c4f54ab678 scratchcommitwithpushrebase scratch/mybranch
+  | |
+  | o  2b5d271c7e0d scratchcommitnobook
+  | |
+  | o  1de1d7d92f89 new scratch commit
+  | |
+  o |  91894e11e825 newcommit
+  | |
+  | o  20759b6926ce scratchcommit
+  |/
+  o  67145f466344 initialcommit
+  
