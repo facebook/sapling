@@ -1032,7 +1032,7 @@ class GitHandler(object):
                 for rev in (hex(r) for r in revs):
                     if rev not in all_exportable:
                         raise hgutil.Abort("revision %s cannot be pushed since"
-                                           " it doesn't have a ref" %
+                                           " it doesn't have a bookmark" %
                                            self.repo[rev])
                     exportable[rev] = all_exportable[rev]
             return self.get_changed_refs(refs, exportable, force)
@@ -1120,7 +1120,7 @@ class GitHandler(object):
             ctx = self.repo[rev]
             if not rev_refs:
                 raise hgutil.Abort("revision %s cannot be pushed since"
-                                   " it doesn't have a ref" % ctx)
+                                   " it doesn't have a bookmark" % ctx)
 
             # Check if the tags the server is advertising are annotated tags,
             # by attempting to retrieve it from the our git repo, and building
