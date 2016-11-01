@@ -55,7 +55,6 @@ from __future__ import absolute_import
 
 from mercurial.i18n import _
 from mercurial import (
-    cmdutil,
     error as hgerror,
     util,
 )
@@ -67,16 +66,13 @@ from . import (
 
 testedwith = 'internal'
 
-cmdtable = {}
-command = cmdutil.command(cmdtable)
+cmdtable = commands.cmdtable
 
 def uisetup(ui):
     cmdnames = ui.configlist('fastannotate', 'commands', ['fastannotate'])
     for name in set(cmdnames):
         if name == 'fastannotate':
-            command('^fastannotate|fastblame|fa',
-                    **commands.fastannotatecommandargs
-                   )(commands.fastannotate)
+            commands.registercommand()
         elif name == 'annotate':
             commands.replacedefault()
         else:

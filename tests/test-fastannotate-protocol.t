@@ -108,3 +108,23 @@ the fastannotate cache is built in both repos, and they are the same
   $ p2=../repo-server/.hg/fastannotate/default
   $ diff $p1/a.l $p2/a.l
   $ diff $p1/a.m $p2/a.m
+
+use the "debugbuildannotatecache" command to build annotate cache
+
+  $ rm -rf $p1 $p2
+  $ hg --cwd ../repo-server debugbuildannotatecache a --debug
+  fastannotate: a: 4 new changesets in the main branch
+  $ hg --cwd ../repo-local debugbuildannotatecache a --debug
+  running * (glob)
+  sending hello command
+  sending between command
+  remote: * (glob) (?)
+  remote: capabilities: * (glob)
+  remote: * (glob) (?)
+  fastannotate: requesting 1 files
+  sending batch command
+  fastannotate: server returned
+  fastannotate: writing * (glob)
+  fastannotate: writing * (glob)
+  $ diff $p1/a.l $p2/a.l
+  $ diff $p1/a.m $p2/a.m

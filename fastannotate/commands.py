@@ -11,6 +11,7 @@ import os
 
 from mercurial.i18n import _
 from mercurial import (
+    cmdutil,
     commands,
     error,
     extensions,
@@ -24,6 +25,9 @@ from . import (
     error as faerror,
     formatter as faformatter,
 )
+
+cmdtable = {}
+command = cmdutil.command(cmdtable)
 
 def _matchpaths(repo, rev, pats, opts, aopts):
     """generate paths matching given patterns"""
@@ -215,7 +219,52 @@ def _appendoptions(origopts):
         origopts.append(newopt)
         _newopts.add(newopt[1].replace('-', '_'))
 
+def registercommand():
+    """register the fastannotate command"""
+    name = '^fastannotate|fastblame|fa'
+    command(name, **fastannotatecommandargs)(fastannotate)
+
 def replacedefault():
     """replace the default annotate command"""
     entry = extensions.wrapcommand(commands.table, 'annotate', _annotatewrapper)
     _appendoptions(entry[1])
+
+@command('debugbuildannotatecache',
+         [('r', 'rev', '', _('build up to the specific revision'), _('REV'))
+         ] + commands.walkopts,
+         _('[-r REV] FILE...'))
+def debugbuildannotatecache(ui, repo, *pats, **opts):
+    """incrementally build fastannotate cache up to REV for specified files
+
+    If REV is not specified, use the config 'fastannotate.mainbranch'.
+
+    If fastannotate.client is True, download the annotate cache from the
+    server. Otherwise, build the annotate cache locally.
+
+    The annotate cache will be built using the default diff and follow
+    options and lives in '.hg/fastannotate/default'.
+    """
+    rev = opts.get('REV') or ui.config('fastannotate', 'mainbranch')
+    if not rev:
+        raise error.Abort(_('you need to provide a revision'),
+                          hint=_('set fastannotate.mainbranch or use --rev'))
+    if ui.configbool('fastannotate', 'unfilteredrepo', True):
+        repo = repo.unfiltered()
+    ctx = scmutil.revsingle(repo, rev)
+    m = scmutil.match(ctx, pats, opts)
+    paths = list(ctx.walk(m))
+    if util.safehasattr(repo, 'prefetchfastannotate'):
+        # client
+        if opts.get('REV'):
+            raise error.Abort(_('--rev cannot be used for client'))
+        repo.prefetchfastannotate(paths)
+    else:
+        # server, or full repo
+        for i, path in enumerate(paths):
+            ui.progress(_('building'), i, total=len(paths))
+            with facontext.annotatecontext(repo, path) as actx:
+                if actx.isuptodate(rev):
+                    continue
+                actx.annotate(rev, rev)
+        # clear the progress bar
+        ui.write()
