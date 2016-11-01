@@ -4,6 +4,53 @@
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
+"""
+    [infinitepush]
+    # Server-side and client-side option. Pattern of the infinitepush bookmark
+    branchpattern = PATTERN
+
+    # Server or client
+    server = False
+
+    # Server-side option. Possible values: 'disk' or 'sql'. Fails if not set
+    indextype = disk
+
+    # Server-side option. Used only if indextype=sql.
+    # Format: 'IP:PORT:DB_NAME:USER:PASSWORD'
+    sqlhost = IP:PORT:DB_NAME:USER:PASSWORD
+
+    # Server-side option. Used only if indextype=disk.
+    # Filesystem path to the index store
+    indexpath = PATH
+
+    # Server-side option. Possible values: 'disk' or 'external'
+    # Fails if not set
+    storetype = disk
+
+    # Server-side option.
+    # Path to the binary that will save bundle to the bundlestore
+    # Formatted cmd line will be passed to it (see `put_args`)
+    put_binary = put
+
+    # Serser-side option. Used only if storetype=external.
+    # Format cmd-line string for put binary. Placeholder: {filename}
+    put_args = {filename}
+
+    # Server-side option.
+    # Path to the binary that get bundle from the bundlestore.
+    # Formatted cmd line will be passed to it (see `get_args`)
+    get_binary = get
+
+    # Serser-side option. Used only if storetype=external.
+    # Format cmd-line string for get binary. Placeholders: {filename} {handle}
+    get_args = {filename} {handle}
+
+    # Server-side option
+    logfile = FIlE
+
+    # Server-side option
+    loglevel = DEBUG
+"""
 
 from __future__ import absolute_import
 import errno
@@ -75,10 +122,11 @@ def _buildsqlindex(ui):
         raise error.Abort(_('please set infinitepush.reponame'))
 
     logfile = ui.config('infinitepush', 'logfile', '')
+    waittimeout = ui.configint('infinitepush', 'waittimeout', 300)
     from . import sqlindexapi
     return sqlindexapi.sqlindexapi(
         reponame, host, port, db, user, password,
-        logfile, _getloglevel(ui))
+        logfile, _getloglevel(ui), waittimeout=waittimeout)
 
 def _getloglevel(ui):
     loglevel = ui.config('infinitepush', 'loglevel', 'DEBUG')

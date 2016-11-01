@@ -1,3 +1,10 @@
+# Infinite push
+#
+# Copyright 2016 Facebook, Inc.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2 or any later version.
+
 import os
 import time
 import logging
@@ -33,7 +40,7 @@ class sqlindexapi(indexapi):
     '''
 
     def __init__(self, reponame, host, port,
-                 database, user, password, logfile, loglevel):
+                 database, user, password, logfile, loglevel, waittimeout=300):
         super(sqlindexapi, self).__init__()
         self.reponame = reponame
         self.sqlargs = {
@@ -51,6 +58,7 @@ class sqlindexapi(indexapi):
         self.log = logging.getLogger()
         self.log.setLevel(loglevel)
         self._connected = False
+        self._waittimeout = waittimeout
 
     def sqlconnect(self):
         if self.sqlconn:
@@ -78,10 +86,10 @@ class sqlindexapi(indexapi):
                     raise
                 time.sleep(0.2)
 
-        waittimeout = 300
-        waittimeout = self.sqlconn.converter.escape('%s' % waittimeout)
+        waittimeout = self.sqlconn.converter.escape('%s' % self._waittimeout)
 
         self.sqlcursor = self.sqlconn.cursor()
+        self.sqlcursor.execute("SET wait_timeout=%s" % waittimeout)
         self._connected = True
 
     def close(self):

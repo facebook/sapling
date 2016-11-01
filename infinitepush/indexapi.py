@@ -1,3 +1,10 @@
+# Infinite push
+#
+# Copyright 2016 Facebook, Inc.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2 or any later version.
+
 class indexapi(object):
     def __init__(self):
         """Initializes the metadata store connection."""
