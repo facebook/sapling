@@ -537,6 +537,7 @@ def checkfile(f, logfunc=_defaultlogger.log, maxerr=None, warnings=False,
         return result
 
     for name, match, magic, filters, pats in checks:
+        post = pre # discard filtering result of previous check
         if debug:
             print(name, f)
         fc = 0
