@@ -444,6 +444,17 @@ webtemplatepats = [
   ]
 ]
 
+allfilesfilters = []
+
+allfilespats = [
+  [
+    (r'(http|https)://[a-zA-Z0-9./]*selenic.com/',
+     'use mercurial-scm.org domain URL'),
+  ],
+  # warnings
+  [],
+]
+
 checks = [
     ('python', r'.*\.(py|cgi)$', r'^#!.*python', pyfilters, pypats),
     ('test script', r'(.*/)?test-[^.~]*$', '', testfilters, testpats),
@@ -456,6 +467,8 @@ checks = [
     ('txt', r'.*\.txt$', '', txtfilters, txtpats),
     ('web template', r'mercurial/templates/.*\.tmpl', '',
      webtemplatefilters, webtemplatepats),
+    ('all except for .po', r'.*(?<!\.po)$', '',
+     allfilesfilters, allfilespats),
 ]
 
 def _preparepats():
