@@ -106,9 +106,9 @@ Resources
 """""""""
 Main Web Site: https://mercurial-scm.org/
 
-Source code repository: http://selenic.com/hg
+Source code repository: https://www.mercurial-scm.org/repo/hg
 
-Mailing list: http://selenic.com/mailman/listinfo/mercurial
+Mailing list: https://www.mercurial-scm.org/mailman/listinfo/mercurial/
 
 Copying
 """""""
