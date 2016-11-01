@@ -393,3 +393,58 @@ Executable files:
   @@ -0,0 +1,1 @@
   +bla
   $ hg diff
+
+Remove lines may delete changesets:
+
+  $ cd ..
+  $ hg init repo4
+  $ cd repo4
+  $ cat > a <<EOF
+  > 1
+  > 2
+  > EOF
+  $ hg commit -m a12 -A a
+  $ cat > b <<EOF
+  > 1
+  > 2
+  > EOF
+  $ hg commit -m b12 -A b
+  $ echo 3 >> b
+  $ hg commit -m b3
+  $ echo 4 >> b
+  $ hg commit -m b4
+  $ echo 1 > b
+  $ echo 3 >> a
+  $ hg absorb -pn
+  showing changes for a
+          @@ -2,0 +2,1 @@
+  bfafb49 +3
+  showing changes for b
+          @@ -1,3 +1,0 @@
+  1154859 -2
+  30970db -3
+  a393a58 -4
+  $ hg absorb -v | grep became
+  bfafb49242db: 1 file(s) changed, became 1a2de97fc652
+  115485984805: 2 file(s) changed, became 0c930dfab74c
+  30970dbf7b40: became empty and was dropped
+  a393a58b9a85: became empty and was dropped
+  $ hg log -T '{rev} {desc}\n' -Gp
+  @  5 b12
+  |  diff --git a/b b/b
+  |  new file mode 100644
+  |  --- /dev/null
+  |  +++ b/b
+  |  @@ -0,0 +1,1 @@
+  |  +1
+  |
+  o  4 a12
+     diff --git a/a b/a
+     new file mode 100644
+     --- /dev/null
+     +++ b/a
+     @@ -0,0 +1,3 @@
+     +1
+     +2
+     +3
+  

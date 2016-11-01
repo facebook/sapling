@@ -764,7 +764,8 @@ class fixupstate(object):
             if len(parents) != 1:
                 return False
             pctx = parents[0]
-        if set(ctx.files()) != set(memworkingcopy.iterkeys()):
+        # ctx changes more files (not a subset of memworkingcopy)
+        if not set(ctx.files()).issubset(set(memworkingcopy.iterkeys())):
             return False
         for path, content in memworkingcopy.iteritems():
             if path not in pctx or path not in ctx:
