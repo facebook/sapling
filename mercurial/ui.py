@@ -22,6 +22,7 @@ from .node import hex
 
 from . import (
     config,
+    encoding,
     error,
     formatter,
     progress,
@@ -569,9 +570,11 @@ class ui(object):
         - False if HGPLAIN is not set, or feature is in HGPLAINEXCEPT
         - True otherwise
         '''
-        if 'HGPLAIN' not in os.environ and 'HGPLAINEXCEPT' not in os.environ:
+        if ('HGPLAIN' not in encoding.environ and
+                'HGPLAINEXCEPT' not in encoding.environ):
             return False
-        exceptions = os.environ.get('HGPLAINEXCEPT', '').strip().split(',')
+        exceptions = encoding.environ.get('HGPLAINEXCEPT',
+                '').strip().split(',')
         if feature and exceptions:
             return feature not in exceptions
         return True
@@ -584,13 +587,13 @@ class ui(object):
         If not found and ui.askusername is True, ask the user, else use
         ($LOGNAME or $USER or $LNAME or $USERNAME) + "@full.hostname".
         """
-        user = os.environ.get("HGUSER")
+        user = encoding.environ.get("HGUSER")
         if user is None:
             user = self.config("ui", ["username", "user"])
             if user is not None:
                 user = os.path.expandvars(user)
         if user is None:
-            user = os.environ.get("EMAIL")
+            user = encoding.environ.get("EMAIL")
         if user is None and self.configbool("ui", "askusername"):
             user = self.prompt(_("enter a commit username:"), default=None)
         if user is None and not self.interactive():
@@ -814,9 +817,9 @@ class ui(object):
     def termwidth(self):
         '''how wide is the terminal in columns?
         '''
-        if 'COLUMNS' in os.environ:
+        if 'COLUMNS' in encoding.environ:
             try:
-                return int(os.environ['COLUMNS'])
+                return int(encoding.environ['COLUMNS'])
             except ValueError:
                 pass
         return util.termwidth()
@@ -1075,10 +1078,10 @@ class ui(object):
             editor = 'E'
         else:
             editor = 'vi'
-        return (os.environ.get("HGEDITOR") or
+        return (encoding.environ.get("HGEDITOR") or
                 self.config("ui", "editor") or
-                os.environ.get("VISUAL") or
-                os.environ.get("EDITOR", editor))
+                encoding.environ.get("VISUAL") or
+                encoding.environ.get("EDITOR", editor))
 
     @util.propertycache
     def _progbar(self):
