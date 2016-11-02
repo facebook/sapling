@@ -330,11 +330,12 @@ class cg1unpacker(object):
 
                 needfiles = {}
                 if repo.ui.configbool('server', 'validate', default=False):
+                    cl = repo.changelog
+                    ml = repo.manifestlog
                     # validate incoming csets have their manifests
                     for cset in xrange(clstart, clend):
-                        mfnode = repo.changelog.read(
-                            repo.changelog.node(cset))[0]
-                        mfest = repo.manifestlog[mfnode].readdelta()
+                        mfnode = cl.read(cl.node(cset))[0]
+                        mfest = ml[mfnode].readdelta()
                         # store file nodes we must see
                         for f, n in mfest.iteritems():
                             needfiles.setdefault(f, set()).add(n)
