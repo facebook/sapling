@@ -73,8 +73,6 @@ Conflicting rebase:
 Try to continue without solving the conflict:
 
   $ hg rebase --continue
-  already rebased 3:3163e20567cc "L1" as 3e046f2ecedb
-  rebasing 4:46f0b057b5c0 "L2"
   abort: unresolved merge conflicts (see 'hg help resolve')
   [255]
 

@@ -661,6 +661,9 @@ def rebase(ui, repo, **opts):
                     _('abort and continue do not allow specifying revisions'))
             if abortf and opts.get('tool', False):
                 ui.warn(_('tool option will be ignored\n'))
+            if contf:
+                ms = mergemod.mergestate.read(repo)
+                cmdutil.checkunresolved(ms)
 
             retcode = rbsrt._prepareabortorcontinue(abortf)
             if retcode is not None:
