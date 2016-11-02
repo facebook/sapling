@@ -207,6 +207,12 @@ docker-ubuntu-xenial: contrib/docker/ubuntu-xenial
 docker-ubuntu-xenial-ppa: contrib/docker/ubuntu-xenial
 	contrib/dockerdeb ubuntu xenial --source-only
 
+docker-ubuntu-yakkety: contrib/docker/ubuntu-yakkety
+	contrib/dockerdeb ubuntu yakkety
+
+docker-ubuntu-yakkety-ppa: contrib/docker/ubuntu-yakkety
+	contrib/dockerdeb ubuntu yakkety --source-only
+
 fedora20:
 	mkdir -p packages/fedora20
 	contrib/buildrpm
