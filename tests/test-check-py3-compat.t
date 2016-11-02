@@ -9,6 +9,8 @@
   hgext/fsmonitor/pywatchman/capabilities.py not using absolute_import
   hgext/fsmonitor/pywatchman/pybser.py not using absolute_import
   i18n/check-translation.py not using absolute_import
+  mercurial/statprof.py not using absolute_import
+  mercurial/statprof.py requires print_function
   setup.py not using absolute_import
   tests/test-demandimport.py not using absolute_import
 
@@ -22,6 +24,7 @@
   hgext/fsmonitor/watchmanclient.py: error importing: <ImportError> No module named 'pybser' (error at __init__.py:*)
   hgext/mq.py: error importing: <TypeError> __import__() argument 1 must be str, not bytes (error at extensions.py:*)
   mercurial/scmwindows.py: error importing: <ImportError> No module named 'winreg' (error at scmwindows.py:*)
+  mercurial/statprof.py: invalid syntax: Missing parentheses in call to 'print' (<unknown>, line *)
   mercurial/win32.py: error importing: <ImportError> No module named 'msvcrt' (error at win32.py:*)
   mercurial/windows.py: error importing: <ImportError> No module named 'msvcrt' (error at windows.py:*)
 
