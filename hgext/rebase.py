@@ -36,7 +36,7 @@ from mercurial import (
     extensions,
     hg,
     lock,
-    merge,
+    merge as mergemod,
     obsolete,
     patch,
     phases,
@@ -823,7 +823,7 @@ def rebasenode(repo, rev, p1, base, state, collapse, target):
     # Update to target and merge it with local
     if repo['.'].rev() != p1:
         repo.ui.debug(" update to %d:%s\n" % (p1, repo[p1]))
-        merge.update(repo, p1, False, True)
+        mergemod.update(repo, p1, False, True)
     else:
         repo.ui.debug(" already in target\n")
     repo.dirstate.write(repo.currenttransaction())
@@ -832,8 +832,8 @@ def rebasenode(repo, rev, p1, base, state, collapse, target):
         repo.ui.debug("   detach base %d:%s\n" % (base, repo[base]))
     # When collapsing in-place, the parent is the common ancestor, we
     # have to allow merging with it.
-    stats = merge.update(repo, rev, True, True, base, collapse,
-                        labels=['dest', 'source'])
+    stats = mergemod.update(repo, rev, True, True, base, collapse,
+                            labels=['dest', 'source'])
     if collapse:
         copies.duplicatecopies(repo, rev, target)
     else:
@@ -1150,7 +1150,7 @@ def abort(repo, originalwd, target, state, activebookmark=None):
 
             # Update away from the rebase if necessary
             if shouldupdate or needupdate(repo, state):
-                merge.update(repo, originalwd, False, True)
+                mergemod.update(repo, originalwd, False, True)
 
             # Strip from the first rebased revision
             if rebased:
