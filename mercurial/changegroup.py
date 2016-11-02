@@ -334,7 +334,7 @@ class cg1unpacker(object):
                     ml = repo.manifestlog
                     # validate incoming csets have their manifests
                     for cset in xrange(clstart, clend):
-                        mfnode = cl.read(cl.node(cset))[0]
+                        mfnode = cl.changelogrevision(cset).manifest
                         mfest = ml[mfnode].readdelta()
                         # store file nodes we must see
                         for f, n in mfest.iteritems():
