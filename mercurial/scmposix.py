@@ -4,6 +4,7 @@ import os
 import sys
 
 from . import (
+    encoding,
     osutil,
 )
 
@@ -34,6 +35,6 @@ def systemrcpath():
 
 def userrcpath():
     if sys.platform == 'plan9':
-        return [os.environ['home'] + '/lib/hgrc']
+        return [encoding.environ['home'] + '/lib/hgrc']
     else:
         return [os.path.expanduser('~/.hgrc')]
