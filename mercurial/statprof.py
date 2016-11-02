@@ -427,40 +427,41 @@ class DisplayFormats:
     FlameGraph = 4
     Json = 5
 
-def display(fp=None, format=3, **kwargs):
+def display(fp=None, format=3, data=None, **kwargs):
     '''Print statistics, either to stdout or the given file object.'''
+    data = data or state
 
     if fp is None:
         import sys
         fp = sys.stdout
-    if len(state.samples) == 0:
+    if len(data.samples) == 0:
         print('No samples recorded.', file=fp)
         return
 
     if format == DisplayFormats.ByLine:
-        display_by_line(fp)
+        display_by_line(data, fp)
     elif format == DisplayFormats.ByMethod:
-        display_by_method(fp)
+        display_by_method(data, fp)
     elif format == DisplayFormats.AboutMethod:
-        display_about_method(fp, **kwargs)
+        display_about_method(data, fp, **kwargs)
     elif format == DisplayFormats.Hotpath:
-        display_hotpath(fp, **kwargs)
+        display_hotpath(data, fp, **kwargs)
     elif format == DisplayFormats.FlameGraph:
-        write_to_flame(fp, **kwargs)
+        write_to_flame(data, fp, **kwargs)
     elif format == DisplayFormats.Json:
-        write_to_json(fp)
+        write_to_json(data, fp)
     else:
         raise Exception("Invalid display format")
 
     if format != DisplayFormats.Json:
         print('---', file=fp)
-        print('Sample count: %d' % len(state.samples), file=fp)
-        print('Total time: %f seconds' % state.accumulated_time, file=fp)
+        print('Sample count: %d' % len(data.samples), file=fp)
+        print('Total time: %f seconds' % data.accumulated_time, file=fp)
 
-def display_by_line(fp):
+def display_by_line(data, fp):
     '''Print the profiler data with each sample line represented
     as one row in a table.  Sorted by self-time per line.'''
-    stats = SiteStats.buildstats(state.samples)
+    stats = SiteStats.buildstats(data.samples)
     stats.sort(reverse=True, key=lambda x: x.selfseconds())
 
     print('%5.5s %10.10s   %7.7s  %-8.8s' %
@@ -477,7 +478,7 @@ def display_by_line(fp):
                                          sitelabel),
               file=fp)
 
-def display_by_method(fp):
+def display_by_method(data, fp):
     '''Print the profiler data with each sample function represented
     as one row in a table.  Important lines within that function are
     output as nested rows.  Sorted by self-time per line.'''
@@ -486,7 +487,7 @@ def display_by_method(fp):
     print('%5.5s  %9.9s  %8.8s  %-8.8s' %
           ("time", "seconds", "seconds", "name"), file=fp)
 
-    stats = SiteStats.buildstats(state.samples)
+    stats = SiteStats.buildstats(data.samples)
 
     grouped = defaultdict(list)
     for stat in stats:
@@ -530,7 +531,7 @@ def display_by_method(fp):
 
                 print('%33.0f%% %6.2f   line %s: %s' % (stattuple), file=fp)
 
-def display_about_method(fp, function=None, **kwargs):
+def display_about_method(data, fp, function=None, **kwargs):
     if function is None:
         raise Exception("Invalid function")
 
@@ -542,7 +543,7 @@ def display_about_method(fp, function=None, **kwargs):
     parents = {}
     children = {}
 
-    for sample in state.samples:
+    for sample in data.samples:
         for i, site in enumerate(sample.stack):
             if site.function == function and (not filename
                 or site.filename() == filename):
@@ -566,7 +567,7 @@ def display_about_method(fp, function=None, **kwargs):
             (count / relevant_samples * 100, parent.filename(),
             parent.function, parent.lineno, parent.getsource(50)), file=fp)
 
-    stats = SiteStats.buildstats(state.samples)
+    stats = SiteStats.buildstats(data.samples)
     stats = [s for s in stats
                if s.site.function == function and
                (not filename or s.site.filename() == filename)]
@@ -599,7 +600,7 @@ def display_about_method(fp, function=None, **kwargs):
               (count / relevant_samples * 100, child.lineno,
                child.getsource(50)), file=fp)
 
-def display_hotpath(fp, limit=0.05, **kwargs):
+def display_hotpath(data, fp, limit=0.05, **kwargs):
     class HotNode(object):
         def __init__(self, site):
             self.site = site
@@ -623,8 +624,8 @@ def display_hotpath(fp, limit=0.05, **kwargs):
                     child.add(stack[i:], time)
 
     root = HotNode(None)
-    lasttime = state.samples[0].time
-    for sample in state.samples:
+    lasttime = data.samples[0].time
+    for sample in data.samples:
         root.add(sample.stack[::-1], sample.time - lasttime)
         lasttime = sample.time
 
@@ -671,7 +672,7 @@ def display_hotpath(fp, limit=0.05, **kwargs):
     if root.count > 0:
         _write(root, 0, False)
 
-def write_to_flame(fp, scriptpath=None, outputfile=None, **kwargs):
+def write_to_flame(data, fp, scriptpath=None, outputfile=None, **kwargs):
     if scriptpath is None:
         scriptpath = os.environ['HOME'] + '/flamegraph.pl'
     if not os.path.exists(scriptpath):
@@ -685,7 +686,7 @@ def write_to_flame(fp, scriptpath=None, outputfile=None, **kwargs):
     file = open(path, "w+")
 
     lines = {}
-    for sample in state.samples:
+    for sample in data.samples:
         sites = [s.function for s in sample.stack]
         sites.reverse()
         line = ';'.join(sites)
@@ -705,10 +706,10 @@ def write_to_flame(fp, scriptpath=None, outputfile=None, **kwargs):
     os.system("perl ~/flamegraph.pl %s > %s" % (path, outputfile))
     print("Written to %s" % outputfile, file=fp)
 
-def write_to_json(fp):
+def write_to_json(data, fp):
     samples = []
 
-    for sample in state.samples:
+    for sample in data.samples:
         stack = []
 
         for frame in sample.stack:
