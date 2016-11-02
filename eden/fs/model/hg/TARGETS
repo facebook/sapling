@@ -5,6 +5,7 @@ cpp_library(
   deps = [
     '//eden/fs/inodes:inodes',
     '//eden/fs/model:model',
+    '//eden/fs/service:EdenMountHandler',
     '//eden/fs/store:store',
     '//eden/utils:utils',
     '//folly:folly',
