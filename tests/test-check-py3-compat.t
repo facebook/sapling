@@ -9,7 +9,6 @@
   hgext/fsmonitor/pywatchman/capabilities.py not using absolute_import
   hgext/fsmonitor/pywatchman/pybser.py not using absolute_import
   i18n/check-translation.py not using absolute_import
-  mercurial/statprof.py not using absolute_import
   mercurial/statprof.py requires print_function
   setup.py not using absolute_import
   tests/test-demandimport.py not using absolute_import

@@ -102,12 +102,22 @@ significantly off if other threads' work patterns are not similar to the
 main thread's work patterns.
 """
 # no-check-code
-from __future__ import division
+from __future__ import absolute_import, division
 
-import inspect, json, os, signal, tempfile, sys, getopt, threading
+import collections
+import contextlib
+import getopt
+import inspect
+import json
+import os
+import signal
+import sys
+import tempfile
+import threading
 import time
-from collections import defaultdict
-from contextlib import contextmanager
+
+defaultdict = collections.defaultdict
+contextmanager = contextlib.contextmanager
 
 __all__ = ['start', 'stop', 'reset', 'display', 'profile']
 
