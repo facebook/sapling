@@ -538,6 +538,7 @@ def extsetup(ui):
 
 @command('debugcolor', [], 'hg debugcolor')
 def debugcolor(ui, repo, **opts):
+    """show available colors and effects"""
     global _styles
     _styles = {}
     for effect in _effects.keys():
