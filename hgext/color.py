@@ -539,6 +539,10 @@ def extsetup(ui):
 @command('debugcolor', [], 'hg debugcolor')
 def debugcolor(ui, repo, **opts):
     """show available colors and effects"""
+    ui.write(('color mode: %s\n') % ui._colormode)
+    return _debugdisplaycolor(ui)
+
+def _debugdisplaycolor(ui):
     global _styles
     oldstyle = _styles
     try:
@@ -551,7 +555,6 @@ def debugcolor(ui, repo, **opts):
                     _styles[k] = k[6:]
                 elif k.startswith('terminfo.'):
                     _styles[k] = k[9:]
-        ui.write(('color mode: %s\n') % ui._colormode)
         ui.write(_('available colors:\n'))
         for colorname, label in _styles.items():
             ui.write(('%s\n') % colorname, label=label)
