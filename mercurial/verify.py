@@ -201,7 +201,8 @@ class verifier(object):
                         progress=None):
         repo = self.repo
         ui = self.ui
-        mf = self.repo.manifest.dirlog(dir)
+        mfl = self.repo.manifestlog
+        mf = mfl._revlog.dirlog(dir)
 
         if not dir:
             self.ui.status(_("checking manifests\n"))
@@ -235,7 +236,8 @@ class verifier(object):
                 self.err(lr, _("%s not in changesets") % short(n), label)
 
             try:
-                for f, fn, fl in mf.readshallowdelta(n).iterentries():
+                mfdelta = mfl.get(dir, n).readdelta(shallow=True)
+                for f, fn, fl in mfdelta.iterentries():
                     if not f:
                         self.err(lr, _("entry without name in manifest"))
                     elif f == "/dev/null":  # ignore this in very old repos

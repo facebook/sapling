@@ -1365,6 +1365,12 @@ class manifestctx(object):
         return self.read()
 
     def readdelta(self, shallow=False):
+        '''Returns a manifest containing just the entries that are present
+        in this manifest, but not in its p1 manifest. This is efficient to read
+        if the revlog delta is already p1.
+
+        Changing the value of `shallow` has no effect on flat manifests.
+        '''
         revlog = self._repo.manifestlog._revlog
         if revlog._usemanifestv2:
             # Need to perform a slow delta
@@ -1427,6 +1433,16 @@ class treemanifestctx(object):
         return self._node
 
     def readdelta(self, shallow=False):
+        '''Returns a manifest containing just the entries that are present
+        in this manifest, but not in its p1 manifest. This is efficient to read
+        if the revlog delta is already p1.
+
+        If `shallow` is True, this will read the delta for this directory,
+        without recursively reading subdirectory manifests. Instead, any
+        subdirectory entry will be reported as it appears in the manifest, i.e.
+        the subdirectory will be reported among files and distinguished only by
+        its 't' flag.
+        '''
         revlog = self._revlog()
         if shallow and not revlog._usemanifestv2:
             r = revlog.rev(self._node)
@@ -1499,41 +1515,6 @@ class manifest(manifestrevlog):
             self._dirlogcache[dir] = manifest(self.opener, dir,
                                               self._dirlogcache)
         return self._dirlogcache[dir]
-
-    def _slowreaddelta(self, node):
-        r0 = self.deltaparent(self.rev(node))
-        m0 = self.read(self.node(r0))
-        m1 = self.read(node)
-        md = self._newmanifest()
-        for f, ((n0, fl0), (n1, fl1)) in m0.diff(m1).iteritems():
-            if n1:
-                md[f] = n1
-                if fl1:
-                    md.setflag(f, fl1)
-        return md
-
-    def readdelta(self, node):
-        if self._usemanifestv2 or self._treeondisk:
-            return self._slowreaddelta(node)
-        r = self.rev(node)
-        d = mdiff.patchtext(self.revdiff(self.deltaparent(r), r))
-        return self._newmanifest(d)
-
-    def readshallowdelta(self, node):
-        '''For flat manifests, this is the same as readdelta(). For
-        treemanifests, this will read the delta for this revlog's directory,
-        without recursively reading subdirectory manifests. Instead, any
-        subdirectory entry will be reported as it appears in the manifests, i.e.
-        the subdirectory will be reported among files and distinguished only by
-        its 't' flag.'''
-        if not self._treeondisk:
-            return self.readdelta(node)
-        if self._usemanifestv2:
-            raise error.Abort(
-                _("readshallowdelta() not implemented for manifestv2"))
-        r = self.rev(node)
-        d = mdiff.patchtext(self.revdiff(self.deltaparent(r), r))
-        return manifestdict(d)
 
     def read(self, node):
         if node == revlog.nullid:
