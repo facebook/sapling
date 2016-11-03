@@ -552,6 +552,15 @@ def wraprepo(repo):
                     # Someone else is already checking and updating the repo
                     self.ui.debug("skipping database sync because another "
                                   "process is already syncing\n")
+
+                    # It's important that we load bookmarks before the
+                    # changelog. This way we know that the bookmarks point to
+                    # valid nodes. Otherwise, the bookmarks might change between
+                    # us reading the changelog and the bookmark file. Normally
+                    # this would be done in needsync(), but since we're skipping
+                    # the sync, we can do it here. Accessing self._bookmarks
+                    # loads both the bookmarks and the changelog.
+                    self._bookmarks
                     return
 
                 try:
