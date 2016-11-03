@@ -677,7 +677,8 @@ class cg1packer(object):
     def generatemanifests(self, commonrevs, clrevorder, fastpathlinkrev, mfs,
                           fnodes):
         repo = self._repo
-        dirlog = repo.manifest.dirlog
+        mfl = repo.manifestlog
+        dirlog = mfl._revlog.dirlog
         tmfnodes = {'': mfs}
 
         # Callback for the manifest, used to collect linkrevs for filelog
@@ -705,7 +706,7 @@ class cg1packer(object):
                 treemanifests to send.
                 """
                 clnode = tmfnodes[dir][x]
-                mdata = dirlog(dir).readshallowfast(x)
+                mdata = mfl.get(dir, x).readfast(shallow=True)
                 for p, n, fl in mdata.iterentries():
                     if fl == 't': # subdirectory manifest
                         subdir = dir + p + '/'

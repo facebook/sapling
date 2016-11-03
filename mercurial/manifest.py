@@ -1351,6 +1351,12 @@ class manifestctx(object):
         return self._data
 
     def readfast(self, shallow=False):
+        '''Calls either readdelta or read, based on which would be less work.
+        readdelta is called if the delta is against the p1, and therefore can be
+        read quickly.
+
+        If `shallow` is True, nothing changes since this is a flat manifest.
+        '''
         rl = self._repo.manifestlog._revlog
         r = rl.rev(self._node)
         deltaparent = rl.deltaparent(r)
@@ -1440,6 +1446,13 @@ class treemanifestctx(object):
             return md
 
     def readfast(self, shallow=False):
+        '''Calls either readdelta or read, based on which would be less work.
+        readdelta is called if the delta is against the p1, and therefore can be
+        read quickly.
+
+        If `shallow` is True, it only returns the entries from this manifest,
+        and not any submanifests.
+        '''
         rl = self._revlog()
         r = rl.rev(self._node)
         deltaparent = rl.deltaparent(r)
@@ -1522,15 +1535,6 @@ class manifest(manifestrevlog):
         d = mdiff.patchtext(self.revdiff(self.deltaparent(r), r))
         return manifestdict(d)
 
-    def readshallowfast(self, node):
-        '''like readfast(), but calls readshallowdelta() instead of readdelta()
-        '''
-        r = self.rev(node)
-        deltaparent = self.deltaparent(r)
-        if deltaparent != revlog.nullrev and deltaparent in self.parentrevs(r):
-            return self.readshallowdelta(node)
-        return self.readshallow(node)
-
     def read(self, node):
         if node == revlog.nullid:
             return self._newmanifest() # don't upset local cache
@@ -1557,13 +1561,6 @@ class manifest(manifestrevlog):
         if arraytext is not None:
             self.fulltextcache[node] = arraytext
         return m
-
-    def readshallow(self, node):
-        '''Reads the manifest in this directory. When using flat manifests,
-        this manifest will generally have files in subdirectories in it. Does
-        not cache the manifest as the callers generally do not read the same
-        version twice.'''
-        return manifestdict(self.revision(node))
 
     def find(self, node, f):
         '''look up entry for a single file efficiently.
