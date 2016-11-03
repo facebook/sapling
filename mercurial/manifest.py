@@ -1262,8 +1262,8 @@ class manifestlog(object):
         self._mancache = self._oldmanifest._mancache
 
     def __getitem__(self, node):
-        """Retrieves the manifest instance for the given node. Throws a KeyError
-        if not found.
+        """Retrieves the manifest instance for the given node. Throws a
+        LookupError if not found.
         """
         if node in self._mancache:
             cachemf = self._mancache[node]
@@ -1273,6 +1273,9 @@ class manifestlog(object):
                 isinstance(cachemf, treemanifestctx)):
                 return cachemf
 
+        if node not in self._revlog.nodemap:
+            raise LookupError(node, self._revlog.indexfile,
+                              _('no node'))
         if self._treeinmem:
             m = treemanifestctx(self._repo, '', node)
         else:
