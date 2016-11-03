@@ -1350,7 +1350,7 @@ class manifestctx(object):
                 self._data = manifestdict(text)
         return self._data
 
-    def readfast(self):
+    def readfast(self, shallow=False):
         rl = self._repo.manifestlog._revlog
         r = rl.rev(self._node)
         deltaparent = rl.deltaparent(r)
@@ -1358,7 +1358,7 @@ class manifestctx(object):
             return self.readdelta()
         return self.read()
 
-    def readdelta(self):
+    def readdelta(self, shallow=False):
         revlog = self._repo.manifestlog._revlog
         if revlog._usemanifestv2:
             # Need to perform a slow delta
@@ -1420,27 +1420,37 @@ class treemanifestctx(object):
     def node(self):
         return self._node
 
-    def readdelta(self):
-        # Need to perform a slow delta
+    def readdelta(self, shallow=False):
         revlog = self._revlog()
-        r0 = revlog.deltaparent(revlog.rev(self._node))
-        m0 = treemanifestctx(self._repo, self._dir, revlog.node(r0)).read()
-        m1 = self.read()
-        md = treemanifest(dir=self._dir)
-        for f, ((n0, fl0), (n1, fl1)) in m0.diff(m1).iteritems():
-            if n1:
-                md[f] = n1
-                if fl1:
-                    md.setflag(f, fl1)
-        return md
+        if shallow and not revlog._usemanifestv2:
+            r = revlog.rev(self._node)
+            d = mdiff.patchtext(revlog.revdiff(revlog.deltaparent(r), r))
+            return manifestdict(d)
+        else:
+            # Need to perform a slow delta
+            r0 = revlog.deltaparent(revlog.rev(self._node))
+            m0 = treemanifestctx(self._repo, self._dir, revlog.node(r0)).read()
+            m1 = self.read()
+            md = treemanifest(dir=self._dir)
+            for f, ((n0, fl0), (n1, fl1)) in m0.diff(m1).iteritems():
+                if n1:
+                    md[f] = n1
+                    if fl1:
+                        md.setflag(f, fl1)
+            return md
 
-    def readfast(self):
+    def readfast(self, shallow=False):
         rl = self._revlog()
         r = rl.rev(self._node)
         deltaparent = rl.deltaparent(r)
-        if deltaparent != revlog.nullrev and deltaparent in rl.parentrevs(r):
-            return self.readdelta()
-        return self.read()
+        if (deltaparent != revlog.nullrev and
+            deltaparent in rl.parentrevs(r)):
+            return self.readdelta(shallow=shallow)
+
+        if shallow:
+            return manifestdict(rl.revision(self._node))
+        else:
+            return self.read()
 
 class manifest(manifestrevlog):
     def __init__(self, opener, dir='', dirlogcache=None):
