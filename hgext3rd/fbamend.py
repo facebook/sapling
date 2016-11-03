@@ -575,7 +575,7 @@ def restack(ui, repo, rebaseopts=None):
             # If we're currently on one of the precursors of the base, update
             # to the latest successor since the old changeset is no longer
             # needed. Note that if we're on a descendant of the base or its
-            # precurosrs, the rebase command will ensure that we end up on a
+            # precursors, the rebase command will ensure that we end up on a
             # non-obsolete changeset, so it is only necessary to explicitly
             # update if we're on a precursor of the base.
             if not repo.revs('. - allprecursors(%d)', base):
@@ -644,7 +644,8 @@ def _findrestacktargets(repo, base):
        ordering that will allow all of the descendants of their precursors
        to be correctly rebased.
     """
-    childrenof = _getchildrelationships(repo, base)
+    childrenof = _getchildrelationships(repo,
+        repo.revs('%d + allprecursors(%d)', base, base))
 
     # Perform BFS starting from base.
     queue = deque([base])
@@ -683,14 +684,14 @@ def _findrestacktargets(repo, base):
     # at higher levels.
     return reversed(targets)
 
-def _getchildrelationships(repo, base):
+def _getchildrelationships(repo, revs):
     """Build a defaultdict of child relationships between all descendants of
-       base. This information will prevent us from having to repeatedly
+       revs. This information will prevent us from having to repeatedly
        perform children that reconstruct these relationships each time.
     """
     cl = repo.changelog
     children = defaultdict(list)
-    for rev in repo.revs('%d:: + allprecursors(%d)::', base, base):
+    for rev in repo.revs('(%ld)::', revs):
         for parent in cl.parentrevs(rev):
             if parent != nullrev:
                 children[parent].append(rev)
@@ -723,9 +724,9 @@ def _latest(repo, rev):
         ]
 
     # Right now this loop runs in O(n^2) due to the allsuccessors
-    # lookup inside getsuccessors(). This check is neccesary to deal
+    # lookup inside getsuccessors(). This check is necessary to deal
     # with unamended changesets (which create situations where
-    # the latest successor is acutally obsolete, and we want a
+    # the latest successor is actually obsolete, and we want a
     # precursor instead. This logic could probably be made more
     # sophisticated for better performance.
     successors = getsuccessors(rev)
@@ -750,6 +751,44 @@ def _deinhibit(repo, contexts):
     if inhibitmod:
         inhibitmod._deinhibitmarkers(repo, (ctx.node() for ctx in contexts))
 
+def _hideopts(entry, opts):
+    """Remove the given set of options from the given command entry.
+       Destructively modifies the entry.
+    """
+    # Each command entry is a tuple, and thus immutable. As such we need
+    # to delete each option from the original list, rather than building
+    # a new, filtered list. Iterate backwards to prevent indicies from changing
+    # as we delete entries.
+    for i, opt in reversed(list(enumerate(entry[1]))):
+        if opt[1] in opts:
+            del entry[1][i]
+
+def _activate(ui, repo, rev):
+    """Activate the bookmark on the given revision if it
+       only has one bookmark.
+    """
+    ctx = repo[rev]
+    bookmarks = repo.nodebookmarks(ctx.node())
+    if len(bookmarks) == 1:
+        ui.status(_("(activating bookmark %s)\n") % bookmarks[0])
+        bmactivate(repo, bookmarks[0])
+
+def _showchangesets(ui, repo, contexts=None, revs=None):
+    """Pretty print a list of changesets. Can take either a list of
+       change contexts or a list of revision numbers.
+    """
+    if contexts is None:
+        contexts = []
+    if revs is not None:
+        contexts.extend(repo[r] for r in revs)
+    showopts = {
+        'template': '[{shortest(node, 6)}] {if(bookmarks, "({bookmarks}) ")}'
+                    '{desc|firstline}\n'
+    }
+    displayer = cmdutil.show_changeset(ui, repo, showopts)
+    for ctx in contexts:
+        displayer.show(ctx)
+
 def _preamendname(repo, node):
     suffix = '.preamend'
     name = bmactive(repo)
@@ -767,6 +806,12 @@ def _usereducation(ui):
     education = ui.config('fbamend', 'education')
     if education:
         ui.warn(education + "\n")
+
+def _setbookmark(repo, tr, bookmark, rev):
+    """Make the given bookmark point to the given revision."""
+    node = repo.changelog.node(rev)
+    repo._bookmarks[bookmark] = node
+    repo._bookmarks.recordchange(tr)
 
 ### bookmarks api compatibility layer ###
 def bmactivate(repo, mark):
