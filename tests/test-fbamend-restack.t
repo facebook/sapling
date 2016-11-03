@@ -286,7 +286,7 @@ a commit on top of one of the obsolete intermediate commits.
   $ mkcommit e
   $ hg prev
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  [5] add b
+  [*] add b (glob)
   $ echo b >> b
   $ hg amend
   warning: the changeset's children were left behind
@@ -430,7 +430,7 @@ Test having an unamended commit.
   $ mkcommit c
   $ hg prev
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  [1] add b
+  [*] add b (glob)
   $ echo b >> b
   $ hg amend -m "Amended"
   warning: the changeset's children were left behind
@@ -467,7 +467,7 @@ Test situation with divergence.
   $ mkcommit c
   $ hg prev
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  [1] add b
+  [*] add b (glob)
   $ echo b >> b
   $ hg amend
   warning: the changeset's children were left behind
@@ -503,7 +503,7 @@ since the successor is obsolete.
   $ mkcommit c
   $ hg prev
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  [1] add b
+  [*] add b (glob)
   $ echo b >> b
   $ hg amend
   warning: the changeset's children were left behind
@@ -604,7 +604,7 @@ stack is lost upon rebasing lower levels.
   $ mkcommit f
   $ hg prev
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  [6] add e
+  [*] add e (glob)
   $ echo e >> e
   $ hg amend
   warning: the changeset's children were left behind
@@ -619,7 +619,7 @@ stack is lost upon rebasing lower levels.
   $ mkcommit h
   $ hg prev
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  [12] add g
+  [*] add g (glob)
   $ echo g >> g
   $ hg amend
   warning: the changeset's children were left behind
