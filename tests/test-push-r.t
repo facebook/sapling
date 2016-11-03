@@ -1,23 +1,16 @@
   $ hg init test
-  $ cd test
-  $ hg unbundle "$TESTDIR/bundles/remote.hg"
+  $ hg -R test unbundle "$TESTDIR/bundles/remote.hg"
   adding changesets
   adding manifests
   adding file changes
   added 9 changesets with 7 changes to 4 files (+1 heads)
   (run 'hg heads' to see heads, 'hg merge' to merge)
-  $ hg up tip
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ cd ..
 
   $ for i in 0 1 2 3 4 5 6 7 8; do
   >    echo
-  >    mkdir test-"$i"
-  >    hg --cwd test-"$i" init
+  >    hg init test-"$i"
   >    hg -R test push -r "$i" test-"$i"
-  >    cd test-"$i"
-  >    hg verify
-  >    cd ..
+  >    hg -R test-"$i" verify
   > done
   
   pushing to test-0
