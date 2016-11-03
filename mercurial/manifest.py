@@ -1265,23 +1265,41 @@ class manifestlog(object):
         """Retrieves the manifest instance for the given node. Throws a
         LookupError if not found.
         """
-        if node in self._mancache:
-            cachemf = self._mancache[node]
-            # The old manifest may put non-ctx manifests in the cache, so skip
-            # those since they don't implement the full api.
-            if (isinstance(cachemf, manifestctx) or
-                isinstance(cachemf, treemanifestctx)):
-                return cachemf
+        return self.get('', node)
 
-        if node not in self._revlog.nodemap:
-            raise LookupError(node, self._revlog.indexfile,
-                              _('no node'))
-        if self._treeinmem:
-            m = treemanifestctx(self._repo, '', node)
+    def get(self, dir, node):
+        """Retrieves the manifest instance for the given node. Throws a
+        LookupError if not found.
+        """
+        if dir:
+            if self._revlog._treeondisk:
+                dirlog = self._revlog.dirlog(dir)
+                if node not in dirlog.nodemap:
+                    raise LookupError(node, dirlog.indexfile,
+                                      _('no node'))
+                m = treemanifestctx(self._repo, dir, node)
+            else:
+                raise error.Abort(
+                        _("cannot ask for manifest directory '%s' in a flat "
+                          "manifest") % dir)
         else:
-            m = manifestctx(self._repo, node)
-        if node != revlog.nullid:
-            self._mancache[node] = m
+            if node in self._mancache:
+                cachemf = self._mancache[node]
+                # The old manifest may put non-ctx manifests in the cache, so
+                # skip those since they don't implement the full api.
+                if (isinstance(cachemf, manifestctx) or
+                    isinstance(cachemf, treemanifestctx)):
+                    return cachemf
+
+            if node not in self._revlog.nodemap:
+                raise LookupError(node, self._revlog.indexfile,
+                                  _('no node'))
+            if self._treeinmem:
+                m = treemanifestctx(self._repo, '', node)
+            else:
+                m = manifestctx(self._repo, node)
+            if node != revlog.nullid:
+                self._mancache[node] = m
         return m
 
     def add(self, m, transaction, link, p1, p2, added, removed):
