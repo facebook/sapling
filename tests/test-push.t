@@ -1,5 +1,12 @@
-  $ hg init test
-  $ hg -R test unbundle "$TESTDIR/bundles/remote.hg"
+==================================
+Basic testing for the push command
+==================================
+
+Testing of the '--rev' flag
+===========================
+
+  $ hg init test-revflag
+  $ hg -R test-revflag unbundle "$TESTDIR/bundles/remote.hg"
   adding changesets
   adding manifests
   adding file changes
@@ -8,12 +15,12 @@
 
   $ for i in 0 1 2 3 4 5 6 7 8; do
   >    echo
-  >    hg init test-"$i"
-  >    hg -R test push -r "$i" test-"$i"
-  >    hg -R test-"$i" verify
+  >    hg init test-revflag-"$i"
+  >    hg -R test-revflag push -r "$i" test-revflag-"$i"
+  >    hg -R test-revflag-"$i" verify
   > done
   
-  pushing to test-0
+  pushing to test-revflag-0
   searching for changes
   adding changesets
   adding manifests
@@ -25,7 +32,7 @@
   checking files
   1 files, 1 changesets, 1 total revisions
   
-  pushing to test-1
+  pushing to test-revflag-1
   searching for changes
   adding changesets
   adding manifests
@@ -37,7 +44,7 @@
   checking files
   1 files, 2 changesets, 2 total revisions
   
-  pushing to test-2
+  pushing to test-revflag-2
   searching for changes
   adding changesets
   adding manifests
@@ -49,7 +56,7 @@
   checking files
   1 files, 3 changesets, 3 total revisions
   
-  pushing to test-3
+  pushing to test-revflag-3
   searching for changes
   adding changesets
   adding manifests
@@ -61,7 +68,7 @@
   checking files
   1 files, 4 changesets, 4 total revisions
   
-  pushing to test-4
+  pushing to test-revflag-4
   searching for changes
   adding changesets
   adding manifests
@@ -73,7 +80,7 @@
   checking files
   1 files, 2 changesets, 2 total revisions
   
-  pushing to test-5
+  pushing to test-revflag-5
   searching for changes
   adding changesets
   adding manifests
@@ -85,7 +92,7 @@
   checking files
   1 files, 3 changesets, 3 total revisions
   
-  pushing to test-6
+  pushing to test-revflag-6
   searching for changes
   adding changesets
   adding manifests
@@ -97,7 +104,7 @@
   checking files
   2 files, 4 changesets, 5 total revisions
   
-  pushing to test-7
+  pushing to test-revflag-7
   searching for changes
   adding changesets
   adding manifests
@@ -109,7 +116,7 @@
   checking files
   3 files, 5 changesets, 6 total revisions
   
-  pushing to test-8
+  pushing to test-revflag-8
   searching for changes
   adding changesets
   adding manifests
@@ -121,10 +128,10 @@
   checking files
   2 files, 5 changesets, 5 total revisions
 
-  $ cd test-8
+  $ cd test-revflag-8
 
-  $ hg pull ../test-7
-  pulling from ../test-7
+  $ hg pull ../test-revflag-7
+  pulling from ../test-revflag-7
   searching for changes
   adding changesets
   adding manifests
