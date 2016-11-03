@@ -1257,9 +1257,17 @@ class manifestlog(object):
         self._oldmanifest = repo._constructmanifest()
         self._revlog = self._oldmanifest
 
+        # A cache of the manifestctx or treemanifestctx for each directory
+        self._dirmancache = {}
+
         # We'll separate this into it's own cache once oldmanifest is no longer
         # used
         self._mancache = self._oldmanifest._mancache
+        self._dirmancache[''] = self._mancache
+
+        # A future patch makes this use the same config value as the existing
+        # mancache
+        self.cachesize = 4
 
     def __getitem__(self, node):
         """Retrieves the manifest instance for the given node. Throws a
@@ -1271,6 +1279,14 @@ class manifestlog(object):
         """Retrieves the manifest instance for the given node. Throws a
         LookupError if not found.
         """
+        if node in self._dirmancache.get(dir, ()):
+            cachemf = self._dirmancache[dir][node]
+            # The old manifest may put non-ctx manifests in the cache, so
+            # skip those since they don't implement the full api.
+            if (isinstance(cachemf, manifestctx) or
+                isinstance(cachemf, treemanifestctx)):
+                return cachemf
+
         if dir:
             if self._revlog._treeondisk:
                 dirlog = self._revlog.dirlog(dir)
@@ -1283,14 +1299,6 @@ class manifestlog(object):
                         _("cannot ask for manifest directory '%s' in a flat "
                           "manifest") % dir)
         else:
-            if node in self._mancache:
-                cachemf = self._mancache[node]
-                # The old manifest may put non-ctx manifests in the cache, so
-                # skip those since they don't implement the full api.
-                if (isinstance(cachemf, manifestctx) or
-                    isinstance(cachemf, treemanifestctx)):
-                    return cachemf
-
             if node not in self._revlog.nodemap:
                 raise LookupError(node, self._revlog.indexfile,
                                   _('no node'))
@@ -1298,8 +1306,13 @@ class manifestlog(object):
                 m = treemanifestctx(self._repo, '', node)
             else:
                 m = manifestctx(self._repo, node)
-            if node != revlog.nullid:
-                self._mancache[node] = m
+
+        if node != revlog.nullid:
+            mancache = self._dirmancache.get(dir)
+            if not mancache:
+                mancache = util.lrucachedict(self.cachesize)
+                self._dirmancache[dir] = mancache
+            mancache[node] = m
         return m
 
     def add(self, m, transaction, link, p1, p2, added, removed):
