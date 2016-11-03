@@ -90,7 +90,7 @@ def uisetup(ui):
 
     # If the evolve extension is enabled, wrap the `next` command to
     # add the --rebase flag.
-    def wrapnext(loaded):
+    def evolveloaded(loaded):
         if not loaded:
             return
 
@@ -101,23 +101,23 @@ def uisetup(ui):
             pass
 
         evolvemod = extensions.find('evolve')
-        entry = extensions.wrapcommand(evolvemod.cmdtable, 'next', nextrebase)
+        entry = extensions.wrapcommand(evolvemod.cmdtable, 'next', wrapnext)
         entry[1].append((
             '', 'rebase', False, _('rebase the changeset if necessary')
         ))
-    extensions.afterloaded('evolve', wrapnext)
+    extensions.afterloaded('evolve', evolveloaded)
 
-    def wraprebase(loaded):
+    def rebaseloaded(loaded):
         if not loaded:
             return
         entry = extensions.wrapcommand(rebasemod.cmdtable, 'rebase',
-                                       rebaserestack)
+                                       wraprebase)
         entry[1].append((
             '', 'restack', False, _('rebase all changesets in the current '
                                     'stack onto the latest version of their '
                                     'respective parents')
         ))
-    extensions.afterloaded('rebase', wraprebase)
+    extensions.afterloaded('rebase', rebaseloaded)
 
 def commit(orig, ui, repo, *pats, **opts):
     if opts.get("amend"):
@@ -404,7 +404,7 @@ def fixupamend(ui, repo):
     finally:
         lockmod.release(wlock, lock, tr)
 
-def nextrebase(orig, ui, repo, **opts):
+def wrapnext(orig, ui, repo, **opts):
     # Disable `hg next --evolve`. The --rebase flag takes its place.
     if opts['evolve']:
         raise error.Abort(
@@ -522,34 +522,28 @@ def _nextrebase(orig, ui, repo, **opts):
     # Run `hg next` to update to the newly rebased child.
     return orig(ui, repo, **opts)
 
-def rebaserestack(orig, ui, repo, **opts):
+def wraprebase(orig, ui, repo, **opts):
     """Wrapper around `hg rebase` adding the `--restack` option, which rebases
        all "unstable" descendants of an obsolete changeset onto the latest
        version of that changeset. This is similar to (and intended as a
        replacement for) the `hg evolve --all` command.
     """
-    if not opts['restack']:
-        return orig(ui, repo, **opts)
+    if opts['restack']:
+        if opts['rev']:
+            raise error.Abort(_("cannot use both --rev and --restack"))
+        if opts['dest']:
+            raise error.Abort(_("cannot use both --dest and --restack"))
+        if opts['source']:
+            raise error.Abort(_("cannot use both --source and --restack"))
+        if opts['base']:
+            raise error.Abort(_("cannot use both --base and --restack"))
+        if opts['abort']:
+            raise error.Abort(_("cannot use both --abort and --restack"))
+        if opts['continue']:
+            raise error.Abort(_("cannot use both --continue and --restack"))
+        return restack(ui, repo, opts)
 
-    if opts['rev']:
-        raise error.Abort(_("cannot use both --rev and --restack"))
-
-    if opts['dest']:
-        raise error.Abort(_("cannot use both --dest and --restack"))
-
-    if opts['source']:
-        raise error.Abort(_("cannot use both --source and --restack"))
-
-    if opts['base']:
-        raise error.Abort(_("cannot use both --base and --restack"))
-
-    if opts['abort']:
-        raise error.Abort(_("cannot use both --abort and --restack"))
-
-    if opts['continue']:
-        raise error.Abort(_("cannot use both --continue and --restack"))
-
-    restack(ui, repo, opts)
+    return orig(ui, repo, **opts)
 
 def restack(ui, repo, rebaseopts=None):
     """Repair a situation in which one or more changesets in a stack
