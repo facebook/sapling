@@ -536,11 +536,16 @@ def extsetup(ui):
          _("when to colorize (boolean, always, auto, never, or debug)"),
          _('TYPE')))
 
-@command('debugcolor', [], 'hg debugcolor')
+@command('debugcolor',
+        [('', 'style', None, _('show all configured styles'))],
+        'hg debugcolor')
 def debugcolor(ui, repo, **opts):
-    """show available colors and effects"""
+    """show available color, effects or style"""
     ui.write(('color mode: %s\n') % ui._colormode)
-    return _debugdisplaycolor(ui)
+    if opts.get('style'):
+        return _debugdisplaystyle(ui)
+    else:
+        return _debugdisplaycolor(ui)
 
 def _debugdisplaycolor(ui):
     global _styles
@@ -563,6 +568,18 @@ def _debugdisplaycolor(ui):
             ui.write(('%s\n') % colorname, label=label)
     finally:
         _styles = oldstyle
+
+def _debugdisplaystyle(ui):
+    ui.write(_('available style:\n'))
+    width = max(len(s) for s in _styles)
+    for label, effects in sorted(_styles.items()):
+        ui.write('%s' % label, label=label)
+        if effects:
+            # 50
+            ui.write(': ')
+            ui.write(' ' * (max(0, width - len(label))))
+            ui.write(', '.join(ui.label(e, e) for e in effects.split()))
+        ui.write('\n')
 
 if os.name != 'nt':
     w32effects = None
