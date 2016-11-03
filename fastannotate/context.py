@@ -13,7 +13,6 @@ import hashlib
 import os
 
 from mercurial import (
-    context as hgcontext,
     error,
     lock as lockmod,
     mdiff,
@@ -98,21 +97,7 @@ def resolvefctx(repo, rev, path, resolverev=False, adjustctx=None):
         ctx = _revsingle(repo, rev)
     else:
         ctx = repo[rev]
-    # special handling working copy context
-    if ctx.rev() is None:
-        return ctx[path]
-    # manifest.find is optimized for single file resolution. use it instead
-    # of manifest.get or ctx.__getitem__ or ctx.filectx for better performance.
-    # note: this is kind of reinventing ctx.filectx.
-    try:
-        fnode, flag = ctx.manifest().find(path)
-    except KeyError:
-        raise error.ManifestLookupError(rev, path, _('not found in manifest'))
-    # TODO: remotefilelog compatibility - remotefilelog does not have a real
-    # filelog - need a different approach
-    flog = _getflog(repo, path)
-    fctx = hgcontext.filectx(repo, path, fileid=fnode, filelog=flog,
-                             changeid=ctx.rev(), changectx=ctx)
+    fctx = ctx[path]
     if adjustctx is not None:
         if adjustctx == 'linkrev':
             introrev = fctx.linkrev()

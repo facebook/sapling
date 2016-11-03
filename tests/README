@@ -18,7 +18,7 @@ Obtaining the test runners
 If you do not already have a copy of the Mercurial repository, you can obtains
 one with:
 
-  $ hg clone http://selenic.com/hg/
+  $ hg clone http://mercurial-scm.org/hg
 
 Running against various Mercurial versions
 ------------------------------------------

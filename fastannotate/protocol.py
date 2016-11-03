@@ -143,6 +143,8 @@ def clientfetch(repo, paths, lastnodemap=None, peer=None):
 
     ui.debug('fastannotate: server returned\n')
     for result in results:
+        if result.value is None:
+            continue
         for path, content in result.value.iteritems():
             # ignore malicious paths
             if not path.startswith('fastannotate/') or '/../' in (path + '/'):
