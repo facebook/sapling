@@ -540,19 +540,23 @@ def extsetup(ui):
 def debugcolor(ui, repo, **opts):
     """show available colors and effects"""
     global _styles
-    _styles = {}
-    for effect in _effects.keys():
-        _styles[effect] = effect
-    if _terminfo_params:
-        for k, v in ui.configitems('color'):
-            if k.startswith('color.'):
-                _styles[k] = k[6:]
-            elif k.startswith('terminfo.'):
-                _styles[k] = k[9:]
-    ui.write(('color mode: %s\n') % ui._colormode)
-    ui.write(_('available colors:\n'))
-    for colorname, label in _styles.items():
-        ui.write(('%s\n') % colorname, label=label)
+    oldstyle = _styles
+    try:
+        _styles = {}
+        for effect in _effects.keys():
+            _styles[effect] = effect
+        if _terminfo_params:
+            for k, v in ui.configitems('color'):
+                if k.startswith('color.'):
+                    _styles[k] = k[6:]
+                elif k.startswith('terminfo.'):
+                    _styles[k] = k[9:]
+        ui.write(('color mode: %s\n') % ui._colormode)
+        ui.write(_('available colors:\n'))
+        for colorname, label in _styles.items():
+            ui.write(('%s\n') % colorname, label=label)
+    finally:
+        _styles = oldstyle
 
 if os.name != 'nt':
     w32effects = None
