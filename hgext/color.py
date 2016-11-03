@@ -556,7 +556,10 @@ def _debugdisplaycolor(ui):
                 elif k.startswith('terminfo.'):
                     _styles[k] = k[9:]
         ui.write(_('available colors:\n'))
-        for colorname, label in _styles.items():
+        # sort label with a '_' after the other to group '_background' entry.
+        items = sorted(_styles.items(),
+                       key=lambda i: ('_' in i[0], i[0], i[1]))
+        for colorname, label in items:
             ui.write(('%s\n') % colorname, label=label)
     finally:
         _styles = oldstyle
