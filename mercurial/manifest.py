@@ -422,6 +422,11 @@ class manifestdict(object):
     def __len__(self):
         return len(self._lm)
 
+    def __nonzero__(self):
+        # nonzero is covered by the __len__ function, but implementing it here
+        # makes it easier for extensions to override.
+        return len(self._lm) != 0
+
     def __setitem__(self, key, node):
         self._lm[key] = node, self.flags(key, '')
 
