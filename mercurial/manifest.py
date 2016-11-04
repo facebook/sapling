@@ -1427,7 +1427,7 @@ class treemanifestctx(object):
                 m.setnode(self._node)
                 self._data = m
             else:
-                text = revlog.revision(self._node)
+                text = rl.revision(self._node)
                 arraytext = array.array('c', text)
                 rl.fulltextcache[self._node] = arraytext
                 self._data = treemanifest(dir=self._dir, text=text)
