@@ -275,7 +275,7 @@ void EdenServer::createThriftServer() {
   server_ = make_shared<ThriftServer>();
   server_->setMaxConnections(FLAGS_thrift_max_conns);
   server_->setMaxRequests(FLAGS_thrift_max_requests);
-  server_->setNWorkerThreads(FLAGS_thrift_num_workers);
+  server_->setNumIOWorkerThreads(FLAGS_thrift_num_workers);
   server_->setEnableCodel(FLAGS_thrift_enable_codel);
   server_->setMaxNumPendingConnectionsPerWorker(FLAGS_thrift_queue_len);
   server_->setMinCompressBytes(FLAGS_thrift_min_compress_bytes);
