@@ -150,7 +150,7 @@ def has_cvsnt():
 
 @check("darcs", "darcs client")
 def has_darcs():
-    return matchoutput('darcs --version', br'2\.[2-9]', True)
+    return matchoutput('darcs --version', br'\b2\.([2-9]|\d{2})', True)
 
 @check("mtn", "monotone client (>= 1.0)")
 def has_mtn():
