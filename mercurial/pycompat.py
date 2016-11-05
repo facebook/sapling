@@ -36,6 +36,7 @@ if ispy3:
     import functools
     import os
     fsencode = os.fsencode
+    fsdecode = os.fsdecode
 
     def sysstr(s):
         """Return a keyword str to be passed to Python functions such as
@@ -75,6 +76,11 @@ else:
         else:
             raise TypeError(
                 "expect str, not %s" % type(filename).__name__)
+
+    # In Python 2, fsdecode() has a very chance to receive bytes. So it's
+    # better not to touch Python 2 part as it's already working fine.
+    def fsdecode(filename):
+        return filename
 
 stringio = io.StringIO
 empty = _queue.Empty
