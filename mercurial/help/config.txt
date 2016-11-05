@@ -1409,9 +1409,9 @@ profiling is done using lsprof.
       first line of a function. This restriction makes it difficult to
       identify the expensive parts of a non-trivial function.
     ``stat``
-      Use a third-party statistical profiler, statprof. This profiler
-      currently runs only on Unix systems, and is most useful for
-      profiling commands that run for longer than about 0.1 seconds.
+      Use a statistical profiler, statprof. This profiler is most
+      most useful for profiling commands that run for longer than
+      about 0.1 seconds.
 
 ``format``
     Profiling format.  Specific to the ``ls`` instrumenting profiler.
@@ -1425,6 +1425,20 @@ profiling is done using lsprof.
       Format profiling data for kcachegrind use: when saving to a
       file, the generated file can directly be loaded into
       kcachegrind.
+
+``statformat``
+    Profiling format for the ``stat`` profiler.
+    (default: hotpath)
+
+    ``hotpath``
+      Show a tree-based display containing the hot path of execution (where
+      most time was spent).
+    ``bymethod``
+      Show a table of methods ordered by how frequently they are active.
+    ``byline``
+      Show a table of lines in files ordered by how frequently they are active.
+    ``json``
+      Render profiling data as JSON.
 
 ``frequency``
     Sampling frequency.  Specific to the ``stat`` sampling profiler.
