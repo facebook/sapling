@@ -8,7 +8,7 @@ initialize darcs repo
 
   $ mkdir darcs-repo
   $ cd darcs-repo
-  $ darcs init
+  $ darcs init -q
   $ echo a > a
   $ darcs record -a -l -m p0
   Finished recording patch 'p0'
@@ -43,6 +43,7 @@ update source
   Backing up ./a(*) (glob)
   We have conflicts in the following files:
   ./a
+   (?)
   $ sleep 1
   $ echo e > a
   $ echo f > f
@@ -54,13 +55,13 @@ update source
 
 test file and directory move
 
-  $ darcs mv f ff
+  $ darcs mv -q f ff
 
 Test remove + move
 
-  $ darcs remove dir/d2
+  $ darcs remove -q dir/d2
   $ rm dir/d2
-  $ darcs mv dir dir2
+  $ darcs mv -q dir dir2
   $ darcs record -a -l -m p3
   Finished recording patch 'p3'
 
