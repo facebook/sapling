@@ -123,10 +123,10 @@ def profile(ui):
     """
     profiler = os.getenv('HGPROF')
     if profiler is None:
-        profiler = ui.config('profiling', 'type', default='ls')
+        profiler = ui.config('profiling', 'type', default='stat')
     if profiler not in ('ls', 'stat', 'flame'):
         ui.warn(_("unrecognized profiler '%s' - ignored\n") % profiler)
-        profiler = 'ls'
+        profiler = 'stat'
 
     output = ui.config('profiling', 'output')
 

@@ -1401,7 +1401,7 @@ profiling is done using lsprof.
 
 ``type``
     The type of profiler to use.
-    (default: ls)
+    (default: stat)
 
     ``ls``
       Use Python's built-in instrumenting profiler. This profiler

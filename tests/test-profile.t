@@ -66,29 +66,29 @@ Install an extension that can sleep and guarantee a profiler has time to run
 
 statistical profiler works
 
-  $ HGPROF=stat hg --profile sleep 2>../out
+  $ hg --profile sleep 2>../out
   $ grep Sample ../out
   Sample count: \d+ (re)
 
 Various statprof formatters work
 
-  $ HGPROF=stat hg --profile --config profiling.statformat=byline sleep 2>../out
+  $ hg --profile --config profiling.statformat=byline sleep 2>../out
   $ head -n 1 ../out
     %   cumulative      self          
   $ grep Sample ../out
   Sample count: \d+ (re)
 
-  $ HGPROF=stat hg --profile --config profiling.statformat=bymethod sleep 2>../out
+  $ hg --profile --config profiling.statformat=bymethod sleep 2>../out
   $ head -n 1 ../out
     %   cumulative      self          
   $ grep Sample ../out
   Sample count: \d+ (re)
 
-  $ HGPROF=stat hg --profile --config profiling.statformat=hotpath sleep 2>../out
+  $ hg --profile --config profiling.statformat=hotpath sleep 2>../out
   $ grep Sample ../out
   Sample count: \d+ (re)
 
-  $ HGPROF=stat hg --profile --config profiling.statformat=json sleep 2>../out
+  $ hg --profile --config profiling.statformat=json sleep 2>../out
   $ cat ../out
   \[\[\d+.* (re)
 
