@@ -10,6 +10,7 @@ This contains aliases to hide python version-specific details from the core.
 
 from __future__ import absolute_import
 
+import os
 import sys
 
 ispy3 = (sys.version_info[0] >= 3)
@@ -34,9 +35,10 @@ else:
 if ispy3:
     import builtins
     import functools
-    import os
     fsencode = os.fsencode
     fsdecode = os.fsdecode
+    # A bytes version of os.name.
+    osname = os.name.encode('ascii')
 
     def sysstr(s):
         """Return a keyword str to be passed to Python functions such as
@@ -81,6 +83,8 @@ else:
     # better not to touch Python 2 part as it's already working fine.
     def fsdecode(filename):
         return filename
+
+    osname = os.name
 
 stringio = io.StringIO
 empty = _queue.Empty
