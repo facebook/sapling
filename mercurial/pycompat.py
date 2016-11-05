@@ -43,6 +43,7 @@ if ispy3:
     osname = os.name.encode('ascii')
     ospathsep = os.pathsep.encode('ascii')
     ossep = os.sep.encode('ascii')
+    sysargv = list(map(os.fsencode, sys.argv))
 
     def sysstr(s):
         """Return a keyword str to be passed to Python functions such as
@@ -91,6 +92,7 @@ else:
     osname = os.name
     ospathsep = os.pathsep
     ossep = os.sep
+    sysargv = sys.argv
 
 stringio = io.StringIO
 empty = _queue.Empty
