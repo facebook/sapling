@@ -39,6 +39,8 @@ if ispy3:
     fsdecode = os.fsdecode
     # A bytes version of os.name.
     osname = os.name.encode('ascii')
+    ospathsep = os.pathsep.encode('ascii')
+    ossep = os.sep.encode('ascii')
 
     def sysstr(s):
         """Return a keyword str to be passed to Python functions such as
@@ -85,6 +87,8 @@ else:
         return filename
 
     osname = os.name
+    ospathsep = os.pathsep
+    ossep = os.sep
 
 stringio = io.StringIO
 empty = _queue.Empty
