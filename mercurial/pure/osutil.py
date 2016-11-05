@@ -14,7 +14,11 @@ import socket
 import stat as statmod
 import sys
 
-from . import policy
+from . import (
+    policy,
+    pycompat,
+)
+
 modulepolicy = policy.policy
 policynocffi = policy.policynocffi
 
@@ -51,8 +55,8 @@ def listdirpure(path, stat=False, skip=None):
     '''
     result = []
     prefix = path
-    if not prefix.endswith(os.sep):
-        prefix += os.sep
+    if not prefix.endswith(pycompat.ossep):
+        prefix += pycompat.ossep
     names = os.listdir(path)
     names.sort()
     for fn in names:

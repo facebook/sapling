@@ -61,6 +61,7 @@ from . import (
     phases,
     policy,
     pvec,
+    pycompat,
     repair,
     revlog,
     revset,
@@ -3160,7 +3161,7 @@ def debugpathcomplete(ui, repo, *specs, **opts):
         if os.path.isdir(spec):
             spec += '/'
         spec = spec[len(rootdir):]
-        fixpaths = os.sep != '/'
+        fixpaths = pycompat.ossep != '/'
         if fixpaths:
             spec = spec.replace(os.sep, '/')
         speclen = len(spec)
@@ -3755,7 +3756,7 @@ def debugwalk(ui, repo, *pats, **opts):
     if not items:
         return
     f = lambda fn: fn
-    if ui.configbool('ui', 'slash') and os.sep != '/':
+    if ui.configbool('ui', 'slash') and pycompat.ossep != '/':
         f = lambda fn: util.normpath(fn)
     fmt = 'f  %%-%ds  %%-%ds  %%s' % (
         max([len(abs) for abs in items]),

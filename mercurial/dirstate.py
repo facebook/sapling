@@ -21,6 +21,7 @@ from . import (
     osutil,
     parsers,
     pathutil,
+    pycompat,
     scmutil,
     util,
 )
@@ -215,7 +216,7 @@ class dirstate(object):
 
     @propertycache
     def _slash(self):
-        return self._ui.configbool('ui', 'slash') and os.sep != '/'
+        return self._ui.configbool('ui', 'slash') and pycompat.ossep != '/'
 
     @propertycache
     def _checklink(self):
