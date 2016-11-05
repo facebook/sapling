@@ -324,6 +324,8 @@ def stop():
         if statprofpath:
             save_data(statprofpath)
 
+    return state
+
 def save_data(path):
     with open(path, 'w+') as file:
         file.write(str(state.accumulated_time) + '\n')
