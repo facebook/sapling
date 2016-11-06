@@ -938,6 +938,9 @@ if mainfrozen() and getattr(sys, 'frozen', None) != 'macosx_app':
 else:
     datapath = os.path.dirname(__file__)
 
+if not isinstance(datapath, bytes):
+    datapath = pycompat.fsencode(datapath)
+
 i18n.setdatapath(datapath)
 
 _hgexecutable = None
