@@ -747,9 +747,17 @@ def perffncacheencode(ui, repo, **opts):
     timer(d)
     fm.end()
 
-@command('perfbdiff', revlogopts + formatteropts, '-c|-m|FILE REV')
-def perfbdiff(ui, repo, file_, rev=None, **opts):
-    """benchmark a bdiff between a revision and its delta parent"""
+@command('perfbdiff', revlogopts + formatteropts + [
+    ('', 'count', 1, 'number of revisions to test (when using --startrev)')],
+    '-c|-m|FILE REV')
+def perfbdiff(ui, repo, file_, rev=None, count=None, **opts):
+    """benchmark a bdiff between revisions
+
+    By default, benchmark a bdiff between its delta parent and itself.
+
+    With ``--count``, benchmark bdiffs between delta parents and self for N
+    revisions starting at the specified revision.
+    """
     if opts.get('changelog') or opts.get('manifest'):
         file_, rev = None, file_
     elif rev is None:
@@ -759,10 +767,10 @@ def perfbdiff(ui, repo, file_, rev=None, **opts):
 
     r = cmdutil.openrevlog(repo, 'perfbdiff', file_, opts)
 
-    node = r.lookup(rev)
-    rev = r.rev(node)
-    dp = r.deltaparent(rev)
-    textpairs.append((r.revision(dp), r.revision(node)))
+    startrev = r.rev(r.lookup(rev))
+    for rev in range(startrev, min(startrev + count, len(r) - 1)):
+        dp = r.deltaparent(rev)
+        textpairs.append((r.revision(dp), r.revision(rev)))
 
     def d():
         for pair in textpairs:

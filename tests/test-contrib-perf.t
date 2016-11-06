@@ -50,7 +50,7 @@ perfstatus
    perfancestorset
                  (no help text available)
    perfannotate  (no help text available)
-   perfbdiff     benchmark a bdiff between a revision and its delta parent
+   perfbdiff     benchmark a bdiff between revisions
    perfbranchmap
                  benchmark the update of a branchmap
    perfcca       (no help text available)
