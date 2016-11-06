@@ -72,7 +72,7 @@ _effects = {
     'white_background': 47,
     }
 
-_styles = {
+_defaultstyles = {
     'grep.match': 'red bold',
     'grep.linenumber': 'green',
     'grep.rev': 'green',
@@ -129,7 +129,7 @@ _styles = {
 }
 
 def loadcolortable(ui, extname, colortable):
-    _styles.update(colortable)
+    _defaultstyles.update(colortable)
 
 def _terminfosetup(ui, mode):
     '''Initialize terminfo data and the terminal if we're in terminfo mode.'''
@@ -254,7 +254,7 @@ def _modesetup(ui):
     return None
 
 def configstyles(ui):
-    ui._styles.update(_styles)
+    ui._styles.update(_defaultstyles)
     for status, cfgeffects in ui.configitems('color'):
         if '.' not in status or status.startswith(('color.', 'terminfo.')):
             continue
