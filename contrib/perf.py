@@ -755,17 +755,18 @@ def perfbdiff(ui, repo, file_, rev=None, **opts):
     elif rev is None:
         raise error.CommandError('perfbdiff', 'invalid arguments')
 
+    textpairs = []
+
     r = cmdutil.openrevlog(repo, 'perfbdiff', file_, opts)
 
     node = r.lookup(rev)
     rev = r.rev(node)
     dp = r.deltaparent(rev)
-
-    text1 = r.revision(dp)
-    text2 = r.revision(node)
+    textpairs.append((r.revision(dp), r.revision(node)))
 
     def d():
-        bdiff.bdiff(text1, text2)
+        for pair in textpairs:
+            bdiff.bdiff(*pair)
 
     timer, fm = gettimer(ui, opts)
     timer(d)
