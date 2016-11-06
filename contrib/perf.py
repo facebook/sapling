@@ -748,7 +748,8 @@ def perffncacheencode(ui, repo, **opts):
     fm.end()
 
 @command('perfbdiff', revlogopts + formatteropts + [
-    ('', 'count', 1, 'number of revisions to test (when using --startrev)')],
+    ('', 'count', 1, 'number of revisions to test (when using --startrev)'),
+    ('', 'alldata', False, 'test bdiffs for all associated revisions')],
     '-c|-m|FILE REV')
 def perfbdiff(ui, repo, file_, rev=None, count=None, **opts):
     """benchmark a bdiff between revisions
@@ -757,7 +758,14 @@ def perfbdiff(ui, repo, file_, rev=None, count=None, **opts):
 
     With ``--count``, benchmark bdiffs between delta parents and self for N
     revisions starting at the specified revision.
+
+    With ``--alldata``, assume the requested revision is a changeset and
+    measure bdiffs for all changes related to that changeset (manifest
+    and filelogs).
     """
+    if opts['alldata']:
+        opts['changelog'] = True
+
     if opts.get('changelog') or opts.get('manifest'):
         file_, rev = None, file_
     elif rev is None:
@@ -769,8 +777,25 @@ def perfbdiff(ui, repo, file_, rev=None, count=None, **opts):
 
     startrev = r.rev(r.lookup(rev))
     for rev in range(startrev, min(startrev + count, len(r) - 1)):
-        dp = r.deltaparent(rev)
-        textpairs.append((r.revision(dp), r.revision(rev)))
+        if opts['alldata']:
+            # Load revisions associated with changeset.
+            ctx = repo[rev]
+            mtext = repo.manifest.revision(ctx.manifestnode())
+            for pctx in ctx.parents():
+                pman = repo.manifest.revision(pctx.manifestnode())
+                textpairs.append((pman, mtext))
+
+            # Load filelog revisions by iterating manifest delta.
+            man = ctx.manifest()
+            pman = ctx.p1().manifest()
+            for filename, change in pman.diff(man).items():
+                fctx = repo.file(filename)
+                f1 = fctx.revision(change[0][0] or -1)
+                f2 = fctx.revision(change[1][0] or -1)
+                textpairs.append((f1, f2))
+        else:
+            dp = r.deltaparent(rev)
+            textpairs.append((r.revision(dp), r.revision(rev)))
 
     def d():
         for pair in textpairs:
