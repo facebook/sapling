@@ -805,7 +805,7 @@ class ui(object):
         elif self._colormode == 'win32':
             # windows color printing is its own can of crab, defer to
             # the color module and that is it.
-            color.win32print(self._write, *args, **opts)
+            color.win32print(self, self._write, *args, **opts)
         else:
             msgs = args
             if self._colormode is not None:
@@ -831,7 +831,7 @@ class ui(object):
         elif self._colormode == 'win32':
             # windows color printing is its own can of crab, defer to
             # the color module and that is it.
-            color.win32print(self._write_err, *args, **opts)
+            color.win32print(self, self._write_err, *args, **opts)
         else:
             msgs = args
             if self._colormode is not None:

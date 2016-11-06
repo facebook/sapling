@@ -423,11 +423,11 @@ if pycompat.osname == 'nt':
             ansire = re.compile('\033\[([^m]*)m([^\033]*)(.*)',
                                 re.MULTILINE | re.DOTALL)
 
-    def win32print(writefunc, *msgs, **opts):
+    def win32print(ui, writefunc, *msgs, **opts):
         for text in msgs:
-            _win32print(text, writefunc, **opts)
+            _win32print(ui, text, writefunc, **opts)
 
-    def _win32print(text, writefunc, **opts):
+    def _win32print(ui, text, writefunc, **opts):
         label = opts.get('label', '')
         attr = origattr
 
