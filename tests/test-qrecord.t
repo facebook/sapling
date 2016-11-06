@@ -9,6 +9,9 @@ help record (no record)
   record extension - commands to interactively select changes for
   commit/qrefresh (DEPRECATED)
   
+  The feature provided by this extension has been moved into core Mercurial as
+  'hg commit --interactive'.
+  
   (use 'hg help extensions' for information on enabling extensions)
 
 help qrecord (no record)

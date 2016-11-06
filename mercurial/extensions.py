@@ -426,7 +426,7 @@ def _disabledhelp(path):
         file.close()
 
     if doc: # extracting localized synopsis
-        return gettext(doc).splitlines()[0]
+        return gettext(doc)
     else:
         return _('(no help text available)')
 
@@ -448,7 +448,7 @@ def disabled():
     for name, path in paths.iteritems():
         doc = _disabledhelp(path)
         if doc:
-            exts[name] = doc
+            exts[name] = doc.splitlines()[0]
 
     return exts
 
