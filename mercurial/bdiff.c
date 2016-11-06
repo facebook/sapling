@@ -31,9 +31,11 @@ int bdiff_splitlines(const char *a, ssize_t len, struct bdiff_line **lr)
 
 	/* count the lines */
 	i = 1; /* extra line for sentinel */
-	for (p = a; p < a + len; p++)
-		if (*p == '\n' || p == plast)
+	for (p = a; p < plast; p++)
+		if (*p == '\n')
 			i++;
+	if (p == plast)
+		i++;
 
 	*lr = l = (struct bdiff_line *)malloc(sizeof(struct bdiff_line) * i);
 	if (!l)
