@@ -158,6 +158,7 @@ class ui(object):
         # color mode: see mercurial/color.py for possible value
         self._colormode = None
         self._terminfoparams = {}
+        self._styles = {}
 
         if src:
             self.fout = src.fout
@@ -176,6 +177,7 @@ class ui(object):
             self.insecureconnections = src.insecureconnections
             self._colormode = src._colormode
             self._terminfoparams = src._terminfoparams.copy()
+            self._styles = src._styles.copy()
 
             self.fixconfig()
 

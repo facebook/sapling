@@ -254,6 +254,7 @@ def _modesetup(ui):
     return None
 
 def configstyles(ui):
+    ui._styles.update(_styles)
     for status, cfgeffects in ui.configitems('color'):
         if '.' not in status or status.startswith(('color.', 'terminfo.')):
             continue
@@ -267,7 +268,7 @@ def configstyles(ui):
                     ui.warn(_("ignoring unknown color/effect %r "
                               "(configured in color.%s)\n")
                             % (e, status))
-            _styles[status] = ' '.join(good)
+            ui._styles[status] = ' '.join(good)
 
 def valideffect(ui, effect):
     'Determine if the effect is valid or not.'
@@ -321,7 +322,7 @@ def colorlabel(ui, msg, label):
     elif ui._colormode is not None:
         effects = []
         for l in label.split():
-            s = _styles.get(l, '')
+            s = ui._styles.get(l, '')
             if s:
                 effects.append(s)
             elif valideffect(ui, l):
@@ -443,7 +444,7 @@ if pycompat.osname == 'nt':
 
         # determine console attributes based on labels
         for l in label.split():
-            style = _styles.get(l, '')
+            style = ui._styles.get(l, '')
             for effect in style.split():
                 try:
                     attr = mapcolor(w32effects[effect], attr)
