@@ -25,6 +25,7 @@ import random
 import sys
 import time
 from mercurial import (
+    bdiff,
     changegroup,
     cmdutil,
     commands,
@@ -743,6 +744,30 @@ def perffncacheencode(ui, repo, **opts):
     def d():
         for p in s.fncache.entries:
             s.encode(p)
+    timer(d)
+    fm.end()
+
+@command('perfbdiff', revlogopts + formatteropts, '-c|-m|FILE REV')
+def perfbdiff(ui, repo, file_, rev=None, **opts):
+    """benchmark a bdiff between a revision and its delta parent"""
+    if opts.get('changelog') or opts.get('manifest'):
+        file_, rev = None, file_
+    elif rev is None:
+        raise error.CommandError('perfbdiff', 'invalid arguments')
+
+    r = cmdutil.openrevlog(repo, 'perfbdiff', file_, opts)
+
+    node = r.lookup(rev)
+    rev = r.rev(node)
+    dp = r.deltaparent(rev)
+
+    text1 = r.revision(dp)
+    text2 = r.revision(node)
+
+    def d():
+        bdiff.bdiff(text1, text2)
+
+    timer, fm = gettimer(ui, opts)
     timer(d)
     fm.end()
 
