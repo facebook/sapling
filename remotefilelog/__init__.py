@@ -728,7 +728,7 @@ def _revertprefetch(orig, repo, ctx, *files):
         sparsematch = repo.sparsematch(ctx.rev())
         for f in files:
             for path in f:
-                if not sparsematch or sparsematch(path):
+                if (not sparsematch or sparsematch(path)) and path in mf:
                     allfiles.append((path, hex(mf[path])))
         repo.fileservice.prefetch(allfiles)
     return orig(repo, ctx, *files)

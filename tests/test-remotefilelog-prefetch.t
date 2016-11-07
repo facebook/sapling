@@ -217,3 +217,21 @@
   $ hg log -f z2 -T '{desc}\n'
   move z -> z2
   x
+
+# Revert across double renames. Note: the scary "abort", error is because
+# https://bz.mercurial-scm.org/5419 .
+
+  $ clearcache
+  $ hg mv y y2
+  $ hg mv x x2
+  $ hg mv z2 z3
+  $ hg revert -a -r 1 || true
+  undeleting x
+  forgetting x2
+  undeleting y
+  forgetting y2
+  adding z
+  forgetting z3
+  3 files fetched over 1 fetches - (0 misses, 100.00% hit ratio) over * (glob)
+  abort: z2@109c3a557a73: not found in manifest! (?)
+
