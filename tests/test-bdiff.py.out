@@ -42,31 +42,34 @@ showdiff(
  'f\n'
 done
 done
-Odd diff for a trivial change:
+Nice diff for a trivial change:
 showdiff(
   '<0\n-\n<1\n-\n<2\n-\n<3\n-\n<4\n-\n',
   '>0\n-\n>1\n-\n>2\n-\n>3\n-\n>4\n-\n'):
- 0 8 '<0\n-\n<1\n' -> '>0\n'
+ 0 3 '<0\n' -> '>0\n'
  '-\n'
- 10 13 '<2\n' -> '>1\n'
+ 5 8 '<1\n' -> '>1\n'
  '-\n'
- 15 18 '<3\n' -> '>2\n'
+ 10 13 '<2\n' -> '>2\n'
  '-\n'
- 20 23 '<4\n' -> '>3\n'
+ 15 18 '<3\n' -> '>3\n'
  '-\n'
- 25 25 '' -> '>4\n-\n'
-Diff 1 to 3 lines - preference for adding / removing at the end of sequences:
+ 20 23 '<4\n' -> '>4\n'
+ '-\n'
+Diff 1 to 3 lines - preference for balanced recursion:
 showdiff(
   'a\n',
   'a\na\na\n'):
+ 0 0 '' -> 'a\n'
  'a\n'
- 2 2 '' -> 'a\na\n'
-Diff 1 to 5 lines - preference for adding / removing at the end of sequences:
+ 2 2 '' -> 'a\n'
+Diff 1 to 5 lines - preference for balanced recursion:
 showdiff(
   'a\n',
   'a\na\na\na\na\n'):
+ 0 0 '' -> 'a\na\n'
  'a\n'
- 2 2 '' -> 'a\na\na\na\n'
+ 2 2 '' -> 'a\na\n'
 Diff 3 to 1 lines - preference for balanced recursion:
 showdiff(
   'a\na\na\n',

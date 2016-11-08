@@ -47,8 +47,8 @@ Amending changeset with changes in working dir:
   --- a/a	Thu Jan 01 00:00:00 1970 +0000
   +++ b/a	Thu Jan 01 00:00:00 1970 +0000
   @@ -1,1 +1,3 @@
-   a
   +a
+   a
   +a
   $ hg log
   changeset:   1:43f1ba15f28a
@@ -122,13 +122,13 @@ No changes, just a different message:
   uncompressed size of bundle content:
        254 (changelog)
        163 (manifests)
-       129  a
+       141  a
   saved backup bundle to $TESTTMP/.hg/strip-backup/74609c7f506e-1bfde511-amend-backup.hg (glob)
   1 changesets found
   uncompressed size of bundle content:
        250 (changelog)
        163 (manifests)
-       129  a
+       141  a
   adding branch
   adding changesets
   adding manifests
@@ -140,8 +140,8 @@ No changes, just a different message:
   --- a/a	Thu Jan 01 00:00:00 1970 +0000
   +++ b/a	Thu Jan 01 00:00:00 1970 +0000
   @@ -1,1 +1,3 @@
-   a
   +a
+   a
   +a
   $ hg log
   changeset:   1:1cd866679df8
@@ -266,13 +266,13 @@ then, test editing custom commit message
   uncompressed size of bundle content:
        249 (changelog)
        163 (manifests)
-       131  a
+       143  a
   saved backup bundle to $TESTTMP/.hg/strip-backup/5f357c7560ab-e7c84ade-amend-backup.hg (glob)
   1 changesets found
   uncompressed size of bundle content:
        257 (changelog)
        163 (manifests)
-       131  a
+       143  a
   adding branch
   adding changesets
   adding manifests
@@ -309,13 +309,13 @@ Same, but with changes in working dir (different code path):
   uncompressed size of bundle content:
        464 (changelog)
        322 (manifests)
-       249  a
+       261  a
   saved backup bundle to $TESTTMP/.hg/strip-backup/7ab3bf440b54-8e3b5088-amend-backup.hg (glob)
   1 changesets found
   uncompressed size of bundle content:
        257 (changelog)
        163 (manifests)
-       133  a
+       145  a
   adding branch
   adding changesets
   adding manifests

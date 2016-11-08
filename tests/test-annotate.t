@@ -91,8 +91,8 @@ annotate (JSON)
 annotate -n b
 
   $ hg annotate -n b
-  0: a
   1: a
+  0: a
   1: a
   3: b4
   3: b5
@@ -111,8 +111,8 @@ annotate --no-follow b
 annotate -nl b
 
   $ hg annotate -nl b
+  1:1: a
   0:1: a
-  1:2: a
   1:3: a
   3:4: b4
   3:5: b5
@@ -121,8 +121,8 @@ annotate -nl b
 annotate -nf b
 
   $ hg annotate -nf b
-  0 a: a
   1 a: a
+  0 a: a
   1 a: a
   3 b: b4
   3 b: b5
@@ -131,8 +131,8 @@ annotate -nf b
 annotate -nlf b
 
   $ hg annotate -nlf b
+  1 a:1: a
   0 a:1: a
-  1 a:2: a
   1 a:3: a
   3 b:4: b4
   3 b:5: b5
@@ -156,8 +156,8 @@ annotate -nlf b
 annotate after merge
 
   $ hg annotate -nf b
-  0 a: a
   1 a: a
+  0 a: a
   1 a: a
   3 b: b4
   4 b: c
@@ -166,8 +166,8 @@ annotate after merge
 annotate after merge with -l
 
   $ hg annotate -nlf b
+  1 a:1: a
   0 a:1: a
-  1 a:2: a
   1 a:3: a
   3 b:4: b4
   4 b:5: c
@@ -198,7 +198,7 @@ annotate after merge with -l
 annotate after rename merge
 
   $ hg annotate -nf b
-  0 a: a
+  1 a: a
   6 b: z
   1 a: a
   3 b: b4
@@ -209,7 +209,7 @@ annotate after rename merge
 annotate after rename merge with -l
 
   $ hg annotate -nlf b
-  0 a:1: a
+  1 a:1: a
   6 b:2: z
   1 a:3: a
   3 b:4: b4
@@ -226,7 +226,7 @@ Issue2807: alignment of line numbers with -l
   $ echo more >> b
   $ hg ci -mmore -d '7 0'
   $ hg annotate -nlf b
-   0 a: 1: a
+   1 a: 1: a
    6 b: 2: z
    1 a: 3: a
    3 b: 4: b4
@@ -240,15 +240,15 @@ Issue2807: alignment of line numbers with -l
 linkrev vs rev
 
   $ hg annotate -r tip -n a
-  0: a
   1: a
+  0: a
   1: a
 
 linkrev vs rev with -l
 
   $ hg annotate -r tip -nl a
+  1:1: a
   0:1: a
-  1:2: a
   1:3: a
 
 Issue589: "undelete" sequence leads to crash
