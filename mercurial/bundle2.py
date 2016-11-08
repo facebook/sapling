@@ -485,11 +485,11 @@ def encodecaps(caps):
     return '\n'.join(chunks)
 
 bundletypes = {
-    "": ("", None),       # only when using unbundle on ssh and old http servers
+    "": ("", 'UN'),       # only when using unbundle on ssh and old http servers
                           # since the unification ssh accepts a header but there
                           # is no capability signaling it.
     "HG20": (), # special-cased below
-    "HG10UN": ("HG10UN", None),
+    "HG10UN": ("HG10UN", 'UN'),
     "HG10BZ": ("HG10", 'BZ'),
     "HG10GZ": ("HG10GZ", 'GZ'),
 }
@@ -511,7 +511,7 @@ class bundle20(object):
         self._params = []
         self._parts = []
         self.capabilities = dict(capabilities)
-        self._compressor = util.compressors[None]()
+        self._compengine = util.compengines.forbundletype('UN')
 
     def setcompression(self, alg):
         """setup core part compression to <alg>"""
@@ -519,7 +519,7 @@ class bundle20(object):
             return
         assert not any(n.lower() == 'Compression' for n, v in self._params)
         self.addparam('Compression', alg)
-        self._compressor = util.compressors[alg]()
+        self._compengine = util.compengines.forbundletype(alg)
 
     @property
     def nbparts(self):
@@ -572,11 +572,12 @@ class bundle20(object):
         if param:
             yield param
         # starting compression
+        compressor = self._compengine.compressorobj()
         for chunk in self._getcorechunk():
-            data = self._compressor.compress(chunk)
+            data = compressor.compress(chunk)
             if data:
                 yield data
-        yield self._compressor.flush()
+        yield compressor.flush()
 
     def _paramchunk(self):
         """return a encoded version of all stream parameters"""
@@ -1318,18 +1319,19 @@ def writebundle(ui, cg, filename, bundletype, vfs=None, compression=None):
             raise error.Abort(_('old bundle types only supports v1 '
                                 'changegroups'))
         header, comp = bundletypes[bundletype]
-        if comp not in util.compressors:
+        if comp not in util.compengines.supportedbundletypes:
             raise error.Abort(_('unknown stream compression type: %s')
                               % comp)
-        z = util.compressors[comp]()
+        compengine = util.compengines.forbundletype(comp)
+        compressor = compengine.compressorobj()
         subchunkiter = cg.getchunks()
         def chunkiter():
             yield header
             for chunk in subchunkiter:
-                data = z.compress(chunk)
+                data = compressor.compress(chunk)
                 if data:
                     yield data
-            yield z.flush()
+            yield compressor.flush()
         chunkiter = chunkiter()
 
     # parse the changegroup data, otherwise we will block
