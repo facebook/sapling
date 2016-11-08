@@ -681,7 +681,7 @@ class unbundle20(unpackermixin):
     def __init__(self, ui, fp):
         """If header is specified, we do not read it out of the stream."""
         self.ui = ui
-        self._decompressor = util.decompressors[None]
+        self._compengine = util.compengines.forbundletype('UN')
         self._compressed = None
         super(unbundle20, self).__init__(fp)
 
@@ -755,9 +755,9 @@ class unbundle20(unpackermixin):
             params = self._readexact(paramssize)
             self._processallparams(params)
             yield params
-            assert self._decompressor is util.decompressors[None]
+            assert self._compengine.bundletype == 'UN'
         # From there, payload might need to be decompressed
-        self._fp = self._decompressor(self._fp)
+        self._fp = self._compengine.decompressorreader(self._fp)
         emptycount = 0
         while emptycount < 2:
             # so we can brainlessly loop
@@ -781,7 +781,7 @@ class unbundle20(unpackermixin):
         # make sure param have been loaded
         self.params
         # From there, payload need to be decompressed
-        self._fp = self._decompressor(self._fp)
+        self._fp = self._compengine.decompressorreader(self._fp)
         indebug(self.ui, 'start extraction of bundle2 parts')
         headerblock = self._readpartheader()
         while headerblock is not None:
@@ -823,10 +823,10 @@ def b2streamparamhandler(name):
 @b2streamparamhandler('compression')
 def processcompression(unbundler, param, value):
     """read compression parameter and install payload decompression"""
-    if value not in util.decompressors:
+    if value not in util.compengines.supportedbundletypes:
         raise error.BundleUnknownFeatureError(params=(param,),
                                               values=(value,))
-    unbundler._decompressor = util.decompressors[value]
+    unbundler._compengine = util.compengines.forbundletype(value)
     if value is not None:
         unbundler._compressed = True
 
