@@ -1340,6 +1340,9 @@ class manifestctx(object):
         #rev = revlog.rev(node)
         #self.linkrev = revlog.linkrev(rev)
 
+    def _revlog(self):
+        return self._repo.manifestlog._revlog
+
     def node(self):
         return self._node
 
@@ -1348,7 +1351,7 @@ class manifestctx(object):
             if self._node == revlog.nullid:
                 self._data = manifestdict()
             else:
-                rl = self._repo.manifestlog._revlog
+                rl = self._revlog()
                 text = rl.revision(self._node)
                 arraytext = array.array('c', text)
                 rl._fulltextcache[self._node] = arraytext
@@ -1362,7 +1365,7 @@ class manifestctx(object):
 
         If `shallow` is True, nothing changes since this is a flat manifest.
         '''
-        rl = self._repo.manifestlog._revlog
+        rl = self._revlog()
         r = rl.rev(self._node)
         deltaparent = rl.deltaparent(r)
         if deltaparent != revlog.nullrev and deltaparent in rl.parentrevs(r):
@@ -1376,7 +1379,7 @@ class manifestctx(object):
 
         Changing the value of `shallow` has no effect on flat manifests.
         '''
-        revlog = self._repo.manifestlog._revlog
+        revlog = self._revlog()
         if revlog._usemanifestv2:
             # Need to perform a slow delta
             r0 = revlog.deltaparent(revlog.rev(self._node))
