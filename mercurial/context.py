@@ -178,6 +178,8 @@ class basectx(object):
         return hex(self.node())
     def manifest(self):
         return self._manifest
+    def manifestctx(self):
+        return self._manifestctx
     def repo(self):
         return self._repo
     def phasestr(self):
@@ -530,12 +532,15 @@ class changectx(basectx):
 
     @propertycache
     def _manifest(self):
-        return self._repo.manifestlog[self._changeset.manifest].read()
+        return self._manifestctx.read()
+
+    @propertycache
+    def _manifestctx(self):
+        return self._repo.manifestlog[self._changeset.manifest]
 
     @propertycache
     def _manifestdelta(self):
-        mfnode = self._changeset.manifest
-        return self._repo.manifestlog[mfnode].readdelta()
+        return self._manifestctx.readdelta()
 
     @propertycache
     def _parents(self):
