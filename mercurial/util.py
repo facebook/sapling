@@ -2966,7 +2966,7 @@ class compressionengine(object):
         exclude the name from external usage, set the first element to ``None``.
 
         If bundle compression is supported, the class must also implement
-        ``compressstream``, ``compressorobj`` and `decompressorreader``.
+        ``compressstream`` and `decompressorreader``.
         """
         return None
 
@@ -2979,14 +2979,6 @@ class compressionengine(object):
 
         Optionally accepts an argument defining how to perform compression.
         Each engine treats this argument differently.
-        """
-        raise NotImplementedError()
-
-    def compressorobj(self):
-        """(Temporary) Obtain an object used for compression.
-
-        The returned object has ``compress(data)`` and ``flush()`` methods.
-        These are used to incrementally feed data chunks into a compressor.
         """
         raise NotImplementedError()
 
@@ -3005,9 +2997,6 @@ class _zlibengine(compressionengine):
 
     def bundletype(self):
         return 'gzip', 'GZ'
-
-    def compressorobj(self):
-        return zlib.compressobj()
 
     def compressstream(self, it, opts=None):
         opts = opts or {}
@@ -3039,9 +3028,6 @@ class _bz2engine(compressionengine):
     def bundletype(self):
         return 'bzip2', 'BZ'
 
-    def compressorobj(self):
-        return bz2.BZ2Compressor()
-
     def compressstream(self, it, opts=None):
         opts = opts or {}
         z = bz2.BZ2Compressor(opts.get('level', 9))
@@ -3069,7 +3055,7 @@ class _truncatedbz2engine(compressionengine):
     def bundletype(self):
         return None, '_truncatedBZ'
 
-    # We don't implement compressorobj because it is hackily handled elsewhere.
+    # We don't implement compressstream because it is hackily handled elsewhere.
 
     def decompressorreader(self, fh):
         def gen():
@@ -3083,22 +3069,12 @@ class _truncatedbz2engine(compressionengine):
 
 compengines.register(_truncatedbz2engine())
 
-class nocompress(object):
-    def compress(self, x):
-        return x
-
-    def flush(self):
-        return ''
-
 class _noopengine(compressionengine):
     def name(self):
         return 'none'
 
     def bundletype(self):
         return 'none', 'UN'
-
-    def compressorobj(self):
-        return nocompress()
 
     def compressstream(self, it, opts=None):
         return it
