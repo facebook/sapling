@@ -137,14 +137,16 @@ class cg1unpacker(object):
     _grouplistcount = 1 # One list of files after the manifests
 
     def __init__(self, fh, alg, extras=None):
-        if alg == 'UN':
-            alg = None # get more modern without breaking too much
-        if not alg in util.decompressors:
+        if alg is None:
+            alg = 'UN'
+        if alg not in util.compengines.supportedbundletypes:
             raise error.Abort(_('unknown stream compression type: %s')
                              % alg)
         if alg == 'BZ':
             alg = '_truncatedBZ'
-        self._stream = util.decompressors[alg](fh)
+
+        compengine = util.compengines.forbundletype(alg)
+        self._stream = compengine.decompressorreader(fh)
         self._type = alg
         self.extras = extras or {}
         self.callback = None
