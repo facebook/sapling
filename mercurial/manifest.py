@@ -1331,6 +1331,11 @@ class memmanifestctx(object):
     def new(self):
         return memmanifestctx(self._repo)
 
+    def copy(self):
+        memmf = memmanifestctx(self._repo)
+        memmf._manifestdict = self.read().copy()
+        return memmf
+
     def read(self):
         return self._manifestdict
 
@@ -1359,6 +1364,11 @@ class manifestctx(object):
 
     def new(self):
         return memmanifestctx(self._repo)
+
+    def copy(self):
+        memmf = memmanifestctx(self._repo)
+        memmf._manifestdict = self.read().copy()
+        return memmf
 
     def read(self):
         if not self._data:
@@ -1423,6 +1433,11 @@ class memtreemanifestctx(object):
     def new(self, dir=''):
         return memtreemanifestctx(self._repo, dir=dir)
 
+    def copy(self):
+        memmf = memtreemanifestctx(self._repo, dir=self._dir)
+        memmf._treemanifest = self._treemanifest.copy()
+        return memmf
+
     def read(self):
         return self._treemanifest
 
@@ -1471,6 +1486,11 @@ class treemanifestctx(object):
 
     def new(self, dir=''):
         return memtreemanifestctx(self._repo, dir=dir)
+
+    def copy(self):
+        memmf = memtreemanifestctx(self._repo, dir=self._dir)
+        memmf._treemanifest = self.read().copy()
+        return memmf
 
     def readdelta(self, shallow=False):
         '''Returns a manifest containing just the entries that are present
