@@ -1320,13 +1320,13 @@ class manifestlog(object):
             mancache[node] = m
         return m
 
-    def add(self, m, transaction, link, p1, p2, added, removed):
-        return self._revlog.add(m, transaction, link, p1, p2, added, removed)
-
 class memmanifestctx(object):
     def __init__(self, repo):
         self._repo = repo
         self._manifestdict = manifestdict()
+
+    def _revlog(self):
+        return self._repo.manifestlog._revlog
 
     def new(self):
         return memmanifestctx(self._repo)
@@ -1338,6 +1338,10 @@ class memmanifestctx(object):
 
     def read(self):
         return self._manifestdict
+
+    def write(self, transaction, link, p1, p2, added, removed):
+        return self._revlog().add(self._manifestdict, transaction, link, p1, p2,
+                                  added, removed)
 
 class manifestctx(object):
     """A class representing a single revision of a manifest, including its
@@ -1430,6 +1434,9 @@ class memtreemanifestctx(object):
         self._dir = dir
         self._treemanifest = treemanifest()
 
+    def _revlog(self):
+        return self._repo.manifestlog._revlog
+
     def new(self, dir=''):
         return memtreemanifestctx(self._repo, dir=dir)
 
@@ -1440,6 +1447,10 @@ class memtreemanifestctx(object):
 
     def read(self):
         return self._treemanifest
+
+    def write(self, transaction, link, p1, p2, added, removed):
+        return self._revlog().add(self._treemanifest, transaction, link, p1, p2,
+                                  added, removed)
 
 class treemanifestctx(object):
     def __init__(self, repo, dir, node):

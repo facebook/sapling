@@ -1700,9 +1700,13 @@ class localrepository(object):
             trp = weakref.proxy(tr)
 
             if ctx.files():
-                m1 = p1.manifest()
-                m2 = p2.manifest()
-                m = m1.copy()
+                m1ctx = p1.manifestctx()
+                m2ctx = p2.manifestctx()
+                mctx = m1ctx.copy()
+
+                m = mctx.read()
+                m1 = m1ctx.read()
+                m2 = m2ctx.read()
 
                 # check in files
                 added = []
@@ -1736,9 +1740,9 @@ class localrepository(object):
                 drop = [f for f in removed if f in m]
                 for f in drop:
                     del m[f]
-                mn = self.manifestlog.add(m, trp, linkrev,
-                                          p1.manifestnode(), p2.manifestnode(),
-                                          added, drop)
+                mn = mctx.write(trp, linkrev,
+                                p1.manifestnode(), p2.manifestnode(),
+                                added, drop)
                 files = changed + removed
             else:
                 mn = p1.manifestnode()
