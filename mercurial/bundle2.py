@@ -571,13 +571,8 @@ class bundle20(object):
         yield _pack(_fstreamparamsize, len(param))
         if param:
             yield param
-        # starting compression
-        compressor = self._compengine.compressorobj()
-        for chunk in self._getcorechunk():
-            data = compressor.compress(chunk)
-            if data:
-                yield data
-        yield compressor.flush()
+        for chunk in self._compengine.compressstream(self._getcorechunk()):
+            yield chunk
 
     def _paramchunk(self):
         """return a encoded version of all stream parameters"""
@@ -1323,15 +1318,10 @@ def writebundle(ui, cg, filename, bundletype, vfs=None, compression=None):
             raise error.Abort(_('unknown stream compression type: %s')
                               % comp)
         compengine = util.compengines.forbundletype(comp)
-        compressor = compengine.compressorobj()
-        subchunkiter = cg.getchunks()
         def chunkiter():
             yield header
-            for chunk in subchunkiter:
-                data = compressor.compress(chunk)
-                if data:
-                    yield data
-            yield compressor.flush()
+            for chunk in compengine.compressstream(cg.getchunks()):
+                yield chunk
         chunkiter = chunkiter()
 
     # parse the changegroup data, otherwise we will block
