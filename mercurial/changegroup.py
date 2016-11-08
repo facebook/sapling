@@ -250,7 +250,7 @@ class cg1unpacker(object):
         # no new manifest will be created and the manifest group will
         # be empty during the pull
         self.manifestheader()
-        repo.manifest.addgroup(self, revmap, trp)
+        repo.manifestlog._revlog.addgroup(self, revmap, trp)
         repo.ui.progress(_('manifests'), None)
         self.callback = None
 
@@ -480,7 +480,7 @@ class cg3unpacker(cg2unpacker):
             # If we get here, there are directory manifests in the changegroup
             d = chunkdata["filename"]
             repo.ui.debug("adding %s revisions\n" % d)
-            dirlog = repo.manifest.dirlog(d)
+            dirlog = repo.manifestlog._revlog.dirlog(d)
             if not dirlog.addgroup(self, revmap, trp):
                 raise error.Abort(_("received dir revlog group is empty"))
 
@@ -588,7 +588,7 @@ class cg1packer(object):
     def _packmanifests(self, dir, mfnodes, lookuplinknode):
         """Pack flat manifests into a changegroup stream."""
         assert not dir
-        for chunk in self.group(mfnodes, self._repo.manifest,
+        for chunk in self.group(mfnodes, self._repo.manifestlog._revlog,
                                 lookuplinknode, units=_('manifests')):
             yield chunk
 
@@ -852,8 +852,10 @@ class cg3packer(cg2packer):
     def _packmanifests(self, dir, mfnodes, lookuplinknode):
         if dir:
             yield self.fileheader(dir)
-        for chunk in self.group(mfnodes, self._repo.manifest.dirlog(dir),
-                                lookuplinknode, units=_('manifests')):
+
+        dirlog = self._repo.manifestlog._revlog.dirlog(dir)
+        for chunk in self.group(mfnodes, dirlog, lookuplinknode,
+                                units=_('manifests')):
             yield chunk
 
     def _manifestsdone(self):
