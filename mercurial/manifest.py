@@ -1323,6 +1323,17 @@ class manifestlog(object):
     def add(self, m, transaction, link, p1, p2, added, removed):
         return self._revlog.add(m, transaction, link, p1, p2, added, removed)
 
+class memmanifestctx(object):
+    def __init__(self, repo):
+        self._repo = repo
+        self._manifestdict = manifestdict()
+
+    def new(self):
+        return memmanifestctx(self._repo)
+
+    def read(self):
+        return self._manifestdict
+
 class manifestctx(object):
     """A class representing a single revision of a manifest, including its
     contents, its parent revs, and its linkrev.
@@ -1345,6 +1356,9 @@ class manifestctx(object):
 
     def node(self):
         return self._node
+
+    def new(self):
+        return memmanifestctx(self._repo)
 
     def read(self):
         if not self._data:
@@ -1400,6 +1414,18 @@ class manifestctx(object):
     def find(self, key):
         return self.read().find(key)
 
+class memtreemanifestctx(object):
+    def __init__(self, repo, dir=''):
+        self._repo = repo
+        self._dir = dir
+        self._treemanifest = treemanifest()
+
+    def new(self, dir=''):
+        return memtreemanifestctx(self._repo, dir=dir)
+
+    def read(self):
+        return self._treemanifest
+
 class treemanifestctx(object):
     def __init__(self, repo, dir, node):
         self._repo = repo
@@ -1442,6 +1468,9 @@ class treemanifestctx(object):
 
     def node(self):
         return self._node
+
+    def new(self, dir=''):
+        return memtreemanifestctx(self._repo, dir=dir)
 
     def readdelta(self, shallow=False):
         '''Returns a manifest containing just the entries that are present
