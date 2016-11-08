@@ -2966,9 +2966,21 @@ class compressionengine(object):
         exclude the name from external usage, set the first element to ``None``.
 
         If bundle compression is supported, the class must also implement
-        ``compressorobj`` and `decompressorreader``.
+        ``compressstream``, ``compressorobj`` and `decompressorreader``.
         """
         return None
+
+    def compressstream(self, it, opts=None):
+        """Compress an iterator of chunks.
+
+        The method receives an iterator (ideally a generator) of chunks of
+        bytes to be compressed. It returns an iterator (ideally a generator)
+        of bytes of chunks representing the compressed output.
+
+        Optionally accepts an argument defining how to perform compression.
+        Each engine treats this argument differently.
+        """
+        raise NotImplementedError()
 
     def compressorobj(self):
         """(Temporary) Obtain an object used for compression.
@@ -2997,6 +3009,19 @@ class _zlibengine(compressionengine):
     def compressorobj(self):
         return zlib.compressobj()
 
+    def compressstream(self, it, opts=None):
+        opts = opts or {}
+
+        z = zlib.compressobj(opts.get('level', -1))
+        for chunk in it:
+            data = z.compress(chunk)
+            # Not all calls to compress emit data. It is cheaper to inspect
+            # here than to feed empty chunks through generator.
+            if data:
+                yield data
+
+        yield z.flush()
+
     def decompressorreader(self, fh):
         def gen():
             d = zlib.decompressobj()
@@ -3016,6 +3041,16 @@ class _bz2engine(compressionengine):
 
     def compressorobj(self):
         return bz2.BZ2Compressor()
+
+    def compressstream(self, it, opts=None):
+        opts = opts or {}
+        z = bz2.BZ2Compressor(opts.get('level', 9))
+        for chunk in it:
+            data = z.compress(chunk)
+            if data:
+                yield data
+
+        yield z.flush()
 
     def decompressorreader(self, fh):
         def gen():
@@ -3064,6 +3099,9 @@ class _noopengine(compressionengine):
 
     def compressorobj(self):
         return nocompress()
+
+    def compressstream(self, it, opts=None):
+        return it
 
     def decompressorreader(self, fh):
         return fh
