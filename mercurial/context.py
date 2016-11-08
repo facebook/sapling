@@ -259,8 +259,10 @@ class basectx(object):
             if path in self._manifestdelta:
                 return (self._manifestdelta[path],
                         self._manifestdelta.flags(path))
-        node, flag = self._repo.manifest.find(self._changeset.manifest, path)
-        if not node:
+        mfl = self._repo.manifestlog
+        try:
+            node, flag = mfl[self._changeset.manifest].find(path)
+        except KeyError:
             raise error.ManifestLookupError(self._node, path,
                                             _('not found in manifest'))
 

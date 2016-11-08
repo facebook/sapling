@@ -1394,6 +1394,9 @@ class manifestctx(object):
         d = mdiff.patchtext(revlog.revdiff(revlog.deltaparent(r), r))
         return manifestdict(d)
 
+    def find(self, key):
+        return self.read().find(key)
+
 class treemanifestctx(object):
     def __init__(self, repo, dir, node):
         self._repo = repo
@@ -1486,6 +1489,9 @@ class treemanifestctx(object):
         else:
             return self.read()
 
+    def find(self, key):
+        return self.read().find(key)
+
 class manifest(manifestrevlog):
     def __init__(self, opener, dir='', dirlogcache=None):
         '''The 'dir' and 'dirlogcache' arguments are for internal use by
@@ -1547,15 +1553,6 @@ class manifest(manifestrevlog):
         if arraytext is not None:
             self.fulltextcache[node] = arraytext
         return m
-
-    def find(self, node, f):
-        '''look up entry for a single file efficiently.
-        return (node, flags) pair if found, (None, None) if not.'''
-        m = self.read(node)
-        try:
-            return m.find(f)
-        except KeyError:
-            return None, None
 
     def clearcaches(self):
         super(manifest, self).clearcaches()

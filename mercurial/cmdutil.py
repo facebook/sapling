@@ -2566,11 +2566,14 @@ def cat(ui, repo, ctx, matcher, prefix, **opts):
     # for performance to avoid the cost of parsing the manifest.
     if len(matcher.files()) == 1 and not matcher.anypats():
         file = matcher.files()[0]
-        mf = repo.manifest
+        mfl = repo.manifestlog
         mfnode = ctx.manifestnode()
-        if mfnode and mf.find(mfnode, file)[0]:
-            write(file)
-            return 0
+        try:
+            if mfnode and mfl[mfnode].find(file)[0]:
+                write(file)
+                return 0
+        except KeyError:
+            pass
 
     for abs in ctx.walk(matcher):
         write(abs)
