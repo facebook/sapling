@@ -3070,29 +3070,5 @@ class _noopengine(compressionengine):
 
 compengines.register(_noopengine())
 
-def _makedecompressor(decompcls):
-    def generator(f):
-        d = decompcls()
-        for chunk in filechunkiter(f):
-            yield d.decompress(chunk)
-    def func(fh):
-        return chunkbuffer(generator(fh))
-    return func
-
-def _bz2():
-    d = bz2.BZ2Decompressor()
-    # Bzip2 stream start with BZ, but we stripped it.
-    # we put it back for good measure.
-    d.decompress('BZ')
-    return d
-
-decompressors = {None: lambda fh: fh,
-                 '_truncatedBZ': _makedecompressor(_bz2),
-                 'BZ': _makedecompressor(lambda: bz2.BZ2Decompressor()),
-                 'GZ': _makedecompressor(lambda: zlib.decompressobj()),
-                 }
-# also support the old form by courtesies
-decompressors['UN'] = decompressors[None]
-
 # convenient shortcut
 dst = debugstacktrace
