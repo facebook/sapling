@@ -18,7 +18,7 @@ Create an ondisk bundlestore in .hg/scratchbranches
   > }
   $ scratchnodes() {
   >    for node in `find ../repo/.hg/scratchbranches/index/nodemap/* | sort`; do
-  >        echo ${node##*/}
+  >        echo ${node##*/} `cat $node`
   >    done
   > }
   $ scratchbookmarks() {
@@ -159,8 +159,8 @@ Push to scratch branch
   o  initialcommit public
   
   $ scratchnodes
-  1de1d7d92f8965260391d0513fe8a8d5973d3042
-  20759b6926ce827d5a8c73eb1fa9726d6f7defb2
+  1de1d7d92f8965260391d0513fe8a8d5973d3042 467bcc4f69f11010d1809a3f2aeeb80182b58f0d
+  20759b6926ce827d5a8c73eb1fa9726d6f7defb2 467bcc4f69f11010d1809a3f2aeeb80182b58f0d
 
   $ scratchbookmarks
   scratch/mybranch 1de1d7d92f8965260391d0513fe8a8d5973d3042
@@ -235,9 +235,9 @@ Push scratch revision without bookmark with --bundle-store
   
 
   $ scratchnodes
-  1de1d7d92f8965260391d0513fe8a8d5973d3042
-  20759b6926ce827d5a8c73eb1fa9726d6f7defb2
-  2b5d271c7e0d25d811359a314d413ebcc75c9524
+  1de1d7d92f8965260391d0513fe8a8d5973d3042 a27d53b3d2877d3ab24b4c8c4b0944f8d238e46b
+  20759b6926ce827d5a8c73eb1fa9726d6f7defb2 a27d53b3d2877d3ab24b4c8c4b0944f8d238e46b
+  2b5d271c7e0d25d811359a314d413ebcc75c9524 a27d53b3d2877d3ab24b4c8c4b0944f8d238e46b
 
 Test with pushrebase
   $ cp $TESTTMP/defaulthgrc $HGRCPATH
@@ -265,10 +265,10 @@ Test with pushrebase
   o  initialcommit public
   
   $ scratchnodes
-  1de1d7d92f8965260391d0513fe8a8d5973d3042
-  20759b6926ce827d5a8c73eb1fa9726d6f7defb2
-  2b5d271c7e0d25d811359a314d413ebcc75c9524
-  d8c4f54ab678fd67cb90bb3f272a2dc6513a59a7
+  1de1d7d92f8965260391d0513fe8a8d5973d3042 70d053e033ea0f7502d27ab48e3cf03b7458b4e3
+  20759b6926ce827d5a8c73eb1fa9726d6f7defb2 70d053e033ea0f7502d27ab48e3cf03b7458b4e3
+  2b5d271c7e0d25d811359a314d413ebcc75c9524 70d053e033ea0f7502d27ab48e3cf03b7458b4e3
+  d8c4f54ab678fd67cb90bb3f272a2dc6513a59a7 70d053e033ea0f7502d27ab48e3cf03b7458b4e3
 
 Change the order of pushrebase and infinitepush
   $ cp $TESTTMP/defaulthgrc $HGRCPATH
@@ -297,11 +297,11 @@ Change the order of pushrebase and infinitepush
   o  initialcommit public
   
   $ scratchnodes
-  1de1d7d92f8965260391d0513fe8a8d5973d3042
-  20759b6926ce827d5a8c73eb1fa9726d6f7defb2
-  2b5d271c7e0d25d811359a314d413ebcc75c9524
-  6c10d49fe92751666c40263f96721b918170d3da
-  d8c4f54ab678fd67cb90bb3f272a2dc6513a59a7
+  1de1d7d92f8965260391d0513fe8a8d5973d3042 5c5bc30f6272ee4b1107b2c996f49d163ad18eb7
+  20759b6926ce827d5a8c73eb1fa9726d6f7defb2 5c5bc30f6272ee4b1107b2c996f49d163ad18eb7
+  2b5d271c7e0d25d811359a314d413ebcc75c9524 5c5bc30f6272ee4b1107b2c996f49d163ad18eb7
+  6c10d49fe92751666c40263f96721b918170d3da 5c5bc30f6272ee4b1107b2c996f49d163ad18eb7
+  d8c4f54ab678fd67cb90bb3f272a2dc6513a59a7 5c5bc30f6272ee4b1107b2c996f49d163ad18eb7
 
 Non-fastforward scratch bookmark push
   $ hg up 6c10d49fe927
@@ -509,3 +509,27 @@ Have to use full hash because short hashes are not supported yet
   |/
   o  67145f466344 initialcommit
   
+Push new scratch head. Make sure that new bundle is created but 8872775dd97a
+still in the old bundle
+  $ hg up scratch/mybranch
+  4 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  (activating bookmark scratch/mybranch)
+  $ mkcommit newscratchhead
+  created new head
+  $ hg push -r . --to scratch/newscratchhead --create
+  pushing to ssh://user@dummy/repo
+  searching for changes
+  remote: pushing 5 commits:
+  remote:     20759b6926ce  scratchcommit
+  remote:     1de1d7d92f89  new scratch commit
+  remote:     2b5d271c7e0d  scratchcommitnobook
+  remote:     d8c4f54ab678  scratchcommitwithpushrebase
+  remote:     8611afacb870  newscratchhead
+  $ scratchnodes
+  1de1d7d92f8965260391d0513fe8a8d5973d3042 2fa526470913fdcc94397caaf6cdbc977b3318cc
+  20759b6926ce827d5a8c73eb1fa9726d6f7defb2 2fa526470913fdcc94397caaf6cdbc977b3318cc
+  2b5d271c7e0d25d811359a314d413ebcc75c9524 2fa526470913fdcc94397caaf6cdbc977b3318cc
+  6c10d49fe92751666c40263f96721b918170d3da 5c5bc30f6272ee4b1107b2c996f49d163ad18eb7
+  8611afacb87078300a6d6b2f0c4b49fa506a8db9 2fa526470913fdcc94397caaf6cdbc977b3318cc
+  8872775dd97a750e1533dc1fbbca665644b32547 e83e00b2d07dd427210a4a644f7ce8186f701fd7
+  d8c4f54ab678fd67cb90bb3f272a2dc6513a59a7 2fa526470913fdcc94397caaf6cdbc977b3318cc

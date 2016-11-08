@@ -778,20 +778,19 @@ def bundle2scratchbranch(op, part):
             op.repo.ui.warn(("    %s  %s\n") % (revs[-1], firstline))
 
         nodes = [hex(rev.node()) for rev in revs]
-
-        newnodes = filter(lambda node: not index.getbundle(node), nodes)
-        if newnodes:
+        hasnewnodes = not bool(index.getbundle(nodes[-1]))
+        if hasnewnodes:
             with open(bundlefile, 'r') as f:
                 key = store.write(f.read())
             if bookmark:
-                index.addbookmarkandbundle(key, newnodes,
-                                           bookmark, newnodes[-1])
+                index.addbookmarkandbundle(key, nodes,
+                                           bookmark, nodes[-1])
                 if params.get('pushbackbookmarks'):
                     _addbookmarkpushbackpart(op, bookmark,
-                                             newnodes[-1], bookprevnode)
+                                             nodes[-1], bookprevnode)
             else:
                 # Push new scratch commits with no bookmark
-                index.addbundle(key, newnodes)
+                index.addbundle(key, nodes)
         elif bookmark:
             # Push new scratch bookmark to known scratch commits
             index.addbookmark(bookmark, nodes[-1])
