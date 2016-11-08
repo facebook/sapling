@@ -42,3 +42,41 @@ showdiff(
  'f\n'
 done
 done
+Odd diff for a trivial change:
+showdiff(
+  '<0\n-\n<1\n-\n<2\n-\n<3\n-\n<4\n-\n',
+  '>0\n-\n>1\n-\n>2\n-\n>3\n-\n>4\n-\n'):
+ 0 8 '<0\n-\n<1\n' -> '>0\n'
+ '-\n'
+ 10 13 '<2\n' -> '>1\n'
+ '-\n'
+ 15 18 '<3\n' -> '>2\n'
+ '-\n'
+ 20 23 '<4\n' -> '>3\n'
+ '-\n'
+ 25 25 '' -> '>4\n-\n'
+Diff 1 to 3 lines - preference for adding / removing at the end of sequences:
+showdiff(
+  'a\n',
+  'a\na\na\n'):
+ 'a\n'
+ 2 2 '' -> 'a\na\n'
+Diff 1 to 5 lines - preference for adding / removing at the end of sequences:
+showdiff(
+  'a\n',
+  'a\na\na\na\na\n'):
+ 'a\n'
+ 2 2 '' -> 'a\na\na\na\n'
+Diff 3 to 1 lines - preference for adding / removing at the end of sequences:
+showdiff(
+  'a\na\na\n',
+  'a\n'):
+ 'a\n'
+ 2 6 'a\na\n' -> ''
+Diff 5 to 1 lines - this diff seems weird:
+showdiff(
+  'a\na\na\na\na\n',
+  'a\n'):
+ 0 2 'a\n' -> ''
+ 'a\n'
+ 4 10 'a\na\na\n' -> ''

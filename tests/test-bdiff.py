@@ -78,3 +78,17 @@ testfixws("", "", 1)
 testfixws("", "", 0)
 
 print("done")
+
+print("Odd diff for a trivial change:")
+showdiff(
+    ''.join('<%s\n-\n' % i for i in range(5)),
+    ''.join('>%s\n-\n' % i for i in range(5)))
+
+print("Diff 1 to 3 lines - preference for adding / removing at the end of sequences:")
+showdiff('a\n', 'a\n' * 3)
+print("Diff 1 to 5 lines - preference for adding / removing at the end of sequences:")
+showdiff('a\n', 'a\n' * 5)
+print("Diff 3 to 1 lines - preference for adding / removing at the end of sequences:")
+showdiff('a\n' * 3, 'a\n')
+print("Diff 5 to 1 lines - this diff seems weird:")
+showdiff('a\n' * 5, 'a\n')
