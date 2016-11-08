@@ -88,14 +88,8 @@ class webproto(wireproto.abstractserverproto):
         # Don't allow untrusted settings because disabling compression or
         # setting a very high compression level could lead to flooding
         # the server's network or CPU.
-        z = zlib.compressobj(self.ui.configint('server', 'zliblevel', -1))
-        for chunk in chunks:
-            data = z.compress(chunk)
-            # Not all calls to compress() emit data. It is cheaper to inspect
-            # that here than to send it via the generator.
-            if data:
-                yield data
-        yield z.flush()
+        opts = {'level': self.ui.configint('server', 'zliblevel', -1)}
+        return util.compengines['zlib'].compressstream(chunks, opts)
 
     def _client(self):
         return 'remote:%s:%s:%s' % (
