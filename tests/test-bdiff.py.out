@@ -67,16 +67,17 @@ showdiff(
   'a\na\na\na\na\n'):
  'a\n'
  2 2 '' -> 'a\na\na\na\n'
-Diff 3 to 1 lines - preference for adding / removing at the end of sequences:
+Diff 3 to 1 lines - preference for balanced recursion:
 showdiff(
   'a\na\na\n',
   'a\n'):
+ 0 2 'a\n' -> ''
  'a\n'
- 2 6 'a\na\n' -> ''
-Diff 5 to 1 lines - this diff seems weird:
+ 4 6 'a\n' -> ''
+Diff 5 to 1 lines - preference for balanced recursion:
 showdiff(
   'a\na\na\na\na\n',
   'a\n'):
- 0 2 'a\n' -> ''
+ 0 4 'a\na\n' -> ''
  'a\n'
- 4 10 'a\na\na\n' -> ''
+ 6 10 'a\na\n' -> ''

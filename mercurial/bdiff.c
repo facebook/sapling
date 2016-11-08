@@ -151,7 +151,7 @@ static int longest_match(struct bdiff_line *a, struct bdiff_line *b,
 	if (a2 - a1 > 30000)
 		a1 = a2 - 30000;
 
-	half = (a1 + a2) / 2;
+	half = (a1 + a2 - 1) / 2;
 
 	for (i = a1; i < a2; i++) {
 		/* skip all lines in b after the current block */
@@ -177,7 +177,7 @@ static int longest_match(struct bdiff_line *a, struct bdiff_line *b,
 
 			/* best match so far? we prefer matches closer
 			   to the middle to balance recursion */
-			if (k > mk || (k == mk && (i <= mi || i < half))) {
+			if (k > mk || (k == mk && (i <= mi || i <= half))) {
 				mi = i;
 				mj = j;
 				mk = k;
