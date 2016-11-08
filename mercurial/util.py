@@ -3070,15 +3070,6 @@ class _noopengine(compressionengine):
 
 compengines.register(_noopengine())
 
-compressors = {
-    None: nocompress,
-    # lambda to prevent early import
-    'BZ': lambda: bz2.BZ2Compressor(),
-    'GZ': lambda: zlib.compressobj(),
-    }
-# also support the old form by courtesies
-compressors['UN'] = compressors[None]
-
 def _makedecompressor(decompcls):
     def generator(f):
         d = decompcls()
