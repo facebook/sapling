@@ -258,6 +258,7 @@ def runhooks(ui, repo, name, hooks, throw=False, **args):
             sys.stderr.flush()
     finally:
         if _redirect and oldstdout >= 0:
+            sys.__stdout__.flush()  # write hook output to stderr fd
             os.dup2(oldstdout, stdoutno)
             os.close(oldstdout)
 

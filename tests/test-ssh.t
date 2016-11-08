@@ -265,8 +265,17 @@ a bad, evil hook that prints to stdout
   > sys.stdout.write("KABOOM\n")
   > EOF
 
-  $ echo '[hooks]' >> ../remote/.hg/hgrc
-  $ echo "changegroup.stdout = python $TESTTMP/badhook" >> ../remote/.hg/hgrc
+  $ cat <<EOF > $TESTTMP/badpyhook.py
+  > import sys
+  > def hook(ui, repo, hooktype, **kwargs):
+  >     sys.stdout.write("KABOOM IN PROCESS\n")
+  > EOF
+
+  $ cat <<EOF >> ../remote/.hg/hgrc
+  > [hooks]
+  > changegroup.stdout = python $TESTTMP/badhook
+  > changegroup.pystdout = python:$TESTTMP/badpyhook.py:hook
+  > EOF
   $ echo r > r
   $ hg ci -A -m z r
 
@@ -281,6 +290,7 @@ push should succeed even though it has an unexpected response
   remote: adding file changes
   remote: added 1 changesets with 1 changes to 1 files
   remote: KABOOM
+  remote: KABOOM IN PROCESS
   $ hg -R ../remote heads
   changeset:   5:1383141674ec
   tag:         tip
@@ -447,6 +457,7 @@ stderr from remote commands should be printed before stdout from local code (iss
   remote: adding file changes
   remote: added 1 changesets with 1 changes to 1 files
   remote: KABOOM
+  remote: KABOOM IN PROCESS
   local stdout
 
 debug output
