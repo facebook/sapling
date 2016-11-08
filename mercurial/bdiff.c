@@ -177,10 +177,20 @@ static int longest_match(struct bdiff_line *a, struct bdiff_line *b,
 
 			/* best match so far? we prefer matches closer
 			   to the middle to balance recursion */
-			if (k > mk || (k == mk && (i <= mi || i <= half))) {
+			if (k > mk) {
+				/* a longer match */
 				mi = i;
 				mj = j;
 				mk = k;
+			} else if (k == mk) {
+				if (i > mi && i <= half) {
+					/* same match but closer to half */
+					mi = i;
+					mj = j;
+				} else if (i == mi) {
+					/* same i but earlier j */
+					mj = j;
+				}
 			}
 		}
 	}
