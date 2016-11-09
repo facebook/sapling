@@ -43,6 +43,14 @@ if ispy3:
     osname = os.name.encode('ascii')
     ospathsep = os.pathsep.encode('ascii')
     ossep = os.sep.encode('ascii')
+
+    # Since Python 3 converts argv to wchar_t type by Py_DecodeLocale() on Unix,
+    # we can use os.fsencode() to get back bytes argv.
+    #
+    # https://hg.python.org/cpython/file/v3.5.1/Programs/python.c#l55
+    #
+    # TODO: On Windows, the native argv is wchar_t, so we'll need a different
+    # workaround to simulate the Python 2 (i.e. ANSI Win32 API) behavior.
     sysargv = list(map(os.fsencode, sys.argv))
 
     def sysstr(s):
