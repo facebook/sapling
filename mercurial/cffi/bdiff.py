@@ -5,7 +5,7 @@ import os
 
 ffi = cffi.FFI()
 ffi.set_source("_bdiff_cffi",
-    open(os.path.join(os.path.join(os.path.dirname(__file__), 'mercurial'),
+    open(os.path.join(os.path.join(os.path.dirname(__file__), '..'),
         'bdiff.c')).read(), include_dirs=['mercurial'])
 ffi.cdef("""
 struct bdiff_line {
