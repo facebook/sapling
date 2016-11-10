@@ -658,6 +658,44 @@ def _unshelverestorecommit(ui, repo, basename, oldquiet):
     ui.quiet = oldquiet
     return repo, shelvectx
 
+def _rebaserestoredcommit(ui, repo, opts, tr, oldtiprev, basename, pctx,
+                          tmpwctx, shelvectx, branchtorestore):
+    """Rebase restored commit from its original location to a destination"""
+    # If the shelve is not immediately on top of the commit
+    # we'll be merging with, rebase it to be on top.
+    if tmpwctx.node() == shelvectx.parents()[0].node():
+        return shelvectx
+
+    ui.status(_('rebasing shelved changes\n'))
+    try:
+        rebase.rebase(ui, repo, **{
+            'rev': [shelvectx.rev()],
+            'dest': str(tmpwctx.rev()),
+            'keep': True,
+            'tool': opts.get('tool', ''),
+        })
+    except error.InterventionRequired:
+        tr.close()
+
+        stripnodes = [repo.changelog.node(rev)
+                      for rev in xrange(oldtiprev, len(repo))]
+        shelvedstate.save(repo, basename, pctx, tmpwctx, stripnodes,
+                          branchtorestore)
+
+        util.rename(repo.join('rebasestate'),
+                    repo.join('unshelverebasestate'))
+        raise error.InterventionRequired(
+            _("unresolved conflicts (see 'hg resolve', then "
+              "'hg unshelve --continue')"))
+
+    # refresh ctx after rebase completes
+    shelvectx = repo['tip']
+
+    if not shelvectx in tmpwctx.children():
+        # rebase was a no-op, so it produced no child commit
+        shelvectx = tmpwctx
+    return shelvectx
+
 @command('unshelve',
          [('a', 'abort', None,
            _('abort an incomplete unshelve operation')),
@@ -789,38 +827,9 @@ def _dounshelve(ui, repo, *shelved, **opts):
         if shelvectx.branch() != shelvectx.p1().branch():
             branchtorestore = shelvectx.branch()
 
-        # If the shelve is not immediately on top of the commit
-        # we'll be merging with, rebase it to be on top.
-        if tmpwctx.node() != shelvectx.parents()[0].node():
-            ui.status(_('rebasing shelved changes\n'))
-            try:
-                rebase.rebase(ui, repo, **{
-                    'rev' : [shelvectx.rev()],
-                    'dest' : str(tmpwctx.rev()),
-                    'keep' : True,
-                    'tool' : opts.get('tool', ''),
-                })
-            except error.InterventionRequired:
-                tr.close()
-
-                stripnodes = [repo.changelog.node(rev)
-                              for rev in xrange(oldtiprev, len(repo))]
-                shelvedstate.save(repo, basename, pctx, tmpwctx, stripnodes,
-                                  branchtorestore)
-
-                util.rename(repo.join('rebasestate'),
-                            repo.join('unshelverebasestate'))
-                raise error.InterventionRequired(
-                    _("unresolved conflicts (see 'hg resolve', then "
-                      "'hg unshelve --continue')"))
-
-            # refresh ctx after rebase completes
-            shelvectx = repo['tip']
-
-            if not shelvectx in tmpwctx.children():
-                # rebase was a no-op, so it produced no child commit
-                shelvectx = tmpwctx
-
+        shelvectx = _rebaserestoredcommit(ui, repo, opts, tr, oldtiprev,
+                                          basename, pctx, tmpwctx, shelvectx,
+                                          branchtorestore)
         mergefiles(ui, repo, pctx, shelvectx)
         restorebranch(ui, repo, branchtorestore)
 
