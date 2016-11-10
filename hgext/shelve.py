@@ -328,6 +328,13 @@ def _nothingtoshelvemessaging(ui, repo, pats, opts):
     else:
         ui.status(_("nothing changed\n"))
 
+def _shelvecreatedcommit(repo, node, name):
+    bases = list(mutableancestors(repo[node]))
+    shelvedfile(repo, name, 'hg').writebundle(bases, node)
+    cmdutil.export(repo, [node],
+                   fp=shelvedfile(repo, name, 'patch').opener('wb'),
+                   opts=mdiff.diffopts(git=True))
+
 def _docreatecmd(ui, repo, pats, opts):
     wctx = repo[None]
     parents = wctx.parents()
@@ -380,12 +387,7 @@ def _docreatecmd(ui, repo, pats, opts):
             _nothingtoshelvemessaging(ui, repo, pats, opts)
             return 1
 
-        bases = list(mutableancestors(repo[node]))
-        shelvedfile(repo, name, 'hg').writebundle(bases, node)
-        cmdutil.export(repo, [node],
-                       fp=shelvedfile(repo, name, 'patch').opener('wb'),
-                       opts=mdiff.diffopts(git=True))
-
+        _shelvecreatedcommit(repo, node, name)
 
         if ui.formatted():
             desc = util.ellipsis(desc, ui.termwidth())
