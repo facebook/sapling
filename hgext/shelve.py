@@ -62,6 +62,7 @@ testedwith = 'ships-with-hg-core'
 
 backupdir = 'shelve-backup'
 shelvedir = 'shelved'
+shelvefileextensions = ['hg', 'patch']
 
 class shelvedfile(object):
     """Helper for the file storing a single shelve
@@ -221,7 +222,7 @@ def cleanupoldbackups(repo):
             # keep it, because timestamp can't decide exact order of backups
             continue
         base = f[:-3]
-        for ext in 'hg patch'.split():
+        for ext in shelvefileextensions:
             try:
                 vfs.unlink(base + '.' + ext)
             except OSError as err:
@@ -399,7 +400,7 @@ def cleanupcmd(ui, repo):
     with repo.wlock():
         for (name, _type) in repo.vfs.readdir(shelvedir):
             suffix = name.rsplit('.', 1)[-1]
-            if suffix in ('hg', 'patch'):
+            if suffix in shelvefileextensions:
                 shelvedfile(repo, name).movetobackup()
             cleanupoldbackups(repo)
 
@@ -410,8 +411,15 @@ def deletecmd(ui, repo, pats):
     with repo.wlock():
         try:
             for name in pats:
-                for suffix in 'hg patch'.split():
-                    shelvedfile(repo, name, suffix).movetobackup()
+                for suffix in shelvefileextensions:
+                    shfile = shelvedfile(repo, name, suffix)
+                    # patch file is necessary, as it should
+                    # be present for any kind of shelve,
+                    # but the .hg file is optional as in future we
+                    # will add obsolete shelve with does not create a
+                    # bundle
+                    if shfile.exists() or suffix == 'patch':
+                        shfile.movetobackup()
             cleanupoldbackups(repo)
         except OSError as err:
             if err.errno != errno.ENOENT:
@@ -557,8 +565,10 @@ def restorebranch(ui, repo, branchtorestore):
 def unshelvecleanup(ui, repo, name, opts):
     """remove related files after an unshelve"""
     if not opts.get('keep'):
-        for filetype in 'hg patch'.split():
-            shelvedfile(repo, name, filetype).movetobackup()
+        for filetype in shelvefileextensions:
+            shfile = shelvedfile(repo, name, filetype)
+            if shfile.exists():
+                shfile.movetobackup()
         cleanupoldbackups(repo)
 
 def unshelvecontinue(ui, repo, state, opts):
