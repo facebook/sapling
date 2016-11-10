@@ -189,7 +189,8 @@ def _picktool(repo, ui, path, binary, symlink, changedelete):
         if _toolbool(ui, t, "disabled", False):
             disabled.add(t)
     names = tools.keys()
-    tools = sorted([(-p, t) for t, p in tools.items() if t not in disabled])
+    tools = sorted([(-p, tool) for tool, p in tools.items()
+                    if tool not in disabled])
     uimerge = ui.config("ui", "merge")
     if uimerge:
         # external tools defined in uimerge won't be able to handle
