@@ -8,7 +8,6 @@
 from __future__ import absolute_import
 
 import cgi
-import zlib
 
 from .common import (
     HTTP_OK,
