@@ -502,8 +502,8 @@ class colorui(uimod.ui):
                 effects.append(l)
         effects = ' '.join(effects)
         if effects:
-            return '\n'.join([render_effects(s, effects)
-                              for s in msg.split('\n')])
+            return '\n'.join([render_effects(line, effects)
+                              for line in msg.split('\n')])
         return msg
 
 def uisetup(ui):
