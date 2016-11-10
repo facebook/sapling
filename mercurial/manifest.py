@@ -1594,33 +1594,6 @@ class manifest(manifestrevlog):
                                               self._dirlogcache)
         return self._dirlogcache[dir]
 
-    def read(self, node):
-        if node == revlog.nullid:
-            return self._newmanifest() # don't upset local cache
-        if node in self._mancache:
-            cached = self._mancache[node]
-            if (isinstance(cached, manifestctx) or
-                isinstance(cached, treemanifestctx)):
-                cached = cached.read()
-            return cached
-        if self._treeondisk:
-            def gettext():
-                return self.revision(node)
-            def readsubtree(dir, subm):
-                return self.dirlog(dir).read(subm)
-            m = self._newmanifest()
-            m.read(gettext, readsubtree)
-            m.setnode(node)
-            arraytext = None
-        else:
-            text = self.revision(node)
-            m = self._newmanifest(text)
-            arraytext = array.array('c', text)
-        self._mancache[node] = m
-        if arraytext is not None:
-            self.fulltextcache[node] = arraytext
-        return m
-
     def clearcaches(self):
         super(manifest, self).clearcaches()
         self._mancache.clear()

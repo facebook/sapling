@@ -567,7 +567,7 @@ def perfmanifest(ui, repo, rev, **opts):
     t = ctx.manifestnode()
     def d():
         repo.manifest.clearcaches()
-        repo.manifest.read(t)
+        repo.manifestlog[t].read()
     timer(d)
     fm.end()
 

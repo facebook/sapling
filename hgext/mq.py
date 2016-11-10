@@ -1660,7 +1660,7 @@ class queue(object):
             # caching against the next repo.status call
             mm, aa, dd = repo.status(patchparent, top)[:3]
             changes = repo.changelog.read(top)
-            man = repo.manifest.read(changes[0])
+            man = repo.manifestlog[changes[0]].read()
             aaa = aa[:]
             matchfn = scmutil.match(repo[None], pats, opts)
             # in short mode, we only diff the files included in the
