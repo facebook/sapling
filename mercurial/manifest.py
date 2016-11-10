@@ -1322,6 +1322,10 @@ class manifestlog(object):
             mancache[node] = m
         return m
 
+    def clearcaches(self):
+        self._dirmancache.clear()
+        self._revlog.clearcaches()
+
 class memmanifestctx(object):
     def __init__(self, repo):
         self._repo = repo
@@ -1593,7 +1597,3 @@ class manifest(manifestrevlog):
             self._dirlogcache[dir] = manifest(self.opener, dir,
                                               self._dirlogcache)
         return self._dirlogcache[dir]
-
-    def clearcaches(self):
-        super(manifest, self).clearcaches()
-        self._mancache.clear()
