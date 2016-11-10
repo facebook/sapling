@@ -558,9 +558,13 @@ def restack(ui, repo, rebaseopts=None):
         cmdutil.checkunfinished(repo)
         cmdutil.bailifchanged(repo)
 
-        # Identify a base changeset from which to begin stabilizing.
-        base = _findrestackbase(repo)
-        targets = _findrestacktargets(repo, base)
+        # Find the latest version of the changeset at the botom of the
+        # current stack. If the current changeset is public, simply start
+        # restacking from the current changeset (under the assumption)
+        # that there are non-public changesets higher up.
+        base = repo.revs('::. & draft()').first()
+        latest = _latest(repo, base) if base is not None else repo['.'].rev()
+        targets = _findrestacktargets(repo, latest)
 
         with repo.transaction('restack') as tr:
             # Attempt to stabilize all changesets that are or will be (after
@@ -572,14 +576,15 @@ def restack(ui, repo, rebaseopts=None):
                     tr.close()
                     raise
 
-            # If we're currently on one of the precursors of the base, update
-            # to the latest successor since the old changeset is no longer
-            # needed. Note that if we're on a descendant of the base or its
-            # precursors, the rebase command will ensure that we end up on a
-            # non-obsolete changeset, so it is only necessary to explicitly
-            # update if we're on a precursor of the base.
-            if not repo.revs('. - allprecursors(%d)', base):
-                commands.update(ui, repo, rev=base)
+            # Ensure that we always end up on the latest version of the
+            # current changeset. Usually, this will be taken care of
+            # by the rebase operation. However, in some cases (such as
+            # if we are on the precursor of the base changeset) the
+            # rebase will not update to the latest version, so we need
+            # to do this manually.
+            successor = repo.revs('allsuccessors(.)').last()
+            if successor is not None:
+                commands.update(ui, repo, rev=successor)
 
 def _restackonce(ui, repo, rev, rebaseopts=None):
     """Rebase all descendants of precursors of rev onto rev, thereby
@@ -610,33 +615,6 @@ def _restackonce(ui, repo, rev, rebaseopts=None):
     _clearpreamend(repo, contexts)
     _deinhibit(repo, contexts)
 
-def _findrestackbase(repo):
-    """Search backwards through history to find a changeset in the current
-       stack that may have unstable descendants on its precursors, or
-       may itself need to be stabilized.
-    """
-    # Move down current stack until we find a changeset with visible
-    # precursors or successors, indicating that we may need to stabilize
-    # some descendants of this changeset or its precursors.
-    stack = repo.revs('::. & draft()')
-    stack.reverse()
-    for rev in stack:
-        # Is this the latest version of this changeset? If not, we need
-        # to rebase any unstable descendants onto the latest version.
-        latest = _latest(repo, rev)
-        if rev != latest:
-            return latest
-
-        # If we're already on the latest version, check if there are any
-        # visible precusors. If so, we need to rebase their descendants.
-        if repo.revs('allprecursors(%d)', rev):
-            return rev
-
-    # If we don't encounter any changesets with precursors or successors
-    # on the way down, assume the user just wants to recusively fix
-    # the stack upwards from the current changeset.
-    return repo['.'].rev()
-
 def _findrestacktargets(repo, base):
     """Starting from the given base revision, do a BFS forwards through
        history, looking for changesets with unstable descendants on their
@@ -660,7 +638,13 @@ def _findrestacktargets(repo, base):
             continue
 
         processed.add(rev)
-        queue.extend(childrenof[rev])
+
+        # Children need to be added in sorted order so that newer
+        # children (as determined by rev number) will have their
+        # descendants of their precursors rebased before older children.
+        # This ensures that unstable changesets will always be rebased
+        # onto the latest visible successor of their parent changeset.
+        queue.extend(sorted(childrenof[rev]))
 
         # Look for visible precursors (which are probably visible because
         # they have unstable descendants) and successors (for which the latest
@@ -690,54 +674,20 @@ def _getchildrelationships(repo, revs):
        perform children that reconstruct these relationships each time.
     """
     cl = repo.changelog
-    children = defaultdict(list)
+    children = defaultdict(set)
     for rev in repo.revs('(%ld)::', revs):
         for parent in cl.parentrevs(rev):
             if parent != nullrev:
-                children[parent].append(rev)
+                children[parent].add(rev)
     return children
 
 def _latest(repo, rev):
     """Find the "latest version" of the given revision -- either the
        latest visible successor, or the revision itself if it has no
-       visible successors. Throws an exception if divergence is
-       detected.
+       visible successors.
     """
-    unfiltered = repo.unfiltered()
-
-    def leadstovisible(rev):
-        """Return true if the given revision is visble, or if one
-           of the revisions in its chain of successors is visible.
-        """
-        try:
-            return repo.revs('allsuccessors(%d) + %d', rev, rev)
-        except error.FilteredRepoLookupError:
-            return False
-
-    def getsuccessors(rev):
-        """Return all successors of the given revision that leads
-           to a visible successor.
-        """
-        return [
-            r for r in unfiltered.revs('successors(%d)', rev)
-            if leadstovisible(r)
-        ]
-
-    # Right now this loop runs in O(n^2) due to the allsuccessors
-    # lookup inside getsuccessors(). This check is necessary to deal
-    # with unamended changesets (which create situations where
-    # the latest successor is actually obsolete, and we want a
-    # precursor instead. This logic could probably be made more
-    # sophisticated for better performance.
-    successors = getsuccessors(rev)
-    while successors:
-        if len(successors) > 1:
-            raise error.Abort(_("changeset %s has multiple newer versions, "
-                                "cannot automatically determine latest verion")
-                              % unfiltered[rev].hex())
-        rev = successors[0]
-        successors = getsuccessors(rev)
-    return rev
+    latest = repo.revs('allsuccessors(%d)', rev).last()
+    return latest if latest is not None else rev
 
 def _clearpreamend(repo, contexts):
     """Remove any preamend bookmarks on the given change contexts."""

@@ -324,7 +324,9 @@ a commit on top of one of the obsolete intermediate commits.
   o  0 add a
   
 
-Test that we only use the closest stable base commit.
+Test that we start from the bottom of the stack. (Previously, restack would
+only repair the unstable children closest to the current changeset. This
+behavior is now incorrect -- restack should always fix the whole stack.)
   $ reset
   $ mkcommit a
   $ mkcommit b
@@ -359,15 +361,15 @@ Test that we only use the closest stable base commit.
   
   $ hg rebase --restack
   rebasing 3:47d2a3944de8 "add d"
+  rebasing 7:a43fcd08f41f "add c" (tip)
+  rebasing 8:49b119a57122 "add d"
   $ showgraph
-  @  8 add d
+  @  10 add d
   |
-  o  7 add c
+  o  9 add c
   |
-  | o  5 add b
-  | |
-  o |  1 add b
-  |/
+  o  5 add b
+  |
   o  0 add a
   
 
@@ -460,7 +462,8 @@ Test having an unamended commit.
   o  0 add a
   
 
-Test situation with divergence.
+Test situation with divergence. Restack should rebase unstable children
+onto the newest successor of their parent.
   $ reset
   $ mkcommit a
   $ mkcommit b
@@ -468,22 +471,20 @@ Test situation with divergence.
   $ hg prev
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   [*] add b (glob)
-  $ echo b >> b
-  $ hg amend
+  $ hg amend -m "successor 1"
   warning: the changeset's children were left behind
   (use 'hg amend --fixup' to rebase them)
   $ hg up 1
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ echo c >> b
-  $ hg amend
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg amend -m "successor 2"
   warning: the changeset's children were left behind
   (use 'hg amend --fixup' to rebase them)
   $ hg up 1
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ showgraph
-  o  6 add b
+  o  4 successor 2
   |
-  | o  4 add b
+  | o  3 successor 1
   |/
   | o  2 add c
   | |
@@ -492,8 +493,17 @@ Test situation with divergence.
   o  0 add a
   
   $ hg rebase --restack
-  abort: changeset 7c3bad9141dcb46ff89abf5f61856facd56e476c has multiple newer versions, cannot automatically determine latest verion
-  [255]
+  rebasing 2:4538525df7e2 "add c"
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ showgraph
+  o  5 add c
+  |
+  @  4 successor 2
+  |
+  | o  3 successor 1
+  |/
+  o  0 add a
+  
 
 Test situation with divergence due to an unamend. This should actually succeed
 since the successor is obsolete.
@@ -653,12 +663,12 @@ stack is lost upon rebasing lower levels.
   
   $ hg rebase --restack
   rebasing 13:9f2a7cefd4b4 "add h"
-  rebasing 3:47d2a3944de8 "add d"
   rebasing 7:2a79e3a98cd6 "add f"
+  rebasing 3:47d2a3944de8 "add d"
   rebasing 11:a43fcd08f41f "add c"
   rebasing 15:604f34a1983d "add g" (tip)
   rebasing 16:e1df23499b99 "add h"
-  rebasing 17:49b119a57122 "add d"
+  rebasing 18:49b119a57122 "add d"
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ showgraph
   o  22 add d
@@ -669,7 +679,7 @@ stack is lost upon rebasing lower levels.
   |/
   o  19 add c
   |
-  | o  18 add f
+  | o  17 add f
   | |
   | o  9 add e
   |/
