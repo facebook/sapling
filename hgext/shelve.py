@@ -273,24 +273,24 @@ def getshelvename(repo, parent, opts):
         raise error.Abort(_("shelved change names may not start with '.'"))
     return name
 
+def mutableancestors(ctx):
+    """return all mutable ancestors for ctx (included)
+
+    Much faster than the revset ancestors(ctx) & draft()"""
+    seen = set([nodemod.nullrev])
+    visit = collections.deque()
+    visit.append(ctx)
+    while visit:
+        ctx = visit.popleft()
+        yield ctx.node()
+        for parent in ctx.parents():
+            rev = parent.rev()
+            if rev not in seen:
+                seen.add(rev)
+                if parent.mutable():
+                    visit.append(parent)
+
 def _docreatecmd(ui, repo, pats, opts):
-    def mutableancestors(ctx):
-        """return all mutable ancestors for ctx (included)
-
-        Much faster than the revset ancestors(ctx) & draft()"""
-        seen = set([nodemod.nullrev])
-        visit = collections.deque()
-        visit.append(ctx)
-        while visit:
-            ctx = visit.popleft()
-            yield ctx.node()
-            for parent in ctx.parents():
-                rev = parent.rev()
-                if rev not in seen:
-                    seen.add(rev)
-                    if parent.mutable():
-                        visit.append(parent)
-
     wctx = repo[None]
     parents = wctx.parents()
     if len(parents) > 1:
