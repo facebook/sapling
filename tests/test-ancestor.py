@@ -11,7 +11,7 @@ import time
 from mercurial.node import nullrev
 from mercurial import (
     ancestor,
-    commands,
+    debugcommands,
     hg,
     ui as uimod,
     util,
@@ -226,7 +226,7 @@ def test_gca():
             # C version not available
             return
 
-        commands.debugbuilddag(u, repo, dag)
+        debugcommands.debugbuilddag(u, repo, dag)
         # Compare the results of the Python and C versions. This does not
         # include choosing a winner when more than one gca exists -- we make
         # sure both return exactly the same set of gcas.
