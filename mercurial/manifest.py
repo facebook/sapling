@@ -1255,10 +1255,12 @@ class manifestlog(object):
         self._repo = repo
 
         usetreemanifest = False
+        cachesize = 4
 
         opts = getattr(opener, 'options', None)
         if opts is not None:
             usetreemanifest = opts.get('treemanifest', usetreemanifest)
+            cachesize = opts.get('manifestcachesize', cachesize)
         self._treeinmem = usetreemanifest
 
         self._oldmanifest = repo._constructmanifest()
@@ -1266,15 +1268,9 @@ class manifestlog(object):
 
         # A cache of the manifestctx or treemanifestctx for each directory
         self._dirmancache = {}
+        self._dirmancache[''] = util.lrucachedict(cachesize)
 
-        # We'll separate this into it's own cache once oldmanifest is no longer
-        # used
-        self._mancache = self._oldmanifest._mancache
-        self._dirmancache[''] = self._mancache
-
-        # A future patch makes this use the same config value as the existing
-        # mancache
-        self.cachesize = 4
+        self.cachesize = cachesize
 
     def __getitem__(self, node):
         """Retrieves the manifest instance for the given node. Throws a
