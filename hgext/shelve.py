@@ -64,6 +64,10 @@ backupdir = 'shelve-backup'
 shelvedir = 'shelved'
 shelvefileextensions = ['hg', 'patch']
 
+# we never need the user, so we use a
+# generic user for all shelve operations
+shelveuser = 'shelve@localhost'
+
 class shelvedfile(object):
     """Helper for the file storing a single shelve
 
@@ -290,6 +294,32 @@ def mutableancestors(ctx):
                 if parent.mutable():
                     visit.append(parent)
 
+def getcommitfunc(extra, interactive, editor=False):
+    def commitfunc(ui, repo, message, match, opts):
+        hasmq = util.safehasattr(repo, 'mq')
+        if hasmq:
+            saved, repo.mq.checkapplied = repo.mq.checkapplied, False
+        backup = repo.ui.backupconfig('phases', 'new-commit')
+        try:
+            repo.ui.setconfig('phases', 'new-commit', phases.secret)
+            editor_ = False
+            if editor:
+                editor_ = cmdutil.getcommiteditor(editform='shelve.shelve',
+                                                  **opts)
+            return repo.commit(message, shelveuser, opts.get('date'), match,
+                               editor=editor_, extra=extra)
+        finally:
+            repo.ui.restoreconfig(backup)
+            if hasmq:
+                repo.mq.checkapplied = saved
+
+    def interactivecommitfunc(ui, repo, *pats, **opts):
+        match = scmutil.match(repo['.'], pats, {})
+        message = opts['message']
+        return commitfunc(ui, repo, message, match, opts)
+
+    return interactivecommitfunc if interactive else commitfunc
+
 def _docreatecmd(ui, repo, pats, opts):
     wctx = repo[None]
     parents = wctx.parents()
@@ -297,9 +327,6 @@ def _docreatecmd(ui, repo, pats, opts):
         raise error.Abort(_('cannot shelve while merging'))
     parent = parents[0]
     origbranch = wctx.branch()
-
-    # we never need the user, so we use a generic user for all shelve operations
-    user = 'shelve@localhost'
 
     if parent.node() != nodemod.nullid:
         desc = "changes to: %s" % parent.description().split('\n', 1)[0]
@@ -335,30 +362,11 @@ def _docreatecmd(ui, repo, pats, opts):
             # at bundled commit
             repo.dirstate.setbranch(repo['.'].branch())
 
-        def commitfunc(ui, repo, message, match, opts):
-            hasmq = util.safehasattr(repo, 'mq')
-            if hasmq:
-                saved, repo.mq.checkapplied = repo.mq.checkapplied, False
-            backup = repo.ui.backupconfig('phases', 'new-commit')
-            try:
-                repo.ui. setconfig('phases', 'new-commit', phases.secret)
-                editor = cmdutil.getcommiteditor(editform='shelve.shelve',
-                                                 **opts)
-                return repo.commit(message, user, opts.get('date'), match,
-                                   editor=editor, extra=extra)
-            finally:
-                repo.ui.restoreconfig(backup)
-                if hasmq:
-                    repo.mq.checkapplied = saved
-
-        def interactivecommitfunc(ui, repo, *pats, **opts):
-            match = scmutil.match(repo['.'], pats, {})
-            message = opts['message']
-            return commitfunc(ui, repo, message, match, opts)
+        commitfunc = getcommitfunc(extra, interactive, editor=True)
         if not interactive:
             node = cmdutil.commit(ui, repo, commitfunc, pats, opts)
         else:
-            node = cmdutil.dorecord(ui, repo, interactivecommitfunc, None,
+            node = cmdutil.dorecord(ui, repo, commitfunc, None,
                                     False, cmdutil.recordfilter, *pats, **opts)
         if not node:
             stat = repo.status(match=scmutil.match(repo[None], pats, opts))
@@ -741,21 +749,8 @@ def _dounshelve(ui, repo, *shelved, **opts):
         if s.modified or s.added or s.removed or s.deleted:
             ui.status(_("temporarily committing pending changes "
                         "(restore with 'hg unshelve --abort')\n"))
-            def commitfunc(ui, repo, message, match, opts):
-                hasmq = util.safehasattr(repo, 'mq')
-                if hasmq:
-                    saved, repo.mq.checkapplied = repo.mq.checkapplied, False
-
-                backup = repo.ui.backupconfig('phases', 'new-commit')
-                try:
-                    repo.ui.setconfig('phases', 'new-commit', phases.secret)
-                    return repo.commit(message, 'shelve@localhost',
-                                       opts.get('date'), match)
-                finally:
-                    repo.ui.restoreconfig(backup)
-                    if hasmq:
-                        repo.mq.checkapplied = saved
-
+            commitfunc = getcommitfunc(extra=None, interactive=False,
+                                       editor=False)
             tempopts = {}
             tempopts['message'] = "pending changes temporary commit"
             tempopts['date'] = opts.get('date')
