@@ -504,10 +504,6 @@ class localrepository(object):
                 c.readpending('00changelog.i.a')
         return c
 
-    @property
-    def manifest(self):
-        return self.manifestlog._oldmanifest
-
     def _constructmanifest(self):
         # This is a temporary function while we migrate from manifest to
         # manifestlog. It allows bundlerepo and unionrepo to intercept the
