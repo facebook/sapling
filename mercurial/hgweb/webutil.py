@@ -269,7 +269,7 @@ def changeidctx(repo, changeid):
     try:
         ctx = repo[changeid]
     except error.RepoError:
-        man = repo.manifest
+        man = repo.manifestlog._revlog
         ctx = repo[man.linkrev(man.rev(man.lookup(changeid)))]
 
     return ctx

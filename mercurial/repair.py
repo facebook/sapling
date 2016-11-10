@@ -67,7 +67,7 @@ def _collectbrokencsets(repo, files, striprev):
         _, brokenset = revlog.getstrippoint(striprev)
         s.update([revlog.linkrev(r) for r in brokenset])
 
-    collectone(repo.manifest)
+    collectone(repo.manifestlog._revlog)
     for fname in files:
         collectone(repo.file(fname))
 
@@ -153,7 +153,7 @@ def strip(ui, repo, nodelist, backup=True, topic='backup'):
         tmpbundlefile = _bundle(repo, savebases, saveheads, node, 'temp',
                             compress=False)
 
-    mfst = repo.manifest
+    mfst = repo.manifestlog._revlog
 
     curtr = repo.currenttransaction()
     if curtr is not None:

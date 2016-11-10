@@ -458,7 +458,8 @@ def showmanifest(**args):
         # just avoid crash, we might want to use the 'ff...' hash in future
         return
     args = args.copy()
-    args.update({'rev': repo.manifest.rev(mnode), 'node': hex(mnode)})
+    args.update({'rev': repo.manifestlog._revlog.rev(mnode),
+                 'node': hex(mnode)})
     return templ('manifest', **args)
 
 def shownames(namespace, **args):

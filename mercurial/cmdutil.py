@@ -559,7 +559,7 @@ def openrevlog(repo, cmd, file_, opts):
             if len(dirlog):
                 r = dirlog
         elif mf:
-            r = repo.manifest
+            r = repo.manifestlog._revlog
         elif file_:
             filelog = repo.file(file_)
             if len(filelog):
@@ -1324,7 +1324,8 @@ class changeset_printer(object):
             mnode = ctx.manifestnode()
             # i18n: column positioning for "hg log"
             self.ui.write(_("manifest:    %d:%s\n") %
-                          (self.repo.manifest.rev(mnode), hex(mnode)),
+                          (self.repo.manifestlog._revlog.rev(mnode),
+                           hex(mnode)),
                           label='ui.debug log.manifest')
         # i18n: column positioning for "hg log"
         self.ui.write(_("user:        %s\n") % ctx.user(),

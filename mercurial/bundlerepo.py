@@ -359,7 +359,7 @@ class bundlerepository(localrepo.localrepository):
 
     @localrepo.unfilteredpropertycache
     def filestart(self):
-        self.manifest
+        self.manifestlog
         return self.filestart
 
     def url(self):

@@ -18,7 +18,7 @@ def pdb(ui, repo, msg, **opts):
         'mercurial': mercurial,
         'repo': repo,
         'cl': repo.changelog,
-        'mf': repo.manifest,
+        'mf': repo.manifestlog,
     }
 
     code.interact(msg, local=objects)
@@ -27,7 +27,7 @@ def ipdb(ui, repo, msg, **opts):
     import IPython
 
     cl = repo.changelog
-    mf = repo.manifest
+    mf = repo.manifestlog
     cl, mf # use variables to appease pyflakes
 
     IPython.embed()
