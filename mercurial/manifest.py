@@ -1581,19 +1581,3 @@ class manifest(manifestrevlog):
         self._mancache = util.lrucachedict(cachesize)
         self._treeinmem = usetreemanifest
         super(manifest, self).__init__(opener, dir=dir, dirlogcache=dirlogcache)
-
-    def _newmanifest(self, data=''):
-        if self._treeinmem:
-            return treemanifest(self._dir, data)
-        return manifestdict(data)
-
-    def dirlog(self, dir):
-        """This overrides the base revlog implementation to allow construction
-        'manifest' types instead of manifestrevlog types. This is only needed
-        until we migrate off the 'manifest' type."""
-        if dir:
-            assert self._treeondisk
-        if dir not in self._dirlogcache:
-            self._dirlogcache[dir] = manifest(self.opener, dir,
-                                              self._dirlogcache)
-        return self._dirlogcache[dir]
