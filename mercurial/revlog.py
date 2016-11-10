@@ -597,7 +597,7 @@ class revlog(object):
                         visit.append(p)
         missing = list(missing)
         missing.sort()
-        return has, [self.node(r) for r in missing]
+        return has, [self.node(miss) for miss in missing]
 
     def incrementalmissingrevs(self, common=None):
         """Return an object that can be used to incrementally compute the
@@ -749,10 +749,10 @@ class revlog(object):
                 # include roots that aren't ancestors.
 
                 # Filter out roots that aren't ancestors of heads
-                roots = [n for n in roots if n in ancestors]
+                roots = [root for root in roots if root in ancestors]
                 # Recompute the lowest revision
                 if roots:
-                    lowestrev = min([self.rev(n) for n in roots])
+                    lowestrev = min([self.rev(root) for root in roots])
                 else:
                     # No more roots?  Return empty list
                     return nonodes
@@ -811,7 +811,7 @@ class revlog(object):
                     # But, obviously its parents aren't.
                     for p in self.parents(n):
                         heads.pop(p, None)
-        heads = [n for n, flag in heads.iteritems() if flag]
+        heads = [head for head, flag in heads.iteritems() if flag]
         roots = list(roots)
         assert orderedout
         assert roots
@@ -963,9 +963,9 @@ class revlog(object):
 
     def _partialmatch(self, id):
         try:
-            n = self.index.partialmatch(id)
-            if n and self.hasnode(n):
-                return n
+            partial = self.index.partialmatch(id)
+            if partial and self.hasnode(partial):
+                return partial
             return None
         except RevlogError:
             # parsers.c radix tree lookup gave multiple matches
