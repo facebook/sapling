@@ -14,8 +14,10 @@ import stat
 
 from .i18n import _
 from .node import (
+    addednodeid,
     bin,
     hex,
+    modifiednodeid,
     newnodeid,
     nullid,
     nullrev,
@@ -1232,23 +1234,13 @@ class committablectx(basectx):
         """
         parents = self.parents()
 
-        man1 = parents[0].manifest()
-        man = man1.copy()
-        if len(parents) > 1:
-            man2 = self.p2().manifest()
-            def getman(f):
-                if f in man1:
-                    return man1
-                return man2
-        else:
-            getman = lambda f: man1
+        man = parents[0].manifest().copy()
 
-        copied = self._repo.dirstate.copies()
         ff = self._flagfunc
-        for i, l in (("a", self._status.added), ("m", self._status.modified)):
+        for i, l in ((addednodeid, self._status.added),
+                     (modifiednodeid, self._status.modified)):
             for f in l:
-                orig = copied.get(f, f)
-                man[f] = getman(orig).get(orig, nullid) + i
+                man[f] = i
                 try:
                     man.setflag(f, ff(f))
                 except OSError:

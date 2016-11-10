@@ -15,6 +15,7 @@ import struct
 
 from .i18n import _
 from .node import (
+    addednodeid,
     bin,
     hex,
     nullhex,
@@ -873,7 +874,7 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, matcher,
                     else:
                         actions[f] = ('cd', (f, None, f, False, pa.node()),
                                       "prompt changed/deleted")
-                elif n1[20:] == 'a':
+                elif n1 == addednodeid:
                     # This extra 'a' is added by working copy manifest to mark
                     # the file as locally added. We should forget it instead of
                     # deleting it.
