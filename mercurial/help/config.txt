@@ -1410,8 +1410,8 @@ profiling is done using lsprof.
       identify the expensive parts of a non-trivial function.
     ``stat``
       Use a statistical profiler, statprof. This profiler is most
-      most useful for profiling commands that run for longer than
-      about 0.1 seconds.
+      useful for profiling commands that run for longer than about 0.1
+      seconds.
 
 ``format``
     Profiling format.  Specific to the ``ls`` instrumenting profiler.
