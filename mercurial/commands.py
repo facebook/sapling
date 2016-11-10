@@ -1858,40 +1858,6 @@ def copy(ui, repo, *pats, **opts):
     with repo.wlock(False):
         return cmdutil.copy(ui, repo, pats, opts)
 
-@command('debuggetbundle',
-    [('H', 'head', [], _('id of head node'), _('ID')),
-    ('C', 'common', [], _('id of common node'), _('ID')),
-    ('t', 'type', 'bzip2', _('bundle compression type to use'), _('TYPE'))],
-    _('REPO FILE [-H|-C ID]...'),
-    norepo=True)
-def debuggetbundle(ui, repopath, bundlepath, head=None, common=None, **opts):
-    """retrieves a bundle from a repo
-
-    Every ID must be a full-length hex node id string. Saves the bundle to the
-    given file.
-    """
-    repo = hg.peer(ui, opts, repopath)
-    if not repo.capable('getbundle'):
-        raise error.Abort("getbundle() not supported by target repository")
-    args = {}
-    if common:
-        args['common'] = [bin(s) for s in common]
-    if head:
-        args['heads'] = [bin(s) for s in head]
-    # TODO: get desired bundlecaps from command line.
-    args['bundlecaps'] = None
-    bundle = repo.getbundle('debug', **args)
-
-    bundletype = opts.get('type', 'bzip2').lower()
-    btypes = {'none': 'HG10UN',
-              'bzip2': 'HG10BZ',
-              'gzip': 'HG10GZ',
-              'bundle2': 'HG20'}
-    bundletype = btypes.get(bundletype)
-    if bundletype not in bundle2.bundletypes:
-        raise error.Abort(_('unknown bundle type specified with --type'))
-    bundle2.writebundle(ui, bundle, bundlepath, bundletype)
-
 @command('debugignore', [], '[FILE]')
 def debugignore(ui, repo, *files, **opts):
     """display the combined ignore pattern and information about ignored files
