@@ -696,6 +696,17 @@ def _rebaserestoredcommit(ui, repo, opts, tr, oldtiprev, basename, pctx,
         shelvectx = tmpwctx
     return shelvectx
 
+def _forgetunknownfiles(repo, shelvectx, addedbefore):
+    # Forget any files that were unknown before the shelve, unknown before
+    # unshelve started, but are now added.
+    shelveunknown = shelvectx.extra().get('shelve_unknown')
+    if not shelveunknown:
+        return
+    shelveunknown = frozenset(shelveunknown.split('\0'))
+    addedafter = frozenset(repo.status().added)
+    toforget = (addedafter & shelveunknown) - addedbefore
+    repo[None].forget(toforget)
+
 @command('unshelve',
          [('a', 'abort', None,
            _('abort an incomplete unshelve operation')),
@@ -832,15 +843,7 @@ def _dounshelve(ui, repo, *shelved, **opts):
                                           branchtorestore)
         mergefiles(ui, repo, pctx, shelvectx)
         restorebranch(ui, repo, branchtorestore)
-
-        # Forget any files that were unknown before the shelve, unknown before
-        # unshelve started, but are now added.
-        shelveunknown = shelvectx.extra().get('shelve_unknown')
-        if shelveunknown:
-            shelveunknown = frozenset(shelveunknown.split('\0'))
-            addedafter = frozenset(repo.status().added)
-            toforget = (addedafter & shelveunknown) - addedbefore
-            repo[None].forget(toforget)
+        _forgetunknownfiles(repo, shelvectx, addedbefore)
 
         shelvedstate.clear(repo)
 
