@@ -650,6 +650,14 @@ def _commitworkingcopychanges(ui, repo, opts, tmpwctx):
     tmpwctx = repo[node]
     return tmpwctx, addedbefore
 
+def _unshelverestorecommit(ui, repo, basename, oldquiet):
+    """Recreate commit in the repository during the unshelve"""
+    ui.quiet = True
+    shelvedfile(repo, basename, 'hg').applybundle()
+    shelvectx = repo['tip']
+    ui.quiet = oldquiet
+    return repo, shelvectx
+
 @command('unshelve',
          [('a', 'abort', None,
            _('abort an incomplete unshelve operation')),
@@ -775,12 +783,7 @@ def _dounshelve(ui, repo, *shelved, **opts):
         tmpwctx, addedbefore = _commitworkingcopychanges(ui, repo, opts,
                                                          tmpwctx)
 
-        ui.quiet = True
-        shelvedfile(repo, basename, 'hg').applybundle()
-
-        ui.quiet = oldquiet
-
-        shelvectx = repo['tip']
+        repo, shelvectx = _unshelverestorecommit(ui, repo, basename, oldquiet)
 
         branchtorestore = ''
         if shelvectx.branch() != shelvectx.p1().branch():
