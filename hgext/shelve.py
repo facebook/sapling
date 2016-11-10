@@ -243,6 +243,36 @@ def createcmd(ui, repo, pats, opts):
         cmdutil.checkunfinished(repo)
         return _docreatecmd(ui, repo, pats, opts)
 
+def getshelvename(repo, parent, opts):
+    """Decide on the name this shelve is going to have"""
+    def gennames():
+        yield label
+        for i in xrange(1, 100):
+            yield '%s-%02d' % (label, i)
+    name = opts.get('name')
+    label = repo._activebookmark or parent.branch() or 'default'
+    # slashes aren't allowed in filenames, therefore we rename it
+    label = label.replace('/', '_')
+
+    if name:
+        if shelvedfile(repo, name, 'hg').exists():
+            e = _("a shelved change named '%s' already exists") % name
+            raise error.Abort(e)
+    else:
+        for n in gennames():
+            if not shelvedfile(repo, n, 'hg').exists():
+                name = n
+                break
+        else:
+            raise error.Abort(_("too many shelved changes named '%s'") % label)
+
+    # ensure we are not creating a subdirectory or a hidden file
+    if '/' in name or '\\' in name:
+        raise error.Abort(_('shelved change names may not contain slashes'))
+    if name.startswith('.'):
+        raise error.Abort(_("shelved change names may not start with '.'"))
+    return name
+
 def _docreatecmd(ui, repo, pats, opts):
     def mutableancestors(ctx):
         """return all mutable ancestors for ctx (included)
@@ -270,15 +300,6 @@ def _docreatecmd(ui, repo, pats, opts):
 
     # we never need the user, so we use a generic user for all shelve operations
     user = 'shelve@localhost'
-    label = repo._activebookmark or parent.branch() or 'default'
-
-    # slashes aren't allowed in filenames, therefore we rename it
-    label = label.replace('/', '_')
-
-    def gennames():
-        yield label
-        for i in xrange(1, 100):
-            yield '%s-%02d' % (label, i)
 
     if parent.node() != nodemod.nullid:
         desc = "changes to: %s" % parent.description().split('\n', 1)[0]
@@ -288,8 +309,6 @@ def _docreatecmd(ui, repo, pats, opts):
     if not opts.get('message'):
         opts['message'] = desc
 
-    name = opts.get('name')
-
     lock = tr = None
     try:
         lock = repo.lock()
@@ -298,28 +317,11 @@ def _docreatecmd(ui, repo, pats, opts):
         # pull races. ensure we don't print the abort message to stderr.
         tr = repo.transaction('commit', report=lambda x: None)
 
-        if name:
-            if shelvedfile(repo, name, 'hg').exists():
-                raise error.Abort(_("a shelved change named '%s' already exists"
-                                   ) % name)
-        else:
-            for n in gennames():
-                if not shelvedfile(repo, n, 'hg').exists():
-                    name = n
-                    break
-            else:
-                raise error.Abort(_("too many shelved changes named '%s'") %
-                                 label)
-
-        # ensure we are not creating a subdirectory or a hidden file
-        if '/' in name or '\\' in name:
-            raise error.Abort(_('shelved change names may not contain slashes'))
-        if name.startswith('.'):
-            raise error.Abort(_("shelved change names may not start with '.'"))
         interactive = opts.get('interactive', False)
         includeunknown = (opts.get('unknown', False) and
                           not opts.get('addremove', False))
 
+        name = getshelvename(repo, parent, opts)
         extra={}
         if includeunknown:
             s = repo.status(match=scmutil.match(repo[None], pats, opts),
