@@ -482,19 +482,20 @@ class rebaseruntime(object):
             ui.note(_("update back to initial working directory parent\n"))
             hg.updaterepo(repo, newwd, False)
 
+        if self.currentbookmarks:
+            with repo.transaction('bookmark') as tr:
+                updatebookmarks(repo, targetnode, nstate,
+                                self.currentbookmarks, tr)
+                if self.activebookmark not in repo._bookmarks:
+                    # active bookmark was divergent one and has been deleted
+                    self.activebookmark = None
+
         if not self.keepf:
             collapsedas = None
             if self.collapsef:
                 collapsedas = newnode
             clearrebased(ui, repo, self.state, self.skipped, collapsedas)
 
-        with repo.transaction('bookmark') as tr:
-            if self.currentbookmarks:
-                updatebookmarks(repo, targetnode, nstate,
-                                self.currentbookmarks, tr)
-                if self.activebookmark not in repo._bookmarks:
-                    # active bookmark was divergent one and has been deleted
-                    self.activebookmark = None
         clearstatus(repo)
         clearcollapsemsg(repo)
 
