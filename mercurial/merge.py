@@ -18,6 +18,7 @@ from .node import (
     addednodeid,
     bin,
     hex,
+    modifiednodeid,
     nullhex,
     nullid,
     nullrev,
@@ -815,7 +816,7 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, matcher,
     if '.hgsubstate' in m1:
         # check whether sub state is modified
         if any(wctx.sub(s).dirty() for s in wctx.substate):
-            m1['.hgsubstate'] += '+'
+            m1['.hgsubstate'] = modifiednodeid
 
     # Compare manifests
     if matcher is not None:
