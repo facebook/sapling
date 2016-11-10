@@ -1183,7 +1183,7 @@ class manifestrevlog(revlog.revlog):
                                                     self._dirlogcache)
         return self._dirlogcache[dir]
 
-    def add(self, m, transaction, link, p1, p2, added, removed):
+    def add(self, m, transaction, link, p1, p2, added, removed, readtree=None):
         if (p1 in self.fulltextcache and util.safehasattr(m, 'fastdelta')
             and not self._usemanifestv2):
             # If our first parent is in the manifest cache, we can
@@ -1206,9 +1206,10 @@ class manifestrevlog(revlog.revlog):
             # through to the revlog layer, and let it handle the delta
             # process.
             if self._treeondisk:
-                m1 = self.read(p1)
-                m2 = self.read(p2)
-                n = self._addtree(m, transaction, link, m1, m2)
+                assert readtree, "readtree must be set for treemanifest writes"
+                m1 = readtree(self._dir, p1)
+                m2 = readtree(self._dir, p2)
+                n = self._addtree(m, transaction, link, m1, m2, readtree)
                 arraytext = None
             else:
                 text = m.text(self._usemanifestv2)
@@ -1220,14 +1221,15 @@ class manifestrevlog(revlog.revlog):
 
         return n
 
-    def _addtree(self, m, transaction, link, m1, m2):
+    def _addtree(self, m, transaction, link, m1, m2, readtree):
         # If the manifest is unchanged compared to one parent,
         # don't write a new revision
         if m.unmodifiedsince(m1) or m.unmodifiedsince(m2):
             return m.node()
         def writesubtree(subm, subp1, subp2):
             sublog = self.dirlog(subm.dir())
-            sublog.add(subm, transaction, link, subp1, subp2, None, None)
+            sublog.add(subm, transaction, link, subp1, subp2, None, None,
+                       readtree=readtree)
         m.writesubtrees(m1, m2, writesubtree)
         text = m.dirtext(self._usemanifestv2)
         # Double-check whether contents are unchanged to one parent
@@ -1449,8 +1451,10 @@ class memtreemanifestctx(object):
         return self._treemanifest
 
     def write(self, transaction, link, p1, p2, added, removed):
+        def readtree(dir, node):
+            return self._repo.manifestlog.get(dir, node).read()
         return self._revlog().add(self._treemanifest, transaction, link, p1, p2,
-                                  added, removed)
+                                  added, removed, readtree=readtree)
 
 class treemanifestctx(object):
     def __init__(self, repo, dir, node):
