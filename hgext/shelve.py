@@ -320,6 +320,14 @@ def getcommitfunc(extra, interactive, editor=False):
 
     return interactivecommitfunc if interactive else commitfunc
 
+def _nothingtoshelvemessaging(ui, repo, pats, opts):
+    stat = repo.status(match=scmutil.match(repo[None], pats, opts))
+    if stat.deleted:
+        ui.status(_("nothing changed (%d missing files, see "
+                    "'hg status')\n") % len(stat.deleted))
+    else:
+        ui.status(_("nothing changed\n"))
+
 def _docreatecmd(ui, repo, pats, opts):
     wctx = repo[None]
     parents = wctx.parents()
@@ -369,12 +377,7 @@ def _docreatecmd(ui, repo, pats, opts):
             node = cmdutil.dorecord(ui, repo, commitfunc, None,
                                     False, cmdutil.recordfilter, *pats, **opts)
         if not node:
-            stat = repo.status(match=scmutil.match(repo[None], pats, opts))
-            if stat.deleted:
-                ui.status(_("nothing changed (%d missing files, see "
-                            "'hg status')\n") % len(stat.deleted))
-            else:
-                ui.status(_("nothing changed\n"))
+            _nothingtoshelvemessaging(ui, repo, pats, opts)
             return 1
 
         bases = list(mutableancestors(repo[node]))
