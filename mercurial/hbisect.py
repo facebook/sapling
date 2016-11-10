@@ -98,7 +98,7 @@ def bisect(changelog, state):
     tot = len(candidates)
     unskipped = [c for c in candidates if (c not in skip) and (c != badrev)]
     if tot == 1 or not unskipped:
-        return ([changelog.node(rev) for rev in candidates], 0, good)
+        return ([changelog.node(c) for c in candidates], 0, good)
     perfect = tot // 2
 
     # find the best node to test
