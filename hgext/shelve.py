@@ -335,6 +335,13 @@ def _shelvecreatedcommit(repo, node, name):
                    fp=shelvedfile(repo, name, 'patch').opener('wb'),
                    opts=mdiff.diffopts(git=True))
 
+def _includeunknownfiles(repo, pats, opts, extra):
+    s = repo.status(match=scmutil.match(repo[None], pats, opts),
+                    unknown=True)
+    if s.unknown:
+        extra['shelve_unknown'] = '\0'.join(s.unknown)
+        repo[None].add(s.unknown)
+
 def _docreatecmd(ui, repo, pats, opts):
     wctx = repo[None]
     parents = wctx.parents()
@@ -364,13 +371,9 @@ def _docreatecmd(ui, repo, pats, opts):
                           not opts.get('addremove', False))
 
         name = getshelvename(repo, parent, opts)
-        extra={}
+        extra = {}
         if includeunknown:
-            s = repo.status(match=scmutil.match(repo[None], pats, opts),
-                            unknown=True)
-            if s.unknown:
-                extra['shelve_unknown'] = '\0'.join(s.unknown)
-                repo[None].add(s.unknown)
+            _includeunknownfiles(repo, pats, opts, extra)
 
         if _iswctxonnewbranch(repo) and not _isbareshelve(pats, opts):
             # In non-bare shelve we don't store newly created branch
