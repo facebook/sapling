@@ -342,6 +342,9 @@ def _includeunknownfiles(repo, pats, opts, extra):
         extra['shelve_unknown'] = '\0'.join(s.unknown)
         repo[None].add(s.unknown)
 
+def _finishshelve(repo):
+    _aborttransaction(repo)
+
 def _docreatecmd(ui, repo, pats, opts):
     wctx = repo[None]
     parents = wctx.parents()
@@ -399,7 +402,7 @@ def _docreatecmd(ui, repo, pats, opts):
         if origbranch != repo['.'].branch() and not _isbareshelve(pats, opts):
             repo.dirstate.setbranch(origbranch)
 
-        _aborttransaction(repo)
+        _finishshelve(repo)
     finally:
         lockmod.release(tr, lock)
 
