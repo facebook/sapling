@@ -425,7 +425,7 @@ class verifier(object):
 
             # cross-check
             if f in filenodes:
-                fns = [(lr, n) for n, lr in filenodes[f].iteritems()]
+                fns = [(v, k) for k, v in filenodes[f].iteritems()]
                 for lr, node in sorted(fns):
                     self.err(lr, _("manifest refers to unknown revision %s") %
                              short(node), f)
