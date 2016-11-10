@@ -16,6 +16,7 @@ from .i18n import _
 from .node import (
     bin,
     hex,
+    newnodeid,
     nullid,
     nullrev,
     short,
@@ -38,11 +39,6 @@ from . import (
 )
 
 propertycache = util.propertycache
-
-# Phony node value to stand-in for new files in some uses of
-# manifests. Manifests support 21-byte hashes for nodes which are
-# dirty in the working copy.
-_newnode = '!' * 21
 
 nonascii = re.compile(r'[^\x21-\x7f]').search
 
@@ -142,7 +138,7 @@ class basectx(object):
                 removed.append(fn)
             elif flag1 != flag2:
                 modified.append(fn)
-            elif node2 != _newnode:
+            elif node2 != newnodeid:
                 # When comparing files between two commits, we save time by
                 # not comparing the file contents when the nodeids differ.
                 # Note that this means we incorrectly report a reverted change
@@ -1587,7 +1583,7 @@ class workingctx(committablectx):
         """
         mf = self._repo['.']._manifestmatches(match, s)
         for f in s.modified + s.added:
-            mf[f] = _newnode
+            mf[f] = newnodeid
             mf.setflag(f, self.flags(f))
         for f in s.removed:
             if f in mf:
