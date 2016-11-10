@@ -508,7 +508,7 @@ class localrepository(object):
         # This is a temporary function while we migrate from manifest to
         # manifestlog. It allows bundlerepo and unionrepo to intercept the
         # manifest creation.
-        return manifest.manifest(self.svfs)
+        return manifest.manifestrevlog(self.svfs)
 
     @storecache('00manifest.i')
     def manifestlog(self):

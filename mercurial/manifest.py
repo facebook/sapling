@@ -1558,22 +1558,3 @@ class treemanifestctx(object):
 
     def find(self, key):
         return self.read().find(key)
-
-class manifest(manifestrevlog):
-    def __init__(self, opener, dir='', dirlogcache=None):
-        '''The 'dir' and 'dirlogcache' arguments are for internal use by
-        manifest.manifest only. External users should create a root manifest
-        log with manifest.manifest(opener) and call dirlog() on it.
-        '''
-        # During normal operations, we expect to deal with not more than four
-        # revs at a time (such as during commit --amend). When rebasing large
-        # stacks of commits, the number can go up, hence the config knob below.
-        cachesize = 4
-        usetreemanifest = False
-        opts = getattr(opener, 'options', None)
-        if opts is not None:
-            cachesize = opts.get('manifestcachesize', cachesize)
-            usetreemanifest = opts.get('treemanifest', usetreemanifest)
-        self._mancache = util.lrucachedict(cachesize)
-        self._treeinmem = usetreemanifest
-        super(manifest, self).__init__(opener, dir=dir, dirlogcache=dirlogcache)
