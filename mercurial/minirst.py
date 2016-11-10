@@ -697,7 +697,7 @@ def format(text, width=80, indent=0, keep=None, style='plain', section=None):
         if collapse:
             synthetic.reverse()
             for s in synthetic:
-                path = [blocks[i]['lines'][0] for i in s]
+                path = [blocks[syn]['lines'][0] for syn in s]
                 real = s[-1] + 2
                 realline = blocks[real]['lines']
                 realline[0] = ('"%s"' %
