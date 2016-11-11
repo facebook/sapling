@@ -589,6 +589,10 @@ extmodules = [
               ['hgext/fsmonitor/pywatchman/bser.c']),
     ]
 
+sys.path.insert(0, 'contrib/python-zstandard')
+import setup_zstd
+extmodules.append(setup_zstd.get_c_extension('mercurial.zstd'))
+
 try:
     from distutils import cygwinccompiler
 
