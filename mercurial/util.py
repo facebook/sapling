@@ -3021,15 +3021,27 @@ class compressormanager(object):
         """Obtain a compression engine registered to a bundle name.
 
         Will raise KeyError if the bundle type isn't registered.
+
+        Will abort if the engine is known but not available.
         """
-        return self._engines[self._bundlenames[bundlename]]
+        engine = self._engines[self._bundlenames[bundlename]]
+        if not engine.available():
+            raise error.Abort(_('compression engine %s could not be loaded') %
+                              engine.name())
+        return engine
 
     def forbundletype(self, bundletype):
         """Obtain a compression engine registered to a bundle type.
 
         Will raise KeyError if the bundle type isn't registered.
+
+        Will abort if the engine is known but not available.
         """
-        return self._engines[self._bundletypes[bundletype]]
+        engine = self._engines[self._bundletypes[bundletype]]
+        if not engine.available():
+            raise error.Abort(_('compression engine %s could not be loaded') %
+                              engine.name())
+        return engine
 
 compengines = compressormanager()
 
