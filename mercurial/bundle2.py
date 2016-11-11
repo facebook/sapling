@@ -515,7 +515,7 @@ class bundle20(object):
 
     def setcompression(self, alg):
         """setup core part compression to <alg>"""
-        if alg is None:
+        if alg in (None, 'UN'):
             return
         assert not any(n.lower() == 'Compression' for n, v in self._params)
         self.addparam('Compression', alg)
