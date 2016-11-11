@@ -3047,6 +3047,15 @@ class compressionengine(object):
         """
         raise NotImplementedError()
 
+    def available(self):
+        """Whether the compression engine is available.
+
+        The intent of this method is to allow optional compression engines
+        that may not be available in all installations (such as engines relying
+        on C extensions that may not be present).
+        """
+        return True
+
     def bundletype(self):
         """Describes bundle identifiers for this engine.
 
