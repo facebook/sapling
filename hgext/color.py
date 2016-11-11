@@ -275,8 +275,8 @@ def _modesetup(ui, coloropt):
 
     def modewarn():
         # only warn if color.mode was explicitly set and we're in
-        # an interactive terminal
-        if mode == realmode and ui.interactive():
+        # a formatted terminal
+        if mode == realmode and ui.formatted():
             ui.warn(_('warning: failed to set color mode to %s\n') % mode)
 
     if realmode == 'win32':
