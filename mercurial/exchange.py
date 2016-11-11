@@ -37,12 +37,6 @@ from . import (
 urlerr = util.urlerr
 urlreq = util.urlreq
 
-# Maps bundle compression human names to internal representation.
-_bundlespeccompressions = {'none': None,
-                           'bzip2': 'BZ',
-                           'gzip': 'GZ',
-                          }
-
 # Maps bundle version human names to changegroup versions.
 _bundlespeccgversions = {'v1': '01',
                          'v2': '02',
@@ -114,7 +108,7 @@ def parsebundlespec(repo, spec, strict=True, externalnames=False):
     if '-' in spec:
         compression, version = spec.split('-', 1)
 
-        if compression not in _bundlespeccompressions:
+        if compression not in util.compengines.supportedbundlenames:
             raise error.UnsupportedBundleSpecification(
                     _('%s compression is not supported') % compression)
 
@@ -130,7 +124,7 @@ def parsebundlespec(repo, spec, strict=True, externalnames=False):
 
         spec, params = parseparams(spec)
 
-        if spec in _bundlespeccompressions:
+        if spec in util.compengines.supportedbundlenames:
             compression = spec
             version = 'v1'
             if 'generaldelta' in repo.requirements:
@@ -157,7 +151,8 @@ def parsebundlespec(repo, spec, strict=True, externalnames=False):
                       ', '.join(sorted(missingreqs)))
 
     if not externalnames:
-        compression = _bundlespeccompressions[compression]
+        engine = util.compengines.forbundlename(compression)
+        compression = engine.bundletype()[1]
         version = _bundlespeccgversions[version]
     return compression, version, params
 
@@ -196,10 +191,10 @@ def getbundlespec(ui, fh):
     restored.
     """
     def speccompression(alg):
-        for k, v in _bundlespeccompressions.items():
-            if v == alg:
-                return k
-        return None
+        try:
+            return util.compengines.forbundletype(alg).bundletype()[0]
+        except KeyError:
+            return None
 
     b = readbundle(ui, fh, None)
     if isinstance(b, changegroup.cg1unpacker):
