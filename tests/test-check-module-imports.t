@@ -159,6 +159,7 @@ outputs, which should be fixed later.
   $ hg locate 'set:**.py or grep(r"^#!.*?python")' \
   > 'tests/**.t' \
   > -X contrib/debugshell.py \
+  > -X contrib/python-zstandard/ \
   > -X contrib/win32/hgwebdir_wsgi.py \
   > -X doc/gendoc.py \
   > -X doc/hgmanpage.py \

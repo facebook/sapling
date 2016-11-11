@@ -4,6 +4,17 @@
   $ cd "$TESTDIR"/..
 
   $ hg files 'set:(**.py)' | sed 's|\\|/|g' | xargs python contrib/check-py3-compat.py
+  contrib/python-zstandard/setup.py not using absolute_import
+  contrib/python-zstandard/setup_zstd.py not using absolute_import
+  contrib/python-zstandard/tests/common.py not using absolute_import
+  contrib/python-zstandard/tests/test_cffi.py not using absolute_import
+  contrib/python-zstandard/tests/test_compressor.py not using absolute_import
+  contrib/python-zstandard/tests/test_data_structures.py not using absolute_import
+  contrib/python-zstandard/tests/test_decompressor.py not using absolute_import
+  contrib/python-zstandard/tests/test_estimate_sizes.py not using absolute_import
+  contrib/python-zstandard/tests/test_module_attributes.py not using absolute_import
+  contrib/python-zstandard/tests/test_roundtrip.py not using absolute_import
+  contrib/python-zstandard/tests/test_train_dictionary.py not using absolute_import
   hgext/fsmonitor/pywatchman/__init__.py not using absolute_import
   hgext/fsmonitor/pywatchman/__init__.py requires print_function
   hgext/fsmonitor/pywatchman/capabilities.py not using absolute_import
