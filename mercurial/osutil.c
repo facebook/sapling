@@ -727,6 +727,63 @@ bail:
 }
 
 #endif /* CMSG_LEN */
+
+#if defined(HAVE_SETPROCTITLE)
+/* setproctitle is the first choice - available in FreeBSD */
+#define SETPROCNAME_USE_SETPROCTITLE
+#elif (defined(__linux__) || defined(__APPLE__)) && PY_MAJOR_VERSION == 2
+/* rewrite the argv buffer in place - works in Linux and OS X. Py_GetArgcArgv
+ * in Python 3 returns the copied wchar_t **argv, thus unsupported. */
+#define SETPROCNAME_USE_ARGVREWRITE
+#else
+#define SETPROCNAME_USE_NONE
+#endif
+
+#ifndef SETPROCNAME_USE_NONE
+static PyObject *setprocname(PyObject *self, PyObject *args)
+{
+	const char *name = NULL;
+	if (!PyArg_ParseTuple(args, "s", &name))
+		return NULL;
+
+#if defined(SETPROCNAME_USE_SETPROCTITLE)
+	setproctitle("%s", name);
+#elif defined(SETPROCNAME_USE_ARGVREWRITE)
+	{
+		static char *argvstart = NULL;
+		static size_t argvsize = 0;
+		if (argvstart == NULL) {
+			int argc = 0, i;
+			char **argv = NULL;
+			char *argvend;
+			extern void Py_GetArgcArgv(int *argc, char ***argv);
+			Py_GetArgcArgv(&argc, &argv);
+
+			/* Check the memory we can use. Typically, argv[i] and
+			 * argv[i + 1] are continuous. */
+			argvend = argvstart = argv[0];
+			for (i = 0; i < argc; ++i) {
+				if (argv[i] > argvend || argv[i] < argvstart)
+					break; /* not continuous */
+				size_t len = strlen(argv[i]);
+				argvend = argv[i] + len + 1 /* '\0' */;
+			}
+			if (argvend > argvstart) /* sanity check */
+				argvsize = argvend - argvstart;
+		}
+
+		if (argvstart && argvsize > 1) {
+			int n = snprintf(argvstart, argvsize, "%s", name);
+			if (n >= 0 && (size_t)n < argvsize)
+				memset(argvstart + n, 0, argvsize - n);
+		}
+	}
+#endif
+
+	Py_RETURN_NONE;
+}
+#endif /* ndef SETPROCNAME_USE_NONE */
+
 #endif /* ndef _WIN32 */
 
 static PyObject *listdir(PyObject *self, PyObject *args, PyObject *kwargs)
@@ -899,7 +956,11 @@ static PyMethodDef methods[] = {
 	{"recvfds", (PyCFunction)recvfds, METH_VARARGS,
 	 "receive list of file descriptors via socket\n"},
 #endif
+#ifndef SETPROCNAME_USE_NONE
+	{"setprocname", (PyCFunction)setprocname, METH_VARARGS,
+	 "set process title (best-effort)\n"},
 #endif
+#endif /* ndef _WIN32 */
 #ifdef __APPLE__
 	{
 		"isgui", (PyCFunction)isgui, METH_NOARGS,
