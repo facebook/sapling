@@ -3197,5 +3197,50 @@ class _noopengine(compressionengine):
 
 compengines.register(_noopengine())
 
+class _zstdengine(compressionengine):
+    def name(self):
+        return 'zstd'
+
+    @propertycache
+    def _module(self):
+        # Not all installs have the zstd module available. So defer importing
+        # until first access.
+        try:
+            from . import zstd
+            # Force delayed import.
+            zstd.__version__
+            return zstd
+        except ImportError:
+            return None
+
+    def available(self):
+        return bool(self._module)
+
+    def bundletype(self):
+        return 'zstd', 'ZS'
+
+    def compressstream(self, it, opts=None):
+        opts = opts or {}
+        # zstd level 3 is almost always significantly faster than zlib
+        # while providing no worse compression. It strikes a good balance
+        # between speed and compression.
+        level = opts.get('level', 3)
+
+        zstd = self._module
+        z = zstd.ZstdCompressor(level=level).compressobj()
+        for chunk in it:
+            data = z.compress(chunk)
+            if data:
+                yield data
+
+        yield z.flush()
+
+    def decompressorreader(self, fh):
+        zstd = self._module
+        dctx = zstd.ZstdDecompressor()
+        return chunkbuffer(dctx.read_from(fh))
+
+compengines.register(_zstdengine())
+
 # convenient shortcut
 dst = debugstacktrace
