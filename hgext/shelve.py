@@ -707,6 +707,14 @@ def _forgetunknownfiles(repo, shelvectx, addedbefore):
     toforget = (addedafter & shelveunknown) - addedbefore
     repo[None].forget(toforget)
 
+def _finishunshelve(repo, oldtiprev, tr):
+    # The transaction aborting will strip all the commits for us,
+    # but it doesn't update the inmemory structures, so addchangegroup
+    # hooks still fire and try to operate on the missing commits.
+    # Clean up manually to prevent this.
+    repo.unfiltered().changelog.strip(oldtiprev, tr)
+    _aborttransaction(repo)
+
 @command('unshelve',
          [('a', 'abort', None,
            _('abort an incomplete unshelve operation')),
@@ -846,16 +854,8 @@ def _dounshelve(ui, repo, *shelved, **opts):
         _forgetunknownfiles(repo, shelvectx, addedbefore)
 
         shelvedstate.clear(repo)
-
-        # The transaction aborting will strip all the commits for us,
-        # but it doesn't update the inmemory structures, so addchangegroup
-        # hooks still fire and try to operate on the missing commits.
-        # Clean up manually to prevent this.
-        repo.unfiltered().changelog.strip(oldtiprev, tr)
-
+        _finishunshelve(repo, oldtiprev, tr)
         unshelvecleanup(ui, repo, basename, opts)
-
-        _aborttransaction(repo)
     finally:
         ui.quiet = oldquiet
         if tr:
