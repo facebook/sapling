@@ -187,9 +187,9 @@ class bundlechangelog(bundlerevlog, changelog.changelog):
         finally:
             self.filteredrevs = oldfilter
 
-class bundlemanifest(bundlerevlog, manifest.manifest):
+class bundlemanifest(bundlerevlog, manifest.manifestrevlog):
     def __init__(self, opener, bundle, linkmapper, dirlogstarts=None, dir=''):
-        manifest.manifest.__init__(self, opener, dir=dir)
+        manifest.manifestrevlog.__init__(self, opener, dir=dir)
         bundlerevlog.__init__(self, opener, self.indexfile, bundle,
                               linkmapper)
         if dirlogstarts is None:
@@ -207,7 +207,7 @@ class bundlemanifest(bundlerevlog, manifest.manifest):
         if node in self.fulltextcache:
             result = self.fulltextcache[node].tostring()
         else:
-            result = manifest.manifest.revision(self, nodeorrev)
+            result = manifest.manifestrevlog.revision(self, nodeorrev)
         return result
 
     def dirlog(self, d):
