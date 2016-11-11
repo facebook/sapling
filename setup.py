@@ -67,6 +67,7 @@ if 'FORCE_SETUPTOOLS' in os.environ:
     from setuptools import setup
 else:
     from distutils.core import setup
+from distutils.ccompiler import new_compiler
 from distutils.core import Command, Extension
 from distutils.dist import Distribution
 from distutils.command.build import build
@@ -553,7 +554,13 @@ common_depends = ['mercurial/bitmanipulation.h',
                   'mercurial/compat.h',
                   'mercurial/util.h']
 
+osutil_cflags = []
 osutil_ldflags = []
+
+# platform specific macros: HAVE_SETPROCTITLE
+for plat, func in [(re.compile('freebsd'), 'setproctitle')]:
+    if plat.search(sys.platform) and hasfunction(new_compiler(), func):
+        osutil_cflags.append('-DHAVE_%s' % func.upper())
 
 if sys.platform == 'darwin':
     osutil_ldflags += ['-framework', 'ApplicationServices']
@@ -575,6 +582,7 @@ extmodules = [
                                     'mercurial/pathencode.c'],
               depends=common_depends),
     Extension('mercurial.osutil', ['mercurial/osutil.c'],
+              extra_compile_args=osutil_cflags,
               extra_link_args=osutil_ldflags,
               depends=common_depends),
     Extension('hgext.fsmonitor.pywatchman.bser',
