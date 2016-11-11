@@ -152,18 +152,18 @@ class unionchangelog(unionrevlog, changelog.changelog):
     def baserevdiff(self, rev1, rev2):
         return changelog.changelog.revdiff(self, rev1, rev2)
 
-class unionmanifest(unionrevlog, manifest.manifest):
+class unionmanifest(unionrevlog, manifest.manifestrevlog):
     def __init__(self, opener, opener2, linkmapper):
-        manifest.manifest.__init__(self, opener)
-        manifest2 = manifest.manifest(opener2)
+        manifest.manifestrevlog.__init__(self, opener)
+        manifest2 = manifest.manifestrevlog(opener2)
         unionrevlog.__init__(self, opener, self.indexfile, manifest2,
                              linkmapper)
 
     def baserevision(self, nodeorrev):
-        return manifest.manifest.revision(self, nodeorrev)
+        return manifest.manifestrevlog.revision(self, nodeorrev)
 
     def baserevdiff(self, rev1, rev2):
-        return manifest.manifest.revdiff(self, rev1, rev2)
+        return manifest.manifestrevlog.revdiff(self, rev1, rev2)
 
 class unionfilelog(unionrevlog, filelog.filelog):
     def __init__(self, opener, path, opener2, linkmapper, repo):
