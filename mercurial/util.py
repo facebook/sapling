@@ -1497,6 +1497,24 @@ class filestat(object):
         except AttributeError:
             return False
 
+    def avoidambig(self, path, old):
+        """Change file stat of specified path to avoid ambiguity
+
+        'old' should be previous filestat of 'path'.
+
+        This skips avoiding ambiguity, if a process doesn't have
+        appropriate privileges for 'path'.
+        """
+        advanced = (old.stat.st_mtime + 1) & 0x7fffffff
+        try:
+            os.utime(path, (advanced, advanced))
+        except OSError as inst:
+            if inst.errno == errno.EPERM:
+                # utime() on the file created by another user causes EPERM,
+                # if a process doesn't have appropriate privileges
+                return
+            raise
+
     def __ne__(self, other):
         return not self == other
 
