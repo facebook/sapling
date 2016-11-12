@@ -115,11 +115,17 @@ def _posixworker(ui, func, staticargs, args):
                 st = _exitstatus(st)
             if st and not problem[0]:
                 problem[0] = st
+                # unregister SIGCHLD handler as all children will be killed
+                signal.signal(signal.SIGCHLD, oldchldhandler)
                 killworkers()
+    def sigchldhandler(signum, frame):
+        waitforworkers(blocking=False)
+    oldchldhandler = signal.signal(signal.SIGCHLD, sigchldhandler)
     for pargs in partition(args, workers):
         pid = os.fork()
         if pid == 0:
             signal.signal(signal.SIGINT, oldhandler)
+            signal.signal(signal.SIGCHLD, oldchldhandler)
             try:
                 os.close(rfd)
                 for i, item in func(*(staticargs + (pargs,))):
@@ -137,6 +143,7 @@ def _posixworker(ui, func, staticargs, args):
     def cleanup():
         signal.signal(signal.SIGINT, oldhandler)
         t.join()
+        signal.signal(signal.SIGCHLD, oldchldhandler)
         status = problem[0]
         if status:
             if status < 0:
