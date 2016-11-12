@@ -1202,8 +1202,7 @@ def diffordiffstat(ui, repo, diffopts, node1, node2, match,
         chunks = patch.diff(repo, node1, node2, match, changes, diffopts,
                             prefix=prefix, relroot=relroot)
         for chunk, label in patch.diffstatui(util.iterlines(chunks),
-                                             width=width,
-                                             git=diffopts.git):
+                                             width=width):
             write(chunk, label=label)
     else:
         for chunk, label in patch.diffui(repo, node1, node2, match,

@@ -505,8 +505,7 @@ def listcmd(ui, repo, pats, opts):
                 for chunk, label in patch.difflabel(iter, difflines):
                     ui.write(chunk, label=label)
             if opts['stat']:
-                for chunk, label in patch.diffstatui(difflines, width=width,
-                                                     git=True):
+                for chunk, label in patch.diffstatui(difflines, width=width):
                     ui.write(chunk, label=label)
 
 def singlepatchcmds(ui, repo, pats, opts, subcommand):

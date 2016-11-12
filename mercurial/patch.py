@@ -2550,7 +2550,7 @@ def diffstatdata(lines):
     addresult()
     return results
 
-def diffstat(lines, width=80, git=False):
+def diffstat(lines, width=80):
     output = []
     stats = diffstatdata(lines)
     maxname, maxtotal, totaladds, totalremoves, hasbinary = diffstatsum(stats)

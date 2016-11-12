@@ -166,7 +166,7 @@ def makepatch(ui, repo, patchlines, opts, _charsets, idx, total, numbered,
         while patchlines and not patchlines[0].strip():
             patchlines.pop(0)
 
-    ds = patch.diffstat(patchlines, git=opts.get('git'))
+    ds = patch.diffstat(patchlines)
     if opts.get('diffstat'):
         body += ds + '\n\n'
 
