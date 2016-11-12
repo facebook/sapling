@@ -11,7 +11,6 @@ import errno
 import os
 import signal
 import sys
-import threading
 
 from .i18n import _
 from . import (
@@ -138,11 +137,9 @@ def _posixworker(ui, func, staticargs, args):
         pids.add(pid)
     os.close(wfd)
     fp = os.fdopen(rfd, 'rb', 0)
-    t = threading.Thread(target=waitforworkers)
-    t.start()
     def cleanup():
         signal.signal(signal.SIGINT, oldhandler)
-        t.join()
+        waitforworkers()
         signal.signal(signal.SIGCHLD, oldchldhandler)
         status = problem[0]
         if status:
