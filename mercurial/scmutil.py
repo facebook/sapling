@@ -1457,8 +1457,7 @@ class checkambigatclosing(closewrapbase):
             newstat = util.filestat(self._origfh.name)
             if newstat.isambig(oldstat):
                 # stat of changed file is ambiguous to original one
-                advanced = (oldstat.stat.st_mtime + 1) & 0x7fffffff
-                os.utime(self._origfh.name, (advanced, advanced))
+                newstat.avoidambig(self._origfh.name, oldstat)
 
     def __exit__(self, exc_type, exc_value, exc_tb):
         self._origfh.__exit__(exc_type, exc_value, exc_tb)
