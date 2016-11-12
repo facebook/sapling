@@ -390,8 +390,7 @@ class abstractvfs(object):
             newstat = util.filestat(dstpath)
             if newstat.isambig(oldstat):
                 # stat of renamed file is ambiguous to original one
-                advanced = (oldstat.stat.st_mtime + 1) & 0x7fffffff
-                os.utime(dstpath, (advanced, advanced))
+                newstat.avoidambig(dstpath, oldstat)
             return ret
         return util.rename(self.join(src), dstpath)
 
