@@ -630,6 +630,26 @@ def unshelvecontinue(ui, repo, state, opts):
         unshelvecleanup(ui, repo, state.name, opts)
         ui.status(_("unshelve of '%s' complete\n") % state.name)
 
+def _commitworkingcopychanges(ui, repo, opts, tmpwctx):
+    """Temporarily commit working copy changes before moving unshelve commit"""
+    # Store pending changes in a commit and remember added in case a shelve
+    # contains unknown files that are part of the pending change
+    s = repo.status()
+    addedbefore = frozenset(s.added)
+    if not (s.modified or s.added or s.removed or s.deleted):
+        return tmpwctx, addedbefore
+    ui.status(_("temporarily committing pending changes "
+                "(restore with 'hg unshelve --abort')\n"))
+    commitfunc = getcommitfunc(extra=None, interactive=False,
+                               editor=False)
+    tempopts = {}
+    tempopts['message'] = "pending changes temporary commit"
+    tempopts['date'] = opts.get('date')
+    ui.quiet = True
+    node = cmdutil.commit(ui, repo, commitfunc, [], tempopts)
+    tmpwctx = repo[node]
+    return tmpwctx, addedbefore
+
 @command('unshelve',
          [('a', 'abort', None,
            _('abort an incomplete unshelve operation')),
@@ -752,21 +772,8 @@ def _dounshelve(ui, repo, *shelved, **opts):
         # and shelvectx is the unshelved changes. Then we merge it all down
         # to the original pctx.
 
-        # Store pending changes in a commit and remember added in case a shelve
-        # contains unknown files that are part of the pending change
-        s = repo.status()
-        addedbefore = frozenset(s.added)
-        if s.modified or s.added or s.removed or s.deleted:
-            ui.status(_("temporarily committing pending changes "
-                        "(restore with 'hg unshelve --abort')\n"))
-            commitfunc = getcommitfunc(extra=None, interactive=False,
-                                       editor=False)
-            tempopts = {}
-            tempopts['message'] = "pending changes temporary commit"
-            tempopts['date'] = opts.get('date')
-            ui.quiet = True
-            node = cmdutil.commit(ui, repo, commitfunc, [], tempopts)
-            tmpwctx = repo[node]
+        tmpwctx, addedbefore = _commitworkingcopychanges(ui, repo, opts,
+                                                         tmpwctx)
 
         ui.quiet = True
         shelvedfile(repo, basename, 'hg').applybundle()
