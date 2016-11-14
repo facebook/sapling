@@ -9,6 +9,23 @@
 
 The linkrevcache extension memorizes some _adjustlinkrev results in a local
 database in the directory '.hg/cache/linkrevdb'.
+
+Config examples::
+
+    [linkrevcache]
+    # Whether to test ancestors or not. (default: True)
+    # - When set to False, the build process will be faster, while the database
+    #   will contain some unnecessary entries (mode-only changes and merges
+    #   where the file node is reused).
+    # - When set to True, the database won't contain unnecessary entries.
+    checkancestor = False
+
+    # Whether to read filelog or not. (default: True)
+    # - When set to False, the build process will be faster, while the database
+    #   will be probably much larger.
+    # - When set to True, filelog will be read and existing linkrevs won't be
+    #   stored in the database.
+    readfilelog = False
 """
 
 import os
@@ -16,8 +33,16 @@ import shutil
 import sys
 
 from mercurial import (
+    cmdutil,
+    filelog,
+    node,
     util,
 )
+from mercurial.i18n import _
+
+cmdtable = {}
+command = cmdutil.command(cmdtable)
+
 _chosendbm = None
 
 def _choosedbm():
@@ -237,3 +262,94 @@ def reposetup(ui, repo):
 
         dbpath = repo.vfs.join(_linkrevdbpath)
         setattr(repo, '_linkrevcache', linkrevdb(dbpath, write=False))
+
+@command('debugbuildlinkrevcache',
+         [('e', 'end', '', _('end revision')),
+          ('', 'copy', False, _('copy the database files to modify them '
+                                'lock-free (EXPERIMENTAL)'))])
+def debugbuildlinkrevcache(ui, repo, *pats, **opts):
+    """build the linkrev database from filelogs"""
+    db = linkrevdb(repo.vfs.join(_linkrevdbpath), write=True,
+                   copyonwrite=opts.get('atomic_temp'))
+    end = int(opts.get('end') or (len(repo) - 1))
+    try:
+        _buildlinkrevcache(ui, repo, db, end)
+    finally:
+        db.close()
+
+def _buildlinkrevcache(ui, repo, db, end):
+    checkancestor = ui.configbool('linkrevcache', 'checkancestor', True)
+    readfilelog = ui.configbool('linkrevcache', 'readfilelog', True)
+
+    repo = repo.unfiltered()
+    cl = repo.changelog
+    idx = cl.index
+    ml = repo.manifestlog
+
+    filelogcache = {}
+
+    def _getfilelog(path):
+        if path not in filelogcache:
+            filelogcache[path] = filelog.filelog(repo.svfs, path)
+        return filelogcache[path]
+
+    start = db.getlastrev() + 1
+
+    # the number of ancestor tests when the slow (Python) stateful (cache
+    # ancestors) algorithm is faster than the fast (C) stateless (walk through
+    # the changelog index every time) algorithm.
+    ancestorcountthreshold = 10
+
+    for rev in xrange(start, end + 1):
+        ui.progress(_('building'), rev, total=end, unit=_('changesets'))
+        clr = cl.changelogrevision(rev)
+        md = ml[clr.manifest].readfast()
+
+        if checkancestor:
+            if len(clr.files) >= ancestorcountthreshold:
+                # we may need to frequently test ancestors against rev,
+                # in this case, pre-calculating rev's ancestors helps.
+                ancestors = cl.ancestors([rev])
+
+                def isancestor(x):
+                    return x in ancestors
+            else:
+                # the C index ancestor testing is faster than Python's
+                # lazyancestors.
+                def isancestor(x):
+                    return x in idx.commonancestorsheads(x, rev)
+
+        for path in clr.files:
+            if path not in md:
+                continue
+
+            fnode = md[path]
+
+            if readfilelog:
+                fl = _getfilelog(path)
+                frev = fl.rev(fnode)
+                lrev = fl.linkrev(frev)
+                if lrev == rev:
+                    continue
+            else:
+                lrev = None
+
+            if checkancestor:
+                linkrevs = set(db.getlinkrevs(path, fnode))
+                if lrev is not None:
+                    linkrevs.add(lrev)
+                if rev in linkrevs:
+                    continue
+                if any(isancestor(l) for l in linkrevs):
+                    continue
+
+            # found a new linkrev!
+            if ui.debugflag:
+                ui.debug('%s@%s: new linkrev %s\n'
+                         % (path, node.hex(fnode), rev))
+
+            db.appendlinkrev(path, fnode, rev)
+
+        db.setlastrev(rev)
+
+    ui.write()  # clear progress bar
