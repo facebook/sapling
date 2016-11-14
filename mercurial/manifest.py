@@ -1278,9 +1278,12 @@ class manifestlog(object):
         """
         return self.get('', node)
 
-    def get(self, dir, node):
+    def get(self, dir, node, verify=True):
         """Retrieves the manifest instance for the given node. Throws a
         LookupError if not found.
+
+        `verify` - if True an exception will be thrown if the node is not in
+                   the revlog
         """
         if node in self._dirmancache.get(dir, ()):
             cachemf = self._dirmancache[dir][node]
@@ -1292,19 +1295,21 @@ class manifestlog(object):
 
         if dir:
             if self._revlog._treeondisk:
-                dirlog = self._revlog.dirlog(dir)
-                if node not in dirlog.nodemap:
-                    raise LookupError(node, dirlog.indexfile,
-                                      _('no node'))
+                if verify:
+                    dirlog = self._revlog.dirlog(dir)
+                    if node not in dirlog.nodemap:
+                        raise LookupError(node, dirlog.indexfile,
+                                          _('no node'))
                 m = treemanifestctx(self._repo, dir, node)
             else:
                 raise error.Abort(
                         _("cannot ask for manifest directory '%s' in a flat "
                           "manifest") % dir)
         else:
-            if node not in self._revlog.nodemap:
-                raise LookupError(node, self._revlog.indexfile,
-                                  _('no node'))
+            if verify:
+                if node not in self._revlog.nodemap:
+                    raise LookupError(node, self._revlog.indexfile,
+                                      _('no node'))
             if self._treeinmem:
                 m = treemanifestctx(self._repo, '', node)
             else:
