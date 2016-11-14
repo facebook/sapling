@@ -10464,7 +10464,7 @@ msgstr ""
 "    指定対象の変更のみが退避されます。"
 
 msgid ""
-"    In bare shelve(when no files are specified, without interactive,\n"
+"    In bare shelve (when no files are specified, without interactive,\n"
 "    include and exclude option), shelving remembers information if the\n"
 "    working directory was on newly created branch, in other words working\n"
 "    directory was on different branch than its first parent. In this\n"

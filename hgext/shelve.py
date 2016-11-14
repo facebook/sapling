@@ -865,7 +865,7 @@ def shelvecmd(ui, repo, *pats, **opts):
     files. If specific files or directories are named, only changes to
     those files are shelved.
 
-    In bare shelve(when no files are specified, without interactive,
+    In bare shelve (when no files are specified, without interactive,
     include and exclude option), shelving remembers information if the
     working directory was on newly created branch, in other words working
     directory was on different branch than its first parent. In this
