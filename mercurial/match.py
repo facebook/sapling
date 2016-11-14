@@ -669,7 +669,7 @@ def readpatternfile(filepath, warn, sourceinfo=False):
     patterns = []
 
     fp = open(filepath)
-    for lineno, line in enumerate(fp, start=1):
+    for lineno, line in enumerate(util.iterfile(fp), start=1):
         if "#" in line:
             global _commentre
             if not _commentre:
