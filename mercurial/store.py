@@ -436,7 +436,7 @@ class fncache(object):
         self.entries = set(decodedir(fp.read()).splitlines())
         if '' in self.entries:
             fp.seek(0)
-            for n, line in enumerate(fp):
+            for n, line in enumerate(util.iterfile(fp)):
                 if not line.rstrip('\n'):
                     t = _('invalid entry in fncache, line %d') % (n + 1)
                     raise error.Abort(t)
