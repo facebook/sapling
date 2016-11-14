@@ -1069,7 +1069,7 @@ the hunk is left unchanged.
                     # Remove comment lines
                     patchfp = open(patchfn)
                     ncpatchfp = stringio()
-                    for line in patchfp:
+                    for line in util.iterfile(patchfp):
                         if not line.startswith('#'):
                             ncpatchfp.write(line)
                     patchfp.close()
@@ -2012,7 +2012,7 @@ def _externalpatch(ui, repo, patcher, patchname, strip, files,
     fp = util.popen('%s %s -p%d < %s' % (patcher, ' '.join(args), strip,
                                        util.shellquote(patchname)))
     try:
-        for line in fp:
+        for line in util.iterfile(fp):
             line = line.rstrip()
             ui.note(line + '\n')
             if line.startswith('patching file '):
