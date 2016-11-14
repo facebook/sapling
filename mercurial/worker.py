@@ -14,7 +14,10 @@ import sys
 import threading
 
 from .i18n import _
-from . import error
+from . import (
+    error,
+    util,
+)
 
 def countcpus():
     '''try to count the number of CPUs on the system'''
@@ -128,7 +131,7 @@ def _posixworker(ui, func, staticargs, args):
                 os.kill(os.getpid(), -status)
             sys.exit(status)
     try:
-        for line in fp:
+        for line in util.iterfile(fp):
             l = line.split(' ', 1)
             yield int(l[0]), l[1][:-1]
     except: # re-raises
