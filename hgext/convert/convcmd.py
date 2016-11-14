@@ -201,7 +201,7 @@ class converter(object):
         m = {}
         try:
             fp = open(path, 'r')
-            for i, line in enumerate(fp):
+            for i, line in enumerate(util.iterfile(fp)):
                 line = line.splitlines()[0].rstrip()
                 if not line:
                     # Ignore blank lines

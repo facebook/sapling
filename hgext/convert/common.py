@@ -454,7 +454,7 @@ class mapfile(dict):
             if err.errno != errno.ENOENT:
                 raise
             return
-        for i, line in enumerate(fp):
+        for i, line in enumerate(util.iterfile(fp)):
             line = line.splitlines()[0].rstrip()
             if not line:
                 # Ignore blank lines
