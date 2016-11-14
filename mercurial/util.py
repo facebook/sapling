@@ -2190,6 +2190,11 @@ def wrap(line, width, initindent='', hangindent=''):
                             subsequent_indent=hangindent)
     return wrapper.fill(line).encode(encoding.encoding)
 
+def iterfile(fp):
+    """like fp.__iter__ but does not have issues with EINTR. Python 2.7.12 is
+    known to have such issues."""
+    return iter(fp.readline, '')
+
 def iterlines(iterator):
     for chunk in iterator:
         for line in chunk.splitlines():
