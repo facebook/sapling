@@ -34,6 +34,8 @@ import sys
 
 from mercurial import (
     cmdutil,
+    context,
+    extensions,
     filelog,
     node,
     util,
@@ -357,6 +359,10 @@ def _buildlinkrevcache(ui, repo, db, end):
 @command('debugverifylinkrevcache', [])
 def debugverifylinkrevcache(ui, repo, *pats, **opts):
     """read the linkrevs from the database and verify if they are correct"""
+    # restore to the original _adjustlinkrev implementation
+    c = context.basefilectx
+    extensions.unwrapfunction(c, '_adjustlinkrev', _adjustlinkrev)
+
     paths = {}  # {id: name}
     nodes = {}  # {id: name}
 
@@ -366,8 +372,8 @@ def debugverifylinkrevcache(ui, repo, *pats, **opts):
     db = repo._linkrevcache
     paths = dict(db._getdb(db._pathdbname))
     nodes = dict(db._getdb(db._nodedbname))
-    pathsrev = {v: k for k, v in paths.iteritems()}
-    nodesrev = {v: k for k, v in nodes.iteritems()}
+    pathsrev = dict((v, k) for k, v in paths.iteritems())
+    nodesrev = dict((v, k) for k, v in nodes.iteritems())
     lrevs = dict(db._getdb(db._linkrevdbname))
 
     readfilelog = ui.configbool('linkrevcache', 'readfilelog', True)
@@ -401,3 +407,39 @@ def debugverifylinkrevcache(ui, repo, *pats, **opts):
                        introrev))
 
     ui.write(_('%d entries verified\n') % total)
+
+def _adjustlinkrev(orig, self, *args, **kwds):
+    lkr = self.linkrev()
+    repo = self._repo
+
+    # for a repo with only a single head, linkrev is accurate
+    if getattr(repo, '_singleheaded', False):
+        return lkr
+
+    # argv can be "path, flog, fnode, srcrev", or "srcrev" - see e81d72b4b0ae
+    srcrev = args[-1]
+    cache = getattr(self._repo, '_linkrevcache', None)
+    if cache is not None and srcrev is not None:
+        index = repo.unfiltered().changelog.index
+        try:
+            linkrevs = set(cache.getlinkrevs(self._path, self._filenode))
+        except Exception:
+            # the database may be locked - cannot be used correctly
+            linkrevs = set()
+        finally:
+            # do not keep the database open so others can write to it
+            # note: this is bad for perf. but it's here to workaround the gdbm
+            # locking pattern: reader and writer cannot co-exist. if we have
+            # a dbm engine that locks differently, we don't need this.
+            cache.close()
+        linkrevs.add(lkr)
+        for rev in sorted(linkrevs): # sorted filters out unnecessary linkrevs
+            if rev in index.commonancestorsheads(rev, srcrev):
+                return rev
+
+    # fallback to the possibly slow implementation
+    return orig(self, *args, **kwds)
+
+def uisetup(ui):
+    c = context.basefilectx
+    extensions.wrapfunction(c, '_adjustlinkrev', _adjustlinkrev)

@@ -22,3 +22,8 @@
   a@d0c79e1d33097a72f79cb2e5a81c685e8f688d45: new linkrev 2
   $ hg debugverifylinkrevcache
   1 entries verified
+
+  $ hg annotate a -r 1
+  1: 1
+  $ hg annotate a -r 2
+  2: 1
