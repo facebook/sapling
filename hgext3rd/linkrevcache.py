@@ -227,3 +227,13 @@ def linkrevdb(dirname, write=False, copyonwrite=False):
             return linkrevdbwritewithtemprename(dirname)
         else:
             return linkrevdbreadwrite(dirname)
+
+_linkrevdbpath = 'cache/linkrevdb'
+
+def reposetup(ui, repo):
+    if repo.local():
+        # if the repo is single headed, adjustlinkrev can just return linkrev
+        repo._singleheaded = (len(repo.unfiltered().changelog.headrevs()) == 1)
+
+        dbpath = repo.vfs.join(_linkrevdbpath)
+        setattr(repo, '_linkrevcache', linkrevdb(dbpath, write=False))
