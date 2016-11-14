@@ -353,3 +353,51 @@ def _buildlinkrevcache(ui, repo, db, end):
         db.setlastrev(rev)
 
     ui.write()  # clear progress bar
+
+@command('debugverifylinkrevcache', [])
+def debugverifylinkrevcache(ui, repo, *pats, **opts):
+    """read the linkrevs from the database and verify if they are correct"""
+    paths = {}  # {id: name}
+    nodes = {}  # {id: name}
+
+    repo = repo.unfiltered()
+    idx = repo.unfiltered().changelog.index
+
+    db = repo._linkrevcache
+    paths = dict(db._getdb(db._pathdbname))
+    nodes = dict(db._getdb(db._nodedbname))
+    pathsrev = {v: k for k, v in paths.iteritems()}
+    nodesrev = {v: k for k, v in nodes.iteritems()}
+    lrevs = dict(db._getdb(db._linkrevdbname))
+
+    readfilelog = ui.configbool('linkrevcache', 'readfilelog', True)
+
+    total = len(lrevs)
+    for i, (k, v) in enumerate(lrevs.iteritems()):
+        ui.progress(_('verifying'), i, total=total)
+        pathid, nodeid = k.split('\0')
+        path = pathsrev[pathid]
+        fnode = nodesrev[nodeid]
+        linkrevs = _str2intlist(v)
+        linkrevs.sort()
+
+        for linkrev in linkrevs:
+            fctx = repo[linkrev][path]
+            introrev = fctx.introrev()
+            fctx.linkrev()
+            if readfilelog:
+                flinkrev = fctx.linkrev()
+            else:
+                flinkrev = None
+            if introrev == linkrev:
+                continue
+            if (introrev in idx.commonancestorsheads(introrev, linkrev) and
+                (introrev in linkrevs or introrev == flinkrev)):
+                adjective = _('unnecessary')
+            else:
+                adjective = _('incorrect')
+            ui.warn(_('%s linkrev %s for %s @ %s (expected: %s)\n')
+                    % (adjective, linkrev, path, node.hex(fnode),
+                       introrev))
+
+    ui.write(_('%d entries verified\n') % total)
