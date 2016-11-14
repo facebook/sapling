@@ -1489,7 +1489,10 @@ class treemanifestctx(object):
                 def gettext():
                     return rl.revision(self._node)
                 def readsubtree(dir, subm):
-                    return treemanifestctx(self._repo, dir, subm).read()
+                    # Set verify to False since we need to be able to create
+                    # subtrees for trees that don't exist on disk.
+                    return self._repo.manifestlog.get(dir, subm,
+                                                      verify=False).read()
                 m.read(gettext, readsubtree)
                 m.setnode(self._node)
                 self._data = m
@@ -1531,7 +1534,7 @@ class treemanifestctx(object):
         else:
             # Need to perform a slow delta
             r0 = revlog.deltaparent(revlog.rev(self._node))
-            m0 = treemanifestctx(self._repo, self._dir, revlog.node(r0)).read()
+            m0 = self._repo.manifestlog.get(self._dir, revlog.node(r0)).read()
             m1 = self.read()
             md = treemanifest(dir=self._dir)
             for f, ((n0, fl0), (n1, fl1)) in m0.diff(m1).iteritems():
