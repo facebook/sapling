@@ -84,9 +84,9 @@ showdiff(
     ''.join('<%s\n-\n' % i for i in range(5)),
     ''.join('>%s\n-\n' % i for i in range(5)))
 
-print("Diff 1 to 3 lines - preference for balanced recursion:")
+print("Diff 1 to 3 lines - preference for appending:")
 showdiff('a\n', 'a\n' * 3)
-print("Diff 1 to 5 lines - preference for balanced recursion:")
+print("Diff 1 to 5 lines - preference for appending:")
 showdiff('a\n', 'a\n' * 5)
 print("Diff 3 to 1 lines - preference for balanced recursion:")
 showdiff('a\n' * 3, 'a\n')

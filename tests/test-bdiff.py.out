@@ -56,20 +56,18 @@ showdiff(
  '-\n'
  20 23 '<4\n' -> '>4\n'
  '-\n'
-Diff 1 to 3 lines - preference for balanced recursion:
+Diff 1 to 3 lines - preference for appending:
 showdiff(
   'a\n',
   'a\na\na\n'):
- 0 0 '' -> 'a\n'
  'a\n'
- 2 2 '' -> 'a\n'
-Diff 1 to 5 lines - preference for balanced recursion:
+ 2 2 '' -> 'a\na\n'
+Diff 1 to 5 lines - preference for appending:
 showdiff(
   'a\n',
   'a\na\na\na\na\n'):
- 0 0 '' -> 'a\na\n'
  'a\n'
- 2 2 '' -> 'a\na\n'
+ 2 2 '' -> 'a\na\na\na\n'
 Diff 3 to 1 lines - preference for balanced recursion:
 showdiff(
   'a\na\na\n',

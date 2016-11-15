@@ -51,8 +51,8 @@ specified)
   --- a/a
   +++ b/a
   @@ -1,1 +1,3 @@
-  +a
    a
+  +a
   +b
 
 Fold with local changes:
@@ -67,8 +67,8 @@ Fold with local changes:
   --- a/a
   +++ b/a
   @@ -1,1 +1,3 @@
-  +a
    a
+  +a
   +b
 
   $ hg revert -a --no-backup
