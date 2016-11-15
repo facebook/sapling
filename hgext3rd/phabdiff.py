@@ -18,7 +18,7 @@ def showphabdiff(repo, ctx, templ, **args):
 def showtasks(**args):
     """:tasks: String. Return the tasks associated with given hg rev."""
     descr = args['ctx'].description()
-    match = re.search('(Tasks|Task ID): (\d+)(,\s*\d+)*', descr)
+    match = re.search('(Tasks|Task ID):\s*(\d+)(,\s*\d+)*', descr)
 
     tasks = []
     if match:

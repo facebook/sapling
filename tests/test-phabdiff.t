@@ -23,6 +23,6 @@ Test phabdiff template mapping
 
   $ echo b > b
   $ hg commit -Aqm "Differential Revision: https://phabricator.fb.com/D5678
-  > Tasks: 32, 44"
+  > Tasks:32, 44"
   $ hg log -r . --template "{phabdiff}: {tasks}\n"
   D5678: 32 44
