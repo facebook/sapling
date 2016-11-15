@@ -184,7 +184,7 @@ static int longest_match(struct bdiff_line *a, struct bdiff_line *b,
 				mj = j;
 				mk = k;
 			} else if (k == mk) {
-				if (i > mi && i <= half) {
+				if (i > mi && i <= half && j > b1) {
 					/* same match but closer to half */
 					mi = i;
 					mj = j;
