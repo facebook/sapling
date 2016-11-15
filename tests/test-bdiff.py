@@ -11,13 +11,12 @@ def test1(a, b):
     if d:
         c = mpatch.patches(a, [d])
     if c != b:
-        print("***", repr(a), repr(b))
-        print("bad:")
-        print(repr(c)[:200])
-        print(repr(d))
+        print("bad diff+patch result from\n  %r to\n  %r:" % (a, b))
+        print("bdiff: %r" % d)
+        print("patched: %r" % c[:200])
 
 def test(a, b):
-    print("***", repr(a), repr(b))
+    print("test", repr(a), repr(b))
     test1(a, b)
     test1(b, a)
 
@@ -43,13 +42,21 @@ test("a\nb", "a\nb")
 
 #issue1295
 def showdiff(a, b):
+    print('showdiff(\n  %r,\n  %r):' % (a, b))
     bin = bdiff.bdiff(a, b)
     pos = 0
+    q = 0
     while pos < len(bin):
         p1, p2, l = struct.unpack(">lll", bin[pos:pos + 12])
         pos += 12
-        print(p1, p2, repr(bin[pos:pos + l]))
+        if p1:
+            print('', repr(a[q:p1]))
+        print('', p1, p2, repr(a[p1:p2]), '->', repr(bin[pos:pos + l]))
         pos += l
+        q = p2
+    if q < len(a):
+        print('', repr(a[q:]))
+
 showdiff("x\n\nx\n\nx\n\nx\n\nz\n", "x\n\nx\n\ny\n\nx\n\nx\n\nz\n")
 showdiff("x\n\nx\n\nx\n\nx\n\nz\n", "x\n\nx\n\ny\n\nx\n\ny\n\nx\n\nz\n")
 # we should pick up abbbc. rather than bc.de as the longest match
