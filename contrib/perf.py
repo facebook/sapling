@@ -136,13 +136,14 @@ def gettimer(ui, opts=None):
 
     if opts is None:
         opts = {}
-    # redirect all to stderr
-    ui = ui.copy()
-    uifout = safeattrsetter(ui, 'fout', ignoremissing=True)
-    if uifout:
-        # for "historical portability":
-        # ui.fout/ferr have been available since 1.9 (or 4e1ccd4c2b6d)
-        uifout.set(ui.ferr)
+    # redirect all to stderr unless buffer api is in use
+    if not ui._buffers:
+        ui = ui.copy()
+        uifout = safeattrsetter(ui, 'fout', ignoremissing=True)
+        if uifout:
+            # for "historical portability":
+            # ui.fout/ferr have been available since 1.9 (or 4e1ccd4c2b6d)
+            uifout.set(ui.ferr)
 
     # get a formatter
     uiformatter = getattr(ui, 'formatter', None)
