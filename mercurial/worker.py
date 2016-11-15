@@ -88,7 +88,7 @@ def _posixworker(ui, func, staticargs, args):
     workers = _numworkers(ui)
     oldhandler = signal.getsignal(signal.SIGINT)
     signal.signal(signal.SIGINT, signal.SIG_IGN)
-    pids, problem = [], [0]
+    pids, problem = set(), [0]
     def killworkers():
         # if one worker bails, there's no good reason to wait for the rest
         for p in pids:
@@ -118,8 +118,7 @@ def _posixworker(ui, func, staticargs, args):
                 os._exit(255)
                 # other exceptions are allowed to propagate, we rely
                 # on lock.py's pid checks to avoid release callbacks
-        pids.append(pid)
-    pids.reverse()
+        pids.add(pid)
     os.close(wfd)
     fp = os.fdopen(rfd, 'rb', 0)
     t = threading.Thread(target=waitforworkers)
