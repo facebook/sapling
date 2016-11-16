@@ -1,42 +1,17 @@
 
 Create an ondisk bundlestore in .hg/scratchbranches
-
+  $ . "$TESTDIR/library.sh"
+  $ . "$TESTDIR/library-infinitepush.sh"
   $ extpath=`dirname $TESTDIR`
-  $ cp -r $extpath/infinitepush $TESTTMP # use $TESTTMP substitution in message
   $ cp $extpath/hgext3rd/pushrebase.py $TESTTMP # use $TESTTMP substitution in message
   $ cp $HGRCPATH $TESTTMP/defaulthgrc
-  $ cat >> $HGRCPATH << EOF
-  > [extensions]
-  > infinitepush=$TESTTMP/infinitepush
-  > [ui]
-  > ssh = python "$TESTDIR/dummyssh"
-  > EOF
-  $ mkcommit() {
-  >    echo "$1" > "$1"
-  >    hg add "$1"
-  >    hg ci -m "$1"
-  > }
-  $ scratchnodes() {
-  >    for node in `find ../repo/.hg/scratchbranches/index/nodemap/* | sort`; do
-  >        echo ${node##*/} `cat $node`
-  >    done
-  > }
-  $ scratchbookmarks() {
-  >    for bookmark in `find ../repo/.hg/scratchbranches/index/bookmarkmap/* -type f | sort`; do
-  >        echo "${bookmark##*/bookmarkmap/} `cat $bookmark`"
-  >    done
-  > }
+  $ setupcommon
   $ hg init repo
   $ cd repo
 
 Check that we can send a scratch on the server and it does not show there in
 the history but is stored on disk
-  $ cat >> .hg/hgrc << EOF
-  > [infinitepush]
-  > server=yes
-  > indextype=disk
-  > storetype=disk
-  > EOF
+  $ setupserver
   $ cd ..
   $ hg clone ssh://user@dummy/repo client -q
   $ cd client
@@ -48,10 +23,6 @@ the history but is stored on disk
   remote: adding manifests
   remote: adding file changes
   remote: added 1 changesets with 1 changes to 1 files
-  $ cat >> $HGRCPATH << EOF
-  > [infinitepush]
-  > branchpattern=re:scratch/.*
-  > EOF
   $ mkcommit scratchcommit
   $ hg push -r . --to scratch/mybranch --create
   pushing to ssh://user@dummy/repo

@@ -569,7 +569,7 @@ def _push(orig, ui, repo, dest=None, *args, **opts):
     oldphasemove = None
 
     try:
-        bookmark = opts.get('to')
+        bookmark = opts.get('to') or ''
         create = opts.get('create') or False
 
         scratchpush = opts.get('bundle_store')
@@ -618,6 +618,35 @@ def _push(orig, ui, repo, dest=None, *args, **opts):
         ui.restoreconfig(oldcreate)
         if oldphasemove:
             exchange._localphasemove = oldphasemove
+    return result
+
+@command('debugbackup')
+def backup(ui, repo, dest=None):
+    """
+    Saves new non-extinct commits since the last `hg backup` or from 0 revision
+    if this backup is the first.
+    """
+
+    backuptipfile = 'infinitepushbackuptip'
+    backuptip = repo.svfs.tryread(backuptipfile)
+    try:
+        backuptip = int(backuptip) + 1
+    except ValueError:
+        backuptip = 0
+
+    # Use unfiltered repo because backuptip may now point to obsolete changeset
+    repo = repo.unfiltered()
+    # To avoid race conditions save current tip of the repo and backup
+    # everything up to this revision.
+    currenttiprev = repo['tip'].rev()
+    if backuptip > currenttiprev:
+        ui.status(_('nothing to backup\n'))
+        return 0
+    revs = list(repo.revs('heads(draft() & %d:%d)', backuptip, currenttiprev))
+    pushcmd = commands.table['^push'][0]
+    result = pushcmd(ui, repo, dest=dest, rev=revs, bundle_store=True)
+    with repo.svfs(backuptipfile, mode="w", atomictemp=True) as f:
+        f.write(str(currenttiprev))
     return result
 
 def _phasemove(orig, pushop, nodes, phase=phases.public):

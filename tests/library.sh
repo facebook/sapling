@@ -43,3 +43,9 @@ hginit() {
 clearcache() {
   rm -rf $CACHEDIR/*
 }
+
+mkcommit() {
+  echo "$1" > "$1"
+  hg add "$1"
+  hg ci -m "$1"
+}
