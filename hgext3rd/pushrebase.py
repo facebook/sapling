@@ -9,7 +9,7 @@ import errno, os, tempfile, resource, time
 
 from mercurial import bundle2, cmdutil, hg, scmutil, exchange, commands
 from mercurial import util, error, discovery, changegroup, context, revset
-from mercurial import obsolete, pushkey, phases, extensions
+from mercurial import obsolete, pushkey, phases, extensions, manifest
 from mercurial.extensions import wrapcommand, wrapfunction
 from mercurial.hg import repository
 from mercurial.node import nullid, hex, bin
@@ -97,7 +97,7 @@ def unbundle(orig, repo, cg, heads, source, url):
         preloadmfs = cg.params.get('preloadmanifests')
         if preloadmfs:
             for mfnode in preloadmfs.split(','):
-                repo.manifest.read(bin(mfnode))
+                repo.manifestlog[bin(mfnode)].read()
 
     return orig(repo, cg, heads, source, url)
 
@@ -505,7 +505,15 @@ def bundle2rebase(op, part):
         # Preload the caches with data we already have. We need to make copies
         # here so that original repo caches don't get tainted with bundle
         # specific data.
-        bundle.manifest._mancache = op.repo.manifest._mancache.copy()
+        newdirmancache = bundle.manifestlog._dirmancache
+        for dir, dircache in op.repo.manifestlog._dirmancache.iteritems():
+            for mfnode in dircache:
+                mfctx = dircache[mfnode]
+                newmfctx = manifest.manifestctx(bundle, mfnode)
+                newmfctx._data = mfctx._data
+                newdirmancache[dir][mfnode] = newmfctx
+        newfulltextcache = op.repo.manifestlog._revlog._fulltextcache.copy()
+        bundle.manifestlog._revlog._fulltextcache = newfulltextcache
 
         try:
             # onto is None means don't do rebasing
