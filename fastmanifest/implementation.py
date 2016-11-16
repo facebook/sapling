@@ -176,7 +176,7 @@ class hybridmanifest(object):
         return self._manifest('__delitem__').__delitem__(key)
 
     def __nonzero__(self):
-        return self._manifest('__nonzero__').__nonzero__()
+        return bool(self._manifest('__nonzero__'))
 
     def __len__(self):
         return self._manifest('__len__').__len__()
