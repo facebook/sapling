@@ -98,8 +98,6 @@ run pyflakes on all tracked files ending in .py or without a file ending
   tests/treemanifest_correctness.py:8: 'error' imported but unused
   tests/treemanifest_correctness.py:11: 'pdb' imported but unused
   tests/treemanifest_correctness.py:12: 'fastmanifestcache' imported but unused
-  treemanifest/__init__.py:17: 'hex' imported but unused
-  treemanifest/__init__.py:17: 'nullrev' imported but unused
   hgext3rd/catnotate.py:26: local variable 'files' is assigned to but never used
   hgext3rd/fastlog.py:358: local variable 'queue' is assigned to but never used
   hgext3rd/fbconduit.py:191: local variable 'peerpath' is assigned to but never used

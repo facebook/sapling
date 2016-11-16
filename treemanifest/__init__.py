@@ -5,6 +5,16 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
+"""allows using and migrating to tree manifests
+
+When autocreatetrees is enabled, you can limit which bookmarks are initially
+converted to trees during pull by specifying `treemanifest.allowedtreeroots`.
+
+    [treemanifest]
+    allowedtreeroots = master,stable
+
+"""
+
 from mercurial import (
     changegroup,
     cmdutil,
@@ -14,7 +24,7 @@ from mercurial import (
     util,
 )
 from mercurial.i18n import _
-from mercurial.node import bin, hex, nullrev
+from mercurial.node import bin
 
 from remotefilelog.contentstore import unioncontentstore
 from remotefilelog.datapack import datapackstore, mutabledatapack
@@ -100,6 +110,11 @@ def recordmanifest(pack, repo, oldtip, newtip):
         p1node = mfrevlog.node(p1)
         refcount[p1node] = refcount.get(p1node, 0) + 1
 
+    allowedtreeroots = set()
+    for name in repo.ui.configlist('treemanifest', 'allowedtreeroots'):
+        if name in repo:
+            allowedtreeroots.add(repo[name].manifestnode())
+
     for rev in xrange(oldtip, newtip):
         ui.progress(message, rev - oldtip, total=total)
         p1 = mfrevlog.parentrevs(rev)[0]
@@ -111,6 +126,9 @@ def recordmanifest(pack, repo, oldtip, newtip):
             origtree = mfl[p1node].read()._treemanifest()
 
         if not origtree:
+            if allowedtreeroots and p1node not in allowedtreeroots:
+                continue
+
             p1mf = mfl[p1node].read()
             origtree = ctreemanifest.treemanifest(repo.svfs.manifestdatastore)
             for filename, node, flag in p1mf.iterentries():
@@ -180,9 +198,9 @@ def recordmanifest(pack, repo, oldtip, newtip):
 
         newtree.write(InterceptedMutablePack(pack, mfrevlog.node(rev)),
                       origtree)
-        diff = newtree.diff(origtree)
 
         if ui.configbool('treemanifest', 'verifyautocreate', True):
+            diff = newtree.diff(origtree)
             if len(diff) != len(adds) + len(deletes):
                 import pdb
                 pdb.set_trace()
