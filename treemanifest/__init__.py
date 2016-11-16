@@ -52,8 +52,8 @@ def wraprepo(repo):
         writestore=localdatastore)
 
 def _unpackmanifests(orig, self, repo, *args, **kwargs):
-    mf = repo.manifest
-    oldtip = len(mf)
+    mfrevlog = repo.manifestlog._revlog
+    oldtip = len(mfrevlog)
 
     orig(self, repo, *args, **kwargs)
 
@@ -64,7 +64,7 @@ def _unpackmanifests(orig, self, repo, *args, **kwargs):
         packpath = shallowutil.getcachepackpath(repo, PACK_CATEGORY)
         opener = scmutil.vfs(packpath)
         with mutabledatapack(repo.ui, opener) as dpack:
-            recordmanifest(dpack, repo, oldtip, len(mf))
+            recordmanifest(dpack, repo, oldtip, len(mfrevlog))
             dpack.close()
 
         # Alert the store that there may be new packs
@@ -86,7 +86,8 @@ class InterceptedMutablePack(object):
         return self._pack.add(name, node, deltabasenode, delta)
 
 def recordmanifest(pack, repo, oldtip, newtip):
-    mf = repo.manifest
+    mfl = repo.manifestlog
+    mfrevlog = mfl._revlog
     total = newtip - oldtip
     ui = repo.ui
     builttrees = {}
@@ -95,22 +96,22 @@ def recordmanifest(pack, repo, oldtip, newtip):
 
     refcount = {}
     for rev in xrange(oldtip, newtip):
-        p1 = mf.parentrevs(rev)[0]
-        p1node = mf.node(p1)
+        p1 = mfrevlog.parentrevs(rev)[0]
+        p1node = mfrevlog.node(p1)
         refcount[p1node] = refcount.get(p1node, 0) + 1
 
     for rev in xrange(oldtip, newtip):
         ui.progress(message, rev - oldtip, total=total)
-        p1 = mf.parentrevs(rev)[0]
-        p1node = mf.node(p1)
+        p1 = mfrevlog.parentrevs(rev)[0]
+        p1node = mfrevlog.node(p1)
 
         if p1node in builttrees:
             origtree = builttrees[p1node]
         else:
-            origtree = mf.read(p1node)._treemanifest()
+            origtree = mfl[p1node].read()._treemanifest()
 
         if not origtree:
-            p1mf = mf.read(p1node)
+            p1mf = mfl[p1node].read()
             origtree = ctreemanifest.treemanifest(repo.svfs.manifestdatastore)
             for filename, node, flag in p1mf.iterentries():
                 origtree.set(filename, node, flag)
@@ -125,9 +126,9 @@ def recordmanifest(pack, repo, oldtip, newtip):
         refcount[p1node] = p1refcount
 
         # This will generally be very quick, since p1 == deltabase
-        delta = mf.revdiff(p1, rev)
+        delta = mfrevlog.revdiff(p1, rev)
 
-        allfiles = set(repo.changelog.readfiles(mf.linkrev(rev)))
+        allfiles = set(repo.changelog.readfiles(mfrevlog.linkrev(rev)))
 
         deletes = []
         adds = []
@@ -177,7 +178,8 @@ def recordmanifest(pack, repo, oldtip, newtip):
         for fname, fnode, fflags in adds:
             newtree.set(fname, fnode, fflags)
 
-        newtree.write(InterceptedMutablePack(pack, mf.node(rev)), origtree)
+        newtree.write(InterceptedMutablePack(pack, mfrevlog.node(rev)),
+                      origtree)
         diff = newtree.diff(origtree)
 
         if ui.configbool('treemanifest', 'verifyautocreate', True):
@@ -198,9 +200,9 @@ def recordmanifest(pack, repo, oldtip, newtip):
                     import pdb
                     pdb.set_trace()
                     pass
-        builttrees[mf.node(rev)] = newtree
+        builttrees[mfrevlog.node(rev)] = newtree
 
-        mfnode = mf.node(rev)
+        mfnode = mfrevlog.node(rev)
         if refcount.get(mfnode) > 0:
             builttrees[mfnode] = newtree
 

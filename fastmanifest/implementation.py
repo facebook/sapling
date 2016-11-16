@@ -826,7 +826,16 @@ class manifestfactory(object):
 
         if (supportsctree and
             self.ui.configbool("fastmanifest", "usetree", False)):
-            tree = origself.read(p1)._treemanifest()
+            def loadflat():
+                # This should eventually be made lazy loaded, so consumers can
+                # access the node/p1/linkrev data without having to parse the
+                # whole manifest.
+                data = origself.revision(p1)
+                arraytext = array.array('c', data)
+                origself._fulltextcache[p1] = arraytext
+                return manifest.manifestdict(data)
+            tree = hybridmanifest(self.ui, origself.opener, loadflat=loadflat,
+                                  node=p1)._treemanifest()
             if tree:
                 newtree = tree.copy()
                 for filename in removed:
