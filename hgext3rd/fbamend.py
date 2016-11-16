@@ -543,6 +543,25 @@ def wraprebase(orig, ui, repo, **opts):
             raise error.Abort(_("cannot use both --continue and --restack"))
         return restack(ui, repo, opts)
 
+    # If the --continue flag is passed, we need to create a transaction
+    # to ensure that the inhibit extension's post-transaction hook is called
+    # after the rebase is finished. This hook is responsible for inhibiting
+    # visible obsolete changesets, which may be created if we're continuing a
+    # `hg next --rebase` operation. To be less invasive, create a short
+    # transaction after the rebase call instead of wrapping the call itself
+    # in a transaction.
+    if opts['continue']:
+        with nested(repo.wlock(), repo.lock()):
+            ret = orig(ui, repo, **opts)
+            with repo.transaction('rebase'):
+                # The rebase command will cause the rebased commits to still be
+                # cached as 'visible', even if the entire stack has been
+                # rebased and everything is obsolete. We need to manaully clear
+                # the cached values to that the post-transaction callback will
+                # work correctly.
+                repo.invalidatevolatilesets()
+            return ret
+
     return orig(ui, repo, **opts)
 
 def restack(ui, repo, rebaseopts=None):
