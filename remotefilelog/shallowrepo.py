@@ -89,8 +89,8 @@ def wraprepo(repo):
             else:
                 localrevs = repo
 
-            mf = repo.manifest
             mfl = repo.manifestlog
+            mfrevlog = mfl._revlog
             if base is not None:
                 mfdict = mfl[repo[base].manifestnode()].read()
                 skip = set(mfdict.iteritems())
@@ -110,11 +110,11 @@ def wraprepo(repo):
                 sparsematch = repo.sparsematch(rev)
 
                 mfnode = ctx.manifestnode()
-                mfrev = mf.rev(mfnode)
+                mfrev = mfrevlog.rev(mfnode)
 
                 # Decompressing manifests is expensive.
                 # When possible, only read the deltas.
-                p1, p2 = mf.parentrevs(mfrev)
+                p1, p2 = mfrevlog.parentrevs(mfrev)
                 if p1 in visited and p2 in visited:
                     mfdict = mfl[mfnode].readfast()
                 else:
