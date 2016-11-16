@@ -1,5 +1,3 @@
-  $ python -c 'import hgext3rd.sparse' || exit 80
-
   $ . "$TESTDIR/library.sh"
 
   $ hginit master
@@ -27,7 +25,7 @@
   searching for changes
   no changes found
   $ cd shallow
-  $ printf "[extensions]\nsparse=\n" >> .hg/hgrc
+  $ printf "[extensions]\nsparse=$TESTDIR/../hgext3rd/sparse.py\n" >> .hg/hgrc
 
   $ hg sparse -I x
   $ hg prefetch -r 0
@@ -79,7 +77,7 @@
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
   $ cd shallow2
-  $ printf "[extensions]\nsparse=\n" >> .hg/hgrc
+  $ printf "[extensions]\nsparse=$TESTDIR/../hgext3rd/sparse.py\n" >> .hg/hgrc
 
   $ hg up -q 0
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob)
@@ -93,10 +91,9 @@ pulled
   $ cd ../shallow
   $ hg up -q 1
   $ hg pull -q
-  $ clearcache
   $ hg sparse -I z
-  2 files fetched over 2 fetches - (2 misses, 0.00% hit ratio) over *s (glob)
-  $ hg prefetch -r '. + .^'
-  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob)
+  $ clearcache
+  $ hg prefetch -r '. + .^' -I x -I z
+  4 files fetched over 1 fetches - (4 misses, 0.00% hit ratio) over * (glob)
   $ hg rebase -d 2 --keep
   rebasing 1:876b1317060d "x2" (foo)
