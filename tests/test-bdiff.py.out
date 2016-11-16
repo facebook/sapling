@@ -34,10 +34,9 @@ showdiff(
 showdiff(
   'a\nb\nb\nb\nc\n.\nd\ne\n.\nf\n',
   'a\nb\nb\na\nb\nb\nb\nc\n.\nb\nc\n.\nd\ne\nf\n'):
- 0 0 '' -> 'a\nb\nb\n'
- 'a\nb\nb\nb\nc\n.\n'
- 12 12 '' -> 'b\nc\n.\n'
- 'd\ne\n'
+ 'a\nb\nb\n'
+ 6 6 '' -> 'a\nb\nb\nb\nc\n.\n'
+ 'b\nc\n.\nd\ne\n'
  16 18 '.\n' -> ''
  'f\n'
 done

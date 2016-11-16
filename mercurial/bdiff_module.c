@@ -61,12 +61,12 @@ nomem:
 
 static PyObject *bdiff(PyObject *self, PyObject *args)
 {
-	char *sa, *sb, *rb;
+	char *sa, *sb, *rb, *ia, *ib;
 	PyObject *result = NULL;
 	struct bdiff_line *al, *bl;
 	struct bdiff_hunk l, *h;
 	int an, bn, count;
-	Py_ssize_t len = 0, la, lb;
+	Py_ssize_t len = 0, la, lb, li = 0, lcommon = 0, lmax;
 	PyThreadState *_save;
 
 	l.next = NULL;
@@ -80,8 +80,17 @@ static PyObject *bdiff(PyObject *self, PyObject *args)
 	}
 
 	_save = PyEval_SaveThread();
-	an = bdiff_splitlines(sa, la, &al);
-	bn = bdiff_splitlines(sb, lb, &bl);
+
+	lmax = la > lb ? lb : la;
+	for (ia = sa, ib = sb;
+	     li < lmax && *ia == *ib;
+	     ++li, ++ia, ++ib)
+		if (*ia == '\n')
+			lcommon = li + 1;
+	/* we can almost add: if (li == lmax) lcommon = li; */
+
+	an = bdiff_splitlines(sa + lcommon, la - lcommon, &al);
+	bn = bdiff_splitlines(sb + lcommon, lb - lcommon, &bl);
 	if (!al || !bl)
 		goto nomem;
 
@@ -112,8 +121,8 @@ static PyObject *bdiff(PyObject *self, PyObject *args)
 	for (h = l.next; h; h = h->next) {
 		if (h->a1 != la || h->b1 != lb) {
 			len = bl[h->b1].l - bl[lb].l;
-			putbe32((uint32_t)(al[la].l - al->l), rb);
-			putbe32((uint32_t)(al[h->a1].l - al->l), rb + 4);
+			putbe32((uint32_t)(al[la].l + lcommon - al->l), rb);
+			putbe32((uint32_t)(al[h->a1].l + lcommon - al->l), rb + 4);
 			putbe32((uint32_t)len, rb + 8);
 			memcpy(rb + 12, bl[lb].l, len);
 			rb += 12 + len;
