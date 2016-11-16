@@ -9,10 +9,9 @@ Set up test environment.
   > fbamend=$TESTTMP/fbamend.py
   > inhibit=
   > rebase=
-  > strip=
   > [experimental]
   > evolution = createmarkers
-  > evolutioncommands = prev next
+  > evolutioncommands = previous next
   > EOF
   $ mkcommit() {
   >   echo "$1" > "$1"
@@ -31,172 +30,311 @@ Set up test environment.
   > }
   $ hg init nextrebase && cd nextrebase
 
-Ensure that the hg next --evolve is disabled.
-  $ hg next --evolve
-  abort: the --evolve flag is not supported
-  (use 'hg next --rebase' instead)
+Cannot --rebase and --merge.
+  $ hg next --rebase --merge
+  abort: cannot use both --merge and --rebase
   [255]
 
-Check case where there's nothing to rebase.
-  $ mkcommit a
-  $ mkcommit b
-  $ mkcommit c
-  $ hg prev
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  [1] add b
-  $ hg next --rebase
-  found no changesets to rebase, doing normal 'hg next' instead
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  [2] add c
-
-Create a situation where child commits are left behind after amend.
-  $ hg prev
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  [1] add b
-  $ echo "b2" > b2
-  $ hg add b2
-  $ hg amend -m "add b and b2"
+Rebasing single changeset.
+  $ hg debugbuilddag -n +4
+  $ hg up 1
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg amend -m "amended"
   warning: the changeset's children were left behind
   (use 'hg amend --fixup' to rebase them)
-  $ showgraph
-  @  4 add b and b2
-  |
-  | o  2 add c
-  | |
-  | o  1 add b
-  |/
-  o  0 add a
-  
-
-Check that hg rebase --next works in the simple case.
-  $ hg next --rebase --dry-run
-  hg rebase -r 4538525df7e2b9f09423636c61ef63a4cb872a2d -d 29509da8015c02a5a44d703e561252f6478a1430 -k
-  hg next
-  $ hg next --rebase
-  rebasing 2:4538525df7e2 "add c"
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  [5] add c
-  $ showgraph
-  @  5 add c
-  |
-  o  4 add b and b2
-  |
-  o  0 add a
-  
-
-Ensure we abort if there are multiple children on a precursor.
-  $ reset
-  $ mkcommit a
-  $ mkcommit b
-  $ mkcommit c
-  $ hg prev
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  [1] add b
-  $ mkcommit d
-  created new head
-  $ hg prev
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  [1] add b
-  $ echo "b3" > b3
-  $ hg add b3
-  $ hg amend -m "add b and b3"
-  warning: the changeset's children were left behind
-  (use 'hg amend --fixup' to rebase them)
-  $ showgraph
-  @  5 add b and b3
-  |
-  | o  3 add d
-  | |
-  | | o  2 add c
-  | |/
-  | o  1 add b
-  |/
-  o  0 add a
-  
-
-  $ hg next --rebase
-  there are multiple child changesets on previous versions of the current changeset, namely:
-  [4538] add c
-  [78f8] add d
-  abort: ambiguous next changeset to rebase
-  (please rebase the desired one manually)
+  $ hg next
+  abort: current changeset has no children
   [255]
+  $ hg next --rebase
+  rebasing 2:776c07fa2b12 "r2"
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  [fe8ffc] r2
+  $ showgraph
+  @  5 r2
+  |
+  o  4 amended
+  |
+  | o  3 r3
+  | |
+  | o  2 r2
+  | |
+  | o  1 r1
+  |/
+  o  0 r0
+  
 
-Check behavior when there is a child on the current changeset and on
-a precursor.
+Rebasing multiple changesets at once.
   $ reset
-  $ mkcommit a
-  $ mkcommit b
-  $ mkcommit c
-  $ hg prev
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  [1] add b
-  $ echo b >> b
-  $ hg amend
+  $ hg debugbuilddag -n +5
+  $ hg up 1
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg amend -m "amended"
   warning: the changeset's children were left behind
   (use 'hg amend --fixup' to rebase them)
-  $ mkcommit d
-  $ hg prev
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  [4] add b
+  $ hg next --rebase --top
+  rebasing 2:776c07fa2b12 "r2"
+  rebasing 3:137d867d71d5 "r3"
+  rebasing 4:daa37004f338 "r4"
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  [55b98e] r4
   $ showgraph
-  o  5 add d
+  @  8 r4
   |
-  @  4 add b
+  o  7 r3
   |
-  | o  2 add c
+  o  6 r2
+  |
+  o  5 amended
+  |
+  o  0 r0
+  
+
+Rebasing a stack one changeset at a time.
+  $ reset
+  $ hg debugbuilddag -n +5
+  $ hg up 1
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg amend -m "amended"
+  warning: the changeset's children were left behind
+  (use 'hg amend --fixup' to rebase them)
+  $ hg next --rebase
+  rebasing 2:776c07fa2b12 "r2"
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  [fe8ffc] r2
+  $ hg next --rebase
+  rebasing 3:137d867d71d5 "r3"
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  [7d603c] r3
+  $ showgraph
+  @  7 r3
+  |
+  o  6 r2
+  |
+  o  5 amended
+  |
+  | o  4 r4
   | |
-  | o  1 add b
+  | o  3 r3
+  | |
+  | o  2 r2
+  | |
+  | o  1 r1
   |/
-  o  0 add a
+  o  0 r0
   
 
   $ hg next --rebase
-  there are child changesets on one or more previous versions of the current changeset, but the current version also has children
-  skipping rebasing the following child changesets:
-  [4538] add c
+  rebasing 4:daa37004f338 "r4"
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  [5] add d
+  [55b98e] r4
+  $ showgraph
+  @  8 r4
+  |
+  o  7 r3
+  |
+  o  6 r2
+  |
+  o  5 amended
+  |
+  o  0 r0
+  
 
-Check the case where multiple amends have occurred.
+Rebasing a stack two changesets at a time.
   $ reset
-  $ mkcommit a
-  $ mkcommit b
-  $ mkcommit c
-  $ hg prev
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  [1] add b
-  $ echo b >> b
-  $ hg amend
+  $ hg debugbuilddag -n +6
+  $ hg up 1
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg amend -m "amended"
   warning: the changeset's children were left behind
   (use 'hg amend --fixup' to rebase them)
-  $ echo b >> b
-  $ hg amend
-  $ echo b >> b
-  $ hg amend
+  $ hg next --rebase 2
+  rebasing 2:776c07fa2b12 "r2"
+  rebasing 3:137d867d71d5 "r3"
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  [7d603c] r3
   $ showgraph
-  @  8 add b
+  @  8 r3
   |
-  | o  2 add c
+  o  7 r2
+  |
+  o  6 amended
+  |
+  | o  5 r5
   | |
-  | o  1 add b
+  | o  4 r4
+  | |
+  | o  3 r3
+  | |
+  | o  2 r2
+  | |
+  | o  1 r1
   |/
-  o  0 add a
+  o  0 r0
   
-
-  $ hg next --rebase
-  rebasing 2:4538525df7e2 "add c"
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  [9] add c
+  $ hg next --rebase 2
+  rebasing 4:daa37004f338 "r4"
+  rebasing 5:5f333e6f7274 "r5"
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  [c01a35] r5
   $ showgraph
-  @  9 add c
+  @  10 r5
   |
-  o  8 add b
+  o  9 r4
   |
-  o  0 add a
+  o  8 r3
+  |
+  o  7 r2
+  |
+  o  6 amended
+  |
+  o  0 r0
   
 
-Check whether we can rebase a stack of commits.
+Rebasing after multiple amends.
+  $ reset
+  $ hg debugbuilddag -n +5
+  $ hg up 1
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg amend -m "amend 1"
+  warning: the changeset's children were left behind
+  (use 'hg amend --fixup' to rebase them)
+  $ hg amend -m "amend 2"
+  $ hg amend -m "amend 3"
+  $ showgraph
+  @  7 amend 3
+  |
+  | o  4 r4
+  | |
+  | o  3 r3
+  | |
+  | o  2 r2
+  | |
+  | o  1 r1
+  |/
+  o  0 r0
+  
+  $ hg next --rebase --top
+  rebasing 2:776c07fa2b12 "r2"
+  rebasing 3:137d867d71d5 "r3"
+  rebasing 4:daa37004f338 "r4"
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  [66772e] r4
+  $ showgraph
+  @  10 r4
+  |
+  o  9 r3
+  |
+  o  8 r2
+  |
+  o  7 amend 3
+  |
+  o  0 r0
+  
+
+Rebasing from below the amended changeset with the --newest flag.
+  $ reset
+  $ hg debugbuilddag -n +6
+  $ hg up 2
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg amend -m "amended"
+  warning: the changeset's children were left behind
+  (use 'hg amend --fixup' to rebase them)
+  $ hg up 0
+  0 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  $ showgraph
+  o  6 amended
+  |
+  | o  5 r5
+  | |
+  | o  4 r4
+  | |
+  | o  3 r3
+  | |
+  | o  2 r2
+  |/
+  o  1 r1
+  |
+  @  0 r0
+  
+  $ hg next --rebase --top --newest
+  rebasing 3:137d867d71d5 "r3"
+  rebasing 4:daa37004f338 "r4"
+  rebasing 5:5f333e6f7274 "r5"
+  5 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  [bd05f8] r5
+  $ showgraph
+  @  9 r5
+  |
+  o  8 r4
+  |
+  o  7 r3
+  |
+  o  6 amended
+  |
+  o  1 r1
+  |
+  o  0 r0
+  
+
+Test aborting due to ambiguity caused by a rebase. The rebase should be
+rolled back and the final state should be as it was before `hg next --rebase`.
+  $ reset
+  $ hg debugbuilddag -n +6
+  $ hg up 1
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg amend -m "amended"
+  warning: the changeset's children were left behind
+  (use 'hg amend --fixup' to rebase them)
+  $ mkcommit a
+  $ hg prev
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  [dc00ac] amended
+  $ showgraph
+  o  7 add a
+  |
+  @  6 amended
+  |
+  | o  5 r5
+  | |
+  | o  4 r4
+  | |
+  | o  3 r3
+  | |
+  | o  2 r2
+  | |
+  | o  1 r1
+  |/
+  o  0 r0
+  
+  $ hg next --rebase
+  rebasing 2:776c07fa2b12 "r2"
+  changeset dc00accb61d3 has multiple children, namely:
+  [4e13d3] add a
+  [fe8ffc] r2
+  transaction abort!
+  rollback completed
+  abort: ambiguous next changeset
+  (use the --newest flag to always pick the newest child at each step)
+  [255]
+  $ showgraph
+  o  7 add a
+  |
+  @  6 amended
+  |
+  | o  5 r5
+  | |
+  | o  4 r4
+  | |
+  | o  3 r3
+  | |
+  | o  2 r2
+  | |
+  | o  1 r1
+  |/
+  o  0 r0
+  
+
+Test a situation where there is a conflict.
   $ reset
   $ mkcommit a
   $ mkcommit b
@@ -204,12 +342,13 @@ Check whether we can rebase a stack of commits.
   $ mkcommit d
   $ hg up 1
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
-  $ echo b >> b
-  $ hg amend
+  $ echo "conflict" > c
+  $ hg add c
+  $ hg amend -m "amended to add c"
   warning: the changeset's children were left behind
   (use 'hg amend --fixup' to rebase them)
   $ showgraph
-  @  5 add b
+  @  5 amended to add c
   |
   | o  3 add d
   | |
@@ -219,86 +358,44 @@ Check whether we can rebase a stack of commits.
   |/
   o  0 add a
   
-
-  $ hg next --rebase
+  $ hg next --rebase --top
   rebasing 2:4538525df7e2 "add c"
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  [6] add c
-  $ showgraph
-  @  6 add c
-  |
-  o  5 add b
-  |
-  | o  3 add d
-  | |
-  | o  2 add c
-  | |
-  | o  1 add b
-  |/
-  o  0 add a
-  
-
-After rebasing the last commit in the stack, the old stack should be stripped.
-  $ hg next --rebase
-  rebasing 3:47d2a3944de8 "add d"
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  [7] add d
-  $ showgraph
-  @  7 add d
-  |
-  o  6 add c
-  |
-  o  5 add b
-  |
-  o  0 add a
-  
-
-Check whether hg next --rebase behaves correctly when there is a conflict.
-  $ reset
-  $ mkcommit a
-  $ mkcommit b
-  $ mkcommit conflict
-  $ hg prev
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  [1] add b
-  $ echo "different" > conflict
-  $ hg add conflict
-  $ hg amend
-  warning: the changeset's children were left behind
-  (use 'hg amend --fixup' to rebase them)
-  $ showgraph
-  @  4 add b
-  |
-  | o  2 add conflict
-  | |
-  | o  1 add b
-  |/
-  o  0 add a
-  
-
-  $ hg next --rebase
-  rebasing 2:391efaa4d81f "add conflict"
-  merging conflict
-  warning: conflicts while merging conflict! (edit, then use 'hg resolve --mark')
-  please resolve any conflicts, run 'hg rebase --continue', and then run 'hg next'
+  merging c
+  warning: conflicts while merging c! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
-  $ hg next --rebase
+  $ showgraph
+  @  5 amended to add c
+  |
+  | o  3 add d
+  | |
+  | @  2 add c
+  | |
+  | o  1 add b
+  |/
+  o  0 add a
+  
+In this mid-rebase state, we can't use `hg previous` or `hg next`:
+  $ hg previous
   abort: rebase in progress
   (use 'hg rebase --continue' or 'hg rebase --abort')
   [255]
-  $ echo "merged" > conflict
-  $ hg resolve --mark conflict
+Now resolve the conflict and resume the rebase.
+  $ rm c
+  $ echo "resolved" > c
+  $ hg resolve --mark c
   (no more unresolved files)
   continue: hg rebase --continue
   $ hg rebase --continue
-  rebasing 2:391efaa4d81f "add conflict"
+  rebasing 2:4538525df7e2 "add c"
   $ showgraph
-  o  5 add conflict
+  o  6 add c
   |
-  @  4 add b
+  @  5 amended to add c
   |
-  | o  2 add conflict
+  | o  3 add d
+  | |
+  | o  2 add c
   | |
   | o  1 add b
   |/
