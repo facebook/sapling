@@ -403,8 +403,8 @@ class _annotatecontext(object):
             self.ui.write()
 
         result = [
-            ((self.revmap.rev2hsh(f) if isinstance(f, int) else f.node()), l)
-            for f, l in hist[revfctx][0]]
+            ((self.revmap.rev2hsh(fr) if isinstance(fr, int) else fr.node()), l)
+            for fr, l in hist[revfctx][0]] # [(node, linenumber)]
         return self._refineannotateresult(result, revfctx, showpath, showlines)
 
     def canannotatedirectly(self, rev):
