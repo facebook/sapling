@@ -550,6 +550,7 @@ delta_chain_t getdeltachain(
 
   if (handle->paged_in_datapack_memory > MAX_PAGED_IN_DATAPACK) {
     platform_madvise_away(handle->data_mmap, (size_t) handle->data_file_sz);
+    handle->paged_in_datapack_memory = 0;
   }
 
   result.code = GET_DELTA_CHAIN_OK;
