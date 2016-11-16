@@ -45,9 +45,9 @@ def catnotate(ui, repo, file1, *args, **opts):
     # for performance to avoid the cost of parsing the manifest.
     if len(matcher.files()) == 1 and not matcher.anypats():
         file = matcher.files()[0]
-        mf = repo.manifest
+        mfl = repo.manifestlog
         mfnode = ctx.manifestnode()
-        if mfnode and mf.find(mfnode, file)[0]:
+        if mfnode and mfl[mfnode].find(file)[0]:
             write(file)
             return 0
 
