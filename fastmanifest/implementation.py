@@ -720,11 +720,17 @@ class hybridmanifestctx(object):
     """A class representing a single revision of a manifest, including its
     contents, its parent revs, and its linkrev.
     """
-    def __init__(self, ui, opener, revlog, node):
+    def __init__(self, ui, repo, revlog, node):
         self._ui = ui
-        self._opener = opener
+        self._repo = repo
+        self._opener = repo.svfs
         self._revlog = revlog
         self._node = node
+
+    def copy(self):
+        memmf = manifest.memmanifestctx(self._repo)
+        memmf._manifestdict = self.read().copy()
+        return memmf
 
     def read(self):
         def loadflat():
@@ -768,40 +774,12 @@ class manifestfactory(object):
     def __init__(self, ui):
         self.ui = ui
 
-    def newmanifest(self, orig, *args, **kwargs):
-        return hybridmanifest(self.ui,
-                              args[0].opener,
-                              loadflat=lambda: orig(*args, **kwargs))
-
-    def read(self, orig, *args, **kwargs):
-        return hybridmanifest(self.ui,
-                              args[0].opener,
-                              loadflat=lambda: orig(*args, **kwargs),
-                              node=args[1])
-
-    def readshallowfast(self, orig, *args, **kwargs):
-        # copy-paste from manifest.readshallowfast
-        manifest = args[0]
-        if len(args) == 2:
-            node = args[1]
-        else:
-            node = kwargs['node']
-        r = manifest.rev(node)
-        deltaparent = manifest.deltaparent(r)
-        if (deltaparent != revlog.nullrev and
-                deltaparent in manifest.parentrevs(r)):
-            return manifest.readshallowdelta(node)
-        return hybridmanifest(self.ui,
-                              args[0].opener,
-                              loadflat=lambda: orig(*args, **kwargs),
-                              node=args[1])
-
     def newgetitem(self, orig, *args, **kwargs):
         # args[0] == instance of manifestlog
         # args[1] = node
         return hybridmanifestctx(
             self.ui,
-            args[0]._repo.svfs,
+            args[0]._repo,
             args[0]._revlog,
             args[1])
 

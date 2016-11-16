@@ -186,46 +186,13 @@ class FastManifestExtension(object):
     @staticmethod
     def setup():
         logger = debug.manifestaccesslogger(FastManifestExtension.get_ui())
-        extensions.wrapfunction(manifest.manifest, 'rev', logger.revwrap)
+        extensions.wrapfunction(manifest.manifestrevlog, 'rev', logger.revwrap)
 
         factory = manifestfactory(FastManifestExtension.get_ui())
 
         extensions.wrapfunction(
             manifest.manifestlog, '__getitem__', factory.newgetitem)
-        extensions.wrapfunction(manifest.manifest, 'add', factory.add)
-
-        # Wraps all the function creating a manifestdict
-        # We have to do that because the logic to create manifest can take
-        # 7 different codepaths and we want to retain the node information
-        # that comes at the top level:
-        #
-        # read -> _newmanifest ---------------------------> manifestdict
-        #
-        # readshallowfast -> readshallow -----------------> manifestdict
-        #    \                    \------> _newmanifest --> manifestdict
-        #    --> readshallowdelta ------------------------> manifestdict
-        #         \->readdelta    -------> _newmanifest --> manifestdict
-        #             \->slowreaddelta --> _newmanifest --> manifestdict
-        #
-        # othermethods -----------------------------------> manifestdict
-        #
-        # We can have hybridmanifest that wraps one hybridmanifest in some
-        # codepath. We resolve to the correct flatmanifest when asked in
-        # the_flatmanifest method
-        #
-        # The recursion level is at most 2 because we wrap the two top
-        # level functions and _newmanifest
-        # (wrapped only for the case of -1)
-        extensions.wrapfunction(manifest.manifest, '_newmanifest',
-                                factory.newmanifest)
-        extensions.wrapfunction(manifest.manifest, 'read', factory.read)
-        try:
-            extensions.wrapfunction(manifest.manifest, 'readshallowfast',
-                                    factory.readshallowfast)
-        except AttributeError:
-            # The function didn't use to be defined in previous versions
-            # of hg
-            pass
+        extensions.wrapfunction(manifest.manifestrevlog, 'add', factory.add)
 
         revsetmod.symbols['fastmanifesttocache'] = (
                 cachemanager.fastmanifesttocache

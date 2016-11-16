@@ -49,7 +49,8 @@ def fastmanifestcached(repo, subset, x):
     cache = fastmanifestcache.getinstance(repo.store.opener, repo.ui)
     manifestsbinnodes = set([revlog.bin(u.replace("fast",""))
                             for u in cache.ondiskcache])
-    manifestslinkrevs = [repo.manifest.linkrev(repo.manifest.rev(k))
+    mfrevlog = repo.manifestlog._revlog
+    manifestslinkrevs = [mfrevlog.linkrev(mfrevlog.rev(k))
                          for k in manifestsbinnodes]
     cachedrevs = set()
     if manifestslinkrevs:
