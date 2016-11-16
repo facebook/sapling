@@ -118,7 +118,7 @@ def uisetup(ui):
             wrapprevious,
             synopsis=" [NUM_STEPS]"
         )
-        _hideopts(preventry, {'no-topic', 'dry-run'})
+        _hideopts(preventry, set(['no-topic', 'dry-run']))
         preventry[1].extend([
             ('', 'newest', False,
                 _('always pick the newest parent when a changeset has '
@@ -143,7 +143,7 @@ def uisetup(ui):
             wrapnext,
             synopsis=" [NUM_STEPS]",
         )
-        _hideopts(nextentry, {'evolve', 'no-topic', 'dry-run'})
+        _hideopts(nextentry, set(['evolve', 'no-topic', 'dry-run']))
         nextentry[1].extend([
             ('', 'newest', False,
                 _('always pick the newest child when a changeset has '
