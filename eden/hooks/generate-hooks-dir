@@ -13,12 +13,11 @@ if ! [[ -d `dirname $HOOKS` && ! -e "$HOOKS" ]]; then
 fi
 
 mkdir $HOOKS
-mkdir $HOOKS/hg
 
 cd `buck root`
 
-# Write the hg/post-clone script into the desired directory.
+# Write the post-clone script into the desired directory.
 TARGET=//eden/hooks/hg:post-clone
 buck build @mode/opt $TARGET
 POST_CLONE=`buck targets --show-output $TARGET | awk '{print $2}'`
-cp $POST_CLONE $HOOKS/hg/post-clone
+cp $POST_CLONE $HOOKS/post-clone

@@ -123,6 +123,9 @@ void EdenServiceHandler::mountImpl(const MountInfo& info) {
       if (ex.errnoValue() != ENOENT) {
         // TODO(13448173): If clone fails, then we should roll back the mount.
         throw;
+      } else {
+        VLOG(1) << "Did not run post-clone hook '" << postCloneScript
+                << "' because it was not found.";
       }
     }
     LOG(INFO) << "Finished post-clone hook '" << postCloneScript << "' for "
