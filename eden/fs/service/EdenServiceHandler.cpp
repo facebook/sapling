@@ -56,7 +56,7 @@ void EdenServiceHandler::mountImpl(const MountInfo& info) {
   // Read some values before transferring the config.
   auto repoSource = config->getRepoSource();
   auto cloneSuccessPath = config->getCloneSuccessPath();
-  auto repoHooks = config->getRepoHooks();
+  auto repoHooks = config->getRepoHooks().copy();
   auto repoType = config->getRepoType();
 
   auto overlayPath = config->getOverlayPath();
