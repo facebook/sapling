@@ -861,12 +861,24 @@ def annotate(web, req, tmpl):
     f = fctx.path()
     parity = paritygen(web.stripecount)
 
+    # parents() is called once per line and several lines likely belong to
+    # same revision. So it is worth caching.
+    # TODO there are still redundant operations within basefilectx.parents()
+    # and from the fctx.annotate() call itself that could be cached.
+    parentscache = {}
     def parents(f):
-        for p in f.parents():
-            yield {
-                "node": p.hex(),
-                "rev": p.rev(),
-            }
+        rev = f.rev()
+        if rev not in parentscache:
+            parentscache[rev] = []
+            for p in f.parents():
+                entry = {
+                    'node': p.hex(),
+                    'rev': p.rev(),
+                }
+                parentscache[rev].append(entry)
+
+        for p in parentscache[rev]:
+            yield p
 
     def annotate(**map):
         if util.binary(fctx.data()):
