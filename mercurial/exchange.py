@@ -1661,6 +1661,17 @@ def _getbundletagsfnodes(bundler, repo, source, bundlecaps=None,
     if chunks:
         bundler.newpart('hgtagsfnodes', data=''.join(chunks))
 
+def _getbookmarks(repo, **kwargs):
+    """Returns bookmark to node mapping.
+
+    This function is primarily used to generate `bookmarks` bundle2 part.
+    It is a separate function in order to make it easy to wrap it
+    in extensions. Passing `kwargs` to the function makes it easy to
+    add new parameters in extensions.
+    """
+
+    return dict(bookmod.listbinbookmarks(repo))
+
 def check_heads(repo, their_heads, context):
     """check if the heads of a repo have been modified
 
