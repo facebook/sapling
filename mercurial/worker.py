@@ -89,6 +89,10 @@ def _posixworker(ui, func, staticargs, args):
     signal.signal(signal.SIGINT, signal.SIG_IGN)
     pids, problem = set(), [0]
     def killworkers():
+        # unregister SIGCHLD handler as all children will be killed. This
+        # function shouldn't be interrupted by another SIGCHLD; otherwise pids
+        # could be updated while iterating, which would cause inconsistency.
+        signal.signal(signal.SIGCHLD, oldchldhandler)
         # if one worker bails, there's no good reason to wait for the rest
         for p in pids:
             try:
@@ -115,8 +119,6 @@ def _posixworker(ui, func, staticargs, args):
                 st = _exitstatus(st)
             if st and not problem[0]:
                 problem[0] = st
-                # unregister SIGCHLD handler as all children will be killed
-                signal.signal(signal.SIGCHLD, oldchldhandler)
                 killworkers()
     def sigchldhandler(signum, frame):
         waitforworkers(blocking=False)
