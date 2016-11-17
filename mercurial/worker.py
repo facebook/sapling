@@ -102,6 +102,7 @@ def _posixworker(ui, func, staticargs, args):
             while True:
                 try:
                     p, st = os.waitpid(pid, (0 if blocking else os.WNOHANG))
+                    break
                 except OSError as e:
                     if e.errno == errno.EINTR:
                         continue
