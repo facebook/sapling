@@ -1381,6 +1381,10 @@ class manifestctx(object):
         memmf._manifestdict = self.read().copy()
         return memmf
 
+    @propertycache
+    def parents(self):
+        return self._revlog().parents(self._node)
+
     def read(self):
         if not self._data:
             if self._node == revlog.nullid:
@@ -1514,6 +1518,10 @@ class treemanifestctx(object):
         memmf = memtreemanifestctx(self._repo, dir=self._dir)
         memmf._treemanifest = self.read().copy()
         return memmf
+
+    @propertycache
+    def parents(self):
+        return self._revlog().parents(self._node)
 
     def readdelta(self, shallow=False):
         '''Returns a manifest containing just the entries that are present
