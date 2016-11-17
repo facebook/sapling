@@ -576,7 +576,7 @@ def wraprepo(repo):
 
             # Save a copy of the old manifest cache so we can put it back
             # afterwards.
-            oldmancache = self.manifest._mancache
+            oldmancache = self.manifestlog._dirmancache
 
             wlock = lock = None
             try:
@@ -639,11 +639,11 @@ def wraprepo(repo):
                 # the revlogs. So clear all the caches.
                 self.invalidate()
                 self._filecache.pop('changelog', None)
-                self._filecache.pop('manifest', None)
+                self._filecache.pop('manifestlog', None)
                 self._filecache.pop('_phasecache', None)
 
                 # Refill the cache
-                self.manifest._mancache = oldmancache
+                self.manifestlog._dirmancache = oldmancache
 
                 heads = set(self.heads())
                 heads.discard(nullid)
@@ -1004,7 +1004,7 @@ def wraprepo(repo):
                     if path == '00changelog.i':
                         rl = self.changelog
                     elif path == '00manifest.i':
-                        rl = self.manifest
+                        rl = self.manifestlog._revlog
                     else:
                         rl = revlog.revlog(self.svfs, path)
                     localnode = hex(rl.node(rev))
