@@ -1696,7 +1696,11 @@ class localrepository(object):
             tr = self.transaction("commit")
             trp = weakref.proxy(tr)
 
-            if ctx.files():
+            if ctx.manifestnode():
+                # reuse an existing manifest revision
+                mn = ctx.manifestnode()
+                files = ctx.files()
+            elif ctx.files():
                 m1ctx = p1.manifestctx()
                 m2ctx = p2.manifestctx()
                 mctx = m1ctx.copy()
