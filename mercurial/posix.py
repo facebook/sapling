@@ -160,7 +160,10 @@ def checkexec(path):
 
     try:
         EXECFLAGS = stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH
-        fh, fn = tempfile.mkstemp(dir=path, prefix='hg-checkexec-')
+        cachedir = os.path.join(path, '.hg', 'cache')
+        if not os.path.isdir(cachedir):
+            cachedir = path
+        fh, fn = tempfile.mkstemp(dir=cachedir, prefix='hg-checkexec-')
         try:
             os.close(fh)
             m = os.stat(fn).st_mode & 0o777
