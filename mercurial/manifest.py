@@ -1418,7 +1418,7 @@ class manifestctx(object):
         if revlog._usemanifestv2:
             # Need to perform a slow delta
             r0 = revlog.deltaparent(revlog.rev(self._node))
-            m0 = manifestctx(self._repo, revlog.node(r0)).read()
+            m0 = self._repo.manifestlog[revlog.node(r0)].read()
             m1 = self.read()
             md = manifestdict()
             for f, ((n0, fl0), (n1, fl1)) in m0.diff(m1).iteritems():
