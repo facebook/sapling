@@ -119,9 +119,10 @@ def _posixworker(ui, func, staticargs, args):
                 st = _exitstatus(st)
             if st and not problem[0]:
                 problem[0] = st
-                killworkers()
     def sigchldhandler(signum, frame):
         waitforworkers(blocking=False)
+        if problem[0]:
+            killworkers()
     oldchldhandler = signal.signal(signal.SIGCHLD, sigchldhandler)
     for pargs in partition(args, workers):
         pid = os.fork()
