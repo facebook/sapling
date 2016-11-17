@@ -219,9 +219,16 @@ def checklink(path):
     # mktemp is not racy because symlink creation will fail if the
     # file already exists
     while True:
-        name = tempfile.mktemp(dir=path, prefix='hg-checklink-')
+        cachedir = os.path.join(path, '.hg', 'cache')
+        if os.path.isdir(cachedir):
+            checkdir = cachedir
+        else:
+            checkdir = path
+            cachedir = None
+        name = tempfile.mktemp(dir=checkdir, prefix='checklink-')
         try:
-            fd = tempfile.NamedTemporaryFile(dir=path, prefix='hg-checklink-')
+            fd = tempfile.NamedTemporaryFile(dir=checkdir,
+                                             prefix='hg-checklink-')
             try:
                 os.symlink(os.path.basename(fd.name), name)
                 os.unlink(name)
