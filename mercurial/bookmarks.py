@@ -296,16 +296,9 @@ def listbinbookmarks(repo):
             yield k, v
 
 def listbookmarks(repo):
-    # We may try to list bookmarks on a repo type that does not
-    # support it (e.g., statichttprepository).
-    marks = getattr(repo, '_bookmarks', {})
-
     d = {}
-    hasnode = repo.changelog.hasnode
-    for k, v in marks.iteritems():
-        # don't expose local divergent bookmarks
-        if hasnode(v) and ('@' not in k or k.endswith('@')):
-            d[k] = hex(v)
+    for book, node in listbinbookmarks(repo):
+        d[book] = hex(node)
     return d
 
 def pushbookmark(repo, key, old, new):
