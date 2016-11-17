@@ -111,11 +111,14 @@ def _posixworker(ui, func, staticargs, args):
                     if e.errno == errno.EINTR:
                         continue
                     elif e.errno == errno.ECHILD:
-                        break # ignore ECHILD
+                        # child would already be reaped, but pids yet been
+                        # updated (maybe interrupted just after waitpid)
+                        pids.discard(pid)
+                        break
                     else:
                         raise
             if p:
-                pids.remove(p)
+                pids.discard(p)
                 st = _exitstatus(st)
             if st and not problem[0]:
                 problem[0] = st
