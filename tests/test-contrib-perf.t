@@ -114,6 +114,7 @@ perfstatus
   $ hg perfancestorset 2
   $ hg perfannotate a
   $ hg perfbdiff -c 1
+  $ hg perfbdiff --alldata 1
   $ hg perfbranchmap
   $ hg perfcca
   $ hg perfchangegroupchangelog

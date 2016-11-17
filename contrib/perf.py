@@ -781,9 +781,9 @@ def perfbdiff(ui, repo, file_, rev=None, count=None, **opts):
         if opts['alldata']:
             # Load revisions associated with changeset.
             ctx = repo[rev]
-            mtext = repo.manifest.revision(ctx.manifestnode())
+            mtext = repo.manifestlog._revlog.revision(ctx.manifestnode())
             for pctx in ctx.parents():
-                pman = repo.manifest.revision(pctx.manifestnode())
+                pman = repo.manifestlog._revlog.revision(pctx.manifestnode())
                 textpairs.append((pman, mtext))
 
             # Load filelog revisions by iterating manifest delta.
