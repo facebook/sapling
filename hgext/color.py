@@ -167,6 +167,7 @@ from __future__ import absolute_import
 from mercurial.i18n import _
 from mercurial import (
     cmdutil,
+    color,
     commands,
     dispatch,
     encoding,
@@ -323,61 +324,6 @@ try:
 except ImportError:
     _terminfo_params = {}
 
-_styles = {'grep.match': 'red bold',
-           'grep.linenumber': 'green',
-           'grep.rev': 'green',
-           'grep.change': 'green',
-           'grep.sep': 'cyan',
-           'grep.filename': 'magenta',
-           'grep.user': 'magenta',
-           'grep.date': 'magenta',
-           'bookmarks.active': 'green',
-           'branches.active': 'none',
-           'branches.closed': 'black bold',
-           'branches.current': 'green',
-           'branches.inactive': 'none',
-           'diff.changed': 'white',
-           'diff.deleted': 'red',
-           'diff.diffline': 'bold',
-           'diff.extended': 'cyan bold',
-           'diff.file_a': 'red bold',
-           'diff.file_b': 'green bold',
-           'diff.hunk': 'magenta',
-           'diff.inserted': 'green',
-           'diff.tab': '',
-           'diff.trailingwhitespace': 'bold red_background',
-           'changeset.public' : '',
-           'changeset.draft' : '',
-           'changeset.secret' : '',
-           'diffstat.deleted': 'red',
-           'diffstat.inserted': 'green',
-           'histedit.remaining': 'red bold',
-           'ui.prompt': 'yellow',
-           'log.changeset': 'yellow',
-           'patchbomb.finalsummary': '',
-           'patchbomb.from': 'magenta',
-           'patchbomb.to': 'cyan',
-           'patchbomb.subject': 'green',
-           'patchbomb.diffstats': '',
-           'rebase.rebased': 'blue',
-           'rebase.remaining': 'red bold',
-           'resolve.resolved': 'green bold',
-           'resolve.unresolved': 'red bold',
-           'shelve.age': 'cyan',
-           'shelve.newest': 'green bold',
-           'shelve.name': 'blue bold',
-           'status.added': 'green bold',
-           'status.clean': 'none',
-           'status.copied': 'none',
-           'status.deleted': 'cyan bold underline',
-           'status.ignored': 'black bold',
-           'status.modified': 'blue bold',
-           'status.removed': 'red bold',
-           'status.unknown': 'magenta bold underline',
-           'tags.normal': 'green',
-           'tags.local': 'black bold'}
-
-
 def _effect_str(effect):
     '''Helper function for render_effects().'''
 
@@ -415,7 +361,7 @@ def render_effects(text, effects):
 
 def extstyles():
     for name, ext in extensions.extensions():
-        _styles.update(getattr(ext, 'colortable', {}))
+        color._styles.update(getattr(ext, 'colortable', {}))
 
 def valideffect(effect):
     'Determine if the effect is valid or not.'
@@ -440,7 +386,7 @@ def configstyles(ui):
                     ui.warn(_("ignoring unknown color/effect %r "
                               "(configured in color.%s)\n")
                             % (e, status))
-            _styles[status] = ' '.join(good)
+            color._styles[status] = ' '.join(good)
 
 class colorui(uimod.ui):
     _colormode = 'ansi'
@@ -493,7 +439,7 @@ class colorui(uimod.ui):
 
         effects = []
         for l in label.split():
-            s = _styles.get(l, '')
+            s = color._styles.get(l, '')
             if s:
                 effects.append(s)
             elif valideffect(l):
@@ -546,31 +492,31 @@ def debugcolor(ui, repo, **opts):
         return _debugdisplaycolor(ui)
 
 def _debugdisplaycolor(ui):
-    oldstyle = _styles.copy()
+    oldstyle = color._styles.copy()
     try:
-        _styles.clear()
+        color._styles.clear()
         for effect in _effects.keys():
-            _styles[effect] = effect
+            color._styles[effect] = effect
         if _terminfo_params:
             for k, v in ui.configitems('color'):
                 if k.startswith('color.'):
-                    _styles[k] = k[6:]
+                    color._styles[k] = k[6:]
                 elif k.startswith('terminfo.'):
-                    _styles[k] = k[9:]
+                    color._styles[k] = k[9:]
         ui.write(_('available colors:\n'))
         # sort label with a '_' after the other to group '_background' entry.
-        items = sorted(_styles.items(),
+        items = sorted(color._styles.items(),
                        key=lambda i: ('_' in i[0], i[0], i[1]))
         for colorname, label in items:
             ui.write(('%s\n') % colorname, label=label)
     finally:
-        _styles.clear()
-        _styles.update(oldstyle)
+        color._styles.clear()
+        color._styles.update(oldstyle)
 
 def _debugdisplaystyle(ui):
     ui.write(_('available style:\n'))
-    width = max(len(s) for s in _styles)
-    for label, effects in sorted(_styles.items()):
+    width = max(len(s) for s in color._styles)
+    for label, effects in sorted(color._styles.items()):
         ui.write('%s' % label, label=label)
         if effects:
             # 50
@@ -687,7 +633,7 @@ else:
 
         # determine console attributes based on labels
         for l in label.split():
-            style = _styles.get(l, '')
+            style = color._styles.get(l, '')
             for effect in style.split():
                 try:
                     attr = mapcolor(w32effects[effect], attr)
