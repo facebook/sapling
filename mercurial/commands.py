@@ -15,6 +15,7 @@ import random
 import re
 import shlex
 import socket
+import string
 import sys
 import tempfile
 import time
@@ -3194,6 +3195,8 @@ def debugrevlog(ui, repo, file_=None, **opts):
     datasize = [None, 0, 0]
     fullsize = [None, 0, 0]
     deltasize = [None, 0, 0]
+    chunktypecounts = {}
+    chunktypesizes = {}
 
     def addsize(size, l):
         if l[0] is None or size < l[0]:
@@ -3230,6 +3233,20 @@ def debugrevlog(ui, repo, file_=None, **opts):
                 nump2 += 1
             elif delta != nullrev:
                 numother += 1
+
+        # Obtain data on the raw chunks in the revlog.
+        chunk = r._chunkraw(rev, rev)[1]
+        if chunk:
+            chunktype = chunk[0]
+        else:
+            chunktype = 'empty'
+
+        if chunktype not in chunktypecounts:
+            chunktypecounts[chunktype] = 0
+            chunktypesizes[chunktype] = 0
+
+        chunktypecounts[chunktype] += 1
+        chunktypesizes[chunktype] += size
 
     # Adjust size min value for empty cases
     for size in (datasize, fullsize, deltasize):
@@ -3281,6 +3298,24 @@ def debugrevlog(ui, repo, file_=None, **opts):
     ui.write(('revision size : ') + fmt2 % totalsize)
     ui.write(('    full      : ') + fmt % pcfmt(fulltotal, totalsize))
     ui.write(('    deltas    : ') + fmt % pcfmt(deltatotal, totalsize))
+
+    def fmtchunktype(chunktype):
+        if chunktype == 'empty':
+            return '    %s     : ' % chunktype
+        elif chunktype in string.ascii_letters:
+            return '    0x%s (%s)  : ' % (hex(chunktype), chunktype)
+        else:
+            return '    0x%s      : ' % hex(chunktype)
+
+    ui.write('\n')
+    ui.write(('chunks        : ') + fmt2 % numrevs)
+    for chunktype in sorted(chunktypecounts):
+        ui.write(fmtchunktype(chunktype))
+        ui.write(fmt % pcfmt(chunktypecounts[chunktype], numrevs))
+    ui.write(('chunks size   : ') + fmt2 % totalsize)
+    for chunktype in sorted(chunktypecounts):
+        ui.write(fmtchunktype(chunktype))
+        ui.write(fmt % pcfmt(chunktypesizes[chunktype], totalsize))
 
     ui.write('\n')
     fmt = dfmtstr(max(avgchainlen, compratio))

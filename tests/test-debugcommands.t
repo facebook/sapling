@@ -22,6 +22,11 @@
       full      : 44 (100.00%)
       deltas    :  0 ( 0.00%)
   
+  chunks        :  1
+      0x75 (u)  :  1 (100.00%)
+  chunks size   : 44
+      0x75 (u)  : 44 (100.00%)
+  
   avg chain length  : 0
   max chain length  : 0
   compression ratio : 0
