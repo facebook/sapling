@@ -276,7 +276,30 @@ class hgdist(Distribution):
         # too late for some cases
         return not self.pure and Distribution.has_ext_modules(self)
 
+# This is ugly as a one-liner. So use a variable.
+buildextnegops = dict(getattr(build_ext, 'negative_options', {}))
+buildextnegops['no-zstd'] = 'zstd'
+
 class hgbuildext(build_ext):
+    user_options = build_ext.user_options + [
+        ('zstd', None, 'compile zstd bindings [default]'),
+        ('no-zstd', None, 'do not compile zstd bindings'),
+    ]
+
+    boolean_options = build_ext.boolean_options + ['zstd']
+    negative_opt = buildextnegops
+
+    def initialize_options(self):
+        self.zstd = True
+        return build_ext.initialize_options(self)
+
+    def build_extensions(self):
+        # Filter out zstd if disabled via argument.
+        if not self.zstd:
+            self.extensions = [e for e in self.extensions
+                               if e.name != 'mercurial.zstd']
+
+        return build_ext.build_extensions(self)
 
     def build_extension(self, ext):
         try:
