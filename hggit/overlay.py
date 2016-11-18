@@ -9,6 +9,7 @@ from mercurial import (
     changelog,
     manifest,
     context,
+    util,
 )
 from mercurial.node import bin, hex, nullid
 
@@ -308,14 +309,45 @@ class overlayrevlog(object):
     def __len__(self):
         return len(self.repo.handler.repo) + len(self.repo.revmap)
 
-class overlaymanifestlog(overlayrevlog):
+class overlayoldmanifestlog(overlayrevlog):
     def read(self, sha):
         if sha == nullid:
             return manifest.manifestdict()
         return overlaymanifest(self.repo, sha)
 
     def __getitem__(self, sha):
-        return self.read(sha)
+        return overlaymanifestctx(self.repo, sha)
+
+class overlaymanifestrevlog(overlayrevlog):
+    pass
+
+class overlaymanifestctx(object):
+    def __init__(self, repo, node):
+        self._repo = repo
+        self._node = node
+
+    def read(self):
+        return overlaymanifest(self._repo, self._node)
+
+try:
+    class overlaymanifestlog(manifest.manifestlog):
+        def __init__(self, repo):
+            self._repo = repo
+
+        # Needed for 4.0, since __getitem__ did not redirect to get() in that
+        # release.
+        def __getitem__(self, node):
+            return self.get('', node)
+
+        def get(self, dir, node):
+            if dir:
+                raise RuntimeError("hggit doesn't support treemanifests")
+            if node == nullid:
+                return manifest.manifestctx()
+            return overlaymanifestctx(self._repo, node)
+except AttributeError:
+    # manifestlog did not exist prior to 4.0
+    pass
 
 class overlaychangelog(overlayrevlog):
     def read(self, sha):
@@ -336,9 +368,13 @@ class overlayrepo(object):
         self.handler = handler
 
         self.changelog = overlaychangelog(self, handler.repo.changelog)
-        self.manifest = overlaymanifestlog(self, handler.repo.manifest)
-        # new as of mercurial 3.9+
-        self.manifestlog = self.manifest
+        if util.safehasattr(handler.repo, 'manifest'):
+            self.manifest = overlayoldmanifestlog(self, handler.repo.manifest)
+            # new as of mercurial 3.9+
+            self.manifestlog = self.manifest
+        else:
+            # no more manifest class as of 4.1
+            self.manifestlog = overlaymanifestlog(self)
 
         # for incoming -p
         self.root = handler.repo.root
@@ -359,6 +395,10 @@ class overlayrepo(object):
             self.names = namespaces.namespaces()
         except (AttributeError, ImportError):
             pass
+
+    def _constructmanifest(self):
+        return overlaymanifestrevlog(self,
+                self.handler.repo._constructmanifest())
 
     def __getitem__(self, n):
         if n not in self.revmap:
