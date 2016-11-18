@@ -271,7 +271,7 @@ void EdenServiceHandler::getMaterializedEntries(
     std::unique_ptr<std::string> mountPoint) {
   auto edenMount = server_->getMount(*mountPoint);
   if (!edenMount) {
-    throw newEdenError(ENODEV, "no such mount point \"{}\"", mountPoint.get());
+    throw newEdenError(ENODEV, "no such mount point \"{}\"", *mountPoint);
   }
 
   return getMaterializedEntriesForMount(edenMount.get(), out);
