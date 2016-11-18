@@ -217,3 +217,35 @@ https://en.wikipedia.org/wiki/Interleaved_deltas for its introduction.
   JL or LINE) takes 2 bits, REV takes 30 bits and ADDR or LINENUM takes 32
   bits. It also stores the max revision number and buffer size at the first
   64 bits for quick access to these values.
+
+1.3 Comparing with Mercurial's revlog format
+
+  Apparently, linelog is very different from revlog: linelog stores rev and
+  line numbers, while revlog has line contents and other metadata (like
+  parents, flags). However, the revlog format could also be used to store rev
+  and line numbers. For example, to speed up the annotate operation, we could
+  also pre-calculate annotate results and just store them using the revlog
+  format.
+
+  Therefore, linelog is actually somehow similar to revlog, with the important
+  trade-off that it only supports linear history (mentioned in section 0.1).
+  Essentially, the differences are:
+
+    a) Linelog is full of deltas, while revlog could contain full file
+       contents sometimes. So linelog is smaller. Revlog could trade
+       reconstruction speed for file size - best case, revlog is as small as
+       linelog.
+    b) The interleaved delta structure allows skipping large portion of
+       uninteresting deltas so linelog's content reconstruction is faster than
+       the delta-only version of revlog (however it's possible to construct
+       a case where interleaved deltas degrade to plain deltas, so linelog
+       worst case would be delta-only revlog). Revlog could trade file size
+       for reconstruction speed.
+    c) Linelog implicitly maintains the order of all lines it stores. So it
+       could dump all the lines from all revisions, with a reasonable order.
+       While revlog could also dump all line additions, it requires extra
+       computation to figure out the order putting those lines - that's some
+       kind of "merge".
+
+  "c" makes "hg absorb" easier to implement and makes it possible to do
+  "annotate --deleted".
