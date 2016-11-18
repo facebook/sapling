@@ -186,30 +186,6 @@ command = cmdutil.command(cmdtable)
 # leave the attribute unspecified.
 testedwith = 'ships-with-hg-core'
 
-# start and stop parameters for effects
-_effects = {'none': 0,
-            'black': 30,
-            'red': 31,
-            'green': 32,
-            'yellow': 33,
-            'blue': 34,
-            'magenta': 35,
-            'cyan': 36,
-            'white': 37,
-            'bold': 1,
-            'italic': 3,
-            'underline': 4,
-            'inverse': 7,
-            'dim': 2,
-            'black_background': 40,
-            'red_background': 41,
-            'green_background': 42,
-            'yellow_background': 43,
-            'blue_background': 44,
-            'purple_background': 45,
-            'cyan_background': 46,
-            'white_background': 47}
-
 def _terminfosetup(ui, mode):
     '''Initialize terminfo data and the terminal if we're in terminfo mode.'''
 
@@ -298,7 +274,7 @@ def _modesetup(ui, coloropt):
         if not w32effects:
             modewarn()
             return None
-        _effects.update(w32effects)
+        color._effects.update(w32effects)
     elif realmode == 'ansi':
         _terminfo_params.clear()
     elif realmode == 'terminfo':
@@ -365,9 +341,9 @@ def render_effects(text, effects):
     if not text:
         return text
     if not _terminfo_params:
-        start = [str(_effects[e]) for e in ['none'] + effects.split()]
+        start = [str(color._effects[e]) for e in ['none'] + effects.split()]
         start = '\033[' + ';'.join(start) + 'm'
-        stop = '\033[' + str(_effects['none']) + 'm'
+        stop = '\033[' + str(color._effects['none']) + 'm'
     else:
         start = ''.join(_effect_str(effect)
                         for effect in ['none'] + effects.split())
@@ -377,7 +353,7 @@ def render_effects(text, effects):
 def valideffect(effect):
     'Determine if the effect is valid or not.'
     good = False
-    if not _terminfo_params and effect in _effects:
+    if not _terminfo_params and effect in color._effects:
         good = True
     elif effect in _terminfo_params or effect[:-11] in _terminfo_params:
         good = True
@@ -505,7 +481,7 @@ def _debugdisplaycolor(ui):
     oldstyle = color._styles.copy()
     try:
         color._styles.clear()
-        for effect in _effects.keys():
+        for effect in color._effects.keys():
             color._styles[effect] = effect
         if _terminfo_params:
             for k, v in ui.configitems('color'):
