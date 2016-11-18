@@ -187,13 +187,28 @@ command = cmdutil.command(cmdtable)
 testedwith = 'ships-with-hg-core'
 
 # start and stop parameters for effects
-_effects = {'none': 0, 'black': 30, 'red': 31, 'green': 32, 'yellow': 33,
-            'blue': 34, 'magenta': 35, 'cyan': 36, 'white': 37, 'bold': 1,
-            'italic': 3, 'underline': 4, 'inverse': 7, 'dim': 2,
-            'black_background': 40, 'red_background': 41,
-            'green_background': 42, 'yellow_background': 43,
-            'blue_background': 44, 'purple_background': 45,
-            'cyan_background': 46, 'white_background': 47}
+_effects = {'none': 0,
+            'black': 30,
+            'red': 31,
+            'green': 32,
+            'yellow': 33,
+            'blue': 34,
+            'magenta': 35,
+            'cyan': 36,
+            'white': 37,
+            'bold': 1,
+            'italic': 3,
+            'underline': 4,
+            'inverse': 7,
+            'dim': 2,
+            'black_background': 40,
+            'red_background': 41,
+            'green_background': 42,
+            'yellow_background': 43,
+            'blue_background': 44,
+            'purple_background': 45,
+            'cyan_background': 46,
+            'white_background': 47}
 
 def _terminfosetup(ui, mode):
     '''Initialize terminfo data and the terminal if we're in terminfo mode.'''
