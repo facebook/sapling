@@ -546,10 +546,9 @@ def debugcolor(ui, repo, **opts):
         return _debugdisplaycolor(ui)
 
 def _debugdisplaycolor(ui):
-    global _styles
-    oldstyle = _styles
+    oldstyle = _styles.copy()
     try:
-        _styles = {}
+        _styles.clear()
         for effect in _effects.keys():
             _styles[effect] = effect
         if _terminfo_params:
@@ -565,7 +564,8 @@ def _debugdisplaycolor(ui):
         for colorname, label in items:
             ui.write(('%s\n') % colorname, label=label)
     finally:
-        _styles = oldstyle
+        _styles.clear()
+        _styles.update(oldstyle)
 
 def _debugdisplaystyle(ui):
     ui.write(_('available style:\n'))
