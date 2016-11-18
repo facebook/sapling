@@ -770,6 +770,9 @@ class hybridmanifestctx(object):
     def node(self):
         return self._node
 
+    def find(self, path):
+        return self.read().find(path)
+
 class manifestfactory(object):
     def __init__(self, ui):
         self.ui = ui
