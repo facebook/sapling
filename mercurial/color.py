@@ -60,3 +60,6 @@ _styles = {'grep.match': 'red bold',
            'status.unknown': 'magenta bold underline',
            'tags.normal': 'green',
            'tags.local': 'black bold'}
+
+def loadcolortable(ui, extname, colortable):
+    _styles.update(colortable)

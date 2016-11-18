@@ -25,6 +25,7 @@ from .i18n import _
 
 from . import (
     cmdutil,
+    color,
     commands,
     debugcommands,
     demandimport,
@@ -635,6 +636,7 @@ _loaded = set()
 #   extraobj) arguments
 extraloaders = [
     ('cmdtable', commands, 'loadcmdtable'),
+    ('colortable', color, 'loadcolortable'),
     ('filesetpredicate', fileset, 'loadpredicate'),
     ('revsetpredicate', revset, 'loadpredicate'),
     ('templatefilter', templatefilters, 'loadfilter'),

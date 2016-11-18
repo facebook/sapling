@@ -359,10 +359,6 @@ def render_effects(text, effects):
         stop = _effect_str('none')
     return ''.join([start, text, stop])
 
-def extstyles():
-    for name, ext in extensions.extensions():
-        color._styles.update(getattr(ext, 'colortable', {}))
-
 def valideffect(effect):
     'Determine if the effect is valid or not.'
     good = False
@@ -460,7 +456,6 @@ def uisetup(ui):
         mode = _modesetup(ui_, opts['color'])
         colorui._colormode = mode
         if mode and mode != 'debug':
-            extstyles()
             configstyles(ui_)
         return orig(ui_, opts, cmd, cmdfunc)
     def colorgit(orig, gitsub, commands, env=None, stream=False, cwd=None):
