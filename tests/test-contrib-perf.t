@@ -95,6 +95,8 @@ perfstatus
                  (no help text available)
    perfrawfiles  (no help text available)
    perfrevlog    Benchmark reading a series of revisions from a revlog.
+   perfrevlogchunks
+                 Benchmark operations on revlog chunks.
    perfrevlogrevision
                  Benchmark obtaining a revlog revision.
    perfrevrange  (no help text available)
@@ -144,6 +146,7 @@ perfstatus
   $ hg perfrawfiles 2
   $ hg perfrevlog .hg/store/data/a.i
   $ hg perfrevlogrevision -m 0
+  $ hg perfrevlogchunks -c
   $ hg perfrevrange
   $ hg perfrevset 'all()'
   $ hg perfstartup

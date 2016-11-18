@@ -859,6 +859,84 @@ def perfrevlog(ui, repo, file_=None, startrev=0, reverse=False, **opts):
     timer(d)
     fm.end()
 
+@command('perfrevlogchunks', revlogopts + formatteropts +
+         [('s', 'startrev', 0, 'revision to start at')],
+         '-c|-m|FILE')
+def perfrevlogchunks(ui, repo, file_=None, startrev=0, **opts):
+    """Benchmark operations on revlog chunks.
+
+    Logically, each revlog is a collection of fulltext revisions. However,
+    stored within each revlog are "chunks" of possibly compressed data. This
+    data needs to be read and decompressed or compressed and written.
+
+    This command measures the time it takes to read+decompress and recompress
+    chunks in a revlog. It effectively isolates I/O and compression performance.
+    For measurements of higher-level operations like resolving revisions,
+    see ``perfrevlog`` and ``perfrevlogrevision``.
+    """
+    rl = cmdutil.openrevlog(repo, 'perfrevlogchunks', file_, opts)
+    revs = list(rl.revs(startrev, len(rl) - 1))
+
+    def rlfh(rl):
+        if rl._inline:
+            return getsvfs(repo)(rl.indexfile)
+        else:
+            return getsvfs(repo)(rl.datafile)
+
+    def doread():
+        rl.clearcaches()
+        for rev in revs:
+            rl._chunkraw(rev, rev)
+
+    def doreadcachedfh():
+        rl.clearcaches()
+        fh = rlfh(rl)
+        for rev in revs:
+            rl._chunkraw(rev, rev, df=fh)
+
+    def doreadbatch():
+        rl.clearcaches()
+        rl._chunkraw(revs[0], revs[-1])
+
+    def doreadbatchcachedfh():
+        rl.clearcaches()
+        fh = rlfh(rl)
+        rl._chunkraw(revs[0], revs[-1], df=fh)
+
+    def dochunk():
+        rl.clearcaches()
+        fh = rlfh(rl)
+        for rev in revs:
+            rl._chunk(rev, df=fh)
+
+    chunks = [None]
+
+    def dochunkbatch():
+        rl.clearcaches()
+        fh = rlfh(rl)
+        # Save chunks as a side-effect.
+        chunks[0] = rl._chunks(revs, df=fh)
+
+    def docompress():
+        rl.clearcaches()
+        for chunk in chunks[0]:
+            rl.compress(chunk)
+
+    benches = [
+        (lambda: doread(), 'read'),
+        (lambda: doreadcachedfh(), 'read w/ reused fd'),
+        (lambda: doreadbatch(), 'read batch'),
+        (lambda: doreadbatchcachedfh(), 'read batch w/ reused fd'),
+        (lambda: dochunk(), 'chunk'),
+        (lambda: dochunkbatch(), 'chunk batch'),
+        (lambda: docompress(), 'compress'),
+    ]
+
+    for fn, title in benches:
+        timer, fm = gettimer(ui, opts)
+        timer(fn, title=title)
+        fm.end()
+
 @command('perfrevlogrevision', revlogopts + formatteropts +
          [('', 'cache', False, 'use caches instead of clearing')],
          '-c|-m|FILE REV')
