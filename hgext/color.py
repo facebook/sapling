@@ -197,7 +197,6 @@ _effects = {'none': 0, 'black': 30, 'red': 31, 'green': 32, 'yellow': 33,
 def _terminfosetup(ui, mode):
     '''Initialize terminfo data and the terminal if we're in terminfo mode.'''
 
-    global _terminfo_params
     # If we failed to load curses, we go ahead and return.
     if not _terminfo_params:
         return
@@ -215,7 +214,7 @@ def _terminfosetup(ui, mode):
     try:
         curses.setupterm()
     except curses.error as e:
-        _terminfo_params = {}
+        _terminfo_params.clear()
         return
 
     for key, (b, e, c) in _terminfo_params.items():
@@ -232,11 +231,9 @@ def _terminfosetup(ui, mode):
         if mode == "terminfo":
             ui.warn(_("no terminfo entry for setab/setaf: reverting to "
               "ECMA-48 color\n"))
-        _terminfo_params = {}
+        _terminfo_params.clear()
 
 def _modesetup(ui, coloropt):
-    global _terminfo_params
-
     if coloropt == 'debug':
         return 'debug'
 
@@ -281,13 +278,13 @@ def _modesetup(ui, coloropt):
             ui.warn(_('warning: failed to set color mode to %s\n') % mode)
 
     if realmode == 'win32':
-        _terminfo_params = {}
+        _terminfo_params.clear()
         if not w32effects:
             modewarn()
             return None
         _effects.update(w32effects)
     elif realmode == 'ansi':
-        _terminfo_params = {}
+        _terminfo_params.clear()
     elif realmode == 'terminfo':
         _terminfosetup(ui, mode)
         if not _terminfo_params:
