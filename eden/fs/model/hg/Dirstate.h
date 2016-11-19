@@ -23,25 +23,45 @@ namespace eden {
 
 class TreeInode;
 
-enum class HgStatusCode {
-  // I think nothing in Dirstate.userChanges_ should ever have this state?
-  // If so, it probably makes sense to remove it from the enum.
-  CLEAN = 0,
+/**
+ * Type of change to the manifest that the user has specified for a particular
+ * file that will apply on the next commit.
+ */
+enum class HgUserStatusDirective {
+  ADD,
+  REMOVE,
+};
 
-  MODIFIED = 1,
-  ADDED = 2,
+/**
+ *
+ * Mercurial status code for a file. This is a function of:
+ * 1. Whether there is a HgUserStatusDirective for the file.
+ * 2. Whether the file exists on disk.
+ * 3. Whether the file is already in the repo.
+ * 4. Whether the file is matched by a pattern in .hgignore.
+ */
+enum class HgStatusCode {
+  // PLEASE DO NOT ALPHA-SORT! We prefer CLEAN to correspond to 0, so these are
+  // not alphabetically sorted. They are roughly ordered by expected frequency
+  // of use.
+  CLEAN,
+
+  MODIFIED,
+  ADDED,
 
   /** Indicates file has been marked for removal by the user. */
-  REMOVED = 3,
+  REMOVED,
 
   /**
    * Indicates file is tracked by the repo, is not on disk, but has not been
    * marked for removal by the user.
    */
-  MISSING = 4,
-  NOT_TRACKED = 5,
-  IGNORED = 6,
+  MISSING,
+  NOT_TRACKED,
+  IGNORED,
 };
+
+const std::string& HgStatusCode_toString(HgStatusCode code);
 
 class HgStatus {
  public:
@@ -62,15 +82,24 @@ class HgStatus {
     return statuses_ == other.statuses_;
   }
 
+  /**
+   * Returns something akin to what you would see when running `hg status`.
+   * This is intended for debugging purposes: do not rely on the format of the
+   * return value.
+   */
+  std::string toString() const;
+
  private:
   std::unordered_map<RelativePath, HgStatusCode> statuses_;
 };
 
+std::ostream& operator<<(std::ostream& os, const HgStatus& status);
+
 class DirstatePersistence {
  public:
   virtual ~DirstatePersistence() {}
-  virtual void save(
-      std::unordered_map<RelativePath, HgStatusCode>& userChanges) = 0;
+  virtual void save(std::unordered_map<RelativePath, HgUserStatusDirective>&
+                        userDirectives) = 0;
 };
 
 /**
@@ -111,25 +140,24 @@ class Dirstate {
    */
   void add(RelativePathPiece path);
 
- private:
   /**
-   * Sets the entry in the userChanges_ map, ensuring that the appropriate
-   * invariants are maintained. Assuming this modifies the userChanges_ map, it
-   * must also save the changes via the DirstatePersistence abstraction.
+   * Analogous to `hg rm <path>` where `<path>` is an ordinary file or symlink.
    */
-  void applyUserStatusChange_(RelativePathPiece file, HgStatusCode code);
+  void remove(RelativePathPiece path, bool force);
 
+ private:
   void computeDelta(
-      const Tree& original,
+      const Tree* original,
       TreeInode& current,
       DirectoryDelta& delta) const;
 
   /**
    * Manifest of files in the working copy whose status is not CLEAN. These are
    * also referred to as "nonnormal" files.
+   * TODO(mbolin): Consider StringKeyedMap instead of unordered_map.
    */
-  folly::Synchronized<std::unordered_map<RelativePath, HgStatusCode>>
-      userChanges_;
+  folly::Synchronized<std::unordered_map<RelativePath, HgUserStatusDirective>>
+      userDirectives_;
   std::shared_ptr<EdenMount> edenMount_;
   std::unique_ptr<DirstatePersistence> persistence_;
 };
