@@ -68,6 +68,31 @@ TEST(Dirstate, createDirstate) {
   verifyEmptyDirstate(dirstate);
 }
 
+TEST(Dirstate, createDirstateWithInitialState) {
+  TestMountBuilder builder;
+  builder.addFile({"removed.txt", "nada"});
+  auto testMount = builder.build();
+  testMount->addFile("newfile.txt", "legitimate add");
+
+  auto persistence = std::make_unique<FakeDirstatePeristence>();
+  std::unordered_map<RelativePath, HgUserStatusDirective> userDirectives{
+      {RelativePath("deleted.txt"), HgUserStatusDirective::REMOVE},
+      {RelativePath("missing.txt"), HgUserStatusDirective::ADD},
+      {RelativePath("newfile.txt"), HgUserStatusDirective::ADD},
+      {RelativePath("removed.txt"), HgUserStatusDirective::REMOVE},
+  };
+  Dirstate dirstate(
+      testMount->getEdenMount(), std::move(persistence), &userDirectives);
+  verifyExpectedDirstate(
+      dirstate,
+      {
+          {"deleted.txt", HgStatusCode::REMOVED},
+          {"missing.txt", HgStatusCode::MISSING},
+          {"newfile.txt", HgStatusCode::ADDED},
+          {"removed.txt", HgStatusCode::REMOVED},
+      });
+}
+
 TEST(Dirstate, createDirstateWithUntrackedFile) {
   TestMountBuilder builder;
   auto testMount = builder.build();

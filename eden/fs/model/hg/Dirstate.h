@@ -124,13 +124,20 @@ class DirstatePersistence {
  */
 class Dirstate {
  public:
-  // TODO(mbolin): Frequently, the Dirstate should be "rehydrated" from an
-  // on-disk version when rebooting Eden, so we should have a constructor that
-  // reflects that.
-  explicit Dirstate(
+  Dirstate(
+      std::shared_ptr<EdenMount> edenMount,
+      std::unique_ptr<DirstatePersistence> persistence,
+      const std::unordered_map<RelativePath, HgUserStatusDirective>*
+          userDirectives)
+      : userDirectives_(*userDirectives),
+        edenMount_(std::move(edenMount)),
+        persistence_(std::move(persistence)) {}
+
+  Dirstate(
       std::shared_ptr<EdenMount> edenMount,
       std::unique_ptr<DirstatePersistence> persistence)
-      : edenMount_(edenMount), persistence_(std::move(persistence)) {}
+      : edenMount_(std::move(edenMount)),
+        persistence_(std::move(persistence)) {}
 
   /** Analogous to calling `hg status`. */
   std::unique_ptr<HgStatus> getStatus();

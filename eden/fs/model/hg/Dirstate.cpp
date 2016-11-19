@@ -47,22 +47,49 @@ std::string HgStatus::toString() const {
   return buf->moveToFbString().toStdString();
 }
 
+namespace {
+template <typename RelativePathType>
+void updateManifestWithDirectives(
+    const std::unordered_map<RelativePathType, HgUserStatusDirective>*
+        unaccountedUserDirectives,
+    std::unordered_map<RelativePath, HgStatusCode>* manifest) {
+  // We should make sure that every entry in userDirectives_ is accounted for in
+  // the HgStatus that we return.
+  for (auto& pair : *unaccountedUserDirectives) {
+    switch (pair.second) {
+      case HgUserStatusDirective::ADD:
+        // The file was marked for addition, but no longer exists in the working
+        // copy. The user should either restore the file or run `hg forget`.
+        manifest->emplace(RelativePath(pair.first), HgStatusCode::MISSING);
+        break;
+      case HgUserStatusDirective::REMOVE:
+        // The file was marked for removal, but it still exists in the working
+        // copy without any modifications. Although it may seem strange, it
+        // should still show up as REMOVED in `hg status` even though it is
+        // still on disk.
+        manifest->emplace(RelativePath(pair.first), HgStatusCode::REMOVED);
+        break;
+    }
+  }
+}
+}
+
 std::unique_ptr<HgStatus> Dirstate::getStatus() {
   // Find the modified directories in the overlay and compare them with what is
   // in the root tree.
   auto mountPoint = edenMount_->getMountPoint();
   auto modifiedDirectories = getModifiedDirectoriesForMount(edenMount_.get());
+  std::unordered_map<RelativePath, HgStatusCode> manifest;
   if (modifiedDirectories->empty()) {
-    // There are no changes in the overlay, so the status should be empty?
-    return std::make_unique<HgStatus>(
-        std::unordered_map<RelativePath, HgStatusCode>());
+    auto userDirectives = userDirectives_.rlock();
+    updateManifestWithDirectives(&*userDirectives, &manifest);
+    return std::make_unique<HgStatus>(std::move(manifest));
   }
 
   auto userDirectives = userDirectives_.rlock();
   std::unordered_map<RelativePathPiece, HgUserStatusDirective>
       copyOfUserDirectives(userDirectives->begin(), userDirectives->end());
 
-  std::unordered_map<RelativePath, HgStatusCode> manifest;
   auto rootTree = edenMount_->getRootTree();
   auto objectStore = edenMount_->getObjectStore();
   for (auto& directory : *modifiedDirectories) {
@@ -165,24 +192,7 @@ std::unique_ptr<HgStatus> Dirstate::getStatus() {
     }
   }
 
-  // We should make sure that every entry in userDirectives_ is accounted for in
-  // the HgStatus that we return.
-  for (auto& pair : copyOfUserDirectives) {
-    switch (pair.second) {
-      case HgUserStatusDirective::ADD:
-        // The file was marked for addition, but no longer exists in the working
-        // copy. The user should either restore the file or run `hg forget`.
-        manifest.emplace(RelativePath(pair.first), HgStatusCode::MISSING);
-        break;
-      case HgUserStatusDirective::REMOVE:
-        // The file was marked for removal, but it still exists in the working
-        // copy without any modifications. Although it may seem strange, it
-        // should still show up as REMOVED in `hg status` even though it is
-        // still on disk.
-        manifest.emplace(RelativePath(pair.first), HgStatusCode::REMOVED);
-        break;
-    }
-  }
+  updateManifestWithDirectives(&copyOfUserDirectives, &manifest);
 
   return std::make_unique<HgStatus>(std::move(manifest));
 }
