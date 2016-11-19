@@ -99,7 +99,7 @@ pull and merge from test-a again
 
   $ cat test.txt
   one
-  <<<<<<< working copy: 50c3a7e29886  - test: Merge 1
+  <<<<<<< working copy: 50c3a7e29886 - test: Merge 1
   two-point-five
   =======
   two-point-one

@@ -332,7 +332,7 @@ should conflict
   conflict
   =======
   t3
-  >>>>>>> other: 7af322bc1198  - test: 7
+  >>>>>>> other: 7af322bc1198 - test: 7
 
 11: remove subrepo t
 

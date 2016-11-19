@@ -367,14 +367,14 @@ h: l vs l, different
   2
   =======
   1
-  >>>>>>> merge rev:    2e60aa20b912  - test: 1
+  >>>>>>> merge rev:    2e60aa20b912 - test: 1
   $ tellmeabout b
   b is a plain file with content:
   <<<<<<< working copy: 0c617753b41b - test: 2
   2
   =======
   1
-  >>>>>>> merge rev:    2e60aa20b912  - test: 1
+  >>>>>>> merge rev:    2e60aa20b912 - test: 1
   $ tellmeabout c
   c is a plain file with content:
   x
@@ -418,14 +418,14 @@ h: l vs l, different
   [1]
   $ tellmeabout a
   a is a plain file with content:
-  <<<<<<< working copy: 2e60aa20b912  - test: 1
+  <<<<<<< working copy: 2e60aa20b912 - test: 1
   1
   =======
   2
   >>>>>>> merge rev:    0c617753b41b - test: 2
   $ tellmeabout b
   b is an executable file with content:
-  <<<<<<< working copy: 2e60aa20b912  - test: 1
+  <<<<<<< working copy: 2e60aa20b912 - test: 1
   1
   =======
   2

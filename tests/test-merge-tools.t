@@ -75,11 +75,11 @@ running from a devel copy, not a temp installation
   [1]
   $ aftermerge
   # cat f
-  <<<<<<< working copy: ef83787e2614  - test: revision 1
+  <<<<<<< working copy: ef83787e2614 - test: revision 1
   revision 1
   =======
   revision 2
-  >>>>>>> merge rev:    0185f4e0cf02  - test: revision 2
+  >>>>>>> merge rev:    0185f4e0cf02 - test: revision 2
   space
   # hg stat
   M f
@@ -935,7 +935,7 @@ premerge=keep keeps conflict markers in:
   # hg update -C 1
   $ hg merge -r 4 --config merge-tools.true.premerge=keep
   merging f
-  <<<<<<< working copy: ef83787e2614  - test: revision 1
+  <<<<<<< working copy: ef83787e2614 - test: revision 1
   revision 1
   space
   =======
@@ -948,7 +948,7 @@ premerge=keep keeps conflict markers in:
   (branch merge, don't forget to commit)
   $ aftermerge
   # cat f
-  <<<<<<< working copy: ef83787e2614  - test: revision 1
+  <<<<<<< working copy: ef83787e2614 - test: revision 1
   revision 1
   space
   =======
@@ -969,7 +969,7 @@ premerge=keep-merge3 keeps conflict markers with base content:
   # hg update -C 1
   $ hg merge -r 4 --config merge-tools.true.premerge=keep-merge3
   merging f
-  <<<<<<< working copy: ef83787e2614  - test: revision 1
+  <<<<<<< working copy: ef83787e2614 - test: revision 1
   revision 1
   space
   ||||||| base
@@ -985,7 +985,7 @@ premerge=keep-merge3 keeps conflict markers with base content:
   (branch merge, don't forget to commit)
   $ aftermerge
   # cat f
-  <<<<<<< working copy: ef83787e2614  - test: revision 1
+  <<<<<<< working copy: ef83787e2614 - test: revision 1
   revision 1
   space
   ||||||| base

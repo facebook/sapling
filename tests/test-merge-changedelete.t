@@ -107,7 +107,7 @@ Non-interactive merge:
   changed2
   =======
   changed1
-  >>>>>>> merge rev:    10f9a0a634e8  - test: removed file1, changed file2, cha...
+  >>>>>>> merge rev:    10f9a0a634e8 - test: removed file1, changed file2, chan...
 
 
 Interactive merge:
@@ -171,7 +171,7 @@ Interactive merge:
   changed2
   =======
   changed1
-  >>>>>>> merge rev:    10f9a0a634e8  - test: removed file1, changed file2, cha...
+  >>>>>>> merge rev:    10f9a0a634e8 - test: removed file1, changed file2, chan...
 
 
 Interactive merge with bad input:
@@ -247,7 +247,7 @@ Interactive merge with bad input:
   changed2
   =======
   changed1
-  >>>>>>> merge rev:    10f9a0a634e8  - test: removed file1, changed file2, cha...
+  >>>>>>> merge rev:    10f9a0a634e8 - test: removed file1, changed file2, chan...
 
 
 Interactive merge with not enough input:
@@ -310,7 +310,7 @@ Interactive merge with not enough input:
   changed2
   =======
   changed1
-  >>>>>>> merge rev:    10f9a0a634e8  - test: removed file1, changed file2, cha...
+  >>>>>>> merge rev:    10f9a0a634e8 - test: removed file1, changed file2, chan...
 
 Choose local versions of files
 
@@ -635,7 +635,7 @@ Choose to merge all files
   ||||||| base
   =======
   changed1
-  >>>>>>> merge rev:    10f9a0a634e8  - test: removed file1, changed file2, cha...
+  >>>>>>> merge rev:    10f9a0a634e8 - test: removed file1, changed file2, chan...
 
 Exercise transitions between local, other, fail and prompt, and make sure the
 dirstate stays consistent. (Compare with each other and to the above

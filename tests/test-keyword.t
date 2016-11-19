@@ -1117,7 +1117,7 @@ conflict: keyword should stay outside conflict zone
   bar
   =======
   foo
-  >>>>>>> merge rev:    85d2d2d732a5  - test: simplemerge
+  >>>>>>> merge rev:    85d2d2d732a5 - test: simplemerge
 
 resolve to local, m must contain hash of last change (local parent)
 

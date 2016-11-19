@@ -518,7 +518,8 @@ def _formatconflictmarker(repo, ctx, template, label, pad):
     return util.ellipsis(mark, 80 - 8)
 
 _defaultconflictmarker = ('{node|short} '
-                          '{ifeq(tags, "tip", "", "{tags} ")}'
+                          '{ifeq(tags, "tip", "", '
+                           'ifeq(tags, "", "", "{tags} "))}'
                           '{if(bookmarks, "{bookmarks} ")}'
                           '{ifeq(branch, "default", "", "{branch} ")}'
                           '- {author|user}: {desc|firstline}')

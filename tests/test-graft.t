@@ -456,7 +456,7 @@ Resolve conflicted graft
   c
   =======
   b
-  >>>>>>> graft: 5d205f8b35b6  - bar: 1
+  >>>>>>> graft: 5d205f8b35b6 - bar: 1
   $ echo b > a
   $ hg resolve -m a
   (no more unresolved files)

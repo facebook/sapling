@@ -148,7 +148,7 @@ and committed in local target directory.
   target
   =======
   baz
-  >>>>>>> merge rev:    ce36d17b18fb  - test: 2 add a/c
+  >>>>>>> merge rev:    ce36d17b18fb - test: 2 add a/c
   $ rm b/c.orig
 
 Remote directory rename with conflicting file added in remote target directory
@@ -177,7 +177,7 @@ and committed in local source directory.
   ? a/d
   ? b/c.orig
   $ cat b/c
-  <<<<<<< working copy: ce36d17b18fb  - test: 2 add a/c
+  <<<<<<< working copy: ce36d17b18fb - test: 2 add a/c
   baz
   =======
   target

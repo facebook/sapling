@@ -836,7 +836,7 @@ running into merge conflict and invoking rebase --continue.
   rebasing 2:b8d8db2b242d "a-dev" (tip)
   saved backup bundle to $TESTTMP/collapse_remember_message/.hg/strip-backup/b8d8db2b242d-f474c19a-backup.hg (glob)
   $ hg log
-  changeset:   2:12bb766dceb1
+  changeset:   2:45ba1d1a8665
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000

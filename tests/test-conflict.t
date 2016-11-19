@@ -55,7 +55,7 @@
   =======
   4
   5
-  >>>>>>> merge rev:    c0c68e4fe667  - test: branch1
+  >>>>>>> merge rev:    c0c68e4fe667 - test: branch1
   Hop we are done.
 
   $ hg status
