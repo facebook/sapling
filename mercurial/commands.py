@@ -2579,6 +2579,16 @@ def debuginstall(ui, **opts):
         problems += 1
     fm.condwrite(err, 'extensionserror', " %s\n", err)
 
+    compengines = util.compengines._engines.values()
+    fm.write('compengines', _('checking registered compression engines (%s)\n'),
+             fm.formatlist(sorted(e.name() for e in compengines),
+                           name='compengine', fmt='%s', sep=', '))
+    fm.write('compenginesavail', _('checking available compression engines '
+                                   '(%s)\n'),
+             fm.formatlist(sorted(e.name() for e in compengines
+                                  if e.available()),
+                           name='compengine', fmt='%s', sep=', '))
+
     # templates
     p = templater.templatepaths()
     fm.write('templatedirs', 'checking templates (%s)...\n', ' '.join(p))
