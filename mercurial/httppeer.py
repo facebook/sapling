@@ -12,7 +12,6 @@ import errno
 import os
 import socket
 import tempfile
-import zlib
 
 from .i18n import _
 from .node import nullid
@@ -30,16 +29,26 @@ httplib = util.httplib
 urlerr = util.urlerr
 urlreq = util.urlreq
 
-def zgenerator(f):
-    zd = zlib.decompressobj()
+# FUTURE: consider refactoring this API to use generators. This will
+# require a compression engine API to emit generators.
+def decompressresponse(response, engine):
     try:
-        for chunk in util.filechunkiter(f):
-            while chunk:
-                yield zd.decompress(chunk, 2**18)
-                chunk = zd.unconsumed_tail
+        reader = engine.decompressorreader(response)
     except httplib.HTTPException:
         raise IOError(None, _('connection ended unexpectedly'))
-    yield zd.flush()
+
+    # We need to wrap reader.read() so HTTPException on subsequent
+    # reads is also converted.
+    origread = reader.read
+    class readerproxy(reader.__class__):
+        def read(self, *args, **kwargs):
+            try:
+                return origread(*args, **kwargs)
+            except httplib.HTTPException:
+                raise IOError(None, _('connection ended unexpectedly'))
+
+    reader.__class__ = readerproxy
+    return reader
 
 class httppeer(wireproto.wirepeer):
     def __init__(self, ui, path):
@@ -202,7 +211,7 @@ class httppeer(wireproto.wirepeer):
                                       (safeurl, version))
 
         if _compressible:
-            return util.chunkbuffer(zgenerator(resp))
+            return decompressresponse(resp, util.compengines['zlib'])
 
         return resp
 
