@@ -68,13 +68,6 @@ class sshserver(wireproto.abstractserverproto):
     def redirect(self):
         pass
 
-    def groupchunks(self, fh):
-        return iter(lambda: fh.read(4096), '')
-
-    def compresschunks(self, chunks):
-        for chunk in chunks:
-            yield chunk
-
     def sendresponse(self, v):
         self.fout.write("%d\n" % len(v))
         self.fout.write(v)
@@ -82,7 +75,13 @@ class sshserver(wireproto.abstractserverproto):
 
     def sendstream(self, source):
         write = self.fout.write
-        for chunk in source.gen:
+
+        if source.reader:
+            gen = iter(lambda: source.reader.read(4096), '')
+        else:
+            gen = source.gen
+
+        for chunk in gen:
             write(chunk)
         self.fout.flush()
 

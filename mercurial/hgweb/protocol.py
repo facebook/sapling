@@ -73,16 +73,6 @@ class webproto(wireproto.abstractserverproto):
         self.ui.ferr, self.ui.fout = self.oldio
         return val
 
-    def groupchunks(self, fh):
-        def getchunks():
-            while True:
-                chunk = fh.read(32768)
-                if not chunk:
-                    break
-                yield chunk
-
-        return self.compresschunks(getchunks())
-
     def compresschunks(self, chunks):
         # Don't allow untrusted settings because disabling compression or
         # setting a very high compression level could lead to flooding
@@ -106,8 +96,16 @@ def call(repo, req, cmd):
         req.respond(HTTP_OK, HGTYPE, body=rsp)
         return []
     elif isinstance(rsp, wireproto.streamres):
+        if rsp.reader:
+            gen = iter(lambda: rsp.reader.read(32768), '')
+        else:
+            gen = rsp.gen
+
+        if rsp.v1compressible:
+            gen = p.compresschunks(gen)
+
         req.respond(HTTP_OK, HGTYPE)
-        return rsp.gen
+        return gen
     elif isinstance(rsp, wireproto.pushres):
         val = p.restore()
         rsp = '%d\n%s' % (rsp.res, val)
