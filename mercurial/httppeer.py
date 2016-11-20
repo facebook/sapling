@@ -90,7 +90,7 @@ class httppeer(wireproto.wirepeer):
     def lock(self):
         raise error.Abort(_('operation not supported over http'))
 
-    def _callstream(self, cmd, **args):
+    def _callstream(self, cmd, _compressible=False, **args):
         if cmd == 'pushkey':
             args['data'] = ''
         data = args.pop('data', None)
@@ -201,6 +201,9 @@ class httppeer(wireproto.wirepeer):
                 raise error.RepoError(_("'%s' uses newer protocol %s") %
                                       (safeurl, version))
 
+        if _compressible:
+            return util.chunkbuffer(zgenerator(resp))
+
         return resp
 
     def _call(self, cmd, **args):
@@ -271,8 +274,7 @@ class httppeer(wireproto.wirepeer):
                 os.unlink(filename)
 
     def _callcompressable(self, cmd, **args):
-        stream = self._callstream(cmd, **args)
-        return util.chunkbuffer(zgenerator(stream))
+        return self._callstream(cmd, _compressible=True, **args)
 
     def _abort(self, exception):
         raise exception
