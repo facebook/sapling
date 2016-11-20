@@ -332,10 +332,9 @@ class KeepAliveHandler(object):
     def _start_transaction(self, h, req):
         # What follows mostly reimplements HTTPConnection.request()
         # except it adds self.parent.addheaders in the mix.
-        headers = req.headers.copy()
-        if sys.version_info >= (2, 4):
-            headers.update(req.unredirected_hdrs)
-        headers.update(self.parent.addheaders)
+        headers = dict(self.parent.addheaders)
+        headers.update(req.headers)
+        headers.update(req.unredirected_hdrs)
         headers = dict((n.lower(), v) for n, v in headers.items())
         skipheaders = {}
         for n in ('host', 'accept-encoding'):
