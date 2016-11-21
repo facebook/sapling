@@ -1,5 +1,6 @@
 import os
 from collections import defaultdict
+from hgext3rd.extutil import runshellcommand
 from mercurial import error, mdiff, osutil, scmutil, util
 from mercurial.node import nullid
 from mercurial.i18n import _
@@ -15,7 +16,7 @@ def backgroundrepack(repo, incremental=True):
     cmd = ' '.join(map(util.shellquote, cmd))
 
     repo.ui.warn(msg)
-    shallowutil.runshellcommand(cmd, os.environ)
+    runshellcommand(cmd, os.environ)
 
 def fullrepack(repo):
     datasource = contentstore.unioncontentstore(*repo.shareddatastores)

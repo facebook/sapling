@@ -181,7 +181,7 @@ if not components:
 dependencies = {
     'absorb' : ['linelog'],
     'fastannotate' : ['linelog'],
-    'remotefilelog' : ['cdatapack'],
+    'remotefilelog' : ['cdatapack', 'extutil'],
     'treemanifest' : ['ctreemanifest', 'cdatapack', 'fastmanifest'],
 }
 
