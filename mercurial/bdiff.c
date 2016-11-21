@@ -47,10 +47,10 @@ int bdiff_splitlines(const char *a, ssize_t len, struct bdiff_line **lr)
 
 	/* build the line array and calculate hashes */
 	hash = 0;
-	for (p = a; p < a + len; p++) {
+	for (p = a; p < plast; p++) {
 		hash = HASH(hash, *p);
 
-		if (*p == '\n' || p == plast) {
+		if (*p == '\n') {
 			l->hash = hash;
 			hash = 0;
 			l->len = p - b + 1;
@@ -59,6 +59,15 @@ int bdiff_splitlines(const char *a, ssize_t len, struct bdiff_line **lr)
 			l++;
 			b = p + 1;
 		}
+	}
+
+	if (p == plast) {
+		hash = HASH(hash, *p);
+		l->hash = hash;
+		l->len = p - b + 1;
+		l->l = b;
+		l->n = INT_MAX;
+		l++;
 	}
 
 	/* set up a sentinel */
