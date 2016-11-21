@@ -138,10 +138,7 @@ def wrapname(name, wrapper):
     func = getattr(module, name)
     def f(*args, **kwds):
         return wrapper(func, args, kwds)
-    try:
-        f.__name__ = func.__name__ # fails with Python 2.3
-    except Exception:
-        pass
+    f.__name__ = func.__name__
     setattr(module, name, f)
 
 # List of functions to be wrapped.
