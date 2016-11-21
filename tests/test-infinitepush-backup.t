@@ -120,7 +120,7 @@ Create two more heads and backup them
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ mkcommit newhead2
   created new head
-  $ hg backup
+  $ hg debugbackup
   pushing to ssh://user@dummy/repo
   searching for changes
   remote: pushing 2 commits:
@@ -132,7 +132,7 @@ Backup in background
   6 (no-eol)
   $ mkcommit newcommit
   $ tip=`hg log -r tip -T '{rev}'`
-  $ hg backup --background
+  $ hg debugbackup --background
   >>> from time import sleep
   >>> for i in range(5):
   ...   sleep(0.1)

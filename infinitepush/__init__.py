@@ -625,12 +625,12 @@ def _push(orig, ui, repo, dest=None, *args, **opts):
 @command('debugbackup', [('', 'background', None, 'run backup in background')])
 def backup(ui, repo, dest=None, **opts):
     """
-    Saves new non-extinct commits since the last `hg backup` or from 0 revision
-    if this backup is the first.
+    Saves new non-extinct commits since the last `hg debugbackup` or from 0
+    revision if this backup is the first.
     """
 
     if opts.get('background'):
-        runshellcommand('hg backup', os.environ)
+        runshellcommand('hg debugbackup', os.environ)
         return 0
     backuptipfile = 'infinitepushbackuptip'
     backuptip = repo.svfs.tryread(backuptipfile)
