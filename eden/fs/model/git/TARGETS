@@ -1,16 +1,13 @@
-ignore_srcs = [
-  'GitIgnore.cpp',
-  'GitIgnorePattern.cpp',
-]
-ignore_headers = [
-  'GitIgnore.h',
-  'GitIgnorePattern.h',
-]
-
 cpp_library(
   name = 'git',
-  srcs = glob(['*.cpp'], excludes=ignore_srcs),
-  headers = glob(['*.h'], excludes=ignore_headers),
+  srcs = [
+    'GitBlob.cpp',
+    'GitTree.cpp',
+  ],
+  headers = [
+    'GitBlob.h',
+    'GitTree.h',
+  ],
   deps = [
     '@/folly:folly',
     '@/folly/io:iobuf',
@@ -23,11 +20,30 @@ cpp_library(
 
 cpp_library(
   name = 'gitignore',
-  srcs = ignore_srcs,
-  headers = ignore_headers,
+  srcs = [
+    'GitIgnore.cpp',
+    'GitIgnorePattern.cpp',
+  ],
+  headers = [
+    'GitIgnore.h',
+    'GitIgnorePattern.h',
+  ],
   deps = [
+    ':glob',
     '@/eden/utils:utils',
     '@/folly:folly',
-    '@/folly/io:iobuf',
+  ],
+)
+
+cpp_library(
+  name = 'glob',
+  srcs = [
+    'GlobMatcher.cpp',
+  ],
+  headers = [
+    'GlobMatcher.h',
+  ],
+  deps = [
+    '@/folly:folly',
   ],
 )

@@ -12,6 +12,7 @@
 #include <folly/Optional.h>
 #include <folly/Range.h>
 #include "eden/fs/model/git/GitIgnore.h"
+#include "eden/fs/model/git/GlobMatcher.h"
 
 namespace facebook {
 namespace eden {
@@ -48,7 +49,9 @@ class GitIgnorePattern {
   GitIgnore::MatchResult match(RelativePathPiece path) const;
 
  private:
-  // Flag values that can be bitwise-ORed to create the flags_ value.
+  /**
+   * Flag values that can be bitwise-ORed to create the flags_ value.
+   */
   enum Flags : uint32_t {
     // This pattern started with !, indicating we should explicitly include
     // the anything matching it.
@@ -60,18 +63,19 @@ class GitIgnorePattern {
     FLAG_BASENAME_ONLY = 0x04,
   };
 
-  GitIgnorePattern(uint32_t flags, folly::StringPiece pattern);
+  GitIgnorePattern(uint32_t flags, GlobMatcher&& matcher);
 
   GitIgnorePattern(GitIgnorePattern const&) = delete;
   GitIgnorePattern& operator=(GitIgnorePattern const&) = delete;
 
-  bool fnmatch(folly::StringPiece value) const;
-
   /**
-   * Whether this is an include or exclude pattern.
+   * A bit set of the Flags defined above.
    */
   uint32_t flags_{0};
-  std::string pattern_;
+  /**
+   * The GlobMatcher object for performing matching.
+   */
+  GlobMatcher matcher_;
 };
 }
 }

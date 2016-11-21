@@ -13,3 +13,18 @@ cpp_unittest(
     'gtest',
   ],
 )
+
+cpp_benchmark(
+  name = 'benchmark',
+  srcs = glob(['*Benchmark.cpp']),
+  deps = [
+    '@/eden/fs/model/git:glob',
+    '@/folly:benchmark',
+    '@/folly:folly',
+    '@/folly/init:init',
+    '@/watchman/thirdparty/wildmatch:wildmatch',
+  ],
+  external_deps = [
+    ('re2', None),
+  ],
+)

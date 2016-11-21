@@ -9,10 +9,9 @@
  */
 #include "GitIgnorePattern.h"
 
-#include <fnmatch.h>
-
 using folly::Optional;
 using folly::StringPiece;
+using std::string;
 
 namespace facebook {
 namespace eden {
@@ -100,14 +99,8 @@ Optional<GitIgnorePattern> GitIgnorePattern::parseLine(StringPiece line) {
   //
   // Note that this check is done after stripping of any trailing backslash
   // above.
-  ssize_t firstSlash = -1;
-  for (size_t idx = 0; idx < line.size(); ++idx) {
-    if (line[idx] == '/') {
-      firstSlash = idx;
-      break;
-    }
-  }
-  if (firstSlash < 0) {
+  auto firstSlash = line.find('/');
+  if (firstSlash == StringPiece::npos) {
     flags |= FLAG_BASENAME_ONLY;
   } else if (firstSlash == 0) {
     // Skip past this first slash.
@@ -125,29 +118,32 @@ Optional<GitIgnorePattern> GitIgnorePattern::parseLine(StringPiece line) {
     if (line[0] == '/') {
       return folly::none;
     }
+  } else if (firstSlash == 2 && line[0] == '*' && line[1] == '*') {
+    // As an optimization, if the pattern starts with "**/" and contains no
+    // other slashes, just drop the leading "**/" and set FLAG_BASENAME_ONLY.
+    //
+    // This translates patterns like "**/foo" into just "foo", and "**/*.txt"
+    // into "*.txt"
+    //
+    // In practice, the majority of our ignore patterns using "**" are of this
+    // form.
+    if (line.find('/', 3) == StringPiece::npos) {
+      line.advance(3);
+      flags |= FLAG_BASENAME_ONLY;
+    }
   }
 
-  // TODO: git also tracks how much of the leading portion of the pattern does
-  // not contain any glob-special characters, so they can do fixed-string
-  // matching against that portion.
+  // Create the GlobMatcher
+  auto matcher = GlobMatcher::create(line);
+  if (!matcher.hasValue()) {
+    return folly::none;
+  }
 
-  // TODO: git also has a EXC_FLAG_ENDSWITH flag they use to optimize matching
-  // of patterns like "*.txt", ".c", etc.  (initial wildcard followed by all
-  // non-wildcard, non-slash characters).
-
-  // TODO
-  //
-  // "**" is special:
-  // - leading "**/" matches any leading directory
-  // - trailing "/**" matches any trailing suffix
-  // - "/**/" matches zero or more directories
-  // - other consecutive asterisks are invalid
-
-  return GitIgnorePattern(flags, line);
+  return GitIgnorePattern(flags, std::move(matcher).value());
 }
 
-GitIgnorePattern::GitIgnorePattern(uint32_t flags, StringPiece pattern)
-    : flags_(flags), pattern_(pattern.str()) {}
+GitIgnorePattern::GitIgnorePattern(uint32_t flags, GlobMatcher&& matcher)
+    : flags_(flags), matcher_(std::move(matcher)) {}
 
 GitIgnorePattern::~GitIgnorePattern() {}
 
@@ -161,10 +157,10 @@ GitIgnore::MatchResult GitIgnorePattern::match(RelativePathPiece path) const {
   bool isMatch = false;
   if (flags_ & FLAG_BASENAME_ONLY) {
     // Match only on the file basename.
-    isMatch = fnmatch(path.basename().stringPiece());
+    isMatch = matcher_.match(path.basename().stringPiece());
   } else {
     // Match on full relative path to the file from this directory.
-    isMatch = fnmatch(path.stringPiece());
+    isMatch = matcher_.match(path.stringPiece());
   }
 
   if (isMatch) {
@@ -172,28 +168,6 @@ GitIgnore::MatchResult GitIgnorePattern::match(RelativePathPiece path) const {
   }
 
   return GitIgnore::NO_MATCH;
-}
-
-bool GitIgnorePattern::fnmatch(folly::StringPiece value) const {
-  // FIXME: We're just using the standard fnmatch() function for now.
-  // This has several issues:
-  // - I don't believe it will handle "**" correctly
-  // - It's going to hurt performance a lot that we have to call value.str()
-  //   and allocate a new string each time we perform matching.
-  // - I suspect this function may not exist on all platforms we care about.
-  //
-  // Both git and libgit2 appear to have their own custom implementations here.
-  // We'll probably need to do the same.  (It doesn't look like the version in
-  // libgit2 is exposed in a way that we can call it.  Even if we could, it
-  // wouldn't handle our non-null-terminated StringPiece objects.)
-  //
-  // git also performs additional optimizations that we probably will want to
-  // do as well:
-  // - special handling for "endswith" type patterns ("*.txt", "*.c", etc)
-  // - special handling for fixed strings, and for just the leading fixed
-  //   portion of a pattern.
-  int rc = ::fnmatch(pattern_.c_str(), value.str().c_str(), FNM_PATHNAME);
-  return rc == 0;
 }
 }
 }
