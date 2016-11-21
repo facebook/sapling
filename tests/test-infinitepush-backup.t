@@ -126,3 +126,18 @@ Create two more heads and backup them
   remote: pushing 2 commits:
   remote:     f79c5017def3  newhead1
   remote:     667453c0787e  newhead2
+
+Backup in background
+  $ cat .hg/store/infinitepushbackuptip
+  6 (no-eol)
+  $ mkcommit newcommit
+  $ tip=`hg log -r tip -T '{rev}'`
+  $ hg backup --background
+  >>> from time import sleep
+  >>> for i in range(5):
+  ...   sleep(0.1)
+  ...   backuptip = int(open('.hg/store/infinitepushbackuptip').read())
+  ...   if backuptip == 7:
+  ...     break
+  $ cat .hg/store/infinitepushbackuptip
+  7 (no-eol)

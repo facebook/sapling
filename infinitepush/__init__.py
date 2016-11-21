@@ -60,6 +60,7 @@ import resource
 import tempfile
 
 from collections import defaultdict
+from hgext3rd.extutil import runshellcommand
 from mercurial import (
     bundle2,
     changegroup,
@@ -621,13 +622,16 @@ def _push(orig, ui, repo, dest=None, *args, **opts):
             exchange._localphasemove = oldphasemove
     return result
 
-@command('debugbackup')
-def backup(ui, repo, dest=None):
+@command('debugbackup', [('', 'background', None, 'run backup in background')])
+def backup(ui, repo, dest=None, **opts):
     """
     Saves new non-extinct commits since the last `hg backup` or from 0 revision
     if this backup is the first.
     """
 
+    if opts.get('background'):
+        runshellcommand('hg backup', os.environ)
+        return 0
     backuptipfile = 'infinitepushbackuptip'
     backuptip = repo.svfs.tryread(backuptipfile)
     try:
