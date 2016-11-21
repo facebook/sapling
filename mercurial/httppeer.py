@@ -169,9 +169,6 @@ class httppeer(wireproto.wirepeer):
             self.ui.debug('http error while sending %s command\n' % cmd)
             self.ui.traceback()
             raise IOError(None, inst)
-        except IndexError:
-            # this only happens with Python 2.3, later versions raise URLError
-            raise error.Abort(_('http error, possibly caused by proxy setting'))
         # record the url we got redirected to
         resp_url = resp.geturl()
         if resp_url.endswith(qs):
