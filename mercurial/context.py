@@ -1975,3 +1975,101 @@ class memfilectx(committablefilectx):
     def write(self, data, flags):
         """wraps repo.wwrite"""
         self._data = data
+
+class metadataonlyctx(committablectx):
+    """Like memctx but it's reusing the manifest of different commit.
+    Intended to be used by lightweight operations that are creating
+    metadata-only changes.
+
+    Revision information is supplied at initialization time.  'repo' is the
+    current localrepo, 'ctx' is original revision which manifest we're reuisng
+    'parents' is a sequence of two parent revisions identifiers (pass None for
+    every missing parent), 'text' is the commit.
+
+    user receives the committer name and defaults to current repository
+    username, date is the commit date in any format supported by
+    util.parsedate() and defaults to current date, extra is a dictionary of
+    metadata or is left empty.
+    """
+    def __new__(cls, repo, path, *args, **kwargs):
+        return super(metadataonlyctx, cls).__new__(cls, repo)
+
+    def __init__(self, repo, originalctx, parents, text, user=None, date=None,
+                 extra=None, editor=False):
+        super(metadataonlyctx, self).__init__(repo, text, user, date, extra)
+        self._rev = None
+        self._node = None
+        self._originalctx = originalctx
+        self._manifestnode = originalctx.manifestnode()
+        parents = [(p or nullid) for p in parents]
+        p1, p2 = self._parents = [changectx(self._repo, p) for p in parents]
+
+        # sanity check to ensure that the reused manifest parents are
+        # manifests of our commit parents
+        mp1, mp2 = self.manifestctx().parents
+        if p1 != nullid and p1.manifestctx().node() != mp1:
+            raise RuntimeError('can\'t reuse the manifest: '
+                               'its p1 doesn\'t match the new ctx p1')
+        if p2 != nullid and p2.manifestctx().node() != mp2:
+            raise RuntimeError('can\'t reuse the manifest: '
+                               'its p2 doesn\'t match the new ctx p2')
+
+        self._files = originalctx.files()
+        self.substate = {}
+
+        if extra:
+            self._extra = extra.copy()
+        else:
+            self._extra = {}
+
+        if self._extra.get('branch', '') == '':
+            self._extra['branch'] = 'default'
+
+        if editor:
+            self._text = editor(self._repo, self, [])
+            self._repo.savecommitmessage(self._text)
+
+    def manifestnode(self):
+        return self._manifestnode
+
+    @propertycache
+    def _manifestctx(self):
+        return self._repo.manifestlog[self._manifestnode]
+
+    def filectx(self, path, filelog=None):
+        return self._originalctx.filectx(path, filelog=filelog)
+
+    def commit(self):
+        """commit context to the repo"""
+        return self._repo.commitctx(self)
+
+    @property
+    def _manifest(self):
+        return self._originalctx.manifest()
+
+    @propertycache
+    def _status(self):
+        """Calculate exact status from ``files`` specified in the ``origctx``
+        and parents manifests.
+        """
+        man1 = self.p1().manifest()
+        p2 = self._parents[1]
+        # "1 < len(self._parents)" can't be used for checking
+        # existence of the 2nd parent, because "metadataonlyctx._parents" is
+        # explicitly initialized by the list, of which length is 2.
+        if p2.node() != nullid:
+            man2 = p2.manifest()
+            managing = lambda f: f in man1 or f in man2
+        else:
+            managing = lambda f: f in man1
+
+        modified, added, removed = [], [], []
+        for f in self._files:
+            if not managing(f):
+                added.append(f)
+            elif self[f]:
+                modified.append(f)
+            else:
+                removed.append(f)
+
+        return scmutil.status(modified, added, removed, [], [], [], [])
