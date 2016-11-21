@@ -1,7 +1,16 @@
+ignore_srcs = [
+  'GitIgnore.cpp',
+  'GitIgnorePattern.cpp',
+]
+ignore_headers = [
+  'GitIgnore.h',
+  'GitIgnorePattern.h',
+]
+
 cpp_library(
   name = 'git',
-  srcs = glob(['*.cpp']),
-  headers = glob(['*.h']),
+  srcs = glob(['*.cpp'], excludes=ignore_srcs),
+  headers = glob(['*.h'], excludes=ignore_headers),
   deps = [
     '@/folly:folly',
     '@/folly/io:iobuf',
@@ -9,5 +18,16 @@ cpp_library(
   ],
   external_deps = [
     ('libgit2', None, 'git2'),
+  ],
+)
+
+cpp_library(
+  name = 'gitignore',
+  srcs = ignore_srcs,
+  headers = ignore_headers,
+  deps = [
+    '@/eden/utils:utils',
+    '@/folly:folly',
+    '@/folly/io:iobuf',
   ],
 )
