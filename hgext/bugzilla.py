@@ -571,9 +571,9 @@ class cookietransportrequest(object):
         self.send_user_agent(h)
         self.send_content(h, request_body)
 
-        # Deal with differences between Python 2.4-2.6 and 2.7.
+        # Deal with differences between Python 2.6 and 2.7.
         # In the former h is a HTTP(S). In the latter it's a
-        # HTTP(S)Connection. Luckily, the 2.4-2.6 implementation of
+        # HTTP(S)Connection. Luckily, the 2.6 implementation of
         # HTTP(S) has an underlying HTTP(S)Connection, so extract
         # that and use it.
         try:
