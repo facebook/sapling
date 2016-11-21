@@ -7,8 +7,8 @@ cpp_library(
     '@/eden/fs/model:model',
     '@/eden/fs/model/git:git',
     '@/folly:folly',
-    '@/rocksdb:rocksdb',
   ],
   external_deps = [
+    'rocksdb',
   ],
 )
