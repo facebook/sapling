@@ -9,6 +9,7 @@ import sys
 from . import (
     encoding,
     osutil,
+    pycompat,
 )
 
 def _rcfiles(path):
@@ -30,7 +31,7 @@ def systemrcpath():
         root = 'etc/mercurial'
     # old mod_python does not set sys.argv
     if len(getattr(sys, 'argv', [])) > 0:
-        p = os.path.dirname(os.path.dirname(sys.argv[0]))
+        p = os.path.dirname(os.path.dirname(pycompat.sysargv[0]))
         if p != '/':
             path.extend(_rcfiles(os.path.join(p, root)))
     path.extend(_rcfiles('/' + root))
