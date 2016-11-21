@@ -36,6 +36,7 @@ from . import (
     hg,
     hook,
     profiling,
+    pycompat,
     revset,
     templatefilters,
     templatekw,
@@ -58,7 +59,7 @@ class request(object):
 
 def run():
     "run the command in sys.argv"
-    sys.exit((dispatch(request(sys.argv[1:])) or 0) & 255)
+    sys.exit((dispatch(request(pycompat.sysargv[1:])) or 0) & 255)
 
 def _getsimilar(symbols, value):
     sim = lambda x: difflib.SequenceMatcher(None, value, x).ratio()
