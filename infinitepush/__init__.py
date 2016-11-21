@@ -50,6 +50,9 @@
 
     # Server-side option
     loglevel = DEBUG
+
+    # Client-side option
+    debugbackuplog = FILE
 """
 
 from __future__ import absolute_import
@@ -630,7 +633,11 @@ def backup(ui, repo, dest=None, **opts):
     """
 
     if opts.get('background'):
-        runshellcommand('hg debugbackup', os.environ)
+        background_cmd = 'hg debugbackup'
+        logfile = ui.config('infinitepush', 'debugbackuplog')
+        if logfile:
+            background_cmd = background_cmd + ' &> ' + logfile
+        runshellcommand(background_cmd, os.environ)
         return 0
     backuptipfile = 'infinitepushbackuptip'
     backuptip = repo.svfs.tryread(backuptipfile)

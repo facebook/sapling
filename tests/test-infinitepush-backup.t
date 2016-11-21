@@ -132,12 +132,18 @@ Backup in background
   6 (no-eol)
   $ mkcommit newcommit
   $ tip=`hg log -r tip -T '{rev}'`
-  $ hg debugbackup --background
+  $ hg --config infinitepush.debugbackuplog="$TESTTMP/logfile" debugbackup --background
   >>> from time import sleep
-  >>> for i in range(5):
+  >>> for i in range(100):
   ...   sleep(0.1)
   ...   backuptip = int(open('.hg/store/infinitepushbackuptip').read())
   ...   if backuptip == 7:
   ...     break
+  $ cat $TESTTMP/logfile
+  pushing to ssh://user@dummy/repo
+  searching for changes
+  remote: pushing 2 commits:
+  remote:     667453c0787e  newhead2
+  remote:     773a3ba2e7c2  newcommit
   $ cat .hg/store/infinitepushbackuptip
   7 (no-eol)
