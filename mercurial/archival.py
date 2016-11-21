@@ -141,7 +141,7 @@ class tarit(object):
         self.mtime = mtime
         self.fileobj = None
 
-        def taropen(name, mode, fileobj=None):
+        def taropen(mode, name='', fileobj=None):
             if kind == 'gz':
                 mode = mode[0]
                 if not fileobj:
@@ -155,10 +155,9 @@ class tarit(object):
                 return tarfile.open(name, mode + kind, fileobj)
 
         if isinstance(dest, str):
-            self.z = taropen(dest, mode='w:')
+            self.z = taropen('w:', name=dest)
         else:
-            # Python 2.5-2.5.1 have a regression that requires a name arg
-            self.z = taropen(name='', mode='w|', fileobj=dest)
+            self.z = taropen('w|', fileobj=dest)
 
     def addfile(self, name, mode, islink, data):
         i = tarfile.TarInfo(name)
