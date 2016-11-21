@@ -388,15 +388,16 @@ def _lookupwrap(orig):
                     return "%s %s\n" % (0, r)
     return _lookup
 
-def validaterevset(repo, revset):
+def validaterevset(repo, revset, bookmark):
     """Abort if the revs to be pushed aren't valid for a scratch branch."""
     if not repo.revs(revset):
         raise error.Abort(_('nothing to push'))
-
-    heads = repo.revs('heads(%r)', revset)
-    if len(heads) > 1:
-        raise error.Abort(
-            _('cannot push more than one head to a scratch branch'))
+    if bookmark:
+        # Allow bundle with many heads only if no bookmark is specified
+        heads = repo.revs('heads(%r)', revset)
+        if len(heads) > 1:
+            raise error.Abort(
+                _('cannot push more than one head to a scratch branch'))
 
 def getscratchbranchpart(repo, peer, outgoing, force, ui, bookmark, create):
     if not outgoing.missing:
@@ -405,7 +406,7 @@ def getscratchbranchpart(repo, peer, outgoing, force, ui, bookmark, create):
     if scratchbranchparttype not in bundle2.bundle2caps(peer):
         raise error.Abort(_('no server support for %r') % scratchbranchparttype)
 
-    validaterevset(repo, revset.formatspec('%ln', outgoing.missing))
+    validaterevset(repo, revset.formatspec('%ln', outgoing.missing), bookmark)
 
     cg = changegroup.getlocalchangegroupraw(repo, 'push', outgoing)
 
@@ -740,9 +741,9 @@ def _makebundlefromraw(data):
 
     return bundlefile
 
-def _getrevs(bundle, oldnode, force):
+def _getrevs(bundle, oldnode, force, bookmark):
     'extracts and validates the revs to be imported'
-    validaterevset(bundle, 'bundle()')
+    validaterevset(bundle, 'bundle()', bookmark)
     revs = [bundle[r] for r in bundle.revs('sort(bundle())')]
 
     # new bookmark
@@ -791,7 +792,7 @@ def bundle2scratchbranch(op, part):
                                   hint="use --create if you want to create one")
         else:
             oldnode = None
-        revs = _getrevs(bundle, oldnode, force)
+        revs = _getrevs(bundle, oldnode, force, bookmark)
 
         # Notify the user of what is being pushed
         plural = 's' if len(revs) > 1 else ''
@@ -807,24 +808,30 @@ def bundle2scratchbranch(op, part):
             op.repo.ui.warn(("    %s  %s\n") % (revs[-1], firstline))
 
         nodes = [hex(rev.node()) for rev in revs]
-        hasnewnodes = not bool(index.getbundle(nodes[-1]))
-        if hasnewnodes:
+        hasnode = lambda rev: not bool(index.getbundle(bundle[rev].hex()))
+        hasnewheads = any(hasnode(rev)
+                          for rev in bundle.revs('heads(bundle())'))
+        # If there's a bookmark specified, there should be only one head,
+        # so we choose the last node, which will be that head.
+        # If a bug or malicious client allows there to be a bookmark
+        # with multiple heads, we will place the bookmark on the last head.
+        bookmarknode = nodes[-1] if nodes else None
+        if hasnewheads:
             with open(bundlefile, 'r') as f:
                 key = store.write(f.read())
             if bookmark:
                 index.addbookmarkandbundle(key, nodes,
-                                           bookmark, nodes[-1])
-                if params.get('pushbackbookmarks'):
-                    _addbookmarkpushbackpart(op, bookmark,
-                                             nodes[-1], bookprevnode)
+                                           bookmark, bookmarknode)
+                _maybeaddpushbackpart(op, bookmark, bookmarknode,
+                                      bookprevnode, params)
             else:
                 # Push new scratch commits with no bookmark
                 index.addbundle(key, nodes)
         elif bookmark:
             # Push new scratch bookmark to known scratch commits
-            index.addbookmark(bookmark, nodes[-1])
-            if params.get('pushbackbookmarks'):
-                _addbookmarkpushbackpart(op, bookmark, nodes[-1], bookprevnode)
+            index.addbookmark(bookmark, bookmarknode)
+            _maybeaddpushbackpart(op, bookmark, bookmarknode,
+                                  bookprevnode, params)
     finally:
         try:
             if bundlefile:
@@ -835,15 +842,16 @@ def bundle2scratchbranch(op, part):
 
     return 1
 
-def _addbookmarkpushbackpart(op, bookmark, newnode, oldnode):
-    if op.reply and 'pushback' in op.reply.capabilities:
-        params = {
-            'namespace': 'bookmarks',
-            'key': bookmark,
-            'new': newnode,
-            'old': oldnode,
-        }
-        op.reply.newpart('pushkey', mandatoryparams=params.items())
+def _maybeaddpushbackpart(op, bookmark, newnode, oldnode, params):
+    if params.get('pushbackbookmarks'):
+        if op.reply and 'pushback' in op.reply.capabilities:
+            params = {
+                'namespace': 'bookmarks',
+                'key': bookmark,
+                'new': newnode,
+                'old': oldnode,
+            }
+            op.reply.newpart('pushkey', mandatoryparams=params.items())
 
 def bundle2pushkey(orig, op, part):
     if op.records[scratchbranchparttype + '_skippushkey']:

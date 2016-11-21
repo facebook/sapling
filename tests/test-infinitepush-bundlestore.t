@@ -504,3 +504,36 @@ still in the old bundle
   8611afacb87078300a6d6b2f0c4b49fa506a8db9 2fa526470913fdcc94397caaf6cdbc977b3318cc
   8872775dd97a750e1533dc1fbbca665644b32547 e83e00b2d07dd427210a4a644f7ce8186f701fd7
   d8c4f54ab678fd67cb90bb3f272a2dc6513a59a7 2fa526470913fdcc94397caaf6cdbc977b3318cc
+
+Create new repo
+  $ cd ..
+  $ rm -rf repo
+  $ hg init repo
+  $ cd repo
+  $ setupserver
+  $ cd ..
+  $ rm -rf client
+  $ hg clone ssh://user@dummy/repo client -q
+  $ cd client
+
+Create two heads. Push first head alone, then two heads together. Make sure that
+multihead push works.
+  $ mkcommit multihead1
+  $ hg up null
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ mkcommit multihead2
+  created new head
+  $ hg push -r . --bundle-store
+  pushing to ssh://user@dummy/repo
+  searching for changes
+  remote: pushing 1 commit:
+  remote:     ee4802bf6864  multihead2
+  $ hg push -r '0:1' --bundle-store
+  pushing to ssh://user@dummy/repo
+  searching for changes
+  remote: pushing 2 commits:
+  remote:     a97fca1e39c7  multihead1
+  remote:     ee4802bf6864  multihead2
+  $ scratchnodes
+  a97fca1e39c70c8412aef902f6328408c652725a b9f1e02193bced87328c6f313a0ea8358694aa6a
+  ee4802bf6864326a6b3dcfff5a03abc2a0a69b8f b9f1e02193bced87328c6f313a0ea8358694aa6a

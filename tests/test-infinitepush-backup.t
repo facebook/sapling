@@ -110,3 +110,19 @@ Create one more head and run `hg debugbackup`. Make sure that only new head is p
   searching for changes
   remote: pushing 1 commit:
   remote:     3a30e220fe42  newhead
+
+Create two more heads and backup them
+  $ hg up 0
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ mkcommit newhead1
+  created new head
+  $ hg up 0
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ mkcommit newhead2
+  created new head
+  $ hg backup
+  pushing to ssh://user@dummy/repo
+  searching for changes
+  remote: pushing 2 commits:
+  remote:     f79c5017def3  newhead1
+  remote:     667453c0787e  newhead2
