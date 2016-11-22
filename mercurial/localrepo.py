@@ -28,7 +28,6 @@ from . import (
     bundle2,
     changegroup,
     changelog,
-    cmdutil,
     context,
     dirstate,
     dirstateguard,
@@ -42,6 +41,7 @@ from . import (
     manifest,
     match as matchmod,
     merge as mergemod,
+    mergeutil,
     namespaces,
     obsolete,
     pathutil,
@@ -1630,7 +1630,7 @@ class localrepository(object):
                 raise error.Abort(_("cannot commit merge with missing files"))
 
             ms = mergemod.mergestate.read(self)
-            cmdutil.checkunresolved(ms)
+            mergeutil.checkunresolved(ms)
 
             if editor:
                 cctx._text = editor(self, cctx, subs)
