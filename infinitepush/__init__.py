@@ -754,7 +754,6 @@ def _makebundlefromraw(data):
 
 def _getrevs(bundle, oldnode, force, bookmark):
     'extracts and validates the revs to be imported'
-    validaterevset(bundle, 'bundle()', bookmark)
     revs = [bundle[r] for r in bundle.revs('sort(bundle())')]
 
     # new bookmark
@@ -803,6 +802,11 @@ def bundle2scratchbranch(op, part):
                                   hint="use --create if you want to create one")
         else:
             oldnode = None
+        bundleheads = bundle.revs('heads(bundle())')
+        if bookmark and len(bundleheads) > 1:
+            raise error.Abort(
+                _('cannot push more than one head to a scratch branch'))
+
         revs = _getrevs(bundle, oldnode, force, bookmark)
 
         # Notify the user of what is being pushed
@@ -819,9 +823,8 @@ def bundle2scratchbranch(op, part):
             op.repo.ui.warn(("    %s  %s\n") % (revs[-1], firstline))
 
         nodes = [hex(rev.node()) for rev in revs]
-        hasnode = lambda rev: not bool(index.getbundle(bundle[rev].hex()))
-        hasnewheads = any(hasnode(rev)
-                          for rev in bundle.revs('heads(bundle())'))
+        inindex = lambda rev: bool(index.getbundle(bundle[rev].hex()))
+        hasnewheads = any(not inindex(rev) for rev in bundleheads)
         # If there's a bookmark specified, there should be only one head,
         # so we choose the last node, which will be that head.
         # If a bug or malicious client allows there to be a bookmark
