@@ -34,6 +34,7 @@ from . import (
     graphmod,
     lock as lockmod,
     match as matchmod,
+    mergeutil,
     obsolete,
     patch,
     pathutil,
@@ -3407,13 +3408,7 @@ def command(table):
 
     return cmd
 
-def checkunresolved(ms):
-    if list(ms.unresolved()):
-        raise error.Abort(_("unresolved merge conflicts "
-                            "(see 'hg help resolve')"))
-    if ms.mdstate() != 's' or list(ms.driverresolved()):
-        raise error.Abort(_('driver-resolved merge conflicts'),
-                          hint=_('run "hg resolve --all" to resolve'))
+checkunresolved = mergeutil.checkunresolved
 
 # a list of (ui, repo, otherpeer, opts, missing) functions called by
 # commands.outgoing.  "missing" is "missing" of the result of
