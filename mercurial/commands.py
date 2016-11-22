@@ -40,6 +40,7 @@ from . import (
     dagparser,
     dagutil,
     destutil,
+    dirstateguard,
     discovery,
     encoding,
     error,
@@ -686,7 +687,7 @@ def _dobackout(ui, repo, node=None, rev=None, **opts):
     bheads = repo.branchheads(branch)
     rctx = scmutil.revsingle(repo, hex(parent))
     if not opts.get('merge') and op1 != node:
-        dsguard = cmdutil.dirstateguard(repo, 'backout')
+        dsguard = dirstateguard.dirstateguard(repo, 'backout')
         try:
             ui.setconfig('ui', 'forcemerge', opts.get('tool', ''),
                          'backout')
@@ -4884,7 +4885,7 @@ def import_(ui, repo, patch1=None, *patches, **opts):
             lock = repo.lock()
             tr = repo.transaction('import')
         else:
-            dsguard = cmdutil.dirstateguard(repo, 'import')
+            dsguard = dirstateguard.dirstateguard(repo, 'import')
         parents = repo[None].parents()
         for patchurl in patches:
             if patchurl == '-':
