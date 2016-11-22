@@ -38,6 +38,7 @@ from mercurial import (
     hg,
     lock,
     merge as mergemod,
+    mergeutil,
     obsolete,
     patch,
     phases,
@@ -665,7 +666,7 @@ def rebase(ui, repo, **opts):
                 ui.warn(_('tool option will be ignored\n'))
             if contf:
                 ms = mergemod.mergestate.read(repo)
-                cmdutil.checkunresolved(ms)
+                mergeutil.checkunresolved(ms)
 
             retcode = rbsrt._prepareabortorcontinue(abortf)
             if retcode is not None:
