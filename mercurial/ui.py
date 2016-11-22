@@ -7,6 +7,7 @@
 
 from __future__ import absolute_import
 
+import contextlib
 import errno
 import getpass
 import inspect
@@ -1192,6 +1193,23 @@ class ui(object):
         msg += ("\n(compatibility will be dropped after Mercurial-%s,"
                 " update your code.)") % version
         self.develwarn(msg, stacklevel=2, config='deprec-warn')
+
+    @contextlib.contextmanager
+    def configoverride(self, overrides, source=""):
+        """Context manager for temporary config overrides
+        `overrides` must be a dict of the following structure:
+        {(section, name) : value}"""
+        backups = {}
+        for (section, name), value in overrides.items():
+            backups[(section, name)] = self.backupconfig(section, name)
+            self.setconfig(section, name, value, source)
+        yield
+        for __, backup in backups.items():
+            self.restoreconfig(backup)
+        # just restoring ui.quiet config to the previous value is not enough
+        # as it does not update ui.quiet class member
+        if ('ui', 'quiet') in overrides:
+            self.fixconfig(section='ui')
 
 class paths(dict):
     """Represents a collection of paths and their configs.
