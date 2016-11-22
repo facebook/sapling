@@ -13,8 +13,6 @@ allowing operations like diff and log with revsets.
 
 from __future__ import absolute_import
 
-import os
-
 from .i18n import _
 from .node import nullid
 
@@ -27,6 +25,7 @@ from . import (
     manifest,
     mdiff,
     pathutil,
+    pycompat,
     revlog,
     scmutil,
     util,
@@ -229,7 +228,7 @@ class unionrepository(localrepo.localrepository):
         return unionpeer(self)
 
     def getcwd(self):
-        return os.getcwd() # always outside the repo
+        return pycompat.getcwd() # always outside the repo
 
 def instance(ui, path, create):
     if create:
@@ -237,13 +236,13 @@ def instance(ui, path, create):
     parentpath = ui.config("bundle", "mainreporoot", "")
     if not parentpath:
         # try to find the correct path to the working directory repo
-        parentpath = cmdutil.findrepo(os.getcwd())
+        parentpath = cmdutil.findrepo(pycompat.getcwd())
         if parentpath is None:
             parentpath = ''
     if parentpath:
         # Try to make the full path relative so we get a nice, short URL.
         # In particular, we don't want temp dir names in test outputs.
-        cwd = os.getcwd()
+        cwd = pycompat.getcwd()
         if parentpath == cwd:
             parentpath = ''
         else:

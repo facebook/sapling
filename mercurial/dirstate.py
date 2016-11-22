@@ -271,7 +271,7 @@ class dirstate(object):
 
     @propertycache
     def _cwd(self):
-        return os.getcwd()
+        return pycompat.getcwd()
 
     def getcwd(self):
         '''Return the path from which a canonical path is calculated.

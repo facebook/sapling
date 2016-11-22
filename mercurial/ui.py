@@ -27,6 +27,7 @@ from . import (
     error,
     formatter,
     progress,
+    pycompat,
     scmutil,
     util,
 )
@@ -227,7 +228,7 @@ class ui(object):
         if section in (None, 'paths'):
             # expand vars and ~
             # translate paths relative to root (or home) into absolute paths
-            root = root or os.getcwd()
+            root = root or pycompat.getcwd()
             for c in self._tcfg, self._ucfg, self._ocfg:
                 for n, p in c.items('paths'):
                     # Ignore sub-options.

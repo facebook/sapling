@@ -12,6 +12,7 @@ from mercurial.i18n import _
 from mercurial import (
     encoding,
     error,
+    pycompat,
     scmutil,
     strutil,
     util,
@@ -1119,7 +1120,7 @@ class svn_sink(converter_sink, commandline):
         self.delexec = []
         self.copies = []
         self.wc = None
-        self.cwd = os.getcwd()
+        self.cwd = pycompat.getcwd()
 
         created = False
         if os.path.isfile(os.path.join(path, '.svn', 'entries')):
@@ -1139,7 +1140,8 @@ class svn_sink(converter_sink, commandline):
                         path = '/' + path
                     path = 'file://' + path
 
-            wcpath = os.path.join(os.getcwd(), os.path.basename(path) + '-wc')
+            wcpath = os.path.join(pycompat.getcwd(), os.path.basename(path) +
+                                '-wc')
             ui.status(_('initializing svn working copy %r\n')
                       % os.path.basename(wcpath))
             self.run0('checkout', path, wcpath)

@@ -2630,7 +2630,7 @@ def debugpathcomplete(ui, repo, *specs, **opts):
 
     def complete(path, acceptable):
         dirstate = repo.dirstate
-        spec = os.path.normpath(os.path.join(os.getcwd(), path))
+        spec = os.path.normpath(os.path.join(pycompat.getcwd(), path))
         rootdir = repo.root + os.sep
         if spec != repo.root and not spec.startswith(rootdir):
             return [], []

@@ -880,7 +880,7 @@ def _dispatch(req):
                         if not path:
                             raise error.RepoError(_("no repository found in"
                                                     " '%s' (.hg not found)")
-                                                  % os.getcwd())
+                                                  % pycompat.getcwd())
                         raise
             if repo:
                 ui = repo.ui

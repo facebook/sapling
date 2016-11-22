@@ -38,6 +38,7 @@ from . import (
     patch,
     pathutil,
     phases,
+    pycompat,
     repair,
     revlog,
     revset,
@@ -570,7 +571,7 @@ def openrevlog(repo, cmd, file_, opts):
             raise error.CommandError(cmd, _('invalid arguments'))
         if not os.path.isfile(file_):
             raise error.Abort(_("revlog '%s' not found") % file_)
-        r = revlog.revlog(scmutil.opener(os.getcwd(), audit=False),
+        r = revlog.revlog(scmutil.opener(pycompat.getcwd(), audit=False),
                           file_[:-2] + ".i")
     return r
 
@@ -2744,7 +2745,7 @@ def commitforceeditor(repo, ctx, subs, finishdesc=None, extramsg=None,
         committext = buildcommittext(repo, ctx, subs, extramsg)
 
     # run editor in the repository root
-    olddir = os.getcwd()
+    olddir = pycompat.getcwd()
     os.chdir(repo.root)
 
     # make in-memory changes visible to external process

@@ -16,6 +16,7 @@ from . import (
     demandimport,
     error,
     extensions,
+    pycompat,
     util,
 )
 
@@ -141,7 +142,7 @@ def _exthook(ui, repo, name, cmd, args, throw):
     if repo:
         cwd = repo.root
     else:
-        cwd = os.getcwd()
+        cwd = pycompat.getcwd()
     r = ui.system(cmd, environ=env, cwd=cwd)
 
     duration = time.time() - starttime

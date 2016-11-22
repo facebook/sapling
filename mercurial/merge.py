@@ -28,6 +28,7 @@ from . import (
     error,
     filemerge,
     obsolete,
+    pycompat,
     scmutil,
     subrepo,
     util,
@@ -1040,7 +1041,7 @@ def batchremove(repo, actions):
     wjoin = repo.wjoin
     audit = repo.wvfs.audit
     try:
-        cwd = os.getcwd()
+        cwd = pycompat.getcwd()
     except OSError as err:
         if err.errno != errno.ENOENT:
             raise
@@ -1066,7 +1067,7 @@ def batchremove(repo, actions):
         # cwd was present before we started to remove files
         # let's check if it is present after we removed them
         try:
-            os.getcwd()
+            pycompat.getcwd()
         except OSError as err:
             if err.errno != errno.ENOENT:
                 raise
