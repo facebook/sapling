@@ -25,7 +25,6 @@ from .node import (
 )
 from . import (
     copies,
-    destutil,
     error,
     filemerge,
     obsolete,
@@ -1483,11 +1482,6 @@ def update(repo, node, branchmerge, force, ancestor=None,
         pas = [None]
         if ancestor is not None:
             pas = [repo[ancestor]]
-
-        if node is None:
-            repo.ui.deprecwarn('update with no target', '3.9')
-            rev, _mark, _act = destutil.destupdate(repo)
-            node = repo[rev].node()
 
         overwrite = force and not branchmerge
 
