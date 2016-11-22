@@ -39,6 +39,9 @@ def decompressresponse(response, engine):
 
     # We need to wrap reader.read() so HTTPException on subsequent
     # reads is also converted.
+    # Ideally we'd use super() here. However, if ``reader`` isn't a new-style
+    # class, this can raise:
+    # TypeError: super() argument 1 must be type, not classobj
     origread = reader.read
     class readerproxy(reader.__class__):
         def read(self, *args, **kwargs):
