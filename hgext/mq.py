@@ -79,7 +79,6 @@ from mercurial.node import (
 from mercurial import (
     cmdutil,
     commands,
-    dispatch,
     error,
     extensions,
     hg,
@@ -3588,7 +3587,7 @@ def extsetup(ui):
         for cmd, entry in cmdtable.iteritems():
             cmd = cmdutil.parsealiases(cmd)[0]
             func = entry[0]
-            if dispatch._cmdattr(ui, cmd, func, 'norepo'):
+            if func.norepo:
                 continue
             entry = extensions.wrapcommand(cmdtable, cmd, mqcommand)
             entry[1].extend(mqopt)

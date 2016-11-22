@@ -714,14 +714,6 @@ def _checkshellalias(lui, ui, args):
         return lambda: runcommand(lui, None, cmd, args[:1], ui, options, d,
                                   [], {})
 
-def _cmdattr(ui, cmd, func, attr):
-    try:
-        return getattr(func, attr)
-    except AttributeError:
-        ui.deprecwarn("missing attribute '%s', use @command decorator "
-                      "to register '%s'" % (attr, cmd), '3.8')
-        return False
-
 _loaded = set()
 
 # list of (objname, loadermod, loadername) tuple:
@@ -854,7 +846,7 @@ def _dispatch(req):
     with profiling.maybeprofile(lui):
         repo = None
         cmdpats = args[:]
-        if not _cmdattr(ui, cmd, func, 'norepo'):
+        if not func.norepo:
             # use the repo from the request only if we don't have -R
             if not rpath and not cwd:
                 repo = req.repo
@@ -877,9 +869,8 @@ def _dispatch(req):
                 except error.RepoError:
                     if rpath and rpath[-1]: # invalid -R path
                         raise
-                    if not _cmdattr(ui, cmd, func, 'optionalrepo'):
-                        if (_cmdattr(ui, cmd, func, 'inferrepo') and
-                            args and not path):
+                    if not func.optionalrepo:
+                        if func.inferrepo and args and not path:
                             # try to infer -R from command args
                             repos = map(cmdutil.findrepo, args)
                             guess = repos[0]
