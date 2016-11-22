@@ -32,6 +32,7 @@ from mercurial import (
     commands,
     copies,
     destutil,
+    dirstateguard,
     error,
     extensions,
     hg,
@@ -790,7 +791,7 @@ def concludenode(repo, rev, p1, p2, commitmsg=None, editor=None, extrafn=None,
     '''Commit the wd changes with parents p1 and p2. Reuse commit info from rev
     but also store useful information in extra.
     Return node of committed revision.'''
-    dsguard = cmdutil.dirstateguard(repo, 'rebase')
+    dsguard = dirstateguard.dirstateguard(repo, 'rebase')
     try:
         repo.setparents(repo[p1].node(), repo[p2].node())
         ctx = repo[rev]
