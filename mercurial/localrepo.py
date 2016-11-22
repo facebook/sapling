@@ -31,6 +31,7 @@ from . import (
     cmdutil,
     context,
     dirstate,
+    dirstateguard,
     encoding,
     error,
     exchange,
@@ -1141,7 +1142,7 @@ class localrepository(object):
             wlock = self.wlock()
             lock = self.lock()
             if self.svfs.exists("undo"):
-                dsguard = cmdutil.dirstateguard(self, 'rollback')
+                dsguard = dirstateguard.dirstateguard(self, 'rollback')
 
                 return self._rollback(dryrun, force, dsguard)
             else:
