@@ -43,6 +43,9 @@ if ispy3:
     osname = os.name.encode('ascii')
     ospathsep = os.pathsep.encode('ascii')
     ossep = os.sep.encode('ascii')
+    # os.getcwd() on Python 3 returns string, but it has os.getcwdb() which
+    # returns bytes.
+    getcwd = os.getcwdb
 
     # TODO: .buffer might not exist if std streams were replaced; we'll need
     # a silly wrapper to make a bytes stream backed by a unicode one.
@@ -110,6 +113,7 @@ else:
     stdout = sys.stdout
     stderr = sys.stderr
     sysargv = sys.argv
+    getcwd = os.getcwd
 
 stringio = io.StringIO
 empty = _queue.Empty

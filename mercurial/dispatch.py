@@ -667,7 +667,7 @@ def _getlocal(ui, rpath, wd=None):
     """
     if wd is None:
         try:
-            wd = os.getcwd()
+            wd = pycompat.getcwd()
         except OSError as e:
             raise error.Abort(_("error getting current working directory: %s") %
                               e.strerror)
