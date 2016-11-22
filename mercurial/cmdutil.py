@@ -3522,4 +3522,9 @@ def wrongtooltocontinue(repo, task):
         hint = after[0]
     raise error.Abort(_('no %s in progress') % task, hint=hint)
 
-dirstateguard = dirstateguardmod.dirstateguard
+class dirstateguard(dirstateguardmod.dirstateguard):
+    def __init__(self, repo, name):
+        dirstateguardmod.dirstateguard.__init__(self, repo, name)
+        repo.ui.deprecwarn(
+            'dirstateguard has moved from cmdutil to dirstateguard',
+            '4.1')
