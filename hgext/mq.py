@@ -79,6 +79,7 @@ from mercurial.node import (
 from mercurial import (
     cmdutil,
     commands,
+    dirstateguard,
     error,
     extensions,
     hg,
@@ -1724,7 +1725,7 @@ class queue(object):
 
             dsguard = None
             try:
-                dsguard = cmdutil.dirstateguard(repo, 'mq.refresh')
+                dsguard = dirstateguard.dirstateguard(repo, 'mq.refresh')
                 if diffopts.git or diffopts.upgrade:
                     copies = {}
                     for dst in a:
