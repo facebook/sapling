@@ -3408,7 +3408,10 @@ def command(table):
 
     return cmd
 
-checkunresolved = mergeutil.checkunresolved
+def checkunresolved(ms):
+    ms._repo.ui.deprecwarn('checkunresolved moved from cmdutil to mergeutil',
+                           '4.1')
+    return mergeutil.checkunresolved(ms)
 
 # a list of (ui, repo, otherpeer, opts, missing) functions called by
 # commands.outgoing.  "missing" is "missing" of the result of
