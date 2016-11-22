@@ -603,7 +603,8 @@ def _pushdiscoverybookmarks(pushop):
     explicit = set([repo._bookmarks.expandname(bookmark)
                     for bookmark in pushop.bookmarks])
 
-    comp = bookmod.compare(repo, repo._bookmarks, remotebookmark, srchex=hex)
+    comp = bookmod.comparebookmarks(repo, repo._bookmarks,
+                                    remotebookmark, srchex=hex)
     addsrc, adddst, advsrc, advdst, diverge, differ, invalid, same = comp
     for b, scid, dcid in advsrc:
         if b in explicit:

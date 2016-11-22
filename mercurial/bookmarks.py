@@ -323,8 +323,8 @@ def pushbookmark(repo, key, old, new):
     finally:
         lockmod.release(tr, l, w)
 
-def compare(repo, srcmarks, dstmarks,
-            srchex=None, dsthex=None, targets=None):
+def comparebookmarks(repo, srcmarks, dstmarks,
+                     srchex=None, dsthex=None, targets=None):
     '''Compare bookmarks between srcmarks and dstmarks
 
     This returns tuple "(addsrc, adddst, advsrc, advdst, diverge,
@@ -443,7 +443,7 @@ def updatefromremote(ui, repo, remotemarks, path, trfunc, explicit=()):
     ui.debug("checking for updated bookmarks\n")
     localmarks = repo._bookmarks
     (addsrc, adddst, advsrc, advdst, diverge, differ, invalid, same
-     ) = compare(repo, remotemarks, localmarks, dsthex=hex)
+     ) = comparebookmarks(repo, remotemarks, localmarks, dsthex=hex)
 
     status = ui.status
     warn = ui.warn
@@ -505,8 +505,8 @@ def incoming(ui, repo, other):
     '''
     ui.status(_("searching for changed bookmarks\n"))
 
-    r = compare(repo, other.listkeys('bookmarks'), repo._bookmarks,
-                dsthex=hex)
+    r = comparebookmarks(repo, other.listkeys('bookmarks'), repo._bookmarks,
+                         dsthex=hex)
     addsrc, adddst, advsrc, advdst, diverge, differ, invalid, same = r
 
     incomings = []
@@ -547,8 +547,8 @@ def outgoing(ui, repo, other):
     '''
     ui.status(_("searching for changed bookmarks\n"))
 
-    r = compare(repo, repo._bookmarks, other.listkeys('bookmarks'),
-                srchex=hex)
+    r = comparebookmarks(repo, repo._bookmarks, other.listkeys('bookmarks'),
+                         srchex=hex)
     addsrc, adddst, advsrc, advdst, diverge, differ, invalid, same = r
 
     outgoings = []
@@ -592,8 +592,8 @@ def summary(repo, other):
 
     This returns "(# of incoming, # of outgoing)" tuple.
     '''
-    r = compare(repo, other.listkeys('bookmarks'), repo._bookmarks,
-                dsthex=hex)
+    r = comparebookmarks(repo, other.listkeys('bookmarks'), repo._bookmarks,
+                         dsthex=hex)
     addsrc, adddst, advsrc, advdst, diverge, differ, invalid, same = r
     return (len(addsrc), len(adddst))
 
