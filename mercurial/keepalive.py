@@ -78,31 +78,6 @@ EXTRA ATTRIBUTES AND METHODS
   easy to distinguish between non-200 responses.  The reason is that
   urllib2 tries to do clever things with error codes 301, 302, 401,
   and 407, and it wraps the object upon return.
-
-  For python versions earlier than 2.4, you can avoid this fancy error
-  handling by setting the module-level global HANDLE_ERRORS to zero.
-  You see, prior to 2.4, it's the HTTP Handler's job to determine what
-  to handle specially, and what to just pass up.  HANDLE_ERRORS == 0
-  means "pass everything up".  In python 2.4, however, this job no
-  longer belongs to the HTTP Handler and is now done by a NEW handler,
-  HTTPErrorProcessor.  Here's the bottom line:
-
-    python version < 2.4
-        HANDLE_ERRORS == 1  (default) pass up 200, treat the rest as
-                            errors
-        HANDLE_ERRORS == 0  pass everything up, error processing is
-                            left to the calling code
-    python version >= 2.4
-        HANDLE_ERRORS == 1  pass up 200, treat the rest as errors
-        HANDLE_ERRORS == 0  (default) pass everything up, let the
-                            other handlers (specifically,
-                            HTTPErrorProcessor) decide what to do
-
-  In practice, setting the variable either way makes little difference
-  in python 2.4, so for the most consistent behavior across versions,
-  you probably just want to use the defaults, which will give you
-  exceptions on errors.
-
 """
 
 # $Id: keepalive.py,v 1.14 2006/04/04 21:00:32 mstenner Exp $
@@ -124,10 +99,6 @@ urlerr = util.urlerr
 urlreq = util.urlreq
 
 DEBUG = None
-
-if sys.version_info < (2, 4):
-    HANDLE_ERRORS = 1
-else: HANDLE_ERRORS = 0
 
 class ConnectionManager(object):
     """
@@ -277,11 +248,7 @@ class KeepAliveHandler(object):
         r.headers = r.msg
         r.msg = r.reason
 
-        if r.status == 200 or not HANDLE_ERRORS:
-            return r
-        else:
-            return self.parent.error('http', req, r,
-                                     r.status, r.msg, r.headers)
+        return r
 
     def _reuse_connection(self, h, req, host):
         """start the transaction with a re-used connection
@@ -595,33 +562,6 @@ class HTTPConnection(httplib.HTTPConnection):
 #####   TEST FUNCTIONS
 #########################################################################
 
-def error_handler(url):
-    global HANDLE_ERRORS
-    orig = HANDLE_ERRORS
-    keepalive_handler = HTTPHandler()
-    opener = urlreq.buildopener(keepalive_handler)
-    urlreq.installopener(opener)
-    pos = {0: 'off', 1: 'on'}
-    for i in (0, 1):
-        print("  fancy error handling %s (HANDLE_ERRORS = %i)" % (pos[i], i))
-        HANDLE_ERRORS = i
-        try:
-            fo = urlreq.urlopen(url)
-            fo.read()
-            fo.close()
-            try:
-                status, reason = fo.status, fo.reason
-            except AttributeError:
-                status, reason = None, None
-        except IOError as e:
-            print("  EXCEPTION: %s" % e)
-            raise
-        else:
-            print("  status = %s, reason = %s" % (status, reason))
-    HANDLE_ERRORS = orig
-    hosts = keepalive_handler.open_connections()
-    print("open connections:", hosts)
-    keepalive_handler.close_all()
 
 def continuity(url):
     md5 = hashlib.md5
@@ -732,12 +672,6 @@ def test_timeout(url):
 
 
 def test(url, N=10):
-    print("checking error handler (do this on a non-200)")
-    try: error_handler(url)
-    except IOError:
-        print("exiting - exception will prevent further tests")
-        sys.exit()
-    print('')
     print("performing continuity test (making sure stuff isn't corrupted)")
     continuity(url)
     print('')
