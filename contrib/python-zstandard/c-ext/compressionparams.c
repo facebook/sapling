@@ -136,7 +136,7 @@ static void CompressionParameters_dealloc(PyObject* self) {
 
 static Py_ssize_t CompressionParameters_length(PyObject* self) {
 	return 7;
-};
+}
 
 static PyObject* CompressionParameters_item(PyObject* o, Py_ssize_t i) {
 	CompressionParametersObject* self = (CompressionParametersObject*)o;

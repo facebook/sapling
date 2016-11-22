@@ -42,7 +42,7 @@ static void DictParameters_dealloc(PyObject* self) {
 
 static Py_ssize_t DictParameters_length(PyObject* self) {
 	return 4;
-};
+}
 
 static PyObject* DictParameters_item(PyObject* o, Py_ssize_t i) {
 	DictParametersObject* self = (DictParametersObject*)o;
