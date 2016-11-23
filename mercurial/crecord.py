@@ -433,7 +433,7 @@ class uihunk(patchnode):
     def __repr__(self):
         return '<hunk %r@%d>' % (self.filename(), self.fromline)
 
-def filterpatch(ui, chunks, chunkselector):
+def filterpatch(ui, chunks, chunkselector, operation=None):
     """interactively filter patch chunks into applied-only chunks"""
     chunks = list(chunks)
     # convert chunks list into structure suitable for displaying/modifying
@@ -446,7 +446,7 @@ def filterpatch(ui, chunks, chunkselector):
     uiheaders = [uiheader(h) for h in headers]
     # let user choose headers/hunks/lines, and mark their applied flags
     # accordingly
-    ret = chunkselector(ui, uiheaders)
+    ret = chunkselector(ui, uiheaders, operation=operation)
     appliedhunklist = []
     for hdr in uiheaders:
         if (hdr.applied and
@@ -466,13 +466,13 @@ def filterpatch(ui, chunks, chunkselector):
 
     return (appliedhunklist, ret)
 
-def chunkselector(ui, headerlist):
+def chunkselector(ui, headerlist, operation=None):
     """
     curses interface to get selection of chunks, and mark the applied flags
     of the chosen chunks.
     """
     ui.write(_('starting interactive selection\n'))
-    chunkselector = curseschunkselector(headerlist, ui)
+    chunkselector = curseschunkselector(headerlist, ui, operation)
     f = signal.getsignal(signal.SIGTSTP)
     curses.wrapper(chunkselector.main)
     if chunkselector.initerr is not None:
@@ -486,12 +486,12 @@ def testdecorator(testfn, f):
         return f(testfn, *args, **kwargs)
     return u
 
-def testchunkselector(testfn, ui, headerlist):
+def testchunkselector(testfn, ui, headerlist, operation=None):
     """
     test interface to get selection of chunks, and mark the applied flags
     of the chosen chunks.
     """
-    chunkselector = curseschunkselector(headerlist, ui)
+    chunkselector = curseschunkselector(headerlist, ui, operation)
     if testfn and os.path.exists(testfn):
         testf = open(testfn)
         testcommands = map(lambda x: x.rstrip('\n'), testf.readlines())
@@ -502,7 +502,7 @@ def testchunkselector(testfn, ui, headerlist):
     return chunkselector.opts
 
 class curseschunkselector(object):
-    def __init__(self, headerlist, ui):
+    def __init__(self, headerlist, ui, operation=None):
         # put the headers into a patch object
         self.headerlist = patch(headerlist)
 
@@ -555,6 +555,9 @@ class curseschunkselector(object):
 
         # if the last 'toggle all' command caused all changes to be applied
         self.waslasttoggleallapplied = True
+
+        # affects some ui text
+        self.operation = operation
 
     def uparrowevent(self):
         """
