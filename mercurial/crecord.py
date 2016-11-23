@@ -960,10 +960,10 @@ class curseschunkselector(object):
                             pairname='legend')
                 self.statuswin.refresh()
                 return
-            line1 = ("SELECT CHUNKS: (j/k/up/dn/pgup/pgdn) move cursor; "
-                   "(space/A) toggle hunk/all; (e)dit hunk;")
-            line2 = (" (f)old/unfold; (c)onfirm applied; (q)uit; (?) help "
-                   "| [X]=hunk applied **=folded, toggle [a]mend mode")
+            line1 = _("SELECT CHUNKS: (j/k/up/dn/pgup/pgdn) move cursor; "
+                      "(space/A) toggle hunk/all; (e)dit hunk;")
+            line2 = _(" (f)old/unfold; (c)onfirm applied; (q)uit; (?) help "
+                      "| [X]=hunk applied **=folded, toggle [a]mend mode")
 
             printstring(self.statuswin,
                         util.ellipsis(line1, self.xscreensize - 1),
@@ -1305,7 +1305,8 @@ class curseschunkselector(object):
 
     def helpwindow(self):
         "print a help window to the screen.  exit after any keypress."
-        helptext = """            [press any key to return to the patch-display]
+        helptext = _(
+            """            [press any key to return to the patch-display]
 
 crecord allows you to interactively choose among the changes you have made,
 and confirm only those changes you select for further processing by the command
@@ -1329,7 +1330,7 @@ the following are valid keystrokes:
                       c : confirm selected changes
                       r : review/edit and confirm selected changes
                       q : quit without confirming (no changes will be made)
-                      ? : help (what you're currently reading)"""
+                      ? : help (what you're currently reading)""")
 
         helpwin = curses.newwin(self.yscreensize, 0, 0, 0)
         helplines = helptext.split("\n")
@@ -1368,7 +1369,7 @@ the following are valid keystrokes:
     def reviewcommit(self):
         """ask for 'y' to be pressed to confirm selected. return True if
         confirmed."""
-        confirmtext = (
+        confirmtext = _(
 """if you answer yes to the following, the your currently chosen patch chunks
 will be loaded into an editor.  you may modify the patch from the editor, and
 save the changes if you wish to change the patch.  otherwise, you can just
@@ -1400,19 +1401,19 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
         except ValueError:
             ver = 1
         if ver < 2.19:
-            msg = ("The amend option is unavailable with hg versions < 2.2\n\n"
-                   "Press any key to continue.")
+            msg = _("The amend option is unavailable with hg versions < 2.2\n\n"
+                    "Press any key to continue.")
         elif opts.get('amend') is None:
             opts['amend'] = True
-            msg = ("Amend option is turned on -- committing the currently "
-                   "selected changes will not create a new changeset, but "
-                   "instead update the most recently committed changeset.\n\n"
-                   "Press any key to continue.")
+            msg = _("Amend option is turned on -- committing the currently "
+                    "selected changes will not create a new changeset, but "
+                    "instead update the most recently committed changeset.\n\n"
+                    "Press any key to continue.")
         elif opts.get('amend') is True:
             opts['amend'] = None
-            msg = ("Amend option is turned off -- committing the currently "
-                   "selected changes will create a new changeset.\n\n"
-                   "Press any key to continue.")
+            msg = _("Amend option is turned off -- committing the currently "
+                    "selected changes will create a new changeset.\n\n"
+                    "Press any key to continue.")
         if not test:
             self.confirmationwindow(msg)
 
