@@ -1622,3 +1622,31 @@ progress
   abort: no unshelve in progress
   [255]
   $ cd ..
+
+Unshelve respects --keep even if user intervention is needed
+  $ hg init unshelvekeep
+  $ echo 1 > file && hg ci -Am 1
+  adding file
+  $ echo 2 >> file
+  $ hg shelve
+  shelved as default
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ echo 3 >> file && hg ci -Am 13
+  $ hg shelve --list
+  default         (1s ago)    changes to: 1
+  $ hg unshelve --keep
+  unshelving change 'default'
+  rebasing shelved changes
+  rebasing 3:1d24e58054c8 "changes to: 1" (tip)
+  merging file
+  warning: conflicts while merging file! (edit, then use 'hg resolve --mark')
+  unresolved conflicts (see 'hg resolve', then 'hg unshelve --continue')
+  [1]
+  $ hg resolve --mark file
+  (no more unresolved files)
+  continue: hg unshelve --continue
+  $ hg unshelve --continue
+  rebasing 3:1d24e58054c8 "changes to: 1" (tip)
+  unshelve of 'default' complete
+  $ hg shelve --list
+  default         (1s ago)    changes to: 1

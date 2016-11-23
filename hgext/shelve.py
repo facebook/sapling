@@ -159,6 +159,8 @@ class shelvedstate(object):
     """
     _version = 1
     _filename = 'shelvedstate'
+    _keep = 'keep'
+    _nokeep = 'nokeep'
 
     @classmethod
     def load(cls, repo):
@@ -175,6 +177,7 @@ class shelvedstate(object):
             parents = [nodemod.bin(h) for h in fp.readline().split()]
             stripnodes = [nodemod.bin(h) for h in fp.readline().split()]
             branchtorestore = fp.readline().strip()
+            keep = fp.readline().strip() == cls._keep
         except (ValueError, TypeError) as err:
             raise error.CorruptedState(str(err))
         finally:
@@ -188,6 +191,7 @@ class shelvedstate(object):
             obj.parents = parents
             obj.stripnodes = stripnodes
             obj.branchtorestore = branchtorestore
+            obj.keep = keep
         except error.RepoLookupError as err:
             raise error.CorruptedState(str(err))
 
@@ -195,7 +199,7 @@ class shelvedstate(object):
 
     @classmethod
     def save(cls, repo, name, originalwctx, pendingctx, stripnodes,
-             branchtorestore):
+             branchtorestore, keep=False):
         fp = repo.vfs(cls._filename, 'wb')
         fp.write('%i\n' % cls._version)
         fp.write('%s\n' % name)
@@ -206,6 +210,7 @@ class shelvedstate(object):
         fp.write('%s\n' %
                  ' '.join([nodemod.hex(n) for n in stripnodes]))
         fp.write('%s\n' % branchtorestore)
+        fp.write('%s\n' % (cls._keep if keep else cls._nokeep))
         fp.close()
 
     @classmethod
@@ -680,7 +685,7 @@ def _rebaserestoredcommit(ui, repo, opts, tr, oldtiprev, basename, pctx,
         stripnodes = [repo.changelog.node(rev)
                       for rev in xrange(oldtiprev, len(repo))]
         shelvedstate.save(repo, basename, pctx, tmpwctx, stripnodes,
-                          branchtorestore)
+                          branchtorestore, opts.get('keep'))
 
         util.rename(repo.join('rebasestate'),
                     repo.join('unshelverebasestate'))
@@ -782,6 +787,8 @@ def _dounshelve(ui, repo, *shelved, **opts):
 
         try:
             state = shelvedstate.load(repo)
+            if opts.get('keep') is None:
+                opts['keep'] = state.keep
         except IOError as err:
             if err.errno != errno.ENOENT:
                 raise
