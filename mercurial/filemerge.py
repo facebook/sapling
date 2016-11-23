@@ -577,8 +577,9 @@ def _filemerge(premerge, repo, mynode, orig, fcd, fco, fca, labels=None):
     a boolean indicating whether the file was deleted from disk."""
 
     def temp(prefix, ctx):
-        pre = "%s~%s." % (os.path.basename(ctx.path()), prefix)
-        (fd, name) = tempfile.mkstemp(prefix=pre)
+        fullbase, ext = os.path.splitext(ctx.path())
+        pre = "%s~%s." % (os.path.basename(fullbase), prefix)
+        (fd, name) = tempfile.mkstemp(prefix=pre, suffix=ext)
         data = repo.wwritedata(ctx.path(), ctx.data())
         f = os.fdopen(fd, "wb")
         f.write(data)
