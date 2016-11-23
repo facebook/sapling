@@ -88,7 +88,8 @@ follows, with byte 0 being the first byte (all data stored as big endian):
 0-5 (6 bytes)
    Absolute offset of revision data from beginning of revlog.
 6-7 (2 bytes)
-   Bit flags impacting revision behavior.
+   Bit flags impacting revision behavior. The following bit offsets define:
+   0: 'censor' extension flag.
 8-11 (4 bytes)
    Compressed length of revision data / chunk as stored in revlog.
 12-15 (4 bytes)
