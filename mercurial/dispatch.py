@@ -15,7 +15,6 @@ import pdb
 import re
 import shlex
 import signal
-import socket
 import sys
 import time
 import traceback
@@ -38,6 +37,7 @@ from . import (
     profiling,
     pycompat,
     revset,
+    scmutil,
     templatefilters,
     templatekw,
     templater,
@@ -218,30 +218,15 @@ def _runcatch(req):
     return callcatch(ui, _runcatchfunc)
 
 def callcatch(ui, func):
-    """call func() with global exception handling
-
-    return func() if no exception happens. otherwise do some error handling
-    and return an exit code accordingly.
+    """like scmutil.callcatch but handles more high-level exceptions about
+    config parsing and commands. besides, use handlecommandexception to handle
+    uncaught exceptions.
     """
     try:
-        return func()
-    # Global exception handling, alphabetically
-    # Mercurial-specific first, followed by built-in and library exceptions
+        return scmutil.callcatch(ui, func)
     except error.AmbiguousCommand as inst:
         ui.warn(_("hg: command '%s' is ambiguous:\n    %s\n") %
                 (inst.args[0], " ".join(inst.args[1])))
-    except error.ParseError as inst:
-        _formatparse(ui.warn, inst)
-        return -1
-    except error.LockHeld as inst:
-        if inst.errno == errno.ETIMEDOUT:
-            reason = _('timed out waiting for lock held by %s') % inst.locker
-        else:
-            reason = _('lock held by %s') % inst.locker
-        ui.warn(_("abort: %s: %s\n") % (inst.desc or inst.filename, reason))
-    except error.LockUnavailable as inst:
-        ui.warn(_("abort: could not lock %s: %s\n") %
-               (inst.desc or inst.filename, inst.strerror))
     except error.CommandError as inst:
         if inst.args[0]:
             ui.warn(_("hg %s: %s\n") % (inst.args[0], inst.args[1]))
@@ -249,34 +234,9 @@ def callcatch(ui, func):
         else:
             ui.warn(_("hg: %s\n") % inst.args[1])
             commands.help_(ui, 'shortlist')
-    except error.OutOfBandError as inst:
-        if inst.args:
-            msg = _("abort: remote error:\n")
-        else:
-            msg = _("abort: remote error\n")
-        ui.warn(msg)
-        if inst.args:
-            ui.warn(''.join(inst.args))
-        if inst.hint:
-            ui.warn('(%s)\n' % inst.hint)
-    except error.RepoError as inst:
-        ui.warn(_("abort: %s!\n") % inst)
-        if inst.hint:
-            ui.warn(_("(%s)\n") % inst.hint)
-    except error.ResponseError as inst:
-        ui.warn(_("abort: %s") % inst.args[0])
-        if not isinstance(inst.args[1], basestring):
-            ui.warn(" %r\n" % (inst.args[1],))
-        elif not inst.args[1]:
-            ui.warn(_(" empty string\n"))
-        else:
-            ui.warn("\n%r\n" % util.ellipsis(inst.args[1]))
-    except error.CensoredNodeError as inst:
-        ui.warn(_("abort: file censored %s!\n") % inst)
-    except error.RevlogError as inst:
-        ui.warn(_("abort: %s!\n") % inst)
-    except error.SignalInterrupt:
-        ui.warn(_("killed!\n"))
+    except error.ParseError as inst:
+        _formatparse(ui.warn, inst)
+        return -1
     except error.UnknownCommand as inst:
         ui.warn(_("hg: unknown command '%s'\n") % inst.args[0])
         try:
@@ -292,61 +252,11 @@ def callcatch(ui, func):
                     suggested = True
             if not suggested:
                 commands.help_(ui, 'shortlist')
-    except error.InterventionRequired as inst:
-        ui.warn("%s\n" % inst)
-        if inst.hint:
-            ui.warn(_("(%s)\n") % inst.hint)
-        return 1
-    except error.Abort as inst:
-        ui.warn(_("abort: %s\n") % inst)
-        if inst.hint:
-            ui.warn(_("(%s)\n") % inst.hint)
-    except ImportError as inst:
-        ui.warn(_("abort: %s!\n") % inst)
-        m = str(inst).split()[-1]
-        if m in "mpatch bdiff".split():
-            ui.warn(_("(did you forget to compile extensions?)\n"))
-        elif m in "zlib".split():
-            ui.warn(_("(is your Python install correct?)\n"))
-    except IOError as inst:
-        if util.safehasattr(inst, "code"):
-            ui.warn(_("abort: %s\n") % inst)
-        elif util.safehasattr(inst, "reason"):
-            try: # usually it is in the form (errno, strerror)
-                reason = inst.reason.args[1]
-            except (AttributeError, IndexError):
-                # it might be anything, for example a string
-                reason = inst.reason
-            if isinstance(reason, unicode):
-                # SSLError of Python 2.7.9 contains a unicode
-                reason = reason.encode(encoding.encoding, 'replace')
-            ui.warn(_("abort: error: %s\n") % reason)
-        elif (util.safehasattr(inst, "args")
-              and inst.args and inst.args[0] == errno.EPIPE):
-            pass
-        elif getattr(inst, "strerror", None):
-            if getattr(inst, "filename", None):
-                ui.warn(_("abort: %s: %s\n") % (inst.strerror, inst.filename))
-            else:
-                ui.warn(_("abort: %s\n") % inst.strerror)
-        else:
-            raise
-    except OSError as inst:
-        if getattr(inst, "filename", None) is not None:
-            ui.warn(_("abort: %s: '%s'\n") % (inst.strerror, inst.filename))
-        else:
-            ui.warn(_("abort: %s\n") % inst.strerror)
+    except IOError:
+        raise
     except KeyboardInterrupt:
         raise
-    except MemoryError:
-        ui.warn(_("abort: out of memory\n"))
-    except SystemExit as inst:
-        # Commands shouldn't sys.exit directly, but give a return code.
-        # Just in case catch this and and pass exit code to caller.
-        return inst.code
-    except socket.error as inst:
-        ui.warn(_("abort: %s\n") % inst.args[-1])
-    except:  # perhaps re-raises
+    except:  # probably re-raises
         if not handlecommandexception(ui):
             raise
 
