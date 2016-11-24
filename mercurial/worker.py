@@ -15,6 +15,7 @@ import sys
 from .i18n import _
 from . import (
     error,
+    scmutil,
     util,
 )
 
@@ -132,15 +133,26 @@ def _posixworker(ui, func, staticargs, args):
         if pid == 0:
             signal.signal(signal.SIGINT, oldhandler)
             signal.signal(signal.SIGCHLD, oldchldhandler)
-            try:
+
+            def workerfunc():
                 os.close(rfd)
                 for i, item in func(*(staticargs + (pargs,))):
                     os.write(wfd, '%d %s\n' % (i, item))
-                os._exit(0)
+
+            # make sure we use os._exit in all code paths. otherwise the worker
+            # may do some clean-ups which could cause surprises like deadlock.
+            # see sshpeer.cleanup for example.
+            try:
+                scmutil.callcatch(ui, workerfunc)
             except KeyboardInterrupt:
                 os._exit(255)
-                # other exceptions are allowed to propagate, we rely
-                # on lock.py's pid checks to avoid release callbacks
+            except: # never return, therefore no re-raises
+                try:
+                    ui.traceback()
+                finally:
+                    os._exit(255)
+            else:
+                os._exit(0)
         pids.add(pid)
     os.close(wfd)
     fp = os.fdopen(rfd, 'rb', 0)
