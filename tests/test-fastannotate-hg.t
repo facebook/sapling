@@ -300,10 +300,11 @@ annotate after rename merge with -l
   :    --- a/a
   :    +++ b/b
   :    @@ -1,3 +1,3 @@
+  :    -a (?)
   :     a
   :    +z
   :     a
-  :    -a
+  :    -a (?)
   :
   o  1:762f04898e6684ff713415f7b8a8d53d33f96c92diff --git a/a b/a
   |  --- a/a
@@ -321,6 +322,22 @@ annotate after rename merge with -l
      +a
   
 
+(note on question marks:
+ the upstream bdiff change (96f2f50d923f+3633403888ae+8c0c75aa3ff4+5c4e2636c1a9
+ +38ed54888617) alters the output so deletion is not always at the end of the
+ output. for example:
+ | a | b | old | new | # old: e1d6aa0e4c3a, new: 8836f13e3c5b
+ |-------------------|
+ | a | a |  a  | -a  |
+ | a | z | +z  |  a  |
+ | a | a |  a  | +z  |
+ |   |   | -a  |  a  |
+ |-------------------|
+ | a | a |     a     |
+ | a | a |     a     |
+ | a |   |    -a     |
+ this leads to more question marks below)
+
 (rev 1 adds two "a"s and rev 6 deletes one "a".
  the "a" that rev 6 deletes could be either the first or the second "a" of those two "a"s added by rev 1.
  and that causes the line number difference)
@@ -335,9 +352,11 @@ annotate after rename merge with -l
   7 b:7: d
 
   $ hg annotate -nlf b
-  0 a:1: a
+  0 a:1: a (?)
+  1 a:2: a (?)
   6 b:2: z
-  1 a:2: a
+  1 a:2: a (?)
+  1 a:3: a (?)
   3 b:4: b4
   4 b:5: c
   3 b:5: b5
@@ -353,9 +372,11 @@ Issue2807: alignment of line numbers with -l
   $ echo more >> b
   $ hg ci -mmore -d '7 0'
   $ hg annotate -nlf b
-   0 a: 1: a
+   0 a: 1: a (?)
+   1 a: 2: a (?)
    6 b: 2: z
-   1 a: 2: a
+   1 a: 2: a (?)
+   1 a: 3: a (?)
    3 b: 4: b4
    4 b: 5: c
    3 b: 5: b5
