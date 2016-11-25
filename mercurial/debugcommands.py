@@ -849,3 +849,28 @@ def debugindexdot(ui, repo, file_=None, **opts):
         if pp[1] != nullid:
             ui.write("\t%d -> %d\n" % (r.rev(pp[1]), i))
     ui.write("}\n")
+
+@command('debugupgraderepo', [
+    ('o', 'optimize', [], _('extra optimization to perform'), _('NAME')),
+    ('', 'run', False, _('performs an upgrade')),
+])
+def debugupgraderepo(ui, repo, run=False, optimize=None):
+    """upgrade a repository to use different features
+
+    If no arguments are specified, the repository is evaluated for upgrade
+    and a list of problems and potential optimizations is printed.
+
+    With ``--run``, a repository upgrade is performed. Behavior of the upgrade
+    can be influenced via additional arguments. More details will be provided
+    by the command output when run without ``--run``.
+
+    During the upgrade, the repository will be locked and no writes will be
+    allowed.
+
+    At the end of the upgrade, the repository may not be readable while new
+    repository data is swapped in. This window will be as long as it takes to
+    rename some directories inside the ``.hg`` directory. On most machines, this
+    should complete almost instantaneously and the chances of a consumer being
+    unable to access the repository should be low.
+    """
+    raise error.Abort(_('not yet implemented'))

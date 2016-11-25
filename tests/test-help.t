@@ -910,6 +910,8 @@ Test list of internal help commands
                  show set of successors for revision
    debugtemplate
                  parse and apply a template
+   debugupgraderepo
+                 upgrade a repository to use different features
    debugwalk     show how files match on given patterns
    debugwireargs
                  (no help text available)

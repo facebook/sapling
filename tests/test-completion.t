@@ -109,6 +109,7 @@ Show debug commands if there are no other candidates
   debugsub
   debugsuccessorssets
   debugtemplate
+  debugupgraderepo
   debugwalk
   debugwireargs
 
@@ -274,6 +275,7 @@ Show all commands + options
   debugsub: rev
   debugsuccessorssets: 
   debugtemplate: rev, define
+  debugupgraderepo: optimize, run
   debugwalk: include, exclude
   debugwireargs: three, four, five, ssh, remotecmd, insecure
   files: rev, print0, include, exclude, template, subrepos
