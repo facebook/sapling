@@ -1,6 +1,5 @@
-from mercurial import extensions, util, cmdutil, commands, error, scmutil, util
+from mercurial import util, cmdutil, scmutil, util
 from mercurial.i18n import _
-import mercurial.match as matchmod
 import os
 
 cmdtable = {}
@@ -23,7 +22,6 @@ def catnotate(ui, repo, file1, *args, **opts):
     """
     ctx = scmutil.revsingle(repo, opts.get('rev'))
     matcher = scmutil.match(ctx, (file1,) + args, opts)
-    files = args
     prefix = ''
 
     err = 1

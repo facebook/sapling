@@ -14,7 +14,6 @@ from mercurial import (
     extensions,
     localrepo,
 )
-from mercurial.i18n import _
 
 def _localrepoinit(orig, self, baseui, path=None, create=False):
     orig(self, baseui, path, create)

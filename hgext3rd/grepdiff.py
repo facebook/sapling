@@ -22,7 +22,7 @@ prefixtoprocessors = {
     "dec": lambda adds, removes: adds < removes
 }
 
-def getpatternandprocessor(args):
+def getpatternandprocessor(repo, args):
     """Parse prefix and pattern from the provided arguments
 
     Example argument could be args[0][1] == 'add:hello world'"""
@@ -71,8 +71,7 @@ def grepdiffpredicate(repo, subset, x):
     if len(args) > 1:
         files = set(pathutil.canonpath(repo.root, repo.getcwd(), arg[1])
                     for arg in args[1:])
-    res = []
-    pattern, processor = getpatternandprocessor(args)
+    pattern, processor = getpatternandprocessor(repo, args)
     def matcher(rev):
         res = processor(*ctxaddsremoves(repo[rev], files, pattern))
         return res

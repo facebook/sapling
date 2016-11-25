@@ -14,7 +14,7 @@ from mercurial import match as matchmod
 from mercurial import merge as mergemod
 from mercurial.node import nullid
 from mercurial.i18n import _
-import errno, os, re, collections, hashlib
+import os, collections, hashlib
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
@@ -763,7 +763,6 @@ def _refresh(ui, repo, origstatus, origsparsematch, force):
     # Calculate actions
     dirstate = repo.dirstate
     ctx = repo['.']
-    wctx = repo[None]
     added = []
     lookup = []
     dropped = []

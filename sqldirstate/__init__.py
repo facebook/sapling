@@ -7,7 +7,7 @@
 
 testedwith = 'internal'
 
-from sqldirstate import makedirstate, DBFILE, toflat, tosql, writefakedirstate
+from sqldirstate import makedirstate, toflat, tosql, writefakedirstate
 
 from mercurial import commands, error, extensions, cmdutil, localrepo, util
 from mercurial.i18n import _

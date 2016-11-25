@@ -12,7 +12,6 @@
 # Thanks to these markers, less information is displayed and rebases can have
 # less irrelevant conflicts.
 
-import re
 from mercurial import commands
 from mercurial import obsolete
 from mercurial import phases
@@ -59,8 +58,8 @@ def _pull(orig, ui, repo, *args, **opts):
 
     inhibit, deinhibitnodes = _deinhibitancestors(unfiltered, tocreate)
 
-    with unfiltered.lock() as l:
-        with unfiltered.transaction('pullcreatemarkers') as t:
+    with unfiltered.lock():
+        with unfiltered.transaction('pullcreatemarkers'):
             obsolete.createmarkers(unfiltered, tocreate)
             if deinhibitnodes:
                 inhibit._deinhibitmarkers(unfiltered, deinhibitnodes)

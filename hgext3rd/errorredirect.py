@@ -32,7 +32,6 @@ Examples::
 
 import os
 import subprocess
-import sys
 import traceback
 
 from mercurial import (

@@ -26,7 +26,7 @@ from mercurial import extensions
 from mercurial import error
 from mercurial.i18n import _
 from hgext import rebase
-import errno, inspect, os, re, shlex, stat, subprocess, time
+import inspect, os, re, shlex, stat, subprocess, time
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
@@ -205,8 +205,6 @@ def pull(orig, ui, repo, *args, **opts):
         rebasemsg = _('you must use a bookmark with tracking '
                       'or manually specify a destination for the rebase')
         if isrebase and bmactive(repo):
-            rebasehint = _('set up tracking with `hg book -t <destination>` '
-                           'or manually supply --dest / -d')
             mess = ui.config('tweakdefaults', 'bmnodestmsg', rebasemsg)
             hint = ui.config('tweakdefaults', 'bmnodesthint', _(
                 'set up tracking with `hg book -t <destination>` '

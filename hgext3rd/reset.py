@@ -3,12 +3,12 @@
 """reset the active bookmark and working copy to a desired revision"""
 
 from mercurial.i18n import _
-from mercurial.node import short, hex
+from mercurial.node import hex
 from mercurial import extensions, merge, scmutil, hg
-from mercurial import cmdutil, obsolete, repair, util, bundlerepo, error
+from mercurial import cmdutil, obsolete, repair, bundlerepo, error
 from mercurial import exchange, phases
 from mercurial import lock as lockmod
-import struct, os, glob, binascii
+import os, glob, binascii
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)

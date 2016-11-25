@@ -12,13 +12,15 @@ Tries to map a given git command to a Mercurial command:
   hg update master
 
 """
-from mercurial import extensions, util, cmdutil, commands, error
-from mercurial import hg, changegroup, fancyopts
-from mercurial.extensions import wrapfunction
-from hgext import pager
-from mercurial.node import hex, nullrev, nullid
 from mercurial.i18n import _
-import errno, os, re, glob, getopt
+from mercurial import (
+    cmdutil,
+    error,
+    fancyopts,
+    util,
+)
+from hgext import pager
+import re, getopt
 
 pager.attended.append('githelp')
 

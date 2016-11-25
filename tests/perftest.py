@@ -4,10 +4,16 @@
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
-from mercurial import cmdutil, error, manifest, scmutil
+from mercurial import (
+    cmdutil,
+    error,
+    manifest,
+    mdiff,
+    scmutil,
+)
 from mercurial.node import nullid
 from remotefilelog import datapack, contentstore, shallowutil
-import pdb, hashlib, os, time
+import hashlib, os, time
 from fastmanifest.implementation import fastmanifestcache
 from fastmanifest import cachemanager
 import ctreemanifest
@@ -229,10 +235,8 @@ def profiletreepack(repo, store, rev1, rev2, opts):
                 result = store.get(filename, node)
                 self._cache[(filename, node)] = result
                 return result
-    fakestore = FakeStore()
     def ctreeconstructor(mfnode):
         # Enable the fake store to remove blob lookup time
-        #treemf = ctreemanifest.treemanifest(fakestore, mfnode)
         treemf = ctreemanifest.treemanifest(store, mfnode)
         return treemf
 

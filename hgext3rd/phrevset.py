@@ -26,7 +26,6 @@ from mercurial import hg
 from mercurial import extensions
 from mercurial import revset
 from mercurial import error
-from mercurial import util as hgutil
 from mercurial.i18n import _
 
 try:

@@ -9,7 +9,6 @@ from mercurial.util import httplib
 
 import json
 import os
-import sys
 import time
 from mercurial import util
 import arcconfig

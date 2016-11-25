@@ -30,7 +30,7 @@ def _getbundlesendvars(pushop, bundler):
         for entry in pushop.repo._shellvars:
             try:
                 key, value = entry.split('=', 1)
-            except Exception as e:
+            except Exception:
                 raise error.Abort(
                     _('passed in variable needs to be of form var= or var=val. '
                       'Instead, this was given "%s"') % entry)

@@ -184,11 +184,10 @@ def gitnode(repo, subset, x):
     reponame = repo.ui.config('fbconduit', 'reponame')
     if not reponame:
         # We don't know who we are, so we can't ask for a translation
-        return subset.filter(lambda r: false)
+        return subset.filter(lambda r: False)
     backingrepos = repo.ui.configlist('fbconduit', 'backingrepos',
                                       default=[reponame])
 
-    peerpath = repo.ui.expandpath('default')
     translationerror = False
     for backingrepo in backingrepos:
         try:
@@ -202,7 +201,7 @@ def gitnode(repo, subset, x):
             hghash = result[n]
             if hghash != '':
                 break
-        except ConduitError as e:
+        except ConduitError:
             pass
     else:
         translationerror = True

@@ -28,6 +28,7 @@ The following configuration options are available:
 
 '''
 
+from mercurial.i18n import _
 from mercurial import commands, extensions, revlog, util
 import os, struct, weakref
 

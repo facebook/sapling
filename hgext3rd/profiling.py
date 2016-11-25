@@ -17,8 +17,8 @@ intercepted or redirected by another extension.
 We only track interactive time on the primary thread.
 """
 
-import contextlib, signal, threading
-from mercurial import profiling, extensions, util
+import contextlib, threading
+from mercurial import profiling, extensions
 from mercurial import ui as uimod
 from time import time as clock
 

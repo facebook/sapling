@@ -6,8 +6,8 @@
 # GNU General Public License version 2 or any later version.
 """display recently made backups to recover stripped changesets"""
 
-from mercurial import extensions, cmdutil, commands, error, bundlerepo
-from mercurial import hg, changegroup, exchange, obsolete
+from mercurial import cmdutil, commands, error, bundlerepo
+from mercurial import hg, exchange, obsolete
 from mercurial import bundle2
 from mercurial import lock as lockmod
 from hgext import pager

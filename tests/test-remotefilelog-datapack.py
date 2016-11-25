@@ -1,6 +1,4 @@
-import binascii
 import hashlib
-import itertools
 import random
 import shutil
 import struct
@@ -12,7 +10,6 @@ import silenttestrunner
 
 from remotefilelog.datapack import (
     datapack,
-    datapackstore,
     fastdatapack,
     mutabledatapack,
 )
@@ -23,7 +20,7 @@ from remotefilelog.basepack import (
 )
 
 from mercurial import scmutil
-from mercurial.node import hex, bin, nullid
+from mercurial.node import nullid
 import mercurial.ui
 
 class datapacktestsbase(object):
@@ -261,7 +258,7 @@ class datapacktestsbase(object):
                 findnodes = [(rev[0], rev[1]) for rev in revisions]
 
                 start = time.time()
-                result = pack.getmissing(findnodes[:lookupsize])
+                pack.getmissing(findnodes[:lookupsize])
                 elapsed = time.time() - start
                 print ("%s pack %s lookups = %0.04f" %
                        (('%s' % packsize).rjust(7),

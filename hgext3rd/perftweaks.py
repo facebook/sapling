@@ -6,9 +6,14 @@
 # GNU General Public License version 2 or any later version.
 """extension for tweaking Mercurial features to improve performance."""
 
-from mercurial import branchmap, merge, revlog, scmutil, tags, util
-from mercurial.extensions import wrapcommand, wrapfunction
-from mercurial.i18n import _
+from mercurial import (
+    branchmap,
+    merge,
+    revlog,
+    scmutil,
+    tags,
+)
+from mercurial.extensions import wrapfunction
 from mercurial.node import nullid, nullrev
 import errno
 import os

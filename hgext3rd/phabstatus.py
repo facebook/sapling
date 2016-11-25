@@ -10,11 +10,6 @@ from mercurial import util as hgutil
 from mercurial.i18n import _
 from mercurial import obsolete
 
-import re
-import subprocess
-import os
-import json
-
 from phabricator import (
     arcconfig,
     conduit,

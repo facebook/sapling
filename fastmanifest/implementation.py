@@ -15,7 +15,10 @@ from mercurial import manifest, mdiff, revlog, scmutil, util
 import cachemanager
 import cfastmanifest
 from metrics import metricscollector
-from constants import *
+from constants import (
+    CACHE_SUBDIR,
+    DEFAULT_MAX_MEMORY_ENTRIES,
+)
 
 try:
     import ctreemanifest
@@ -752,7 +755,7 @@ class hybridmanifestctx(object):
             r0 = revlog.deltaparent(revlog.rev(self._node))
             m0 = manifest.manifestctx(self._repo, rl.node(r0)).read()
             m1 = self.read()
-            md = manifestdict()
+            md = manifest.manifestdict()
             for f, ((n0, fl0), (n1, fl1)) in m0.diff(m1).iteritems():
                 if n1:
                     md[f] = n1

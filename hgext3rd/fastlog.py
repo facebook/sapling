@@ -362,12 +362,12 @@ class LocalIteratorThread(Thread):
                 if self.stopped():
                     break
                 if not match or match(filefunc(result), dirs):
-                    self.queue.put((self.id, True, result))
+                    queue.put((self.id, True, result))
         except Exception as e:
             self.ui.traceback()
-            self.queue.put((self.id, False, str(e)))
+            queue.put((self.id, False, str(e)))
         finally:
-            self.queue.put((self.id, True, None))
+            queue.put((self.id, True, None))
 
 
 class FastLogThread(Thread):

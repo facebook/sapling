@@ -32,7 +32,7 @@ projectY.dir3 = foo/goo/hoo
 
 from collections import defaultdict
 import errno
-from mercurial import commands, extensions, localrepo, util
+from mercurial import extensions, localrepo, util
 from mercurial import match as matchmod
 from mercurial import error
 from mercurial.i18n import _

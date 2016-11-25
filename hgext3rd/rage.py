@@ -3,7 +3,7 @@
 """upload useful diagnostics and give instructions for asking for help"""
 
 from mercurial.i18n import _
-from mercurial import cmdutil, util, commands, bookmarks, ui, extensions, error
+from mercurial import cmdutil, util, commands, bookmarks, error
 from mercurial import scmutil
 from hgext import blackbox
 from hgext3rd import (
@@ -178,9 +178,8 @@ def rage(ui, repo, *pats, **opts):
         ('first 20 lines of "hg status"',
             _failsafe(lambda:
                 '\n'.join(hgcmd(commands.status).splitlines()[:20]))),
-        ('last 40 lines of interesting blackbox.log',
-            _failsafe(lambda: shcmd('grep -Fv FM: %s | tail -n 40'
-                                    % util.shellquote(ui._bbfp.name)))),
+        ('hg blackbox -l60',
+            _failsafe(lambda: hgcmd(blackbox.blackbox, limit=60))),
         ('hg summary', _failsafe(lambda: hgcmd(commands.summary))),
         ('hg config (local)', _failsafe(lambda: '\n'.join(localconfig(ui)))),
         ('hg sparse',

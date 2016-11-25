@@ -12,7 +12,6 @@
 # GNU General Public License version 2 or any later version.
 
 from mercurial import extensions
-from mercurial import localrepo
 import datetime
 defaultmsg = """
 +------------------------------------------------------------------------------+

@@ -143,7 +143,6 @@ def uncommit(ui, repo, *pats, **opts):
 
     with nested(repo.wlock(), repo.lock()):
         wctx = repo[None]
-        wm = wctx.manifest()
 
         if len(wctx.parents()) <= 0 or not wctx.parents()[0]:
             raise error.Abort(_("cannot uncommit null changeset"))

@@ -18,7 +18,6 @@ from mercurial import (
     extensions,
     hook,
     merge,
-    util,
 )
 
 def wrappreprocess(orig, repo, ms, wctx, labels=None):
@@ -153,5 +152,5 @@ def wrappropertycache(cls, propname, wrapper):
             break
 
     if currcls is object:
-        raise AttributeError(_("type '%s' has no property '%s'") % (origcls,
-                             propname))
+        raise AttributeError(_("%s has no property '%s'") %
+                             (type(currcls), propname))

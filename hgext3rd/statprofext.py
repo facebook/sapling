@@ -15,7 +15,12 @@ This extension configures the statprof based on Mercurial config knobs.
 """
 
 import contextlib
-from mercurial import profiling, extensions
+from mercurial.i18n import _
+from mercurial import (
+    error,
+    extensions,
+    profiling,
+)
 
 def extsetup(ui):
     extensions.wrapfunction(profiling, 'statprofile', statprofile)

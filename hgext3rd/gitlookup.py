@@ -21,7 +21,7 @@
 # This also provides client and server commands to download all the Git metadata
 # via bundle2.
 
-from mercurial import bundle2, cmdutil, exchange, extensions, encoding, hg
+from mercurial import bundle2, cmdutil, exchange, encoding, hg
 from mercurial import util, wireproto, error
 from mercurial.node import nullid
 from mercurial.i18n import _
@@ -127,7 +127,8 @@ def bundle2getgitmeta(op, part):
         raise error.Abort(_("gitmeta: 'filename' missing"))
     fname = params['filename']
     if fname not in gitmetafiles:
-        ui.warn(_("warning: gitmeta: unknown file '%s' skipped\n") % fname)
+        op.repo.ui.warn(_("warning: gitmeta: unknown file '%s' skipped\n")
+                        % fname)
         return
     f = op.repo.opener(fname, 'w+', atomictemp=True)
     try:

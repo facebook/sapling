@@ -22,7 +22,6 @@ standalone ssh-askpass script.
 """
 
 import contextlib
-import errno
 import os
 import signal
 import socket
@@ -84,7 +83,6 @@ def _startttyserver():
     """
     sockpath = os.path.join(tempfile.mkdtemp('ttysrv'), str(os.getpid()))
     pipes = os.pipe()
-    ppid = os.getpid()
     pid = os.fork()
     if pid:
         # parent, wait for the child to start listening
@@ -148,7 +146,6 @@ def _validaterepo(orig, self, sshcmd, args, remotecmd):
                     % (util.shellquote(sys.executable),
                        util.shellquote(__file__)))
         os.chmod(scriptpath, 0o755)
-        parentpids = [os.getpid(), pid]
         env = {
             # ssh will not use SSH_ASKPASS if DISPLAY is not set
             'DISPLAY': os.environ.get('DISPLAY', ''),

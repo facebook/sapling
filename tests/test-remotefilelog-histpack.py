@@ -1,6 +1,4 @@
-import binascii
 import hashlib
-import itertools
 import random
 import shutil
 import struct
@@ -10,15 +8,13 @@ import unittest
 import silenttestrunner
 
 from remotefilelog.historypack import historypack, mutablehistorypack
-from remotefilelog.historypack import historypackstore
 
 from mercurial import scmutil
-from mercurial.node import hex, bin, nullid
+from mercurial.node import nullid
 import mercurial.ui
 
 from remotefilelog.basepack import (
     SMALLFANOUTCUTOFF,
-    SMALLFANOUTPREFIX,
     LARGEFANOUTPREFIX,
 )
 

@@ -19,7 +19,6 @@ from mercurial import hg
 from mercurial import lock
 from mercurial import node
 from mercurial import scmutil
-from mercurial import util
 from mercurial.i18n import _
 
 cmdtable = {}
@@ -141,7 +140,6 @@ def defineactions():
     return stop, execute, executerelative
 
 def extsetup(ui):
-    histedit = extensions.find('histedit')
     stop, execute, executerel = defineactions()
 
     if ui.config('experimental', 'histeditng'):

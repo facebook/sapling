@@ -5,11 +5,15 @@
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
-from mercurial import cmdutil, error, manifest, scmutil
+from mercurial import (
+    cmdutil,
+    manifest,
+    mdiff,
+    scmutil,
+)
 from mercurial.node import nullid
 from remotefilelog import datapack, contentstore, shallowutil
-import difflib, pdb, hashlib, os, time
-from fastmanifest.implementation import fastmanifestcache
+import difflib, hashlib, os, time
 from fastmanifest import cachemanager
 import ctreemanifest
 
