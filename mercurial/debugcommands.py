@@ -68,6 +68,13 @@ def debugancestor(ui, repo, *args):
     a = r.ancestor(lookup(rev1), lookup(rev2))
     ui.write('%d:%s\n' % (r.rev(a), hex(a)))
 
+@command('debugapplystreamclonebundle', [], 'FILE')
+def debugapplystreamclonebundle(ui, repo, fname):
+    """apply a stream clone bundle file"""
+    f = hg.openpath(ui, fname)
+    gen = exchange.readbundle(ui, f, fname)
+    gen.apply(repo)
+
 @command('debugbuilddag',
     [('m', 'mergeable-file', None, _('add single file mergeable changes')),
     ('o', 'overwritten-file', None, _('add single file all revs overwrite')),
@@ -220,24 +227,6 @@ def debugbuilddag(ui, repo, text=None,
         ui.progress(_('building'), None)
         release(tr, lock, wlock)
 
-@command('debugbundle',
-        [('a', 'all', None, _('show all details')),
-         ('', 'spec', None, _('print the bundlespec of the bundle'))],
-        _('FILE'),
-        norepo=True)
-def debugbundle(ui, bundlepath, all=None, spec=None, **opts):
-    """lists the contents of a bundle"""
-    with hg.openpath(ui, bundlepath) as f:
-        if spec:
-            spec = exchange.getbundlespec(ui, f)
-            ui.write('%s\n' % spec)
-            return
-
-        gen = exchange.readbundle(ui, f, bundlepath)
-        if isinstance(gen, bundle2.unbundle20):
-            return _debugbundle2(ui, gen, all=all, **opts)
-        _debugchangegroup(ui, gen, all=all, **opts)
-
 def _debugchangegroup(ui, gen, all=None, indent=0, **opts):
     indent_string = ' ' * indent
     if all:
@@ -288,24 +277,23 @@ def _debugbundle2(ui, gen, all=None, **opts):
             cg = changegroup.getunbundler(version, part, 'UN')
             _debugchangegroup(ui, cg, all=all, indent=4, **opts)
 
-@command('debugcreatestreamclonebundle', [], 'FILE')
-def debugcreatestreamclonebundle(ui, repo, fname):
-    """create a stream clone bundle file
+@command('debugbundle',
+        [('a', 'all', None, _('show all details')),
+         ('', 'spec', None, _('print the bundlespec of the bundle'))],
+        _('FILE'),
+        norepo=True)
+def debugbundle(ui, bundlepath, all=None, spec=None, **opts):
+    """lists the contents of a bundle"""
+    with hg.openpath(ui, bundlepath) as f:
+        if spec:
+            spec = exchange.getbundlespec(ui, f)
+            ui.write('%s\n' % spec)
+            return
 
-    Stream bundles are special bundles that are essentially archives of
-    revlog files. They are commonly used for cloning very quickly.
-    """
-    requirements, gen = streamclone.generatebundlev1(repo)
-    changegroup.writechunks(ui, gen, fname)
-
-    ui.write(_('bundle requirements: %s\n') % ', '.join(sorted(requirements)))
-
-@command('debugapplystreamclonebundle', [], 'FILE')
-def debugapplystreamclonebundle(ui, repo, fname):
-    """apply a stream clone bundle file"""
-    f = hg.openpath(ui, fname)
-    gen = exchange.readbundle(ui, f, fname)
-    gen.apply(repo)
+        gen = exchange.readbundle(ui, f, bundlepath)
+        if isinstance(gen, bundle2.unbundle20):
+            return _debugbundle2(ui, gen, all=all, **opts)
+        _debugchangegroup(ui, gen, all=all, **opts)
 
 @command('debugcheckstate', [], '')
 def debugcheckstate(ui, repo):
@@ -370,6 +358,18 @@ def debugcomplete(ui, cmd='', **opts):
     if ui.verbose:
         cmdlist = [' '.join(c[0]) for c in cmdlist.values()]
     ui.write("%s\n" % "\n".join(sorted(cmdlist)))
+
+@command('debugcreatestreamclonebundle', [], 'FILE')
+def debugcreatestreamclonebundle(ui, repo, fname):
+    """create a stream clone bundle file
+
+    Stream bundles are special bundles that are essentially archives of
+    revlog files. They are commonly used for cloning very quickly.
+    """
+    requirements, gen = streamclone.generatebundlev1(repo)
+    changegroup.writechunks(ui, gen, fname)
+
+    ui.write(_('bundle requirements: %s\n') % ', '.join(sorted(requirements)))
 
 @command('debugdag',
     [('t', 'tags', None, _('use tags as labels')),
@@ -464,6 +464,107 @@ def debugdate(ui, date, range=None, **opts):
     if range:
         m = util.matchdate(range)
         ui.write(("match: %s\n") % m(d[0]))
+
+@command('debugdeltachain',
+    commands.debugrevlogopts + commands.formatteropts,
+    _('-c|-m|FILE'),
+    optionalrepo=True)
+def debugdeltachain(ui, repo, file_=None, **opts):
+    """dump information about delta chains in a revlog
+
+    Output can be templatized. Available template keywords are:
+
+    :``rev``:       revision number
+    :``chainid``:   delta chain identifier (numbered by unique base)
+    :``chainlen``:  delta chain length to this revision
+    :``prevrev``:   previous revision in delta chain
+    :``deltatype``: role of delta / how it was computed
+    :``compsize``:  compressed size of revision
+    :``uncompsize``: uncompressed size of revision
+    :``chainsize``: total size of compressed revisions in chain
+    :``chainratio``: total chain size divided by uncompressed revision size
+                    (new delta chains typically start at ratio 2.00)
+    :``lindist``:   linear distance from base revision in delta chain to end
+                    of this revision
+    :``extradist``: total size of revisions not part of this delta chain from
+                    base of delta chain to end of this revision; a measurement
+                    of how much extra data we need to read/seek across to read
+                    the delta chain for this revision
+    :``extraratio``: extradist divided by chainsize; another representation of
+                    how much unrelated data is needed to load this delta chain
+    """
+    r = cmdutil.openrevlog(repo, 'debugdeltachain', file_, opts)
+    index = r.index
+    generaldelta = r.version & revlog.REVLOGGENERALDELTA
+
+    def revinfo(rev):
+        e = index[rev]
+        compsize = e[1]
+        uncompsize = e[2]
+        chainsize = 0
+
+        if generaldelta:
+            if e[3] == e[5]:
+                deltatype = 'p1'
+            elif e[3] == e[6]:
+                deltatype = 'p2'
+            elif e[3] == rev - 1:
+                deltatype = 'prev'
+            elif e[3] == rev:
+                deltatype = 'base'
+            else:
+                deltatype = 'other'
+        else:
+            if e[3] == rev:
+                deltatype = 'base'
+            else:
+                deltatype = 'prev'
+
+        chain = r._deltachain(rev)[0]
+        for iterrev in chain:
+            e = index[iterrev]
+            chainsize += e[1]
+
+        return compsize, uncompsize, deltatype, chain, chainsize
+
+    fm = ui.formatter('debugdeltachain', opts)
+
+    fm.plain('    rev  chain# chainlen     prev   delta       '
+             'size    rawsize  chainsize     ratio   lindist extradist '
+             'extraratio\n')
+
+    chainbases = {}
+    for rev in r:
+        comp, uncomp, deltatype, chain, chainsize = revinfo(rev)
+        chainbase = chain[0]
+        chainid = chainbases.setdefault(chainbase, len(chainbases) + 1)
+        basestart = r.start(chainbase)
+        revstart = r.start(rev)
+        lineardist = revstart + comp - basestart
+        extradist = lineardist - chainsize
+        try:
+            prevrev = chain[-2]
+        except IndexError:
+            prevrev = -1
+
+        chainratio = float(chainsize) / float(uncomp)
+        extraratio = float(extradist) / float(chainsize)
+
+        fm.startitem()
+        fm.write('rev chainid chainlen prevrev deltatype compsize '
+                 'uncompsize chainsize chainratio lindist extradist '
+                 'extraratio',
+                 '%7d %7d %8d %8d %7s %10d %10d %10d %9.5f %9d %9d %10.5f\n',
+                 rev, chainid, len(chain), prevrev, deltatype, comp,
+                 uncomp, chainsize, chainratio, lineardist, extradist,
+                 extraratio,
+                 rev=rev, chainid=chainid, chainlen=len(chain),
+                 prevrev=prevrev, deltatype=deltatype, compsize=comp,
+                 uncompsize=uncomp, chainsize=chainsize,
+                 chainratio=chainratio, lindist=lineardist,
+                 extradist=extradist, extraratio=extraratio)
+
+    fm.end()
 
 @command('debugdiscovery',
     [('', 'old', None, _('use old-style discovery')),
@@ -748,104 +849,3 @@ def debugindexdot(ui, repo, file_=None, **opts):
         if pp[1] != nullid:
             ui.write("\t%d -> %d\n" % (r.rev(pp[1]), i))
     ui.write("}\n")
-
-@command('debugdeltachain',
-    commands.debugrevlogopts + commands.formatteropts,
-    _('-c|-m|FILE'),
-    optionalrepo=True)
-def debugdeltachain(ui, repo, file_=None, **opts):
-    """dump information about delta chains in a revlog
-
-    Output can be templatized. Available template keywords are:
-
-    :``rev``:       revision number
-    :``chainid``:   delta chain identifier (numbered by unique base)
-    :``chainlen``:  delta chain length to this revision
-    :``prevrev``:   previous revision in delta chain
-    :``deltatype``: role of delta / how it was computed
-    :``compsize``:  compressed size of revision
-    :``uncompsize``: uncompressed size of revision
-    :``chainsize``: total size of compressed revisions in chain
-    :``chainratio``: total chain size divided by uncompressed revision size
-                    (new delta chains typically start at ratio 2.00)
-    :``lindist``:   linear distance from base revision in delta chain to end
-                    of this revision
-    :``extradist``: total size of revisions not part of this delta chain from
-                    base of delta chain to end of this revision; a measurement
-                    of how much extra data we need to read/seek across to read
-                    the delta chain for this revision
-    :``extraratio``: extradist divided by chainsize; another representation of
-                    how much unrelated data is needed to load this delta chain
-    """
-    r = cmdutil.openrevlog(repo, 'debugdeltachain', file_, opts)
-    index = r.index
-    generaldelta = r.version & revlog.REVLOGGENERALDELTA
-
-    def revinfo(rev):
-        e = index[rev]
-        compsize = e[1]
-        uncompsize = e[2]
-        chainsize = 0
-
-        if generaldelta:
-            if e[3] == e[5]:
-                deltatype = 'p1'
-            elif e[3] == e[6]:
-                deltatype = 'p2'
-            elif e[3] == rev - 1:
-                deltatype = 'prev'
-            elif e[3] == rev:
-                deltatype = 'base'
-            else:
-                deltatype = 'other'
-        else:
-            if e[3] == rev:
-                deltatype = 'base'
-            else:
-                deltatype = 'prev'
-
-        chain = r._deltachain(rev)[0]
-        for iterrev in chain:
-            e = index[iterrev]
-            chainsize += e[1]
-
-        return compsize, uncompsize, deltatype, chain, chainsize
-
-    fm = ui.formatter('debugdeltachain', opts)
-
-    fm.plain('    rev  chain# chainlen     prev   delta       '
-             'size    rawsize  chainsize     ratio   lindist extradist '
-             'extraratio\n')
-
-    chainbases = {}
-    for rev in r:
-        comp, uncomp, deltatype, chain, chainsize = revinfo(rev)
-        chainbase = chain[0]
-        chainid = chainbases.setdefault(chainbase, len(chainbases) + 1)
-        basestart = r.start(chainbase)
-        revstart = r.start(rev)
-        lineardist = revstart + comp - basestart
-        extradist = lineardist - chainsize
-        try:
-            prevrev = chain[-2]
-        except IndexError:
-            prevrev = -1
-
-        chainratio = float(chainsize) / float(uncomp)
-        extraratio = float(extradist) / float(chainsize)
-
-        fm.startitem()
-        fm.write('rev chainid chainlen prevrev deltatype compsize '
-                 'uncompsize chainsize chainratio lindist extradist '
-                 'extraratio',
-                 '%7d %7d %8d %8d %7s %10d %10d %10d %9.5f %9d %9d %10.5f\n',
-                 rev, chainid, len(chain), prevrev, deltatype, comp,
-                 uncomp, chainsize, chainratio, lineardist, extradist,
-                 extraratio,
-                 rev=rev, chainid=chainid, chainlen=len(chain),
-                 prevrev=prevrev, deltatype=deltatype, compsize=comp,
-                 uncompsize=uncomp, chainsize=chainsize,
-                 chainratio=chainratio, lindist=lineardist,
-                 extradist=extradist, extraratio=extraratio)
-
-    fm.end()

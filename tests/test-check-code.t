@@ -34,4 +34,3 @@ New errors are not allowed. Warnings are strongly discouraged.
   ...         print('commands in debugcommands.py not sorted; first differing '
   ...               'command is %s; expected %s' % (commands[i], command))
   ...         break
-  commands in debugcommands.py not sorted; first differing command is debugbuilddag; expected debugapplystreamclonebundle
