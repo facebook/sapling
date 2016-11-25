@@ -46,6 +46,7 @@ Revert interactive tests
   > y
   > y
   > y
+  > y
   > n
   > n
   > EOF
@@ -53,6 +54,7 @@ Revert interactive tests
   reverting folder1/g (glob)
   removing folder1/i (glob)
   reverting folder2/h (glob)
+  remove added file folder1/i (Yn)? y
   diff --git a/f b/f
   2 hunks, 2 lines changed
   examine changes to 'f'? [Ynesfdaq?] y
@@ -174,6 +176,7 @@ Test --no-backup
   $ hg update -C 6
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg revert -i -r 2 --all -- << EOF
+  > n
   > y
   > y
   > y
@@ -186,6 +189,7 @@ Test --no-backup
   reverting folder1/g (glob)
   removing folder1/i (glob)
   reverting folder2/h (glob)
+  remove added file folder1/i (Yn)? n
   diff --git a/f b/f
   2 hunks, 2 lines changed
   examine changes to 'f'? [Ynesfdaq?] y
@@ -258,7 +262,6 @@ Test --no-backup
   $ hg st
   M f
   M folder1/g
-  R folder1/i
   $ hg revert --interactive f << EOF
   > y
   > y
@@ -290,7 +293,6 @@ Test --no-backup
   $ hg st
   M f
   M folder1/g
-  R folder1/i
   ? f.orig
   $ cat f
   a
@@ -307,7 +309,7 @@ Test --no-backup
   5
   $ rm f.orig
   $ hg update -C .
-  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Check editing files newly added by a revert
 

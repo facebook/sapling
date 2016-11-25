@@ -3167,6 +3167,13 @@ def _performrevert(repo, parents, ctx, actions, interactive=False,
         fc = ctx[f]
         repo.wwrite(f, fc.data(), fc.flags())
 
+    def doremove(f):
+        try:
+            util.unlinkpath(repo.wjoin(f))
+        except OSError:
+            pass
+        repo.dirstate.remove(f)
+
     audit_path = pathutil.pathauditor(repo.root)
     for f in actions['forget'][0]:
         if interactive:
@@ -3180,11 +3187,15 @@ def _performrevert(repo, parents, ctx, actions, interactive=False,
             repo.dirstate.drop(f)
     for f in actions['remove'][0]:
         audit_path(f)
-        try:
-            util.unlinkpath(repo.wjoin(f))
-        except OSError:
-            pass
-        repo.dirstate.remove(f)
+        if interactive:
+            choice = repo.ui.promptchoice(
+                _("remove added file %s (Yn)?$$ &Yes $$ &No") % f)
+            if choice == 0:
+                doremove(f)
+            else:
+                excluded_files.append(repo.wjoin(f))
+        else:
+            doremove(f)
     for f in actions['drop'][0]:
         audit_path(f)
         repo.dirstate.remove(f)
