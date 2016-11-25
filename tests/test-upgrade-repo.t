@@ -241,6 +241,7 @@ Upgrading a repository to generaldelta works
   migrating changelog containing 3 revisions (184 bytes in store; 181 bytes tracked data)
   finished migrating 3 changelog revisions; change in size: 0 bytes
   finished migrating 9 total revisions; total change in store size: 0 bytes
+  copying phaseroots
   data fully migrated to temporary repository
   marking source repository as being upgraded; clients will be unable to read from repository
   starting in-place swap of repository data
@@ -276,6 +277,7 @@ store directory has files we expect
   00manifest.i
   data
   fncache
+  phaseroots
   undo
   undo.backupfiles
   undo.phaseroots

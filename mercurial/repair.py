@@ -10,6 +10,7 @@ from __future__ import absolute_import
 
 import errno
 import hashlib
+import stat
 import tempfile
 import time
 
@@ -799,6 +800,44 @@ def _copyrevlogs(ui, srcrepo, dstrepo, tr, deltareuse, aggressivemergedeltas):
     ui.write(_('finished migrating %d total revisions; total change in store '
                'size: %s\n') % (revcount, util.bytecount(dstsize - srcsize)))
 
+def _upgradefilterstorefile(srcrepo, dstrepo, requirements, path, mode, st):
+    """Determine whether to copy a store file during upgrade.
+
+    This function is called when migrating store files from ``srcrepo`` to
+    ``dstrepo`` as part of upgrading a repository.
+
+    Args:
+      srcrepo: repo we are copying from
+      dstrepo: repo we are copying to
+      requirements: set of requirements for ``dstrepo``
+      path: store file being examined
+      mode: the ``ST_MODE`` file type of ``path``
+      st: ``stat`` data structure for ``path``
+
+    Function should return ``True`` if the file is to be copied.
+    """
+    # Skip revlogs.
+    if path.endswith(('.i', '.d')):
+        return False
+    # Skip transaction related files.
+    if path.startswith('undo'):
+        return False
+    # Only copy regular files.
+    if mode != stat.S_IFREG:
+        return False
+    # Skip other skipped files.
+    if path in ('lock', 'fncache'):
+        return False
+
+    return True
+
+def _upgradefinishdatamigration(ui, srcrepo, dstrepo, requirements):
+    """Hook point for extensions to perform additional actions during upgrade.
+
+    This function is called after revlogs and store files have been copied but
+    before the new store is swapped into the original location.
+    """
+
 def _upgraderepo(ui, srcrepo, dstrepo, requirements, actions):
     """Do the low-level work of upgrading a repository.
 
@@ -828,7 +867,18 @@ def _upgraderepo(ui, srcrepo, dstrepo, requirements, actions):
         _copyrevlogs(ui, srcrepo, dstrepo, tr, deltareuse,
                      'redeltamultibase' in actions)
 
-    # TODO copy non-revlog store files
+    # Now copy other files in the store directory.
+    for p, kind, st in srcrepo.store.vfs.readdir('', stat=True):
+        if not _upgradefilterstorefile(srcrepo, dstrepo, requirements,
+                                       p, kind, st):
+            continue
+
+        srcrepo.ui.write(_('copying %s\n') % p)
+        src = srcrepo.store.vfs.join(p)
+        dst = dstrepo.store.vfs.join(p)
+        util.copyfile(src, dst, copystat=True)
+
+    _upgradefinishdatamigration(ui, srcrepo, dstrepo, requirements)
 
     ui.write(_('data fully migrated to temporary repository\n'))
 
