@@ -3170,10 +3170,8 @@ def _performrevert(repo, parents, ctx, actions, interactive=False,
     audit_path = pathutil.pathauditor(repo.root)
     for f in actions['forget'][0]:
         if interactive:
-            choice = \
-                repo.ui.promptchoice(
-                    _("forget added file %s (yn)?$$ &Yes $$ &No")
-                    % f)
+            choice = repo.ui.promptchoice(
+                _("forget added file %s (yn)?$$ &Yes $$ &No") % f)
             if choice == 0:
                 repo.dirstate.drop(f)
             else:
