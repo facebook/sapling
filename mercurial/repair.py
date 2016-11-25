@@ -918,6 +918,12 @@ def _upgraderepo(ui, srcrepo, dstrepo, requirements, actions):
                'again\n'))
     scmutil.writerequires(srcrepo.vfs, requirements)
 
+    # The lock file from the old store won't be removed because nothing has a
+    # reference to its new location. So clean it up manually. Alternatively, we
+    # could update srcrepo.svfs and other variables to point to the new
+    # location. This is simpler.
+    backupvfs.unlink('store/lock')
+
     return backuppath
 
 def upgraderepo(ui, repo, run=False, optimize=None):

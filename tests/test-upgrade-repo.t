@@ -303,7 +303,6 @@ old store should be backed up
   00manifest.i
   data
   fncache
-  lock
   phaseroots
   undo
   undo.backup.fncache
