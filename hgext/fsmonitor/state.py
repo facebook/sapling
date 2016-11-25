@@ -59,6 +59,12 @@ class state(object):
             state = file.read().split('\0')
             # state = hostname\0clock\0ignorehash\0 + list of files, each
             # followed by a \0
+            if len(state) < 3:
+                self._ui.log(
+                    'fsmonitor', 'fsmonitor: state file truncated (expected '
+                    '3 chunks, found %d), nuking state\n', len(state))
+                self.invalidate()
+                return None, None, None
             diskhostname = state[0]
             hostname = socket.gethostname()
             if diskhostname != hostname:
@@ -85,12 +91,12 @@ class state(object):
             return
 
         try:
-            file = self._opener('fsmonitor.state', 'wb')
+            file = self._opener('fsmonitor.state', 'wb', atomictemp=True)
         except (IOError, OSError):
             self._ui.warn(_("warning: unable to write out fsmonitor state\n"))
             return
 
-        try:
+        with file:
             file.write(struct.pack(_versionformat, _version))
             file.write(socket.gethostname() + '\0')
             file.write(clock + '\0')
@@ -98,8 +104,6 @@ class state(object):
             if notefiles:
                 file.write('\0'.join(notefiles))
                 file.write('\0')
-        finally:
-            file.close()
 
     def invalidate(self):
         try:
