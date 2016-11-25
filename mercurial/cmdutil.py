@@ -3171,7 +3171,7 @@ def _performrevert(repo, parents, ctx, actions, interactive=False,
     for f in actions['forget'][0]:
         if interactive:
             choice = repo.ui.promptchoice(
-                _("forget added file %s (yn)?$$ &Yes $$ &No") % f)
+                _("forget added file %s (Yn)?$$ &Yes $$ &No") % f)
             if choice == 0:
                 repo.dirstate.drop(f)
             else:

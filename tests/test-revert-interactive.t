@@ -424,14 +424,14 @@ Check the experimental config to invert the selection:
   > n
   > EOF
   forgetting newfile
-  forget added file newfile (yn)? n
+  forget added file newfile (Yn)? n
   $ hg status
   A newfile
   $ hg revert -i <<EOF
   > y
   > EOF
   forgetting newfile
-  forget added file newfile (yn)? y
+  forget added file newfile (Yn)? y
   $ hg status
   ? newfile
 
