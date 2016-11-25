@@ -176,7 +176,9 @@ def fastannotate(ui, repo, *pats, **opts):
                         result = a.annotatealllines(
                             rev, showpath=showpath, showlines=showlines)
                 break
-            except faerror.CannotReuseError: # happens if master moves backwards
+            except (faerror.CannotReuseError, faerror.CorruptedFileError):
+                # happens if master moves backwards, or the file was deleted
+                # and readded, or renamed to an existing name, or corrupted.
                 if rebuild: # give up since we have tried rebuild already
                     raise
                 else: # try a second time rebuilding the cache (slow)
@@ -263,8 +265,22 @@ def debugbuildannotatecache(ui, repo, *pats, **opts):
         for i, path in enumerate(paths):
             ui.progress(_('building'), i, total=len(paths))
             with facontext.annotatecontext(repo, path) as actx:
-                if actx.isuptodate(rev):
-                    continue
-                actx.annotate(rev, rev)
+                try:
+                    if actx.isuptodate(rev):
+                        continue
+                    actx.annotate(rev, rev)
+                except (faerror.CannotReuseError, faerror.CorruptedFileError):
+                    # the cache is broken (could happen with renaming so the
+                    # file history gets invalidated). rebuild and try again.
+                    ui.debug('fastannotate: %s: rebuilding broken cache\n'
+                             % path)
+                    actx.rebuild()
+                    try:
+                        actx.annotate(rev, rev)
+                    except Exception as ex:
+                        # possibly a bug, but should not stop us from building
+                        # cache for other files.
+                        ui.warn(_('fastannotate: %s: failed to '
+                                  'build cache: %r\n') % (path, ex))
         # clear the progress bar
         ui.write()

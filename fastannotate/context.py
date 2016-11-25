@@ -578,7 +578,8 @@ class _annotatecontext(object):
             else:
                 fctx = f
             lines = mdiff.splitnewlines(fctx.data())
-            assert len(lines) == len(result)
+            if len(lines) != len(result): # linelog is probably corrupted
+                raise faerror.CorruptedFileError()
             result = (result, lines)
         return result
 
