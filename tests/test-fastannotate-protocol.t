@@ -81,9 +81,9 @@ happens even if the client has more commits
   3: 4
   4: 5
 
-if the client has a different "@" (head of the master branch), the server can
-detect things are unchanged and does not return full contents (not that there
-is no "writing ... to fastannotate")
+if the client has a different "@" (head of the master branch) and "@" is ahead
+of the server, the server can detect things are unchanged and does not return
+full contents (not that there is no "writing ... to fastannotate")
 
   $ hg bookmark -r 4 @ -f
   $ hg fastannotate a --debug
@@ -96,6 +96,16 @@ is no "writing ... to fastannotate")
   fastannotate: requesting 1 files
   sending batch command
   fastannotate: server returned
+  0: 1
+  1: 2
+  2: 3
+  3: 4
+  4: 5
+
+if the client has a different "@" which is behind the server. no download is
+necessary
+
+  $ hg fastannotate a --debug --config fastannotate.mainbranch=2
   0: 1
   1: 2
   2: 3

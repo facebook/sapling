@@ -212,21 +212,45 @@ class _annotatecontext(object):
         else:
             return self._revmap.rev2hsh(self._revmap.maxrev)
 
-    def isuptodate(self, master):
+    def isuptodate(self, master, strict=True):
         """return True if the revmap / linelog is up-to-date, or the file
         does not exist in the master revision. False otherwise.
 
-        it tries to be fast and could return false negatives.
+        it tries to be fast and could return false negatives, because of the
+        use of linkrev instead of introrev.
 
         useful for both server and client to decide whether to update
         fastannotate cache or not.
+
+        if strict is True, even if fctx exists in the revmap, but is not the
+        last node, isuptodate will return False. it's good for performance - no
+        expensive check was done.
+
+        if strict is False, if fctx exists in the revmap, this function may
+        return True. this is useful for the client to skip downloading the
+        cache if the client's master is behind the server's.
         """
         lastnode = self.lastnode
         try:
             f = self._resolvefctx(master, resolverev=True)
+            # choose linkrev instead of introrev as the check is meant to be
+            # *fast*.
+            linknode = self.repo.changelog.rev(f.linkrev())[-1]
+            if not strict and lastnode:
+                # perform the mtime check first, it's faster than loading the
+                # revamp.
+                try:
+                    mtime = os.stat(self.revmappath).st_mtime
+                except OSError: # not fatal
+                    pass
+                else:
+                    if f.date()[0] < mtime:
+                        # if mtime check passes, check if f.node() is in the
+                        # revmap. note: this loads the revmap and can be slow.
+                        return self.revmap.hsh2rev(linknode) is not None
             # avoid resolving old manifest, or slow adjustlinkrev to be fast,
             # false negatives are acceptable in this case.
-            return self.repo.changelog.rev(f.linkrev())[-1] == lastnode
+            return linknode == lastnode
         except LookupError:
             # master does not have the file, or the revmap is ahead
             return True

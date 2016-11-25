@@ -160,12 +160,12 @@ def clientfetch(repo, paths, lastnodemap=None, peer=None):
 def localreposetup(ui, repo):
     class fastannotaterepo(repo.__class__):
         def prefetchfastannotate(self, paths, peer=None):
-            master = _getmaster(repo.ui)
+            master = _getmaster(self.ui)
             needupdatepaths = []
             lastnodemap = {}
             for path in paths:
-                with context.annotatecontext(repo, path) as actx:
-                    if not actx.isuptodate(master):
+                with context.annotatecontext(self, path) as actx:
+                    if not actx.isuptodate(master, strict=False):
                         needupdatepaths.append(path)
                         lastnodemap[path] = actx.lastnode
             if needupdatepaths:
