@@ -98,11 +98,13 @@ std::unique_ptr<HgStatus> Dirstate::getStatus() const {
     // Get the directory as a TreeInode.
     auto dirInode = mountPoint_->getDirInodeForPath(directory);
     auto treeInode = std::dynamic_pointer_cast<TreeInode>(dirInode);
-    DCHECK_NOTNULL(treeInode.get());
+    DCHECK(treeInode.get() != nullptr) << "Failed to get a TreeInode for "
+                                       << directory;
 
     // Get the directory as a Tree.
     auto tree = getTreeForDirectory(directory, rootTree.get(), objectStore_);
-    DCHECK_NOTNULL(tree.get());
+    DCHECK(tree.get() != nullptr) << "Failed to getTreeForDirectory() for "
+                                  << directory;
 
     DirectoryDelta delta;
     computeDelta(rootTree.get(), *treeInode, delta);
