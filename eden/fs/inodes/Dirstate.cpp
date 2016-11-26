@@ -8,12 +8,16 @@
  *
  */
 #include "Dirstate.h"
+#include <folly/Format.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
+#include "eden/fs/inodes/DirstatePersistence.h"
+#include "eden/fs/inodes/EdenMounts.h"
 #include "eden/fs/inodes/TreeEntryFileInode.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/model/Blob.h"
-#include "eden/fs/service/EdenMountHandler.h"
+#include "eden/fs/model/Tree.h"
+#include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/store/ObjectStores.h"
 #include "eden/fuse/MountPoint.h"
 
@@ -50,19 +54,19 @@ std::string HgStatus::toString() const {
 namespace {
 template <typename RelativePathType>
 void updateManifestWithDirectives(
-    const std::unordered_map<RelativePathType, HgUserStatusDirective>*
+    const std::unordered_map<RelativePathType, overlay::UserStatusDirective>*
         unaccountedUserDirectives,
     std::unordered_map<RelativePath, HgStatusCode>* manifest) {
   // We should make sure that every entry in userDirectives_ is accounted for in
   // the HgStatus that we return.
   for (auto& pair : *unaccountedUserDirectives) {
     switch (pair.second) {
-      case HgUserStatusDirective::ADD:
+      case overlay::UserStatusDirective::Add:
         // The file was marked for addition, but no longer exists in the working
         // copy. The user should either restore the file or run `hg forget`.
         manifest->emplace(RelativePath(pair.first), HgStatusCode::MISSING);
         break;
-      case HgUserStatusDirective::REMOVE:
+      case overlay::UserStatusDirective::Remove:
         // The file was marked for removal, but it still exists in the working
         // copy without any modifications. Although it may seem strange, it
         // should still show up as REMOVED in `hg status` even though it is
@@ -74,11 +78,10 @@ void updateManifestWithDirectives(
 }
 }
 
-std::unique_ptr<HgStatus> Dirstate::getStatus() {
+std::unique_ptr<HgStatus> Dirstate::getStatus() const {
   // Find the modified directories in the overlay and compare them with what is
   // in the root tree.
-  auto mountPoint = edenMount_->getMountPoint();
-  auto modifiedDirectories = getModifiedDirectoriesForMount(edenMount_.get());
+  auto modifiedDirectories = getModifiedDirectoriesForMount(mountPoint_);
   std::unordered_map<RelativePath, HgStatusCode> manifest;
   if (modifiedDirectories->empty()) {
     auto userDirectives = userDirectives_.rlock();
@@ -87,19 +90,18 @@ std::unique_ptr<HgStatus> Dirstate::getStatus() {
   }
 
   auto userDirectives = userDirectives_.rlock();
-  std::unordered_map<RelativePathPiece, HgUserStatusDirective>
+  std::unordered_map<RelativePathPiece, overlay::UserStatusDirective>
       copyOfUserDirectives(userDirectives->begin(), userDirectives->end());
 
-  auto rootTree = edenMount_->getRootTree();
-  auto objectStore = edenMount_->getObjectStore();
+  auto rootTree = getRootTree();
   for (auto& directory : *modifiedDirectories) {
     // Get the directory as a TreeInode.
-    auto dirInode = mountPoint->getDirInodeForPath(directory);
+    auto dirInode = mountPoint_->getDirInodeForPath(directory);
     auto treeInode = std::dynamic_pointer_cast<TreeInode>(dirInode);
     DCHECK_NOTNULL(treeInode.get());
 
     // Get the directory as a Tree.
-    auto tree = getTreeForDirectory(directory, rootTree.get(), objectStore);
+    auto tree = getTreeForDirectory(directory, rootTree.get(), objectStore_);
     DCHECK_NOTNULL(tree.get());
 
     DirectoryDelta delta;
@@ -115,10 +117,10 @@ std::unique_ptr<HgStatus> Dirstate::getStatus() {
       if (result != userDirectives->end()) {
         auto statusCode = result->second;
         switch (statusCode) {
-          case HgUserStatusDirective::ADD:
+          case overlay::UserStatusDirective::Add:
             manifest.emplace(pathToEntry, HgStatusCode::ADDED);
             break;
-          case HgUserStatusDirective::REMOVE:
+          case overlay::UserStatusDirective::Remove:
             // TODO(mbolin): Is there any weird sequence of modifications with
             // adding/removed files matched by .hgignore that could lead to this
             // state?
@@ -143,7 +145,7 @@ std::unique_ptr<HgStatus> Dirstate::getStatus() {
       if (result != userDirectives->end()) {
         auto statusCode = result->second;
         switch (statusCode) {
-          case HgUserStatusDirective::ADD:
+          case overlay::UserStatusDirective::Add:
             // TODO(mbolin): Is there any weird sequence of modifications with
             // adding/removed files matched by .hgignore that could lead to this
             // state?
@@ -151,7 +153,7 @@ std::unique_ptr<HgStatus> Dirstate::getStatus() {
                 "Invariant violation: The user has marked {} for addition, "
                 "but it already exists in the manifest.",
                 pathToEntry.stringPiece()));
-          case HgUserStatusDirective::REMOVE:
+          case overlay::UserStatusDirective::Remove:
             manifest.emplace(pathToEntry, HgStatusCode::REMOVED);
             break;
         }
@@ -171,7 +173,7 @@ std::unique_ptr<HgStatus> Dirstate::getStatus() {
       if (result != userDirectives->end()) {
         auto statusCode = result->second;
         switch (statusCode) {
-          case HgUserStatusDirective::ADD:
+          case overlay::UserStatusDirective::Add:
             // TODO(mbolin): Is there any weird sequence of modifications with
             // adding/removed files matched by .hgignore that could lead to this
             // state?
@@ -180,7 +182,7 @@ std::unique_ptr<HgStatus> Dirstate::getStatus() {
                 "but it already exists in the manifest "
                 "(and is currently removed from disk).",
                 pathToEntry.stringPiece()));
-          case HgUserStatusDirective::REMOVE:
+          case overlay::UserStatusDirective::Remove:
             manifest.emplace(pathToEntry, HgStatusCode::REMOVED);
             break;
         }
@@ -200,7 +202,7 @@ std::unique_ptr<HgStatus> Dirstate::getStatus() {
 bool hasMatchingAttributes(
     const TreeEntry* treeEntry,
     const TreeInode::Entry* treeInode,
-    ObjectStore& objectStore,
+    ObjectStore* objectStore,
     TreeInode& parent, // Has rlock
     const TreeInode::Dir& dir) {
   if (treeEntry->getMode() != treeInode->mode) {
@@ -218,7 +220,7 @@ bool hasMatchingAttributes(
     auto fileInode =
         std::dynamic_pointer_cast<TreeEntryFileInode>(overlayInode);
     auto overlaySHA1 = fileInode->getSHA1().get();
-    auto blobSHA1 = objectStore.getSha1ForBlob(treeEntry->getHash());
+    auto blobSHA1 = objectStore->getSha1ForBlob(treeEntry->getHash());
     return overlaySHA1 == *blobSHA1;
   } else {
     auto optionalHash = treeInode->hash;
@@ -270,7 +272,7 @@ void Dirstate::computeDelta(
       if (!hasMatchingAttributes(
               &base,
               overlayIterator->second.get(),
-              *edenMount_->getObjectStore(),
+              objectStore_,
               current,
               *dir)) {
         delta.modified.push_back(base.getName());
@@ -312,16 +314,16 @@ void Dirstate::add(RelativePathPiece path) {
     auto result = userDirectives->find(path.copy());
     if (result != userDirectives->end()) {
       switch (result->second) {
-        case HgUserStatusDirective::ADD:
+        case overlay::UserStatusDirective::Add:
           // No-op: already added.
           break;
-        case HgUserStatusDirective::REMOVE:
+        case overlay::UserStatusDirective::Remove:
           userDirectives->erase(path.copy());
           persistence_->save(*userDirectives);
           break;
       }
     } else {
-      (*userDirectives)[path.copy()] = HgUserStatusDirective::ADD;
+      (*userDirectives)[path.copy()] = overlay::UserStatusDirective::Add;
       persistence_->save(*userDirectives);
     }
   }
@@ -337,7 +339,7 @@ bool shouldFileBeDeletedByHgRemove(
     RelativePathPiece file,
     std::shared_ptr<fusell::DirInode> parent,
     const TreeEntry* treeEntry,
-    ObjectStore& objectStore) {
+    ObjectStore* objectStore) {
   auto treeInode = std::dynamic_pointer_cast<TreeInode>(parent);
   if (treeInode == nullptr) {
     // The parent directory for the file is not in the overlay, so the file must
@@ -415,7 +417,7 @@ void Dirstate::remove(RelativePathPiece path, bool force) {
   // prefer not to do them while holding the lock.
   std::shared_ptr<fusell::DirInode> parent;
   try {
-    parent = edenMount_->getMountPoint()->getDirInodeForPath(path.dirname());
+    parent = mountPoint_->getDirInodeForPath(path.dirname());
   } catch (const std::system_error& e) {
     auto value = e.code().value();
     if (value == ENOENT || value == ENOTDIR) {
@@ -434,8 +436,7 @@ void Dirstate::remove(RelativePathPiece path, bool force) {
     }
   }
 
-  auto entry = getEntryForFile(
-      path, edenMount_->getRootTree().get(), edenMount_->getObjectStore());
+  auto entry = getEntryForFile(path, getRootTree().get(), objectStore_);
 
   auto shouldDelete = false;
   {
@@ -458,17 +459,17 @@ void Dirstate::remove(RelativePathPiece path, bool force) {
           // the file has been modified, so we must perform this check before
           // updating userDirectives.
           shouldDelete = shouldFileBeDeletedByHgRemove(
-              path, parent, entry.get(), *edenMount_->getObjectStore());
+              path, parent, entry.get(), objectStore_);
         }
       }
-      (*userDirectives)[path.copy()] = HgUserStatusDirective::REMOVE;
+      (*userDirectives)[path.copy()] = overlay::UserStatusDirective::Remove;
       persistence_->save(*userDirectives);
     } else {
       switch (result->second) {
-        case HgUserStatusDirective::REMOVE:
+        case overlay::UserStatusDirective::Remove:
           // No-op: already removed.
           break;
-        case HgUserStatusDirective::ADD:
+        case overlay::UserStatusDirective::Add:
           if (inode != nullptr) {
             throw std::runtime_error(folly::sformat(
                 "not removing {}: file has been marked for add "
@@ -484,7 +485,7 @@ void Dirstate::remove(RelativePathPiece path, bool force) {
   }
 
   if (shouldDelete) {
-    auto dispatcher = edenMount_->getMountPoint()->getDispatcher();
+    auto dispatcher = mountPoint_->getDispatcher();
     try {
       dispatcher->unlink(parent->getNodeId(), path.basename()).get();
     } catch (const std::system_error& e) {
@@ -494,6 +495,10 @@ void Dirstate::remove(RelativePathPiece path, bool force) {
       }
     }
   }
+}
+
+std::unique_ptr<Tree> Dirstate::getRootTree() const {
+  return getRootTreeForMountPoint(mountPoint_, objectStore_);
 }
 
 const std::string kStatusCodeCharClean = "C";

@@ -9,7 +9,7 @@
  */
 
 #include <gtest/gtest.h>
-#include "eden/fs/model/hg/Dirstate.h"
+#include "eden/fs/inodes/Dirstate.h"
 #include "eden/fs/testharness/TestMount.h"
 
 using namespace facebook::eden;
@@ -36,27 +36,19 @@ TEST(HgStatus, toString) {
       hgStatus.toString());
 }
 
-class FakeDirstatePeristence : public DirstatePersistence {
- public:
-  virtual ~FakeDirstatePeristence() {}
-  void save(
-      const std::unordered_map<RelativePath, HgUserStatusDirective>&) override {
-  }
-};
-
 void verifyExpectedDirstate(
-    Dirstate& dirstate,
+    const Dirstate* dirstate,
     std::unordered_map<std::string, HgStatusCode>&& statuses) {
   std::unordered_map<RelativePath, HgStatusCode> expected;
   for (auto& pair : statuses) {
     expected.emplace(RelativePath(pair.first), pair.second);
   }
   auto expectedStatus = HgStatus(std::move(expected));
-  EXPECT_EQ(expectedStatus, *dirstate.getStatus());
+  EXPECT_EQ(expectedStatus, *dirstate->getStatus().get());
 }
 
-void verifyEmptyDirstate(Dirstate& dirstate) {
-  auto status = dirstate.getStatus();
+void verifyEmptyDirstate(const Dirstate* dirstate) {
+  auto status = dirstate->getStatus();
   EXPECT_EQ(0, status->size()) << "Expected dirstate to be empty.";
 }
 
@@ -64,26 +56,23 @@ TEST(Dirstate, createDirstate) {
   TestMountBuilder builder;
   auto testMount = builder.build();
 
-  auto persistence = std::make_unique<FakeDirstatePeristence>();
-  Dirstate dirstate(testMount->getEdenMount(), std::move(persistence));
+  auto dirstate = testMount->getDirstate();
   verifyEmptyDirstate(dirstate);
 }
 
 TEST(Dirstate, createDirstateWithInitialState) {
   TestMountBuilder builder;
   builder.addFile({"removed.txt", "nada"});
+  builder.addUserDirectives({
+      {RelativePath("deleted.txt"), overlay::UserStatusDirective::Remove},
+      {RelativePath("missing.txt"), overlay::UserStatusDirective::Add},
+      {RelativePath("newfile.txt"), overlay::UserStatusDirective::Add},
+      {RelativePath("removed.txt"), overlay::UserStatusDirective::Remove},
+  });
   auto testMount = builder.build();
   testMount->addFile("newfile.txt", "legitimate add");
 
-  auto persistence = std::make_unique<FakeDirstatePeristence>();
-  std::unordered_map<RelativePath, HgUserStatusDirective> userDirectives{
-      {RelativePath("deleted.txt"), HgUserStatusDirective::REMOVE},
-      {RelativePath("missing.txt"), HgUserStatusDirective::ADD},
-      {RelativePath("newfile.txt"), HgUserStatusDirective::ADD},
-      {RelativePath("removed.txt"), HgUserStatusDirective::REMOVE},
-  };
-  Dirstate dirstate(
-      testMount->getEdenMount(), std::move(persistence), &userDirectives);
+  auto dirstate = testMount->getDirstate();
   verifyExpectedDirstate(
       dirstate,
       {
@@ -97,36 +86,30 @@ TEST(Dirstate, createDirstateWithInitialState) {
 TEST(Dirstate, createDirstateWithUntrackedFile) {
   TestMountBuilder builder;
   auto testMount = builder.build();
+  auto dirstate = testMount->getDirstate();
+
   testMount->addFile("hello.txt", "some contents");
-
-  auto persistence = std::make_unique<FakeDirstatePeristence>();
-  Dirstate dirstate(testMount->getEdenMount(), std::move(persistence));
-
   verifyExpectedDirstate(dirstate, {{"hello.txt", HgStatusCode::NOT_TRACKED}});
 }
 
 TEST(Dirstate, createDirstateWithAddedFile) {
   TestMountBuilder builder;
   auto testMount = builder.build();
+  auto dirstate = testMount->getDirstate();
+
   testMount->addFile("hello.txt", "some contents");
-
-  auto persistence = std::make_unique<FakeDirstatePeristence>();
-  Dirstate dirstate(testMount->getEdenMount(), std::move(persistence));
-  dirstate.add(RelativePathPiece("hello.txt"));
-
+  dirstate->add(RelativePathPiece("hello.txt"));
   verifyExpectedDirstate(dirstate, {{"hello.txt", HgStatusCode::ADDED}});
 }
 
 TEST(Dirstate, createDirstateWithMissingFile) {
   TestMountBuilder builder;
   auto testMount = builder.build();
+  auto dirstate = testMount->getDirstate();
+
   testMount->addFile("hello.txt", "some contents");
-
-  auto persistence = std::make_unique<FakeDirstatePeristence>();
-  Dirstate dirstate(testMount->getEdenMount(), std::move(persistence));
-  dirstate.add(RelativePathPiece("hello.txt"));
+  dirstate->add(RelativePathPiece("hello.txt"));
   testMount->deleteFile("hello.txt");
-
   verifyExpectedDirstate(dirstate, {{"hello.txt", HgStatusCode::MISSING}});
 }
 
@@ -134,11 +117,9 @@ TEST(Dirstate, createDirstateWithModifiedFileContents) {
   TestMountBuilder builder;
   builder.addFile({"hello.txt", "some contents"});
   auto testMount = builder.build();
+  auto dirstate = testMount->getDirstate();
 
-  auto persistence = std::make_unique<FakeDirstatePeristence>();
-  Dirstate dirstate(testMount->getEdenMount(), std::move(persistence));
   testMount->overwriteFile("hello.txt", "other contents");
-
   verifyExpectedDirstate(dirstate, {{"hello.txt", HgStatusCode::MODIFIED}});
 }
 
@@ -146,11 +127,9 @@ TEST(Dirstate, createDirstateWithTouchedFile) {
   TestMountBuilder builder;
   builder.addFile({"hello.txt", "some contents"});
   auto testMount = builder.build();
+  auto dirstate = testMount->getDirstate();
 
-  auto persistence = std::make_unique<FakeDirstatePeristence>();
-  Dirstate dirstate(testMount->getEdenMount(), std::move(persistence));
   testMount->overwriteFile("hello.txt", "some contents");
-
   // Although the file has been written, it has not changed in any significant
   // way.
   verifyEmptyDirstate(dirstate);
@@ -160,10 +139,9 @@ TEST(Dirstate, createDirstateWithFileAndThenHgRemoveIt) {
   TestMountBuilder builder;
   builder.addFile({"hello.txt", "some contents"});
   auto testMount = builder.build();
+  auto dirstate = testMount->getDirstate();
 
-  auto persistence = std::make_unique<FakeDirstatePeristence>();
-  Dirstate dirstate(testMount->getEdenMount(), std::move(persistence));
-  dirstate.remove(RelativePathPiece("hello.txt"), /* force */ false);
+  dirstate->remove(RelativePathPiece("hello.txt"), /* force */ false);
   EXPECT_FALSE(testMount->hasFileAt("hello.txt"));
 
   verifyExpectedDirstate(dirstate, {{"hello.txt", HgStatusCode::REMOVED}});
@@ -173,11 +151,10 @@ TEST(Dirstate, createDirstateWithFileRemoveItAndThenHgRemoveIt) {
   TestMountBuilder builder;
   builder.addFile({"hello.txt", "some contents"});
   auto testMount = builder.build();
+  auto dirstate = testMount->getDirstate();
 
-  auto persistence = std::make_unique<FakeDirstatePeristence>();
-  Dirstate dirstate(testMount->getEdenMount(), std::move(persistence));
   testMount->deleteFile("hello.txt");
-  dirstate.remove(RelativePathPiece("hello.txt"), /* force */ false);
+  dirstate->remove(RelativePathPiece("hello.txt"), /* force */ false);
 
   verifyExpectedDirstate(dirstate, {{"hello.txt", HgStatusCode::REMOVED}});
 }
@@ -186,13 +163,12 @@ TEST(Dirstate, createDirstateWithFileTouchItAndThenHgRemoveIt) {
   TestMountBuilder builder;
   builder.addFile({"hello.txt", "original contents"});
   auto testMount = builder.build();
+  auto dirstate = testMount->getDirstate();
 
-  auto persistence = std::make_unique<FakeDirstatePeristence>();
-  Dirstate dirstate(testMount->getEdenMount(), std::move(persistence));
   testMount->overwriteFile("hello.txt", "some other contents");
 
   try {
-    dirstate.remove(RelativePathPiece("hello.txt"), /* force */ false);
+    dirstate->remove(RelativePathPiece("hello.txt"), /* force */ false);
     FAIL() << "Should error when trying to remove a modified file.";
   } catch (const std::runtime_error& e) {
     EXPECT_STREQ(
@@ -201,7 +177,7 @@ TEST(Dirstate, createDirstateWithFileTouchItAndThenHgRemoveIt) {
   }
 
   testMount->overwriteFile("hello.txt", "original contents");
-  dirstate.remove(RelativePathPiece("hello.txt"), /* force */ false);
+  dirstate->remove(RelativePathPiece("hello.txt"), /* force */ false);
   EXPECT_FALSE(testMount->hasFileAt("hello.txt"));
 
   verifyExpectedDirstate(dirstate, {{"hello.txt", HgStatusCode::REMOVED}});
@@ -211,14 +187,11 @@ TEST(Dirstate, createDirstateWithFileModifyItAndThenHgForceRemoveIt) {
   TestMountBuilder builder;
   builder.addFile({"hello.txt", "original contents"});
   auto testMount = builder.build();
+  auto dirstate = testMount->getDirstate();
 
-  auto persistence = std::make_unique<FakeDirstatePeristence>();
-  Dirstate dirstate(testMount->getEdenMount(), std::move(persistence));
   testMount->overwriteFile("hello.txt", "some other contents");
-
-  dirstate.remove(RelativePathPiece("hello.txt"), /* force */ true);
+  dirstate->remove(RelativePathPiece("hello.txt"), /* force */ true);
   EXPECT_FALSE(testMount->hasFileAt("hello.txt"));
-
   verifyExpectedDirstate(dirstate, {{"hello.txt", HgStatusCode::REMOVED}});
 }
 
@@ -226,16 +199,14 @@ TEST(Dirstate, ensureSubsequentCallsToHgRemoveHaveNoEffect) {
   TestMountBuilder builder;
   builder.addFile({"hello.txt", "original contents"});
   auto testMount = builder.build();
+  auto dirstate = testMount->getDirstate();
 
-  auto persistence = std::make_unique<FakeDirstatePeristence>();
-  Dirstate dirstate(testMount->getEdenMount(), std::move(persistence));
-
-  dirstate.remove(RelativePathPiece("hello.txt"), /* force */ false);
+  dirstate->remove(RelativePathPiece("hello.txt"), /* force */ false);
   EXPECT_FALSE(testMount->hasFileAt("hello.txt"));
   verifyExpectedDirstate(dirstate, {{"hello.txt", HgStatusCode::REMOVED}});
 
   // Calling `hg remove` again should have no effect and not throw any errors.
-  dirstate.remove(RelativePathPiece("hello.txt"), /* force */ false);
+  dirstate->remove(RelativePathPiece("hello.txt"), /* force */ false);
   EXPECT_FALSE(testMount->hasFileAt("hello.txt"));
   verifyExpectedDirstate(dirstate, {{"hello.txt", HgStatusCode::REMOVED}});
 
@@ -246,7 +217,7 @@ TEST(Dirstate, ensureSubsequentCallsToHgRemoveHaveNoEffect) {
   verifyExpectedDirstate(dirstate, {{"hello.txt", HgStatusCode::REMOVED}});
 
   // Calling `hg remove` again should have no effect and not throw any errors.
-  dirstate.remove(RelativePathPiece("hello.txt"), /* force */ false);
+  dirstate->remove(RelativePathPiece("hello.txt"), /* force */ false);
   EXPECT_TRUE(testMount->hasFileAt("hello.txt"));
   verifyExpectedDirstate(dirstate, {{"hello.txt", HgStatusCode::REMOVED}});
 }
@@ -254,34 +225,30 @@ TEST(Dirstate, ensureSubsequentCallsToHgRemoveHaveNoEffect) {
 TEST(Dirstate, createDirstateHgAddFileRemoveItThenHgRemoveIt) {
   TestMountBuilder builder;
   auto testMount = builder.build();
-
-  auto persistence = std::make_unique<FakeDirstatePeristence>();
-  Dirstate dirstate(testMount->getEdenMount(), std::move(persistence));
+  auto dirstate = testMount->getDirstate();
 
   testMount->addFile("hello.txt", "I will be added.");
-  dirstate.add(RelativePathPiece("hello.txt"));
+  dirstate->add(RelativePathPiece("hello.txt"));
   verifyExpectedDirstate(dirstate, {{"hello.txt", HgStatusCode::ADDED}});
 
   testMount->deleteFile("hello.txt");
   verifyExpectedDirstate(dirstate, {{"hello.txt", HgStatusCode::MISSING}});
 
-  dirstate.remove(RelativePathPiece("hello.txt"), /* force */ false);
+  dirstate->remove(RelativePathPiece("hello.txt"), /* force */ false);
   verifyEmptyDirstate(dirstate);
 }
 
 TEST(Dirstate, createDirstateHgAddFileThenHgRemoveIt) {
   TestMountBuilder builder;
   auto testMount = builder.build();
-
-  auto persistence = std::make_unique<FakeDirstatePeristence>();
-  Dirstate dirstate(testMount->getEdenMount(), std::move(persistence));
+  auto dirstate = testMount->getDirstate();
 
   testMount->addFile("hello.txt", "I will be added.");
-  dirstate.add(RelativePathPiece("hello.txt"));
+  dirstate->add(RelativePathPiece("hello.txt"));
   verifyExpectedDirstate(dirstate, {{"hello.txt", HgStatusCode::ADDED}});
 
   try {
-    dirstate.remove(RelativePathPiece("hello.txt"), /* force */ false);
+    dirstate->remove(RelativePathPiece("hello.txt"), /* force */ false);
     FAIL() << "Should error when trying to remove a file scheduled for add.";
   } catch (const std::runtime_error& e) {
     EXPECT_STREQ(
@@ -289,7 +256,6 @@ TEST(Dirstate, createDirstateHgAddFileThenHgRemoveIt) {
         "(use 'hg forget' to undo add)",
         e.what());
   }
-
   verifyExpectedDirstate(dirstate, {{"hello.txt", HgStatusCode::ADDED}});
 }
 
@@ -297,10 +263,8 @@ TEST(Dirstate, createDirstateWithFileAndThenDeleteItWithoutCallingHgRemove) {
   TestMountBuilder builder;
   builder.addFile({"hello.txt", "some contents"});
   auto testMount = builder.build();
+  auto dirstate = testMount->getDirstate();
 
-  auto persistence = std::make_unique<FakeDirstatePeristence>();
-  Dirstate dirstate(testMount->getEdenMount(), std::move(persistence));
   testMount->deleteFile("hello.txt");
-
   verifyExpectedDirstate(dirstate, {{"hello.txt", HgStatusCode::MISSING}});
 }

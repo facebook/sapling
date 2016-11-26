@@ -12,6 +12,7 @@
 #include <folly/experimental/TestUtil.h>
 #include <folly/io/IOBuf.h>
 #include "eden/fs/config/ClientConfig.h"
+#include "eden/fs/inodes/Dirstate.h"
 #include "eden/fs/inodes/FileData.h"
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/TreeEntryFileInode.h"
@@ -30,6 +31,7 @@ using facebook::eden::fusell::MountPoint;
 using folly::ByteRange;
 using folly::StringPiece;
 using folly::test::TemporaryDirectory;
+using folly::test::TemporaryFile;
 using std::make_shared;
 using std::make_unique;
 using std::shared_ptr;
@@ -82,6 +84,16 @@ unique_ptr<TestMount> TestMountBuilder::build() {
   shared_ptr<Overlay> overlay =
       make_shared<Overlay>(AbsolutePathPiece{overlayDir->path().string()});
 
+  // TODO(mbolin): Change EdenMount so that it creates the Dirstate.
+  auto pathToDirstatePersistenceData = make_unique<TemporaryFile>();
+  auto dirstatePersistence = make_unique<DirstatePersistence>(
+      AbsolutePathPiece(pathToDirstatePersistenceData->path().string()));
+  auto dirstate = make_unique<Dirstate>(
+      mountPoint.get(),
+      objectStore.get(),
+      std::move(dirstatePersistence),
+      &userDirectives_);
+
   std::vector<BindMount> bindMounts;
   unique_ptr<EdenMount> edenMount = make_unique<EdenMount>(
       mountPoint, std::move(objectStore), overlay, bindMounts);
@@ -130,9 +142,19 @@ unique_ptr<TestMount> TestMountBuilder::build() {
 
   return make_unique<TestMount>(
       std::move(edenMount),
+      std::move(dirstate),
       std::move(mountPointDir),
       std::move(pathToRocksDb),
-      std::move(overlayDir));
+      std::move(overlayDir),
+      std::move(pathToDirstatePersistenceData));
+}
+
+void TestMountBuilder::addUserDirectives(
+    std::unordered_map<RelativePath, overlay::UserStatusDirective>&&
+        userDirectives) {
+  for (auto& pair : userDirectives) {
+    userDirectives_.emplace(pair.first, pair.second);
+  }
 }
 
 void TestMount::addFile(folly::StringPiece path, std::string contents) {

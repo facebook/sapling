@@ -9,30 +9,30 @@
  */
 #pragma once
 
-#include "eden/fs/model/hg/Dirstate.h"
+#include <unordered_map>
+#include "eden/fs/inodes/gen-cpp2/overlay_types.h"
 #include "eden/utils/PathFuncs.h"
 
 namespace facebook {
 namespace eden {
 
 /**
- * Implementation of DirstatePersistence that persists data to a local file.
+ * Persists dirstate data to a local file.
  */
-class LocalDirstatePersistence : public DirstatePersistence {
+class DirstatePersistence {
  public:
-  explicit LocalDirstatePersistence(AbsolutePathPiece storageFile)
+  explicit DirstatePersistence(AbsolutePathPiece storageFile)
       : storageFile_(storageFile) {}
 
-  virtual ~LocalDirstatePersistence() {}
-
-  void save(const std::unordered_map<RelativePath, HgUserStatusDirective>&
-                userDirectives) override;
+  void save(
+      const std::unordered_map<RelativePath, overlay::UserStatusDirective>&
+          userDirectives);
 
   /**
    * If the underlying storage file does not exist, then this returns an empty
    * map.
    */
-  std::unordered_map<RelativePath, HgUserStatusDirective> load();
+  std::unordered_map<RelativePath, overlay::UserStatusDirective> load();
 
  private:
   AbsolutePath storageFile_;

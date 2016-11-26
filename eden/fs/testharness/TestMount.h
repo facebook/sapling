@@ -13,9 +13,11 @@
 #include <folly/experimental/TestUtil.h>
 #include <sys/stat.h>
 #include <vector>
+#include "eden/fs/inodes/Dirstate.h"
+#include "eden/fs/inodes/DirstatePersistence.h"
 #include "eden/fs/inodes/EdenMount.h"
+#include "eden/fs/inodes/gen-cpp2/overlay_types.h"
 #include "eden/fs/model/TreeEntry.h"
-#include "eden/fs/store/ObjectStore.h"
 #include "eden/utils/PathFuncs.h"
 
 namespace facebook {
@@ -44,13 +46,17 @@ class TestMount {
  public:
   TestMount(
       std::shared_ptr<EdenMount> edenMount,
+      std::unique_ptr<Dirstate> dirstate,
       std::unique_ptr<folly::test::TemporaryDirectory> mountPointDir,
       std::unique_ptr<folly::test::TemporaryDirectory> pathToRocksDb,
-      std::unique_ptr<folly::test::TemporaryDirectory> overlayDir)
+      std::unique_ptr<folly::test::TemporaryDirectory> overlayDir,
+      std::unique_ptr<folly::test::TemporaryFile> persistenceDataFile)
       : edenMount_(edenMount),
+        dirstate_(std::move(dirstate)),
         mountPointDir_(std::move(mountPointDir)),
         pathToRocksDb_(std::move(pathToRocksDb)),
-        overlayDir_(std::move(overlayDir)) {}
+        overlayDir_(std::move(overlayDir)),
+        persistenceDataFile_(std::move(persistenceDataFile)) {}
 
   /**
    * Add file to the mount; it will be available in the overlay.
@@ -80,14 +86,20 @@ class TestMount {
     return edenMount_;
   }
 
+  Dirstate* getDirstate() {
+    return dirstate_.get();
+  }
+
  private:
   std::shared_ptr<EdenMount> edenMount_;
+  std::unique_ptr<Dirstate> dirstate_;
 
   // The TestMount must hold onto these TemporaryDirectories because they need
   // to live for the duration of the test.
   std::unique_ptr<folly::test::TemporaryDirectory> mountPointDir_;
   std::unique_ptr<folly::test::TemporaryDirectory> pathToRocksDb_;
   std::unique_ptr<folly::test::TemporaryDirectory> overlayDir_;
+  std::unique_ptr<folly::test::TemporaryFile> persistenceDataFile_;
 };
 
 class TestMountBuilder {
@@ -104,8 +116,14 @@ class TestMountBuilder {
     }
   }
 
+  void addUserDirectives(
+      std::unordered_map<RelativePath, overlay::UserStatusDirective>&&
+          userDirectives);
+
  private:
   std::vector<TestMountFile> files_;
+  std::unordered_map<RelativePath, overlay::UserStatusDirective>
+      userDirectives_;
 };
 }
 }

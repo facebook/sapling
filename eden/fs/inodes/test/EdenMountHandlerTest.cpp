@@ -7,7 +7,7 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
-#include "eden/fs/service/EdenMountHandler.h"
+#include "eden/fs/inodes/EdenMounts.h"
 #include "eden/fs/testharness/TestMount.h"
 #include "eden/utils/PathFuncs.h"
 
@@ -19,7 +19,8 @@ TEST(EdenMountHandler, getModifiedDirectoriesForMountWithNoModifications) {
   TestMountBuilder builder;
   auto testMount = builder.build();
   auto edenMount = testMount->getEdenMount();
-  auto modifiedDirectories = getModifiedDirectoriesForMount(edenMount.get());
+  auto modifiedDirectories =
+      getModifiedDirectoriesForMount(edenMount->getMountPoint());
   std::vector<RelativePath> expected = {};
   EXPECT_EQ(expected, *modifiedDirectories.get());
 }
@@ -48,7 +49,8 @@ TEST(EdenMountHandler, getModifiedDirectoriesForMount) {
   testMount->addFile("a/b/c/file.txt", "");
 
   auto edenMount = testMount->getEdenMount();
-  auto modifiedDirectories = getModifiedDirectoriesForMount(edenMount.get());
+  auto modifiedDirectories =
+      getModifiedDirectoriesForMount(edenMount->getMountPoint());
 
   std::vector<RelativePath> expected = {
       RelativePath(),

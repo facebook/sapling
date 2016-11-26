@@ -18,6 +18,7 @@ cpp_library(
     '@/eden/fs/journal:journal',
     '@/eden/fs/store:store',
     '@/eden/fuse:fusell',
+    '@/eden/utils:utils',
     ':serialization-cpp2',
   ],
   external_deps = [

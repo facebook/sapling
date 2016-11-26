@@ -11,8 +11,9 @@
 
 #include <glog/logging.h>
 
-#include "Overlay.h"
 #include "eden/fs/config/ClientConfig.h"
+#include "eden/fs/inodes/EdenMounts.h"
+#include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fuse/MountPoint.h"
@@ -77,14 +78,7 @@ const vector<BindMount>& EdenMount::getBindMounts() const {
 }
 
 std::unique_ptr<Tree> EdenMount::getRootTree() const {
-  auto rootAsDirInode = mountPoint_->getRootInode();
-  auto rootAsTreeInode = std::dynamic_pointer_cast<TreeInode>(rootAsDirInode);
-  {
-    auto dir = rootAsTreeInode->getContents().rlock();
-    auto& rootTreeHash = dir->treeHash.value();
-    auto tree = getObjectStore()->getTree(rootTreeHash);
-    return tree;
-  }
+  return getRootTreeForMountPoint(mountPoint_.get(), getObjectStore());
 }
 }
 } // facebook::eden

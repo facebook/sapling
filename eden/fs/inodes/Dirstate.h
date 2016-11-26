@@ -9,9 +9,8 @@
  */
 #pragma once
 #include <folly/Synchronized.h>
-#include "eden/fs/inodes/EdenMount.h"
-#include "eden/fs/model/Tree.h"
-#include "eden/fs/store/ObjectStore.h"
+#include "eden/fs/inodes/DirstatePersistence.h"
+#include "eden/fs/inodes/gen-cpp2/overlay_types.h"
 #include "eden/utils/PathFuncs.h"
 
 namespace {
@@ -21,16 +20,13 @@ class DirectoryDelta;
 namespace facebook {
 namespace eden {
 
+class ObjectStore;
+class Tree;
 class TreeInode;
 
-/**
- * Type of change to the manifest that the user has specified for a particular
- * file that will apply on the next commit.
- */
-enum class HgUserStatusDirective {
-  ADD,
-  REMOVE,
-};
+namespace fusell {
+class MountPoint;
+}
 
 /**
  *
@@ -95,14 +91,6 @@ class HgStatus {
 
 std::ostream& operator<<(std::ostream& os, const HgStatus& status);
 
-class DirstatePersistence {
- public:
-  virtual ~DirstatePersistence() {}
-  virtual void save(
-      const std::unordered_map<RelativePath, HgUserStatusDirective>&
-          userDirectives) = 0;
-};
-
 /**
  * This is designed to be a simple implemenation of an Hg dirstate. It's
  * "simple" in that every call to `getStatus()` walks the entire overlay to
@@ -126,22 +114,26 @@ class DirstatePersistence {
 class Dirstate {
  public:
   Dirstate(
-      std::shared_ptr<EdenMount> edenMount,
+      fusell::MountPoint* mountPoint,
+      ObjectStore* objectStore,
       std::unique_ptr<DirstatePersistence> persistence,
-      const std::unordered_map<RelativePath, HgUserStatusDirective>*
+      const std::unordered_map<RelativePath, overlay::UserStatusDirective>*
           userDirectives)
-      : userDirectives_(*userDirectives),
-        edenMount_(std::move(edenMount)),
-        persistence_(std::move(persistence)) {}
+      : mountPoint_(mountPoint),
+        objectStore_(objectStore),
+        persistence_(std::move(persistence)),
+        userDirectives_(*userDirectives) {}
 
   Dirstate(
-      std::shared_ptr<EdenMount> edenMount,
+      fusell::MountPoint* mountPoint,
+      ObjectStore* objectStore,
       std::unique_ptr<DirstatePersistence> persistence)
-      : edenMount_(std::move(edenMount)),
+      : mountPoint_(mountPoint),
+        objectStore_(objectStore),
         persistence_(std::move(persistence)) {}
 
   /** Analogous to calling `hg status`. */
-  std::unique_ptr<HgStatus> getStatus();
+  std::unique_ptr<HgStatus> getStatus() const;
 
   /**
    * Analogous to `hg add <path>` where `<path>` is an ordinary file or symlink.
@@ -159,15 +151,19 @@ class Dirstate {
       TreeInode& current,
       DirectoryDelta& delta) const;
 
+  std::unique_ptr<Tree> getRootTree() const;
+
+  fusell::MountPoint* mountPoint_;
+  ObjectStore* objectStore_;
+  std::unique_ptr<DirstatePersistence> persistence_;
   /**
    * Manifest of files in the working copy whose status is not CLEAN. These are
    * also referred to as "nonnormal" files.
    * TODO(mbolin): Consider StringKeyedMap instead of unordered_map.
    */
-  folly::Synchronized<std::unordered_map<RelativePath, HgUserStatusDirective>>
+  folly::Synchronized<
+      std::unordered_map<RelativePath, overlay::UserStatusDirective>>
       userDirectives_;
-  std::shared_ptr<EdenMount> edenMount_;
-  std::unique_ptr<DirstatePersistence> persistence_;
 };
 }
 }

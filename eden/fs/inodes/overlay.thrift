@@ -32,3 +32,12 @@ struct OverlayData {
   // fit in memory and thus that this won't be too big to work with.
   1: map<RelativePath, OverlayDir> localDirs
 }
+
+enum UserStatusDirective {
+  Add = 0x0,
+  Remove = 0x1,
+}
+
+struct DirstateData {
+  1: map<RelativePath, UserStatusDirective> directives
+}

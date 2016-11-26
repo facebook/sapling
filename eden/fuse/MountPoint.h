@@ -124,6 +124,13 @@ class MountPoint {
    */
   struct stat initStatData() const;
 
+  /**
+   * @return vector with the RelativePath of every directory that is modified
+   *     according to the overlay in the mount. The vector will be ordered as a
+   *     depth-first traversal of the overlay.
+   */
+  std::unique_ptr<std::vector<RelativePath>> getModifiedDirectories();
+
  private:
   enum class Status { UNINIT, STARTING, RUNNING, ERROR };
 

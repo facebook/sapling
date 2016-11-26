@@ -11,56 +11,58 @@
 #include <folly/experimental/TestUtil.h>
 #include <gtest/gtest.h>
 #include <thrift/lib/cpp2/protocol/Serializer.h>
-#include "eden/fs/model/hg/LocalDirstatePersistence.h"
-#include "eden/fs/model/hg/gen-cpp2/dirstate_types.h"
+#include "eden/fs/inodes/DirstatePersistence.h"
+#include "eden/fs/inodes/gen-cpp2/overlay_types.h"
 
 using namespace facebook::eden;
 using apache::thrift::CompactSerializer;
 using folly::test::TemporaryFile;
 
-TEST(LocalDirstatePersistence, saveAndReadDirectivesBackOut) {
+TEST(DirstatePersistence, saveAndReadDirectivesBackOut) {
   TemporaryFile storageFile;
 
   AbsolutePath storageFilePath(storageFile.path().c_str());
-  LocalDirstatePersistence persistence(storageFilePath);
-  std::unordered_map<RelativePath, HgUserStatusDirective> userDirectives = {
-      {RelativePath("add.txt"), HgUserStatusDirective::ADD},
-      {RelativePath("remove.txt"), HgUserStatusDirective::REMOVE},
-  };
+  DirstatePersistence persistence(storageFilePath);
+  std::unordered_map<RelativePath, overlay::UserStatusDirective>
+      userDirectives = {
+          {RelativePath("add.txt"), overlay::UserStatusDirective::Add},
+          {RelativePath("remove.txt"), overlay::UserStatusDirective::Remove},
+      };
   persistence.save(userDirectives);
 
   auto rehydratedDirectives = persistence.load();
   EXPECT_EQ(userDirectives, rehydratedDirectives);
 }
 
-TEST(LocalDirstatePersistence, loadFromFileWithWellFormattedData) {
+TEST(DirstatePersistence, loadFromFileWithWellFormattedData) {
   TemporaryFile storageFile;
 
-  dirstate::DirstateData dirstateData;
+  overlay::DirstateData dirstateData;
   dirstateData.directives = {
-      {"add.txt", dirstate::HgUserStatusDirectiveValue::Add},
-      {"remove.txt", dirstate::HgUserStatusDirectiveValue::Remove}};
+      {"add.txt", overlay::UserStatusDirective::Add},
+      {"remove.txt", overlay::UserStatusDirective::Remove}};
   auto serializedData = CompactSerializer::serialize<std::string>(dirstateData);
   folly::writeFull(
       storageFile.fd(), serializedData.data(), serializedData.size());
 
   AbsolutePath storageFilePath(storageFile.path().c_str());
-  LocalDirstatePersistence persistence(storageFilePath);
+  DirstatePersistence persistence(storageFilePath);
   auto directives = persistence.load();
-  std::unordered_map<RelativePath, HgUserStatusDirective> expectedDirectives = {
-      {RelativePath("add.txt"), HgUserStatusDirective::ADD},
-      {RelativePath("remove.txt"), HgUserStatusDirective::REMOVE},
-  };
+  std::unordered_map<RelativePath, overlay::UserStatusDirective>
+      expectedDirectives = {
+          {RelativePath("add.txt"), overlay::UserStatusDirective::Add},
+          {RelativePath("remove.txt"), overlay::UserStatusDirective::Remove},
+      };
   EXPECT_EQ(expectedDirectives, directives);
 }
 
-TEST(LocalDirstatePersistence, attemptLoadFromNonExistentFile) {
+TEST(DirstatePersistence, attemptLoadFromNonExistentFile) {
   AbsolutePath storageFilePath;
   {
     TemporaryFile storageFile;
     storageFilePath = AbsolutePath(storageFile.path().c_str());
   }
-  LocalDirstatePersistence persistence(storageFilePath);
+  DirstatePersistence persistence(storageFilePath);
   auto directives = persistence.load();
   EXPECT_EQ(0, directives.size());
 }

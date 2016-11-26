@@ -13,6 +13,7 @@
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/TreeEntryFileInode.h"
 #include "eden/fs/inodes/TreeInode.h"
+#include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fuse/MountPoint.h"
 #include "eden/fuse/fuse_headers.h"
 #include "eden/utils/PathFuncs.h"
@@ -102,50 +103,6 @@ void getMaterializedEntriesRecursive(
       }
     }
   });
-}
-
-void getModifiedDirectoriesRecursive(
-    RelativePathPiece dirPath,
-    TreeInode* dir,
-    std::vector<RelativePath>* modifiedDirectories) {
-  dir->getContents().withRLock([&](const auto& contents) mutable {
-    if (!contents.materialized) {
-      return;
-    }
-
-    modifiedDirectories->push_back(dirPath.copy());
-    for (auto& entIter : contents.entries) {
-      const auto& ent = entIter.second;
-      if (S_ISDIR(ent->mode) && ent->materialized) {
-        const auto& name = entIter.first;
-        auto childInode = dir->lookupChildByNameLocked(&contents, name);
-        auto childPath = dirPath + name;
-        auto childDir = std::dynamic_pointer_cast<TreeInode>(childInode);
-        DCHECK(childDir->getContents().rlock()->materialized)
-            << (dirPath + name) << " entry " << ent.get()
-            << " materialized is true, but the contained dir is !materialized";
-
-        getModifiedDirectoriesRecursive(
-            childPath, childDir.get(), modifiedDirectories);
-      }
-    }
-  });
-}
-
-unique_ptr<std::vector<RelativePath>> getModifiedDirectoriesForMount(
-    EdenMount* edenMount) {
-  auto inodeDispatcher = edenMount->getMountPoint()->getDispatcher();
-  auto rootInode = inodeDispatcher->getDirInode(FUSE_ROOT_ID);
-  auto treeInode = std::dynamic_pointer_cast<TreeInode>(rootInode);
-  if (treeInode) {
-    auto modifiedDirectories = std::make_unique<std::vector<RelativePath>>();
-    getModifiedDirectoriesRecursive(
-        RelativePathPiece(), treeInode.get(), modifiedDirectories.get());
-    return modifiedDirectories;
-  } else {
-    throw std::runtime_error(folly::to<std::string>(
-        "Could not find root TreeInode for ", edenMount->getPath()));
-  }
 }
 }
 }
