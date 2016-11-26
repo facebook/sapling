@@ -45,7 +45,7 @@ class EdenMount {
       std::unique_ptr<ObjectStore> objectStore,
       std::shared_ptr<Overlay> overlay,
       std::unique_ptr<Dirstate> dirstate,
-      std::unique_ptr<const ClientConfig> clientConfig);
+      const ClientConfig* clientConfig);
   EdenMount(
       std::shared_ptr<fusell::MountPoint> mountPoint,
       std::unique_ptr<ObjectStore> objectStore,

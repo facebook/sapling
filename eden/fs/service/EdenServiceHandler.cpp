@@ -60,25 +60,17 @@ void EdenServiceHandler::mountImpl(const MountInfo& info) {
       AbsolutePathPiece{info.mountPoint},
       AbsolutePathPiece{info.edenClientPath},
       server_->getConfig().get());
-  auto snapshotID = config->getSnapshotID();
 
-  auto mountPoint =
-      std::make_shared<fusell::MountPoint>(AbsolutePathPiece{info.mountPoint});
-
-  // Read some values before transferring the config.
-  auto repoSource = config->getRepoSource();
-  auto cloneSuccessPath = config->getCloneSuccessPath();
-  auto repoHooks = config->getRepoHooks().copy();
   auto repoType = config->getRepoType();
-
-  auto overlayPath = config->getOverlayPath();
-  auto overlay = std::make_shared<Overlay>(overlayPath);
   auto backingStore =
       server_->getBackingStore(repoType, config->getRepoSource());
   auto objectStore =
       make_unique<ObjectStore>(server_->getLocalStore(), backingStore);
+  auto snapshotID = config->getSnapshotID();
   auto rootTree = objectStore->getTreeForCommit(snapshotID);
 
+  auto mountPoint =
+      std::make_shared<fusell::MountPoint>(AbsolutePathPiece{info.mountPoint});
   auto dirstateStoragePath = getPathToDirstateStorage(mountPoint->getPath());
   auto persistence = std::make_unique<DirstatePersistence>(dirstateStoragePath);
   auto userDirectives = persistence->load();
@@ -88,12 +80,15 @@ void EdenServiceHandler::mountImpl(const MountInfo& info) {
       std::move(persistence),
       &userDirectives);
 
+  auto overlayPath = config->getOverlayPath();
+  auto overlay = std::make_shared<Overlay>(overlayPath);
+
   auto edenMount = std::make_shared<EdenMount>(
       mountPoint,
       std::move(objectStore),
       overlay,
       std::move(dirstate),
-      std::move(config));
+      config.get());
 
   // Load the overlay, if present.
   auto rootOverlayDir = overlay->loadOverlayDir(RelativePathPiece());
@@ -127,9 +122,12 @@ void EdenServiceHandler::mountImpl(const MountInfo& info) {
   // appropriate bind mounts for the client.
   server_->mount(edenMount);
 
+  auto cloneSuccessPath = config->getCloneSuccessPath();
   bool isInitialMount = access(cloneSuccessPath.c_str(), F_OK) != 0;
   if (isInitialMount) {
+    auto repoHooks = config->getRepoHooks();
     auto postCloneScript = repoHooks + RelativePathPiece("post-clone");
+    auto repoSource = config->getRepoSource();
 
     LOG(INFO) << "Running post-clone hook '" << postCloneScript << "' for "
               << info.mountPoint;

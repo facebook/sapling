@@ -48,7 +48,7 @@ EdenMount::EdenMount(
     unique_ptr<ObjectStore> objectStore,
     shared_ptr<Overlay> overlay,
     unique_ptr<Dirstate> dirstate,
-    unique_ptr<const ClientConfig> clientConfig)
+    const ClientConfig* clientConfig)
     : EdenMount(
           mountPoint,
           std::move(objectStore),
