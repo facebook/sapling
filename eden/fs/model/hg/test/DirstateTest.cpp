@@ -39,7 +39,8 @@ TEST(HgStatus, toString) {
 class FakeDirstatePeristence : public DirstatePersistence {
  public:
   virtual ~FakeDirstatePeristence() {}
-  void save(std::unordered_map<RelativePath, HgUserStatusDirective>&) override {
+  void save(
+      const std::unordered_map<RelativePath, HgUserStatusDirective>&) override {
   }
 };
 

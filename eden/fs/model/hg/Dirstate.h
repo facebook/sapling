@@ -98,8 +98,9 @@ std::ostream& operator<<(std::ostream& os, const HgStatus& status);
 class DirstatePersistence {
  public:
   virtual ~DirstatePersistence() {}
-  virtual void save(std::unordered_map<RelativePath, HgUserStatusDirective>&
-                        userDirectives) = 0;
+  virtual void save(
+      const std::unordered_map<RelativePath, HgUserStatusDirective>&
+          userDirectives) = 0;
 };
 
 /**
