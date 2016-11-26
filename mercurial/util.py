@@ -3124,7 +3124,10 @@ class _zlibengine(compressionengine):
         def gen():
             d = zlib.decompressobj()
             for chunk in filechunkiter(fh):
-                yield d.decompress(chunk)
+                while chunk:
+                    # Limit output size to limit memory.
+                    yield d.decompress(chunk, 2 ** 18)
+                    chunk = d.unconsumed_tail
 
         return chunkbuffer(gen())
 
