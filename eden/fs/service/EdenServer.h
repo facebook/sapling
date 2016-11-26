@@ -33,7 +33,7 @@ namespace facebook {
 namespace eden {
 
 class BackingStore;
-class ClientConfig;
+class Dirstate;
 class EdenMount;
 class EdenServiceHandler;
 class LocalStore;
@@ -50,6 +50,7 @@ class EdenServer {
   using ConfigData = boost::property_tree::ptree;
   using MountList = std::vector<std::shared_ptr<EdenMount>>;
   using MountMap = folly::StringKeyedMap<std::shared_ptr<EdenMount>>;
+  using DirstateMap = folly::StringKeyedMap<std::shared_ptr<Dirstate>>;
 
   EdenServer(
       folly::StringPiece edenDir,
@@ -101,6 +102,10 @@ class EdenServer {
       folly::StringPiece type,
       folly::StringPiece name);
 
+  AbsolutePathPiece getEdenDir() {
+    return edenDir_;
+  }
+
  private:
   using BackingStoreKey = std::pair<std::string, std::string>;
   using BackingStoreMap =
@@ -130,7 +135,7 @@ class EdenServer {
    * backingStores_ and localStore_.
    */
 
-  std::string edenDir_;
+  AbsolutePath edenDir_;
   AbsolutePath systemConfigDir_;
   AbsolutePath configPath_;
   std::string rocksPath_;

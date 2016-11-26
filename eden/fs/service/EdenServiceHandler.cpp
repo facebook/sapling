@@ -17,6 +17,8 @@
 #include "EdenError.h"
 #include "EdenServer.h"
 #include "eden/fs/config/ClientConfig.h"
+#include "eden/fs/inodes/Dirstate.h"
+#include "eden/fs/inodes/DirstatePersistence.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/TreeEntryFileInode.h"
@@ -40,6 +42,16 @@ EdenServiceHandler::EdenServiceHandler(EdenServer* server)
 
 facebook::fb303::cpp2::fb_status EdenServiceHandler::getStatus() {
   return facebook::fb303::cpp2::fb_status::ALIVE;
+}
+
+void EdenServiceHandler::mount(std::unique_ptr<MountInfo> info) {
+  try {
+    mountImpl(*info);
+  } catch (const EdenError& ex) {
+    throw;
+  } catch (const std::exception& ex) {
+    throw newEdenError(ex);
+  }
 }
 
 void EdenServiceHandler::mountImpl(const MountInfo& info) {
@@ -66,8 +78,22 @@ void EdenServiceHandler::mountImpl(const MountInfo& info) {
   auto objectStore =
       make_unique<ObjectStore>(server_->getLocalStore(), backingStore);
   auto rootTree = objectStore->getTreeForCommit(snapshotID);
+
+  auto dirstateStoragePath = getPathToDirstateStorage(mountPoint->getPath());
+  auto persistence = std::make_unique<DirstatePersistence>(dirstateStoragePath);
+  auto userDirectives = persistence->load();
+  auto dirstate = std::make_unique<Dirstate>(
+      mountPoint.get(),
+      objectStore.get(),
+      std::move(persistence),
+      &userDirectives);
+
   auto edenMount = std::make_shared<EdenMount>(
-      mountPoint, std::move(objectStore), overlay, std::move(config));
+      mountPoint,
+      std::move(objectStore),
+      overlay,
+      std::move(dirstate),
+      std::move(config));
 
   // Load the overlay, if present.
   auto rootOverlayDir = overlay->loadOverlayDir(RelativePathPiece());
@@ -99,7 +125,7 @@ void EdenServiceHandler::mountImpl(const MountInfo& info) {
 
   // TODO(mbolin): Use the result of config.getBindMounts() to perform the
   // appropriate bind mounts for the client.
-  server_->mount(std::move(edenMount));
+  server_->mount(edenMount);
 
   bool isInitialMount = access(cloneSuccessPath.c_str(), F_OK) != 0;
   if (isInitialMount) {
@@ -136,14 +162,19 @@ void EdenServiceHandler::mountImpl(const MountInfo& info) {
   folly::writeFile(string(), cloneSuccessPath.c_str());
 }
 
-void EdenServiceHandler::mount(std::unique_ptr<MountInfo> info) {
-  try {
-    mountImpl(*info);
-  } catch (const EdenError& ex) {
-    throw;
-  } catch (const std::exception& ex) {
-    throw newEdenError(ex);
-  }
+/**
+ * The path to the metadata for this mount is available at
+ * ~/.eden/clients/CLIENT_HASH.
+ */
+AbsolutePath EdenServiceHandler::getPathToDirstateStorage(
+    AbsolutePathPiece mountPointPath) {
+  // We need to take the sha-1 of the utf-8 version of path.
+  folly::ByteRange bytes(mountPointPath.stringPiece());
+  auto sha1 = Hash::sha1(bytes);
+  auto component = PathComponent(sha1.toString());
+
+  return server_->getEdenDir() + PathComponent("clients") + component +
+      PathComponent("dirstate");
 }
 
 void EdenServiceHandler::unmount(std::unique_ptr<std::string> mountPoint) {
@@ -384,6 +415,65 @@ void EdenServiceHandler::getFileInformation(
       out.emplace_back(std::move(result));
     }
   }
+}
+
+// TODO(mbolin): Use ThriftHgStatusCode exclusively instead of HgStatusCode.
+ThriftHgStatusCode thriftStatusCodeForStatusCode(HgStatusCode statusCode) {
+  switch (statusCode) {
+    case HgStatusCode::CLEAN:
+      return ThriftHgStatusCode::CLEAN;
+    case HgStatusCode::MODIFIED:
+      return ThriftHgStatusCode::MODIFIED;
+    case HgStatusCode::ADDED:
+      return ThriftHgStatusCode::ADDED;
+    case HgStatusCode::REMOVED:
+      return ThriftHgStatusCode::REMOVED;
+    case HgStatusCode::MISSING:
+      return ThriftHgStatusCode::MISSING;
+    case HgStatusCode::NOT_TRACKED:
+      return ThriftHgStatusCode::NOT_TRACKED;
+    case HgStatusCode::IGNORED:
+      return ThriftHgStatusCode::IGNORED;
+  }
+  throw std::runtime_error(
+      folly::to<std::string>("Unrecognized value: ", statusCode));
+}
+
+void EdenServiceHandler::scmGetStatus(
+    ThriftHgStatus& out,
+    std::unique_ptr<std::string> mountPoint) {
+  auto dirstate = server_->getMount(*mountPoint)->getDirstate();
+  DCHECK(dirstate != nullptr) << "Failed to get dirstate for "
+                              << mountPoint.get();
+
+  auto status = dirstate->getStatus();
+  auto& entries = out.entries;
+  for (auto& pair : *status->list()) {
+    auto statusCode = pair.second;
+    entries[pair.first.stringPiece().str()] =
+        thriftStatusCodeForStatusCode(statusCode);
+  }
+}
+
+void EdenServiceHandler::scmAdd(
+    std::unique_ptr<std::string> mountPoint,
+    std::unique_ptr<std::string> path) {
+  auto dirstate = server_->getMount(*mountPoint)->getDirstate();
+  DCHECK(dirstate != nullptr) << "Failed to get dirstate for "
+                              << mountPoint.get();
+
+  dirstate->add(RelativePathPiece{*path});
+}
+
+void EdenServiceHandler::scmRemove(
+    std::unique_ptr<std::string> mountPoint,
+    std::unique_ptr<std::string> path,
+    bool force) {
+  auto dirstate = server_->getMount(*mountPoint)->getDirstate();
+  DCHECK(dirstate != nullptr) << "Failed to get dirstate for "
+                              << mountPoint.get();
+
+  dirstate->remove(RelativePathPiece{*path}, force);
 }
 
 void EdenServiceHandler::shutdown() {

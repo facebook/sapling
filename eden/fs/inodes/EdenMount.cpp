@@ -12,8 +12,10 @@
 #include <glog/logging.h>
 
 #include "eden/fs/config/ClientConfig.h"
+#include "eden/fs/inodes/Dirstate.h"
 #include "eden/fs/inodes/EdenMounts.h"
 #include "eden/fs/inodes/Overlay.h"
+#include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fuse/MountPoint.h"
@@ -45,21 +47,25 @@ EdenMount::EdenMount(
     shared_ptr<fusell::MountPoint> mountPoint,
     unique_ptr<ObjectStore> objectStore,
     shared_ptr<Overlay> overlay,
+    unique_ptr<Dirstate> dirstate,
     unique_ptr<const ClientConfig> clientConfig)
     : EdenMount(
           mountPoint,
           std::move(objectStore),
           overlay,
+          std::move(dirstate),
           clientConfig->getBindMounts()) {}
 
 EdenMount::EdenMount(
     shared_ptr<fusell::MountPoint> mountPoint,
     unique_ptr<ObjectStore> objectStore,
     shared_ptr<Overlay> overlay,
+    std::unique_ptr<Dirstate> dirstate,
     vector<BindMount> bindMounts)
     : mountPoint_(std::move(mountPoint)),
       objectStore_(std::move(objectStore)),
       overlay_(std::move(overlay)),
+      dirstate_(std::move(dirstate)),
       bindMounts_(std::move(bindMounts)),
       mountGeneration_(globalProcessGeneration | ++mountGeneration) {
   CHECK_NOTNULL(mountPoint_.get());

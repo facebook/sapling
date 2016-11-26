@@ -85,6 +85,10 @@ class HgStatus {
    */
   std::string toString() const;
 
+  const std::unordered_map<RelativePath, HgStatusCode>* list() const {
+    return &statuses_;
+  }
+
  private:
   std::unordered_map<RelativePath, HgStatusCode> statuses_;
 };

@@ -20,6 +20,7 @@
 
 #include "EdenServiceHandler.h"
 #include "eden/fs/config/ClientConfig.h"
+#include "eden/fs/inodes/Dirstate.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/NullBackingStore.h"
@@ -68,7 +69,7 @@ EdenServer::EdenServer(
     StringPiece systemConfigDir,
     StringPiece configPath,
     StringPiece rocksPath)
-    : edenDir_(edenDir.str()),
+    : edenDir_(AbsolutePath(edenDir)),
       systemConfigDir_(systemConfigDir),
       configPath_(configPath),
       rocksPath_(rocksPath.str()) {}
@@ -106,7 +107,7 @@ void EdenServer::run() {
   // Remount existing mount points
   folly::dynamic dirs = folly::dynamic::object();
   try {
-    dirs = ClientConfig::loadClientDirectoryMap(AbsolutePathPiece{edenDir_});
+    dirs = ClientConfig::loadClientDirectoryMap(edenDir_);
   } catch (const std::exception& ex) {
     LOG(ERROR) << "Could not parse config.json file: " << ex.what()
                << " Skipping remount step.";
@@ -114,7 +115,9 @@ void EdenServer::run() {
   for (auto& client : dirs.items()) {
     auto mountInfo = std::make_unique<MountInfo>();
     mountInfo->mountPoint = client.first.c_str();
-    mountInfo->edenClientPath = edenDir_ + "/clients/" + client.second.c_str();
+    auto edenClientPath = edenDir_ + PathComponent("clients") +
+        PathComponent(client.second.c_str());
+    mountInfo->edenClientPath = edenClientPath.stringPiece().str();
     try {
       handler_->mount(std::move(mountInfo));
     } catch (const std::exception& ex) {
@@ -270,7 +273,7 @@ shared_ptr<BackingStore> EdenServer::createBackingStore(
 }
 
 void EdenServer::createThriftServer() {
-  auto address = getThriftAddress(FLAGS_thrift_address, edenDir_);
+  auto address = getThriftAddress(FLAGS_thrift_address, edenDir_.stringPiece());
 
   server_ = make_shared<ThriftServer>();
   server_->setMaxConnections(FLAGS_thrift_max_conns);
@@ -286,12 +289,13 @@ void EdenServer::createThriftServer() {
 }
 
 void EdenServer::acquireEdenLock() {
-  boost::filesystem::path edenPath{edenDir_};
+  boost::filesystem::path edenPath{edenDir_.stringPiece().str()};
   boost::filesystem::path lockPath = edenPath / "lock";
   lockFile_ = folly::File(lockPath.string(), O_WRONLY | O_CREAT);
   if (!lockFile_.try_lock()) {
     throw std::runtime_error(
-        "another instance of Eden appears to be running for " + edenDir_);
+        "another instance of Eden appears to be running for " +
+        edenDir_.stringPiece().str());
   }
 }
 

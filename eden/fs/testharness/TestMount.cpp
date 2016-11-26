@@ -96,7 +96,11 @@ unique_ptr<TestMount> TestMountBuilder::build() {
 
   std::vector<BindMount> bindMounts;
   unique_ptr<EdenMount> edenMount = make_unique<EdenMount>(
-      mountPoint, std::move(objectStore), overlay, bindMounts);
+      mountPoint,
+      std::move(objectStore),
+      overlay,
+      std::move(dirstate),
+      bindMounts);
 
   // Use HgManifestImporter to create the appropriate intermediate Tree objects
   // for the set of files that the user specified with proper hashes.
@@ -142,7 +146,6 @@ unique_ptr<TestMount> TestMountBuilder::build() {
 
   return make_unique<TestMount>(
       std::move(edenMount),
-      std::move(dirstate),
       std::move(mountPointDir),
       std::move(pathToRocksDb),
       std::move(overlayDir),
@@ -263,6 +266,10 @@ std::shared_ptr<TreeEntryFileInode> TestMount::getFileInodeForPath(
 
 std::unique_ptr<Tree> TestMount::getRootTree() const {
   return edenMount_->getRootTree();
+}
+
+Dirstate* TestMount::getDirstate() const {
+  return edenMount_->getDirstate();
 }
 }
 }

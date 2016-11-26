@@ -22,6 +22,7 @@ class MountPoint;
 
 class BindMount;
 class ClientConfig;
+class Dirstate;
 class ObjectStore;
 class Overlay;
 class Journal;
@@ -43,11 +44,13 @@ class EdenMount {
       std::shared_ptr<fusell::MountPoint> mountPoint,
       std::unique_ptr<ObjectStore> objectStore,
       std::shared_ptr<Overlay> overlay,
+      std::unique_ptr<Dirstate> dirstate,
       std::unique_ptr<const ClientConfig> clientConfig);
   EdenMount(
       std::shared_ptr<fusell::MountPoint> mountPoint,
       std::unique_ptr<ObjectStore> objectStore,
       std::shared_ptr<Overlay> overlay,
+      std::unique_ptr<Dirstate> dirstate,
       const std::vector<BindMount> bindMounts);
   virtual ~EdenMount();
 
@@ -87,6 +90,10 @@ class EdenMount {
     return overlay_;
   }
 
+  Dirstate* getDirstate() {
+    return dirstate_.get();
+  }
+
   folly::Synchronized<Journal>& getJournal() {
     return journal_;
   }
@@ -106,6 +113,7 @@ class EdenMount {
   std::shared_ptr<fusell::MountPoint> mountPoint_;
   std::unique_ptr<ObjectStore> objectStore_;
   std::shared_ptr<Overlay> overlay_;
+  std::unique_ptr<Dirstate> dirstate_;
 
   /*
    * Note that this config will not be updated if the user modifies the

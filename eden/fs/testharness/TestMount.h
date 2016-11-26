@@ -46,13 +46,11 @@ class TestMount {
  public:
   TestMount(
       std::shared_ptr<EdenMount> edenMount,
-      std::unique_ptr<Dirstate> dirstate,
       std::unique_ptr<folly::test::TemporaryDirectory> mountPointDir,
       std::unique_ptr<folly::test::TemporaryDirectory> pathToRocksDb,
       std::unique_ptr<folly::test::TemporaryDirectory> overlayDir,
       std::unique_ptr<folly::test::TemporaryFile> persistenceDataFile)
       : edenMount_(edenMount),
-        dirstate_(std::move(dirstate)),
         mountPointDir_(std::move(mountPointDir)),
         pathToRocksDb_(std::move(pathToRocksDb)),
         overlayDir_(std::move(overlayDir)),
@@ -86,13 +84,10 @@ class TestMount {
     return edenMount_;
   }
 
-  Dirstate* getDirstate() {
-    return dirstate_.get();
-  }
+  Dirstate* getDirstate() const;
 
  private:
   std::shared_ptr<EdenMount> edenMount_;
-  std::unique_ptr<Dirstate> dirstate_;
 
   // The TestMount must hold onto these TemporaryDirectories because they need
   // to live for the duration of the test.

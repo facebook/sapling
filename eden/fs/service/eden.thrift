@@ -98,6 +98,20 @@ enum WildMatchFlags {
   NoEscape = 0x2,
 }
 
+enum ThriftHgStatusCode {
+  CLEAN = 0x0,
+  MODIFIED = 0x1,
+  ADDED = 0x2,
+  REMOVED = 0x3,
+  MISSING = 0x4,
+  NOT_TRACKED = 0x5,
+  IGNORED = 0x6,
+}
+
+struct ThriftHgStatus {
+  1: map<string, ThriftHgStatusCode> entries
+}
+
 service EdenService extends fb303.FacebookService {
   list<MountInfo> listMounts() throws (1: EdenError ex)
   void mount(1: MountInfo info) throws (1: EdenError ex)
@@ -170,4 +184,20 @@ service EdenService extends fb303.FacebookService {
     2: list<string> globs,
     3: i32 wildMatchFlags)
       throws (1: EdenError ex)
+
+  //////// HG COMMANDS ////////
+
+  // TODO(mbolin): `hg status` has a ton of command line flags to support.
+  ThriftHgStatus scmGetStatus(1: string mountPoint) throws (1: EdenError ex)
+
+  void scmAdd(
+    1: string mountPoint,
+    2: string path
+  ) throws (1: EdenError ex)
+
+  void scmRemove(
+    1: string mountPoint,
+    2: string path,
+    3: bool force
+  ) throws (1: EdenError ex)
 }

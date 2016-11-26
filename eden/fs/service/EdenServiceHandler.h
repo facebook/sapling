@@ -66,6 +66,19 @@ class EdenServiceHandler : virtual public EdenServiceSvIf,
       std::unique_ptr<std::string> mountPoint,
       std::unique_ptr<std::vector<std::string>> paths) override;
 
+  void scmGetStatus(
+      ThriftHgStatus& out,
+      std::unique_ptr<std::string> mountPoint) override;
+
+  void scmAdd(
+      std::unique_ptr<std::string> mountPoint,
+      std::unique_ptr<std::string> path) override;
+
+  void scmRemove(
+      std::unique_ptr<std::string> mountPoint,
+      std::unique_ptr<std::string> path,
+      bool force) override;
+
   /**
    * When this Thrift handler is notified to shutdown, it notifies the
    * EdenServer to shut down, as well.
@@ -86,6 +99,8 @@ class EdenServiceHandler : virtual public EdenServiceSvIf,
       const std::string& path);
 
   void mountImpl(const MountInfo& info);
+
+  AbsolutePath getPathToDirstateStorage(AbsolutePathPiece mountPointPath);
 
   EdenServer* const server_;
 };
