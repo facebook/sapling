@@ -946,15 +946,39 @@ class curseschunkselector(object):
         self.linesprintedtopadsofar += linesprinted
         return t
 
+    def _getstatuslinesegments(self):
+        """-> [str]. return segments"""
+        segments = [
+            _('Select hunks to record'),
+            '-',
+            _('[x]=selected **=collapsed'),
+            _('c: confirm'),
+            _('q: abort'),
+            _('arrow keys: move/expand/collapse'),
+            _('space: select'),
+            _('?: help'),
+        ]
+        return segments
+
     def _getstatuslines(self):
         """() -> [str]. return short help used in the top status window"""
         if self.errorstr is not None:
             lines = [self.errorstr, _('Press any key to continue')]
         else:
-            lines = [_("SELECT CHUNKS: (j/k/up/dn/pgup/pgdn) move cursor; "
-                       "(space/A) toggle hunk/all; (e)dit hunk;"),
-                     _(" (f)old/unfold; (c)onfirm applied; (q)uit; (?) help "
-                       "| [X]=hunk applied **=folded, toggle [a]mend mode")]
+            # wrap segments to lines
+            segments = self._getstatuslinesegments()
+            width = self.xscreensize
+            lines = []
+            lastwidth = width
+            for s in segments:
+                w = encoding.colwidth(s)
+                sep = ' ' * (1 + (s and s[0] not in '-['))
+                if lastwidth + w + len(sep) >= width:
+                    lines.append(s)
+                    lastwidth = w
+                else:
+                    lines[-1] += sep + s
+                    lastwidth += w + len(sep)
         if len(lines) != self.numstatuslines:
             self.numstatuslines = len(lines)
             self.statuswin.resize(self.numstatuslines, self.xscreensize)
