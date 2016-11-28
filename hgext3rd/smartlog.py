@@ -150,6 +150,26 @@ def uisetup(ui):
         return templatekw.showlist('amendsuccessor', asnodes, **args)
     templatekw.keywords['amendsuccessors'] = amendsuccessors
 
+    def splituccessors(repo, ctx, **args):
+        """Return all of the node's successors created as a result of split"""
+        asnodes = list(modifysuccessors(ctx, 'split'))
+        return templatekw.showlist('splitsuccessor', asnodes, **args)
+    templatekw.keywords['splitsuccessors'] = splituccessors
+
+    def foldsuccessors(repo, ctx, **args):
+        """Return all of the node's successors created as a result of fold"""
+        asnodes = list(modifysuccessors(ctx, 'fold'))
+        return templatekw.showlist('foldsuccessor', asnodes, **args)
+    templatekw.keywords['foldsuccessors'] = foldsuccessors
+
+    def histeditsuccessors(repo, ctx, **args):
+        """Return all of the node's successors created as a result of
+           histedit
+        """
+        asnodes = list(modifysuccessors(ctx, 'histedit'))
+        return templatekw.showlist('histeditsuccessor', asnodes, **args)
+    templatekw.keywords['histeditsuccessors'] = histeditsuccessors
+
     def showgraphnode(orig, repo, ctx, **args):
         """Show obsolete nodes as 'x', even when inhibited."""
         char = orig(repo, ctx, **args)
