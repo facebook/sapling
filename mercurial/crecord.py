@@ -501,6 +501,12 @@ def testchunkselector(testfn, ui, headerlist, operation=None):
                 break
     return chunkselector.opts
 
+_headermessages = { # {operation: text}
+    'revert': _('Select hunks to revert'),
+    'discard': _('Select hunks to discard'),
+    None: _('Select hunks to record'),
+}
+
 class curseschunkselector(object):
     def __init__(self, headerlist, ui, operation=None):
         # put the headers into a patch object
@@ -557,6 +563,8 @@ class curseschunkselector(object):
         self.waslasttoggleallapplied = True
 
         # affects some ui text
+        if operation not in _headermessages:
+            raise RuntimeError('unexpected operation: %s' % operation)
         self.operation = operation
 
     def uparrowevent(self):
@@ -950,7 +958,7 @@ class curseschunkselector(object):
         """-> [str]. return segments"""
         selected = self.currentselecteditem.applied
         segments = [
-            _('Select hunks to record'),
+            _headermessages[self.operation],
             '-',
             _('[x]=selected **=collapsed'),
             _('c: confirm'),
