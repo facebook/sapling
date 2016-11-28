@@ -72,6 +72,8 @@ def gettype(q):
     return int(q & 0xFFFF)
 
 def offset_type(offset, type):
+    if (type & ~REVIDX_KNOWN_FLAGS) != 0:
+        raise ValueError('unknown revlog index flags')
     return long(long(offset) << 16 | type)
 
 _nullhash = hashlib.sha1(nullid)
