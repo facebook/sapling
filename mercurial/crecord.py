@@ -946,6 +946,17 @@ class curseschunkselector(object):
         self.linesprintedtopadsofar += linesprinted
         return t
 
+    def _getstatuslines(self):
+        """() -> [str]. return short help used in the top status window"""
+        if self.errorstr is not None:
+            lines = [self.errorstr, _('Press any key to continue')]
+        else:
+            lines = [_("SELECT CHUNKS: (j/k/up/dn/pgup/pgdn) move cursor; "
+                       "(space/A) toggle hunk/all; (e)dit hunk;"),
+                     _(" (f)old/unfold; (c)onfirm applied; (q)uit; (?) help "
+                       "| [X]=hunk applied **=folded, toggle [a]mend mode")]
+        return [util.ellipsis(l, self.xscreensize - 1) for l in lines]
+
     def updatescreen(self):
         self.statuswin.erase()
         self.chunkpad.erase()
@@ -954,25 +965,13 @@ class curseschunkselector(object):
 
         # print out the status lines at the top
         try:
-            if self.errorstr is not None:
-                printstring(self.statuswin, self.errorstr, pairname='legend')
-                printstring(self.statuswin, 'Press any key to continue',
-                            pairname='legend')
-                self.statuswin.refresh()
-                return
-            line1 = _("SELECT CHUNKS: (j/k/up/dn/pgup/pgdn) move cursor; "
-                      "(space/A) toggle hunk/all; (e)dit hunk;")
-            line2 = _(" (f)old/unfold; (c)onfirm applied; (q)uit; (?) help "
-                      "| [X]=hunk applied **=folded, toggle [a]mend mode")
-
-            printstring(self.statuswin,
-                        util.ellipsis(line1, self.xscreensize - 1),
-                        pairname="legend")
-            printstring(self.statuswin,
-                        util.ellipsis(line2, self.xscreensize - 1),
-                        pairname="legend")
+            for line in self._getstatuslines():
+                printstring(self.statuswin, line, pairname="legend")
+            self.statuswin.refresh()
         except curses.error:
             pass
+        if self.errorstr is not None:
+            return
 
         # print out the patch in the remaining part of the window
         try:
@@ -984,9 +983,6 @@ class curseschunkselector(object):
                                   self.xscreensize)
         except curses.error:
             pass
-
-        # refresh([pminrow, pmincol, sminrow, smincol, smaxrow, smaxcol])
-        self.statuswin.refresh()
 
     def getstatusprefixstring(self, item):
         """
