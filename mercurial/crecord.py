@@ -948,6 +948,7 @@ class curseschunkselector(object):
 
     def _getstatuslinesegments(self):
         """-> [str]. return segments"""
+        selected = self.currentselecteditem.applied
         segments = [
             _('Select hunks to record'),
             '-',
@@ -955,7 +956,7 @@ class curseschunkselector(object):
             _('c: confirm'),
             _('q: abort'),
             _('arrow keys: move/expand/collapse'),
-            _('space: select'),
+            _('space: deselect') if selected else _('space: select'),
             _('?: help'),
         ]
         return segments
