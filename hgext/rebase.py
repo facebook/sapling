@@ -724,12 +724,19 @@ def _definesets(ui, repo, destf=None, srcf=None, basef=None, revf=[],
             dest = repo[_destrebase(repo, base, destspace=destspace)]
             destf = str(dest)
 
-        commonanc = repo.revs('ancestor(%ld, %d)', base, dest).first()
-        if commonanc is not None:
-            rebaseset = repo.revs('(%d::(%ld) - %d)::',
-                                  commonanc, base, commonanc)
-        else:
-            rebaseset = []
+        roots = [] # selected children of branching points
+        bpbase = {} # {branchingpoint: [origbase]}
+        for b in base: # group bases by branching points
+            bp = repo.revs('ancestor(%d, %d)', b, dest).first()
+            bpbase[bp] = bpbase.get(bp, []) + [b]
+        if None in bpbase:
+            # emulate the old behavior, showing "nothing to rebase" (a better
+            # behavior may be abort with "cannot find branching point" error)
+            bpbase.clear()
+        for bp, bs in bpbase.iteritems(): # calculate roots
+            roots += list(repo.revs('children(%d) & ancestors(%ld)', bp, bs))
+
+        rebaseset = repo.revs('%ld::', roots)
 
         if not rebaseset:
             # transform to list because smartsets are not comparable to
