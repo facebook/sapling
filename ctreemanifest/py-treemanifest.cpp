@@ -1045,10 +1045,14 @@ static PyObject *treemanifest_write(py_treemanifest *self, PyObject *args,
 }
 
 static int treemanifest_nonzero(py_treemanifest *self) {
-  if (self->tm.getRootManifest()->children() > 0) {
-    return 1;
-  } else {
-    return 0;
+  try {
+    if (self->tm.getRootManifest()->children() > 0) {
+      return 1;
+    } else {
+      return 0;
+    }
+  } catch (const pyexception &ex) {
+    return -1;
   }
 }
 
