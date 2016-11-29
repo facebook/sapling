@@ -716,10 +716,13 @@ def _capabilities(repo, proto):
         capsblob = bundle2.encodecaps(bundle2.getrepocaps(repo))
         caps.append('bundle2=' + urlreq.quote(capsblob))
     caps.append('unbundle=%s' % ','.join(bundle2.bundlepriority))
-    caps.append(
-        'httpheader=%d' % repo.ui.configint('server', 'maxhttpheaderlen', 1024))
-    if repo.ui.configbool('experimental', 'httppostargs', False):
-        caps.append('httppostargs')
+
+    if proto.name == 'http':
+        caps.append('httpheader=%d' %
+                    repo.ui.configint('server', 'maxhttpheaderlen', 1024))
+        if repo.ui.configbool('experimental', 'httppostargs', False):
+            caps.append('httppostargs')
+
     return caps
 
 # If you are writing an extension and consider wrapping this function. Wrap
