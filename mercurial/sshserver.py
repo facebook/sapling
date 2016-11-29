@@ -26,6 +26,7 @@ class sshserver(wireproto.abstractserverproto):
         self.lock = None
         self.fin = ui.fin
         self.fout = ui.fout
+        self.name = 'ssh'
 
         hook.redirect(True)
         ui.fout = repo.ui.fout = ui.ferr

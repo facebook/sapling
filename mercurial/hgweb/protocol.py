@@ -30,6 +30,8 @@ class webproto(wireproto.abstractserverproto):
         self.req = req
         self.response = ''
         self.ui = ui
+        self.name = 'http'
+
     def getargs(self, args):
         knownargs = self._args()
         data = {}
