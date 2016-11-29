@@ -196,40 +196,27 @@ _knownopts = set([opt[1].replace('-', '_') for opt in
                   (fastannotatecommandargs['options'] + commands.globalopts)])
 
 def _annotatewrapper(orig, ui, repo, *pats, **opts):
-    """use this in extensions.wrapcommand"""
-    nonemptyopts = set(k for k, v in opts.iteritems() if v)
-    unknownopts = nonemptyopts.difference(_knownopts)
-    if opts.get('template', '') not in ['json', '']:
-        # if -T is used, fastannotate only supports -Tjson
-        unknownopts.add('template')
-    if unknownopts:
-        ui.debug('fastannotate: option %r is not supported, falling back '
-                 'to the original annotate\n' % list(unknownopts))
-        unsafeopts = _newopts.intersection(nonemptyopts)
-        if unsafeopts:
-            raise error.Abort(_('--%s cannot be used together with --%s')
-                              % (list(unknownopts)[0].replace('_', '-'),
-                                 list(unsafeopts)[0].replace('_', '-')))
-        return orig(ui, repo, *pats, **opts)
-    return fastannotate(ui, repo, *pats, **opts)
+    """used by wrapdefault"""
+    # we need this hack until the obsstore has 0.0 seconds perf impact
+    if ui.configbool('fastannotate', 'unfilteredrepo', True):
+        repo = repo.unfiltered()
 
-def _appendoptions(origopts):
-    """append our options to the original amend option list"""
-    for newopt in fastannotatecommandargs['options']:
-        if any([o[1] == newopt[1] for o in origopts]):
-            continue
-        origopts.append(newopt)
-        _newopts.add(newopt[1].replace('-', '_'))
+    # check if we need to do prefetch (client-side)
+    rev = opts.get('rev')
+    if util.safehasattr(repo, 'prefetchfastannotate') and rev is not None:
+        paths = list(_matchpaths(repo, rev, pats, opts, aopts=None))
+        repo.prefetchfastannotate(paths)
+
+    return orig(ui, repo, *pats, **opts)
 
 def registercommand():
     """register the fastannotate command"""
     name = '^fastannotate|fastblame|fa'
     command(name, **fastannotatecommandargs)(fastannotate)
 
-def replacedefault():
-    """replace the default annotate command"""
-    entry = extensions.wrapcommand(commands.table, 'annotate', _annotatewrapper)
-    _appendoptions(entry[1])
+def wrapdefault():
+    """wrap the default annotate command, to be aware of the protocol"""
+    extensions.wrapcommand(commands.table, 'annotate', _annotatewrapper)
 
 @command('debugbuildannotatecache',
          [('r', 'rev', '', _('build up to the specific revision'), _('REV'))

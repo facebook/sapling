@@ -70,8 +70,7 @@ annotate cache greatly. Run "debugbuildlinkrevcache" before
     # follow). do not affect "fastannotate" mode. (default: True)
     forcefollow = True
 
-    # for "fastannotate" mode, use unfiltered repo for better performance. do
-    # not affect "fctx" mode.
+    # use unfiltered repo for better performance.
     unfilteredrepo = True
 
     # sacrifice correctness in some corner cases for performance. it does not
@@ -120,6 +119,7 @@ def uisetup(ui):
         elif name == 'fctx':
             from . import support
             support.replacefctxannotate()
+            commands.wrapdefault()
         else:
             raise hgerror.Abort(_('fastannotate: invalid mode: %s') % name)
 

@@ -119,6 +119,16 @@ the fastannotate cache is built in both repos, and they are the same
   $ diff $p1/a.l $p2/a.l
   $ diff $p1/a.m $p2/a.m
 
+in the "fctx" mode with the "annotate" command, the client also downloads the
+cache. but not in the (default) "fastannotate" mode.
+
+  $ rm $p1/a.l $p1/a.m
+  $ hg annotate a --debug | grep 'fastannotate: writing'
+  [1]
+  $ hg annotate a --config fastannotate.modes=fctx --debug | grep 'fastannotate: writing' | sort
+  fastannotate: writing 112 bytes to fastannotate/default/a.l
+  fastannotate: writing 94 bytes to fastannotate/default/a.m
+
 the server would rebuild broken cache automatically
 
   $ cp $p2/a.m $p2/a.m.bak

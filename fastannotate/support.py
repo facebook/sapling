@@ -61,7 +61,11 @@ def _doannotate(fctx, follow=True, diffopts=None, ui=None):
         ui = repo.ui
     path = fctx._path
 
-    master = ui.config('fastannotate', 'mainbranch') or 'default'
+    if util.safehasattr(repo, 'prefetchfastannotate'):
+        # client: do not update annotate cache on its own
+        master = None
+    else:
+        master = ui.config('fastannotate', 'mainbranch') or 'default'
     if ui.configbool('fastannotate', 'forcefollow', True):
         follow = True
 
