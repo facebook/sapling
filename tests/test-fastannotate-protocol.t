@@ -119,6 +119,17 @@ the fastannotate cache is built in both repos, and they are the same
   $ diff $p1/a.l $p2/a.l
   $ diff $p1/a.m $p2/a.m
 
+the server would rebuild broken cache automatically
+
+  $ cp $p2/a.m $p2/a.m.bak
+  $ echo BROKEN1 > $p1/a.m
+  $ echo BROKEN2 > $p2/a.m
+  $ hg fastannotate a --debug | grep 'fastannotate: writing' | sort
+  fastannotate: writing 112 bytes to fastannotate/default/a.l
+  fastannotate: writing 94 bytes to fastannotate/default/a.m
+  $ diff $p1/a.m $p2/a.m
+  $ diff $p2/a.m $p2/a.m.bak
+
 use the "debugbuildannotatecache" command to build annotate cache
 
   $ rm -rf $p1 $p2

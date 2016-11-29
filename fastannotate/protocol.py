@@ -44,9 +44,16 @@ def _getannotate(repo, proto, path, lastnode):
     with context.annotatecontext(repo, path) as actx:
         # update before responding to the client
         master = _getmaster(repo.ui)
-        if not actx.isuptodate(master):
-            actx.annotate(master, master)
-            actx.close() # flush
+        try:
+            if not actx.isuptodate(master):
+                actx.annotate(master, master)
+        except Exception:
+            # non-fast-forward move or corrupted. rebuild automically.
+            actx.rebuild()
+            try:
+                actx.annotate(master, master)
+            except Exception:
+                pass
         # send back the full content of revmap and linelog, in the future we
         # may want to do some rsync-like fancy updating.
         # the lastnode check is not necessary if the client and the server
