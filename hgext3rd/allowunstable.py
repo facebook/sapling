@@ -6,14 +6,16 @@
 # GNU General Public License version 2 or any later version.
 """enables the creation of unstable changesets for supported commands
 
-   Wraps several commands to temporarily add the allowunstable value to the
-   experimental.evolution configuration option for the duration of the
-   command, which lets those commands to create unstable changesets and
-   thereby letting them be used on changesets in the middle of a stack.
+   Wraps several commands to temporarily add the `allowunstable` value to the
+   `experimental.evolution` configuration option for the duration of command
+   execution. This lets those commands create unstable changesets and
+   thereby allows them be used on changesets in the middle of a stack.
 
-   Since we're not sure whether simply enabling allowunstable would have
-   unintended side effect, this extension let's use the option without
-   fully enabling it and potentially breaking things.
+   This extension is intended as a stopgap measure. Ideally, we would just
+   enable allowunstable globally, but it is unclear if doing so would break
+   any other extensions or functionality. Until that is determined, this
+   extension allows allowunstable to be selectively rolled out while keeping
+   all of the wrapping required to do so in one place.
 """
 
 from mercurial import extensions
