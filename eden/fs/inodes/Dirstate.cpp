@@ -354,7 +354,7 @@ void Dirstate::computeDelta(
       break;
     }
 
-    auto base = *baseIterator;
+    const auto& base = *baseIterator;
     auto overlayName = overlayIterator->first;
     auto cmp = base.getName().stringPiece().compare(overlayName.stringPiece());
     if (cmp == 0) {
