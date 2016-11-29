@@ -26,7 +26,10 @@ will not load them for you
 
 from mercurial import extensions
 from mercurial import error
-from hgext import chgserver
+try:
+    from mercurial import chgserver
+except ImportError:
+    from hgext import chgserver
 chgserver._configsections.append('extorder')
 
 testedwith = 'internal'

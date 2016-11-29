@@ -180,15 +180,18 @@ def _patchchgserver():
     """patch chgserver so we can backup tty fds before they are replaced if
     chg starts the pager.
     """
+    chgserver = None
     try:
-        chgserver = extensions.find('chgserver')
-    except KeyError:
-        pass
-    else:
-        server = getattr(chgserver, 'chgcmdserver', None)
-        if server and 'attachio' in server.capabilities:
-            orig = server.attachio
-            server.capabilities['attachio'] = extensions.bind(_attachio, orig)
+        from mercurial import chgserver
+    except ImportError:
+        try:
+            chgserver = extensions.find('chgserver')
+        except KeyError:
+            pass
+    server = getattr(chgserver, 'chgcmdserver', None)
+    if server and 'attachio' in server.capabilities:
+        orig = server.attachio
+        server.capabilities['attachio'] = extensions.bind(_attachio, orig)
 
 def uisetup(ui):
     # _validaterepo runs ssh and needs to be wrapped
