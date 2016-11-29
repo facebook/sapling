@@ -72,6 +72,7 @@ class TestMount {
   bool hasFileAt(folly::StringPiece path);
 
   void deleteFile(folly::StringPiece path);
+  void rmdir(folly::StringPiece path);
 
   std::shared_ptr<TreeInode> getDirInodeForPath(folly::StringPiece path) const;
   std::shared_ptr<TreeEntryFileInode> getFileInodeForPath(

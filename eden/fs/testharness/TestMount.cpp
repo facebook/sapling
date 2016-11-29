@@ -238,6 +238,13 @@ void TestMount::deleteFile(folly::StringPiece path) {
   dispatcher->unlink(treeInode->getInode(), relativePath.basename()).get();
 }
 
+void TestMount::rmdir(folly::StringPiece path) {
+  auto relativePath = RelativePathPiece{path};
+  auto treeInode = getDirInodeForPath(relativePath.dirname().stringPiece());
+  auto dispatcher = edenMount_->getMountPoint()->getDispatcher();
+  dispatcher->rmdir(treeInode->getInode(), relativePath.basename()).get();
+}
+
 std::shared_ptr<TreeInode> TestMount::getDirInodeForPath(
     folly::StringPiece path) const {
   auto directory =

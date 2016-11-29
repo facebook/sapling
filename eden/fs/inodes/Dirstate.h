@@ -11,6 +11,7 @@
 #include <folly/Synchronized.h>
 #include "eden/fs/inodes/DirstatePersistence.h"
 #include "eden/fs/inodes/gen-cpp2/overlay_types.h"
+#include "eden/fs/model/Tree.h"
 #include "eden/utils/PathFuncs.h"
 
 namespace {
@@ -150,12 +151,30 @@ class Dirstate {
   void remove(RelativePathPiece path, bool force);
 
  private:
+  /**
+   * Compares the TreeEntries from a Tree in the base commit with those in the
+   * current TreeInode. Differences are recorded in the provided delta.
+   */
   void computeDelta(
-      const Tree* original,
+      const std::vector<TreeEntry>* originalTreeEntries,
       TreeInode& current,
       DirectoryDelta& delta) const;
 
   std::unique_ptr<Tree> getRootTree() const;
+
+  /**
+   * Recursively performs a depth-first traversal of the specified Tree, adding
+   * all of the files under it as either REMOVED or MISSING to
+   * copyOfUserDirectives, as appropriate.
+   */
+  void addDeletedEntries(
+      const Tree* tree,
+      RelativePathPiece pathToTree,
+      std::unordered_map<RelativePath, HgStatusCode>* manifest,
+      const std::unordered_map<RelativePath, overlay::UserStatusDirective>*
+          userDirectives,
+      std::unordered_map<RelativePathPiece, overlay::UserStatusDirective>*
+          copyOfUserDirectives) const;
 
   fusell::MountPoint* mountPoint_;
   ObjectStore* objectStore_;

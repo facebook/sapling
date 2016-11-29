@@ -268,3 +268,273 @@ TEST(Dirstate, createDirstateWithFileAndThenDeleteItWithoutCallingHgRemove) {
   testMount->deleteFile("hello.txt");
   verifyExpectedDirstate(dirstate, {{"hello.txt", HgStatusCode::MISSING}});
 }
+
+TEST(Dirstate, createDirstateAndAddNewDirectory) {
+  TestMountBuilder builder;
+  builder.addFile({"file-in-root.txt", "some contents"});
+  auto testMount = builder.build();
+  auto dirstate = testMount->getDirstate();
+
+  // Add one folder that appears before file-in-root.txt alphabetically.
+  testMount->mkdir("a-new-folder");
+  testMount->addFile("a-new-folder/add.txt", "");
+  testMount->addFile("a-new-folder/not-tracked.txt", "");
+  dirstate->add(RelativePathPiece("a-new-folder/add.txt"));
+
+  // Add one folder that appears after file-in-root.txt alphabetically.
+  testMount->mkdir("z-new-folder");
+  testMount->addFile("z-new-folder/add.txt", "");
+  testMount->addFile("z-new-folder/not-tracked.txt", "");
+  dirstate->add(RelativePathPiece("z-new-folder/add.txt"));
+
+  verifyExpectedDirstate(
+      dirstate,
+      {
+          {"a-new-folder/add.txt", HgStatusCode::ADDED},
+          {"a-new-folder/not-tracked.txt", HgStatusCode::NOT_TRACKED},
+          {"z-new-folder/add.txt", HgStatusCode::ADDED},
+          {"z-new-folder/not-tracked.txt", HgStatusCode::NOT_TRACKED},
+      });
+}
+
+TEST(Dirstate, createDirstateAndRemoveExistingDirectory) {
+  TestMountBuilder builder;
+  builder.addFile({"file-in-root.txt", "some contents"});
+
+  // Add one folder that appears before file-in-root.txt alphabetically.
+  builder.addFile({"a-new-folder/original1.txt", ""});
+  builder.addFile({"a-new-folder/original2.txt", ""});
+
+  // Add one folder that appears after file-in-root.txt alphabetically.
+  builder.addFile({"z-new-folder/original1.txt", ""});
+  builder.addFile({"z-new-folder/original2.txt", ""});
+
+  auto testMount = builder.build();
+  auto dirstate = testMount->getDirstate();
+
+  // Remove some files in the directories.
+  auto force = false;
+  dirstate->remove(RelativePathPiece("a-new-folder/original1.txt"), force);
+  dirstate->remove(RelativePathPiece("z-new-folder/original1.txt"), force);
+  verifyExpectedDirstate(
+      dirstate,
+      {
+          {"a-new-folder/original1.txt", HgStatusCode::REMOVED},
+          {"z-new-folder/original1.txt", HgStatusCode::REMOVED},
+      });
+
+  // Remove the remaining files in the directories.
+  dirstate->remove(RelativePathPiece("a-new-folder/original2.txt"), force);
+  dirstate->remove(RelativePathPiece("z-new-folder/original2.txt"), force);
+  verifyExpectedDirstate(
+      dirstate,
+      {
+          {"a-new-folder/original1.txt", HgStatusCode::REMOVED},
+          {"a-new-folder/original2.txt", HgStatusCode::REMOVED},
+          {"z-new-folder/original1.txt", HgStatusCode::REMOVED},
+          {"z-new-folder/original2.txt", HgStatusCode::REMOVED},
+      });
+
+  // Deleting the directories should not change the results.
+  testMount->rmdir("a-new-folder");
+  testMount->rmdir("z-new-folder");
+  verifyExpectedDirstate(
+      dirstate,
+      {
+          {"a-new-folder/original1.txt", HgStatusCode::REMOVED},
+          {"a-new-folder/original2.txt", HgStatusCode::REMOVED},
+          {"z-new-folder/original1.txt", HgStatusCode::REMOVED},
+          {"z-new-folder/original2.txt", HgStatusCode::REMOVED},
+      });
+}
+
+TEST(Dirstate, createDirstateAndReplaceFileWithDirectory) {
+  TestMountBuilder builder;
+  builder.addFile({"dir/some-file", ""});
+
+  auto testMount = builder.build();
+  auto dirstate = testMount->getDirstate();
+
+  // Replace file with empty directory.
+  testMount->deleteFile("dir/some-file");
+  testMount->mkdir("dir/some-file");
+  verifyExpectedDirstate(
+      dirstate,
+      {
+          {"dir/some-file", HgStatusCode::MISSING},
+      });
+
+  // Add file to new, empty directory.
+  testMount->addFile("dir/some-file/a-real-file.txt", "");
+  verifyExpectedDirstate(
+      dirstate,
+      {
+          {"dir/some-file", HgStatusCode::MISSING},
+          {"dir/some-file/a-real-file.txt", HgStatusCode::NOT_TRACKED},
+      });
+
+  // TODO: Trying to `hg add dir/some-file/a-real-file.txt` should fail with:
+  // "abort: file 'dir/some-file' in dirstate clashes with
+  //     'dir/some-file/a-real-file.txt'"
+  // dirstate->add(RelativePathPiece("dir/some-file/a-real-file.txt"));
+}
+
+TEST(Dirstate, createDirstateAndReplaceDirectoryWithFile) {
+  TestMountBuilder builder;
+  builder.addFile({"dir1/dir2/some-file", ""});
+
+  auto testMount = builder.build();
+  auto dirstate = testMount->getDirstate();
+
+  testMount->deleteFile("dir1/dir2/some-file");
+  testMount->rmdir("dir1/dir2");
+  verifyExpectedDirstate(
+      dirstate,
+      {
+          {"dir1/dir2/some-file", HgStatusCode::MISSING},
+      });
+
+  testMount->addFile("dir1/dir2", "");
+  verifyExpectedDirstate(
+      dirstate,
+      {
+          {"dir1/dir2", HgStatusCode::NOT_TRACKED},
+          {"dir1/dir2/some-file", HgStatusCode::MISSING},
+      });
+
+  // TODO: Trying to `hg add dir1/dir2` should fail with:
+  // "abort: directory 'dir1/dir2' already in dirstate"
+  // dirstate->add(RelativePathPiece("dir1/dir2"));
+}
+
+TEST(Dirstate, createDirstateAndAddSubtree) {
+  TestMountBuilder builder;
+
+  auto testMount = builder.build();
+  auto dirstate = testMount->getDirstate();
+
+  testMount->addFile("root1.txt", "");
+  testMount->addFile("root2.txt", "");
+  testMount->mkdir("dir1");
+  testMount->addFile("dir1/aFile.txt", "");
+  testMount->addFile("dir1/bFile.txt", "");
+  dirstate->add(RelativePathPiece("root1.txt"));
+  dirstate->add(RelativePathPiece("dir1/bFile.txt"));
+  verifyExpectedDirstate(
+      dirstate,
+      {
+          {"root1.txt", HgStatusCode::ADDED},
+          {"root2.txt", HgStatusCode::NOT_TRACKED},
+          {"dir1/aFile.txt", HgStatusCode::NOT_TRACKED},
+          {"dir1/bFile.txt", HgStatusCode::ADDED},
+      });
+
+  testMount->mkdir("dir1/dir2");
+  testMount->mkdir("dir1/dir2/dir3");
+  testMount->mkdir("dir1/dir2/dir3/dir4");
+  testMount->addFile("dir1/dir2/dir3/dir4/cFile.txt", "");
+  verifyExpectedDirstate(
+      dirstate,
+      {
+          {"root1.txt", HgStatusCode::ADDED},
+          {"root2.txt", HgStatusCode::NOT_TRACKED},
+          {"dir1/aFile.txt", HgStatusCode::NOT_TRACKED},
+          {"dir1/bFile.txt", HgStatusCode::ADDED},
+          {"dir1/dir2/dir3/dir4/cFile.txt", HgStatusCode::NOT_TRACKED},
+      });
+
+  dirstate->add(RelativePathPiece("dir1/dir2/dir3/dir4/cFile.txt"));
+  verifyExpectedDirstate(
+      dirstate,
+      {
+          {"root1.txt", HgStatusCode::ADDED},
+          {"root2.txt", HgStatusCode::NOT_TRACKED},
+          {"dir1/aFile.txt", HgStatusCode::NOT_TRACKED},
+          {"dir1/bFile.txt", HgStatusCode::ADDED},
+          {"dir1/dir2/dir3/dir4/cFile.txt", HgStatusCode::ADDED},
+      });
+}
+
+TEST(Dirstate, createDirstateAndRemoveSubtree) {
+  TestMountBuilder builder;
+  builder.addFile({"root.txt", ""});
+  builder.addFile({"dir1/a-file.txt", ""});
+  builder.addFile({"dir1/b-file.txt", ""});
+  builder.addFile({"dir1/dir2/a-file.txt", ""});
+  builder.addFile({"dir1/dir2/b-file.txt", ""});
+  builder.addFile({"dir1/dir2/dir3/dir4/a-file.txt", ""});
+  builder.addFile({"dir1/dir2/dir3/dir4/b-file.txt", ""});
+
+  auto testMount = builder.build();
+  auto dirstate = testMount->getDirstate();
+
+  testMount->deleteFile("dir1/dir2/dir3/dir4/a-file.txt");
+  verifyExpectedDirstate(
+      dirstate,
+      {
+          {"dir1/dir2/dir3/dir4/a-file.txt", HgStatusCode::MISSING},
+      });
+
+  testMount->deleteFile("dir1/dir2/dir3/dir4/b-file.txt");
+  verifyExpectedDirstate(
+      dirstate,
+      {
+          {"dir1/dir2/dir3/dir4/a-file.txt", HgStatusCode::MISSING},
+          {"dir1/dir2/dir3/dir4/b-file.txt", HgStatusCode::MISSING},
+      });
+
+  testMount->rmdir("dir1/dir2/dir3/dir4");
+  verifyExpectedDirstate(
+      dirstate,
+      {
+          {"dir1/dir2/dir3/dir4/a-file.txt", HgStatusCode::MISSING},
+          {"dir1/dir2/dir3/dir4/b-file.txt", HgStatusCode::MISSING},
+      });
+
+  testMount->rmdir("dir1/dir2/dir3");
+  verifyExpectedDirstate(
+      dirstate,
+      {
+          {"dir1/dir2/dir3/dir4/a-file.txt", HgStatusCode::MISSING},
+          {"dir1/dir2/dir3/dir4/b-file.txt", HgStatusCode::MISSING},
+      });
+
+  testMount->deleteFile("dir1/dir2/a-file.txt");
+  testMount->deleteFile("dir1/dir2/b-file.txt");
+  verifyExpectedDirstate(
+      dirstate,
+      {
+          {"dir1/dir2/a-file.txt", HgStatusCode::MISSING},
+          {"dir1/dir2/b-file.txt", HgStatusCode::MISSING},
+          {"dir1/dir2/dir3/dir4/a-file.txt", HgStatusCode::MISSING},
+          {"dir1/dir2/dir3/dir4/b-file.txt", HgStatusCode::MISSING},
+      });
+
+  testMount->deleteFile("dir1/a-file.txt");
+  testMount->deleteFile("dir1/b-file.txt");
+  verifyExpectedDirstate(
+      dirstate,
+      {
+          {"dir1/a-file.txt", HgStatusCode::MISSING},
+          {"dir1/b-file.txt", HgStatusCode::MISSING},
+          {"dir1/dir2/a-file.txt", HgStatusCode::MISSING},
+          {"dir1/dir2/b-file.txt", HgStatusCode::MISSING},
+          {"dir1/dir2/dir3/dir4/a-file.txt", HgStatusCode::MISSING},
+          {"dir1/dir2/dir3/dir4/b-file.txt", HgStatusCode::MISSING},
+      });
+
+  testMount->deleteFile("root.txt");
+  testMount->rmdir("dir1/dir2");
+  testMount->rmdir("dir1");
+  verifyExpectedDirstate(
+      dirstate,
+      {
+          {"root.txt", HgStatusCode::MISSING},
+          {"dir1/a-file.txt", HgStatusCode::MISSING},
+          {"dir1/b-file.txt", HgStatusCode::MISSING},
+          {"dir1/dir2/a-file.txt", HgStatusCode::MISSING},
+          {"dir1/dir2/b-file.txt", HgStatusCode::MISSING},
+          {"dir1/dir2/dir3/dir4/a-file.txt", HgStatusCode::MISSING},
+          {"dir1/dir2/dir3/dir4/b-file.txt", HgStatusCode::MISSING},
+      });
+}

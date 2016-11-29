@@ -137,6 +137,25 @@ TEST(TestMount, deleteFile) {
   EXPECT_FALSE(testMount->hasFileAt("file.txt"));
 }
 
+TEST(TestMount, rmdir) {
+  TestMountBuilder builder;
+  builder.addFile({"dir/file.txt", "original contents"});
+  auto testMount = builder.build();
+  EXPECT_TRUE(testMount->hasFileAt("dir/file.txt"));
+  EXPECT_NE(nullptr, testMount->getDirInodeForPath("dir"));
+
+  testMount->deleteFile("dir/file.txt");
+  EXPECT_NE(nullptr, testMount->getDirInodeForPath("dir"));
+  testMount->rmdir("dir");
+
+  try {
+    testMount->getDirInodeForPath("dir");
+    FAIL() << "ENOENT should be thrown";
+  } catch (const std::system_error& expected) {
+    ASSERT_EQ(ENOENT, expected.code().value());
+  }
+}
+
 TEST(TestMount, createFileInSubdirectory) {
   TestMountBuilder builder;
   builder.addFile({"a/b/c.txt", "I am in the a/b/ directory."});

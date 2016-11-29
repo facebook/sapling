@@ -11,22 +11,32 @@
 #include <folly/Format.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
-#include "eden/fs/inodes/DirstatePersistence.h"
 #include "eden/fs/inodes/EdenMounts.h"
 #include "eden/fs/inodes/TreeEntryFileInode.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/model/Blob.h"
-#include "eden/fs/model/Tree.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/store/ObjectStores.h"
 #include "eden/fuse/MountPoint.h"
 
 namespace {
+/**
+ * Represents file (non-directory) changes in a directory. This reflects:
+ * - New file in directory.
+ * - File removed from directory (possibly replaced with directory of same
+ *   name).
+ * - Subdirectory removed form directory (possibly replaced with file of same
+ *   name).
+ *
+ * However, it does not reflect:
+ * - New subdirectory in directory.
+ */
 struct DirectoryDelta {
   // The contents of each vector is sorted by compare().
   std::vector<facebook::eden::PathComponent> added;
   std::vector<facebook::eden::PathComponent> removed;
   std::vector<facebook::eden::PathComponent> modified;
+  std::vector<facebook::eden::PathComponent> removedDirectories;
 };
 }
 
@@ -78,6 +88,37 @@ void updateManifestWithDirectives(
 }
 }
 
+void processRemovedFile(
+    RelativePath pathToEntry,
+    std::unordered_map<RelativePath, HgStatusCode>* manifest,
+    const std::unordered_map<RelativePath, overlay::UserStatusDirective>*
+        userDirectives,
+    std::unordered_map<RelativePathPiece, overlay::UserStatusDirective>*
+        copyOfUserDirectives) {
+  auto result = userDirectives->find(pathToEntry);
+  if (result != userDirectives->end()) {
+    auto statusCode = result->second;
+    switch (statusCode) {
+      case overlay::UserStatusDirective::Add:
+        // TODO(mbolin): Is there any weird sequence of modifications with
+        // adding/removed files matched by .hgignore that could lead to this
+        // state?
+        throw std::runtime_error(folly::sformat(
+            "Invariant violation: The user has marked {} for addition, "
+            "but it already exists in the manifest "
+            "(and is currently removed from disk).",
+            pathToEntry.stringPiece()));
+      case overlay::UserStatusDirective::Remove:
+        manifest->emplace(pathToEntry, HgStatusCode::REMOVED);
+        break;
+    }
+    copyOfUserDirectives->erase(pathToEntry);
+  } else {
+    // The file is not present on disk, but the user never ran `hg rm`.
+    manifest->emplace(pathToEntry, HgStatusCode::MISSING);
+  }
+}
+
 std::unique_ptr<HgStatus> Dirstate::getStatus() const {
   // Find the modified directories in the overlay and compare them with what is
   // in the root tree.
@@ -103,11 +144,33 @@ std::unique_ptr<HgStatus> Dirstate::getStatus() const {
 
     // Get the directory as a Tree.
     auto tree = getTreeForDirectory(directory, rootTree.get(), objectStore_);
-    DCHECK(tree.get() != nullptr) << "Failed to getTreeForDirectory() for "
-                                  << directory;
-
     DirectoryDelta delta;
-    computeDelta(rootTree.get(), *treeInode, delta);
+    std::vector<TreeEntry> emptyEntries;
+    // Note that if tree is NULL, then the directory must be new in the working
+    // copy because there is no corresponding Tree in the manifest. Defining
+    // treeEntries in this way avoids a heap allocation when tree is NULL.
+    const auto* treeEntries = tree ? &tree->getTreeEntries() : &emptyEntries;
+    computeDelta(treeEntries, *treeInode, delta);
+
+    for (auto& removedDirectory : delta.removedDirectories) {
+      // Must find the Tree that corresponds to removedDirectory and add
+      // everything under it as REMOVED or MISSING in the manifest, as
+      // appropriate.
+      auto entry = tree->getEntryPtr(removedDirectory);
+      auto subdirectory = directory + removedDirectory;
+      DCHECK(entry != nullptr) << "Failed to find TreeEntry for "
+                               << subdirectory;
+      DCHECK(entry->getType() == TreeEntryType::TREE)
+          << "Removed directory " << subdirectory
+          << " did not correspond to a Tree.";
+      auto removedTree = objectStore_->getTree(entry->getHash());
+      addDeletedEntries(
+          removedTree.get(),
+          subdirectory,
+          &manifest,
+          &*userDirectives,
+          &copyOfUserDirectives);
+    }
 
     // Files in delta.added fall into one of three categories:
     // 1. ADDED
@@ -171,28 +234,8 @@ std::unique_ptr<HgStatus> Dirstate::getStatus() const {
     // 3. IGNORED
     for (auto& removedPath : delta.removed) {
       auto pathToEntry = directory + removedPath;
-      auto result = userDirectives->find(pathToEntry);
-      if (result != userDirectives->end()) {
-        auto statusCode = result->second;
-        switch (statusCode) {
-          case overlay::UserStatusDirective::Add:
-            // TODO(mbolin): Is there any weird sequence of modifications with
-            // adding/removed files matched by .hgignore that could lead to this
-            // state?
-            throw std::runtime_error(folly::sformat(
-                "Invariant violation: The user has marked {} for addition, "
-                "but it already exists in the manifest "
-                "(and is currently removed from disk).",
-                pathToEntry.stringPiece()));
-          case overlay::UserStatusDirective::Remove:
-            manifest.emplace(pathToEntry, HgStatusCode::REMOVED);
-            break;
-        }
-        copyOfUserDirectives.erase(pathToEntry);
-      } else {
-        // The file is not present on disk, but the user never ran `hg rm`.
-        manifest.emplace(pathToEntry, HgStatusCode::MISSING);
-      }
+      processRemovedFile(
+          pathToEntry, &manifest, &*userDirectives, &copyOfUserDirectives);
     }
   }
 
@@ -201,6 +244,35 @@ std::unique_ptr<HgStatus> Dirstate::getStatus() const {
   return std::make_unique<HgStatus>(std::move(manifest));
 }
 
+void Dirstate::addDeletedEntries(
+    const Tree* tree,
+    RelativePathPiece pathToTree,
+    std::unordered_map<RelativePath, HgStatusCode>* manifest,
+    const std::unordered_map<RelativePath, overlay::UserStatusDirective>*
+        userDirectives,
+    std::unordered_map<RelativePathPiece, overlay::UserStatusDirective>*
+        copyOfUserDirectives) const {
+  for (auto& entry : tree->getTreeEntries()) {
+    auto pathToEntry = pathToTree + entry.getName();
+    if (entry.getType() == TreeEntryType::BLOB) {
+      processRemovedFile(
+          pathToEntry, manifest, userDirectives, copyOfUserDirectives);
+    } else {
+      auto subtree = objectStore_->getTree(entry.getHash());
+      addDeletedEntries(
+          subtree.get(),
+          pathToEntry,
+          manifest,
+          userDirectives,
+          copyOfUserDirectives);
+    }
+  }
+}
+
+/**
+ * Assumes that treeEntry and treeInode correspond to the same path. Returns
+ * true if both the mode_t and file contents match for treeEntry and treeInode.
+ */
 bool hasMatchingAttributes(
     const TreeEntry* treeEntry,
     const TreeInode::Entry* treeInode,
@@ -231,17 +303,24 @@ bool hasMatchingAttributes(
   }
 }
 
+/**
+ * @return true if `mode` corresponds to a file (regular or symlink) as opposed
+ *   to a directory.
+ */
+inline bool isFile(mode_t mode) {
+  return S_ISREG(mode) || S_ISLNK(mode);
+}
+
 void Dirstate::computeDelta(
-    const Tree* original,
+    const std::vector<TreeEntry>* treeEntries,
     TreeInode& current,
     DirectoryDelta& delta) const {
-  auto treeEntries = original->getTreeEntries();
   auto dir = current.getContents().rlock();
   auto& entries = dir->entries;
 
-  auto baseIterator = treeEntries.begin();
+  auto baseIterator = treeEntries->begin();
   auto overlayIterator = entries.begin();
-  auto baseEnd = treeEntries.end();
+  auto baseEnd = treeEntries->end();
   auto overlayEnd = entries.end();
   if (baseIterator == baseEnd && overlayIterator == overlayEnd) {
     return;
@@ -249,16 +328,27 @@ void Dirstate::computeDelta(
 
   while (true) {
     if (baseIterator == baseEnd) {
-      // Remaining entries in overlayIterator should be added to delta.added.
+      // Each remaining entry in overlayIterator should be added to delta.added
+      // (unless it is a directory).
       while (overlayIterator != overlayEnd) {
-        delta.added.push_back(overlayIterator->first);
+        auto mode = overlayIterator->second.get()->mode;
+        if (isFile(mode)) {
+          delta.added.push_back(overlayIterator->first);
+        }
         ++overlayIterator;
       }
       break;
     } else if (overlayIterator == overlayEnd) {
-      // Remaining entries in baseIterator should be added to delta.removed.
+      // Each remaining entry in baseIterator should be added to delta.removed
+      // (unless it is a directory).
       while (baseIterator != baseEnd) {
-        delta.removed.push_back((*baseIterator).getName());
+        const auto& base = *baseIterator;
+        auto mode = base.getMode();
+        if (isFile(mode)) {
+          delta.removed.push_back(base.getName());
+        } else {
+          delta.removedDirectories.push_back(base.getName());
+        }
         ++baseIterator;
       }
       break;
@@ -266,26 +356,53 @@ void Dirstate::computeDelta(
 
     auto base = *baseIterator;
     auto overlayName = overlayIterator->first;
-    // TODO(mbolin): Support directories! Currently, this logic only makes sense
-    // if all of the entries are files.
-
     auto cmp = base.getName().stringPiece().compare(overlayName.stringPiece());
     if (cmp == 0) {
-      if (!hasMatchingAttributes(
-              &base,
-              overlayIterator->second.get(),
-              objectStore_,
-              current,
-              *dir)) {
-        delta.modified.push_back(base.getName());
+      // There are entries in the base commit and the overlay with the same
+      // name. All four of the following are possible:
+      // 1. Both entries correspond to files.
+      // 2. Both entries correspond to directories.
+      // 3. The entry was a file in the base commit but is now a directory.
+      // 4. The entry was a directory in the base commit but is now a file.
+      auto isFileInBase = isFile((*baseIterator).getMode());
+      auto isFileInOverlay = isFile(overlayIterator->second.get()->mode);
+
+      if (isFileInBase && isFileInOverlay) {
+        if (!hasMatchingAttributes(
+                &base,
+                overlayIterator->second.get(),
+                &*objectStore_,
+                current,
+                *dir)) {
+          delta.modified.push_back(base.getName());
+        }
+      } else if (isFileInBase) {
+        // It was a file in the base, but now is a directory in the overlay.
+        // Hg should consider this file to be missing/removed.
+        delta.removed.push_back(base.getName());
+      } else if (isFileInOverlay) {
+        // It was a directory in the base, but now is a file in the overlay.
+        // Hg should consider this file to be added/untracked while the
+        // directory's contents should be considered removed.
+        delta.added.push_back(base.getName());
+        delta.removedDirectories.push_back(base.getName());
       }
+
       baseIterator++;
       overlayIterator++;
     } else if (cmp < 0) {
-      delta.removed.push_back(base.getName());
+      auto mode = base.getMode();
+      if (isFile(mode)) {
+        delta.removed.push_back(base.getName());
+      } else {
+        delta.removedDirectories.push_back(base.getName());
+      }
       baseIterator++;
     } else {
-      delta.added.push_back(overlayName);
+      auto mode = overlayIterator->second.get()->mode;
+      if (isFile(mode)) {
+        delta.added.push_back(overlayName);
+      }
       overlayIterator++;
     }
   }
