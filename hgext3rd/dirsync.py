@@ -37,7 +37,7 @@ from mercurial import match as matchmod
 from mercurial import error
 from mercurial.i18n import _
 
-testedwith = 'internal'
+testedwith = 'ships-with-fb-hgext'
 
 def extsetup(ui):
     extensions.wrapfunction(localrepo.localrepository, 'commit', _commit)

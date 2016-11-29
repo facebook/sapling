@@ -53,7 +53,7 @@ from itertools import count
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
-testedwith = 'internal'
+testedwith = 'ships-with-fb-hgext'
 
 rebasemod = None
 inhibitmod = None

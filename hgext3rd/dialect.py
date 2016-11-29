@@ -11,7 +11,7 @@ With this extension enabled, some terms will be replaced by their more
 well-known equivalents. Namely, "changeset" will be replaced by "commit".
 """
 
-testedwith = '3.9'
+testedwith = 'ships-with-fb-hgext'
 
 from mercurial import (
     extensions,

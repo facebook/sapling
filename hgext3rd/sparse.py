@@ -18,7 +18,7 @@ import os, collections, hashlib
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
-testedwith = 'internal'
+testedwith = 'ships-with-fb-hgext'
 
 def uisetup(ui):
     _setupupdates(ui)

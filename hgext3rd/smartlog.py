@@ -48,7 +48,7 @@ pager.attended.append('smartlog')
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
-testedwith = 'internal'
+testedwith = 'ships-with-fb-hgext'
 enabled = False
 commit_info = False
 hiddenchanges = 0

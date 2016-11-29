@@ -48,7 +48,7 @@ from mercurial import (
 )
 from mercurial.i18n import _
 
-testedwith = 'internal'
+testedwith = 'ships-with-fb-hgext'
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)

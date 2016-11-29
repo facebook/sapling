@@ -34,7 +34,7 @@ from mercurial import cmdutil, commands, error, scmutil
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
-testedwith = 'internal'
+testedwith = 'ships-with-fb-hgext'
 
 def uisetup(ui):
     permitted_opts = [

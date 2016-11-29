@@ -24,7 +24,7 @@ from mercurial.i18n import _
 cmdtable = {}
 command = cmdutil.command(cmdtable)
 
-testedwith = 'internal'
+testedwith = 'ships-with-fb-hgext'
 
 def defineactions():
     histedit = extensions.find('histedit')

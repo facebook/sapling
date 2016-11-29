@@ -18,7 +18,7 @@ from mercurial.node import nullid, nullrev
 import errno
 import os
 
-testedwith = 'internal'
+testedwith = 'ships-with-fb-hgext'
 
 def extsetup(ui):
     wrapfunction(tags, '_readtagcache', _readtagcache)

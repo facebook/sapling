@@ -536,7 +536,7 @@ pgup/K: move patch up, pgdn/J: move patch down, c: commit, q: abort
 cmdtable = {}
 command = cmdutil.command(cmdtable)
 
-testedwith = 'internal'
+testedwith = 'ships-with-fb-hgext'
 
 @command('chistedit', [
      ('k', 'keep', False,

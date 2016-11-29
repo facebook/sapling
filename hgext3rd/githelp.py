@@ -26,7 +26,7 @@ pager.attended.append('githelp')
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
-testedwith = 'internal'
+testedwith = 'ships-with-fb-hgext'
 
 class GitUnknownError(error.Abort):
     failmessage = ("\n\nIf this is a valid git command, please search/ask in "

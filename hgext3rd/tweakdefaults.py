@@ -30,7 +30,7 @@ import inspect, os, re, shlex, stat, subprocess, time
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
-testedwith = 'internal'
+testedwith = 'ships-with-fb-hgext'
 
 globaldata = 'globaldata'
 createmarkersoperation = 'createmarkersoperation'

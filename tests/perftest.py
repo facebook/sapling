@@ -20,7 +20,7 @@ import ctreemanifest
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
-testedwith = ''
+testedwith = 'ships-with-fb-hgext'
 
 @command('testtree', [
     ('', 'build', '', ''),

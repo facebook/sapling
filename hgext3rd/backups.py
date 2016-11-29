@@ -19,7 +19,7 @@ pager.attended.append('backups')
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
-testedwith = 'internal'
+testedwith = 'ships-with-fb-hgext'
 msgwithcreatermarkers = """Marker creation is enabled so no changeset should be
 stripped unless you explicitly called hg strip. hg backups will show you the
 stripped changesets. If you are trying to recover a changeset hidden from a

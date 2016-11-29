@@ -38,7 +38,7 @@ except Exception:
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
-testedwith = ''
+testedwith = 'ships-with-fb-hgext'
 
 repoclass = localrepo.localrepository
 if util.safehasattr(repoclass, '_basesupported'):

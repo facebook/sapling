@@ -32,7 +32,7 @@ except ImportError:
     from hgext import chgserver
 chgserver._configsections.append('extorder')
 
-testedwith = 'internal'
+testedwith = 'ships-with-fb-hgext'
 
 def uisetup(ui):
 

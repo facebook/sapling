@@ -15,7 +15,7 @@ from mercurial.hg import repository
 from mercurial.node import nullid, hex, bin
 from mercurial.i18n import _
 
-testedwith = '3.4'
+testedwith = 'ships-with-fb-hgext'
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)

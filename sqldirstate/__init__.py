@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-testedwith = 'internal'
+testedwith = 'ships-with-fb-hgext'
 
 from sqldirstate import makedirstate, toflat, tosql, writefakedirstate
 

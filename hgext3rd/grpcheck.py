@@ -24,7 +24,7 @@ message and override some other config items.
 import os
 import grp
 
-testedwith = '3.9'
+testedwith = 'ships-with-fb-hgext'
 
 _missinggroup = None
 

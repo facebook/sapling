@@ -34,7 +34,7 @@ from contextlib import nested
 cmdtable = {}
 command = cmdutil.command(cmdtable)
 
-testedwith = 'internal'
+testedwith = 'ships-with-fb-hgext'
 
 def _updatebookmarks(repo, oldid, newid, tr):
     oldbookmarks = repo.nodebookmarks(oldid)

@@ -14,7 +14,7 @@ from mercurial import (
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
-testedwith = 'internal'
+testedwith = 'ships-with-fb-hgext'
 
 def extsetup(ui):
     entry = extensions.wrapcommand(commands.table, 'commit', _commit)

@@ -12,7 +12,7 @@ import os, glob, binascii
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
-testedwith = 'internal'
+testedwith = 'ships-with-fb-hgext'
 
 def _isevolverepo(repo):
     try:

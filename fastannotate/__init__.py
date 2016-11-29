@@ -74,7 +74,7 @@ from . import (
     protocol,
 )
 
-testedwith = 'internal'
+testedwith = 'ships-with-fb-hgext'
 
 cmdtable = commands.cmdtable
 

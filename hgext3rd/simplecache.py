@@ -19,7 +19,7 @@ import socket, json, random, os, tempfile
 from mercurial import extensions, node, copies, context
 from mercurial.scmutil import status
 
-testedwith = 'internal'
+testedwith = 'ships-with-fb-hgext'
 
 def extsetup(ui):
     extensions.wrapfunction(copies, 'pathcopies', pathcopiesui(ui))

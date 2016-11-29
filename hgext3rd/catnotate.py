@@ -4,7 +4,7 @@ import os
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
-testedwith = 'internal'
+testedwith = 'ships-with-fb-hgext'
 
 @command('^catnotate', [
     ('r', 'rev', '', _('print the given revision'), _('REV')),
