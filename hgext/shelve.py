@@ -63,6 +63,8 @@ testedwith = 'ships-with-hg-core'
 backupdir = 'shelve-backup'
 shelvedir = 'shelved'
 shelvefileextensions = ['hg', 'patch']
+# universal extension is present in all types of shelves
+patchextension = 'patch'
 
 # we never need the user, so we use a
 # generic user for all shelve operations
@@ -220,7 +222,8 @@ class shelvedstate(object):
 def cleanupoldbackups(repo):
     vfs = scmutil.vfs(repo.join(backupdir))
     maxbackups = repo.ui.configint('shelve', 'maxbackups', 10)
-    hgfiles = [f for f in vfs.listdir() if f.endswith('.hg')]
+    hgfiles = [f for f in vfs.listdir()
+               if f.endswith('.' + patchextension)]
     hgfiles = sorted([(vfs.stat(f).st_mtime, f) for f in hgfiles])
     if 0 < maxbackups and maxbackups < len(hgfiles):
         bordermtime = hgfiles[-maxbackups][0]
@@ -230,7 +233,7 @@ def cleanupoldbackups(repo):
         if mtime == bordermtime:
             # keep it, because timestamp can't decide exact order of backups
             continue
-        base = f[:-3]
+        base = f[:-(1 + len(patchextension))]
         for ext in shelvefileextensions:
             try:
                 vfs.unlink(base + '.' + ext)
@@ -264,12 +267,12 @@ def getshelvename(repo, parent, opts):
     label = label.replace('/', '_')
 
     if name:
-        if shelvedfile(repo, name, 'hg').exists():
+        if shelvedfile(repo, name, patchextension).exists():
             e = _("a shelved change named '%s' already exists") % name
             raise error.Abort(e)
     else:
         for n in gennames():
-            if not shelvedfile(repo, n, 'hg').exists():
+            if not shelvedfile(repo, n, patchextension).exists():
                 name = n
                 break
         else:
@@ -337,7 +340,7 @@ def _shelvecreatedcommit(repo, node, name):
     bases = list(mutableancestors(repo[node]))
     shelvedfile(repo, name, 'hg').writebundle(bases, node)
     cmdutil.export(repo, [node],
-                   fp=shelvedfile(repo, name, 'patch').opener('wb'),
+                   fp=shelvedfile(repo, name, patchextension).opener('wb'),
                    opts=mdiff.diffopts(git=True))
 
 def _includeunknownfiles(repo, pats, opts, extra):
@@ -444,7 +447,7 @@ def deletecmd(ui, repo, pats):
                     # but the .hg file is optional as in future we
                     # will add obsolete shelve with does not create a
                     # bundle
-                    if shfile.exists() or suffix == 'patch':
+                    if shfile.exists() or suffix == patchextension:
                         shfile.movetobackup()
             cleanupoldbackups(repo)
         except OSError as err:
@@ -463,7 +466,7 @@ def listshelves(repo):
     info = []
     for (name, _type) in names:
         pfx, sfx = name.rsplit('.', 1)
-        if not pfx or sfx != 'patch':
+        if not pfx or sfx != patchextension:
             continue
         st = shelvedfile(repo, name).stat()
         info.append((st.st_mtime, shelvedfile(repo, pfx).filename()))
@@ -491,7 +494,7 @@ def listcmd(ui, repo, pats, opts):
         ui.write(age, label='shelve.age')
         ui.write(' ' * (12 - len(age)))
         used += 12
-        with open(name + '.patch', 'rb') as fp:
+        with open(name + '.' + patchextension, 'rb') as fp:
             while True:
                 line = fp.readline()
                 if not line:
@@ -519,7 +522,7 @@ def singlepatchcmds(ui, repo, pats, opts, subcommand):
         raise error.Abort(_("--%s expects a single shelf") % subcommand)
     shelfname = pats[0]
 
-    if not shelvedfile(repo, shelfname, 'patch').exists():
+    if not shelvedfile(repo, shelfname, patchextension).exists():
         raise error.Abort(_("cannot find shelf %s") % shelfname)
 
     listcmd(ui, repo, pats, opts)
@@ -823,7 +826,7 @@ def _dounshelve(ui, repo, *shelved, **opts):
     else:
         basename = shelved[0]
 
-    if not shelvedfile(repo, basename, 'patch').exists():
+    if not shelvedfile(repo, basename, patchextension).exists():
         raise error.Abort(_("shelved change '%s' not found") % basename)
 
     oldquiet = ui.quiet
