@@ -9,7 +9,10 @@ from optparse import OptionParser
 from StringIO import StringIO
 import BaseHTTPServer, json, signal, sys, urlparse
 
-from mercurial import cmdutil
+try:
+    from mercurial.server import runservice
+except ImportError:
+    from mercurial.cmdutil import service as runservice
 
 known_translations = {}
 
@@ -139,5 +142,5 @@ if __name__ == '__main__':
             'daemon': not options.foreground,
             'daemon_postexec': options.daemon_postexec}
     service = simplehttpservice(options.host, options.port)
-    cmdutil.service(opts, initfn=service.init, runfn=service.run,
-                    runargs=[sys.executable, __file__] + sys.argv[1:])
+    runservice(opts, initfn=service.init, runfn=service.run,
+               runargs=[sys.executable, __file__] + sys.argv[1:])
