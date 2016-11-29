@@ -962,18 +962,18 @@ void writestore(Manifest *mainManifest, const std::vector<char*> &cmpNodes,
   NewTreeIterator iterator(mainManifest, cmpNodes, cmpManifests, fetcher);
 
   std::string *path = NULL;
-  Manifest *result = NULL;
-  std::string *node = NULL;
+  ManifestNode *result = NULL;
+  ManifestNode *p1 = NULL;
+  ManifestNode *p2 = NULL;
   std::string raw;
-  while (iterator.next(&path, &result, &node)) {
+  while (iterator.next(&path, &result, &p1, &p2)) {
     // TODO: find an appropriate delta base and compute the delta
-    result->serialize(raw);
+    result->manifest->serialize(raw);
     PythonObj args = Py_BuildValue("(s#s#s#s#)",
                                    path->c_str(), (Py_ssize_t)path->size(),
-                                   node->c_str(), (Py_ssize_t)BIN_NODE_SIZE,
+                                   result->node, (Py_ssize_t)BIN_NODE_SIZE,
                                    NULLID, (Py_ssize_t)BIN_NODE_SIZE,
                                    raw.c_str(), (Py_ssize_t)raw.size());
-
     pack.callmethod("add", args);
   }
 }

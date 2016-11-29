@@ -539,16 +539,16 @@ NewTreeIterator::NewTreeIterator(Manifest *mainRoot,
   }
 }
 
-bool NewTreeIterator::popResult(std::string **path, Manifest **result, std::string **node) {
+bool NewTreeIterator::popResult(std::string **path, ManifestNode **result,
+                                ManifestNode **p1, ManifestNode **p2) {
   stackframe &mainFrame = this->mainStack.back();
   Manifest *mainManifest = mainFrame.manifest;
   std::string mainSerialized;
 
   // When we loop over the cmpStacks, record the cmp nodes that are parents
   // of the level we're about to return.
-  char parentNodes[2][BIN_NODE_SIZE];
-  memcpy(parentNodes[0], NULLID, BIN_NODE_SIZE);
-  memcpy(parentNodes[1], NULLID, BIN_NODE_SIZE);
+  memcpy(this->parents[0].node, NULLID, BIN_NODE_SIZE);
+  memcpy(this->parents[1].node, NULLID, BIN_NODE_SIZE);
 
   bool alreadyExists = false;
 
@@ -579,10 +579,14 @@ bool NewTreeIterator::popResult(std::string **path, Manifest **result, std::stri
       if (cmpStack.size() > 1) {
         stackframe &priorCmpFrame = cmpStack[cmpStack.size() - 2];
         ManifestEntry *priorCmpEntry = priorCmpFrame.currentvalue();
-        memcpy(parentNodes[i], binfromhex(priorCmpEntry->node).c_str(), BIN_NODE_SIZE);
+        this->parents[i].manifest = cmpManifest;
+        memcpy(this->parents[i].node, binfromhex(priorCmpEntry->node).c_str(),
+               BIN_NODE_SIZE);
       } else {
         // Use the original passed in parent nodes
-        memcpy(parentNodes[i], binfromhex(this->cmpNodes[i]).c_str(), BIN_NODE_SIZE);
+        this->parents[i].manifest = cmpManifest;
+        memcpy(this->parents[i].node, binfromhex(this->cmpNodes[i]).c_str(),
+               BIN_NODE_SIZE);
       }
     }
   }
@@ -596,7 +600,8 @@ bool NewTreeIterator::popResult(std::string **path, Manifest **result, std::stri
   }
 
   char tempnode[BIN_NODE_SIZE];
-  mainManifest->computeNode(parentNodes[0], parentNodes[1], tempnode);
+  mainManifest->computeNode(this->parents[0].node, this->parents[1].node,
+                            tempnode);
 
   // Update the node on the manifest entry
   if (mainStack.size() > 0) {
@@ -620,11 +625,13 @@ bool NewTreeIterator::popResult(std::string **path, Manifest **result, std::stri
     return false;
   }
 
-  this->node.assign(tempnode, 20);
+  this->result.manifest = mainManifest;
+  memcpy(this->result.node, tempnode, BIN_NODE_SIZE);
 
   *path = &this->path;
-  *result = mainManifest;
-  *node = &this->node;
+  *result = &this->result;
+  *p1 = &this->parents[0];
+  *p2 = &this->parents[1];
   return true;
 }
 
@@ -660,7 +667,7 @@ bool NewTreeIterator::processDirectory(ManifestEntry *mainEntry) {
         if (cmp == 0) {
           // And the nodes match...
           if (!alreadyExists &&
-              (mainEntry->node && strncmp(mainEntry->node, cmpEntry->node, 40) == 0)) {
+              (mainEntry->node && memcmp(mainEntry->node, cmpEntry->node, HEX_NODE_SIZE) == 0)) {
             // Skip this entry
             alreadyExists = true;
           }
@@ -697,7 +704,8 @@ bool NewTreeIterator::processDirectory(ManifestEntry *mainEntry) {
   return true;
 }
 
-bool NewTreeIterator::next(std::string **path, Manifest **result, std::string **node) {
+bool NewTreeIterator::next(std::string **path, ManifestNode **result,
+                           ManifestNode **p1, ManifestNode **p2) {
   // Pop the last returned directory off the path
   size_t slashoffset = this->path.find_last_of('/', this->path.size() - 2);
   if (slashoffset == std::string::npos) {
@@ -718,7 +726,7 @@ bool NewTreeIterator::next(std::string **path, Manifest **result, std::string **
     if (mainFrame.isfinished()) {
       // This can return false if this manifest ended up being equivalent to
       // a cmp parent manifest, which means we should skip it.
-      if (this->popResult(path, result, node)) {
+      if (this->popResult(path, result, p1, p2)) {
         if (this->mainStack.size() > 0) {
           this->mainStack.back().next();
         }

@@ -205,4 +205,10 @@ class SortedManifestIterator {
     bool isfinished() const;
 };
 
+class ManifestNode {
+  public:
+    Manifest *manifest;
+    char node[BIN_NODE_SIZE];
+};
+
 #endif //REMOTEFILELOG_MANIFEST_H

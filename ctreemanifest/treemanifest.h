@@ -251,7 +251,8 @@ class NewTreeIterator {
     std::vector<char*> cmpNodes;
     std::vector<std::vector<stackframe> > cmpStacks;
     std::string path;
-    std::string node;
+    ManifestNode result;
+    ManifestNode parents[2];
     ManifestFetcher fetcher;
   public:
     NewTreeIterator(Manifest *mainRoot,
@@ -265,13 +266,15 @@ class NewTreeIterator {
      * Return true if a manifest was returned, or false if we've reached the
      * end.
      */
-    bool next(std::string **path, Manifest **result, std::string **node);
+    bool next(std::string **path, ManifestNode **result,
+              ManifestNode **p1, ManifestNode **p2);
   private:
     /**
      * Pops the current Manifest, populating the output values and returning true
      * if the current Manifest is different from all comparison manifests.
      */
-    bool popResult(std::string **path, Manifest **result, std::string **node);
+    bool popResult(std::string **path, ManifestNode **result,
+                   ManifestNode **p1, ManifestNode **p2);
 
     /** Pushes the given Manifest onto the stacks. If the given Manifest equals
      * one of the comparison Manifests, the function does nothing.
