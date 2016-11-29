@@ -24,7 +24,7 @@ from mercurial import (
     util,
 )
 from mercurial.i18n import _
-from mercurial.node import bin
+from mercurial.node import bin, nullid
 
 from remotefilelog.contentstore import unioncontentstore
 from remotefilelog.datapack import datapackstore, mutabledatapack
@@ -85,14 +85,17 @@ class InterceptedMutablePack(object):
     with the provided node. This is useful for forcing a tree manifest to be
     referencable via its flat hash.
     """
-    def __init__(self, pack, node):
+    def __init__(self, pack, node, p1node):
         self._pack = pack
         self._node = node
+        self._p1node = p1node
 
     def add(self, name, node, deltabasenode, delta):
         # For the root node, provide the flat manifest as the key
         if name == "":
             node = self._node
+            if deltabasenode != nullid:
+                deltabasenode = self._p1node
         return self._pack.add(name, node, deltabasenode, delta)
 
 def recordmanifest(pack, repo, oldtip, newtip):
@@ -125,7 +128,7 @@ def recordmanifest(pack, repo, oldtip, newtip):
         else:
             origtree = mfl[p1node].read()._treemanifest()
 
-        if not origtree:
+        if origtree is None:
             if allowedtreeroots and p1node not in allowedtreeroots:
                 continue
 
@@ -133,7 +136,7 @@ def recordmanifest(pack, repo, oldtip, newtip):
             origtree = ctreemanifest.treemanifest(repo.svfs.manifestdatastore)
             for filename, node, flag in p1mf.iterentries():
                 origtree.set(filename, node, flag)
-            origtree.write(InterceptedMutablePack(pack, p1node))
+            origtree.write(InterceptedMutablePack(pack, p1node, nullid))
             builttrees[p1node] = origtree
 
         # Remove the tree from the cache once we've processed its final use.
@@ -196,7 +199,7 @@ def recordmanifest(pack, repo, oldtip, newtip):
         for fname, fnode, fflags in adds:
             newtree.set(fname, fnode, fflags)
 
-        newtree.write(InterceptedMutablePack(pack, mfrevlog.node(rev)),
+        newtree.write(InterceptedMutablePack(pack, mfrevlog.node(rev), p1node),
                       origtree)
 
         if ui.configbool('treemanifest', 'verifyautocreate', True):

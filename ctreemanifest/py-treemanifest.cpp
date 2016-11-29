@@ -958,31 +958,59 @@ static PyObject *treemanifest_walk(py_treemanifest *self, PyObject *args) {
 
 void writestore(Manifest *mainManifest, const std::vector<char*> &cmpNodes,
                 const std::vector<Manifest*> &cmpManifests,
-                PythonObj &pack, const ManifestFetcher &fetcher) {
+                PythonObj &pack, const ManifestFetcher &fetcher,
+                bool useDeltas) {
   NewTreeIterator iterator(mainManifest, cmpNodes, cmpManifests, fetcher);
+
+  PythonObj mdiff = PyImport_ImportModule("mercurial.mdiff");
 
   std::string *path = NULL;
   ManifestNode *result = NULL;
   ManifestNode *p1 = NULL;
   ManifestNode *p2 = NULL;
   std::string raw;
+  std::string p1raw;
   while (iterator.next(&path, &result, &p1, &p2)) {
-    // TODO: find an appropriate delta base and compute the delta
     result->manifest->serialize(raw);
+
+    char* p1node = (char*)NULLID;
+    if (!useDeltas || memcmp(p1->node, NULLID, BIN_NODE_SIZE) == 0) {
+      p1raw.erase();
+    } else {
+      p1->manifest->serialize(p1raw);
+      p1node = p1->node;
+
+      PythonObj deltaArgs = Py_BuildValue("(s#s#)",
+          p1raw.c_str(), (Py_ssize_t)p1raw.size(),
+          raw.c_str(), (Py_ssize_t)raw.size());
+      PythonObj delta = mdiff.callmethod("textdiff", deltaArgs);
+      char *deltabytes;
+      Py_ssize_t deltabytelen;
+      if (PyString_AsStringAndSize(delta, &deltabytes, &deltabytelen)) {
+        throw pyexception();
+      }
+      raw.assign(deltabytes, deltabytelen);
+    }
+
     PythonObj args = Py_BuildValue("(s#s#s#s#)",
                                    path->c_str(), (Py_ssize_t)path->size(),
                                    result->node, (Py_ssize_t)BIN_NODE_SIZE,
-                                   NULLID, (Py_ssize_t)BIN_NODE_SIZE,
+                                   p1node, (Py_ssize_t)BIN_NODE_SIZE,
                                    raw.c_str(), (Py_ssize_t)raw.size());
     pack.callmethod("add", args);
   }
 }
 
-static PyObject *treemanifest_write(py_treemanifest *self, PyObject *args) {
+static PyObject *treemanifest_write(py_treemanifest *self, PyObject *args,
+                                    PyObject *kwargs) {
   PyObject* packObj;
   py_treemanifest* p1tree = NULL;
+  PyObject* useDeltaObj = NULL;
 
-  if (!PyArg_ParseTuple(args, "O|O", &packObj, &p1tree)) {
+  static char const *kwlist[] = {"pack", "p1tree", "useDeltas", NULL};
+
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|OO", (char**)kwlist,
+                                   &packObj, &p1tree, &useDeltaObj)) {
     return NULL;
   }
 
@@ -990,6 +1018,8 @@ static PyObject *treemanifest_write(py_treemanifest *self, PyObject *args) {
   // destruct, so let's increment now.
   Py_INCREF(packObj);
   PythonObj pack = packObj;
+
+  bool useDeltas = useDeltaObj ? PyObject_IsTrue(useDeltaObj) : true;
 
   try {
     std::vector<char*> cmpNodes;
@@ -1000,7 +1030,7 @@ static PyObject *treemanifest_write(py_treemanifest *self, PyObject *args) {
       cmpManifests.push_back(p1tree->tm.getRootManifest());
     }
 
-    writestore(self->tm.getRootManifest(), cmpNodes, cmpManifests, pack, self->tm.fetcher);
+    writestore(self->tm.getRootManifest(), cmpNodes, cmpManifests, pack, self->tm.fetcher, useDeltas);
 
     char tempnode[20];
     self->tm.getRootManifest()->computeNode(p1tree ? binfromhex(p1tree->tm.root.node).c_str() : NULLID, NULLID, tempnode);
@@ -1054,7 +1084,7 @@ static PyMethodDef treemanifest_methods[] = {
     "returns the text form of the manifest"},
   {"walk", (PyCFunction)treemanifest_walk, METH_VARARGS,
     "returns a iterator for walking the manifest"},
-  {"write", (PyCFunction)treemanifest_write, METH_VARARGS,
+  {"write", (PyCFunction)treemanifest_write, METH_VARARGS|METH_KEYWORDS,
     "writes any pending tree changes to the given store"},
   {NULL, NULL}
 };

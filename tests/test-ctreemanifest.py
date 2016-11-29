@@ -252,7 +252,7 @@ class ctreemanifesttests(unittest.TestCase):
         b.set("abc/a", None, None)
         b.set("abc/a/foo", *hashflags())
 
-        bnode = b.write(store, a)
+        bnode = b.write(store, a, useDeltas=False)
 
         b2 = ctreemanifest.treemanifest(store, bnode)
         self.assertEquals(list(b.iterentries()), list(b2.iterentries()))

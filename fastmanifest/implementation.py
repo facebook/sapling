@@ -872,7 +872,7 @@ class manifestfactory(object):
 
                 pack = treemanifest.InterceptedMutablePack(
                         transaction.treepack,
-                        node)
+                        node, p1)
                 newtree.write(pack, tree)
 
                 treemanifestcache.getinstance(opener, self.ui)[node] = newtree
