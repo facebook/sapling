@@ -342,7 +342,7 @@ def blame(orig, ui, repo, *pats, **opts):
         """Fetch the Phab Diff Id from the node in mapping"""
         res = ' ' * 8
         try:
-            d = repo[mapping['node']].description()
+            d = repo[mapping['rev']].description()
             pat = 'https://.*/(D\d+)'
             m = re.search(pat, d)
             res = m.group(1) if m else ''
@@ -353,45 +353,57 @@ def blame(orig, ui, repo, *pats, **opts):
     if ui.plain():
         return orig(ui, repo, *pats, **opts)
 
+    # changeset is the new default
+    if all(not opts.get(f) for f in ['changeset', 'number', 'phabdiff', 'user',
+                                     'date', 'file']):
+        opts['changeset'] = True
+
     # We want to register template `blame_phabdiffid` function
     # just for this call so that we don't pollute the function
     # namespaces for other commandss. The reason is mainly
-    # because `blame_phabdiffid` relies on 'node' value being
+    # because `blame_phabdiffid` relies on 'rev' value being
     # present in the `mapping` argument passed to it (which
     # would not necessarily be the case for other non-log-like
     # commands.
     # tl/dr: this is a dirty hack and we want to have is as
     # restricted as possible
     templater.funcs['blame_phabdiffid'] = phabdiff
-    tmpl = "{short(node)}:"
-    if opts.get('number'):
-        # user expressed explicit desire to see revisions
-        # padding is really big here, but hopefully people
-        # don't want to see revisions too much
-        revtmpl = "{pad(rev, 9)}:"
+
+    try:
+        # without --phabdiff or with -T, use the default formatter
+        if not opts.get('phabdiff') or opts.get('template'):
+            return orig(ui, repo, *pats, **opts)
+
+        # to show the --phabdiff column, we want to modify "opmap" in
+        # commands.annotate - not doable directly so let's use templates to
+        # workaround.
+        ptmpl = ['']
+
+        def append(t, sep=' '):
+            if ptmpl[0]:
+                ptmpl[0] += sep
+            ptmpl[0] += t
+
+        if opts.get('user'):
+            append("{pad(user|emailuser, 13, ' ', True)}")
+        if opts.get('number'):
+            width = len(str(len(repo)))
+            append("{pad(rev, %d)}" % width)
         if opts.get('changeset'):
-            tmpl += revtmpl
-        else:
-            tmpl = revtmpl
-    if opts.get('phabdiff'):
-        del opts['phabdiff']
-        tmpl += "{pad(blame_phabdiffid(), 8)}:"
-    if opts.get('user'):
-        tmpl += "{pad(user|emailuser, 13, ' ', True)}:"
-    if opts.get('date'):
-        tmpl += "{pad(date|rfc822date, 12)}:"
-    if opts.get('file'):
-        tmpl += "{file}:"
-    if opts.get('line_number'):
-        tmpl += "{pad(line_number, 5, ' ', True)}:"
-    if not opts.get('template'):
-        opts['template'] = tmpl + "{line}"
-        # this forces original blame to provide necessary node hash
-        # that we can reuse to parse Phabricator Diff id
-        opts['changeset'] = True
-    result = orig(ui, repo, *pats, **opts)
-    del templater.funcs['blame_phabdiffid']
-    return result
+            append("{short(node)}")
+        if opts.get('phabdiff'):
+            opts['number'] = True # makes mapping['rev'] available in phabdiff
+            append("{pad(blame_phabdiffid(), 8)}")
+        if opts.get('date'):
+            append("{pad(date|rfc822date, 12)}")
+        if opts.get('file'):
+            append("{file}")
+        if opts.get('line_number'):
+            append("{pad(line_number, 5, ' ', True)}", sep=':')
+        opts['template'] = ptmpl[0] + ': {line}'
+        return orig(ui, repo, *pats, **opts)
+    finally:
+        del templater.funcs['blame_phabdiffid']
 
 @command('histgrep', commands.table['grep'][1], commands.table['grep'][2])
 def histgrep(ui, repo, pattern, *pats, **opts):
