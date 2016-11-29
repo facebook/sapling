@@ -53,7 +53,11 @@ def _getannotate(repo, proto, path, lastnode):
             try:
                 actx.annotate(master, master)
             except Exception:
-                pass
+                actx.rebuild() # delete files
+        finally:
+            # although the "with" context will also do a close/flush, we need
+            # to do it early so we can send the correct respond to client.
+            actx.close()
         # send back the full content of revmap and linelog, in the future we
         # may want to do some rsync-like fancy updating.
         # the lastnode check is not necessary if the client and the server
