@@ -333,7 +333,7 @@ ensure that we have a merge with unresolved conflicts
   +++ b/a/a
   @@ -1,2 +1,6 @@
    a
-  +<<<<<<< dest:   *  - shelve: pending changes temporary commit (glob)
+  +<<<<<<< dest:   * - shelve: pending changes temporary commit (glob)
    c
   +=======
   +a
@@ -760,7 +760,7 @@ unshelve and conflicts with tracked and untracked files
   M f
   ? f.orig
   $ cat f
-  <<<<<<< dest:   5f6b880e719b  - shelve: pending changes temporary commit
+  <<<<<<< dest:   5f6b880e719b - shelve: pending changes temporary commit
   g
   =======
   f
@@ -805,7 +805,7 @@ unshelve and conflicts with tracked and untracked files
   M f
   ? f.orig
   $ cat f
-  <<<<<<< dest:   *  - test: intermediate other change (glob)
+  <<<<<<< dest:   * - test: intermediate other change (glob)
   g
   =======
   f
