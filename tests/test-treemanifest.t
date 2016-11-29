@@ -74,13 +74,13 @@ Test that commit creates local trees
   $ hg commit -qAm 'modify subdir/z'
   $ ls -l .hg/store/packs/manifests
   * (glob)
-  * 1106 * b031abfd8f5fb59940caa0d7d66e9bd5e0efe085.dataidx (glob)
-  * 255 * b031abfd8f5fb59940caa0d7d66e9bd5e0efe085.datapack (glob)
-  $ hg debugdatapack .hg/store/packs/manifests/b031abfd8f5fb59940caa0d7d66e9bd5e0efe085
+  * 1106 * 5ae421f7ddd38490fe5bb8fb379861746c7377d4.dataidx (glob)
+  * 255 * 5ae421f7ddd38490fe5bb8fb379861746c7377d4.datapack (glob)
+  $ hg debugdatapack .hg/store/packs/manifests/5ae421f7ddd38490fe5bb8fb379861746c7377d4
   
   subdir/
   Node          Delta Base    Delta Length
-  07b387b95108  000000000000  43
+  ac728a786423  000000000000  43
   
   
   Node          Delta Base    Delta Length
