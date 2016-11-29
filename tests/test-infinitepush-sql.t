@@ -63,7 +63,7 @@ With no configuration it should abort
   $ hg st
   abort: please set infinitepush.sqlhost
   [255]
-  $ DBHOSTPORT=`$TESTDIR/getdb.sh`
+  $ DBHOSTPORT=`$TESTDIR/getdb.sh` || exit 1
   $ echo "sqlhost=$DBHOSTPORT" >> .hg/hgrc
   $ echo "reponame=babar" >> .hg/hgrc
   $ DBHOST=`echo $DBHOSTPORT | cut -d : -f 1`
