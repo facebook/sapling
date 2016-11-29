@@ -1383,6 +1383,7 @@ We expect that bare-shelve will not keep branch in current working directory.
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg branch
   default
+  $ cd ..
 
 When i shelve commit on newly created branch i expect
 that after unshelve newly created branch will be preserved.
@@ -1416,6 +1417,7 @@ that after unshelve newly created branch will be preserved.
   ? b
   $ hg branch
   test
+  $ cd ..
 
 When i shelve commit on newly created branch, make
 some changes, unshelve it and running into merge
@@ -1489,6 +1491,7 @@ test branch.
   A b
   $ hg branch
   default
+  $ cd ..
 
 When i unshelve resulting in merge conflicts and makes saved
 file shelvedstate looks like in previous versions in
@@ -1551,6 +1554,7 @@ in previous versions) and running unshelve --continue
   M a
   $ hg branch
   default
+  $ cd ..
 
 On non bare shelve the branch information shouldn't be restored
 
@@ -1624,7 +1628,7 @@ progress
   $ cd ..
 
 Unshelve respects --keep even if user intervention is needed
-  $ hg init unshelvekeep
+  $ hg init unshelvekeep && cd unshelvekeep
   $ echo 1 > file && hg ci -Am 1
   adding file
   $ echo 2 >> file
@@ -1637,7 +1641,7 @@ Unshelve respects --keep even if user intervention is needed
   $ hg unshelve --keep
   unshelving change 'default'
   rebasing shelved changes
-  rebasing 3:1d24e58054c8 "changes to: 1" (tip)
+  rebasing 2:3fbe6fbb0bef "changes to: 1" (tip)
   merging file
   warning: conflicts while merging file! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see 'hg resolve', then 'hg unshelve --continue')
@@ -1646,7 +1650,8 @@ Unshelve respects --keep even if user intervention is needed
   (no more unresolved files)
   continue: hg unshelve --continue
   $ hg unshelve --continue
-  rebasing 3:1d24e58054c8 "changes to: 1" (tip)
+  rebasing 2:3fbe6fbb0bef "changes to: 1" (tip)
   unshelve of 'default' complete
   $ hg shelve --list
-  default         (1s ago)    changes to: 1
+  default         (*s ago)    changes to: 1 (glob)
+  $ cd ..
