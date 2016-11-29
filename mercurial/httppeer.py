@@ -111,6 +111,7 @@ class httppeer(wireproto.wirepeer):
         self.ui.debug("sending %s command\n" % cmd)
         q = [('cmd', cmd)]
         headersize = 0
+        varyheaders = []
         # Important: don't use self.capable() here or else you end up
         # with infinite recursion when trying to look up capabilities
         # for the first time.
@@ -137,13 +138,11 @@ class httppeer(wireproto.wirepeer):
                 headerfmt = 'X-HgArg-%s'
                 contentlen = headersize - len(headerfmt % '000' + ': \r\n')
                 headernum = 0
-                varyheaders = []
                 for i in xrange(0, len(encargs), contentlen):
                     headernum += 1
                     header = headerfmt % str(headernum)
                     headers[header] = encargs[i:i + contentlen]
                     varyheaders.append(header)
-                headers['Vary'] = ','.join(varyheaders)
             else:
                 q += sorted(args.items())
         qs = '?%s' % urlreq.urlencode(q)
@@ -158,7 +157,10 @@ class httppeer(wireproto.wirepeer):
             headers['X-HgHttp2'] = '1'
         if data is not None and 'Content-Type' not in headers:
             headers['Content-Type'] = 'application/mercurial-0.1'
+
+        headers['Vary'] = ','.join(varyheaders)
         req = self.requestbuilder(cu, data, headers)
+
         if data is not None:
             self.ui.debug("sending %s bytes\n" % size)
             req.add_unredirected_header('Content-Length', '%d' % size)
