@@ -22,6 +22,14 @@ import os
 import traceback
 
 try:
+    # debug commands were moved to a separate module
+    # importing it ensures the commands are registered
+    from mercurial import debugcommands as hgdebugcommands
+    hgdebugcommands.command
+except ImportError:
+    pass
+
+try:
     from mercurial import streamclone
     streamclone._walkstreamfiles
     hasstreamclone = True
