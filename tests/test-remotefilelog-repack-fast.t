@@ -229,13 +229,13 @@
 # Test repacking datapack without history
   $ rm -rf $CACHEDIR/master/packs/*hist*
   $ hg repack
-  $ hg debugdatapack $TESTTMP/hgcache/master/packs/60ed975b3589fc9708a374155083fbdc7da397cb
+  $ hg debugdatapack $TESTTMP/hgcache/master/packs/1c6261363473d5595d26728c201e1395d39bf94e
   
   x
   Node          Delta Base    Delta Length
   1bb2e6237e03  000000000000  8
-  aee31534993a  000000000000  4
-  d4a3ed9310e5  000000000000  6
+  aee31534993a  d4a3ed9310e5  12
+  d4a3ed9310e5  1bb2e6237e03  12
   
   y
   Node          Delta Base    Delta Length
