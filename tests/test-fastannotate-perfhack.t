@@ -119,20 +119,6 @@ config option "fastannotate.mainbranch"
   2: 3
   4: 4
 
-config option "fastannotate.commands"
-
-  $ hg annotate -r 1 --debug a
-  0: 1
-  1: 2
-  $ hg annotate --config fastannotate.commands=annotate -r 1 --debug a
-  fastannotate: a: using fast path (resolved fctx: True)
-  0: 1
-  1: 2
-  $ hg fastannotate --config fastannotate.commands=annotate -h -q
-  hg: unknown command 'fastannotate'
-  (did you mean *) (glob)
-  [255]
-
 rename
 
   $ hg mv a b

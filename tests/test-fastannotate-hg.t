@@ -10,7 +10,8 @@
   > [extensions]
   > fastannotate=
   > [fastannotate]
-  > commands=annotate
+  > modes=fctx
+  > forcefollow=False
   > mainbranch=.
   > EOF
 
@@ -173,7 +174,7 @@ annotate after merge
 (note: the first one falls back to the vanilla annotate which does not use linelog)
 
   $ hg annotate -nf b --debug
-  fastannotate: b: cache broken and deleted
+  fastannotate: b: rebuilding broken cache
   fastannotate: b: 5 new changesets in the main branch
   0 a: a
   1 a: a
@@ -229,7 +230,7 @@ annotate after merge with -l
 (in this case, "b4", "b5" could be considered introduced by either rev 3, or rev 4.
  and that causes the rev number difference)
 
-  $ hg annotate -nlf b --config fastannotate.commands=
+  $ hg annotate -nlf b --config fastannotate.modes=
   0 a:1: a
   1 a:2: a
   1 a:3: a
@@ -342,7 +343,7 @@ annotate after rename merge with -l
  the "a" that rev 6 deletes could be either the first or the second "a" of those two "a"s added by rev 1.
  and that causes the line number difference)
 
-  $ hg annotate -nlf b --config fastannotate.commands=
+  $ hg annotate -nlf b --config fastannotate.modes=
   0 a:1: a
   6 b:2: z
   1 a:3: a

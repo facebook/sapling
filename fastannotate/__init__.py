@@ -12,6 +12,13 @@ The fastannotate extension provides a 'fastannotate' command that makes
 use of the linelog data structure as a cache layer and is expected to
 be faster than the vanilla 'annotate' if the cache is present.
 
+In most cases, fastannotate requires a setup that mainbranch is some pointer
+that always moves forward, to be most efficient.
+
+Using fastannotate together with linkrevcache would speed up building the
+annotate cache greatly. Run "debugbuildlinkrevcache" before
+"debugbuildannotatecache".
+
 ::
 
     [fastannotate]
@@ -21,17 +28,22 @@ be faster than the vanilla 'annotate' if the cache is present.
     # forward, usually it is "master" or "@".
     mainbranch = master
 
-    # add a "fastannotate" command, and replace the default "annotate" command
-    commands = fastannotate, annotate
+    # fastannotate supports different modes to expose its feature.
+    # a list of combination:
+    # - fastannotate: expose the feature via the "fastannotate" command which
+    #   deals with everything in a most efficient way, and provides extra
+    #   features like --deleted etc.
+    # - fctx: replace fctx.annotate implementation. note:
+    #     a. it is less efficient than the "fastannotate" command
+    #     b. it will make it practically impossible to access the old (disk
+    #        side-effect free) annotate implementation
+    #     c. it implies "hgweb".
+    # - hgweb: replace hgweb's annotate implementation. conflict with "fctx".
+    # (default: fastannotate)
+    modes = fastannotate
 
     # default format when no format flags are used (default: number)
     defaultformat = changeset, user, date
-
-    # replace hgweb's annotate implementation (default: False)
-    # note: mainbranch should be set to a forward-only name, otherwise the
-    # linelog cache may be rebuilt frequently, which leads to errors and
-    # poor performance
-    hgweb = True
 
     # serve the annotate cache via wire protocol (default: False)
     # tip: the .hg/fastannotate directory is portable - can be rsynced
@@ -51,7 +63,15 @@ be faster than the vanilla 'annotate' if the cache is present.
     # to False. (default: True if flock is supported, False otherwise)
     useflock = True
 
-    # use unfiltered repo for better performance
+    # for "fctx" mode, always follow renames regardless of command line option.
+    # this is a BC with the original command but will reduced the space needed
+    # for annotate cache, and is useful for client-server setup since the
+    # server will only provide annotate cache with default options (i.e. with
+    # follow). do not affect "fastannotate" mode. (default: True)
+    forcefollow = True
+
+    # for "fastannotate" mode, use unfiltered repo for better performance. do
+    # not affect "fctx" mode.
     unfilteredrepo = True
 
     # sacrifice correctness in some corner cases for performance. it does not
@@ -88,19 +108,20 @@ def _flockavailable():
         return True
 
 def uisetup(ui):
-    cmdnames = ui.configlist('fastannotate', 'commands', ['fastannotate'])
-    for name in set(cmdnames):
+    modes = set(ui.configlist('fastannotate', 'modes', ['fastannotate']))
+    if 'fctx' in modes:
+        modes.discard('hgweb')
+    for name in modes:
         if name == 'fastannotate':
             commands.registercommand()
-        elif name == 'annotate':
-            commands.replacedefault()
+        elif name == 'hgweb':
+            from . import support
+            support.replacehgwebannotate()
+        elif name == 'fctx':
+            from . import support
+            support.replacefctxannotate()
         else:
-            raise hgerror.Abort(_('%s: invalid fastannotate.commands option')
-                                % name)
-    if ui.configbool('fastannotate', 'hgweb'):
-        # local import to avoid overhead of loading hgweb for non-hgweb usages
-        from . import hgwebsupport
-        hgwebsupport.replacehgwebannotate()
+            raise hgerror.Abort(_('fastannotate: invalid mode: %s') % name)
 
     if ui.configbool('fastannotate', 'server'):
         protocol.serveruisetup(ui)
