@@ -784,7 +784,7 @@ Test revert --all to parent content
 
 (setup from reference repo)
 
-  $ cp -r revert-ref revert-parent-all
+  $ cp -R revert-ref revert-parent-all
   $ cd revert-parent-all
 
 check revert output
@@ -841,7 +841,7 @@ Test revert --all to "base" content
 
 (setup from reference repo)
 
-  $ cp -r revert-ref revert-base-all
+  $ cp -R revert-ref revert-base-all
   $ cd revert-base-all
 
 check revert output
@@ -896,7 +896,7 @@ Test revert to parent content with explicit file name
 
 (setup from reference repo)
 
-  $ cp -r revert-ref revert-parent-explicit
+  $ cp -R revert-ref revert-parent-explicit
   $ cd revert-parent-explicit
 
 revert all files individually and check the output
@@ -989,7 +989,7 @@ Test revert to "base" content with explicit file name
 
 (setup from reference repo)
 
-  $ cp -r revert-ref revert-base-explicit
+  $ cp -R revert-ref revert-base-explicit
   $ cd revert-base-explicit
 
 revert all files individually and check the output

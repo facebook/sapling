@@ -23,7 +23,7 @@ Check that obsolete properly strip heads
   $ mkcommit base
   $ hg phase --public .
   $ cd ..
-  $ cp -r remote base
+  $ cp -R remote base
   $ hg clone remote local
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -54,7 +54,7 @@ setup
   |/
   o  b4952fcf48cf (public) add base
   
-  $ cp -r ../remote ../backup1
+  $ cp -R ../remote ../backup1
 
 old exists remotely as draft. It is obsoleted by new that we now push.
 Push should not warn about creating new head
@@ -73,7 +73,7 @@ old head is now public (public local version)
 setup
 
   $ rm -fr ../remote
-  $ cp -r ../backup1 ../remote
+  $ cp -R ../backup1 ../remote
   $ hg -R ../remote phase --public c70b08862e08
   $ hg pull -v
   pulling from $TESTTMP/remote (glob)
@@ -104,7 +104,7 @@ TODO: Not implemented yet.
 # setup
 #
 #   $ rm -fr ../remote
-#   $ cp -r ../backup1 ../remote
+#   $ cp -R ../backup1 ../remote
 #   $ hg -R ../remote phase --public c70b08862e08
 #   $ hg phase --draft --force c70b08862e08
 #   $ hg log -G --hidden
@@ -131,7 +131,7 @@ old head is obsolete but replacement is not pushed
 setup
 
   $ rm -fr ../remote
-  $ cp -r ../backup1 ../remote
+  $ cp -R ../backup1 ../remote
   $ hg phase --draft --force '(0::) - 0'
   $ hg up -q '.^'
   $ mkcommit other
@@ -206,7 +206,7 @@ setup. (The obsolete marker is known locally only
   |/
   @  b4952fcf48cf (public) add base
   
-  $ cp -r ../remote ../backup2
+  $ cp -R ../remote ../backup2
 
 Push should not warn about adding new heads. We create one, but we'll delete
 one anyway.
@@ -226,7 +226,7 @@ Remote head is unknown but obsoleted by a local changeset
 setup
 
   $ rm -fr ../remote
-  $ cp -r ../backup1 ../remote
+  $ cp -R ../backup1 ../remote
   $ cd ..
   $ rm -rf local
   $ hg clone remote local -r 0

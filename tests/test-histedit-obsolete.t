@@ -339,7 +339,7 @@ phases.new-commit option is.
 
 New-commit as draft (default)
 
-  $ cp -r base simple-draft
+  $ cp -R base simple-draft
   $ cd simple-draft
   $ hg histedit -r 'b449568bf7fc' --commands - << EOF
   > edit b449568bf7fc 11 f
@@ -378,7 +378,7 @@ New-commit as draft (default)
 
 New-commit as secret (config)
 
-  $ cp -r base simple-secret
+  $ cp -R base simple-secret
   $ cd simple-secret
   $ cat >> .hg/hgrc << EOF
   > [phases]
@@ -425,7 +425,7 @@ Changeset reordering
 If a secret changeset is put before a draft one, all descendant should be secret.
 It seems more important to present the secret phase.
 
-  $ cp -r base reorder
+  $ cp -R base reorder
   $ cd reorder
   $ hg histedit -r 'b449568bf7fc' --commands - << EOF
   > pick b449568bf7fc 11 f
@@ -462,7 +462,7 @@ better safe than sorry). Folding between same phase changeset still works
 
 Note that there is a few reordering in this series for more extensive test
 
-  $ cp -r base folding
+  $ cp -R base folding
   $ cd folding
   $ cat >> .hg/hgrc << EOF
   > [phases]

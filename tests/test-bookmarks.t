@@ -572,8 +572,8 @@ pull --update works the same as pull && update
 
   $ hg bookmark -r3 Y
   moving bookmark 'Y' forward from db815d6d32e6
-  $ cp -r  ../cloned-bookmarks-update ../cloned-bookmarks-manual-update
-  $ cp -r  ../cloned-bookmarks-update ../cloned-bookmarks-manual-update-with-divergence
+  $ cp -R ../cloned-bookmarks-update ../cloned-bookmarks-manual-update
+  $ cp -R ../cloned-bookmarks-update ../cloned-bookmarks-manual-update-with-divergence
 
 (manual version)
 

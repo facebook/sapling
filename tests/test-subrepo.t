@@ -1518,8 +1518,8 @@ Forgetting an explicit path in a subrepo untracks the file
 Courtesy phases synchronisation to publishing server does not block the push
 (issue3781)
 
-  $ cp -r main issue3781
-  $ cp -r main issue3781-dest
+  $ cp -R main issue3781
+  $ cp -R main issue3781-dest
   $ cd issue3781-dest/s
   $ hg phase tip # show we have draft changeset
   5: draft
