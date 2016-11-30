@@ -33,6 +33,7 @@ Trigger branchcache creation:
   branch2-served
   checkisexec
   checklink
+  checklink-target
   checknoexec
   rbc-names-v1
   rbc-revs-v1
@@ -50,6 +51,7 @@ Ensure branchcache got copied over:
   branch2-served
   checkisexec
   checklink
+  checklink-target
 
   $ cat a
   a

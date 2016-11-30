@@ -231,10 +231,18 @@ def checklink(path):
             cachedir = None
         name = tempfile.mktemp(dir=checkdir, prefix='checklink-')
         try:
-            fd = tempfile.NamedTemporaryFile(dir=checkdir,
-                                             prefix='hg-checklink-')
+            fd = None
+            if cachedir is None:
+                fd = tempfile.NamedTemporaryFile(dir=checkdir,
+                                                 prefix='hg-checklink-')
+                target = os.path.basename(fd.name)
+            else:
+                # create a fixed file to link to; doesn't matter if it
+                # already exists.
+                target = 'checklink-target'
+                open(os.path.join(cachedir, target), 'w').close()
             try:
-                os.symlink(os.path.basename(fd.name), name)
+                os.symlink(target, name)
                 if cachedir is None:
                     os.unlink(name)
                 else:
@@ -249,7 +257,8 @@ def checklink(path):
                     continue
                 raise
             finally:
-                fd.close()
+                if fd is not None:
+                    fd.close()
         except AttributeError:
             return False
         except OSError as inst:
