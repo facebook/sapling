@@ -95,18 +95,3 @@ New errors are not allowed. Warnings are strongly discouraged.
   undocumented: statprof.mechanism (str) ['thread']
   undocumented: treemanifest.autocreatetrees (bool)
   undocumented: treemanifest.verifyautocreate (bool) [True]
-  undocumented: tweakdefaults.allowbranch (bool) [True]
-  undocumented: tweakdefaults.allowfullrepohistgrep (bool)
-  undocumented: tweakdefaults.allowmerge (bool) [True]
-  undocumented: tweakdefaults.allowrollback (bool) [True]
-  undocumented: tweakdefaults.allowtags (bool) [True]
-  undocumented: tweakdefaults.amendkeepdate (bool)
-  undocumented: tweakdefaults.bmnodestmsg (str) [<variable>]
-  undocumented: tweakdefaults.branchesmessage (str)
-  undocumented: tweakdefaults.defaultdest (str)
-  undocumented: tweakdefaults.graftkeepdate (bool)
-  undocumented: tweakdefaults.nodestmsg (str) [<variable>]
-  undocumented: tweakdefaults.nooprebase (bool) [True]
-  undocumented: tweakdefaults.rebasekeepdate (bool)
-  undocumented: tweakdefaults.rollbackhint (str)
-  undocumented: tweakdefaults.tagsmessage (str)

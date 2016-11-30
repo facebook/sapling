@@ -12,8 +12,8 @@ scratchbookmarks() {
 
 setupcommon() {
   extpath=`dirname $TESTDIR`
-  cp -r $extpath/infinitepush $TESTTMP
-  cp -r $extpath/infinitepush $TESTTMP
+  cp -R $extpath/infinitepush $TESTTMP
+  cp -R $extpath/infinitepush $TESTTMP
 
   cat >> $HGRCPATH << EOF
 [extensions]

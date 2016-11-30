@@ -17,16 +17,58 @@ This extension changes defaults to be more user friendly.
   hg grep       greps the working directory instead of history
   hg histgrep   renamed from grep
 
+Config::
+
+    [tweakdefaults]
+    # default destination used by pull --rebase / --update
+    defaultdest = ''
+
+    # whether to keep the commit date when doing amend / graft / rebase
+    amendkeepdate = False
+    graftkeepdate = False
+    rebasekeepdate = False
+
+    # whether to allow or disable some commands
+    allowbranch = True
+    allowfullrepohistgrep = False
+    allowmerge = True
+    allowrollback = True
+    allowtags = True
+
+    # change rebase exit from 1 to 0 if nothing is rebased
+    nooprebase = True
+
+    # educational messages
+    bmnodesthint = ''
+    bmnodestmsg = ''
+    branchmessage = ''
+    branchesmessage = ''
+    mergemessage = ''
+    nodesthint = ''
+    nodestmsg = ''
+    rollbackhint = ''
+    tagsmessage = ''
 """
 
-from mercurial import util, cmdutil, commands, extensions, hg, scmutil
-from mercurial import bookmarks, obsolete, templater
-from mercurial.extensions import wrapcommand, wrapfunction
-from mercurial import extensions
-from mercurial import error
 from mercurial.i18n import _
+from mercurial import (
+    bookmarks,
+    cmdutil,
+    commands,
+    error,
+    extensions,
+    hg,
+    obsolete,
+    scmutil,
+    templater,
+    util,
+)
+
 from hgext import rebase
 import inspect, os, re, shlex, stat, subprocess, time
+
+wrapcommand = extensions.wrapcommand
+wrapfunction = extensions.wrapfunction
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
@@ -236,7 +278,6 @@ def pull(orig, ui, repo, *args, **opts):
         ret = ret or commands.update(ui, repo, node=dest, check=True)
 
     return ret
-
 
 def tweakbehaviors(ui):
     """Tweak Behaviors

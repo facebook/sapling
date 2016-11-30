@@ -1,6 +1,6 @@
   $ . $TESTDIR/require-ext.sh remotenames
   $ extpath=`dirname $TESTDIR`
-  $ cp -r $extpath/infinitepush $TESTTMP # use $TESTTMP substitution in message
+  $ cp -R $extpath/infinitepush $TESTTMP # use $TESTTMP substitution in message
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > infinitepush=$TESTTMP/infinitepush

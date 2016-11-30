@@ -1,7 +1,7 @@
   $ . "$TESTDIR/library.sh"
 
   $ extpath=`dirname $TESTDIR`
-  $ cp -r $extpath/infinitepush $TESTTMP
+  $ cp -R $extpath/infinitepush $TESTTMP
   $ mkcommit() {
   >    echo "$1" > "$1"
   >    hg add "$1"

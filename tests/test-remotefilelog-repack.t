@@ -182,7 +182,7 @@
   x
 
 # Test copy trace across rename and back
-  $ cp -r $TESTTMP/hgcache/master/packs $TESTTMP/backuppacks
+  $ cp -R $TESTTMP/hgcache/master/packs $TESTTMP/backuppacks
   $ cd ../master
   $ hg mv y x
   $ hg commit -m 'move y back to x'
@@ -223,7 +223,7 @@
   saved backup bundle to $TESTTMP/master/.hg/strip-backup/609547eda446-1aa878d4-backup.hg (glob)
 
   $ rm -rf $TESTTMP/hgcache/master/packs
-  $ cp -r $TESTTMP/backuppacks $TESTTMP/hgcache/master/packs
+  $ cp -R $TESTTMP/backuppacks $TESTTMP/hgcache/master/packs
 
 # Test repacking datapack without history
   $ rm -rf $CACHEDIR/master/packs/*hist*
