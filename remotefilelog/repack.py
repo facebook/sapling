@@ -23,7 +23,12 @@ def fullrepack(repo):
     historysource = metadatastore.unionmetadatastore(*repo.sharedhistorystores,
                                                      allowincomplete=True)
 
-    _runrepack(repo, datasource, historysource)
+    _runrepack(repo, datasource, historysource, constants.FILEPACK_CATEGORY)
+
+    if util.safehasattr(repo.svfs, 'manifestdatastore'):
+        _runrepack(repo, repo.svfs.manifestdatastore,
+                   metadatastore.unionmetadatastore(),
+                   constants.TREEPACK_CATEGORY)
 
 def incrementalrepack(repo):
     """This repacks the repo by looking at the distribution of pack files in the
@@ -51,7 +56,7 @@ def incrementalrepack(repo):
     historysource = metadatastore.unionmetadatastore(*historypacks,
                                                      allowincomplete=True)
 
-    _runrepack(repo, datasource, historysource)
+    _runrepack(repo, datasource, historysource, constants.FILEPACK_CATEGORY)
 
 def _computeincrementaldatapack(ui, files):
     """Given a set of pack files and a set of generation size limits, this
@@ -148,11 +153,11 @@ def _computeincrementalpack(ui, files, limits, packsuffix, indexsuffix,
 
     return []
 
-def _runrepack(repo, data, history):
-    packpath = shallowutil.getcachepackpath(repo, constants.FILEPACK_CATEGORY)
+def _runrepack(repo, data, history, category):
+    packpath = shallowutil.getcachepackpath(repo, category)
     shallowutil.mkstickygroupdir(repo.ui, packpath)
 
-    packer = repacker(repo, data, history)
+    packer = repacker(repo, data, history, category)
 
     opener = scmutil.vfs(packpath)
     # Packs should be write-once files, so set them to read-only.
@@ -169,10 +174,11 @@ class repacker(object):
     """Class for orchestrating the repack of data and history information into a
     new format.
     """
-    def __init__(self, repo, data, history):
+    def __init__(self, repo, data, history, category):
         self.repo = repo
         self.data = data
         self.history = history
+        self.unit = constants.getunits(category)
 
     def run(self, targetdata, targethistory):
         ledger = repackledger()
@@ -277,7 +283,7 @@ class repacker(object):
                 entries[node].datarepacked = True
 
             count += 1
-            ui.progress(_("repacking data"), count, unit="files",
+            ui.progress(_("repacking data"), count, unit=self.unit,
                         total=len(byfile))
 
         ui.progress(_("repacking data"), None)
@@ -335,7 +341,7 @@ class repacker(object):
                     entries[node].historyrepacked = True
 
             count += 1
-            ui.progress(_("repacking history"), count, unit="files",
+            ui.progress(_("repacking history"), count, unit=self.unit,
                         total=len(byfile))
 
         ui.progress(_("repacking history"), None)
