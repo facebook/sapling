@@ -656,7 +656,14 @@ def backup(ui, repo, dest=None, **opts):
         return 0
     revs = list(repo.revs('heads(draft() & %d:%d)', backuptip, currenttiprev))
     pushcmd = commands.table['^push'][0]
-    result = pushcmd(ui, repo, dest=dest, rev=revs, bundle_store=True)
+    pushopts = dict(opt[1:3] for opt in commands.table['^push'][1])
+    pushopts['rev'] = revs
+    pushopts['dest'] = dest
+    pushopts['bundle_store'] = True
+    if 'remotenames' in extensions._extensions:
+        # Remotenames doesn't allow to push anon heads. We need to override it
+        pushopts['allow_anon'] = True
+    result = pushcmd(ui, repo, **pushopts)
     with repo.svfs(backuptipfile, mode="w", atomictemp=True) as f:
         f.write(str(currenttiprev))
     return result
