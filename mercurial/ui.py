@@ -535,7 +535,7 @@ class ui(object):
         result = self.config(section, name, untrusted=untrusted)
         if result is None:
             result = default or []
-        if isinstance(result, basestring):
+        if isinstance(result, bytes):
             result = _configlist(result.lstrip(' ,\n'))
             if result is None:
                 result = default or []

@@ -9,6 +9,6 @@ The full traceback is hidden to have a stable output.
   >   $PYTHON3 `which hg` $cmd 2>&1 2>&1 | tail -1
   > done
   version
-  NameError: name 'basestring' is not defined
+  TypeError: Can't convert 'bytes' object to str implicitly
   debuginstall
-  NameError: name 'basestring' is not defined
+  TypeError: Can't convert 'bytes' object to str implicitly
