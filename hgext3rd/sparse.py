@@ -171,7 +171,7 @@ def _setupcommit(ui):
         """
         orig(self, node)
         repo = self._repo
-        if util.safehasattr(repo, 'sparsematch'):
+        if util.safehasattr(repo, 'getsparsepatterns'):
             ctx = repo[node]
             _, _, profiles = repo.getsparsepatterns(ctx.rev())
             if set(profiles) & set(ctx.files()):
