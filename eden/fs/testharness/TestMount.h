@@ -22,7 +22,7 @@
 
 namespace facebook {
 namespace eden {
-class TreeEntryFileInode;
+class FileInode;
 class TreeInode;
 
 struct TestMountFile {
@@ -75,8 +75,7 @@ class TestMount {
   void rmdir(folly::StringPiece path);
 
   std::shared_ptr<TreeInode> getDirInodeForPath(folly::StringPiece path) const;
-  std::shared_ptr<TreeEntryFileInode> getFileInodeForPath(
-      folly::StringPiece path) const;
+  std::shared_ptr<FileInode> getFileInodeForPath(folly::StringPiece path) const;
 
   /** Convenience method for getting the Tree for the root of the mount. */
   std::unique_ptr<Tree> getRootTree() const;

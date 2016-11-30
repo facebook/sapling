@@ -16,15 +16,15 @@
 namespace facebook {
 namespace eden {
 
-class TreeEntryFileHandle;
+class FileHandle;
 class Blob;
 class FileData;
 class Hash;
 
-class TreeEntryFileInode : public fusell::FileInode {
+class FileInode : public fusell::FileInode {
  public:
   /** Construct an inode using an overlay entry */
-  TreeEntryFileInode(
+  FileInode(
       fuse_ino_t ino,
       std::shared_ptr<TreeInode> parentInode_,
       TreeInode::Entry* entry);
@@ -33,7 +33,7 @@ class TreeEntryFileInode : public fusell::FileInode {
    * file must be moved in and must have been created by a call to
    * Overlay::openFile.  This constructor is used in the DirInode::create
    * case and is required to implement O_EXCL correctly. */
-  TreeEntryFileInode(
+  FileInode(
       fuse_ino_t ino,
       std::shared_ptr<TreeInode> parentInode,
       TreeInode::Entry* entry,
@@ -82,7 +82,7 @@ class TreeEntryFileInode : public fusell::FileInode {
   // that will acquire this mutex.
   std::mutex mutex_;
 
-  friend class TreeEntryFileHandle;
+  friend class ::facebook::eden::FileHandle;
 };
 }
 }

@@ -29,9 +29,9 @@ class Hash;
  * The data may be lazily loaded from the EdenMount's ObjectStore only when it
  * is needed.
  *
- * FileData objects are tracked via shared_ptr.  TreeEntryFileInode and
- * TreeEntryFileHandle objects maintain references to them.  FileData objects
- * should not outlive the EdenMount to which they belong.
+ * FileData objects are tracked via shared_ptr.  FileInode and FileHandle
+ * objects maintain references to them.  FileData objects should not outlive
+ * the EdenMount to which they belong.
  */
 class FileData {
  public:

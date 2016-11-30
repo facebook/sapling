@@ -20,8 +20,8 @@
 #include "eden/fs/inodes/Dirstate.h"
 #include "eden/fs/inodes/DirstatePersistence.h"
 #include "eden/fs/inodes/EdenMount.h"
+#include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/Overlay.h"
-#include "eden/fs/inodes/TreeEntryFileInode.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/service/EdenMountHandler.h"
@@ -270,7 +270,7 @@ SHA1Result EdenServiceHandler::getSHA1ForPath(
     if (it == relativePath.paths().end()) {
       // inodeNumber must correspond to the last path component, which we expect
       // to correspond to a file.
-      auto fileInode = std::dynamic_pointer_cast<TreeEntryFileInode>(
+      auto fileInode = std::dynamic_pointer_cast<FileInode>(
           inodeDispatcher->getFileInode(inodeNumber));
 
       if (!fileInode) {

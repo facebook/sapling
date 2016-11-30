@@ -12,7 +12,7 @@
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
 #include "eden/fs/inodes/EdenMounts.h"
-#include "eden/fs/inodes/TreeEntryFileInode.h"
+#include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/store/ObjectStore.h"
@@ -291,8 +291,7 @@ bool hasMatchingAttributes(
     // TreeInode::Entry, so we must compare with the contents in the overlay.
     auto overlayInode =
         parent.lookupChildByNameLocked(&dir, treeEntry->getName());
-    auto fileInode =
-        std::dynamic_pointer_cast<TreeEntryFileInode>(overlayInode);
+    auto fileInode = std::dynamic_pointer_cast<FileInode>(overlayInode);
     auto overlaySHA1 = fileInode->getSHA1().get();
     auto blobSHA1 = objectStore->getSha1ForBlob(treeEntry->getHash());
     return overlaySHA1 == *blobSHA1;

@@ -10,8 +10,8 @@
 #include "TreeInode.h"
 
 #include "EdenMount.h"
+#include "FileInode.h"
 #include "Overlay.h"
-#include "TreeEntryFileInode.h"
 #include "TreeInodeDirHandle.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileData.h"
@@ -106,7 +106,7 @@ std::shared_ptr<fusell::InodeBase> TreeInode::getChildByNameLocked(
         node->getNodeId());
   }
 
-  return std::make_shared<TreeEntryFileInode>(
+  return std::make_shared<FileInode>(
       node->getNodeId(),
       std::static_pointer_cast<TreeInode>(shared_from_this()),
       entry);
@@ -223,7 +223,7 @@ TreeInode::create(PathComponentPiece name, mode_t mode, int flags) {
   // Compute the effective name of the node they want to create.
   auto targetName = myname + name;
   std::shared_ptr<fusell::FileHandle> handle;
-  std::shared_ptr<TreeEntryFileInode> inode;
+  std::shared_ptr<FileInode> inode;
   std::shared_ptr<fusell::InodeNameManager::Node> node;
 
   materializeDirAndParents();
@@ -252,8 +252,8 @@ TreeInode::create(PathComponentPiece name, mode_t mode, int flags) {
     // Generate an inode number for this new entry.
     node = this->getNameMgr()->getNodeByName(this->getNodeId(), name);
 
-    // build a corresponding TreeEntryFileInode
-    inode = std::make_shared<TreeEntryFileInode>(
+    // build a corresponding FileInode
+    inode = std::make_shared<FileInode>(
         node->getNodeId(),
         std::static_pointer_cast<TreeInode>(this->shared_from_this()),
         entry.get(),

@@ -11,7 +11,7 @@
 
 #include <folly/Range.h>
 #include "eden/fs/inodes/EdenMount.h"
-#include "eden/fs/inodes/TreeEntryFileInode.h"
+#include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fuse/MountPoint.h"
@@ -90,8 +90,7 @@ void getMaterializedEntriesRecursive(
             << " materialized is true, but the contained dir is !materialized";
         getMaterializedEntriesRecursive(out, childPath, childDir.get());
       } else {
-        auto fileInode =
-            std::dynamic_pointer_cast<TreeEntryFileInode>(childInode);
+        auto fileInode = std::dynamic_pointer_cast<FileInode>(childInode);
         auto attr = fileInode->getattr().get();
 
         FileInformation fileInfo;

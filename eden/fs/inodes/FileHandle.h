@@ -15,16 +15,16 @@ namespace eden {
 
 class Blob;
 class FileData;
+class FileInode;
 class LocalStore;
-class TreeEntryFileInode;
 
-class TreeEntryFileHandle : public fusell::FileHandle {
+class FileHandle : public fusell::FileHandle {
  public:
-  explicit TreeEntryFileHandle(
-      std::shared_ptr<TreeEntryFileInode> inode,
+  explicit FileHandle(
+      std::shared_ptr<FileInode> inode,
       std::shared_ptr<FileData> data,
       int flags);
-  ~TreeEntryFileHandle();
+  ~FileHandle();
 
   folly::Future<fusell::Dispatcher::Attr> getattr() override;
   folly::Future<fusell::Dispatcher::Attr> setattr(
@@ -40,7 +40,7 @@ class TreeEntryFileHandle : public fusell::FileHandle {
   folly::Future<folly::Unit> fsync(bool datasync) override;
 
  private:
-  std::shared_ptr<TreeEntryFileInode> inode_;
+  std::shared_ptr<FileInode> inode_;
   std::shared_ptr<FileData> data_;
   int openFlags_;
 };

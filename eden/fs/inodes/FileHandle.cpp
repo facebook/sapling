@@ -7,24 +7,24 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
-#include "TreeEntryFileHandle.h"
+#include "FileHandle.h"
 
 #include "EdenMount.h"
 #include "FileData.h"
-#include "TreeEntryFileInode.h"
+#include "FileInode.h"
 #include "eden/fs/store/LocalStore.h"
 
 
 namespace facebook {
 namespace eden {
 
-TreeEntryFileHandle::TreeEntryFileHandle(
-    std::shared_ptr<TreeEntryFileInode> inode,
+FileHandle::FileHandle(
+    std::shared_ptr<FileInode> inode,
     std::shared_ptr<FileData> data,
     int flags)
-    : inode_(inode), data_(data), openFlags_(flags) {}
+    : inode_(std::move(inode)), data_(std::move(data)), openFlags_(flags) {}
 
-TreeEntryFileHandle::~TreeEntryFileHandle() {
+FileHandle::~FileHandle() {
   // Must reset the data point prior to calling fileHandleDidClose,
   // otherwise it will see a use count that is too high and won't
   // reclaim resources soon enough.
@@ -32,33 +32,29 @@ TreeEntryFileHandle::~TreeEntryFileHandle() {
   inode_->fileHandleDidClose();
 }
 
-folly::Future<fusell::Dispatcher::Attr> TreeEntryFileHandle::getattr() {
+folly::Future<fusell::Dispatcher::Attr> FileHandle::getattr() {
   return inode_->getattr();
 }
 
-folly::Future<fusell::Dispatcher::Attr> TreeEntryFileHandle::setattr(
+folly::Future<fusell::Dispatcher::Attr> FileHandle::setattr(
     const struct stat& attr,
     int to_set) {
   return inode_->setattr(attr, to_set);
 }
 
-bool TreeEntryFileHandle::preserveCache() const {
+bool FileHandle::preserveCache() const {
   return true;
 }
 
-bool TreeEntryFileHandle::isSeekable() const {
+bool FileHandle::isSeekable() const {
   return true;
 }
 
-folly::Future<fusell::BufVec> TreeEntryFileHandle::read(
-    size_t size,
-    off_t off) {
+folly::Future<fusell::BufVec> FileHandle::read(size_t size, off_t off) {
   return data_->read(size, off);
 }
 
-folly::Future<size_t> TreeEntryFileHandle::write(
-    fusell::BufVec&& buf,
-    off_t off) {
+folly::Future<size_t> FileHandle::write(fusell::BufVec&& buf, off_t off) {
   SCOPE_SUCCESS {
     auto myname = inode_->parentInode_->getNameMgr()->resolvePathToNode(
         inode_->getNodeId());
@@ -68,9 +64,7 @@ folly::Future<size_t> TreeEntryFileHandle::write(
   return data_->write(std::move(buf), off);
 }
 
-folly::Future<size_t> TreeEntryFileHandle::write(
-    folly::StringPiece str,
-    off_t off) {
+folly::Future<size_t> FileHandle::write(folly::StringPiece str, off_t off) {
   SCOPE_SUCCESS {
     auto myname = inode_->parentInode_->getNameMgr()->resolvePathToNode(
         inode_->getNodeId());
@@ -80,12 +74,12 @@ folly::Future<size_t> TreeEntryFileHandle::write(
   return data_->write(str, off);
 }
 
-folly::Future<folly::Unit> TreeEntryFileHandle::flush(uint64_t lock_owner) {
+folly::Future<folly::Unit> FileHandle::flush(uint64_t lock_owner) {
   data_->flush(lock_owner);
   return folly::Unit{};
 }
 
-folly::Future<folly::Unit> TreeEntryFileHandle::fsync(bool datasync) {
+folly::Future<folly::Unit> FileHandle::fsync(bool datasync) {
   data_->fsync(datasync);
   return folly::Unit{};
 }

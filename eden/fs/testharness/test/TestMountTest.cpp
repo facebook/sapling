@@ -8,7 +8,7 @@
  *
  */
 #include <folly/Range.h>
-#include "eden/fs/inodes/TreeEntryFileInode.h"
+#include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/testharness/TestMount.h"
@@ -40,7 +40,7 @@ TEST(TestMount, createSimpleTestMount) {
 
   auto fileTreeEntry = testMount->getFileInodeForPath("path1");
   EXPECT_NE(nullptr, fileTreeEntry.get())
-      << "Should be able to find TreeEntryFileInode for path1";
+      << "Should be able to find FileInode for path1";
 
   auto entry = fileTreeEntry->getEntry();
   auto expectedSha1 = Hash::sha1(ByteRange(StringPiece("first!")));

@@ -14,8 +14,8 @@
 #include "eden/fs/config/ClientConfig.h"
 #include "eden/fs/inodes/Dirstate.h"
 #include "eden/fs/inodes/FileData.h"
+#include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/Overlay.h"
-#include "eden/fs/inodes/TreeEntryFileInode.h"
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
@@ -258,16 +258,16 @@ std::shared_ptr<TreeInode> TestMount::getDirInodeForPath(
   }
 }
 
-std::shared_ptr<TreeEntryFileInode> TestMount::getFileInodeForPath(
+std::shared_ptr<FileInode> TestMount::getFileInodeForPath(
     folly::StringPiece path) const {
   auto file =
       edenMount_->getMountPoint()->getInodeBaseForPath(RelativePathPiece{path});
-  auto fileTreeEntry = std::dynamic_pointer_cast<TreeEntryFileInode>(file);
+  auto fileTreeEntry = std::dynamic_pointer_cast<FileInode>(file);
   if (fileTreeEntry != nullptr) {
     return fileTreeEntry;
   } else {
     throw std::runtime_error(
-        folly::to<std::string>("Could not cast to TreeEntryFileInode: ", path));
+        folly::to<std::string>("Could not cast to FileInode: ", path));
   }
 }
 

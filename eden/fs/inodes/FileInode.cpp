@@ -7,12 +7,12 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
-#include "TreeEntryFileInode.h"
+#include "FileInode.h"
 
 #include "EdenMount.h"
 #include "FileData.h"
+#include "FileHandle.h"
 #include "Overlay.h"
-#include "TreeEntryFileHandle.h"
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/store/ObjectStore.h"
@@ -27,7 +27,7 @@ using std::vector;
 namespace facebook {
 namespace eden {
 
-TreeEntryFileInode::TreeEntryFileInode(
+FileInode::FileInode(
     fuse_ino_t ino,
     std::shared_ptr<TreeInode> parentInode,
     TreeInode::Entry* entry)
@@ -38,7 +38,7 @@ TreeEntryFileInode::TreeEntryFileInode(
           std::make_shared<FileData>(mutex_, parentInode_->getMount(), entry)) {
 }
 
-TreeEntryFileInode::TreeEntryFileInode(
+FileInode::FileInode(
     fuse_ino_t ino,
     std::shared_ptr<TreeInode> parentInode,
     TreeInode::Entry* entry,
@@ -52,7 +52,7 @@ TreeEntryFileInode::TreeEntryFileInode(
           entry_,
           std::move(file))) {}
 
-folly::Future<fusell::Dispatcher::Attr> TreeEntryFileInode::getattr() {
+folly::Future<fusell::Dispatcher::Attr> FileInode::getattr() {
   auto data = getOrLoadData();
   auto path = parentInode_->getNameMgr()->resolvePathToNode(getNodeId());
 
@@ -69,7 +69,7 @@ folly::Future<fusell::Dispatcher::Attr> TreeEntryFileInode::getattr() {
   return attr;
 }
 
-folly::Future<fusell::Dispatcher::Attr> TreeEntryFileInode::setattr(
+folly::Future<fusell::Dispatcher::Attr> FileInode::setattr(
     const struct stat& attr,
     int to_set) {
   auto data = getOrLoadData();
@@ -98,7 +98,7 @@ folly::Future<fusell::Dispatcher::Attr> TreeEntryFileInode::setattr(
   return result;
 }
 
-folly::Future<std::string> TreeEntryFileInode::readlink() {
+folly::Future<std::string> FileInode::readlink() {
   std::unique_lock<std::mutex> lock(mutex_);
 
   DCHECK_NOTNULL(entry_);
@@ -133,7 +133,7 @@ folly::Future<std::string> TreeEntryFileInode::readlink() {
   return buf.moveToFbString().toStdString();
 }
 
-std::shared_ptr<FileData> TreeEntryFileInode::getOrLoadData() {
+std::shared_ptr<FileData> FileInode::getOrLoadData() {
   std::unique_lock<std::mutex> lock(mutex_);
   if (!data_) {
     data_ =
@@ -143,7 +143,7 @@ std::shared_ptr<FileData> TreeEntryFileInode::getOrLoadData() {
   return data_;
 }
 
-void TreeEntryFileInode::fileHandleDidClose() {
+void FileInode::fileHandleDidClose() {
   std::unique_lock<std::mutex> lock(mutex_);
   if (data_.unique()) {
     // We're the only remaining user, no need to keep it around
@@ -151,12 +151,12 @@ void TreeEntryFileInode::fileHandleDidClose() {
   }
 }
 
-AbsolutePath TreeEntryFileInode::getLocalPath() const {
+AbsolutePath FileInode::getLocalPath() const {
   return parentInode_->getOverlay()->getContentDir() +
       parentInode_->getNameMgr()->resolvePathToNode(getNodeId());
 }
 
-folly::Future<std::shared_ptr<fusell::FileHandle>> TreeEntryFileInode::open(
+folly::Future<std::shared_ptr<fusell::FileHandle>> FileInode::open(
     const struct fuse_file_info& fi) {
   auto data = getOrLoadData();
   SCOPE_EXIT {
@@ -177,13 +177,11 @@ folly::Future<std::shared_ptr<fusell::FileHandle>> TreeEntryFileInode::open(
         overlay);
   }
 
-  return std::make_shared<TreeEntryFileHandle>(
-      std::static_pointer_cast<TreeEntryFileInode>(shared_from_this()),
-      data,
-      fi.flags);
+  return std::make_shared<FileHandle>(
+      std::static_pointer_cast<FileInode>(shared_from_this()), data, fi.flags);
 }
 
-std::shared_ptr<fusell::FileHandle> TreeEntryFileInode::finishCreate() {
+std::shared_ptr<fusell::FileHandle> FileInode::finishCreate() {
   auto data = getOrLoadData();
   SCOPE_EXIT {
     data.reset();
@@ -194,13 +192,11 @@ std::shared_ptr<fusell::FileHandle> TreeEntryFileInode::finishCreate() {
       parentInode_->getNameMgr()->resolvePathToNode(getNodeId()),
       parentInode_->getOverlay());
 
-  return std::make_shared<TreeEntryFileHandle>(
-      std::static_pointer_cast<TreeEntryFileInode>(shared_from_this()),
-      data,
-      0);
+  return std::make_shared<FileHandle>(
+      std::static_pointer_cast<FileInode>(shared_from_this()), data, 0);
 }
 
-Future<vector<string>> TreeEntryFileInode::listxattr() {
+Future<vector<string>> FileInode::listxattr() {
   // Currently, we only return a non-empty vector for regular files, and we
   // assume that the SHA-1 is present without checking the ObjectStore.
   vector<string> attributes;
@@ -211,7 +207,7 @@ Future<vector<string>> TreeEntryFileInode::listxattr() {
   return attributes;
 }
 
-Future<string> TreeEntryFileInode::getxattr(StringPiece name) {
+Future<string> FileInode::getxattr(StringPiece name) {
   // Currently, we only support the xattr for the SHA-1 of a regular file.
   if (name != kXattrSha1) {
     folly::throwSystemErrorExplicit(kENOATTR);
@@ -220,7 +216,7 @@ Future<string> TreeEntryFileInode::getxattr(StringPiece name) {
   return getSHA1().get().toString();
 }
 
-Future<Hash> TreeEntryFileInode::getSHA1() {
+Future<Hash> FileInode::getSHA1() {
   // Some ugly looking stuff to avoid materializing the file if we haven't
   // done so already.
   std::unique_lock<std::mutex> lock(mutex_);
@@ -253,7 +249,7 @@ Future<Hash> TreeEntryFileInode::getSHA1() {
   return *parentInode_->getStore()->getSha1ForBlob(entry_->hash.value()).get();
 }
 
-const TreeInode::Entry* TreeEntryFileInode::getEntry() const {
+const TreeInode::Entry* FileInode::getEntry() const {
   return entry_;
 }
 }
