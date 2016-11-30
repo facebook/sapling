@@ -29,7 +29,7 @@ from . import (
 cmdtable = {}
 command = cmdutil.command(cmdtable)
 
-def _matchpaths(repo, rev, pats, opts, aopts):
+def _matchpaths(repo, rev, pats, opts, aopts=facontext.defaultopts):
     """generate paths matching given patterns"""
     perfhack = repo.ui.configbool('fastannotate', 'perfhack')
 
@@ -204,7 +204,7 @@ def _annotatewrapper(orig, ui, repo, *pats, **opts):
     # check if we need to do prefetch (client-side)
     rev = opts.get('rev')
     if util.safehasattr(repo, 'prefetchfastannotate') and rev is not None:
-        paths = list(_matchpaths(repo, rev, pats, opts, aopts=None))
+        paths = list(_matchpaths(repo, rev, pats, opts))
         repo.prefetchfastannotate(paths)
 
     return orig(ui, repo, *pats, **opts)
