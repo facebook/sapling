@@ -36,7 +36,6 @@
   mercurial/cffi/mpatch.py: error importing: <ImportError> No module named 'mercurial.cffi' (error at check-py3-compat.py:*)
   mercurial/cffi/osutil.py: error importing: <ImportError> No module named 'mercurial.cffi' (error at check-py3-compat.py:*)
   mercurial/scmwindows.py: error importing: <ImportError> No module named 'msvcrt' (error at win32.py:*)
-  mercurial/statprof.py: error importing: <TypeError> __slots__ items must be strings, not 'bytes' (error at statprof.py:*)
   mercurial/win32.py: error importing: <ImportError> No module named 'msvcrt' (error at win32.py:*)
   mercurial/windows.py: error importing: <ImportError> No module named 'msvcrt' (error at windows.py:*)
 
