@@ -141,6 +141,21 @@ class sqlindexapi(indexapi):
         self.addbookmark(bookmark, bookmarknode, commit=False)
         self.sqlconn.commit()
 
+    def deletebookmarks(self, patterns, commit):
+        """Accepts list of bookmark patterns and deletes them.
+        If `commit` is set then bookmark will actually be deleted. Otherwise
+        deletion will be delayed until the end of transaction.
+        """
+        if not self._connected:
+            self.sqlconnect()
+        self.log.info("DELETE BOOKMARKS: %s" % patterns)
+        for pattern in patterns:
+            self.sqlcursor.execute(
+                "DELETE from bookmarkstonode WHERE bookmark LIKE (%s)",
+                params=(pattern,))
+        if commit:
+            self.sqlconn.commit()
+
     def listbookmarks(self):
         if not self._connected:
             self.sqlconnect()

@@ -28,6 +28,15 @@ class indexapi(object):
         """Atomic addbundle() + addbookmark()"""
         raise NotImplementedError()
 
+    def deletebookmarks(self, patterns, commit):
+        """Accepts list of bookmarks and deletes them.
+        `commit` may not be implemented by some indexapis.
+        The meaning of the `commit` parameter: if  it is set then bookmark
+        will actually be deleted when deletebookmarks returns. Otherwise
+        deletion will be delayed until the end of transaction.
+        """
+        raise NotImplementedError()
+
     def getbundle(self, node):
         """Returns the bundleid for the bundle that contains the given node."""
         raise NotImplementedError()
