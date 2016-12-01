@@ -1,5 +1,4 @@
-  $ extpath=`dirname $TESTDIR`
-  $ PYTHONPATH=$extpath:$TESTDIR/../:$PYTHONPATH
+  $ PYTHONPATH=$TESTDIR/..:$PYTHONPATH
   $ export PYTHONPATH
 
   $ cat >> $HGRCPATH << EOF

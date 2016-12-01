@@ -1,7 +1,6 @@
 (this file is backported from core hg tests/test-annotate.t)
 
-  $ extpath=`dirname $TESTDIR`
-  $ PYTHONPATH=$extpath:$TESTDIR/../:$PYTHONPATH
+  $ PYTHONPATH=$TESTDIR/..:$PYTHONPATH
   $ export PYTHONPATH
 
   $ cat >> $HGRCPATH << EOF

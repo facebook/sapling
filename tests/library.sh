@@ -1,8 +1,7 @@
-python -c 'import lz4' || exit 80
+${PYTHON:-python} -c 'import lz4' || exit 80
 
-cp `echo $HGRCPATH` ./
 CACHEDIR=$PWD/hgcache
-cat >> .hgrc <<EOF
+cat >> $HGRCPATH <<EOF
 [remotefilelog]
 cachepath=$CACHEDIR
 debug=True
@@ -17,7 +16,6 @@ preferuncompressed=True
 [experimental]
 changegroup3=True
 EOF
-export HGRCPATH=$PWD/.hgrc
 
 hgcloneshallow() {
   local name
