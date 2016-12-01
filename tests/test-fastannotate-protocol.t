@@ -83,7 +83,8 @@ happens even if the client has more commits
 
 if the client has a different "@" (head of the master branch) and "@" is ahead
 of the server, the server can detect things are unchanged and does not return
-full contents (not that there is no "writing ... to fastannotate")
+full contents (not that there is no "writing ... to fastannotate"), but the
+client can also build things up on its own (causing diverge)
 
   $ hg bookmark -r 4 @ -f
   $ hg fastannotate a --debug
@@ -96,6 +97,7 @@ full contents (not that there is no "writing ... to fastannotate")
   fastannotate: requesting 1 files
   sending batch command
   fastannotate: server returned
+  fastannotate: a: 1 new changesets in the main branch
   0: 1
   1: 2
   2: 3
@@ -106,18 +108,21 @@ if the client has a different "@" which is behind the server. no download is
 necessary
 
   $ hg fastannotate a --debug --config fastannotate.mainbranch=2
+  fastannotate: a: using fast path (resolved fctx: True)
   0: 1
   1: 2
   2: 3
   3: 4
   4: 5
 
-the fastannotate cache is built in both repos, and they are the same
+define fastannotate on-disk paths
 
   $ p1=.hg/fastannotate/default
   $ p2=../repo-server/.hg/fastannotate/default
-  $ diff $p1/a.l $p2/a.l
-  $ diff $p1/a.m $p2/a.m
+
+revert bookmark change so the client is behind the server
+
+  $ hg bookmark -r 2 @ -f
 
 in the "fctx" mode with the "annotate" command, the client also downloads the
 cache. but not in the (default) "fastannotate" mode.
@@ -128,6 +133,19 @@ cache. but not in the (default) "fastannotate" mode.
   $ hg annotate a --config fastannotate.modes=fctx --debug | grep 'fastannotate: writing' | sort
   fastannotate: writing 112 bytes to fastannotate/default/a.l
   fastannotate: writing 94 bytes to fastannotate/default/a.m
+
+the fastannotate cache (built server-side, downloaded client-side) in two repos
+have the same content (because the client downloads from the server)
+
+  $ diff $p1/a.l $p2/a.l
+  $ diff $p1/a.m $p2/a.m
+
+in the "fctx" mode, the client could also build the cache locally
+
+  $ hg annotate a --config fastannotate.modes=fctx --debug --config fastannotate.mainbranch=4 | grep fastannotate
+  fastannotate: requesting 1 files
+  fastannotate: server returned
+  fastannotate: a: 1 new changesets in the main branch
 
 the server would rebuild broken cache automatically
 

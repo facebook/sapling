@@ -161,7 +161,6 @@ def fastannotate(ui, repo, *pats, **opts):
     # for client, prefetch from the server and do not update linelog
     if util.safehasattr(repo, 'prefetchfastannotate'):
         repo.prefetchfastannotate(paths)
-        master = None
 
     for path in paths:
         result = lines = existinglines = None
