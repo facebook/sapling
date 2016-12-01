@@ -39,13 +39,8 @@ class fileindexapi(indexapi):
         bookmarkpath = os.path.join(self._bookmarkmap, bookmark)
         self._write(bookmarkpath, node)
 
-    def addbookmarkandbundle(self, bundleid, nodes, bookmark, bookmarknode):
-        self.addbookmark(bookmark, bookmarknode)
-        self.addbundle(bundleid, nodes)
 
-    def deletebookmarks(self, patterns, commit):
-        """`commit` is ignored
-        """
+    def deletebookmarks(self, patterns):
         for pattern in patterns:
             for bookmark, _ in self._listbookmarks(pattern):
                 bookmarkpath = os.path.join(self._bookmarkmap, bookmark)

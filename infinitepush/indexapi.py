@@ -6,12 +6,28 @@
 # GNU General Public License version 2 or any later version.
 
 class indexapi(object):
+    """Class that manages access to infinitepush index.
+
+    This class is a context manager and all write operations (like
+    deletebookmarks, addbookmark etc) should use `with` statement:
+
+      with index:
+          index.deletebookmarks(...)
+          ...
+    """
+
     def __init__(self):
         """Initializes the metadata store connection."""
         pass
 
     def close(self):
         """Cleans up the metadata store connection."""
+        pass
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
         pass
 
     def addbundle(self, bundleid, nodes):
@@ -24,16 +40,8 @@ class indexapi(object):
         store."""
         raise NotImplementedError()
 
-    def addbookmarkandbundle(self, bundleid, nodes, bookmark, bookmarknode):
-        """Atomic addbundle() + addbookmark()"""
-        raise NotImplementedError()
-
-    def deletebookmarks(self, patterns, commit):
+    def deletebookmarks(self, patterns):
         """Accepts list of bookmarks and deletes them.
-        `commit` may not be implemented by some indexapis.
-        The meaning of the `commit` parameter: if  it is set then bookmark
-        will actually be deleted when deletebookmarks returns. Otherwise
-        deletion will be delayed until the end of transaction.
         """
         raise NotImplementedError()
 

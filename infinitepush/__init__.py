@@ -837,22 +837,15 @@ def bundle2scratchbranch(op, part):
         # If a bug or malicious client allows there to be a bookmark
         # with multiple heads, we will place the bookmark on the last head.
         bookmarknode = nodes[-1] if nodes else None
-        if hasnewheads:
-            with open(bundlefile, 'r') as f:
-                key = store.write(f.read())
+        with index:
+            if hasnewheads:
+                with open(bundlefile, 'r') as f:
+                    key = store.write(f.read())
+                index.addbundle(key, nodes)
             if bookmark:
-                index.addbookmarkandbundle(key, nodes,
-                                           bookmark, bookmarknode)
+                index.addbookmark(bookmark, bookmarknode)
                 _maybeaddpushbackpart(op, bookmark, bookmarknode,
                                       bookprevnode, params)
-            else:
-                # Push new scratch commits with no bookmark
-                index.addbundle(key, nodes)
-        elif bookmark:
-            # Push new scratch bookmark to known scratch commits
-            index.addbookmark(bookmark, bookmarknode)
-            _maybeaddpushbackpart(op, bookmark, bookmarknode,
-                                  bookprevnode, params)
     finally:
         try:
             if bundlefile:
