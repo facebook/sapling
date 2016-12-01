@@ -17,6 +17,13 @@ from indexapi import (
     indexexception,
 )
 
+def _convertbookmarkpattern(pattern):
+    pattern = pattern.replace('_', '\\_')
+    pattern = pattern.replace('%', '\\%')
+    if pattern.endswith('*'):
+        pattern = pattern[:-1] + '%'
+    return pattern
+
 class sqlindexapi(indexapi):
     '''
     Sql backend for infinitepush index. See tables.
@@ -165,6 +172,7 @@ class sqlindexapi(indexapi):
             self.sqlconnect()
         self.log.info("DELETE BOOKMARKS: %s" % patterns)
         for pattern in patterns:
+            pattern = _convertbookmarkpattern(pattern)
             self.sqlcursor.execute(
                 "DELETE from bookmarkstonode WHERE bookmark LIKE (%s)",
                 params=(pattern,))
@@ -221,10 +229,7 @@ class sqlindexapi(indexapi):
             self.sqlconnect()
         self.log.info(
             "QUERY BOOKMARKS reponame: %r query: %r" % (self.reponame, query))
-        query = query.replace('_', '\\_')
-        query = query.replace('%', '\\%')
-        if query.endswith('*'):
-            query = query[:-1] + '%'
+        query = _convertbookmarkpattern(query)
         self.sqlcursor.execute(
             "SELECT bookmark, node from bookmarkstonode WHERE "
             "reponame = %s AND bookmark LIKE %s",

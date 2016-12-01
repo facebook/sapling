@@ -56,6 +56,8 @@ Make commit and backup it
   $ scratchnodes
   606a357e69adb2e36d559ae3237626e82a955c9d 2a40dbb1b839c5720ba2662ca1329373674a6e3a
   7e6a6fd9c7c8c8c307ee14678f03d63af3a7b455 6ff0097c5e81598752887c6990977a3a1f981004
+  $ scratchbookmarks
+  infinitepush/backups/test/[0-9a-zA-Z.-]+\$TESTTMP/client/heads/7e6a6fd9c7c8c8c307ee14678f03d63af3a7b455 7e6a6fd9c7c8c8c307ee14678f03d63af3a7b455 (re)
   $ cat .hg/store/infinitepushbackuptip
   0 (no-eol)
 
@@ -73,8 +75,11 @@ Make first commit public (by doing push) and then backup new commit
   searching for changes
   remote: pushing 1 commit:
   remote:     94a60f5ad8b2  newcommit
+  $ scratchbookmarks
+  infinitepush/backups/test/[0-9a-zA-Z.-]+\$TESTTMP/client/heads/94a60f5ad8b2e007240007edab982b3638a3f38d 94a60f5ad8b2e007240007edab982b3638a3f38d (re)
   $ cat .hg/store/infinitepushbackuptip
   1 (no-eol)
+
 Create obsoleted commit
   $ mkcommit obsoletedcommit
   $ hg prune .
@@ -147,3 +152,20 @@ Backup in background
   remote:     773a3ba2e7c2  newcommit
   $ cat .hg/store/infinitepushbackuptip
   7 (no-eol)
+
+Backup with bookmark
+  $ mkcommit commitwithbookmark
+  $ hg book abook
+  $ hg debugbackup
+  pushing to ssh://user@dummy/repo
+  searching for changes
+  remote: pushing 3 commits:
+  remote:     667453c0787e  newhead2
+  remote:     773a3ba2e7c2  newcommit
+  remote:     166ff4468f7d  commitwithbookmark
+  $ scratchbookmarks
+  infinitepush/backups/test/[0-9a-zA-Z.-]+\$TESTTMP/client/bookmarks/abook 166ff4468f7da443df90d268158ba7d75d52585a (re)
+  infinitepush/backups/test/[0-9a-zA-Z.-]+\$TESTTMP/client/heads/166ff4468f7da443df90d268158ba7d75d52585a 166ff4468f7da443df90d268158ba7d75d52585a (re)
+  infinitepush/backups/test/[0-9a-zA-Z.-]+\$TESTTMP/client/heads/3a30e220fe42e969e34bbe8001b951a20f31f2e8 3a30e220fe42e969e34bbe8001b951a20f31f2e8 (re)
+  infinitepush/backups/test/[0-9a-zA-Z.-]+\$TESTTMP/client/heads/d5609f7fa63352da538eeffbe3ffabed1779aafc d5609f7fa63352da538eeffbe3ffabed1779aafc (re)
+  infinitepush/backups/test/[0-9a-zA-Z.-]+\$TESTTMP/client/heads/f79c5017def3b9af9928edbb52cc620c74b4b291 f79c5017def3b9af9928edbb52cc620c74b4b291 (re)

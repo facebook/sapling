@@ -57,9 +57,12 @@
 
 from __future__ import absolute_import
 import errno
+import json
 import logging
 import os
 import resource
+import socket
+import struct
 import tempfile
 
 from collections import defaultdict
@@ -96,8 +99,10 @@ command = cmdutil.command(cmdtable)
 
 pushrebaseparttype = 'b2x:rebase'
 scratchbranchparttype = 'b2x:infinitepush'
+scratchbookmarksparttype = 'b2x:infinitepushscratchbookmarks'
 
 experimental = 'experimental'
+configmanybookmarks = 'server-bundlestore-manybookmarks'
 configbookmark = 'server-bundlestore-bookmark'
 configcreate = 'server-bundlestore-create'
 configscratchpush = 'infinitepush-scratchpush'
@@ -277,7 +282,7 @@ def _checkheads(orig, pushop):
 
 def wireprotolistkeyspatterns(repo, proto, namespace, patterns):
     patterns = decodelist(patterns)
-    d = repo.listkeys(encoding.tolocal(namespace), patterns).items()
+    d = repo.listkeys(encoding.tolocal(namespace), patterns).iteritems()
     return pushkey.encodekeys(d)
 
 def localrepolistkeys(orig, self, namespace, patterns=None):
@@ -290,7 +295,7 @@ def localrepolistkeys(orig, self, namespace, patterns=None):
             if pattern.endswith('*'):
                 pattern = 're:^' + pattern[:-1] + '.*'
             kind, pat, matcher = util.stringmatcher(pattern)
-            for bookmark, node in bookmarks.items():
+            for bookmark, node in bookmarks.iteritems():
                 if matcher(bookmark):
                     results[bookmark] = node
         return results
@@ -435,8 +440,38 @@ def getscratchbranchpart(repo, peer, outgoing, force, ui, bookmark, create):
     #  handler
     return bundle2.bundlepart(
         scratchbranchparttype.upper(),
-        advisoryparams=params.items(),
+        advisoryparams=params.iteritems(),
         data=cg)
+
+def _encodebookmarks(bookmarks):
+    encoded = {}
+    for bookmark, node in bookmarks.iteritems():
+        encoded[bookmark] = node
+    dumped = json.dumps(encoded)
+    result = struct.pack('>i', len(dumped)) + dumped
+    return result
+
+def _decodebookmarks(stream):
+    sizeofjsonsize = struct.calcsize('>i')
+    size = struct.unpack('>i', stream.read(sizeofjsonsize))[0]
+    unicodedict = json.loads(stream.read(size))
+    # python json module always returns unicode strings. We need to convert
+    # it back to bytes string
+    result = {}
+    for bookmark, node in unicodedict.iteritems():
+        bookmark = bookmark.encode('ascii')
+        node = node.encode('ascii')
+        result[bookmark] = node
+    return result
+
+def getscratchbookmarkspart(peer, bookmarks):
+    if scratchbookmarksparttype not in bundle2.bundle2caps(peer):
+        raise error.Abort(
+            _('no server support for %r') % scratchbookmarksparttype)
+
+    return bundle2.bundlepart(
+        scratchbookmarksparttype.upper(),
+        data=_encodebookmarks(bookmarks))
 
 def _pull(orig, ui, repo, source="default", **opts):
     # Copy paste from `pull` command
@@ -551,7 +586,7 @@ def _saveremotebookmarks(repo, newbookmarks, remote):
             # saveremotenames expects 20 byte binary nodes for branches
             branches[rname].append(bin(hexnode))
 
-    for bookmark, hexnode in newbookmarks.items():
+    for bookmark, hexnode in newbookmarks.iteritems():
         bookmarks[bookmark] = hexnode
     remotenamesext.saveremotenames(repo, remotepath, branches, bookmarks)
 
@@ -559,7 +594,7 @@ def _savelocalbookmarks(repo, bookmarks):
     with repo.wlock():
         with repo.lock():
             with repo.transaction('bookmark') as tr:
-                for scratchbook, node in bookmarks.items():
+                for scratchbook, node in bookmarks.iteritems():
                     changectx = repo[node]
                     repo._bookmarks[scratchbook] = changectx.node()
                 repo._bookmarks.recordchange(tr)
@@ -625,11 +660,56 @@ def _push(orig, ui, repo, dest=None, *args, **opts):
             exchange._localphasemove = oldphasemove
     return result
 
+def _getcommonprefix(ui, repo):
+    username = ui.shortuser(ui.username())
+    hostname = socket.gethostname()
+
+    result = '/'.join(('infinitepush',
+                     'backups',
+                     username,
+                     hostname))
+    if not repo.origroot.startswith('/'):
+        result += '/'
+    result += repo.origroot
+    if result.endswith('/'):
+        result = result[:-1]
+    return result
+
+def _getbackupbookmarkprefix(ui, repo):
+    return '/'.join((_getcommonprefix(ui, repo),
+                     'bookmarks'))
+
+def _escapebookmark(bookmark):
+    '''
+    If `bookmark` contains "/bookmarks/" as a substring then replace it with
+    "/bookmarksbookmarks/". This will make parsing remote bookmark name
+    unambigious.
+    '''
+
+    return bookmark.replace('/bookmarks/', '/bookmarksbookmarks/')
+
+def _getbackupbookmarkname(ui, bookmark, repo):
+    bookmark = encoding.fromlocal(bookmark)
+    bookmark = _escapebookmark(bookmark)
+    return '/'.join((_getbackupbookmarkprefix(ui, repo), bookmark))
+
+def _getbackupheadprefix(ui, repo):
+    return '/'.join((_getcommonprefix(ui, repo),
+                     'heads'))
+
+def _getbackupheadname(ui, hexhead, repo):
+    return '/'.join((_getbackupheadprefix(ui, repo), hexhead))
+
 @command('debugbackup', [('', 'background', None, 'run backup in background')])
 def backup(ui, repo, dest=None, **opts):
     """
-    Saves new non-extinct commits since the last `hg debugbackup` or from 0
+    Pushes commits, bookmarks and heads to infinitepush.
+    New non-extinct commits are saved since the last `hg debugbackup` or since 0
     revision if this backup is the first.
+    Local bookmarks are saved remotely as:
+        infinitepush/backups/USERNAME/HOST/REPOROOT/bookmarks/LOCAL_BOOKMARK
+    Local heads are saved remotely as:
+        infinitepush/backups/USERNAME/HOST/REPOROOT/heads/HEAD_HASH
     """
 
     if opts.get('background'):
@@ -654,6 +734,25 @@ def backup(ui, repo, dest=None, **opts):
     if backuptip > currenttiprev:
         ui.status(_('nothing to backup\n'))
         return 0
+
+    bookmarkstobackup = {}
+    for bookmark, node in repo._bookmarks.iteritems():
+        bookmark = _getbackupbookmarkname(ui, bookmark, repo)
+        hexnode = hex(node)
+        bookmarkstobackup[bookmark] = hexnode
+
+    for headrev in repo.revs('head() & not public()'):
+        hexhead = repo[headrev].hex()
+        headbookmarksname = _getbackupheadname(ui, hexhead, repo)
+        bookmarkstobackup[headbookmarksname] = hexhead
+
+    # Adding patterns to delete previous heads and bookmarks
+    bookmarkstobackup[_getbackupheadprefix(ui, repo) + '/*'] = ''
+    bookmarkstobackup[_getbackupbookmarkprefix(ui, repo) + '/*'] = ''
+
+    ui.setconfig(experimental, configmanybookmarks,
+                 bookmarkstobackup, 'debugbackup')
+
     revs = list(repo.revs('heads(draft() & %d:%d)', backuptip, currenttiprev))
     pushcmd = commands.table['^push'][0]
     pushopts = dict(opt[1:3] for opt in commands.table['^push'][1])
@@ -710,7 +809,14 @@ def partgen(pushop, bundler):
 
     return handlereply
 
+@exchange.b2partsgenerator(scratchbookmarksparttype)
+def partgen(pushop, bundler):
+    manybookmarks = pushop.ui.config(experimental, configmanybookmarks)
+    if manybookmarks:
+        bundler.addpart(getscratchbookmarkspart(pushop.remote, manybookmarks))
+
 bundle2.capabilities[scratchbranchparttype] = ()
+bundle2.capabilities[scratchbookmarksparttype] = ()
 
 def _makebundlefile(part):
     """constructs a temporary bundle file
@@ -856,6 +962,25 @@ def bundle2scratchbranch(op, part):
 
     return 1
 
+@bundle2.parthandler(scratchbookmarksparttype, ('prefixestodelete',))
+def bundle2scratchbookmarks(op, part):
+    '''Handler deletes bookmarks first then adds new bookmarks.
+    '''
+    index = op.repo.bundlestore.index
+    decodedbookmarks = _decodebookmarks(part)
+    toinsert = {}
+    todelete = []
+    for bookmark, node in decodedbookmarks.iteritems():
+        if node:
+            toinsert[bookmark] = node
+        else:
+            todelete.append(bookmark)
+    with index:
+        if todelete:
+            index.deletebookmarks(todelete)
+        if toinsert:
+            index.addmanybookmarks(toinsert)
+
 def _maybeaddpushbackpart(op, bookmark, newnode, oldnode, params):
     if params.get('pushbackbookmarks'):
         if op.reply and 'pushback' in op.reply.capabilities:
@@ -865,7 +990,7 @@ def _maybeaddpushbackpart(op, bookmark, newnode, oldnode, params):
                 'new': newnode,
                 'old': oldnode,
             }
-            op.reply.newpart('pushkey', mandatoryparams=params.items())
+            op.reply.newpart('pushkey', mandatoryparams=params.iteritems())
 
 def bundle2pushkey(orig, op, part):
     if op.records[scratchbranchparttype + '_skippushkey']:

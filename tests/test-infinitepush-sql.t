@@ -1,83 +1,28 @@
 #if no-osx
-  $ extpath=`dirname $TESTDIR`
-  $ cp -r $extpath/infinitepush $TESTTMP
   $ mkcommit() {
   >    echo "$1" > "$1"
   >    hg add "$1"
   >    hg ci -d "0 0" -m "$1"
   > }
-  $ setupclienthgrc() {
-  > cat << EOF > $1/.hg/hgrc
-  > [ui]
-  > ssh=python "$TESTDIR/dummyssh"
-  > [extensions]
-  > infinitepush=$TESTTMP/infinitepush
-  > [infinitepush]
-  > branchpattern=re:scratch/.+
-  > server=False
-  > [paths]
-  > default = ssh://user@dummy/server
-  > EOF
-  > }
-  $ setupserverhgrc() {
-  > cat << EOF > $1/.hg/hgrc
-  > [ui]
-  > ssh=python "$TESTDIR/dummyssh"
-  > [extensions]
-  > infinitepush=$TESTTMP/infinitepush
-  > [infinitepush]
-  > branchpattern=re:scratch/.+
-  > server=True
-  > indextype=sql
-  > storetype=disk
-  > EOF
-  > }
-  $ createdb() {
-  > mysql -h $DBHOST -P $DBPORT -u $DBUSER -p"$DBPASS" -e "CREATE DATABASE IF NOT EXISTS $DBNAME;" 2>/dev/null
-  > mysql -h $DBHOST -P $DBPORT -D $DBNAME -u $DBUSER -p"$DBPASS" -e '
-  > DROP TABLE IF EXISTS nodestobundle;
-  > DROP TABLE IF EXISTS bookmarkstonode;
-  > DROP TABLE IF EXISTS bundles;
-  > CREATE TABLE IF NOT EXISTS nodestobundle(
-  > node CHAR(40) BINARY NOT NULL,
-  > bundle VARCHAR(512) BINARY NOT NULL,
-  > reponame CHAR(255) BINARY NOT NULL,
-  > PRIMARY KEY(node, reponame));
-  >  
-  > CREATE TABLE IF NOT EXISTS bookmarkstonode(
-  > node CHAR(40) BINARY NOT NULL,
-  > bookmark VARCHAR(512) BINARY NOT NULL,
-  > reponame CHAR(255) BINARY NOT NULL,
-  > PRIMARY KEY(reponame, bookmark));
-  > 
-  > CREATE TABLE IF NOT EXISTS bundles(
-  > bundle VARCHAR(512) BINARY NOT NULL,
-  > reponame CHAR(255) BINARY NOT NULL,
-  > PRIMARY KEY(bundle, reponame));' 2>/dev/null
-  > }
+  $ . "$TESTDIR/library-infinitepush.sh"
+  $ setupcommon
 
 With no configuration it should abort
   $ hg init server
-  $ setupserverhgrc server
   $ cd server
+  $ setupsqlserverhgrc
   $ hg st
   abort: please set infinitepush.sqlhost
   [255]
-  $ DBHOSTPORT=`$TESTDIR/getdb.sh` || exit 1
-  $ echo "sqlhost=$DBHOSTPORT" >> .hg/hgrc
-  $ echo "reponame=babar" >> .hg/hgrc
-  $ DBHOST=`echo $DBHOSTPORT | cut -d : -f 1`
-  $ DBPORT=`echo $DBHOSTPORT | cut -d : -f 2`
-  $ DBNAME=`echo $DBHOSTPORT | cut -d : -f 3`
-  $ DBUSER=`echo $DBHOSTPORT | cut -d : -f 4`
-  $ DBPASS=`echo $DBHOSTPORT | cut -d : -f 5-`
-  $ createdb
+  $ setupdb
   $ cd ..
-  $ hg clone -q --config ui.ssh='python "$TESTDIR/dummyssh"' ssh://user@dummy/server client1
-  $ hg clone -q --config ui.ssh='python "$TESTDIR/dummyssh"' ssh://user@dummy/server client2
-  $ setupclienthgrc client1
-  $ setupclienthgrc client2
+  $ hg clone -q ssh://user@dummy/server client1
+  $ hg clone -q ssh://user@dummy/server client2
   $ cd client1
+  $ setupsqlclienthgrc
+  $ cd ../client2
+  $ setupsqlclienthgrc
+  $ cd ../client1
   $ mkcommit scratchcommit
 
   $ hg push -r . --to scratch/book --create

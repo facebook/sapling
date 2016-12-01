@@ -33,3 +33,67 @@ indextype=disk
 storetype=disk
 EOF
 }
+
+setupsqlclienthgrc() {
+cat << EOF > .hg/hgrc
+[ui]
+ssh=python "$TESTDIR/dummyssh"
+[extensions]
+infinitepush=$TESTTMP/infinitepush
+[infinitepush]
+branchpattern=re:scratch/.+
+server=False
+[paths]
+default = ssh://user@dummy/server
+EOF
+}
+
+setupsqlserverhgrc() {
+cat << EOF > .hg/hgrc
+[ui]
+ssh=python "$TESTDIR/dummyssh"
+[extensions]
+infinitepush=$TESTTMP/infinitepush
+[infinitepush]
+branchpattern=re:scratch/.+
+server=True
+indextype=sql
+storetype=disk
+EOF
+}
+
+createdb() {
+mysql -h $DBHOST -P $DBPORT -u $DBUSER -p"$DBPASS" -e "CREATE DATABASE IF NOT EXISTS $DBNAME;" 2>/dev/null
+mysql -h $DBHOST -P $DBPORT -D $DBNAME -u $DBUSER -p"$DBPASS" -e '
+DROP TABLE IF EXISTS nodestobundle;
+DROP TABLE IF EXISTS bookmarkstonode;
+DROP TABLE IF EXISTS bundles;
+CREATE TABLE IF NOT EXISTS nodestobundle(
+node CHAR(40) BINARY NOT NULL,
+bundle VARCHAR(512) BINARY NOT NULL,
+reponame CHAR(255) BINARY NOT NULL,
+PRIMARY KEY(node, reponame));
+
+CREATE TABLE IF NOT EXISTS bookmarkstonode(
+node CHAR(40) BINARY NOT NULL,
+bookmark VARCHAR(512) BINARY NOT NULL,
+reponame CHAR(255) BINARY NOT NULL,
+PRIMARY KEY(reponame, bookmark));
+
+CREATE TABLE IF NOT EXISTS bundles(
+bundle VARCHAR(512) BINARY NOT NULL,
+reponame CHAR(255) BINARY NOT NULL,
+PRIMARY KEY(bundle, reponame));' 2>/dev/null
+}
+
+setupdb() {
+DBHOSTPORT=`$TESTDIR/getdb.sh` || exit 1
+echo "sqlhost=$DBHOSTPORT" >> .hg/hgrc
+echo "reponame=babar" >> .hg/hgrc
+DBHOST=`echo $DBHOSTPORT | cut -d : -f 1`
+DBPORT=`echo $DBHOSTPORT | cut -d : -f 2`
+DBNAME=`echo $DBHOSTPORT | cut -d : -f 3`
+DBUSER=`echo $DBHOSTPORT | cut -d : -f 4`
+DBPASS=`echo $DBHOSTPORT | cut -d : -f 5-`
+createdb
+}
