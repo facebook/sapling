@@ -93,8 +93,29 @@ def _fctxannotate(orig, self, follow=False, linenumber=False, diffopts=None):
                             'annotate: %r' % ex)
         return orig(self, follow, linenumber, diffopts)
 
+def _remotefctxannotate(orig, self, follow=False, linenumber=None,
+                        diffopts=None, prefetch=True):
+    if prefetch:
+        # disable prefetch if linelog is up to date
+        master = _getmaster(self)
+        with context.fctxannotatecontext(self, follow, diffopts) as ac:
+            if ac.isuptodate(master, strict=False):
+                self._repo.ui.debug('fastannotate: %s: remotefilelog prefetch '
+                                    'disabled\n' % self._path)
+                prefetch = False
+    return orig(self, follow, linenumber, diffopts, prefetch)
+
 def replacehgwebannotate():
     extensions.wrapfunction(hgweb.webutil, 'annotate', _hgwebannotate)
 
 def replacefctxannotate():
     extensions.wrapfunction(hgcontext.basefilectx, 'annotate', _fctxannotate)
+
+def replaceremotefctxannotate():
+    try:
+        r = extensions.find('remotefilelog')
+    except KeyError:
+        return
+    else:
+        extensions.wrapfunction(r.remotefilectx.remotefilectx, 'annotate',
+                                _remotefctxannotate)

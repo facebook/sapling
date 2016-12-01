@@ -123,6 +123,7 @@ def uisetup(ui):
         elif name == 'fctx':
             from . import support
             support.replacefctxannotate()
+            support.replaceremotefctxannotate()
             commands.wrapdefault()
         else:
             raise hgerror.Abort(_('fastannotate: invalid mode: %s') % name)

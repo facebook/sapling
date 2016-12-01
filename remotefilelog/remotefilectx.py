@@ -283,15 +283,16 @@ class remotefilectx(context.filectx):
 
         return None
 
-    def annotate(self, follow=False, linenumber=None, diffopts=None):
-        # use linkrev to find the first changeset where self appeared
-        fetch = []
-        ancestors = self.ancestors()
-        for ancestor in ancestors:
-            fetch.append((ancestor.path(), hex(ancestor.filenode())))
+    def annotate(self, follow=False, linenumber=None, diffopts=None,
+                 prefetch=True):
+        if prefetch:
+            # use linkrev to find the first changeset where self appeared
+            fetch = []
+            ancestors = self.ancestors()
+            for ancestor in ancestors:
+                fetch.append((ancestor.path(), hex(ancestor.filenode())))
 
-        self._repo.fileservice.prefetch(fetch)
-
+            self._repo.fileservice.prefetch(fetch)
         return super(remotefilectx, self).annotate(follow, linenumber, diffopts)
 
     def cmp(self, fctx):
