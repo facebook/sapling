@@ -18,6 +18,7 @@ from .i18n import (
 from . import (
     cmdutil,
     error,
+    pycompat,
     util,
 )
 
@@ -74,7 +75,7 @@ def loadpath(path, module_name):
 
 def _importh(name):
     """import and return the <name> module"""
-    mod = __import__(name)
+    mod = __import__(pycompat.sysstr(name))
     components = name.split('.')
     for comp in components[1:]:
         mod = getattr(mod, comp)

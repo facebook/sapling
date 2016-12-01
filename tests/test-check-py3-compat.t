@@ -31,7 +31,6 @@
   hgext/fsmonitor/pywatchman/capabilities.py: error importing: <ImportError> No module named 'pybser' (error at __init__.py:*)
   hgext/fsmonitor/pywatchman/pybser.py: error importing: <ImportError> No module named 'pybser' (error at __init__.py:*)
   hgext/fsmonitor/watchmanclient.py: error importing: <ImportError> No module named 'pybser' (error at __init__.py:*)
-  hgext/mq.py: error importing: <TypeError> __import__() argument 1 must be str, not bytes (error at extensions.py:*)
   mercurial/cffi/bdiff.py: error importing: <ImportError> No module named 'mercurial.cffi' (error at check-py3-compat.py:*)
   mercurial/cffi/mpatch.py: error importing: <ImportError> No module named 'mercurial.cffi' (error at check-py3-compat.py:*)
   mercurial/cffi/osutil.py: error importing: <ImportError> No module named 'mercurial.cffi' (error at check-py3-compat.py:*)
