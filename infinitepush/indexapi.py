@@ -40,6 +40,11 @@ class indexapi(object):
         store."""
         raise NotImplementedError()
 
+    def addmanybookmarks(self, bookmarks):
+        """Takes a dict with mapping from bookmark to hash and records mapping
+        in the metadata store."""
+        raise NotImplementedError()
+
     def deletebookmarks(self, patterns):
         """Accepts list of bookmarks and deletes them.
         """

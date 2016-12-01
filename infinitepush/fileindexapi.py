@@ -39,6 +39,9 @@ class fileindexapi(indexapi):
         bookmarkpath = os.path.join(self._bookmarkmap, bookmark)
         self._write(bookmarkpath, node)
 
+    def addmanybookmarks(self, bookmarks):
+        for bookmark, node in bookmarks.items():
+            self.addbookmark(bookmark, node)
 
     def deletebookmarks(self, patterns):
         for pattern in patterns:

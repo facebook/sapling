@@ -141,6 +141,21 @@ class sqlindexapi(indexapi):
             "VALUES (%s, %s, %s) ON DUPLICATE KEY UPDATE node=VALUES(node)",
             params=(bookmark, node, self.reponame))
 
+    def addmanybookmarks(self, bookmarks):
+        if not self._connected:
+            self.sqlconnect()
+        args = []
+        values = []
+        for bookmark, node in bookmarks.iteritems():
+            args.append('(%s, %s, %s)')
+            values.extend((bookmark, node, self.reponame))
+        args = ','.join(args)
+
+        self.sqlcursor.execute(
+            "INSERT INTO bookmarkstonode(bookmark, node, reponame) "
+            "VALUES %s ON DUPLICATE KEY UPDATE node=VALUES(node)" % args,
+            params=values)
+
     def deletebookmarks(self, patterns):
         """Accepts list of bookmark patterns and deletes them.
         If `commit` is set then bookmark will actually be deleted. Otherwise
