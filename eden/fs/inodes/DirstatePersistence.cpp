@@ -49,7 +49,13 @@ DirstatePersistence::load() {
   auto dirstateData =
       CompactSerializer::deserialize<overlay::DirstateData>(serializedData);
   for (auto& pair : dirstateData.directives) {
-    entries[RelativePath(pair.first)] = pair.second;
+    auto name = overlay::_UserStatusDirective_VALUES_TO_NAMES.find(pair.second);
+    if (name != overlay::_UserStatusDirective_VALUES_TO_NAMES.end()) {
+      entries[RelativePath(pair.first)] = pair.second;
+    } else {
+      throw std::runtime_error(folly::to<std::string>(
+          "Illegal enum value for UserStatusDirective: ", pair.second));
+    }
   }
 
   return entries;
