@@ -158,7 +158,7 @@ def fastannotate(ui, repo, *pats, **opts):
     # paths will be used for prefetching and the real annotating
     paths = list(_matchpaths(repo, rev, pats, opts, aopts))
 
-    # for client, prefetch from the server and do not update linelog
+    # for client, prefetch from the server
     if util.safehasattr(repo, 'prefetchfastannotate'):
         repo.prefetchfastannotate(paths)
 

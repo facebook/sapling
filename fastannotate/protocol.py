@@ -10,6 +10,7 @@ from mercurial import (
     extensions,
     hg,
     localrepo,
+    scmutil,
     wireproto,
 )
 from mercurial.i18n import _
@@ -168,13 +169,39 @@ def clientfetch(repo, paths, lastnodemap=None, peer=None):
             with repo.vfs(path, 'wb') as f:
                 f.write(content)
 
+def _filterfetchpaths(repo, paths):
+    """return a subset of paths whose history is long and need to fetch linelog
+    from the server. works with remotefilelog and non-remotefilelog repos.
+    """
+    threshold = repo.ui.configint('fastannotate', 'clientfetchthreshold', 10)
+    if threshold <= 0:
+        return paths
+
+    master = repo.ui.config('fastannotate', 'mainbranch') or 'default'
+
+    if 'remotefilelog' in repo.requirements:
+        ctx = scmutil.revsingle(repo, master)
+        f = lambda path: len(ctx[path].ancestormap())
+    else:
+        f = lambda path: len(repo.file(path))
+
+    result = []
+    for path in paths:
+        try:
+            if f(path) >= threshold:
+                result.append(path)
+        except Exception: # file not found etc.
+            result.append(path)
+
+    return result
+
 def localreposetup(ui, repo):
     class fastannotaterepo(repo.__class__):
         def prefetchfastannotate(self, paths, peer=None):
             master = _getmaster(self.ui)
             needupdatepaths = []
             lastnodemap = {}
-            for path in paths:
+            for path in _filterfetchpaths(self, paths):
                 with context.annotatecontext(self, path) as actx:
                     if not actx.isuptodate(master, strict=False):
                         needupdatepaths.append(path)

@@ -37,6 +37,7 @@ setup the local repo
   $ cat >> .hg/hgrc << EOF
   > [fastannotate]
   > client=1
+  > clientfetchthreshold=0
   > EOF
   $ [ -d .hg/fastannotate ]
   [1]
@@ -177,3 +178,15 @@ use the "debugbuildannotatecache" command to build annotate cache
   fastannotate: writing * (glob)
   $ diff $p1/a.l $p2/a.l
   $ diff $p1/a.m $p2/a.m
+
+with the clientfetchthreshold config option, the client can build up the cache
+without downloading from the server
+
+  $ rm -rf $p1
+  $ hg fastannotate a --debug --config fastannotate.clientfetchthreshold=10
+  fastannotate: a: 3 new changesets in the main branch
+  0: 1
+  1: 2
+  2: 3
+  3: 4
+  4: 5

@@ -56,6 +56,10 @@ annotate cache greatly. Run "debugbuildlinkrevcache" before
     # path to use when connecting to the remote server (default: default)
     remotepath = default
 
+    # minimal length of the history of a file required to fetch linelog from
+    # the server. (default: 10)
+    clientfetchthreshold = 10
+
     # use flock instead of the file existence lock
     # flock may not work well on some network filesystems, but they avoid
     # creating and deleting files frequently, which is faster when updating
