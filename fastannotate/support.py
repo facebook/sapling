@@ -51,30 +51,26 @@ def _convertoutputs(repo, annotated, contents):
         results.append(((fctxmap[(hsh, path)], linenum + 1), contents[i]))
     return results
 
-def _doannotate(fctx, follow=True, diffopts=None, ui=None):
+def _getmaster(fctx):
+    """(fctx) -> str"""
+    return fctx._repo.ui.config('fastannotate', 'mainbranch') or 'default'
+
+def _doannotate(fctx, follow=True, diffopts=None):
     """like the vanilla fctx.annotate, but do it via fastannotate, and make
     the output format compatible with the vanilla fctx.annotate.
     may raise Exception, and always return line numbers.
     """
-    repo = fctx._repo
-    if ui is None:
-        ui = repo.ui
-    path = fctx._path
-
-    master = ui.config('fastannotate', 'mainbranch') or 'default'
-    if ui.configbool('fastannotate', 'forcefollow', True):
-        follow = True
-
-    aopts = context.annotateopts(diffopts=diffopts, followrename=follow)
+    master = _getmaster(fctx)
     annotated = contents = None
 
-    with context.annotatecontext(repo, path, aopts) as ac:
+    with context.fctxannotatecontext(fctx, follow, diffopts) as ac:
         try:
             annotated, contents = ac.annotate(fctx.rev(), master=master,
                                               showpath=True, showlines=True)
         except Exception:
             ac.rebuild() # try rebuild once
-            ui.debug('fastannotate: %s: rebuilding broken cache\n' % path)
+            fctx._repo.ui.debug('fastannotate: %s: rebuilding broken cache\n'
+                                % fctx._path)
             try:
                 annotated, contents = ac.annotate(fctx.rev(), master=master,
                                                   showpath=True, showlines=True)
@@ -82,18 +78,19 @@ def _doannotate(fctx, follow=True, diffopts=None, ui=None):
                 raise
 
     assert annotated and contents
-    return _convertoutputs(repo, annotated, contents)
+    return _convertoutputs(fctx._repo, annotated, contents)
 
 def _hgwebannotate(orig, fctx, ui):
     diffopts = patch.difffeatureopts(ui, untrusted=True,
                                      section='annotate', whitespace=True)
-    return _doannotate(fctx, diffopts=diffopts, ui=ui)
+    return _doannotate(fctx, diffopts=diffopts)
 
 def _fctxannotate(orig, self, follow=False, linenumber=False, diffopts=None):
     try:
         return _doannotate(self, follow, diffopts)
-    except Exception:
-        # fallback to the original method
+    except Exception as ex:
+        self._repo.ui.debug('fastannotate: falling back to the vanilla '
+                            'annotate: %r' % ex)
         return orig(self, follow, linenumber, diffopts)
 
 def replacehgwebannotate():

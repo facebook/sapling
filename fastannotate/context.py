@@ -782,3 +782,14 @@ def annotatecontext(repo, path, opts=defaultopts, rebuild=False):
     finally:
         if actx is not None:
             actx.close()
+
+def fctxannotatecontext(fctx, follow=True, diffopts=None, rebuild=False):
+    """like annotatecontext but get the context from a fctx. convenient when
+    used in fctx.annotate
+    """
+    repo = fctx._repo
+    path = fctx._path
+    if repo.ui.configbool('fastannotate', 'forcefollow', True):
+        follow = True
+    aopts = annotateopts(diffopts=diffopts, followrename=follow)
+    return annotatecontext(repo, path, aopts, rebuild)
