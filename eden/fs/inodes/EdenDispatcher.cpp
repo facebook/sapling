@@ -14,6 +14,7 @@
 #include <wangle/concurrent/GlobalExecutor.h>
 #include <shared_mutex>
 #include "EdenMount.h"
+#include "FileHandle.h"
 #include "FileInode.h"
 #include "TreeInode.h"
 #include "eden/fuse/DirHandle.h"
@@ -227,7 +228,7 @@ std::shared_ptr<fusell::InodeBase> EdenDispatcher::lookupInode(
   return it->second;
 }
 
-std::shared_ptr<TreeInode> EdenDispatcher::getDirInode(
+std::shared_ptr<TreeInode> EdenDispatcher::getTreeInode(
     fuse_ino_t ino,
     bool mustExist) const {
   auto d = std::dynamic_pointer_cast<TreeInode>(getInode(ino));
@@ -261,7 +262,7 @@ folly::Future<fusell::Dispatcher::Attr> EdenDispatcher::getattr(
 folly::Future<std::shared_ptr<fusell::DirHandle>> EdenDispatcher::opendir(
     fuse_ino_t ino,
     const struct fuse_file_info& fi) {
-  return getDirInode(ino)->opendir(fi);
+  return getTreeInode(ino)->opendir(fi);
 }
 
 folly::Future<fuse_entry_param> EdenDispatcher::lookup(
@@ -279,7 +280,7 @@ folly::Future<std::shared_ptr<fusell::InodeBase>>
 EdenDispatcher::lookupInodeBase(
     fuse_ino_t parent,
     PathComponentPiece namepiece) {
-  auto dir = getDirInode(parent);
+  auto dir = getTreeInode(parent);
 
   // First, see if we already have the Inode loaded
   auto mgr = mount_->getNameMgr();
@@ -357,7 +358,7 @@ folly::Future<fusell::Dispatcher::Create> EdenDispatcher::create(
     PathComponentPiece name,
     mode_t mode,
     int flags) {
-  return getDirInode(parent)
+  return getTreeInode(parent)
       ->create(name, mode, flags)
       .then([=](TreeInode::CreateResult created) {
         recordInode(created.inode);
@@ -379,18 +380,22 @@ folly::Future<fuse_entry_param> EdenDispatcher::mknod(
     PathComponentPiece name,
     mode_t mode,
     dev_t rdev) {
-  return getDirInode(parent)->mknod(name, mode, rdev);
+  // We intentionally do not support device nodes.
+  // The mknod(3) man page indicates that EPERM should be thrown if the
+  // filesystem does not support the type of node requested.
+  folly::throwSystemErrorExplicit(
+      EPERM, "device node creation not supported in eden mount points");
 }
 
 folly::Future<fuse_entry_param>
 EdenDispatcher::mkdir(fuse_ino_t parent, PathComponentPiece name, mode_t mode) {
-  return getDirInode(parent)->mkdir(name, mode);
+  return getTreeInode(parent)->mkdir(name, mode);
 }
 
 folly::Future<folly::Unit> EdenDispatcher::unlink(
     fuse_ino_t parent,
     PathComponentPiece name) {
-  return getDirInode(parent)->unlink(name).then(
+  return getTreeInode(parent)->unlink(name).then(
       [ =, name = PathComponent(name) ] {
         auto mgr = mount_->getNameMgr();
         mgr->unlink(parent, name);
@@ -401,7 +406,7 @@ folly::Future<folly::Unit> EdenDispatcher::unlink(
 folly::Future<folly::Unit> EdenDispatcher::rmdir(
     fuse_ino_t parent,
     PathComponentPiece name) {
-  return getDirInode(parent)->rmdir(name).then(
+  return getTreeInode(parent)->rmdir(name).then(
       [ =, name = PathComponent(name) ] {
         auto mgr = mount_->getNameMgr();
         mgr->unlink(parent, name);
@@ -413,7 +418,7 @@ folly::Future<fuse_entry_param> EdenDispatcher::symlink(
     PathComponentPiece link,
     fuse_ino_t parent,
     PathComponentPiece name) {
-  return getDirInode(parent)->symlink(link, name);
+  return getTreeInode(parent)->symlink(link, name);
 }
 
 folly::Future<folly::Unit> EdenDispatcher::rename(
@@ -421,8 +426,8 @@ folly::Future<folly::Unit> EdenDispatcher::rename(
     PathComponentPiece name,
     fuse_ino_t newparent,
     PathComponentPiece newname) {
-  return getDirInode(parent)
-      ->rename(name, getDirInode(newparent), newname)
+  return getTreeInode(parent)
+      ->rename(name, getTreeInode(newparent), newname)
       .then([ =, name = name.copy(), newname = newname.copy() ] {
         auto mgr = mount_->getNameMgr();
         mgr->rename(parent, name, newparent, newname);
@@ -434,14 +439,11 @@ folly::Future<fuse_entry_param> EdenDispatcher::link(
     fuse_ino_t ino,
     fuse_ino_t newparent,
     PathComponentPiece newname) {
-  return getInode(ino)->link(getDirInode(newparent), newname).then([
-    =,
-    name = newname.copy()
-  ](fuse_entry_param && entry) {
-    auto mgr = mount_->getNameMgr();
-    mgr->link(ino, entry.generation, newparent, name);
-    return entry;
-  });
+  // We intentionally do not support hard links.
+  // These generally cannot be tracked in source control (git or mercurial)
+  // and are not portable to non-Unix platforms.
+  folly::throwSystemErrorExplicit(
+      EPERM, "hard links are not supported in eden mount points");
 }
 
 Future<string> EdenDispatcher::getxattr(fuse_ino_t ino, StringPiece name) {

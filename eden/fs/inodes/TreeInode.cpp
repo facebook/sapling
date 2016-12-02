@@ -11,6 +11,7 @@
 
 #include "EdenDispatcher.h"
 #include "EdenMount.h"
+#include "FileHandle.h"
 #include "FileInode.h"
 #include "Overlay.h"
 #include "TreeInodeDirHandle.h"
@@ -33,7 +34,7 @@ TreeInode::TreeInode(
     TreeInode::Entry* entry,
     fuse_ino_t parent,
     fuse_ino_t ino)
-    : DirInode(ino),
+    : fusell::InodeBase(ino),
       mount_(mount),
       contents_(buildDirFromTree(tree.get())),
       entry_(entry),
@@ -48,7 +49,7 @@ TreeInode::TreeInode(
     TreeInode::Entry* entry,
     fuse_ino_t parent,
     fuse_ino_t ino)
-    : DirInode(ino),
+    : fusell::InodeBase(ino),
       mount_(mount),
       contents_(std::move(dir)),
       entry_(entry),
@@ -145,8 +146,7 @@ void TreeInode::materializeDirAndParents() {
   // Ensure that our parent(s) are materialized.  We can't go higher
   // than the root inode though.
   if (getNodeId() != FUSE_ROOT_ID) {
-    auto parentInode = std::dynamic_pointer_cast<TreeInode>(
-        getMount()->getDispatcher()->getDirInode(parent_));
+    auto parentInode = getMount()->getDispatcher()->getTreeInode(parent_);
     DCHECK(parentInode) << "must always have a TreeInode parent";
     // and get it to materialize
     parentInode->materializeDirAndParents();
@@ -185,8 +185,7 @@ void TreeInode::materializeDirAndParents() {
   // This means that there is a small window of time where our in-memory and
   // on-disk state for the overlay are not in sync.
   if (updateParent) {
-    auto parentInode = std::dynamic_pointer_cast<TreeInode>(
-        getMount()->getDispatcher()->getDirInode(parent_));
+    auto parentInode = getMount()->getDispatcher()->getTreeInode(parent_);
     auto parentName = getNameMgr()->resolvePathToNode(parentInode->getNodeId());
     getOverlay()->saveOverlayDir(parentName, &*parentInode->contents_.wlock());
   }
@@ -216,14 +215,14 @@ TreeInode::Dir TreeInode::buildDirFromTree(const Tree* tree) {
   return dir;
 }
 
-folly::Future<fusell::DirInode::CreateResult>
+folly::Future<TreeInode::CreateResult>
 TreeInode::create(PathComponentPiece name, mode_t mode, int flags) {
   // Figure out the relative path to this inode.
   auto myname = getNameMgr()->resolvePathToNode(getNodeId());
 
   // Compute the effective name of the node they want to create.
   auto targetName = myname + name;
-  std::shared_ptr<fusell::FileHandle> handle;
+  std::shared_ptr<FileHandle> handle;
   std::shared_ptr<FileInode> inode;
   std::shared_ptr<fusell::InodeNameManager::Node> node;
 
@@ -275,7 +274,7 @@ TreeInode::create(PathComponentPiece name, mode_t mode, int flags) {
   auto getattrResult = handle->getattr();
   return getattrResult.then(
       [ =, handle = std::move(handle) ](fusell::Dispatcher::Attr attr) mutable {
-        fusell::DirInode::CreateResult result(getMount()->getMountPoint());
+        CreateResult result(getMount()->getMountPoint());
 
         // Return all of the results back to the kernel.
         result.inode = inode;
@@ -291,6 +290,23 @@ bool TreeInode::canForget() {
   // We can't let this inode be forgotten while it is materialized,
   // as we hold the source of truth about this entry.
   return !contents_.rlock()->materialized;
+}
+
+folly::Future<fuse_entry_param> link(
+    std::shared_ptr<fusell::InodeBase> /* node */,
+    PathComponentPiece /* newname */) {
+  // We intentionally do not support hard links.
+  // These generally cannot be tracked in source control (git or mercurial)
+  // and are not portable to non-Unix platforms.
+  folly::throwSystemErrorExplicit(
+      EPERM, "hard links are not supported in eden mount points");
+}
+
+folly::Future<fuse_entry_param> TreeInode::symlink(
+    PathComponentPiece /* link */,
+    PathComponentPiece /* name */) {
+  // TODO
+  FUSELL_NOT_IMPL();
 }
 
 folly::Future<fuse_entry_param> TreeInode::mkdir(
@@ -600,18 +616,12 @@ void TreeInode::renameHelper(
 
 folly::Future<folly::Unit> TreeInode::rename(
     PathComponentPiece name,
-    std::shared_ptr<DirInode> newParent,
+    std::shared_ptr<TreeInode> newParent,
     PathComponentPiece newName) {
-  auto targetDir = std::dynamic_pointer_cast<TreeInode>(newParent);
-  if (!targetDir) {
-    // This probably can't happen, but it is better to be safe than sorry.
-    folly::throwSystemErrorExplicit(EXDEV, "target dir is not a TreeInode");
-  }
-
   auto nameMgr = getNameMgr();
   auto sourceName = nameMgr->resolvePathToNode(getNodeId()) + name;
   auto targetName =
-      nameMgr->resolvePathToNode(targetDir->getNodeId()) + newName;
+      nameMgr->resolvePathToNode(newParent->getNodeId()) + newName;
 
   // Check pre-conditions with a read lock before we materialize anything
   // in case we're processing spurious rename for a non-existent entry;
@@ -634,15 +644,20 @@ folly::Future<folly::Unit> TreeInode::rename(
 
   // Can't use SYNCHRONIZED_DUAL for both cases, as we'd self-deadlock by trying
   // to wlock the same thing twice
-  if (targetDir.get() == this) {
+  if (newParent.get() == this) {
     contents_.withWLock([&](auto& contents) {
       this->renameHelper(&contents, sourceName, &contents, targetName);
     });
   } else {
-    targetDir->materializeDirAndParents();
+    newParent->materializeDirAndParents();
 
+    // TODO: SYNCHRONIZED_DUAL is not the correct locking order to use here.
+    // We need to figure out if the source and dest are ancestors/children of
+    // each other.  If so we have to lock the ancestor first.  Otherwise we may
+    // deadlock with other operations that always acquire parent directory
+    // locks first (e.g., rmdir())
     SYNCHRONIZED_DUAL(
-        sourceContents, contents_, destContents, targetDir->contents_) {
+        sourceContents, contents_, destContents, newParent->contents_) {
       renameHelper(&sourceContents, sourceName, &destContents, targetName);
     }
   }

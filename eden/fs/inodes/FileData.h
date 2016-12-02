@@ -41,7 +41,7 @@ class FileData {
   /** Construct a freshly created FileData from a pre-opened File object.
    * file must be moved in (it has no copy constructor) and must have
    * been created by a call to Overlay::createFile.  This constructor
-   * is used in the DirInode::create case and is required to implement
+   * is used in the TreeInode::create case and is required to implement
    * O_EXCL correctly. */
   FileData(
       std::mutex& mutex,

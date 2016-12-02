@@ -17,8 +17,6 @@ namespace facebook {
 namespace eden {
 namespace fusell {
 
-class DirInode;
-
 class InodeBase : public std::enable_shared_from_this<InodeBase> {
   fuse_ino_t ino_;
   // A reference count tracking the outstanding lookups that the kernel
@@ -48,9 +46,6 @@ class InodeBase : public std::enable_shared_from_this<InodeBase> {
   virtual folly::Future<Dispatcher::Attr> setattr(const struct stat& attr,
                                                   int to_set);
 
-  virtual folly::Future<fuse_entry_param> link(
-      std::shared_ptr<DirInode> newparent,
-      PathComponentPiece newname);
   virtual folly::Future<folly::Unit> setxattr(folly::StringPiece name,
                                               folly::StringPiece value,
                                               int flags);

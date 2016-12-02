@@ -10,21 +10,21 @@
 #pragma once
 #include <folly/Optional.h>
 #include "eden/fs/model/Hash.h"
-#include "eden/fuse/Inodes.h"
+#include "eden/fuse/InodeBase.h"
+#include "eden/fuse/InodeNameManager.h"
 #include "eden/utils/PathMap.h"
 
 namespace facebook {
 namespace eden {
 
 class EdenMount;
-class Hash;
+class FileHandle;
 class ObjectStore;
 class Tree;
-class TreeEntry;
 class Overlay;
 
 // Represents a Tree instance in a form that FUSE can consume
-class TreeInode : public fusell::DirInode {
+class TreeInode : public fusell::InodeBase {
  public:
   /** Represents a directory entry.
    * A directory entry holds the combined Tree and Overlay data;
@@ -56,6 +56,24 @@ class TreeInode : public fusell::DirInode {
     bool materialized{false};
   };
 
+  /** Holds the results of a create operation.
+   *
+   * It is important that the file handle creation respect O_EXCL if
+   * it set in the flags parameter to TreeInode::create.
+   */
+  struct CreateResult {
+    /// file attributes and cache ttls.
+    fusell::Dispatcher::Attr attr;
+    /// The newly created inode instance.
+    std::shared_ptr<fusell::InodeBase> inode;
+    /// The newly opened file handle.
+    std::shared_ptr<FileHandle> file;
+    /// The newly created node record from the name manager.
+    std::shared_ptr<fusell::InodeNameManager::Node> node;
+
+    explicit CreateResult(const fusell::MountPoint* mount) : attr(mount) {}
+  };
+
   TreeInode(
       EdenMount* mount,
       std::unique_ptr<Tree>&& tree,
@@ -79,14 +97,14 @@ class TreeInode : public fusell::DirInode {
   /** Implements the InodeBase method used by the Dispatcher
    * to create the Inode instance for a given name */
   folly::Future<std::shared_ptr<fusell::InodeBase>> getChildByName(
-      PathComponentPiece namepiece) override;
+      PathComponentPiece namepiece);
 
   folly::Future<std::shared_ptr<fusell::DirHandle>> opendir(
-      const struct fuse_file_info& fi) override;
+      const struct fuse_file_info& fi);
   folly::Future<folly::Unit> rename(
       PathComponentPiece name,
-      std::shared_ptr<DirInode> newParent,
-      PathComponentPiece newName) override;
+      std::shared_ptr<TreeInode> newParent,
+      PathComponentPiece newName);
 
   bool canForget() override;
 
@@ -123,13 +141,15 @@ class TreeInode : public fusell::DirInode {
   ObjectStore* getStore() const;
 
   const std::shared_ptr<Overlay>& getOverlay() const;
-  folly::Future<fusell::DirInode::CreateResult>
-  create(PathComponentPiece name, mode_t mode, int flags) override;
+  folly::Future<CreateResult>
+  create(PathComponentPiece name, mode_t mode, int flags);
+  folly::Future<fuse_entry_param> symlink(
+      PathComponentPiece link,
+      PathComponentPiece name);
 
-  folly::Future<fuse_entry_param> mkdir(PathComponentPiece name, mode_t mode)
-      override;
-  folly::Future<folly::Unit> unlink(PathComponentPiece name) override;
-  folly::Future<folly::Unit> rmdir(PathComponentPiece name) override;
+  folly::Future<fuse_entry_param> mkdir(PathComponentPiece name, mode_t mode);
+  folly::Future<folly::Unit> unlink(PathComponentPiece name);
+  folly::Future<folly::Unit> rmdir(PathComponentPiece name);
 
   /** Called in a thrift context to switch the active snapshot.
    * Since this is called in a thrift context, RequestData::get() won't

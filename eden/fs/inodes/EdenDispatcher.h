@@ -52,10 +52,10 @@ class EdenDispatcher : public fusell::Dispatcher {
   std::shared_ptr<fusell::InodeBase> getInode(fuse_ino_t, bool mustExist = true)
       const;
   std::shared_ptr<fusell::InodeBase> lookupInode(fuse_ino_t) const;
-  std::shared_ptr<TreeInode> getDirInode(fuse_ino_t, bool mustExist = true)
+  std::shared_ptr<TreeInode> getTreeInode(fuse_ino_t, bool mustExist = true)
       const;
-  std::shared_ptr<FileInode> getFileInode(fuse_ino_t,
-                                          bool mustExist = true) const;
+  std::shared_ptr<FileInode> getFileInode(fuse_ino_t, bool mustExist = true)
+      const;
 
   /*
    * Set the root inode.

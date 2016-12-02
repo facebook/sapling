@@ -100,8 +100,7 @@ const vector<BindMount>& EdenMount::getBindMounts() const {
 }
 
 std::shared_ptr<TreeInode> EdenMount::getRootInode() const {
-  auto rootAsDirInode = dispatcher_->getRootInode();
-  return std::dynamic_pointer_cast<TreeInode>(rootAsDirInode);
+  return dispatcher_->getRootInode();
 }
 
 std::unique_ptr<Tree> EdenMount::getRootTree() const {

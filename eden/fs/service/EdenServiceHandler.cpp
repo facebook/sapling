@@ -206,7 +206,7 @@ SHA1Result EdenServiceHandler::getSHA1ForPath(
   auto edenMount = server_->getMount(mountPoint);
   auto relativePath = RelativePathPiece{path};
   auto dispatcher = edenMount->getDispatcher();
-  shared_ptr<fusell::DirInode> parent = edenMount->getRootInode();
+  auto parent = edenMount->getRootInode();
 
   auto it = relativePath.paths().begin();
   while (true) {
@@ -221,8 +221,7 @@ SHA1Result EdenServiceHandler::getSHA1ForPath(
     if (it == relativePath.paths().end()) {
       // inodeNumber must correspond to the last path component, which we expect
       // to correspond to a file.
-      auto fileInode = std::dynamic_pointer_cast<FileInode>(
-          dispatcher->getFileInode(inodeNumber));
+      auto fileInode = dispatcher->getFileInode(inodeNumber);
 
       if (!fileInode) {
         out.set_error(newEdenError(
@@ -241,7 +240,7 @@ SHA1Result EdenServiceHandler::getSHA1ForPath(
       out.set_sha1(StringPiece(hash.getBytes()).str());
       return out;
     } else {
-      parent = dispatcher->getDirInode(inodeNumber);
+      parent = dispatcher->getTreeInode(inodeNumber);
     }
   }
 }

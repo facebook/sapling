@@ -16,6 +16,7 @@
 #include "eden/fs/inodes/Dirstate.h"
 #include "eden/fs/inodes/EdenDispatcher.h"
 #include "eden/fs/inodes/FileData.h"
+#include "eden/fs/inodes/FileHandle.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/model/Blob.h"
@@ -26,7 +27,6 @@
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/store/hg/HgManifestImporter.h"
 #include "eden/fs/testharness/TestBackingStore.h"
-#include "eden/fuse/FileInode.h"
 #include "eden/fuse/MountPoint.h"
 
 using facebook::eden::fusell::MountPoint;

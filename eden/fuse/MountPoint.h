@@ -20,7 +20,6 @@ namespace facebook {
 namespace eden {
 namespace fusell {
 
-class DirInode;
 class Dispatcher;
 class Channel;
 
@@ -76,7 +75,7 @@ class MountPoint {
   /**
    * Indicate that the mount point has been successfully started.
    *
-   * This function should only be invoked by InodeDispatcher.
+   * This function should only be invoked by the Dispatcher class.
    */
   void mountStarted();
 

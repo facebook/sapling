@@ -31,7 +31,7 @@ FileInode::FileInode(
     fuse_ino_t ino,
     std::shared_ptr<TreeInode> parentInode,
     TreeInode::Entry* entry)
-    : fusell::FileInode(ino),
+    : fusell::InodeBase(ino),
       parentInode_(parentInode),
       entry_(entry),
       data_(
@@ -43,7 +43,7 @@ FileInode::FileInode(
     std::shared_ptr<TreeInode> parentInode,
     TreeInode::Entry* entry,
     folly::File&& file)
-    : fusell::FileInode(ino),
+    : fusell::InodeBase(ino),
       parentInode_(parentInode),
       entry_(entry),
       data_(std::make_shared<FileData>(
@@ -181,7 +181,7 @@ folly::Future<std::shared_ptr<fusell::FileHandle>> FileInode::open(
       std::static_pointer_cast<FileInode>(shared_from_this()), data, fi.flags);
 }
 
-std::shared_ptr<fusell::FileHandle> FileInode::finishCreate() {
+std::shared_ptr<FileHandle> FileInode::finishCreate() {
   auto data = getOrLoadData();
   SCOPE_EXIT {
     data.reset();

@@ -600,10 +600,9 @@ void Dirstate::add(RelativePathPiece path) {
  */
 bool shouldFileBeDeletedByHgRemove(
     RelativePathPiece file,
-    std::shared_ptr<fusell::DirInode> parent,
+    std::shared_ptr<TreeInode> treeInode,
     const TreeEntry* treeEntry,
     ObjectStore* objectStore) {
-  auto treeInode = std::dynamic_pointer_cast<TreeInode>(parent);
   if (treeInode == nullptr) {
     // The parent directory for the file is not in the overlay, so the file must
     // not have been modified. As such, `hg remove` should result in deleting

@@ -11,17 +11,16 @@
 #include <folly/File.h>
 #include "TreeInode.h"
 #include "eden/fs/model/Tree.h"
-#include "eden/fuse/Inodes.h"
+#include "eden/fuse/InodeBase.h"
 
 namespace facebook {
 namespace eden {
 
 class FileHandle;
-class Blob;
 class FileData;
 class Hash;
 
-class FileInode : public fusell::FileInode {
+class FileInode : public fusell::InodeBase {
  public:
   /** Construct an inode using an overlay entry */
   FileInode(
@@ -31,7 +30,7 @@ class FileInode : public fusell::FileInode {
 
   /** Construct an inode using a freshly created overlay file.
    * file must be moved in and must have been created by a call to
-   * Overlay::openFile.  This constructor is used in the DirInode::create
+   * Overlay::openFile.  This constructor is used in the TreeInode::create
    * case and is required to implement O_EXCL correctly. */
   FileInode(
       fuse_ino_t ino,
@@ -43,15 +42,15 @@ class FileInode : public fusell::FileInode {
   folly::Future<fusell::Dispatcher::Attr> setattr(
       const struct stat& attr,
       int to_set) override;
-  folly::Future<std::string> readlink() override;
+  folly::Future<std::string> readlink();
   folly::Future<std::shared_ptr<fusell::FileHandle>> open(
-      const struct fuse_file_info& fi) override;
+      const struct fuse_file_info& fi);
 
   /** Specialized helper to finish a file creation operation.
    * Intended to be called immediately after invoking the constructor
    * that accepts a File object, this returns an opened FileHandle
    * for the file that was passed to the constructor. */
-  std::shared_ptr<fusell::FileHandle> finishCreate();
+  std::shared_ptr<FileHandle> finishCreate();
 
   folly::Future<std::vector<std::string>> listxattr() override;
   folly::Future<std::string> getxattr(folly::StringPiece name) override;

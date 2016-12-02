@@ -7,7 +7,7 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
-#include "Inodes.h"
+#include "InodeBase.h"
 
 using namespace folly;
 
@@ -31,12 +31,6 @@ folly::Future<Dispatcher::Attr> InodeBase::getattr() {
 // See Dispatcher::setattr
 folly::Future<Dispatcher::Attr> InodeBase::setattr(const struct stat& attr,
                                                    int to_set) {
-  FUSELL_NOT_IMPL();
-}
-
-folly::Future<fuse_entry_param> InodeBase::link(
-    std::shared_ptr<DirInode>,
-    PathComponentPiece) {
   FUSELL_NOT_IMPL();
 }
 
