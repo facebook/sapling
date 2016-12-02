@@ -78,3 +78,35 @@
   $ hg repack
   $ ls -l .hg/store/packs/manifests | grep datapack
   * 335 * 3c6e0e5aee5fbadb6c70cab831e9ec4921e5d99c.datapack (glob)
+
+# Test incremental repacking of trees
+  $ echo b >> dir/b && hg commit -Aqm 'modify dir/b'
+  $ echo b >> dir/b && hg commit -Aqm 'modify dir/b'
+  $ ls -l .hg/store/packs/manifests | grep datapack
+  * 335 * 3c6e0e5aee5fbadb6c70cab831e9ec4921e5d99c.datapack (glob)
+  * 227 * c90aca4b75c7dcf6dbd05d0b66bbd225cd49caa6.datapack (glob)
+  * 227 * d7e58e97c891caec5ef4f9f2531eeaa42295859c.datapack (glob)
+
+- repack incremental does nothing here because there are so few packs
+  $ hg repack --incremental --config remotefilelog.data.generations=300,200 --config remotefilelog.data.repacksizelimit=300
+  $ ls -l .hg/store/packs/manifests | grep datapack
+  * 335 * 3c6e0e5aee5fbadb6c70cab831e9ec4921e5d99c.datapack (glob)
+  * 227 * c90aca4b75c7dcf6dbd05d0b66bbd225cd49caa6.datapack (glob)
+  * 227 * d7e58e97c891caec5ef4f9f2531eeaa42295859c.datapack (glob)
+
+  $ echo b >> dir/b && hg commit -Aqm 'modify dir/b'
+  $ echo b >> dir/b && hg commit -Aqm 'modify dir/b'
+  $ echo b >> dir/b && hg commit -Aqm 'modify dir/b'
+  $ ls -l .hg/store/packs/manifests | grep datapack
+  * 335 * 3c6e0e5aee5fbadb6c70cab831e9ec4921e5d99c.datapack (glob)
+  * 227 * 422b0714c31ae9ccde7e2122d55da99e1bf27617.datapack (glob)
+  * 227 * 4361a9e72e2d655197f027200133f283739ae491.datapack (glob)
+  * 227 * c90aca4b75c7dcf6dbd05d0b66bbd225cd49caa6.datapack (glob)
+  * 227 * d7e58e97c891caec5ef4f9f2531eeaa42295859c.datapack (glob)
+  * 227 * dc91863edf02a63c560d1b10b791649e55f35a4b.datapack (glob)
+
+- repack incremental kicks in once there are a number of packs
+  $ hg repack --incremental --config remotefilelog.data.generations=300,200
+  $ ls -l .hg/store/packs/manifests | grep datapack
+  * 335 * 3c6e0e5aee5fbadb6c70cab831e9ec4921e5d99c.datapack (glob)
+  * 1131 * b8a2b6847811444adab7bcc168b7517ff1ffde6b.datapack (glob)

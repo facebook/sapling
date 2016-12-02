@@ -73,7 +73,7 @@ def incrementalrepack(repo):
                                                 constants.TREEPACK_CATEGORY)
         _incrementalrepack(repo,
                            repo.svfs.sharedmanifestdatastores,
-                           metadatastore.unionmetadatastore(),
+                           [metadatastore.unionmetadatastore()],
                            packpath,
                            constants.TREEPACK_CATEGORY)
 
@@ -82,11 +82,13 @@ def incrementalrepack(repo):
                                                 constants.TREEPACK_CATEGORY)
         _incrementalrepack(repo,
                            repo.svfs.localmanifestdatastores,
-                           metadatastore.unionmetadatastore(),
+                           [metadatastore.unionmetadatastore()],
                            packpath,
-                           constants.TREEPACK_CATEGORY)
+                           constants.TREEPACK_CATEGORY,
+                           allowincompletedata=True)
 
-def _incrementalrepack(repo, datastore, historystore, packpath, category):
+def _incrementalrepack(repo, datastore, historystore, packpath, category,
+        allowincompletedata=False):
     shallowutil.mkstickygroupdir(repo.ui, packpath)
 
     files = osutil.listdir(packpath, stat=True)
@@ -103,7 +105,9 @@ def _incrementalrepack(repo, datastore, historystore, packpath, category):
     historypacks.extend(s for s in historystore
                         if not isinstance(s, historypack.historypackstore))
 
-    datasource = contentstore.unioncontentstore(*datapacks)
+    datasource = contentstore.unioncontentstore(
+        *datapacks,
+        allowincomplete=allowincompletedata)
     historysource = metadatastore.unionmetadatastore(*historypacks,
                                                      allowincomplete=True)
 

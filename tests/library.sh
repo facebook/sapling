@@ -6,7 +6,7 @@ cat >> $HGRCPATH <<EOF
 cachepath=$CACHEDIR
 debug=True
 [extensions]
-remotefilelog=$TESTDIR/../remotefilelog
+remotefilelog=
 rebase=
 mq=
 [ui]
