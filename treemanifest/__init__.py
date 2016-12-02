@@ -130,7 +130,9 @@ def recordmanifest(pack, repo, oldtip, newtip):
         p1 = mfrevlog.parentrevs(rev)[0]
         p1node = mfrevlog.node(p1)
 
-        if p1node in builttrees:
+        if p1node == nullid:
+            origtree = ctreemanifest.treemanifest(repo.svfs.manifestdatastore)
+        elif p1node in builttrees:
             origtree = builttrees[p1node]
         else:
             origtree = mfl[p1node].read()._treemanifest()
@@ -207,7 +209,7 @@ def recordmanifest(pack, repo, oldtip, newtip):
             newtree.set(fname, fnode, fflags)
 
         newtree.write(InterceptedMutablePack(pack, mfrevlog.node(rev), p1node),
-                      origtree)
+                      origtree if p1node != nullid else None)
 
         if ui.configbool('treemanifest', 'verifyautocreate', True):
             diff = newtree.diff(origtree)

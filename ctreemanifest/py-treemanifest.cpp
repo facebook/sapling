@@ -1090,14 +1090,19 @@ void writestore(Manifest *mainManifest, const std::vector<char*> &cmpNodes,
 static PyObject *treemanifest_write(py_treemanifest *self, PyObject *args,
                                     PyObject *kwargs) {
   PyObject* packObj;
-  py_treemanifest* p1tree = NULL;
+  PyObject* p1treeObj = NULL;
   PyObject* useDeltaObj = NULL;
 
   static char const *kwlist[] = {"pack", "p1tree", "useDeltas", NULL};
 
   if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|OO", (char**)kwlist,
-                                   &packObj, &p1tree, &useDeltaObj)) {
+                                   &packObj, &p1treeObj, &useDeltaObj)) {
     return NULL;
+  }
+
+  py_treemanifest *p1tree = NULL;
+  if (p1treeObj && p1treeObj != Py_None) {
+    p1tree = (py_treemanifest*)p1treeObj;
   }
 
   // ParseTuple doesn't increment the ref, but the PythonObj will decrement on
