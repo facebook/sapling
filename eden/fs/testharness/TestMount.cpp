@@ -172,10 +172,6 @@ void TestMount::addFile(folly::StringPiece path, std::string contents) {
 }
 
 void TestMount::overwriteFile(folly::StringPiece path, std::string contents) {
-  auto relativePath = RelativePathPiece{path};
-  auto directory =
-      edenMount_->getMountPoint()->getDirInodeForPath(relativePath.dirname());
-  auto dispatcher = edenMount_->getDispatcher();
   auto file = getFileInodeForPath(path);
 
   fuse_file_info info;
@@ -188,9 +184,6 @@ void TestMount::overwriteFile(folly::StringPiece path, std::string contents) {
 }
 
 std::string TestMount::readFile(folly::StringPiece path) {
-  auto relativePath = RelativePathPiece{path};
-  auto directory =
-      edenMount_->getMountPoint()->getDirInodeForPath(relativePath.dirname());
   auto file = getFileInodeForPath(path);
   auto fileData = file->getOrLoadData();
   auto attr = file->getattr().get();
@@ -203,7 +196,7 @@ bool TestMount::hasFileAt(folly::StringPiece path) {
   auto relativePath = RelativePathPiece{path};
   mode_t mode;
   try {
-    auto child = edenMount_->getMountPoint()->getInodeBaseForPath(relativePath);
+    auto child = edenMount_->getInodeBase(relativePath);
     mode = child->getattr().get().st.st_mode;
   } catch (const std::system_error& e) {
     if (e.code().value() == ENOENT) {
@@ -240,28 +233,12 @@ void TestMount::rmdir(folly::StringPiece path) {
 
 std::shared_ptr<TreeInode> TestMount::getDirInodeForPath(
     folly::StringPiece path) const {
-  auto directory =
-      edenMount_->getMountPoint()->getInodeBaseForPath(RelativePathPiece{path});
-  auto treeInode = std::dynamic_pointer_cast<TreeInode>(directory);
-  if (treeInode != nullptr) {
-    return treeInode;
-  } else {
-    throw std::runtime_error(
-        folly::to<std::string>("Could not cast to TreeInode: ", path));
-  }
+  return edenMount_->getTreeInode(RelativePathPiece{path});
 }
 
 std::shared_ptr<FileInode> TestMount::getFileInodeForPath(
     folly::StringPiece path) const {
-  auto file =
-      edenMount_->getMountPoint()->getInodeBaseForPath(RelativePathPiece{path});
-  auto fileTreeEntry = std::dynamic_pointer_cast<FileInode>(file);
-  if (fileTreeEntry != nullptr) {
-    return fileTreeEntry;
-  } else {
-    throw std::runtime_error(
-        folly::to<std::string>("Could not cast to FileInode: ", path));
-  }
+  return edenMount_->getFileInode(RelativePathPiece{path});
 }
 
 std::unique_ptr<Tree> TestMount::getRootTree() const {

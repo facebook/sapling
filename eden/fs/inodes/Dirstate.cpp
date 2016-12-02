@@ -207,9 +207,7 @@ class IgnoreChecker {
     VLOG(4) << "Loading ignore file at \"" << ignorePath << "\"";
     std::shared_ptr<FileInode> ignoreInode;
     try {
-      auto fusellInode =
-          mountPoint_->getMountPoint()->getFileInodeForPath(ignorePath);
-      ignoreInode = std::dynamic_pointer_cast<FileInode>(fusellInode);
+      ignoreInode = mountPoint_->getFileInode(ignorePath);
     } catch (const std::system_error& ex) {
       if (ex.code().category() != std::system_category() ||
           (ex.code().value() != ENOENT && ex.code().value() != ENOTDIR)) {

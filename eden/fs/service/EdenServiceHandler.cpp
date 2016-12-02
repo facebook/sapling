@@ -340,8 +340,7 @@ void EdenServiceHandler::getFileInformation(
 
     try {
       auto relativePath = RelativePathPiece{path};
-      auto inodeBase =
-          edenMount->getMountPoint()->getInodeBaseForPath(relativePath);
+      auto inodeBase = edenMount->getInodeBase(relativePath);
 
       // we've reached the item of interest.
       auto attr = inodeBase->getattr().get();

@@ -51,24 +51,6 @@ class MountPoint {
   }
 
   /**
-   * @return the InodeBase for the specified path or throws a std::system_error
-   *     with ENOENT.
-   */
-  std::shared_ptr<InodeBase> getInodeBaseForPath(RelativePathPiece path) const;
-
-  /**
-   * @return the FileInode for the specified path or throws a std::system_error
-   *     with ENOENT or EISDIR, as appropriate.
-   */
-  std::shared_ptr<FileInode> getFileInodeForPath(RelativePathPiece path) const;
-
-  /**
-   * @return the DirInode for the specified path or throws a std::system_error
-   *     with ENOENT or ENOTDIR, as appropriate.
-   */
-  std::shared_ptr<DirInode> getDirInodeForPath(RelativePathPiece path) const;
-
-  /**
    * Spawn a new thread to mount the filesystem and run the fuse channel.
    *
    * This is similar to run(), except that it returns as soon as the filesystem

@@ -116,17 +116,43 @@ std::unique_ptr<Tree> EdenMount::getRootTree() const {
 
 shared_ptr<fusell::InodeBase> EdenMount::getInodeBase(
     RelativePathPiece path) const {
-  return mountPoint_->getInodeBaseForPath(path);
+  auto inodeBase = getDispatcher()->getInode(FUSE_ROOT_ID);
+  auto relativePath = RelativePathPiece{path};
+
+  // Walk down to the path of interest.
+  auto it = relativePath.paths().begin();
+  while (it != relativePath.paths().end()) {
+    // This will throw if there is no such entry.
+    inodeBase =
+        getDispatcher()
+            ->lookupInodeBase(inodeBase->getNodeId(), it.piece().basename())
+            .get();
+    ++it;
+  }
+
+  return inodeBase;
 }
 
 shared_ptr<TreeInode> EdenMount::getTreeInode(RelativePathPiece path) const {
-  auto dirInode = mountPoint_->getDirInodeForPath(path);
-  return std::dynamic_pointer_cast<TreeInode>(dirInode);
+  auto inodeBase = getInodeBase(path);
+  auto treeInode = std::dynamic_pointer_cast<TreeInode>(inodeBase);
+  if (treeInode) {
+    return treeInode;
+  } else {
+    folly::throwSystemErrorExplicit(
+        ENOTDIR, "not a directory: ", path.stringPiece());
+  }
 }
 
 shared_ptr<FileInode> EdenMount::getFileInode(RelativePathPiece path) const {
-  auto fusellInode = mountPoint_->getFileInodeForPath(path);
-  return std::dynamic_pointer_cast<FileInode>(fusellInode);
+  auto inodeBase = getInodeBase(path);
+  auto fileInode = std::dynamic_pointer_cast<FileInode>(inodeBase);
+  if (fileInode) {
+    return fileInode;
+  } else {
+    folly::throwSystemErrorExplicit(
+        EISDIR, "is a directory: ", path.stringPiece());
+  }
 }
 }
 } // facebook::eden
