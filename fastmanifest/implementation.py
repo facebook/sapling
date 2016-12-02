@@ -122,6 +122,9 @@ class hybridmanifest(object):
         if self.__treemanifest is None:
             if self.node in self.treecache:
                 self.__treemanifest = self.treecache[self.node]
+            elif self.node == revlog.nullid:
+                store = self.opener.manifestdatastore
+                self.__treemanifest = ctreemanifest.treemanifest(store)
             else:
                 store = self.opener.manifestdatastore
                 missing = store.getmissing([('', self.node)])
