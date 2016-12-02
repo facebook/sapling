@@ -60,6 +60,25 @@ def incrementalrepack(repo):
                        packpath,
                        constants.FILEPACK_CATEGORY)
 
+    if util.safehasattr(repo.svfs, 'manifestdatastore'):
+        # Repack the shared manifest store
+        packpath = shallowutil.getcachepackpath(repo,
+                                                constants.TREEPACK_CATEGORY)
+        _incrementalrepack(repo,
+                           repo.svfs.sharedmanifestdatastores,
+                           metadatastore.unionmetadatastore(),
+                           packpath,
+                           constants.TREEPACK_CATEGORY)
+
+        # Repack the local manifest store
+        packpath = shallowutil.getlocalpackpath(repo.svfs.vfs.base,
+                                                constants.TREEPACK_CATEGORY)
+        _incrementalrepack(repo,
+                           repo.svfs.localmanifestdatastores,
+                           metadatastore.unionmetadatastore(),
+                           packpath,
+                           constants.TREEPACK_CATEGORY)
+
 def _incrementalrepack(repo, datastore, historystore, packpath, category):
     shallowutil.mkstickygroupdir(repo.ui, packpath)
 
