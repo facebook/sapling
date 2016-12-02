@@ -808,16 +808,17 @@ class manifestfactory(object):
         origself, m, transaction, link, p1, p2, added, removed = args[:8]
         fastcache = fastmanifestcache.getinstance(origself.opener, self.ui)
 
+        p1text = None
+
         p1hexnode = revlog.hex(p1)
         cacheenabled = self.ui.configbool("fastmanifest", "usecache", True)
         if (cacheenabled and
             p1hexnode in fastcache and
             isinstance(m, hybridmanifest) and
             m._incache()):
-            # yay, we can satisfy this from the fastmanifest.
+            p1text = fastcache[p1hexnode].text()
 
-            p1manifest = fastcache[p1hexnode]
-
+        if p1text:
             manifest._checkforbidden(added)
             # combine the changed lists into one sorted iterator
             work = heapq.merge([(x, False) for x in added],
@@ -825,7 +826,7 @@ class manifestfactory(object):
 
             # TODO: potential for optimization: avoid this silly conversion to a
             # python array.
-            manifestarray = array.array('c', p1manifest.text())
+            manifestarray = array.array('c', p1text)
 
             arraytext, deltatext = m.fastdelta(manifestarray, work)
             cachedelta = origself.rev(p1), deltatext
@@ -834,15 +835,15 @@ class manifestfactory(object):
                 text, transaction, link, p1, p2, cachedelta)
             hexnode = revlog.hex(node)
 
-            # Even though we checked 'm._incache()' above, it may have since
-            # disappeared, since background processes could be modifying the
-            # cache.
+            # Even though we may have checked 'm._incache()' above, it may have
+            # since disappeared, since background processes could be modifying
+            # the cache.
             cachedmf = m._cachedmanifest()
             if cachedmf:
                 fastcache.put_inmemory(hexnode, cachedmf)
-
-            self.ui.debug("[FM] wrote manifest %s\n" % (hexnode,))
+                self.ui.debug("[FM] wrote manifest %s\n" % (hexnode,))
         else:
+            # If neither cache could help, fallback to the normal add
             node = orig(*args, **kwargs)
 
         if (supportsctree and
