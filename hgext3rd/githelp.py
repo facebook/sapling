@@ -409,6 +409,7 @@ def commit(ui, repo, *args, **kwargs):
         ('a', 'all', None, ''),
         ('m', 'message', '', ''),
         ('p', 'patch', None, ''),
+        ('C', 'reuse-message', '', ''),
         ('F', 'file', '', ''),
         ('', 'author', '', ''),
         ('', 'date', '', ''),
@@ -426,6 +427,9 @@ def commit(ui, repo, *args, **kwargs):
             cmd = Command('amend')
         else:
             cmd['--amend'] = None
+
+    if opts.get('reuse_message'):
+        cmd['-M'] = opts.get('reuse_message')
 
     if opts.get('message'):
         cmd['-m'] = "'%s'" % (opts.get('message'),)

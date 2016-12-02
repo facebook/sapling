@@ -234,6 +234,14 @@ Branch deletion in git strips commits
   $ hg githelp -- git branch --delete experiment1 experiment2
   hg strip -B experiment1 -B experiment2 -B
 
+githelp for reuse message using the shorthand
+  $ hg githelp -- git commit -C deadbeef
+  hg commit -M deadbeef
+
+githelp for reuse message using the the long version
+  $ hg githelp -- git commit --reuse-message deadbeef
+  hg commit -M deadbeef
+
 githelp for apply with no options
   $ hg githelp -- apply
   hg import
