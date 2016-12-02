@@ -14,8 +14,6 @@
 #include <folly/FileUtil.h>
 #include <folly/String.h>
 #include <folly/json.h>
-#include <pwd.h>
-#include <stdlib.h>
 
 using std::string;
 
@@ -36,6 +34,7 @@ const facebook::eden::RelativePathPiece kSnapshotFile{"SNAPSHOT"};
 const facebook::eden::RelativePathPiece kBindMountsDir{"bind-mounts"};
 const facebook::eden::RelativePathPiece kCloneSuccessFile{"clone-succeeded"};
 const facebook::eden::RelativePathPiece kOverlayDir{"local"};
+const facebook::eden::RelativePathPiece kDirstateFile{"dirstate"};
 
 // File holding mapping of client directories.
 const facebook::eden::RelativePathPiece kClientDirectoryMap{"config.json"};
@@ -47,12 +46,9 @@ namespace eden {
 using defaultPtree = boost::property_tree::basic_ptree<string, string>;
 
 ClientConfig::ClientConfig(
-    AbsolutePathPiece clientDirectory,
     AbsolutePathPiece mountPath,
-    std::vector<BindMount>&& bindMounts)
-    : clientDirectory_(clientDirectory),
-      mountPath_(mountPath),
-      bindMounts_(std::move(bindMounts)) {}
+    AbsolutePathPiece clientDirectory)
+    : clientDirectory_(clientDirectory), mountPath_(mountPath) {}
 
 Hash ClientConfig::getSnapshotID() const {
   // Read the snapshot.
@@ -70,6 +66,10 @@ AbsolutePath ClientConfig::getOverlayPath() const {
 
 AbsolutePath ClientConfig::getCloneSuccessPath() const {
   return clientDirectory_ + kCloneSuccessFile;
+}
+
+AbsolutePath ClientConfig::getDirstateStoragePath() const {
+  return clientDirectory_ + kDirstateFile;
 }
 
 ClientConfig::ConfigData ClientConfig::loadConfigData(
@@ -108,7 +108,7 @@ ClientConfig::ConfigData ClientConfig::loadConfigData(
 }
 
 std::unique_ptr<ClientConfig> ClientConfig::loadFromClientDirectory(
-    AbsolutePathPiece mountPoint,
+    AbsolutePathPiece mountPath,
     AbsolutePathPiece clientDirectory,
     const ConfigData* configData) {
   // Extract repository name from the client config file
@@ -127,22 +127,18 @@ std::unique_ptr<ClientConfig> ClientConfig::loadFromClientDirectory(
     throw std::runtime_error("Could not find repository data for " + repoName);
   }
 
+  // Construct ClientConfig object
+  auto config = std::make_unique<ClientConfig>(mountPath, clientDirectory);
+
   // Extract the bind mounts
-  std::vector<BindMount> bindMounts;
   string bindMountHeader = kBindMountsKey.toString() + repoName;
   auto bindMountPoints = configData->get_child(bindMountHeader, defaultPtree());
-
-  AbsolutePath mountPath = AbsolutePath{mountPoint};
   AbsolutePath bindMountsPath = clientDirectory + kBindMountsDir;
   for (auto item : bindMountPoints) {
     auto pathInClientDir = bindMountsPath + RelativePathPiece{item.first};
     auto pathInMountDir = mountPath + RelativePathPiece{item.second.data()};
-    bindMounts.emplace_back(BindMount{pathInClientDir, pathInMountDir});
+    config->bindMounts_.emplace_back(pathInClientDir, pathInMountDir);
   }
-
-  // Construct ClientConfig object
-  auto config = std::make_unique<ClientConfig>(
-      ClientConfig(clientDirectory, mountPath, std::move(bindMounts)));
 
   // Load repository information
   config->repoType_ = repoData.get(kRepoTypeKey.toString(), "");

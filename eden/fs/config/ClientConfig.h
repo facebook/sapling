@@ -19,13 +19,16 @@ namespace facebook {
 namespace eden {
 
 struct BindMount {
-  AbsolutePath pathInClientDir;
-  AbsolutePath pathInMountDir;
+  BindMount(AbsolutePathPiece clientDirPath, AbsolutePathPiece mountDirPath)
+      : pathInClientDir(clientDirPath), pathInMountDir(mountDirPath) {}
 
   bool operator==(const BindMount& other) const {
     return pathInClientDir == other.pathInClientDir &&
         pathInMountDir == other.pathInMountDir;
   }
+
+  AbsolutePath pathInClientDir;
+  AbsolutePath pathInMountDir;
 };
 
 inline void operator<<(std::ostream& out, const BindMount& bindMount) {
@@ -37,11 +40,36 @@ class ClientConfig {
  public:
   using ConfigData = boost::property_tree::ptree;
 
+  /**
+   * Manually construct a ClientConfig object.
+   *
+   * Note that most callers will probably want to use the
+   * loadFromClientDirectory() factory function to create a ClientConfig object
+   * from an existing client directory, rather than directly calling this
+   * constructor.
+   */
+  ClientConfig(AbsolutePathPiece mountPath, AbsolutePathPiece clientDirectory);
+
+  /**
+   * Load a ClientConfig object from the edenrc file in a client directory.
+   *
+   * @param mountPath  The path where the client is (or will be) mounted.
+   * @param clientDirectory  The eden client data directory, where the client
+   *     configuration file can be found (along with its overlay and other
+   *     data).
+   * @param configData  The eden server configuration data.  (This is the
+   *     global server configuration rather than the client-specific config
+   *     data.  This function will load the client-specific config data from
+   *     the clientDirectory.)
+   */
   static std::unique_ptr<ClientConfig> loadFromClientDirectory(
-      AbsolutePathPiece mountPoint,
+      AbsolutePathPiece mountPath,
       AbsolutePathPiece clientDirectory,
       const ConfigData* configData);
 
+  /**
+   * Load the global server configuration data.
+   */
   static ConfigData loadConfigData(
       AbsolutePathPiece systemConfigDir,
       AbsolutePathPiece homeDirectory);
@@ -86,6 +114,9 @@ class ClientConfig {
 
   /** File that will be written once the clone for this client has succeeded. */
   AbsolutePath getCloneSuccessPath() const;
+
+  /** Path to the file where the dirstate data is stored. */
+  AbsolutePath getDirstateStoragePath() const;
 
  private:
   ClientConfig(

@@ -56,67 +56,21 @@ void EdenServiceHandler::mount(std::unique_ptr<MountInfo> info) {
 
 void EdenServiceHandler::mountImpl(const MountInfo& info) {
   server_->reloadConfig();
-  auto config = ClientConfig::loadFromClientDirectory(
+  auto initialConfig = ClientConfig::loadFromClientDirectory(
       AbsolutePathPiece{info.mountPoint},
       AbsolutePathPiece{info.edenClientPath},
       server_->getConfig().get());
 
-  auto repoType = config->getRepoType();
+  auto repoType = initialConfig->getRepoType();
   auto backingStore =
-      server_->getBackingStore(repoType, config->getRepoSource());
+      server_->getBackingStore(repoType, initialConfig->getRepoSource());
   auto objectStore =
       make_unique<ObjectStore>(server_->getLocalStore(), backingStore);
-  auto snapshotID = config->getSnapshotID();
-  auto rootTree = objectStore->getTreeForCommit(snapshotID);
-
-  auto mountPoint =
-      std::make_shared<fusell::MountPoint>(AbsolutePathPiece{info.mountPoint});
-  auto dirstateStoragePath = getPathToDirstateStorage(mountPoint->getPath());
-  auto persistence = std::make_unique<DirstatePersistence>(dirstateStoragePath);
-  auto userDirectives = persistence->load();
-  auto dirstate = std::make_unique<Dirstate>(
-      mountPoint.get(),
-      objectStore.get(),
-      std::move(persistence),
-      &userDirectives);
-
-  auto overlayPath = config->getOverlayPath();
-  auto overlay = std::make_shared<Overlay>(overlayPath);
-
   auto edenMount = std::make_shared<EdenMount>(
-      mountPoint,
-      std::move(objectStore),
-      overlay,
-      std::move(dirstate),
-      config.get());
-
-  // Load the overlay, if present.
-  auto rootOverlayDir = overlay->loadOverlayDir(RelativePathPiece());
-
-  // Create the inode for the root of the tree using the hash contained
-  // within the snapshotPath file
-  if (rootOverlayDir) {
-    mountPoint->setRootInode(std::make_shared<TreeInode>(
-        edenMount.get(),
-        std::move(rootOverlayDir.value()),
-        nullptr,
-        FUSE_ROOT_ID,
-        FUSE_ROOT_ID));
-  } else {
-    mountPoint->setRootInode(std::make_shared<TreeInode>(
-        edenMount.get(),
-        std::move(rootTree),
-        nullptr,
-        FUSE_ROOT_ID,
-        FUSE_ROOT_ID));
-  }
-
-  // Record the transition from no snapshot to the current snapshot in
-  // the journal.  This also sets things up so that we can carry the
-  // snapshot id forward through subsequent journal entries.
-  auto delta = std::make_unique<JournalDelta>();
-  delta->toHash = snapshotID;
-  edenMount->getJournal().wlock()->addDelta(std::move(delta));
+      std::move(initialConfig), std::move(objectStore));
+  // We gave ownership of initialConfig to the EdenMount.
+  // Get a pointer to it that we can use for the remainder of this function.
+  auto* config = edenMount->getConfig();
 
   // TODO(mbolin): Use the result of config.getBindMounts() to perform the
   // appropriate bind mounts for the client.

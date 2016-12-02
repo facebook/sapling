@@ -11,6 +11,8 @@
 #include <folly/Format.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
+#include "eden/fs/config/ClientConfig.h"
+#include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/EdenMounts.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/TreeInode.h"
@@ -86,7 +88,6 @@ void updateManifestWithDirectives(
     }
   }
 }
-}
 
 void processRemovedFile(
     RelativePath pathToEntry,
@@ -118,6 +119,17 @@ void processRemovedFile(
     manifest->emplace(pathToEntry, HgStatusCode::MISSING);
   }
 }
+}
+
+Dirstate::Dirstate(EdenMount* mount)
+    : mountPoint_(mount->getMountPoint()),
+      objectStore_(mount->getObjectStore()) {
+  auto dirstateStoragePath = mount->getConfig()->getDirstateStoragePath();
+  persistence_ = std::make_unique<DirstatePersistence>(dirstateStoragePath);
+  *(userDirectives_.wlock()) = persistence_->load();
+}
+
+Dirstate::~Dirstate() {}
 
 std::unique_ptr<HgStatus> Dirstate::getStatus() const {
   // Find the modified directories in the overlay and compare them with what is

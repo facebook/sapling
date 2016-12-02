@@ -41,17 +41,8 @@ class Tree;
 class EdenMount {
  public:
   EdenMount(
-      std::shared_ptr<fusell::MountPoint> mountPoint,
-      std::unique_ptr<ObjectStore> objectStore,
-      std::shared_ptr<Overlay> overlay,
-      std::unique_ptr<Dirstate> dirstate,
-      const ClientConfig* clientConfig);
-  EdenMount(
-      std::shared_ptr<fusell::MountPoint> mountPoint,
-      std::unique_ptr<ObjectStore> objectStore,
-      std::shared_ptr<Overlay> overlay,
-      std::unique_ptr<Dirstate> dirstate,
-      const std::vector<BindMount> bindMounts);
+      std::unique_ptr<ClientConfig> config,
+      std::unique_ptr<ObjectStore> objectStore);
   virtual ~EdenMount();
 
   /*
@@ -102,6 +93,10 @@ class EdenMount {
     return mountGeneration_;
   }
 
+  const ClientConfig* getConfig() const {
+    return config_.get();
+  }
+
   /** Convenience method for getting the Tree for the root of the mount. */
   std::unique_ptr<Tree> getRootTree() const;
 
@@ -110,7 +105,8 @@ class EdenMount {
   EdenMount(EdenMount const&) = delete;
   EdenMount& operator=(EdenMount const&) = delete;
 
-  std::shared_ptr<fusell::MountPoint> mountPoint_;
+  std::unique_ptr<ClientConfig> config_;
+  std::unique_ptr<fusell::MountPoint> mountPoint_;
   std::unique_ptr<ObjectStore> objectStore_;
   std::shared_ptr<Overlay> overlay_;
   std::unique_ptr<Dirstate> dirstate_;

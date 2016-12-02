@@ -46,15 +46,8 @@ class TestMount {
  public:
   TestMount(
       std::shared_ptr<EdenMount> edenMount,
-      std::unique_ptr<folly::test::TemporaryDirectory> mountPointDir,
-      std::unique_ptr<folly::test::TemporaryDirectory> pathToRocksDb,
-      std::unique_ptr<folly::test::TemporaryDirectory> overlayDir,
-      std::unique_ptr<folly::test::TemporaryFile> persistenceDataFile)
-      : edenMount_(edenMount),
-        mountPointDir_(std::move(mountPointDir)),
-        pathToRocksDb_(std::move(pathToRocksDb)),
-        overlayDir_(std::move(overlayDir)),
-        persistenceDataFile_(std::move(persistenceDataFile)) {}
+      std::unique_ptr<folly::test::TemporaryDirectory> testDir)
+      : edenMount_(edenMount), testDir_(std::move(testDir)) {}
 
   /**
    * Add file to the mount; it will be available in the overlay.
@@ -89,12 +82,9 @@ class TestMount {
  private:
   std::shared_ptr<EdenMount> edenMount_;
 
-  // The TestMount must hold onto these TemporaryDirectories because they need
+  // The TestMount must hold onto the test TemporaryDirectory because it needs
   // to live for the duration of the test.
-  std::unique_ptr<folly::test::TemporaryDirectory> mountPointDir_;
-  std::unique_ptr<folly::test::TemporaryDirectory> pathToRocksDb_;
-  std::unique_ptr<folly::test::TemporaryDirectory> overlayDir_;
-  std::unique_ptr<folly::test::TemporaryFile> persistenceDataFile_;
+  std::unique_ptr<folly::test::TemporaryDirectory> testDir_;
 };
 
 class TestMountBuilder {
@@ -116,6 +106,11 @@ class TestMountBuilder {
           userDirectives);
 
  private:
+  /** Populate the test client directory, and return a ClientConfig obeject */
+  std::unique_ptr<ClientConfig> setupClientConfig(
+      AbsolutePathPiece testDirectory,
+      Hash rootTreeHash);
+
   std::vector<TestMountFile> files_;
   std::unordered_map<RelativePath, overlay::UserStatusDirective>
       userDirectives_;

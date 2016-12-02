@@ -21,6 +21,8 @@ class DirectoryDelta;
 namespace facebook {
 namespace eden {
 
+class ClientConfig;
+class EdenMount;
 class ObjectStore;
 class Tree;
 class TreeInode;
@@ -118,24 +120,8 @@ std::ostream& operator<<(std::ostream& os, const HgStatus& status);
  */
 class Dirstate {
  public:
-  Dirstate(
-      fusell::MountPoint* mountPoint,
-      ObjectStore* objectStore,
-      std::unique_ptr<DirstatePersistence> persistence,
-      const std::unordered_map<RelativePath, overlay::UserStatusDirective>*
-          userDirectives)
-      : mountPoint_(mountPoint),
-        objectStore_(objectStore),
-        persistence_(std::move(persistence)),
-        userDirectives_(*userDirectives) {}
-
-  Dirstate(
-      fusell::MountPoint* mountPoint,
-      ObjectStore* objectStore,
-      std::unique_ptr<DirstatePersistence> persistence)
-      : mountPoint_(mountPoint),
-        objectStore_(objectStore),
-        persistence_(std::move(persistence)) {}
+  explicit Dirstate(EdenMount* mount);
+  ~Dirstate();
 
   /** Analogous to calling `hg status`. */
   std::unique_ptr<HgStatus> getStatus() const;

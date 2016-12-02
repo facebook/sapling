@@ -44,33 +44,43 @@ static const uint64_t globalProcessGeneration =
 static std::atomic<uint16_t> mountGeneration{0};
 
 EdenMount::EdenMount(
-    shared_ptr<fusell::MountPoint> mountPoint,
-    unique_ptr<ObjectStore> objectStore,
-    shared_ptr<Overlay> overlay,
-    unique_ptr<Dirstate> dirstate,
-    const ClientConfig* clientConfig)
-    : EdenMount(
-          mountPoint,
-          std::move(objectStore),
-          overlay,
-          std::move(dirstate),
-          clientConfig->getBindMounts()) {}
-
-EdenMount::EdenMount(
-    shared_ptr<fusell::MountPoint> mountPoint,
-    unique_ptr<ObjectStore> objectStore,
-    shared_ptr<Overlay> overlay,
-    std::unique_ptr<Dirstate> dirstate,
-    vector<BindMount> bindMounts)
-    : mountPoint_(std::move(mountPoint)),
+    std::unique_ptr<ClientConfig> config,
+    std::unique_ptr<ObjectStore> objectStore)
+    : config_(std::move(config)),
+      mountPoint_(
+          std::make_unique<fusell::MountPoint>(config_->getMountPath())),
       objectStore_(std::move(objectStore)),
-      overlay_(std::move(overlay)),
-      dirstate_(std::move(dirstate)),
-      bindMounts_(std::move(bindMounts)),
+      overlay_(std::make_shared<Overlay>(config_->getOverlayPath())),
+      dirstate_(std::make_unique<Dirstate>(this)),
+      bindMounts_(config_->getBindMounts()),
       mountGeneration_(globalProcessGeneration | ++mountGeneration) {
-  CHECK_NOTNULL(mountPoint_.get());
-  CHECK_NOTNULL(objectStore_.get());
-  CHECK_NOTNULL(overlay_.get());
+  // Load the overlay, if present.
+  auto rootOverlayDir = overlay_->loadOverlayDir(RelativePathPiece());
+
+  // Create the inode for the root of the tree using the hash contained
+  // within the snapshotPath file
+  auto snapshotID = config_->getSnapshotID();
+  std::shared_ptr<TreeInode> rootInode;
+  if (rootOverlayDir) {
+    rootInode = std::make_shared<TreeInode>(
+        this,
+        std::move(rootOverlayDir.value()),
+        nullptr,
+        FUSE_ROOT_ID,
+        FUSE_ROOT_ID);
+  } else {
+    auto rootTree = objectStore_->getTreeForCommit(snapshotID);
+    rootInode = std::make_shared<TreeInode>(
+        this, std::move(rootTree), nullptr, FUSE_ROOT_ID, FUSE_ROOT_ID);
+  }
+  mountPoint_->setRootInode(rootInode);
+
+  // Record the transition from no snapshot to the current snapshot in
+  // the journal.  This also sets things up so that we can carry the
+  // snapshot id forward through subsequent journal entries.
+  auto delta = std::make_unique<JournalDelta>();
+  delta->toHash = snapshotID;
+  journal_.wlock()->addDelta(std::move(delta));
 }
 
 EdenMount::~EdenMount() {}
