@@ -99,6 +99,10 @@ fusell::InodeDispatcher* EdenMount::getDispatcher() const {
   return mountPoint_->getInodeDispatcher();
 }
 
+fusell::InodeNameManager* EdenMount::getNameMgr() const {
+  return mountPoint_->getNameMgr();
+}
+
 std::shared_ptr<TreeInode> EdenMount::getRootInode() const {
   auto rootAsDirInode = mountPoint_->getRootInode();
   return std::dynamic_pointer_cast<TreeInode>(rootAsDirInode);

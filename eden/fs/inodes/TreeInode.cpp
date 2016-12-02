@@ -656,7 +656,7 @@ EdenMount* TreeInode::getMount() const {
 }
 
 fusell::InodeNameManager* TreeInode::getNameMgr() const {
-  return mount_->getMountPoint()->getNameMgr();
+  return mount_->getNameMgr();
 }
 
 ObjectStore* TreeInode::getStore() const {

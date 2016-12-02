@@ -19,6 +19,7 @@ namespace eden {
 namespace fusell {
 class InodeBase;
 class InodeDispatcher;
+class InodeNameManager;
 class MountPoint;
 }
 
@@ -85,6 +86,11 @@ class EdenMount {
    * Return the InodeDispatcher used for this mount.
    */
   fusell::InodeDispatcher* getDispatcher() const;
+
+  /**
+   * Return the InodeNameManager used for this mount.
+   */
+  fusell::InodeNameManager* getNameMgr() const;
 
   const std::shared_ptr<Overlay>& getOverlay() const {
     return overlay_;
