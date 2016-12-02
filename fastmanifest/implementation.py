@@ -194,6 +194,12 @@ class hybridmanifest(object):
             m = self._treemanifest()
         return m.text(*args, **kwargs)
 
+    def fastdelta(self, base, changes):
+        tree = self._treemanifest()
+        if tree is not None:
+            return fastdelta(tree, tree.find, base, changes)
+        return self._manifest('fastdelta').fastdelta(base, changes)
+
     def _converttohybridmanifest(self, m, node):
         if isinstance(m, hybridmanifest):
             return m
@@ -812,11 +818,17 @@ class manifestfactory(object):
 
         p1hexnode = revlog.hex(p1)
         cacheenabled = self.ui.configbool("fastmanifest", "usecache", True)
+        treeenabled = self.ui.configbool("fastmanifest", "usetree", False)
+
         if (cacheenabled and
             p1hexnode in fastcache and
             isinstance(m, hybridmanifest) and
             m._incache()):
             p1text = fastcache[p1hexnode].text()
+        elif treeenabled:
+            tree = m._treemanifest()
+            if tree is not None:
+                p1text = origself.revision(p1)
 
         if p1text:
             manifest._checkforbidden(added)
@@ -846,8 +858,8 @@ class manifestfactory(object):
             # If neither cache could help, fallback to the normal add
             node = orig(*args, **kwargs)
 
-        if (supportsctree and
-            self.ui.configbool("fastmanifest", "usetree", False)):
+        # Add the new manifest to the tree
+        if supportsctree and treeenabled:
             def loadflat():
                 # This should eventually be made lazy loaded, so consumers can
                 # access the node/p1/linkrev data without having to parse the
