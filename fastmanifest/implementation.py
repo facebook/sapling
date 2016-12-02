@@ -184,6 +184,16 @@ class hybridmanifest(object):
     def __len__(self):
         return self._manifest('__len__').__len__()
 
+    def text(self, *args, **kwargs):
+        # Normally we would prefer treemanifest instead of flat, but for text()
+        # flat is actually faster for now.
+        m = self._cachedmanifest()
+        if m is None:
+            m = self._flatmanifest()
+        if m is None:
+            m = self._treemanifest()
+        return m.text(*args, **kwargs)
+
     def _converttohybridmanifest(self, m, node):
         if isinstance(m, hybridmanifest):
             return m
