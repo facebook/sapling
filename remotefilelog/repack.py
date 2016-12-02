@@ -23,19 +23,30 @@ def fullrepack(repo):
     historysource = metadatastore.unionmetadatastore(*repo.sharedhistorystores,
                                                      allowincomplete=True)
 
-    _runrepack(repo, datasource, historysource, constants.FILEPACK_CATEGORY)
+    packpath = shallowutil.getcachepackpath(repo, constants.FILEPACK_CATEGORY)
+    _runrepack(repo, datasource, historysource, packpath,
+               constants.FILEPACK_CATEGORY)
 
     if util.safehasattr(repo.svfs, 'manifestdatastore'):
+        packpath = shallowutil.getcachepackpath(repo,
+                                                constants.TREEPACK_CATEGORY)
         _runrepack(repo, repo.svfs.manifestdatastore,
                    metadatastore.unionmetadatastore(),
+                   packpath,
                    constants.TREEPACK_CATEGORY)
 
 def incrementalrepack(repo):
     """This repacks the repo by looking at the distribution of pack files in the
     repo and performing the most minimal repack to keep the repo in good shape.
     """
-
     packpath = shallowutil.getcachepackpath(repo, constants.FILEPACK_CATEGORY)
+    _incrementalrepack(repo,
+                       repo.shareddatastores,
+                       repo.sharedhistorystores,
+                       packpath,
+                       constants.FILEPACK_CATEGORY)
+
+def _incrementalrepack(repo, datastore, historystore, packpath, category):
     shallowutil.mkstickygroupdir(repo.ui, packpath)
 
     files = osutil.listdir(packpath, stat=True)
@@ -43,20 +54,20 @@ def incrementalrepack(repo):
     datapacks = _computeincrementaldatapack(repo.ui, files)
     fullpaths = list(os.path.join(packpath, p) for p in datapacks)
     datapacks = list(datapack.datapack(p) for p in fullpaths)
-    datapacks.extend(s for s in repo.shareddatastores
+    datapacks.extend(s for s in datastore
                      if not isinstance(s, datapack.datapackstore))
 
     historypacks = _computeincrementalhistorypack(repo.ui, files)
     fullpaths = list(os.path.join(packpath, p) for p in historypacks)
     historypacks = list(historypack.historypack(p) for p in fullpaths)
-    historypacks.extend(s for s in repo.sharedhistorystores
+    historypacks.extend(s for s in historystore
                         if not isinstance(s, historypack.historypackstore))
 
     datasource = contentstore.unioncontentstore(*datapacks)
     historysource = metadatastore.unionmetadatastore(*historypacks,
                                                      allowincomplete=True)
 
-    _runrepack(repo, datasource, historysource, constants.FILEPACK_CATEGORY)
+    _runrepack(repo, datasource, historysource, packpath, category)
 
 def _computeincrementaldatapack(ui, files):
     """Given a set of pack files and a set of generation size limits, this
@@ -153,8 +164,7 @@ def _computeincrementalpack(ui, files, limits, packsuffix, indexsuffix,
 
     return []
 
-def _runrepack(repo, data, history, category):
-    packpath = shallowutil.getcachepackpath(repo, category)
+def _runrepack(repo, data, history, packpath, category):
     shallowutil.mkstickygroupdir(repo.ui, packpath)
 
     packer = repacker(repo, data, history, category)
