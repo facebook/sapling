@@ -749,6 +749,87 @@ static PyObject *treemanifest_copy(py_treemanifest *self) {
   return copyObj.returnval();
 }
 
+/**
+ * Returns true if we can take the fast path for the given matcher.
+ * The fastpath is for when the matcher contains a small list of specific file
+ * names, so we can test each file instead of iterating over the whole manifest.
+ */
+static bool canusematchfastpath(py_treemanifest *self, PythonObj matcher) {
+  PythonObj emptyargs = PyTuple_New(0);
+  PythonObj files = matcher.callmethod("files", emptyargs);
+
+  Py_ssize_t length = PyList_Size(files);
+  if (length > 100) {
+    return false;
+  }
+
+  if (!PyObject_IsTrue(matcher.callmethod("isexact", emptyargs))) {
+    // TODO: the python version of this function also allows the fastpath when
+    //       (match.prefix() and all(fn in self for fn in files)))
+    return false;
+  }
+
+  return true;
+}
+
+/**
+ * Uses the fast path to test the matcher against the tree. The fast path
+ * iterates over the files in the matcher, instead of iterating over the entire
+ * manifest.
+ */
+static PyObject *treemanifest_matchesfastpath(py_treemanifest *self, PythonObj matcher) {
+  PythonObj emptyargs = PyTuple_New(0);
+  PythonObj manifestmod = PyImport_ImportModule("mercurial.manifest");
+  PythonObj manifestdict = manifestmod.getattr("manifestdict");
+  PythonObj result = manifestdict.call(emptyargs);
+
+  PythonObj files = matcher.callmethod("files", emptyargs);
+
+  std::string pathstring;
+  std::string resultnode;
+
+  PythonObj iterator = PyObject_GetIter((PyObject*)files);
+  PyObject* fileObj;
+  PythonObj file;
+  while ((fileObj = PyIter_Next(iterator))) {
+    file = fileObj;
+    char *path;
+    Py_ssize_t pathlen;
+    if (PyString_AsStringAndSize(file, &path, &pathlen)) {
+      throw pyexception();
+    }
+
+    const char *resultflag = NULL;
+
+    pathstring.assign(path, (size_t)pathlen);
+    if (!self->tm.get(path, &resultnode, &resultflag)) {
+      continue;
+    }
+
+    // Call manifestdict.__setitem__
+    PythonObj setArgs = Py_BuildValue(
+        "s#s#",
+        path, pathlen, resultnode.c_str(), BIN_NODE_SIZE);
+    result.callmethod("__setitem__", setArgs);
+
+    Py_ssize_t flaglen;
+    if (!resultflag) {
+      flaglen = 0;
+      resultflag = MAGIC_EMPTY_STRING;
+    } else {
+      flaglen = 1;
+    }
+    PythonObj flagArgs = Py_BuildValue("s#s#", path, pathlen, resultflag, flaglen);
+    result.callmethod("setflag", flagArgs);
+  }
+
+  if (PyErr_Occurred()) {
+    throw pyexception();
+  }
+
+  return result.returnval();
+}
+
 static PyObject *treemanifest_matches(py_treemanifest *self, PyObject *args) {
   PyObject* matcherObj;
 
@@ -766,6 +847,11 @@ static PyObject *treemanifest_matches(py_treemanifest *self, PyObject *args) {
   }
 
   try {
+    // If the matcher is a list of files, take the fastpath
+    if (canusematchfastpath(self, matcher)) {
+      return treemanifest_matchesfastpath(self, matcher);
+    }
+
     PythonObj manifestmod = PyImport_ImportModule("mercurial.manifest");
     PythonObj manifestdict = manifestmod.getattr("manifestdict");
     PythonObj result = manifestdict.call(emptyargs);
