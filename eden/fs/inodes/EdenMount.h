@@ -18,7 +18,6 @@ namespace facebook {
 namespace eden {
 namespace fusell {
 class InodeBase;
-class InodeDispatcher;
 class InodeNameManager;
 class MountPoint;
 }
@@ -26,6 +25,7 @@ class MountPoint;
 class BindMount;
 class ClientConfig;
 class Dirstate;
+class EdenDispatcher;
 class FileInode;
 class ObjectStore;
 class Overlay;
@@ -83,14 +83,18 @@ class EdenMount {
   }
 
   /**
-   * Return the InodeDispatcher used for this mount.
+   * Return the EdenDispatcher used for this mount.
    */
-  fusell::InodeDispatcher* getDispatcher() const;
+  EdenDispatcher* getDispatcher() const {
+    return dispatcher_.get();
+  }
 
   /**
    * Return the InodeNameManager used for this mount.
    */
-  fusell::InodeNameManager* getNameMgr() const;
+  fusell::InodeNameManager* getNameMgr() const {
+    return nameManager_.get();
+  }
 
   const std::shared_ptr<Overlay>& getOverlay() const {
     return overlay_;
@@ -142,6 +146,8 @@ class EdenMount {
   EdenMount& operator=(EdenMount const&) = delete;
 
   std::unique_ptr<ClientConfig> config_;
+  std::unique_ptr<EdenDispatcher> dispatcher_;
+  std::unique_ptr<fusell::InodeNameManager> nameManager_;
   std::unique_ptr<fusell::MountPoint> mountPoint_;
   std::unique_ptr<ObjectStore> objectStore_;
   std::shared_ptr<Overlay> overlay_;

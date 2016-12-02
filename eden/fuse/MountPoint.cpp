@@ -10,25 +10,16 @@
 #include "MountPoint.h"
 
 #include "Channel.h"
-#include "DirInode.h"
-#include "InodeBase.h"
-#include "InodeDispatcher.h"
-#include "InodeNameManager.h"
+#include "Dispatcher.h"
 
 #include <sys/stat.h>
-#include <string>
-#include <vector>
 
 namespace facebook {
 namespace eden {
 namespace fusell {
 
-MountPoint::MountPoint(AbsolutePathPiece path, std::shared_ptr<DirInode> root)
-    : path_(path),
-      uid_(getuid()),
-      gid_(getgid()),
-      dispatcher_{new InodeDispatcher(this, std::move(root))},
-      nameManager_{new InodeNameManager()} {}
+MountPoint::MountPoint(AbsolutePathPiece path, Dispatcher* dispatcher)
+    : path_(path), uid_(getuid()), gid_(getgid()), dispatcher_{dispatcher} {}
 
 MountPoint::~MountPoint() {}
 
@@ -94,9 +85,11 @@ void MountPoint::mountStarted() {
 
 void MountPoint::run(bool debug) {
   // This next line is responsible for indirectly calling mount().
+  dispatcher_->setMountPoint(this);
   channel_ = std::make_unique<Channel>(this);
-  channel_->runSession(dispatcher_.get(), debug);
+  channel_->runSession(dispatcher_, debug);
   channel_.reset();
+  dispatcher_->unsetMountPoint();
 }
 
 struct stat MountPoint::initStatData() const {

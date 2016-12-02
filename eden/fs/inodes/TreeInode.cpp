@@ -9,6 +9,7 @@
  */
 #include "TreeInode.h"
 
+#include "EdenDispatcher.h"
 #include "EdenMount.h"
 #include "FileInode.h"
 #include "Overlay.h"
@@ -398,7 +399,7 @@ std::shared_ptr<fusell::InodeBase> TreeInode::lookupChildByNameLocked(
     const Dir* contents,
     PathComponentPiece name) {
   auto dispatcher = getMount()->getDispatcher();
-  auto mgr = getMount()->getMountPoint()->getNameMgr();
+  auto mgr = getMount()->getNameMgr();
 
   auto node = mgr->getNodeByName(getNodeId(), name, false);
 

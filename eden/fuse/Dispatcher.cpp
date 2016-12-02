@@ -31,6 +31,16 @@ Dispatcher::Attr::Attr(const MountPoint* mount) : timeout(1.0) {
 
 Dispatcher::~Dispatcher() {}
 
+void Dispatcher::setMountPoint(MountPoint* mountPoint) {
+  CHECK(mountPoint_ == nullptr);
+  mountPoint_ = mountPoint;
+}
+
+void Dispatcher::unsetMountPoint() {
+  CHECK_NOTNULL(mountPoint_);
+  mountPoint_ = nullptr;
+}
+
 void Dispatcher::initConnection(fuse_conn_info& conn) {}
 
 FileHandleMap& Dispatcher::getFileHandles() {
@@ -105,6 +115,7 @@ void Dispatcher::disp_init(void* userdata, struct fuse_conn_info* conn) {
   disp->initConnection(*conn);
   disp->connInfo_ = *conn;
   disp->stats_ = EdenStats();
+  disp->mountPoint_->mountStarted();
 
   LOG(INFO) << "Speaking fuse protocol " << conn->proto_major << "."
             << conn->proto_minor << ", async_read=" << conn->async_read

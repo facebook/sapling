@@ -14,6 +14,7 @@
 #include <folly/io/IOBuf.h>
 #include "eden/fs/config/ClientConfig.h"
 #include "eden/fs/inodes/Dirstate.h"
+#include "eden/fs/inodes/EdenDispatcher.h"
 #include "eden/fs/inodes/FileData.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/Overlay.h"

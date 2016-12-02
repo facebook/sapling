@@ -11,5 +11,4 @@
 #include "DirInode.h"
 #include "FileInode.h"
 #include "InodeBase.h"
-#include "InodeDispatcher.h"
 #include "InodeNameManager.h"

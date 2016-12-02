@@ -8,52 +8,52 @@
  *
  */
 #pragma once
-#include <folly/FBString.h>
 #include <folly/SharedMutex.h>
-#include <mutex>
-#include <shared_mutex>
 #include <unordered_map>
-#include "Dispatcher.h"
-#include "InodeNameManager.h"
+#include "eden/fuse/Dispatcher.h"
 
 namespace facebook {
 namespace eden {
-namespace fusell {
 
-class DirInode;
-class FileInode;
+namespace fusell {
 class InodeBase;
-class MountPoint;
+class InodeNameManager;
+}
+
+class EdenMount;
+class FileInode;
+class TreeInode;
 
 /**
- * A dispatcher that dispatches to Inode instances
+ * A FUSE request dispatcher for eden mount points.
  */
-class InodeDispatcher : public Dispatcher {
-  std::shared_ptr<DirInode> root_;
-  std::unordered_map<fuse_ino_t, std::shared_ptr<InodeBase>> inodes_;
+class EdenDispatcher : public fusell::Dispatcher {
+  std::shared_ptr<TreeInode> root_;
+  std::unordered_map<fuse_ino_t, std::shared_ptr<fusell::InodeBase>> inodes_;
   mutable folly::SharedMutex lock_;
 
-  // The MountPoint that owns this InodeDispatcher.
-  MountPoint* const mountPoint_;
+  // The EdenMount that owns this EdenDispatcher.
+  EdenMount* const mount_;
 
  public:
   /*
-   * Create an InodeDispatcher, without a root node yet.
+   * Create an EdenDispatcher, without a root node yet.
    * setRootInode() must be called before using this dispatcher.
    */
-  explicit InodeDispatcher(MountPoint* mountPoint);
+  explicit EdenDispatcher(EdenMount* mount);
 
   /*
-   * Create an InodeDispatcher using the specified root inode object.
+   * Create an EdenDispatcher using the specified root inode object.
    */
-  explicit InodeDispatcher(
-      MountPoint* mountPoint,
-      std::shared_ptr<DirInode> rootInode);
+  explicit EdenDispatcher(
+      EdenMount* mount,
+      std::shared_ptr<TreeInode> rootInode);
 
-  std::shared_ptr<InodeBase> getInode(fuse_ino_t, bool mustExist = true) const;
-  std::shared_ptr<InodeBase> lookupInode(fuse_ino_t) const;
-  std::shared_ptr<DirInode> getDirInode(fuse_ino_t,
-                                        bool mustExist = true) const;
+  std::shared_ptr<fusell::InodeBase> getInode(fuse_ino_t, bool mustExist = true)
+      const;
+  std::shared_ptr<fusell::InodeBase> lookupInode(fuse_ino_t) const;
+  std::shared_ptr<TreeInode> getDirInode(fuse_ino_t, bool mustExist = true)
+      const;
   std::shared_ptr<FileInode> getFileInode(fuse_ino_t,
                                           bool mustExist = true) const;
 
@@ -61,22 +61,22 @@ class InodeDispatcher : public Dispatcher {
    * Set the root inode.
    *
    * This method should be used to set the root inode on a default-constructed
-   * InodeDispatcher.  It may only be called once, and it must be called before
-   * using the InodeDispatcher.
+   * EdenDispatcher.  It may only be called once, and it must be called before
+   * using the EdenDispatcher.
    */
-  void setRootInode(std::shared_ptr<DirInode> inode);
+  void setRootInode(std::shared_ptr<TreeInode> inode);
 
   /** Throws if setRootInode() has not been invoked yet. */
-  std::shared_ptr<DirInode> getRootInode() const;
+  std::shared_ptr<TreeInode> getRootInode() const;
 
-  void recordInode(std::shared_ptr<InodeBase> inode);
+  void recordInode(std::shared_ptr<fusell::InodeBase> inode);
 
   void initConnection(fuse_conn_info& conn) override;
   folly::Future<Attr> getattr(fuse_ino_t ino) override;
   folly::Future<Attr> setattr(fuse_ino_t ino,
                               const struct stat& attr,
                               int to_set) override;
-  folly::Future<std::shared_ptr<DirHandle>> opendir(
+  folly::Future<std::shared_ptr<fusell::DirHandle>> opendir(
       fuse_ino_t ino,
       const struct fuse_file_info& fi) override;
   folly::Future<fuse_entry_param> lookup(
@@ -86,12 +86,12 @@ class InodeDispatcher : public Dispatcher {
   /**
    * Similar to lookup(), except this does not require an active FUSE request.
    */
-  folly::Future<std::shared_ptr<InodeBase>> lookupInodeBase(
+  folly::Future<std::shared_ptr<fusell::InodeBase>> lookupInodeBase(
       fuse_ino_t parent,
       PathComponentPiece name);
   folly::Future<folly::Unit> forget(fuse_ino_t ino,
                                     unsigned long nlookup) override;
-  folly::Future<std::shared_ptr<FileHandle>> open(
+  folly::Future<std::shared_ptr<fusell::FileHandle>> open(
       fuse_ino_t ino,
       const struct fuse_file_info& fi) override;
   folly::Future<std::string> readlink(fuse_ino_t ino) override;
@@ -129,12 +129,6 @@ class InodeDispatcher : public Dispatcher {
   folly::Future<std::string> getxattr(fuse_ino_t ino, folly::StringPiece name)
       override;
   folly::Future<std::vector<std::string>> listxattr(fuse_ino_t ino) override;
-
-  /** Compute a fuse_entry_param */
-  fuse_entry_param computeEntryParam(
-      const Dispatcher::Attr& attr,
-      std::shared_ptr<InodeNameManager::Node> node);
 };
-}
 }
 }

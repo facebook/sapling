@@ -40,6 +40,12 @@ class MountPoint;
 class Dispatcher {
   fuse_conn_info connInfo_;
   Channel* chan_{nullptr};
+  /**
+   * The MountPoint using this dispatcher.
+   *
+   * This pointer is not set until the MountPoint is started.
+   */
+  MountPoint* mountPoint_{nullptr};
   EdenStats stats_;
   FileHandleMap fileHandles_;
 
@@ -62,6 +68,20 @@ class Dispatcher {
   std::shared_ptr<FileHandle> getFileHandle(uint64_t fh);
   // delegates to FileHandleMap::getDirHandle
   std::shared_ptr<DirHandle> getDirHandle(uint64_t dh);
+
+  /**
+   * Set the MountPoint currently using this Dispatcher.
+   *
+   * This is called when the MountPoint begins the mounting process.
+   */
+  void setMountPoint(MountPoint* mountPoint);
+
+  /**
+   * Clear the MountPoint.
+   *
+   * This is called once the MountPoint is unmounted.
+   */
+  void unsetMountPoint();
 
   /**
    * Called during filesystem mounting.  It informs the filesystem

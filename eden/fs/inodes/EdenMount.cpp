@@ -13,6 +13,7 @@
 
 #include "eden/fs/config/ClientConfig.h"
 #include "eden/fs/inodes/Dirstate.h"
+#include "eden/fs/inodes/EdenDispatcher.h"
 #include "eden/fs/inodes/EdenMounts.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/Overlay.h"
@@ -20,6 +21,7 @@
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/store/ObjectStore.h"
+#include "eden/fuse/InodeNameManager.h"
 #include "eden/fuse/MountPoint.h"
 
 using std::shared_ptr;
@@ -49,8 +51,10 @@ EdenMount::EdenMount(
     std::unique_ptr<ClientConfig> config,
     std::unique_ptr<ObjectStore> objectStore)
     : config_(std::move(config)),
+      dispatcher_{new EdenDispatcher(this)},
+      nameManager_{new fusell::InodeNameManager()},
       mountPoint_(
-          std::make_unique<fusell::MountPoint>(config_->getMountPath())),
+          new fusell::MountPoint(config_->getMountPath(), dispatcher_.get())),
       objectStore_(std::move(objectStore)),
       overlay_(std::make_shared<Overlay>(config_->getOverlayPath())),
       dirstate_(std::make_unique<Dirstate>(this)),
@@ -75,7 +79,7 @@ EdenMount::EdenMount(
     rootInode = std::make_shared<TreeInode>(
         this, std::move(rootTree), nullptr, FUSE_ROOT_ID, FUSE_ROOT_ID);
   }
-  getDispatcher()->setRootInode(rootInode);
+  dispatcher_->setRootInode(rootInode);
 
   // Record the transition from no snapshot to the current snapshot in
   // the journal.  This also sets things up so that we can carry the
@@ -95,16 +99,8 @@ const vector<BindMount>& EdenMount::getBindMounts() const {
   return bindMounts_;
 }
 
-fusell::InodeDispatcher* EdenMount::getDispatcher() const {
-  return mountPoint_->getInodeDispatcher();
-}
-
-fusell::InodeNameManager* EdenMount::getNameMgr() const {
-  return mountPoint_->getNameMgr();
-}
-
 std::shared_ptr<TreeInode> EdenMount::getRootInode() const {
-  auto rootAsDirInode = getDispatcher()->getRootInode();
+  auto rootAsDirInode = dispatcher_->getRootInode();
   return std::dynamic_pointer_cast<TreeInode>(rootAsDirInode);
 }
 
@@ -120,7 +116,7 @@ std::unique_ptr<Tree> EdenMount::getRootTree() const {
 
 shared_ptr<fusell::InodeBase> EdenMount::getInodeBase(
     RelativePathPiece path) const {
-  auto inodeBase = getDispatcher()->getInode(FUSE_ROOT_ID);
+  auto inodeBase = dispatcher_->getInode(FUSE_ROOT_ID);
   auto relativePath = RelativePathPiece{path};
 
   // Walk down to the path of interest.
@@ -128,7 +124,7 @@ shared_ptr<fusell::InodeBase> EdenMount::getInodeBase(
   while (it != relativePath.paths().end()) {
     // This will throw if there is no such entry.
     inodeBase =
-        getDispatcher()
+        dispatcher_
             ->lookupInodeBase(inodeBase->getNodeId(), it.piece().basename())
             .get();
     ++it;

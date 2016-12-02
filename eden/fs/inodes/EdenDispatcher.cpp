@@ -7,17 +7,17 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
-#include "InodeDispatcher.h"
+#include "EdenDispatcher.h"
 
 #include <dirent.h>
 #include <wangle/concurrent/CPUThreadPoolExecutor.h>
 #include <wangle/concurrent/GlobalExecutor.h>
 #include <shared_mutex>
-#include "Channel.h"
-#include "DirHandle.h"
-#include "FileHandle.h"
-#include "Inodes.h"
-#include "MountPoint.h"
+#include "EdenMount.h"
+#include "FileInode.h"
+#include "TreeInode.h"
+#include "eden/fuse/DirHandle.h"
+#include "eden/fuse/FileHandle.h"
 
 using namespace folly;
 using facebook::eden::PathComponentPiece;
@@ -52,17 +52,15 @@ DEFINE_int32(
 
 namespace facebook {
 namespace eden {
-namespace fusell {
 
-InodeDispatcher::InodeDispatcher(MountPoint* mountPoint)
-    : mountPoint_(mountPoint) {
+EdenDispatcher::EdenDispatcher(EdenMount* mount) : mount_(mount) {
   inodes_.reserve(FLAGS_inode_reserve);
 }
 
-InodeDispatcher::InodeDispatcher(
-    MountPoint* mountPoint,
-    std::shared_ptr<DirInode> rootInode)
-    : InodeDispatcher(mountPoint) {
+EdenDispatcher::EdenDispatcher(
+    EdenMount* mount,
+    std::shared_ptr<TreeInode> rootInode)
+    : EdenDispatcher(mount) {
   if (rootInode) {
     setRootInode(std::move(rootInode));
   }
@@ -162,38 +160,49 @@ struct Walker : public std::enable_shared_from_this<Walker> {
         });
   }
 };
+
+/** Compute a fuse_entry_param */
+fuse_entry_param computeEntryParam(
+    const fusell::Dispatcher::Attr& attr,
+    std::shared_ptr<fusell::InodeNameManager::Node> node) {
+  fuse_entry_param entry;
+  entry.ino = node->getNodeId();
+  entry.generation = node->getGeneration();
+  entry.attr = attr.st;
+  entry.attr_timeout = attr.timeout;
+  entry.entry_timeout = attr.timeout;
+  return entry;
+}
 }
 
-void InodeDispatcher::initConnection(fuse_conn_info& conn) {
+void EdenDispatcher::initConnection(fuse_conn_info& /* conn */) {
   if (FLAGS_warm_kernel_on_startup) {
-    auto walker = std::make_shared<Walker>(
-        getChannel().getMountPoint()->getPath().stringPiece().str());
+    auto walker =
+        std::make_shared<Walker>(mount_->getPath().stringPiece().str());
     walker->walk();
   }
-
-  mountPoint_->mountStarted();
 }
 
-void InodeDispatcher::setRootInode(std::shared_ptr<DirInode> inode) {
+void EdenDispatcher::setRootInode(std::shared_ptr<TreeInode> inode) {
   CHECK(!root_);
   CHECK_EQ(inode->getNodeId(), FUSE_ROOT_ID);
   root_ = std::move(inode);
   recordInode(root_);
 }
 
-std::shared_ptr<DirInode> InodeDispatcher::getRootInode() const {
+std::shared_ptr<TreeInode> EdenDispatcher::getRootInode() const {
   DCHECK(root_);
   return root_;
 }
 
-void InodeDispatcher::recordInode(std::shared_ptr<InodeBase> inode) {
+void EdenDispatcher::recordInode(std::shared_ptr<fusell::InodeBase> inode) {
   auto ino = inode->getNodeId();
   std::unique_lock<SharedMutex> g(lock_);
   auto ret = inodes_.emplace(ino, std::move(inode));
   DCHECK(ret.second);
 }
 
-std::shared_ptr<InodeBase> InodeDispatcher::getInode(
+std::shared_ptr<fusell::InodeBase> EdenDispatcher::getInode(
     fuse_ino_t ino,
     bool mustExist) const {
   std::shared_lock<SharedMutex> g(lock_);
@@ -207,7 +216,8 @@ std::shared_ptr<InodeBase> InodeDispatcher::getInode(
   return it->second;
 }
 
-std::shared_ptr<InodeBase> InodeDispatcher::lookupInode(fuse_ino_t ino) const {
+std::shared_ptr<fusell::InodeBase> EdenDispatcher::lookupInode(
+    fuse_ino_t ino) const {
   std::shared_lock<SharedMutex> g(lock_);
   const auto& it = inodes_.find(ino);
   if (it == inodes_.end()) {
@@ -217,10 +227,10 @@ std::shared_ptr<InodeBase> InodeDispatcher::lookupInode(fuse_ino_t ino) const {
   return it->second;
 }
 
-std::shared_ptr<DirInode> InodeDispatcher::getDirInode(
+std::shared_ptr<TreeInode> EdenDispatcher::getDirInode(
     fuse_ino_t ino,
     bool mustExist) const {
-  auto d = std::dynamic_pointer_cast<DirInode>(getInode(ino));
+  auto d = std::dynamic_pointer_cast<TreeInode>(getInode(ino));
   if (!d) {
     if (mustExist) {
       throwSystemErrorExplicit(ENOTDIR);
@@ -230,7 +240,7 @@ std::shared_ptr<DirInode> InodeDispatcher::getDirInode(
   return d;
 }
 
-std::shared_ptr<FileInode> InodeDispatcher::getFileInode(
+std::shared_ptr<FileInode> EdenDispatcher::getFileInode(
     fuse_ino_t ino,
     bool mustExist) const {
   auto f = std::dynamic_pointer_cast<FileInode>(getInode(ino));
@@ -243,48 +253,38 @@ std::shared_ptr<FileInode> InodeDispatcher::getFileInode(
   return f;
 }
 
-folly::Future<Dispatcher::Attr> InodeDispatcher::getattr(fuse_ino_t ino) {
+folly::Future<fusell::Dispatcher::Attr> EdenDispatcher::getattr(
+    fuse_ino_t ino) {
   return getInode(ino)->getattr();
 }
 
-folly::Future<std::shared_ptr<DirHandle>> InodeDispatcher::opendir(
+folly::Future<std::shared_ptr<fusell::DirHandle>> EdenDispatcher::opendir(
     fuse_ino_t ino,
     const struct fuse_file_info& fi) {
   return getDirInode(ino)->opendir(fi);
 }
 
-fuse_entry_param InodeDispatcher::computeEntryParam(
-    const Dispatcher::Attr& attr,
-    std::shared_ptr<InodeNameManager::Node> node) {
-  fuse_entry_param entry;
-  entry.ino = node->getNodeId();
-  entry.generation = node->getGeneration();
-  entry.attr = attr.st;
-  entry.attr_timeout = attr.timeout;
-  entry.entry_timeout = attr.timeout;
-  return entry;
-}
-
-folly::Future<fuse_entry_param> InodeDispatcher::lookup(
+folly::Future<fuse_entry_param> EdenDispatcher::lookup(
     fuse_ino_t parent,
     PathComponentPiece namepiece) {
   auto name = namepiece.copy();
   auto inode = lookupInodeBase(parent, namepiece).get();
-  return inode->getattr().then([=](Dispatcher::Attr attr) {
-    auto node = mountPoint_->getNameMgr()->getNodeById(inode->getNodeId());
+  return inode->getattr().then([=](fusell::Dispatcher::Attr attr) {
+    auto node = mount_->getNameMgr()->getNodeById(inode->getNodeId());
     return computeEntryParam(attr, node);
   });
 }
 
-folly::Future<std::shared_ptr<InodeBase>> InodeDispatcher::lookupInodeBase(
+folly::Future<std::shared_ptr<fusell::InodeBase>>
+EdenDispatcher::lookupInodeBase(
     fuse_ino_t parent,
     PathComponentPiece namepiece) {
   auto dir = getDirInode(parent);
 
   // First, see if we already have the Inode loaded
-  auto mgr = mountPoint_->getNameMgr();
+  auto mgr = mount_->getNameMgr();
   auto node = mgr->getNodeByName(parent, namepiece, false);
-  std::shared_ptr<InodeBase> existing_inode;
+  std::shared_ptr<fusell::InodeBase> existing_inode;
 
   if (node) {
     existing_inode = lookupInode(node->getNodeId());
@@ -292,7 +292,7 @@ folly::Future<std::shared_ptr<InodeBase>> InodeDispatcher::lookupInodeBase(
 
   return (existing_inode ? makeFuture(existing_inode)
                          : dir->getChildByName(namepiece))
-      .then([=](std::shared_ptr<InodeBase> inode) mutable {
+      .then([=](std::shared_ptr<fusell::InodeBase> inode) mutable {
         if (!inode) {
           throwSystemErrorExplicit(ENOENT);
         }
@@ -306,12 +306,12 @@ folly::Future<std::shared_ptr<InodeBase>> InodeDispatcher::lookupInodeBase(
       });
 }
 
-folly::Future<Dispatcher::Attr>
-InodeDispatcher::setattr(fuse_ino_t ino, const struct stat& attr, int to_set) {
+folly::Future<fusell::Dispatcher::Attr>
+EdenDispatcher::setattr(fuse_ino_t ino, const struct stat& attr, int to_set) {
   return getInode(ino)->setattr(attr, to_set);
 }
 
-folly::Future<folly::Unit> InodeDispatcher::forget(
+folly::Future<folly::Unit> EdenDispatcher::forget(
     fuse_ino_t ino,
     unsigned long nlookup) {
   {
@@ -345,36 +345,36 @@ folly::Future<folly::Unit> InodeDispatcher::forget(
   return Unit{};
 }
 
-folly::Future<std::shared_ptr<FileHandle>> InodeDispatcher::open(
+folly::Future<std::shared_ptr<fusell::FileHandle>> EdenDispatcher::open(
     fuse_ino_t ino,
     const struct fuse_file_info& fi) {
   auto f = getFileInode(ino);
   return f->open(fi);
 }
 
-folly::Future<Dispatcher::Create> InodeDispatcher::create(
+folly::Future<fusell::Dispatcher::Create> EdenDispatcher::create(
     fuse_ino_t parent,
     PathComponentPiece name,
     mode_t mode,
     int flags) {
   return getDirInode(parent)
       ->create(name, mode, flags)
-      .then([=](DirInode::CreateResult created) {
+      .then([=](TreeInode::CreateResult created) {
         recordInode(created.inode);
 
-        Dispatcher::Create result;
+        fusell::Dispatcher::Create result;
         result.entry = computeEntryParam(created.attr, created.node);
         result.fh = std::move(created.file);
         return result;
       });
 }
 
-folly::Future<std::string> InodeDispatcher::readlink(fuse_ino_t ino) {
+folly::Future<std::string> EdenDispatcher::readlink(fuse_ino_t ino) {
   auto f = getFileInode(ino);
   return f->readlink();
 }
 
-folly::Future<fuse_entry_param> InodeDispatcher::mknod(
+folly::Future<fuse_entry_param> EdenDispatcher::mknod(
     fuse_ino_t parent,
     PathComponentPiece name,
     mode_t mode,
@@ -382,43 +382,41 @@ folly::Future<fuse_entry_param> InodeDispatcher::mknod(
   return getDirInode(parent)->mknod(name, mode, rdev);
 }
 
-folly::Future<fuse_entry_param> InodeDispatcher::mkdir(
-    fuse_ino_t parent,
-    PathComponentPiece name,
-    mode_t mode) {
+folly::Future<fuse_entry_param>
+EdenDispatcher::mkdir(fuse_ino_t parent, PathComponentPiece name, mode_t mode) {
   return getDirInode(parent)->mkdir(name, mode);
 }
 
-folly::Future<folly::Unit> InodeDispatcher::unlink(
+folly::Future<folly::Unit> EdenDispatcher::unlink(
     fuse_ino_t parent,
     PathComponentPiece name) {
   return getDirInode(parent)->unlink(name).then(
       [ =, name = PathComponent(name) ] {
-        auto mgr = mountPoint_->getNameMgr();
+        auto mgr = mount_->getNameMgr();
         mgr->unlink(parent, name);
         return Unit{};
       });
 }
 
-folly::Future<folly::Unit> InodeDispatcher::rmdir(
+folly::Future<folly::Unit> EdenDispatcher::rmdir(
     fuse_ino_t parent,
     PathComponentPiece name) {
   return getDirInode(parent)->rmdir(name).then(
       [ =, name = PathComponent(name) ] {
-        auto mgr = mountPoint_->getNameMgr();
+        auto mgr = mount_->getNameMgr();
         mgr->unlink(parent, name);
         return Unit{};
       });
 }
 
-folly::Future<fuse_entry_param> InodeDispatcher::symlink(
+folly::Future<fuse_entry_param> EdenDispatcher::symlink(
     PathComponentPiece link,
     fuse_ino_t parent,
     PathComponentPiece name) {
   return getDirInode(parent)->symlink(link, name);
 }
 
-folly::Future<folly::Unit> InodeDispatcher::rename(
+folly::Future<folly::Unit> EdenDispatcher::rename(
     fuse_ino_t parent,
     PathComponentPiece name,
     fuse_ino_t newparent,
@@ -426,13 +424,13 @@ folly::Future<folly::Unit> InodeDispatcher::rename(
   return getDirInode(parent)
       ->rename(name, getDirInode(newparent), newname)
       .then([ =, name = name.copy(), newname = newname.copy() ] {
-        auto mgr = mountPoint_->getNameMgr();
+        auto mgr = mount_->getNameMgr();
         mgr->rename(parent, name, newparent, newname);
         return Unit{};
       });
 }
 
-folly::Future<fuse_entry_param> InodeDispatcher::link(
+folly::Future<fuse_entry_param> EdenDispatcher::link(
     fuse_ino_t ino,
     fuse_ino_t newparent,
     PathComponentPiece newname) {
@@ -440,19 +438,18 @@ folly::Future<fuse_entry_param> InodeDispatcher::link(
     =,
     name = newname.copy()
   ](fuse_entry_param && entry) {
-    auto mgr = mountPoint_->getNameMgr();
+    auto mgr = mount_->getNameMgr();
     mgr->link(ino, entry.generation, newparent, name);
     return entry;
   });
 }
 
-Future<string> InodeDispatcher::getxattr(fuse_ino_t ino, StringPiece name) {
+Future<string> EdenDispatcher::getxattr(fuse_ino_t ino, StringPiece name) {
   return getInode(ino)->getxattr(name);
 }
 
-Future<vector<string>> InodeDispatcher::listxattr(fuse_ino_t ino) {
+Future<vector<string>> EdenDispatcher::listxattr(fuse_ino_t ino) {
   return getInode(ino)->listxattr();
-}
 }
 }
 }

@@ -21,29 +21,16 @@ namespace eden {
 namespace fusell {
 
 class DirInode;
-class FileInode;
-class InodeBase;
-class InodeDispatcher;
-class InodeNameManager;
+class Dispatcher;
 class Channel;
 
 class MountPoint {
  public:
-  explicit MountPoint(
-      AbsolutePathPiece path,
-      std::shared_ptr<DirInode> root = {});
+  explicit MountPoint(AbsolutePathPiece path, Dispatcher* dispatcher);
   virtual ~MountPoint();
 
   const AbsolutePath& getPath() const {
     return path_;
-  }
-
-  InodeDispatcher* getInodeDispatcher() const {
-    return dispatcher_.get();
-  }
-
-  InodeNameManager* getNameMgr() const {
-    return nameManager_.get();
   }
 
   /**
@@ -102,13 +89,6 @@ class MountPoint {
    */
   struct stat initStatData() const;
 
-  /**
-   * @return vector with the RelativePath of every directory that is modified
-   *     according to the overlay in the mount. The vector will be ordered as a
-   *     depth-first traversal of the overlay.
-   */
-  std::unique_ptr<std::vector<RelativePath>> getModifiedDirectories();
-
  private:
   enum class Status { UNINIT, STARTING, RUNNING, ERROR };
 
@@ -120,8 +100,7 @@ class MountPoint {
   uid_t uid_;
   gid_t gid_;
 
-  std::unique_ptr<InodeDispatcher> const dispatcher_;
-  std::unique_ptr<InodeNameManager> const nameManager_;
+  Dispatcher* const dispatcher_;
   std::unique_ptr<Channel> channel_;
 
   std::mutex mutex_;
