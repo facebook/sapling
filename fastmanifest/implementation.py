@@ -184,28 +184,28 @@ class hybridmanifest(object):
     def __len__(self):
         return self._manifest('__len__').__len__()
 
-    def _converttohybridmanifest(self, m):
+    def _converttohybridmanifest(self, m, node):
         if isinstance(m, hybridmanifest):
             return m
         elif isinstance(m, fastmanifestdict):
             return hybridmanifest(self.ui, self.opener, fast=m,
-                                  node=self.node)
+                                  node=node)
         elif isinstance(m, manifest.manifestdict):
             return hybridmanifest(self.ui, self.opener, flat=m,
-                                  node=self.node)
+                                  node=node)
         elif supportsctree and isinstance(m, ctreemanifest.treemanifest):
             return hybridmanifest(self.ui, self.opener, tree=m,
-                                  node=self.node)
+                                  node=node)
         else:
             raise ValueError("unknown manifest type {0}".format(type(m)))
 
     def copy(self):
         copy = self._manifest('copy').copy()
-        return self._converttohybridmanifest(copy)
+        return self._converttohybridmanifest(copy, self.node)
 
     def matches(self, *args, **kwargs):
         matches = self._manifest('matches').matches(*args, **kwargs)
-        return self._converttohybridmanifest(matches)
+        return self._converttohybridmanifest(matches, None)
 
     def _getmatchingtypemanifest(self, m2, operation):
         # Find _m1 and _m2 of the same type, to provide the fastest computation

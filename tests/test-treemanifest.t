@@ -85,3 +85,8 @@ Test that commit creates local trees
   
   Node          Delta Base    Delta Length
   7a911436836f  70f2c6726cec  61
+
+Test that manifest matchers work
+  $ hg status --rev 1 --rev 2 -I subdir/a
+  $ hg status --rev 1 --rev 2 -I subdir/z
+  M subdir/z
