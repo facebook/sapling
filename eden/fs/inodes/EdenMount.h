@@ -17,18 +17,22 @@
 namespace facebook {
 namespace eden {
 namespace fusell {
+class InodeBase;
+class InodeDispatcher;
 class MountPoint;
 }
 
 class BindMount;
 class ClientConfig;
 class Dirstate;
+class FileInode;
 class ObjectStore;
 class Overlay;
 class Journal;
 class Tree;
+class TreeInode;
 
-/*
+/**
  * EdenMount contains all of the data about a specific eden mount point.
  *
  * This contains:
@@ -45,7 +49,7 @@ class EdenMount {
       std::unique_ptr<ObjectStore> objectStore);
   virtual ~EdenMount();
 
-  /*
+  /**
    * Get the MountPoint object.
    *
    * This returns a raw pointer since the EdenMount owns the mount point.
@@ -56,7 +60,7 @@ class EdenMount {
     return mountPoint_.get();
   }
 
-  /*
+  /**
    * Return the path to the mount point.
    */
   const AbsolutePath& getPath() const;
@@ -67,7 +71,7 @@ class EdenMount {
    */
   const std::vector<BindMount>& getBindMounts() const;
 
-  /*
+  /**
    * Return the ObjectStore used by this mount point.
    *
    * The ObjectStore is guaranteed to be valid for the lifetime of the
@@ -76,6 +80,11 @@ class EdenMount {
   ObjectStore* getObjectStore() const {
     return objectStore_.get();
   }
+
+  /**
+   * Return the InodeDispatcher used for this mount.
+   */
+  fusell::InodeDispatcher* getDispatcher() const;
 
   const std::shared_ptr<Overlay>& getOverlay() const {
     return overlay_;
@@ -100,6 +109,24 @@ class EdenMount {
   /** Convenience method for getting the Tree for the root of the mount. */
   std::unique_ptr<Tree> getRootTree() const;
 
+  /**
+   * @return the InodeBase for the specified path or throws a std::system_error
+   *     with ENOENT.
+   */
+  std::shared_ptr<fusell::InodeBase> getInodeBase(RelativePathPiece path) const;
+
+  /**
+   * @return the TreeInode for the specified path or throws a std::system_error
+   *     with ENOENT or ENOTDIR, as appropriate.
+   */
+  std::shared_ptr<TreeInode> getTreeInode(RelativePathPiece path) const;
+
+  /**
+   * @return the FileInode for the specified path or throws a std::system_error
+   *     with ENOENT or EISDIR, as appropriate.
+   */
+  std::shared_ptr<FileInode> getFileInode(RelativePathPiece path) const;
+
  private:
   // Forbidden copy constructor and assignment operator
   EdenMount(EdenMount const&) = delete;
@@ -119,7 +146,7 @@ class EdenMount {
 
   folly::Synchronized<Journal> journal_;
 
-  /*
+  /**
    * A number to uniquely identify this particular incarnation of this mount.
    * We use bits from the process id and the time at which we were mounted.
    */

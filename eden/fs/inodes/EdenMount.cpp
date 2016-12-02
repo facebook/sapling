@@ -14,7 +14,9 @@
 #include "eden/fs/config/ClientConfig.h"
 #include "eden/fs/inodes/Dirstate.h"
 #include "eden/fs/inodes/EdenMounts.h"
+#include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/Overlay.h"
+#include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/store/ObjectStore.h"
@@ -93,8 +95,27 @@ const vector<BindMount>& EdenMount::getBindMounts() const {
   return bindMounts_;
 }
 
+fusell::InodeDispatcher* EdenMount::getDispatcher() const {
+  return mountPoint_->getDispatcher();
+}
+
 std::unique_ptr<Tree> EdenMount::getRootTree() const {
   return getRootTreeForMountPoint(mountPoint_.get(), getObjectStore());
+}
+
+shared_ptr<fusell::InodeBase> EdenMount::getInodeBase(
+    RelativePathPiece path) const {
+  return mountPoint_->getInodeBaseForPath(path);
+}
+
+shared_ptr<TreeInode> EdenMount::getTreeInode(RelativePathPiece path) const {
+  auto dirInode = mountPoint_->getDirInodeForPath(path);
+  return std::dynamic_pointer_cast<TreeInode>(dirInode);
+}
+
+shared_ptr<FileInode> EdenMount::getFileInode(RelativePathPiece path) const {
+  auto fusellInode = mountPoint_->getFileInodeForPath(path);
+  return std::dynamic_pointer_cast<FileInode>(fusellInode);
 }
 }
 } // facebook::eden

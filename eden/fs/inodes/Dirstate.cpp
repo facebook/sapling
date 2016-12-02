@@ -124,8 +124,7 @@ void processRemovedFile(
 }
 
 Dirstate::Dirstate(EdenMount* mount)
-    : mountPoint_(mount->getMountPoint()),
-      objectStore_(mount->getObjectStore()),
+    : mount_(mount),
       persistence_(mount->getConfig()->getDirstateStoragePath()) {
   auto loadedData = persistence_.load();
   userDirectives_.wlock()->swap(loadedData);
@@ -136,7 +135,8 @@ Dirstate::~Dirstate() {}
 std::unique_ptr<HgStatus> Dirstate::getStatus() const {
   // Find the modified directories in the overlay and compare them with what is
   // in the root tree.
-  auto modifiedDirectories = getModifiedDirectoriesForMount(mountPoint_);
+  auto modifiedDirectories =
+      getModifiedDirectoriesForMount(mount_->getMountPoint());
   std::unordered_map<RelativePath, HgStatusCode> manifest;
   if (modifiedDirectories->empty()) {
     auto userDirectives = userDirectives_.rlock();
@@ -148,16 +148,16 @@ std::unique_ptr<HgStatus> Dirstate::getStatus() const {
   std::unordered_map<RelativePathPiece, overlay::UserStatusDirective>
       copyOfUserDirectives(userDirectives->begin(), userDirectives->end());
 
-  auto rootTree = getRootTree();
+  auto rootTree = mount_->getRootTree();
   for (auto& directory : *modifiedDirectories) {
     // Get the directory as a TreeInode.
-    auto dirInode = mountPoint_->getDirInodeForPath(directory);
-    auto treeInode = std::dynamic_pointer_cast<TreeInode>(dirInode);
+    auto treeInode = mount_->getTreeInode(directory);
     DCHECK(treeInode.get() != nullptr) << "Failed to get a TreeInode for "
                                        << directory;
 
     // Get the directory as a Tree.
-    auto tree = getTreeForDirectory(directory, rootTree.get(), objectStore_);
+    auto tree = getTreeForDirectory(
+        directory, rootTree.get(), mount_->getObjectStore());
     DirectoryDelta delta;
     std::vector<TreeEntry> emptyEntries;
     // Note that if tree is NULL, then the directory must be new in the working
@@ -177,7 +177,7 @@ std::unique_ptr<HgStatus> Dirstate::getStatus() const {
       DCHECK(entry->getType() == TreeEntryType::TREE)
           << "Removed directory " << subdirectory
           << " did not correspond to a Tree.";
-      auto removedTree = objectStore_->getTree(entry->getHash());
+      auto removedTree = mount_->getObjectStore()->getTree(entry->getHash());
       addDeletedEntries(
           removedTree.get(),
           subdirectory,
@@ -272,7 +272,7 @@ void Dirstate::addDeletedEntries(
       processRemovedFile(
           pathToEntry, manifest, userDirectives, copyOfUserDirectives);
     } else {
-      auto subtree = objectStore_->getTree(entry.getHash());
+      auto subtree = mount_->getObjectStore()->getTree(entry.getHash());
       addDeletedEntries(
           subtree.get(),
           pathToEntry,
@@ -384,7 +384,7 @@ void Dirstate::computeDelta(
         if (!hasMatchingAttributes(
                 &base,
                 overlayIterator->second.get(),
-                &*objectStore_,
+                mount_->getObjectStore(),
                 current,
                 *dir)) {
           delta.modified.push_back(base.getName());
@@ -547,9 +547,9 @@ void Dirstate::remove(RelativePathPiece path, bool force) {
   // We look up the InodeBase and TreeEntry for `path` before acquiring the
   // write lock for userDirectives_ because these lookups could be slow, so we
   // prefer not to do them while holding the lock.
-  std::shared_ptr<fusell::DirInode> parent;
+  std::shared_ptr<TreeInode> parent;
   try {
-    parent = mountPoint_->getDirInodeForPath(path.dirname());
+    parent = mount_->getTreeInode(path.dirname());
   } catch (const std::system_error& e) {
     auto value = e.code().value();
     if (value == ENOENT || value == ENOTDIR) {
@@ -568,7 +568,8 @@ void Dirstate::remove(RelativePathPiece path, bool force) {
     }
   }
 
-  auto entry = getEntryForFile(path, getRootTree().get(), objectStore_);
+  auto entry = getEntryForFile(
+      path, mount_->getRootTree().get(), mount_->getObjectStore());
 
   auto shouldDelete = false;
   {
@@ -591,7 +592,7 @@ void Dirstate::remove(RelativePathPiece path, bool force) {
           // the file has been modified, so we must perform this check before
           // updating userDirectives.
           shouldDelete = shouldFileBeDeletedByHgRemove(
-              path, parent, entry.get(), objectStore_);
+              path, parent, entry.get(), mount_->getObjectStore());
         }
       }
       (*userDirectives)[path.copy()] = overlay::UserStatusDirective::Remove;
@@ -617,7 +618,7 @@ void Dirstate::remove(RelativePathPiece path, bool force) {
   }
 
   if (shouldDelete) {
-    auto dispatcher = mountPoint_->getDispatcher();
+    auto dispatcher = mount_->getDispatcher();
     try {
       dispatcher->unlink(parent->getNodeId(), path.basename()).get();
     } catch (const std::system_error& e) {
@@ -627,10 +628,6 @@ void Dirstate::remove(RelativePathPiece path, bool force) {
       }
     }
   }
-}
-
-std::unique_ptr<Tree> Dirstate::getRootTree() const {
-  return getRootTreeForMountPoint(mountPoint_, objectStore_);
 }
 
 const std::string kStatusCodeCharClean = "C";

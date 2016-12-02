@@ -146,8 +146,6 @@ class Dirstate {
       TreeInode& current,
       DirectoryDelta& delta) const;
 
-  std::unique_ptr<Tree> getRootTree() const;
-
   /**
    * Recursively performs a depth-first traversal of the specified Tree, adding
    * all of the files under it as either REMOVED or MISSING to
@@ -162,8 +160,8 @@ class Dirstate {
       std::unordered_map<RelativePathPiece, overlay::UserStatusDirective>*
           copyOfUserDirectives) const;
 
-  fusell::MountPoint* mountPoint_;
-  ObjectStore* objectStore_;
+  /** The EdenMount object that owns this Dirstate */
+  EdenMount* const mount_{nullptr};
   DirstatePersistence persistence_;
   /**
    * Manifest of files in the working copy whose status is not CLEAN. These are
