@@ -164,7 +164,7 @@ class Dirstate {
 
   fusell::MountPoint* mountPoint_;
   ObjectStore* objectStore_;
-  std::unique_ptr<DirstatePersistence> persistence_;
+  DirstatePersistence persistence_;
   /**
    * Manifest of files in the working copy whose status is not CLEAN. These are
    * also referred to as "nonnormal" files.

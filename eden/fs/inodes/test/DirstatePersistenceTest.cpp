@@ -19,7 +19,7 @@ using apache::thrift::CompactSerializer;
 using folly::test::TemporaryFile;
 
 TEST(DirstatePersistence, saveAndReadDirectivesBackOut) {
-  TemporaryFile storageFile;
+  TemporaryFile storageFile("eden_test");
 
   AbsolutePath storageFilePath(storageFile.path().c_str());
   DirstatePersistence persistence(storageFilePath);
@@ -35,7 +35,7 @@ TEST(DirstatePersistence, saveAndReadDirectivesBackOut) {
 }
 
 TEST(DirstatePersistence, loadFromFileWithWellFormattedData) {
-  TemporaryFile storageFile;
+  TemporaryFile storageFile("eden_test");
 
   overlay::DirstateData dirstateData;
   dirstateData.directives = {
@@ -59,7 +59,7 @@ TEST(DirstatePersistence, loadFromFileWithWellFormattedData) {
 TEST(DirstatePersistence, attemptLoadFromNonExistentFile) {
   AbsolutePath storageFilePath;
   {
-    TemporaryFile storageFile;
+    TemporaryFile storageFile("eden_test");
     storageFilePath = AbsolutePath(storageFile.path().c_str());
   }
   DirstatePersistence persistence(storageFilePath);

@@ -8,6 +8,7 @@
  *
  */
 #include "DirstatePersistence.h"
+
 #include <folly/FileUtil.h>
 #include <thrift/lib/cpp2/protocol/Serializer.h>
 
@@ -26,12 +27,8 @@ void DirstatePersistence::save(
   }
   dirstateData.directives = directives;
   auto serializedData = CompactSerializer::serialize<std::string>(dirstateData);
-  auto wrote = folly::writeFile(serializedData, storageFile_.c_str());
 
-  if (!wrote) {
-    throw std::runtime_error(folly::to<std::string>(
-        "Failed to persist Dirstate to file ", storageFile_));
-  }
+  folly::writeFileAtomic(storageFile_.stringPiece(), serializedData, 0644);
 }
 
 std::unordered_map<RelativePath, overlay::UserStatusDirective>

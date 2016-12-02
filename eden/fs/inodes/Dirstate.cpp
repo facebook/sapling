@@ -8,10 +8,12 @@
  *
  */
 #include "Dirstate.h"
+
 #include <folly/Format.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
 #include "eden/fs/config/ClientConfig.h"
+#include "eden/fs/inodes/DirstatePersistence.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/EdenMounts.h"
 #include "eden/fs/inodes/FileInode.h"
@@ -123,10 +125,10 @@ void processRemovedFile(
 
 Dirstate::Dirstate(EdenMount* mount)
     : mountPoint_(mount->getMountPoint()),
-      objectStore_(mount->getObjectStore()) {
-  auto dirstateStoragePath = mount->getConfig()->getDirstateStoragePath();
-  persistence_ = std::make_unique<DirstatePersistence>(dirstateStoragePath);
-  *(userDirectives_.wlock()) = persistence_->load();
+      objectStore_(mount->getObjectStore()),
+      persistence_(mount->getConfig()->getDirstateStoragePath()) {
+  auto loadedData = persistence_.load();
+  userDirectives_.wlock()->swap(loadedData);
 }
 
 Dirstate::~Dirstate() {}
@@ -449,12 +451,12 @@ void Dirstate::add(RelativePathPiece path) {
           break;
         case overlay::UserStatusDirective::Remove:
           userDirectives->erase(path.copy());
-          persistence_->save(*userDirectives);
+          persistence_.save(*userDirectives);
           break;
       }
     } else {
       (*userDirectives)[path.copy()] = overlay::UserStatusDirective::Add;
-      persistence_->save(*userDirectives);
+      persistence_.save(*userDirectives);
     }
   }
 }
@@ -593,7 +595,7 @@ void Dirstate::remove(RelativePathPiece path, bool force) {
         }
       }
       (*userDirectives)[path.copy()] = overlay::UserStatusDirective::Remove;
-      persistence_->save(*userDirectives);
+      persistence_.save(*userDirectives);
     } else {
       switch (result->second) {
         case overlay::UserStatusDirective::Remove:
@@ -607,7 +609,7 @@ void Dirstate::remove(RelativePathPiece path, bool force) {
                 path.stringPiece()));
           } else {
             userDirectives->erase(path.copy());
-            persistence_->save(*userDirectives);
+            persistence_.save(*userDirectives);
           }
           break;
       }
