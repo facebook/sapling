@@ -18,6 +18,7 @@ converted to trees during pull by specifying `treemanifest.allowedtreeroots`.
 from mercurial import (
     changegroup,
     cmdutil,
+    error,
     extensions,
     localrepo,
     scmutil,
@@ -48,6 +49,10 @@ def reposetup(ui, repo):
 def wraprepo(repo):
     if not isinstance(repo, localrepo.localrepository):
         return
+
+    repo.name = repo.ui.config('remotefilelog', 'reponame')
+    if not repo.name:
+        raise error.Abort(_("remotefilelog.reponame must be configured"))
 
     usecdatapack = repo.ui.configbool('remotefilelog', 'fastdatapack')
 
