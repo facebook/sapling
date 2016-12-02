@@ -32,14 +32,6 @@ MountPoint::MountPoint(AbsolutePathPiece path, std::shared_ptr<DirInode> root)
 
 MountPoint::~MountPoint() {}
 
-void MountPoint::setRootInode(std::shared_ptr<DirInode> inode) {
-  dispatcher_->setRootInode(std::move(inode));
-}
-
-std::shared_ptr<DirInode> MountPoint::getRootInode() const {
-  return dispatcher_->getRootInode();
-}
-
 void MountPoint::start(bool debug) {
   std::function<void()> onStop;
   return start(debug, onStop);

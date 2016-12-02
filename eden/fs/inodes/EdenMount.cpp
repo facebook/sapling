@@ -75,7 +75,7 @@ EdenMount::EdenMount(
     rootInode = std::make_shared<TreeInode>(
         this, std::move(rootTree), nullptr, FUSE_ROOT_ID, FUSE_ROOT_ID);
   }
-  mountPoint_->setRootInode(rootInode);
+  getDispatcher()->setRootInode(rootInode);
 
   // Record the transition from no snapshot to the current snapshot in
   // the journal.  This also sets things up so that we can carry the
@@ -104,7 +104,7 @@ fusell::InodeNameManager* EdenMount::getNameMgr() const {
 }
 
 std::shared_ptr<TreeInode> EdenMount::getRootInode() const {
-  auto rootAsDirInode = mountPoint_->getRootInode();
+  auto rootAsDirInode = getDispatcher()->getRootInode();
   return std::dynamic_pointer_cast<TreeInode>(rootAsDirInode);
 }
 
