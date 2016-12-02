@@ -156,7 +156,7 @@ std::unique_ptr<ClientConfig> TestMountBuilder::setupClientConfig(
 
 void TestMount::addFile(folly::StringPiece path, std::string contents) {
   RelativePathPiece relativePath(path);
-  auto treeInode = getDirInodeForPath(relativePath.dirname().stringPiece());
+  auto treeInode = getTreeInode(relativePath.dirname());
   mode_t modeThatSeemsToBeIgnored = 0; // TreeInode::create() uses 0600.
   int flags = 0;
   auto dispatcher = edenMount_->getDispatcher();
@@ -173,7 +173,7 @@ void TestMount::addFile(folly::StringPiece path, std::string contents) {
 }
 
 void TestMount::overwriteFile(folly::StringPiece path, std::string contents) {
-  auto file = getFileInodeForPath(path);
+  auto file = getFileInode(path);
 
   fuse_file_info info;
   info.flags = O_RDWR | O_TRUNC;
@@ -185,7 +185,7 @@ void TestMount::overwriteFile(folly::StringPiece path, std::string contents) {
 }
 
 std::string TestMount::readFile(folly::StringPiece path) {
-  auto file = getFileInodeForPath(path);
+  auto file = getFileInode(path);
   auto fileData = file->getOrLoadData();
   auto attr = file->getattr().get();
   auto buf = fileData->readIntoBuffer(
@@ -212,7 +212,7 @@ bool TestMount::hasFileAt(folly::StringPiece path) {
 
 void TestMount::mkdir(folly::StringPiece path) {
   auto relativePath = RelativePathPiece{path};
-  auto treeInode = getDirInodeForPath(relativePath.dirname().stringPiece());
+  auto treeInode = getTreeInode(relativePath.dirname());
   mode_t mode = 0755;
   auto dispatcher = edenMount_->getDispatcher();
   dispatcher->mkdir(treeInode->getInode(), relativePath.basename(), mode).get();
@@ -220,24 +220,34 @@ void TestMount::mkdir(folly::StringPiece path) {
 
 void TestMount::deleteFile(folly::StringPiece path) {
   auto relativePath = RelativePathPiece{path};
-  auto treeInode = getDirInodeForPath(relativePath.dirname().stringPiece());
+  auto treeInode = getTreeInode(relativePath.dirname());
   auto dispatcher = edenMount_->getDispatcher();
   dispatcher->unlink(treeInode->getInode(), relativePath.basename()).get();
 }
 
 void TestMount::rmdir(folly::StringPiece path) {
   auto relativePath = RelativePathPiece{path};
-  auto treeInode = getDirInodeForPath(relativePath.dirname().stringPiece());
+  auto treeInode = getTreeInode(relativePath.dirname());
   auto dispatcher = edenMount_->getDispatcher();
   dispatcher->rmdir(treeInode->getInode(), relativePath.basename()).get();
 }
 
-std::shared_ptr<TreeInode> TestMount::getDirInodeForPath(
+std::shared_ptr<TreeInode> TestMount::getTreeInode(
+    RelativePathPiece path) const {
+  return edenMount_->getTreeInode(path);
+}
+
+std::shared_ptr<TreeInode> TestMount::getTreeInode(
     folly::StringPiece path) const {
   return edenMount_->getTreeInode(RelativePathPiece{path});
 }
 
-std::shared_ptr<FileInode> TestMount::getFileInodeForPath(
+std::shared_ptr<FileInode> TestMount::getFileInode(
+    RelativePathPiece path) const {
+  return edenMount_->getFileInode(path);
+}
+
+std::shared_ptr<FileInode> TestMount::getFileInode(
     folly::StringPiece path) const {
   return edenMount_->getFileInode(RelativePathPiece{path});
 }

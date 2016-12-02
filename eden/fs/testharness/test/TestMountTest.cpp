@@ -38,7 +38,7 @@ TEST(TestMount, createSimpleTestMount) {
   });
   auto testMount = builder.build();
 
-  auto fileTreeEntry = testMount->getFileInodeForPath("path1");
+  auto fileTreeEntry = testMount->getFileInode("path1");
   EXPECT_NE(nullptr, fileTreeEntry.get())
       << "Should be able to find FileInode for path1";
 
@@ -48,7 +48,7 @@ TEST(TestMount, createSimpleTestMount) {
       << "For simplicity, TestMount uses the SHA-1 of the contents as "
       << "the id for a Blob.";
 
-  auto dirTreeEntry = testMount->getDirInodeForPath("");
+  auto dirTreeEntry = testMount->getTreeInode("");
   {
     auto dir = dirTreeEntry->getContents().rlock();
     auto& rootEntries = dir->entries;
@@ -69,7 +69,7 @@ TEST(TestMount, addFileAfterMountIsCreated) {
   auto testMount = builder.build();
 
   testMount->addFile("file2.txt", "I am added by the user after mounting.");
-  auto dirTreeEntry = testMount->getDirInodeForPath("");
+  auto dirTreeEntry = testMount->getTreeInode("");
   {
     auto dir = dirTreeEntry->getContents().rlock();
     auto& rootEntries = dir->entries;
@@ -142,14 +142,14 @@ TEST(TestMount, rmdir) {
   builder.addFile({"dir/file.txt", "original contents"});
   auto testMount = builder.build();
   EXPECT_TRUE(testMount->hasFileAt("dir/file.txt"));
-  EXPECT_NE(nullptr, testMount->getDirInodeForPath("dir"));
+  EXPECT_NE(nullptr, testMount->getTreeInode("dir"));
 
   testMount->deleteFile("dir/file.txt");
-  EXPECT_NE(nullptr, testMount->getDirInodeForPath("dir"));
+  EXPECT_NE(nullptr, testMount->getTreeInode("dir"));
   testMount->rmdir("dir");
 
   try {
-    testMount->getDirInodeForPath("dir");
+    testMount->getTreeInode("dir");
     FAIL() << "ENOENT should be thrown";
   } catch (const std::system_error& expected) {
     ASSERT_EQ(ENOENT, expected.code().value());

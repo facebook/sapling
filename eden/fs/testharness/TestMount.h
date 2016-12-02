@@ -67,8 +67,10 @@ class TestMount {
   void deleteFile(folly::StringPiece path);
   void rmdir(folly::StringPiece path);
 
-  std::shared_ptr<TreeInode> getDirInodeForPath(folly::StringPiece path) const;
-  std::shared_ptr<FileInode> getFileInodeForPath(folly::StringPiece path) const;
+  std::shared_ptr<TreeInode> getTreeInode(RelativePathPiece path) const;
+  std::shared_ptr<TreeInode> getTreeInode(folly::StringPiece path) const;
+  std::shared_ptr<FileInode> getFileInode(RelativePathPiece path) const;
+  std::shared_ptr<FileInode> getFileInode(folly::StringPiece path) const;
 
   /** Convenience method for getting the Tree for the root of the mount. */
   std::unique_ptr<Tree> getRootTree() const;
