@@ -538,3 +538,38 @@ TEST(Dirstate, createDirstateAndRemoveSubtree) {
           {"dir1/dir2/dir3/dir4/b-file.txt", HgStatusCode::MISSING},
       });
 }
+
+TEST(Dirstate, checkIgnoredBehavior) {
+  TestMountBuilder builder;
+  builder.addFiles({
+      {".gitignore", "hello*\n"},
+      {"a/b/c/noop.c", "int main() { return 0; }\n"},
+  });
+  auto testMount = builder.build();
+  testMount->addFile("hello.txt", "some contents");
+  testMount->addFile("goodbye.txt", "other contents");
+  testMount->addFile(
+      "a/b/c/noop.o",
+      "\x7f"
+      "ELF");
+
+  auto dirstate = testMount->getDirstate();
+
+  verifyExpectedDirstate(
+      dirstate,
+      {
+          {"hello.txt", HgStatusCode::IGNORED},
+          {"goodbye.txt", HgStatusCode::NOT_TRACKED},
+          {"a/b/c/noop.o", HgStatusCode::NOT_TRACKED},
+      });
+
+  testMount->addFile("a/b/.gitignore", "*.o\n");
+  verifyExpectedDirstate(
+      dirstate,
+      {
+          {"hello.txt", HgStatusCode::IGNORED},
+          {"goodbye.txt", HgStatusCode::NOT_TRACKED},
+          {"a/b/.gitignore", HgStatusCode::NOT_TRACKED},
+          {"a/b/c/noop.o", HgStatusCode::IGNORED},
+      });
+}

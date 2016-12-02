@@ -10,18 +10,24 @@
 #include "Dirstate.h"
 
 #include <folly/Format.h>
+#include <folly/experimental/StringKeyedUnorderedMap.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
 #include "eden/fs/config/ClientConfig.h"
 #include "eden/fs/inodes/DirstatePersistence.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/EdenMounts.h"
+#include "eden/fs/inodes/FileData.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/model/Blob.h"
+#include "eden/fs/model/git/GitIgnore.h"
+#include "eden/fs/model/git/GitIgnorePattern.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/store/ObjectStores.h"
 #include "eden/fuse/MountPoint.h"
+
+using folly::StringPiece;
 
 namespace {
 /**
@@ -85,6 +91,11 @@ void updateManifestWithDirectives(
         // copy without any modifications. Although it may seem strange, it
         // should still show up as REMOVED in `hg status` even though it is
         // still on disk.
+        //
+        // Note that even if the file matches an ignore pattern, we currently
+        // report it just as REMOVED.  This matches mercurial's current
+        // behavior, but in the future it would probably be nicer to add a code
+        // for REMOVED+IGNORED.
         manifest->emplace(RelativePath(pair.first), HgStatusCode::REMOVED);
         break;
     }
@@ -121,6 +132,104 @@ void processRemovedFile(
     manifest->emplace(pathToEntry, HgStatusCode::MISSING);
   }
 }
+
+// Short-term helper class until we implement gitignore
+// handling more efficiently.
+class IgnoreChecker {
+ public:
+  explicit IgnoreChecker(EdenMount* mountPoint) : mountPoint_(mountPoint) {}
+
+  bool isIgnored(RelativePathPiece path) {
+    // If a path's parent directory is ignored, it is ignored
+    // (as long as it hasn't been explicitly added to the dirstate, which
+    // we already check before calling IgnoreChecker).
+    //
+    // Note that this is a potentially expensive recursion.
+    // We could memoize the results for directories.  (Although eventually we
+    // should just store this data directly in the Inode objects.)
+    if (path.stringPiece().empty()) {
+      return false;
+    }
+    if (isIgnored(path.dirname())) {
+      return true;
+    }
+
+    StringPiece piece = path.stringPiece();
+    auto idx = piece.rfind('/');
+    while (true) {
+      StringPiece dirName;
+      StringPiece childName;
+      if (idx == StringPiece::npos) {
+        dirName = StringPiece();
+        childName = piece;
+      } else {
+        dirName = StringPiece(piece.begin(), idx);
+        childName = StringPiece(piece.begin() + idx + 1, piece.end());
+      }
+
+      VLOG(5) << "Check ignored: \"" << childName << "\" in \"" << dirName
+              << "\"";
+      const GitIgnore* ignore = getIgnoreData(dirName);
+      auto matchResult = ignore->match(
+          RelativePathPiece(childName, detail::SkipPathSanityCheck()));
+      if (matchResult == GitIgnore::INCLUDE) {
+        // Explicitly included.  We don't need to check parent directories.
+        return false;
+      } else if (matchResult == GitIgnore::EXCLUDE) {
+        return true;
+      }
+
+      if (idx == StringPiece::npos) {
+        // We checked everything up to the root.  The path is not ignored.
+        return false;
+      }
+      idx = dirName.rfind('/');
+    }
+  }
+
+ private:
+  const GitIgnore* getIgnoreData(StringPiece directory) {
+    auto it = ignoreCache_.find(directory);
+    if (it != ignoreCache_.end()) {
+      return &(it->second);
+    }
+
+    GitIgnore ignore;
+    loadIgnoreFile(directory, &ignore);
+    auto ret = ignoreCache_.emplace(directory, std::move(ignore));
+    return &(ret.first->second);
+  }
+
+  void loadIgnoreFile(StringPiece directory, GitIgnore* ignore) {
+    // Ugh.  This is rather inefficient.
+    auto ignorePath =
+        RelativePath(directory) + PathComponentPiece(".gitignore");
+    VLOG(4) << "Loading ignore file at \"" << ignorePath << "\"";
+    std::shared_ptr<FileInode> ignoreInode;
+    try {
+      auto fusellInode =
+          mountPoint_->getMountPoint()->getFileInodeForPath(ignorePath);
+      ignoreInode = std::dynamic_pointer_cast<FileInode>(fusellInode);
+    } catch (const std::system_error& ex) {
+      if (ex.code().category() != std::system_category() ||
+          (ex.code().value() != ENOENT && ex.code().value() != ENOTDIR)) {
+        throw;
+      }
+    }
+
+    if (!ignoreInode) {
+      // No gitignore file to load.
+      return;
+    }
+
+    auto data = ignoreInode->getOrLoadData();
+    data->materializeForRead(O_RDONLY, ignorePath, mountPoint_->getOverlay());
+    ignore->loadFile(data->readAll());
+  }
+
+  EdenMount* const mountPoint_{nullptr};
+  folly::StringKeyedUnorderedMap<GitIgnore> ignoreCache_;
+};
 }
 
 Dirstate::Dirstate(EdenMount* mount)
@@ -147,6 +256,19 @@ std::unique_ptr<HgStatus> Dirstate::getStatus() const {
   auto userDirectives = userDirectives_.rlock();
   std::unordered_map<RelativePathPiece, overlay::UserStatusDirective>
       copyOfUserDirectives(userDirectives->begin(), userDirectives->end());
+
+  // TODO: This code is somewhat inefficient.
+  // We ideally should restructure this so that we can compute diff and ignore
+  // data in a single pass through the tree.  (We shouldn't have separate walks
+  // in getModifiedDirectoriesForMount(), then the for loop below, plus
+  // additional computation to look up ignore data.)
+  //
+  // Doing this all at once would also make it possible to completely skip
+  // ignored directories that have no tracked files inside of them.  Currently
+  // we can't do this.  getModifiedDirectoriesForMount() has to descend into
+  // ignored directories because it doesn't know if userDirectives_ contains
+  // entries for files in these directories or not.
+  IgnoreChecker ignoreChecker(mount_);
 
   auto rootTree = mount_->getRootTree();
   for (auto& directory : *modifiedDirectories) {
@@ -209,15 +331,27 @@ std::unique_ptr<HgStatus> Dirstate::getStatus() const {
                 pathToEntry.stringPiece()));
         }
         copyOfUserDirectives.erase(pathToEntry);
+      } else if (ignoreChecker.isIgnored(pathToEntry)) {
+        manifest.emplace(pathToEntry, HgStatusCode::IGNORED);
       } else {
         manifest.emplace(pathToEntry, HgStatusCode::NOT_TRACKED);
       }
     }
 
-    // Files in delta.modified fall into one of three categories:
+    // Files in delta.modified fall into one of two categories:
     // 1. MODIFIED
     // 2. REMOVED
-    // 3. IGNORED
+    //
+    // Technically, a file might be both REMOVED and IGNORED if the user asked
+    // us to remove the file from source control tracking, but it still exists
+    // in the file system, and it matches an ignore pattern.  Unfortunately
+    // mercurial doesn't really represent the state properly in this case, and
+    // just lists the file REMOVED, and not IGNORED.  (This does result in some
+    // bugs: "hg clean --all" won't actually delete the file in this case.)
+    //
+    // Eventually it might be nice if we represent this state properly in our
+    // thrift API.  For now though the mercurial code can't make use of it
+    // properly though.
     for (auto& modifiedPath : delta.modified) {
       auto pathToEntry = directory + modifiedPath;
       auto result = userDirectives->find(pathToEntry);
@@ -242,10 +376,9 @@ std::unique_ptr<HgStatus> Dirstate::getStatus() const {
       }
     }
 
-    // Files in delta.removed fall into one of three categories:
+    // Files in delta.removed fall into one of two categories:
     // 1. REMOVED
     // 2. MISSING
-    // 3. IGNORED
     for (auto& removedPath : delta.removed) {
       auto pathToEntry = directory + removedPath;
       processRemovedFile(

@@ -198,6 +198,21 @@ std::unique_ptr<folly::IOBuf> FileData::readIntoBuffer(size_t size, off_t off) {
   return result;
 }
 
+std::string FileData::readAll() {
+  std::unique_lock<std::mutex> lock(mutex_);
+  if (file_) {
+    std::string result;
+    auto rc = lseek(file_.fd(), 0, SEEK_SET);
+    folly::checkUnixError(rc, "unable to seek in materialized FileData");
+    folly::readFile(file_.fd(), result);
+    return result;
+  }
+
+  const auto& contentsBuf = blob_->getContents();
+  folly::io::Cursor cursor(&contentsBuf);
+  return cursor.readFixedString(contentsBuf.computeChainDataLength());
+}
+
 fusell::BufVec FileData::read(size_t size, off_t off) {
   auto buf = readIntoBuffer(size, off);
   return fusell::BufVec(std::move(buf));

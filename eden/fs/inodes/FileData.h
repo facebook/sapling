@@ -69,22 +69,40 @@ class FileData {
   /// Returns the sha1 hash of the content, for existing lock holders.
   Hash getSha1Locked(const std::unique_lock<std::mutex>&);
 
-  /// Materialize the file data.
-  // open_flags has the same meaning as the flags parameter to
-  // open(2).  Materialization depends on the write mode specified
-  // in those flags; if we are writing to the file then we need to
-  // copy it locally to the overlay.  If we are truncating we just
-  // need to create an empty file in the overlay.  Otherwise we
-  // need to go out to the LocalStore to obtain the backing data.
+  /**
+   * Read the entire file contents, and return them as a string.
+   *
+   * Note that this API generally should only be used for fairly small files.
+   */
+  std::string readAll();
+
+  /**
+   * Materialize the file data.
+   * open_flags has the same meaning as the flags parameter to
+   * open(2).  Materialization depends on the write mode specified
+   * in those flags; if we are writing to the file then we need to
+   * copy it locally to the overlay.  If we are truncating we just
+   * need to create an empty file in the overlay.  Otherwise we
+   * need to go out to the LocalStore to obtain the backing data.
+   *
+   * TODO: The overlay argument should be passed in as a raw pointer.  We do
+   * not need ownership of it.
+   */
   void materializeForWrite(
       int open_flags,
       RelativePathPiece path,
       std::shared_ptr<Overlay> overlay);
 
-  /** Materializes the file data.
+  /**
+   * Materializes the file data.
+   *
    * This variant is optimized for the read case; if there is
    * no locally available version of the file in the overlay,
-   * this method will fetch it from the LocalStore. */
+   * this method will fetch it from the LocalStore.
+   *
+   * TODO: The overlay argument should be passed in as a raw pointer.  We do
+   * not need ownership of it.
+   */
   void materializeForRead(
       int open_flags,
       RelativePathPiece path,

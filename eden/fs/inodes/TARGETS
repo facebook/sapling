@@ -13,8 +13,10 @@ cpp_library(
   headers = glob(['*.h']),
   deps = [
     '@/folly:folly',
+    '@/folly/experimental:experimental',
     '@/eden/fs/config:config',
     '@/eden/fs/model:model',
+    '@/eden/fs/model/git:gitignore',
     '@/eden/fs/journal:journal',
     '@/eden/fs/store:store',
     '@/eden/fuse:fusell',
