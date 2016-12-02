@@ -19,13 +19,17 @@ def backgroundrepack(repo, incremental=True):
     runshellcommand(cmd, os.environ)
 
 def fullrepack(repo):
-    datasource = contentstore.unioncontentstore(*repo.shareddatastores)
-    historysource = metadatastore.unionmetadatastore(*repo.sharedhistorystores,
-                                                     allowincomplete=True)
+    if util.safehasattr(repo, 'shareddatastores'):
+        datasource = contentstore.unioncontentstore(*repo.shareddatastores)
+        historysource = metadatastore.unionmetadatastore(
+            *repo.sharedhistorystores,
+            allowincomplete=True)
 
-    packpath = shallowutil.getcachepackpath(repo, constants.FILEPACK_CATEGORY)
-    _runrepack(repo, datasource, historysource, packpath,
-               constants.FILEPACK_CATEGORY)
+        packpath = shallowutil.getcachepackpath(
+            repo,
+            constants.FILEPACK_CATEGORY)
+        _runrepack(repo, datasource, historysource, packpath,
+                   constants.FILEPACK_CATEGORY)
 
     if util.safehasattr(repo.svfs, 'manifestdatastore'):
         # Repack the shared manifest store
@@ -53,12 +57,15 @@ def incrementalrepack(repo):
     """This repacks the repo by looking at the distribution of pack files in the
     repo and performing the most minimal repack to keep the repo in good shape.
     """
-    packpath = shallowutil.getcachepackpath(repo, constants.FILEPACK_CATEGORY)
-    _incrementalrepack(repo,
-                       repo.shareddatastores,
-                       repo.sharedhistorystores,
-                       packpath,
-                       constants.FILEPACK_CATEGORY)
+    if util.safehasattr(repo, 'shareddatastores'):
+        packpath = shallowutil.getcachepackpath(
+            repo,
+            constants.FILEPACK_CATEGORY)
+        _incrementalrepack(repo,
+                           repo.shareddatastores,
+                           repo.sharedhistorystores,
+                           packpath,
+                           constants.FILEPACK_CATEGORY)
 
     if util.safehasattr(repo.svfs, 'manifestdatastore'):
         # Repack the shared manifest store
