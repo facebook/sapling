@@ -189,6 +189,8 @@ def parsefileblob(path, decompress):
     return size, firstnode, mapping
 
 def debugdatapack(ui, path, **opts):
+    if '.data' in path:
+        path = path[:path.index('.data')]
     dpack = datapack.datapack(path)
 
     node = opts.get('node')
@@ -239,6 +241,8 @@ def dumpdeltachain(ui, deltachain, **opts):
             len(delta)))
 
 def debughistorypack(ui, path):
+    if '.hist' in path:
+        path = path[:path.index('.hist')]
     hpack = historypack.historypack(path)
 
     lastfilename = None
