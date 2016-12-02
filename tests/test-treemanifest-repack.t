@@ -30,7 +30,7 @@
   > autocreatetrees=True
   > EOF
 
-# Test repacking manifest packs
+# Test repacking shared manifest packs
   $ hg pull -q -r 0
   $ hg pull -q -r 1
   $ ls -l $CACHEDIR/master/packs/manifests | grep datapack
@@ -67,3 +67,14 @@
   dir/
   Node          Delta Base    Delta Length
   23226e7a252c  000000000000  43
+
+# Test repacking local manifest packs
+  $ hg up -q 1
+  $ echo a >> a && hg commit -Aqm 'modify a'
+  $ echo b >> dir/b && hg commit -Aqm 'modify dir/b'
+  $ ls -l .hg/store/packs/manifests | grep datapack
+  * 109 * 4465e7e50fbf4559eb4df204edd9be788cc346a5.datapack (glob)
+  * 227 * f1c10c3d58e94f19ec2978407ead3dba42558419.datapack (glob)
+  $ hg repack
+  $ ls -l .hg/store/packs/manifests | grep datapack
+  * 335 * 3c6e0e5aee5fbadb6c70cab831e9ec4921e5d99c.datapack (glob)
