@@ -7,8 +7,29 @@
 
 """a simple caching layer to speed up _adjustlinkrev
 
-The linkrevcache extension memorizes some _adjustlinkrev results in a local
-database in the directory '.hg/cache/linkrevdb'.
+The linkrevcache extension could use a pre-built database to speed up some
+_adjustlinkrev operations. The database is stored in the directory
+'.hg/cache/linkrevdb'.
+
+To use the extension, you need to prebuild the database using the
+`debugbuildlinkrevcache` command, and then keep the extension enabled.
+
+To update the database, run `debugbuildlinkrevcache` again. It would find new
+revisions and fill the database incrementally.
+
+If the building process is slow, try setting `checkancestor` to False.
+
+The database won't be updated on demand for I/O and locking concerns. It may be
+addressed if we could have some (partially) "append-only" map-like data
+structure.
+
+The linkrev caching database would generally speed up the log (following a
+file) and annotate operations.
+
+.. note::
+
+   The database format is not guaranteed portable. Copying it from a machine
+   to another may make it unreadable.
 
 Config examples::
 
@@ -41,6 +62,8 @@ from mercurial import (
     util,
 )
 from mercurial.i18n import _
+
+testedwith = 'ships-with-fb-hgext'
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
