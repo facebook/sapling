@@ -43,8 +43,7 @@ std::shared_ptr<DirInode> MountPoint::getRootInode() const {
 
 std::shared_ptr<InodeBase> MountPoint::getInodeBaseForPath(
     RelativePathPiece path) const {
-  auto inodeDispatcher = getDispatcher();
-  auto inodeBase = inodeDispatcher->getInode(FUSE_ROOT_ID);
+  auto inodeBase = dispatcher_->getInode(FUSE_ROOT_ID);
   auto relativePath = RelativePathPiece{path};
 
   // Walk down to the path of interest.
@@ -52,7 +51,7 @@ std::shared_ptr<InodeBase> MountPoint::getInodeBaseForPath(
   while (it != relativePath.paths().end()) {
     // This will throw if there is no such entry.
     inodeBase =
-        inodeDispatcher
+        dispatcher_
             ->lookupInodeBase(inodeBase->getNodeId(), it.piece().basename())
             .get();
     ++it;

@@ -106,6 +106,9 @@ class EdenMount {
     return config_.get();
   }
 
+  /** Get the TreeInode for the root of the mount. */
+  std::shared_ptr<TreeInode> getRootInode() const;
+
   /** Convenience method for getting the Tree for the root of the mount. */
   std::unique_ptr<Tree> getRootTree() const;
 

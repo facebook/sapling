@@ -19,16 +19,7 @@
 namespace facebook {
 namespace eden {
 
-class ObjectStore;
-class Tree;
-
-namespace fusell {
-class MountPoint;
-}
-
-std::unique_ptr<Tree> getRootTreeForMountPoint(
-    fusell::MountPoint* mountPoint,
-    ObjectStore* objectStore);
+class EdenMount;
 
 /**
  * @return vector with the RelativePath of every directory that is modified
@@ -36,6 +27,6 @@ std::unique_ptr<Tree> getRootTreeForMountPoint(
  *     depth-first traversal of the overlay.
  */
 std::unique_ptr<std::vector<RelativePath>> getModifiedDirectoriesForMount(
-    fusell::MountPoint* mountPoint);
+    EdenMount* mount);
 }
 }

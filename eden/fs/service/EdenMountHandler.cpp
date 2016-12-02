@@ -32,9 +32,6 @@ void getMaterializedEntriesRecursive(
 void getMaterializedEntriesForMount(
     EdenMount* edenMount,
     MaterializedResult& out) {
-  auto inodeDispatcher = edenMount->getMountPoint()->getDispatcher();
-  auto rootInode = inodeDispatcher->getDirInode(FUSE_ROOT_ID);
-
   auto latest = edenMount->getJournal().rlock()->getLatest();
 
   out.currentPosition.mountGeneration = edenMount->getMountGeneration();
@@ -42,10 +39,10 @@ void getMaterializedEntriesForMount(
   out.currentPosition.snapshotHash =
       StringPiece(latest->toHash.getBytes()).str();
 
-  auto treeInode = std::dynamic_pointer_cast<TreeInode>(rootInode);
-  if (treeInode) {
+  auto rootInode = edenMount->getRootInode();
+  if (rootInode) {
     getMaterializedEntriesRecursive(
-        out.fileInfo, RelativePathPiece(), treeInode.get());
+        out.fileInfo, RelativePathPiece(), rootInode.get());
   }
 }
 

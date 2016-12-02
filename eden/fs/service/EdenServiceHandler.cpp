@@ -161,10 +161,7 @@ void EdenServiceHandler::checkOutRevision(
     throw EdenError("requested mount point is not known to this eden instance");
   }
 
-  auto mount = edenMount->getMountPoint();
-  auto dispatcher = mount->getDispatcher();
-  auto root = std::dynamic_pointer_cast<TreeInode>(
-      dispatcher->getDirInode(FUSE_ROOT_ID));
+  auto root = edenMount->getRootInode();
   CHECK_NOTNULL(root.get());
 
   root->performCheckout(hashObj);
@@ -207,8 +204,8 @@ SHA1Result EdenServiceHandler::getSHA1ForPath(
 
   auto edenMount = server_->getMount(mountPoint);
   auto relativePath = RelativePathPiece{path};
-  auto inodeDispatcher = edenMount->getMountPoint()->getDispatcher();
-  auto parent = inodeDispatcher->getDirInode(FUSE_ROOT_ID);
+  auto inodeDispatcher = edenMount->getDispatcher();
+  shared_ptr<fusell::DirInode> parent = edenMount->getRootInode();
 
   auto it = relativePath.paths().begin();
   while (true) {
@@ -278,8 +275,6 @@ void EdenServiceHandler::getCurrentJournalPosition(
     JournalPosition& out,
     std::unique_ptr<std::string> mountPoint) {
   auto edenMount = server_->getMount(*mountPoint);
-  auto inodeDispatcher = edenMount->getMountPoint()->getDispatcher();
-
   auto latest = edenMount->getJournal().rlock()->getLatest();
 
   out.mountGeneration = edenMount->getMountGeneration();
@@ -292,8 +287,6 @@ void EdenServiceHandler::getFilesChangedSince(
     std::unique_ptr<std::string> mountPoint,
     std::unique_ptr<JournalPosition> fromPosition) {
   auto edenMount = server_->getMount(*mountPoint);
-  auto inodeDispatcher = edenMount->getMountPoint()->getDispatcher();
-
   auto delta = edenMount->getJournal().rlock()->getLatest();
 
   if (fromPosition->mountGeneration != edenMount->getMountGeneration()) {
@@ -340,8 +333,7 @@ void EdenServiceHandler::getFileInformation(
     std::unique_ptr<std::string> mountPoint,
     std::unique_ptr<std::vector<std::string>> paths) {
   auto edenMount = server_->getMount(*mountPoint);
-  auto inodeDispatcher = edenMount->getMountPoint()->getDispatcher();
-  auto rootInode = inodeDispatcher->getInode(FUSE_ROOT_ID);
+  auto rootInode = edenMount->getRootInode();
 
   for (auto& path : *paths) {
     FileInformationOrError result;

@@ -158,7 +158,7 @@ void TestMount::addFile(folly::StringPiece path, std::string contents) {
   auto treeInode = getDirInodeForPath(relativePath.dirname().stringPiece());
   mode_t modeThatSeemsToBeIgnored = 0; // TreeInode::create() uses 0600.
   int flags = 0;
-  auto dispatcher = edenMount_->getMountPoint()->getDispatcher();
+  auto dispatcher = edenMount_->getDispatcher();
   auto createResult = dispatcher
                           ->create(
                               treeInode->getInode(),
@@ -175,7 +175,7 @@ void TestMount::overwriteFile(folly::StringPiece path, std::string contents) {
   auto relativePath = RelativePathPiece{path};
   auto directory =
       edenMount_->getMountPoint()->getDirInodeForPath(relativePath.dirname());
-  auto dispatcher = edenMount_->getMountPoint()->getDispatcher();
+  auto dispatcher = edenMount_->getDispatcher();
   auto file = getFileInodeForPath(path);
 
   fuse_file_info info;
@@ -220,21 +220,21 @@ void TestMount::mkdir(folly::StringPiece path) {
   auto relativePath = RelativePathPiece{path};
   auto treeInode = getDirInodeForPath(relativePath.dirname().stringPiece());
   mode_t mode = 0755;
-  auto dispatcher = edenMount_->getMountPoint()->getDispatcher();
+  auto dispatcher = edenMount_->getDispatcher();
   dispatcher->mkdir(treeInode->getInode(), relativePath.basename(), mode).get();
 }
 
 void TestMount::deleteFile(folly::StringPiece path) {
   auto relativePath = RelativePathPiece{path};
   auto treeInode = getDirInodeForPath(relativePath.dirname().stringPiece());
-  auto dispatcher = edenMount_->getMountPoint()->getDispatcher();
+  auto dispatcher = edenMount_->getDispatcher();
   dispatcher->unlink(treeInode->getInode(), relativePath.basename()).get();
 }
 
 void TestMount::rmdir(folly::StringPiece path) {
   auto relativePath = RelativePathPiece{path};
   auto treeInode = getDirInodeForPath(relativePath.dirname().stringPiece());
-  auto dispatcher = edenMount_->getMountPoint()->getDispatcher();
+  auto dispatcher = edenMount_->getDispatcher();
   dispatcher->rmdir(treeInode->getInode(), relativePath.basename()).get();
 }
 

@@ -19,8 +19,7 @@ TEST(EdenMountHandler, getModifiedDirectoriesForMountWithNoModifications) {
   TestMountBuilder builder;
   auto testMount = builder.build();
   auto edenMount = testMount->getEdenMount();
-  auto modifiedDirectories =
-      getModifiedDirectoriesForMount(edenMount->getMountPoint());
+  auto modifiedDirectories = getModifiedDirectoriesForMount(edenMount.get());
   std::vector<RelativePath> expected = {};
   EXPECT_EQ(expected, *modifiedDirectories.get());
 }
@@ -49,8 +48,7 @@ TEST(EdenMountHandler, getModifiedDirectoriesForMount) {
   testMount->addFile("a/b/c/file.txt", "");
 
   auto edenMount = testMount->getEdenMount();
-  auto modifiedDirectories =
-      getModifiedDirectoriesForMount(edenMount->getMountPoint());
+  auto modifiedDirectories = getModifiedDirectoriesForMount(edenMount.get());
 
   std::vector<RelativePath> expected = {
       RelativePath(),

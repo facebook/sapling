@@ -145,7 +145,7 @@ void TreeInode::materializeDirAndParents() {
   // than the root inode though.
   if (getNodeId() != FUSE_ROOT_ID) {
     auto parentInode = std::dynamic_pointer_cast<TreeInode>(
-        getMount()->getMountPoint()->getDispatcher()->getDirInode(parent_));
+        getMount()->getDispatcher()->getDirInode(parent_));
     DCHECK(parentInode) << "must always have a TreeInode parent";
     // and get it to materialize
     parentInode->materializeDirAndParents();
@@ -185,7 +185,7 @@ void TreeInode::materializeDirAndParents() {
   // on-disk state for the overlay are not in sync.
   if (updateParent) {
     auto parentInode = std::dynamic_pointer_cast<TreeInode>(
-        getMount()->getMountPoint()->getDispatcher()->getDirInode(parent_));
+        getMount()->getDispatcher()->getDirInode(parent_));
     auto parentName = getNameMgr()->resolvePathToNode(parentInode->getNodeId());
     getOverlay()->saveOverlayDir(parentName, &*parentInode->contents_.wlock());
   }
@@ -336,8 +336,7 @@ folly::Future<fuse_entry_param> TreeInode::mkdir(
       std::make_unique<JournalDelta>(JournalDelta{targetName}));
 
   // Look up the inode for this new dir and return its entry info.
-  return getMount()->getMountPoint()->getDispatcher()->lookup(
-      getNodeId(), name);
+  return getMount()->getDispatcher()->lookup(getNodeId(), name);
 }
 
 folly::Future<folly::Unit> TreeInode::unlink(PathComponentPiece name) {
@@ -398,9 +397,8 @@ folly::Future<folly::Unit> TreeInode::unlink(PathComponentPiece name) {
 std::shared_ptr<fusell::InodeBase> TreeInode::lookupChildByNameLocked(
     const Dir* contents,
     PathComponentPiece name) {
-  auto mountPoint = getMount()->getMountPoint();
-  auto dispatcher = mountPoint->getDispatcher();
-  auto mgr = mountPoint->getNameMgr();
+  auto dispatcher = getMount()->getDispatcher();
+  auto mgr = getMount()->getMountPoint()->getNameMgr();
 
   auto node = mgr->getNodeByName(getNodeId(), name, false);
 

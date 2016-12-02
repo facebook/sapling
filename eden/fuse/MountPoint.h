@@ -42,7 +42,7 @@ class MountPoint {
     return path_;
   }
 
-  InodeDispatcher* getDispatcher() const {
+  InodeDispatcher* getInodeDispatcher() const {
     return dispatcher_.get();
   }
 

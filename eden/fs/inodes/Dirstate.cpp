@@ -244,8 +244,7 @@ Dirstate::~Dirstate() {}
 std::unique_ptr<HgStatus> Dirstate::getStatus() const {
   // Find the modified directories in the overlay and compare them with what is
   // in the root tree.
-  auto modifiedDirectories =
-      getModifiedDirectoriesForMount(mount_->getMountPoint());
+  auto modifiedDirectories = getModifiedDirectoriesForMount(mount_);
   std::unordered_map<RelativePath, HgStatusCode> manifest;
   if (modifiedDirectories->empty()) {
     auto userDirectives = userDirectives_.rlock();

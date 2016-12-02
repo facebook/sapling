@@ -9,27 +9,14 @@
  */
 
 #include "EdenMounts.h"
+#include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/store/ObjectStore.h"
-#include "eden/fuse/MountPoint.h"
 #include "eden/utils/PathFuncs.h"
 
 namespace facebook {
 namespace eden {
-
-std::unique_ptr<Tree> getRootTreeForMountPoint(
-    fusell::MountPoint* mountPoint,
-    ObjectStore* objectStore) {
-  auto rootAsDirInode = mountPoint->getRootInode();
-  auto rootAsTreeInode = std::dynamic_pointer_cast<TreeInode>(rootAsDirInode);
-  {
-    auto dir = rootAsTreeInode->getContents().rlock();
-    auto& rootTreeHash = dir->treeHash.value();
-    auto tree = objectStore->getTree(rootTreeHash);
-    return tree;
-  }
-}
 
 void getModifiedDirectoriesRecursive(
     RelativePathPiece dirPath,
@@ -63,18 +50,16 @@ void getModifiedDirectoriesRecursive(
 // TreeInode. If MountPoint depended on TreeInode, it would create a circular
 // dependency, which is why this function lives here.
 std::unique_ptr<std::vector<RelativePath>> getModifiedDirectoriesForMount(
-    fusell::MountPoint* mountPoint) {
-  auto inodeDispatcher = mountPoint->getDispatcher();
-  auto rootInode = inodeDispatcher->getDirInode(FUSE_ROOT_ID);
-  auto treeInode = std::dynamic_pointer_cast<TreeInode>(rootInode);
-  if (treeInode) {
+    EdenMount* mount) {
+  auto rootInode = mount->getRootInode();
+  if (rootInode) {
     auto modifiedDirectories = std::make_unique<std::vector<RelativePath>>();
     getModifiedDirectoriesRecursive(
-        RelativePathPiece(), treeInode.get(), modifiedDirectories.get());
+        RelativePathPiece(), rootInode.get(), modifiedDirectories.get());
     return modifiedDirectories;
   } else {
     throw std::runtime_error(folly::to<std::string>(
-        "Could not find root TreeInode for ", mountPoint->getPath()));
+        "Could not find root TreeInode for ", mount->getPath()));
   }
 }
 }

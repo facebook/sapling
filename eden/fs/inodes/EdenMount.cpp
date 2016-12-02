@@ -96,11 +96,22 @@ const vector<BindMount>& EdenMount::getBindMounts() const {
 }
 
 fusell::InodeDispatcher* EdenMount::getDispatcher() const {
-  return mountPoint_->getDispatcher();
+  return mountPoint_->getInodeDispatcher();
+}
+
+std::shared_ptr<TreeInode> EdenMount::getRootInode() const {
+  auto rootAsDirInode = mountPoint_->getRootInode();
+  return std::dynamic_pointer_cast<TreeInode>(rootAsDirInode);
 }
 
 std::unique_ptr<Tree> EdenMount::getRootTree() const {
-  return getRootTreeForMountPoint(mountPoint_.get(), getObjectStore());
+  auto rootInode = getRootInode();
+  {
+    auto dir = rootInode->getContents().rlock();
+    auto& rootTreeHash = dir->treeHash.value();
+    auto tree = objectStore_->getTree(rootTreeHash);
+    return tree;
+  }
 }
 
 shared_ptr<fusell::InodeBase> EdenMount::getInodeBase(
