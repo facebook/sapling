@@ -58,6 +58,8 @@ def wraprepo(repo):
                                                  PACK_CATEGORY)
     localdatastore = datapackstore(localpackpath, usecdatapack=usecdatapack)
 
+    repo.svfs.sharedmanifestdatastores = [datastore]
+    repo.svfs.localmanifestdatastores = [localdatastore]
     repo.svfs.manifestdatastore = unioncontentstore(localdatastore, datastore,
         writestore=localdatastore)
 

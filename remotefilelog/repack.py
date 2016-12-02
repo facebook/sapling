@@ -28,9 +28,23 @@ def fullrepack(repo):
                constants.FILEPACK_CATEGORY)
 
     if util.safehasattr(repo.svfs, 'manifestdatastore'):
+        # Repack the shared manifest store
+        datasource = contentstore.unioncontentstore(
+                        *repo.svfs.sharedmanifestdatastores)
         packpath = shallowutil.getcachepackpath(repo,
                                                 constants.TREEPACK_CATEGORY)
-        _runrepack(repo, repo.svfs.manifestdatastore,
+        _runrepack(repo, datasource,
+                   metadatastore.unionmetadatastore(),
+                   packpath,
+                   constants.TREEPACK_CATEGORY)
+
+        # Repack the local manifest store
+        datasource = contentstore.unioncontentstore(
+                        *repo.svfs.localmanifestdatastores,
+                        allowincomplete=True)
+        packpath = shallowutil.getlocalpackpath(repo.svfs.vfs.base,
+                                                constants.TREEPACK_CATEGORY)
+        _runrepack(repo, datasource,
                    metadatastore.unionmetadatastore(),
                    packpath,
                    constants.TREEPACK_CATEGORY)
