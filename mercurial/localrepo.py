@@ -249,7 +249,7 @@ class localrepository(object):
     # only functions defined in module of enabled extensions are invoked
     featuresetupfuncs = set()
 
-    def __init__(self, baseui, path=None, create=False):
+    def __init__(self, baseui, path, create=False):
         self.requirements = set()
         self.wvfs = scmutil.vfs(path, expandpath=True, realpath=True)
         self.wopener = self.wvfs
