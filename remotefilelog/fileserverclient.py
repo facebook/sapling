@@ -401,14 +401,14 @@ class fileserverclient(object):
     def receivemissing(self, pipe, filename, node):
         line = pipe.readline()[:-1]
         if not line:
-            raise error.ResponseError(_("error downloading file " +
-                "contents: connection closed early\n"), '')
+            raise error.ResponseError(_("error downloading file contents:"),
+                                      _("connection closed early"))
         size = int(line)
         data = pipe.read(size)
         if len(data) != size:
-            raise error.ResponseError(_("error downloading file contents: "
-                                        "only received %s of %s bytes") %
-                                      (len(data), size))
+            raise error.ResponseError(_("error downloading file contents:"),
+                                      _("only received %s of %s bytes")
+                                      % (len(data), size))
 
         self.writedata.addremotefilelognode(filename, bin(node),
                                              lz4.decompress(data))
