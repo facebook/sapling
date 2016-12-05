@@ -57,6 +57,7 @@
 
 from __future__ import absolute_import
 import errno
+import hashlib
 import json
 import logging
 import os
@@ -719,21 +720,19 @@ def backup(ui, repo, dest=None, **opts):
             background_cmd = background_cmd + ' &> ' + logfile
         runshellcommand(background_cmd, os.environ)
         return 0
-    backuptipfile = 'infinitepushbackuptip'
-    backuptip = repo.svfs.tryread(backuptipfile)
-    try:
-        backuptip = int(backuptip) + 1
-    except ValueError:
-        backuptip = 0
-
-    # Use unfiltered repo because backuptip may now point to obsolete changeset
-    repo = repo.unfiltered()
-    # To avoid race conditions save current tip of the repo and backup
-    # everything up to this revision.
-    currenttiprev = repo['tip'].rev()
-    if backuptip > currenttiprev:
-        ui.status(_('nothing to backup\n'))
-        return 0
+    backupedstatefile = 'infinitepushlastbackupedstate'
+    backuptipbookmarkshash = repo.svfs.tryread(backupedstatefile).split(' ')
+    backuptip = 0
+    # hash of empty string is the default. This is to prevent backuping of
+    # empty repo
+    bookmarkshash = hashlib.sha1().hexdigest()
+    if len(backuptipbookmarkshash) == 2:
+        try:
+            backuptip = int(backuptipbookmarkshash[0]) + 1
+        except ValueError:
+            pass
+        if len(backuptipbookmarkshash[1]) == 40:
+            bookmarkshash = backuptipbookmarkshash[1]
 
     bookmarkstobackup = {}
     for bookmark, node in repo._bookmarks.iteritems():
@@ -746,6 +745,27 @@ def backup(ui, repo, dest=None, **opts):
         headbookmarksname = _getbackupheadname(ui, hexhead, repo)
         bookmarkstobackup[headbookmarksname] = hexhead
 
+    currentbookmarkshash = hashlib.sha1()
+    for book, node in sorted(bookmarkstobackup.iteritems()):
+        currentbookmarkshash.update(book)
+        currentbookmarkshash.update(node)
+    currentbookmarkshash = currentbookmarkshash.hexdigest()
+
+    # Use unfiltered repo because backuptip may now point to obsolete changeset
+    repo = repo.unfiltered()
+
+    # To avoid race conditions save current tip of the repo and backup
+    # everything up to this revision.
+    currenttiprev = len(repo) - 1
+    revs = ['null']
+    if backuptip <= currenttiprev:
+        revset = 'head() & draft() & %d:' % backuptip
+        revs = list(repo.revs(revset)) or ['null']
+
+    if currentbookmarkshash == bookmarkshash and revs == ['null']:
+        ui.status(_('nothing to backup\n'))
+        return 0
+
     # Adding patterns to delete previous heads and bookmarks
     bookmarkstobackup[_getbackupheadprefix(ui, repo) + '/*'] = ''
     bookmarkstobackup[_getbackupbookmarkprefix(ui, repo) + '/*'] = ''
@@ -753,7 +773,6 @@ def backup(ui, repo, dest=None, **opts):
     ui.setconfig(experimental, configmanybookmarks,
                  bookmarkstobackup, 'debugbackup')
 
-    revs = list(repo.revs('heads(draft() & %d:%d)', backuptip, currenttiprev))
     pushcmd = commands.table['^push'][0]
     pushopts = dict(opt[1:3] for opt in commands.table['^push'][1])
     pushopts['rev'] = revs
@@ -763,8 +782,12 @@ def backup(ui, repo, dest=None, **opts):
         # Remotenames doesn't allow to push anon heads. We need to override it
         pushopts['allow_anon'] = True
     result = pushcmd(ui, repo, **pushopts)
-    with repo.svfs(backuptipfile, mode="w", atomictemp=True) as f:
-        f.write(str(currenttiprev))
+    if result == 1:
+        # push sets exit-code to 1 if there are no changesets to push.
+        # We want a zero exit-code in this case.
+        result = 0
+    with repo.svfs(backupedstatefile, mode="w", atomictemp=True) as f:
+        f.write(str(currenttiprev) + ' ' + currentbookmarkshash)
     return result
 
 def _phasemove(orig, pushop, nodes, phase=phases.public):
