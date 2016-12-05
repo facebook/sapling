@@ -255,7 +255,7 @@ def _newchgui(srcui, csystem):
 def _loadnewui(srcui, args):
     from . import dispatch  # avoid cycle
 
-    newui = srcui.__class__()
+    newui = srcui.__class__.load()
     for a in ['fin', 'fout', 'ferr', 'environ']:
         setattr(newui, a, getattr(srcui, a))
     if util.safehasattr(srcui, '_csystem'):
