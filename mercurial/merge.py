@@ -794,7 +794,7 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, matcher,
     if matcher is not None and matcher.always():
         matcher = None
 
-    copy, movewithdir, diverge, renamedelete = {}, {}, {}, {}
+    copy, movewithdir, diverge, renamedelete, dirmove = {}, {}, {}, {}, {}
 
     # manifests fetched in order are going to be faster, so prime the caches
     [x.manifest() for x in
@@ -802,7 +802,7 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, matcher,
 
     if followcopies:
         ret = copies.mergecopies(repo, wctx, p2, pa)
-        copy, movewithdir, diverge, renamedelete = ret
+        copy, movewithdir, diverge, renamedelete, dirmove = ret
 
     repo.ui.note(_("resolving manifests\n"))
     repo.ui.debug(" branchmerge: %s, force: %s, partial: %s\n"
@@ -921,7 +921,16 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, matcher,
                     actions[f] = ('cm', (fl2, pa.node()),
                                   "remote created, get or merge")
             elif n2 != ma[f]:
-                if acceptremote:
+                df = None
+                for d in dirmove:
+                    if f.startswith(d):
+                        # new file added in a directory that was moved
+                        df = dirmove[d] + f[len(d):]
+                        break
+                if df in m1:
+                    actions[df] = ('m', (df, f, f, False, pa.node()),
+                            "local directory rename - respect move from " + f)
+                elif acceptremote:
                     actions[f] = ('c', (fl2,), "remote recreating")
                 else:
                     actions[f] = ('dc', (None, f, f, False, pa.node()),

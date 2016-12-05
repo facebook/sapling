@@ -1286,3 +1286,28 @@ Check superfluous filemerge of files renamed in the past but untouched by graft
   $ hg ci -qAmc
   $ hg up -q .~2
   $ hg graft tip -qt:fail
+
+  $ cd ..
+
+Graft a change into a new file previously grafted into a renamed directory
+
+  $ hg init dirmovenewfile
+  $ cd dirmovenewfile
+  $ mkdir a
+  $ echo a > a/a
+  $ hg ci -qAma
+  $ echo x > a/x
+  $ hg ci -qAmx
+  $ hg up -q 0
+  $ hg mv -q a b
+  $ hg ci -qAmb
+  $ hg graft -q 1 # a/x grafted as b/x, but no copy information recorded
+  $ hg up -q 1
+  $ echo y > a/x
+  $ hg ci -qAmy
+  $ hg up -q 3
+  $ hg graft -q 4
+  $ hg status --change .
+  M b/x
+
+  $ cd ..

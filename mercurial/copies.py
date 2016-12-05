@@ -310,8 +310,8 @@ def mergecopies(repo, c1, c2, base):
     Find moves and copies between context c1 and c2 that are relevant
     for merging. 'base' will be used as the merge base.
 
-    Returns four dicts: "copy", "movewithdir", "diverge", and
-    "renamedelete".
+    Returns five dicts: "copy", "movewithdir", "diverge", "renamedelete" and
+    "dirmove".
 
     "copy" is a mapping from destination name -> source name,
     where source is in c1 and destination is in c2 or vice-versa.
@@ -326,20 +326,24 @@ def mergecopies(repo, c1, c2, base):
 
     "renamedelete" is a mapping of source name -> list of destination
     names for files deleted in c1 that were renamed in c2 or vice-versa.
+
+    "dirmove" is a mapping of detected source dir -> destination dir renames.
+    This is needed for handling changes to new files previously grafted into
+    renamed directories.
     """
     # avoid silly behavior for update from empty dir
     if not c1 or not c2 or c1 == c2:
-        return {}, {}, {}, {}
+        return {}, {}, {}, {}, {}
 
     # avoid silly behavior for parent -> working dir
     if c2.node() is None and c1.node() == repo.dirstate.p1():
-        return repo.dirstate.copies(), {}, {}, {}
+        return repo.dirstate.copies(), {}, {}, {}, {}
 
     # Copy trace disabling is explicitly below the node == p1 logic above
     # because the logic above is required for a simple copy to be kept across a
     # rebase.
     if repo.ui.configbool('experimental', 'disablecopytrace'):
-        return {}, {}, {}, {}
+        return {}, {}, {}, {}, {}
 
     # In certain scenarios (e.g. graft, update or rebase), base can be
     # overridden We still need to know a real common ancestor in this case We
@@ -365,7 +369,7 @@ def mergecopies(repo, c1, c2, base):
     limit = _findlimit(repo, c1.rev(), c2.rev())
     if limit is None:
         # no common ancestor, no copies
-        return {}, {}, {}, {}
+        return {}, {}, {}, {}, {}
     repo.ui.debug("  searching for copies back to rev %d\n" % limit)
 
     m1 = c1.manifest()
@@ -503,7 +507,7 @@ def mergecopies(repo, c1, c2, base):
     del divergeset
 
     if not fullcopy:
-        return copy, {}, diverge, renamedelete
+        return copy, {}, diverge, renamedelete, {}
 
     repo.ui.debug("  checking for directory renames\n")
 
@@ -541,7 +545,7 @@ def mergecopies(repo, c1, c2, base):
     del d1, d2, invalid
 
     if not dirmove:
-        return copy, {}, diverge, renamedelete
+        return copy, {}, diverge, renamedelete, {}
 
     for d in dirmove:
         repo.ui.debug("   discovered dir src: '%s' -> dst: '%s'\n" %
@@ -561,7 +565,7 @@ def mergecopies(repo, c1, c2, base):
                                        "dst: '%s'\n") % (f, df))
                     break
 
-    return copy, movewithdir, diverge, renamedelete
+    return copy, movewithdir, diverge, renamedelete, dirmove
 
 def _related(f1, f2, limit):
     """return True if f1 and f2 filectx have a common ancestor
