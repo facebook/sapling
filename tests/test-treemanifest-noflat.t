@@ -61,7 +61,7 @@ This file tests that normal mercurial operations almost never read the flat mani
 # manifest.revdiff cannot hit the fast path since the first manifest is not a delta.
   $ hg pull -q -r 0
   read flat manifest
-    File "/data/users/durham/hg/mercurial/revlog.py", line *, in revdiff (glob)
+    File "*/mercurial/revlog.py", line *, in revdiff (glob)
       self.revision(rev2))
   
 # Test that no flat manifests are read during pull and update
@@ -73,13 +73,13 @@ This file tests that normal mercurial operations almost never read the flat mani
 # produce the delta.
   $ echo a >> b && hg commit -Aqm 'modify b'
   read flat manifest
-    File "/data/users/durham/fb-hgext/fastmanifest/implementation.py", line *, in add (glob)
+    File "*/fb-hgext/fastmanifest/implementation.py", line *, in add (glob)
       p1text = origself.revision(p1)
   
 # Test that rebase access the flat text only once, for the final commit
   $ hg rebase -d 1 -r 2
   read flat manifest
-    File "/data/users/durham/fb-hgext/fastmanifest/implementation.py", line *, in add (glob)
+    File "*/fb-hgext/fastmanifest/implementation.py", line *, in add (glob)
       p1text = origself.revision(p1)
   
   rebasing 2:667a26a14261 "modify b" (tip)
