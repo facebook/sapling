@@ -592,6 +592,8 @@ def _saveremotebookmarks(repo, newbookmarks, remote):
     remotenamesext.saveremotenames(repo, remotepath, branches, bookmarks)
 
 def _savelocalbookmarks(repo, bookmarks):
+    if not bookmarks:
+        return
     with repo.wlock():
         with repo.lock():
             with repo.transaction('bookmark') as tr:
