@@ -639,6 +639,9 @@ def _push(orig, ui, repo, dest=None, *args, **opts):
                                         _phasemove)
         # Copy-paste from `push` command
         path = ui.paths.getpath(dest, default=('default-push', 'default'))
+        if not path:
+            raise error.Abort(_('default repository not configured!'),
+                             hint=_("see 'hg help config.paths'"))
         destpath = path.pushloc or path.loc
         if destpath.startswith('svn+') and scratchpush:
             raise error.Abort('infinite push does not work with svn repo',
