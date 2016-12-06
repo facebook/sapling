@@ -10,6 +10,7 @@ from __future__ import absolute_import, print_function
 import atexit
 import difflib
 import errno
+import getopt
 import os
 import pdb
 import re
@@ -448,7 +449,7 @@ def _parse(ui, args):
 
     try:
         args = fancyopts.fancyopts(args, commands.globalopts, options)
-    except fancyopts.getopt.GetoptError as inst:
+    except getopt.GetoptError as inst:
         raise error.CommandError(None, inst)
 
     if args:
@@ -471,7 +472,7 @@ def _parse(ui, args):
 
     try:
         args = fancyopts.fancyopts(args, c, cmdoptions, gnu=True)
-    except fancyopts.getopt.GetoptError as inst:
+    except getopt.GetoptError as inst:
         raise error.CommandError(cmd, inst)
 
     # separate global options back out
@@ -601,7 +602,7 @@ def _checkshellalias(lui, ui, args):
 
     try:
         args = fancyopts.fancyopts(args, commands.globalopts, options)
-    except fancyopts.getopt.GetoptError:
+    except getopt.GetoptError:
         return
 
     if not args:
