@@ -174,6 +174,6 @@ Test programming error failure:
   ** Mercurial Distributed SCM (*) (glob)
   ** Extensions loaded: * (glob)
   Traceback (most recent call last):
-  RuntimeError: programming error: transaction requires locking
+  mercurial.error.ProgrammingError: transaction requires locking
 
   $ cd ..
