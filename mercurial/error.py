@@ -168,6 +168,9 @@ class SignatureError(Exception):
 class PushRaced(RuntimeError):
     """An exception raised during unbundling that indicate a push race"""
 
+class ProgrammingError(RuntimeError):
+    """Raised if a developer has made some mistake"""
+
 # bundle2 related errors
 class BundleValueError(ValueError):
     """error raised when bundle2 cannot be processed"""
