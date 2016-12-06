@@ -49,6 +49,11 @@ annotate cache greatly. Run "debugbuildlinkrevcache" before
     # tip: the .hg/fastannotate directory is portable - can be rsynced
     server = True
 
+    # build annotate cache on demand for every client request (default: True)
+    # disabling it could make server response faster, useful when there is a
+    # cronjob building the cache.
+    serverbuildondemand = True
+
     # update local annotate cache from remote on demand
     # (default: True for remotefilelog repo, False otherwise)
     client = True

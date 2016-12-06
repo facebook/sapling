@@ -42,23 +42,27 @@ def _getannotate(repo, proto, path, lastnode):
     #   FILE := vfspath + '\0' + str(size) + '\0' + content
     #   OUTPUT := '' | FILE + OUTPUT
     result = ''
+    buildondemand = repo.ui.configbool('fastannotate', 'serverbuildondemand',
+                                       True)
     with context.annotatecontext(repo, path) as actx:
-        # update before responding to the client
-        master = _getmaster(repo.ui)
-        try:
-            if not actx.isuptodate(master):
-                actx.annotate(master, master)
-        except Exception:
-            # non-fast-forward move or corrupted. rebuild automically.
-            actx.rebuild()
+        if buildondemand:
+            # update before responding to the client
+            master = _getmaster(repo.ui)
             try:
-                actx.annotate(master, master)
+                if not actx.isuptodate(master):
+                    actx.annotate(master, master)
             except Exception:
-                actx.rebuild() # delete files
-        finally:
-            # although the "with" context will also do a close/flush, we need
-            # to do it early so we can send the correct respond to client.
-            actx.close()
+                # non-fast-forward move or corrupted. rebuild automically.
+                actx.rebuild()
+                try:
+                    actx.annotate(master, master)
+                except Exception:
+                    actx.rebuild() # delete files
+            finally:
+                # although the "with" context will also do a close/flush, we
+                # need to do it early so we can send the correct respond to
+                # client.
+                actx.close()
         # send back the full content of revmap and linelog, in the future we
         # may want to do some rsync-like fancy updating.
         # the lastnode check is not necessary if the client and the server

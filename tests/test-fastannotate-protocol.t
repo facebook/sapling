@@ -189,3 +189,13 @@ without downloading from the server
   2: 3
   3: 4
   4: 5
+
+with serverbuildondemand=False, the server will not build anything
+
+  $ cat >> ../repo-server/.hg/hgrc <<EOF
+  > [fastannotate]
+  > serverbuildondemand=False
+  > EOF
+  $ rm -rf $p1 $p2
+  $ hg fastannotate a --debug | grep 'fastannotate: writing'
+  [1]
