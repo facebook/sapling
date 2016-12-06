@@ -401,6 +401,7 @@ Use --force because this push creates new head
     "node": "0000000000000000000000000000000000000000"
    }
   ]
+
 Push to svn server should fail
   $ hg push svn+ssh://svn.vip.facebook.com/svnroot/tfb/trunk/www -r . --to scratch/serversidebook
   abort: infinite push does not work with svn repo
@@ -429,6 +430,10 @@ Scratch pull of pruned commits
   $ hg pull -B scratch/mybranch
   pulling from ssh://user@dummy/repo
   no changes found
+  adding changesets
+  adding manifests
+  adding file changes
+  added 0 changesets with 0 changes to 6 files
   adding remote bookmark scratch/serversidebook
   adding remote bookmark serversidebook
   $ hg log -r 'reverse(::scratch/mybranch)' -T '{desc}\n'
@@ -463,6 +468,10 @@ Have to use full hash because short hashes are not supported yet
   $ hg pull -r 8872775dd97a750e1533dc1fbbca665644b32547
   pulling from ssh://user@dummy/repo
   no changes found
+  adding changesets
+  adding manifests
+  adding file changes
+  added 0 changesets with 0 changes to 6 files
   $ hg log -G -T '{node|short} {desc} {bookmarks}'
   @  fe8283fe1190 peercommit
   |
@@ -505,22 +514,27 @@ still in the old bundle
   8872775dd97a750e1533dc1fbbca665644b32547 e83e00b2d07dd427210a4a644f7ce8186f701fd7
   d8c4f54ab678fd67cb90bb3f272a2dc6513a59a7 2fa526470913fdcc94397caaf6cdbc977b3318cc
 
-Create new repo
+Recreate the repo
   $ cd ..
   $ rm -rf repo
   $ hg init repo
   $ cd repo
   $ setupserver
+  $ mkcommit initialcommit
+  $ hg phase --public .
+
+Recreate the clients
   $ cd ..
   $ rm -rf client
+  $ rm -rf client2
   $ hg clone ssh://user@dummy/repo client -q
-  $ cd client
 
 Create two heads. Push first head alone, then two heads together. Make sure that
 multihead push works.
+  $ cd client
   $ mkcommit multihead1
   $ hg up null
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ mkcommit multihead2
   created new head
   $ hg push -r . --bundle-store
@@ -528,12 +542,138 @@ multihead push works.
   searching for changes
   remote: pushing 1 commit:
   remote:     ee4802bf6864  multihead2
-  $ hg push -r '0:1' --bundle-store
+  $ hg push -r '1:2' --bundle-store
   pushing to ssh://user@dummy/repo
   searching for changes
   remote: pushing 2 commits:
-  remote:     a97fca1e39c7  multihead1
+  remote:     bc22f9a30a82  multihead1
   remote:     ee4802bf6864  multihead2
   $ scratchnodes
-  a97fca1e39c70c8412aef902f6328408c652725a b9f1e02193bced87328c6f313a0ea8358694aa6a
-  ee4802bf6864326a6b3dcfff5a03abc2a0a69b8f b9f1e02193bced87328c6f313a0ea8358694aa6a
+  bc22f9a30a821118244deacbd732e394ed0b686c cfee141fdd133862c88671c3cf87b41e6b344178
+  ee4802bf6864326a6b3dcfff5a03abc2a0a69b8f cfee141fdd133862c88671c3cf87b41e6b344178
+
+Create two new scratch bookmarks
+  $ hg up 0
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ mkcommit scratchfirstpart
+  created new head
+  $ hg push -r . --to scratch/firstpart --create
+  pushing to ssh://user@dummy/repo
+  searching for changes
+  remote: pushing 1 commit:
+  remote:     176993b87e39  scratchfirstpart
+  $ hg up 0
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ mkcommit scratchsecondpart
+  created new head
+  $ hg push -r . --to scratch/secondpart --create
+  pushing to ssh://user@dummy/repo
+  searching for changes
+  remote: pushing 1 commit:
+  remote:     8db3891c220e  scratchsecondpart
+
+Pull two bookmarks from the second client
+  $ cd ..
+  $ hg clone ssh://user@dummy/repo client2 -q
+  $ cd client2
+  $ hg pull -B scratch/firstpart -B scratch/secondpart
+  pulling from ssh://user@dummy/repo
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files (+1 heads)
+  (run 'hg heads' to see heads, 'hg merge' to merge)
+  $ hg log -G -T '{desc} {phase} {bookmarks}'
+  o  scratchsecondpart draft scratch/secondpart
+  |
+  | o  scratchfirstpart draft scratch/firstpart
+  |/
+  @  initialcommit public
+  
+Make two commits to the scratch branch
+  $ mkcommit testpullbycommithash1
+  created new head
+  $ hg log -r '.' -T '{node}\n' > ../testpullbycommithash1
+  $ mkcommit testpullbycommithash2
+  $ hg push -r . --to scratch/mybranch --create -q
+
+Create third client and pull by commit hash.
+Make sure testpullbycommithash2 has not fetched
+  $ cd ..
+  $ hg clone ssh://user@dummy/repo client3 -q
+  $ cd client3
+  $ hg pull -r `cat ../testpullbycommithash1`
+  pulling from ssh://user@dummy/repo
+  searching for changes
+  no changes found
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+  $ hg log -G -T '{desc} {phase} {bookmarks}'
+  o  testpullbycommithash1 draft
+  |
+  @  initialcommit public
+  
+Make public commit in the repo and pull it.
+Make sure phase on the client is public.
+  $ cd ../repo
+  $ mkcommit publiccommit
+  $ hg phase --public .
+  $ cd ../client3
+  $ hg pull
+  pulling from ssh://user@dummy/repo
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files (+1 heads)
+  (run 'hg heads' to see heads, 'hg merge' to merge)
+  $ hg log -G -T '{desc} {phase} {bookmarks} {node|short}'
+  o  publiccommit public  a79b6597f322
+  |
+  | o  testpullbycommithash1 draft  33910bfe6ffe
+  |/
+  @  initialcommit public  67145f466344
+  
+  $ hg up a79b6597f322
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ mkcommit scratchontopofpublic
+  $ hg push -r . --to scratch/scratchontopofpublic --create
+  pushing to ssh://user@dummy/repo
+  searching for changes
+  remote: pushing 1 commit:
+  remote:     c70aee6da07d  scratchontopofpublic
+  $ cd ../client2
+  $ hg pull -B scratch/scratchontopofpublic
+  pulling from ssh://user@dummy/repo
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files (+1 heads)
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+  (run 'hg heads .' to see heads, 'hg merge' to merge)
+  $ hg log -G -T '{desc} {phase} {bookmarks} {node|short}'
+  o  scratchontopofpublic draft scratch/scratchontopofpublic c70aee6da07d
+  |
+  o  publiccommit public  a79b6597f322
+  |
+  | @  testpullbycommithash2 draft scratch/mybranch d8fde0ddfc96
+  | |
+  | o  testpullbycommithash1 draft  33910bfe6ffe
+  |/
+  | o  scratchsecondpart draft scratch/secondpart 8db3891c220e
+  |/
+  | o  scratchfirstpart draft scratch/firstpart 176993b87e39
+  |/
+  o  initialcommit public  67145f466344
+  

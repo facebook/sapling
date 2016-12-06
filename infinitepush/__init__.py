@@ -80,14 +80,14 @@ from mercurial import (
     extensions,
     hg,
     localrepo,
-    util,
+    phases,
     pushkey,
     revset,
-    phases,
+    util,
     wireproto,
 )
 
-from mercurial.extensions import wrapcommand, wrapfunction
+from mercurial.extensions import wrapcommand, wrapfunction, unwrapfunction
 from mercurial.hg import repository
 from mercurial.node import bin, hex
 from mercurial.i18n import _
@@ -319,17 +319,18 @@ def listkeyspatterns(self, namespace, patterns):
                   % (namespace, len(d)))
     yield pushkey.decodekeys(d)
 
-def _includefilelogstobundle(bundlecaps, bundlerepo, ui):
+def _readbundlerevs(bundlerepo):
+    return list(bundlerepo.revs('bundle()'))
+
+def _includefilelogstobundle(bundlecaps, bundlerepo, bundlerevs, ui):
     '''Tells remotefilelog to include all changed files to the changegroup
 
     By default remotefilelog doesn't include file content to the changegroup.
     But we need to include it if we are fetching from bundlestore.
     '''
-
-    revs = bundlerepo.revs('bundle()')
-    cl = bundlerepo.changelog
     changedfiles = set()
-    for r in revs:
+    cl = bundlerepo.changelog
+    for r in bundlerevs:
         # [3] means changed files
         changedfiles.update(cl.read(r)[3])
     if not changedfiles:
@@ -350,30 +351,103 @@ def _includefilelogstobundle(bundlecaps, bundlerepo, ui):
 
     return newcaps
 
-def getbundlechunks(orig, repo, source, heads=None, common=None,
-                    bundlecaps=None, **kwargs):
-    # Check if heads exists, if not, check bundle store
-    hasscratchnode = False
+def getbundlerepo(repo, unknownhead):
+    index = repo.bundlestore.index
+    store = repo.bundlestore.store
+    bundleid = index.getbundle(hex(unknownhead))
+    if bundleid is None:
+        raise error.Abort('%s head is not known' % hex(unknownhead))
+    bundleraw = store.read(bundleid)
+    bundlefile = _makebundlefromraw(bundleraw)
+    bundlepath = "bundle:%s+%s" % (repo.root, bundlefile)
+    return repository(repo.ui, bundlepath)
+
+def _getoutputbundleraw(bundlerepo, bundleroots, unknownhead):
+    '''
+    Bundle may include more revision then user requested. For example,
+    if user asks for revision but bundle also consists its descendants.
+    This function will filter out all revision that user is not requested.
+    '''
+    outgoing = discovery.outgoing(bundlerepo, commonheads=bundleroots,
+                                  missingheads=[unknownhead])
+    outputbundleraw = changegroup.getlocalchangegroupraw(bundlerepo, 'pull',
+                                                         outgoing)
+    return outputbundleraw
+
+def _getbundleroots(oldrepo, bundlerepo, bundlerevs):
+    cl = bundlerepo.changelog
+    bundleroots = []
+    for rev in bundlerevs:
+        node = cl.node(rev)
+        parents = cl.parents(node)
+        for parent in parents:
+            # include all revs that exist in the main repo
+            # to make sure that bundle may apply client-side
+            if parent in oldrepo:
+                bundleroots.append(parent)
+    return bundleroots
+
+def getbundlechunks(orig, repo, source, heads=None, bundlecaps=None, **kwargs):
+    heads = heads or []
+    # newheads are parents of roots of scratch bundles that were requested
+    newphases = {}
+    scratchbundles = []
+    newheads = []
+    scratchheads = []
     for head in heads:
         if head not in repo.changelog.nodemap:
-            if hasscratchnode:
-                raise error.Abort(
-                    'not implemented: not possible to pull more than '
-                    'one scratch branch')
-            index = repo.bundlestore.index
-            store = repo.bundlestore.store
-            bundleid = index.getbundle(hex(head))
-            bundleraw = store.read(bundleid)
-            bundlefile = _makebundlefromraw(bundleraw)
-            bundlepath = "bundle:%s+%s" % (repo.root, bundlefile)
-            bundlerepo = repository(repo.ui, bundlepath)
-            repo = bundlerepo
-            hasscratchnode = True
+            bundlerepo = getbundlerepo(repo, head)
+            bundlerevs = set(_readbundlerevs(bundlerepo))
             bundlecaps = _includefilelogstobundle(bundlecaps, bundlerepo,
-                                                  repo.ui)
+                                                  bundlerevs, repo.ui)
+            cl = bundlerepo.changelog
+            for rev in bundlerevs:
+                node = cl.node(rev)
+                newphases[hex(node)] = str(phases.draft)
 
-    return orig(repo, source, heads=heads, common=common,
-                bundlecaps=bundlecaps, **kwargs)
+            bundleroots = _getbundleroots(repo, bundlerepo, bundlerevs)
+            outputbundleraw = _getoutputbundleraw(bundlerepo, bundleroots, head)
+            scratchbundles.append(outputbundleraw)
+            newheads.extend(bundleroots)
+            scratchheads.append(head)
+
+    pullfrombundlestore = bool(scratchbundles)
+    wrappedchangegrouppart = False
+    wrappedlistkeys = False
+    oldchangegrouppart = exchange.getbundle2partsmapping['changegroup']
+    try:
+        def _changegrouppart(bundler, *args, **kwargs):
+            # Order is important here. First add non-scratch part
+            # and only then add parts with scratch bundles because
+            # non-scratch part contains parents of roots of scratch bundles.
+            result = oldchangegrouppart(bundler, *args, **kwargs)
+            for bundle in scratchbundles:
+                bundler.newpart('changegroup', data=bundle)
+            return result
+
+        exchange.getbundle2partsmapping['changegroup'] = _changegrouppart
+        wrappedchangegrouppart = True
+
+        def _listkeys(orig, self, namespace):
+            origvalues = orig(self, namespace)
+            if namespace == 'phases' and pullfrombundlestore:
+                if origvalues.get('publishing') == 'True':
+                    # Make repo non-publishing to preserve draft phase
+                    del origvalues['publishing']
+                origvalues.update(newphases)
+            return origvalues
+
+        wrapfunction(localrepo.localrepository, 'listkeys', _listkeys)
+        wrappedlistkeys = True
+        heads = list((set(newheads) | set(heads)) - set(scratchheads))
+        result = orig(repo, source, heads=heads,
+                      bundlecaps=bundlecaps, **kwargs)
+    finally:
+        if wrappedchangegrouppart:
+            exchange.getbundle2partsmapping['changegroup'] = oldchangegrouppart
+        if wrappedlistkeys:
+            unwrapfunction(localrepo.localrepository, 'listkeys', _listkeys)
+    return result
 
 def _lookupwrap(orig):
     def _lookup(repo, proto, key):
@@ -486,9 +560,6 @@ def _pull(orig, ui, repo, source="default", **opts):
         for bookmark in opts.get('bookmark'):
             if _scratchbranchmatcher(bookmark):
                 other = hg.peer(repo, opts, source)
-                if hasscratchbookmarks:
-                    raise error.Abort('not implemented: not possible to pull '
-                                      'more than one scratch branch')
                 fetchedbookmarks = other.listkeyspatterns('bookmarks',
                                                           patterns=[bookmark])
                 if bookmark not in fetchedbookmarks:
