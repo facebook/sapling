@@ -116,6 +116,10 @@ import tempfile
 import threading
 import time
 
+from . import (
+    pycompat,
+)
+
 defaultdict = collections.defaultdict
 contextmanager = contextlib.contextmanager
 
@@ -771,7 +775,7 @@ def main(argv=None):
 
     # process options
     try:
-        opts, args = getopt.getopt(sys.argv[optstart:], "hl:f:o:p:",
+        opts, args = pycompat.getoptb(sys.argv[optstart:], "hl:f:o:p:",
                                    ["help", "limit=", "file=", "output-file=", "script-path="])
     except getopt.error as msg:
         print(msg)

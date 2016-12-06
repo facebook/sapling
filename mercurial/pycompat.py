@@ -10,6 +10,7 @@ This contains aliases to hide python version-specific details from the core.
 
 from __future__ import absolute_import
 
+import getopt
 import os
 import sys
 
@@ -87,6 +88,19 @@ if ispy3:
     setattr = _wrapattrfunc(builtins.setattr)
     xrange = builtins.range
 
+    # getopt.getopt() on Python 3 deals with unicodes internally so we cannot
+    # pass bytes there. Passing unicodes will result in unicodes as return
+    # values which we need to convert again to bytes.
+    def getoptb(args, shortlist, namelist):
+        args = [a.decode('latin-1') for a in args]
+        shortlist = shortlist.decode('latin-1')
+        namelist = [a.decode('latin-1') for a in namelist]
+        opts, args = getopt.getopt(args, shortlist, namelist)
+        opts = [(a[0].encode('latin-1'), a[1].encode('latin-1'))
+                for a in opts]
+        args = [a.encode('latin-1') for a in args]
+        return opts, args
+
 else:
     def sysstr(s):
         return s
@@ -105,6 +119,9 @@ else:
     # better not to touch Python 2 part as it's already working fine.
     def fsdecode(filename):
         return filename
+
+    def getoptb(args, shortlist, namelist):
+        return getopt.getopt(args, shortlist, namelist)
 
     osname = os.name
     ospathsep = os.pathsep
