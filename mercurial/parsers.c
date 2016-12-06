@@ -753,6 +753,7 @@ typedef struct {
 	PyObject_HEAD
 	/* Type-specific fields go here. */
 	PyObject *data;        /* raw bytes of index */
+	Py_buffer buf;         /* buffer of data */
 	PyObject **cache;      /* cached tuples */
 	const char **offsets;  /* populated on demand */
 	Py_ssize_t raw_length; /* original number of elements */
@@ -808,7 +809,7 @@ static const char *index_deref(indexObject *self, Py_ssize_t pos)
 		return self->offsets[pos];
 	}
 
-	return PyBytes_AS_STRING(self->data) + pos * v1_hdrsize;
+	return (const char *)(self->buf.buf) + pos * v1_hdrsize;
 }
 
 static inline int index_get_parents(indexObject *self, Py_ssize_t rev,
@@ -2389,9 +2390,9 @@ static int index_assign_subscript(indexObject *self, PyObject *item,
  */
 static Py_ssize_t inline_scan(indexObject *self, const char **offsets)
 {
-	const char *data = PyBytes_AS_STRING(self->data);
+	const char *data = (const char *)self->buf.buf;
 	Py_ssize_t pos = 0;
-	Py_ssize_t end = PyBytes_GET_SIZE(self->data);
+	Py_ssize_t end = self->buf.len;
 	long incr = v1_hdrsize;
 	Py_ssize_t len = 0;
 
@@ -2425,6 +2426,7 @@ static int index_init(indexObject *self, PyObject *args)
 	self->added = NULL;
 	self->cache = NULL;
 	self->data = NULL;
+	memset(&self->buf, 0, sizeof(self->buf));
 	self->headrevs = NULL;
 	self->filteredrevs = Py_None;
 	Py_INCREF(Py_None);
@@ -2433,11 +2435,15 @@ static int index_init(indexObject *self, PyObject *args)
 
 	if (!PyArg_ParseTuple(args, "OO", &data_obj, &inlined_obj))
 		return -1;
-	if (!PyBytes_Check(data_obj)) {
-		PyErr_SetString(PyExc_TypeError, "data is not a string");
+	if (!PyObject_CheckBuffer(data_obj)) {
+		PyErr_SetString(PyExc_TypeError,
+				"data does not support buffer interface");
 		return -1;
 	}
-	size = PyBytes_GET_SIZE(data_obj);
+
+	if (PyObject_GetBuffer(data_obj, &self->buf, PyBUF_SIMPLE) == -1)
+		return -1;
+	size = self->buf.len;
 
 	self->inlined = inlined_obj && PyObject_IsTrue(inlined_obj);
 	self->data = data_obj;
@@ -2478,6 +2484,10 @@ static void index_dealloc(indexObject *self)
 {
 	_index_clearcaches(self);
 	Py_XDECREF(self->filteredrevs);
+	if (self->buf.buf) {
+		PyBuffer_Release(&self->buf);
+		memset(&self->buf, 0, sizeof(self->buf));
+	}
 	Py_XDECREF(self->data);
 	Py_XDECREF(self->added);
 	PyObject_Del(self);
@@ -2577,7 +2587,8 @@ static PyTypeObject indexType = {
  * follows:
  *
  * index: an index object that lazily parses RevlogNG records
- * cache: if data is inlined, a tuple (index_file_content, 0), else None
+ * cache: if data is inlined, a tuple (0, index_file_content), else None
+ *        index_file_content could be a string, or a buffer
  *
  * added complications are for backwards compatibility
  */
