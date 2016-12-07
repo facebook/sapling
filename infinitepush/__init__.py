@@ -777,6 +777,14 @@ def _getbackupheadprefix(ui, repo):
 def _getbackupheadname(ui, hexhead, repo):
     return '/'.join((_getbackupheadprefix(ui, repo), hexhead))
 
+def _getremote(repo, ui, dest, **opts):
+    path = ui.paths.getpath(dest, default=('default-push', 'default'))
+    if not path:
+        raise error.Abort(_('default repository not configured!'),
+                         hint=_("see 'hg help config.paths'"))
+    dest = path.pushloc or path.loc
+    return hg.peer(repo, opts, dest)
+
 @command('debugbackup', [('', 'background', None, 'run backup in background')])
 def backup(ui, repo, dest=None, **opts):
     """
@@ -833,12 +841,12 @@ def backup(ui, repo, dest=None, **opts):
     # To avoid race conditions save current tip of the repo and backup
     # everything up to this revision.
     currenttiprev = len(repo) - 1
-    revs = ['null']
+    revs = []
     if backuptip <= currenttiprev:
         revset = 'head() & draft() & %d:' % backuptip
-        revs = list(repo.revs(revset)) or ['null']
+        revs = list(repo.revs(revset))
 
-    if currentbookmarkshash == bookmarkshash and revs == ['null']:
+    if currentbookmarkshash == bookmarkshash and not revs:
         ui.status(_('nothing to backup\n'))
         return 0
 
@@ -846,25 +854,32 @@ def backup(ui, repo, dest=None, **opts):
     bookmarkstobackup[_getbackupheadprefix(ui, repo) + '/*'] = ''
     bookmarkstobackup[_getbackupbookmarkprefix(ui, repo) + '/*'] = ''
 
-    ui.setconfig(experimental, configmanybookmarks,
-                 bookmarkstobackup, 'debugbackup')
+    other = _getremote(repo, ui, dest, **opts)
+    bundler = bundle2.bundle20(ui, bundle2.bundle2caps(other))
+    # Disallow pushback because we want to avoid taking repo locks.
+    # And we don't need pushback anyway
+    capsblob = bundle2.encodecaps(bundle2.getrepocaps(repo,
+                                                      allowpushback=False))
+    bundler.newpart('replycaps', data=capsblob)
+    if revs:
+        nodes = map(repo.changelog.node, revs)
+        outgoing = discovery.findcommonoutgoing(repo, other, onlyheads=nodes)
+        bundler.addpart(getscratchbranchpart(repo, other, outgoing,
+                                             force=False, ui=ui,
+                                             bookmark=None, create=False))
 
-    pushcmd = commands.table['^push'][0]
-    pushopts = dict(opt[1:3] for opt in commands.table['^push'][1])
-    pushopts['rev'] = revs
-    pushopts['dest'] = dest
-    pushopts['bundle_store'] = True
-    if 'remotenames' in extensions._extensions:
-        # Remotenames doesn't allow to push anon heads. We need to override it
-        pushopts['allow_anon'] = True
-    result = pushcmd(ui, repo, **pushopts)
-    if result == 1:
-        # push sets exit-code to 1 if there are no changesets to push.
-        # We want a zero exit-code in this case.
-        result = 0
+    if bookmarkstobackup:
+        bundler.addpart(getscratchbookmarkspart(other, bookmarkstobackup))
+    stream = util.chunkbuffer(bundler.getchunks())
+
+    try:
+        other.unbundle(stream, ['force'], other.url())
+    except error.BundleValueError as exc:
+        raise error.Abort(_('missing support for %s') % exc)
+
     with repo.svfs(backupedstatefile, mode="w", atomictemp=True) as f:
         f.write(str(currenttiprev) + ' ' + currentbookmarkshash)
-    return result
+    return 0
 
 def _phasemove(orig, pushop, nodes, phase=phases.public):
     """prevent commits from being marked public

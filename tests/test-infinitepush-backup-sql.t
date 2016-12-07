@@ -17,14 +17,12 @@
   $ setupsqlclienthgrc
   $ mkcommit initialcommit
   $ hg debugbackup
-  pushing to ssh://user@dummy/server
   searching for changes
   remote: pushing 1 commit:
   remote:     67145f466344  initialcommit
   $ mkcommit commitwithbookmark
   $ hg book abook
   $ hg debugbackup
-  pushing to ssh://user@dummy/server
   searching for changes
   remote: pushing 2 commits:
   remote:     67145f466344  initialcommit
