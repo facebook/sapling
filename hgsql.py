@@ -287,12 +287,21 @@ class sqlcontext(object):
 
         if self.takelock and not writelock in repo.heldlocks:
             startwait = time.time()
-            repo.sqllock(writelock)
+            try:
+                repo.sqllock(writelock)
+            except error.Abort:
+                elapsed = time.time() - startwait
+                repo.ui.log("sqllock", "failed to get sql lock after %s "
+                            "seconds\n", elapsed, elapsed=elapsed * 1000,
+                            valuetype='lockwait', success='false')
+                raise
+
             self._startprofile()
             self._locked = True
             elapsed = time.time() - startwait
             repo.ui.log("sqllock", "waited for sql lock for %s seconds\n",
-                        elapsed, elapsed=elapsed * 1000, valuetype='lockwait')
+                        elapsed, elapsed=elapsed * 1000,
+                        valuetype='lockwait', success='true')
         self._startlocktime = time.time()
 
         if self._connected:
