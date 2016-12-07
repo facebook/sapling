@@ -473,6 +473,35 @@ def wraprepo(repo):
                 callback()
             self.sqlpostrelease = []
 
+        def lock(self, *args, **kwargs):
+            wl = self._wlockref and self._wlockref()
+            if (not self._synclock and
+                not (wl is not None and wl.held) and
+                not self.hassqllock(writelock, checkserver=False)):
+                self._recordbadlockorder()
+            return super(sqllocalrepo, self).lock(*args, **kwargs)
+
+        def wlock(self, *args, **kwargs):
+            if (not self._synclock and
+                not self.hassqllock(writelock, checkserver=False)):
+                self._recordbadlockorder()
+            return super(sqllocalrepo, self).wlock(*args, **kwargs)
+
+        def _recordbadlockorder(self):
+            self.ui.debug("hgsql: invalid lock order\n")
+
+            outputdir = self.ui.config('hgsql', 'profileoutput')
+            if outputdir:
+                import random, traceback
+                pid = os.getpid()
+                rand = random.random()
+                timestamp = time.time()
+                path = os.path.join(outputdir, 'hgsql-lockorder-%s-%s-%s' %
+                                               (timestamp, pid, rand))
+                with open(path, 'a+') as f:
+                    stack = traceback.format_stack()
+                    f.write(''.join(stack))
+
         def transaction(self, *args, **kwargs):
             tr = super(sqllocalrepo, self).transaction(*args, **kwargs)
             if tr.count > 1:
@@ -528,9 +557,12 @@ def wraprepo(repo):
             is returned, it means the limiter was not acquired, and readonly
             clients should not attempt to perform a sync."""
             try:
+                def release():
+                    self._synclock = None
                 wait = False
-                return self._lock(self.svfs, "synclimiter", wait, None,
-                               None, _('repository %s') % self.origroot)
+                self._synclock = self._lock(self.svfs, "synclimiter", wait, release,
+                                           None, _('repository %s') % self.origroot)
+                return self._synclock
             except error.LockHeld:
                 return None
 
@@ -1050,6 +1082,7 @@ def wraprepo(repo):
     repo.pendingrevs = []
     repo.heldlocks = set()
     repo.sqlpostrelease = []
+    repo._synclock = None
 
     repo.__class__ = sqllocalrepo
 

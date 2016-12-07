@@ -58,6 +58,10 @@ password = $DBPASS
 port = $DBPORT
 reponame = $2
 
+[server]
+preferuncompressed=True
+uncompressed=True
+
 [ui]
 ssh=python "$TESTDIR/dummyssh"
 EOF
