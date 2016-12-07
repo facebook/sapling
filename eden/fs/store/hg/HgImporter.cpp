@@ -322,13 +322,13 @@ HgImporter::HgImporter(StringPiece repoPath, LocalStore* store)
   Subprocess::Options opts;
   // Send commands to the child on its stdin.
   // Receive output on HELPER_PIPE_FD.
-  opts.stdin(Subprocess::PIPE).fd(HELPER_PIPE_FD, Subprocess::PIPE_OUT);
+  opts.stdinFd(Subprocess::PIPE).fd(HELPER_PIPE_FD, Subprocess::PIPE_OUT);
   helper_ = Subprocess{cmd, opts};
   SCOPE_FAIL {
     helper_.closeParentFd(STDIN_FILENO);
     helper_.wait();
   };
-  helperIn_ = helper_.stdin();
+  helperIn_ = helper_.stdinFd();
   helperOut_ = helper_.parentFd(HELPER_PIPE_FD);
 
   // Wait for the import helper to send the CMD_STARTED message indicating
