@@ -97,8 +97,6 @@ def uisetup(ui):
              _('disable automatic file move detection')))
     extensions.afterloaded('automv', has_automv)
 
-    # If the evolve extension is enabled, wrap the `next` command to
-    # add the --rebase flag.
     def evolveloaded(loaded):
         if not loaded:
             return
@@ -818,51 +816,8 @@ def _restackonce(ui, repo, rev, rebaseopts=None, childrenonly=False):
     rebaseopts['rev'] = descendants
     rebaseopts['dest'] = rev
 
-    # We're potentially going to make a few temporary configuration
-    # changes, so back up the old configs to restore afterwards.
-    backupconfigs = []
-
-    # If we're only rebasing children, we need to set the configuration
-    # to allow instability. We can't use the --keep flag as this will
-    # suppress the creation of obsmarkers on the precursor nodes,
-    # and it is difficult to manually create the correct markers on the
-    # new changesets after a rebase operation if several changesets
-    # were rebased.
-    if childrenonly:
-        backupconfigs.append(ui.backupconfig('experimental', 'evolution'))
-        oldconfig = repo.ui.configlist('experimental', 'evolution')
-        newconfig = oldconfig + [obsolete.allowunstableopt]
-        repo.ui.setconfig('experimental', 'evolution', newconfig)
-
-    # Overwrite the the global configuration value set by the tweakdefaults
-    # extension to store the current top-level operation name. tweakdefaults
-    # wraps obsolete.createmarkers() to use this value to set the metadata
-    # on newly created obsmarkers. We need this to be set to 'rebase' in
-    # order for obsolete changesets to have a "rebased as X" labels
-    # in `hg sl`.
-    try:
-        tweakdefaults = extensions.find('tweakdefaults')
-    except KeyError:
-        # No tweakdefaults extension -- skip this since there is no wrapper
-        # to set the metadata.
-        pass
-    else:
-        backupconfigs.append(ui.backupconfig(
-            tweakdefaults.globaldata,
-            tweakdefaults.createmarkersoperation
-        ))
-        repo.ui.setconfig(
-            tweakdefaults.globaldata,
-            tweakdefaults.createmarkersoperation,
-            'rebase'
-        )
-
-    try:
-        rebasemod.rebase(ui, repo, **rebaseopts)
-    finally:
-        # Reset the configuration to what it was before.
-        for backup in backupconfigs:
-            ui.restoreconfig(backup)
+    # Perform rebase.
+    rebasemod.rebase(ui, repo, **rebaseopts)
 
     # Remove any preamend bookmarks on precursors.
     _clearpreamend(repo, allprecursors)

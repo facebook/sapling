@@ -55,6 +55,11 @@ def extsetup(ui):
     else:
         extensions.wrapcommand(rebase.cmdtable, 'rebase', allowunstable)
 
+        # In addition to wrapping the user-facing command, we also need to
+        # wrap the rebase.rebase() function itself so that extensions that
+        # call it directly will work correctly.
+        extensions.wrapfunction(rebase, 'rebase', allowunstable)
+
 def allowunstable(orig, ui, repo, *args, **kwargs):
     """Wrap a function with the signature orig(ui, repo, *args, **kwargs)
        to temporarily allow the creation of unstable changesets for the

@@ -4,6 +4,7 @@ Set up test environment.
   $ cp $extpath/hgext3rd/fbamend.py $TESTTMP # use $TESTTMP substitution in message
   $ cat >> $HGRCPATH << EOF
   > [extensions]
+  > allowunstable=
   > directaccess=
   > evolve=
   > fbamend=$TESTTMP/fbamend.py
@@ -11,7 +12,7 @@ Set up test environment.
   > rebase=
   > [experimental]
   > evolution = createmarkers
-  > evolutioncommands = previous next
+  > evolutioncommands = previous next split fold
   > EOF
   $ mkcommit() {
   >   echo "$1" > "$1"
