@@ -101,6 +101,19 @@ if ispy3:
         args = [a.encode('latin-1') for a in args]
         return opts, args
 
+    # keys of keyword arguments in Python need to be strings which are unicodes
+    # Python 3. This function takes keyword arguments, convert the keys to str.
+    def strkwargs(dic):
+        dic = dict((k.decode('latin-1'), v) for k, v in dic.iteritems())
+        return dic
+
+    # keys of keyword arguments need to be unicode while passing into
+    # a function. This function helps us to convert those keys back to bytes
+    # again as we need to deal with bytes.
+    def byteskwargs(dic):
+        dic = dict((k.encode('latin-1'), v) for k, v in dic.iteritems())
+        return dic
+
 else:
     def sysstr(s):
         return s
@@ -122,6 +135,12 @@ else:
 
     def getoptb(args, shortlist, namelist):
         return getopt.getopt(args, shortlist, namelist)
+
+    def strkwargs(dic):
+        return dic
+
+    def byteskwargs(dic):
+        return dic
 
     osname = os.name
     ospathsep = os.pathsep
