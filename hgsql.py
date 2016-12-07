@@ -292,7 +292,7 @@ class sqlcontext(object):
             self._locked = True
             elapsed = time.time() - startwait
             repo.ui.log("sqllock", "waited for sql lock for %s seconds\n",
-                        elapsed, elapsed=elapsed, valuetype='lockwait')
+                        elapsed, elapsed=elapsed * 1000, valuetype='lockwait')
         self._startlocktime = time.time()
 
         if self._connected:
@@ -304,7 +304,7 @@ class sqlcontext(object):
             if self._locked:
                 elapsed = time.time() - self._startlocktime
                 repo.ui.log("sqllock", "held sql lock for %s seconds\n",
-                            elapsed, elapsed=elapsed, valuetype='lockheld')
+                            elapsed, elapsed=elapsed * 1000, valuetype='lockheld')
                 self._stopprofile(elapsed)
                 repo.sqlunlock(writelock)
 
