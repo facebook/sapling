@@ -122,7 +122,7 @@ config option "fastannotate.modes"
   0: 1
   1: 2
   $ hg annotate --config fastannotate.modes=fctx -r 1 --debug a
-  fastannotate: a: using fast path (resolved fctx: True)
+  fastannotate: a: using fast path (resolved fctx: False)
   0: 1
   1: 2
   $ hg fastannotate --config fastannotate.modes=fctx -h -q

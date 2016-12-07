@@ -269,6 +269,13 @@ class _annotatecontext(object):
         corresponding line contents.
         """
 
+        # the fast path test requires commit hash, convert rev number to hash,
+        # so it may hit the fast path. note: in the "fctx" mode, the "annotate"
+        # command could give us a revision number even if the user passes a
+        # commit hash.
+        if isinstance(rev, int):
+            rev = self.repo.changelog.node(rev)
+
         # fast path: if rev is in the main branch already
         directly, revfctx = self.canannotatedirectly(rev)
         if directly:

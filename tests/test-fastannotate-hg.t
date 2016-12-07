@@ -185,7 +185,7 @@ annotate after merge
 (difference explained below)
 
   $ hg annotate -nf b --debug
-  fastannotate: b: using fast path (resolved fctx: True)
+  fastannotate: b: using fast path (resolved fctx: False)
   0 a: a
   1 a: a
   1 a: a

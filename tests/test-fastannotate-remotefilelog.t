@@ -93,16 +93,16 @@ And it can reuse the annotate cache for each revision
 
   $ hg blame x -r 1 --debug
   fastannotate: x: remotefilelog prefetch disabled
-  fastannotate: x: using fast path (resolved fctx: True)
+  fastannotate: x: using fast path (resolved fctx: False)
   0: x
   1: y
   $ hg blame x -r 2 --debug
   fastannotate: x: remotefilelog prefetch disabled
-  fastannotate: x: using fast path (resolved fctx: True)
+  fastannotate: x: using fast path (resolved fctx: False)
   0: x
   1: y
   2: z
   $ hg blame x -r 0 --debug
   fastannotate: x: remotefilelog prefetch disabled
-  fastannotate: x: using fast path (resolved fctx: True)
+  fastannotate: x: using fast path (resolved fctx: False)
   0: x
