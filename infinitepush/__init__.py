@@ -52,7 +52,7 @@
     loglevel = DEBUG
 
     # Client-side option
-    debugbackuplog = FILE
+    pushbackuplog = FILE
 """
 
 from __future__ import absolute_import
@@ -785,12 +785,13 @@ def _getremote(repo, ui, dest, **opts):
     dest = path.pushloc or path.loc
     return hg.peer(repo, opts, dest)
 
-@command('debugbackup', [('', 'background', None, 'run backup in background')])
+@command('pushbackup',
+         [('', 'background', None, 'run backup in background')])
 def backup(ui, repo, dest=None, **opts):
     """
     Pushes commits, bookmarks and heads to infinitepush.
-    New non-extinct commits are saved since the last `hg debugbackup` or since 0
-    revision if this backup is the first.
+    New non-extinct commits are saved since the last `hg pushbackup`
+    or since 0 revision if this backup is the first.
     Local bookmarks are saved remotely as:
         infinitepush/backups/USERNAME/HOST/REPOROOT/bookmarks/LOCAL_BOOKMARK
     Local heads are saved remotely as:
@@ -798,8 +799,8 @@ def backup(ui, repo, dest=None, **opts):
     """
 
     if opts.get('background'):
-        background_cmd = 'hg debugbackup'
-        logfile = ui.config('infinitepush', 'debugbackuplog')
+        background_cmd = 'hg pushbackup'
+        logfile = ui.config('infinitepush', 'pushbackuplog')
         if logfile:
             background_cmd = background_cmd + ' &> ' + logfile
         runshellcommand(background_cmd, os.environ)

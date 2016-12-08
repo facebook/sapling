@@ -15,7 +15,7 @@ Create client
 
 Backup with remotenames enabled. Make sure that it works fine with anon heads
   $ mkcommit remotenamespush
-  $ hg --config extensions.remotenames= debugbackup
+  $ hg --config extensions.remotenames= pushbackup
   searching for changes
   remote: pushing 1 commit:
   remote:     f4ca5164f72e  remotenamespush

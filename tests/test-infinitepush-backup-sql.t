@@ -16,13 +16,13 @@
   $ cd client
   $ setupsqlclienthgrc
   $ mkcommit initialcommit
-  $ hg debugbackup
+  $ hg pushbackup
   searching for changes
   remote: pushing 1 commit:
   remote:     67145f466344  initialcommit
   $ mkcommit commitwithbookmark
   $ hg book abook
-  $ hg debugbackup
+  $ hg pushbackup
   searching for changes
   remote: pushing 2 commits:
   remote:     67145f466344  initialcommit

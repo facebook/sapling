@@ -23,7 +23,7 @@ Backup empty repo
   $ hg clone ssh://user@dummy/repo client -q
   $ cd client
   $ setupevolve
-  $ hg debugbackup
+  $ hg pushbackup
   nothing to backup
   $ mkcommit commit
   $ hg prune .
@@ -31,7 +31,7 @@ Backup empty repo
   working directory now at 000000000000
   1 changesets pruned
   $ mkcommit newcommit
-  $ hg debugbackup
+  $ hg pushbackup
   searching for changes
   remote: pushing 1 commit:
   remote:     606a357e69ad  newcommit
@@ -46,9 +46,9 @@ Setup client
   $ setupevolve
 
 Make commit and backup it. Use lockfail.py to make sure lock is not taken during
-debugbackup
+pushbackup
   $ mkcommit commit
-  $ hg debugbackup --config extensions.lockfail=$TESTDIR/lockfail.py
+  $ hg pushbackup --config extensions.lockfail=$TESTDIR/lockfail.py
   searching for changes
   remote: pushing 1 commit:
   remote:     7e6a6fd9c7c8  commit
@@ -69,7 +69,7 @@ Make first commit public (by doing push) and then backup new commit
   remote: adding file changes
   remote: added 1 changesets with 1 changes to 1 files
   $ mkcommit newcommit
-  $ hg debugbackup
+  $ hg pushbackup
   searching for changes
   remote: pushing 1 commit:
   remote:     94a60f5ad8b2  newcommit
@@ -93,7 +93,7 @@ Make obsoleted commit non-extinct by committing on top of it
   1 new unstable changesets
 
 Backup both of them
-  $ hg debugbackup
+  $ hg pushbackup
   searching for changes
   remote: pushing 3 commits:
   remote:     94a60f5ad8b2  newcommit
@@ -102,12 +102,12 @@ Backup both of them
   $ cat .hg/store/infinitepushlastbackupedstate
   3 [0-9a-f]{40} \(no-eol\) (re)
 
-Create one more head and run `hg debugbackup`. Make sure that only new head is pushed
+Create one more head and run `hg pushbackup`. Make sure that only new head is pushed
   $ hg up 0
   0 files updated, 0 files merged, 3 files removed, 0 files unresolved
   $ mkcommit newhead
   created new head
-  $ hg debugbackup
+  $ hg pushbackup
   searching for changes
   remote: pushing 1 commit:
   remote:     3a30e220fe42  newhead
@@ -121,7 +121,7 @@ Create two more heads and backup them
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ mkcommit newhead2
   created new head
-  $ hg debugbackup
+  $ hg pushbackup
   searching for changes
   remote: pushing 2 commits:
   remote:     f79c5017def3  newhead1
@@ -132,7 +132,7 @@ Backup in background
   6 [0-9a-f]{40} \(no-eol\) (re)
   $ mkcommit newcommit
   $ tip=`hg log -r tip -T '{rev}'`
-  $ hg --config infinitepush.debugbackuplog="$TESTTMP/logfile" debugbackup --background
+  $ hg --config infinitepush.pushbackuplog="$TESTTMP/logfile" pushbackup --background
   >>> from time import sleep
   >>> for i in range(100):
   ...   sleep(0.1)
@@ -150,7 +150,7 @@ Backup in background
 Backup with bookmark
   $ mkcommit commitwithbookmark
   $ hg book abook
-  $ hg debugbackup
+  $ hg pushbackup
   searching for changes
   remote: pushing 3 commits:
   remote:     667453c0787e  newhead2
@@ -165,7 +165,7 @@ Backup with bookmark
 
 Backup only bookmarks
   $ hg book newbook
-  $ hg debugbackup
+  $ hg pushbackup
   $ scratchbookmarks
   infinitepush/backups/test/[0-9a-zA-Z.-]+\$TESTTMP/client/bookmarks/abook 166ff4468f7da443df90d268158ba7d75d52585a (re)
   infinitepush/backups/test/[0-9a-zA-Z.-]+\$TESTTMP/client/bookmarks/newbook 166ff4468f7da443df90d268158ba7d75d52585a (re)
@@ -175,7 +175,7 @@ Backup only bookmarks
   infinitepush/backups/test/[0-9a-zA-Z.-]+\$TESTTMP/client/heads/f79c5017def3b9af9928edbb52cc620c74b4b291 f79c5017def3b9af9928edbb52cc620c74b4b291 (re)
 
 Nothing changed, make sure no backup happens
-  $ hg debugbackup
+  $ hg pushbackup
   nothing to backup
 
 Obsolete a head, make sure backup happens
@@ -183,7 +183,7 @@ Obsolete a head, make sure backup happens
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   working directory now at 773a3ba2e7c2
   1 changesets pruned
-  $ hg debugbackup
+  $ hg pushbackup
   $ scratchbookmarks
   infinitepush/backups/test/[0-9a-zA-Z.-]+\$TESTTMP/client/bookmarks/abook 773a3ba2e7c25358df2e5b3cced70371333bc61c (re)
   infinitepush/backups/test/[0-9a-zA-Z.-]+\$TESTTMP/client/bookmarks/newbook 773a3ba2e7c25358df2e5b3cced70371333bc61c (re)
@@ -212,7 +212,7 @@ Rebase + backup. Make sure that two heads were deleted and head was saved
   
   $ hg rebase -s f79c5017de -d 773a3ba2e7c2
   rebasing 5:f79c5017def3 "newhead1"
-  $ hg debugbackup
+  $ hg pushbackup
   searching for changes
   remote: pushing 3 commits:
   remote:     667453c0787e  newhead2
@@ -260,18 +260,18 @@ Make a few public commits. Make sure we don't backup them
   |/
   o  7e6a6fd9c7c8c8c307ee14678f03d63af3a7b455 commit public
   
-  $ hg debugbackup
+  $ hg pushbackup
   $ scratchbookmarks
   infinitepush/backups/test/[0-9a-zA-Z.-]+\$TESTTMP/client/bookmarks/abook 773a3ba2e7c25358df2e5b3cced70371333bc61c (re)
   infinitepush/backups/test/[0-9a-zA-Z.-]+\$TESTTMP/client/bookmarks/newbook 773a3ba2e7c25358df2e5b3cced70371333bc61c (re)
   infinitepush/backups/test/[0-9a-zA-Z.-]+\$TESTTMP/client/heads/3a30e220fe42e969e34bbe8001b951a20f31f2e8 3a30e220fe42e969e34bbe8001b951a20f31f2e8 (re)
   infinitepush/backups/test/[0-9a-zA-Z.-]+\$TESTTMP/client/heads/d5609f7fa63352da538eeffbe3ffabed1779aafc d5609f7fa63352da538eeffbe3ffabed1779aafc (re)
-  $ hg debugbackup
+  $ hg pushbackup
   nothing to backup
 
 Backup bookmark that has '/bookmarks/' in the name. Make sure it was escaped
   $ hg book new/bookmarks/book
-  $ hg debugbackup
+  $ hg pushbackup
   $ scratchbookmarks
   infinitepush/backups/test/[0-9a-zA-Z.-]+\$TESTTMP/client/bookmarks/abook 773a3ba2e7c25358df2e5b3cced70371333bc61c (re)
   infinitepush/backups/test/[0-9a-zA-Z.-]+\$TESTTMP/client/bookmarks/new/bookmarksbookmarks/book 3446a384dd701da41cd83cbd9562805fc6412c0e (re)
