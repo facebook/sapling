@@ -113,8 +113,7 @@ std::unique_ptr<Tree> EdenMount::getRootTree() const {
   }
 }
 
-shared_ptr<fusell::InodeBase> EdenMount::getInodeBase(
-    RelativePathPiece path) const {
+shared_ptr<InodeBase> EdenMount::getInodeBase(RelativePathPiece path) const {
   auto inodeBase = dispatcher_->getInode(FUSE_ROOT_ID);
   auto relativePath = RelativePathPiece{path};
 

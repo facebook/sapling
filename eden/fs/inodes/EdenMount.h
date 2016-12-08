@@ -17,7 +17,6 @@
 namespace facebook {
 namespace eden {
 namespace fusell {
-class InodeBase;
 class InodeNameManager;
 class MountPoint;
 }
@@ -27,6 +26,7 @@ class ClientConfig;
 class Dirstate;
 class EdenDispatcher;
 class FileInode;
+class InodeBase;
 class ObjectStore;
 class Overlay;
 class Journal;
@@ -126,7 +126,7 @@ class EdenMount {
    * @return the InodeBase for the specified path or throws a std::system_error
    *     with ENOENT.
    */
-  std::shared_ptr<fusell::InodeBase> getInodeBase(RelativePathPiece path) const;
+  std::shared_ptr<InodeBase> getInodeBase(RelativePathPiece path) const;
 
   /**
    * @return the TreeInode for the specified path or throws a std::system_error

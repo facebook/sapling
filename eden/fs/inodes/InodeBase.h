@@ -10,12 +10,11 @@
 #pragma once
 #include <folly/futures/Future.h>
 #include <atomic>
-#include "Dispatcher.h"
-#include "fuse_headers.h"
+#include "eden/fuse/Dispatcher.h"
+#include "eden/fuse/fuse_headers.h"
 
 namespace facebook {
 namespace eden {
-namespace fusell {
 
 class InodeBase : public std::enable_shared_from_this<InodeBase> {
   fuse_ino_t ino_;
@@ -40,11 +39,12 @@ class InodeBase : public std::enable_shared_from_this<InodeBase> {
   }
 
   // See Dispatcher::getattr
-  virtual folly::Future<Dispatcher::Attr> getattr();
+  virtual folly::Future<fusell::Dispatcher::Attr> getattr();
 
   // See Dispatcher::setattr
-  virtual folly::Future<Dispatcher::Attr> setattr(const struct stat& attr,
-                                                  int to_set);
+  virtual folly::Future<fusell::Dispatcher::Attr> setattr(
+      const struct stat& attr,
+      int to_set);
 
   virtual folly::Future<folly::Unit> setxattr(folly::StringPiece name,
                                               folly::StringPiece value,
@@ -58,6 +58,5 @@ class InodeBase : public std::enable_shared_from_this<InodeBase> {
    * this inode object.  Return false if we should preserve it anyway. */
   virtual bool canForget();
 };
-}
 }
 }

@@ -34,7 +34,7 @@ TreeInode::TreeInode(
     TreeInode::Entry* entry,
     fuse_ino_t parent,
     fuse_ino_t ino)
-    : fusell::InodeBase(ino),
+    : InodeBase(ino),
       mount_(mount),
       contents_(buildDirFromTree(tree.get())),
       entry_(entry),
@@ -49,7 +49,7 @@ TreeInode::TreeInode(
     TreeInode::Entry* entry,
     fuse_ino_t parent,
     fuse_ino_t ino)
-    : fusell::InodeBase(ino),
+    : InodeBase(ino),
       mount_(mount),
       contents_(std::move(dir)),
       entry_(entry),
@@ -77,7 +77,7 @@ fusell::Dispatcher::Attr TreeInode::getAttrLocked(const Dir* contents) {
   return attr;
 }
 
-std::shared_ptr<fusell::InodeBase> TreeInode::getChildByNameLocked(
+std::shared_ptr<InodeBase> TreeInode::getChildByNameLocked(
     const Dir* contents,
     PathComponentPiece name) {
   auto iter = contents->entries.find(name);
@@ -114,7 +114,7 @@ std::shared_ptr<fusell::InodeBase> TreeInode::getChildByNameLocked(
       entry);
 }
 
-folly::Future<std::shared_ptr<fusell::InodeBase>> TreeInode::getChildByName(
+folly::Future<std::shared_ptr<InodeBase>> TreeInode::getChildByName(
     PathComponentPiece namepiece) {
   auto contents = contents_.rlock();
   return getChildByNameLocked(&*contents, namepiece);
@@ -293,7 +293,7 @@ bool TreeInode::canForget() {
 }
 
 folly::Future<fuse_entry_param> link(
-    std::shared_ptr<fusell::InodeBase> /* node */,
+    std::shared_ptr<InodeBase> /* node */,
     PathComponentPiece /* newname */) {
   // We intentionally do not support hard links.
   // These generally cannot be tracked in source control (git or mercurial)
@@ -411,7 +411,7 @@ folly::Future<folly::Unit> TreeInode::unlink(PathComponentPiece name) {
   return folly::Unit{};
 }
 
-std::shared_ptr<fusell::InodeBase> TreeInode::lookupChildByNameLocked(
+std::shared_ptr<InodeBase> TreeInode::lookupChildByNameLocked(
     const Dir* contents,
     PathComponentPiece name) {
   auto dispatcher = getMount()->getDispatcher();

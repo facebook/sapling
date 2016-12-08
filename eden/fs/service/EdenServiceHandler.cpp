@@ -210,8 +210,7 @@ SHA1Result EdenServiceHandler::getSHA1ForPath(
 
   auto it = relativePath.paths().begin();
   while (true) {
-    shared_ptr<fusell::InodeBase> inodeBase;
-    inodeBase =
+    shared_ptr<InodeBase> inodeBase =
         dispatcher->lookupInodeBase(parent->getNodeId(), it.piece().basename())
             .get();
 

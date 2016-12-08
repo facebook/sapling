@@ -687,7 +687,7 @@ void Dirstate::remove(RelativePathPiece path, bool force) {
     }
   }
 
-  std::shared_ptr<fusell::InodeBase> inode;
+  std::shared_ptr<InodeBase> inode;
   if (parent != nullptr) {
     try {
       inode = parent->getChildByName(path.basename()).get();

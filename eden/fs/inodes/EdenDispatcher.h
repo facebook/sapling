@@ -16,12 +16,12 @@ namespace facebook {
 namespace eden {
 
 namespace fusell {
-class InodeBase;
 class InodeNameManager;
 }
 
 class EdenMount;
 class FileInode;
+class InodeBase;
 class TreeInode;
 
 /**
@@ -29,7 +29,7 @@ class TreeInode;
  */
 class EdenDispatcher : public fusell::Dispatcher {
   std::shared_ptr<TreeInode> root_;
-  std::unordered_map<fuse_ino_t, std::shared_ptr<fusell::InodeBase>> inodes_;
+  std::unordered_map<fuse_ino_t, std::shared_ptr<InodeBase>> inodes_;
   mutable folly::SharedMutex lock_;
 
   // The EdenMount that owns this EdenDispatcher.
@@ -49,9 +49,8 @@ class EdenDispatcher : public fusell::Dispatcher {
       EdenMount* mount,
       std::shared_ptr<TreeInode> rootInode);
 
-  std::shared_ptr<fusell::InodeBase> getInode(fuse_ino_t, bool mustExist = true)
-      const;
-  std::shared_ptr<fusell::InodeBase> lookupInode(fuse_ino_t) const;
+  std::shared_ptr<InodeBase> getInode(fuse_ino_t, bool mustExist = true) const;
+  std::shared_ptr<InodeBase> lookupInode(fuse_ino_t) const;
   std::shared_ptr<TreeInode> getTreeInode(fuse_ino_t, bool mustExist = true)
       const;
   std::shared_ptr<FileInode> getFileInode(fuse_ino_t, bool mustExist = true)
@@ -69,7 +68,7 @@ class EdenDispatcher : public fusell::Dispatcher {
   /** Throws if setRootInode() has not been invoked yet. */
   std::shared_ptr<TreeInode> getRootInode() const;
 
-  void recordInode(std::shared_ptr<fusell::InodeBase> inode);
+  void recordInode(std::shared_ptr<InodeBase> inode);
 
   void initConnection(fuse_conn_info& conn) override;
   folly::Future<Attr> getattr(fuse_ino_t ino) override;
@@ -86,7 +85,7 @@ class EdenDispatcher : public fusell::Dispatcher {
   /**
    * Similar to lookup(), except this does not require an active FUSE request.
    */
-  folly::Future<std::shared_ptr<fusell::InodeBase>> lookupInodeBase(
+  folly::Future<std::shared_ptr<InodeBase>> lookupInodeBase(
       fuse_ino_t parent,
       PathComponentPiece name);
   folly::Future<folly::Unit> forget(fuse_ino_t ino,

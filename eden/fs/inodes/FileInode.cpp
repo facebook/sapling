@@ -31,7 +31,7 @@ FileInode::FileInode(
     fuse_ino_t ino,
     std::shared_ptr<TreeInode> parentInode,
     TreeInode::Entry* entry)
-    : fusell::InodeBase(ino),
+    : InodeBase(ino),
       parentInode_(parentInode),
       entry_(entry),
       data_(
@@ -43,7 +43,7 @@ FileInode::FileInode(
     std::shared_ptr<TreeInode> parentInode,
     TreeInode::Entry* entry,
     folly::File&& file)
-    : fusell::InodeBase(ino),
+    : InodeBase(ino),
       parentInode_(parentInode),
       entry_(entry),
       data_(std::make_shared<FileData>(

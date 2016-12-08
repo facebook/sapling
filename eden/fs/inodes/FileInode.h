@@ -9,9 +9,9 @@
  */
 #pragma once
 #include <folly/File.h>
+#include "InodeBase.h"
 #include "TreeInode.h"
 #include "eden/fs/model/Tree.h"
-#include "eden/fuse/InodeBase.h"
 
 namespace facebook {
 namespace eden {
@@ -20,7 +20,7 @@ class FileHandle;
 class FileData;
 class Hash;
 
-class FileInode : public fusell::InodeBase {
+class FileInode : public InodeBase {
  public:
   /** Construct an inode using an overlay entry */
   FileInode(

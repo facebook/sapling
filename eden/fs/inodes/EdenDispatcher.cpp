@@ -196,14 +196,14 @@ std::shared_ptr<TreeInode> EdenDispatcher::getRootInode() const {
   return root_;
 }
 
-void EdenDispatcher::recordInode(std::shared_ptr<fusell::InodeBase> inode) {
+void EdenDispatcher::recordInode(std::shared_ptr<InodeBase> inode) {
   auto ino = inode->getNodeId();
   std::unique_lock<SharedMutex> g(lock_);
   auto ret = inodes_.emplace(ino, std::move(inode));
   DCHECK(ret.second);
 }
 
-std::shared_ptr<fusell::InodeBase> EdenDispatcher::getInode(
+std::shared_ptr<InodeBase> EdenDispatcher::getInode(
     fuse_ino_t ino,
     bool mustExist) const {
   std::shared_lock<SharedMutex> g(lock_);
@@ -217,8 +217,7 @@ std::shared_ptr<fusell::InodeBase> EdenDispatcher::getInode(
   return it->second;
 }
 
-std::shared_ptr<fusell::InodeBase> EdenDispatcher::lookupInode(
-    fuse_ino_t ino) const {
+std::shared_ptr<InodeBase> EdenDispatcher::lookupInode(fuse_ino_t ino) const {
   std::shared_lock<SharedMutex> g(lock_);
   const auto& it = inodes_.find(ino);
   if (it == inodes_.end()) {
@@ -276,8 +275,7 @@ folly::Future<fuse_entry_param> EdenDispatcher::lookup(
   });
 }
 
-folly::Future<std::shared_ptr<fusell::InodeBase>>
-EdenDispatcher::lookupInodeBase(
+folly::Future<std::shared_ptr<InodeBase>> EdenDispatcher::lookupInodeBase(
     fuse_ino_t parent,
     PathComponentPiece namepiece) {
   auto dir = getTreeInode(parent);
@@ -285,7 +283,7 @@ EdenDispatcher::lookupInodeBase(
   // First, see if we already have the Inode loaded
   auto mgr = mount_->getNameMgr();
   auto node = mgr->getNodeByName(parent, namepiece, false);
-  std::shared_ptr<fusell::InodeBase> existing_inode;
+  std::shared_ptr<InodeBase> existing_inode;
 
   if (node) {
     existing_inode = lookupInode(node->getNodeId());
@@ -293,7 +291,7 @@ EdenDispatcher::lookupInodeBase(
 
   return (existing_inode ? makeFuture(existing_inode)
                          : dir->getChildByName(namepiece))
-      .then([=](std::shared_ptr<fusell::InodeBase> inode) mutable {
+      .then([=](std::shared_ptr<InodeBase> inode) mutable {
         if (!inode) {
           throwSystemErrorExplicit(ENOENT);
         }

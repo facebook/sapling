@@ -9,8 +9,8 @@
  */
 #pragma once
 #include <folly/Optional.h>
+#include "eden/fs/inodes/InodeBase.h"
 #include "eden/fs/model/Hash.h"
-#include "eden/fuse/InodeBase.h"
 #include "eden/fuse/InodeNameManager.h"
 #include "eden/utils/PathMap.h"
 
@@ -24,7 +24,7 @@ class Tree;
 class Overlay;
 
 // Represents a Tree instance in a form that FUSE can consume
-class TreeInode : public fusell::InodeBase {
+class TreeInode : public InodeBase {
  public:
   /** Represents a directory entry.
    * A directory entry holds the combined Tree and Overlay data;
@@ -65,7 +65,7 @@ class TreeInode : public fusell::InodeBase {
     /// file attributes and cache ttls.
     fusell::Dispatcher::Attr attr;
     /// The newly created inode instance.
-    std::shared_ptr<fusell::InodeBase> inode;
+    std::shared_ptr<InodeBase> inode;
     /// The newly opened file handle.
     std::shared_ptr<FileHandle> file;
     /// The newly created node record from the name manager.
@@ -96,7 +96,7 @@ class TreeInode : public fusell::InodeBase {
 
   /** Implements the InodeBase method used by the Dispatcher
    * to create the Inode instance for a given name */
-  folly::Future<std::shared_ptr<fusell::InodeBase>> getChildByName(
+  folly::Future<std::shared_ptr<InodeBase>> getChildByName(
       PathComponentPiece namepiece);
 
   folly::Future<std::shared_ptr<fusell::DirHandle>> opendir(
@@ -170,7 +170,7 @@ class TreeInode : public fusell::InodeBase {
    * on the Dir object.  This is needed because the equivalent lookupInodeBase
    * functionality in the dispatcher will call in to getChildByName and
    * attempt to acquire the lock */
-  std::shared_ptr<fusell::InodeBase> lookupChildByNameLocked(
+  std::shared_ptr<InodeBase> lookupChildByNameLocked(
       const Dir* contents,
       PathComponentPiece name);
 
@@ -180,10 +180,9 @@ class TreeInode : public fusell::InodeBase {
   Dir buildDirFromTree(const Tree* tree);
 
   /** Helper used to implement getChildByName and lookupChildByNameLocked */
-  std::shared_ptr<fusell::InodeBase> getChildByNameLocked(
+  std::shared_ptr<InodeBase> getChildByNameLocked(
       const Dir* contents,
       PathComponentPiece name);
-
 
   // The EdenMount object that this inode belongs to.
   // We store this as a raw pointer since the TreeInode is part of the mount

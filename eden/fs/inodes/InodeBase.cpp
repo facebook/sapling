@@ -13,7 +13,6 @@ using namespace folly;
 
 namespace facebook {
 namespace eden {
-namespace fusell {
 
 InodeBase::~InodeBase() {}
 
@@ -24,13 +23,14 @@ InodeBase::InodeBase(fuse_ino_t ino) : ino_(ino) {
 }
 
 // See Dispatcher::getattr
-folly::Future<Dispatcher::Attr> InodeBase::getattr() {
+folly::Future<fusell::Dispatcher::Attr> InodeBase::getattr() {
   FUSELL_NOT_IMPL();
 }
 
 // See Dispatcher::setattr
-folly::Future<Dispatcher::Attr> InodeBase::setattr(const struct stat& attr,
-                                                   int to_set) {
+folly::Future<fusell::Dispatcher::Attr> InodeBase::setattr(
+    const struct stat& /* attr */,
+    int /* to_set */) {
   FUSELL_NOT_IMPL();
 }
 
@@ -54,7 +54,6 @@ folly::Future<folly::Unit> InodeBase::access(int mask) {
 
 bool InodeBase::canForget() {
   return true;
-}
 }
 }
 }
