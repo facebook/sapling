@@ -32,6 +32,15 @@ using folly::StringPiece;
 
 namespace {
 /**
+ * When comparing two file entries for equality from a source control
+ * perspective, exclude these bits when comparing their mode_t values.
+ * Specifically, we ignore the "group" and "others" permissions,
+ * as well as setuid, setgid, and the restricted deletion flag.
+ */
+constexpr mode_t kIgnoredModeBits =
+    (S_IRWXG | S_IRWXO | S_ISUID | S_ISGID | S_ISVTX);
+
+/**
  * Represents file (non-directory) changes in a directory. This reflects:
  * - New file in directory.
  * - File removed from directory (possibly replaced with directory of same
@@ -424,7 +433,9 @@ bool hasMatchingAttributes(
     ObjectStore* objectStore,
     TreeInode& parent, // Has rlock
     const TreeInode::Dir& dir) {
-  if (treeEntry->getMode() != treeInode->mode) {
+  // As far as comparing mode bits is concerned, we ignore the "group" and
+  // "other" permissions.
+  if (((treeEntry->getMode() ^ treeInode->mode) & ~kIgnoredModeBits) != 0) {
     return false;
   }
 
