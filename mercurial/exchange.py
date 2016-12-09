@@ -603,9 +603,21 @@ def _pushdiscoverybookmarks(pushop):
     explicit = set([repo._bookmarks.expandname(bookmark)
                     for bookmark in pushop.bookmarks])
 
-    comp = bookmod.comparebookmarks(repo, repo._bookmarks,
-                                    remotebookmark, srchex=hex)
+    remotebookmark = bookmod.unhexlifybookmarks(remotebookmark)
+    comp = bookmod.comparebookmarks(repo, repo._bookmarks, remotebookmark)
+
+    def safehex(x):
+        if x is None:
+            return x
+        return hex(x)
+
+    def hexifycompbookmarks(bookmarks):
+        for b, scid, dcid in bookmarks:
+            yield b, safehex(scid), safehex(dcid)
+
+    comp = [hexifycompbookmarks(marks) for marks in comp]
     addsrc, adddst, advsrc, advdst, diverge, differ, invalid, same = comp
+
     for b, scid, dcid in advsrc:
         if b in explicit:
             explicit.remove(b)
@@ -617,7 +629,7 @@ def _pushdiscoverybookmarks(pushop):
             explicit.remove(b)
             pushop.outbookmarks.append((b, '', scid))
     # search for overwritten bookmark
-    for b, scid, dcid in advdst + diverge + differ:
+    for b, scid, dcid in list(advdst) + list(diverge) + list(differ):
         if b in explicit:
             explicit.remove(b)
             pushop.outbookmarks.append((b, dcid, scid))
@@ -1456,6 +1468,7 @@ def _pullbookmarks(pullop):
     pullop.stepsdone.add('bookmarks')
     repo = pullop.repo
     remotebookmarks = pullop.remotebookmarks
+    remotebookmarks = bookmod.unhexlifybookmarks(remotebookmarks)
     bookmod.updatefromremote(repo.ui, repo, remotebookmarks,
                              pullop.remote.url(),
                              pullop.gettransaction,
