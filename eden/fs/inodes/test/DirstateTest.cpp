@@ -317,6 +317,50 @@ TEST(Dirstate, createDirstateWithFileAndThenDeleteItWithoutCallingHgRemove) {
   verifyExpectedDirstate(dirstate, {{"hello.txt", HgStatusCode::MISSING}});
 }
 
+TEST(Dirstate, removeAllOnADirectoryWithFilesInVariousStates) {
+  TestMountBuilder builder;
+  builder.addFiles({
+      {"mydir/a", "In the manifest."},
+      {"mydir/b", "Will rm."},
+      {"mydir/c", "Will hg rm."},
+  });
+  auto testMount = builder.build();
+  auto dirstate = testMount->getDirstate();
+
+  testMount->deleteFile("mydir/b");
+  scmRemoveFile(dirstate, "mydir/c", /* force */ false);
+  testMount->addFile("mydir/d", "I will be added.");
+  dirstate->add(RelativePathPiece("mydir/d"));
+  testMount->addFile("mydir/e", "I will be untracked");
+  verifyExpectedDirstate(
+      dirstate,
+      {{"mydir/b", HgStatusCode::MISSING},
+       {"mydir/c", HgStatusCode::REMOVED},
+       {"mydir/d", HgStatusCode::ADDED},
+       {"mydir/e", HgStatusCode::NOT_TRACKED}});
+
+  scmRemoveFileAndExpect(
+      dirstate,
+      "mydir",
+      /* force */ false,
+      DirstateRemoveError{
+          RelativePath("mydir/d"),
+          "not removing mydir/d: "
+          "file has been marked for add (use 'hg forget' to undo add)"});
+  verifyExpectedDirstate(
+      dirstate,
+      {{"mydir/a", HgStatusCode::REMOVED},
+       {"mydir/b", HgStatusCode::REMOVED},
+       {"mydir/c", HgStatusCode::REMOVED},
+       {"mydir/d", HgStatusCode::ADDED},
+       {"mydir/e", HgStatusCode::NOT_TRACKED}});
+  EXPECT_FALSE(testMount->hasFileAt("mydir/a"));
+  EXPECT_FALSE(testMount->hasFileAt("mydir/b"));
+  EXPECT_FALSE(testMount->hasFileAt("mydir/c"));
+  EXPECT_TRUE(testMount->hasFileAt("mydir/d"));
+  EXPECT_TRUE(testMount->hasFileAt("mydir/e"));
+}
+
 TEST(Dirstate, createDirstateAndAddNewDirectory) {
   TestMountBuilder builder;
   builder.addFile({"file-in-root.txt", "some contents"});

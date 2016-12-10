@@ -671,6 +671,22 @@ ShouldBeDeleted shouldFileBeDeletedByHgRemove(
   return ShouldBeDeleted::NO_BECAUSE_THE_FILE_WAS_ALREADY_DELETED;
 }
 
+void collectAllPathsUnderTree(
+    const Tree* directory,
+    RelativePathPiece directoryName,
+    const ObjectStore* objectStore,
+    folly::EvictingCacheMap<RelativePath, folly::Unit>& collection) {
+  for (auto& entry : directory->getTreeEntries()) {
+    auto entryPath = directoryName + entry.getName();
+    if (entry.getFileType() != FileType::DIRECTORY) {
+      collection.set(entryPath, folly::unit);
+    } else {
+      auto tree = objectStore->getTree(entry.getHash());
+      collectAllPathsUnderTree(tree.get(), entryPath, objectStore, collection);
+    }
+  }
+}
+
 void Dirstate::removeAll(
     const std::vector<RelativePathPiece>* paths,
     bool force,
@@ -685,10 +701,29 @@ void Dirstate::removeAll(
     // A file (or directory) must be tracked in order for it to be
     // removed, though it does not need to exist on disk (it could be in the
     // MISSING state when this is called, for example).
-    auto entry = getEntryForFile(path, rootTree.get(), objectStore);
+    auto entry = getEntryForPath(path, rootTree.get(), objectStore);
     if (entry != nullptr) {
       if (entry->getFileType() == FileType::DIRECTORY) {
-        DCHECK(false) << "TODO: Support directories!";
+        // This should take action on every file under entry, as well as any
+        // files that are tracked as ADDED under path. Note that removing a
+        // file that is tracked as ADDED will either trigger a "not removing:
+        // file has been marked for add" error, or it will perform the remove if
+        // --force has been specified. We leave that up to ::remove() to decide.
+        auto directory = objectStore->getTree(entry->getHash());
+        collectAllPathsUnderTree(
+            directory.get(), path, objectStore, pathsToRemove);
+        {
+          auto userDirectives = userDirectives_.rlock();
+          for (auto& pair : *userDirectives) {
+            // Note that if the path is already marked as "Remove" in
+            // userDirectives, ::remove() is a noop, so we can filter out those
+            // paths here.
+            if (pair.second != overlay::UserStatusDirective::Remove &&
+                path.isParentDirOf(pair.first)) {
+              pathsToRemove.set(pair.first, folly::unit);
+            }
+          }
+        }
       } else {
         pathsToRemove.set(path.copy(), folly::unit);
       }
@@ -700,7 +735,17 @@ void Dirstate::removeAll(
       if (inodeBase != nullptr) {
         auto stat = inodeBase->getattr().get().st;
         if (S_ISDIR(stat.st_mode)) {
-          DCHECK(false) << "TODO: Support directories!";
+          // This is a case where the directory is exists in the working copy,
+          // but not in the manifest. It may have entries in userDirectives that
+          // could be affected by this `hg rm` call.
+          {
+            auto userDirectives = userDirectives_.rlock();
+            for (auto& pair : *userDirectives) {
+              if (path.isParentDirOf(pair.first)) {
+                pathsToRemove.set(pair.first, folly::unit);
+              }
+            }
+          }
         } else {
           // We let remove() determine whether path is untracked or not.
           pathsToRemove.set(path.copy(), folly::unit);
@@ -737,6 +782,9 @@ void Dirstate::removeAll(
   // should also be removed. Note that this is not guaranteed to be the case
   // here because an individual file in the directory may have failed to have
   // been removed because it was modified, ignored, etc.
+  // On further consideration, this is not specific to directory arguments. If
+  // `hg rm <path>` is called and <path> is the last file in the directory
+  // (other than the root), then the directory should be removed.
 }
 
 void Dirstate::remove(
