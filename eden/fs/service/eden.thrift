@@ -112,6 +112,15 @@ struct ThriftHgStatus {
   1: map<string, ThriftHgStatusCode> entries
 }
 
+/**
+ * Note that the error message always contains the path, so it can be displayed
+ * to the user verbatim without having to prefix it with the path explicitly.
+ */
+struct ScmRemoveError {
+  1: string path
+  2: string errorMessage
+}
+
 service EdenService extends fb303.FacebookService {
   list<MountInfo> listMounts() throws (1: EdenError ex)
   void mount(1: MountInfo info) throws (1: EdenError ex)
@@ -195,9 +204,9 @@ service EdenService extends fb303.FacebookService {
     2: string path
   ) throws (1: EdenError ex)
 
-  void scmRemove(
+  list<ScmRemoveError> scmRemove(
     1: string mountPoint,
-    2: string path,
+    2: list<string> paths, // May be files or directories.
     3: bool force
   ) throws (1: EdenError ex)
 }

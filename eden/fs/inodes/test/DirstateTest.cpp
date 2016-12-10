@@ -52,6 +52,35 @@ void verifyEmptyDirstate(const Dirstate* dirstate) {
   EXPECT_EQ(0, status->size()) << "Expected dirstate to be empty.";
 }
 
+/**
+ * Calls `dirstate->removeAll({path}, force, errorsToReport)` and fails if
+ * errorsToReport is non-empty.
+ */
+void scmRemoveFile(Dirstate* dirstate, std::string path, bool force) {
+  std::vector<DirstateRemoveError> errorsToReport;
+  std::vector<RelativePathPiece> paths({RelativePathPiece(path)});
+  dirstate->removeAll(&paths, force, errorsToReport);
+  if (!errorsToReport.empty()) {
+    FAIL() << "Unexpected error: " << errorsToReport[0];
+  }
+}
+
+/**
+ * Calls `dirstate->removeAll({path}, force, errorsToReport)` and fails if
+ * errorsToReport is not {expectedError}.
+ */
+void scmRemoveFileAndExpect(
+    Dirstate* dirstate,
+    std::string path,
+    bool force,
+    DirstateRemoveError expectedError) {
+  std::vector<DirstateRemoveError> errorsToReport;
+  std::vector<RelativePathPiece> paths({RelativePathPiece(path)});
+  dirstate->removeAll(&paths, force, errorsToReport);
+  std::vector<DirstateRemoveError> expectedErrors({expectedError});
+  EXPECT_EQ(expectedErrors, errorsToReport);
+}
+
 TEST(Dirstate, createDirstate) {
   TestMountBuilder builder;
   auto testMount = builder.build();
@@ -141,7 +170,7 @@ TEST(Dirstate, createDirstateWithFileAndThenHgRemoveIt) {
   auto testMount = builder.build();
   auto dirstate = testMount->getDirstate();
 
-  dirstate->remove(RelativePathPiece("hello.txt"), /* force */ false);
+  scmRemoveFile(dirstate, "hello.txt", /* force */ false);
   EXPECT_FALSE(testMount->hasFileAt("hello.txt"));
 
   verifyExpectedDirstate(dirstate, {{"hello.txt", HgStatusCode::REMOVED}});
@@ -154,7 +183,7 @@ TEST(Dirstate, createDirstateWithFileRemoveItAndThenHgRemoveIt) {
   auto dirstate = testMount->getDirstate();
 
   testMount->deleteFile("hello.txt");
-  dirstate->remove(RelativePathPiece("hello.txt"), /* force */ false);
+  scmRemoveFile(dirstate, "hello.txt", /* force */ false);
 
   verifyExpectedDirstate(dirstate, {{"hello.txt", HgStatusCode::REMOVED}});
 }
@@ -167,17 +196,16 @@ TEST(Dirstate, createDirstateWithFileTouchItAndThenHgRemoveIt) {
 
   testMount->overwriteFile("hello.txt", "some other contents");
 
-  try {
-    dirstate->remove(RelativePathPiece("hello.txt"), /* force */ false);
-    FAIL() << "Should error when trying to remove a modified file.";
-  } catch (const std::runtime_error& e) {
-    EXPECT_STREQ(
-        "not removing hello.txt: file is modified (use -f to force removal)",
-        e.what());
-  }
+  scmRemoveFileAndExpect(
+      dirstate,
+      "hello.txt",
+      /* force */ false,
+      DirstateRemoveError{RelativePath("hello.txt"),
+                          "not removing hello.txt: file is modified "
+                          "(use -f to force removal)"});
 
   testMount->overwriteFile("hello.txt", "original contents");
-  dirstate->remove(RelativePathPiece("hello.txt"), /* force */ false);
+  scmRemoveFile(dirstate, "hello.txt", /* force */ false);
   EXPECT_FALSE(testMount->hasFileAt("hello.txt"));
 
   verifyExpectedDirstate(dirstate, {{"hello.txt", HgStatusCode::REMOVED}});
@@ -190,7 +218,7 @@ TEST(Dirstate, createDirstateWithFileModifyItAndThenHgForceRemoveIt) {
   auto dirstate = testMount->getDirstate();
 
   testMount->overwriteFile("hello.txt", "some other contents");
-  dirstate->remove(RelativePathPiece("hello.txt"), /* force */ true);
+  scmRemoveFile(dirstate, "hello.txt", /* force */ true);
   EXPECT_FALSE(testMount->hasFileAt("hello.txt"));
   verifyExpectedDirstate(dirstate, {{"hello.txt", HgStatusCode::REMOVED}});
 }
@@ -201,12 +229,12 @@ TEST(Dirstate, ensureSubsequentCallsToHgRemoveHaveNoEffect) {
   auto testMount = builder.build();
   auto dirstate = testMount->getDirstate();
 
-  dirstate->remove(RelativePathPiece("hello.txt"), /* force */ false);
+  scmRemoveFile(dirstate, "hello.txt", /* force */ false);
   EXPECT_FALSE(testMount->hasFileAt("hello.txt"));
   verifyExpectedDirstate(dirstate, {{"hello.txt", HgStatusCode::REMOVED}});
 
   // Calling `hg remove` again should have no effect and not throw any errors.
-  dirstate->remove(RelativePathPiece("hello.txt"), /* force */ false);
+  scmRemoveFile(dirstate, "hello.txt", /* force */ false);
   EXPECT_FALSE(testMount->hasFileAt("hello.txt"));
   verifyExpectedDirstate(dirstate, {{"hello.txt", HgStatusCode::REMOVED}});
 
@@ -217,7 +245,7 @@ TEST(Dirstate, ensureSubsequentCallsToHgRemoveHaveNoEffect) {
   verifyExpectedDirstate(dirstate, {{"hello.txt", HgStatusCode::REMOVED}});
 
   // Calling `hg remove` again should have no effect and not throw any errors.
-  dirstate->remove(RelativePathPiece("hello.txt"), /* force */ false);
+  scmRemoveFile(dirstate, "hello.txt", /* force */ false);
   EXPECT_TRUE(testMount->hasFileAt("hello.txt"));
   verifyExpectedDirstate(dirstate, {{"hello.txt", HgStatusCode::REMOVED}});
 }
@@ -234,7 +262,7 @@ TEST(Dirstate, createDirstateHgAddFileRemoveItThenHgRemoveIt) {
   testMount->deleteFile("hello.txt");
   verifyExpectedDirstate(dirstate, {{"hello.txt", HgStatusCode::MISSING}});
 
-  dirstate->remove(RelativePathPiece("hello.txt"), /* force */ false);
+  scmRemoveFile(dirstate, "hello.txt", /* force */ false);
   verifyEmptyDirstate(dirstate);
 }
 
@@ -255,7 +283,7 @@ TEST(Dirstate, createDirstateHgAddFileRemoveItThenHgRemoveItInSubdirectory) {
   verifyExpectedDirstate(
       dirstate, {{"dir1/dir2/hello.txt", HgStatusCode::MISSING}});
 
-  dirstate->remove(RelativePathPiece("dir1/dir2/hello.txt"), /* force */ false);
+  scmRemoveFile(dirstate, "dir1/dir2/hello.txt", /* force */ false);
   verifyEmptyDirstate(dirstate);
 }
 
@@ -268,15 +296,14 @@ TEST(Dirstate, createDirstateHgAddFileThenHgRemoveIt) {
   dirstate->add(RelativePathPiece("hello.txt"));
   verifyExpectedDirstate(dirstate, {{"hello.txt", HgStatusCode::ADDED}});
 
-  try {
-    dirstate->remove(RelativePathPiece("hello.txt"), /* force */ false);
-    FAIL() << "Should error when trying to remove a file scheduled for add.";
-  } catch (const std::runtime_error& e) {
-    EXPECT_STREQ(
-        "not removing hello.txt: file has been marked for add "
-        "(use 'hg forget' to undo add)",
-        e.what());
-  }
+  scmRemoveFileAndExpect(
+      dirstate,
+      "hello.txt",
+      /* force */ false,
+      DirstateRemoveError{
+          RelativePath("hello.txt"),
+          "not removing hello.txt: file has been marked for add "
+          "(use 'hg forget' to undo add)"});
   verifyExpectedDirstate(dirstate, {{"hello.txt", HgStatusCode::ADDED}});
 }
 
@@ -335,8 +362,8 @@ TEST(Dirstate, createDirstateAndRemoveExistingDirectory) {
 
   // Remove some files in the directories.
   auto force = false;
-  dirstate->remove(RelativePathPiece("a-new-folder/original1.txt"), force);
-  dirstate->remove(RelativePathPiece("z-new-folder/original1.txt"), force);
+  scmRemoveFile(dirstate, "a-new-folder/original1.txt", force);
+  scmRemoveFile(dirstate, "z-new-folder/original1.txt", force);
   verifyExpectedDirstate(
       dirstate,
       {
@@ -345,8 +372,8 @@ TEST(Dirstate, createDirstateAndRemoveExistingDirectory) {
       });
 
   // Remove the remaining files in the directories.
-  dirstate->remove(RelativePathPiece("a-new-folder/original2.txt"), force);
-  dirstate->remove(RelativePathPiece("z-new-folder/original2.txt"), force);
+  scmRemoveFile(dirstate, "a-new-folder/original2.txt", force);
+  scmRemoveFile(dirstate, "z-new-folder/original2.txt", force);
   verifyExpectedDirstate(
       dirstate,
       {

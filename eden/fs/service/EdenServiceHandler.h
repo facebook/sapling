@@ -75,8 +75,9 @@ class EdenServiceHandler : virtual public EdenServiceSvIf,
       std::unique_ptr<std::string> path) override;
 
   void scmRemove(
+      std::vector<ScmRemoveError>& errorsToReport,
       std::unique_ptr<std::string> mountPoint,
-      std::unique_ptr<std::string> path,
+      std::unique_ptr<std::vector<std::string>> paths,
       bool force) override;
 
   /**

@@ -9,7 +9,9 @@
  */
 #include "Dirstate.h"
 
+#include <folly/EvictingCacheMap.h>
 #include <folly/Format.h>
+#include <folly/Unit.h>
 #include <folly/experimental/StringKeyedUnorderedMap.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
@@ -20,6 +22,7 @@
 #include "eden/fs/inodes/EdenMounts.h"
 #include "eden/fs/inodes/FileData.h"
 #include "eden/fs/inodes/FileInode.h"
+#include "eden/fs/inodes/InodeBase.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/git/GitIgnore.h"
@@ -62,6 +65,10 @@ struct DirectoryDelta {
 
 namespace facebook {
 namespace eden {
+
+std::ostream& operator<<(std::ostream& os, const DirstateRemoveError& status) {
+  return os << status.errorMessage;
+}
 
 std::string HgStatus::toString() const {
   // Sort the entries in the map.
@@ -603,22 +610,39 @@ void Dirstate::add(RelativePathPiece path) {
   }
 }
 
+namespace {
+enum ShouldBeDeleted {
+  YES,
+  NO_BECAUSE_THE_FILE_WAS_ALREADY_DELETED,
+  NO_BECAUSE_THE_FILE_WAS_MODIFIED,
+};
+
+void addDirstateRemoveError(
+    RelativePathPiece path,
+    StringPiece formatError,
+    std::vector<DirstateRemoveError>& errorsToReport) {
+  errorsToReport.emplace_back(DirstateRemoveError{
+      path.copy(), folly::sformat(formatError, path.stringPiece())});
+}
+}
+
 /**
  * We need to delete the file from the working copy if either of the following
  * hold (note that it is a precondition that the file exists):
  * 1. The file is not materialized in the overlay, so it is unmodified.
  * 2. The file is in the overlay, but matches what is in the manifest.
  */
-bool shouldFileBeDeletedByHgRemove(
+ShouldBeDeleted shouldFileBeDeletedByHgRemove(
     RelativePathPiece file,
     std::shared_ptr<TreeInode> treeInode,
     const TreeEntry* treeEntry,
-    ObjectStore* objectStore) {
+    ObjectStore* objectStore,
+    std::vector<DirstateRemoveError>& errorsToReport) {
   if (treeInode == nullptr) {
     // The parent directory for the file is not in the overlay, so the file must
     // not have been modified. As such, `hg remove` should result in deleting
     // the file.
-    return true;
+    return ShouldBeDeleted::YES;
   }
 
   auto name = file.basename();
@@ -628,11 +652,13 @@ bool shouldFileBeDeletedByHgRemove(
     if (entry.first == name) {
       if (hasMatchingAttributes(
               treeEntry, entry.second.get(), objectStore, *treeInode, *dir)) {
-        return true;
+        return ShouldBeDeleted::YES;
       } else {
-        throw std::runtime_error(folly::sformat(
+        addDirstateRemoveError(
+            file.copy(),
             "not removing {}: file is modified (use -f to force removal)",
-            file.stringPiece()));
+            errorsToReport);
+        return ShouldBeDeleted::NO_BECAUSE_THE_FILE_WAS_MODIFIED;
       }
     }
   }
@@ -642,19 +668,90 @@ bool shouldFileBeDeletedByHgRemove(
   // this function, but there could be a race condition where the file is
   // deleted after this function is entered and before we reach this line of
   // code, so we return false here just to be safe.
-  return false;
+  return ShouldBeDeleted::NO_BECAUSE_THE_FILE_WAS_ALREADY_DELETED;
 }
 
-void Dirstate::remove(RelativePathPiece path, bool force) {
+void Dirstate::removeAll(
+    const std::vector<RelativePathPiece>* paths,
+    bool force,
+    std::vector<DirstateRemoveError>& errorsToReport) {
+  // First, let's collect all of the files to remove based on the `paths`
+  // argument. We use an EvictingCacheMap as a set that preserves iteration
+  // order.
+  folly::EvictingCacheMap<RelativePath, folly::Unit> pathsToRemove(0);
+  auto rootTree = mount_->getRootTree();
+  auto objectStore = mount_->getObjectStore();
+  for (auto path : *paths) {
+    // A file (or directory) must be tracked in order for it to be
+    // removed, though it does not need to exist on disk (it could be in the
+    // MISSING state when this is called, for example).
+    auto entry = getEntryForFile(path, rootTree.get(), objectStore);
+    if (entry != nullptr) {
+      if (entry->getFileType() == FileType::DIRECTORY) {
+        DCHECK(false) << "TODO: Support directories!";
+      } else {
+        pathsToRemove.set(path.copy(), folly::unit);
+      }
+    } else {
+      // The path does not exist in the manifest (but it could be tracked in
+      // userChanges!), so now we must check its local state to determine what
+      // to do next.
+      auto inodeBase = getInodeBaseOrNull(path);
+      if (inodeBase != nullptr) {
+        auto stat = inodeBase->getattr().get().st;
+        if (S_ISDIR(stat.st_mode)) {
+          DCHECK(false) << "TODO: Support directories!";
+        } else {
+          // We let remove() determine whether path is untracked or not.
+          pathsToRemove.set(path.copy(), folly::unit);
+        }
+      } else {
+        // path might not exist in the manifest, but it is possible that it is
+        // tracked and marked for addition. For example, the user may create a
+        // file, run `hg add`, and then delete it before running `hg remove`.
+        {
+          auto userDirectives = userDirectives_.rlock();
+          auto result = userDirectives->find(path.copy());
+          if (result != userDirectives->end()) {
+            // We let remove() determine whether path is untracked or not.
+            pathsToRemove.set(path.copy(), folly::unit);
+            continue;
+          }
+        }
+        addDirstateRemoveError(
+            path, "{}: No such file or directory", errorsToReport);
+      }
+    }
+  }
+
+  // TODO(mbolin): It would be advantageous to redesign remove() to work in
+  // batches. Every call to remove() acquires the userDirectives lock and
+  // potentially writes to the persistence layer. It would be better to do both
+  // of those things once for the entire set of paths instead of once per path.
+  for (auto& pair : pathsToRemove) {
+    remove(pair.first, force, errorsToReport);
+  }
+
+  // TODO(mbolin): If one of the original paths corresponds to a directory and
+  // now that directory is empty (or contains only empty directories), then it
+  // should also be removed. Note that this is not guaranteed to be the case
+  // here because an individual file in the directory may have failed to have
+  // been removed because it was modified, ignored, etc.
+}
+
+void Dirstate::remove(
+    RelativePathPiece path,
+    bool force,
+    std::vector<DirstateRemoveError>& errorsToReport) {
   /*
-   * Analogous to `hg rm <path>`. Note that this can have one of several
-   * possible outcomes:
-   * 1. If the path does not exist in the working copy or the manifest, return
-   *    an error.
-   * 2. If the path refers to a directory, return an error. (Currently, the
-   *    caller is responsible for enumerating the transitive set of files in
-   *    the directory and invoking this method once for each file.)
-   * 3. If the path is in the manifest but not in userDirectives, then it should
+   * Analogous to `hg rm <path>`. Note that the caller is responsible for
+   * ensuring that `path` satisfies at least one of the following requirements:
+   * a. The path corresponds to a file (non-directory) in the working copy.
+   * b. The path corresponds to a file (non-directory) the manifest.
+   * c. The path corresponds to a file (non-directory) in userDirectives.
+   *
+   * Note that this can have one of several possible outcomes:
+   * 1. If the path is in the manifest but not in userDirectives, then it should
    *    be marked as REMOVED, but there are several cases to consider:
    *    a. It has already been removed from the working copy. If the user ran
    *      `hg status` right now, the file would be reported as MISSING at this
@@ -665,15 +762,16 @@ void Dirstate::remove(RelativePathPiece path, bool force) {
    *    c. It has local changes in the working copy. In this case, nothing
    *      should be modified and an error should be returned:
    *      "not removing: file is modified (use -f to force removal)".
-   * 4. If the path is in userDirectives as REMOVED, then this should be a noop.
+   * 2. If the path is in userDirectives as REMOVED, then this should be a noop.
    *    In particular, even if the user has performed the following sequence:
    *    $ hg rm a-file.txt   # deletes a-file.txt
    *    $ echo random-stuff > a-file.txt
    *    $ hg rm a-file.txt   # leaves a-file.txt alone
    *    The second call to `hg rm` should not delete a-file.txt even though
-   *    the first one did. It should not raise an error that the contents have
+   *    the first one did. It should not return an error that the contents have
    *    changed, either.
-   * 5. If the path is in userChanges as ADD, then there are two possibilities:
+   * 3. If the path is in userDirectives as ADD, then there are two
+   *    possibilities:
    *    a. If the file exists, then no action is taken and an error should be
    *      returned:
    *      "not removing: file has been marked for add "
@@ -682,9 +780,6 @@ void Dirstate::remove(RelativePathPiece path, bool force) {
    *      than ADDED at this point. Regardless, now its entry should be removed
    *      from userDirectives.
    */
-  // TODO(mbolin): Verify that path corresponds to a regular file or symlink in
-  // either the manifest or the working copy.
-
   // We look up the InodeBase and TreeEntry for `path` before acquiring the
   // write lock for userDirectives_ because these lookups could be slow, so we
   // prefer not to do them while holding the lock.
@@ -721,19 +816,35 @@ void Dirstate::remove(RelativePathPiece path, bool force) {
       // corresponding TreeEntry in the manifest and compare it to its Entry in
       // the Overlay, if it exists.
       if (entry == nullptr) {
-        throw std::runtime_error(folly::sformat(
-            "not removing {}: file is untracked", path.stringPiece()));
+        addDirstateRemoveError(
+            path, "not removing {}: file is untracked", errorsToReport);
+        return;
       }
 
       if (inode != nullptr) {
         if (force) {
           shouldDelete = true;
         } else {
-          // Note that shouldFileBeDeletedByHgRemove() may throw an exception if
-          // the file has been modified, so we must perform this check before
-          // updating userDirectives.
-          shouldDelete = shouldFileBeDeletedByHgRemove(
-              path, parent, entry.get(), mount_->getObjectStore());
+          auto shouldBeDeleted = shouldFileBeDeletedByHgRemove(
+              path,
+              parent,
+              entry.get(),
+              mount_->getObjectStore(),
+              errorsToReport);
+          switch (shouldBeDeleted) {
+            case ShouldBeDeleted::YES:
+              shouldDelete = true;
+              break;
+            case ShouldBeDeleted::NO_BECAUSE_THE_FILE_WAS_ALREADY_DELETED:
+              // We still need to update userDirectives to mark the file as
+              // removed in this case.
+              break;
+            case ShouldBeDeleted::NO_BECAUSE_THE_FILE_WAS_MODIFIED:
+              // If the file was modified, then it should not even be marked as
+              // removed. An error should have been added to errorsToReport, so
+              // we just abort the entire method at this point.
+              return;
+          }
         }
       }
       (*userDirectives)[path.copy()] = overlay::UserStatusDirective::Remove;
@@ -745,10 +856,12 @@ void Dirstate::remove(RelativePathPiece path, bool force) {
           break;
         case overlay::UserStatusDirective::Add:
           if (inode != nullptr) {
-            throw std::runtime_error(folly::sformat(
+            addDirstateRemoveError(
+                path,
                 "not removing {}: file has been marked for add "
                 "(use 'hg forget' to undo add)",
-                path.stringPiece()));
+                errorsToReport);
+            return;
           } else {
             userDirectives->erase(path.copy());
             persistence_.save(*userDirectives);
@@ -767,6 +880,19 @@ void Dirstate::remove(RelativePathPiece path, bool force) {
       if (e.code().value() != ENOENT) {
         throw;
       }
+    }
+  }
+}
+
+std::shared_ptr<InodeBase> Dirstate::getInodeBaseOrNull(
+    RelativePathPiece path) const {
+  try {
+    return mount_->getInodeBase(path);
+  } catch (const std::system_error& e) {
+    if (e.code().value() == ENOENT) {
+      return nullptr;
+    } else {
+      throw;
     }
   }
 }

@@ -23,11 +23,13 @@ namespace eden {
 
 class ClientConfig;
 class EdenMount;
+class InodeBase;
 class ObjectStore;
 class Tree;
 class TreeInode;
 
 namespace fusell {
+class InodeBase;
 class MountPoint;
 }
 
@@ -98,6 +100,22 @@ class HgStatus {
 
 std::ostream& operator<<(std::ostream& os, const HgStatus& status);
 
+struct DirstateRemoveError {
+  RelativePath path;
+  std::string errorMessage;
+};
+inline bool operator==(
+    const DirstateRemoveError& lhs,
+    const DirstateRemoveError& rhs) {
+  return lhs.path == rhs.path && lhs.errorMessage == rhs.errorMessage;
+}
+inline bool operator!=(
+    const DirstateRemoveError& lhs,
+    const DirstateRemoveError& rhs) {
+  return !(lhs == rhs);
+}
+std::ostream& operator<<(std::ostream& os, const DirstateRemoveError& status);
+
 /**
  * This is designed to be a simple implemenation of an Hg dirstate. It's
  * "simple" in that every call to `getStatus()` walks the entire overlay to
@@ -132,11 +150,37 @@ class Dirstate {
   void add(RelativePathPiece path);
 
   /**
-   * Analogous to `hg rm <path>` where `<path>` is an ordinary file or symlink.
+   * Analogous to `hg rm <path1> <path2> ...` where each `<path>` identifies a
+   * file or directory in the manifest. (Note that the path may correspond to a
+   * file that has already been removed from disk.)
+   *
+   * In Mercurial proper, `hg rm` can take multiple paths, some of which are
+   * invalid arguments (they could be untracked files, for example). When this
+   * happens:
+   *
+   * 1. `hg rm` is applied for the valid arguments.
+   * 2. An error message is printed for each invalid argument.
+   * 3. An exit code of 1 is returned.
+   *
+   * In order to support this behavior, this method can add entries to
+   * errorsToReport, indicating error messages to present to the user. As such,
+   * if this adds entries to errorsToReport, the corresponding exit code to
+   * `hg rm` should be 1.
    */
-  void remove(RelativePathPiece path, bool force);
+  void removeAll(
+      const std::vector<RelativePathPiece>* paths,
+      bool force,
+      std::vector<DirstateRemoveError>& errorsToReport);
 
  private:
+  /**
+   * Analogous to `hg rm <path>` where `<path>` is an ordinary file or symlink.
+   */
+  void remove(
+      RelativePathPiece path,
+      bool force,
+      std::vector<DirstateRemoveError>& errorsToReport);
+
   /**
    * Compares the TreeEntries from a Tree in the base commit with those in the
    * current TreeInode. Differences are recorded in the provided delta.
@@ -159,6 +203,12 @@ class Dirstate {
           userDirectives,
       std::unordered_map<RelativePathPiece, overlay::UserStatusDirective>*
           copyOfUserDirectives) const;
+
+  /**
+   * Note that EdenMount::getInodeBase() throws if path does not correspond to
+   * an actual file. This helper function returns nullptr instead in that case.
+   */
+  std::shared_ptr<InodeBase> getInodeBaseOrNull(RelativePathPiece path) const;
 
   /** The EdenMount object that owns this Dirstate */
   EdenMount* const mount_{nullptr};
