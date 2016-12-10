@@ -238,6 +238,27 @@ TEST(Dirstate, createDirstateHgAddFileRemoveItThenHgRemoveIt) {
   verifyEmptyDirstate(dirstate);
 }
 
+TEST(Dirstate, createDirstateHgAddFileRemoveItThenHgRemoveItInSubdirectory) {
+  TestMountBuilder builder;
+  auto testMount = builder.build();
+  auto dirstate = testMount->getDirstate();
+
+  testMount->mkdir("dir1");
+  testMount->mkdir("dir1/dir2");
+  testMount->addFile("dir1/dir2/hello.txt", "I will be added.");
+  dirstate->add(RelativePathPiece("dir1/dir2/hello.txt"));
+  verifyExpectedDirstate(
+      dirstate, {{"dir1/dir2/hello.txt", HgStatusCode::ADDED}});
+
+  testMount->deleteFile("dir1/dir2/hello.txt");
+  testMount->rmdir("dir1/dir2");
+  verifyExpectedDirstate(
+      dirstate, {{"dir1/dir2/hello.txt", HgStatusCode::MISSING}});
+
+  dirstate->remove(RelativePathPiece("dir1/dir2/hello.txt"), /* force */ false);
+  verifyEmptyDirstate(dirstate);
+}
+
 TEST(Dirstate, createDirstateHgAddFileThenHgRemoveIt) {
   TestMountBuilder builder;
   auto testMount = builder.build();

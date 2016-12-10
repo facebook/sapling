@@ -693,7 +693,7 @@ void Dirstate::remove(RelativePathPiece path, bool force) {
     parent = mount_->getTreeInode(path.dirname());
   } catch (const std::system_error& e) {
     auto value = e.code().value();
-    if (value == ENOENT || value == ENOTDIR) {
+    if (value != ENOENT && value != ENOTDIR) {
       throw;
     }
   }
