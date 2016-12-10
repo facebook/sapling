@@ -30,9 +30,18 @@ std::unique_ptr<Tree> getTreeForDirectory(
 
 /**
  * Given a Tree and a RelativePathPiece, returns the corresponding TreeEntry in
- * the ObjectStore, if it exists.
+ * the ObjectStore, if it exists and corresponds to a file.
  */
 std::unique_ptr<TreeEntry> getEntryForFile(
+    RelativePathPiece file,
+    const Tree* baseCommit,
+    const IObjectStore* objectStore);
+
+/**
+ * Given a Tree and a RelativePathPiece, returns the corresponding TreeEntry in
+ * the ObjectStore. It may correspond to a directory or a file.
+ */
+std::unique_ptr<TreeEntry> getEntryForPath(
     RelativePathPiece file,
     const Tree* baseCommit,
     const IObjectStore* objectStore);

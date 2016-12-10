@@ -42,10 +42,21 @@ std::unique_ptr<TreeEntry> getEntryForFile(
     RelativePathPiece file,
     const Tree* root,
     const IObjectStore* objectStore) {
+  auto entry = getEntryForPath(file, root, objectStore);
+  if (entry != nullptr && entry->getType() == TreeEntryType::BLOB) {
+    return entry;
+  }
+  return nullptr;
+}
+
+std::unique_ptr<TreeEntry> getEntryForPath(
+    RelativePathPiece file,
+    const Tree* root,
+    const IObjectStore* objectStore) {
   auto parentTree = getTreeForDirectory(file.dirname(), root, objectStore);
   if (parentTree != nullptr) {
     auto treeEntry = parentTree->getEntryPtr(file.basename());
-    if (treeEntry != nullptr && treeEntry->getType() == TreeEntryType::BLOB) {
+    if (treeEntry != nullptr) {
       return std::make_unique<TreeEntry>(*treeEntry);
     }
   }
