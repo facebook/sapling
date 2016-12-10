@@ -80,6 +80,12 @@ class EdenServiceHandler : virtual public EdenServiceSvIf,
       std::unique_ptr<std::vector<std::string>> paths,
       bool force) override;
 
+  void scmMarkCommitted(
+      std::unique_ptr<std::string> mountPoint,
+      std::unique_ptr<std::string> commitID,
+      std::unique_ptr<std::vector<std::string>> pathsToClear,
+      std::unique_ptr<std::vector<std::string>> pathsToDrop) override;
+
   /**
    * When this Thrift handler is notified to shutdown, it notifies the
    * EdenServer to shut down, as well.

@@ -78,6 +78,8 @@ class ClientConfig {
 
   Hash getSnapshotID() const;
 
+  void setSnapshotID(Hash& id) const;
+
   const AbsolutePath& getMountPath() const {
     return mountPath_;
   }
@@ -119,6 +121,8 @@ class ClientConfig {
   AbsolutePath getDirstateStoragePath() const;
 
  private:
+  AbsolutePath getSnapshotPath() const;
+
   ClientConfig(
       AbsolutePathPiece clientDirectory,
       AbsolutePathPiece mountPath,

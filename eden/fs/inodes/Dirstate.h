@@ -172,6 +172,20 @@ class Dirstate {
       bool force,
       std::vector<DirstateRemoveError>& errorsToReport);
 
+  /**
+   * Called as part of `hg commit`, so this does three things (ideally
+   * atomically):
+   * 1. Updates the hashes in the Overlay.
+   * 3. Updates SNAPSHOT to the commitID.
+   * 4. Applies the changes represented by pathsToClean and pathsToDrop to the
+   *    dirstate. Note that this may not clear the dirstate altogether if the
+   *    user has done `hg commit <specific-files>` or `hg commit -i`.
+   */
+  void markCommitted(
+      Hash commitID,
+      std::vector<RelativePathPiece>& pathsToClean,
+      std::vector<RelativePathPiece>& pathsToDrop);
+
  private:
   /**
    * Analogous to `hg rm <path>` where `<path>` is an ordinary file or symlink.

@@ -8,7 +8,6 @@
  *
  */
 #include "Dirstate.h"
-
 #include <folly/EvictingCacheMap.h>
 #include <folly/Format.h>
 #include <folly/Unit.h>
@@ -943,6 +942,80 @@ std::shared_ptr<InodeBase> Dirstate::getInodeBaseOrNull(
       throw;
     }
   }
+}
+
+void Dirstate::markCommitted(
+    Hash commitID,
+    std::vector<RelativePathPiece>& pathsToClean,
+    std::vector<RelativePathPiece>& pathsToDrop) {
+  // First, we update the root tree hash (as well as the hashes of other
+  // directories in the overlay). Currently, this is stored in two places: in
+  // the OverlayDir.treeHash for the root tree and in the SNAPSHOT file.
+  // In practice, the SNAPSHOT file is almost always ignored in code, so it
+  // mainly exists for debugging. Ultimately, we will probably drop the SNAPSHOT
+  // file.
+  auto objectStore = mount_->getObjectStore();
+  auto treeForCommit = objectStore->getTreeForCommit(commitID);
+  if (treeForCommit == nullptr) {
+    throw std::runtime_error(folly::sformat(
+        "Cannot mark committed because commit for {} cannot be found.",
+        commitID.toString()));
+  }
+
+  // Perform a depth-first traversal of directories in the overlay and update
+  // the treeHash, as appropriate.
+  auto overlay = mount_->getOverlay();
+  auto modifiedDirectories = getModifiedDirectoriesForMount(mount_);
+  for (auto& directory : *modifiedDirectories) {
+    auto treeForDirectory =
+        getTreeForDirectory(directory, treeForCommit.get(), objectStore);
+    if (treeForDirectory == nullptr) {
+      // This could happen because directory is:
+      // - .hg
+      // - a bind mount
+      // - an ignored directory.
+      continue;
+    }
+
+    auto treeInode = mount_->getTreeInode(directory);
+    DCHECK(treeInode.get() != nullptr) << "Failed to get a TreeInode for "
+                                       << directory;
+
+    auto dir = treeInode->getContents().wlock();
+    dir->treeHash = treeForDirectory->getHash();
+    overlay->saveOverlayDir(directory, &*dir);
+  }
+
+  // Now that the hashes are written, we update the userDirectives.
+  {
+    auto userDirectives = userDirectives_.wlock();
+    // Do we need to do anything in the overlay at the end of this?
+    for (auto& path : pathsToClean) {
+      VLOG(1) << "calling clean on " << path;
+      auto numErased = userDirectives->erase(path.copy());
+      if (numErased == 0) {
+        VLOG(1)
+            << "Was supposed to mark path " << path
+            << " clean in the dirstate, but was not in userDirectives. "
+            << "This is expected if the path was modified rather than added.";
+      }
+    }
+
+    for (auto& path : pathsToDrop) {
+      VLOG(1) << "calling drop on " << path;
+      auto numErased = userDirectives->erase(path.copy());
+      if (numErased == 0) {
+        VLOG(1) << "Was supposed to drop path " << path
+                << " in the dirstate, but was not in userDirectives.";
+      }
+    }
+
+    persistence_.save(*userDirectives);
+  }
+
+  // With respect to maintaining consistency, this is the least important I/O
+  // that we do, so we do it last.
+  mount_->getConfig()->setSnapshotID(commitID);
 }
 
 const std::string kStatusCodeCharClean = "C";

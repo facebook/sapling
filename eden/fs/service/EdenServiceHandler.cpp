@@ -428,6 +428,42 @@ void EdenServiceHandler::scmRemove(
   }
 }
 
+namespace {
+/**
+ * Because a 20-byte hash is declared as "binary" in a .thrift file, which
+ * becomes a std::unique_ptr<std::string> when turned into a C++ parameter, this
+ * provides a convenience method for converting the std::string into a Hash.
+ */
+Hash createHashForCommitID(const std::string* commitID) {
+  return Hash(folly::ByteRange(folly::StringPiece(*commitID)));
+}
+}
+
+void EdenServiceHandler::scmMarkCommitted(
+    std::unique_ptr<std::string> mountPoint,
+    std::unique_ptr<std::string> commitID,
+    std::unique_ptr<std::vector<std::string>> pathsToCleanAsStrings,
+    std::unique_ptr<std::vector<std::string>> pathsToDropAsStrings) {
+  auto dirstate = server_->getMount(*mountPoint)->getDirstate();
+  DCHECK(dirstate != nullptr) << "Failed to get dirstate for "
+                              << mountPoint.get();
+
+  auto hash = createHashForCommitID(commitID.get());
+  std::vector<RelativePathPiece> pathsToClean;
+  pathsToClean.reserve(pathsToCleanAsStrings->size());
+  for (auto& path : *pathsToCleanAsStrings.get()) {
+    pathsToClean.emplace_back(RelativePathPiece(path));
+  }
+
+  std::vector<RelativePathPiece> pathsToDrop;
+  pathsToDrop.reserve(pathsToDropAsStrings->size());
+  for (auto& path : *pathsToDropAsStrings.get()) {
+    pathsToDrop.emplace_back(RelativePathPiece(path));
+  }
+
+  dirstate->markCommitted(hash, pathsToClean, pathsToDrop);
+}
+
 void EdenServiceHandler::shutdown() {
   server_->stop();
 }

@@ -11,6 +11,7 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/range/adaptor/reversed.hpp>
+#include <folly/File.h>
 #include <folly/FileUtil.h>
 #include <folly/String.h>
 #include <folly/json.h>
@@ -52,12 +53,23 @@ ClientConfig::ClientConfig(
 
 Hash ClientConfig::getSnapshotID() const {
   // Read the snapshot.
-  auto snapshotFile = clientDirectory_ + kSnapshotFile;
+  auto snapshotFile = getSnapshotPath();
   string snapshotFileContents;
   folly::readFile(snapshotFile.c_str(), snapshotFileContents);
   // Make sure to remove any leading or trailing whitespace.
   auto snapshotID = folly::trimWhitespace(snapshotFileContents);
   return Hash{snapshotID};
+}
+
+void ClientConfig::setSnapshotID(Hash& id) const {
+  auto snapshotPath = getSnapshotPath();
+  auto hashStr = id.toString() + "\n";
+  folly::writeFileAtomic(
+      snapshotPath.stringPiece(), folly::StringPiece(hashStr));
+}
+
+AbsolutePath ClientConfig::getSnapshotPath() const {
+  return clientDirectory_ + kSnapshotFile;
 }
 
 AbsolutePath ClientConfig::getOverlayPath() const {

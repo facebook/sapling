@@ -209,4 +209,11 @@ service EdenService extends fb303.FacebookService {
     2: list<string> paths, // May be files or directories.
     3: bool force
   ) throws (1: EdenError ex)
+
+  void scmMarkCommitted(
+    1: string mountPoint,
+    2: binary commitID,
+    3: list<string> pathsToClean,
+    4: list<string> pathsToDrop,
+  ) throws (1: EdenError ex)
 }
