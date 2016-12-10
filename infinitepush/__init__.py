@@ -1058,10 +1058,12 @@ def bundle2scratchbranch(op, part):
         # If a bug or malicious client allows there to be a bookmark
         # with multiple heads, we will place the bookmark on the last head.
         bookmarknode = nodes[-1] if nodes else None
+        key = None
+        if hasnewheads:
+            with open(bundlefile, 'r') as f:
+                key = store.write(f.read())
         with index:
-            if hasnewheads:
-                with open(bundlefile, 'r') as f:
-                    key = store.write(f.read())
+            if key:
                 index.addbundle(key, nodes)
             if bookmark:
                 index.addbookmark(bookmark, bookmarknode)
