@@ -8,6 +8,7 @@
 from __future__ import absolute_import
 
 from . import (
+    error,
     pycompat,
     util,
 )
@@ -49,6 +50,10 @@ class _funcregistrarbase(object):
 
     def _doregister(self, func, decl, *args, **kwargs):
         name = self._getname(decl)
+
+        if name in self._table:
+            msg = 'duplicate registration for name: "%s"' % name
+            raise error.ProgrammingError(msg)
 
         if func.__doc__ and not util.safehasattr(func, '_origdoc'):
             doc = func.__doc__.strip()
