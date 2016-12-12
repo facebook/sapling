@@ -169,7 +169,7 @@ class PushRaced(RuntimeError):
     """An exception raised during unbundling that indicate a push race"""
 
 class ProgrammingError(RuntimeError):
-    """Raised if a developer has made some mistake"""
+    """Raised if a mercurial (core or extension) developer made a mistake"""
 
 # bundle2 related errors
 class BundleValueError(ValueError):
