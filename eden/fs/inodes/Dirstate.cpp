@@ -258,7 +258,9 @@ Dirstate::~Dirstate() {}
 std::unique_ptr<HgStatus> Dirstate::getStatus() const {
   // Find the modified directories in the overlay and compare them with what is
   // in the root tree.
-  auto modifiedDirectories = getModifiedDirectoriesForMount(mount_);
+  auto hgDir = RelativePathPiece(".hg");
+  auto toIgnore = std::unordered_set<RelativePathPiece>{hgDir};
+  auto modifiedDirectories = getModifiedDirectoriesForMount(mount_, &toIgnore);
   std::unordered_map<RelativePath, HgStatusCode> manifest;
   if (modifiedDirectories.empty()) {
     auto userDirectives = userDirectives_.rlock();
@@ -964,7 +966,9 @@ void Dirstate::markCommitted(
   // Perform a depth-first traversal of directories in the overlay and update
   // the treeHash, as appropriate.
   auto overlay = mount_->getOverlay();
-  auto modifiedDirectories = getModifiedDirectoriesForMount(mount_);
+  auto hgDir = RelativePathPiece(".hg");
+  auto toIgnore = std::unordered_set<RelativePathPiece>{hgDir};
+  auto modifiedDirectories = getModifiedDirectoriesForMount(mount_, &toIgnore);
   for (auto& directory : modifiedDirectories) {
     auto treeForDirectory =
         getTreeForDirectory(directory, treeForCommit.get(), objectStore);

@@ -26,6 +26,8 @@ class EdenMount;
  *     according to the overlay in the mount. The vector will be ordered as a
  *     depth-first traversal of the overlay.
  */
-std::vector<RelativePath> getModifiedDirectoriesForMount(EdenMount* mount);
+std::vector<RelativePath> getModifiedDirectoriesForMount(
+    const EdenMount* mount,
+    const std::unordered_set<RelativePathPiece>* toIgnore);
 }
 }

@@ -21,7 +21,12 @@ namespace eden {
 void getModifiedDirectoriesRecursive(
     RelativePathPiece dirPath,
     TreeInode* dir,
+    const std::unordered_set<RelativePathPiece>* toIgnore,
     std::vector<RelativePath>& modifiedDirectories) {
+  if (toIgnore->find(dirPath) != toIgnore->end()) {
+    return;
+  }
+
   dir->getContents().withRLock([&](const auto& contents) mutable {
     if (!contents.materialized) {
       return;
@@ -40,7 +45,7 @@ void getModifiedDirectoriesRecursive(
             << " materialized is true, but the contained dir is !materialized";
 
         getModifiedDirectoriesRecursive(
-            childPath, childDir.get(), modifiedDirectories);
+            childPath, childDir.get(), toIgnore, modifiedDirectories);
       }
     }
   });
@@ -49,12 +54,14 @@ void getModifiedDirectoriesRecursive(
 // This function is not a method of MountPoint because it has a dependency on
 // TreeInode. If MountPoint depended on TreeInode, it would create a circular
 // dependency, which is why this function lives here.
-std::vector<RelativePath> getModifiedDirectoriesForMount(EdenMount* mount) {
+std::vector<RelativePath> getModifiedDirectoriesForMount(
+    const EdenMount* mount,
+    const std::unordered_set<RelativePathPiece>* toIgnore) {
   auto rootInode = mount->getRootInode();
   if (rootInode) {
     std::vector<RelativePath> modifiedDirectories;
     getModifiedDirectoriesRecursive(
-        RelativePathPiece(), rootInode.get(), modifiedDirectories);
+        RelativePathPiece(), rootInode.get(), toIgnore, modifiedDirectories);
     return modifiedDirectories;
   } else {
     throw std::runtime_error(folly::to<std::string>(

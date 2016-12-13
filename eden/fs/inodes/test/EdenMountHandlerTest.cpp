@@ -19,7 +19,9 @@ TEST(EdenMountHandler, getModifiedDirectoriesForMountWithNoModifications) {
   TestMountBuilder builder;
   auto testMount = builder.build();
   auto edenMount = testMount->getEdenMount();
-  auto modifiedDirectories = getModifiedDirectoriesForMount(edenMount.get());
+  auto toIgnore = std::unordered_set<RelativePathPiece>();
+  auto modifiedDirectories =
+      getModifiedDirectoriesForMount(edenMount.get(), &toIgnore);
   std::vector<RelativePath> expected = {};
   EXPECT_EQ(expected, modifiedDirectories);
 }
@@ -48,7 +50,9 @@ TEST(EdenMountHandler, getModifiedDirectoriesForMount) {
   testMount->addFile("a/b/c/file.txt", "");
 
   auto edenMount = testMount->getEdenMount();
-  auto modifiedDirectories = getModifiedDirectoriesForMount(edenMount.get());
+  auto nothingToIgnore = std::unordered_set<RelativePathPiece>();
+  auto modifiedDirectories =
+      getModifiedDirectoriesForMount(edenMount.get(), &nothingToIgnore);
 
   std::vector<RelativePath> expected = {
       RelativePath(),
@@ -62,4 +66,14 @@ TEST(EdenMountHandler, getModifiedDirectoriesForMount) {
       RelativePath("x/y/z"),
   };
   EXPECT_EQ(expected, modifiedDirectories);
+
+  auto aDir = RelativePath("a");
+  auto xDir = RelativePath("x");
+  auto toIgnore = std::unordered_set<RelativePathPiece>{aDir, xDir};
+  auto modifiedDirectoriesWithFilter =
+      getModifiedDirectoriesForMount(edenMount.get(), &toIgnore);
+  std::vector<RelativePath> expectedWithFilter = {
+      RelativePath(), RelativePath("animals"), RelativePath("animals/c"),
+  };
+  EXPECT_EQ(expectedWithFilter, modifiedDirectoriesWithFilter);
 }

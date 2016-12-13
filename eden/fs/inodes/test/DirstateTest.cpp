@@ -121,6 +121,20 @@ TEST(Dirstate, createDirstateWithUntrackedFile) {
   verifyExpectedDirstate(dirstate, {{"hello.txt", HgStatusCode::NOT_TRACKED}});
 }
 
+TEST(Dirstate, shouldIgnoreFilesInHgDirectory) {
+  TestMountBuilder builder;
+  auto testMount = builder.build();
+  auto dirstate = testMount->getDirstate();
+
+  testMount->mkdir(".hg");
+  testMount->addFile(".hg/a-file", "contents");
+  testMount->mkdir(".hg/some-extension");
+  testMount->addFile(".hg/some-extension/a-file", "contents");
+  testMount->mkdir(".hg/some-extension/with-a-directory");
+  testMount->addFile(".hg/some-extension/with-a-directory/a-file", "contents");
+  verifyEmptyDirstate(dirstate);
+}
+
 TEST(Dirstate, createDirstateWithAddedFile) {
   TestMountBuilder builder;
   auto testMount = builder.build();
