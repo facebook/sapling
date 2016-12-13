@@ -53,7 +53,7 @@ unique_ptr<Tree> FakeObjectStore::getTree(const Hash& id) const {
   if (iter != trees_.end()) {
     return make_unique<Tree>(iter->second);
   } else {
-    return nullptr;
+    throw std::domain_error("tree " + id.toString() + " not found");
   }
 }
 
@@ -62,7 +62,7 @@ unique_ptr<Blob> FakeObjectStore::getBlob(const Hash& id) const {
   if (iter != blobs_.end()) {
     return make_unique<Blob>(iter->second);
   } else {
-    return nullptr;
+    throw std::domain_error("blob " + id.toString() + " not found");
   }
 }
 
@@ -71,7 +71,7 @@ unique_ptr<Tree> FakeObjectStore::getTreeForCommit(const Hash& id) const {
   if (iter != commits_.end()) {
     return make_unique<Tree>(iter->second);
   } else {
-    return nullptr;
+    throw std::domain_error("commit " + id.toString() + " not found");
   }
 }
 
@@ -80,7 +80,7 @@ unique_ptr<Hash> FakeObjectStore::getSha1ForBlob(const Hash& id) const {
   if (iter != sha1s_.end()) {
     return make_unique<Hash>(iter->second);
   } else {
-    return nullptr;
+    throw std::domain_error("blob " + id.toString() + " not found");
   }
 }
 }

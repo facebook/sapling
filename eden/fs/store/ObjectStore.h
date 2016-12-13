@@ -38,9 +38,36 @@ class ObjectStore : public IObjectStore {
       std::shared_ptr<BackingStore> backingStore);
   virtual ~ObjectStore();
 
+  /**
+   * Get a Tree by ID.
+   *
+   * This function never returns nullptr.  It throws std::domain_error if the
+   * specified tree ID does not exist, or possibly other exceptions on error.
+   */
   std::unique_ptr<Tree> getTree(const Hash& id) const override;
+
+  /**
+   * Get a Blob by ID.
+   *
+   * This function never returns nullptr.  It throws std::domain_error if the
+   * specified blob ID does not exist, or possibly other exceptions on error.
+   */
   std::unique_ptr<Blob> getBlob(const Hash& id) const override;
+
+  /**
+   * Get a Tree by commit ID.
+   *
+   * This function never returns nullptr.  It throws std::domain_error if the
+   * specified commit ID does not exist, or possibly other exceptions on error.
+   */
   std::unique_ptr<Tree> getTreeForCommit(const Hash& commitID) const override;
+
+  /**
+   * Get a Tree by commit ID.
+   *
+   * This function never returns nullptr.  It throws std::domain_error if the
+   * specified blob ID does not exist, or possibly other exceptions on error.
+   */
   std::unique_ptr<Hash> getSha1ForBlob(const Hash& id) const override;
 
  private:

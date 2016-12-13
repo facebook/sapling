@@ -68,11 +68,11 @@ TEST(FakeObjectStore, getObjectsOfAllTypesFromStore) {
   EXPECT_EQ(sha1Hash, *foundSha1.get());
 }
 
-TEST(FakeObjectStore, getMissingObjectReturnsNullptr) {
+TEST(FakeObjectStore, getMissingObjectThrows) {
   FakeObjectStore store;
   Hash hash("4242424242424242424242424242424242424242");
-  EXPECT_EQ(nullptr, store.getTree(hash).get());
-  EXPECT_EQ(nullptr, store.getBlob(hash).get());
-  EXPECT_EQ(nullptr, store.getTreeForCommit(hash).get());
-  EXPECT_EQ(nullptr, store.getSha1ForBlob(hash).get());
+  EXPECT_THROW(store.getTree(hash), std::domain_error);
+  EXPECT_THROW(store.getBlob(hash), std::domain_error);
+  EXPECT_THROW(store.getTreeForCommit(hash), std::domain_error);
+  EXPECT_THROW(store.getSha1ForBlob(hash), std::domain_error);
 }
