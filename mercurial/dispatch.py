@@ -803,7 +803,8 @@ def _dispatch(req):
 
         msg = ' '.join(' ' in a and repr(a) or a for a in fullargs)
         ui.log("command", '%s\n', msg)
-        d = lambda: util.checksignature(func)(ui, *args, **cmdoptions)
+        strcmdopt = pycompat.strkwargs(cmdoptions)
+        d = lambda: util.checksignature(func)(ui, *args, **strcmdopt)
         try:
             return runcommand(lui, repo, cmd, fullargs, ui, options, d,
                               cmdpats, cmdoptions)

@@ -9,6 +9,6 @@ The full traceback is hidden to have a stable output.
   >   $PYTHON3 `which hg` $cmd 2>&1 2>&1 | tail -1
   > done
   version
-  TypeError: Can't convert 'bytes' object to str implicitly
+  warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
   debuginstall
   TypeError: Can't convert 'bytes' object to str implicitly
