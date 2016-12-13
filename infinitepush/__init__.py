@@ -61,7 +61,6 @@ import hashlib
 import json
 import logging
 import os
-import resource
 import socket
 import struct
 import tempfile
@@ -933,22 +932,21 @@ def partgen(pushop, bundler):
 bundle2.capabilities[scratchbranchparttype] = ()
 bundle2.capabilities[scratchbookmarksparttype] = ()
 
-def _makebundlefile(part):
+def _makebundlefile(ui, part, cgversion):
     """constructs a temporary bundle file
-
-    part.data should be an uncompressed v1 changegroup"""
+    """
 
     fp = None
     fd, bundlefile = tempfile.mkstemp()
     try:  # guards bundlefile
         try:  # guards fp
             fp = os.fdopen(fd, 'wb')
-            magic = 'HG10UN'
-            fp.write(magic)
-            data = part.read(resource.getpagesize() - len(magic))
-            while data:
-                fp.write(data)
-                data = part.read(resource.getpagesize())
+            bundler = bundle2.bundle20(ui)
+            cgpart = bundle2.bundlepart('changegroup', data=part.read())
+            cgpart.addparam('version', cgversion)
+            bundler.addpart(cgpart)
+            buf = util.chunkbuffer(bundler.getchunks())
+            fp.write(buf.read())
         finally:
             fp.close()
     except Exception:
@@ -1001,7 +999,7 @@ def _getrevs(bundle, oldnode, force, bookmark):
 
 @bundle2.parthandler(scratchbranchparttype,
                      ('bookmark', 'bookprevnode' 'create', 'force',
-                      'pushbackbookmarks'))
+                      'pushbackbookmarks', 'cgversion'))
 def bundle2scratchbranch(op, part):
     '''unbundle a bundle2 part containing a changegroup to store'''
 
@@ -1013,7 +1011,8 @@ def bundle2scratchbranch(op, part):
     bundlefile = None
 
     try:  # guards bundlefile
-        bundlefile = _makebundlefile(part)
+        cgversion = params.get('cgversion', '01')
+        bundlefile = _makebundlefile(op.repo.ui, part, cgversion)
         bundlepath = "bundle:%s+%s" % (op.repo.root, bundlefile)
         bundle = repository(op.repo.ui, bundlepath)
 
