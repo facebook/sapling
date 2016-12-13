@@ -999,7 +999,7 @@ def perfrevlogrevision(ui, repo, file_, rev=None, cache=None, **opts):
     def dohash(text):
         if not cache:
             r.clearcaches()
-        r._checkhash(text, node, rev)
+        r.checkhash(text, node, rev=rev)
 
     def dorevision():
         if not cache:

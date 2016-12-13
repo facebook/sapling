@@ -1247,9 +1247,7 @@ class revlog(object):
             bins = bins[1:]
 
         text = mdiff.patches(text, bins)
-
-        text = self._checkhash(text, node, rev)
-
+        self.checkhash(text, node, rev=rev)
         self._cache = (node, rev, text)
         return text
 
@@ -1261,12 +1259,14 @@ class revlog(object):
         """
         return hash(text, p1, p2)
 
-    def _checkhash(self, text, node, rev):
-        p1, p2 = self.parents(node)
-        self.checkhash(text, p1, p2, node, rev)
-        return text
+    def checkhash(self, text, node, p1=None, p2=None, rev=None):
+        """Check node hash integrity.
 
-    def checkhash(self, text, p1, p2, node, rev=None):
+        Available as a function so that subclasses can extend hash mismatch
+        behaviors as needed.
+        """
+        if p1 is None and p2 is None:
+            p1, p2 = self.parents(node)
         if node != self.hash(text, p1, p2):
             revornode = rev
             if revornode is None:
@@ -1441,7 +1441,7 @@ class revlog(object):
                 basetext = self.revision(self.node(baserev), _df=fh)
                 btext[0] = mdiff.patch(basetext, delta)
             try:
-                self.checkhash(btext[0], p1, p2, node)
+                self.checkhash(btext[0], node, p1=p1, p2=p2)
                 if flags & REVIDX_ISCENSORED:
                     raise RevlogError(_('node %s is not censored') % node)
             except CensoredNodeError:
