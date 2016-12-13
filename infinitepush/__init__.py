@@ -56,16 +56,20 @@
 """
 
 from __future__ import absolute_import
+import contextlib
 import errno
 import hashlib
 import json
 import logging
 import os
+import random
 import socket
 import struct
 import tempfile
+import time
 
 from collections import defaultdict
+from functools import partial
 from hgext3rd.extutil import runshellcommand
 from mercurial import (
     bundle2,
@@ -997,12 +1001,45 @@ def _getrevs(bundle, oldnode, force, bookmark):
         raise error.Abort(_('non-forward push'),
                           hint=_('use --force to override'))
 
+@contextlib.contextmanager
+def logservicecall(logger, service):
+    start = time.time()
+    logger(service, eventtype='start')
+    try:
+        yield
+        logger(service, eventtype='success', elapsed=time.time() - start)
+    except Exception:
+        logger(service, eventtype='failure', elapsed=time.time() - start)
+        raise
+
+def _getorcreateinfinitepushlogger(op):
+    logger = op.records['infinitepushlogger']
+    if not logger:
+        ui = op.repo.ui
+        username = ui.shortuser(ui.username())
+        # Generate random request id to be able to find all logged entries
+        # for the same request. Since requestid is pseudo-generated it may
+        # not be unique, but we assume that (hostname, username, requestid)
+        # is unique.
+        random.seed()
+        requestid = random.randint(0, 2000000000)
+        hostname = socket.gethostname()
+        logger = partial(ui.log, 'infinitepush', user=username,
+                         requestid=requestid, hostname=hostname)
+        op.records.add('infinitepushlogger', logger)
+    else:
+        logger = logger[0]
+    return logger
+
 @bundle2.parthandler(scratchbranchparttype,
                      ('bookmark', 'bookprevnode' 'create', 'force',
                       'pushbackbookmarks', 'cgversion'))
 def bundle2scratchbranch(op, part):
     '''unbundle a bundle2 part containing a changegroup to store'''
 
+    log = _getorcreateinfinitepushlogger(op)
+    parthandlerstart = time.time()
+    log(scratchbranchparttype, eventtype='start')
     params = part.params
     index = op.repo.bundlestore.index
     store = op.repo.bundlestore.store
@@ -1060,14 +1097,24 @@ def bundle2scratchbranch(op, part):
         key = None
         if hasnewheads:
             with open(bundlefile, 'r') as f:
-                key = store.write(f.read())
-        with index:
-            if key:
-                index.addbundle(key, nodes)
-            if bookmark:
-                index.addbookmark(bookmark, bookmarknode)
-                _maybeaddpushbackpart(op, bookmark, bookmarknode,
-                                      bookprevnode, params)
+                bundledata = f.read()
+                with logservicecall(log, 'bundlestore'):
+                    key = store.write(bundledata)
+
+        with logservicecall(log, 'index'):
+            with index:
+                if key:
+                    index.addbundle(key, nodes)
+                if bookmark:
+                    index.addbookmark(bookmark, bookmarknode)
+                    _maybeaddpushbackpart(op, bookmark, bookmarknode,
+                                          bookprevnode, params)
+        log(scratchbranchparttype, eventtype='success',
+            elapsed=time.time() - parthandlerstart)
+    except Exception:
+        log(scratchbranchparttype, eventtype='failure',
+            elapsed=time.time() - parthandlerstart)
+        raise
     finally:
         try:
             if bundlefile:
@@ -1091,11 +1138,13 @@ def bundle2scratchbookmarks(op, part):
             toinsert[bookmark] = node
         else:
             todelete.append(bookmark)
-    with index:
-        if todelete:
-            index.deletebookmarks(todelete)
-        if toinsert:
-            index.addmanybookmarks(toinsert)
+    log = _getorcreateinfinitepushlogger(op)
+    with logservicecall(log, scratchbookmarksparttype):
+        with index:
+            if todelete:
+                index.deletebookmarks(todelete)
+            if toinsert:
+                index.addmanybookmarks(toinsert)
 
 def _maybeaddpushbackpart(op, bookmark, newnode, oldnode, params):
     if params.get('pushbackbookmarks'):
