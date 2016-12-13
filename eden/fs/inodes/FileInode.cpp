@@ -30,8 +30,9 @@ namespace eden {
 FileInode::FileInode(
     fuse_ino_t ino,
     std::shared_ptr<TreeInode> parentInode,
+    PathComponentPiece name,
     TreeInode::Entry* entry)
-    : InodeBase(ino),
+    : InodeBase(ino, parentInode, name),
       parentInode_(parentInode),
       entry_(entry),
       data_(
@@ -41,9 +42,10 @@ FileInode::FileInode(
 FileInode::FileInode(
     fuse_ino_t ino,
     std::shared_ptr<TreeInode> parentInode,
+    PathComponentPiece name,
     TreeInode::Entry* entry,
     folly::File&& file)
-    : InodeBase(ino),
+    : InodeBase(ino, parentInode, name),
       parentInode_(parentInode),
       entry_(entry),
       data_(std::make_shared<FileData>(

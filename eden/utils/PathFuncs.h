@@ -325,8 +325,16 @@ class PathBase :
   }
 
   /// Return a reference to the underlying stored value
-  const Storage& value() const {
+  const Storage& value() const& {
     return path_;
+  }
+  /**
+   * If we are an rvalue-reference, return a rvalue-reference to our value.
+   *
+   * This allows callers to extract the string we contain if they desire.
+   */
+  Storage&& value() && {
+    return std::move(path_);
   }
 };
 

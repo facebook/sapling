@@ -68,16 +68,11 @@ EdenMount::EdenMount(
   auto snapshotID = config_->getSnapshotID();
   std::shared_ptr<TreeInode> rootInode;
   if (rootOverlayDir) {
-    rootInode = std::make_shared<TreeInode>(
-        this,
-        std::move(rootOverlayDir.value()),
-        nullptr,
-        FUSE_ROOT_ID,
-        FUSE_ROOT_ID);
+    rootInode =
+        std::make_shared<TreeInode>(this, std::move(rootOverlayDir.value()));
   } else {
     auto rootTree = objectStore_->getTreeForCommit(snapshotID);
-    rootInode = std::make_shared<TreeInode>(
-        this, std::move(rootTree), nullptr, FUSE_ROOT_ID, FUSE_ROOT_ID);
+    rootInode = std::make_shared<TreeInode>(this, std::move(rootTree));
   }
   dispatcher_->setRootInode(rootInode);
 

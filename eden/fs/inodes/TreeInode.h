@@ -76,18 +76,24 @@ class TreeInode : public InodeBase {
 
   TreeInode(
       EdenMount* mount,
-      std::unique_ptr<Tree>&& tree,
+      fuse_ino_t ino,
+      std::shared_ptr<TreeInode> parent,
+      PathComponentPiece name,
       Entry* entry,
-      fuse_ino_t parent,
-      fuse_ino_t ino);
+      std::unique_ptr<Tree>&& tree);
 
   /// Construct an inode that only has backing in the Overlay area
   TreeInode(
       EdenMount* mount,
-      Dir&& dir,
+      fuse_ino_t ino,
+      std::shared_ptr<TreeInode> parent,
+      PathComponentPiece name,
       Entry* entry,
-      fuse_ino_t parent,
-      fuse_ino_t ino);
+      Dir&& dir);
+
+  /// Constructors for the root TreeInode
+  TreeInode(EdenMount* mount, std::unique_ptr<Tree>&& tree);
+  TreeInode(EdenMount* mount, Dir&& tree);
 
   ~TreeInode();
 
@@ -177,7 +183,7 @@ class TreeInode : public InodeBase {
  private:
   /** Translates a Tree object from our store into a Dir object
    * used to track the directory in the inode */
-  Dir buildDirFromTree(const Tree* tree);
+  static Dir buildDirFromTree(const Tree* tree);
 
   /** Helper used to implement getChildByName and lookupChildByNameLocked */
   std::shared_ptr<InodeBase> getChildByNameLocked(
@@ -194,6 +200,10 @@ class TreeInode : public InodeBase {
   folly::Synchronized<Dir> contents_;
   /** Can be nullptr for the root inode only, otherwise will be non-null */
   TreeInode::Entry* entry_{nullptr};
+
+  // TODO: replace uses of parent_ with InodeBase::location_
+  // As far as I can tell parent_ is not correctly updated when this inode is
+  // renamed.
   fuse_ino_t parent_;
 };
 }

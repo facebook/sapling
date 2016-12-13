@@ -25,7 +25,8 @@ class FileInode : public InodeBase {
   /** Construct an inode using an overlay entry */
   FileInode(
       fuse_ino_t ino,
-      std::shared_ptr<TreeInode> parentInode_,
+      std::shared_ptr<TreeInode> parentInode,
+      PathComponentPiece name,
       TreeInode::Entry* entry);
 
   /** Construct an inode using a freshly created overlay file.
@@ -35,6 +36,7 @@ class FileInode : public InodeBase {
   FileInode(
       fuse_ino_t ino,
       std::shared_ptr<TreeInode> parentInode,
+      PathComponentPiece name,
       TreeInode::Entry* entry,
       folly::File&& file);
 
@@ -71,6 +73,11 @@ class FileInode : public InodeBase {
 
   // We hold the ref on the parentInode so that entry_ remains
   // valid while we're both alive
+  //
+  // TODO: parentInode_ is accessed without locking.
+  //   It also does not appear to be updated on rename.
+  //   We should update uses of parentInode_ with InodeBase::location_ instead,
+  //   and then delete parentInode_.
   std::shared_ptr<TreeInode> parentInode_;
   TreeInode::Entry* entry_;
 

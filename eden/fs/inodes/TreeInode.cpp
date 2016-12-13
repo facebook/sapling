@@ -30,33 +30,42 @@ namespace eden {
 
 TreeInode::TreeInode(
     EdenMount* mount,
-    std::unique_ptr<Tree>&& tree,
-    TreeInode::Entry* entry,
-    fuse_ino_t parent,
-    fuse_ino_t ino)
-    : InodeBase(ino),
-      mount_(mount),
-      contents_(buildDirFromTree(tree.get())),
-      entry_(entry),
-      parent_(parent) {
-  DCHECK(ino == FUSE_ROOT_ID || entry_ != nullptr)
-      << "only the root dir can have a null entry_";
+    fuse_ino_t ino,
+    std::shared_ptr<TreeInode> parent,
+    PathComponentPiece name,
+    Entry* entry,
+    std::unique_ptr<Tree>&& tree)
+    : TreeInode(mount, ino, parent, name, entry, buildDirFromTree(tree.get())) {
 }
 
 TreeInode::TreeInode(
     EdenMount* mount,
-    TreeInode::Dir&& dir,
-    TreeInode::Entry* entry,
-    fuse_ino_t parent,
-    fuse_ino_t ino)
-    : InodeBase(ino),
+    fuse_ino_t ino,
+    std::shared_ptr<TreeInode> parent,
+    PathComponentPiece name,
+    Entry* entry,
+    Dir&& dir)
+    : InodeBase(ino, parent, name),
       mount_(mount),
       contents_(std::move(dir)),
       entry_(entry),
-      parent_(parent) {
-  DCHECK(ino == FUSE_ROOT_ID || entry_ != nullptr)
-      << "only the root dir can have a null entry_";
+      parent_(parent->getNodeId()) {
+  DCHECK_NE(ino, FUSE_ROOT_ID);
+  DCHECK_NOTNULL(entry_);
 }
+
+TreeInode::TreeInode(EdenMount* mount, std::unique_ptr<Tree>&& tree)
+    : TreeInode(mount, buildDirFromTree(tree.get())) {}
+
+TreeInode::TreeInode(EdenMount* mount, Dir&& dir)
+    : InodeBase(
+          FUSE_ROOT_ID,
+          nullptr,
+          PathComponentPiece{"", detail::SkipPathSanityCheck()}),
+      mount_(mount),
+      contents_(std::move(dir)),
+      entry_(nullptr),
+      parent_(FUSE_ROOT_ID) {}
 
 TreeInode::~TreeInode() {}
 
@@ -93,7 +102,12 @@ std::shared_ptr<InodeBase> TreeInode::getChildByNameLocked(
     if (!entry->materialized && entry->hash) {
       auto tree = getStore()->getTree(entry->hash.value());
       return std::make_shared<TreeInode>(
-          mount_, std::move(tree), entry, getNodeId(), node->getNodeId());
+          mount_,
+          node->getNodeId(),
+          std::static_pointer_cast<TreeInode>(shared_from_this()),
+          name,
+          entry,
+          std::move(tree));
     }
 
     // No corresponding TreeEntry, this exists only in the overlay.
@@ -102,15 +116,17 @@ std::shared_ptr<InodeBase> TreeInode::getChildByNameLocked(
     DCHECK(overlayDir) << "missing overlay for " << targetName;
     return std::make_shared<TreeInode>(
         mount_,
-        std::move(overlayDir.value()),
+        node->getNodeId(),
+        std::static_pointer_cast<TreeInode>(shared_from_this()),
+        name,
         entry,
-        getNodeId(),
-        node->getNodeId());
+        std::move(overlayDir.value()));
   }
 
   return std::make_shared<FileInode>(
       node->getNodeId(),
       std::static_pointer_cast<TreeInode>(shared_from_this()),
+      name,
       entry);
 }
 
@@ -201,7 +217,6 @@ TreeInode::Dir TreeInode::buildDirFromTree(const Tree* tree) {
     return dir;
   }
 
-  auto myname = getNameMgr()->resolvePathToNode(getNodeId());
   dir.treeHash = tree->getHash();
   for (const auto& treeEntry : tree->getTreeEntries()) {
     Entry entry;
@@ -256,6 +271,7 @@ TreeInode::create(PathComponentPiece name, mode_t mode, int flags) {
     inode = std::make_shared<FileInode>(
         node->getNodeId(),
         std::static_pointer_cast<TreeInode>(this->shared_from_this()),
+        name,
         entry.get(),
         std::move(file));
 
@@ -399,6 +415,11 @@ folly::Future<folly::Unit> TreeInode::unlink(PathComponentPiece name) {
       auto filePath = overlay->getContentDir() + targetName;
       folly::checkUnixError(::unlink(filePath.c_str()), "unlink: ", filePath);
     }
+
+    // TODO: If an InodeBase object exists for the child, we need to update it
+    // to mark it unlinked.  In a subsequent diff I plan to add an InodeBase
+    // pointer in the Entry object.  Once we have that I will come back and
+    // perform the update here.
 
     // And actually remove it
     contents.entries.erase(entIter);
@@ -590,6 +611,13 @@ void TreeInode::renameHelper(
         absoluteDestPath,
         " failed");
   }
+
+  // TODO: If an InodeBase object has been loaded for the file being renamed,
+  // we need to update it's parent pointer and name.
+  //
+  // Currently the parent point ends up pointing to the old path.
+  // I'll come back and fix this up once I add an InodeBase pointer to our
+  // Entry object.
 
   // Success.
   // Update the destination with the source data (this copies in the hash if
