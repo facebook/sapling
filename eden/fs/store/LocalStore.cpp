@@ -9,7 +9,9 @@
  */
 #include "LocalStore.h"
 
+#include <folly/Bits.h>
 #include <folly/Format.h>
+#include <folly/Optional.h>
 #include <folly/String.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
@@ -27,6 +29,7 @@ using facebook::eden::Hash;
 using folly::ByteRange;
 using folly::io::Cursor;
 using folly::IOBuf;
+using folly::Optional;
 using folly::StringPiece;
 using rocksdb::ReadOptions;
 using rocksdb::Slice;
@@ -37,22 +40,23 @@ using std::string;
 using std::unique_ptr;
 
 namespace {
+using namespace facebook::eden;
 
 /**
- * For a blob, we write an entry whose key is the same of the blob's with the
- * SHA1_KEY_SUFFIX suffix appended to it that maps to the SHA-1 of the blob's
- * contents.
+ * For each blob, we also store an entry containing the blob metadata.
+ * This is stored under a key that is the blob's key plus the
+ * ATTRIBUTE_METADATA suffix.
  *
- * Note that we use a suffix that is a single byte so that the resulting key can
- * fit efficiently in an fbstring.
+ * (We should potentially switch to RocksDB column families instead in the
+ * future, rather than using a key suffix.)
  */
-const unsigned char ATTRIBUTE_SHA_1 = 's';
+const unsigned char ATTRIBUTE_METADATA = 'x';
 
-class Sha1Key {
+class BlobMetadataKey {
  public:
-  explicit Sha1Key(const Hash& id) {
+  explicit BlobMetadataKey(const Hash& id) {
     memcpy(key_.data(), id.getBytes().data(), Hash::RAW_SIZE);
-    key_[Hash::RAW_SIZE] = ATTRIBUTE_SHA_1;
+    key_[Hash::RAW_SIZE] = ATTRIBUTE_METADATA;
   }
 
   ByteRange bytes() const {
@@ -65,6 +69,55 @@ class Sha1Key {
 
  private:
   std::array<uint8_t, Hash::RAW_SIZE + 1> key_;
+};
+
+class SerializedBlobMetadata {
+ public:
+  explicit SerializedBlobMetadata(const BlobMetadata& metadata) {
+    serialize(metadata.sha1, metadata.size);
+  }
+  SerializedBlobMetadata(const Hash& contentsHash, uint64_t blobSize) {
+    serialize(contentsHash, blobSize);
+  }
+
+  Slice slice() const {
+    return Slice{reinterpret_cast<const char*>(data_.data()), data_.size()};
+  }
+
+  static BlobMetadata parse(Hash blobID, const StoreResult& result) {
+    auto bytes = result.bytes();
+    if (bytes.size() != SIZE) {
+      throw std::invalid_argument(folly::sformat(
+          "Blob metadata for {} had unexpected size {}. Could not deserialize.",
+          blobID.toString(),
+          bytes.size()));
+    }
+
+    uint64_t blobSizeBE;
+    memcpy(&blobSizeBE, bytes.data(), sizeof(uint64_t));
+    bytes.advance(sizeof(uint64_t));
+    auto contentsHash = Hash{bytes};
+    return BlobMetadata{contentsHash, folly::Endian::big(blobSizeBE)};
+  }
+
+ private:
+  void serialize(const Hash& contentsHash, uint64_t blobSize) {
+    uint64_t blobSizeBE = folly::Endian::big(blobSize);
+    memcpy(data_.data(), &blobSizeBE, sizeof(uint64_t));
+    memcpy(
+        data_.data() + sizeof(uint64_t),
+        contentsHash.getBytes().data(),
+        Hash::RAW_SIZE);
+  }
+
+  static constexpr size_t SIZE = sizeof(uint64_t) + Hash::RAW_SIZE;
+
+  /**
+   * The serialized data is stored as stored as:
+   * - size (8 bytes, big endian)
+   * - hash (20 bytes)
+   */
+  std::array<uint8_t, SIZE> data_;
 };
 
 rocksdb::Slice _createSlice(folly::ByteRange bytes) {
@@ -143,28 +196,32 @@ std::unique_ptr<Blob> LocalStore::getBlob(const Hash& id) const {
   return deserializeGitBlob(id, &buf);
 }
 
-std::unique_ptr<Hash> LocalStore::getSha1ForBlob(const Hash& id) const {
-  Sha1Key key(id);
+Optional<BlobMetadata> LocalStore::getBlobMetadata(const Hash& id) const {
+  BlobMetadataKey key(id);
   auto result = get(key.bytes());
   if (!result.isValid()) {
     return nullptr;
   }
-  auto bytes = result.bytes();
-  if (bytes.size() != Hash::RAW_SIZE) {
-    throw std::invalid_argument(folly::sformat(
-        "Database entry for {} was not of size {}. Could not convert to SHA-1.",
-        id.toString(),
-        static_cast<size_t>(Hash::RAW_SIZE)));
-  }
-
-  return std::make_unique<Hash>(bytes);
+  return SerializedBlobMetadata::parse(id, result);
 }
 
-void LocalStore::putBlob(const Hash& id, const Blob* blob) {
+unique_ptr<Hash> LocalStore::getSha1ForBlob(const Hash& id) const {
+  auto metadata = getBlobMetadata(id);
+  if (!metadata) {
+    return nullptr;
+  }
+  // TODO: Update this API to return an Optional<Hash> instead of a
+  // unique_ptr<Hash>
+  return std::make_unique<Hash>(metadata.value().sha1);
+}
+
+BlobMetadata LocalStore::putBlob(const Hash& id, const Blob* blob) {
   const IOBuf& contents = blob->getContents();
 
-  Sha1Key sha1Key(id);
-  auto sha1 = Hash::sha1(&contents);
+  BlobMetadata metadata{Hash::sha1(&contents),
+                        contents.computeChainDataLength()};
+  BlobMetadataKey metadataKey(id);
+  SerializedBlobMetadata metadataBytes(metadata);
 
   auto hashSlice = _createSlice(id.getBytes());
   SliceParts keyParts(&hashSlice, 1);
@@ -192,7 +249,7 @@ void LocalStore::putBlob(const Hash& id, const Blob* blob) {
 
   WriteBatch blobWrites;
   blobWrites.Put(keyParts, bodyParts);
-  blobWrites.Put(sha1Key.slice(), _createSlice(sha1.getBytes()));
+  blobWrites.Put(metadataKey.slice(), metadataBytes.slice());
   auto status = db_->Write(WriteOptions(), &blobWrites);
   if (!status.ok()) {
     // We don't use RocksException::check(), since we don't want to waste our
@@ -203,27 +260,8 @@ void LocalStore::putBlob(const Hash& id, const Blob* blob) {
         folly::hexlify(id.getBytes()),
         " in local store");
   }
-}
 
-// TODO: We should deprecate this function, and update all callers to use
-// the version of putBlob() above.
-void LocalStore::putBlob(const Hash& id, ByteRange blobData, const Hash& sha1) {
-  Sha1Key sha1Key(id);
-
-  // Record both the blob and SHA-1 entries in one RocksDB write operation.
-  WriteBatch blobWrites;
-  blobWrites.Put(_createSlice(id.getBytes()), _createSlice(blobData));
-  blobWrites.Put(sha1Key.slice(), _createSlice(sha1.getBytes()));
-  auto status = db_->Write(WriteOptions(), &blobWrites);
-  if (!status.ok()) {
-    // We don't use RocksException::check(), since we don't want to waste our
-    // time computing the hex string of the key if we succeeded.
-    throw RocksException::build(
-        status,
-        "error putting blob ",
-        folly::hexlify(id.getBytes()),
-        " in local store");
-  }
+  return metadata;
 }
 
 Hash LocalStore::putTree(const Tree* tree) {

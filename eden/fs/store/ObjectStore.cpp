@@ -117,9 +117,8 @@ unique_ptr<Hash> ObjectStore::getSha1ForBlob(const Hash& id) const {
         folly::to<string>("blob ", id.toString(), " not found"));
   }
 
-  localStore_->putBlob(id, blob.get());
-  auto sha1Obj = Hash::sha1(&blob->getContents());
-  return std::make_unique<Hash>(sha1Obj);
+  auto metadata = localStore_->putBlob(id, blob.get());
+  return std::make_unique<Hash>(metadata.sha1);
 }
 }
 } // facebook::eden

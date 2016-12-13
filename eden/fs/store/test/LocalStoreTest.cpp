@@ -7,8 +7,10 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
+#include <folly/Optional.h>
 #include <folly/String.h>
 #include <folly/experimental/TestUtil.h>
+#include <folly/io/IOBuf.h>
 #include <gtest/gtest.h>
 #include <stdexcept>
 #include "eden/fs/model/Blob.h"
@@ -22,6 +24,7 @@ using namespace facebook::eden;
 using TempDir = folly::test::TemporaryDirectory;
 
 using facebook::eden::Hash;
+using folly::IOBuf;
 using folly::StringPiece;
 using folly::unhexlify;
 using std::string;
@@ -30,21 +33,35 @@ TEST(LocalStore, testReadAndWriteBlob) {
   TempDir tmp;
   LocalStore store(tmp.path().string());
 
-  string blobHash("3a8f8eb91101860fd8484154885838bf322964d0");
-  Hash hash(blobHash);
+  Hash hash("3a8f8eb91101860fd8484154885838bf322964d0");
 
-  string contents("{\n  \"breakConfig\": true\n}\n");
-  auto gitBlobObjectStr = folly::to<string>(string("blob 26\x00", 8), contents);
+  StringPiece contents("{\n  \"breakConfig\": true\n}\n");
+  auto buf = IOBuf{IOBuf::WRAP_BUFFER, folly::ByteRange{contents}};
+  auto sha1 = Hash::sha1(&buf);
 
-  auto sha1 = Hash::sha1(StringPiece(gitBlobObjectStr));
-  store.putBlob(hash, folly::StringPiece{gitBlobObjectStr}, sha1);
+  auto inBlob = Blob{hash, std::move(buf)};
+  store.putBlob(hash, &inBlob);
 
-  auto blob = store.getBlob(hash);
-  EXPECT_EQ(hash, blob->getHash());
+  auto outBlob = store.getBlob(hash);
+  EXPECT_EQ(hash, outBlob->getHash());
   EXPECT_EQ(
-      contents, blob->getContents().clone()->moveToFbString().toStdString());
+      contents, outBlob->getContents().clone()->moveToFbString().toStdString());
 
   EXPECT_EQ(sha1, *store.getSha1ForBlob(hash).get());
+  auto retreivedMetadata = store.getBlobMetadata(hash);
+  ASSERT_TRUE(retreivedMetadata.hasValue());
+  EXPECT_EQ(sha1, retreivedMetadata.value().sha1);
+  EXPECT_EQ(contents.size(), retreivedMetadata.value().size);
+}
+
+TEST(LocalStore, testReadNonexistent) {
+  TempDir tmp;
+  LocalStore store(tmp.path().string());
+
+  Hash hash("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+  EXPECT_TRUE(nullptr == store.getBlob(hash));
+  auto retreivedMetadata = store.getBlobMetadata(hash);
+  EXPECT_FALSE(retreivedMetadata.hasValue());
 }
 
 TEST(LocalStore, testReadsAndWriteTree) {

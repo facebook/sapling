@@ -11,7 +11,12 @@
 
 #include <folly/Range.h>
 #include <memory>
+#include "eden/fs/store/BlobMetadata.h"
 
+namespace folly {
+template <typename T>
+class Optional;
+}
 namespace rocksdb {
 class DB;
 }
@@ -75,6 +80,14 @@ class LocalStore {
   std::unique_ptr<Blob> getBlob(const Hash& id) const;
 
   /**
+   * Get the size of a blob and the SHA-1 hash of its contents.
+   *
+   * Returns folly::none if this key is not present in the store, or throws an
+   * exception on error.
+   */
+  folly::Optional<BlobMetadata> getBlobMetadata(const Hash& id) const;
+
+  /**
    * Get the SHA-1 hash of the blob contents for the specified blob.
    *
    * Returns nullptr if this key is not present in the store, or throws an
@@ -83,8 +96,14 @@ class LocalStore {
   std::unique_ptr<Hash> getSha1ForBlob(const Hash& id) const;
 
   Hash putTree(const Tree* tree);
-  void putBlob(const Hash& id, const Blob* blob);
-  void putBlob(const Hash& id, folly::ByteRange blobData, const Hash& sha1);
+
+  /**
+   * Store a Blob.
+   *
+   * Returns a BlobMetadata about the blob, which includes the SHA-1 hash of
+   * its contents.
+   */
+  BlobMetadata putBlob(const Hash& id, const Blob* blob);
 
   /**
    * Put arbitrary data in the store.
