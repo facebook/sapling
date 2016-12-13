@@ -190,6 +190,14 @@ class Dirstate {
 
  private:
   /**
+   * A version of getStatus() that explores only a specific directory, but
+   * comes with the critical limitation that it will throw ENOENT or ENOTDIR
+   * if the specified directory doesn't exist (or if it refers to a file).
+   */
+  std::unique_ptr<HgStatus> getStatusForExistingDirectory(
+      RelativePathPiece directory) const;
+
+  /**
    * Analogous to `hg rm <path>` where `<path>` is an ordinary file or symlink.
    */
   void remove(

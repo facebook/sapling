@@ -22,6 +22,17 @@ namespace eden {
 class EdenMount;
 
 /**
+ * @param toIgnore elements of the set are relative to the root of the mount.
+ * @return vector with the RelativePath of every directory that is modified
+ *     according to the overlay in the mount, but scoped to directoryInMount.
+ *     The vector will be ordered as a depth-first traversal of the overlay.
+ */
+std::vector<RelativePath> getModifiedDirectories(
+    const EdenMount* mount,
+    RelativePathPiece directoryInMount,
+    const std::unordered_set<RelativePathPiece>* toIgnore);
+
+/**
  * @return vector with the RelativePath of every directory that is modified
  *     according to the overlay in the mount. The vector will be ordered as a
  *     depth-first traversal of the overlay.

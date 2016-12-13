@@ -51,6 +51,17 @@ void getModifiedDirectoriesRecursive(
   });
 }
 
+std::vector<RelativePath> getModifiedDirectories(
+    const EdenMount* mount,
+    RelativePathPiece directoryInMount,
+    const std::unordered_set<RelativePathPiece>* toIgnore) {
+  auto tree = mount->getTreeInode(directoryInMount);
+  std::vector<RelativePath> modifiedDirectories;
+  getModifiedDirectoriesRecursive(
+      directoryInMount, tree.get(), toIgnore, modifiedDirectories);
+  return modifiedDirectories;
+}
+
 // This function is not a method of MountPoint because it has a dependency on
 // TreeInode. If MountPoint depended on TreeInode, it would create a circular
 // dependency, which is why this function lives here.

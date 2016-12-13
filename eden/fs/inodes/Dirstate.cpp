@@ -88,14 +88,22 @@ std::string HgStatus::toString() const {
 }
 
 namespace {
+/**
+ * All entries added to the manifest must be under the `prefix`.
+ */
 template <typename RelativePathType>
 void updateManifestWithDirectives(
+    RelativePathPiece prefix,
     const std::unordered_map<RelativePathType, overlay::UserStatusDirective>*
         unaccountedUserDirectives,
     std::unordered_map<RelativePath, HgStatusCode>* manifest) {
   // We should make sure that every entry in userDirectives_ is accounted for in
   // the HgStatus that we return.
   for (auto& pair : *unaccountedUserDirectives) {
+    if (!prefix.isParentDirOf(RelativePathPiece(pair.first))) {
+      continue;
+    }
+
     switch (pair.second) {
       case overlay::UserStatusDirective::Add:
         // The file was marked for addition, but no longer exists in the working
@@ -256,15 +264,25 @@ Dirstate::Dirstate(EdenMount* mount)
 Dirstate::~Dirstate() {}
 
 std::unique_ptr<HgStatus> Dirstate::getStatus() const {
+  return getStatusForExistingDirectory(RelativePathPiece(""));
+}
+
+std::unique_ptr<HgStatus> Dirstate::getStatusForExistingDirectory(
+    RelativePathPiece directory) const {
+  auto hgDir = RelativePathPiece(".hg");
+  std::unordered_set<RelativePathPiece> toIgnore;
+  if (directory.empty()) {
+    toIgnore.insert(hgDir);
+  }
+
   // Find the modified directories in the overlay and compare them with what is
   // in the root tree.
-  auto hgDir = RelativePathPiece(".hg");
-  auto toIgnore = std::unordered_set<RelativePathPiece>{hgDir};
-  auto modifiedDirectories = getModifiedDirectoriesForMount(mount_, &toIgnore);
+  auto modifiedDirectories =
+      getModifiedDirectories(mount_, directory, &toIgnore);
   std::unordered_map<RelativePath, HgStatusCode> manifest;
   if (modifiedDirectories.empty()) {
     auto userDirectives = userDirectives_.rlock();
-    updateManifestWithDirectives(&*userDirectives, &manifest);
+    updateManifestWithDirectives(directory, &*userDirectives, &manifest);
     return std::make_unique<HgStatus>(std::move(manifest));
   }
 
@@ -401,7 +419,7 @@ std::unique_ptr<HgStatus> Dirstate::getStatus() const {
     }
   }
 
-  updateManifestWithDirectives(&copyOfUserDirectives, &manifest);
+  updateManifestWithDirectives(directory, &copyOfUserDirectives, &manifest);
 
   return std::make_unique<HgStatus>(std::move(manifest));
 }
