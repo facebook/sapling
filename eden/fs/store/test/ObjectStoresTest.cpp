@@ -110,6 +110,33 @@ TEST(getTreeForDirectory, getDeepDirectory) {
   EXPECT_EQ(deepDirHash, treeForDir->getHash());
 }
 
+TEST(getEntryForPath, testFilesOfAllTypes) {
+  auto store = createObjectStoreForTest(rootTreeHash);
+  auto rootTree = store->getTree(rootTreeHash);
+
+  RelativePathPiece emptyPath("");
+  auto emptyPathEntry = getEntryForPath(emptyPath, rootTree.get(), store.get());
+  EXPECT_EQ(nullptr, emptyPathEntry)
+      << "There is no TreeEntry for the root Tree.";
+
+  RelativePathPiece fileInRoot("a_file");
+  auto fileInRootEntry =
+      getEntryForPath(fileInRoot, rootTree.get(), store.get());
+  EXPECT_EQ(aFileHash, fileInRootEntry->getHash());
+
+  RelativePathPiece dirInRoot("a_dir");
+  auto dirInRootEntry = getEntryForPath(dirInRoot, rootTree.get(), store.get());
+  EXPECT_EQ(aDirHash, dirInRootEntry->getHash());
+
+  RelativePathPiece deepDir("a_dir/deep_dir");
+  auto deepDirEntry = getEntryForPath(deepDir, rootTree.get(), store.get());
+  EXPECT_EQ(deepDirHash, deepDirEntry->getHash());
+
+  RelativePathPiece deepFile("a_dir/deep_dir/deep_file");
+  auto deepFileEntry = getEntryForPath(deepFile, rootTree.get(), store.get());
+  EXPECT_EQ(deepFileHash, deepFileEntry->getHash());
+}
+
 namespace {
 unique_ptr<FakeObjectStore> createObjectStoreForTest(Hash& hashForRootTree) {
   FakeObjectStore store;
