@@ -456,7 +456,7 @@ bool hasMatchingAttributes(
     auto fileInode = std::dynamic_pointer_cast<FileInode>(overlayInode);
     auto overlaySHA1 = fileInode->getSHA1().get();
     auto blobSHA1 = objectStore->getSha1ForBlob(treeEntry->getHash());
-    return overlaySHA1 == *blobSHA1;
+    return overlaySHA1 == blobSHA1;
   } else {
     auto optionalHash = treeInode->hash;
     DCHECK(optionalHash.hasValue()) << "non-materialized file must have a hash";

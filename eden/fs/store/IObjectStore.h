@@ -34,7 +34,7 @@ class IObjectStore {
    * hash identifying the blob may be computed using a separate mechanism, and
    * may not be the same as the SHA1-hash of its contents.)
    */
-  virtual std::unique_ptr<Hash> getSha1ForBlob(const Hash& id) const = 0;
+  virtual Hash getSha1ForBlob(const Hash& id) const = 0;
 };
 }
 }

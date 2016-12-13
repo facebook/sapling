@@ -90,10 +90,10 @@ class LocalStore {
   /**
    * Get the SHA-1 hash of the blob contents for the specified blob.
    *
-   * Returns nullptr if this key is not present in the store, or throws an
+   * Returns folly::none if this key is not present in the store, or throws an
    * exception on error.
    */
-  std::unique_ptr<Hash> getSha1ForBlob(const Hash& id) const;
+  folly::Optional<Hash> getSha1ForBlob(const Hash& id) const;
 
   Hash putTree(const Tree* tree);
 

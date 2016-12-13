@@ -36,7 +36,7 @@ class FakeObjectStore : public IObjectStore {
   std::unique_ptr<Tree> getTree(const Hash& id) const override;
   std::unique_ptr<Blob> getBlob(const Hash& id) const override;
   std::unique_ptr<Tree> getTreeForCommit(const Hash& commitID) const override;
-  std::unique_ptr<Hash> getSha1ForBlob(const Hash& id) const override;
+  Hash getSha1ForBlob(const Hash& id) const override;
 
  private:
   std::unordered_map<Hash, Tree> trees_;

@@ -200,19 +200,17 @@ Optional<BlobMetadata> LocalStore::getBlobMetadata(const Hash& id) const {
   BlobMetadataKey key(id);
   auto result = get(key.bytes());
   if (!result.isValid()) {
-    return nullptr;
+    return folly::none;
   }
   return SerializedBlobMetadata::parse(id, result);
 }
 
-unique_ptr<Hash> LocalStore::getSha1ForBlob(const Hash& id) const {
+Optional<Hash> LocalStore::getSha1ForBlob(const Hash& id) const {
   auto metadata = getBlobMetadata(id);
   if (!metadata) {
-    return nullptr;
+    return folly::none;
   }
-  // TODO: Update this API to return an Optional<Hash> instead of a
-  // unique_ptr<Hash>
-  return std::make_unique<Hash>(metadata.value().sha1);
+  return metadata.value().sha1;
 }
 
 BlobMetadata LocalStore::putBlob(const Hash& id, const Blob* blob) {

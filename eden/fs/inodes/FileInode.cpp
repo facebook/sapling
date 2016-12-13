@@ -248,7 +248,7 @@ Future<Hash> FileInode::getSHA1() {
   // TODO(mbolin): Make this more fault-tolerant. Currently, there is no logic
   // to account for the case where we don't have the SHA-1 for the blob, the
   // hash doesn't correspond to a blob, etc.
-  return *parentInode_->getStore()->getSha1ForBlob(entry_->hash.value()).get();
+  return parentInode_->getStore()->getSha1ForBlob(entry_->hash.value());
 }
 
 const TreeInode::Entry* FileInode::getEntry() const {

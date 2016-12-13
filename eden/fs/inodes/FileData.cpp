@@ -364,7 +364,7 @@ void FileData::materializeForWrite(
       // read/write and closes it without changing it.
       auto sha1 =
           mount_->getObjectStore()->getSha1ForBlob(entry_->hash.value());
-      fsetxattr(file.fd(), kXattrSha1, sha1->toString());
+      fsetxattr(file.fd(), kXattrSha1, sha1.toString());
       sha1Valid_ = true;
     }
 
@@ -399,8 +399,7 @@ Hash FileData::getSha1Locked(const std::unique_lock<std::mutex>&) {
   }
 
   CHECK(entry_->hash.hasValue());
-  auto sha1 = mount_->getObjectStore()->getSha1ForBlob(entry_->hash.value());
-  return *sha1.get();
+  return mount_->getObjectStore()->getSha1ForBlob(entry_->hash.value());
 }
 
 Hash FileData::recomputeAndStoreSha1() {

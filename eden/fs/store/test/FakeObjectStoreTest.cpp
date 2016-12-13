@@ -64,8 +64,7 @@ TEST(FakeObjectStore, getObjectsOfAllTypesFromStore) {
   Blob blob2(blobHash, *buf2.get());
   store.setSha1ForBlob(blob2, sha1Hash);
   auto foundSha1 = store.getSha1ForBlob(blob2.getHash());
-  ASSERT_NE(nullptr, foundSha1.get());
-  EXPECT_EQ(sha1Hash, *foundSha1.get());
+  EXPECT_EQ(sha1Hash, foundSha1);
 }
 
 TEST(FakeObjectStore, getMissingObjectThrows) {

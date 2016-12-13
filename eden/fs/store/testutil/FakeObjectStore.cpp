@@ -75,10 +75,10 @@ unique_ptr<Tree> FakeObjectStore::getTreeForCommit(const Hash& id) const {
   }
 }
 
-unique_ptr<Hash> FakeObjectStore::getSha1ForBlob(const Hash& id) const {
+Hash FakeObjectStore::getSha1ForBlob(const Hash& id) const {
   auto iter = sha1s_.find(id);
   if (iter != sha1s_.end()) {
-    return make_unique<Hash>(iter->second);
+    return iter->second;
   } else {
     throw std::domain_error("blob " + id.toString() + " not found");
   }

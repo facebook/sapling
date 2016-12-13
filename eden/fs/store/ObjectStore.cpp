@@ -10,6 +10,7 @@
 #include "ObjectStore.h"
 
 #include <folly/Conv.h>
+#include <folly/Optional.h>
 #include <folly/io/IOBuf.h>
 #include <stdexcept>
 #include "BackingStore.h"
@@ -99,10 +100,10 @@ unique_ptr<Tree> ObjectStore::getTreeForCommit(const Hash& commitID) const {
   return tree;
 }
 
-unique_ptr<Hash> ObjectStore::getSha1ForBlob(const Hash& id) const {
+Hash ObjectStore::getSha1ForBlob(const Hash& id) const {
   auto sha1 = localStore_->getSha1ForBlob(id);
   if (sha1) {
-    return sha1;
+    return sha1.value();
   }
 
   // TODO: We should probably build a smarter API so we can ask the
@@ -118,7 +119,7 @@ unique_ptr<Hash> ObjectStore::getSha1ForBlob(const Hash& id) const {
   }
 
   auto metadata = localStore_->putBlob(id, blob.get());
-  return std::make_unique<Hash>(metadata.sha1);
+  return metadata.sha1;
 }
 }
 } // facebook::eden

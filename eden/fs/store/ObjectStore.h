@@ -65,10 +65,10 @@ class ObjectStore : public IObjectStore {
   /**
    * Get a Tree by commit ID.
    *
-   * This function never returns nullptr.  It throws std::domain_error if the
-   * specified blob ID does not exist, or possibly other exceptions on error.
+   * This throws std::domain_error if the specified blob ID does not exist, or
+   * possibly other exceptions on error.
    */
-  std::unique_ptr<Hash> getSha1ForBlob(const Hash& id) const override;
+  Hash getSha1ForBlob(const Hash& id) const override;
 
  private:
   // Forbidden copy constructor and assignment operator
