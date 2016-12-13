@@ -12,7 +12,7 @@
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
-#include "eden/fs/store/testutil/FakeObjectStore.h"
+#include "eden/fs/testharness/FakeObjectStore.h"
 
 using namespace facebook::eden;
 using folly::IOBuf;

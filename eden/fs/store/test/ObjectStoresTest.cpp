@@ -8,7 +8,7 @@
  *
  */
 #include "eden/fs/store/ObjectStores.h"
-#include "eden/fs/store/testutil/FakeObjectStore.h"
+#include "eden/fs/testharness/FakeObjectStore.h"
 
 #include <gtest/gtest.h>
 

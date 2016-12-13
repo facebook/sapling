@@ -5,7 +5,7 @@ cpp_unittest(
   deps = [
     '//eden/fs/model:model',
     '//eden/fs/store:store',
-    '//eden/fs/store/testutil:testutil',
+    '//eden/fs/testharness:testharness',
     '//folly:folly',
     '//folly/experimental:test_util',
   ],

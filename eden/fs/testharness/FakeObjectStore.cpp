@@ -8,6 +8,7 @@
  *
  */
 #include "FakeObjectStore.h"
+
 #include <folly/String.h>
 
 using std::make_unique;
@@ -17,11 +18,7 @@ using std::unordered_map;
 namespace facebook {
 namespace eden {
 
-FakeObjectStore::FakeObjectStore()
-    : trees_(unordered_map<Hash, Tree>()),
-      blobs_(unordered_map<Hash, Blob>()),
-      commits_(unordered_map<Hash, Tree>()),
-      sha1s_(unordered_map<Hash, Hash>()) {}
+FakeObjectStore::FakeObjectStore() {}
 
 FakeObjectStore::~FakeObjectStore() {}
 
