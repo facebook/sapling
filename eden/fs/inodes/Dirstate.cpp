@@ -260,7 +260,7 @@ std::unique_ptr<HgStatus> Dirstate::getStatus() const {
   // in the root tree.
   auto modifiedDirectories = getModifiedDirectoriesForMount(mount_);
   std::unordered_map<RelativePath, HgStatusCode> manifest;
-  if (modifiedDirectories->empty()) {
+  if (modifiedDirectories.empty()) {
     auto userDirectives = userDirectives_.rlock();
     updateManifestWithDirectives(&*userDirectives, &manifest);
     return std::make_unique<HgStatus>(std::move(manifest));
@@ -284,7 +284,7 @@ std::unique_ptr<HgStatus> Dirstate::getStatus() const {
   IgnoreChecker ignoreChecker(mount_);
 
   auto rootTree = mount_->getRootTree();
-  for (auto& directory : *modifiedDirectories) {
+  for (auto& directory : modifiedDirectories) {
     // Get the directory as a TreeInode.
     auto treeInode = mount_->getTreeInode(directory);
     DCHECK(treeInode.get() != nullptr) << "Failed to get a TreeInode for "
@@ -965,7 +965,7 @@ void Dirstate::markCommitted(
   // the treeHash, as appropriate.
   auto overlay = mount_->getOverlay();
   auto modifiedDirectories = getModifiedDirectoriesForMount(mount_);
-  for (auto& directory : *modifiedDirectories) {
+  for (auto& directory : modifiedDirectories) {
     auto treeForDirectory =
         getTreeForDirectory(directory, treeForCommit.get(), objectStore);
     if (treeForDirectory == nullptr) {

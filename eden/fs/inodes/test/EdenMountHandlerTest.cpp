@@ -21,7 +21,7 @@ TEST(EdenMountHandler, getModifiedDirectoriesForMountWithNoModifications) {
   auto edenMount = testMount->getEdenMount();
   auto modifiedDirectories = getModifiedDirectoriesForMount(edenMount.get());
   std::vector<RelativePath> expected = {};
-  EXPECT_EQ(expected, *modifiedDirectories.get());
+  EXPECT_EQ(expected, modifiedDirectories);
 }
 
 TEST(EdenMountHandler, getModifiedDirectoriesForMount) {
@@ -61,5 +61,5 @@ TEST(EdenMountHandler, getModifiedDirectoriesForMount) {
       RelativePath("x/y"),
       RelativePath("x/y/z"),
   };
-  EXPECT_EQ(expected, *modifiedDirectories.get());
+  EXPECT_EQ(expected, modifiedDirectories);
 }
