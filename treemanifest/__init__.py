@@ -158,8 +158,6 @@ def recordmanifest(pack, repo, oldtip, newtip):
         # This will generally be very quick, since p1 == deltabase
         delta = mfrevlog.revdiff(p1, rev)
 
-        allfiles = set(repo.changelog.readfiles(mfrevlog.linkrev(rev)))
-
         deletes = []
         adds = []
 
@@ -189,16 +187,12 @@ def recordmanifest(pack, repo, oldtip, newtip):
                 if not line:
                     continue
                 fname, rest = line.split('\0')
-                # It's possible for a delta to contain an entry that is a no-op
-                # (deletes the same data it adds), so check it against allfiles.
-                if fname not in allfiles:
-                    continue
                 fnode = rest[:40]
                 fflag = rest[40:]
                 adds.append((fname, bin(fnode), fflag))
 
-        deletes = allfiles.difference(fname for fname, fnode, fflag
-                                           in adds)
+        allfiles = set(repo.changelog.readfiles(mfrevlog.linkrev(rev)))
+        deletes = allfiles.difference(fname for fname, fnode, fflag in adds)
 
         # Apply the changes on top of the parent tree
         newtree = origtree.copy()
