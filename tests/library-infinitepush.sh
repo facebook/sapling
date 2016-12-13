@@ -87,13 +87,23 @@ PRIMARY KEY(bundle, reponame));' 2>/dev/null
 }
 
 setupdb() {
-DBHOSTPORT=`$TESTDIR/getdb.sh` || exit 1
-echo "sqlhost=$DBHOSTPORT" >> .hg/hgrc
+[[ -e $TESTDIR/getdb.sh ]] || { echo 'skipped: missing getdb.sh'; exit 80; }
+source $TESTDIR/getdb.sh >/dev/null
+
+if [[ -z $DBHOST && -z $DBPORT && -n $DBHOSTPORT ]]; then
+    # Assuming they are set using the legacy way: $DBHOSTPORT
+    DBHOST=`echo $DBHOSTPORT | cut -d : -f 1`
+    DBPORT=`echo $DBHOSTPORT | cut -d : -f 2`
+fi
+
+[[ -z $DBHOST ]] && DBHOST=localhost
+[[ -z $DBPORT ]] && DBPORT=3306
+[[ -z $DBPASS && -n $PASSWORD ]] && DBPASS="$PASSWORD"
+[[ -z $DBUSER && -n $USER ]] && DBUSER="$USER"
+[[ -z $DBNAME ]] && DBNAME="testdb_hg_$$_$TIME"
+
+echo "sqlhost=$DBHOST:$DBPORT:$DBNAME:$DBUSER:$DBPASS" >> .hg/hgrc
 echo "reponame=babar" >> .hg/hgrc
-DBHOST=`echo $DBHOSTPORT | cut -d : -f 1`
-DBPORT=`echo $DBHOSTPORT | cut -d : -f 2`
-DBNAME=`echo $DBHOSTPORT | cut -d : -f 3`
-DBUSER=`echo $DBHOSTPORT | cut -d : -f 4`
-DBPASS=`echo $DBHOSTPORT | cut -d : -f 5-`
+
 createdb
 }
