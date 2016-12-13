@@ -16,6 +16,7 @@
 #include "eden/fs/inodes/Dirstate.h"
 #include "eden/fs/inodes/DirstatePersistence.h"
 #include "eden/fs/inodes/EdenMount.h"
+#include "eden/fs/inodes/InodePtr.h"
 #include "eden/fs/inodes/gen-cpp2/overlay_types.h"
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/utils/PathFuncs.h"
@@ -67,10 +68,10 @@ class TestMount {
   void deleteFile(folly::StringPiece path);
   void rmdir(folly::StringPiece path);
 
-  std::shared_ptr<TreeInode> getTreeInode(RelativePathPiece path) const;
-  std::shared_ptr<TreeInode> getTreeInode(folly::StringPiece path) const;
-  std::shared_ptr<FileInode> getFileInode(RelativePathPiece path) const;
-  std::shared_ptr<FileInode> getFileInode(folly::StringPiece path) const;
+  TreeInodePtr getTreeInode(RelativePathPiece path) const;
+  TreeInodePtr getTreeInode(folly::StringPiece path) const;
+  FileInodePtr getFileInode(RelativePathPiece path) const;
+  FileInodePtr getFileInode(folly::StringPiece path) const;
 
   /** Convenience method for getting the Tree for the root of the mount. */
   std::unique_ptr<Tree> getRootTree() const;

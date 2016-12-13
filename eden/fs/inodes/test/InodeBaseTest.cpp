@@ -28,16 +28,13 @@ TEST(InodeBase, getPath) {
   EXPECT_EQ(RelativePathPiece(), root->getPath().value());
   EXPECT_EQ("<root>", root->getLogPath());
 
-  auto getChild = [](
-      const std::shared_ptr<TreeInode>& parent, StringPiece name) {
+  auto getChild = [](const TreeInodePtr& parent, StringPiece name) {
     return parent->getChildByName(PathComponentPiece{name}).get();
   };
-  auto childTree = [&getChild](
-      const std::shared_ptr<TreeInode>& parent, StringPiece name) {
+  auto childTree = [&getChild](const TreeInodePtr& parent, StringPiece name) {
     return dynamic_pointer_cast<TreeInode>(getChild(parent, name));
   };
-  auto childFile = [&getChild](
-      const std::shared_ptr<TreeInode>& parent, StringPiece name) {
+  auto childFile = [&getChild](const TreeInodePtr& parent, StringPiece name) {
     return dynamic_pointer_cast<FileInode>(getChild(parent, name));
   };
 

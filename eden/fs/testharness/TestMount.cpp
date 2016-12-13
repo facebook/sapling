@@ -232,23 +232,19 @@ void TestMount::rmdir(folly::StringPiece path) {
   dispatcher->rmdir(treeInode->getInode(), relativePath.basename()).get();
 }
 
-std::shared_ptr<TreeInode> TestMount::getTreeInode(
-    RelativePathPiece path) const {
+TreeInodePtr TestMount::getTreeInode(RelativePathPiece path) const {
   return edenMount_->getTreeInode(path);
 }
 
-std::shared_ptr<TreeInode> TestMount::getTreeInode(
-    folly::StringPiece path) const {
+TreeInodePtr TestMount::getTreeInode(folly::StringPiece path) const {
   return edenMount_->getTreeInode(RelativePathPiece{path});
 }
 
-std::shared_ptr<FileInode> TestMount::getFileInode(
-    RelativePathPiece path) const {
+FileInodePtr TestMount::getFileInode(RelativePathPiece path) const {
   return edenMount_->getFileInode(path);
 }
 
-std::shared_ptr<FileInode> TestMount::getFileInode(
-    folly::StringPiece path) const {
+FileInodePtr TestMount::getFileInode(folly::StringPiece path) const {
   return edenMount_->getFileInode(RelativePathPiece{path});
 }
 

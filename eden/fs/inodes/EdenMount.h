@@ -33,6 +33,10 @@ class Journal;
 class Tree;
 class TreeInode;
 
+using InodePtr = std::shared_ptr<InodeBase>;
+using TreeInodePtr = std::shared_ptr<TreeInode>;
+using FileInodePtr = std::shared_ptr<FileInode>;
+
 /**
  * EdenMount contains all of the data about a specific eden mount point.
  *
@@ -117,7 +121,7 @@ class EdenMount {
   }
 
   /** Get the TreeInode for the root of the mount. */
-  std::shared_ptr<TreeInode> getRootInode() const;
+  TreeInodePtr getRootInode() const;
 
   /** Convenience method for getting the Tree for the root of the mount. */
   std::unique_ptr<Tree> getRootTree() const;
@@ -126,19 +130,19 @@ class EdenMount {
    * @return the InodeBase for the specified path or throws a std::system_error
    *     with ENOENT.
    */
-  std::shared_ptr<InodeBase> getInodeBase(RelativePathPiece path) const;
+  InodePtr getInodeBase(RelativePathPiece path) const;
 
   /**
    * @return the TreeInode for the specified path or throws a std::system_error
    *     with ENOENT or ENOTDIR, as appropriate.
    */
-  std::shared_ptr<TreeInode> getTreeInode(RelativePathPiece path) const;
+  TreeInodePtr getTreeInode(RelativePathPiece path) const;
 
   /**
    * @return the FileInode for the specified path or throws a std::system_error
    *     with ENOENT or EISDIR, as appropriate.
    */
-  std::shared_ptr<FileInode> getFileInode(RelativePathPiece path) const;
+  FileInodePtr getFileInode(RelativePathPiece path) const;
 
  private:
   // Forbidden copy constructor and assignment operator

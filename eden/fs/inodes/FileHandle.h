@@ -8,6 +8,7 @@
  *
  */
 #pragma once
+#include "eden/fs/inodes/InodePtr.h"
 #include "eden/fuse/FileHandle.h"
 
 namespace facebook {
@@ -21,7 +22,7 @@ class LocalStore;
 class FileHandle : public fusell::FileHandle {
  public:
   explicit FileHandle(
-      std::shared_ptr<FileInode> inode,
+      FileInodePtr inode,
       std::shared_ptr<FileData> data,
       int flags);
   ~FileHandle();
@@ -40,7 +41,7 @@ class FileHandle : public fusell::FileHandle {
   folly::Future<folly::Unit> fsync(bool datasync) override;
 
  private:
-  std::shared_ptr<FileInode> inode_;
+  FileInodePtr inode_;
   std::shared_ptr<FileData> data_;
   int openFlags_;
 };

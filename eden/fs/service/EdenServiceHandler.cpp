@@ -29,7 +29,6 @@
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fuse/MountPoint.h"
 
-using std::shared_ptr;
 using std::string;
 using std::unique_ptr;
 using folly::make_unique;
@@ -210,7 +209,7 @@ SHA1Result EdenServiceHandler::getSHA1ForPath(
 
   auto it = relativePath.paths().begin();
   while (true) {
-    shared_ptr<InodeBase> inodeBase =
+    InodePtr inodeBase =
         dispatcher->lookupInodeBase(parent->getNodeId(), it.piece().basename())
             .get();
 

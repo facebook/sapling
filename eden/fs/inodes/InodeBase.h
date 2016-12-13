@@ -13,6 +13,7 @@
 #include <atomic>
 #include <memory>
 #include <vector>
+#include "eden/fs/inodes/InodePtr.h"
 #include "eden/fuse/Dispatcher.h"
 #include "eden/fuse/fuse_headers.h"
 #include "eden/utils/PathFuncs.h"
@@ -24,10 +25,7 @@ class TreeInode;
 
 class InodeBase : public std::enable_shared_from_this<InodeBase> {
  public:
-  InodeBase(
-      fuse_ino_t ino,
-      std::shared_ptr<TreeInode> parent,
-      PathComponentPiece name);
+  InodeBase(fuse_ino_t ino, TreeInodePtr parent, PathComponentPiece name);
   virtual ~InodeBase();
 
   fuse_ino_t getNodeId() const {
@@ -86,10 +84,10 @@ class InodeBase : public std::enable_shared_from_this<InodeBase> {
 
  private:
   struct LocationInfo {
-    LocationInfo(std::shared_ptr<TreeInode> p, PathComponentPiece n)
+    LocationInfo(TreeInodePtr p, PathComponentPiece n)
         : parent(std::move(p)), name(n) {}
 
-    std::shared_ptr<TreeInode> parent;
+    TreeInodePtr parent;
     /**
      * unlinked will be set to true if the Inode has been unlinked from the
      * filesystem.

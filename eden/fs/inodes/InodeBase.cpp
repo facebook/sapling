@@ -21,7 +21,7 @@ InodeBase::~InodeBase() {}
 
 InodeBase::InodeBase(
     fuse_ino_t ino,
-    std::shared_ptr<TreeInode> parent,
+    TreeInodePtr parent,
     PathComponentPiece name)
     : ino_(ino), location_(LocationInfo(std::move(parent), name)) {
   // Inode numbers generally shouldn't be 0.
@@ -87,7 +87,7 @@ bool InodeBase::canForget() {
 bool InodeBase::getPathHelper(
     std::vector<PathComponent>& names,
     bool stopOnUnlinked) const {
-  std::shared_ptr<TreeInode> parent;
+  TreeInodePtr parent;
   bool unlinked = false;
   {
     auto loc = location_.rlock();

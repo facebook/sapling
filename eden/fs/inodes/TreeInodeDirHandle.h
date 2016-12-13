@@ -8,7 +8,7 @@
  *
  */
 #pragma once
-#include "TreeInode.h"
+#include "eden/fs/inodes/InodePtr.h"
 #include "eden/fuse/DirHandle.h"
 
 namespace facebook {
@@ -16,7 +16,7 @@ namespace eden {
 
 class TreeInodeDirHandle : public fusell::DirHandle {
  public:
-  explicit TreeInodeDirHandle(std::shared_ptr<TreeInode> inode);
+  explicit TreeInodeDirHandle(TreeInodePtr inode);
 
   folly::Future<fusell::DirList> readdir(fusell::DirList&& list, off_t off)
       override;
@@ -28,7 +28,7 @@ class TreeInodeDirHandle : public fusell::DirHandle {
   folly::Future<fusell::Dispatcher::Attr> getattr() override;
 
  private:
-  std::shared_ptr<TreeInode> inode_;
+  TreeInodePtr inode_;
 };
 }
 }

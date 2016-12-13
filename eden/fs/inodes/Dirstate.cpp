@@ -221,7 +221,7 @@ class IgnoreChecker {
     auto ignorePath =
         RelativePath(directory) + PathComponentPiece(".gitignore");
     VLOG(4) << "Loading ignore file at \"" << ignorePath << "\"";
-    std::shared_ptr<FileInode> ignoreInode;
+    FileInodePtr ignoreInode;
     try {
       ignoreInode = mountPoint_->getFileInode(ignorePath);
     } catch (const std::system_error& ex) {
@@ -633,7 +633,7 @@ void addDirstateRemoveError(
  */
 ShouldBeDeleted shouldFileBeDeletedByHgRemove(
     RelativePathPiece file,
-    std::shared_ptr<TreeInode> treeInode,
+    TreeInodePtr treeInode,
     const TreeEntry* treeEntry,
     ObjectStore* objectStore,
     std::vector<DirstateRemoveError>& errorsToReport) {
@@ -830,7 +830,7 @@ void Dirstate::remove(
   // We look up the InodeBase and TreeEntry for `path` before acquiring the
   // write lock for userDirectives_ because these lookups could be slow, so we
   // prefer not to do them while holding the lock.
-  std::shared_ptr<TreeInode> parent;
+  TreeInodePtr parent;
   try {
     parent = mount_->getTreeInode(path.dirname());
   } catch (const std::system_error& e) {
@@ -840,7 +840,7 @@ void Dirstate::remove(
     }
   }
 
-  std::shared_ptr<InodeBase> inode;
+  InodePtr inode;
   if (parent != nullptr) {
     try {
       inode = parent->getChildByName(path.basename()).get();
@@ -931,8 +931,7 @@ void Dirstate::remove(
   }
 }
 
-std::shared_ptr<InodeBase> Dirstate::getInodeBaseOrNull(
-    RelativePathPiece path) const {
+InodePtr Dirstate::getInodeBaseOrNull(RelativePathPiece path) const {
   try {
     return mount_->getInodeBase(path);
   } catch (const std::system_error& e) {

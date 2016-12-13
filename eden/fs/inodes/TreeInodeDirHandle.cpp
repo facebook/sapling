@@ -10,14 +10,14 @@
 #include "TreeInodeDirHandle.h"
 
 #include "Overlay.h"
+#include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/utils/DirType.h"
 
 namespace facebook {
 namespace eden {
 
-TreeInodeDirHandle::TreeInodeDirHandle(std::shared_ptr<TreeInode> inode)
-    : inode_(inode) {}
+TreeInodeDirHandle::TreeInodeDirHandle(TreeInodePtr inode) : inode_(inode) {}
 
 folly::Future<fusell::DirList> TreeInodeDirHandle::readdir(
     fusell::DirList&& list,

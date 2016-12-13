@@ -28,6 +28,8 @@ class ObjectStore;
 class Tree;
 class TreeInode;
 
+using InodePtr = std::shared_ptr<InodeBase>;
+
 namespace fusell {
 class InodeBase;
 class MountPoint;
@@ -222,7 +224,7 @@ class Dirstate {
    * Note that EdenMount::getInodeBase() throws if path does not correspond to
    * an actual file. This helper function returns nullptr instead in that case.
    */
-  std::shared_ptr<InodeBase> getInodeBaseOrNull(RelativePathPiece path) const;
+  InodePtr getInodeBaseOrNull(RelativePathPiece path) const;
 
   /** The EdenMount object that owns this Dirstate */
   EdenMount* const mount_{nullptr};

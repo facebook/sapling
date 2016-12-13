@@ -25,7 +25,7 @@ class FileInode : public InodeBase {
   /** Construct an inode using an overlay entry */
   FileInode(
       fuse_ino_t ino,
-      std::shared_ptr<TreeInode> parentInode,
+      TreeInodePtr parentInode,
       PathComponentPiece name,
       TreeInode::Entry* entry);
 
@@ -35,7 +35,7 @@ class FileInode : public InodeBase {
    * case and is required to implement O_EXCL correctly. */
   FileInode(
       fuse_ino_t ino,
-      std::shared_ptr<TreeInode> parentInode,
+      TreeInodePtr parentInode,
       PathComponentPiece name,
       TreeInode::Entry* entry,
       folly::File&& file);
@@ -78,7 +78,7 @@ class FileInode : public InodeBase {
   //   It also does not appear to be updated on rename.
   //   We should update uses of parentInode_ with InodeBase::location_ instead,
   //   and then delete parentInode_.
-  std::shared_ptr<TreeInode> parentInode_;
+  TreeInodePtr parentInode_;
   TreeInode::Entry* entry_;
 
   std::shared_ptr<FileData> data_;

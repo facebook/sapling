@@ -19,7 +19,7 @@ namespace facebook {
 namespace eden {
 
 FileHandle::FileHandle(
-    std::shared_ptr<FileInode> inode,
+    FileInodePtr inode,
     std::shared_ptr<FileData> data,
     int flags)
     : inode_(std::move(inode)), data_(std::move(data)), openFlags_(flags) {}

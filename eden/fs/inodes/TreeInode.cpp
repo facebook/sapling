@@ -31,7 +31,7 @@ namespace eden {
 TreeInode::TreeInode(
     EdenMount* mount,
     fuse_ino_t ino,
-    std::shared_ptr<TreeInode> parent,
+    TreeInodePtr parent,
     PathComponentPiece name,
     Entry* entry,
     std::unique_ptr<Tree>&& tree)
@@ -41,7 +41,7 @@ TreeInode::TreeInode(
 TreeInode::TreeInode(
     EdenMount* mount,
     fuse_ino_t ino,
-    std::shared_ptr<TreeInode> parent,
+    TreeInodePtr parent,
     PathComponentPiece name,
     Entry* entry,
     Dir&& dir)
@@ -86,7 +86,7 @@ fusell::Dispatcher::Attr TreeInode::getAttrLocked(const Dir* contents) {
   return attr;
 }
 
-std::shared_ptr<InodeBase> TreeInode::getChildByNameLocked(
+InodePtr TreeInode::getChildByNameLocked(
     const Dir* contents,
     PathComponentPiece name) {
   auto iter = contents->entries.find(name);
@@ -130,7 +130,7 @@ std::shared_ptr<InodeBase> TreeInode::getChildByNameLocked(
       entry);
 }
 
-folly::Future<std::shared_ptr<InodeBase>> TreeInode::getChildByName(
+folly::Future<InodePtr> TreeInode::getChildByName(
     PathComponentPiece namepiece) {
   auto contents = contents_.rlock();
   return getChildByNameLocked(&*contents, namepiece);
@@ -238,7 +238,7 @@ TreeInode::create(PathComponentPiece name, mode_t mode, int flags) {
   // Compute the effective name of the node they want to create.
   auto targetName = myname + name;
   std::shared_ptr<FileHandle> handle;
-  std::shared_ptr<FileInode> inode;
+  FileInodePtr inode;
   std::shared_ptr<fusell::InodeNameManager::Node> node;
 
   materializeDirAndParents();
@@ -309,7 +309,7 @@ bool TreeInode::canForget() {
 }
 
 folly::Future<fuse_entry_param> link(
-    std::shared_ptr<InodeBase> /* node */,
+    InodePtr /* node */,
     PathComponentPiece /* newname */) {
   // We intentionally do not support hard links.
   // These generally cannot be tracked in source control (git or mercurial)
@@ -432,7 +432,7 @@ folly::Future<folly::Unit> TreeInode::unlink(PathComponentPiece name) {
   return folly::Unit{};
 }
 
-std::shared_ptr<InodeBase> TreeInode::lookupChildByNameLocked(
+InodePtr TreeInode::lookupChildByNameLocked(
     const Dir* contents,
     PathComponentPiece name) {
   auto dispatcher = getMount()->getDispatcher();
@@ -644,7 +644,7 @@ void TreeInode::renameHelper(
 
 folly::Future<folly::Unit> TreeInode::rename(
     PathComponentPiece name,
-    std::shared_ptr<TreeInode> newParent,
+    TreeInodePtr newParent,
     PathComponentPiece newName) {
   auto nameMgr = getNameMgr();
   auto sourceName = nameMgr->resolvePathToNode(getNodeId()) + name;

@@ -24,7 +24,6 @@
 #include "eden/fuse/InodeNameManager.h"
 #include "eden/fuse/MountPoint.h"
 
-using std::shared_ptr;
 using std::unique_ptr;
 using std::vector;
 
@@ -66,7 +65,7 @@ EdenMount::EdenMount(
   // Create the inode for the root of the tree using the hash contained
   // within the snapshotPath file
   auto snapshotID = config_->getSnapshotID();
-  std::shared_ptr<TreeInode> rootInode;
+  TreeInodePtr rootInode;
   if (rootOverlayDir) {
     rootInode =
         std::make_shared<TreeInode>(this, std::move(rootOverlayDir.value()));
@@ -94,7 +93,7 @@ const vector<BindMount>& EdenMount::getBindMounts() const {
   return bindMounts_;
 }
 
-std::shared_ptr<TreeInode> EdenMount::getRootInode() const {
+TreeInodePtr EdenMount::getRootInode() const {
   return dispatcher_->getRootInode();
 }
 
@@ -108,7 +107,7 @@ std::unique_ptr<Tree> EdenMount::getRootTree() const {
   }
 }
 
-shared_ptr<InodeBase> EdenMount::getInodeBase(RelativePathPiece path) const {
+InodePtr EdenMount::getInodeBase(RelativePathPiece path) const {
   auto inodeBase = dispatcher_->getInode(FUSE_ROOT_ID);
   auto relativePath = RelativePathPiece{path};
 
@@ -126,7 +125,7 @@ shared_ptr<InodeBase> EdenMount::getInodeBase(RelativePathPiece path) const {
   return inodeBase;
 }
 
-shared_ptr<TreeInode> EdenMount::getTreeInode(RelativePathPiece path) const {
+TreeInodePtr EdenMount::getTreeInode(RelativePathPiece path) const {
   auto inodeBase = getInodeBase(path);
   auto treeInode = std::dynamic_pointer_cast<TreeInode>(inodeBase);
   if (treeInode) {
@@ -137,7 +136,7 @@ shared_ptr<TreeInode> EdenMount::getTreeInode(RelativePathPiece path) const {
   }
 }
 
-shared_ptr<FileInode> EdenMount::getFileInode(RelativePathPiece path) const {
+FileInodePtr EdenMount::getFileInode(RelativePathPiece path) const {
   auto inodeBase = getInodeBase(path);
   auto fileInode = std::dynamic_pointer_cast<FileInode>(inodeBase);
   if (fileInode) {

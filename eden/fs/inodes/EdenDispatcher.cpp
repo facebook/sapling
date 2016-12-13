@@ -58,9 +58,7 @@ EdenDispatcher::EdenDispatcher(EdenMount* mount) : mount_(mount) {
   inodes_.reserve(FLAGS_inode_reserve);
 }
 
-EdenDispatcher::EdenDispatcher(
-    EdenMount* mount,
-    std::shared_ptr<TreeInode> rootInode)
+EdenDispatcher::EdenDispatcher(EdenMount* mount, TreeInodePtr rootInode)
     : EdenDispatcher(mount) {
   if (rootInode) {
     setRootInode(std::move(rootInode));
@@ -184,28 +182,26 @@ void EdenDispatcher::initConnection(fuse_conn_info& /* conn */) {
   }
 }
 
-void EdenDispatcher::setRootInode(std::shared_ptr<TreeInode> inode) {
+void EdenDispatcher::setRootInode(TreeInodePtr inode) {
   CHECK(!root_);
   CHECK_EQ(inode->getNodeId(), FUSE_ROOT_ID);
   root_ = std::move(inode);
   recordInode(root_);
 }
 
-std::shared_ptr<TreeInode> EdenDispatcher::getRootInode() const {
+TreeInodePtr EdenDispatcher::getRootInode() const {
   DCHECK(root_);
   return root_;
 }
 
-void EdenDispatcher::recordInode(std::shared_ptr<InodeBase> inode) {
+void EdenDispatcher::recordInode(InodePtr inode) {
   auto ino = inode->getNodeId();
   std::unique_lock<SharedMutex> g(lock_);
   auto ret = inodes_.emplace(ino, std::move(inode));
   DCHECK(ret.second);
 }
 
-std::shared_ptr<InodeBase> EdenDispatcher::getInode(
-    fuse_ino_t ino,
-    bool mustExist) const {
+InodePtr EdenDispatcher::getInode(fuse_ino_t ino, bool mustExist) const {
   std::shared_lock<SharedMutex> g(lock_);
   const auto& it = inodes_.find(ino);
   if (it == inodes_.end()) {
@@ -217,7 +213,7 @@ std::shared_ptr<InodeBase> EdenDispatcher::getInode(
   return it->second;
 }
 
-std::shared_ptr<InodeBase> EdenDispatcher::lookupInode(fuse_ino_t ino) const {
+InodePtr EdenDispatcher::lookupInode(fuse_ino_t ino) const {
   std::shared_lock<SharedMutex> g(lock_);
   const auto& it = inodes_.find(ino);
   if (it == inodes_.end()) {
@@ -227,9 +223,8 @@ std::shared_ptr<InodeBase> EdenDispatcher::lookupInode(fuse_ino_t ino) const {
   return it->second;
 }
 
-std::shared_ptr<TreeInode> EdenDispatcher::getTreeInode(
-    fuse_ino_t ino,
-    bool mustExist) const {
+TreeInodePtr EdenDispatcher::getTreeInode(fuse_ino_t ino, bool mustExist)
+    const {
   auto d = std::dynamic_pointer_cast<TreeInode>(getInode(ino));
   if (!d) {
     if (mustExist) {
@@ -240,9 +235,8 @@ std::shared_ptr<TreeInode> EdenDispatcher::getTreeInode(
   return d;
 }
 
-std::shared_ptr<FileInode> EdenDispatcher::getFileInode(
-    fuse_ino_t ino,
-    bool mustExist) const {
+FileInodePtr EdenDispatcher::getFileInode(fuse_ino_t ino, bool mustExist)
+    const {
   auto f = std::dynamic_pointer_cast<FileInode>(getInode(ino));
   if (!f) {
     if (mustExist) {
@@ -275,7 +269,7 @@ folly::Future<fuse_entry_param> EdenDispatcher::lookup(
   });
 }
 
-folly::Future<std::shared_ptr<InodeBase>> EdenDispatcher::lookupInodeBase(
+folly::Future<InodePtr> EdenDispatcher::lookupInodeBase(
     fuse_ino_t parent,
     PathComponentPiece namepiece) {
   auto dir = getTreeInode(parent);
@@ -283,7 +277,7 @@ folly::Future<std::shared_ptr<InodeBase>> EdenDispatcher::lookupInodeBase(
   // First, see if we already have the Inode loaded
   auto mgr = mount_->getNameMgr();
   auto node = mgr->getNodeByName(parent, namepiece, false);
-  std::shared_ptr<InodeBase> existing_inode;
+  InodePtr existing_inode;
 
   if (node) {
     existing_inode = lookupInode(node->getNodeId());
@@ -291,7 +285,7 @@ folly::Future<std::shared_ptr<InodeBase>> EdenDispatcher::lookupInodeBase(
 
   return (existing_inode ? makeFuture(existing_inode)
                          : dir->getChildByName(namepiece))
-      .then([=](std::shared_ptr<InodeBase> inode) mutable {
+      .then([=](InodePtr inode) mutable {
         if (!inode) {
           throwSystemErrorExplicit(ENOENT);
         }
