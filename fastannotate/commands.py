@@ -39,23 +39,26 @@ def _matchpaths(repo, rev, pats, opts, aopts=facontext.defaultopts):
     #    corresponding linelog files
     if perfhack:
         # cwd related to reporoot
-        reldir = os.path.relpath(os.getcwd(), os.path.dirname(repo.path))
+        reporoot = os.path.dirname(repo.path)
+        reldir = os.path.relpath(os.getcwd(), reporoot)
         if reldir == '.':
             reldir = ''
         if any(opts.get(o[1]) for o in commands.walkopts): # a)
             perfhack = False
         else: # b)
+            relpats = [os.path.relpath(p, reporoot) if os.path.isabs(p) else p
+                       for p in pats]
             # disable perfhack on '..' since it allows escaping from the repo
             if any(('..' in f or
                     not os.path.isfile(
                         facontext.pathhelper(repo, f, aopts).linelogpath))
-                   for f in pats):
+                   for f in relpats):
                 perfhack = False
 
     # perfhack: emit paths directory without checking with manifest
     # this can be incorrect if the rev dos not have file.
     if perfhack:
-        for p in pats:
+        for p in relpats:
             yield os.path.join(reldir, p)
     else:
         def bad(x, y):
