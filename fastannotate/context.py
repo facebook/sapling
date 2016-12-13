@@ -235,19 +235,11 @@ class _annotatecontext(object):
             f = self._resolvefctx(master, resolverev=True)
             # choose linkrev instead of introrev as the check is meant to be
             # *fast*.
-            linknode = self.repo.changelog.rev(f.linkrev())[-1]
-            if not strict and lastnode:
-                # perform the mtime check first, it's faster than loading the
-                # revamp.
-                try:
-                    mtime = os.stat(self.revmappath).st_mtime
-                except OSError: # not fatal
-                    pass
-                else:
-                    if f.date()[0] < mtime:
-                        # if mtime check passes, check if f.node() is in the
-                        # revmap. note: this loads the revmap and can be slow.
-                        return self.revmap.hsh2rev(linknode) is not None
+            linknode = self.repo.changelog.node(f.linkrev())
+            if not strict and lastnode and linknode != lastnode:
+                # check if f.node() is in the revmap. note: this loads the
+                # revmap and can be slow.
+                return self.revmap.hsh2rev(linknode) is not None
             # avoid resolving old manifest, or slow adjustlinkrev to be fast,
             # false negatives are acceptable in this case.
             return linknode == lastnode
