@@ -79,6 +79,11 @@ annotate cache greatly. Run "debugbuildlinkrevcache" before
     # follow). do not affect "fastannotate" mode. (default: True)
     forcefollow = True
 
+    # for "fctx" mode, always treat file as text files, to skip the "isbinary"
+    # check. this is consistent with the "fastannotate" command and could help
+    # to avoid a file fetch if remotefilelog is used. (default: True)
+    forcetext = True
+
     # use unfiltered repo for better performance.
     unfilteredrepo = True
 

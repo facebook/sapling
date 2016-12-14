@@ -203,6 +203,10 @@ def _annotatewrapper(orig, ui, repo, *pats, **opts):
     if ui.configbool('fastannotate', 'unfilteredrepo', True):
         repo = repo.unfiltered()
 
+    # treat the file as text (skip the isbinary check)
+    if ui.configbool('fastannotate', 'forcetext', True):
+        opts['text'] = True
+
     # check if we need to do prefetch (client-side)
     rev = opts.get('rev')
     if util.safehasattr(repo, 'prefetchfastannotate') and rev is not None:
