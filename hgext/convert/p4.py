@@ -150,7 +150,7 @@ class p4_source(common.converter_source):
             c = common.commit(author=self.recode(d["user"]),
                               date=util.datestr(date, '%Y-%m-%d %H:%M:%S %1%2'),
                               parents=parents, desc=desc, branch=None,
-                              extra={"p4": change})
+                              extra={"p4": change, "convert_revision": change})
 
             files = []
             copies = {}
