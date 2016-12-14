@@ -321,7 +321,13 @@ class p4_source(common.converter_source):
         return marshal.load(stdout)
 
     def getcommit(self, rev):
-        return self.changeset[rev]
+        if rev in self.changeset:
+            return self.changeset[rev]
+        elif rev in self.revmap:
+            d = self._fetch_revision(rev)
+            return self._construct_commit(d, parents=None)
+        raise error.Abort(
+            _("cannot find %s in the revmap or parsed changesets") % rev)
 
     def gettags(self):
         return {}
