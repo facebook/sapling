@@ -151,24 +151,17 @@ class p4_source(common.converter_source):
                 lastid = change
                 continue
 
-            cmd = "p4 -G describe -s %s" % change
-            stdout = util.popen(cmd, mode='rb')
-            d = marshal.load(stdout)
-            desc = self.recode(d.get("desc", ""))
-            shortdesc = desc.split("\n", 1)[0]
-            t = '%s %s' % (d["change"], repr(shortdesc)[1:-1])
-            ui.status(util.ellipsis(t, 80) + '\n')
-
             if lastid:
                 parents = [lastid]
             else:
                 parents = []
 
-            date = (int(d["time"]), 0)     # timezone not set
-            c = common.commit(author=self.recode(d["user"]),
-                              date=util.datestr(date, '%Y-%m-%d %H:%M:%S %1%2'),
-                              parents=parents, desc=desc, branch=None,
-                              extra={"p4": change, "convert_revision": change})
+            d = self._fetch_revision(change)
+            c = self._construct_commit(d, parents)
+
+            shortdesc = c.desc.splitlines(True)[0].rstrip('\r\n')
+            t = '%s %s' % (c.rev, repr(shortdesc)[1:-1])
+            ui.status(util.ellipsis(t, 80) + '\n')
 
             files = []
             copies = {}
@@ -302,6 +295,30 @@ class p4_source(common.converter_source):
         if full:
             raise error.Abort(_("convert from p4 does not support --full"))
         return self.files[rev], self.copies[rev], set()
+
+    def _construct_commit(self, obj, parents=None):
+        """
+        Constructs a common.commit object from an unmarshalled
+        `p4 describe` output
+        """
+        desc = self.recode(obj.get("desc", ""))
+        shortdesc = desc.split("\n", 1)[0]
+
+        date = (int(obj["time"]), 0)     # timezone not set
+        if parents is None:
+            parents = []
+
+        return common.commit(author=self.recode(obj["user"]),
+            date=util.datestr(date, '%Y-%m-%d %H:%M:%S %1%2'),
+            parents=parents, desc=desc, branch=None, rev=obj['change'],
+            extra={"p4": obj['change'], "convert_revision": obj['change']})
+
+    def _fetch_revision(self, rev):
+        """Return an output of `p4 describe` including author, commit date as
+        a dictionary."""
+        cmd = "p4 -G describe -s %s" % rev
+        stdout = util.popen(cmd, mode='rb')
+        return marshal.load(stdout)
 
     def getcommit(self, rev):
         return self.changeset[rev]
