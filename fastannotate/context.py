@@ -203,7 +203,7 @@ class _annotatecontext(object):
         self._node2path.clear()
         _unlinkpaths([self.revmappath, self.linelogpath])
 
-    @util.propertycache
+    @property
     def lastnode(self):
         """return last node in revmap, or None if revmap is empty"""
         if self._revmap is None:
