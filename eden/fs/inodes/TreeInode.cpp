@@ -306,8 +306,8 @@ bool TreeInode::canForget() {
 }
 
 folly::Future<fuse_entry_param> TreeInode::symlink(
-    PathComponentPiece /* link */,
-    PathComponentPiece /* name */) {
+    PathComponentPiece /* name */,
+    folly::StringPiece /* contents */) {
   // TODO
   FUSELL_NOT_IMPL();
 }

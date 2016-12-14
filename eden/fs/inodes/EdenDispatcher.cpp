@@ -407,10 +407,10 @@ folly::Future<folly::Unit> EdenDispatcher::rmdir(
 }
 
 folly::Future<fuse_entry_param> EdenDispatcher::symlink(
-    PathComponentPiece link,
     fuse_ino_t parent,
-    PathComponentPiece name) {
-  return getTreeInode(parent)->symlink(link, name);
+    PathComponentPiece name,
+    StringPiece link) {
+  return getTreeInode(parent)->symlink(name, link);
 }
 
 folly::Future<folly::Unit> EdenDispatcher::rename(

@@ -218,12 +218,12 @@ class Dispatcher {
   /**
    * Create a symbolic link
    *
-   * @param link the contents of the symbolic link
    * @param parent inode number of the parent directory
    * @param name to create
+   * @param link the contents of the symbolic link
    */
   virtual folly::Future<fuse_entry_param>
-  symlink(PathComponentPiece link, fuse_ino_t parent, PathComponentPiece name);
+  symlink(fuse_ino_t parent, PathComponentPiece name, folly::StringPiece link);
 
   /**
    * Rename a file

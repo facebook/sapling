@@ -103,9 +103,9 @@ class EdenDispatcher : public fusell::Dispatcher {
   folly::Future<folly::Unit> rmdir(fuse_ino_t parent, PathComponentPiece name)
       override;
   folly::Future<fuse_entry_param> symlink(
-      PathComponentPiece link,
       fuse_ino_t parent,
-      PathComponentPiece name) override;
+      PathComponentPiece name,
+      folly::StringPiece link) override;
   folly::Future<folly::Unit> rename(
       fuse_ino_t parent,
       PathComponentPiece name,

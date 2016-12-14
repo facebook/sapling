@@ -340,7 +340,7 @@ static void disp_rmdir(fuse_req_t req, fuse_ino_t parent, const char* name) {
 }
 
 folly::Future<fuse_entry_param>
-    Dispatcher::symlink(PathComponentPiece, fuse_ino_t, PathComponentPiece) {
+Dispatcher::symlink(fuse_ino_t, PathComponentPiece, folly::StringPiece) {
   FUSELL_NOT_IMPL();
 }
 
@@ -350,15 +350,14 @@ static void disp_symlink(fuse_req_t req,
                          const char* name) {
   auto& request = RequestData::create(req);
   auto* dispatcher = request.getDispatcher();
-  request.setRequestFuture(
-      request.startRequest(dispatcher->getStats().symlink)
-          .then([=, &request] {
-            return dispatcher->symlink(
-                PathComponentPiece(link), parent, PathComponentPiece(name));
-          })
-          .then([](fuse_entry_param&& param) {
-            RequestData::get().replyEntry(param);
-          }));
+  request.setRequestFuture(request.startRequest(dispatcher->getStats().symlink)
+                               .then([=, &request] {
+                                 return dispatcher->symlink(
+                                     parent, PathComponentPiece(name), link);
+                               })
+                               .then([](fuse_entry_param&& param) {
+                                 RequestData::get().replyEntry(param);
+                               }));
 }
 
 folly::Future<folly::Unit> Dispatcher::rename(

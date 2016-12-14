@@ -149,8 +149,8 @@ class TreeInode : public InodeBase {
   folly::Future<CreateResult>
   create(PathComponentPiece name, mode_t mode, int flags);
   folly::Future<fuse_entry_param> symlink(
-      PathComponentPiece link,
-      PathComponentPiece name);
+      PathComponentPiece name,
+      folly::StringPiece contents);
 
   folly::Future<fuse_entry_param> mkdir(PathComponentPiece name, mode_t mode);
   folly::Future<folly::Unit> unlink(PathComponentPiece name);
