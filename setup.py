@@ -84,93 +84,97 @@ availablepackages = [
     'linelog',
 ]
 
-availableextmodules = {
-    'cdatapack' : [
-        Extension('cdatapack',
-            sources=[
-                'cdatapack/py-cdatapack.c',
-                'cdatapack/cdatapack.c',
-            ],
-            include_dirs=[
-                'clib',
-                'cdatapack',
-            ] + include_dirs,
-            library_dirs=library_dirs,
-            libraries=[
-                'crypto',
-                'lz4',
-            ],
-            extra_compile_args=[
-                "-std=c99",
-                "-Wall",
-                "-Werror", "-Werror=strict-prototypes",
-            ] + cdebugflags,
-        ),
-    ],
-    'ctreemanifest' : [
-        Extension('ctreemanifest',
-            sources=[
-                'ctreemanifest/py-treemanifest.cpp',
-                'ctreemanifest/manifest.cpp',
-                'ctreemanifest/manifest_entry.cpp',
-                'ctreemanifest/manifest_fetcher.cpp',
-                'ctreemanifest/pythonutil.cpp',
-                'ctreemanifest/treemanifest.cpp',
-            ],
-            include_dirs=[
-                'ctreemanifest',
-            ] + include_dirs,
-            library_dirs=library_dirs,
-            libraries=[
-                'crypto',
-            ],
-            extra_compile_args=[
-                "-std=c++0x",
-                "-Wall",
-                "-Werror",
-            ] + cdebugflags,
-        ),
-    ],
-    'cfastmanifest' : [
-        Extension('cfastmanifest',
-            sources=['cfastmanifest.c',
-                     'cfastmanifest/bsearch.c',
-                     'clib/buffer.c',
-                     'cfastmanifest/checksum.c',
-                     'cfastmanifest/node.c',
-                     'cfastmanifest/tree.c',
-                     'cfastmanifest/tree_arena.c',
-                     'cfastmanifest/tree_convert.c',
-                     'cfastmanifest/tree_copy.c',
-                     'cfastmanifest/tree_diff.c',
-                     'cfastmanifest/tree_disk.c',
-                     'cfastmanifest/tree_iterator.c',
-                     'cfastmanifest/tree_path.c',
-            ],
-            include_dirs=[
-                'cfastmanifest',
-                'clib',
-            ] + include_dirs,
-            library_dirs=library_dirs,
-            libraries=['crypto',
-            ],
-            extra_compile_args=[
-                "-std=c99",
-                "-Wall",
-                "-Werror", "-Werror=strict-prototypes",
-            ] + cdebugflags,
-        ),
-    ],
-    'linelog' : [
-        Extension('linelog',
-            sources=['linelog/pyext/linelog.pyx'],
-            extra_compile_args=[
-                '-std=c99',
-                '-Wall', '-Wextra', '-Wconversion', '-pedantic',
-            ] + cdebugflags,
-        ),
-    ],
-}
+if os.name == 'nt':
+    # The modules that successfully compile on Windows
+    availableextmodules = {}
+else:
+    availableextmodules = {
+        'cdatapack' : [
+            Extension('cdatapack',
+                sources=[
+                    'cdatapack/py-cdatapack.c',
+                    'cdatapack/cdatapack.c',
+                ],
+                include_dirs=[
+                    'clib',
+                    'cdatapack',
+                ] + include_dirs,
+                library_dirs=library_dirs,
+                libraries=[
+                    'crypto',
+                    'lz4',
+                ],
+                extra_compile_args=[
+                    "-std=c99",
+                    "-Wall",
+                    "-Werror", "-Werror=strict-prototypes",
+                ] + cdebugflags,
+            ),
+        ],
+        'ctreemanifest' : [
+            Extension('ctreemanifest',
+                sources=[
+                    'ctreemanifest/py-treemanifest.cpp',
+                    'ctreemanifest/manifest.cpp',
+                    'ctreemanifest/manifest_entry.cpp',
+                    'ctreemanifest/manifest_fetcher.cpp',
+                    'ctreemanifest/pythonutil.cpp',
+                    'ctreemanifest/treemanifest.cpp',
+                ],
+                include_dirs=[
+                    'ctreemanifest',
+                ] + include_dirs,
+                library_dirs=library_dirs,
+                libraries=[
+                    'crypto',
+                ],
+                extra_compile_args=[
+                    "-std=c++0x",
+                    "-Wall",
+                    "-Werror",
+                ] + cdebugflags,
+            ),
+        ],
+        'cfastmanifest' : [
+            Extension('cfastmanifest',
+                sources=['cfastmanifest.c',
+                         'cfastmanifest/bsearch.c',
+                         'clib/buffer.c',
+                         'cfastmanifest/checksum.c',
+                         'cfastmanifest/node.c',
+                         'cfastmanifest/tree.c',
+                         'cfastmanifest/tree_arena.c',
+                         'cfastmanifest/tree_convert.c',
+                         'cfastmanifest/tree_copy.c',
+                         'cfastmanifest/tree_diff.c',
+                         'cfastmanifest/tree_disk.c',
+                         'cfastmanifest/tree_iterator.c',
+                         'cfastmanifest/tree_path.c',
+                ],
+                include_dirs=[
+                    'cfastmanifest',
+                    'clib',
+                ] + include_dirs,
+                library_dirs=library_dirs,
+                libraries=['crypto',
+                ],
+                extra_compile_args=[
+                    "-std=c99",
+                    "-Wall",
+                    "-Werror", "-Werror=strict-prototypes",
+                ] + cdebugflags,
+            ),
+        ],
+        'linelog' : [
+            Extension('linelog',
+                sources=['linelog/pyext/linelog.pyx'],
+                extra_compile_args=[
+                    '-std=c99',
+                    '-Wall', '-Wextra', '-Wconversion', '-pedantic',
+                ] + cdebugflags,
+            ),
+        ],
+    }
 
 COMPONENTS = sorted(availablepackages + availableextmodules.keys() +
                     availablepymodules.keys())
@@ -196,9 +200,13 @@ while processdep:
                     components.append(dep)
                     processdep = True
 
-cythonmodules = [
-    'linelog',
-]
+if os.name == 'nt':
+    # The modules that successfully compile on Windows
+    cythonmodules = []
+else:
+    cythonmodules = [
+        'linelog',
+    ]
 for cythonmodule in cythonmodules:
     if cythonmodule in components:
         import Cython
