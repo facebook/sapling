@@ -154,7 +154,7 @@ class cg1unpacker(object):
     # These methods (compressed, read, seek, tell) all appear to only
     # be used by bundlerepo, but it's a little hard to tell.
     def compressed(self):
-        return self._type is not None
+        return self._type is not None and self._type != 'UN'
     def read(self, l):
         return self._stream.read(l)
     def seek(self, pos):
