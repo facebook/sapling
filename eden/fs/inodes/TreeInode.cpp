@@ -17,6 +17,7 @@
 #include "TreeInodeDirHandle.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileData.h"
+#include "eden/fs/inodes/InodeError.h"
 #include "eden/fs/journal/JournalDelta.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
@@ -91,7 +92,7 @@ InodePtr TreeInode::getChildByNameLocked(
     PathComponentPiece name) {
   auto iter = contents->entries.find(name);
   if (iter == contents->entries.end()) {
-    folly::throwSystemErrorExplicit(ENOENT);
+    throw InodeError(ENOENT, inodePtrFromThis(), name);
   }
 
   // Only allocate an inode number once we know that the entry exists!
@@ -104,7 +105,7 @@ InodePtr TreeInode::getChildByNameLocked(
       return std::make_shared<TreeInode>(
           mount_,
           node->getNodeId(),
-          std::static_pointer_cast<TreeInode>(shared_from_this()),
+          inodePtrFromThis(),
           name,
           entry,
           std::move(tree));
@@ -117,17 +118,14 @@ InodePtr TreeInode::getChildByNameLocked(
     return std::make_shared<TreeInode>(
         mount_,
         node->getNodeId(),
-        std::static_pointer_cast<TreeInode>(shared_from_this()),
+        inodePtrFromThis(),
         name,
         entry,
         std::move(overlayDir.value()));
   }
 
   return std::make_shared<FileInode>(
-      node->getNodeId(),
-      std::static_pointer_cast<TreeInode>(shared_from_this()),
-      name,
-      entry);
+      node->getNodeId(), inodePtrFromThis(), name, entry);
 }
 
 folly::Future<InodePtr> TreeInode::getChildByName(
@@ -146,8 +144,7 @@ fuse_ino_t TreeInode::getInode() const {
 
 folly::Future<std::shared_ptr<fusell::DirHandle>> TreeInode::opendir(
     const struct fuse_file_info&) {
-  return std::make_shared<TreeInodeDirHandle>(
-      std::static_pointer_cast<TreeInode>(shared_from_this()));
+  return std::make_shared<TreeInodeDirHandle>(inodePtrFromThis());
 }
 
 /* If we don't yet have an overlay entry for this portion of the tree,
@@ -270,7 +267,7 @@ TreeInode::create(PathComponentPiece name, mode_t mode, int flags) {
     // build a corresponding FileInode
     inode = std::make_shared<FileInode>(
         node->getNodeId(),
-        std::static_pointer_cast<TreeInode>(this->shared_from_this()),
+        inodePtrFromThis(),
         name,
         entry.get(),
         std::move(file));
@@ -308,16 +305,6 @@ bool TreeInode::canForget() {
   return !contents_.rlock()->materialized;
 }
 
-folly::Future<fuse_entry_param> link(
-    InodePtr /* node */,
-    PathComponentPiece /* newname */) {
-  // We intentionally do not support hard links.
-  // These generally cannot be tracked in source control (git or mercurial)
-  // and are not portable to non-Unix platforms.
-  folly::throwSystemErrorExplicit(
-      EPERM, "hard links are not supported in eden mount points");
-}
-
 folly::Future<fuse_entry_param> TreeInode::symlink(
     PathComponentPiece /* link */,
     PathComponentPiece /* name */) {
@@ -337,8 +324,7 @@ folly::Future<fuse_entry_param> TreeInode::mkdir(
   contents_.withWLock([&](auto& contents) {
     auto entIter = contents.entries.find(name);
     if (entIter != contents.entries.end()) {
-      folly::throwSystemErrorExplicit(
-          EEXIST, "mkdir: ", targetName, " already exists in the overlay");
+      throw InodeError(EEXIST, inodePtrFromThis(), name);
     }
     auto overlay = this->getOverlay();
 
@@ -384,12 +370,10 @@ folly::Future<folly::Unit> TreeInode::unlink(PathComponentPiece name) {
   contents_.withRLock([&](const auto& contents) {
     auto entIter = contents.entries.find(name);
     if (entIter == contents.entries.end()) {
-      folly::throwSystemErrorExplicit(
-          ENOENT, "unlink: ", targetName, " does not exist");
+      throw InodeError(ENOENT, inodePtrFromThis(), name);
     }
     if (S_ISDIR(entIter->second->mode)) {
-      folly::throwSystemErrorExplicit(
-          EISDIR, "unlink: ", targetName, " is a directory");
+      throw InodeError(EISDIR, inodePtrFromThis(), name);
     }
   });
 
@@ -399,14 +383,12 @@ folly::Future<folly::Unit> TreeInode::unlink(PathComponentPiece name) {
     // Re-check the pre-conditions in case we raced
     auto entIter = contents.entries.find(name);
     if (entIter == contents.entries.end()) {
-      folly::throwSystemErrorExplicit(
-          ENOENT, "unlink: ", targetName, " does not exist");
+      throw InodeError(ENOENT, inodePtrFromThis(), name);
     }
 
     auto& ent = entIter->second;
     if (S_ISDIR(ent->mode)) {
-      folly::throwSystemErrorExplicit(
-          EISDIR, "unlink: ", targetName, " is a directory");
+      throw InodeError(EISDIR, inodePtrFromThis(), name);
     }
 
     auto overlay = this->getOverlay();
@@ -464,34 +446,31 @@ folly::Future<folly::Unit> TreeInode::rmdir(PathComponentPiece name) {
   contents_.withRLock([&](const auto& contents) {
     auto entIter = contents.entries.find(name);
     if (entIter == contents.entries.end()) {
-      folly::throwSystemErrorExplicit(
-          ENOENT, "rmdir: ", targetName, " does not exist");
+      throw InodeError(ENOENT, inodePtrFromThis(), name);
     }
     if (!S_ISDIR(entIter->second->mode)) {
-      folly::throwSystemErrorExplicit(
-          EISDIR, "rmdir: ", targetName, " is not a directory");
+      throw InodeError(EISDIR, inodePtrFromThis(), name);
     }
     auto targetInode = this->lookupChildByNameLocked(&contents, name);
     if (!targetInode) {
-      folly::throwSystemErrorExplicit(
+      throw InodeError(
           EIO,
-          "rmdir: ",
-          targetName,
-          " is supposed to exist but didn't resolve to an inode object");
+          inodePtrFromThis(),
+          name,
+          "rmdir target did not resolve to an inode object");
     }
     auto targetDir = std::dynamic_pointer_cast<TreeInode>(targetInode);
     if (!targetDir) {
-      folly::throwSystemErrorExplicit(
+      throw InodeError(
           EIO,
-          "rmdir: ",
-          targetName,
-          " is supposed to be a dir but didn't resolve to a TreeInode object");
+          inodePtrFromThis(),
+          name,
+          "rmdir target did not resolve to a TreeInode object");
     }
 
     targetDir->contents_.withRLock([&](const auto& targetContents) {
       if (!targetContents.entries.empty()) {
-        folly::throwSystemErrorExplicit(
-            ENOTEMPTY, "rmdir: ", targetName, " is not empty");
+        throw InodeError(ENOTEMPTY, inodePtrFromThis(), name);
       }
     });
   });
@@ -502,34 +481,31 @@ folly::Future<folly::Unit> TreeInode::rmdir(PathComponentPiece name) {
     // Re-check the pre-conditions in case we raced
     auto entIter = contents.entries.find(name);
     if (entIter == contents.entries.end()) {
-      folly::throwSystemErrorExplicit(
-          ENOENT, "rmdir: ", targetName, " does not exist");
+      throw InodeError(ENOENT, inodePtrFromThis(), name);
     }
 
     auto& ent = entIter->second;
     if (!S_ISDIR(ent->mode)) {
-      folly::throwSystemErrorExplicit(
-          EISDIR, "rmdir: ", targetName, " is not a directory");
+      throw InodeError(EISDIR, inodePtrFromThis(), name);
     }
     auto targetInode = this->lookupChildByNameLocked(&contents, name);
     if (!targetInode) {
-      folly::throwSystemErrorExplicit(
+      throw InodeError(
           EIO,
-          "rmdir: ",
-          targetName,
-          " is supposed to exist but didn't resolve to an inode object");
+          inodePtrFromThis(),
+          name,
+          "rmdir target did not resolve to an inode object");
     }
     auto targetDir = std::dynamic_pointer_cast<TreeInode>(targetInode);
     if (!targetDir) {
-      folly::throwSystemErrorExplicit(
+      throw InodeError(
           EIO,
-          "rmdir: ",
-          targetName,
-          " is supposed to be a dir but didn't resolve to a TreeInode object");
+          inodePtrFromThis(),
+          name,
+          "rmdir target did not resolve to a TreeInode object");
     }
     if (!targetDir->contents_.rlock()->entries.empty()) {
-      folly::throwSystemErrorExplicit(
-          ENOTEMPTY, "rmdir: ", targetName, " is not empty");
+      throw InodeError(ENOTEMPTY, inodePtrFromThis(), name);
     }
 
     auto overlay = this->getOverlay();
@@ -663,8 +639,7 @@ folly::Future<folly::Unit> TreeInode::rename(
   contents_.withRLock([&](const auto& contents) {
     auto entIter = contents.entries.find(name);
     if (entIter == contents.entries.end()) {
-      folly::throwSystemErrorExplicit(
-          ENOENT, "rename: source file ", sourceName, " does not exist");
+      throw InodeError(ENOENT, inodePtrFromThis(), name);
     }
   });
 

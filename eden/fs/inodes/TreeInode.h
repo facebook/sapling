@@ -184,6 +184,10 @@ class TreeInode : public InodeBase {
    * used to track the directory in the inode */
   static Dir buildDirFromTree(const Tree* tree);
 
+  TreeInodePtr inodePtrFromThis() {
+    return std::static_pointer_cast<TreeInode>(shared_from_this());
+  }
+
   /** Helper used to implement getChildByName and lookupChildByNameLocked */
   InodePtr getChildByNameLocked(const Dir* contents, PathComponentPiece name);
 

@@ -12,6 +12,7 @@
 #include "EdenMount.h"
 #include "FileData.h"
 #include "FileHandle.h"
+#include "InodeError.h"
 #include "Overlay.h"
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Hash.h"
@@ -106,7 +107,7 @@ folly::Future<std::string> FileInode::readlink() {
   DCHECK_NOTNULL(entry_);
   if (!S_ISLNK(entry_->mode)) {
     // man 2 readlink says:  EINVAL The named file is not a symbolic link.
-    folly::throwSystemErrorExplicit(EINVAL);
+    throw InodeError(EINVAL, inodePtrFromThis(), "not a symlink");
   }
 
   if (entry_->materialized) {
@@ -212,7 +213,7 @@ Future<vector<string>> FileInode::listxattr() {
 Future<string> FileInode::getxattr(StringPiece name) {
   // Currently, we only support the xattr for the SHA-1 of a regular file.
   if (name != kXattrSha1) {
-    folly::throwSystemErrorExplicit(kENOATTR);
+    throw InodeError(kENOATTR, inodePtrFromThis());
   }
 
   return getSHA1().get().toString();
@@ -230,7 +231,7 @@ Future<Hash> FileInode::getSHA1() {
 
   if (!S_ISREG(entry_->mode)) {
     // We only define a SHA-1 value for regular files
-    folly::throwSystemErrorExplicit(kENOATTR);
+    throw InodeError(kENOATTR, inodePtrFromThis());
   }
 
   if (entry_->materialized) {

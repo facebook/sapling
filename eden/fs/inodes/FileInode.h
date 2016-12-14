@@ -64,6 +64,9 @@ class FileInode : public InodeBase {
   std::shared_ptr<FileData> getOrLoadData();
 
  private:
+  FileInodePtr inodePtrFromThis() {
+    return std::static_pointer_cast<FileInode>(shared_from_this());
+  }
 
   /// Called as part of shutting down an open handle.
   void fileHandleDidClose();

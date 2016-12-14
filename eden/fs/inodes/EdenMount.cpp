@@ -16,6 +16,7 @@
 #include "eden/fs/inodes/EdenDispatcher.h"
 #include "eden/fs/inodes/EdenMounts.h"
 #include "eden/fs/inodes/FileInode.h"
+#include "eden/fs/inodes/InodeError.h"
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/model/Hash.h"
@@ -137,8 +138,7 @@ TreeInodePtr EdenMount::getTreeInode(RelativePathPiece path) const {
   if (treeInode) {
     return treeInode;
   } else {
-    folly::throwSystemErrorExplicit(
-        ENOTDIR, "not a directory: ", path.stringPiece());
+    throw InodeError(ENOTDIR, inodeBase);
   }
 }
 
@@ -148,8 +148,7 @@ FileInodePtr EdenMount::getFileInode(RelativePathPiece path) const {
   if (fileInode) {
     return fileInode;
   } else {
-    folly::throwSystemErrorExplicit(
-        EISDIR, "is a directory: ", path.stringPiece());
+    throw InodeError(EISDIR, inodeBase);
   }
 }
 }
