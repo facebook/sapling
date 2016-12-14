@@ -28,6 +28,8 @@ try:
 except ImportError:
     supportsctree = False
 
+propertycache = util.propertycache
+
 class hybridmanifest(object):
     """
     Hybrid manifest that behaves like a lazy manifest.
@@ -758,6 +760,10 @@ class hybridmanifestctx(object):
         memmf = manifest.memmanifestctx(self._repo)
         memmf._manifestdict = self.read().copy()
         return memmf
+
+    @propertycache
+    def parents(self):
+        return self._revlog.parents(self._node)
 
     def read(self):
         def loadflat():
