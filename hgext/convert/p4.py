@@ -126,14 +126,16 @@ class p4_source(common.converter_source):
 
         # handle revision limiting
         startrev = self.ui.config('convert', 'p4.startrev', default=0)
-        self.p4changes = [x for x in self.p4changes
-                          if ((not startrev or int(x) >= int(startrev)) and
-                              (not self.revs or int(x) <= int(self.revs[0])))]
 
         # now read the full changelists to get the list of file revisions
         ui.status(_('collecting p4 changelists\n'))
         lastid = None
         for change in self.p4changes:
+            if startrev and int(change) < int(startrev):
+                continue
+            if self.revs and int(change) > int(self.revs[0]):
+                continue
+
             cmd = "p4 -G describe -s %s" % change
             stdout = util.popen(cmd, mode='rb')
             d = marshal.load(stdout)
