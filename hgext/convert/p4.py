@@ -55,6 +55,7 @@ class p4_source(common.converter_source):
 
         common.checktool('p4', abort=False)
 
+        self.revmap = {}
         self.p4changes = {}
         self.heads = []
         self.changeset = {}
@@ -76,6 +77,19 @@ class p4_source(common.converter_source):
             raise error.Abort(_("p4 source does not support specifying "
                                "multiple revisions"))
         self._parse(ui, path)
+
+    def setrevmap(self, revmap):
+        """Sets the parsed revmap dictionary.
+
+        Revmap stores mappings from a source revision to a target revision.
+        It is set in convertcmd.convert and provided by the user as a file
+        on the commandline.
+
+        Revisions in the map are considered beeing present in the
+        repository and ignored during _parse(). This allows for incremental
+        imports if a revmap is provided.
+        """
+        self.revmap = revmap
 
     def _parse_view(self, path):
         "Read changes affecting the path"
@@ -131,6 +145,10 @@ class p4_source(common.converter_source):
             if startrev and int(change) < int(startrev):
                 continue
             if self.revs and int(change) > int(self.revs[0]):
+                continue
+            if change in self.revmap:
+                # Ignore already present revisions, but set the parent pointer.
+                lastid = change
                 continue
 
             cmd = "p4 -G describe -s %s" % change
