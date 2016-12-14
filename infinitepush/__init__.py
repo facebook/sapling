@@ -375,7 +375,7 @@ def _getoutputbundleraw(bundlerepo, bundleroots, unknownhead):
                                   missingheads=[unknownhead])
     outputbundleraw = changegroup.getlocalchangegroupraw(bundlerepo, 'pull',
                                                          outgoing)
-    return outputbundleraw
+    return util.chunkbuffer(outputbundleraw).read()
 
 def _getbundleroots(oldrepo, bundlerepo, bundlerevs):
     cl = bundlerepo.changelog
@@ -400,16 +400,20 @@ def getbundlechunks(orig, repo, source, heads=None, bundlecaps=None, **kwargs):
     for head in heads:
         if head not in repo.changelog.nodemap:
             bundlerepo = getbundlerepo(repo, head)
-            bundlerevs = set(_readbundlerevs(bundlerepo))
-            bundlecaps = _includefilelogstobundle(bundlecaps, bundlerepo,
-                                                  bundlerevs, repo.ui)
-            cl = bundlerepo.changelog
-            for rev in bundlerevs:
-                node = cl.node(rev)
-                newphases[hex(node)] = str(phases.draft)
+            try:
+                bundlerevs = set(_readbundlerevs(bundlerepo))
+                bundlecaps = _includefilelogstobundle(bundlecaps, bundlerepo,
+                                                      bundlerevs, repo.ui)
+                cl = bundlerepo.changelog
+                for rev in bundlerevs:
+                    node = cl.node(rev)
+                    newphases[hex(node)] = str(phases.draft)
 
-            bundleroots = _getbundleroots(repo, bundlerepo, bundlerevs)
-            outputbundleraw = _getoutputbundleraw(bundlerepo, bundleroots, head)
+                bundleroots = _getbundleroots(repo, bundlerepo, bundlerevs)
+                outputbundleraw = _getoutputbundleraw(bundlerepo, bundleroots,
+                                                      head)
+            finally:
+                bundlerepo.close()
             scratchbundles.append(outputbundleraw)
             newheads.extend(bundleroots)
             scratchheads.append(head)
@@ -1046,6 +1050,7 @@ def bundle2scratchbranch(op, part):
     op.records.add(scratchbranchparttype + '_skippushkey', True)
 
     bundlefile = None
+    bundle = None
 
     try:  # guards bundlefile
         cgversion = params.get('cgversion', '01')
@@ -1122,6 +1127,8 @@ def bundle2scratchbranch(op, part):
         except OSError as e:
             if e.errno != errno.ENOENT:
                 raise
+        if bundle:
+            bundle.close()
 
     return 1
 
