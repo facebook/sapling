@@ -266,7 +266,7 @@ class _annotatecontext(object):
         # command could give us a revision number even if the user passes a
         # commit hash.
         if isinstance(rev, int):
-            rev = self.repo.changelog.node(rev)
+            rev = node.hex(self.repo.changelog.node(rev))
 
         # fast path: if rev is in the main branch already
         directly, revfctx = self.canannotatedirectly(rev)
