@@ -22,6 +22,7 @@
 #include "eden/fs/inodes/EdenDispatcher.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
+#include "eden/fs/inodes/InodeError.h"
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/model/Hash.h"
@@ -204,43 +205,14 @@ SHA1Result EdenServiceHandler::getSHA1ForPath(
 
   auto edenMount = server_->getMount(mountPoint);
   auto relativePath = RelativePathPiece{path};
-  auto dispatcher = edenMount->getDispatcher();
-  auto parent = edenMount->getRootInode();
-
-  auto it = relativePath.paths().begin();
-  while (true) {
-    InodePtr inodeBase =
-        dispatcher->lookupInodeBase(parent->getNodeId(), it.piece().basename())
-            .get();
-
-    auto inodeNumber = inodeBase->getNodeId();
-    auto currentPiece = it.piece();
-    it++;
-    if (it == relativePath.paths().end()) {
-      // inodeNumber must correspond to the last path component, which we expect
-      // to correspond to a file.
-      auto fileInode = dispatcher->getFileInode(inodeNumber);
-
-      if (!fileInode) {
-        out.set_error(newEdenError(
-            EISDIR, "Wrong FileInode type: {}", currentPiece.stringPiece()));
-        return out;
-      }
-
-      auto entry = fileInode->getEntry();
-      if (!S_ISREG(entry->mode)) {
-        out.set_error(newEdenError(
-            EISDIR, "Not an ordinary file: {}", currentPiece.stringPiece()));
-        return out;
-      }
-
-      auto hash = fileInode->getSHA1().get();
-      out.set_sha1(StringPiece(hash.getBytes()).str());
-      return out;
-    } else {
-      parent = dispatcher->getTreeInode(inodeNumber);
-    }
+  auto fileInode = edenMount->getFileInode(relativePath);
+  if (!S_ISREG(fileInode->getEntry()->mode)) {
+    // We intentionally want to refuse to compute the SHA1 of symlinks
+    throw InodeError(EINVAL, fileInode, "file is a symlink");
   }
+  auto hash = fileInode->getSHA1().get();
+  out.set_sha1(StringPiece(hash.getBytes()).str());
+  return out;
 }
 
 void EdenServiceHandler::getMaterializedEntries(

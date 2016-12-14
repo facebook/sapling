@@ -63,7 +63,7 @@ class ThriftTest:
     def test_get_sha1_throws_for_directory(self):
         results = self.client.getSHA1(self.mount, ['adir'])
         self.assertEqual(1, len(results))
-        self.assert_error(results[0], ': Is a directory')
+        self.assert_error(results[0], 'adir: Is a directory')
 
     def test_get_sha1_throws_for_non_existent_file(self):
         results = self.client.getSHA1(self.mount, ['i_do_not_exist'])
@@ -75,7 +75,8 @@ class ThriftTest:
         '''Fails because caller should resolve the symlink themselves.'''
         results = self.client.getSHA1(self.mount, ['slink'])
         self.assertEqual(1, len(results))
-        self.assert_error(results[0], 'Not an ordinary file: slink')
+        self.assert_error(results[0],
+                          'slink: file is a symlink: Invalid argument')
 
     def assert_error(self, sha1result, error_message):
         self.assertIsNotNone(sha1result, msg='Must pass a SHA1Result')
