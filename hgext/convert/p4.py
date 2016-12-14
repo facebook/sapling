@@ -60,9 +60,6 @@ class p4_source(common.converter_source):
         self.changeset = {}
         self.files = {}
         self.copies = {}
-        self.tags = {}
-        self.lastbranch = {}
-        self.parent = {}
         self.encoding = self.ui.config('convert', 'p4.encoding',
                                        default=convcmd.orig_encoding)
         self.depotname = {}           # mapping from local name to depot name
@@ -292,7 +289,7 @@ class p4_source(common.converter_source):
         return self.changeset[rev]
 
     def gettags(self):
-        return self.tags
+        return {}
 
     def getchangedfiles(self, rev, i):
         return sorted([x[0] for x in self.files[rev]])
