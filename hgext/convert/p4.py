@@ -56,7 +56,7 @@ class p4_source(common.converter_source):
         common.checktool('p4', abort=False)
 
         self.p4changes = {}
-        self.heads = {}
+        self.heads = []
         self.changeset = {}
         self.files = {}
         self.copies = {}
