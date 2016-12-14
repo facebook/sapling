@@ -22,8 +22,8 @@
 #include "eden/fs/config/ClientConfig.h"
 #include "eden/fs/inodes/Dirstate.h"
 #include "eden/fs/inodes/EdenMount.h"
+#include "eden/fs/store/EmptyBackingStore.h"
 #include "eden/fs/store/LocalStore.h"
-#include "eden/fs/store/NullBackingStore.h"
 #include "eden/fs/store/git/GitBackingStore.h"
 #include "eden/fs/store/hg/HgBackingStore.h"
 #include "eden/fuse/MountPoint.h"
@@ -261,7 +261,7 @@ shared_ptr<BackingStore> EdenServer::createBackingStore(
     StringPiece type,
     StringPiece name) {
   if (type == "null") {
-    return make_shared<NullBackingStore>();
+    return make_shared<EmptyBackingStore>();
   } else if (type == "hg") {
     return make_shared<HgBackingStore>(name, localStore_.get());
   } else if (type == "git") {

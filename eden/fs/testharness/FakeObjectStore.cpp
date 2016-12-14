@@ -9,8 +9,12 @@
  */
 #include "FakeObjectStore.h"
 
+#include <folly/Optional.h>
 #include <folly/String.h>
+#include <folly/futures/Future.h>
 
+using folly::Future;
+using folly::makeFuture;
 using std::make_unique;
 using std::unique_ptr;
 using std::unordered_map;
@@ -27,7 +31,13 @@ void FakeObjectStore::addTree(Tree&& tree) {
 }
 
 void FakeObjectStore::addBlob(Blob&& blob) {
+  // Compute the blob metadata
+  auto sha1 = Hash::sha1(&blob.getContents());
+  auto metadata =
+      BlobMetadata{sha1, blob.getContents().computeChainDataLength()};
+
   blobs_.emplace(blob.getHash(), std::move(blob));
+  blobMetadata_.emplace(blob.getHash(), metadata);
 }
 
 void FakeObjectStore::setTreeForCommit(const Hash& commitID, Tree&& tree) {
@@ -41,44 +51,55 @@ void FakeObjectStore::setTreeForCommit(const Hash& commitID, Tree&& tree) {
   }
 }
 
-void FakeObjectStore::setSha1ForBlob(const Blob& blob, const Hash& sha1) {
-  sha1s_[blob.getHash()] = sha1;
+unique_ptr<Tree> FakeObjectStore::getTree(const Hash& id) const {
+  return getTreeFuture(id).get();
 }
 
-unique_ptr<Tree> FakeObjectStore::getTree(const Hash& id) const {
+Future<std::unique_ptr<Tree>> FakeObjectStore::getTreeFuture(
+    const Hash& id) const {
   auto iter = trees_.find(id);
-  if (iter != trees_.end()) {
-    return make_unique<Tree>(iter->second);
-  } else {
-    throw std::domain_error("tree " + id.toString() + " not found");
+  if (iter == trees_.end()) {
+    return makeFuture<unique_ptr<Tree>>(
+        std::domain_error("tree " + id.toString() + " not found"));
   }
+  return makeFuture(make_unique<Tree>(iter->second));
 }
 
 unique_ptr<Blob> FakeObjectStore::getBlob(const Hash& id) const {
-  auto iter = blobs_.find(id);
-  if (iter != blobs_.end()) {
-    return make_unique<Blob>(iter->second);
-  } else {
-    throw std::domain_error("blob " + id.toString() + " not found");
-  }
+  return getBlobFuture(id).get();
 }
 
-unique_ptr<Tree> FakeObjectStore::getTreeForCommit(const Hash& id) const {
-  auto iter = commits_.find(id);
-  if (iter != commits_.end()) {
-    return make_unique<Tree>(iter->second);
-  } else {
-    throw std::domain_error("commit " + id.toString() + " not found");
+Future<std::unique_ptr<Blob>> FakeObjectStore::getBlobFuture(
+    const Hash& id) const {
+  auto iter = blobs_.find(id);
+  if (iter == blobs_.end()) {
+    return makeFuture<unique_ptr<Blob>>(
+        std::domain_error("blob " + id.toString() + " not found"));
   }
+  return makeFuture(make_unique<Blob>(iter->second));
+}
+
+Future<unique_ptr<Tree>> FakeObjectStore::getTreeForCommit(
+    const Hash& commitID) const {
+  auto iter = commits_.find(commitID);
+  if (iter == commits_.end()) {
+    return makeFuture<unique_ptr<Tree>>(std::domain_error(
+        "tree data for commit " + commitID.toString() + " not found"));
+  }
+  return makeFuture(make_unique<Tree>(iter->second));
 }
 
 Hash FakeObjectStore::getSha1ForBlob(const Hash& id) const {
-  auto iter = sha1s_.find(id);
-  if (iter != sha1s_.end()) {
-    return iter->second;
-  } else {
-    throw std::domain_error("blob " + id.toString() + " not found");
+  return getBlobMetadata(id).get().sha1;
+}
+
+Future<BlobMetadata> FakeObjectStore::getBlobMetadata(const Hash& id) const {
+  auto iter = blobMetadata_.find(id);
+  if (iter == blobMetadata_.end()) {
+    return makeFuture<BlobMetadata>(
+        std::domain_error("metadata for blob " + id.toString() + " not found"));
   }
+  return makeFuture(iter->second);
 }
 }
 }

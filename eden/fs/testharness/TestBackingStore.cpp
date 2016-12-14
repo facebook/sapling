@@ -9,11 +9,15 @@
  */
 #include "TestBackingStore.h"
 
+#include <folly/futures/Future.h>
+
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/store/LocalStore.h"
 
+using folly::Future;
+using folly::makeFuture;
 using std::unique_ptr;
 
 namespace facebook {
@@ -24,16 +28,19 @@ TestBackingStore::TestBackingStore(std::shared_ptr<LocalStore> localStore)
 
 TestBackingStore::~TestBackingStore() {}
 
-unique_ptr<Tree> TestBackingStore::getTree(const Hash& /* id */) {
-  return nullptr;
+Future<unique_ptr<Tree>> TestBackingStore::getTree(const Hash& /* id */) {
+  return makeFuture<unique_ptr<Tree>>(
+      std::runtime_error("getTree() not implemented yet"));
 }
 
-unique_ptr<Blob> TestBackingStore::getBlob(const Hash& /* id */) {
-  return nullptr;
+Future<unique_ptr<Blob>> TestBackingStore::getBlob(const Hash& /* id */) {
+  return makeFuture<unique_ptr<Blob>>(
+      std::runtime_error("getBlob() not implemented yet"));
 }
 
-unique_ptr<Tree> TestBackingStore::getTreeForCommit(const Hash& commitID) {
-  return localStore_->getTree(commitID);
+Future<unique_ptr<Tree>> TestBackingStore::getTreeForCommit(
+    const Hash& commitID) {
+  return makeFuture(localStore_->getTree(commitID));
 }
 }
 } // facebook::eden

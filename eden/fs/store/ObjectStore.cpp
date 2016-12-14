@@ -11,6 +11,7 @@
 
 #include <folly/Conv.h>
 #include <folly/Optional.h>
+#include <folly/futures/Future.h>
 #include <folly/io/IOBuf.h>
 #include <stdexcept>
 #include "BackingStore.h"
@@ -18,7 +19,9 @@
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Tree.h"
 
+using folly::Future;
 using folly::IOBuf;
+using folly::makeFuture;
 using std::shared_ptr;
 using std::string;
 using std::unique_ptr;
@@ -35,91 +38,116 @@ ObjectStore::ObjectStore(
 ObjectStore::~ObjectStore() {}
 
 unique_ptr<Tree> ObjectStore::getTree(const Hash& id) const {
+  return getTreeFuture(id).get();
+}
+
+Future<unique_ptr<Tree>> ObjectStore::getTreeFuture(const Hash& id) const {
   // Check in the LocalStore first
   auto tree = localStore_->getTree(id);
   if (tree) {
     VLOG(4) << "tree " << id << " found in local store";
-    return tree;
+    return makeFuture(std::move(tree));
   }
 
-  // TODO: We probably should build a mechanism to check if the same ID is
-  // being looked up simultanously in separate threads, and share the work.
-  // This may require more thinking about the memory model, since currently
-  // getTree() returns a unique_ptr, which cannot be shared.  We should figure
-  // out if we manage simultaneous lookups in the ObjectStore, or higher up
-  // in the inode code.
-
-  // Look in the BackingStore
-  tree = backingStore_->getTree(id);
-  if (!tree) {
-    // TODO: Perhaps we should do some short-term negative caching?
-    VLOG(2) << "unable to find tree " << id;
-    throw std::domain_error(
-        folly::to<string>("tree ", id.toString(), " not found"));
-  }
-
-  // TODO: For now, the BackingStore objects actually end up already
-  // saving the Tree object in the LocalStore, so we don't do anything here.
+  // Note: We don't currently have logic here to avoid duplicate work if
+  // multiple callers request the same tree at once.  We could store a map of
+  // pending lookups as (Hash --> std::list<Promise<unique_ptr<Tree>>), and
+  // just add a new Promise to the list if this Hash already exists in the
+  // pending list.
   //
-  // localStore_->putTree(tree.get());
-  VLOG(3) << "tree " << id << " retrieved from backing store";
-  return tree;
+  // However, de-duplication of object loads will already be done at the Inode
+  // layer.  Therefore we currently don't bother de-duping loads at this layer.
+
+  // Load the tree from the BackingStore.
+  return backingStore_->getTree(id).then([id](std::unique_ptr<Tree> tree) {
+    if (!tree) {
+      // TODO: Perhaps we should do some short-term negative caching?
+      VLOG(2) << "unable to find tree " << id;
+      throw std::domain_error(
+          folly::to<string>("tree ", id.toString(), " not found"));
+    }
+
+    // TODO: For now, the BackingStore objects actually end up already
+    // saving the Tree object in the LocalStore, so we don't do anything
+    // here.
+    //
+    // localStore_->putTree(tree.get());
+    VLOG(3) << "tree " << id << " retrieved from backing store";
+    return tree;
+  });
 }
 
 unique_ptr<Blob> ObjectStore::getBlob(const Hash& id) const {
+  return getBlobFuture(id).get();
+}
+
+Future<unique_ptr<Blob>> ObjectStore::getBlobFuture(const Hash& id) const {
   auto blob = localStore_->getBlob(id);
   if (blob) {
     VLOG(4) << "blob " << id << "  found in local store";
-    return blob;
+    return makeFuture(std::move(blob));
   }
 
   // Look in the BackingStore
-  blob = backingStore_->getBlob(id);
-  if (!blob) {
-    VLOG(2) << "unable to find blob " << id;
-    // TODO: Perhaps we should do some short-term negative caching?
-    throw std::domain_error(
-        folly::to<string>("blob ", id.toString(), " not found"));
-  }
+  return backingStore_->getBlob(id).then(
+      [ localStore = localStore_, id ](std::unique_ptr<Blob> blob) {
+        if (!blob) {
+          VLOG(2) << "unable to find blob " << id;
+          // TODO: Perhaps we should do some short-term negative caching?
+          throw std::domain_error(
+              folly::to<string>("blob ", id.toString(), " not found"));
+        }
 
-  VLOG(3) << "blob " << id << "  retrieved from backing store";
-  localStore_->putBlob(id, blob.get());
-  return blob;
+        VLOG(3) << "blob " << id << "  retrieved from backing store";
+        localStore->putBlob(id, blob.get());
+        return blob;
+      });
 }
 
-unique_ptr<Tree> ObjectStore::getTreeForCommit(const Hash& commitID) const {
+Future<unique_ptr<Tree>> ObjectStore::getTreeForCommit(
+    const Hash& commitID) const {
   VLOG(3) << "getTreeForCommit(" << commitID << ")";
 
-  // For now we assume that the BackingStore will insert the Tree into the
-  // LocalStore on its own.
-  auto tree = backingStore_->getTreeForCommit(commitID);
-  if (!tree) {
-    throw std::domain_error(
-        folly::to<string>("unable to import commit ", commitID.toString()));
-  }
-  return tree;
+  return backingStore_->getTreeForCommit(commitID).then(
+      [commitID](std::unique_ptr<Tree> tree) {
+        if (!tree) {
+          throw std::domain_error(folly::to<string>(
+              "unable to import commit ", commitID.toString()));
+        }
+
+        // For now we assume that the BackingStore will insert the Tree into the
+        // LocalStore on its own, so we don't have to update the LocalStore
+        // ourselves here.
+        return tree;
+      });
 }
 
 Hash ObjectStore::getSha1ForBlob(const Hash& id) const {
-  auto sha1 = localStore_->getSha1ForBlob(id);
-  if (sha1) {
-    return sha1.value();
-  }
-
-  // TODO: We should probably build a smarter API so we can ask the
-  // BackingStore for just the SHA1 if it can compute it more efficiently
-  // without having to get the full blob data.
-
-  // Look in the BackingStore
-  auto blob = backingStore_->getBlob(id);
-  if (!blob) {
-    // TODO: Perhaps we should do some short-term negative caching?
-    throw std::domain_error(
-        folly::to<string>("blob ", id.toString(), " not found"));
-  }
-
-  auto metadata = localStore_->putBlob(id, blob.get());
+  auto metadata = getBlobMetadata(id).get();
   return metadata.sha1;
+}
+
+Future<BlobMetadata> ObjectStore::getBlobMetadata(const Hash& id) const {
+  auto localData = localStore_->getBlobMetadata(id);
+  if (localData.hasValue()) {
+    return localData.value();
+  }
+
+  // Load the blob from the BackingStore.
+  //
+  // TODO: It would be nice to add a smarter API to the BackingStore so that we
+  // can query it just for the blob metadata if it supports getting that
+  // without retrieving the full blob data.
+  return backingStore_->getBlob(id).then(
+      [ localStore = localStore_, id ](std::unique_ptr<Blob> blob) {
+        if (!blob) {
+          // TODO: Perhaps we should do some short-term negative caching?
+          throw std::domain_error(
+              folly::to<string>("blob ", id.toString(), " not found"));
+        }
+
+        return localStore->putBlob(id, blob.get());
+      });
 }
 }
 } // facebook::eden

@@ -9,6 +9,8 @@
  */
 #include "HgBackingStore.h"
 
+#include <folly/futures/Future.h>
+
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
@@ -16,7 +18,9 @@
 #include "eden/fs/store/StoreResult.h"
 
 using folly::ByteRange;
+using folly::Future;
 using folly::StringPiece;
+using folly::makeFuture;
 using std::make_unique;
 using std::unique_ptr;
 
@@ -29,20 +33,33 @@ HgBackingStore::HgBackingStore(StringPiece repository, LocalStore* localStore)
 
 HgBackingStore::~HgBackingStore() {}
 
-unique_ptr<Tree> HgBackingStore::getTree(const Hash& id) {
-  // HgBackingStore imports all relevant Tree objects inside getTreeForCommit()
-  // We should never have a case where we are asked for a Tree that hasn't
-  // already been imported.
+Future<unique_ptr<Tree>> HgBackingStore::getTree(const Hash& id) {
+  // HgBackingStore imports all relevant Tree objects when the root Tree is
+  // imported by getTreeForCommit().  We should never have a case where
+  // we are asked for a Tree that hasn't already been imported.
   LOG(ERROR) << "HgBackingStore asked for unknown tree ID " << id.toString();
-  return nullptr;
+  return makeFuture<unique_ptr<Tree>>(std::domain_error(
+      "HgBackingStore asked for unknown tree ID " + id.toString()));
 }
 
-unique_ptr<Blob> HgBackingStore::getBlob(const Hash& id) {
-  auto buf = importer_->importFileContents(id);
-  return make_unique<Blob>(id, std::move(buf));
+Future<unique_ptr<Blob>> HgBackingStore::getBlob(const Hash& id) {
+  // TODO: Perform hg loading in a separate thread pool
+  try {
+    auto buf = importer_->importFileContents(id);
+    return makeFuture(make_unique<Blob>(id, std::move(buf)));
+  } catch (const std::exception& ex) {
+    return makeFuture<unique_ptr<Blob>>(
+        folly::exception_wrapper{std::current_exception(), ex});
+  }
 }
 
-unique_ptr<Tree> HgBackingStore::getTreeForCommit(const Hash& commitID) {
+Future<unique_ptr<Tree>> HgBackingStore::getTreeForCommit(
+    const Hash& commitID) {
+  // TODO: Perform hg loading in a separate thread pool
+  return makeFuture(getTreeForCommitImpl(commitID));
+}
+
+unique_ptr<Tree> HgBackingStore::getTreeForCommitImpl(const Hash& commitID) {
   // TODO: We should probably switch to using a RocksDB column family rather
   // than a key suffix here.
   static constexpr StringPiece mappingSuffix{"hgc"};

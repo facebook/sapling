@@ -15,6 +15,7 @@
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
+#include "eden/fs/store/BlobMetadata.h"
 
 namespace facebook {
 namespace eden {
@@ -31,18 +32,24 @@ class FakeObjectStore : public IObjectStore {
   void addTree(Tree&& tree);
   void addBlob(Blob&& blob);
   void setTreeForCommit(const Hash& commitID, Tree&& tree);
-  void setSha1ForBlob(const Blob& blob, const Hash& sha1);
 
   std::unique_ptr<Tree> getTree(const Hash& id) const override;
   std::unique_ptr<Blob> getBlob(const Hash& id) const override;
-  std::unique_ptr<Tree> getTreeForCommit(const Hash& commitID) const override;
   Hash getSha1ForBlob(const Hash& id) const override;
+
+  folly::Future<std::unique_ptr<Tree>> getTreeFuture(
+      const Hash& id) const override;
+  folly::Future<std::unique_ptr<Blob>> getBlobFuture(
+      const Hash& id) const override;
+  folly::Future<std::unique_ptr<Tree>> getTreeForCommit(
+      const Hash& commitID) const override;
+  folly::Future<BlobMetadata> getBlobMetadata(const Hash& id) const override;
 
  private:
   std::unordered_map<Hash, Tree> trees_;
   std::unordered_map<Hash, Blob> blobs_;
   std::unordered_map<Hash, Tree> commits_;
-  std::unordered_map<Hash, Hash> sha1s_;
+  std::unordered_map<Hash, BlobMetadata> blobMetadata_;
 };
 }
 }

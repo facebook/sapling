@@ -10,6 +10,7 @@
 #include "GitBackingStore.h"
 
 #include <folly/Conv.h>
+#include <folly/futures/Future.h>
 #include <git2.h>
 
 #include "eden/fs/model/Blob.h"
@@ -20,9 +21,11 @@
 #include "eden/fs/store/LocalStore.h"
 
 using folly::ByteRange;
+using folly::Future;
 using folly::IOBuf;
-using folly::make_unique;
+using folly::makeFuture;
 using folly::StringPiece;
+using std::make_unique;
 using std::string;
 using std::unique_ptr;
 
@@ -68,7 +71,12 @@ const char* GitBackingStore::getPath() const {
   return git_repository_path(repo_);
 }
 
-unique_ptr<Tree> GitBackingStore::getTree(const Hash& id) {
+Future<unique_ptr<Tree>> GitBackingStore::getTree(const Hash& id) {
+  // TODO: Use a separate thread pool to do the git I/O
+  return makeFuture(getTreeImpl(id));
+}
+
+unique_ptr<Tree> GitBackingStore::getTreeImpl(const Hash& id) {
   VLOG(4) << "importing tree " << id;
 
   git_oid treeOID = hash2Oid(id);
@@ -120,7 +128,12 @@ unique_ptr<Tree> GitBackingStore::getTree(const Hash& id) {
   return tree;
 }
 
-unique_ptr<Blob> GitBackingStore::getBlob(const Hash& id) {
+Future<unique_ptr<Blob>> GitBackingStore::getBlob(const Hash& id) {
+  // TODO: Use a separate thread pool to do the git I/O
+  return makeFuture(getBlobImpl(id));
+}
+
+unique_ptr<Blob> GitBackingStore::getBlobImpl(const Hash& id) {
   VLOG(5) << "importing blob " << id;
 
   auto blobOID = hash2Oid(id);
@@ -143,7 +156,13 @@ unique_ptr<Blob> GitBackingStore::getBlob(const Hash& id) {
   return make_unique<Blob>(id, std::move(buf));
 }
 
-unique_ptr<Tree> GitBackingStore::getTreeForCommit(const Hash& commitID) {
+Future<unique_ptr<Tree>> GitBackingStore::getTreeForCommit(
+    const Hash& commitID) {
+  // TODO: Use a separate thread pool to do the git I/O
+  return makeFuture(getTreeForCommitImpl(commitID));
+}
+
+unique_ptr<Tree> GitBackingStore::getTreeForCommitImpl(const Hash& commitID) {
   VLOG(4) << "resolving tree for commit " << commitID;
 
   // Look up the commit info
@@ -170,7 +189,7 @@ unique_ptr<Tree> GitBackingStore::getTreeForCommit(const Hash& commitID) {
   }
 
   // We have to import the tree.
-  return getTree(treeID);
+  return getTreeImpl(treeID);
 }
 
 git_oid GitBackingStore::hash2Oid(const Hash& hash) {

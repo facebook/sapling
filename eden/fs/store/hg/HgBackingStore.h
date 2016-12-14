@@ -35,14 +35,17 @@ class HgBackingStore : public BackingStore {
   HgBackingStore(folly::StringPiece repository, LocalStore* localStore);
   virtual ~HgBackingStore();
 
-  std::unique_ptr<Tree> getTree(const Hash& id) override;
-  std::unique_ptr<Blob> getBlob(const Hash& id) override;
-  std::unique_ptr<Tree> getTreeForCommit(const Hash& commitID) override;
+  folly::Future<std::unique_ptr<Tree>> getTree(const Hash& id) override;
+  folly::Future<std::unique_ptr<Blob>> getBlob(const Hash& id) override;
+  folly::Future<std::unique_ptr<Tree>> getTreeForCommit(
+      const Hash& commitID) override;
 
  private:
   // Forbidden copy constructor and assignment operator
   HgBackingStore(HgBackingStore const&) = delete;
   HgBackingStore& operator=(HgBackingStore const&) = delete;
+
+  std::unique_ptr<Tree> getTreeForCommitImpl(const Hash& commitID);
 
   // TODO: In the future we may want to maintain a pool of HgImporter objects,
   // rather than just a single one, so we can perform multiple imports in

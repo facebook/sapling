@@ -44,13 +44,18 @@ class GitBackingStore : public BackingStore {
    */
   const char* getPath() const;
 
-  std::unique_ptr<Tree> getTree(const Hash& id) override;
-  std::unique_ptr<Blob> getBlob(const Hash& id) override;
-  std::unique_ptr<Tree> getTreeForCommit(const Hash& commitID) override;
+  folly::Future<std::unique_ptr<Tree>> getTree(const Hash& id) override;
+  folly::Future<std::unique_ptr<Blob>> getBlob(const Hash& id) override;
+  folly::Future<std::unique_ptr<Tree>> getTreeForCommit(
+      const Hash& commitID) override;
 
  private:
   GitBackingStore(GitBackingStore const&) = delete;
   GitBackingStore& operator=(GitBackingStore const&) = delete;
+
+  std::unique_ptr<Tree> getTreeImpl(const Hash& id);
+  std::unique_ptr<Blob> getBlobImpl(const Hash& id);
+  std::unique_ptr<Tree> getTreeForCommitImpl(const Hash& commitID);
 
   static git_oid hash2Oid(const Hash& hash);
   static Hash oid2Hash(const git_oid* oid);

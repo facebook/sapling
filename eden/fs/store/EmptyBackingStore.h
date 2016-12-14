@@ -9,29 +9,24 @@
  */
 #pragma once
 
-#include <memory>
-#include "eden/fs/store/BackingStore.h"
+#include "BackingStore.h"
 
 namespace facebook {
 namespace eden {
 
-class LocalStore;
-
-/**
- * A BackingStore implementation for test code.
+/*
+ * A dummy BackingStore implementation, that always throws std::domain_error
+ * for any ID that is looked up.
  */
-class TestBackingStore : public BackingStore {
+class EmptyBackingStore : public BackingStore {
  public:
-  explicit TestBackingStore(std::shared_ptr<LocalStore> localStore);
-  virtual ~TestBackingStore();
+  EmptyBackingStore();
+  virtual ~EmptyBackingStore();
 
   folly::Future<std::unique_ptr<Tree>> getTree(const Hash& id) override;
   folly::Future<std::unique_ptr<Blob>> getBlob(const Hash& id) override;
   folly::Future<std::unique_ptr<Tree>> getTreeForCommit(
       const Hash& commitID) override;
-
- private:
-  std::shared_ptr<LocalStore> localStore_;
 };
 }
 } // facebook::eden

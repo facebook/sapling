@@ -70,7 +70,13 @@ EdenMount::EdenMount(
     rootInode =
         std::make_shared<TreeInode>(this, std::move(rootOverlayDir.value()));
   } else {
-    auto rootTree = objectStore_->getTreeForCommit(snapshotID);
+    // Note: We immediately wait on the Future returned by
+    // getTreeForCommit().
+    //
+    // Loading the root tree may take a while.  It may be better to refactor
+    // the code slightly so that this is done in a helper function, before the
+    // EdenMount constructor is called.
+    auto rootTree = objectStore_->getTreeForCommit(snapshotID).get();
     rootInode = std::make_shared<TreeInode>(this, std::move(rootTree));
   }
   dispatcher_->setRootInode(rootInode);

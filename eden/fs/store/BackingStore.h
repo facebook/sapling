@@ -11,6 +11,11 @@
 
 #include <memory>
 
+namespace folly {
+template <typename T>
+class Future;
+}
+
 namespace facebook {
 namespace eden {
 
@@ -32,10 +37,10 @@ class BackingStore {
   BackingStore() {}
   virtual ~BackingStore() {}
 
-  virtual std::unique_ptr<Tree> getTree(const Hash& id) = 0;
-  virtual std::unique_ptr<Blob> getBlob(const Hash& id) = 0;
-
-  virtual std::unique_ptr<Tree> getTreeForCommit(const Hash& commitID) = 0;
+  virtual folly::Future<std::unique_ptr<Tree>> getTree(const Hash& id) = 0;
+  virtual folly::Future<std::unique_ptr<Blob>> getBlob(const Hash& id) = 0;
+  virtual folly::Future<std::unique_ptr<Tree>> getTreeForCommit(
+      const Hash& commitID) = 0;
 
  private:
   // Forbidden copy constructor and assignment operator

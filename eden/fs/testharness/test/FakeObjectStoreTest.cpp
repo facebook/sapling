@@ -7,6 +7,7 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
+#include <folly/futures/Future.h>
 #include <folly/io/IOBuf.h>
 #include <gtest/gtest.h>
 #include "eden/fs/model/Blob.h"
@@ -24,7 +25,6 @@ namespace {
 Hash fileHash("0000000000000000000000000000000000000000");
 Hash tree1Hash("1111111111111111111111111111111111111111");
 Hash tree2Hash("2222222222222222222222222222222222222222");
-Hash sha1Hash("3333333333333333333333333333333333333333");
 Hash commHash("4444444444444444444444444444444444444444");
 Hash blobHash("5555555555555555555555555555555555555555");
 }
@@ -43,8 +43,8 @@ TEST(FakeObjectStore, getObjectsOfAllTypesFromStore) {
   EXPECT_EQ(tree1Hash, foundTree->getHash());
 
   // Test getBlob().
-  unique_ptr<IOBuf> buf1(IOBuf::create(0));
-  Blob blob1(blobHash, *buf1.get());
+  auto buf1 = IOBuf();
+  Blob blob1(blobHash, buf1);
   store.addBlob(std::move(blob1));
   auto foundBlob = store.getBlob(blobHash);
   EXPECT_TRUE(foundBlob);
@@ -55,16 +55,21 @@ TEST(FakeObjectStore, getObjectsOfAllTypesFromStore) {
   entries2.emplace_back(fileHash, "a_file", FileType::REGULAR_FILE, rw_);
   Tree tree2(std::move(entries2), tree2Hash);
   store.setTreeForCommit(commHash, std::move(tree2));
-  auto foundTreeForCommit = store.getTreeForCommit(commHash);
+  auto foundTreeForCommit = store.getTreeForCommit(commHash).get();
   ASSERT_NE(nullptr, foundTreeForCommit.get());
   EXPECT_EQ(tree2Hash, foundTreeForCommit->getHash());
 
-  // Test getSha1ForBlob().
-  unique_ptr<IOBuf> buf2(IOBuf::create(0));
-  Blob blob2(blobHash, *buf2.get());
-  store.setSha1ForBlob(blob2, sha1Hash);
+  // Test getBlobMetadata() and getSha1ForBlob().
+  auto buf2 = IOBuf();
+  Blob blob2(blobHash, buf2);
+  auto expectedSha1 = Hash::sha1(&buf1);
   auto foundSha1 = store.getSha1ForBlob(blob2.getHash());
-  EXPECT_EQ(sha1Hash, foundSha1);
+  EXPECT_EQ(expectedSha1, foundSha1);
+  auto metadataFuture = store.getBlobMetadata(blob2.getHash());
+  ASSERT_TRUE(metadataFuture.isReady());
+  auto metadata = metadataFuture.get();
+  EXPECT_EQ(expectedSha1, metadata.sha1);
+  EXPECT_EQ(0, metadata.size);
 }
 
 TEST(FakeObjectStore, getMissingObjectThrows) {
@@ -72,6 +77,6 @@ TEST(FakeObjectStore, getMissingObjectThrows) {
   Hash hash("4242424242424242424242424242424242424242");
   EXPECT_THROW(store.getTree(hash), std::domain_error);
   EXPECT_THROW(store.getBlob(hash), std::domain_error);
-  EXPECT_THROW(store.getTreeForCommit(hash), std::domain_error);
+  EXPECT_THROW(store.getTreeForCommit(hash).get(), std::domain_error);
   EXPECT_THROW(store.getSha1ForBlob(hash), std::domain_error);
 }

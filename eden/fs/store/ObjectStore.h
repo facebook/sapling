@@ -43,6 +43,8 @@ class ObjectStore : public IObjectStore {
    *
    * This function never returns nullptr.  It throws std::domain_error if the
    * specified tree ID does not exist, or possibly other exceptions on error.
+   *
+   * TODO: This API will be deprecated in favor of getTreeFuture()
    */
   std::unique_ptr<Tree> getTree(const Hash& id) const override;
 
@@ -51,24 +53,59 @@ class ObjectStore : public IObjectStore {
    *
    * This function never returns nullptr.  It throws std::domain_error if the
    * specified blob ID does not exist, or possibly other exceptions on error.
+   *
+   * TODO: This API will be deprecated in favor of getBlobFuture()
    */
   std::unique_ptr<Blob> getBlob(const Hash& id) const override;
 
   /**
    * Get a Tree by commit ID.
    *
-   * This function never returns nullptr.  It throws std::domain_error if the
-   * specified commit ID does not exist, or possibly other exceptions on error.
-   */
-  std::unique_ptr<Tree> getTreeForCommit(const Hash& commitID) const override;
-
-  /**
-   * Get a Tree by commit ID.
-   *
    * This throws std::domain_error if the specified blob ID does not exist, or
    * possibly other exceptions on error.
+   *
+   * TODO: This API will be deprecated in favor of getBlobMetadata()
    */
   Hash getSha1ForBlob(const Hash& id) const override;
+
+  /**
+   * Get a Tree by ID.
+   *
+   * This returns a Future object that will produce the Tree when it is ready.
+   * It may result in a std::domain_error if the specified tree ID does not
+   * exist, or possibly other exceptions on error.
+   */
+  folly::Future<std::unique_ptr<Tree>> getTreeFuture(
+      const Hash& id) const override;
+
+  /**
+   * Get a Blob by ID.
+   *
+   * This returns a Future object that will produce the Blob when it is ready.
+   * It may result in a std::domain_error if the specified blob ID does not
+   * exist, or possibly other exceptions on error.
+   */
+  folly::Future<std::unique_ptr<Blob>> getBlobFuture(
+      const Hash& id) const override;
+
+  /**
+   * Get a commit's root Tree.
+   *
+   * This returns a Future object that will produce the root Tree when it is
+   * ready.  It may result in a std::domain_error if the specified commit ID
+   * does not exist, or possibly other exceptions on error.
+   */
+  folly::Future<std::unique_ptr<Tree>> getTreeForCommit(
+      const Hash& commitID) const override;
+
+  /**
+   * Get metadata about a Blob.
+   *
+   * This returns a Future object that will produce the BlobMetadata when it is
+   * ready.  It may result in a std::domain_error if the specified blob does
+   * not exist, or possibly other exceptions on error.
+   */
+  folly::Future<BlobMetadata> getBlobMetadata(const Hash& id) const override;
 
  private:
   // Forbidden copy constructor and assignment operator

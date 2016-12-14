@@ -11,10 +11,16 @@
 
 #include <memory>
 
+namespace folly {
+template <typename T>
+class Future;
+}
+
 namespace facebook {
 namespace eden {
 
 class Blob;
+class BlobMetadata;
 class Hash;
 class Tree;
 
@@ -24,8 +30,6 @@ class IObjectStore {
 
   virtual std::unique_ptr<Tree> getTree(const Hash& id) const = 0;
   virtual std::unique_ptr<Blob> getBlob(const Hash& id) const = 0;
-  virtual std::unique_ptr<Tree> getTreeForCommit(
-      const Hash& commitID) const = 0;
 
   /**
    * Return the SHA1 hash of the blob contents.
@@ -35,6 +39,21 @@ class IObjectStore {
    * may not be the same as the SHA1-hash of its contents.)
    */
   virtual Hash getSha1ForBlob(const Hash& id) const = 0;
+
+  /*
+   * Future-based APIs.
+   *
+   * Eventually all callers will be updated to use these versions, and the
+   * non-future APIs will be removed.  (We can then drop the "Future" from
+   * these method names.)
+   */
+  virtual folly::Future<std::unique_ptr<Tree>> getTreeFuture(
+      const Hash& id) const = 0;
+  virtual folly::Future<std::unique_ptr<Blob>> getBlobFuture(
+      const Hash& id) const = 0;
+  virtual folly::Future<std::unique_ptr<Tree>> getTreeForCommit(
+      const Hash& commitID) const = 0;
+  virtual folly::Future<BlobMetadata> getBlobMetadata(const Hash& id) const = 0;
 };
 }
 }

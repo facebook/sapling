@@ -974,7 +974,9 @@ void Dirstate::markCommitted(
   // mainly exists for debugging. Ultimately, we will probably drop the SNAPSHOT
   // file.
   auto objectStore = mount_->getObjectStore();
-  auto treeForCommit = objectStore->getTreeForCommit(commitID);
+  // Note: we immediately wait on the Future here.
+  // It may take a fairly long time to import the Tree.
+  auto treeForCommit = objectStore->getTreeForCommit(commitID).get();
   if (treeForCommit == nullptr) {
     throw std::runtime_error(folly::sformat(
         "Cannot mark committed because commit for {} cannot be found.",
