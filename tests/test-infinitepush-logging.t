@@ -61,7 +61,7 @@ Make upload to bundlestore fail
   > EOF
   $ cd client
   $ mkcommit failpushcommit
-  $ hg push -r . --to scratch/scratchpush
+  $ hg push -r . --to scratch/scratchpush 2> /dev/null
   pushing to ssh://user@dummy/repo
   searching for changes
   remote: infinitepush: b2x:infinitepush \(eventtype=start, hostname=.+, requestid=\d+, user=test\) (re)
@@ -72,5 +72,4 @@ Make upload to bundlestore fail
   remote: infinitepush: bundlestore \(elapsed=.+ eventtype=failure, hostname=.+, requestid=\d+, user=test\) (re)
   remote: infinitepush: b2x:infinitepush \(elapsed=.+ eventtype=failure, hostname=.+, requestid=\d+, user=test\) (re)
   remote: abort: Not a directory: '/dev/null/\d+' (re)
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
