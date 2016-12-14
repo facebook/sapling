@@ -228,7 +228,7 @@ class p4_source(common.converter_source):
             self.copies[change] = copies
             lastid = change
 
-        if lastid:
+        if lastid and len(self.changeset) > 0:
             self.heads = [lastid]
 
     def getheads(self):
