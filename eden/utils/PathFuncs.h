@@ -1060,6 +1060,59 @@ RelativePathPiece ComposedPathIterator<Piece, IsReverse>::remainder() const {
   }
 }
 }
+
+/**
+ * Get the current working directory, as an AbsolutePath.
+ */
+AbsolutePath getcwd();
+
+/**
+ * Canonicalize a path string.
+ *
+ * This removes duplicate "/" characters, and resolves "/./" and "/../"
+ * components.
+ *
+ * Note that we intentially convert a leading "//" to "/
+ * (e.g., "//foo" --> "/foo").  (POSIX specifies that a leading "//" has
+ * special platform-defined behavior, so other libraries sometimes leave it
+ * as-is instead of replacing it with just one "/".)
+ *
+ * This is purely a string processing function.  The path in question does not
+ * need to exist.  If the path refers to symbolic links, these are not
+ * resolved.
+ *
+ * If the path is relative, the current working directory is prepended to it.
+ */
+AbsolutePath canonicalPath(folly::StringPiece path);
+
+/**
+ * Canonicalize a path string.
+ *
+ * If the input is a relative path, the specified base path is prepended to it.
+ */
+AbsolutePath canonicalPath(folly::StringPiece path, AbsolutePathPiece base);
+
+/**
+ * Convert an arbitrary unsanitized input string to a normalized AbsolutePath.
+ *
+ * This resolves symlinks, as well as "." and ".." components in the input
+ * path.  If the input path is a relative path it is converted into an absolute
+ * one.
+ *
+ * This will throw an exception if the specified path does not exist, or if it
+ * or one of its parent directories is inaccessible.  (In the future it may be
+ * worth adding a version of this function that simply performs normalization,
+ * and can succeed even if the path does not exist.)
+ *
+ * Use canonicalPath() if you want to normalize a path name that may not exist.
+ */
+AbsolutePath realpath(const char* path);
+AbsolutePath realpath(folly::StringPiece path);
+template <typename T>
+typename std::enable_if<folly::IsSomeString<T>::value, AbsolutePath>::type
+realpath(const T& path) {
+  return realpath(path.c_str());
+}
 }
 } // facebook::eden
 

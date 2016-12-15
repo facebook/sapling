@@ -7,10 +7,17 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
-#include <boost/functional/hash.hpp>
-#include <gtest/gtest.h>
-#include <sstream>
 #include "PathFuncs.h"
+
+#include <boost/functional/hash.hpp>
+#include <fcntl.h>
+#include <folly/Exception.h>
+#include <folly/experimental/TestUtil.h>
+#include <gtest/gtest.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <sstream>
 
 using facebook::eden::dirname;
 using facebook::eden::basename;
@@ -362,4 +369,129 @@ TEST(PathFuncs, findParent) {
 
   it = path.findParent(RelativePathPiece("foo/bar/baz"));
   EXPECT_TRUE(it == path.allPaths().end());
+}
+
+namespace {
+/*
+ * Helper class to create a temporary directory and cd into it while this
+ * object exists.
+ */
+class TmpWorkingDir {
+ public:
+  TmpWorkingDir() {
+    chdir(pathStr.c_str());
+  }
+  ~TmpWorkingDir() {
+    chdir(oldDir.value().c_str());
+  }
+
+  AbsolutePath oldDir{getcwd()};
+  folly::test::TemporaryDirectory dir{"eden_test"};
+  std::string pathStr{dir.path().string()};
+  AbsolutePathPiece path{pathStr};
+};
+}
+
+TEST(PathFuncs, canonicalPath) {
+  EXPECT_EQ("/foo/bar/abc.txt", canonicalPath("/foo/bar/abc.txt").value());
+  EXPECT_EQ("/foo/bar/abc.txt", canonicalPath("///foo/bar//abc.txt").value());
+  EXPECT_EQ("/foo/bar/abc.txt", canonicalPath("///foo/bar/./abc.txt").value());
+  EXPECT_EQ("/foo/bar/abc.txt", canonicalPath("/..//foo/bar//abc.txt").value());
+  EXPECT_EQ("/abc.txt", canonicalPath("/..//foo/bar/../../abc.txt").value());
+  EXPECT_EQ("/", canonicalPath("/").value());
+  EXPECT_EQ("/", canonicalPath("////").value());
+  EXPECT_EQ("/", canonicalPath("/../../..").value());
+  EXPECT_EQ("/", canonicalPath("/././.").value());
+  EXPECT_EQ("/", canonicalPath("/./././").value());
+  EXPECT_EQ("/", canonicalPath("/./.././").value());
+  EXPECT_EQ("/abc.foo", canonicalPath("/abc.foo/../abc.foo///").value());
+  EXPECT_EQ("/foo", canonicalPath("//foo").value());
+
+  auto base = AbsolutePath{"/base/dir/path"};
+  EXPECT_EQ("/base/dir/path", canonicalPath("", base).value());
+  EXPECT_EQ("/base/dir/path/abc", canonicalPath("abc", base).value());
+  EXPECT_EQ("/base/dir/path/abc/def", canonicalPath("abc/def/", base).value());
+  EXPECT_EQ("/base/dir/path", canonicalPath(".", base).value());
+  EXPECT_EQ("/base/dir/path", canonicalPath("././/.", base).value());
+  EXPECT_EQ("/base/dir", canonicalPath("..", base).value());
+  EXPECT_EQ("/base/dir", canonicalPath("../", base).value());
+  EXPECT_EQ("/base/dir", canonicalPath("../.", base).value());
+  EXPECT_EQ("/base/dir", canonicalPath(".././", base).value());
+  EXPECT_EQ(
+      "/base/dir/xy/s.txt", canonicalPath(".././xy//z/../s.txt", base).value());
+  EXPECT_EQ(
+      "/base/dir/xy/s.txt",
+      canonicalPath("z//.././../xy//s.txt", base).value());
+  EXPECT_EQ(
+      "/base/dir/path/ foo bar ", canonicalPath(" foo bar ", base).value());
+  EXPECT_EQ("/base/dir/path/.../test", canonicalPath(".../test", base).value());
+
+  TmpWorkingDir tmpDir;
+  EXPECT_EQ(tmpDir.pathStr, canonicalPath(".").value());
+  EXPECT_EQ(tmpDir.pathStr + "/foo", canonicalPath("foo").value());
+  EXPECT_EQ(
+      tmpDir.pathStr + "/a/b/c.txt",
+      canonicalPath("foo/../a//d/../b/./c.txt").value());
+}
+
+TEST(PathFuncs, realpath) {
+  TmpWorkingDir tmpDir;
+
+  // Change directories to the tmp dir for the duration of this test
+  auto oldDir = getcwd();
+  SCOPE_EXIT {
+    chdir(oldDir.value().c_str());
+  };
+  chdir(tmpDir.pathStr.c_str());
+
+  // Set up some files to test with
+  folly::checkUnixError(
+      open("simple.txt", O_WRONLY | O_CREAT), "failed to create simple.txt");
+  folly::checkUnixError(mkdir("parent", 0755), "failed to mkdir parent");
+  folly::checkUnixError(mkdir("parent/child", 0755), "failed to mkdir child");
+  folly::checkUnixError(
+      open("parent/child/file.txt", O_WRONLY | O_CREAT),
+      "failed to create file.txt");
+  folly::checkUnixError(
+      symlink("parent//child/../child/file.txt", "wonky_link"),
+      "failed to create wonky_link");
+  folly::checkUnixError(
+      symlink("child/nowhere", "parent/broken_link"),
+      "failed to create broken_link");
+  folly::checkUnixError(
+      symlink("../loop_b", "parent/loop_a"), "failed to create loop_a");
+  folly::checkUnixError(
+      symlink("parent/loop_a", "loop_b"), "failed to create loop_b");
+
+  // Now actually test realpath()
+  EXPECT_EQ(tmpDir.pathStr + "/simple.txt", realpath("simple.txt").value());
+  EXPECT_EQ(
+      tmpDir.pathStr + "/simple.txt", realpath("parent/../simple.txt").value());
+  EXPECT_EQ(
+      tmpDir.pathStr + "/simple.txt",
+      realpath("parent/..//parent/.//child/../../simple.txt").value());
+  EXPECT_THROW(realpath("nosuchdir/../simple.txt"), std::system_error);
+  EXPECT_EQ(
+      tmpDir.pathStr + "/simple.txt",
+      realpath(tmpDir.pathStr + "//simple.txt").value());
+  EXPECT_EQ(
+      tmpDir.pathStr + "/simple.txt",
+      realpath(tmpDir.pathStr + "//parent/../simple.txt").value());
+
+  EXPECT_EQ(
+      tmpDir.pathStr + "/parent/child/file.txt",
+      realpath("parent///child//file.txt").value());
+  EXPECT_EQ(
+      tmpDir.pathStr + "/parent/child/file.txt",
+      realpath("wonky_link").value());
+
+  EXPECT_EQ(
+      tmpDir.pathStr + "/parent/child", realpath("parent///child//").value());
+  EXPECT_EQ(tmpDir.pathStr + "/parent", realpath("parent/.").value());
+  EXPECT_EQ(tmpDir.pathStr, realpath("parent/..").value());
+
+  EXPECT_THROW(realpath("parent/broken_link"), std::system_error);
+  EXPECT_THROW(realpath("parent/loop_a"), std::system_error);
+  EXPECT_THROW(realpath("loop_b"), std::system_error);
+  EXPECT_THROW(realpath("parent/nosuchfile"), std::system_error);
 }
