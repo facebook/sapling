@@ -499,9 +499,12 @@ def getscratchbranchpart(repo, peer, outgoing, force, ui, bookmark, create):
 
     validaterevset(repo, revset.formatspec('%ln', outgoing.missing), bookmark)
 
-    cg = changegroup.getlocalchangegroupraw(repo, 'push', outgoing)
+    cgversion = '02'
+    cg = changegroup.getlocalchangegroupraw(repo, 'push',
+                                            outgoing, version=cgversion)
 
     params = {}
+    params['cgversion'] = cgversion
     if bookmark:
         params['bookmark'] = bookmark
         # 'prevbooknode' is necessary for pushkey reply part

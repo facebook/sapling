@@ -53,8 +53,8 @@ pushbackup
   remote: pushing 1 commit:
   remote:     7e6a6fd9c7c8  commit
   $ scratchnodes
-  606a357e69adb2e36d559ae3237626e82a955c9d d201d23bf7f9889bc103cfe6d0f10499421eb63b
-  7e6a6fd9c7c8c8c307ee14678f03d63af3a7b455 72ddba67d26a9e8d4b43a314c037169509b92188
+  606a357e69adb2e36d559ae3237626e82a955c9d 9fa7f02468b18919035248ab21c8267674c0a3d6
+  7e6a6fd9c7c8c8c307ee14678f03d63af3a7b455 168423c30397d95ef5f44d883f0887f0f5be0936
   $ scratchbookmarks
   infinitepush/backups/test/[0-9a-zA-Z.-]+\$TESTTMP/client/heads/7e6a6fd9c7c8c8c307ee14678f03d63af3a7b455 7e6a6fd9c7c8c8c307ee14678f03d63af3a7b455 (re)
   $ cat .hg/store/infinitepushlastbackupedstate

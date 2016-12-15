@@ -52,9 +52,9 @@ the history but is stored on disk
   $ find ../repo/.hg/scratchbranches | sort
   ../repo/.hg/scratchbranches
   ../repo/.hg/scratchbranches/filebundlestore
-  ../repo/.hg/scratchbranches/filebundlestore/67
-  ../repo/.hg/scratchbranches/filebundlestore/67/c0
-  ../repo/.hg/scratchbranches/filebundlestore/67/c0/67c002fef9703044964834c2bb577a49c5a0b5ec
+  ../repo/.hg/scratchbranches/filebundlestore/b9
+  ../repo/.hg/scratchbranches/filebundlestore/b9/e1
+  ../repo/.hg/scratchbranches/filebundlestore/b9/e1/b9e1ee5f93fb6d7c42496fc176c09839639dd9cc
   ../repo/.hg/scratchbranches/index
   ../repo/.hg/scratchbranches/index/bookmarkmap
   ../repo/.hg/scratchbranches/index/bookmarkmap/scratch
@@ -130,8 +130,8 @@ Push to scratch branch
   o  initialcommit public
   
   $ scratchnodes
-  1de1d7d92f8965260391d0513fe8a8d5973d3042 19412dd566222618cd030e18005c80c356c9f843
-  20759b6926ce827d5a8c73eb1fa9726d6f7defb2 19412dd566222618cd030e18005c80c356c9f843
+  1de1d7d92f8965260391d0513fe8a8d5973d3042 bed63daed3beba97fff2e819a148cf415c217a85
+  20759b6926ce827d5a8c73eb1fa9726d6f7defb2 bed63daed3beba97fff2e819a148cf415c217a85
 
   $ scratchbookmarks
   scratch/mybranch 1de1d7d92f8965260391d0513fe8a8d5973d3042
@@ -206,9 +206,9 @@ Push scratch revision without bookmark with --bundle-store
   
 
   $ scratchnodes
-  1de1d7d92f8965260391d0513fe8a8d5973d3042 4e165e8b1f81dfbb4d26297dc66988940756fcb0
-  20759b6926ce827d5a8c73eb1fa9726d6f7defb2 4e165e8b1f81dfbb4d26297dc66988940756fcb0
-  2b5d271c7e0d25d811359a314d413ebcc75c9524 4e165e8b1f81dfbb4d26297dc66988940756fcb0
+  1de1d7d92f8965260391d0513fe8a8d5973d3042 66fa08ff107451320512817bed42b7f467a1bec3
+  20759b6926ce827d5a8c73eb1fa9726d6f7defb2 66fa08ff107451320512817bed42b7f467a1bec3
+  2b5d271c7e0d25d811359a314d413ebcc75c9524 66fa08ff107451320512817bed42b7f467a1bec3
 
 Test with pushrebase
   $ cp $TESTTMP/defaulthgrc $HGRCPATH
@@ -236,10 +236,10 @@ Test with pushrebase
   o  initialcommit public
   
   $ scratchnodes
-  1de1d7d92f8965260391d0513fe8a8d5973d3042 2d0fd81e57a6018f58b63985243ebe00a34de4cb
-  20759b6926ce827d5a8c73eb1fa9726d6f7defb2 2d0fd81e57a6018f58b63985243ebe00a34de4cb
-  2b5d271c7e0d25d811359a314d413ebcc75c9524 2d0fd81e57a6018f58b63985243ebe00a34de4cb
-  d8c4f54ab678fd67cb90bb3f272a2dc6513a59a7 2d0fd81e57a6018f58b63985243ebe00a34de4cb
+  1de1d7d92f8965260391d0513fe8a8d5973d3042 e3cb2ac50f9e1e6a5ead3217fc21236c84af4397
+  20759b6926ce827d5a8c73eb1fa9726d6f7defb2 e3cb2ac50f9e1e6a5ead3217fc21236c84af4397
+  2b5d271c7e0d25d811359a314d413ebcc75c9524 e3cb2ac50f9e1e6a5ead3217fc21236c84af4397
+  d8c4f54ab678fd67cb90bb3f272a2dc6513a59a7 e3cb2ac50f9e1e6a5ead3217fc21236c84af4397
 
 Change the order of pushrebase and infinitepush
   $ cp $TESTTMP/defaulthgrc $HGRCPATH
@@ -268,11 +268,11 @@ Change the order of pushrebase and infinitepush
   o  initialcommit public
   
   $ scratchnodes
-  1de1d7d92f8965260391d0513fe8a8d5973d3042 eb133b9754ed60fcdf98bd4ddae7e80b6b70fe9e
-  20759b6926ce827d5a8c73eb1fa9726d6f7defb2 eb133b9754ed60fcdf98bd4ddae7e80b6b70fe9e
-  2b5d271c7e0d25d811359a314d413ebcc75c9524 eb133b9754ed60fcdf98bd4ddae7e80b6b70fe9e
-  6c10d49fe92751666c40263f96721b918170d3da eb133b9754ed60fcdf98bd4ddae7e80b6b70fe9e
-  d8c4f54ab678fd67cb90bb3f272a2dc6513a59a7 eb133b9754ed60fcdf98bd4ddae7e80b6b70fe9e
+  1de1d7d92f8965260391d0513fe8a8d5973d3042 cd0586065eaf8b483698518f5fc32531e36fd8e0
+  20759b6926ce827d5a8c73eb1fa9726d6f7defb2 cd0586065eaf8b483698518f5fc32531e36fd8e0
+  2b5d271c7e0d25d811359a314d413ebcc75c9524 cd0586065eaf8b483698518f5fc32531e36fd8e0
+  6c10d49fe92751666c40263f96721b918170d3da cd0586065eaf8b483698518f5fc32531e36fd8e0
+  d8c4f54ab678fd67cb90bb3f272a2dc6513a59a7 cd0586065eaf8b483698518f5fc32531e36fd8e0
 
 Non-fastforward scratch bookmark push
   $ hg up 6c10d49fe927
@@ -506,13 +506,13 @@ still in the old bundle
   remote:     d8c4f54ab678  scratchcommitwithpushrebase
   remote:     8611afacb870  newscratchhead
   $ scratchnodes
-  1de1d7d92f8965260391d0513fe8a8d5973d3042 193a989b8ab8773d1cca5a6d1fdcbf5aa9e61b62
-  20759b6926ce827d5a8c73eb1fa9726d6f7defb2 193a989b8ab8773d1cca5a6d1fdcbf5aa9e61b62
-  2b5d271c7e0d25d811359a314d413ebcc75c9524 193a989b8ab8773d1cca5a6d1fdcbf5aa9e61b62
-  6c10d49fe92751666c40263f96721b918170d3da eb133b9754ed60fcdf98bd4ddae7e80b6b70fe9e
-  8611afacb87078300a6d6b2f0c4b49fa506a8db9 193a989b8ab8773d1cca5a6d1fdcbf5aa9e61b62
-  8872775dd97a750e1533dc1fbbca665644b32547 2e17e57fa00167232df26b8e1752f30d00f052c6
-  d8c4f54ab678fd67cb90bb3f272a2dc6513a59a7 193a989b8ab8773d1cca5a6d1fdcbf5aa9e61b62
+  1de1d7d92f8965260391d0513fe8a8d5973d3042 d1b4f12087a79b2b1d342e222686a829d09d399b
+  20759b6926ce827d5a8c73eb1fa9726d6f7defb2 d1b4f12087a79b2b1d342e222686a829d09d399b
+  2b5d271c7e0d25d811359a314d413ebcc75c9524 d1b4f12087a79b2b1d342e222686a829d09d399b
+  6c10d49fe92751666c40263f96721b918170d3da cd0586065eaf8b483698518f5fc32531e36fd8e0
+  8611afacb87078300a6d6b2f0c4b49fa506a8db9 d1b4f12087a79b2b1d342e222686a829d09d399b
+  8872775dd97a750e1533dc1fbbca665644b32547 ac7f12436d58e685616ffc1f619bcecce8829e25
+  d8c4f54ab678fd67cb90bb3f272a2dc6513a59a7 d1b4f12087a79b2b1d342e222686a829d09d399b
 
 Recreate the repo
   $ cd ..
@@ -549,8 +549,8 @@ multihead push works.
   remote:     bc22f9a30a82  multihead1
   remote:     ee4802bf6864  multihead2
   $ scratchnodes
-  bc22f9a30a821118244deacbd732e394ed0b686c 4fb870642394276983606d0b419b87547d121e0e
-  ee4802bf6864326a6b3dcfff5a03abc2a0a69b8f 4fb870642394276983606d0b419b87547d121e0e
+  bc22f9a30a821118244deacbd732e394ed0b686c ab1bc557aa090a9e4145512c734b6e8a828393a5
+  ee4802bf6864326a6b3dcfff5a03abc2a0a69b8f ab1bc557aa090a9e4145512c734b6e8a828393a5
 
 Create two new scratch bookmarks
   $ hg up 0
