@@ -19,14 +19,27 @@ from fb303.ttypes import fb_status
 
 
 def _find_executables():
-    '''Find the eden CLI and edenfs daemon relative to the unit test binary.'''
+    '''Find the eden CLI and edenfs daemon relative to the unit test binary,
+       unless EDENFS_CLI_PATH and/or EDENFS_SERVER_PATH are set in the
+       environment; in that case, trust that the environment has been
+       set to the correct location.
+       Raise an exception if either the cli or server executable cannot
+       be located.
+    '''
     test_binary = os.path.abspath(sys.argv[0])
     edenfs_dir = os.path.dirname(os.path.dirname(test_binary))
-    cli = os.path.join(edenfs_dir, 'cli', 'cli.par')
-    # The EDENFS_SUFFIX will be set to indicate if we should test with a
-    # particular variant of the edenfs daemon
-    suffix = os.environ.get('EDENFS_SUFFIX', '')
-    edenfs = os.path.join(edenfs_dir, 'service', 'edenfs' + suffix)
+
+    cli = os.environ.get('EDENFS_CLI_PATH')
+    edenfs = os.environ.get('EDENFS_SERVER_PATH')
+
+    if not cli:
+        cli = os.path.join(edenfs_dir, 'cli', 'cli.par')
+
+    if not edenfs:
+        # The EDENFS_SUFFIX will be set to indicate if we should test with a
+        # particular variant of the edenfs daemon
+        suffix = os.environ.get('EDENFS_SUFFIX', '')
+        edenfs = os.path.join(edenfs_dir, 'service', 'edenfs' + suffix)
 
     if not os.access(cli, os.X_OK):
         msg = 'unable to find eden CLI for integration testing: {!r}'.format(
