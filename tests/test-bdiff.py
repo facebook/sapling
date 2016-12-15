@@ -82,17 +82,27 @@ class BdiffTests(unittest.TestCase):
               'x\n\n',
               diffreplace(9, 9, '', 'y\n\n'),
               'x\n\nz\n']),
-            # we should pick up abbbc. rather than bc.de as the longest match
-            ("a\nb\nb\nb\nc\n.\nd\ne\n.\nf\n",
-             "a\nb\nb\na\nb\nb\nb\nc\n.\nb\nc\n.\nd\ne\nf\n",
-             ['a\nb\nb\n',
-              diffreplace(6, 6, '', 'a\nb\nb\nb\nc\n.\n'),
-              'b\nc\n.\nd\ne\n',
-              diffreplace(16, 18, '.\n', ''),
-              'f\n']),
         ]
         for old, new, want in cases:
             self.assertEqual(self.showdiff(old, new), want)
+
+    def test_issue1295_varies_on_pure(self):
+            # we should pick up abbbc. rather than bc.de as the longest match
+        got = self.showdiff("a\nb\nb\nb\nc\n.\nd\ne\n.\nf\n",
+                            "a\nb\nb\na\nb\nb\nb\nc\n.\nb\nc\n.\nd\ne\nf\n")
+        want_c = ['a\nb\nb\n',
+                  diffreplace(6, 6, '', 'a\nb\nb\nb\nc\n.\n'),
+                  'b\nc\n.\nd\ne\n',
+                  diffreplace(16, 18, '.\n', ''),
+                  'f\n']
+        want_pure = [diffreplace(0, 0, '', 'a\nb\nb\n'),
+                     'a\nb\nb\nb\nc\n.\n',
+                     diffreplace(12, 12, '', 'b\nc\n.\n'),
+                     'd\ne\n',
+                     diffreplace(16, 18, '.\n', ''), 'f\n']
+        self.assert_(got in (want_c, want_pure),
+                     'got: %r, wanted either %r or %r' % (
+                         got, want_c, want_pure))
 
     def test_fixws(self):
         cases = [
