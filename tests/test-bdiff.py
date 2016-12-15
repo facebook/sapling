@@ -94,6 +94,18 @@ class BdiffTests(unittest.TestCase):
         for old, new, want in cases:
             self.assertEqual(self.showdiff(old, new), want)
 
+    def test_fixws(self):
+        cases = [
+            (" \ta\r b\t\n", "ab\n", 1),
+            (" \ta\r b\t\n", " a b\n", 0),
+            ("", "", 1),
+            ("", "", 0),
+        ]
+        for a, b, allws in cases:
+            c = bdiff.fixws(a, allws)
+            self.assertEqual(
+                c, b, 'fixws(%r) want %r got %r (allws=%r)' % (a, b, c, allws))
+
 def showdiff(a, b):
     print('showdiff(\n  %r,\n  %r):' % (a, b))
     bin = bdiff.bdiff(a, b)
@@ -109,20 +121,6 @@ def showdiff(a, b):
         q = p2
     if q < len(a):
         print('', repr(a[q:]))
-
-def testfixws(a, b, allws):
-    c = bdiff.fixws(a, allws)
-    if c != b:
-        print("*** fixws", repr(a), repr(b), allws)
-        print("got:")
-        print(repr(c))
-
-testfixws(" \ta\r b\t\n", "ab\n", 1)
-testfixws(" \ta\r b\t\n", " a b\n", 0)
-testfixws("", "", 1)
-testfixws("", "", 0)
-
-print("done")
 
 print("Nice diff for a trivial change:")
 showdiff(
