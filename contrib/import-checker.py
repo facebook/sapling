@@ -391,6 +391,7 @@ def verify_modern_convention(module, root, localmods, root_col_offset=0):
     seennonsymbollocal = False
     # The last name to be imported (for sorting).
     lastname = None
+    laststdlib = None
     # Relative import levels encountered so far.
     seenlevels = set()
 
@@ -412,16 +413,18 @@ def verify_modern_convention(module, root, localmods, root_col_offset=0):
             name = node.names[0].name
             asname = node.names[0].asname
 
+            stdlib = name in stdlib_modules
+
             # Ignore sorting rules on imports inside blocks.
             if node.col_offset == root_col_offset:
-                if lastname and name < lastname:
+                if lastname and name < lastname and laststdlib == stdlib:
                     yield msg('imports not lexically sorted: %s < %s',
                               name, lastname)
 
-                lastname = name
+            lastname = name
+            laststdlib = stdlib
 
             # stdlib imports should be before local imports.
-            stdlib = name in stdlib_modules
             if stdlib and seenlocal and node.col_offset == root_col_offset:
                 yield msg('stdlib import "%s" follows local import: %s',
                           name, seenlocal)
