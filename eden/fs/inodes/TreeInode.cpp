@@ -267,7 +267,7 @@ TreeInode::create(PathComponentPiece name, mode_t mode, int flags) {
     // build a corresponding FileInode
     inode = std::make_shared<FileInode>(
         node->getNodeId(),
-        inodePtrFromThis(),
+        this->inodePtrFromThis(),
         name,
         entry.get(),
         std::move(file));
@@ -324,7 +324,7 @@ folly::Future<fuse_entry_param> TreeInode::mkdir(
   contents_.withWLock([&](auto& contents) {
     auto entIter = contents.entries.find(name);
     if (entIter != contents.entries.end()) {
-      throw InodeError(EEXIST, inodePtrFromThis(), name);
+      throw InodeError(EEXIST, this->inodePtrFromThis(), name);
     }
     auto overlay = this->getOverlay();
 
@@ -370,10 +370,10 @@ folly::Future<folly::Unit> TreeInode::unlink(PathComponentPiece name) {
   contents_.withRLock([&](const auto& contents) {
     auto entIter = contents.entries.find(name);
     if (entIter == contents.entries.end()) {
-      throw InodeError(ENOENT, inodePtrFromThis(), name);
+      throw InodeError(ENOENT, this->inodePtrFromThis(), name);
     }
     if (S_ISDIR(entIter->second->mode)) {
-      throw InodeError(EISDIR, inodePtrFromThis(), name);
+      throw InodeError(EISDIR, this->inodePtrFromThis(), name);
     }
   });
 
@@ -383,12 +383,12 @@ folly::Future<folly::Unit> TreeInode::unlink(PathComponentPiece name) {
     // Re-check the pre-conditions in case we raced
     auto entIter = contents.entries.find(name);
     if (entIter == contents.entries.end()) {
-      throw InodeError(ENOENT, inodePtrFromThis(), name);
+      throw InodeError(ENOENT, this->inodePtrFromThis(), name);
     }
 
     auto& ent = entIter->second;
     if (S_ISDIR(ent->mode)) {
-      throw InodeError(EISDIR, inodePtrFromThis(), name);
+      throw InodeError(EISDIR, this->inodePtrFromThis(), name);
     }
 
     auto overlay = this->getOverlay();
@@ -446,16 +446,16 @@ folly::Future<folly::Unit> TreeInode::rmdir(PathComponentPiece name) {
   contents_.withRLock([&](const auto& contents) {
     auto entIter = contents.entries.find(name);
     if (entIter == contents.entries.end()) {
-      throw InodeError(ENOENT, inodePtrFromThis(), name);
+      throw InodeError(ENOENT, this->inodePtrFromThis(), name);
     }
     if (!S_ISDIR(entIter->second->mode)) {
-      throw InodeError(EISDIR, inodePtrFromThis(), name);
+      throw InodeError(EISDIR, this->inodePtrFromThis(), name);
     }
     auto targetInode = this->lookupChildByNameLocked(&contents, name);
     if (!targetInode) {
       throw InodeError(
           EIO,
-          inodePtrFromThis(),
+          this->inodePtrFromThis(),
           name,
           "rmdir target did not resolve to an inode object");
     }
@@ -463,14 +463,14 @@ folly::Future<folly::Unit> TreeInode::rmdir(PathComponentPiece name) {
     if (!targetDir) {
       throw InodeError(
           EIO,
-          inodePtrFromThis(),
+          this->inodePtrFromThis(),
           name,
           "rmdir target did not resolve to a TreeInode object");
     }
 
     targetDir->contents_.withRLock([&](const auto& targetContents) {
       if (!targetContents.entries.empty()) {
-        throw InodeError(ENOTEMPTY, inodePtrFromThis(), name);
+        throw InodeError(ENOTEMPTY, this->inodePtrFromThis(), name);
       }
     });
   });
@@ -481,18 +481,18 @@ folly::Future<folly::Unit> TreeInode::rmdir(PathComponentPiece name) {
     // Re-check the pre-conditions in case we raced
     auto entIter = contents.entries.find(name);
     if (entIter == contents.entries.end()) {
-      throw InodeError(ENOENT, inodePtrFromThis(), name);
+      throw InodeError(ENOENT, this->inodePtrFromThis(), name);
     }
 
     auto& ent = entIter->second;
     if (!S_ISDIR(ent->mode)) {
-      throw InodeError(EISDIR, inodePtrFromThis(), name);
+      throw InodeError(EISDIR, this->inodePtrFromThis(), name);
     }
     auto targetInode = this->lookupChildByNameLocked(&contents, name);
     if (!targetInode) {
       throw InodeError(
           EIO,
-          inodePtrFromThis(),
+          this->inodePtrFromThis(),
           name,
           "rmdir target did not resolve to an inode object");
     }
@@ -500,12 +500,12 @@ folly::Future<folly::Unit> TreeInode::rmdir(PathComponentPiece name) {
     if (!targetDir) {
       throw InodeError(
           EIO,
-          inodePtrFromThis(),
+          this->inodePtrFromThis(),
           name,
           "rmdir target did not resolve to a TreeInode object");
     }
     if (!targetDir->contents_.rlock()->entries.empty()) {
-      throw InodeError(ENOTEMPTY, inodePtrFromThis(), name);
+      throw InodeError(ENOTEMPTY, this->inodePtrFromThis(), name);
     }
 
     auto overlay = this->getOverlay();
@@ -639,7 +639,7 @@ folly::Future<folly::Unit> TreeInode::rename(
   contents_.withRLock([&](const auto& contents) {
     auto entIter = contents.entries.find(name);
     if (entIter == contents.entries.end()) {
-      throw InodeError(ENOENT, inodePtrFromThis(), name);
+      throw InodeError(ENOENT, this->inodePtrFromThis(), name);
     }
   });
 
