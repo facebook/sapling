@@ -116,7 +116,7 @@ struct ThriftHgStatus {
  * Note that the error message always contains the path, so it can be displayed
  * to the user verbatim without having to prefix it with the path explicitly.
  */
-struct ScmRemoveError {
+struct ScmAddRemoveError {
   1: string path
   2: string errorMessage
 }
@@ -199,12 +199,12 @@ service EdenService extends fb303.FacebookService {
   // TODO(mbolin): `hg status` has a ton of command line flags to support.
   ThriftHgStatus scmGetStatus(1: string mountPoint) throws (1: EdenError ex)
 
-  void scmAdd(
+  list<ScmAddRemoveError> scmAdd(
     1: string mountPoint,
-    2: string path
+    2: list<string> paths, // May be files or directories.
   ) throws (1: EdenError ex)
 
-  list<ScmRemoveError> scmRemove(
+  list<ScmAddRemoveError> scmRemove(
     1: string mountPoint,
     2: list<string> paths, // May be files or directories.
     3: bool force

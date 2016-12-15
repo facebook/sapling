@@ -53,13 +53,38 @@ void verifyEmptyDirstate(const Dirstate* dirstate) {
 }
 
 /**
+ * Calls `dirstate->addAll({path}, errorsToReport)` and fails if
+ * errorsToReport is non-empty. Note that path may identify a file or a
+ * directory, though it must be an existing file.
+ */
+void scmAddFile(Dirstate* dirstate, std::string path) {
+  std::vector<DirstateAddRemoveError> errorsToReport;
+  std::vector<RelativePathPiece> paths({RelativePathPiece(path)});
+  dirstate->addAll(paths, &errorsToReport);
+  if (!errorsToReport.empty()) {
+    FAIL() << "Unexpected error: " << errorsToReport[0];
+  }
+}
+
+void scmAddFileAndExpect(
+    Dirstate* dirstate,
+    std::string path,
+    DirstateAddRemoveError expectedError) {
+  std::vector<DirstateAddRemoveError> errorsToReport;
+  std::vector<RelativePathPiece> paths({RelativePathPiece(path)});
+  dirstate->addAll(paths, &errorsToReport);
+  std::vector<DirstateAddRemoveError> expectedErrors({expectedError});
+  EXPECT_EQ(expectedErrors, errorsToReport);
+}
+
+/**
  * Calls `dirstate->removeAll({path}, force, errorsToReport)` and fails if
  * errorsToReport is non-empty.
  */
 void scmRemoveFile(Dirstate* dirstate, std::string path, bool force) {
-  std::vector<DirstateRemoveError> errorsToReport;
+  std::vector<DirstateAddRemoveError> errorsToReport;
   std::vector<RelativePathPiece> paths({RelativePathPiece(path)});
-  dirstate->removeAll(&paths, force, errorsToReport);
+  dirstate->removeAll(paths, force, &errorsToReport);
   if (!errorsToReport.empty()) {
     FAIL() << "Unexpected error: " << errorsToReport[0];
   }
@@ -73,11 +98,11 @@ void scmRemoveFileAndExpect(
     Dirstate* dirstate,
     std::string path,
     bool force,
-    DirstateRemoveError expectedError) {
-  std::vector<DirstateRemoveError> errorsToReport;
+    DirstateAddRemoveError expectedError) {
+  std::vector<DirstateAddRemoveError> errorsToReport;
   std::vector<RelativePathPiece> paths({RelativePathPiece(path)});
-  dirstate->removeAll(&paths, force, errorsToReport);
-  std::vector<DirstateRemoveError> expectedErrors({expectedError});
+  dirstate->removeAll(paths, force, &errorsToReport);
+  std::vector<DirstateAddRemoveError> expectedErrors({expectedError});
   EXPECT_EQ(expectedErrors, errorsToReport);
 }
 
@@ -141,7 +166,7 @@ TEST(Dirstate, createDirstateWithAddedFile) {
   auto dirstate = testMount->getDirstate();
 
   testMount->addFile("hello.txt", "some contents");
-  dirstate->add(RelativePathPiece("hello.txt"));
+  scmAddFile(dirstate, "hello.txt");
   verifyExpectedDirstate(dirstate, {{"hello.txt", HgStatusCode::ADDED}});
 }
 
@@ -151,7 +176,7 @@ TEST(Dirstate, createDirstateWithMissingFile) {
   auto dirstate = testMount->getDirstate();
 
   testMount->addFile("hello.txt", "some contents");
-  dirstate->add(RelativePathPiece("hello.txt"));
+  scmAddFile(dirstate, "hello.txt");
   testMount->deleteFile("hello.txt");
   verifyExpectedDirstate(dirstate, {{"hello.txt", HgStatusCode::MISSING}});
 }
@@ -176,6 +201,88 @@ TEST(Dirstate, createDirstateWithTouchedFile) {
   // Although the file has been written, it has not changed in any significant
   // way.
   verifyEmptyDirstate(dirstate);
+}
+
+TEST(Dirstate, addDirectoriesWithMixOfFiles) {
+  TestMountBuilder builder;
+  builder.addFiles({
+      {"rootfile.txt", ""}, {"dir1/a.txt", "original contents"},
+  });
+  auto testMount = builder.build();
+
+  testMount->addFile("dir1/b.txt", "");
+  testMount->mkdir("dir2");
+  testMount->addFile("dir2/c.txt", "");
+
+  auto dirstate = testMount->getDirstate();
+  verifyExpectedDirstate(
+      dirstate,
+      {
+          {"dir1/b.txt", HgStatusCode::NOT_TRACKED},
+          {"dir2/c.txt", HgStatusCode::NOT_TRACKED},
+      });
+
+  // `hg add dir2` should ensure only things under dir2 are added.
+  scmAddFile(dirstate, "dir2");
+  verifyExpectedDirstate(
+      dirstate,
+      {
+          {"dir1/b.txt", HgStatusCode::NOT_TRACKED},
+          {"dir2/c.txt", HgStatusCode::ADDED},
+      });
+
+  // This is the equivalent of `hg forget dir1/a.txt`.
+  scmRemoveFile(dirstate, "dir1/a.txt", /* force */ false);
+  testMount->addFile("dir1/a.txt", "original contents");
+  verifyExpectedDirstate(
+      dirstate,
+      {
+          {"dir1/a.txt", HgStatusCode::REMOVED},
+          {"dir1/b.txt", HgStatusCode::NOT_TRACKED},
+          {"dir2/c.txt", HgStatusCode::ADDED},
+      });
+
+  // Running `hg add .` should remove the removal marker from dir1/a.txt because
+  // dir1/a.txt is still on disk.
+  scmAddFile(dirstate, "");
+  verifyExpectedDirstate(
+      dirstate,
+      {
+          {"dir1/b.txt", HgStatusCode::ADDED},
+          {"dir2/c.txt", HgStatusCode::ADDED},
+      });
+
+  scmRemoveFile(dirstate, "dir1/a.txt", /* force */ false);
+  testMount->addFile("dir1/a.txt", "different contents");
+  // Running `hg add dir1` should remove the removal marker from dir1/a.txt, but
+  // `hg status` should also reflect that it is modified.
+  scmAddFile(dirstate, "dir1");
+  verifyExpectedDirstate(
+      dirstate,
+      {
+          {"dir1/a.txt", HgStatusCode::MODIFIED},
+          {"dir1/b.txt", HgStatusCode::ADDED},
+          {"dir2/c.txt", HgStatusCode::ADDED},
+      });
+
+  scmRemoveFile(dirstate, "dir1/a.txt", /* force */ true);
+  // This should not add dir1/a.txt back because it is not on disk.
+  scmAddFile(dirstate, "dir1");
+  verifyExpectedDirstate(
+      dirstate,
+      {
+          {"dir1/a.txt", HgStatusCode::REMOVED},
+          {"dir1/b.txt", HgStatusCode::ADDED},
+          {"dir2/c.txt", HgStatusCode::ADDED},
+      });
+
+  scmAddFileAndExpect(
+      dirstate,
+      "dir3",
+      DirstateAddRemoveError{RelativePath("dir3"),
+                             "dir3: No such file or directory"}
+
+      );
 }
 
 TEST(Dirstate, createDirstateWithFileAndThenHgRemoveIt) {
@@ -214,9 +321,9 @@ TEST(Dirstate, createDirstateWithFileTouchItAndThenHgRemoveIt) {
       dirstate,
       "hello.txt",
       /* force */ false,
-      DirstateRemoveError{RelativePath("hello.txt"),
-                          "not removing hello.txt: file is modified "
-                          "(use -f to force removal)"});
+      DirstateAddRemoveError{RelativePath("hello.txt"),
+                             "not removing hello.txt: file is modified "
+                             "(use -f to force removal)"});
 
   testMount->overwriteFile("hello.txt", "original contents");
   scmRemoveFile(dirstate, "hello.txt", /* force */ false);
@@ -270,7 +377,7 @@ TEST(Dirstate, createDirstateHgAddFileRemoveItThenHgRemoveIt) {
   auto dirstate = testMount->getDirstate();
 
   testMount->addFile("hello.txt", "I will be added.");
-  dirstate->add(RelativePathPiece("hello.txt"));
+  scmAddFile(dirstate, "hello.txt");
   verifyExpectedDirstate(dirstate, {{"hello.txt", HgStatusCode::ADDED}});
 
   testMount->deleteFile("hello.txt");
@@ -288,7 +395,7 @@ TEST(Dirstate, createDirstateHgAddFileRemoveItThenHgRemoveItInSubdirectory) {
   testMount->mkdir("dir1");
   testMount->mkdir("dir1/dir2");
   testMount->addFile("dir1/dir2/hello.txt", "I will be added.");
-  dirstate->add(RelativePathPiece("dir1/dir2/hello.txt"));
+  scmAddFile(dirstate, "dir1/dir2/hello.txt");
   verifyExpectedDirstate(
       dirstate, {{"dir1/dir2/hello.txt", HgStatusCode::ADDED}});
 
@@ -307,14 +414,14 @@ TEST(Dirstate, createDirstateHgAddFileThenHgRemoveIt) {
   auto dirstate = testMount->getDirstate();
 
   testMount->addFile("hello.txt", "I will be added.");
-  dirstate->add(RelativePathPiece("hello.txt"));
+  scmAddFile(dirstate, "hello.txt");
   verifyExpectedDirstate(dirstate, {{"hello.txt", HgStatusCode::ADDED}});
 
   scmRemoveFileAndExpect(
       dirstate,
       "hello.txt",
       /* force */ false,
-      DirstateRemoveError{
+      DirstateAddRemoveError{
           RelativePath("hello.txt"),
           "not removing hello.txt: file has been marked for add "
           "(use 'hg forget' to undo add)"});
@@ -344,7 +451,7 @@ TEST(Dirstate, removeAllOnADirectoryWithFilesInVariousStates) {
   testMount->deleteFile("mydir/b");
   scmRemoveFile(dirstate, "mydir/c", /* force */ false);
   testMount->addFile("mydir/d", "I will be added.");
-  dirstate->add(RelativePathPiece("mydir/d"));
+  scmAddFile(dirstate, "mydir/d");
   testMount->addFile("mydir/e", "I will be untracked");
   verifyExpectedDirstate(
       dirstate,
@@ -357,7 +464,7 @@ TEST(Dirstate, removeAllOnADirectoryWithFilesInVariousStates) {
       dirstate,
       "mydir",
       /* force */ false,
-      DirstateRemoveError{
+      DirstateAddRemoveError{
           RelativePath("mydir/d"),
           "not removing mydir/d: "
           "file has been marked for add (use 'hg forget' to undo add)"});
@@ -385,13 +492,13 @@ TEST(Dirstate, createDirstateAndAddNewDirectory) {
   testMount->mkdir("a-new-folder");
   testMount->addFile("a-new-folder/add.txt", "");
   testMount->addFile("a-new-folder/not-tracked.txt", "");
-  dirstate->add(RelativePathPiece("a-new-folder/add.txt"));
+  scmAddFile(dirstate, "a-new-folder/add.txt");
 
   // Add one folder that appears after file-in-root.txt alphabetically.
   testMount->mkdir("z-new-folder");
   testMount->addFile("z-new-folder/add.txt", "");
   testMount->addFile("z-new-folder/not-tracked.txt", "");
-  dirstate->add(RelativePathPiece("z-new-folder/add.txt"));
+  scmAddFile(dirstate, "z-new-folder/add.txt");
 
   verifyExpectedDirstate(
       dirstate,
@@ -524,8 +631,8 @@ TEST(Dirstate, createDirstateAndAddSubtree) {
   testMount->mkdir("dir1");
   testMount->addFile("dir1/aFile.txt", "");
   testMount->addFile("dir1/bFile.txt", "");
-  dirstate->add(RelativePathPiece("root1.txt"));
-  dirstate->add(RelativePathPiece("dir1/bFile.txt"));
+  scmAddFile(dirstate, "root1.txt");
+  scmAddFile(dirstate, "dir1/bFile.txt");
   verifyExpectedDirstate(
       dirstate,
       {
@@ -549,7 +656,7 @@ TEST(Dirstate, createDirstateAndAddSubtree) {
           {"dir1/dir2/dir3/dir4/cFile.txt", HgStatusCode::NOT_TRACKED},
       });
 
-  dirstate->add(RelativePathPiece("dir1/dir2/dir3/dir4/cFile.txt"));
+  scmAddFile(dirstate, "dir1/dir2/dir3/dir4/cFile.txt");
   verifyExpectedDirstate(
       dirstate,
       {

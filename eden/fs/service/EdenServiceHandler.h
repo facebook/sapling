@@ -71,11 +71,12 @@ class EdenServiceHandler : virtual public EdenServiceSvIf,
       std::unique_ptr<std::string> mountPoint) override;
 
   void scmAdd(
+      std::vector<ScmAddRemoveError>& errorsToReport,
       std::unique_ptr<std::string> mountPoint,
-      std::unique_ptr<std::string> path) override;
+      std::unique_ptr<std::vector<std::string>> paths) override;
 
   void scmRemove(
-      std::vector<ScmRemoveError>& errorsToReport,
+      std::vector<ScmAddRemoveError>& errorsToReport,
       std::unique_ptr<std::string> mountPoint,
       std::unique_ptr<std::vector<std::string>> paths,
       bool force) override;

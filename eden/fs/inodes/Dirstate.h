@@ -75,7 +75,7 @@ class HgStatus {
    * What happens if `path` is not in the internal statuses_ map? Should it
    * return CLEAN or something else?
    */
-  HgStatusCode statusForPath(RelativePath path) const;
+  HgStatusCode statusForPath(RelativePathPiece path) const;
 
   size_t size() const {
     return statuses_.size();
@@ -102,21 +102,23 @@ class HgStatus {
 
 std::ostream& operator<<(std::ostream& os, const HgStatus& status);
 
-struct DirstateRemoveError {
+struct DirstateAddRemoveError {
   RelativePath path;
   std::string errorMessage;
 };
 inline bool operator==(
-    const DirstateRemoveError& lhs,
-    const DirstateRemoveError& rhs) {
+    const DirstateAddRemoveError& lhs,
+    const DirstateAddRemoveError& rhs) {
   return lhs.path == rhs.path && lhs.errorMessage == rhs.errorMessage;
 }
 inline bool operator!=(
-    const DirstateRemoveError& lhs,
-    const DirstateRemoveError& rhs) {
+    const DirstateAddRemoveError& lhs,
+    const DirstateAddRemoveError& rhs) {
   return !(lhs == rhs);
 }
-std::ostream& operator<<(std::ostream& os, const DirstateRemoveError& status);
+std::ostream& operator<<(
+    std::ostream& os,
+    const DirstateAddRemoveError& status);
 
 /**
  * This is designed to be a simple implemenation of an Hg dirstate. It's
@@ -147,9 +149,16 @@ class Dirstate {
   std::unique_ptr<HgStatus> getStatus() const;
 
   /**
-   * Analogous to `hg add <path>` where `<path>` is an ordinary file or symlink.
+   * Analogous to `hg add <path1> <path2> ...` where each `<path>` identifies an
+   * untracked file (or directory that contains untracked files) to be tracked.
+   *
+   * Note that if `paths` is empty, then nothing will be added. To do the
+   * equivalent of `hg add .`, then `paths` should be a vector with one element
+   * whose value is `RelativePathPiece("")`.
    */
-  void add(RelativePathPiece path);
+  void addAll(
+      const std::vector<RelativePathPiece>& paths,
+      std::vector<DirstateAddRemoveError>* errorsToReport);
 
   /**
    * Analogous to `hg rm <path1> <path2> ...` where each `<path>` identifies a
@@ -170,9 +179,9 @@ class Dirstate {
    * `hg rm` should be 1.
    */
   void removeAll(
-      const std::vector<RelativePathPiece>* paths,
+      const std::vector<RelativePathPiece>& paths,
       bool force,
-      std::vector<DirstateRemoveError>& errorsToReport);
+      std::vector<DirstateAddRemoveError>* errorsToReport);
 
   /**
    * Called as part of `hg commit`, so this does three things (ideally
@@ -185,8 +194,8 @@ class Dirstate {
    */
   void markCommitted(
       Hash commitID,
-      std::vector<RelativePathPiece>& pathsToClean,
-      std::vector<RelativePathPiece>& pathsToDrop);
+      const std::vector<RelativePathPiece>& pathsToClean,
+      const std::vector<RelativePathPiece>& pathsToDrop);
 
  private:
   /**
@@ -203,7 +212,7 @@ class Dirstate {
   void remove(
       RelativePathPiece path,
       bool force,
-      std::vector<DirstateRemoveError>& errorsToReport);
+      std::vector<DirstateAddRemoveError>* errorsToReport);
 
   /**
    * Compares the TreeEntries from a Tree in the base commit with those in the

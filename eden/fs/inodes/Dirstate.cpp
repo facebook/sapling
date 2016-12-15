@@ -65,7 +65,9 @@ struct DirectoryDelta {
 namespace facebook {
 namespace eden {
 
-std::ostream& operator<<(std::ostream& os, const DirstateRemoveError& status) {
+std::ostream& operator<<(
+    std::ostream& os,
+    const DirstateAddRemoveError& status) {
   return os << status.errorMessage;
 }
 
@@ -590,42 +592,108 @@ void Dirstate::computeDelta(
   return;
 }
 
-void Dirstate::add(RelativePathPiece path) {
-  // TODO(mbolin): Verify that path corresponds to a regular file or symlink.
-  /*
-   * Analogous to `hg add <path>`. Note that this can have one of several
-   * possible outcomes:
-   * 1. If the path does not exist in the working copy, return an error. (Note
-   *    that this happens even if path is in the userDirectives_ as REMOVE.
-   * 2. If the path refers to a directory, return an error. (Currently, the
-   *    caller is responsible for enumerating the transitive set of files in
-   *    the directory and invoking this method once for each file.)
-   * 3. If the path is already in the manifest, or if it is already present in
-   *    userDirectives_ as ADD, then return a warning as Hg does:
-   *    "<path> already tracked!".
-   * 4. If the path was in the userDirectives_ as REMOVE, then this call to
-   *    add() cancels it out and should remove the entry from userDirectives_.
-   * 5. Otherwise, `path` must not be in userDirectives_, so add it.
-   */
-  // TODO(mbolin): Honor the detailed behavior described above. Currently, we
-  // assume that none of the edge cases in 1-3 apply.
-  {
+namespace {
+enum AddAction {
+  Add,
+  Erase,
+};
+
+void addDirstateAddRemoveError(
+    RelativePathPiece path,
+    StringPiece formatError,
+    std::vector<DirstateAddRemoveError>* errorsToReport) {
+  errorsToReport->push_back(DirstateAddRemoveError{
+      path.copy(), folly::sformat(formatError, path.stringPiece())});
+}
+
+void assignAddAction(
+    RelativePathPiece path,
+    HgStatusCode code,
+    std::unordered_map<RelativePath, AddAction>& actions) {
+  if (code == HgStatusCode::NOT_TRACKED) {
+    actions[path.copy()] = AddAction::Add;
+  } else if (code == HgStatusCode::REMOVED) {
+    actions[path.copy()] = AddAction::Erase;
+  }
+  // TODO(mbolin): Should we do anything for the other statuses? Do we
+  // need to complain or anything like that?
+}
+
+enum WorkingCopyStatus { File, Directory, DoesNotExist };
+
+WorkingCopyStatus getPathStatus(
+    RelativePathPiece path,
+    const EdenMount* mount) {
+  try {
+    // Use getInodeBase() as a test of whether the path exists.
+    auto inodeBase = mount->getInodeBase(path);
+    if (std::dynamic_pointer_cast<FileInode>(inodeBase) != nullptr) {
+      return WorkingCopyStatus::File;
+    } else {
+      return WorkingCopyStatus::Directory;
+    }
+  } catch (const std::system_error& e) {
+    if (e.code().value() != ENOENT) {
+      throw;
+    } else {
+      return WorkingCopyStatus::DoesNotExist;
+    }
+  }
+}
+}
+
+void Dirstate::addAll(
+    const std::vector<RelativePathPiece>& paths,
+    std::vector<DirstateAddRemoveError>* errorsToReport) {
+  // Find all of the untracked files and then update userDirectives, as
+  // appropriate.
+  std::unordered_map<RelativePath, AddAction> actions;
+  for (auto& path : paths) {
+    auto pathStatus = getPathStatus(path, mount_);
+    if (pathStatus == WorkingCopyStatus::File) {
+      // Admittedly, this getStatusForExistingDirectory() call will also
+      // traverse subdirectories of path.dirname(), so it will do some extra
+      // work. Similarly, if paths contains a list of files in the same
+      // directory, getStatusForExistingDirectory() will be called once per
+      // file instead of once for all files in that directory. If this turns
+      // out to be a bottleneck, then we can do some extra bookkeeping to
+      // reduce lookups.
+      auto status = getStatusForExistingDirectory(path.dirname());
+      auto code = status->statusForPath(path);
+      assignAddAction(path, code, actions);
+    } else if (pathStatus == WorkingCopyStatus::Directory) {
+      auto status = getStatusForExistingDirectory(path);
+      for (auto& pair : *status->list()) {
+        // Only attempt to process the entry if it corresponds to a file in the
+        // working copy.
+        auto entryStatus = getPathStatus(pair.first, mount_);
+        if (entryStatus == WorkingCopyStatus::File) {
+          assignAddAction(pair.first, pair.second, actions);
+        }
+      }
+    } else if (pathStatus == WorkingCopyStatus::DoesNotExist) {
+      addDirstateAddRemoveError(
+          path, "{}: No such file or directory", errorsToReport);
+    } else {
+      throw std::runtime_error("Unhandled enum value");
+    }
+  }
+
+  // Apply all of the updates to userDirectives in one go.
+  if (!actions.empty()) {
     auto userDirectives = userDirectives_.wlock();
-    auto result = userDirectives->find(path.copy());
-    if (result != userDirectives->end()) {
-      switch (result->second) {
-        case overlay::UserStatusDirective::Add:
-          // No-op: already added.
+    for (auto& pair : actions) {
+      auto action = pair.second;
+      switch (action) {
+        case AddAction::Add:
+          (*userDirectives)[pair.first] = overlay::UserStatusDirective::Add;
           break;
-        case overlay::UserStatusDirective::Remove:
-          userDirectives->erase(path.copy());
-          persistence_.save(*userDirectives);
+        case AddAction::Erase:
+          userDirectives->erase(pair.first);
           break;
       }
-    } else {
-      (*userDirectives)[path.copy()] = overlay::UserStatusDirective::Add;
-      persistence_.save(*userDirectives);
     }
+    persistence_.save(*userDirectives);
   }
 }
 
@@ -635,14 +703,6 @@ enum ShouldBeDeleted {
   NO_BECAUSE_THE_FILE_WAS_ALREADY_DELETED,
   NO_BECAUSE_THE_FILE_WAS_MODIFIED,
 };
-
-void addDirstateRemoveError(
-    RelativePathPiece path,
-    StringPiece formatError,
-    std::vector<DirstateRemoveError>& errorsToReport) {
-  errorsToReport.emplace_back(DirstateRemoveError{
-      path.copy(), folly::sformat(formatError, path.stringPiece())});
-}
 }
 
 /**
@@ -656,7 +716,7 @@ ShouldBeDeleted shouldFileBeDeletedByHgRemove(
     TreeInodePtr treeInode,
     const TreeEntry* treeEntry,
     ObjectStore* objectStore,
-    std::vector<DirstateRemoveError>& errorsToReport) {
+    std::vector<DirstateAddRemoveError>* errorsToReport) {
   if (treeInode == nullptr) {
     // The parent directory for the file is not in the overlay, so the file must
     // not have been modified. As such, `hg remove` should result in deleting
@@ -673,8 +733,8 @@ ShouldBeDeleted shouldFileBeDeletedByHgRemove(
               treeEntry, entry.second.get(), objectStore, *treeInode, *dir)) {
         return ShouldBeDeleted::YES;
       } else {
-        addDirstateRemoveError(
-            file.copy(),
+        addDirstateAddRemoveError(
+            file,
             "not removing {}: file is modified (use -f to force removal)",
             errorsToReport);
         return ShouldBeDeleted::NO_BECAUSE_THE_FILE_WAS_MODIFIED;
@@ -707,16 +767,16 @@ void collectAllPathsUnderTree(
 }
 
 void Dirstate::removeAll(
-    const std::vector<RelativePathPiece>* paths,
+    const std::vector<RelativePathPiece>& paths,
     bool force,
-    std::vector<DirstateRemoveError>& errorsToReport) {
+    std::vector<DirstateAddRemoveError>* errorsToReport) {
   // First, let's collect all of the files to remove based on the `paths`
   // argument. We use an EvictingCacheMap as a set that preserves iteration
   // order.
   folly::EvictingCacheMap<RelativePath, folly::Unit> pathsToRemove(0);
   auto rootTree = mount_->getRootTree();
   auto objectStore = mount_->getObjectStore();
-  for (auto path : *paths) {
+  for (auto& path : paths) {
     // A file (or directory) must be tracked in order for it to be
     // removed, though it does not need to exist on disk (it could be in the
     // MISSING state when this is called, for example).
@@ -782,7 +842,7 @@ void Dirstate::removeAll(
             continue;
           }
         }
-        addDirstateRemoveError(
+        addDirstateAddRemoveError(
             path, "{}: No such file or directory", errorsToReport);
       }
     }
@@ -809,7 +869,7 @@ void Dirstate::removeAll(
 void Dirstate::remove(
     RelativePathPiece path,
     bool force,
-    std::vector<DirstateRemoveError>& errorsToReport) {
+    std::vector<DirstateAddRemoveError>* errorsToReport) {
   /*
    * Analogous to `hg rm <path>`. Note that the caller is responsible for
    * ensuring that `path` satisfies at least one of the following requirements:
@@ -883,7 +943,7 @@ void Dirstate::remove(
       // corresponding TreeEntry in the manifest and compare it to its Entry in
       // the Overlay, if it exists.
       if (entry == nullptr) {
-        addDirstateRemoveError(
+        addDirstateAddRemoveError(
             path, "not removing {}: file is untracked", errorsToReport);
         return;
       }
@@ -923,7 +983,7 @@ void Dirstate::remove(
           break;
         case overlay::UserStatusDirective::Add:
           if (inode != nullptr) {
-            addDirstateRemoveError(
+            addDirstateAddRemoveError(
                 path,
                 "not removing {}: file has been marked for add "
                 "(use 'hg forget' to undo add)",
@@ -965,8 +1025,8 @@ InodePtr Dirstate::getInodeBaseOrNull(RelativePathPiece path) const {
 
 void Dirstate::markCommitted(
     Hash commitID,
-    std::vector<RelativePathPiece>& pathsToClean,
-    std::vector<RelativePathPiece>& pathsToDrop) {
+    const std::vector<RelativePathPiece>& pathsToClean,
+    const std::vector<RelativePathPiece>& pathsToDrop) {
   // First, we update the root tree hash (as well as the hashes of other
   // directories in the overlay). Currently, this is stored in two places: in
   // the OverlayDir.treeHash for the root tree and in the SNAPSHOT file.
@@ -1071,8 +1131,8 @@ const std::string& HgStatusCode_toString(HgStatusCode code) {
       static_cast<typename std::underlying_type<HgStatusCode>::type>(code)));
 }
 
-HgStatusCode HgStatus::statusForPath(RelativePath path) const {
-  auto result = statuses_.find(path);
+HgStatusCode HgStatus::statusForPath(RelativePathPiece path) const {
+  auto result = statuses_.find(path.copy());
   if (result != statuses_.end()) {
     return result->second;
   } else {

@@ -368,17 +368,28 @@ void EdenServiceHandler::scmGetStatus(
 }
 
 void EdenServiceHandler::scmAdd(
+    std::vector<ScmAddRemoveError>& errorsToReport,
     std::unique_ptr<std::string> mountPoint,
-    std::unique_ptr<std::string> path) {
+    std::unique_ptr<std::vector<std::string>> paths) {
   auto dirstate = server_->getMount(*mountPoint)->getDirstate();
   DCHECK(dirstate != nullptr) << "Failed to get dirstate for "
                               << mountPoint.get();
 
-  dirstate->add(RelativePathPiece{*path});
+  std::vector<RelativePathPiece> relativePaths;
+  for (auto& path : *paths.get()) {
+    relativePaths.emplace_back(path);
+  }
+  std::vector<DirstateAddRemoveError> dirstateErrorsToReport;
+  dirstate->addAll(relativePaths, &dirstateErrorsToReport);
+  for (auto& error : dirstateErrorsToReport) {
+    errorsToReport.emplace_back();
+    errorsToReport.back().path = error.path.stringPiece().str();
+    errorsToReport.back().errorMessage = error.errorMessage;
+  }
 }
 
 void EdenServiceHandler::scmRemove(
-    std::vector<ScmRemoveError>& errorsToReport,
+    std::vector<ScmAddRemoveError>& errorsToReport,
     std::unique_ptr<std::string> mountPoint,
     std::unique_ptr<std::vector<std::string>> paths,
     bool force) {
@@ -390,8 +401,8 @@ void EdenServiceHandler::scmRemove(
   for (auto& path : *paths.get()) {
     relativePaths.emplace_back(path);
   }
-  std::vector<DirstateRemoveError> dirstateErrorsToReport;
-  dirstate->removeAll(&relativePaths, force, dirstateErrorsToReport);
+  std::vector<DirstateAddRemoveError> dirstateErrorsToReport;
+  dirstate->removeAll(relativePaths, force, &dirstateErrorsToReport);
   for (auto& error : dirstateErrorsToReport) {
     errorsToReport.emplace_back();
     errorsToReport.back().path = error.path.stringPiece().str();
