@@ -106,35 +106,36 @@ class BdiffTests(unittest.TestCase):
             self.assertEqual(
                 c, b, 'fixws(%r) want %r got %r (allws=%r)' % (a, b, c, allws))
 
-def showdiff(a, b):
-    print('showdiff(\n  %r,\n  %r):' % (a, b))
-    bin = bdiff.bdiff(a, b)
-    pos = 0
-    q = 0
-    while pos < len(bin):
-        p1, p2, l = struct.unpack(">lll", bin[pos:pos + 12])
-        pos += 12
-        if p1:
-            print('', repr(a[q:p1]))
-        print('', p1, p2, repr(a[p1:p2]), '->', repr(bin[pos:pos + l]))
-        pos += l
-        q = p2
-    if q < len(a):
-        print('', repr(a[q:]))
+    def test_nice_diff_for_trivial_change(self):
+        self.assertEqual(self.showdiff(
+            ''.join('<%s\n-\n' % i for i in range(5)),
+            ''.join('>%s\n-\n' % i for i in range(5))),
+                         [diffreplace(0, 3, '<0\n', '>0\n'),
+                          '-\n',
+                          diffreplace(5, 8, '<1\n', '>1\n'),
+                          '-\n',
+                          diffreplace(10, 13, '<2\n', '>2\n'),
+                          '-\n',
+                          diffreplace(15, 18, '<3\n', '>3\n'),
+                          '-\n',
+                          diffreplace(20, 23, '<4\n', '>4\n'),
+                          '-\n'])
 
-print("Nice diff for a trivial change:")
-showdiff(
-    ''.join('<%s\n-\n' % i for i in range(5)),
-    ''.join('>%s\n-\n' % i for i in range(5)))
+    def test_prefer_appending(self):
+        # 1 line to 3 lines
+        self.assertEqual(self.showdiff('a\n', 'a\n' * 3),
+                         ['a\n', diffreplace(2, 2, '', 'a\na\n')])
+        # 1 line to 5 lines
+        self.assertEqual(self.showdiff('a\n', 'a\n' * 5),
+                         ['a\n', diffreplace(2, 2, '', 'a\na\na\na\n')])
 
-print("Diff 1 to 3 lines - preference for appending:")
-showdiff('a\n', 'a\n' * 3)
-print("Diff 1 to 5 lines - preference for appending:")
-showdiff('a\n', 'a\n' * 5)
-print("Diff 3 to 1 lines - preference for removing trailing lines:")
-showdiff('a\n' * 3, 'a\n')
-print("Diff 5 to 1 lines - preference for removing trailing lines:")
-showdiff('a\n' * 5, 'a\n')
+    def test_prefer_removing_trailing(self):
+        # 3 lines to 1 line
+        self.assertEqual(self.showdiff('a\n' * 3, 'a\n'),
+                         ['a\n', diffreplace(2, 6, 'a\na\n', '')])
+        # 5 lines to 1 line
+        self.assertEqual(self.showdiff('a\n' * 5, 'a\n'),
+                         ['a\n', diffreplace(2, 10, 'a\na\na\na\n', '')])
 
 if __name__ == '__main__':
     silenttestrunner.main(__name__)
