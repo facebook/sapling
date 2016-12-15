@@ -1,22 +1,3 @@
-test 'a\nc\n\n\n\n' 'a\nb\n\n\n'
-test 'a\nb\nc\n' 'a\nc\n'
-test '' ''
-test 'a\nb\nc' 'a\nb\nc'
-test 'a\nb\nc\nd\n' 'a\nd\n'
-test 'a\nb\nc\nd\n' 'a\nc\ne\n'
-test 'a\nb\nc\n' 'a\nc\n'
-test 'a\n' 'c\na\nb\n'
-test 'a\n' ''
-test 'a\n' 'b\nc\n'
-test 'a\n' 'c\na\n'
-test '' 'adjfkjdjksdhfksj'
-test '' 'ab'
-test '' 'abc'
-test 'a' 'a'
-test 'ab' 'ab'
-test 'abc' 'abc'
-test 'a\n' 'a\n'
-test 'a\nb' 'a\nb'
 showdiff(
   'x\n\nx\n\nx\n\nx\n\nz\n',
   'x\n\nx\n\ny\n\nx\n\nx\n\nz\n'):

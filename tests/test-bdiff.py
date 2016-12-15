@@ -1,44 +1,53 @@
 from __future__ import absolute_import, print_function
 import struct
+import unittest
+
+import silenttestrunner
+
 from mercurial import (
     bdiff,
     mpatch,
 )
 
-def test1(a, b):
-    d = bdiff.bdiff(a, b)
-    c = a
-    if d:
-        c = mpatch.patches(a, [d])
-    if c != b:
-        print("bad diff+patch result from\n  %r to\n  %r:" % (a, b))
-        print("bdiff: %r" % d)
-        print("patched: %r" % c[:200])
+class BdiffTests(unittest.TestCase):
 
-def test(a, b):
-    print("test", repr(a), repr(b))
-    test1(a, b)
-    test1(b, a)
+    def assert_bdiff_applies(self, a, b):
+        d = bdiff.bdiff(a, b)
+        c = a
+        if d:
+            c = mpatch.patches(a, [d])
+        self.assertEqual(
+            c, b, ("bad diff+patch result from\n  %r to\n  "
+                   "%r: \nbdiff: %r\npatched: %r" % (a, b, d, c[:200])))
 
-test("a\nc\n\n\n\n", "a\nb\n\n\n")
-test("a\nb\nc\n", "a\nc\n")
-test("", "")
-test("a\nb\nc", "a\nb\nc")
-test("a\nb\nc\nd\n", "a\nd\n")
-test("a\nb\nc\nd\n", "a\nc\ne\n")
-test("a\nb\nc\n", "a\nc\n")
-test("a\n", "c\na\nb\n")
-test("a\n", "")
-test("a\n", "b\nc\n")
-test("a\n", "c\na\n")
-test("", "adjfkjdjksdhfksj")
-test("", "ab")
-test("", "abc")
-test("a", "a")
-test("ab", "ab")
-test("abc", "abc")
-test("a\n", "a\n")
-test("a\nb", "a\nb")
+    def assert_bdiff(self, a, b):
+        self.assert_bdiff_applies(a, b)
+        self.assert_bdiff_applies(b, a)
+
+    def test_bdiff_basic(self):
+        cases = [
+            ("a\nc\n\n\n\n", "a\nb\n\n\n"),
+            ("a\nb\nc\n", "a\nc\n"),
+            ("", ""),
+            ("a\nb\nc", "a\nb\nc"),
+            ("a\nb\nc\nd\n", "a\nd\n"),
+            ("a\nb\nc\nd\n", "a\nc\ne\n"),
+            ("a\nb\nc\n", "a\nc\n"),
+            ("a\n", "c\na\nb\n"),
+            ("a\n", ""),
+            ("a\n", "b\nc\n"),
+            ("a\n", "c\na\n"),
+            ("", "adjfkjdjksdhfksj"),
+            ("", "ab"),
+            ("", "abc"),
+            ("a", "a"),
+            ("ab", "ab"),
+            ("abc", "abc"),
+            ("a\n", "a\n"),
+            ("a\nb", "a\nb"),
+        ]
+        for a, b in cases:
+            self.assert_bdiff(a, b)
 
 #issue1295
 def showdiff(a, b):
@@ -92,3 +101,6 @@ print("Diff 3 to 1 lines - preference for removing trailing lines:")
 showdiff('a\n' * 3, 'a\n')
 print("Diff 5 to 1 lines - preference for removing trailing lines:")
 showdiff('a\n' * 5, 'a\n')
+
+if __name__ == '__main__':
+    silenttestrunner.main(__name__)
