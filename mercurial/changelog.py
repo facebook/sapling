@@ -79,9 +79,10 @@ class appender(object):
         self.fp = fp
         self.offset = fp.tell()
         self.size = vfs.fstat(fp).st_size
+        self._end = self.size
 
     def end(self):
-        return self.size + len("".join(self.data))
+        return self._end
     def tell(self):
         return self.offset
     def flush(self):
@@ -121,6 +122,7 @@ class appender(object):
     def write(self, s):
         self.data.append(str(s))
         self.offset += len(s)
+        self._end += len(s)
 
 def _divertopener(opener, target):
     """build an opener that writes in 'target.a' instead of 'target'"""
