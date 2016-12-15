@@ -21,18 +21,30 @@
 #include "eden/fs/store/StoreResult.h"
 
 using namespace facebook::eden;
-using TempDir = folly::test::TemporaryDirectory;
 
-using facebook::eden::Hash;
 using folly::IOBuf;
 using folly::StringPiece;
+using folly::test::TemporaryDirectory;
 using folly::unhexlify;
 using std::string;
 
-TEST(LocalStore, testReadAndWriteBlob) {
-  TempDir tmp;
-  LocalStore store(tmp.path().string());
+class LocalStoreTest : public ::testing::Test {
+ protected:
+  void SetUp() override {
+    testDir_ = std::make_unique<TemporaryDirectory>("eden_test");
+    auto path = AbsolutePathPiece{testDir_->path().string()};
+    store_ = std::make_unique<LocalStore>(path);
+  }
 
+  void TearDown() override {
+    testDir_.reset();
+  }
+
+  std::unique_ptr<TemporaryDirectory> testDir_;
+  std::unique_ptr<LocalStore> store_;
+};
+
+TEST_F(LocalStoreTest, testReadAndWriteBlob) {
   Hash hash("3a8f8eb91101860fd8484154885838bf322964d0");
 
   StringPiece contents("{\n  \"breakConfig\": true\n}\n");
@@ -40,34 +52,28 @@ TEST(LocalStore, testReadAndWriteBlob) {
   auto sha1 = Hash::sha1(&buf);
 
   auto inBlob = Blob{hash, std::move(buf)};
-  store.putBlob(hash, &inBlob);
+  store_->putBlob(hash, &inBlob);
 
-  auto outBlob = store.getBlob(hash);
+  auto outBlob = store_->getBlob(hash);
   EXPECT_EQ(hash, outBlob->getHash());
   EXPECT_EQ(
       contents, outBlob->getContents().clone()->moveToFbString().toStdString());
 
-  EXPECT_EQ(sha1, store.getSha1ForBlob(hash));
-  auto retreivedMetadata = store.getBlobMetadata(hash);
+  EXPECT_EQ(sha1, store_->getSha1ForBlob(hash));
+  auto retreivedMetadata = store_->getBlobMetadata(hash);
   ASSERT_TRUE(retreivedMetadata.hasValue());
   EXPECT_EQ(sha1, retreivedMetadata.value().sha1);
   EXPECT_EQ(contents.size(), retreivedMetadata.value().size);
 }
 
-TEST(LocalStore, testReadNonexistent) {
-  TempDir tmp;
-  LocalStore store(tmp.path().string());
-
+TEST_F(LocalStoreTest, testReadNonexistent) {
   Hash hash("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
-  EXPECT_TRUE(nullptr == store.getBlob(hash));
-  auto retreivedMetadata = store.getBlobMetadata(hash);
+  EXPECT_TRUE(nullptr == store_->getBlob(hash));
+  auto retreivedMetadata = store_->getBlobMetadata(hash);
   EXPECT_FALSE(retreivedMetadata.hasValue());
 }
 
-TEST(LocalStore, testReadsAndWriteTree) {
-  TempDir tmp;
-  LocalStore store(tmp.path().string());
-
+TEST_F(LocalStoreTest, testReadsAndWriteTree) {
   Hash hash(folly::StringPiece{"8e073e366ed82de6465d1209d3f07da7eebabb93"});
 
   auto gitTreeObject = folly::to<string>(
@@ -106,8 +112,8 @@ TEST(LocalStore, testReadsAndWriteTree) {
       string("100644 xdebug.ini\x00", 18),
       unhexlify("9ed5bbccd1b9b0077561d14c0130dc086ab27e04"));
 
-  store.put(hash.getBytes(), folly::StringPiece{gitTreeObject});
-  auto tree = store.getTree(hash);
+  store_->put(hash.getBytes(), folly::StringPiece{gitTreeObject});
+  auto tree = store_->getTree(hash);
   EXPECT_EQ(Hash("8e073e366ed82de6465d1209d3f07da7eebabb93"), tree->getHash());
   EXPECT_EQ(11, tree->getTreeEntries().size());
 
@@ -120,22 +126,19 @@ TEST(LocalStore, testReadsAndWriteTree) {
   EXPECT_EQ(0b0110, readmeEntry.getOwnerPermissions());
 }
 
-TEST(LocalStore, testGetResult) {
-  TempDir tmp;
-  LocalStore store(tmp.path().string());
-
+TEST_F(LocalStoreTest, testGetResult) {
   StringPiece key1 = "foo";
   StringPiece key2 = "bar";
 
-  EXPECT_FALSE(store.get(key1).isValid());
-  EXPECT_FALSE(store.get(key2).isValid());
+  EXPECT_FALSE(store_->get(key1).isValid());
+  EXPECT_FALSE(store_->get(key2).isValid());
 
-  store.put(key1, StringPiece{"hello world"});
-  auto result1 = store.get(key1);
+  store_->put(key1, StringPiece{"hello world"});
+  auto result1 = store_->get(key1);
   ASSERT_TRUE(result1.isValid());
   EXPECT_EQ("hello world", result1.piece());
 
-  auto result2 = store.get(key2);
+  auto result2 = store_->get(key2);
   EXPECT_FALSE(result2.isValid());
   EXPECT_THROW(result2.piece(), std::domain_error);
 }

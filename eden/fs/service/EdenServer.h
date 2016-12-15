@@ -53,10 +53,10 @@ class EdenServer {
   using DirstateMap = folly::StringKeyedMap<std::shared_ptr<Dirstate>>;
 
   EdenServer(
-      folly::StringPiece edenDir,
-      folly::StringPiece systemConfigDir,
-      folly::StringPiece configPath,
-      folly::StringPiece rocksPath);
+      AbsolutePathPiece edenDir,
+      AbsolutePathPiece systemConfigDir,
+      AbsolutePathPiece configPath,
+      AbsolutePathPiece rocksPath);
   virtual ~EdenServer();
 
   void run();
@@ -138,7 +138,7 @@ class EdenServer {
   AbsolutePath edenDir_;
   AbsolutePath systemConfigDir_;
   AbsolutePath configPath_;
-  std::string rocksPath_;
+  AbsolutePath rocksPath_;
   folly::File lockFile_;
   folly::Synchronized<std::shared_ptr<ConfigData>> configData_;
   std::shared_ptr<EdenServiceHandler> handler_;

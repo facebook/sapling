@@ -12,6 +12,7 @@
 #include <folly/Range.h>
 #include <memory>
 #include "eden/fs/store/BlobMetadata.h"
+#include "eden/utils/PathFuncs.h"
 
 namespace folly {
 template <typename T>
@@ -45,7 +46,7 @@ class Tree;
  */
 class LocalStore {
  public:
-  explicit LocalStore(folly::StringPiece pathToRocksDb);
+  explicit LocalStore(AbsolutePathPiece pathToRocksDb);
   virtual ~LocalStore();
 
   /**

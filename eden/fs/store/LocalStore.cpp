@@ -129,8 +129,8 @@ rocksdb::Slice _createSlice(folly::ByteRange bytes) {
 namespace facebook {
 namespace eden {
 
-LocalStore::LocalStore(StringPiece pathToRocksDb)
-    : db_(createRocksDb(pathToRocksDb)) {}
+LocalStore::LocalStore(AbsolutePathPiece pathToRocksDb)
+    : db_(createRocksDb(pathToRocksDb.stringPiece())) {}
 
 LocalStore::~LocalStore() {
 #ifdef FOLLY_SANITIZE_ADDRESS

@@ -70,7 +70,7 @@ unique_ptr<TestMount> TestMountBuilder::build() {
   AbsolutePath testDirPath{testDir->path().string()};
 
   auto pathToRocksDb = testDirPath + PathComponentPiece("rocksdb");
-  auto localStore = make_shared<LocalStore>(pathToRocksDb.stringPiece());
+  auto localStore = make_shared<LocalStore>(pathToRocksDb);
   shared_ptr<BackingStore> backingStore =
       make_shared<TestBackingStore>(localStore);
   unique_ptr<ObjectStore> objectStore =

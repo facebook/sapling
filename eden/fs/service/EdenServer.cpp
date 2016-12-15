@@ -65,14 +65,14 @@ namespace facebook {
 namespace eden {
 
 EdenServer::EdenServer(
-    StringPiece edenDir,
-    StringPiece systemConfigDir,
-    StringPiece configPath,
-    StringPiece rocksPath)
-    : edenDir_(AbsolutePath(edenDir)),
+    AbsolutePathPiece edenDir,
+    AbsolutePathPiece systemConfigDir,
+    AbsolutePathPiece configPath,
+    AbsolutePathPiece rocksPath)
+    : edenDir_(edenDir),
       systemConfigDir_(systemConfigDir),
       configPath_(configPath),
-      rocksPath_(rocksPath.str()) {}
+      rocksPath_(rocksPath) {}
 
 EdenServer::~EdenServer() {
   // Stop all of the mount points.

@@ -122,41 +122,39 @@ int main(int argc, char **argv) {
     fprintf(stderr, "error: the --edenDir argument is required\n");
     return EX_USAGE;
   }
+  auto edenDir = canonicalPath(FLAGS_edenDir);
+  auto systemConfigDir = FLAGS_systemConfigDir.empty()
+      ? AbsolutePath{"/etc/eden/config.d"}
+      : canonicalPath(FLAGS_systemConfigDir);
+  auto rocksPath = FLAGS_rocksPath.empty()
+      ? edenDir + RelativePathPiece{"storage/rocks-db"}
+      : canonicalPath(FLAGS_rocksPath);
 
-  std::string systemConfigDir = FLAGS_systemConfigDir;
-  if (systemConfigDir.empty()) {
-    systemConfigDir = "/etc/eden/config.d";
-  }
-
-  std::string configPath = FLAGS_configPath;
-  if (configPath.empty()) {
+  std::string configPathStr = FLAGS_configPath;
+  if (configPathStr.empty()) {
     auto homeDir = getenv("HOME");
     if (homeDir) {
-      configPath = homeDir;
+      configPathStr = homeDir;
     } else {
       struct passwd pwd;
       struct passwd* result;
       char buf[1024];
       if (getpwuid_r(getuid(), &pwd, buf, sizeof(buf), &result) == 0) {
         if (result != nullptr) {
-          configPath = pwd.pw_dir;
+          configPathStr = pwd.pw_dir;
         }
       }
     }
-    if (configPath.empty()) {
+    if (configPathStr.empty()) {
       fprintf(
           stderr,
-          "error: the --configPath argument was not specified and no $HOME\
-directory could be found for this user\n");
+          "error: the --configPath argument was not specified and no "
+          "$HOME directory could be found for this user\n");
       return EX_USAGE;
     }
-    configPath.append("/.edenrc");
+    configPathStr.append("/.edenrc");
   }
-
-  std::string rocksPath = FLAGS_rocksPath;
-  if (rocksPath.empty()) {
-    rocksPath = FLAGS_edenDir + "/storage/rocks-db";
-  }
+  auto configPath = canonicalPath(configPathStr);
 
   // Set the FUSE_THREAD_STACK environment variable.
   // Do this early on before we spawn any other threads, since setenv()
@@ -167,7 +165,7 @@ directory could be found for this user\n");
       1);
 
   // Run the eden server
-  EdenServer server(FLAGS_edenDir, systemConfigDir, configPath, rocksPath);
+  EdenServer server(edenDir, systemConfigDir, configPath, rocksPath);
   server.run();
 
   LOG(INFO) << "edenfs performing orderly shutdown";

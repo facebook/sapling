@@ -15,9 +15,12 @@
 
 #include "HgImporter.h"
 #include "eden/fs/store/LocalStore.h"
+#include "eden/utils/PathFuncs.h"
 
 DEFINE_string(edenDir, "", "The path to the .eden directory");
 DEFINE_string(rev, "", "The revision ID to import");
+
+using namespace facebook::eden;
 
 int main(int argc, char* argv[]) {
   folly::init(&argc, &argv);
@@ -31,15 +34,16 @@ int main(int argc, char* argv[]) {
     fprintf(stderr, "error: --edenDir must be specified\n");
     return EX_USAGE;
   }
-  auto rocksPath = FLAGS_edenDir + "/storage/rocks-db";
+  auto rocksPath =
+      canonicalPath(FLAGS_edenDir) + RelativePathPiece{"storage/rocks-db"};
 
   std::string revName = FLAGS_rev;
   if (revName.empty()) {
     revName = ".";
   }
 
-  facebook::eden::LocalStore store(rocksPath);
-  facebook::eden::HgImporter importer(repoPath, &store);
+  LocalStore store(rocksPath);
+  HgImporter importer(repoPath, &store);
   auto rootHash = importer.importManifest(revName);
   printf("Imported root tree: %s\n", rootHash.toString().c_str());
 
