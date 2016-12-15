@@ -5,6 +5,11 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
+# "historical portability" policy of contrib/benchmarks:
+#
+# We have to make this code work correctly with current mercurial stable branch
+# and if possible with reasonable cost with early Mercurial versions.
+
 '''ASV (https://asv.readthedocs.io) benchmark suite
 
 Benchmark are parameterized against reference repositories found in the
@@ -36,6 +41,7 @@ from mercurial import (
     extensions,
     hg,
     ui as uimod,
+    util,
 )
 
 basedir = os.path.abspath(os.path.join(os.path.dirname(__file__),
@@ -50,7 +56,12 @@ outputre = re.compile((r'! wall (\d+.\d+) comb \d+.\d+ user \d+.\d+ sys '
 
 def runperfcommand(reponame, command, *args, **kwargs):
     os.environ["HGRCPATH"] = os.environ.get("ASVHGRCPATH", "")
-    ui = uimod.ui.load()
+    # for "historical portability"
+    # ui.load() has been available since d83ca85
+    if util.safehasattr(uimod.ui, "load"):
+        ui = uimod.ui.load()
+    else:
+        ui = uimod.ui()
     repo = hg.repository(ui, os.path.join(reposdir, reponame))
     perfext = extensions.load(ui, 'perfext',
                               os.path.join(basedir, 'contrib', 'perf.py'))
