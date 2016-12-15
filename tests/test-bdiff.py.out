@@ -1,26 +1,3 @@
-showdiff(
-  'x\n\nx\n\nx\n\nx\n\nz\n',
-  'x\n\nx\n\ny\n\nx\n\nx\n\nz\n'):
- 'x\n\nx\n\n'
- 6 6 '' -> 'y\n\n'
- 'x\n\nx\n\nz\n'
-showdiff(
-  'x\n\nx\n\nx\n\nx\n\nz\n',
-  'x\n\nx\n\ny\n\nx\n\ny\n\nx\n\nz\n'):
- 'x\n\nx\n\n'
- 6 6 '' -> 'y\n\n'
- 'x\n\n'
- 9 9 '' -> 'y\n\n'
- 'x\n\nz\n'
-showdiff(
-  'a\nb\nb\nb\nc\n.\nd\ne\n.\nf\n',
-  'a\nb\nb\na\nb\nb\nb\nc\n.\nb\nc\n.\nd\ne\nf\n'):
- 'a\nb\nb\n'
- 6 6 '' -> 'a\nb\nb\nb\nc\n.\n'
- 'b\nc\n.\nd\ne\n'
- 16 18 '.\n' -> ''
- 'f\n'
-done
 done
 Nice diff for a trivial change:
 showdiff(
