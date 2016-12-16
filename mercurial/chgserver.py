@@ -504,6 +504,9 @@ class chgcmdserver(commandserver.server):
         else:
             self.cresult.write('\0')
 
+    def runcommand(self):
+        return super(chgcmdserver, self).runcommand()
+
     def setenv(self):
         """Clear and update os.environ
 
@@ -522,6 +525,7 @@ class chgcmdserver(commandserver.server):
     capabilities.update({'attachio': attachio,
                          'chdir': chdir,
                          'getpager': getpager,
+                         'runcommand': runcommand,
                          'setenv': setenv,
                          'setumask': setumask})
 
