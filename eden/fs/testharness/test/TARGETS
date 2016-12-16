@@ -4,6 +4,7 @@ cpp_unittest(
   srcs = glob(['*Test.cpp']),
   deps = [
     '//eden/fs/testharness:testharness',
+    '//eden/utils/test:test_lib',
   ],
   external_deps = [
     'gtest',
