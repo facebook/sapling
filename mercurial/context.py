@@ -1991,7 +1991,7 @@ class metadataonlyctx(committablectx):
     util.parsedate() and defaults to current date, extra is a dictionary of
     metadata or is left empty.
     """
-    def __new__(cls, repo, path, *args, **kwargs):
+    def __new__(cls, repo, originalctx, *args, **kwargs):
         return super(metadataonlyctx, cls).__new__(cls, repo)
 
     def __init__(self, repo, originalctx, parents, text, user=None, date=None,
