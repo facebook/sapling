@@ -18,6 +18,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <sstream>
+#include "eden/utils/test/TestChecks.h"
 
 using facebook::eden::dirname;
 using facebook::eden::basename;
@@ -230,10 +231,18 @@ TEST(PathFuncs, PathComponent) {
 
   EXPECT_NE(comp, compPiece);
 
-  EXPECT_THROW(PathComponent("foo/bar"), std::domain_error);
-  EXPECT_THROW(PathComponent(""), std::domain_error);
-  EXPECT_THROW(PathComponent("."), std::domain_error);
-  EXPECT_THROW(PathComponent(".."), std::domain_error);
+  EXPECT_THROW_RE(
+      PathComponent("foo/bar"),
+      std::domain_error,
+      "containing a directory separator");
+  EXPECT_THROW_RE(
+      PathComponent(""),
+      std::domain_error,
+      "cannot have an empty PathComponent");
+  EXPECT_THROW_RE(
+      PathComponent("."), std::domain_error, "must not be \\. or \\.\\.");
+  EXPECT_THROW_RE(
+      PathComponent(".."), std::domain_error, "must not be \\. or \\.\\.");
 }
 
 TEST(PathFuncs, RelativePath) {
@@ -241,8 +250,9 @@ TEST(PathFuncs, RelativePath) {
   EXPECT_EQ("", emptyRel.stringPiece());
   EXPECT_EQ("", (emptyRel + RelativePath()).value());
 
-  EXPECT_THROW(RelativePath("/foo/bar"), std::domain_error);
-  EXPECT_THROW(RelativePath("foo/"), std::domain_error);
+  EXPECT_THROW_RE(RelativePath("/foo/bar"), std::domain_error, "absolute path");
+  EXPECT_THROW_RE(
+      RelativePath("foo/"), std::domain_error, "must not end with a slash");
 
   RelativePathPiece relPiece("foo/bar");
   EXPECT_EQ("foo/bar", relPiece.stringPiece());
@@ -271,9 +281,13 @@ TEST(PathFuncs, RelativePath) {
 }
 
 TEST(PathFuncs, AbsolutePath) {
-  EXPECT_THROW(AbsolutePath("invalid"), std::domain_error);
-  EXPECT_THROW(AbsolutePath(""), std::domain_error);
-  EXPECT_THROW(AbsolutePath("/trailing/slash/"), std::domain_error);
+  EXPECT_THROW_RE(
+      AbsolutePath("invalid"), std::domain_error, "non-absolute string");
+  EXPECT_THROW_RE(AbsolutePath(""), std::domain_error, "non-absolute string");
+  EXPECT_THROW_RE(
+      AbsolutePath("/trailing/slash/"),
+      std::domain_error,
+      "must not end with a slash");
 
   AbsolutePath abs("/some/dir");
   EXPECT_EQ("dir", abs.basename().stringPiece());
@@ -470,7 +484,7 @@ TEST(PathFuncs, realpath) {
   EXPECT_EQ(
       tmpDir.pathStr + "/simple.txt",
       realpath("parent/..//parent/.//child/../../simple.txt").value());
-  EXPECT_THROW(realpath("nosuchdir/../simple.txt"), std::system_error);
+  EXPECT_THROW_ERRNO(realpath("nosuchdir/../simple.txt"), ENOENT);
   EXPECT_EQ(
       tmpDir.pathStr + "/simple.txt",
       realpath(tmpDir.pathStr + "//simple.txt").value());
@@ -490,8 +504,8 @@ TEST(PathFuncs, realpath) {
   EXPECT_EQ(tmpDir.pathStr + "/parent", realpath("parent/.").value());
   EXPECT_EQ(tmpDir.pathStr, realpath("parent/..").value());
 
-  EXPECT_THROW(realpath("parent/broken_link"), std::system_error);
-  EXPECT_THROW(realpath("parent/loop_a"), std::system_error);
-  EXPECT_THROW(realpath("loop_b"), std::system_error);
-  EXPECT_THROW(realpath("parent/nosuchfile"), std::system_error);
+  EXPECT_THROW_ERRNO(realpath("parent/broken_link"), ENOENT);
+  EXPECT_THROW_ERRNO(realpath("parent/loop_a"), ELOOP);
+  EXPECT_THROW_ERRNO(realpath("loop_b"), ELOOP);
+  EXPECT_THROW_ERRNO(realpath("parent/nosuchfile"), ENOENT);
 }
