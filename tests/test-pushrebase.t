@@ -345,9 +345,9 @@ Pushing a merge should rebase only the latest side of the merge
   updating bookmark master
   $ cd ../server
   $ log
-  o  on top of merge [public:7548c79a5591] master
+  o  on top of merge [public:54b35e8b58eb] master
   |
-  o    merge [public:93a3cc822f6a]
+  o    merge [public:5a512eb2b3f8]
   |\
   | o  branch middle [public:5a0cbf3df4ef]
   | |
@@ -717,6 +717,62 @@ Test date rewriting with a merge commit
   added 3 changesets with 0 changes to 2 files (+1 heads)
   3 new obsolescence markers
 
+  $ cd ..
+
+Test pushrebase on merge commit where master is on the p2 side
+
+  $ hg init p2mergeserver
+  $ cd p2mergeserver
+  $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > bundle2hooks =
+  > pushrebase =
+  > EOF
+  $ echo a >> a && hg commit -Aqm 'add a'
+  $ hg bookmark master
+
+  $ cd ..
+  $ hg clone -q p2mergeserver p2mergeclient
+  $ cd p2mergeclient
+  $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > pushrebase =
+  > EOF
+  $ hg up -q null
+  $ echo b >> b && hg commit -Aqm 'add b'
+  $ hg up -q null
+  $ echo c >> c && hg commit -Aqm 'add c'
+  $ hg merge -q 1
+  $ hg commit -m 'merge b and c'
+  $ hg push --to master
+  pushing to $TESTTMP/p2mergeserver (glob)
+  searching for changes
+  pushing 3 changsets:
+      cde40f86152f  add b
+      6c337f0241b3  add c
+      4ae459502279  merge b and c
+  3 new changesets from the server will be downloaded
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 0 changes to 2 files
+  2 new obsolescence markers
+  $ hg -R ../p2mergeserver log -G -T '{rev}: {desc}'
+  o    3: merge b and c
+  |\
+  | o  2: add c
+  |
+  o  1: add b
+  |
+  @  0: add a
+  
+  $ hg -R ../p2mergeserver manifest -r 1
+  a
+  b
+  $ hg -R ../p2mergeserver manifest -r 3
+  a
+  b
+  c
   $ cd ..
 
 Test force pushes

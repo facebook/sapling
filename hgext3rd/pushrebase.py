@@ -359,7 +359,7 @@ def _getrevs(bundle, onto):
 
     return revs, oldonto
 
-def _graft(repo, rev, mapping):
+def _graft(repo, rev, mapping, lastdestnode):
     '''duplicate changeset "rev" with parents from "mapping"'''
     oldp1 = rev.p1().node()
     oldp2 = rev.p2().node()
@@ -393,6 +393,24 @@ def _graft(repo, rev, mapping):
             del mapping[nullid]
 
     if oldp1 != nullid and oldp2 != nullid:
+        # The way commits work is they copy p1, then apply the necessary changes
+        # to get to the new state. In a pushrebase situation, we are applying
+        # changes from the pre-rebase commit to a post-rebase commit, which
+        # means we need to ensure that changes caused by the rebase are
+        # preserved. In a merge commit, if p2 is the post-rebase commit that
+        # contains all the files from the rebase destination, those changes will
+        # be lost, since the newp1 doesn't have those changes, and
+        # oldp1.diff(oldrev) doesn't have them either. The solution is to ensure
+        # that the parent that contains all the original rebase destination
+        # files is always p1. We do that by just swapping them here.
+        if newp2 == lastdestnode:
+            newtemp = newp1
+            oldtemp = oldp1
+            oldp1 = oldp2
+            oldp2 = oldtemp
+            newp1 = newp2
+            newp2 = newtemp
+
         # If it's a merge commit, Mercurial's rev.files() only returns the files
         # that are different from both p1 and p2, so it would not capture all of
         # the incoming changes from p2 (for instance, new files in p2). The fix
@@ -561,8 +579,9 @@ def bundle2rebase(op, part):
             firstline = bundle[revs[-1]].description().split('\n')[0][:50]
             op.repo.ui.warn(("    %s  %s\n") % (revs[-1], firstline))
 
+        lastdestnode = None
         for rev in revs:
-            newrev = _graft(op.repo, rev, mapping)
+            newrev = _graft(op.repo, rev, mapping, lastdestnode)
 
             new = op.repo[newrev]
             oldnode = rev.node()
@@ -570,6 +589,12 @@ def bundle2rebase(op, part):
             replacements[oldnode] = newnode
             mapping[oldnode] = newnode
             added.append(newnode)
+
+            # Track which commit contains the original rebase destination
+            # contents, so we can preserve the appropriate side's content during
+            # merges.
+            if not lastdestnode or oldnode == lastdestnode:
+                lastdestnode = newnode
 
             if 'node' not in tr.hookargs:
                 tr.hookargs['node'] = hex(newnode)
