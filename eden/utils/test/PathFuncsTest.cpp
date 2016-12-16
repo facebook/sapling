@@ -7,7 +7,7 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
-#include "PathFuncs.h"
+#include "eden/utils/PathFuncs.h"
 
 #include <boost/functional/hash.hpp>
 #include <fcntl.h>
@@ -15,7 +15,6 @@
 #include <folly/experimental/TestUtil.h>
 #include <gtest/gtest.h>
 #include <sys/stat.h>
-#include <sys/types.h>
 #include <unistd.h>
 #include <sstream>
 #include "eden/utils/test/TestChecks.h"
