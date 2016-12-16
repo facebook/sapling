@@ -120,3 +120,29 @@ Test file permissions
   drwxrw[sx]r-x.? [0-9]+ .* \. (re)
   drwxrw[sx]r-x.? [0-9]+ .* \.\. (re)
   -rw-rw-r--.? 1 .* branchheads-served (re)
+
+Test logging the dirsize
+
+Set up the sampling extension and set a log file, then do a repo status.
+We need to disable the SCM_SAMPLING_FILEPATH env var because arcanist may set it!
+
+  $ LOGDIR=`pwd`/logs
+  $ mkdir $LOGDIR
+  $ cat >> $HGRCPATH << EOF
+  > [sampling]
+  > key.dirstate_size=dirstate_size
+  > filepath = $LOGDIR/samplingpath.txt
+  > [extensions]
+  > sampling=
+  > EOF
+  $ PYTHONPATH=$TESTDIR/..:$PYTHONPATH
+  $ export PYTHONPATH
+  $ SCM_SAMPLING_FILEPATH= hg status
+  >>> import json
+  >>> with open("$LOGDIR/samplingpath.txt") as f:
+  ...     data = f.read()
+  >>> for record in data.strip("\0").split("\0"):
+  ...     parsedrecord = json.loads(record)
+  ...     print '{0}: {1}'.format(parsedrecord['category'],
+  ...                             parsedrecord['data']['dirstate_size'])
+  dirstate_size: 1

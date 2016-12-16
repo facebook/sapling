@@ -8,10 +8,12 @@
 
 from mercurial import (
     branchmap,
+    dispatch,
     merge,
     revlog,
     scmutil,
     tags,
+    util,
 )
 from mercurial.extensions import wrapfunction
 from mercurial.node import nullid, nullrev
@@ -29,6 +31,7 @@ def extsetup(ui):
 
     wrapfunction(branchmap.branchcache, 'write', _branchmapwrite)
     wrapfunction(branchmap, 'read', _branchmapread)
+    wrapfunction(dispatch, 'runcommand', _trackdirstatesizes)
 
 def _readtagcache(orig, ui, repo):
     """Disables reading tags if the repo is known to not contain any."""
@@ -173,3 +176,18 @@ def _savepreloadrevs(repo, name, revs):
         except EnvironmentError:
             # No permission to write? No big deal
             pass
+
+def _trackdirstatesizes(runcommand, lui, repo, *args):
+    res = runcommand(lui, repo, *args)
+    if repo is not None and repo.local():
+        dirstate = repo.dirstate
+        # if the _map attribute is missing on the map, the dirstate was not
+        # loaded. If present, it *could* be a sqldirstate map.
+        if '_map' in vars(dirstate):
+            map_ = dirstate._map
+            # check for a sqldirstate, only load length if cache was activated
+            sqldirstate = util.safehasattr(map_, '_lookupcache')
+            logsize = map_._lookupcache is not None if sqldirstate else True
+            if logsize:
+                lui.log('dirstate_size', '', dirstate_size=len(dirstate._map))
+    return res
