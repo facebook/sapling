@@ -1593,10 +1593,6 @@ help/ shows help topics
         "topic": "merge-tools"
       },
       {
-        "summary": "Specifying Multiple Revisions",
-        "topic": "multirevs"
-      },
-      {
         "summary": "File Name Patterns",
         "topic": "patterns"
       },

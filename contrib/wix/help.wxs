@@ -25,7 +25,6 @@
           <File Name="hgignore.txt" />
           <File Name="hgweb.txt" />
           <File Name="merge-tools.txt" />
-          <File Name="multirevs.txt" />
           <File Name="patterns.txt" />
           <File Name="phases.txt" />
           <File Name="revisions.txt" />

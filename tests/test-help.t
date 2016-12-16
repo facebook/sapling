@@ -113,7 +113,6 @@ Short help:
    hgweb         Configuring hgweb
    internals     Technical implementation topics
    merge-tools   Merge Tools
-   multirevs     Specifying Multiple Revisions
    patterns      File Name Patterns
    phases        Working with Phases
    revisions     Specifying Single Revisions
@@ -190,7 +189,6 @@ Short help:
    hgweb         Configuring hgweb
    internals     Technical implementation topics
    merge-tools   Merge Tools
-   multirevs     Specifying Multiple Revisions
    patterns      File Name Patterns
    phases        Working with Phases
    revisions     Specifying Single Revisions
@@ -831,7 +829,6 @@ Test that default list of commands omits extension commands
    hgweb         Configuring hgweb
    internals     Technical implementation topics
    merge-tools   Merge Tools
-   multirevs     Specifying Multiple Revisions
    patterns      File Name Patterns
    phases        Working with Phases
    revisions     Specifying Single Revisions
@@ -1905,13 +1902,6 @@ Dish up an empty repo; serve it cold.
   </a>
   </td><td>
   Merge Tools
-  </td></tr>
-  <tr><td>
-  <a href="/help/multirevs">
-  multirevs
-  </a>
-  </td><td>
-  Specifying Multiple Revisions
   </td></tr>
   <tr><td>
   <a href="/help/patterns">

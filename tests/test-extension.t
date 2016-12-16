@@ -730,23 +730,15 @@ Test help topic with same name as extension
   > EOF
   $ echo "multirevs = multirevs.py" >> $HGRCPATH
 
-  $ hg help multirevs
-  Specifying Multiple Revisions
-  """""""""""""""""""""""""""""
+  $ hg help multirevs | tail
   
-      When Mercurial accepts more than one revision, they may be specified
-      individually, or provided as a topologically continuous range, separated
-      by the ":" character.
+      - Changesets committed in May 2008, sorted by user:
   
-      The syntax of range notation is [BEGIN]:[END], where BEGIN and END are
-      revision identifiers. Both BEGIN and END are optional. If BEGIN is not
-      specified, it defaults to revision number 0. If END is not specified, it
-      defaults to the tip. The range ":" thus means "all revisions".
+          hg log -r "sort(date('May 2008'), user)"
   
-      If BEGIN is greater than END, revisions are treated in reverse order.
+      - Changesets mentioning "bug" or "issue" that are not in a tagged release:
   
-      A range acts as a closed interval. This means that a range of 3:5 gives 3,
-      4 and 5. Similarly, a range of 9:6 gives 9, 8, 7, and 6.
+          hg log -r "(keyword(bug) or keyword(issue)) and not ancestors(tag())"
   
   use 'hg help -c multirevs' to see help for the multirevs command
 
