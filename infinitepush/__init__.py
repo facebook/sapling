@@ -63,12 +63,13 @@ import json
 import logging
 import os
 import random
+import re
 import socket
 import struct
 import tempfile
 import time
 
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 from functools import partial
 from hgext3rd.extutil import runshellcommand
 from mercurial import (
@@ -112,6 +113,9 @@ configcreate = 'server-bundlestore-create'
 configscratchpush = 'infinitepush-scratchpush'
 
 _scratchbranchmatcher = lambda x: False
+
+backupbookmarktuple = namedtuple('backupbookmarktuple',
+                                 ['hostname', 'reporoot', 'localbookmark'])
 
 def _buildexternalbundlestore(ui):
     put_args = ui.configlist('infinitepush', 'put_args', [])
@@ -747,14 +751,14 @@ def _push(orig, ui, repo, dest=None, *args, **opts):
             exchange._localphasemove = oldphasemove
     return result
 
-def _getcommonprefix(ui, repo):
+def _getcommonuserprefix(ui):
     username = ui.shortuser(ui.username())
+    return '/'.join(('infinitepush', 'backups', username))
+
+def _getcommonprefix(ui, repo):
     hostname = socket.gethostname()
 
-    result = '/'.join(('infinitepush',
-                     'backups',
-                     username,
-                     hostname))
+    result = '/'.join((_getcommonuserprefix(ui), hostname))
     if not repo.origroot.startswith('/'):
         result += '/'
     result += repo.origroot
@@ -768,15 +772,19 @@ def _getbackupbookmarkprefix(ui, repo):
 
 def _escapebookmark(bookmark):
     '''
-    If `bookmark` contains "/bookmarks/" as a substring then replace it with
-    "/bookmarksbookmarks/". This will make parsing remote bookmark name
+    If `bookmark` contains "bookmarks" as a substring then replace it with
+    "bookmarksbookmarks". This will make parsing remote bookmark name
     unambigious.
     '''
 
-    return bookmark.replace('/bookmarks/', '/bookmarksbookmarks/')
+    bookmark = encoding.fromlocal(bookmark)
+    return bookmark.replace('bookmarks', 'bookmarksbookmarks')
+
+def _unescapebookmark(bookmark):
+    bookmark = encoding.tolocal(bookmark)
+    return bookmark.replace('bookmarksbookmarks', 'bookmarks')
 
 def _getbackupbookmarkname(ui, bookmark, repo):
-    bookmark = encoding.fromlocal(bookmark)
     bookmark = _escapebookmark(bookmark)
     return '/'.join((_getbackupbookmarkprefix(ui, repo), bookmark))
 
@@ -794,6 +802,11 @@ def _getremote(repo, ui, dest, **opts):
                          hint=_("see 'hg help config.paths'"))
     dest = path.pushloc or path.loc
     return hg.peer(repo, opts, dest)
+
+def _getcommandandoptions(command):
+    pushcmd = commands.table[command][0]
+    pushopts = dict(opt[1:3] for opt in commands.table[command][1])
+    return pushcmd, pushopts
 
 @command('pushbackup',
          [('', 'background', None, 'run backup in background')])
@@ -891,6 +904,98 @@ def backup(ui, repo, dest=None, **opts):
     with repo.svfs(backupedstatefile, mode="w", atomictemp=True) as f:
         f.write(str(currenttiprev) + ' ' + currentbookmarkshash)
     return 0
+
+def _parsebackupbookmark(ui, backupbookmark):
+    '''Parses backup bookmark and returns info about it
+
+    Backup bookmark may represent either a local bookmark or a head.
+    Returns None if backup bookmark has wrong format or tuple.
+    First entry is a hostname where this bookmark came from.
+    Second entry is a root of the repo where this bookmark came from.
+    Third entry in a tuple is local bookmark if backup bookmark
+    represents a local bookmark and None otherwise.
+    '''
+
+    commonre = '^{}/([-\w.]+)(/.*)'.format(re.escape(_getcommonuserprefix(ui)))
+    bookmarkre = commonre + '/bookmarks/(.*)$'
+    headsre = commonre + '/heads/[a-f0-9]{40}$'
+
+    match = re.search(bookmarkre, backupbookmark)
+    if not match:
+        match = re.search(headsre, backupbookmark)
+        if not match:
+            return None
+        # It's a local head not a local bookmark.
+        # That's why localbookmark is None
+        return backupbookmarktuple(hostname=match.group(1),
+                                   reporoot=match.group(2),
+                                   localbookmark=None)
+
+    return backupbookmarktuple(hostname=match.group(1),
+                               reporoot=match.group(2),
+                               localbookmark=_unescapebookmark(match.group(3)))
+
+@command('pullbackup', [
+         ('', 'reporoot', '', 'root of the repo to restore'),
+         ('', 'hostname', '', 'hostname of the repo to restore')])
+def restore(ui, repo, dest=None, **opts):
+    """
+    Pulls commits from infinitepush that were previously saved with
+    `hg pushbackup`.
+    If user has only one backup for the `dest` repo then it will be restored.
+    But user may have backed up many local repos that points to `dest` repo.
+    These local repos may reside on different hosts or in different
+    repo roots. It makes restore ambiguous; `--reporoot` and `--hostname`
+    options are used to disambiguate.
+    """
+
+    other = _getremote(repo, ui, dest, **opts)
+
+    sourcereporoot = opts.get('reporoot')
+    sourcehostname = opts.get('hostname')
+
+    pattern = _getcommonuserprefix(ui) + '/*'
+    fetchedbookmarks = other.listkeyspatterns('bookmarks', patterns=[pattern])
+    reporoots = set()
+    hostnames = set()
+    nodestopull = set()
+    localbookmarks = {}
+    for book, node in fetchedbookmarks.iteritems():
+        parsed = _parsebackupbookmark(ui, book)
+        if parsed:
+            if sourcereporoot and sourcereporoot != parsed.reporoot:
+                continue
+            if sourcehostname and sourcehostname != parsed.hostname:
+                continue
+            nodestopull.add(node)
+            if parsed.localbookmark:
+                localbookmarks[parsed.localbookmark] = node
+            reporoots.add(parsed.reporoot)
+            hostnames.add(parsed.hostname)
+        else:
+            ui.warn(_('wrong format of backup bookmark: %s') % book)
+
+    if len(reporoots) > 1:
+        raise error.Abort(
+            _('ambiguous repo root to restore: %s') % sorted(reporoots),
+            hint=_('set --reporoot to disambiguate'))
+
+    if len(hostnames) > 1:
+        raise error.Abort(
+            _('ambiguous hostname to restore: %s') % sorted(hostnames),
+            hint=_('set --hostname to disambiguate'))
+    pullcmd, pullopts = _getcommandandoptions('^pull')
+    pullopts['rev'] = list(nodestopull)
+    result = pullcmd(ui, repo, **pullopts)
+
+    with repo.wlock():
+        with repo.lock():
+            with repo.transaction('bookmark') as tr:
+                for scratchbook, hexnode in localbookmarks.iteritems():
+                    repo._bookmarks[scratchbook] = bin(hexnode)
+                repo._bookmarks.recordchange(tr)
+
+    return result
 
 def _phasemove(orig, pushop, nodes, phase=phases.public):
     """prevent commits from being marked public
