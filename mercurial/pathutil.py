@@ -9,6 +9,7 @@ from .i18n import _
 from . import (
     encoding,
     error,
+    pycompat,
     util,
 )
 
@@ -87,8 +88,8 @@ class pathauditor(object):
         # This means we won't accidentally traverse a symlink into some other
         # filesystem (which is potentially expensive to access).
         for i in range(len(parts)):
-            prefix = os.sep.join(parts[:i + 1])
-            normprefix = os.sep.join(normparts[:i + 1])
+            prefix = pycompat.ossep.join(parts[:i + 1])
+            normprefix = pycompat.ossep.join(normparts[:i + 1])
             if normprefix in self.auditeddir:
                 continue
             if self._realfs:
@@ -132,7 +133,7 @@ def canonpath(root, cwd, myname, auditor=None):
     if util.endswithsep(root):
         rootsep = root
     else:
-        rootsep = root + os.sep
+        rootsep = root + pycompat.ossep
     name = myname
     if not os.path.isabs(name):
         name = os.path.join(root, cwd, name)
@@ -202,8 +203,8 @@ def normasprefix(path):
     '/'
     '''
     d, p = os.path.splitdrive(path)
-    if len(p) != len(os.sep):
-        return path + os.sep
+    if len(p) != len(pycompat.ossep):
+        return path + pycompat.ossep
     else:
         return path
 

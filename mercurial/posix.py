@@ -369,7 +369,7 @@ if sys.platform == 'cygwin':
     # use upper-ing as normcase as same as NTFS workaround
     def normcase(path):
         pathlen = len(path)
-        if (pathlen == 0) or (path[0] != os.sep):
+        if (pathlen == 0) or (path[0] != pycompat.ossep):
             # treat as relative
             return encoding.upper(path)
 
@@ -381,7 +381,7 @@ if sys.platform == 'cygwin':
             mplen = len(mp)
             if mplen == pathlen: # mount point itself
                 return mp
-            if path[mplen] == os.sep:
+            if path[mplen] == pycompat.ossep:
                 return mp + encoding.upper(path[mplen:])
 
         return encoding.upper(path)
@@ -456,7 +456,7 @@ def findexe(command):
             return executable
         return None
 
-    if os.sep in command:
+    if pycompat.ossep in command:
         return findexisting(command)
 
     if sys.platform == 'plan9':

@@ -286,7 +286,7 @@ class dirstate(object):
         # self._root ends with a path separator if self._root is '/' or 'C:\'
         rootsep = self._root
         if not util.endswithsep(rootsep):
-            rootsep += os.sep
+            rootsep += pycompat.ossep
         if cwd.startswith(rootsep):
             return cwd[len(rootsep):]
         else:
