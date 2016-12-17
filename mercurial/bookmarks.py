@@ -8,7 +8,6 @@
 from __future__ import absolute_import
 
 import errno
-import os
 
 from .i18n import _
 from .node import (
@@ -31,7 +30,7 @@ def _getbkfile(repo):
     may need to tweak this behavior further.
     """
     bkfile = None
-    if 'HG_PENDING' in os.environ:
+    if 'HG_PENDING' in encoding.environ:
         try:
             bkfile = repo.vfs('bookmarks.pending')
         except IOError as inst:

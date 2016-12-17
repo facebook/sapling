@@ -67,7 +67,7 @@ def _trypending(root, vfs, filename):
 
     This returns '(fp, is_pending_opened)' tuple.
     '''
-    if root == os.environ.get('HG_PENDING'):
+    if root == encoding.environ.get('HG_PENDING'):
         try:
             return (vfs('%s.pending' % filename), True)
         except IOError as inst:

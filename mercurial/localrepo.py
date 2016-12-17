@@ -499,8 +499,8 @@ class localrepository(object):
     @storecache('00changelog.i')
     def changelog(self):
         c = changelog.changelog(self.svfs)
-        if 'HG_PENDING' in os.environ:
-            p = os.environ['HG_PENDING']
+        if 'HG_PENDING' in encoding.environ:
+            p = encoding.environ['HG_PENDING']
             if p.startswith(self.root):
                 c.readpending('00changelog.i.a')
         return c
@@ -1299,7 +1299,7 @@ class localrepository(object):
         # the contents of parentenvvar are used by the underlying lock to
         # determine whether it can be inherited
         if parentenvvar is not None:
-            parentlock = os.environ.get(parentenvvar)
+            parentlock = encoding.environ.get(parentenvvar)
         try:
             l = lockmod.lock(vfs, lockname, 0, releasefn=releasefn,
                              acquirefn=acquirefn, desc=desc,

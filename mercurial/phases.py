@@ -103,7 +103,6 @@ Note: old client behave as a publishing server with draft only content
 from __future__ import absolute_import
 
 import errno
-import os
 
 from .i18n import _
 from .node import (
@@ -114,6 +113,7 @@ from .node import (
     short,
 )
 from . import (
+    encoding,
     error,
 )
 
@@ -137,7 +137,7 @@ def _readroots(repo, phasedefaults=None):
     roots = [set() for i in allphases]
     try:
         f = None
-        if 'HG_PENDING' in os.environ:
+        if 'HG_PENDING' in encoding.environ:
             try:
                 f = repo.svfs('phaseroots.pending')
             except IOError as inst:
