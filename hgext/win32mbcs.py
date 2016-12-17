@@ -53,6 +53,7 @@ from mercurial.i18n import _
 from mercurial import (
     encoding,
     error,
+    pycompat,
 )
 
 # Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for
@@ -97,7 +98,7 @@ def appendsep(s):
     except UnicodeError:
         us = s
     if us and us[-1] not in ':/\\':
-        s += os.sep
+        s += pycompat.ossep
     return s
 
 

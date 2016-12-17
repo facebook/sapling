@@ -12,6 +12,7 @@ import re
 from mercurial.i18n import _
 from mercurial import (
     hook,
+    pycompat,
     util,
 )
 
@@ -136,8 +137,8 @@ def createlog(ui, directory=None, root="", rlog=True, cache=None):
         except IOError:
             raise logerror(_('not a CVS sandbox'))
 
-        if prefix and not prefix.endswith(os.sep):
-            prefix += os.sep
+        if prefix and not prefix.endswith(pycompat.ossep):
+            prefix += pycompat.ossep
 
         # Use the Root file in the sandbox, if it exists
         try:
