@@ -177,7 +177,7 @@ def _is_win_9x():
     try:
         return sys.getwindowsversion()[3] == 1
     except AttributeError:
-        return 'command' in os.environ.get('comspec', '')
+        return 'command' in encoding.environ.get('comspec', '')
 
 def openhardlinks():
     return not _is_win_9x()
@@ -303,7 +303,7 @@ def findexe(command):
     PATH isn't searched if command is an absolute or relative path.
     An extension from PATHEXT is found and added if not present.
     If command isn't found None is returned.'''
-    pathext = os.environ.get('PATHEXT', '.COM;.EXE;.BAT;.CMD')
+    pathext = encoding.environ.get('PATHEXT', '.COM;.EXE;.BAT;.CMD')
     pathexts = [ext for ext in pathext.lower().split(pycompat.ospathsep)]
     if os.path.splitext(command)[1].lower() in pathexts:
         pathexts = ['']
@@ -319,7 +319,7 @@ def findexe(command):
     if pycompat.ossep in command:
         return findexisting(command)
 
-    for path in os.environ.get('PATH', '').split(pycompat.ospathsep):
+    for path in encoding.environ.get('PATH', '').split(pycompat.ospathsep):
         executable = findexisting(os.path.join(path, command))
         if executable is not None:
             return executable

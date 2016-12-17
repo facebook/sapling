@@ -16,6 +16,7 @@ from .i18n import _
 from .node import nullid, short
 
 from . import (
+    encoding,
     error,
     formatter,
     match,
@@ -165,7 +166,7 @@ def _picktool(repo, ui, path, binary, symlink, changedelete):
                 return (force, force)
 
     # HGMERGE takes next precedence
-    hgmerge = os.environ.get("HGMERGE")
+    hgmerge = encoding.environ.get("HGMERGE")
     if hgmerge:
         if changedelete and not supportscd(hgmerge):
             return ":prompt", None

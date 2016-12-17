@@ -10,9 +10,8 @@
 
 from __future__ import absolute_import
 
-import os
-
 from .. import (
+    encoding,
     util,
 )
 
@@ -24,7 +23,7 @@ def launch(application):
     util.setbinary(util.stdin)
     util.setbinary(util.stdout)
 
-    environ = dict(os.environ.iteritems())
+    environ = dict(encoding.environ.iteritems())
     environ.setdefault('PATH_INFO', '')
     if environ.get('SERVER_SOFTWARE', '').startswith('Microsoft-IIS'):
         # IIS includes script_name in PATH_INFO

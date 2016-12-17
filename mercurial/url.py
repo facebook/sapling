@@ -15,6 +15,7 @@ import socket
 
 from .i18n import _
 from . import (
+    encoding,
     error,
     httpconnection as httpconnectionmod,
     keepalive,
@@ -118,8 +119,8 @@ class proxyhandler(urlreq.proxyhandler):
         if ui.config("http_proxy", "host"):
             for env in ["HTTP_PROXY", "http_proxy", "no_proxy"]:
                 try:
-                    if env in os.environ:
-                        del os.environ[env]
+                    if env in encoding.environ:
+                        del encoding.environ[env]
                 except OSError:
                     pass
 

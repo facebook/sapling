@@ -13,6 +13,7 @@ import mimetypes
 import os
 
 from .. import (
+    encoding,
     pycompat,
     util,
 )
@@ -191,7 +192,7 @@ def get_contact(config):
     """
     return (config("web", "contact") or
             config("ui", "username") or
-            os.environ.get("EMAIL") or "")
+            encoding.environ.get("EMAIL") or "")
 
 def caching(web, req):
     tag = 'W/"%s"' % web.mtime

@@ -286,7 +286,8 @@ class hgweb(object):
         Modern servers should be using WSGI and should avoid this
         method, if possible.
         """
-        if not os.environ.get('GATEWAY_INTERFACE', '').startswith("CGI/1."):
+        if not encoding.environ.get('GATEWAY_INTERFACE',
+                                    '').startswith("CGI/1."):
             raise RuntimeError("This function is only intended to be "
                                "called while running as a CGI script.")
         wsgicgi.launch(self)
