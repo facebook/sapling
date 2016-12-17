@@ -1892,7 +1892,7 @@ def debuginstall(ui, **opts):
     fm.write('pythonexe', _("checking Python executable (%s)\n"),
              sys.executable)
     fm.write('pythonver', _("checking Python version (%s)\n"),
-             ("%s.%s.%s" % sys.version_info[:3]))
+             ("%d.%d.%d" % sys.version_info[:3]))
     fm.write('pythonlib', _("checking Python lib (%s)...\n"),
              os.path.dirname(os.__file__))
 
