@@ -18,6 +18,7 @@ cpp_library(
     '@/eden/fs/model:model',
     '@/eden/fs/model/git:gitignore',
     '@/eden/fs/journal:journal',
+    '@/eden/fs/service:thrift-cpp2',
     '@/eden/fs/store:store',
     '@/eden/fuse:fusell',
     '@/eden/utils:utils',

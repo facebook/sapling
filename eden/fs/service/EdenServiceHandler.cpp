@@ -329,28 +329,6 @@ void EdenServiceHandler::getFileInformation(
   }
 }
 
-// TODO(mbolin): Use ThriftHgStatusCode exclusively instead of HgStatusCode.
-ThriftHgStatusCode thriftStatusCodeForStatusCode(HgStatusCode statusCode) {
-  switch (statusCode) {
-    case HgStatusCode::CLEAN:
-      return ThriftHgStatusCode::CLEAN;
-    case HgStatusCode::MODIFIED:
-      return ThriftHgStatusCode::MODIFIED;
-    case HgStatusCode::ADDED:
-      return ThriftHgStatusCode::ADDED;
-    case HgStatusCode::REMOVED:
-      return ThriftHgStatusCode::REMOVED;
-    case HgStatusCode::MISSING:
-      return ThriftHgStatusCode::MISSING;
-    case HgStatusCode::NOT_TRACKED:
-      return ThriftHgStatusCode::NOT_TRACKED;
-    case HgStatusCode::IGNORED:
-      return ThriftHgStatusCode::IGNORED;
-  }
-  throw std::runtime_error(
-      folly::to<std::string>("Unrecognized value: ", statusCode));
-}
-
 void EdenServiceHandler::scmGetStatus(
     ThriftHgStatus& out,
     std::unique_ptr<std::string> mountPoint) {
@@ -362,8 +340,7 @@ void EdenServiceHandler::scmGetStatus(
   auto& entries = out.entries;
   for (auto& pair : *status->list()) {
     auto statusCode = pair.second;
-    entries[pair.first.stringPiece().str()] =
-        thriftStatusCodeForStatusCode(statusCode);
+    entries[pair.first.stringPiece().str()] = statusCode;
   }
 }
 

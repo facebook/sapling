@@ -73,14 +73,14 @@ std::ostream& operator<<(
 
 std::string HgStatus::toString() const {
   // Sort the entries in the map.
-  std::vector<std::pair<RelativePath, HgStatusCode>> entries(
+  std::vector<std::pair<RelativePath, StatusCode>> entries(
       statuses_.begin(), statuses_.end());
   std::sort(entries.begin(), entries.end());
 
   auto buf = folly::IOBuf::create(50 * entries.size());
   folly::io::Appender appender(buf.get(), /* growSize */ 1024);
   for (auto pair : entries) {
-    appender(HgStatusCode_toString(pair.second));
+    appender.write(hgStatusCodeChar(pair.second));
     appender(" ");
     appender(pair.first.stringPiece());
     appender("\n");
@@ -98,7 +98,7 @@ void updateManifestWithDirectives(
     RelativePathPiece prefix,
     const std::unordered_map<RelativePathType, overlay::UserStatusDirective>*
         unaccountedUserDirectives,
-    std::unordered_map<RelativePath, HgStatusCode>* manifest) {
+    std::unordered_map<RelativePath, StatusCode>* manifest) {
   // We should make sure that every entry in userDirectives_ is accounted for in
   // the HgStatus that we return.
   for (auto& pair : *unaccountedUserDirectives) {
@@ -110,7 +110,7 @@ void updateManifestWithDirectives(
       case overlay::UserStatusDirective::Add:
         // The file was marked for addition, but no longer exists in the working
         // copy. The user should either restore the file or run `hg forget`.
-        manifest->emplace(RelativePath(pair.first), HgStatusCode::MISSING);
+        manifest->emplace(RelativePath(pair.first), StatusCode::MISSING);
         break;
       case overlay::UserStatusDirective::Remove:
         // The file was marked for removal, but it still exists in the working
@@ -122,7 +122,7 @@ void updateManifestWithDirectives(
         // report it just as REMOVED.  This matches mercurial's current
         // behavior, but in the future it would probably be nicer to add a code
         // for REMOVED+IGNORED.
-        manifest->emplace(RelativePath(pair.first), HgStatusCode::REMOVED);
+        manifest->emplace(RelativePath(pair.first), StatusCode::REMOVED);
         break;
     }
   }
@@ -130,7 +130,7 @@ void updateManifestWithDirectives(
 
 void processRemovedFile(
     RelativePath pathToEntry,
-    std::unordered_map<RelativePath, HgStatusCode>* manifest,
+    std::unordered_map<RelativePath, StatusCode>* manifest,
     const std::unordered_map<RelativePath, overlay::UserStatusDirective>*
         userDirectives,
     std::unordered_map<RelativePathPiece, overlay::UserStatusDirective>*
@@ -149,13 +149,13 @@ void processRemovedFile(
             "(and is currently removed from disk).",
             pathToEntry.stringPiece()));
       case overlay::UserStatusDirective::Remove:
-        manifest->emplace(pathToEntry, HgStatusCode::REMOVED);
+        manifest->emplace(pathToEntry, StatusCode::REMOVED);
         break;
     }
     copyOfUserDirectives->erase(pathToEntry);
   } else {
     // The file is not present on disk, but the user never ran `hg rm`.
-    manifest->emplace(pathToEntry, HgStatusCode::MISSING);
+    manifest->emplace(pathToEntry, StatusCode::MISSING);
   }
 }
 
@@ -281,7 +281,7 @@ std::unique_ptr<HgStatus> Dirstate::getStatusForExistingDirectory(
   // in the root tree.
   auto modifiedDirectories =
       getModifiedDirectories(mount_, directory, &toIgnore);
-  std::unordered_map<RelativePath, HgStatusCode> manifest;
+  std::unordered_map<RelativePath, StatusCode> manifest;
   if (modifiedDirectories.empty()) {
     auto userDirectives = userDirectives_.rlock();
     updateManifestWithDirectives(directory, &*userDirectives, &manifest);
@@ -354,7 +354,7 @@ std::unique_ptr<HgStatus> Dirstate::getStatusForExistingDirectory(
         auto statusCode = result->second;
         switch (statusCode) {
           case overlay::UserStatusDirective::Add:
-            manifest.emplace(pathToEntry, HgStatusCode::ADDED);
+            manifest.emplace(pathToEntry, StatusCode::ADDED);
             break;
           case overlay::UserStatusDirective::Remove:
             // TODO(mbolin): Is there any weird sequence of modifications with
@@ -367,9 +367,9 @@ std::unique_ptr<HgStatus> Dirstate::getStatusForExistingDirectory(
         }
         copyOfUserDirectives.erase(pathToEntry);
       } else if (ignoreChecker.isIgnored(pathToEntry)) {
-        manifest.emplace(pathToEntry, HgStatusCode::IGNORED);
+        manifest.emplace(pathToEntry, StatusCode::IGNORED);
       } else {
-        manifest.emplace(pathToEntry, HgStatusCode::NOT_TRACKED);
+        manifest.emplace(pathToEntry, StatusCode::NOT_TRACKED);
       }
     }
 
@@ -402,12 +402,12 @@ std::unique_ptr<HgStatus> Dirstate::getStatusForExistingDirectory(
                 "but it already exists in the manifest.",
                 pathToEntry.stringPiece()));
           case overlay::UserStatusDirective::Remove:
-            manifest.emplace(pathToEntry, HgStatusCode::REMOVED);
+            manifest.emplace(pathToEntry, StatusCode::REMOVED);
             break;
         }
         copyOfUserDirectives.erase(pathToEntry);
       } else {
-        manifest.emplace(pathToEntry, HgStatusCode::MODIFIED);
+        manifest.emplace(pathToEntry, StatusCode::MODIFIED);
       }
     }
 
@@ -429,7 +429,7 @@ std::unique_ptr<HgStatus> Dirstate::getStatusForExistingDirectory(
 void Dirstate::addDeletedEntries(
     const Tree* tree,
     RelativePathPiece pathToTree,
-    std::unordered_map<RelativePath, HgStatusCode>* manifest,
+    std::unordered_map<RelativePath, StatusCode>* manifest,
     const std::unordered_map<RelativePath, overlay::UserStatusDirective>*
         userDirectives,
     std::unordered_map<RelativePathPiece, overlay::UserStatusDirective>*
@@ -608,11 +608,11 @@ void addDirstateAddRemoveError(
 
 void assignAddAction(
     RelativePathPiece path,
-    HgStatusCode code,
+    StatusCode code,
     std::unordered_map<RelativePath, AddAction>& actions) {
-  if (code == HgStatusCode::NOT_TRACKED) {
+  if (code == StatusCode::NOT_TRACKED) {
     actions[path.copy()] = AddAction::Add;
-  } else if (code == HgStatusCode::REMOVED) {
+  } else if (code == StatusCode::REMOVED) {
     actions[path.copy()] = AddAction::Erase;
   }
   // TODO(mbolin): Should we do anything for the other statuses? Do we
@@ -1101,43 +1101,43 @@ void Dirstate::markCommitted(
   mount_->getConfig()->setSnapshotID(commitID);
 }
 
-const std::string kStatusCodeCharClean = "C";
-const std::string kStatusCodeCharModified = "M";
-const std::string kStatusCodeCharAdded = "A";
-const std::string kStatusCodeCharRemoved = "R";
-const std::string kStatusCodeCharMissing = "!";
-const std::string kStatusCodeCharNotTracked = "?";
-const std::string kStatusCodeCharIgnored = "I";
+const char kStatusCodeCharClean = 'C';
+const char kStatusCodeCharModified = 'M';
+const char kStatusCodeCharAdded = 'A';
+const char kStatusCodeCharRemoved = 'R';
+const char kStatusCodeCharMissing = '!';
+const char kStatusCodeCharNotTracked = '?';
+const char kStatusCodeCharIgnored = 'I';
 
-const std::string& HgStatusCode_toString(HgStatusCode code) {
+char hgStatusCodeChar(StatusCode code) {
   switch (code) {
-    case HgStatusCode::CLEAN:
+    case StatusCode::CLEAN:
       return kStatusCodeCharClean;
-    case HgStatusCode::MODIFIED:
+    case StatusCode::MODIFIED:
       return kStatusCodeCharModified;
-    case HgStatusCode::ADDED:
+    case StatusCode::ADDED:
       return kStatusCodeCharAdded;
-    case HgStatusCode::REMOVED:
+    case StatusCode::REMOVED:
       return kStatusCodeCharRemoved;
-    case HgStatusCode::MISSING:
+    case StatusCode::MISSING:
       return kStatusCodeCharMissing;
-    case HgStatusCode::NOT_TRACKED:
+    case StatusCode::NOT_TRACKED:
       return kStatusCodeCharNotTracked;
-    case HgStatusCode::IGNORED:
+    case StatusCode::IGNORED:
       return kStatusCodeCharIgnored;
   }
   throw std::runtime_error(folly::to<std::string>(
-      "Unrecognized HgStatusCode: ",
-      static_cast<typename std::underlying_type<HgStatusCode>::type>(code)));
+      "Unrecognized StatusCode: ",
+      static_cast<typename std::underlying_type<StatusCode>::type>(code)));
 }
 
-HgStatusCode HgStatus::statusForPath(RelativePathPiece path) const {
+StatusCode HgStatus::statusForPath(RelativePathPiece path) const {
   auto result = statuses_.find(path.copy());
   if (result != statuses_.end()) {
     return result->second;
   } else {
     // TODO(mbolin): Verify that path is in the tree and throw if not?
-    return HgStatusCode::CLEAN;
+    return StatusCode::CLEAN;
   }
 }
 

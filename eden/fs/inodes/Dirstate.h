@@ -12,6 +12,7 @@
 #include "eden/fs/inodes/DirstatePersistence.h"
 #include "eden/fs/inodes/gen-cpp2/overlay_types.h"
 #include "eden/fs/model/Tree.h"
+#include "eden/fs/service/gen-cpp2/EdenService.h"
 #include "eden/utils/PathFuncs.h"
 
 namespace {
@@ -36,46 +37,22 @@ class MountPoint;
 }
 
 /**
- *
- * Mercurial status code for a file. This is a function of:
- * 1. Whether there is a HgUserStatusDirective for the file.
- * 2. Whether the file exists on disk.
- * 3. Whether the file is already in the repo.
- * 4. Whether the file is matched by a pattern in .hgignore.
+ * Returns the single-char representation of the status used by `hg status`.
+ * Note that this differs from the corresponding entry in the _VALUES_TO_NAMES
+ * map for a Thrift enum.
  */
-enum class HgStatusCode {
-  // PLEASE DO NOT ALPHA-SORT! We prefer CLEAN to correspond to 0, so these are
-  // not alphabetically sorted. They are roughly ordered by expected frequency
-  // of use.
-  CLEAN,
-
-  MODIFIED,
-  ADDED,
-
-  /** Indicates file has been marked for removal by the user. */
-  REMOVED,
-
-  /**
-   * Indicates file is tracked by the repo, is not on disk, but has not been
-   * marked for removal by the user.
-   */
-  MISSING,
-  NOT_TRACKED,
-  IGNORED,
-};
-
-const std::string& HgStatusCode_toString(HgStatusCode code);
+char hgStatusCodeChar(StatusCode code);
 
 class HgStatus {
  public:
-  explicit HgStatus(std::unordered_map<RelativePath, HgStatusCode>&& statuses)
+  explicit HgStatus(std::unordered_map<RelativePath, StatusCode>&& statuses)
       : statuses_(statuses) {}
 
   /**
    * What happens if `path` is not in the internal statuses_ map? Should it
    * return CLEAN or something else?
    */
-  HgStatusCode statusForPath(RelativePathPiece path) const;
+  StatusCode statusForPath(RelativePathPiece path) const;
 
   size_t size() const {
     return statuses_.size();
@@ -92,12 +69,12 @@ class HgStatus {
    */
   std::string toString() const;
 
-  const std::unordered_map<RelativePath, HgStatusCode>* list() const {
+  const std::unordered_map<RelativePath, StatusCode>* list() const {
     return &statuses_;
   }
 
  private:
-  std::unordered_map<RelativePath, HgStatusCode> statuses_;
+  std::unordered_map<RelativePath, StatusCode> statuses_;
 };
 
 std::ostream& operator<<(std::ostream& os, const HgStatus& status);
@@ -231,7 +208,7 @@ class Dirstate {
   void addDeletedEntries(
       const Tree* tree,
       RelativePathPiece pathToTree,
-      std::unordered_map<RelativePath, HgStatusCode>* manifest,
+      std::unordered_map<RelativePath, StatusCode>* manifest,
       const std::unordered_map<RelativePath, overlay::UserStatusDirective>*
           userDirectives,
       std::unordered_map<RelativePathPiece, overlay::UserStatusDirective>*

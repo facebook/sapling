@@ -98,7 +98,7 @@ enum WildMatchFlags {
   NoEscape = 0x2,
 }
 
-enum ThriftHgStatusCode {
+enum StatusCode {
   CLEAN = 0x0,
   MODIFIED = 0x1,
   ADDED = 0x2,
@@ -109,7 +109,7 @@ enum ThriftHgStatusCode {
 }
 
 struct ThriftHgStatus {
-  1: map<string, ThriftHgStatusCode> entries
+  1: map<string, StatusCode> entries
 }
 
 /**

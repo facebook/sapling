@@ -15,14 +15,14 @@
 using namespace facebook::eden;
 
 TEST(HgStatus, toString) {
-  std::unordered_map<RelativePath, HgStatusCode> statuses({{
-      {RelativePath("clean.txt"), HgStatusCode::CLEAN},
-      {RelativePath("modified.txt"), HgStatusCode::MODIFIED},
-      {RelativePath("added.txt"), HgStatusCode::ADDED},
-      {RelativePath("removed.txt"), HgStatusCode::REMOVED},
-      {RelativePath("missing.txt"), HgStatusCode::MISSING},
-      {RelativePath("not_tracked.txt"), HgStatusCode::NOT_TRACKED},
-      {RelativePath("ignored.txt"), HgStatusCode::IGNORED},
+  std::unordered_map<RelativePath, StatusCode> statuses({{
+      {RelativePath("clean.txt"), StatusCode::CLEAN},
+      {RelativePath("modified.txt"), StatusCode::MODIFIED},
+      {RelativePath("added.txt"), StatusCode::ADDED},
+      {RelativePath("removed.txt"), StatusCode::REMOVED},
+      {RelativePath("missing.txt"), StatusCode::MISSING},
+      {RelativePath("not_tracked.txt"), StatusCode::NOT_TRACKED},
+      {RelativePath("ignored.txt"), StatusCode::IGNORED},
   }});
   HgStatus hgStatus(std::move(statuses));
   EXPECT_EQ(
@@ -38,8 +38,8 @@ TEST(HgStatus, toString) {
 
 void verifyExpectedDirstate(
     const Dirstate* dirstate,
-    std::unordered_map<std::string, HgStatusCode>&& statuses) {
-  std::unordered_map<RelativePath, HgStatusCode> expected;
+    std::unordered_map<std::string, StatusCode>&& statuses) {
+  std::unordered_map<RelativePath, StatusCode> expected;
   for (auto& pair : statuses) {
     expected.emplace(RelativePath(pair.first), pair.second);
   }
@@ -130,10 +130,10 @@ TEST(Dirstate, createDirstateWithInitialState) {
   verifyExpectedDirstate(
       dirstate,
       {
-          {"deleted.txt", HgStatusCode::REMOVED},
-          {"missing.txt", HgStatusCode::MISSING},
-          {"newfile.txt", HgStatusCode::ADDED},
-          {"removed.txt", HgStatusCode::REMOVED},
+          {"deleted.txt", StatusCode::REMOVED},
+          {"missing.txt", StatusCode::MISSING},
+          {"newfile.txt", StatusCode::ADDED},
+          {"removed.txt", StatusCode::REMOVED},
       });
 }
 
@@ -143,7 +143,7 @@ TEST(Dirstate, createDirstateWithUntrackedFile) {
   auto dirstate = testMount->getDirstate();
 
   testMount->addFile("hello.txt", "some contents");
-  verifyExpectedDirstate(dirstate, {{"hello.txt", HgStatusCode::NOT_TRACKED}});
+  verifyExpectedDirstate(dirstate, {{"hello.txt", StatusCode::NOT_TRACKED}});
 }
 
 TEST(Dirstate, shouldIgnoreFilesInHgDirectory) {
@@ -167,7 +167,7 @@ TEST(Dirstate, createDirstateWithAddedFile) {
 
   testMount->addFile("hello.txt", "some contents");
   scmAddFile(dirstate, "hello.txt");
-  verifyExpectedDirstate(dirstate, {{"hello.txt", HgStatusCode::ADDED}});
+  verifyExpectedDirstate(dirstate, {{"hello.txt", StatusCode::ADDED}});
 }
 
 TEST(Dirstate, createDirstateWithMissingFile) {
@@ -178,7 +178,7 @@ TEST(Dirstate, createDirstateWithMissingFile) {
   testMount->addFile("hello.txt", "some contents");
   scmAddFile(dirstate, "hello.txt");
   testMount->deleteFile("hello.txt");
-  verifyExpectedDirstate(dirstate, {{"hello.txt", HgStatusCode::MISSING}});
+  verifyExpectedDirstate(dirstate, {{"hello.txt", StatusCode::MISSING}});
 }
 
 TEST(Dirstate, createDirstateWithModifiedFileContents) {
@@ -188,7 +188,7 @@ TEST(Dirstate, createDirstateWithModifiedFileContents) {
   auto dirstate = testMount->getDirstate();
 
   testMount->overwriteFile("hello.txt", "other contents");
-  verifyExpectedDirstate(dirstate, {{"hello.txt", HgStatusCode::MODIFIED}});
+  verifyExpectedDirstate(dirstate, {{"hello.txt", StatusCode::MODIFIED}});
 }
 
 TEST(Dirstate, createDirstateWithTouchedFile) {
@@ -218,8 +218,8 @@ TEST(Dirstate, addDirectoriesWithMixOfFiles) {
   verifyExpectedDirstate(
       dirstate,
       {
-          {"dir1/b.txt", HgStatusCode::NOT_TRACKED},
-          {"dir2/c.txt", HgStatusCode::NOT_TRACKED},
+          {"dir1/b.txt", StatusCode::NOT_TRACKED},
+          {"dir2/c.txt", StatusCode::NOT_TRACKED},
       });
 
   // `hg add dir2` should ensure only things under dir2 are added.
@@ -227,8 +227,8 @@ TEST(Dirstate, addDirectoriesWithMixOfFiles) {
   verifyExpectedDirstate(
       dirstate,
       {
-          {"dir1/b.txt", HgStatusCode::NOT_TRACKED},
-          {"dir2/c.txt", HgStatusCode::ADDED},
+          {"dir1/b.txt", StatusCode::NOT_TRACKED},
+          {"dir2/c.txt", StatusCode::ADDED},
       });
 
   // This is the equivalent of `hg forget dir1/a.txt`.
@@ -237,9 +237,9 @@ TEST(Dirstate, addDirectoriesWithMixOfFiles) {
   verifyExpectedDirstate(
       dirstate,
       {
-          {"dir1/a.txt", HgStatusCode::REMOVED},
-          {"dir1/b.txt", HgStatusCode::NOT_TRACKED},
-          {"dir2/c.txt", HgStatusCode::ADDED},
+          {"dir1/a.txt", StatusCode::REMOVED},
+          {"dir1/b.txt", StatusCode::NOT_TRACKED},
+          {"dir2/c.txt", StatusCode::ADDED},
       });
 
   // Running `hg add .` should remove the removal marker from dir1/a.txt because
@@ -248,8 +248,7 @@ TEST(Dirstate, addDirectoriesWithMixOfFiles) {
   verifyExpectedDirstate(
       dirstate,
       {
-          {"dir1/b.txt", HgStatusCode::ADDED},
-          {"dir2/c.txt", HgStatusCode::ADDED},
+          {"dir1/b.txt", StatusCode::ADDED}, {"dir2/c.txt", StatusCode::ADDED},
       });
 
   scmRemoveFile(dirstate, "dir1/a.txt", /* force */ false);
@@ -260,9 +259,9 @@ TEST(Dirstate, addDirectoriesWithMixOfFiles) {
   verifyExpectedDirstate(
       dirstate,
       {
-          {"dir1/a.txt", HgStatusCode::MODIFIED},
-          {"dir1/b.txt", HgStatusCode::ADDED},
-          {"dir2/c.txt", HgStatusCode::ADDED},
+          {"dir1/a.txt", StatusCode::MODIFIED},
+          {"dir1/b.txt", StatusCode::ADDED},
+          {"dir2/c.txt", StatusCode::ADDED},
       });
 
   scmRemoveFile(dirstate, "dir1/a.txt", /* force */ true);
@@ -271,9 +270,9 @@ TEST(Dirstate, addDirectoriesWithMixOfFiles) {
   verifyExpectedDirstate(
       dirstate,
       {
-          {"dir1/a.txt", HgStatusCode::REMOVED},
-          {"dir1/b.txt", HgStatusCode::ADDED},
-          {"dir2/c.txt", HgStatusCode::ADDED},
+          {"dir1/a.txt", StatusCode::REMOVED},
+          {"dir1/b.txt", StatusCode::ADDED},
+          {"dir2/c.txt", StatusCode::ADDED},
       });
 
   scmAddFileAndExpect(
@@ -294,7 +293,7 @@ TEST(Dirstate, createDirstateWithFileAndThenHgRemoveIt) {
   scmRemoveFile(dirstate, "hello.txt", /* force */ false);
   EXPECT_FALSE(testMount->hasFileAt("hello.txt"));
 
-  verifyExpectedDirstate(dirstate, {{"hello.txt", HgStatusCode::REMOVED}});
+  verifyExpectedDirstate(dirstate, {{"hello.txt", StatusCode::REMOVED}});
 }
 
 TEST(Dirstate, createDirstateWithFileRemoveItAndThenHgRemoveIt) {
@@ -306,7 +305,7 @@ TEST(Dirstate, createDirstateWithFileRemoveItAndThenHgRemoveIt) {
   testMount->deleteFile("hello.txt");
   scmRemoveFile(dirstate, "hello.txt", /* force */ false);
 
-  verifyExpectedDirstate(dirstate, {{"hello.txt", HgStatusCode::REMOVED}});
+  verifyExpectedDirstate(dirstate, {{"hello.txt", StatusCode::REMOVED}});
 }
 
 TEST(Dirstate, createDirstateWithFileTouchItAndThenHgRemoveIt) {
@@ -329,7 +328,7 @@ TEST(Dirstate, createDirstateWithFileTouchItAndThenHgRemoveIt) {
   scmRemoveFile(dirstate, "hello.txt", /* force */ false);
   EXPECT_FALSE(testMount->hasFileAt("hello.txt"));
 
-  verifyExpectedDirstate(dirstate, {{"hello.txt", HgStatusCode::REMOVED}});
+  verifyExpectedDirstate(dirstate, {{"hello.txt", StatusCode::REMOVED}});
 }
 
 TEST(Dirstate, createDirstateWithFileModifyItAndThenHgForceRemoveIt) {
@@ -341,7 +340,7 @@ TEST(Dirstate, createDirstateWithFileModifyItAndThenHgForceRemoveIt) {
   testMount->overwriteFile("hello.txt", "some other contents");
   scmRemoveFile(dirstate, "hello.txt", /* force */ true);
   EXPECT_FALSE(testMount->hasFileAt("hello.txt"));
-  verifyExpectedDirstate(dirstate, {{"hello.txt", HgStatusCode::REMOVED}});
+  verifyExpectedDirstate(dirstate, {{"hello.txt", StatusCode::REMOVED}});
 }
 
 TEST(Dirstate, ensureSubsequentCallsToHgRemoveHaveNoEffect) {
@@ -352,23 +351,23 @@ TEST(Dirstate, ensureSubsequentCallsToHgRemoveHaveNoEffect) {
 
   scmRemoveFile(dirstate, "hello.txt", /* force */ false);
   EXPECT_FALSE(testMount->hasFileAt("hello.txt"));
-  verifyExpectedDirstate(dirstate, {{"hello.txt", HgStatusCode::REMOVED}});
+  verifyExpectedDirstate(dirstate, {{"hello.txt", StatusCode::REMOVED}});
 
   // Calling `hg remove` again should have no effect and not throw any errors.
   scmRemoveFile(dirstate, "hello.txt", /* force */ false);
   EXPECT_FALSE(testMount->hasFileAt("hello.txt"));
-  verifyExpectedDirstate(dirstate, {{"hello.txt", HgStatusCode::REMOVED}});
+  verifyExpectedDirstate(dirstate, {{"hello.txt", StatusCode::REMOVED}});
 
   // Even if we restore the file, it should still show up as removed in
   // `hg status`.
   testMount->addFile("hello.txt", "original contents");
   EXPECT_TRUE(testMount->hasFileAt("hello.txt"));
-  verifyExpectedDirstate(dirstate, {{"hello.txt", HgStatusCode::REMOVED}});
+  verifyExpectedDirstate(dirstate, {{"hello.txt", StatusCode::REMOVED}});
 
   // Calling `hg remove` again should have no effect and not throw any errors.
   scmRemoveFile(dirstate, "hello.txt", /* force */ false);
   EXPECT_TRUE(testMount->hasFileAt("hello.txt"));
-  verifyExpectedDirstate(dirstate, {{"hello.txt", HgStatusCode::REMOVED}});
+  verifyExpectedDirstate(dirstate, {{"hello.txt", StatusCode::REMOVED}});
 }
 
 TEST(Dirstate, createDirstateHgAddFileRemoveItThenHgRemoveIt) {
@@ -378,10 +377,10 @@ TEST(Dirstate, createDirstateHgAddFileRemoveItThenHgRemoveIt) {
 
   testMount->addFile("hello.txt", "I will be added.");
   scmAddFile(dirstate, "hello.txt");
-  verifyExpectedDirstate(dirstate, {{"hello.txt", HgStatusCode::ADDED}});
+  verifyExpectedDirstate(dirstate, {{"hello.txt", StatusCode::ADDED}});
 
   testMount->deleteFile("hello.txt");
-  verifyExpectedDirstate(dirstate, {{"hello.txt", HgStatusCode::MISSING}});
+  verifyExpectedDirstate(dirstate, {{"hello.txt", StatusCode::MISSING}});
 
   scmRemoveFile(dirstate, "hello.txt", /* force */ false);
   verifyEmptyDirstate(dirstate);
@@ -397,12 +396,12 @@ TEST(Dirstate, createDirstateHgAddFileRemoveItThenHgRemoveItInSubdirectory) {
   testMount->addFile("dir1/dir2/hello.txt", "I will be added.");
   scmAddFile(dirstate, "dir1/dir2/hello.txt");
   verifyExpectedDirstate(
-      dirstate, {{"dir1/dir2/hello.txt", HgStatusCode::ADDED}});
+      dirstate, {{"dir1/dir2/hello.txt", StatusCode::ADDED}});
 
   testMount->deleteFile("dir1/dir2/hello.txt");
   testMount->rmdir("dir1/dir2");
   verifyExpectedDirstate(
-      dirstate, {{"dir1/dir2/hello.txt", HgStatusCode::MISSING}});
+      dirstate, {{"dir1/dir2/hello.txt", StatusCode::MISSING}});
 
   scmRemoveFile(dirstate, "dir1/dir2/hello.txt", /* force */ false);
   verifyEmptyDirstate(dirstate);
@@ -415,7 +414,7 @@ TEST(Dirstate, createDirstateHgAddFileThenHgRemoveIt) {
 
   testMount->addFile("hello.txt", "I will be added.");
   scmAddFile(dirstate, "hello.txt");
-  verifyExpectedDirstate(dirstate, {{"hello.txt", HgStatusCode::ADDED}});
+  verifyExpectedDirstate(dirstate, {{"hello.txt", StatusCode::ADDED}});
 
   scmRemoveFileAndExpect(
       dirstate,
@@ -425,7 +424,7 @@ TEST(Dirstate, createDirstateHgAddFileThenHgRemoveIt) {
           RelativePath("hello.txt"),
           "not removing hello.txt: file has been marked for add "
           "(use 'hg forget' to undo add)"});
-  verifyExpectedDirstate(dirstate, {{"hello.txt", HgStatusCode::ADDED}});
+  verifyExpectedDirstate(dirstate, {{"hello.txt", StatusCode::ADDED}});
 }
 
 TEST(Dirstate, createDirstateWithFileAndThenDeleteItWithoutCallingHgRemove) {
@@ -435,7 +434,7 @@ TEST(Dirstate, createDirstateWithFileAndThenDeleteItWithoutCallingHgRemove) {
   auto dirstate = testMount->getDirstate();
 
   testMount->deleteFile("hello.txt");
-  verifyExpectedDirstate(dirstate, {{"hello.txt", HgStatusCode::MISSING}});
+  verifyExpectedDirstate(dirstate, {{"hello.txt", StatusCode::MISSING}});
 }
 
 TEST(Dirstate, removeAllOnADirectoryWithFilesInVariousStates) {
@@ -455,10 +454,10 @@ TEST(Dirstate, removeAllOnADirectoryWithFilesInVariousStates) {
   testMount->addFile("mydir/e", "I will be untracked");
   verifyExpectedDirstate(
       dirstate,
-      {{"mydir/b", HgStatusCode::MISSING},
-       {"mydir/c", HgStatusCode::REMOVED},
-       {"mydir/d", HgStatusCode::ADDED},
-       {"mydir/e", HgStatusCode::NOT_TRACKED}});
+      {{"mydir/b", StatusCode::MISSING},
+       {"mydir/c", StatusCode::REMOVED},
+       {"mydir/d", StatusCode::ADDED},
+       {"mydir/e", StatusCode::NOT_TRACKED}});
 
   scmRemoveFileAndExpect(
       dirstate,
@@ -470,11 +469,11 @@ TEST(Dirstate, removeAllOnADirectoryWithFilesInVariousStates) {
           "file has been marked for add (use 'hg forget' to undo add)"});
   verifyExpectedDirstate(
       dirstate,
-      {{"mydir/a", HgStatusCode::REMOVED},
-       {"mydir/b", HgStatusCode::REMOVED},
-       {"mydir/c", HgStatusCode::REMOVED},
-       {"mydir/d", HgStatusCode::ADDED},
-       {"mydir/e", HgStatusCode::NOT_TRACKED}});
+      {{"mydir/a", StatusCode::REMOVED},
+       {"mydir/b", StatusCode::REMOVED},
+       {"mydir/c", StatusCode::REMOVED},
+       {"mydir/d", StatusCode::ADDED},
+       {"mydir/e", StatusCode::NOT_TRACKED}});
   EXPECT_FALSE(testMount->hasFileAt("mydir/a"));
   EXPECT_FALSE(testMount->hasFileAt("mydir/b"));
   EXPECT_FALSE(testMount->hasFileAt("mydir/c"));
@@ -503,10 +502,10 @@ TEST(Dirstate, createDirstateAndAddNewDirectory) {
   verifyExpectedDirstate(
       dirstate,
       {
-          {"a-new-folder/add.txt", HgStatusCode::ADDED},
-          {"a-new-folder/not-tracked.txt", HgStatusCode::NOT_TRACKED},
-          {"z-new-folder/add.txt", HgStatusCode::ADDED},
-          {"z-new-folder/not-tracked.txt", HgStatusCode::NOT_TRACKED},
+          {"a-new-folder/add.txt", StatusCode::ADDED},
+          {"a-new-folder/not-tracked.txt", StatusCode::NOT_TRACKED},
+          {"z-new-folder/add.txt", StatusCode::ADDED},
+          {"z-new-folder/not-tracked.txt", StatusCode::NOT_TRACKED},
       });
 }
 
@@ -532,8 +531,8 @@ TEST(Dirstate, createDirstateAndRemoveExistingDirectory) {
   verifyExpectedDirstate(
       dirstate,
       {
-          {"a-new-folder/original1.txt", HgStatusCode::REMOVED},
-          {"z-new-folder/original1.txt", HgStatusCode::REMOVED},
+          {"a-new-folder/original1.txt", StatusCode::REMOVED},
+          {"z-new-folder/original1.txt", StatusCode::REMOVED},
       });
 
   // Remove the remaining files in the directories.
@@ -542,10 +541,10 @@ TEST(Dirstate, createDirstateAndRemoveExistingDirectory) {
   verifyExpectedDirstate(
       dirstate,
       {
-          {"a-new-folder/original1.txt", HgStatusCode::REMOVED},
-          {"a-new-folder/original2.txt", HgStatusCode::REMOVED},
-          {"z-new-folder/original1.txt", HgStatusCode::REMOVED},
-          {"z-new-folder/original2.txt", HgStatusCode::REMOVED},
+          {"a-new-folder/original1.txt", StatusCode::REMOVED},
+          {"a-new-folder/original2.txt", StatusCode::REMOVED},
+          {"z-new-folder/original1.txt", StatusCode::REMOVED},
+          {"z-new-folder/original2.txt", StatusCode::REMOVED},
       });
 
   // Deleting the directories should not change the results.
@@ -554,10 +553,10 @@ TEST(Dirstate, createDirstateAndRemoveExistingDirectory) {
   verifyExpectedDirstate(
       dirstate,
       {
-          {"a-new-folder/original1.txt", HgStatusCode::REMOVED},
-          {"a-new-folder/original2.txt", HgStatusCode::REMOVED},
-          {"z-new-folder/original1.txt", HgStatusCode::REMOVED},
-          {"z-new-folder/original2.txt", HgStatusCode::REMOVED},
+          {"a-new-folder/original1.txt", StatusCode::REMOVED},
+          {"a-new-folder/original2.txt", StatusCode::REMOVED},
+          {"z-new-folder/original1.txt", StatusCode::REMOVED},
+          {"z-new-folder/original2.txt", StatusCode::REMOVED},
       });
 }
 
@@ -574,7 +573,7 @@ TEST(Dirstate, createDirstateAndReplaceFileWithDirectory) {
   verifyExpectedDirstate(
       dirstate,
       {
-          {"dir/some-file", HgStatusCode::MISSING},
+          {"dir/some-file", StatusCode::MISSING},
       });
 
   // Add file to new, empty directory.
@@ -582,8 +581,8 @@ TEST(Dirstate, createDirstateAndReplaceFileWithDirectory) {
   verifyExpectedDirstate(
       dirstate,
       {
-          {"dir/some-file", HgStatusCode::MISSING},
-          {"dir/some-file/a-real-file.txt", HgStatusCode::NOT_TRACKED},
+          {"dir/some-file", StatusCode::MISSING},
+          {"dir/some-file/a-real-file.txt", StatusCode::NOT_TRACKED},
       });
 
   // TODO: Trying to `hg add dir/some-file/a-real-file.txt` should fail with:
@@ -604,15 +603,15 @@ TEST(Dirstate, createDirstateAndReplaceDirectoryWithFile) {
   verifyExpectedDirstate(
       dirstate,
       {
-          {"dir1/dir2/some-file", HgStatusCode::MISSING},
+          {"dir1/dir2/some-file", StatusCode::MISSING},
       });
 
   testMount->addFile("dir1/dir2", "");
   verifyExpectedDirstate(
       dirstate,
       {
-          {"dir1/dir2", HgStatusCode::NOT_TRACKED},
-          {"dir1/dir2/some-file", HgStatusCode::MISSING},
+          {"dir1/dir2", StatusCode::NOT_TRACKED},
+          {"dir1/dir2/some-file", StatusCode::MISSING},
       });
 
   // TODO: Trying to `hg add dir1/dir2` should fail with:
@@ -636,10 +635,10 @@ TEST(Dirstate, createDirstateAndAddSubtree) {
   verifyExpectedDirstate(
       dirstate,
       {
-          {"root1.txt", HgStatusCode::ADDED},
-          {"root2.txt", HgStatusCode::NOT_TRACKED},
-          {"dir1/aFile.txt", HgStatusCode::NOT_TRACKED},
-          {"dir1/bFile.txt", HgStatusCode::ADDED},
+          {"root1.txt", StatusCode::ADDED},
+          {"root2.txt", StatusCode::NOT_TRACKED},
+          {"dir1/aFile.txt", StatusCode::NOT_TRACKED},
+          {"dir1/bFile.txt", StatusCode::ADDED},
       });
 
   testMount->mkdir("dir1/dir2");
@@ -649,22 +648,22 @@ TEST(Dirstate, createDirstateAndAddSubtree) {
   verifyExpectedDirstate(
       dirstate,
       {
-          {"root1.txt", HgStatusCode::ADDED},
-          {"root2.txt", HgStatusCode::NOT_TRACKED},
-          {"dir1/aFile.txt", HgStatusCode::NOT_TRACKED},
-          {"dir1/bFile.txt", HgStatusCode::ADDED},
-          {"dir1/dir2/dir3/dir4/cFile.txt", HgStatusCode::NOT_TRACKED},
+          {"root1.txt", StatusCode::ADDED},
+          {"root2.txt", StatusCode::NOT_TRACKED},
+          {"dir1/aFile.txt", StatusCode::NOT_TRACKED},
+          {"dir1/bFile.txt", StatusCode::ADDED},
+          {"dir1/dir2/dir3/dir4/cFile.txt", StatusCode::NOT_TRACKED},
       });
 
   scmAddFile(dirstate, "dir1/dir2/dir3/dir4/cFile.txt");
   verifyExpectedDirstate(
       dirstate,
       {
-          {"root1.txt", HgStatusCode::ADDED},
-          {"root2.txt", HgStatusCode::NOT_TRACKED},
-          {"dir1/aFile.txt", HgStatusCode::NOT_TRACKED},
-          {"dir1/bFile.txt", HgStatusCode::ADDED},
-          {"dir1/dir2/dir3/dir4/cFile.txt", HgStatusCode::ADDED},
+          {"root1.txt", StatusCode::ADDED},
+          {"root2.txt", StatusCode::NOT_TRACKED},
+          {"dir1/aFile.txt", StatusCode::NOT_TRACKED},
+          {"dir1/bFile.txt", StatusCode::ADDED},
+          {"dir1/dir2/dir3/dir4/cFile.txt", StatusCode::ADDED},
       });
 }
 
@@ -685,31 +684,31 @@ TEST(Dirstate, createDirstateAndRemoveSubtree) {
   verifyExpectedDirstate(
       dirstate,
       {
-          {"dir1/dir2/dir3/dir4/a-file.txt", HgStatusCode::MISSING},
+          {"dir1/dir2/dir3/dir4/a-file.txt", StatusCode::MISSING},
       });
 
   testMount->deleteFile("dir1/dir2/dir3/dir4/b-file.txt");
   verifyExpectedDirstate(
       dirstate,
       {
-          {"dir1/dir2/dir3/dir4/a-file.txt", HgStatusCode::MISSING},
-          {"dir1/dir2/dir3/dir4/b-file.txt", HgStatusCode::MISSING},
+          {"dir1/dir2/dir3/dir4/a-file.txt", StatusCode::MISSING},
+          {"dir1/dir2/dir3/dir4/b-file.txt", StatusCode::MISSING},
       });
 
   testMount->rmdir("dir1/dir2/dir3/dir4");
   verifyExpectedDirstate(
       dirstate,
       {
-          {"dir1/dir2/dir3/dir4/a-file.txt", HgStatusCode::MISSING},
-          {"dir1/dir2/dir3/dir4/b-file.txt", HgStatusCode::MISSING},
+          {"dir1/dir2/dir3/dir4/a-file.txt", StatusCode::MISSING},
+          {"dir1/dir2/dir3/dir4/b-file.txt", StatusCode::MISSING},
       });
 
   testMount->rmdir("dir1/dir2/dir3");
   verifyExpectedDirstate(
       dirstate,
       {
-          {"dir1/dir2/dir3/dir4/a-file.txt", HgStatusCode::MISSING},
-          {"dir1/dir2/dir3/dir4/b-file.txt", HgStatusCode::MISSING},
+          {"dir1/dir2/dir3/dir4/a-file.txt", StatusCode::MISSING},
+          {"dir1/dir2/dir3/dir4/b-file.txt", StatusCode::MISSING},
       });
 
   testMount->deleteFile("dir1/dir2/a-file.txt");
@@ -717,10 +716,10 @@ TEST(Dirstate, createDirstateAndRemoveSubtree) {
   verifyExpectedDirstate(
       dirstate,
       {
-          {"dir1/dir2/a-file.txt", HgStatusCode::MISSING},
-          {"dir1/dir2/b-file.txt", HgStatusCode::MISSING},
-          {"dir1/dir2/dir3/dir4/a-file.txt", HgStatusCode::MISSING},
-          {"dir1/dir2/dir3/dir4/b-file.txt", HgStatusCode::MISSING},
+          {"dir1/dir2/a-file.txt", StatusCode::MISSING},
+          {"dir1/dir2/b-file.txt", StatusCode::MISSING},
+          {"dir1/dir2/dir3/dir4/a-file.txt", StatusCode::MISSING},
+          {"dir1/dir2/dir3/dir4/b-file.txt", StatusCode::MISSING},
       });
 
   testMount->deleteFile("dir1/a-file.txt");
@@ -728,12 +727,12 @@ TEST(Dirstate, createDirstateAndRemoveSubtree) {
   verifyExpectedDirstate(
       dirstate,
       {
-          {"dir1/a-file.txt", HgStatusCode::MISSING},
-          {"dir1/b-file.txt", HgStatusCode::MISSING},
-          {"dir1/dir2/a-file.txt", HgStatusCode::MISSING},
-          {"dir1/dir2/b-file.txt", HgStatusCode::MISSING},
-          {"dir1/dir2/dir3/dir4/a-file.txt", HgStatusCode::MISSING},
-          {"dir1/dir2/dir3/dir4/b-file.txt", HgStatusCode::MISSING},
+          {"dir1/a-file.txt", StatusCode::MISSING},
+          {"dir1/b-file.txt", StatusCode::MISSING},
+          {"dir1/dir2/a-file.txt", StatusCode::MISSING},
+          {"dir1/dir2/b-file.txt", StatusCode::MISSING},
+          {"dir1/dir2/dir3/dir4/a-file.txt", StatusCode::MISSING},
+          {"dir1/dir2/dir3/dir4/b-file.txt", StatusCode::MISSING},
       });
 
   testMount->deleteFile("root.txt");
@@ -742,13 +741,13 @@ TEST(Dirstate, createDirstateAndRemoveSubtree) {
   verifyExpectedDirstate(
       dirstate,
       {
-          {"root.txt", HgStatusCode::MISSING},
-          {"dir1/a-file.txt", HgStatusCode::MISSING},
-          {"dir1/b-file.txt", HgStatusCode::MISSING},
-          {"dir1/dir2/a-file.txt", HgStatusCode::MISSING},
-          {"dir1/dir2/b-file.txt", HgStatusCode::MISSING},
-          {"dir1/dir2/dir3/dir4/a-file.txt", HgStatusCode::MISSING},
-          {"dir1/dir2/dir3/dir4/b-file.txt", HgStatusCode::MISSING},
+          {"root.txt", StatusCode::MISSING},
+          {"dir1/a-file.txt", StatusCode::MISSING},
+          {"dir1/b-file.txt", StatusCode::MISSING},
+          {"dir1/dir2/a-file.txt", StatusCode::MISSING},
+          {"dir1/dir2/b-file.txt", StatusCode::MISSING},
+          {"dir1/dir2/dir3/dir4/a-file.txt", StatusCode::MISSING},
+          {"dir1/dir2/dir3/dir4/b-file.txt", StatusCode::MISSING},
       });
 }
 
@@ -771,18 +770,18 @@ TEST(Dirstate, checkIgnoredBehavior) {
   verifyExpectedDirstate(
       dirstate,
       {
-          {"hello.txt", HgStatusCode::IGNORED},
-          {"goodbye.txt", HgStatusCode::NOT_TRACKED},
-          {"a/b/c/noop.o", HgStatusCode::NOT_TRACKED},
+          {"hello.txt", StatusCode::IGNORED},
+          {"goodbye.txt", StatusCode::NOT_TRACKED},
+          {"a/b/c/noop.o", StatusCode::NOT_TRACKED},
       });
 
   testMount->addFile("a/b/.gitignore", "*.o\n");
   verifyExpectedDirstate(
       dirstate,
       {
-          {"hello.txt", HgStatusCode::IGNORED},
-          {"goodbye.txt", HgStatusCode::NOT_TRACKED},
-          {"a/b/.gitignore", HgStatusCode::NOT_TRACKED},
-          {"a/b/c/noop.o", HgStatusCode::IGNORED},
+          {"hello.txt", StatusCode::IGNORED},
+          {"goodbye.txt", StatusCode::NOT_TRACKED},
+          {"a/b/.gitignore", StatusCode::NOT_TRACKED},
+          {"a/b/c/noop.o", StatusCode::IGNORED},
       });
 }
