@@ -24,6 +24,7 @@ from .i18n import _
 from . import (
     cmdutil,
     config,
+    encoding,
     error,
     exchange,
     filemerge,
@@ -1102,7 +1103,7 @@ class svnsubrepo(abstractsubrepo):
             path = self.wvfs.reljoin(self._ctx.repo().origroot,
                                      self._path, filename)
             cmd.append(path)
-        env = dict(os.environ)
+        env = dict(encoding.environ)
         # Avoid localized output, preserve current locale for everything else.
         lc_all = env.get('LC_ALL')
         if lc_all:
@@ -1398,7 +1399,7 @@ class gitsubrepo(abstractsubrepo):
         """
         self.ui.debug('%s: git %s\n' % (self._relpath, ' '.join(commands)))
         if env is None:
-            env = os.environ.copy()
+            env = encoding.environ.copy()
         # disable localization for Git output (issue5176)
         env['LC_ALL'] = 'C'
         # fix for Git CVE-2015-7545
@@ -1633,7 +1634,7 @@ class gitsubrepo(abstractsubrepo):
         if self._gitmissing():
             raise error.Abort(_("subrepo %s is missing") % self._relpath)
         cmd = ['commit', '-a', '-m', text]
-        env = os.environ.copy()
+        env = encoding.environ.copy()
         if user:
             cmd += ['--author', user]
         if date:

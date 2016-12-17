@@ -8,11 +8,11 @@
 
 from __future__ import absolute_import
 
-import os
 import sys
 
 from .i18n import _
 from . import (
+    encoding,
     error,
     hook,
     util,
@@ -131,5 +131,5 @@ class sshserver(wireproto.abstractserverproto):
         return cmd != ''
 
     def _client(self):
-        client = os.environ.get('SSH_CLIENT', '').split(' ', 1)[0]
+        client = encoding.environ.get('SSH_CLIENT', '').split(' ', 1)[0]
         return 'remote:ssh:' + client

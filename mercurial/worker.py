@@ -14,6 +14,7 @@ import sys
 
 from .i18n import _
 from . import (
+    encoding,
     error,
     scmutil,
     util,
@@ -32,7 +33,7 @@ def countcpus():
 
     # windows
     try:
-        n = int(os.environ['NUMBER_OF_PROCESSORS'])
+        n = int(encoding.environ['NUMBER_OF_PROCESSORS'])
         if n > 0:
             return n
     except (KeyError, ValueError):

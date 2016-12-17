@@ -55,6 +55,7 @@ from .i18n import _
 from . import (
     cmdutil,
     commandserver,
+    encoding,
     error,
     extensions,
     osutil,
@@ -102,7 +103,8 @@ def _confighash(ui):
     for section in _configsections:
         sectionitems.append(ui.configitems(section))
     sectionhash = _hashlist(sectionitems)
-    envitems = [(k, v) for k, v in os.environ.iteritems() if _envre.match(k)]
+    envitems = [(k, v) for k, v in encoding.environ.iteritems()
+                if _envre.match(k)]
     envhash = _hashlist(sorted(envitems))
     return sectionhash[:6] + envhash[:6]
 
@@ -177,7 +179,7 @@ def _setuppagercmd(ui, options, cmd):
     if not ui.formatted():
         return
 
-    p = ui.config("pager", "pager", os.environ.get("PAGER"))
+    p = ui.config("pager", "pager", encoding.environ.get("PAGER"))
     usepager = False
     always = util.parsebool(options['pager'])
     auto = options['pager'] == 'auto'
@@ -237,7 +239,7 @@ def _newchgui(srcui, csystem):
                 if val is True:
                     return '1'
                 return str(val)
-            env = os.environ.copy()
+            env = encoding.environ.copy()
             if environ:
                 env.update((k, py2shell(v)) for k, v in environ.iteritems())
             env['HG'] = util.hgexecutable()
@@ -512,8 +514,8 @@ class chgcmdserver(commandserver.server):
         except ValueError:
             raise ValueError('unexpected value in setenv request')
         _log('setenv: %r\n' % sorted(newenv.keys()))
-        os.environ.clear()
-        os.environ.update(newenv)
+        encoding.environ.clear()
+        encoding.environ.update(newenv)
 
     capabilities = commandserver.server.capabilities.copy()
     capabilities.update({'attachio': attachio,
@@ -628,8 +630,8 @@ class chgunixservicehandler(object):
 def chgunixservice(ui, repo, opts):
     # CHGINTERNALMARK is temporarily set by chg client to detect if chg will
     # start another chg. drop it to avoid possible side effects.
-    if 'CHGINTERNALMARK' in os.environ:
-        del os.environ['CHGINTERNALMARK']
+    if 'CHGINTERNALMARK' in encoding.environ:
+        del encoding.environ['CHGINTERNALMARK']
 
     if repo:
         # one chgserver can serve multiple repos. drop repo information

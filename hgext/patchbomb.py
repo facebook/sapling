@@ -75,6 +75,7 @@ from mercurial.i18n import _
 from mercurial import (
     cmdutil,
     commands,
+    encoding,
     error,
     hg,
     mail,
@@ -693,8 +694,8 @@ def email(ui, repo, *revs, **opts):
         if opts.get('test'):
             ui.status(_('displaying '), subj, ' ...\n')
             ui.flush()
-            if 'PAGER' in os.environ and not ui.plain():
-                fp = util.popen(os.environ['PAGER'], 'w')
+            if 'PAGER' in encoding.environ and not ui.plain():
+                fp = util.popen(encoding.environ['PAGER'], 'w')
             else:
                 fp = ui
             generator = emailmod.Generator.Generator(fp, mangle_from_=False)

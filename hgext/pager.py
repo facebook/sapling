@@ -71,6 +71,7 @@ from mercurial import (
     cmdutil,
     commands,
     dispatch,
+    encoding,
     extensions,
     util,
     )
@@ -123,7 +124,7 @@ def uisetup(ui):
         return
 
     def pagecmd(orig, ui, options, cmd, cmdfunc):
-        p = ui.config("pager", "pager", os.environ.get("PAGER"))
+        p = ui.config("pager", "pager", encoding.environ.get("PAGER"))
         usepager = False
         always = util.parsebool(options['pager'])
         auto = options['pager'] == 'auto'
