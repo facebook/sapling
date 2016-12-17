@@ -14,6 +14,8 @@ import os
 import random
 import subprocess
 
+from . import encoding
+
 _kernel32 = ctypes.windll.kernel32
 _advapi32 = ctypes.windll.advapi32
 _user32 = ctypes.windll.user32
@@ -424,8 +426,8 @@ def spawndetached(args):
     pi = _PROCESS_INFORMATION()
 
     env = ''
-    for k in os.environ:
-        env += "%s=%s\0" % (k, os.environ[k])
+    for k in encoding.environ:
+        env += "%s=%s\0" % (k, encoding.environ[k])
     if not env:
         env = '\0'
     env += '\0'
@@ -433,7 +435,7 @@ def spawndetached(args):
     args = subprocess.list2cmdline(args)
     # Not running the command in shell mode makes Python 2.6 hang when
     # writing to hgweb output socket.
-    comspec = os.environ.get("COMSPEC", "cmd.exe")
+    comspec = encoding.environ.get("COMSPEC", "cmd.exe")
     args = comspec + " /c " + args
 
     res = _kernel32.CreateProcessA(

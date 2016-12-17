@@ -117,6 +117,7 @@ import threading
 import time
 
 from . import (
+    encoding,
     pycompat,
 )
 
@@ -324,7 +325,7 @@ def stop():
 
         state.accumulate_time(clock())
         state.last_start_time = None
-        statprofpath = os.environ.get('STATPROF_DEST')
+        statprofpath = encoding.environ.get('STATPROF_DEST')
         if statprofpath:
             save_data(statprofpath)
 
@@ -680,7 +681,7 @@ def display_hotpath(data, fp, limit=0.05, **kwargs):
 
 def write_to_flame(data, fp, scriptpath=None, outputfile=None, **kwargs):
     if scriptpath is None:
-        scriptpath = os.environ['HOME'] + '/flamegraph.pl'
+        scriptpath = encoding.environ['HOME'] + '/flamegraph.pl'
     if not os.path.exists(scriptpath):
         print("error: missing %s" % scriptpath, file=fp)
         print("get it here: https://github.com/brendangregg/FlameGraph",

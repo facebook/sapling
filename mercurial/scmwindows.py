@@ -3,6 +3,7 @@ from __future__ import absolute_import
 import os
 
 from . import (
+    encoding,
     osutil,
     pycompat,
     util,
@@ -48,7 +49,7 @@ def userrcpath():
     home = os.path.expanduser('~')
     path = [os.path.join(home, 'mercurial.ini'),
             os.path.join(home, '.hgrc')]
-    userprofile = os.environ.get('USERPROFILE')
+    userprofile = encoding.environ.get('USERPROFILE')
     if userprofile and userprofile != home:
         path.append(os.path.join(userprofile, 'mercurial.ini'))
         path.append(os.path.join(userprofile, '.hgrc'))

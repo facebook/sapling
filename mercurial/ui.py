@@ -143,7 +143,7 @@ class ui(object):
             self.fin = util.stdin
 
             # shared read-only environment
-            self.environ = os.environ
+            self.environ = encoding.environ
 
             self.httppasswordmgrdb = urlreq.httppasswordmgrwithdefaultrealm()
 

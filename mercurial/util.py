@@ -948,14 +948,14 @@ def hgexecutable():
     Defaults to $HG or 'hg' in the search path.
     """
     if _hgexecutable is None:
-        hg = os.environ.get('HG')
+        hg = encoding.environ.get('HG')
         mainmod = sys.modules['__main__']
         if hg:
             _sethgexecutable(hg)
         elif mainfrozen():
             if getattr(sys, 'frozen', None) == 'macosx_app':
                 # Env variable set by py2app
-                _sethgexecutable(os.environ['EXECUTABLEPATH'])
+                _sethgexecutable(encoding.environ['EXECUTABLEPATH'])
             else:
                 _sethgexecutable(sys.executable)
         elif os.path.basename(getattr(mainmod, '__file__', '')) == 'hg':
@@ -1006,7 +1006,7 @@ def system(cmd, environ=None, cwd=None, onerr=None, errprefix=None, out=None):
             os.chdir(cwd)
         rc = os.system(cmd)
     else:
-        env = dict(os.environ)
+        env = dict(encoding.environ)
         env.update((k, py2shell(v)) for k, v in environ.iteritems())
         env['HG'] = hgexecutable()
         if out is None or _isstdout(out):
@@ -1384,7 +1384,7 @@ def splitpath(path):
 def gui():
     '''Are we running in a GUI?'''
     if sys.platform == 'darwin':
-        if 'SSH_CONNECTION' in os.environ:
+        if 'SSH_CONNECTION' in encoding.environ:
             # handle SSH access to a box where the user is logged in
             return False
         elif getattr(osutil, 'isgui', None):
@@ -1394,7 +1394,7 @@ def gui():
             # pure build; use a safe default
             return True
     else:
-        return os.name == "nt" or os.environ.get("DISPLAY")
+        return os.name == "nt" or encoding.environ.get("DISPLAY")
 
 def mktempcopy(name, emptyok=False, createmode=None):
     """Create a temporary file with the same contents from name
@@ -2297,7 +2297,7 @@ def hgcmd():
     if mainfrozen():
         if getattr(sys, 'frozen', None) == 'macosx_app':
             # Env variable set by py2app
-            return [os.environ['EXECUTABLEPATH']]
+            return [encoding.environ['EXECUTABLEPATH']]
         else:
             return [sys.executable]
     return gethgcmd()
