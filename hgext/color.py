@@ -171,6 +171,7 @@ from mercurial import (
     cmdutil,
     commands,
     dispatch,
+    encoding,
     extensions,
     subrepo,
     ui as uimod,
@@ -245,7 +246,8 @@ def _modesetup(ui, coloropt):
     if not always and not auto:
         return None
 
-    formatted = always or (os.environ.get('TERM') != 'dumb' and ui.formatted())
+    formatted = (always or (encoding.environ.get('TERM') != 'dumb'
+                 and ui.formatted()))
 
     mode = ui.config('color', 'mode', 'auto')
 
@@ -256,7 +258,7 @@ def _modesetup(ui, coloropt):
     realmode = mode
     if mode == 'auto':
         if os.name == 'nt':
-            term = os.environ.get('TERM')
+            term = encoding.environ.get('TERM')
             # TERM won't be defined in a vanilla cmd.exe environment.
 
             # UNIX-like environments on Windows such as Cygwin and MSYS will

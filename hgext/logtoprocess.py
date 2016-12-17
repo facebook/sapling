@@ -40,6 +40,8 @@ import platform
 import subprocess
 import sys
 
+from mercurial import encoding
+
 # Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
 # be specifying the version(s) of Mercurial they are tested with, or
@@ -117,7 +119,7 @@ def uisetup(ui):
                 optpairs = (
                     ('OPT_{0}'.format(key.upper()), str(value))
                     for key, value in opts.iteritems())
-                env = dict(itertools.chain(os.environ.items(),
+                env = dict(itertools.chain(encoding.environ.items(),
                                            msgpairs, optpairs),
                            EVENT=event, HGPID=str(os.getpid()))
                 # Connect stdin to /dev/null to prevent child processes messing

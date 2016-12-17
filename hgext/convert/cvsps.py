@@ -11,6 +11,7 @@ import re
 
 from mercurial.i18n import _
 from mercurial import (
+    encoding,
     hook,
     pycompat,
     util,
@@ -147,7 +148,7 @@ def createlog(ui, directory=None, root="", rlog=True, cache=None):
             pass
 
     if not root:
-        root = os.environ.get('CVSROOT', '')
+        root = encoding.environ.get('CVSROOT', '')
 
     # read log cache if one exists
     oldlog = []
