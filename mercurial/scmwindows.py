@@ -4,6 +4,7 @@ import os
 
 from . import (
     osutil,
+    pycompat,
     util,
     win32,
 )
@@ -33,7 +34,7 @@ def systemrcpath():
     if not isinstance(value, str) or not value:
         return rcpath
     value = util.localpath(value)
-    for p in value.split(os.pathsep):
+    for p in value.split(pycompat.ospathsep):
         if p.lower().endswith('mercurial.ini'):
             rcpath.append(p)
         elif os.path.isdir(p):

@@ -23,6 +23,7 @@ import unicodedata
 from .i18n import _
 from . import (
     encoding,
+    pycompat,
 )
 
 posixfile = open
@@ -461,7 +462,7 @@ def findexe(command):
     if sys.platform == 'plan9':
         return findexisting(os.path.join('/bin', command))
 
-    for path in os.environ.get('PATH', '').split(os.pathsep):
+    for path in os.environ.get('PATH', '').split(pycompat.ospathsep):
         executable = findexisting(os.path.join(path, command))
         if executable is not None:
             return executable

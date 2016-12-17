@@ -18,6 +18,7 @@ from .i18n import _
 from . import (
     encoding,
     osutil,
+    pycompat,
     win32,
 )
 
@@ -303,7 +304,7 @@ def findexe(command):
     An extension from PATHEXT is found and added if not present.
     If command isn't found None is returned.'''
     pathext = os.environ.get('PATHEXT', '.COM;.EXE;.BAT;.CMD')
-    pathexts = [ext for ext in pathext.lower().split(os.pathsep)]
+    pathexts = [ext for ext in pathext.lower().split(pycompat.ospathsep)]
     if os.path.splitext(command)[1].lower() in pathexts:
         pathexts = ['']
 
@@ -318,7 +319,7 @@ def findexe(command):
     if os.sep in command:
         return findexisting(command)
 
-    for path in os.environ.get('PATH', '').split(os.pathsep):
+    for path in os.environ.get('PATH', '').split(pycompat.ospathsep):
         executable = findexisting(os.path.join(path, command))
         if executable is not None:
             return executable
