@@ -1304,8 +1304,8 @@ def fspath(name, root):
         return dict((normcase(n), n) for n in os.listdir(dir))
 
     seps = pycompat.ossep
-    if os.altsep:
-        seps = seps + os.altsep
+    if pycompat.osaltsep:
+        seps = seps + pycompat.osaltsep
     # Protect backslashes. This gets silly very quickly.
     seps.replace('\\','\\\\')
     pattern = remod.compile(r'([^%s]+)|([%s]+)' % (seps, seps))
@@ -1371,7 +1371,7 @@ def checknlink(testfile):
 def endswithsep(path):
     '''Check path ends with os.sep or os.altsep.'''
     return (path.endswith(pycompat.ossep)
-            or os.altsep and path.endswith(os.altsep))
+            or pycompat.osaltsep and path.endswith(pycompat.osaltsep))
 
 def splitpath(path):
     '''Split path by os.sep.

@@ -143,7 +143,7 @@ def staticfile(directory, fname, req):
     for part in parts:
         if (part in ('', os.curdir, os.pardir) or
             pycompat.ossep in part or
-            os.altsep is not None and os.altsep in part):
+            pycompat.osaltsep is not None and pycompat.osaltsep in part):
             return
     fpath = os.path.join(*parts)
     if isinstance(directory, str):

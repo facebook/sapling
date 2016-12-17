@@ -1245,7 +1245,7 @@ def stylemap(styles, paths=None):
         if (not style
             or style in (os.curdir, os.pardir)
             or pycompat.ossep in style
-            or os.altsep and os.altsep in style):
+            or pycompat.osaltsep and pycompat.osaltsep in style):
             continue
         locations = [os.path.join(style, 'map'), 'map-' + style]
         locations.append('map')
