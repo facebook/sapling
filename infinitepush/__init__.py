@@ -916,7 +916,7 @@ def _parsebackupbookmark(ui, backupbookmark):
     represents a local bookmark and None otherwise.
     '''
 
-    commonre = '^{}/([-\w.]+)(/.*)'.format(re.escape(_getcommonuserprefix(ui)))
+    commonre = '^{0}/([-\w.]+)(/.*)'.format(re.escape(_getcommonuserprefix(ui)))
     bookmarkre = commonre + '/bookmarks/(.*)$'
     headsre = commonre + '/heads/[a-f0-9]{40}$'
 
