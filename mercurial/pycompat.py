@@ -44,6 +44,9 @@ if ispy3:
     osname = os.name.encode('ascii')
     ospathsep = os.pathsep.encode('ascii')
     ossep = os.sep.encode('ascii')
+    osaltsep = os.altsep
+    if osaltsep:
+        osaltsep = osaltsep.encode('ascii')
     # os.getcwd() on Python 3 returns string, but it has os.getcwdb() which
     # returns bytes.
     getcwd = os.getcwdb
@@ -145,6 +148,7 @@ else:
     osname = os.name
     ospathsep = os.pathsep
     ossep = os.sep
+    osaltsep = os.altsep
     stdin = sys.stdin
     stdout = sys.stdout
     stderr = sys.stderr
