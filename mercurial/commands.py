@@ -2356,7 +2356,7 @@ def debugpathcomplete(ui, repo, *specs, **opts):
     def complete(path, acceptable):
         dirstate = repo.dirstate
         spec = os.path.normpath(os.path.join(pycompat.getcwd(), path))
-        rootdir = repo.root + os.sep
+        rootdir = repo.root + pycompat.ossep
         if spec != repo.root and not spec.startswith(rootdir):
             return [], []
         if os.path.isdir(spec):
@@ -2364,7 +2364,7 @@ def debugpathcomplete(ui, repo, *specs, **opts):
         spec = spec[len(rootdir):]
         fixpaths = pycompat.ossep != '/'
         if fixpaths:
-            spec = spec.replace(os.sep, '/')
+            spec = spec.replace(pycompat.ossep, '/')
         speclen = len(spec)
         fullpaths = opts['full']
         files, dirs = set(), set()
@@ -2372,11 +2372,11 @@ def debugpathcomplete(ui, repo, *specs, **opts):
         for f, st in dirstate.iteritems():
             if f.startswith(spec) and st[0] in acceptable:
                 if fixpaths:
-                    f = f.replace('/', os.sep)
+                    f = f.replace('/', pycompat.ossep)
                 if fullpaths:
                     addfile(f)
                     continue
-                s = f.find(os.sep, speclen)
+                s = f.find(pycompat.ossep, speclen)
                 if s >= 0:
                     adddir(f[:s])
                 else:

@@ -916,7 +916,7 @@ def pathto(root, n1, n2):
         a.pop()
         b.pop()
     b.reverse()
-    return os.sep.join((['..'] * len(a)) + b) or '.'
+    return pycompat.ossep.join((['..'] * len(a)) + b) or '.'
 
 def mainfrozen():
     """return True if we are a frozen executable.
@@ -1303,7 +1303,7 @@ def fspath(name, root):
     def _makefspathcacheentry(dir):
         return dict((normcase(n), n) for n in os.listdir(dir))
 
-    seps = os.sep
+    seps = pycompat.ossep
     if os.altsep:
         seps = seps + os.altsep
     # Protect backslashes. This gets silly very quickly.
@@ -1370,7 +1370,8 @@ def checknlink(testfile):
 
 def endswithsep(path):
     '''Check path ends with os.sep or os.altsep.'''
-    return path.endswith(os.sep) or os.altsep and path.endswith(os.altsep)
+    return (path.endswith(pycompat.ossep)
+            or os.altsep and path.endswith(os.altsep))
 
 def splitpath(path):
     '''Split path by os.sep.
@@ -1378,7 +1379,7 @@ def splitpath(path):
     an alternative of simple "xxx.split(os.sep)".
     It is recommended to use os.path.normpath() before using this
     function if need.'''
-    return path.split(os.sep)
+    return path.split(pycompat.ossep)
 
 def gui():
     '''Are we running in a GUI?'''
