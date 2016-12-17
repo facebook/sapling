@@ -31,6 +31,7 @@ from . import (
     node,
     pathutil,
     phases,
+    pycompat,
     scmutil,
     util,
 )
@@ -1172,7 +1173,7 @@ class svnsubrepo(abstractsubrepo):
                 changes.append(path)
         for path in changes:
             for ext in externals:
-                if path == ext or path.startswith(ext + os.sep):
+                if path == ext or path.startswith(ext + pycompat.ossep):
                     return True, True, bool(missing)
         return bool(changes), False, bool(missing)
 

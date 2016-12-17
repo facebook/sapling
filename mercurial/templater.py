@@ -17,6 +17,7 @@ from . import (
     error,
     minirst,
     parser,
+    pycompat,
     registrar,
     revset as revsetmod,
     templatefilters,
@@ -1243,7 +1244,7 @@ def stylemap(styles, paths=None):
         # only plain name is allowed to honor template paths
         if (not style
             or style in (os.curdir, os.pardir)
-            or os.sep in style
+            or pycompat.ossep in style
             or os.altsep and os.altsep in style):
             continue
         locations = [os.path.join(style, 'map'), 'map-' + style]

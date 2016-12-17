@@ -731,7 +731,7 @@ def copy(ui, repo, pats, opts, rename=False):
             else:
                 striplen = len(abspfx)
             if striplen:
-                striplen += len(os.sep)
+                striplen += len(pycompat.ossep)
             res = lambda p: os.path.join(dest, util.localpath(p)[striplen:])
         elif destdirexists:
             res = lambda p: os.path.join(dest,
@@ -765,12 +765,12 @@ def copy(ui, repo, pats, opts, rename=False):
                 abspfx = util.localpath(abspfx)
                 striplen = len(abspfx)
                 if striplen:
-                    striplen += len(os.sep)
+                    striplen += len(pycompat.ossep)
                 if os.path.isdir(os.path.join(dest, os.path.split(abspfx)[1])):
                     score = evalpath(striplen)
                     striplen1 = len(os.path.split(abspfx)[0])
                     if striplen1:
-                        striplen1 += len(os.sep)
+                        striplen1 += len(pycompat.ossep)
                     if evalpath(striplen1) > score:
                         striplen = striplen1
                 res = lambda p: os.path.join(dest,

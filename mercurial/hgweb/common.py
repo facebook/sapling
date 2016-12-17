@@ -12,7 +12,10 @@ import errno
 import mimetypes
 import os
 
-from .. import util
+from .. import (
+    pycompat,
+    util,
+)
 
 httpserver = util.httpserver
 
@@ -139,7 +142,8 @@ def staticfile(directory, fname, req):
     parts = fname.split('/')
     for part in parts:
         if (part in ('', os.curdir, os.pardir) or
-            os.sep in part or os.altsep is not None and os.altsep in part):
+            pycompat.ossep in part or
+            os.altsep is not None and os.altsep in part):
             return
     fpath = os.path.join(*parts)
     if isinstance(directory, str):

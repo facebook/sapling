@@ -215,7 +215,7 @@ def setbinary(fd):
         msvcrt.setmode(fno(), os.O_BINARY)
 
 def pconvert(path):
-    return path.replace(os.sep, '/')
+    return path.replace(pycompat.ossep, '/')
 
 def localpath(path):
     return path.replace('/', '\\')
@@ -316,7 +316,7 @@ def findexe(command):
                 return executable
         return None
 
-    if os.sep in command:
+    if pycompat.ossep in command:
         return findexisting(command)
 
     for path in os.environ.get('PATH', '').split(pycompat.ospathsep):
