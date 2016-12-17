@@ -93,7 +93,7 @@ _encodingfixers = {
 try:
     encoding = environ.get("HGENCODING")
     if not encoding:
-        encoding = locale.getpreferredencoding() or 'ascii'
+        encoding = locale.getpreferredencoding().encode('ascii') or 'ascii'
         encoding = _encodingfixers.get(encoding, lambda: encoding)()
 except locale.Error:
     encoding = 'ascii'
