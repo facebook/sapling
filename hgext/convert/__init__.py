@@ -320,6 +320,13 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
         is very expensive for large projects, and is only effective when
         ``convert.git.similarity`` is greater than 0. The default is False.
 
+    :convert.git.renamelimit: perform rename and copy detection up to this
+        many changed files in a commit. Increasing this will make rename
+        and copy detection more accurate but will significantly slow down
+        computation on large projects. The option is only relevant if
+        ``convert.git.similarity`` is greater than 0. The default is
+        ``400``.
+
     :convert.git.remoteprefix: remote refs are converted as bookmarks with
         ``convert.git.remoteprefix`` as a prefix followed by a /. The default
         is 'remote'.
