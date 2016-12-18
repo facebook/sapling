@@ -179,7 +179,7 @@ def extsetup(ui):
     if _encoding.lower() in problematic_encodings.split():
         for f in funcs.split():
             wrapname(f, wrapper)
-        if os.name == 'nt':
+        if pycompat.osname == 'nt':
             for f in winfuncs.split():
                 wrapname(f, wrapper)
         wrapname("mercurial.osutil.listdir", wrapperforlistdir)

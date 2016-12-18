@@ -23,6 +23,7 @@ from mercurial import (
     httpconnection,
     match as matchmod,
     node,
+    pycompat,
     scmutil,
     util,
 )
@@ -72,7 +73,7 @@ def _usercachedir(ui):
     path = ui.configpath(longname, 'usercache', None)
     if path:
         return path
-    if os.name == 'nt':
+    if pycompat.osname == 'nt':
         appdata = os.getenv('LOCALAPPDATA', os.getenv('APPDATA'))
         if appdata:
             return os.path.join(appdata, longname)
@@ -80,7 +81,7 @@ def _usercachedir(ui):
         home = os.getenv('HOME')
         if home:
             return os.path.join(home, 'Library', 'Caches', longname)
-    elif os.name == 'posix':
+    elif pycompat.osname == 'posix':
         path = os.getenv('XDG_CACHE_HOME')
         if path:
             return os.path.join(path, longname)
@@ -88,7 +89,8 @@ def _usercachedir(ui):
         if home:
             return os.path.join(home, '.cache', longname)
     else:
-        raise error.Abort(_('unknown operating system: %s\n') % os.name)
+        raise error.Abort(_('unknown operating system: %s\n')
+                          % pycompat.osname)
     raise error.Abort(_('unknown %s usercache location') % longname)
 
 def inusercache(ui, hash):

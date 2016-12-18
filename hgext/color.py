@@ -164,8 +164,6 @@ If ``pagermode`` is not defined, the ``mode`` will be used.
 
 from __future__ import absolute_import
 
-import os
-
 from mercurial.i18n import _
 from mercurial import (
     cmdutil,
@@ -173,6 +171,7 @@ from mercurial import (
     dispatch,
     encoding,
     extensions,
+    pycompat,
     subrepo,
     ui as uimod,
     util,
@@ -257,7 +256,7 @@ def _modesetup(ui, coloropt):
 
     realmode = mode
     if mode == 'auto':
-        if os.name == 'nt':
+        if pycompat.osname == 'nt':
             term = encoding.environ.get('TERM')
             # TERM won't be defined in a vanilla cmd.exe environment.
 
@@ -583,7 +582,7 @@ def _debugdisplaystyle(ui):
             ui.write(', '.join(ui.label(e, e) for e in effects.split()))
         ui.write('\n')
 
-if os.name != 'nt':
+if pycompat.osname != 'nt':
     w32effects = None
 else:
     import ctypes
