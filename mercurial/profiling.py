@@ -8,12 +8,12 @@
 from __future__ import absolute_import, print_function
 
 import contextlib
-import os
 import time
 
 from .i18n import _
 from . import (
     error,
+    pycompat,
     util,
 )
 
@@ -120,7 +120,7 @@ def profile(ui):
     Profiling is active when the context manager is active. When the context
     manager exits, profiling results will be written to the configured output.
     """
-    profiler = os.getenv('HGPROF')
+    profiler = pycompat.osgetenv('HGPROF')
     if profiler is None:
         profiler = ui.config('profiling', 'type', default='stat')
     if profiler not in ('ls', 'stat', 'flame'):
