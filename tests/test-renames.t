@@ -454,3 +454,145 @@ Regenerate the Git metadata and compare the hashes
   e1348449e0c3a417b086ed60fc13f068d4aa8b26 gamma
   cc83241f39927232f690d370894960b0d1943a0e beta
   938bb65bb322eb4a3558bec4cdc8a680c4d1794c alpha
+
+Test findcopiesharder
+
+  $ cd $TESTTMP
+  $ git init -q gitcopyharder
+  $ cd gitcopyharder
+  $ cat >> file0 << EOF
+  > 1
+  > 2
+  > 3
+  > 4
+  > 5
+  > EOF
+  $ git add file0
+  $ fn_git_commit -m file0
+  $ cp file0 file1
+  $ git add file1
+  $ fn_git_commit -m file1
+  $ cp file0 file2
+  $ echo 6 >> file2
+  $ git add file2
+  $ fn_git_commit -m file2
+
+  $ cd ..
+
+Clone without findcopiesharder does not find copies from unmodified files
+
+  $ hg clone gitcopyharder hgnocopyharder
+  importing git objects into hg
+  updating to branch default
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg -R hgnocopyharder export 1::2
+  # HG changeset patch
+  # User test <test@example.org>
+  # Date 1167609621 0
+  #      Mon Jan 01 00:00:21 2007 +0000
+  # Node ID 555831c93e2a250e5ba42efad45bf7ba71da13e4
+  # Parent  b45d023c6842337ffe694663a44aa672d311081c
+  file1
+  
+  diff --git a/file1 b/file1
+  new file mode 100644
+  --- /dev/null
+  +++ b/file1
+  @@ -0,0 +1,5 @@
+  +1
+  +2
+  +3
+  +4
+  +5
+  # HG changeset patch
+  # User test <test@example.org>
+  # Date 1167609622 0
+  #      Mon Jan 01 00:00:22 2007 +0000
+  # Node ID ec77ccdbefe023eb9898b0399f84f670c8c0f5fc
+  # Parent  555831c93e2a250e5ba42efad45bf7ba71da13e4
+  file2
+  
+  diff --git a/file2 b/file2
+  new file mode 100644
+  --- /dev/null
+  +++ b/file2
+  @@ -0,0 +1,6 @@
+  +1
+  +2
+  +3
+  +4
+  +5
+  +6
+
+findcopiesharder finds copies from unmodified files if similarity is met
+
+  $ hg --config git.findcopiesharder=true clone gitcopyharder hgcopyharder0
+  importing git objects into hg
+  updating to branch default
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg -R hgcopyharder0 export 1::2
+  # HG changeset patch
+  # User test <test@example.org>
+  # Date 1167609621 0
+  #      Mon Jan 01 00:00:21 2007 +0000
+  # Node ID cd05a87103eed9d270fc05b62b00f48e174ab960
+  # Parent  b45d023c6842337ffe694663a44aa672d311081c
+  file1
+  
+  diff --git a/file0 b/file1
+  copy from file0
+  copy to file1
+  # HG changeset patch
+  # User test <test@example.org>
+  # Date 1167609622 0
+  #      Mon Jan 01 00:00:22 2007 +0000
+  # Node ID 9b30998342729c7357d418bebed7399986cfe643
+  # Parent  cd05a87103eed9d270fc05b62b00f48e174ab960
+  file2
+  
+  diff --git a/file0 b/file2
+  copy from file0
+  copy to file2
+  --- a/file0
+  +++ b/file2
+  @@ -3,3 +3,4 @@
+   3
+   4
+   5
+  +6
+
+  $ hg --config git.findcopiesharder=true --config git.similarity=95 clone gitcopyharder hgcopyharder1
+  importing git objects into hg
+  updating to branch default
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg -R hgcopyharder1 export 1::2
+  # HG changeset patch
+  # User test <test@example.org>
+  # Date 1167609621 0
+  #      Mon Jan 01 00:00:21 2007 +0000
+  # Node ID cd05a87103eed9d270fc05b62b00f48e174ab960
+  # Parent  b45d023c6842337ffe694663a44aa672d311081c
+  file1
+  
+  diff --git a/file0 b/file1
+  copy from file0
+  copy to file1
+  # HG changeset patch
+  # User test <test@example.org>
+  # Date 1167609622 0
+  #      Mon Jan 01 00:00:22 2007 +0000
+  # Node ID d9d2e8cbf050772be31dccf78851f71dc547d139
+  # Parent  cd05a87103eed9d270fc05b62b00f48e174ab960
+  file2
+  
+  diff --git a/file2 b/file2
+  new file mode 100644
+  --- /dev/null
+  +++ b/file2
+  @@ -0,0 +1,6 @@
+  +1
+  +2
+  +3
+  +4
+  +5
+  +6
