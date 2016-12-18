@@ -159,7 +159,7 @@ if sys.platform == 'darwin' and ffi is not None:
 else:
     listdir = listdirpure
 
-if os.name != 'nt':
+if pycompat.osname != 'nt':
     posixfile = open
 
     _SCM_RIGHTS = 0x01

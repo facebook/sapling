@@ -16,6 +16,7 @@ from .i18n import _
 from . import (
     encoding,
     error,
+    pycompat,
     scmutil,
     util,
 )
@@ -52,7 +53,7 @@ def _numworkers(ui):
             raise error.Abort(_('number of cpus must be an integer'))
     return min(max(countcpus(), 4), 32)
 
-if os.name == 'posix':
+if pycompat.osname == 'posix':
     _startupcost = 0.01
 else:
     _startupcost = 1e30
@@ -186,7 +187,7 @@ def _posixexitstatus(code):
     elif os.WIFSIGNALED(code):
         return -os.WTERMSIG(code)
 
-if os.name != 'nt':
+if pycompat.osname != 'nt':
     _platformworker = _posixworker
     _exitstatus = _posixexitstatus
 

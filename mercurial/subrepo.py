@@ -1313,7 +1313,7 @@ class gitsubrepo(abstractsubrepo):
             notfoundhint = _("check git is installed and in your PATH")
             if e.errno != errno.ENOENT:
                 raise error.Abort(genericerror % (self._path, e.strerror))
-            elif os.name == 'nt':
+            elif pycompat.osname == 'nt':
                 try:
                     self._gitexecutable = 'git.cmd'
                     out, err = self._gitnodir(['--version'])

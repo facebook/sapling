@@ -29,7 +29,7 @@ except NameError:
     unicode = str
 
 _languages = None
-if (os.name == 'nt'
+if (pycompat.osname == 'nt'
     and 'LANGUAGE' not in encoding.environ
     and 'LC_ALL' not in encoding.environ
     and 'LC_MESSAGES' not in encoding.environ

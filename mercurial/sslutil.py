@@ -18,6 +18,7 @@ import sys
 from .i18n import _
 from . import (
     error,
+    pycompat,
     util,
 )
 
@@ -706,7 +707,7 @@ def _defaultcacerts(ui):
     # because we'll get a certificate verification error later and the lack
     # of loaded CA certificates will be the reason why.
     # Assertion: this code is only called if certificates are being verified.
-    if os.name == 'nt':
+    if pycompat.osname == 'nt':
         if not _canloaddefaultcerts:
             ui.warn(_('(unable to load Windows CA certificates; see '
                       'https://mercurial-scm.org/wiki/SecureConnections for '
@@ -737,7 +738,7 @@ def _defaultcacerts(ui):
     # / is writable on Windows. Out of an abundance of caution make sure
     # we're not on Windows because paths from _systemcacerts could be installed
     # by non-admin users.
-    assert os.name != 'nt'
+    assert pycompat.osname != 'nt'
 
     # Try to find CA certificates in well-known locations. We print a warning
     # when using a found file because we don't want too much silent magic

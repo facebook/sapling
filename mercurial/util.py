@@ -63,7 +63,7 @@ urlparse = pycompat.urlparse
 urlreq = pycompat.urlreq
 xmlrpclib = pycompat.xmlrpclib
 
-if os.name == 'nt':
+if pycompat.osname == 'nt':
     from . import windows as platform
     stdout = platform.winstdout(pycompat.stdout)
 else:
@@ -238,7 +238,7 @@ except NameError:
         def buffer(sliceable, offset=0):
             return memoryview(sliceable)[offset:]
 
-closefds = os.name == 'posix'
+closefds = pycompat.osname == 'posix'
 
 _chunksize = 4096
 
@@ -1175,7 +1175,7 @@ def checkwinfilename(path):
             return _("filename ends with '%s', which is not allowed "
                      "on Windows") % t
 
-if os.name == 'nt':
+if pycompat.osname == 'nt':
     checkosfilename = checkwinfilename
 else:
     checkosfilename = platform.checkosfilename
@@ -1394,7 +1394,7 @@ def gui():
             # pure build; use a safe default
             return True
     else:
-        return os.name == "nt" or encoding.environ.get("DISPLAY")
+        return pycompat.osname == "nt" or encoding.environ.get("DISPLAY")
 
 def mktempcopy(name, emptyok=False, createmode=None):
     """Create a temporary file with the same contents from name

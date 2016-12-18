@@ -18,6 +18,7 @@ from ..i18n import _
 
 from .. import (
     error,
+    pycompat,
     util,
 )
 
@@ -266,7 +267,7 @@ def openlog(opt, default):
 class MercurialHTTPServer(_mixin, httpservermod.httpserver, object):
 
     # SO_REUSEADDR has broken semantics on windows
-    if os.name == 'nt':
+    if pycompat.osname == 'nt':
         allow_reuse_address = 0
 
     def __init__(self, ui, app, addr, handler, **kwargs):

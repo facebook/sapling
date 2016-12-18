@@ -34,7 +34,7 @@ from . import (
     util,
 )
 
-if os.name == 'nt':
+if pycompat.osname == 'nt':
     from . import scmwindows as scmplatform
 else:
     from . import scmposix as scmplatform
@@ -281,7 +281,7 @@ def checkportabilityalert(ui):
     val = ui.config('ui', 'portablefilenames', 'warn')
     lval = val.lower()
     bval = util.parsebool(val)
-    abort = os.name == 'nt' or lval == 'abort'
+    abort = pycompat.osname == 'nt' or lval == 'abort'
     warn = bval or lval == 'warn'
     if bval is None and not (warn or abort or lval == 'ignore'):
         raise error.ConfigError(
@@ -1461,7 +1461,7 @@ class backgroundfilecloser(object):
 
         # Only Windows/NTFS has slow file closing. So only enable by default
         # on that platform. But allow to be enabled elsewhere for testing.
-        defaultenabled = os.name == 'nt'
+        defaultenabled = pycompat.osname == 'nt'
         enabled = ui.configbool('worker', 'backgroundclose', defaultenabled)
 
         if not enabled:
