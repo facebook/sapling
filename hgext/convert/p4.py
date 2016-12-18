@@ -302,8 +302,6 @@ class p4_source(common.converter_source):
         `p4 describe` output
         """
         desc = self.recode(obj.get("desc", ""))
-        shortdesc = desc.split("\n", 1)[0]
-
         date = (int(obj["time"]), 0)     # timezone not set
         if parents is None:
             parents = []
