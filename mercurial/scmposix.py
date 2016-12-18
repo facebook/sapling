@@ -25,7 +25,7 @@ def _rcfiles(path):
 
 def systemrcpath():
     path = []
-    if sys.platform == 'plan9':
+    if pycompat.sysplatform == 'plan9':
         root = 'lib/mercurial'
     else:
         root = 'etc/mercurial'
@@ -38,7 +38,7 @@ def systemrcpath():
     return path
 
 def userrcpath():
-    if sys.platform == 'plan9':
+    if pycompat.sysplatform == 'plan9':
         return [encoding.environ['home'] + '/lib/hgrc']
     else:
         return [os.path.expanduser('~/.hgrc')]

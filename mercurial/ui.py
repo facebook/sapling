@@ -1086,7 +1086,7 @@ class ui(object):
 
     def geteditor(self):
         '''return editor to use'''
-        if sys.platform == 'plan9':
+        if pycompat.sysplatform == 'plan9':
             # vi is the MIPS instruction simulator on Plan 9. We
             # instead default to E to plumb commit messages to
             # avoid confusion.

@@ -3890,15 +3890,15 @@ def help_(ui, name=None, **opts):
 
     keep = opts.get('system') or []
     if len(keep) == 0:
-        if sys.platform.startswith('win'):
+        if pycompat.sysplatform.startswith('win'):
             keep.append('windows')
-        elif sys.platform == 'OpenVMS':
+        elif pycompat.sysplatform == 'OpenVMS':
             keep.append('vms')
-        elif sys.platform == 'plan9':
+        elif pycompat.sysplatform == 'plan9':
             keep.append('plan9')
         else:
             keep.append('unix')
-            keep.append(sys.platform.lower())
+            keep.append(pycompat.sysplatform.lower())
     if ui.verbose:
         keep.append('verbose')
 

@@ -303,7 +303,7 @@ normcasespec = encoding.normcasespecs.lower
 # fallback normcase function for non-ASCII strings
 normcasefallback = normcase
 
-if sys.platform == 'darwin':
+if pycompat.sysplatform == 'darwin':
 
     def normcase(path):
         '''
@@ -354,7 +354,7 @@ if sys.platform == 'darwin':
         # drop HFS+ ignored characters
         return encoding.hfsignoreclean(enc)
 
-if sys.platform == 'cygwin':
+if pycompat.sysplatform == 'cygwin':
     # workaround for cygwin, in which mount point part of path is
     # treated as case sensitive, even though underlying NTFS is case
     # insensitive.
@@ -447,7 +447,7 @@ def findexe(command):
     If command is a basename then PATH is searched for command.
     PATH isn't searched if command is an absolute or relative path.
     If command isn't found None is returned.'''
-    if sys.platform == 'OpenVMS':
+    if pycompat.sysplatform == 'OpenVMS':
         return command
 
     def findexisting(executable):
@@ -459,7 +459,7 @@ def findexe(command):
     if pycompat.ossep in command:
         return findexisting(command)
 
-    if sys.platform == 'plan9':
+    if pycompat.sysplatform == 'plan9':
         return findexisting(os.path.join('/bin', command))
 
     for path in encoding.environ.get('PATH', '').split(pycompat.ospathsep):
