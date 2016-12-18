@@ -8,7 +8,6 @@
  *
  */
 #include <folly/String.h>
-#include <git2/oid.h>
 #include <gtest/gtest.h>
 #include <string>
 #include "eden/fs/model/Hash.h"

@@ -12,7 +12,6 @@
 #include <folly/Exception.h>
 #include <folly/File.h>
 #include <folly/String.h>
-#include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
