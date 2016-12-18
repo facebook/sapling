@@ -795,7 +795,7 @@ def tempfilter(s, cmd):
         cmd = cmd.replace('INFILE', inname)
         cmd = cmd.replace('OUTFILE', outname)
         code = os.system(cmd)
-        if sys.platform == 'OpenVMS' and code & 1:
+        if pycompat.sysplatform == 'OpenVMS' and code & 1:
             code = 0
         if code:
             raise Abort(_("command '%s' failed: %s") %
@@ -998,7 +998,7 @@ def system(cmd, environ=None, cwd=None, onerr=None, errprefix=None, out=None):
         return str(val)
     origcmd = cmd
     cmd = quotecommand(cmd)
-    if sys.platform == 'plan9' and (sys.version_info[0] == 2
+    if pycompat.sysplatform == 'plan9' and (sys.version_info[0] == 2
                                     and sys.version_info[1] < 7):
         # subprocess kludge to work around issues in half-baked Python
         # ports, notably bichued/python:
@@ -1020,7 +1020,7 @@ def system(cmd, environ=None, cwd=None, onerr=None, errprefix=None, out=None):
                 out.write(line)
             proc.wait()
             rc = proc.returncode
-        if sys.platform == 'OpenVMS' and rc & 1:
+        if pycompat.sysplatform == 'OpenVMS' and rc & 1:
             rc = 0
     if rc and onerr:
         errmsg = '%s %s' % (os.path.basename(origcmd.split(None, 1)[0]),
@@ -1383,7 +1383,7 @@ def splitpath(path):
 
 def gui():
     '''Are we running in a GUI?'''
-    if sys.platform == 'darwin':
+    if pycompat.sysplatform == 'darwin':
         if 'SSH_CONNECTION' in encoding.environ:
             # handle SSH access to a box where the user is logged in
             return False

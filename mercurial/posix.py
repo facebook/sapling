@@ -80,7 +80,7 @@ def nlinks(name):
 def parsepatchoutput(output_line):
     """parses the output produced by patch and returns the filename"""
     pf = output_line[14:]
-    if os.sys.platform == 'OpenVMS':
+    if pycompat.sysplatform == 'OpenVMS':
         if pf[0] == '`':
             pf = pf[1:-1] # Remove the quotes
     else:
@@ -404,7 +404,7 @@ if pycompat.sysplatform == 'cygwin':
 
 _needsshellquote = None
 def shellquote(s):
-    if os.sys.platform == 'OpenVMS':
+    if pycompat.sysplatform == 'OpenVMS':
         return '"%s"' % s
     global _needsshellquote
     if _needsshellquote is None:
@@ -423,7 +423,7 @@ def popen(command, mode='r'):
 
 def testpid(pid):
     '''return False if pid dead, True if running or not sure'''
-    if os.sys.platform == 'OpenVMS':
+    if pycompat.sysplatform == 'OpenVMS':
         return True
     try:
         os.kill(pid, 0)

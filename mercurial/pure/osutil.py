@@ -12,7 +12,6 @@ import ctypes.util
 import os
 import socket
 import stat as statmod
-import sys
 
 from . import (
     policy,
@@ -70,14 +69,14 @@ def listdirpure(path, stat=False, skip=None):
     return result
 
 ffi = None
-if modulepolicy not in policynocffi and sys.platform == 'darwin':
+if modulepolicy not in policynocffi and pycompat.sysplatform == 'darwin':
     try:
         from _osutil_cffi import ffi, lib
     except ImportError:
         if modulepolicy == 'cffi': # strict cffi import
             raise
 
-if sys.platform == 'darwin' and ffi is not None:
+if pycompat.sysplatform == 'darwin' and ffi is not None:
     listdir_batch_size = 4096
     # tweakable number, only affects performance, which chunks
     # of bytes do we get back from getattrlistbulk
@@ -165,7 +164,7 @@ if pycompat.osname != 'nt':
     _SCM_RIGHTS = 0x01
     _socklen_t = ctypes.c_uint
 
-    if sys.platform == 'linux2':
+    if pycompat.sysplatform.startswith('linux'):
         # socket.h says "the type should be socklen_t but the definition of
         # the kernel is incompatible with this."
         _cmsg_len_t = ctypes.c_size_t

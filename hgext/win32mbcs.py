@@ -169,7 +169,7 @@ problematic_encodings = '''big5 big5-tw csbig5 big5hkscs big5-hkscs
 def extsetup(ui):
     # TODO: decide use of config section for this extension
     if ((not os.path.supports_unicode_filenames) and
-        (sys.platform != 'cygwin')):
+        (pycompat.sysplatform != 'cygwin')):
         ui.warn(_("[win32mbcs] cannot activate on this platform.\n"))
         return
     # determine encoding for filename
