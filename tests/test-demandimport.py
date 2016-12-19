@@ -70,7 +70,16 @@ try:
     print('no demandmod should be created for attribute of non-package '
           'module:\ncontextlib.unknownattr =', f(unknownattr))
 except ImportError as inst:
-    print('contextlib.unknownattr = ImportError: %s' % inst)
+    print('contextlib.unknownattr = ImportError: %s'
+          % rsub(r"'", '', str(inst)))
+
+# Unlike the import statement, __import__() function should not raise
+# ImportError even if fromlist has an unknown item
+# (see Python/import.c:import_module_level() and ensure_fromlist())
+contextlibimp = __import__('contextlib', globals(), locals(), ['unknownattr'])
+print("__import__('contextlib', ..., ['unknownattr']) =", f(contextlibimp))
+print("hasattr(contextlibimp, 'unknownattr') =",
+      util.safehasattr(contextlibimp, 'unknownattr'))
 
 demandimport.disable()
 os.environ['HGDEMANDIMPORT'] = 'disable'
