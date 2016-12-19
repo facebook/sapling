@@ -52,6 +52,9 @@ if ispy3:
     # returns bytes.
     getcwd = os.getcwdb
     sysplatform = sys.platform.encode('ascii')
+    sysexecutable = sys.executable
+    if sysexecutable:
+        sysexecutable = os.fsencode(sysexecutable)
 
     # TODO: .buffer might not exist if std streams were replaced; we'll need
     # a silly wrapper to make a bytes stream backed by a unicode one.
@@ -158,6 +161,7 @@ else:
     sysplatform = sys.platform
     getcwd = os.getcwd
     osgetenv = os.getenv
+    sysexecutable = sys.executable
 
 stringio = io.StringIO
 empty = _queue.Empty
