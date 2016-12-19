@@ -526,7 +526,12 @@ def _tempaddress(address):
     return '%s.%d.tmp' % (address, os.getpid())
 
 def _hashaddress(address, hashstr):
-    return '%s-%s' % (address, hashstr)
+    # if the basename of address contains '.', use only the left part. this
+    # makes it possible for the client to pass 'server.tmp$PID' and follow by
+    # an atomic rename to avoid locking when spawning new servers.
+    dirname, basename = os.path.split(address)
+    basename = basename.split('.', 1)[0]
+    return '%s-%s' % (os.path.join(dirname, basename), hashstr)
 
 class chgunixservicehandler(object):
     """Set of operations for chg services"""
