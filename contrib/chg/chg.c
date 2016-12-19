@@ -31,6 +31,7 @@
 
 struct cmdserveropts {
 	char sockname[UNIX_PATH_MAX];
+	char initsockname[UNIX_PATH_MAX];
 	char redirectsockname[UNIX_PATH_MAX];
 	char lockfile[UNIX_PATH_MAX];
 	size_t argsize;
@@ -163,6 +164,10 @@ static void setcmdserveropts(struct cmdserveropts *opts)
 	r = snprintf(opts->lockfile, sizeof(opts->lockfile), lockfmt, basename);
 	if (r < 0 || (size_t)r >= sizeof(opts->lockfile))
 		abortmsg("too long TMPDIR or CHGSOCKNAME (r = %d)", r);
+	r = snprintf(opts->initsockname, sizeof(opts->initsockname),
+			"%s.%u", opts->sockname, (unsigned)getpid());
+	if (r < 0 || (size_t)r >= sizeof(opts->initsockname))
+		abortmsg("too long TMPDIR or CHGSOCKNAME (r = %d)", r);
 }
 
 /*
@@ -223,7 +228,7 @@ static void execcmdserver(const struct cmdserveropts *opts)
 		hgcmd,
 		"serve",
 		"--cmdserver", "chgunix",
-		"--address", opts->sockname,
+		"--address", opts->initsockname,
 		"--daemon-postexec", "chdir:/",
 	};
 	size_t baseargvsize = sizeof(baseargv) / sizeof(baseargv[0]);
@@ -247,7 +252,7 @@ static hgclient_t *retryconnectcmdserver(struct cmdserveropts *opts, pid_t pid)
 	static const struct timespec sleepreq = {0, 10 * 1000000};
 	int pst = 0;
 
-	debugmsg("try connect to %s repeatedly", opts->sockname);
+	debugmsg("try connect to %s repeatedly", opts->initsockname);
 
 	unsigned int timeoutsec = 60;  /* default: 60 seconds */
 	const char *timeoutenv = getenv("CHGTIMEOUT");
@@ -255,9 +260,15 @@ static hgclient_t *retryconnectcmdserver(struct cmdserveropts *opts, pid_t pid)
 		sscanf(timeoutenv, "%u", &timeoutsec);
 
 	for (unsigned int i = 0; !timeoutsec || i < timeoutsec * 100; i++) {
-		hgclient_t *hgc = hgc_open(opts->sockname);
-		if (hgc)
+		hgclient_t *hgc = hgc_open(opts->initsockname);
+		if (hgc) {
+			debugmsg("rename %s to %s", opts->initsockname,
+					opts->sockname);
+			int r = rename(opts->initsockname, opts->sockname);
+			if (r != 0)
+				abortmsgerrno("cannot rename");
 			return hgc;
+		}
 
 		if (pid > 0) {
 			/* collect zombie if child process fails to start */
@@ -269,7 +280,7 @@ static hgclient_t *retryconnectcmdserver(struct cmdserveropts *opts, pid_t pid)
 		nanosleep(&sleepreq, NULL);
 	}
 
-	abortmsg("timed out waiting for cmdserver %s", opts->sockname);
+	abortmsg("timed out waiting for cmdserver %s", opts->initsockname);
 	return NULL;
 
 cleanup:
@@ -312,7 +323,7 @@ static hgclient_t *connectcmdserver(struct cmdserveropts *opts)
 	if (sockname == opts->redirectsockname)
 		unlink(opts->sockname);
 
-	debugmsg("start cmdserver at %s", opts->sockname);
+	debugmsg("start cmdserver at %s", opts->initsockname);
 
 	pid_t pid = fork();
 	if (pid < 0)

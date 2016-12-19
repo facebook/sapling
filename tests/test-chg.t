@@ -46,7 +46,7 @@ isolate socket directory for stable result:
 warm up server:
 
   $ CHGDEBUG= chg log 2>&1 | egrep 'instruction|start'
-  chg: debug: start cmdserver at $TESTTMP/extreload/chgsock/server
+  chg: debug: start cmdserver at $TESTTMP/extreload/chgsock/server.* (glob)
 
 new server should be started if extension modified:
 
@@ -55,7 +55,7 @@ new server should be started if extension modified:
   $ CHGDEBUG= chg log 2>&1 | egrep 'instruction|start'
   chg: debug: instruction: unlink $TESTTMP/extreload/chgsock/server-* (glob)
   chg: debug: instruction: reconnect
-  chg: debug: start cmdserver at $TESTTMP/extreload/chgsock/server
+  chg: debug: start cmdserver at $TESTTMP/extreload/chgsock/server.* (glob)
 
 old server will shut down, while new server should still be reachable:
 
@@ -77,7 +77,7 @@ since no server is reachable from socket file, new server should be started:
 (this test makes sure that old server shut down automatically)
 
   $ CHGDEBUG= chg log 2>&1 | egrep 'instruction|start'
-  chg: debug: start cmdserver at $TESTTMP/extreload/chgsock/server
+  chg: debug: start cmdserver at $TESTTMP/extreload/chgsock/server.* (glob)
 
 shut down servers and restore environment:
 
