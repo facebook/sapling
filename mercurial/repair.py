@@ -431,11 +431,218 @@ def upgradeallowednewrequirements(repo):
         'generaldelta',
     ])
 
+deficiency = 'deficiency'
+optimisation = 'optimization'
+
+class upgradeimprovement(object):
+    """Represents an improvement that can be made as part of an upgrade.
+
+    The following attributes are defined on each instance:
+
+    name
+       Machine-readable string uniquely identifying this improvement. It
+       will be mapped to an action later in the upgrade process.
+
+    type
+       Either ``deficiency`` or ``optimisation``. A deficiency is an obvious
+       problem. An optimization is an action (sometimes optional) that
+       can be taken to further improve the state of the repository.
+
+    description
+       Message intended for humans explaining the improvement in more detail,
+       including the implications of it. For ``deficiency`` types, should be
+       worded in the present tense. For ``optimisation`` types, should be
+       worded in the future tense.
+
+    upgrademessage
+       Message intended for humans explaining what an upgrade addressing this
+       issue will do. Should be worded in the future tense.
+
+    fromdefault (``deficiency`` types only)
+       Boolean indicating whether the current (deficient) state deviates
+       from Mercurial's default configuration.
+
+    fromconfig (``deficiency`` types only)
+       Boolean indicating whether the current (deficient) state deviates
+       from the current Mercurial configuration.
+    """
+    def __init__(self, name, type, description, upgrademessage, **kwargs):
+        self.name = name
+        self.type = type
+        self.description = description
+        self.upgrademessage = upgrademessage
+
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+
+def upgradefindimprovements(repo):
+    """Determine improvements that can be made to the repo during upgrade.
+
+    Returns a list of ``upgradeimprovement`` describing repository deficiencies
+    and optimizations.
+    """
+    # Avoid cycle: cmdutil -> repair -> localrepo -> cmdutil
+    from . import localrepo
+
+    newreporeqs = localrepo.newreporequirements(repo)
+
+    improvements = []
+
+    # We could detect lack of revlogv1 and store here, but they were added
+    # in 0.9.2 and we don't support upgrading repos without these
+    # requirements, so let's not bother.
+
+    if 'fncache' not in repo.requirements:
+        improvements.append(upgradeimprovement(
+            name='fncache',
+            type=deficiency,
+            description=_('long and reserved filenames may not work correctly; '
+                          'repository performance is sub-optimal'),
+            upgrademessage=_('repository will be more resilient to storing '
+                             'certain paths and performance of certain '
+                             'operations should be improved'),
+            fromdefault=True,
+            fromconfig='fncache' in newreporeqs))
+
+    if 'dotencode' not in repo.requirements:
+        improvements.append(upgradeimprovement(
+            name='dotencode',
+            type=deficiency,
+            description=_('storage of filenames beginning with a period or '
+                          'space may not work correctly'),
+            upgrademessage=_('repository will be better able to store files '
+                             'beginning with a space or period'),
+            fromdefault=True,
+            fromconfig='dotencode' in newreporeqs))
+
+    if 'generaldelta' not in repo.requirements:
+        improvements.append(upgradeimprovement(
+            name='generaldelta',
+            type=deficiency,
+            description=_('deltas within internal storage are unable to '
+                          'choose optimal revisions; repository is larger and '
+                          'slower than it could be; interaction with other '
+                          'repositories may require extra network and CPU '
+                          'resources, making "hg push" and "hg pull" slower'),
+            upgrademessage=_('repository storage will be able to create '
+                             'optimal deltas; new repository data will be '
+                             'smaller and read times should decrease; '
+                             'interacting with other repositories using this '
+                             'storage model should require less network and '
+                             'CPU resources, making "hg push" and "hg pull" '
+                             'faster'),
+            fromdefault=True,
+            fromconfig='generaldelta' in newreporeqs))
+
+    # Mercurial 4.0 changed changelogs to not use delta chains. Search for
+    # changelogs with deltas.
+    cl = repo.changelog
+    for rev in cl:
+        chainbase = cl.chainbase(rev)
+        if chainbase != rev:
+            improvements.append(upgradeimprovement(
+                name='removecldeltachain',
+                type=deficiency,
+                description=_('changelog storage is using deltas instead of '
+                              'raw entries; changelog reading and any '
+                              'operation relying on changelog data are slower '
+                              'than they could be'),
+                upgrademessage=_('changelog storage will be reformated to '
+                                 'store raw entries; changelog reading will be '
+                                 'faster; changelog size may be reduced'),
+                fromdefault=True,
+                fromconfig=True))
+            break
+
+    # Now for the optimizations.
+
+    # These are unconditionally added. There is logic later that figures out
+    # which ones to apply.
+
+    improvements.append(upgradeimprovement(
+        name='redeltaparent',
+        type=optimisation,
+        description=_('deltas within internal storage will be recalculated to '
+                      'choose an optimal base revision where this was not '
+                      'already done; the size of the repository may shrink and '
+                      'various operations may become faster; the first time '
+                      'this optimization is performed could slow down upgrade '
+                      'execution considerably; subsequent invocations should '
+                      'not run noticeably slower'),
+        upgrademessage=_('deltas within internal storage will choose a new '
+                         'base revision if needed')))
+
+    improvements.append(upgradeimprovement(
+        name='redeltamultibase',
+        type=optimisation,
+        description=_('deltas within internal storage will be recalculated '
+                      'against multiple base revision and the smallest '
+                      'difference will be used; the size of the repository may '
+                      'shrink significantly when there are many merges; this '
+                      'optimization will slow down execution in proportion to '
+                      'the number of merges in the repository and the amount '
+                      'of files in the repository; this slow down should not '
+                      'be significant unless there are tens of thousands of '
+                      'files and thousands of merges'),
+        upgrademessage=_('deltas within internal storage will choose an '
+                         'optimal delta by computing deltas against multiple '
+                         'parents; may slow down execution time '
+                         'significantly')))
+
+    improvements.append(upgradeimprovement(
+        name='redeltaall',
+        type=optimisation,
+        description=_('deltas within internal storage will always be '
+                      'recalculated without reusing prior deltas; this will '
+                      'likely make execution run several times slower; this '
+                      'optimization is typically not needed'),
+        upgrademessage=_('deltas within internal storage will be fully '
+                         'recomputed; this will likely drastically slow down '
+                         'execution time')))
+
+    return improvements
+
+def upgradedetermineactions(repo, improvements, sourcereqs, destreqs,
+                            optimize):
+    """Determine upgrade actions that will be performed.
+
+    Given a list of improvements as returned by ``upgradefindimprovements``,
+    determine the list of upgrade actions that will be performed.
+
+    The role of this function is to filter improvements if needed, apply
+    recommended optimizations from the improvements list that make sense,
+    etc.
+
+    Returns a list of action names.
+    """
+    newactions = []
+
+    knownreqs = upgradesupporteddestrequirements(repo)
+
+    for i in improvements:
+        name = i.name
+
+        # If the action is a requirement that doesn't show up in the
+        # destination requirements, prune the action.
+        if name in knownreqs and name not in destreqs:
+            continue
+
+        if i.type == deficiency:
+            newactions.append(name)
+
+    newactions.extend(o for o in sorted(optimize) if o not in newactions)
+
+    # FUTURE consider adding some optimizations here for certain transitions.
+    # e.g. adding generaldelta could schedule parent redeltas.
+
+    return newactions
+
 def upgraderepo(ui, repo, run=False, optimize=None):
     """Upgrade a repository in place."""
     # Avoid cycle: cmdutil -> repair -> localrepo -> cmdutil
     from . import localrepo
 
+    optimize = set(optimize or [])
     repo = repo.unfiltered()
 
     # Ensure the repository can be upgraded.
@@ -473,6 +680,25 @@ def upgraderepo(ui, repo, run=False, optimize=None):
                             'destination requirement: %s') %
                           _(', ').join(sorted(unsupportedreqs)))
 
+    # Find and validate all improvements that can be made.
+    improvements = upgradefindimprovements(repo)
+    for i in improvements:
+        if i.type not in (deficiency, optimisation):
+            raise error.Abort(_('unexpected improvement type %s for %s') % (
+                i.type, i.name))
+
+    # Validate arguments.
+    unknownoptimize = optimize - set(i.name for i in improvements
+                                     if i.type == optimisation)
+    if unknownoptimize:
+        raise error.Abort(_('unknown optimization action requested: %s') %
+                          ', '.join(sorted(unknownoptimize)),
+                          hint=_('run without arguments to see valid '
+                                 'optimizations'))
+
+    actions = upgradedetermineactions(repo, improvements, repo.requirements,
+                                      newreqs, optimize)
+
     def printrequirements():
         ui.write(_('requirements\n'))
         ui.write(_('   preserved: %s\n') %
@@ -488,8 +714,60 @@ def upgraderepo(ui, repo, run=False, optimize=None):
 
         ui.write('\n')
 
+    def printupgradeactions():
+        for action in actions:
+            for i in improvements:
+                if i.name == action:
+                    ui.write('%s\n   %s\n\n' %
+                             (i.name, i.upgrademessage))
+
     if not run:
+        fromdefault = []
+        fromconfig = []
+        optimizations = []
+
+        for i in improvements:
+            assert i.type in (deficiency, optimisation)
+            if i.type == deficiency:
+                if i.fromdefault:
+                    fromdefault.append(i)
+                if i.fromconfig:
+                    fromconfig.append(i)
+            else:
+                optimizations.append(i)
+
+        if fromdefault or fromconfig:
+            fromconfignames = set(x.name for x in fromconfig)
+            onlydefault = [i for i in fromdefault
+                           if i.name not in fromconfignames]
+
+            if fromconfig:
+                ui.write(_('repository lacks features recommended by '
+                           'current config options:\n\n'))
+                for i in fromconfig:
+                    ui.write('%s\n   %s\n\n' % (i.name, i.description))
+
+            if onlydefault:
+                ui.write(_('repository lacks features used by the default '
+                           'config options:\n\n'))
+                for i in onlydefault:
+                    ui.write('%s\n   %s\n\n' % (i.name, i.description))
+
+            ui.write('\n')
+        else:
+            ui.write(_('(no feature deficiencies found in existing '
+                       'repository)\n'))
+
         ui.write(_('performing an upgrade with "--run" will make the following '
                    'changes:\n\n'))
 
         printrequirements()
+        printupgradeactions()
+
+        unusedoptimize = [i for i in improvements
+                          if i.name not in actions and i.type == optimisation]
+        if unusedoptimize:
+            ui.write(_('additional optimizations are available by specifying '
+                     '"--optimize <name>":\n\n'))
+            for i in unusedoptimize:
+                ui.write(_('%s\n   %s\n\n') % (i.name, i.description))
