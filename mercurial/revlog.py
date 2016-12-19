@@ -1948,3 +1948,117 @@ class revlog(object):
         if not self._inline:
             res.append(self.datafile)
         return res
+
+    DELTAREUSEALWAYS = 'always'
+    DELTAREUSESAMEREVS = 'samerevs'
+    DELTAREUSENEVER = 'never'
+
+    DELTAREUSEALL = set(['always', 'samerevs', 'never'])
+
+    def clone(self, tr, destrevlog, addrevisioncb=None,
+              deltareuse=DELTAREUSESAMEREVS, aggressivemergedeltas=None):
+        """Copy this revlog to another, possibly with format changes.
+
+        The destination revlog will contain the same revisions and nodes.
+        However, it may not be bit-for-bit identical due to e.g. delta encoding
+        differences.
+
+        The ``deltareuse`` argument control how deltas from the existing revlog
+        are preserved in the destination revlog. The argument can have the
+        following values:
+
+        DELTAREUSEALWAYS
+           Deltas will always be reused (if possible), even if the destination
+           revlog would not select the same revisions for the delta. This is the
+           fastest mode of operation.
+        DELTAREUSESAMEREVS
+           Deltas will be reused if the destination revlog would pick the same
+           revisions for the delta. This mode strikes a balance between speed
+           and optimization.
+        DELTAREUSENEVER
+           Deltas will never be reused. This is the slowest mode of execution.
+           This mode can be used to recompute deltas (e.g. if the diff/delta
+           algorithm changes).
+
+        Delta computation can be slow, so the choice of delta reuse policy can
+        significantly affect run time.
+
+        The default policy (``DELTAREUSESAMEREVS``) strikes a balance between
+        two extremes. Deltas will be reused if they are appropriate. But if the
+        delta could choose a better revision, it will do so. This means if you
+        are converting a non-generaldelta revlog to a generaldelta revlog,
+        deltas will be recomputed if the delta's parent isn't a parent of the
+        revision.
+
+        In addition to the delta policy, the ``aggressivemergedeltas`` argument
+        controls whether to compute deltas against both parents for merges.
+        By default, the current default is used.
+        """
+        if deltareuse not in self.DELTAREUSEALL:
+            raise ValueError(_('value for deltareuse invalid: %s') % deltareuse)
+
+        if len(destrevlog):
+            raise ValueError(_('destination revlog is not empty'))
+
+        if getattr(self, 'filteredrevs', None):
+            raise ValueError(_('source revlog has filtered revisions'))
+        if getattr(destrevlog, 'filteredrevs', None):
+            raise ValueError(_('destination revlog has filtered revisions'))
+
+        # lazydeltabase controls whether to reuse a cached delta, if possible.
+        oldlazydeltabase = destrevlog._lazydeltabase
+        oldamd = destrevlog._aggressivemergedeltas
+
+        try:
+            if deltareuse == self.DELTAREUSEALWAYS:
+                destrevlog._lazydeltabase = True
+            elif deltareuse == self.DELTAREUSESAMEREVS:
+                destrevlog._lazydeltabase = False
+
+            destrevlog._aggressivemergedeltas = aggressivemergedeltas or oldamd
+
+            populatecachedelta = deltareuse in (self.DELTAREUSEALWAYS,
+                                                self.DELTAREUSESAMEREVS)
+
+            index = self.index
+            for rev in self:
+                entry = index[rev]
+
+                # Some classes override linkrev to take filtered revs into
+                # account. Use raw entry from index.
+                flags = entry[0] & 0xffff
+                linkrev = entry[4]
+                p1 = index[entry[5]][7]
+                p2 = index[entry[6]][7]
+                node = entry[7]
+
+                # (Possibly) reuse the delta from the revlog if allowed and
+                # the revlog chunk is a delta.
+                cachedelta = None
+                text = None
+                if populatecachedelta:
+                    dp = self.deltaparent(rev)
+                    if dp != nullrev:
+                        cachedelta = (dp, str(self._chunk(rev)))
+
+                if not cachedelta:
+                    text = self.revision(rev)
+
+                ifh = destrevlog.opener(destrevlog.indexfile, 'a+',
+                                        checkambig=False)
+                dfh = None
+                if not destrevlog._inline:
+                    dfh = destrevlog.opener(destrevlog.datafile, 'a+')
+                try:
+                    destrevlog._addrevision(node, text, tr, linkrev, p1, p2,
+                                            flags, cachedelta, ifh, dfh)
+                finally:
+                    if dfh:
+                        dfh.close()
+                    ifh.close()
+
+                if addrevisioncb:
+                    addrevisioncb(self, rev, node)
+        finally:
+            destrevlog._lazydeltabase = oldlazydeltabase
+            destrevlog._aggressivemergedeltas = oldamd
