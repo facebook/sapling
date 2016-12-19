@@ -19,7 +19,7 @@ from . import (
 
 # modelled after templater.templatepath:
 if getattr(sys, 'frozen', None) is not None:
-    module = sys.executable
+    module = pycompat.sysexecutable
 else:
     module = __file__
 

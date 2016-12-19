@@ -47,7 +47,6 @@ import os
 import re
 import signal
 import struct
-import sys
 import time
 
 from .i18n import _
@@ -59,6 +58,7 @@ from . import (
     error,
     extensions,
     osutil,
+    pycompat,
     util,
 )
 
@@ -122,7 +122,7 @@ def _getmtimepaths(ui):
         modules.append(__version__)
     except ImportError:
         pass
-    files = [sys.executable]
+    files = [pycompat.sysexecutable]
     for m in modules:
         try:
             files.append(inspect.getabsfile(m))

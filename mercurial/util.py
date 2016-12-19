@@ -931,7 +931,7 @@ def mainfrozen():
 # the location of data files matching the source code
 if mainfrozen() and getattr(sys, 'frozen', None) != 'macosx_app':
     # executable version (py2exe) doesn't support __file__
-    datapath = os.path.dirname(sys.executable)
+    datapath = os.path.dirname(pycompat.sysexecutable)
 else:
     datapath = os.path.dirname(__file__)
 
@@ -957,7 +957,7 @@ def hgexecutable():
                 # Env variable set by py2app
                 _sethgexecutable(encoding.environ['EXECUTABLEPATH'])
             else:
-                _sethgexecutable(sys.executable)
+                _sethgexecutable(pycompat.sysexecutable)
         elif os.path.basename(getattr(mainmod, '__file__', '')) == 'hg':
             _sethgexecutable(mainmod.__file__)
         else:
@@ -2299,7 +2299,7 @@ def hgcmd():
             # Env variable set by py2app
             return [encoding.environ['EXECUTABLEPATH']]
         else:
-            return [sys.executable]
+            return [pycompat.sysexecutable]
     return gethgcmd()
 
 def rundetached(args, condfn):

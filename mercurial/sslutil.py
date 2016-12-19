@@ -669,9 +669,9 @@ def _plainapplepython():
       cacerts file
     """
     if (pycompat.sysplatform != 'darwin' or
-                        util.mainfrozen() or not sys.executable):
+                        util.mainfrozen() or not pycompat.sysexecutable):
         return False
-    exe = os.path.realpath(sys.executable).lower()
+    exe = os.path.realpath(pycompat.sysexecutable).lower()
     return (exe.startswith('/usr/bin/python') or
             exe.startswith('/system/library/frameworks/python.framework/'))
 
