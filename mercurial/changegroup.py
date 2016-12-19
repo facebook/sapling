@@ -876,10 +876,9 @@ _packermap = {'01': (cg1packer, cg1unpacker),
 
 def allsupportedversions(ui):
     versions = set(_packermap.keys())
-    versions.discard('03')
-    if (ui.configbool('experimental', 'changegroup3') or
-        ui.configbool('experimental', 'treemanifest')):
-        versions.add('03')
+    if not (ui.configbool('experimental', 'changegroup3') or
+            ui.configbool('experimental', 'treemanifest')):
+        versions.discard('03')
     return versions
 
 # Changegroup versions that can be applied to the repo
