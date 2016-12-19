@@ -11,6 +11,7 @@ from mercurial import (
     hg,
     localrepo,
     scmutil,
+    sshpeer,
     wireproto,
 )
 from mercurial.i18n import _
@@ -130,14 +131,39 @@ def peersetup(ui, peer):
 
 @contextlib.contextmanager
 def annotatepeer(repo):
-    remotepath = repo.ui.expandpath(
-        repo.ui.config('fastannotate', 'remotepath', 'default'))
-    peer = hg.peer(repo.ui, {}, remotepath)
+    ui = repo.ui
+
+    # fileservice belongs to remotefilelog
+    fileservice = getattr(repo, 'fileservice', None)
+    remoteserver = getattr(fileservice, 'remoteserver', None)
+    sharepeer = ui.configbool('fastannotate', 'clientsharepeer', True)
+
+    if sharepeer and remoteserver:
+        ui.debug('fastannotate: stealing peer from remotefilelog\n')
+        fileservice.endrequest()
+        peer = fileservice.remoteserver
+        stolen = True
+    else:
+        remotepath = ui.expandpath(
+            ui.config('fastannotate', 'remotepath', 'default'))
+        peer = hg.peer(ui, {}, remotepath)
+        stolen = False
+
     try:
+        # Note: fastannotate requests should never trigger a remotefilelog
+        # "getfiles" request, because "getfiles" puts the stream into a state
+        # that does not exit. See "clientfetch": it does "getannotate" before
+        # any hg stuff that could potentially trigger a "getfiles".
         yield peer
     finally:
-        for i in ['close', 'cleanup']:
-            getattr(peer, i, lambda: None)()
+        if not stolen:
+            if (sharepeer and fileservice and remoteserver is None
+                and isinstance(peer, sshpeer.sshpeer)):
+                ui.debug('fastannotate: donating sshpeer to remotefilelog\n')
+                fileservice.remoteserver = peer
+            else:
+                for i in ['close', 'cleanup']:
+                    getattr(peer, i, lambda: None)()
 
 def clientfetch(repo, paths, lastnodemap=None, peer=None):
     """download annotate cache from the server for paths"""
@@ -155,6 +181,8 @@ def clientfetch(repo, paths, lastnodemap=None, peer=None):
     batcher = peer.batch()
     ui.debug('fastannotate: requesting %d files\n' % len(paths))
     results = [batcher.getannotate(p, lastnodemap.get(p)) for p in paths]
+    # Note: This is the only place that fastannotate sends a request via SSH.
+    # The SSH stream should not be in the remotefilelog "getfiles" loop.
     batcher.submit()
 
     ui.debug('fastannotate: server returned\n')

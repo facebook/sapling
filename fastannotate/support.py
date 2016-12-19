@@ -15,7 +15,10 @@ from mercurial import (
     util,
 )
 
-from . import context
+from . import (
+    context,
+    revmap,
+)
 
 class _lazyfctx(object):
     """delegates to fctx but do not construct fctx when unnecessary"""
@@ -90,20 +93,16 @@ def _fctxannotate(orig, self, follow=False, linenumber=False, diffopts=None):
         return _doannotate(self, follow, diffopts)
     except Exception as ex:
         self._repo.ui.debug('fastannotate: falling back to the vanilla '
-                            'annotate: %r' % ex)
+                            'annotate: %r\n' % ex)
         return orig(self, follow, linenumber, diffopts)
 
 def _remotefctxannotate(orig, self, follow=False, linenumber=None,
-                        diffopts=None, prefetch=True):
-    if prefetch:
-        # disable prefetch if linelog is up to date
-        master = _getmaster(self)
-        with context.fctxannotatecontext(self, follow, diffopts) as ac:
-            if ac.isuptodate(master, strict=False):
-                self._repo.ui.debug('fastannotate: %s: remotefilelog prefetch '
-                                    'disabled\n' % self._path)
-                prefetch = False
-    return orig(self, follow, linenumber, diffopts, prefetch)
+                        diffopts=None, prefetchskip=None):
+    # skipset: a set-like used to test if a fctx needs to be downloaded
+    skipset = None
+    with context.fctxannotatecontext(self, follow, diffopts) as ac:
+        skipset = revmap.revmap(ac.revmappath)
+    return orig(self, follow, linenumber, diffopts, prefetchskip=skipset)
 
 def replacehgwebannotate():
     extensions.wrapfunction(hgweb.webutil, 'annotate', _hgwebannotate)

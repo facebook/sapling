@@ -359,7 +359,6 @@ class fileserverclient(object):
                 verbose = self.ui.verbose
                 self.ui.verbose = False
                 try:
-                    oldremote = self.remoteserver
                     remote = self._connect()
 
                     # TODO: deduplicate this with the constant in shallowrepo
@@ -368,8 +367,9 @@ class fileserverclient(object):
                             raise error.Abort('remotefilelog requires ssh '
                                               'servers')
                         # If it's a new connection, issue the getfiles command
-                        if oldremote != remote:
+                        if not getattr(remote, '_getfilescalled', False):
                             remote._callstream("getfiles")
+                            remote._getfilescalled = True
                         _getfiles(remote, self.receivemissing, progresstick,
                                   missed, idmap)
                     elif remote.capable("getfile"):
@@ -397,6 +397,20 @@ class fileserverclient(object):
             os.umask(oldumask)
 
         return missing
+
+    def endrequest(self):
+        """End the getfiles request loop.
+
+        It's useful if we want to run other commands using the same sshpeer.
+        """
+        remote = self.remoteserver
+        if remote is None:
+            return
+        if not getattr(remote, '_getfilescalled', False):
+            return
+        remote.pipeo.write('\n')
+        remote.pipeo.flush()
+        remote._getfilescalled = False
 
     def receivemissing(self, pipe, filename, node):
         line = pipe.readline()[:-1]

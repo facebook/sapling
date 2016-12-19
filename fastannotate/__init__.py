@@ -61,6 +61,13 @@ annotate cache greatly. Run "debugbuildlinkrevcache" before
     # path to use when connecting to the remote server (default: default)
     remotepath = default
 
+    # share sshpeer with remotefilelog. this would allow fastannotate to peek
+    # into remotefilelog internals, and steal its sshpeer, or in the reversed
+    # direction: donate its sshpeer to remotefilelog. disable this if
+    # fastannotate and remotefilelog should not share a sshpeer when their
+    # endpoints are different and incompatible. (default: True)
+    clientsharepeer = True
+
     # minimal length of the history of a file required to fetch linelog from
     # the server. (default: 10)
     clientfetchthreshold = 10

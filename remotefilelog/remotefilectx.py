@@ -284,14 +284,35 @@ class remotefilectx(context.filectx):
         return None
 
     def annotate(self, follow=False, linenumber=None, diffopts=None,
-                 prefetch=True):
-        if prefetch:
-            # use linkrev to find the first changeset where self appeared
-            fetch = []
-            ancestors = self.ancestors()
-            for ancestor in ancestors:
-                fetch.append((ancestor.path(), hex(ancestor.filenode())))
+                 prefetchskip=None):
+        introctx = self
+        if prefetchskip:
+            # use introrev so prefetchskip can be accurately tested
+            introrev = self.introrev()
+            if self.rev() != introrev:
+                introctx = remotefilectx(self._repo, self._path,
+                                         changeid=introrev,
+                                         fileid=self._fileid,
+                                         filelog=self._filelog,
+                                         ancestormap=self._ancestormap)
 
+        # like self.ancestors, but append to "fetch" and skip visiting parents
+        # of nodes in "prefetchskip".
+        fetch = []
+        queue = collections.deque((introctx,))
+        while queue:
+            current = queue.pop()
+            if current.filenode() != self.filenode():
+                # this is a "joint point". fastannotate needs contents of
+                # "joint point"s to calculate diffs for side branches.
+                fetch.append((current.path(), hex(current.filenode())))
+            if prefetchskip and current in prefetchskip:
+                continue
+            map(queue.append, current.parents())
+
+        self._repo.ui.debug('remotefilelog: prefetching %d files '
+                            'for annotate\n' % len(fetch))
+        if fetch:
             self._repo.fileservice.prefetch(fetch)
         return super(remotefilectx, self).annotate(follow, linenumber, diffopts)
 
