@@ -194,9 +194,13 @@ Upgrading a repository that is already modern essentially no-ops
   beginning upgrade...
   repository locked and read-only
   creating temporary repository to stage migrated data: $TESTTMP/modern/.hg/upgrade.* (glob)
+  (it is safe to interrupt this process any time before data migration completes)
+  data fully migrated to temporary repository
   marking source repository as being upgraded; clients will be unable to read from repository
   starting in-place swap of repository data
   replaced files will be backed up at $TESTTMP/modern/.hg/upgradebackup.* (glob)
+  replacing store...
+  store replacement complete; repository was inconsistent for *s (glob)
   finalizing requirements file and making repository readable again
   removing temporary repository $TESTTMP/modern/.hg/upgrade.* (glob)
   copy of old repository backed up at $TESTTMP/modern/.hg/upgradebackup.* (glob)
@@ -227,9 +231,22 @@ Upgrading a repository to generaldelta works
   beginning upgrade...
   repository locked and read-only
   creating temporary repository to stage migrated data: $TESTTMP/upgradegd/.hg/upgrade.* (glob)
+  (it is safe to interrupt this process any time before data migration completes)
+  migrating 9 total revisions (3 in filelogs, 3 in manifests, 3 in changelog)
+  migrating 341 bytes in store; 401 bytes tracked data
+  migrating 3 filelogs containing 3 revisions (0 bytes in store; 0 bytes tracked data)
+  finished migrating 3 filelog revisions across 3 filelogs; change in size: 0 bytes
+  migrating 1 manifests containing 3 revisions (157 bytes in store; 220 bytes tracked data)
+  finished migrating 3 manifest revisions across 1 manifests; change in size: 0 bytes
+  migrating changelog containing 3 revisions (184 bytes in store; 181 bytes tracked data)
+  finished migrating 3 changelog revisions; change in size: 0 bytes
+  finished migrating 9 total revisions; total change in store size: 0 bytes
+  data fully migrated to temporary repository
   marking source repository as being upgraded; clients will be unable to read from repository
   starting in-place swap of repository data
   replaced files will be backed up at $TESTTMP/upgradegd/.hg/upgradebackup.* (glob)
+  replacing store...
+  store replacement complete; repository was inconsistent for *s (glob)
   finalizing requirements file and making repository readable again
   removing temporary repository $TESTTMP/upgradegd/.hg/upgrade.* (glob)
   copy of old repository backed up at $TESTTMP/upgradegd/.hg/upgradebackup.* (glob)
@@ -251,5 +268,44 @@ generaldelta added to original requirements files
   generaldelta
   revlogv1
   store
+
+store directory has files we expect
+
+  $ ls .hg/store
+  00changelog.i
+  00manifest.i
+  data
+  fncache
+  undo
+  undo.backupfiles
+  undo.phaseroots
+
+manifest should be generaldelta
+
+  $ hg debugrevlog -m | grep flags
+  flags  : inline, generaldelta
+
+verify should be happy
+
+  $ hg verify
+  checking changesets
+  checking manifests
+  crosschecking files in changesets and manifests
+  checking files
+  3 files, 3 changesets, 3 total revisions
+
+old store should be backed up
+
+  $ ls .hg/upgradebackup.*/store
+  00changelog.i
+  00manifest.i
+  data
+  fncache
+  lock
+  phaseroots
+  undo
+  undo.backup.fncache
+  undo.backupfiles
+  undo.phaseroots
 
   $ cd ..

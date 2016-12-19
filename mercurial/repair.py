@@ -11,15 +11,19 @@ from __future__ import absolute_import
 import errno
 import hashlib
 import tempfile
+import time
 
 from .i18n import _
 from .node import short
 from . import (
     bundle2,
     changegroup,
+    changelog,
     error,
     exchange,
+    manifest,
     obsolete,
+    revlog,
     scmutil,
     util,
 )
@@ -639,6 +643,162 @@ def upgradedetermineactions(repo, improvements, sourcereqs, destreqs,
 
     return newactions
 
+def _revlogfrompath(repo, path):
+    """Obtain a revlog from a repo path.
+
+    An instance of the appropriate class is returned.
+    """
+    if path == '00changelog.i':
+        return changelog.changelog(repo.svfs)
+    elif path.endswith('00manifest.i'):
+        mandir = path[:-len('00manifest.i')]
+        return manifest.manifestrevlog(repo.svfs, dir=mandir)
+    else:
+        # Filelogs don't do anything special with settings. So we can use a
+        # vanilla revlog.
+        return revlog.revlog(repo.svfs, path)
+
+def _copyrevlogs(ui, srcrepo, dstrepo, tr, deltareuse, aggressivemergedeltas):
+    """Copy revlogs between 2 repos."""
+    revcount = 0
+    srcsize = 0
+    srcrawsize = 0
+    dstsize = 0
+    fcount = 0
+    frevcount = 0
+    fsrcsize = 0
+    frawsize = 0
+    fdstsize = 0
+    mcount = 0
+    mrevcount = 0
+    msrcsize = 0
+    mrawsize = 0
+    mdstsize = 0
+    crevcount = 0
+    csrcsize = 0
+    crawsize = 0
+    cdstsize = 0
+
+    # Perform a pass to collect metadata. This validates we can open all
+    # source files and allows a unified progress bar to be displayed.
+    for unencoded, encoded, size in srcrepo.store.walk():
+        if unencoded.endswith('.d'):
+            continue
+
+        rl = _revlogfrompath(srcrepo, unencoded)
+        revcount += len(rl)
+
+        datasize = 0
+        rawsize = 0
+        idx = rl.index
+        for rev in rl:
+            e = idx[rev]
+            datasize += e[1]
+            rawsize += e[2]
+
+        srcsize += datasize
+        srcrawsize += rawsize
+
+        # This is for the separate progress bars.
+        if isinstance(rl, changelog.changelog):
+            crevcount += len(rl)
+            csrcsize += datasize
+            crawsize += rawsize
+        elif isinstance(rl, manifest.manifestrevlog):
+            mcount += 1
+            mrevcount += len(rl)
+            msrcsize += datasize
+            mrawsize += rawsize
+        elif isinstance(rl, revlog.revlog):
+            fcount += 1
+            frevcount += len(rl)
+            fsrcsize += datasize
+            frawsize += rawsize
+
+    if not revcount:
+        return
+
+    ui.write(_('migrating %d total revisions (%d in filelogs, %d in manifests, '
+               '%d in changelog)\n') %
+             (revcount, frevcount, mrevcount, crevcount))
+    ui.write(_('migrating %s in store; %s tracked data\n') % (
+             (util.bytecount(srcsize), util.bytecount(srcrawsize))))
+
+    # Used to keep track of progress.
+    progress = []
+    def oncopiedrevision(rl, rev, node):
+        progress[1] += 1
+        srcrepo.ui.progress(progress[0], progress[1], total=progress[2])
+
+    # Do the actual copying.
+    # FUTURE this operation can be farmed off to worker processes.
+    seen = set()
+    for unencoded, encoded, size in srcrepo.store.walk():
+        if unencoded.endswith('.d'):
+            continue
+
+        oldrl = _revlogfrompath(srcrepo, unencoded)
+        newrl = _revlogfrompath(dstrepo, unencoded)
+
+        if isinstance(oldrl, changelog.changelog) and 'c' not in seen:
+            ui.write(_('finished migrating %d manifest revisions across %d '
+                       'manifests; change in size: %s\n') %
+                     (mrevcount, mcount, util.bytecount(mdstsize - msrcsize)))
+
+            ui.write(_('migrating changelog containing %d revisions '
+                       '(%s in store; %s tracked data)\n') %
+                     (crevcount, util.bytecount(csrcsize),
+                      util.bytecount(crawsize)))
+            seen.add('c')
+            progress[:] = [_('changelog revisions'), 0, crevcount]
+        elif isinstance(oldrl, manifest.manifestrevlog) and 'm' not in seen:
+            ui.write(_('finished migrating %d filelog revisions across %d '
+                       'filelogs; change in size: %s\n') %
+                     (frevcount, fcount, util.bytecount(fdstsize - fsrcsize)))
+
+            ui.write(_('migrating %d manifests containing %d revisions '
+                       '(%s in store; %s tracked data)\n') %
+                     (mcount, mrevcount, util.bytecount(msrcsize),
+                      util.bytecount(mrawsize)))
+            seen.add('m')
+            progress[:] = [_('manifest revisions'), 0, mrevcount]
+        elif 'f' not in seen:
+            ui.write(_('migrating %d filelogs containing %d revisions '
+                       '(%s in store; %s tracked data)\n') %
+                     (fcount, frevcount, util.bytecount(fsrcsize),
+                      util.bytecount(frawsize)))
+            seen.add('f')
+            progress[:] = [_('file revisions'), 0, frevcount]
+
+        ui.progress(progress[0], progress[1], total=progress[2])
+
+        ui.note(_('cloning %d revisions from %s\n') % (len(oldrl), unencoded))
+        oldrl.clone(tr, newrl, addrevisioncb=oncopiedrevision,
+                    deltareuse=deltareuse,
+                    aggressivemergedeltas=aggressivemergedeltas)
+
+        datasize = 0
+        idx = newrl.index
+        for rev in newrl:
+            datasize += idx[rev][1]
+
+        dstsize += datasize
+
+        if isinstance(newrl, changelog.changelog):
+            cdstsize += datasize
+        elif isinstance(newrl, manifest.manifestrevlog):
+            mdstsize += datasize
+        else:
+            fdstsize += datasize
+
+    ui.progress(progress[0], None)
+
+    ui.write(_('finished migrating %d changelog revisions; change in size: '
+               '%s\n') % (crevcount, util.bytecount(cdstsize - csrcsize)))
+
+    ui.write(_('finished migrating %d total revisions; total change in store '
+               'size: %s\n') % (revcount, util.bytecount(dstsize - srcsize)))
+
 def _upgraderepo(ui, srcrepo, dstrepo, requirements, actions):
     """Do the low-level work of upgrading a repository.
 
@@ -652,7 +812,25 @@ def _upgraderepo(ui, srcrepo, dstrepo, requirements, actions):
     assert srcrepo.currentwlock()
     assert dstrepo.currentwlock()
 
-    # TODO copy store
+    ui.write(_('(it is safe to interrupt this process any time before '
+               'data migration completes)\n'))
+
+    if 'redeltaall' in actions:
+        deltareuse = revlog.revlog.DELTAREUSENEVER
+    elif 'redeltaparent' in actions:
+        deltareuse = revlog.revlog.DELTAREUSESAMEREVS
+    elif 'redeltamultibase' in actions:
+        deltareuse = revlog.revlog.DELTAREUSESAMEREVS
+    else:
+        deltareuse = revlog.revlog.DELTAREUSEALWAYS
+
+    with dstrepo.transaction('upgrade') as tr:
+        _copyrevlogs(ui, srcrepo, dstrepo, tr, deltareuse,
+                     'redeltamultibase' in actions)
+
+    # TODO copy non-revlog store files
+
+    ui.write(_('data fully migrated to temporary repository\n'))
 
     backuppath = tempfile.mkdtemp(prefix='upgradebackup.', dir=srcrepo.path)
     backupvfs = scmutil.vfs(backuppath)
@@ -673,7 +851,16 @@ def _upgraderepo(ui, srcrepo, dstrepo, requirements, actions):
     ui.write(_('replaced files will be backed up at %s\n') %
              backuppath)
 
-    # TODO do the store swap here.
+    # Now swap in the new store directory. Doing it as a rename should make
+    # the operation nearly instantaneous and atomic (at least in well-behaved
+    # environments).
+    ui.write(_('replacing store...\n'))
+    tstart = time.time()
+    util.rename(srcrepo.spath, backupvfs.join('store'))
+    util.rename(dstrepo.spath, srcrepo.spath)
+    elapsed = time.time() - tstart
+    ui.write(_('store replacement complete; repository was inconsistent for '
+               '%0.1fs\n') % elapsed)
 
     # We first write the requirements file. Any new requirements will lock
     # out legacy clients.
