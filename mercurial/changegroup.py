@@ -874,23 +874,23 @@ _packermap = {'01': (cg1packer, cg1unpacker),
              '03': (cg3packer, cg3unpacker),
 }
 
-def allsupportedversions(ui):
+def allsupportedversions(repo):
     versions = set(_packermap.keys())
-    if not (ui.configbool('experimental', 'changegroup3') or
-            ui.configbool('experimental', 'treemanifest')):
+    if not (repo.ui.configbool('experimental', 'changegroup3') or
+            repo.ui.configbool('experimental', 'treemanifest')):
         versions.discard('03')
     return versions
 
 # Changegroup versions that can be applied to the repo
 def supportedincomingversions(repo):
-    versions = allsupportedversions(repo.ui)
+    versions = allsupportedversions(repo)
     if 'treemanifest' in repo.requirements:
         versions.add('03')
     return versions
 
 # Changegroup versions that can be created from the repo
 def supportedoutgoingversions(repo):
-    versions = allsupportedversions(repo.ui)
+    versions = allsupportedversions(repo)
     if 'treemanifest' in repo.requirements:
         # Versions 01 and 02 support only flat manifests and it's just too
         # expensive to convert between the flat manifest and tree manifest on
