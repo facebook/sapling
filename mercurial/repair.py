@@ -10,6 +10,7 @@ from __future__ import absolute_import
 
 import errno
 import hashlib
+import tempfile
 
 from .i18n import _
 from .node import short
@@ -19,6 +20,7 @@ from . import (
     error,
     exchange,
     obsolete,
+    scmutil,
     util,
 )
 
@@ -637,6 +639,50 @@ def upgradedetermineactions(repo, improvements, sourcereqs, destreqs,
 
     return newactions
 
+def _upgraderepo(ui, srcrepo, dstrepo, requirements, actions):
+    """Do the low-level work of upgrading a repository.
+
+    The upgrade is effectively performed as a copy between a source
+    repository and a temporary destination repository.
+
+    The source repository is unmodified for as long as possible so the
+    upgrade can abort at any time without causing loss of service for
+    readers and without corrupting the source repository.
+    """
+    assert srcrepo.currentwlock()
+    assert dstrepo.currentwlock()
+
+    # TODO copy store
+
+    backuppath = tempfile.mkdtemp(prefix='upgradebackup.', dir=srcrepo.path)
+    backupvfs = scmutil.vfs(backuppath)
+
+    # Make a backup of requires file first, as it is the first to be modified.
+    util.copyfile(srcrepo.join('requires'), backupvfs.join('requires'))
+
+    # We install an arbitrary requirement that clients must not support
+    # as a mechanism to lock out new clients during the data swap. This is
+    # better than allowing a client to continue while the repository is in
+    # an inconsistent state.
+    ui.write(_('marking source repository as being upgraded; clients will be '
+               'unable to read from repository\n'))
+    scmutil.writerequires(srcrepo.vfs,
+                          srcrepo.requirements | set(['upgradeinprogress']))
+
+    ui.write(_('starting in-place swap of repository data\n'))
+    ui.write(_('replaced files will be backed up at %s\n') %
+             backuppath)
+
+    # TODO do the store swap here.
+
+    # We first write the requirements file. Any new requirements will lock
+    # out legacy clients.
+    ui.write(_('finalizing requirements file and making repository readable '
+               'again\n'))
+    scmutil.writerequires(srcrepo.vfs, requirements)
+
+    return backuppath
+
 def upgraderepo(ui, repo, run=False, optimize=None):
     """Upgrade a repository in place."""
     # Avoid cycle: cmdutil -> repair -> localrepo -> cmdutil
@@ -771,3 +817,43 @@ def upgraderepo(ui, repo, run=False, optimize=None):
                      '"--optimize <name>":\n\n'))
             for i in unusedoptimize:
                 ui.write(_('%s\n   %s\n\n') % (i.name, i.description))
+        return
+
+    # Else we're in the run=true case.
+    ui.write(_('upgrade will perform the following actions:\n\n'))
+    printrequirements()
+    printupgradeactions()
+
+    ui.write(_('beginning upgrade...\n'))
+    with repo.wlock():
+        with repo.lock():
+            ui.write(_('repository locked and read-only\n'))
+            # Our strategy for upgrading the repository is to create a new,
+            # temporary repository, write data to it, then do a swap of the
+            # data. There are less heavyweight ways to do this, but it is easier
+            # to create a new repo object than to instantiate all the components
+            # (like the store) separately.
+            tmppath = tempfile.mkdtemp(prefix='upgrade.', dir=repo.path)
+            backuppath = None
+            try:
+                ui.write(_('creating temporary repository to stage migrated '
+                           'data: %s\n') % tmppath)
+                dstrepo = localrepo.localrepository(repo.baseui,
+                                                    path=tmppath,
+                                                    create=True)
+
+                with dstrepo.wlock():
+                    with dstrepo.lock():
+                        backuppath = _upgraderepo(ui, repo, dstrepo, newreqs,
+                                                  actions)
+
+            finally:
+                ui.write(_('removing temporary repository %s\n') % tmppath)
+                repo.vfs.rmtree(tmppath, forcibly=True)
+
+                if backuppath:
+                    ui.warn(_('copy of old repository backed up at %s\n') %
+                            backuppath)
+                    ui.warn(_('the old repository will not be deleted; remove '
+                              'it to free up disk space once the upgraded '
+                              'repository is verified\n'))

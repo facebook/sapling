@@ -180,3 +180,76 @@ Various sub-optimal detections work
      deltas within internal storage will always be recalculated without reusing prior deltas; this will likely make execution run several times slower; this optimization is typically not needed
   
 
+  $ cd ..
+
+Upgrading a repository that is already modern essentially no-ops
+
+  $ hg init modern
+  $ hg -R modern debugupgraderepo --run
+  upgrade will perform the following actions:
+  
+  requirements
+     preserved: dotencode, fncache, generaldelta, revlogv1, store
+  
+  beginning upgrade...
+  repository locked and read-only
+  creating temporary repository to stage migrated data: $TESTTMP/modern/.hg/upgrade.* (glob)
+  marking source repository as being upgraded; clients will be unable to read from repository
+  starting in-place swap of repository data
+  replaced files will be backed up at $TESTTMP/modern/.hg/upgradebackup.* (glob)
+  finalizing requirements file and making repository readable again
+  removing temporary repository $TESTTMP/modern/.hg/upgrade.* (glob)
+  copy of old repository backed up at $TESTTMP/modern/.hg/upgradebackup.* (glob)
+  the old repository will not be deleted; remove it to free up disk space once the upgraded repository is verified
+
+Upgrading a repository to generaldelta works
+
+  $ hg --config format.usegeneraldelta=false init upgradegd
+  $ cd upgradegd
+  $ touch f0
+  $ hg -q commit -A -m initial
+  $ touch f1
+  $ hg -q commit -A -m 'add f1'
+  $ hg -q up -r 0
+  $ touch f2
+  $ hg -q commit -A -m 'add f2'
+
+  $ hg debugupgraderepo --run
+  upgrade will perform the following actions:
+  
+  requirements
+     preserved: dotencode, fncache, revlogv1, store
+     added: generaldelta
+  
+  generaldelta
+     repository storage will be able to create optimal deltas; new repository data will be smaller and read times should decrease; interacting with other repositories using this storage model should require less network and CPU resources, making "hg push" and "hg pull" faster
+  
+  beginning upgrade...
+  repository locked and read-only
+  creating temporary repository to stage migrated data: $TESTTMP/upgradegd/.hg/upgrade.* (glob)
+  marking source repository as being upgraded; clients will be unable to read from repository
+  starting in-place swap of repository data
+  replaced files will be backed up at $TESTTMP/upgradegd/.hg/upgradebackup.* (glob)
+  finalizing requirements file and making repository readable again
+  removing temporary repository $TESTTMP/upgradegd/.hg/upgrade.* (glob)
+  copy of old repository backed up at $TESTTMP/upgradegd/.hg/upgradebackup.* (glob)
+  the old repository will not be deleted; remove it to free up disk space once the upgraded repository is verified
+
+Original requirements backed up
+
+  $ cat .hg/upgradebackup.*/requires
+  dotencode
+  fncache
+  revlogv1
+  store
+
+generaldelta added to original requirements files
+
+  $ cat .hg/requires
+  dotencode
+  fncache
+  generaldelta
+  revlogv1
+  store
+
+  $ cd ..
