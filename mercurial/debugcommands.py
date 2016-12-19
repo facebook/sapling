@@ -34,6 +34,7 @@ from . import (
     localrepo,
     lock as lockmod,
     pycompat,
+    repair,
     revlog,
     scmutil,
     setdiscovery,
@@ -873,4 +874,4 @@ def debugupgraderepo(ui, repo, run=False, optimize=None):
     should complete almost instantaneously and the chances of a consumer being
     unable to access the repository should be low.
     """
-    raise error.Abort(_('not yet implemented'))
+    return repair.upgraderepo(ui, repo, run=run, optimize=optimize)

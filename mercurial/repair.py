@@ -358,3 +358,138 @@ def deleteobsmarkers(obsstore, indices):
         newobsstorefile.write(bytes)
     newobsstorefile.close()
     return n
+
+def upgraderequiredsourcerequirements(repo):
+    """Obtain requirements required to be present to upgrade a repo.
+
+    An upgrade will not be allowed if the repository doesn't have the
+    requirements returned by this function.
+    """
+    return set([
+        # Introduced in Mercurial 0.9.2.
+        'revlogv1',
+        # Introduced in Mercurial 0.9.2.
+        'store',
+    ])
+
+def upgradeblocksourcerequirements(repo):
+    """Obtain requirements that will prevent an upgrade from occurring.
+
+    An upgrade cannot be performed if the source repository contains a
+    requirements in the returned set.
+    """
+    return set([
+        # The upgrade code does not yet support these experimental features.
+        # This is an artificial limitation.
+        'manifestv2',
+        'treemanifest',
+        # This was a precursor to generaldelta and was never enabled by default.
+        # It should (hopefully) not exist in the wild.
+        'parentdelta',
+        # Upgrade should operate on the actual store, not the shared link.
+        'shared',
+    ])
+
+def upgradesupportremovedrequirements(repo):
+    """Obtain requirements that can be removed during an upgrade.
+
+    If an upgrade were to create a repository that dropped a requirement,
+    the dropped requirement must appear in the returned set for the upgrade
+    to be allowed.
+    """
+    return set()
+
+def upgradesupporteddestrequirements(repo):
+    """Obtain requirements that upgrade supports in the destination.
+
+    If the result of the upgrade would create requirements not in this set,
+    the upgrade is disallowed.
+
+    Extensions should monkeypatch this to add their custom requirements.
+    """
+    return set([
+        'dotencode',
+        'fncache',
+        'generaldelta',
+        'revlogv1',
+        'store',
+    ])
+
+def upgradeallowednewrequirements(repo):
+    """Obtain requirements that can be added to a repository during upgrade.
+
+    This is used to disallow proposed requirements from being added when
+    they weren't present before.
+
+    We use a list of allowed requirement additions instead of a list of known
+    bad additions because the whitelist approach is safer and will prevent
+    future, unknown requirements from accidentally being added.
+    """
+    return set([
+        'dotencode',
+        'fncache',
+        'generaldelta',
+    ])
+
+def upgraderepo(ui, repo, run=False, optimize=None):
+    """Upgrade a repository in place."""
+    # Avoid cycle: cmdutil -> repair -> localrepo -> cmdutil
+    from . import localrepo
+
+    repo = repo.unfiltered()
+
+    # Ensure the repository can be upgraded.
+    missingreqs = upgraderequiredsourcerequirements(repo) - repo.requirements
+    if missingreqs:
+        raise error.Abort(_('cannot upgrade repository; requirement '
+                            'missing: %s') % _(', ').join(sorted(missingreqs)))
+
+    blockedreqs = upgradeblocksourcerequirements(repo) & repo.requirements
+    if blockedreqs:
+        raise error.Abort(_('cannot upgrade repository; unsupported source '
+                            'requirement: %s') %
+                          _(', ').join(sorted(blockedreqs)))
+
+    # FUTURE there is potentially a need to control the wanted requirements via
+    # command arguments or via an extension hook point.
+    newreqs = localrepo.newreporequirements(repo)
+
+    noremovereqs = (repo.requirements - newreqs -
+                   upgradesupportremovedrequirements(repo))
+    if noremovereqs:
+        raise error.Abort(_('cannot upgrade repository; requirement would be '
+                            'removed: %s') % _(', ').join(sorted(noremovereqs)))
+
+    noaddreqs = (newreqs - repo.requirements -
+                 upgradeallowednewrequirements(repo))
+    if noaddreqs:
+        raise error.Abort(_('cannot upgrade repository; do not support adding '
+                            'requirement: %s') %
+                          _(', ').join(sorted(noaddreqs)))
+
+    unsupportedreqs = newreqs - upgradesupporteddestrequirements(repo)
+    if unsupportedreqs:
+        raise error.Abort(_('cannot upgrade repository; do not support '
+                            'destination requirement: %s') %
+                          _(', ').join(sorted(unsupportedreqs)))
+
+    def printrequirements():
+        ui.write(_('requirements\n'))
+        ui.write(_('   preserved: %s\n') %
+                 _(', ').join(sorted(newreqs & repo.requirements)))
+
+        if repo.requirements - newreqs:
+            ui.write(_('   removed: %s\n') %
+                     _(', ').join(sorted(repo.requirements - newreqs)))
+
+        if newreqs - repo.requirements:
+            ui.write(_('   added: %s\n') %
+                     _(', ').join(sorted(newreqs - repo.requirements)))
+
+        ui.write('\n')
+
+    if not run:
+        ui.write(_('performing an upgrade with "--run" will make the following '
+                   'changes:\n\n'))
+
+        printrequirements()
