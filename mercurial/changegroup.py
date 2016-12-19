@@ -877,16 +877,14 @@ _packermap = {'01': (cg1packer, cg1unpacker),
 def allsupportedversions(repo):
     versions = set(_packermap.keys())
     if not (repo.ui.configbool('experimental', 'changegroup3') or
-            repo.ui.configbool('experimental', 'treemanifest')):
+            repo.ui.configbool('experimental', 'treemanifest') or
+            'treemanifest' in repo.requirements):
         versions.discard('03')
     return versions
 
 # Changegroup versions that can be applied to the repo
 def supportedincomingversions(repo):
-    versions = allsupportedversions(repo)
-    if 'treemanifest' in repo.requirements:
-        versions.add('03')
-    return versions
+    return allsupportedversions(repo)
 
 # Changegroup versions that can be created from the repo
 def supportedoutgoingversions(repo):
@@ -899,7 +897,6 @@ def supportedoutgoingversions(repo):
         # support versions 01 and 02.
         versions.discard('01')
         versions.discard('02')
-        versions.add('03')
     return versions
 
 def safeversion(repo):
