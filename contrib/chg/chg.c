@@ -33,16 +33,13 @@ struct cmdserveropts {
 	char sockname[UNIX_PATH_MAX];
 	char initsockname[UNIX_PATH_MAX];
 	char redirectsockname[UNIX_PATH_MAX];
-	char lockfile[UNIX_PATH_MAX];
 	size_t argsize;
 	const char **args;
-	int lockfd;
 	int sockdirfd;
 };
 
 static void initcmdserveropts(struct cmdserveropts *opts) {
 	memset(opts, 0, sizeof(struct cmdserveropts));
-	opts->lockfd = -1;
 	opts->sockdirfd = -1;
 }
 
@@ -50,7 +47,6 @@ static void freecmdserveropts(struct cmdserveropts *opts) {
 	free(opts->args);
 	opts->args = NULL;
 	opts->argsize = 0;
-	assert(opts->lockfd == -1 && "should be closed by unlockcmdserver()");
 	if (opts->sockdirfd >= 0) {
 		close(opts->sockdirfd);
 		opts->sockdirfd = -1;
@@ -157,50 +153,13 @@ static void setcmdserveropts(struct cmdserveropts *opts)
 
 	const char *basename = (envsockname) ? envsockname : sockdir;
 	const char *sockfmt = (envsockname) ? "%s" : "%s/server";
-	const char *lockfmt = (envsockname) ? "%s.lock" : "%s/lock";
 	r = snprintf(opts->sockname, sizeof(opts->sockname), sockfmt, basename);
 	if (r < 0 || (size_t)r >= sizeof(opts->sockname))
-		abortmsg("too long TMPDIR or CHGSOCKNAME (r = %d)", r);
-	r = snprintf(opts->lockfile, sizeof(opts->lockfile), lockfmt, basename);
-	if (r < 0 || (size_t)r >= sizeof(opts->lockfile))
 		abortmsg("too long TMPDIR or CHGSOCKNAME (r = %d)", r);
 	r = snprintf(opts->initsockname, sizeof(opts->initsockname),
 			"%s.%u", opts->sockname, (unsigned)getpid());
 	if (r < 0 || (size_t)r >= sizeof(opts->initsockname))
 		abortmsg("too long TMPDIR or CHGSOCKNAME (r = %d)", r);
-}
-
-/*
- * Acquire a file lock that indicates a client is trying to start and connect
- * to a server, before executing a command. The lock is released upon exit or
- * explicit unlock. Will block if the lock is held by another process.
- */
-static void lockcmdserver(struct cmdserveropts *opts)
-{
-	if (opts->lockfd == -1) {
-		opts->lockfd = open(opts->lockfile,
-				    O_RDWR | O_CREAT | O_NOFOLLOW, 0600);
-		if (opts->lockfd == -1)
-			abortmsgerrno("cannot create lock file %s",
-				      opts->lockfile);
-		fsetcloexec(opts->lockfd);
-	}
-	int r = flock(opts->lockfd, LOCK_EX);
-	if (r == -1)
-		abortmsgerrno("cannot acquire lock");
-}
-
-/*
- * Release the file lock held by calling lockcmdserver. Will do nothing if
- * lockcmdserver is not called.
- */
-static void unlockcmdserver(struct cmdserveropts *opts)
-{
-	if (opts->lockfd == -1)
-		return;
-	flock(opts->lockfd, LOCK_UN);
-	close(opts->lockfd);
-	opts->lockfd = -1;
 }
 
 static const char *gethgcmd(void)
@@ -308,14 +267,6 @@ static hgclient_t *connectcmdserver(struct cmdserveropts *opts)
 	if (hgc)
 		return hgc;
 
-	lockcmdserver(opts);
-	hgc = hgc_open(sockname);
-	if (hgc) {
-		unlockcmdserver(opts);
-		debugmsg("cmdserver is started by another process");
-		return hgc;
-	}
-
 	/* prevent us from being connected to an outdated server: we were
 	 * told by a server to redirect to opts->redirectsockname and that
 	 * address does not work. we do not want to connect to the server
@@ -334,7 +285,6 @@ static hgclient_t *connectcmdserver(struct cmdserveropts *opts)
 		hgc = retryconnectcmdserver(opts, pid);
 	}
 
-	unlockcmdserver(opts);
 	return hgc;
 }
 
