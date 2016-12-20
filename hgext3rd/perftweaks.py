@@ -32,6 +32,7 @@ def extsetup(ui):
     wrapfunction(branchmap.branchcache, 'write', _branchmapwrite)
     wrapfunction(branchmap, 'read', _branchmapread)
     wrapfunction(dispatch, 'runcommand', _trackdirstatesizes)
+    wrapfunction(dispatch, 'runcommand', _tracksparseprofiles)
 
 def _readtagcache(orig, ui, repo):
     """Disables reading tags if the repo is known to not contain any."""
@@ -190,4 +191,13 @@ def _trackdirstatesizes(runcommand, lui, repo, *args):
             logsize = map_._lookupcache is not None if sqldirstate else True
             if logsize:
                 lui.log('dirstate_size', '', dirstate_size=len(dirstate._map))
+    return res
+
+def _tracksparseprofiles(runcommand, lui, repo, *args):
+    res = runcommand(lui, repo, *args)
+    if repo is not None and repo.local():
+        if util.safehasattr(repo, 'getactiveprofiles'):
+            profiles = repo.getactiveprofiles()
+            lui.log('sparse_profiles', '',
+                    active_profiles=sorted(profiles))
     return res
