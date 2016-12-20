@@ -56,13 +56,8 @@ class p4_source(common.converter_source):
         common.checktool('p4', abort=False)
 
         self.revmap = {}
-        self.heads = []
-        self.changeset = {}
-        self.files = {}
-        self.copies = {}
         self.encoding = self.ui.config('convert', 'p4.encoding',
                                        default=convcmd.orig_encoding)
-        self.depotname = {}           # mapping from local name to depot name
         self.re_type = re.compile(
             "([a-z]+)?(text|binary|symlink|apple|resource|unicode|utf\d+)"
             "(\+\w+)?$")
@@ -74,7 +69,6 @@ class p4_source(common.converter_source):
         if revs and len(revs) > 1:
             raise error.Abort(_("p4 source does not support specifying "
                                "multiple revisions"))
-        self._parse_once(ui, path)
 
     def setrevmap(self, revmap):
         """Sets the parsed revmap dictionary.
@@ -240,13 +234,29 @@ class p4_source(common.converter_source):
             'depotname': depotname,
         }
 
-    def _parse_once(self, ui, path):
-        d = self._parse(ui, path)
-        self.changeset = d['changeset']
-        self.heads = d['heads']
-        self.files = d['files']
-        self.copies = d['copies']
-        self.depotname = d['depotname']
+    @util.propertycache
+    def _parse_once(self):
+        return self._parse(self.ui, self.path)
+
+    @util.propertycache
+    def copies(self):
+        return self._parse_once['copies']
+
+    @util.propertycache
+    def files(self):
+        return self._parse_once['files']
+
+    @util.propertycache
+    def changeset(self):
+        return self._parse_once['changeset']
+
+    @util.propertycache
+    def heads(self):
+        return self._parse_once['heads']
+
+    @util.propertycache
+    def depotname(self):
+        return self._parse_once['depotname']
 
     def getheads(self):
         return self.heads

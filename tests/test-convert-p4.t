@@ -67,12 +67,12 @@ change some files
 convert
   $ hg convert -s p4 $DEPOTPATH dst
   initializing destination dst repository
+  scanning source...
   reading p4 views
   collecting p4 changelists
   1 initial
   2 change a
   3 change b/c
-  scanning source...
   sorting...
   converting...
   2 initial
@@ -98,13 +98,10 @@ change some files
 
 convert again
   $ hg convert -s p4 $DEPOTPATH dst
+  scanning source...
   reading p4 views
   collecting p4 changelists
-  1 initial
-  2 change a
-  3 change b/c
   4 change a b/c
-  scanning source...
   sorting...
   converting...
   0 change a b/c
@@ -130,14 +127,10 @@ interesting names
 
 convert again
   $ hg convert -s p4 $DEPOTPATH dst
+  scanning source...
   reading p4 views
   collecting p4 changelists
-  1 initial
-  2 change a
-  3 change b/c
-  4 change a b/c
   5 add d e f
-  scanning source...
   sorting...
   converting...
   0 add d e f
