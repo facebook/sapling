@@ -143,7 +143,7 @@ class HgServer(object):
 
     def initialize(self):
         hgrc = os.path.join(self.repo_path, b".hg", b"hgrc")
-        self.ui = HgUI()
+        self.ui = HgUI.load()
         self.ui.readconfig(hgrc, self.repo_path)
         mercurial.extensions.loadall(self.ui)
         repo = mercurial.hg.repository(self.ui, self.repo_path)
