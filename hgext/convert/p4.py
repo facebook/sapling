@@ -95,10 +95,12 @@ class p4_source(common.converter_source):
         "Read changes affecting the path"
         cmd = 'p4 -G changes -s submitted %s' % util.shellquote(path)
         stdout = util.popen(cmd, mode='rb')
+        p4changes = {}
         for d in loaditer(stdout):
             c = d.get("change", None)
             if c:
-                self.p4changes[c] = True
+                p4changes[c] = True
+        return p4changes
 
     def _parse(self, ui, path):
         "Prepare list of P4 filenames and revisions to import"
@@ -106,7 +108,7 @@ class p4_source(common.converter_source):
 
         # read client spec or view
         if "/" in path:
-            self._parse_view(path)
+            self.p4changes.update(self._parse_view(path))
             if path.startswith("//") and path.endswith("/..."):
                 views = {path[:-3]:""}
             else:
@@ -119,7 +121,7 @@ class p4_source(common.converter_source):
             for client in clientspec:
                 if client.startswith("View"):
                     sview, cview = clientspec[client].split()
-                    self._parse_view(sview)
+                    self.p4changes.update(self._parse_view(sview))
                     if sview.endswith("...") and cview.endswith("..."):
                         sview = sview[:-3]
                         cview = cview[:-3]
