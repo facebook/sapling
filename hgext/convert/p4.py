@@ -56,7 +56,6 @@ class p4_source(common.converter_source):
         common.checktool('p4', abort=False)
 
         self.revmap = {}
-        self.p4changes = {}
         self.heads = []
         self.changeset = {}
         self.files = {}
@@ -75,7 +74,7 @@ class p4_source(common.converter_source):
         if revs and len(revs) > 1:
             raise error.Abort(_("p4 source does not support specifying "
                                "multiple revisions"))
-        self._parse(ui, path)
+        self._parse_once(ui, path)
 
     def setrevmap(self, revmap):
         """Sets the parsed revmap dictionary.
@@ -103,11 +102,19 @@ class p4_source(common.converter_source):
 
     def _parse(self, ui, path):
         "Prepare list of P4 filenames and revisions to import"
+        p4changes = {}
+        changeset = {}
+        files_map = {}
+        copies_map = {}
+        localname = {}
+        depotname = {}
+        heads = []
+
         ui.status(_('reading p4 views\n'))
 
         # read client spec or view
         if "/" in path:
-            self.p4changes.update(self._parse_view(path))
+            p4changes.update(self._parse_view(path))
             if path.startswith("//") and path.endswith("/..."):
                 views = {path[:-3]:""}
             else:
@@ -120,7 +127,7 @@ class p4_source(common.converter_source):
             for client in clientspec:
                 if client.startswith("View"):
                     sview, cview = clientspec[client].split()
-                    self.p4changes.update(self._parse_view(sview))
+                    p4changes.update(self._parse_view(sview))
                     if sview.endswith("...") and cview.endswith("..."):
                         sview = sview[:-3]
                         cview = cview[:-3]
@@ -129,8 +136,8 @@ class p4_source(common.converter_source):
                     views[sview] = cview
 
         # list of changes that affect our source files
-        self.p4changes = self.p4changes.keys()
-        self.p4changes.sort(key=int)
+        p4changes = p4changes.keys()
+        p4changes.sort(key=int)
 
         # list with depot pathnames, longest first
         vieworder = views.keys()
@@ -142,7 +149,7 @@ class p4_source(common.converter_source):
         # now read the full changelists to get the list of file revisions
         ui.status(_('collecting p4 changelists\n'))
         lastid = None
-        for change in self.p4changes:
+        for change in p4changes:
             if startrev and int(change) < int(startrev):
                 continue
             if self.revs and int(change) > int(self.revs[0]):
@@ -167,7 +174,6 @@ class p4_source(common.converter_source):
             files = []
             copies = {}
             copiedfiles = []
-            localname = {}
             i = 0
             while ("depotFile%d" % i) in d and ("rev%d" % i) in d:
                 oldname = d["depotFile%d" % i]
@@ -178,7 +184,7 @@ class p4_source(common.converter_source):
                         break
                 if filename:
                     files.append((filename, d["rev%d" % i]))
-                    self.depotname[filename] = oldname
+                    depotname[filename] = oldname
                     if (d.get("action%d" % i) == "move/add"):
                         copiedfiles.append(filename)
                     localname[oldname] = filename
@@ -186,7 +192,7 @@ class p4_source(common.converter_source):
 
             # Collect information about copied files
             for filename in copiedfiles:
-                oldname = self.depotname[filename]
+                oldname = depotname[filename]
 
                 flcmd = 'p4 -G filelog %s' \
                       % util.shellquote(oldname)
@@ -218,13 +224,29 @@ class p4_source(common.converter_source):
                     ui.warn(_("cannot find source for copied file: %s@%s\n")
                             % (filename, change))
 
-            self.changeset[change] = c
-            self.files[change] = files
-            self.copies[change] = copies
+            changeset[change] = c
+            files_map[change] = files
+            copies_map[change] = copies
             lastid = change
 
-        if lastid and len(self.changeset) > 0:
-            self.heads = [lastid]
+        if lastid and len(changeset) > 0:
+            heads = [lastid]
+
+        return {
+            'changeset': changeset,
+            'files': files_map,
+            'copies': copies_map,
+            'heads': heads,
+            'depotname': depotname,
+        }
+
+    def _parse_once(self, ui, path):
+        d = self._parse(ui, path)
+        self.changeset = d['changeset']
+        self.heads = d['heads']
+        self.files = d['files']
+        self.copies = d['copies']
+        self.depotname = d['depotname']
 
     def getheads(self):
         return self.heads
