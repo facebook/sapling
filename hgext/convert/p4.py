@@ -64,7 +64,6 @@ class p4_source(common.converter_source):
         self.encoding = self.ui.config('convert', 'p4.encoding',
                                        default=convcmd.orig_encoding)
         self.depotname = {}           # mapping from local name to depot name
-        self.localname = {} # mapping from depot name to local name
         self.re_type = re.compile(
             "([a-z]+)?(text|binary|symlink|apple|resource|unicode|utf\d+)"
             "(\+\w+)?$")
@@ -168,6 +167,7 @@ class p4_source(common.converter_source):
             files = []
             copies = {}
             copiedfiles = []
+            localname = {}
             i = 0
             while ("depotFile%d" % i) in d and ("rev%d" % i) in d:
                 oldname = d["depotFile%d" % i]
@@ -181,7 +181,7 @@ class p4_source(common.converter_source):
                     self.depotname[filename] = oldname
                     if (d.get("action%d" % i) == "move/add"):
                         copiedfiles.append(filename)
-                    self.localname[oldname] = filename
+                    localname[oldname] = filename
                 i += 1
 
             # Collect information about copied files
@@ -208,8 +208,8 @@ class p4_source(common.converter_source):
                                 j += 1
                         i += 1
 
-                    if copiedoldname and copiedoldname in self.localname:
-                        copiedfilename = self.localname[copiedoldname]
+                    if copiedoldname and copiedoldname in localname:
+                        copiedfilename = localname[copiedoldname]
                         break
 
                 if copiedfilename:
