@@ -9,3 +9,8 @@
 override_dh_auto_install:
 	python$(PYVERS) setup.py install --root $(CURDIR)/debian/remotefilelog --install-layout=deb --component remotefilelog
 	find $(CURDIR)/debian/remotefilelog -name '*.egg-info' -delete
+	# Explicitly remove the hgext3rd/__init__.py file from the place where we're
+	# staging the files for build.  Mercurial provides
+	# <python>/dist-packages/hgext3rd/__init__.py normally, we do not want to
+	# conflict.
+	find $(CURDIR)/debian/remotefilelog -wholename '*/hgext3rd/__init__.py' -delete
