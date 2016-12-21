@@ -94,15 +94,16 @@ from __future__ import absolute_import
 import hashlib
 import os
 import stat
-import sys
 
 from mercurial.i18n import _
 from mercurial import (
     context,
+    encoding,
     extensions,
     localrepo,
     merge,
     pathutil,
+    pycompat,
     scmutil,
     util,
 )
@@ -292,7 +293,7 @@ def overridewalk(orig, self, match, subrepos, unknown, ignored, full=True):
     if normalize:
         foldmap = dict((normcase(k), k) for k in results)
 
-    switch_slashes = os.sep == '\\'
+    switch_slashes = pycompat.ossep == '\\'
     # The order of the results is, strictly speaking, undefined.
     # For case changes on a case insensitive filesystem we may receive
     # two entries, one with exists=True and another with exists=False.
@@ -392,8 +393,8 @@ def overridestatus(
 
     def _cmpsets(l1, l2):
         try:
-            if 'FSMONITOR_LOG_FILE' in os.environ:
-                fn = os.environ['FSMONITOR_LOG_FILE']
+            if 'FSMONITOR_LOG_FILE' in encoding.environ:
+                fn = encoding.environ['FSMONITOR_LOG_FILE']
                 f = open(fn, 'wb')
             else:
                 fn = 'fsmonitorfail.log'
@@ -434,7 +435,7 @@ def overridestatus(
     updatestate = (parentworking and match.always() and
                    not isinstance(ctx2, (context.workingcommitctx,
                                          context.memctx)) and
-                   'HG_PENDING' not in os.environ)
+                   'HG_PENDING' not in encoding.environ)
 
     try:
         if self._fsmonitorstate.walk_on_invalidate:
@@ -545,7 +546,7 @@ def wrapdirstate(orig, self):
 
 def extsetup(ui):
     wrapfilecache(localrepo.localrepository, 'dirstate', wrapdirstate)
-    if sys.platform == 'darwin':
+    if pycompat.sysplatform == 'darwin':
         # An assist for avoiding the dangling-symlink fsevents bug
         extensions.wrapfunction(os, 'symlink', wrapsymlink)
 
