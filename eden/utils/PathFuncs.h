@@ -9,6 +9,7 @@
  */
 #pragma once
 #include <boost/operators.hpp>
+#include <folly/Format.h>
 #include <folly/Hash.h>
 #include <folly/String.h>
 #include <type_traits>
@@ -1141,5 +1142,45 @@ struct hash<facebook::eden::detail::AbsolutePathBase<A>> {
       const facebook::eden::detail::AbsolutePathBase<A>& s) const {
     return facebook::eden::detail::hash_value(s);
   }
+};
+}
+
+namespace folly {
+/*
+ * folly::FormatValue specializations so that path types can be used with
+ * folly::format()
+ *
+ * Unfortunately due to the way FormatValue is implemented we have to provide
+ * explicit specializations for the individual subclasses (we can't just
+ * partially specialize it once for PathBase).
+ *
+ * The object being formatted is guaranteed to live longer than the FormatValue
+ * itself, so we only need to capture the StringPiece in the constructor.
+ *
+ * We defer all implementation to FormatValue<StringPiece>
+ */
+template <typename Storage>
+class FormatValue<facebook::eden::detail::PathComponentBase<Storage>>
+    : public FormatValue<StringPiece> {
+ public:
+  using Param = facebook::eden::detail::PathComponentBase<Storage>;
+  explicit FormatValue(const Param& val)
+      : FormatValue<StringPiece>(val.stringPiece()) {}
+};
+template <typename Storage>
+class FormatValue<facebook::eden::detail::RelativePathBase<Storage>>
+    : public FormatValue<StringPiece> {
+ public:
+  using Param = facebook::eden::detail::RelativePathBase<Storage>;
+  explicit FormatValue(const Param& val)
+      : FormatValue<StringPiece>(val.stringPiece()) {}
+};
+template <typename Storage>
+class FormatValue<facebook::eden::detail::AbsolutePathBase<Storage>>
+    : public FormatValue<StringPiece> {
+ public:
+  using Param = facebook::eden::detail::AbsolutePathBase<Storage>;
+  explicit FormatValue(const Param& val)
+      : FormatValue<StringPiece>(val.stringPiece()) {}
 };
 }
