@@ -120,9 +120,10 @@ class ClientConfig {
   /** Path to the file where the dirstate data is stored. */
   AbsolutePath getDirstateStoragePath() const;
 
- private:
+  /** Path to the file where the current commit ID is stored */
   AbsolutePath getSnapshotPath() const;
 
+ private:
   ClientConfig(
       AbsolutePathPiece clientDirectory,
       AbsolutePathPiece mountPath,

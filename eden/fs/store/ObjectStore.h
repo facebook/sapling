@@ -107,6 +107,20 @@ class ObjectStore : public IObjectStore {
    */
   folly::Future<BlobMetadata> getBlobMetadata(const Hash& id) const override;
 
+  /**
+   * Get the LocalStore used by this ObjectStore
+   */
+  const std::shared_ptr<LocalStore>& getLocalStore() const {
+    return localStore_;
+  }
+
+  /**
+   * Get the BackingStore used by this ObjectStore
+   */
+  const std::shared_ptr<BackingStore>& getBackingStore() const {
+    return backingStore_;
+  }
+
  private:
   // Forbidden copy constructor and assignment operator
   ObjectStore(ObjectStore const&) = delete;

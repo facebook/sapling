@@ -23,8 +23,14 @@
 
 namespace facebook {
 namespace eden {
+class ClientConfig;
+class FakeBackingStore;
 class FileInode;
+class LocalStore;
 class TreeInode;
+template <typename T>
+class StoredObject;
+using StoredHash = StoredObject<Hash>;
 
 struct TestMountFile {
   RelativePath path;
@@ -47,8 +53,8 @@ class TestMount {
  public:
   TestMount(
       std::shared_ptr<EdenMount> edenMount,
-      std::unique_ptr<folly::test::TemporaryDirectory> testDir)
-      : edenMount_(edenMount), testDir_(std::move(testDir)) {}
+      std::unique_ptr<folly::test::TemporaryDirectory> testDir);
+  ~TestMount();
 
   /**
    * Add file to the mount; it will be available in the overlay.
@@ -83,16 +89,112 @@ class TestMount {
   Dirstate* getDirstate() const;
 
  private:
-  std::shared_ptr<EdenMount> edenMount_;
-
-  // The TestMount must hold onto the test TemporaryDirectory because it needs
-  // to live for the duration of the test.
+  /**
+   * The temporary directory for this TestMount.
+   *
+   * This must be stored as a member variable to ensure the temporary directory
+   * lives for the duration of the test.
+   *
+   * We intentionally list it before the edenMount_ so it gets constructed
+   * first, and destroyed (and deleted from disk) after the EdenMount is
+   * destroyed.
+   */
   std::unique_ptr<folly::test::TemporaryDirectory> testDir_;
+
+  std::shared_ptr<EdenMount> edenMount_;
 };
 
-class TestMountBuilder {
+/**
+ * A class for helping construct the temporary directories and other state
+ * needed to create a TestMount.
+ */
+class BaseTestMountBuilder {
  public:
+  BaseTestMountBuilder();
+  virtual ~BaseTestMountBuilder();
+
+  /**
+   * Build the TestMount.
+   *
+   * This BaseTestMountBuilder object should not be accessed again after
+   * calling build().
+   */
   std::unique_ptr<TestMount> build();
+
+  /**
+   * Get the ClientConfig object.
+   *
+   * The ClientConfig object provides methods to get the paths to the mount
+   * point, the client directory, etc.
+   */
+  ClientConfig* getConfig() const {
+    return config_.get();
+  }
+
+  /**
+   * Get the LocalStore.
+   *
+   * Callers can use this to populate the LocalStore before calling build().
+   */
+  const std::shared_ptr<LocalStore>& getLocalStore() const {
+    return localStore_;
+  }
+
+  /**
+   * Get the LocalStore.
+   *
+   * Callers can use this to populate the BackingStore before calling build().
+   */
+  const std::shared_ptr<FakeBackingStore>& getBackingStore() const {
+    return backingStore_;
+  }
+
+  /**
+   * Store a commit ID to tree ID mapping in the BackingStore,
+   * and then write this commit ID to the current SNAPSHOT file.
+   *
+   * This automatically makes the commit ID --> tree ID mapping ready in the
+   * FakeBackingStore.
+   *
+   * Note that the EdenMount constructor currently blocks until the root tree
+   * is ready, so the caller must make the returned StoredHash ready before
+   * calling build.  The Tree referenced by the rootTreeHash must also be
+   * ready or available in the LocalStore.
+   */
+  void setCommit(Hash commitHash, Hash rootTreeHash);
+
+  /**
+   * Write a commit ID to the current SNAPSHOT file.
+   *
+   * Note that the EdenMount constructor currently blocks until the root tree
+   * is ready, so the caller must ensure that the commit hash and root tree are
+   * both ready in the ObjectStore.
+   */
+  void writeSnapshotFile(Hash commitHash);
+
+ private:
+  void initTestDirectory();
+
+  virtual void populateStore();
+
+  std::unique_ptr<folly::test::TemporaryDirectory> testDir_;
+  std::unique_ptr<ClientConfig> config_;
+  std::shared_ptr<LocalStore> localStore_;
+  std::shared_ptr<FakeBackingStore> backingStore_;
+};
+
+/**
+ * An implementation of BaseTestMountBuilder that helps populate the
+ * LocalStore.
+ *
+ * All files defined with addFile()/addFiles() are added directly to the
+ * LocalStore.  They will therefore always be immediately available, and the
+ * test code cannot control when their Futures are fulfilled.
+ */
+class TestMountBuilder : public BaseTestMountBuilder {
+ public:
+  TestMountBuilder();
+  virtual ~TestMountBuilder();
 
   void addFile(TestMountFile&& file) {
     files_.emplace_back(std::move(file));
@@ -105,14 +207,11 @@ class TestMountBuilder {
   }
 
   void addUserDirectives(
-      std::unordered_map<RelativePath, overlay::UserStatusDirective>&&
+      const std::unordered_map<RelativePath, overlay::UserStatusDirective>&
           userDirectives);
 
  private:
-  /** Populate the test client directory, and return a ClientConfig obeject */
-  std::unique_ptr<ClientConfig> setupClientConfig(
-      AbsolutePathPiece testDirectory,
-      Hash rootTreeHash);
+  void populateStore() override;
 
   std::vector<TestMountFile> files_;
   std::unordered_map<RelativePath, overlay::UserStatusDirective>

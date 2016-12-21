@@ -26,7 +26,8 @@
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/store/hg/HgManifestImporter.h"
-#include "eden/fs/testharness/TestBackingStore.h"
+#include "eden/fs/testharness/FakeBackingStore.h"
+#include "eden/fs/testharness/TestUtil.h"
 #include "eden/fuse/MountPoint.h"
 
 using facebook::eden::fusell::MountPoint;
@@ -48,7 +49,82 @@ bool TestMountFile::operator==(const TestMountFile& other) const {
       type == other.type;
 }
 
-unique_ptr<TestMount> TestMountBuilder::build() {
+TestMount::TestMount(
+    std::shared_ptr<EdenMount> edenMount,
+    std::unique_ptr<folly::test::TemporaryDirectory> testDir)
+    : testDir_(std::move(testDir)), edenMount_(std::move(edenMount)) {}
+
+TestMount::~TestMount() {}
+
+BaseTestMountBuilder::BaseTestMountBuilder() {
+  // Initialize the TestMount's temporary directory.
+  // This sets both testDir_, config_, localStore_, and backingStore_
+  initTestDirectory();
+}
+
+BaseTestMountBuilder::~BaseTestMountBuilder() {}
+
+unique_ptr<TestMount> BaseTestMountBuilder::build() {
+  // Invoke populateStore() so subclasses can populate the stores, if needed.
+  populateStore();
+
+  // Now create the EdenMount
+  unique_ptr<ObjectStore> objectStore =
+      make_unique<ObjectStore>(localStore_, backingStore_);
+  auto edenMount =
+      std::make_shared<EdenMount>(std::move(config_), std::move(objectStore));
+  return make_unique<TestMount>(std::move(edenMount), std::move(testDir_));
+}
+
+void BaseTestMountBuilder::initTestDirectory() {
+  // Create the temporary directory
+  testDir_ = make_unique<TemporaryDirectory>("eden_test");
+
+  // Make the mount point and the eden client storage directories
+  // inside the test directory.
+  auto makedir = [](AbsolutePathPiece path) {
+    ::mkdir(path.stringPiece().str().c_str(), 0755);
+  };
+  auto testDirPath = AbsolutePath{testDir_->path().string()};
+  auto clientDirectory = testDirPath + PathComponentPiece("eden");
+  makedir(clientDirectory);
+  makedir(clientDirectory + PathComponentPiece("local"));
+  auto mountPath = testDirPath + PathComponentPiece("mount");
+  makedir(mountPath);
+
+  // Create the ClientConfig using our newly-populated client directory
+  config_ = make_unique<ClientConfig>(mountPath, clientDirectory);
+
+  // Create localStore_ and backingStore_
+  localStore_ =
+      make_shared<LocalStore>(testDirPath + PathComponentPiece("rocksdb"));
+  backingStore_ = make_shared<FakeBackingStore>(localStore_);
+}
+
+void BaseTestMountBuilder::setCommit(Hash commitHash, Hash rootTreeHash) {
+  // Record the commit hash to root tree hash mapping in the BackingStore
+  auto* storedCommit = backingStore_->putCommit(commitHash, rootTreeHash);
+  storedCommit->setReady();
+
+  // Write the commit hash to the snapshot file
+  writeSnapshotFile(commitHash);
+}
+
+void BaseTestMountBuilder::writeSnapshotFile(Hash commitHash) {
+  auto snapshotPath = config_->getSnapshotPath();
+  folly::writeFileAtomic(
+      snapshotPath.stringPiece(), commitHash.toString() + "\n");
+}
+
+void BaseTestMountBuilder::populateStore() {
+  // Base class implementation is a no-op
+}
+
+TestMountBuilder::TestMountBuilder() {}
+
+TestMountBuilder::~TestMountBuilder() {}
+
+void TestMountBuilder::populateStore() {
   std::sort(
       files_.begin(),
       files_.end(),
@@ -66,19 +142,9 @@ unique_ptr<TestMount> TestMountBuilder::build() {
     }
   }
 
-  auto testDir = make_unique<TemporaryDirectory>("eden_test");
-  AbsolutePath testDirPath{testDir->path().string()};
-
-  auto pathToRocksDb = testDirPath + PathComponentPiece("rocksdb");
-  auto localStore = make_shared<LocalStore>(pathToRocksDb);
-  shared_ptr<BackingStore> backingStore =
-      make_shared<TestBackingStore>(localStore);
-  unique_ptr<ObjectStore> objectStore =
-      make_unique<ObjectStore>(localStore, backingStore);
-
   // Use HgManifestImporter to create the appropriate intermediate Tree objects
   // for the set of files that the user specified with proper hashes.
-  HgManifestImporter manifestImporter(localStore.get());
+  HgManifestImporter manifestImporter(getLocalStore().get());
   for (auto& file : files_) {
     auto dirname = file.path.dirname();
 
@@ -101,7 +167,7 @@ unique_ptr<TestMount> TestMountBuilder::build() {
     //    blobData instead of inserting the required header as the two-arg form
     //    of putBlob() does. The way the header insertion logic, as written, is
     //    not easy to extract out.
-    localStore->putBlob(sha1, &blobWithDummyHash);
+    getLocalStore()->putBlob(sha1, &blobWithDummyHash);
 
     TreeEntry treeEntry(
         sha1, file.path.basename().stringPiece(), file.type, file.rwx);
@@ -109,49 +175,23 @@ unique_ptr<TestMount> TestMountBuilder::build() {
   }
   auto rootTreeHash = manifestImporter.finish();
 
-  // Create the ClientConfig for the test mount
-  auto config = setupClientConfig(testDirPath, rootTreeHash);
-
   // If we have user directives, put them in the dirstate file
   if (!userDirectives_.empty()) {
-    DirstatePersistence dirstatePersistence{config->getDirstateStoragePath()};
+    DirstatePersistence dirstatePersistence{
+        getConfig()->getDirstateStoragePath()};
     dirstatePersistence.save(userDirectives_);
   }
 
-  auto edenMount =
-      std::make_shared<EdenMount>(std::move(config), std::move(objectStore));
-  return make_unique<TestMount>(std::move(edenMount), std::move(testDir));
+  // Pick an arbitrary commit ID, and store that it maps to the root tree that
+  // HgManifestImporter built.
+  auto commitHash = makeTestHash("cccc");
+  setCommit(commitHash, rootTreeHash);
 }
 
 void TestMountBuilder::addUserDirectives(
-    std::unordered_map<RelativePath, overlay::UserStatusDirective>&&
+    const std::unordered_map<RelativePath, overlay::UserStatusDirective>&
         userDirectives) {
-  for (auto& pair : userDirectives) {
-    userDirectives_.emplace(pair.first, pair.second);
-  }
-}
-
-std::unique_ptr<ClientConfig> TestMountBuilder::setupClientConfig(
-    AbsolutePathPiece testDirectory,
-    Hash rootTreeHash) {
-  // Make the mount point and the eden client storage directories
-  // inside the test directory.
-  auto makedir = [](AbsolutePathPiece path) {
-    ::mkdir(path.stringPiece().str().c_str(), 0755);
-  };
-  AbsolutePath clientDirectory = testDirectory + PathComponentPiece("eden");
-  makedir(clientDirectory);
-  makedir(clientDirectory + PathComponentPiece("local"));
-  AbsolutePath mountPath = testDirectory + PathComponentPiece("mount");
-  makedir(mountPath);
-
-  // Write the root hash to the snapshot file
-  auto snapshotPath = clientDirectory + PathComponentPiece{"SNAPSHOT"};
-  folly::writeFileAtomic(
-      snapshotPath.stringPiece(), rootTreeHash.toString() + "\n");
-
-  // Return a ClientConfig using our newly-populated client directory
-  return make_unique<ClientConfig>(mountPath, clientDirectory);
+  userDirectives_.insert(userDirectives.begin(), userDirectives.end());
 }
 
 void TestMount::addFile(folly::StringPiece path, std::string contents) {

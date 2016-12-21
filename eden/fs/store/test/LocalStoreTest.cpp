@@ -37,6 +37,7 @@ class LocalStoreTest : public ::testing::Test {
   }
 
   void TearDown() override {
+    store_.reset();
     testDir_.reset();
   }
 

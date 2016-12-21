@@ -1,0 +1,263 @@
+/*
+ *  Copyright (c) 2016, Facebook, Inc.
+ *  All rights reserved.
+ *
+ *  This source code is licensed under the BSD-style license found in the
+ *  LICENSE file in the root directory of this source tree. An additional grant
+ *  of patent rights can be found in the PATENTS file in the same directory.
+ *
+ */
+#include <folly/experimental/TestUtil.h>
+#include <folly/io/Cursor.h>
+#include <folly/io/IOBuf.h>
+#include <gtest/gtest.h>
+#include <sys/stat.h>
+#include "eden/fs/store/LocalStore.h"
+#include "eden/fs/testharness/FakeBackingStore.h"
+#include "eden/fs/testharness/TestUtil.h"
+#include "eden/utils/PathFuncs.h"
+#include "eden/utils/test/TestChecks.h"
+
+using namespace facebook::eden;
+using folly::io::Cursor;
+using folly::test::TemporaryDirectory;
+
+namespace {
+class FakeBackingStoreTest : public ::testing::Test {
+ protected:
+  void SetUp() override {
+    testDir_ = std::make_unique<TemporaryDirectory>("eden_test");
+    auto path = AbsolutePathPiece{testDir_->path().string()};
+    localStore_ = std::make_shared<LocalStore>(path);
+    store_ = std::make_unique<FakeBackingStore>(localStore_);
+  }
+
+  void TearDown() override {
+    store_.reset();
+    localStore_.reset();
+    testDir_.reset();
+  }
+
+  std::unique_ptr<TemporaryDirectory> testDir_;
+  std::shared_ptr<LocalStore> localStore_;
+  std::unique_ptr<FakeBackingStore> store_;
+};
+
+/**
+ * Helper function to get blob contents as a string.
+ *
+ * We unfortunately can't use moveToFbString() or coalesce() since the Blob's
+ * contents are always const.
+ */
+std::string blobContents(const Blob& blob) {
+  Cursor c(&blob.getContents());
+  return c.readFixedString(blob.getContents().computeChainDataLength());
+}
+}
+
+TEST_F(FakeBackingStoreTest, getNonExistent) {
+  // getTree()/getBlob()/getTreeForCommit() should throw immediately
+  // when called on non-existent objects.
+  auto hash = makeTestHash("1");
+  EXPECT_THROW_RE(
+      store_->getBlob(hash), std::domain_error, "blob 0+1 not found");
+  EXPECT_THROW_RE(
+      store_->getTree(hash), std::domain_error, "tree 0+1 not found");
+  EXPECT_THROW_RE(
+      store_->getTreeForCommit(hash),
+      std::domain_error,
+      "commit 0+1 not found");
+}
+
+TEST_F(FakeBackingStoreTest, getBlob) {
+  // Add a blob to the tree
+  auto hash = makeTestHash("1");
+  auto* storedBlob = store_->putBlob(hash, "foobar");
+  EXPECT_EQ(hash, storedBlob->get().getHash());
+  EXPECT_EQ("foobar", blobContents(storedBlob->get()));
+
+  // The blob is not ready yet, so calling getBlob() should yield not-ready
+  // Future objects.
+  auto future1 = store_->getBlob(hash);
+  EXPECT_FALSE(future1.isReady());
+  auto future2 = store_->getBlob(hash);
+  EXPECT_FALSE(future2.isReady());
+
+  // Calling trigger() should make the pending futures ready.
+  storedBlob->trigger();
+  ASSERT_TRUE(future1.isReady());
+  ASSERT_TRUE(future2.isReady());
+  EXPECT_EQ("foobar", blobContents(*future1.get()));
+  EXPECT_EQ("foobar", blobContents(*future2.get()));
+
+  // But subsequent calls to getBlob() should still yield unready futures.
+  auto future3 = store_->getBlob(hash);
+  EXPECT_FALSE(future3.isReady());
+  auto future4 = store_->getBlob(hash);
+  EXPECT_FALSE(future4.isReady());
+  bool future4Failed = false;
+  folly::exception_wrapper future4Error;
+  future4.then([] { FAIL() << "future4 should not succeed\n"; })
+      .onError([&](const folly::exception_wrapper& ew) {
+        future4Failed = true;
+        future4Error = ew;
+      });
+
+  // Calling triggerError() should fail pending futures
+  storedBlob->triggerError(std::logic_error("does not compute"));
+  ASSERT_TRUE(future3.isReady());
+  EXPECT_THROW_RE(future3.get(), std::logic_error, "does not compute");
+  ASSERT_TRUE(future4Failed);
+  EXPECT_THROW_RE(
+      future4Error.throwException(), std::logic_error, "does not compute");
+
+  // Calling setReady() should make the pending futures ready, as well
+  // as all subsequent Futures returned by getBlob()
+  auto future5 = store_->getBlob(hash);
+  EXPECT_FALSE(future5.isReady());
+
+  storedBlob->setReady();
+  ASSERT_TRUE(future5.isReady());
+  EXPECT_EQ("foobar", blobContents(*future5.get()));
+
+  // Subsequent calls to getBlob() should return Futures that are immediately
+  // ready since we called setReady() above.
+  auto future6 = store_->getBlob(hash);
+  ASSERT_TRUE(future6.isReady());
+  EXPECT_EQ("foobar", blobContents(*future6.get()));
+}
+
+TEST_F(FakeBackingStoreTest, getTree) {
+  // Populate some files and directories in the store
+  auto* runme = store_->putBlob("#!/bin/sh\necho 'hello world!'\n");
+  auto* foo = store_->putBlob(makeTestHash("f00"), "this is foo\n");
+  EXPECT_EQ(makeTestHash("f00"), foo->get().getHash());
+  auto* bar = store_->putBlob("barbarbarbar\n");
+
+  auto* dir1 = store_->putTree(
+      makeTestHash("abc"),
+      {
+          {"foo", foo}, {"runme", runme, 0755},
+      });
+  EXPECT_EQ(makeTestHash("abc"), dir1->get().getHash());
+  auto* dir2 = store_->putTree({{"README", store_->putBlob("docs go here")}});
+
+  auto rootHash = makeTestHash("10101010");
+  auto* rootDir = store_->putTree(
+      rootHash,
+      {
+          {"zzz", foo, 0444},
+          {"dir1", dir1},
+          {"readonly", dir2, 0500},
+          {"bar", bar},
+      });
+
+  // Try getting the root tree but failing it with triggerError()
+  auto future1 = store_->getTree(rootHash);
+  EXPECT_FALSE(future1.isReady());
+  rootDir->triggerError(std::runtime_error("cosmic rays"));
+  EXPECT_THROW_RE(future1.get(), std::runtime_error, "cosmic rays");
+
+  // Now try using trigger()
+  auto future2 = store_->getTree(rootHash);
+  EXPECT_FALSE(future2.isReady());
+  auto future3 = store_->getTree(rootHash);
+  EXPECT_FALSE(future3.isReady());
+  rootDir->trigger();
+  ASSERT_TRUE(future2.isReady());
+  ASSERT_TRUE(future3.isReady());
+
+  auto tree2 = future2.get();
+  EXPECT_EQ(rootHash, tree2->getHash());
+  EXPECT_EQ(4, tree2->getTreeEntries().size());
+  // Tree entries are always alphabetically sorted so we don't have to worry
+  // about order here
+  EXPECT_EQ(PathComponentPiece{"bar"}, tree2->getEntryAt(0).getName());
+  EXPECT_EQ(bar->get().getHash(), tree2->getEntryAt(0).getHash());
+  EXPECT_EQ(S_IFREG | 0644, tree2->getEntryAt(0).getMode());
+  EXPECT_EQ(PathComponentPiece{"dir1"}, tree2->getEntryAt(1).getName());
+  EXPECT_EQ(dir1->get().getHash(), tree2->getEntryAt(1).getHash());
+  EXPECT_EQ(S_IFDIR | 0755, tree2->getEntryAt(1).getMode());
+  EXPECT_EQ(PathComponentPiece{"readonly"}, tree2->getEntryAt(2).getName());
+  EXPECT_EQ(dir2->get().getHash(), tree2->getEntryAt(2).getHash());
+  // TreeEntry objects only track owner permissions, so even though we input
+  // the permissions as 0500 above this really ends up returning 0555
+  EXPECT_EQ(S_IFDIR | 0555, tree2->getEntryAt(2).getMode());
+  EXPECT_EQ(PathComponentPiece{"zzz"}, tree2->getEntryAt(3).getName());
+  EXPECT_EQ(foo->get().getHash(), tree2->getEntryAt(3).getHash());
+  EXPECT_EQ(S_IFREG | 0444, tree2->getEntryAt(3).getMode());
+
+  EXPECT_EQ(rootHash, future3.get()->getHash());
+
+  // Now try using setReady()
+  auto future4 = store_->getTree(rootHash);
+  EXPECT_FALSE(future4.isReady());
+  rootDir->setReady();
+  ASSERT_TRUE(future4.isReady());
+  EXPECT_EQ(rootHash, future4.get()->getHash());
+
+  auto future5 = store_->getTree(rootHash);
+  ASSERT_TRUE(future5.isReady());
+  EXPECT_EQ(rootHash, future5.get()->getHash());
+}
+
+TEST_F(FakeBackingStoreTest, getTreeForCommit) {
+  // Set up one commit with a root tree
+  auto dir1Hash = makeTestHash("abc");
+  auto* dir1 = store_->putTree(dir1Hash, {{"foo", store_->putBlob("foo\n")}});
+  auto hash1 = makeTestHash("1");
+  auto* commit1 = store_->putCommit(hash1, dir1);
+  // Set up a second commit, but don't actually add the tree object for this one
+  auto hash2 = makeTestHash("2");
+  auto* commit2 = store_->putCommit(hash2, makeTestHash("3"));
+
+  auto future1 = store_->getTreeForCommit(hash1);
+  EXPECT_FALSE(future1.isReady());
+  auto future2 = store_->getTreeForCommit(hash2);
+  EXPECT_FALSE(future2.isReady());
+
+  // Trigger commit1, then dir1 to make future1 ready.
+  commit1->trigger();
+  EXPECT_FALSE(future1.isReady());
+  dir1->trigger();
+  ASSERT_TRUE(future1.isReady());
+  EXPECT_EQ(dir1Hash, future1.get()->getHash());
+
+  // future2 should still be pending
+  EXPECT_FALSE(future2.isReady());
+
+  // Get another future for commit1
+  auto future3 = store_->getTreeForCommit(hash1);
+  EXPECT_FALSE(future3.isReady());
+  // Triggering the directory now should have no effect,
+  // since there should be no futures for it yet.
+  dir1->trigger();
+  EXPECT_FALSE(future3.isReady());
+  commit1->trigger();
+  EXPECT_FALSE(future3.isReady());
+  dir1->trigger();
+  ASSERT_TRUE(future3.isReady());
+  EXPECT_EQ(dir1Hash, future3.get()->getHash());
+
+  // Try triggering errors
+  auto future4 = store_->getTreeForCommit(hash1);
+  EXPECT_FALSE(future4.isReady());
+  commit1->triggerError(std::runtime_error("bad luck"));
+  ASSERT_TRUE(future4.isReady());
+  EXPECT_THROW_RE(future4.get(), std::runtime_error, "bad luck");
+
+  auto future5 = store_->getTreeForCommit(hash1);
+  EXPECT_FALSE(future5.isReady());
+  commit1->trigger();
+  EXPECT_FALSE(future5.isReady());
+  dir1->triggerError(std::runtime_error("PC Load Letter"));
+  ASSERT_TRUE(future5.isReady());
+  EXPECT_THROW_RE(future5.get(), std::runtime_error, "PC Load Letter");
+
+  // Now trigger commit2.
+  // This should trigger future2 to fail since the tree does not actually exist.
+  commit2->trigger();
+  ASSERT_TRUE(future2.isReady());
+  EXPECT_THROW_RE(
+      future2.get(), std::domain_error, "tree .* for commit .* not found");
+}

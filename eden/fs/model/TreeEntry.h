@@ -79,6 +79,16 @@ class TreeEntry {
     return mode;
   }
 
+  /**
+   * Extract the owner permissions from a mode_t value.
+   *
+   * This can be used to construct the ownerPermissions parameter needed for
+   * the TreeEntry constructor.
+   */
+  static uint8_t modeToOwnerPermissions(mode_t mode) {
+    return (mode >> 6) & 0b111;
+  }
+
  private:
   FileType fileType_;
   uint8_t ownerPermissions_;
