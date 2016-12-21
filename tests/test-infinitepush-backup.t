@@ -13,6 +13,16 @@
   $ . "$TESTDIR/library-infinitepush.sh"
   $ setupcommon
 
+  $ cat >> wait_for_background_backup.py << EOF
+  > from time import sleep
+  > import sys
+  > for i in range(100):
+  >   sleep(0.1)
+  >   backuptip = int(open('.hg/store/infinitepushlastbackupedstate').read().split(' ')[0])
+  >   if backuptip == int(sys.argv[1]):
+  >     break
+  > EOF
+
 Setup server
   $ hg init repo
   $ cd repo
@@ -131,14 +141,8 @@ Backup in background
   $ cat .hg/store/infinitepushlastbackupedstate
   6 [0-9a-f]{40} \(no-eol\) (re)
   $ mkcommit newcommit
-  $ tip=`hg log -r tip -T '{rev}'`
   $ hg --config infinitepush.pushbackuplog="$TESTTMP/logfile" pushbackup --background
-  >>> from time import sleep
-  >>> for i in range(100):
-  ...   sleep(0.1)
-  ...   backuptip = int(open('.hg/store/infinitepushlastbackupedstate').read().split(' ')[0])
-  ...   if backuptip == 7:
-  ...     break
+  $ python ../wait_for_background_backup.py `hg log -r tip -T '{rev}'`
   $ cat $TESTTMP/logfile
   searching for changes
   remote: pushing 2 commits:
@@ -278,3 +282,35 @@ Backup bookmark that has '/bookmarks/' in the name. Make sure it was escaped
   infinitepush/backups/test/[0-9a-zA-Z.-]+\$TESTTMP/client/bookmarks/newbook 773a3ba2e7c25358df2e5b3cced70371333bc61c (re)
   infinitepush/backups/test/[0-9a-zA-Z.-]+\$TESTTMP/client/heads/3a30e220fe42e969e34bbe8001b951a20f31f2e8 3a30e220fe42e969e34bbe8001b951a20f31f2e8 (re)
   infinitepush/backups/test/[0-9a-zA-Z.-]+\$TESTTMP/client/heads/d5609f7fa63352da538eeffbe3ffabed1779aafc d5609f7fa63352da538eeffbe3ffabed1779aafc (re)
+
+Backup to different path
+  $ cat >> .hg/hgrc << EOF
+  > [paths]
+  > default = brokenpath
+  > nondefault = ssh://user@dummy/repo
+  > EOF
+  $ hg book somebook
+  $ hg --config paths.default=brokenpath pushbackup
+  abort: repository $TESTTMP/client/brokenpath not found!
+  [255]
+  $ hg pushbackup nondefault --traceback
+  $ scratchbookmarks
+  infinitepush/backups/test/devvm957.lla2.facebook.com$TESTTMP/client/bookmarks/abook 773a3ba2e7c25358df2e5b3cced70371333bc61c
+  infinitepush/backups/test/devvm957.lla2.facebook.com$TESTTMP/client/bookmarks/new/bookmarksbookmarks/book 3446a384dd701da41cd83cbd9562805fc6412c0e
+  infinitepush/backups/test/devvm957.lla2.facebook.com$TESTTMP/client/bookmarks/newbook 773a3ba2e7c25358df2e5b3cced70371333bc61c
+  infinitepush/backups/test/devvm957.lla2.facebook.com$TESTTMP/client/bookmarks/somebook 3446a384dd701da41cd83cbd9562805fc6412c0e
+  infinitepush/backups/test/devvm957.lla2.facebook.com$TESTTMP/client/heads/3a30e220fe42e969e34bbe8001b951a20f31f2e8 3a30e220fe42e969e34bbe8001b951a20f31f2e8
+  infinitepush/backups/test/devvm957.lla2.facebook.com$TESTTMP/client/heads/d5609f7fa63352da538eeffbe3ffabed1779aafc d5609f7fa63352da538eeffbe3ffabed1779aafc
+
+Backup in background to different path
+  $ mkcommit backgroundcommittodifferentpath
+  $ hg --config infinitepush.pushbackuplog="$TESTTMP/logfile" pushbackup nondefault --background
+  $ python ../wait_for_background_backup.py `hg log -r tip -T '{rev}'`
+  $ cat $TESTTMP/logfile
+  searching for changes
+  remote: pushing 2 commits:
+  remote:     667453c0787e  newhead2
+  remote:     773a3ba2e7c2  newcommit
+  searching for changes
+  remote: pushing 1 commit:
+  remote:     268f86e364f9  backgroundcommittodifferentpath

@@ -822,11 +822,13 @@ def backup(ui, repo, dest=None, **opts):
     """
 
     if opts.get('background'):
-        background_cmd = 'hg pushbackup'
+        background_cmd = ['hg', 'pushbackup']
+        if dest:
+            background_cmd.append(dest)
         logfile = ui.config('infinitepush', 'pushbackuplog')
         if logfile:
-            background_cmd = background_cmd + ' &> ' + logfile
-        runshellcommand(background_cmd, os.environ)
+            background_cmd.extend(('&>>', logfile))
+        runshellcommand(' '.join(background_cmd), os.environ)
         return 0
     backupedstatefile = 'infinitepushlastbackupedstate'
     backuptipbookmarkshash = repo.svfs.tryread(backupedstatefile).split(' ')
