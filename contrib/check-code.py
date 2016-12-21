@@ -456,8 +456,26 @@ allfilespats = [
   [],
 ]
 
+py3pats = [
+  [
+    (r'os\.environ', "use encoding.environ instead (py3)"),
+    (r'os\.name', "use pycompat.osname instead (py3)"),
+    (r'os\.getcwd', "use pycompat.getcwd instead (py3)"),
+    (r'os\.sep', "use pycompat.ossep instead (py3)"),
+    (r'os\.pathsep', "use pycompat.ospathsep instead (py3)"),
+    (r'os\.altsep', "use pycompat.osaltsep instead (py3)"),
+    (r'os\.getenv', "use pycompat.osgetenv instead (py3)"),
+    (r'sys\.platform', "use pycompat.sysplatform instead (py3)"),
+    (r'getopt\.getopt', "use pycompat.getoptb instead (py3)"),
+  ],
+  # warnings
+  [],
+]
+
 checks = [
     ('python', r'.*\.(py|cgi)$', r'^#!.*python', pyfilters, pypats),
+    ('python 3', r'.*(hgext|mercurial).*(?<!pycompat)\.py', '',
+            pyfilters, py3pats),
     ('test script', r'(.*/)?test-[^.~]*$', '', testfilters, testpats),
     ('c', r'.*\.[ch]$', '', cfilters, cpats),
     ('unified test', r'.*\.t$', '', utestfilters, utestpats),
