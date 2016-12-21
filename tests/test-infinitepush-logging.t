@@ -33,25 +33,25 @@
   remote: infinitepush: b2x:infinitepush \(eventtype=start, hostname=.+, requestid=\d+, user=test\) (re)
   remote: pushing 1 commit:
   remote:     7e6a6fd9c7c8  commit
-  remote: infinitepush: bundlestore \(eventtype=start, hostname=.*, requestid=\d+, user=test\) (re)
-  remote: infinitepush: bundlestore \(elapsed=.+, eventtype=success, hostname=.*, requestid=\d+, user=test\) (re)
-  remote: infinitepush: index \(eventtype=start, hostname=.*, requestid=\d+, user=test\) (re)
-  remote: infinitepush: index \(elapsed=.+, eventtype=success, hostname=.*, requestid=\d+, user=test\) (re)
-  remote: infinitepush: b2x:infinitepush \(elapsed=.+, eventtype=success, hostname=.*, requestid=\d+, user=test\) (re)
+  remote: infinitepush: bundlestore \(eventtype=start, hostname=[-.0-9a-z]+, reponame=babar, requestid=\d+, user=test\) (re)
+  remote: infinitepush: bundlestore \(elapsed=.+, eventtype=success, hostname=[-.0-9a-z]+, reponame=babar, requestid=\d+, user=test\) (re)
+  remote: infinitepush: index \(eventtype=start, hostname=[-.0-9a-z]+, reponame=babar, requestid=\d+, user=test\) (re)
+  remote: infinitepush: index \(elapsed=.+, eventtype=success, hostname=[-.0-9a-z]+, reponame=babar, requestid=\d+, user=test\) (re)
+  remote: infinitepush: b2x:infinitepush \(elapsed=.+, eventtype=success, hostname=[-.0-9a-z]+, reponame=babar, requestid=\d+, user=test\) (re)
   $ cd ..
 
 Check that logging works for b2x:infinitepushscratchbookmarks part
   $ cd client
   $ hg pushbackup
   searching for changes
-  remote: infinitepush: b2x:infinitepush \(eventtype=start, hostname=.*, requestid=\d+, user=test\) (re)
+  remote: infinitepush: b2x:infinitepush \(eventtype=start, hostname=[-.0-9a-z]+, reponame=babar, requestid=\d+, user=test\) (re)
   remote: pushing 1 commit:
   remote:     7e6a6fd9c7c8  commit
-  remote: infinitepush: index \(eventtype=start, hostname=.*, requestid=\d+, user=test\) (re)
-  remote: infinitepush: index \(elapsed=.+, eventtype=success, hostname=.*, requestid=\d+, user=test\) (re)
-  remote: infinitepush: b2x:infinitepush \(elapsed=.+, eventtype=success, hostname=.*, requestid=\d+, user=test\) (re)
-  remote: infinitepush: b2x:infinitepushscratchbookmarks \(eventtype=start, hostname=.*, requestid=\d+, user=test\) (re)
-  remote: infinitepush: b2x:infinitepushscratchbookmarks \(elapsed=.+, eventtype=success, hostname=.*, requestid=\d+, user=test\) (re)
+  remote: infinitepush: index \(eventtype=start, hostname=[-.0-9a-z]+, reponame=babar, requestid=\d+, user=test\) (re)
+  remote: infinitepush: index \(elapsed=.+, eventtype=success, hostname=[-.0-9a-z]+, reponame=babar, requestid=\d+, user=test\) (re)
+  remote: infinitepush: b2x:infinitepush \(elapsed=.+, eventtype=success, hostname=[-.0-9a-z]+, reponame=babar, requestid=\d+, user=test\) (re)
+  remote: infinitepush: b2x:infinitepushscratchbookmarks \(eventtype=start, hostname=[-.0-9a-z]+, reponame=babar, requestid=\d+, user=test\) (re)
+  remote: infinitepush: b2x:infinitepushscratchbookmarks \(elapsed=.+, eventtype=success, hostname=[-.0-9a-z]+, reponame=babar, requestid=\d+, user=test\) (re)
   $ cd ..
 
 Make upload to bundlestore fail
@@ -69,7 +69,7 @@ Make upload to bundlestore fail
   remote:     7e6a6fd9c7c8  commit
   remote:     bba29d9d577a  failpushcommit
   remote: infinitepush: bundlestore \(eventtype=start, hostname=.+, requestid=\d+, user=test\) (re)
-  remote: infinitepush: bundlestore \(elapsed=.+ eventtype=failure, hostname=.+, requestid=\d+, user=test\) (re)
-  remote: infinitepush: b2x:infinitepush \(elapsed=.+ eventtype=failure, hostname=.+, requestid=\d+, user=test\) (re)
+  remote: infinitepush: bundlestore \(elapsed=[-+0-9.e]+, errormsg=\[Errno 20\] Not a directory: '/dev/null/\d+', eventtype=failure, hostname=[-.0-9a-z]+, reponame=babar, requestid=\d+, user=test\) (re)
+  remote: infinitepush: b2x:infinitepush \(elapsed=[-+0-9.e]+, errormsg=\[Errno 20\] Not a directory: '/dev/null/\d+', eventtype=failure, hostname=[-.0-9a-z]+, reponame=babar, requestid=\d+, user=test\) (re)
   remote: abort: Not a directory: '/dev/null/\d+' (re)
   [255]

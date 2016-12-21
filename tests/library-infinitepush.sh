@@ -31,6 +31,7 @@ cat >> .hg/hgrc << EOF
 server=yes
 indextype=disk
 storetype=disk
+reponame=babar
 EOF
 }
 

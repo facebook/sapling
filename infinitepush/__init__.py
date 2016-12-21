@@ -1120,8 +1120,9 @@ def logservicecall(logger, service):
     try:
         yield
         logger(service, eventtype='success', elapsed=time.time() - start)
-    except Exception:
-        logger(service, eventtype='failure', elapsed=time.time() - start)
+    except Exception as e:
+        logger(service, eventtype='failure', elapsed=time.time() - start,
+               errormsg=str(e))
         raise
 
 def _getorcreateinfinitepushlogger(op):
@@ -1137,7 +1138,8 @@ def _getorcreateinfinitepushlogger(op):
         requestid = random.randint(0, 2000000000)
         hostname = socket.gethostname()
         logger = partial(ui.log, 'infinitepush', user=username,
-                         requestid=requestid, hostname=hostname)
+                         requestid=requestid, hostname=hostname,
+                         reponame=ui.config('infinitepush', 'reponame'))
         op.records.add('infinitepushlogger', logger)
     else:
         logger = logger[0]
@@ -1224,9 +1226,10 @@ def bundle2scratchbranch(op, part):
                                           bookprevnode, params)
         log(scratchbranchparttype, eventtype='success',
             elapsed=time.time() - parthandlerstart)
-    except Exception:
+    except Exception as e:
         log(scratchbranchparttype, eventtype='failure',
-            elapsed=time.time() - parthandlerstart)
+            elapsed=time.time() - parthandlerstart,
+            errormsg=str(e))
         raise
     finally:
         try:
