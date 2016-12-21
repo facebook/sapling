@@ -87,7 +87,7 @@ class client(object):
                     useImmutableBser=True)
             return self._watchmanclient.query(*watchmanargs)
         except pywatchman.CommandError as ex:
-            if ex.msg.startswith('unable to resolve root'):
+            if 'unable to resolve root' in ex.msg:
                 raise WatchmanNoRoot(self._root, ex.msg)
             raise Unavailable(ex.msg)
         except pywatchman.WatchmanError as ex:
