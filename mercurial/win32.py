@@ -14,7 +14,10 @@ import os
 import random
 import subprocess
 
-from . import encoding
+from . import (
+    encoding,
+    pycompat,
+)
 
 _kernel32 = ctypes.windll.kernel32
 _advapi32 = ctypes.windll.advapi32
@@ -440,7 +443,7 @@ def spawndetached(args):
 
     res = _kernel32.CreateProcessA(
         None, args, None, None, False, _CREATE_NO_WINDOW,
-        env, os.getcwd(), ctypes.byref(si), ctypes.byref(pi))
+        env, pycompat.getcwd(), ctypes.byref(si), ctypes.byref(pi))
     if not res:
         raise ctypes.WinError()
 

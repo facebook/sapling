@@ -31,9 +31,6 @@ New errors are not allowed. Warnings are strongly discouraged.
    > policy = os.environ.get('HGMODULEPOLICY', policy)
    use encoding.environ instead (py3)
   Skipping mercurial/statprof.py it has no-che?k-code (glob)
-  mercurial/win32.py:443:
-   >         env, os.getcwd(), ctypes.byref(si), ctypes.byref(pi))
-   use pycompat.getcwd instead (py3)
   [1]
 
 @commands in debugcommands.py should be in alphabetical order.
