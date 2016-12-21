@@ -327,9 +327,8 @@ _iochannels = [
 
 class chgcmdserver(commandserver.server):
     def __init__(self, ui, repo, fin, fout, sock, hashstate, baseaddress):
-        self._csystem = channeledsystem(fin, fout, 'S')
         super(chgcmdserver, self).__init__(
-            _newchgui(ui, self._csystem), repo, fin, fout)
+            _newchgui(ui, channeledsystem(fin, fout, 'S')), repo, fin, fout)
         self.clientsock = sock
         self._oldios = []  # original (self.ch, ui.fp, fd) before "attachio"
         self.hashstate = hashstate
