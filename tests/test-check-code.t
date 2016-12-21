@@ -7,13 +7,8 @@
 New errors are not allowed. Warnings are strongly discouraged.
 (The writing "no-che?k-code" is for not skipping this file when checking.)
 
-  $ hg locate -X contrib/python-zstandard | sed 's-\\-/-g' |
-  >   xargs "$check_code" --warnings --per-file=0 || false
-  Skipping hgext/fsmonitor/pywatchman/__init__.py it has no-che?k-code (glob)
-  Skipping hgext/fsmonitor/pywatchman/bser.c it has no-che?k-code (glob)
-  Skipping hgext/fsmonitor/pywatchman/capabilities.py it has no-che?k-code (glob)
-  Skipping hgext/fsmonitor/pywatchman/msc_stdint.h it has no-che?k-code (glob)
-  Skipping hgext/fsmonitor/pywatchman/pybser.py it has no-che?k-code (glob)
+  $ hg locate -X contrib/python-zstandard -X hgext/fsmonitor/pywatchman |
+  > sed 's-\\-/-g' | xargs "$check_code" --warnings --per-file=0 || false
   Skipping i18n/polib.py it has no-che?k-code (glob)
   Skipping mercurial/httpclient/__init__.py it has no-che?k-code (glob)
   Skipping mercurial/httpclient/_readers.py it has no-che?k-code (glob)
