@@ -143,6 +143,7 @@ Backup in background
   $ mkcommit newcommit
   $ hg --config infinitepush.pushbackuplog="$TESTTMP/logfile" pushbackup --background
   $ python ../wait_for_background_backup.py `hg log -r tip -T '{rev}'`
+  $ sync
   $ cat $TESTTMP/logfile
   searching for changes
   remote: pushing 2 commits:
@@ -295,17 +296,18 @@ Backup to different path
   [255]
   $ hg pushbackup nondefault --traceback
   $ scratchbookmarks
-  infinitepush/backups/test/devvm957.lla2.facebook.com$TESTTMP/client/bookmarks/abook 773a3ba2e7c25358df2e5b3cced70371333bc61c
-  infinitepush/backups/test/devvm957.lla2.facebook.com$TESTTMP/client/bookmarks/new/bookmarksbookmarks/book 3446a384dd701da41cd83cbd9562805fc6412c0e
-  infinitepush/backups/test/devvm957.lla2.facebook.com$TESTTMP/client/bookmarks/newbook 773a3ba2e7c25358df2e5b3cced70371333bc61c
-  infinitepush/backups/test/devvm957.lla2.facebook.com$TESTTMP/client/bookmarks/somebook 3446a384dd701da41cd83cbd9562805fc6412c0e
-  infinitepush/backups/test/devvm957.lla2.facebook.com$TESTTMP/client/heads/3a30e220fe42e969e34bbe8001b951a20f31f2e8 3a30e220fe42e969e34bbe8001b951a20f31f2e8
-  infinitepush/backups/test/devvm957.lla2.facebook.com$TESTTMP/client/heads/d5609f7fa63352da538eeffbe3ffabed1779aafc d5609f7fa63352da538eeffbe3ffabed1779aafc
+  infinitepush/backups/test/[0-9a-zA-Z.-]+\$TESTTMP/client/bookmarks/abook 773a3ba2e7c25358df2e5b3cced70371333bc61c (re)
+  infinitepush/backups/test/[0-9a-zA-Z.-]+\$TESTTMP/client/bookmarks/new/bookmarksbookmarks/book 3446a384dd701da41cd83cbd9562805fc6412c0e (re)
+  infinitepush/backups/test/[0-9a-zA-Z.-]+\$TESTTMP/client/bookmarks/newbook 773a3ba2e7c25358df2e5b3cced70371333bc61c (re)
+  infinitepush/backups/test/[0-9a-zA-Z.-]+\$TESTTMP/client/bookmarks/somebook 3446a384dd701da41cd83cbd9562805fc6412c0e (re)
+  infinitepush/backups/test/[0-9a-zA-Z.-]+\$TESTTMP/client/heads/3a30e220fe42e969e34bbe8001b951a20f31f2e8 3a30e220fe42e969e34bbe8001b951a20f31f2e8 (re)
+  infinitepush/backups/test/[0-9a-zA-Z.-]+\$TESTTMP/client/heads/d5609f7fa63352da538eeffbe3ffabed1779aafc d5609f7fa63352da538eeffbe3ffabed1779aafc (re)
 
 Backup in background to different path
   $ mkcommit backgroundcommittodifferentpath
   $ hg --config infinitepush.pushbackuplog="$TESTTMP/logfile" pushbackup nondefault --background
   $ python ../wait_for_background_backup.py `hg log -r tip -T '{rev}'`
+  $ sync
   $ cat $TESTTMP/logfile
   searching for changes
   remote: pushing 2 commits:
