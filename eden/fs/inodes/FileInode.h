@@ -74,14 +74,13 @@ class FileInode : public InodeBase {
   /// Compute the path to the overlay file for this item.
   AbsolutePath getLocalPath() const;
 
-  // We hold the ref on the parentInode so that entry_ remains
-  // valid while we're both alive
-  //
-  // TODO: parentInode_ is accessed without locking.
-  //   It also does not appear to be updated on rename.
-  //   We should update uses of parentInode_ with InodeBase::location_ instead,
-  //   and then delete parentInode_.
-  TreeInodePtr parentInode_;
+  /**
+   * Our Entry in our parent TreeInode's contents_
+   *
+   * TODO: We need to replace this with our own copy.  As-is we should never
+   * access this without holding our parent's contents_ lock, which we aren't
+   * doing correctly.
+   */
   TreeInode::Entry* entry_;
 
   std::shared_ptr<FileData> data_;

@@ -33,8 +33,7 @@ FileInode::FileInode(
     TreeInodePtr parentInode,
     PathComponentPiece name,
     TreeInode::Entry* entry)
-    : InodeBase(ino, parentInode, name),
-      parentInode_(parentInode),
+    : InodeBase(ino, std::move(parentInode), name),
       entry_(entry),
       data_(std::make_shared<FileData>(this, mutex_, entry)) {}
 
@@ -44,8 +43,7 @@ FileInode::FileInode(
     PathComponentPiece name,
     TreeInode::Entry* entry,
     folly::File&& file)
-    : InodeBase(ino, parentInode, name),
-      parentInode_(parentInode),
+    : InodeBase(ino, std::move(parentInode), name),
       entry_(entry),
       data_(std::make_shared<FileData>(this, mutex_, entry_, std::move(file))) {
 }
@@ -58,10 +56,10 @@ folly::Future<fusell::Dispatcher::Attr> FileInode::getattr() {
   // materialized the data from the entry_, we have to materialize it
   // from the store.  If we augmented our metadata we could avoid this,
   // and this would speed up operations like `ls`.
-  auto overlay = parentInode_->getOverlay();
+  auto overlay = getMount()->getOverlay();
   data->materializeForRead(O_RDONLY, path, overlay);
 
-  fusell::Dispatcher::Attr attr(parentInode_->getMount()->getMountPoint());
+  fusell::Dispatcher::Attr attr(getMount()->getMountPoint());
   attr.st = data->stat();
   attr.st.st_ino = getNodeId();
   return attr;
@@ -80,17 +78,17 @@ folly::Future<fusell::Dispatcher::Attr> FileInode::setattr(
     open_flags |= O_TRUNC;
   }
 
-  parentInode_->materializeDirAndParents();
+  getParentBuggy()->materializeDirAndParents();
 
   auto path = getPathBuggy();
-  auto overlay = parentInode_->getOverlay();
+  auto overlay = getMount()->getOverlay();
   data->materializeForWrite(open_flags, path, overlay);
 
-  fusell::Dispatcher::Attr result(parentInode_->getMount()->getMountPoint());
+  fusell::Dispatcher::Attr result(getMount()->getMountPoint());
   result.st = data->setAttr(attr, to_set);
   result.st.st_ino = getNodeId();
 
-  parentInode_->getMount()->getJournal().wlock()->addDelta(
+  getMount()->getJournal().wlock()->addDelta(
       std::make_unique<JournalDelta>(JournalDelta{path}));
 
   return result;
@@ -126,7 +124,7 @@ folly::Future<std::string> FileInode::readlink() {
   }
 
   // Load the symlink contents from the store
-  auto blob = parentInode_->getStore()->getBlob(entry_->hash.value());
+  auto blob = getMount()->getObjectStore()->getBlob(entry_->hash.value());
   auto buf = blob->getContents();
   return buf.moveToFbString().toStdString();
 }
@@ -149,7 +147,7 @@ void FileInode::fileHandleDidClose() {
 }
 
 AbsolutePath FileInode::getLocalPath() const {
-  return parentInode_->getOverlay()->getContentDir() + getPathBuggy();
+  return getMount()->getOverlay()->getContentDir() + getPathBuggy();
 }
 
 folly::Future<std::shared_ptr<fusell::FileHandle>> FileInode::open(
@@ -159,9 +157,9 @@ folly::Future<std::shared_ptr<fusell::FileHandle>> FileInode::open(
     data.reset();
     fileHandleDidClose();
   };
-  auto overlay = parentInode_->getOverlay();
+  auto overlay = getMount()->getOverlay();
   if (fi.flags & (O_RDWR | O_WRONLY | O_CREAT | O_TRUNC)) {
-    parentInode_->materializeDirAndParents();
+    getParentBuggy()->materializeDirAndParents();
     data->materializeForWrite(fi.flags, getPathBuggy(), overlay);
   } else {
     data->materializeForRead(fi.flags, getPathBuggy(), overlay);
@@ -177,7 +175,7 @@ std::shared_ptr<FileHandle> FileInode::finishCreate() {
     data.reset();
     fileHandleDidClose();
   };
-  data->materializeForWrite(0, getPathBuggy(), parentInode_->getOverlay());
+  data->materializeForWrite(0, getPathBuggy(), getMount()->getOverlay());
 
   return std::make_shared<FileHandle>(
       std::static_pointer_cast<FileInode>(shared_from_this()), data, 0);
@@ -233,7 +231,7 @@ Future<Hash> FileInode::getSHA1() {
   // TODO(mbolin): Make this more fault-tolerant. Currently, there is no logic
   // to account for the case where we don't have the SHA-1 for the blob, the
   // hash doesn't correspond to a blob, etc.
-  return parentInode_->getStore()->getSha1ForBlob(entry_->hash.value());
+  return getMount()->getObjectStore()->getSha1ForBlob(entry_->hash.value());
 }
 
 const TreeInode::Entry* FileInode::getEntry() const {
