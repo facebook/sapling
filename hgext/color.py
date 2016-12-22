@@ -196,7 +196,7 @@ def _terminfosetup(ui, mode):
     '''Initialize terminfo data and the terminal if we're in terminfo mode.'''
 
     # If we failed to load curses, we go ahead and return.
-    if not color._terminfo_params:
+    if curses is None:
         return
     # Otherwise, see what the config file says.
     if mode not in ('auto', 'terminfo'):
