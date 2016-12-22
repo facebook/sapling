@@ -11,17 +11,19 @@
 #include <folly/File.h>
 #include <folly/io/IOBuf.h>
 #include <mutex>
-#include "Overlay.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/model/Tree.h"
-#include "eden/fuse/BufVec.h"
 
 namespace facebook {
 namespace eden {
+namespace fusell {
+class BufVec;
+}
 
 class Blob;
-class EdenMount;
+class FileInode;
 class Hash;
+class Overlay;
 
 /**
  * FileData stores information about a file contents.
@@ -30,13 +32,13 @@ class Hash;
  * is needed.
  *
  * FileData objects are tracked via shared_ptr.  FileInode and FileHandle
- * objects maintain references to them.  FileData objects should not outlive
- * the EdenMount to which they belong.
+ * objects maintain references to them.  FileData objects never outlive
+ * the FileInode to which they belong.
  */
 class FileData {
  public:
   /** Construct a FileData from an overlay entry */
-  FileData(std::mutex& mutex, EdenMount* mount, TreeInode::Entry* entry);
+  FileData(FileInode* inode, std::mutex& mutex, TreeInode::Entry* entry);
 
   /** Construct a freshly created FileData from a pre-opened File object.
    * file must be moved in (it has no copy constructor) and must have
@@ -44,8 +46,8 @@ class FileData {
    * is used in the TreeInode::create case and is required to implement
    * O_EXCL correctly. */
   FileData(
+      FileInode* inode,
       std::mutex& mutex,
-      EdenMount* mount,
       TreeInode::Entry* entry,
       folly::File&& file);
 
@@ -109,25 +111,40 @@ class FileData {
       std::shared_ptr<Overlay> overlay);
 
  private:
-  // Reference to the mutex in the associated inode.
-  // It must be held by readers and writers before interpreting the filedata,
-  // as any actor may cause materialization or truncation of the data.
-  // Recommended practice in the implementation of methods on this class is to
-  // hold a unique_lock as a guard for the duration of the method.
-  std::mutex& mutex_;
+  ObjectStore* getObjectStore() const;
+
+  /// Recompute the SHA1 content hash of the open file_.
+  // The mutex must be owned by the caller.
+  Hash recomputeAndStoreSha1();
 
   /**
-   * The EdenMount that this FileData object belongs to.
+   * The FileInode that this FileData object belongs to.
    *
    * This pointer never changes once a FileData object is constructed.  A
-   * FileData always belongs to the same EdenMount.  Therefore it is safe to
+   * FileData always belongs to the same FileInode.  Therefore it is safe to
    * access this pointer without locking.
    */
-  EdenMount* const mount_{nullptr};
+  FileInode* const inode_{nullptr};
+
+  /**
+   * Reference to the mutex in the associated inode.
+   * It must be held by readers and writers before interpreting the filedata,
+   * as any actor may cause materialization or truncation of the data.
+   * Recommended practice in the implementation of methods on this class is to
+   * hold a unique_lock as a guard for the duration of the method.
+   *
+   * TODO: Maybe we should just make FileData a friend of FileInode,
+   * and access this as inode_->mutex_
+   */
+  std::mutex& mutex_;
 
   /** Metadata about the file.
    * This points to the entry that is owned by the parent TreeInode
-   * of this file.  It will always be non-null. */
+   * of this file.  It will always be non-null.
+   *
+   * TODO: Maybe we should just make FileData a friend of FileInode,
+   * and access this as inode_->entry_
+   */
   TreeInode::Entry* entry_;
 
   /// if backed by tree, the data from the tree, else nullptr.
@@ -138,10 +155,6 @@ class FileData {
 
   /// if backed by an overlay file, whether the sha1 xattr is valid
   bool sha1Valid_{false};
-
-  /// Recompute the SHA1 content hash of the open file_.
-  // The mutex must be owned by the caller.
-  Hash recomputeAndStoreSha1();
 };
 }
 }

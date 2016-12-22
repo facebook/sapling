@@ -22,6 +22,7 @@
 #include "eden/fs/inodes/FileData.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeBase.h"
+#include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/git/GitIgnore.h"

@@ -36,9 +36,7 @@ FileInode::FileInode(
     : InodeBase(ino, parentInode, name),
       parentInode_(parentInode),
       entry_(entry),
-      data_(
-          std::make_shared<FileData>(mutex_, parentInode_->getMount(), entry)) {
-}
+      data_(std::make_shared<FileData>(this, mutex_, entry)) {}
 
 FileInode::FileInode(
     fuse_ino_t ino,
@@ -49,11 +47,8 @@ FileInode::FileInode(
     : InodeBase(ino, parentInode, name),
       parentInode_(parentInode),
       entry_(entry),
-      data_(std::make_shared<FileData>(
-          mutex_,
-          parentInode_->getMount(),
-          entry_,
-          std::move(file))) {}
+      data_(std::make_shared<FileData>(this, mutex_, entry_, std::move(file))) {
+}
 
 folly::Future<fusell::Dispatcher::Attr> FileInode::getattr() {
   auto data = getOrLoadData();
@@ -139,8 +134,7 @@ folly::Future<std::string> FileInode::readlink() {
 std::shared_ptr<FileData> FileInode::getOrLoadData() {
   std::unique_lock<std::mutex> lock(mutex_);
   if (!data_) {
-    data_ =
-        std::make_shared<FileData>(mutex_, parentInode_->getMount(), entry_);
+    data_ = std::make_shared<FileData>(this, mutex_, entry_);
   }
 
   return data_;

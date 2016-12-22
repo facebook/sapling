@@ -16,9 +16,12 @@
 #include <openssl/sha.h>
 #include "Overlay.h"
 #include "eden/fs/inodes/EdenMount.h"
+#include "eden/fs/inodes/FileInode.h"
+#include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/store/ObjectStore.h"
+#include "eden/fuse/BufVec.h"
 #include "eden/fuse/MountPoint.h"
 #include "eden/fuse/fuse_headers.h"
 #include "eden/utils/XAttr.h"
@@ -28,15 +31,15 @@ namespace eden {
 
 using folly::checkUnixError;
 
-FileData::FileData(std::mutex& mutex, EdenMount* mount, TreeInode::Entry* entry)
-    : mutex_(mutex), mount_(mount), entry_(entry) {}
+FileData::FileData(FileInode* inode, std::mutex& mutex, TreeInode::Entry* entry)
+    : inode_(inode), mutex_(mutex), entry_(entry) {}
 
 FileData::FileData(
+    FileInode* inode,
     std::mutex& mutex,
-    EdenMount* mount,
     TreeInode::Entry* entry,
     folly::File&& file)
-    : mutex_(mutex), mount_(mount), entry_(entry), file_(std::move(file)) {}
+    : inode_(inode), mutex_(mutex), entry_(entry), file_(std::move(file)) {}
 
 // Conditionally updates target with either the value provided by
 // the caller, or with the current time value, depending on the value
@@ -120,7 +123,7 @@ struct stat FileData::setAttr(const struct stat& attr, int to_set) {
 }
 
 struct stat FileData::stat() {
-  auto st = mount_->getMountPoint()->initStatData();
+  auto st = inode_->getMount()->getMountPoint()->initStatData();
   st.st_nlink = 1;
 
   std::unique_lock<std::mutex> lock(mutex_);
@@ -276,7 +279,7 @@ void FileData::materializeForRead(
 
   if (needBlob && !blob_) {
     // Load the blob data.
-    blob_ = mount_->getObjectStore()->getBlob(entry_->hash.value());
+    blob_ = getObjectStore()->getBlob(entry_->hash.value());
   }
 }
 
@@ -325,7 +328,7 @@ void FileData::materializeForWrite(
 
   if (needBlob && !blob_) {
     // Load the blob data.
-    blob_ = mount_->getObjectStore()->getBlob(entry_->hash.value());
+    blob_ = getObjectStore()->getBlob(entry_->hash.value());
   }
 
   if (needFile && !file_) {
@@ -362,8 +365,7 @@ void FileData::materializeForWrite(
       // Copy and apply the sha1 to the new file.  This saves us from
       // recomputing it again in the case that something opens the file
       // read/write and closes it without changing it.
-      auto sha1 =
-          mount_->getObjectStore()->getSha1ForBlob(entry_->hash.value());
+      auto sha1 = getObjectStore()->getSha1ForBlob(entry_->hash.value());
       fsetxattr(file.fd(), kXattrSha1, sha1.toString());
       sha1Valid_ = true;
     }
@@ -399,7 +401,11 @@ Hash FileData::getSha1Locked(const std::unique_lock<std::mutex>&) {
   }
 
   CHECK(entry_->hash.hasValue());
-  return mount_->getObjectStore()->getSha1ForBlob(entry_->hash.value());
+  return getObjectStore()->getSha1ForBlob(entry_->hash.value());
+}
+
+ObjectStore* FileData::getObjectStore() const {
+  return inode_->getMount()->getObjectStore();
 }
 
 Hash FileData::recomputeAndStoreSha1() {
