@@ -610,6 +610,7 @@ def _wraprepo(ui, repo):
     ('f', 'force', False, _('allow changing rules even with pending changes')),
     ('', 'enable-profile', False, _('enables the specified profile')),
     ('', 'disable-profile', False, _('disables the specified profile')),
+    ('', 'import-rules', False, _('imports rules from a file')),
     ('', 'refresh', False, _('updates the working after sparseness changes')),
     ('', 'reset', False, _('makes the repo full again')),
     ],
@@ -645,6 +646,11 @@ def sparse(ui, repo, *pats, **opts):
     changeset is checked out. Changes to .hgsparse are not applied until they
     have been committed.
 
+    --import-rules accepts a path to a file containing rules in the .hgsparse
+    format, allowing you to add --include, --exclude and --enable-profile rules
+    in bulk. Like the --include, --exclude and --enable-profile switches, the
+    changes are applied immediately.
+
     Returns 0 if editing the sparse checkout succeeds.
     """
     include = opts.get('include')
@@ -652,11 +658,12 @@ def sparse(ui, repo, *pats, **opts):
     force = opts.get('force')
     enableprofile = opts.get('enable_profile')
     disableprofile = opts.get('disable_profile')
+    importrules = opts.get('import_rules')
     delete = opts.get('delete')
     refresh = opts.get('refresh')
     reset = opts.get('reset')
     count = sum([include, exclude, enableprofile, disableprofile, delete,
-                refresh, reset])
+                 importrules, refresh, reset])
     if count > 1:
         raise error.Abort(_("too many flags specified"))
 
@@ -675,6 +682,9 @@ def sparse(ui, repo, *pats, **opts):
         _config(ui, repo, pats, include=include, exclude=exclude, reset=reset,
                 delete=delete, enableprofile=enableprofile,
                 disableprofile=disableprofile, force=force)
+
+    if importrules:
+        _import(ui, repo, pats, force=force)
 
     if refresh:
         try:
@@ -735,6 +745,47 @@ def _config(ui, repo, pats, include=False, exclude=False, reset=False,
             raise
     finally:
         wlock.release()
+
+def _import(ui, repo, files, force=False):
+    with repo.wlock():
+        # load union of current active profile
+        revs = [repo.changelog.rev(node) for node in
+                repo.dirstate.parents() if node != nullid]
+
+        # read current configuration
+        raw = ''
+        if repo.opener.exists('sparse'):
+            raw = repo.opener.read('sparse')
+        includes, excludes, profiles = repo.readsparseconfig(raw)
+        profiles = set(profiles)
+
+        # all active rules
+        aincludes, aexcludes, aprofiles = set(), set(), set()
+        for rev in revs:
+            rincludes, rexcludes, rprofiles = repo.getsparsepatterns(rev)
+            aincludes.update(rincludes)
+            aexcludes.update(rexcludes)
+            aprofiles.update(rprofiles)
+
+        # import rules on top; only take in rules that are not yet
+        # part of the active rules.
+        changed = False
+        for file in files:
+            with util.posixfile(util.expandpath(file)) as importfile:
+                iincludes, iexcludes, iprofiles = repo.readsparseconfig(
+                    importfile.read())
+                oldsize = len(includes) + len(excludes) + len(profiles)
+                includes.update(iincludes - aincludes)
+                excludes.update(iexcludes - aexcludes)
+                profiles.update(set(iprofiles) - aprofiles)
+                if len(includes) + len(excludes) + len(profiles) > oldsize:
+                    changed = True
+
+        if changed:
+            oldstatus = repo.status()
+            oldsparsematch = repo.sparsematch()
+            repo.writesparseconfig(includes, excludes, profiles)
+            _refresh(ui, repo, oldstatus, oldsparsematch, force)
 
 def _refresh(ui, repo, origstatus, origsparsematch, force):
     """Refreshes which files are on disk by comparing the old status and
