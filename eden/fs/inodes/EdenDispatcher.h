@@ -8,64 +8,28 @@
  *
  */
 #pragma once
-#include <folly/SharedMutex.h>
-#include <unordered_map>
 #include "eden/fs/inodes/InodePtr.h"
 #include "eden/fuse/Dispatcher.h"
 
 namespace facebook {
 namespace eden {
 
-namespace fusell {
-class InodeNameManager;
-}
-
 class EdenMount;
 class FileInode;
 class InodeBase;
+class InodeMap;
 class TreeInode;
 
 /**
  * A FUSE request dispatcher for eden mount points.
  */
 class EdenDispatcher : public fusell::Dispatcher {
-  TreeInodePtr root_;
-  std::unordered_map<fuse_ino_t, InodePtr> inodes_;
-  mutable folly::SharedMutex lock_;
-
-  // The EdenMount that owns this EdenDispatcher.
-  EdenMount* const mount_;
-
  public:
   /*
-   * Create an EdenDispatcher, without a root node yet.
+   * Create an EdenDispatcher.
    * setRootInode() must be called before using this dispatcher.
    */
   explicit EdenDispatcher(EdenMount* mount);
-
-  /*
-   * Create an EdenDispatcher using the specified root inode object.
-   */
-  explicit EdenDispatcher(EdenMount* mount, TreeInodePtr rootInode);
-
-  InodePtr getInode(fuse_ino_t, bool mustExist = true) const;
-  InodePtr lookupInode(fuse_ino_t) const;
-  TreeInodePtr getTreeInode(fuse_ino_t, bool mustExist = true) const;
-  FileInodePtr getFileInode(fuse_ino_t, bool mustExist = true) const;
-
-  /*
-   * Set the root inode.
-   *
-   * This method should be used to set the root inode on a default-constructed
-   * EdenDispatcher.  It may only be called once, and it must be called before
-   * using the EdenDispatcher.
-   */
-  void setRootInode(TreeInodePtr inode);
-
-  /** Throws if setRootInode() has not been invoked yet. */
-  TreeInodePtr getRootInode() const;
-
-  void recordInode(InodePtr inode);
 
   void initConnection(fuse_conn_info& conn) override;
   folly::Future<Attr> getattr(fuse_ino_t ino) override;
@@ -79,12 +43,6 @@ class EdenDispatcher : public fusell::Dispatcher {
       fuse_ino_t parent,
       PathComponentPiece name) override;
 
-  /**
-   * Similar to lookup(), except this does not require an active FUSE request.
-   */
-  folly::Future<InodePtr> lookupInodeBase(
-      fuse_ino_t parent,
-      PathComponentPiece name);
   folly::Future<folly::Unit> forget(fuse_ino_t ino,
                                     unsigned long nlookup) override;
   folly::Future<std::shared_ptr<fusell::FileHandle>> open(
@@ -125,6 +83,15 @@ class EdenDispatcher : public fusell::Dispatcher {
   folly::Future<std::string> getxattr(fuse_ino_t ino, folly::StringPiece name)
       override;
   folly::Future<std::vector<std::string>> listxattr(fuse_ino_t ino) override;
+
+ private:
+  // The EdenMount that owns this EdenDispatcher.
+  EdenMount* const mount_;
+  // The EdenMount's InodeMap.
+  // We store this pointer purely for convenience.  We need it on pretty much
+  // every FUSE request, and having it locally avoids  having to dereference
+  // mount_ first.
+  InodeMap* const inodeMap_;
 };
 }
 }

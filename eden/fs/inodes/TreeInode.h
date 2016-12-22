@@ -11,7 +11,6 @@
 #include <folly/Optional.h>
 #include "eden/fs/inodes/InodeBase.h"
 #include "eden/fs/model/Hash.h"
-#include "eden/fuse/InodeNameManager.h"
 #include "eden/utils/PathMap.h"
 
 namespace facebook {
@@ -88,8 +87,6 @@ class TreeInode : public InodeBase {
     InodePtr inode;
     /// The newly opened file handle.
     std::shared_ptr<FileHandle> file;
-    /// The newly created node record from the name manager.
-    std::shared_ptr<fusell::InodeNameManager::Node> node;
 
     explicit CreateResult(const fusell::MountPoint* mount) : attr(mount) {}
   };
@@ -130,6 +127,9 @@ class TreeInode : public InodeBase {
    * The Inode object will be loaded if it is not already loaded.
    */
   folly::Future<InodePtr> getOrLoadChild(PathComponentPiece name);
+  folly::Future<TreeInodePtr> getOrLoadChildTree(PathComponentPiece name);
+
+  fuse_ino_t getChildInodeNumber(PathComponentPiece name);
 
   folly::Future<std::shared_ptr<fusell::DirHandle>> opendir(
       const struct fuse_file_info& fi);
@@ -138,13 +138,12 @@ class TreeInode : public InodeBase {
       TreeInodePtr newParent,
       PathComponentPiece newName);
 
-  bool canForget() override;
-
   void renameHelper(
       Dir* sourceContents,
-      RelativePathPiece sourceName,
+      PathComponentPiece sourceName,
+      TreeInodePtr destParent,
       Dir* destContents,
-      RelativePathPiece destName);
+      PathComponentPiece destName);
 
   fuse_ino_t getParent() const;
   fuse_ino_t getInode() const;
@@ -179,7 +178,7 @@ class TreeInode : public InodeBase {
       PathComponentPiece name,
       folly::StringPiece contents);
 
-  folly::Future<fuse_entry_param> mkdir(PathComponentPiece name, mode_t mode);
+  TreeInodePtr mkdir(PathComponentPiece name, mode_t mode);
   folly::Future<folly::Unit> unlink(PathComponentPiece name);
   folly::Future<folly::Unit> rmdir(PathComponentPiece name);
 
@@ -194,17 +193,6 @@ class TreeInode : public InodeBase {
    * This is required whenever we are about to make a structural change
    * in the tree; renames, creation, deletion. */
   void materializeDirAndParents();
-
-  fusell::InodeNameManager* getNameMgr() const;
-
-  /** Horribly named function that resolves the existing inode for a name,
-   * falling back to creating and populating it, while we hold a lock
-   * on the Dir object.  This is needed because the equivalent lookupInodeBase
-   * functionality in the dispatcher will call in to getChildByName and
-   * attempt to acquire the lock */
-  InodePtr lookupChildByNameLocked(
-      const Dir* contents,
-      PathComponentPiece name);
 
   /**
    * Internal API only for use by InodeMap.
@@ -237,8 +225,8 @@ class TreeInode : public InodeBase {
     return std::static_pointer_cast<TreeInode>(shared_from_this());
   }
 
-  /** Helper used to implement getChildByName and lookupChildByNameLocked */
-  InodePtr getChildByNameLocked(const Dir* contents, PathComponentPiece name);
+  folly::Future<folly::Unit>
+  rmdirImpl(PathComponent name, TreeInodePtr child, unsigned int attemptNum);
 
   // The EdenMount object that this inode belongs to.
   // We store this as a raw pointer since the TreeInode is part of the mount

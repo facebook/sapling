@@ -457,30 +457,28 @@ void Dirstate::addDeletedEntries(
  */
 bool hasMatchingAttributes(
     const TreeEntry* treeEntry,
-    const TreeInode::Entry* treeInode,
+    const TreeInode::Entry* inodeEntry,
     ObjectStore* objectStore,
     TreeInode& parent, // Has rlock
     const TreeInode::Dir& dir) {
   // As far as comparing mode bits is concerned, we ignore the "group" and
   // "other" permissions.
-  if (((treeEntry->getMode() ^ treeInode->mode) & ~kIgnoredModeBits) != 0) {
+  if (((treeEntry->getMode() ^ inodeEntry->mode) & ~kIgnoredModeBits) != 0) {
     return false;
   }
 
   // TODO(t12183419): Once the file size is available in the TreeEntry,
   // compare file sizes before fetching SHA-1s.
 
-  if (treeInode->materialized) {
+  if (inodeEntry->materialized) {
     // If the the inode is materialized, then we cannot trust the Hash on the
     // TreeInode::Entry, so we must compare with the contents in the overlay.
-    auto overlayInode =
-        parent.lookupChildByNameLocked(&dir, treeEntry->getName());
-    auto fileInode = std::dynamic_pointer_cast<FileInode>(overlayInode);
+    auto fileInode = dynamic_cast<FileInode*>(inodeEntry->inode);
     auto overlaySHA1 = fileInode->getSHA1().get();
     auto blobSHA1 = objectStore->getSha1ForBlob(treeEntry->getHash());
     return overlaySHA1 == blobSHA1;
   } else {
-    auto optionalHash = treeInode->hash;
+    auto optionalHash = inodeEntry->hash;
     DCHECK(optionalHash.hasValue()) << "non-materialized file must have a hash";
     return *optionalHash.get_pointer() == treeEntry->getHash();
   }

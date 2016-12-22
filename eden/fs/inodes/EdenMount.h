@@ -17,7 +17,6 @@
 namespace facebook {
 namespace eden {
 namespace fusell {
-class InodeNameManager;
 class MountPoint;
 }
 
@@ -95,13 +94,6 @@ class EdenMount {
   }
 
   /**
-   * Return the InodeNameManager used for this mount.
-   */
-  fusell::InodeNameManager* getNameMgr() const {
-    return nameManager_.get();
-  }
-
-  /**
    * Return the InodeMap for this mount.
    */
   InodeMap* getInodeMap() const {
@@ -160,7 +152,6 @@ class EdenMount {
   std::unique_ptr<ClientConfig> config_;
   std::unique_ptr<InodeMap> inodeMap_;
   std::unique_ptr<EdenDispatcher> dispatcher_;
-  std::unique_ptr<fusell::InodeNameManager> nameManager_;
   std::unique_ptr<fusell::MountPoint> mountPoint_;
   std::unique_ptr<ObjectStore> objectStore_;
   std::shared_ptr<Overlay> overlay_;

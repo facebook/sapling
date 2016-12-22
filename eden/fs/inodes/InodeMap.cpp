@@ -328,6 +328,40 @@ UnloadedInodeData InodeMap::lookupUnloadedInode(fuse_ino_t number) {
   return UnloadedInodeData(it->second->parent, it->second->name);
 }
 
+void InodeMap::decNumFuseLookups(fuse_ino_t number) {
+  auto data = data_.wlock();
+
+  // First check in the loaded inode map
+  auto loadedIter = data->loadedInodes_.find(number);
+  if (loadedIter != data->loadedInodes_.end()) {
+    loadedIter->second->decNumFuseLookups();
+    return;
+  }
+
+  // If it wasn't loaded, it should be in the unloaded map
+  auto unloadedIter = data->unloadedInodes_.find(number);
+  if (UNLIKELY(unloadedIter == data->unloadedInodes_.end())) {
+    EDEN_BUG()
+        << "InodeMap::decNumFuseLookups() called on unknown inode number "
+        << number;
+  }
+
+  // Decrement the reference count in the unloaded entry
+  const auto& unloadedEntry = unloadedIter->second;
+  CHECK_GT(unloadedEntry->numFuseReferences, 0);
+  --unloadedEntry->numFuseReferences;
+  if (unloadedEntry->numFuseReferences <= 0) {
+    // We can completely forget about this unloaded inode now.
+    VLOG(5) << "forgetting unloaded inode " << number << ": "
+            << unloadedEntry->parent << ":" << unloadedEntry->name;
+    auto reverseLookupKey =
+        std::make_pair(unloadedEntry->parent, unloadedEntry->name.piece());
+    auto numErased = data->unloadedInodesReverse_.erase(reverseLookupKey);
+    CHECK_EQ(1, numErased);
+    data->unloadedInodes_.erase(unloadedIter);
+  }
+}
+
 void InodeMap::save() {
   // TODO
 }

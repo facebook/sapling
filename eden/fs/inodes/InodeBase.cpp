@@ -17,7 +17,9 @@ using namespace folly;
 namespace facebook {
 namespace eden {
 
-InodeBase::~InodeBase() {}
+InodeBase::~InodeBase() {
+  VLOG(5) << "inode " << this << " destroyed: " << getLogPath();
+}
 
 InodeBase::InodeBase(
     fuse_ino_t ino,
@@ -27,6 +29,7 @@ InodeBase::InodeBase(
   // Inode numbers generally shouldn't be 0.
   // Older versions of glibc have bugs handling files with an inode number of 0
   DCHECK_NE(ino_, 0);
+  VLOG(5) << "inode " << this << " created: " << getLogPath();
 }
 
 // See Dispatcher::getattr
@@ -57,10 +60,6 @@ folly::Future<folly::Unit> InodeBase::removexattr(folly::StringPiece name) {
 }
 folly::Future<folly::Unit> InodeBase::access(int mask) {
   FUSELL_NOT_IMPL();
-}
-
-bool InodeBase::canForget() {
-  return true;
 }
 
 /**
@@ -165,6 +164,24 @@ std::string InodeBase::getLogPath() const {
   //
   // return std::move(path).value();
   return path.stringPiece().str();
+}
+
+void InodeBase::markUnlinked() {
+  VLOG(5) << "inode " << this << " unlinked: " << getLogPath();
+  auto loc = location_.wlock();
+  DCHECK(!loc->unlinked);
+  loc->unlinked = true;
+}
+
+void InodeBase::updateLocation(
+    TreeInodePtr newParent,
+    PathComponentPiece newName) {
+  VLOG(5) << "inode " << this << " renamed: " << getLogPath() << " --> "
+          << newParent->getLogPath() << " / \"" << newName << "\"";
+  auto loc = location_.wlock();
+  DCHECK(!loc->unlinked);
+  loc->parent = newParent;
+  loc->name = newName.copy();
 }
 }
 }

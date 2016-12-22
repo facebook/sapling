@@ -205,6 +205,8 @@ SHA1Result EdenServiceHandler::getSHA1ForPath(
 
   auto edenMount = server_->getMount(mountPoint);
   auto relativePath = RelativePathPiece{path};
+  // TODO(t12747617): This should use a future-based API to do the FileInode
+  // lookup.
   auto fileInode = edenMount->getFileInode(relativePath);
   if (!S_ISREG(fileInode->getEntry()->mode)) {
     // We intentionally want to refuse to compute the SHA1 of symlinks

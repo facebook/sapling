@@ -9,6 +9,7 @@
  */
 #include "EdenMountHandler.h"
 
+#include <boost/polymorphic_cast.hpp>
 #include <folly/Range.h>
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
@@ -56,6 +57,9 @@ void getMaterializedEntriesRecursive(
     std::map<std::string, FileInformation>& out,
     RelativePathPiece dirPath,
     TreeInode* dir) {
+  // TODO: It would be better to make a copy of the materialized inodes in the
+  // current directory, then release the current directory lock before we
+  // recurse into children.
   dir->getContents().withRLock([&](const auto& contents) mutable {
     if (contents.materialized) {
       FileInformation dirInfo;
@@ -77,17 +81,19 @@ void getMaterializedEntriesRecursive(
         continue;
       }
 
-      auto childInode = dir->lookupChildByNameLocked(&contents, name);
+      // ent->inode is guaranteed to be set if ent->materialized is
+      auto childInode = ent->inode;
+      CHECK(childInode != nullptr);
       auto childPath = dirPath + name;
 
       if (S_ISDIR(ent->mode)) {
-        auto childDir = std::dynamic_pointer_cast<TreeInode>(childInode);
+        auto childDir = boost::polymorphic_downcast<TreeInode*>(childInode);
         DCHECK(childDir->getContents().rlock()->materialized)
             << (dirPath + name) << " entry " << ent.get()
             << " materialized is true, but the contained dir is !materialized";
-        getMaterializedEntriesRecursive(out, childPath, childDir.get());
+        getMaterializedEntriesRecursive(out, childPath, childDir);
       } else {
-        auto fileInode = std::dynamic_pointer_cast<FileInode>(childInode);
+        auto fileInode = boost::polymorphic_downcast<FileInode*>(childInode);
         auto attr = fileInode->getattr().get();
 
         FileInformation fileInfo;

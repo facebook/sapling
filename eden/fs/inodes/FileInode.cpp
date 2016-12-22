@@ -57,7 +57,7 @@ FileInode::FileInode(
 
 folly::Future<fusell::Dispatcher::Attr> FileInode::getattr() {
   auto data = getOrLoadData();
-  auto path = parentInode_->getNameMgr()->resolvePathToNode(getNodeId());
+  auto path = getPathBuggy();
 
   // Future optimization opportunity: right now, if we have not already
   // materialized the data from the entry_, we have to materialize it
@@ -87,7 +87,7 @@ folly::Future<fusell::Dispatcher::Attr> FileInode::setattr(
 
   parentInode_->materializeDirAndParents();
 
-  auto path = parentInode_->getNameMgr()->resolvePathToNode(getNodeId());
+  auto path = getPathBuggy();
   auto overlay = parentInode_->getOverlay();
   data->materializeForWrite(open_flags, path, overlay);
 
@@ -155,8 +155,7 @@ void FileInode::fileHandleDidClose() {
 }
 
 AbsolutePath FileInode::getLocalPath() const {
-  return parentInode_->getOverlay()->getContentDir() +
-      parentInode_->getNameMgr()->resolvePathToNode(getNodeId());
+  return parentInode_->getOverlay()->getContentDir() + getPathBuggy();
 }
 
 folly::Future<std::shared_ptr<fusell::FileHandle>> FileInode::open(
@@ -169,15 +168,9 @@ folly::Future<std::shared_ptr<fusell::FileHandle>> FileInode::open(
   auto overlay = parentInode_->getOverlay();
   if (fi.flags & (O_RDWR | O_WRONLY | O_CREAT | O_TRUNC)) {
     parentInode_->materializeDirAndParents();
-    data->materializeForWrite(
-        fi.flags,
-        parentInode_->getNameMgr()->resolvePathToNode(getNodeId()),
-        overlay);
+    data->materializeForWrite(fi.flags, getPathBuggy(), overlay);
   } else {
-    data->materializeForRead(
-        fi.flags,
-        parentInode_->getNameMgr()->resolvePathToNode(getNodeId()),
-        overlay);
+    data->materializeForRead(fi.flags, getPathBuggy(), overlay);
   }
 
   return std::make_shared<FileHandle>(
@@ -190,10 +183,7 @@ std::shared_ptr<FileHandle> FileInode::finishCreate() {
     data.reset();
     fileHandleDidClose();
   };
-  data->materializeForWrite(
-      0,
-      parentInode_->getNameMgr()->resolvePathToNode(getNodeId()),
-      parentInode_->getOverlay());
+  data->materializeForWrite(0, getPathBuggy(), parentInode_->getOverlay());
 
   return std::make_shared<FileHandle>(
       std::static_pointer_cast<FileInode>(shared_from_this()), data, 0);

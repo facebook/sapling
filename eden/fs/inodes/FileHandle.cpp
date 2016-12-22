@@ -56,8 +56,7 @@ folly::Future<fusell::BufVec> FileHandle::read(size_t size, off_t off) {
 
 folly::Future<size_t> FileHandle::write(fusell::BufVec&& buf, off_t off) {
   SCOPE_SUCCESS {
-    auto myname = inode_->parentInode_->getNameMgr()->resolvePathToNode(
-        inode_->getNodeId());
+    auto myname = inode_->getPathBuggy();
     inode_->parentInode_->getMount()->getJournal().wlock()->addDelta(
         std::make_unique<JournalDelta>(JournalDelta{myname}));
   };
@@ -66,8 +65,7 @@ folly::Future<size_t> FileHandle::write(fusell::BufVec&& buf, off_t off) {
 
 folly::Future<size_t> FileHandle::write(folly::StringPiece str, off_t off) {
   SCOPE_SUCCESS {
-    auto myname = inode_->parentInode_->getNameMgr()->resolvePathToNode(
-        inode_->getNodeId());
+    auto myname = inode_->getPathBuggy();
     inode_->parentInode_->getMount()->getJournal().wlock()->addDelta(
         std::make_unique<JournalDelta>(JournalDelta{myname}));
   };

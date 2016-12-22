@@ -62,7 +62,7 @@ folly::Future<fusell::DirList> TreeInodeDirHandle::readdir(
 
   // Fetch some info now so that we can be more efficient
   // while populating entries.
-  auto myname = inode_->getNameMgr()->resolvePathToNode(dir_inode);
+  auto myname = inode_->getPathBuggy();
 
   inode_->getContents().withRLock([&](const auto& dir) {
     entries.reserve(2 /* "." and ".." */ + dir.entries.size());
@@ -102,9 +102,7 @@ folly::Future<fusell::DirList> TreeInodeDirHandle::readdir(
       // We defer it from the first pass above in case we have a huge
       // dir and need to paginate through it across several calls into
       // this function.
-      auto node = inode_->getNameMgr()->getNodeByName(
-          dir_inode, PathComponentPiece(entry.name));
-      st.st_ino = node->getNodeId();
+      st.st_ino = inode_->getChildInodeNumber(PathComponentPiece{entry.name});
     }
 
     if (!list.add(entry.name, st, ++off)) {

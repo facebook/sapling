@@ -23,11 +23,11 @@
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/store/ObjectStore.h"
-#include "eden/fuse/InodeNameManager.h"
 #include "eden/fuse/MountPoint.h"
 
 using std::unique_ptr;
 using std::vector;
+using folly::StringPiece;
 
 namespace facebook {
 namespace eden {
@@ -54,7 +54,6 @@ EdenMount::EdenMount(
     : config_(std::move(config)),
       inodeMap_{new InodeMap()},
       dispatcher_{new EdenDispatcher(this)},
-      nameManager_{new fusell::InodeNameManager()},
       mountPoint_(
           new fusell::MountPoint(config_->getMountPath(), dispatcher_.get())),
       objectStore_(std::move(objectStore)),
@@ -82,7 +81,7 @@ EdenMount::EdenMount(
     auto rootTree = objectStore_->getTreeForCommit(snapshotID).get();
     rootInode = std::make_shared<TreeInode>(this, std::move(rootTree));
   }
-  dispatcher_->setRootInode(rootInode);
+  inodeMap_->setRootInode(rootInode);
 
   // Record the transition from no snapshot to the current snapshot in
   // the journal.  This also sets things up so that we can carry the
@@ -103,11 +102,11 @@ const vector<BindMount>& EdenMount::getBindMounts() const {
 }
 
 TreeInodePtr EdenMount::getRootInode() const {
-  return dispatcher_->getRootInode();
+  return inodeMap_->getRootInode();
 }
 
 std::unique_ptr<Tree> EdenMount::getRootTree() const {
-  auto rootInode = getRootInode();
+  auto rootInode = inodeMap_->getRootInode();
   {
     auto dir = rootInode->getContents().rlock();
     auto& rootTreeHash = dir->treeHash.value();
@@ -117,21 +116,31 @@ std::unique_ptr<Tree> EdenMount::getRootTree() const {
 }
 
 InodePtr EdenMount::getInodeBase(RelativePathPiece path) const {
-  auto inodeBase = dispatcher_->getInode(FUSE_ROOT_ID);
-  auto relativePath = RelativePathPiece{path};
-
-  // Walk down to the path of interest.
-  auto it = relativePath.paths().begin();
-  while (it != relativePath.paths().end()) {
-    // This will throw if there is no such entry.
-    inodeBase =
-        dispatcher_
-            ->lookupInodeBase(inodeBase->getNodeId(), it.piece().basename())
-            .get();
-    ++it;
+  // TODO: We should really switch all callers to use a Future-base API here.
+  //
+  // We probably should probably split this into two versions:
+  // - one that returns only loaded inodes, and returns immediately
+  // - one that may load an inode, and returns a Future
+  auto treeInode = inodeMap_->getRootInode();
+  auto pathStr = path.stringPiece();
+  if (pathStr.empty()) {
+    return treeInode;
   }
 
-  return inodeBase;
+  auto startIdx = 0;
+  while (true) {
+    DCHECK_LT(startIdx, pathStr.size());
+    auto endIdx = pathStr.find(kDirSeparator, startIdx);
+    if (endIdx == StringPiece::npos) {
+      auto name = StringPiece{pathStr.data() + startIdx, pathStr.end()};
+      return treeInode->getOrLoadChild(PathComponentPiece{name}).get();
+    } else {
+      auto name =
+          StringPiece{pathStr.data() + startIdx, pathStr.data() + endIdx};
+      startIdx = endIdx + 1;
+      treeInode = treeInode->getOrLoadChildTree(PathComponentPiece{name}).get();
+    }
+  }
 }
 
 TreeInodePtr EdenMount::getTreeInode(RelativePathPiece path) const {

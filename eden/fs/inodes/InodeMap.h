@@ -186,6 +186,18 @@ class InodeMap {
   UnloadedInodeData lookupUnloadedInode(fuse_ino_t number);
 
   /**
+   * Decrement the number of outstanding FUSE references to an inode number.
+   *
+   * Note that there is no corresponding incNumFuseLookups() function:
+   * increments are always done directly on a loaded InodeBase object.
+   *
+   * However, decrements may happen after we have decided to unload the Inode
+   * object.  Therefore decrements are performed on the InodeMap so that we can
+   * avoid loading an Inode object just to decrement its reference count.
+   */
+  void decNumFuseLookups(fuse_ino_t number);
+
+  /**
    * Persist the inode number state to disk.
    *
    * This API supports gracefully restarting the eden server without unmounting
@@ -313,11 +325,12 @@ class InodeMap {
      * are already protected by the data_ lock.)
      */
     PromiseVector promises;
-    /*
-     * TODO: We probably also need a reference count tracking how many times
-     * this fuse_ino_t value has been returned to the FUSE API, so we know
-     * when it is safe to forget.
+    /**
+     * The number of times we have returned this inode number to FUSE via
+     * lookup() calls that have not yet been released with a corresponding
+     * forget().
      */
+    int64_t numFuseReferences{0};
   };
   struct Members;
 

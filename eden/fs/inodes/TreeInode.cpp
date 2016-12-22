@@ -92,51 +92,9 @@ fusell::Dispatcher::Attr TreeInode::getAttrLocked(const Dir* contents) {
   return attr;
 }
 
-InodePtr TreeInode::getChildByNameLocked(
-    const Dir* contents,
-    PathComponentPiece name) {
-  auto iter = contents->entries.find(name);
-  if (iter == contents->entries.end()) {
-    throw InodeError(ENOENT, inodePtrFromThis(), name);
-  }
-
-  // Only allocate an inode number once we know that the entry exists!
-  auto node = getNameMgr()->getNodeByName(getNodeId(), name);
-  auto entry = iter->second.get();
-
-  if (S_ISDIR(entry->mode)) {
-    if (!entry->materialized && entry->hash) {
-      auto tree = getStore()->getTree(entry->hash.value());
-      return std::make_shared<TreeInode>(
-          mount_,
-          node->getNodeId(),
-          inodePtrFromThis(),
-          name,
-          entry,
-          std::move(tree));
-    }
-
-    // No corresponding TreeEntry, this exists only in the overlay.
-    auto targetName = getNameMgr()->resolvePathToNode(node->getNodeId());
-    auto overlayDir = getOverlay()->loadOverlayDir(targetName);
-    DCHECK(overlayDir) << "missing overlay for " << targetName;
-    return std::make_shared<TreeInode>(
-        mount_,
-        node->getNodeId(),
-        inodePtrFromThis(),
-        name,
-        entry,
-        std::move(overlayDir.value()));
-  }
-
-  return std::make_shared<FileInode>(
-      node->getNodeId(), inodePtrFromThis(), name, entry);
-}
-
 folly::Future<InodePtr> TreeInode::getChildByName(
     PathComponentPiece namepiece) {
-  auto contents = contents_.rlock();
-  return getChildByNameLocked(&*contents, namepiece);
+  return getOrLoadChild(namepiece);
 }
 
 Future<InodePtr> TreeInode::getOrLoadChild(PathComponentPiece name) {
@@ -187,6 +145,34 @@ Future<InodePtr> TreeInode::getOrLoadChild(PathComponentPiece name) {
   }
 
   return std::move(returnFuture).value();
+}
+
+Future<TreeInodePtr> TreeInode::getOrLoadChildTree(PathComponentPiece name) {
+  return getOrLoadChild(name).then([](InodePtr child) {
+    auto treeInode = std::dynamic_pointer_cast<TreeInode>(child);
+    if (!treeInode) {
+      return makeFuture<TreeInodePtr>(InodeError(ENOTDIR, child));
+    }
+    return makeFuture(treeInode);
+  });
+}
+
+fuse_ino_t TreeInode::getChildInodeNumber(PathComponentPiece name) {
+  auto contents = contents_.wlock();
+  auto iter = contents->entries.find(name);
+  if (iter == contents->entries.end()) {
+    throw InodeError(ENOENT, inodePtrFromThis(), name);
+  }
+
+  auto& ent = iter->second;
+  if (ent->inode) {
+    return ent->inode->getNodeId();
+  }
+
+  // TODO: We should probably track unloaded inode numbers directly in the
+  // TreeInode, rather than in the separate unloadedInodesReverse_ map in
+  // InodeMap.
+  return mount_->getInodeMap()->getOrAllocateUnloadedInodeNumber(this, name);
 }
 
 void TreeInode::loadChildInode(PathComponentPiece name, fuse_ino_t number) {
@@ -327,16 +313,7 @@ Future<InodePtr> TreeInode::startLoadingInode(
   // unlinked or renamed.  Otherwise it seems like there are race conditions
   // here between computing the path to the child's materialized data file and
   // the time when we actually open it.
-  auto myPath = getPath();
-  if (!myPath.hasValue()) {
-    // We were unlinked before we could get loaded.
-    VLOG(3) << "inode unlinked before it could be loaded: " << getLogPath();
-    return folly::makeFuture<std::shared_ptr<InodeBase>>(std::system_error(
-        ENOENT,
-        std::system_category(),
-        "inode unlinked before it could be loaded"));
-  }
-  auto targetName = myPath.value() + name;
+  auto targetName = getPathBuggy() + name;
   auto overlayDir = getOverlay()->loadOverlayDir(targetName);
   DCHECK(overlayDir) << "missing overlay for " << targetName;
   return std::make_shared<TreeInode>(
@@ -373,9 +350,7 @@ void TreeInode::materializeDirAndParents() {
   // Ensure that our parent(s) are materialized.  We can't go higher
   // than the root inode though.
   if (getNodeId() != FUSE_ROOT_ID) {
-    auto parentInode = getMount()->getDispatcher()->getTreeInode(parent_);
-    DCHECK(parentInode) << "must always have a TreeInode parent";
-    // and get it to materialize
+    auto parentInode = getParentBuggy();
     parentInode->materializeDirAndParents();
   }
 
@@ -388,8 +363,7 @@ void TreeInode::materializeDirAndParents() {
       return false;
     }
 
-    auto myname = this->getNameMgr()->resolvePathToNode(this->getNodeId());
-
+    auto myname = this->getPathBuggy();
     auto overlay = this->getOverlay();
     auto dirPath = overlay->getContentDir() + myname;
     if (::mkdir(dirPath.c_str(), 0755) != 0 && errno != EEXIST) {
@@ -412,8 +386,10 @@ void TreeInode::materializeDirAndParents() {
   // This means that there is a small window of time where our in-memory and
   // on-disk state for the overlay are not in sync.
   if (updateParent) {
-    auto parentInode = getMount()->getDispatcher()->getTreeInode(parent_);
-    auto parentName = getNameMgr()->resolvePathToNode(parentInode->getNodeId());
+    // FIXME: Overlay file paths should be based on our inode number,
+    // not on our path.
+    auto parentInode = getParentBuggy();
+    auto parentName = parentInode->getPathBuggy();
     getOverlay()->saveOverlayDir(parentName, &*parentInode->contents_.wlock());
   }
 }
@@ -444,13 +420,12 @@ TreeInode::Dir TreeInode::buildDirFromTree(const Tree* tree) {
 folly::Future<TreeInode::CreateResult>
 TreeInode::create(PathComponentPiece name, mode_t mode, int flags) {
   // Figure out the relative path to this inode.
-  auto myname = getNameMgr()->resolvePathToNode(getNodeId());
+  auto myname = getPathBuggy();
 
   // Compute the effective name of the node they want to create.
   auto targetName = myname + name;
   std::shared_ptr<FileHandle> handle;
   FileInodePtr inode;
-  std::shared_ptr<fusell::InodeNameManager::Node> node;
 
   materializeDirAndParents();
 
@@ -476,15 +451,18 @@ TreeInode::create(PathComponentPiece name, mode_t mode, int flags) {
     entry->mode = st.st_mode;
 
     // Generate an inode number for this new entry.
-    node = this->getNameMgr()->getNodeByName(this->getNodeId(), name);
+    auto* inodeMap = this->mount_->getInodeMap();
+    auto childNumber = inodeMap->allocateInodeNumber();
 
     // build a corresponding FileInode
     inode = std::make_shared<FileInode>(
-        node->getNodeId(),
+        childNumber,
         this->inodePtrFromThis(),
         name,
         entry.get(),
         std::move(file));
+    entry->inode = inode.get();
+    inodeMap->inodeCreated(inode);
 
     // The kernel wants an open operation to return the inode,
     // the file handle and some attribute information.
@@ -507,16 +485,9 @@ TreeInode::create(PathComponentPiece name, mode_t mode, int flags) {
         result.inode = inode;
         result.file = std::move(handle);
         result.attr = attr;
-        result.node = node;
 
         return result;
       });
-}
-
-bool TreeInode::canForget() {
-  // We can't let this inode be forgotten while it is materialized,
-  // as we hold the source of truth about this entry.
-  return !contents_.rlock()->materialized;
 }
 
 folly::Future<fuse_entry_param> TreeInode::symlink(
@@ -526,15 +497,14 @@ folly::Future<fuse_entry_param> TreeInode::symlink(
   FUSELL_NOT_IMPL();
 }
 
-folly::Future<fuse_entry_param> TreeInode::mkdir(
-    PathComponentPiece name,
-    mode_t mode) {
+TreeInodePtr TreeInode::mkdir(PathComponentPiece name, mode_t mode) {
   // Figure out the relative path to this inode.
-  auto myname = getNameMgr()->resolvePathToNode(getNodeId());
+  auto myname = getPathBuggy();
   auto targetName = myname + name;
   // Compute the effective name of the node they want to create.
   materializeDirAndParents();
 
+  TreeInodePtr newChild;
   contents_.withWLock([&](auto& contents) {
     auto entIter = contents.entries.find(name);
     if (entIter != contents.entries.end()) {
@@ -555,26 +525,39 @@ folly::Future<fuse_entry_param> TreeInode::mkdir(
     entry->mode = st.st_mode;
     entry->materialized = true;
 
-    contents.entries.emplace(name, std::move(entry));
-    overlay->saveOverlayDir(myname, &contents);
-
-    // Create the overlay entry for this dir before the lookup call
-    // below tries to load it (and fails)
+    // Create the overlay entry for this dir
     Dir emptyDir;
     emptyDir.materialized = true;
     overlay->saveOverlayDir(targetName, &emptyDir);
+
+    // Create the TreeInode
+    auto* inodeMap = this->mount_->getInodeMap();
+    auto childNumber = inodeMap->allocateInodeNumber();
+    newChild = std::make_shared<TreeInode>(
+        mount_,
+        childNumber,
+        this->inodePtrFromThis(),
+        name,
+        entry.get(),
+        std::move(emptyDir));
+    entry->inode = newChild.get();
+    inodeMap->inodeCreated(newChild);
+
+    contents.entries.emplace(name, std::move(entry));
+    overlay->saveOverlayDir(myname, &contents);
   });
 
   getMount()->getJournal().wlock()->addDelta(
       std::make_unique<JournalDelta>(JournalDelta{targetName}));
 
-  // Look up the inode for this new dir and return its entry info.
-  return getMount()->getDispatcher()->lookup(getNodeId(), name);
+  return newChild;
 }
 
 folly::Future<folly::Unit> TreeInode::unlink(PathComponentPiece name) {
+  // TODO: We should grab the mountpoint-wide rename lock here.
+
   // Compute the full name of the node they want to remove.
-  auto myname = getNameMgr()->resolvePathToNode(getNodeId());
+  auto myname = getPathBuggy();
   auto targetName = myname + name;
 
   // Check pre-conditions with a read lock before we materialize anything
@@ -611,11 +594,11 @@ folly::Future<folly::Unit> TreeInode::unlink(PathComponentPiece name) {
       auto filePath = overlay->getContentDir() + targetName;
       folly::checkUnixError(::unlink(filePath.c_str()), "unlink: ", filePath);
     }
-
-    // TODO: If an InodeBase object exists for the child, we need to update it
-    // to mark it unlinked.  In a subsequent diff I plan to add an InodeBase
-    // pointer in the Entry object.  Once we have that I will come back and
-    // perform the update here.
+    // If the child inode in question is loaded, inform it that it has been
+    // unlinked.
+    if (ent->inode) {
+      ent->inode->markUnlinked();
+    }
 
     // And actually remove it
     contents.entries.erase(entIter);
@@ -628,111 +611,105 @@ folly::Future<folly::Unit> TreeInode::unlink(PathComponentPiece name) {
   return folly::Unit{};
 }
 
-InodePtr TreeInode::lookupChildByNameLocked(
-    const Dir* contents,
-    PathComponentPiece name) {
-  auto dispatcher = getMount()->getDispatcher();
-  auto mgr = getMount()->getNameMgr();
-
-  auto node = mgr->getNodeByName(getNodeId(), name, false);
-
-  if (node) {
-    return dispatcher->getInode(node->getNodeId(), true);
-  }
-
-  auto child = getChildByNameLocked(contents, name);
-
-  node = mgr->getNodeById(child->getNodeId());
-  dispatcher->recordInode(child);
-
-  return child;
+folly::Future<folly::Unit> TreeInode::rmdir(PathComponentPiece name) {
+  // TODO: We should probably grab the mountpoint-wide rename lock here,
+  // and hold it during the child lookup.  This would avoid having to retry.
+  return getOrLoadChildTree(name).then(
+      [ self = inodePtrFromThis(),
+        childName = PathComponent{name} ](const TreeInodePtr& child) {
+        return self->rmdirImpl(childName, child, 1);
+      });
 }
 
-folly::Future<folly::Unit> TreeInode::rmdir(PathComponentPiece name) {
-  // Compute the full name of the node they want to remove.
-  auto myname = getNameMgr()->resolvePathToNode(getNodeId());
-  auto targetName = myname + name;
-
-  // Check pre-conditions with a read lock before we materialize anything
-  // in case we're processing spurious unlink for a non-existent entry;
-  // we don't want to materialize part of a tree if we're not actually
-  // going to do any work in it.
-  contents_.withRLock([&](const auto& contents) {
-    auto entIter = contents.entries.find(name);
-    if (entIter == contents.entries.end()) {
-      throw InodeError(ENOENT, this->inodePtrFromThis(), name);
+folly::Future<folly::Unit> TreeInode::rmdirImpl(
+    PathComponent name,
+    TreeInodePtr child,
+    unsigned int attemptNum) {
+  // Verify that the child directory is empty before we materialize ourself
+  {
+    auto childContents = child->contents_.rlock();
+    if (!childContents->entries.empty()) {
+      throw InodeError(ENOTEMPTY, child);
     }
-    if (!S_ISDIR(entIter->second->mode)) {
-      throw InodeError(EISDIR, this->inodePtrFromThis(), name);
-    }
-    auto targetInode = this->lookupChildByNameLocked(&contents, name);
-    if (!targetInode) {
-      throw InodeError(
-          EIO,
-          this->inodePtrFromThis(),
-          name,
-          "rmdir target did not resolve to an inode object");
-    }
-    auto targetDir = std::dynamic_pointer_cast<TreeInode>(targetInode);
-    if (!targetDir) {
-      throw InodeError(
-          EIO,
-          this->inodePtrFromThis(),
-          name,
-          "rmdir target did not resolve to a TreeInode object");
-    }
-
-    targetDir->contents_.withRLock([&](const auto& targetContents) {
-      if (!targetContents.entries.empty()) {
-        throw InodeError(ENOTEMPTY, this->inodePtrFromThis(), name);
-      }
-    });
-  });
+  }
 
   materializeDirAndParents();
 
-  contents_.withWLock([&](auto& contents) {
-    // Re-check the pre-conditions in case we raced
-    auto entIter = contents.entries.find(name);
-    if (entIter == contents.entries.end()) {
-      throw InodeError(ENOENT, this->inodePtrFromThis(), name);
-    }
+  // Lock our contents in write mode.
+  // We will hold it for the duration of the unlink.
+  auto targetName = getPathBuggy() + name;
+  {
+    auto contents = contents_.wlock();
 
+    // Make sure that this name still corresponds to the child inode we just
+    // looked up.
+    auto entIter = contents->entries.find(name);
+    if (entIter == contents->entries.end()) {
+      throw InodeError(ENOENT, inodePtrFromThis(), name);
+    }
     auto& ent = entIter->second;
-    if (!S_ISDIR(ent->mode)) {
-      throw InodeError(EISDIR, this->inodePtrFromThis(), name);
-    }
-    auto targetInode = this->lookupChildByNameLocked(&contents, name);
-    if (!targetInode) {
-      throw InodeError(
-          EIO,
-          this->inodePtrFromThis(),
-          name,
-          "rmdir target did not resolve to an inode object");
-    }
-    auto targetDir = std::dynamic_pointer_cast<TreeInode>(targetInode);
-    if (!targetDir) {
-      throw InodeError(
-          EIO,
-          this->inodePtrFromThis(),
-          name,
-          "rmdir target did not resolve to a TreeInode object");
-    }
-    if (!targetDir->contents_.rlock()->entries.empty()) {
-      throw InodeError(ENOTEMPTY, this->inodePtrFromThis(), name);
+    if (ent->inode != child.get()) {
+      // This child was replaced since the rmdir attempt started.
+      if (ent->inode == nullptr) {
+        constexpr unsigned int kMaxRmdirRetries = 3;
+        if (attemptNum > kMaxRmdirRetries) {
+          throw InodeError(
+              EIO,
+              inodePtrFromThis(),
+              name,
+              "directory was removed/renamed after "
+              "rmdir() started");
+        }
+        contents.unlock();
+        // Note that we intentially create childFuture() in a separate
+        // statement before calling then() on it, since we std::move()
+        // the name into the lambda capture for then().
+        //
+        // Pre-C++17 this has undefined behavior if they are both in the same
+        // statement: argument evaluation order is undefined, so we could
+        // create the lambda (and invalidate name) before calling
+        // getOrLoadChildTree(name).  C++17 fixes this order to guarantee that
+        // the left side of "." will always get evaluated before the right
+        // side.
+        auto childFuture = getOrLoadChildTree(name);
+        return childFuture.then([
+          self = inodePtrFromThis(),
+          childName = PathComponent{std::move(name)},
+          attemptNum
+        ](const TreeInodePtr& child) {
+          return self->rmdirImpl(childName, child, attemptNum + 1);
+        });
+      } else {
+        // Just update to point to the current child
+        InodePtr childGeneric = ent->inode->shared_from_this();
+        child = std::dynamic_pointer_cast<TreeInode>(childGeneric);
+        if (!child) {
+          throw InodeError(ENOTDIR, childGeneric);
+        }
+      }
     }
 
+    // Lock the child contents, and make sure they are still empty
+    auto childContents = child->contents_.rlock();
+    if (!childContents->entries.empty()) {
+      throw InodeError(ENOTEMPTY, child);
+    }
+
+    // Now we can do the rmdir
     auto overlay = this->getOverlay();
     if (ent->materialized) {
       auto dirPath = overlay->getContentDir() + targetName;
       folly::checkUnixError(::rmdir(dirPath.c_str()), "rmdir: ", dirPath);
     }
+    if (ent->inode) {
+      ent->inode->markUnlinked();
+    }
 
     // And actually remove it
-    contents.entries.erase(entIter);
-    overlay->saveOverlayDir(myname, &contents);
+    contents->entries.erase(entIter);
+    overlay->saveOverlayDir(getPathBuggy(), &*contents);
     overlay->removeOverlayDir(targetName);
-  });
+  }
 
   getMount()->getJournal().wlock()->addDelta(
       std::make_unique<JournalDelta>(JournalDelta{targetName}));
@@ -742,57 +719,54 @@ folly::Future<folly::Unit> TreeInode::rmdir(PathComponentPiece name) {
 
 void TreeInode::renameHelper(
     Dir* sourceContents,
-    RelativePathPiece sourceName,
+    PathComponentPiece sourceName,
+    TreeInodePtr destParent,
     Dir* destContents,
-    RelativePathPiece destName) {
-  auto sourceEntIter = sourceContents->entries.find(sourceName.basename());
+    PathComponentPiece destName) {
+  auto sourceEntIter = sourceContents->entries.find(sourceName);
   if (sourceEntIter == sourceContents->entries.end()) {
-    folly::throwSystemErrorExplicit(
-        ENOENT, "rename: source file ", sourceName, " does not exist");
+    throw InodeError(ENOENT, inodePtrFromThis(), sourceName);
   }
 
-  auto destEntIter = destContents->entries.find(destName.basename());
+  auto destEntIter = destContents->entries.find(destName);
 
   if (mode_to_dtype(sourceEntIter->second->mode) == dtype_t::Dir &&
       destEntIter != destContents->entries.end()) {
     // When renaming a directory, the destination must either not exist or
     // it must be an empty directory
     if (mode_to_dtype(destEntIter->second->mode) != dtype_t::Dir) {
-      folly::throwSystemErrorExplicit(
-          ENOTDIR,
-          "attempted to rename dir ",
-          sourceName,
-          " to existing name ",
-          destName,
-          " but the latter is not a directory");
+      throw InodeError(ENOTDIR, destParent, destName);
     }
 
-    auto targetInode =
-        lookupChildByNameLocked(destContents, destName.basename());
-    auto destDir = std::dynamic_pointer_cast<TreeInode>(targetInode);
-    if (!destDir) {
-      folly::throwSystemErrorExplicit(
-          EIO, "inconsistency between contents and inodes objects");
-    }
+    // If the directory is loaded, check to see if it contains anything
+    if (destEntIter->second->inode != nullptr) {
+      auto destDir = dynamic_cast<TreeInode*>(destEntIter->second->inode);
+      if (!destDir) {
+        throw InodeError(
+            EIO,
+            destParent,
+            destName,
+            "inconsistency between contents and inodes objects");
+      }
 
-    if (!destDir->contents_.rlock()->entries.empty()) {
-      folly::throwSystemErrorExplicit(
-          ENOTEMPTY,
-          "attempted to rename dir ",
-          sourceName,
-          " to dir ",
-          destName,
-          " but the latter is not a empty directory");
+      if (!destDir->contents_.rlock()->entries.empty()) {
+        throw InodeError(ENOTEMPTY, destParent, destName);
+      }
+    } else {
+      // This directory is not currently loaded.
+      // This means that it cannot be materialized, so it only contains the
+      // contents from its Tree.  We don't ever track empty Trees, so therefore
+      // the directory cannot be empty.
+      throw InodeError(ENOTEMPTY, destParent, destName);
     }
   }
-
-  auto contentDir = getOverlay()->getContentDir();
-  auto absoluteSourcePath = contentDir + sourceName;
-  auto absoluteDestPath = contentDir + destName;
 
   // If we haven't actually materialized it yet, the rename() call will
   // fail.  So don't try that.
   if (sourceEntIter->second->materialized) {
+    auto contentDir = getOverlay()->getContentDir();
+    auto absoluteSourcePath = contentDir + getPathBuggy() + sourceName;
+    auto absoluteDestPath = contentDir + destParent->getPathBuggy() + destName;
     folly::checkUnixError(
         ::rename(absoluteSourcePath.c_str(), absoluteDestPath.c_str()),
         "rename ",
@@ -802,44 +776,39 @@ void TreeInode::renameHelper(
         " failed");
   }
 
-  // TODO: If an InodeBase object has been loaded for the file being renamed,
-  // we need to update it's parent pointer and name.
-  //
-  // Currently the parent point ends up pointing to the old path.
-  // I'll come back and fix this up once I add an InodeBase pointer to our
-  // Entry object.
-
   // Success.
   // Update the destination with the source data (this copies in the hash if
   // it happens to be set).
-  auto& destEnt = destContents->entries[destName.basename()];
+  auto& destEnt = destContents->entries[destName];
   // Note: sourceEntIter may have been invalidated by the line above in the
   // case that the source and destination dirs are the same.  We need to
   // recompute that iterator now to be safe.
-  sourceEntIter = sourceContents->entries.find(sourceName.basename());
+  sourceEntIter = sourceContents->entries.find(sourceName);
+
+  if (destEnt && destEnt->inode) {
+    destEnt->inode->markUnlinked();
+  }
 
   // We want to move in the data from the source.
   destEnt = std::move(sourceEntIter->second);
 
+  if (destEnt->inode) {
+    destEnt->inode->updateLocation(destParent, destName);
+  }
+
   // Now remove the source information
   sourceContents->entries.erase(sourceEntIter);
-
-  getOverlay()->saveOverlayDir(sourceName.dirname(), sourceContents);
-  if (sourceContents != destContents) {
-    // Don't saved the same thing twice if the rename is within the
-    // same directory.
-    getOverlay()->saveOverlayDir(destName.dirname(), destContents);
-  }
 }
 
 folly::Future<folly::Unit> TreeInode::rename(
     PathComponentPiece name,
     TreeInodePtr newParent,
     PathComponentPiece newName) {
-  auto nameMgr = getNameMgr();
-  auto sourceName = nameMgr->resolvePathToNode(getNodeId()) + name;
-  auto targetName =
-      nameMgr->resolvePathToNode(newParent->getNodeId()) + newName;
+  // TODO: Grab a mountpoint-wide rename lock so that no other rename
+  // operations can happen while we are running.
+
+  auto myPath = getPathBuggy();
+  auto destDirPath = newParent->getPathBuggy();
 
   // Check pre-conditions with a read lock before we materialize anything
   // in case we're processing spurious rename for a non-existent entry;
@@ -863,7 +832,8 @@ folly::Future<folly::Unit> TreeInode::rename(
   // to wlock the same thing twice
   if (newParent.get() == this) {
     contents_.withWLock([&](auto& contents) {
-      this->renameHelper(&contents, sourceName, &contents, targetName);
+      this->renameHelper(&contents, name, newParent, &contents, newName);
+      this->getOverlay()->saveOverlayDir(myPath, &contents);
     });
   } else {
     newParent->materializeDirAndParents();
@@ -875,10 +845,14 @@ folly::Future<folly::Unit> TreeInode::rename(
     // locks first (e.g., rmdir())
     SYNCHRONIZED_DUAL(
         sourceContents, contents_, destContents, newParent->contents_) {
-      renameHelper(&sourceContents, sourceName, &destContents, targetName);
+      renameHelper(&sourceContents, name, newParent, &destContents, newName);
+      getOverlay()->saveOverlayDir(myPath, &sourceContents);
+      getOverlay()->saveOverlayDir(destDirPath, &destContents);
     }
   }
 
+  auto sourceName = myPath + name;
+  auto targetName = destDirPath + newName;
   getMount()->getJournal().wlock()->addDelta(
       std::make_unique<JournalDelta>(JournalDelta{sourceName, targetName}));
   return folly::Unit{};
@@ -886,10 +860,6 @@ folly::Future<folly::Unit> TreeInode::rename(
 
 EdenMount* TreeInode::getMount() const {
   return mount_;
-}
-
-fusell::InodeNameManager* TreeInode::getNameMgr() const {
-  return mount_->getNameMgr();
 }
 
 ObjectStore* TreeInode::getStore() const {

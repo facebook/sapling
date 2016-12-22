@@ -32,12 +32,22 @@ class InodeBase : public std::enable_shared_from_this<InodeBase> {
     return ino_;
   }
 
-  void incNumLookups(uint32_t count = 1) {
-    nlookup_.fetch_add(count, std::memory_order_acq_rel);
+  /**
+   * Increment the number of outstanding FUSE references to an inode number.
+   *
+   * This should be called in response to a FUSE lookup() call.
+   */
+  void incNumFuseLookups() {
+    numFuseReferences_.fetch_add(1, std::memory_order_acq_rel);
   }
-  uint32_t decNumLookups(uint32_t count = 1) {
-    auto prev = nlookup_.fetch_sub(count, std::memory_order_acq_rel);
-    return prev - count;
+
+  /**
+   * Decrement the number of outstanding FUSE references to an inode number.
+   *
+   * This should be called in response to a FUSE forget() call.
+   */
+  void decNumFuseLookups() {
+    numFuseReferences_.fetch_sub(1, std::memory_order_acq_rel);
   }
 
   // See Dispatcher::getattr
@@ -56,10 +66,6 @@ class InodeBase : public std::enable_shared_from_this<InodeBase> {
   virtual folly::Future<folly::Unit> removexattr(folly::StringPiece name);
   virtual folly::Future<folly::Unit> access(int mask);
 
-  /** Return true if Dispatcher should honor a FORGET and free
-   * this inode object.  Return false if we should preserve it anyway. */
-  virtual bool canForget();
-
   /**
    * Compute the path to this inode, from the root of the mount point.
    *
@@ -73,6 +79,23 @@ class InodeBase : public std::enable_shared_from_this<InodeBase> {
   folly::Optional<RelativePath> getPath() const;
 
   /**
+   * Short term hack for existing code that is incorrectly using the path in
+   * racy ways.
+   *
+   * This is mostly used by the Overlay code.  The Overlay code needs to be
+   * switched to use inode numbers instead of path names.
+   *
+   * The value returned is not guaranteed to be up-to-date by the time it is
+   * used.  This may also throw if the file has been unlinked.
+   *
+   * TODO: Remove this method once the Overlay code is updated to use inode
+   * numbers instead of path names.
+   */
+  RelativePath getPathBuggy() const {
+    return getPath().value();
+  }
+
+  /**
    * Get a string to use to refer to this file in a log message.
    *
    * This will usually return the path to the file, but if the file has been
@@ -81,6 +104,52 @@ class InodeBase : public std::enable_shared_from_this<InodeBase> {
    * or parsing by other code.
    */
   std::string getLogPath() const;
+
+  /**
+   * markUnlinked() should only be invoked by TreeInode.
+   *
+   * This method is called when a child inode is unlinked from its parent.
+   * This can happen in a few different ways:
+   *
+   * - By TreeInode::unlink() (for FileInode objects)
+   * - By TreeInode::rmdir() (for TreeInode objects)
+   * - By TreeInode::rename() for the destination of the rename,
+   *   (which may be a file or an empty tree inode)
+   *
+   * TODO: Once we have a rename lock, this method should take a const
+   * reference to the mountpoint-wide rename lock to guarantee the caller is
+   * properly holding the lock.
+   */
+  void markUnlinked();
+
+  /**
+   * updateLocation() should only be invoked by TreeInode.
+   *
+   * This is called when an inode is renamed to a new location.
+   *
+   * TODO: Once we have a rename lock, this method should take a const
+   * reference to the mountpoint-wide rename lock to guarantee the caller is
+   * properly holding the lock.
+   */
+  void updateLocation(TreeInodePtr newParent, PathComponentPiece newName);
+
+ protected:
+  /**
+   * TODO: A temporary hack for children inodes looking up their parent without
+   * proper locking.
+   *
+   * At the moment this is primarily use for dealing with the Overlay.  The
+   * right long-term fix is to just change the overlay so that the path to an
+   * inodes overlay data depends only on its inode number, and not on is path.
+   * As-is, the overlay code is racy with respect to rename() and unlink()
+   * operations.
+   *
+   * TODO: Remove this method once the Overlay code is updated to use inode
+   * numbers instead of path names.
+   */
+  TreeInodePtr getParentBuggy() {
+    return location_.rlock()->parent;
+  }
 
  private:
   struct LocationInfo {
@@ -108,10 +177,16 @@ class InodeBase : public std::enable_shared_from_this<InodeBase> {
       const;
 
   fuse_ino_t const ino_;
-  // A reference count tracking the outstanding lookups that the kernel
-  // has performed on this inode.  This lets us track when we can forget
-  // about it.
-  std::atomic<uint32_t> nlookup_{1};
+
+  /**
+   * A reference count tracking the outstanding lookups that the kernel's FUSE
+   * API has performed on this inode.  We must remember this inode number
+   * for as long as the FUSE API has references to it.  (However, we may unload
+   * the Inode object itself, destroying ourself and letting the InodeMap
+   * simply remember the association of the fuse_ino_t with our location in the
+   * file system.)
+   */
+  std::atomic<uint32_t> numFuseReferences_{0};
 
   /**
    * Information about this Inode's location in the file system path.

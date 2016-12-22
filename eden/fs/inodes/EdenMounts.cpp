@@ -9,6 +9,8 @@
  */
 
 #include "EdenMounts.h"
+
+#include <boost/polymorphic_cast.hpp>
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/model/Tree.h"
@@ -18,6 +20,11 @@
 namespace facebook {
 namespace eden {
 
+/*
+ * TODO(t14009445): We should move this code into TreeInode, so that code
+ * outside of TreeInode never needs to directly access the TreeInode contents_
+ * and hold its lock.
+ */
 void getModifiedDirectoriesRecursive(
     RelativePathPiece dirPath,
     TreeInode* dir,
@@ -37,15 +44,16 @@ void getModifiedDirectoriesRecursive(
       const auto& ent = entIter.second;
       if (S_ISDIR(ent->mode) && ent->materialized) {
         const auto& name = entIter.first;
-        auto childInode = dir->lookupChildByNameLocked(&contents, name);
+        auto childInode = ent->inode;
+        CHECK(childInode != nullptr);
         auto childPath = dirPath + name;
-        auto childDir = std::dynamic_pointer_cast<TreeInode>(childInode);
+        auto childDir = boost::polymorphic_downcast<TreeInode*>(childInode);
         DCHECK(childDir->getContents().rlock()->materialized)
             << (dirPath + name) << " entry " << ent.get()
             << " materialized is true, but the contained dir is !materialized";
 
         getModifiedDirectoriesRecursive(
-            childPath, childDir.get(), toIgnore, modifiedDirectories);
+            childPath, childDir, toIgnore, modifiedDirectories);
       }
     }
   });
