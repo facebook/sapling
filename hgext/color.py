@@ -202,14 +202,15 @@ def _terminfosetup(ui, mode):
     if mode not in ('auto', 'terminfo'):
         return
 
-    color._terminfo_params.update((key[6:], (False, int(val), ''))
-        for key, val in ui.configitems('color')
-        if key.startswith('color.'))
-    color._terminfo_params.update((key[9:],
-                                   (True, '', val.replace('\\E', '\x1b')))
-        for key, val in ui.configitems('color')
-        if key.startswith('terminfo.'))
+    for key, val in ui.configitems('color'):
+        if key.startswith('color.'):
+            newval = (False, int(val), '')
+            color._terminfo_params[key[6:]] = newval
 
+    for key, val in ui.configitems('color'):
+        if key.startswith('terminfo.'):
+            newval = (True, '', val.replace('\\E', '\x1b'))
+            color._terminfo_params[key[9:]] = newval
     try:
         curses.setupterm()
     except curses.error as e:
