@@ -116,10 +116,6 @@ def loadcolortable(ui, extname, colortable):
 
 def valideffect(effect):
     'Determine if the effect is valid or not.'
-    good = False
-    if not _terminfo_params and effect in _effects:
-        good = True
-    elif (effect in _terminfo_params
-          or effect[:-11] in _terminfo_params):
-        good = True
-    return good
+    return ((not _terminfo_params and effect in _effects)
+             or (effect in _terminfo_params
+                 or effect[:-11] in _terminfo_params))
