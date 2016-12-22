@@ -120,14 +120,18 @@ class EdenTestCase(TestParent):
     def setup_eden_test(self):
         self.tmp_dir = tempfile.mkdtemp(prefix='eden_test.')
 
-        # The eden config directory
-        self.eden_dir = os.path.join(self.tmp_dir, 'eden')
         # The home directory, to make sure eden looks at this rather than the
         # real home directory of the user running the tests.
         self.home_dir = os.path.join(self.tmp_dir, 'homedir')
         os.mkdir(self.home_dir)
         self.old_home = os.getenv('HOME')
         os.environ['HOME'] = self.home_dir
+
+        # TODO: Make this configurable via ~/.edenrc.
+        # The eden config directory.
+        self.eden_dir = os.path.join(self.home_dir, 'local/.eden')
+        os.makedirs(self.eden_dir)
+
         # The directory holding the system configuration files
         self.system_config_dir = os.path.join(self.tmp_dir, 'config.d')
         os.mkdir(self.system_config_dir)
@@ -207,7 +211,13 @@ class EdenRepoTestBase(EdenTestCase):
         self.populate_repo()
 
         self.eden.add_repository(self.repo_name, self.repo.path)
+        self.amend_edenrc_before_clone()
         self.eden.clone(self.repo_name, self.mount)
+
+    def amend_edenrc_before_clone(self):
+        '''Let the test update the ~/.edenrc file before running `eden clone`.
+        '''
+        pass
 
     def populate_repo(self):
         raise NotImplementedError('individual test classes must implement '

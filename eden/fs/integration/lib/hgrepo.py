@@ -78,3 +78,7 @@ class HgRepository(repobase.Repository):
                     '--config', user_config,
                     '--date', date_str,
                     '--logfile', msgf.name)
+
+    def status(self):
+        '''Returns the output of `hg status` as a string.'''
+        return self.hg('status')

@@ -1,0 +1,30 @@
+include_defs('//eden/DEFS')
+
+# We test only with the oss version because it builds faster
+# and we do not expect that testing against the internal version
+# will provide any additional signal.
+oss_suffix = get_oss_suffix()
+
+python_library(
+  name = 'testutil',
+  srcs = [
+    'hg_extension_test_base.py',
+  ],
+  deps = [
+    '//eden/fs/integration/lib:lib',
+    '//eden/hooks/hg:post-clone',
+  ],
+)
+
+python_unittest(
+  name = 'lib',
+  srcs = [
+    'hg_extension_test_base_test.py',
+  ],
+  env = {
+    'EDENFS_SUFFIX': oss_suffix,
+  },
+  deps = [
+    ':testutil',
+  ],
+)
