@@ -297,20 +297,6 @@ def _modesetup(ui, coloropt):
         return realmode
     return None
 
-def render_effects(text, effects):
-    'Wrap text in commands to turn on each effect.'
-    if not text:
-        return text
-    if not color._terminfo_params:
-        start = [str(color._effects[e]) for e in ['none'] + effects.split()]
-        start = '\033[' + ';'.join(start) + 'm'
-        stop = '\033[' + str(color._effects['none']) + 'm'
-    else:
-        start = ''.join(color._effect_str(effect)
-                        for effect in ['none'] + effects.split())
-        stop = color._effect_str('none')
-    return ''.join([start, text, stop])
-
 class colorui(uimod.ui):
     _colormode = 'ansi'
     def write(self, *args, **opts):
@@ -369,7 +355,7 @@ class colorui(uimod.ui):
                 effects.append(l)
         effects = ' '.join(effects)
         if effects:
-            return '\n'.join([render_effects(line, effects)
+            return '\n'.join([color._render_effects(line, effects)
                               for line in msg.split('\n')])
         return msg
 

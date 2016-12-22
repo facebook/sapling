@@ -158,3 +158,17 @@ def _effect_str(effect):
         return curses.tparm(curses.tigetstr('setab'), val)
     else:
         return curses.tparm(curses.tigetstr('setaf'), val)
+
+def _render_effects(text, effects):
+    'Wrap text in commands to turn on each effect.'
+    if not text:
+        return text
+    if not _terminfo_params:
+        start = [str(_effects[e]) for e in ['none'] + effects.split()]
+        start = '\033[' + ';'.join(start) + 'm'
+        stop = '\033[' + str(_effects['none']) + 'm'
+    else:
+        start = ''.join(_effect_str(effect)
+                        for effect in ['none'] + effects.split())
+        stop = _effect_str('none')
+    return ''.join([start, text, stop])
