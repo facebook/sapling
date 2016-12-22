@@ -165,14 +165,14 @@ def _render_effects(text, effects):
     'Wrap text in commands to turn on each effect.'
     if not text:
         return text
-    if not _terminfo_params:
-        start = [str(_effects[e]) for e in ['none'] + effects.split()]
-        start = '\033[' + ';'.join(start) + 'm'
-        stop = '\033[' + str(_effects['none']) + 'm'
-    else:
+    if _terminfo_params:
         start = ''.join(_effect_str(effect)
                         for effect in ['none'] + effects.split())
         stop = _effect_str('none')
+    else:
+        start = [str(_effects[e]) for e in ['none'] + effects.split()]
+        start = '\033[' + ';'.join(start) + 'm'
+        stop = '\033[' + str(_effects['none']) + 'm'
     return ''.join([start, text, stop])
 
 w32effects = None
