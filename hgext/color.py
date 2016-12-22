@@ -332,22 +332,6 @@ def render_effects(text, effects):
         stop = _effect_str('none')
     return ''.join([start, text, stop])
 
-def configstyles(ui):
-    for status, cfgeffects in ui.configitems('color'):
-        if '.' not in status or status.startswith(('color.', 'terminfo.')):
-            continue
-        cfgeffects = ui.configlist('color', status)
-        if cfgeffects:
-            good = []
-            for e in cfgeffects:
-                if color.valideffect(e):
-                    good.append(e)
-                else:
-                    ui.warn(_("ignoring unknown color/effect %r "
-                              "(configured in color.%s)\n")
-                            % (e, status))
-            color._styles[status] = ' '.join(good)
-
 class colorui(uimod.ui):
     _colormode = 'ansi'
     def write(self, *args, **opts):
@@ -420,7 +404,7 @@ def uisetup(ui):
         mode = _modesetup(ui_, opts['color'])
         colorui._colormode = mode
         if mode and mode != 'debug':
-            configstyles(ui_)
+            color.configstyles(ui_)
         return orig(ui_, opts, cmd, cmdfunc)
     def colorgit(orig, gitsub, commands, env=None, stream=False, cwd=None):
         if gitsub.ui._colormode and len(commands) and commands[0] == "diff":

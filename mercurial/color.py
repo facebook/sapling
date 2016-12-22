@@ -7,6 +7,8 @@
 
 from __future__ import absolute_import
 
+from .i18n import _
+
 try:
     import curses
     # Mapping from effect name to terminfo attribute name (or raw code) or
@@ -113,6 +115,22 @@ _styles = {'grep.match': 'red bold',
 
 def loadcolortable(ui, extname, colortable):
     _styles.update(colortable)
+
+def configstyles(ui):
+    for status, cfgeffects in ui.configitems('color'):
+        if '.' not in status or status.startswith(('color.', 'terminfo.')):
+            continue
+        cfgeffects = ui.configlist('color', status)
+        if cfgeffects:
+            good = []
+            for e in cfgeffects:
+                if valideffect(e):
+                    good.append(e)
+                else:
+                    ui.warn(_("ignoring unknown color/effect %r "
+                              "(configured in color.%s)\n")
+                            % (e, status))
+            _styles[status] = ' '.join(good)
 
 def valideffect(effect):
     'Determine if the effect is valid or not.'
