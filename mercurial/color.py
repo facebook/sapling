@@ -137,3 +137,24 @@ def valideffect(effect):
     return ((not _terminfo_params and effect in _effects)
              or (effect in _terminfo_params
                  or effect[:-11] in _terminfo_params))
+
+def _effect_str(effect):
+    '''Helper function for render_effects().'''
+
+    bg = False
+    if effect.endswith('_background'):
+        bg = True
+        effect = effect[:-11]
+    try:
+        attr, val, termcode = _terminfo_params[effect]
+    except KeyError:
+        return ''
+    if attr:
+        if termcode:
+            return termcode
+        else:
+            return curses.tigetstr(val)
+    elif bg:
+        return curses.tparm(curses.tigetstr('setab'), val)
+    else:
+        return curses.tparm(curses.tigetstr('setaf'), val)

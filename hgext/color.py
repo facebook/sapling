@@ -297,27 +297,6 @@ def _modesetup(ui, coloropt):
         return realmode
     return None
 
-def _effect_str(effect):
-    '''Helper function for render_effects().'''
-
-    bg = False
-    if effect.endswith('_background'):
-        bg = True
-        effect = effect[:-11]
-    try:
-        attr, val, termcode = color._terminfo_params[effect]
-    except KeyError:
-        return ''
-    if attr:
-        if termcode:
-            return termcode
-        else:
-            return curses.tigetstr(val)
-    elif bg:
-        return curses.tparm(curses.tigetstr('setab'), val)
-    else:
-        return curses.tparm(curses.tigetstr('setaf'), val)
-
 def render_effects(text, effects):
     'Wrap text in commands to turn on each effect.'
     if not text:
@@ -327,9 +306,9 @@ def render_effects(text, effects):
         start = '\033[' + ';'.join(start) + 'm'
         stop = '\033[' + str(color._effects['none']) + 'm'
     else:
-        start = ''.join(_effect_str(effect)
+        start = ''.join(color._effect_str(effect)
                         for effect in ['none'] + effects.split())
-        stop = _effect_str('none')
+        stop = color._effect_str('none')
     return ''.join([start, text, stop])
 
 class colorui(uimod.ui):
