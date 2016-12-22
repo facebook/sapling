@@ -53,6 +53,9 @@ enabled = False
 commit_info = False
 hiddenchanges = 0
 
+# Remove unsupported --limit option.
+logopts = [opt for opt in commands.logopts if opt[1] != "limit"]
+
 def _drawendinglines(orig, lines, extra, edgemap, seen):
     # if we are going to have only one single column, draw the missing '|'s
     # and restore everything to normal. see comment in 'ascii' below for an
@@ -529,7 +532,7 @@ def smartlogrevset(repo, subset, x):
     ('r', 'rev', [], _('show the specified revisions or range'), _('REV')),
     ('', 'all', False, _('don\'t hide old local changesets'), ''),
     ('', 'commit-info', False, _('show changes in current changeset'), ''),
-] + commands.logopts, _('hg smartlog|slog'))
+] + logopts, _('hg smartlog|slog'))
 def smartlog(ui, repo, *pats, **opts):
     '''displays the graph of changesets that are relevant to you
 
