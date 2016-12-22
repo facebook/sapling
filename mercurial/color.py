@@ -118,6 +118,45 @@ _styles = {'grep.match': 'red bold',
 def loadcolortable(ui, extname, colortable):
     _styles.update(colortable)
 
+def _terminfosetup(ui, mode):
+    '''Initialize terminfo data and the terminal if we're in terminfo mode.'''
+
+    # If we failed to load curses, we go ahead and return.
+    if curses is None:
+        return
+    # Otherwise, see what the config file says.
+    if mode not in ('auto', 'terminfo'):
+        return
+
+    for key, val in ui.configitems('color'):
+        if key.startswith('color.'):
+            newval = (False, int(val), '')
+            _terminfo_params[key[6:]] = newval
+        elif key.startswith('terminfo.'):
+            newval = (True, '', val.replace('\\E', '\x1b'))
+            _terminfo_params[key[9:]] = newval
+    try:
+        curses.setupterm()
+    except curses.error as e:
+        _terminfo_params.clear()
+        return
+
+    for key, (b, e, c) in _terminfo_params.items():
+        if not b:
+            continue
+        if not c and not curses.tigetstr(e):
+            # Most terminals don't support dim, invis, etc, so don't be
+            # noisy and use ui.debug().
+            ui.debug("no terminfo entry for %s\n" % e)
+            del _terminfo_params[key]
+    if not curses.tigetstr('setaf') or not curses.tigetstr('setab'):
+        # Only warn about missing terminfo entries if we explicitly asked for
+        # terminfo mode.
+        if mode == "terminfo":
+            ui.warn(_("no terminfo entry for setab/setaf: reverting to "
+              "ECMA-48 color\n"))
+        _terminfo_params.clear()
+
 def configstyles(ui):
     for status, cfgeffects in ui.configitems('color'):
         if '.' not in status or status.startswith(('color.', 'terminfo.')):
