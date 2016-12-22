@@ -305,10 +305,10 @@ Non-fastforward scratch bookmark push
   searching for changes
   remote: non-forward push
   abort: push failed on remote
-  (use --force to override)
+  (use --non-forward-move to override)
   [255]
 
-  $ hg push -r . --to scratch/mybranch --force
+  $ hg push -r . --to scratch/mybranch --non-forward-move
   pushing to ssh://user@dummy/repo
   searching for changes
   remote: pushing 5 commits:

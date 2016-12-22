@@ -111,6 +111,7 @@ configmanybookmarks = 'server-bundlestore-manybookmarks'
 configbookmark = 'server-bundlestore-bookmark'
 configcreate = 'server-bundlestore-create'
 configscratchpush = 'infinitepush-scratchpush'
+confignonforwardmove = 'non-forward-move'
 
 _scratchbranchmatcher = lambda x: False
 
@@ -223,6 +224,11 @@ def clientextsetup(ui):
     # Don't add the 'to' arg if it already exists
     if not any(a for a in entry[1] if a[1] == 'to'):
         entry[1].append(('', 'to', '', _('push revs to this bookmark')))
+
+    if not any(a for a in entry[1] if a[1] == 'non-forward-move'):
+        entry[1].append(('', 'non-forward-move', None,
+                         _('allows moving a remote bookmark to an '
+                           'arbitrary place')))
 
     if not any(a for a in entry[1] if a[1] == 'create'):
         entry[1].append(
@@ -494,7 +500,8 @@ def validaterevset(repo, revset, bookmark):
             raise error.Abort(
                 _('cannot push more than one head to a scratch branch'))
 
-def getscratchbranchpart(repo, peer, outgoing, force, ui, bookmark, create):
+def getscratchbranchpart(repo, peer, outgoing, confignonforwardmove,
+                         ui, bookmark, create):
     if not outgoing.missing:
         raise error.Abort(_('no commits to push'))
 
@@ -517,7 +524,7 @@ def getscratchbranchpart(repo, peer, outgoing, force, ui, bookmark, create):
             params['bookprevnode'] = repo[bookmark].hex()
         if create:
             params['create'] = '1'
-    if force:
+    if confignonforwardmove:
         params['force'] = '1'
 
     # Do not send pushback bundle2 part with bookmarks if remotenames extension
@@ -719,6 +726,8 @@ def _push(orig, ui, repo, dest=None, *args, **opts):
             # containing `pushkey` part to update bookmarks)
             ui.setconfig(experimental, 'bundle2.pushback', True)
 
+        ui.setconfig(experimental, confignonforwardmove,
+                     opts.get('non_forward_move'), '--non-forward-move')
         if scratchpush:
             ui.setconfig(experimental, configscratchpush, True)
             oldphasemove = wrapfunction(exchange,
@@ -891,7 +900,7 @@ def backup(ui, repo, dest=None, **opts):
         nodes = map(repo.changelog.node, revs)
         outgoing = discovery.findcommonoutgoing(repo, other, onlyheads=nodes)
         bundler.addpart(getscratchbranchpart(repo, other, outgoing,
-                                             force=False, ui=ui,
+                                             confignonforwardmove=False, ui=ui,
                                              bookmark=None, create=False))
 
     if bookmarkstobackup:
@@ -1025,10 +1034,12 @@ def partgen(pushop, bundler):
         pushop.cgresult = 0
         return
 
+    nonforwardmove = pushop.force or pushop.ui.configbool(experimental,
+                                                          confignonforwardmove)
     scratchpart = getscratchbranchpart(pushop.repo,
                                        pushop.remote,
                                        pushop.outgoing,
-                                       pushop.force,
+                                       nonforwardmove,
                                        pushop.ui,
                                        bookmark,
                                        create)
@@ -1113,7 +1124,7 @@ def _getrevs(bundle, oldnode, force, bookmark):
         return revs
     else:
         raise error.Abort(_('non-forward push'),
-                          hint=_('use --force to override'))
+                          hint=_('use --non-forward-move to override'))
 
 @contextlib.contextmanager
 def logservicecall(logger, service):
