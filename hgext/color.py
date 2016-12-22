@@ -164,6 +164,12 @@ If ``pagermode`` is not defined, the ``mode`` will be used.
 
 from __future__ import absolute_import
 
+try:
+    import curses
+    curses.COLOR_BLACK # force import
+except ImportError:
+    curses = None
+
 from mercurial.i18n import _
 from mercurial import (
     cmdutil,
@@ -190,40 +196,41 @@ def _terminfosetup(ui, mode):
     '''Initialize terminfo data and the terminal if we're in terminfo mode.'''
 
     # If we failed to load curses, we go ahead and return.
-    if not _terminfo_params:
+    if not color._terminfo_params:
         return
     # Otherwise, see what the config file says.
     if mode not in ('auto', 'terminfo'):
         return
 
-    _terminfo_params.update((key[6:], (False, int(val), ''))
+    color._terminfo_params.update((key[6:], (False, int(val), ''))
         for key, val in ui.configitems('color')
         if key.startswith('color.'))
-    _terminfo_params.update((key[9:], (True, '', val.replace('\\E', '\x1b')))
+    color._terminfo_params.update((key[9:],
+                                   (True, '', val.replace('\\E', '\x1b')))
         for key, val in ui.configitems('color')
         if key.startswith('terminfo.'))
 
     try:
         curses.setupterm()
     except curses.error as e:
-        _terminfo_params.clear()
+        color._terminfo_params.clear()
         return
 
-    for key, (b, e, c) in _terminfo_params.items():
+    for key, (b, e, c) in color._terminfo_params.items():
         if not b:
             continue
         if not c and not curses.tigetstr(e):
             # Most terminals don't support dim, invis, etc, so don't be
             # noisy and use ui.debug().
             ui.debug("no terminfo entry for %s\n" % e)
-            del _terminfo_params[key]
+            del color._terminfo_params[key]
     if not curses.tigetstr('setaf') or not curses.tigetstr('setab'):
         # Only warn about missing terminfo entries if we explicitly asked for
         # terminfo mode.
         if mode == "terminfo":
             ui.warn(_("no terminfo entry for setab/setaf: reverting to "
               "ECMA-48 color\n"))
-        _terminfo_params.clear()
+        color._terminfo_params.clear()
 
 def _modesetup(ui, coloropt):
     if coloropt == 'debug':
@@ -270,16 +277,16 @@ def _modesetup(ui, coloropt):
             ui.warn(_('warning: failed to set color mode to %s\n') % mode)
 
     if realmode == 'win32':
-        _terminfo_params.clear()
+        color._terminfo_params.clear()
         if not w32effects:
             modewarn()
             return None
         color._effects.update(w32effects)
     elif realmode == 'ansi':
-        _terminfo_params.clear()
+        color._terminfo_params.clear()
     elif realmode == 'terminfo':
         _terminfosetup(ui, mode)
-        if not _terminfo_params:
+        if not color._terminfo_params:
             ## FIXME Shouldn't we return None in this case too?
             modewarn()
             realmode = 'ansi'
@@ -290,31 +297,6 @@ def _modesetup(ui, coloropt):
         return realmode
     return None
 
-try:
-    import curses
-    # Mapping from effect name to terminfo attribute name (or raw code) or
-    # color number.  This will also force-load the curses module.
-    _terminfo_params = {'none': (True, 'sgr0', ''),
-                        'standout': (True, 'smso', ''),
-                        'underline': (True, 'smul', ''),
-                        'reverse': (True, 'rev', ''),
-                        'inverse': (True, 'rev', ''),
-                        'blink': (True, 'blink', ''),
-                        'dim': (True, 'dim', ''),
-                        'bold': (True, 'bold', ''),
-                        'invisible': (True, 'invis', ''),
-                        'italic': (True, 'sitm', ''),
-                        'black': (False, curses.COLOR_BLACK, ''),
-                        'red': (False, curses.COLOR_RED, ''),
-                        'green': (False, curses.COLOR_GREEN, ''),
-                        'yellow': (False, curses.COLOR_YELLOW, ''),
-                        'blue': (False, curses.COLOR_BLUE, ''),
-                        'magenta': (False, curses.COLOR_MAGENTA, ''),
-                        'cyan': (False, curses.COLOR_CYAN, ''),
-                        'white': (False, curses.COLOR_WHITE, '')}
-except ImportError:
-    _terminfo_params = {}
-
 def _effect_str(effect):
     '''Helper function for render_effects().'''
 
@@ -323,7 +305,7 @@ def _effect_str(effect):
         bg = True
         effect = effect[:-11]
     try:
-        attr, val, termcode = _terminfo_params[effect]
+        attr, val, termcode = color._terminfo_params[effect]
     except KeyError:
         return ''
     if attr:
@@ -340,7 +322,7 @@ def render_effects(text, effects):
     'Wrap text in commands to turn on each effect.'
     if not text:
         return text
-    if not _terminfo_params:
+    if not color._terminfo_params:
         start = [str(color._effects[e]) for e in ['none'] + effects.split()]
         start = '\033[' + ';'.join(start) + 'm'
         stop = '\033[' + str(color._effects['none']) + 'm'
@@ -353,9 +335,10 @@ def render_effects(text, effects):
 def valideffect(effect):
     'Determine if the effect is valid or not.'
     good = False
-    if not _terminfo_params and effect in color._effects:
+    if not color._terminfo_params and effect in color._effects:
         good = True
-    elif effect in _terminfo_params or effect[:-11] in _terminfo_params:
+    elif (effect in color._terminfo_params
+          or effect[:-11] in color._terminfo_params):
         good = True
     return good
 
@@ -483,7 +466,7 @@ def _debugdisplaycolor(ui):
         color._styles.clear()
         for effect in color._effects.keys():
             color._styles[effect] = effect
-        if _terminfo_params:
+        if color._terminfo_params:
             for k, v in ui.configitems('color'):
                 if k.startswith('color.'):
                     color._styles[k] = k[6:]

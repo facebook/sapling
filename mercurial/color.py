@@ -7,6 +7,32 @@
 
 from __future__ import absolute_import
 
+try:
+    import curses
+    # Mapping from effect name to terminfo attribute name (or raw code) or
+    # color number.  This will also force-load the curses module.
+    _terminfo_params = {'none': (True, 'sgr0', ''),
+                        'standout': (True, 'smso', ''),
+                        'underline': (True, 'smul', ''),
+                        'reverse': (True, 'rev', ''),
+                        'inverse': (True, 'rev', ''),
+                        'blink': (True, 'blink', ''),
+                        'dim': (True, 'dim', ''),
+                        'bold': (True, 'bold', ''),
+                        'invisible': (True, 'invis', ''),
+                        'italic': (True, 'sitm', ''),
+                        'black': (False, curses.COLOR_BLACK, ''),
+                        'red': (False, curses.COLOR_RED, ''),
+                        'green': (False, curses.COLOR_GREEN, ''),
+                        'yellow': (False, curses.COLOR_YELLOW, ''),
+                        'blue': (False, curses.COLOR_BLUE, ''),
+                        'magenta': (False, curses.COLOR_MAGENTA, ''),
+                        'cyan': (False, curses.COLOR_CYAN, ''),
+                        'white': (False, curses.COLOR_WHITE, '')}
+except ImportError:
+    curses = None
+    _terminfo_params = {}
+
 # start and stop parameters for effects
 _effects = {'none': 0,
             'black': 30,
