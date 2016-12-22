@@ -14,10 +14,6 @@ fi
 
 mkdir $HOOKS
 
-cd `buck root`
-
 # Write the post-clone script into the desired directory.
 TARGET=//eden/hooks/hg:post-clone
-buck build @mode/opt $TARGET
-POST_CLONE=`buck targets --show-output $TARGET | awk '{print $2}'`
-cp $POST_CLONE $HOOKS/post-clone
+buck build @mode/opt $TARGET --into $HOOKS/post-clone
