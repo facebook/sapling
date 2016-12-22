@@ -18,6 +18,7 @@ namespace eden {
 
 class EdenMount;
 class FileHandle;
+class InodeMap;
 class ObjectStore;
 class Tree;
 class Overlay;
@@ -92,7 +93,6 @@ class TreeInode : public InodeBase {
   };
 
   TreeInode(
-      EdenMount* mount,
       fuse_ino_t ino,
       TreeInodePtr parent,
       PathComponentPiece name,
@@ -101,7 +101,6 @@ class TreeInode : public InodeBase {
 
   /// Construct an inode that only has backing in the Overlay area
   TreeInode(
-      EdenMount* mount,
       fuse_ino_t ino,
       TreeInodePtr parent,
       PathComponentPiece name,
@@ -156,12 +155,12 @@ class TreeInode : public InodeBase {
   }
 
   /**
-   * Get the EdenMount that this TreeInode belongs to.
+   * Get the InodeMap for this tree's EdenMount.
    *
-   * The EdenMount is guaranteed to remain valid for at least the lifetime of
+   * The InodeMap is guaranteed to remain valid for at least the lifetime of
    * the TreeInode object.
    */
-  EdenMount* getMount() const;
+  InodeMap* getInodeMap() const;
 
   /**
    * Get the ObjectStore for this mount point.
@@ -227,13 +226,6 @@ class TreeInode : public InodeBase {
 
   folly::Future<folly::Unit>
   rmdirImpl(PathComponent name, TreeInodePtr child, unsigned int attemptNum);
-
-  // The EdenMount object that this inode belongs to.
-  // We store this as a raw pointer since the TreeInode is part of the mount
-  // point.  The EdenMount should always exist longer than any inodes it
-  // contains.  (Storing a shared_ptr to the EdenMount would introduce circular
-  // references which are undesirable.)
-  EdenMount* const mount_{nullptr};
 
   folly::Synchronized<Dir> contents_;
   /** Can be nullptr for the root inode only, otherwise will be non-null */

@@ -35,24 +35,20 @@ namespace facebook {
 namespace eden {
 
 TreeInode::TreeInode(
-    EdenMount* mount,
     fuse_ino_t ino,
     TreeInodePtr parent,
     PathComponentPiece name,
     Entry* entry,
     std::unique_ptr<Tree>&& tree)
-    : TreeInode(mount, ino, parent, name, entry, buildDirFromTree(tree.get())) {
-}
+    : TreeInode(ino, parent, name, entry, buildDirFromTree(tree.get())) {}
 
 TreeInode::TreeInode(
-    EdenMount* mount,
     fuse_ino_t ino,
     TreeInodePtr parent,
     PathComponentPiece name,
     Entry* entry,
     Dir&& dir)
     : InodeBase(ino, parent, name),
-      mount_(mount),
       contents_(std::move(dir)),
       entry_(entry),
       parent_(parent->getNodeId()) {
@@ -64,11 +60,7 @@ TreeInode::TreeInode(EdenMount* mount, std::unique_ptr<Tree>&& tree)
     : TreeInode(mount, buildDirFromTree(tree.get())) {}
 
 TreeInode::TreeInode(EdenMount* mount, Dir&& dir)
-    : InodeBase(
-          FUSE_ROOT_ID,
-          nullptr,
-          PathComponentPiece{"", detail::SkipPathSanityCheck()}),
-      mount_(mount),
+    : InodeBase(mount),
       contents_(std::move(dir)),
       entry_(nullptr),
       parent_(FUSE_ROOT_ID) {}
@@ -121,7 +113,7 @@ Future<InodePtr> TreeInode::getOrLoadChild(PathComponentPiece name) {
     // being loaded, or if we need to start loading it now.
     folly::Promise<InodePtr> promise;
     returnFuture = promise.getFuture();
-    if (mount_->getInodeMap()->shouldLoadChild(
+    if (getInodeMap()->shouldLoadChild(
             this, name, std::move(promise), &childNumber)) {
       // The inode is not already being loaded.  We have to start loading it
       // now.
@@ -133,7 +125,7 @@ Future<InodePtr> TreeInode::getOrLoadChild(PathComponentPiece name) {
         // lock.
         auto childInode = loadFuture.get();
         entryPtr->inode = childInode.get();
-        mount_->getInodeMap()->inodeLoadComplete(childInode);
+        getInodeMap()->inodeLoadComplete(childInode);
       } else {
         inodeLoadFuture = std::move(loadFuture);
       }
@@ -172,7 +164,7 @@ fuse_ino_t TreeInode::getChildInodeNumber(PathComponentPiece name) {
   // TODO: We should probably track unloaded inode numbers directly in the
   // TreeInode, rather than in the separate unloadedInodesReverse_ map in
   // InodeMap.
-  return mount_->getInodeMap()->getOrAllocateUnloadedInodeNumber(this, name);
+  return getInodeMap()->getOrAllocateUnloadedInodeNumber(this, name);
 }
 
 void TreeInode::loadChildInode(PathComponentPiece name, fuse_ino_t number) {
@@ -184,7 +176,7 @@ void TreeInode::loadChildInode(PathComponentPiece name, fuse_ino_t number) {
       auto bug = EDEN_BUG() << "InodeMap requested to load inode " << number
                             << ", but there is no entry named \"" << name
                             << "\" in " << getNodeId();
-      mount_->getInodeMap()->inodeLoadFailed(number, bug.toException());
+      getInodeMap()->inodeLoadFailed(number, bug.toException());
       return;
     }
 
@@ -202,7 +194,7 @@ void TreeInode::loadChildInode(PathComponentPiece name, fuse_ino_t number) {
       // cause problems for anyone trying to access this child inode in the
       // future, but at least it shouldn't damage the InodeMap data structures
       // any further.)
-      mount_->getInodeMap()->inodeLoadFailed(number, bug.toException());
+      getInodeMap()->inodeLoadFailed(number, bug.toException());
       return;
     }
 
@@ -234,11 +226,11 @@ void TreeInode::registerInodeLoadComplete(
         iter->second->inode = childInode.get();
         // Make sure that we are still holding the contents_ lock when
         // calling inodeLoadComplete()
-        self->mount_->getInodeMap()->inodeLoadComplete(childInode);
+        self->getInodeMap()->inodeLoadComplete(childInode);
       })
       .onError([ self = inodePtrFromThis(), number ](
           const folly::exception_wrapper& ew) {
-        self->mount_->getInodeMap()->inodeLoadFailed(number, ew);
+        self->getInodeMap()->inodeLoadFailed(number, ew);
       });
 }
 
@@ -303,7 +295,7 @@ Future<InodePtr> TreeInode::startLoadingInode(
       number
     ](std::unique_ptr<Tree> tree) {
       return std::make_shared<TreeInode>(
-          self->mount_, number, self, childName, entry, std::move(tree));
+          number, self, childName, entry, std::move(tree));
     });
   }
 
@@ -317,12 +309,7 @@ Future<InodePtr> TreeInode::startLoadingInode(
   auto overlayDir = getOverlay()->loadOverlayDir(targetName);
   DCHECK(overlayDir) << "missing overlay for " << targetName;
   return std::make_shared<TreeInode>(
-      mount_,
-      number,
-      std::static_pointer_cast<TreeInode>(shared_from_this()),
-      name,
-      entry,
-      std::move(overlayDir.value()));
+      number, inodePtrFromThis(), name, entry, std::move(overlayDir.value()));
 }
 
 fuse_ino_t TreeInode::getParent() const {
@@ -451,7 +438,7 @@ TreeInode::create(PathComponentPiece name, mode_t mode, int flags) {
     entry->mode = st.st_mode;
 
     // Generate an inode number for this new entry.
-    auto* inodeMap = this->mount_->getInodeMap();
+    auto* inodeMap = this->getInodeMap();
     auto childNumber = inodeMap->allocateInodeNumber();
 
     // build a corresponding FileInode
@@ -531,10 +518,9 @@ TreeInodePtr TreeInode::mkdir(PathComponentPiece name, mode_t mode) {
     overlay->saveOverlayDir(targetName, &emptyDir);
 
     // Create the TreeInode
-    auto* inodeMap = this->mount_->getInodeMap();
+    auto* inodeMap = this->getInodeMap();
     auto childNumber = inodeMap->allocateInodeNumber();
     newChild = std::make_shared<TreeInode>(
-        mount_,
         childNumber,
         this->inodePtrFromThis(),
         name,
@@ -858,16 +844,16 @@ folly::Future<folly::Unit> TreeInode::rename(
   return folly::Unit{};
 }
 
-EdenMount* TreeInode::getMount() const {
-  return mount_;
+InodeMap* TreeInode::getInodeMap() const {
+  return getMount()->getInodeMap();
 }
 
 ObjectStore* TreeInode::getStore() const {
-  return mount_->getObjectStore();
+  return getMount()->getObjectStore();
 }
 
 const std::shared_ptr<Overlay>& TreeInode::getOverlay() const {
-  return mount_->getOverlay();
+  return getMount()->getOverlay();
 }
 
 void TreeInode::performCheckout(const Hash& hash) {

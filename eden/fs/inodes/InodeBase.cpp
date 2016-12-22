@@ -21,11 +21,20 @@ InodeBase::~InodeBase() {
   VLOG(5) << "inode " << this << " destroyed: " << getLogPath();
 }
 
+InodeBase::InodeBase(EdenMount* mount)
+    : ino_(FUSE_ROOT_ID),
+      mount_{mount},
+      location_{LocationInfo{
+          nullptr,
+          PathComponentPiece{"", detail::SkipPathSanityCheck()}}} {}
+
 InodeBase::InodeBase(
     fuse_ino_t ino,
     TreeInodePtr parent,
     PathComponentPiece name)
-    : ino_(ino), location_(LocationInfo(std::move(parent), name)) {
+    : ino_(ino),
+      mount_(parent->mount_),
+      location_(LocationInfo(std::move(parent), name)) {
   // Inode numbers generally shouldn't be 0.
   // Older versions of glibc have bugs handling files with an inode number of 0
   DCHECK_NE(ino_, 0);

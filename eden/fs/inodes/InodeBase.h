@@ -21,11 +21,21 @@
 namespace facebook {
 namespace eden {
 
+class EdenMount;
 class TreeInode;
 
 class InodeBase : public std::enable_shared_from_this<InodeBase> {
  public:
+  /**
+   * Constructor for the root TreeInode of an EdenMount.
+   */
+  explicit InodeBase(EdenMount* mount);
+
+  /**
+   * Constructor for all non-root inodes.
+   */
   InodeBase(fuse_ino_t ino, TreeInodePtr parent, PathComponentPiece name);
+
   virtual ~InodeBase();
 
   fuse_ino_t getNodeId() const {
@@ -48,6 +58,16 @@ class InodeBase : public std::enable_shared_from_this<InodeBase> {
    */
   void decNumFuseLookups() {
     numFuseReferences_.fetch_sub(1, std::memory_order_acq_rel);
+  }
+
+  /**
+   * Get the EdenMount that this inode belongs to
+   *
+   * The EdenMount is guaranteed to remain valid for at least the lifetime of
+   * this InodeBase object.
+   */
+  EdenMount* getMount() const {
+    return mount_;
   }
 
   // See Dispatcher::getattr
@@ -177,6 +197,15 @@ class InodeBase : public std::enable_shared_from_this<InodeBase> {
       const;
 
   fuse_ino_t const ino_;
+
+  /**
+   * The EdenMount object that this inode belongs to.
+   *
+   * We store this as a raw pointer since the TreeInode is part of the mount
+   * point.  The EdenMount will always exist longer than any inodes it
+   * contains.
+   */
+  EdenMount* const mount_{nullptr};
 
   /**
    * A reference count tracking the outstanding lookups that the kernel's FUSE
