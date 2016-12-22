@@ -176,12 +176,9 @@ from mercurial import (
     color,
     commands,
     dispatch,
-    encoding,
     extensions,
-    pycompat,
     subrepo,
     ui as uimod,
-    util,
 )
 
 cmdtable = {}
@@ -192,76 +189,11 @@ command = cmdutil.command(cmdtable)
 # leave the attribute unspecified.
 testedwith = 'ships-with-hg-core'
 
-def _modesetup(ui, coloropt):
-    if coloropt == 'debug':
-        return 'debug'
-
-    auto = (coloropt == 'auto')
-    always = not auto and util.parsebool(coloropt)
-    if not always and not auto:
-        return None
-
-    formatted = (always or (encoding.environ.get('TERM') != 'dumb'
-                 and ui.formatted()))
-
-    mode = ui.config('color', 'mode', 'auto')
-
-    # If pager is active, color.pagermode overrides color.mode.
-    if getattr(ui, 'pageractive', False):
-        mode = ui.config('color', 'pagermode', mode)
-
-    realmode = mode
-    if mode == 'auto':
-        if pycompat.osname == 'nt':
-            term = encoding.environ.get('TERM')
-            # TERM won't be defined in a vanilla cmd.exe environment.
-
-            # UNIX-like environments on Windows such as Cygwin and MSYS will
-            # set TERM. They appear to make a best effort attempt at setting it
-            # to something appropriate. However, not all environments with TERM
-            # defined support ANSI. Since "ansi" could result in terminal
-            # gibberish, we error on the side of selecting "win32". However, if
-            # w32effects is not defined, we almost certainly don't support
-            # "win32", so don't even try.
-            if (term and 'xterm' in term) or not color.w32effects:
-                realmode = 'ansi'
-            else:
-                realmode = 'win32'
-        else:
-            realmode = 'ansi'
-
-    def modewarn():
-        # only warn if color.mode was explicitly set and we're in
-        # a formatted terminal
-        if mode == realmode and ui.formatted():
-            ui.warn(_('warning: failed to set color mode to %s\n') % mode)
-
-    if realmode == 'win32':
-        color._terminfo_params.clear()
-        if not color.w32effects:
-            modewarn()
-            return None
-        color._effects.update(color.w32effects)
-    elif realmode == 'ansi':
-        color._terminfo_params.clear()
-    elif realmode == 'terminfo':
-        color._terminfosetup(ui, mode)
-        if not color._terminfo_params:
-            ## FIXME Shouldn't we return None in this case too?
-            modewarn()
-            realmode = 'ansi'
-    else:
-        return None
-
-    if always or (auto and formatted):
-        return realmode
-    return None
-
 def uisetup(ui):
     if ui.plain():
         return
     def colorcmd(orig, ui_, opts, cmd, cmdfunc):
-        mode = _modesetup(ui_, opts['color'])
+        mode = color._modesetup(ui_, opts['color'])
         uimod.ui._colormode = mode
         if mode and mode != 'debug':
             color.configstyles(ui_)
