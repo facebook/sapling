@@ -570,7 +570,14 @@ def poll(fds):
 
     In unsupported cases, it will raise a NotImplementedError"""
     try:
-        res = select.select(fds, fds, fds)
+        while True:
+            try:
+                res = select.select(fds, fds, fds)
+                break
+            except select.error as inst:
+                if inst.args[0] == errno.EINTR:
+                    continue
+                raise
     except ValueError: # out of range file descriptor
         raise NotImplementedError()
     return sorted(list(set(sum(res, []))))
