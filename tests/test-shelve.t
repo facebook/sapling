@@ -100,6 +100,46 @@ make sure shelve files were backed up
   default.hg
   default.patch
 
+checks to make sure we dont create a directory or
+hidden file while choosing a new shelve name
+
+when we are given a name
+
+  $ hg shelve -n foo/bar
+  abort: shelved change names may not contain slashes
+  [255]
+  $ hg shelve -n .baz
+  abort: shelved change names may not start with '.'
+  [255]
+  $ hg shelve -n foo\\bar
+  abort: shelved change names may not contain slashes
+  [255]
+
+when shelve has to choose itself
+
+  $ hg branch x/y -q
+  $ hg commit -q -m "Branch commit 0"
+  $ hg shelve
+  nothing changed
+  [1]
+  $ hg branch .x -q
+  $ hg commit -q -m "Branch commit 1"
+  $ hg shelve
+  abort: shelved change names may not start with '.'
+  [255]
+  $ hg branch x\\y -q
+  $ hg commit -q -m "Branch commit 2"
+  $ hg shelve
+  abort: shelved change names may not contain slashes
+  [255]
+
+cleaning the branches made for name checking tests
+
+  $ hg up default -q
+  $ hg strip 3 -q
+  $ hg strip 2 -q
+  $ hg strip 1 -q
+
 create an mq patch - shelving should work fine with a patch applied
 
   $ echo n > n
@@ -127,15 +167,6 @@ set up some more complex changes to shelve
   A c.copy
     c
   R b/b
-
-prevent some foot-shooting
-
-  $ hg shelve -n foo/bar
-  abort: shelved change names may not contain slashes
-  [255]
-  $ hg shelve -n .baz
-  abort: shelved change names may not start with '.'
-  [255]
 
 the common case - no options or filenames
 
