@@ -42,6 +42,26 @@ class TreeInode : public InodeBase {
      * For a directory this means that the directory exists, for
      * a file it means that the file exists */
     bool materialized{false};
+
+    /**
+     * A pointer to the child inode, if it is loaded, or null if it is not
+     * loaded.
+     *
+     * Note that we store this as a raw pointer.  Children inodes hold a
+     * reference to their parent TreeInode, not the other way around.
+     * Children inodes can be destroyed only in one of two ways:
+     * - Being unlinked, then having their last reference go away.
+     *   In this case they will be removed from our entries list when they are
+     *   unlinked.
+     * - Being unloaded (after their reference count is already 0).  In this
+     *   case the parent TreeInodes responsible for triggering unloading of its
+     *   children, so it resets this pointer to null when it unloads the child.
+     *
+     * TODO: This should perhaps be a folly::Variant with the above data.
+     * If the child is loaded, it should be the source of truth about all of
+     * the data for the child.
+     */
+    InodeBase* inode{nullptr};
   };
 
   /** Represents a directory in the overlay */
@@ -103,6 +123,13 @@ class TreeInode : public InodeBase {
   /** Implements the InodeBase method used by the Dispatcher
    * to create the Inode instance for a given name */
   folly::Future<InodePtr> getChildByName(PathComponentPiece namepiece);
+
+  /**
+   * Get the inode object for a child of this directory.
+   *
+   * The Inode object will be loaded if it is not already loaded.
+   */
+  folly::Future<InodePtr> getOrLoadChild(PathComponentPiece name);
 
   folly::Future<std::shared_ptr<fusell::DirHandle>> opendir(
       const struct fuse_file_info& fi);
@@ -179,7 +206,29 @@ class TreeInode : public InodeBase {
       const Dir* contents,
       PathComponentPiece name);
 
+  /**
+   * Internal API only for use by InodeMap.
+   *
+   * InodeMap will call this API when a child inode needs to be loaded.
+   * The TreeInode will call InodeMap::inodeLoadComplete() or
+   * InodeMap::inodeLoadFailed() when the load finishes.
+   */
+  void loadChildInode(PathComponentPiece name, fuse_ino_t number);
+
  private:
+  void registerInodeLoadComplete(
+      folly::Future<InodePtr>& future,
+      PathComponentPiece name,
+      fuse_ino_t number);
+
+  folly::Future<InodePtr> startLoadingInodeNoThrow(
+      Entry* entry,
+      PathComponentPiece name,
+      fuse_ino_t number) noexcept;
+
+  folly::Future<InodePtr>
+  startLoadingInode(Entry* entry, PathComponentPiece name, fuse_ino_t number);
+
   /** Translates a Tree object from our store into a Dir object
    * used to track the directory in the inode */
   static Dir buildDirFromTree(const Tree* tree);

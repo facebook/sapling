@@ -6,6 +6,7 @@ cpp_unittest(
     '//eden/fs/inodes:inodes',
     '//eden/fs/testharness:testharness',
     '//eden/utils:utils',
+    '//eden/utils/test:test_lib',
   ],
   external_deps = [
     'gtest',

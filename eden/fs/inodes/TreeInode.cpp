@@ -13,6 +13,7 @@
 #include "EdenMount.h"
 #include "FileHandle.h"
 #include "FileInode.h"
+#include "InodeMap.h"
 #include "Overlay.h"
 #include "TreeInodeDirHandle.h"
 #include "eden/fs/inodes/EdenMount.h"
@@ -24,7 +25,11 @@
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fuse/MountPoint.h"
 #include "eden/fuse/RequestData.h"
+#include "eden/utils/Bug.h"
 #include "eden/utils/PathFuncs.h"
+
+using folly::Future;
+using folly::makeFuture;
 
 namespace facebook {
 namespace eden {
@@ -132,6 +137,215 @@ folly::Future<InodePtr> TreeInode::getChildByName(
     PathComponentPiece namepiece) {
   auto contents = contents_.rlock();
   return getChildByNameLocked(&*contents, namepiece);
+}
+
+Future<InodePtr> TreeInode::getOrLoadChild(PathComponentPiece name) {
+  folly::Optional<folly::Future<InodePtr>> inodeLoadFuture;
+  folly::Optional<folly::Future<InodePtr>> returnFuture;
+  fuse_ino_t childNumber;
+  {
+    auto contents = contents_.wlock();
+    auto iter = contents->entries.find(name);
+    if (iter == contents->entries.end()) {
+      VLOG(5) << "attempted to load non-existent entry \"" << name << "\" in "
+              << getLogPath();
+      return makeFuture<InodePtr>(InodeError(ENOENT, inodePtrFromThis(), name));
+    }
+
+    // Check to see if the entry is already loaded
+    auto& entryPtr = iter->second;
+    if (entryPtr->inode) {
+      return makeFuture(entryPtr->inode->shared_from_this());
+    }
+
+    // The entry is not loaded yet.  Ask the InodeMap about the entry.
+    // The InodeMap will tell us if this inode is already in the process of
+    // being loaded, or if we need to start loading it now.
+    folly::Promise<InodePtr> promise;
+    returnFuture = promise.getFuture();
+    if (mount_->getInodeMap()->shouldLoadChild(
+            this, name, std::move(promise), &childNumber)) {
+      // The inode is not already being loaded.  We have to start loading it
+      // now.
+      auto loadFuture =
+          startLoadingInodeNoThrow(entryPtr.get(), name, childNumber);
+      if (loadFuture.isReady() && loadFuture.hasValue()) {
+        // If we finished loading the inode immediately, just call
+        // InodeMap::inodeLoadComplete() now, since we still have the data_
+        // lock.
+        auto childInode = loadFuture.get();
+        entryPtr->inode = childInode.get();
+        mount_->getInodeMap()->inodeLoadComplete(childInode);
+      } else {
+        inodeLoadFuture = std::move(loadFuture);
+      }
+    }
+  }
+
+  if (inodeLoadFuture) {
+    registerInodeLoadComplete(inodeLoadFuture.value(), name, childNumber);
+  }
+
+  return std::move(returnFuture).value();
+}
+
+void TreeInode::loadChildInode(PathComponentPiece name, fuse_ino_t number) {
+  folly::Optional<folly::Future<InodePtr>> future;
+  {
+    auto contents = contents_.rlock();
+    auto iter = contents->entries.find(name);
+    if (iter == contents->entries.end()) {
+      auto bug = EDEN_BUG() << "InodeMap requested to load inode " << number
+                            << ", but there is no entry named \"" << name
+                            << "\" in " << getNodeId();
+      mount_->getInodeMap()->inodeLoadFailed(number, bug.toException());
+      return;
+    }
+
+    auto& entryPtr = iter->second;
+    // InodeMap makes sure to only try loading each inode once, so this entry
+    // should not already be loaded.
+    if (entryPtr->inode != nullptr) {
+      auto bug = EDEN_BUG() << "InodeMap requested to load inode " << number
+                            << "(" << name << " in " << getNodeId()
+                            << "), which is already loaded";
+      // Call inodeLoadFailed().  (Arguably we could call inodeLoadComplete()
+      // if the existing inode has the same number as the one we were requested
+      // to load.  However, it seems more conservative to just treat this as
+      // failed and fail pending promises waiting on this inode.  This may
+      // cause problems for anyone trying to access this child inode in the
+      // future, but at least it shouldn't damage the InodeMap data structures
+      // any further.)
+      mount_->getInodeMap()->inodeLoadFailed(number, bug.toException());
+      return;
+    }
+
+    future = startLoadingInodeNoThrow(entryPtr.get(), name, number);
+  }
+  registerInodeLoadComplete(future.value(), name, number);
+}
+
+void TreeInode::registerInodeLoadComplete(
+    folly::Future<InodePtr>& future,
+    PathComponentPiece name,
+    fuse_ino_t number) {
+  // This method should never be called with the data_ lock held.
+  // If the future is already ready we will try to acquire the data_ lock now.
+  future
+      .then([ self = inodePtrFromThis(), childName = PathComponent{name} ](
+          const InodePtr& childInode) {
+        auto contents = self->contents_.wlock();
+        auto iter = contents->entries.find(childName);
+        if (iter == contents->entries.end()) {
+          // This probably shouldn't ever happen.
+          // We should ensure that the child inode is loaded first before
+          // renaming or unlinking it.
+          LOG(ERROR) << "child " << childName << " in " << self->getLogPath()
+                     << " removed before it finished loading";
+          throw InodeError(
+              ENOENT, self, childName, "inode removed before loading finished");
+        }
+        iter->second->inode = childInode.get();
+        // Make sure that we are still holding the contents_ lock when
+        // calling inodeLoadComplete()
+        self->mount_->getInodeMap()->inodeLoadComplete(childInode);
+      })
+      .onError([ self = inodePtrFromThis(), number ](
+          const folly::exception_wrapper& ew) {
+        self->mount_->getInodeMap()->inodeLoadFailed(number, ew);
+      });
+}
+
+Future<InodePtr> TreeInode::startLoadingInodeNoThrow(
+    Entry* entry,
+    PathComponentPiece name,
+    fuse_ino_t number) noexcept {
+  // The callers of startLoadingInodeNoThrow() need to make sure that they
+  // always call InodeMap::inodeLoadComplete() or InodeMap::inodeLoadFailed()
+  // afterwards.
+  //
+  // It simplifies their logic to guarantee that we never throw an exception,
+  // and always return a Future object.  Therefore we simply wrap
+  // startLoadingInode() and convert any thrown exceptions into Future.
+  try {
+    return startLoadingInode(entry, name, number);
+  } catch (const std::exception& ex) {
+    // It's possible that makeFuture() itself could throw, but this only
+    // happens on out of memory, in which case the whole process is pretty much
+    // hosed anyway.
+    return makeFuture<InodePtr>(
+        folly::exception_wrapper{std::current_exception(), ex});
+  }
+}
+
+Future<InodePtr> TreeInode::startLoadingInode(
+    Entry* entry,
+    PathComponentPiece name,
+    fuse_ino_t number) {
+  VLOG(5) << "starting to load inode " << number << ": " << getLogPath()
+          << " / \"" << name << "\"";
+  DCHECK(entry->inode == nullptr);
+  if (!S_ISDIR(entry->mode)) {
+    // If this is a file we can just go ahead and create it now;
+    // we don't need to load anything else.
+    //
+    // Eventually we may want to go ahead start loading some of the blob data
+    // now, but we don't have to wait for it to be ready before marking the
+    // inode loaded.
+    auto inode = std::make_shared<FileInode>(
+        number,
+        std::static_pointer_cast<TreeInode>(shared_from_this()),
+        name,
+        entry);
+    return makeFuture(inode);
+  }
+
+  // TODO:
+  // - Always load the Tree if this entry has one.  This is needed so we can
+  //   compute diffs from the current commit state.  This will simplify
+  //   Dirstate computation.
+  // - The ObjectStore APIs should be updated to return a Future when loading
+  //   the Tree, since this can potentially be a costly operation.
+  // - We can potentially start loading the overlay data in parallel with
+  //   loading the Tree.
+
+  if (!entry->materialized && entry->hash) {
+    return getStore()->getTreeFuture(entry->hash.value()).then([
+      self = std::static_pointer_cast<TreeInode>(shared_from_this()),
+      childName = PathComponent{name},
+      entry,
+      number
+    ](std::unique_ptr<Tree> tree) {
+      return std::make_shared<TreeInode>(
+          self->mount_, number, self, childName, entry, std::move(tree));
+    });
+  }
+
+  // No corresponding TreeEntry, this exists only in the overlay.
+  //
+  // TODO: We should probably require that an inode be loaded before it can be
+  // unlinked or renamed.  Otherwise it seems like there are race conditions
+  // here between computing the path to the child's materialized data file and
+  // the time when we actually open it.
+  auto myPath = getPath();
+  if (!myPath.hasValue()) {
+    // We were unlinked before we could get loaded.
+    VLOG(3) << "inode unlinked before it could be loaded: " << getLogPath();
+    return folly::makeFuture<std::shared_ptr<InodeBase>>(std::system_error(
+        ENOENT,
+        std::system_category(),
+        "inode unlinked before it could be loaded"));
+  }
+  auto targetName = myPath.value() + name;
+  auto overlayDir = getOverlay()->loadOverlayDir(targetName);
+  DCHECK(overlayDir) << "missing overlay for " << targetName;
+  return std::make_shared<TreeInode>(
+      mount_,
+      number,
+      std::static_pointer_cast<TreeInode>(shared_from_this()),
+      name,
+      entry,
+      std::move(overlayDir.value()));
 }
 
 fuse_ino_t TreeInode::getParent() const {

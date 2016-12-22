@@ -17,6 +17,7 @@
 #include "eden/fs/inodes/EdenMounts.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeError.h"
+#include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/model/Hash.h"
@@ -51,6 +52,7 @@ EdenMount::EdenMount(
     std::unique_ptr<ClientConfig> config,
     std::unique_ptr<ObjectStore> objectStore)
     : config_(std::move(config)),
+      inodeMap_{new InodeMap()},
       dispatcher_{new EdenDispatcher(this)},
       nameManager_{new fusell::InodeNameManager()},
       mountPoint_(

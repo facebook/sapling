@@ -27,6 +27,7 @@ class Dirstate;
 class EdenDispatcher;
 class FileInode;
 class InodeBase;
+class InodeMap;
 class ObjectStore;
 class Overlay;
 class Journal;
@@ -100,6 +101,13 @@ class EdenMount {
     return nameManager_.get();
   }
 
+  /**
+   * Return the InodeMap for this mount.
+   */
+  InodeMap* getInodeMap() const {
+    return inodeMap_.get();
+  }
+
   const std::shared_ptr<Overlay>& getOverlay() const {
     return overlay_;
   }
@@ -150,6 +158,7 @@ class EdenMount {
   EdenMount& operator=(EdenMount const&) = delete;
 
   std::unique_ptr<ClientConfig> config_;
+  std::unique_ptr<InodeMap> inodeMap_;
   std::unique_ptr<EdenDispatcher> dispatcher_;
   std::unique_ptr<fusell::InodeNameManager> nameManager_;
   std::unique_ptr<fusell::MountPoint> mountPoint_;
