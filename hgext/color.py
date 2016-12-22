@@ -332,16 +332,6 @@ def render_effects(text, effects):
         stop = _effect_str('none')
     return ''.join([start, text, stop])
 
-def valideffect(effect):
-    'Determine if the effect is valid or not.'
-    good = False
-    if not color._terminfo_params and effect in color._effects:
-        good = True
-    elif (effect in color._terminfo_params
-          or effect[:-11] in color._terminfo_params):
-        good = True
-    return good
-
 def configstyles(ui):
     for status, cfgeffects in ui.configitems('color'):
         if '.' not in status or status.startswith(('color.', 'terminfo.')):
@@ -350,7 +340,7 @@ def configstyles(ui):
         if cfgeffects:
             good = []
             for e in cfgeffects:
-                if valideffect(e):
+                if color.valideffect(e):
                     good.append(e)
                 else:
                     ui.warn(_("ignoring unknown color/effect %r "
@@ -412,7 +402,7 @@ class colorui(uimod.ui):
             s = color._styles.get(l, '')
             if s:
                 effects.append(s)
-            elif valideffect(l):
+            elif color.valideffect(l):
                 effects.append(l)
         effects = ' '.join(effects)
         if effects:
