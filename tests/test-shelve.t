@@ -106,13 +106,13 @@ hidden file while choosing a new shelve name
 when we are given a name
 
   $ hg shelve -n foo/bar
-  abort: shelved change names may not contain slashes
+  abort: shelved change names can not contain slashes
   [255]
   $ hg shelve -n .baz
-  abort: shelved change names may not start with '.'
+  abort: shelved change names can not start with '.'
   [255]
   $ hg shelve -n foo\\bar
-  abort: shelved change names may not contain slashes
+  abort: shelved change names can not contain slashes
   [255]
 
 when shelve has to choose itself
@@ -125,13 +125,13 @@ when shelve has to choose itself
   $ hg branch .x -q
   $ hg commit -q -m "Branch commit 1"
   $ hg shelve
-  abort: shelved change names may not start with '.'
-  [255]
+  nothing changed
+  [1]
   $ hg branch x\\y -q
   $ hg commit -q -m "Branch commit 2"
   $ hg shelve
-  abort: shelved change names may not contain slashes
-  [255]
+  nothing changed
+  [1]
 
 cleaning the branches made for name checking tests
 

@@ -265,11 +265,22 @@ def getshelvename(repo, parent, opts):
     label = repo._activebookmark or parent.branch() or 'default'
     # slashes aren't allowed in filenames, therefore we rename it
     label = label.replace('/', '_')
+    label = label.replace('\\', '_')
+    # filenames must not start with '.' as it should not be hidden
+    if label.startswith('.'):
+        label = label.replace('.', '_', 1)
 
     if name:
         if shelvedfile(repo, name, patchextension).exists():
             e = _("a shelved change named '%s' already exists") % name
             raise error.Abort(e)
+
+        # ensure we are not creating a subdirectory or a hidden file
+        if '/' in name or '\\' in name:
+            raise error.Abort(_('shelved change names can not contain slashes'))
+        if name.startswith('.'):
+            raise error.Abort(_("shelved change names can not start with '.'"))
+
     else:
         for n in gennames():
             if not shelvedfile(repo, n, patchextension).exists():
@@ -278,11 +289,6 @@ def getshelvename(repo, parent, opts):
         else:
             raise error.Abort(_("too many shelved changes named '%s'") % label)
 
-    # ensure we are not creating a subdirectory or a hidden file
-    if '/' in name or '\\' in name:
-        raise error.Abort(_('shelved change names may not contain slashes'))
-    if name.startswith('.'):
-        raise error.Abort(_("shelved change names may not start with '.'"))
     return name
 
 def mutableancestors(ctx):
