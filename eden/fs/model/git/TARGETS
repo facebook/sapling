@@ -9,9 +9,9 @@ cpp_library(
     'GitTree.h',
   ],
   deps = [
-    '@/folly:folly',
-    '@/folly/io:iobuf',
-    '@/eden/fs/model:model',
+    '//eden/fs/model:model',
+    '//folly:folly',
+    '//folly/io:iobuf',
   ],
   external_deps = [
     ('libgit2', None, 'git2'),
@@ -30,8 +30,8 @@ cpp_library(
   ],
   deps = [
     ':glob',
-    '@/eden/utils:utils',
-    '@/folly:folly',
+    '//eden/utils:utils',
+    '//folly:folly',
   ],
 )
 
@@ -44,6 +44,6 @@ cpp_library(
     'GlobMatcher.h',
   ],
   deps = [
-    '@/folly:folly',
+    '//folly:folly',
   ],
 )

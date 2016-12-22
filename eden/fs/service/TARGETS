@@ -16,7 +16,9 @@ thrift_library(
   },
   py_base_module = 'facebook',
   languages = ['cpp2', 'java', 'py'],
-  deps = ['@/common/fb303/if:fb303'],
+  deps = [
+    '//common/fb303/if:fb303',
+  ],
 )
 
 thrift_library(
@@ -38,7 +40,7 @@ python_library(
   ],
   base_module = 'eden.thrift',
   deps = [
-    '@/eden/fs/service:thrift-py',
+    '//eden/fs/service:thrift-py',
   ],
 )
 
@@ -64,8 +66,12 @@ if is_facebook_internal():
     create_eden_fs_rules(
         suffix = get_fb_suffix(),
         subdir = 'out.fb',
-        server_srcs = ['facebook/EdenServer.cpp'],
-        server_deps = ['@/common/services/cpp:cpp'],
+        server_srcs = [
+          'facebook/EdenServer.cpp',
+        ],
+        server_deps = [
+          '//common/services/cpp:cpp',
+        ],
     )
 
 # JAVA BINDINGS FOR THRIFT ENDPOINT

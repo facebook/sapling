@@ -10,11 +10,11 @@ cpp_library(
   srcs = glob(['*.cpp'], excludes=TESTER_SRCS),
   headers = glob(['*.h']),
   deps = [
-    '@/eden/fs/model:model',
-    '@/eden/fs/model/git:git',
-    '@/eden/fs/store:store',
-    '@/folly:folly',
-    '@/folly:subprocess',
+    '//eden/fs/model:model',
+    '//eden/fs/model/git:git',
+    '//eden/fs/store:store',
+    '//folly:folly',
+    '//folly:subprocess',
   ],
   external_deps = [
     ('boost', None, 'boost_filesystem'),
@@ -28,6 +28,6 @@ cpp_binary(
   srcs = TESTER_SRCS,
   deps = [
     ':hg',
-    '@/folly/init:init',
+    '//folly/init:init',
   ],
 )

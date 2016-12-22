@@ -1,16 +1,16 @@
 cpp_library(
-    name = "fusell",
-    srcs = glob(["*.cpp"]),
-    headers = glob(["*.h"]),
-    deps = [
-        "@/folly:folly",
-        "@/folly:stats",
-        "@/folly:synchronized",
-        "@/wangle:wangle",
-        "@/eden/fuse/privhelper:privhelper",
-        "@/eden/utils:utils",
-    ],
-    external_deps = [
-        ('fuse', None, 'fuse'),
-    ],
+  name = 'fusell',
+  srcs = glob(['*.cpp']),
+  headers = glob(['*.h']),
+  deps = [
+    '//eden/fuse/privhelper:privhelper',
+    '//eden/utils:utils',
+    '//folly:folly',
+    '//folly:stats',
+    '//folly:synchronized',
+    '//wangle:wangle',
+  ],
+  external_deps = [
+    ('fuse', None, 'fuse'),
+  ],
 )

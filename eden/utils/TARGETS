@@ -1,11 +1,11 @@
 cpp_library(
-    name = "utils",
-    srcs = glob(['*.cpp']),
-    headers = glob(['*.h']),
-    deps = [
-        "@/folly:evicting_cache_map",
-        "@/folly:folly",
-        "@/folly/futures:futures",
-        "@/folly:subprocess",
-    ],
+  name = 'utils',
+  srcs = glob(['*.cpp']),
+  headers = glob(['*.h']),
+  deps = [
+    '//folly:evicting_cache_map',
+    '//folly:folly',
+    '//folly:subprocess',
+    '//folly/futures:futures',
+  ],
 )

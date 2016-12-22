@@ -1,12 +1,12 @@
 cpp_library(
-    name = "privhelper",
-    srcs = glob(["*.cpp"]),
-    headers = glob(["*.h"]),
-    deps = [
-        "@/folly/io:iobuf",
-        "@/folly:folly",
-    ],
-    external_deps = [
-        ("boost", None, "boost_filesystem"),
-    ],
+  name = 'privhelper',
+  srcs = glob(['*.cpp']),
+  headers = glob(['*.h']),
+  deps = [
+    '//folly:folly',
+    '//folly/io:iobuf',
+  ],
+  external_deps = [
+    ('boost', None, 'boost_filesystem'),
+  ],
 )

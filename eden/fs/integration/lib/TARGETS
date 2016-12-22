@@ -2,8 +2,8 @@ python_library(
   name = 'lib',
   srcs = glob(['*.py']),
   deps = [
-    '@/eden/fs/cli:lib',
-    '@/eden/fs/service:py-client',
-    '@/eden/fs/service:thrift-py',
+    '//eden/fs/cli:lib',
+    '//eden/fs/service:py-client',
+    '//eden/fs/service:thrift-py',
   ],
 )

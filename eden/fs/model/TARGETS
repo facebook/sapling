@@ -3,9 +3,9 @@ cpp_library(
   srcs = glob(['*.cpp']),
   headers = glob(['*.h']),
   deps = [
-    '@/folly:folly',
-    '@/folly/ssl:openssl_hash',
-    '@/eden/utils:utils',
+    '//eden/utils:utils',
+    '//folly:folly',
+    '//folly/ssl:openssl_hash',
   ],
   external_deps = [
     ('boost', 'any'),

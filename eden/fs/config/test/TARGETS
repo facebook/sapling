@@ -3,9 +3,9 @@ cpp_unittest(
   headers = AutoHeaders.RECURSIVE_GLOB,  # https://fburl.com/424819295
   srcs = glob(['*Test.cpp']),
   deps = [
-    '@/eden/fs/config:config',
-    '@/eden/utils:utils',
-    '@/folly/experimental:test_util',
+    '//eden/fs/config:config',
+    '//eden/utils:utils',
+    '//folly/experimental:test_util',
   ],
   external_deps = [
     'gtest',

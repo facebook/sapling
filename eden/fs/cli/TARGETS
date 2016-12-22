@@ -5,8 +5,8 @@ python_binary(
   srcs = ['main.py'],
   main_module = 'eden/fs/cli/main',
   deps = [
-    '@/eden/fs/cli:lib',
-    '@/eden/fs/service:py-client',
+    '//eden/fs/cli:lib',
+    '//eden/fs/service:py-client',
   ],
 )
 

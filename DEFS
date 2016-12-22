@@ -20,7 +20,7 @@ def cpp_library(
         name=name,
         srcs=srcs,
         headers=headers,
-        deps=normalize_deps(deps),
+        deps=deps,
         visibility=[
             'PUBLIC',
         ],
@@ -37,7 +37,7 @@ def cpp_binary(
     cxx_binary(
         name=name,
         srcs=srcs,
-        deps=normalize_deps(deps),
+        deps=deps,
     )
 
 
@@ -51,7 +51,7 @@ def cpp_unittest(
     cxx_test(
         name=name,
         srcs=srcs,
-        deps=normalize_deps(deps),
+        deps=deps,
     )
 
 
@@ -68,21 +68,8 @@ def python_binary(
         name=name,
         srcs=srcs,
         main_module=main_module,
-        deps=normalize_deps(deps),
+        deps=deps,
         visibility=[
             'PUBLIC',
         ],
     )
-
-
-def normalize_deps(deps):
-    if deps is None:
-        return []
-    return map(normalize_dep, deps)
-
-
-def normalize_dep(dep):
-    if dep.startswith('@/'):
-        return '/' + dep[1:]
-    else:
-        return dep

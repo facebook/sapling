@@ -3,9 +3,9 @@ cpp_library(
   srcs = glob(['*.cpp']),
   headers = glob(['*.h']),
   deps = [
-    '@/folly:folly',
-    '@/eden/utils:utils',
-    '@/eden/fs/model:model',
+    '//eden/fs/model:model',
+    '//eden/utils:utils',
+    '//folly:folly',
   ],
   external_deps = [
     ('boost', 'any'),
@@ -13,10 +13,10 @@ cpp_library(
 )
 
 cpp_unittest(
-    name = "test_journal",
-    srcs = glob(['test/*Test.cpp']),
-    deps = [
-        ':journal',
-        '@/folly/experimental:test_util',
-    ],
+  name = 'test_journal',
+  srcs = glob(['test/*Test.cpp']),
+  deps = [
+    ':journal',
+    '//folly/experimental:test_util',
+  ],
 )
