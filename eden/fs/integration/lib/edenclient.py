@@ -8,6 +8,7 @@
 # of patent rights can be found in the PATENTS file in the same directory.
 
 import os
+import shlex
 import shutil
 import subprocess
 import tempfile
@@ -177,6 +178,8 @@ class EdenFS(object):
         # Turn up the VLOG level for the fuse server so that errors are logged
         # with an explanation when they bubble up to RequestData::catchErrors
         args.extend(['--', '--vmodule=RequestData=5'])
+        if 'EDEN_DAEMON_ARGS' in os.environ:
+            args.extend(shlex.split(os.environ['EDEN_DAEMON_ARGS']))
 
         self._process = subprocess.Popen(args)
         self._wait_for_healthy(timeout)
