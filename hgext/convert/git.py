@@ -31,6 +31,18 @@ class submodule(object):
     def hgsubstate(self):
         return "%s %s" % (self.node, self.path)
 
+# Keys in extra fields that should not be copied if the user requests.
+bannedextrakeys = set([
+    # Git commit object built-ins.
+    'tree',
+    'parent',
+    'author',
+    'committer',
+    # Mercurial built-ins.
+    'branch',
+    'close',
+])
+
 class convert_git(common.converter_source, common.commandline):
     # Windows does not support GIT_DIR= construct while other systems
     # cannot remove environment variable. Just assume none have
@@ -91,6 +103,12 @@ class convert_git(common.converter_source, common.commandline):
         self.submodules = []
 
         self.catfilepipe = self.gitpipe('cat-file', '--batch')
+
+        self.copyextrakeys = self.ui.configlist('convert', 'git.extrakeys')
+        banned = set(self.copyextrakeys) & bannedextrakeys
+        if banned:
+            raise error.Abort(_('copying of extra key is forbidden: %s') %
+                              _(', ').join(sorted(banned)))
 
     def after(self):
         for f in self.catfilepipe:
@@ -279,6 +297,7 @@ class convert_git(common.converter_source, common.commandline):
         l = c[:end].splitlines()
         parents = []
         author = committer = None
+        extra = {}
         for e in l[1:]:
             n, v = e.split(" ", 1)
             if n == "author":
@@ -295,6 +314,8 @@ class convert_git(common.converter_source, common.commandline):
                 committer = self.recode(committer)
             if n == "parent":
                 parents.append(v)
+            if n in self.copyextrakeys:
+                extra[n] = v
 
         if committer and committer != author:
             message += "\ncommitter: %s\n" % committer
@@ -304,7 +325,8 @@ class convert_git(common.converter_source, common.commandline):
 
         c = common.commit(parents=parents, date=date, author=author,
                           desc=message,
-                          rev=version)
+                          rev=version,
+                          extra=extra)
         return c
 
     def numcommits(self):

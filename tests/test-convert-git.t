@@ -804,3 +804,127 @@ test for safely passing paths to git (CVE-2016-3105)
 
 #endif
 
+Conversion of extra commit metadata to extras works
+
+  $ git init gitextras >/dev/null 2>/dev/null
+  $ cd gitextras
+  $ touch foo
+  $ git add foo
+  $ commit -m initial
+  $ echo 1 > foo
+  $ tree=`git write-tree`
+
+Git doesn't provider a user-facing API to write extra metadata into the
+commit, so create the commit object by hand
+
+  $ git hash-object -t commit -w --stdin << EOF
+  > tree ${tree}
+  > parent ba6b1344e977ece9e00958dbbf17f1f09384b2c1
+  > author test <test@example.com> 1000000000 +0000
+  > committer test <test@example.com> 1000000000 +0000
+  > extra-1 extra-1
+  > extra-2 extra-2 with space
+  > convert_revision 0000aaaabbbbccccddddeeee
+  > 
+  > message with extras
+  > EOF
+  8123727c8361a4117d1a2d80e0c4e7d70c757f18
+
+  $ git reset --hard 8123727c8361a4117d1a2d80e0c4e7d70c757f18 > /dev/null
+
+  $ cd ..
+
+convert will not retain custom metadata keys by default
+
+  $ hg convert gitextras hgextras1
+  initializing destination hgextras1 repository
+  scanning source...
+  sorting...
+  converting...
+  1 initial
+  0 message with extras
+  updating bookmarks
+
+  $ hg -R hgextras1 log --debug -r 1
+  changeset:   1:e13a39880f68479127b2a80fa0b448cc8524aa09
+  bookmark:    master
+  tag:         tip
+  phase:       draft
+  parent:      0:dcb68977c55cd02cbd13b901df65c4b6e7b9c4b9
+  parent:      -1:0000000000000000000000000000000000000000
+  manifest:    0:6a3df4de388f3c4f8e28f4f9a814299a3cbb5f50
+  user:        test <test@example.com>
+  date:        Sun Sep 09 01:46:40 2001 +0000
+  extra:       branch=default
+  extra:       convert_revision=8123727c8361a4117d1a2d80e0c4e7d70c757f18
+  description:
+  message with extras
+  
+  
+
+Attempting to convert a banned extra is disallowed
+
+  $ hg convert --config convert.git.extrakeys=tree,parent gitextras hgextras-banned
+  initializing destination hgextras-banned repository
+  abort: copying of extra key is forbidden: parent, tree
+  [255]
+
+Converting a specific extra works
+
+  $ hg convert --config convert.git.extrakeys=extra-1 gitextras hgextras2
+  initializing destination hgextras2 repository
+  scanning source...
+  sorting...
+  converting...
+  1 initial
+  0 message with extras
+  updating bookmarks
+
+  $ hg -R hgextras2 log --debug -r 1
+  changeset:   1:d40fb205d58597e6ecfd55b16f198be5bf436391
+  bookmark:    master
+  tag:         tip
+  phase:       draft
+  parent:      0:dcb68977c55cd02cbd13b901df65c4b6e7b9c4b9
+  parent:      -1:0000000000000000000000000000000000000000
+  manifest:    0:6a3df4de388f3c4f8e28f4f9a814299a3cbb5f50
+  user:        test <test@example.com>
+  date:        Sun Sep 09 01:46:40 2001 +0000
+  extra:       branch=default
+  extra:       convert_revision=8123727c8361a4117d1a2d80e0c4e7d70c757f18
+  extra:       extra-1=extra-1
+  description:
+  message with extras
+  
+  
+
+Converting multiple extras works
+
+  $ hg convert --config convert.git.extrakeys=extra-1,extra-2 gitextras hgextras3
+  initializing destination hgextras3 repository
+  scanning source...
+  sorting...
+  converting...
+  1 initial
+  0 message with extras
+  updating bookmarks
+
+  $ hg -R hgextras3 log --debug -r 1
+  changeset:   1:0105af33379e7b6491501fd34141b7af700fe125
+  bookmark:    master
+  tag:         tip
+  phase:       draft
+  parent:      0:dcb68977c55cd02cbd13b901df65c4b6e7b9c4b9
+  parent:      -1:0000000000000000000000000000000000000000
+  manifest:    0:6a3df4de388f3c4f8e28f4f9a814299a3cbb5f50
+  user:        test <test@example.com>
+  date:        Sun Sep 09 01:46:40 2001 +0000
+  extra:       branch=default
+  extra:       convert_revision=8123727c8361a4117d1a2d80e0c4e7d70c757f18
+  extra:       extra-1=extra-1
+  extra:       extra-2=extra-2 with space
+  description:
+  message with extras
+  
+  
+

@@ -268,6 +268,13 @@
                     computation on large projects. The option is only relevant
                     if "convert.git.similarity" is greater than 0. The default
                     is "400".
+      convert.git.extrakeys
+                    list of extra keys from commit metadata to copy to the
+                    destination. Some Git repositories store extra metadata in
+                    commits. By default, this non-default metadata will be lost
+                    during conversion. Setting this config option can retain
+                    that metadata. Some built-in keys such as "parent" and
+                    "branch" are not allowed to be copied.
       convert.git.remoteprefix
                     remote refs are converted as bookmarks with
                     "convert.git.remoteprefix" as a prefix followed by a /. The
