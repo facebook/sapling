@@ -15,7 +15,6 @@ import socket
 
 from .i18n import _
 from . import (
-    encoding,
     error,
     httpconnection as httpconnectionmod,
     keepalive,
@@ -112,17 +111,6 @@ class proxyhandler(urlreq.proxyhandler):
                       (proxy.host, proxy.port))
         else:
             proxies = {}
-
-        # urllib2 takes proxy values from the environment and those
-        # will take precedence if found. So, if there's a config entry
-        # defining a proxy, drop the environment ones
-        if ui.config("http_proxy", "host"):
-            for env in ["HTTP_PROXY", "http_proxy", "no_proxy"]:
-                try:
-                    if env in encoding.environ:
-                        del encoding.environ[env]
-                except OSError:
-                    pass
 
         urlreq.proxyhandler.__init__(self, proxies)
         self.ui = ui
