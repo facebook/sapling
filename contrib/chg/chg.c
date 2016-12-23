@@ -35,22 +35,16 @@ struct cmdserveropts {
 	char redirectsockname[UNIX_PATH_MAX];
 	size_t argsize;
 	const char **args;
-	int sockdirfd;
 };
 
 static void initcmdserveropts(struct cmdserveropts *opts) {
 	memset(opts, 0, sizeof(struct cmdserveropts));
-	opts->sockdirfd = -1;
 }
 
 static void freecmdserveropts(struct cmdserveropts *opts) {
 	free(opts->args);
 	opts->args = NULL;
 	opts->argsize = 0;
-	if (opts->sockdirfd >= 0) {
-		close(opts->sockdirfd);
-		opts->sockdirfd = -1;
-	}
 }
 
 /*
