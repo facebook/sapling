@@ -425,10 +425,43 @@ hgclient_t *hgc_open(const char *sockname)
 
 	struct sockaddr_un addr;
 	addr.sun_family = AF_UNIX;
-	strncpy(addr.sun_path, sockname, sizeof(addr.sun_path));
+
+	/* use chdir to workaround small sizeof(sun_path) */
+	int bakfd = -1;
+	const char *basename = sockname;
+	{
+		const char *split = strrchr(sockname, '/');
+		if (split && split != sockname) {
+			if (split[1] == '\0')
+				abortmsg("sockname cannot end with a slash");
+			size_t len = split - sockname;
+			char sockdir[len + 1];
+			memcpy(sockdir, sockname, len);
+			sockdir[len] = '\0';
+
+			bakfd = open(".", O_DIRECTORY);
+			if (bakfd == -1)
+				abortmsgerrno("cannot open cwd");
+
+			int r = chdir(sockdir);
+			if (r != 0)
+				abortmsgerrno("cannot chdir %s", sockdir);
+
+			basename = split + 1;
+		}
+	}
+	if (strlen(basename) >= sizeof(addr.sun_path))
+		abortmsg("sockname is too long: %s", basename);
+	strncpy(addr.sun_path, basename, sizeof(addr.sun_path));
 	addr.sun_path[sizeof(addr.sun_path) - 1] = '\0';
 
+	/* real connect */
 	int r = connect(fd, (struct sockaddr *)&addr, sizeof(addr));
+	if (bakfd != -1) {
+		fchdirx(bakfd);
+		close(bakfd);
+	}
+
 	if (r < 0) {
 		close(fd);
 		if (errno == ENOENT || errno == ECONNREFUSED)
