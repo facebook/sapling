@@ -337,6 +337,9 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
         ``convert.git.remoteprefix`` as a prefix followed by a /. The default
         is 'remote'.
 
+    :convert.git.saverev: whether to store the original Git commit ID in the
+        metadata of the destination commit. The default is True.
+
     :convert.git.skipsubmodules: does not convert root level .gitmodules files
         or files with 160000 mode indicating a submodule. Default is False.
 

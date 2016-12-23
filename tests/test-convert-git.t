@@ -928,3 +928,58 @@ Converting multiple extras works
   
   
 
+convert.git.saverev can be disabled to prevent convert_revision from being written
+
+  $ hg convert --config convert.git.saverev=false gitextras hgextras4
+  initializing destination hgextras4 repository
+  scanning source...
+  sorting...
+  converting...
+  1 initial
+  0 message with extras
+  updating bookmarks
+
+  $ hg -R hgextras4 log --debug -r 1
+  changeset:   1:1dcaf4ffe5bee43fa86db2800821f6f0af212c5c
+  bookmark:    master
+  tag:         tip
+  phase:       draft
+  parent:      0:a13935fec4daf06a5a87a7307ccb0fc94f98d06d
+  parent:      -1:0000000000000000000000000000000000000000
+  manifest:    0:6a3df4de388f3c4f8e28f4f9a814299a3cbb5f50
+  user:        test <test@example.com>
+  date:        Sun Sep 09 01:46:40 2001 +0000
+  extra:       branch=default
+  description:
+  message with extras
+  
+  
+
+convert.git.saverev and convert.git.extrakeys can be combined to preserve
+convert_revision from source
+
+  $ hg convert --config convert.git.saverev=false --config convert.git.extrakeys=convert_revision gitextras hgextras5
+  initializing destination hgextras5 repository
+  scanning source...
+  sorting...
+  converting...
+  1 initial
+  0 message with extras
+  updating bookmarks
+
+  $ hg -R hgextras5 log --debug -r 1
+  changeset:   1:574d85931544d4542007664fee3747360e85ee28
+  bookmark:    master
+  tag:         tip
+  phase:       draft
+  parent:      0:a13935fec4daf06a5a87a7307ccb0fc94f98d06d
+  parent:      -1:0000000000000000000000000000000000000000
+  manifest:    0:6a3df4de388f3c4f8e28f4f9a814299a3cbb5f50
+  user:        test <test@example.com>
+  date:        Sun Sep 09 01:46:40 2001 +0000
+  extra:       branch=default
+  extra:       convert_revision=0000aaaabbbbccccddddeeee
+  description:
+  message with extras
+  
+  
