@@ -25,14 +25,14 @@
 #include "hgclient.h"
 #include "util.h"
 
-#ifndef UNIX_PATH_MAX
-#define UNIX_PATH_MAX (sizeof(((struct sockaddr_un *)NULL)->sun_path))
+#ifndef PATH_MAX
+#define PATH_MAX 4096
 #endif
 
 struct cmdserveropts {
-	char sockname[UNIX_PATH_MAX];
-	char initsockname[UNIX_PATH_MAX];
-	char redirectsockname[UNIX_PATH_MAX];
+	char sockname[PATH_MAX];
+	char initsockname[PATH_MAX];
+	char redirectsockname[PATH_MAX];
 	size_t argsize;
 	const char **args;
 };
@@ -130,7 +130,7 @@ static void preparesockdir(const char *sockdir)
 static void setcmdserveropts(struct cmdserveropts *opts)
 {
 	int r;
-	char sockdir[UNIX_PATH_MAX];
+	char sockdir[PATH_MAX];
 	const char *envsockname = getenv("CHGSOCKNAME");
 	if (!envsockname) {
 		/* by default, put socket file in secure directory

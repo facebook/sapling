@@ -16,6 +16,20 @@ ill-formed config
   [255]
 
   $ cp $HGRCPATH.orig $HGRCPATH
+
+long socket path
+
+  $ sockpath=$TESTTMP/this/path/should/be/longer/than/one-hundred-and-seven/characters/where/107/is/the/typical/size/limit/of/unix-domain-socket
+  $ mkdir -p $sockpath
+  $ bakchgsockname=$CHGSOCKNAME
+  $ CHGSOCKNAME=$sockpath/server
+  $ export CHGSOCKNAME
+  $ chg root
+  $TESTTMP/foo
+  $ rm -rf $sockpath
+  $ CHGSOCKNAME=$bakchgsockname
+  $ export CHGSOCKNAME
+
   $ cd ..
 
 server lifecycle
