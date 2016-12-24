@@ -269,6 +269,17 @@ The value of the capability is a comma-delimited list of strings declaring
 supported compression formats. The order of the compression formats is in
 server-preferred order, most preferred first.
 
+The identifiers used by the official Mercurial distribution are:
+
+bzip2
+   bzip2
+none
+   uncompressed / raw data
+zlib
+   zlib (no gzip header)
+zstd
+   zstd
+
 This capability was introduced in Mercurial 4.1 (released February 2017).
 
 getbundle
