@@ -868,10 +868,7 @@ def nearestrebased(repo, rev, state):
     else:
         return None
 
-def _checkobsrebase(repo, ui,
-                                  rebaseobsrevs,
-                                  rebasesetrevs,
-                                  rebaseobsskipped):
+def _checkobsrebase(repo, ui, rebaseobsrevs, rebasesetrevs, rebaseobsskipped):
     """
     Abort if rebase will create divergence or rebase is noop because of markers
 
