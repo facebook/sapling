@@ -11,6 +11,7 @@ from __future__ import absolute_import
 import errno
 import os
 import socket
+import struct
 import tempfile
 
 from .i18n import _
@@ -174,6 +175,37 @@ class httppeer(wireproto.wirepeer):
         if data is not None and 'Content-Type' not in headers:
             headers['Content-Type'] = 'application/mercurial-0.1'
 
+        # Tell the server we accept application/mercurial-0.2 and multiple
+        # compression formats if the server is capable of emitting those
+        # payloads.
+        protoparams = []
+
+        mediatypes = set()
+        if self.caps is not None:
+            mt = self.capable('httpmediatype')
+            if mt:
+                protoparams.append('0.1')
+                mediatypes = set(mt.split(','))
+
+        if '0.2tx' in mediatypes:
+            protoparams.append('0.2')
+
+        if '0.2tx' in mediatypes and self.capable('compression'):
+            # We /could/ compare supported compression formats and prune
+            # non-mutually supported or error if nothing is mutually supported.
+            # For now, send the full list to the server and have it error.
+            comps = [e.wireprotosupport().name for e in
+                     util.compengines.supportedwireengines(util.CLIENTROLE)]
+            protoparams.append('comp=%s' % ','.join(comps))
+
+        if protoparams:
+            protoheaders = encodevalueinheaders(' '.join(protoparams),
+                                                'X-HgProto',
+                                                headersize or 1024)
+            for header, value in protoheaders:
+                headers[header] = value
+                varyheaders.append(header)
+
         headers['Vary'] = ','.join(varyheaders)
         req = self.requestbuilder(cu, data, headers)
 
@@ -224,7 +256,19 @@ class httppeer(wireproto.wirepeer):
             except ValueError:
                 raise error.RepoError(_("'%s' sent a broken Content-Type "
                                         "header (%s)") % (safeurl, proto))
-            if version_info > (0, 1):
+
+            if version_info == (0, 1):
+                if _compressible:
+                    return decompressresponse(resp, util.compengines['zlib'])
+                return resp
+            elif version_info == (0, 2):
+                # application/mercurial-0.2 always identifies the compression
+                # engine in the payload header.
+                elen = struct.unpack('B', resp.read(1))[0]
+                ename = resp.read(elen)
+                engine = util.compengines.forwiretype(ename)
+                return decompressresponse(resp, engine)
+            else:
                 raise error.RepoError(_("'%s' uses newer protocol %s") %
                                       (safeurl, version))
 

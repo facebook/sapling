@@ -466,6 +466,11 @@ def opener(ui, authinfo=None):
     # user agent they deem appropriate.
     agent = 'mercurial/proto-1.0 (Mercurial %s)' % util.version()
     opener.addheaders = [('User-agent', agent)]
+
+    # This header should only be needed by wire protocol requests. But it has
+    # been sent on all requests since forever. We keep sending it for backwards
+    # compatibility reasons. Modern versions of the wire protocol use
+    # X-HgProto-<N> for advertising client support.
     opener.addheaders.append(('Accept', 'application/mercurial-0.1'))
     return opener
 

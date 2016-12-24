@@ -264,9 +264,9 @@ Verify we hit the HTTP server:
 
   $ cat access.log
   * - - [*] "GET /?cmd=capabilities HTTP/1.1" 200 - (glob)
-  * - - [*] "GET /?cmd=getbundle HTTP/1.1" 200 - (glob)
+  * - - [*] "GET /?cmd=getbundle HTTP/1.1" 200 - x-hgproto-1:0.1 0.2 comp=*zlib,none,bzip2 (glob)
   * - - [*] "GET /?cmd=capabilities HTTP/1.1" 200 - (glob)
-  * - - [*] "GET /?cmd=getbundle HTTP/1.1" 200 - x-hgarg-1:common=700b7e19db54103633c4bf4a6a6b6d55f4d50c03+d5f6e1ea452285324836a49d7d3c2a63cfed1d31&heads=13c0170174366b441dc68e8e33757232fa744458+bac16991d12ff45f9dc43c52da1946dfadb83e80 (glob)
+  * - - [*] "GET /?cmd=getbundle HTTP/1.1" 200 - x-hgarg-1:common=700b7e19db54103633c4bf4a6a6b6d55f4d50c03+d5f6e1ea452285324836a49d7d3c2a63cfed1d31&heads=13c0170174366b441dc68e8e33757232fa744458+bac16991d12ff45f9dc43c52da1946dfadb83e80 x-hgproto-1:0.1 0.2 comp=*zlib,none,bzip2 (glob)
 
   $ cat error.log
 

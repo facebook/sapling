@@ -347,7 +347,7 @@ largefiles should batch verify remote calls
   searching 2 changesets for largefiles
   verified existence of 2 revisions of 2 largefiles
   $ tail -1 access.log
-  127.0.0.1 - - [*] "GET /?cmd=batch HTTP/1.1" 200 - x-hgarg-1:cmds=statlfile+sha%3D972a1a11f19934401291cc99117ec614933374ce%3Bstatlfile+sha%3Dc801c9cfe94400963fcb683246217d5db77f9a9a (glob)
+  127.0.0.1 - - [*] "GET /?cmd=batch HTTP/1.1" 200 - x-hgarg-1:cmds=statlfile+sha%3D972a1a11f19934401291cc99117ec614933374ce%3Bstatlfile+sha%3Dc801c9cfe94400963fcb683246217d5db77f9a9a x-hgproto-1:0.1 0.2 comp=*zlib,none,bzip2 (glob)
   $ hg -R batchverifyclone update
   getting changed largefiles
   2 largefiles updated, 0 removed
@@ -384,7 +384,7 @@ available locally.
   searching 3 changesets for largefiles
   verified existence of 3 revisions of 3 largefiles
   $ tail -1 access.log
-  127.0.0.1 - - [*] "GET /?cmd=batch HTTP/1.1" 200 - x-hgarg-1:cmds=statlfile+sha%3Dc8559c3c9cfb42131794b7d8009230403b9b454c (glob)
+  127.0.0.1 - - [*] "GET /?cmd=batch HTTP/1.1" 200 - x-hgarg-1:cmds=statlfile+sha%3Dc8559c3c9cfb42131794b7d8009230403b9b454c x-hgproto-1:0.1 0.2 comp=*zlib,none,bzip2 (glob)
 
   $ killdaemons.py
 
