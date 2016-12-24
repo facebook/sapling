@@ -65,11 +65,27 @@ Example HTTP requests::
     GET /repo?cmd=capabilities
     X-HgArg-1: foo=bar&baz=hello%20world
 
+The request media type should be chosen based on server support. If the
+``httpmediatype`` server capability is present, the client should send
+the newest mutually supported media type. If this capability is absent,
+the client must assume the server only supports the
+``application/mercurial-0.1`` media type.
+
 The ``Content-Type`` HTTP response header identifies the response as coming
 from Mercurial and can also be used to signal an error has occurred.
 
-The ``application/mercurial-0.1`` media type indicates a generic Mercurial
-response. It matches the media type sent by the client.
+The ``application/mercurial-*`` media types indicate a generic Mercurial
+data type.
+
+The ``application/mercurial-0.1`` media type is raw Mercurial data. It is the
+predecessor of the format below.
+
+The ``application/mercurial-0.2`` media type is compression framed Mercurial
+data. The first byte of the payload indicates the length of the compression
+format identifier that follows. Next are N bytes indicating the compression
+format. e.g. ``zlib``. The remaining bytes are compressed according to that
+compression format. The decompressed data behaves the same as with
+``application/mercurial-0.1``.
 
 The ``application/hg-error`` media type indicates a generic error occurred.
 The content of the HTTP response body typically holds text describing the
@@ -81,15 +97,19 @@ type.
 Clients also accept the ``text/plain`` media type. All other media
 types should cause the client to error.
 
+Behavior of media types is further described in the ``Content Negotiation``
+section below.
+
 Clients should issue a ``User-Agent`` request header that identifies the client.
 The server should not use the ``User-Agent`` for feature detection.
 
-A command returning a ``string`` response issues the
-``application/mercurial-0.1`` media type and the HTTP response body contains
-the raw string value. A ``Content-Length`` header is typically issued.
+A command returning a ``string`` response issues a
+``application/mercurial-0.*`` media type and the HTTP response body contains
+the raw string value (after compression decoding, if used). A
+``Content-Length`` header is typically issued, but not required.
 
-A command returning a ``stream`` response issues the
-``application/mercurial-0.1`` media type and the HTTP response is typically
+A command returning a ``stream`` response issues a
+``application/mercurial-0.*`` media type and the HTTP response is typically
 using *chunked transfer* (``Transfer-Encoding: chunked``).
 
 SSH Transport
@@ -233,6 +253,24 @@ This capability was introduced in Mercurial 0.9.2 (released December
 This capability was introduced at the same time as the ``lookup``
 capability/command.
 
+compression
+-----------
+
+Declares support for negotiating compression formats.
+
+Presence of this capability indicates the server supports dynamic selection
+of compression formats based on the client request.
+
+Servers advertising this capability are required to support the
+``application/mercurial-0.2`` media type in response to commands returning
+streams. Servers may support this media type on any command.
+
+The value of the capability is a comma-delimited list of strings declaring
+supported compression formats. The order of the compression formats is in
+server-preferred order, most preferred first.
+
+This capability was introduced in Mercurial 4.1 (released February 2017).
+
 getbundle
 ---------
 
@@ -251,6 +289,51 @@ length that clients should send. Clients should ignore any content after a
 comma in the value, as this is reserved for future use.
 
 This capability was introduced in Mercurial 1.9 (released July 2011).
+
+httpmediatype
+-------------
+
+Indicates which HTTP media types (``Content-Type`` header) the server is
+capable of receiving and sending.
+
+The value of the capability is a comma-delimited list of strings identifying
+support for media type and transmission direction. The following strings may
+be present:
+
+0.1rx
+   Indicates server support for receiving ``application/mercurial-0.1`` media
+   types.
+
+0.1tx
+   Indicates server support for sending ``application/mercurial-0.1`` media
+   types.
+
+0.2rx
+   Indicates server support for receiving ``application/mercurial-0.2`` media
+   types.
+
+0.2tx
+   Indicates server support for sending ``application/mercurial-0.2`` media
+   types.
+
+minrx=X
+   Minimum media type version the server is capable of receiving. Value is a
+   string like ``0.2``.
+
+   This capability can be used by servers to limit connections from legacy
+   clients not using the latest supported media type. However, only clients
+   with knowledge of this capability will know to consult this value. This
+   capability is present so the client may issue a more user-friendly error
+   when the server has locked out a legacy client.
+
+mintx=X
+   Minimum media type version the server is capable of sending. Value is a
+   string like ``0.1``.
+
+Servers advertising support for the ``application/mercurial-0.2`` media type
+should also advertise the ``compression`` capability.
+
+This capability was introduced in Mercurial 4.1 (released February 2017).
 
 httppostargs
 ------------
@@ -415,6 +498,57 @@ announcements. Clients assume servers will send this output before the
 Mercurial server replies to the client-issued commands. So any server output
 not conforming to the expected command responses is assumed to be not related
 to Mercurial and can be ignored.
+
+Content Negotiation
+===================
+
+The wire protocol has some mechanisms to help peers determine what content
+types and encoding the other side will accept. Historically, these mechanisms
+have been built into commands themselves because most commands only send a
+well-defined response type and only certain commands needed to support
+functionality like compression.
+
+Currently, only the HTTP transport supports content negotiation at the protocol
+layer.
+
+HTTP requests advertise supported response formats via the ``X-HgProto-<N>``
+request header, where ``<N>`` is an integer starting at 1 allowing the logical
+value to span multiple headers. This value consists of a list of
+space-delimited parameters. Each parameter denotes a feature or capability.
+
+The following parameters are defined:
+
+0.1
+   Indicates the client supports receiving ``application/mercurial-0.1``
+   responses.
+
+0.2
+   Indicates the client supports receiving ``application/mercurial-0.2``
+   responses.
+
+comp
+   Indicates compression formats the client can decode. Value is a list of
+   comma delimited strings identifying compression formats ordered from
+   most preferential to least preferential. e.g. ``comp=zstd,zlib,none``.
+
+   This parameter does not have an effect if only the ``0.1`` parameter
+   is defined, as support for ``application/mercurial-0.2`` or greater is
+   required to use arbitrary compression formats.
+
+   If this parameter is not advertised, the server interprets this as
+   equivalent to ``zlib,none``.
+
+Clients may choose to only send this header if the ``httpmediatype``
+server capability is present, as currently all server-side features
+consulting this header require the client to opt in to new protocol features
+advertised via the ``httpmediatype`` capability.
+
+A server that doesn't receive an ``X-HgProto-<N>`` header should infer a
+value of ``0.1``. This is compatible with legacy clients.
+
+A server receiving a request indicating support for multiple media type
+versions may respond with any of the supported media types. Not all servers
+may support all media types on all commands.
 
 Commands
 ========
