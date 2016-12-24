@@ -377,27 +377,38 @@ source, the copy source took the contents of the copy dest)
 renamelimit config option works
 
   $ cd git-repo2
-  $ cp bar bar-copy0
-  $ echo 0 >> bar-copy0
-  $ cp bar bar-copy1
-  $ echo 1 >> bar-copy1
-  $ git add bar-copy0 bar-copy1
-  $ commit -a -m 'copy bar 2 times'
+  $ cat >> copy-source << EOF
+  > sc0
+  > sc1
+  > sc2
+  > sc3
+  > sc4
+  > sc5
+  > sc6
+  > EOF
+  $ git add copy-source
+  $ commit -m 'add copy-source'
+  $ cp copy-source source-copy0
+  $ echo 0 >> source-copy0
+  $ cp copy-source source-copy1
+  $ echo 1 >> source-copy1
+  $ git add source-copy0 source-copy1
+  $ commit -a -m 'copy copy-source 2 times'
   $ cd ..
 
   $ hg -q convert --config convert.git.renamelimit=1 \
   > --config convert.git.findcopiesharder=true --datesort git-repo2 fullrepo2
   $ hg -R fullrepo2 status -C --change master
-  A bar-copy0
-  A bar-copy1
+  A source-copy0
+  A source-copy1
 
   $ hg -q convert --config convert.git.renamelimit=100 \
   > --config convert.git.findcopiesharder=true --datesort git-repo2 fullrepo3
   $ hg -R fullrepo3 status -C --change master
-  A bar-copy0
-    bar
-  A bar-copy1
-    bar
+  A source-copy0
+    copy-source
+  A source-copy1
+    copy-source
 
 test binary conversion (issue1359)
 
