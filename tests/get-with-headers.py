@@ -35,6 +35,13 @@ if '--json' in sys.argv:
     sys.argv.remove('--json')
     formatjson = True
 
+hgproto = None
+if '--hgproto' in sys.argv:
+    idx = sys.argv.index('--hgproto')
+    hgproto = sys.argv[idx + 1]
+    sys.argv.pop(idx)
+    sys.argv.pop(idx)
+
 tag = None
 def request(host, path, show):
     assert not path.startswith('/'), path
@@ -42,6 +49,8 @@ def request(host, path, show):
     headers = {}
     if tag:
         headers['If-None-Match'] = tag
+    if hgproto:
+        headers['X-HgProto-1'] = hgproto
 
     conn = httplib.HTTPConnection(host)
     conn.request("GET", '/' + path, None, headers)

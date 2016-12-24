@@ -1629,6 +1629,18 @@ Controls generic server settings.
 
     This option only impacts the HTTP server.
 
+``zstdlevel``
+    Integer between ``1`` and ``22`` that controls the zstd compression level
+    for wire protocol commands. ``1`` is the minimal amount of compression and
+    ``22`` is the highest amount of compression.
+
+    The default (``3``) should be significantly faster than zlib while likely
+    delivering better compression ratios.
+
+    This option only impacts the HTTP server.
+
+    See also ``server.zliblevel``.
+
 ``smtp``
 --------
 
