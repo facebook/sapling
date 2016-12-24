@@ -64,7 +64,6 @@ from __future__ import absolute_import
 
 import os
 import re
-import shlex
 import shutil
 import tempfile
 from mercurial.i18n import _
@@ -78,6 +77,7 @@ from mercurial import (
     commands,
     error,
     filemerge,
+    pycompat,
     scmutil,
     util,
 )
@@ -371,7 +371,7 @@ def uisetup(ui):
             if path:
                 # case "cmd = path opts"
                 cmdline = path
-                diffopts = len(shlex.split(cmdline)) > 1
+                diffopts = len(pycompat.shlexsplit(cmdline)) > 1
             else:
                 # case "cmd ="
                 path = util.findexe(cmd)

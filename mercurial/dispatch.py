@@ -14,7 +14,6 @@ import getopt
 import os
 import pdb
 import re
-import shlex
 import signal
 import sys
 import time
@@ -279,7 +278,7 @@ def aliasargs(fn, givenargs):
         cmd = re.sub(r'\$(\d+|\$)', replacer, cmd)
         givenargs = [x for i, x in enumerate(givenargs)
                      if i not in nums]
-        args = shlex.split(cmd)
+        args = pycompat.shlexsplit(cmd)
     return args + givenargs
 
 def aliasinterpolate(name, args, cmd):
@@ -351,7 +350,7 @@ class cmdalias(object):
             return
 
         try:
-            args = shlex.split(self.definition)
+            args = pycompat.shlexsplit(self.definition)
         except ValueError as inst:
             self.badalias = (_("error in definition for alias '%s': %s")
                              % (self.name, inst))
@@ -461,7 +460,7 @@ def _parse(ui, args):
         args = aliasargs(entry[0], args)
         defaults = ui.config("defaults", cmd)
         if defaults:
-            args = map(util.expandpath, shlex.split(defaults)) + args
+            args = map(util.expandpath, pycompat.shlexsplit(defaults)) + args
         c = list(entry[1])
     else:
         cmd = None

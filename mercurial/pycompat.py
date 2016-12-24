@@ -12,6 +12,7 @@ from __future__ import absolute_import
 
 import getopt
 import os
+import shlex
 import sys
 
 ispy3 = (sys.version_info[0] >= 3)
@@ -122,6 +123,14 @@ if ispy3:
         dic = dict((k.encode('latin-1'), v) for k, v in dic.iteritems())
         return dic
 
+    # shlex.split() accepts unicodes on Python 3. This function takes bytes
+    # argument, convert it into unicodes, pass into shlex.split(), convert the
+    # returned value to bytes and return that.
+    # TODO: handle shlex.shlex().
+    def shlexsplit(s):
+        ret = shlex.split(s.decode('latin-1'))
+        return [a.encode('latin-1') for a in ret]
+
 else:
     def sysstr(s):
         return s
@@ -162,6 +171,7 @@ else:
     getcwd = os.getcwd
     osgetenv = os.getenv
     sysexecutable = sys.executable
+    shlexsplit = shlex.split
 
 stringio = io.StringIO
 empty = _queue.Empty

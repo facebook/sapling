@@ -11,7 +11,6 @@ import difflib
 import errno
 import os
 import re
-import shlex
 import socket
 import string
 import sys
@@ -1981,7 +1980,7 @@ def debuginstall(ui, **opts):
     editor = ui.geteditor()
     editor = util.expandpath(editor)
     fm.write('editor', _("checking commit editor... (%s)\n"), editor)
-    cmdpath = util.findexe(shlex.split(editor)[0])
+    cmdpath = util.findexe(pycompat.shlexsplit(editor)[0])
     fm.condwrite(not cmdpath and editor == 'vi', 'vinotfound',
                  _(" No commit editor set and can't find %s in PATH\n"
                    " (specify a commit editor in your configuration"
