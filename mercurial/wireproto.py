@@ -607,6 +607,55 @@ def bundle1allowed(repo, action):
 
     return ui.configbool('server', 'bundle1', True)
 
+def supportedcompengines(ui, proto, role):
+    """Obtain the list of supported compression engines for a request."""
+    assert role in (util.CLIENTROLE, util.SERVERROLE)
+
+    compengines = util.compengines.supportedwireengines(role)
+
+    # Allow config to override default list and ordering.
+    if role == util.SERVERROLE:
+        configengines = ui.configlist('server', 'compressionengines')
+        config = 'server.compressionengines'
+    else:
+        # This is currently implemented mainly to facilitate testing. In most
+        # cases, the server should be in charge of choosing a compression engine
+        # because a server has the most to lose from a sub-optimal choice. (e.g.
+        # CPU DoS due to an expensive engine or a network DoS due to poor
+        # compression ratio).
+        configengines = ui.configlist('experimental',
+                                      'clientcompressionengines')
+        config = 'experimental.clientcompressionengines'
+
+    # No explicit config. Filter out the ones that aren't supposed to be
+    # advertised and return default ordering.
+    if not configengines:
+        attr = 'serverpriority' if role == util.SERVERROLE else 'clientpriority'
+        return [e for e in compengines
+                if getattr(e.wireprotosupport(), attr) > 0]
+
+    # If compression engines are listed in the config, assume there is a good
+    # reason for it (like server operators wanting to achieve specific
+    # performance characteristics). So fail fast if the config references
+    # unusable compression engines.
+    validnames = set(e.name() for e in compengines)
+    invalidnames = set(e for e in configengines if e not in validnames)
+    if invalidnames:
+        raise error.Abort(_('invalid compression engine defined in %s: %s') %
+                          (config, ', '.join(sorted(invalidnames))))
+
+    compengines = [e for e in compengines if e.name() in configengines]
+    compengines = sorted(compengines,
+                         key=lambda e: configengines.index(e.name()))
+
+    if not compengines:
+        raise error.Abort(_('%s config option does not specify any known '
+                            'compression engines') % config,
+                          hint=_('usable compression engines: %s') %
+                          ', '.sorted(validnames))
+
+    return compengines
+
 # list of commands
 commands = {}
 
@@ -722,6 +771,16 @@ def _capabilities(repo, proto):
                     repo.ui.configint('server', 'maxhttpheaderlen', 1024))
         if repo.ui.configbool('experimental', 'httppostargs', False):
             caps.append('httppostargs')
+
+        # FUTURE advertise 0.2rx once support is implemented
+        # FUTURE advertise minrx and mintx after consulting config option
+        caps.append('httpmediatype=0.1rx,0.1tx,0.2tx')
+
+        compengines = supportedcompengines(repo.ui, proto, util.SERVERROLE)
+        if compengines:
+            comptypes = ','.join(urlreq.quote(e.wireprotosupport().name)
+                                 for e in compengines)
+            caps.append('compression=%s' % comptypes)
 
     return caps
 

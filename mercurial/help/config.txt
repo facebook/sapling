@@ -1545,6 +1545,21 @@ Alias definitions for revsets. See :hg:`help revsets` for details.
 
 Controls generic server settings.
 
+``compressionengines``
+    List of compression engines and their relative priority to advertise
+    to clients.
+
+    The order of compression engines determines their priority, the first
+    having the highest priority. If a compression engine is not listed
+    here, it won't be advertised to clients.
+
+    If not set (the default), built-in defaults are used. Run
+    :hg:`debuginstall` to list available compression engines and their
+    default wire protocol priority.
+
+    Older Mercurial clients only support zlib compression and this setting
+    has no effect for legacy clients.
+
 ``uncompressed``
     Whether to allow clients to clone a repository using the
     uncompressed streaming protocol. This transfers about 40% more

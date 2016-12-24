@@ -1959,6 +1959,12 @@ def debuginstall(ui, **opts):
              fm.formatlist(sorted(e.name() for e in compengines
                                   if e.available()),
                            name='compengine', fmt='%s', sep=', '))
+    wirecompengines = util.compengines.supportedwireengines(util.SERVERROLE)
+    fm.write('compenginesserver', _('checking available compression engines '
+                                    'for wire protocol (%s)\n'),
+             fm.formatlist([e.name() for e in wirecompengines
+                            if e.wireprotosupport()],
+                           name='compengine', fmt='%s', sep=', '))
 
     # templates
     p = templater.templatepaths()

@@ -13,6 +13,7 @@ hg debuginstall
   checking installed modules (*mercurial)... (glob)
   checking registered compression engines (*zlib*) (glob)
   checking available compression engines (*zlib*) (glob)
+  checking available compression engines for wire protocol (*zlib*) (glob)
   checking templates (*mercurial?templates)... (glob)
   checking default template (*mercurial?templates?map-cmdline.default) (glob)
   checking commit editor... (* -c "import sys; sys.exit(0)") (glob)
@@ -25,6 +26,7 @@ hg debuginstall JSON
    {
     "compengines": ["bz2", "bz2truncated", "none", "zlib"*], (glob)
     "compenginesavail": ["bz2", "bz2truncated", "none", "zlib"*], (glob)
+    "compenginesserver": [*"zlib"*], (glob)
     "defaulttemplate": "*mercurial?templates?map-cmdline.default", (glob)
     "defaulttemplateerror": null,
     "defaulttemplatenotfound": "default",
@@ -64,6 +66,7 @@ hg debuginstall with no username
   checking installed modules (*mercurial)... (glob)
   checking registered compression engines (*zlib*) (glob)
   checking available compression engines (*zlib*) (glob)
+  checking available compression engines for wire protocol (*zlib*) (glob)
   checking templates (*mercurial?templates)... (glob)
   checking default template (*mercurial?templates?map-cmdline.default) (glob)
   checking commit editor... (* -c "import sys; sys.exit(0)") (glob)
@@ -93,6 +96,7 @@ path variables are expanded (~ is the same as $TESTTMP)
   checking installed modules (*mercurial)... (glob)
   checking registered compression engines (*zlib*) (glob)
   checking available compression engines (*zlib*) (glob)
+  checking available compression engines for wire protocol (*zlib*) (glob)
   checking templates (*mercurial?templates)... (glob)
   checking default template (*mercurial?templates?map-cmdline.default) (glob)
   checking commit editor... (* -c "import sys; sys.exit(0)") (glob)
