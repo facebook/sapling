@@ -24,9 +24,12 @@
   > | xargs $PYTHON3 contrib/check-py3-compat.py \
   > | sed 's/[0-9][0-9]*)$/*)/'
   hgext/convert/transport.py: error importing: <ImportError> No module named 'svn.client' (error at transport.py:*)
-  hgext/fsmonitor/pywatchman/capabilities.py: error importing: <ImportError> No module named 'pybser' (error at __init__.py:*)
-  hgext/fsmonitor/pywatchman/pybser.py: error importing: <ImportError> No module named 'pybser' (error at __init__.py:*)
-  hgext/fsmonitor/watchmanclient.py: error importing: <ImportError> No module named 'pybser' (error at __init__.py:*)
+  hgext/fsmonitor/pywatchman/capabilities.py: error importing: <SyntaxError> from __future__ imports must occur at the beginning of the file (__init__.py, line 30) (error at watchmanclient.py:*)
+  hgext/fsmonitor/pywatchman/compat.py: error importing: <SyntaxError> from __future__ imports must occur at the beginning of the file (__init__.py, line 30) (error at watchmanclient.py:*)
+  hgext/fsmonitor/pywatchman/encoding.py: error importing: <SyntaxError> from __future__ imports must occur at the beginning of the file (__init__.py, line 30) (error at watchmanclient.py:*)
+  hgext/fsmonitor/pywatchman/load.py: error importing: <SyntaxError> from __future__ imports must occur at the beginning of the file (__init__.py, line 30) (error at watchmanclient.py:*)
+  hgext/fsmonitor/pywatchman/pybser.py: error importing: <SyntaxError> from __future__ imports must occur at the beginning of the file (__init__.py, line 30) (error at watchmanclient.py:*)
+  hgext/fsmonitor/watchmanclient.py: error importing: <SyntaxError> from __future__ imports must occur at the beginning of the file (__init__.py, line 30) (error at watchmanclient.py:*)
   mercurial/cffi/bdiff.py: error importing: <ImportError> No module named 'mercurial.cffi' (error at check-py3-compat.py:*)
   mercurial/cffi/mpatch.py: error importing: <ImportError> No module named 'mercurial.cffi' (error at check-py3-compat.py:*)
   mercurial/cffi/osutil.py: error importing: <ImportError> No module named 'mercurial.cffi' (error at check-py3-compat.py:*)
