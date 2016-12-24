@@ -25,6 +25,20 @@ urlreq = util.urlreq
 HGTYPE = 'application/mercurial-0.1'
 HGERRTYPE = 'application/hg-error'
 
+def decodevaluefromheaders(req, headerprefix):
+    """Decode a long value from multiple HTTP request headers."""
+    chunks = []
+    i = 1
+    while True:
+        v = req.env.get('HTTP_%s_%d' % (
+            headerprefix.upper().replace('-', '_'), i))
+        if v is None:
+            break
+        chunks.append(v)
+        i += 1
+
+    return ''.join(chunks)
+
 class webproto(wireproto.abstractserverproto):
     def __init__(self, req, ui):
         self.req = req
@@ -53,15 +67,9 @@ class webproto(wireproto.abstractserverproto):
             args.update(cgi.parse_qs(
                 self.req.read(postlen), keep_blank_values=True))
             return args
-        chunks = []
-        i = 1
-        while True:
-            h = self.req.env.get('HTTP_X_HGARG_' + str(i))
-            if h is None:
-                break
-            chunks += [h]
-            i += 1
-        args.update(cgi.parse_qs(''.join(chunks), keep_blank_values=True))
+
+        argvalue = decodevaluefromheaders(self.req, 'X-HgArg')
+        args.update(cgi.parse_qs(argvalue, keep_blank_values=True))
         return args
     def getfile(self, fp):
         length = int(self.req.env['CONTENT_LENGTH'])

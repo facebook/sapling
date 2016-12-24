@@ -53,6 +53,26 @@ def decompressresponse(response, engine):
     reader.__class__ = readerproxy
     return reader
 
+def encodevalueinheaders(value, header, limit):
+    """Encode a string value into multiple HTTP headers.
+
+    ``value`` will be encoded into 1 or more HTTP headers with the names
+    ``header-<N>`` where ``<N>`` is an integer starting at 1. Each header
+    name + value will be at most ``limit`` bytes long.
+
+    Returns an iterable of 2-tuples consisting of header names and values.
+    """
+    fmt = header + '-%s'
+    valuelen = limit - len(fmt % '000') - len(': \r\n')
+    result = []
+
+    n = 0
+    for i in xrange(0, len(value), valuelen):
+        n += 1
+        result.append((fmt % str(n), value[i:i + valuelen]))
+
+    return result
+
 class httppeer(wireproto.wirepeer):
     def __init__(self, ui, path):
         self.path = path
@@ -135,13 +155,9 @@ class httppeer(wireproto.wirepeer):
             if headersize > 0:
                 # The headers can typically carry more data than the URL.
                 encargs = urlreq.urlencode(sorted(args.items()))
-                headerfmt = 'X-HgArg-%s'
-                contentlen = headersize - len(headerfmt % '000' + ': \r\n')
-                headernum = 0
-                for i in xrange(0, len(encargs), contentlen):
-                    headernum += 1
-                    header = headerfmt % str(headernum)
-                    headers[header] = encargs[i:i + contentlen]
+                for header, value in encodevalueinheaders(encargs, 'X-HgArg',
+                                                          headersize):
+                    headers[header] = value
                     varyheaders.append(header)
             else:
                 q += sorted(args.items())
