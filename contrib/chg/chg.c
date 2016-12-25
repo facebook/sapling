@@ -127,21 +127,25 @@ static void preparesockdir(const char *sockdir)
 		abortmsg("insecure sockdir %s", sockdir);
 }
 
+static void getdefaultsockdir(char sockdir[], size_t size)
+{
+	/* by default, put socket file in secure directory
+	 * (permission of socket file may be ignored on some Unices) */
+	const char *tmpdir = getenv("TMPDIR");
+	if (!tmpdir)
+		tmpdir = "/tmp";
+	int r = snprintf(sockdir, size, "%s/chg%d", tmpdir, geteuid());
+	if (r < 0 || (size_t)r >= size)
+		abortmsg("too long TMPDIR (r = %d)", r);
+}
+
 static void setcmdserveropts(struct cmdserveropts *opts)
 {
 	int r;
 	char sockdir[PATH_MAX];
 	const char *envsockname = getenv("CHGSOCKNAME");
 	if (!envsockname) {
-		/* by default, put socket file in secure directory
-		 * (permission of socket file may be ignored on some Unices) */
-		const char *tmpdir = getenv("TMPDIR");
-		if (!tmpdir)
-			tmpdir = "/tmp";
-		r = snprintf(sockdir, sizeof(sockdir), "%s/chg%d",
-			     tmpdir, geteuid());
-		if (r < 0 || (size_t)r >= sizeof(sockdir))
-			abortmsg("too long TMPDIR (r = %d)", r);
+		getdefaultsockdir(sockdir, sizeof(sockdir));
 		preparesockdir(sockdir);
 	}
 
