@@ -457,16 +457,17 @@ hgclient_t *hgc_open(const char *sockname)
 
 	/* real connect */
 	int r = connect(fd, (struct sockaddr *)&addr, sizeof(addr));
+	if (r < 0) {
+		if (errno != ENOENT && errno != ECONNREFUSED)
+			abortmsgerrno("cannot connect to %s", sockname);
+	}
 	if (bakfd != -1) {
 		fchdirx(bakfd);
 		close(bakfd);
 	}
-
 	if (r < 0) {
 		close(fd);
-		if (errno == ENOENT || errno == ECONNREFUSED)
-			return NULL;
-		abortmsgerrno("cannot connect to %s", addr.sun_path);
+		return NULL;
 	}
 	debugmsg("connected to %s", addr.sun_path);
 
