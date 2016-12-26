@@ -118,6 +118,12 @@ def uisetup(ui):
     if '--debugger' in sys.argv or not ui.formatted():
         return
 
+    class pagerui(ui.__class__):
+        def _runpager(self, pagercmd):
+            _runpager(self, pagercmd)
+
+    ui.__class__ = pagerui
+
     # chg has its own pager implementation
     argv = sys.argv[:]
     if 'chgunix' in dispatch._earlygetopt(['--cmdserver'], argv):
@@ -157,7 +163,7 @@ def uisetup(ui):
             ui.setconfig('ui', 'interactive', False, 'pager')
             if util.safehasattr(signal, "SIGPIPE"):
                 signal.signal(signal.SIGPIPE, signal.SIG_DFL)
-            _runpager(ui, p)
+            ui._runpager(p)
         return orig(ui, options, cmd, cmdfunc)
 
     # Wrap dispatch._runcommand after color is loaded so color can see
