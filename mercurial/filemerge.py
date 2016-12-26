@@ -35,8 +35,8 @@ def _toolstr(ui, tool, part, default=""):
 def _toolbool(ui, tool, part, default=False):
     return ui.configbool("merge-tools", tool + "." + part, default)
 
-def _toollist(ui, tool, part, default=[]):
-    return ui.configlist("merge-tools", tool + "." + part, default)
+def _toollist(ui, tool, part, default=None):
+    return ui.configlist("merge-tools", tool + "." + part, default or [])
 
 internals = {}
 # Merge tools to document.
