@@ -1153,6 +1153,42 @@ class filectx(basefilectx):
         return [filectx(self._repo, self._path, fileid=x,
                         filelog=self._filelog) for x in c]
 
+def blockancestors(fctx, fromline, toline):
+    """Yield ancestors of `fctx` with respect to the block of lines within
+    `fromline`-`toline` range.
+    """
+    def changesrange(fctx1, fctx2, linerange2):
+        """Return `(diffinrange, linerange1)` where `diffinrange` is True
+        if diff from fctx2 to fctx1 has changes in linerange2 and
+        `linerange1` is the new line range for fctx1.
+        """
+        diffopts = patch.diffopts(fctx._repo.ui)
+        blocks = mdiff.allblocks(fctx1.data(), fctx2.data(), diffopts)
+        filteredblocks, linerange1 = mdiff.blocksinrange(blocks, linerange2)
+        diffinrange = any(stype == '!' for _, stype in filteredblocks)
+        return diffinrange, linerange1
+
+    visit = {(fctx.linkrev(), fctx.filenode()): (fctx, (fromline, toline))}
+    while visit:
+        c, linerange2 = visit.pop(max(visit))
+        pl = c.parents()
+        if not pl:
+            # The block originates from the initial revision.
+            yield c
+            continue
+        inrange = False
+        for p in pl:
+            inrangep, linerange1 = changesrange(p, c, linerange2)
+            inrange = inrange or inrangep
+            if linerange1[0] == linerange1[1]:
+                # Parent's linerange is empty, meaning that the block got
+                # introduced in this revision; no need to go futher in this
+                # branch.
+                continue
+            visit[p.linkrev(), p.filenode()] = p, linerange1
+        if inrange:
+            yield c
+
 class committablectx(basectx):
     """A committablectx object provides common functionality for a context that
     wants the ability to commit, e.g. workingctx or memctx."""
