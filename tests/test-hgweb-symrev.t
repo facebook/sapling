@@ -186,7 +186,7 @@ Set up the repo
   <li><a href="/diff/xyzzy/foo?style=paper">diff</a></li>
   <li><a href="/comparison/xyzzy/foo?style=paper">comparison</a></li>
   <li><a href="/log/xyzzy/foo?style=paper">file log</a></li>
-  <li><a href="/raw-annotate/xyzzy/foo">raw</a></li>
+  <li><a href="/raw-file/xyzzy/foo">raw</a></li>
    annotate foo @ 1:<a href="/rev/a7c1559b7bba?style=paper">a7c1559b7bba</a>
    <td class="author"><a href="/file/43c799df6e75/foo?style=paper">43c799df6e75</a> </td>
    <td class="author"><a href="/file/9d8c40cba617/foo?style=paper">9d8c40cba617</a> </td>
@@ -381,7 +381,7 @@ Set up the repo
   <li><a href="/diff/xyzzy/foo?style=coal">diff</a></li>
   <li><a href="/comparison/xyzzy/foo?style=coal">comparison</a></li>
   <li><a href="/log/xyzzy/foo?style=coal">file log</a></li>
-  <li><a href="/raw-annotate/xyzzy/foo">raw</a></li>
+  <li><a href="/raw-file/xyzzy/foo">raw</a></li>
    annotate foo @ 1:<a href="/rev/a7c1559b7bba?style=coal">a7c1559b7bba</a>
    <td class="author"><a href="/file/43c799df6e75/foo?style=coal">43c799df6e75</a> </td>
    <td class="author"><a href="/file/9d8c40cba617/foo?style=coal">9d8c40cba617</a> </td>
@@ -626,7 +626,7 @@ Set up the repo
   <a href="/log/xyzzy/foo?style=gitweb">revisions</a> |
   <a href="/diff/xyzzy/foo?style=gitweb">diff</a> |
   <a href="/comparison/xyzzy/foo?style=gitweb">comparison</a> |
-  <a href="/raw-annotate/xyzzy/foo">raw</a> |
+  <a href="/raw-file/xyzzy/foo">raw</a> |
    <td style="font-family:monospace"><a class="list" href="/rev/a7c1559b7bba?style=gitweb">a7c1559b7bba</a></td>
   <a class="list" href="/annotate/43c799df6e75/foo?style=gitweb">
   <a class="list" href="/annotate/9d8c40cba617/foo?style=gitweb">9d8c40cba617</a></td>
@@ -849,7 +849,7 @@ Set up the repo
           <li><a href="/log/xyzzy/foo?style=monoblue">revisions</a></li>
           <li><a href="/diff/xyzzy/foo?style=monoblue">diff</a></li>
           <li><a href="/comparison/xyzzy/foo?style=monoblue">comparison</a></li>
-          <li><a href="/raw-annotate/xyzzy/foo">raw</a></li>
+          <li><a href="/raw-file/xyzzy/foo">raw</a></li>
           <dd><a href="/rev/a7c1559b7bba?style=monoblue">a7c1559b7bba</a></dd>
   <a href="/annotate/43c799df6e75/foo?style=monoblue">
   <a href="/annotate/9d8c40cba617/foo?style=monoblue">9d8c40cba617</a>
@@ -1053,7 +1053,7 @@ Set up the repo
   <a href="/file/xyzzy/?style=spartan">files</a>
   <a href="/file/xyzzy/foo?style=spartan">file</a>
   <a href="/log/xyzzy/foo?style=spartan">revisions</a>
-  <a href="/raw-annotate/xyzzy/foo">raw</a>
+  <a href="/raw-file/xyzzy/foo">raw</a>
    <td><a href="/rev/a7c1559b7bba?style=spartan">a7c1559b7bba</a></td>
   <a href="/annotate/43c799df6e75/foo?style=spartan">
   <td><a href="/annotate/9d8c40cba617/foo?style=spartan">9d8c40cba617</a></td>
