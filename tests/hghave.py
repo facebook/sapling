@@ -413,6 +413,12 @@ def has_pyflakes():
                        br"<stdin>:1: 're' imported but unused",
                        True)
 
+@check("pylint", "Pylint python linter")
+def has_pylint():
+    return matchoutput("pylint --help",
+                       br"Usage:  pylint",
+                       True)
+
 @check("pygments", "Pygments source highlighting library")
 def has_pygments():
     try:
