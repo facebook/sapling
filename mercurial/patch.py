@@ -2526,6 +2526,15 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
                 header.append('index %s..%s' %
                               (gitindex(content1), gitindex(content2)))
         else:
+            if opts.git and opts.index > 0:
+                flag = flag1
+                if flag is None:
+                    flag = flag2
+                header.append('index %s..%s %s' %
+                              (gitindex(content1)[0:opts.index],
+                               gitindex(content2)[0:opts.index],
+                               gitmode[flag]))
+
             text = mdiff.unidiff(content1, date1,
                                  content2, date2,
                                  path1, path2, opts=opts)
