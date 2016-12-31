@@ -689,4 +689,97 @@ verify pathauditor blocks evil filepaths
   $ HGEDITOR="sh $TESTTMP/notouching.sh" hg commit
   abort: commit message unchanged
   [255]
+
+test that text below the --- >8 --- special string is ignored
+
+  $ hg init ignore_below_special_string
+  $ cd ignore_below_special_string
+  $ echo foo > foo
+  $ hg add foo
+  $ hg commit -m "foo"
+  $ cat >> .hg/hgrc <<EOF
+  > [committemplate]
+  > changeset.commit = first line
+  >     HG: this is customized commit template
+  >     HG: {extramsg}
+  >     HG: ------------------------ >8 ------------------------
+  >     {diff()}
+  > EOF
+  $ echo foo2 > foo2
+  $ hg add foo2
+  $ HGEDITOR=cat hg ci
+  first line
+  HG: this is customized commit template
+  HG: Leave message empty to abort commit.
+  HG: ------------------------ >8 ------------------------
+  diff -r e63c23eaa88a foo2
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/foo2	Thu Jan 01 00:00:00 1970 +0000
+  @@ -0,0 +1,1 @@
+  +foo2
+  $ hg log -T '{desc}\n' -r .
+  first line
+
+test that the special string --- >8 --- isn't used when not at the beginning of
+a line
+
+  $ cat >> .hg/hgrc <<EOF
+  > [committemplate]
+  > changeset.commit = first line2
+  >     another line HG: ------------------------ >8 ------------------------
+  >     HG: this is customized commit template
+  >     HG: {extramsg}
+  >     HG: ------------------------ >8 ------------------------
+  >     {diff()}
+  > EOF
+  $ echo foo >> foo
+  $ HGEDITOR=cat hg ci
+  first line2
+  another line HG: ------------------------ >8 ------------------------
+  HG: this is customized commit template
+  HG: Leave message empty to abort commit.
+  HG: ------------------------ >8 ------------------------
+  diff -r 3661b22b0702 foo
+  --- a/foo	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/foo	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,1 +1,2 @@
+   foo
+  +foo
+  $ hg log -T '{desc}\n' -r .
+  first line2
+  another line HG: ------------------------ >8 ------------------------
+
+also test that this special string isn't accepted when there is some extra text
+at the end
+
+  $ cat >> .hg/hgrc <<EOF
+  > [committemplate]
+  > changeset.commit = first line3
+  >     HG: ------------------------ >8 ------------------------foobar
+  >     second line
+  >     HG: this is customized commit template
+  >     HG: {extramsg}
+  >     HG: ------------------------ >8 ------------------------
+  >     {diff()}
+  > EOF
+  $ echo foo >> foo
+  $ HGEDITOR=cat hg ci
+  first line3
+  HG: ------------------------ >8 ------------------------foobar
+  second line
+  HG: this is customized commit template
+  HG: Leave message empty to abort commit.
+  HG: ------------------------ >8 ------------------------
+  diff -r ce648f5f066f foo
+  --- a/foo	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/foo	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,2 +1,3 @@
+   foo
+   foo
+  +foo
+  $ hg log -T '{desc}\n' -r .
+  first line3
+  second line
+
   $ cd ..
+

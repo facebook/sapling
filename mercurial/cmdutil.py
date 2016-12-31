@@ -49,6 +49,10 @@ from . import (
 )
 stringio = util.stringio
 
+# special string such that everything below this line will be ingored in the
+# editor text
+_linebelow = "^HG: ------------------------ >8 ------------------------$"
+
 def ishunk(x):
     hunkclasses = (crecordmod.uihunk, patch.recordhunk)
     return isinstance(x, hunkclasses)
@@ -2767,6 +2771,13 @@ def commitforceeditor(repo, ctx, subs, finishdesc=None, extramsg=None,
 
     editortext = repo.ui.edit(committext, ctx.user(), ctx.extra(),
                         editform=editform, pending=pending)
+
+    # strip away anything below this special string (used for editors that want
+    # to display the diff)
+    stripbelow = re.search(_linebelow, editortext, flags=re.MULTILINE)
+    if stripbelow:
+        editortext = editortext[:stripbelow.start()]
+
     text = re.sub("(?m)^HG:.*(\n|$)", "", editortext)
     os.chdir(olddir)
 
