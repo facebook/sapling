@@ -127,8 +127,9 @@ def recordmanifest(pack, repo, oldtip, newtip):
 
     for rev in xrange(oldtip, newtip):
         ui.progress(message, rev - oldtip, total=total)
-        p1 = mfrevlog.parentrevs(rev)[0]
+        p1, p2 = mfrevlog.parentrevs(rev)
         p1node = mfrevlog.node(p1)
+        p2node = mfrevlog.node(p2)
 
         if p1node == nullid:
             origtree = ctreemanifest.treemanifest(repo.svfs.manifestdatastore)
@@ -155,44 +156,55 @@ def recordmanifest(pack, repo, oldtip, newtip):
             builttrees.pop(p1node, None)
         refcount[p1node] = p1refcount
 
-        # This will generally be very quick, since p1 == deltabase
-        delta = mfrevlog.revdiff(p1, rev)
+        if p2node != nullid:
+            node = mfrevlog.node(rev)
+            diff = mfl[p1node].read().diff(mfl[node].read())
+            deletes = []
+            adds = []
+            for filename, ((anode, aflag), (bnode, bflag)) in diff.iteritems():
+                if bnode is None:
+                    deletes.append(filename)
+                else:
+                    adds.append((filename, bnode, bflag))
+        else:
+            # This will generally be very quick, since p1 == deltabase
+            delta = mfrevlog.revdiff(p1, rev)
 
-        deletes = []
-        adds = []
+            deletes = []
+            adds = []
 
-        # Inspect the delta and read the added files from it
-        current = 0
-        end = len(delta)
-        while current < end:
-            try:
-                block = ''
-                # Deltas are of the form:
-                #   <start><end><datalen><data>
-                # Where start and end say what bytes to delete, and data says
-                # what bytes to insert in their place. So we can just read
-                # <data> to figure out all the added files.
-                byte1, byte2, blocklen = struct.unpack(">lll",
-                        delta[current:current + 12])
-                current += 12
-                if blocklen:
-                    block = delta[current:current + blocklen]
-                    current += blocklen
-            except struct.error:
-                raise RuntimeError("patch cannot be decoded")
+            # Inspect the delta and read the added files from it
+            current = 0
+            end = len(delta)
+            while current < end:
+                try:
+                    block = ''
+                    # Deltas are of the form:
+                    #   <start><end><datalen><data>
+                    # Where start and end say what bytes to delete, and data says
+                    # what bytes to insert in their place. So we can just read
+                    # <data> to figure out all the added files.
+                    byte1, byte2, blocklen = struct.unpack(">lll",
+                            delta[current:current + 12])
+                    current += 12
+                    if blocklen:
+                        block = delta[current:current + blocklen]
+                        current += blocklen
+                except struct.error:
+                    raise RuntimeError("patch cannot be decoded")
 
-            # An individual delta block may contain multiple newline delimited
-            # entries.
-            for line in block.split('\n'):
-                if not line:
-                    continue
-                fname, rest = line.split('\0')
-                fnode = rest[:40]
-                fflag = rest[40:]
-                adds.append((fname, bin(fnode), fflag))
+                # An individual delta block may contain multiple newline delimited
+                # entries.
+                for line in block.split('\n'):
+                    if not line:
+                        continue
+                    fname, rest = line.split('\0')
+                    fnode = rest[:40]
+                    fflag = rest[40:]
+                    adds.append((fname, bin(fnode), fflag))
 
-        allfiles = set(repo.changelog.readfiles(mfrevlog.linkrev(rev)))
-        deletes = allfiles.difference(fname for fname, fnode, fflag in adds)
+            allfiles = set(repo.changelog.readfiles(mfrevlog.linkrev(rev)))
+            deletes = allfiles.difference(fname for fname, fnode, fflag in adds)
 
         # Apply the changes on top of the parent tree
         newtree = origtree.copy()
