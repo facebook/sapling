@@ -1,6 +1,7 @@
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > rebase=
+  > histedit=
   > 
   > [alias]
   > tglog = log -G --template "{rev}: '{desc}' {branches}\n"
@@ -72,6 +73,27 @@ Re-run:
   searching for changes
   no changes found
 
+Abort pull early if working dir is not clean:
+
+  $ echo L1-mod > L1
+  $ hg pull --rebase
+  abort: uncommitted changes
+  [255]
+  $ hg update --clean --quiet
+
+Abort pull early if another operation (histedit) is in progress:
+
+  $ hg histedit . -q --commands - << EOF
+  > edit d80cc2da061e histedit: generate unfinished state
+  > EOF
+  Editing (d80cc2da061e), you may commit or record as needed now.
+  (hg histedit --continue to resume)
+  [1]
+  $ hg pull --rebase
+  abort: histedit in progress
+  (use 'hg histedit --continue' or 'hg histedit --abort')
+  [255]
+  $ hg histedit --abort --quiet
 
 Invoke pull --rebase and nothing to rebase:
 
