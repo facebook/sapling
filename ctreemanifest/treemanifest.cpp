@@ -622,6 +622,12 @@ bool NewTreeIterator::popResult(std::string **path, ManifestNode **result,
   // just give up now. Unless we're the root node (because the root node
   // will always change based on the parent nodes).
   if (alreadyExists && this->mainStack.size() > 1) {
+    size_t slashoffset = this->path.find_last_of('/', this->path.size() - 2);
+    if (slashoffset == std::string::npos) {
+      this->path.erase();
+    } else {
+      this->path.erase(slashoffset + 1);
+    }
     return false;
   }
 
