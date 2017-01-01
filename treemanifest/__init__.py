@@ -217,25 +217,40 @@ def recordmanifest(pack, repo, oldtip, newtip):
         newtree.write(InterceptedMutablePack(pack, mfrevlog.node(rev), p1node),
                       origtree if p1node != nullid else None)
 
-        if ui.configbool('treemanifest', 'verifyautocreate', True):
+        if ui.configbool('treemanifest', 'verifyautocreate', False):
             diff = newtree.diff(origtree)
             if len(diff) != len(adds) + len(deletes):
                 import pdb
                 pdb.set_trace()
 
             for fname in deletes:
-                l, r = diff[fname]
-                if l != (None, ''):
+                fdiff = diff.get(fname)
+                if fdiff is None:
                     import pdb
                     pdb.set_trace()
                     pass
+                else:
+                    l, r = fdiff
+                    if l != (None, ''):
+                        import pdb
+                        pdb.set_trace()
+                        pass
 
             for fname, fnode, fflags in adds:
-                l, r = diff[fname]
-                if l != (fnode, fflags):
-                    import pdb
-                    pdb.set_trace()
-                    pass
+                fdiff = diff.get(fname)
+                if fdiff is None:
+                    # Sometimes adds are no-ops, so they don't show up in the
+                    # diff.
+                    if origtree.get(fname) != newtree.get(fname):
+                        import pdb
+                        pdb.set_trace()
+                        pass
+                else:
+                    l, r = fdiff
+                    if l != (fnode, fflags):
+                        import pdb
+                        pdb.set_trace()
+                        pass
         builttrees[mfrevlog.node(rev)] = newtree
 
         mfnode = mfrevlog.node(rev)
