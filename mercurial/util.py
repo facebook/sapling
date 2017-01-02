@@ -3207,6 +3207,19 @@ class compressionengine(object):
         """
         raise NotImplementedError()
 
+    def revlogcompressor(self, opts=None):
+        """Obtain an object that can be used to compress revlog entries.
+
+        The object has a ``compress(data)`` method that compresses binary
+        data. This method returns compressed binary data or ``None`` if
+        the data could not be compressed (too small, not compressible, etc).
+        The returned data should have a header uniquely identifying this
+        compression format so decompression can be routed to this engine.
+
+        The object is reusable but is not thread safe.
+        """
+        raise NotImplementedError()
+
 class _zlibengine(compressionengine):
     def name(self):
         return 'zlib'
@@ -3240,6 +3253,41 @@ class _zlibengine(compressionengine):
                     chunk = d.unconsumed_tail
 
         return chunkbuffer(gen())
+
+    class zlibrevlogcompressor(object):
+        def compress(self, data):
+            insize = len(data)
+            # Caller handles empty input case.
+            assert insize > 0
+
+            if insize < 44:
+                return None
+
+            elif insize <= 1000000:
+                compressed = zlib.compress(data)
+                if len(compressed) < insize:
+                    return compressed
+                return None
+
+            # zlib makes an internal copy of the input buffer, doubling
+            # memory usage for large inputs. So do streaming compression
+            # on large inputs.
+            else:
+                z = zlib.compressobj()
+                parts = []
+                pos = 0
+                while pos < insize:
+                    pos2 = pos + 2**20
+                    parts.append(z.compress(data[pos:pos2]))
+                    pos = pos2
+                parts.append(z.flush())
+
+                if sum(map(len, parts)) < insize:
+                    return ''.join(parts)
+                return None
+
+    def revlogcompressor(self, opts=None):
+        return self.zlibrevlogcompressor()
 
 compengines.register(_zlibengine())
 
@@ -3315,6 +3363,13 @@ class _noopengine(compressionengine):
     def decompressorreader(self, fh):
         return fh
 
+    class nooprevlogcompressor(object):
+        def compress(self, data):
+            return None
+
+    def revlogcompressor(self, opts=None):
+        return self.nooprevlogcompressor()
+
 compengines.register(_noopengine())
 
 class _zstdengine(compressionengine):
@@ -3362,6 +3417,49 @@ class _zstdengine(compressionengine):
         zstd = self._module
         dctx = zstd.ZstdDecompressor()
         return chunkbuffer(dctx.read_from(fh))
+
+    class zstdrevlogcompressor(object):
+        def __init__(self, zstd, level=3):
+            # Writing the content size adds a few bytes to the output. However,
+            # it allows decompression to be more optimal since we can
+            # pre-allocate a buffer to hold the result.
+            self._cctx = zstd.ZstdCompressor(level=level,
+                                             write_content_size=True)
+            self._compinsize = zstd.COMPRESSION_RECOMMENDED_INPUT_SIZE
+
+        def compress(self, data):
+            insize = len(data)
+            # Caller handles empty input case.
+            assert insize > 0
+
+            if insize < 50:
+                return None
+
+            elif insize <= 1000000:
+                compressed = self._cctx.compress(data)
+                if len(compressed) < insize:
+                    return compressed
+                return None
+            else:
+                z = self._cctx.compressobj()
+                chunks = []
+                pos = 0
+                while pos < insize:
+                    pos2 = pos + self._compinsize
+                    chunk = z.compress(data[pos:pos2])
+                    if chunk:
+                        chunks.append(chunk)
+                    pos = pos2
+                chunks.append(z.flush())
+
+                if sum(map(len, chunks)) < insize:
+                    return ''.join(chunks)
+                return None
+
+    def revlogcompressor(self, opts=None):
+        opts = opts or {}
+        return self.zstdrevlogcompressor(self._module,
+                                         level=opts.get('level', 3))
 
 compengines.register(_zstdengine())
 
