@@ -157,10 +157,8 @@ error:
 
 /* This implementation is based on hgext/pager.py (post 369741ef7253)
  * Return 0 if pager is not started, or pid of the pager */
-static pid_t setuppager(hgclient_t *hgc, const char *const args[],
-		       size_t argsize)
+static pid_t setuppager(const char *pagercmd)
 {
-	const char *pagercmd = hgc_getpager(hgc, args, argsize);
 	if (!pagercmd)
 		return 0;
 
@@ -179,7 +177,6 @@ static pid_t setuppager(hgclient_t *hgc, const char *const args[],
 				goto error;
 		}
 		close(pipefds[1]);
-		hgc_attachio(hgc);  /* reattach to pager */
 		return pid;
 	} else {
 		dup2(pipefds[0], fileno(stdin));
