@@ -140,22 +140,6 @@ def hash(text, p1, p2):
     s.update(text)
     return s.digest()
 
-def decompress(bin):
-    """ decompress the given input """
-    if not bin:
-        return bin
-    t = bin[0]
-    if t == '\0':
-        return bin
-    if t == 'x':
-        try:
-            return _decompress(bin)
-        except zlib.error as e:
-            raise RevlogError(_("revlog decompress error: %s") % str(e))
-    if t == 'u':
-        return util.buffer(bin, 1)
-    raise RevlogError(_("unknown compression type %r") % t)
-
 # index v0:
 #  4 bytes: offset
 #  4 bytes: compressed length
@@ -1179,7 +1163,7 @@ class revlog(object):
 
         Returns a str holding uncompressed data for the requested revision.
         """
-        return decompress(self._chunkraw(rev, rev, df=df)[1])
+        return self.decompress(self._chunkraw(rev, rev, df=df)[1])
 
     def _chunks(self, revs, df=None):
         """Obtain decompressed chunks for the specified revisions.
@@ -1212,12 +1196,13 @@ class revlog(object):
             # 2G on Windows
             return [self._chunk(rev, df=df) for rev in revs]
 
+        decomp = self.decompress
         for rev in revs:
             chunkstart = start(rev)
             if inline:
                 chunkstart += (rev + 1) * iosize
             chunklength = length(rev)
-            ladd(decompress(buffer(data, chunkstart - offset, chunklength)))
+            ladd(decomp(buffer(data, chunkstart - offset, chunklength)))
 
         return l
 
@@ -1508,6 +1493,26 @@ class revlog(object):
                 return ("", text)
             return ('u', text)
         return ("", bin)
+
+    def decompress(self, data):
+        """Decompress a revlog chunk.
+
+        The chunk is expected to begin with a header identifying the
+        format type so it can be routed to an appropriate decompressor.
+        """
+        if not data:
+            return data
+        t = data[0]
+        if t == '\0':
+            return data
+        if t == 'x':
+            try:
+                return _decompress(data)
+            except zlib.error as e:
+                raise RevlogError(_('revlog decompress error: %s') % str(e))
+        if t == 'u':
+            return util.buffer(data, 1)
+        raise RevlogError(_('unknown compression type %r') % t)
 
     def _isgooddelta(self, d, textlen):
         """Returns True if the given delta is good. Good means that it is within

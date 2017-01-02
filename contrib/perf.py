@@ -34,7 +34,6 @@ from mercurial import (
     extensions,
     mdiff,
     merge,
-    revlog,
     util,
 )
 
@@ -989,7 +988,7 @@ def perfrevlogrevision(ui, repo, file_, rev=None, cache=None, **opts):
                 chunkstart += (rev + 1) * iosize
             chunklength = length(rev)
             b = buffer(data, chunkstart - offset, chunklength)
-            revlog.decompress(b)
+            r.decompress(b)
 
     def dopatch(text, bins):
         if not cache:
