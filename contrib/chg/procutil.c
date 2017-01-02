@@ -159,6 +159,7 @@ error:
  * Return 0 if pager is not started, or pid of the pager */
 static pid_t setuppager(const char *pagercmd)
 {
+	assert(pagerpid == 0);
 	if (!pagercmd)
 		return 0;
 
@@ -177,6 +178,7 @@ static pid_t setuppager(const char *pagercmd)
 				goto error;
 		}
 		close(pipefds[1]);
+		pagerpid = pid;
 		return pid;
 	} else {
 		dup2(pipefds[0], fileno(stdin));
@@ -197,13 +199,16 @@ error:
 	return 0;
 }
 
-static void waitpager(pid_t pid)
+static void waitpager(void)
 {
+	if (pagerpid == 0)
+		return;
+
 	/* close output streams to notify the pager its input ends */
 	fclose(stdout);
 	fclose(stderr);
 	while (1) {
-		pid_t ret = waitpid(pid, NULL, 0);
+		pid_t ret = waitpid(pagerpid, NULL, 0);
 		if (ret == -1 && errno == EINTR)
 			continue;
 		break;
