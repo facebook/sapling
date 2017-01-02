@@ -23,6 +23,7 @@
 #include <unistd.h>
 
 #include "hgclient.h"
+#include "procutil.h"
 #include "util.h"
 
 #ifndef PATH_MAX
@@ -302,8 +303,6 @@ static void killcmdserver(const struct cmdserveropts *opts)
 		free(resolvedpath);
 	}
 }
-
-#include "procutil.c"
 
 /* Run instructions sent from the server like unlink and set redirect path
  * Return 1 if reconnect is needed, otherwise 0 */

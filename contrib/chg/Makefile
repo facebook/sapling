@@ -1,7 +1,7 @@
 HG = $(CURDIR)/../../hg
 
 TARGET = chg
-SRCS = chg.c hgclient.c util.c
+SRCS = chg.c hgclient.c procutil.c util.c
 OBJS = $(SRCS:.c=.o)
 
 CFLAGS ?= -O2 -Wall -Wextra -pedantic -g
@@ -24,8 +24,9 @@ all: $(TARGET)
 $(TARGET): $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $(OBJS)
 
-chg.o: hgclient.h util.h
+chg.o: hgclient.h procutil.h util.h
 hgclient.o: hgclient.h util.h
+procutil.o: procutil.h util.h
 util.o: util.h
 
 .PHONY: install

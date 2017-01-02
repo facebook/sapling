@@ -7,6 +7,17 @@
  * GNU General Public License version 2 or any later version.
  */
 
+#include <assert.h>
+#include <errno.h>
+#include <signal.h>
+#include <stdio.h>
+#include <string.h>
+#include <sys/wait.h>
+#include <unistd.h>
+
+#include "procutil.h"
+#include "util.h"
+
 static pid_t pagerpid = 0;
 static pid_t peerpgid = 0;
 static pid_t peerpid = 0;
@@ -71,7 +82,7 @@ static void handlechildsignal(int sig UNUSED_)
 		kill(peerpid, SIGPIPE);
 }
 
-static void setupsignalhandler(pid_t pid, pid_t pgid)
+void setupsignalhandler(pid_t pid, pid_t pgid)
 {
 	if (pid <= 0)
 		return;
@@ -121,7 +132,7 @@ error:
 	abortmsgerrno("failed to set up signal handlers");
 }
 
-static void restoresignalhandler()
+void restoresignalhandler(void)
 {
 	struct sigaction sa;
 	memset(&sa, 0, sizeof(sa));
@@ -157,7 +168,7 @@ error:
 
 /* This implementation is based on hgext/pager.py (post 369741ef7253)
  * Return 0 if pager is not started, or pid of the pager */
-static pid_t setuppager(const char *pagercmd)
+pid_t setuppager(const char *pagercmd)
 {
 	assert(pagerpid == 0);
 	if (!pagercmd)
@@ -199,7 +210,7 @@ error:
 	return 0;
 }
 
-static void waitpager(void)
+void waitpager(void)
 {
 	if (pagerpid == 0)
 		return;
