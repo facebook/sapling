@@ -39,7 +39,6 @@ from . import (
 
 _pack = struct.pack
 _unpack = struct.unpack
-_compress = zlib.compress
 _decompress = zlib.decompress
 
 # revlog header flags
@@ -340,6 +339,10 @@ class revlog(object):
             self._chunkclear()
         # revnum -> (chain-length, sum-delta-length)
         self._chaininfocache = {}
+
+    @util.propertycache
+    def _compressor(self):
+        return util.compengines['zlib'].revlogcompressor()
 
     def tip(self):
         return self.node(len(self.index) - 2)
@@ -1465,34 +1468,20 @@ class revlog(object):
                 dfh.close()
             ifh.close()
 
-    def compress(self, text):
-        """ generate a possibly-compressed representation of text """
-        if not text:
-            return ("", text)
-        l = len(text)
-        bin = None
-        if l < 44:
-            pass
-        elif l > 1000000:
-            # zlib makes an internal copy, thus doubling memory usage for
-            # large files, so lets do this in pieces
-            z = zlib.compressobj()
-            p = []
-            pos = 0
-            while pos < l:
-                pos2 = pos + 2**20
-                p.append(z.compress(text[pos:pos2]))
-                pos = pos2
-            p.append(z.flush())
-            if sum(map(len, p)) < l:
-                bin = "".join(p)
-        else:
-            bin = _compress(text)
-        if bin is None or len(bin) >= l:
-            if text[0] == '\0':
-                return ("", text)
-            return ('u', text)
-        return ("", bin)
+    def compress(self, data):
+        """Generate a possibly-compressed representation of data."""
+        if not data:
+            return '', data
+
+        compressed = self._compressor.compress(data)
+
+        if compressed:
+            # The revlog compressor added the header in the returned data.
+            return '', compressed
+
+        if data[0] == '\0':
+            return '', data
+        return 'u', data
 
     def decompress(self, data):
         """Decompress a revlog chunk.
