@@ -859,9 +859,10 @@ def perfrevlog(ui, repo, file_=None, startrev=0, reverse=False, **opts):
     fm.end()
 
 @command('perfrevlogchunks', revlogopts + formatteropts +
-         [('s', 'startrev', 0, 'revision to start at')],
+         [('e', 'engines', '', 'compression engines to use'),
+          ('s', 'startrev', 0, 'revision to start at')],
          '-c|-m|FILE')
-def perfrevlogchunks(ui, repo, file_=None, startrev=0, **opts):
+def perfrevlogchunks(ui, repo, file_=None, engines=None, startrev=0, **opts):
     """Benchmark operations on revlog chunks.
 
     Logically, each revlog is a collection of fulltext revisions. However,
@@ -874,6 +875,26 @@ def perfrevlogchunks(ui, repo, file_=None, startrev=0, **opts):
     see ``perfrevlog`` and ``perfrevlogrevision``.
     """
     rl = cmdutil.openrevlog(repo, 'perfrevlogchunks', file_, opts)
+
+    # Verify engines argument.
+    if engines:
+        engines = set(e.strip() for e in engines.split(','))
+        for engine in engines:
+            try:
+                util.compressionengines[engine]
+            except KeyError:
+                raise error.Abort('unknown compression engine: %s' % engine)
+    else:
+        engines = []
+        for e in util.compengines:
+            engine = util.compengines[e]
+            try:
+                if engine.available():
+                    engine.revlogcompressor().compress('dummy')
+                    engines.append(e)
+            except NotImplementedError:
+                pass
+
     revs = list(rl.revs(startrev, len(rl) - 1))
 
     def rlfh(rl):
@@ -916,10 +937,17 @@ def perfrevlogchunks(ui, repo, file_=None, startrev=0, **opts):
         # Save chunks as a side-effect.
         chunks[0] = rl._chunks(revs, df=fh)
 
-    def docompress():
+    def docompress(compressor):
         rl.clearcaches()
-        for chunk in chunks[0]:
-            rl.compress(chunk)
+
+        try:
+            # Swap in the requested compression engine.
+            oldcompressor = rl._compressor
+            rl._compressor = compressor
+            for chunk in chunks[0]:
+                rl.compress(chunk)
+        finally:
+            rl._compressor = oldcompressor
 
     benches = [
         (lambda: doread(), 'read'),
@@ -928,8 +956,12 @@ def perfrevlogchunks(ui, repo, file_=None, startrev=0, **opts):
         (lambda: doreadbatchcachedfh(), 'read batch w/ reused fd'),
         (lambda: dochunk(), 'chunk'),
         (lambda: dochunkbatch(), 'chunk batch'),
-        (lambda: docompress(), 'compress'),
     ]
+
+    for engine in sorted(engines):
+        compressor = util.compengines[engine].revlogcompressor()
+        benches.append((functools.partial(docompress, compressor),
+                        'compress w/ %s' % engine))
 
     for fn, title in benches:
         timer, fm = gettimer(ui, opts)
