@@ -1503,7 +1503,7 @@ class revlog(object):
                 bin = "".join(p)
         else:
             bin = _compress(text)
-        if bin is None or len(bin) > l:
+        if bin is None or len(bin) >= l:
             if text[0] == '\0':
                 return ("", text)
             return ('u', text)
