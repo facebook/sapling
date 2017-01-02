@@ -71,14 +71,11 @@ static void handlechildsignal(int sig UNUSED_)
 		kill(peerpid, SIGPIPE);
 }
 
-static void setupsignalhandler(const hgclient_t *hgc)
+static void setupsignalhandler(pid_t pid, pid_t pgid)
 {
-	pid_t pid = hgc_peerpid(hgc);
 	if (pid <= 0)
 		return;
 	peerpid = pid;
-
-	pid_t pgid = hgc_peerpgid(hgc);
 	peerpgid = (pgid <= 1 ? 0 : pgid);
 
 	struct sigaction sa;

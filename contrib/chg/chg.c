@@ -429,7 +429,7 @@ int main(int argc, const char *argv[], const char *envp[])
 				 gethgcmd());
 	}
 
-	setupsignalhandler(hgc);
+	setupsignalhandler(hgc_peerpid(hgc), hgc_peerpgid(hgc));
 	pagerpid = setuppager(hgc, argv + 1, argc - 1);
 	int exitcode = hgc_runcommand(hgc, argv + 1, argc - 1);
 	restoresignalhandler();
