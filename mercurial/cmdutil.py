@@ -1142,6 +1142,10 @@ def diffordiffstat(ui, repo, diffopts, node1, node2, match,
             sub.diff(ui, diffopts, tempnode2, submatch, changes=changes,
                      stat=stat, fp=fp, prefix=prefix)
 
+def _changesetlabels(ctx):
+    labels = ['log.changeset', 'changeset.%s' % ctx.phasestr()]
+    return ' '.join(labels)
+
 class changeset_printer(object):
     '''show changeset information when templating not requested.'''
 
@@ -1202,7 +1206,7 @@ class changeset_printer(object):
 
         # i18n: column positioning for "hg log"
         self.ui.write(_("changeset:   %d:%s\n") % revnode,
-                      label='log.changeset changeset.%s' % ctx.phasestr())
+                      label=_changesetlabels(ctx))
 
         # branches are shown first before any other names due to backwards
         # compatibility
