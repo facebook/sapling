@@ -113,6 +113,45 @@ def splitblock(base1, lines1, base2, lines2, opts):
         s1 = i1
         s2 = i2
 
+def blocksinrange(blocks, rangeb):
+    """filter `blocks` like (a1, a2, b1, b2) from items outside line range
+    `rangeb` from ``(b1, b2)`` point of view.
+
+    Return `filteredblocks, rangea` where:
+
+    * `filteredblocks` is list of ``block = (a1, a2, b1, b2), stype`` items of
+      `blocks` that are inside `rangeb` from ``(b1, b2)`` point of view; a
+      block ``(b1, b2)`` being inside `rangeb` if
+      ``rangeb[0] < b2 and b1 < rangeb[1]``;
+    * `rangea` is the line range w.r.t. to ``(a1, a2)`` parts of `blocks`.
+    """
+    lbb, ubb = rangeb
+    lba, uba = None, None
+    filteredblocks = []
+    for block in blocks:
+        (a1, a2, b1, b2), stype = block
+        if lbb >= b1 and ubb <= b2 and stype == '=':
+            # rangeb is within a single "=" hunk, restrict back linerange1
+            # by offsetting rangeb
+            lba = lbb - b1 + a1
+            uba = ubb - b1 + a1
+        else:
+            if b1 <= lbb < b2:
+                if stype == '=':
+                    lba = a2 - (b2 - lbb)
+                else:
+                    lba = a1
+            if b1 < ubb <= b2:
+                if stype == '=':
+                    uba = a1 + (ubb - b1)
+                else:
+                    uba = a2
+        if lbb < b2 and b1 < ubb:
+            filteredblocks.append(block)
+    if lba is None or uba is None or uba < lba:
+        raise error.Abort(_('line range exceeds file size'))
+    return filteredblocks, (lba, uba)
+
 def allblocks(text1, text2, opts=None, lines1=None, lines2=None):
     """Return (block, type) tuples, where block is an mdiff.blocks
     line entry. type is '=' for blocks matching exactly one another
