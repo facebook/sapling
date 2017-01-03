@@ -94,4 +94,4 @@ New errors are not allowed. Warnings are strongly discouraged.
   undocumented: statprof.format (str) ['hotpath']
   undocumented: statprof.mechanism (str) ['thread']
   undocumented: treemanifest.autocreatetrees (bool)
-  undocumented: treemanifest.verifyautocreate (bool) [True]
+  undocumented: treemanifest.verifyautocreate (bool)

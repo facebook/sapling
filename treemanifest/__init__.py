@@ -181,9 +181,9 @@ def recordmanifest(pack, repo, oldtip, newtip):
                     block = ''
                     # Deltas are of the form:
                     #   <start><end><datalen><data>
-                    # Where start and end say what bytes to delete, and data says
-                    # what bytes to insert in their place. So we can just read
-                    # <data> to figure out all the added files.
+                    # Where start and end say what bytes to delete, and data
+                    # says what bytes to insert in their place. So we can just
+                    # read <data> to figure out all the added files.
                     byte1, byte2, blocklen = struct.unpack(">lll",
                             delta[current:current + 12])
                     current += 12
@@ -193,8 +193,8 @@ def recordmanifest(pack, repo, oldtip, newtip):
                 except struct.error:
                     raise RuntimeError("patch cannot be decoded")
 
-                # An individual delta block may contain multiple newline delimited
-                # entries.
+                # An individual delta block may contain multiple newline
+                # delimited entries.
                 for line in block.split('\n'):
                     if not line:
                         continue
