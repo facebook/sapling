@@ -3,8 +3,8 @@
 """upload useful diagnostics and give instructions for asking for help"""
 
 from mercurial.i18n import _
-from mercurial import cmdutil, util, commands, bookmarks, error
-from mercurial import scmutil
+from mercurial import cmdutil, util, commands, bookmarks, encoding, error
+from mercurial import pycompat, scmutil
 from hgext import blackbox
 from hgext3rd import (
     smartlog,
@@ -45,7 +45,8 @@ Description:
 HG: Edit task title and description. Lines beginning with 'HG:' are removed."
 HG: First line is the title followed by the description.
 HG: Feel free to add relevant information.
-''' % (repo.root, socket.gethostname(), os.getenv('LOGNAME'), defaultdesc)
+''' % (repo.root, socket.gethostname(), pycompat.osgetenv('LOGNAME'),
+       defaultdesc)
 
     text = re.sub("(?m)^HG:.*(\n|$)", "", ui.edit(prompt, ui.username()))
     lines = text.splitlines()
@@ -70,7 +71,7 @@ HG: Feel free to add relevant information.
 
 def which(name):
     """ """
-    for p in os.environ.get('PATH', '/bin').split(os.pathsep):
+    for p in encoding.environ.get('PATH', '/bin').split(pycompat.ospathsep):
         path = os.path.join(p, name)
         if os.path.exists(path):
             return path
@@ -157,7 +158,7 @@ def rage(ui, repo, *pats, **opts):
 
     basic = [
         ('date', time.ctime()),
-        ('unixname', os.getenv('LOGNAME')),
+        ('unixname', pycompat.osgetenv('LOGNAME')),
         ('hostname', socket.gethostname()),
         ('repo location', _failsafe(lambda: repo.root)),
         ('active bookmark',

@@ -6,7 +6,7 @@ from mercurial.i18n import _
 from mercurial.node import hex
 from mercurial import extensions, merge, scmutil, hg
 from mercurial import cmdutil, obsolete, repair, bundlerepo, error
-from mercurial import exchange, phases
+from mercurial import exchange, phases, pycompat
 from mercurial import lock as lockmod
 import os, glob, binascii
 
@@ -156,7 +156,7 @@ def _findbundle(repo, rev):
     backups.sort(key=lambda x: os.path.getmtime(x), reverse=True)
     for backup in backups:
         # Much of this is copied from the hg incoming logic
-        source = os.path.relpath(backup, os.getcwd())
+        source = os.path.relpath(backup, pycompat.getcwd())
         source = ui.expandpath(source)
         source, branches = hg.parseurl(source)
         other = hg.peer(repo, {}, source)

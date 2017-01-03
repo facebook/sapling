@@ -10,6 +10,7 @@ from mercurial import cmdutil, commands, error, bundlerepo
 from mercurial import hg, exchange, obsolete
 from mercurial import bundle2
 from mercurial import lock as lockmod
+from mercurial import pycompat
 from hgext import pager
 from mercurial.node import nullid, short
 from mercurial.i18n import _
@@ -81,7 +82,7 @@ def backups(ui, repo, *pats, **opts):
 
     for backup in backups:
         # Much of this is copied from the hg incoming logic
-        source = os.path.relpath(backup, os.getcwd())
+        source = os.path.relpath(backup, pycompat.getcwd())
         source = ui.expandpath(source)
         source, branches = hg.parseurl(source, opts.get('branch'))
         try:

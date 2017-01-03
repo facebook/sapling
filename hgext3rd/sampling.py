@@ -14,7 +14,7 @@
 # - If the file cannot be created or accessed, fails silently
 #
 # The configuration details can be found in the documentation of ui.log below
-from mercurial import util
+from mercurial import encoding, util
 
 import json, os
 
@@ -23,8 +23,9 @@ def _parentfolderexists(f):
             os.path.exists(os.path.dirname(os.path.normpath(f))))
 
 def _getcandidatelocation(ui):
-    for candidatelocation in (os.environ.get("SCM_SAMPLING_FILEPATH", None),
-                              ui.config("sampling", "filepath", "")):
+    for candidatelocation in (
+            encoding.environ.get("SCM_SAMPLING_FILEPATH", None),
+            ui.config("sampling", "filepath", "")):
         if _parentfolderexists(candidatelocation):
             return candidatelocation
     return None

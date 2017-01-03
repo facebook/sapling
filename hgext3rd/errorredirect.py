@@ -30,12 +30,12 @@ Examples::
   script = (echo "$WARNING"; cat) | cat >&2
 """
 
-import os
 import subprocess
 import traceback
 
 from mercurial import (
     dispatch,
+    encoding,
     extensions,
 )
 
@@ -46,7 +46,7 @@ def _handlecommandexception(orig, ui):
 
     warning = dispatch._exceptionwarning(ui)
     trace = traceback.format_exc()
-    env = os.environ.copy()
+    env = encoding.environ.copy()
     env['WARNING'] = warning
     env['TRACE'] = trace
     p = subprocess.Popen(script, shell=True, stdin=subprocess.PIPE, env=env)

@@ -10,6 +10,7 @@ import errno, os, tempfile, resource, time
 from mercurial import bundle2, cmdutil, hg, scmutil, exchange, commands
 from mercurial import util, error, discovery, changegroup, context, revset
 from mercurial import obsolete, pushkey, phases, extensions, manifest
+from mercurial import encoding
 from mercurial.extensions import wrapcommand, wrapfunction
 from mercurial.hg import repository
 from mercurial.node import nullid, hex, bin
@@ -84,7 +85,7 @@ def blocknonpushrebase(ui, repo, **kwargs):
 
 def _peerorrepo(orig, ui, path, create=False):
     # Force hooks to use a bundle repo
-    bundlepath = os.environ.get("HG_HOOK_BUNDLEPATH")
+    bundlepath = encoding.environ.get("HG_HOOK_BUNDLEPATH")
     if bundlepath:
         return orig(ui, bundlepath, create=create)
     return orig(ui, path, create)

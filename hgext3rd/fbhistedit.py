@@ -9,15 +9,16 @@
 Adds a s/stop verb to histedit to stop after a changeset was picked.
 """
 
-import os
 from pipes import quote
 
 from mercurial import cmdutil
 from mercurial import error
+from mercurial import encoding
 from mercurial import extensions
 from mercurial import hg
 from mercurial import lock
 from mercurial import node
+from mercurial import pycompat
 from mercurial import scmutil
 from mercurial.i18n import _
 
@@ -92,7 +93,7 @@ def defineactions():
 
             try:
                 ctx = repo[ctxnode]
-                shell = os.environ.get('SHELL', None)
+                shell = encoding.environ.get('SHELL', None)
                 cmd = self.command
                 if shell and self.repo.ui.config('fbhistedit',
                                                  'exec_in_user_shell'):
@@ -135,7 +136,7 @@ def defineactions():
     class executerelative(execute):
         def __init__(self, state, command):
             super(executerelative, self).__init__(state, command)
-            self.cwd = os.getcwd()
+            self.cwd = pycompat.getcwd()
 
     return stop, execute, executerelative
 

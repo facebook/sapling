@@ -28,6 +28,7 @@ import socket
 import sys
 import tempfile
 
+from mercurial import encoding
 from multiprocessing.reduction import recv_handle, send_handle
 
 # backup tty fds. useful if we lose them later, like chg starting the pager
@@ -56,7 +57,7 @@ def _sockbind(sock, addr):
 
 def _isttyserverneeded():
     # respect user's setting, SSH_ASKPASS is likely a gui program
-    if 'SSH_ASKPASS' in os.environ:
+    if 'SSH_ASKPASS' in encoding.environ:
         return False
 
     # the tty server is not needed if /dev/tty can be opened
@@ -148,7 +149,7 @@ def _validaterepo(orig, self, sshcmd, args, remotecmd):
         os.chmod(scriptpath, 0o755)
         env = {
             # ssh will not use SSH_ASKPASS if DISPLAY is not set
-            'DISPLAY': os.environ.get('DISPLAY', ''),
+            'DISPLAY': encoding.environ.get('DISPLAY', ''),
             'SSH_ASKPASS': util.shellquote(scriptpath),
             'TTYSOCK': util.shellquote(sockpath),
         }
@@ -214,7 +215,7 @@ def _shoulddisableecho(prompt):
 
 def _sshaskpassmain(prompt):
     """the ssh-askpass client"""
-    rfd, wfd = _receivefds(os.environ['TTYSOCK'])
+    rfd, wfd = _receivefds(encoding.environ['TTYSOCK'])
     r, w = os.fdopen(rfd, 'r'), os.fdopen(wfd, 'a')
     w.write('\033[31;1m==== AUTHENTICATING FOR SSH  ====\033[0m\n')
     w.write(prompt)
@@ -231,7 +232,7 @@ def _sshaskpassmain(prompt):
     sys.stdout.flush()
     w.write('\033[31;1m==== AUTHENTICATION COMPLETE ====\033[0m\n')
 
-if __name__ == '__main__' and all(n in os.environ
+if __name__ == '__main__' and all(n in encoding.environ
                                   for n in ['SSH_ASKPASS', 'TTYSOCK']):
     # started by ssh as ssh-askpass
     with _silentexception(terminate=True):

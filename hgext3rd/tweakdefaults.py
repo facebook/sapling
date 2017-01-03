@@ -56,6 +56,7 @@ from mercurial import (
     cmdutil,
     commands,
     error,
+    encoding,
     extensions,
     hg,
     obsolete,
@@ -65,7 +66,7 @@ from mercurial import (
 )
 
 from hgext import rebase
-import inspect, os, re, shlex, stat, subprocess, time
+import inspect, re, shlex, stat, subprocess, time
 
 wrapcommand = extensions.wrapcommand
 wrapfunction = extensions.wrapfunction
@@ -716,7 +717,7 @@ def statuscmd(orig, ui, repo, *pats, **opts):
             message = _('--root-relative not supported with patterns')
             hint = _('run from the repo root instead')
             raise error.Abort(message, hint=hint)
-    elif os.environ.get('HGPLAIN'): # don't break automation
+    elif encoding.environ.get('HGPLAIN'): # don't break automation
         pass
     # Here's an ugly hack! If users are passing "re:" to make status relative,
     # hgwatchman will never refresh the full state and status will become and
