@@ -497,6 +497,7 @@ def bundle2rebase(op, part):
     params = part.params
 
     bundlefile = None
+    bundle = None
 
     try: # guards bundlefile
         bundlefile = _makebundlefile(part)
@@ -519,6 +520,7 @@ def bundle2rebase(op, part):
         # Recreate the bundle repo, since taking the lock in gettransaction()
         # may have caused it to become out of date.
         # (but grab a copy of the cache first)
+        bundle.close()
         bundle = repository(op.repo.ui, bundlepath)
 
         # Preload the caches with data we already have. We need to make copies
@@ -609,6 +611,8 @@ def bundle2rebase(op, part):
         except OSError as e:
             if e.errno != errno.ENOENT:
                 raise
+        if bundle:
+            bundle.close()
 
     publishing = op.repo.ui.configbool('phases', 'publish', True)
     if publishing:
