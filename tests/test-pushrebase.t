@@ -824,6 +824,7 @@ Test force pushes
   o  0 a
   
 Make sure that no hg-bundle-* files left
-  $ ls ../server/.hg/hg-bundle-*
-  ls: cannot access ../server/.hg/hg-bundle-*: No such file or directory
-  [2]
+(the '|| true' and '*' prefix is because ls has different behavior on linux
+and osx)
+  $ ls ../server/.hg/hg-bundle-* || true
+  ls: *../server/.hg/hg-bundle-*: No such file or directory (glob)
