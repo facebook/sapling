@@ -28,13 +28,14 @@ lfile_copies_switch = '{if(file_copies_switch,
                                                % ' {name} ({source})'}\n"))}'
 
 # General templates
-cset = '{label("log.changeset changeset.{phase}",
+_cset_labels = 'log.changeset changeset.{phase}'
+cset = '{label("{_cset_labels}",
                "changeset:   {rev}:{node|short}")}\n'
 
 lphase = '{label("log.phase",
                  "phase:       {phase}")}\n'
 
-fullcset = '{label("log.changeset changeset.{phase}",
+fullcset = '{label("{_cset_labels}",
                    "changeset:   {rev}:{node}")}\n'
 
 parent = '{label("log.parent changeset.{phase}",
