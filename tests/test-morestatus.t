@@ -82,7 +82,7 @@ Test graft state
   # 
   # To mark files as resolved:  hg resolve --mark FILE
   # To continue:                hg graft --continue
-  # To abort:                   hg update --clean .    (warning: this will erase all uncommitted changed)
+  # To abort:                   hg update --clean .    (warning: this will discard uncommitted changes)
 
 Test hg status is normal after graft abort
   $ hg up --clean -q
@@ -189,7 +189,7 @@ Test conflicted merge state
   # 
   # To mark files as resolved:  hg resolve --mark FILE
   # To continue:                hg commit
-  # To abort:                   hg update --clean .    (warning: this will erase all uncommitted changed)
+  # To abort:                   hg update --clean .    (warning: this will discard uncommitted changes)
 
 Test hg status is normal after merge abort
   $ hg update --clean -q
@@ -208,7 +208,7 @@ Test non-conflicted merge state
   
   # The repository is in an unfinished *merge* state.
   # To continue:                hg commit
-  # To abort:                   hg update --clean .    (warning: this will erase all uncommitted changed)
+  # To abort:                   hg update --clean .    (warning: this will discard uncommitted changes)
 
 Test hg status is normal after merge commit (no output)
   $ hg commit -m 'merge commit' -q
@@ -220,7 +220,7 @@ Test interrupted update state, without active bookmark and REV is a hash
   
   # The repository is in an unfinished *update* state.
   # To continue:                hg update -C 2977a57ce863
-  # To abort:                   hg update .
+  # To abort:                   hg update --clean .    (warning: this will discard uncommitted changes)
 
 Test interrupted update state, with active bookmark and REV is a bookmark
   $ hg bookmark b1
@@ -230,7 +230,7 @@ Test interrupted update state, with active bookmark and REV is a bookmark
   
   # The repository is in an unfinished *update* state.
   # To continue:                hg update b2
-  # To abort:                   hg update b1
+  # To abort:                   hg update --clean b1    (warning: this will discard uncommitted changes)
 
 Test update state can be reset using bookmark
   $ hg update $breakupdateflag b1 -q
@@ -245,7 +245,7 @@ Test interrupted update state, without active bookmark and REV is specified usin
   
   # The repository is in an unfinished *update* state.
   # To continue:                hg update --date 1970-1-1 -q
-  # To abort:                   hg update .
+  # To abort:                   hg update --clean .    (warning: this will discard uncommitted changes)
 
 Test update state can be reset using .
   $ hg update . -q

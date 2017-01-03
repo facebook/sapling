@@ -16,11 +16,7 @@ from mercurial.i18n import _
 from mercurial import merge as mergemod
 from mercurial import scmutil
 
-
 UPDATEARGS = 'updateargs'
-HG_UPDATE_CLEAN = ('hg update --clean .    (warning: this will '
-                   'erase all uncommitted changed)')
-
 
 def prefixlines(raw):
     '''Surround lineswith a comment char and a new line'''
@@ -62,9 +58,13 @@ def histeditmsg(repo, ui):
 def unshelvemsg(repo, ui):
     helpmessage(ui, 'hg unshelve --continue', 'hg unshelve --abort')
 
+def updatecleanmsg(dest=None):
+    warning = _('warning: this will discard uncommitted changes')
+    return 'hg update --clean %s    (%s)' % (dest or '.', warning)
+
 def graftmsg(repo, ui):
     # tweakdefaults requires `update` to have a rev hence the `.`
-    helpmessage(ui, 'hg graft --continue', HG_UPDATE_CLEAN)
+    helpmessage(ui, 'hg graft --continue', updatecleanmsg())
 
 def updatemsg(repo, ui):
     previousargs = repo.vfs.tryread(UPDATEARGS)
@@ -72,12 +72,12 @@ def updatemsg(repo, ui):
         continuecmd = 'hg ' + previousargs
     else:
         continuecmd = 'hg update ' + repo.vfs.read('updatestate')[:12]
-    abortcmd = 'hg update ' + (repo._activebookmark or '.')
+    abortcmd = updatecleanmsg(repo._activebookmark)
     helpmessage(ui, continuecmd, abortcmd)
 
 def mergemsg(repo, ui):
     # tweakdefaults requires `update` to have a rev hence the `.`
-    helpmessage(ui, 'hg commit', HG_UPDATE_CLEAN)
+    helpmessage(ui, 'hg commit', updatecleanmsg())
 
 def bisectmsg(repo, ui):
     msg = _('To mark the changeset good:    hg bisect --good\n'
