@@ -132,10 +132,10 @@ set up some more complex changes to shelve
 prevent some foot-shooting
 
   $ hg shelve -n foo/bar
-  abort: shelved change names may not contain slashes
+  abort: shelved change names can not contain slashes
   [255]
   $ hg shelve -n .baz
-  abort: shelved change names may not start with '.'
+  abort: shelved change names can not start with '.'
   [255]
 
 the common case - no options or filenames
