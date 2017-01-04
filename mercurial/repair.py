@@ -99,9 +99,9 @@ def strip(ui, repo, nodelist, backup=True, topic='backup'):
     # (head = revision in the set that has no descendant in the set;
     #  base = revision in the set that has no ancestor in the set)
     tostrip = set(striplist)
-    for rev in striplist:
-        for desc in cl.descendants([rev]):
-            tostrip.add(desc)
+    for r in cl.revs(start=striprev + 1):
+        if any(p in tostrip for p in cl.parentrevs(r)):
+            tostrip.add(r)
 
     files = _collectfiles(repo, striprev)
     saverevs = _collectbrokencsets(repo, files, striprev)
