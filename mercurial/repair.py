@@ -91,6 +91,9 @@ def strip(ui, repo, nodelist, backup=True, topic='backup'):
     striplist = [cl.rev(node) for node in nodelist]
     striprev = min(striplist)
 
+    files = _collectfiles(repo, striprev)
+    saverevs = _collectbrokencsets(repo, files, striprev)
+
     # Some revisions with rev > striprev may not be descendants of striprev.
     # We have to find these revisions and put them in a bundle, so that
     # we can restore them after the truncations.
@@ -99,16 +102,11 @@ def strip(ui, repo, nodelist, backup=True, topic='backup'):
     # (head = revision in the set that has no descendant in the set;
     #  base = revision in the set that has no ancestor in the set)
     tostrip = set(striplist)
+    saveheads = set(saverevs)
     for r in cl.revs(start=striprev + 1):
         if any(p in tostrip for p in cl.parentrevs(r)):
             tostrip.add(r)
 
-    files = _collectfiles(repo, striprev)
-    saverevs = _collectbrokencsets(repo, files, striprev)
-
-    # compute heads
-    saveheads = set(saverevs)
-    for r in xrange(striprev + 1, len(cl)):
         if r not in tostrip:
             saverevs.add(r)
             saveheads.difference_update(cl.parentrevs(r))
