@@ -316,3 +316,38 @@ Backup in background to different path
   searching for changes
   remote: pushing 1 commit:
   remote:     268f86e364f9  backgroundcommittodifferentpath
+
+Clean client and repo
+  $ cd ..
+  $ rm -rf repo
+  $ rm -rf client
+  $ hg init repo
+  $ cd repo
+  $ setupserver
+  $ cd ..
+  $ hg clone ssh://user@dummy/repo client -q
+  $ cd client
+  $ setupevolve
+
+Create public commit
+  $ mkcommit initial
+  $ hg push
+  pushing to ssh://user@dummy/repo
+  searching for changes
+  remote: adding changesets
+  remote: adding manifests
+  remote: adding file changes
+  remote: added 1 changesets with 1 changes to 1 files
+
+Make commit and immediately obsolete it, then create a bookmark.
+Make sure pushbackup works
+  $ mkcommit toobsolete
+  $ hg prune .
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  working directory now at 630839011471
+  1 changesets pruned
+  $ hg book somebook
+  $ hg pushbackup
+  searching for changes
+  $ scratchbookmarks
+  infinitepush/backups/test/[0-9a-zA-Z.-]+\$TESTTMP/client/bookmarks/somebook 630839011471e17f808b92ab084bedfaca33b110 (re)

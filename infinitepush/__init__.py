@@ -899,9 +899,11 @@ def backup(ui, repo, dest=None, **opts):
     if revs:
         nodes = map(repo.changelog.node, revs)
         outgoing = discovery.findcommonoutgoing(repo, other, onlyheads=nodes)
-        bundler.addpart(getscratchbranchpart(repo, other, outgoing,
-                                             confignonforwardmove=False, ui=ui,
-                                             bookmark=None, create=False))
+        if outgoing.missing:
+            bundler.addpart(getscratchbranchpart(repo, other, outgoing,
+                                                 confignonforwardmove=False,
+                                                 ui=ui, bookmark=None,
+                                                 create=False))
 
     if bookmarkstobackup:
         bundler.addpart(getscratchbookmarkspart(other, bookmarkstobackup))
