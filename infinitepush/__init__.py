@@ -836,7 +836,7 @@ def backup(ui, repo, dest=None, **opts):
             background_cmd.append(dest)
         logfile = ui.config('infinitepush', 'pushbackuplog')
         if logfile:
-            background_cmd.extend(('&>>', logfile))
+            background_cmd.extend(('>>', logfile, '2>&1'))
         runshellcommand(' '.join(background_cmd), os.environ)
         return 0
     backupedstatefile = 'infinitepushlastbackupedstate'
