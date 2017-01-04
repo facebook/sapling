@@ -1068,6 +1068,52 @@ def _followfirst(repo, subset, x):
     # of every revisions or files revisions.
     return _follow(repo, subset, x, '_followfirst', followfirst=True)
 
+@predicate('followlines(file, fromline, toline[, rev=.])', safe=True)
+def followlines(repo, subset, x):
+    """Changesets modifying `file` in line range ('fromline', 'toline').
+
+    Line range corresponds to 'file' content at 'rev' and should hence be
+    consistent with file size. If rev is not specified, working directory's
+    parent is used.
+    """
+    from . import context  # avoid circular import issues
+
+    args = getargs(x, 3, 4, _("followlines takes at least three arguments"))
+
+    rev = '.'
+    if len(args) == 4:
+        revarg = getargsdict(args[3], 'followlines', 'rev')
+        if 'rev' in revarg:
+            revs = getset(repo, fullreposet(repo), revarg['rev'])
+            if len(revs) != 1:
+                raise error.ParseError(
+                    _("followlines expects exactly one revision"))
+            rev = revs.last()
+
+    pat = getstring(args[0], _("followlines requires a pattern"))
+    if not matchmod.patkind(pat):
+        fname = pathutil.canonpath(repo.root, repo.getcwd(), pat)
+    else:
+        m = matchmod.match(repo.root, repo.getcwd(), [pat], ctx=repo[rev])
+        files = [f for f in repo[rev] if m(f)]
+        if len(files) != 1:
+            raise error.ParseError(_("followlines expects exactly one file"))
+        fname = files[0]
+
+    try:
+        fromline, toline = [int(getsymbol(a)) for a in args[1:3]]
+    except ValueError:
+        raise error.ParseError(_("line range bounds must be integers"))
+    if toline - fromline < 0:
+        raise error.ParseError(_("line range must be positive"))
+    if fromline < 1:
+        raise error.ParseError(_("fromline must be strictly positive"))
+    fromline -= 1
+
+    fctx = repo[rev].filectx(fname)
+    revs = (c.rev() for c in context.blockancestors(fctx, fromline, toline))
+    return subset & generatorset(revs, iterasc=False)
+
 @predicate('all()', safe=True)
 def getall(repo, subset, x):
     """All changesets, the same as ``0:tip``.
