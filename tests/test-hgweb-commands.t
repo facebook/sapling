@@ -686,7 +686,7 @@ Logs and changes
       <description>foo revision history</description>
       <item>
       <title>base</title>
-      <link>http://*:$HGPORT/log2ef0ac749a14/foo</link> (glob)
+      <link>http://*:$HGPORT/log/2ef0ac749a14/foo</link> (glob)
       <description><![CDATA[base(websub)]]></description>
       <author>&#116;&#101;&#115;&#116;</author>
       <pubDate>Thu, 01 Jan 1970 00:00:00 +0000</pubDate>

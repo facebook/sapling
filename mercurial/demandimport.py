@@ -199,8 +199,11 @@ def _demandimport(name, globals=None, locals=None, fromlist=None, level=level):
             nonpkg = getattr(mod, '__path__', nothing) is nothing
             if symbol is nothing:
                 if nonpkg:
-                    # do not try relative import, which would raise ValueError
-                    raise ImportError('cannot import name %s' % attr)
+                    # do not try relative import, which would raise ValueError,
+                    # and leave unknown attribute as the default __import__()
+                    # would do. the missing attribute will be detected later
+                    # while processing the import statement.
+                    return
                 mn = '%s.%s' % (mod.__name__, attr)
                 if mn in ignore:
                     importfunc = _origimport

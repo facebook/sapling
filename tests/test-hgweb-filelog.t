@@ -783,14 +783,14 @@ rss log
       <description>a revision history</description>
       <item>
       <title>second a</title>
-      <link>http://*:$HGPORT/log3f41bc784e7e/a</link> (glob)
+      <link>http://*:$HGPORT/log/3f41bc784e7e/a</link> (glob)
       <description><![CDATA[second a]]></description>
       <author>&#116;&#101;&#115;&#116;</author>
       <pubDate>Thu, 01 Jan 1970 00:00:00 +0000</pubDate>
   </item>
   <item>
       <title>first a</title>
-      <link>http://*:$HGPORT/log5ed941583260/a</link> (glob)
+      <link>http://*:$HGPORT/log/5ed941583260/a</link> (glob)
       <description><![CDATA[first a]]></description>
       <author>&#116;&#101;&#115;&#116;</author>
       <pubDate>Thu, 01 Jan 1970 00:00:00 +0000</pubDate>

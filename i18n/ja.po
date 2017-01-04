@@ -165,8 +165,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2016-10-30 20:25+0900\n"
-"PO-Revision-Date: 2016-11-01 03:50+0900\n"
+"POT-Creation-Date: 2016-12-31 13:29+0900\n"
+"PO-Revision-Date: 2016-12-31 17:09+0900\n"
 "Last-Translator: Japanese translation team <mercurial-ja@googlegroups.com>\n"
 "Language-Team: Japanese\n"
 "Language: ja\n"
@@ -646,6 +646,8 @@ msgid ""
 "This extension checks at commit/amend time if any of the committed files\n"
 "comes from an unrecorded mv."
 msgstr ""
+"本エクステンションは、 Mercurial を介さずに改名されたファイルでも、\n"
+":hg:`commit` の際に自動判定して、 改名扱いにします。"
 
 msgid ""
 "The threshold at which a file is considered a move can be set with the\n"
@@ -653,21 +655,23 @@ msgid ""
 "0\n"
 "(disabled) and 100 (files must be identical), the default is 95."
 msgstr ""
+"改名はファイルの類似度で判定され、 改名判定の閾値は ``automv.similarity``\n"
+"で設定します。 この設定値は 0 (= 判定無効化) から 100 (= 厳密一致時のみ、\n"
+"改名と判定) の間の、 類似度のパーセンテージを表します。 デフォルト値は 95。"
 
 msgid "disable automatic file move detection"
-msgstr ""
+msgstr "自動改名判定の無効化"
 
-#, fuzzy
 msgid "automv.similarity must be between 0 and 100"
-msgstr "類似度には0から100の間を指定してください"
+msgstr "automv.similarity には0から100の間を指定してください"
 
-#, fuzzy, python-format
+#, python-format
 msgid "detected move of %s as %s (%d%% similar)\n"
-msgstr "%s の削除を %s へのファイル名変更として記録中 (類似度 %d%%)\n"
+msgstr "%s から %s への改名を検出 (類似度 %d%%)\n"
 
 #, python-format
 msgid "detected move of %d files\n"
-msgstr ""
+msgstr "%d ファイルの改名を検出\n"
 
 msgid "log repository events to a blackbox for debugging"
 msgstr "リポジトリにおけるイベントの記録(デバッグ用)"
@@ -4381,9 +4385,8 @@ msgid ""
 "https://facebook.github.io/watchman/ and make sure it is in your PATH."
 msgstr ""
 
-#, fuzzy
 msgid "The following configuration options exist:"
-msgstr "本エクステンションに対しては、以下の設定のみが可能です::"
+msgstr ""
 
 msgid ""
 "    [fsmonitor]\n"
@@ -4465,23 +4468,22 @@ msgstr "ディレクトリ"
 msgid "unsupported file type (type is %s)"
 msgstr "未サポートのファイル種別(%s)"
 
-#, fuzzy, python-format
+#, python-format
 msgid "warning: unable to write to %s\n"
-msgstr "警告: %s における .gitmodules の解析に失敗\n"
+msgstr ""
 
-#, fuzzy, python-format
+#, python-format
 msgid ""
 "The fsmonitor extension is incompatible with the %s extension and has been "
 "disabled.\n"
-msgstr "eol エクステンションと win32text エクステンションは併用できません\n"
+msgstr ""
 
 #, python-format
 msgid "type '%s' has no property '%s'"
 msgstr ""
 
-#, fuzzy
 msgid "warning: unable to write out fsmonitor state\n"
-msgstr "警告: %s における .gitmodules の解析に失敗\n"
+msgstr ""
 
 msgid "commands to sign and verify changesets"
 msgstr "リビジョンへの署名および検証コマンド"
@@ -5628,9 +5630,8 @@ msgid ""
 "bookmarks were previously located."
 msgstr ""
 
-#, fuzzy
 msgid "journal lock does not support nesting"
-msgstr "指定の連携先には履歴を反映できません"
+msgstr ""
 
 #, python-format
 msgid "journal of %s"
@@ -5644,17 +5645,16 @@ msgstr "%s のロック (%r が保持) の解放を待っています\n"
 msgid "got lock after %s seconds\n"
 msgstr "%s 秒遅れでロックを獲得\n"
 
-#, fuzzy, python-format
+#, python-format
 msgid "unsupported journal file version '%s'\n"
-msgstr "未サポートなバンドルファイルバージョンです: %s"
+msgstr ""
 
-#, fuzzy
 msgid "not available"
-msgstr "ヘルプはありません"
+msgstr ""
 
-#, fuzzy, python-format
+#, python-format
 msgid "unknown journal file version '%s'"
-msgstr "未知のバンドル形式バージョン %s"
+msgstr ""
 
 msgid "show the previous position of bookmarks and the working copy"
 msgstr ""
@@ -5670,15 +5670,11 @@ msgid ""
 "    name, or '.' for the working copy, as well."
 msgstr ""
 
-#, fuzzy
 msgid ""
 "    If `name` starts with `re:`, the remainder of the name is treated as\n"
 "    a regular expression. To match a name that actually starts with `re:`,\n"
 "    use the prefix `literal:`."
 msgstr ""
-"    `name` が `re:` で始まる場合、 残りは正規表現として扱われます。\n"
-"    タグ名そのものが `re:` で始まる場合は、 名前を `literal:`\n"
-"    付きで指定してください。"
 
 msgid ""
 "    By default hg journal only shows the commit hash and the command that "
@@ -5702,17 +5698,15 @@ msgstr ""
 msgid "You can't combine --all and filtering on a name"
 msgstr ""
 
-#, fuzzy
 msgid "the working copy and bookmarks"
-msgstr "変更されたブックマークを探索中\n"
+msgstr ""
 
-#, fuzzy, python-format
+#, python-format
 msgid "previous locations of %s:\n"
-msgstr "  読み込み元: %s\n"
+msgstr ""
 
-#, fuzzy
 msgid "no recorded locations\n"
-msgstr "  読み込み元: %s\n"
+msgstr ""
 
 msgid "expand keywords in tracked files"
 msgstr "構成管理対象ファイル中のキーワード展開"
@@ -13287,8 +13281,8 @@ msgstr ""
 msgid "      - clone a remote repository to a new directory named hg/::"
 msgstr "      - 遠隔ホストのリポジトリを、 新規 hg/ ディレクトリ配下に複製::"
 
-msgid "          hg clone http://selenic.com/hg"
-msgstr "          hg clone http://selenic.com/hg"
+msgid "          hg clone https://www.mercurial-scm.org/repo/hg/"
+msgstr "          hg clone https://www.mercurial-scm.org/repo/hg/"
 
 msgid "      - create a lightweight local clone::"
 msgstr "      - 同一ホスト上のリポジトリを軽量複製::"
@@ -13321,8 +13315,8 @@ msgstr "          hg clone -r 04e544 experimental/ good/"
 msgid "      - clone (and track) a particular named branch::"
 msgstr "      - 特定の名前付きブランチ限定での複製::"
 
-msgid "          hg clone http://selenic.com/hg#stable"
-msgstr "          hg clone http://selenic.com/hg#stable"
+msgid "          hg clone https://www.mercurial-scm.org/repo/hg/#stable"
+msgstr "          hg clone https://www.mercurial-scm.org/repo/hg/#stable"
 
 msgid "    See :hg:`help urls` for details on specifying URLs."
 msgstr "    URL 記述の詳細は :hg:`help urls` を参照してください。"
@@ -15299,8 +15293,8 @@ msgstr "          hg id -n -r 1.3"
 msgid "      - check the most recent revision of a remote repository::"
 msgstr "      - 連携先リポジトリにおける最新リビジョンの確認::"
 
-msgid "          hg id -r tip http://selenic.com/hg/"
-msgstr "          hg id -r tip http://selenic.com/hg/"
+msgid "          hg id -r tip https://www.mercurial-scm.org/repo/hg/"
+msgstr "          hg id -r tip https://www.mercurial-scm.org/repo/hg/"
 
 msgid ""
 "    See :hg:`log` for generating more information about specific revisions,\n"
@@ -15472,8 +15466,10 @@ msgstr "          hg import -s 80 http://example.com/bugfix.patch"
 msgid "      - import a changeset from an hgweb server::"
 msgstr "      - hgweb サーバからの指定リビジョンの取り込み::"
 
-msgid "          hg import http://www.selenic.com/hg/rev/5ca8c111e9aa"
-msgstr "          hg import http://www.selenic.com/hg/rev/5ca8c111e9aa"
+msgid ""
+"          hg import https://www.mercurial-scm.org/repo/hg/rev/5ca8c111e9aa"
+msgstr ""
+"          hg import https://www.mercurial-scm.org/repo/hg/rev/5ca8c111e9aa"
 
 msgid "      - import all the patches in an Unix-style mbox::"
 msgstr "      - Unix 形式 mbox ファイル中の全パッチの取り込み::"
@@ -16112,14 +16108,14 @@ msgid ""
 "        hg log -r \"p1(REV)+p2(REV)\" or\n"
 "        hg log -r \"max(::p1() and file(FILE))+max(::p2() and file(FILE))\" "
 "or\n"
-"        hg log -r \"max(::p1(REV) and file(FILE))+max(::p2(REV) and file"
-"(FILE))\""
+"        hg log -r \"max(::p1(REV) and file(FILE))+max(::p2(REV) and "
+"file(FILE))\""
 msgstr ""
 "        hg log -r \"p1()+p2()\"\n"
 "        hg log -r \"p1(REV)+p2(REV)\"\n"
 "        hg log -r \"max(::p1() and file(FILE))+max(::p2() and file(FILE))\"\n"
-"        hg log -r \"max(::p1(REV) and file(FILE))+max(::p2(REV) and file"
-"(FILE))\""
+"        hg log -r \"max(::p1(REV) and file(FILE))+max(::p2(REV) and "
+"file(FILE))\""
 
 msgid "    See :hg:`summary` and :hg:`help revsets` for related information."
 msgstr ""
@@ -17402,7 +17398,7 @@ msgstr "タグ '%s' は存在します(強制実行する場合は -f を指定�
 msgid "uncommitted merge"
 msgstr "マージが未コミットです"
 
-msgid "not at a branch head (use -f to force)"
+msgid "working directory is not at a branch head (use -f to force)"
 msgstr "親リビジョンがブランチのヘッドではありません(強制実行は -f 指定)"
 
 msgid "cannot tag null revision"
@@ -22420,8 +22416,8 @@ msgstr "    (デフォルト値: topic bar number estimate)"
 
 msgid ""
 "``width``\n"
-"    If set, the maximum width of the progress information (that is, min"
-"(width,\n"
+"    If set, the maximum width of the progress information (that is, "
+"min(width,\n"
 "    term width) will be used)."
 msgstr ""
 "``width``\n"
@@ -22744,12 +22740,11 @@ msgstr ""
 "``templates``\n"
 "-------------"
 
-#, fuzzy
 msgid ""
 "Use the ``[templates]`` section to define template strings.\n"
 "See :hg:`help templates` for details."
 msgstr ""
-"テンプレート文字列の定義は ``[templates]`` セクションで行います。\n"
+"``[templates]`` セクションはテンプレート文字列の定義を行います。\n"
 "詳細は :hg:`help templates` を参照してください。"
 
 msgid ""
@@ -25560,8 +25555,8 @@ msgstr ""
 "ラッパースクリプトです。"
 
 msgid ""
-"To be used in ~/.ssh/authorized_keys with the \"command\" option, see sshd"
-"(8):\n"
+"To be used in ~/.ssh/authorized_keys with the \"command\" option, see "
+"sshd(8):\n"
 "command=\"hg-ssh path/to/repo1 /path/to/repo2 ~/repo3 ~user/repo4\" ssh-"
 "dss ...\n"
 "(probably together with these other useful options:\n"
@@ -25647,11 +25642,12 @@ msgstr ""
 "\"\"\"\"\"\"\"\"\n"
 "ウェブサイト: http://mercurial-scm.org/"
 
-msgid "Source code repository: http://selenic.com/hg"
-msgstr "ソースコードリポジトリ: http://selenic.com/hg"
+msgid "Source code repository: https://www.mercurial-scm.org/repo/hg"
+msgstr "ソースコードリポジトリ: https://www.mercurial-scm.org/repo/hg"
 
-msgid "Mailing list: http://selenic.com/mailman/listinfo/mercurial"
-msgstr "メーリングリスト: http://selenic.com/mailman/listinfo/mercurial"
+msgid "Mailing list: https://www.mercurial-scm.org/mailman/listinfo/mercurial/"
+msgstr ""
+"メーリングリスト: https://www.mercurial-scm.org/mailman/listinfo/mercurial/"
 
 msgid ""
 "Copying\n"
@@ -26914,8 +26910,8 @@ msgid ""
 "repository to disable publishing in its configuration file::"
 msgstr ""
 "未完の作業を共有するために、 リビジョンのフェーズを draft のままで\n"
-"push/pull したい場合もあるでしょう。 publishing を無効化するには、\n"
-"サーバ側で以下の設定を行ってください::"
+"push/pull したい場合もあるでしょう。 publishing 処理を無効化するには、\n"
+"各リポジトリで以下の設定を行ってください::"
 
 msgid ""
 "  [phases]\n"
@@ -31784,8 +31780,8 @@ msgid ""
 msgstr ""
 " サブリポジトリ %(s)s の参照先が異なっています (現行側: %(sl)s, 他方側: "
 "%(sr)s)\n"
-"両者のマージ:(m)erge, 現行側%(l)s 参照先:(l)ocal, 他方側%(o)s 参照先:(r)"
-"emote のいずれを採用しますか？$$ &Merge $$ &Local $$ &Remote"
+"両者のマージ:(m)erge, 現行側%(l)s 参照先:(l)ocal, 他方側%(o)s 参照先:"
+"(r)emote のいずれを採用しますか？$$ &Merge $$ &Local $$ &Remote"
 
 #, python-format
 msgid ""

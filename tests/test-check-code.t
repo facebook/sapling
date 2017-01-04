@@ -10,7 +10,7 @@ New errors are not allowed. Warnings are strongly discouraged.
   $ hg locate -X contrib/python-zstandard -X hgext/fsmonitor/pywatchman |
   > sed 's-\\-/-g' | xargs "$check_code" --warnings --per-file=0 || false
   Skipping i18n/polib.py it has no-che?k-code (glob)
-  mercurial/demandimport.py:309:
+  mercurial/demandimport.py:312:
    >     if os.environ.get('HGDEMANDIMPORT') != 'disable':
    use encoding.environ instead (py3)
   mercurial/encoding.py:54:
