@@ -51,6 +51,24 @@
 # =========================================================================
 #
 
+_find_most_relevant_remotebookmark()
+{
+    # We don't want to output all remote bookmarks because there can be many
+    # of them. This function finds the most relevant remote bookmark using this
+    # algorithm:
+    # 1. If 'master' or '@' bookmark is available then output it
+    # 2. Sort remote bookmarks and output the first in reverse sorted order (
+    # it's a heuristic that tries to find the newest bookmark. It will work well
+    # with bookmarks like 'release20160926' and 'release20161010').
+    relevantbook=$(command grep -m1 -E -o "^[^/]+/(master|@)$" <<< "$1")
+    if [[ -n $relevantbook ]]; then
+        command echo $relevantbook
+        return 0
+    fi
+
+    command echo "$(command sort -r <<< "$1" | command head -n 1)"
+}
+
 _scm_prompt()
 {
   local dir git hg fmt
@@ -115,10 +133,14 @@ _scm_prompt()
     fi
     local remote="$hg/.hg/remotenames"
     if [[ -f "$remote" ]]; then
-      local marks=$(command grep "^$dirstate bookmarks" "$remote" | \
-        command cut -f 3 -d ' ' | command tr '\n' '|' | command sed -e 's/|$//')
-      if [[ -n "$marks" ]]; then
-        br="$br|$marks"
+      local allremotemarks="$(command grep "^$dirstate bookmarks" "$remote" | \
+        command cut -f 3 -d ' ')"
+
+      if [[ -n "$allremotemarks" ]]; then
+          local remotemark="$(_find_most_relevant_remotebookmark "$allremotemarks")"
+          if [[ -n "$remotemark" ]]; then
+            br="$br|$remotemark..."
+          fi
       fi
     fi
     local branch
