@@ -16,7 +16,7 @@
   $ cat >> wait_for_background_backup.py << EOF
   > from time import sleep
   > import sys
-  > for i in range(100):
+  > for i in range(200):
   >   sleep(0.1)
   >   backuptip = int(open('.hg/store/infinitepushlastbackupedstate').read().split(' ')[0])
   >   if backuptip == int(sys.argv[1]):
@@ -143,7 +143,6 @@ Backup in background
   $ mkcommit newcommit
   $ hg --config infinitepush.pushbackuplog="$TESTTMP/logfile" pushbackup --background
   $ python ../wait_for_background_backup.py `hg log -r tip -T '{rev}'`
-  $ sleep 2
   $ cat $TESTTMP/logfile
   searching for changes
   remote: pushing 2 commits:
@@ -307,7 +306,6 @@ Backup in background to different path
   $ mkcommit backgroundcommittodifferentpath
   $ hg --config infinitepush.pushbackuplog="$TESTTMP/logfile" pushbackup nondefault --background
   $ python ../wait_for_background_backup.py `hg log -r tip -T '{rev}'`
-  $ sleep 2
   $ cat $TESTTMP/logfile
   searching for changes
   remote: pushing 2 commits:
