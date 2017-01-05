@@ -1328,7 +1328,7 @@ class revlog(object):
         self._chunkclear()
 
     def addrevision(self, text, transaction, link, p1, p2, cachedelta=None,
-                    node=None):
+                    node=None, flags=REVIDX_DEFAULT_FLAGS):
         """add a revision to the log
 
         text - the revision data to add
@@ -1339,6 +1339,7 @@ class revlog(object):
         node - nodeid of revision; typically node is not specified, and it is
             computed by default as hash(text, p1, p2), however subclasses might
             use different hashing method (and override checkhash() in such case)
+        flags - the known flags to set on the revision
         """
         if link == nullrev:
             raise RevlogError(_("attempted to add linkrev -1 to %s")
@@ -1359,7 +1360,7 @@ class revlog(object):
         ifh = self.opener(self.indexfile, "a+", checkambig=self._checkambig)
         try:
             return self._addrevision(node, text, transaction, link, p1, p2,
-                                     REVIDX_DEFAULT_FLAGS, cachedelta, ifh, dfh)
+                                     flags, cachedelta, ifh, dfh)
         finally:
             if dfh:
                 dfh.close()
