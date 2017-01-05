@@ -289,9 +289,9 @@ Test loading with hggit
   $ echo "hggit=" >> $HGRCPATH
   $ hg help bookmarks  | grep -A 3 -- '--track'
    -t --track BOOKMARK track this bookmark or remote name
-   -u --[no-]untrack   remove tracking for this bookmark
-   -a --[no-]all       show both remote and local bookmarks
-      --[no-]remote    show only remote bookmarks
+   -u --untrack        remove tracking for this bookmark
+   -a --all            show both remote and local bookmarks
+      --remote         show only remote bookmarks
 
 Test branches marked as closed are not loaded
   $ cd ../alpha
