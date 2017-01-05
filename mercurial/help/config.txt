@@ -418,6 +418,28 @@ one shown by default::
        "HG: removed {file}\n"                 }{if(files, "",
        "HG: no files changed\n")}
 
+``diff()``
+    String: show the diff (see :hg:`help templates` for detail)
+
+Sometimes it is helpful to show the diff of the changeset in the editor without
+having to prefix 'HG: ' to each line so that highlighting works correctly. For
+this, Mercurial provides a special string which will ignore everything below
+it::
+
+     HG: ------------------------ >8 ------------------------
+
+For example, the template configuration below will show the diff below the
+extra message::
+
+    [committemplate]
+    changeset = {desc}\n\n
+        HG: Enter commit message.  Lines beginning with 'HG:' are removed.
+        HG: {extramsg}
+        HG: ------------------------ >8 ------------------------
+        HG: Do not touch the line above.
+        HG: Everything below will be removed.
+        {diff()}
+
 .. note::
 
    For some problematic encodings (see :hg:`help win32mbcs` for
