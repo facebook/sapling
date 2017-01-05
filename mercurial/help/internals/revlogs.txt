@@ -90,6 +90,7 @@ follows, with byte 0 being the first byte (all data stored as big endian):
 6-7 (2 bytes)
    Bit flags impacting revision behavior. The following bit offsets define:
    0: REVIDX_ISCENSORED revision has censor metadata, must be verified.
+   1: REVIDX_EXTSTORED revision data is stored externally.
 8-11 (4 bytes)
    Compressed length of revision data / chunk as stored in revlog.
 12-15 (4 bytes)
