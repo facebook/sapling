@@ -2259,9 +2259,9 @@ def user(repo, subset, x):
     """
     return author(repo, subset, x)
 
-# experimental
 @predicate('wdir', safe=True)
 def wdir(repo, subset, x):
+    """Working directory. (EXPERIMENTAL)"""
     # i18n: "wdir" is a keyword
     getargs(x, 0, 0, _("wdir takes no arguments"))
     if node.wdirrev in subset or isinstance(subset, fullreposet):

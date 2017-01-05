@@ -2809,8 +2809,8 @@ Bogus function with a similar internal name doesn't suggest the internal name
   [255]
 
 Undocumented functions aren't suggested as similar either
-  $ log 'wdir2()'
-  hg: parse error: unknown identifier: wdir2
+  $ log 'tagged2()'
+  hg: parse error: unknown identifier: tagged2
   [255]
 
 multiple revspecs
