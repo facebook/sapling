@@ -1110,6 +1110,9 @@ class filectx(basefilectx):
         return filectx(self._repo, self._path, fileid=fileid,
                        filelog=self._filelog, changeid=changeid)
 
+    def rawdata(self):
+        return self._filelog.revision(self._filenode, raw=True)
+
     def data(self):
         try:
             return self._filelog.read(self._filenode)

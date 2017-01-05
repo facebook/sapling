@@ -783,7 +783,7 @@ class cg1packer(object):
         prefix = ''
         if revlog.iscensored(base) or revlog.iscensored(rev):
             try:
-                delta = revlog.revision(node)
+                delta = revlog.revision(node, raw=True)
             except error.CensoredNodeError as e:
                 delta = e.tombstone
             if base == nullrev:
@@ -792,7 +792,7 @@ class cg1packer(object):
                 baselen = revlog.rawsize(base)
                 prefix = mdiff.replacediffheader(baselen, len(delta))
         elif base == nullrev:
-            delta = revlog.revision(node)
+            delta = revlog.revision(node, raw=True)
             prefix = mdiff.trivialdiffheader(len(delta))
         else:
             delta = revlog.revdiff(base, rev)

@@ -93,7 +93,7 @@ class unionrevlog(revlog.revlog):
         return mdiff.textdiff(self.revision(self.node(rev1)),
                               self.revision(self.node(rev2)))
 
-    def revision(self, nodeorrev):
+    def revision(self, nodeorrev, raw=False):
         """return an uncompressed revision of a given node or revision
         number.
         """

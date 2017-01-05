@@ -1202,12 +1202,14 @@ class revlog(object):
         return mdiff.textdiff(self.revision(rev1),
                               self.revision(rev2))
 
-    def revision(self, nodeorrev, _df=None):
+    def revision(self, nodeorrev, _df=None, raw=False):
         """return an uncompressed revision of a given node or revision
         number.
 
-        _df is an existing file handle to read from. It is meant to only be
-        used internally.
+        _df - an existing file handle to read from. (internal-only)
+        raw - an optional argument specifying if the revision data is to be
+        treated as raw data when applying flag transforms. 'raw' should be set
+        to True when generating changegroups or in debug commands.
         """
         if isinstance(nodeorrev, int):
             rev = nodeorrev
@@ -1412,13 +1414,16 @@ class revlog(object):
         return True
 
     def _addrevision(self, node, text, transaction, link, p1, p2, flags,
-                     cachedelta, ifh, dfh, alwayscache=False):
+                     cachedelta, ifh, dfh, alwayscache=False, raw=False):
         """internal function to add revisions to the log
 
         see addrevision for argument descriptions.
         invariants:
         - text is optional (can be None); if not set, cachedelta must be set.
           if both are set, they must correspond to each other.
+        - raw is optional; if set to True, it indicates the revision data is to
+          be treated by _processflags() as raw. It is usually set by changegroup
+          generation and debug commands.
         """
         btext = [text]
         def buildtext():
@@ -1438,8 +1443,9 @@ class revlog(object):
                     fh = ifh
                 else:
                     fh = dfh
-                basetext = self.revision(self.node(baserev), _df=fh)
+                basetext = self.revision(self.node(baserev), _df=fh, raw=raw)
                 btext[0] = mdiff.patch(basetext, delta)
+
             try:
                 self.checkhash(btext[0], node, p1=p1, p2=p2)
                 if flags & REVIDX_ISCENSORED:
@@ -1668,10 +1674,14 @@ class revlog(object):
                 # the added revision, which will require a call to
                 # revision(). revision() will fast path if there is a cache
                 # hit. So, we tell _addrevision() to always cache in this case.
+                # We're only using addgroup() in the context of changegroup
+                # generation so the revision data can always be handled as raw
+                # by the flagprocessor.
                 chain = self._addrevision(node, None, transaction, link,
                                           p1, p2, flags, (baserev, delta),
                                           ifh, dfh,
-                                          alwayscache=bool(addrevisioncb))
+                                          alwayscache=bool(addrevisioncb),
+                                          raw=True)
 
                 if addrevisioncb:
                     addrevisioncb(self, chain)

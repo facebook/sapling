@@ -445,7 +445,7 @@ def debugdata(ui, repo, file_, rev=None, **opts):
         raise error.CommandError('debugdata', _('invalid arguments'))
     r = cmdutil.openrevlog(repo, 'debugdata', file_, opts)
     try:
-        ui.write(r.revision(r.lookup(rev)))
+        ui.write(r.revision(r.lookup(rev), raw=True))
     except KeyError:
         raise error.Abort(_('invalid revision identifier %s') % rev)
 
