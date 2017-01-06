@@ -1424,7 +1424,7 @@ def _computeobsoletenotrebased(repo, rebaseobsrevs, dest):
     return obsoletenotrebased
 
 def summaryhook(ui, repo):
-    if not os.path.exists(repo.join('rebasestate')):
+    if not repo.vfs.exists('rebasestate'):
         return
     try:
         rbsrt = rebaseruntime(repo, ui, {})
