@@ -815,6 +815,16 @@ test the "troubles" templatekw
   $ hg log -r 'bumped() and unstable()'
   7:50c51b361e60 (draft unstable bumped) [ ] add babar
 
+test the default cmdline template
+
+  $ hg log -T default -r 'bumped()'
+  changeset:   7:50c51b361e60
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  trouble:     unstable, bumped
+  summary:     add babar
+  
+
 Test incoming/outcoming with changesets obsoleted remotely, known locally
 ===============================================================================
 

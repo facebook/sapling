@@ -1,9 +1,9 @@
 # Base templates. Due to name clashes with existing keywords, we have
 # to replace some keywords with 'lkeyword', for 'labelled keyword'
-changeset = '{cset}{branches}{bookmarks}{tags}{parents}{user}{ldate}{summary}\n'
+changeset = '{cset}{branches}{bookmarks}{tags}{parents}{user}{ldate}{ltroubles}{summary}\n'
 changeset_quiet = '{lnode}'
-changeset_verbose = '{cset}{branches}{bookmarks}{tags}{parents}{user}{ldate}{lfiles}{lfile_copies_switch}{description}\n'
-changeset_debug = '{fullcset}{branches}{bookmarks}{tags}{lphase}{parents}{manifest}{user}{ldate}{lfile_mods}{lfile_adds}{lfile_dels}{lfile_copies_switch}{extras}{description}\n'
+changeset_verbose = '{cset}{branches}{bookmarks}{tags}{parents}{user}{ldate}{ltroubles}{lfiles}{lfile_copies_switch}{description}\n'
+changeset_debug = '{fullcset}{branches}{bookmarks}{tags}{lphase}{parents}{manifest}{user}{ldate}{ltroubles}{lfile_mods}{lfile_adds}{lfile_dels}{lfile_copies_switch}{extras}{description}\n'
 
 # File templates
 lfiles = '{if(files,
@@ -28,7 +28,8 @@ lfile_copies_switch = '{if(file_copies_switch,
                                                % ' {name} ({source})'}\n"))}'
 
 # General templates
-_cset_labels = 'log.changeset changeset.{phase}'
+_trouble_label = 'trouble.{trouble}'
+_cset_labels = 'log.changeset changeset.{phase}{if(troubles, " changeset.troubled {troubles%_trouble_label}")}'
 cset = '{label("{_cset_labels}",
                "changeset:   {rev}:{node|short}")}\n'
 
@@ -64,6 +65,9 @@ summary = '{if(desc|strip, "{label('log.summary',
 
 ldate = '{label("log.date",
                 "date:        {date|date}")}\n'
+
+ltroubles = '{if(troubles, "{label('ui.note log.trouble',
+                                   'trouble:     {join(troubles, ", ")}')}\n")}'
 
 extra = '{label("ui.debug log.extra",
                 "extra:       {key}={value|stringescape}")}\n'
