@@ -1261,6 +1261,7 @@ class changeset_printer(object):
                       label='log.date')
 
         if ctx.troubled():
+            # i18n: column positioning for "hg log"
             self.ui.write(_("trouble:     %s\n") % ', '.join(ctx.troubles()),
                           label='ui.note log.trouble')
 
