@@ -692,6 +692,11 @@ verify pathauditor blocks evil filepaths
 
 test that text below the --- >8 --- special string is ignored
 
+  $ cat <<'EOF' > $TESTTMP/lowercaseline.sh
+  > cat $1 | sed s/LINE/line/ | tee $1.new
+  > mv $1.new $1
+  > EOF
+
   $ hg init ignore_below_special_string
   $ cd ignore_below_special_string
   $ echo foo > foo
@@ -699,7 +704,7 @@ test that text below the --- >8 --- special string is ignored
   $ hg commit -m "foo"
   $ cat >> .hg/hgrc <<EOF
   > [committemplate]
-  > changeset.commit = first line
+  > changeset.commit = first LINE
   >     HG: this is customized commit template
   >     HG: {extramsg}
   >     HG: ------------------------ >8 ------------------------
@@ -707,7 +712,7 @@ test that text below the --- >8 --- special string is ignored
   > EOF
   $ echo foo2 > foo2
   $ hg add foo2
-  $ HGEDITOR=cat hg ci
+  $ HGEDITOR="sh $TESTTMP/lowercaseline.sh" hg ci
   first line
   HG: this is customized commit template
   HG: Leave message empty to abort commit.
@@ -725,7 +730,7 @@ a line
 
   $ cat >> .hg/hgrc <<EOF
   > [committemplate]
-  > changeset.commit = first line2
+  > changeset.commit = first LINE2
   >     another line HG: ------------------------ >8 ------------------------
   >     HG: this is customized commit template
   >     HG: {extramsg}
@@ -733,7 +738,7 @@ a line
   >     {diff()}
   > EOF
   $ echo foo >> foo
-  $ HGEDITOR=cat hg ci
+  $ HGEDITOR="sh $TESTTMP/lowercaseline.sh" hg ci
   first line2
   another line HG: ------------------------ >8 ------------------------
   HG: this is customized commit template
@@ -754,7 +759,7 @@ at the end
 
   $ cat >> .hg/hgrc <<EOF
   > [committemplate]
-  > changeset.commit = first line3
+  > changeset.commit = first LINE3
   >     HG: ------------------------ >8 ------------------------foobar
   >     second line
   >     HG: this is customized commit template
@@ -763,7 +768,7 @@ at the end
   >     {diff()}
   > EOF
   $ echo foo >> foo
-  $ HGEDITOR=cat hg ci
+  $ HGEDITOR="sh $TESTTMP/lowercaseline.sh" hg ci
   first line3
   HG: ------------------------ >8 ------------------------foobar
   second line
