@@ -107,7 +107,6 @@ scratchbranchparttype = 'b2x:infinitepush'
 scratchbookmarksparttype = 'b2x:infinitepushscratchbookmarks'
 
 experimental = 'experimental'
-configmanybookmarks = 'server-bundlestore-manybookmarks'
 configbookmark = 'server-bundlestore-bookmark'
 configcreate = 'server-bundlestore-create'
 configscratchpush = 'infinitepush-scratchpush'
@@ -1053,12 +1052,6 @@ def partgen(pushop, bundler):
         pushop.cgresult = 1
 
     return handlereply
-
-@exchange.b2partsgenerator(scratchbookmarksparttype)
-def partgen(pushop, bundler):
-    manybookmarks = pushop.ui.config(experimental, configmanybookmarks)
-    if manybookmarks:
-        bundler.addpart(getscratchbookmarkspart(pushop.remote, manybookmarks))
 
 bundle2.capabilities[scratchbranchparttype] = ()
 bundle2.capabilities[scratchbookmarksparttype] = ()
