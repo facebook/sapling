@@ -5991,6 +5991,15 @@ def summary(ui, repo, **opts):
                 ui.write(_(' (empty repository)'))
             else:
                 ui.write(_(' (no revision checked out)'))
+        if p.troubled():
+            ui.write(' (')
+            troubles = p.troubles()
+            for idx, trouble in enumerate(troubles, 1):
+                ui.write(trouble,
+                         label='trouble.%s' % trouble)
+                if idx < len(troubles):
+                    ui.write(', ')
+            ui.write(')')
         ui.write('\n')
         if p.description():
             ui.status(' ' + p.description().splitlines()[0].strip() + '\n',

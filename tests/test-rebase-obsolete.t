@@ -761,7 +761,7 @@ If a rebase is going to create divergence, it should abort
   o  0:4a2df7238c3b A
   
   $ hg summary
-  parent: 15:73568ab6879d tip
+  parent: 15:73568ab6879d tip (unstable)
    bar foo
   branch: default
   commit: (clean)

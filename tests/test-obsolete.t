@@ -242,7 +242,7 @@ Fixing "bumped" situation
 We need to create a clone of 5 and add a special marker with a flag
 
   $ hg summary
-  parent: 5:5601fb93a350 tip
+  parent: 5:5601fb93a350 tip (bumped)
    add new_3_c
   branch: default
   commit: (clean)
@@ -477,7 +477,7 @@ detect outgoing obsolete and unstable
   $ hg log -r 'obsolete()'
   4:94b33453f93b (draft) [ ] add original_d
   $ hg summary
-  parent: 5:cda648ca50f5 tip
+  parent: 5:cda648ca50f5 tip (unstable)
    add original_e
   branch: default
   commit: (clean)
@@ -824,6 +824,20 @@ test the default cmdline template
   trouble:     unstable, bumped
   summary:     add babar
   
+
+test summary output
+
+  $ hg up -r 'bumped() and unstable()'
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg summary
+  parent: 7:50c51b361e60  (unstable, bumped)
+   add babar
+  branch: default
+  commit: 3 unknown (clean)
+  update: 2 new changesets (update)
+  phases: 4 draft
+  unstable: 2 changesets
+  bumped: 1 changesets
 
 Test incoming/outcoming with changesets obsoleted remotely, known locally
 ===============================================================================
