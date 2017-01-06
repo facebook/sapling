@@ -237,10 +237,10 @@ static void handlesystemrequest(hgclient_t *hgc)
 	ctx->data[ctx->datasize] = '\0';  /* terminate last string */
 
 	const char **args = unpackcmdargsnul(ctx);
-	if (!args[0] || !args[1])
-		abortmsg("missing command or cwd in system request");
-	debugmsg("run '%s' at '%s'", args[0], args[1]);
-	int32_t r = runshellcmd(args[0], args + 2, args[1]);
+	if (!args[0] || !args[1] || !args[2])
+		abortmsg("missing type or command or cwd in system request");
+	debugmsg("run '%s' at '%s'", args[1], args[2]);
+	int32_t r = runshellcmd(args[1], args + 3, args[2]);
 	free(args);
 
 	uint32_t r_n = htonl(r);

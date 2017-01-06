@@ -287,13 +287,14 @@ class channeledsystem(object):
     """Propagate ui.system() request in the following format:
 
     payload length (unsigned int),
+    type, '\0',
     cmd, '\0',
     cwd, '\0',
     envkey, '=', val, '\0',
     ...
     envkey, '=', val
 
-    and waits:
+    if type == 'system', waits for:
 
     exitcode length (unsigned int),
     exitcode (int)
@@ -303,8 +304,8 @@ class channeledsystem(object):
         self.out = out
         self.channel = channel
 
-    def __call__(self, cmd, environ, cwd):
-        args = [util.quotecommand(cmd), os.path.abspath(cwd or '.')]
+    def __call__(self, cmd, environ, cwd, type='system'):
+        args = [type, util.quotecommand(cmd), os.path.abspath(cwd or '.')]
         args.extend('%s=%s' % (k, v) for k, v in environ.iteritems())
         data = '\0'.join(args)
         self.out.write(struct.pack('>cI', self.channel, len(data)))
