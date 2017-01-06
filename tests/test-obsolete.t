@@ -3,7 +3,7 @@
   > # public changeset are not obsolete
   > publish=false
   > [ui]
-  > logtemplate="{rev}:{node|short} ({phase}) [{tags} {bookmarks}] {desc|firstline}\n"
+  > logtemplate="{rev}:{node|short} ({phase}{if(troubles, ' {troubles}')}) [{tags} {bookmarks}] {desc|firstline}\n"
   > EOF
   $ mkcommit() {
   >    echo "$1" > "$1"
@@ -203,7 +203,7 @@ Check that public changeset are not accounted as obsolete:
 
   $ hg --hidden phase --public 2
   $ hg log -G
-  @  5:5601fb93a350 (draft) [tip ] add new_3_c
+  @  5:5601fb93a350 (draft bumped) [tip ] add new_3_c
   |
   | o  2:245bde4270cd (public) [ ] add original_c
   |/
@@ -220,7 +220,7 @@ note that the bumped changeset (5:5601fb93a350) is not a direct successor of
 the public changeset
 
   $ hg log --hidden -r 'bumped()'
-  5:5601fb93a350 (draft) [tip ] add new_3_c
+  5:5601fb93a350 (draft bumped) [tip ] add new_3_c
 
 And that we can't push bumped changeset
 
@@ -485,7 +485,7 @@ detect outgoing obsolete and unstable
   phases: 3 draft
   unstable: 1 changesets
   $ hg log -G -r '::unstable()'
-  @  5:cda648ca50f5 (draft) [tip ] add original_e
+  @  5:cda648ca50f5 (draft unstable) [tip ] add original_e
   |
   x  4:94b33453f93b (draft) [ ] add original_d
   |
@@ -527,7 +527,7 @@ Don't try to push extinct changeset
   2:245bde4270cd (public) [ ] add original_c
   3:6f9641995072 (draft) [ ] add n3w_3_c
   4:94b33453f93b (draft) [ ] add original_d
-  5:cda648ca50f5 (draft) [tip ] add original_e
+  5:cda648ca50f5 (draft unstable) [tip ] add original_e
   $ hg push ../tmpf -f # -f because be push unstable too
   pushing to ../tmpf
   searching for changes
@@ -548,7 +548,7 @@ no warning displayed
 Do not warn about new head when the new head is a successors of a remote one
 
   $ hg log -G
-  @  5:cda648ca50f5 (draft) [tip ] add original_e
+  @  5:cda648ca50f5 (draft unstable) [tip ] add original_e
   |
   x  4:94b33453f93b (draft) [ ] add original_d
   |
@@ -809,6 +809,11 @@ Several troubles on the same changeset (create an unstable and bumped changeset)
   trouble:     unstable, bumped
   summary:     add babar
   
+
+test the "troubles" templatekw
+
+  $ hg log -r 'bumped() and unstable()'
+  7:50c51b361e60 (draft unstable bumped) [ ] add babar
 
 Test incoming/outcoming with changesets obsoleted remotely, known locally
 ===============================================================================

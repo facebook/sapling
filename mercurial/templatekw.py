@@ -595,5 +595,13 @@ def termwidth(repo, ctx, templ, **args):
     """Integer. The width of the current terminal."""
     return repo.ui.termwidth()
 
+@templatekeyword('troubles')
+def showtroubles(**args):
+    """List of strings. Evolution troubles affecting the changeset.
+
+    (EXPERIMENTAL)
+    """
+    return showlist('trouble', args['ctx'].troubles(), **args)
+
 # tell hggettext to extract docstrings from these functions:
 i18nfunctions = keywords.values()
