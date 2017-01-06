@@ -2772,14 +2772,15 @@ def commitforceeditor(repo, ctx, subs, finishdesc=None, extramsg=None,
 
     editortext = repo.ui.edit(committext, ctx.user(), ctx.extra(),
                         editform=editform, pending=pending)
+    text = editortext
 
     # strip away anything below this special string (used for editors that want
     # to display the diff)
-    stripbelow = re.search(_linebelow, editortext, flags=re.MULTILINE)
+    stripbelow = re.search(_linebelow, text, flags=re.MULTILINE)
     if stripbelow:
-        editortext = editortext[:stripbelow.start()]
+        text = text[:stripbelow.start()]
 
-    text = re.sub("(?m)^HG:.*(\n|$)", "", editortext)
+    text = re.sub("(?m)^HG:.*(\n|$)", "", text)
     os.chdir(olddir)
 
     if finishdesc:

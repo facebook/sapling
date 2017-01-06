@@ -712,6 +712,9 @@ test that text below the --- >8 --- special string is ignored
   > EOF
   $ echo foo2 > foo2
   $ hg add foo2
+  $ HGEDITOR="sh $TESTTMP/notouching.sh" hg ci
+  abort: commit message unchanged
+  [255]
   $ HGEDITOR="sh $TESTTMP/lowercaseline.sh" hg ci
   first line
   HG: this is customized commit template
