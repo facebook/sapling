@@ -72,7 +72,7 @@ def expushop(orig, pushop, repo, remote, force=False, revs=None,
     orig(pushop, repo, remote, force, revs, newbranch, bookmarks)
 
     for flag in ['to', 'delete', 'create', 'allowanon', 'nonforwardmove']:
-        setattr(pushop, flag, kwargs.get(flag))
+        setattr(pushop, flag, kwargs.pop(flag, None))
 
 def _isselectivepull(ui):
     return ui.configbool('remotenames', 'selectivepull', False)
