@@ -239,14 +239,18 @@ static void handlesystemrequest(hgclient_t *hgc)
 	const char **args = unpackcmdargsnul(ctx);
 	if (!args[0] || !args[1] || !args[2])
 		abortmsg("missing type or command or cwd in system request");
-	debugmsg("run '%s' at '%s'", args[1], args[2]);
-	int32_t r = runshellcmd(args[1], args + 3, args[2]);
-	free(args);
+	if (strcmp(args[0], "system") == 0) {
+		debugmsg("run '%s' at '%s'", args[1], args[2]);
+		int32_t r = runshellcmd(args[1], args + 3, args[2]);
+		free(args);
 
-	uint32_t r_n = htonl(r);
-	memcpy(ctx->data, &r_n, sizeof(r_n));
-	ctx->datasize = sizeof(r_n);
-	writeblock(hgc);
+		uint32_t r_n = htonl(r);
+		memcpy(ctx->data, &r_n, sizeof(r_n));
+		ctx->datasize = sizeof(r_n);
+		writeblock(hgc);
+	} else {
+		abortmsg("unknown type in system request: %s", args[0]);
+	}
 }
 
 /* Read response of command execution until receiving 'r'-esult */
