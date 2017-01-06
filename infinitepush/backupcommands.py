@@ -57,83 +57,36 @@ def backup(ui, repo, dest=None, **opts):
             background_cmd.extend(('>>', logfile, '2>&1'))
         runshellcommand(' '.join(background_cmd), os.environ)
         return 0
-    backupedstatefile = 'infinitepushlastbackupedstate'
-    backuptipbookmarkshash = repo.svfs.tryread(backupedstatefile).split(' ')
-    backuptip = 0
-    # hash of empty string is the default. This is to prevent backuping of
-    # empty repo
-    bookmarkshash = hashlib.sha1().hexdigest()
-    if len(backuptipbookmarkshash) == 2:
-        try:
-            backuptip = int(backuptipbookmarkshash[0]) + 1
-        except ValueError:
-            pass
-        if len(backuptipbookmarkshash[1]) == 40:
-            bookmarkshash = backuptipbookmarkshash[1]
 
-    bookmarkstobackup = {}
-    for bookmark, node in repo._bookmarks.iteritems():
-        bookmark = _getbackupbookmarkname(ui, bookmark, repo)
-        hexnode = hex(node)
-        bookmarkstobackup[bookmark] = hexnode
-
-    for headrev in repo.revs('head() & not public()'):
-        hexhead = repo[headrev].hex()
-        headbookmarksname = _getbackupheadname(ui, hexhead, repo)
-        bookmarkstobackup[headbookmarksname] = hexhead
-
-    currentbookmarkshash = hashlib.sha1()
-    for book, node in sorted(bookmarkstobackup.iteritems()):
-        currentbookmarkshash.update(book)
-        currentbookmarkshash.update(node)
-    currentbookmarkshash = currentbookmarkshash.hexdigest()
-
-    # Use unfiltered repo because backuptip may now point to obsolete changeset
-    repo = repo.unfiltered()
+    backuptip, bookmarkshash = _readbackupstatefile(ui, repo)
+    bookmarkstobackup = _getbookmarkstobackup(ui, repo)
 
     # To avoid race conditions save current tip of the repo and backup
     # everything up to this revision.
     currenttiprev = len(repo) - 1
-    revs = []
-    if backuptip <= currenttiprev:
-        revset = 'head() & draft() & %d:' % backuptip
-        revs = list(repo.revs(revset))
-
-    if currentbookmarkshash == bookmarkshash and not revs:
-        ui.status(_('nothing to backup\n'))
-        return 0
-
-    # Adding patterns to delete previous heads and bookmarks
-    bookmarkstobackup[_getbackupheadprefix(ui, repo) + '/*'] = ''
-    bookmarkstobackup[_getbackupbookmarkprefix(ui, repo) + '/*'] = ''
-
     other = _getremote(repo, ui, dest, **opts)
-    bundler = bundle2.bundle20(ui, bundle2.bundle2caps(other))
-    # Disallow pushback because we want to avoid taking repo locks.
-    # And we don't need pushback anyway
-    capsblob = bundle2.encodecaps(bundle2.getrepocaps(repo,
-                                                      allowpushback=False))
-    bundler.newpart('replycaps', data=capsblob)
-    if revs:
-        nodes = map(repo.changelog.node, revs)
-        outgoing = discovery.findcommonoutgoing(repo, other, onlyheads=nodes)
-        if outgoing.missing:
-            bundler.addpart(getscratchbranchpart(repo, other, outgoing,
-                                                 confignonforwardmove=False,
-                                                 ui=ui, bookmark=None,
-                                                 create=False))
+    outgoing = _getrevstobackup(repo, other, backuptip,
+                                currenttiprev, bookmarkstobackup)
+    currentbookmarkshash = _getbookmarkshash(bookmarkstobackup)
 
-    if bookmarkstobackup:
+    bundler = _createbundler(ui, repo, other)
+    backup = False
+    if outgoing and outgoing.missing:
+        backup = True
+        bundler.addpart(getscratchbranchpart(repo, other, outgoing,
+                                             confignonforwardmove=False,
+                                             ui=ui, bookmark=None,
+                                             create=False))
+
+    if currentbookmarkshash != bookmarkshash:
+        backup = True
         bundler.addpart(getscratchbookmarkspart(other, bookmarkstobackup))
-    stream = util.chunkbuffer(bundler.getchunks())
 
-    try:
-        other.unbundle(stream, ['force'], other.url())
-    except error.BundleValueError as exc:
-        raise error.Abort(_('missing support for %s') % exc)
-
-    with repo.svfs(backupedstatefile, mode="w", atomictemp=True) as f:
-        f.write(str(currenttiprev) + ' ' + currentbookmarkshash)
+    if backup:
+        _sendbundle(bundler, other)
+        _writebackupstatefile(repo.svfs, currenttiprev, currentbookmarkshash)
+    else:
+        ui.status(_('nothing to backup\n'))
     return 0
 
 @command('pullbackup', [
@@ -198,6 +151,10 @@ def restore(ui, repo, dest=None, **opts):
 
     return result
 
+_backupedstatefile = 'infinitepushlastbackupedstate'
+
+# Common helper functions
+
 def _getcommonuserprefix(ui):
     username = ui.shortuser(ui.username())
     return '/'.join(('infinitepush', 'backups', username))
@@ -255,6 +212,90 @@ def _getcommandandoptions(command):
     pushopts = dict(opt[1:3] for opt in commands.table[command][1])
     return pushcmd, pushopts
 
+# Backup helper functions
+
+def _getdefaultbookmarkstobackup(ui, repo):
+    bookmarkstobackup = {}
+    bookmarkstobackup[_getbackupheadprefix(ui, repo) + '/*'] = ''
+    bookmarkstobackup[_getbackupbookmarkprefix(ui, repo) + '/*'] = ''
+    return bookmarkstobackup
+
+def _getbookmarkstobackup(ui, repo):
+    bookmarkstobackup = _getdefaultbookmarkstobackup(ui, repo)
+    for bookmark, node in repo._bookmarks.iteritems():
+        bookmark = _getbackupbookmarkname(ui, bookmark, repo)
+        hexnode = hex(node)
+        bookmarkstobackup[bookmark] = hexnode
+
+    for headrev in repo.revs('head() & not public()'):
+        hexhead = repo[headrev].hex()
+        headbookmarksname = _getbackupheadname(ui, hexhead, repo)
+        bookmarkstobackup[headbookmarksname] = hexhead
+
+    return bookmarkstobackup
+
+def _getbookmarkshash(bookmarkstobackup):
+    currentbookmarkshash = hashlib.sha1()
+    for book, node in sorted(bookmarkstobackup.iteritems()):
+        currentbookmarkshash.update(book)
+        currentbookmarkshash.update(node)
+    return currentbookmarkshash.hexdigest()
+
+def _createbundler(ui, repo, other):
+    bundler = bundle2.bundle20(ui, bundle2.bundle2caps(other))
+    # Disallow pushback because we want to avoid taking repo locks.
+    # And we don't need pushback anyway
+    capsblob = bundle2.encodecaps(bundle2.getrepocaps(repo,
+                                                      allowpushback=False))
+    bundler.newpart('replycaps', data=capsblob)
+    return bundler
+
+def _sendbundle(bundler, other):
+    stream = util.chunkbuffer(bundler.getchunks())
+    try:
+        other.unbundle(stream, ['force'], other.url())
+    except error.BundleValueError as exc:
+        raise error.Abort(_('missing support for %s') % exc)
+
+def findcommonoutgoing(repo, other, heads):
+    if heads:
+        nodes = map(repo.changelog.node, heads)
+        return discovery.findcommonoutgoing(repo, other, onlyheads=nodes)
+    else:
+        return None
+
+def _getrevstobackup(repo, other, backuptip, currenttiprev, bookmarkstobackup):
+    # Use unfiltered repo because backuptip may now point to filtered commit
+    repo = repo.unfiltered()
+    revs = []
+    if backuptip <= currenttiprev:
+        revset = 'head() & draft() & %d:' % backuptip
+        revs = list(repo.revs(revset))
+
+    outgoing = findcommonoutgoing(repo, other, revs)
+
+    return outgoing
+
+def _readbackupstatefile(ui, repo):
+    backuptipbookmarkshash = repo.svfs.tryread(_backupedstatefile).split(' ')
+    backuptip = 0
+    # hash of the default bookmarks to backup. This is to prevent backuping of
+    # empty repo
+    bookmarkshash = _getbookmarkshash(_getdefaultbookmarkstobackup(ui, repo))
+    if len(backuptipbookmarkshash) == 2:
+        try:
+            backuptip = int(backuptipbookmarkshash[0]) + 1
+        except ValueError:
+            pass
+        if len(backuptipbookmarkshash[1]) == 40:
+            bookmarkshash = backuptipbookmarkshash[1]
+    return backuptip, bookmarkshash
+
+def _writebackupstatefile(vfs, backuptip, bookmarkshash):
+    with vfs(_backupedstatefile, mode="w", atomictemp=True) as f:
+        f.write(str(backuptip) + ' ' + bookmarkshash)
+
+# Restore helper functions
 def _parsebackupbookmark(ui, backupbookmark):
     '''Parses backup bookmark and returns info about it
 
