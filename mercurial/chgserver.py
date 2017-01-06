@@ -312,12 +312,15 @@ class channeledsystem(object):
         self.out.write(data)
         self.out.flush()
 
-        length = self.in_.read(4)
-        length, = struct.unpack('>I', length)
-        if length != 4:
-            raise error.Abort(_('invalid response'))
-        rc, = struct.unpack('>i', self.in_.read(4))
-        return rc
+        if type == 'system':
+            length = self.in_.read(4)
+            length, = struct.unpack('>I', length)
+            if length != 4:
+                raise error.Abort(_('invalid response'))
+            rc, = struct.unpack('>i', self.in_.read(4))
+            return rc
+        else:
+            raise error.ProgrammingError('invalid S channel type: %s' % type)
 
 _iochannels = [
     # server.ch, ui.fp, mode
