@@ -798,6 +798,18 @@ reenable for later test
 
 #endif
 
+Several troubles on the same changeset (create an unstable and bumped changeset)
+
+  $ hg debugobsolete `getid obsolete_e`
+  $ hg debugobsolete `getid original_c` `getid babar`
+  $ hg log --config ui.logtemplate= -r 'bumped() and unstable()'
+  changeset:   7:50c51b361e60
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  trouble:     unstable, bumped
+  summary:     add babar
+  
+
 Test incoming/outcoming with changesets obsoleted remotely, known locally
 ===============================================================================
 
