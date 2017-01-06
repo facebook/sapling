@@ -282,7 +282,7 @@ class lazyremotenamedict(UserDict.DictMixin):
     """Read-only dict-like Class to lazily resolve remotename entries
 
     We are doing that because remotenames startup was slow.
-    We read the remotenames file once to figure out the potential entries
+    We lazily read the remotenames file once to figure out the potential entries
     and store them in self.potentialentries. Then when asked to resolve an
     entry, if it is not in self.potentialentries, then it isn't there, if it
     is in self.potentialentries we resolve it and store the result in
@@ -293,10 +293,11 @@ class lazyremotenamedict(UserDict.DictMixin):
         self.potentialentries = {}
         self._kind = kind # bookmarks or branches
         self._repo = repo
-        self._load()
+        self.loaded = False
 
     def _load(self):
         """Read the remotenames file, store entries matching selected kind"""
+        self.loaded = True
         repo = self._repo
         alias_default = repo.ui.configbool('remotenames', 'alias.default')
         for node, nametype, remote, rname in readremotenames(repo):
@@ -328,6 +329,8 @@ class lazyremotenamedict(UserDict.DictMixin):
         return [binnode]
 
     def __getitem__(self, key):
+        if not self.loaded:
+            self._load()
         val = self._fetchandcache(key)
         if val is not None:
             return val
@@ -345,6 +348,8 @@ class lazyremotenamedict(UserDict.DictMixin):
             return None
 
     def keys(self):
+        if not self.loaded:
+            self._load()
         for u in self.potentialentries.keys():
             self._fetchandcache(u)
         return self.cache.keys()
