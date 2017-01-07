@@ -66,7 +66,7 @@ summary = '{if(desc|strip, "{label('log.summary',
 ldate = '{label("log.date",
                 "date:        {date|date}")}\n'
 
-ltroubles = '{if(troubles, "{label('ui.note log.trouble',
+ltroubles = '{if(troubles, "{label('log.trouble',
                                    'trouble:     {join(troubles, ", ")}')}\n")}'
 
 extra = '{label("ui.debug log.extra",
