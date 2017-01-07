@@ -1034,7 +1034,7 @@ def archive(web, req, tmpl):
     allowed = web.configlist("web", "allow_archive")
     key = req.form['node'][0]
 
-    if type_ not in web.archives:
+    if type_ not in web.archivespecs:
         msg = 'Unsupported archive type: %s' % type_
         raise ErrorResponse(HTTP_NOT_FOUND, msg)
 
