@@ -134,7 +134,8 @@ class requestcontext(object):
 
     def archivelist(self, nodeid):
         allowed = self.configlist('web', 'allow_archive')
-        for typ, spec in self.archivespecs.iteritems():
+        for typ in self.archives:
+            spec = self.archivespecs[typ]
             if typ in allowed or self.configbool('web', 'allow%s' % typ):
                 yield {'type': typ, 'extension': spec[2], 'node': nodeid}
 
