@@ -16,6 +16,9 @@ expansion::
     $ hg log -r1 --template "{node}\n"
     b56ce7b07c52de7d5fd79fb89701ea538af65746
 
+Keywords
+========
+
 Strings in curly braces are called keywords. The availability of
 keywords depends on the exact context of the templater. These
 keywords are usually available for templating a log-like command:
@@ -32,6 +35,9 @@ You can also use a chain of filters to get the desired output::
    $ hg tip --template "{date|isodate}\n"
    2008-08-21 18:22 +0000
 
+Filters
+=======
+
 List of filters:
 
 .. filtersmarker
@@ -39,9 +45,15 @@ List of filters:
 Note that a filter is nothing more than a function call, i.e.
 ``expr|filter`` is equivalent to ``filter(expr)``.
 
+Functions
+=========
+
 In addition to filters, there are some basic built-in functions:
 
 .. functionsmarker
+
+Infix
+=====
 
 We provide a limited set of infix arithmetic operations on integers::
 
@@ -59,6 +71,9 @@ Also, for any expression that returns a list, there is a list operator::
 As seen in the above example, ``{template}`` is interpreted as a template.
 To prevent it from being interpreted, you can use an escape character ``\{``
 or a raw string prefix, ``r'...'``.
+
+Aliases
+=======
 
 New keywords and functions can be defined in the ``templatealias`` section of
 a Mercurial configuration file::
@@ -93,6 +108,9 @@ For example,
 defines a template, ``nodedate``, which can be called like::
 
   $ hg log -r . -Tnodedate
+
+Examples
+========
 
 Some sample command line templates:
 
