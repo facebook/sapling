@@ -52,8 +52,8 @@ In addition to filters, there are some basic built-in functions:
 
 .. functionsmarker
 
-Infix
-=====
+Operators
+=========
 
 We provide a limited set of infix arithmetic operations on integers::
 

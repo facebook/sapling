@@ -12,16 +12,13 @@ Special characters can be used in quoted identifiers by escaping them,
 e.g., ``\n`` is interpreted as a newline. To prevent them from being
 interpreted, strings can be prefixed with ``r``, e.g. ``r'...'``.
 
-Prefix
-======
+Operators
+=========
 
 There is a single prefix operator:
 
 ``not x``
   Changesets not in x. Short form is ``! x``.
-
-Infix
-=====
 
 These are the supported infix operators:
 
@@ -76,9 +73,6 @@ These are the supported infix operators:
     ``grep(r'\bissue[ :]?1234\b|\bbug\(1234\)')``
     in this case. This matches against all of "issue 1234", "issue:1234",
     "issue1234" and "bug(1234)".
-
-Postfix
-=======
 
 There is a single postfix operator:
 

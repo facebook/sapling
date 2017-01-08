@@ -17,16 +17,13 @@ interpreted, strings can be prefixed with ``r``, e.g. ``r'...'``.
 
 See also :hg:`help patterns`.
 
-Prefix
-======
+Operators
+=========
 
 There is a single prefix operator:
 
 ``not x``
   Files not in x. Short form is ``! x``.
-
-Infix
-=====
 
 These are the supported infix operators:
 
