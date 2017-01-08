@@ -58,10 +58,10 @@ Subrepopath which overlaps with filepath, does not change warnings in remove()
   $ mkdir snot
   $ touch snot/file
   $ hg remove -S snot/file
-  not removing snot/file: file is untracked
+  not removing snot/file: file is untracked (glob)
   [1]
   $ hg cat snot/filenot
-  snot/filenot: no such file in rev 7cf8cfea66e4
+  snot/filenot: no such file in rev 7cf8cfea66e4 (glob)
   [1]
   $ rm -r snot
 

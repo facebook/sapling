@@ -3707,7 +3707,7 @@ Test relpath function
   a
   $ cd ..
   $ hg log -R r -r0 -T '{files % "{file|relpath}\n"}'
-  r/a (glob)
+  r/a
   $ cd r
 
 Test active bookmark templating
