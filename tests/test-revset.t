@@ -912,6 +912,9 @@ test ancestors
   5
   $ log 'desc(B)'
   5
+  $ hg log -r 'desc(r"re:S?u")' --template "{rev} {desc|firstline}\n"
+  5 5 bug
+  6 6 issue619
   $ log 'descendants(2 or 3)'
   2
   3

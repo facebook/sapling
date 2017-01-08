@@ -814,15 +814,18 @@ def date(repo, subset, x):
 @predicate('desc(string)', safe=True)
 def desc(repo, subset, x):
     """Search commit message for string. The match is case-insensitive.
+
+    If `string` starts with `re:`, the remainder of the string is treated as
+    a regular expression. To match a substring that actually starts with `re:`,
+    use the prefix `literal:`.
     """
     # i18n: "desc" is a keyword
-    ds = encoding.lower(getstring(x, _("desc requires a string")))
+    ds = getstring(x, _("desc requires a string"))
 
-    def matches(x):
-        c = repo[x]
-        return ds in encoding.lower(c.description())
+    kind, pattern, matcher = _substringmatcher(ds, casesensitive=False)
 
-    return subset.filter(matches, condrepr=('<desc %r>', ds))
+    return subset.filter(lambda r: matcher(repo[r].description()),
+                         condrepr=('<desc %r>', ds))
 
 def _descendants(repo, subset, x, followfirst=False):
     roots = getset(repo, fullreposet(repo), x)
