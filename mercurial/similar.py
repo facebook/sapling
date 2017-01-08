@@ -81,8 +81,8 @@ def _findsimilarmatches(repo, added, removed, threshold):
     repo.ui.progress(_('searching'), None)
 
     for dest, v in copies.iteritems():
-        source, score = v
-        yield source, dest, score
+        source, bscore = v
+        yield source, dest, bscore
 
 def findrenames(repo, added, removed, threshold):
     '''find renamed files -- yields (before, after, score) tuples'''
