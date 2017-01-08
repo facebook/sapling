@@ -1588,6 +1588,8 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
             return True
         elif keypressed in [' '] or (test and keypressed in ["TOGGLE"]):
             self.toggleapply()
+            if self.ui.configbool('experimental', 'spacemovesdown'):
+                self.downarrowevent()
         elif keypressed in ['A']:
             self.toggleall()
         elif keypressed in ['e']:
