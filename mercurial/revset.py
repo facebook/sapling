@@ -588,9 +588,7 @@ def bisected(repo, subset, x):
 def bookmark(repo, subset, x):
     """The named bookmark or all bookmarks.
 
-    If `name` starts with `re:`, the remainder of the name is treated as
-    a regular expression. To match a bookmark that actually starts with `re:`,
-    use the prefix `literal:`.
+    Pattern matching is supported for `name`. See ``hg help revsets.patterns``.
     """
     # i18n: "bookmark" is a keyword
     args = getargs(x, 0, 1, _('bookmark takes one or no arguments'))
@@ -628,9 +626,8 @@ def branch(repo, subset, x):
     All changesets belonging to the given branch or the branches of the given
     changesets.
 
-    If `string` starts with `re:`, the remainder of the name is treated as
-    a regular expression. To match a branch that actually starts with `re:`,
-    use the prefix `literal:`.
+    Pattern matching is supported for `string`. See
+    ``hg help revsets.patterns``.
     """
     getbi = repo.revbranchcache().branchinfo
 
@@ -815,9 +812,8 @@ def date(repo, subset, x):
 def desc(repo, subset, x):
     """Search commit message for string. The match is case-insensitive.
 
-    If `string` starts with `re:`, the remainder of the string is treated as
-    a regular expression. To match a substring that actually starts with `re:`,
-    use the prefix `literal:`.
+    Pattern matching is supported for `string`. See
+    ``hg help revsets.patterns``.
     """
     # i18n: "desc" is a keyword
     ds = getstring(x, _("desc requires a string"))
@@ -927,9 +923,8 @@ def extra(repo, subset, x):
     """Changesets with the given label in the extra metadata, with the given
     optional value.
 
-    If `value` starts with `re:`, the remainder of the value is treated as
-    a regular expression. To match a value that actually starts with `re:`,
-    use the prefix `literal:`.
+    Pattern matching is supported for `value`. See
+    ``hg help revsets.patterns``.
     """
     args = getargsdict(x, 'extra', 'label value')
     if 'label' not in args:
@@ -1409,9 +1404,8 @@ def modifies(repo, subset, x):
 def named(repo, subset, x):
     """The changesets in a given namespace.
 
-    If `namespace` starts with `re:`, the remainder of the string is treated as
-    a regular expression. To match a namespace that actually starts with `re:`,
-    use the prefix `literal:`.
+    Pattern matching is supported for `namespace`. See
+    ``hg help revsets.patterns``.
     """
     # i18n: "named" is a keyword
     args = getargs(x, 1, 1, _('named requires a namespace argument'))
@@ -2267,9 +2261,8 @@ def _substringmatcher(pattern, casesensitive=True):
 def tag(repo, subset, x):
     """The specified tag by name, or all tagged revisions if no name is given.
 
-    If `name` starts with `re:`, the remainder of the name is treated as
-    a regular expression. To match a tag that actually starts with `re:`,
-    use the prefix `literal:`.
+    Pattern matching is supported for `name`. See
+    ``hg help revsets.patterns``.
     """
     # i18n: "tag" is a keyword
     args = getargs(x, 0, 1, _("tag takes one or no arguments"))
@@ -2310,9 +2303,8 @@ def unstable(repo, subset, x):
 def user(repo, subset, x):
     """User name contains string. The match is case-insensitive.
 
-    If `string` starts with `re:`, the remainder of the string is treated as
-    a regular expression. To match a user that actually contains `re:`, use
-    the prefix `literal:`.
+    Pattern matching is supported for `string`. See
+    ``hg help revsets.patterns``.
     """
     return author(repo, subset, x)
 

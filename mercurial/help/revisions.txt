@@ -119,6 +119,23 @@ There is a single postfix operator:
 ``x^``
   Equivalent to ``x^1``, the first parent of each changeset in x.
 
+Patterns
+========
+
+Where noted, predicates that perform string matching can accept a pattern
+string. The pattern may be either a literal, or a regular expression. If the
+pattern starts with ``re:``, the remainder of the pattern is treated as a
+regular expression. Otherwise, it is treated as a literal. To match a pattern
+that actually starts with ``re:``, use the prefix ``literal:``.
+
+Matching is case-sensitive, unless otherwise noted.  To perform a case-
+insensitive match on a case-sensitive predicate, use a regular expression,
+prefixed with ``(?i)``.
+
+  For example::
+
+    ``tag(r're:(?i)release')`` matches "release" or "RELEASE" or "Release", etc
+
 Predicates
 ==========
 
