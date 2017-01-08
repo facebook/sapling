@@ -15,10 +15,18 @@ Special characters can be used in quoted identifiers by escaping them,
 e.g., ``\n`` is interpreted as a newline. To prevent them from being
 interpreted, strings can be prefixed with ``r``, e.g. ``r'...'``.
 
+See also :hg:`help patterns`.
+
+Prefix
+======
+
 There is a single prefix operator:
 
 ``not x``
   Files not in x. Short form is ``! x``.
+
+Infix
+=====
 
 These are the supported infix operators:
 
@@ -32,9 +40,15 @@ These are the supported infix operators:
 ``x - y``
   Files in x but not in y.
 
+Predicates
+==========
+
 The following predicates are supported:
 
 .. predicatesmarker
+
+Examples
+========
 
 Some sample queries:
 
@@ -61,5 +75,3 @@ Some sample queries:
 - Remove files listed in foo.lst that contain the letter a or b::
 
     hg remove "set: 'listfile:foo.lst' and (**a* or **b*)"
-
-See also :hg:`help patterns`.
