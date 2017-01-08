@@ -719,8 +719,6 @@ Template keywords
   $ hg debugobsolete -r6 -T '{flag} {get(metadata, "user")}\n'
   0 test
 
-#if serve
-
 Test the debug output for exchange
 ----------------------------------
 
@@ -745,6 +743,8 @@ check hgweb does not explode
   > done
   $ hg up tip
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+#if serve
 
   $ hg serve -n test -p $HGPORT -d --pid-file=hg.pid -A access.log -E errors.log
   $ cat hg.pid >> $DAEMON_PIDS
@@ -796,6 +796,7 @@ reenable for later test
   $ echo '[experimental]' >> $HGRCPATH
   $ echo "evolution=createmarkers,exchange" >> $HGRCPATH
 
+  $ rm hg.pid access.log errors.log
 #endif
 
 Several troubles on the same changeset (create an unstable and bumped changeset)
@@ -833,7 +834,7 @@ test summary output
   parent: 7:50c51b361e60  (unstable, bumped)
    add babar
   branch: default
-  commit: 3 unknown (clean)
+  commit: (clean)
   update: 2 new changesets (update)
   phases: 4 draft
   unstable: 2 changesets
