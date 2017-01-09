@@ -211,7 +211,7 @@ def _setuppagercmd(ui, options, cmd):
         ui.setconfig('ui', 'interactive', False, 'pager')
         return p
 
-def _newchgui(srcui, csystem):
+def _newchgui(srcui, csystem, attachio):
     class chgui(srcui.__class__):
         def __init__(self, src=None):
             super(chgui, self).__init__(src)
@@ -240,6 +240,10 @@ def _newchgui(srcui, csystem):
                     errmsg = '%s: %s' % (errprefix, errmsg)
                 raise onerr(errmsg)
             return rc
+
+        def _runpager(self, cmd):
+            self._csystem(cmd, util.shellenviron(), type='pager',
+                          cmdtable={'attachio': attachio})
 
     return chgui(srcui)
 
@@ -335,7 +339,8 @@ _iochannels = [
 class chgcmdserver(commandserver.server):
     def __init__(self, ui, repo, fin, fout, sock, hashstate, baseaddress):
         super(chgcmdserver, self).__init__(
-            _newchgui(ui, channeledsystem(fin, fout, 'S')), repo, fin, fout)
+            _newchgui(ui, channeledsystem(fin, fout, 'S'), self.attachio),
+            repo, fin, fout)
         self.clientsock = sock
         self._oldios = []  # original (self.ch, ui.fp, fd) before "attachio"
         self.hashstate = hashstate
