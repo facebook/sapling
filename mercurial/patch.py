@@ -2168,6 +2168,31 @@ def difffeatureopts(ui, opts=None, untrusted=False, section='diff', git=False,
 
     if git:
         buildopts['git'] = get('git')
+
+        # need to inspect the ui object instead of using get() since we want to
+        # test for an int
+        hconf = ui.config('experimental', 'extendedheader.index')
+        if hconf is not None:
+            hlen = None
+            try:
+                # the hash config could be an integer (for length of hash) or a
+                # word (e.g. short, full, none)
+                hlen = int(hconf)
+            except ValueError:
+                # default value
+                if hconf == 'short' or hconf == '':
+                    hlen = 12
+                elif hconf == 'full':
+                    hlen = 40
+                elif hconf != 'none':
+                    msg = _("invalid value for extendedheader.index: '%s'\n")
+                    ui.warn(msg % hconf)
+            finally:
+                if hlen < 0 or hlen > 40:
+                    msg = _("invalid length for extendedheader.index: '%d'\n")
+                    ui.warn(msg % hlen)
+                buildopts['index'] = hlen
+
     if whitespace:
         buildopts['ignorews'] = get('ignore_all_space', 'ignorews')
         buildopts['ignorewsamount'] = get('ignore_space_change',

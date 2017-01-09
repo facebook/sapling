@@ -52,6 +52,7 @@ class diffopts(object):
         'nodates': False,
         'nobinary': False,
         'noprefix': False,
+        'index': 0,
         'ignorews': False,
         'ignorewsamount': False,
         'ignoreblanklines': False,
