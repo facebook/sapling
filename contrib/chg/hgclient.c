@@ -32,7 +32,6 @@ enum {
 	/* cHg extension: */
 	CAP_ATTACHIO = 0x0100,
 	CAP_CHDIR = 0x0200,
-	CAP_GETPAGER = 0x0400,
 	CAP_SETENV = 0x0800,
 	CAP_SETUMASK = 0x1000,
 	CAP_VALIDATE = 0x2000,
@@ -48,7 +47,6 @@ static const cappair_t captable[] = {
 	{"runcommand", CAP_RUNCOMMAND},
 	{"attachio", CAP_ATTACHIO},
 	{"chdir", CAP_CHDIR},
-	{"getpager", CAP_GETPAGER},
 	{"setenv", CAP_SETENV},
 	{"setumask", CAP_SETUMASK},
 	{"validate", CAP_VALIDATE},
@@ -590,31 +588,6 @@ void hgc_attachio(hgclient_t *hgc)
 	if (!(hgc->capflags & CAP_ATTACHIO))
 		return;
 	attachio(hgc);
-}
-
-/*!
- * Get pager command for the given Mercurial command args
- *
- * If no pager enabled, returns NULL. The return value becomes invalid
- * once you run another request to hgc.
- */
-const char *hgc_getpager(hgclient_t *hgc, const char *const args[],
-			 size_t argsize)
-{
-	assert(hgc);
-
-	if (!(hgc->capflags & CAP_GETPAGER))
-		return NULL;
-
-	packcmdargs(&hgc->ctx, args, argsize);
-	writeblockrequest(hgc, "getpager");
-	handleresponse(hgc);
-
-	if (hgc->ctx.datasize < 1 || hgc->ctx.data[0] == '\0')
-		return NULL;
-	enlargecontext(&hgc->ctx, hgc->ctx.datasize + 1);
-	hgc->ctx.data[hgc->ctx.datasize] = '\0';
-	return hgc->ctx.data;
 }
 
 /*!

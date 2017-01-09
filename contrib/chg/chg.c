@@ -429,10 +429,6 @@ int main(int argc, const char *argv[], const char *envp[])
 	}
 
 	setupsignalhandler(hgc_peerpid(hgc), hgc_peerpgid(hgc));
-	const char *pagercmd = hgc_getpager(hgc, argv + 1, argc - 1);
-	pid_t pagerpid = setuppager(pagercmd);
-	if (pagerpid)
-		hgc_attachio(hgc);  /* reattach to pager */
 	int exitcode = hgc_runcommand(hgc, argv + 1, argc - 1);
 	restoresignalhandler();
 	hgc_close(hgc);

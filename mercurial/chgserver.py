@@ -16,9 +16,6 @@
 'chdir' command
     change current directory
 
-'getpager' command
-    checks if pager is enabled and which pager should be executed
-
 'setenv' command
     replace os.environ completely
 
@@ -45,14 +42,12 @@ import hashlib
 import inspect
 import os
 import re
-import signal
 import struct
 import time
 
 from .i18n import _
 
 from . import (
-    cmdutil,
     commandserver,
     encoding,
     error,
@@ -171,45 +166,6 @@ class hashstate(object):
         mtimehash = _mtimehash(mtimepaths)
         _log('confighash = %s mtimehash = %s\n' % (confighash, mtimehash))
         return hashstate(confighash, mtimehash, mtimepaths)
-
-# copied from hgext/pager.py:uisetup()
-def _setuppagercmd(ui, options, cmd):
-    from . import commands  # avoid cycle
-
-    if not ui.formatted():
-        return
-
-    p = ui.config("pager", "pager", encoding.environ.get("PAGER"))
-    usepager = False
-    always = util.parsebool(options['pager'])
-    auto = options['pager'] == 'auto'
-
-    if not p:
-        pass
-    elif always:
-        usepager = True
-    elif not auto:
-        usepager = False
-    else:
-        attended = ['annotate', 'cat', 'diff', 'export', 'glog', 'log', 'qdiff']
-        attend = ui.configlist('pager', 'attend', attended)
-        ignore = ui.configlist('pager', 'ignore')
-        cmds, _ = cmdutil.findcmd(cmd, commands.table)
-
-        for cmd in cmds:
-            var = 'attend-%s' % cmd
-            if ui.config('pager', var):
-                usepager = ui.configbool('pager', var)
-                break
-            if (cmd in attend or
-                (cmd not in ignore and not attend)):
-                usepager = True
-                break
-
-    if usepager:
-        ui.setconfig('ui', 'formatted', ui.formatted(), 'pager')
-        ui.setconfig('ui', 'interactive', False, 'pager')
-        return p
 
 def _newchgui(srcui, csystem, attachio):
     class chgui(srcui.__class__):
@@ -484,37 +440,6 @@ class chgcmdserver(commandserver.server):
         _log('setumask %r\n' % mask)
         os.umask(mask)
 
-    def getpager(self):
-        """Read cmdargs and write pager command to r-channel if enabled
-
-        If pager isn't enabled, this writes '\0' because channeledoutput
-        does not allow to write empty data.
-        """
-        from . import dispatch  # avoid cycle
-
-        args = self._readlist()
-        try:
-            cmd, _func, args, options, _cmdoptions = dispatch._parse(self.ui,
-                                                                     args)
-        except (error.Abort, error.AmbiguousCommand, error.CommandError,
-                error.UnknownCommand):
-            cmd = None
-            options = {}
-        if not cmd or 'pager' not in options:
-            self.cresult.write('\0')
-            return
-
-        pagercmd = _setuppagercmd(self.ui, options, cmd)
-        if pagercmd:
-            # Python's SIGPIPE is SIG_IGN by default. change to SIG_DFL so
-            # we can exit if the pipe to the pager is closed
-            if util.safehasattr(signal, 'SIGPIPE') and \
-                    signal.getsignal(signal.SIGPIPE) == signal.SIG_IGN:
-                signal.signal(signal.SIGPIPE, signal.SIG_DFL)
-            self.cresult.write(pagercmd)
-        else:
-            self.cresult.write('\0')
-
     def runcommand(self):
         return super(chgcmdserver, self).runcommand()
 
@@ -535,7 +460,6 @@ class chgcmdserver(commandserver.server):
     capabilities = commandserver.server.capabilities.copy()
     capabilities.update({'attachio': attachio,
                          'chdir': chdir,
-                         'getpager': getpager,
                          'runcommand': runcommand,
                          'setenv': setenv,
                          'setumask': setumask})
