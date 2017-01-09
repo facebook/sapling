@@ -253,9 +253,8 @@ def unidiff(a, ad, b, bd, fn1, fn2, opts=defaultopts):
 
     return "".join(l)
 
-# creates a headerless unified diff
-# t1 and t2 are the text to be diffed
 def _unidiff(t1, t2, opts=defaultopts):
+    """Yield hunks of a headerless unified diff from t1 and t2 texts."""
     l1 = splitnewlines(t1)
     l2 = splitnewlines(t2)
     def contextend(l, len):
