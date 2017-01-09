@@ -445,6 +445,9 @@ class overlayrepo(object):
     def filectx(self, path, fileid=None):
         return overlayfilectx(self, path, fileid=fileid)
 
+    def unfiltered(self):
+        return self.handler.repo.unfiltered()
+
     def _makemaps(self, commits, refs):
         baserev = self.handler.repo['tip'].rev()
         self.revmap = {}
