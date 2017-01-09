@@ -582,6 +582,15 @@ merge
   $ hg up 23 --quiet
 
 check error cases
+  $ hg log -r 'followlines()'
+  hg: parse error: followlines takes at least 1 positional arguments
+  [255]
+  $ hg log -r 'followlines(baz)'
+  hg: parse error: followlines takes at least three arguments
+  [255]
+  $ hg log -r 'followlines(baz, 1)'
+  hg: parse error: followlines takes at least three arguments
+  [255]
   $ hg log -r 'followlines(baz, 1, 2, rev=desc("b"))'
   hg: parse error: followlines expects exactly one revision
   [255]

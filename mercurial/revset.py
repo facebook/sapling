@@ -1078,19 +1078,19 @@ def followlines(repo, subset, x):
     """
     from . import context  # avoid circular import issues
 
-    args = getargs(x, 3, 4, _("followlines takes at least three arguments"))
+    args = getargsdict(x, 'followlines', 'file *lines rev')
+    if len(args['lines']) != 2:
+        raise error.ParseError(_("followlines takes at least three arguments"))
 
     rev = '.'
-    if len(args) == 4:
-        revarg = getargsdict(args[3], 'followlines', 'rev')
-        if 'rev' in revarg:
-            revs = getset(repo, fullreposet(repo), revarg['rev'])
-            if len(revs) != 1:
-                raise error.ParseError(
-                    _("followlines expects exactly one revision"))
-            rev = revs.last()
+    if 'rev' in args:
+        revs = getset(repo, fullreposet(repo), args['rev'])
+        if len(revs) != 1:
+            raise error.ParseError(
+                _("followlines expects exactly one revision"))
+        rev = revs.last()
 
-    pat = getstring(args[0], _("followlines requires a pattern"))
+    pat = getstring(args['file'], _("followlines requires a pattern"))
     if not matchmod.patkind(pat):
         fname = pathutil.canonpath(repo.root, repo.getcwd(), pat)
     else:
@@ -1101,7 +1101,7 @@ def followlines(repo, subset, x):
         fname = files[0]
 
     try:
-        fromline, toline = [int(getsymbol(a)) for a in args[1:3]]
+        fromline, toline = [int(getsymbol(a)) for a in args['lines']]
     except ValueError:
         raise error.ParseError(_("line range bounds must be integers"))
     if toline - fromline < 0:
