@@ -231,19 +231,8 @@ def _newchgui(srcui, csystem):
                 or self.fout.fileno() != util.stdout.fileno()):
                 return super(chgui, self).system(cmd, environ, cwd, onerr,
                                                  errprefix)
-            # copied from mercurial/util.py:system()
             self.flush()
-            def py2shell(val):
-                if val is None or val is False:
-                    return '0'
-                if val is True:
-                    return '1'
-                return str(val)
-            env = encoding.environ.copy()
-            if environ:
-                env.update((k, py2shell(v)) for k, v in environ.iteritems())
-            env['HG'] = util.hgexecutable()
-            rc = self._csystem(cmd, env, cwd)
+            rc = self._csystem(cmd, util.shellenviron(environ), cwd)
             if rc and onerr:
                 errmsg = '%s %s' % (os.path.basename(cmd.split(None, 1)[0]),
                                     util.explainexit(rc)[0])
