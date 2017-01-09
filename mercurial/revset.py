@@ -326,7 +326,7 @@ def getargs(x, min, max, err):
     return l
 
 def getargsdict(x, funcname, keys):
-    return parser.buildargsdict(getlist(x), funcname, keys.split(),
+    return parser.buildargsdict(getlist(x), funcname, parser.splitargspec(keys),
                                 keyvaluenode='keyvalue', keynode='symbol')
 
 def getset(repo, subset, x):

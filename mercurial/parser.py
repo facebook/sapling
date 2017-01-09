@@ -90,22 +90,61 @@ class parser(object):
             return self.eval(t)
         return t
 
-def buildargsdict(trees, funcname, keys, keyvaluenode, keynode):
+def splitargspec(spec):
+    """Parse spec of function arguments into (poskeys, varkey, keys)
+
+    >>> splitargspec('')
+    ([], None, [])
+    >>> splitargspec('foo bar')
+    ([], None, ['foo', 'bar'])
+    >>> splitargspec('foo *bar baz')
+    (['foo'], 'bar', ['baz'])
+    >>> splitargspec('*foo')
+    ([], 'foo', [])
+    """
+    pre, sep, post = spec.partition('*')
+    pres = pre.split()
+    posts = post.split()
+    if sep:
+        if not posts:
+            raise error.ProgrammingError('no *varkey name provided')
+        return pres, posts[0], posts[1:]
+    return [], None, pres
+
+def buildargsdict(trees, funcname, argspec, keyvaluenode, keynode):
     """Build dict from list containing positional and keyword arguments
 
-    Invalid keywords or too many positional arguments are rejected, but
-    missing arguments are just omitted.
+    Arguments are specified by a tuple of ``(poskeys, varkey, keys)`` where
+
+    - ``poskeys``: list of names of positional arguments
+    - ``varkey``: optional argument name that takes up remainder
+    - ``keys``: list of names that can be either positional or keyword arguments
+
+    If ``varkey`` specified, all ``keys`` must be given as keyword arguments.
+
+    Invalid keywords, too few positional arguments, or too many positional
+    arguments are rejected, but missing keyword arguments are just omitted.
     """
+    poskeys, varkey, keys = argspec
     kwstart = next((i for i, x in enumerate(trees) if x[0] == keyvaluenode),
                    len(trees))
-    if len(trees) > len(keys):
+    if kwstart < len(poskeys):
+        raise error.ParseError(_("%(func)s takes at least %(nargs)d positional "
+                                 "arguments")
+                               % {'func': funcname, 'nargs': len(poskeys)})
+    if not varkey and len(trees) > len(poskeys) + len(keys):
         raise error.ParseError(_("%(func)s takes at most %(nargs)d arguments")
-                               % {'func': funcname, 'nargs': len(keys)})
+                               % {'func': funcname,
+                                  'nargs': len(poskeys) + len(keys)})
     args = {}
     # consume positional arguments
-    for k, x in zip(keys, trees[:kwstart]):
+    for k, x in zip(poskeys, trees[:kwstart]):
         args[k] = x
-    assert len(args) == kwstart
+    if varkey:
+        args[varkey] = trees[len(args):kwstart]
+    else:
+        for k, x in zip(keys, trees[len(args):kwstart]):
+            args[k] = x
     # remainder should be keyword arguments
     for x in trees[kwstart:]:
         if x[0] != keyvaluenode or x[1][0] != keynode:
