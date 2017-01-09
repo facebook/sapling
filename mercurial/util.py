@@ -974,6 +974,21 @@ def _isstdout(f):
     fileno = getattr(f, 'fileno', None)
     return fileno and fileno() == sys.__stdout__.fileno()
 
+def shellenviron(environ=None):
+    """return environ with optional override, useful for shelling out"""
+    def py2shell(val):
+        'convert python object into string that is useful to shell'
+        if val is None or val is False:
+            return '0'
+        if val is True:
+            return '1'
+        return str(val)
+    env = dict(encoding.environ)
+    if environ:
+        env.update((k, py2shell(v)) for k, v in environ.iteritems())
+    env['HG'] = hgexecutable()
+    return env
+
 def system(cmd, environ=None, cwd=None, onerr=None, errprefix=None, out=None):
     '''enhanced shell command execution.
     run with environment maybe modified, maybe in different dir.
@@ -983,19 +998,10 @@ def system(cmd, environ=None, cwd=None, onerr=None, errprefix=None, out=None):
 
     if out is specified, it is assumed to be a file-like object that has a
     write() method. stdout and stderr will be redirected to out.'''
-    if environ is None:
-        environ = {}
     try:
         stdout.flush()
     except Exception:
         pass
-    def py2shell(val):
-        'convert python object into string that is useful to shell'
-        if val is None or val is False:
-            return '0'
-        if val is True:
-            return '1'
-        return str(val)
     origcmd = cmd
     cmd = quotecommand(cmd)
     if pycompat.sysplatform == 'plan9' and (sys.version_info[0] == 2
@@ -1006,9 +1012,7 @@ def system(cmd, environ=None, cwd=None, onerr=None, errprefix=None, out=None):
             os.chdir(cwd)
         rc = os.system(cmd)
     else:
-        env = dict(encoding.environ)
-        env.update((k, py2shell(v)) for k, v in environ.iteritems())
-        env['HG'] = hgexecutable()
+        env = shellenviron(environ)
         if out is None or _isstdout(out):
             rc = subprocess.call(cmd, shell=True, close_fds=closefds,
                                  env=env, cwd=cwd)
