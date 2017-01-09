@@ -312,6 +312,12 @@ def getstring(x, err):
         return x[1]
     raise error.ParseError(err)
 
+def getinteger(x, err):
+    try:
+        return int(getstring(x, err))
+    except ValueError:
+        raise error.ParseError(err)
+
 def getlist(x):
     if not x:
         return []
@@ -539,10 +545,7 @@ def ancestorspec(repo, subset, x, n, order):
     Changesets that are the Nth ancestor (first parents only) of a changeset
     in set.
     """
-    try:
-        n = int(n[1])
-    except (TypeError, ValueError):
-        raise error.ParseError(_("~ expects a number"))
+    n = getinteger(n, _("~ expects a number"))
     ps = set()
     cl = repo.changelog
     for r in getset(repo, fullreposet(repo), x):
@@ -1098,10 +1101,8 @@ def followlines(repo, subset, x):
             raise error.ParseError(_("followlines expects exactly one file"))
         fname = files[0]
 
-    try:
-        fromline, toline = [int(getsymbol(a)) for a in args['lines']]
-    except ValueError:
-        raise error.ParseError(_("line range bounds must be integers"))
+    fromline, toline = [getinteger(a, _("line range bounds must be integers"))
+                        for a in args['lines']]
     if toline - fromline < 0:
         raise error.ParseError(_("line range must be positive"))
     if fromline < 1:
@@ -1273,19 +1274,15 @@ def limit(repo, subset, x):
     if 'set' not in args:
         # i18n: "limit" is a keyword
         raise error.ParseError(_("limit requires one to three arguments"))
-    try:
-        lim, ofs = 1, 0
-        if 'n' in args:
-            # i18n: "limit" is a keyword
-            lim = int(getstring(args['n'], _("limit requires a number")))
-        if 'offset' in args:
-            # i18n: "limit" is a keyword
-            ofs = int(getstring(args['offset'], _("limit requires a number")))
-        if ofs < 0:
-            raise error.ParseError(_("negative offset"))
-    except (TypeError, ValueError):
+    lim, ofs = 1, 0
+    if 'n' in args:
         # i18n: "limit" is a keyword
-        raise error.ParseError(_("limit expects a number"))
+        lim = getinteger(args['n'], _("limit expects a number"))
+    if 'offset' in args:
+        # i18n: "limit" is a keyword
+        ofs = getinteger(args['offset'], _("limit expects a number"))
+    if ofs < 0:
+        raise error.ParseError(_("negative offset"))
     os = getset(repo, fullreposet(repo), args['set'])
     result = []
     it = iter(os)
@@ -1308,14 +1305,10 @@ def last(repo, subset, x):
     """
     # i18n: "last" is a keyword
     l = getargs(x, 1, 2, _("last requires one or two arguments"))
-    try:
-        lim = 1
-        if len(l) == 2:
-            # i18n: "last" is a keyword
-            lim = int(getstring(l[1], _("last requires a number")))
-    except (TypeError, ValueError):
+    lim = 1
+    if len(l) == 2:
         # i18n: "last" is a keyword
-        raise error.ParseError(_("last expects a number"))
+        lim = getinteger(l[1], _("last expects a number"))
     os = getset(repo, fullreposet(repo), l[0])
     os.reverse()
     result = []
