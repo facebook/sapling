@@ -2343,6 +2343,7 @@ def difflabel(func, *args, **kw):
                     ('old', 'diff.extended'),
                     ('new', 'diff.extended'),
                     ('deleted', 'diff.extended'),
+                    ('index', 'diff.extended'),
                     ('---', 'diff.file_a'),
                     ('+++', 'diff.file_b')]
     textprefixes = [('@', 'diff.hunk'),
