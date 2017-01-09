@@ -15,6 +15,7 @@ from .bundleparts import (
 )
 from mercurial import (
     bundle2,
+    changegroup,
     cmdutil,
     commands,
     discovery,
@@ -26,7 +27,8 @@ from mercurial import (
 
 from collections import namedtuple
 from hgext3rd.extutil import runshellcommand
-from mercurial.node import bin, hex
+from mercurial.extensions import wrapfunction, unwrapfunction
+from mercurial.node import bin, hex, nullrev
 from mercurial.i18n import _
 
 cmdtable = {}
@@ -69,24 +71,31 @@ def backup(ui, repo, dest=None, **opts):
                                 currenttiprev, bookmarkstobackup)
     currentbookmarkshash = _getbookmarkshash(bookmarkstobackup)
 
-    bundler = _createbundler(ui, repo, other)
-    backup = False
-    if outgoing and outgoing.missing:
-        backup = True
-        bundler.addpart(getscratchbranchpart(repo, other, outgoing,
-                                             confignonforwardmove=False,
-                                             ui=ui, bookmark=None,
-                                             create=False))
+    # Wrap deltaparent function to make sure that bundle takes less space
+    # See _deltaparent comments for details
+    wrapfunction(changegroup.cg2packer, 'deltaparent', _deltaparent)
+    try:
+        bundler = _createbundler(ui, repo, other)
+        backup = False
+        if outgoing and outgoing.missing:
+            backup = True
+            bundler.addpart(getscratchbranchpart(repo, other, outgoing,
+                                                 confignonforwardmove=False,
+                                                 ui=ui, bookmark=None,
+                                                 create=False))
 
-    if currentbookmarkshash != bookmarkshash:
-        backup = True
-        bundler.addpart(getscratchbookmarkspart(other, bookmarkstobackup))
+        if currentbookmarkshash != bookmarkshash:
+            backup = True
+            bundler.addpart(getscratchbookmarkspart(other, bookmarkstobackup))
 
-    if backup:
-        _sendbundle(bundler, other)
-        _writebackupstatefile(repo.svfs, currenttiprev, currentbookmarkshash)
-    else:
-        ui.status(_('nothing to backup\n'))
+        if backup:
+            _sendbundle(bundler, other)
+            _writebackupstatefile(repo.svfs, currenttiprev,
+                                   currentbookmarkshash)
+        else:
+            ui.status(_('nothing to backup\n'))
+    finally:
+        unwrapfunction(changegroup.cg2packer, 'deltaparent', _deltaparent)
     return 0
 
 @command('pullbackup', [
@@ -213,6 +222,14 @@ def _getcommandandoptions(command):
     return pushcmd, pushopts
 
 # Backup helper functions
+
+def _deltaparent(orig, self, revlog, rev, p1, p2, prev):
+    # This version of deltaparent prefers p1 over prev to use less space
+    dp = revlog.deltaparent(rev)
+    if dp == nullrev and not revlog.storedeltachains:
+        # send full snapshot only if revlog configured to do so
+        return nullrev
+    return p1
 
 def _getdefaultbookmarkstobackup(ui, repo):
     bookmarkstobackup = {}
