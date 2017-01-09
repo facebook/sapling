@@ -302,6 +302,8 @@ def tokenize(program, lookup=None, syminitletters=None, symletters=None):
 
 # helpers
 
+_notset = object()
+
 def getsymbol(x):
     if x and x[0] == 'symbol':
         return x[1]
@@ -312,7 +314,9 @@ def getstring(x, err):
         return x[1]
     raise error.ParseError(err)
 
-def getinteger(x, err):
+def getinteger(x, err, default=_notset):
+    if not x and default is not _notset:
+        return default
     try:
         return int(getstring(x, err))
     except ValueError:
@@ -1274,13 +1278,10 @@ def limit(repo, subset, x):
     if 'set' not in args:
         # i18n: "limit" is a keyword
         raise error.ParseError(_("limit requires one to three arguments"))
-    lim, ofs = 1, 0
-    if 'n' in args:
-        # i18n: "limit" is a keyword
-        lim = getinteger(args['n'], _("limit expects a number"))
-    if 'offset' in args:
-        # i18n: "limit" is a keyword
-        ofs = getinteger(args['offset'], _("limit expects a number"))
+    # i18n: "limit" is a keyword
+    lim = getinteger(args.get('n'), _("limit expects a number"), default=1)
+    # i18n: "limit" is a keyword
+    ofs = getinteger(args.get('offset'), _("limit expects a number"), default=0)
     if ofs < 0:
         raise error.ParseError(_("negative offset"))
     os = getset(repo, fullreposet(repo), args['set'])
