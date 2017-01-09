@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2016, Facebook, Inc.
+ *  Copyright (c) 2017, Facebook, Inc.
  *  All rights reserved.
  *
  *  This source code is licensed under the BSD-style license found in the
@@ -275,7 +275,7 @@ Future<InodePtr> TreeInode::startLoadingInode(
         std::static_pointer_cast<TreeInode>(shared_from_this()),
         name,
         entry);
-    return makeFuture(inode);
+    return makeFuture<InodePtr>(inode);
   }
 
   // TODO:
@@ -293,7 +293,7 @@ Future<InodePtr> TreeInode::startLoadingInode(
       childName = PathComponent{name},
       entry,
       number
-    ](std::unique_ptr<Tree> tree) {
+    ](std::unique_ptr<Tree> tree)->InodePtr {
       return std::make_shared<TreeInode>(
           number, self, childName, entry, std::move(tree));
     });
