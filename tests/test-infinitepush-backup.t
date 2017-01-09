@@ -141,13 +141,8 @@ Backup in background
   $ cat .hg/store/infinitepushlastbackupedstate
   6 [0-9a-f]{40} \(no-eol\) (re)
   $ mkcommit newcommit
-  $ hg --config infinitepush.pushbackuplog="$TESTTMP/logfile" pushbackup --background
+  $ hg pushbackup --background
   $ python ../wait_for_background_backup.py `hg log -r tip -T '{rev}'`
-  $ cat $TESTTMP/logfile
-  searching for changes
-  remote: pushing 2 commits:
-  remote:     667453c0787e  newhead2
-  remote:     773a3ba2e7c2  newcommit
   $ cat .hg/store/infinitepushlastbackupedstate
   7 [0-9a-f]{40} \(no-eol\) (re)
 
@@ -304,16 +299,10 @@ Backup to different path
 
 Backup in background to different path
   $ mkcommit backgroundcommittodifferentpath
-  $ hg --config infinitepush.pushbackuplog="$TESTTMP/logfile" pushbackup nondefault --background
+  $ hg pushbackup nondefault --background
   $ python ../wait_for_background_backup.py `hg log -r tip -T '{rev}'`
-  $ cat $TESTTMP/logfile
-  searching for changes
-  remote: pushing 2 commits:
-  remote:     667453c0787e  newhead2
-  remote:     773a3ba2e7c2  newcommit
-  searching for changes
-  remote: pushing 1 commit:
-  remote:     268f86e364f9  backgroundcommittodifferentpath
+  $ cat .hg/store/infinitepushlastbackupedstate
+  12 [0-9a-f]{40} \(no-eol\) (re)
 
 Clean client and repo
   $ cd ..
