@@ -81,6 +81,18 @@ class HgExtensionTestBase(testcase.EdenHgTest):
         with open(fullpath, 'a'):
             os.utime(fullpath)
 
+    def write_file(self, path, contents, mode=0o644):
+        '''Create or overwrite a file with the given contents.'''
+        fullpath = self.get_path(path)
+        with open(fullpath, 'w') as f:
+            f.write(contents)
+        os.chmod(fullpath, mode)
+
+    def mkdir(self, path):
+        '''Call mkdir for the specified path relative to the clone.'''
+        fullpath = self.get_path(path)
+        os.mkdir(fullpath)
+
     def rm(self, path):
         '''Unlink the file at the specified path relative to the clone.'''
         os.unlink(self.get_path(path))
