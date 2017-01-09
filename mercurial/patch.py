@@ -2169,6 +2169,11 @@ def difffeatureopts(ui, opts=None, untrusted=False, section='diff', git=False,
     if git:
         buildopts['git'] = get('git')
 
+        # since this is in the experimental section, we need to call
+        # ui.configbool directory
+        buildopts['showsimilarity'] = ui.configbool('experimental',
+                                                    'extendedheader.similarity')
+
         # need to inspect the ui object instead of using get() since we want to
         # test for an int
         hconf = ui.config('experimental', 'extendedheader.index')
