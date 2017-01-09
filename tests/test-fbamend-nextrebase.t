@@ -42,7 +42,7 @@ Rebasing single changeset.
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg amend -m "amended"
   warning: the changeset's children were left behind
-  (use 'hg amend --fixup' to rebase them)
+  (use 'hg rebase --restack' (alias: 'hg restack') to rebase them)
   $ hg next
   abort: current changeset has no children
   [255]
@@ -71,7 +71,7 @@ Rebasing multiple changesets at once.
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg amend -m "amended"
   warning: the changeset's children were left behind
-  (use 'hg amend --fixup' to rebase them)
+  (use 'hg rebase --restack' (alias: 'hg restack') to rebase them)
   $ hg next --rebase --top
   rebasing 2:776c07fa2b12 "r2"
   rebasing 3:137d867d71d5 "r3"
@@ -97,7 +97,7 @@ Rebasing a stack one changeset at a time.
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg amend -m "amended"
   warning: the changeset's children were left behind
-  (use 'hg amend --fixup' to rebase them)
+  (use 'hg rebase --restack' (alias: 'hg restack') to rebase them)
   $ hg next --rebase
   rebasing 2:776c07fa2b12 "r2"
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -147,7 +147,7 @@ Rebasing a stack two changesets at a time.
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg amend -m "amended"
   warning: the changeset's children were left behind
-  (use 'hg amend --fixup' to rebase them)
+  (use 'hg rebase --restack' (alias: 'hg restack') to rebase them)
   $ hg next --rebase 2
   rebasing 2:776c07fa2b12 "r2"
   rebasing 3:137d867d71d5 "r3"
@@ -198,7 +198,7 @@ Rebasing after multiple amends.
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg amend -m "amend 1"
   warning: the changeset's children were left behind
-  (use 'hg amend --fixup' to rebase them)
+  (use 'hg rebase --restack' (alias: 'hg restack') to rebase them)
   $ hg amend -m "amend 2"
   $ hg amend -m "amend 3"
   $ showgraph
@@ -239,7 +239,7 @@ Rebasing from below the amended changeset with the --newest flag.
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg amend -m "amended"
   warning: the changeset's children were left behind
-  (use 'hg amend --fixup' to rebase them)
+  (use 'hg rebase --restack' (alias: 'hg restack') to rebase them)
   $ hg up 0
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ showgraph
@@ -285,7 +285,7 @@ rolled back and the final state should be as it was before `hg next --rebase`.
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg amend -m "amended"
   warning: the changeset's children were left behind
-  (use 'hg amend --fixup' to rebase them)
+  (use 'hg rebase --restack' (alias: 'hg restack') to rebase them)
   $ mkcommit a
   $ hg prev
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
@@ -347,7 +347,7 @@ Test a situation where there is a conflict.
   $ hg add c
   $ hg amend -m "amended to add c"
   warning: the changeset's children were left behind
-  (use 'hg amend --fixup' to rebase them)
+  (use 'hg rebase --restack' (alias: 'hg restack') to rebase them)
   $ showgraph
   @  5 amended to add c
   |

@@ -42,7 +42,7 @@ Test that no preamend bookmark is created.
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ hg amend -m "amended"
   warning: the changeset's children were left behind
-  (use 'hg amend --fixup' to rebase them)
+  (use 'hg rebase --restack' (alias: 'hg restack') to rebase them)
   $ hg book
   no bookmarks set
 

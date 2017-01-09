@@ -58,7 +58,7 @@ Test basic functions
   $ echo a >> a
   $ hg amend
   warning: the changeset's children were left behind
-  (use 'hg amend --fixup' to rebase them)
+  (use 'hg rebase --restack' (alias: 'hg restack') to rebase them)
   $ hg up 0
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo x >> x
@@ -107,7 +107,7 @@ Test that bookmarked re-amends work well
   user education
   second line
   warning: the changeset's children were left behind
-  (use 'hg amend --fixup' to rebase them)
+  (use 'hg rebase --restack' (alias: 'hg restack') to rebase them)
   $ hg log -G -T '{node|short} {desc} {bookmarks}\n'
   @  edf5fd2f5332 aa bm
   |
@@ -158,7 +158,7 @@ Test that unbookmarked re-amends work well
   user education
   second line
   warning: the changeset's children were left behind
-  (use 'hg amend --fixup' to rebase them)
+  (use 'hg rebase --restack' (alias: 'hg restack') to rebase them)
   $ hg log -G -T '{node|short} {desc} {bookmarks}\n'
   @  94eb429c9465 aa
   |
@@ -359,7 +359,7 @@ Fbamend respects the createmarkers option
   user education
   second line
   warning: the changeset's children were left behind
-  (use 'hg amend --fixup' to rebase them)
+  (use 'hg rebase --restack' (alias: 'hg restack') to rebase them)
   $ hg amend --fixup
   rebasing the children of 3a4d2824efc1.preamend
   rebasing 3:3166f3b5587d "commit --amend message"
@@ -501,7 +501,7 @@ Test fbamend with inhibit
   user education
   second line
   warning: the changeset's children were left behind
-  (use 'hg amend --fixup' to rebase them)
+  (use 'hg rebase --restack' (alias: 'hg restack') to rebase them)
   $ hg amend --fixup
   rebasing the children of f2d4abddbbcd.preamend
   rebasing 2:4538525df7e2 "add c"

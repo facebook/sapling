@@ -67,7 +67,7 @@ Test basic case of a single amend in a small stack.
   $ echo b >> b
   $ hg amend
   warning: the changeset's children were left behind
-  (use 'hg amend --fixup' to rebase them)
+  (use 'hg rebase --restack' (alias: 'hg restack') to rebase them)
   $ showgraph
   @  5 add b
   |
@@ -109,7 +109,7 @@ Test multiple amends of same commit.
   $ echo b >> b
   $ hg amend
   warning: the changeset's children were left behind
-  (use 'hg amend --fixup' to rebase them)
+  (use 'hg rebase --restack' (alias: 'hg restack') to rebase them)
   $ echo b >> b
   $ hg amend
   $ showgraph
@@ -144,7 +144,7 @@ Test conflict during rebasing.
   $ hg add d
   $ hg amend
   warning: the changeset's children were left behind
-  (use 'hg amend --fixup' to rebase them)
+  (use 'hg rebase --restack' (alias: 'hg restack') to rebase them)
   $ showgraph
   @  6 add b
   |
@@ -202,7 +202,7 @@ Test finding a stable base commit from within the old stack.
   $ echo b >> b
   $ hg amend
   warning: the changeset's children were left behind
-  (use 'hg amend --fixup' to rebase them)
+  (use 'hg rebase --restack' (alias: 'hg restack') to rebase them)
   $ hg up 3
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ showgraph
@@ -240,7 +240,7 @@ Test finding a stable base commit from a new child of the amended commit.
   $ echo b >> b
   $ hg amend
   warning: the changeset's children were left behind
-  (use 'hg amend --fixup' to rebase them)
+  (use 'hg rebase --restack' (alias: 'hg restack') to rebase them)
   $ mkcommit e
   $ showgraph
   @  6 add e
@@ -282,7 +282,7 @@ a commit on top of one of the obsolete intermediate commits.
   $ echo b >> b
   $ hg amend
   warning: the changeset's children were left behind
-  (use 'hg amend --fixup' to rebase them)
+  (use 'hg rebase --restack' (alias: 'hg restack') to rebase them)
   $ mkcommit e
   $ hg prev
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
@@ -290,7 +290,7 @@ a commit on top of one of the obsolete intermediate commits.
   $ echo b >> b
   $ hg amend
   warning: the changeset's children were left behind
-  (use 'hg amend --fixup' to rebase them)
+  (use 'hg rebase --restack' (alias: 'hg restack') to rebase them)
   $ hg up 6
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ showgraph
@@ -337,13 +337,13 @@ behavior is now incorrect -- restack should always fix the whole stack.)
   $ echo b >> b
   $ hg amend
   warning: the changeset's children were left behind
-  (use 'hg amend --fixup' to rebase them)
+  (use 'hg rebase --restack' (alias: 'hg restack') to rebase them)
   $ hg up 2
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo c >> c
   $ hg amend
   warning: the changeset's children were left behind
-  (use 'hg amend --fixup' to rebase them)
+  (use 'hg rebase --restack' (alias: 'hg restack') to rebase them)
   $ hg up 3
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ showgraph
@@ -387,7 +387,7 @@ below the current commit alone.
   $ echo d >> d
   $ hg amend
   warning: the changeset's children were left behind
-  (use 'hg amend --fixup' to rebase them)
+  (use 'hg rebase --restack' (alias: 'hg restack') to rebase them)
   $ hg up 0
   0 files updated, 0 files merged, 3 files removed, 0 files unresolved
   $ mkcommit f
@@ -436,7 +436,7 @@ Test having an unamended commit.
   $ echo b >> b
   $ hg amend -m "Amended"
   warning: the changeset's children were left behind
-  (use 'hg amend --fixup' to rebase them)
+  (use 'hg rebase --restack' (alias: 'hg restack') to rebase them)
   $ echo b >> b
   $ hg amend -m "Unamended"
   $ hg unamend
@@ -473,12 +473,12 @@ onto the newest successor of their parent.
   [*] add b (glob)
   $ hg amend -m "successor 1"
   warning: the changeset's children were left behind
-  (use 'hg amend --fixup' to rebase them)
+  (use 'hg rebase --restack' (alias: 'hg restack') to rebase them)
   $ hg up 1
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg amend -m "successor 2"
   warning: the changeset's children were left behind
-  (use 'hg amend --fixup' to rebase them)
+  (use 'hg rebase --restack' (alias: 'hg restack') to rebase them)
   $ hg up 1
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ showgraph
@@ -517,13 +517,13 @@ since the successor is obsolete.
   $ echo b >> b
   $ hg amend
   warning: the changeset's children were left behind
-  (use 'hg amend --fixup' to rebase them)
+  (use 'hg rebase --restack' (alias: 'hg restack') to rebase them)
   $ hg up 1
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo c >> b
   $ hg amend
   warning: the changeset's children were left behind
-  (use 'hg amend --fixup' to rebase them)
+  (use 'hg rebase --restack' (alias: 'hg restack') to rebase them)
   $ hg unamend
   $ hg up -C 1
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -558,13 +558,13 @@ Test recursive restacking -- basic case.
   $ echo b >> b
   $ hg amend
   warning: the changeset's children were left behind
-  (use 'hg amend --fixup' to rebase them)
+  (use 'hg rebase --restack' (alias: 'hg restack') to rebase them)
   $ hg up 2
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo c >> c
   $ hg amend
   warning: the changeset's children were left behind
-  (use 'hg amend --fixup' to rebase them)
+  (use 'hg rebase --restack' (alias: 'hg restack') to rebase them)
   $ hg up 1
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ showgraph
@@ -609,7 +609,7 @@ stack is lost upon rebasing lower levels.
   $ echo b >> b
   $ hg amend
   warning: the changeset's children were left behind
-  (use 'hg amend --fixup' to rebase them)
+  (use 'hg rebase --restack' (alias: 'hg restack') to rebase them)
   $ mkcommit e
   $ mkcommit f
   $ hg prev
@@ -618,13 +618,13 @@ stack is lost upon rebasing lower levels.
   $ echo e >> e
   $ hg amend
   warning: the changeset's children were left behind
-  (use 'hg amend --fixup' to rebase them)
+  (use 'hg rebase --restack' (alias: 'hg restack') to rebase them)
   $ hg up 2
   2 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo c >> c
   $ hg amend
   warning: the changeset's children were left behind
-  (use 'hg amend --fixup' to rebase them)
+  (use 'hg rebase --restack' (alias: 'hg restack') to rebase them)
   $ mkcommit g
   $ mkcommit h
   $ hg prev
@@ -633,7 +633,7 @@ stack is lost upon rebasing lower levels.
   $ echo g >> g
   $ hg amend
   warning: the changeset's children were left behind
-  (use 'hg amend --fixup' to rebase them)
+  (use 'hg rebase --restack' (alias: 'hg restack') to rebase them)
   $ hg up 1
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ showgraph
