@@ -229,6 +229,20 @@ Git diff, adding space
   -a
   +b
 
+Git diff, adding extended headers
+
+  $ hg diff --git --config experimental.extendedheader.index=7 --config experimental.extendedheader.similarity=True
+  diff --git a/f1 b/f 1
+  similarity index 0%
+  rename from f1
+  rename to f 1
+  index 7898192..6178079 100644
+  --- a/f1
+  +++ b/f 1	
+  @@ -1,1 +1,1 @@
+  -a
+  +b
+
 Git diff with noprefix
 
   $ hg --config diff.noprefix=True diff --git --nodates

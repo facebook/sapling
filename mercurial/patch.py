@@ -35,6 +35,7 @@ from . import (
     mdiff,
     pathutil,
     scmutil,
+    similar,
     util,
 )
 stringio = util.stringio
@@ -2521,6 +2522,9 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
                     header.append('old mode %s' % mode1)
                     header.append('new mode %s' % mode2)
                 if copyop is not None:
+                    if opts.showsimilarity:
+                        sim = similar.score(ctx1[path1], ctx2[path2]) * 100
+                        header.append('similarity index %d%%' % sim)
                     header.append('%s from %s' % (copyop, path1))
                     header.append('%s to %s' % (copyop, path2))
         elif revs and not repo.ui.quiet:
