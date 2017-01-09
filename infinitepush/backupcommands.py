@@ -273,6 +273,30 @@ def _getrevstobackup(repo, other, backuptip, currenttiprev, bookmarkstobackup):
         revs = list(repo.revs(revset))
 
     outgoing = findcommonoutgoing(repo, other, revs)
+    rootstofilter = []
+    if outgoing:
+        # In rare cases it's possible to have node without filelogs only
+        # locally. It is possible if remotefilelog is enabled and if node was
+        # stripped server-side. In this case we want to filter this
+        # nodes and all ancestors out
+        for node in outgoing.missing:
+            changectx = repo[node]
+            for file in changectx.files():
+                try:
+                    changectx.filectx(file)
+                except error.ManifestLookupError:
+                    rootstofilter.append(changectx.rev())
+
+    if rootstofilter:
+        revstofilter = list(repo.revs('%ld::', rootstofilter))
+        revs = set(revs) - set(revstofilter)
+        outgoing = findcommonoutgoing(repo, other, revs)
+        filteredhexnodes = set([repo[filteredrev].hex()
+                                for filteredrev in revstofilter])
+        # Use list(...) to make it work in python2 and python3
+        for book, hexnode in list(bookmarkstobackup.items()):
+            if hexnode in filteredhexnodes:
+                del bookmarkstobackup[book]
 
     return outgoing
 
