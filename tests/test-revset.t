@@ -161,8 +161,8 @@ trivial
   (rangeall
     None)
   * optimized:
-  (rangepre
-    ('string', 'tip')
+  (rangeall
+    None
     define)
   * set:
   <spanset+ 0:9>
@@ -619,8 +619,8 @@ may be hidden (issue5385)
   (rangeall
     None)
   * analyzed:
-  (rangepre
-    ('string', 'tip')
+  (rangeall
+    None
     define)
   * set:
   <spanset+ 0:9>

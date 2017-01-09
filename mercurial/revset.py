@@ -380,12 +380,22 @@ def rangeset(repo, subset, x, y, order):
         return baseset()
     return _makerangeset(repo, subset, m.first(), n.last(), order)
 
+def rangeall(repo, subset, x, order):
+    assert x is None
+    return _makerangeset(repo, subset, 0, len(repo) - 1, order)
+
 def rangepre(repo, subset, y, order):
     # ':y' can't be rewritten to '0:y' since '0' may be hidden
     n = getset(repo, fullreposet(repo), y)
     if not n:
         return baseset()
     return _makerangeset(repo, subset, 0, n.last(), order)
+
+def rangepost(repo, subset, x, order):
+    m = getset(repo, fullreposet(repo), x)
+    if not m:
+        return baseset()
+    return _makerangeset(repo, subset, m.first(), len(repo) - 1, order)
 
 def _makerangeset(repo, subset, m, n, order):
     if m == n:
@@ -2385,7 +2395,9 @@ def _hexlist(repo, subset, x, order):
 
 methods = {
     "range": rangeset,
+    "rangeall": rangeall,
     "rangepre": rangepre,
+    "rangepost": rangepost,
     "dagrange": dagrange,
     "string": stringset,
     "symbol": stringset,
@@ -2500,10 +2512,6 @@ def _analyze(x, order):
         return _analyze(('func', ('symbol', 'ancestors'), x[1]), order)
     elif op == 'dagrangepost':
         return _analyze(('func', ('symbol', 'descendants'), x[1]), order)
-    elif op == 'rangeall':
-        return _analyze(('rangepre', ('string', 'tip')), order)
-    elif op == 'rangepost':
-        return _analyze(('range', x[1], ('string', 'tip')), order)
     elif op == 'negate':
         s = getstring(x[1], _("can't negate that"))
         return _analyze(('string', '-' + s), order)
@@ -2517,7 +2525,9 @@ def _analyze(x, order):
         return (op, _analyze(x[1], order), order)
     elif op == 'not':
         return (op, _analyze(x[1], anyorder), order)
-    elif op in ('rangepre', 'parentpost'):
+    elif op == 'rangeall':
+        return (op, None, order)
+    elif op in ('rangepre', 'rangepost', 'parentpost'):
         return (op, _analyze(x[1], defineorder), order)
     elif op == 'group':
         return _analyze(x[1], order)
@@ -2622,7 +2632,9 @@ def _optimize(x, small):
             o = _optimize(x[1], not small)
             order = x[2]
             return o[0], (op, o[1], order)
-    elif op in ('rangepre', 'parentpost'):
+    elif op == 'rangeall':
+        return smallbonus, x
+    elif op in ('rangepre', 'rangepost', 'parentpost'):
         o = _optimize(x[1], small)
         order = x[2]
         return o[0], (op, o[1], order)
