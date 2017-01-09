@@ -124,11 +124,6 @@ def uisetup(ui):
 
     ui.__class__ = pagerui
 
-    # chg has its own pager implementation
-    argv = sys.argv[:]
-    if 'chgunix' in dispatch._earlygetopt(['--cmdserver'], argv):
-        return
-
     def pagecmd(orig, ui, options, cmd, cmdfunc):
         p = ui.config("pager", "pager", encoding.environ.get("PAGER"))
         usepager = False
