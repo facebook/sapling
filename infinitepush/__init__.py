@@ -925,7 +925,7 @@ def bundle2scratchbranch(op, part):
 
     return 1
 
-@bundle2.parthandler(scratchbookmarksparttype, ('prefixestodelete',))
+@bundle2.parthandler(scratchbookmarksparttype)
 def bundle2scratchbookmarks(op, part):
     '''Handler deletes bookmarks first then adds new bookmarks.
     '''
