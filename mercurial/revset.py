@@ -1066,23 +1066,23 @@ def _followfirst(repo, subset, x):
     # of every revisions or files revisions.
     return _follow(repo, subset, x, '_followfirst', followfirst=True)
 
-@predicate('followlines(file, fromline, toline[, rev=.])', safe=True)
+@predicate('followlines(file, fromline, toline[, startrev=.])', safe=True)
 def followlines(repo, subset, x):
     """Changesets modifying `file` in line range ('fromline', 'toline').
 
-    Line range corresponds to 'file' content at 'rev' and should hence be
-    consistent with file size. If rev is not specified, working directory's
+    Line range corresponds to 'file' content at 'startrev' and should hence be
+    consistent with file size. If startrev is not specified, working directory's
     parent is used.
     """
     from . import context  # avoid circular import issues
 
-    args = getargsdict(x, 'followlines', 'file *lines rev')
+    args = getargsdict(x, 'followlines', 'file *lines startrev')
     if len(args['lines']) != 2:
         raise error.ParseError(_("followlines takes at least three arguments"))
 
     rev = '.'
-    if 'rev' in args:
-        revs = getset(repo, fullreposet(repo), args['rev'])
+    if 'startrev' in args:
+        revs = getset(repo, fullreposet(repo), args['startrev'])
         if len(revs) != 1:
             raise error.ParseError(
                 _("followlines expects exactly one revision"))

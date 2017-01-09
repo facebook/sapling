@@ -490,11 +490,11 @@ Test followlines() revset
   16: baz:0
   19: baz:3
   20: baz:4
-  $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 3, 5, rev=20)'
+  $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 3, 5, startrev=20)'
   16: baz:0
   19: baz:3
   20: baz:4
-  $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 3, 5, rev=.^)'
+  $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 3, 5, startrev=.^)'
   16: baz:0
   19: baz:3
   $ printf "0\n0\n" | cat - baz > baz1
@@ -591,7 +591,7 @@ check error cases
   $ hg log -r 'followlines(baz, 1)'
   hg: parse error: followlines takes at least three arguments
   [255]
-  $ hg log -r 'followlines(baz, 1, 2, rev=desc("b"))'
+  $ hg log -r 'followlines(baz, 1, 2, startrev=desc("b"))'
   hg: parse error: followlines expects exactly one revision
   [255]
   $ hg log -r 'followlines("glob:*", 1, 2)'
