@@ -23,6 +23,7 @@
 #include <unistd.h>
 
 #include "hgclient.h"
+#include "procutil.h"
 #include "util.h"
 
 enum {
@@ -70,6 +71,8 @@ struct hgclient_tag_ {
 };
 
 static const size_t defaultdatasize = 4096;
+
+static void attachio(hgclient_t *hgc);
 
 static void initcontext(context_t *ctx)
 {
@@ -248,6 +251,13 @@ static void handlesystemrequest(hgclient_t *hgc)
 		memcpy(ctx->data, &r_n, sizeof(r_n));
 		ctx->datasize = sizeof(r_n);
 		writeblock(hgc);
+	} else if (strcmp(args[0], "pager") == 0) {
+		setuppager(args[1]);
+		if (hgc->capflags & CAP_ATTACHIO)
+			attachio(hgc);
+		/* unblock the server */
+		static const char emptycmd[] = "\n";
+		sendall(hgc->sockfd, emptycmd, sizeof(emptycmd) - 1);
 	} else {
 		abortmsg("unknown type in system request: %s", args[0]);
 	}

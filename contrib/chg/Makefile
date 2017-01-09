@@ -25,7 +25,7 @@ $(TARGET): $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $(OBJS)
 
 chg.o: hgclient.h procutil.h util.h
-hgclient.o: hgclient.h util.h
+hgclient.o: hgclient.h procutil.h util.h
 procutil.o: procutil.h util.h
 util.o: util.h
 
