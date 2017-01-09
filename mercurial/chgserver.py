@@ -287,13 +287,17 @@ class channeledsystem(object):
 
     exitcode length (unsigned int),
     exitcode (int)
+
+    if type == 'pager', repetitively waits for a command name ending with '\n'
+    and executes it defined by cmdtable, or exits the loop if the command name
+    is empty.
     """
     def __init__(self, in_, out, channel):
         self.in_ = in_
         self.out = out
         self.channel = channel
 
-    def __call__(self, cmd, environ, cwd, type='system'):
+    def __call__(self, cmd, environ, cwd=None, type='system', cmdtable=None):
         args = [type, util.quotecommand(cmd), os.path.abspath(cwd or '.')]
         args.extend('%s=%s' % (k, v) for k, v in environ.iteritems())
         data = '\0'.join(args)
@@ -308,6 +312,16 @@ class channeledsystem(object):
                 raise error.Abort(_('invalid response'))
             rc, = struct.unpack('>i', self.in_.read(4))
             return rc
+        elif type == 'pager':
+            while True:
+                cmd = self.in_.readline()[:-1]
+                if not cmd:
+                    break
+                if cmdtable and cmd in cmdtable:
+                    _log('pager subcommand: %s' % cmd)
+                    cmdtable[cmd]()
+                else:
+                    raise error.Abort(_('unexpected command: %s') % cmd)
         else:
             raise error.ProgrammingError('invalid S channel type: %s' % type)
 
