@@ -486,43 +486,43 @@ annotate removed file
 
 Test followlines() revset
 
-  $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 3, 5)'
+  $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 3:5)'
   16: baz:0
   19: baz:3
   20: baz:4
-  $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 3, 5, startrev=20)'
+  $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 3:5, startrev=20)'
   16: baz:0
   19: baz:3
   20: baz:4
-  $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 3, 5, startrev=.^)'
+  $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 3:5, startrev=.^)'
   16: baz:0
   19: baz:3
   $ printf "0\n0\n" | cat - baz > baz1
   $ mv baz1 baz
   $ hg ci -m 'added two lines with 0'
-  $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 5, 7)'
+  $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 5:7)'
   16: baz:0
   19: baz:3
   20: baz:4
   $ echo 6 >> baz
   $ hg ci -m 'added line 8'
-  $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 5, 7)'
+  $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 5:7)'
   16: baz:0
   19: baz:3
   20: baz:4
   $ sed 's/3/3+/' baz > baz.new
   $ mv baz.new baz
   $ hg ci -m 'baz:3->3+'
-  $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 5, 7)'
+  $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 5:7)'
   16: baz:0
   19: baz:3
   20: baz:4
   23: baz:3->3+
-  $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 1, 2)'
+  $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 1:2)'
   21: added two lines with 0
 
 file patterns are okay
-  $ hg log -T '{rev}: {desc}\n' -r 'followlines("path:baz", 1, 2)'
+  $ hg log -T '{rev}: {desc}\n' -r 'followlines("path:baz", 1:2)'
   21: added two lines with 0
 
 renames are followed
@@ -530,7 +530,7 @@ renames are followed
   $ sed 's/4/4+/' qux > qux.new
   $ mv qux.new qux
   $ hg ci -m 'qux:4->4+'
-  $ hg log -T '{rev}: {desc}\n' -r 'followlines(qux, 5, 7)'
+  $ hg log -T '{rev}: {desc}\n' -r 'followlines(qux, 5:7)'
   16: baz:0
   19: baz:3
   20: baz:4
@@ -545,7 +545,7 @@ merge
   $ sed 's/3+/3-/' baz > baz.new
   $ mv baz.new baz
   $ hg ci -m 'baz:3+->3-'
-  $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 5, 7)'
+  $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 5:7)'
   16: baz:0
   19: baz:3
   20: baz:4
@@ -556,7 +556,7 @@ merge
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ hg ci -m merge
-  $ hg log -T '{rev}: {desc}\n' -r 'followlines(qux, 5, 7)'
+  $ hg log -T '{rev}: {desc}\n' -r 'followlines(qux, 5:7)'
   16: baz:0
   19: baz:3
   20: baz:4
@@ -571,7 +571,7 @@ merge
   (branch merge, don't forget to commit)
   $ hg ci -m 'merge from other side'
   created new head
-  $ hg log -T '{rev}: {desc}\n' -r 'followlines(qux, 5, 7)'
+  $ hg log -T '{rev}: {desc}\n' -r 'followlines(qux, 5:7)'
   16: baz:0
   19: baz:3
   20: baz:4
@@ -586,27 +586,33 @@ check error cases
   hg: parse error: followlines takes at least 1 positional arguments
   [255]
   $ hg log -r 'followlines(baz)'
-  hg: parse error: followlines takes at least three arguments
+  hg: parse error: followlines requires a line range
   [255]
   $ hg log -r 'followlines(baz, 1)'
-  hg: parse error: followlines takes at least three arguments
+  hg: parse error: followlines expects a line range
   [255]
-  $ hg log -r 'followlines(baz, 1, 2, startrev=desc("b"))'
+  $ hg log -r 'followlines(baz, 1:2, startrev=desc("b"))'
   hg: parse error: followlines expects exactly one revision
   [255]
-  $ hg log -r 'followlines("glob:*", 1, 2)'
+  $ hg log -r 'followlines("glob:*", 1:2)'
   hg: parse error: followlines expects exactly one file
   [255]
-  $ hg log -r 'followlines(baz, x, 4)'
+  $ hg log -r 'followlines(baz, 1:)'
   hg: parse error: line range bounds must be integers
   [255]
-  $ hg log -r 'followlines(baz, 5, 4)'
+  $ hg log -r 'followlines(baz, :1)'
+  hg: parse error: line range bounds must be integers
+  [255]
+  $ hg log -r 'followlines(baz, x:4)'
+  hg: parse error: line range bounds must be integers
+  [255]
+  $ hg log -r 'followlines(baz, 5:4)'
   hg: parse error: line range must be positive
   [255]
-  $ hg log -r 'followlines(baz, 0, 4)'
+  $ hg log -r 'followlines(baz, 0:4)'
   hg: parse error: fromline must be strictly positive
   [255]
-  $ hg log -r 'followlines(baz, 2, 40)'
+  $ hg log -r 'followlines(baz, 2:40)'
   abort: line range exceeds file size
   [255]
 

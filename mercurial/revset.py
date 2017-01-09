@@ -329,6 +329,20 @@ def getlist(x):
         return list(x[1:])
     return [x]
 
+def getrange(x, err):
+    if not x:
+        raise error.ParseError(err)
+    op = x[0]
+    if op == 'range':
+        return x[1], x[2]
+    elif op == 'rangepre':
+        return None, x[1]
+    elif op == 'rangepost':
+        return x[1], None
+    elif op == 'rangeall':
+        return None, None
+    raise error.ParseError(err)
+
 def getargs(x, min, max, err):
     l = getlist(x)
     if len(l) < min or (max >= 0 and len(l) > max):
@@ -1083,7 +1097,7 @@ def _followfirst(repo, subset, x):
     # of every revisions or files revisions.
     return _follow(repo, subset, x, '_followfirst', followfirst=True)
 
-@predicate('followlines(file, fromline, toline[, startrev=.])', safe=True)
+@predicate('followlines(file, fromline:toline[, startrev=.])', safe=True)
 def followlines(repo, subset, x):
     """Changesets modifying `file` in line range ('fromline', 'toline').
 
@@ -1094,8 +1108,8 @@ def followlines(repo, subset, x):
     from . import context  # avoid circular import issues
 
     args = getargsdict(x, 'followlines', 'file *lines startrev')
-    if len(args['lines']) != 2:
-        raise error.ParseError(_("followlines takes at least three arguments"))
+    if len(args['lines']) != 1:
+        raise error.ParseError(_("followlines requires a line range"))
 
     rev = '.'
     if 'startrev' in args:
@@ -1115,8 +1129,9 @@ def followlines(repo, subset, x):
             raise error.ParseError(_("followlines expects exactly one file"))
         fname = files[0]
 
+    lr = getrange(args['lines'][0], _("followlines expects a line range"))
     fromline, toline = [getinteger(a, _("line range bounds must be integers"))
-                        for a in args['lines']]
+                        for a in lr]
     if toline - fromline < 0:
         raise error.ParseError(_("line range must be positive"))
     if fromline < 1:
