@@ -9,6 +9,8 @@ from mercurial import templatekw
 from phabricator import diffprops
 import re
 
+taskregex = re.compile('(Tasks|Task ID):\s*(\d+)(,\s*\d+)*')
+
 def showphabdiff(repo, ctx, templ, **args):
     """:phabdiff: String. Return the phabricator diff id for a given hg rev."""
     descr = ctx.description()
@@ -18,7 +20,7 @@ def showphabdiff(repo, ctx, templ, **args):
 def showtasks(**args):
     """:tasks: String. Return the tasks associated with given hg rev."""
     descr = args['ctx'].description()
-    match = re.search('(Tasks|Task ID):\s*(\d+)(,\s*\d+)*', descr)
+    match = taskregex.search(descr)
 
     tasks = []
     if match:

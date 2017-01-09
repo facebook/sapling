@@ -1,6 +1,8 @@
 import re
 from operator import itemgetter
 
+diffrevisionregex = re.compile('Differential Revision:.*/D(\d+)')
+
 def parserevfromcommitmsg(description):
     """Parses the D123 revision number from a commit message.
     Returns just the revision number without the D prefix.
@@ -8,8 +10,7 @@ def parserevfromcommitmsg(description):
     host, so this can also work with our public phabricator instance,
     or for others.
     """
-    match = re.search('Differential Revision:.*/D(\d+)',
-                      description)
+    match = diffrevisionregex.search(description)
     return match.group(1) if match else None
 
 def getcurrentdiffidforrev(client, phabrev):
