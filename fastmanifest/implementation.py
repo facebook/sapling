@@ -895,10 +895,10 @@ class manifestfactory(object):
                     packpath = shallowutil.getlocalpackpath(
                             origself.opener.vfs.base,
                             'manifests')
-                    opener = scmutil.vfs(packpath)
+                    localpackopener = scmutil.vfs(packpath)
                     transaction.treepack = datapack.mutabledatapack(
                             self.ui,
-                            opener)
+                            localpackopener)
                     def postclose(tr):
                         tr.treepack.close()
                         treemanifestcache.getinstance(origself.opener,
@@ -914,7 +914,8 @@ class manifestfactory(object):
                         node, p1)
                 newtree.write(pack, tree)
 
-                treemanifestcache.getinstance(opener, self.ui)[node] = newtree
+                treemanifestcache.getinstance(origself.opener,
+                                              self.ui)[node] = newtree
 
         return node
 
