@@ -61,6 +61,13 @@ check http return codes
   $ hg serve -p $HGPORT -d --pid-file=hg.pid -E errors.log
   $ cat hg.pid >> $DAEMON_PIDS
 
+check archive links' order
+
+  $ get-with-headers.py localhost:$HGPORT "?revcount=1" | grep '/archive/tip.'
+  <a href="/archive/tip.zip">zip</a>
+  <a href="/archive/tip.tar.gz">gz</a>
+  <a href="/archive/tip.tar.bz2">bz2</a>
+
 invalid arch type should give 404
 
   $ get-with-headers.py localhost:$HGPORT "archive/tip.invalid" | head -n 1
