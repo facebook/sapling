@@ -5,6 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
+from mercurial.i18n import _
 from mercurial.node import hex, nullid, nullrev
 from mercurial import localrepo, util, match, scmutil
 from . import remotefilelog, remotefilectx, fileserverclient
@@ -19,6 +20,7 @@ from historypack import historypackstore
 import os
 
 requirement = "remotefilelog"
+_prefetching = _('prefetching')
 
 def wraprepo(repo):
     class shallowrepository(repo.__class__):
@@ -103,6 +105,9 @@ def wraprepo(repo):
             serverfiles = skip.copy()
             visited = set()
             visited.add(nullrev)
+            revnum = 0
+            revcount = len(revs)
+            self.ui.progress(_prefetching, revnum, total=revcount)
             for rev in sorted(revs):
                 ctx = repo[rev]
                 if pats:
@@ -131,9 +136,12 @@ def wraprepo(repo):
                     files.update(diff)
 
                 visited.add(mfrev)
+                revnum += 1
+                self.ui.progress(_prefetching, revnum, total=revcount)
 
             files.difference_update(skip)
             serverfiles.difference_update(skip)
+            self.ui.progress(_prefetching, None)
 
             # Fetch files known to be on the server
             if serverfiles:
