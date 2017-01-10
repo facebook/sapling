@@ -297,10 +297,10 @@ class hgwebdir(object):
         def archivelist(ui, nodeid, url):
             allowed = ui.configlist("web", "allow_archive", untrusted=True)
             archives = []
-            for i in [('zip', '.zip'), ('gz', '.tar.gz'), ('bz2', '.tar.bz2')]:
-                if i[0] in allowed or ui.configbool("web", "allow" + i[0],
+            for typ, spec in hgweb_mod.archivespecs.iteritems():
+                if typ in allowed or ui.configbool("web", "allow" + typ,
                                                     untrusted=True):
-                    archives.append({"type" : i[0], "extension": i[1],
+                    archives.append({"type" : typ, "extension": spec[2],
                                      "node": nodeid, "url": url})
             return archives
 

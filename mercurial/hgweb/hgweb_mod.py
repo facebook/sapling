@@ -53,6 +53,12 @@ perms = {
     'pushkey': 'push',
 }
 
+archivespecs = util.sortdict((
+    ('zip', ('application/zip', 'zip', '.zip', None)),
+    ('gz', ('application/x-gzip', 'tgz', '.tar.gz', None)),
+    ('bz2', ('application/x-bzip2', 'tbz2', '.tar.bz2', None)),
+))
+
 def makebreadcrumb(url, prefix=''):
     '''Return a 'URL breadcrumb' list
 
@@ -89,6 +95,8 @@ class requestcontext(object):
         self.repo = repo
         self.reponame = app.reponame
 
+        self.archivespecs = archivespecs
+
         self.maxchanges = self.configint('web', 'maxchanges', 10)
         self.stripecount = self.configint('web', 'stripes', 1)
         self.maxshortchanges = self.configint('web', 'maxshortchanges', 60)
@@ -123,12 +131,6 @@ class requestcontext(object):
     def configlist(self, section, name, default=None, untrusted=True):
         return self.repo.ui.configlist(section, name, default,
                                        untrusted=untrusted)
-
-    archivespecs = util.sortdict((
-        ('zip', ('application/zip', 'zip', '.zip', None)),
-        ('gz', ('application/x-gzip', 'tgz', '.tar.gz', None)),
-        ('bz2', ('application/x-bzip2', 'tbz2', '.tar.bz2', None)),
-    ))
 
     def archivelist(self, nodeid):
         allowed = self.configlist('web', 'allow_archive')
