@@ -210,33 +210,30 @@ class hybridmanifest(object):
         return m.text(*args, **kwargs)
 
     def fastdelta(self, base, changes):
-        tree = self._treemanifest()
-        if tree is not None:
-            return fastdelta(tree, tree.find, base, changes)
-        return self._manifest('fastdelta').fastdelta(base, changes)
+        m = self._manifest('fastdelta')
+        if isinstance(m, ctreemanifest.treemanifest):
+            return fastdelta(m, m.find, base, changes)
+        return m.fastdelta(base, changes)
 
-    def _converttohybridmanifest(self, m, node):
+    def _converttohybridmanifest(self, m):
         if isinstance(m, hybridmanifest):
             return m
         elif isinstance(m, fastmanifestdict):
-            return hybridmanifest(self.ui, self.opener, fast=m,
-                                  node=node)
+            return hybridmanifest(self.ui, self.opener, fast=m)
         elif isinstance(m, manifest.manifestdict):
-            return hybridmanifest(self.ui, self.opener, flat=m,
-                                  node=node)
+            return hybridmanifest(self.ui, self.opener, flat=m)
         elif supportsctree and isinstance(m, ctreemanifest.treemanifest):
-            return hybridmanifest(self.ui, self.opener, tree=m,
-                                  node=node)
+            return hybridmanifest(self.ui, self.opener, tree=m)
         else:
             raise ValueError("unknown manifest type {0}".format(type(m)))
 
     def copy(self):
         copy = self._manifest('copy').copy()
-        return self._converttohybridmanifest(copy, self.node)
+        return self._converttohybridmanifest(copy)
 
     def matches(self, *args, **kwargs):
         matches = self._manifest('matches').matches(*args, **kwargs)
-        return self._converttohybridmanifest(matches, None)
+        return self._converttohybridmanifest(matches)
 
     def _getmatchingtypemanifest(self, m2, operation):
         # Find _m1 and _m2 of the same type, to provide the fastest computation

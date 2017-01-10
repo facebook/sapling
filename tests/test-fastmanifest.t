@@ -50,7 +50,7 @@ manifest of each parent, one is cached (-1) and the other is not:
   [FM-METRICS] kind: filesnotincachehitratio, kwargs: [('filesnotincachehitratio', -1)]
   [FM-METRICS] End metrics
   [FM-METRICS] Begin metrics
-  [FM-METRICS] kind: cachehitratio, kwargs: [('cachehitratio', 50)]
+  [FM-METRICS] kind: cachehitratio, kwargs: [('cachehitratio', 33)]
   [FM-METRICS] kind: diffcachehitratio, kwargs: [('diffcachehitratio', -1)]
   [FM-METRICS] kind: filesnotincachehitratio, kwargs: [('filesnotincachehitratio', -1)]
   [FM-METRICS] End metrics
@@ -61,7 +61,7 @@ manifest of each parent, one is cached (-1) and the other is not:
   [FM-METRICS] kind: filesnotincachehitratio, kwargs: [('filesnotincachehitratio', -1)]
   [FM-METRICS] End metrics
   [FM-METRICS] Begin metrics
-  [FM-METRICS] kind: cachehitratio, kwargs: [('cachehitratio', 50)]
+  [FM-METRICS] kind: cachehitratio, kwargs: [('cachehitratio', 33)]
   [FM-METRICS] kind: diffcachehitratio, kwargs: [('diffcachehitratio', -1)]
   [FM-METRICS] kind: filesnotincachehitratio, kwargs: [('filesnotincachehitratio', -1)]
   [FM-METRICS] End metrics
@@ -72,7 +72,7 @@ manifest of each parent, one is cached (-1) and the other is not:
   [FM-METRICS] kind: filesnotincachehitratio, kwargs: [('filesnotincachehitratio', -1)]
   [FM-METRICS] End metrics
   [FM-METRICS] Begin metrics
-  [FM-METRICS] kind: cachehitratio, kwargs: [('cachehitratio', 50)]
+  [FM-METRICS] kind: cachehitratio, kwargs: [('cachehitratio', 33)]
   [FM-METRICS] kind: diffcachehitratio, kwargs: [('diffcachehitratio', -1)]
   [FM-METRICS] kind: filesnotincachehitratio, kwargs: [('filesnotincachehitratio', -1)]
   [FM-METRICS] End metrics
@@ -83,7 +83,7 @@ manifest of each parent, one is cached (-1) and the other is not:
   [FM-METRICS] kind: filesnotincachehitratio, kwargs: [('filesnotincachehitratio', -1)]
   [FM-METRICS] End metrics
   [FM-METRICS] Begin metrics
-  [FM-METRICS] kind: cachehitratio, kwargs: [('cachehitratio', 50)]
+  [FM-METRICS] kind: cachehitratio, kwargs: [('cachehitratio', 33)]
   [FM-METRICS] kind: diffcachehitratio, kwargs: [('diffcachehitratio', -1)]
   [FM-METRICS] kind: filesnotincachehitratio, kwargs: [('filesnotincachehitratio', -1)]
   [FM-METRICS] End metrics
