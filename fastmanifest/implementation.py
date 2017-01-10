@@ -118,10 +118,12 @@ class hybridmanifest(object):
         return self.__cachedmanifest
 
     def _treemanifest(self):
-        if self.__treemanifest is False or self.node is None:
+        if self.__treemanifest is False:
             return None
         assert supportsctree
         if self.__treemanifest is None:
+            if self.node is None:
+                return None
             if self.node in self.treecache:
                 self.__treemanifest = self.treecache[self.node]
             elif self.node == revlog.nullid:
