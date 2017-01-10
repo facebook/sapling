@@ -1383,7 +1383,17 @@ def bundle(ui, repo, fname, dest=None, **opts):
         assert cgversion == '02'
         bversion = 'HG20'
 
-    bundle2.writebundle(ui, cg, fname, bversion, compression=bcompression)
+    # TODO compression options should be derived from bundlespec parsing.
+    # This is a temporary hack to allow adjusting bundle compression
+    # level without a) formalizing the bundlespec changes to declare it
+    # b) introducing a command flag.
+    compopts = {}
+    complevel = ui.configint('experimental', 'bundlecomplevel')
+    if complevel is not None:
+        compopts['level'] = complevel
+
+    bundle2.writebundle(ui, cg, fname, bversion, compression=bcompression,
+                        compopts=compopts)
 
 @command('cat',
     [('o', 'output', '',

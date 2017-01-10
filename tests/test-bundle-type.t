@@ -110,6 +110,37 @@ test bundle types
   c35a0f9217e65d1fdb90c936ffa7dbe679f83ddf
   gzip-v1
   
+
+Compression level can be adjusted for bundle2 bundles
+
+  $ hg init test-complevel
+  $ cd test-complevel
+
+  $ cat > file0 << EOF
+  > this is a file
+  > with some text
+  > and some more text
+  > and other content
+  > EOF
+  $ cat > file1 << EOF
+  > this is another file
+  > with some other content
+  > and repeated, repeated, repeated, repeated content
+  > EOF
+  $ hg -q commit -A -m initial
+
+  $ hg bundle -a -t gzip-v2 gzip-v2.hg
+  1 changesets found
+  $ f --size gzip-v2.hg
+  gzip-v2.hg: size=427
+
+  $ hg --config experimental.bundlecomplevel=1 bundle -a -t gzip-v2 gzip-v2-level1.hg
+  1 changesets found
+  $ f --size gzip-v2-level1.hg
+  gzip-v2-level1.hg: size=435
+
+  $ cd ..
+
 #if zstd
 
   $ for t in "zstd" "zstd-v2"; do
