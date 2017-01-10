@@ -464,6 +464,14 @@ class chgcmdserver(commandserver.server):
                          'setenv': setenv,
                          'setumask': setumask})
 
+    if util.safehasattr(osutil, 'setprocname'):
+        def setprocname(self):
+            """Change process title"""
+            name = self._readstr()
+            _log('setprocname: %r\n' % name)
+            osutil.setprocname(name)
+        capabilities['setprocname'] = setprocname
+
 def _tempaddress(address):
     return '%s.%d.tmp' % (address, os.getpid())
 
