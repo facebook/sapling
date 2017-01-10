@@ -138,6 +138,12 @@ os.stat_float_times(False)
 def safehasattr(thing, attr):
     return getattr(thing, attr, _notset) is not _notset
 
+def bitsfrom(container):
+    bits = 0
+    for bit in container:
+        bits |= bit
+    return bits
+
 DIGESTS = {
     'md5': hashlib.md5,
     'sha1': hashlib.sha1,

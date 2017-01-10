@@ -148,7 +148,10 @@ class bundlerevlog(revlog.revlog):
             delta = self._chunk(chain.pop())
             text = mdiff.patches(text, [delta])
 
-        self.checkhash(text, node, rev=rev)
+        text, validatehash = self._processflags(text, self.flags(rev),
+                                                'read', raw=raw)
+        if validatehash:
+            self.checkhash(text, node, rev=rev)
         self._cache = (node, rev, text)
         return text
 

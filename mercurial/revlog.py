@@ -55,7 +55,11 @@ REVLOGNG_FLAGS = REVLOGNGINLINEDATA | REVLOGGENERALDELTA
 # revlog index flags
 REVIDX_ISCENSORED = (1 << 15) # revision has censor metadata, must be verified
 REVIDX_DEFAULT_FLAGS = 0
-REVIDX_KNOWN_FLAGS = REVIDX_ISCENSORED
+# stable order in which flags need to be processed and their processors applied
+REVIDX_FLAGS_ORDER = [
+    REVIDX_ISCENSORED,
+]
+REVIDX_KNOWN_FLAGS = util.bitsfrom(REVIDX_FLAGS_ORDER)
 
 # max size of revlog with inline data
 _maxinline = 131072
@@ -64,6 +68,41 @@ _chunksize = 1048576
 RevlogError = error.RevlogError
 LookupError = error.LookupError
 CensoredNodeError = error.CensoredNodeError
+ProgrammingError = error.ProgrammingError
+
+# Store flag processors (cf. 'addflagprocessor()' to register)
+_flagprocessors = {
+    REVIDX_ISCENSORED: None,
+}
+
+def addflagprocessor(flag, processor):
+    """Register a flag processor on a revision data flag.
+
+    Invariant:
+    - Flags need to be defined in REVIDX_KNOWN_FLAGS and REVIDX_FLAGS_ORDER.
+    - Only one flag processor can be registered on a specific flag.
+    - flagprocessors must be 3-tuples of functions (read, write, raw) with the
+      following signatures:
+          - (read)  f(self, text) -> newtext, bool
+          - (write) f(self, text) -> newtext, bool
+          - (raw)   f(self, text) -> bool
+      The boolean returned by these transforms is used to determine whether
+      'newtext' can be used for hash integrity checking.
+
+      Note: The 'raw' transform is used for changegroup generation and in some
+      debug commands. In this case the transform only indicates whether the
+      contents can be used for hash integrity checks.
+    """
+    if not flag & REVIDX_KNOWN_FLAGS:
+        msg = _("cannot register processor on unknown flag '%#x'.") % (flag)
+        raise ProgrammingError(msg)
+    if flag not in REVIDX_FLAGS_ORDER:
+        msg = _("flag '%#x' undefined in REVIDX_FLAGS_ORDER.") % (flag)
+        raise ProgrammingError(msg)
+    if flag in _flagprocessors:
+        msg = _("cannot register multiple processors on flag '%#x'.") % (flag)
+        raise error.Abort(msg)
+    _flagprocessors[flag] = processor
 
 def getoffset(q):
     return int(q >> 16)
@@ -1231,11 +1270,6 @@ class revlog(object):
         if rev is None:
             rev = self.rev(node)
 
-        # check rev flags
-        if self.flags(rev) & ~REVIDX_KNOWN_FLAGS:
-            raise RevlogError(_('incompatible revision flag %x') %
-                              (self.flags(rev) & ~REVIDX_KNOWN_FLAGS))
-
         chain, stopped = self._deltachain(rev, stoprev=cachedrev)
         if stopped:
             text = self._cache[2]
@@ -1249,7 +1283,12 @@ class revlog(object):
             bins = bins[1:]
 
         text = mdiff.patches(text, bins)
-        self.checkhash(text, node, rev=rev)
+
+        text, validatehash = self._processflags(text, self.flags(rev), 'read',
+                                                raw=raw)
+        if validatehash:
+            self.checkhash(text, node, rev=rev)
+
         self._cache = (node, rev, text)
         return text
 
@@ -1260,6 +1299,65 @@ class revlog(object):
         as needed.
         """
         return hash(text, p1, p2)
+
+    def _processflags(self, text, flags, operation, raw=False):
+        """Inspect revision data flags and applies transforms defined by
+        registered flag processors.
+
+        ``text`` - the revision data to process
+        ``flags`` - the revision flags
+        ``operation`` - the operation being performed (read or write)
+        ``raw`` - an optional argument describing if the raw transform should be
+        applied.
+
+        This method processes the flags in the order (or reverse order if
+        ``operation`` is 'write') defined by REVIDX_FLAGS_ORDER, applying the
+        flag processors registered for present flags. The order of flags defined
+        in REVIDX_FLAGS_ORDER needs to be stable to allow non-commutativity.
+
+        Returns a 2-tuple of ``(text, validatehash)`` where ``text`` is the
+        processed text and ``validatehash`` is a bool indicating whether the
+        returned text should be checked for hash integrity.
+
+        Note: If the ``raw`` argument is set, it has precedence over the
+        operation and will only update the value of ``validatehash``.
+        """
+        if not operation in ('read', 'write'):
+            raise ProgrammingError(_("invalid '%s' operation ") % (operation))
+        # Check all flags are known.
+        if flags & ~REVIDX_KNOWN_FLAGS:
+            raise RevlogError(_("incompatible revision flag '%#x'") %
+                              (flags & ~REVIDX_KNOWN_FLAGS))
+        validatehash = True
+        # Depending on the operation (read or write), the order might be
+        # reversed due to non-commutative transforms.
+        orderedflags = REVIDX_FLAGS_ORDER
+        if operation == 'write':
+            orderedflags = reversed(orderedflags)
+
+        for flag in orderedflags:
+            # If a flagprocessor has been registered for a known flag, apply the
+            # related operation transform and update result tuple.
+            if flag & flags:
+                vhash = True
+
+                if flag not in _flagprocessors:
+                    message = _("missing processor for flag '%#x'") % (flag)
+                    raise RevlogError(message)
+
+                processor = _flagprocessors[flag]
+                if processor is not None:
+                    readtransform, writetransform, rawtransform = processor
+
+                    if raw:
+                        vhash = rawtransform(self, text)
+                    elif operation == 'read':
+                        text, vhash = readtransform(self, text)
+                    else: # write operation
+                        text, vhash = writetransform(self, text)
+                validatehash = validatehash and vhash
+
+        return text, validatehash
 
     def checkhash(self, text, node, p1=None, p2=None, rev=None):
         """Check node hash integrity.
@@ -1345,6 +1443,17 @@ class revlog(object):
             raise RevlogError(_("attempted to add linkrev -1 to %s")
                               % self.indexfile)
 
+        if flags:
+            node = node or self.hash(text, p1, p2)
+
+        newtext, validatehash = self._processflags(text, flags, 'write')
+
+        # If the flag processor modifies the revision data, ignore any provided
+        # cachedelta.
+        if newtext != text:
+            cachedelta = None
+        text = newtext
+
         if len(text) > _maxentrysize:
             raise RevlogError(
                 _("%s: size of %d bytes exceeds maximum revlog storage of 2GiB")
@@ -1353,6 +1462,9 @@ class revlog(object):
         node = node or self.hash(text, p1, p2)
         if node in self.nodemap:
             return node
+
+        if validatehash:
+            self.checkhash(text, node, p1=p1, p2=p2)
 
         dfh = None
         if not self._inline:
@@ -1448,7 +1560,10 @@ class revlog(object):
                 btext[0] = mdiff.patch(basetext, delta)
 
             try:
-                self.checkhash(btext[0], node, p1=p1, p2=p2)
+                res = self._processflags(btext[0], flags, 'read', raw=raw)
+                btext[0], validatehash = res
+                if validatehash:
+                    self.checkhash(btext[0], node, p1=p1, p2=p2)
                 if flags & REVIDX_ISCENSORED:
                     raise RevlogError(_('node %s is not censored') % node)
             except CensoredNodeError:
