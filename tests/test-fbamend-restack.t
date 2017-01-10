@@ -40,9 +40,6 @@ Test unsupported flags:
   $ hg rebase --restack --rev .
   abort: cannot use both --rev and --restack
   [255]
-  $ hg rebase --restack --dest .
-  abort: cannot use both --dest and --restack
-  [255]
   $ hg rebase --restack --source .
   abort: cannot use both --source and --restack
   [255]

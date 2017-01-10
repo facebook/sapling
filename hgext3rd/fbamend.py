@@ -711,10 +711,13 @@ def wraprebase(orig, ui, repo, **opts):
        replacement for) the `hg evolve --all` command.
     """
     if opts['restack']:
+        # We can't abort if --dest is passed because some extensions
+        # (namely remotenames) will automatically add this flag.
+        # So just silently drop it instead.
+        opts.pop('dest', None)
+
         if opts['rev']:
             raise error.Abort(_("cannot use both --rev and --restack"))
-        if opts['dest']:
-            raise error.Abort(_("cannot use both --dest and --restack"))
         if opts['source']:
             raise error.Abort(_("cannot use both --source and --restack"))
         if opts['base']:
