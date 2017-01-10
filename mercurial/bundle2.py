@@ -512,14 +512,16 @@ class bundle20(object):
         self._parts = []
         self.capabilities = dict(capabilities)
         self._compengine = util.compengines.forbundletype('UN')
+        self._compopts = None
 
-    def setcompression(self, alg):
+    def setcompression(self, alg, compopts=None):
         """setup core part compression to <alg>"""
         if alg in (None, 'UN'):
             return
         assert not any(n.lower() == 'Compression' for n, v in self._params)
         self.addparam('Compression', alg)
         self._compengine = util.compengines.forbundletype(alg)
+        self._compopts = compopts
 
     @property
     def nbparts(self):
@@ -571,7 +573,8 @@ class bundle20(object):
         yield _pack(_fstreamparamsize, len(param))
         if param:
             yield param
-        for chunk in self._compengine.compressstream(self._getcorechunk()):
+        for chunk in self._compengine.compressstream(self._getcorechunk(),
+                                                     self._compopts):
             yield chunk
 
     def _paramchunk(self):
@@ -1289,7 +1292,8 @@ def obsmarkersversion(caps):
     obscaps = caps.get('obsmarkers', ())
     return [int(c[1:]) for c in obscaps if c.startswith('V')]
 
-def writebundle(ui, cg, filename, bundletype, vfs=None, compression=None):
+def writebundle(ui, cg, filename, bundletype, vfs=None, compression=None,
+                compopts=None):
     """Write a bundle file and return its filename.
 
     Existing files will not be overwritten.
@@ -1300,7 +1304,7 @@ def writebundle(ui, cg, filename, bundletype, vfs=None, compression=None):
 
     if bundletype == "HG20":
         bundle = bundle20(ui)
-        bundle.setcompression(compression)
+        bundle.setcompression(compression, compopts)
         part = bundle.newpart('changegroup', data=cg.getchunks())
         part.addparam('version', cg.version)
         if 'clcount' in cg.extras:
@@ -1320,7 +1324,7 @@ def writebundle(ui, cg, filename, bundletype, vfs=None, compression=None):
         compengine = util.compengines.forbundletype(comp)
         def chunkiter():
             yield header
-            for chunk in compengine.compressstream(cg.getchunks()):
+            for chunk in compengine.compressstream(cg.getchunks(), compopts):
                 yield chunk
         chunkiter = chunkiter()
 
