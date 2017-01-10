@@ -437,7 +437,10 @@ def blame(orig, ui, repo, *pats, **opts):
             opts['number'] = True # makes mapping['rev'] available in phabdiff
             append("{pad(blame_phabdiffid(), 8)}")
         if opts.get('date'):
-            append("{pad(date|rfc822date, 12)}")
+            if ui.quiet:
+                append("{pad(date|shortdate, 10)}")
+            else:
+                append("{pad(date|rfc822date, 12)}")
         if opts.get('file'):
             append("{file}")
         if opts.get('line_number'):

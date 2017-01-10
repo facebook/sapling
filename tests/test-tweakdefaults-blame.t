@@ -42,3 +42,11 @@ Test wrapped blame to be able to handle the usual command line attributes
   D111111 : line one
   D111111 : line two
   D222222 : line three
+  $ hg blame -p --date a
+  D111111  Thu, 01 Jan 1970 00:00:00 +0000: line one
+  D111111  Thu, 01 Jan 1970 00:00:00 +0000: line two
+  D222222  Thu, 01 Jan 1970 00:00:00 +0000: line three
+  $ hg blame -p --date --quiet a
+  D111111  1970-01-01: line one
+  D111111  1970-01-01: line two
+  D222222  1970-01-01: line three
