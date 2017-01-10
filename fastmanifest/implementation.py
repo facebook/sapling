@@ -42,7 +42,6 @@ class hybridmanifest(object):
     def __init__(self, ui, opener,
                  flat=None, fast=None, loadflat=None, tree=None, node=None):
         self.__flatmanifest = flat
-        self.__cachedmanifest = fast
         self.loadflat = loadflat
 
         if supportsctree and ui.configbool("fastmanifest", "usetree", False):
@@ -50,8 +49,13 @@ class hybridmanifest(object):
         else:
             self.__treemanifest = False
 
+        if ui.configbool("fastmanifest", "usecache", True):
+            self.__cachedmanifest = fast
+        else:
+            self.__cachedmanifest = False
+
         assert (self.__flatmanifest is not None or
-                self.__cachedmanifest is not None or
+                self.__cachedmanifest not in (None, False) or
                 self.__treemanifest not in (None, False) or
                 self.loadflat is not None)
 
@@ -66,7 +70,8 @@ class hybridmanifest(object):
         self.debugfastmanifest = self.ui.configbool("fastmanifest",
                                                      "debugfastmanifest", False)
 
-        self.incache = True if self.__cachedmanifest is not None else None
+        self.incache = (True if self.__cachedmanifest not in (None, False)
+                             else None)
 
         if self.ui.configbool("fastmanifest", "silent"):
             self.debug = _silent_debug
@@ -82,11 +87,11 @@ class hybridmanifest(object):
                 if isinstance(self.__flatmanifest, hybridmanifest):
                     # See comment in extsetup to see why we have to do that
                     self.__flatmanifest = self.__flatmanifest._flatmanifest()
-            elif self.__cachedmanifest is not None:
+            elif self.__cachedmanifest not in (None, False):
                 # build a flat manifest from the text of the fastmanifest.
                 self.__flatmanifest = manifest.manifestdict(
                     self.__cachedmanifest.text())
-            elif self.__treemanifest is not None:
+            elif self.__treemanifest not in (None, False):
                 # build a flat manifest from the text of the fastmanifest.
                 self.__flatmanifest = manifest.manifestdict(
                     self.__treemanifest.text())
@@ -95,6 +100,9 @@ class hybridmanifest(object):
         return self.__flatmanifest
 
     def _cachedmanifest(self):
+        if self.__cachedmanifest is False:
+            return None
+
         if self.incache is None:
             # Cache lookup
             if (self.cachekey is not None and
@@ -693,8 +701,6 @@ class fastmanifestcache(object):
         return r
 
     def __contains__(self, hexnode):
-        if not self.ui.configbool("fastmanifest", "usecache", True):
-            return False
         return hexnode in self.inmemorycache or hexnode in self.ondiskcache
 
     def __setitem__(self, hexnode, manifest):
