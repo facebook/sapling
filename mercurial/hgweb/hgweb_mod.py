@@ -89,8 +89,6 @@ class requestcontext(object):
         self.repo = repo
         self.reponame = app.reponame
 
-        self.archives = ('zip', 'gz', 'bz2')
-
         self.maxchanges = self.configint('web', 'maxchanges', 10)
         self.stripecount = self.configint('web', 'stripes', 1)
         self.maxshortchanges = self.configint('web', 'maxshortchanges', 60)
@@ -126,16 +124,15 @@ class requestcontext(object):
         return self.repo.ui.configlist(section, name, default,
                                        untrusted=untrusted)
 
-    archivespecs = {
-        'bz2': ('application/x-bzip2', 'tbz2', '.tar.bz2', None),
-        'gz': ('application/x-gzip', 'tgz', '.tar.gz', None),
-        'zip': ('application/zip', 'zip', '.zip', None),
-    }
+    archivespecs = util.sortdict((
+        ('zip', ('application/zip', 'zip', '.zip', None)),
+        ('gz', ('application/x-gzip', 'tgz', '.tar.gz', None)),
+        ('bz2', ('application/x-bzip2', 'tbz2', '.tar.bz2', None)),
+    ))
 
     def archivelist(self, nodeid):
         allowed = self.configlist('web', 'allow_archive')
-        for typ in self.archives:
-            spec = self.archivespecs[typ]
+        for typ, spec in self.archivespecs.iteritems():
             if typ in allowed or self.configbool('web', 'allow%s' % typ):
                 yield {'type': typ, 'extension': spec[2], 'node': nodeid}
 
