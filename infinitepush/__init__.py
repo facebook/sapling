@@ -796,15 +796,16 @@ def _getrevs(bundle, oldnode, force, bookmark):
                           hint=_('use --non-forward-move to override'))
 
 @contextlib.contextmanager
-def logservicecall(logger, service):
+def logservicecall(logger, service, **kwargs):
     start = time.time()
-    logger(service, eventtype='start')
+    logger(service, eventtype='start', **kwargs)
     try:
         yield
-        logger(service, eventtype='success', elapsed=time.time() - start)
+        logger(service, eventtype='success', elapsed=time.time() - start,
+               **kwargs)
     except Exception as e:
         logger(service, eventtype='failure', elapsed=time.time() - start,
-               errormsg=str(e))
+               errormsg=str(e), **kwargs)
         raise
 
 def _getorcreateinfinitepushlogger(op):
@@ -895,7 +896,8 @@ def bundle2scratchbranch(op, part):
         if hasnewheads:
             with open(bundlefile, 'r') as f:
                 bundledata = f.read()
-                with logservicecall(log, 'bundlestore'):
+                with logservicecall(log, 'bundlestore',
+                                    bundlesize=len(bundledata)):
                     key = store.write(bundledata)
 
         with logservicecall(log, 'index'):
