@@ -1316,9 +1316,9 @@ def pullrebase(orig, ui, repo, *args, **opts):
                 ui.debug('--update and --rebase are not compatible, ignoring '
                          'the update flag\n')
 
-            ui.debug('before rebase: ensure working dir is clean\n')
             cmdutil.checkunfinished(repo)
-            cmdutil.bailifchanged(repo)
+            cmdutil.bailifchanged(repo, hint=_('cannot pull with rebase: '
+                'please commit or shelve your changes first'))
 
             revsprepull = len(repo)
             origpostincoming = commands.postincoming

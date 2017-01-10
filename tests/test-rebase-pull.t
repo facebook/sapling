@@ -78,6 +78,7 @@ Abort pull early if working dir is not clean:
   $ echo L1-mod > L1
   $ hg pull --rebase
   abort: uncommitted changes
+  (cannot pull with rebase: please commit or shelve your changes first)
   [255]
   $ hg update --clean --quiet
 
@@ -94,6 +95,41 @@ Abort pull early if another operation (histedit) is in progress:
   (use 'hg histedit --continue' or 'hg histedit --abort')
   [255]
   $ hg histedit --abort --quiet
+
+Abort pull early with pending uncommitted merge:
+
+  $ cd ..
+  $ hg clone --noupdate c d
+  $ cd d
+  $ hg tglog
+  o  1: 'C2'
+  |
+  o  0: 'C1'
+  
+  $ hg update --quiet 0
+  $ echo M1 > M1
+  $ hg commit --quiet -Am M1
+  $ hg update --quiet 1
+  $ hg merge 2
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  $ hg pull --rebase
+  abort: outstanding uncommitted merge
+  (cannot pull with rebase: please commit or shelve your changes first)
+  [255]
+  $ hg update --clean --quiet
+
+Abort pull early with unclean subrepo:
+  $ echo s = s > .hgsub
+  $ hg add .hgsub
+  $ hg init s
+  $ hg commit -m "generated a subrepo"
+  $ echo a > s/a
+  $ hg -R s add s/a
+  $ hg pull --rebase
+  abort: uncommitted changes in subrepository 's'
+  (cannot pull with rebase: please commit or shelve your changes first)
+  [255]
 
 Invoke pull --rebase and nothing to rebase:
 

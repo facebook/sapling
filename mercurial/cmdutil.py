@@ -355,15 +355,23 @@ def findrepo(p):
 
     return p
 
-def bailifchanged(repo, merge=True):
+def bailifchanged(repo, merge=True, hint=None):
+    """ enforce the precondition that working directory must be clean.
+
+    'merge' can be set to false if a pending uncommitted merge should be
+    ignored (such as when 'update --check' runs).
+
+    'hint' is the usual hint given to Abort exception.
+    """
+
     if merge and repo.dirstate.p2() != nullid:
-        raise error.Abort(_('outstanding uncommitted merge'))
+        raise error.Abort(_('outstanding uncommitted merge'), hint=hint)
     modified, added, removed, deleted = repo.status()[:4]
     if modified or added or removed or deleted:
-        raise error.Abort(_('uncommitted changes'))
+        raise error.Abort(_('uncommitted changes'), hint=hint)
     ctx = repo[None]
     for s in sorted(ctx.substate):
-        ctx.sub(s).bailifchanged()
+        ctx.sub(s).bailifchanged(hint=hint)
 
 def logmessage(ui, opts):
     """ get the log message according to -m and -l option """
