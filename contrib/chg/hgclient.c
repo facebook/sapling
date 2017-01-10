@@ -35,6 +35,7 @@ enum {
 	CAP_SETENV = 0x0800,
 	CAP_SETUMASK = 0x1000,
 	CAP_VALIDATE = 0x2000,
+	CAP_SETPROCNAME = 0x4000,
 };
 
 typedef struct {
@@ -50,6 +51,7 @@ static const cappair_t captable[] = {
 	{"setenv", CAP_SETENV},
 	{"setumask", CAP_SETUMASK},
 	{"validate", CAP_VALIDATE},
+	{"setprocname", CAP_SETPROCNAME},
 	{NULL, 0},  /* terminator */
 };
 
@@ -362,6 +364,14 @@ static void readhello(hgclient_t *hgc)
 	debugmsg("capflags=0x%04x, pid=%d", hgc->capflags, hgc->pid);
 }
 
+static void updateprocname(hgclient_t *hgc)
+{
+	size_t n = (size_t)snprintf(hgc->ctx.data, hgc->ctx.maxdatasize,
+			"chg[worker/%d]", (int)getpid());
+	hgc->ctx.datasize = n;
+	writeblockrequest(hgc, "setprocname");
+}
+
 static void attachio(hgclient_t *hgc)
 {
 	debugmsg("request attachio");
@@ -491,6 +501,8 @@ hgclient_t *hgc_open(const char *sockname)
 	readhello(hgc);
 	if (!(hgc->capflags & CAP_RUNCOMMAND))
 		abortmsg("insufficient capability: runcommand");
+	if (hgc->capflags & CAP_SETPROCNAME)
+		updateprocname(hgc);
 	if (hgc->capflags & CAP_ATTACHIO)
 		attachio(hgc);
 	if (hgc->capflags & CAP_CHDIR)
