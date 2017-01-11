@@ -1165,7 +1165,6 @@ Test a help topic
       denoting the revision prior to the tip, and so forth.
   
       A 40-digit hexadecimal string is treated as a unique revision identifier.
-  
       A hexadecimal string less than 40 characters long is treated as a unique
       revision identifier and is referred to as a short-form identifier. A
       short-form identifier is only valid if it is the prefix of exactly one
@@ -2781,10 +2780,7 @@ Dish up an empty repo; serve it cold.
   -2 denoting the revision prior to the tip, and so forth.
   </p>
   <p>
-  A 40-digit hexadecimal string is treated as a unique revision
-  identifier.
-  </p>
-  <p>
+  A 40-digit hexadecimal string is treated as a unique revision identifier.
   A hexadecimal string less than 40 characters long is treated as a
   unique revision identifier and is referred to as a short-form
   identifier. A short-form identifier is only valid if it is the prefix
