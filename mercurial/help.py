@@ -210,10 +210,8 @@ helptable = sorted([
     (["patterns"], _("File Name Patterns"), loaddoc('patterns')),
     (['environment', 'env'], _('Environment Variables'),
      loaddoc('environment')),
-    (['revisions', 'revs'], _('Specifying Single Revisions'),
-     loaddoc('revisions')),
-    (['revsets', 'revset', 'multirevs', 'mrevs'],
-     _("Specifying Revision Sets"), loaddoc('revsets')),
+    (['revisions', 'revs', 'revsets', 'revset', 'multirevs', 'mrevs'],
+      _('Specifying Revisions'), loaddoc('revisions')),
     (['filesets', 'fileset'], _("Specifying File Sets"), loaddoc('filesets')),
     (['diffs'], _('Diff Formats'), loaddoc('diffs')),
     (['merge-tools', 'mergetools'], _('Merge Tools'), loaddoc('merge-tools')),
@@ -280,7 +278,7 @@ def addtopicsymbols(topic, marker, symbols, dedent=False):
 addtopicsymbols('filesets', '.. predicatesmarker', fileset.symbols)
 addtopicsymbols('merge-tools', '.. internaltoolsmarker',
                 filemerge.internalsdoc)
-addtopicsymbols('revsets', '.. predicatesmarker', revset.symbols)
+addtopicsymbols('revisions', '.. predicatesmarker', revset.symbols)
 addtopicsymbols('templates', '.. keywordsmarker', templatekw.keywords)
 addtopicsymbols('templates', '.. filtersmarker', templatefilters.filters)
 addtopicsymbols('templates', '.. functionsmarker', templater.funcs)

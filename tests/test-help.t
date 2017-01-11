@@ -115,8 +115,7 @@ Short help:
    merge-tools   Merge Tools
    patterns      File Name Patterns
    phases        Working with Phases
-   revisions     Specifying Single Revisions
-   revsets       Specifying Revision Sets
+   revisions     Specifying Revisions
    scripting     Using Mercurial from scripts and automation
    subrepos      Subrepositories
    templating    Template Usage
@@ -191,8 +190,7 @@ Short help:
    merge-tools   Merge Tools
    patterns      File Name Patterns
    phases        Working with Phases
-   revisions     Specifying Single Revisions
-   revsets       Specifying Revision Sets
+   revisions     Specifying Revisions
    scripting     Using Mercurial from scripts and automation
    subrepos      Subrepositories
    templating    Template Usage
@@ -831,8 +829,7 @@ Test that default list of commands omits extension commands
    merge-tools   Merge Tools
    patterns      File Name Patterns
    phases        Working with Phases
-   revisions     Specifying Single Revisions
-   revsets       Specifying Revision Sets
+   revisions     Specifying Revisions
    scripting     Using Mercurial from scripts and automation
    subrepos      Subrepositories
    templating    Template Usage
@@ -1287,7 +1284,7 @@ Test help hooks
   >     return doc + '\nhelphook1\n'
   > 
   > def extsetup(ui):
-  >     help.addtopichook('revsets', rewrite)
+  >     help.addtopichook('revisions', rewrite)
   > EOF
   $ cat > helphook2.py <<EOF
   > from mercurial import help
@@ -1296,7 +1293,7 @@ Test help hooks
   >     return doc + '\nhelphook2\n'
   > 
   > def extsetup(ui):
-  >     help.addtopichook('revsets', rewrite)
+  >     help.addtopichook('revisions', rewrite)
   > EOF
   $ echo '[extensions]' >> $HGRCPATH
   $ echo "helphook1 = `pwd`/helphook1.py" >> $HGRCPATH
@@ -1933,14 +1930,7 @@ Dish up an empty repo; serve it cold.
   revisions
   </a>
   </td><td>
-  Specifying Single Revisions
-  </td></tr>
-  <tr><td>
-  <a href="/help/revsets">
-  revsets
-  </a>
-  </td><td>
-  Specifying Revision Sets
+  Specifying Revisions
   </td></tr>
   <tr><td>
   <a href="/help/scripting">
