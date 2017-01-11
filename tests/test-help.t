@@ -2352,7 +2352,6 @@ Dish up an empty repo; serve it cold.
   </div>
   </div>
   
-  <script type="text/javascript">process_dates()</script>
   
   
   </body>
@@ -2527,7 +2526,6 @@ Dish up an empty repo; serve it cold.
   </div>
   </div>
   
-  <script type="text/javascript">process_dates()</script>
   
   
   </body>
@@ -2723,7 +2721,6 @@ Dish up an empty repo; serve it cold.
   </div>
   </div>
   
-  <script type="text/javascript">process_dates()</script>
   
   
   </body>
@@ -2818,7 +2815,6 @@ Dish up an empty repo; serve it cold.
   </div>
   </div>
   
-  <script type="text/javascript">process_dates()</script>
   
   
   </body>
@@ -2915,7 +2911,6 @@ Sub-topic indexes rendered properly
   </div>
   </div>
   
-  <script type="text/javascript">process_dates()</script>
   
   
   </body>
@@ -3154,7 +3149,6 @@ Sub-topic topics rendered properly
   </div>
   </div>
   
-  <script type="text/javascript">process_dates()</script>
   
   
   </body>

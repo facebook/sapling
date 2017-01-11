@@ -131,7 +131,6 @@ revision
   
   </div>
   </div>
-  <script type="text/javascript">process_dates()</script>
   
   
   </body>
@@ -235,7 +234,6 @@ diff removed file
   </div>
   </div>
   
-  <script type="text/javascript">process_dates()</script>
   
   
   </body>

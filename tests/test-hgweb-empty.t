@@ -109,7 +109,6 @@ Some tests for hgweb in an empty repository
   </div>
   </div>
   
-  <script type="text/javascript">process_dates()</script>
   
   
   </body>
@@ -220,7 +219,6 @@ Some tests for hgweb in an empty repository
   </div>
   </div>
   
-  <script type="text/javascript">process_dates()</script>
   
   
   </body>
@@ -374,7 +372,6 @@ Some tests for hgweb in an empty repository
   </div>
   </div>
   
-  <script type="text/javascript">process_dates()</script>
   
   
   </body>
@@ -454,7 +451,6 @@ Some tests for hgweb in an empty repository
   </table>
   </div>
   </div>
-  <script type="text/javascript">process_dates()</script>
   
   
   </body>

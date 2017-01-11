@@ -829,7 +829,6 @@ Logs and changes
   </div>
   </div>
   
-  <script type="text/javascript">process_dates()</script>
   
   
   </body>
@@ -961,7 +960,6 @@ Logs and changes
   
   </div>
   </div>
-  <script type="text/javascript">process_dates()</script>
   
   
   </body>
@@ -1068,7 +1066,6 @@ Logs and changes
   </div>
   </div>
   
-  <script type="text/javascript">process_dates()</script>
   
   
   </body>
@@ -1352,7 +1349,6 @@ File-related
   </div>
   </div>
   
-  <script type="text/javascript">process_dates()</script>
   
   
   </body>
@@ -1478,7 +1474,6 @@ File-related
   </div>
   </div>
   
-  <script type="text/javascript">process_dates()</script>
   
   
   </body>
@@ -1690,7 +1685,6 @@ Overviews
     <td colspan="3"><a class="list" href="/branches?style=gitweb">...</a></td>
   </tr>
   </table>
-  <script type="text/javascript">process_dates()</script>
   <div class="page_footer">
   <div class="page_footer_text">test</div>
   <div class="rss_logo">
@@ -1835,7 +1829,6 @@ Overviews
       );
   </script>
   
-  <script type="text/javascript">process_dates()</script>
   <div class="page_footer">
   <div class="page_footer_text">test</div>
   <div class="rss_logo">

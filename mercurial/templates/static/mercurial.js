@@ -433,3 +433,7 @@ function ajaxScrollInit(urlFormat,
     window.addEventListener('resize', scrollHandler);
     scrollHandler();
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+   process_dates();
+}, false);

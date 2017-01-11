@@ -162,7 +162,6 @@ revision
   
   </div>
   </div>
-  <script type="text/javascript">process_dates()</script>
   
   
   </body>
@@ -299,7 +298,6 @@ diff removed file
   </div>
   </div>
   
-  <script type="text/javascript">process_dates()</script>
   
   
   </body>
@@ -442,7 +440,6 @@ revision
   
   </div>
   </div>
-  <script type="text/javascript">process_dates()</script>
   
   
   </body>
@@ -579,7 +576,6 @@ diff modified file
   </div>
   </div>
   
-  <script type="text/javascript">process_dates()</script>
   
   
   </body>
@@ -703,7 +699,6 @@ comparison new file
   </div>
   </div>
   
-  <script type="text/javascript">process_dates()</script>
   
   
   </body>
@@ -837,7 +832,6 @@ comparison existing file
   </div>
   </div>
   
-  <script type="text/javascript">process_dates()</script>
   
   
   </body>
@@ -969,7 +963,6 @@ comparison removed file
   </div>
   </div>
   
-  <script type="text/javascript">process_dates()</script>
   
   
   </body>
@@ -1096,7 +1089,6 @@ comparison not-modified file
   </div>
   </div>
   
-  <script type="text/javascript">process_dates()</script>
   
   
   </body>

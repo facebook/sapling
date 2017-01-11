@@ -186,7 +186,6 @@ hgweb filerevision, html
   </div>
   </div>
   
-  <script type="text/javascript">process_dates()</script>
   
   
   </body>
@@ -857,7 +856,6 @@ hgweb fileannotate, html
   </div>
   </div>
   
-  <script type="text/javascript">process_dates()</script>
   
   
   </body>

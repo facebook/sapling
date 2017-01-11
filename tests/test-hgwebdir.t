@@ -898,7 +898,6 @@ should succeed, slashy names
   </table>
   </div>
   </div>
-  <script type="text/javascript">process_dates()</script>
   
   
   </body>
@@ -969,7 +968,6 @@ should succeed, slashy names
   </table>
   </div>
   </div>
-  <script type="text/javascript">process_dates()</script>
   
   
   </body>
@@ -1407,7 +1405,6 @@ test inexistent and inaccessible repo should be ignored silently
   </table>
   </div>
   </div>
-  <script type="text/javascript">process_dates()</script>
   
   
   </body>

@@ -139,7 +139,6 @@ manifest with descending (paper)
   </table>
   </div>
   </div>
-  <script type="text/javascript">process_dates()</script>
   
   
   </body>
@@ -259,7 +258,6 @@ manifest with descending (coal)
   </table>
   </div>
   </div>
-  <script type="text/javascript">process_dates()</script>
   
   
   </body>
@@ -360,7 +358,6 @@ manifest with descending (monoblue)
           
       </table>
   
-      <script type="text/javascript">process_dates()</script>
       <div class="page-footer">
           <p>Mercurial Repository: test</p>
           <ul class="rss-logo">
@@ -470,7 +467,6 @@ manifest with descending (gitweb)
   
   </table>
   
-  <script type="text/javascript">process_dates()</script>
   <div class="page_footer">
   <div class="page_footer_text">test</div>
   <div class="rss_logo">
@@ -551,7 +547,6 @@ manifest with descending (spartan)
   </a>
   
   </table>
-  <script type="text/javascript">process_dates()</script>
   
   <div class="logo">
   <a href="https://mercurial-scm.org/">

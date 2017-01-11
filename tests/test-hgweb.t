@@ -99,7 +99,6 @@ should give a 404 - static file that does not exist
   </div>
   </div>
   
-  <script type="text/javascript">process_dates()</script>
   
   
   </body>
@@ -207,7 +206,6 @@ should give a 404 - file does not exist
   </div>
   </div>
   
-  <script type="text/javascript">process_dates()</script>
   
   
   </body>
@@ -318,7 +316,6 @@ try bad style
   </table>
   </div>
   </div>
-  <script type="text/javascript">process_dates()</script>
   
   
   </body>

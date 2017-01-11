@@ -242,7 +242,6 @@ tip - two revisions
   </div>
   </div>
   
-  <script type="text/javascript">process_dates()</script>
   
   
   </body>
@@ -362,7 +361,6 @@ second version - two revisions
   </div>
   </div>
   
-  <script type="text/javascript">process_dates()</script>
   
   
   </body>
@@ -474,7 +472,6 @@ first deleted - one revision
   </div>
   </div>
   
-  <script type="text/javascript">process_dates()</script>
   
   
   </body>
@@ -586,7 +583,6 @@ first version - one revision
   </div>
   </div>
   
-  <script type="text/javascript">process_dates()</script>
   
   
   </body>
@@ -651,7 +647,6 @@ before addition - error
   </div>
   </div>
   
-  <script type="text/javascript">process_dates()</script>
   
   
   </body>
@@ -757,7 +752,6 @@ should show base link, use spartan because it shows it
   
   
   
-  <script type="text/javascript">process_dates()</script>
   
   <div class="logo">
   <a href="https://mercurial-scm.org/">
