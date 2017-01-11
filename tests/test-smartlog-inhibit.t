@@ -25,7 +25,7 @@ with the inhibit extension enabled.
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg amend -m "amended"
   warning: the changeset's children were left behind
-  (use 'hg amend --fixup' to rebase them)
+  (use 'hg rebase --restack' (alias: 'hg restack') to rebase them)
   $ hg smartlog -T '{rev} {bookmarks}'
   warning: there is no master changeset locally, try pulling from server
   @  4
