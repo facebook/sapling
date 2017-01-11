@@ -19,6 +19,7 @@ from .common import (
     HTTP_NOT_FOUND,
     HTTP_OK,
     HTTP_SERVER_ERROR,
+    cspvalues,
     get_contact,
     get_mtime,
     ismember,
@@ -227,8 +228,12 @@ class hgwebdir(object):
         try:
             self.refresh()
 
+            csp, nonce = cspvalues(self.ui)
+            if csp:
+                req.headers.append(('Content-Security-Policy', csp))
+
             virtual = req.env.get("PATH_INFO", "").strip('/')
-            tmpl = self.templater(req)
+            tmpl = self.templater(req, nonce)
             ctype = tmpl('mimetype', encoding=encoding.encoding)
             ctype = templater.stringify(ctype)
 
@@ -466,7 +471,7 @@ class hgwebdir(object):
                     sortcolumn=sortcolumn, descending=descending,
                     **dict(sort))
 
-    def templater(self, req):
+    def templater(self, req, nonce):
 
         def motd(**map):
             if self.motd is not None:
@@ -510,6 +515,7 @@ class hgwebdir(object):
             "staticurl": staticurl,
             "sessionvars": sessionvars,
             "style": style,
+            "nonce": nonce,
         }
         tmpl = templater.templater.frommapfile(mapfile, defaults=defaults)
         return tmpl

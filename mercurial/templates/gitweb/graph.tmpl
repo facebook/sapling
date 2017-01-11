@@ -45,7 +45,7 @@ graph |
 <ul id="graphnodes"></ul>
 </div>
 
-<script>
+<script{if(nonce, ' nonce="{nonce}"')}>
 <!-- hide script content
 
 var data = {jsdata|json};
@@ -108,7 +108,7 @@ graph.render(data);
 | {changenav%navgraph}
 </div>
 
-<script type="text/javascript">
+<script type="text/javascript"{if(nonce, ' nonce="{nonce}"')}>
     ajaxScrollInit(
             '{url|urlescape}graph/{rev}?revcount=%next%&style={style}',
             {revcount}+60,

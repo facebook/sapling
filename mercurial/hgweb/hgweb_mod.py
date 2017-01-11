@@ -19,6 +19,7 @@ from .common import (
     HTTP_OK,
     HTTP_SERVER_ERROR,
     caching,
+    cspvalues,
     permhooks,
 )
 from .request import wsgirequest
@@ -115,6 +116,8 @@ class requestcontext(object):
         # of the request.
         self.websubtable = app.websubtable
 
+        self.csp, self.nonce = cspvalues(self.repo.ui)
+
     # Trust the settings from the .hg/hgrc files by default.
     def config(self, section, name, default=None, untrusted=True):
         return self.repo.ui.config(section, name, default,
@@ -201,6 +204,7 @@ class requestcontext(object):
             'sessionvars': sessionvars,
             'pathdef': makebreadcrumb(req.url),
             'style': style,
+            'nonce': self.nonce,
         }
         tmpl = templater.templater.frommapfile(mapfile,
                                                filters={'websub': websubfilter},
@@ -318,6 +322,13 @@ class hgweb(object):
         encoding.encoding = rctx.config('web', 'encoding', encoding.encoding)
         rctx.repo.ui.environ = req.env
 
+        if rctx.csp:
+            # hgwebdir may have added CSP header. Since we generate our own,
+            # replace it.
+            req.headers = [h for h in req.headers
+                           if h[0] != 'Content-Security-Policy']
+            req.headers.append(('Content-Security-Policy', rctx.csp))
+
         # work with CGI variables to create coherent structure
         # use SCRIPT_NAME, PATH_INFO and QUERY_STRING as well as our REPO_NAME
 
@@ -414,7 +425,9 @@ class hgweb(object):
                 req.form['cmd'] = [tmpl.cache['default']]
                 cmd = req.form['cmd'][0]
 
-            if rctx.configbool('web', 'cache', True):
+            # Don't enable caching if using a CSP nonce because then it wouldn't
+            # be a nonce.
+            if rctx.configbool('web', 'cache', True) and not rctx.nonce:
                 caching(self, req) # sets ETag header or raises NOT_MODIFIED
             if cmd not in webcommands.__all__:
                 msg = 'no such method: %s' % cmd

@@ -40,7 +40,7 @@ shortlog |
 {changenav%navshort}
 </div>
 
-<script type="text/javascript">
+<script type="text/javascript"{if(nonce, ' nonce="{nonce}"')}>
     ajaxScrollInit(
             '{url|urlescape}shortlog/%next%{sessionvars%urlparameter}',
             '{nextentry%"{node}"}', <!-- NEXTHASH

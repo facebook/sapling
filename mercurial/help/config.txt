@@ -2111,6 +2111,20 @@ The full set of options is:
     Name or email address of the person in charge of the repository.
     (default: ui.username or ``$EMAIL`` or "unknown" if unset or empty)
 
+``csp``
+    Send a ``Content-Security-Policy`` HTTP header with this value.
+
+    The value may contain a special string ``%nonce%``, which will be replaced
+    by a randomly-generated one-time use value. If the value contains
+    ``%nonce%``, ``web.cache`` will be disabled, as caching undermines the
+    one-time property of the nonce. This nonce will also be inserted into
+    ``<script>`` elements containing inline JavaScript.
+
+    Note: lots of HTML content sent by the server is derived from repository
+    data. Please consider the potential for malicious repository data to
+    "inject" itself into generated HTML content as part of your security
+    threat model.
+
 ``deny_push``
     Whether to deny pushing to the repository. If empty or not set,
     push is not denied. If the special value ``*``, all remote users are
