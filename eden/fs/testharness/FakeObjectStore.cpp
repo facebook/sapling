@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2016, Facebook, Inc.
+ *  Copyright (c) 2017, Facebook, Inc.
  *  All rights reserved.
  *
  *  This source code is licensed under the BSD-style license found in the
@@ -27,7 +27,8 @@ FakeObjectStore::FakeObjectStore() {}
 FakeObjectStore::~FakeObjectStore() {}
 
 void FakeObjectStore::addTree(Tree&& tree) {
-  trees_.emplace(tree.getHash(), std::move(tree));
+  auto treeHash = tree.getHash();
+  trees_.emplace(std::move(treeHash), std::move(tree));
 }
 
 void FakeObjectStore::addBlob(Blob&& blob) {
@@ -36,8 +37,9 @@ void FakeObjectStore::addBlob(Blob&& blob) {
   auto metadata =
       BlobMetadata{sha1, blob.getContents().computeChainDataLength()};
 
-  blobs_.emplace(blob.getHash(), std::move(blob));
-  blobMetadata_.emplace(blob.getHash(), metadata);
+  auto blobHash = blob.getHash();
+  blobs_.emplace(blobHash, std::move(blob));
+  blobMetadata_.emplace(std::move(blobHash), metadata);
 }
 
 void FakeObjectStore::setTreeForCommit(const Hash& commitID, Tree&& tree) {
