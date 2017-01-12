@@ -33,7 +33,7 @@ Specifying multiple revisions
 =============================
 
 Mercurial supports a functional language for selecting a set of
-revisions.
+revisions. Expressions in this language are called revsets.
 
 The language supports a number of predicates which are joined by infix
 operators. Parenthesis can be used for grouping.
