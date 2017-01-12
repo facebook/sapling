@@ -1253,6 +1253,9 @@ def hidden(repo, subset, x):
 def keyword(repo, subset, x):
     """Search commit message, user name, and names of changed files for
     string. The match is case-insensitive.
+
+    For a regular expression or case sensitive search of these fields, use
+    ``grep(regex)``.
     """
     # i18n: "keyword" is a keyword
     kw = encoding.lower(getstring(x, _("keyword requires a string")))
