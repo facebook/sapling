@@ -1517,6 +1517,13 @@ prepare a stack of patches depending on each other
   |
   o  initial [Babar] 2: +8/-0
   
+Adding those config options should not change the output of diffstat. Bugfix #4755.
+
+  $ hg log -r . --template '{diffstat}\n'
+  1: +1/-0
+  $ hg log -r . --template '{diffstat}\n' --config diff.git=1 \
+  >   --config diff.noprefix=1
+  1: +1/-0
 
 Importing with some success and some errors:
 
