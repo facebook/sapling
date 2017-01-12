@@ -29,6 +29,12 @@ working directory is checked out, it is equivalent to null. If an
 uncommitted merge is in progress, "." is the revision of the first
 parent.
 
+Finally, commands that expect a single revision (like ``hg update``) also
+accept revsets (see below for details). When given a revset, they use the
+last revision of the revset. A few commands accept two single revisions
+(like ``hg diff``). When given a revset, they use the first and the last
+revisions of the revset.
+
 Specifying multiple revisions
 =============================
 
@@ -188,3 +194,13 @@ Some sample queries:
   release::
 
     hg log -r "(keyword(bug) or keyword(issue)) and not ancestors(tag())"
+
+- Update to commit that bookmark @ is pointing too, without activating the
+  bookmark (this works because the last revision of the revset is used)::
+
+    hg update :@
+
+- Show diff between tags 1.3 and 1.5 (this works because the first and the
+  last revisions of the revset are used)::
+
+    hg diff -r 1.3::1.5

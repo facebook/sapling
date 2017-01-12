@@ -731,14 +731,14 @@ Test help topic with same name as extension
   $ echo "multirevs = multirevs.py" >> $HGRCPATH
 
   $ hg help multirevs | tail
+        bookmark (this works because the last revision of the revset is used):
   
-      - Changesets committed in May 2008, sorted by user:
+          hg update :@
   
-          hg log -r "sort(date('May 2008'), user)"
+      - Show diff between tags 1.3 and 1.5 (this works because the first and the
+        last revisions of the revset are used):
   
-      - Changesets mentioning "bug" or "issue" that are not in a tagged release:
-  
-          hg log -r "(keyword(bug) or keyword(issue)) and not ancestors(tag())"
+          hg diff -r 1.3::1.5
   
   use 'hg help -c multirevs' to see help for the multirevs command
 
