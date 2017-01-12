@@ -102,9 +102,10 @@ test transplanted revset
   7  b3
   $ hg log -r 'transplanted(head())' --template '{rev} {parents} {desc}\n'
   7  b3
-  $ hg help revsets | grep transplanted
+  $ hg help revisions.transplanted
       "transplanted([set])"
         Transplanted changesets in set, or all transplanted changesets.
+  
 
 test transplanted keyword
 

@@ -888,9 +888,10 @@ mq revset
   $ hg log -r 'mq()' --template '{rev}\n'
   1
   2
-  $ hg help revsets | grep -i mq
+  $ hg help revisions.mq
       "mq()"
         Changesets managed by MQ.
+  
 
 bad node in status
 
