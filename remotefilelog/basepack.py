@@ -1,5 +1,6 @@
 import errno, hashlib, mmap, os, struct, time
 from mercurial import osutil
+from mercurial.i18n import _
 
 import shallowutil
 
@@ -37,7 +38,7 @@ SMALLFANOUTCUTOFF = 2**16 / 8
 REFRESHRATE = 0.1
 
 class basepackstore(object):
-    def __init__(self, path):
+    def __init__(self, ui, path):
         self.path = path
         self.packs = []
         # lastrefesh is 0 so we'll immediately check for new packs on the first
@@ -47,12 +48,17 @@ class basepackstore(object):
         for filepath in self._getavailablepackfiles():
             try:
                 pack = self.getpack(filepath)
-            except (OSError, IOError) as ex:
-                # someone could have removed the file since we retrieved the
-                # list of paths.  if that happens, just don't add the pack to
-                # the list of available packs.
-                if ex.errno != errno.ENOENT:
-                    raise
+            except Exception as ex:
+                # An exception may be thrown if the pack file is corrupted
+                # somehow.  Log a warning but keep going in this case, just
+                # skipping this pack file.
+                #
+                # If this is an ENOENT error then don't even bother logging.
+                # Someone could have removed the file since we retrieved the
+                # list of paths.
+                if getattr(ex, 'errno', None) != errno.ENOENT:
+                    ui.warn(_('unable to load pack %s: %s\n') % (filepath, ex))
+                    pass
                 continue
             self.packs.append(pack)
 

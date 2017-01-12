@@ -57,11 +57,12 @@ def wraprepo(repo):
     usecdatapack = repo.ui.configbool('remotefilelog', 'fastdatapack')
 
     packpath = shallowutil.getcachepackpath(repo, PACK_CATEGORY)
-    datastore = datapackstore(packpath, usecdatapack=usecdatapack)
+    datastore = datapackstore(repo.ui, packpath, usecdatapack=usecdatapack)
 
     localpackpath = shallowutil.getlocalpackpath(repo.svfs.vfs.base,
                                                  PACK_CATEGORY)
-    localdatastore = datapackstore(localpackpath, usecdatapack=usecdatapack)
+    localdatastore = datapackstore(repo.ui, localpackpath,
+                                   usecdatapack=usecdatapack)
 
     repo.svfs.sharedmanifestdatastores = [datastore]
     repo.svfs.localmanifestdatastores = [localdatastore]

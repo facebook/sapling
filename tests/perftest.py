@@ -39,7 +39,7 @@ def testpackedtrees(ui, repo, *args, **opts):
             buildtreepack(repo, newpack, opts.get('build'))
             newpack.close()
 
-    packstore = datapack.datapackstore(opener.base,
+    packstore = datapack.datapackstore(ui, opener.base,
             usecdatapack=ui.configbool('remotefilelog', 'fastdatapack'))
     unionstore = contentstore.unioncontentstore(packstore)
 
@@ -63,7 +63,7 @@ class cachestore(object):
 def buildtreepack(repo, pack, revs):
     mf = repo.manifest
     cache = cachestore()
-    packstore = datapack.datapackstore(pack.opener.base)
+    packstore = datapack.datapackstore(repo.ui, pack.opener.base)
     store = contentstore.unioncontentstore(cache, packstore)
     ctxs = list(repo.set(revs))
     for count, ctx in enumerate(ctxs):
