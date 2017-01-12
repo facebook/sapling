@@ -62,6 +62,7 @@ class hybridmanifest(object):
         self.ui = ui
         self.opener = opener
         self.node = node
+        self.basemanifest = None
 
         self.cachekey = revlog.hex(self.node) if self.node is not None else None
 
@@ -229,45 +230,67 @@ class hybridmanifest(object):
 
     def copy(self):
         copy = self._manifest('copy').copy()
-        return self._converttohybridmanifest(copy)
+        hybridmf = self._converttohybridmanifest(copy)
+        hybridmf.basemanifest = self.basemanifest or self
+        return hybridmf
 
     def matches(self, *args, **kwargs):
         matches = self._manifest('matches').matches(*args, **kwargs)
-        return self._converttohybridmanifest(matches)
+        hybridmf = self._converttohybridmanifest(matches)
+        hybridmf.basemanifest = self.basemanifest or self
+        return hybridmf
 
     def _getmatchingtypemanifest(self, m2, operation):
         # Find _m1 and _m2 of the same type, to provide the fastest computation
-        _m1, _m2 = None, None
-        hit = False
         if isinstance(m2, hybridmanifest):
             self.debug("[FM] %s: other side is hybrid manifest\n" % operation)
-            # CACHE HIT
+
+            # Best case: both are in the cache
             if self._incache() and m2._incache():
-                _m1, _m2 = self._cachedmanifest(), m2._cachedmanifest()
-                # _m1 or _m2 can be None if _incache was True if the cache
-                # got garbage collected in the meantime or entry is corrupted
-                if _m1 is None or _m2 is None:
-                    self.debug("[FM] %s: unable to load one or "
-                               "more manifests\n" % operation)
-                    _m1, _m2 = self._flatmanifest(), m2._flatmanifest()
-                else:
-                    hit = True
-            # CACHE MISS
-            else:
-                _m1, _m2 = self._treemanifest(), m2._treemanifest()
-                if _m1 is None or _m2 is None:
-                    self.debug("[FM] %s: cache miss\n" % operation)
-                    _m1, _m2 = self._flatmanifest(), m2._flatmanifest()
-                else:
-                    self.debug(("[FM] %s: loaded matching tree "
-                                "manifests\n") % operation)
+                cachedmf1 = self._cachedmanifest()
+                cachedmf2 = m2._cachedmanifest()
+                if cachedmf1 is not None and cachedmf2 is not None:
+                    return cachedmf1, cachedmf2, True
+
+            # Second best: both are trees
+            treemf1 = self._treemanifest()
+            treemf2 = m2._treemanifest()
+            if treemf1 is not None and treemf2 is not None:
+                self.debug(("[FM] %s: loaded matching tree "
+                            "manifests\n") % operation)
+                return treemf1, treemf2, False
+
+            # Third best: one tree, one computed tree
+            def canbuildtree(m):
+                return (m._cachedmanifest() is not None and
+                        m.basemanifest is not None and
+                        m.basemanifest._cachedmanifest() is not None and
+                        m.basemanifest._treemanifest() is not None)
+
+            def buildtree(m):
+                diff = m.basemanifest._cachedmanifest().diff(
+                        m._cachedmanifest())
+                temptreemf = m.basemanifest._treemanifest().copy()
+                for f, ((an, af), (bn, bf)) in diff.iteritems():
+                    temptreemf.set(f, bn, bf)
+                return temptreemf
+
+            if treemf1 is not None and canbuildtree(m2):
+                self.debug(("[FM] %s: computed matching tree "
+                            "manifests\n") % operation)
+                return treemf1, buildtree(m2), False
+            elif treemf2 is not None and canbuildtree(self):
+                self.debug(("[FM] %s: computed matching tree "
+                            "manifests\n") % operation)
+                return buildtree(self), treemf2, False
+
+            # Worst: both flat
+            self.debug("[FM] %s: cache and tree miss\n" % operation)
+            return self._flatmanifest(), m2._flatmanifest(), False
         else:
             # This happens when diffing against a new manifest (like rev -1)
             self.debug("[FM] %s: other side not hybrid manifest\n" % operation)
-            _m1, _m2 = self._flatmanifest(), m2
-
-        assert type(_m1) == type(_m2)
-        return _m1, _m2, hit
+            return self._flatmanifest(), m2, False
 
     def diff(self, m2, *args, **kwargs):
         self.debug("[FM] performing diff\n")

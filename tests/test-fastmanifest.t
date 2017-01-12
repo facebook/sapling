@@ -92,7 +92,7 @@ manifest of each parent, one is cached (-1) and the other is not:
   [FM] cache miss for fastmanifest 7ab5760d084a24168f7595c38c00f4bbc2e308d9
   [FM] performing diff
   [FM] diff: other side is hybrid manifest
-  [FM] diff: cache miss
+  [FM] diff: cache and tree miss
   diff -r 47d2a3944de8b013de3be9578e8e344ea2e6c097 -r 9d206ffc875e1bc304590549be293be36821e66c e
   --- /dev/null
   +++ b/e
@@ -150,7 +150,7 @@ Test the --pruneall command to prune all the cached manifests
   [FM] cache miss for fastmanifest 7ab5760d084a24168f7595c38c00f4bbc2e308d9
   [FM] performing diff
   [FM] diff: other side is hybrid manifest
-  [FM] diff: cache miss
+  [FM] diff: cache and tree miss
   diff -r 47d2a3944de8b013de3be9578e8e344ea2e6c097 -r 9d206ffc875e1bc304590549be293be36821e66c e
   --- /dev/null
   +++ b/e
