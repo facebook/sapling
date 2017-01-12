@@ -556,9 +556,9 @@ def author(repo, subset, x):
     """Alias for ``user(string)``.
     """
     # i18n: "author" is a keyword
-    n = encoding.lower(getstring(x, _("author requires a string")))
-    kind, pattern, matcher = _substringmatcher(n)
-    return subset.filter(lambda x: matcher(encoding.lower(repo[x].user())),
+    n = getstring(x, _("author requires a string"))
+    kind, pattern, matcher = _substringmatcher(n, casesensitive=False)
+    return subset.filter(lambda x: matcher(repo[x].user()),
                          condrepr=('<user %r>', n))
 
 @predicate('bisect(string)', safe=True)
@@ -2249,10 +2249,15 @@ def subrepo(repo, subset, x):
 
     return subset.filter(matches, condrepr=('<subrepo %r>', pat))
 
-def _substringmatcher(pattern):
-    kind, pattern, matcher = util.stringmatcher(pattern)
+def _substringmatcher(pattern, casesensitive=True):
+    kind, pattern, matcher = util.stringmatcher(pattern,
+                                                casesensitive=casesensitive)
     if kind == 'literal':
-        matcher = lambda s: pattern in s
+        if not casesensitive:
+            pattern = encoding.lower(pattern)
+            matcher = lambda s: pattern in encoding.lower(s)
+        else:
+            matcher = lambda s: pattern in s
     return kind, pattern, matcher
 
 @predicate('tag([name])', safe=True)

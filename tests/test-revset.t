@@ -865,6 +865,17 @@ test ancestors
   7
   8
   9
+  $ log 'author(r"re:\S")'
+  0
+  1
+  2
+  3
+  4
+  5
+  6
+  7
+  8
+  9
   $ log 'branch(é)'
   8
   9
