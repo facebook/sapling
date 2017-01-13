@@ -32,7 +32,7 @@
 
 using std::string;
 using std::unique_ptr;
-using folly::make_unique;
+using std::make_unique;
 using folly::StringPiece;
 
 namespace facebook {
