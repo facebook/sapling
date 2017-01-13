@@ -325,6 +325,7 @@ pypats = [
     # XXX only catch mutable arguments on the first line of the definition
     (r'def.*[( ]\w+=\{\}', "don't use mutable default arguments"),
     (r'\butil\.Abort\b', "directly use error.Abort"),
+    (r'^@(\w*\.)?cachefunc', "module-level @cachefunc is risky, please avoid"),
     (r'^import Queue', "don't use Queue, use util.queue + util.empty"),
     (r'^import cStringIO', "don't use cStringIO.StringIO, use util.stringio"),
     (r'^import urllib', "don't use urllib, use util.urlreq/util.urlerr"),
