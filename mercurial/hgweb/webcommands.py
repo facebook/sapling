@@ -974,26 +974,20 @@ def filelog(web, req, tmpl):
     count = fctx.filerev() + 1
     start = max(0, fctx.filerev() - revcount + 1) # first rev on this page
     end = min(count, start + revcount) # last rev on this page
-    parity = paritygen(web.stripecount, offset=start - end)
+    parity = paritygen(web.stripecount, offset=start - end + 1)
 
-    def entries():
-        l = []
+    repo = web.repo
+    revs = fctx.filelog().revs(start, end - 1)
+    entries = []
+    for i in reversed(revs):
+        iterfctx = fctx.filectx(i)
+        entries.append(dict(
+            parity=next(parity),
+            filerev=i,
+            file=f,
+            rename=webutil.renamelink(iterfctx),
+            **webutil.commonentry(repo, iterfctx)))
 
-        repo = web.repo
-        revs = fctx.filelog().revs(start, end - 1)
-        for i in revs:
-            iterfctx = fctx.filectx(i)
-
-            l.append(dict(
-                parity=next(parity),
-                filerev=i,
-                file=f,
-                rename=webutil.renamelink(iterfctx),
-                **webutil.commonentry(repo, iterfctx)))
-        for e in reversed(l):
-            yield e
-
-    entries = list(entries())
     latestentry = entries[:1]
 
     revnav = webutil.filerevnav(web.repo, fctx.path())
