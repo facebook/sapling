@@ -1,12 +1,18 @@
 import hashlib
+import os
 import random
 import shutil
+import stat
 import struct
+import sys
 import tempfile
 import time
 import unittest
 
 import silenttestrunner
+
+# Load the local remotefilelog, not the system one
+sys.path[0:0] = [os.path.join(os.path.dirname(__file__), '..')]
 
 from remotefilelog.datapack import (
     datapack,
@@ -19,7 +25,6 @@ from remotefilelog.basepack import (
     LARGEFANOUTPREFIX,
 )
 
-from mercurial import scmutil
 from mercurial.node import nullid
 import mercurial.ui
 
@@ -51,8 +56,7 @@ class datapacktestsbase(object):
             revisions = [("filename", self.getFakeHash(), nullid, "content")]
 
         packdir = self.makeTempDir()
-        opener = scmutil.vfs(packdir)
-        packer = mutabledatapack(mercurial.ui.ui(), opener)
+        packer = mutabledatapack(mercurial.ui.ui(), packdir)
 
         for filename, node, base, content in revisions:
             packer.add(filename, node, base, content)
@@ -180,6 +184,7 @@ class datapacktestsbase(object):
         with open(path) as f:
             raw = f.read()
         raw = struct.pack('!B', 1) + raw[1:]
+        os.chmod(path, os.stat(path).st_mode | stat.S_IWRITE)
         with open(path, 'w+') as f:
             f.write(raw)
 

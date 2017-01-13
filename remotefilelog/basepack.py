@@ -1,5 +1,5 @@
 import errno, hashlib, mmap, os, struct, time
-from mercurial import osutil
+from mercurial import osutil, scmutil
 from mercurial.i18n import _
 
 import shallowutil
@@ -206,11 +206,14 @@ class basepack(object):
         raise NotImplemented()
 
 class mutablebasepack(object):
-    def __init__(self, ui, opener):
+    def __init__(self, ui, packdir):
+        opener = scmutil.vfs(packdir)
+        opener.createmode = 0o444
         self.opener = opener
+
         self.entries = {}
 
-        shallowutil.mkstickygroupdir(ui, opener.base)
+        shallowutil.mkstickygroupdir(ui, packdir)
         self.packfp, self.packpath = opener.mkstemp(
             suffix=self.PACKSUFFIX + '-tmp')
         self.idxfp, self.idxpath = opener.mkstemp(

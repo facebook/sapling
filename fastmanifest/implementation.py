@@ -11,7 +11,7 @@ import os
 import time
 import heapq
 
-from mercurial import manifest, mdiff, revlog, scmutil, util
+from mercurial import manifest, mdiff, revlog, util
 import cachemanager
 import cfastmanifest
 from metrics import metricscollector
@@ -921,10 +921,9 @@ class manifestfactory(object):
                     packpath = shallowutil.getlocalpackpath(
                             origself.opener.vfs.base,
                             'manifests')
-                    localpackopener = scmutil.vfs(packpath)
                     transaction.treepack = datapack.mutabledatapack(
                             self.ui,
-                            localpackopener)
+                            packpath)
                     def postclose(tr):
                         tr.treepack.close()
                         treemanifestcache.getinstance(origself.opener,

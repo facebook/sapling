@@ -309,8 +309,8 @@ class mutablehistorypack(basepack.mutablebasepack):
     PACKSUFFIX = PACKSUFFIX
     INDEXENTRYLENGTH = INDEXENTRYLENGTH
 
-    def __init__(self, ui, opener):
-        super(mutablehistorypack, self).__init__(ui, opener)
+    def __init__(self, ui, packpath):
+        super(mutablehistorypack, self).__init__(ui, packpath)
         self.pastfiles = {}
         self.currentfile = None
         self.currententries = []

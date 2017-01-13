@@ -21,7 +21,6 @@ from mercurial import (
     error,
     extensions,
     localrepo,
-    scmutil,
     util,
 )
 from mercurial.i18n import _
@@ -80,8 +79,7 @@ def _unpackmanifests(orig, self, repo, *args, **kwargs):
 
         # TODO: only put in cache if pulling from main server
         packpath = shallowutil.getcachepackpath(repo, PACK_CATEGORY)
-        opener = scmutil.vfs(packpath)
-        with mutabledatapack(repo.ui, opener) as dpack:
+        with mutabledatapack(repo.ui, packpath) as dpack:
             recordmanifest(dpack, repo, oldtip, len(mfrevlog))
             dpack.close()
 

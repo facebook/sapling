@@ -8,7 +8,7 @@
 from mercurial.i18n import _
 from mercurial.node import hex, bin, nullid
 from mercurial import util, sshpeer, hg, error, util, wireproto, httppeer
-from mercurial import extensions, scmutil
+from mercurial import extensions
 import hashlib, os, lz4, time, io, struct
 import itertools
 
@@ -444,11 +444,8 @@ class fileserverclient(object):
                                                 constants.FILEPACK_CATEGORY)
         shallowutil.mkstickygroupdir(self.repo.ui, packpath)
 
-        opener = scmutil.vfs(packpath)
-        # Packs should be write-once files, so set them to read-only.
-        opener.createmode = 0o444
-        with datapack.mutabledatapack(self.ui, opener) as dpack:
-            with historypack.mutablehistorypack(self.ui, opener) as hpack:
+        with datapack.mutabledatapack(self.ui, packpath) as dpack:
+            with historypack.mutablehistorypack(self.ui, packpath) as hpack:
                 for filename in self.readfiles(remote):
                     i += 1
                     self.ui.progress(_downloading, i, total=len(groupedfiles))

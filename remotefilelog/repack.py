@@ -1,7 +1,7 @@
 import os
 from collections import defaultdict
 from hgext3rd.extutil import runshellcommand
-from mercurial import error, mdiff, osutil, scmutil, util
+from mercurial import error, mdiff, osutil, util
 from mercurial.node import nullid
 from mercurial.i18n import _
 import constants, datapack, historypack, contentstore, metadatastore
@@ -213,11 +213,8 @@ def _runrepack(repo, data, history, packpath, category):
 
     packer = repacker(repo, data, history, category)
 
-    opener = scmutil.vfs(packpath)
-    # Packs should be write-once files, so set them to read-only.
-    opener.createmode = 0o444
-    with datapack.mutabledatapack(repo.ui, opener) as dpack:
-        with historypack.mutablehistorypack(repo.ui, opener) as hpack:
+    with datapack.mutabledatapack(repo.ui, packpath) as dpack:
+        with historypack.mutablehistorypack(repo.ui, packpath) as hpack:
             try:
                 packer.run(dpack, hpack)
             except error.LockHeld:

@@ -33,13 +33,12 @@ def testpackedtrees(ui, repo, *args, **opts):
     packpath = shallowutil.getcachepackpath(repo, 'manifest')
     if not os.path.exists(packpath):
         os.mkdir(packpath)
-    opener = scmutil.vfs(packpath)
     if opts.get('build'):
-        with datapack.mutabledatapack(opener) as newpack:
+        with datapack.mutabledatapack(ui, packpath) as newpack:
             buildtreepack(repo, newpack, opts.get('build'))
             newpack.close()
 
-    packstore = datapack.datapackstore(ui, opener.base,
+    packstore = datapack.datapackstore(ui, packpath,
             usecdatapack=ui.configbool('remotefilelog', 'fastdatapack'))
     unionstore = contentstore.unioncontentstore(packstore)
 

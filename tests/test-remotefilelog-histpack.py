@@ -1,15 +1,19 @@
 import hashlib
+import os
 import random
 import shutil
+import stat
 import struct
+import sys
 import tempfile
 import unittest
 
 import silenttestrunner
 
+# Load the local remotefilelog, not the system one
+sys.path[0:0] = [os.path.join(os.path.dirname(__file__), '..')]
 from remotefilelog.historypack import historypack, mutablehistorypack
 
-from mercurial import scmutil
 from mercurial.node import nullid
 import mercurial.ui
 
@@ -48,8 +52,7 @@ class histpacktests(unittest.TestCase):
                           self.getFakeHash(), None)]
 
         packdir = self.makeTempDir()
-        opener = scmutil.vfs(packdir)
-        packer = mutablehistorypack(mercurial.ui.ui(), opener)
+        packer = mutablehistorypack(mercurial.ui.ui(), packdir)
 
         for filename, node, p1, p2, linknode, copyfrom in revisions:
             packer.add(filename, node, p1, p2, linknode, copyfrom)
@@ -209,6 +212,7 @@ class histpacktests(unittest.TestCase):
         with open(path) as f:
             raw = f.read()
         raw = struct.pack('!B', 1) + raw[1:]
+        os.chmod(path, os.stat(path).st_mode | stat.S_IWRITE)
         with open(path, 'w+') as f:
             f.write(raw)
 
