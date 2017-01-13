@@ -1,6 +1,6 @@
   $ PYTHONPATH=$TESTDIR/..:$PYTHONPATH
   $ echo "[extensions]" >> $HGRCPATH
-  $ echo "gitlookup = $TESTDIR/../hgext3rd/phabdiff.py" >> $HGRCPATH
+  $ echo "phabdiff=" >> $HGRCPATH
 
 Setup repo
 
@@ -23,6 +23,12 @@ Test phabdiff template mapping
 
   $ echo b > b
   $ hg commit -Aqm "Differential Revision: https://phabricator.fb.com/D5678
-  > Tasks:32, 44"
+  > Tasks:32, 44    55"
   $ hg log -r . --template "{phabdiff}: {tasks}\n"
-  D5678: 32 44
+  D5678: 32 44 55
+
+  $ echo d > d
+  $ hg commit -Aqm "Differential Revision: http://phabricator.intern.facebook.com/D1245
+  > Task: t123456,456"
+  $ hg log -r . --template "{phabdiff}: {tasks}\n"
+  D1245: 123456 456
