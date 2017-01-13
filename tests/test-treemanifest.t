@@ -90,3 +90,11 @@ Test that manifest matchers work
   $ hg status --rev 1 --rev 2 -I subdir/a
   $ hg status --rev 1 --rev 2 -I subdir/z
   M subdir/z
+
+Test config validation
+  $ hg log -r . --config extensions.fastmanifest=!
+  abort: cannot use treemanifest without fastmanifest
+  [255]
+  $ hg log -r . --config extensions.treemanifest=!
+  abort: fastmanifest.usetree cannot be enabled without enabling treemanifest
+  [255]

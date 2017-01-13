@@ -93,6 +93,7 @@ import sys
 from mercurial import bookmarks, cmdutil, dispatch, error, extensions
 from mercurial import localrepo, manifest
 from mercurial import revset as revsetmod
+from mercurial.i18n import _
 
 import cachemanager
 from metrics import metricscollector
@@ -237,3 +238,10 @@ def extsetup(ui):
 def reposetup(ui, repo):
     # always update the ui object.
     FastManifestExtension.set_ui(ui)
+
+    if ui.configbool('fastmanifest', 'usetree'):
+        try:
+            extensions.find('treemanifest')
+        except KeyError:
+            raise error.Abort(_("fastmanifest.usetree cannot be enabled without"
+                                " enabling treemanifest"))

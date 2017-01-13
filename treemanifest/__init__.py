@@ -53,6 +53,11 @@ def wraprepo(repo):
     if not repo.name:
         raise error.Abort(_("remotefilelog.reponame must be configured"))
 
+    try:
+        extensions.find('fastmanifest')
+    except KeyError:
+        raise error.Abort(_("cannot use treemanifest without fastmanifest"))
+
     usecdatapack = repo.ui.configbool('remotefilelog', 'fastdatapack')
 
     packpath = shallowutil.getcachepackpath(repo, PACK_CATEGORY)
