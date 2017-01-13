@@ -588,7 +588,7 @@ def bisected(repo, subset, x):
 def bookmark(repo, subset, x):
     """The named bookmark or all bookmarks.
 
-    Pattern matching is supported for `name`. See ``hg help revsets.patterns``.
+    Pattern matching is supported for `name`. See :hg:`help revisions.patterns`.
     """
     # i18n: "bookmark" is a keyword
     args = getargs(x, 0, 1, _('bookmark takes one or no arguments'))
@@ -627,7 +627,7 @@ def branch(repo, subset, x):
     changesets.
 
     Pattern matching is supported for `string`. See
-    ``hg help revsets.patterns``.
+    :hg:`help revisions.patterns`.
     """
     getbi = repo.revbranchcache().branchinfo
 
@@ -813,7 +813,7 @@ def desc(repo, subset, x):
     """Search commit message for string. The match is case-insensitive.
 
     Pattern matching is supported for `string`. See
-    ``hg help revsets.patterns``.
+    :hg:`help revisions.patterns`.
     """
     # i18n: "desc" is a keyword
     ds = getstring(x, _("desc requires a string"))
@@ -924,7 +924,7 @@ def extra(repo, subset, x):
     optional value.
 
     Pattern matching is supported for `value`. See
-    ``hg help revsets.patterns``.
+    :hg:`help revisions.patterns`.
     """
     args = getargsdict(x, 'extra', 'label value')
     if 'label' not in args:
@@ -1405,7 +1405,7 @@ def named(repo, subset, x):
     """The changesets in a given namespace.
 
     Pattern matching is supported for `namespace`. See
-    ``hg help revsets.patterns``.
+    :hg:`help revisions.patterns`.
     """
     # i18n: "named" is a keyword
     args = getargs(x, 1, 1, _('named requires a namespace argument'))
@@ -2262,7 +2262,7 @@ def tag(repo, subset, x):
     """The specified tag by name, or all tagged revisions if no name is given.
 
     Pattern matching is supported for `name`. See
-    ``hg help revsets.patterns``.
+    :hg:`help revisions.patterns`.
     """
     # i18n: "tag" is a keyword
     args = getargs(x, 0, 1, _("tag takes one or no arguments"))
@@ -2304,7 +2304,7 @@ def user(repo, subset, x):
     """User name contains string. The match is case-insensitive.
 
     Pattern matching is supported for `string`. See
-    ``hg help revsets.patterns``.
+    :hg:`help revisions.patterns`.
     """
     return author(repo, subset, x)
 
