@@ -13,7 +13,6 @@ from .i18n import _
 from . import (
     bdiff,
     mdiff,
-    util,
 )
 
 def _findexactmatches(repo, added, removed):
@@ -43,16 +42,14 @@ def _findexactmatches(repo, added, removed):
     # Done
     repo.ui.progress(_('searching for exact renames'), None)
 
-@util.cachefunc
 def _ctxdata(fctx):
     # lazily load text
     orig = fctx.data()
     return orig, mdiff.splitnewlines(orig)
 
-@util.cachefunc
-def score(fctx1, fctx2):
-    text = fctx1.data()
-    orig, lines = _ctxdata(fctx2)
+def _score(fctx, otherdata):
+    orig, lines = otherdata
+    text = fctx.data()
     # bdiff.blocks() returns blocks of matching lines
     # count the number of bytes in each
     equal = 0
@@ -63,6 +60,9 @@ def score(fctx1, fctx2):
 
     lengths = len(text) + len(orig)
     return equal * 2.0 / lengths
+
+def score(fctx1, fctx2):
+    return _score(fctx1, _ctxdata(fctx2))
 
 def _findsimilarmatches(repo, added, removed, threshold):
     '''find potentially renamed files based on similar file content
@@ -75,9 +75,12 @@ def _findsimilarmatches(repo, added, removed, threshold):
         repo.ui.progress(_('searching for similar files'), i,
                          total=len(removed), unit=_('files'))
 
+        data = None
         for a in added:
             bestscore = copies.get(a, (None, threshold))[1]
-            myscore = score(a, r)
+            if data is None:
+                data = _ctxdata(r)
+            myscore = _score(a, data)
             if myscore >= bestscore:
                 copies[a] = (r, myscore)
     repo.ui.progress(_('searching'), None)
