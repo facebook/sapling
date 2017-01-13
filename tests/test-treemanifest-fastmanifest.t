@@ -52,7 +52,7 @@
   > EOF
   $ hg pull -q
   read flat manifest
-    File "/data/users/durham/fb-hgext/fastmanifest/implementation.py", line *, in loadflat (glob)
+    File "*fastmanifest/implementation.py", line *, in loadflat (glob)
       data = self._revlog.revision(self._node)
   
 
@@ -61,12 +61,12 @@
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo d > d && hg ci -Aqm 'added d'
   read flat manifest
-    File "/data/users/durham/fb-hgext/fastmanifest/implementation.py", line *, in add (glob)
+    File "*fastmanifest/implementation.py", line *, in add (glob)
       p1text = origself.revision(p1)
   
   $ hg debugcachemanifest -r .
   read flat manifest
-    File "/data/users/durham/fb-hgext/fastmanifest/implementation.py", line *, in loadflat (glob)
+    File "*fastmanifest/implementation.py", line *, in loadflat (glob)
       data = self._revlog.revision(self._node)
   
   $ hg diff -r tip -r 1 --stat
