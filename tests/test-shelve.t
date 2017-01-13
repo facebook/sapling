@@ -991,7 +991,7 @@ Test interactive shelve
   x
   x
 
-shelve --patch and shelve --stat should work with a single valid shelfname
+shelve --patch and shelve --stat should work with valid shelfnames
 
   $ hg up --clean .
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -1008,11 +1008,29 @@ shelve --patch and shelve --stat should work with a single valid shelfname
   shelved as default-01
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg shelve --patch default default-01
-  abort: --patch expects a single shelf
-  [255]
+  default-01      (*)* changes to: create conflict (glob)
+  
+  diff --git a/shelf-patch-b b/shelf-patch-b
+  new file mode 100644
+  --- /dev/null
+  +++ b/shelf-patch-b
+  @@ -0,0 +1,1 @@
+  +patch b
+  default         (*)* changes to: create conflict (glob)
+  
+  diff --git a/shelf-patch-a b/shelf-patch-a
+  new file mode 100644
+  --- /dev/null
+  +++ b/shelf-patch-a
+  @@ -0,0 +1,1 @@
+  +patch a
   $ hg shelve --stat default default-01
-  abort: --stat expects a single shelf
-  [255]
+  default-01      (*)* changes to: create conflict (glob)
+   shelf-patch-b |  1 +
+   1 files changed, 1 insertions(+), 0 deletions(-)
+  default         (*)* changes to: create conflict (glob)
+   shelf-patch-a |  1 +
+   1 files changed, 1 insertions(+), 0 deletions(-)
   $ hg shelve --patch default
   default         (*)* changes to: create conflict (glob)
   
@@ -1031,6 +1049,12 @@ shelve --patch and shelve --stat should work with a single valid shelfname
   [255]
   $ hg shelve --stat nonexistentshelf
   abort: cannot find shelf nonexistentshelf
+  [255]
+  $ hg shelve --patch default nonexistentshelf
+  abort: cannot find shelf nonexistentshelf
+  [255]
+  $ hg shelve --patch
+  abort: --patch expects at least one shelf
   [255]
 
   $ cd ..

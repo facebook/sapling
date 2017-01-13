@@ -522,14 +522,14 @@ def listcmd(ui, repo, pats, opts):
                 for chunk, label in patch.diffstatui(difflines, width=width):
                     ui.write(chunk, label=label)
 
-def singlepatchcmds(ui, repo, pats, opts, subcommand):
-    """subcommand that displays a single shelf"""
-    if len(pats) != 1:
-        raise error.Abort(_("--%s expects a single shelf") % subcommand)
-    shelfname = pats[0]
+def patchcmds(ui, repo, pats, opts, subcommand):
+    """subcommand that displays shelves"""
+    if len(pats) == 0:
+        raise error.Abort(_("--%s expects at least one shelf") % subcommand)
 
-    if not shelvedfile(repo, shelfname, patchextension).exists():
-        raise error.Abort(_("cannot find shelf %s") % shelfname)
+    for shelfname in pats:
+        if not shelvedfile(repo, shelfname, patchextension).exists():
+            raise error.Abort(_("cannot find shelf %s") % shelfname)
 
     listcmd(ui, repo, pats, opts)
 
@@ -967,9 +967,9 @@ def shelvecmd(ui, repo, *pats, **opts):
     elif checkopt('list'):
         return listcmd(ui, repo, pats, opts)
     elif checkopt('patch'):
-        return singlepatchcmds(ui, repo, pats, opts, subcommand='patch')
+        return patchcmds(ui, repo, pats, opts, subcommand='patch')
     elif checkopt('stat'):
-        return singlepatchcmds(ui, repo, pats, opts, subcommand='stat')
+        return patchcmds(ui, repo, pats, opts, subcommand='stat')
     else:
         return createcmd(ui, repo, pats, opts)
 
