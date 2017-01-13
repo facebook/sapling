@@ -181,8 +181,11 @@ class ctreemanifesttests(unittest.TestCase):
         self.assertEquals((h, f), out)
 
         a.set("abc", None, None)
-        out = a.find("abc")
-        self.assertEquals((None, None), out)
+        try:
+            out = a.find("abc")
+            raise RuntimeError("set should've removed file abc")
+        except KeyError:
+            pass
 
     def testCleanupAfterRemove(self):
         a = ctreemanifest.treemanifest(FakeStore())
@@ -265,6 +268,18 @@ class ctreemanifesttests(unittest.TestCase):
         self.assertEquals(a.get('abc/z'), zflags[0])
         self.assertEquals(a.get('abc/x'), None)
         self.assertEquals(a.get('abc'), None)
+
+    def testFind(self):
+        a = ctreemanifest.treemanifest(FakeStore())
+        zflags = hashflags()
+        a.set("abc/z", *zflags)
+
+        self.assertEquals(a.find('abc/z'), zflags)
+        try:
+            a.find('abc/x')
+            raise RuntimeError("find for non-existent file should throw")
+        except KeyError:
+            pass
 
     def testSetFlag(self):
         a = ctreemanifest.treemanifest(FakeStore())

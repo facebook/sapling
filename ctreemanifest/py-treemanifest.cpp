@@ -282,10 +282,11 @@ static PyObject *treemanifest_find(PyObject *o, PyObject *args) {
   }
 
   if (!found) {
-    if (PyErr_Occurred()) {
-      return NULL;
+    if (!PyErr_Occurred()) {
+      PyErr_Format(PyExc_KeyError,
+                   "cannot find file '%s' in manifest", filename);
     }
-    return Py_BuildValue("s#s#", NULL, (Py_ssize_t)0, NULL, (Py_ssize_t)0);
+    return NULL;
   } else {
     Py_ssize_t flaglen;
     if (resultflag == NULL) {
