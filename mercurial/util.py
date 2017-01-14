@@ -238,10 +238,14 @@ try:
     buffer = buffer
 except NameError:
     if not pycompat.ispy3:
-        def buffer(sliceable, offset=0):
+        def buffer(sliceable, offset=0, length=None):
+            if length is not None:
+                return sliceable[offset:offset + length]
             return sliceable[offset:]
     else:
-        def buffer(sliceable, offset=0):
+        def buffer(sliceable, offset=0, length=None):
+            if length is not None:
+                return memoryview(sliceable)[offset:offset + length]
             return memoryview(sliceable)[offset:]
 
 closefds = pycompat.osname == 'posix'
