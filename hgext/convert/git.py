@@ -110,6 +110,55 @@ class convert_git(common.converter_source, common.commandline):
             raise error.Abort(_('copying of extra key is forbidden: %s') %
                               _(', ').join(sorted(banned)))
 
+        committeractions = self.ui.configlist('convert', 'git.committeractions',
+                                              'messagedifferent')
+
+        messagedifferent = None
+        messagealways = None
+        for a in committeractions:
+            if a.startswith(('messagedifferent', 'messagealways')):
+                k = a
+                v = None
+                if '=' in a:
+                    k, v = a.split('=', 1)
+
+                if k == 'messagedifferent':
+                    messagedifferent = v or 'committer:'
+                elif k == 'messagealways':
+                    messagealways = v or 'committer:'
+
+        if messagedifferent and messagealways:
+            raise error.Abort(_('committeractions cannot define both '
+                                'messagedifferent and messagealways'))
+
+        dropcommitter = 'dropcommitter' in committeractions
+        replaceauthor = 'replaceauthor' in committeractions
+        replacecommitter = 'replacecommitter' in committeractions
+
+        if dropcommitter and (replaceauthor or replacecommitter):
+            raise error.Abort(_('committeractions cannot define both '
+                                'dropcommitter and '
+                                'replaceauthor/replacecommitter'))
+
+        if dropcommitter and messagealways:
+            raise error.Abort(_('committeractions cannot define both '
+                                'dropcommitter and messagealways'))
+
+        if replaceauthor and replacecommitter:
+            raise error.Abort(_('committeractions cannot define both '
+                                'replaceauthor and replacecommitter'))
+
+        if not messagedifferent and not messagealways:
+            messagedifferent = 'committer:'
+
+        self.committeractions = {
+            'dropcommitter': dropcommitter,
+            'replaceauthor': replaceauthor,
+            'replacecommitter': replacecommitter,
+            'messagedifferent': messagedifferent,
+            'messagealways': messagealways,
+        }
+
     def after(self):
         for f in self.catfilepipe:
             f.close()
@@ -317,8 +366,22 @@ class convert_git(common.converter_source, common.commandline):
             if n in self.copyextrakeys:
                 extra[n] = v
 
-        if committer and committer != author:
-            message += "\ncommitter: %s\n" % committer
+        if self.committeractions['dropcommitter']:
+            committer = None
+
+        if self.committeractions['replacecommitter']:
+            committer = author
+        elif self.committeractions['replaceauthor']:
+            author = committer
+
+        if committer:
+            messagealways = self.committeractions['messagealways']
+            messagedifferent = self.committeractions['messagedifferent']
+            if messagealways:
+                message += '\n%s %s\n' % (messagealways, committer)
+            elif messagedifferent and author != committer:
+                message += '\n%s %s\n' % (messagedifferent, committer)
+
         tzs, tzh, tzm = tz[-5:-4] + "1", tz[-4:-2], tz[-2:]
         tz = -int(tzs) * (int(tzh) * 3600 + int(tzm))
         date = tm + " " + str(tz)

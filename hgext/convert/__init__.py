@@ -327,6 +327,39 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
         ``convert.git.similarity`` is greater than 0. The default is
         ``400``.
 
+    :convert.git.committeractions: list of actions to take when processing
+        author and committer values.
+
+        Git commits have separate author (who wrote the commit) and committer
+        (who applied the commit) fields. Not all destinations support separate
+        author and committer fields (including Mercurial). This config option
+        controls what to do with these author and committer fields during
+        conversion.
+
+        A value of ``messagedifferent`` will append a ``committer: ...``
+        line to the commit message if the Git committer is different from the
+        author. The prefix of that line can be specified using the syntax
+        ``messagedifferent=<prefix>``. e.g. ``messagedifferent=git-committer:``.
+        When a prefix is specified, a space will always be inserted between the
+        prefix and the value.
+
+        ``messagealways`` behaves like ``messagedifferent`` except it will
+        always result in a ``committer: ...`` line being appended to the commit
+        message. This value is mutually exclusive with ``messagedifferent``.
+
+        ``dropcommitter`` will remove references to the committer. Only
+        references to the author will remain. Actions that add references
+        to the committer will have no effect when this is set.
+
+        ``replaceauthor`` will replace the value of the author field with
+        the committer. Other actions that add references to the committer
+        will still take effect when this is set.
+
+        ``replacecommitter`` will replace the value of the committer field
+        with the author.
+
+        The default is ``messagedifferent``.
+
     :convert.git.extrakeys: list of extra keys from commit metadata to copy to
         the destination. Some Git repositories store extra metadata in commits.
         By default, this non-default metadata will be lost during conversion.

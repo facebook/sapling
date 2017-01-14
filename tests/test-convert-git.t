@@ -482,6 +482,229 @@ convert author committer
   
   
 
+Various combinations of committeractions fail
+
+  $ hg --config convert.git.committeractions=messagedifferent,messagealways convert git-repo4 bad-committer
+  initializing destination bad-committer repository
+  abort: committeractions cannot define both messagedifferent and messagealways
+  [255]
+
+  $ hg --config convert.git.committeractions=dropcommitter,replaceauthor convert git-repo4 bad-committer
+  initializing destination bad-committer repository
+  abort: committeractions cannot define both dropcommitter and replaceauthor/replacecommitter
+  [255]
+
+  $ hg --config convert.git.committeractions=dropcommitter,replacecommitter convert git-repo4 bad-committer
+  initializing destination bad-committer repository
+  abort: committeractions cannot define both dropcommitter and replaceauthor/replacecommitter
+  [255]
+
+  $ hg --config convert.git.committeractions=dropcommitter,messagealways convert git-repo4 bad-committer
+  initializing destination bad-committer repository
+  abort: committeractions cannot define both dropcommitter and messagealways
+  [255]
+
+  $ hg --config convert.git.committeractions=replaceauthor,replacecommitter convert git-repo4 bad-committer
+  initializing destination bad-committer repository
+  abort: committeractions cannot define both replaceauthor and replacecommitter
+  [255]
+
+custom prefix on messagedifferent works
+
+  $ hg --config convert.git.committeractions=messagedifferent=different: convert git-repo4 git-repo4-hg-messagedifferentprefix
+  initializing destination git-repo4-hg-messagedifferentprefix repository
+  scanning source...
+  sorting...
+  converting...
+  1 addfoo
+  0 addfoo2
+  updating bookmarks
+
+  $ hg -R git-repo4-hg-messagedifferentprefix log -v
+  changeset:   1:2fe0c98a109d
+  bookmark:    master
+  tag:         tip
+  user:        nottest <test@example.org>
+  date:        Mon Jan 01 00:00:21 2007 +0000
+  files:       foo
+  description:
+  addfoo2
+  
+  different: test <test@example.org>
+  
+  
+  changeset:   0:0735477b0224
+  user:        test <test@example.org>
+  date:        Mon Jan 01 00:00:20 2007 +0000
+  files:       foo
+  description:
+  addfoo
+  
+  
+
+messagealways will always add the "committer: " line even if committer identical
+
+  $ hg --config convert.git.committeractions=messagealways convert git-repo4 git-repo4-hg-messagealways
+  initializing destination git-repo4-hg-messagealways repository
+  scanning source...
+  sorting...
+  converting...
+  1 addfoo
+  0 addfoo2
+  updating bookmarks
+
+  $ hg -R git-repo4-hg-messagealways log -v
+  changeset:   1:8db057d8cd37
+  bookmark:    master
+  tag:         tip
+  user:        nottest <test@example.org>
+  date:        Mon Jan 01 00:00:21 2007 +0000
+  files:       foo
+  description:
+  addfoo2
+  
+  committer: test <test@example.org>
+  
+  
+  changeset:   0:8f71fe9c98be
+  user:        test <test@example.org>
+  date:        Mon Jan 01 00:00:20 2007 +0000
+  files:       foo
+  description:
+  addfoo
+  
+  committer: test <test@example.org>
+  
+  
+
+custom prefix on messagealways works
+
+  $ hg --config convert.git.committeractions=messagealways=always: convert git-repo4 git-repo4-hg-messagealwaysprefix
+  initializing destination git-repo4-hg-messagealwaysprefix repository
+  scanning source...
+  sorting...
+  converting...
+  1 addfoo
+  0 addfoo2
+  updating bookmarks
+
+  $ hg -R git-repo4-hg-messagealwaysprefix log -v
+  changeset:   1:83c17174de79
+  bookmark:    master
+  tag:         tip
+  user:        nottest <test@example.org>
+  date:        Mon Jan 01 00:00:21 2007 +0000
+  files:       foo
+  description:
+  addfoo2
+  
+  always: test <test@example.org>
+  
+  
+  changeset:   0:2ac9bcb3534a
+  user:        test <test@example.org>
+  date:        Mon Jan 01 00:00:20 2007 +0000
+  files:       foo
+  description:
+  addfoo
+  
+  always: test <test@example.org>
+  
+  
+
+replaceauthor replaces author with committer
+
+  $ hg --config convert.git.committeractions=replaceauthor convert git-repo4 git-repo4-hg-replaceauthor
+  initializing destination git-repo4-hg-replaceauthor repository
+  scanning source...
+  sorting...
+  converting...
+  1 addfoo
+  0 addfoo2
+  updating bookmarks
+
+  $ hg -R git-repo4-hg-replaceauthor log -v
+  changeset:   1:122c1d8999ea
+  bookmark:    master
+  tag:         tip
+  user:        test <test@example.org>
+  date:        Mon Jan 01 00:00:21 2007 +0000
+  files:       foo
+  description:
+  addfoo2
+  
+  
+  changeset:   0:0735477b0224
+  user:        test <test@example.org>
+  date:        Mon Jan 01 00:00:20 2007 +0000
+  files:       foo
+  description:
+  addfoo
+  
+  
+
+replacecommitter replaces committer with author
+
+  $ hg --config convert.git.committeractions=replacecommitter convert git-repo4 git-repo4-hg-replacecommitter
+  initializing destination git-repo4-hg-replacecommitter repository
+  scanning source...
+  sorting...
+  converting...
+  1 addfoo
+  0 addfoo2
+  updating bookmarks
+
+  $ hg -R git-repo4-hg-replacecommitter log -v
+  changeset:   1:190b2da396cc
+  bookmark:    master
+  tag:         tip
+  user:        nottest <test@example.org>
+  date:        Mon Jan 01 00:00:21 2007 +0000
+  files:       foo
+  description:
+  addfoo2
+  
+  
+  changeset:   0:0735477b0224
+  user:        test <test@example.org>
+  date:        Mon Jan 01 00:00:20 2007 +0000
+  files:       foo
+  description:
+  addfoo
+  
+  
+
+dropcommitter removes the committer
+
+  $ hg --config convert.git.committeractions=dropcommitter convert git-repo4 git-repo4-hg-dropcommitter
+  initializing destination git-repo4-hg-dropcommitter repository
+  scanning source...
+  sorting...
+  converting...
+  1 addfoo
+  0 addfoo2
+  updating bookmarks
+
+  $ hg -R git-repo4-hg-dropcommitter log -v
+  changeset:   1:190b2da396cc
+  bookmark:    master
+  tag:         tip
+  user:        nottest <test@example.org>
+  date:        Mon Jan 01 00:00:21 2007 +0000
+  files:       foo
+  description:
+  addfoo2
+  
+  
+  changeset:   0:0735477b0224
+  user:        test <test@example.org>
+  date:        Mon Jan 01 00:00:20 2007 +0000
+  files:       foo
+  description:
+  addfoo
+  
+  
+
 --sourceorder should fail
 
   $ hg convert --sourcesort git-repo4 git-repo4-sourcesort-hg
