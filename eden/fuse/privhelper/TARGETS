@@ -3,8 +3,8 @@ cpp_library(
   srcs = glob(['*.cpp']),
   headers = glob(['*.h']),
   deps = [
-    '//folly:folly',
-    '//folly/io:iobuf',
+    '@/folly:folly',
+    '@/folly/io:iobuf',
   ],
   external_deps = [
     ('boost', None, 'boost_filesystem'),

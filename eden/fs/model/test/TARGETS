@@ -3,8 +3,8 @@ cpp_unittest(
   headers = AutoHeaders.RECURSIVE_GLOB,  # https://fburl.com/424819295
   srcs = glob(['*Test.cpp']),
   deps = [
-    '//eden/fs/model:model',
-    '//eden/utils:utils',
+    '@/eden/fs/model:model',
+    '@/eden/utils:utils',
   ],
   external_deps = [
     'gtest',

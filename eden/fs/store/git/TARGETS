@@ -3,9 +3,9 @@ cpp_library(
   srcs = glob(['*.cpp']),
   headers = glob(['*.h']),
   deps = [
-    '//eden/fs/model:model',
-    '//eden/fs/store:store',
-    '//folly:folly',
+    '@/eden/fs/model:model',
+    '@/eden/fs/store:store',
+    '@/folly:folly',
   ],
   external_deps = [
     ('libgit2', None, 'git2'),

@@ -3,10 +3,10 @@ cpp_library(
   srcs = glob(['*.cpp']),
   headers = glob(['*.h']),
   deps = [
-    '//eden/fs/model:model',
-    '//eden/fs/model/git:git',
-    '//eden/fs/rocksdb:rocksdb',
-    '//folly:folly',
-    '//rocksdb:rocksdb',
+    '@/eden/fs/model:model',
+    '@/eden/fs/model/git:git',
+    '@/eden/fs/rocksdb:rocksdb',
+    '@/folly:folly',
+    '@/rocksdb:rocksdb',
   ],
 )

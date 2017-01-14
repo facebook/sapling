@@ -3,8 +3,8 @@ cpp_unittest(
   srcs = glob(['*Test.cpp']),
   deps = [
     ':test_lib',
-    '//eden/utils:utils',
-    '//folly/experimental:test_util',
+    '@/eden/utils:utils',
+    '@/folly/experimental:test_util',
   ],
   external_deps = [
     'gtest',
@@ -16,8 +16,8 @@ cpp_library(
   headers = glob(['*.h']),
   srcs = glob(['*.cpp'], excludes=['*Test.cpp']),
   deps = [
-    '//folly:conv',
-    '//folly:exception_string',
+    '@/folly:conv',
+    '@/folly:exception_string',
   ],
   external_deps = [
     'gtest',

@@ -3,9 +3,9 @@ cpp_library(
   srcs = glob(['*.cpp']),
   headers = glob(['*.h']),
   deps = [
-    '//folly:evicting_cache_map',
-    '//folly:folly',
-    '//folly:subprocess',
-    '//folly/futures:futures',
+    '@/folly:evicting_cache_map',
+    '@/folly:folly',
+    '@/folly:subprocess',
+    '@/folly/futures:futures',
   ],
 )

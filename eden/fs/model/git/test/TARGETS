@@ -2,10 +2,10 @@ cpp_unittest(
   name = 'test',
   srcs = glob(['*Test.cpp']),
   deps = [
-    '//eden/fs/model:model',
-    '//eden/fs/model/git:git',
-    '//eden/fs/model/git:gitignore',
-    '//folly:folly',
+    '@/eden/fs/model:model',
+    '@/eden/fs/model/git:git',
+    '@/eden/fs/model/git:gitignore',
+    '@/folly:folly',
   ],
   external_deps = [
     'glog',
@@ -18,11 +18,11 @@ cpp_benchmark(
   name = 'benchmark',
   srcs = glob(['*Benchmark.cpp']),
   deps = [
-    '//eden/fs/model/git:glob',
-    '//folly:benchmark',
-    '//folly:folly',
-    '//folly/init:init',
-    '//watchman/thirdparty/wildmatch:wildmatch',
+    '@/eden/fs/model/git:glob',
+    '@/folly:benchmark',
+    '@/folly:folly',
+    '@/folly/init:init',
+    '@/watchman/thirdparty/wildmatch:wildmatch',
   ],
   external_deps = [
     ('re2', None),

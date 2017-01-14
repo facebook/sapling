@@ -3,12 +3,12 @@ cpp_library(
   srcs = glob(['*.cpp']),
   headers = glob(['*.h']),
   deps = [
-    '//eden/fuse/privhelper:privhelper',
-    '//eden/utils:utils',
-    '//folly:folly',
-    '//folly:stats',
-    '//folly:synchronized',
-    '//wangle:wangle',
+    '@/eden/fuse/privhelper:privhelper',
+    '@/eden/utils:utils',
+    '@/folly:folly',
+    '@/folly:stats',
+    '@/folly:synchronized',
+    '@/wangle:wangle',
   ],
   external_deps = [
     ('fuse', None, 'fuse'),
