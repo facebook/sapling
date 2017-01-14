@@ -133,20 +133,14 @@ class convert_git(common.converter_source, common.commandline):
 
         dropcommitter = 'dropcommitter' in committeractions
         replaceauthor = 'replaceauthor' in committeractions
-        replacecommitter = 'replacecommitter' in committeractions
 
-        if dropcommitter and (replaceauthor or replacecommitter):
+        if dropcommitter and replaceauthor:
             raise error.Abort(_('committeractions cannot define both '
-                                'dropcommitter and '
-                                'replaceauthor/replacecommitter'))
+                                'dropcommitter and replaceauthor'))
 
         if dropcommitter and messagealways:
             raise error.Abort(_('committeractions cannot define both '
                                 'dropcommitter and messagealways'))
-
-        if replaceauthor and replacecommitter:
-            raise error.Abort(_('committeractions cannot define both '
-                                'replaceauthor and replacecommitter'))
 
         if not messagedifferent and not messagealways:
             messagedifferent = 'committer:'
@@ -154,7 +148,6 @@ class convert_git(common.converter_source, common.commandline):
         self.committeractions = {
             'dropcommitter': dropcommitter,
             'replaceauthor': replaceauthor,
-            'replacecommitter': replacecommitter,
             'messagedifferent': messagedifferent,
             'messagealways': messagealways,
         }
@@ -368,9 +361,6 @@ class convert_git(common.converter_source, common.commandline):
 
         if self.committeractions['dropcommitter']:
             committer = None
-
-        if self.committeractions['replacecommitter']:
-            committer = author
         elif self.committeractions['replaceauthor']:
             author = committer
 

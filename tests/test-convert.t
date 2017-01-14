@@ -297,9 +297,6 @@
           committer. Other actions that add references to the committer will
           still take effect when this is set.
   
-          "replacecommitter" will replace the value of the committer field with
-          the author.
-  
           The default is "messagedifferent".
   
       convert.git.extrakeys
