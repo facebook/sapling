@@ -284,6 +284,12 @@ class localrepository(object):
         else:
             self.supported = self._basesupported
 
+        # Add compression engines.
+        for name in util.compengines:
+            engine = util.compengines[name]
+            if engine.revlogheader():
+                self.supported.add('exp-compression-%s' % name)
+
         if not self.vfs.isdir():
             if create:
                 self.requirements = newreporequirements(self)
@@ -396,6 +402,10 @@ class localrepository(object):
             'aggressivemergedeltas', False)
         self.svfs.options['aggressivemergedeltas'] = aggressivemergedeltas
         self.svfs.options['lazydeltabase'] = not scmutil.gddeltaconfig(self.ui)
+
+        for r in self.requirements:
+            if r.startswith('exp-compression-'):
+                self.svfs.options['compengine'] = r[len('exp-compression-'):]
 
     def _writerequirements(self):
         scmutil.writerequires(self.vfs, self.requirements)
@@ -1993,6 +2003,18 @@ def newreporequirements(repo):
             requirements.add('fncache')
             if ui.configbool('format', 'dotencode', True):
                 requirements.add('dotencode')
+
+    compengine = ui.config('experimental', 'format.compression', 'zlib')
+    if compengine not in util.compengines:
+        raise error.Abort(_('compression engine %s defined by '
+                            'experimental.format.compression not available') %
+                          compengine,
+                          hint=_('run "hg debuginstall" to list available '
+                                 'compression engines'))
+
+    # zlib is the historical default and doesn't need an explicit requirement.
+    if compengine != 'zlib':
+        requirements.add('exp-compression-%s' % compengine)
 
     if scmutil.gdinitconfig(ui):
         requirements.add('generaldelta')

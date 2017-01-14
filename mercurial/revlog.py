@@ -272,6 +272,7 @@ class revlog(object):
         # Mapping of revision integer to full node.
         self._nodecache = {nullid: nullrev}
         self._nodepos = None
+        self._compengine = 'zlib'
 
         v = REVLOG_DEFAULT_VERSION
         opts = getattr(opener, 'options', None)
@@ -288,6 +289,8 @@ class revlog(object):
             if 'aggressivemergedeltas' in opts:
                 self._aggressivemergedeltas = opts['aggressivemergedeltas']
             self._lazydeltabase = bool(opts.get('lazydeltabase', False))
+            if 'compengine' in opts:
+                self._compengine = opts['compengine']
 
         if self._chunkcachesize <= 0:
             raise RevlogError(_('revlog chunk cache size %r is not greater '
@@ -345,7 +348,7 @@ class revlog(object):
 
     @util.propertycache
     def _compressor(self):
-        return util.compengines['zlib'].revlogcompressor()
+        return util.compengines[self._compengine].revlogcompressor()
 
     def tip(self):
         return self.node(len(self.index) - 2)
