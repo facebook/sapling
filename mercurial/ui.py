@@ -972,7 +972,10 @@ class ui(object):
             # disable getpass() only if explicitly specified. it's still valid
             # to interact with tty even if fin is not a tty.
             if self.configbool('ui', 'nontty'):
-                return self.fin.readline().rstrip('\n')
+                l = self.fin.readline()
+                if not l:
+                    raise EOFError
+                return l.rstrip('\n')
             else:
                 return getpass.getpass('')
         except EOFError:

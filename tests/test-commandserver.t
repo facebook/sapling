@@ -607,6 +607,12 @@ changelog and manifest would have invalid node:
   ...     runcommand(server, ['debuggetpass', '--config',
   ...                         'ui.interactive=True'],
   ...                input=stringio('1234\n'))
+  ...     runcommand(server, ['debuggetpass', '--config',
+  ...                         'ui.interactive=True'],
+  ...                input=stringio('\n'))
+  ...     runcommand(server, ['debuggetpass', '--config',
+  ...                         'ui.interactive=True'],
+  ...                input=stringio(''))
   ...     runcommand(server, ['debugprompt', '--config',
   ...                         'ui.interactive=True'],
   ...                input=stringio('5678\n'))
@@ -614,6 +620,11 @@ changelog and manifest would have invalid node:
   ...     runcommand(server, ['debugwritestdout'])
   *** runcommand debuggetpass --config ui.interactive=True
   password: 1234
+  *** runcommand debuggetpass --config ui.interactive=True
+  password: 
+  *** runcommand debuggetpass --config ui.interactive=True
+  password: abort: response expected
+   [255]
   *** runcommand debugprompt --config ui.interactive=True
   prompt: 5678
   *** runcommand debugreadstdin
