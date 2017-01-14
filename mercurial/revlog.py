@@ -39,7 +39,8 @@ from . import (
 
 _pack = struct.pack
 _unpack = struct.unpack
-_decompress = zlib.decompress
+# Aliased for performance.
+_zlibdecompress = zlib.decompress
 
 # revlog header flags
 REVLOGV0 = 0
@@ -339,6 +340,8 @@ class revlog(object):
             self._chunkclear()
         # revnum -> (chain-length, sum-delta-length)
         self._chaininfocache = {}
+        # revlog header -> revlog compressor
+        self._decompressors = {}
 
     @util.propertycache
     def _compressor(self):
@@ -1491,17 +1494,52 @@ class revlog(object):
         """
         if not data:
             return data
+
+        # Revlogs are read much more frequently than they are written and many
+        # chunks only take microseconds to decompress, so performance is
+        # important here.
+        #
+        # We can make a few assumptions about revlogs:
+        #
+        # 1) the majority of chunks will be compressed (as opposed to inline
+        #    raw data).
+        # 2) decompressing *any* data will likely by at least 10x slower than
+        #    returning raw inline data.
+        # 3) we want to prioritize common and officially supported compression
+        #    engines
+        #
+        # It follows that we want to optimize for "decompress compressed data
+        # when encoded with common and officially supported compression engines"
+        # case over "raw data" and "data encoded by less common or non-official
+        # compression engines." That is why we have the inline lookup first
+        # followed by the compengines lookup.
+        #
+        # According to `hg perfrevlogchunks`, this is ~0.5% faster for zlib
+        # compressed chunks. And this matters for changelog and manifest reads.
         t = data[0]
-        if t == '\0':
-            return data
+
         if t == 'x':
             try:
-                return _decompress(data)
+                return _zlibdecompress(data)
             except zlib.error as e:
                 raise RevlogError(_('revlog decompress error: %s') % str(e))
-        if t == 'u':
+        # '\0' is more common than 'u' so it goes first.
+        elif t == '\0':
+            return data
+        elif t == 'u':
             return util.buffer(data, 1)
-        raise RevlogError(_('unknown compression type %r') % t)
+
+        try:
+            compressor = self._decompressors[t]
+        except KeyError:
+            try:
+                engine = util.compengines.forrevlogheader(t)
+                compressor = engine.revlogcompressor()
+                self._decompressors[t] = compressor
+            except KeyError:
+                raise RevlogError(_('unknown compression type %r') % t)
+
+        return compressor.decompress(data)
 
     def _isgooddelta(self, d, textlen):
         """Returns True if the given delta is good. Good means that it is within
