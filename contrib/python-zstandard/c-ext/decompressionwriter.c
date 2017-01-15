@@ -85,7 +85,7 @@ static PyObject* ZstdDecompressionWriter_write(ZstdDecompressionWriter* self, Py
 		return NULL;
 	}
 
-	output.dst = malloc(self->outSize);
+	output.dst = PyMem_Malloc(self->outSize);
 	if (!output.dst) {
 		return PyErr_NoMemory();
 	}
@@ -102,7 +102,7 @@ static PyObject* ZstdDecompressionWriter_write(ZstdDecompressionWriter* self, Py
 		Py_END_ALLOW_THREADS
 
 		if (ZSTD_isError(zresult)) {
-			free(output.dst);
+			PyMem_Free(output.dst);
 			PyErr_Format(ZstdError, "zstd decompress error: %s",
 				ZSTD_getErrorName(zresult));
 			return NULL;
@@ -120,7 +120,7 @@ static PyObject* ZstdDecompressionWriter_write(ZstdDecompressionWriter* self, Py
 		}
 	}
 
-	free(output.dst);
+	PyMem_Free(output.dst);
 
 	/* TODO return bytes written */
 	Py_RETURN_NONE;

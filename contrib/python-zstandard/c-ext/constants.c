@@ -33,6 +33,9 @@ void constants_module_init(PyObject* mod) {
 	ZstdError = PyErr_NewException("zstd.ZstdError", NULL, NULL);
 	PyModule_AddObject(mod, "ZstdError", ZstdError);
 
+	PyModule_AddIntConstant(mod, "COMPRESSOBJ_FLUSH_FINISH", compressorobj_flush_finish);
+	PyModule_AddIntConstant(mod, "COMPRESSOBJ_FLUSH_BLOCK", compressorobj_flush_block);
+
 	/* For now, the version is a simple tuple instead of a dedicated type. */
 	zstdVersion = PyTuple_New(3);
 	PyTuple_SetItem(zstdVersion, 0, PyLong_FromLong(ZSTD_VERSION_MAJOR));

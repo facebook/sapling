@@ -65,14 +65,14 @@ ZstdCompressionDict* train_dictionary(PyObject* self, PyObject* args, PyObject* 
 
 	/* Now that we know the total size of the raw simples, we can allocate
 	a buffer for the raw data */
-	sampleBuffer = malloc(samplesSize);
+	sampleBuffer = PyMem_Malloc(samplesSize);
 	if (!sampleBuffer) {
 		PyErr_NoMemory();
 		return NULL;
 	}
-	sampleSizes = malloc(samplesLen * sizeof(size_t));
+	sampleSizes = PyMem_Malloc(samplesLen * sizeof(size_t));
 	if (!sampleSizes) {
-		free(sampleBuffer);
+		PyMem_Free(sampleBuffer);
 		PyErr_NoMemory();
 		return NULL;
 	}
@@ -87,10 +87,10 @@ ZstdCompressionDict* train_dictionary(PyObject* self, PyObject* args, PyObject* 
 		sampleOffset = (char*)sampleOffset + sampleSize;
 	}
 
-	dict = malloc(capacity);
+	dict = PyMem_Malloc(capacity);
 	if (!dict) {
-		free(sampleSizes);
-		free(sampleBuffer);
+		PyMem_Free(sampleSizes);
+		PyMem_Free(sampleBuffer);
 		PyErr_NoMemory();
 		return NULL;
 	}
@@ -100,9 +100,9 @@ ZstdCompressionDict* train_dictionary(PyObject* self, PyObject* args, PyObject* 
 		zparams);
 	if (ZDICT_isError(zresult)) {
 		PyErr_Format(ZstdError, "Cannot train dict: %s", ZDICT_getErrorName(zresult));
-		free(dict);
-		free(sampleSizes);
-		free(sampleBuffer);
+		PyMem_Free(dict);
+		PyMem_Free(sampleSizes);
+		PyMem_Free(sampleBuffer);
 		return NULL;
 	}
 
@@ -140,7 +140,7 @@ static int ZstdCompressionDict_init(ZstdCompressionDict* self, PyObject* args) {
 		return -1;
 	}
 
-	self->dictData = malloc(sourceSize);
+	self->dictData = PyMem_Malloc(sourceSize);
 	if (!self->dictData) {
 		PyErr_NoMemory();
 		return -1;
@@ -154,7 +154,7 @@ static int ZstdCompressionDict_init(ZstdCompressionDict* self, PyObject* args) {
 
 static void ZstdCompressionDict_dealloc(ZstdCompressionDict* self) {
 	if (self->dictData) {
-		free(self->dictData);
+		PyMem_Free(self->dictData);
 		self->dictData = NULL;
 	}
 

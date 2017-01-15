@@ -36,8 +36,8 @@ static PyObject* ZstdCompressionObj_compress(ZstdCompressionObj* self, PyObject*
 	PyObject* result = NULL;
 	Py_ssize_t resultSize = 0;
 
-	if (self->flushed) {
-		PyErr_SetString(ZstdError, "cannot call compress() after flush() has been called");
+	if (self->finished) {
+		PyErr_SetString(ZstdError, "cannot call compress() after compressor finished");
 		return NULL;
 	}
 
@@ -92,17 +92,62 @@ static PyObject* ZstdCompressionObj_compress(ZstdCompressionObj* self, PyObject*
 	}
 }
 
-static PyObject* ZstdCompressionObj_flush(ZstdCompressionObj* self) {
+static PyObject* ZstdCompressionObj_flush(ZstdCompressionObj* self, PyObject* args) {
+	int flushMode = compressorobj_flush_finish;
 	size_t zresult;
 	PyObject* result = NULL;
 	Py_ssize_t resultSize = 0;
 
-	if (self->flushed) {
-		PyErr_SetString(ZstdError, "flush() already called");
+	if (!PyArg_ParseTuple(args, "|i", &flushMode)) {
 		return NULL;
 	}
 
-	self->flushed = 1;
+	if (flushMode != compressorobj_flush_finish && flushMode != compressorobj_flush_block) {
+		PyErr_SetString(PyExc_ValueError, "flush mode not recognized");
+		return NULL;
+	}
+
+	if (self->finished) {
+		PyErr_SetString(ZstdError, "compressor object already finished");
+		return NULL;
+	}
+
+	assert(self->output.pos == 0);
+
+	if (flushMode == compressorobj_flush_block) {
+		/* The output buffer is of size ZSTD_CStreamOutSize(), which is 
+		   guaranteed to hold a full block. */
+		Py_BEGIN_ALLOW_THREADS
+		zresult = ZSTD_flushStream(self->cstream, &self->output);
+		Py_END_ALLOW_THREADS
+
+		if (ZSTD_isError(zresult)) {
+			PyErr_Format(ZstdError, "zstd compress error: %s", ZSTD_getErrorName(zresult));
+			return NULL;
+		}
+
+		/* Output buffer is guaranteed to hold full block. */
+		assert(zresult == 0);
+
+		if (self->output.pos) {
+			result = PyBytes_FromStringAndSize(self->output.dst, self->output.pos);
+			if (!result) {
+				return NULL;
+			}
+		}
+
+		self->output.pos = 0;
+
+		if (result) {
+			return result;
+		}
+		else {
+			return PyBytes_FromString("");
+		}
+	}
+
+	assert(flushMode == compressorobj_flush_finish);
+	self->finished = 1;
 
 	while (1) {
 		zresult = ZSTD_endStream(self->cstream, &self->output);
@@ -151,7 +196,7 @@ static PyObject* ZstdCompressionObj_flush(ZstdCompressionObj* self) {
 static PyMethodDef ZstdCompressionObj_methods[] = {
 	{ "compress", (PyCFunction)ZstdCompressionObj_compress, METH_VARARGS,
 	PyDoc_STR("compress data") },
-	{ "flush", (PyCFunction)ZstdCompressionObj_flush, METH_NOARGS,
+	{ "flush", (PyCFunction)ZstdCompressionObj_flush, METH_VARARGS,
 	PyDoc_STR("finish compression operation") },
 	{ NULL, NULL }
 };

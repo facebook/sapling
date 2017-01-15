@@ -15,7 +15,12 @@
 #include "zstd.h"
 #include "zdict.h"
 
-#define PYTHON_ZSTANDARD_VERSION "0.5.0"
+#define PYTHON_ZSTANDARD_VERSION "0.6.0"
+
+typedef enum {
+	compressorobj_flush_finish,
+	compressorobj_flush_block,
+} CompressorObj_Flush;
 
 typedef struct {
 	PyObject_HEAD
@@ -54,6 +59,7 @@ typedef struct {
 
 	int compressionLevel;
 	ZstdCompressionDict* dict;
+	ZSTD_CCtx* cctx;
 	ZSTD_CDict* cdict;
 	CompressionParametersObject* cparams;
 	ZSTD_frameParameters fparams;
@@ -67,7 +73,7 @@ typedef struct {
 	ZstdCompressor* compressor;
 	ZSTD_CStream* cstream;
 	ZSTD_outBuffer output;
-	int flushed;
+	int finished;
 } ZstdCompressionObj;
 
 extern PyTypeObject ZstdCompressionObjType;

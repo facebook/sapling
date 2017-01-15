@@ -72,6 +72,26 @@ void decompressionwriter_module_init(PyObject* mod);
 void decompressoriterator_module_init(PyObject* mod);
 
 void zstd_module_init(PyObject* m) {
+	/* python-zstandard relies on unstable zstd C API features. This means
+	   that changes in zstd may break expectations in python-zstandard.
+
+	   python-zstandard is distributed with a copy of the zstd sources.
+	   python-zstandard is only guaranteed to work with the bundled version
+	   of zstd.
+
+	   However, downstream redistributors or packagers may unbundle zstd
+	   from python-zstandard. This can result in a mismatch between zstd
+	   versions and API semantics. This essentially "voids the warranty"
+	   of python-zstandard and may cause undefined behavior.
+
+	   We detect this mismatch here and refuse to load the module if this
+	   scenario is detected.
+	*/
+	if (ZSTD_VERSION_NUMBER != 10102 || ZSTD_versionNumber() != 10102) {
+		PyErr_SetString(PyExc_ImportError, "zstd C API mismatch; Python bindings not compiled against expected zstd version");
+		return;
+	}
+
 	compressionparams_module_init(m);
 	dictparams_module_init(m);
 	compressiondict_module_init(m);
@@ -99,6 +119,10 @@ PyMODINIT_FUNC PyInit_zstd(void) {
 	PyObject *m = PyModule_Create(&zstd_module);
 	if (m) {
 		zstd_module_init(m);
+		if (PyErr_Occurred()) {
+			Py_DECREF(m);
+			m = NULL;
+		}
 	}
 	return m;
 }

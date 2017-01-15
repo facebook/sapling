@@ -1,6 +1,33 @@
 Version History
 ===============
 
+0.6.0 (released 2017-01-14)
+---------------------------
+
+* Support for legacy zstd protocols (build time opt in feature).
+* Automation improvements to test against Python 3.6, latest versions
+  of Tox, more deterministic AppVeyor behavior.
+* CFFI "parser" improved to use a compiler preprocessor instead of rewriting
+  source code manually.
+* Vendored version of zstd updated to 1.1.2.
+* Documentation improvements.
+* Introduce a bench.py script for performing (crude) benchmarks.
+* ZSTD_CCtx instances are now reused across multiple compress() operations.
+* ZstdCompressor.write_to() now has a flush() method.
+* ZstdCompressor.compressobj()'s flush() method now accepts an argument to
+  flush a block (as opposed to ending the stream).
+* Disallow compress(b'') when writing content sizes by default (issue #11).
+
+0.5.2 (released 2016-11-12)
+---------------------------
+
+* more packaging fixes for source distribution
+
+0.5.1 (released 2016-11-12)
+---------------------------
+
+* setup_zstd.py is included in the source distribution
+
 0.5.0 (released 2016-11-10)
 ---------------------------
 

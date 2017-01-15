@@ -7,7 +7,10 @@
 from __future__ import absolute_import
 
 import cffi
+import distutils.ccompiler
 import os
+import subprocess
+import tempfile
 
 
 HERE = os.path.abspath(os.path.dirname(__file__))
@@ -20,10 +23,8 @@ SOURCES = ['zstd/%s' % p for p in (
     'common/zstd_common.c',
     'compress/fse_compress.c',
     'compress/huf_compress.c',
-    'compress/zbuff_compress.c',
     'compress/zstd_compress.c',
     'decompress/huf_decompress.c',
-    'decompress/zbuff_decompress.c',
     'decompress/zstd_decompress.c',
     'dictBuilder/divsufsort.c',
     'dictBuilder/zdict.c',
@@ -37,74 +38,71 @@ INCLUDE_DIRS = [os.path.join(HERE, d) for d in (
     'zstd/dictBuilder',
 )]
 
+# cffi can't parse some of the primitives in zstd.h. So we invoke the
+# preprocessor and feed its output into cffi.
+compiler = distutils.ccompiler.new_compiler()
+
+# Needed for MSVC.
+if hasattr(compiler, 'initialize'):
+    compiler.initialize()
+
+# Distutils doesn't set compiler.preprocessor, so invoke the preprocessor
+# manually.
+if compiler.compiler_type == 'unix':
+    args = list(compiler.executables['compiler'])
+    args.extend([
+        '-E',
+        '-DZSTD_STATIC_LINKING_ONLY',
+    ])
+elif compiler.compiler_type == 'msvc':
+    args = [compiler.cc]
+    args.extend([
+        '/EP',
+        '/DZSTD_STATIC_LINKING_ONLY',
+    ])
+else:
+    raise Exception('unsupported compiler type: %s' % compiler.compiler_type)
+
+# zstd.h includes <stddef.h>, which is also included by cffi's boilerplate.
+# This can lead to duplicate declarations. So we strip this include from the
+# preprocessor invocation.
+
 with open(os.path.join(HERE, 'zstd', 'zstd.h'), 'rb') as fh:
-    zstd_h = fh.read()
+    lines = [l for l in fh if not l.startswith(b'#include <stddef.h>')]
+
+fd, input_file = tempfile.mkstemp(suffix='.h')
+os.write(fd, b''.join(lines))
+os.close(fd)
+
+args.append(input_file)
+
+try:
+    process = subprocess.Popen(args, stdout=subprocess.PIPE)
+    output = process.communicate()[0]
+    ret = process.poll()
+    if ret:
+        raise Exception('preprocessor exited with error')
+finally:
+    os.unlink(input_file)
+
+def normalize_output():
+    lines = []
+    for line in output.splitlines():
+        # CFFI's parser doesn't like __attribute__ on UNIX compilers.
+        if line.startswith(b'__attribute__ ((visibility ("default"))) '):
+            line = line[len(b'__attribute__ ((visibility ("default"))) '):]
+
+        lines.append(line)
+
+    return b'\n'.join(lines)
 
 ffi = cffi.FFI()
 ffi.set_source('_zstd_cffi', '''
-/* needed for typedefs like U32 references in zstd.h */
-#include "mem.h"
 #define ZSTD_STATIC_LINKING_ONLY
 #include "zstd.h"
-''',
-    sources=SOURCES, include_dirs=INCLUDE_DIRS)
+''', sources=SOURCES, include_dirs=INCLUDE_DIRS)
 
-# Rather than define the API definitions from zstd.h inline, munge the
-# source in a way that cdef() will accept.
-lines = zstd_h.splitlines()
-lines = [l.rstrip() for l in lines if l.strip()]
-
-# Strip preprocessor directives - they aren't important for our needs.
-lines = [l for l in lines
-         if not l.startswith((b'#if', b'#else', b'#endif', b'#include'))]
-
-# Remove extern C block
-lines = [l for l in lines if l not in (b'extern "C" {', b'}')]
-
-# The version #defines don't parse and aren't necessary. Strip them.
-lines = [l for l in lines if not l.startswith((
-    b'#define ZSTD_H_235446',
-    b'#define ZSTD_LIB_VERSION',
-    b'#define ZSTD_QUOTE',
-    b'#define ZSTD_EXPAND_AND_QUOTE',
-    b'#define ZSTD_VERSION_STRING',
-    b'#define ZSTD_VERSION_NUMBER'))]
-
-# The C parser also doesn't like some constant defines referencing
-# other constants.
-# TODO we pick the 64-bit constants here. We should assert somewhere
-# we're compiling for 64-bit.
-def fix_constants(l):
-    if l.startswith(b'#define ZSTD_WINDOWLOG_MAX '):
-        return b'#define ZSTD_WINDOWLOG_MAX 27'
-    elif l.startswith(b'#define ZSTD_CHAINLOG_MAX '):
-        return b'#define ZSTD_CHAINLOG_MAX 28'
-    elif l.startswith(b'#define ZSTD_HASHLOG_MAX '):
-        return b'#define ZSTD_HASHLOG_MAX 27'
-    elif l.startswith(b'#define ZSTD_CHAINLOG_MAX '):
-        return b'#define ZSTD_CHAINLOG_MAX 28'
-    elif l.startswith(b'#define ZSTD_CHAINLOG_MIN '):
-        return b'#define ZSTD_CHAINLOG_MIN 6'
-    elif l.startswith(b'#define ZSTD_SEARCHLOG_MAX '):
-        return b'#define ZSTD_SEARCHLOG_MAX 26'
-    elif l.startswith(b'#define ZSTD_BLOCKSIZE_ABSOLUTEMAX '):
-        return b'#define ZSTD_BLOCKSIZE_ABSOLUTEMAX 131072'
-    else:
-        return l
-lines = map(fix_constants, lines)
-
-# ZSTDLIB_API isn't handled correctly. Strip it.
-lines = [l for l in lines if not l.startswith(b'#  define ZSTDLIB_API')]
-def strip_api(l):
-    if l.startswith(b'ZSTDLIB_API '):
-        return l[len(b'ZSTDLIB_API '):]
-    else:
-        return l
-lines = map(strip_api, lines)
-
-source = b'\n'.join(lines)
-ffi.cdef(source.decode('latin1'))
-
+ffi.cdef(normalize_output().decode('latin1'))
 
 if __name__ == '__main__':
     ffi.compile()

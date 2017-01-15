@@ -2,12 +2,16 @@
 python-zstandard
 ================
 
-This project provides a Python C extension for interfacing with the
-`Zstandard <http://www.zstd.net>`_ compression library.
+This project provides Python bindings for interfacing with the
+`Zstandard <http://www.zstd.net>`_ compression library. A C extension
+and CFFI interface is provided.
 
 The primary goal of the extension is to provide a Pythonic interface to
 the underlying C API. This means exposing most of the features and flexibility
 of the C API while not sacrificing usability or safety that Python provides.
+
+The canonical home for this project is
+https://github.com/indygreg/python-zstandard.
 
 |  |ci-status| |win-ci-status|
 
@@ -205,13 +209,31 @@ write_dict_id
    Defaults to True. The dictionary ID is only written if a dictionary
    is being used.
 
+Unless specified otherwise, assume that no two methods of ``ZstdCompressor``
+instances can be called from multiple Python threads simultaneously. In other
+words, assume instances are not thread safe unless stated otherwise.
+
 Simple API
 ^^^^^^^^^^
 
 ``compress(data)`` compresses and returns data as a one-shot operation.::
 
-   cctx = zstd.ZsdCompressor()
+   cctx = zstd.ZstdCompressor()
    compressed = cctx.compress(b'data to compress')
+
+Unless ``compression_params`` or ``dict_data`` are passed to the
+``ZstdCompressor``, each invocation of ``compress()`` will calculate the
+optimal compression parameters for the configured compression ``level`` and
+input data size (some parameters are fine-tuned for small input sizes).
+
+If a compression dictionary is being used, the compression parameters
+determined from the first input's size will be reused for subsequent
+operations.
+
+There is currently a deficiency in zstd's C APIs that makes it difficult
+to round trip empty inputs when ``write_content_size=True``. Attempting
+this will raise a ``ValueError`` unless ``allow_empty=True`` is passed
+to ``compress()``.
 
 Streaming Input API
 ^^^^^^^^^^^^^^^^^^^
@@ -226,13 +248,17 @@ data into a compressor.::
        ...
 
 The argument to ``write_to()`` must have a ``write(data)`` method. As
-compressed data is available, ``write()`` will be called with the comrpessed
+compressed data is available, ``write()`` will be called with the compressed
 data as its argument. Many common Python types implement ``write()``, including
 open file handles and ``io.BytesIO``.
 
 ``write_to()`` returns an object representing a streaming compressor instance.
 It **must** be used as a context manager. That object's ``write(data)`` method
 is used to feed data into the compressor.
+
+A ``flush()`` method can be called to evict whatever data remains within the
+compressor's internal state into the output object. This may result in 0 or
+more ``write()`` calls to the output object.
 
 If the size of the data being fed to this streaming compressor is known,
 you can declare it before compression begins::
@@ -279,6 +305,10 @@ or by fetching a slice of data from the object directly (in the case where
 the buffer protocol is being used). The returned iterator consists of chunks
 of compressed data.
 
+If reading from the source via ``read()``, ``read()`` will be called until
+it raises or returns an empty bytes (``b''``). It is perfectly valid for
+the source to deliver fewer bytes than were what requested by ``read(size)``.
+
 Like ``write_to()``, ``read_from()`` also accepts a ``size`` argument
 declaring the size of the input stream::
 
@@ -292,6 +322,10 @@ the ideal size of output chunks::
     cctx = zstd.ZstdCompressor()
     for chunk in cctx.read_from(fh, read_size=16384, write_size=8192):
         pass
+
+Unlike ``write_to()``, ``read_from()`` does not give direct control over the
+sizes of chunks fed into the compressor. Instead, chunk sizes will be whatever
+the object being read from delivers. These will often be of a uniform size.
 
 Stream Copying API
 ^^^^^^^^^^^^^^^^^^
@@ -334,9 +368,15 @@ The purpose of ``compressobj()`` is to provide an API-compatible interface
 with ``zlib.compressobj`` and ``bz2.BZ2Compressor``. This allows callers to
 swap in different compressor objects while using the same API.
 
-Once ``flush()`` is called, the compressor will no longer accept new data
-to ``compress()``. ``flush()`` **must** be called to end the compression
-context. If not called, the returned data may be incomplete.
+``flush()`` accepts an optional argument indicating how to end the stream.
+``zstd.COMPRESSOBJ_FLUSH_FINISH`` (the default) ends the compression stream.
+Once this type of flush is performed, ``compress()`` and ``flush()`` can
+no longer be called. This type of flush **must** be called to end the
+compression context. If not called, returned data may be incomplete.
+
+A ``zstd.COMPRESSOBJ_FLUSH_BLOCK`` argument to ``flush()`` will flush a
+zstd block. Flushes of this type can be performed multiple times. The next
+call to ``compress()`` will begin a new zstd block.
 
 Here is how this API should be used::
 
@@ -344,6 +384,15 @@ Here is how this API should be used::
    cobj = cctx.compressobj()
    data = cobj.compress(b'raw input 0')
    data = cobj.compress(b'raw input 1')
+   data = cobj.flush()
+
+Or to flush blocks::
+
+   cctx.zstd.ZstdCompressor()
+   cobj = cctx.compressobj()
+   data = cobj.compress(b'chunk in first block')
+   data = cobj.flush(zstd.COMPRESSOBJ_FLUSH_BLOCK)
+   data = cobj.compress(b'chunk in second block')
    data = cobj.flush()
 
 For best performance results, keep input chunks under 256KB. This avoids
@@ -370,6 +419,10 @@ dict_data
    Compression dictionary to use.
 
 The interface of this class is very similar to ``ZstdCompressor`` (by design).
+
+Unless specified otherwise, assume that no two methods of ``ZstdDecompressor``
+instances can be called from multiple Python threads simultaneously. In other
+words, assume instances are not thread safe unless stated otherwise.
 
 Simple API
 ^^^^^^^^^^

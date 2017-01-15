@@ -5,6 +5,7 @@
 # This software may be modified and distributed under the terms
 # of the BSD license. See the LICENSE file for details.
 
+import sys
 from setuptools import setup
 
 try:
@@ -14,9 +15,15 @@ except ImportError:
 
 import setup_zstd
 
+SUPPORT_LEGACY = False
+
+if "--legacy" in sys.argv:
+    SUPPORT_LEGACY = True
+    sys.argv.remove("--legacy")
+
 # Code for obtaining the Extension instance is in its own module to
 # facilitate reuse in other projects.
-extensions = [setup_zstd.get_c_extension()]
+extensions = [setup_zstd.get_c_extension(SUPPORT_LEGACY, 'zstd')]
 
 if cffi:
     import make_cffi

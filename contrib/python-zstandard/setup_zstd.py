@@ -16,15 +16,24 @@ zstd_sources = ['zstd/%s' % p for p in (
     'common/zstd_common.c',
     'compress/fse_compress.c',
     'compress/huf_compress.c',
-    'compress/zbuff_compress.c',
     'compress/zstd_compress.c',
     'decompress/huf_decompress.c',
-    'decompress/zbuff_decompress.c',
     'decompress/zstd_decompress.c',
     'dictBuilder/divsufsort.c',
     'dictBuilder/zdict.c',
 )]
 
+zstd_sources_legacy = ['zstd/%s' % p for p in (
+    'deprecated/zbuff_compress.c',
+    'deprecated/zbuff_decompress.c',
+    'legacy/zstd_v01.c',
+    'legacy/zstd_v02.c',
+    'legacy/zstd_v03.c',
+    'legacy/zstd_v04.c',
+    'legacy/zstd_v05.c',
+    'legacy/zstd_v06.c',
+    'legacy/zstd_v07.c'
+)]
 
 zstd_includes = [
     'c-ext',
@@ -33,6 +42,11 @@ zstd_includes = [
     'zstd/compress',
     'zstd/decompress',
     'zstd/dictBuilder',
+]
+
+zstd_includes_legacy = [
+    'zstd/deprecated',
+    'zstd/legacy',
 ]
 
 ext_sources = [
@@ -51,14 +65,27 @@ ext_sources = [
     'c-ext/dictparams.c',
 ]
 
+zstd_depends = [
+    'c-ext/python-zstandard.h',
+]
 
-def get_c_extension(name='zstd'):
+
+def get_c_extension(support_legacy=False, name='zstd'):
     """Obtain a distutils.extension.Extension for the C extension."""
     root = os.path.abspath(os.path.dirname(__file__))
 
     sources = [os.path.join(root, p) for p in zstd_sources + ext_sources]
+    if support_legacy:
+        sources.extend([os.path.join(root, p) for p in zstd_sources_legacy])
+
     include_dirs = [os.path.join(root, d) for d in zstd_includes]
+    if support_legacy:
+        include_dirs.extend([os.path.join(root, d) for d in zstd_includes_legacy])
+
+    depends = [os.path.join(root, p) for p in zstd_depends]
 
     # TODO compile with optimizations.
     return Extension(name, sources,
-                     include_dirs=include_dirs)
+                     include_dirs=include_dirs,
+                     depends=depends,
+                     extra_compile_args=["-DZSTD_LEGACY_SUPPORT=1"] if support_legacy else [])
