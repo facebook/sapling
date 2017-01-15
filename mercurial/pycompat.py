@@ -46,7 +46,6 @@ if ispy3:
     ospathsep = os.pathsep.encode('ascii')
     ossep = os.sep.encode('ascii')
     osaltsep = os.altsep
-    osgetenv = os.getenvb
     if osaltsep:
         osaltsep = osaltsep.encode('ascii')
     # os.getcwd() on Python 3 returns string, but it has os.getcwdb() which
@@ -169,7 +168,6 @@ else:
     sysargv = sys.argv
     sysplatform = sys.platform
     getcwd = os.getcwd
-    osgetenv = os.getenv
     sysexecutable = sys.executable
     shlexsplit = shlex.split
 

@@ -465,9 +465,10 @@ py3pats = [
     (r'os\.sep', "use pycompat.ossep instead (py3)"),
     (r'os\.pathsep', "use pycompat.ospathsep instead (py3)"),
     (r'os\.altsep', "use pycompat.osaltsep instead (py3)"),
-    (r'os\.getenv', "use pycompat.osgetenv instead (py3)"),
     (r'sys\.platform', "use pycompat.sysplatform instead (py3)"),
     (r'getopt\.getopt', "use pycompat.getoptb instead (py3)"),
+    (r'os\.getenv', "use encoding.environ.get instead"),
+    (r'os\.setenv', "modifying the environ dict is not preferred"),
   ],
   # warnings
   [],

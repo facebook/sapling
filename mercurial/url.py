@@ -15,10 +15,10 @@ import socket
 
 from .i18n import _
 from . import (
+    encoding,
     error,
     httpconnection as httpconnectionmod,
     keepalive,
-    pycompat,
     sslutil,
     util,
 )
@@ -81,7 +81,7 @@ class passwordmgr(object):
 class proxyhandler(urlreq.proxyhandler):
     def __init__(self, ui):
         proxyurl = (ui.config("http_proxy", "host") or
-                        pycompat.osgetenv('http_proxy'))
+                        encoding.environ.get('http_proxy'))
         # XXX proxyauthinfo = None
 
         if proxyurl:
@@ -99,7 +99,7 @@ class proxyhandler(urlreq.proxyhandler):
             no_list.extend([p.lower() for
                             p in ui.configlist("http_proxy", "no")])
             no_list.extend([p.strip().lower() for
-                            p in pycompat.osgetenv("no_proxy", '').split(',')
+                            p in encoding.environ.get("no_proxy", '').split(',')
                             if p.strip()])
             # "http_proxy.always" config is for running tests on localhost
             if ui.configbool("http_proxy", "always"):

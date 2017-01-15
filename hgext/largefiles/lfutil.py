@@ -19,6 +19,7 @@ from mercurial.i18n import _
 
 from mercurial import (
     dirstate,
+    encoding,
     error,
     httpconnection,
     match as matchmod,
@@ -74,19 +75,19 @@ def _usercachedir(ui):
     if path:
         return path
     if pycompat.osname == 'nt':
-        appdata = pycompat.osgetenv('LOCALAPPDATA',\
-                        pycompat.osgetenv('APPDATA'))
+        appdata = encoding.environ.get('LOCALAPPDATA',\
+                        encoding.environ.get('APPDATA'))
         if appdata:
             return os.path.join(appdata, longname)
     elif platform.system() == 'Darwin':
-        home = pycompat.osgetenv('HOME')
+        home = encoding.environ.get('HOME')
         if home:
             return os.path.join(home, 'Library', 'Caches', longname)
     elif pycompat.osname == 'posix':
-        path = pycompat.osgetenv('XDG_CACHE_HOME')
+        path = encoding.environ.get('XDG_CACHE_HOME')
         if path:
             return os.path.join(path, longname)
-        home = pycompat.osgetenv('HOME')
+        home = encoding.environ.get('HOME')
         if home:
             return os.path.join(home, '.cache', longname)
     else:
