@@ -243,6 +243,28 @@ Git diff, adding extended headers
   -a
   +b
 
+  $ hg diff --git --config experimental.extendedheader.index=-1
+  invalid length for extendedheader.index: '-1'
+  diff --git a/f1 b/f 1
+  rename from f1
+  rename to f 1
+  --- a/f1
+  +++ b/f 1	
+  @@ -1,1 +1,1 @@
+  -a
+  +b
+
+  $ hg diff --git --config experimental.extendedheader.index=whatever
+  invalid value for extendedheader.index: 'whatever'
+  diff --git a/f1 b/f 1
+  rename from f1
+  rename to f 1
+  --- a/f1
+  +++ b/f 1	
+  @@ -1,1 +1,1 @@
+  -a
+  +b
+
 Git diff with noprefix
 
   $ hg --config diff.noprefix=True diff --git --nodates

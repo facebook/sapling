@@ -2184,6 +2184,9 @@ def difffeatureopts(ui, opts=None, untrusted=False, section='diff', git=False,
                 # the hash config could be an integer (for length of hash) or a
                 # word (e.g. short, full, none)
                 hlen = int(hconf)
+                if hlen < 0 or hlen > 40:
+                    msg = _("invalid length for extendedheader.index: '%d'\n")
+                    ui.warn(msg % hlen)
             except ValueError:
                 # default value
                 if hconf == 'short' or hconf == '':
@@ -2194,9 +2197,6 @@ def difffeatureopts(ui, opts=None, untrusted=False, section='diff', git=False,
                     msg = _("invalid value for extendedheader.index: '%s'\n")
                     ui.warn(msg % hconf)
             finally:
-                if hlen < 0 or hlen > 40:
-                    msg = _("invalid length for extendedheader.index: '%d'\n")
-                    ui.warn(msg % hlen)
                 buildopts['index'] = hlen
 
     if whitespace:
