@@ -952,7 +952,8 @@ def followlines(repo, subset, x):
     fromline -= 1
 
     fctx = repo[rev].filectx(fname)
-    revs = (c.rev() for c in context.blockancestors(fctx, fromline, toline))
+    revs = (c.rev() for c, _linerange
+            in context.blockancestors(fctx, fromline, toline))
     return subset & generatorset(revs, iterasc=False)
 
 @predicate('all()', safe=True)

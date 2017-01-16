@@ -1179,7 +1179,7 @@ def blockancestors(fctx, fromline, toline, followfirst=False):
             pl = pl[:1]
         if not pl:
             # The block originates from the initial revision.
-            yield c
+            yield c, linerange2
             continue
         inrange = False
         for p in pl:
@@ -1192,7 +1192,7 @@ def blockancestors(fctx, fromline, toline, followfirst=False):
                 continue
             visit[p.linkrev(), p.filenode()] = p, linerange1
         if inrange:
-            yield c
+            yield c, linerange2
 
 class committablectx(basectx):
     """A committablectx object provides common functionality for a context that
