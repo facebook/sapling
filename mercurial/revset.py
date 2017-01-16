@@ -901,17 +901,22 @@ def _followfirst(repo, subset, x):
     # of every revisions or files revisions.
     return _follow(repo, subset, x, '_followfirst', followfirst=True)
 
-@predicate('followlines(file, fromline:toline[, startrev=.])', safe=True)
+@predicate('followlines(file, fromline:toline[, startrev=., descend=False])',
+           safe=True)
 def followlines(repo, subset, x):
     """Changesets modifying `file` in line range ('fromline', 'toline').
 
     Line range corresponds to 'file' content at 'startrev' and should hence be
     consistent with file size. If startrev is not specified, working directory's
     parent is used.
+
+    By default, ancestors of 'startrev' are returned. If 'descend' is True,
+    descendants of 'startrev' are returned though renames are (currently) not
+    followed in this direction.
     """
     from . import context  # avoid circular import issues
 
-    args = getargsdict(x, 'followlines', 'file *lines startrev')
+    args = getargsdict(x, 'followlines', 'file *lines startrev descend')
     if len(args['lines']) != 1:
         raise error.ParseError(_("followlines requires a line range"))
 
@@ -939,9 +944,17 @@ def followlines(repo, subset, x):
     fromline, toline = util.processlinerange(fromline, toline)
 
     fctx = repo[rev].filectx(fname)
-    revs = (c.rev() for c, _linerange
-            in context.blockancestors(fctx, fromline, toline))
-    return subset & generatorset(revs, iterasc=False)
+    if args.get('descend', False):
+        rs = generatorset(
+            (c.rev() for c, _linerange
+             in context.blockdescendants(fctx, fromline, toline)),
+            iterasc=True)
+    else:
+        rs = generatorset(
+            (c.rev() for c, _linerange
+             in context.blockancestors(fctx, fromline, toline)),
+            iterasc=False)
+    return subset & rs
 
 @predicate('all()', safe=True)
 def getall(repo, subset, x):

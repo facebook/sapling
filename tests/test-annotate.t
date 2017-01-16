@@ -484,7 +484,9 @@ annotate removed file
   $ hg id -n
   20
 
-Test followlines() revset
+Test followlines() revset; we usually check both followlines(pat, range) and
+followlines(pat, range, descend=True) to make sure both give the same result
+when they should.
 
   $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 3:5)'
   16: baz:0
@@ -494,9 +496,11 @@ Test followlines() revset
   16: baz:0
   19: baz:3
   20: baz:4
-  $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 3:5, startrev=.^)'
+  $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 3:5, startrev=19)'
   16: baz:0
   19: baz:3
+  $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 3:5, startrev=19, descend=True)'
+  20: baz:4
   $ printf "0\n0\n" | cat - baz > baz1
   $ mv baz1 baz
   $ hg ci -m 'added two lines with 0'
@@ -504,11 +508,15 @@ Test followlines() revset
   16: baz:0
   19: baz:3
   20: baz:4
+  $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 3:5, descend=True, startrev=19)'
+  20: baz:4
   $ echo 6 >> baz
   $ hg ci -m 'added line 8'
   $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 5:7)'
   16: baz:0
   19: baz:3
+  20: baz:4
+  $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 3:5, startrev=19, descend=True)'
   20: baz:4
   $ sed 's/3/3+/' baz > baz.new
   $ mv baz.new baz
@@ -516,6 +524,9 @@ Test followlines() revset
   $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 5:7)'
   16: baz:0
   19: baz:3
+  20: baz:4
+  23: baz:3->3+
+  $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 3:5, startrev=19, descend=True)'
   20: baz:4
   23: baz:3->3+
   $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 1:2)'
@@ -536,9 +547,13 @@ renames are followed
   20: baz:4
   23: baz:3->3+
   24: qux:4->4+
-  $ hg up 23 --quiet
+
+but are missed when following children
+  $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 5:7, startrev=22, descend=True)'
+  23: baz:3->3+
 
 merge
+  $ hg up 23 --quiet
   $ echo 7 >> baz
   $ hg ci -m 'one more line, out of line range'
   created new head
@@ -580,6 +595,10 @@ merge
   26: baz:3+->3-
   28: merge from other side
   $ hg up 23 --quiet
+
+we are missing the branch with rename when following children
+  $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 5:7, startrev=25, descend=True)'
+  26: baz:3+->3-
 
 check error cases
   $ hg log -r 'followlines()'
