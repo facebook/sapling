@@ -30,6 +30,6 @@ def get_daemon_versions():
         build target names.
     '''
     return [
-        ('//eden/fs/service:edenfs%s' % suffix, suffix)
+        ('@/eden/fs/service:edenfs%s' % suffix, suffix)
         for suffix in [get_fb_suffix(), get_oss_suffix()]
     ]

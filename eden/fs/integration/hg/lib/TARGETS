@@ -11,8 +11,8 @@ python_library(
     'hg_extension_test_base.py',
   ],
   deps = [
-    '//eden/fs/integration/lib:lib',
-    '//eden/hooks/hg:post-clone',
+    '@/eden/fs/integration/lib:lib',
+    '@/eden/hooks/hg:post-clone',
   ],
 )
 

@@ -4,7 +4,7 @@ include_defs('//eden/DEFS')
 # and we do not expect that testing against the internal version
 # will provide any additional signal.
 oss_suffix = get_oss_suffix()
-daemon_target = '//eden/fs/service:edenfs%s' % oss_suffix
+daemon_target = '@/eden/fs/service:edenfs%s' % oss_suffix
 
 python_unittest(
   name = 'hg',
@@ -14,7 +14,7 @@ python_unittest(
   },
   deps = [
     daemon_target,
-    '//eden/fs/cli:cli',
-    '//eden/fs/integration/hg/lib:testutil',
+    '@/eden/fs/cli:cli',
+    '@/eden/fs/integration/hg/lib:testutil',
   ],
 )

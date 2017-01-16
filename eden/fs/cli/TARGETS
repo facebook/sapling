@@ -5,8 +5,8 @@ python_binary(
   srcs = ['main.py'],
   main_module = 'eden/fs/cli/main',
   deps = [
-    '//eden/fs/cli:lib',
-    '//eden/fs/service:py-client',
+    '@/eden/fs/cli:lib',
+    '@/eden/fs/service:py-client',
   ],
 )
 
@@ -25,7 +25,7 @@ for build_target, suffix in get_daemon_versions():
       name = 'all%s' % suffix,
       srcs = [
         ':cli',
-        build_target,
+        build_target.replace('@/', '//'),
       ],
       out = 'eden%s-stamp' % suffix,
       cmd = 'touch $OUT',

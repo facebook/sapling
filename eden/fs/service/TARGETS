@@ -17,7 +17,7 @@ thrift_library(
   py_base_module = 'facebook',
   languages = ['cpp2', 'java', 'py'],
   deps = [
-    '//common/fb303/if:fb303',
+    '@/common/fb303/if:fb303',
   ],
 )
 
@@ -40,7 +40,7 @@ python_library(
   ],
   base_module = 'eden.thrift',
   deps = [
-    '//eden/fs/service:thrift-py',
+    '@/eden/fs/service:thrift-py',
   ],
 )
 
@@ -54,10 +54,10 @@ cpp_library(
   ],
   deps = [
     ':thrift-cpp2',
-    '//eden/fs/inodes:inodes',
-    '//eden/fuse:fusell',
-    '//eden/utils:utils',
-    '//folly:folly',
+    '@/eden/fs/inodes:inodes',
+    '@/eden/fuse:fusell',
+    '@/eden/utils:utils',
+    '@/folly:folly',
   ],
 )
 
@@ -70,7 +70,7 @@ if is_facebook_internal():
           'facebook/EdenServer.cpp',
         ],
         server_deps = [
-          '//common/services/cpp:cpp',
+          '@/common/services/cpp:cpp',
         ],
     )
 
