@@ -258,6 +258,9 @@ static PyObject* ZstdCompressor_copy_stream(ZstdCompressor* self, PyObject* args
 		return NULL;
 	}
 
+	/* Prevent free on uninitialized memory in finally. */
+	output.dst = NULL;
+
 	cstream = CStream_from_ZstdCompressor(self, sourceSize);
 	if (!cstream) {
 		res = NULL;

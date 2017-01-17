@@ -165,6 +165,9 @@ static PyObject* Decompressor_copy_stream(ZstdDecompressor* self, PyObject* args
 		return NULL;
 	}
 
+	/* Prevent free on uninitialized memory in finally. */
+	output.dst = NULL;
+
 	dstream = DStream_from_ZstdDecompressor(self);
 	if (!dstream) {
 		res = NULL;
