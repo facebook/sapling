@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2016, Facebook, Inc.
+ *  Copyright (c) 2017, Facebook, Inc.
  *  All rights reserved.
  *
  *  This source code is licensed under the BSD-style license found in the
@@ -9,9 +9,10 @@
  */
 #pragma once
 
+#include <folly/ExceptionWrapper.h>
 #include <folly/Format.h>
 #include <folly/Range.h>
-
+#include <system_error>
 #include "eden/fs/service/gen-cpp2/eden_types.h"
 
 namespace facebook {
@@ -27,11 +28,7 @@ namespace eden {
  * The message is used literally in this case, and is not passed through
  * folly::format() if no format arguments are supplied..
  */
-EdenError newEdenError(int errorCode, folly::StringPiece message) {
-  auto e = EdenError(message.str());
-  e.set_errorCode(errorCode);
-  return e;
-}
+EdenError newEdenError(int errorCode, folly::StringPiece message);
 
 /**
  * Construct an EdenError from an error code, plus a format
@@ -58,10 +55,7 @@ EdenError newEdenError(folly::StringPiece fmt, Args&&... args) {
  *
  * This automatically extracts the error code.
  */
-template <class... Args>
-EdenError newEdenError(const std::system_error& ex) {
-  return newEdenError(ex.code().value(), ex.what());
-}
+EdenError newEdenError(const std::system_error& ex);
 
 /**
  * Construct an EdenError from an exception.
@@ -69,14 +63,11 @@ EdenError newEdenError(const std::system_error& ex) {
  * If the exception is an instance of std::system_error the error code will be
  * extracted.
  */
-template <class... Args>
-EdenError newEdenError(const std::exception& ex) {
-  const std::system_error* systemError =
-      dynamic_cast<const std::system_error*>(&ex);
-  if (systemError) {
-    return newEdenError(*systemError);
-  }
-  return EdenError(folly::exceptionStr(ex).toStdString());
-}
+EdenError newEdenError(const std::exception& ex);
+
+/**
+ * Construct an EdenError from a folly::exception_wrapper.
+ */
+EdenError newEdenError(const folly::exception_wrapper& ew);
 }
 }

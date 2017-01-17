@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2016, Facebook, Inc.
+ *  Copyright (c) 2017, Facebook, Inc.
  *  All rights reserved.
  *
  *  This source code is licensed under the BSD-style license found in the
@@ -13,9 +13,15 @@
 #include "eden/fs/service/gen-cpp2/EdenService.h"
 #include "eden/utils/PathFuncs.h"
 
+namespace folly {
+template <typename T>
+class Future;
+}
+
 namespace facebook {
 namespace eden {
 
+class Hash;
 class EdenServer;
 class TreeInode;
 
@@ -98,13 +104,13 @@ class EdenServiceHandler : virtual public EdenServiceSvIf,
   EdenServiceHandler(EdenServiceHandler const&) = delete;
   EdenServiceHandler& operator=(EdenServiceHandler const&) = delete;
 
-  SHA1Result getSHA1ForPath(
-      const std::string& mountPoint,
-      const std::string& path);
+  folly::Future<Hash> getSHA1ForPath(
+      folly::StringPiece mountPoint,
+      folly::StringPiece path);
 
-  SHA1Result getSHA1ForPathDefensively(
-      const std::string& mountPoint,
-      const std::string& path);
+  folly::Future<Hash> getSHA1ForPathDefensively(
+      folly::StringPiece mountPoint,
+      folly::StringPiece path) noexcept;
 
   void mountImpl(const MountInfo& info);
 

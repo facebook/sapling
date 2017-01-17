@@ -13,6 +13,7 @@
 #include <folly/FileUtil.h>
 #include <folly/String.h>
 #include <folly/Subprocess.h>
+#include <folly/futures/Future.h>
 #include <unordered_set>
 #include "EdenError.h"
 #include "EdenServer.h"
@@ -30,9 +31,12 @@
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fuse/MountPoint.h"
 
+using std::make_unique;
 using std::string;
 using std::unique_ptr;
-using std::make_unique;
+using std::vector;
+using folly::Future;
+using folly::makeFuture;
 using folly::StringPiece;
 
 namespace facebook {
@@ -169,38 +173,44 @@ void EdenServiceHandler::checkOutRevision(
 }
 
 void EdenServiceHandler::getSHA1(
-    std::vector<SHA1Result>& out,
-    std::unique_ptr<string> mountPoint,
-    std::unique_ptr<std::vector<string>> paths) {
-  // TODO(t12747617): Parallelize these requests.
-  for (auto& path : *paths.get()) {
-    out.push_back(getSHA1ForPathDefensively(*mountPoint.get(), path));
+    vector<SHA1Result>& out,
+    unique_ptr<string> mountPoint,
+    unique_ptr<vector<string>> paths) {
+  vector<Future<Hash>> futures;
+  for (const auto& path : *paths) {
+    futures.emplace_back(getSHA1ForPathDefensively(*mountPoint, path));
+  }
+
+  auto results = folly::collectAll(std::move(futures)).get();
+  for (auto& result : results) {
+    out.emplace_back();
+    SHA1Result& sha1Result = out.back();
+    if (result.hasValue()) {
+      sha1Result.set_sha1(StringPiece{result.value().getBytes()}.str());
+    } else {
+      sha1Result.set_error(newEdenError(result.exception()));
+    }
   }
 }
 
-SHA1Result EdenServiceHandler::getSHA1ForPathDefensively(
-    const string& mountPoint,
-    const string& path) {
-  // Calls getSHA1ForPath() and traps all system_errors and returns the error
-  // variant of the SHA1Result union type rather than letting the exception
-  // bubble up.
+Future<Hash> EdenServiceHandler::getSHA1ForPathDefensively(
+    StringPiece mountPoint,
+    StringPiece path) noexcept {
+  // Calls getSHA1ForPath() and traps all immediate exceptions and converts
+  // them in to a Future result.
   try {
     return getSHA1ForPath(mountPoint, path);
   } catch (const std::system_error& e) {
-    SHA1Result out;
-    out.set_error(newEdenError(e));
-    return out;
+    return makeFuture<Hash>(newEdenError(e));
   }
 }
 
-SHA1Result EdenServiceHandler::getSHA1ForPath(
-    const string& mountPoint,
-    const string& path) {
-  SHA1Result out;
-
+Future<Hash> EdenServiceHandler::getSHA1ForPath(
+    StringPiece mountPoint,
+    StringPiece path) {
   if (path.empty()) {
-    out.set_error(newEdenError(EINVAL, "path cannot be the empty string"));
-    return out;
+    return makeFuture<Hash>(
+        newEdenError(EINVAL, "path cannot be the empty string"));
   }
 
   auto edenMount = server_->getMount(mountPoint);
@@ -210,11 +220,9 @@ SHA1Result EdenServiceHandler::getSHA1ForPath(
   auto fileInode = edenMount->getFileInode(relativePath);
   if (!S_ISREG(fileInode->getEntry()->mode)) {
     // We intentionally want to refuse to compute the SHA1 of symlinks
-    throw InodeError(EINVAL, fileInode, "file is a symlink");
+    return makeFuture<Hash>(InodeError(EINVAL, fileInode, "file is a symlink"));
   }
-  auto hash = fileInode->getSHA1().get();
-  out.set_sha1(StringPiece(hash.getBytes()).str());
-  return out;
+  return fileInode->getSHA1();
 }
 
 void EdenServiceHandler::getMaterializedEntries(
