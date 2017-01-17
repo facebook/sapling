@@ -94,7 +94,10 @@ follows, with byte 0 being the first byte (all data stored as big endian):
 
    0: REVIDX_ISCENSORED revision has censor metadata, must be verified.
 
-   1: REVIDX_EXTSTORED revision data is stored externally.
+   1: REVIDX_ELLIPSIS revision hash does not match its data. Used by
+   narrowhg
+
+   2: REVIDX_EXTSTORED revision data is stored externally.
 
 8-11 (4 bytes)
    Compressed length of revision data / chunk as stored in revlog.
