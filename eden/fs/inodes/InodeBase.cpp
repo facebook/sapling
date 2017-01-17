@@ -191,11 +191,15 @@ std::string InodeBase::getLogPath() const {
 
 std::unique_ptr<InodeBase> InodeBase::markUnlinked(
     TreeInode* parent,
-    PathComponentPiece name) {
+    PathComponentPiece name,
+    const RenameLock& renameLock) {
   VLOG(5) << "inode " << this << " unlinked: " << getLogPath();
+  DCHECK(renameLock.isHeld(mount_));
+
   {
     auto loc = location_.wlock();
     DCHECK(!loc->unlinked);
+    DCHECK_EQ(loc->parent.get(), parent);
     loc->unlinked = true;
   }
 
@@ -228,9 +232,13 @@ std::unique_ptr<InodeBase> InodeBase::markUnlinked(
 
 void InodeBase::updateLocation(
     TreeInodePtr newParent,
-    PathComponentPiece newName) {
+    PathComponentPiece newName,
+    const RenameLock& renameLock) {
   VLOG(5) << "inode " << this << " renamed: " << getLogPath() << " --> "
           << newParent->getLogPath() << " / \"" << newName << "\"";
+  DCHECK(renameLock.isHeld(mount_));
+  DCHECK_EQ(mount_, newParent->mount_);
+
   auto loc = location_.wlock();
   DCHECK(!loc->unlinked);
   loc->parent = newParent;

@@ -9,8 +9,11 @@
  */
 #pragma once
 
+#include <folly/SharedMutex.h>
 #include <folly/Synchronized.h>
 #include <memory>
+#include <mutex>
+#include <shared_mutex>
 #include "eden/fs/inodes/InodePtrFwd.h"
 #include "eden/fs/journal/JournalDelta.h"
 #include "eden/utils/PathFuncs.h"
@@ -30,6 +33,9 @@ class ObjectStore;
 class Overlay;
 class Journal;
 class Tree;
+
+class RenameLock;
+class SharedRenameLock;
 
 /**
  * EdenMount contains all of the data about a specific eden mount point.
@@ -158,6 +164,16 @@ class EdenMount {
   FileInodePtr getFileInode(RelativePathPiece path) const;
 
   /**
+   * Acquire the rename lock in exclusive mode.
+   */
+  RenameLock acquireRenameLock();
+
+  /**
+   * Acquire the rename lock in shared mode.
+   */
+  SharedRenameLock acquireSharedRenameLock();
+
+  /**
    * shutdownComplete() will be called by InodeMap when all outstanding Inodes
    * for this mount point have been deleted.
    *
@@ -166,6 +182,9 @@ class EdenMount {
   void shutdownComplete();
 
  private:
+  friend class RenameLock;
+  friend class SharedRenameLock;
+
   // Forbidden copy constructor and assignment operator
   EdenMount(EdenMount const&) = delete;
   EdenMount& operator=(EdenMount const&) = delete;
@@ -187,6 +206,15 @@ class EdenMount {
   std::shared_ptr<Overlay> overlay_;
   std::unique_ptr<Dirstate> dirstate_;
 
+  /**
+   * A mutex around all name-changing operations in this mount point.
+   *
+   * This includes rename() operations as well as unlink() and rmdir().
+   * Any operation that modifies an existing InodeBase's location_ data must
+   * hold the rename lock.
+   */
+  folly::SharedMutex renameMutex_;
+
   /*
    * Note that this config will not be updated if the user modifies the
    * underlying config files after the ClientConfig was created.
@@ -202,6 +230,40 @@ class EdenMount {
   const uint64_t mountGeneration_;
 };
 
+/**
+ * RenameLock is a holder for an EdenMount's rename mutex.
+ *
+ * This is primarily useful so it can be forward declared easily,
+ * but it also provides a helper method to ensure that it is currently holding
+ * a lock on the desired mount.
+ */
+class RenameLock : public std::unique_lock<folly::SharedMutex> {
+ public:
+  explicit RenameLock(EdenMount* mount)
+      : std::unique_lock<folly::SharedMutex>{mount->renameMutex_} {}
+
+  bool isHeld(EdenMount* mount) const {
+    return owns_lock() && (mutex() == &mount->renameMutex_);
+  }
+};
+
+/**
+ * SharedRenameLock is a holder for an EdenMount's rename mutex in shared mode.
+ */
+class SharedRenameLock : public std::shared_lock<folly::SharedMutex> {
+ public:
+  explicit SharedRenameLock(EdenMount* mount)
+      : std::shared_lock<folly::SharedMutex>{mount->renameMutex_} {}
+
+  bool isHeld(EdenMount* mount) const {
+    return owns_lock() && (mutex() == &mount->renameMutex_);
+  }
+};
+
+/**
+ * EdenMountDeleter acts as a deleter argument for std::shared_ptr or
+ * std::unique_ptr.
+ */
 class EdenMountDeleter {
  public:
   void operator()(EdenMount* mount) {

@@ -20,8 +20,9 @@ class EdenMount;
 class FileHandle;
 class InodeMap;
 class ObjectStore;
-class Tree;
 class Overlay;
+class RenameLock;
+class Tree;
 
 // Represents a Tree instance in a form that FUSE can consume
 class TreeInode : public InodeBase {
@@ -142,7 +143,8 @@ class TreeInode : public InodeBase {
       PathComponentPiece sourceName,
       TreeInodePtr destParent,
       Dir* destContents,
-      PathComponentPiece destName);
+      PathComponentPiece destName,
+      const RenameLock& renameLock);
 
   fuse_ino_t getParent() const;
   fuse_ino_t getInode() const;

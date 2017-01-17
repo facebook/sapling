@@ -538,7 +538,8 @@ TreeInodePtr TreeInode::mkdir(PathComponentPiece name, mode_t mode) {
 }
 
 folly::Future<folly::Unit> TreeInode::unlink(PathComponentPiece name) {
-  // TODO: We should grab the mountpoint-wide rename lock here.
+  // Acquire the rename lock since we need to update our child's location
+  auto renameLock = getMount()->acquireRenameLock();
 
   // Compute the full name of the node they want to remove.
   auto myname = getPathBuggy();
@@ -581,8 +582,11 @@ folly::Future<folly::Unit> TreeInode::unlink(PathComponentPiece name) {
     }
     // If the child inode in question is loaded, inform it that it has been
     // unlinked.
+    //
+    // FIXME: If our child is not loaded, we need to tell the InodeMap so it
+    // can update its state if the child is present in the unloadedInodes_ map.
     if (ent->inode) {
-      deletedInode = ent->inode->markUnlinked(this, name);
+      deletedInode = ent->inode->markUnlinked(this, name, renameLock);
     }
 
     // And actually remove it
@@ -611,6 +615,9 @@ folly::Future<folly::Unit> TreeInode::rmdirImpl(
     PathComponent name,
     TreeInodePtr child,
     unsigned int attemptNum) {
+  // Acquire the rename lock since we need to update our child's location
+  auto renameLock = getMount()->acquireRenameLock();
+
   // Verify that the child directory is empty before we materialize ourself
   {
     auto childContents = child->contents_.rlock();
@@ -688,8 +695,10 @@ folly::Future<folly::Unit> TreeInode::rmdirImpl(
       auto dirPath = overlay->getContentDir() + targetName;
       folly::checkUnixError(::rmdir(dirPath.c_str()), "rmdir: ", dirPath);
     }
+    // FIXME: If our child is not loaded, we need to tell the InodeMap so it
+    // can update its state if the child is present in the unloadedInodes_ map.
     if (ent->inode) {
-      deletedInode = ent->inode->markUnlinked(this, name);
+      deletedInode = ent->inode->markUnlinked(this, name, renameLock);
     }
 
     // And actually remove it
@@ -710,7 +719,8 @@ std::unique_ptr<InodeBase> TreeInode::renameHelper(
     PathComponentPiece sourceName,
     TreeInodePtr destParent,
     Dir* destContents,
-    PathComponentPiece destName) {
+    PathComponentPiece destName,
+    const RenameLock& renameLock) {
   auto sourceEntIter = sourceContents->entries.find(sourceName);
   if (sourceEntIter == sourceContents->entries.end()) {
     throw InodeError(ENOENT, inodePtrFromThis(), sourceName);
@@ -774,15 +784,21 @@ std::unique_ptr<InodeBase> TreeInode::renameHelper(
   sourceEntIter = sourceContents->entries.find(sourceName);
 
   std::unique_ptr<InodeBase> deletedInode;
+  // FIXME: If destEnt exists but destEnt->inode is not loaded, we need to tell
+  // the InodeMap so it can update its state if the child is present in the
+  // unloadedInodes_ map.
   if (destEnt && destEnt->inode) {
-    deletedInode = destEnt->inode->markUnlinked(destParent.get(), destName);
+    deletedInode =
+        destEnt->inode->markUnlinked(destParent.get(), destName, renameLock);
   }
 
   // We want to move in the data from the source.
   destEnt = std::move(sourceEntIter->second);
 
+  // FIXME: If our child is not loaded, we need to tell the InodeMap so it
+  // can update its state if the child is present in the unloadedInodes_ map.
   if (destEnt->inode) {
-    destEnt->inode->updateLocation(destParent, destName);
+    destEnt->inode->updateLocation(destParent, destName, renameLock);
   }
 
   // Now remove the source information
@@ -794,8 +810,9 @@ folly::Future<folly::Unit> TreeInode::rename(
     PathComponentPiece name,
     TreeInodePtr newParent,
     PathComponentPiece newName) {
-  // TODO: Grab a mountpoint-wide rename lock so that no other rename
+  // Grab a mountpoint-wide rename lock so that no other rename
   // operations can happen while we are running.
+  auto renameLock = getMount()->acquireRenameLock();
 
   auto myPath = getPathBuggy();
   auto destDirPath = newParent->getPathBuggy();
@@ -823,8 +840,8 @@ folly::Future<folly::Unit> TreeInode::rename(
   std::unique_ptr<InodeBase> deletedInode;
   if (newParent.get() == this) {
     contents_.withWLock([&](auto& contents) {
-      deletedInode =
-          this->renameHelper(&contents, name, newParent, &contents, newName);
+      deletedInode = this->renameHelper(
+          &contents, name, newParent, &contents, newName, renameLock);
       this->getOverlay()->saveOverlayDir(myPath, &contents);
     });
   } else {
@@ -838,7 +855,7 @@ folly::Future<folly::Unit> TreeInode::rename(
     SYNCHRONIZED_DUAL(
         sourceContents, contents_, destContents, newParent->contents_) {
       deletedInode = renameHelper(
-          &sourceContents, name, newParent, &destContents, newName);
+          &sourceContents, name, newParent, &destContents, newName, renameLock);
       getOverlay()->saveOverlayDir(myPath, &sourceContents);
       getOverlay()->saveOverlayDir(destDirPath, &destContents);
     }

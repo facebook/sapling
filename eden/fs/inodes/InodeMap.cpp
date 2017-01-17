@@ -393,12 +393,15 @@ void InodeMap::beginShutdown() {
   // Walk from the root of the tree down, finding all unreferenced inodes,
   // and immediately destroy them.
   //
-  // TODO: Once the mountpoint-wide rename lock exists, hold it here before
-  // doing the walk.  We want to make sure that we walk *all* children.  While
-  // doing the walk we want to make sure that an Inode that hasn't been
-  // processed yet cannot be moved from the unprocessed part of the tree into a
-  // processed part of the tree.
-  root_->unloadChildrenNow();
+  // Hold the the mountpoint-wide rename lock in shared mode while doing the
+  // walk.  We want to make sure that we walk *all* children.  While doing the
+  // walk we want to make sure that an Inode that hasn't been processed yet
+  // cannot be moved from the unprocessed part of the tree into a processed
+  // part of the tree.
+  {
+    auto renameLock = mount_->acquireSharedRenameLock();
+    root_->unloadChildrenNow();
+  }
 
   // Also walk loadedInodes_ to immediately destroy all unreferenced unlinked
   // inodes.  (There may be unlinked inodes that have no outstanding pointer

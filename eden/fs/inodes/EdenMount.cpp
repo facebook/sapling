@@ -167,5 +167,13 @@ TreeInodePtr EdenMount::getTreeInode(RelativePathPiece path) const {
 FileInodePtr EdenMount::getFileInode(RelativePathPiece path) const {
   return getInodeBase(path).asFilePtr();
 }
+
+RenameLock EdenMount::acquireRenameLock() {
+  return RenameLock{this};
+}
+
+SharedRenameLock EdenMount::acquireSharedRenameLock() {
+  return SharedRenameLock{this};
+}
 }
 } // facebook::eden

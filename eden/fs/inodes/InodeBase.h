@@ -23,6 +23,7 @@ namespace eden {
 
 class EdenMount;
 class ParentInodeInfo;
+class RenameLock;
 class TreeInode;
 
 class InodeBase {
@@ -165,10 +166,6 @@ class InodeBase {
    *
    * This must be called while holding the parent's contents_ lock.
    *
-   * TODO: Once we have a rename lock, this method should take a const
-   * reference to the mountpoint-wide rename lock to guarantee the caller is
-   * properly holding the lock.
-   *
    * Unlinking an inode may cause it to be immediately unloaded.  If this
    * occurs, this method returns a unique_ptr to itself.  The calling TreeInode
    * is then responsible for actually deleting the inode (which will happen
@@ -179,18 +176,18 @@ class InodeBase {
    */
   std::unique_ptr<InodeBase> markUnlinked(
       TreeInode* parent,
-      PathComponentPiece name);
+      PathComponentPiece name,
+      const RenameLock& renameLock);
 
   /**
    * updateLocation() should only be invoked by TreeInode.
    *
    * This is called when an inode is renamed to a new location.
-   *
-   * TODO: Once we have a rename lock, this method should take a const
-   * reference to the mountpoint-wide rename lock to guarantee the caller is
-   * properly holding the lock.
    */
-  void updateLocation(TreeInodePtr newParent, PathComponentPiece newName);
+  void updateLocation(
+      TreeInodePtr newParent,
+      PathComponentPiece newName,
+      const RenameLock& renameLock);
 
   /**
    * Check to see if the ptrAcquire reference count is zero.
