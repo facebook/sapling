@@ -972,7 +972,7 @@ def filelog(web, req, tmpl):
     morevars['revcount'] = revcount * 2
 
     count = fctx.filerev() + 1
-    start = max(0, fctx.filerev() - revcount + 1) # first rev on this page
+    start = max(0, count - revcount) # first rev on this page
     end = min(count, start + revcount) # last rev on this page
     parity = paritygen(web.stripecount, offset=start - end)
 
