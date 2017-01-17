@@ -1021,7 +1021,8 @@ class ui(object):
             opts['label'] = opts.get('label', '') + ' ui.debug'
             self.write(*msg, **opts)
 
-    def edit(self, text, user, extra=None, editform=None, pending=None):
+    def edit(self, text, user, extra=None, editform=None, pending=None,
+             tmpdir=None):
         extra_defaults = {
             'prefix': 'editor',
             'suffix': '.txt',
@@ -1029,8 +1030,13 @@ class ui(object):
         if extra is not None:
             extra_defaults.update(extra)
         extra = extra_defaults
+
+        tdir = None
+        if self.configbool('experimental', 'editortmpinhg'):
+            tdir = tmpdir
         (fd, name) = tempfile.mkstemp(prefix='hg-' + extra['prefix'] + '-',
-                                      suffix=extra['suffix'], text=True)
+                                      suffix=extra['suffix'], text=True,
+                                      dir=tdir)
         try:
             f = os.fdopen(fd, "w")
             f.write(text)
