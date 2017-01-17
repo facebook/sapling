@@ -46,7 +46,26 @@ class EdenMount {
   EdenMount(
       std::unique_ptr<ClientConfig> config,
       std::unique_ptr<ObjectStore> objectStore);
-  virtual ~EdenMount();
+
+  /**
+   * Create a shared_ptr to an EdenMount.
+   *
+   * This is a convenience helper function to create the shared_ptr using an
+   * EdenMountDeleter.
+   */
+  static std::shared_ptr<EdenMount> makeShared(
+      std::unique_ptr<ClientConfig> config,
+      std::unique_ptr<ObjectStore> objectStore);
+
+  /**
+   * Destroy the EdenMount.
+   *
+   * This begins the destruction process for the EdenMount.  The mount will
+   * wait until all outstanding inode references are released before it is
+   * completely destroyed.  (This may or may not happen before destroy()
+   * returns.)
+   */
+  void destroy();
 
   /**
    * Get the MountPoint object.
@@ -138,10 +157,27 @@ class EdenMount {
    */
   FileInodePtr getFileInode(RelativePathPiece path) const;
 
+  /**
+   * shutdownComplete() will be called by InodeMap when all outstanding Inodes
+   * for this mount point have been deleted.
+   *
+   * This method should only be invoked by InodeMap.
+   */
+  void shutdownComplete();
+
  private:
   // Forbidden copy constructor and assignment operator
   EdenMount(EdenMount const&) = delete;
   EdenMount& operator=(EdenMount const&) = delete;
+
+  /**
+   * Private destructor.
+   *
+   * This should not be invoked by callers directly.  Use the destroy() method
+   * above (or the EdenMountDeleter if you plan to store the EdenMount in a
+   * std::unique_ptr or std::shared_ptr).
+   */
+  ~EdenMount();
 
   std::unique_ptr<ClientConfig> config_;
   std::unique_ptr<InodeMap> inodeMap_;
@@ -164,6 +200,13 @@ class EdenMount {
    * We use bits from the process id and the time at which we were mounted.
    */
   const uint64_t mountGeneration_;
+};
+
+class EdenMountDeleter {
+ public:
+  void operator()(EdenMount* mount) {
+    mount->destroy();
+  }
 };
 }
 }

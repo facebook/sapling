@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2016, Facebook, Inc.
+ *  Copyright (c) 2017, Facebook, Inc.
  *  All rights reserved.
  *
  *  This source code is licensed under the BSD-style license found in the
@@ -67,8 +67,8 @@ void EdenServiceHandler::mountImpl(const MountInfo& info) {
       server_->getBackingStore(repoType, initialConfig->getRepoSource());
   auto objectStore =
       make_unique<ObjectStore>(server_->getLocalStore(), backingStore);
-  auto edenMount = std::make_shared<EdenMount>(
-      std::move(initialConfig), std::move(objectStore));
+  auto edenMount =
+      EdenMount::makeShared(std::move(initialConfig), std::move(objectStore));
   // We gave ownership of initialConfig to the EdenMount.
   // Get a pointer to it that we can use for the remainder of this function.
   auto* config = edenMount->getConfig();

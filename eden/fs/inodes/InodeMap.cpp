@@ -11,6 +11,7 @@
 
 #include <folly/Exception.h>
 #include <folly/Likely.h>
+#include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/utils/Bug.h"
@@ -22,7 +23,8 @@ using std::string;
 
 namespace facebook {
 namespace eden {
-InodeMap::InodeMap() {}
+
+InodeMap::InodeMap(EdenMount* mount) : mount_{mount} {}
 
 InodeMap::~InodeMap() {
   // TODO: We need to clean up the EdenMount / InodeMap destruction process a
@@ -346,6 +348,12 @@ void InodeMap::decNumFuseLookups(fuse_ino_t number) {
 
 void InodeMap::save() {
   // TODO
+}
+
+void InodeMap::beginShutdown() {
+  // TODO: Actually shut down gracefully and wait until all inodes are
+  // destroyed to call mount_->shutdownComplete()
+  mount_->shutdownComplete();
 }
 
 bool InodeMap::shouldLoadChild(

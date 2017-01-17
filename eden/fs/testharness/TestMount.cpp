@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2016, Facebook, Inc.
+ *  Copyright (c) 2017, Facebook, Inc.
  *  All rights reserved.
  *
  *  This source code is licensed under the BSD-style license found in the
@@ -72,7 +72,7 @@ unique_ptr<TestMount> BaseTestMountBuilder::build() {
   unique_ptr<ObjectStore> objectStore =
       make_unique<ObjectStore>(localStore_, backingStore_);
   auto edenMount =
-      std::make_shared<EdenMount>(std::move(config_), std::move(objectStore));
+      EdenMount::makeShared(std::move(config_), std::move(objectStore));
   return make_unique<TestMount>(std::move(edenMount), std::move(testDir_));
 }
 

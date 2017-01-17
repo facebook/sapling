@@ -9,6 +9,7 @@
  */
 #pragma once
 
+#include <folly/Synchronized.h>
 #include <folly/futures/Future.h>
 #include <list>
 #include <memory>
@@ -25,6 +26,7 @@ class exception_wrapper;
 namespace facebook {
 namespace eden {
 
+class EdenMount;
 class FileInode;
 class InodeBase;
 class TreeInode;
@@ -94,7 +96,7 @@ struct UnloadedInodeData {
  */
 class InodeMap {
  public:
-  InodeMap();
+  explicit InodeMap(EdenMount* mount);
   virtual ~InodeMap();
 
   InodeMap(InodeMap&&) = default;
@@ -207,6 +209,17 @@ class InodeMap {
    * unloadedInodes_ map.
    */
   void save();
+
+  /**
+   * beginShutdown() is invoked by EdenMount::destroy()
+   *
+   * The EdenMount can only be destroyed once all Inodes it contains are
+   * unreferenced.  beginShutdown() initiates this process.  Once all Inodes
+   * are destroyed the InodeMap will then delete the EdenMount.
+   *
+   * beginShutdown() should only be called by EdenMount.
+   */
+  void beginShutdown();
 
   /////////////////////////////////////////////////////////////////////////
   // The following public APIs should only be used by TreeInode
@@ -414,9 +427,14 @@ class InodeMap {
   };
 
   /**
+   * The EdenMount that owns this InodeMap.
+   */
+  EdenMount* const mount_{nullptr};
+
+  /**
    * The root inode.
    *
-   * This member should never change after the InodeMap is initialized.
+   * This member never changes after the InodeMap is initialized.
    * It is therefore safe to access without locking.
    */
   TreeInodePtr root_;

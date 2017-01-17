@@ -48,11 +48,19 @@ static const uint64_t globalProcessGeneration =
 // for a given mount instance.
 static std::atomic<uint16_t> mountGeneration{0};
 
+std::shared_ptr<EdenMount> EdenMount::makeShared(
+    std::unique_ptr<ClientConfig> config,
+    std::unique_ptr<ObjectStore> objectStore) {
+  return std::shared_ptr<EdenMount>{
+      new EdenMount{std::move(config), std::move(objectStore)},
+      EdenMountDeleter{}};
+}
+
 EdenMount::EdenMount(
     std::unique_ptr<ClientConfig> config,
     std::unique_ptr<ObjectStore> objectStore)
     : config_(std::move(config)),
-      inodeMap_{new InodeMap()},
+      inodeMap_{new InodeMap(this)},
       dispatcher_{new EdenDispatcher(this)},
       mountPoint_(
           new fusell::MountPoint(config_->getMountPath(), dispatcher_.get())),
@@ -80,7 +88,7 @@ EdenMount::EdenMount(
     auto rootTree = objectStore_->getTreeForCommit(snapshotID).get();
     rootInode = TreeInodePtr::makeNew(this, std::move(rootTree));
   }
-  inodeMap_->setRootInode(rootInode);
+  inodeMap_->setRootInode(std::move(rootInode));
 
   // Record the transition from no snapshot to the current snapshot in
   // the journal.  This also sets things up so that we can carry the
@@ -91,6 +99,16 @@ EdenMount::EdenMount(
 }
 
 EdenMount::~EdenMount() {}
+
+void EdenMount::destroy() {
+  VLOG(1) << "beginning shutdown for EdenMount " << getPath();
+  inodeMap_->beginShutdown();
+}
+
+void EdenMount::shutdownComplete() {
+  VLOG(1) << "destruction complete for EdenMount " << getPath();
+  delete this;
+}
 
 const AbsolutePath& EdenMount::getPath() const {
   return mountPoint_->getPath();
