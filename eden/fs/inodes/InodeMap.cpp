@@ -13,6 +13,7 @@
 #include <folly/Likely.h>
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
+#include "eden/fs/inodes/ParentInodeInfo.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/utils/Bug.h"
 
@@ -46,8 +47,8 @@ InodeMap::~InodeMap() {
 void InodeMap::setRootInode(TreeInodePtr root) {
   auto data = data_.wlock();
   CHECK(!root_);
-  root_ = root;
-  auto ret = data->loadedInodes_.emplace(FUSE_ROOT_ID, root.get());
+  root_ = std::move(root);
+  auto ret = data->loadedInodes_.emplace(FUSE_ROOT_ID, root_.get());
   CHECK(ret.second);
 }
 
@@ -116,10 +117,12 @@ Future<InodePtr> InodeMap::lookupInode(fuse_ino_t number) {
       // with the lock still held.
       InodePtr firstLoadedParent = InodePtr::newPtrLocked(loadedIter->second);
       PathComponent requiredChildName = unloadedData->name;
+      bool isUnlinked = unloadedData->isUnlinked;
       // Unlock the data before starting the child lookup
       data.unlock();
       // Trigger the lookup, then return to our caller.
-      startChildLookup(firstLoadedParent, requiredChildName, childInodeNumber);
+      startChildLookup(
+          firstLoadedParent, requiredChildName, isUnlinked, childInodeNumber);
       return result;
     }
 
@@ -144,7 +147,10 @@ Future<InodePtr> InodeMap::lookupInode(fuse_ino_t number) {
     // it is fulfilled.
     parentData->promises.emplace_back();
     setupParentLookupPromise(
-        parentData->promises.back(), unloadedData->name, childInodeNumber);
+        parentData->promises.back(),
+        unloadedData->name,
+        unloadedData->isUnlinked,
+        childInodeNumber);
 
     if (alreadyLoading) {
       // This parent is already being loaded.
@@ -161,11 +167,16 @@ Future<InodePtr> InodeMap::lookupInode(fuse_ino_t number) {
 void InodeMap::setupParentLookupPromise(
     Promise<InodePtr>& promise,
     PathComponentPiece childName,
+    bool isUnlinked,
     fuse_ino_t childInodeNumber) {
   promise.getFuture()
-      .then([ name = PathComponent(childName), this, childInodeNumber ](
-          const InodePtr& inode) {
-        startChildLookup(inode, name, childInodeNumber);
+      .then([
+        name = PathComponent(childName),
+        this,
+        isUnlinked,
+        childInodeNumber
+      ](const InodePtr& inode) {
+        startChildLookup(inode, name, isUnlinked, childInodeNumber);
       })
       .onError([this, childInodeNumber](const folly::exception_wrapper& ex) {
         // Fail all pending lookups on the child
@@ -176,6 +187,7 @@ void InodeMap::setupParentLookupPromise(
 void InodeMap::startChildLookup(
     const InodePtr& parent,
     PathComponentPiece childName,
+    bool isUnlinked,
     fuse_ino_t childInodeNumber) {
   auto treeInode = parent.asTreePtrOrNull();
   if (!treeInode) {
@@ -188,6 +200,12 @@ void InodeMap::startChildLookup(
       promise.setException(ew);
     }
     return;
+  }
+
+  if (isUnlinked) {
+    // FIXME: The UnloadedData object needs to have enough data to recreate
+    // this object, or we need to be able to load the info from the overlay.
+    LOG(FATAL) << "reloading unlinked inodes not implemented yet";
   }
 
   // Ask the TreeInode to load this child inode.
@@ -219,9 +237,13 @@ void InodeMap::inodeLoadComplete(const InodePtr& inode) {
         << "failed to find reverse unloaded inode data when finishing "
         << "load of inode " << number;
 
+    inode->setFuseRefcount(it->second->numFuseReferences);
+
     // Insert the entry into loadedInodes_, and remove it from unloadedInodes_
     data->loadedInodes_.emplace(number, inode.get());
-    data->unloadedInodesReverse_.erase(reverseIter);
+    if (!it->second->isUnlinked) {
+      data->unloadedInodesReverse_.erase(reverseIter);
+    }
     data->unloadedInodes_.erase(it);
   } catch (const std::exception& ex) {
     LOG(ERROR) << "error marking inode " << number
@@ -312,37 +334,50 @@ UnloadedInodeData InodeMap::lookupUnloadedInode(fuse_ino_t number) {
   return UnloadedInodeData(it->second->parent, it->second->name);
 }
 
-void InodeMap::decNumFuseLookups(fuse_ino_t number) {
+void InodeMap::decFuseRefcount(fuse_ino_t number, uint32_t count) {
   auto data = data_.wlock();
 
   // First check in the loaded inode map
   auto loadedIter = data->loadedInodes_.find(number);
   if (loadedIter != data->loadedInodes_.end()) {
-    loadedIter->second->decNumFuseLookups();
+    // Acquire an InodePtr, so that we are always holding a pointer reference
+    // on the inode when we decrement the fuse refcount.
+    //
+    // This ensures that onInodeUnreferenced() will be processed at some point
+    // after decrementing the FUSE refcount to 0, even if there were no
+    // outstanding pointer references before this.
+    auto inode = InodePtr::newPtrLocked(loadedIter->second);
+    // Now release our lock before decrementing the inode's FUSE reference
+    // count and immediately releasing our pointer reference.
+    data.unlock();
+    inode->decFuseRefcount(count);
     return;
   }
 
   // If it wasn't loaded, it should be in the unloaded map
   auto unloadedIter = data->unloadedInodes_.find(number);
   if (UNLIKELY(unloadedIter == data->unloadedInodes_.end())) {
-    EDEN_BUG()
-        << "InodeMap::decNumFuseLookups() called on unknown inode number "
-        << number;
+    EDEN_BUG() << "InodeMap::decFuseRefcount() called on unknown inode number "
+               << number;
   }
 
   // Decrement the reference count in the unloaded entry
   const auto& unloadedEntry = unloadedIter->second;
-  CHECK_GT(unloadedEntry->numFuseReferences, 0);
-  --unloadedEntry->numFuseReferences;
+  CHECK_GE(unloadedEntry->numFuseReferences, count);
+  unloadedEntry->numFuseReferences -= count;
   if (unloadedEntry->numFuseReferences <= 0) {
     // We can completely forget about this unloaded inode now.
     VLOG(5) << "forgetting unloaded inode " << number << ": "
             << unloadedEntry->parent << ":" << unloadedEntry->name;
     auto reverseLookupKey =
         std::make_pair(unloadedEntry->parent, unloadedEntry->name.piece());
-    auto numErased = data->unloadedInodesReverse_.erase(reverseLookupKey);
-    CHECK_EQ(1, numErased);
-    data->unloadedInodes_.erase(unloadedIter);
+    VLOG(7) << "reverse unload erase " << reverseLookupKey.first << ":"
+            << reverseLookupKey.second;
+    if (!unloadedEntry->isUnlinked) {
+      auto numErased = data->unloadedInodesReverse_.erase(reverseLookupKey);
+      CHECK_EQ(1, numErased);
+      data->unloadedInodes_.erase(unloadedIter);
+    }
   }
 }
 
@@ -351,9 +386,184 @@ void InodeMap::save() {
 }
 
 void InodeMap::beginShutdown() {
-  // TODO: Actually shut down gracefully and wait until all inodes are
-  // destroyed to call mount_->shutdownComplete()
+  // Record that we are in the process of shutting down.
+  CHECK(!shuttingDown_.load(std::memory_order_acquire));
+  shuttingDown_.store(true, std::memory_order_release);
+
+  // Walk from the root of the tree down, finding all unreferenced inodes,
+  // and immediately destroy them.
+  //
+  // TODO: Once the mountpoint-wide rename lock exists, hold it here before
+  // doing the walk.  We want to make sure that we walk *all* children.  While
+  // doing the walk we want to make sure that an Inode that hasn't been
+  // processed yet cannot be moved from the unprocessed part of the tree into a
+  // processed part of the tree.
+  root_->unloadChildrenNow();
+
+  // Also walk loadedInodes_ to immediately destroy all unreferenced unlinked
+  // inodes.  (There may be unlinked inodes that have no outstanding pointer
+  // references, but outstanding FUSE references.)
+  //
+  // We walk normal inodes via the root since it is easier to hold the parent
+  // TreeInode's contents lock as we walk down from the root.  However, we
+  // can't find unlinked inodes that way.  For unlinked inodes we don't need to
+  // hold the parent's contents lock, so scanning loadedInodes_ for them is
+  // straightforward.
+  {
+    // The simplest way to unload the inodes is to simply acquire InodePtrs
+    // to them, then let the normal pointer release process be responsible for
+    // unloading them.
+    std::vector<InodePtr> inodesToUnload;
+    auto data = data_.wlock();
+    for (const auto& entry : data->loadedInodes_) {
+      if (!entry.second->isPtrAcquireCountZero()) {
+        continue;
+      }
+      if (!entry.second->isUnlinked()) {
+        continue;
+      }
+      inodesToUnload.push_back(InodePtr::newPtrLocked(entry.second));
+    }
+    // Release the lock, then release all of our InodePtrs to unload
+    // the inodes.
+    data.unlock();
+    inodesToUnload.clear();
+  }
+
+  // Decrement our reference count on root_.
+  // This method lets us manually drop our reference count while still
+  // retaining our pointer.  When onInodeUnreferenced() is called for the root
+  // we know that all inodes have been destroyed and we can complete shutdown.
+  root_.manualDecRef();
+}
+
+void InodeMap::shutdownComplete() {
+  // We manually dropped our reference count to the root inode in
+  // beginShutdown().  Destroy it now, and call resetNoDecRef() on our pointer
+  // to make sure it doesn't try to decrement the reference count again when
+  // the pointer is destroyed.
+  delete root_.get();
+  root_.resetNoDecRef();
+
   mount_->shutdownComplete();
+}
+
+void InodeMap::onInodeUnreferenced(
+    const InodeBase* inode,
+    ParentInodeInfo&& parentInfo) {
+  VLOG(5) << "inode " << inode->getNodeId()
+          << " unreferenced: " << inode->getLogPath();
+  // Acquire our lock.
+  auto data = data_.wlock();
+
+  // Decrement the Inode's acquire count
+  auto acquireCount = inode->decPtrAcquireCount();
+  if (acquireCount != 1) {
+    // Someone else has already re-acquired a reference to this inode.
+    // We can't destroy it yet.
+    return;
+  }
+
+  if (inode == root_.get()) {
+    CHECK(shuttingDown_.load(std::memory_order_acquire));
+    data.unlock();
+    shutdownComplete();
+    return;
+  }
+
+  // Decide if we should unload the inode now, or wait until later.
+  bool unloadNow = false;
+  if (shuttingDown_.load(std::memory_order_acquire)) {
+    // Always unload Inode objects immediately when shutting down.
+    // We can't destroy the EdenMount until all inodes get unloaded.
+    unloadNow = true;
+  } else if (parentInfo.isUnlinked() && inode->getFuseRefcount() == 0) {
+    // This inode has been unlinked and has no outstanding FUSE references.
+    // This inode can now be completely destroyed and forgotten about.
+    unloadNow = true;
+  } else {
+    // In other cases:
+    // - If the inode is materialized, we should never unload it.
+    // - Otherwise, we have the option to unload it or not.
+    //   For now we choose to always keep it loaded.
+  }
+
+  if (unloadNow) {
+    unloadInode(
+        inode,
+        parentInfo.getParent().get(),
+        parentInfo.getName(),
+        parentInfo.isUnlinked(),
+        data);
+    if (!parentInfo.isUnlinked()) {
+      const auto& parentContents = parentInfo.getParentContents();
+      auto it = parentContents->entries.find(parentInfo.getName());
+      CHECK(it != parentContents->entries.end());
+      CHECK_EQ(it->second->inode, inode);
+      it->second->inode = nullptr;
+    }
+  }
+
+  // If we unloaded the inode, only delete it after we release our locks.
+  // Deleting it may cause its parent TreeInode to become unreferenced, causing
+  // another recursive call to onInodeUnreferenced(), which will need to
+  // reacquire the lock.
+  data.unlock();
+  parentInfo.reset();
+  if (unloadNow) {
+    delete inode;
+  }
+}
+
+InodeMapLock InodeMap::lockForUnload() {
+  return InodeMapLock{data_.wlock()};
+}
+
+void InodeMap::unloadInode(
+    const InodeBase* inode,
+    TreeInode* parent,
+    PathComponentPiece name,
+    bool isUnlinked,
+    const InodeMapLock& lock) {
+  return unloadInode(inode, parent, name, isUnlinked, lock.data_);
+}
+
+void InodeMap::unloadInode(
+    const InodeBase* inode,
+    TreeInode* parent,
+    PathComponentPiece name,
+    bool isUnlinked,
+    const folly::Synchronized<Members>::LockedPtr& data) {
+  auto fuseCount = inode->getFuseRefcount();
+  if (fuseCount > 0) {
+    // Insert an unloaded entry
+    VLOG(5) << "unloading inode " << inode->getNodeId()
+            << " with FUSE refcount=" << fuseCount << ": "
+            << inode->getLogPath();
+    auto unloadedEntry = std::make_unique<UnloadedInode>(
+        inode->getNodeId(), parent->getNodeId(), name);
+    unloadedEntry->numFuseReferences = fuseCount;
+    unloadedEntry->isUnlinked = isUnlinked;
+    auto reverseInsertKey =
+        std::make_pair(unloadedEntry->parent, unloadedEntry->name.piece());
+    VLOG(7) << "reverse unload emplace " << reverseInsertKey.first << ":"
+            << reverseInsertKey.second;
+    auto* unloadedEntryRaw = unloadedEntry.get();
+    auto ret = data->unloadedInodes_.emplace(
+        inode->getNodeId(), std::move(unloadedEntry));
+    CHECK(ret.second);
+    if (!isUnlinked) {
+      auto reverseRet = data->unloadedInodesReverse_.emplace(
+          reverseInsertKey, unloadedEntryRaw);
+      CHECK(reverseRet.second);
+    }
+  } else {
+    VLOG(5) << "forgetting unreferenced inode " << inode->getNodeId() << ": "
+            << inode->getLogPath();
+  }
+
+  auto numErased = data->loadedInodes_.erase(inode->getNodeId());
+  CHECK_EQ(numErased, 1);
 }
 
 bool InodeMap::shouldLoadChild(
@@ -432,13 +642,13 @@ InodeMap::UnloadedInode* InodeMap::allocateUnloadedInode(
   fuse_ino_t parentNumber = parent->getNodeId();
   auto newUnloadedData =
       std::make_unique<UnloadedInode>(childNumber, parentNumber, name);
-  auto* unloadedData = newUnloadedData.get();
   // When we insert the data in to unloadedInodesReverse_, make sure the
   // PathComponentPiece in the key points to the PathComponent owned by the
   // UnloadedInode, so that the memory is guaranteed to be valid for as long
   // as the entry exists.
+  auto* unloadedData = newUnloadedData.get();
   auto reverseInsertKey =
-      std::make_pair(parentNumber, PathComponentPiece{newUnloadedData->name});
+      std::make_pair(parentNumber, newUnloadedData->name.piece());
   data.unloadedInodes_.emplace(childNumber, std::move(newUnloadedData));
   data.unloadedInodesReverse_.emplace(reverseInsertKey, unloadedData);
   return unloadedData;

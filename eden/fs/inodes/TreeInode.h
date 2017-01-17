@@ -137,7 +137,7 @@ class TreeInode : public InodeBase {
       TreeInodePtr newParent,
       PathComponentPiece newName);
 
-  void renameHelper(
+  std::unique_ptr<InodeBase> renameHelper(
       Dir* sourceContents,
       PathComponentPiece sourceName,
       TreeInodePtr destParent,
@@ -201,6 +201,14 @@ class TreeInode : public InodeBase {
    * InodeMap::inodeLoadFailed() when the load finishes.
    */
   void loadChildInode(PathComponentPiece name, fuse_ino_t number);
+
+  /**
+   * Unload all unreferenced children under this tree (recursively).
+   *
+   * This walks the children underneath this tree, unloading any inodes that
+   * are unreferenced.
+   */
+  void unloadChildrenNow();
 
  private:
   void registerInodeLoadComplete(

@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2016, Facebook, Inc.
+ *  Copyright (c) 2017, Facebook, Inc.
  *  All rights reserved.
  *
  *  This source code is licensed under the BSD-style license found in the
@@ -7,10 +7,13 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
-#include "InodeBase.h"
+#include "eden/fs/inodes/InodeBase.h"
 
 #include <folly/Likely.h>
-#include "TreeInode.h"
+#include "eden/fs/inodes/EdenMount.h"
+#include "eden/fs/inodes/InodeMap.h"
+#include "eden/fs/inodes/ParentInodeInfo.h"
+#include "eden/fs/inodes/TreeInode.h"
 
 using namespace folly;
 
@@ -18,15 +21,21 @@ namespace facebook {
 namespace eden {
 
 InodeBase::~InodeBase() {
-  VLOG(5) << "inode " << this << " destroyed: " << getLogPath();
+  VLOG(5) << "inode " << this << " (" << ino_
+          << ") destroyed: " << getLogPath();
 }
 
 InodeBase::InodeBase(EdenMount* mount)
     : ino_(FUSE_ROOT_ID),
       mount_{mount},
-      location_{LocationInfo{
-          nullptr,
-          PathComponentPiece{"", detail::SkipPathSanityCheck()}}} {}
+      location_{
+          LocationInfo{nullptr,
+                       PathComponentPiece{"", detail::SkipPathSanityCheck()}}} {
+  VLOG(5) << "root inode " << this << " (" << ino_ << ") created for mount "
+          << mount_->getPath();
+  // The root inode always starts with an implicit reference from FUSE.
+  incFuseRefcount();
+}
 
 InodeBase::InodeBase(
     fuse_ino_t ino,
@@ -38,7 +47,7 @@ InodeBase::InodeBase(
   // Inode numbers generally shouldn't be 0.
   // Older versions of glibc have bugs handling files with an inode number of 0
   DCHECK_NE(ino_, 0);
-  VLOG(5) << "inode " << this << " created: " << getLogPath();
+  VLOG(5) << "inode " << this << " (" << ino_ << ") created: " << getLogPath();
 }
 
 // See Dispatcher::getattr
@@ -69,6 +78,11 @@ folly::Future<folly::Unit> InodeBase::removexattr(folly::StringPiece name) {
 }
 folly::Future<folly::Unit> InodeBase::access(int mask) {
   FUSELL_NOT_IMPL();
+}
+
+bool InodeBase::isUnlinked() const {
+  auto loc = location_.rlock();
+  return loc->unlinked;
 }
 
 /**
@@ -175,11 +189,41 @@ std::string InodeBase::getLogPath() const {
   return path.stringPiece().str();
 }
 
-void InodeBase::markUnlinked() {
+std::unique_ptr<InodeBase> InodeBase::markUnlinked(
+    TreeInode* parent,
+    PathComponentPiece name) {
   VLOG(5) << "inode " << this << " unlinked: " << getLogPath();
-  auto loc = location_.wlock();
-  DCHECK(!loc->unlinked);
-  loc->unlinked = true;
+  {
+    auto loc = location_.wlock();
+    DCHECK(!loc->unlinked);
+    loc->unlinked = true;
+  }
+
+  // Grab the inode map lock, and check if we should unload
+  // ourself immediately.
+  auto* inodeMap = getMount()->getInodeMap();
+  auto inodeMapLock = inodeMap->lockForUnload();
+  if (isPtrAcquireCountZero() && getFuseRefcount() == 0) {
+    inodeMap->unloadInode(this, parent, name, true, inodeMapLock);
+    // We have to delete ourself now.
+    // Do this by returning a unique_ptr to ourself, so that our caller will
+    // destroy us.  This ensures we get destroyed after releasing the InodeMap
+    // lock.  Our calling TreeInode should wait to destroy us until they
+    // release their contents lock as well.
+    //
+    // (Technically it should probably be fine even if the caller deletes us
+    // before releasing their contents lock, it just seems safer to wait.
+    // The main area of concern is that deleting us will drop a reference count
+    // on our parent, which could require the code to acquire locks to destroy
+    // our parent.  However, we are only ever invoked from unlink(), rmdir(),
+    // or rename() operations which must already be holding a reference on our
+    // parent.  Therefore our parent should never be destroyed when our
+    // destructor gets invoked here, so we won't need to acquire our parent's
+    // contents lock in our destructor.)
+    return std::unique_ptr<InodeBase>(this);
+  }
+  // We don't need our caller to delete us, so return null.
+  return nullptr;
 }
 
 void InodeBase::updateLocation(
@@ -191,6 +235,77 @@ void InodeBase::updateLocation(
   DCHECK(!loc->unlinked);
   loc->parent = newParent;
   loc->name = newName.copy();
+}
+
+void InodeBase::onPtrRefZero() const {
+  auto parentInfo = getParentInfo();
+  getMount()->getInodeMap()->onInodeUnreferenced(this, std::move(parentInfo));
+}
+
+ParentInodeInfo InodeBase::getParentInfo() const {
+  using ParentContentsPtr = folly::Synchronized<TreeInode::Dir>::LockedPtr;
+
+  // Grab our parent's contents_ lock.
+  //
+  // We need a retry loop here in case we get renamed or unlinked while trying
+  // to acquire our parent's lock.
+  //
+  // (We could acquire the mount point rename lock first, to ensure that we
+  // can't be renamed during this process.  However it seems unlikely that we
+  // would get renamed or unlinked, so retrying seems probably better than
+  // holding a mountpoint-wide lock.)
+  size_t numTries = {0};
+  while (true) {
+    ++numTries;
+    TreeInodePtr parent;
+    // Get our current parent.
+    {
+      auto loc = location_.rlock();
+      parent = loc->parent;
+      if (loc->unlinked) {
+        VLOG(6) << "getParentInfo(): unlinked inode detected after " << numTries
+                << " tries";
+        return ParentInodeInfo{
+            loc->name, loc->parent, loc->unlinked, ParentContentsPtr{}};
+      }
+    }
+
+    if (!parent) {
+      // We are the root inode.
+      DCHECK_EQ(numTries, 1);
+      return ParentInodeInfo{
+          PathComponentPiece{"", detail::SkipPathSanityCheck()},
+          nullptr,
+          false,
+          ParentContentsPtr{}};
+    }
+    // Now grab our parent's contents lock.
+    auto parentContents = parent->getContents().wlock();
+
+    // After acquiring our parent's contents lock we have to make sure it is
+    // actually still our parent.  If it is we are done and can break out of
+    // this loop.
+    {
+      auto loc = location_.rlock();
+      if (loc->unlinked) {
+        // This file was unlinked since we checked earlier
+        VLOG(6) << "getParentInfo(): file is newly unlinked on try "
+                << numTries;
+        return ParentInodeInfo{
+            loc->name, loc->parent, loc->unlinked, ParentContentsPtr{}};
+      }
+      if (loc->parent == parent) {
+        // Our parent is still the same.  We're done.
+        VLOG(6) << "getParentInfo() acquired parent lock after " << numTries
+                << " tries";
+        return ParentInodeInfo{
+            loc->name, loc->parent, loc->unlinked, std::move(parentContents)};
+      }
+    }
+    // Otherwise our parent changed, and we have to retry.
+    parent.reset();
+    parentContents.unlock();
+  }
 }
 }
 }

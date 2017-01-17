@@ -22,6 +22,7 @@ namespace facebook {
 namespace eden {
 
 class EdenMount;
+class ParentInodeInfo;
 class TreeInode;
 
 class InodeBase {
@@ -43,21 +44,31 @@ class InodeBase {
   }
 
   /**
-   * Increment the number of outstanding FUSE references to an inode number.
+   * Increment the number of references to this inode by its inode number.
    *
-   * This should be called in response to a FUSE lookup() call.
+   * While the FUSE reference count is non-zero, the inode number will be
+   * remembered, and InodeMap::lookupInode() can be used to look up the inode
+   * object using its inode number.  Once the FUSE reference count drops to
+   * zero the inode number may be forgotten, and it is no longer valid to call
+   * InodeMap::lookupInode() with this inode's number.
+   *
+   * This is generally intended for use by FUSE APIs that return an inode
+   * number to the kernel: lookup(), create(), mkdir(), symlink(), link()
    */
-  void incNumFuseLookups() {
+  void incFuseRefcount() {
     numFuseReferences_.fetch_add(1, std::memory_order_acq_rel);
   }
 
   /**
-   * Decrement the number of outstanding FUSE references to an inode number.
+   * Decrement the number of outstanding references to this inode's number.
    *
-   * This should be called in response to a FUSE forget() call.
+   * This should be used to release inode number references obtained via
+   * incFuseRefcount().  The primary use case is for FUSE forget() calls.
    */
-  void decNumFuseLookups() {
-    numFuseReferences_.fetch_sub(1, std::memory_order_acq_rel);
+  void decFuseRefcount(uint32_t count = 1) {
+    auto prevValue =
+        numFuseReferences_.fetch_sub(count, std::memory_order_acq_rel);
+    DCHECK_GE(prevValue, count);
   }
 
   /**
@@ -85,6 +96,22 @@ class InodeBase {
   virtual folly::Future<std::vector<std::string>> listxattr();
   virtual folly::Future<folly::Unit> removexattr(folly::StringPiece name);
   virtual folly::Future<folly::Unit> access(int mask);
+
+  /**
+   * Check if this Inode has been unlinked from its parent TreeInode.
+   *
+   * Once an inode is unlinked it is no longer part of the file system tree.
+   * It can still be accessed by existing FileHandles or other internal
+   * InodePtrs referring to it, but it can no longer be accessed by a path.
+   *
+   * An unlinked Inode can never be re-linked back into the file system.
+   * It will be destroyed when the last reference to it goes away.
+   *
+   * TreeInodes can only be unlinked when they have no children.  It is
+   * therefore not possible to have an Inode object that is not marked unlinked
+   * but has a parent tree that is unlinked.
+   */
+  bool isUnlinked() const;
 
   /**
    * Compute the path to this inode, from the root of the mount point.
@@ -136,11 +163,23 @@ class InodeBase {
    * - By TreeInode::rename() for the destination of the rename,
    *   (which may be a file or an empty tree inode)
    *
+   * This must be called while holding the parent's contents_ lock.
+   *
    * TODO: Once we have a rename lock, this method should take a const
    * reference to the mountpoint-wide rename lock to guarantee the caller is
    * properly holding the lock.
+   *
+   * Unlinking an inode may cause it to be immediately unloaded.  If this
+   * occurs, this method returns a unique_ptr to itself.  The calling TreeInode
+   * is then responsible for actually deleting the inode (which will happen
+   * automatically when the unique_ptr is destroyed or reset) in their calling
+   * context after they release their contents lock.  If unlinking this inode
+   * does not cause it to be immediately unloaded then this method will return
+   * a null pointer.
    */
-  void markUnlinked();
+  std::unique_ptr<InodeBase> markUnlinked(
+      TreeInode* parent,
+      PathComponentPiece name);
 
   /**
    * updateLocation() should only be invoked by TreeInode.
@@ -152,6 +191,69 @@ class InodeBase {
    * properly holding the lock.
    */
   void updateLocation(TreeInodePtr newParent, PathComponentPiece newName);
+
+  /**
+   * Check to see if the ptrAcquire reference count is zero.
+   *
+   * This method is intended for internal use by the InodeMap/TreeInode code,
+   * so it can tell when it is safe to unload an inode.
+   *
+   * This method should only be called while holding both the parent
+   * TreeInode's contents lock and the InodeMap lock.  (Otherwise the reference
+   * count may be incremented by another thread before you can examine the
+   * return value.)
+   */
+  bool isPtrAcquireCountZero() const {
+    return ptrAcquireCount_.load(std::memory_order_acquire) == 0;
+  }
+
+  /**
+   * Decrement the ptrAcquire reference count, and return its previous value.
+   *
+   * This method is intended for internal use by the InodeMap/TreeInode code,
+   * so it can tell when it is safe to unload an inode.
+   *
+   * This method should only be called while holding both the parent
+   * TreeInode's contents lock and the InodeMap lock.  (Otherwise the reference
+   * count may be incremented by another thread before you can examine the
+   * return value.)
+   */
+  uint32_t decPtrAcquireCount() const {
+    return ptrAcquireCount_.fetch_sub(1, std::memory_order_acq_rel);
+  }
+
+  /**
+   * Get the FUSE reference count.
+   *
+   * This is intended only to be checked when an Inode is being unloaded,
+   * while holding both it's parent TreeInode's contents_ lock and the InodeMap
+   * lock.
+   *
+   * The FUSE reference count is only incremented or decremented while holding
+   * a pointer reference on the Inode.  Checking the FUSE reference count is
+   * therefore safe during unload, when we are sure there are no outstanding
+   * pointer references to the inode.
+   *
+   * Checking the FUSE reference count at any other point in time may be racy,
+   * since other threads may be changing the reference count concurrently.
+   */
+  uint32_t getFuseRefcount() const {
+    // DCHECK that the caller is only calling us while the inode is being
+    // unloaded
+    DCHECK_EQ(0, ptrAcquireCount_.load(std::memory_order_acquire));
+
+    return numFuseReferences_.load(std::memory_order_acquire);
+  }
+
+  /**
+   * Set the FUSE reference count.
+   *
+   * This method should only be called by InodeMap when first loading an Inode,
+   * before the Inode object has been returned to any users.
+   */
+  void setFuseRefcount(uint32_t count) {
+    return numFuseReferences_.store(count, std::memory_order_release);
+  }
 
  protected:
   /**
@@ -217,11 +319,19 @@ class InodeBase {
   // APIs that hand out new InodePtrs are InodeMap::lookupInode() and
   // TreeInode::getOrLoadChild().
   void newInodeRefConstructed() const {
-    ptrRefcount_.fetch_add(1, std::memory_order_acq_rel);
+    auto prevValue = ptrRefcount_.fetch_add(1, std::memory_order_acq_rel);
+    if (prevValue == 0) {
+      ptrAcquireCount_.fetch_add(1, std::memory_order_acq_rel);
+    }
   }
   void decrementPtrRef() const {
-    ptrRefcount_.fetch_sub(1, std::memory_order_acq_rel);
+    auto prevValue = ptrRefcount_.fetch_sub(1, std::memory_order_acq_rel);
+    if (prevValue == 1) {
+      onPtrRefZero();
+    }
   }
+  void onPtrRefZero() const;
+  ParentInodeInfo getParentInfo() const;
 
   fuse_ino_t const ino_;
 
@@ -295,6 +405,34 @@ class InodeBase {
    *   re-create the Inode object later if this inode is looked up again.
    */
   mutable std::atomic<uint32_t> ptrRefcount_{0};
+
+  /**
+   * The number of times the ptrRefcount_ has been incremented from 0 to 1,
+   * minus the number of times it has been decremented from 1 to 0.
+   *
+   * This is necessary so we can properly synchronize destruction, and ensure
+   * that only one thread tries to destroy a given Inode.
+   *
+   * This variable can only be incremented when holding either the parent
+   * TreeInode's contents_ lock or the InodeMap lock.  It can only be
+   * decremented when holding both the parent TreeInode's contents_ lock and
+   * the InodeMap lock.  When ptrAcquireCount_ drops to 0 it is safe to delete
+   * the Inode.
+   *
+   * It isn't safe to delete the Inode purely based on ptrRefcount_ alone,
+   * since ptrRefcount_ is decremented without holding any other locks.  It's
+   * possible that thread A ptrRefcount_ drops to 0 and then thread B
+   * immediately increments ptrRefcount_ back to 1.  If thread B then drops the
+   * refcount back to 0 we need to make sure that only one of thread A and
+   * thread B try to destroy the inode.
+   *
+   * By tracking ptrRefcount_ and ptrAcquireCount_ separately we allow
+   * ptrRefcount_ to be manipulated with a single atomic operation in most
+   * cases (when not transitioning between 0 and 1).  Only when transitioning
+   * from 0 to 1 or vice-versa do we need to acquire additional locks and
+   * perform more synchronization.
+   */
+  mutable std::atomic<uint32_t> ptrAcquireCount_{0};
 
   /**
    * Information about this Inode's location in the file system path.

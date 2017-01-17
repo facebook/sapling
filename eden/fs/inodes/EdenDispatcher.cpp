@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2016, Facebook, Inc.
+ *  Copyright (c) 2017, Facebook, Inc.
  *  All rights reserved.
  *
  *  This source code is licensed under the BSD-style license found in the
@@ -201,7 +201,7 @@ folly::Future<fuse_entry_param> EdenDispatcher::lookup(
       })
       .then([](const InodePtr& inode) {
         return inode->getattr().then([inode](fusell::Dispatcher::Attr attr) {
-          inode->incNumFuseLookups();
+          inode->incFuseRefcount();
           return computeEntryParam(inode->getNodeId(), attr);
         });
       });
@@ -218,8 +218,8 @@ EdenDispatcher::setattr(fuse_ino_t ino, const struct stat& attr, int toSet) {
 folly::Future<folly::Unit> EdenDispatcher::forget(
     fuse_ino_t ino,
     unsigned long nlookup) {
-  inodeMap_->decNumFuseLookups(ino);
   VLOG(7) << "forget(" << ino << ", " << nlookup << ")";
+  inodeMap_->decFuseRefcount(ino, nlookup);
   return Unit{};
 }
 
@@ -245,6 +245,7 @@ folly::Future<fusell::Dispatcher::Create> EdenDispatcher::create(
       })
       .then([=](TreeInode::CreateResult created) {
         fusell::Dispatcher::Create result;
+        created.inode->incFuseRefcount();
         result.entry =
             computeEntryParam(created.inode->getNodeId(), created.attr);
         result.fh = std::move(created.file);
@@ -278,9 +279,9 @@ EdenDispatcher::mkdir(fuse_ino_t parent, PathComponentPiece name, mode_t mode) {
   return inodeMap_->lookupTreeInode(parent).then(
       [ childName = PathComponent{name}, mode ](const TreeInodePtr& inode) {
         auto child = inode->mkdir(childName, mode);
-        return child->getattr().then([childNumber = child->getNodeId()](
-            fusell::Dispatcher::Attr attr) {
-          return computeEntryParam(childNumber, attr);
+        return child->getattr().then([child](fusell::Dispatcher::Attr attr) {
+          child->incFuseRefcount();
+          return computeEntryParam(child->getNodeId(), attr);
         });
       });
 }
@@ -313,6 +314,9 @@ folly::Future<fuse_entry_param> EdenDispatcher::symlink(
   return inodeMap_->lookupTreeInode(parent).then(
       [ linkContents = link.str(),
         childName = PathComponent{name} ](const TreeInodePtr& inode) {
+        // TODO: TreeInode::symlink() isn't actually implemented yet.
+        // When it is, we need to call incFuseRefcount() on the
+        // new link inode
         return inode->symlink(childName, linkContents);
       });
 }

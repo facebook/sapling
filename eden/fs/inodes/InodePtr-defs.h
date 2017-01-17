@@ -57,5 +57,17 @@ void InodePtrImpl<InodeType>::decref() {
     value_->decrementPtrRef();
   }
 }
+
+template <typename InodeType>
+void InodePtrImpl<InodeType>::manualDecRef() {
+  CHECK_NOTNULL(value_);
+  value_->decrementPtrRef();
+}
+
+template <typename InodeType>
+void InodePtrImpl<InodeType>::resetNoDecRef() {
+  CHECK_NOTNULL(value_);
+  value_ = nullptr;
+}
 }
 }

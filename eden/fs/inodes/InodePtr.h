@@ -173,6 +173,23 @@ class InodePtrImpl {
     return InodePtrImpl{inode, LOCKED_INCREMENT};
   }
 
+  /**
+   * manualDecRef() is an internal method only for use by InodeMap.
+   *
+   * InodeMap will call this on the root inode to manually release its
+   * reference count when the mount point starts shutting down.  It will then
+   * call resetNoDecRef() once the root inode becomes fully unreferenced.
+   */
+  void manualDecRef();
+
+  /**
+   * resetNoDecRef() is an internal method only for use by InodeMap.
+   *
+   * InodeMap will call this on its root inode after having manually released
+   * the reference count with manualDecRef().
+   */
+  void resetNoDecRef();
+
  protected:
   template <typename OtherInodeType>
   friend class InodePtrImpl;

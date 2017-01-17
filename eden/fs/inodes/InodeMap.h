@@ -30,6 +30,7 @@ class EdenMount;
 class FileInode;
 class InodeBase;
 class TreeInode;
+class ParentInodeInfo;
 
 struct UnloadedInodeData {
   UnloadedInodeData(fuse_ino_t p, PathComponentPiece n) : parent(p), name(n) {}
@@ -37,6 +38,8 @@ struct UnloadedInodeData {
   fuse_ino_t const parent;
   PathComponent const name;
 };
+
+class InodeMapLock;
 
 /**
  * InodeMap allows looking up Inode objects based on a inode number
@@ -125,7 +128,16 @@ class InodeMap {
   /**
    * Lookup an Inode object by inode number.
    *
-   * This creates the InodeBase object if it is not currently loaded.
+   * Inode objects can only be looked up by number if the inode number
+   * reference count is non-zero.  The inode number refcount is incremented by
+   * calling incFuseRefcount() on the Inode object.  The initial access that
+   * first creates an Inode is always by name.  After the initial access,
+   * incFuseRefcount() can be called to allow it to be retreived by inode
+   * number later.  InodeMap::decFuseRefcount() can be used to drop an inode
+   * number reference count.
+   *
+   * If the InodeBase object is not currently loaded it will be loaded and a
+   * new InodeBase object returned.
    *
    * Loading an Inode requires retreiving data about it from the ObjectStore,
    * which may take some time.  Therefore lookupInode() returns a Future, which
@@ -190,14 +202,14 @@ class InodeMap {
   /**
    * Decrement the number of outstanding FUSE references to an inode number.
    *
-   * Note that there is no corresponding incNumFuseLookups() function:
+   * Note that there is no corresponding incFuseRefcount() function:
    * increments are always done directly on a loaded InodeBase object.
    *
    * However, decrements may happen after we have decided to unload the Inode
    * object.  Therefore decrements are performed on the InodeMap so that we can
    * avoid loading an Inode object just to decrement its reference count.
    */
-  void decNumFuseLookups(fuse_ino_t number);
+  void decFuseRefcount(fuse_ino_t number, uint32_t count = 1);
 
   /**
    * Persist the inode number state to disk.
@@ -220,6 +232,51 @@ class InodeMap {
    * beginShutdown() should only be called by EdenMount.
    */
   void beginShutdown();
+
+  /**
+   * onInodeUnreferenced() will be called when an Inode's InodePtr reference
+   * count drops to zero.
+   *
+   * This is an internal API that should not be called by most users.
+   */
+  void onInodeUnreferenced(
+      const InodeBase* inode,
+      ParentInodeInfo&& parentInfo);
+
+  /**
+   * Acquire the InodeMap lock while performing Inode unloading.
+   *
+   * This method is called by TreeInode when scanning its children for
+   * unloading.  It should only be called *after* acquring the TreeInode
+   * contents lock.
+   *
+   * This is an internal API that should not be used by most callers.
+   */
+  InodeMapLock lockForUnload();
+
+  /**
+   * unloadedInode() should be called to unload an unreferenced inode.
+   *
+   * The caller is responsible for ensuring that this inode is unreferenced and
+   * safe to unload.  The caller must have previously locked the parent
+   * TreeInode's contents map  (unless the inode is unlinked, in which case it
+   * no longer has a parent).  The caller must have also locked the InodeMap
+   * using lockForUnload().
+   *
+   * This is an internal API that should not be used by most callers.
+   *
+   * The caller is still responsible for deleting the InodeBase.
+   * The InodeBase should not be deleted until releasing the InodeMap and
+   * TreeInode locks (since deleting it may cause its parent Inode to become
+   * unreferenced, triggering another immediate call to onInodeUnreferenced(),
+   * which will acquire these locks).
+   */
+  void unloadInode(
+      const InodeBase* inode,
+      TreeInode* parent,
+      PathComponentPiece name,
+      bool isUnlinked,
+      const InodeMapLock& lock);
 
   /////////////////////////////////////////////////////////////////////////
   // The following public APIs should only be used by TreeInode
@@ -309,6 +366,7 @@ class InodeMap {
       PathComponentPiece name);
 
  private:
+  friend class InodeMapLock;
   using PromiseVector = std::vector<folly::Promise<InodePtr>>;
 
   /**
@@ -327,6 +385,17 @@ class InodeMap {
     fuse_ino_t const number;
     fuse_ino_t const parent;
     PathComponent const name;
+
+    /**
+     * A boolean indicating if this inode is unlinked.
+     *
+     * TODO: For unlinked inodes we can't rely on the parent TreeInode to have
+     * data about this inode's mode and File/Blob hash.  We need to record
+     * enough information to be able to load it without a parent Tree.  We
+     * perhaps should record this data in the overlay and just use the overlay.
+     */
+    bool isUnlinked{false};
+
     /**
      * A list of promises waiting on this inode to be loaded.
      *
@@ -345,34 +414,6 @@ class InodeMap {
      */
     int64_t numFuseReferences{0};
   };
-  struct Members;
-
-  InodeMap(InodeMap const&) = delete;
-  InodeMap& operator=(InodeMap const&) = delete;
-
-  void setupParentLookupPromise(
-      folly::Promise<InodePtr>& promise,
-      PathComponentPiece childName,
-      fuse_ino_t childInodeNumber);
-  void startChildLookup(
-      const InodePtr& parent,
-      PathComponentPiece childName,
-      fuse_ino_t childInodeNumber);
-
-  /**
-   * Extract the list of promises waiting on the specified inode number to be
-   * loaded.
-   *
-   * This method acquires the data_ lock internally.
-   * It should never be called while already holding the lock.
-   */
-  PromiseVector extractPendingPromises(fuse_ino_t number);
-
-  UnloadedInode* allocateUnloadedInode(
-      Members& data,
-      const TreeInode* parent,
-      PathComponentPiece name);
-  fuse_ino_t allocateInodeNumber(Members& data);
 
   struct Members {
     /**
@@ -426,6 +467,53 @@ class InodeMap {
     fuse_ino_t nextInodeNumber_{FUSE_ROOT_ID + 1};
   };
 
+  InodeMap(InodeMap const&) = delete;
+  InodeMap& operator=(InodeMap const&) = delete;
+
+  void shutdownComplete();
+
+  void setupParentLookupPromise(
+      folly::Promise<InodePtr>& promise,
+      PathComponentPiece childName,
+      bool isUnlinked,
+      fuse_ino_t childInodeNumber);
+  void startChildLookup(
+      const InodePtr& parent,
+      PathComponentPiece childName,
+      bool isUnlinked,
+      fuse_ino_t childInodeNumber);
+
+  /**
+   * Extract the list of promises waiting on the specified inode number to be
+   * loaded.
+   *
+   * This method acquires the data_ lock internally.
+   * It should never be called while already holding the lock.
+   */
+  PromiseVector extractPendingPromises(fuse_ino_t number);
+
+  UnloadedInode* allocateUnloadedInode(
+      Members& data,
+      const TreeInode* parent,
+      PathComponentPiece name);
+  fuse_ino_t allocateInodeNumber(Members& data);
+
+  /**
+   * Unload an inode
+   *
+   * This simply removes it from the loadedInodes_ map and, if it is still
+   * referenced by FUSE, adds it to the unloadedInodes_ map.
+   *
+   * The caller is responsible for actually deleting the Inode object after
+   * releasing the InodeMap lock.
+   */
+  void unloadInode(
+      const InodeBase* inode,
+      TreeInode* parent,
+      PathComponentPiece name,
+      bool isUnlinked,
+      const folly::Synchronized<Members>::LockedPtr& lock);
+
   /**
    * The EdenMount that owns this InodeMap.
    */
@@ -440,6 +528,11 @@ class InodeMap {
   TreeInodePtr root_;
 
   /**
+   * shuttingDown_ will be set to true once EdenMount::destroy() is called
+   */
+  std::atomic<bool> shuttingDown_{false};
+
+  /**
    * The locked data.
    *
    * Note: be very careful to hold this lock only when necessary.  No other
@@ -450,6 +543,28 @@ class InodeMap {
    * the InodeMap while holding their own lock.)
    */
   folly::Synchronized<Members> data_;
+};
+
+/**
+ * An opaque class so that InodeMap can return its lock to the TreeInode
+ * in order to make multiple calls to unloadInode() without releasing and
+ * re-acquiring the lock.
+ *
+ * This mostly exists to make forward declarations simpler.
+ */
+class InodeMapLock {
+ public:
+  explicit InodeMapLock(
+      folly::Synchronized<InodeMap::Members>::LockedPtr&& data)
+      : data_(std::move(data)) {}
+
+  void unlock() {
+    data_.unlock();
+  }
+
+ private:
+  friend class InodeMap;
+  folly::Synchronized<InodeMap::Members>::LockedPtr data_;
 };
 }
 }

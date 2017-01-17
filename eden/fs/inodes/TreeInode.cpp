@@ -9,6 +9,8 @@
  */
 #include "TreeInode.h"
 
+#include <boost/polymorphic_cast.hpp>
+#include <vector>
 #include "EdenDispatcher.h"
 #include "EdenMount.h"
 #include "FileHandle.h"
@@ -558,6 +560,7 @@ folly::Future<folly::Unit> TreeInode::unlink(PathComponentPiece name) {
 
   materializeDirAndParents();
 
+  std::unique_ptr<InodeBase> deletedInode;
   contents_.withWLock([&](auto& contents) {
     // Re-check the pre-conditions in case we raced
     auto entIter = contents.entries.find(name);
@@ -579,7 +582,7 @@ folly::Future<folly::Unit> TreeInode::unlink(PathComponentPiece name) {
     // If the child inode in question is loaded, inform it that it has been
     // unlinked.
     if (ent->inode) {
-      ent->inode->markUnlinked();
+      deletedInode = ent->inode->markUnlinked(this, name);
     }
 
     // And actually remove it
@@ -590,6 +593,7 @@ folly::Future<folly::Unit> TreeInode::unlink(PathComponentPiece name) {
   getMount()->getJournal().wlock()->addDelta(
       std::make_unique<JournalDelta>(JournalDelta{targetName}));
 
+  deletedInode.reset();
   return folly::Unit{};
 }
 
@@ -620,6 +624,7 @@ folly::Future<folly::Unit> TreeInode::rmdirImpl(
   // Lock our contents in write mode.
   // We will hold it for the duration of the unlink.
   auto targetName = getPathBuggy() + name;
+  std::unique_ptr<InodeBase> deletedInode;
   {
     auto contents = contents_.wlock();
 
@@ -684,7 +689,7 @@ folly::Future<folly::Unit> TreeInode::rmdirImpl(
       folly::checkUnixError(::rmdir(dirPath.c_str()), "rmdir: ", dirPath);
     }
     if (ent->inode) {
-      ent->inode->markUnlinked();
+      deletedInode = ent->inode->markUnlinked(this, name);
     }
 
     // And actually remove it
@@ -692,6 +697,7 @@ folly::Future<folly::Unit> TreeInode::rmdirImpl(
     overlay->saveOverlayDir(getPathBuggy(), &*contents);
     overlay->removeOverlayDir(targetName);
   }
+  deletedInode.reset();
 
   getMount()->getJournal().wlock()->addDelta(
       std::make_unique<JournalDelta>(JournalDelta{targetName}));
@@ -699,7 +705,7 @@ folly::Future<folly::Unit> TreeInode::rmdirImpl(
   return folly::Unit{};
 }
 
-void TreeInode::renameHelper(
+std::unique_ptr<InodeBase> TreeInode::renameHelper(
     Dir* sourceContents,
     PathComponentPiece sourceName,
     TreeInodePtr destParent,
@@ -767,8 +773,9 @@ void TreeInode::renameHelper(
   // recompute that iterator now to be safe.
   sourceEntIter = sourceContents->entries.find(sourceName);
 
+  std::unique_ptr<InodeBase> deletedInode;
   if (destEnt && destEnt->inode) {
-    destEnt->inode->markUnlinked();
+    deletedInode = destEnt->inode->markUnlinked(destParent.get(), destName);
   }
 
   // We want to move in the data from the source.
@@ -780,6 +787,7 @@ void TreeInode::renameHelper(
 
   // Now remove the source information
   sourceContents->entries.erase(sourceEntIter);
+  return deletedInode;
 }
 
 folly::Future<folly::Unit> TreeInode::rename(
@@ -812,9 +820,11 @@ folly::Future<folly::Unit> TreeInode::rename(
 
   // Can't use SYNCHRONIZED_DUAL for both cases, as we'd self-deadlock by trying
   // to wlock the same thing twice
+  std::unique_ptr<InodeBase> deletedInode;
   if (newParent.get() == this) {
     contents_.withWLock([&](auto& contents) {
-      this->renameHelper(&contents, name, newParent, &contents, newName);
+      deletedInode =
+          this->renameHelper(&contents, name, newParent, &contents, newName);
       this->getOverlay()->saveOverlayDir(myPath, &contents);
     });
   } else {
@@ -827,11 +837,13 @@ folly::Future<folly::Unit> TreeInode::rename(
     // locks first (e.g., rmdir())
     SYNCHRONIZED_DUAL(
         sourceContents, contents_, destContents, newParent->contents_) {
-      renameHelper(&sourceContents, name, newParent, &destContents, newName);
+      deletedInode = renameHelper(
+          &sourceContents, name, newParent, &destContents, newName);
       getOverlay()->saveOverlayDir(myPath, &sourceContents);
       getOverlay()->saveOverlayDir(destDirPath, &destContents);
     }
   }
+  deletedInode.reset();
 
   auto sourceName = myPath + name;
   auto targetName = destDirPath + newName;
@@ -854,6 +866,48 @@ const std::shared_ptr<Overlay>& TreeInode::getOverlay() const {
 
 void TreeInode::performCheckout(const Hash& hash) {
   throw std::runtime_error("not yet implemented");
+}
+
+void TreeInode::unloadChildrenNow() {
+  std::vector<TreeInodePtr> treeChildren;
+  std::vector<InodeBase*> toDelete;
+  auto* inodeMap = getInodeMap();
+  {
+    auto contents = contents_.wlock();
+    auto inodeMapLock = inodeMap->lockForUnload();
+
+    for (auto& entry : contents->entries) {
+      if (!entry.second->inode) {
+        continue;
+      }
+
+      auto* asTree = dynamic_cast<TreeInode*>(entry.second->inode);
+      if (asTree) {
+        treeChildren.push_back(TreeInodePtr::newPtrLocked(asTree));
+      } else {
+        if (entry.second->inode->isPtrAcquireCountZero()) {
+          // Unload the inode
+          inodeMap->unloadInode(
+              entry.second->inode, this, entry.first, false, inodeMapLock);
+          // Record that we should now delete this inode after releasing
+          // the locks.
+          toDelete.push_back(entry.second->inode);
+          entry.second->inode = nullptr;
+        }
+      }
+    }
+  }
+
+  for (auto* child : toDelete) {
+    delete child;
+  }
+  for (auto& child : treeChildren) {
+    child->unloadChildrenNow();
+  }
+
+  // Note: during mount point shutdown, returning from this function and
+  // destroying the treeChildren map will decrement the reference count on
+  // all of our children trees, which may result in them being destroyed.
 }
 }
 }
