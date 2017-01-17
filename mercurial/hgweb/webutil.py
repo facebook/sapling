@@ -442,14 +442,7 @@ def diffs(repo, tmpl, ctx, basectx, files, parity, style):
         m = match.always(repo.root, repo.getcwd())
 
     diffopts = patch.diffopts(repo.ui, untrusted=True)
-    if basectx is None:
-        parents = ctx.parents()
-        if parents:
-            node1 = parents[0].node()
-        else:
-            node1 = nullid
-    else:
-        node1 = basectx.node()
+    node1 = basectx.node()
     node2 = ctx.node()
 
     block = []

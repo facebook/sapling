@@ -754,13 +754,14 @@ def filediff(web, req, tmpl):
     if fctx is not None:
         path = fctx.path()
         ctx = fctx.changectx()
+    basectx = ctx.p1()
 
     parity = paritygen(web.stripecount)
     style = web.config('web', 'style', 'paper')
     if 'style' in req.form:
         style = req.form['style'][0]
 
-    diffs = webutil.diffs(web.repo, tmpl, ctx, None, [path], parity, style)
+    diffs = webutil.diffs(web.repo, tmpl, ctx, basectx, [path], parity, style)
     if fctx is not None:
         rename = webutil.renamelink(fctx)
         ctx = fctx
