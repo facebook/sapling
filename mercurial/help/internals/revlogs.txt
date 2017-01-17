@@ -85,32 +85,41 @@ follows, with byte 0 being the first byte (all data stored as big endian):
 
 0-3 (4 bytes) (rev 0 only)
    Revlog header
+
 0-5 (6 bytes)
    Absolute offset of revision data from beginning of revlog.
+
 6-7 (2 bytes)
    Bit flags impacting revision behavior. The following bit offsets define:
    0: REVIDX_ISCENSORED revision has censor metadata, must be verified.
    1: REVIDX_EXTSTORED revision data is stored externally.
+
 8-11 (4 bytes)
    Compressed length of revision data / chunk as stored in revlog.
+
 12-15 (4 bytes)
    Uncompressed length of revision data. This is the size of the full
    revision data, not the size of the chunk post decompression.
+
 16-19 (4 bytes)
    Base or previous revision this revision's delta was produced against.
    -1 means this revision holds full text (as opposed to a delta).
    For generaldelta repos, this is the previous revision in the delta
    chain. For non-generaldelta repos, this is the base or first
    revision in the delta chain.
+
 20-23 (4 bytes)
    A revision this revision is *linked* to. This allows a revision in
    one revlog to be forever associated with a revision in another
    revlog. For example, a file's revlog may point to the changelog
    revision that introduced it.
+
 24-27 (4 bytes)
    Revision of 1st parent. -1 indicates no parent.
+
 28-31 (4 bytes)
    Revision of 2nd parent. -1 indicates no 2nd parent.
+
 32-63 (32 bytes)
    Hash of revision's full text. Currently, SHA-1 is used and only
    the first 20 bytes of this field are used. The rest of the bytes
