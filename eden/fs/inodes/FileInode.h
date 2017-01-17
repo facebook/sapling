@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2016, Facebook, Inc.
+ *  Copyright (c) 2017, Facebook, Inc.
  *  All rights reserved.
  *
  *  This source code is licensed under the BSD-style license found in the
@@ -64,8 +64,17 @@ class FileInode : public InodeBase {
   std::shared_ptr<FileData> getOrLoadData();
 
  private:
+  /**
+   * Get a FileInodePtr to ourself.
+   *
+   * This uses FileInodePtr::newPtrFromExisting() internally.
+   *
+   * This should only be called in contexts where we know an external caller
+   * already has an existing reference to us.  (Which is most places--a caller
+   * has to have a reference to us in order to call any of our APIs.)
+   */
   FileInodePtr inodePtrFromThis() {
-    return std::static_pointer_cast<FileInode>(shared_from_this());
+    return FileInodePtr::newPtrFromExisting(this);
   }
 
   /// Called as part of shutting down an open handle.

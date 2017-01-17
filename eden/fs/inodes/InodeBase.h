@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2016, Facebook, Inc.
+ *  Copyright (c) 2017, Facebook, Inc.
  *  All rights reserved.
  *
  *  This source code is licensed under the BSD-style license found in the
@@ -24,7 +24,7 @@ namespace eden {
 class EdenMount;
 class TreeInode;
 
-class InodeBase : public std::enable_shared_from_this<InodeBase> {
+class InodeBase {
  public:
   /**
    * Constructor for the root TreeInode of an EdenMount.
@@ -172,6 +172,10 @@ class InodeBase : public std::enable_shared_from_this<InodeBase> {
   }
 
  private:
+  template <typename InodeType>
+  friend class InodePtrImpl;
+  friend class InodePtrTestHelper;
+
   struct LocationInfo {
     LocationInfo(TreeInodePtr p, PathComponentPiece n)
         : parent(std::move(p)), name(n) {}
@@ -196,6 +200,29 @@ class InodeBase : public std::enable_shared_from_this<InodeBase> {
   bool getPathHelper(std::vector<PathComponent>& names, bool stopOnUnlinked)
       const;
 
+  // incrementPtrRef() is called by InodePtr whenever an InodePtr is copied.
+  void incrementPtrRef() const {
+    auto prevValue = ptrRefcount_.fetch_add(1, std::memory_order_acq_rel);
+    // Calls to incrementPtrRef() are not allowed to increment the reference
+    // count from 0 to 1.
+    //
+    // The refcount is only allowed to go from 0 to 1 when holding the InodeMap
+    // lock or our parent TreeInode's contents lock.  Those two situations call
+    // newInodeRefConstructed() instead
+    DCHECK_NE(0, prevValue);
+  }
+
+  // newInodeRefConstructed() is called any time we construct a brand new
+  // InodePtr in response to a request to access or load an Inode.  The only
+  // APIs that hand out new InodePtrs are InodeMap::lookupInode() and
+  // TreeInode::getOrLoadChild().
+  void newInodeRefConstructed() const {
+    ptrRefcount_.fetch_add(1, std::memory_order_acq_rel);
+  }
+  void decrementPtrRef() const {
+    ptrRefcount_.fetch_sub(1, std::memory_order_acq_rel);
+  }
+
   fuse_ino_t const ino_;
 
   /**
@@ -218,6 +245,58 @@ class InodeBase : public std::enable_shared_from_this<InodeBase> {
   std::atomic<uint32_t> numFuseReferences_{0};
 
   /**
+   * A reference count used by InodePtr.
+   *
+   * A few notes about the refcount management:
+   *
+   * - Inode objects are not necessarily destroyed immediately when the
+   *   refcount goes to 0.  They may remain in memory for a while in case they
+   *   get used again relatively soon.  When necessary we can sweep the loaded
+   *   inode objects and unload inodes whose refcount is 0 and who have not
+   *   been accessed recently.
+   *
+   * - When copying or deleting InodePtr objects this reference count is
+   *   updated atomically with acquire/release barriers.  No other locks need
+   *   to be held during these operations.  The current thread is guaranteed to
+   *   already hold a reference to the Inode in question since it already has
+   *   an InodePtr.  These operations can increment a refcount from 1 or more
+   *   to a higher value, but they can never increment a refcount from 0 to 1.
+   *   They can also decrement a refcount from 1 to 0.
+   *
+   * - Either the InodeMap lock or the parent TreeInode's contents lock is
+   *   always held when incrementing the refcount from 0 to 1.
+   *
+   *   Only two operations can inrement the refcount from 0 to 1:
+   *   - InodeMap::lookupInode().
+   *     This acquires the InodeMap lock
+   *   - TreeInode::getOrLoadChild()
+   *     This acquires the parent's TreeInode lock
+   *
+   *   When checking to see if we can unload an inode, we acquire both it's
+   *   parent TreeInode's contents lock and the InodeMap lock (in that order).
+   *   We are therefore guaranteed that if the refcount is 0 when we check it,
+   *   no other thread can increment it to 1 before we delete the object.
+   *
+   * Notes about owning vs non-owning pointers:
+   * - An Inode always holds an owning TreeInodePtr to its parent.  This
+   *   ensures the parent cannot be unloaded as long as it has any unloaded
+   *   children.
+   *
+   * - The InodeMap stores raw (non-owning) pointers to the inodes.  When an
+   *   Inode is unloaded we explicitly inform the InodeMap of the change.
+   *
+   * - Each TreeInode holds raw (non-owning) pointers to its children.  When an
+   *   Inode is unloaded we explicitly reset its parent pointer to this object.
+   *
+   * - The numFuseReferences_ variable tracks the number of users that know
+   *   about this inode by its inode number.  However, this does not prevent us
+   *   from destroying the Inode object.  We can unload the Inode object itself
+   *   in this case, and InodeMap will retain enough information to be able to
+   *   re-create the Inode object later if this inode is looked up again.
+   */
+  mutable std::atomic<uint32_t> ptrRefcount_{0};
+
+  /**
    * Information about this Inode's location in the file system path.
    * Eden does not support hard links, so each Inode has exactly one location.
    *
@@ -237,3 +316,5 @@ class InodeBase : public std::enable_shared_from_this<InodeBase> {
 };
 }
 }
+
+#include "eden/fs/inodes/InodePtr-defs.h"

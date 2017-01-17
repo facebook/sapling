@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2016, Facebook, Inc.
+ *  Copyright (c) 2017, Facebook, Inc.
  *  All rights reserved.
  *
  *  This source code is licensed under the BSD-style license found in the
@@ -45,7 +45,7 @@ void InodeMap::setRootInode(TreeInodePtr root) {
   auto data = data_.wlock();
   CHECK(!root_);
   root_ = root;
-  auto ret = data->loadedInodes_.emplace(FUSE_ROOT_ID, root);
+  auto ret = data->loadedInodes_.emplace(FUSE_ROOT_ID, root.get());
   CHECK(ret.second);
 }
 
@@ -63,9 +63,9 @@ Future<InodePtr> InodeMap::lookupInode(fuse_ino_t number) {
     //
     // This code path should be quite common, so it's better to perform
     // makeFuture()'s memory allocation without the lock held.
-    InodePtr result = loadedIter->second;
+    auto result = InodePtr::newPtrLocked(loadedIter->second);
     data.unlock();
-    return folly::makeFuture(result);
+    return folly::makeFuture<InodePtr>(result);
   }
 
   // Look up the data in the unloadedInodes_ map.
@@ -112,7 +112,7 @@ Future<InodePtr> InodeMap::lookupInode(fuse_ino_t number) {
       // We found a loaded parent.
       // Grab copies of the arguments we need for startChildLookup(),
       // with the lock still held.
-      InodePtr firstLoadedParent = loadedIter->second;
+      InodePtr firstLoadedParent = InodePtr::newPtrLocked(loadedIter->second);
       PathComponent requiredChildName = unloadedData->name;
       // Unlock the data before starting the child lookup
       data.unlock();
@@ -175,7 +175,7 @@ void InodeMap::startChildLookup(
     const InodePtr& parent,
     PathComponentPiece childName,
     fuse_ino_t childInodeNumber) {
-  auto treeInode = std::dynamic_pointer_cast<TreeInode>(parent);
+  auto treeInode = parent.asTreePtrOrNull();
   if (!treeInode) {
     auto bug = EDEN_BUG() << "parent inode " << parent->getNodeId() << " of ("
                           << childName << ", " << childInodeNumber
@@ -218,7 +218,7 @@ void InodeMap::inodeLoadComplete(const InodePtr& inode) {
         << "load of inode " << number;
 
     // Insert the entry into loadedInodes_, and remove it from unloadedInodes_
-    data->loadedInodes_.emplace(number, inode);
+    data->loadedInodes_.emplace(number, inode.get());
     data->unloadedInodesReverse_.erase(reverseIter);
     data->unloadedInodes_.erase(it);
   } catch (const std::exception& ex) {
@@ -262,23 +262,13 @@ InodeMap::PromiseVector InodeMap::extractPendingPromises(fuse_ino_t number) {
 }
 
 Future<TreeInodePtr> InodeMap::lookupTreeInode(fuse_ino_t number) {
-  return lookupInode(number).then([](const InodePtr& inode) {
-    auto tree = std::dynamic_pointer_cast<TreeInode>(inode);
-    if (!tree) {
-      throwSystemErrorExplicit(ENOTDIR);
-    }
-    return tree;
-  });
+  return lookupInode(number).then(
+      [](const InodePtr& inode) { return inode.asTreePtr(); });
 }
 
 Future<FileInodePtr> InodeMap::lookupFileInode(fuse_ino_t number) {
-  return lookupInode(number).then([](const InodePtr& inode) {
-    auto tree = std::dynamic_pointer_cast<FileInode>(inode);
-    if (!tree) {
-      throwSystemErrorExplicit(EISDIR);
-    }
-    return tree;
-  });
+  return lookupInode(number).then(
+      [](const InodePtr& inode) { return inode.asFilePtr(); });
 }
 
 InodePtr InodeMap::lookupLoadedInode(fuse_ino_t number) {
@@ -287,7 +277,7 @@ InodePtr InodeMap::lookupLoadedInode(fuse_ino_t number) {
   if (it == data->loadedInodes_.end()) {
     return nullptr;
   }
-  return it->second;
+  return InodePtr::newPtrLocked(it->second);
 }
 
 TreeInodePtr InodeMap::lookupLoadedTree(fuse_ino_t number) {
@@ -295,11 +285,7 @@ TreeInodePtr InodeMap::lookupLoadedTree(fuse_ino_t number) {
   if (!inode) {
     return nullptr;
   }
-  auto tree = std::dynamic_pointer_cast<TreeInode>(inode);
-  if (!tree) {
-    throwSystemErrorExplicit(ENOTDIR);
-  }
-  return tree;
+  return inode.asTreePtr();
 }
 
 FileInodePtr InodeMap::lookupLoadedFile(fuse_ino_t number) {
@@ -307,11 +293,7 @@ FileInodePtr InodeMap::lookupLoadedFile(fuse_ino_t number) {
   if (!inode) {
     return nullptr;
   }
-  auto file = std::dynamic_pointer_cast<FileInode>(inode);
-  if (!file) {
-    throwSystemErrorExplicit(EISDIR);
-  }
-  return file;
+  return inode.asFilePtr();
 }
 
 UnloadedInodeData InodeMap::lookupUnloadedInode(fuse_ino_t number) {
@@ -413,7 +395,7 @@ void InodeMap::inodeCreated(const InodePtr& inode) {
   VLOG(4) << "created new inode " << inode->getNodeId() << ": "
           << inode->getLogPath();
   auto data = data_.wlock();
-  data->loadedInodes_.emplace(inode->getNodeId(), inode);
+  data->loadedInodes_.emplace(inode->getNodeId(), inode.get());
 }
 
 fuse_ino_t InodeMap::getOrAllocateUnloadedInodeNumber(

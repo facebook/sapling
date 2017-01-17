@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2016, Facebook, Inc.
+ *  Copyright (c) 2017, Facebook, Inc.
  *  All rights reserved.
  *
  *  This source code is licensed under the BSD-style license found in the
@@ -220,8 +220,17 @@ class TreeInode : public InodeBase {
    * used to track the directory in the inode */
   static Dir buildDirFromTree(const Tree* tree);
 
+  /**
+   * Get a TreeInodePtr to ourself.
+   *
+   * This uses TreeInodePtr::newPtrFromExisting() internally.
+   *
+   * This should only be called in contexts where we know an external caller
+   * already has an existing reference to us.  (Which is most places--a caller
+   * has to have a reference to us in order to call any of our APIs.)
+   */
   TreeInodePtr inodePtrFromThis() {
-    return std::static_pointer_cast<TreeInode>(shared_from_this());
+    return TreeInodePtr::newPtrFromExisting(this);
   }
 
   folly::Future<folly::Unit>

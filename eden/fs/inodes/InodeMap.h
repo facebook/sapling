@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2016, Facebook, Inc.
+ *  Copyright (c) 2017, Facebook, Inc.
  *  All rights reserved.
  *
  *  This source code is licensed under the BSD-style license found in the
@@ -365,12 +365,12 @@ class InodeMap {
     /**
      * The map of loaded inodes
      *
-     * TODO: When we switch to our own custom InodePtr implementation,
-     * this map should eventually store raw pointers, and not hold a reference
-     * to the inodes.  The InodeMap itself should not force Inode objects to
-     * remain in existence forever.
+     * This map stores raw pointers rather than InodePtr objects.  The InodeMap
+     * itself does not hold a reference to the Inode objects.  When an Inode is
+     * looked up the InodeMap will wrap the Inode in an InodePtr so that the
+     * caller acquires a reference.
      */
-    std::unordered_map<fuse_ino_t, InodePtr> loadedInodes_;
+    std::unordered_map<fuse_ino_t, InodeBase*> loadedInodes_;
 
     /**
      * The map of currently unloaded inodes

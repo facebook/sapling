@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2016, Facebook, Inc.
+ *  Copyright (c) 2017, Facebook, Inc.
  *  All rights reserved.
  *
  *  This source code is licensed under the BSD-style license found in the
@@ -14,15 +14,11 @@
 #include <folly/Synchronized.h>
 #include <memory>
 #include <system_error>
+#include "eden/fs/inodes/InodePtr.h"
 #include "eden/utils/PathFuncs.h"
 
 namespace facebook {
 namespace eden {
-
-class InodeBase;
-class TreeInode;
-using InodePtr = std::shared_ptr<InodeBase>;
-using TreeInodePtr = std::shared_ptr<TreeInode>;
 
 /**
  * A subclass of std::system_error referring to a specific inode.

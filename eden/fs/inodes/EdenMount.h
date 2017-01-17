@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2016, Facebook, Inc.
+ *  Copyright (c) 2017, Facebook, Inc.
  *  All rights reserved.
  *
  *  This source code is licensed under the BSD-style license found in the
@@ -11,6 +11,7 @@
 
 #include <folly/Synchronized.h>
 #include <memory>
+#include "eden/fs/inodes/InodePtrFwd.h"
 #include "eden/fs/journal/JournalDelta.h"
 #include "eden/utils/PathFuncs.h"
 
@@ -24,18 +25,11 @@ class BindMount;
 class ClientConfig;
 class Dirstate;
 class EdenDispatcher;
-class FileInode;
-class InodeBase;
 class InodeMap;
 class ObjectStore;
 class Overlay;
 class Journal;
 class Tree;
-class TreeInode;
-
-using InodePtr = std::shared_ptr<InodeBase>;
-using TreeInodePtr = std::shared_ptr<TreeInode>;
-using FileInodePtr = std::shared_ptr<FileInode>;
 
 /**
  * EdenMount contains all of the data about a specific eden mount point.

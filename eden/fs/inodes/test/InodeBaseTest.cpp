@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2016, Facebook, Inc.
+ *  Copyright (c) 2017, Facebook, Inc.
  *  All rights reserved.
  *
  *  This source code is licensed under the BSD-style license found in the
@@ -32,10 +32,10 @@ TEST(InodeBase, getPath) {
     return parent->getChildByName(PathComponentPiece{name}).get();
   };
   auto childTree = [&getChild](const TreeInodePtr& parent, StringPiece name) {
-    return dynamic_pointer_cast<TreeInode>(getChild(parent, name));
+    return getChild(parent, name).asTreePtr();
   };
   auto childFile = [&getChild](const TreeInodePtr& parent, StringPiece name) {
-    return dynamic_pointer_cast<FileInode>(getChild(parent, name));
+    return getChild(parent, name).asFilePtr();
   };
 
   auto a = childTree(root, "a");

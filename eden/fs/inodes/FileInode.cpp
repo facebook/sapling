@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2016, Facebook, Inc.
+ *  Copyright (c) 2017, Facebook, Inc.
  *  All rights reserved.
  *
  *  This source code is licensed under the BSD-style license found in the
@@ -165,8 +165,7 @@ folly::Future<std::shared_ptr<fusell::FileHandle>> FileInode::open(
     data->materializeForRead(fi.flags, getPathBuggy(), overlay);
   }
 
-  return std::make_shared<FileHandle>(
-      std::static_pointer_cast<FileInode>(shared_from_this()), data, fi.flags);
+  return std::make_shared<FileHandle>(inodePtrFromThis(), data, fi.flags);
 }
 
 std::shared_ptr<FileHandle> FileInode::finishCreate() {
@@ -177,8 +176,7 @@ std::shared_ptr<FileHandle> FileInode::finishCreate() {
   };
   data->materializeForWrite(0, getPathBuggy(), getMount()->getOverlay());
 
-  return std::make_shared<FileHandle>(
-      std::static_pointer_cast<FileInode>(shared_from_this()), data, 0);
+  return std::make_shared<FileHandle>(inodePtrFromThis(), data, 0);
 }
 
 Future<vector<string>> FileInode::listxattr() {

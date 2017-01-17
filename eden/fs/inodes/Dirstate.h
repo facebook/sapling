@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2016, Facebook, Inc.
+ *  Copyright (c) 2017, Facebook, Inc.
  *  All rights reserved.
  *
  *  This source code is licensed under the BSD-style license found in the
@@ -10,6 +10,7 @@
 #pragma once
 #include <folly/Synchronized.h>
 #include "eden/fs/inodes/DirstatePersistence.h"
+#include "eden/fs/inodes/InodePtrFwd.h"
 #include "eden/fs/inodes/gen-cpp2/overlay_types.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/service/gen-cpp2/EdenService.h"
@@ -28,8 +29,6 @@ class InodeBase;
 class ObjectStore;
 class Tree;
 class TreeInode;
-
-using InodePtr = std::shared_ptr<InodeBase>;
 
 namespace fusell {
 class InodeBase;

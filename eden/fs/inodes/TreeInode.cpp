@@ -105,7 +105,7 @@ Future<InodePtr> TreeInode::getOrLoadChild(PathComponentPiece name) {
     // Check to see if the entry is already loaded
     auto& entryPtr = iter->second;
     if (entryPtr->inode) {
-      return makeFuture(entryPtr->inode->shared_from_this());
+      return makeFuture<InodePtr>(InodePtr::newPtrLocked(entryPtr->inode));
     }
 
     // The entry is not loaded yet.  Ask the InodeMap about the entry.
@@ -141,7 +141,7 @@ Future<InodePtr> TreeInode::getOrLoadChild(PathComponentPiece name) {
 
 Future<TreeInodePtr> TreeInode::getOrLoadChildTree(PathComponentPiece name) {
   return getOrLoadChild(name).then([](InodePtr child) {
-    auto treeInode = std::dynamic_pointer_cast<TreeInode>(child);
+    auto treeInode = child.asTreePtrOrNull();
     if (!treeInode) {
       return makeFuture<TreeInodePtr>(InodeError(ENOTDIR, child));
     }
@@ -270,11 +270,7 @@ Future<InodePtr> TreeInode::startLoadingInode(
     // Eventually we may want to go ahead start loading some of the blob data
     // now, but we don't have to wait for it to be ready before marking the
     // inode loaded.
-    auto inode = std::make_shared<FileInode>(
-        number,
-        std::static_pointer_cast<TreeInode>(shared_from_this()),
-        name,
-        entry);
+    auto inode = FileInodePtr::makeNew(number, inodePtrFromThis(), name, entry);
     return makeFuture<InodePtr>(inode);
   }
 
@@ -289,12 +285,12 @@ Future<InodePtr> TreeInode::startLoadingInode(
 
   if (!entry->materialized && entry->hash) {
     return getStore()->getTreeFuture(entry->hash.value()).then([
-      self = std::static_pointer_cast<TreeInode>(shared_from_this()),
+      self = inodePtrFromThis(),
       childName = PathComponent{name},
       entry,
       number
     ](std::unique_ptr<Tree> tree)->InodePtr {
-      return std::make_shared<TreeInode>(
+      return TreeInodePtr::makeNew(
           number, self, childName, entry, std::move(tree));
     });
   }
@@ -308,7 +304,7 @@ Future<InodePtr> TreeInode::startLoadingInode(
   auto targetName = getPathBuggy() + name;
   auto overlayDir = getOverlay()->loadOverlayDir(targetName);
   DCHECK(overlayDir) << "missing overlay for " << targetName;
-  return std::make_shared<TreeInode>(
+  return TreeInodePtr::makeNew(
       number, inodePtrFromThis(), name, entry, std::move(overlayDir.value()));
 }
 
@@ -442,7 +438,7 @@ TreeInode::create(PathComponentPiece name, mode_t mode, int flags) {
     auto childNumber = inodeMap->allocateInodeNumber();
 
     // build a corresponding FileInode
-    inode = std::make_shared<FileInode>(
+    inode = FileInodePtr::makeNew(
         childNumber,
         this->inodePtrFromThis(),
         name,
@@ -520,7 +516,7 @@ TreeInodePtr TreeInode::mkdir(PathComponentPiece name, mode_t mode) {
     // Create the TreeInode
     auto* inodeMap = this->getInodeMap();
     auto childNumber = inodeMap->allocateInodeNumber();
-    newChild = std::make_shared<TreeInode>(
+    newChild = TreeInodePtr::makeNew(
         childNumber,
         this->inodePtrFromThis(),
         name,
@@ -666,12 +662,12 @@ folly::Future<folly::Unit> TreeInode::rmdirImpl(
           return self->rmdirImpl(childName, child, attemptNum + 1);
         });
       } else {
-        // Just update to point to the current child
-        InodePtr childGeneric = ent->inode->shared_from_this();
-        child = std::dynamic_pointer_cast<TreeInode>(childGeneric);
-        if (!child) {
-          throw InodeError(ENOTDIR, childGeneric);
+        // Just update to point to the current child, if it is still a tree
+        auto* currentChildTree = dynamic_cast<TreeInode*>(ent->inode);
+        if (!currentChildTree) {
+          throw InodeError(ENOTDIR, inodePtrFromThis(), name);
         }
+        child = TreeInodePtr::newPtrLocked(currentChildTree);
       }
     }
 

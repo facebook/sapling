@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2016, Facebook, Inc.
+ *  Copyright (c) 2017, Facebook, Inc.
  *  All rights reserved.
  *
  *  This source code is licensed under the BSD-style license found in the
@@ -69,8 +69,7 @@ EdenMount::EdenMount(
   auto snapshotID = config_->getSnapshotID();
   TreeInodePtr rootInode;
   if (rootOverlayDir) {
-    rootInode =
-        std::make_shared<TreeInode>(this, std::move(rootOverlayDir.value()));
+    rootInode = TreeInodePtr::makeNew(this, std::move(rootOverlayDir.value()));
   } else {
     // Note: We immediately wait on the Future returned by
     // getTreeForCommit().
@@ -79,7 +78,7 @@ EdenMount::EdenMount(
     // the code slightly so that this is done in a helper function, before the
     // EdenMount constructor is called.
     auto rootTree = objectStore_->getTreeForCommit(snapshotID).get();
-    rootInode = std::make_shared<TreeInode>(this, std::move(rootTree));
+    rootInode = TreeInodePtr::makeNew(this, std::move(rootTree));
   }
   inodeMap_->setRootInode(rootInode);
 
@@ -144,23 +143,11 @@ InodePtr EdenMount::getInodeBase(RelativePathPiece path) const {
 }
 
 TreeInodePtr EdenMount::getTreeInode(RelativePathPiece path) const {
-  auto inodeBase = getInodeBase(path);
-  auto treeInode = std::dynamic_pointer_cast<TreeInode>(inodeBase);
-  if (treeInode) {
-    return treeInode;
-  } else {
-    throw InodeError(ENOTDIR, inodeBase);
-  }
+  return getInodeBase(path).asTreePtr();
 }
 
 FileInodePtr EdenMount::getFileInode(RelativePathPiece path) const {
-  auto inodeBase = getInodeBase(path);
-  auto fileInode = std::dynamic_pointer_cast<FileInode>(inodeBase);
-  if (fileInode) {
-    return fileInode;
-  } else {
-    throw InodeError(EISDIR, inodeBase);
-  }
+  return getInodeBase(path).asFilePtr();
 }
 }
 } // facebook::eden

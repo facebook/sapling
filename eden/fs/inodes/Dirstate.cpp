@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2016, Facebook, Inc.
+ *  Copyright (c) 2017, Facebook, Inc.
  *  All rights reserved.
  *
  *  This source code is licensed under the BSD-style license found in the
@@ -626,7 +626,7 @@ WorkingCopyStatus getPathStatus(
   try {
     // Use getInodeBase() as a test of whether the path exists.
     auto inodeBase = mount->getInodeBase(path);
-    if (std::dynamic_pointer_cast<FileInode>(inodeBase) != nullptr) {
+    if (inodeBase.asFilePtrOrNull() != nullptr) {
       return WorkingCopyStatus::File;
     } else {
       return WorkingCopyStatus::Directory;
