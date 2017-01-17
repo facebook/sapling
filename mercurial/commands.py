@@ -6481,10 +6481,10 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False,
     changeset (see :hg:`help parents`).
 
     If the changeset is not a descendant or ancestor of the working
-    directory's parent, the update is aborted. With the -c/--check
-    option, the working directory is checked for uncommitted changes; if
-    none are found, the working directory is updated to the specified
-    changeset.
+    directory's parent and there are uncommitted changes, the update is
+    aborted. With the -c/--check option, the working directory is checked
+    for uncommitted changes; if none are found, the working directory is
+    updated to the specified changeset.
 
     .. container:: verbose
 
