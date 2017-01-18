@@ -68,3 +68,14 @@ Test working directory
   $ echo b-wdir > b
   $ hg cat -r 'wdir()' b
   b-wdir
+
+Environment variables are not visible by default
+
+  $ PATTERN='t4' hg log -r '.' -T "{ifcontains('PATTERN', envvars, 'yes', 'no')}\n"
+  no
+
+Environment variable visibility can be explicit
+
+  $ PATTERN='t4' hg log -r '.' -T "{envvars % '{key} -> {value}\n'}" \
+  >                 --config "experimental.exportableenviron=PATTERN"
+  PATTERN -> t4

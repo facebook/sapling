@@ -1448,6 +1448,7 @@ class changeset_templater(changeset_printer):
             'parent': '{rev}:{node|formatnode} ',
             'manifest': '{rev}:{node|formatnode}',
             'file_copy': '{name} ({source})',
+            'envvar': '{key}={value}',
             'extra': '{key}={value|stringescape}'
             }
         # filecopy is preserved for compatibility reasons

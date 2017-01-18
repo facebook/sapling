@@ -303,6 +303,18 @@ def showdiffstat(repo, ctx, templ, **args):
     maxname, maxtotal, adds, removes, binary = patch.diffstatsum(stats)
     return '%s: +%s/-%s' % (len(stats), adds, removes)
 
+@templatekeyword('envvars')
+def showenvvars(repo, **args):
+    """A dictionary of environment variables. (EXPERIMENTAL)"""
+
+    env = repo.ui.exportableenviron()
+    env = util.sortdict((k, env[k]) for k in sorted(env))
+    makemap = lambda k: {'key': k, 'value': env[k]}
+    c = [makemap(k) for k in env]
+    f = _showlist('envvar', c, plural='envvars', **args)
+    return _hybrid(f, env, makemap,
+                   lambda x: '%s=%s' % (x['key'], x['value']))
+
 @templatekeyword('extras')
 def showextras(**args):
     """List of dicts with key, value entries of the 'extras'
