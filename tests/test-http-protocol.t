@@ -20,7 +20,7 @@ compression formats are advertised in compression capability
   compression=zstd,zlib
 #else
   $ get-with-headers.py 127.0.0.1:$HGPORT '?cmd=capabilities' | tr ' ' '\n' | grep compression
-  compression=ZL
+  compression=zlib
 #endif
 
   $ killdaemons.py
