@@ -1,4 +1,4 @@
-#require test-repo pyflakes hg10
+#require test-repo pyflakes
 
   $ . $TESTDIR/require-core-hg.sh tests/filterpyflakes.py
 
