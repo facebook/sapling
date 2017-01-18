@@ -2,6 +2,7 @@
 
   $ check_code="$RUNTESTDIR"/../contrib/check-code.py
   $ cd "$TESTDIR"/..
+  $ unset HGRCPATH
 
 New errors are not allowed. Warnings are strongly discouraged.
 (The writing "no-che?k-code" is for not skipping this file when checking.)

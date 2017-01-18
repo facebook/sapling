@@ -7,6 +7,7 @@ It differs slightly to fix paths.
 
   $ . "$RUNTESTDIR/helpers-testrepo.sh"
   $ cd "$TESTDIR"/..
+  $ unset HGRCPATH
 
 look for python scripts without the execute bit
 

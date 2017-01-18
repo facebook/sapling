@@ -4,6 +4,7 @@ This file is backported from mercurial/tests/test-check-shbang.t.
 
   $ . "$RUNTESTDIR/helpers-testrepo.sh"
   $ cd "$TESTDIR"/..
+  $ unset HGRCPATH
 
 look for python scripts that do not use /usr/bin/env
 

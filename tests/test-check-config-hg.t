@@ -7,6 +7,7 @@ It differs slightly to fix paths and include files in core hg.
 
   $ . "$RUNTESTDIR/helpers-testrepo.sh"
   $ cd "$TESTDIR"/..
+  $ unset HGRCPATH
 
 New errors are not allowed. Warnings are strongly discouraged.
 
