@@ -147,6 +147,15 @@ class ui(object):
 
             self.httppasswordmgrdb = urlreq.httppasswordmgrwithdefaultrealm()
 
+        allowed = self.configlist('experimental', 'exportableenviron')
+        if '*' in allowed:
+            self._exportableenviron = self.environ
+        else:
+            self._exportableenviron = {}
+            for k in allowed:
+                if k in self.environ:
+                    self._exportableenviron[k] = self.environ[k]
+
     @classmethod
     def load(cls):
         """Create a ui and load global and user configs"""
@@ -1210,6 +1219,12 @@ class ui(object):
         msg += ("\n(compatibility will be dropped after Mercurial-%s,"
                 " update your code.)") % version
         self.develwarn(msg, stacklevel=2, config='deprec-warn')
+
+    def exportableenviron(self):
+        """The environment variables that are safe to export, e.g. through
+        hgweb.
+        """
+        return self._exportableenviron
 
     @contextlib.contextmanager
     def configoverride(self, overrides, source=""):
