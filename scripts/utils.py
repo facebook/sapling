@@ -37,10 +37,6 @@ def spawnruntests(args, **kwds):
     cpucount = multiprocessing.cpu_count()
     cmd = [getrunner(), '-j%d' % cpucount]
 
-    # Enable lz4revlog extension for lz4revlog repo.
-    if 'lz4revlog' in reporequires():
-        cmd += ['--extra-config-opt=extensions.lz4revlog=']
-
     # Include the repository root in PYTHONPATH so the unit tests will find
     # the extensions from the local repository, rather than the versions
     # already installed on the system.
