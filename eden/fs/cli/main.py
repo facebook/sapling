@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (c) 2016, Facebook, Inc.
+# Copyright (c) 2017, Facebook, Inc.
 # All rights reserved.
 #
 # This source code is licensed under the BSD-style license found in the
@@ -47,7 +47,7 @@ def infer_client_from_cwd(config, clientname):
 
 
 def do_help(args, parser, subparsers):
-    help_args = args.args
+    help_args = getattr(args, 'args', [])
     num_help_args = len(help_args)
     if num_help_args == 1:
         name = args.args[0]
@@ -411,8 +411,8 @@ def create_config(args):
 def main():
     parser, subparsers = create_parser()
     args = parser.parse_args()
-    if args.subparser_name == 'help':
-        retcode = args.func(args, parser, subparsers)
+    if args.subparser_name == 'help' or getattr(args, 'func', None) is None:
+        retcode = do_help(args, parser, subparsers)
     else:
         retcode = args.func(args)
     return retcode
