@@ -28,6 +28,7 @@ from .common import (
 
 from .. import (
     archival,
+    context,
     encoding,
     error,
     graphmod,
@@ -968,6 +969,8 @@ def filelog(web, req, tmpl):
         except ValueError:
             pass
 
+    lrange = webutil.linerange(req)
+
     lessvars = copy.copy(tmpl.defaults['sessionvars'])
     lessvars['revcount'] = max(revcount / 2, 1)
     morevars = copy.copy(tmpl.defaults['sessionvars'])
@@ -996,24 +999,49 @@ def filelog(web, req, tmpl):
         path = fctx.path()
         return webutil.diffs(web, tmpl, ctx, basectx, [path], diffstyle)
 
-    for i in revs:
-        iterfctx = fctx.filectx(i)
-        diffs = None
-        if patch:
-            diffs = diff(iterfctx)
-        entries.append(dict(
-            parity=next(parity),
-            filerev=i,
-            file=f,
-            diff=diffs,
-            rename=webutil.renamelink(iterfctx),
-            **webutil.commonentry(repo, iterfctx)))
-    entries.reverse()
+    linerange = None
+    if lrange is not None:
+        linerange = webutil.formatlinerange(*lrange)
+        # deactivate numeric nav links when linerange is specified as this
+        # would required a dedicated "revnav" class
+        nav = None
+        ancestors = context.blockancestors(fctx, *lrange)
+        for i, (c, lr) in enumerate(ancestors, 1):
+            diffs = None
+            if patch:
+                diffs = diff(c)
+            # follow renames accross filtered (not in range) revisions
+            path = c.path()
+            entries.append(dict(
+                parity=next(parity),
+                filerev=c.rev(),
+                file=path,
+                diff=diffs,
+                linerange=webutil.formatlinerange(*lr),
+                **webutil.commonentry(repo, c)))
+            if i == revcount:
+                break
+        lessvars['linerange'] = webutil.formatlinerange(*lrange)
+        morevars['linerange'] = lessvars['linerange']
+    else:
+        for i in revs:
+            iterfctx = fctx.filectx(i)
+            diffs = None
+            if patch:
+                diffs = diff(iterfctx)
+            entries.append(dict(
+                parity=next(parity),
+                filerev=i,
+                file=f,
+                diff=diffs,
+                rename=webutil.renamelink(iterfctx),
+                **webutil.commonentry(repo, iterfctx)))
+        entries.reverse()
+        revnav = webutil.filerevnav(web.repo, fctx.path())
+        nav = revnav.gen(end - 1, revcount, count)
 
     latestentry = entries[:1]
 
-    revnav = webutil.filerevnav(web.repo, fctx.path())
-    nav = revnav.gen(end - 1, revcount, count)
     return tmpl("filelog",
                 file=f,
                 nav=nav,
@@ -1021,6 +1049,7 @@ def filelog(web, req, tmpl):
                 entries=entries,
                 patch=patch,
                 latestentry=latestentry,
+                linerange=linerange,
                 revcount=revcount,
                 morevars=morevars,
                 lessvars=lessvars,

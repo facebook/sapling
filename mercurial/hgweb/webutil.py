@@ -18,6 +18,7 @@ from ..node import hex, nullid, short
 
 from .common import (
     ErrorResponse,
+    HTTP_BAD_REQUEST,
     HTTP_NOT_FOUND,
     paritygen,
 )
@@ -316,6 +317,26 @@ def filectx(repo, req):
         fctx = repo.filectx(path, fileid=changeid)
 
     return fctx
+
+def linerange(req):
+    linerange = req.form.get('linerange')
+    if linerange is None:
+        return None
+    if len(linerange) > 1:
+        raise ErrorResponse(HTTP_BAD_REQUEST,
+                            'redundant linerange parameter')
+    try:
+        fromline, toline = map(int, linerange[0].split(':', 1))
+    except ValueError:
+        raise ErrorResponse(HTTP_BAD_REQUEST,
+                            'invalid linerange parameter')
+    try:
+        return util.processlinerange(fromline, toline)
+    except error.ParseError as exc:
+        raise ErrorResponse(HTTP_BAD_REQUEST, str(exc))
+
+def formatlinerange(fromline, toline):
+    return '%d:%d' % (fromline + 1, toline)
 
 def commonentry(repo, ctx):
     node = ctx.node()

@@ -190,6 +190,7 @@ tip - two revisions
   <h3>
    log a @ 4:<a href="/rev/3f41bc784e7e">3f41bc784e7e</a>
    <span class="branchname">a-branch</span> 
+   
   </h3>
   
   <form class="search" action="/log">
@@ -311,6 +312,7 @@ second version - two revisions
   <h3>
    log a @ 4:<a href="/rev/3f41bc784e7e">3f41bc784e7e</a>
    <span class="branchname">a-branch</span> 
+   
   </h3>
   
   <form class="search" action="/log">
@@ -432,6 +434,7 @@ first deleted - one revision
   <h3>
    log a @ 1:<a href="/rev/5ed941583260">5ed941583260</a>
    <span class="tag">a-tag</span> <span class="tag">a-bookmark</span> 
+   
   </h3>
   
   <form class="search" action="/log">
@@ -544,6 +547,7 @@ first version - one revision
   <h3>
    log a @ 1:<a href="/rev/5ed941583260">5ed941583260</a>
    <span class="tag">a-tag</span> <span class="tag">a-bookmark</span> 
+   
   </h3>
   
   <form class="search" action="/log">
@@ -658,6 +662,264 @@ before addition - error
   </body>
   </html>
   
+  [1]
+
+  $ hg log -r 'followlines(c, 1:2, startrev=tip) and follow(c)'
+  changeset:   0:6563da9dcf87
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     b
+  
+  changeset:   7:46c1a66bd8fc
+  branch:      a-branch
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     change c
+  
+  $ (get-with-headers.py localhost:$HGPORT 'log/tip/c?linerange=1:2')
+  200 Script output follows
+  
+  <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+  <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-US">
+  <head>
+  <link rel="icon" href="/static/hgicon.png" type="image/png" />
+  <meta name="robots" content="index, nofollow" />
+  <link rel="stylesheet" href="/static/style-paper.css" type="text/css" />
+  <script type="text/javascript" src="/static/mercurial.js"></script>
+  
+  <title>test: c history</title>
+  <link rel="alternate" type="application/atom+xml"
+     href="/atom-log/tip/c" title="Atom feed for test:c" />
+  <link rel="alternate" type="application/rss+xml"
+     href="/rss-log/tip/c" title="RSS feed for test:c" />
+  </head>
+  <body>
+  
+  <div class="container">
+  <div class="menu">
+  <div class="logo">
+  <a href="https://mercurial-scm.org/">
+  <img src="/static/hglogo.png" alt="mercurial" /></a>
+  </div>
+  <ul>
+  <li><a href="/shortlog/tip">log</a></li>
+  <li><a href="/graph/tip">graph</a></li>
+  <li><a href="/tags">tags</a></li>
+  <li><a href="/bookmarks">bookmarks</a></li>
+  <li><a href="/branches">branches</a></li>
+  </ul>
+  <ul>
+  <li><a href="/rev/tip">changeset</a></li>
+  <li><a href="/file/tip">browse</a></li>
+  </ul>
+  <ul>
+  <li><a href="/file/tip/c">file</a></li>
+  <li><a href="/diff/tip/c">diff</a></li>
+  <li><a href="/comparison/tip/c">comparison</a></li>
+  <li><a href="/annotate/tip/c">annotate</a></li>
+  <li class="active">file log</li>
+  <li><a href="/raw-file/tip/c">raw</a></li>
+  </ul>
+  <ul>
+  <li><a href="/help">help</a></li>
+  </ul>
+  <div class="atom-logo">
+  <a href="/atom-log/tip/c" title="subscribe to atom feed">
+  <img class="atom-logo" src="/static/feed-icon-14x14.png" alt="atom feed" />
+  </a>
+  </div>
+  </div>
+  
+  <div class="main">
+  <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
+  <h3>
+   log c @ 7:<a href="/rev/46c1a66bd8fc">46c1a66bd8fc</a>
+   <span class="branchname">a-branch</span> <span class="tag">tip</span> 
+    (following lines 1:2 <a href="/log/tip/c">back to filelog</a>)
+  </h3>
+  
+  <form class="search" action="/log">
+  
+  <p><input name="rev" id="search1" type="text" size="30" /></p>
+  <div id="hint">Find changesets by keywords (author, files, the commit message), revision
+  number or hash, or <a href="/help/revsets">revset expression</a>.</div>
+  </form>
+  
+  <div class="navigate">
+  <a href="/log/tip/c?linerange=1%3A2&revcount=30">less</a>
+  <a href="/log/tip/c?linerange=1%3A2&revcount=120">more</a>
+  |  </div>
+  
+  <table class="bigtable">
+  <thead>
+   <tr>
+    <th class="age">age</th>
+    <th class="author">author</th>
+    <th class="description">description</th>
+   </tr>
+  </thead>
+  <tbody class="stripes2">
+   <tr>
+    <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
+    <td class="author">test</td>
+    <td class="description">
+     <a href="/rev/46c1a66bd8fc">change c</a>
+     <span class="branchhead">a-branch</span> <span class="tag">tip</span> 
+    </td>
+   </tr>
+   
+   <tr>
+    <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
+    <td class="author">test</td>
+    <td class="description">
+     <a href="/rev/6563da9dcf87">b</a>
+     
+    </td>
+   </tr>
+   
+  
+  </tbody>
+  </table>
+  
+  <div class="navigate">
+  <a href="/log/tip/c?linerange=1%3A2&revcount=30">less</a>
+  <a href="/log/tip/c?linerange=1%3A2&revcount=120">more</a>
+  |  
+  </div>
+  
+  </div>
+  </div>
+  
+  
+  
+  </body>
+  </html>
+  
+  $ (get-with-headers.py localhost:$HGPORT 'log/tip/c?linerange=1%3A2&revcount=1')
+  200 Script output follows
+  
+  <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+  <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-US">
+  <head>
+  <link rel="icon" href="/static/hgicon.png" type="image/png" />
+  <meta name="robots" content="index, nofollow" />
+  <link rel="stylesheet" href="/static/style-paper.css" type="text/css" />
+  <script type="text/javascript" src="/static/mercurial.js"></script>
+  
+  <title>test: c history</title>
+  <link rel="alternate" type="application/atom+xml"
+     href="/atom-log/tip/c" title="Atom feed for test:c" />
+  <link rel="alternate" type="application/rss+xml"
+     href="/rss-log/tip/c" title="RSS feed for test:c" />
+  </head>
+  <body>
+  
+  <div class="container">
+  <div class="menu">
+  <div class="logo">
+  <a href="https://mercurial-scm.org/">
+  <img src="/static/hglogo.png" alt="mercurial" /></a>
+  </div>
+  <ul>
+  <li><a href="/shortlog/tip?revcount=1">log</a></li>
+  <li><a href="/graph/tip?revcount=1">graph</a></li>
+  <li><a href="/tags?revcount=1">tags</a></li>
+  <li><a href="/bookmarks?revcount=1">bookmarks</a></li>
+  <li><a href="/branches?revcount=1">branches</a></li>
+  </ul>
+  <ul>
+  <li><a href="/rev/tip?revcount=1">changeset</a></li>
+  <li><a href="/file/tip?revcount=1">browse</a></li>
+  </ul>
+  <ul>
+  <li><a href="/file/tip/c?revcount=1">file</a></li>
+  <li><a href="/diff/tip/c?revcount=1">diff</a></li>
+  <li><a href="/comparison/tip/c?revcount=1">comparison</a></li>
+  <li><a href="/annotate/tip/c?revcount=1">annotate</a></li>
+  <li class="active">file log</li>
+  <li><a href="/raw-file/tip/c">raw</a></li>
+  </ul>
+  <ul>
+  <li><a href="/help?revcount=1">help</a></li>
+  </ul>
+  <div class="atom-logo">
+  <a href="/atom-log/tip/c" title="subscribe to atom feed">
+  <img class="atom-logo" src="/static/feed-icon-14x14.png" alt="atom feed" />
+  </a>
+  </div>
+  </div>
+  
+  <div class="main">
+  <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
+  <h3>
+   log c @ 7:<a href="/rev/46c1a66bd8fc?revcount=1">46c1a66bd8fc</a>
+   <span class="branchname">a-branch</span> <span class="tag">tip</span> 
+    (following lines 1:2 <a href="/log/tip/c?revcount=1">back to filelog</a>)
+  </h3>
+  
+  <form class="search" action="/log">
+  <input type="hidden" name="revcount" value="1" />
+  <p><input name="rev" id="search1" type="text" size="30" /></p>
+  <div id="hint">Find changesets by keywords (author, files, the commit message), revision
+  number or hash, or <a href="/help/revsets">revset expression</a>.</div>
+  </form>
+  
+  <div class="navigate">
+  <a href="/log/tip/c?linerange=1%3A2&revcount=1">less</a>
+  <a href="/log/tip/c?linerange=1%3A2&revcount=2">more</a>
+  |  </div>
+  
+  <table class="bigtable">
+  <thead>
+   <tr>
+    <th class="age">age</th>
+    <th class="author">author</th>
+    <th class="description">description</th>
+   </tr>
+  </thead>
+  <tbody class="stripes2">
+   <tr>
+    <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
+    <td class="author">test</td>
+    <td class="description">
+     <a href="/rev/46c1a66bd8fc?revcount=1">change c</a>
+     <span class="branchhead">a-branch</span> <span class="tag">tip</span> 
+    </td>
+   </tr>
+   
+  
+  </tbody>
+  </table>
+  
+  <div class="navigate">
+  <a href="/log/tip/c?linerange=1%3A2&revcount=1">less</a>
+  <a href="/log/tip/c?linerange=1%3A2&revcount=2">more</a>
+  |  
+  </div>
+  
+  </div>
+  </div>
+  
+  
+  
+  </body>
+  </html>
+  
+  $ (get-with-headers.py localhost:$HGPORT 'log/3/a?linerange=1' --headeronly)
+  400 invalid linerange parameter
+  [1]
+  $ (get-with-headers.py localhost:$HGPORT 'log/3/a?linerange=1:a' --headeronly)
+  400 invalid linerange parameter
+  [1]
+  $ (get-with-headers.py localhost:$HGPORT 'log/3/a?linerange=1:2&linerange=3:4' --headeronly)
+  400 redundant linerange parameter
+  [1]
+  $ (get-with-headers.py localhost:$HGPORT 'log/3/a?linerange=3:2' --headeronly)
+  400 line range must be positive
+  [1]
+  $ (get-with-headers.py localhost:$HGPORT 'log/3/a?linerange=0:1' --headeronly)
+  400 fromline must be strictly positive
   [1]
 
 should show base link, use spartan because it shows it
@@ -829,6 +1091,7 @@ filelog with patch
   <h3>
    log a @ 4:<a href="/rev/3f41bc784e7e">3f41bc784e7e</a>
    <span class="branchname">a-branch</span> 
+   
   </h3>
   
   <form class="search" action="/log">
