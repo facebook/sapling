@@ -770,9 +770,13 @@ Test that rebase is not confused by $CWD disappearing during rebase (issue4121)
   saved backup bundle to $TESTTMP/cwd-vanish/.hg/strip-backup/779a07b1b7a0-853e0073-backup.hg (glob)
 #endif
 
+Get back to the root of cwd-vanish. Note that even though `cd ..`
+works on most systems, it does not work on FreeBSD 10, so we use an
+absolute path to get back to the repository.
+  $ cd $TESTTMP/cwd-vanish
+
 Test that rebase is done in topo order (issue5370)
 
-  $ cd ..
   $ hg init order
   $ cd order
   $ touch a && hg add a && hg ci -m A
