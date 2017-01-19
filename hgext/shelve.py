@@ -650,7 +650,7 @@ def _commitworkingcopychanges(ui, repo, opts, tmpwctx):
     # contains unknown files that are part of the pending change
     s = repo.status()
     addedbefore = frozenset(s.added)
-    if not (s.modified or s.added or s.removed or s.deleted):
+    if not (s.modified or s.added or s.removed):
         return tmpwctx, addedbefore
     ui.status(_("temporarily committing pending changes "
                 "(restore with 'hg unshelve --abort')\n"))
@@ -728,6 +728,17 @@ def _finishunshelve(repo, oldtiprev, tr):
     # Clean up manually to prevent this.
     repo.unfiltered().changelog.strip(oldtiprev, tr)
     _aborttransaction(repo)
+
+def _checkunshelveuntrackedproblems(ui, repo, shelvectx):
+    """Check potential problems which may result from working
+    copy having untracked changes."""
+    wcdeleted = set(repo.status().deleted)
+    shelvetouched = set(shelvectx.files())
+    intersection = wcdeleted.intersection(shelvetouched)
+    if intersection:
+        m = _("shelved change touches missing files")
+        hint = _("run hg status to see which files are missing")
+        raise error.Abort(m, hint=hint)
 
 @command('unshelve',
          [('a', 'abort', None,
@@ -857,7 +868,7 @@ def _dounshelve(ui, repo, *shelved, **opts):
                                                          tmpwctx)
 
         repo, shelvectx = _unshelverestorecommit(ui, repo, basename, oldquiet)
-
+        _checkunshelveuntrackedproblems(ui, repo, shelvectx)
         branchtorestore = ''
         if shelvectx.branch() != shelvectx.p1().branch():
             branchtorestore = shelvectx.branch()

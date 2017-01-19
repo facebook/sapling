@@ -1710,3 +1710,30 @@ Unshelve respects --keep even if user intervention is needed
   $ hg shelve --list
   default         (*s ago)    changes to: 1 (glob)
   $ cd ..
+
+Unshelving when there are deleted files does not crash (issue4176)
+  $ hg init unshelve-deleted-file && cd unshelve-deleted-file
+  $ echo a > a && echo b > b && hg ci -Am ab
+  adding a
+  adding b
+  $ echo aa > a && hg shelve
+  shelved as default
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ rm b
+  $ hg st
+  ! b
+  $ hg unshelve
+  unshelving change 'default'
+  $ hg shelve
+  shelved as default
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ rm a && echo b > b
+  $ hg st
+  ! a
+  $ hg unshelve
+  unshelving change 'default'
+  abort: shelved change touches missing files
+  (run hg status to see which files are missing)
+  [255]
+  $ hg st
+  ! a
