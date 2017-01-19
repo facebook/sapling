@@ -321,10 +321,9 @@ Test archiving to zip file (unzip output is unstable):
 
 (unzip date formating is unstable, we do not care about it and glob it out)
 
-  $ unzip -l ../archive.zip
+  $ unzip -l ../archive.zip | grep -v -- ----- | egrep -v files$
   Archive:  ../archive.zip
     Length [ ]* Date [ ]* Time [ ]* Name (re)
-  [\- ]* (re)
         172  [0-9:\- ]*  .hg_archival.txt (re)
          10  [0-9:\- ]*  .hgsub (re)
          45  [0-9:\- ]*  .hgsubstate (re)
@@ -333,8 +332,6 @@ Test archiving to zip file (unzip output is unstable):
          45  [0-9:\- ]*  foo/.hgsubstate (re)
           9  [0-9:\- ]*  foo/y.txt (re)
           9  [0-9:\- ]*  foo/bar/z.txt (re)
-  [\- ]* (re)
-        303  [ ]*        8 files (re)
 
 Test archiving a revision that references a subrepo that is not yet
 cloned:

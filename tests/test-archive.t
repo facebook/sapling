@@ -327,14 +327,11 @@ old file -- date clamped to 1980
   $ hg add old
   $ hg commit -m old
   $ hg archive ../old.zip
-  $ unzip -l ../old.zip
+  $ unzip -l ../old.zip | grep -v -- ----- | egrep -v files$
   Archive:  ../old.zip
   \s*Length.* (re)
-  *-----* (glob)
   *172*80*00:00*old/.hg_archival.txt (glob)
   *0*80*00:00*old/old (glob)
-  *-----* (glob)
-  \s*172\s+2 files (re)
 
 show an error when a provided pattern matches no files
 
