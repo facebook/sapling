@@ -72,16 +72,6 @@ except (AttributeError, ImportError):
     _compress = _decompress = lz4missing
     usable = False
 
-def decompress(orig, bin):
-    if not bin:
-        return bin
-    t = bin[0]
-    if t == '\0':
-        return bin
-    if t == '4':
-        return _decompress(bin[1:])
-    return orig(bin)
-
 def requirements(orig, repo):
     reqs = orig(repo)
     if repo.ui.configbool('format', 'uselz4', True):
@@ -120,7 +110,16 @@ if usable:
                 return ('', '4' + c)
             return super(lz4revlog, self).compress(text)
 
-    extensions.wrapfunction(revlog, 'decompress', decompress)
+        def decompress(self, bin):
+            if not bin:
+                return bin
+            t = bin[0]
+            if t == '\0':
+                return bin
+            if t == '4':
+                return _decompress(bin[1:])
+            return super(lz4revlog, self).decompress(bin)
+
     cls = localrepo.localrepository
     for reqs in 'supportedformats openerreqs'.split():
         getattr(cls, reqs).add('lz4revlog')
