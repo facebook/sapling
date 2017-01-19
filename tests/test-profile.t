@@ -92,4 +92,10 @@ Various statprof formatters work
   $ cat ../out
   \[\[\d+.* (re)
 
+statprof can be used as a standalone module
+
+  $ $PYTHON -m mercurial.statprof hotpath
+  must specify --file to load
+  [1]
+
   $ cd ..

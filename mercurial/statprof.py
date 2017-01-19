@@ -800,6 +800,10 @@ def main(argv=None):
         else:
             assert False, "unhandled option %s" % o
 
+    if not path:
+        print('must specify --file to load')
+        return 1
+
     load_data(path=path)
 
     display(**displayargs)
