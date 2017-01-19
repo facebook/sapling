@@ -115,9 +115,6 @@ def _runpager(ui, p):
         pager.wait()
 
 def uisetup(ui):
-    if '--debugger' in sys.argv or not ui.formatted():
-        return
-
     class pagerui(ui.__class__):
         def _runpager(self, pagercmd):
             _runpager(self, pagercmd)
@@ -130,7 +127,7 @@ def uisetup(ui):
         always = util.parsebool(options['pager'])
         auto = options['pager'] == 'auto'
 
-        if not p:
+        if not p or '--debugger' in sys.argv or not ui.formatted():
             pass
         elif always:
             usepager = True

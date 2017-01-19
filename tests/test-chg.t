@@ -32,6 +32,38 @@ long socket path
 
   $ cd ..
 
+pager
+-----
+
+  $ cat >> fakepager.py <<EOF
+  > import sys
+  > for line in sys.stdin:
+  >     sys.stdout.write('paged! %r\n' % line)
+  > EOF
+
+enable pager extension globally, but spawns the master server with no tty:
+
+  $ chg init pager
+  $ cd pager
+  $ cat >> $HGRCPATH <<EOF
+  > [extensions]
+  > pager =
+  > [pager]
+  > pager = python $TESTTMP/fakepager.py
+  > EOF
+  $ chg version > /dev/null
+  $ touch foo
+  $ chg ci -qAm foo
+
+pager should be enabled if the attached client has a tty:
+
+  $ chg log -l1 -q --config ui.formatted=True
+  paged! '0:1f7b0de80e11\n'
+  $ chg log -l1 -q --config ui.formatted=False
+  0:1f7b0de80e11
+
+  $ cd ..
+
 server lifecycle
 ----------------
 

@@ -152,6 +152,11 @@ doesn't result in history being paged.
   summary:     modify a 9
   
 
+Pager should not start if stdout is not a tty.
+
+  $ hg log -l1 -q --config ui.formatted=False
+  10:46106edeeb38
+
 Pager with color enabled allows colors to come through by default,
 even though stdout is no longer a tty.
   $ cat >> $HGRCPATH <<EOF
