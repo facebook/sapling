@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from mercurial import templatekw, extensions
+from mercurial import extensions, registrar
 from mercurial import util as hgutil
 from mercurial.i18n import _
 from mercurial import obsolete
@@ -115,8 +115,11 @@ def populateresponseforphab(repo, ctx):
         # Do this once per smartlog call, not for every revs to be displayed
         del repo._smartlogrevs
 
+templatekeyword = registrar.templatekeyword()
+
+@templatekeyword('phabstatus')
 def showphabstatus(repo, ctx, templ, **args):
-    """:phabstatus: String. Return the diff approval status for a given hg rev
+    """String. Return the diff approval status for a given hg rev
     """
     populateresponseforphab(repo, ctx)
 
@@ -142,8 +145,9 @@ sent to phabricator.
 don't say anything. All good.
 3) If this is a middle revision: Then we compare the hashes as regular.
 """
+@templatekeyword('syncstatus')
 def showsyncstatus(repo, ctx, templ, **args):
-    """:syncstatus: String. Return whether the local revision is in sync
+    """String. Return whether the local revision is in sync
         with the remote (phabricator) revision
     """
     populateresponseforphab(repo, ctx)
@@ -189,7 +193,5 @@ def _getdag(orig, *args):
     return orig(*args)
 
 def extsetup(ui):
-    templatekw.keywords['phabstatus'] = showphabstatus
-    templatekw.keywords['syncstatus'] = showsyncstatus
     smartlog = extensions.find("smartlog")
     extensions.wrapfunction(smartlog, 'getdag', _getdag)

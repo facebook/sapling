@@ -8,8 +8,8 @@ from mercurial import (
     error,
     extensions,
     node,
+    registrar,
     revset,
-    templatekw,
     templater,
 )
 from mercurial.i18n import _
@@ -40,7 +40,6 @@ def extsetup(ui):
         ui.warn(_('No conduit host specified in config; disabling fbconduit\n'))
         return
     templater.funcs['mirrornode'] = mirrornode
-    templatekw.keywords['gitnode'] = showgitnode
 
     revset.symbols['gitnode'] = gitnode
     extensions.wrapfunction(revset, 'stringset', overridestringset)
@@ -135,6 +134,9 @@ def mirrornode(ctx, mapping, args):
         return ''
     return result.get(node, '')
 
+templatekeyword = registrar.templatekeyword()
+
+@templatekeyword("gitnode")
 def showgitnode(repo, ctx, templ, **args):
     """Return the git revision corresponding to a given hg rev"""
     reponame = repo.ui.config('fbconduit', 'reponame')

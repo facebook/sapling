@@ -37,22 +37,44 @@ the repository level. If that is the case, add the line above to the `.hg/hgrc`
 file inside the repository (e.g. ~/www/.hg/hgrc).
 '''
 
-from mercurial import templatekw
+from mercurial import registrar
 import re
 
+templatekeyword = registrar.templatekeyword()
+
+@templatekeyword("myparentdiff")
 def showmyparentdiff(repo, ctx, templ, **args):
+    """Show the differential revision of the commit's parent, if it has the
+       same author as this commit.
+    """
     return extract_from_parent(ctx, 'Differential Revision:.*/(D\d+)')
 
+@templatekeyword("myparentreviewers")
 def showmyparentreviewers(repo, ctx, templ, **args):
+    """Show the reviewers of the commit's parent, if it has the
+       same author as this commit.
+    """
     return extract_from_parent(ctx, '\s*Reviewers: (.*)')
 
+@templatekeyword("myparentsubscribers")
 def showmyparentsubscribers(repo, ctx, templ, **args):
+    """Show the subscribers of the commit's parent, if it has the
+       same author as this commit.
+    """
     return extract_from_parent(ctx, '\s*Subscribers: (.*)')
 
+@templatekeyword("myparenttasks")
 def showmyparenttasks(repo, ctx, templ, **args):
+    """Show the tasks from the commit's parent, if it has the
+       same author as this commit.
+    """
     return extract_from_parent(ctx, '\s*(?:Tasks|Task ID): (.*)')
 
+@templatekeyword("myparenttitleprefix")
 def showmyparenttitleprefix(repo, ctx, templ, **args):
+    """Show the title prefix of the commit's parent, if it has the
+       same author as this commit.
+    """
     if not p1_is_same_user(ctx):
         return ''
     descr = ctx.p1().description()
@@ -69,10 +91,3 @@ def extract_from_parent(ctx, pattern):
 
 def p1_is_same_user(ctx):
     return ctx.user() == ctx.p1().user()
-
-def extsetup(ui):
-    templatekw.keywords['myparentdiff'] = showmyparentdiff
-    templatekw.keywords['myparenttasks'] = showmyparenttasks
-    templatekw.keywords['myparentreviewers'] = showmyparentreviewers
-    templatekw.keywords['myparenttitleprefix'] = showmyparenttitleprefix
-    templatekw.keywords['myparentsubscribers'] = showmyparentsubscribers

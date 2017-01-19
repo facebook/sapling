@@ -35,6 +35,7 @@ from mercurial import (
     graphmod,
     obsolete,
     phases,
+    registrar,
     revset,
     scmutil,
     templatekw,
@@ -125,72 +126,73 @@ def uisetup(ui):
     revset.symbols['smartlog'] = smartlogrevset
     revset.safesymbols.add('smartlog')
 
-    def singlepublicsuccessor(repo, ctx, templ, **args):
-        """:singlepublicsuccessor: String. Get a single public successor for a
-        given node.  If there's none or more than one, return empty string.
-        This is intended to be used for "Landed as" marking
-        in `hg sl` output."""
-        successorssets = obsolete.successorssets(repo, ctx.node())
-        unfiltered = repo.unfiltered()
-        ctxs = (unfiltered[n] for n in chain.from_iterable(successorssets))
-        public = (c.hex() for c in ctxs if not c.mutable() and c != ctx)
-        first = next(public, '')
-        second = next(public, '')
-
-        return '' if first and second else first
-
-    templatekw.keywords['singlepublicsuccessor'] = singlepublicsuccessor
-
-    def rebasesuccessors(repo, ctx, **args):
-        """Return all of the node's successors created as a result of rebase"""
-        rsnodes = list(modifysuccessors(ctx, 'rebase'))
-        return templatekw.showlist('rebasesuccessor', rsnodes, **args)
-    templatekw.keywords['rebasesuccessors'] = rebasesuccessors
-
-    def amendsuccessors(repo, ctx, **args):
-        """Return all of the node's successors created as a result of amend"""
-        asnodes = list(modifysuccessors(ctx, 'amend'))
-        return templatekw.showlist('amendsuccessor', asnodes, **args)
-    templatekw.keywords['amendsuccessors'] = amendsuccessors
-
-    def splituccessors(repo, ctx, **args):
-        """Return all of the node's successors created as a result of split"""
-        asnodes = list(modifysuccessors(ctx, 'split'))
-        return templatekw.showlist('splitsuccessor', asnodes, **args)
-    templatekw.keywords['splitsuccessors'] = splituccessors
-
-    def foldsuccessors(repo, ctx, **args):
-        """Return all of the node's successors created as a result of fold"""
-        asnodes = list(modifysuccessors(ctx, 'fold'))
-        return templatekw.showlist('foldsuccessor', asnodes, **args)
-    templatekw.keywords['foldsuccessors'] = foldsuccessors
-
-    def histeditsuccessors(repo, ctx, **args):
-        """Return all of the node's successors created as a result of
-           histedit
-        """
-        asnodes = list(modifysuccessors(ctx, 'histedit'))
-        return templatekw.showlist('histeditsuccessor', asnodes, **args)
-    templatekw.keywords['histeditsuccessors'] = histeditsuccessors
-
-    def showgraphnode(orig, repo, ctx, **args):
-        """Show obsolete nodes as 'x', even when inhibited."""
-        char = orig(repo, ctx, **args)
-        if char != 'o' or ctx.node() == '...':
-            return char
-        return 'x' if repo.revs('allsuccessors(%d)', ctx.rev()) else char
-
-    def wrapshowgraphnode(loaded):
-        """Ensure that evolve is loaded before wrapping showgraph() because
-           the wrapper functions uses the 'allsuccessors' revset symbol,
-           which is provided by the evolve extension.
-        """
-        if loaded:
-            # Some callers directly call showgraphnode(), so wrap the original
-            # function in addition to updating templatekw.keywords.
-            extensions.wrapfunction(templatekw, 'showgraphnode', showgraphnode)
-            templatekw.keywords['graphnode'] = templatekw.showgraphnode
     extensions.afterloaded('evolve', wrapshowgraphnode)
+
+templatekeyword = registrar.templatekeyword()
+
+@templatekeyword('singlepublicsuccessor')
+def singlepublicsuccessor(repo, ctx, templ, **args):
+    """String. Get a single public successor for a
+    given node.  If there's none or more than one, return empty string.
+    This is intended to be used for "Landed as" marking
+    in `hg sl` output."""
+    successorssets = obsolete.successorssets(repo, ctx.node())
+    unfiltered = repo.unfiltered()
+    ctxs = (unfiltered[n] for n in chain.from_iterable(successorssets))
+    public = (c.hex() for c in ctxs if not c.mutable() and c != ctx)
+    first = next(public, '')
+    second = next(public, '')
+
+    return '' if first and second else first
+
+@templatekeyword('rebasesuccessors')
+def rebasesuccessors(repo, ctx, **args):
+    """Return all of the node's successors created as a result of rebase"""
+    rsnodes = list(modifysuccessors(ctx, 'rebase'))
+    return templatekw.showlist('rebasesuccessor', rsnodes, **args)
+
+@templatekeyword('amendsuccessors')
+def amendsuccessors(repo, ctx, **args):
+    """Return all of the node's successors created as a result of amend"""
+    asnodes = list(modifysuccessors(ctx, 'amend'))
+    return templatekw.showlist('amendsuccessor', asnodes, **args)
+
+@templatekeyword('splitsuccessors')
+def splitsuccessors(repo, ctx, **args):
+    """Return all of the node's successors created as a result of split"""
+    asnodes = list(modifysuccessors(ctx, 'split'))
+    return templatekw.showlist('splitsuccessor', asnodes, **args)
+
+@templatekeyword('foldsuccessors')
+def foldsuccessors(repo, ctx, **args):
+    """Return all of the node's successors created as a result of fold"""
+    asnodes = list(modifysuccessors(ctx, 'fold'))
+    return templatekw.showlist('foldsuccessor', asnodes, **args)
+
+@templatekeyword('histeditsuccessors')
+def histeditsuccessors(repo, ctx, **args):
+    """Return all of the node's successors created as a result of
+       histedit
+    """
+    asnodes = list(modifysuccessors(ctx, 'histedit'))
+    return templatekw.showlist('histeditsuccessor', asnodes, **args)
+
+def showgraphnode(orig, repo, ctx, **args):
+    """Show obsolete nodes as 'x', even when inhibited."""
+    char = orig(repo, ctx, **args)
+    if char != 'o' or ctx.node() == '...':
+        return char
+    return 'x' if repo.revs('allsuccessors(%d)', ctx.rev()) else char
+
+def wrapshowgraphnode(loaded):
+    """Ensure that evolve is loaded before wrapping showgraph() because
+       the wrapper functions uses the 'allsuccessors' revset symbol,
+       which is provided by the evolve extension.
+    """
+    if loaded:
+        # Some callers directly call showgraphnode(), so wrap the original
+        # function in addition to updating templatekw.keywords.
+        extensions.wrapfunction(templatekw, 'showgraphnode', showgraphnode)
 
 def modifysuccessors(ctx, operation):
     """Return all of the node's successors which were created as a result

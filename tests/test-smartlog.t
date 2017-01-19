@@ -432,3 +432,29 @@ Add other draft stacks
   o  1[master]   66f7d451a68b   1970-01-01 00:00 +0000   debugbuilddag
   |    r1
   |
+
+Make sure the template keywords are documented correctly
+  $ hg help templates | grep -A1 successor
+      amendsuccessors
+                    Return all of the node's successors created as a result of
+                    amend
+  --
+      foldsuccessors
+                    Return all of the node's successors created as a result of
+                    fold
+  --
+      histeditsuccessors
+                    Return all of the node's successors created as a result of
+                    histedit
+  --
+      rebasesuccessors
+                    Return all of the node's successors created as a result of
+                    rebase
+  --
+      singlepublicsuccessor
+                    String. Get a single public successor for a given node.  If
+                    there's none or more than one, return empty string. This is
+  --
+      splitsuccessors
+                    Return all of the node's successors created as a result of
+                    split

@@ -15,13 +15,16 @@ shortversion:
 from mercurial import extensions
 from mercurial import error
 from mercurial import hg
-from mercurial import templatekw
+from mercurial import registrar
 from mercurial import revset
 from mercurial.i18n import _
 import re
 
 githashre = re.compile('g([0-9a-fA-F]{40,40})')
 
+templatekeyword = registrar.templatekeyword()
+
+@templatekeyword("gitnode")
 def showgitnode(repo, ctx, templ, **args):
     """Return the git revision corresponding to a given hg rev"""
     peerpath = repo.ui.expandpath('default')
@@ -66,7 +69,6 @@ def overridestringset(orig, repo, subset, x):
     return orig(repo, subset, x)
 
 def extsetup(ui):
-    templatekw.keywords['gitnode'] = showgitnode
     revset.symbols['gitnode'] = gitnode
     extensions.wrapfunction(revset, 'stringset', overridestringset)
     revset.symbols['stringset'] = revset.stringset

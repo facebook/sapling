@@ -119,4 +119,9 @@ Test with multiple backing repos specified.
   commit 3
   $ hg log -r gdddddddddddddddddddddddddddddddddddddddd -T '{desc}\n'
   commit 3
+
+Make sure the template keywords are documented correctly
+
+  $ hg help templates | grep gitnode
+      gitnode       Return the git revision corresponding to a given hg rev
   $ cd ..

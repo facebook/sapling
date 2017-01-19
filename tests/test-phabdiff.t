@@ -32,3 +32,9 @@ Test phabdiff template mapping
   > Task: t123456,456"
   $ hg log -r . --template "{phabdiff}: {tasks}\n"
   D1245: 123456 456
+
+Make sure the template keywords are documented correctly
+
+  $ hg help templates | egrep 'phabdiff|tasks'
+      phabdiff      String. Return the phabricator diff id for a given hg rev.
+      tasks         String. Return the tasks associated with given hg rev.

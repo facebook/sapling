@@ -57,3 +57,8 @@ And finally, the success case
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg log -T '{phabstatus}\n' -r .
   Needs Review
 
+Make sure the template keywords are documented correctly
+
+  $ hg help templates | egrep 'phabstatus|syncstatus'
+      phabstatus    String. Return the diff approval status for a given hg rev
+      syncstatus    String. Return whether the local revision is in sync with

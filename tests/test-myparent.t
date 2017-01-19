@@ -51,3 +51,20 @@ If the authors do not match the keywords will be empty.
   $ hg log -T '{myparenttasks}' -r .
   $ hg log -T '{myparenttitleprefix}' -r .
 
+Make sure the template keywords are documented correctly
+
+  $ hg help templates | grep -A2 myparent
+      myparentdiff  Show the differential revision of the commit's parent, if it
+                    has the same author as this commit.
+      myparentreviewers
+                    Show the reviewers of the commit's parent, if it has the
+                    same author as this commit.
+      myparentsubscribers
+                    Show the subscribers of the commit's parent, if it has the
+                    same author as this commit.
+      myparenttasks
+                    Show the tasks from the commit's parent, if it has the same
+                    author as this commit.
+      myparenttitleprefix
+                    Show the title prefix of the commit's parent, if it has the
+                    same author as this commit.
