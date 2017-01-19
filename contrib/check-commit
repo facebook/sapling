@@ -59,6 +59,10 @@ def checkcommit(commit, node=None):
     exitcode = 0
     printed = node is None
     hits = []
+    signtag = (afterheader +
+          r'Added (tag [^ ]+|signature) for changeset [a-f0-9]{12}')
+    if re.search(signtag, commit):
+        return 0
     for exp, msg in errors:
         for m in re.finditer(exp, commit):
             end = m.end()

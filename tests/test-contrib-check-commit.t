@@ -30,6 +30,30 @@ A fine patch:
   > EOF
   $ cat patch-with-long-header.diff | $TESTDIR/../contrib/check-commit
 
+This would normally be against the rules, but it's okay because that's
+what tagging and signing looks like:
+
+  $ cat > creates-a-tag.diff << EOF
+  > # HG changeset patch
+  > # User Augie Fackler <raf@durin42.com>
+  > # Date 1484787778 18000
+  > #      Wed Jan 18 20:02:58 2017 -0500
+  > # Branch stable
+  > # Node ID c177635e4acf52923bc3aa9f72a5b1ad1197b173
+  > # Parent  a1dd2c0c479e0550040542e392e87bc91262517e
+  > Added tag 4.1-rc for changeset a1dd2c0c479e
+  > 
+  > diff --git a/.hgtags b/.hgtags
+  > --- a/.hgtags
+  > +++ b/.hgtags
+  > @@ -150,3 +150,4 @@ 438173c415874f6ac653efc1099dec9c9150e90f
+  >  eab27446995210c334c3d06f1a659e3b9b5da769 4.0
+  >  b3b1ae98f6a0e14c1e1ba806a6c18e193b6dae5c 4.0.1
+  >  e69874dc1f4e142746ff3df91e678a09c6fc208c 4.0.2
+  > +a1dd2c0c479e0550040542e392e87bc91262517e 4.1-rc
+  > EOF
+  $ $TESTDIR/../contrib/check-commit < creates-a-tag.diff
+
 A patch with lots of errors:
 
   $ cat > patch-with-long-header.diff << EOF
