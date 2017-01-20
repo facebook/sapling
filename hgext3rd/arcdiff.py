@@ -6,6 +6,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
+import os
+
 from mercurial import commands, error, extensions
 from mercurial.i18n import _
 
@@ -63,6 +65,6 @@ def _diff(orig, ui, repo, *pats, **opts):
     if len(pats) == 0:
         prev = set(repo.unfiltered()[rev].files())
         curr = set(repo['.'].files())
-        pats = tuple(prev | curr)
+        pats = tuple(os.path.join(repo.root, p) for p in prev | curr)
 
     return orig(ui, repo, *pats, **opts)
