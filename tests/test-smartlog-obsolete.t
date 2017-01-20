@@ -82,7 +82,7 @@ Check rebase template keyword.
   add b [a-f0-9]*  (re)
 
 Check fold template keyword.
-  $ hg fold 4
+  $ hg fold --from 4
   2 changesets folded
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ showgraph

@@ -32,7 +32,7 @@ an error message.
 Test that we can perform a fold in the middle of a stack.
   $ hg up 2
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg fold ".^"
+  $ hg fold --from ".^"
   2 changesets folded
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ showgraph

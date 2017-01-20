@@ -48,7 +48,7 @@ Set up repo.
 Test simple case of folding a head. Should work normally.
   $ hg up 7
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg fold '.^'
+  $ hg fold --from '.^'
   2 changesets folded
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ showgraph
@@ -69,7 +69,7 @@ Test simple case of folding a head. Should work normally.
 Test rebasing of stack after fold.
   $ hg up 3
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg fold '.^'
+  $ hg fold --from '.^'
   2 changesets folded
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   rebasing 4:b762560d23fd "r4"
@@ -90,7 +90,7 @@ Test rebasing of stack after fold.
 Test rebasing of multiple children
   $ hg up 1
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg fold '.^'
+  $ hg fold --from '.^'
   2 changesets folded
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   rebasing 5:* "r5" (glob)
@@ -136,7 +136,7 @@ rebase is not on the topmost folded commit.
 
   $ hg up 0
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg fold 2
+  $ hg fold --from 2
   3 changesets folded
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   rebasing 3:a422badec216 "r3"
@@ -213,7 +213,7 @@ does inhibit its descendants in the old stack. The fold command should
 manually inhibit any visible obsolete commits in the old stack.
   $ hg up 7
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg fold 8
+  $ hg fold --from 8
   2 changesets folded
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ showgraph
