@@ -1546,7 +1546,7 @@ def origin(repo, subset, x):
     # some optimizations from the fact this is a baseset.
     return subset & o
 
-@predicate('outgoing([path])', safe=True)
+@predicate('outgoing([path])', safe=False)
 def outgoing(repo, subset, x):
     """Changesets not found in the specified destination repository, or the
     default push location.
@@ -1737,7 +1737,7 @@ def public(repo, subset, x):
     return subset.filter(condition, condrepr=('<phase %r>', target),
                          cache=False)
 
-@predicate('remote([id [,path]])', safe=True)
+@predicate('remote([id [,path]])', safe=False)
 def remote(repo, subset, x):
     """Local revision that corresponds to the given identifier in a
     remote repository, if present. Here, the '.' identifier is a
