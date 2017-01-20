@@ -196,11 +196,11 @@ def wrapshowgraphnode(loaded):
 
 def modifysuccessors(ctx, operation):
     """Return all of the node's successors which were created as a result
-    of a given modification operation (amend/rebase)"""
-    hex = nodemod.hex
-    return (hex(m.succnodes()[0]) for m in obsolete.successormarkers(ctx)
-            if len(m.succnodes()) == 1
-            and m.metadata().get('operation') == operation)
+    of a given modification operation"""
+    for m in obsolete.successormarkers(ctx):
+        if m.metadata().get('operation') == operation:
+            for node in m.succnodes():
+                yield nodemod.hex(node)
 
 def sortnodes(nodes, parentfunc, masters):
     """Topologically sorts the nodes, using the parentfunc to find
