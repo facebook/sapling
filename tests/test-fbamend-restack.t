@@ -12,7 +12,7 @@ Set up test environment.
   > strip=
   > [experimental]
   > evolution = createmarkers
-  > evolutioncommands = prev next
+  > evolutioncommands = prev next split fold
   > EOF
   $ mkcommit() {
   >   echo "$1" > "$1"

@@ -11,7 +11,7 @@ Set up test environment.
   > rebase=
   > [experimental]
   > evolution = createmarkers
-  > evolutioncommands = previous next
+  > evolutioncommands = previous next split fold
   > EOF
   $ hg init fbamendprevious && cd fbamendprevious
 

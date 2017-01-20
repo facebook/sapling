@@ -12,7 +12,7 @@
   > smartlog=$TESTTMP/smartlog.py
   > [experimental]
   > evolution = createmarkers
-  > evolutioncommands = prev next
+  > evolutioncommands = prev next split fold
   > EOF
 
 Test that changesets with visible precursors are rendered as x's, even

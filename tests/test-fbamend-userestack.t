@@ -12,7 +12,7 @@ Set up test environment.
   > strip=
   > [experimental]
   > evolution = createmarkers
-  > evolutioncommands = prev next
+  > evolutioncommands = prev next split fold
   > [fbamend]
   > userestack=true
   > EOF

@@ -25,7 +25,7 @@ markers instead to fix up amends, enable the userestack option::
 
 To make `hg previous` and `hg next` always pick the newest commit at
 each step of walking up or down the stack instead of aborting when
-encountering non-linearity (equivalent to the --newest flag), enabled
+encountering non-linearity (equivalent to the --newest flag), enable
 the following config option::
 
     [fbamend]
@@ -43,6 +43,7 @@ from mercurial import (
     obsolete,
     phases,
     repair,
+    scmutil,
 )
 from mercurial.node import hex, nullrev, short
 from mercurial import lock as lockmod
@@ -160,6 +161,27 @@ def uisetup(ui):
                 _('do not activate the bookmark on the destination changeset')
             ),
         ])
+
+        # Wrap `hg split`.
+        splitentry = extensions.wrapcommand(
+            evolvemod.cmdtable,
+            'split',
+            wrapsplit,
+        )
+        splitentry[1].append(
+            ('', 'norebase', False, _("don't rebase children after split"))
+        )
+
+        # Wrap `hg fold`.
+        foldentry = extensions.wrapcommand(
+            evolvemod.cmdtable,
+            'fold',
+            wrapfold,
+        )
+        foldentry[1].append(
+            ('', 'norebase', False, _("don't rebase children after fold"))
+        )
+
     extensions.afterloaded('evolve', evolveloaded)
 
     def rebaseloaded(loaded):
@@ -460,6 +482,57 @@ def fixupamend(ui, repo):
     finally:
         lockmod.release(wlock, lock, tr)
 
+def wrapsplit(orig, ui, repo, *revs, **opts):
+    """Automatically rebase unstable descendants after split."""
+    # Find the rev number of the changeset to split. This needs to happen
+    # before splitting in case the input revset is relative to the working
+    # copy parent, since `hg split` may update to a new changeset.
+    revs = (list(revs) + opts.get('rev', [])) or ['.']
+    rev = scmutil.revsingle(repo, revs[0]).rev()
+    torebase = repo.revs('descendants(%d) - (%d)', rev, rev)
+
+    # Perform split.
+    ret = orig(ui, repo, *revs, **opts)
+
+    # Fix up stack.
+    if not opts['norebase'] and torebase:
+        with nested(repo.wlock(), repo.lock()):
+            with repo.transaction('splitrebase'):
+                top = repo.revs('allsuccessors(%d)', rev).last()
+                _restackonce(ui, repo, top)
+
+    return ret
+
+def wrapfold(orig, ui, repo, *revs, **opts):
+    """Automatically rebase unstable descendants after fold."""
+    # Find the rev numbers of the changesets that will be folded. This needs
+    # to happen before folding in case the input revset is relative to the
+    # working copy parent, since `hg fold` may update to a new changeset.
+    revs = list(revs) + opts.get('rev', [])
+    revs = scmutil.revrange(repo, revs)
+    if not opts['exact']:
+        revs = repo.revs('(%ld::.) or (.::%ld)', revs, revs)
+    torebase = repo.revs('descendants(%ld) - (%ld)', revs, revs)
+
+    # Perform fold.
+    ret = orig(ui, repo, *revs, **opts)
+
+    # Fix up stack.
+    with nested(repo.wlock(), repo.lock()):
+        with repo.transaction('foldrebase'):
+            if not opts['norebase'] and torebase:
+                folded = repo.revs('allsuccessors(%ld)', revs).last()
+                _restackonce(ui, repo, folded)
+            else:
+                # If there's nothing to rebase, deinhibit the folded
+                # changesets so that they get correctly marked as
+                # hidden if needed. For some reason inhibit's
+                # post-transaction hook misses this changeset.
+                visible = repo.unfiltered().revs('(%ld) - hidden()', revs)
+                _deinhibit(repo, (repo[r] for r in visible))
+
+    return ret
+
 def wrapprevious(orig, ui, repo, *args, **opts):
     """Replacement for `hg previous` from the evolve extension."""
     _moverelative(ui, repo, args, opts, reverse=True)
@@ -687,9 +760,9 @@ def _findstacktop(ui, repo, newest=False):
             # We can't simply return heads.max() since this might give
             # a different answer from walking up the stack as in
             # _findnexttarget(), which picks the child with the greatest
-            # revision number at each step. This may be confusing, since it
-            # means that `hg next --top` and `hg next --top --rebase` would
-            # result in a different destination changeset, for example.
+            # revision number at each step. This would be confusing, since
+            # it would mean that `hg next --top` and `hg next --top --rebase`
+            # would result in different destination changesets.
             return _findnexttarget(ui, repo, newest=True, top=True)
         ui.warn(_("current stack has multiple heads, namely:\n"))
         _showchangesets(ui, repo, revs=heads)
@@ -764,7 +837,7 @@ def restack(ui, repo, rebaseopts=None):
 
         # Find the latest version of the changeset at the botom of the
         # current stack. If the current changeset is public, simply start
-        # restacking from the current changeset (under the assumption)
+        # restacking from the current changeset with the assumption
         # that there are non-public changesets higher up.
         base = repo.revs('::. & draft()').first()
         latest = _latest(repo, base) if base is not None else repo['.'].rev()
