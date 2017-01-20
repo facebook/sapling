@@ -978,11 +978,29 @@ shelve --patch and shelve --stat should work with a single valid shelfname
   shelved as default-01
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg shelve --patch default default-01
-  abort: --patch expects a single shelf
-  [255]
+  default-01      (1s ago)    changes to: create conflict
+  
+  diff --git a/shelf-patch-b b/shelf-patch-b
+  new file mode 100644
+  --- /dev/null
+  +++ b/shelf-patch-b
+  @@ -0,0 +1,1 @@
+  +patch b
+  default         (1s ago)    changes to: create conflict
+  
+  diff --git a/shelf-patch-a b/shelf-patch-a
+  new file mode 100644
+  --- /dev/null
+  +++ b/shelf-patch-a
+  @@ -0,0 +1,1 @@
+  +patch a
   $ hg shelve --stat default default-01
-  abort: --stat expects a single shelf
-  [255]
+  default-01      (1s ago)    changes to: create conflict
+   shelf-patch-b |  1 +
+   1 files changed, 1 insertions(+), 0 deletions(-)
+  default         (1s ago)    changes to: create conflict
+   shelf-patch-a |  1 +
+   1 files changed, 1 insertions(+), 0 deletions(-)
   $ hg shelve --patch default
   default         (*)* changes to: create conflict (glob)
   
