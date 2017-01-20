@@ -45,7 +45,7 @@ Description:
 HG: Edit task title and description. Lines beginning with 'HG:' are removed."
 HG: First line is the title followed by the description.
 HG: Feel free to add relevant information.
-''' % (repo.root, socket.gethostname(), pycompat.osgetenv('LOGNAME'),
+''' % (repo.root, socket.gethostname(), encoding.environ.get('LOGNAME'),
        defaultdesc)
 
     text = re.sub("(?m)^HG:.*(\n|$)", "", ui.edit(prompt, ui.username()))
@@ -158,7 +158,7 @@ def rage(ui, repo, *pats, **opts):
 
     basic = [
         ('date', time.ctime()),
-        ('unixname', pycompat.osgetenv('LOGNAME')),
+        ('unixname', encoding.environ.get('LOGNAME')),
         ('hostname', socket.gethostname()),
         ('repo location', _failsafe(lambda: repo.root)),
         ('active bookmark',
