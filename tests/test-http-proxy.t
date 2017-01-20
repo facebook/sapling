@@ -83,10 +83,11 @@ url with user name and password
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
-bad host:port for proxy
+bad host:port for proxy ("Protocol not supported" can happen on
+misconfigured hosts)
 
   $ http_proxy=localhost:$HGPORT2 hg clone --config http_proxy.always=True http://localhost:$HGPORT/ f
-  abort: error: Connection refused
+  abort: error: (Connection refused|Protocol not supported) (re)
   [255]
 
 do not use the proxy if it is in the no list
