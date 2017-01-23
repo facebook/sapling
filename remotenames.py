@@ -347,12 +347,25 @@ class lazyremotenamedict(UserDict.DictMixin):
         else:
             return None
 
-    def keys(self):
+    def keys(self, resolvekeys=None):
+        """Get a list of bookmark names
+
+        `resolvekeys` allows callee to ask whether nodes to which these keys
+        point should be resolved in a revlog (to safeguard against a key
+        pointing to a non-existent node). If this kwarg:
+            - is None: remotenames.resolvekeys config value is read,
+              defaulting to True, as the behavior before this fix
+            - is not None: the bool value of resolvekeys is used"""
+        if resolvekeys is None:
+            resolvekeys = self._repo.ui.configbool("remotenames",
+                                                   "resolvekeys", True)
         if not self.loaded:
             self._load()
-        for u in self.potentialentries.keys():
-            self._fetchandcache(u)
-        return self.cache.keys()
+        if resolvekeys:
+            for u in self.potentialentries.keys():
+                self._fetchandcache(u)
+            return self.cache.keys()
+        return self.potentialentries.keys()
 
 class remotenames(dict):
     """This class encapsulates all the remotenames state. It also contains
