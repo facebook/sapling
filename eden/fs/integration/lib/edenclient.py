@@ -135,7 +135,7 @@ class EdenFS(object):
         cmd.extend(args)
         return cmd
 
-    def start(self, timeout=10):
+    def start(self, timeout=30):
         '''
         Run "eden daemon" to start the eden daemon.
         '''
