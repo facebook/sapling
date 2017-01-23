@@ -18,6 +18,7 @@ from .node import (
 from . import (
     error,
     revlog,
+    scmutil,
     util,
 )
 
@@ -32,21 +33,13 @@ def _normpath(f):
         f = f.replace('//', '/')
     return f
 
-def _validpath(repo, path):
-    """Returns False if a path should NOT be treated as part of a repo.
-
-    For all in-core cases, this returns True, as we have no way for a
-    path to be mentioned in the history but not actually be
-    relevant. For narrow clones, this is important because many
-    filelogs will be missing, and changelog entries may mention
-    modified files that are outside the narrow scope.
-    """
-    return True
-
 class verifier(object):
-    def __init__(self, repo):
+    # The match argument is always None in hg core, but e.g. the narrowhg
+    # extension will pass in a matcher here.
+    def __init__(self, repo, match=None):
         self.repo = repo.unfiltered()
         self.ui = repo.ui
+        self.match = match or scmutil.matchall(repo)
         self.badrevs = set()
         self.errors = 0
         self.warnings = 0
@@ -170,6 +163,7 @@ class verifier(object):
     def _verifychangelog(self):
         ui = self.ui
         repo = self.repo
+        match = self.match
         cl = repo.changelog
 
         ui.status(_("checking changesets\n"))
@@ -189,7 +183,7 @@ class verifier(object):
                     mflinkrevs.setdefault(changes[0], []).append(i)
                     self.refersmf = True
                 for f in changes[3]:
-                    if _validpath(repo, f):
+                    if match(f):
                         filelinkrevs.setdefault(_normpath(f), []).append(i)
             except Exception as inst:
                 self.refersmf = True
@@ -201,6 +195,7 @@ class verifier(object):
                         progress=None):
         repo = self.repo
         ui = self.ui
+        match = self.match
         mfl = self.repo.manifestlog
         mf = mfl._revlog.dirlog(dir)
 
@@ -243,12 +238,14 @@ class verifier(object):
                     elif f == "/dev/null":  # ignore this in very old repos
                         continue
                     fullpath = dir + _normpath(f)
-                    if not _validpath(repo, fullpath):
-                        continue
                     if fl == 't':
+                        if not match.visitdir(fullpath):
+                            continue
                         subdirnodes.setdefault(fullpath + '/', {}).setdefault(
                             fn, []).append(lr)
                     else:
+                        if not match(fullpath):
+                            continue
                         filenodes.setdefault(fullpath, {}).setdefault(fn, lr)
             except Exception as inst:
                 self.exc(lr, _("reading delta %s") % short(n), inst, label)
