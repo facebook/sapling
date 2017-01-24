@@ -25,7 +25,8 @@ namespace facebook {
 namespace eden {
 namespace fusell {
 
-Dispatcher::Attr::Attr(const MountPoint* mount) : timeout(1.0) {
+Dispatcher::Attr::Attr(const MountPoint* mount)
+    : timeout(std::numeric_limits<double>::max()) {
   st = mount->initStatData();
 }
 
@@ -964,8 +965,12 @@ static const fuse_lowlevel_ops dispatcher_ops = {
 const fuse_conn_info& Dispatcher::getConnInfo() const { return connInfo_; }
 
 Channel& Dispatcher::getChannel() const {
-  DCHECK(chan_ != nullptr) << "Channel not yet assigned!?";
+  CHECK(chan_ != nullptr) << "Channel not yet assigned!?";
   return *chan_;
+}
+
+Channel* Dispatcher::getChannelPtr() const {
+  return chan_;
 }
 
 EdenStats& Dispatcher::getStats() {

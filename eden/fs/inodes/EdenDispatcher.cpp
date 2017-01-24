@@ -19,8 +19,10 @@
 #include "FileInode.h"
 #include "InodeMap.h"
 #include "TreeInode.h"
+#include "eden/fuse/Channel.h"
 #include "eden/fuse/DirHandle.h"
 #include "eden/fuse/FileHandle.h"
+#include "eden/fuse/RequestData.h"
 
 using namespace folly;
 using facebook::eden::PathComponentPiece;
@@ -290,9 +292,21 @@ folly::Future<folly::Unit> EdenDispatcher::unlink(
     fuse_ino_t parent,
     PathComponentPiece name) {
   VLOG(7) << "unlink(" << parent << ", " << name << ")";
-  return inodeMap_->lookupTreeInode(parent)
-      .then([childName = PathComponent{name}](const TreeInodePtr& inode) {
+  return inodeMap_->lookupTreeInode(parent).then(
+      [ this, childName = PathComponent{name} ](const TreeInodePtr& inode) {
         inode->unlink(childName);
+
+        // TODO: we need to move invalidation into the Inode implementation
+        // so that we can ensure that it happens regardless of whether a
+        // change is made via FUSE or thrift.  This is present here for
+        // now as an example of how to use the invalidation API and
+        // because we must invalidate when scmRemove is used.
+        if (!fusell::RequestData::isFuseRequest()) {
+          auto chan = getChannelPtr();
+          if (chan) {
+            chan->invalidateEntry(inode->getNodeId(), childName);
+          }
+        }
       });
 }
 

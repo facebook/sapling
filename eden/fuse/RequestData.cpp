@@ -41,6 +41,10 @@ void RequestData::interrupter(fuse_req_t req, void* data) {
   }
 }
 
+bool RequestData::isFuseRequest() {
+  return folly::RequestContext::get()->getContextData(kKey) != nullptr;
+}
+
 RequestData& RequestData::get() {
   auto data = folly::RequestContext::get()->getContextData(kKey);
   if (UNLIKELY(!data)) {

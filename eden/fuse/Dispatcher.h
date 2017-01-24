@@ -58,7 +58,14 @@ class Dispatcher {
       bool debug);
   EdenStats& getStats();
   const EdenStats& getStats() const;
+
+  // Returns the channel.  Must not be called if the channel
+  // is not assigned!  (will terminate the program)
   Channel& getChannel() const;
+
+  // Returns the channel.  May be nullptr in test environments!
+  Channel* getChannelPtr() const;
+
   const fuse_conn_info& getConnInfo() const;
   FileHandleMap& getFileHandles();
 

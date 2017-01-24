@@ -45,6 +45,11 @@ class RequestData : public folly::RequestData {
   explicit RequestData(fuse_req_t req);
   static RequestData& get();
   static RequestData& create(fuse_req_t req);
+
+  // Returns true if the current context is being called from inside
+  // a FUSE request, false otherwise.
+  static bool isFuseRequest();
+
   folly::Future<folly::Unit> startRequest(EdenStats::Histogram& histogram);
   void finishRequest();
 

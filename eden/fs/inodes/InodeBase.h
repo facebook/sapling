@@ -140,7 +140,11 @@ class InodeBase {
    * numbers instead of path names.
    */
   RelativePath getPathBuggy() const {
-    return getPath().value();
+    auto path = getPath();
+    if (!path.hasValue()) {
+      LOG(FATAL) << "getPathBuggy(): there is no path";
+    }
+    return path.value();
   }
 
   /**
