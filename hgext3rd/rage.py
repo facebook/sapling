@@ -175,7 +175,7 @@ def rage(ui, repo, *pats, **opts):
         ('df -h', _failsafe(lambda: shcmd('df -h', check=False))),
         # unfiltered smartlog for recent hidden changesets
         ('hg sl', _failsafe(lambda: hgcmd(
-            smartlog.smartlog, _repo=repo.unfiltered(), template='{sl}'))),
+            smartlog.smartlog, _repo=repo.unfiltered(), template='{hsl}'))),
         ('first 20 lines of "hg status"',
             _failsafe(lambda:
                 '\n'.join(hgcmd(commands.status).splitlines()[:20]))),
