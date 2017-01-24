@@ -412,7 +412,10 @@ by hand to make changes to the repository or remove it.''' % name)
             # runaway processes that weren't cleaned up by the test itself.
             # We want to make sure this behavior works during the eden
             # integration tests.
-            if name.startswith('TESTPILOT_'):
+            # Similarly, we want to preserve EDENFS_ env vars which are
+            # populated by our own test infra to relay paths to important
+            # build artifacts in our build tree.
+            if name.startswith('TESTPILOT_') or name.startswith('EDENFS_'):
                 eden_env[name] = value
             elif name in preserve:
                 eden_env[name] = value

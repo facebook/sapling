@@ -7,6 +7,9 @@ for daemon_target, suffix in get_daemon_versions():
       env = {
         'EDENFS_SUFFIX': suffix,
       #  'HYPOTHESIS_VERBOSITY_LEVEL': 'verbose',
+        'EDENFS_CLI_PATH': '$(location @/eden/fs/cli:cli)',
+        'EDENFS_SERVER_PATH': '$(location %s)' % daemon_target,
+        'EDENFS_POST_CLONE_PATH': '$(location @/eden/hooks/hg:post-clone)',
       },
       deps = [
         daemon_target,
