@@ -66,11 +66,11 @@ namespace eden {
 
 EdenServer::EdenServer(
     AbsolutePathPiece edenDir,
-    AbsolutePathPiece systemConfigDir,
+    AbsolutePathPiece etcEdenDir,
     AbsolutePathPiece configPath,
     AbsolutePathPiece rocksPath)
     : edenDir_(edenDir),
-      systemConfigDir_(systemConfigDir),
+      etcEdenDir_(etcEdenDir),
       configPath_(configPath),
       rocksPath_(rocksPath) {}
 
@@ -227,8 +227,8 @@ shared_ptr<EdenMount> EdenServer::getMount(StringPiece mountPath) const {
 }
 
 void EdenServer::reloadConfig() {
-  *configData_.wlock() = make_shared<ConfigData>(ClientConfig::loadConfigData(
-      systemConfigDir_.piece(), configPath_.piece()));
+  *configData_.wlock() = make_shared<ConfigData>(
+      ClientConfig::loadConfigData(etcEdenDir_.piece(), configPath_.piece()));
 }
 
 shared_ptr<EdenServer::ConfigData> EdenServer::getConfig() {

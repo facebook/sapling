@@ -287,7 +287,7 @@ def create_parser():
         '--config-dir',
         help='Path to directory where client data is stored.')
     parser.add_argument(
-        '--system-config-dir',
+        '--etc-eden-dir',
         help='Path to directory that holds the system configuration files.')
     parser.add_argument(
         '--home-dir',
@@ -424,7 +424,7 @@ def find_default_config_dir():
 def create_config(args):
     config = args.config_dir or find_default_config_dir()
     home_dir = args.home_dir or util.get_home_dir()
-    return config_mod.Config(config, args.system_config_dir, home_dir)
+    return config_mod.Config(config, args.etc_eden_dir, home_dir)
 
 
 def main():

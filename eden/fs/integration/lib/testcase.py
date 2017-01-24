@@ -133,8 +133,10 @@ class EdenTestCase(TestParent):
         self.eden_dir = os.path.join(self.home_dir, 'local/.eden')
         os.makedirs(self.eden_dir)
 
+        self.etc_eden_dir = os.path.join(self.tmp_dir, 'etc-eden')
+        os.mkdir(self.etc_eden_dir)
         # The directory holding the system configuration files
-        self.system_config_dir = os.path.join(self.tmp_dir, 'config.d')
+        self.system_config_dir = os.path.join(self.etc_eden_dir, 'config.d')
         os.mkdir(self.system_config_dir)
         # Parent directory for any git/hg repositories created during the test
         self.repos_dir = os.path.join(self.tmp_dir, 'repos')
@@ -144,7 +146,7 @@ class EdenTestCase(TestParent):
         os.mkdir(self.mounts_dir)
 
         self.eden = edenclient.EdenFS(self.eden_dir,
-                                      system_config_dir=self.system_config_dir,
+                                      etc_eden_dir=self.etc_eden_dir,
                                       home_dir=self.home_dir)
         self.eden.start()
 

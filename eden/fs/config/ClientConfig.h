@@ -72,8 +72,8 @@ class ClientConfig {
    * Load the global server configuration data.
    */
   static ConfigData loadConfigData(
-      AbsolutePathPiece systemConfigDir,
-      AbsolutePathPiece homeDirectory);
+      AbsolutePathPiece etcEdenDirectory,
+      AbsolutePathPiece configPath);
 
   static folly::dynamic loadClientDirectoryMap(AbsolutePathPiece edenDir);
 

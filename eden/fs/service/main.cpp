@@ -20,8 +20,8 @@
 DEFINE_bool(allowRoot, false, "Allow running eden directly as root");
 DEFINE_string(edenDir, "", "The path to the .eden directory");
 DEFINE_string(
-    systemConfigDir,
-    "/etc/eden/config.d",
+    etcEdenDir,
+    "/etc/eden",
     "The directory holding all system configuration files");
 DEFINE_string(configPath, "", "The path of the ~/.edenrc config file");
 DEFINE_string(rocksPath, "", "The path to the local RocksDB store");
@@ -123,9 +123,7 @@ int main(int argc, char **argv) {
     return EX_USAGE;
   }
   auto edenDir = canonicalPath(FLAGS_edenDir);
-  auto systemConfigDir = FLAGS_systemConfigDir.empty()
-      ? AbsolutePath{"/etc/eden/config.d"}
-      : canonicalPath(FLAGS_systemConfigDir);
+  auto etcEdenDir = canonicalPath(FLAGS_etcEdenDir);
   auto rocksPath = FLAGS_rocksPath.empty()
       ? edenDir + RelativePathPiece{"storage/rocks-db"}
       : canonicalPath(FLAGS_rocksPath);
@@ -165,7 +163,7 @@ int main(int argc, char **argv) {
       1);
 
   // Run the eden server
-  EdenServer server(edenDir, systemConfigDir, configPath, rocksPath);
+  EdenServer server(edenDir, etcEdenDir, configPath, rocksPath);
   server.run();
 
   LOG(INFO) << "edenfs performing orderly shutdown";

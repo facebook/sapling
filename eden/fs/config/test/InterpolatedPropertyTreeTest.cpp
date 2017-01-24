@@ -79,6 +79,19 @@ TEST_F(InterpTest, testReferenceCycle) {
   EXPECT_EQ("${HOME}", tree.get("section", "foo", "nope"));
 }
 
+TEST_F(InterpTest, testSet) {
+  InterpolatedPropertyTree tree;
+
+  tree.set("foo", "bar", "baz");
+  EXPECT_EQ("baz", tree.get("foo", "bar", "nope"));
+
+  tree.set("foo", "wat", "woot");
+  EXPECT_EQ("woot", tree.get("foo", "wat", "nope"));
+
+  tree.set("other", "key", "value");
+  EXPECT_EQ("value", tree.get("other", "key", "nope"));
+}
+
 TEST_F(InterpTest, testMerge) {
   folly::StringPiece base(
       "[section]\n"

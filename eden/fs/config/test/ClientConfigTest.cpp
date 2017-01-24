@@ -27,7 +27,8 @@ class ClientConfigTest : public ::testing::Test {
  protected:
   std::unique_ptr<TemporaryDirectory> edenDir_;
   folly::fs::path clientDir_;
-  folly::fs::path systemConfigDir_;
+  folly::fs::path etcEdenPath_;
+  folly::fs::path edenConfigDotDPath_;
   folly::fs::path mountPoint_;
   folly::fs::path userConfigPath_;
 
@@ -35,8 +36,12 @@ class ClientConfigTest : public ::testing::Test {
     edenDir_ = std::make_unique<TemporaryDirectory>("eden_config_test_");
     clientDir_ = edenDir_->path() / "client";
     folly::fs::create_directory(clientDir_);
-    systemConfigDir_ = edenDir_->path() / "config.d";
-    folly::fs::create_directory(systemConfigDir_);
+
+    etcEdenPath_ = edenDir_->path() / "etc-eden";
+    folly::fs::create_directory(etcEdenPath_);
+
+    edenConfigDotDPath_ = etcEdenPath_ / "config.d";
+    folly::fs::create_directory(edenConfigDotDPath_);
     mountPoint_ = "/tmp/someplace";
 
     auto snapshotPath = clientDir_ / "SNAPSHOT";
@@ -67,7 +72,7 @@ class ClientConfigTest : public ::testing::Test {
 
 TEST_F(ClientConfigTest, testLoadFromClientDirectory) {
   auto configData = ClientConfig::loadConfigData(
-      AbsolutePath{systemConfigDir_.string()},
+      AbsolutePath{etcEdenPath_.string()},
       AbsolutePath{userConfigPath_.string()});
   auto config = ClientConfig::loadFromClientDirectory(
       AbsolutePath{mountPoint_.string()},
@@ -98,7 +103,7 @@ TEST_F(ClientConfigTest, testLoadFromClientDirectoryWithNoBindMounts) {
   folly::writeFile(folly::StringPiece{data}, userConfigPath_.c_str());
 
   auto configData = ClientConfig::loadConfigData(
-      AbsolutePath{systemConfigDir_.string()},
+      AbsolutePath{etcEdenPath_.string()},
       AbsolutePath{userConfigPath_.string()});
   auto config = ClientConfig::loadFromClientDirectory(
       AbsolutePath{mountPoint_.string()},
@@ -115,7 +120,7 @@ TEST_F(ClientConfigTest, testLoadFromClientDirectoryWithNoBindMounts) {
 }
 
 TEST_F(ClientConfigTest, testOverrideSystemConfigData) {
-  auto systemConfigPath = systemConfigDir_ / "config.d";
+  auto systemConfigPath = edenConfigDotDPath_ / "config.d";
   auto data =
       "; This INI has a comment\n"
       "[repository fbsource]\n"
@@ -133,7 +138,7 @@ TEST_F(ClientConfigTest, testOverrideSystemConfigData) {
   folly::writeFile(folly::StringPiece{data}, userConfigPath_.c_str());
 
   auto configData = ClientConfig::loadConfigData(
-      AbsolutePath{systemConfigDir_.string()},
+      AbsolutePath{etcEdenPath_.string()},
       AbsolutePath{userConfigPath_.string()});
   auto config = ClientConfig::loadFromClientDirectory(
       AbsolutePath{mountPoint_.string()},
@@ -154,7 +159,7 @@ TEST_F(ClientConfigTest, testOverrideSystemConfigData) {
 }
 
 TEST_F(ClientConfigTest, testOnlySystemConfigData) {
-  auto systemConfigPath = systemConfigDir_ / "config.d";
+  auto systemConfigPath = edenConfigDotDPath_ / "config.d";
   auto data =
       "; This INI has a comment\n"
       "[repository fbsource]\n"
@@ -167,7 +172,7 @@ TEST_F(ClientConfigTest, testOnlySystemConfigData) {
   folly::writeFile(folly::StringPiece{""}, userConfigPath_.c_str());
 
   auto configData = ClientConfig::loadConfigData(
-      AbsolutePath{systemConfigDir_.string()},
+      AbsolutePath{etcEdenPath_.string()},
       AbsolutePath{userConfigPath_.string()});
   auto config = ClientConfig::loadFromClientDirectory(
       AbsolutePath{mountPoint_.string()},

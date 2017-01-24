@@ -38,6 +38,12 @@ class InterpolatedPropertyTree {
       folly::StringPiece key,
       folly::StringPiece defaultValue) const;
 
+  // Set a value in the specified section
+  void set(
+      folly::StringPiece section,
+      folly::StringPiece key,
+      folly::StringPiece value);
+
   // Load a config file, replacing the contents of the internal property tree
   void loadIniFile(AbsolutePathPiece path);
 

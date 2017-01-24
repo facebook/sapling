@@ -22,13 +22,13 @@ from .find_executables import EDEN_CLI, EDEN_DAEMON
 class EdenFS(object):
     '''Manages an instance of the eden fuse server.'''
 
-    def __init__(self, eden_dir=None, system_config_dir=None, home_dir=None):
+    def __init__(self, eden_dir=None, etc_eden_dir=None, home_dir=None):
         if eden_dir is None:
             eden_dir = tempfile.mkdtemp(prefix='eden_test.')
         self._eden_dir = eden_dir
 
         self._process = None
-        self._system_config_dir = system_config_dir
+        self._etc_eden_dir = etc_eden_dir
         self._home_dir = home_dir
 
     @property
@@ -127,8 +127,8 @@ class EdenFS(object):
             subprocess.Popen() or subprocess.check_call().
         '''
         cmd = [EDEN_CLI, '--config-dir', self._eden_dir]
-        if self._system_config_dir:
-            cmd += ['--system-config-dir', self._system_config_dir]
+        if self._etc_eden_dir:
+            cmd += ['--etc-eden-dir', self._etc_eden_dir]
         if self._home_dir:
             cmd += ['--home-dir', self._home_dir]
         cmd.append(command)

@@ -26,8 +26,14 @@ import facebook.eden.ttypes as eden_ttypes
 from fb303.ttypes import fb_status
 import thrift
 
+# Use --etcEdenDir to change the value used for a given invocation
+# of the eden cli.
+DEFAULT_ETC_EDEN_DIR = '/etc/eden'
 # These are INI files that hold config data.
-SYSTEM_CONFIG_DIR = '/etc/eden/config.d'
+# CONFIG_DOT_D is relative to DEFAULT_ETC_EDEN_DIR, or whatever the
+# effective value is for that path
+CONFIG_DOT_D = 'config.d'
+# USER_CONFIG is relative to the HOME dir for the user
 USER_CONFIG = '.edenrc'
 
 # These paths are relative to the user's client directory.
@@ -55,11 +61,11 @@ class UsageError(Exception):
 
 
 class Config:
-    def __init__(self, config_dir, system_config_dir, home_dir):
+    def __init__(self, config_dir, etc_eden_dir, home_dir):
         self._config_dir = config_dir
-        self._system_config_dir = system_config_dir
-        if not self._system_config_dir:
-            self._system_config_dir = SYSTEM_CONFIG_DIR
+        self._etc_eden_dir = etc_eden_dir
+        if not self._etc_eden_dir:
+            self._etc_eden_dir = DEFAULT_ETC_EDEN_DIR
         self._user_config_path = os.path.join(home_dir, USER_CONFIG)
         self._home_dir = home_dir
 
@@ -78,9 +84,10 @@ class Config:
 
     def get_rc_files(self):
         result = []
-        if os.path.isdir(self._system_config_dir):
-            result = os.listdir(self._system_config_dir)
-            result = [os.path.join(self._system_config_dir, f) for f in result]
+        config_d = os.path.join(self._etc_eden_dir, CONFIG_DOT_D)
+        if os.path.isdir(config_d):
+            result = os.listdir(config_d)
+            result = [os.path.join(config_d, f) for f in result]
             result.sort()
         result.append(self._user_config_path)
         return result
@@ -327,7 +334,7 @@ by hand to make changes to the repository or remove it.''' % name)
 
         # Run the eden server.
         cmd = [daemon_binary, '--edenDir', self._config_dir,
-               '--systemConfigDir', self._system_config_dir,
+               '--etcEdenDir', self._etc_eden_dir,
                '--configPath', self._user_config_path, ]
         if gdb:
             gdb_args = gdb_args or []

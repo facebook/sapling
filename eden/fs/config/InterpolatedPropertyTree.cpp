@@ -56,6 +56,13 @@ std::string InterpolatedPropertyTree::get(
   return interpolate(child.get(key.toString(), defaultValue.toString()));
 }
 
+void InterpolatedPropertyTree::set(
+    folly::StringPiece section,
+    folly::StringPiece key,
+    folly::StringPiece value) {
+  tree_.put(folly::to<std::string>(section, ".", key), value.toString());
+}
+
 void InterpolatedPropertyTree::loadIniFile(AbsolutePathPiece path) {
   boost::property_tree::ini_parser::read_ini(
       path.stringPiece().toString(), tree_);

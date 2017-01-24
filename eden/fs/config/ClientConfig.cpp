@@ -30,6 +30,10 @@ constexpr folly::StringPiece kName{"name"};
 constexpr folly::StringPiece kRepoHooksKey{"hooks"};
 constexpr folly::StringPiece kRepoTypeKey{"type"};
 constexpr folly::StringPiece kRepoSourceKey{"path"};
+constexpr folly::StringPiece kPathsSection{"__paths__"};
+constexpr folly::StringPiece kEtcEdenDir{"etc-eden"};
+constexpr folly::StringPiece kUserConfigFile{"user-config"};
+constexpr folly::StringPiece kConfigDotD{"config.d"};
 
 // Files of interest in the client directory.
 const facebook::eden::RelativePathPiece kSnapshotFile{"SNAPSHOT"};
@@ -84,10 +88,11 @@ AbsolutePath ClientConfig::getDirstateStoragePath() const {
 }
 
 ClientConfig::ConfigData ClientConfig::loadConfigData(
-    AbsolutePathPiece systemConfigDir,
+    AbsolutePathPiece etcEdenDirectory,
     AbsolutePathPiece configPath) {
   // Get global config files
-  boost::filesystem::path rcDir(folly::to<string>(systemConfigDir));
+  boost::filesystem::path rcDir(
+      folly::to<string>(etcEdenDirectory, "/", kConfigDotD));
   std::vector<string> rcFiles;
   if (boost::filesystem::is_directory(rcDir)) {
     for (auto it : boost::filesystem::directory_iterator(rcDir)) {
@@ -110,6 +115,11 @@ ClientConfig::ConfigData ClientConfig::loadConfigData(
   };
 
   ConfigData resultData;
+  // Record the paths that were used, so that we can use them to
+  // create default values later on
+  resultData.set(kPathsSection, kEtcEdenDir, etcEdenDirectory.stringPiece());
+  resultData.set(kPathsSection, kUserConfigFile, userConfigPath.stringPiece());
+
   // Parse repository data in order to compile them
   for (auto rc : boost::adaptors::reverse(rcFiles)) {
     if (access(rc.c_str(), R_OK) != 0) {
@@ -152,7 +162,11 @@ std::unique_ptr<ClientConfig> ClientConfig::loadFromClientDirectory(
   auto repoData = configData->getSection(repoHeader);
   config->repoType_ = repoData[kRepoTypeKey];
   config->repoSource_ = repoData[kRepoSourceKey];
-  auto hooksPath = repoData[kRepoHooksKey];
+
+  auto hooksPath = configData->get(
+      repoHeader,
+      kRepoHooksKey,
+      configData->get(kPathsSection, kEtcEdenDir, ""));
   if (hooksPath != "") {
     config->repoHooks_ = AbsolutePath{hooksPath};
   }

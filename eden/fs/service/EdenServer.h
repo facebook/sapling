@@ -54,7 +54,7 @@ class EdenServer {
 
   EdenServer(
       AbsolutePathPiece edenDir,
-      AbsolutePathPiece systemConfigDir,
+      AbsolutePathPiece etcEdenDir,
       AbsolutePathPiece configPath,
       AbsolutePathPiece rocksPath);
   virtual ~EdenServer();
@@ -136,7 +136,7 @@ class EdenServer {
    */
 
   AbsolutePath edenDir_;
-  AbsolutePath systemConfigDir_;
+  AbsolutePath etcEdenDir_;
   AbsolutePath configPath_;
   AbsolutePath rocksPath_;
   folly::File lockFile_;
