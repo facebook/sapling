@@ -21,7 +21,7 @@ python_library(
 for build_target, suffix in get_daemon_versions():
     # The :all rule is a convenience to ensure that both the CLI and the daemon
     # are built.
-    genrule(
+    buck_genrule(
       name = 'all%s' % suffix,
       srcs = [
         ':cli',
