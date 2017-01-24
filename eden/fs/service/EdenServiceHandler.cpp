@@ -99,6 +99,8 @@ void EdenServiceHandler::mountImpl(const MountInfo& info) {
           folly::Subprocess::pipeStdin());
       proc.closeParentFd(STDIN_FILENO);
       proc.waitChecked();
+      LOG(INFO) << "Finished post-clone hook '" << postCloneScript << "' for "
+                << info.mountPoint;
     } catch (const folly::SubprocessSpawnError& ex) {
       // If this failed because postCloneScript does not exist, then ignore the
       // error because we are tolerant of the case where /etc/eden/hooks does
@@ -106,13 +108,10 @@ void EdenServiceHandler::mountImpl(const MountInfo& info) {
       if (ex.errnoValue() != ENOENT) {
         // TODO(13448173): If clone fails, then we should roll back the mount.
         throw;
-      } else {
-        VLOG(1) << "Did not run post-clone hook '" << postCloneScript
-                << "' because it was not found.";
       }
+      LOG(INFO) << "Did not run post-clone hook '" << postCloneScript
+                << "' for " << info.mountPoint << " because it was not found.";
     }
-    LOG(INFO) << "Finished post-clone hook '" << postCloneScript << "' for "
-              << info.mountPoint;
   }
 
   // The equivalent of `touch` to signal that clone completed successfully.
