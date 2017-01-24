@@ -28,6 +28,7 @@ from . import gitrepo
 def is_sandcastle():
     return 'SANDCASTLE' in os.environ
 
+
 default_settings = settings(
     # Turn off the health checks because setUp/tearDown are too slow
     suppress_health_check=[HealthCheck.too_slow],

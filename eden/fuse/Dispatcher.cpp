@@ -165,7 +165,8 @@ static void disp_forget(fuse_req_t req, fuse_ino_t ino, unsigned long nlookup) {
 }
 
 #if FUSE_MINOR_VERSION >= 9
-static void disp_forget_multi(fuse_req_t req, size_t count, fuse_forget_data *forgets) {
+static void
+disp_forget_multi(fuse_req_t req, size_t count, fuse_forget_data* forgets) {
   auto& request = RequestData::create(req);
   std::vector<fuse_forget_data> forget(forgets, forgets + count);
   auto* dispatcher = request.getDispatcher();

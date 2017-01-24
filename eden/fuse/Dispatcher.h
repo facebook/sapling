@@ -307,7 +307,9 @@ class Dispatcher {
   /**
    * Get an extended attribute
    */
-  virtual folly::Future<std::string> getxattr(fuse_ino_t ino, folly::StringPiece name);
+  virtual folly::Future<std::string> getxattr(
+      fuse_ino_t ino,
+      folly::StringPiece name);
   static const int kENOATTR;
 
   /**

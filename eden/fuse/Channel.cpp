@@ -14,7 +14,6 @@
 #include <folly/Format.h>
 #include <folly/String.h>
 #include <linux/fuse.h>
-#include <sys/mount.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/uio.h>

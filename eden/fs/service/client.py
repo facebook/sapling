@@ -34,6 +34,7 @@ class EdenNotRunningError(Exception):
 def _eden_thrift_error_str(ex):
     return ex.message
 
+
 EdenService.EdenError.__str__ = _eden_thrift_error_str
 
 

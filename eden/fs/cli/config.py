@@ -337,14 +337,13 @@ by hand to make changes to the repository or remove it.''' % name)
         # Open the log file
         log_path = self.get_log_path()
         util.mkdir_p(os.path.dirname(log_path))
-        log_file = open(log_path, 'a')
-        startup_msg = time.strftime('%Y-%m-%d %H:%M:%S: starting edenfs\n')
-        log_file.write(startup_msg)
+        with open(log_path, 'a') as log_file:
+            startup_msg = time.strftime('%Y-%m-%d %H:%M:%S: starting edenfs\n')
+            log_file.write(startup_msg)
 
-        # Start edenfs
-        proc = subprocess.Popen(cmd, env=eden_env, preexec_fn=os.setsid,
-                                stdout=log_file, stderr=log_file)
-        log_file.close()
+            # Start edenfs
+            proc = subprocess.Popen(cmd, env=eden_env, preexec_fn=os.setsid,
+                                    stdout=log_file, stderr=log_file)
 
         # Wait for edenfs to start
         return self._wait_for_daemon_healthy(proc)

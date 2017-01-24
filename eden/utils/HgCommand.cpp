@@ -241,9 +241,8 @@ HgTreeInformation::rawStatFile(const std::string& filename) {
   return future;
 }
 
-folly::Future<std::vector<std::shared_ptr<HgFileInformation>>> HgTreeInformation::statFiles(
-    const std::vector<std::string>& files) {
-
+folly::Future<std::vector<std::shared_ptr<HgFileInformation>>>
+HgTreeInformation::statFiles(const std::vector<std::string>& files) {
   std::vector<folly::Future<std::shared_ptr<HgFileInformation>>> futures;
 
   return folly::collectAll(folly::window(files,

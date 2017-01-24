@@ -14,6 +14,7 @@ from .lib import testcase
 from facebook.eden import EdenService
 from facebook.eden.ttypes import FileInformationOrError
 
+
 @testcase.eden_repo_test
 class MaterializedQueryTest:
     '''Check that materialization is represented correctly.'''

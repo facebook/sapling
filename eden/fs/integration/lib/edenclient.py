@@ -143,10 +143,10 @@ class EdenFS(object):
             raise Exception('cannot start an already-running eden client')
 
         args = self._get_eden_args(
-                'daemon',
-                '--daemon-binary', EDEN_DAEMON,
-                '--foreground',
-            )
+            'daemon',
+            '--daemon-binary', EDEN_DAEMON,
+            '--foreground',
+        )
         # If the EDEN_GDB environment variable is set, run eden inside gdb
         # so a developer can debug crashes
         if os.environ.get('EDEN_GDB'):

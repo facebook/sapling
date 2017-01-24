@@ -10,7 +10,6 @@
 #include "GitTree.h"
 #include <folly/Format.h>
 #include <folly/String.h>
-#include <git2/oid.h>
 #include <array>
 #include <cstdio>
 #include <cstring>
