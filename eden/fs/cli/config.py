@@ -20,7 +20,7 @@ import subprocess
 import tempfile
 import time
 
-from . import util
+from . import (util, configinterpolator)
 import eden.thrift
 import facebook.eden.ttypes as eden_ttypes
 from fb303.ttypes import fb_status
@@ -61,9 +61,18 @@ class Config:
         if not self._system_config_dir:
             self._system_config_dir = SYSTEM_CONFIG_DIR
         self._user_config_path = os.path.join(home_dir, USER_CONFIG)
+        self._home_dir = home_dir
 
     def _loadConfig(self):
-        parser = configparser.ConfigParser()
+        ''' to facilitate templatizing a centrally deployed config, we
+            allow a limited set of env vars to be expanded.
+            ${HOME} will be replaced by the user's home dir,
+            ${USER} will be replaced by the user's login name.
+        '''
+        defaults = {'USER': os.environ.get('USER'),
+                    'HOME': self._home_dir}
+        parser = configparser.ConfigParser(
+            interpolation=configinterpolator.EdenConfigInterpolator(defaults))
         parser.read(self.get_rc_files())
         return parser
 

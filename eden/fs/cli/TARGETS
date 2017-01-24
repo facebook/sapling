@@ -14,8 +14,15 @@ python_library(
   name = 'lib',
   srcs = [
     'config.py',
+    'configinterpolator.py',
     'util.py',
   ],
+)
+
+python_unittest(
+  name = 'test',
+  srcs = glob(['test/*.py']),
+  deps = [':lib']
 )
 
 for build_target, suffix in get_daemon_versions():
