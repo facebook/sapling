@@ -12,6 +12,7 @@
 #include <boost/property_tree/ini_parser.hpp>
 #include <folly/Optional.h>
 #include <folly/dynamic.h>
+#include "InterpolatedPropertyTree.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/utils/PathFuncs.h"
 
@@ -38,7 +39,7 @@ inline void operator<<(std::ostream& out, const BindMount& bindMount) {
 
 class ClientConfig {
  public:
-  using ConfigData = boost::property_tree::ptree;
+  using ConfigData = InterpolatedPropertyTree;
 
   /**
    * Manually construct a ClientConfig object.

@@ -25,7 +25,8 @@ const facebook::eden::RelativePathPiece kLocalConfig{"edenrc"};
 // Keys for the config INI file.
 constexpr folly::StringPiece kBindMountsKey{"bindmounts "};
 constexpr folly::StringPiece kRepositoryKey{"repository "};
-constexpr folly::StringPiece kRepoNameKey{"repository.name"};
+constexpr folly::StringPiece kRepoSection{"repository"};
+constexpr folly::StringPiece kName{"name"};
 constexpr folly::StringPiece kRepoHooksKey{"hooks"};
 constexpr folly::StringPiece kRepoTypeKey{"type"};
 constexpr folly::StringPiece kRepoSourceKey{"path"};
@@ -43,8 +44,6 @@ const facebook::eden::RelativePathPiece kClientDirectoryMap{"config.json"};
 
 namespace facebook {
 namespace eden {
-
-using defaultPtree = boost::property_tree::basic_ptree<string, string>;
 
 ClientConfig::ClientConfig(
     AbsolutePathPiece mountPath,
@@ -87,7 +86,6 @@ AbsolutePath ClientConfig::getDirstateStoragePath() const {
 ClientConfig::ConfigData ClientConfig::loadConfigData(
     AbsolutePathPiece systemConfigDir,
     AbsolutePathPiece configPath) {
-  ConfigData resultData;
   // Get global config files
   boost::filesystem::path rcDir(folly::to<string>(systemConfigDir));
   std::vector<string> rcFiles;
@@ -102,19 +100,22 @@ ClientConfig::ConfigData ClientConfig::loadConfigData(
   auto userConfigPath = AbsolutePath{configPath};
   rcFiles.push_back(userConfigPath.c_str());
 
+  // A function that prevents merging a repo stanza over a pre-existing one
+  auto accept = [](
+      const InterpolatedPropertyTree& tree, folly::StringPiece section) {
+    if (section.startsWith("repository ") && tree.hasSection(section)) {
+      return InterpolatedPropertyTree::MergeDisposition::SkipAll;
+    }
+    return InterpolatedPropertyTree::MergeDisposition::UpdateAll;
+  };
+
+  ConfigData resultData;
   // Parse repository data in order to compile them
   for (auto rc : boost::adaptors::reverse(rcFiles)) {
     if (access(rc.c_str(), R_OK) != 0) {
       continue;
     }
-    // Only add repository data from the first config file that references it
-    ConfigData configData;
-    boost::property_tree::ini_parser::read_ini(rc, configData);
-    for (auto& entry : configData) {
-      if (resultData.get_child(entry.first, defaultPtree()).empty()) {
-        resultData.put_child(entry.first, entry.second);
-      }
-    }
+    resultData.updateFromIniFile(AbsolutePathPiece(rc), accept);
   }
   return resultData;
 }
@@ -124,18 +125,13 @@ std::unique_ptr<ClientConfig> ClientConfig::loadFromClientDirectory(
     AbsolutePathPiece clientDirectory,
     const ConfigData* configData) {
   // Extract repository name from the client config file
-  ConfigData repoData;
-  boost::filesystem::path configFile(
-      folly::to<string>(clientDirectory + kLocalConfig));
-  boost::property_tree::ini_parser::read_ini(configFile.string(), repoData);
-  auto repoName = repoData.get(kRepoNameKey.toString(), "");
+  ConfigData localConfig;
+  localConfig.loadIniFile(clientDirectory + kLocalConfig);
+  auto repoName = localConfig.get(kRepoSection, kName, "");
 
   // Get the data of repository repoName from config files
-  string repoHeader = kRepositoryKey.toString() + repoName;
-  repoData = configData->get_child(repoHeader, defaultPtree());
-
-  // Repository data not found
-  if (repoData.empty()) {
+  auto repoHeader = folly::to<string>(kRepositoryKey, repoName);
+  if (!configData->hasSection(repoHeader)) {
     throw std::runtime_error("Could not find repository data for " + repoName);
   }
 
@@ -143,19 +139,20 @@ std::unique_ptr<ClientConfig> ClientConfig::loadFromClientDirectory(
   auto config = std::make_unique<ClientConfig>(mountPath, clientDirectory);
 
   // Extract the bind mounts
-  string bindMountHeader = kBindMountsKey.toString() + repoName;
-  auto bindMountPoints = configData->get_child(bindMountHeader, defaultPtree());
+  auto bindMountHeader = folly::to<string>(kBindMountsKey, repoName);
+  auto bindMountPoints = configData->getSection(bindMountHeader);
   AbsolutePath bindMountsPath = clientDirectory + kBindMountsDir;
   for (auto item : bindMountPoints) {
     auto pathInClientDir = bindMountsPath + RelativePathPiece{item.first};
-    auto pathInMountDir = mountPath + RelativePathPiece{item.second.data()};
+    auto pathInMountDir = mountPath + RelativePathPiece{item.second};
     config->bindMounts_.emplace_back(pathInClientDir, pathInMountDir);
   }
 
   // Load repository information
-  config->repoType_ = repoData.get(kRepoTypeKey.toString(), "");
-  config->repoSource_ = repoData.get(kRepoSourceKey.toString(), "");
-  auto hooksPath = repoData.get(kRepoHooksKey.toString(), "");
+  auto repoData = configData->getSection(repoHeader);
+  config->repoType_ = repoData[kRepoTypeKey];
+  config->repoSource_ = repoData[kRepoSourceKey];
+  auto hooksPath = repoData[kRepoHooksKey];
   if (hooksPath != "") {
     config->repoHooks_ = AbsolutePath{hooksPath};
   }

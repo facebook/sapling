@@ -9,7 +9,6 @@
  */
 #pragma once
 
-#include <boost/property_tree/ptree.hpp>
 #include <folly/File.h>
 #include <folly/Range.h>
 #include <folly/SocketAddress.h>
@@ -21,6 +20,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include "eden/fs/config/InterpolatedPropertyTree.h"
 #include "eden/utils/PathFuncs.h"
 
 namespace apache {
@@ -47,7 +47,7 @@ class LocalStore;
  */
 class EdenServer {
  public:
-  using ConfigData = boost::property_tree::ptree;
+  using ConfigData = InterpolatedPropertyTree;
   using MountList = std::vector<std::shared_ptr<EdenMount>>;
   using MountMap = folly::StringKeyedMap<std::shared_ptr<EdenMount>>;
   using DirstateMap = folly::StringKeyedMap<std::shared_ptr<Dirstate>>;
