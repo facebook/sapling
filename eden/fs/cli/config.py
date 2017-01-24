@@ -62,6 +62,11 @@ class Config:
             self._system_config_dir = SYSTEM_CONFIG_DIR
         self._user_config_path = os.path.join(home_dir, USER_CONFIG)
 
+    def _loadConfig(self):
+        parser = configparser.ConfigParser()
+        parser.read(self.get_rc_files())
+        return parser
+
     def get_rc_files(self):
         result = []
         if os.path.isdir(self._system_config_dir):
@@ -74,8 +79,7 @@ class Config:
     def get_repository_list(self, parser=None):
         result = []
         if not parser:
-            parser = configparser.ConfigParser()
-            parser.read(self.get_rc_files())
+            parser = self._loadConfig()
         for section in parser.sections():
             header = section.split(' ')
             if len(header) == 2 and header[0] == 'repository':
@@ -83,8 +87,7 @@ class Config:
         return sorted(result)
 
     def get_config_value(self, key):
-        parser = configparser.ConfigParser()
-        parser.read(self.get_rc_files())
+        parser = self._loadConfig()
         section, option = key.split('.', 1)
         try:
             return parser.get(section, option)
@@ -92,8 +95,7 @@ class Config:
             raise KeyError(str(exc))
 
     def print_full_config(self):
-        parser = configparser.ConfigParser()
-        parser.read(self.get_rc_files())
+        parser = self._loadConfig()
         for section in parser.sections():
             print('[%s]' % section)
             for k, v in parser.items(section):
@@ -107,9 +109,7 @@ class Config:
         are: 'repo_type', 'repo_source', 'bind-mounts'.
         '''
         result = {}
-        rc_files = self.get_rc_files()
-        parser = configparser.ConfigParser()
-        parser.read(rc_files)
+        parser = self._loadConfig()
         repository_header = 'repository ' + name
         if repository_header in parser:
             result.update(parser[repository_header])
