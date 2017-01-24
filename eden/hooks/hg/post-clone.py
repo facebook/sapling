@@ -17,13 +17,9 @@ import argparse
 import errno
 import os
 import shutil
+import subprocess
 import sys
 import tempfile
-
-try:
-    import configparser
-except ImportError:
-    import ConfigParser as configparser
 
 
 def read_config(directory, name, default=None):
@@ -129,17 +125,14 @@ def main():
 
     eden_ext_path = args.eden_extension
     if eden_ext_path is None:
-        # TODO(mbolin): Support `eden config --get hg.edenextensionpath`.
-        # eden/fs/cli/config.py seems to have most of what would be needed in
-        # terms of loading all of the relevant rc files in order, so we should
-        # find a way to share that logic.
-        parser = configparser.ConfigParser()
-        edenrc = os.path.join(os.environ['HOME'], '.edenrc')
-        parser.read([edenrc])
-        try:
-            eden_ext_path = parser.get('hooks', 'hg.edenextension')
-        except (configparser.NoSectionError, configparser.NoOptionError):
-            pass
+        proc = subprocess.run([
+            os.environ.get('EDENFS_CLI_PATH', 'eden'),
+            'config',
+            '--get',
+            'hooks.hg.edenextension'],
+            stdout=subprocess.PIPE)
+        if proc.returncode == 0:
+            eden_ext_path = proc.stdout.decode('ascii').strip()
 
     try:
         setup_eden_hg_dir(tmp_dir, repo_hg_dir, eden_ext_path)

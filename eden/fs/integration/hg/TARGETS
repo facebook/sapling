@@ -4,20 +4,14 @@ include_defs('//eden/DEFS')
 # and we do not expect that testing against the internal version
 # will provide any additional signal.
 oss_suffix = get_oss_suffix()
-daemon_target = '@/eden/fs/service:edenfs%s' % oss_suffix
+
+artifacts = get_test_env_and_deps(oss_suffix)
 
 python_unittest(
   name = 'hg',
   srcs = glob(['*.py']),
-  env = {
-    'EDENFS_SUFFIX': oss_suffix,
-    'EDENFS_CLI_PATH': '$(location @/eden/fs/cli:cli)',
-    'EDENFS_SERVER_PATH': '$(location %s)' % daemon_target,
-    'EDENFS_POST_CLONE_PATH': '$(location @/eden/hooks/hg:post-clone)',
-  },
-  deps = [
-    daemon_target,
-    '@/eden/fs/cli:cli',
+  env = artifacts['env'],
+  deps = artifacts['deps'] + [
     '@/eden/fs/integration/hg/lib:testutil',
   ],
 )

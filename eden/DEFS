@@ -33,3 +33,29 @@ def get_daemon_versions():
         ('@/eden/fs/service:edenfs%s' % suffix, suffix)
         for suffix in [get_fb_suffix(), get_oss_suffix()]
     ]
+
+def get_test_env_and_deps(suffix=''):
+    '''Returns env vars and a dep list that is useful for locating various
+    build products from inside our tests'''
+
+    daemon_target = '@/eden/fs/service:edenfs%s' % suffix
+    env_to_target = {
+        'EDENFS_CLI_PATH': '@/eden/fs/cli:cli',
+        'EDENFS_SERVER_PATH': daemon_target,
+        'EDENFS_POST_CLONE_PATH': '@/eden/hooks/hg:post-clone',
+        'EDENFS_LAME_THRIFT_PAR': '@/eden/fs/service:thrift-EdenService-pyremote',
+    }
+
+    envs = {
+      'EDENFS_SUFFIX': suffix,
+    }
+    deps = []
+
+    for name, dep in env_to_target.items():
+        envs[name] = '$(location %s)' % dep
+        deps.append(dep)
+
+    return {
+        'env': envs,
+        'deps': deps
+    }
