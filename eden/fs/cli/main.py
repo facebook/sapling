@@ -139,6 +139,19 @@ def do_clone(args):
         return 1
 
 
+def do_config(args):
+    config = create_config(args)
+
+    if args.get:
+        try:
+            print(config.get_config_value(args.get))
+        except (KeyError, ValueError):
+            # mirrors `git config --get invalid`; just exit with code 1
+            return 1
+    else:
+        config.print_full_config()
+    return 0
+
 def do_mount(args):
     config = create_config(args)
     try:
@@ -300,6 +313,12 @@ def create_parser():
     clone_parser.add_argument(
         '--snapshot', '-s', type=str, help='Snapshot id of revision')
     clone_parser.set_defaults(func=do_clone)
+
+    config_parser = subparsers.add_parser(
+        'config', help='Query Eden configuration')
+    config_parser.add_argument(
+        '--get', help='Name of value to get')
+    config_parser.set_defaults(func=do_config)
 
     daemon_parser = subparsers.add_parser(
         'daemon', help='Run the edenfs daemon')

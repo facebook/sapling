@@ -82,6 +82,23 @@ class Config:
                 result.append(header[1])
         return sorted(result)
 
+    def get_config_value(self, key):
+        parser = configparser.ConfigParser()
+        parser.read(self.get_rc_files())
+        section, option = key.split('.', 1)
+        try:
+            return parser.get(section, option)
+        except (configparser.NoOptionError, configparser.NoSectionError) as exc:
+            raise KeyError(str(exc))
+
+    def print_full_config(self):
+        parser = configparser.ConfigParser()
+        parser.read(self.get_rc_files())
+        for section in parser.sections():
+            print('[%s]' % section)
+            for k, v in parser.items(section):
+                print('%s=%s' % (k, v))
+
     def get_repo_data(self, name):
         '''
         Returns a dictionary containing the metadata and the bind mounts of the
@@ -625,3 +642,4 @@ def _verify_mount_point(mount_point):
             ('%s must be a directory in order to mount a client at %s. ' +
              'If this is the correct location, run `mkdir -p %s` to create ' +
              'the directory.') % (parent_dir, mount_point, parent_dir))
+
