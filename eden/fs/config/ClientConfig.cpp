@@ -114,7 +114,12 @@ ClientConfig::ConfigData ClientConfig::loadConfigData(
     return InterpolatedPropertyTree::MergeDisposition::UpdateAll;
   };
 
-  ConfigData resultData;
+  // Define replacements for use in interpolating the config files.
+  // These are coupled with the equivalent code in eden/fs/cli/config.py
+  // and must be kept in sync.
+  ConfigData resultData{{"HOME", getenv("HOME") ? getenv("HOME") : "/"},
+                        {"USER", getenv("USER") ? getenv("USER") : ""}};
+
   // Record the paths that were used, so that we can use them to
   // create default values later on
   resultData.set(kPathsSection, kEtcEdenDir, etcEdenDirectory.stringPiece());
@@ -166,7 +171,7 @@ std::unique_ptr<ClientConfig> ClientConfig::loadFromClientDirectory(
   auto hooksPath = configData->get(
       repoHeader,
       kRepoHooksKey,
-      configData->get(kPathsSection, kEtcEdenDir, ""));
+      configData->get(kPathsSection, kEtcEdenDir, "/etc/eden") + "/hooks");
   if (hooksPath != "") {
     config->repoHooks_ = AbsolutePath{hooksPath};
   }

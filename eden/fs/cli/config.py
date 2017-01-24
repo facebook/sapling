@@ -74,6 +74,8 @@ class Config:
             allow a limited set of env vars to be expanded.
             ${HOME} will be replaced by the user's home dir,
             ${USER} will be replaced by the user's login name.
+            These are coupled with the equivalent code in
+            eden/fs/config/ClientConfig.cpp and must be kept in sync.
         '''
         defaults = {'USER': os.environ.get('USER'),
                     'HOME': self._home_dir}
