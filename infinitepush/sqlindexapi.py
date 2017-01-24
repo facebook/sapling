@@ -47,7 +47,8 @@ class sqlindexapi(indexapi):
     '''
 
     def __init__(self, reponame, host, port,
-                 database, user, password, logfile, loglevel, waittimeout=300):
+                 database, user, password, logfile, loglevel,
+                 waittimeout=300, locktimeout=120):
         super(sqlindexapi, self).__init__()
         self.reponame = reponame
         self.sqlargs = {
@@ -66,6 +67,7 @@ class sqlindexapi(indexapi):
         self.log.setLevel(loglevel)
         self._connected = False
         self._waittimeout = waittimeout
+        self._locktimeout = locktimeout
 
     def sqlconnect(self):
         if self.sqlconn:
@@ -97,6 +99,8 @@ class sqlindexapi(indexapi):
 
         self.sqlcursor = self.sqlconn.cursor()
         self.sqlcursor.execute("SET wait_timeout=%s" % waittimeout)
+        self.sqlcursor.execute("SET innodb_lock_wait_timeout=%s" %
+                               self._locktimeout)
         self._connected = True
 
     def close(self):

@@ -51,6 +51,14 @@
     # Server-side option
     loglevel = DEBUG
 
+    # Server-side option. Used only if indextype=sql.
+    # Sets mysql wait_timeout option.
+    waittimeout = 300
+
+    # Server-side option. Used only if indextype=sql.
+    # Sets mysql innodb_lock_wait_timeout option.
+    locktimeout = 120
+
     # Client-side option
     pushbackuplog = FILE
 """
@@ -135,10 +143,12 @@ def _buildsqlindex(ui):
 
     logfile = ui.config('infinitepush', 'logfile', '')
     waittimeout = ui.configint('infinitepush', 'waittimeout', 300)
+    locktimeout = ui.configint('infinitepush', 'locktimeout', 120)
     from . import sqlindexapi
     return sqlindexapi.sqlindexapi(
         reponame, host, port, db, user, password,
-        logfile, _getloglevel(ui), waittimeout=waittimeout)
+        logfile, _getloglevel(ui), waittimeout=waittimeout,
+        locktimeout=locktimeout)
 
 def _getloglevel(ui):
     loglevel = ui.config('infinitepush', 'loglevel', 'DEBUG')
