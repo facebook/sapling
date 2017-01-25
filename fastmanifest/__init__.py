@@ -236,6 +236,11 @@ def extsetup(ui):
     FastManifestExtension.setup()
 
 def reposetup(ui, repo):
+    # Don't update the ui for remote peer repos, since they won't have the local
+    # configs.
+    if repo.local() is None:
+        return
+
     # always update the ui object.
     FastManifestExtension.set_ui(ui)
 
