@@ -14,7 +14,7 @@ applied patches (subset of known patches).
 Known patches are represented as patch files in the .hg/patches
 directory. Applied patches are both patch files and changesets.
 
-Common tasks (use :hg:`help command` for more details)::
+Common tasks (use :hg:`help COMMAND` for more details)::
 
   create new patch                          qnew
   import existing patch                     qimport
