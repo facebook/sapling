@@ -50,10 +50,7 @@ TreeInode::TreeInode(
     PathComponentPiece name,
     Entry* entry,
     Dir&& dir)
-    : InodeBase(ino, parent, name),
-      contents_(std::move(dir)),
-      entry_(entry),
-      parent_(parent->getNodeId()) {
+    : InodeBase(ino, parent, name), contents_(std::move(dir)), entry_(entry) {
   DCHECK_NE(ino, FUSE_ROOT_ID);
   DCHECK_NOTNULL(entry_);
 }
@@ -62,10 +59,7 @@ TreeInode::TreeInode(EdenMount* mount, std::unique_ptr<Tree>&& tree)
     : TreeInode(mount, buildDirFromTree(tree.get())) {}
 
 TreeInode::TreeInode(EdenMount* mount, Dir&& dir)
-    : InodeBase(mount),
-      contents_(std::move(dir)),
-      entry_(nullptr),
-      parent_(FUSE_ROOT_ID) {}
+    : InodeBase(mount), contents_(std::move(dir)), entry_(nullptr) {}
 
 TreeInode::~TreeInode() {}
 
@@ -308,10 +302,6 @@ Future<InodePtr> TreeInode::startLoadingInode(
   DCHECK(overlayDir) << "missing overlay for " << targetName;
   return TreeInodePtr::makeNew(
       number, inodePtrFromThis(), name, entry, std::move(overlayDir.value()));
-}
-
-fuse_ino_t TreeInode::getParent() const {
-  return parent_;
 }
 
 fuse_ino_t TreeInode::getInode() const {

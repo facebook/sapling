@@ -64,18 +64,26 @@ folly::Future<fusell::DirList> TreeInodeDirHandle::readdir(
   // while populating entries.
   auto myname = inode_->getPathBuggy();
 
-  inode_->getContents().withRLock([&](const auto& dir) {
-    entries.reserve(2 /* "." and ".." */ + dir.entries.size());
+  {
+    auto dir = inode_->getContents().rlock();
+    entries.reserve(2 /* "." and ".." */ + dir->entries.size());
 
     // Reserved entries for linking to parent and self.
     entries.emplace_back(".", dtype_t::Dir, dir_inode);
-    entries.emplace_back("..", dtype_t::Dir, inode_->getParent());
+    auto parent = inode_->getParentBuggy();
+    if (!parent) {
+      // For the root of the mount point, just add its own inode ID
+      // as its parent.
+      entries.emplace_back("..", dtype_t::Dir, dir_inode);
+    } else {
+      entries.emplace_back("..", dtype_t::Dir, parent->getNodeId());
+    }
 
-    for (const auto& entry : dir.entries) {
+    for (const auto& entry : dir->entries) {
       entries.emplace_back(
           entry.first.value().c_str(), mode_to_dtype(entry.second->mode));
     }
-  });
+  }
 
   // And now the easy part: seek to the provided offset and fill up
   // the DirList with the entries that remain.

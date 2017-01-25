@@ -146,7 +146,6 @@ class TreeInode : public InodeBase {
       PathComponentPiece destName,
       const RenameLock& renameLock);
 
-  fuse_ino_t getParent() const;
   fuse_ino_t getInode() const;
 
   const folly::Synchronized<Dir>& getContents() const {
@@ -249,11 +248,6 @@ class TreeInode : public InodeBase {
   folly::Synchronized<Dir> contents_;
   /** Can be nullptr for the root inode only, otherwise will be non-null */
   TreeInode::Entry* entry_{nullptr};
-
-  // TODO: replace uses of parent_ with InodeBase::location_
-  // As far as I can tell parent_ is not correctly updated when this inode is
-  // renamed.
-  fuse_ino_t parent_;
 };
 }
 }

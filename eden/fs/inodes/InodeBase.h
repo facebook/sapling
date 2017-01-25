@@ -24,6 +24,7 @@ namespace eden {
 class EdenMount;
 class ParentInodeInfo;
 class RenameLock;
+class SharedRenameLock;
 class TreeInode;
 
 class InodeBase {
@@ -256,7 +257,19 @@ class InodeBase {
     return numFuseReferences_.store(count, std::memory_order_release);
   }
 
- protected:
+  /**
+   * Get the parent directory of this inode.
+   *
+   * This must be called while holding the rename lock, to ensure the parent
+   * does not change before the return value can be used.
+   */
+  TreeInodePtr getParent(const RenameLock&) const {
+    return location_.rlock()->parent;
+  }
+  TreeInodePtr getParent(const SharedRenameLock&) const {
+    return location_.rlock()->parent;
+  }
+
   /**
    * TODO: A temporary hack for children inodes looking up their parent without
    * proper locking.
