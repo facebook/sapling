@@ -799,6 +799,13 @@ def wraprebase(orig, ui, repo, **opts):
             raise error.Abort(_("cannot use both --abort and --restack"))
         if opts['continue']:
             raise error.Abort(_("cannot use both --continue and --restack"))
+
+        # The --hidden option is handled at a higher level, so instead of
+        # checking for it directly we have to check whether the repo
+        # is unfiltered.
+        if repo == repo.unfiltered():
+            raise error.Abort(_("cannot use both --hidden and --restack"))
+
         return restack(ui, repo, opts)
 
     # If the --continue flag is passed, we need to create a transaction

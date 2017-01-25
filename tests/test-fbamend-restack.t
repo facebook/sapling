@@ -27,7 +27,7 @@ Set up test environment.
   >   cd rebasestack
   > }
   $ showgraph() {
-  >   hg log --graph -T "{rev} {desc|firstline}"
+  >   hg log --graph -T "{rev} {desc|firstline}" | sed \$d
   > }
   $ hg init rebasestack && cd rebasestack
 
@@ -52,7 +52,9 @@ Test unsupported flags:
   $ hg rebase --restack --continue
   abort: cannot use both --continue and --restack
   [255]
-
+  $ hg rebase --restack --hidden
+  abort: cannot use both --hidden and --restack
+  [255]
 
 Test basic case of a single amend in a small stack.
   $ mkcommit a
@@ -75,7 +77,6 @@ Test basic case of a single amend in a small stack.
   | o  1 add b
   |/
   o  0 add a
-  
   $ hg rebase --restack
   rebasing 2:4538525df7e2 "add c"
   rebasing 3:47d2a3944de8 "add d"
@@ -87,7 +88,6 @@ Test basic case of a single amend in a small stack.
   @  5 add b
   |
   o  0 add a
-  
 
 Test multiple amends of same commit.
   $ reset
@@ -102,7 +102,7 @@ Test multiple amends of same commit.
   @  1 add b
   |
   o  0 add a
-  
+
   $ echo b >> b
   $ hg amend
   warning: the changeset's children were left behind
@@ -117,7 +117,6 @@ Test multiple amends of same commit.
   | o  1 add b
   |/
   o  0 add a
-  
   $ hg rebase --restack
   rebasing 2:4538525df7e2 "add c"
   $ showgraph
@@ -126,7 +125,6 @@ Test multiple amends of same commit.
   @  6 add b
   |
   o  0 add a
-  
 
 Test conflict during rebasing.
   $ reset
@@ -154,7 +152,6 @@ Test conflict during rebasing.
   | o  1 add b
   |/
   o  0 add a
-  
   $ hg rebase --restack
   rebasing 2:4538525df7e2 "add c"
   rebasing 3:47d2a3944de8 "add d"
@@ -186,7 +183,6 @@ Test conflict during rebasing.
   | o  1 add b
   |/
   o  0 add a
-  
 
 Test finding a stable base commit from within the old stack.
   $ reset
@@ -212,7 +208,6 @@ Test finding a stable base commit from within the old stack.
   | o  1 add b
   |/
   o  0 add a
-  
   $ hg rebase --restack
   rebasing 2:4538525df7e2 "add c"
   rebasing 3:47d2a3944de8 "add d"
@@ -224,7 +219,6 @@ Test finding a stable base commit from within the old stack.
   o  5 add b
   |
   o  0 add a
-  
 
 Test finding a stable base commit from a new child of the amended commit.
   $ reset
@@ -251,7 +245,6 @@ Test finding a stable base commit from a new child of the amended commit.
   | o  1 add b
   |/
   o  0 add a
-  
   $ hg rebase --restack
   rebasing 2:4538525df7e2 "add c"
   rebasing 3:47d2a3944de8 "add d"
@@ -265,7 +258,6 @@ Test finding a stable base commit from a new child of the amended commit.
   o  5 add b
   |
   o  0 add a
-  
 
 Test finding a stable base commit when there are multiple amends and
 a commit on top of one of the obsolete intermediate commits.
@@ -304,7 +296,6 @@ a commit on top of one of the obsolete intermediate commits.
   | o  1 add b
   |/
   o  0 add a
-  
   $ hg rebase --restack
   rebasing 2:4538525df7e2 "add c"
   rebasing 3:47d2a3944de8 "add d"
@@ -319,7 +310,6 @@ a commit on top of one of the obsolete intermediate commits.
   o  8 add b
   |
   o  0 add a
-  
 
 Test that we start from the bottom of the stack. (Previously, restack would
 only repair the unstable children closest to the current changeset. This
@@ -355,7 +345,6 @@ behavior is now incorrect -- restack should always fix the whole stack.)
   o |  1 add b
   |/
   o  0 add a
-  
   $ hg rebase --restack
   rebasing 3:47d2a3944de8 "add d"
   rebasing 7:a43fcd08f41f "add c" (tip)
@@ -368,7 +357,6 @@ behavior is now incorrect -- restack should always fix the whole stack.)
   o  5 add b
   |
   o  0 add a
-  
 
 Test what happens if there is no base commit found. The command should
 fix up everything above the current commit, leaving other commits
@@ -405,7 +393,6 @@ below the current commit alone.
   | @  1 add b
   |/
   o  0 add a
-  
   $ hg rebase --restack
   rebasing 4:9d206ffc875e "add e"
   $ showgraph
@@ -420,7 +407,6 @@ below the current commit alone.
   @ |  1 add b
   |/
   o  0 add a
-  
 
 Test having an unamended commit.
   $ reset
@@ -447,7 +433,6 @@ Test having an unamended commit.
   | @  1 add b
   |/
   o  0 add a
-  
   $ hg rebase --restack
   rebasing 2:4538525df7e2 "add c"
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -457,7 +442,6 @@ Test having an unamended commit.
   @  4 Amended
   |
   o  0 add a
-  
 
 Test situation with divergence. Restack should rebase unstable children
 onto the newest successor of their parent.
@@ -488,7 +472,6 @@ onto the newest successor of their parent.
   | @  1 add b
   |/
   o  0 add a
-  
   $ hg rebase --restack
   rebasing 2:4538525df7e2 "add c"
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -500,7 +483,6 @@ onto the newest successor of their parent.
   | o  3 successor 1
   |/
   o  0 add a
-  
 
 Test situation with divergence due to an unamend. This should actually succeed
 since the successor is obsolete.
@@ -532,7 +514,6 @@ since the successor is obsolete.
   | @  1 add b
   |/
   o  0 add a
-  
   $ hg rebase --restack
   rebasing 2:4538525df7e2 "add c"
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -542,7 +523,6 @@ since the successor is obsolete.
   @  4 add b
   |
   o  0 add a
-  
 
 Test recursive restacking -- basic case.
   $ reset
@@ -576,7 +556,6 @@ Test recursive restacking -- basic case.
   @ |  1 add b
   |/
   o  0 add a
-  
   $ hg rebase --restack
   rebasing 3:47d2a3944de8 "add d"
   rebasing 7:a43fcd08f41f "add c" (tip)
@@ -590,7 +569,6 @@ Test recursive restacking -- basic case.
   @  5 add b
   |
   o  0 add a
-  
 
 Test recursive restacking -- more complex case. This test is designed to
 to check for a bug encountered if rebasing is performed naively from the
@@ -657,7 +635,6 @@ stack is lost upon rebasing lower levels.
   @ |  1 add b
   |/
   o  0 add a
-  
   $ hg rebase --restack
   rebasing 13:9f2a7cefd4b4 "add h"
   rebasing 7:2a79e3a98cd6 "add f"
@@ -683,4 +660,3 @@ stack is lost upon rebasing lower levels.
   @  5 add b
   |
   o  0 add a
-  
