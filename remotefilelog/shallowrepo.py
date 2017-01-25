@@ -64,15 +64,20 @@ def wraprepo(repo):
             Revision information is passed via the context argument.
             """
 
-            # prefetch files that will likely be compared
-            m1 = ctx.p1().manifest()
-            files = []
-            for f in ctx.modified() + ctx.added():
-                fparent1 = m1.get(f, nullid)
-                if fparent1 != nullid:
-                    files.append((f, hex(fparent1)))
-            self.fileservice.prefetch(files)
-            return super(shallowrepository, self).commitctx(ctx, error=error)
+            # some contexts already have manifest nodes, they don't need any
+            # prefetching (for example if we're just editing a commit message
+            # we can reuse manifest
+            if not ctx.manifestnode():
+                # prefetch files that will likely be compared
+                m1 = ctx.p1().manifest()
+                files = []
+                for f in ctx.modified() + ctx.added():
+                    fparent1 = m1.get(f, nullid)
+                    if fparent1 != nullid:
+                        files.append((f, hex(fparent1)))
+                self.fileservice.prefetch(files)
+            return super(shallowrepository, self).commitctx(ctx,
+                                                            error=error)
 
         def prefetch(self, revs, base=None, pats=None, opts=None):
             """Prefetches all the necessary file revisions for the given revs
