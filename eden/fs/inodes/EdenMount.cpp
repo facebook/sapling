@@ -9,6 +9,8 @@
  */
 #include "EdenMount.h"
 
+#include <folly/ExceptionWrapper.h>
+#include <folly/futures/Future.h>
 #include <glog/logging.h>
 
 #include "eden/fs/config/ClientConfig.h"
@@ -27,6 +29,8 @@
 
 using std::unique_ptr;
 using std::vector;
+using folly::Future;
+using folly::makeFuture;
 using folly::StringPiece;
 
 namespace facebook {
@@ -132,40 +136,20 @@ std::unique_ptr<Tree> EdenMount::getRootTree() const {
   }
 }
 
-InodePtr EdenMount::getInodeBase(RelativePathPiece path) const {
-  // TODO: We should really switch all callers to use a Future-base API here.
-  //
-  // We probably should probably split this into two versions:
-  // - one that returns only loaded inodes, and returns immediately
-  // - one that may load an inode, and returns a Future
-  auto treeInode = inodeMap_->getRootInode();
-  auto pathStr = path.stringPiece();
-  if (pathStr.empty()) {
-    return treeInode;
-  }
-
-  auto startIdx = 0;
-  while (true) {
-    DCHECK_LT(startIdx, pathStr.size());
-    auto endIdx = pathStr.find(kDirSeparator, startIdx);
-    if (endIdx == StringPiece::npos) {
-      auto name = StringPiece{pathStr.data() + startIdx, pathStr.end()};
-      return treeInode->getOrLoadChild(PathComponentPiece{name}).get();
-    } else {
-      auto name =
-          StringPiece{pathStr.data() + startIdx, pathStr.data() + endIdx};
-      startIdx = endIdx + 1;
-      treeInode = treeInode->getOrLoadChildTree(PathComponentPiece{name}).get();
-    }
-  }
+Future<InodePtr> EdenMount::getInode(RelativePathPiece path) const {
+  return inodeMap_->getRootInode()->getChildRecursive(path);
 }
 
-TreeInodePtr EdenMount::getTreeInode(RelativePathPiece path) const {
-  return getInodeBase(path).asTreePtr();
+InodePtr EdenMount::getInodeBlocking(RelativePathPiece path) const {
+  return getInode(path).get();
 }
 
-FileInodePtr EdenMount::getFileInode(RelativePathPiece path) const {
-  return getInodeBase(path).asFilePtr();
+TreeInodePtr EdenMount::getTreeInodeBlocking(RelativePathPiece path) const {
+  return getInodeBlocking(path).asTreePtr();
+}
+
+FileInodePtr EdenMount::getFileInodeBlocking(RelativePathPiece path) const {
+  return getInodeBlocking(path).asFilePtr();
 }
 
 RenameLock EdenMount::acquireRenameLock() {

@@ -214,14 +214,15 @@ Future<Hash> EdenServiceHandler::getSHA1ForPath(
 
   auto edenMount = server_->getMount(mountPoint);
   auto relativePath = RelativePathPiece{path};
-  // TODO(t12747617): This should use a future-based API to do the FileInode
-  // lookup.
-  auto fileInode = edenMount->getFileInode(relativePath);
-  if (!S_ISREG(fileInode->getEntry()->mode)) {
-    // We intentionally want to refuse to compute the SHA1 of symlinks
-    return makeFuture<Hash>(InodeError(EINVAL, fileInode, "file is a symlink"));
-  }
-  return fileInode->getSHA1();
+  return edenMount->getInode(relativePath).then([](const InodePtr& inode) {
+    auto fileInode = inode.asFilePtr();
+    if (!S_ISREG(fileInode->getEntry()->mode)) {
+      // We intentionally want to refuse to compute the SHA1 of symlinks
+      return makeFuture<Hash>(
+          InodeError(EINVAL, fileInode, "file is a symlink"));
+    }
+    return fileInode->getSHA1();
+  });
 }
 
 void EdenServiceHandler::getMaterializedEntries(
@@ -318,7 +319,7 @@ void EdenServiceHandler::getFileInformation(
 
     try {
       auto relativePath = RelativePathPiece{path};
-      auto inodeBase = edenMount->getInodeBase(relativePath);
+      auto inodeBase = edenMount->getInodeBlocking(relativePath);
 
       // we've reached the item of interest.
       auto attr = inodeBase->getattr().get();

@@ -7,7 +7,6 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
-
 #include "EdenMounts.h"
 
 #include <boost/polymorphic_cast.hpp>
@@ -63,7 +62,7 @@ std::vector<RelativePath> getModifiedDirectories(
     const EdenMount* mount,
     RelativePathPiece directoryInMount,
     const std::unordered_set<RelativePathPiece>* toIgnore) {
-  auto tree = mount->getTreeInode(directoryInMount);
+  auto tree = mount->getTreeInodeBlocking(directoryInMount);
   std::vector<RelativePath> modifiedDirectories;
   getModifiedDirectoriesRecursive(
       directoryInMount, tree.get(), toIgnore, modifiedDirectories);

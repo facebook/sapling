@@ -214,8 +214,9 @@ class Dirstate {
           copyOfUserDirectives) const;
 
   /**
-   * Note that EdenMount::getInodeBase() throws if path does not correspond to
-   * an actual file. This helper function returns nullptr instead in that case.
+   * Note that EdenMount::getInodeBlocking() throws if path does not
+   * correspond to an actual file. This helper function returns nullptr instead
+   * in that case.
    */
   InodePtr getInodeBaseOrNull(RelativePathPiece path) const;
 

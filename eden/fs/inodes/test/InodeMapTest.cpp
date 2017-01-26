@@ -149,3 +149,88 @@ TEST(InodeMap, asyncError) {
   EXPECT_THROW(srcFuture.get(), std::domain_error);
   EXPECT_THROW(srcFuture2.get(), std::domain_error);
 }
+
+TEST(InodeMap, recursiveLookup) {
+  BaseTestMountBuilder builder;
+  auto backingStore = builder.getBackingStore();
+
+  auto file = backingStore->putBlob("this is a test file");
+  auto d = backingStore->putTree({{"file.txt", file}});
+  auto c = backingStore->putTree({{"d", d}});
+  auto b = backingStore->putTree({{"c", c}});
+  auto a = backingStore->putTree({{"b", b}});
+  auto root = backingStore->putTree({{"a", a}});
+  builder.setCommit(makeTestHash("ccc"), root->get().getHash());
+  // build() will hang unless the root tree is ready.
+  root->setReady();
+
+  auto testMount = builder.build();
+  auto rootInode = testMount->getEdenMount()->getRootInode();
+
+  // Call EdenMount::getInode() on the root
+  auto rootFuture = testMount->getEdenMount()->getInode(RelativePathPiece{""});
+  ASSERT_TRUE(rootFuture.isReady());
+  auto rootResult = rootFuture.get();
+  EXPECT_EQ(rootInode, rootResult);
+
+  // Call EdenMount::getInode() to do a recursive lookup
+  auto fileFuture = testMount->getEdenMount()->getInode(
+      RelativePathPiece{"a/b/c/d/file.txt"});
+  EXPECT_FALSE(fileFuture.isReady());
+
+  c->setReady();
+  EXPECT_FALSE(fileFuture.isReady());
+  a->setReady();
+  EXPECT_FALSE(fileFuture.isReady());
+  b->setReady();
+  EXPECT_FALSE(fileFuture.isReady());
+  file->setReady();
+  EXPECT_FALSE(fileFuture.isReady());
+  d->setReady();
+  ASSERT_TRUE(fileFuture.isReady());
+  auto fileInode = fileFuture.get();
+  EXPECT_EQ(
+      RelativePathPiece{"a/b/c/d/file.txt"}, fileInode->getPath().value());
+}
+
+TEST(InodeMap, recursiveLookupError) {
+  BaseTestMountBuilder builder;
+  auto backingStore = builder.getBackingStore();
+
+  auto file = backingStore->putBlob("this is a test file");
+  auto d = backingStore->putTree({{"file.txt", file}});
+  auto c = backingStore->putTree({{"d", d}});
+  auto b = backingStore->putTree({{"c", c}});
+  auto a = backingStore->putTree({{"b", b}});
+  auto root = backingStore->putTree({{"a", a}});
+  builder.setCommit(makeTestHash("ccc"), root->get().getHash());
+  // build() will hang unless the root tree is ready.
+  root->setReady();
+
+  auto testMount = builder.build();
+  auto rootInode = testMount->getEdenMount()->getRootInode();
+
+  // Call EdenMount::getInode() on the root
+  auto rootFuture = testMount->getEdenMount()->getInode(RelativePathPiece{""});
+  ASSERT_TRUE(rootFuture.isReady());
+  auto rootResult = rootFuture.get();
+  EXPECT_EQ(rootInode, rootResult);
+
+  // Call EdenMount::getInode() to do a recursive lookup
+  auto fileFuture = testMount->getEdenMount()->getInode(
+      RelativePathPiece{"a/b/c/d/file.txt"});
+  EXPECT_FALSE(fileFuture.isReady());
+
+  a->setReady();
+  EXPECT_FALSE(fileFuture.isReady());
+  c->setReady();
+  EXPECT_FALSE(fileFuture.isReady());
+  b->setReady();
+  EXPECT_FALSE(fileFuture.isReady());
+  file->setReady();
+  EXPECT_FALSE(fileFuture.isReady());
+  d->triggerError(std::domain_error("error for testing purposes"));
+  ASSERT_TRUE(fileFuture.isReady());
+  EXPECT_THROW_RE(
+      fileFuture.get(), std::domain_error, "error for testing purposes");
+}

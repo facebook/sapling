@@ -18,6 +18,11 @@
 #include "eden/fs/journal/JournalDelta.h"
 #include "eden/utils/PathFuncs.h"
 
+namespace folly {
+template <typename T>
+class Future;
+}
+
 namespace facebook {
 namespace eden {
 namespace fusell {
@@ -146,22 +151,44 @@ class EdenMount {
   std::unique_ptr<Tree> getRootTree() const;
 
   /**
+   * Look up the Inode object for the specified path.
+   *
+   * This may fail with an InodeError containing ENOENT if the path does not
+   * exist, or ENOTDIR if one of the intermediate components along the path is
+   * not a directory.
+   *
+   * This may also fail with other exceptions if something else goes wrong
+   * besides the path being invalid (for instance, an error loading data from
+   * the ObjectStore).
+   */
+  folly::Future<InodePtr> getInode(RelativePathPiece path) const;
+
+  /**
+   * A blocking version of getInode().
+   *
    * @return the InodeBase for the specified path or throws a std::system_error
    *     with ENOENT.
+   *
+   * TODO: We should switch all callers to use the Future-base API, and remove
+   * the blocking API.
    */
-  InodePtr getInodeBase(RelativePathPiece path) const;
+  InodePtr getInodeBlocking(RelativePathPiece path) const;
 
   /**
-   * @return the TreeInode for the specified path or throws a std::system_error
-   *     with ENOENT or ENOTDIR, as appropriate.
+   * Syntactic sugar for getInode().get().asTreePtr()
+   *
+   * TODO: We should switch all callers to use the Future-base API, and remove
+   * the blocking API.
    */
-  TreeInodePtr getTreeInode(RelativePathPiece path) const;
+  TreeInodePtr getTreeInodeBlocking(RelativePathPiece path) const;
 
   /**
-   * @return the FileInode for the specified path or throws a std::system_error
-   *     with ENOENT or EISDIR, as appropriate.
+   * Syntactic sugar for getInode().get().asFilePtr()
+   *
+   * TODO: We should switch all callers to use the Future-base API, and remove
+   * the blocking API.
    */
-  FileInodePtr getFileInode(RelativePathPiece path) const;
+  FileInodePtr getFileInodeBlocking(RelativePathPiece path) const;
 
   /**
    * Acquire the rename lock in exclusive mode.

@@ -10,6 +10,7 @@
 #include "TreeInode.h"
 
 #include <boost/polymorphic_cast.hpp>
+#include <folly/futures/Future.h>
 #include <vector>
 #include "EdenDispatcher.h"
 #include "EdenMount.h"
@@ -32,6 +33,7 @@
 
 using folly::Future;
 using folly::makeFuture;
+using folly::StringPiece;
 
 namespace facebook {
 namespace eden {
@@ -143,6 +145,55 @@ Future<TreeInodePtr> TreeInode::getOrLoadChildTree(PathComponentPiece name) {
     }
     return makeFuture(treeInode);
   });
+}
+
+namespace {
+/**
+ * A helper class for performing a recursive path lookup.
+ *
+ * If needed we could probably optimize this more in the future.  As-is we are
+ * likely performing a lot of avoidable memory allocations to bind and set
+ * Future callbacks at each stage.  This should be possible to implement with
+ * only a single allocation up front (but we might not be able to achieve that
+ * using the Futures API, we might have to create more custom callback API).
+ */
+class LookupProcessor {
+ public:
+  explicit LookupProcessor(RelativePathPiece path) : path_{path} {}
+
+  Future<InodePtr> next(TreeInodePtr tree) {
+    auto pathStr = path_.stringPiece();
+    DCHECK_LT(pathIndex_, pathStr.size());
+    auto endIdx = pathStr.find(kDirSeparator, pathIndex_);
+    if (endIdx == StringPiece::npos) {
+      auto name = StringPiece{pathStr.data() + pathIndex_, pathStr.end()};
+      return tree->getOrLoadChild(PathComponentPiece{name});
+    }
+
+    auto name =
+        StringPiece{pathStr.data() + pathIndex_, pathStr.data() + endIdx};
+    pathIndex_ = endIdx + 1;
+    return tree->getOrLoadChildTree(PathComponentPiece{name})
+        .then(&LookupProcessor::next, this);
+  }
+
+ private:
+  RelativePath path_;
+  size_t pathIndex_{0};
+};
+}
+
+Future<InodePtr> TreeInode::getChildRecursive(RelativePathPiece path) {
+  auto pathStr = path.stringPiece();
+  if (pathStr.empty()) {
+    return makeFuture<InodePtr>(InodePtr::newPtrFromExisting(this));
+  }
+
+  auto processor = std::make_unique<LookupProcessor>(path);
+  auto future = processor->next(TreeInodePtr::newPtrFromExisting(this));
+  // This ensure() callback serves to hold onto the unique_ptr,
+  // and makes sure it only gets destroyed when the future is finally resolved.
+  return future.ensure([p = std::move(processor)]() mutable { p.reset(); });
 }
 
 fuse_ino_t TreeInode::getChildInodeNumber(PathComponentPiece name) {

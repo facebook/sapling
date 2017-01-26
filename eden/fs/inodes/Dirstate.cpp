@@ -234,7 +234,7 @@ class IgnoreChecker {
     VLOG(4) << "Loading ignore file at \"" << ignorePath << "\"";
     FileInodePtr ignoreInode;
     try {
-      ignoreInode = mountPoint_->getFileInode(ignorePath);
+      ignoreInode = mountPoint_->getFileInodeBlocking(ignorePath);
     } catch (const std::system_error& ex) {
       if (ex.code().category() != std::system_category() ||
           (ex.code().value() != ENOENT && ex.code().value() != ENOTDIR)) {
@@ -309,7 +309,7 @@ std::unique_ptr<HgStatus> Dirstate::getStatusForExistingDirectory(
   auto rootTree = mount_->getRootTree();
   for (auto& directory : modifiedDirectories) {
     // Get the directory as a TreeInode.
-    auto treeInode = mount_->getTreeInode(directory);
+    auto treeInode = mount_->getTreeInodeBlocking(directory);
     DCHECK(treeInode.get() != nullptr) << "Failed to get a TreeInode for "
                                        << directory;
 
@@ -624,8 +624,8 @@ WorkingCopyStatus getPathStatus(
     RelativePathPiece path,
     const EdenMount* mount) {
   try {
-    // Use getInodeBase() as a test of whether the path exists.
-    auto inodeBase = mount->getInodeBase(path);
+    // Use getInodeBlocking() as a test of whether the path exists.
+    auto inodeBase = mount->getInodeBlocking(path);
     if (inodeBase.asFilePtrOrNull() != nullptr) {
       return WorkingCopyStatus::File;
     } else {
@@ -911,7 +911,7 @@ void Dirstate::remove(
   // prefer not to do them while holding the lock.
   TreeInodePtr parent;
   try {
-    parent = mount_->getTreeInode(path.dirname());
+    parent = mount_->getTreeInodeBlocking(path.dirname());
   } catch (const std::system_error& e) {
     auto value = e.code().value();
     if (value != ENOENT && value != ENOTDIR) {
@@ -1012,7 +1012,7 @@ void Dirstate::remove(
 
 InodePtr Dirstate::getInodeBaseOrNull(RelativePathPiece path) const {
   try {
-    return mount_->getInodeBase(path);
+    return mount_->getInodeBlocking(path);
   } catch (const std::system_error& e) {
     if (e.code().value() == ENOENT) {
       return nullptr;
@@ -1059,7 +1059,7 @@ void Dirstate::markCommitted(
       continue;
     }
 
-    auto treeInode = mount_->getTreeInode(directory);
+    auto treeInode = mount_->getTreeInodeBlocking(directory);
     DCHECK(treeInode.get() != nullptr) << "Failed to get a TreeInode for "
                                        << directory;
 

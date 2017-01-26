@@ -129,6 +129,14 @@ class TreeInode : public InodeBase {
   folly::Future<InodePtr> getOrLoadChild(PathComponentPiece name);
   folly::Future<TreeInodePtr> getOrLoadChildTree(PathComponentPiece name);
 
+  /**
+   * Recursively look up a child inode.
+   *
+   * The Inode object in question, and all intervening TreeInode objects,
+   * will be loaded if they are not already loaded.
+   */
+  folly::Future<InodePtr> getChildRecursive(RelativePathPiece name);
+
   fuse_ino_t getChildInodeNumber(PathComponentPiece name);
 
   folly::Future<std::shared_ptr<fusell::DirHandle>> opendir(
