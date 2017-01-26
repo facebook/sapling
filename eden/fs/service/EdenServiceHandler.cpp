@@ -28,6 +28,7 @@
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/service/EdenMountHandler.h"
+#include "eden/fs/service/GlobNode.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fuse/MountPoint.h"
 
@@ -340,6 +341,26 @@ void EdenServiceHandler::getFileInformation(
       result.set_error(newEdenError(e));
       out.emplace_back(std::move(result));
     }
+  }
+}
+
+void EdenServiceHandler::glob(
+    vector<string>& out,
+    unique_ptr<string> mountPoint,
+    unique_ptr<vector<string>> globs) {
+  auto edenMount = server_->getMount(*mountPoint);
+  auto rootInode = edenMount->getRootInode();
+
+  // Compile the list of globs into a tree
+  GlobNode globRoot;
+  for (auto& globString : *globs) {
+    globRoot.parse(globString);
+  }
+
+  // and evaluate it against the root
+  auto matches = globRoot.evaluate(RelativePathPiece(), rootInode).get();
+  for (auto& fileName : matches) {
+    out.emplace_back(fileName.stringPiece().toString());
   }
 }
 

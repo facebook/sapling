@@ -91,13 +91,6 @@ struct MaterializedResult {
   2: map<string, FileInformation> fileInfo
 }
 
-/** These map to the WM_XXX defines in the watchman wildmatch.h
- * that we'll port over to Eden real-soon-now. */
-enum WildMatchFlags {
-  IncludeDotFiles = 0x1,
-  NoEscape = 0x2,
-}
-
 enum StatusCode {
   CLEAN = 0x0,
   MODIFIED = 0x1,
@@ -190,8 +183,7 @@ service EdenService extends fb303.FacebookService {
    */
   list<string> glob(
     1: string mountPoint,
-    2: list<string> globs,
-    3: i32 wildMatchFlags)
+    2: list<string> globs)
       throws (1: EdenError ex)
 
   //////// HG COMMANDS ////////

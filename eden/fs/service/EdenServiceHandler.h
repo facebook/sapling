@@ -72,6 +72,11 @@ class EdenServiceHandler : virtual public EdenServiceSvIf,
       std::unique_ptr<std::string> mountPoint,
       std::unique_ptr<std::vector<std::string>> paths) override;
 
+  void glob(
+      std::vector<std::string>& out,
+      std::unique_ptr<std::string> mountPoint,
+      std::unique_ptr<std::vector<std::string>> globs) override;
+
   void scmGetStatus(
       ThriftHgStatus& out,
       std::unique_ptr<std::string> mountPoint) override;
