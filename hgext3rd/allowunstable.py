@@ -45,6 +45,16 @@ def extsetup(ui):
         extensions.wrapcommand(evolve.cmdtable, 'fold',
                                setcreatemarkersop('fold'))
 
+    # Allow the creation of unstable changesets during record.
+    try:
+        record = extensions.find('record')
+    except KeyError:
+        pass
+    else:
+        extensions.wrapcommand(record.cmdtable, 'record', allowunstable)
+        extensions.wrapcommand(record.cmdtable, 'record',
+                               setcreatemarkersop('amend'))
+
     # Allow the creation of unstable changesets during rebase.
     # (Required to use -r without --keep in the middle of a stack.)
     # No need to set operation name since tweakdefaults does this already.

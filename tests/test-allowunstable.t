@@ -10,12 +10,21 @@ Set up test environment.
   > histedit=
   > inhibit=
   > rebase=
+  > record=
   > [experimental]
   > evolution = createmarkers
   > evolutioncommands = fold split
+  > [ui]
+  > interactive = true
   > EOF
   $ showgraph() {
-  >   hg log --graph -T "{rev} {desc|firstline}"
+  >   hg log -r '(::.)::' --graph -T "{rev} {desc|firstline}" | sed \$d
+  > }
+  $ reset() {
+  >   cd ..
+  >   rm -rf allowunstable
+  >   hg init allowunstable
+  >   cd allowunstable
   > }
   $ hg init allowunstable && cd allowunstable
   $ hg debugbuilddag +5
@@ -47,7 +56,7 @@ Test that we can perform a fold in the middle of a stack.
   | o  1 r1
   |/
   o  0 r0
-  
+
 Test that we can perform a rebase in the middle of a stack.
   $ hg rebase -r 3 -d 5
   rebasing 3:2dc09a01254d "r3"
@@ -65,4 +74,26 @@ Test that we can perform a rebase in the middle of a stack.
   | o  1 r1
   |/
   o  0 r0
+
+Test that we can perform `hg record --amend` in the middle of a stack.
+  $ reset
+  $ hg debugbuilddag +3
+  $ hg up 1
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ touch foo
+  $ hg add foo
+  $ hg record --amend << EOF
+  > y
+  > EOF
+  diff --git a/foo b/foo
+  new file mode 100644
+  examine changes to 'foo'? [Ynesfdaq?] y
   
+  $ showgraph
+  @  4 r1
+  |
+  | o  2 r2
+  | |
+  | o  1 r1
+  |/
+  o  0 r0
