@@ -35,10 +35,14 @@ def wraprepo(repo):
                      repo.ui.config("remotefilelog", "fallbackrepo",
                        repo.ui.config("paths", "default")))
 
-        def sparsematch(self, *revs, **kwargs):
-            baseinstance = super(shallowrepository, self)
-            if util.safehasattr(baseinstance, 'sparsematch'):
-                return baseinstance.sparsematch(*revs, **kwargs)
+        def maybesparsematch(self, *revs, **kwargs):
+            '''
+            A wrapper that allows the remotefilelog to invoke sparsematch() if
+            this is a sparse repository, or returns None if this is not a
+            sparse repository.
+            '''
+            if util.safehasattr(self, 'sparsematch'):
+                return self.sparsematch(*revs, **kwargs)
 
             return None
 
@@ -117,7 +121,7 @@ def wraprepo(repo):
                 ctx = repo[rev]
                 if pats:
                     m = scmutil.match(ctx, pats, opts)
-                sparsematch = repo.sparsematch(rev)
+                sparsematch = repo.maybesparsematch(rev)
 
                 mfnode = ctx.manifestnode()
                 mfrev = mfrevlog.rev(mfnode)

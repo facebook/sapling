@@ -229,7 +229,7 @@ def onetimeclientsetup(ui):
                           *args, **kwargs):
         if shallowrepo.requirement in repo.requirements:
             files = []
-            sparsematch = repo.sparsematch(mctx.rev())
+            sparsematch = repo.maybesparsematch(mctx.rev())
             for f, (m, actionargs, msg) in actions.iteritems():
                 if sparsematch and not sparsematch(f):
                     continue
@@ -277,7 +277,7 @@ def onetimeclientsetup(ui):
             m2 = c2.manifest()
             files = []
 
-            sparsematch1 = repo.sparsematch(c1.rev())
+            sparsematch1 = repo.maybesparsematch(c1.rev())
             if sparsematch1:
                 sparseu1 = []
                 for f in u1:
@@ -286,7 +286,7 @@ def onetimeclientsetup(ui):
                         sparseu1.append(f)
                 u1 = sparseu1
 
-            sparsematch2 = repo.sparsematch(c2.rev())
+            sparsematch2 = repo.maybesparsematch(c2.rev())
             if sparsematch2:
                 sparseu2 = []
                 for f in u2:
@@ -308,7 +308,7 @@ def onetimeclientsetup(ui):
             mb = b.manifest()
 
             files = []
-            sparsematch = repo.sparsematch(b.rev())
+            sparsematch = repo.maybesparsematch(b.rev())
             if sparsematch:
                 sparsemissing = []
                 for f in missing:
@@ -733,7 +733,7 @@ def _revertprefetch(orig, repo, ctx, *files):
     if shallowrepo.requirement in repo.requirements:
         allfiles = []
         mf = ctx.manifest()
-        sparsematch = repo.sparsematch(ctx.rev())
+        sparsematch = repo.maybesparsematch(ctx.rev())
         for f in files:
             for path in f:
                 if (not sparsematch or sparsematch(path)) and path in mf:
