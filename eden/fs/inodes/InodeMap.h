@@ -99,6 +99,8 @@ class InodeMapLock;
  */
 class InodeMap {
  public:
+  using PromiseVector = std::vector<folly::Promise<InodePtr>>;
+
   explicit InodeMap(EdenMount* mount);
   virtual ~InodeMap();
 
@@ -322,8 +324,11 @@ class InodeMap {
    * the contents lock.  This ensures that if you lock a TreeInode and see that
    * an inode isn't present in its contents, it cannot have finished loading
    * yet in the InodeMap.
+   *
+   * Returns a vector of Promises waiting on this TreeInode to be loaded.  The
+   * TreeInode must fulfill these promises after releasing its contents lock.
    */
-  void inodeLoadComplete(const InodePtr& inode);
+  PromiseVector inodeLoadComplete(InodeBase* inode);
 
   /**
    * inodeLoadFailed() should only be called by TreeInode.
@@ -367,7 +372,6 @@ class InodeMap {
 
  private:
   friend class InodeMapLock;
-  using PromiseVector = std::vector<folly::Promise<InodePtr>>;
 
   /**
    * Data about an unloaded inode.

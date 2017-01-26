@@ -221,16 +221,19 @@ class TreeInode : public InodeBase {
 
  private:
   void registerInodeLoadComplete(
-      folly::Future<InodePtr>& future,
+      folly::Future<std::unique_ptr<InodeBase>>& future,
       PathComponentPiece name,
       fuse_ino_t number);
+  void inodeLoadComplete(
+      PathComponentPiece childName,
+      std::unique_ptr<InodeBase> childInode);
 
-  folly::Future<InodePtr> startLoadingInodeNoThrow(
+  folly::Future<std::unique_ptr<InodeBase>> startLoadingInodeNoThrow(
       Entry* entry,
       PathComponentPiece name,
       fuse_ino_t number) noexcept;
 
-  folly::Future<InodePtr>
+  folly::Future<std::unique_ptr<InodeBase>>
   startLoadingInode(Entry* entry, PathComponentPiece name, fuse_ino_t number);
 
   /** Translates a Tree object from our store into a Dir object

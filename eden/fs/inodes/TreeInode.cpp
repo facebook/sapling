@@ -34,6 +34,8 @@
 using folly::Future;
 using folly::makeFuture;
 using folly::StringPiece;
+using std::make_unique;
+using std::unique_ptr;
 
 namespace facebook {
 namespace eden {
@@ -88,8 +90,10 @@ folly::Future<InodePtr> TreeInode::getChildByName(
 }
 
 Future<InodePtr> TreeInode::getOrLoadChild(PathComponentPiece name) {
-  folly::Optional<folly::Future<InodePtr>> inodeLoadFuture;
-  folly::Optional<folly::Future<InodePtr>> returnFuture;
+  folly::Optional<Future<unique_ptr<InodeBase>>> inodeLoadFuture;
+  folly::Optional<Future<InodePtr>> returnFuture;
+  InodePtr childInodePtr;
+  InodeMap::PromiseVector promises;
   fuse_ino_t childNumber;
   {
     auto contents = contents_.wlock();
@@ -123,7 +127,8 @@ Future<InodePtr> TreeInode::getOrLoadChild(PathComponentPiece name) {
         // lock.
         auto childInode = loadFuture.get();
         entryPtr->inode = childInode.get();
-        getInodeMap()->inodeLoadComplete(childInode);
+        promises = getInodeMap()->inodeLoadComplete(childInode.get());
+        childInodePtr = InodePtr::newPtrLocked(childInode.release());
       } else {
         inodeLoadFuture = std::move(loadFuture);
       }
@@ -132,6 +137,10 @@ Future<InodePtr> TreeInode::getOrLoadChild(PathComponentPiece name) {
 
   if (inodeLoadFuture) {
     registerInodeLoadComplete(inodeLoadFuture.value(), name, childNumber);
+  } else {
+    for (auto& promise : promises) {
+      promise.setValue(childInodePtr);
+    }
   }
 
   return std::move(returnFuture).value();
@@ -215,7 +224,7 @@ fuse_ino_t TreeInode::getChildInodeNumber(PathComponentPiece name) {
 }
 
 void TreeInode::loadChildInode(PathComponentPiece name, fuse_ino_t number) {
-  folly::Optional<folly::Future<InodePtr>> future;
+  folly::Optional<folly::Future<unique_ptr<InodeBase>>> future;
   {
     auto contents = contents_.rlock();
     auto iter = contents->entries.find(name);
@@ -251,29 +260,15 @@ void TreeInode::loadChildInode(PathComponentPiece name, fuse_ino_t number) {
 }
 
 void TreeInode::registerInodeLoadComplete(
-    folly::Future<InodePtr>& future,
+    folly::Future<unique_ptr<InodeBase>>& future,
     PathComponentPiece name,
     fuse_ino_t number) {
-  // This method should never be called with the data_ lock held.
-  // If the future is already ready we will try to acquire the data_ lock now.
+  // This method should never be called with the contents_ lock held.  If the
+  // future is already ready we will try to acquire the contents_ lock now.
   future
       .then([ self = inodePtrFromThis(), childName = PathComponent{name} ](
-          const InodePtr& childInode) {
-        auto contents = self->contents_.wlock();
-        auto iter = contents->entries.find(childName);
-        if (iter == contents->entries.end()) {
-          // This probably shouldn't ever happen.
-          // We should ensure that the child inode is loaded first before
-          // renaming or unlinking it.
-          LOG(ERROR) << "child " << childName << " in " << self->getLogPath()
-                     << " removed before it finished loading";
-          throw InodeError(
-              ENOENT, self, childName, "inode removed before loading finished");
-        }
-        iter->second->inode = childInode.get();
-        // Make sure that we are still holding the contents_ lock when
-        // calling inodeLoadComplete()
-        self->getInodeMap()->inodeLoadComplete(childInode);
+          unique_ptr<InodeBase> && childInode) {
+        self->inodeLoadComplete(childName, std::move(childInode));
       })
       .onError([ self = inodePtrFromThis(), number ](
           const folly::exception_wrapper& ew) {
@@ -281,7 +276,47 @@ void TreeInode::registerInodeLoadComplete(
       });
 }
 
-Future<InodePtr> TreeInode::startLoadingInodeNoThrow(
+void TreeInode::inodeLoadComplete(
+    PathComponentPiece childName,
+    std::unique_ptr<InodeBase> childInode) {
+  InodeMap::PromiseVector promises;
+
+  {
+    auto contents = contents_.wlock();
+    auto iter = contents->entries.find(childName);
+    if (iter == contents->entries.end()) {
+      // This shouldn't ever happen.
+      // The rename(), unlink(), and rmdir() code should always ensure
+      // the child inode in question is loaded before removing or renaming
+      // it.  (We probably could allow renaming/removing unloaded inodes,
+      // but the loading process would have to be significantly more
+      // complicated to deal with this, both here and in the parent lookup
+      // process in InodeMap::lookupInode().)
+      LOG(ERROR) << "child " << childName << " in " << getLogPath()
+                 << " removed before it finished loading";
+      throw InodeError(
+          ENOENT,
+          inodePtrFromThis(),
+          childName,
+          "inode removed before loading finished");
+    }
+    iter->second->inode = childInode.get();
+    // Make sure that we are still holding the contents_ lock when
+    // calling inodeLoadComplete().  This ensures that no-one can look up
+    // the inode by name before it is also available in the InodeMap.
+    // However, we must wait to fulfill pending promises until after
+    // releasing our lock.
+    promises = getInodeMap()->inodeLoadComplete(childInode.get());
+  }
+
+  // Fulfill all of the pending promises after releasing our lock
+  auto inodePtr = InodePtr::newPtrLocked(childInode.release());
+  for (auto& promise : promises) {
+    promise.setValue(inodePtr);
+  }
+}
+
+Future<unique_ptr<InodeBase>> TreeInode::startLoadingInodeNoThrow(
     Entry* entry,
     PathComponentPiece name,
     fuse_ino_t number) noexcept {
@@ -298,12 +333,12 @@ Future<InodePtr> TreeInode::startLoadingInodeNoThrow(
     // It's possible that makeFuture() itself could throw, but this only
     // happens on out of memory, in which case the whole process is pretty much
     // hosed anyway.
-    return makeFuture<InodePtr>(
+    return makeFuture<unique_ptr<InodeBase>>(
         folly::exception_wrapper{std::current_exception(), ex});
   }
 }
 
-Future<InodePtr> TreeInode::startLoadingInode(
+Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
     Entry* entry,
     PathComponentPiece name,
     fuse_ino_t number) {
@@ -317,8 +352,7 @@ Future<InodePtr> TreeInode::startLoadingInode(
     // Eventually we may want to go ahead start loading some of the blob data
     // now, but we don't have to wait for it to be ready before marking the
     // inode loaded.
-    auto inode = FileInodePtr::makeNew(number, inodePtrFromThis(), name, entry);
-    return makeFuture<InodePtr>(inode);
+    return make_unique<FileInode>(number, inodePtrFromThis(), name, entry);
   }
 
   // TODO:
@@ -336,8 +370,8 @@ Future<InodePtr> TreeInode::startLoadingInode(
       childName = PathComponent{name},
       entry,
       number
-    ](std::unique_ptr<Tree> tree)->InodePtr {
-      return TreeInodePtr::makeNew(
+    ](std::unique_ptr<Tree> tree)->unique_ptr<InodeBase> {
+      return make_unique<TreeInode>(
           number, self, childName, entry, std::move(tree));
     });
   }
@@ -351,7 +385,7 @@ Future<InodePtr> TreeInode::startLoadingInode(
   auto targetName = getPathBuggy() + name;
   auto overlayDir = getOverlay()->loadOverlayDir(targetName);
   DCHECK(overlayDir) << "missing overlay for " << targetName;
-  return TreeInodePtr::makeNew(
+  return make_unique<TreeInode>(
       number, inodePtrFromThis(), name, entry, std::move(overlayDir.value()));
 }
 

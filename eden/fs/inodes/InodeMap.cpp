@@ -216,7 +216,7 @@ void InodeMap::startChildLookup(
   treeInode->loadChildInode(childName, childInodeNumber);
 }
 
-void InodeMap::inodeLoadComplete(const InodePtr& inode) {
+InodeMap::PromiseVector InodeMap::inodeLoadComplete(InodeBase* inode) {
   auto number = inode->getNodeId();
   VLOG(5) << "successfully loaded inode " << number << ": "
           << inode->getLogPath();
@@ -240,11 +240,12 @@ void InodeMap::inodeLoadComplete(const InodePtr& inode) {
     inode->setFuseRefcount(it->second->numFuseReferences);
 
     // Insert the entry into loadedInodes_, and remove it from unloadedInodes_
-    data->loadedInodes_.emplace(number, inode.get());
+    data->loadedInodes_.emplace(number, inode);
     if (!it->second->isUnlinked) {
       data->unloadedInodesReverse_.erase(reverseIter);
     }
     data->unloadedInodes_.erase(it);
+    return promises;
   } catch (const std::exception& ex) {
     LOG(ERROR) << "error marking inode " << number
                << " loaded: " << folly::exceptionStr(ex);
@@ -252,12 +253,7 @@ void InodeMap::inodeLoadComplete(const InodePtr& inode) {
     for (auto& promise : promises) {
       promise.setException(ew);
     }
-    return;
-  }
-
-  // Fulfill all of the pending promises after releasing our lock
-  for (auto& promise : promises) {
-    promise.setValue(inode);
+    return PromiseVector{};
   }
 }
 
