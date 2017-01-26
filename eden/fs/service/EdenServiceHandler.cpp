@@ -77,6 +77,10 @@ void EdenServiceHandler::mountImpl(const MountInfo& info) {
   // Get a pointer to it that we can use for the remainder of this function.
   auto* config = edenMount->getConfig();
 
+  // Load InodeBase objects for any materialized files in this mount point
+  // before we start mounting.
+  edenMount->getRootInode()->loadMaterializedChildren().wait();
+
   // TODO(mbolin): Use the result of config.getBindMounts() to perform the
   // appropriate bind mounts for the client.
   server_->mount(edenMount);

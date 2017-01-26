@@ -960,6 +960,86 @@ void TreeInode::performCheckout(const Hash& hash) {
   throw std::runtime_error("not yet implemented");
 }
 
+namespace {
+folly::Future<folly::Unit> recursivelyLoadMaterializedChildren(
+    const InodePtr& child) {
+  // If this child is a directory, call loadMaterializedChildren() on it.
+  TreeInodePtr treeChild = child.asTreePtrOrNull();
+  if (treeChild) {
+    return treeChild->loadMaterializedChildren();
+  }
+  return folly::makeFuture();
+}
+}
+
+folly::Future<folly::Unit> TreeInode::loadMaterializedChildren() {
+  struct LoadInfo {
+    LoadInfo(
+        Future<unique_ptr<InodeBase>>&& f,
+        PathComponentPiece n,
+        fuse_ino_t num)
+        : future(std::move(f)), name(n), number(num) {}
+
+    Future<unique_ptr<InodeBase>> future;
+    PathComponent name;
+    fuse_ino_t number;
+  };
+  std::vector<LoadInfo> pendingLoads;
+  std::vector<Future<InodePtr>> inodeFutures;
+
+  {
+    auto contents = contents_.wlock();
+    if (!contents->materialized) {
+      return folly::makeFuture();
+    }
+
+    for (auto& entry : contents->entries) {
+      const auto& name = entry.first;
+      const auto& ent = entry.second;
+      if (!ent->materialized) {
+        continue;
+      }
+
+      if (ent->inode) {
+        // We generally don't expect any inodes to be loaded already
+        LOG(WARNING)
+            << "found already-loaded inode for materialized child "
+            << ent->inode->getLogPath()
+            << " when performing initial loading of materialized inodes";
+        continue;
+      }
+
+      folly::Promise<InodePtr> promise;
+      inodeFutures.emplace_back(promise.getFuture());
+      fuse_ino_t childNumber;
+      if (getInodeMap()->shouldLoadChild(
+              this, name, std::move(promise), &childNumber)) {
+        // The inode is not already being loaded.  We have to start loading it
+        // now.
+        auto loadFuture =
+            startLoadingInodeNoThrow(ent.get(), name, childNumber);
+        pendingLoads.emplace_back(std::move(loadFuture), name, childNumber);
+      }
+    }
+  }
+
+  // Hook up the pending load futures to properly complete the loading process
+  // then the futures are ready.  We can only do this after releasing the
+  // contents_ lock.
+  for (auto& load : pendingLoads) {
+    registerInodeLoadComplete(load.future, load.name, load.number);
+  }
+
+  // Now add callbacks to the Inode futures so that we recurse into
+  // children directories when each child inode becomes ready.
+  std::vector<Future<folly::Unit>> results;
+  for (auto& future : inodeFutures) {
+    results.emplace_back(future.then(recursivelyLoadMaterializedChildren));
+  }
+
+  return folly::collectAll(results).unit();
+}
+
 void TreeInode::unloadChildrenNow() {
   std::vector<TreeInodePtr> treeChildren;
   std::vector<InodeBase*> toDelete;

@@ -219,6 +219,21 @@ class TreeInode : public InodeBase {
    */
   void unloadChildrenNow();
 
+  /**
+   * Load all materialized children underneath this TreeInode.
+   *
+   * This recursively descends into children directories.
+   *
+   * This method is intended to be called during the mount point initialization
+   * to trigger loading of materialized inodes.  This allows other parts of the
+   * code to assume that materialized inodes are always loaded once the mount
+   * point has been initialized.
+   *
+   * Returns a Future that completes once all materialized inodes have been
+   * loaded.
+   */
+  folly::Future<folly::Unit> loadMaterializedChildren();
+
  private:
   void registerInodeLoadComplete(
       folly::Future<std::unique_ptr<InodeBase>>& future,
