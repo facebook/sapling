@@ -1193,6 +1193,7 @@ def displayremotebookmarks(ui, repo, opts):
 
     # it seems overkill to hide displaying hidden remote bookmarks
     repo = repo.unfiltered()
+    useformatted = repo.ui.formatted()
 
     for name in sorted(ns.listnames(repo)):
         node = ns.nodes(repo, name)[0]
@@ -1206,7 +1207,7 @@ def displayremotebookmarks(ui, repo, opts):
         fmt = ' ' * padsize + ' %d:%s'
 
         tmplabel = label
-        if ctx.obsolete():
+        if useformatted and ctx.obsolete():
             tmplabel = tmplabel + ' changeset.obsolete'
         fm.write(color, '%s', name, label=label)
         fm.condwrite(not ui.quiet, 'rev node', fmt, ctx.rev(),
