@@ -101,6 +101,16 @@ def _trypullremotebookmark(mayberemotebookmark, repo, ui):
 def expull(orig, repo, remote, *args, **kwargs):
     remotebookmarks = remote.listkeys('bookmarks')
     if _isselectivepull(repo.ui):
+        # if selectivepull is enabled then we don't save all of the remote
+        # bookmarks in remotenames file. Instead we save only bookmarks that
+        # are "interesting" to a user. Moreover, "hg pull" without parameters
+        # pulls only "interesting" bookmarks. There is a config option to
+        # set default "interesting" bookmarks
+        # (see _getselectivepulldefaultbookmarks).
+        # Then bookmark is considered "interesting" if user did
+        # "hg update REMOTE_BOOK_NAME" or "hg pull -B REMOTE_BOOK_NAME".
+        # Selectivepull is helpful when server has too many remote bookmarks
+        # because it may slow down clients.
         path = activepath(repo.ui, remote)
         bookmarks = {}
         for bookmark in readbookmarknames(repo, path):
