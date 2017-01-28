@@ -57,23 +57,22 @@ void getMaterializedEntriesRecursive(
     std::map<std::string, FileInformation>& out,
     RelativePathPiece dirPath,
     TreeInode* dir) {
-  // TODO: It would be better to make a copy of the materialized inodes in the
-  // current directory, then release the current directory lock before we
-  // recurse into children.
-  dir->getContents().withRLock([&](const auto& contents) mutable {
-    if (contents.materialized) {
-      FileInformation dirInfo;
-      auto attr = dir->getAttrLocked(&contents);
-
-      dirInfo.mode = attr.st.st_mode;
-      timespecToTimeSpec(attr.st.st_mtim, dirInfo.mtime);
-
-      out[dirPath.value().toString()] = std::move(dirInfo);
-    } else {
+  std::vector<std::pair<RelativePath, TreeInodePtr>> recurseList;
+  {
+    auto contents = dir->getContents().rlock();
+    if (!contents->materialized) {
       return;
     }
 
-    for (auto& entIter : contents.entries) {
+    FileInformation dirInfo;
+    auto attr = dir->getAttrLocked(&*contents);
+
+    dirInfo.mode = attr.st.st_mode;
+    timespecToTimeSpec(attr.st.st_mtim, dirInfo.mtime);
+
+    out[dirPath.value().toString()] = std::move(dirInfo);
+
+    for (auto& entIter : contents->entries) {
       const auto& name = entIter.first;
       const auto& ent = entIter.second;
 
@@ -84,14 +83,15 @@ void getMaterializedEntriesRecursive(
       // ent->inode is guaranteed to be set if ent->materialized is
       auto childInode = ent->inode;
       CHECK(childInode != nullptr);
-      auto childPath = dirPath + name;
 
+      auto childPath = dirPath + name;
       if (S_ISDIR(ent->mode)) {
         auto childDir = boost::polymorphic_downcast<TreeInode*>(childInode);
         DCHECK(childDir->getContents().rlock()->materialized)
             << (dirPath + name) << " entry " << ent.get()
             << " materialized is true, but the contained dir is !materialized";
-        getMaterializedEntriesRecursive(out, childPath, childDir);
+        recurseList.emplace_back(
+            childPath, TreeInodePtr::newPtrLocked(childDir));
       } else {
         auto fileInode = boost::polymorphic_downcast<FileInode*>(childInode);
         auto attr = fileInode->getattr().get();
@@ -104,7 +104,11 @@ void getMaterializedEntriesRecursive(
         out[childPath.value().toStdString()] = std::move(fileInfo);
       }
     }
-  });
+  }
+
+  for (const auto& entry : recurseList) {
+    getMaterializedEntriesRecursive(out, entry.first, entry.second.get());
+  }
 }
 }
 }
