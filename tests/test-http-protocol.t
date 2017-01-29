@@ -16,11 +16,9 @@
 compression formats are advertised in compression capability
 
 #if zstd
-  $ get-with-headers.py 127.0.0.1:$HGPORT '?cmd=capabilities' | tr ' ' '\n' | grep compression
-  compression=zstd,zlib
+  $ get-with-headers.py 127.0.0.1:$HGPORT '?cmd=capabilities' | tr ' ' '\n' | grep '^compression=zstd,zlib$' > /dev/null
 #else
-  $ get-with-headers.py 127.0.0.1:$HGPORT '?cmd=capabilities' | tr ' ' '\n' | grep compression
-  compression=zlib
+  $ get-with-headers.py 127.0.0.1:$HGPORT '?cmd=capabilities' | tr ' ' '\n' | grep '^compression=zlib$' > /dev/null
 #endif
 
   $ killdaemons.py
@@ -29,8 +27,7 @@ server.compressionengines can replace engines list wholesale
 
   $ hg --config server.compressionengines=none -R server serve -p $HGPORT -d --pid-file hg.pid
   $ cat hg.pid > $DAEMON_PIDS
-  $ get-with-headers.py 127.0.0.1:$HGPORT '?cmd=capabilities' | tr ' ' '\n' | grep compression
-  compression=none
+  $ get-with-headers.py 127.0.0.1:$HGPORT '?cmd=capabilities' | tr ' ' '\n' | grep '^compression=none$' > /dev/null
 
   $ killdaemons.py
 
@@ -38,8 +35,7 @@ Order of engines can also change
 
   $ hg --config server.compressionengines=none,zlib -R server serve -p $HGPORT -d --pid-file hg.pid
   $ cat hg.pid > $DAEMON_PIDS
-  $ get-with-headers.py 127.0.0.1:$HGPORT '?cmd=capabilities' | tr ' ' '\n' | grep compression
-  compression=none,zlib
+  $ get-with-headers.py 127.0.0.1:$HGPORT '?cmd=capabilities' | tr ' ' '\n' | grep '^compression=none,zlib$' > /dev/null
 
   $ killdaemons.py
 
