@@ -133,6 +133,11 @@ def expull(orig, repo, remote, *args, **kwargs):
                 bookmarks[bookmark] = remotebookmarks[bookmark]
         else:
             heads = kwargs.get('heads') or []
+            # heads may be passed as positional args
+            if len(args) > 0:
+                if args[0]:
+                    heads = args[0]
+                args = args[1:]
             for bookmark in bookmarks:
                 heads.append(remote.lookup(remotebookmarks[bookmark]))
             kwargs['bookmarks'] = bookmarks

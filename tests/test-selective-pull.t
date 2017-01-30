@@ -97,7 +97,7 @@ Specify bookmark to pull
 
 Create second remote
   $ cd ..
-  $ hg clone -q remoterepo secondremoterepo
+  $ hg clone -q ssh://user@dummy/remoterepo secondremoterepo
   $ cd secondremoterepo
   $ hg up -q 0238718db2b1
   $ hg book master
