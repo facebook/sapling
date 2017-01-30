@@ -13,6 +13,7 @@
   $ filterhtml () {
   >   sed -e "s/class=\"k\"/class=\"kn\"/g" \
   >       -e "s/class=\"mf\"/class=\"mi\"/g" \
+  >       -e "s/class=\"vm\"/class=\"n\"/g" \
   >       -e "s/class=\"\([cs]\)[h12]\"/class=\"\1\"/g"
   > }
 
