@@ -46,6 +46,9 @@ from hgext.convert import hg as converthg
 
 # namespace to use when recording an hg journal entry
 journalremotebookmarktype = 'remotebookmark'
+# name of the file that is used to mark that transition to selectivepull has
+# happened
+_selectivepullenabledfile = 'selectivepullenabled'
 
 def exbookcalcupdate(orig, ui, repo, checkout):
     '''Return a tuple (targetrev, movemarkfrom) indicating the rev to
@@ -123,9 +126,14 @@ def expull(orig, repo, remote, *args, **kwargs):
         # because it may slow down clients.
         path = activepath(repo.ui, remote)
         bookmarks = {}
-        for bookmark in readbookmarknames(repo, path):
-            if bookmark in remotebookmarks:
-                bookmarks[bookmark] = remotebookmarks[bookmark]
+        if repo.vfs.exists(_selectivepullenabledfile):
+            # 'selectivepullenabled' file is used for transition between
+            # non-selectivepull repo to selectivepull repo. It is used as
+            # indicator to whether "non-interesting" bookmarks were removed
+            # from remotenames file.
+            for bookmark in readbookmarknames(repo, path):
+                if bookmark in remotebookmarks:
+                    bookmarks[bookmark] = remotebookmarks[bookmark]
         if not bookmarks:
             bookmarks = _getselectivepulldefaultbookmarks(repo.ui,
                                                           remotebookmarks)
@@ -149,6 +157,13 @@ def expull(orig, repo, remote, *args, **kwargs):
 
     res = orig(repo, remote, *args, **kwargs)
     pullremotenames(repo, remote, bookmarks)
+    if repo.vfs.exists(_selectivepullenabledfile):
+        if not _isselectivepull(repo.ui):
+            repo.vfs.unlink(_selectivepullenabledfile)
+    else:
+        if _isselectivepull(repo.ui):
+            with repo.vfs(_selectivepullenabledfile, 'w') as f:
+                f.write('enabled') # content doesn't matter
     return res
 
 def pullremotenames(repo, remote, bookmarks):

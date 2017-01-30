@@ -200,3 +200,30 @@ Update to the remote bookmark from secondremote
 Update make sure revsets work
   $ hg up '.^'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+Make another clone with selectivepull disabled
+  $ hg clone -q ssh://user@dummy/remoterepo localrepo2
+  $ cd localrepo2
+  $ hg book --remote
+     default/master            2:0238718db2b1
+     default/thirdbook         0:1449e7934ec1
+
+Enable selectivepull and make a pull. Make sure only master bookmark is left
+  $ cat >> .hg/hgrc << EOF
+  > [remotenames]
+  > selectivepull=True
+  > selectivepulldefault=master
+  > EOF
+  $ hg pull -q
+  $ hg book --remote
+     default/master            2:0238718db2b1
+
+Temporarily disable selectivepull, pull, enable it again and pull again.
+Make sure only master bookmark is present
+  $ hg pull --config remotenames.selectivepull=False -q
+  $ hg book --remote
+     default/master            2:0238718db2b1
+     default/thirdbook         0:1449e7934ec1
+  $ hg pull -q
+  $ hg book --remote
+     default/master            2:0238718db2b1
