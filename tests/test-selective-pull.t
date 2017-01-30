@@ -29,7 +29,7 @@ Pull master bookmark
      default/master            0:1449e7934ec1
 
 Set up selective pull
-  $ cat >> $HGRCPATH << EOF
+  $ cat >> .hg/hgrc << EOF
   > [remotenames]
   > selectivepull=True
   > selectivepulldefault=master
