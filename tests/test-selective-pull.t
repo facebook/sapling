@@ -227,3 +227,14 @@ Make sure only master bookmark is present
   $ hg pull -q
   $ hg book --remote
      default/master            2:0238718db2b1
+
+Set two bookmarks in selectivepulldefault, make sure both of them were pulled
+  $ cat >> .hg/hgrc << EOF
+  > [remotenames]
+  > selectivepulldefault=master,thirdbook
+  > EOF
+  $ rm .hg/selectivepullenabled
+  $ hg pull -q
+  $ hg book --remote
+     default/master            2:0238718db2b1
+     default/thirdbook         0:1449e7934ec1

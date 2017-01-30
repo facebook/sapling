@@ -81,14 +81,19 @@ def _isselectivepull(ui):
     return ui.configbool('remotenames', 'selectivepull', False)
 
 def _getselectivepulldefaultbookmarks(ui, remotebookmarks):
-    default_book = ui.config('remotenames', 'selectivepulldefault')
-    if not default_book:
-        raise error.Abort(_('no default bookmark specified for selectivepull'))
-    if default_book in remotebookmarks:
-        return {default_book: remotebookmarks[default_book]}
-    else:
+    default_books = ui.configlist('remotenames', 'selectivepulldefault')
+    if not default_books:
+        raise error.Abort(_('no default bookmarks specified for selectivepull'))
+
+    result = {}
+    for default_book in default_books:
+        if default_book in remotebookmarks:
+            result[default_book] = remotebookmarks[default_book]
+
+    if not default_books:
         raise error.Abort(
-            _('default bookmark %s is not found on remote') % default_book)
+            _('default bookmarks %s are not found on remote') % default_books)
+    return result
 
 def _trypullremotebookmark(mayberemotebookmark, repo, ui):
     ui.warn(_('`%s` not found: assuming it is a remote bookmark '
