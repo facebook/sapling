@@ -737,7 +737,7 @@ files correctly after an interrupted update. Also verify that checking all
 hashes reveals it isn't clean.
 
 Start with clean dirstates:
-  $ hg up -qcr "8^"
+  $ hg up --quiet --check --rev "8^"
   $ sleep 1
   $ hg st
 Update standins without updating largefiles - large1 is modified and largeX is
