@@ -77,6 +77,16 @@ def expushop(orig, pushop, repo, remote, force=False, revs=None,
 def _isselectivepull(ui):
     return ui.configbool('remotenames', 'selectivepull', False)
 
+def _getselectivepulldefaultbookmarks(ui, remotebookmarks):
+    default_book = ui.config('remotenames', 'selectivepulldefault')
+    if not default_book:
+        raise error.Abort(_('no default bookmark specified for selectivepull'))
+    if default_book in remotebookmarks:
+        return {default_book: remotebookmarks[default_book]}
+    else:
+        raise error.Abort(
+            _('default bookmark %s is not found on remote') % default_book)
+
 def _trypullremotebookmark(mayberemotebookmark, repo, ui):
     ui.warn(_('`%s` not found: assuming it is a remote bookmark '
               'and trying to pull it\n') % mayberemotebookmark)
@@ -117,16 +127,8 @@ def expull(orig, repo, remote, *args, **kwargs):
             if bookmark in remotebookmarks:
                 bookmarks[bookmark] = remotebookmarks[bookmark]
         if not bookmarks:
-            default_book = repo.ui.config('remotenames', 'selectivepulldefault')
-            if not default_book:
-                raise error.Abort(
-                    _('no default bookmark specified for selectivepull'))
-            if default_book in remotebookmarks:
-                bookmarks = {default_book: remotebookmarks[default_book]}
-            else:
-                raise error.Abort(
-                    _('default bookmark %s is not found on remote') %
-                    default_book)
+            bookmarks = _getselectivepulldefaultbookmarks(repo.ui,
+                                                          remotebookmarks)
 
         if kwargs.get('bookmarks'):
             for bookmark in kwargs['bookmarks']:
