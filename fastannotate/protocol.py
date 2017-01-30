@@ -233,13 +233,17 @@ def localreposetup(ui, repo):
             master = _getmaster(self.ui)
             needupdatepaths = []
             lastnodemap = {}
-            for path in _filterfetchpaths(self, paths):
-                with context.annotatecontext(self, path) as actx:
-                    if not actx.isuptodate(master, strict=False):
-                        needupdatepaths.append(path)
-                        lastnodemap[path] = actx.lastnode
-            if needupdatepaths:
-                clientfetch(self, needupdatepaths, lastnodemap, peer)
+            try:
+                for path in _filterfetchpaths(self, paths):
+                    with context.annotatecontext(self, path) as actx:
+                        if not actx.isuptodate(master, strict=False):
+                            needupdatepaths.append(path)
+                            lastnodemap[path] = actx.lastnode
+                if needupdatepaths:
+                    clientfetch(self, needupdatepaths, lastnodemap, peer)
+            except Exception as ex:
+                # could be directory not writable or so, not fatal
+                self.ui.debug('fastannotate: prefetch failed: %r\n' % ex)
     repo.__class__ = fastannotaterepo
 
 def clientreposetup(ui, repo):

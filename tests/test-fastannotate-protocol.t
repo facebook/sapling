@@ -190,6 +190,21 @@ without downloading from the server
   3: 4
   4: 5
 
+if the fastannotate directory is not writable, the fctx mode still works
+
+  $ rm -rf $p1
+  $ touch $p1
+  $ hg annotate a --debug --traceback --config fastannotate.modes=fctx
+  fastannotate: a: cache broken and deleted
+  fastannotate: prefetch failed: * (glob)
+  fastannotate: a: cache broken and deleted
+  fastannotate: falling back to the vanilla annotate: * (glob)
+  0: 1
+  1: 2
+  2: 3
+  3: 4
+  4: 5
+
 with serverbuildondemand=False, the server will not build anything
 
   $ cat >> ../repo-server/.hg/hgrc <<EOF
