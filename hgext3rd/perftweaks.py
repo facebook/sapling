@@ -9,14 +9,16 @@
 from mercurial import (
     branchmap,
     dispatch,
+    extensions,
     merge,
+    phases,
     revlog,
     scmutil,
     tags,
     util,
 )
 from mercurial.extensions import wrapfunction
-from mercurial.node import nullid, nullrev
+from mercurial.node import bin, nullid, nullrev
 import errno
 import os
 
@@ -29,10 +31,26 @@ def extsetup(ui):
     if ui.configbool('perftweaks', 'preferdeltas'):
         wrapfunction(revlog.revlog, '_isgooddelta', _isgooddelta)
 
-    wrapfunction(branchmap.branchcache, 'write', _branchmapwrite)
-    wrapfunction(branchmap, 'read', _branchmapread)
     wrapfunction(dispatch, 'runcommand', _trackdirstatesizes)
     wrapfunction(dispatch, 'runcommand', _tracksparseprofiles)
+
+    # noderev cache creation
+    # The node rev cache is a cache of rev numbers that we are likely to do a
+    # node->rev lookup for. Since looking up rev->node is cheaper than
+    # node->rev, we use this cache to prefill the changelog radix tree with
+    # mappings.
+    wrapfunction(branchmap.branchcache, 'write', _branchmapwrite)
+    wrapfunction(phases.phasecache, 'advanceboundary', _editphases)
+    wrapfunction(phases.phasecache, 'retractboundary', _editphases)
+    try:
+        remotenames = extensions.find('remotenames')
+        wrapfunction(remotenames, 'saveremotenames', _saveremotenames)
+    except KeyError:
+        pass
+
+def reposetup(ui, repo):
+    if repo.local() is not None:
+        _preloadrevs(repo)
 
 def _readtagcache(orig, ui, repo):
     """Disables reading tags if the repo is known to not contain any."""
@@ -77,10 +95,6 @@ def _branchmapupdate(orig, self, repo, revgen):
     repo.ui.log('branchcache', 'perftweaks updated %s branch cache\n',
                 repo.filtername)
 
-def _branchmapread(orig, repo):
-    _preloadrevs(repo)
-    return orig(repo)
-
 def _branchmapwrite(orig, self, repo):
     result = orig(self, repo)
     if repo.ui.configbool('perftweaks', 'cachenoderevs', True):
@@ -93,6 +107,35 @@ def _branchmapwrite(orig, self, repo):
 
     return result
 
+def _saveremotenames(orig, repo, remotepath, branches=None, bookmarks=None):
+    result = orig(repo, remotepath, branches=branches, bookmarks=bookmarks)
+    if repo.ui.configbool('perftweaks', 'cachenoderevs', True):
+        revs = set()
+        nodemap = repo.changelog.nodemap
+        if bookmarks:
+            revs.update(nodemap[bin(n)] for b, n in bookmarks.iteritems())
+        if branches:
+            for branch, nodes in branches.iteritems():
+                revs.update(nodemap[n] for n in nodes)
+        name = 'remotenames-%s' % remotepath
+        _savepreloadrevs(repo, name, revs)
+
+    return result
+
+def _editphases(orig, self, repo, tr, *args):
+    result = orig(self, repo, tr, *args)
+    def _write(fp):
+        revs = set()
+        nodemap = repo.changelog.nodemap
+        for phase, roots in enumerate(self.phaseroots):
+            revs.update(nodemap[n] for n in roots)
+        _savepreloadrevs(repo, 'phaseroots', revs)
+
+    # We don't actually use the transaction file generator. It's just a hook so
+    # we can write out at the same time as phases.
+    tr.addfilegenerator('noderev-phaseroot', ('phaseroots-fake',), _write)
+
+    return result
 
 def _isgooddelta(orig, self, d, textlen):
     """Returns True if the given delta is good. Good means that it is within
