@@ -997,6 +997,7 @@ def calculateupdates(repo, wctx, mctx, ancestors, branchmerge, force,
         # Pick the best bid for each file
         repo.ui.note(_('\nauction for merging merge bids\n'))
         actions = {}
+        dms = [] # filenames that have dm actions
         for f, bids in sorted(fbids.items()):
             # bids is a mapping from action method to list af actions
             # Consensus?
@@ -1005,6 +1006,8 @@ def calculateupdates(repo, wctx, mctx, ancestors, branchmerge, force,
                 if all(a == l[0] for a in l[1:]): # len(bids) is > 1
                     repo.ui.note(_(" %s: consensus for %s\n") % (f, m))
                     actions[f] = l[0]
+                    if m == 'dm':
+                        dms.append(f)
                     continue
             # If keep is an option, just do it.
             if 'k' in bids:
@@ -1029,7 +1032,19 @@ def calculateupdates(repo, wctx, mctx, ancestors, branchmerge, force,
             repo.ui.warn(_(' %s: ambiguous merge - picked %s action\n') %
                          (f, m))
             actions[f] = l[0]
+            if m == 'dm':
+                dms.append(f)
             continue
+        # Work around 'dm' that can cause multiple actions for the same file
+        for f in dms:
+            dm, (f0, flags), msg = actions[f]
+            assert dm == 'dm', dm
+            m, args, msg = actions[f0]
+            if m == 'r':
+                # We have one bid for removing a file and another for moving it.
+                # These two could be merged as first move and then delete ...
+                # but instead drop moving and just delete.
+                del actions[f]
         repo.ui.note(_('end of auction\n\n'))
 
     _resolvetrivial(repo, wctx, mctx, ancestors[0], actions)
