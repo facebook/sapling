@@ -93,24 +93,31 @@ Criss cross merging
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
 
-  $ head *
-  ==> f1 <==
+  $ f --dump *
+  f1:
+  >>>
   5 second change
-  
-  ==> f2 <==
+  <<<
+  f2:
+  >>>
   6 second change
-  
-  ==> f2.base <==
+  <<<
+  f2.base:
+  >>>
   0 base
-  
-  ==> f2.local <==
+  <<<
+  f2.local:
+  >>>
   6 second change
-  
-  ==> f2.orig <==
+  <<<
+  f2.orig:
+  >>>
   6 second change
-  
-  ==> f2.other <==
+  <<<
+  f2.other:
+  >>>
   2 first change
+  <<<
 
   $ hg up -qC .
   $ hg merge -v --tool internal:dump 5 --config merge.preferancestor="null 40663881 3b08d"
@@ -156,12 +163,15 @@ Redo merge with merge.preferancestor="*" to enable bid merge
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
 
-  $ head *
-  ==> f1 <==
+  $ f --dump *
+  f1:
+  >>>
   5 second change
-  
-  ==> f2 <==
+  <<<
+  f2:
+  >>>
   6 second change
+  <<<
 
 
 The other way around:
@@ -198,12 +208,15 @@ The other way around:
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
 
-  $ head *
-  ==> f1 <==
+  $ f --dump *
+  f1:
+  >>>
   5 second change
-  
-  ==> f2 <==
+  <<<
+  f2:
+  >>>
   6 second change
+  <<<
 
 Verify how the output looks and and how verbose it is:
 
