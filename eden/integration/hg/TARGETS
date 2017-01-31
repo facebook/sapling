@@ -12,6 +12,6 @@ python_unittest(
   srcs = glob(['*.py']),
   env = artifacts['env'],
   deps = artifacts['deps'] + [
-    '@/eden/fs/integration/hg/lib:testutil',
+    '@/eden/integration/hg/lib:testutil',
   ],
 )
