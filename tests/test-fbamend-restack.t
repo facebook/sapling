@@ -1,7 +1,7 @@
 Set up test environment.
   $ . $TESTDIR/require-ext.sh directaccess evolve inhibit
   $ extpath=`dirname $TESTDIR`
-  $ cp $extpath/hgext3rd/fbamend.py $TESTTMP # use $TESTTMP substitution in message
+  $ cp $extpath/hgext3rd/fbamend.py $TESTTMP
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > directaccess=
@@ -9,7 +9,6 @@ Set up test environment.
   > fbamend=$TESTTMP/fbamend.py
   > inhibit=
   > rebase=
-  > strip=
   > [experimental]
   > evolution = createmarkers
   > evolutioncommands = prev next split fold
@@ -17,19 +16,18 @@ Set up test environment.
   $ mkcommit() {
   >   echo "$1" > "$1"
   >   hg add "$1"
-  >   echo "add $1" > msg
-  >   hg ci -l msg
+  >   hg ci -m "add $1"
   > }
   $ reset() {
   >   cd ..
-  >   rm -rf rebasestack
-  >   hg init rebasestack
-  >   cd rebasestack
+  >   rm -rf restack
+  >   hg init restack
+  >   cd restack
   > }
   $ showgraph() {
   >   hg log --graph -T "{rev} {desc|firstline}" | sed \$d
   > }
-  $ hg init rebasestack && cd rebasestack
+  $ hg init restack && cd restack
 
 Note: Repositories populated by `hg debugbuilddag` don't seem to
 correctly show all commits in the log output. Manually creating the
