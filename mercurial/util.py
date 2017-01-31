@@ -550,7 +550,7 @@ class sortdict(dict):
         except ValueError:
             pass
     def keys(self):
-        return self._list
+        return self._list[:]
     def iterkeys(self):
         return self._list.__iter__()
     def iteritems(self):
