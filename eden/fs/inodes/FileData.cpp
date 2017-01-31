@@ -32,7 +32,17 @@ namespace eden {
 using folly::checkUnixError;
 
 FileData::FileData(FileInode* inode, std::mutex& mutex, TreeInode::Entry* entry)
-    : inode_(inode), mutex_(mutex), entry_(entry) {}
+    : inode_(inode), mutex_(mutex), entry_(entry) {
+  // The rest of the FileData code assumes that we always have file_ if
+  // this is a materialized file.
+  if (entry_->materialized) {
+    // TODO: update the overlay code to use inode numbers.
+    // This file might not have a path if it has been unlinked.
+    auto filePath = inode->getParentBuggy()->getOverlay()->getContentDir() +
+        inode->getPathBuggy();
+    file_ = folly::File(filePath.c_str(), O_RDWR | O_NOFOLLOW, 0600);
+  }
+}
 
 FileData::FileData(
     FileInode* inode,
