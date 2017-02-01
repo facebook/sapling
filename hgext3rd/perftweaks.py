@@ -113,10 +113,19 @@ def _saveremotenames(orig, repo, remotepath, branches=None, bookmarks=None):
         revs = set()
         nodemap = repo.changelog.nodemap
         if bookmarks:
-            revs.update(nodemap[bin(n)] for b, n in bookmarks.iteritems())
+            for b, n in bookmarks.iteritems():
+                n = bin(n)
+                # remotenames can pass bookmarks that don't exist in the
+                # changelog yet. It filters them internally, but we need to as
+                # well.
+                if n in nodemap:
+                    revs.add(nodemap[n])
         if branches:
             for branch, nodes in branches.iteritems():
-                revs.update(nodemap[n] for n in nodes)
+                for n in nodes:
+                    if n in nodemap:
+                        revs.add(nodemap[n])
+
         name = 'remotenames-%s' % remotepath
         _savepreloadrevs(repo, name, revs)
 
@@ -128,7 +137,9 @@ def _editphases(orig, self, repo, tr, *args):
         revs = set()
         nodemap = repo.changelog.nodemap
         for phase, roots in enumerate(self.phaseroots):
-            revs.update(nodemap[n] for n in roots)
+            for n in roots:
+                if n in nodemap:
+                    revs.add(nodemap[n])
         _savepreloadrevs(repo, 'phaseroots', revs)
 
     # We don't actually use the transaction file generator. It's just a hook so
