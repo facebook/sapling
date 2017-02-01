@@ -1860,27 +1860,6 @@ def copy(ui, repo, *pats, **opts):
     with repo.wlock(False):
         return cmdutil.copy(ui, repo, pats, opts)
 
-@command('debugpushkey', [], _('REPO NAMESPACE [KEY OLD NEW]'), norepo=True)
-def debugpushkey(ui, repopath, namespace, *keyinfo, **opts):
-    '''access the pushkey key/value protocol
-
-    With two args, list the keys in the given namespace.
-
-    With five args, set a key to new if it currently is set to old.
-    Reports success or failure.
-    '''
-
-    target = hg.peer(ui, {}, repopath)
-    if keyinfo:
-        key, old, new = keyinfo
-        r = target.pushkey(namespace, key, old, new)
-        ui.status(str(r) + '\n')
-        return not r
-    else:
-        for k, v in sorted(target.listkeys(namespace).iteritems()):
-            ui.write("%s\t%s\n" % (k.encode('string-escape'),
-                                   v.encode('string-escape')))
-
 @command('debugpvec', [], _('A B'))
 def debugpvec(ui, repo, a, b=None):
     ca = scmutil.revsingle(repo, a)
