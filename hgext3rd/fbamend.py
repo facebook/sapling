@@ -501,6 +501,9 @@ def wrapsplit(orig, ui, repo, *revs, **opts):
                 top = repo.revs('allsuccessors(%d)', rev).last()
                 _restackonce(ui, repo, top)
 
+    # Fix up bookmarks, if any.
+    _fixbookmarks(repo, [rev])
+
     return ret
 
 def wrapfold(orig, ui, repo, *revs, **opts):
@@ -530,6 +533,9 @@ def wrapfold(orig, ui, repo, *revs, **opts):
                 # post-transaction hook misses this changeset.
                 visible = repo.unfiltered().revs('(%ld) - hidden()', revs)
                 _deinhibit(repo, (repo[r] for r in visible))
+
+    # Fix up bookmarks, if any.
+    _fixbookmarks(repo, revs)
 
     return ret
 
@@ -1065,6 +1071,20 @@ def _setbookmark(repo, tr, bookmark, rev):
     node = repo.changelog.node(rev)
     repo._bookmarks[bookmark] = node
     repo._bookmarks.recordchange(tr)
+
+def _fixbookmarks(repo, revs):
+    """Make any bookmarks pointing to the given revisions point to the
+       latest version of each respective revision.
+    """
+    repo = repo.unfiltered()
+    cl = repo.changelog
+    with nested(repo.wlock(), repo.lock()):
+        with repo.transaction('movebookmarks') as tr:
+            for rev in revs:
+                latest = cl.node(_latest(repo, rev))
+                for bm in repo.nodebookmarks(cl.node(rev)):
+                    repo._bookmarks[bm] = latest
+            repo._bookmarks.recordchange(tr)
 
 ### bookmarks api compatibility layer ###
 def bmactivate(repo, mark):

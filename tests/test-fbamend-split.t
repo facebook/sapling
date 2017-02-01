@@ -305,3 +305,44 @@ Test --norebase flag.
   o  12 add a1 and a2
   |
   o  11 add a1 and a2
+
+Test that bookmarks are correctly moved.
+  $ reset
+  $ mkcommit a
+  $ hg book test1
+  $ hg book test2
+  $ hg bookmarks
+     test1                     0:* (glob)
+   * test2                     0:* (glob)
+  $ hg split << EOF
+  > y
+  > y
+  > n
+  > y
+  > EOF
+  (leaving bookmark test2)
+  0 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  adding a1
+  adding a2
+  diff --git a/a1 b/a1
+  new file mode 100644
+  examine changes to 'a1'? [Ynesfdaq?] y
+  
+  @@ -0,0 +1,1 @@
+  +a1
+  record change 1/2 to 'a1'? [Ynesfdaq?] y
+  
+  diff --git a/a2 b/a2
+  new file mode 100644
+  examine changes to 'a2'? [Ynesfdaq?] n
+  
+  created new head
+  Done splitting? [yN] y
+
+  $ showgraph
+  @  2 add a1 and a2
+  |
+  o  1 add a1 and a2
+  $ hg bookmarks
+     test1                     2:* (glob)
+   * test2                     2:* (glob)

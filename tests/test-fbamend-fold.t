@@ -224,3 +224,20 @@ manually inhibit any visible obsolete commits in the old stack.
   o |  6 r1
   |/
   o  0 r0
+
+Test that bookmarks are correctly moved.
+  $ reset
+  $ hg debugbuilddag +3
+  $ hg bookmarks -r 1 test1
+  $ hg bookmarks -r 2 test2_1
+  $ hg bookmarks -r 2 test2_2
+  $ hg bookmarks
+     test1                     1:* (glob)
+     test2_1                   2:* (glob)
+     test2_2                   2:* (glob)
+  $ hg fold --exact 1 2
+  2 changesets folded
+  $ hg bookmarks
+     test1                     3:* (glob)
+     test2_1                   3:* (glob)
+     test2_2                   3:* (glob)
