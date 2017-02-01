@@ -1863,19 +1863,6 @@ def copy(ui, repo, *pats, **opts):
     with repo.wlock(False):
         return cmdutil.copy(ui, repo, pats, opts)
 
-@command('debugknown', [], _('REPO ID...'), norepo=True)
-def debugknown(ui, repopath, *ids, **opts):
-    """test whether node ids are known to a repo
-
-    Every ID must be a full-length hex node id string. Returns a list of 0s
-    and 1s indicating unknown/known.
-    """
-    repo = hg.peer(ui, opts, repopath)
-    if not repo.capable('known'):
-        raise error.Abort("known() not supported by target repository")
-    flags = repo.known([bin(s) for s in ids])
-    ui.write("%s\n" % ("".join([f and "1" or "0" for f in flags])))
-
 @command('debuglabelcomplete', [], _('LABEL...'))
 def debuglabelcomplete(ui, repo, *args):
     '''backwards compatibility with old bash completion scripts (DEPRECATED)'''
