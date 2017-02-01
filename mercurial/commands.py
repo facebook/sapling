@@ -16,7 +16,6 @@ import time
 
 from .i18n import _
 from .node import (
-    bin,
     hex,
     nullid,
     nullrev,
@@ -1860,117 +1859,6 @@ def copy(ui, repo, *pats, **opts):
     """
     with repo.wlock(False):
         return cmdutil.copy(ui, repo, pats, opts)
-
-@command('debugobsolete',
-        [('', 'flags', 0, _('markers flag')),
-         ('', 'record-parents', False,
-          _('record parent information for the precursor')),
-         ('r', 'rev', [], _('display markers relevant to REV')),
-         ('', 'index', False, _('display index of the marker')),
-         ('', 'delete', [], _('delete markers specified by indices')),
-        ] + commitopts2 + formatteropts,
-         _('[OBSOLETED [REPLACEMENT ...]]'))
-def debugobsolete(ui, repo, precursor=None, *successors, **opts):
-    """create arbitrary obsolete marker
-
-    With no arguments, displays the list of obsolescence markers."""
-
-    def parsenodeid(s):
-        try:
-            # We do not use revsingle/revrange functions here to accept
-            # arbitrary node identifiers, possibly not present in the
-            # local repository.
-            n = bin(s)
-            if len(n) != len(nullid):
-                raise TypeError()
-            return n
-        except TypeError:
-            raise error.Abort('changeset references must be full hexadecimal '
-                             'node identifiers')
-
-    if opts.get('delete'):
-        indices = []
-        for v in opts.get('delete'):
-            try:
-                indices.append(int(v))
-            except ValueError:
-                raise error.Abort(_('invalid index value: %r') % v,
-                                  hint=_('use integers for indices'))
-
-        if repo.currenttransaction():
-            raise error.Abort(_('cannot delete obsmarkers in the middle '
-                                'of transaction.'))
-
-        with repo.lock():
-            n = repair.deleteobsmarkers(repo.obsstore, indices)
-            ui.write(_('deleted %i obsolescence markers\n') % n)
-
-        return
-
-    if precursor is not None:
-        if opts['rev']:
-            raise error.Abort('cannot select revision when creating marker')
-        metadata = {}
-        metadata['user'] = opts['user'] or ui.username()
-        succs = tuple(parsenodeid(succ) for succ in successors)
-        l = repo.lock()
-        try:
-            tr = repo.transaction('debugobsolete')
-            try:
-                date = opts.get('date')
-                if date:
-                    date = util.parsedate(date)
-                else:
-                    date = None
-                prec = parsenodeid(precursor)
-                parents = None
-                if opts['record_parents']:
-                    if prec not in repo.unfiltered():
-                        raise error.Abort('cannot used --record-parents on '
-                                         'unknown changesets')
-                    parents = repo.unfiltered()[prec].parents()
-                    parents = tuple(p.node() for p in parents)
-                repo.obsstore.create(tr, prec, succs, opts['flags'],
-                                     parents=parents, date=date,
-                                     metadata=metadata)
-                tr.close()
-            except ValueError as exc:
-                raise error.Abort(_('bad obsmarker input: %s') % exc)
-            finally:
-                tr.release()
-        finally:
-            l.release()
-    else:
-        if opts['rev']:
-            revs = scmutil.revrange(repo, opts['rev'])
-            nodes = [repo[r].node() for r in revs]
-            markers = list(obsolete.getmarkers(repo, nodes=nodes))
-            markers.sort(key=lambda x: x._data)
-        else:
-            markers = obsolete.getmarkers(repo)
-
-        markerstoiter = markers
-        isrelevant = lambda m: True
-        if opts.get('rev') and opts.get('index'):
-            markerstoiter = obsolete.getmarkers(repo)
-            markerset = set(markers)
-            isrelevant = lambda m: m in markerset
-
-        fm = ui.formatter('debugobsolete', opts)
-        for i, m in enumerate(markerstoiter):
-            if not isrelevant(m):
-                # marker can be irrelevant when we're iterating over a set
-                # of markers (markerstoiter) which is bigger than the set
-                # of markers we want to display (markers)
-                # this can happen if both --index and --rev options are
-                # provided and thus we need to iterate over all of the markers
-                # to get the correct indices, but only display the ones that
-                # are relevant to --rev value
-                continue
-            fm.startitem()
-            ind = i if opts.get('index') else None
-            cmdutil.showmarker(fm, m, index=ind)
-        fm.end()
 
 @command('debugpathcomplete',
          [('f', 'full', None, _('complete an entire path')),
