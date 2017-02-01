@@ -62,7 +62,7 @@ def _commitfiltered(repo, ctx, match):
 
     # Filter copies
     copied = copies.pathcopies(base, ctx)
-    copied = dict((src, dst) for src, dst in copied.iteritems()
+    copied = dict((dst, src) for dst, src in copied.iteritems()
                   if dst in files)
     def filectxfn(repo, memctx, path, contentctx=ctx, redirect=()):
         if path not in contentctx:
