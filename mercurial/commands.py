@@ -13,8 +13,6 @@ import os
 import re
 import socket
 import string
-import sys
-import tempfile
 import time
 
 from .i18n import _
@@ -51,7 +49,6 @@ from . import (
     obsolete,
     patch,
     phases,
-    policy,
     pvec,
     pycompat,
     repair,
@@ -61,7 +58,6 @@ from . import (
     server,
     smartset,
     sshserver,
-    sslutil,
     streamclone,
     templatekw,
     templater,
@@ -1866,172 +1862,6 @@ def copy(ui, repo, *pats, **opts):
     """
     with repo.wlock(False):
         return cmdutil.copy(ui, repo, pats, opts)
-
-@command('debuginstall', [] + formatteropts, '', norepo=True)
-def debuginstall(ui, **opts):
-    '''test Mercurial installation
-
-    Returns 0 on success.
-    '''
-
-    def writetemp(contents):
-        (fd, name) = tempfile.mkstemp(prefix="hg-debuginstall-")
-        f = os.fdopen(fd, "wb")
-        f.write(contents)
-        f.close()
-        return name
-
-    problems = 0
-
-    fm = ui.formatter('debuginstall', opts)
-    fm.startitem()
-
-    # encoding
-    fm.write('encoding', _("checking encoding (%s)...\n"), encoding.encoding)
-    err = None
-    try:
-        encoding.fromlocal("test")
-    except error.Abort as inst:
-        err = inst
-        problems += 1
-    fm.condwrite(err, 'encodingerror', _(" %s\n"
-                 " (check that your locale is properly set)\n"), err)
-
-    # Python
-    fm.write('pythonexe', _("checking Python executable (%s)\n"),
-             pycompat.sysexecutable)
-    fm.write('pythonver', _("checking Python version (%s)\n"),
-             ("%d.%d.%d" % sys.version_info[:3]))
-    fm.write('pythonlib', _("checking Python lib (%s)...\n"),
-             os.path.dirname(pycompat.fsencode(os.__file__)))
-
-    security = set(sslutil.supportedprotocols)
-    if sslutil.hassni:
-        security.add('sni')
-
-    fm.write('pythonsecurity', _("checking Python security support (%s)\n"),
-             fm.formatlist(sorted(security), name='protocol',
-                           fmt='%s', sep=','))
-
-    # These are warnings, not errors. So don't increment problem count. This
-    # may change in the future.
-    if 'tls1.2' not in security:
-        fm.plain(_('  TLS 1.2 not supported by Python install; '
-                   'network connections lack modern security\n'))
-    if 'sni' not in security:
-        fm.plain(_('  SNI not supported by Python install; may have '
-                   'connectivity issues with some servers\n'))
-
-    # TODO print CA cert info
-
-    # hg version
-    hgver = util.version()
-    fm.write('hgver', _("checking Mercurial version (%s)\n"),
-             hgver.split('+')[0])
-    fm.write('hgverextra', _("checking Mercurial custom build (%s)\n"),
-             '+'.join(hgver.split('+')[1:]))
-
-    # compiled modules
-    fm.write('hgmodulepolicy', _("checking module policy (%s)\n"),
-             policy.policy)
-    fm.write('hgmodules', _("checking installed modules (%s)...\n"),
-             os.path.dirname(__file__))
-
-    err = None
-    try:
-        from . import (
-            base85,
-            bdiff,
-            mpatch,
-            osutil,
-        )
-        dir(bdiff), dir(mpatch), dir(base85), dir(osutil) # quiet pyflakes
-    except Exception as inst:
-        err = inst
-        problems += 1
-    fm.condwrite(err, 'extensionserror', " %s\n", err)
-
-    compengines = util.compengines._engines.values()
-    fm.write('compengines', _('checking registered compression engines (%s)\n'),
-             fm.formatlist(sorted(e.name() for e in compengines),
-                           name='compengine', fmt='%s', sep=', '))
-    fm.write('compenginesavail', _('checking available compression engines '
-                                   '(%s)\n'),
-             fm.formatlist(sorted(e.name() for e in compengines
-                                  if e.available()),
-                           name='compengine', fmt='%s', sep=', '))
-    wirecompengines = util.compengines.supportedwireengines(util.SERVERROLE)
-    fm.write('compenginesserver', _('checking available compression engines '
-                                    'for wire protocol (%s)\n'),
-             fm.formatlist([e.name() for e in wirecompengines
-                            if e.wireprotosupport()],
-                           name='compengine', fmt='%s', sep=', '))
-
-    # templates
-    p = templater.templatepaths()
-    fm.write('templatedirs', 'checking templates (%s)...\n', ' '.join(p))
-    fm.condwrite(not p, '', _(" no template directories found\n"))
-    if p:
-        m = templater.templatepath("map-cmdline.default")
-        if m:
-            # template found, check if it is working
-            err = None
-            try:
-                templater.templater.frommapfile(m)
-            except Exception as inst:
-                err = inst
-                p = None
-            fm.condwrite(err, 'defaulttemplateerror', " %s\n", err)
-        else:
-            p = None
-        fm.condwrite(p, 'defaulttemplate',
-                     _("checking default template (%s)\n"), m)
-        fm.condwrite(not m, 'defaulttemplatenotfound',
-                     _(" template '%s' not found\n"), "default")
-    if not p:
-        problems += 1
-    fm.condwrite(not p, '',
-                 _(" (templates seem to have been installed incorrectly)\n"))
-
-    # editor
-    editor = ui.geteditor()
-    editor = util.expandpath(editor)
-    fm.write('editor', _("checking commit editor... (%s)\n"), editor)
-    cmdpath = util.findexe(pycompat.shlexsplit(editor)[0])
-    fm.condwrite(not cmdpath and editor == 'vi', 'vinotfound',
-                 _(" No commit editor set and can't find %s in PATH\n"
-                   " (specify a commit editor in your configuration"
-                   " file)\n"), not cmdpath and editor == 'vi' and editor)
-    fm.condwrite(not cmdpath and editor != 'vi', 'editornotfound',
-                 _(" Can't find editor '%s' in PATH\n"
-                   " (specify a commit editor in your configuration"
-                   " file)\n"), not cmdpath and editor)
-    if not cmdpath and editor != 'vi':
-        problems += 1
-
-    # check username
-    username = None
-    err = None
-    try:
-        username = ui.username()
-    except error.Abort as e:
-        err = e
-        problems += 1
-
-    fm.condwrite(username, 'username',  _("checking username (%s)\n"), username)
-    fm.condwrite(err, 'usernameerror', _("checking username...\n %s\n"
-        " (specify a username in your configuration file)\n"), err)
-
-    fm.condwrite(not problems, '',
-                 _("no problems detected\n"))
-    if not problems:
-        fm.data(problems=problems)
-    fm.condwrite(problems, 'problems',
-                 _("%d problems detected,"
-                   " please check your install!\n"), problems)
-    fm.end()
-
-    return problems
 
 @command('debugknown', [], _('REPO ID...'), norepo=True)
 def debugknown(ui, repopath, *ids, **opts):
