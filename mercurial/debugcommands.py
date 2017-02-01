@@ -17,6 +17,7 @@ from .i18n import _
 from .node import (
     bin,
     hex,
+    nullhex,
     nullid,
     short,
 )
@@ -36,6 +37,7 @@ from . import (
     hg,
     localrepo,
     lock as lockmod,
+    merge as mergemod,
     policy,
     pycompat,
     repair,
@@ -1040,6 +1042,105 @@ def debugknown(ui, repopath, *ids, **opts):
 def debuglabelcomplete(ui, repo, *args):
     '''backwards compatibility with old bash completion scripts (DEPRECATED)'''
     commands.debugnamecomplete(ui, repo, *args)
+
+@command('debugmergestate', [], '')
+def debugmergestate(ui, repo, *args):
+    """print merge state
+
+    Use --verbose to print out information about whether v1 or v2 merge state
+    was chosen."""
+    def _hashornull(h):
+        if h == nullhex:
+            return 'null'
+        else:
+            return h
+
+    def printrecords(version):
+        ui.write(('* version %s records\n') % version)
+        if version == 1:
+            records = v1records
+        else:
+            records = v2records
+
+        for rtype, record in records:
+            # pretty print some record types
+            if rtype == 'L':
+                ui.write(('local: %s\n') % record)
+            elif rtype == 'O':
+                ui.write(('other: %s\n') % record)
+            elif rtype == 'm':
+                driver, mdstate = record.split('\0', 1)
+                ui.write(('merge driver: %s (state "%s")\n')
+                         % (driver, mdstate))
+            elif rtype in 'FDC':
+                r = record.split('\0')
+                f, state, hash, lfile, afile, anode, ofile = r[0:7]
+                if version == 1:
+                    onode = 'not stored in v1 format'
+                    flags = r[7]
+                else:
+                    onode, flags = r[7:9]
+                ui.write(('file: %s (record type "%s", state "%s", hash %s)\n')
+                         % (f, rtype, state, _hashornull(hash)))
+                ui.write(('  local path: %s (flags "%s")\n') % (lfile, flags))
+                ui.write(('  ancestor path: %s (node %s)\n')
+                         % (afile, _hashornull(anode)))
+                ui.write(('  other path: %s (node %s)\n')
+                         % (ofile, _hashornull(onode)))
+            elif rtype == 'f':
+                filename, rawextras = record.split('\0', 1)
+                extras = rawextras.split('\0')
+                i = 0
+                extrastrings = []
+                while i < len(extras):
+                    extrastrings.append('%s = %s' % (extras[i], extras[i + 1]))
+                    i += 2
+
+                ui.write(('file extras: %s (%s)\n')
+                         % (filename, ', '.join(extrastrings)))
+            elif rtype == 'l':
+                labels = record.split('\0', 2)
+                labels = [l for l in labels if len(l) > 0]
+                ui.write(('labels:\n'))
+                ui.write(('  local: %s\n' % labels[0]))
+                ui.write(('  other: %s\n' % labels[1]))
+                if len(labels) > 2:
+                    ui.write(('  base:  %s\n' % labels[2]))
+            else:
+                ui.write(('unrecognized entry: %s\t%s\n')
+                         % (rtype, record.replace('\0', '\t')))
+
+    # Avoid mergestate.read() since it may raise an exception for unsupported
+    # merge state records. We shouldn't be doing this, but this is OK since this
+    # command is pretty low-level.
+    ms = mergemod.mergestate(repo)
+
+    # sort so that reasonable information is on top
+    v1records = ms._readrecordsv1()
+    v2records = ms._readrecordsv2()
+    order = 'LOml'
+    def key(r):
+        idx = order.find(r[0])
+        if idx == -1:
+            return (1, r[1])
+        else:
+            return (0, idx)
+    v1records.sort(key=key)
+    v2records.sort(key=key)
+
+    if not v1records and not v2records:
+        ui.write(('no merge state found\n'))
+    elif not v2records:
+        ui.note(('no version 2 merge state\n'))
+        printrecords(1)
+    elif ms._v1v2match(v1records, v2records):
+        ui.note(('v1 and v2 states match: using v2\n'))
+        printrecords(2)
+    else:
+        ui.note(('v1 and v2 states mismatch: using v1\n'))
+        printrecords(1)
+        if ui.verbose:
+            printrecords(2)
 
 @command('debugupgraderepo', [
     ('o', 'optimize', [], _('extra optimization to perform'), _('NAME')),
