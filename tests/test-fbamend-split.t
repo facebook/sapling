@@ -49,6 +49,12 @@ Initialize repo.
   |
   o  0 add a1 and a2
 
+Test that split behaves correctly on error.
+  $ hg split -r 0 1 2
+  abort: more than one revset is given
+  (use either `hg split <rs>` or `hg split --rev <rs>`, not both)
+  [255]
+
 Test basic case of splitting a head.
   $ hg split << EOF
   > y

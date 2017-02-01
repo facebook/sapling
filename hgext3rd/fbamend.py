@@ -482,17 +482,21 @@ def fixupamend(ui, repo):
     finally:
         lockmod.release(wlock, lock, tr)
 
-def wrapsplit(orig, ui, repo, *revs, **opts):
+def wrapsplit(orig, ui, repo, *args, **opts):
     """Automatically rebase unstable descendants after split."""
     # Find the rev number of the changeset to split. This needs to happen
     # before splitting in case the input revset is relative to the working
     # copy parent, since `hg split` may update to a new changeset.
-    revs = (list(revs) + opts.get('rev', [])) or ['.']
+    revs = (list(args) + opts.get('rev', [])) or ['.']
     rev = scmutil.revsingle(repo, revs[0]).rev()
     torebase = repo.revs('descendants(%d) - (%d)', rev, rev)
 
     # Perform split.
-    ret = orig(ui, repo, *revs, **opts)
+    ret = orig(ui, repo, *args, **opts)
+
+    # Return early if split failed.
+    if ret:
+        return ret
 
     # Fix up stack.
     if not opts['norebase'] and torebase:
@@ -506,19 +510,23 @@ def wrapsplit(orig, ui, repo, *revs, **opts):
 
     return ret
 
-def wrapfold(orig, ui, repo, *revs, **opts):
+def wrapfold(orig, ui, repo, *args, **opts):
     """Automatically rebase unstable descendants after fold."""
     # Find the rev numbers of the changesets that will be folded. This needs
     # to happen before folding in case the input revset is relative to the
     # working copy parent, since `hg fold` may update to a new changeset.
-    revs = list(revs) + opts.get('rev', [])
+    revs = list(args) + opts.get('rev', [])
     revs = scmutil.revrange(repo, revs)
     if not opts['exact']:
         revs = repo.revs('(%ld::.) or (.::%ld)', revs, revs)
     torebase = repo.revs('descendants(%ld) - (%ld)', revs, revs)
 
     # Perform fold.
-    ret = orig(ui, repo, *revs, **opts)
+    ret = orig(ui, repo, *args, **opts)
+
+    # Return early if fold failed.
+    if ret:
+        return ret
 
     # Fix up stack.
     with nested(repo.wlock(), repo.lock()):

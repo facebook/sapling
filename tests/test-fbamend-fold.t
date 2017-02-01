@@ -45,6 +45,11 @@ Set up repo.
   |
   o  0 r0
 
+Test that a fold works correctly on error.
+  $ hg fold --exact 7 7
+  single revision specified, nothing to fold
+  [1]
+
 Test simple case of folding a head. Should work normally.
   $ hg up 7
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
