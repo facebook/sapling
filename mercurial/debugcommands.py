@@ -1142,6 +1142,26 @@ def debugmergestate(ui, repo, *args):
         if ui.verbose:
             printrecords(2)
 
+@command('debugnamecomplete', [], _('NAME...'))
+def debugnamecomplete(ui, repo, *args):
+    '''complete "names" - tags, open branch names, bookmark names'''
+
+    names = set()
+    # since we previously only listed open branches, we will handle that
+    # specially (after this for loop)
+    for name, ns in repo.names.iteritems():
+        if name != 'branches':
+            names.update(ns.listnames(repo))
+    names.update(tag for (tag, heads, tip, closed)
+                 in repo.branchmap().iterbranches() if not closed)
+    completions = set()
+    if not args:
+        args = ['']
+    for a in args:
+        completions.update(n for n in names if n.startswith(a))
+    ui.write('\n'.join(sorted(completions)))
+    ui.write('\n')
+
 @command('debugupgraderepo', [
     ('o', 'optimize', [], _('extra optimization to perform'), _('NAME')),
     ('', 'run', False, _('performs an upgrade')),
