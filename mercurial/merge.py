@@ -1039,8 +1039,7 @@ def calculateupdates(repo, wctx, mctx, ancestors, branchmerge, force,
         for f in dms:
             dm, (f0, flags), msg = actions[f]
             assert dm == 'dm', dm
-            m, args, msg = actions[f0]
-            if m == 'r':
+            if f0 in actions and actions[f0][0] == 'r':
                 # We have one bid for removing a file and another for moving it.
                 # These two could be merged as first move and then delete ...
                 # but instead drop moving and just delete.
