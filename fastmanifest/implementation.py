@@ -783,6 +783,7 @@ class hybridmanifestctx(object):
         self._opener = repo.svfs
         self._revlog = revlog
         self._node = node
+        self._hybridmanifest = None
 
     def copy(self):
         memmf = manifest.memmanifestctx(self._repo)
@@ -794,17 +795,19 @@ class hybridmanifestctx(object):
         return self._revlog.parents(self._node)
 
     def read(self):
-        def loadflat():
-            # This should eventually be made lazy loaded, so consumers can
-            # access the node/p1/linkrev data without having to parse the whole
-            # manifest.
-            data = self._revlog.revision(self._node)
-            arraytext = array.array('c', data)
-            self._revlog._fulltextcache[self._node] = arraytext
-            return manifest.manifestdict(data)
+        if self._hybridmanifest is None:
+            def loadflat():
+                # This should eventually be made lazy loaded, so consumers can
+                # access the node/p1/linkrev data without having to parse the
+                # whole manifest.
+                data = self._revlog.revision(self._node)
+                arraytext = array.array('c', data)
+                self._revlog._fulltextcache[self._node] = arraytext
+                return manifest.manifestdict(data)
 
-        return hybridmanifest(self._ui, self._opener, loadflat=loadflat,
-                                 node=self._node)
+            self._hybridmanifest = hybridmanifest(
+                self._ui, self._opener, loadflat=loadflat, node=self._node)
+        return self._hybridmanifest
 
     def readdelta(self):
         rl = self._revlog
@@ -839,13 +842,23 @@ class manifestfactory(object):
         self.ui = ui
 
     def newgetitem(self, orig, *args, **kwargs):
-        # args[0] == instance of manifestlog
-        # args[1] = node
-        return hybridmanifestctx(
-            self.ui,
-            args[0]._repo,
-            args[0]._revlog,
-            args[1])
+        mfl = args[0]
+        node = args[1]
+        dir = ''
+
+        if node in mfl._dirmancache.get(dir, ()):
+            return mfl._dirmancache[dir][node]
+
+        m = hybridmanifestctx(self.ui, mfl._repo, mfl._revlog, node)
+
+        if node != revlog.nullid:
+            mancache = mfl._dirmancache.get(dir)
+            if mancache is None:
+                mancache = util.lrucachedict(mfl.cachesize)
+                mfl._dirmancache[dir] = mancache
+            mancache[node] = m
+
+        return m
 
     def add(self, orig, *args, **kwargs):
         origself, m, transaction, link, p1, p2, added, removed = args[:8]
