@@ -1863,11 +1863,6 @@ def copy(ui, repo, *pats, **opts):
     with repo.wlock(False):
         return cmdutil.copy(ui, repo, pats, opts)
 
-@command('debuglabelcomplete', [], _('LABEL...'))
-def debuglabelcomplete(ui, repo, *args):
-    '''backwards compatibility with old bash completion scripts (DEPRECATED)'''
-    debugnamecomplete(ui, repo, *args)
-
 @command('debugmergestate', [], '')
 def debugmergestate(ui, repo, *args):
     """print merge state

@@ -1036,6 +1036,11 @@ def debugknown(ui, repopath, *ids, **opts):
     flags = repo.known([bin(s) for s in ids])
     ui.write("%s\n" % ("".join([f and "1" or "0" for f in flags])))
 
+@command('debuglabelcomplete', [], _('LABEL...'))
+def debuglabelcomplete(ui, repo, *args):
+    '''backwards compatibility with old bash completion scripts (DEPRECATED)'''
+    commands.debugnamecomplete(ui, repo, *args)
+
 @command('debugupgraderepo', [
     ('o', 'optimize', [], _('extra optimization to perform'), _('NAME')),
     ('', 'run', False, _('performs an upgrade')),
