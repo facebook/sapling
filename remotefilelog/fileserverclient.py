@@ -11,7 +11,6 @@ from mercurial import util, sshpeer, hg, error, util, wireproto, httppeer
 from mercurial import extensions
 import hashlib, os, lz4, time, io, struct
 import itertools
-import threading
 
 import constants, datapack, historypack, shallowutil
 from shallowutil import readexactly, readunpack
@@ -211,75 +210,20 @@ def _getfiles(
         start = i
         end = min(len(missed), start + 10000)
         i = end
+        for missingid in missed[start:end]:
+            # issue new request
+            versionid = missingid[-40:]
+            file = idmap[missingid]
+            sshrequest = "%s%s\n" % (versionid, file)
+            remote.pipeo.write(sshrequest)
+        remote.pipeo.flush()
 
-        def worker():
-            try:
-                # issue new request
-                for missingid in missed[start:end]:
-                    if worker.stop:
-                        # This allows to gracefully exit the workerthread if an
-                        # exception was raised in the main thread.
-                        return
-                    versionid = missingid[-40:]
-                    file = idmap[missingid]
-                    sshrequest = "%s%s\n" % (versionid, file)
-                    remote.pipeo.write(sshrequest)
-                    # worker.requested is used to inform the main thread that
-                    # a request have been processed and that it can try
-                    # receive the result. This is to avoid a deadlock if an
-                    # exception was raised in the worker and the main thread
-                    # was already trying to read from the pipe.
-                    worker.requested += 1
-                remote.pipeo.flush()
-            except Exception as e:
-                # Set the exception so that the main thread can re-raise it
-                # later
-                worker.exception = e
-                return
-
-        # I use function attributes to share data between threads.
-        # This allows a simpler implementation than using events, queues
-        # and locks. Considering this worker is scoped to this function,
-        # race conditions are managed by making sure a single thread writes
-        # to a variable. I also make sure the logic reading a variable does not
-        # depend on the atomicity of write operations
-        worker.exception = None  # Written in worker, read in main thread
-        worker.requested = -1  # Written in worker, read in main thread
-        worker.stop = False  # Written in main thread, read in worker
-
-        workerthread = threading.Thread(target=worker)
-        # Normally, the workerthread should always be gracefully exited by the
-        # main thread if an exception is raised. Setting the thread daemon
-        # should not be required, but I let it there as a safety net. Maybe it
-        # could be removed.
-        workerthread.daemon = True
-        workerthread.start()
-
-        try:
-            # receive batch results
-            for n, missingid in enumerate(missed[start:end]):
-                while n > worker.requested:
-                    # This while loop allows to wait for a request to have been
-                    # properly issued by the workerthread. In the meantime, if
-                    # an exception is raised in the workerthread, it is
-                    # immediately re-raised in the main thread. This is to avoid
-                    # a deadlock in case the main thread is expecting data in
-                    # remote.pipei and the worker thread will never issue the
-                    # request because it raised an exception.
-                    if worker.exception is not None:
-                        raise worker.exception
-                versionid = missingid[-40:]
-                file = idmap[missingid]
-                receivemissing(remote.pipei, file, versionid)
-                progresstick()
-        except BaseException:
-            # Gracefully exit the workerthread before raising the exception
-            worker.stop = True
-            raise
-
-        # The workerthread should always be done here and join might not be
-        # necessary...
-        workerthread.join()
+        # receive batch results
+        for missingid in missed[start:end]:
+            versionid = missingid[-40:]
+            file = idmap[missingid]
+            receivemissing(remote.pipei, file, versionid)
+            progresstick()
 
 class fileserverclient(object):
     """A client for requesting files from the remote file server.
