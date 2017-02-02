@@ -33,7 +33,6 @@ from . import (
     error,
     exchange,
     extensions,
-    formatter,
     graphmod,
     hbisect,
     help,
@@ -51,7 +50,6 @@ from . import (
     sshserver,
     streamclone,
     templatekw,
-    templater,
     ui as uimod,
     util,
 )
@@ -1854,56 +1852,6 @@ def copy(ui, repo, *pats, **opts):
     with repo.wlock(False):
         return cmdutil.copy(ui, repo, pats, opts)
 
-@command('debugtemplate',
-    [('r', 'rev', [], _('apply template on changesets'), _('REV')),
-     ('D', 'define', [], _('define template keyword'), _('KEY=VALUE'))],
-    _('[-r REV]... [-D KEY=VALUE]... TEMPLATE'),
-    optionalrepo=True)
-def debugtemplate(ui, repo, tmpl, **opts):
-    """parse and apply a template
-
-    If -r/--rev is given, the template is processed as a log template and
-    applied to the given changesets. Otherwise, it is processed as a generic
-    template.
-
-    Use --verbose to print the parsed tree.
-    """
-    revs = None
-    if opts['rev']:
-        if repo is None:
-            raise error.RepoError(_('there is no Mercurial repository here '
-                                    '(.hg not found)'))
-        revs = scmutil.revrange(repo, opts['rev'])
-
-    props = {}
-    for d in opts['define']:
-        try:
-            k, v = (e.strip() for e in d.split('=', 1))
-            if not k:
-                raise ValueError
-            props[k] = v
-        except ValueError:
-            raise error.Abort(_('malformed keyword definition: %s') % d)
-
-    if ui.verbose:
-        aliases = ui.configitems('templatealias')
-        tree = templater.parse(tmpl)
-        ui.note(templater.prettyformat(tree), '\n')
-        newtree = templater.expandaliases(tree, aliases)
-        if newtree != tree:
-            ui.note(("* expanded:\n"), templater.prettyformat(newtree), '\n')
-
-    mapfile = None
-    if revs is None:
-        k = 'debugtemplate'
-        t = formatter.maketemplater(ui, k, tmpl)
-        ui.write(templater.stringify(t(k, **props)))
-    else:
-        displayer = cmdutil.changeset_templater(ui, repo, None, opts, tmpl,
-                                                mapfile, buffered=False)
-        for r in revs:
-            displayer.show(repo[r], **props)
-        displayer.close()
 
 @command('debugwalk', walkopts, _('[OPTION]... [FILE]...'), inferrepo=True)
 def debugwalk(ui, repo, *pats, **opts):
