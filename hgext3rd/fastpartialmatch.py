@@ -1,11 +1,15 @@
 '''extension that makes node prefix lookup faster
 
 Storage format is simple. There are a few files (at most 256).
-Each file contains entries:
+Each file contains header and entries:
+Header:
+  <1 byte version><4 bytes number of entries that were sorted><19 bytes unused>
+Entry:
   <20-byte node hash><4 byte encoded rev>
 Name of the file is the first two letters of the hex node hash. Nodes with the
-same first two letters go to the same file. Nodes are NOT sorted inside the file
-to make appends of new nodes easier.
+same first two letters go to the same file. Nodes may be partially sorted:
+first entries are sorted others don't. Header stores info about how many entries
+are sorted.
 Partial index should always be correct i.e. it should contain only nodes that
 are present in the repo (regardless of whether they are visible or not) and
 rev numbers for nodes should be correct too.
@@ -54,6 +58,8 @@ _packstruct = struct.Struct('!L')
 _nodesize = 20
 _entrysize = _nodesize + _packstruct.size
 _raiseifinconsistent = False
+_current_version = 1
+_tip = 'run `hg debugrebuildpartialindex` to fix the issue'
 
 def extsetup(ui):
     extensions.wrapfunction(context.changectx, '__init__', _changectxinit)
@@ -91,7 +97,7 @@ def debugprintpartialindexfile(ui, repo, *args):
             ui.warn(_('file %s does not exist\n') % file)
             continue
 
-        for node, rev in _readallentries(repo.svfs, fullpath):
+        for node, rev in _parseindexfile(repo.svfs, fullpath):
             ui.write('%s %d\n' % (hex(node), rev))
 
 @command('^debugrebuildpartialindex', [])
@@ -116,7 +122,7 @@ def debugcheckfastpartialindex(ui, repo):
     for entry in indexvfs.listdir():
         if len(entry) == 2 and indexvfs.isfile(entry):
             try:
-                for node, actualrev in _readallentries(indexvfs, entry):
+                for node, actualrev in _parseindexfile(indexvfs, entry):
                     expectedrev = repo.changelog.rev(node)
                     foundnodes.add(node)
                     if expectedrev != actualrev:
@@ -176,6 +182,8 @@ def _rebuildpartialindex(ui, repo, skiphexnodes=None):
     indexvfs = _getopener(vfs.join(tempdir))
     for filename, data in filesdata.items():
         with indexvfs(filename, 'a') as fileobj:
+            header = _header(len(data))
+            header.write(fileobj)
             for node, rev in sorted(data, key=itemgetter(0)):
                 _writeindexentry(fileobj, node, rev)
     vfs.rename(tempdir, _partialindexdir)
@@ -232,6 +240,9 @@ def _recordcommit(tr, hexnode, rev, vfs):
         size = 0
     tr.add(filename, size)
     with vfs(filename, 'a') as fileobj:
+        if not size:
+            header = _header(0)
+            header.write(fileobj)
         _writeindexentry(fileobj, bin(hexnode), rev)
 
 def _partialmatch(orig, self, id):
@@ -288,7 +299,7 @@ def _findcandidates(ui, vfs, id):
     fullpath = os.path.join(_partialindexdir, filename)
     try:
         if vfs.exists(fullpath):
-            for node, rev in _readallentries(vfs, fullpath):
+            for node, rev in _parseindexfile(vfs, fullpath):
                 hexnode = hex(node)
                 if hexnode.startswith(id):
                     candidates[node] = rev
@@ -298,22 +309,63 @@ def _findcandidates(ui, vfs, id):
         return None
     return candidates
 
+class _header(object):
+    _versionpack = struct.Struct('!B')
+    _intpacker = _packstruct
+    headersize = 24
+
+    def __init__(self, sortedcount):
+        self.sortedcount = sortedcount
+
+    def write(self, fileobj):
+        fileobj.write(self._versionpack.pack(_current_version))
+        fileobj.write(self._intpacker.pack(self.sortedcount))
+        fill = '\0' * (self.headersize - self._intpacker.size -
+                       self._versionpack.size)
+        fileobj.write(fill)
+
+    @classmethod
+    def read(cls, fileobj):
+        header = fileobj.read(cls.headersize)
+        if not header or len(header) != cls.headersize:
+            raise ValueError(_('corrupted header: %s') % _tip)
+
+        versionsize = cls._versionpack.size
+        headerversion = header[:versionsize]
+        headerversion = cls._versionpack.unpack(headerversion)[0]
+        if headerversion != _current_version:
+            raise ValueError(_('incompatible index version: %s') % _tip)
+
+        sortedcount = header[versionsize:versionsize + cls._intpacker.size]
+        sortedcount = cls._intpacker.unpack(sortedcount)[0]
+        return cls(sortedcount)
+
 def _writeindexentry(fileobj, node, rev):
     fileobj.write(node + _packstruct.pack(rev))
 
-def _readallentries(vfs, file):
+def _parseindexfile(vfs, file):
+    if vfs.stat(file).st_size == 0:
+        return
     with vfs(file) as fileobj:
-        node, rev = _readindexentry(fileobj)
-        while node:
+        _header.read(fileobj)
+        for node, rev in _readtillend(fileobj):
             yield node, rev
-            node, rev = _readindexentry(fileobj)
+
+def _readtillend(fileobj):
+    node, rev = _readindexentry(fileobj)
+    while node:
+        yield node, rev
+        node, rev = _readindexentry(fileobj)
+
+def _entryoffset(index):
+    return _header.headersize + _entrysize * index
 
 def _readindexentry(fileobj):
     line = fileobj.read(_entrysize)
     if not line:
         return None, None
     if len(line) != _entrysize:
-        raise ValueError(_('corrupted index'))
+        raise ValueError(_('corrupted index: %s') % _tip)
 
     node = line[:_nodesize]
     rev = line[_nodesize:]

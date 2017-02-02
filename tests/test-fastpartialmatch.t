@@ -28,7 +28,7 @@ Check permissions
   total 12
   drwxr-xr-x. 2 stash users 4096 .* \. (re)
   drwxr-xr-x. 4 stash users 4096 .* \.\. (re)
-  -rw-r--r--. 1 stash users   24 .* b7 (re)
+  -rw-r--r--. 1 stash users   48 .* b7 (re)
 
 Check debug commands
   $ hg debugrebuildpartialindex
@@ -49,14 +49,14 @@ Check that debugcheckpartialindex fails on corrupted indexes
   [1]
   $ printf 'garbage' > .hg/store/partialindex/b7
   $ hg debugcheckpartialindex
-  b7 file is corrupted: corrupted index
+  b7 file is corrupted: corrupted header: run `hg debugrebuildpartialindex` to fix the issue
   b75a450e74d5a7708da8c3144fbeb4ac88694044 node not found in partialindex
   [1]
   $ hg log -r b75a
-  failed to read partial index partialindex/b7 : corrupted index
-  failed to read partial index partialindex/b7 : corrupted index
-  failed to read partial index partialindex/b7 : corrupted index
-  failed to read partial index partialindex/b7 : corrupted index
+  failed to read partial index partialindex/b7 : corrupted header: run `hg debugrebuildpartialindex` to fix the issue
+  failed to read partial index partialindex/b7 : corrupted header: run `hg debugrebuildpartialindex` to fix the issue
+  failed to read partial index partialindex/b7 : corrupted header: run `hg debugrebuildpartialindex` to fix the issue
+  failed to read partial index partialindex/b7 : corrupted header: run `hg debugrebuildpartialindex` to fix the issue
   changeset:   0:b75a450e74d5
   tag:         tip
   user:        test
