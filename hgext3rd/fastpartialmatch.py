@@ -63,6 +63,8 @@ def reposetup(ui, repo):
         # Add `ui` object to access it from `_partialmatch` func
         repo.svfs.ui = ui
         ui.setconfig('hooks', 'pretxncommit.fastpartialmatch', _commithook)
+        ui.setconfig('hooks', 'pretxnchangegroup.fastpartialmatch',
+                     _changegrouphook)
 
 @command('^debugprintpartialindexfile', [])
 def debugprintpartialindexfile(ui, repo, *args):
@@ -180,6 +182,28 @@ def _commithook(ui, repo, hooktype, node, parent1, parent2):
         hexnode = node  # it's actually a hexnode
         tr = repo.currenttransaction()
         _recordcommit(tr, hexnode, repo[hexnode].rev(), repo.svfs)
+
+def _changegrouphook(ui, repo, hooktype, **hookargs):
+    tr = repo.currenttransaction()
+    vfs = repo.svfs
+    if 'node' in hookargs and 'node_last' in hookargs:
+        hexnode_first = hookargs['node']
+        hexnode_last = hookargs['node_last']
+        # Ask changelog directly to avoid calling fastpartialmatch because
+        # it doesn't have the newest nodes yet
+        rev_first = repo.changelog.rev(bin(hexnode_first))
+        rev_last = repo.changelog.rev(bin(hexnode_last))
+        newhexnodes = []
+        for rev in xrange(rev_first, rev_last + 1):
+            newhexnodes.append(repo[rev].hex())
+
+        if not vfs.exists(_partialindexdir):
+            _rebuildpartialindex(ui, repo, skiphexnodes=set(newhexnodes))
+        for i, hexnode in enumerate(newhexnodes):
+            _recordcommit(tr, hexnode, rev_first + i, vfs)
+    else:
+        ui.warn(_('unexpected hookargs parameters: `node` and ' +
+                  '`node_last` should be present\n'))
 
 def _recordcommit(tr, hexnode, rev, vfs):
     vfs = _getopener(vfs.join(''))

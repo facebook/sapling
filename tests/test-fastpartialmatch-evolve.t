@@ -31,3 +31,34 @@
   $ hg debugcheckpartialindex
   $ mkcommit first
   $ hg debugcheckpartialindex
+  $ hg prune -q .
+  $ hg debugcheckpartialindex
+
+Try histedit
+  $ mkcommit second
+  $ mkcommit third
+  $ mkcommit fourth
+  $ hg log --graph
+  @  changeset:   4:d5e85d22a345
+  |  tag:         tip
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     fourth
+  |
+  o  changeset:   3:a5b4be173947
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     third
+  |
+  o  changeset:   2:be6305906393
+     parent:      -1:000000000000
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     second
+  
+  $ hg histedit --commands - <<EOF
+  > pick d5e85d22a345 3 fourth
+  > pick a5b4be173947 2 third
+  > pick be6305906393 1 second
+  > EOF
+  $ hg debugcheckpartialindex

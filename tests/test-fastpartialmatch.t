@@ -98,3 +98,32 @@ Test raiseifinconsistent option
   
   $ hg log --config fastpartialmatch.raiseifinconsistent=True -r b75a 2>&1 | grep ValueError
   ValueError: inconsistent partial match index while resolving b75a
+
+Test that new partial index entries are created during clone and pull
+  $ cd ..
+  $ hg clone -q ssh://user@dummy/repo cloned
+  $ cd cloned
+  $ ls .hg/store/partialindex
+  b7
+  $ cd ../repo
+  $ mkcommit fromserver
+  $ hg log -r . -T '{node}\n'
+  3dd368d533d16f6172e27321f05f9a419ca354bf
+  $ cd ../cloned
+  $ hg pull -q
+  $ ls .hg/store/partialindex
+  3d
+  b7
+  $ hg debugprintpartialindexfile 3d
+  3dd368d533d16f6172e27321f05f9a419ca354bf 1
+
+Remove partial index and make sure everything still works
+  $ rm -r .hg/store/partialindex
+  $ hg log -r 3dd368
+  changeset:   1:3dd368d533d1
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     fromserver
+  
+  $ hg debugrebuildpartialindex
