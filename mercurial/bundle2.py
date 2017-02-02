@@ -862,6 +862,11 @@ class bundlepart(object):
         self._generated = None
         self.mandatory = mandatory
 
+    def __repr__(self):
+        cls = "%s.%s" % (self.__class__.__module__, self.__class__.__name__)
+        return ('<%s object at %x; id: %s; type: %s; mandatory: %s>'
+                % (cls, id(self), self.id, self.type, self.mandatory))
+
     def copy(self):
         """return a copy of the part
 
