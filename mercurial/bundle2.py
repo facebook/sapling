@@ -320,9 +320,6 @@ def processbundle(repo, unbundler, transactiongetter=None, op=None):
     It iterates over each part then searches for and uses the proper handling
     code to process the part. Parts are processed in order.
 
-    This is very early version of this function that will be strongly reworked
-    before final usage.
-
     Unknown Mandatory part will abort the process.
 
     It is temporarily possible to provide a prebuilt bundleoperation to the
