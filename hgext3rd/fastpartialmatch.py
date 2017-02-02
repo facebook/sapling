@@ -23,6 +23,11 @@ rev numbers for nodes should be correct too.
 
     # whether to use bisect during partial hash resolving
     usebisect = True
+
+    # if any index file has more than or equal to `unsortedthreshold` unsorted
+    # entries then index will be rebuilt when _changegrouphook will be triggered
+    # (usually it's the next pull)
+    unsortedthreshold = 1000
 '''
 
 from collections import defaultdict
@@ -66,6 +71,8 @@ _raiseifinconsistent = False
 _usebisect = True
 _current_version = 1
 _tip = 'run `hg debugrebuildpartialindex` to fix the issue'
+_unsortedthreshold = 1000
+_needrebuildfile = os.path.join(_partialindexdir, 'needrebuild')
 
 def extsetup(ui):
     extensions.wrapfunction(context.changectx, '__init__', _changectxinit)
@@ -75,6 +82,9 @@ def extsetup(ui):
                                          'raiseifinconsistent', False)
     global _usebisect
     _usebisect = ui.configbool('fastpartialmatch', 'usebisect', True)
+    global _unsortedthreshold
+    _unsortedthreshold = ui.configint('fastpartialmatch', 'unsortedthreshold',
+                                      _unsortedthreshold)
 
 def reposetup(ui, repo):
     if repo.local():
@@ -127,20 +137,19 @@ def debugcheckfastpartialindex(ui, repo):
     # commits
     ret = 0
     repo = repo.unfiltered()
-    for entry in indexvfs.listdir():
-        if len(entry) == 2 and indexvfs.isfile(entry):
-            try:
-                for node, actualrev in _parseindexfile(indexvfs, entry):
-                    expectedrev = repo.changelog.rev(node)
-                    foundnodes.add(node)
-                    if expectedrev != actualrev:
-                        ret = 1
-                        ui.warn(_('corrupted index: rev number for %s ' +
-                                'should be %d but found %d\n') %
-                                (hex(node), expectedrev, actualrev))
-            except ValueError as e:
-                ret = 1
-                ui.warn(_('%s file is corrupted: %s\n') % (entry, e))
+    for indexfile in _iterindexfile(indexvfs):
+        try:
+            for node, actualrev in _parseindexfile(indexvfs, indexfile):
+                expectedrev = repo.changelog.rev(node)
+                foundnodes.add(node)
+                if expectedrev != actualrev:
+                    ret = 1
+                    ui.warn(_('corrupted index: rev number for %s ' +
+                            'should be %d but found %d\n') %
+                            (hex(node), expectedrev, actualrev))
+        except ValueError as e:
+            ret = 1
+            ui.warn(_('%s file is corrupted: %s\n') % (indexfile, e))
 
     for rev in repo:
         node = repo[rev].node()
@@ -162,6 +171,24 @@ def debugresolvepartialhash(ui, repo, *args):
             nodes = ', '.join([hex(node) + ' ' + str(rev)
                                for node, rev in candidates.items()])
             ui.write(_('%s: %s\n') % (arg, nodes))
+
+@command('^debugfastpartialmatchstat', [])
+def debugfastpartialmatchstat(ui, repo):
+    if _needsrebuilding(repo.svfs):
+        ui.write(_('index will be rebuilt on the next pull\n'))
+    indexvfs = scmutil.vfs(repo.svfs.join(_partialindexdir))
+    for indexfile in _iterindexfile(indexvfs):
+        size = indexvfs.stat(indexfile).st_size - _header.headersize
+        entriescount = size / _entrysize
+        with indexvfs(indexfile) as fileobj:
+            header = _header.read(fileobj)
+            ui.write(_('file: %s, entries: %d, out of them %d sorted\n') %
+                     (indexfile, entriescount, header.sortedcount))
+
+def _iterindexfile(indexvfs):
+    for entry in indexvfs.listdir():
+        if len(entry) == 2 and indexvfs.isfile(entry):
+            yield entry
 
 def _rebuildpartialindex(ui, repo, skiphexnodes=None):
     ui.debug('rebuilding partial node index\n')
@@ -231,7 +258,7 @@ def _changegrouphook(ui, repo, hooktype, **hookargs):
         for rev in xrange(rev_first, rev_last + 1):
             newhexnodes.append(repo[rev].hex())
 
-        if not vfs.exists(_partialindexdir):
+        if not vfs.exists(_partialindexdir) or _needsrebuilding(vfs):
             _rebuildpartialindex(ui, repo, skiphexnodes=set(newhexnodes))
         for i, hexnode in enumerate(newhexnodes):
             _recordcommit(tr, hexnode, rev_first + i, vfs)
@@ -339,10 +366,15 @@ def _findcandidates(ui, vfs, id):
                     # go after. Move file current position after all sorted
                     # entries and then scan the file till the end.
                     fileobj.seek(_entryoffset(sortedcount))
+
+                unsorted = 0
                 for node, rev in _readtillend(fileobj):
                     hexnode = hex(node)
+                    unsorted += 1
                     if hexnode.startswith(id):
                         candidates[node] = rev
+                if unsorted >= _unsortedthreshold:
+                    _markneedsrebuilding(ui, vfs)
     except Exception as e:
         ui.warn(_('failed to read partial index %s : %s\n') %
                 (fullpath, str(e)))
@@ -379,6 +411,16 @@ class _header(object):
         sortedcount = header[versionsize:versionsize + cls._intpacker.size]
         sortedcount = cls._intpacker.unpack(sortedcount)[0]
         return cls(sortedcount)
+
+def _needsrebuilding(vfs):
+    return vfs.exists(_needrebuildfile)
+
+def _markneedsrebuilding(ui, vfs):
+    try:
+        with vfs(_needrebuildfile, 'w') as fileobj:
+            fileobj.write('content') # content doesn't matter
+    except IOError as e:
+        ui.warn(_('error happened while triggering rebuild: %s\n') % e)
 
 def _writeindexentry(fileobj, node, rev):
     fileobj.write(node + _packstruct.pack(rev))

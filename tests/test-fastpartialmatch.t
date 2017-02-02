@@ -317,3 +317,69 @@ Test usebisect option
   $ hg debugrebuildpartialindex
   $ hg --config fastpartialmatch.usebisect=False debugresolvepartialhash ac536e
   ac536e: ac536ed8bde0682e30bb64c64570758903ce1aa6 3
+
+Test cache rebuilding
+  $ cd ../repo
+  $ mkcommit committotriggercacherebuilding
+  $ cd ../cloned2
+  $ printf '[fastpartialmatch]\nunsortedthreshold=1' >> .hg/hgrc
+  $ hg up -q ac536ed8bde0
+  $ mkcommit commit
+  $ hg log -r . -T '{node}\n'
+  587cd78c6d0eb0259484b09a5983bcc2973f2245
+
+Next command should set that cache needs rebuilding
+  $ hg log -r 587cd78c6d0eb0259 > /dev/null
+  $ hg debugfastpartialmatchstat
+  index will be rebuilt on the next pull
+  file: 64, entries: 1, out of them 1 sorted
+  file: 3d, entries: 1, out of them 1 sorted
+  file: ac, entries: 1, out of them 1 sorted
+  file: b7, entries: 1, out of them 1 sorted
+  file: 58, entries: 1, out of them 0 sorted
+
+Now do a pull and make sure that index was rebuilt (file '12' is not rebuilt
+because it was just pulled)
+  $ hg pull -q
+  $ hg debugfastpartialmatchstat
+  index will be rebuilt on the next pull
+  file: 64, entries: 1, out of them 1 sorted
+  file: 3d, entries: 1, out of them 1 sorted
+  file: ac, entries: 1, out of them 1 sorted
+  file: b7, entries: 1, out of them 1 sorted
+  file: 58, entries: 1, out of them 1 sorted
+  file: 12, entries: 1, out of them 0 sorted
+
+Increase unsortedthreshold and make one more pull. Make sure index doesn't need
+to be rebuilt
+  $ cd ../repo
+  $ mkcommit somecommit
+  $ cd ../cloned2
+  $ hg pull -q --config fastpartialmatch.unsortedthreshold=2
+  $ hg debugfastpartialmatchstat
+  file: 64, entries: 1, out of them 1 sorted
+  file: 3d, entries: 1, out of them 1 sorted
+  file: ac, entries: 1, out of them 1 sorted
+  file: b7, entries: 1, out of them 1 sorted
+  file: 58, entries: 1, out of them 1 sorted
+  file: 12, entries: 1, out of them 1 sorted
+  file: fd, entries: 1, out of them 0 sorted
+
+Make a commit and change partialindex permissions to non-writabble. Then do
+partial lookup that should write needrebuild file but it couldn't because
+of permissions. Make sure it doesn't throw and just log the problem
+  $ mkcommit commitpermissionissue
+  $ chmod u-w .hg/store/partialindex
+  $ hg log -r . -T '{node}\n'
+  2b52832374dd7e499a1fbd172f1d75e13ee32477
+  $ hg log -r 2b5283237
+  error happened while triggering rebuild: [Errno 13] Permission denied: '$TESTTMP/cloned2/.hg/store/partialindex/needrebuild'
+  error happened while triggering rebuild: [Errno 13] Permission denied: '$TESTTMP/cloned2/.hg/store/partialindex/needrebuild'
+  changeset:   7:2b52832374dd
+  tag:         tip
+  parent:      4:587cd78c6d0e
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     commitpermissionissue
+  
+  $ chmod u+w .hg/store/partialindex
