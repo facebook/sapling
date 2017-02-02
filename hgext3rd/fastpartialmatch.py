@@ -65,6 +65,14 @@ def reposetup(ui, repo):
         ui.setconfig('hooks', 'pretxncommit.fastpartialmatch', _commithook)
         ui.setconfig('hooks', 'pretxnchangegroup.fastpartialmatch',
                      _changegrouphook)
+        # To handle strips
+        ui.setconfig('hooks', 'pretxnclose.fastpartialmatch', _pretxnclosehook)
+        # Increase the priority of the hook to make sure it's called before
+        # other hooks. If another hook failed before
+        # pretxnclose.fastpartialmatch during strip then partial index will
+        # contain non-existing nodes.
+        ui.setconfig('hooks', 'priority.pretxnclose.fastpartialmatch',
+                     10)
 
 @command('^debugprintpartialindexfile', [])
 def debugprintpartialindexfile(ui, repo, *args):
@@ -175,6 +183,15 @@ def _getopener(path):
     vfs = scmutil.vfs(path)
     vfs.createmode = 0o644
     return vfs
+
+def _pretxnclosehook(ui, repo, hooktype, txnname, **hookargs):
+    # Strip may change revision numbers for many commits, it's safer to rebuild
+    # index from scratch.
+    if txnname == 'strip':
+        vfs = repo.svfs
+        if vfs.exists(_partialindexdir):
+            vfs.rmtree(_partialindexdir)
+            _rebuildpartialindex(ui, repo)
 
 def _commithook(ui, repo, hooktype, node, parent1, parent2):
     if _ispartialindexbuilt(repo.svfs):

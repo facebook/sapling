@@ -127,3 +127,170 @@ Remove partial index and make sure everything still works
   summary:     fromserver
   
   $ hg debugrebuildpartialindex
+
+Test strip
+  $ hg log --graph
+  o  changeset:   1:3dd368d533d1
+  |  tag:         tip
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     fromserver
+  |
+  @  changeset:   0:b75a450e74d5
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     first
+  
+  $ hg strip -r 1
+  saved backup bundle to $TESTTMP/cloned/.hg/strip-backup/3dd368d533d1-aec0bb31-backup.hg (glob)
+  $ hg log --graph
+  @  changeset:   0:b75a450e74d5
+     tag:         tip
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     first
+  
+  $ hg debugcheckpartialindex
+
+Try to commit after partial index was stripped
+  $ mkcommit afterstrip
+  $ hg debugcheckpartialindex
+
+Test histedit
+  $ mkcommit tohistedit
+  $ hg log --graph
+  @  changeset:   2:353c4093de9e
+  |  tag:         tip
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     tohistedit
+  |
+  o  changeset:   1:51e0111a3ca1
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     afterstrip
+  |
+  o  changeset:   0:b75a450e74d5
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     first
+  
+  $ hg histedit --commands - <<EOF
+  > pick 353c4093de9e 2 tohistedit
+  > pick 51e0111a3ca1 1 afterstrip
+  > EOF
+  saved backup bundle to $TESTTMP/cloned/.hg/strip-backup/51e0111a3ca1-ae8f0808-backup.hg (glob)
+  $ hg log --graph
+  @  changeset:   2:8dc08dfc2ed8
+  |  tag:         tip
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     afterstrip
+  |
+  o  changeset:   1:1d6b19400cfd
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     tohistedit
+  |
+  o  changeset:   0:b75a450e74d5
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     first
+  
+  $ ls .hg/store/partialindex
+  1d
+  8d
+  b7
+
+Abort strip and then restore. Check partial index
+  $ rm -rf .hg/strip-backup/*
+  $ printf '\n[hooks]\npriority.pretxnclose.fastpartialmatch=10' >> .hg/hgrc
+  $ hg strip -r . --config hooks.pretxnclose.abort=false
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  saved backup bundle to $TESTTMP/cloned/.hg/strip-backup/8dc08dfc2ed8-5905654b-backup.hg (glob)
+  transaction abort!
+  rollback completed
+  strip failed, backup bundle stored in '$TESTTMP/cloned/.hg/strip-backup/8dc08dfc2ed8-5905654b-backup.hg'
+  abort: pretxnclose.abort hook exited with status 1
+  [255]
+  $ hg log --graph
+  @  changeset:   1:1d6b19400cfd
+  |  tag:         tip
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     tohistedit
+  |
+  o  changeset:   0:b75a450e74d5
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     first
+  
+  $ hg debugcheckpartialindex
+  $ hg unbundle -q .hg/strip-backup/*
+  $ hg log --graph
+  o  changeset:   2:8dc08dfc2ed8
+  |  tag:         tip
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     afterstrip
+  |
+  @  changeset:   1:1d6b19400cfd
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     tohistedit
+  |
+  o  changeset:   0:b75a450e74d5
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     first
+  
+  $ hg debugcheckpartialindex
+
+Abort a commit
+  $ echo 1 > 1
+  $ hg add 1
+  $ hg commit -m 'commit to discard' --config hooks.pretxnclose.abort=false
+  transaction abort!
+  rollback completed
+  abort: pretxnclose.abort hook exited with status 1
+  [255]
+  $ hg forget 1
+  $ rm 1
+  $ hg debugcheckpartialindex
+
+Make clone with fastpartialmatch disabled. Make pull, make sure partial index
+is rebuilt
+  $ cd ..
+  $ hg clone --config extensions.fastpartialmatch=! -q ssh://user@dummy/repo cloned2
+  $ cd repo
+  $ mkcommit newcommit
+  $ cd ../cloned2
+  $ hg pull -q
+  $ hg log --graph -T '{node}'
+  o  64905857be49e6c1134f69f9743ecf8ac04a93e2
+  |
+  @  3dd368d533d16f6172e27321f05f9a419ca354bf
+  |
+  o  b75a450e74d5a7708da8c3144fbeb4ac88694044
+  
+  $ hg debugcheckpartialindex
+
+Now crash during pull
+  $ cd ..
+  $ rm -rf cloned2
+  $ hg clone -q ssh://user@dummy/repo cloned2
+  $ cd repo
+  $ mkcommit secondcrashpull
+  $ hg log -r . -T '{node}\n'
+  ac536ed8bde0682e30bb64c64570758903ce1aa6
+  $ cd ../cloned2
+  $ hg debugcheckpartialindex
+  $ hg pull -q --config hooks.pretxnclose.abort=false
+  transaction abort!
+  rollback completed
+  abort: pretxnclose.abort hook exited with status 1
+  [255]
+  $ hg debugprintpartialindexfile ac
+  $ hg pull -q
+  $ hg debugprintpartialindexfile ac
+  ac536ed8bde0682e30bb64c64570758903ce1aa6 3
