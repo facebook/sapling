@@ -47,7 +47,6 @@ from . import (
     patch,
     phases,
     pycompat,
-    repair,
     revlog,
     revset,
     scmutil,
@@ -1858,11 +1857,6 @@ def copy(ui, repo, *pats, **opts):
     """
     with repo.wlock(False):
         return cmdutil.copy(ui, repo, pats, opts)
-
-@command('debugrebuildfncache', [], '')
-def debugrebuildfncache(ui, repo):
-    """rebuild the fncache file"""
-    repair.rebuildfncache(ui, repo)
 
 @command('debugrename',
     [('r', 'rev', '', _('revision to debug'), _('REV'))],

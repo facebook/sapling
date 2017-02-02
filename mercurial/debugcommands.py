@@ -1495,6 +1495,11 @@ def debugrebuilddirstate(ui, repo, rev, **opts):
 
         dirstate.rebuild(ctx.node(), ctx.manifest(), changedfiles)
 
+@command('debugrebuildfncache', [], '')
+def debugrebuildfncache(ui, repo):
+    """rebuild the fncache file"""
+    repair.rebuildfncache(ui, repo)
+
 @command('debugupgraderepo', [
     ('o', 'optimize', [], _('extra optimization to perform'), _('NAME')),
     ('', 'run', False, _('performs an upgrade')),
