@@ -1763,6 +1763,7 @@ def unbundle(repo, cg, heads, source, url):
                         parts.append(part)
                 raise
         else:
+            # legacy case: bundle1 (changegroup 01)
             lockandtr[1] = repo.lock()
             r = cg.apply(repo, source, url)
     finally:
