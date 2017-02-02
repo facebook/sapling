@@ -1835,6 +1835,24 @@ def debugrevspec(ui, repo, expr, **opts):
     for c in revs:
         ui.write("%s\n" % c)
 
+@command('debugsetparents', [], _('REV1 [REV2]'))
+def debugsetparents(ui, repo, rev1, rev2=None):
+    """manually set the parents of the current working directory
+
+    This is useful for writing repository conversion tools, but should
+    be used with care. For example, neither the working directory nor the
+    dirstate is updated, so file status may be incorrect after running this
+    command.
+
+    Returns 0 on success.
+    """
+
+    r1 = scmutil.revsingle(repo, rev1).node()
+    r2 = scmutil.revsingle(repo, rev2, 'null').node()
+
+    with repo.wlock():
+        repo.setparents(r1, r2)
+
 @command('debugupgraderepo', [
     ('o', 'optimize', [], _('extra optimization to perform'), _('NAME')),
     ('', 'run', False, _('performs an upgrade')),
