@@ -45,6 +45,17 @@ Check that debugcheckpartialindex fails on corrupted indexes
   b7 file is corrupted: corrupted index
   b75a450e74d5a7708da8c3144fbeb4ac88694044 node not found in partialindex
   [1]
+  $ hg log -r b75a
+  failed to read partial index partialindex/b7 : corrupted index
+  failed to read partial index partialindex/b7 : corrupted index
+  failed to read partial index partialindex/b7 : corrupted index
+  failed to read partial index partialindex/b7 : corrupted index
+  changeset:   0:b75a450e74d5
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     first
+  
   $ mkcommit committostrip
   $ hg log -r . -T '{node}'
   1138fa1e0b22411fc96c825c2603c5c3d056a206 (no-eol)
@@ -60,3 +71,30 @@ Check that debugcheckpartialindex fails on corrupted indexes
 
   $ hg debugrebuildpartialindex
   $ hg debugcheckpartialindex
+
+Resolve 0 revision. Make sure index is not used
+  $ hg log -r 0 --debug | egrep 'changeset|using partial index cache'
+  changeset:   0:b75a450e74d5a7708da8c3144fbeb4ac88694044
+
+Resolve by commit hash prefix. Make sure index is used
+  $ hg log -r b75a --debug | egrep 'changeset|using partial index cache'
+  using partial index cache 0
+  using partial index cache 0
+  changeset:   0:b75a450e74d5a7708da8c3144fbeb4ac88694044
+
+Try to resolve unknown hash
+  $ hg log -r ololo
+  abort: unknown revision 'ololo'!
+  [255]
+
+Test raiseifinconsistent option
+  $ rm .hg/store/partialindex/b7
+  $ hg log -r b75a
+  changeset:   0:b75a450e74d5
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     first
+  
+  $ hg log --config fastpartialmatch.raiseifinconsistent=True -r b75a 2>&1 | grep ValueError
+  ValueError: inconsistent partial match index while resolving b75a

@@ -29,3 +29,5 @@
   1 changesets pruned
   $ hg debugrebuildpartialindex
   $ hg debugcheckpartialindex
+  $ mkcommit first
+  $ hg debugcheckpartialindex

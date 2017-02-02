@@ -9,11 +9,21 @@ to make appends of new nodes easier.
 Partial index should always be correct i.e. it should contain only nodes that
 are present in the repo (regardless of whether they are visible or not) and
 rev numbers for nodes should be correct too.
+
+::
+
+    [fastpartialmatch]
+    # if option is set then exception is raised if index result is inconsistent
+    # with slow path
+    raiseifinconsistent = False
 '''
 
 from mercurial import (
     cmdutil,
+    context,
     error,
+    extensions,
+    revlog,
     scmutil,
 )
 
@@ -24,6 +34,7 @@ from mercurial.node import (
 )
 
 import os
+import re
 import struct
 
 LookupError = error.LookupError
@@ -33,13 +44,24 @@ command = cmdutil.command(cmdtable)
 
 _partialindexdir = 'partialindex'
 
+_maybehash = re.compile(r'^[a-f0-9]+$').search
 _packstruct = struct.Struct('!L')
 
 _nodesize = 20
 _entrysize = _nodesize + _packstruct.size
+_raiseifinconsistent = False
+
+def extsetup(ui):
+    extensions.wrapfunction(context.changectx, '__init__', _changectxinit)
+    extensions.wrapfunction(revlog.revlog, '_partialmatch', _partialmatch)
+    global _raiseifinconsistent
+    _raiseifinconsistent = ui.configbool('fastpartialmatch',
+                                         'raiseifinconsistent', False)
 
 def reposetup(ui, repo):
     if repo.local():
+        # Add `ui` object to access it from `_partialmatch` func
+        repo.svfs.ui = ui
         ui.setconfig('hooks', 'pretxncommit.fastpartialmatch', _commithook)
 
 @command('^debugprintpartialindexfile', [])
@@ -99,6 +121,20 @@ def debugcheckfastpartialindex(ui, repo):
             ui.warn(_('%s node not found in partialindex\n') % hex(node))
     return ret
 
+@command('^debugresolvepartialhash', [])
+def debugresolvepartialhash(ui, repo, *args):
+    for arg in args:
+        ui.debug('resolving %s' % arg)
+        candidates = _findcandidates(ui, repo.svfs, arg)
+        if candidates is None:
+            ui.write(_('failed to read partial index\n'))
+        elif len(candidates) == 0:
+            ui.write(_('%s not found') % arg)
+        else:
+            nodes = ', '.join([hex(node) + ' ' + str(rev)
+                               for node, rev in candidates.items()])
+            ui.write(_('%s: %s\n') % (arg, nodes))
+
 def _rebuildpartialindex(ui, repo, skiphexnodes=None):
     ui.debug('rebuilding partial node index\n')
     repo = repo.unfiltered()
@@ -156,8 +192,69 @@ def _recordcommit(tr, hexnode, rev, vfs):
     with vfs(filename, 'a') as fileobj:
         _writeindexentry(fileobj, bin(hexnode), rev)
 
+def _partialmatch(orig, self, id):
+    if not _ispartialindexbuilt(self.opener):
+        return orig(self, id)
+    candidates = _findcandidates(self.opener.ui, self.opener, id)
+    if candidates is None:
+        return orig(self, id)
+    elif len(candidates) == 0:
+        origres = orig(self, id)
+        if origres is not None:
+            return _handleinconsistentindex(id, origres)
+        return None
+    elif len(candidates) == 1:
+        return candidates.keys()[0]
+    else:
+        raise LookupError(id, _partialindexdir, _('ambiguous identifier'))
+
+def _changectxinit(orig, self, repo, changeid=''):
+    if not _ispartialindexbuilt(repo.svfs):
+        return orig(self, repo, changeid)
+    candidates = _findcandidates(repo.ui, repo.svfs, changeid)
+    if candidates is None:
+        return orig(self, repo, changeid)
+    elif len(candidates) == 0:
+        origres = orig(self, repo, changeid)
+        if origres is not None:
+            return _handleinconsistentindex(changeid, origres)
+        return None
+    elif len(candidates) == 1:
+        rev = candidates.values()[0]
+        repo.ui.debug('using partial index cache %d\n' % rev)
+        return orig(self, repo, rev)
+    else:
+        raise LookupError(id, _partialindexdir, _('ambiguous identifier'))
+
+def _handleinconsistentindex(changeid, expected):
+    if _raiseifinconsistent:
+        raise ValueError('inconsistent partial match index while resolving %s' %
+                         changeid)
+    else:
+        return expected
+
 def _ispartialindexbuilt(vfs):
     return vfs.exists(_partialindexdir)
+
+def _findcandidates(ui, vfs, id):
+    '''Returns dict with matching candidates or None if error happened
+    '''
+    candidates = {}
+    if not (isinstance(id, str) and len(id) >= 4 and _maybehash(id)):
+        return candidates
+    filename = id[:2]
+    fullpath = os.path.join(_partialindexdir, filename)
+    try:
+        if vfs.exists(fullpath):
+            for node, rev in _readallentries(vfs, fullpath):
+                hexnode = hex(node)
+                if hexnode.startswith(id):
+                    candidates[node] = rev
+    except Exception as e:
+        ui.warn(_('failed to read partial index %s : %s\n') %
+                (fullpath, str(e)))
+        return None
+    return candidates
 
 def _writeindexentry(fileobj, node, rev):
     fileobj.write(node + _packstruct.pack(rev))
