@@ -7,6 +7,7 @@
 
 from __future__ import absolute_import
 
+import difflib
 import errno
 import operator
 import os
@@ -49,9 +50,11 @@ from . import (
     pycompat,
     repair,
     revlog,
+    revset,
     scmutil,
     setdiscovery,
     simplemerge,
+    smartset,
     sslutil,
     streamclone,
     templater,
@@ -1738,6 +1741,99 @@ def debugrevlog(ui, repo, file_=None, **opts):
                      + fmt % pcfmt(nump2, numdeltas))
             ui.write(('deltas against other : ') + fmt % pcfmt(numother,
                                                              numdeltas))
+
+@command('debugrevspec',
+    [('', 'optimize', None,
+      _('print parsed tree after optimizing (DEPRECATED)')),
+     ('p', 'show-stage', [],
+      _('print parsed tree at the given stage'), _('NAME')),
+     ('', 'no-optimized', False, _('evaluate tree without optimization')),
+     ('', 'verify-optimized', False, _('verify optimized result')),
+     ],
+    ('REVSPEC'))
+def debugrevspec(ui, repo, expr, **opts):
+    """parse and apply a revision specification
+
+    Use -p/--show-stage option to print the parsed tree at the given stages.
+    Use -p all to print tree at every stage.
+
+    Use --verify-optimized to compare the optimized result with the unoptimized
+    one. Returns 1 if the optimized result differs.
+    """
+    stages = [
+        ('parsed', lambda tree: tree),
+        ('expanded', lambda tree: revset.expandaliases(ui, tree)),
+        ('concatenated', revset.foldconcat),
+        ('analyzed', revset.analyze),
+        ('optimized', revset.optimize),
+    ]
+    if opts['no_optimized']:
+        stages = stages[:-1]
+    if opts['verify_optimized'] and opts['no_optimized']:
+        raise error.Abort(_('cannot use --verify-optimized with '
+                            '--no-optimized'))
+    stagenames = set(n for n, f in stages)
+
+    showalways = set()
+    showchanged = set()
+    if ui.verbose and not opts['show_stage']:
+        # show parsed tree by --verbose (deprecated)
+        showalways.add('parsed')
+        showchanged.update(['expanded', 'concatenated'])
+        if opts['optimize']:
+            showalways.add('optimized')
+    if opts['show_stage'] and opts['optimize']:
+        raise error.Abort(_('cannot use --optimize with --show-stage'))
+    if opts['show_stage'] == ['all']:
+        showalways.update(stagenames)
+    else:
+        for n in opts['show_stage']:
+            if n not in stagenames:
+                raise error.Abort(_('invalid stage name: %s') % n)
+        showalways.update(opts['show_stage'])
+
+    treebystage = {}
+    printedtree = None
+    tree = revset.parse(expr, lookup=repo.__contains__)
+    for n, f in stages:
+        treebystage[n] = tree = f(tree)
+        if n in showalways or (n in showchanged and tree != printedtree):
+            if opts['show_stage'] or n != 'parsed':
+                ui.write(("* %s:\n") % n)
+            ui.write(revset.prettyformat(tree), "\n")
+            printedtree = tree
+
+    if opts['verify_optimized']:
+        arevs = revset.makematcher(treebystage['analyzed'])(repo)
+        brevs = revset.makematcher(treebystage['optimized'])(repo)
+        if ui.verbose:
+            ui.note(("* analyzed set:\n"), smartset.prettyformat(arevs), "\n")
+            ui.note(("* optimized set:\n"), smartset.prettyformat(brevs), "\n")
+        arevs = list(arevs)
+        brevs = list(brevs)
+        if arevs == brevs:
+            return 0
+        ui.write(('--- analyzed\n'), label='diff.file_a')
+        ui.write(('+++ optimized\n'), label='diff.file_b')
+        sm = difflib.SequenceMatcher(None, arevs, brevs)
+        for tag, alo, ahi, blo, bhi in sm.get_opcodes():
+            if tag in ('delete', 'replace'):
+                for c in arevs[alo:ahi]:
+                    ui.write('-%s\n' % c, label='diff.deleted')
+            if tag in ('insert', 'replace'):
+                for c in brevs[blo:bhi]:
+                    ui.write('+%s\n' % c, label='diff.inserted')
+            if tag == 'equal':
+                for c in arevs[alo:ahi]:
+                    ui.write(' %s\n' % c)
+        return 1
+
+    func = revset.makematcher(tree)
+    revs = func(repo)
+    if ui.verbose:
+        ui.note(("* set:\n"), smartset.prettyformat(revs), "\n")
+    for c in revs:
+        ui.write("%s\n" % c)
 
 @command('debugupgraderepo', [
     ('o', 'optimize', [], _('extra optimization to perform'), _('NAME')),
