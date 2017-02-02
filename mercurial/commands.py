@@ -11,7 +11,6 @@ import difflib
 import errno
 import os
 import re
-import time
 
 from .i18n import _
 from .node import (
@@ -1854,37 +1853,6 @@ def copy(ui, repo, *pats, **opts):
     """
     with repo.wlock(False):
         return cmdutil.copy(ui, repo, pats, opts)
-
-@command('debugdirstate|debugstate',
-    [('', 'nodates', None, _('do not display the saved mtime')),
-    ('', 'datesort', None, _('sort by saved mtime'))],
-    _('[OPTION]...'))
-def debugstate(ui, repo, **opts):
-    """show the contents of the current dirstate"""
-
-    nodates = opts.get('nodates')
-    datesort = opts.get('datesort')
-
-    timestr = ""
-    if datesort:
-        keyfunc = lambda x: (x[1][3], x[0]) # sort by mtime, then by filename
-    else:
-        keyfunc = None # sort by filename
-    for file_, ent in sorted(repo.dirstate._map.iteritems(), key=keyfunc):
-        if ent[3] == -1:
-            timestr = 'unset               '
-        elif nodates:
-            timestr = 'set                 '
-        else:
-            timestr = time.strftime("%Y-%m-%d %H:%M:%S ",
-                                    time.localtime(ent[3]))
-        if ent[1] & 0o20000:
-            mode = 'lnk'
-        else:
-            mode = '%3o' % (ent[1] & 0o777 & ~util.umask)
-        ui.write("%c %s %10d %s%s\n" % (ent[0], mode, ent[2], timestr, file_))
-    for f in repo.dirstate.copies():
-        ui.write(_("copy: %s -> %s\n") % (repo.dirstate.copied(f), f))
 
 @command('debugsub',
     [('r', 'rev', '',
