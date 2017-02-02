@@ -20,9 +20,14 @@ rev numbers for nodes should be correct too.
     # if option is set then exception is raised if index result is inconsistent
     # with slow path
     raiseifinconsistent = False
+
+    # whether to use bisect during partial hash resolving
+    usebisect = True
 '''
 
 from collections import defaultdict
+from functools import partial
+from hgext3rd.generic_bisect import bisect
 
 from mercurial import (
     cmdutil,
@@ -58,6 +63,7 @@ _packstruct = struct.Struct('!L')
 _nodesize = 20
 _entrysize = _nodesize + _packstruct.size
 _raiseifinconsistent = False
+_usebisect = True
 _current_version = 1
 _tip = 'run `hg debugrebuildpartialindex` to fix the issue'
 
@@ -67,6 +73,8 @@ def extsetup(ui):
     global _raiseifinconsistent
     _raiseifinconsistent = ui.configbool('fastpartialmatch',
                                          'raiseifinconsistent', False)
+    global _usebisect
+    _usebisect = ui.configbool('fastpartialmatch', 'usebisect', True)
 
 def reposetup(ui, repo):
     if repo.local():
@@ -289,6 +297,19 @@ def _handleinconsistentindex(changeid, expected):
 def _ispartialindexbuilt(vfs):
     return vfs.exists(_partialindexdir)
 
+def _bisectcmp(fileobj, index, value):
+    fileobj.seek(_entryoffset(index))
+    node, rev = _readindexentry(fileobj)
+    if node is None:
+        raise ValueError(_('corrupted index: %s') % _tip)
+    hexnode = hex(node)
+    if hexnode.startswith(value):
+        return 0
+    if hexnode < value:
+        return -1
+    else:
+        return 1
+
 def _findcandidates(ui, vfs, id):
     '''Returns dict with matching candidates or None if error happened
     '''
@@ -299,10 +320,29 @@ def _findcandidates(ui, vfs, id):
     fullpath = os.path.join(_partialindexdir, filename)
     try:
         if vfs.exists(fullpath):
-            for node, rev in _parseindexfile(vfs, fullpath):
-                hexnode = hex(node)
-                if hexnode.startswith(id):
-                    candidates[node] = rev
+            with vfs(fullpath) as fileobj:
+                sortedcount = _header.read(fileobj).sortedcount
+                if _usebisect:
+                    ui.debug('using bisect\n')
+                    compare = partial(_bisectcmp, fileobj)
+                    entryindex = bisect(0, sortedcount - 1, compare, id)
+
+                    if entryindex is not None:
+                        node, rev = _readindexentry(fileobj,
+                                                    _entryoffset(entryindex))
+                        while node and hex(node).startswith(id):
+                            candidates[node] = rev
+                            node, rev = _readindexentry(fileobj)
+
+                    # bisect has found candidates among sorted entries.
+                    # But there maybe candidates among unsorted entries that
+                    # go after. Move file current position after all sorted
+                    # entries and then scan the file till the end.
+                    fileobj.seek(_entryoffset(sortedcount))
+                for node, rev in _readtillend(fileobj):
+                    hexnode = hex(node)
+                    if hexnode.startswith(id):
+                        candidates[node] = rev
     except Exception as e:
         ui.warn(_('failed to read partial index %s : %s\n') %
                 (fullpath, str(e)))
@@ -360,7 +400,9 @@ def _readtillend(fileobj):
 def _entryoffset(index):
     return _header.headersize + _entrysize * index
 
-def _readindexentry(fileobj):
+def _readindexentry(fileobj, readfrom=None):
+    if readfrom is not None:
+        fileobj.seek(readfrom)
     line = fileobj.read(_entrysize)
     if not line:
         return None, None

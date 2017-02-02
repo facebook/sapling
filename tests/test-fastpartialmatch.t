@@ -301,3 +301,19 @@ Now crash during pull
   $ hg pull -q
   $ hg debugprintpartialindexfile ac
   ac536ed8bde0682e30bb64c64570758903ce1aa6 3
+  $ hg log --graph -T '{node} {rev}'
+  o  ac536ed8bde0682e30bb64c64570758903ce1aa6 3
+  |
+  @  64905857be49e6c1134f69f9743ecf8ac04a93e2 2
+  |
+  o  3dd368d533d16f6172e27321f05f9a419ca354bf 1
+  |
+  o  b75a450e74d5a7708da8c3144fbeb4ac88694044 0
+  
+  $ hg debugresolvepartialhash ac536e
+  ac536e: ac536ed8bde0682e30bb64c64570758903ce1aa6 3
+
+Test usebisect option
+  $ hg debugrebuildpartialindex
+  $ hg --config fastpartialmatch.usebisect=False debugresolvepartialhash ac536e
+  ac536e: ac536ed8bde0682e30bb64c64570758903ce1aa6 3
