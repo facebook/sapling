@@ -1852,6 +1852,10 @@ class localrepository(object):
                                   listsubrepos)
 
     def heads(self, start=None):
+        if start is None:
+            headrevs = sorted(self.changelog.headrevs(), reverse=True)
+            return [self.changelog.node(rev) for rev in headrevs]
+
         heads = self.changelog.heads(start)
         # sort the output in rev descending order
         return sorted(heads, key=self.changelog.rev, reverse=True)
