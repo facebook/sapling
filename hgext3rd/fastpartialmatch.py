@@ -19,6 +19,7 @@ from mercurial import (
 
 from mercurial.i18n import _
 from mercurial.node import (
+    bin,
     hex,
 )
 
@@ -36,6 +37,10 @@ _packstruct = struct.Struct('!L')
 
 _nodesize = 20
 _entrysize = _nodesize + _packstruct.size
+
+def reposetup(ui, repo):
+    if repo.local():
+        ui.setconfig('hooks', 'pretxncommit.fastpartialmatch', _commithook)
 
 @command('^debugprintpartialindexfile', [])
 def debugprintpartialindexfile(ui, repo, *args):
@@ -132,6 +137,27 @@ def _getopener(path):
     vfs = scmutil.vfs(path)
     vfs.createmode = 0o644
     return vfs
+
+def _commithook(ui, repo, hooktype, node, parent1, parent2):
+    if _ispartialindexbuilt(repo.svfs):
+        # Append new entries only if index is built
+        hexnode = node  # it's actually a hexnode
+        tr = repo.currenttransaction()
+        _recordcommit(tr, hexnode, repo[hexnode].rev(), repo.svfs)
+
+def _recordcommit(tr, hexnode, rev, vfs):
+    vfs = _getopener(vfs.join(''))
+    filename = os.path.join(_partialindexdir, hexnode[:2])
+    if vfs.exists(filename):
+        size = vfs.stat(filename).st_size
+    else:
+        size = 0
+    tr.add(filename, size)
+    with vfs(filename, 'a') as fileobj:
+        _writeindexentry(fileobj, bin(hexnode), rev)
+
+def _ispartialindexbuilt(vfs):
+    return vfs.exists(_partialindexdir)
 
 def _writeindexentry(fileobj, node, rev):
     fileobj.write(node + _packstruct.pack(rev))

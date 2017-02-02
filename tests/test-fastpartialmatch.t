@@ -17,14 +17,15 @@
 
   $ hg init repo
   $ cd repo
+  $ hg debugrebuildpartialindex
   $ mkcommit "first"
+  $ hg debugcheckpartialindex
   $ hg log -r . -T '{node}\n'
   b75a450e74d5a7708da8c3144fbeb4ac88694044
 
 Check debug commands
   $ hg debugrebuildpartialindex
-  $ ls .hg/store/partialindex
-  b7
+  $ hg debugcheckpartialindex
   $ hg debugprintpartialindexfile
   abort: please specify a filename
   [255]
