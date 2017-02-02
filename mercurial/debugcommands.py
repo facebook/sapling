@@ -1884,6 +1884,17 @@ def debugsetparents(ui, repo, rev1, rev2=None):
     with repo.wlock():
         repo.setparents(r1, r2)
 
+@command('debugsub',
+    [('r', 'rev', '',
+     _('revision to check'), _('REV'))],
+    _('[-r REV] [REV]'))
+def debugsub(ui, repo, rev=None):
+    ctx = scmutil.revsingle(repo, rev, None)
+    for k, v in sorted(ctx.substate.items()):
+        ui.write(('path %s\n') % k)
+        ui.write((' source   %s\n') % v[0])
+        ui.write((' revision %s\n') % v[1])
+
 @command('debugupgraderepo', [
     ('o', 'optimize', [], _('extra optimization to perform'), _('NAME')),
     ('', 'run', False, _('performs an upgrade')),
