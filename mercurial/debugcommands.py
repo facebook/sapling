@@ -1500,6 +1500,23 @@ def debugrebuildfncache(ui, repo):
     """rebuild the fncache file"""
     repair.rebuildfncache(ui, repo)
 
+@command('debugrename',
+    [('r', 'rev', '', _('revision to debug'), _('REV'))],
+    _('[-r REV] FILE'))
+def debugrename(ui, repo, file1, *pats, **opts):
+    """dump rename information"""
+
+    ctx = scmutil.revsingle(repo, opts.get('rev'))
+    m = scmutil.match(ctx, (file1,) + pats, opts)
+    for abs in ctx.walk(m):
+        fctx = ctx[abs]
+        o = fctx.filelog().renamed(fctx.filenode())
+        rel = m.rel(abs)
+        if o:
+            ui.write(_("%s renamed from %s:%s\n") % (rel, o[0], hex(o[1])))
+        else:
+            ui.write(_("%s not renamed\n") % rel)
+
 @command('debugupgraderepo', [
     ('o', 'optimize', [], _('extra optimization to perform'), _('NAME')),
     ('', 'run', False, _('performs an upgrade')),
