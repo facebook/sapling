@@ -1719,6 +1719,8 @@ def unbundle(repo, cg, heads, source, url):
     if url.startswith('remote:http:') or url.startswith('remote:https:'):
         captureoutput = True
     try:
+        # note: outside bundle1, 'heads' is expected to be empty and this
+        # 'check_heads' call wil be a no-op
         check_heads(repo, heads, 'uploading changes')
         # push can proceed
         if util.safehasattr(cg, 'params'):
