@@ -177,7 +177,7 @@ def debugfastpartialmatchstat(ui, repo):
     if _needsrebuilding(repo.svfs):
         ui.write(_('index will be rebuilt on the next pull\n'))
     indexvfs = scmutil.vfs(repo.svfs.join(_partialindexdir))
-    for indexfile in _iterindexfile(indexvfs):
+    for indexfile in sorted(_iterindexfile(indexvfs)):
         size = indexvfs.stat(indexfile).st_size - _header.headersize
         entriescount = size / _entrysize
         with indexvfs(indexfile) as fileobj:

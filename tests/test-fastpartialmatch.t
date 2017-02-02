@@ -25,10 +25,10 @@
 
 Check permissions
   $ ls -al .hg/store/partialindex/
-  total 12
-  drwxr-xr-x. 2 stash users 4096 .* \. (re)
-  drwxr-xr-x. 4 stash users 4096 .* \.\. (re)
-  -rw-r--r--. 1 stash users   48 .* b7 (re)
+  total \d+ (re)
+  drwxr-xr-x. .* \. (re)
+  drwxr-xr-x. .* \.\. (re)
+  -rw-r--r--. .* b7 (re)
 
 Check debug commands
   $ hg debugrebuildpartialindex
@@ -332,23 +332,23 @@ Next command should set that cache needs rebuilding
   $ hg log -r 587cd78c6d0eb0259 > /dev/null
   $ hg debugfastpartialmatchstat
   index will be rebuilt on the next pull
-  file: 64, entries: 1, out of them 1 sorted
   file: 3d, entries: 1, out of them 1 sorted
+  file: 58, entries: 1, out of them 0 sorted
+  file: 64, entries: 1, out of them 1 sorted
   file: ac, entries: 1, out of them 1 sorted
   file: b7, entries: 1, out of them 1 sorted
-  file: 58, entries: 1, out of them 0 sorted
 
 Now do a pull and make sure that index was rebuilt (file '12' is not rebuilt
 because it was just pulled)
   $ hg pull -q
   $ hg debugfastpartialmatchstat
   index will be rebuilt on the next pull
-  file: 64, entries: 1, out of them 1 sorted
+  file: 12, entries: 1, out of them 0 sorted
   file: 3d, entries: 1, out of them 1 sorted
+  file: 58, entries: 1, out of them 1 sorted
+  file: 64, entries: 1, out of them 1 sorted
   file: ac, entries: 1, out of them 1 sorted
   file: b7, entries: 1, out of them 1 sorted
-  file: 58, entries: 1, out of them 1 sorted
-  file: 12, entries: 1, out of them 0 sorted
 
 Increase unsortedthreshold and make one more pull. Make sure index doesn't need
 to be rebuilt
@@ -357,12 +357,12 @@ to be rebuilt
   $ cd ../cloned2
   $ hg pull -q --config fastpartialmatch.unsortedthreshold=2
   $ hg debugfastpartialmatchstat
-  file: 64, entries: 1, out of them 1 sorted
+  file: 12, entries: 1, out of them 1 sorted
   file: 3d, entries: 1, out of them 1 sorted
+  file: 58, entries: 1, out of them 1 sorted
+  file: 64, entries: 1, out of them 1 sorted
   file: ac, entries: 1, out of them 1 sorted
   file: b7, entries: 1, out of them 1 sorted
-  file: 58, entries: 1, out of them 1 sorted
-  file: 12, entries: 1, out of them 1 sorted
   file: fd, entries: 1, out of them 0 sorted
 
 Make a commit and change partialindex permissions to non-writabble. Then do
