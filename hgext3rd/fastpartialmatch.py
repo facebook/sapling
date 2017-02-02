@@ -18,6 +18,8 @@ rev numbers for nodes should be correct too.
     raiseifinconsistent = False
 '''
 
+from collections import defaultdict
+
 from mercurial import (
     cmdutil,
     context,
@@ -32,6 +34,8 @@ from mercurial.node import (
     bin,
     hex,
 )
+
+from operator import itemgetter
 
 import os
 import re
@@ -160,24 +164,21 @@ def _rebuildpartialindex(ui, repo, skiphexnodes=None):
 
     vfs.mkdir(tempdir)
 
-    # Cache open file objects to not reopen the same files many times
-    fileobjs = {}
-    try:
-        indexvfs = _getopener(vfs.join(tempdir))
-        for rev in repo.changelog:
-            node = repo.changelog.node(rev)
-            hexnode = hex(node)
-            if hexnode in skiphexnodes:
-                continue
-            filename = hexnode[:2]
-            if filename not in fileobjs:
-                fileobjs[filename] = indexvfs(filename, mode='a')
-            fileobj = fileobjs[filename]
-            _writeindexentry(fileobj, node, rev)
-        vfs.rename(tempdir, _partialindexdir)
-    finally:
-        for fileobj in fileobjs.values():
-            fileobj.close()
+    filesdata = defaultdict(list)
+    for rev in repo.changelog:
+        node = repo.changelog.node(rev)
+        hexnode = hex(node)
+        if hexnode in skiphexnodes:
+            continue
+        filename = hexnode[:2]
+        filesdata[filename].append((node, rev))
+
+    indexvfs = _getopener(vfs.join(tempdir))
+    for filename, data in filesdata.items():
+        with indexvfs(filename, 'a') as fileobj:
+            for node, rev in sorted(data, key=itemgetter(0)):
+                _writeindexentry(fileobj, node, rev)
+    vfs.rename(tempdir, _partialindexdir)
 
 def _getopener(path):
     vfs = scmutil.vfs(path)

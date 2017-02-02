@@ -23,6 +23,13 @@
   $ hg log -r . -T '{node}\n'
   b75a450e74d5a7708da8c3144fbeb4ac88694044
 
+Check permissions
+  $ ls -al .hg/store/partialindex/
+  total 12
+  drwxr-xr-x. 2 stash users 4096 .* \. (re)
+  drwxr-xr-x. 4 stash users 4096 .* \.\. (re)
+  -rw-r--r--. 1 stash users   24 .* b7 (re)
+
 Check debug commands
   $ hg debugrebuildpartialindex
   $ hg debugcheckpartialindex
