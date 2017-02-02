@@ -153,8 +153,6 @@ def uisetup(ui):
         if usepager:
             ui.setconfig('ui', 'formatted', ui.formatted(), 'pager')
             ui.setconfig('ui', 'interactive', False, 'pager')
-            if util.safehasattr(signal, "SIGPIPE"):
-                signal.signal(signal.SIGPIPE, signal.SIG_DFL)
             ui._runpager(p)
         return orig(ui, options, cmd, cmdfunc)
 
