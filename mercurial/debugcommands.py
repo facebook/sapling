@@ -2043,3 +2043,25 @@ def debugwalk(ui, repo, *pats, **opts):
     for abs in items:
         line = fmt % (abs, f(m.rel(abs)), m.exact(abs) and 'exact' or '')
         ui.write("%s\n" % line.rstrip())
+
+@command('debugwireargs',
+    [('', 'three', '', 'three'),
+    ('', 'four', '', 'four'),
+    ('', 'five', '', 'five'),
+    ] + commands.remoteopts,
+    _('REPO [OPTIONS]... [ONE [TWO]]'),
+    norepo=True)
+def debugwireargs(ui, repopath, *vals, **opts):
+    repo = hg.peer(ui, opts, repopath)
+    for opt in commands.remoteopts:
+        del opts[opt[1]]
+    args = {}
+    for k, v in opts.iteritems():
+        if v:
+            args[k] = v
+    # run twice to check that we don't mess up the stream for the next command
+    res1 = repo.debugwireargs(*vals, **args)
+    res2 = repo.debugwireargs(*vals, **args)
+    ui.write("%s\n" % res1)
+    if res1 != res2:
+        ui.warn("%s\n" % res2)

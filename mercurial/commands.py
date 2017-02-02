@@ -1852,28 +1852,6 @@ def copy(ui, repo, *pats, **opts):
     with repo.wlock(False):
         return cmdutil.copy(ui, repo, pats, opts)
 
-@command('debugwireargs',
-    [('', 'three', '', 'three'),
-    ('', 'four', '', 'four'),
-    ('', 'five', '', 'five'),
-    ] + remoteopts,
-    _('REPO [OPTIONS]... [ONE [TWO]]'),
-    norepo=True)
-def debugwireargs(ui, repopath, *vals, **opts):
-    repo = hg.peer(ui, opts, repopath)
-    for opt in remoteopts:
-        del opts[opt[1]]
-    args = {}
-    for k, v in opts.iteritems():
-        if v:
-            args[k] = v
-    # run twice to check that we don't mess up the stream for the next command
-    res1 = repo.debugwireargs(*vals, **args)
-    res2 = repo.debugwireargs(*vals, **args)
-    ui.write("%s\n" % res1)
-    if res1 != res2:
-        ui.warn("%s\n" % res2)
-
 @command('^diff',
     [('r', 'rev', [], _('revision'), _('REV')),
     ('c', 'change', '', _('change made by revision'), _('REV'))
