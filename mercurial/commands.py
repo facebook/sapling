@@ -1859,44 +1859,6 @@ def copy(ui, repo, *pats, **opts):
     with repo.wlock(False):
         return cmdutil.copy(ui, repo, pats, opts)
 
-@command('debugrebuilddirstate|debugrebuildstate',
-    [('r', 'rev', '', _('revision to rebuild to'), _('REV')),
-     ('', 'minimal', None, _('only rebuild files that are inconsistent with '
-                             'the working copy parent')),
-    ],
-    _('[-r REV]'))
-def debugrebuilddirstate(ui, repo, rev, **opts):
-    """rebuild the dirstate as it would look like for the given revision
-
-    If no revision is specified the first current parent will be used.
-
-    The dirstate will be set to the files of the given revision.
-    The actual working directory content or existing dirstate
-    information such as adds or removes is not considered.
-
-    ``minimal`` will only rebuild the dirstate status for files that claim to be
-    tracked but are not in the parent manifest, or that exist in the parent
-    manifest but are not in the dirstate. It will not change adds, removes, or
-    modified files that are in the working copy parent.
-
-    One use of this command is to make the next :hg:`status` invocation
-    check the actual file content.
-    """
-    ctx = scmutil.revsingle(repo, rev)
-    with repo.wlock():
-        dirstate = repo.dirstate
-        changedfiles = None
-        # See command doc for what minimal does.
-        if opts.get('minimal'):
-            manifestfiles = set(ctx.manifest().keys())
-            dirstatefiles = set(dirstate)
-            manifestonly = manifestfiles - dirstatefiles
-            dsonly = dirstatefiles - manifestfiles
-            dsnotadded = set(f for f in dsonly if dirstate[f] != 'a')
-            changedfiles = manifestonly | dsnotadded
-
-        dirstate.rebuild(ctx.node(), ctx.manifest(), changedfiles)
-
 @command('debugrebuildfncache', [], '')
 def debugrebuildfncache(ui, repo):
     """rebuild the fncache file"""
