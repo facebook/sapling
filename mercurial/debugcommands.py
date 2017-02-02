@@ -2025,3 +2025,21 @@ def debugupgraderepo(ui, repo, run=False, optimize=None):
     unable to access the repository should be low.
     """
     return repair.upgraderepo(ui, repo, run=run, optimize=optimize)
+
+@command('debugwalk', commands.walkopts, _('[OPTION]... [FILE]...'),
+         inferrepo=True)
+def debugwalk(ui, repo, *pats, **opts):
+    """show how files match on given patterns"""
+    m = scmutil.match(repo[None], pats, opts)
+    items = list(repo.walk(m))
+    if not items:
+        return
+    f = lambda fn: fn
+    if ui.configbool('ui', 'slash') and pycompat.ossep != '/':
+        f = lambda fn: util.normpath(fn)
+    fmt = 'f  %%-%ds  %%-%ds  %%s' % (
+        max([len(abs) for abs in items]),
+        max([len(m.rel(abs)) for abs in items]))
+    for abs in items:
+        line = fmt % (abs, f(m.rel(abs)), m.exact(abs) and 'exact' or '')
+        ui.write("%s\n" % line.rstrip())
