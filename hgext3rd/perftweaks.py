@@ -144,7 +144,11 @@ def _editphases(orig, self, repo, tr, *args):
 
     # We don't actually use the transaction file generator. It's just a hook so
     # we can write out at the same time as phases.
-    tr.addfilegenerator('noderev-phaseroot', ('phaseroots-fake',), _write)
+    if tr:
+        tr.addfilegenerator('noderev-phaseroot', ('phaseroots-fake',), _write)
+    else:
+        # fp is not used anyway
+        _write(fp=None)
 
     return result
 
