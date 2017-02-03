@@ -147,6 +147,5 @@ class externalbundlestore(abstractbundlestore):
 
             if returncode != 0:
                 raise BundleReadException(
-                    'Failed to download from external store: %s' %
-                    (self.get_binary, stderr))
+                    'Failed to download from external store: %s' % stderr)
             return temp.read()
