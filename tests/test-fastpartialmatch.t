@@ -26,9 +26,9 @@
 Check permissions
   $ ls -al .hg/store/partialindex/
   total \d+ (re)
-  drwxr-xr-x. .* \. (re)
-  drwxr-xr-x. .* \.\. (re)
-  -rw-r--r--. .* b7 (re)
+  drwxr-xr-x.* \. (re)
+  drwxr-xr-x.* \.\. (re)
+  -rw-r--r--.* b7 (re)
 
 Check debug commands
   $ hg debugrebuildpartialindex
