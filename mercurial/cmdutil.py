@@ -26,14 +26,12 @@ from . import (
     changelog,
     copies,
     crecord as crecordmod,
-    dirstateguard as dirstateguardmod,
     encoding,
     error,
     formatter,
     graphmod,
     lock as lockmod,
     match as matchmod,
-    mergeutil,
     obsolete,
     patch,
     pathutil,
@@ -3366,11 +3364,6 @@ def command(table):
 
     return cmd
 
-def checkunresolved(ms):
-    ms._repo.ui.deprecwarn('checkunresolved moved from cmdutil to mergeutil',
-                           '4.1')
-    return mergeutil.checkunresolved(ms)
-
 # a list of (ui, repo, otherpeer, opts, missing) functions called by
 # commands.outgoing.  "missing" is "missing" of the result of
 # "findcommonoutgoing()"
@@ -3477,10 +3470,3 @@ def wrongtooltocontinue(repo, task):
     if after[1]:
         hint = after[0]
     raise error.Abort(_('no %s in progress') % task, hint=hint)
-
-class dirstateguard(dirstateguardmod.dirstateguard):
-    def __init__(self, repo, name):
-        dirstateguardmod.dirstateguard.__init__(self, repo, name)
-        repo.ui.deprecwarn(
-            'dirstateguard has moved from cmdutil to dirstateguard',
-            '4.1')
