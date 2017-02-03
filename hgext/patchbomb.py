@@ -90,6 +90,7 @@ from mercurial import (
     node as nodemod,
     patch,
     registrar,
+    repair,
     scmutil,
     templater,
     util,
@@ -442,6 +443,7 @@ emailopts = [
     ('o', 'outgoing', None,
      _('send changes not found in the target repository')),
     ('b', 'bundle', None, _('send changes not in target as a binary bundle')),
+    ('B', 'bookmark', '', _('send changes only reachable by given bookmark')),
     ('', 'bundlename', 'bundle',
      _('name of the bundle attachment file'), _('NAME')),
     ('r', 'rev', [], _('a revision to send'), _('REV')),
@@ -479,6 +481,9 @@ def email(ui, repo, *revs, **opts):
     will be created. You can include a patch both as text in the email
     body and as a regular or an inline attachment by combining the
     -a/--attach or -i/--inline with the --body option.
+
+    With -B/--bookmark changesets reachable by the given bookmark are
+    selected.
 
     With -o/--outgoing, emails will be generated for patches not found
     in the destination repository (or only those which are ancestors
@@ -518,6 +523,8 @@ def email(ui, repo, *revs, **opts):
       hg email -o -r 3000       # send all ancestors of 3000 not in default
       hg email -o -r 3000 DEST  # send all ancestors of 3000 not in DEST
 
+      hg email -B feature       # send all ancestors of feature bookmark
+
       hg email -b               # send bundle of all patches not in default
       hg email -b DEST          # send bundle of all patches not in DEST
       hg email -b -r 3000       # bundle of all ancestors of 3000 not in default
@@ -540,13 +547,14 @@ def email(ui, repo, *revs, **opts):
     mbox = opts.get('mbox')
     outgoing = opts.get('outgoing')
     rev = opts.get('rev')
+    bookmark = opts.get('bookmark')
 
     if not (opts.get('test') or mbox):
         # really sending
         mail.validateconfig(ui)
 
-    if not (revs or rev or outgoing or bundle):
-        raise error.Abort(_('specify at least one changeset with -r or -o'))
+    if not (revs or rev or outgoing or bundle or bookmark):
+        raise error.Abort(_('specify at least one changeset with -B, -r or -o'))
 
     if outgoing and bundle:
         raise error.Abort(_("--outgoing mode always on with --bundle;"
@@ -565,6 +573,10 @@ def email(ui, repo, *revs, **opts):
         if revs:
             raise error.Abort(_('use only one form to specify the revision'))
         revs = rev
+    elif bookmark:
+        if bookmark not in repo._bookmarks:
+            raise error.Abort(_("bookmark '%s' not found") % bookmark)
+        revs = repair.stripbmrevset(repo, bookmark)
 
     revs = scmutil.revrange(repo, revs)
     if outgoing:
