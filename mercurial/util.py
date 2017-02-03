@@ -63,9 +63,21 @@ urlparse = pycompat.urlparse
 urlreq = pycompat.urlreq
 xmlrpclib = pycompat.xmlrpclib
 
+def isatty(fp):
+    try:
+        return fp.isatty()
+    except AttributeError:
+        return False
+
+# glibc determines buffering on first write to stdout - if we replace a TTY
+# destined stdout with a pipe destined stdout (e.g. pager), we want line
+# buffering
+if isatty(stdout):
+    stdout = os.fdopen(stdout.fileno(), 'wb', 1)
+
 if pycompat.osname == 'nt':
     from . import windows as platform
-    stdout = platform.winstdout(pycompat.stdout)
+    stdout = platform.winstdout(stdout)
 else:
     from . import posix as platform
 
@@ -2749,12 +2761,6 @@ def removeauth(u):
     u = url(u)
     u.user = u.passwd = None
     return str(u)
-
-def isatty(fp):
-    try:
-        return fp.isatty()
-    except AttributeError:
-        return False
 
 timecount = unitcountfn(
     (1, 1e3, _('%.0f s')),
