@@ -42,11 +42,11 @@ struct TestMountFile {
   bool operator==(const TestMountFile& other) const;
 
   /**
-   * @param path is a StringPiece (rather than a RelativePath) for convenience
+   * @param p is a StringPiece (rather than a RelativePath) for convenience
    *     for creating instances of TestMountFile for unit tests.
    */
-  TestMountFile(folly::StringPiece path, std::string contents)
-      : path(path), contents(std::move(contents)) {}
+  TestMountFile(folly::StringPiece p, folly::StringPiece c)
+      : path(p), contents(c.str()) {}
 };
 
 class TestMount {

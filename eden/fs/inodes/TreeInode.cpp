@@ -34,6 +34,7 @@
 using folly::Future;
 using folly::makeFuture;
 using folly::StringPiece;
+using folly::Unit;
 using std::make_unique;
 using std::unique_ptr;
 
@@ -677,8 +678,6 @@ folly::Future<folly::Unit> TreeInode::unlink(PathComponentPiece name) {
 }
 
 folly::Future<folly::Unit> TreeInode::rmdir(PathComponentPiece name) {
-  // TODO: We should probably grab the mountpoint-wide rename lock here,
-  // and hold it during the child lookup.  This would avoid having to retry.
   return getOrLoadChildTree(name).then(
       [ self = inodePtrFromThis(),
         childName = PathComponent{name} ](const TreeInodePtr& child) {
@@ -789,56 +788,254 @@ folly::Future<folly::Unit> TreeInode::rmdirImpl(
   return folly::Unit{};
 }
 
-std::unique_ptr<InodeBase> TreeInode::renameHelper(
-    Dir* sourceContents,
-    PathComponentPiece sourceName,
-    TreeInodePtr destParent,
-    Dir* destContents,
-    PathComponentPiece destName,
-    const RenameLock& renameLock) {
-  auto sourceEntIter = sourceContents->entries.find(sourceName);
-  if (sourceEntIter == sourceContents->entries.end()) {
-    throw InodeError(ENOENT, inodePtrFromThis(), sourceName);
+/**
+ * A helper class that stores all locks required to perform a rename.
+ *
+ * This class helps acquire the locks in the correct order.
+ */
+struct TreeInode::TreeRenameLocks {
+  TreeRenameLocks() {}
+
+  void acquireLocks(
+      TreeInode* srcTree,
+      TreeInode* destTree,
+      PathComponentPiece destName);
+
+  void reset() {
+    *this = TreeRenameLocks();
   }
 
-  auto destEntIter = destContents->entries.find(destName);
+  const RenameLock& renameLock() const {
+    return renameLock_;
+  }
 
-  if (mode_to_dtype(sourceEntIter->second->mode) == dtype_t::Dir &&
-      destEntIter != destContents->entries.end()) {
-    // When renaming a directory, the destination must either not exist or
-    // it must be an empty directory
-    if (mode_to_dtype(destEntIter->second->mode) != dtype_t::Dir) {
-      throw InodeError(ENOTDIR, destParent, destName);
+  Dir* srcContents() {
+    return srcContents_;
+  }
+
+  Dir* destContents() {
+    return destContents_;
+  }
+
+  const PathMap<std::unique_ptr<Entry>>::iterator& destChildIter() const {
+    return destChildIter_;
+  }
+  InodeBase* destChild() const {
+    DCHECK(destChildExists());
+    return destChildIter_->second->inode;
+  }
+
+  bool destChildExists() const {
+    return destChildIter_ != destContents_->entries.end();
+  }
+  bool destChildIsDirectory() const {
+    DCHECK(destChildExists());
+    return mode_to_dtype(destChildIter_->second->mode) == dtype_t::Dir;
+  }
+  bool destChildIsEmpty() const {
+    DCHECK_NOTNULL(destChildContents_);
+    return destChildContents_->entries.empty();
+  }
+
+ private:
+  void lockDestChild(PathComponentPiece destName);
+
+  /**
+   * The mountpoint-wide rename lock.
+   */
+  RenameLock renameLock_;
+
+  /**
+   * Locks for the contents of the source and destination directories.
+   * If the source and destination directories are the same, only
+   * srcContentsLock_ is set.  However, srcContents_ and destContents_ above are
+   * always both set, so that destContents_ can be used regardless of wether
+   * the source and destination are both the same directory or not.
+   */
+  folly::Synchronized<Dir>::LockedPtr srcContentsLock_;
+  folly::Synchronized<Dir>::LockedPtr destContentsLock_;
+  folly::Synchronized<Dir>::LockedPtr destChildContentsLock_;
+
+  /**
+   * Pointers to the source and destination directory contents.
+   *
+   * These may both point to the same contents when the source and destination
+   * directory are the same.
+   */
+  Dir* srcContents_{nullptr};
+  Dir* destContents_{nullptr};
+  Dir* destChildContents_{nullptr};
+
+  /**
+   * An iterator pointing to the destination child entry in
+   * destContents_->entries.
+   * This may point to destContents_->entries.end() if the destination child
+   * does not exist.
+   */
+  PathMap<std::unique_ptr<Entry>>::iterator destChildIter_;
+};
+
+Future<Unit> TreeInode::rename(
+    PathComponentPiece name,
+    TreeInodePtr destParent,
+    PathComponentPiece destName) {
+  materializeDirAndParents();
+  if (destParent.get() != this) {
+    destParent->materializeDirAndParents();
+  }
+
+  bool needSrc = false;
+  bool needDest = false;
+  {
+    // Acquire the locks required to do the rename
+    TreeRenameLocks locks;
+    locks.acquireLocks(this, destParent.get(), destName);
+
+    // Look up the source entry.  The destination entry info was already
+    // loaded by TreeRenameLocks::acquireLocks().
+    auto srcIter = locks.srcContents()->entries.find(name);
+    if (srcIter == locks.srcContents()->entries.end()) {
+      // The source path does not exist.  Fail the rename.
+      return makeFuture<Unit>(InodeError(ENOENT, inodePtrFromThis(), name));
     }
+    Entry* srcEntry = srcIter->second.get();
 
-    // If the directory is loaded, check to see if it contains anything
-    if (destEntIter->second->inode != nullptr) {
-      auto destDir = dynamic_cast<TreeInode*>(destEntIter->second->inode);
-      if (!destDir) {
-        throw InodeError(
-            EIO,
-            destParent,
-            destName,
-            "inconsistency between contents and inodes objects");
-      }
+    // Perform as much input validation as possible now, before starting inode
+    // loads that might be necessary.
 
-      if (!destDir->contents_.rlock()->entries.empty()) {
-        throw InodeError(ENOTEMPTY, destParent, destName);
+    // Validate invalid file/directory replacement
+    if (mode_to_dtype(srcEntry->mode) == dtype_t::Dir) {
+      // The source is a directory.
+      // The destination must not exist, or must be an empty directory,
+      // or the exact same directory.
+      if (locks.destChildExists()) {
+        if (!locks.destChildIsDirectory()) {
+          VLOG(4) << "attempted to rename directory " << getLogPath() << "/"
+                  << name << " over file " << destParent->getLogPath() << "/"
+                  << destName;
+          return makeFuture<Unit>(InodeError(ENOTDIR, destParent, destName));
+        } else if (
+            locks.destChild() != srcEntry->inode && !locks.destChildIsEmpty()) {
+          VLOG(4) << "attempted to rename directory " << getLogPath() << "/"
+                  << name << " over non-empty directory "
+                  << destParent->getLogPath() << "/" << destName;
+          return makeFuture<Unit>(InodeError(ENOTEMPTY, destParent, destName));
+        }
       }
     } else {
-      // This directory is not currently loaded.
-      // This means that it cannot be materialized, so it only contains the
-      // contents from its Tree.  We don't ever track empty Trees, so therefore
-      // the directory cannot be empty.
-      throw InodeError(ENOTEMPTY, destParent, destName);
+      // The source is not a directory.
+      // The destination must not exist, or must not be a directory.
+      if (locks.destChildExists() && locks.destChildIsDirectory()) {
+        VLOG(4) << "attempted to rename file " << getLogPath() << "/" << name
+                << " over directory " << destParent->getLogPath() << "/"
+                << destName;
+        return makeFuture<Unit>(InodeError(EISDIR, destParent, destName));
+      }
+    }
+
+    // Make sure the destination directory is not unlinked.
+    if (destParent->isUnlinked()) {
+      VLOG(4) << "attempted to rename file " << getLogPath() << "/" << name
+              << " into deleted directory " << destParent->getLogPath()
+              << " ( as " << destName << ")";
+      return makeFuture<Unit>(InodeError(ENOENT, destParent));
+    }
+
+    // Check to see if we need to load the source or destination inodes
+    needSrc = !srcEntry->inode;
+    needDest = locks.destChildExists() && !locks.destChild();
+
+    // If we don't have to load anything now, we can immediately perform the
+    // rename.
+    if (!needSrc && !needDest) {
+      return doRename(std::move(locks), name, srcIter, destParent, destName);
+    }
+
+    // If we are still here we have to load either the source or destination,
+    // or both.  Release the locks before we try loading them.
+    //
+    // (We could refactor getOrLoadChild() a little bit so that we could start
+    // the loads with the locks still held, rather than releasing them just for
+    // getOrLoadChild() to re-acquire them temporarily.  This isn't terribly
+    // important for now, though.)
+  }
+
+  // Once we finish the loads, we have to re-run all the rename() logic.
+  // Other renames or unlinks may have occurred in the meantime, so all of the
+  // validation above has to be redone.
+  auto onLoadFinished = [
+    self = inodePtrFromThis(),
+    nameCopy = name.copy(),
+    destParent,
+    destNameCopy = destName.copy()
+  ]() {
+    return self->rename(nameCopy, destParent, destNameCopy);
+  };
+
+  if (needSrc && needDest) {
+    auto srcFuture = getOrLoadChild(name);
+    auto destFuture = destParent->getOrLoadChild(destName);
+    return folly::collect(srcFuture, destFuture).then(onLoadFinished);
+  } else if (needSrc) {
+    return getOrLoadChild(name).then(onLoadFinished);
+  } else {
+    CHECK(needDest);
+    return destParent->getOrLoadChild(destName).then(onLoadFinished);
+  }
+}
+
+namespace {
+bool isAncestor(const RenameLock& renameLock, TreeInode* a, TreeInode* b) {
+  auto parent = b->getParent(renameLock);
+  while (parent) {
+    if (parent.get() == a) {
+      return true;
+    }
+    parent = parent->getParent(renameLock);
+  }
+  return false;
+}
+}
+
+Future<Unit> TreeInode::doRename(
+    TreeRenameLocks&& locks,
+    PathComponentPiece srcName,
+    PathMap<std::unique_ptr<Entry>>::iterator srcIter,
+    TreeInodePtr destParent,
+    PathComponentPiece destName) {
+  Entry* srcEntry = srcIter->second.get();
+
+  // If the source and destination refer to exactly the same file,
+  // then just succeed immediately.  Nothing needs to be done in this case.
+  if (locks.destChildExists() && srcEntry->inode == locks.destChild()) {
+    return folly::Unit{};
+  }
+
+  // If we are doing a directory rename, sanity check that the destination
+  // directory is not a child of the source directory.  The Linux kernel
+  // generally should avoid invoking FUSE APIs with an invalid rename like
+  // this, but we want to check in case rename() gets invoked via some other
+  // non-FUSE mechanism.
+  //
+  // We don't have to worry about the source being a child of the destination
+  // directory.  That will have already been caught by the earlier check that
+  // ensures the destination directory is non-empty.
+  if (mode_to_dtype(srcEntry->mode) == dtype_t::Dir) {
+    // Our caller has already verified that the source is also a
+    // directory here.
+    auto* srcTreeInode =
+        boost::polymorphic_downcast<TreeInode*>(srcEntry->inode);
+    if (srcTreeInode == destParent.get() ||
+        isAncestor(locks.renameLock(), srcTreeInode, destParent.get())) {
+      return makeFuture<Unit>(InodeError(EINVAL, destParent, destName));
     }
   }
 
   // If we haven't actually materialized it yet, the rename() call will
   // fail.  So don't try that.
-  if (sourceEntIter->second->materialized) {
+  if (srcEntry->materialized) {
     auto contentDir = getOverlay()->getContentDir();
-    auto absoluteSourcePath = contentDir + getPathBuggy() + sourceName;
+    auto absoluteSourcePath = contentDir + getPathBuggy() + srcName;
     auto absoluteDestPath = contentDir + destParent->getPathBuggy() + destName;
     folly::checkUnixError(
         ::rename(absoluteSourcePath.c_str(), absoluteDestPath.c_str()),
@@ -852,96 +1049,125 @@ std::unique_ptr<InodeBase> TreeInode::renameHelper(
   // Success.
   // Update the destination with the source data (this copies in the hash if
   // it happens to be set).
-  auto& destEnt = destContents->entries[destName];
-  // Note: sourceEntIter may have been invalidated by the line above in the
-  // case that the source and destination dirs are the same.  We need to
-  // recompute that iterator now to be safe.
-  sourceEntIter = sourceContents->entries.find(sourceName);
-
   std::unique_ptr<InodeBase> deletedInode;
-  // FIXME: If destEnt exists but destEnt->inode is not loaded, we need to tell
-  // the InodeMap so it can update its state if the child is present in the
-  // unloadedInodes_ map.
-  if (destEnt && destEnt->inode) {
-    deletedInode =
-        destEnt->inode->markUnlinked(destParent.get(), destName, renameLock);
+  auto* childInode = srcEntry->inode;
+  if (locks.destChildExists()) {
+    deletedInode = locks.destChild()->markUnlinked(
+        destParent.get(), destName, locks.renameLock());
+
+    // Replace the destination contents entry with the source data
+    locks.destChildIter()->second = std::move(srcIter->second);
+  } else {
+    auto ret = locks.destContents()->entries.emplace(
+        destName, std::move(srcIter->second));
+    CHECK(ret.second);
+
+    // If the source and destination directory are the same, then inserting the
+    // destination entry may have invalidated our source entry iterator, so we
+    // have to look it up again.
+    if (destParent.get() == this) {
+      srcIter = locks.srcContents()->entries.find(srcName);
+    }
   }
 
-  // We want to move in the data from the source.
-  destEnt = std::move(sourceEntIter->second);
-
-  // FIXME: If our child is not loaded, we need to tell the InodeMap so it
-  // can update its state if the child is present in the unloadedInodes_ map.
-  if (destEnt->inode) {
-    destEnt->inode->updateLocation(destParent, destName, renameLock);
-  }
+  // Inform the child inode that it has been moved
+  childInode->updateLocation(destParent, destName, locks.renameLock());
 
   // Now remove the source information
-  sourceContents->entries.erase(sourceEntIter);
-  return deletedInode;
+  locks.srcContents()->entries.erase(srcIter);
+
+  // Save the overlay data
+  const auto& overlay = getOverlay();
+  overlay->saveOverlayDir(getPathBuggy(), locks.srcContents());
+  if (destParent.get() != this) {
+    // We have already verified that destParent is not unlinked, and we are
+    // holding the rename lock which prevents it from being renamed or unlinked
+    // while we are operating, so getPath() must have a value here.
+    overlay->saveOverlayDir(
+        destParent->getPath().value(), locks.destContents());
+  }
+
+  // Release the rename locks before we destroy the deleted destination child
+  // inode (if it exists).
+  locks.reset();
+  deletedInode.reset();
+  return folly::Unit{};
 }
 
-folly::Future<folly::Unit> TreeInode::rename(
-    PathComponentPiece name,
-    TreeInodePtr newParent,
-    PathComponentPiece newName) {
-  // Grab a mountpoint-wide rename lock so that no other rename
-  // operations can happen while we are running.
-  auto renameLock = getMount()->acquireRenameLock();
+/**
+ * Acquire the locks necessary for a rename operation.
+ *
+ * We acquire multiple locks here:
+ *   A) Mountpoint rename lock
+ *   B) Source directory contents_ lock
+ *   C) Destination directory contents_ lock
+ *   E) Destination child contents_ (assuming the destination name
+ *      refers to an existing directory).
+ *
+ * This function ensures the locks are held with the proper ordering.
+ * Since we hold the rename lock first, we can acquire multiple TreeInode
+ * contents_ locks at once, but we must still ensure that we acquire locks on
+ * ancestor TreeInode's before any of their descendants.
+ */
+void TreeInode::TreeRenameLocks::acquireLocks(
+    TreeInode* srcTree,
+    TreeInode* destTree,
+    PathComponentPiece destName) {
+  // First grab the mountpoint-wide rename lock.
+  renameLock_ = srcTree->getMount()->acquireRenameLock();
 
-  auto myPath = getPathBuggy();
-  auto destDirPath = newParent->getPathBuggy();
-
-  // Check pre-conditions with a read lock before we materialize anything
-  // in case we're processing spurious rename for a non-existent entry;
-  // we don't want to materialize part of a tree if we're not actually
-  // going to do any work in it.
-  // There are some more complex pre-conditions that we'd like to check
-  // before materializing, but we cannot do so in a race free manner
-  // without locking each of the associated objects.  The existence
-  // check is sufficient to avoid the majority of the potentially
-  // wasted effort.
-  contents_.withRLock([&](const auto& contents) {
-    auto entIter = contents.entries.find(name);
-    if (entIter == contents.entries.end()) {
-      throw InodeError(ENOENT, this->inodePtrFromThis(), name);
-    }
-  });
-
-  materializeDirAndParents();
-
-  // Can't use SYNCHRONIZED_DUAL for both cases, as we'd self-deadlock by trying
-  // to wlock the same thing twice
-  std::unique_ptr<InodeBase> deletedInode;
-  if (newParent.get() == this) {
-    contents_.withWLock([&](auto& contents) {
-      deletedInode = this->renameHelper(
-          &contents, name, newParent, &contents, newName, renameLock);
-      this->getOverlay()->saveOverlayDir(myPath, &contents);
-    });
+  if (srcTree == destTree) {
+    // If the source and destination directories are the same,
+    // then there is really only one parent directory to lock.
+    srcContentsLock_ = srcTree->contents_.wlock();
+    srcContents_ = &*srcContentsLock_;
+    destContents_ = &*srcContentsLock_;
+    // Look up the destination child entry, and lock it if is is a directory
+    lockDestChild(destName);
+  } else if (isAncestor(renameLock_, srcTree, destTree)) {
+    // If srcTree is an ancestor of destTree, we must acquire the lock on
+    // srcTree first.
+    srcContentsLock_ = srcTree->contents_.wlock();
+    srcContents_ = &*srcContentsLock_;
+    destContentsLock_ = destTree->contents_.wlock();
+    destContents_ = &*destContentsLock_;
+    lockDestChild(destName);
   } else {
-    newParent->materializeDirAndParents();
+    // In all other cases, lock destTree and destChild before srcTree,
+    // as long as we verify that destChild and srcTree are not the same.
+    //
+    // It is not possible for srcTree to be an ancestor of destChild,
+    // since we have confirmed that srcTree is not destTree nor an ancestor of
+    // destTree.
+    destContentsLock_ = destTree->contents_.wlock();
+    destContents_ = &*destContentsLock_;
+    lockDestChild(destName);
 
-    // TODO: SYNCHRONIZED_DUAL is not the correct locking order to use here.
-    // We need to figure out if the source and dest are ancestors/children of
-    // each other.  If so we have to lock the ancestor first.  Otherwise we may
-    // deadlock with other operations that always acquire parent directory
-    // locks first (e.g., rmdir())
-    SYNCHRONIZED_DUAL(
-        sourceContents, contents_, destContents, newParent->contents_) {
-      deletedInode = renameHelper(
-          &sourceContents, name, newParent, &destContents, newName, renameLock);
-      getOverlay()->saveOverlayDir(myPath, &sourceContents);
-      getOverlay()->saveOverlayDir(destDirPath, &destContents);
+    // While srcTree cannot be an ancestor of destChild, it might be the
+    // same inode.  Don't try to lock the same TreeInode twice in this case.
+    //
+    // The rename will be failed later since this must be an error, but for now
+    // we keep going and let the exact error be determined later.
+    // This will either be ENOENT (src entry doesn't exist) or ENOTEMPTY
+    // (destChild is not empty since the src entry exists).
+    if (destChildExists() && destChild() == srcTree) {
+      CHECK_NOTNULL(destChildContents_);
+      srcContents_ = destChildContents_;
+    } else {
+      srcContentsLock_ = srcTree->contents_.wlock();
+      srcContents_ = &*srcContentsLock_;
     }
   }
-  deletedInode.reset();
+}
 
-  auto sourceName = myPath + name;
-  auto targetName = destDirPath + newName;
-  getMount()->getJournal().wlock()->addDelta(
-      std::make_unique<JournalDelta>(JournalDelta{sourceName, targetName}));
-  return folly::Unit{};
+void TreeInode::TreeRenameLocks::lockDestChild(PathComponentPiece destName) {
+  // Look up the destination child entry
+  destChildIter_ = destContents_->entries.find(destName);
+  if (destChildExists() && destChildIsDirectory() && destChild() != nullptr) {
+    auto* childTree = boost::polymorphic_downcast<TreeInode*>(destChild());
+    destChildContentsLock_ = childTree->contents_.wlock();
+    destChildContents_ = &*destChildContentsLock_;
+  }
 }
 
 InodeMap* TreeInode::getInodeMap() const {

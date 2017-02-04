@@ -42,12 +42,42 @@ lock.
 - A FileInode's lock may be acquired while holding its parent TreeInode's
   `contents_` lock.
 
-- In some situations the same thread acquires multiple `contents_` locks
-  together.  These must be acquired in the following order:
-  - If TreeInode A is a parent or ancestor of TreeInode B, A's `contents_` lock
-    must be acquired first.
-  - If TreeInodes A and B are not in a parent/child relationship, acquire A's
-    `contents_` lock first if and only if A's address is lower than B's
+In some situations the same thread acquires multiple `contents_` locks
+together.
+
+  - Some code paths hold a parent TreeInode's `contents_` lock while accessing
+    its children, and then acquire a child TreeInode's `contents_` lock while
+    still holding the parent TreeInode's lock.
+
+  - The `rename()` code may hold up to 3 TreeInode locks.  It always holds the
+    `contents_` lock on both the source TreeInode and the destination
+    TreeInode.  Additionally, if the destination name refers to an existing
+    TreeInode, the rename() holds its `contents_` lock as well, to ensure that
+    it is empty, and to prevent new entries from being created inside this
+    directory once the rename starts.
+
+To prevent deadlocks, the lock ordering constraints for TreeInode `contents_`
+are as follows:
+
+- If you are not holding the mountpoint rename lock, you can only acquire
+  a TreeInode `contents_` lock if the other `contents_` locks you are holding
+  are for this TreeInode's immediate parents.  (e.g., if you are already
+  holding another `contents_` lock it must be for this TreeInode's parent.  If
+  you are holding two other `contents_` locks it must be for this TreeInode's
+  parent and grandparent.)
+
+  Note however that acquiring multiple TreeInode contents locks discouraged.
+  When possible it is preferred to release the lock on the parent TreeInode
+  before locking the child.  Acquiring locks on more than 2 levels of the tree
+  hierarchy is technically safe from a lock ordering perspective, but is also
+  strongly discouraged.
+
+- If you are holding the mountpoint rename lock, it is safe to acquire multiple
+  TreeInode locks at a time.  However, if there is an ancestor/child
+  relationship between any of the TreeInode's, the ancestor lock must be
+  acquired first.  This avoids lock ordering issues with other threads that are
+  not holding the rename lock.  Among unrelated TreeInodes no particular
+  ordering is required.
 
 ## EdenMount's rename lock:
 

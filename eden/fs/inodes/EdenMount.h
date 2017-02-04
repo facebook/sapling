@@ -266,6 +266,7 @@ class EdenMount {
  */
 class RenameLock : public std::unique_lock<folly::SharedMutex> {
  public:
+  RenameLock() {}
   explicit RenameLock(EdenMount* mount)
       : std::unique_lock<folly::SharedMutex>{mount->renameMutex_} {}
 

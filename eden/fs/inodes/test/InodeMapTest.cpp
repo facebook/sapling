@@ -234,3 +234,122 @@ TEST(InodeMap, recursiveLookupError) {
   EXPECT_THROW_RE(
       fileFuture.get(), std::domain_error, "error for testing purposes");
 }
+
+TEST(InodeMap, renameDuringRecursiveLookup) {
+  BaseTestMountBuilder builder;
+  auto backingStore = builder.getBackingStore();
+
+  auto file = backingStore->putBlob("this is a test file");
+  auto d = backingStore->putTree({{"file.txt", file}});
+  auto c = backingStore->putTree({{"d", d}});
+  auto b = backingStore->putTree({{"c", c}});
+  auto a = backingStore->putTree({{"b", b}});
+  auto root = backingStore->putTree({{"a", a}});
+  builder.setCommit(makeTestHash("ccc"), root->get().getHash());
+  // build() will hang unless the root tree is ready.
+  root->setReady();
+
+  auto testMount = builder.build();
+  auto rootInode = testMount->getEdenMount()->getRootInode();
+
+  // Call EdenMount::getInode() on the root
+  auto rootFuture = testMount->getEdenMount()->getInode(RelativePathPiece{""});
+  ASSERT_TRUE(rootFuture.isReady());
+  auto rootResult = rootFuture.get();
+  EXPECT_EQ(rootInode, rootResult);
+
+  // Call EdenMount::getInode() to do a recursive lookup
+  auto fileFuture = testMount->getEdenMount()->getInode(
+      RelativePathPiece{"a/b/c/d/file.txt"});
+  EXPECT_FALSE(fileFuture.isReady());
+
+  c->setReady();
+  EXPECT_FALSE(fileFuture.isReady());
+  a->setReady();
+  EXPECT_FALSE(fileFuture.isReady());
+  b->setReady();
+  EXPECT_FALSE(fileFuture.isReady());
+
+  auto bFuture = testMount->getEdenMount()->getInode(RelativePathPiece{"a/b"});
+  ASSERT_TRUE(bFuture.isReady());
+  auto bInode = bFuture.get().asTreePtr();
+
+  // Rename c to x after the recursive resolution should have
+  // already looked it up
+  auto renameFuture =
+      bInode->rename(PathComponentPiece{"c"}, bInode, PathComponentPiece{"x"});
+  ASSERT_TRUE(renameFuture.isReady());
+  EXPECT_FALSE(fileFuture.isReady());
+
+  // Now mark the rest of the tree ready
+  // Note that we don't actually have to mark the file itself ready.
+  // The Inode lookup itself doesn't need the blob data yet.
+  d->setReady();
+  ASSERT_TRUE(fileFuture.isReady());
+  auto fileInode = fileFuture.get();
+  // We should have successfully looked up the inode, but it will report it
+  // self (correctly) at its new path now.
+  EXPECT_EQ(
+      RelativePathPiece{"a/b/x/d/file.txt"}, fileInode->getPath().value());
+}
+
+TEST(InodeMap, renameDuringRecursiveLookupAndLoad) {
+  BaseTestMountBuilder builder;
+  auto backingStore = builder.getBackingStore();
+
+  auto file = backingStore->putBlob("this is a test file");
+  auto d = backingStore->putTree({{"file.txt", file}});
+  auto c = backingStore->putTree({{"d", d}});
+  auto b = backingStore->putTree({{"c", c}});
+  auto a = backingStore->putTree({{"b", b}});
+  auto root = backingStore->putTree({{"a", a}});
+  builder.setCommit(makeTestHash("ccc"), root->get().getHash());
+  // build() will hang unless the root tree is ready.
+  root->setReady();
+
+  auto testMount = builder.build();
+  auto rootInode = testMount->getEdenMount()->getRootInode();
+
+  // Call EdenMount::getInode() on the root
+  auto rootFuture = testMount->getEdenMount()->getInode(RelativePathPiece{""});
+  ASSERT_TRUE(rootFuture.isReady());
+  auto rootResult = rootFuture.get();
+  EXPECT_EQ(rootInode, rootResult);
+
+  // Call EdenMount::getInode() to do a recursive lookup
+  auto fileFuture = testMount->getEdenMount()->getInode(
+      RelativePathPiece{"a/b/c/d/file.txt"});
+  EXPECT_FALSE(fileFuture.isReady());
+
+  a->setReady();
+  EXPECT_FALSE(fileFuture.isReady());
+  b->setReady();
+  EXPECT_FALSE(fileFuture.isReady());
+
+  auto bFuture = testMount->getEdenMount()->getInode(RelativePathPiece{"a/b"});
+  ASSERT_TRUE(bFuture.isReady());
+  auto bInode = bFuture.get().asTreePtr();
+
+  // Rename c to x while the recursive resolution is still trying
+  // to look it up.
+  auto renameFuture =
+      bInode->rename(PathComponentPiece{"c"}, bInode, PathComponentPiece{"x"});
+  // The rename will not complete until C becomes ready
+  EXPECT_FALSE(renameFuture.isReady());
+  EXPECT_FALSE(fileFuture.isReady());
+
+  c->setReady();
+  ASSERT_TRUE(renameFuture.isReady());
+  EXPECT_FALSE(fileFuture.isReady());
+
+  // Now mark the rest of the tree ready
+  // Note that we don't actually have to mark the file itself ready.
+  // The Inode lookup itself doesn't need the blob data yet.
+  d->setReady();
+  ASSERT_TRUE(fileFuture.isReady());
+  auto fileInode = fileFuture.get();
+  // We should have successfully looked up the inode, but it will report it
+  // self (correctly) at its new path now.
+  EXPECT_EQ(
+      RelativePathPiece{"a/b/x/d/file.txt"}, fileInode->getPath().value());
+}

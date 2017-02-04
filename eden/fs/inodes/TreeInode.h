@@ -146,14 +146,6 @@ class TreeInode : public InodeBase {
       TreeInodePtr newParent,
       PathComponentPiece newName);
 
-  std::unique_ptr<InodeBase> renameHelper(
-      Dir* sourceContents,
-      PathComponentPiece sourceName,
-      TreeInodePtr destParent,
-      Dir* destContents,
-      PathComponentPiece destName,
-      const RenameLock& renameLock);
-
   fuse_ino_t getInode() const;
 
   const folly::Synchronized<Dir>& getContents() const {
@@ -235,6 +227,8 @@ class TreeInode : public InodeBase {
   folly::Future<folly::Unit> loadMaterializedChildren();
 
  private:
+  struct TreeRenameLocks;
+
   void registerInodeLoadComplete(
       folly::Future<std::unique_ptr<InodeBase>>& future,
       PathComponentPiece name,
@@ -250,6 +244,13 @@ class TreeInode : public InodeBase {
 
   folly::Future<std::unique_ptr<InodeBase>>
   startLoadingInode(Entry* entry, PathComponentPiece name, fuse_ino_t number);
+
+  folly::Future<folly::Unit> doRename(
+      TreeRenameLocks&& locks,
+      PathComponentPiece srcName,
+      PathMap<std::unique_ptr<Entry>>::iterator srcIter,
+      TreeInodePtr destParent,
+      PathComponentPiece destName);
 
   /** Translates a Tree object from our store into a Dir object
    * used to track the directory in the inode */
