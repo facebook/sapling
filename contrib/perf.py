@@ -993,6 +993,26 @@ def perfrevlogrevision(ui, repo, file_, rev=None, cache=None, **opts):
     node = r.lookup(rev)
     rev = r.rev(node)
 
+    def getrawchunks(data, chain):
+        start = r.start
+        length = r.length
+        inline = r._inline
+        iosize = r._io.size
+        buffer = util.buffer
+        offset = start(chain[0])
+
+        chunks = []
+        ladd = chunks.append
+
+        for rev in chain:
+            chunkstart = start(rev)
+            if inline:
+                chunkstart += (rev + 1) * iosize
+            chunklength = length(rev)
+            ladd(buffer(data, chunkstart - offset, chunklength))
+
+        return chunks
+
     def dodeltachain(rev):
         if not cache:
             r.clearcaches()
@@ -1003,24 +1023,15 @@ def perfrevlogrevision(ui, repo, file_, rev=None, cache=None, **opts):
             r.clearcaches()
         r._chunkraw(chain[0], chain[-1])
 
-    def dodecompress(data, chain):
+    def dorawchunks(data, chain):
         if not cache:
             r.clearcaches()
+        getrawchunks(data, chain)
 
-        start = r.start
-        length = r.length
-        inline = r._inline
-        iosize = r._io.size
-        buffer = util.buffer
-        offset = start(chain[0])
-
-        for rev in chain:
-            chunkstart = start(rev)
-            if inline:
-                chunkstart += (rev + 1) * iosize
-            chunklength = length(rev)
-            b = buffer(data, chunkstart - offset, chunklength)
-            r.decompress(b)
+    def dodecompress(chunks):
+        decomp = r.decompress
+        for chunk in chunks:
+            decomp(chunk)
 
     def dopatch(text, bins):
         if not cache:
@@ -1039,6 +1050,7 @@ def perfrevlogrevision(ui, repo, file_, rev=None, cache=None, **opts):
 
     chain = r._deltachain(rev)[0]
     data = r._chunkraw(chain[0], chain[-1])[1]
+    rawchunks = getrawchunks(data, chain)
     bins = r._chunks(chain)
     text = str(bins[0])
     bins = bins[1:]
@@ -1048,7 +1060,8 @@ def perfrevlogrevision(ui, repo, file_, rev=None, cache=None, **opts):
         (lambda: dorevision(), 'full'),
         (lambda: dodeltachain(rev), 'deltachain'),
         (lambda: doread(chain), 'read'),
-        (lambda: dodecompress(data, chain), 'decompress'),
+        (lambda: dorawchunks(data, chain), 'rawchunks'),
+        (lambda: dodecompress(rawchunks), 'decompress'),
         (lambda: dopatch(text, bins), 'patch'),
         (lambda: dohash(text), 'hash'),
     ]
