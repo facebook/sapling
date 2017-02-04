@@ -1,7 +1,7 @@
 Source: mercurial
 Section: vcs
 Priority: optional
-Maintainer: Mercurial Developers <mercurial-devel@selenic.com>
+Maintainer: Mercurial Developers <mercurial-devel@mercurial-scm.org>
 Build-Depends:
  debhelper (>= 9),
  dh-python,
