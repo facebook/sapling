@@ -1547,11 +1547,11 @@ Test section lookup
          "default:pushurl" should be used instead.
   
   $ hg help glossary.mcguffin
-  abort: help section not found
+  abort: help section not found: glossary.mcguffin
   [255]
 
   $ hg help glossary.mc.guffin
-  abort: help section not found
+  abort: help section not found: glossary.mc.guffin
   [255]
 
   $ hg help template.files

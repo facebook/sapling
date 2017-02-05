@@ -3916,6 +3916,7 @@ def help_(ui, name=None, **opts):
     if ui.verbose:
         keep.append('verbose')
 
+    fullname = name
     section = None
     subtopic = None
     if name and '.' in name:
@@ -3938,7 +3939,7 @@ def help_(ui, name=None, **opts):
     # to look for, or we could have simply failed to found "foo.bar"
     # because bar isn't a section of foo
     if section and not (formatted and name):
-        raise error.Abort(_("help section not found"))
+        raise error.Abort(_("help section not found: %s") % fullname)
 
     if 'verbose' in pruned:
         keep.append('omitted')
