@@ -384,37 +384,37 @@ class lazyremotenamedict(UserDict.DictMixin):
         else:
             return None
 
-    def keys(self, resolvekeys=None):
+    def keys(self, resolvenodes=None):
         """Get a list of bookmark names
 
-        `resolvekeys` allows callee to ask whether nodes to which these keys
+        `resolvenodes` allows callee to ask whether nodes to which these keys
         point should be resolved in a revlog (to safeguard against a key
         pointing to a non-existent node). If this kwarg:
-            - is None: remotenames.resolvekeys config value is read,
+            - is None: remotenames.resolvenodes config value is read,
               defaulting to True, as the behavior before this fix
-            - is not None: the bool value of resolvekeys is used"""
-        if resolvekeys is None:
-            resolvekeys = self._repo.ui.configbool("remotenames",
-                                                   "resolvekeys", True)
+            - is not None: the bool value of resolvenodes is used"""
+        if resolvenodes is None:
+            resolvenodes = self._repo.ui.configbool("remotenames",
+                                                   "resolvenodes", True)
         if not self.loaded:
             self._load()
-        if resolvekeys:
+        if resolvenodes:
             for u in self.potentialentries.keys():
                 self._fetchandcache(u)
             return self.cache.keys()
         return self.potentialentries.keys()
 
-    def iteritems(self, resolvekeys=None):
+    def iteritems(self, resolvenodes=None):
         """Iterate over (name, node) tuples
 
-        `resolvekeys` has the same meaning as in `keys()` method"""
+        `resolvenodes` has the same meaning as in `keys()` method"""
         if not self.loaded:
             self._load()
-        if resolvekeys is None:
-            resolvekeys = self._repo.ui.configbool("remotenames",
-                                                   "resolvekeys", True)
+        if resolvenodes is None:
+            resolvenodes = self._repo.ui.configbool("remotenames",
+                                                   "resolvenodes", True)
         for k, vtup in self.potentialentries.iteritems():
-            if resolvekeys:
+            if resolvenodes:
                 self._fetchandcache(k)
             yield (k, [bin(vtup[0])])
 
