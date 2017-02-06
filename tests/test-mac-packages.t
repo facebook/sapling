@@ -25,6 +25,10 @@ Spot-check some randomly selected files:
   ./Library/Python/2.7/site-packages/mercurial/pure/bdiff.py	100644	0/0
   ./Library/Python/2.7/site-packages/mercurial/pure/bdiff.pyc	100644	0/0
   ./Library/Python/2.7/site-packages/mercurial/pure/bdiff.pyo	100644	0/0
+  $ grep zsh/site-functions/hg boms.txt | cut -d '	' -f 1,2,3
+  ./usr/local/share/zsh/site-functions/hg	100640	0/0
+  $ grep hg-completion.bash boms.txt | cut -d '	' -f 1,2,3
+  ./usr/local/hg/contrib/hg-completion.bash	100640	0/0
   $ egrep 'man[15]' boms.txt | cut -d '	' -f 1,2,3
   ./usr/local/share/man/man1	40755	0/0
   ./usr/local/share/man/man1/hg.1	100644	0/0
@@ -40,7 +44,7 @@ Spot-check some randomly selected files:
   ./Library/Python/2.7/site-packages/mercurial/localrepo.py	100644	0/0
   ./Library/Python/2.7/site-packages/mercurial/localrepo.pyc	100644	0/0
   ./Library/Python/2.7/site-packages/mercurial/localrepo.pyo	100644	0/0
-  $ grep '/hg	' boms.txt | cut -d '	' -f 1,2,3
+  $ grep 'bin/hg	' boms.txt | cut -d '	' -f 1,2,3
   ./usr/local/bin/hg	100755	0/0
 
 Make sure the built binary uses the system Python interpreter

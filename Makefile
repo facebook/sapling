@@ -163,6 +163,16 @@ osx:
 	  --root=build/mercurial/ --prefix=/usr/local/ \
 	  --install-lib=/Library/Python/2.7/site-packages/
 	make -C doc all install DESTDIR="$(PWD)/build/mercurial/"
+        # install zsh completions - this location appears to be
+        # searched by default as of macOS Sierra.
+	mkdir -p build/mercurial/usr/local/share/zsh/site-functions
+	cp contrib/zsh_completion build/mercurial/usr/local/share/zsh/site-functions/hg
+        # install bash completions - there doesn't appear to be a
+        # place that's searched by default for bash, so we'll follow
+        # the lead of Apple's git install and just put it in a
+        # location of our own.
+	mkdir -p build/mercurial/usr/local/hg/contrib
+	cp contrib/bash_completion build/mercurial/usr/local/hg/contrib/hg-completion.bash
 	mkdir -p $${OUTPUTDIR:-dist}
 	HGVER=$$((cat build/mercurial/Library/Python/2.7/site-packages/mercurial/__version__.py; echo 'print(version)') | python) && \
 	OSXVER=$$(sw_vers -productVersion | cut -d. -f1,2) && \
