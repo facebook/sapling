@@ -404,6 +404,20 @@ class lazyremotenamedict(UserDict.DictMixin):
             return self.cache.keys()
         return self.potentialentries.keys()
 
+    def iteritems(self, resolvekeys=None):
+        """Iterate over (name, node) tuples
+
+        `resolvekeys` has the same meaning as in `keys()` method"""
+        if not self.loaded:
+            self._load()
+        if resolvekeys is None:
+            resolvekeys = self._repo.ui.configbool("remotenames",
+                                                   "resolvekeys", True)
+        for k, vtup in self.potentialentries.iteritems():
+            if resolvekeys:
+                self._fetchandcache(k)
+            yield (k, [bin(vtup[0])])
+
 class remotenames(dict):
     """This class encapsulates all the remotenames state. It also contains
     methods to access that state in convenient ways. Remotenames are lazy
