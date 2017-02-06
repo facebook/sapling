@@ -309,10 +309,10 @@ class HgServer(object):
 
         chunked_paths = []
         num_paths = 0
-        for path in ctx:
+        for path, hashval, flags in mf.iterentries():
             # Construct the chunk data using join(), since that is relatively
             # fast compared to other ways of constructing python strings.
-            entry = b'\t'.join((mf[path], mf.flags(path), path + b'\0'))
+            entry = b'\t'.join((hashval, flags, path + b'\0'))
             if len(chunked_paths) >= MANIFEST_PATHS_PER_CHUNK:
                 num_paths += len(chunked_paths)
                 self.send_chunk(request, b''.join(chunked_paths),
