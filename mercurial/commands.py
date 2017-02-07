@@ -3484,7 +3484,6 @@ def manifest(ui, repo, node=None, rev=None, **opts):
 
     Returns 0 on success.
     """
-
     fm = ui.formatter('manifest', opts)
 
     if opts.get('all'):
@@ -3500,6 +3499,7 @@ def manifest(ui, repo, node=None, rev=None, **opts):
             for fn, b, size in repo.store.datafiles():
                 if size != 0 and fn[-slen:] == suffix and fn[:plen] == prefix:
                     res.append(fn[plen:-slen])
+        ui.pager('manifest')
         for f in res:
             fm.startitem()
             fm.write("path", '%s\n', f)
@@ -3516,6 +3516,7 @@ def manifest(ui, repo, node=None, rev=None, **opts):
     mode = {'l': '644', 'x': '755', '': '644'}
     ctx = scmutil.revsingle(repo, node)
     mf = ctx.manifest()
+    ui.pager('manifest')
     for f in ctx:
         fm.startitem()
         fl = ctx[f].flags()
