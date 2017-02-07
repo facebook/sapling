@@ -5214,6 +5214,7 @@ def tags(ui, repo, **opts):
     Returns 0 on success.
     """
 
+    ui.pager('tags')
     fm = ui.formatter('tags', opts)
     hexfunc = fm.hexfunc
     tagtype = ""
