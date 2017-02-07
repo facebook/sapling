@@ -4300,6 +4300,7 @@ def resolve(ui, repo, *pats, **opts):
                          hint=('use --all to re-merge all unresolved files'))
 
     if show:
+        ui.pager('resolve')
         fm = ui.formatter('resolve', opts)
         ms = mergemod.mergestate.read(repo)
         m = scmutil.match(repo[None], pats, opts)
