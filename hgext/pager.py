@@ -110,4 +110,4 @@ def uisetup(ui):
         extensions.wrapfunction(dispatch, '_runcommand', pagecmd)
     extensions.afterloaded('color', afterloaded)
 
-attended = ['glog', 'log', 'qdiff']
+attended = ['qdiff']

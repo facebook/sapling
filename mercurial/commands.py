@@ -3435,6 +3435,7 @@ def log(ui, repo, *pats, **opts):
             endrev = scmutil.revrange(repo, opts.get('rev')).max() + 1
         getrenamed = templatekw.getrenamedfn(repo, endrev=endrev)
 
+    ui.pager('log')
     displayer = cmdutil.show_changeset(ui, repo, opts, buffered=True)
     for rev in revs:
         if count == limit:
