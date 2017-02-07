@@ -9,7 +9,7 @@
 # - This extension enhances ui.log(category, message, key=value, ...)
 # to also append filtered logged events as JSON to a file.
 # - The events are separated by NULL characters: '\0'.
-# - The file is either specified with the HG_SAMPLING_FILEPATH environment
+# - The file is either specified with the SCM_SAMPLING_FILEPATH environment
 # variable or the sampling.filepath configuration.
 # - If the file cannot be created or accessed, fails silently
 #
