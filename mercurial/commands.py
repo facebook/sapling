@@ -1940,6 +1940,7 @@ def diff(ui, repo, *pats, **opts):
 
     diffopts = patch.diffallopts(ui, opts)
     m = scmutil.match(repo[node2], pats, opts)
+    ui.pager('diff')
     cmdutil.diffordiffstat(ui, repo, diffopts, node1, node2, m, stat=stat,
                            listsubrepos=opts.get('subrepos'),
                            root=opts.get('root'))
