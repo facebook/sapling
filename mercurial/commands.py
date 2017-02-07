@@ -5415,6 +5415,8 @@ def verify(ui, repo):
 @command('version', [] + formatteropts, norepo=True)
 def version_(ui, **opts):
     """output version and copyright information"""
+    if ui.verbose:
+        ui.pager('version')
     fm = ui.formatter("version", opts)
     fm.startitem()
     fm.write("ver", _("Mercurial Distributed SCM (version %s)\n"),
