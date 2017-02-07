@@ -361,6 +361,7 @@ def annotate(ui, repo, *pats, **opts):
 
     Returns 0 on success.
     """
+    ui.pager('annotate')
     if not pats:
         raise error.Abort(_('at least one filename or pattern is required'))
 

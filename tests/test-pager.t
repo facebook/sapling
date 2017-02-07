@@ -164,3 +164,43 @@ Pager should not override the exit code of other commands
   $ hg fortytwo --pager=on
   paged! '42\n'
   [42]
+
+A command that asks for paging using ui.pager() directly works:
+  $ hg blame a
+  paged! ' 0: a\n'
+  paged! ' 1: a 1\n'
+  paged! ' 2: a 2\n'
+  paged! ' 3: a 3\n'
+  paged! ' 4: a 4\n'
+  paged! ' 5: a 5\n'
+  paged! ' 6: a 6\n'
+  paged! ' 7: a 7\n'
+  paged! ' 8: a 8\n'
+  paged! ' 9: a 9\n'
+  paged! '10: a 10\n'
+but not with HGPLAIN
+  $ HGPLAIN=1 hg blame a
+   0: a
+   1: a 1
+   2: a 2
+   3: a 3
+   4: a 4
+   5: a 5
+   6: a 6
+   7: a 7
+   8: a 8
+   9: a 9
+  10: a 10
+explicit flags work too:
+  $ hg blame --pager=no a
+   0: a
+   1: a 1
+   2: a 2
+   3: a 3
+   4: a 4
+   5: a 5
+   6: a 6
+   7: a 7
+   8: a 8
+   9: a 9
+  10: a 10
