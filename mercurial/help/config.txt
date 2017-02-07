@@ -56,6 +56,7 @@ ones.
 
   - ``<repo>/.hg/hgrc`` (per-repository)
   - ``$HOME/.hgrc`` (per-user)
+  - ``${XDG_CONFIG_HOME:-$HOME/.config}/hg/hgrc`` (per-user)
   - ``<install-root>/etc/mercurial/hgrc`` (per-installation)
   - ``<install-root>/etc/mercurial/hgrc.d/*.rc`` (per-installation)
   - ``/etc/mercurial/hgrc`` (per-system)
