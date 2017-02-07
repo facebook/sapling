@@ -101,7 +101,7 @@ def _buildencodefun():
     e = '_'
     if pycompat.ispy3:
         xchr = lambda x: bytes([x])
-        asciistr = bytes(xrange(127))
+        asciistr = [bytes(a) for a in range(127)]
     else:
         xchr = chr
         asciistr = map(chr, xrange(127))
