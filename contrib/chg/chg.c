@@ -128,6 +128,24 @@ static void preparesockdir(const char *sockdir)
 		abortmsg("insecure sockdir %s", sockdir);
 }
 
+/*
+ * Check if a socket directory exists and is only owned by the current user.
+ * Return 1 if so, 0 if not. This is used to check if XDG_RUNTIME_DIR can be
+ * used or not. According to the specification [1], XDG_RUNTIME_DIR should be
+ * ignored if the directory is not owned by the user with mode 0700.
+ * [1]: https://standards.freedesktop.org/basedir-spec/basedir-spec-latest.html
+ */
+static int checkruntimedir(const char *sockdir)
+{
+	struct stat st;
+	int r = lstat(sockdir, &st);
+	if (r < 0) /* ex. does not exist */
+		return 0;
+	if (!S_ISDIR(st.st_mode)) /* ex. is a file, not a directory */
+		return 0;
+	return st.st_uid == geteuid() && (st.st_mode & 0777) == 0700;
+}
+
 static void getdefaultsockdir(char sockdir[], size_t size)
 {
 	/* by default, put socket file in secure directory
@@ -135,7 +153,7 @@ static void getdefaultsockdir(char sockdir[], size_t size)
 	 * (permission of socket file may be ignored on some Unices) */
 	const char *runtimedir = getenv("XDG_RUNTIME_DIR");
 	int r;
-	if (runtimedir) {
+	if (runtimedir && checkruntimedir(runtimedir)) {
 		r = snprintf(sockdir, size, "%s/chg", runtimedir);
 	} else {
 		const char *tmpdir = getenv("TMPDIR");
