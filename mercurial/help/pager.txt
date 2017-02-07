@@ -26,3 +26,10 @@ you can use --pager=<value>::
   - require the pager: `yes` or `on`.
   - suppress the pager: `no` or `off` (any unrecognized value
   will also work).
+
+To globally turn off all attempts to use a pager, set::
+
+  [pager]
+  enable = false
+
+which will prevent the pager from running.
