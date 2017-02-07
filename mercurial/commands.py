@@ -1792,7 +1792,7 @@ def config(ui, repo, *values, **opts):
         ui.system("%s \"%s\"" % (editor, f),
                   onerr=error.Abort, errprefix=_("edit failed"))
         return
-
+    ui.pager('config')
     fm = ui.formatter('config', opts)
     for f in scmutil.rcpath():
         ui.debug('read config from: %s\n' % f)
