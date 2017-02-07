@@ -863,6 +863,7 @@ class ui(object):
             # interactive, the user didn't say HGPLAIN or
             # HGPLAINEXCEPT=pager, and the user didn't specify --debug.
             return
+        self.debug('starting pager for command %r\n' % command)
 
         # TODO: add a "system defaults" config section so this default
         # of more(1) can be easily replaced with a global
