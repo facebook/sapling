@@ -3292,6 +3292,7 @@ def locate(ui, repo, *pats, **opts):
     m = scmutil.match(ctx, pats, opts, default='relglob',
                       badfn=lambda x, y: False)
 
+    ui.pager('locate')
     for abs in ctx.matches(m):
         if opts.get('fullpath'):
             ui.write(repo.wjoin(abs), end)
