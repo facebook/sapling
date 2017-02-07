@@ -30,7 +30,7 @@ def _wrapchangectx(orig, repo, *args, **kwargs):
     try:
         return orig(repo, *args, **kwargs)
     except error.FilteredRepoLookupError as e:
-        match = re.match(r"hidden revision '(\d+)'", e.message)
+        match = re.match(r"hidden revision '(\d+)'", str(e))
         if not match:
             raise
         rev = int(match.group(1))
