@@ -158,9 +158,7 @@ class historypack(basepack.basepack):
         elif endnode == namehash:
             entry = self._index[end:end + INDEXENTRYLENGTH]
         else:
-            iteration = 0
             while start < end - INDEXENTRYLENGTH:
-                iteration += 1
                 mid = start  + (end - start) / 2
                 mid = mid - ((mid - params.indexstart) % INDEXENTRYLENGTH)
                 midnode = self._index[mid:mid + NODELENGTH]
