@@ -3761,6 +3761,7 @@ def paths(ui, repo, search=None, **opts):
 
     Returns 0 on success.
     """
+    ui.pager('paths')
     if search:
         pathitems = [(name, path) for name, path in ui.paths.iteritems()
                      if name == search]
