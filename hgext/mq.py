@@ -2676,6 +2676,7 @@ def diff(ui, repo, *pats, **opts):
 
     Returns 0 on success.
     """
+    ui.pager('qdiff')
     repo.mq.diff(repo, pats, opts)
     return 0
 

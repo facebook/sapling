@@ -110,4 +110,6 @@ def uisetup(ui):
         extensions.wrapfunction(dispatch, '_runcommand', pagecmd)
     extensions.afterloaded('color', afterloaded)
 
-attended = ['qdiff']
+attended = [
+    'the-default-attend-list-is-now-empty-but-that-breaks-the-extension',
+]
