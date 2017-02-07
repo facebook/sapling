@@ -207,6 +207,11 @@ Pager works with hg aliases including environment variables.
   $ A=2 hg --config pager.attend-printa=yes printa
   paged! '2\n'
 
+Something that's explicitly attended is still not paginated if the
+pager is globally set to off using a flag:
+  $ A=2 hg --config pager.attend-printa=yes printa --pager=no
+  2
+
 Pager should not override the exit code of other commands
 
   $ cat >> $TESTTMP/fortytwo.py <<'EOF'
