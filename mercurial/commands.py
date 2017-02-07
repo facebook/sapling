@@ -1903,7 +1903,7 @@ def debuginstall(ui, **opts):
     fm.write('pythonver', _("checking Python version (%s)\n"),
              ("%d.%d.%d" % sys.version_info[:3]))
     fm.write('pythonlib', _("checking Python lib (%s)...\n"),
-             os.path.dirname(os.__file__))
+             os.path.dirname(pycompat.fsencode(os.__file__)))
 
     security = set(sslutil.supportedprotocols)
     if sslutil.hassni:
