@@ -2084,6 +2084,7 @@ def files(ui, repo, *pats, **opts):
     fmt = '%s' + end
 
     m = scmutil.match(ctx, pats, opts)
+    ui.pager('files')
     with ui.formatter('files', opts) as fm:
         return cmdutil.files(ui, ctx, m, fm, fmt, opts.get('subrepos'))
 
