@@ -12,51 +12,14 @@
 #
 # Run 'hg help pager' to get info on configuration.
 
-'''browse command output with an external pager
+'''browse command output with an external pager (DEPRECATED)
 
-To set the pager that should be used, set the application variable::
-
-  [pager]
-  pager = less -FRX
-
-If no pager is set, the pager extensions uses the environment variable
-$PAGER. If neither pager.pager, nor $PAGER is set, no pager is used.
-
-You can disable the pager for certain commands by adding them to the
-pager.ignore list::
-
-  [pager]
-  ignore = version, help, update
-
-You can also enable the pager only for certain commands using
-pager.attend. Below is the default list of commands to be paged::
-
-  [pager]
-  attend = annotate, cat, diff, export, glog, log, qdiff
-
-Setting pager.attend to an empty value will cause all commands to be
-paged.
-
-If pager.attend is present, pager.ignore will be ignored.
-
-Lastly, you can enable and disable paging for individual commands with
-the attend-<command> option. This setting takes precedence over
-existing attend and ignore options and defaults::
+Forcibly enable paging for individual commands that don't typically
+request pagination with the attend-<command> option. This setting
+takes precedence over ignore options and defaults::
 
   [pager]
   attend-cat = false
-
-To ignore global commands like :hg:`version` or :hg:`help`, you have
-to specify them in your user configuration file.
-
-To control whether the pager is used at all for an individual command,
-you can use --pager=<value>::
-
-  - use as needed: `auto`.
-  - require the pager: `yes` or `on`.
-  - suppress the pager: `no` or `off` (any unrecognized value
-  will also work).
-
 '''
 from __future__ import absolute_import
 

@@ -1593,6 +1593,10 @@ help/ shows help topics
         "topic": "merge-tools"
       },
       {
+        "summary": "Pager Support",
+        "topic": "pager"
+      },
+      {
         "summary": "File Name Patterns",
         "topic": "patterns"
       },

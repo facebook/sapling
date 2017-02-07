@@ -230,6 +230,7 @@ helptable = sorted([
      loaddoc('scripting')),
     (['internals'], _("Technical implementation topics"),
      internalshelp),
+    (['pager'], _("Pager Support"), loaddoc('pager')),
 ])
 
 # Maps topics with sub-topics to a list of their sub-topics.

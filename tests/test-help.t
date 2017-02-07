@@ -113,6 +113,7 @@ Short help:
    hgweb         Configuring hgweb
    internals     Technical implementation topics
    merge-tools   Merge Tools
+   pager         Pager Support
    patterns      File Name Patterns
    phases        Working with Phases
    revisions     Specifying Revisions
@@ -188,6 +189,7 @@ Short help:
    hgweb         Configuring hgweb
    internals     Technical implementation topics
    merge-tools   Merge Tools
+   pager         Pager Support
    patterns      File Name Patterns
    phases        Working with Phases
    revisions     Specifying Revisions
@@ -262,7 +264,6 @@ Test extension help:
        largefiles    track large binary files
        mq            manage a stack of patches
        notify        hooks for sending email push notifications
-       pager         browse command output with an external pager
        patchbomb     command to send changesets as (a series of) patch emails
        purge         command to delete untracked files from the working
                      directory
@@ -831,6 +832,7 @@ Test that default list of commands omits extension commands
    hgweb         Configuring hgweb
    internals     Technical implementation topics
    merge-tools   Merge Tools
+   pager         Pager Support
    patterns      File Name Patterns
    phases        Working with Phases
    revisions     Specifying Revisions
@@ -1916,6 +1918,13 @@ Dish up an empty repo; serve it cold.
   </a>
   </td><td>
   Merge Tools
+  </td></tr>
+  <tr><td>
+  <a href="/help/pager">
+  pager
+  </a>
+  </td><td>
+  Pager Support
   </td></tr>
   <tr><td>
   <a href="/help/patterns">
