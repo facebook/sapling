@@ -2606,6 +2606,7 @@ def grep(ui, repo, pattern, *pats, **opts):
                 except error.LookupError:
                     pass
 
+    ui.pager('grep')
     fm = ui.formatter('grep', opts)
     for ctx in cmdutil.walkchangerevs(repo, matchfn, opts, prep):
         rev = ctx.rev()
