@@ -852,6 +852,7 @@ class ui(object):
         if (self._neverpager
             or self.pageractive
             or command in self.configlist('pager', 'ignore')
+            or not self.configbool('pager', 'attend-' + command, True)
             # TODO: if we want to allow HGPLAINEXCEPT=pager,
             # formatted() will need some adjustment.
             or not self.formatted()
