@@ -94,6 +94,12 @@ def uisetup(ui):
                     break
 
             if usepager:
+                # Slight hack: the attend list is supposed to override
+                # the ignore list for the pager extension, but the
+                # core code doesn't know about attend, so we have to
+                # lobotomize the ignore list so that the extension's
+                # behavior is preserved.
+                ui.setconfig('pager', 'ignore', '', 'pager')
                 ui.pager('extension-via-attend-' + cmd)
         return orig(ui, options, cmd, cmdfunc)
 
