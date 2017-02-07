@@ -37,10 +37,6 @@ def _destupdatevalidate(repo, rev, clean, check):
                     hint = _("commit and merge, or update --clean to"
                              " discard changes")
                     raise error.UpdateAbort(msg, hint=hint)
-                elif not check:  # destination is not a descendant.
-                    msg = _("not a linear update")
-                    hint = _("merge or update --check to force update")
-                    raise error.UpdateAbort(msg, hint=hint)
 
 def _destupdateobs(repo, clean, check):
     """decide of an update destination from obsolescence markers"""
