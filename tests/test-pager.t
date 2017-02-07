@@ -26,7 +26,7 @@ pager was running.
   >   hg ci -m "modify a $x"
   > done
 
-By default diff and log are paged, but summary is not:
+By default diff and log are paged, but id is not:
 
   $ hg diff -c 2 --pager=yes
   paged! 'diff -r f4be7687d414 -r bce265549556 a\n'
@@ -50,23 +50,13 @@ By default diff and log are paged, but summary is not:
   paged! 'summary:     modify a 9\n'
   paged! '\n'
 
-  $ hg summary
-  parent: 10:46106edeeb38 tip
-   modify a 10
-  branch: default
-  commit: (clean)
-  update: (current)
-  phases: 11 draft
+  $ hg id
+  46106edeeb38 tip
 
-We can enable the pager on summary:
+We can enable the pager on id:
 
-  $ hg --config pager.attend-summary=yes summary
-  paged! 'parent: 10:46106edeeb38 tip\n'
-  paged! ' modify a 10\n'
-  paged! 'branch: default\n'
-  paged! 'commit: (clean)\n'
-  paged! 'update: (current)\n'
-  paged! 'phases: 11 draft\n'
+  $ hg --config pager.attend-id=yes id
+  paged! '46106edeeb38 tip\n'
 
 If we completely change the attend list that's respected:
 
