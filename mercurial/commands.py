@@ -4821,6 +4821,7 @@ def summary(ui, repo, **opts):
     Returns 0 on success.
     """
 
+    ui.pager('summary')
     ctx = repo[None]
     parents = ctx.parents()
     pnode = parents[0].node()
