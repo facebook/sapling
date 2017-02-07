@@ -58,18 +58,10 @@ We can enable the pager on id:
   $ hg --config pager.attend-id=yes id
   paged! '46106edeeb38 tip\n'
 
-If we completely change the attend list that's respected:
+Setting attend-$COMMAND to a false value works, even with pager in
+core:
 
   $ hg --config pager.attend-diff=no diff -c 2
-  diff -r f4be7687d414 -r bce265549556 a
-  --- a/a	Thu Jan 01 00:00:00 1970 +0000
-  +++ b/a	Thu Jan 01 00:00:00 1970 +0000
-  @@ -1,2 +1,3 @@
-   a
-   a 1
-  +a 2
-
-  $ hg --config pager.attend=summary diff -c 2
   diff -r f4be7687d414 -r bce265549556 a
   --- a/a	Thu Jan 01 00:00:00 1970 +0000
   +++ b/a	Thu Jan 01 00:00:00 1970 +0000
@@ -91,56 +83,6 @@ If 'log' is in attend, then 'history' should also be paged:
   paged! 'date:        Thu Jan 01 00:00:00 1970 +0000\n'
   paged! 'summary:     modify a 9\n'
   paged! '\n'
-
-Possible bug: history is explicitly ignored in pager config, but
-because log is in the attend list it still gets pager treatment.
-
-  $ hg history --limit 2 --config pager.attend=log \
-  >   --config pager.ignore=history
-  paged! 'changeset:   10:46106edeeb38\n'
-  paged! 'tag:         tip\n'
-  paged! 'user:        test\n'
-  paged! 'date:        Thu Jan 01 00:00:00 1970 +0000\n'
-  paged! 'summary:     modify a 10\n'
-  paged! '\n'
-  paged! 'changeset:   9:6dd8ea7dd621\n'
-  paged! 'user:        test\n'
-  paged! 'date:        Thu Jan 01 00:00:00 1970 +0000\n'
-  paged! 'summary:     modify a 9\n'
-  paged! '\n'
-
-Possible bug: history is explicitly marked as attend-history=no, but
-it doesn't fail to get paged because log is still in the attend list.
-
-  $ hg history --limit 2 --config pager.attend-history=no
-  paged! 'changeset:   10:46106edeeb38\n'
-  paged! 'tag:         tip\n'
-  paged! 'user:        test\n'
-  paged! 'date:        Thu Jan 01 00:00:00 1970 +0000\n'
-  paged! 'summary:     modify a 10\n'
-  paged! '\n'
-  paged! 'changeset:   9:6dd8ea7dd621\n'
-  paged! 'user:        test\n'
-  paged! 'date:        Thu Jan 01 00:00:00 1970 +0000\n'
-  paged! 'summary:     modify a 9\n'
-  paged! '\n'
-
-Possible bug: disabling pager for log but enabling it for history
-doesn't result in history being paged.
-
-  $ hg history --limit 2 --config pager.attend-log=no \
-  > --config pager.attend-history=yes
-  changeset:   10:46106edeeb38
-  tag:         tip
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     modify a 10
-  
-  changeset:   9:6dd8ea7dd621
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     modify a 9
-  
 
 Pager should not start if stdout is not a tty.
 
