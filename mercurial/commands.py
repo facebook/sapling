@@ -2721,7 +2721,6 @@ def help_(ui, name=None, **opts):
 
     Returns 0 if successful.
     """
-
     textwidth = ui.configint('ui', 'textwidth', 78)
     termwidth = ui.termwidth() - 2
     if textwidth <= 0 or termwidth < textwidth:
@@ -2772,6 +2771,7 @@ def help_(ui, name=None, **opts):
         keep.append('notomitted')
     formatted, pruned = minirst.format(text, textwidth, keep=keep,
                                        section=section)
+    ui.pager('help')
     ui.write(formatted)
 
 
