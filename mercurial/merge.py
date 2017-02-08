@@ -1556,7 +1556,7 @@ def update(repo, node, branchmerge, force, ancestor=None,
                     foreground = obsolete.foreground(repo, [p1.node()])
                     # note: the <node> variable contains a random identifier
                     if repo[node].node() in foreground:
-                        pas = [p1]  # allow updating to successors
+                        pass # allow updating to successors
                     elif dirty:
                         msg = _("uncommitted changes")
                         if onode is None:
@@ -1572,15 +1572,17 @@ def update(repo, node, branchmerge, force, ancestor=None,
                         raise error.Abort(msg, hint=hint)
                 else:
                     # Allow jumping branches if clean and specific rev given
-                    pas = [p1]
+                    pass
+
+        if overwrite:
+            pas = [wc]
+        elif not branchmerge:
+            pas = [p1]
 
         # deprecated config: merge.followcopies
         followcopies = repo.ui.configbool('merge', 'followcopies', True)
         if overwrite:
-            pas = [wc]
             followcopies = False
-        elif pas == [p2]: # backwards
-            pas = [p1]
         elif not pas[0]:
             followcopies = False
         if not branchmerge and not wc.dirty(missing=True):
