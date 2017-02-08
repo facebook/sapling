@@ -72,6 +72,7 @@ from mercurial import (
     commands,
     dispatch,
     encoding,
+    error,
     extensions,
     util,
     )
@@ -104,6 +105,9 @@ def _runpager(ui, p):
         os.dup2(stderrfd, util.stderr.fileno())
         pager.stdin.close()
         pager.wait()
+
+def catchterm(*args):
+    raise error.SignalInterrupt
 
 def uisetup(ui):
     class pagerui(ui.__class__):
@@ -144,6 +148,8 @@ def uisetup(ui):
         if usepager:
             ui.setconfig('ui', 'formatted', ui.formatted(), 'pager')
             ui.setconfig('ui', 'interactive', False, 'pager')
+            if util.safehasattr(signal, "SIGPIPE"):
+                signal.signal(signal.SIGPIPE, catchterm)
             ui._runpager(p)
         return orig(ui, options, cmd, cmdfunc)
 
