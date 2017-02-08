@@ -447,6 +447,7 @@ class unixforkingservice(object):
         self._sock = None
         self._oldsigchldhandler = None
         self._workerpids = set()  # updated by signal handler; do not iterate
+        self._socketunlinked = None
 
     def init(self):
         self._sock = socket.socket(socket.AF_UNIX)
@@ -455,11 +456,17 @@ class unixforkingservice(object):
         o = signal.signal(signal.SIGCHLD, self._sigchldhandler)
         self._oldsigchldhandler = o
         self._servicehandler.printbanner(self.address)
+        self._socketunlinked = False
+
+    def _unlinksocket(self):
+        if not self._socketunlinked:
+            self._servicehandler.unlinksocket(self.address)
+            self._socketunlinked = True
 
     def _cleanup(self):
         signal.signal(signal.SIGCHLD, self._oldsigchldhandler)
         self._sock.close()
-        self._servicehandler.unlinksocket(self.address)
+        self._unlinksocket()
         # don't kill child processes as they have active clients, just wait
         self._reapworkers(0)
 
