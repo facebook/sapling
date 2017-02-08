@@ -25,7 +25,8 @@ CompressionParametersObject* get_compression_parameters(PyObject* self, PyObject
 	ZSTD_compressionParameters params;
 	CompressionParametersObject* result;
 
-	if (!PyArg_ParseTuple(args, "i|Kn", &compressionLevel, &sourceSize, &dictSize)) {
+	if (!PyArg_ParseTuple(args, "i|Kn:get_compression_parameters",
+		&compressionLevel, &sourceSize, &dictSize)) {
 		return NULL;
 	}
 
@@ -47,12 +48,85 @@ CompressionParametersObject* get_compression_parameters(PyObject* self, PyObject
 	return result;
 }
 
+static int CompressionParameters_init(CompressionParametersObject* self, PyObject* args, PyObject* kwargs) {
+	static char* kwlist[] = {
+		"window_log",
+		"chain_log",
+		"hash_log",
+		"search_log",
+		"search_length",
+		"target_length",
+		"strategy",
+		NULL
+	};
+
+	unsigned windowLog;
+	unsigned chainLog;
+	unsigned hashLog;
+	unsigned searchLog;
+	unsigned searchLength;
+	unsigned targetLength;
+	unsigned strategy;
+
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "IIIIIII:CompressionParameters",
+		kwlist, &windowLog, &chainLog, &hashLog, &searchLog, &searchLength,
+		&targetLength, &strategy)) {
+		return -1;
+	}
+
+	if (windowLog < ZSTD_WINDOWLOG_MIN || windowLog > ZSTD_WINDOWLOG_MAX) {
+		PyErr_SetString(PyExc_ValueError, "invalid window log value");
+		return -1;
+	}
+
+	if (chainLog < ZSTD_CHAINLOG_MIN || chainLog > ZSTD_CHAINLOG_MAX) {
+		PyErr_SetString(PyExc_ValueError, "invalid chain log value");
+		return -1;
+	}
+
+	if (hashLog < ZSTD_HASHLOG_MIN || hashLog > ZSTD_HASHLOG_MAX) {
+		PyErr_SetString(PyExc_ValueError, "invalid hash log value");
+		return -1;
+	}
+
+	if (searchLog < ZSTD_SEARCHLOG_MIN || searchLog > ZSTD_SEARCHLOG_MAX) {
+		PyErr_SetString(PyExc_ValueError, "invalid search log value");
+		return -1;
+	}
+
+	if (searchLength < ZSTD_SEARCHLENGTH_MIN || searchLength > ZSTD_SEARCHLENGTH_MAX) {
+		PyErr_SetString(PyExc_ValueError, "invalid search length value");
+		return -1;
+	}
+
+	if (targetLength < ZSTD_TARGETLENGTH_MIN || targetLength > ZSTD_TARGETLENGTH_MAX) {
+		PyErr_SetString(PyExc_ValueError, "invalid target length value");
+		return -1;
+	}
+
+	if (strategy < ZSTD_fast || strategy > ZSTD_btopt) {
+		PyErr_SetString(PyExc_ValueError, "invalid strategy value");
+		return -1;
+	}
+
+	self->windowLog = windowLog;
+	self->chainLog = chainLog;
+	self->hashLog = hashLog;
+	self->searchLog = searchLog;
+	self->searchLength = searchLength;
+	self->targetLength = targetLength;
+	self->strategy = strategy;
+
+	return 0;
+}
+
 PyObject* estimate_compression_context_size(PyObject* self, PyObject* args) {
 	CompressionParametersObject* params;
 	ZSTD_compressionParameters zparams;
 	PyObject* result;
 
-	if (!PyArg_ParseTuple(args, "O!", &CompressionParametersType, &params)) {
+	if (!PyArg_ParseTuple(args, "O!:estimate_compression_context_size",
+		&CompressionParametersType, &params)) {
 		return NULL;
 	}
 
@@ -64,113 +138,33 @@ PyObject* estimate_compression_context_size(PyObject* self, PyObject* args) {
 PyDoc_STRVAR(CompressionParameters__doc__,
 "CompressionParameters: low-level control over zstd compression");
 
-static PyObject* CompressionParameters_new(PyTypeObject* subtype, PyObject* args, PyObject* kwargs) {
-	CompressionParametersObject* self;
-	unsigned windowLog;
-	unsigned chainLog;
-	unsigned hashLog;
-	unsigned searchLog;
-	unsigned searchLength;
-	unsigned targetLength;
-	unsigned strategy;
-
-	if (!PyArg_ParseTuple(args, "IIIIIII", &windowLog, &chainLog, &hashLog, &searchLog,
-		&searchLength, &targetLength, &strategy)) {
-		return NULL;
-	}
-
-	if (windowLog < ZSTD_WINDOWLOG_MIN || windowLog > ZSTD_WINDOWLOG_MAX) {
-		PyErr_SetString(PyExc_ValueError, "invalid window log value");
-		return NULL;
-	}
-
-	if (chainLog < ZSTD_CHAINLOG_MIN || chainLog > ZSTD_CHAINLOG_MAX) {
-		PyErr_SetString(PyExc_ValueError, "invalid chain log value");
-		return NULL;
-	}
-
-	if (hashLog < ZSTD_HASHLOG_MIN || hashLog > ZSTD_HASHLOG_MAX) {
-		PyErr_SetString(PyExc_ValueError, "invalid hash log value");
-		return NULL;
-	}
-
-	if (searchLog < ZSTD_SEARCHLOG_MIN || searchLog > ZSTD_SEARCHLOG_MAX) {
-		PyErr_SetString(PyExc_ValueError, "invalid search log value");
-		return NULL;
-	}
-
-	if (searchLength < ZSTD_SEARCHLENGTH_MIN || searchLength > ZSTD_SEARCHLENGTH_MAX) {
-		PyErr_SetString(PyExc_ValueError, "invalid search length value");
-		return NULL;
-	}
-
-	if (targetLength < ZSTD_TARGETLENGTH_MIN || targetLength > ZSTD_TARGETLENGTH_MAX) {
-		PyErr_SetString(PyExc_ValueError, "invalid target length value");
-		return NULL;
-	}
-
-	if (strategy < ZSTD_fast || strategy > ZSTD_btopt) {
-		PyErr_SetString(PyExc_ValueError, "invalid strategy value");
-		return NULL;
-	}
-
-	self = (CompressionParametersObject*)subtype->tp_alloc(subtype, 1);
-	if (!self) {
-		return NULL;
-	}
-
-	self->windowLog = windowLog;
-	self->chainLog = chainLog;
-	self->hashLog = hashLog;
-	self->searchLog = searchLog;
-	self->searchLength = searchLength;
-	self->targetLength = targetLength;
-	self->strategy = strategy;
-
-	return (PyObject*)self;
-}
-
 static void CompressionParameters_dealloc(PyObject* self) {
 	PyObject_Del(self);
 }
 
-static Py_ssize_t CompressionParameters_length(PyObject* self) {
-	return 7;
-}
-
-static PyObject* CompressionParameters_item(PyObject* o, Py_ssize_t i) {
-	CompressionParametersObject* self = (CompressionParametersObject*)o;
-
-	switch (i) {
-	case 0:
-		return PyLong_FromLong(self->windowLog);
-	case 1:
-		return PyLong_FromLong(self->chainLog);
-	case 2:
-		return PyLong_FromLong(self->hashLog);
-	case 3:
-		return PyLong_FromLong(self->searchLog);
-	case 4:
-		return PyLong_FromLong(self->searchLength);
-	case 5:
-		return PyLong_FromLong(self->targetLength);
-	case 6:
-		return PyLong_FromLong(self->strategy);
-	default:
-		PyErr_SetString(PyExc_IndexError, "index out of range");
-		return NULL;
-	}
-}
-
-static PySequenceMethods CompressionParameters_sq = {
-	CompressionParameters_length, /* sq_length */
-	0,							  /* sq_concat */
-	0,                            /* sq_repeat */
-	CompressionParameters_item,   /* sq_item */
-	0,                            /* sq_ass_item */
-	0,                            /* sq_contains */
-	0,                            /* sq_inplace_concat */
-	0                             /* sq_inplace_repeat */
+static PyMemberDef CompressionParameters_members[] = {
+	{ "window_log", T_UINT,
+	  offsetof(CompressionParametersObject, windowLog), READONLY,
+	  "window log" },
+	{ "chain_log", T_UINT,
+	  offsetof(CompressionParametersObject, chainLog), READONLY,
+	  "chain log" },
+	{ "hash_log", T_UINT,
+	  offsetof(CompressionParametersObject, hashLog), READONLY,
+	  "hash log" },
+	{ "search_log", T_UINT,
+	  offsetof(CompressionParametersObject, searchLog), READONLY,
+	  "search log" },
+	{ "search_length", T_UINT,
+	  offsetof(CompressionParametersObject, searchLength), READONLY,
+	  "search length" },
+	{ "target_length", T_UINT,
+	  offsetof(CompressionParametersObject, targetLength), READONLY,
+	  "target length" },
+	{ "strategy", T_INT,
+	  offsetof(CompressionParametersObject, strategy), READONLY,
+	  "strategy" },
+	{ NULL }
 };
 
 PyTypeObject CompressionParametersType = {
@@ -185,7 +179,7 @@ PyTypeObject CompressionParametersType = {
 	0,                         /* tp_compare */
 	0,                         /* tp_repr */
 	0,                         /* tp_as_number */
-	&CompressionParameters_sq, /* tp_as_sequence */
+	0,                         /* tp_as_sequence */
 	0,                         /* tp_as_mapping */
 	0,                         /* tp_hash  */
 	0,                         /* tp_call */
@@ -193,7 +187,7 @@ PyTypeObject CompressionParametersType = {
 	0,                         /* tp_getattro */
 	0,                         /* tp_setattro */
 	0,                         /* tp_as_buffer */
-	Py_TPFLAGS_DEFAULT,        /* tp_flags */
+	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE, /* tp_flags */
 	CompressionParameters__doc__, /* tp_doc */
 	0,                         /* tp_traverse */
 	0,                         /* tp_clear */
@@ -202,16 +196,16 @@ PyTypeObject CompressionParametersType = {
 	0,                         /* tp_iter */
 	0,                         /* tp_iternext */
 	0,                         /* tp_methods */
-	0,                         /* tp_members */
+	CompressionParameters_members, /* tp_members */
 	0,                         /* tp_getset */
 	0,                         /* tp_base */
 	0,                         /* tp_dict */
 	0,                         /* tp_descr_get */
 	0,                         /* tp_descr_set */
 	0,                         /* tp_dictoffset */
-	0,                         /* tp_init */
+	(initproc)CompressionParameters_init, /* tp_init */
 	0,                         /* tp_alloc */
-	CompressionParameters_new, /* tp_new */
+	PyType_GenericNew,         /* tp_new */
 };
 
 void compressionparams_module_init(PyObject* mod) {

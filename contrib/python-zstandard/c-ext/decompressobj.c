@@ -41,9 +41,9 @@ static PyObject* DecompressionObj_decompress(ZstdDecompressionObj* self, PyObjec
 	}
 
 #if PY_MAJOR_VERSION >= 3
-	if (!PyArg_ParseTuple(args, "y#",
+	if (!PyArg_ParseTuple(args, "y#:decompress",
 #else
-	if (!PyArg_ParseTuple(args, "s#",
+	if (!PyArg_ParseTuple(args, "s#:decompress",
 #endif
 		&source, &sourceSize)) {
 		return NULL;

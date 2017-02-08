@@ -13,10 +13,14 @@ except ImportError:
 
 import zstd
 
+from .common import (
+    make_cffi,
+)
 
 compression_levels = strategies.integers(min_value=1, max_value=22)
 
 
+@make_cffi
 class TestRoundTrip(unittest.TestCase):
     @hypothesis.given(strategies.binary(), compression_levels)
     def test_compress_write_to(self, data, level):

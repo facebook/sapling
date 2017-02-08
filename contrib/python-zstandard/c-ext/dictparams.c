@@ -18,8 +18,8 @@ static PyObject* DictParameters_new(PyTypeObject* subtype, PyObject* args, PyObj
 	unsigned notificationLevel;
 	unsigned dictID;
 
-	if (!PyArg_ParseTuple(args, "IiII", &selectivityLevel, &compressionLevel,
-		&notificationLevel, &dictID)) {
+	if (!PyArg_ParseTuple(args, "IiII:DictParameters",
+		&selectivityLevel, &compressionLevel, &notificationLevel, &dictID)) {
 		return NULL;
 	}
 
@@ -39,6 +39,22 @@ static PyObject* DictParameters_new(PyTypeObject* subtype, PyObject* args, PyObj
 static void DictParameters_dealloc(PyObject* self) {
 	PyObject_Del(self);
 }
+
+static PyMemberDef DictParameters_members[] = {
+	{ "selectivity_level", T_UINT,
+	  offsetof(DictParametersObject, selectivityLevel), READONLY,
+	  "selectivity level" },
+	{ "compression_level", T_INT,
+	  offsetof(DictParametersObject, compressionLevel), READONLY,
+	  "compression level" },
+	{ "notification_level", T_UINT,
+	  offsetof(DictParametersObject, notificationLevel), READONLY,
+	  "notification level" },
+	{ "dict_id", T_UINT,
+	  offsetof(DictParametersObject, dictID), READONLY,
+	  "dictionary ID" },
+	{ NULL }
+};
 
 static Py_ssize_t DictParameters_length(PyObject* self) {
 	return 4;
@@ -102,7 +118,7 @@ PyTypeObject DictParametersType = {
 	0,                         /* tp_iter */
 	0,                         /* tp_iternext */
 	0,                         /* tp_methods */
-	0,                         /* tp_members */
+	DictParameters_members,    /* tp_members */
 	0,                         /* tp_getset */
 	0,                         /* tp_base */
 	0,                         /* tp_dict */

@@ -42,9 +42,9 @@ static PyObject* ZstdCompressionObj_compress(ZstdCompressionObj* self, PyObject*
 	}
 
 #if PY_MAJOR_VERSION >= 3
-	if (!PyArg_ParseTuple(args, "y#", &source, &sourceSize)) {
+	if (!PyArg_ParseTuple(args, "y#:compress", &source, &sourceSize)) {
 #else
-	if (!PyArg_ParseTuple(args, "s#", &source, &sourceSize)) {
+	if (!PyArg_ParseTuple(args, "s#:compress", &source, &sourceSize)) {
 #endif
 		return NULL;
 	}
@@ -98,7 +98,7 @@ static PyObject* ZstdCompressionObj_flush(ZstdCompressionObj* self, PyObject* ar
 	PyObject* result = NULL;
 	Py_ssize_t resultSize = 0;
 
-	if (!PyArg_ParseTuple(args, "|i", &flushMode)) {
+	if (!PyArg_ParseTuple(args, "|i:flush", &flushMode)) {
 		return NULL;
 	}
 

@@ -8,6 +8,7 @@
 
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
+#include "structmember.h"
 
 #define ZSTD_STATIC_LINKING_ONLY
 #define ZDICT_STATIC_LINKING_ONLY
@@ -15,7 +16,7 @@
 #include "zstd.h"
 #include "zdict.h"
 
-#define PYTHON_ZSTANDARD_VERSION "0.6.0"
+#define PYTHON_ZSTANDARD_VERSION "0.7.0"
 
 typedef enum {
 	compressorobj_flush_finish,
@@ -34,6 +35,16 @@ typedef struct {
 } CompressionParametersObject;
 
 extern PyTypeObject CompressionParametersType;
+
+typedef struct {
+	PyObject_HEAD
+	unsigned long long frameContentSize;
+	unsigned windowSize;
+	unsigned dictID;
+	char checksumFlag;
+} FrameParametersObject;
+
+extern PyTypeObject FrameParametersType;
 
 typedef struct {
 	PyObject_HEAD
@@ -115,7 +126,7 @@ extern PyTypeObject ZstdCompressorIteratorType;
 typedef struct {
 	PyObject_HEAD
 
-	ZSTD_DCtx* refdctx;
+	ZSTD_DCtx* dctx;
 
 	ZstdCompressionDict* dict;
 	ZSTD_DDict* ddict;
@@ -172,6 +183,7 @@ typedef struct {
 
 void ztopy_compression_parameters(CompressionParametersObject* params, ZSTD_compressionParameters* zparams);
 CompressionParametersObject* get_compression_parameters(PyObject* self, PyObject* args);
+FrameParametersObject* get_frame_parameters(PyObject* self, PyObject* args);
 PyObject* estimate_compression_context_size(PyObject* self, PyObject* args);
 ZSTD_CStream* CStream_from_ZstdCompressor(ZstdCompressor* compressor, Py_ssize_t sourceSize);
 ZSTD_DStream* DStream_from_ZstdDecompressor(ZstdDecompressor* decompressor);

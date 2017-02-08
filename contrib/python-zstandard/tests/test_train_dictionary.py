@@ -7,6 +7,9 @@ except ImportError:
 
 import zstd
 
+from . common import (
+    make_cffi,
+)
 
 if sys.version_info[0] >= 3:
     int_type = int
@@ -14,6 +17,7 @@ else:
     int_type = long
 
 
+@make_cffi
 class TestTrainDictionary(unittest.TestCase):
     def test_no_args(self):
         with self.assertRaises(TypeError):

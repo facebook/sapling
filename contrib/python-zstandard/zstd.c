@@ -34,6 +34,11 @@ PyDoc_STRVAR(get_compression_parameters__doc__,
 "Obtains a ``CompressionParameters`` instance from a compression level and\n"
 "optional input size and dictionary size");
 
+PyDoc_STRVAR(get_frame_parameters__doc__,
+"get_frame_parameters(data)\n"
+"\n"
+"Obtains a ``FrameParameters`` instance by parsing data.\n");
+
 PyDoc_STRVAR(train_dictionary__doc__,
 "train_dictionary(dict_size, samples)\n"
 "\n"
@@ -53,6 +58,8 @@ static PyMethodDef zstd_methods[] = {
 	METH_NOARGS, estimate_decompression_context_size__doc__ },
 	{ "get_compression_parameters", (PyCFunction)get_compression_parameters,
 	METH_VARARGS, get_compression_parameters__doc__ },
+	{ "get_frame_parameters", (PyCFunction)get_frame_parameters,
+	METH_VARARGS, get_frame_parameters__doc__ },
 	{ "train_dictionary", (PyCFunction)train_dictionary,
 	METH_VARARGS | METH_KEYWORDS, train_dictionary__doc__ },
 	{ NULL, NULL }
@@ -70,6 +77,7 @@ void decompressor_module_init(PyObject* mod);
 void decompressobj_module_init(PyObject* mod);
 void decompressionwriter_module_init(PyObject* mod);
 void decompressoriterator_module_init(PyObject* mod);
+void frameparams_module_init(PyObject* mod);
 
 void zstd_module_init(PyObject* m) {
 	/* python-zstandard relies on unstable zstd C API features. This means
@@ -87,7 +95,7 @@ void zstd_module_init(PyObject* m) {
 	   We detect this mismatch here and refuse to load the module if this
 	   scenario is detected.
 	*/
-	if (ZSTD_VERSION_NUMBER != 10102 || ZSTD_versionNumber() != 10102) {
+	if (ZSTD_VERSION_NUMBER != 10103 || ZSTD_versionNumber() != 10103) {
 		PyErr_SetString(PyExc_ImportError, "zstd C API mismatch; Python bindings not compiled against expected zstd version");
 		return;
 	}
@@ -104,6 +112,7 @@ void zstd_module_init(PyObject* m) {
 	decompressobj_module_init(m);
 	decompressionwriter_module_init(m);
 	decompressoriterator_module_init(m);
+	frameparams_module_init(m);
 }
 
 #if PY_MAJOR_VERSION >= 3

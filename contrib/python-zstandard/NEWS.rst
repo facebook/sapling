@@ -1,6 +1,33 @@
 Version History
 ===============
 
+0.7.0 (released 2017-02-07)
+---------------------------
+
+* Added zstd.get_frame_parameters() to obtain info about a zstd frame.
+* Added ZstdDecompressor.decompress_content_dict_chain() for efficient
+  decompression of *content-only dictionary chains*.
+* CFFI module fully implemented; all tests run against both C extension and
+  CFFI implementation.
+* Vendored version of zstd updated to 1.1.3.
+* Use ZstdDecompressor.decompress() now uses ZSTD_createDDict_byReference()
+  to avoid extra memory allocation of dict data.
+* Add function names to error messages (by using ":name" in PyArg_Parse*
+  functions).
+* Reuse decompression context across operations. Previously, we created a
+  new ZSTD_DCtx for each decompress(). This was measured to slow down
+  decompression by 40-200MB/s. The API guarantees say ZstdDecompressor
+  is not thread safe. So we reuse the ZSTD_DCtx across operations and make
+  things faster in the process.
+* ZstdCompressor.write_to()'s compress() and flush() methods now return number
+  of bytes written.
+* ZstdDecompressor.write_to()'s write() method now returns the number of bytes
+  written to the underlying output object.
+* CompressionParameters instances now expose their values as attributes.
+* CompressionParameters instances no longer are subscriptable nor behave
+  as tuples (backwards incompatible). Use attributes to obtain values.
+* DictParameters instances now expose their values as attributes.
+
 0.6.0 (released 2017-01-14)
 ---------------------------
 

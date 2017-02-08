@@ -52,7 +52,7 @@ static PyObject* ZstdCompressionWriter_exit(ZstdCompressionWriter* self, PyObjec
 	ZSTD_outBuffer output;
 	PyObject* res;
 
-	if (!PyArg_ParseTuple(args, "OOO", &exc_type, &exc_value, &exc_tb)) {
+	if (!PyArg_ParseTuple(args, "OOO:__exit__", &exc_type, &exc_value, &exc_tb)) {
 		return NULL;
 	}
 
@@ -119,11 +119,12 @@ static PyObject* ZstdCompressionWriter_write(ZstdCompressionWriter* self, PyObje
 	ZSTD_inBuffer input;
 	ZSTD_outBuffer output;
 	PyObject* res;
+	Py_ssize_t totalWrite = 0;
 
 #if PY_MAJOR_VERSION >= 3
-	if (!PyArg_ParseTuple(args, "y#", &source, &sourceSize)) {
+	if (!PyArg_ParseTuple(args, "y#:write", &source, &sourceSize)) {
 #else
-	if (!PyArg_ParseTuple(args, "s#", &source, &sourceSize)) {
+	if (!PyArg_ParseTuple(args, "s#:write", &source, &sourceSize)) {
 #endif
 		return NULL;
 	}
@@ -164,20 +165,21 @@ static PyObject* ZstdCompressionWriter_write(ZstdCompressionWriter* self, PyObje
 #endif
 				output.dst, output.pos);
 			Py_XDECREF(res);
+			totalWrite += output.pos;
 		}
 		output.pos = 0;
 	}
 
 	PyMem_Free(output.dst);
 
-	/* TODO return bytes written */
-	Py_RETURN_NONE;
+	return PyLong_FromSsize_t(totalWrite);
 }
 
 static PyObject* ZstdCompressionWriter_flush(ZstdCompressionWriter* self, PyObject* args) {
 	size_t zresult;
 	ZSTD_outBuffer output;
 	PyObject* res;
+	Py_ssize_t totalWrite = 0;
 
 	if (!self->entered) {
 		PyErr_SetString(ZstdError, "flush must be called from an active context manager");
@@ -215,14 +217,14 @@ static PyObject* ZstdCompressionWriter_flush(ZstdCompressionWriter* self, PyObje
 #endif
 				output.dst, output.pos);
 			Py_XDECREF(res);
+			totalWrite += output.pos;
 		}
 		output.pos = 0;
 	}
 
 	PyMem_Free(output.dst);
 
-	/* TODO return bytes written */
-	Py_RETURN_NONE;
+	return PyLong_FromSsize_t(totalWrite);
 }
 
 static PyMethodDef ZstdCompressionWriter_methods[] = {

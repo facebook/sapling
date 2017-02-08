@@ -4,10 +4,11 @@ python-zstandard
 
 This project provides Python bindings for interfacing with the
 `Zstandard <http://www.zstd.net>`_ compression library. A C extension
-and CFFI interface is provided.
+and CFFI interface are provided.
 
-The primary goal of the extension is to provide a Pythonic interface to
-the underlying C API. This means exposing most of the features and flexibility
+The primary goal of the project is to provide a rich interface to the
+underlying C API through a Pythonic interface while not sacrificing
+performance. This means exposing most of the features and flexibility
 of the C API while not sacrificing usability or safety that Python provides.
 
 The canonical home for this project is
@@ -22,6 +23,9 @@ The project is officially in beta state. The author is reasonably satisfied
 with the current API and that functionality works as advertised. There
 may be some backwards incompatible changes before 1.0. Though the author
 does not intend to make any major changes to the Python API.
+
+This project is vendored and distributed with Mercurial 4.1, where it is
+used in a production capacity.
 
 There is continuous integration for Python versions 2.6, 2.7, and 3.3+
 on Linux x86_x64 and Windows x86 and x86_64. The author is reasonably
@@ -48,14 +52,15 @@ low level compression and decompression APIs. It could be useful to
 support compression without the framing headers. But the author doesn't
 believe it a high priority at this time.
 
-The CFFI bindings are half-baked and need to be finished.
+The CFFI bindings are feature complete and all tests run against both
+the C extension and CFFI bindings to ensure behavior parity.
 
 Requirements
 ============
 
-This extension is designed to run with Python 2.6, 2.7, 3.3, 3.4, and 3.5
-on common platforms (Linux, Windows, and OS X). Only x86_64 is currently
-well-tested as an architecture.
+This extension is designed to run with Python 2.6, 2.7, 3.3, 3.4, 3.5, and
+3.6 on common platforms (Linux, Windows, and OS X). Only x86_64 is
+currently well-tested as an architecture.
 
 Installing
 ==========
@@ -106,15 +111,11 @@ compressing at several hundred MB/s and decompressing at over 1 GB/s.
 Comparison to Other Python Bindings
 ===================================
 
-https://pypi.python.org/pypi/zstd is an alternative Python binding to
+https://pypi.python.org/pypi/zstd is an alternate Python binding to
 Zstandard. At the time this was written, the latest release of that
-package (1.0.0.2) had the following significant differences from this package:
-
-* It only exposes the simple API for compression and decompression operations.
-  This extension exposes the streaming API, dictionary training, and more.
-* It adds a custom framing header to compressed data and there is no way to
-  disable it. This means that data produced with that module cannot be used by
-  other Zstandard implementations.
+package (1.1.2) only exposed the simple APIs for compression and decompression.
+This package exposes much more of the zstd API, including streaming and
+dictionary compression. This package also has CFFI support.
 
 Bundling of Zstandard Source Code
 =================================
@@ -259,6 +260,10 @@ is used to feed data into the compressor.
 A ``flush()`` method can be called to evict whatever data remains within the
 compressor's internal state into the output object. This may result in 0 or
 more ``write()`` calls to the output object.
+
+Both ``write()`` and ``flush()`` return the number of bytes written to the
+object's ``write()``. In many cases, small inputs do not accumulate enough
+data to cause a write and ``write()`` will return ``0``.
 
 If the size of the data being fed to this streaming compressor is known,
 you can declare it before compression begins::
@@ -476,6 +481,10 @@ This behaves similarly to ``zstd.ZstdCompressor``: compressed data is written to
 the decompressor by calling ``write(data)`` and decompressed output is written
 to the output object by calling its ``write(data)`` method.
 
+Calls to ``write()`` will return the number of bytes written to the output
+object. Not all inputs will result in bytes being written, so return values
+of ``0`` are possible.
+
 The size of chunks being ``write()`` to the destination can be specified::
 
     dctx = zstd.ZstdDecompressor()
@@ -576,6 +585,53 @@ Here is how this API should be used::
    data = dobj.decompress(compressed_chunk_0)
    data = dobj.decompress(compressed_chunk_1)
 
+Content-Only Dictionary Chain Decompression
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+``decompress_content_dict_chain(frames)`` performs decompression of a list of
+zstd frames produced using chained *content-only* dictionary compression. Such
+a list of frames is produced by compressing discrete inputs where each
+non-initial input is compressed with a *content-only* dictionary consisting
+of the content of the previous input.
+
+For example, say you have the following inputs::
+
+   inputs = [b'input 1', b'input 2', b'input 3']
+
+The zstd frame chain consists of:
+
+1. ``b'input 1'`` compressed in standalone/discrete mode
+2. ``b'input 2'`` compressed using ``b'input 1'`` as a *content-only* dictionary
+3. ``b'input 3'`` compressed using ``b'input 2'`` as a *content-only* dictionary
+
+Each zstd frame **must** have the content size written.
+
+The following Python code can be used to produce a *content-only dictionary
+chain*::
+
+	def make_chain(inputs):
+	    frames = []
+
+		# First frame is compressed in standalone/discrete mode.
+		zctx = zstd.ZstdCompressor(write_content_size=True)
+		frames.append(zctx.compress(inputs[0]))
+
+		# Subsequent frames use the previous fulltext as a content-only dictionary
+		for i, raw in enumerate(inputs[1:]):
+		    dict_data = zstd.ZstdCompressionDict(inputs[i])
+			zctx = zstd.ZstdCompressor(write_content_size=True, dict_data=dict_data)
+			frames.append(zctx.compress(raw))
+
+		return frames
+
+``decompress_content_dict_chain()`` returns the uncompressed data of the last
+element in the input chain.
+
+It is possible to implement *content-only dictionary chain* decompression
+on top of other Python APIs. However, this function will likely be significantly
+faster, especially for long input chains, as it avoids the overhead of
+instantiating and passing around intermediate objects between C and Python.
+
 Choosing an API
 ---------------
 
@@ -633,6 +689,13 @@ In Python, compression dictionaries are represented as the
 Instances can be constructed from bytes::
 
    dict_data = zstd.ZstdCompressionDict(data)
+
+It is possible to construct a dictionary from *any* data. Unless the
+data begins with a magic header, the dictionary will be treated as
+*content-only*. *Content-only* dictionaries allow compression operations
+that follow to reference raw data within the content. For one use of
+*content-only* dictionaries, see
+``ZstdDecompressor.decompress_content_dict_chain()``.
 
 More interestingly, instances can be created by *training* on sample data::
 
@@ -700,18 +763,56 @@ You can then configure a compressor to use the custom parameters::
 
     cctx = zstd.ZstdCompressor(compression_params=params)
 
-The members of the ``CompressionParameters`` tuple are as follows::
+The members/attributes of ``CompressionParameters`` instances are as follows::
 
-* 0 - Window log
-* 1 - Chain log
-* 2 - Hash log
-* 3 - Search log
-* 4 - Search length
-* 5 - Target length
-* 6 - Strategy (one of the ``zstd.STRATEGY_`` constants)
+* window_log
+* chain_log
+* hash_log
+* search_log
+* search_length
+* target_length
+* strategy
+
+This is the order the arguments are passed to the constructor if not using
+named arguments.
 
 You'll need to read the Zstandard documentation for what these parameters
 do.
+
+Frame Inspection
+----------------
+
+Data emitted from zstd compression is encapsulated in a *frame*. This frame
+begins with a 4 byte *magic number* header followed by 2 to 14 bytes describing
+the frame in more detail. For more info, see
+https://github.com/facebook/zstd/blob/master/doc/zstd_compression_format.md.
+
+``zstd.get_frame_parameters(data)`` parses a zstd *frame* header from a bytes
+instance and return a ``FrameParameters`` object describing the frame.
+
+Depending on which fields are present in the frame and their values, the
+length of the frame parameters varies. If insufficient bytes are passed
+in to fully parse the frame parameters, ``ZstdError`` is raised. To ensure
+frame parameters can be parsed, pass in at least 18 bytes.
+
+``FrameParameters`` instances have the following attributes:
+
+content_size
+   Integer size of original, uncompressed content. This will be ``0`` if the
+   original content size isn't written to the frame (controlled with the
+   ``write_content_size`` argument to ``ZstdCompressor``) or if the input
+   content size was ``0``.
+
+window_size
+   Integer size of maximum back-reference distance in compressed data.
+
+dict_id
+   Integer of dictionary ID used for compression. ``0`` if no dictionary
+   ID was used or if the dictionary ID was ``0``.
+
+has_checksum
+   Bool indicating whether a 4 byte content checksum is stored at the end
+   of the frame.
 
 Misc Functionality
 ------------------
@@ -776,19 +877,32 @@ TARGETLENGTH_MIN
 TARGETLENGTH_MAX
     Maximum value for compression parameter
 STRATEGY_FAST
-    Compression strategory
+    Compression strategy
 STRATEGY_DFAST
-    Compression strategory
+    Compression strategy
 STRATEGY_GREEDY
-    Compression strategory
+    Compression strategy
 STRATEGY_LAZY
-    Compression strategory
+    Compression strategy
 STRATEGY_LAZY2
-    Compression strategory
+    Compression strategy
 STRATEGY_BTLAZY2
-    Compression strategory
+    Compression strategy
 STRATEGY_BTOPT
-    Compression strategory
+    Compression strategy
+
+Performance Considerations
+--------------------------
+
+The ``ZstdCompressor`` and ``ZstdDecompressor`` types maintain state to a
+persistent compression or decompression *context*. Reusing a ``ZstdCompressor``
+or ``ZstdDecompressor`` instance for multiple operations is faster than
+instantiating a new ``ZstdCompressor`` or ``ZstdDecompressor`` for each
+operation. The differences are magnified as the size of data decreases. For
+example, the difference between *context* reuse and non-reuse for 100,000
+100 byte inputs will be significant (possiby over 10x faster to reuse contexts)
+whereas 10 1,000,000 byte inputs will be more similar in speed (because the
+time spent doing compression dwarfs time spent creating new *contexts*).
 
 Note on Zstandard's *Experimental* API
 ======================================
