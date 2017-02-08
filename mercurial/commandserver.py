@@ -477,11 +477,23 @@ class unixforkingservice(object):
             self._cleanup()
 
     def _mainloop(self):
+        exiting = False
         h = self._servicehandler
-        while not h.shouldexit():
+        while True:
+            if not exiting and h.shouldexit():
+                # clients can no longer connect() to the domain socket, so
+                # we stop queuing new requests.
+                # for requests that are queued (connect()-ed, but haven't been
+                # accept()-ed), handle them before exit. otherwise, clients
+                # waiting for recv() will receive ECONNRESET.
+                self._unlinksocket()
+                exiting = True
             try:
                 ready = select.select([self._sock], [], [], h.pollinterval)[0]
                 if not ready:
+                    # only exit if we completed all queued requests
+                    if exiting:
+                        break
                     continue
                 conn, _addr = self._sock.accept()
             except (select.error, socket.error) as inst:
