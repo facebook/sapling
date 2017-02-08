@@ -64,7 +64,9 @@ def getip():
     # Generic method, sometimes gives useless results
     try:
         dumbip = socket.gethostbyaddr(socket.gethostname())[2][0]
-        if not dumbip.startswith('127.') and ':' not in dumbip:
+        if ':' in dumbip:
+            dumbip = '127.0.0.1'
+        if not dumbip.startswith('127.'):
             return dumbip
     except (socket.gaierror, socket.herror):
         dumbip = '127.0.0.1'
