@@ -177,6 +177,28 @@ Cases are run as shown in that table, row by row.
 
   $ cd ..
 
+Test updating to null revision
+
+  $ hg init null-repo
+  $ cd null-repo
+  $ echo a > a
+  $ hg add a
+  $ hg ci -m a
+  $ hg up -qC 0
+  $ echo b > b
+  $ hg add b
+  $ hg up null
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg st
+  A b
+  $ hg up -q 0
+  $ hg st
+  A b
+  $ hg up -qC null
+  $ hg st
+  ? b
+  $ cd ..
+
 Test updating with closed head
 ---------------------------------------------------------------------
 
