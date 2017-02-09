@@ -1562,7 +1562,7 @@ def update(repo, node, branchmerge, force, ancestor=None,
                     else:
                         msg = _("uncommitted changes")
                         hint = _("commit or update --clean to discard changes")
-                        raise error.Abort(msg, hint=hint)
+                        raise error.UpdateAbort(msg, hint=hint)
                 else:
                     # Allow jumping branches if clean and specific rev given
                     pass

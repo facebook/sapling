@@ -14,30 +14,6 @@ from . import (
     obsolete,
 )
 
-def _destupdatevalidate(repo, rev, clean, check):
-    """validate that the destination comply to various rules
-
-    This exists as its own function to help wrapping from extensions."""
-    wc = repo[None]
-    p1 = wc.p1()
-    if not clean:
-        # Check that the update is linear.
-        #
-        # Mercurial do not allow update-merge for non linear pattern
-        # (that would be technically possible but was considered too confusing
-        # for user a long time ago)
-        #
-        # See mercurial.merge.update for details
-        if p1.rev() not in repo.changelog.ancestors([rev], inclusive=True):
-            dirty = wc.dirty(missing=True)
-            foreground = obsolete.foreground(repo, [p1.node()])
-            if not repo[rev].node() in foreground:
-                if dirty:
-                    msg = _("uncommitted changes")
-                    hint = _("commit and merge, or update --clean to"
-                             " discard changes")
-                    raise error.UpdateAbort(msg, hint=hint)
-
 def _destupdateobs(repo, clean, check):
     """decide of an update destination from obsolescence markers"""
     node = None
@@ -156,8 +132,6 @@ def destupdate(repo, clean=False, check=False):
         if node is not None:
             break
     rev = repo[node].rev()
-
-    _destupdatevalidate(repo, rev, clean, check)
 
     return rev, movemark, activemark
 
