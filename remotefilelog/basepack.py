@@ -1,5 +1,5 @@
 import errno, hashlib, mmap, os, struct, time
-from mercurial import osutil, scmutil
+from mercurial import osutil, scmutil, util
 from mercurial.i18n import _
 
 import shallowutil
@@ -155,7 +155,7 @@ class basepack(object):
                                version)
 
         version, config = struct.unpack('!BB',
-                                    self._index[:INDEXVERSIONSIZE])
+                                        self._index[:INDEXVERSIONSIZE])
         if version != VERSION:
             raise RuntimeError("unsupported pack index version '%s'" %
                                version)
@@ -165,13 +165,16 @@ class basepack(object):
         else:
             self.params = indexparams(SMALLFANOUTPREFIX)
 
+    @util.propertycache
+    def _fanouttable(self):
         params = self.params
         rawfanout = self._index[FANOUTSTART:FANOUTSTART + params.fanoutsize]
-        self._fanouttable = []
+        fanouttable = []
         for i in xrange(0, params.fanoutcount):
             loc = i * 4
             fanoutentry = struct.unpack('!I', rawfanout[loc:loc + 4])[0]
-            self._fanouttable.append(fanoutentry)
+            fanouttable.append(fanoutentry)
+        return fanouttable
 
     def freememory(self):
         """Unmap and remap the memory to free it up after known expensive
