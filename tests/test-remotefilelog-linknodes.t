@@ -109,3 +109,85 @@
   0:b292c1e3311f
 
   $ cd ..
+  $ rm -rf shallow
+
+/* Local linknode is invalid; remote linknode is valid (formerly slow case) */
+
+  $ hgcloneshallow ssh://user@dummy/master shallow -q
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  $ cd shallow
+  $ echo x >> x
+  $ hg commit -Aqm xx2
+  $ cd ../master
+  $ echo y >> y
+  $ hg commit -Aqm yy2
+  $ echo x >> x
+  $ hg commit -Aqm xx2-fake-rebased
+  $ echo y >> y
+  $ hg commit -Aqm yy3
+  $ cd ../shallow
+  $ hg pull --config remotefilelog.debug=True
+  pulling from ssh://user@dummy/master
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 3 changesets with 0 changes to 0 files (+1 heads)
+  (run 'hg heads' to see heads, 'hg merge' to merge)
+  $ hg update tip -q
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
+  $ echo x > x
+  $ hg commit -qAm xx3
+
+# At this point, the linknode points to c1254e70bad1 instead of 32e6611f6149
+  $ hg log -G -T '{node|short} {desc} {phase} {files}\n'
+  @  a5957b6bf0bd xx3 draft x
+  |
+  o  7200df4e0aca yy3 public y
+  |
+  o  32e6611f6149 xx2-fake-rebased public x
+  |
+  o  01979f9404f8 yy2 public y
+  |
+  | o  c1254e70bad1 xx2 draft x
+  |/
+  o  0632994590a8 xx public x
+  |
+  o  b292c1e3311f x public x
+  
+# Check the contents of the local blob for incorrect linknode
+  $ hg debugremotefilelog .hg/store/data/11f6ad8ec52a2984abaafd7c3b516503785c2072/d4a3ed9310e5bd9887e3bf779da5077efab28216
+  size: 6 bytes
+  path: .hg/store/data/11f6ad8ec52a2984abaafd7c3b516503785c2072/d4a3ed9310e5bd9887e3bf779da5077efab28216 
+  key: d4a3ed9310e5 
+  
+          node =>           p1            p2      linknode     copyfrom
+  d4a3ed9310e5 => aee31534993a  000000000000  c1254e70bad1  
+  aee31534993a => 1406e7411862  000000000000  0632994590a8  
+  1406e7411862 => 000000000000  000000000000  b292c1e3311f  
+
+# Verify that we do a fetch on the first log (remote blob fetch for linkrev fix)
+  $ hg log -f x -T '{node|short} {desc} {phase} {files}\n'
+  a5957b6bf0bd xx3 draft x
+  32e6611f6149 xx2-fake-rebased public x
+  0632994590a8 xx public x
+  b292c1e3311f x public x
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
+
+# But not after that
+  $ hg log -f x -T '{node|short} {desc} {phase} {files}\n'
+  a5957b6bf0bd xx3 draft x
+  32e6611f6149 xx2-fake-rebased public x
+  0632994590a8 xx public x
+  b292c1e3311f x public x
+
+# Check the contents of the remote blob for correct linknode
+  $ hg debugremotefilelog $CACHEDIR/master/11/f6ad8ec52a2984abaafd7c3b516503785c2072/d4a3ed9310e5bd9887e3bf779da5077efab28216
+  size: 6 bytes
+  path: $TESTTMP/hgcache/master/11/f6ad8ec52a2984abaafd7c3b516503785c2072/d4a3ed9310e5bd9887e3bf779da5077efab28216 
+  key: d4a3ed9310e5 
+  
+          node =>           p1            p2      linknode     copyfrom
+  d4a3ed9310e5 => aee31534993a  000000000000  32e6611f6149  
+  aee31534993a => 1406e7411862  000000000000  0632994590a8  
+  1406e7411862 => 000000000000  000000000000  b292c1e3311f  

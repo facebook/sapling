@@ -7,7 +7,7 @@
 
 import collections
 from mercurial.node import bin, hex, nullid, nullrev
-from mercurial import context, util, error, ancestor
+from mercurial import context, util, error, ancestor, phases
 
 propertycache = util.propertycache
 
@@ -196,14 +196,68 @@ class remotefilectx(context.filectx):
         if self._verifylinknode(revs, linknode):
             return linknode
 
+        pc = repo._phasecache
+        seenpublic = False
         iteranc = cl.ancestors(revs, inclusive=inclusive)
         for a in iteranc:
+            # First, check locally.
             ac = cl.read(a) # get changeset data (we avoid object creation)
             if path in ac[3]: # checking the 'files' field.
                 # The file has been touched, check if the content is
                 # similar to the one we search for.
                 if fnode == mfl[ac[0]].readfast().get(path):
                     return cl.node(a)
+
+            # This next part is super non-obvious, so big comment block time!
+            #
+            # It is possible to get extremely bad performance here when a fairly
+            # common set of circumstances occur when this extension is combined
+            # with a server-side commit rewriting extension like pushrebase.
+            #
+            # First, an engineer creates Commit A and pushes it to the server.
+            # While the server's data structure will have the correct linkrev
+            # for the files touched in Commit A, the client will have the
+            # linkrev of the local commit, which is "invalid" because it's not
+            # an ancestor of the main line of development.
+            #
+            # The client will never download the remotefilelog with the correct
+            # linkrev as long as nobody else touches that file, since the file
+            # data and history hasn't changed since Commit A.
+            #
+            # After a long time (or a short time in a heavily used repo), if the
+            # same engineer returns to change the same file, some commands --
+            # such as amends of commits with file moves, logs, diffs, etc  --
+            # can trigger this _adjustlinknode code. In those cases, finding
+            # the correct rev can become quite expensive, as the correct
+            # revision is far back in history and we need to walk back through
+            # history to find it.
+            #
+            # In order to improve this situation, we force a prefetch of the
+            # remotefilelog data blob for the file we were called on. We do this
+            # at most once, when we first see a public commit in the history we
+            # are traversing.
+            #
+            # Forcing the prefetch means we will download the remote blob even
+            # if we have the "correct" blob in the local store. Since the union
+            # store checks the remote store first, this means we are much more
+            # likely to get the correct linkrev at this point.
+            #
+            # In rare circumstances (such as the server having a suboptimal
+            # linkrev for our use case), we will fall back to the old slow path.
+            #
+            # We may want to add additional heuristics here in the future if
+            # the slow path is used too much. One promising possibility is using
+            # obsolescence markers to find a more-likely-correct linkrev.
+            if not seenpublic and pc.phase(repo, a) == phases.public:
+                seenpublic = True
+                repo.fileservice.prefetch([(path, hex(fnode))], force=True)
+
+                # Now that we've downloaded a new blob from the server, we need
+                # to rebuild the ancestor map to recompute the linknodes.
+                self._ancestormap = None
+                linknode = self.ancestormap()[fnode][2] # 2 is linknode
+                if self._verifylinknode(revs, linknode):
+                    return linknode
 
         return linknode
 
