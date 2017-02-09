@@ -199,14 +199,15 @@ class remotefilectx(context.filectx):
         pc = repo._phasecache
         seenpublic = False
         iteranc = cl.ancestors(revs, inclusive=inclusive)
-        for a in iteranc:
-            # First, check locally.
-            ac = cl.read(a) # get changeset data (we avoid object creation)
-            if path in ac[3]: # checking the 'files' field.
-                # The file has been touched, check if the content is
-                # similar to the one we search for.
-                if fnode == mfl[ac[0]].readfast().get(path):
-                    return cl.node(a)
+        for ancrev in iteranc:
+            # First, check locally-available history.
+            ancctx = cl.read(ancrev) # This avoids object creation.
+            manifestnode, files = ancctx[0], ancctx[3]
+            if path in files:
+                # The file was touched in this ancestor, so check if the
+                # content is similar to the one we are searching for.
+                if fnode == mfl[manifestnode].readfast().get(path):
+                    return cl.node(ancrev)
 
             # This next part is super non-obvious, so big comment block time!
             #
@@ -248,7 +249,7 @@ class remotefilectx(context.filectx):
             # We may want to add additional heuristics here in the future if
             # the slow path is used too much. One promising possibility is using
             # obsolescence markers to find a more-likely-correct linkrev.
-            if not seenpublic and pc.phase(repo, a) == phases.public:
+            if not seenpublic and pc.phase(repo, ancrev) == phases.public:
                 seenpublic = True
                 repo.fileservice.prefetch([(path, hex(fnode))], force=True)
 
