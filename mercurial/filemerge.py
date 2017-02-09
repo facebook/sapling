@@ -489,6 +489,9 @@ def _xmerge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
     args = util.interpolate(r'\$', replace, args,
                             lambda s: util.shellquote(util.localpath(s)))
     cmd = toolpath + ' ' + args
+    if _toolbool(ui, tool, "gui"):
+        repo.ui.status(_('running merge tool %s for file %s\n') %
+                       (tool, fcd.path()))
     repo.ui.debug('launching merge tool: %s\n' % cmd)
     r = ui.system(cmd, cwd=repo.root, environ=env)
     repo.ui.debug('merge tool returned: %s\n' % r)
