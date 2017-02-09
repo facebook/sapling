@@ -1554,7 +1554,7 @@ def update(repo, node, branchmerge, force, ancestor=None,
                 dirty = wc.dirty(missing=True)
                 if dirty:
                     # Branching is a bit strange to ensure we do the minimal
-                    # amount of call to obsolete.background.
+                    # amount of call to obsolete.foreground.
                     foreground = obsolete.foreground(repo, [p1.node()])
                     # note: the <node> variable contains a random identifier
                     if repo[node].node() in foreground:
