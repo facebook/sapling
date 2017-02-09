@@ -1448,7 +1448,7 @@ def update(repo, node, branchmerge, force, ancestor=None,
     """
     Perform a merge between the working directory and the given node
 
-    node = the node to update to, or None if unspecified
+    node = the node to update to
     branchmerge = whether to merge between branches
     force = whether to force branch merging or file overwriting
     matcher = a matcher to filter file lists (dirstate not updated)
@@ -1491,7 +1491,9 @@ def update(repo, node, branchmerge, force, ancestor=None,
     Return the same tuple as applyupdates().
     """
 
-    onode = node
+    # This functon used to find the default destination if node was None, but
+    # that's now in destutil.py.
+    assert node is not None
     # If we're doing a partial update, we need to skip updating
     # the dirstate, so make a note of any partial-ness to the
     # update here.
@@ -1550,25 +1552,16 @@ def update(repo, node, branchmerge, force, ancestor=None,
 
             if pas not in ([p1], [p2]):  # nonlinear
                 dirty = wc.dirty(missing=True)
-                if dirty or onode is None:
+                if dirty:
                     # Branching is a bit strange to ensure we do the minimal
                     # amount of call to obsolete.background.
                     foreground = obsolete.foreground(repo, [p1.node()])
                     # note: the <node> variable contains a random identifier
                     if repo[node].node() in foreground:
                         pass # allow updating to successors
-                    elif dirty:
+                    else:
                         msg = _("uncommitted changes")
-                        if onode is None:
-                            hint = _("commit and merge, or update --clean to"
-                                     " discard changes")
-                        else:
-                            hint = _("commit or update --clean to discard"
-                                     " changes")
-                        raise error.Abort(msg, hint=hint)
-                    else:  # node is none
-                        msg = _("not a linear update")
-                        hint = _("merge or update --check to force update")
+                        hint = _("commit or update --clean to discard changes")
                         raise error.Abort(msg, hint=hint)
                 else:
                     # Allow jumping branches if clean and specific rev given
