@@ -184,7 +184,7 @@ class remotefilectx(context.filectx):
         cl = repo.unfiltered().changelog
         mfl = repo.manifestlog
         ancestormap = self.ancestormap()
-        p1, p2, linknode, copyfrom = ancestormap[fnode]
+        linknode = ancestormap[fnode][2]
 
         if srcrev is None:
             # wctx case, used by workingfilectx during mergecopy
@@ -203,15 +203,6 @@ class remotefilectx(context.filectx):
             # The node read from the blob may be old and not present, thus not
             # existing in the changelog.
             pass
-
-        # Build a list of linknodes that are known to be ancestors of fnode
-        knownancestors = set()
-        queue = collections.deque(p for p in (p1, p2) if p != nullid)
-        while queue:
-            current = queue.pop()
-            p1, p2, anclinknode, copyfrom = ancestormap[current]
-            queue.extend(p for p in (p1, p2) if p != nullid)
-            knownancestors.add(anclinknode)
 
         iteranc = cl.ancestors(revs, inclusive=inclusive)
         for a in iteranc:
