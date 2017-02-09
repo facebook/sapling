@@ -114,15 +114,19 @@ wifexited = getattr(os, "WIFEXITED", lambda x: False)
 
 def checkportisavailable(port):
     """return true if a port seems free to bind on localhost"""
-    try:
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.bind(('localhost', port))
-        s.close()
-        return True
-    except socket.error as exc:
-        if not exc.errno == errno.EADDRINUSE:
-            raise
-        return False
+    families = [getattr(socket, i, None)
+                for i in ('AF_INET', 'AF_INET6')
+                if getattr(socket, i, None) is not None]
+    for family in families:
+        try:
+            s = socket.socket(family, socket.SOCK_STREAM)
+            s.bind(('localhost', port))
+            s.close()
+            return True
+        except socket.error as exc:
+            if exc.errno not in (errno.EADDRINUSE, errno.EADDRNOTAVAIL):
+                raise
+    return False
 
 closefds = os.name == 'posix'
 def Popen4(cmd, wd, timeout, env=None):
