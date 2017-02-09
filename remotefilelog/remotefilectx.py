@@ -265,21 +265,20 @@ class remotefilectx(context.filectx):
         """
         Check if a linknode is correct one for the current history.
 
-        That is, return True if the linkrev is the ancestor of the first of the
-        passed in revs (if any), otherwise return False.
-
-        TODO: We may want to consider linkrev being an ancestor of any of the
-        passed-in revs as sufficient, not just the first.
+        That is, return True if the linkrev is the ancestor of any of the
+        passed in revs, otherwise return False.
 
         `revs` is a list that usually has one element -- usually the wdir parent
         or the user-passed rev we're looking back from. It may contain two revs
         when there is a merge going on, or zero revs when a root node with no
         parents is being created.
         """
+        if not revs:
+            return False
         try:
             # Use the C fastpath to check if the given linknode is correct.
             cl = self._repo.changelog
-            return revs and cl.isancestor(linknode, cl.node(revs[0]))
+            return any(cl.isancestor(linknode, cl.node(r)) for r in revs)
         except error.LookupError:
             # The linknode read from the blob may have been stripped or
             # otherwise not present in the repository anymore. Do not fail hard
