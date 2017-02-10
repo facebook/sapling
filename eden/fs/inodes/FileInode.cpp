@@ -50,14 +50,12 @@ FileInode::FileInode(
 
 folly::Future<fusell::Dispatcher::Attr> FileInode::getattr() {
   auto data = getOrLoadData();
-  auto path = getPathBuggy();
 
   // Future optimization opportunity: right now, if we have not already
   // materialized the data from the entry_, we have to materialize it
   // from the store.  If we augmented our metadata we could avoid this,
   // and this would speed up operations like `ls`.
-  auto overlay = getMount()->getOverlay();
-  data->materializeForRead(O_RDONLY, path, overlay);
+  data->materializeForRead(O_RDONLY);
 
   fusell::Dispatcher::Attr attr(getMount()->getMountPoint());
   attr.st = data->stat();
@@ -80,16 +78,17 @@ folly::Future<fusell::Dispatcher::Attr> FileInode::setattr(
 
   getParentBuggy()->materializeDirAndParents();
 
-  auto path = getPathBuggy();
-  auto overlay = getMount()->getOverlay();
-  data->materializeForWrite(open_flags, path, overlay);
+  data->materializeForWrite(open_flags);
 
   fusell::Dispatcher::Attr result(getMount()->getMountPoint());
   result.st = data->setAttr(attr, to_set);
   result.st.st_ino = getNodeId();
 
-  getMount()->getJournal().wlock()->addDelta(
-      std::make_unique<JournalDelta>(JournalDelta{path}));
+  auto path = getPath();
+  if (path.hasValue()) {
+    getMount()->getJournal().wlock()->addDelta(
+        std::make_unique<JournalDelta>(JournalDelta{path.value()}));
+  }
 
   return result;
 }
@@ -103,7 +102,7 @@ folly::Future<std::string> FileInode::readlink() {
     throw InodeError(EINVAL, inodePtrFromThis(), "not a symlink");
   }
 
-  if (entry_->materialized) {
+  if (entry_->isMaterialized()) {
     struct stat st;
     auto localPath = getLocalPath();
 
@@ -124,7 +123,7 @@ folly::Future<std::string> FileInode::readlink() {
   }
 
   // Load the symlink contents from the store
-  auto blob = getMount()->getObjectStore()->getBlob(entry_->hash.value());
+  auto blob = getMount()->getObjectStore()->getBlob(entry_->getHash());
   auto buf = blob->getContents();
   return buf.moveToFbString().toStdString();
 }
@@ -147,7 +146,7 @@ void FileInode::fileHandleDidClose() {
 }
 
 AbsolutePath FileInode::getLocalPath() const {
-  return getMount()->getOverlay()->getContentDir() + getPathBuggy();
+  return getMount()->getOverlay()->getFilePath(getNodeId());
 }
 
 folly::Future<std::shared_ptr<fusell::FileHandle>> FileInode::open(
@@ -157,12 +156,11 @@ folly::Future<std::shared_ptr<fusell::FileHandle>> FileInode::open(
     data.reset();
     fileHandleDidClose();
   };
-  auto overlay = getMount()->getOverlay();
   if (fi.flags & (O_RDWR | O_WRONLY | O_CREAT | O_TRUNC)) {
     getParentBuggy()->materializeDirAndParents();
-    data->materializeForWrite(fi.flags, getPathBuggy(), overlay);
+    data->materializeForWrite(fi.flags);
   } else {
-    data->materializeForRead(fi.flags, getPathBuggy(), overlay);
+    data->materializeForRead(fi.flags);
   }
 
   return std::make_shared<FileHandle>(inodePtrFromThis(), data, fi.flags);
@@ -174,7 +172,7 @@ std::shared_ptr<FileHandle> FileInode::finishCreate() {
     data.reset();
     fileHandleDidClose();
   };
-  data->materializeForWrite(0, getPathBuggy(), getMount()->getOverlay());
+  data->materializeForWrite(0);
 
   return std::make_shared<FileHandle>(inodePtrFromThis(), data, 0);
 }
@@ -214,7 +212,7 @@ Future<Hash> FileInode::getSHA1() {
     throw InodeError(kENOATTR, inodePtrFromThis());
   }
 
-  if (entry_->materialized) {
+  if (entry_->isMaterialized()) {
     // The O_NOFOLLOW here prevents us from attempting to read attributes
     // from a symlink.
     auto filePath = getLocalPath();
@@ -229,7 +227,7 @@ Future<Hash> FileInode::getSHA1() {
   // TODO(mbolin): Make this more fault-tolerant. Currently, there is no logic
   // to account for the case where we don't have the SHA-1 for the blob, the
   // hash doesn't correspond to a blob, etc.
-  return getMount()->getObjectStore()->getSha1ForBlob(entry_->hash.value());
+  return getMount()->getObjectStore()->getSha1ForBlob(entry_->getHash());
 }
 
 const TreeInode::Entry* FileInode::getEntry() const {

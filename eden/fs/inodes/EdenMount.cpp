@@ -74,7 +74,7 @@ EdenMount::EdenMount(
       bindMounts_(config_->getBindMounts()),
       mountGeneration_(globalProcessGeneration | ++mountGeneration) {
   // Load the overlay, if present.
-  auto rootOverlayDir = overlay_->loadOverlayDir(RelativePathPiece());
+  auto rootOverlayDir = overlay_->loadOverlayDir(FUSE_ROOT_ID);
 
   // Create the inode for the root of the tree using the hash contained
   // within the snapshotPath file
@@ -92,7 +92,10 @@ EdenMount::EdenMount(
     auto rootTree = objectStore_->getTreeForCommit(snapshotID).get();
     rootInode = TreeInodePtr::makeNew(this, std::move(rootTree));
   }
-  inodeMap_->setRootInode(std::move(rootInode));
+  auto maxInodeNumber = overlay_->getMaxRecordedInode();
+  inodeMap_->initialize(std::move(rootInode), maxInodeNumber);
+  VLOG(2) << "Initializing eden mount " << getPath()
+          << "; max existing inode number is " << maxInodeNumber;
 
   // Record the transition from no snapshot to the current snapshot in
   // the journal.  This also sets things up so that we can carry the

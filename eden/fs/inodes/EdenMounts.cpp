@@ -41,7 +41,7 @@ void getModifiedDirectoriesRecursive(
     modifiedDirectories.push_back(dirPath.copy());
     for (auto& entIter : contents.entries) {
       const auto& ent = entIter.second;
-      if (S_ISDIR(ent->mode) && ent->materialized) {
+      if (S_ISDIR(ent->mode) && ent->isMaterialized()) {
         const auto& name = entIter.first;
         auto childInode = ent->inode;
         CHECK(childInode != nullptr);

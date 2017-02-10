@@ -108,7 +108,7 @@ class InodeMap {
   InodeMap& operator=(InodeMap&&) = default;
 
   /**
-   * Set the root inode.
+   * Initialize the InodeMap
    *
    * This method must be called shortly after constructing an InodeMap object,
    * before it is visible to other threads.  This method is not thread safe.
@@ -117,8 +117,15 @@ class InodeMap {
    * provide callers with slightly more flexibility in ordering of events when
    * constructing an InodeMap.  This generally should be thought of as part of
    * the InodeMap construction process, though.
+   *
+   * @param root The root TreeInode.
+   * @param maxExistingInode  The maximum inode number currently assigned to
+   *     any inode in the filesystem.  For newly created file systems this
+   *     should be FUSE_ROOT_ID.  If this is a mount point that has been
+   *     mounted before, this should be the maximum value across all the
+   *     outstanding inodes.
    */
-  void setRootInode(TreeInodePtr root);
+  void initialize(TreeInodePtr root, fuse_ino_t maxExistingInode);
 
   /**
    * Get the root inode.
@@ -288,8 +295,9 @@ class InodeMap {
    * shouldLoadChild() should only be called by TreeInode.
    *
    * shouldLoadChild() will be called when TreeInode wants to load one of
-   * its child entries by name.  It returns true if the TreeInode should start
-   * loading the inode now, or false if the inode is already being loaded.
+   * its child entries that already has an allocated inode number.  It returns
+   * true if the TreeInode should start loading the inode now, or false if the
+   * inode is already being loaded.
    *
    * If shouldLoadChild() returns true, the TreeInode will then start
    * loading the child inode.  It must then call inodeLoadComplete() or
@@ -300,11 +308,9 @@ class InodeMap {
    * @param parent The TreeInode calling this function to check if it should
    *   load a child.
    * @param name The name of the child inode.
-   * @param promise A promise to fulfil when this inode is finished loading.
+   * @param childInode The inode number of the child.
+   * @param promise A promise to fulfill when this inode is finished loading.
    *   The InodeMap is responsible for fulfilling this promise.
-   * @param childInodeReturn On return this will be set to the inode number of
-   *   the specified child inode.  This return value is always populated,
-   *   regardless of whether shouldLoadChild() returns true or false.
    *
    * @return Returns true if the TreeInode should start loading this child
    *   inode, or false if this child is already being loaded.
@@ -312,8 +318,39 @@ class InodeMap {
   bool shouldLoadChild(
       TreeInode* parent,
       PathComponentPiece name,
-      folly::Promise<InodePtr> promise,
-      fuse_ino_t* childInodeReturn);
+      fuse_ino_t childInode,
+      folly::Promise<InodePtr> promise);
+
+  /**
+   * newChildLoadStarted() should only be called by TreeInode.
+   *
+   * This will be called by TreeInode when it wants to start loading a new
+   * child entry that does not already have an inode number allocated.
+   *
+   * Because no inode is allocated the TreeInode knows that no existing load
+   * attempt is in progress.  If an inode number were allocated TreeInode would
+   * need to call shouldLoadChild() instead.
+   *
+   * This function allocate an inode number for the child, record the pending
+   * load operation, and then return the allocated inode number.
+   *
+   * The TreeInode must later call inodeLoadComplete() or inodeLoadFailed()
+   * when it finishes loading the inode.
+   *
+   * The TreeInode must be holding its contents lock when calling this method.
+   *
+   * @param parent The TreeInode calling this function to check if it should
+   *   load a child.
+   * @param name The name of the child inode.
+   * @param promise A promise to fulfil when this inode is finished loading.
+   *   The InodeMap is responsible for fulfilling this promise.
+   *
+   * @return Returns the newly allocated child inode number.
+   */
+  fuse_ino_t newChildLoadStarted(
+      TreeInode* parent,
+      PathComponentPiece name,
+      folly::Promise<InodePtr> promise);
 
   /**
    * inodeLoadComplete() should only be called by TreeInode.
@@ -342,33 +379,16 @@ class InodeMap {
   /**
    * allocateInodeNumber() should only be called by TreeInode.
    *
-   * This should be called to allocate an inode number for a brand new inode
-   * created by TreeInode::create() or TreeInode::mkdir()
-   *
-   * inodeCreated() must be called immediately afterwards to register the new
-   * child Inode object.
+   * This can be called:
+   * - To allocate an inode number for an existing tree entry that does not
+   *   need to be loaded yet.
+   * - To allocate an inode number for a brand new inode being created by
+   *   TreeInode::create() or TreeInode::mkdir().  In this case
+   *   inodeCreated() should be called immediately afterwards to register the
+   *   new child Inode object.
    */
   fuse_ino_t allocateInodeNumber();
   void inodeCreated(const InodePtr& inode);
-
-  /**
-   * getOrAllocateUnloadedInodeNumber() should only be called by TreeInode.
-   *
-   * This method gets the inode number for an unloaded inode.  If an inode is
-   * already assigned to this child that is returned.  Otherwise a new inode
-   * number is allocated and assigned to the child, then returned.
-   *
-   * This should be called in situations where the inode number is needed by
-   * the child Inode object does not actually need to be loaded yet.
-   * The caller is responsible for guaranteeing that the child in question is
-   * not currently loaded.
-   *
-   * The TreeInode must be holding its contents lock when calling this method.
-   * Otherwise this method could race with an attempt to load the child.
-   */
-  fuse_ino_t getOrAllocateUnloadedInodeNumber(
-      const TreeInode* parent,
-      PathComponentPiece name);
 
  private:
   friend class InodeMapLock;
@@ -432,40 +452,8 @@ class InodeMap {
 
     /**
      * The map of currently unloaded inodes
-     *
-     * This stores the values as unique_ptr<UnloadedInode> rather than just a
-     * plain UnloadedInode so that unloadedInodesReverse_ can store a
-     * PathComponentPiece pointing to the values in this map.  This would not
-     * work if the UnloadedInode objects could be moved.
      */
-    std::unordered_map<fuse_ino_t, std::unique_ptr<UnloadedInode>>
-        unloadedInodes_;
-
-    /**
-     * A reverse map of the unloaded inode data, allowing us to look up
-     * UnloadedInode objects by (parent_number, name)
-     *
-     * This is needed to tell if we already have an inode number allocated when
-     * doing a lookup by name.
-     *
-     * The UnloadedInode pointers in this map point to the values owned by the
-     * unloadedInodes_ map.
-     *
-     * Note: Memory management for the key is slightly subtle.
-     * The keys for this map contain PathComponentPieces instead of
-     * PathComponents.  This allows lookup with a simple PathComponentPiece.
-     * The PathComponentPiece in the key points to the PathComponent owned by
-     * the UnloadedInode object.
-     *
-     * TODO: In the long run, we may need to just move all of this data into
-     * the normal unloadedInodes_ map.  Each UnloadedInode should have a map
-     * listing all its children that have fuse_ino_t values allocated but are
-     * currently unloaded.  This will probably be necessary for TreeInode to
-     * know which of its children are materialized but unloaded.
-     */
-    std::
-        unordered_map<std::pair<fuse_ino_t, PathComponentPiece>, UnloadedInode*>
-            unloadedInodesReverse_;
+    std::unordered_map<fuse_ino_t, UnloadedInode> unloadedInodes_;
 
     /** The next inode number to allocate */
     fuse_ino_t nextInodeNumber_{FUSE_ROOT_ID + 1};
@@ -496,10 +484,6 @@ class InodeMap {
    */
   PromiseVector extractPendingPromises(fuse_ino_t number);
 
-  UnloadedInode* allocateUnloadedInode(
-      Members& data,
-      const TreeInode* parent,
-      PathComponentPiece name);
   fuse_ino_t allocateInodeNumber(Members& data);
 
   /**

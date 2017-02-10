@@ -7,13 +7,13 @@ typedef string RelativePath
 struct OverlayEntry {
   // Holds the mode_t data, which encodes the file type and permissions
   1: i32 mode
-  // For a placeholder entry that is materialized in name only (not content),
-  // this is either the Tree hash or Blob hash (depending on whether this is
-  // a directory or file) that we can use to obtain the content on demand.
-  // If this is null then the entry was not based on data available in the tree
-  // (eg: a newly created file or dir).
-  2: Hash hash
-  3: bool materialized
+  // The inodeNumber of the child, if it is materialized.
+  // If the child is not materialized this will be 0, and the hash will
+  // contain the hash of a source control Tree or Blob.
+  2: i64 inodeNumber
+  // If inodeNumber is 0, then this child is identical to an existing
+  // source control Tree or Blob.  This contains the hash of that Tree or Blob.
+  3: Hash hash
 }
 
 struct OverlayDir {

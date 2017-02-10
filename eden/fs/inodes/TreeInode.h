@@ -24,26 +24,112 @@ class Overlay;
 class RenameLock;
 class Tree;
 
-// Represents a Tree instance in a form that FUSE can consume
+/**
+ * Represents a directory in the file system.
+ */
 class TreeInode : public InodeBase {
  public:
-  /** Represents a directory entry.
-   * A directory entry holds the combined Tree and Overlay data;
-   * if a directory is only partially materialized the entire
-   * directory contents be part of this data, but the individual
-   * entries will indicate whether they have been materialized or not.
+  /**
+   * Represents a directory entry.
+   *
+   * A directory entry can be in one of several states:
+   *
+   * - An InodeBase object for the entry may or may not exist.  If it does
+   *   exist, it is the authoritative source of data for the entry.
+   *
+   * - If the child InodeBase object does not exist, we may or may not have an
+   *   inode number already allocated for the child.  An inode number can be
+   *   allocated on-demand if necessary, without fully creating a child
+   *   InodeBase object.
+   *
+   * - The child may or may not be materialized in the overlay.
+   *
+   *   If the child contents are identical to an existing source control Tree
+   *   or Blob then it does not need to be materialized, and the Entry may only
+   *   contain the hash identifying the Tree/Blob.
+   *
+   *   If the child is materialized in the overlay, then it must have an inode
+   *   number allocated to it.
    */
   struct Entry {
-    /** The complete st_mode value for this entry */
-    mode_t mode;
-    /** If !materialized, the blob or tree hash for this entry in
-     * the local store */
-    folly::Optional<Hash> hash;
-    /** true if the entry has been materialized to the overlay.
-     * For a directory this means that the directory exists, for
-     * a file it means that the file exists */
-    bool materialized{false};
+   public:
+    /**
+     * Create a hash for a non-materialized entry.
+     */
+    Entry(mode_t m, Hash hash) : mode(m), hash_{hash} {}
 
+    /**
+     * Create a hash for a materialized entry.
+     */
+    Entry(mode_t m, fuse_ino_t number) : mode(m), inodeNumber_{number} {}
+
+    Entry(Entry&& e) = default;
+    Entry& operator=(Entry&& e) = default;
+
+    bool isMaterialized() const {
+      // TODO: In the future we should probably only allow callers to invoke
+      // this method when inode is not set.  If inode is set it should be the
+      // authoritative source of data.
+      return !hash_.hasValue();
+    }
+    Hash getHash() const {
+      // TODO: In the future we should probably only allow callers to invoke
+      // this method when inode is not set.  If inode is set it should be the
+      // authoritative source of data.
+      return hash_.value();
+    }
+
+    bool hasInodeNumber() const {
+      return inodeNumber_ != 0;
+    }
+    fuse_ino_t getInodeNumber() const {
+      DCHECK_NE(inodeNumber_, 0);
+      return inodeNumber_;
+    }
+    void setInodeNumber(fuse_ino_t number) {
+      DCHECK_EQ(inodeNumber_, 0);
+      DCHECK(!inode);
+      inodeNumber_ = number;
+    }
+
+    void setMaterialized(fuse_ino_t inode) {
+      DCHECK(inodeNumber_ == 0 || inode == inodeNumber_);
+      inodeNumber_ = inode;
+      hash_.clear();
+    }
+    void setUnmaterialized(Hash hash) {
+      hash_ = hash;
+    }
+
+    // TODO: Make mode private and provide an accessor method instead
+    /** The complete st_mode value for this entry */
+    mode_t mode{0};
+
+   private:
+    /**
+     * If the entry is not materialized, this contains the hash
+     * identifying the source control Tree (if this is a directory) or Blob
+     * (if this is a file) that contains the entry contents.
+     *
+     * If the entry is materialized, this field is not set.
+     *
+     * TODO: If inode is set, this field generally should not be used, and the
+     * child InodeBase should be consulted instead.
+     */
+    folly::Optional<Hash> hash_;
+
+    /**
+     * The inode number, if one is allocated for this entry, or 0 if one is not
+     * allocated.
+     *
+     * An inode number is required for materialized entries, so this is always
+     * non-zero if hash_ is not set.  (It may also be non-zero even when hash_
+     * is set.)
+     */
+    fuse_ino_t inodeNumber_{0};
+
+   public:
+    // TODO: Make inode private and provide an accessor method instead
     /**
      * A pointer to the child inode, if it is loaded, or null if it is not
      * loaded.
@@ -57,10 +143,6 @@ class TreeInode : public InodeBase {
      * - Being unloaded (after their reference count is already 0).  In this
      *   case the parent TreeInodes responsible for triggering unloading of its
      *   children, so it resets this pointer to null when it unloads the child.
-     *
-     * TODO: This should perhaps be a folly::Variant with the above data.
-     * If the child is loaded, it should be the source of truth about all of
-     * the data for the child.
      */
     InodeBase* inode{nullptr};
   };

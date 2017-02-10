@@ -249,9 +249,6 @@ by hand to make changes to the repository or remove it.''' % name)
         for mount in repo_data['bind-mounts']:
             util.mkdir_p(os.path.join(bind_mounts_dir, mount))
 
-        # Create local storage directory
-        self._get_or_create_write_dir(dir_name)
-
         # Prepare to mount
         mount_info = eden_ttypes.MountInfo(mountPoint=path,
                                            edenClientPath=client_dir)
@@ -521,13 +518,6 @@ by hand to make changes to the repository or remove it.''' % name)
 
     def _get_clients_dir(self):
         return os.path.join(self._config_dir, CLIENTS_DIR)
-
-    def _get_or_create_write_dir(self, dir_name):
-        ''' Returns the local storage directory that is used to
-            hold writes that are not part of a snapshot '''
-        local_dir = os.path.join(self._get_clients_dir(),
-                                 dir_name, 'local')
-        return util.mkdir_p(local_dir)
 
 
 class HealthStatus(object):

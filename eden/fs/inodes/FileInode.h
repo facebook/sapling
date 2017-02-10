@@ -63,6 +63,9 @@ class FileInode : public InodeBase {
   /// Ensure that underlying storage information is loaded
   std::shared_ptr<FileData> getOrLoadData();
 
+  /// Compute the path to the overlay file for this item.
+  AbsolutePath getLocalPath() const;
+
  private:
   /**
    * Get a FileInodePtr to ourself.
@@ -80,9 +83,6 @@ class FileInode : public InodeBase {
   /// Called as part of shutting down an open handle.
   void fileHandleDidClose();
 
-  /// Compute the path to the overlay file for this item.
-  AbsolutePath getLocalPath() const;
-
   /**
    * Our Entry in our parent TreeInode's contents_
    *
@@ -90,7 +90,7 @@ class FileInode : public InodeBase {
    * access this without holding our parent's contents_ lock, which we aren't
    * doing correctly.
    */
-  TreeInode::Entry* entry_;
+  TreeInode::Entry* entry_{nullptr};
 
   std::shared_ptr<FileData> data_;
   /// for managing consistency, especially when materializing.

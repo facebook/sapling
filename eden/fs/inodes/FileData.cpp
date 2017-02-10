@@ -35,11 +35,8 @@ FileData::FileData(FileInode* inode, std::mutex& mutex, TreeInode::Entry* entry)
     : inode_(inode), mutex_(mutex), entry_(entry) {
   // The rest of the FileData code assumes that we always have file_ if
   // this is a materialized file.
-  if (entry_->materialized) {
-    // TODO: update the overlay code to use inode numbers.
-    // This file might not have a path if it has been unlinked.
-    auto filePath = inode->getParentBuggy()->getOverlay()->getContentDir() +
-        inode->getPathBuggy();
+  if (entry_->isMaterialized()) {
+    auto filePath = inode_->getLocalPath();
     file_ = folly::File(filePath.c_str(), O_RDWR | O_NOFOLLOW, 0600);
   }
 }
@@ -99,7 +96,11 @@ struct stat FileData::setAttr(const struct stat& attr, int to_set) {
   }
 
   if (to_set & FUSE_SET_ATTR_MODE) {
-    checkUnixError(fchmod(file_.fd(), attr.st_mode));
+    // The mode data is stored only in entry_.
+    // (We don't set mode bits on the overlay file as that may incorrectly
+    // prevent us from reading or writing the overlay data).
+    // Make sure we preserve the file type bits, and only update permissions.
+    entry_->mode = (entry_->mode & S_IFMT) | (07777 & attr.st_mode);
   }
 
   if (to_set & (FUSE_SET_ATTR_ATIME | FUSE_SET_ATTR_MTIME |
@@ -128,6 +129,7 @@ struct stat FileData::setAttr(const struct stat& attr, int to_set) {
   // We need to return the now-current stat information for this file.
   struct stat returnedStat;
   checkUnixError(fstat(file_.fd(), &returnedStat));
+  returnedStat.st_mode = entry_->mode;
 
   return returnedStat;
 }
@@ -141,6 +143,7 @@ struct stat FileData::stat() {
   if (file_) {
     // stat() the overlay file.
     checkUnixError(fstat(file_.fd(), &st));
+    st.st_mode = entry_->mode;
     return st;
   }
 
@@ -258,26 +261,19 @@ size_t FileData::write(folly::StringPiece data, off_t off) {
   return xfer;
 }
 
-void FileData::materializeForRead(
-    int open_flags,
-    RelativePathPiece path,
-    std::shared_ptr<Overlay> overlay) {
-  DCHECK((open_flags & (O_WRONLY | O_RDWR | O_CREAT | O_TRUNC)) == 0)
+void FileData::materializeForRead(int openFlags) {
+  DCHECK((openFlags & (O_WRONLY | O_RDWR | O_CREAT | O_TRUNC)) == 0)
       << "this is the read only materialization method";
   std::unique_lock<std::mutex> lock(mutex_);
 
-  // If we have a tree entry, assume that we will need the blob data...
-  bool needBlob = entry_->hash.hasValue();
-
-  if (entry_->materialized) {
-    // Canonical data for this entry lives in the file in the overlay, so there
-    // is not need to go to the store to satisfy it.
-    needBlob = false;
-
+  // FIXME: Our parent TreeInode owns entry_.  It isn't safe to access it
+  // here without holding the TreeInode's contents_ lock.  We need our own copy
+  // of this data instead.
+  if (entry_->isMaterialized()) {
     // If we have a pre-existing overlay file, we do not need to go to
     // the store at all.
     if (!file_) {
-      auto filePath = overlay->getContentDir() + path;
+      auto filePath = inode_->getLocalPath();
       // O_NOFOLLOW because it never makes sense for the kernel to ask
       // a fuse server to open a file that is a symlink to something else.
       file_ = folly::File(filePath.c_str(), O_RDWR | O_NOFOLLOW);
@@ -285,47 +281,44 @@ void FileData::materializeForRead(
       // outside interference)
       sha1Valid_ = true;
     }
-  }
-
-  if (needBlob && !blob_) {
-    // Load the blob data.
-    blob_ = getObjectStore()->getBlob(entry_->hash.value());
+  } else {
+    // We are backed by a source control Blob
+    if (!blob_) {
+      // Load the blob data.
+      blob_ = getObjectStore()->getBlob(entry_->getHash());
+    }
   }
 }
 
-void FileData::materializeForWrite(
-    int open_flags,
-    RelativePathPiece path,
-    std::shared_ptr<Overlay> overlay) {
+void FileData::materializeForWrite(int openFlags) {
   std::unique_lock<std::mutex> lock(mutex_);
 
+  // FIXME: Our parent TreeInode owns entry_.  It isn't safe to access it
+  // here without holding the TreeInode's contents_ lock.  We need our own copy
+  // of this data instead.
+
   // If we have a tree entry, assume that we will need the blob data...
-  bool needBlob = entry_->hash.hasValue();
+  bool needBlob = !entry_->isMaterialized();
   // ... and that we don't need an overlay file handle.
   bool needFile = false;
 
-  if ((open_flags & O_TRUNC) != 0) {
+  if ((openFlags & O_TRUNC) != 0) {
     // Truncation is a write operation, so we will need an overlay file.
     needFile = true;
     // No need to materialize the blob from the store if we're just
     // going to truncate it anyway.
     needBlob = false;
   }
-  if ((open_flags & (O_RDWR | O_WRONLY)) != 0) {
+  if ((openFlags & (O_RDWR | O_WRONLY)) != 0) {
     // Write operations require an overlay file.
     needFile = true;
   }
 
-  if (needBlob && entry_->materialized) {
-    // Data was deleted, no need to go to the store to satisfy it.
-    needBlob = false;
-  }
-
-  auto filePath = overlay->getContentDir() + path;
+  auto filePath = inode_->getLocalPath();
 
   // If we have a pre-existing overlay file, we do not need to go to
   // the store at all.
-  if (!file_ && entry_->materialized) {
+  if (!file_ && entry_->isMaterialized()) {
     // O_NOFOLLOW because it never makes sense for the kernel to ask
     // a fuse server to open a file that is a symlink to something else.
     file_ = folly::File(filePath.c_str(), O_RDWR | O_NOFOLLOW, 0600);
@@ -338,25 +331,19 @@ void FileData::materializeForWrite(
 
   if (needBlob && !blob_) {
     // Load the blob data.
-    blob_ = getObjectStore()->getBlob(entry_->hash.value());
+    blob_ = getObjectStore()->getBlob(entry_->getHash());
   }
 
   if (needFile && !file_) {
-    if (!entry_ && (open_flags & O_CREAT) == 0) {
-      // If we get here, we do not have any usable backing from the store
-      // and do not have a pre-existing overlay file.
-      // The current file open request isn't asking us to create a file,
-      // therefore we should not create one as we are about to do below.
-      // I don't know if the kernel is smart enough to detect and prevent
-      // this at a higher level or not, but it feels safer to be sure here.
-      folly::throwSystemErrorExplicit(ENOENT);
-    }
-
     // We need an overlay file and don't yet have one.
     // We always create our internal file handle read/write regardless of
     // the mode that the client is requesting.
     auto file = folly::File(filePath.c_str(), O_RDWR | O_CREAT, 0600);
-    entry_->materialized = true;
+    Hash blobHash;
+    if (needBlob) {
+      blobHash = entry_->getHash();
+    }
+    entry_->setMaterialized(inode_->getNodeId());
 
     // We typically need to populate our newly opened file with the data
     // from the overlay.  The O_TRUNC check above may have set needBlob
@@ -369,13 +356,15 @@ void FileData::materializeForWrite(
       auto err = errno;
       if (wrote != buf.computeChainDataLength()) {
         folly::throwSystemErrorExplicit(
-            wrote == -1 ? err : EIO, "failed to materialize ", path);
+            wrote == -1 ? err : EIO,
+            "failed to materialize ",
+            inode_->getLogPath());
       }
 
       // Copy and apply the sha1 to the new file.  This saves us from
       // recomputing it again in the case that something opens the file
       // read/write and closes it without changing it.
-      auto sha1 = getObjectStore()->getSha1ForBlob(entry_->hash.value());
+      auto sha1 = getObjectStore()->getSha1ForBlob(blobHash);
       fsetxattr(file.fd(), kXattrSha1, sha1.toString());
       sha1Valid_ = true;
     }
@@ -385,7 +374,7 @@ void FileData::materializeForWrite(
     // to reason about.
     file_ = std::move(file);
     sha1Valid_ = false;
-  } else if (file_ && (open_flags & O_TRUNC) != 0) {
+  } else if (file_ && (openFlags & O_TRUNC) != 0) {
     // truncating a file that we already have open
     sha1Valid_ = false;
     checkUnixError(ftruncate(file_.fd(), 0));
@@ -410,8 +399,8 @@ Hash FileData::getSha1Locked(const std::unique_lock<std::mutex>&) {
     }
   }
 
-  CHECK(entry_->hash.hasValue());
-  return getObjectStore()->getSha1ForBlob(entry_->hash.value());
+  CHECK(!entry_->isMaterialized());
+  return getObjectStore()->getSha1ForBlob(entry_->getHash());
 }
 
 ObjectStore* FileData::getObjectStore() const {

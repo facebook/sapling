@@ -80,7 +80,7 @@ class FileData {
 
   /**
    * Materialize the file data.
-   * open_flags has the same meaning as the flags parameter to
+   * openFlags has the same meaning as the flags parameter to
    * open(2).  Materialization depends on the write mode specified
    * in those flags; if we are writing to the file then we need to
    * copy it locally to the overlay.  If we are truncating we just
@@ -90,10 +90,7 @@ class FileData {
    * TODO: The overlay argument should be passed in as a raw pointer.  We do
    * not need ownership of it.
    */
-  void materializeForWrite(
-      int open_flags,
-      RelativePathPiece path,
-      std::shared_ptr<Overlay> overlay);
+  void materializeForWrite(int openFlags);
 
   /**
    * Materializes the file data.
@@ -105,10 +102,7 @@ class FileData {
    * TODO: The overlay argument should be passed in as a raw pointer.  We do
    * not need ownership of it.
    */
-  void materializeForRead(
-      int open_flags,
-      RelativePathPiece path,
-      std::shared_ptr<Overlay> overlay);
+  void materializeForRead(int openFlags);
 
  private:
   ObjectStore* getObjectStore() const;
@@ -145,7 +139,7 @@ class FileData {
    * TODO: Maybe we should just make FileData a friend of FileInode,
    * and access this as inode_->entry_
    */
-  TreeInode::Entry* entry_;
+  TreeInode::Entry* entry_{nullptr};
 
   /// if backed by tree, the data from the tree, else nullptr.
   std::unique_ptr<Blob> blob_;

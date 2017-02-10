@@ -8,10 +8,8 @@
  *
  */
 #pragma once
-#include <folly/File.h>
 #include <folly/Optional.h>
-#include <folly/String.h>
-#include <map>
+#include <folly/Range.h>
 #include "TreeInode.h"
 #include "eden/utils/DirType.h"
 #include "eden/utils/PathFuncs.h"
@@ -19,6 +17,10 @@
 
 namespace facebook {
 namespace eden {
+
+namespace overlay {
+class OverlayDir;
+}
 
 /** Manages the write overlay storage area.
  *
@@ -45,20 +47,35 @@ class Overlay {
   /** Returns the path to the root of the Overlay storage area */
   const AbsolutePath& getLocalDir() const;
 
-  /** Returns the path to the root of the materialized tree.
-   * This is a sub-directory of the local dir */
-  const AbsolutePath& getContentDir() const;
+  void saveOverlayDir(fuse_ino_t inodeNumber, const TreeInode::Dir* dir);
+  folly::Optional<TreeInode::Dir> loadOverlayDir(fuse_ino_t inodeNumber) const;
 
-  void saveOverlayDir(RelativePathPiece path, const TreeInode::Dir* dir) const;
-  void removeOverlayDir(RelativePathPiece path) const;
+  void removeOverlayData(fuse_ino_t inodeNumber) const;
 
-  folly::Optional<TreeInode::Dir> loadOverlayDir(RelativePathPiece path) const;
+  /**
+   * Get the path to the overlay file for the given inode
+   */
+  AbsolutePath getFilePath(fuse_ino_t inodeNumber) const;
+
+  /**
+   * Get the maximum inode number stored in the overlay.
+   *
+   * This is called when opening a mount point, to make sure that new inodes
+   * handed out from this point forwards are always greater than any inodes
+   * already tracked in the overlay.
+   */
+  fuse_ino_t getMaxRecordedInode();
 
  private:
+  void initOverlay();
+  bool isOldFormatOverlay() const;
+  void readExistingOverlay(int infoFD);
+  void initNewOverlay();
+  folly::Optional<overlay::OverlayDir> deserializeOverlayDir(
+      fuse_ino_t inodeNumber) const;
+
   /** path to ".eden/CLIENT/local" */
   AbsolutePath localDir_;
-  /** location of the materialized files/dirs */
-  AbsolutePath contentDir_;
 };
 }
 }

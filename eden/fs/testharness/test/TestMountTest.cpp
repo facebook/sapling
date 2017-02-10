@@ -43,8 +43,9 @@ TEST(TestMount, createSimpleTestMount) {
       << "Should be able to find FileInode for path1";
 
   auto entry = fileTreeEntry->getEntry();
+  ASSERT_FALSE(entry->isMaterialized());
   auto expectedSha1 = Hash::sha1(ByteRange(StringPiece("first!")));
-  EXPECT_EQ(expectedSha1, entry->hash.value())
+  EXPECT_EQ(expectedSha1, entry->getHash())
       << "For simplicity, TestMount uses the SHA-1 of the contents as "
       << "the id for a Blob.";
 
@@ -53,7 +54,8 @@ TEST(TestMount, createSimpleTestMount) {
     auto dir = dirTreeEntry->getContents().rlock();
     auto& rootEntries = dir->entries;
     auto& path1Entry = rootEntries.at(PathComponentPiece("path1"));
-    EXPECT_EQ(expectedSha1, path1Entry->hash.value())
+    ASSERT_FALSE(path1Entry->isMaterialized());
+    EXPECT_EQ(expectedSha1, path1Entry->getHash())
         << "Getting the Entry from the root Dir should also work.";
   }
 

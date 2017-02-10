@@ -26,5 +26,6 @@ cpp_library(
   ],
   external_deps = [
     ('boost', 'any'),
+    ('boost', 'any', 'boost_filesystem'),
   ],
 )

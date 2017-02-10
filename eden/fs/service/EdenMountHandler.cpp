@@ -76,7 +76,7 @@ void getMaterializedEntriesRecursive(
       const auto& name = entIter.first;
       const auto& ent = entIter.second;
 
-      if (!ent->materialized) {
+      if (!ent->isMaterialized()) {
         continue;
       }
 

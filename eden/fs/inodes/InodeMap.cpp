@@ -44,12 +44,14 @@ InodeMap::~InodeMap() {
   // destroy the EdenMount.
 }
 
-void InodeMap::setRootInode(TreeInodePtr root) {
+void InodeMap::initialize(TreeInodePtr root, fuse_ino_t maxExistingInode) {
   auto data = data_.wlock();
   CHECK(!root_);
   root_ = std::move(root);
   auto ret = data->loadedInodes_.emplace(FUSE_ROOT_ID, root_.get());
   CHECK(ret.second);
+  DCHECK_GE(maxExistingInode, FUSE_ROOT_ID);
+  data->nextInodeNumber_ = maxExistingInode + 1;
 }
 
 Future<InodePtr> InodeMap::lookupInode(fuse_ino_t number) {
@@ -83,7 +85,7 @@ Future<InodePtr> InodeMap::lookupInode(fuse_ino_t number) {
   }
 
   // Check to see if anyone else has already started loading this inode.
-  auto* unloadedData = unloadedIter->second.get();
+  auto* unloadedData = &unloadedIter->second;
   bool alreadyLoading = !unloadedData->promises.empty();
 
   // Add a new entry to the promises list.
@@ -139,7 +141,7 @@ Future<InodePtr> InodeMap::lookupInode(fuse_ino_t number) {
       return result;
     }
 
-    auto* parentData = unloadedIter->second.get();
+    auto* parentData = &unloadedIter->second;
     alreadyLoading = !parentData->promises.empty();
 
     // Add a new entry to the promises list.
@@ -228,22 +230,12 @@ InodeMap::PromiseVector InodeMap::inodeLoadComplete(InodeBase* inode) {
     CHECK(it != data->unloadedInodes_.end())
         << "failed to find unloaded inode data when finishing load of inode "
         << number;
-    swap(promises, it->second->promises);
+    swap(promises, it->second.promises);
 
-    auto reverseKey = std::make_pair(
-        it->second->parent, PathComponentPiece{it->second->name});
-    auto reverseIter = data->unloadedInodesReverse_.find(reverseKey);
-    CHECK(reverseIter != data->unloadedInodesReverse_.end())
-        << "failed to find reverse unloaded inode data when finishing "
-        << "load of inode " << number;
-
-    inode->setFuseRefcount(it->second->numFuseReferences);
+    inode->setFuseRefcount(it->second.numFuseReferences);
 
     // Insert the entry into loadedInodes_, and remove it from unloadedInodes_
     data->loadedInodes_.emplace(number, inode);
-    if (!it->second->isUnlinked) {
-      data->unloadedInodesReverse_.erase(reverseIter);
-    }
     data->unloadedInodes_.erase(it);
     return promises;
   } catch (const std::exception& ex) {
@@ -276,7 +268,7 @@ InodeMap::PromiseVector InodeMap::extractPendingPromises(fuse_ino_t number) {
     CHECK(it != data->unloadedInodes_.end())
         << "failed to find unloaded inode data when finishing load of inode "
         << number;
-    swap(promises, it->second->promises);
+    swap(promises, it->second.promises);
   }
   return promises;
 }
@@ -327,7 +319,7 @@ UnloadedInodeData InodeMap::lookupUnloadedInode(fuse_ino_t number) {
     throwSystemErrorExplicit(EINVAL, "unknown inode number ", number);
   }
 
-  return UnloadedInodeData(it->second->parent, it->second->name);
+  return UnloadedInodeData(it->second.parent, it->second.name);
 }
 
 void InodeMap::decFuseRefcount(fuse_ino_t number, uint32_t count) {
@@ -358,22 +350,14 @@ void InodeMap::decFuseRefcount(fuse_ino_t number, uint32_t count) {
   }
 
   // Decrement the reference count in the unloaded entry
-  const auto& unloadedEntry = unloadedIter->second;
-  CHECK_GE(unloadedEntry->numFuseReferences, count);
-  unloadedEntry->numFuseReferences -= count;
-  if (unloadedEntry->numFuseReferences <= 0) {
+  auto& unloadedEntry = unloadedIter->second;
+  CHECK_GE(unloadedEntry.numFuseReferences, count);
+  unloadedEntry.numFuseReferences -= count;
+  if (unloadedEntry.numFuseReferences <= 0) {
     // We can completely forget about this unloaded inode now.
     VLOG(5) << "forgetting unloaded inode " << number << ": "
-            << unloadedEntry->parent << ":" << unloadedEntry->name;
-    auto reverseLookupKey =
-        std::make_pair(unloadedEntry->parent, unloadedEntry->name.piece());
-    VLOG(7) << "reverse unload erase " << reverseLookupKey.first << ":"
-            << reverseLookupKey.second;
-    if (!unloadedEntry->isUnlinked) {
-      auto numErased = data->unloadedInodesReverse_.erase(reverseLookupKey);
-      CHECK_EQ(1, numErased);
-      data->unloadedInodes_.erase(unloadedIter);
-    }
+            << unloadedEntry.parent << ":" << unloadedEntry.name;
+    data->unloadedInodes_.erase(unloadedIter);
   }
 }
 
@@ -539,23 +523,17 @@ void InodeMap::unloadInode(
     VLOG(5) << "unloading inode " << inode->getNodeId()
             << " with FUSE refcount=" << fuseCount << ": "
             << inode->getLogPath();
-    auto unloadedEntry = std::make_unique<UnloadedInode>(
-        inode->getNodeId(), parent->getNodeId(), name);
-    unloadedEntry->numFuseReferences = fuseCount;
-    unloadedEntry->isUnlinked = isUnlinked;
+    auto unloadedEntry =
+        UnloadedInode(inode->getNodeId(), parent->getNodeId(), name);
+    unloadedEntry.numFuseReferences = fuseCount;
+    unloadedEntry.isUnlinked = isUnlinked;
     auto reverseInsertKey =
-        std::make_pair(unloadedEntry->parent, unloadedEntry->name.piece());
+        std::make_pair(unloadedEntry.parent, unloadedEntry.name.piece());
     VLOG(7) << "reverse unload emplace " << reverseInsertKey.first << ":"
             << reverseInsertKey.second;
-    auto* unloadedEntryRaw = unloadedEntry.get();
     auto ret = data->unloadedInodes_.emplace(
         inode->getNodeId(), std::move(unloadedEntry));
     CHECK(ret.second);
-    if (!isUnlinked) {
-      auto reverseRet = data->unloadedInodesReverse_.emplace(
-          reverseInsertKey, unloadedEntryRaw);
-      CHECK(reverseRet.second);
-    }
   } else {
     VLOG(5) << "forgetting unreferenced inode " << inode->getNodeId() << ": "
             << inode->getLogPath();
@@ -568,39 +546,57 @@ void InodeMap::unloadInode(
 bool InodeMap::shouldLoadChild(
     TreeInode* parent,
     PathComponentPiece name,
-    Promise<InodePtr> promise,
-    fuse_ino_t* childInodeReturn) {
+    fuse_ino_t childInode,
+    folly::Promise<InodePtr> promise) {
   auto data = data_.wlock();
-
-  // Check in unloadedInodesReverse_ to see if we already have an inode
-  // allocated for this entry.
+  CHECK(childInode < data->nextInodeNumber_);
+  auto iter = data->unloadedInodes_.find(childInode);
   UnloadedInode* unloadedData{nullptr};
-  auto reverseLookupKey = std::make_pair(parent->getNodeId(), name);
-  auto reverseIter = data->unloadedInodesReverse_.find(reverseLookupKey);
-  if (reverseIter == data->unloadedInodesReverse_.end()) {
-    // No inode allocated for this entry yet.
-    // Allocate one now.
-    unloadedData = allocateUnloadedInode(*data, parent, name);
+  if (iter == data->unloadedInodes_.end()) {
+    // This happens when the inode was stored on disk by a previous instance of
+    // the eden daemon and this is the first time we have been asked to load it
+    // into memory.
+    //
+    // Insert a new entry into data->unloadedInodes_
+    fuse_ino_t parentNumber = parent->getNodeId();
+    auto newUnloadedData = UnloadedInode(childInode, parentNumber, name);
+    auto ret =
+        data->unloadedInodes_.emplace(childInode, std::move(newUnloadedData));
+    DCHECK(ret.second);
+    unloadedData = &ret.first->second;
   } else {
-    // We already have an inode assigned to this entry
-    unloadedData = reverseIter->second;
-
-    // Check to see if this inode is already in the process of being loaded.
-    // If so, just add this promise to the existing list.  Return false to the
-    // caller (TreeInode::getOrLoadChild()) indicating that it doesn't need to
-    // start the load itself.
-    if (!unloadedData->promises.empty()) {
-      unloadedData->promises.push_back(std::move(promise));
-      *childInodeReturn = unloadedData->number;
-      return false;
-    }
+    unloadedData = &iter->second;
+    DCHECK_EQ(unloadedData->number, childInode);
   }
 
+  bool isFirstPromise = unloadedData->promises.empty();
+
   // Add the promise to the existing list for this inode.
-  // Return true asking the caller to start the load now.
   unloadedData->promises.push_back(std::move(promise));
-  *childInodeReturn = unloadedData->number;
-  return true;
+
+  // If this is the very first promise then tell the caller they need
+  // to start the load operation.  Otherwise someone else (whoever added the
+  // first promise) has already started loading the inode.
+  return isFirstPromise;
+}
+
+fuse_ino_t InodeMap::newChildLoadStarted(
+    TreeInode* parent,
+    PathComponentPiece name,
+    folly::Promise<InodePtr> promise) {
+  auto data = data_.wlock();
+
+  // Allocate a new inode number
+  auto childNumber = allocateInodeNumber(*data);
+
+  // Put an entry in unloadedInodes_
+  fuse_ino_t parentNumber = parent->getNodeId();
+  auto unloadedData = UnloadedInode(childNumber, parentNumber, name);
+  unloadedData.promises.push_back(std::move(promise));
+  data->unloadedInodes_.emplace(childNumber, std::move(unloadedData));
+
+  // Return the inode number
+  return childNumber;
 }
 
 fuse_ino_t InodeMap::allocateInodeNumber() {
@@ -613,44 +609,6 @@ void InodeMap::inodeCreated(const InodePtr& inode) {
           << inode->getLogPath();
   auto data = data_.wlock();
   data->loadedInodes_.emplace(inode->getNodeId(), inode.get());
-}
-
-fuse_ino_t InodeMap::getOrAllocateUnloadedInodeNumber(
-    const TreeInode* parent,
-    PathComponentPiece name) {
-  auto data = data_.wlock();
-  auto reverseKey = std::make_pair(parent->getNodeId(), name);
-  auto reverseIter = data->unloadedInodesReverse_.find(reverseKey);
-  if (reverseIter != data->unloadedInodesReverse_.end()) {
-    // We already have an inode for this entry
-    return reverseIter->second->number;
-  }
-
-  // We have to allocate an inode and insert it into the unloaded map
-  auto* unloadedData = allocateUnloadedInode(*data, parent, name);
-  return unloadedData->number;
-}
-
-InodeMap::UnloadedInode* InodeMap::allocateUnloadedInode(
-    Members& data,
-    const TreeInode* parent,
-    PathComponentPiece name) {
-  auto childNumber = allocateInodeNumber(data);
-
-  // Put the child inode in unloadedInodes_
-  fuse_ino_t parentNumber = parent->getNodeId();
-  auto newUnloadedData =
-      std::make_unique<UnloadedInode>(childNumber, parentNumber, name);
-  // When we insert the data in to unloadedInodesReverse_, make sure the
-  // PathComponentPiece in the key points to the PathComponent owned by the
-  // UnloadedInode, so that the memory is guaranteed to be valid for as long
-  // as the entry exists.
-  auto* unloadedData = newUnloadedData.get();
-  auto reverseInsertKey =
-      std::make_pair(parentNumber, newUnloadedData->name.piece());
-  data.unloadedInodes_.emplace(childNumber, std::move(newUnloadedData));
-  data.unloadedInodesReverse_.emplace(reverseInsertKey, unloadedData);
-  return unloadedData;
 }
 
 fuse_ino_t InodeMap::allocateInodeNumber(Members& data) {

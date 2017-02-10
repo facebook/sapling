@@ -248,7 +248,7 @@ class IgnoreChecker {
     }
 
     auto data = ignoreInode->getOrLoadData();
-    data->materializeForRead(O_RDONLY, ignorePath, mountPoint_->getOverlay());
+    data->materializeForRead(O_RDONLY);
     ignore->loadFile(data->readAll());
   }
 
@@ -471,7 +471,7 @@ bool hasMatchingAttributes(
   // TODO(t12183419): Once the file size is available in the TreeEntry,
   // compare file sizes before fetching SHA-1s.
 
-  if (inodeEntry->materialized) {
+  if (inodeEntry->isMaterialized()) {
     // If the the inode is materialized, then we cannot trust the Hash on the
     // TreeInode::Entry, so we must compare with the contents in the overlay.
     auto fileInode = dynamic_cast<FileInode*>(inodeEntry->inode);
@@ -479,9 +479,7 @@ bool hasMatchingAttributes(
     auto blobSHA1 = objectStore->getSha1ForBlob(treeEntry->getHash());
     return overlaySHA1 == blobSHA1;
   } else {
-    auto optionalHash = inodeEntry->hash;
-    DCHECK(optionalHash.hasValue()) << "non-materialized file must have a hash";
-    return *optionalHash.get_pointer() == treeEntry->getHash();
+    return inodeEntry->getHash() == treeEntry->getHash();
   }
 }
 
@@ -1065,7 +1063,7 @@ void Dirstate::markCommitted(
 
     auto dir = treeInode->getContents().wlock();
     dir->treeHash = treeForDirectory->getHash();
-    overlay->saveOverlayDir(directory, &*dir);
+    overlay->saveOverlayDir(treeInode->getNodeId(), &*dir);
   }
 
   // Now that the hashes are written, we update the userDirectives.

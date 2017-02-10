@@ -197,16 +197,13 @@ void TestMountBuilder::addUserDirectives(
 void TestMount::addFile(folly::StringPiece path, std::string contents) {
   RelativePathPiece relativePath(path);
   auto treeInode = getTreeInode(relativePath.dirname());
-  mode_t modeThatSeemsToBeIgnored = 0; // TreeInode::create() uses 0600.
+  mode_t mode = 0644;
   int flags = 0;
   auto dispatcher = edenMount_->getDispatcher();
-  auto createResult = dispatcher
-                          ->create(
-                              treeInode->getNodeId(),
-                              relativePath.basename(),
-                              modeThatSeemsToBeIgnored,
-                              flags)
-                          .get();
+  auto createResult =
+      dispatcher
+          ->create(treeInode->getNodeId(), relativePath.basename(), mode, flags)
+          .get();
   off_t off = 0;
   createResult.fh->write(contents, off);
   createResult.fh->fsync(/*datasync*/ true);
