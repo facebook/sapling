@@ -809,7 +809,7 @@ class hybridmanifestctx(object):
                 self._ui, self._opener, loadflat=loadflat, node=self._node)
         return self._hybridmanifest
 
-    def readdelta(self):
+    def readdelta(self, shallow=False):
         rl = self._revlog
         if rl._usemanifestv2:
             # Need to perform a slow delta
@@ -828,7 +828,7 @@ class hybridmanifestctx(object):
         d = mdiff.patchtext(rl.revdiff(rl.deltaparent(r), r))
         return manifest.manifestdict(d)
 
-    def readfast(self):
+    def readfast(self, shallow=False):
         return self.read()
 
     def node(self):
@@ -859,6 +859,12 @@ class manifestfactory(object):
             mancache[node] = m
 
         return m
+
+    def newgetdirmanifestctx(self, orig, mfl, dir, node, *args):
+        if dir != '':
+            raise NotImplemented("fastmanifest doesn't support trees")
+
+        return self.newgetitem(None, mfl, node)
 
     def add(self, orig, *args, **kwargs):
         origself, m, transaction, link, p1, p2, added, removed = args[:8]

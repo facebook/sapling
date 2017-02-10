@@ -193,6 +193,8 @@ class FastManifestExtension(object):
 
         extensions.wrapfunction(
             manifest.manifestlog, '__getitem__', factory.newgetitem)
+        extensions.wrapfunction(
+            manifest.manifestlog, 'get', factory.newgetdirmanifestctx)
         extensions.wrapfunction(manifest.manifestrevlog, 'add', factory.add)
 
         revsetmod.symbols['fastmanifesttocache'] = (
