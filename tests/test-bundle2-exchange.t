@@ -1039,6 +1039,16 @@ Verify the global server.bundle1 option works
   [255]
   $ killdaemons.py
 
+  $ hg --config devel.legacy.exchange=bundle1 clone ssh://user@dummy/bundle2onlyserver not-bundle2-ssh
+  requesting all changes
+  adding changesets
+  remote: abort: incompatible Mercurial client; bundle2 required
+  remote: (see https://www.mercurial-scm.org/wiki/IncompatibleClient)
+  transaction abort!
+  rollback completed
+  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  [255]
+
   $ cat > bundle2onlyserver/.hg/hgrc << EOF
   > [server]
   > bundle1gd = false

@@ -834,7 +834,10 @@ def getbundle(repo, proto, others):
 
     if not bundle1allowed(repo, 'pull'):
         if not exchange.bundle2requested(opts.get('bundlecaps')):
-            return ooberror(bundle2required)
+            if proto.name == 'http':
+                return ooberror(bundle2required)
+            raise error.Abort(bundle2requiredmain,
+                              hint=bundle2requiredhint)
 
     chunks = exchange.getbundlechunks(repo, 'serve', **opts)
     return streamres(gen=chunks, v1compressible=True)
