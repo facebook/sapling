@@ -4129,8 +4129,9 @@ def import_(ui, repo, patch1=None, *patches, **opts):
     Import a list of patches and commit them individually (unless
     --no-commit is specified).
 
-    To read a patch from standard input, use "-" as the patch name. If
-    a URL is specified, the patch will be downloaded from there.
+    To read a patch from standard input (stdin), use "-" as the patch
+    name. If a URL is specified, the patch will be downloaded from
+    there.
 
     Import first applies changes to the working directory (unless
     --bypass is specified), import will abort if there are outstanding
@@ -4199,6 +4200,10 @@ def import_(ui, repo, patch1=None, *patches, **opts):
       - import all the patches in an Unix-style mbox::
 
           hg import incoming-patches.mbox
+
+      - import patches from stdin::
+
+          hg import -
 
       - attempt to exactly restore an exported changeset (not always
         possible)::
