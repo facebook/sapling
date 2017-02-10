@@ -543,3 +543,20 @@ remote hook failure is attributed to remote
   remote: abort: pretxnchangegroup.fail hook failed
   [1]
 
+abort during pull is properly reported as such
+
+  $ echo morefoo >> ../remote/foo
+  $ hg -R ../remote commit --message "more foo to be pulled"
+  $ cat >> ../remote/.hg/hgrc << EOF
+  > [extensions]
+  > crash = ${TESTDIR}/crashgetbundler.py
+  > EOF
+  $ hg --config ui.ssh="python $TESTDIR/dummyssh" pull
+  pulling from ssh://user@dummy/remote
+  searching for changes
+  adding changesets
+  remote: abort: this is an exercise
+  transaction abort!
+  rollback completed
+  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  [255]
