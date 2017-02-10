@@ -1,3 +1,6 @@
+  $ PYTHONPATH=$TESTDIR/..:$PYTHONPATH
+  $ export PYTHONPATH
+
 no-check-code
   $ . "$TESTDIR/library.sh"
 

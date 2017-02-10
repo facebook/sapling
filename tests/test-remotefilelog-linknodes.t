@@ -1,3 +1,6 @@
+  $ PYTHONPATH=$TESTDIR/..:$PYTHONPATH
+  $ export PYTHONPATH
+
 # Tests for the complicated linknode logic in remotefilelog.py::ancestormap()
 
   $ . "$TESTDIR/library.sh"

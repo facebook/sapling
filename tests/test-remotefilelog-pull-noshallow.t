@@ -1,3 +1,6 @@
+  $ PYTHONPATH=$TESTDIR/..:$PYTHONPATH
+  $ export PYTHONPATH
+
   $ . "$TESTDIR/library.sh"
 
 Set up an extension to make sure remotefilelog clientsetup() runs

@@ -1,3 +1,6 @@
+  $ PYTHONPATH=$TESTDIR/..:$PYTHONPATH
+  $ export PYTHONPATH
+
   $ . "$TESTDIR/library.sh"
 
   $ hginit master
