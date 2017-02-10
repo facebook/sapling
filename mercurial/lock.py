@@ -9,12 +9,14 @@ from __future__ import absolute_import
 
 import contextlib
 import errno
+import os
 import socket
 import time
 import warnings
 
 from . import (
     error,
+    pycompat,
     util,
 )
 
@@ -22,9 +24,17 @@ def _getlockprefix():
     """Return a string which is used to differentiate pid namespaces
 
     It's useful to detect "dead" processes and remove stale locks with
-    confidence. Typically it's just hostname.
+    confidence. Typically it's just hostname. On modern linux, we include an
+    extra Linux-specific pid namespace identifier.
     """
-    return socket.gethostname()
+    result = socket.gethostname()
+    if pycompat.sysplatform.startswith('linux'):
+        try:
+            result += '/%x' % os.stat('/proc/self/ns/pid').st_ino
+        except OSError as ex:
+            if ex.errno not in (errno.ENOENT, errno.EACCES, errno.ENOTDIR):
+                raise
+    return result
 
 class lock(object):
     '''An advisory lock held by one process to control access to a set
