@@ -1024,11 +1024,12 @@ bundle1 pull can be disabled for generaldelta repos only
 
 Verify the global server.bundle1 option works
 
-  $ cat > .hg/hgrc << EOF
+  $ cd ..
+  $ cat > bundle2onlyserver/.hg/hgrc << EOF
   > [server]
   > bundle1 = false
   > EOF
-  $ hg serve -p $HGPORT -d --pid-file=hg.pid
+  $ hg -R bundle2onlyserver serve -p $HGPORT -d --pid-file=hg.pid
   $ cat hg.pid >> $DAEMON_PIDS
   $ hg --config devel.legacy.exchange=bundle1 clone http://localhost:$HGPORT not-bundle2
   requesting all changes
@@ -1038,11 +1039,11 @@ Verify the global server.bundle1 option works
   [255]
   $ killdaemons.py
 
-  $ cat > .hg/hgrc << EOF
+  $ cat > bundle2onlyserver/.hg/hgrc << EOF
   > [server]
   > bundle1gd = false
   > EOF
-  $ hg serve -p $HGPORT -d --pid-file=hg.pid
+  $ hg -R bundle2onlyserver serve -p $HGPORT -d --pid-file=hg.pid
   $ cat hg.pid >> $DAEMON_PIDS
 
   $ hg --config devel.legacy.exchange=bundle1 clone http://localhost:$HGPORT/ not-bundle2
@@ -1054,7 +1055,7 @@ Verify the global server.bundle1 option works
 
   $ killdaemons.py
 
-  $ cd ../notgdserver
+  $ cd notgdserver
   $ cat > .hg/hgrc << EOF
   > [server]
   > bundle1gd = false
