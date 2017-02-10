@@ -34,6 +34,8 @@ Test manually inhibiting and deinhibiting nodes.
   $ hg debugobsolete 66f7d451a68b85ed82ff5fcc254daf50c74144bd 6100d3090acf50ed11ec23196cec20f5bd7323aa --config "debuginhibit.printstack=false"
   Inhibiting: ['66f7d451a68b']
   $ hg log -r 'unstable()'
+  $ hg debuginhibit
+  1:66f7d451a68b85ed82ff5fcc254daf50c74144bd r1
   $ hg debuginhibit -d 1
   Deinhibiting: ['66f7d451a68b']
   Context:
@@ -45,6 +47,7 @@ Test manually inhibiting and deinhibiting nodes.
   trouble:     unstable
   summary:     r2
   
+  $ hg debuginhibit
   $ hg debuginhibit 1
   Inhibiting: ['66f7d451a68b']
   Context:

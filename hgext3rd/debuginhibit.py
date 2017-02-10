@@ -55,16 +55,16 @@ def extsetup(ui):
         extensions.wrapfunction(
             inhibit,
             '_inhibitmarkers',
-            partial(printnodes, ui, label="Inhibiting")
+            partial(printnodeswrapper, ui, label="Inhibiting")
         )
         extensions.wrapfunction(
             inhibit,
             '_deinhibitmarkers',
-            partial(printnodes, ui, label="Deinhibiting")
+            partial(printnodeswrapper, ui, label="Deinhibiting")
         )
 
-def printnodes(ui, orig, repo, nodes, label=None):
-    """Print out the nodes being inhibited/dehinhibited."""
+def printnodeswrapper(ui, orig, repo, nodes, label=None):
+    """Wrapper function that prints the nodes being inhibited/dehinhibited."""
     if label is None:
         label = "Nodes"
 
@@ -94,10 +94,18 @@ def debuginhibit(ui, repo, *revs, **opts):
     """manually inhibit or deinhibit the specified revisions
 
     By default inhibits any obsolescence markers on the given revs.
+    With no arguments prints out a list of inhibited nodes.
     """
     _checkenabled(repo)
 
     revs = list(revs) + opts.get('rev', [])
+
+    # If no arguments were passed to the command, just print out all the
+    # inhibited nodes and exit.
+    if not revs:
+        _prettyprintnodes(ui, repo, repo._obsinhibit)
+        return
+
     revs = scmutil.revrange(repo, revs)
     nodes = (repo.changelog.node(rev) for rev in revs)
 
@@ -111,6 +119,17 @@ def debuginhibit(ui, repo, *revs, **opts):
             # Disable inhibit's post-transaction callback so that we only
             # affect the changesets specified by the user.
             del tr._postclosecallback['inhibitposttransaction']
+
+def _prettyprintnodes(ui, repo, nodes):
+    """Pretty print a list of nodes."""
+    contexts = [repo[node] for node in nodes]
+    showopts = {
+        'template': '{rev}:{node} {if(bookmarks, "({bookmarks}) ")}'
+                    '{desc|firstline}\n'
+    }
+    displayer = cmdutil.show_changeset(ui, repo, showopts)
+    for ctx in contexts:
+        displayer.show(ctx)
 
 def _printframe(frameinfo):
     """Return a human-readable string representation of a FrameInfo object."""
