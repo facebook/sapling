@@ -70,8 +70,10 @@ import json
 import logging
 import os
 import random
+import re
 import socket
 import struct
+import sys
 import tempfile
 import time
 
@@ -119,6 +121,7 @@ configscratchpush = 'infinitepush-scratchpush'
 confignonforwardmove = 'non-forward-move'
 
 _scratchbranchmatcher = lambda x: False
+_maybehash = re.compile(r'^[a-f0-9]+$').search
 
 def _buildexternalbundlestore(ui):
     put_args = ui.configlist('infinitepush', 'put_args', [])
@@ -253,6 +256,7 @@ def clientextsetup(ui):
          'name of the remote path to list the bookmarks'))
 
     wrapcommand(commands.table, 'pull', _pull)
+    wrapcommand(commands.table, 'update', _update)
 
     wrapfunction(discovery, 'checkheads', _checkheads)
 
@@ -505,6 +509,25 @@ def _decodebookmarks(stream):
         node = node.encode('ascii')
         result[bookmark] = node
     return result
+
+def _update(orig, ui, repo, node=None, rev=None, **opts):
+    if rev and node:
+        raise error.Abort(_("please specify just one revision"))
+
+    if not opts.get('date') and (rev or node) not in repo:
+        mayberemotenode = rev or node
+        if len(mayberemotenode) == 40 and _maybehash(mayberemotenode):
+            ui.warn(
+                _("'%s' does not exist locally - looking for it " +
+                "remotely...\n") % mayberemotenode)
+            # Try pulling node from remote repo
+            try:
+                commands.pull(ui, repo, rev=[mayberemotenode])
+            except Exception:
+                ui.warn(_('pull failed: %s\n') % sys.exc_info()[1])
+            else:
+                ui.warn(_("'%s' found remotely\n") % mayberemotenode)
+    return orig(ui, repo, node, rev, **opts)
 
 def _pull(orig, ui, repo, source="default", **opts):
     # Copy paste from `pull` command

@@ -677,3 +677,27 @@ Make sure phase on the client is public.
   |/
   o  initialcommit public  67145f466344
   
+Strip scratchontopofpublic commit and do hg update
+  $ hg log -r tip -T '{node}\n'
+  c70aee6da07d7cdb9897375473690df3a8563339
+  $ hg strip -q tip
+  $ hg up c70aee6da07d7cdb9897375473690df3a8563339
+  'c70aee6da07d7cdb9897375473690df3a8563339' does not exist locally - looking for it remotely...
+  pulling from ssh://user@dummy/repo
+  searching for changes
+  no changes found
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+  'c70aee6da07d7cdb9897375473690df3a8563339' found remotely
+  2 files updated, 0 files merged, 2 files removed, 0 files unresolved
+
+Trying to pull from bad path
+  $ hg strip -q tip
+  $ hg --config paths.default=badpath up c70aee6da07d7cdb9897375473690df3a8563339
+  'c70aee6da07d7cdb9897375473690df3a8563339' does not exist locally - looking for it remotely...
+  pulling from $TESTTMP/client2/badpath (glob)
+  pull failed: repository $TESTTMP/client2/badpath not found
+  abort: unknown revision 'c70aee6da07d7cdb9897375473690df3a8563339'!
+  [255]
