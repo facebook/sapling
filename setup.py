@@ -712,7 +712,7 @@ if sys.platform == 'darwin' and os.path.exists('/usr/bin/xcodebuild'):
 setup(name='mercurial',
       version=setupversion,
       author='Matt Mackall and many others',
-      author_email='mercurial@selenic.com',
+      author_email='mercurial@mercurial-scm.org',
       url='https://mercurial-scm.org/',
       download_url='https://mercurial-scm.org/release/',
       description=('Fast scalable distributed SCM (revision control, version '

@@ -452,6 +452,8 @@ allfilespats = [
   [
     (r'(http|https)://[a-zA-Z0-9./]*selenic.com/',
      'use mercurial-scm.org domain URL'),
+    (r'mercurial@selenic\.com',
+     'use mercurial-scm.org domain for mercurial ML address'),
   ],
   # warnings
   [],
