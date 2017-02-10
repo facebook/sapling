@@ -981,6 +981,8 @@ def unbundle(repo, proto, heads):
                 # This need to be moved to something proper.
                 # Feel free to do it.
                 util.stderr.write("abort: %s\n" % exc)
+                if exc.hint is not None:
+                    util.stderr.write("(%s)\n" % exc.hint)
                 return pushres(0)
             except error.PushRaced:
                 return pusherr(str(exc))

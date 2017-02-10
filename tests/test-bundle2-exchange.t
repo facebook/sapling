@@ -1113,6 +1113,7 @@ Verify bundle1 pushes can be disabled
   pushing to ssh://user@dummy/bundle2onlyserver
   searching for changes
   remote: abort: incompatible Mercurial client; bundle2 required
+  remote: (see https://www.mercurial-scm.org/wiki/IncompatibleClient)
   [1]
 
   $ hg push
