@@ -124,7 +124,8 @@ def checkportisavailable(port):
             s.close()
             return True
         except socket.error as exc:
-            if exc.errno not in (errno.EADDRINUSE, errno.EADDRNOTAVAIL):
+            if exc.errno not in (errno.EADDRINUSE, errno.EADDRNOTAVAIL,
+                                 errno.EPROTONOSUPPORT):
                 raise
     return False
 
