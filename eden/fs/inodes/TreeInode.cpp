@@ -390,10 +390,6 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
       number, inodePtrFromThis(), name, entry, std::move(overlayDir.value()));
 }
 
-fuse_ino_t TreeInode::getInode() const {
-  return getNodeId();
-}
-
 folly::Future<std::shared_ptr<fusell::DirHandle>> TreeInode::opendir(
     const struct fuse_file_info&) {
   return std::make_shared<TreeInodeDirHandle>(inodePtrFromThis());

@@ -33,7 +33,7 @@ folly::Future<fusell::DirList> TreeInodeDirHandle::readdir(
   // provided DirList object.
 
   // The inode of this directory
-  auto dir_inode = inode_->getInode();
+  auto dir_inode = inode_->getNodeId();
 
   // It's pretty complicated to stitch together the directory contents
   // while trying to skip around and respect the offset parameter.

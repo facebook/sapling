@@ -202,7 +202,7 @@ void TestMount::addFile(folly::StringPiece path, std::string contents) {
   auto dispatcher = edenMount_->getDispatcher();
   auto createResult = dispatcher
                           ->create(
-                              treeInode->getInode(),
+                              treeInode->getNodeId(),
                               relativePath.basename(),
                               modeThatSeemsToBeIgnored,
                               flags)
@@ -255,21 +255,22 @@ void TestMount::mkdir(folly::StringPiece path) {
   auto treeInode = getTreeInode(relativePath.dirname());
   mode_t mode = 0755;
   auto dispatcher = edenMount_->getDispatcher();
-  dispatcher->mkdir(treeInode->getInode(), relativePath.basename(), mode).get();
+  dispatcher->mkdir(treeInode->getNodeId(), relativePath.basename(), mode)
+      .get();
 }
 
 void TestMount::deleteFile(folly::StringPiece path) {
   auto relativePath = RelativePathPiece{path};
   auto treeInode = getTreeInode(relativePath.dirname());
   auto dispatcher = edenMount_->getDispatcher();
-  dispatcher->unlink(treeInode->getInode(), relativePath.basename()).get();
+  dispatcher->unlink(treeInode->getNodeId(), relativePath.basename()).get();
 }
 
 void TestMount::rmdir(folly::StringPiece path) {
   auto relativePath = RelativePathPiece{path};
   auto treeInode = getTreeInode(relativePath.dirname());
   auto dispatcher = edenMount_->getDispatcher();
-  dispatcher->rmdir(treeInode->getInode(), relativePath.basename()).get();
+  dispatcher->rmdir(treeInode->getNodeId(), relativePath.basename()).get();
 }
 
 TreeInodePtr TestMount::getTreeInode(RelativePathPiece path) const {

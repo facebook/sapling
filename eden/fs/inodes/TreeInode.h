@@ -146,8 +146,6 @@ class TreeInode : public InodeBase {
       TreeInodePtr newParent,
       PathComponentPiece newName);
 
-  fuse_ino_t getInode() const;
-
   const folly::Synchronized<Dir>& getContents() const {
     return contents_;
   }
