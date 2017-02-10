@@ -1363,6 +1363,9 @@ def _pullbundle2(pullop):
     bundle = pullop.remote.getbundle('pull', **kwargs)
     try:
         op = bundle2.processbundle(pullop.repo, bundle, pullop.gettransaction)
+    except bundle2.AbortFromPart as exc:
+        pullop.repo.ui.status(_('remote: abort: %s\n') % exc)
+        raise error.Abort(_('pull failed on remote'), hint=exc.hint)
     except error.BundleValueError as exc:
         raise error.Abort(_('missing support for %s') % exc)
 
