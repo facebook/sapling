@@ -44,6 +44,11 @@ from mercurial.node import hex, short, bin, nullid
 from hgext import schemes
 from hgext.convert import hg as converthg
 
+try:
+    from mercurial import smartset
+except ImportError:
+    smartset = revset
+
 # namespace to use when recording an hg journal entry
 journalremotebookmarktype = 'remotebookmark'
 # name of the file that is used to mark that transition to selectivepull has
@@ -1638,10 +1643,10 @@ def upstream_revs(filt, repo, subset, x):
                 upstream_tips.update(ns.nodes(repo, name))
 
     if not upstream_tips:
-        return revset.baseset([])
+        return smartset.baseset([])
 
     tipancestors = repo.revs('::%ln', upstream_tips)
-    return revset.filteredset(subset, lambda n: n in tipancestors)
+    return smartset.filteredset(subset, lambda n: n in tipancestors)
 
 def upstream(repo, subset, x):
     '''``upstream()``
@@ -1691,7 +1696,7 @@ def remotenamesrevset(repo, subset, x):
             remoterevs.update(ns.nodes(repo, name))
 
     results = (cl.rev(n) for n in remoterevs if n in repo)
-    return subset & revset.baseset(sorted(results))
+    return subset & smartset.baseset(sorted(results))
 
 revset.symbols.update({'upstream': upstream,
                        'pushed': pushed,
