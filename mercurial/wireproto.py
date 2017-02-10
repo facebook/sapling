@@ -33,9 +33,10 @@ from . import (
 urlerr = util.urlerr
 urlreq = util.urlreq
 
-bundle2required = _(
-    'incompatible Mercurial client; bundle2 required\n'
-    '(see https://www.mercurial-scm.org/wiki/IncompatibleClient)\n')
+bundle2requiredmain = _('incompatible Mercurial client; bundle2 required')
+bundle2requiredhint = _('see https://www.mercurial-scm.org/wiki/'
+                        'IncompatibleClient')
+bundle2required = '%s\n(%s)\n' % (bundle2requiredmain, bundle2requiredhint)
 
 class abstractserverproto(object):
     """abstract class that summarizes the protocol API
@@ -948,7 +949,14 @@ def unbundle(repo, proto, heads):
             gen = exchange.readbundle(repo.ui, fp, None)
             if (isinstance(gen, changegroupmod.cg1unpacker)
                 and not bundle1allowed(repo, 'push')):
-                return ooberror(bundle2required)
+                if proto.name == 'http':
+                    # need to special case http because stderr do not get to
+                    # the http client on failed push so we need to abuse some
+                    # other error type to make sure the message get to the
+                    # user.
+                    return ooberror(bundle2required)
+                raise error.Abort(bundle2requiredmain,
+                                  hint=bundle2requiredhint)
 
             r = exchange.unbundle(repo, gen, their_heads, 'serve',
                                   proto._client())

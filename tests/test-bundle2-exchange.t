@@ -1107,6 +1107,14 @@ Verify bundle1 pushes can be disabled
   (see https://www.mercurial-scm.org/wiki/IncompatibleClient)
   [255]
 
+(also check with ssh)
+
+  $ hg --config devel.legacy.exchange=bundle1 push ssh://user@dummy/bundle2onlyserver
+  pushing to ssh://user@dummy/bundle2onlyserver
+  searching for changes
+  remote: abort: incompatible Mercurial client; bundle2 required
+  [1]
+
   $ hg push
   pushing to http://localhost:$HGPORT/
   searching for changes
