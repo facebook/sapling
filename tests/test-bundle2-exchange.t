@@ -518,16 +518,16 @@ Doing the actual push: Abort error
   pushing to ssh://user@dummy/other
   searching for changes
   remote: Abandon ship!
+  remote: (don't panic)
   abort: push failed on remote
-  (don't panic)
   [255]
 
   $ hg -R main push http://localhost:$HGPORT2/ -r e7ec4e813ba6
   pushing to http://localhost:$HGPORT2/
   searching for changes
   remote: Abandon ship!
+  remote: (don't panic)
   abort: push failed on remote
-  (don't panic)
   [255]
 
 

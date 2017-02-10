@@ -904,7 +904,9 @@ def _pushbundle2(pushop):
             raise error.Abort(_('missing support for %s') % exc)
         except bundle2.AbortFromPart as exc:
             pushop.ui.status(_('remote: %s\n') % exc)
-            raise error.Abort(_('push failed on remote'), hint=exc.hint)
+            if exc.hint is not None:
+                pushop.ui.status(_('remote: %s\n') % ('(%s)' % exc.hint))
+            raise error.Abort(_('push failed on remote'))
     except error.PushkeyFailed as exc:
         partid = int(exc.partid)
         if partid not in pushop.pkfailcb:
