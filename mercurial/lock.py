@@ -18,6 +18,14 @@ from . import (
     util,
 )
 
+def _getlockprefix():
+    """Return a string which is used to differentiate pid namespaces
+
+    It's useful to detect "dead" processes and remove stale locks with
+    confidence. Typically it's just hostname.
+    """
+    return socket.gethostname()
+
 class lock(object):
     '''An advisory lock held by one process to control access to a set
     of files.  Non-cooperating processes or incorrectly written scripts
@@ -99,7 +107,7 @@ class lock(object):
             self.held += 1
             return
         if lock._host is None:
-            lock._host = socket.gethostname()
+            lock._host = _getlockprefix()
         lockname = '%s:%s' % (lock._host, self.pid)
         retry = 5
         while not self.held and retry:
