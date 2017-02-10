@@ -85,7 +85,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
-"Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
+"Report-Msgid-Bugs-To: <mercurial-devel@mercurial-scm.org>\n"
 "POT-Creation-Date: 2009-10-25 12:38+0100\n"
 "PO-Revision-Date: 2009-10-25 12:43+0100\n"
 "Last-Translator: Cedric Duval <cedricduval@free.fr>\n"
