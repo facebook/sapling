@@ -123,7 +123,7 @@ def _createhgwebservice(ui, repo, opts):
     if opts.get('port'):
         opts['port'] = util.getport(opts.get('port'))
 
-    alluis = set([ui])
+    alluis = {ui}
     if repo:
         baseui = repo.baseui
         alluis.update([repo.baseui, repo.ui])

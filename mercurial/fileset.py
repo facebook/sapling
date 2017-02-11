@@ -37,7 +37,7 @@ elements = {
     "end": (0, None, None, None, None),
 }
 
-keywords = set(['and', 'or', 'not'])
+keywords = {'and', 'or', 'not'}
 
 globchars = ".*{}[]?/\\_"
 

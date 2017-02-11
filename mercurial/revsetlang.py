@@ -44,9 +44,9 @@ elements = {
     "end": (0, None, None, None, None),
 }
 
-keywords = set(['and', 'or', 'not'])
+keywords = {'and', 'or', 'not'}
 
-_quoteletters = set(['"', "'"])
+_quoteletters = {'"', "'"}
 _simpleopletters = set(pycompat.iterbytestr("():=,-|&+!~^%"))
 
 # default set of valid characters for the initial letter of symbols

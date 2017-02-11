@@ -352,7 +352,7 @@ def mutableancestors(ctx):
     """return all mutable ancestors for ctx (included)
 
     Much faster than the revset ancestors(ctx) & draft()"""
-    seen = set([nodemod.nullrev])
+    seen = {nodemod.nullrev}
     visit = collections.deque()
     visit.append(ctx)
     while visit:
@@ -1006,17 +1006,17 @@ def shelvecmd(ui, repo, *pats, **opts):
     all shelved changes, use ``--cleanup``.
     '''
     allowables = [
-        ('addremove', set(['create'])), # 'create' is pseudo action
-        ('unknown', set(['create'])),
-        ('cleanup', set(['cleanup'])),
-#       ('date', set(['create'])), # ignored for passing '--date "0 0"' in tests
-        ('delete', set(['delete'])),
-        ('edit', set(['create'])),
-        ('list', set(['list'])),
-        ('message', set(['create'])),
-        ('name', set(['create'])),
-        ('patch', set(['patch', 'list'])),
-        ('stat', set(['stat', 'list'])),
+        ('addremove', {'create'}), # 'create' is pseudo action
+        ('unknown', {'create'}),
+        ('cleanup', {'cleanup'}),
+#       ('date', {'create'}), # ignored for passing '--date "0 0"' in tests
+        ('delete', {'delete'}),
+        ('edit', {'create'}),
+        ('list', {'list'}),
+        ('message', {'create'}),
+        ('name', {'create'}),
+        ('patch', {'patch', 'list'}),
+        ('stat', {'stat', 'list'}),
     ]
     def checkopt(opt):
         if opts.get(opt):

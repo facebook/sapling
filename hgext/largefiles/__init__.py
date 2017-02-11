@@ -129,7 +129,7 @@ reposetup = reposetup.reposetup
 
 def featuresetup(ui, supported):
     # don't die on seeing a repo with the largefiles requirement
-    supported |= set(['largefiles'])
+    supported |= {'largefiles'}
 
 def uisetup(ui):
     localrepo.localrepository.featuresetupfuncs.add(featuresetup)

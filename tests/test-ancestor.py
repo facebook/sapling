@@ -49,7 +49,7 @@ def buildgraph(rng, nodes=100, rootprob=0.05, mergeprob=0.2, prevprob=0.7):
 def buildancestorsets(graph):
     ancs = [None] * len(graph)
     for i in xrange(len(graph)):
-        ancs[i] = set([i])
+        ancs[i] = {i}
         if graph[i] == [nullrev]:
             continue
         for p in graph[i]:

@@ -474,7 +474,7 @@ def findexe(command):
 def setsignalhandler():
     pass
 
-_wantedkinds = set([stat.S_IFREG, stat.S_IFLNK])
+_wantedkinds = {stat.S_IFREG, stat.S_IFLNK}
 
 def statfiles(files):
     '''Stat each file in files. Yield each stat, or None if a file does not

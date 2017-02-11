@@ -759,7 +759,7 @@ def _capabilities(repo, proto):
             caps.append('stream-preferred')
         requiredformats = repo.requirements & repo.supportedformats
         # if our local revlogs are just revlogv1, add 'stream' cap
-        if not requiredformats - set(('revlogv1',)):
+        if not requiredformats - {'revlogv1'}:
             caps.append('stream')
         # otherwise, add 'streamreqs' detailing our local revlog format
         else:

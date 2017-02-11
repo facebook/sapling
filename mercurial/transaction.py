@@ -26,10 +26,10 @@ version = 2
 # These are the file generators that should only be executed after the
 # finalizers are done, since they rely on the output of the finalizers (like
 # the changelog having been written).
-postfinalizegenerators = set([
+postfinalizegenerators = {
     'bookmarks',
     'dirstate'
-])
+}
 
 gengroupall='all'
 gengroupprefinalize='prefinalize'

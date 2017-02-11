@@ -749,7 +749,7 @@ def _dispatch(req):
     # imported and commands.table is populated.
     debugcommands.command
 
-    uis = set([ui, lui])
+    uis = {ui, lui}
 
     if req.repo:
         uis.add(req.repo.ui)

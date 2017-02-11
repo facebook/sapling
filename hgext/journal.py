@@ -158,7 +158,7 @@ def unsharejournal(orig, ui, repo, repopath):
             util.safehasattr(repo, 'journal')):
         sharedrepo = share._getsrcrepo(repo)
         sharedfeatures = _readsharedfeatures(repo)
-        if sharedrepo and sharedfeatures > set(['journal']):
+        if sharedrepo and sharedfeatures > {'journal'}:
             # there is a shared repository and there are shared journal entries
             # to copy. move shared date over from source to destination but
             # move the local file first

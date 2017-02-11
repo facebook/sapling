@@ -236,7 +236,7 @@ class match(object):
 
     @propertycache
     def _dirs(self):
-        return set(util.dirs(self._fileroots)) | set(['.'])
+        return set(util.dirs(self._fileroots)) | {'.'}
 
     def visitdir(self, dir):
         '''Decides whether a directory should be visited based on whether it

@@ -913,8 +913,8 @@ class revlog(object):
             stop = []
         stoprevs = set([self.rev(n) for n in stop])
         startrev = self.rev(start)
-        reachable = set((startrev,))
-        heads = set((startrev,))
+        reachable = {startrev}
+        heads = {startrev}
 
         parentrevs = self.parentrevs
         for r in self.revs(start=startrev + 1):
@@ -2039,7 +2039,7 @@ class revlog(object):
     DELTAREUSESAMEREVS = 'samerevs'
     DELTAREUSENEVER = 'never'
 
-    DELTAREUSEALL = set(['always', 'samerevs', 'never'])
+    DELTAREUSEALL = {'always', 'samerevs', 'never'}
 
     def clone(self, tr, destrevlog, addrevisioncb=None,
               deltareuse=DELTAREUSESAMEREVS, aggressivemergedeltas=None):

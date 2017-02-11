@@ -442,10 +442,10 @@ if pycompat.osname == 'nt':
         'inverse': _COMMON_LVB_REVERSE_VIDEO, # double-byte charsets only
     }
 
-    passthrough = set([_FOREGROUND_INTENSITY,
-                       _BACKGROUND_INTENSITY,
-                       _COMMON_LVB_UNDERSCORE,
-                       _COMMON_LVB_REVERSE_VIDEO])
+    passthrough = {_FOREGROUND_INTENSITY,
+                   _BACKGROUND_INTENSITY,
+                   _COMMON_LVB_UNDERSCORE,
+                   _COMMON_LVB_REVERSE_VIDEO}
 
     stdout = _kernel32.GetStdHandle(
                   _STD_OUTPUT_HANDLE)  # don't close the handle returned

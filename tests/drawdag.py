@@ -145,7 +145,7 @@ def _parseasciigraph(text):
     def parents(y, x):
         """(int, int) -> [str]. follow the ASCII edges at given position,
         return a list of parents"""
-        visited = set([(y, x)])
+        visited = {(y, x)}
         visit = []
         result = []
 

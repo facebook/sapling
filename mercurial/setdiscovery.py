@@ -243,7 +243,7 @@ def findcommonheads(ui, local, remote,
             raise error.Abort(_("repository is unrelated"))
         else:
             ui.warn(_("warning: repository is unrelated\n"))
-        return (set([nullid]), True, srvheadhashes,)
+        return ({nullid}, True, srvheadhashes,)
 
     anyincoming = (srvheadhashes != [nullid])
     return dag.externalizeall(result), anyincoming, srvheadhashes

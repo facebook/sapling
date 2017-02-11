@@ -34,7 +34,7 @@ from .hgweb import (
     webcommands,
 )
 
-_exclkeywords = set([
+_exclkeywords = {
     "(ADVANCED)",
     "(DEPRECATED)",
     "(EXPERIMENTAL)",
@@ -44,7 +44,7 @@ _exclkeywords = set([
     _("(DEPRECATED)"),
     # i18n: "(EXPERIMENTAL)" is a keyword, must be translated consistently
     _("(EXPERIMENTAL)"),
-    ])
+}
 
 def listexts(header, exts, indent=1, showdeprecated=False):
     '''return a text listing of the given extensions'''

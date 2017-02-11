@@ -113,9 +113,9 @@ def unfilteredmethod(orig):
         return orig(repo.unfiltered(), *args, **kwargs)
     return wrapper
 
-moderncaps = set(('lookup', 'branchmap', 'pushkey', 'known', 'getbundle',
-                  'unbundle'))
-legacycaps = moderncaps.union(set(['changegroupsubset']))
+moderncaps = {'lookup', 'branchmap', 'pushkey', 'known', 'getbundle',
+              'unbundle'}
+legacycaps = moderncaps.union({'changegroupsubset'})
 
 class localpeer(peer.peerrepository):
     '''peer for a local repo; reflects only the most recent API'''
@@ -247,11 +247,11 @@ class locallegacypeer(localpeer):
 
 class localrepository(object):
 
-    supportedformats = set(('revlogv1', 'generaldelta', 'treemanifest',
-                            'manifestv2'))
-    _basesupported = supportedformats | set(('store', 'fncache', 'shared',
-                                             'relshared', 'dotencode'))
-    openerreqs = set(('revlogv1', 'generaldelta', 'treemanifest', 'manifestv2'))
+    supportedformats = {'revlogv1', 'generaldelta', 'treemanifest',
+                        'manifestv2'}
+    _basesupported = supportedformats | {'store', 'fncache', 'shared',
+                                         'relshared', 'dotencode'}
+    openerreqs = {'revlogv1', 'generaldelta', 'treemanifest', 'manifestv2'}
     filtername = None
 
     # a list of (ui, featureset) functions.
@@ -2020,7 +2020,7 @@ def newreporequirements(repo):
     new repositories.
     """
     ui = repo.ui
-    requirements = set(['revlogv1'])
+    requirements = {'revlogv1'}
     if ui.configbool('format', 'usestore', True):
         requirements.add('store')
         if ui.configbool('format', 'usefncache', True):

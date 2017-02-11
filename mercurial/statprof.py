@@ -126,14 +126,14 @@ contextmanager = contextlib.contextmanager
 
 __all__ = ['start', 'stop', 'reset', 'display', 'profile']
 
-skips = set(["util.py:check", "extensions.py:closure",
-             "color.py:colorcmd", "dispatch.py:checkargs",
-             "dispatch.py:<lambda>", "dispatch.py:_runcatch",
-             "dispatch.py:_dispatch", "dispatch.py:_runcommand",
-             "pager.py:pagecmd", "dispatch.py:run",
-             "dispatch.py:dispatch", "dispatch.py:runcommand",
-             "hg.py:<module>", "evolve.py:warnobserrors",
-         ])
+skips = {"util.py:check", "extensions.py:closure",
+         "color.py:colorcmd", "dispatch.py:checkargs",
+         "dispatch.py:<lambda>", "dispatch.py:_runcatch",
+         "dispatch.py:_dispatch", "dispatch.py:_runcommand",
+         "pager.py:pagecmd", "dispatch.py:run",
+         "dispatch.py:dispatch", "dispatch.py:runcommand",
+         "hg.py:<module>", "evolve.py:warnobserrors",
+}
 
 ###########################################################################
 ## Utils

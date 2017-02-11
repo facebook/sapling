@@ -6,7 +6,7 @@ from mercurial import (
     ui as uimod,
 )
 
-ignore = set(['highlight', 'win32text', 'factotum'])
+ignore = {'highlight', 'win32text', 'factotum'}
 
 if os.name != 'nt':
     ignore.add('win32mbcs')

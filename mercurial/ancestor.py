@@ -47,7 +47,7 @@ def commonancestorsheads(pfunc, *nodes):
                 sv |= poison
                 if v in nodes:
                     # history is linear
-                    return set([v])
+                    return {v}
         if sv < poison:
             for p in pfunc(v):
                 sp = seen[p]
@@ -151,7 +151,7 @@ class incrementalmissingancestors(object):
 
     def hasbases(self):
         '''whether the common set has any non-trivial bases'''
-        return self.bases and self.bases != set([nullrev])
+        return self.bases and self.bases != {nullrev}
 
     def addbases(self, newbases):
         '''grow the ancestor set by adding new bases'''

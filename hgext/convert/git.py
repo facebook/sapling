@@ -32,7 +32,7 @@ class submodule(object):
         return "%s %s" % (self.node, self.path)
 
 # Keys in extra fields that should not be copied if the user requests.
-bannedextrakeys = set([
+bannedextrakeys = {
     # Git commit object built-ins.
     'tree',
     'parent',
@@ -41,7 +41,7 @@ bannedextrakeys = set([
     # Mercurial built-ins.
     'branch',
     'close',
-])
+}
 
 class convert_git(common.converter_source, common.commandline):
     # Windows does not support GIT_DIR= construct while other systems
@@ -455,9 +455,9 @@ class convert_git(common.converter_source, common.commandline):
             ('refs/heads/', '')
         ]
 
-        exclude = set([
+        exclude = {
             'refs/remotes/origin/HEAD',
-        ])
+        }
 
         try:
             output, status = self.gitrunlines('show-ref')

@@ -71,7 +71,7 @@ testedwith = 'ships-with-hg-core'
 cmdtable = {}
 command = cmdutil.command(cmdtable)
 
-newfile = set(('new fi', 'rename', 'copy f', 'copy t'))
+newfile = {'new fi', 'rename', 'copy f', 'copy t'}
 
 def zerodict():
     return collections.defaultdict(lambda: 0)
@@ -336,7 +336,7 @@ def synthesize(ui, repo, descpath, **opts):
     wlock = repo.wlock()
     lock = repo.lock()
 
-    nevertouch = set(('.hgsub', '.hgignore', '.hgtags'))
+    nevertouch = {'.hgsub', '.hgignore', '.hgtags'}
 
     progress = ui.progress
     _synthesizing = _('synthesizing')

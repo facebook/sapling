@@ -310,7 +310,7 @@ class filemap_source(common.converter_source):
             # map to any revision in the restricted graph.  Put SKIPREV
             # in the set of wanted ancestors to simplify code elsewhere
             self.parentmap[rev] = SKIPREV
-            self.wantedancestors[rev] = set((SKIPREV,))
+            self.wantedancestors[rev] = {SKIPREV}
             return
 
         # Reuse the data from our parent.

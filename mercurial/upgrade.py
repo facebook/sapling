@@ -28,12 +28,12 @@ def requiredsourcerequirements(repo):
     An upgrade will not be allowed if the repository doesn't have the
     requirements returned by this function.
     """
-    return set([
+    return {
         # Introduced in Mercurial 0.9.2.
         'revlogv1',
         # Introduced in Mercurial 0.9.2.
         'store',
-    ])
+    }
 
 def blocksourcerequirements(repo):
     """Obtain requirements that will prevent an upgrade from occurring.
@@ -41,7 +41,7 @@ def blocksourcerequirements(repo):
     An upgrade cannot be performed if the source repository contains a
     requirements in the returned set.
     """
-    return set([
+    return {
         # The upgrade code does not yet support these experimental features.
         # This is an artificial limitation.
         'manifestv2',
@@ -51,7 +51,7 @@ def blocksourcerequirements(repo):
         'parentdelta',
         # Upgrade should operate on the actual store, not the shared link.
         'shared',
-    ])
+    }
 
 def supportremovedrequirements(repo):
     """Obtain requirements that can be removed during an upgrade.
@@ -70,13 +70,13 @@ def supporteddestrequirements(repo):
 
     Extensions should monkeypatch this to add their custom requirements.
     """
-    return set([
+    return {
         'dotencode',
         'fncache',
         'generaldelta',
         'revlogv1',
         'store',
-    ])
+    }
 
 def allowednewrequirements(repo):
     """Obtain requirements that can be added to a repository during upgrade.
@@ -88,11 +88,11 @@ def allowednewrequirements(repo):
     bad additions because the whitelist approach is safer and will prevent
     future, unknown requirements from accidentally being added.
     """
-    return set([
+    return {
         'dotencode',
         'fncache',
         'generaldelta',
-    ])
+    }
 
 deficiency = 'deficiency'
 optimisation = 'optimization'
@@ -628,7 +628,7 @@ def _upgraderepo(ui, srcrepo, dstrepo, requirements, actions):
     ui.write(_('marking source repository as being upgraded; clients will be '
                'unable to read from repository\n'))
     scmutil.writerequires(srcrepo.vfs,
-                          srcrepo.requirements | set(['upgradeinprogress']))
+                          srcrepo.requirements | {'upgradeinprogress'})
 
     ui.write(_('starting in-place swap of repository data\n'))
     ui.write(_('replaced files will be backed up at %s\n') %

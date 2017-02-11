@@ -1693,7 +1693,7 @@ def walkfilerevs(repo, match, follow, revs, fncache):
             last = filelog.rev(node)
 
         # keep track of all ancestors of the file
-        ancestors = set([filelog.linkrev(last)])
+        ancestors = {filelog.linkrev(last)}
 
         # iterate from latest to oldest revision
         for rev, flparentlinkrevs, copied in filerevgen(filelog, last):

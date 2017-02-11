@@ -242,7 +242,7 @@ class rebaseruntime(object):
         skipped = set()
         # recompute the set of skipped revs
         if not collapse:
-            seen = set([dest])
+            seen = {dest}
             for old, new in sorted(state.items()):
                 if new != revtodo and new in seen:
                     skipped.add(old)
@@ -250,7 +250,7 @@ class rebaseruntime(object):
         repo.ui.debug('computed skipped revs: %s\n' %
                         (' '.join(str(r) for r in sorted(skipped)) or None))
         repo.ui.debug('rebase status resumed\n')
-        _setrebasesetvisibility(repo, set(state.keys()) | set([originalwd]))
+        _setrebasesetvisibility(repo, set(state.keys()) | {originalwd})
 
         self.originalwd = originalwd
         self.dest = dest
@@ -1235,7 +1235,7 @@ def buildstate(repo, dest, rebaseset, collapse, obsoletenotrebased):
     rebaseset: set of rev
     '''
     originalwd = repo['.'].rev()
-    _setrebasesetvisibility(repo, set(rebaseset) | set([originalwd]))
+    _setrebasesetvisibility(repo, set(rebaseset) | {originalwd})
 
     # This check isn't strictly necessary, since mq detects commits over an
     # applied patch. But it prevents messing up the working directory when

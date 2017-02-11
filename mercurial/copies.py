@@ -637,7 +637,7 @@ def _checkcopies(ctx, f, m1, m2, base, tca, remotebase, limit, data):
         return
 
     of = None
-    seen = set([f])
+    seen = {f}
     for oc in getfctx(f, m1[f]).ancestors():
         ocr = oc.linkrev()
         of = oc.path()

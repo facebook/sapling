@@ -14,7 +14,7 @@ from . import (
 )
 
 # Set of flags to not apply boolean negation logic on
-nevernegate = set([
+nevernegate = {
     # avoid --no-noninteractive
     'noninteractive',
     # These two flags are special because they cause hg to do one
@@ -22,7 +22,7 @@ nevernegate = set([
     # like aliases anyway.
     'help',
     'version',
-    ])
+}
 
 def gnugetopt(args, options, longoptions):
     """Parse options mostly like getopt.gnu_getopt.

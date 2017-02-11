@@ -254,7 +254,7 @@ def _oldheadssummary(repo, remoteheads, outgoing, inc=False):
     newheads = list(c.node() for c in r)
     # set some unsynced head to issue the "unsynced changes" warning
     if inc:
-        unsynced = set([None])
+        unsynced = {None}
     else:
         unsynced = set()
     return {None: (oldheads, newheads, unsynced)}

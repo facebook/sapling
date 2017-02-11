@@ -1097,7 +1097,7 @@ def checksignature(func):
     return check
 
 # a whilelist of known filesystems where hardlink works reliably
-_hardlinkfswhitelist = set([
+_hardlinkfswhitelist = {
     'btrfs',
     'ext2',
     'ext3',
@@ -1109,7 +1109,7 @@ _hardlinkfswhitelist = set([
     'ufs',
     'xfs',
     'zfs',
-])
+}
 
 def copyfile(src, dest, hardlink=False, copystat=False, checkambig=False):
     '''copy a file, preserving mode and optionally other stat info like

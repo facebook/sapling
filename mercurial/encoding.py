@@ -30,9 +30,9 @@ _ignore = [unichr(int(x, 16)).encode("utf-8") for x in
            "206a 206b 206c 206d 206e 206f feff".split()]
 # verify the next function will work
 if pycompat.ispy3:
-    assert set(i[0] for i in _ignore) == set([ord(b'\xe2'), ord(b'\xef')])
+    assert set(i[0] for i in _ignore) == {ord(b'\xe2'), ord(b'\xef')}
 else:
-    assert set(i[0] for i in _ignore) == set(["\xe2", "\xef"])
+    assert set(i[0] for i in _ignore) == {"\xe2", "\xef"}
 
 def hfsignoreclean(s):
     """Remove codepoints ignored by HFS+ from s.

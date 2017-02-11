@@ -47,7 +47,7 @@ def generatestates(maxchangesets, parentcontents):
                                  content in parentcontents]) + "-" + tracked
             yield (filename, parentcontents)
     else:
-        for content in (set([None, 'content' + str(depth + 1)]) |
+        for content in ({None, 'content' + str(depth + 1)} |
                       set(parentcontents)):
             for combination in generatestates(maxchangesets,
                                               parentcontents + [content]):

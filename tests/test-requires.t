@@ -37,7 +37,7 @@ another repository of push/pull/clone on localhost:
   >     for name, module in extensions.extensions(ui):
   >         if __name__ == module.__name__:
   >             # support specific feature locally
-  >             supported |= set(['featuresetup-test'])
+  >             supported |= {'featuresetup-test'}
   >             return
   > def uisetup(ui):
   >     localrepo.localrepository.featuresetupfuncs.add(featuresetup)

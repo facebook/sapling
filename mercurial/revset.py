@@ -451,9 +451,8 @@ def bookmark(repo, subset, x):
             for bmrev in matchrevs:
                 bms.add(repo[bmrev].rev())
     else:
-        bms = set([repo[r].rev()
-                   for r in repo._bookmarks.values()])
-    bms -= set([node.nullrev])
+        bms = {repo[r].rev() for r in repo._bookmarks.values()}
+    bms -= {node.nullrev}
     return subset & bms
 
 @predicate('branch(string or set)', safe=True)
@@ -1276,7 +1275,7 @@ def named(repo, subset, x):
             if name not in ns.deprecated:
                 names.update(repo[n].rev() for n in ns.nodes(repo, name))
 
-    names -= set([node.nullrev])
+    names -= {node.nullrev}
     return subset & names
 
 @predicate('id(string)', safe=True)
@@ -1363,8 +1362,8 @@ def origin(repo, subset, x):
                 return src
             src = prev
 
-    o = set([_firstsrc(r) for r in dests])
-    o -= set([None])
+    o = {_firstsrc(r) for r in dests}
+    o -= {None}
     # XXX we should turn this into a baseset instead of a set, smartset may do
     # some optimizations from the fact this is a baseset.
     return subset & o
@@ -1393,7 +1392,7 @@ def outgoing(repo, subset, x):
     outgoing = discovery.findcommonoutgoing(repo, other, onlyheads=revs)
     repo.ui.popbuffer()
     cl = repo.changelog
-    o = set([cl.rev(r) for r in outgoing.missing])
+    o = {cl.rev(r) for r in outgoing.missing}
     return subset & o
 
 @predicate('p1([set])', safe=True)
@@ -1410,7 +1409,7 @@ def p1(repo, subset, x):
     cl = repo.changelog
     for r in getset(repo, fullreposet(repo), x):
         ps.add(cl.parentrevs(r)[0])
-    ps -= set([node.nullrev])
+    ps -= {node.nullrev}
     # XXX we should turn this into a baseset instead of a set, smartset may do
     # some optimizations from the fact this is a baseset.
     return subset & ps
@@ -1433,7 +1432,7 @@ def p2(repo, subset, x):
     cl = repo.changelog
     for r in getset(repo, fullreposet(repo), x):
         ps.add(cl.parentrevs(r)[1])
-    ps -= set([node.nullrev])
+    ps -= {node.nullrev}
     # XXX we should turn this into a baseset instead of a set, smartset may do
     # some optimizations from the fact this is a baseset.
     return subset & ps
@@ -1458,7 +1457,7 @@ def parents(repo, subset, x):
                 up(p.rev() for p in repo[r].parents())
             else:
                 up(parentrevs(r))
-    ps -= set([node.nullrev])
+    ps -= {node.nullrev}
     return subset & ps
 
 def _phase(repo, subset, *targets):
@@ -1965,7 +1964,7 @@ def _toposort(revs, parentsfunc, firstbranch=()):
             else:
                 # This is a new head. We create a new subgroup for it.
                 targetidx = len(groups)
-                groups.append(([], set([rev])))
+                groups.append(([], {rev}))
 
             gr = groups[targetidx]
 
@@ -2098,11 +2097,11 @@ def tag(repo, subset, x):
             if tn is None:
                 raise error.RepoLookupError(_("tag '%s' does not exist")
                                             % pattern)
-            s = set([repo[tn].rev()])
+            s = {repo[tn].rev()}
         else:
-            s = set([cl.rev(n) for t, n in repo.tagslist() if matcher(t)])
+            s = {cl.rev(n) for t, n in repo.tagslist() if matcher(t)}
     else:
-        s = set([cl.rev(n) for t, n in repo.tagslist() if t != 'tip'])
+        s = {cl.rev(n) for t, n in repo.tagslist() if t != 'tip'}
     return subset & s
 
 @predicate('tagged', safe=True)

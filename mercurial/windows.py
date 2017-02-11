@@ -334,7 +334,7 @@ def findexe(command):
             return executable
     return findexisting(os.path.expanduser(os.path.expandvars(command)))
 
-_wantedkinds = set([stat.S_IFREG, stat.S_IFLNK])
+_wantedkinds = {stat.S_IFREG, stat.S_IFLNK}
 
 def statfiles(files):
     '''Stat each file in files. Yield each stat, or None if a file

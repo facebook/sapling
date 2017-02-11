@@ -185,7 +185,7 @@ def underwayrevset(repo, subset, x):
     # Add working directory parent.
     wdirrev = repo['.'].rev()
     if wdirrev != nullrev:
-        relevant += revset.baseset(set([wdirrev]))
+        relevant += revset.baseset({wdirrev})
 
     return subset & relevant
 

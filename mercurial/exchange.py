@@ -43,7 +43,7 @@ _bundlespeccgversions = {'v1': '01',
                         }
 
 # Compression engines allowed in version 1. THIS SHOULD NEVER CHANGE.
-_bundlespecv1compengines = set(['gzip', 'bzip2', 'none'])
+_bundlespecv1compengines = {'gzip', 'bzip2', 'none'}
 
 def parsebundlespec(repo, spec, strict=True, externalnames=False):
     """Parse a bundle string specification into parts.
@@ -1522,7 +1522,7 @@ def _pullobsolete(pullop):
 
 def caps20to10(repo):
     """return a set with appropriate options to use bundle20 during getbundle"""
-    caps = set(['HG20'])
+    caps = {'HG20'}
     capsblob = bundle2.encodecaps(bundle2.getrepocaps(repo))
     caps.add('bundle2=' + urlreq.quote(capsblob))
     return caps

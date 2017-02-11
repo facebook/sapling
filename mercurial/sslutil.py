@@ -29,17 +29,17 @@ from . import (
 # modern/secure or legacy/insecure. Many operations in this module have
 # separate code paths depending on support in Python.
 
-configprotocols = set([
+configprotocols = {
     'tls1.0',
     'tls1.1',
     'tls1.2',
-])
+}
 
 hassni = getattr(ssl, 'HAS_SNI', False)
 
 # TLS 1.1 and 1.2 may not be supported if the OpenSSL Python is compiled
 # against doesn't support them.
-supportedprotocols = set(['tls1.0'])
+supportedprotocols = {'tls1.0'}
 if util.safehasattr(ssl, 'PROTOCOL_TLSv1_1'):
     supportedprotocols.add('tls1.1')
 if util.safehasattr(ssl, 'PROTOCOL_TLSv1_2'):
@@ -296,7 +296,7 @@ def protocolsettings(protocol):
     # disable protocols via SSLContext.options and OP_NO_* constants.
     # However, SSLContext.options doesn't work unless we have the
     # full/real SSLContext available to us.
-    if supportedprotocols == set(['tls1.0']):
+    if supportedprotocols == {'tls1.0'}:
         if protocol != 'tls1.0':
             raise error.Abort(_('current Python does not support protocol '
                                 'setting %s') % protocol,
@@ -430,7 +430,7 @@ def wrapsocket(sock, keyfile, certfile, ui, serverhostname=None):
                     # is really old. (e.g. server doesn't support TLS 1.0+ or
                     # client doesn't support modern TLS versions introduced
                     # several years from when this comment was written).
-                    if supportedprotocols != set(['tls1.0']):
+                    if supportedprotocols != {'tls1.0'}:
                         ui.warn(_(
                             '(could not communicate with %s using security '
                             'protocols %s; if you are using a modern Mercurial '

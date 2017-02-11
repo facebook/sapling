@@ -213,7 +213,7 @@ def list_stdlib_modules():
         yield m
     for m in ['cffi']:
         yield m
-    stdlib_prefixes = set([sys.prefix, sys.exec_prefix])
+    stdlib_prefixes = {sys.prefix, sys.exec_prefix}
     # We need to supplement the list of prefixes for the search to work
     # when run from within a virtualenv.
     for mod in (BaseHTTPServer, zlib):

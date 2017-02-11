@@ -26,7 +26,7 @@ def modulewhitelist(names):
     replacement = [('.py', ''), ('.c', ''), # trim suffix
                    ('mercurial%s' % (os.sep), ''), # trim "mercurial/" path
                   ]
-    ignored = set(['__init__'])
+    ignored = {'__init__'}
     modules = {}
 
     # convert from file name to module name, and count # of appearances
