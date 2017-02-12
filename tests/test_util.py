@@ -284,6 +284,7 @@ def testui(stupid=False, layout='auto', startrev=0):
     u = ui.ui()
     bools = {True: 'true', False: 'false'}
     u.setconfig('ui', 'quiet', bools[True])
+    u.setconfig('ui', 'username', 'automated tests')
     u.setconfig('extensions', 'hgsubversion', '')
     u.setconfig('hgsubversion', 'stupid', bools[stupid])
     u.setconfig('hgsubversion', 'layout', layout)
