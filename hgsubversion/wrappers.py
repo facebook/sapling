@@ -1,3 +1,6 @@
+import inspect
+import os
+
 from hgext import rebase as hgrebase
 
 from mercurial import cmdutil
@@ -19,7 +22,6 @@ from mercurial import revset
 from mercurial import scmutil
 
 import layouts
-import os
 import replay
 import pushmod
 import stupid as stupidmod
@@ -133,6 +135,9 @@ def findcommonoutgoing(repo, other, onlyheads=None, force=False,
     common, heads = util.outgoing_common_and_heads(repo, hashes, parent)
     outobj = getattr(discovery, 'outgoing', None)
     if outobj is not None:
+        if 'repo' in inspect.getargspec(outobj.__init__).args:
+            # Mercurial 4.0 and later
+            return outobj(repo, common, heads)
         # Mercurial 2.1 and later
         return outobj(repo.changelog, common, heads)
     # Mercurial 2.0 and earlier
