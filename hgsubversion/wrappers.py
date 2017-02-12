@@ -21,6 +21,7 @@ from mercurial import repair
 from mercurial import revset
 from mercurial import scmutil
 
+import inspect
 import layouts
 import replay
 import pushmod
@@ -135,10 +136,12 @@ def findcommonoutgoing(repo, other, onlyheads=None, force=False,
     common, heads = util.outgoing_common_and_heads(repo, hashes, parent)
     outobj = getattr(discovery, 'outgoing', None)
     if outobj is not None:
-        if 'repo' in inspect.getargspec(outobj.__init__).args:
-            # Mercurial 4.0 and later
+        argspec = inspect.getargspec(outobj.__init__)
+        if 'repo' in argspec[0]:
+            # Starting from Mercurial 3.9.1 outgoing.__init__ accepts
+            # `repo` object instead of a `changelog`
             return outobj(repo, common, heads)
-        # Mercurial 2.1 and later
+        # Mercurial 2.1 through 3.9
         return outobj(repo.changelog, common, heads)
     # Mercurial 2.0 and earlier
     return common, heads
