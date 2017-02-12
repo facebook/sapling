@@ -94,6 +94,24 @@ default = %s
 # pager =""",
 }
 
+
+class httppasswordmgrdbproxy(object):
+    """Delays loading urllib2 until it's needed."""
+    def __init__(self):
+        self._mgr = None
+
+    def _get_mgr(self):
+        if self._mgr is None:
+            self._mgr = urlreq.httppasswordmgrwithdefaultrealm()
+        return self._mgr
+
+    def add_password(self, *args, **kwargs):
+        return self._get_mgr().add_password(*args, **kwargs)
+
+    def find_user_password(self, *args, **kwargs):
+        return self._get_mgr().find_user_password(*args, **kwargs)
+
+
 class ui(object):
     def __init__(self, src=None):
         """Create a fresh new ui object if no src given
@@ -145,7 +163,7 @@ class ui(object):
             # shared read-only environment
             self.environ = encoding.environ
 
-            self.httppasswordmgrdb = urlreq.httppasswordmgrwithdefaultrealm()
+            self.httppasswordmgrdb = httppasswordmgrdbproxy()
 
         allowed = self.configlist('experimental', 'exportableenviron')
         if '*' in allowed:
@@ -172,7 +190,7 @@ class ui(object):
         """Clear internal state that shouldn't persist across commands"""
         if self._progbar:
             self._progbar.resetstate()  # reset last-print time of progress bar
-        self.httppasswordmgrdb = urlreq.httppasswordmgrwithdefaultrealm()
+        self.httppasswordmgrdb = httppasswordmgrdbproxy()
 
     def formatter(self, topic, opts):
         return formatter.formatter(self, topic, opts)
