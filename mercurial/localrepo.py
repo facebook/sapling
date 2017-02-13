@@ -1854,7 +1854,7 @@ class localrepository(object):
     def heads(self, start=None):
         if start is None:
             cl = self.changelog
-            headrevs = sorted(cl.headrevs(), reverse=True)
+            headrevs = reversed(cl.headrevs())
             return [cl.node(rev) for rev in headrevs]
 
         heads = self.changelog.heads(start)
