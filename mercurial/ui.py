@@ -402,6 +402,41 @@ class ui(object):
                                     % (section, name, v))
         return b
 
+    def configwith(self, convert, section, name, default=None,
+                   desc=None, untrusted=False):
+        """parse a configuration element with a conversion function
+
+        >>> u = ui(); s = 'foo'
+        >>> u.setconfig(s, 'float1', '42')
+        >>> u.configwith(float, s, 'float1')
+        42.0
+        >>> u.setconfig(s, 'float2', '-4.2')
+        >>> u.configwith(float, s, 'float2')
+        -4.2
+        >>> u.configwith(float, s, 'unknown', 7)
+        7
+        >>> u.setconfig(s, 'invalid', 'somevalue')
+        >>> u.configwith(float, s, 'invalid')
+        Traceback (most recent call last):
+            ...
+        ConfigError: foo.invalid is not a valid float ('somevalue')
+        >>> u.configwith(float, s, 'invalid', desc='womble')
+        Traceback (most recent call last):
+            ...
+        ConfigError: foo.invalid is not a valid womble ('somevalue')
+        """
+
+        v = self.config(section, name, None, untrusted)
+        if v is None:
+            return default
+        try:
+            return convert(v)
+        except ValueError:
+            if desc is None:
+                desc = convert.__name__
+            raise error.ConfigError(_("%s.%s is not a valid %s ('%s')")
+                                    % (section, name, desc, v))
+
     def configint(self, section, name, default=None, untrusted=False):
         """parse a configuration element as an integer
 
