@@ -5289,7 +5289,7 @@ def unbundle(ui, repo, fname1, *fnames, **opts):
     ('d', 'date', '', _('tipmost revision matching date'), _('DATE')),
     ('r', 'rev', '', _('revision'), _('REV'))
      ] + mergetoolopts,
-    _('[-c] [-C] [-d DATE] [[-r] REV]'))
+    _('[-C|-c] [-d DATE] [[-r] REV]'))
 def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False,
            tool=None):
     """update working directory (or switch revisions)
@@ -5310,10 +5310,11 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False,
 
     .. container:: verbose
 
-      The following rules apply when the working directory contains
-      uncommitted changes:
+      The -C/--clean and -c/--check options control what happens if the
+      working directory contains uncommitted changes.
+      At most of one of them can be specified.
 
-      1. If neither -c/--check nor -C/--clean is specified, and if
+      1. If no option is specified, and if
          the requested changeset is an ancestor or descendant of
          the working directory's parent, the uncommitted changes
          are merged into the requested changeset and the merged
