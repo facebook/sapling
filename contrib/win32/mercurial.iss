@@ -21,7 +21,7 @@
 #endif
 
 [Setup]
-AppCopyright=Copyright 2005-2016 Matt Mackall and others
+AppCopyright=Copyright 2005-2017 Matt Mackall and others
 AppName=Mercurial
 AppVersion={#VERSION}
 #if ARCH == "x64"
@@ -41,11 +41,11 @@ AppPublisherURL=https://mercurial-scm.org/
 AppSupportURL=https://mercurial-scm.org/
 AppUpdatesURL=https://mercurial-scm.org/
 AppID={{4B95A5F1-EF59-4B08-BED8-C891C46121B3}
-AppContact=mercurial@selenic.com
+AppContact=mercurial@mercurial-scm.org
 DefaultDirName={pf}\Mercurial
 SourceDir=..\..
 VersionInfoDescription=Mercurial distributed SCM (version {#VERSION})
-VersionInfoCopyright=Copyright 2005-2016 Matt Mackall and others
+VersionInfoCopyright=Copyright 2005-2017 Matt Mackall and others
 VersionInfoCompany=Matt Mackall and others
 InternalCompressLevel=max
 SolidCompression=true

@@ -1,6 +1,6 @@
 #require tla symlink
 
-  $ tla my-id "mercurial <mercurial@selenic.com>"
+  $ tla my-id "mercurial <mercurial@mercurial-scm.org>"
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "convert=" >> $HGRCPATH
 

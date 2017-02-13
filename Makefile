@@ -141,7 +141,7 @@ i18n/hg.pot: $(PYFILES) $(DOCFILES) i18n/posplit i18n/hggettext
         # xgettext "parse" and ignore them.
 	echo $(PYFILES) | xargs \
 	  xgettext --package-name "Mercurial" \
-	  --msgid-bugs-address "<mercurial-devel@selenic.com>" \
+	  --msgid-bugs-address "<mercurial-devel@mercurial-scm.org>" \
 	  --copyright-holder "Matt Mackall <mpm@selenic.com> and others" \
 	  --from-code ISO-8859-1 --join --sort-by-file --add-comments=i18n: \
 	  -d hg -p i18n -o hg.pot.tmp

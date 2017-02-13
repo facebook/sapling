@@ -664,7 +664,7 @@ extra = {}
 if py2exeloaded:
     extra['console'] = [
         {'script':'hg',
-         'copyright':'Copyright (C) 2005-2016 Matt Mackall and others',
+         'copyright':'Copyright (C) 2005-2017 Matt Mackall and others',
          'product_version':version}]
     # sub command of 'build' because 'py2exe' does not handle sub_commands
     build.sub_commands.insert(0, ('build_hgextindex', None))
@@ -712,7 +712,7 @@ if sys.platform == 'darwin' and os.path.exists('/usr/bin/xcodebuild'):
 setup(name='mercurial',
       version=setupversion,
       author='Matt Mackall and many others',
-      author_email='mercurial@selenic.com',
+      author_email='mercurial@mercurial-scm.org',
       url='https://mercurial-scm.org/',
       download_url='https://mercurial-scm.org/release/',
       description=('Fast scalable distributed SCM (revision control, version '

@@ -3,7 +3,7 @@ Upstream-Name: mercurial
 Source: https://www.mercurial-scm.org/
 
 Files: *
-Copyright: 2005-2015, Matt Mackall <mpm@selenic.com> and others.
+Copyright: 2005-2017, Matt Mackall <mpm@selenic.com> and others.
 License: GPL-2+
  This program is free software; you can redistribute it
  and/or modify it under the terms of the GNU General Public

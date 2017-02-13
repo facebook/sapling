@@ -518,16 +518,16 @@ Doing the actual push: Abort error
   pushing to ssh://user@dummy/other
   searching for changes
   remote: Abandon ship!
+  remote: (don't panic)
   abort: push failed on remote
-  (don't panic)
   [255]
 
   $ hg -R main push http://localhost:$HGPORT2/ -r e7ec4e813ba6
   pushing to http://localhost:$HGPORT2/
   searching for changes
   remote: Abandon ship!
+  remote: (don't panic)
   abort: push failed on remote
-  (don't panic)
   [255]
 
 
@@ -1024,11 +1024,12 @@ bundle1 pull can be disabled for generaldelta repos only
 
 Verify the global server.bundle1 option works
 
-  $ cat > .hg/hgrc << EOF
+  $ cd ..
+  $ cat > bundle2onlyserver/.hg/hgrc << EOF
   > [server]
   > bundle1 = false
   > EOF
-  $ hg serve -p $HGPORT -d --pid-file=hg.pid
+  $ hg -R bundle2onlyserver serve -p $HGPORT -d --pid-file=hg.pid
   $ cat hg.pid >> $DAEMON_PIDS
   $ hg --config devel.legacy.exchange=bundle1 clone http://localhost:$HGPORT not-bundle2
   requesting all changes
@@ -1038,11 +1039,21 @@ Verify the global server.bundle1 option works
   [255]
   $ killdaemons.py
 
-  $ cat > .hg/hgrc << EOF
+  $ hg --config devel.legacy.exchange=bundle1 clone ssh://user@dummy/bundle2onlyserver not-bundle2-ssh
+  requesting all changes
+  adding changesets
+  remote: abort: incompatible Mercurial client; bundle2 required
+  remote: (see https://www.mercurial-scm.org/wiki/IncompatibleClient)
+  transaction abort!
+  rollback completed
+  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  [255]
+
+  $ cat > bundle2onlyserver/.hg/hgrc << EOF
   > [server]
   > bundle1gd = false
   > EOF
-  $ hg serve -p $HGPORT -d --pid-file=hg.pid
+  $ hg -R bundle2onlyserver serve -p $HGPORT -d --pid-file=hg.pid
   $ cat hg.pid >> $DAEMON_PIDS
 
   $ hg --config devel.legacy.exchange=bundle1 clone http://localhost:$HGPORT/ not-bundle2
@@ -1054,7 +1065,7 @@ Verify the global server.bundle1 option works
 
   $ killdaemons.py
 
-  $ cd ../notgdserver
+  $ cd notgdserver
   $ cat > .hg/hgrc << EOF
   > [server]
   > bundle1gd = false
@@ -1106,6 +1117,15 @@ Verify bundle1 pushes can be disabled
   incompatible Mercurial client; bundle2 required
   (see https://www.mercurial-scm.org/wiki/IncompatibleClient)
   [255]
+
+(also check with ssh)
+
+  $ hg --config devel.legacy.exchange=bundle1 push ssh://user@dummy/bundle2onlyserver
+  pushing to ssh://user@dummy/bundle2onlyserver
+  searching for changes
+  remote: abort: incompatible Mercurial client; bundle2 required
+  remote: (see https://www.mercurial-scm.org/wiki/IncompatibleClient)
+  [1]
 
   $ hg push
   pushing to http://localhost:$HGPORT/

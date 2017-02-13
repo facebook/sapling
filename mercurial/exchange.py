@@ -904,7 +904,9 @@ def _pushbundle2(pushop):
             raise error.Abort(_('missing support for %s') % exc)
         except bundle2.AbortFromPart as exc:
             pushop.ui.status(_('remote: %s\n') % exc)
-            raise error.Abort(_('push failed on remote'), hint=exc.hint)
+            if exc.hint is not None:
+                pushop.ui.status(_('remote: %s\n') % ('(%s)' % exc.hint))
+            raise error.Abort(_('push failed on remote'))
     except error.PushkeyFailed as exc:
         partid = int(exc.partid)
         if partid not in pushop.pkfailcb:
@@ -1361,6 +1363,9 @@ def _pullbundle2(pullop):
     bundle = pullop.remote.getbundle('pull', **kwargs)
     try:
         op = bundle2.processbundle(pullop.repo, bundle, pullop.gettransaction)
+    except bundle2.AbortFromPart as exc:
+        pullop.repo.ui.status(_('remote: abort: %s\n') % exc)
+        raise error.Abort(_('pull failed on remote'), hint=exc.hint)
     except error.BundleValueError as exc:
         raise error.Abort(_('missing support for %s') % exc)
 

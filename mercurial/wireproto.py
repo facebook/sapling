@@ -33,9 +33,10 @@ from . import (
 urlerr = util.urlerr
 urlreq = util.urlreq
 
-bundle2required = _(
-    'incompatible Mercurial client; bundle2 required\n'
-    '(see https://www.mercurial-scm.org/wiki/IncompatibleClient)\n')
+bundle2requiredmain = _('incompatible Mercurial client; bundle2 required')
+bundle2requiredhint = _('see https://www.mercurial-scm.org/wiki/'
+                        'IncompatibleClient')
+bundle2required = '%s\n(%s)\n' % (bundle2requiredmain, bundle2requiredhint)
 
 class abstractserverproto(object):
     """abstract class that summarizes the protocol API
@@ -833,9 +834,29 @@ def getbundle(repo, proto, others):
 
     if not bundle1allowed(repo, 'pull'):
         if not exchange.bundle2requested(opts.get('bundlecaps')):
-            return ooberror(bundle2required)
+            if proto.name == 'http':
+                return ooberror(bundle2required)
+            raise error.Abort(bundle2requiredmain,
+                              hint=bundle2requiredhint)
 
-    chunks = exchange.getbundlechunks(repo, 'serve', **opts)
+    #chunks = exchange.getbundlechunks(repo, 'serve', **opts)
+    try:
+        chunks = exchange.getbundlechunks(repo, 'serve', **opts)
+    except error.Abort as exc:
+        # cleanly forward Abort error to the client
+        if not exchange.bundle2requested(opts.get('bundlecaps')):
+            if proto.name == 'http':
+                return ooberror(str(exc) + '\n')
+            raise # cannot do better for bundle1 + ssh
+        # bundle2 request expect a bundle2 reply
+        bundler = bundle2.bundle20(repo.ui)
+        manargs = [('message', str(exc))]
+        advargs = []
+        if exc.hint is not None:
+            advargs.append(('hint', exc.hint))
+        bundler.addpart(bundle2.bundlepart('error:abort',
+                                           manargs, advargs))
+        return streamres(gen=bundler.getchunks(), v1compressible=True)
     return streamres(gen=chunks, v1compressible=True)
 
 @wireprotocommand('heads')
@@ -948,7 +969,14 @@ def unbundle(repo, proto, heads):
             gen = exchange.readbundle(repo.ui, fp, None)
             if (isinstance(gen, changegroupmod.cg1unpacker)
                 and not bundle1allowed(repo, 'push')):
-                return ooberror(bundle2required)
+                if proto.name == 'http':
+                    # need to special case http because stderr do not get to
+                    # the http client on failed push so we need to abuse some
+                    # other error type to make sure the message get to the
+                    # user.
+                    return ooberror(bundle2required)
+                raise error.Abort(bundle2requiredmain,
+                                  hint=bundle2requiredhint)
 
             r = exchange.unbundle(repo, gen, their_heads, 'serve',
                                   proto._client())
@@ -973,6 +1001,8 @@ def unbundle(repo, proto, heads):
                 # This need to be moved to something proper.
                 # Feel free to do it.
                 util.stderr.write("abort: %s\n" % exc)
+                if exc.hint is not None:
+                    util.stderr.write("(%s)\n" % exc.hint)
                 return pushres(0)
             except error.PushRaced:
                 return pusherr(str(exc))

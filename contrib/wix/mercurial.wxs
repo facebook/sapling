@@ -43,7 +43,7 @@
     </Property>
 
     <!--Property Id='ARPCOMMENTS'>any comments</Property-->
-    <Property Id='ARPCONTACT'>mercurial@selenic.com</Property>
+    <Property Id='ARPCONTACT'>mercurial@mercurial-scm.org</Property>
     <Property Id='ARPHELPLINK'>https://mercurial-scm.org/wiki/</Property>
     <Property Id='ARPURLINFOABOUT'>https://mercurial-scm.org/about/</Property>
     <Property Id='ARPURLUPDATEINFO'>https://mercurial-scm.org/downloads/</Property>

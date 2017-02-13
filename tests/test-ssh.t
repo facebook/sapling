@@ -548,3 +548,17 @@ remote hook failure is attributed to remote
   abort: push failed on remote
   [255]
 
+abort during pull is properly reported as such
+
+  $ echo morefoo >> ../remote/foo
+  $ hg -R ../remote commit --message "more foo to be pulled"
+  $ cat >> ../remote/.hg/hgrc << EOF
+  > [extensions]
+  > crash = ${TESTDIR}/crashgetbundler.py
+  > EOF
+  $ hg --config ui.ssh="python $TESTDIR/dummyssh" pull
+  pulling from ssh://user@dummy/remote
+  searching for changes
+  remote: abort: this is an exercise
+  abort: pull failed on remote
+  [255]

@@ -1,6 +1,6 @@
 #require baz symlink
 
-  $ baz my-id "mercurial <mercurial@selenic.com>"
+  $ baz my-id "mercurial <mercurial@mercurial-scm.org>"
 
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "convert=" >> $HGRCPATH

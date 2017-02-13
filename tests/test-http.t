@@ -321,3 +321,15 @@ clone of serve with repo in root and unserved subrepo (issue2970)
 check error log
 
   $ cat error.log
+
+check abort error reporting while pulling/cloning
+
+  $ $RUNTESTDIR/killdaemons.py
+  $ hg -R test serve -p $HGPORT -d --pid-file=hg3.pid -E error.log --config extensions.crash=${TESTDIR}/crashgetbundler.py
+  $ cat hg3.pid >> $DAEMON_PIDS
+  $ hg clone http://localhost:$HGPORT/ abort-clone
+  requesting all changes
+  remote: abort: this is an exercise
+  abort: pull failed on remote
+  [255]
+  $ cat error.log
