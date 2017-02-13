@@ -1465,21 +1465,27 @@ def update(repo, node, branchmerge, force, ancestor=None,
     The table below shows all the behaviors of the update command
     given the -c and -C or no options, whether the working directory
     is dirty, whether a revision is specified, and the relationship of
-    the parent rev to the target rev (linear or not). Match from top first.
+    the parent rev to the target rev (linear or not). Match from top first. The
+    -n option doesn't exist on the command line, but represents the
+    experimental.updatecheck=noconflict option.
 
     This logic is tested by test-update-branches.t.
 
-    -c  -C  -m  dirty  rev  linear  |  result
-     y   y   *    *     *     *     |    (1)
-     y   *   y    *     *     *     |    (1)
-     *   y   y    *     *     *     |    (1)
-     *   *   *    *     n     n     |     x
-     *   *   *    n     *     *     |    ok
-     n   n   n    y     *     y     |   merge
-     n   n   n    y     y     n     |    (2)
-     n   n   y    y     *     *     |   merge
-     n   y   n    y     *     *     |  discard
-     y   n   n    y     *     *     |    (3)
+    -c  -C  -n  -m  dirty  rev  linear  |  result
+     y   y   *   *    *     *     *     |    (1)
+     y   *   y   *    *     *     *     |    (1)
+     y   *   *   y    *     *     *     |    (1)
+     *   y   y   *    *     *     *     |    (1)
+     *   y   *   y    *     *     *     |    (1)
+     *   *   y   y    *     *     *     |    (1)
+     *   *   *   *    *     n     n     |     x
+     *   *   *   *    n     *     *     |    ok
+     n   n   n   n    y     *     y     |   merge
+     n   n   n   n    y     y     n     |    (2)
+     n   n   n   y    y     *     *     |   merge
+     n   n   y   n    y     *     *     |  merge if no conflict
+     n   y   n   n    y     *     *     |  discard
+     y   n   n   n    y     *     *     |    (3)
 
     x = can't happen
     * = don't-care
@@ -1499,7 +1505,7 @@ def update(repo, node, branchmerge, force, ancestor=None,
         # updatecheck='abort' to better suppport some of these callers.
         if updatecheck is None:
             updatecheck = 'linear'
-        assert updatecheck in ('none', 'linear')
+        assert updatecheck in ('none', 'linear', 'noconflict')
     # If we're doing a partial update, we need to skip updating
     # the dirstate, so make a note of any partial-ness to the
     # update here.
@@ -1592,6 +1598,13 @@ def update(repo, node, branchmerge, force, ancestor=None,
         actionbyfile, diverge, renamedelete = calculateupdates(
             repo, wc, p2, pas, branchmerge, force, mergeancestor,
             followcopies, matcher=matcher, mergeforce=mergeforce)
+
+        if updatecheck == 'noconflict':
+            for f, (m, args, msg) in actionbyfile.iteritems():
+                if m not in ('g', 'k', 'r'):
+                    msg = _("uncommitted changes")
+                    hint = _("commit or update --merge to allow merge")
+                    raise error.Abort(msg, hint=hint)
 
         # Prompt and create actions. Most of this is in the resolve phase
         # already, but we can't handle .hgsubstate in filemerge or

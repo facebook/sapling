@@ -255,6 +255,65 @@ Cases are run as shown in that table, row by row.
   >>>>>>> destination:  d047485b3896 b1 - test: 4
   $ rm a.orig
 
+  $ echo 'updatecheck = noconflict' >> .hg/hgrc
+
+  $ revtest 'none dirty cross'  dirty 3 4
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  parent=4
+  M foo
+
+  $ revtest 'none dirty linear' dirty 1 2
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  parent=2
+  M foo
+
+  $ revtest 'none dirty linear' dirty 1 2 -c
+  abort: uncommitted changes
+  parent=1
+  M foo
+
+  $ revtest 'none dirty linear' dirty 1 2 -C
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  parent=2
+
+Locally added file is allowed
+  $ hg up -qC 3
+  $ echo a > bar
+  $ hg add bar
+  $ hg up -q 4
+  $ hg st
+  A bar
+  $ hg forget bar
+  $ rm bar
+
+Locally removed file is allowed
+  $ hg up -qC 3
+  $ hg rm a
+  $ hg up -q 4
+  abort: uncommitted changes
+  (commit or update --merge to allow merge)
+  [255]
+
+File conflict is not allowed
+  $ hg up -qC 3
+  $ echo dirty >> a
+  $ hg up -q 4
+  abort: uncommitted changes
+  (commit or update --merge to allow merge)
+  [255]
+  $ hg up -m 4
+  merging a
+  warning: conflicts while merging a! (edit, then use 'hg resolve --mark')
+  0 files updated, 0 files merged, 0 files removed, 1 files unresolved
+  use 'hg resolve' to retry unresolved file merges
+  [1]
+  $ rm a.orig
+
+Change/delete conflict is not allowed
+  $ hg up -qC 3
+  $ hg rm foo
+  $ hg up -q 4
+
 Uses default value of "linear" when value is misspelled
   $ echo 'updatecheck = linyar' >> .hg/hgrc
 

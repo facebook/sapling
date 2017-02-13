@@ -743,12 +743,13 @@ def updatetotally(ui, repo, checkout, brev, clean=False, updatecheck=None):
      * none: don't check (merge working directory changes into destination)
      * linear: check that update is linear before merging working directory
                changes into destination
+     * noconflict: check that the update does not result in file merges
 
     This returns whether conflict is detected at updating or not.
     """
     if updatecheck is None:
         updatecheck = ui.config('experimental', 'updatecheck')
-        if updatecheck not in ('abort', 'none', 'linear'):
+        if updatecheck not in ('abort', 'none', 'linear', 'noconflict'):
             # If not configured, or invalid value configured
             updatecheck = 'linear'
     with repo.wlock():
