@@ -655,6 +655,10 @@ def _dispatch(req):
     rpath = _earlygetopt(["-R", "--repository", "--repo"], args)
     path, lui = _getlocal(ui, rpath)
 
+    # Side-effect of accessing is debugcommands module is guaranteed to be
+    # imported and commands.table is populated.
+    debugcommands.command
+
     # Configure extensions in phases: uisetup, extsetup, cmdtable, and
     # reposetup. Programs like TortoiseHg will call _dispatch several
     # times so we keep track of configured extensions in _loaded.
@@ -673,10 +677,6 @@ def _dispatch(req):
         _loaded.add(name)
 
     # (reposetup is handled in hg.repository)
-
-    # Side-effect of accessing is debugcommands module is guaranteed to be
-    # imported and commands.table is populated.
-    debugcommands.command
 
     addaliases(lui, commands.table)
 
