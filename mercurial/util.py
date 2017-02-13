@@ -809,7 +809,7 @@ def tempfilter(s, cmd):
     inname, outname = None, None
     try:
         infd, inname = tempfile.mkstemp(prefix='hg-filter-in-')
-        fp = os.fdopen(infd, 'wb')
+        fp = os.fdopen(infd, pycompat.sysstr('wb'))
         fp.write(s)
         fp.close()
         outfd, outname = tempfile.mkstemp(prefix='hg-filter-out-')

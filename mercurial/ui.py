@@ -1038,7 +1038,7 @@ class ui(object):
                                       suffix=extra['suffix'], text=True,
                                       dir=rdir)
         try:
-            f = os.fdopen(fd, "w")
+            f = os.fdopen(fd, pycompat.sysstr("w"))
             f.write(text)
             f.close()
 
