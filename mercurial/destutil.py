@@ -14,7 +14,7 @@ from . import (
     obsolete,
 )
 
-def _destupdateobs(repo, clean, check):
+def _destupdateobs(repo, clean):
     """decide of an update destination from obsolescence markers"""
     node = None
     wc = repo[None]
@@ -50,7 +50,7 @@ def _destupdateobs(repo, clean, check):
                 movemark = repo['.'].node()
     return node, movemark, None
 
-def _destupdatebook(repo, clean, check):
+def _destupdatebook(repo, clean):
     """decide on an update destination from active bookmark"""
     # we also move the active bookmark, if any
     activemark = None
@@ -59,7 +59,7 @@ def _destupdatebook(repo, clean, check):
         activemark = node
     return node, movemark, activemark
 
-def _destupdatebranch(repo, clean, check):
+def _destupdatebranch(repo, clean):
     """decide on an update destination from current branch
 
     This ignores closed branch heads.
@@ -85,7 +85,7 @@ def _destupdatebranch(repo, clean, check):
         node = repo['.'].node()
     return node, movemark, None
 
-def _destupdatebranchfallback(repo, clean, check):
+def _destupdatebranchfallback(repo, clean):
     """decide on an update destination from closed heads in current branch"""
     wc = repo[None]
     currentbranch = wc.branch()
@@ -115,7 +115,7 @@ destupdatestepmap = {'evolution': _destupdateobs,
                      'branchfallback': _destupdatebranchfallback,
                      }
 
-def destupdate(repo, clean=False, check=False):
+def destupdate(repo, clean=False):
     """destination for bare update operation
 
     return (rev, movemark, activemark)
@@ -128,7 +128,7 @@ def destupdate(repo, clean=False, check=False):
     node = movemark = activemark = None
 
     for step in destupdatesteps:
-        node, movemark, activemark = destupdatestepmap[step](repo, clean, check)
+        node, movemark, activemark = destupdatestepmap[step](repo, clean)
         if node is not None:
             break
     rev = repo[node].rev()

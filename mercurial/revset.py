@@ -507,7 +507,7 @@ predicate = registrar.revsetpredicate()
 @predicate('_destupdate')
 def _destupdate(repo, subset, x):
     # experimental revset for update destination
-    args = getargsdict(x, 'limit', 'clean check')
+    args = getargsdict(x, 'limit', 'clean')
     return subset & baseset([destutil.destupdate(repo, **args)[0]])
 
 @predicate('_destmerge')

@@ -732,7 +732,7 @@ def updatetotally(ui, repo, checkout, brev, clean=False, check=False):
         movemarkfrom = None
         warndest = False
         if checkout is None:
-            updata = destutil.destupdate(repo, clean=clean, check=check)
+            updata = destutil.destupdate(repo, clean=clean)
             checkout, movemarkfrom, brev = updata
             warndest = True
 
