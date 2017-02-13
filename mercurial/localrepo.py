@@ -1853,8 +1853,9 @@ class localrepository(object):
 
     def heads(self, start=None):
         if start is None:
-            headrevs = sorted(self.changelog.headrevs(), reverse=True)
-            return [self.changelog.node(rev) for rev in headrevs]
+            cl = self.changelog
+            headrevs = sorted(cl.headrevs(), reverse=True)
+            return [cl.node(rev) for rev in headrevs]
 
         heads = self.changelog.heads(start)
         # sort the output in rev descending order
