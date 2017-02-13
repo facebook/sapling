@@ -453,17 +453,11 @@ class ui(object):
         >>> u.configint(s, 'invalid')
         Traceback (most recent call last):
             ...
-        ConfigError: foo.invalid is not an integer ('somevalue')
+        ConfigError: foo.invalid is not a valid integer ('somevalue')
         """
 
-        v = self.config(section, name, None, untrusted)
-        if v is None:
-            return default
-        try:
-            return int(v)
-        except ValueError:
-            raise error.ConfigError(_("%s.%s is not an integer ('%s')")
-                                    % (section, name, v))
+        return self.configwith(int, section, name, default, 'integer',
+                               untrusted)
 
     def configbytes(self, section, name, default=0, untrusted=False):
         """parse a configuration element as a quantity in bytes
