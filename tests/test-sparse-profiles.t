@@ -14,10 +14,12 @@ test sparse
   $ echo x > data.py
   $ echo z > readme.txt
   $ cat > webpage.sparse <<EOF
+  > # frontend sparse profile
   > [include]
   > *.html
   > EOF
   $ cat > backend.sparse <<EOF
+  > # backend sparse profile
   > [include]
   > *.py
   > EOF
@@ -54,10 +56,12 @@ Verify disabling a profile works
 Verify that a profile is updated across multiple commits
 
   $ cat > webpage.sparse <<EOF
+  > # frontend sparse profile
   > [include]
   > *.html
   > EOF
   $ cat > backend.sparse <<EOF
+  > # backend sparse profile
   > [include]
   > *.py
   > *.txt
@@ -89,6 +93,7 @@ Introduce a conflicting .hgsparse change
 
   $ hg up -q 0
   $ cat > backend.sparse <<EOF
+  > # Different backend sparse profile
   > [include]
   > *.html
   > EOF
@@ -122,6 +127,7 @@ Verify conflicting merge pulls in the conflicting changes
 Verify resolving the merge removes the temporarily unioned files
 
   $ cat > backend.sparse <<EOF
+  > # backend sparse profile
   > [include]
   > *.html
   > *.txt
@@ -166,7 +172,7 @@ Verify rebase conflicts pulls in the conflicting changes
   webpage.sparse
 
   $ hg rebase -d 2
-  rebasing 1:ac501d43ae16 "edit profile"
+  rebasing 1:a2b1de640a62 "edit profile"
   temporarily included 1 file(s) in the sparse checkout for merging
   merging backend.sparse
   merging data.py
@@ -224,14 +230,14 @@ warning message can be suppressed by setting missingwarning = false in
   index.html
   readme.txt
   $ hg up tip | grep warning
-  warning: sparse profile 'backend.sparse' not found in rev bc6a201ecffe - ignoring it
+  warning: sparse profile 'backend.sparse' not found in rev bfcb76de99cc - ignoring it
   [1]
   $ ls
   data.py
   index.html
   readme.txt
   $ hg sparse --disable-profile backend.sparse | grep warning
-  warning: sparse profile 'backend.sparse' not found in rev bc6a201ecffe - ignoring it
+  warning: sparse profile 'backend.sparse' not found in rev bfcb76de99cc - ignoring it
   [1]
   $ cat >> .hg/hgrc <<EOF
   > [sparse]
