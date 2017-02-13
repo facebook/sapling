@@ -713,6 +713,23 @@ def write_to_flame(data, fp, scriptpath=None, outputfile=None, **kwargs):
     os.system("perl ~/flamegraph.pl %s > %s" % (path, outputfile))
     print("Written to %s" % outputfile, file=fp)
 
+_pathcache = {}
+def simplifypath(path):
+    '''Attempt to make the path to a Python module easier to read by
+    removing whatever part of the Python search path it was found
+    on.'''
+
+    if path in _pathcache:
+        return _pathcache[path]
+    hgpath = encoding.__file__.rsplit(os.sep, 2)[0]
+    for p in [hgpath] + sys.path:
+        prefix = p + os.sep
+        if path.startswith(prefix):
+            path = path[len(prefix):]
+            break
+    _pathcache[path] = path
+    return path
+
 def write_to_json(data, fp):
     samples = []
 
