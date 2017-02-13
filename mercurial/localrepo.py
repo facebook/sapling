@@ -244,7 +244,7 @@ class localrepository(object):
     supportedformats = set(('revlogv1', 'generaldelta', 'treemanifest',
                             'manifestv2'))
     _basesupported = supportedformats | set(('store', 'fncache', 'shared',
-                                             'dotencode'))
+                                             'relshared', 'dotencode'))
     openerreqs = set(('revlogv1', 'generaldelta', 'treemanifest', 'manifestv2'))
     filtername = None
 
@@ -325,8 +325,11 @@ class localrepository(object):
 
         self.sharedpath = self.path
         try:
-            vfs = scmutil.vfs(self.vfs.read("sharedpath").rstrip('\n'),
-                              realpath=True)
+            sharedpath = self.vfs.read("sharedpath").rstrip('\n')
+            if 'relshared' in self.requirements:
+                sharedpath = self.vfs.join(sharedpath)
+            vfs = scmutil.vfs(sharedpath, realpath=True)
+
             s = vfs.base
             if not vfs.exists():
                 raise error.RepoError(

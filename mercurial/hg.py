@@ -195,7 +195,8 @@ def defaultdest(source):
         return ''
     return os.path.basename(os.path.normpath(path))
 
-def share(ui, source, dest=None, update=True, bookmarks=True, defaultpath=None):
+def share(ui, source, dest=None, update=True, bookmarks=True, defaultpath=None,
+          relative=False):
     '''create a shared repository'''
 
     if not islocal(source):
@@ -235,7 +236,16 @@ def share(ui, source, dest=None, update=True, bookmarks=True, defaultpath=None):
         if inst.errno != errno.ENOENT:
             raise
 
-    requirements += 'shared\n'
+    if relative:
+        try:
+            sharedpath = os.path.relpath(sharedpath, destvfs.base)
+            requirements += 'relshared\n'
+        except IOError as e:
+            raise error.Abort(_('cannot calculate relative path'),
+                              hint=str(e))
+    else:
+        requirements += 'shared\n'
+
     destvfs.write('requires', requirements)
     destvfs.write('sharedpath', sharedpath)
 

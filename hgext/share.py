@@ -65,10 +65,14 @@ testedwith = 'ships-with-hg-core'
 
 @command('share',
     [('U', 'noupdate', None, _('do not create a working directory')),
-     ('B', 'bookmarks', None, _('also share bookmarks'))],
+     ('B', 'bookmarks', None, _('also share bookmarks')),
+     ('', 'relative', None, _('point to source using a relative path '
+                              '(EXPERIMENTAL)')),
+    ],
     _('[-U] [-B] SOURCE [DEST]'),
     norepo=True)
-def share(ui, source, dest=None, noupdate=False, bookmarks=False):
+def share(ui, source, dest=None, noupdate=False, bookmarks=False,
+          relative=False):
     """create a new shared repository
 
     Initialize a new repository and working directory that shares its
@@ -87,7 +91,7 @@ def share(ui, source, dest=None, noupdate=False, bookmarks=False):
     """
 
     return hg.share(ui, source, dest=dest, update=not noupdate,
-                    bookmarks=bookmarks)
+                    bookmarks=bookmarks, relative=relative)
 
 @command('unshare', [], '')
 def unshare(ui, repo):

@@ -55,6 +55,17 @@ This requirement is set when a repository is created via :hg:`share`.
 
 The requirement was added in Mercurial 1.3 (released July 2009).
 
+relshared
+=========
+
+Derivative of ``shared``; the location of the store is relative to the
+store of this repository.
+
+This requirement is set when a repository is created via :hg:`share`
+using the ``--relative`` option.
+
+The requirement was added in Mercurial 4.2 (released May 2017).
+
 dotencode
 =========
 

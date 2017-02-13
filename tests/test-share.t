@@ -358,6 +358,41 @@ verify bookmark behavior after unshare
      bm4                       5:92793bfc8cad
   $ cd ..
 
+test shared clones using relative paths work
+
+  $ mkdir thisdir
+  $ hg init thisdir/orig
+  $ hg share -U thisdir/orig thisdir/abs
+  $ hg share -U --relative thisdir/abs thisdir/rel
+  $ cat thisdir/rel/.hg/sharedpath
+  ../../orig/.hg (no-eol)
+  $ grep shared thisdir/*/.hg/requires
+  thisdir/abs/.hg/requires:shared
+  thisdir/rel/.hg/requires:shared
+  thisdir/rel/.hg/requires:relshared
+
+test that relative shared paths aren't relative to $PWD
+
+  $ cd thisdir
+  $ hg -R rel root
+  $TESTTMP/thisdir/rel
+  $ cd ..
+
+now test that relative paths really are relative, survive across
+renames and changes of PWD
+
+  $ hg -R thisdir/abs root
+  $TESTTMP/thisdir/abs
+  $ hg -R thisdir/rel root
+  $TESTTMP/thisdir/rel
+  $ mv thisdir thatdir
+  $ hg -R thatdir/abs root
+  abort: .hg/sharedpath points to nonexistent directory $TESTTMP/thisdir/orig/.hg!
+  [255]
+  $ hg -R thatdir/rel root
+  $TESTTMP/thatdir/rel
+  $ rm -r thatdir
+
 Explicitly kill daemons to let the test exit on Windows
 
   $ killdaemons.py
