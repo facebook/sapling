@@ -585,7 +585,7 @@ def _filemerge(premerge, repo, mynode, orig, fcd, fco, fca, labels=None):
         pre = "%s~%s." % (os.path.basename(fullbase), prefix)
         (fd, name) = tempfile.mkstemp(prefix=pre, suffix=ext)
         data = repo.wwritedata(ctx.path(), ctx.data())
-        f = os.fdopen(fd, "wb")
+        f = os.fdopen(fd, pycompat.sysstr("wb"))
         f.write(data)
         f.close()
         return name

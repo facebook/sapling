@@ -272,7 +272,7 @@ class bundlerepository(localrepo.localrepository):
                                             suffix=".hg10un")
             self.tempfile = temp
 
-            with os.fdopen(fdtemp, 'wb') as fptemp:
+            with os.fdopen(fdtemp, pycompat.sysstr('wb')) as fptemp:
                 fptemp.write(header)
                 while True:
                     chunk = read(2**18)

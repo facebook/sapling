@@ -287,9 +287,9 @@ class channeledsystem(object):
 
 _iochannels = [
     # server.ch, ui.fp, mode
-    ('cin', 'fin', 'rb'),
-    ('cout', 'fout', 'wb'),
-    ('cerr', 'ferr', 'wb'),
+    ('cin', 'fin', pycompat.sysstr('rb')),
+    ('cout', 'fout', pycompat.sysstr('wb')),
+    ('cerr', 'ferr', pycompat.sysstr('wb')),
 ]
 
 class chgcmdserver(commandserver.server):
