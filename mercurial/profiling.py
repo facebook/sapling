@@ -103,6 +103,7 @@ def statprofile(ui, fp):
             'bymethod': statprof.DisplayFormats.ByMethod,
             'hotpath': statprof.DisplayFormats.Hotpath,
             'json': statprof.DisplayFormats.Json,
+            'chrome': statprof.DisplayFormats.Chrome,
         }
 
         if profformat in formats:
@@ -111,7 +112,23 @@ def statprofile(ui, fp):
             ui.warn(_('unknown profiler output format: %s\n') % profformat)
             displayformat = statprof.DisplayFormats.Hotpath
 
-        statprof.display(fp, data=data, format=displayformat)
+        kwargs = {}
+
+        def fraction(s):
+            if s.endswith('%'):
+                v = float(s[:-1]) / 100
+            else:
+                v = float(s)
+            if 0 <= v <= 1:
+                return v
+            raise ValueError(s)
+
+        if profformat == 'chrome':
+            showmin = ui.configwith(fraction, 'profiling', 'showmin', 0.005)
+            showmax = ui.configwith(fraction, 'profiling', 'showmax', 0.999)
+            kwargs.update(minthreshold=showmin, maxthreshold=showmax)
+
+        statprof.display(fp, data=data, format=displayformat, **kwargs)
 
 @contextlib.contextmanager
 def profile(ui):
