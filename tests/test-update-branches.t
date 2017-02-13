@@ -160,6 +160,16 @@ Cases are run as shown in that table, row by row.
   parent=1
   M foo
 
+  $ revtest '-m dirty linear'   dirty 1 2 -m
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  parent=2
+  M foo
+
+  $ revtest '-m dirty cross'  dirty 3 4 -m
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  parent=4
+  M foo
+
   $ revtest '-c dirtysub linear'   dirtysub 1 2 -c
   abort: uncommitted changes in subrepository 'sub'
   parent=1
@@ -171,7 +181,17 @@ Cases are run as shown in that table, row by row.
   parent=2
 
   $ revtest '-cC dirty linear'  dirty 1 2 -cC
-  abort: cannot specify both -c/--check and -C/--clean
+  abort: can only specify one of -C/--clean, -c/--check, or -m/merge
+  parent=1
+  M foo
+
+  $ revtest '-mc dirty linear'  dirty 1 2 -mc
+  abort: can only specify one of -C/--clean, -c/--check, or -m/merge
+  parent=1
+  M foo
+
+  $ revtest '-mC dirty linear'  dirty 1 2 -mC
+  abort: can only specify one of -C/--clean, -c/--check, or -m/merge
   parent=1
   M foo
 

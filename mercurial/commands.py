@@ -5278,12 +5278,13 @@ def unbundle(ui, repo, fname1, *fnames, **opts):
 @command('^update|up|checkout|co',
     [('C', 'clean', None, _('discard uncommitted changes (no backup)')),
     ('c', 'check', None, _('require clean working directory')),
+    ('m', 'merge', None, _('merge uncommitted changes')),
     ('d', 'date', '', _('tipmost revision matching date'), _('DATE')),
     ('r', 'rev', '', _('revision'), _('REV'))
      ] + mergetoolopts,
-    _('[-C|-c] [-d DATE] [[-r] REV]'))
+    _('[-C|-c|-m] [-d DATE] [[-r] REV]'))
 def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False,
-           tool=None):
+           merge=None, tool=None):
     """update working directory (or switch revisions)
 
     Update the repository's working directory to the specified
@@ -5302,8 +5303,8 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False,
 
     .. container:: verbose
 
-      The -C/--clean and -c/--check options control what happens if the
-      working directory contains uncommitted changes.
+      The -C/--clean, -c/--check, and -m/--merge options control what
+      happens if the working directory contains uncommitted changes.
       At most of one of them can be specified.
 
       1. If no option is specified, and if
@@ -5315,10 +5316,14 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False,
          branch), the update is aborted and the uncommitted changes
          are preserved.
 
-      2. With the -c/--check option, the update is aborted and the
+      2. With the -m/--merge option, the update is allowed even if the
+         requested changeset is not an ancestor or descendant of
+         the working directory's parent.
+
+      3. With the -c/--check option, the update is aborted and the
          uncommitted changes are preserved.
 
-      3. With the -C/--clean option, uncommitted changes are discarded and
+      4. With the -C/--clean option, uncommitted changes are discarded and
          the working directory is updated to the requested changeset.
 
     To cancel an uncommitted merge (and lose your changes), use
@@ -5343,8 +5348,15 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False,
     if date and rev is not None:
         raise error.Abort(_("you can't specify a revision and a date"))
 
-    if check and clean:
-        raise error.Abort(_("cannot specify both -c/--check and -C/--clean"))
+    if len([x for x in (clean, check, merge) if x]) > 1:
+        raise error.Abort(_("can only specify one of -C/--clean, -c/--check, "
+                            "or -m/merge"))
+
+    updatecheck = None
+    if check:
+        updatecheck = 'abort'
+    elif merge:
+        updatecheck = 'none'
 
     with repo.wlock():
         cmdutil.clearunfinished(repo)
@@ -5358,7 +5370,8 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False,
 
         repo.ui.setconfig('ui', 'forcemerge', tool, 'update')
 
-        return hg.updatetotally(ui, repo, rev, brev, clean=clean, check=check)
+        return hg.updatetotally(ui, repo, rev, brev, clean=clean,
+                                updatecheck=updatecheck)
 
 @command('verify', [])
 def verify(ui, repo):

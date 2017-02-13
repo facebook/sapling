@@ -1444,7 +1444,8 @@ def recordupdates(repo, actions, branchmerge):
             repo.dirstate.normal(f)
 
 def update(repo, node, branchmerge, force, ancestor=None,
-           mergeancestor=False, labels=None, matcher=None, mergeforce=False):
+           mergeancestor=False, labels=None, matcher=None, mergeforce=False,
+           updatecheck=None):
     """
     Perform a merge between the working directory and the given node
 
@@ -1468,14 +1469,17 @@ def update(repo, node, branchmerge, force, ancestor=None,
 
     This logic is tested by test-update-branches.t.
 
-    -c  -C  dirty  rev  linear  |  result
-     y   y    *     *     *     |    (1)
-     *   *    *     n     n     |     x
-     *   *    n     *     *     |    ok
-     n   n    y     *     y     |   merge
-     n   n    y     y     n     |    (2)
-     n   y    y     *     *     |  discard
-     y   n    y     *     *     |    (3)
+    -c  -C  -m  dirty  rev  linear  |  result
+     y   y   *    *     *     *     |    (1)
+     y   *   y    *     *     *     |    (1)
+     *   y   y    *     *     *     |    (1)
+     *   *   *    *     n     n     |     x
+     *   *   *    n     *     *     |    ok
+     n   n   n    y     *     y     |   merge
+     n   n   n    y     y     n     |    (2)
+     n   n   y    y     *     *     |   merge
+     n   y   n    y     *     *     |  discard
+     y   n   n    y     *     *     |    (3)
 
     x = can't happen
     * = don't-care
@@ -1486,9 +1490,16 @@ def update(repo, node, branchmerge, force, ancestor=None,
     Return the same tuple as applyupdates().
     """
 
-    # This functon used to find the default destination if node was None, but
+    # This function used to find the default destination if node was None, but
     # that's now in destutil.py.
     assert node is not None
+    if not branchmerge and not force:
+        # TODO: remove the default once all callers that pass branchmerge=False
+        # and force=False pass a value for updatecheck. We may want to allow
+        # updatecheck='abort' to better suppport some of these callers.
+        if updatecheck is None:
+            updatecheck = 'linear'
+        assert updatecheck in ('none', 'linear')
     # If we're doing a partial update, we need to skip updating
     # the dirstate, so make a note of any partial-ness to the
     # update here.
@@ -1545,7 +1556,8 @@ def update(repo, node, branchmerge, force, ancestor=None,
                 repo.hook('update', parent1=xp2, parent2='', error=0)
                 return 0, 0, 0, 0
 
-            if pas not in ([p1], [p2]):  # nonlinear
+            if (updatecheck == 'linear' and
+                    pas not in ([p1], [p2])):  # nonlinear
                 dirty = wc.dirty(missing=True)
                 if dirty:
                     # Branching is a bit strange to ensure we do the minimal

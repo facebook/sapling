@@ -228,7 +228,7 @@ Show all commands + options
   serve: accesslog, daemon, daemon-postexec, errorlog, port, address, prefix, name, web-conf, webdir-conf, pid-file, stdio, cmdserver, templates, style, ipv6, certificate
   status: all, modified, added, removed, deleted, clean, unknown, ignored, no-status, copies, print0, rev, change, include, exclude, subrepos, template
   summary: remote
-  update: clean, check, date, rev, tool
+  update: clean, check, merge, date, rev, tool
   addremove: similarity, subrepos, include, exclude, dry-run
   archive: no-decode, prefix, rev, type, subrepos, include, exclude
   backout: merge, commit, no-commit, parent, rev, edit, tool, include, exclude, message, logfile, date, user

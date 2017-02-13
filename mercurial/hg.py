@@ -691,18 +691,19 @@ def _showstats(repo, stats, quietempty=False):
     repo.ui.status(_("%d files updated, %d files merged, "
                      "%d files removed, %d files unresolved\n") % stats)
 
-def updaterepo(repo, node, overwrite):
+def updaterepo(repo, node, overwrite, updatecheck=None):
     """Update the working directory to node.
 
     When overwrite is set, changes are clobbered, merged else
 
     returns stats (see pydoc mercurial.merge.applyupdates)"""
     return mergemod.update(repo, node, False, overwrite,
-                           labels=['working copy', 'destination'])
+                           labels=['working copy', 'destination'],
+                           updatecheck=updatecheck)
 
-def update(repo, node, quietempty=False):
-    """update the working directory to node, merging linear changes"""
-    stats = updaterepo(repo, node, False)
+def update(repo, node, quietempty=False, updatecheck=None):
+    """update the working directory to node"""
+    stats = updaterepo(repo, node, False, updatecheck=updatecheck)
     _showstats(repo, stats, quietempty)
     if stats[3]:
         repo.ui.status(_("use 'hg resolve' to retry unresolved file merges\n"))
@@ -722,7 +723,7 @@ def clean(repo, node, show_stats=True, quietempty=False):
 # naming conflict in updatetotally()
 _clean = clean
 
-def updatetotally(ui, repo, checkout, brev, clean=False, check=False):
+def updatetotally(ui, repo, checkout, brev, clean=False, updatecheck=None):
     """Update the working directory with extra care for non-file components
 
     This takes care of non-file components below:
@@ -734,10 +735,19 @@ def updatetotally(ui, repo, checkout, brev, clean=False, check=False):
     :checkout: to which revision the working directory is updated
     :brev: a name, which might be a bookmark to be activated after updating
     :clean: whether changes in the working directory can be discarded
-    :check: whether changes in the working directory should be checked
+    :updatecheck: how to deal with a dirty working directory
+
+    Valid values for updatecheck are (None => linear):
+
+     * abort: abort if the working directory is dirty
+     * none: don't check (merge working directory changes into destination)
+     * linear: check that update is linear before merging working directory
+               changes into destination
 
     This returns whether conflict is detected at updating or not.
     """
+    if updatecheck is None:
+        updatecheck = 'linear'
     with repo.wlock():
         movemarkfrom = None
         warndest = False
@@ -749,9 +759,10 @@ def updatetotally(ui, repo, checkout, brev, clean=False, check=False):
         if clean:
             ret = _clean(repo, checkout)
         else:
-            if check:
+            if updatecheck == 'abort':
                 cmdutil.bailifchanged(repo, merge=False)
-            ret = _update(repo, checkout)
+                updatecheck = 'none'
+            ret = _update(repo, checkout, updatecheck=updatecheck)
 
         if not ret and movemarkfrom:
             if movemarkfrom == repo['.'].node():
