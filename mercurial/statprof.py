@@ -433,6 +433,7 @@ class DisplayFormats:
     Hotpath = 3
     FlameGraph = 4
     Json = 5
+    Chrome = 6
 
 def display(fp=None, format=3, data=None, **kwargs):
     '''Print statistics, either to stdout or the given file object.'''
@@ -457,10 +458,12 @@ def display(fp=None, format=3, data=None, **kwargs):
         write_to_flame(data, fp, **kwargs)
     elif format == DisplayFormats.Json:
         write_to_json(data, fp)
+    elif format == DisplayFormats.Chrome:
+        write_to_chrome(data, fp, **kwargs)
     else:
         raise Exception("Invalid display format")
 
-    if format != DisplayFormats.Json:
+    if format not in (DisplayFormats.Json, DisplayFormats.Chrome):
         print('---', file=fp)
         print('Sample count: %d' % len(data.samples), file=fp)
         print('Total time: %f seconds' % data.accumulated_time, file=fp)
@@ -742,6 +745,102 @@ def write_to_json(data, fp):
         samples.append((sample.time, stack))
 
     print(json.dumps(samples), file=fp)
+
+def write_to_chrome(data, fp, minthreshold=0.005, maxthreshold=0.999):
+    samples = []
+    laststack = collections.deque()
+    lastseen = collections.deque()
+
+    # The Chrome tracing format allows us to use a compact stack
+    # representation to save space. It's fiddly but worth it.
+    # We maintain a bijection between stack and ID.
+    stack2id = {}
+    id2stack = [] # will eventually be rendered
+
+    def stackid(stack):
+        if not stack:
+            return
+        if stack in stack2id:
+            return stack2id[stack]
+        parent = stackid(stack[1:])
+        myid = len(stack2id)
+        stack2id[stack] = myid
+        id2stack.append(dict(category=stack[0][0], name='%s %s' % stack[0]))
+        if parent is not None:
+            id2stack[-1].update(parent=parent)
+        return myid
+
+    def endswith(a, b):
+        return list(a)[-len(b):] == list(b)
+
+    # The sampling profiler can sample multiple times without
+    # advancing the clock, potentially causing the Chrome trace viewer
+    # to render single-pixel columns that we cannot zoom in on.  We
+    # work around this by pretending that zero-duration samples are a
+    # millisecond in length.
+
+    clamp = 0.001
+
+    # We provide knobs that by default attempt to filter out stack
+    # frames that are too noisy:
+    #
+    # * A few take almost all execution time. These are usually boring
+    #   setup functions, giving a stack that is deep but uninformative.
+    #
+    # * Numerous samples take almost no time, but introduce lots of
+    #   noisy, oft-deep "spines" into a rendered profile.
+
+    blacklist = set()
+    totaltime = data.samples[-1].time - data.samples[0].time
+    minthreshold = totaltime * minthreshold
+    maxthreshold = max(totaltime * maxthreshold, clamp)
+
+    def poplast():
+        oldsid = stackid(tuple(laststack))
+        oldcat, oldfunc = laststack.popleft()
+        oldtime, oldidx = lastseen.popleft()
+        duration = sample.time - oldtime
+        if minthreshold <= duration <= maxthreshold:
+            # ensure no zero-duration events
+            sampletime = max(oldtime + clamp, sample.time)
+            samples.append(dict(ph='E', name=oldfunc, cat=oldcat, sf=oldsid,
+                                ts=sampletime*1e6, pid=0))
+        else:
+            blacklist.add(oldidx)
+
+    # Much fiddling to synthesize correctly(ish) nested begin/end
+    # events given only stack snapshots.
+
+    for sample in data.samples:
+        tos = sample.stack[0]
+        name = tos.function
+        path = simplifypath(tos.path)
+        category = '%s:%d' % (path, tos.lineno)
+        stack = tuple((('%s:%d' % (simplifypath(frame.path), frame.lineno),
+                        frame.function) for frame in sample.stack))
+        qstack = collections.deque(stack)
+        if laststack == qstack:
+            continue
+        while laststack and qstack and laststack[-1] == qstack[-1]:
+            laststack.pop()
+            qstack.pop()
+        while laststack:
+            poplast()
+        for f in reversed(qstack):
+            lastseen.appendleft((sample.time, len(samples)))
+            laststack.appendleft(f)
+            path, name = f
+            sid = stackid(tuple(laststack))
+            samples.append(dict(ph='B', name=name, cat=path, ts=sample.time*1e6,
+                                sf=sid, pid=0))
+        laststack = collections.deque(stack)
+    while laststack:
+        poplast()
+    events = [s[1] for s in enumerate(samples) if s[0] not in blacklist]
+    frames = collections.OrderedDict((str(k), v)
+                                     for (k,v) in enumerate(id2stack))
+    json.dump(dict(traceEvents=events, stackFrames=frames), fp, indent=1)
+    fp.write('\n')
 
 def printusage():
     print("""
