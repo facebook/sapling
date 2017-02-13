@@ -310,14 +310,16 @@ class KeepAliveHandler(object):
         try:
             if req.has_data():
                 data = req.get_data()
-                h.putrequest('POST', req.get_selector(), **skipheaders)
+                h.putrequest(
+                    req.get_method(), req.get_selector(), **skipheaders)
                 if 'content-type' not in headers:
                     h.putheader('Content-type',
                                 'application/x-www-form-urlencoded')
                 if 'content-length' not in headers:
                     h.putheader('Content-length', '%d' % len(data))
             else:
-                h.putrequest('GET', req.get_selector(), **skipheaders)
+                h.putrequest(
+                    req.get_method(), req.get_selector(), **skipheaders)
         except socket.error as err:
             raise urlerr.urlerror(err)
         for k, v in headers.items():
