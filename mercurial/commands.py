@@ -5363,9 +5363,6 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False,
         brev = rev
         rev = scmutil.revsingle(repo, rev, rev).rev()
 
-        if check:
-            cmdutil.bailifchanged(repo, merge=False)
-
         repo.ui.setconfig('ui', 'forcemerge', tool, 'update')
 
         return hg.updatetotally(ui, repo, rev, brev, clean=clean, check=check)

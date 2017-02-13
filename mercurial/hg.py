@@ -739,6 +739,8 @@ def updatetotally(ui, repo, checkout, brev, clean=False, check=False):
         if clean:
             ret = _clean(repo, checkout)
         else:
+            if check:
+                cmdutil.bailifchanged(repo, merge=False)
             ret = _update(repo, checkout)
 
         if not ret and movemarkfrom:
