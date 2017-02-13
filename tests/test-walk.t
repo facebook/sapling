@@ -112,6 +112,74 @@
   f  beans/navy      ../beans/navy
   f  beans/pinto     ../beans/pinto
   f  beans/turtle    ../beans/turtle
+
+  $ hg debugwalk 'rootfilesin:'
+  f  fennel      ../fennel
+  f  fenugreek   ../fenugreek
+  f  fiddlehead  ../fiddlehead
+  $ hg debugwalk -I 'rootfilesin:'
+  f  fennel      ../fennel
+  f  fenugreek   ../fenugreek
+  f  fiddlehead  ../fiddlehead
+  $ hg debugwalk 'rootfilesin:.'
+  f  fennel      ../fennel
+  f  fenugreek   ../fenugreek
+  f  fiddlehead  ../fiddlehead
+  $ hg debugwalk -I 'rootfilesin:.'
+  f  fennel      ../fennel
+  f  fenugreek   ../fenugreek
+  f  fiddlehead  ../fiddlehead
+  $ hg debugwalk -X 'rootfilesin:'
+  f  beans/black                     ../beans/black
+  f  beans/borlotti                  ../beans/borlotti
+  f  beans/kidney                    ../beans/kidney
+  f  beans/navy                      ../beans/navy
+  f  beans/pinto                     ../beans/pinto
+  f  beans/turtle                    ../beans/turtle
+  f  mammals/Procyonidae/cacomistle  Procyonidae/cacomistle
+  f  mammals/Procyonidae/coatimundi  Procyonidae/coatimundi
+  f  mammals/Procyonidae/raccoon     Procyonidae/raccoon
+  f  mammals/skunk                   skunk
+  $ hg debugwalk 'rootfilesin:fennel'
+  $ hg debugwalk -I 'rootfilesin:fennel'
+  $ hg debugwalk 'rootfilesin:skunk'
+  $ hg debugwalk -I 'rootfilesin:skunk'
+  $ hg debugwalk 'rootfilesin:beans'
+  f  beans/black     ../beans/black
+  f  beans/borlotti  ../beans/borlotti
+  f  beans/kidney    ../beans/kidney
+  f  beans/navy      ../beans/navy
+  f  beans/pinto     ../beans/pinto
+  f  beans/turtle    ../beans/turtle
+  $ hg debugwalk -I 'rootfilesin:beans'
+  f  beans/black     ../beans/black
+  f  beans/borlotti  ../beans/borlotti
+  f  beans/kidney    ../beans/kidney
+  f  beans/navy      ../beans/navy
+  f  beans/pinto     ../beans/pinto
+  f  beans/turtle    ../beans/turtle
+  $ hg debugwalk 'rootfilesin:mammals'
+  f  mammals/skunk  skunk
+  $ hg debugwalk -I 'rootfilesin:mammals'
+  f  mammals/skunk  skunk
+  $ hg debugwalk 'rootfilesin:mammals/'
+  f  mammals/skunk  skunk
+  $ hg debugwalk -I 'rootfilesin:mammals/'
+  f  mammals/skunk  skunk
+  $ hg debugwalk -X 'rootfilesin:mammals'
+  f  beans/black                     ../beans/black
+  f  beans/borlotti                  ../beans/borlotti
+  f  beans/kidney                    ../beans/kidney
+  f  beans/navy                      ../beans/navy
+  f  beans/pinto                     ../beans/pinto
+  f  beans/turtle                    ../beans/turtle
+  f  fennel                          ../fennel
+  f  fenugreek                       ../fenugreek
+  f  fiddlehead                      ../fiddlehead
+  f  mammals/Procyonidae/cacomistle  Procyonidae/cacomistle
+  f  mammals/Procyonidae/coatimundi  Procyonidae/coatimundi
+  f  mammals/Procyonidae/raccoon     Procyonidae/raccoon
+
   $ hg debugwalk .
   f  mammals/Procyonidae/cacomistle  Procyonidae/cacomistle
   f  mammals/Procyonidae/coatimundi  Procyonidae/coatimundi

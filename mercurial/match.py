@@ -104,7 +104,10 @@ class match(object):
         a pattern is one of:
         'glob:<glob>' - a glob relative to cwd
         're:<regexp>' - a regular expression
-        'path:<path>' - a path relative to repository root
+        'path:<path>' - a path relative to repository root, which is matched
+                        recursively
+        'rootfilesin:<path>' - a path relative to repository root, which is
+                        matched non-recursively (will not match subdirectories)
         'relglob:<glob>' - an unrooted glob (*.c matches C files in all dirs)
         'relpath:<path>' - a path relative to cwd
         'relre:<regexp>' - a regexp that needn't match the start of a name
@@ -153,7 +156,7 @@ class match(object):
         elif patterns:
             kindpats = self._normalize(patterns, default, root, cwd, auditor)
             if not _kindpatsalwaysmatch(kindpats):
-                self._files = _roots(kindpats)
+                self._files = _explicitfiles(kindpats)
                 self._anypats = self._anypats or _anypats(kindpats)
                 self.patternspat, pm = _buildmatch(ctx, kindpats, '$',
                                                    listsubrepos, root)
@@ -286,7 +289,7 @@ class match(object):
         for kind, pat in [_patsplit(p, default) for p in patterns]:
             if kind in ('glob', 'relpath'):
                 pat = pathutil.canonpath(root, cwd, pat, auditor)
-            elif kind in ('relglob', 'path'):
+            elif kind in ('relglob', 'path', 'rootfilesin'):
                 pat = util.normpath(pat)
             elif kind in ('listfile', 'listfile0'):
                 try:
@@ -447,7 +450,8 @@ def _patsplit(pattern, default):
     if ':' in pattern:
         kind, pat = pattern.split(':', 1)
         if kind in ('re', 'glob', 'path', 'relglob', 'relpath', 'relre',
-                    'listfile', 'listfile0', 'set', 'include', 'subinclude'):
+                    'listfile', 'listfile0', 'set', 'include', 'subinclude',
+                    'rootfilesin'):
             return kind, pat
     return default, pattern
 
@@ -540,6 +544,14 @@ def _regex(kind, pat, globsuffix):
         if pat == '.':
             return ''
         return '^' + util.re.escape(pat) + '(?:/|$)'
+    if kind == 'rootfilesin':
+        if pat == '.':
+            escaped = ''
+        else:
+            # Pattern is a directory name.
+            escaped = util.re.escape(pat) + '/'
+        # Anything after the pattern must be a non-directory.
+        return '^' + escaped + '[^/]+$'
     if kind == 'relglob':
         return '(?:|.*/)' + _globre(pat) + globsuffix
     if kind == 'relpath':
@@ -614,6 +626,8 @@ def _roots(kindpats):
 
     >>> _roots([('glob', 'g/*', ''), ('glob', 'g', ''), ('glob', 'g*', '')])
     ['g', 'g', '.']
+    >>> _roots([('rootfilesin', 'g', ''), ('rootfilesin', '', '')])
+    ['g', '.']
     >>> _roots([('relpath', 'r', ''), ('path', 'p/p', ''), ('path', '', '')])
     ['r', 'p/p', '.']
     >>> _roots([('relglob', 'rg*', ''), ('re', 're/', ''), ('relre', 'rr', '')])
@@ -628,15 +642,28 @@ def _roots(kindpats):
                     break
                 root.append(p)
             r.append('/'.join(root) or '.')
-        elif kind in ('relpath', 'path'):
+        elif kind in ('relpath', 'path', 'rootfilesin'):
             r.append(pat or '.')
         else: # relglob, re, relre
             r.append('.')
     return r
 
+def _explicitfiles(kindpats):
+    '''Returns the potential explicit filenames from the patterns.
+
+    >>> _explicitfiles([('path', 'foo/bar', '')])
+    ['foo/bar']
+    >>> _explicitfiles([('rootfilesin', 'foo/bar', '')])
+    []
+    '''
+    # Keep only the pattern kinds where one can specify filenames (vs only
+    # directory names).
+    filable = [kp for kp in kindpats if kp[0] not in ('rootfilesin',)]
+    return _roots(filable)
+
 def _anypats(kindpats):
     for kind, pat, source in kindpats:
-        if kind in ('glob', 're', 'relglob', 'relre', 'set'):
+        if kind in ('glob', 're', 'relglob', 'relre', 'set', 'rootfilesin'):
             return True
 
 _commentre = None
