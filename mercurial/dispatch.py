@@ -659,6 +659,15 @@ def _dispatch(req):
     # imported and commands.table is populated.
     debugcommands.command
 
+    uis = set([ui, lui])
+
+    if req.repo:
+        uis.add(req.repo.ui)
+
+    if '--profile' in args:
+        for ui_ in uis:
+            ui_.setconfig('profiling', 'enabled', 'true', '--profile')
+
     # Configure extensions in phases: uisetup, extsetup, cmdtable, and
     # reposetup. Programs like TortoiseHg will call _dispatch several
     # times so we keep track of configured extensions in _loaded.
@@ -721,20 +730,11 @@ def _dispatch(req):
                 (t[4]-s[4], t[0]-s[0], t[2]-s[2], t[1]-s[1], t[3]-s[3]))
         atexit.register(print_time)
 
-    uis = set([ui, lui])
-
-    if req.repo:
-        uis.add(req.repo.ui)
-
     if options['verbose'] or options['debug'] or options['quiet']:
         for opt in ('verbose', 'debug', 'quiet'):
             val = str(bool(options[opt]))
             for ui_ in uis:
                 ui_.setconfig('ui', opt, val, '--' + opt)
-
-    if options['profile']:
-        for ui_ in uis:
-            ui_.setconfig('profiling', 'enabled', 'true', '--profile')
 
     if options['traceback']:
         for ui_ in uis:
