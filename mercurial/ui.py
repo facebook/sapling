@@ -410,9 +410,9 @@ class ui(object):
         >>> u.setconfig(s, 'float1', '42')
         >>> u.configwith(float, s, 'float1')
         42.0
-        >>> u.setconfig(s, 'float2', '-4.2')
+        >>> u.setconfig(s, 'float2', '-4.25')
         >>> u.configwith(float, s, 'float2')
-        -4.2
+        -4.25
         >>> u.configwith(float, s, 'unknown', 7)
         7
         >>> u.setconfig(s, 'invalid', 'somevalue')
