@@ -22,6 +22,87 @@ import os
 requirement = "remotefilelog"
 _prefetching = _('prefetching')
 
+# These make*stores functions are global so that other extensions can replace
+# them.
+def makelocalstores(repo):
+    """In-repo stores, like .hg/store/data; can not be discarded."""
+    localpath = os.path.join(repo.svfs.vfs.base, 'data')
+    if not os.path.exists(localpath):
+        os.makedirs(localpath)
+
+    # Instantiate local data stores
+    localcontent = remotefilelogcontentstore(repo, localpath, repo.name,
+                                             shared=False)
+    localmetadata = remotefilelogmetadatastore(repo, localpath, repo.name,
+                                               shared=False)
+    return localcontent, localmetadata
+
+def makecachestores(repo):
+    """Typically machine-wide, cache of remote data; can be discarded."""
+    # Instantiate shared cache stores
+    cachepath = shallowutil.getcachepath(repo.ui)
+    cachecontent = remotefilelogcontentstore(repo, cachepath, repo.name,
+                                             shared=True)
+    cachemetadata = remotefilelogmetadatastore(repo, cachepath, repo.name,
+                                               shared=True)
+
+    repo.sharedstore = cachecontent
+    repo.shareddatastores.append(cachecontent)
+    repo.sharedhistorystores.append(cachemetadata)
+
+    return cachecontent, cachemetadata
+
+def makeremotestores(repo, cachecontent, cachemetadata):
+    """These stores fetch data from a remote server."""
+    # Instantiate remote stores
+    repo.fileservice = fileserverclient.fileserverclient(repo)
+    remotecontent = remotecontentstore(repo.ui, repo.fileservice,
+                                       cachecontent)
+    remotemetadata = remotemetadatastore(repo.ui, repo.fileservice,
+                                         cachemetadata)
+    return remotecontent, remotemetadata
+
+def makepackstores(repo):
+    """Packs are more efficient (to read from) cache stores."""
+    # Instantiate pack stores
+    packpath = shallowutil.getcachepackpath(repo,
+                                            constants.FILEPACK_CATEGORY)
+    packcontentstore = datapackstore(
+        repo.ui,
+        packpath,
+        usecdatapack=repo.ui.configbool('remotefilelog', 'fastdatapack'))
+    packmetadatastore = historypackstore(repo.ui, packpath)
+
+    repo.shareddatastores.append(packcontentstore)
+    repo.sharedhistorystores.append(packmetadatastore)
+
+    return packcontentstore, packmetadatastore
+
+def makeunionstores(repo):
+    """Union stores iterate the other stores and return the first result."""
+    repo.shareddatastores = []
+    repo.sharedhistorystores = []
+
+    packcontentstore, packmetadatastore = makepackstores(repo)
+    cachecontent, cachemetadata = makecachestores(repo)
+    localcontent, localmetadata = makelocalstores(repo)
+    remotecontent, remotemetadata = makeremotestores(repo, cachecontent,
+                                                     cachemetadata)
+
+    # Instantiate union stores
+    repo.contentstore = unioncontentstore(packcontentstore, cachecontent,
+            localcontent, remotecontent, writestore=localcontent)
+    repo.metadatastore = unionmetadatastore(packmetadatastore, cachemetadata,
+            localmetadata, remotemetadata, writestore=localmetadata)
+
+    fileservicedatawrite = cachecontent
+    fileservicehistorywrite = cachecontent
+    if repo.ui.configbool('remotefilelog', 'fetchpacks'):
+        fileservicedatawrite = packcontentstore
+        fileservicehistorywrite = packmetadatastore
+    repo.fileservice.setstore(repo.contentstore, repo.metadatastore,
+                              fileservicedatawrite, fileservicehistorywrite)
+
 def wraprepo(repo):
     class shallowrepository(repo.__class__):
         @util.propertycache
@@ -166,55 +247,7 @@ def wraprepo(repo):
 
     repo.shallowmatch = match.always(repo.root, '')
 
-    localpath = os.path.join(repo.svfs.vfs.base, 'data')
-    if not os.path.exists(localpath):
-        os.makedirs(localpath)
-
-    # Instantiate local data stores
-    localcontent = remotefilelogcontentstore(repo, localpath, repo.name,
-                                             shared=False)
-    localmetadata = remotefilelogmetadatastore(repo, localpath, repo.name,
-                                               shared=False)
-
-    # Instantiate shared cache stores
-    cachepath = shallowutil.getcachepath(repo.ui)
-    cachecontent = remotefilelogcontentstore(repo, cachepath, repo.name,
-                                             shared=True)
-    cachemetadata = remotefilelogmetadatastore(repo, cachepath, repo.name,
-                                               shared=True)
-    repo.sharedstore = cachecontent
-
-    # Instantiate remote stores
-    repo.fileservice = fileserverclient.fileserverclient(repo)
-    remotecontent = remotecontentstore(repo.ui, repo.fileservice, cachecontent)
-    remotemetadata = remotemetadatastore(repo.ui, repo.fileservice,
-                                         cachemetadata)
-
-    # Instantiate pack stores
-    packpath = shallowutil.getcachepackpath(repo, constants.FILEPACK_CATEGORY)
-    packcontentstore = datapackstore(
-        repo.ui,
-        packpath,
-        usecdatapack=repo.ui.configbool('remotefilelog', 'fastdatapack'))
-    packmetadatastore = historypackstore(repo.ui, packpath)
-
-    # Instantiate union stores
-    repo.contentstore = unioncontentstore(packcontentstore, cachecontent,
-            localcontent, remotecontent, writestore=localcontent)
-    repo.metadatastore = unionmetadatastore(packmetadatastore, cachemetadata,
-            localmetadata, remotemetadata, writestore=localmetadata)
-
-    fileservicedatawrite = cachecontent
-    fileservicehistorywrite = cachecontent
-    if repo.ui.configbool('remotefilelog', 'fetchpacks'):
-        fileservicedatawrite = packcontentstore
-        fileservicehistorywrite = packmetadatastore
-    repo.fileservice.setstore(repo.contentstore, repo.metadatastore,
-                              fileservicedatawrite, fileservicehistorywrite)
-
-    # Record which ones are shared stores
-    repo.shareddatastores = [packcontentstore, cachecontent]
-    repo.sharedhistorystores = [packmetadatastore, cachemetadata]
+    makeunionstores(repo)
 
     repo.includepattern = repo.ui.configlist("remotefilelog", "includepattern",
                                              None)
@@ -223,7 +256,3 @@ def wraprepo(repo):
     if repo.includepattern or repo.excludepattern:
         repo.shallowmatch = match.match(repo.root, '', None,
             repo.includepattern, repo.excludepattern)
-
-    localpath = os.path.join(repo.svfs.vfs.base, 'data')
-    if not os.path.exists(localpath):
-        os.makedirs(localpath)
