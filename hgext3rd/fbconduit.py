@@ -21,6 +21,7 @@ from mercurial.util import httplib
 
 conduit_host = None
 conduit_path = None
+conduit_protocol = None
 connection = None
 
 MAX_CONNECT_RETRIES = 3
