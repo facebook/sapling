@@ -747,7 +747,10 @@ def updatetotally(ui, repo, checkout, brev, clean=False, updatecheck=None):
     This returns whether conflict is detected at updating or not.
     """
     if updatecheck is None:
-        updatecheck = 'linear'
+        updatecheck = ui.config('experimental', 'updatecheck')
+        if updatecheck not in ('abort', 'none', 'linear'):
+            # If not configured, or invalid value configured
+            updatecheck = 'linear'
     with repo.wlock():
         movemarkfrom = None
         warndest = False

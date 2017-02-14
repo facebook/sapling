@@ -195,6 +195,81 @@ Cases are run as shown in that table, row by row.
   parent=1
   M foo
 
+  $ echo '[experimental]' >> .hg/hgrc
+  $ echo 'updatecheck = abort' >> .hg/hgrc
+
+  $ revtest 'none dirty linear' dirty 1 2
+  abort: uncommitted changes
+  parent=1
+  M foo
+
+  $ revtest 'none dirty linear' dirty 1 2 -c
+  abort: uncommitted changes
+  parent=1
+  M foo
+
+  $ revtest 'none dirty linear' dirty 1 2 -C
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  parent=2
+
+  $ echo 'updatecheck = none' >> .hg/hgrc
+
+  $ revtest 'none dirty cross'  dirty 3 4
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  parent=4
+  M foo
+
+  $ revtest 'none dirty linear' dirty 1 2
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  parent=2
+  M foo
+
+  $ revtest 'none dirty linear' dirty 1 2 -c
+  abort: uncommitted changes
+  parent=1
+  M foo
+
+  $ revtest 'none dirty linear' dirty 1 2 -C
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  parent=2
+
+  $ hg co -qC 3
+  $ echo dirty >> a
+  $ hg co --tool :merge3 4
+  merging a
+  warning: conflicts while merging a! (edit, then use 'hg resolve --mark')
+  0 files updated, 0 files merged, 0 files removed, 1 files unresolved
+  use 'hg resolve' to retry unresolved file merges
+  [1]
+  $ hg st
+  M a
+  ? a.orig
+  $ cat a
+  <<<<<<< working copy: 6efa171f091b - test: 3
+  three
+  dirty
+  ||||||| base
+  three
+  =======
+  four
+  >>>>>>> destination:  d047485b3896 b1 - test: 4
+  $ rm a.orig
+
+Uses default value of "linear" when value is misspelled
+  $ echo 'updatecheck = linyar' >> .hg/hgrc
+
+  $ revtest 'dirty cross'  dirty 3 4
+  abort: uncommitted changes
+  (commit or update --clean to discard changes)
+  parent=3
+  M foo
+
+Setup for later tests
+  $ revtest 'none dirty linear' dirty 1 2 -c
+  abort: uncommitted changes
+  parent=1
+  M foo
+
   $ cd ..
 
 Test updating to null revision
