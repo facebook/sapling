@@ -668,94 +668,95 @@ def _dispatch(req):
         for ui_ in uis:
             ui_.setconfig('profiling', 'enabled', 'true', '--profile')
 
-    # Configure extensions in phases: uisetup, extsetup, cmdtable, and
-    # reposetup. Programs like TortoiseHg will call _dispatch several
-    # times so we keep track of configured extensions in _loaded.
-    extensions.loadall(lui)
-    exts = [ext for ext in extensions.extensions() if ext[0] not in _loaded]
-    # Propagate any changes to lui.__class__ by extensions
-    ui.__class__ = lui.__class__
+    with profiling.maybeprofile(lui):
+        # Configure extensions in phases: uisetup, extsetup, cmdtable, and
+        # reposetup. Programs like TortoiseHg will call _dispatch several
+        # times so we keep track of configured extensions in _loaded.
+        extensions.loadall(lui)
+        exts = [ext for ext in extensions.extensions() if ext[0] not in _loaded]
+        # Propagate any changes to lui.__class__ by extensions
+        ui.__class__ = lui.__class__
 
-    # (uisetup and extsetup are handled in extensions.loadall)
+        # (uisetup and extsetup are handled in extensions.loadall)
 
-    for name, module in exts:
-        for objname, loadermod, loadername in extraloaders:
-            extraobj = getattr(module, objname, None)
-            if extraobj is not None:
-                getattr(loadermod, loadername)(ui, name, extraobj)
-        _loaded.add(name)
+        for name, module in exts:
+            for objname, loadermod, loadername in extraloaders:
+                extraobj = getattr(module, objname, None)
+                if extraobj is not None:
+                    getattr(loadermod, loadername)(ui, name, extraobj)
+            _loaded.add(name)
 
-    # (reposetup is handled in hg.repository)
+        # (reposetup is handled in hg.repository)
 
-    addaliases(lui, commands.table)
+        addaliases(lui, commands.table)
 
-    # All aliases and commands are completely defined, now.
-    # Check abbreviation/ambiguity of shell alias.
-    shellaliasfn = _checkshellalias(lui, ui, args)
-    if shellaliasfn:
-        with profiling.maybeprofile(lui):
+        # All aliases and commands are completely defined, now.
+        # Check abbreviation/ambiguity of shell alias.
+        shellaliasfn = _checkshellalias(lui, ui, args)
+        if shellaliasfn:
             return shellaliasfn()
 
-    # check for fallback encoding
-    fallback = lui.config('ui', 'fallbackencoding')
-    if fallback:
-        encoding.fallbackencoding = fallback
+        # check for fallback encoding
+        fallback = lui.config('ui', 'fallbackencoding')
+        if fallback:
+            encoding.fallbackencoding = fallback
 
-    fullargs = args
-    cmd, func, args, options, cmdoptions = _parse(lui, args)
+        fullargs = args
+        cmd, func, args, options, cmdoptions = _parse(lui, args)
 
-    if options["config"]:
-        raise error.Abort(_("option --config may not be abbreviated!"))
-    if options["cwd"]:
-        raise error.Abort(_("option --cwd may not be abbreviated!"))
-    if options["repository"]:
-        raise error.Abort(_(
-            "option -R has to be separated from other options (e.g. not -qR) "
-            "and --repository may only be abbreviated as --repo!"))
+        if options["config"]:
+            raise error.Abort(_("option --config may not be abbreviated!"))
+        if options["cwd"]:
+            raise error.Abort(_("option --cwd may not be abbreviated!"))
+        if options["repository"]:
+            raise error.Abort(_(
+                "option -R has to be separated from other options (e.g. not "
+                "-qR) and --repository may only be abbreviated as --repo!"))
 
-    if options["encoding"]:
-        encoding.encoding = options["encoding"]
-    if options["encodingmode"]:
-        encoding.encodingmode = options["encodingmode"]
-    if options["time"]:
-        def get_times():
-            t = os.times()
-            if t[4] == 0.0: # Windows leaves this as zero, so use time.clock()
-                t = (t[0], t[1], t[2], t[3], time.clock())
-            return t
-        s = get_times()
-        def print_time():
-            t = get_times()
-            ui.warn(_("time: real %.3f secs (user %.3f+%.3f sys %.3f+%.3f)\n") %
-                (t[4]-s[4], t[0]-s[0], t[2]-s[2], t[1]-s[1], t[3]-s[3]))
-        atexit.register(print_time)
+        if options["encoding"]:
+            encoding.encoding = options["encoding"]
+        if options["encodingmode"]:
+            encoding.encodingmode = options["encodingmode"]
+        if options["time"]:
+            def get_times():
+                t = os.times()
+                if t[4] == 0.0:
+                    # Windows leaves this as zero, so use time.clock()
+                    t = (t[0], t[1], t[2], t[3], time.clock())
+                return t
+            s = get_times()
+            def print_time():
+                t = get_times()
+                ui.warn(
+                    _("time: real %.3f secs (user %.3f+%.3f sys %.3f+%.3f)\n") %
+                    (t[4]-s[4], t[0]-s[0], t[2]-s[2], t[1]-s[1], t[3]-s[3]))
+            atexit.register(print_time)
 
-    if options['verbose'] or options['debug'] or options['quiet']:
-        for opt in ('verbose', 'debug', 'quiet'):
-            val = str(bool(options[opt]))
+        if options['verbose'] or options['debug'] or options['quiet']:
+            for opt in ('verbose', 'debug', 'quiet'):
+                val = str(bool(options[opt]))
+                for ui_ in uis:
+                    ui_.setconfig('ui', opt, val, '--' + opt)
+
+        if options['traceback']:
             for ui_ in uis:
-                ui_.setconfig('ui', opt, val, '--' + opt)
+                ui_.setconfig('ui', 'traceback', 'on', '--traceback')
 
-    if options['traceback']:
-        for ui_ in uis:
-            ui_.setconfig('ui', 'traceback', 'on', '--traceback')
+        if options['noninteractive']:
+            for ui_ in uis:
+                ui_.setconfig('ui', 'interactive', 'off', '-y')
 
-    if options['noninteractive']:
-        for ui_ in uis:
-            ui_.setconfig('ui', 'interactive', 'off', '-y')
+        if cmdoptions.get('insecure', False):
+            for ui_ in uis:
+                ui_.insecureconnections = True
 
-    if cmdoptions.get('insecure', False):
-        for ui_ in uis:
-            ui_.insecureconnections = True
+        if options['version']:
+            return commands.version_(ui)
+        if options['help']:
+            return commands.help_(ui, cmd, command=cmd is not None)
+        elif not cmd:
+            return commands.help_(ui, 'shortlist')
 
-    if options['version']:
-        return commands.version_(ui)
-    if options['help']:
-        return commands.help_(ui, cmd, command=cmd is not None)
-    elif not cmd:
-        return commands.help_(ui, 'shortlist')
-
-    with profiling.maybeprofile(lui):
         repo = None
         cmdpats = args[:]
         if not func.norepo:
