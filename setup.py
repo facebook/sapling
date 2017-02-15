@@ -126,6 +126,7 @@ else:
                 sources=[
                     'cstore/py-cstore.cpp',
                     'cstore/datapackstore.cpp',
+                    'cstore/uniondatapackstore.cpp',
                 ],
                 include_dirs=[
                     'cstore',

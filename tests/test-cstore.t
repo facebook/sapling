@@ -5,3 +5,4 @@
   $ export PYTHONPATH
 
   $ python $TESTDIR/cstore-datapackstore.py
+  $ python $TESTDIR/cstore-uniondatapackstore.py
