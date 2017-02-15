@@ -1,5 +1,6 @@
 from distutils.version import LooseVersion
 from distutils.core import setup, Extension
+import distutils
 from glob import glob
 
 import os, sys
@@ -84,6 +85,13 @@ availablepackages = [
     'linelog',
 ]
 
+def distutils_dir_name(dname):
+    """Returns the name of a distutils build directory"""
+    f = "{dirname}.{platform}-{version}"
+    return f.format(dirname=dname,
+                    platform=distutils.util.get_platform(),
+                    version=sys.version[:3])
+
 if os.name == 'nt':
     # The modules that successfully compile on Windows
     availableextmodules = {}
@@ -108,6 +116,30 @@ else:
                     "-std=c99",
                     "-Wall",
                     "-Werror", "-Werror=strict-prototypes",
+                ] + cdebugflags,
+            ),
+        ],
+        'cstore' : [
+            Extension('cstore',
+                sources=[
+                    'cstore/py-cstore.cpp',
+                    'cstore/datapackstore.cpp',
+                ],
+                include_dirs=[
+                    'cstore',
+                ] + include_dirs,
+                library_dirs=[
+                    'build/' + distutils_dir_name('lib'),
+                ] + library_dirs,
+                libraries=[
+                    ':cdatapack.so',
+                    'crypto',
+                    ':ctreemanifest.so',
+                ],
+                extra_compile_args=[
+                    "-std=c++0x",
+                    "-Wall",
+                    "-Werror",
                 ] + cdebugflags,
             ),
         ],
@@ -184,6 +216,7 @@ if not components:
 
 dependencies = {
     'absorb' : ['linelog'],
+    'cstore' : ['ctreemanifest', 'cdatapack'],
     'fastannotate' : ['linelog'],
     'infinitepush' : ['extutil'],
     'remotefilelog' : ['cdatapack', 'extutil'],
@@ -226,6 +259,14 @@ ext_modules = []
 for ext_module in availableextmodules:
     if ext_module in components:
         ext_modules.extend(availableextmodules[ext_module])
+
+# Dependencies between our native libraries means we need to build in order
+ext_order = {
+    'cdatapack' : 0,
+    'ctreemanifest' : 1,
+    'cstore' : 2,
+}
+ext_modules = sorted(ext_modules, key=lambda k: ext_order.get(k.name, 999))
 
 requires = []
 requireslz4 = ['remotefilelog', 'cdatapack']
