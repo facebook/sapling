@@ -364,7 +364,8 @@ def _masterrevset(ui, repo, masterstring):
     """
     Try to find the name of ``master`` -- usually a bookmark.
 
-    Defaults to 'tip' if no suitable local or remote bookmark is found.
+    Defaults to the last public revision, if no suitable local or remote
+    bookmark is found.
     """
 
     if not masterstring:
@@ -381,7 +382,7 @@ def _masterrevset(ui, repo, masterstring):
         if name in names:
             return name
 
-    return 'tip'
+    return 'last(public())'
 
 def _reposnames(ui):
     # '' is local repo. This also defines an order precedence for master.
@@ -397,6 +398,8 @@ def _masterrev(repo, masterrevset):
         master = scmutil.revsingle(repo, masterrevset)
     except error.RepoLookupError:
         master = scmutil.revsingle(repo, _masterrevset(repo.ui, repo, ''))
+    except error.Abort:  # empty revision set
+        return None
 
     if master:
         return master.rev()
@@ -472,8 +475,7 @@ def smartlogrevset(repo, subset, x):
     masterrevset = _masterrevset(repo.ui, repo, masterstring)
     masterrev = _masterrev(repo, masterrevset)
 
-    # Check for empty repo
-    if len(repo) == 0:
+    if masterrev is None:
         masterbranch = None
     else:
         masterbranch = branchinfo(masterrev)[0]
@@ -617,11 +619,6 @@ Excludes:
         if ui.config('experimental', 'graphstyle.grandparent') == '|':
             ui.setconfig('experimental', 'graphstyle.grandparent', '2.')
         enabled = True
-        if masterrevset == 'tip':
-            # 'tip' is what _masterrevset always returns when it can't find
-            # master or @
-            ui.warn(_('warning: there is no master changeset locally, try '
-                      'pulling from server\n'))
 
         revdag = getdag(ui, repo, revs, masterrev)
         displayer = cmdutil.show_changeset(ui, repo, opts, buffered=True)

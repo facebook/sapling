@@ -27,7 +27,6 @@ with the inhibit extension enabled.
   warning: the changeset's children were left behind
   (use 'hg rebase --restack' (alias: 'hg restack') to rebase them)
   $ hg smartlog -T '{rev} {bookmarks}'
-  warning: there is no master changeset locally, try pulling from server
   @  4
   |
   | o  3 test
@@ -42,11 +41,11 @@ with the inhibit extension enabled.
   $ hg up 2
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg smartlog -T '{rev} {bookmarks}'
-  warning: there is no master changeset locally, try pulling from server
   o  3 test
   |
   @  2
   |
   o  1 59cf2bc6d22f.preamend
   |
-  ~
+  o  0
+  
