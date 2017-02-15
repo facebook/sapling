@@ -1203,8 +1203,13 @@ def checkwinfilename(path):
 
 if pycompat.osname == 'nt':
     checkosfilename = checkwinfilename
+    timer = time.clock
 else:
     checkosfilename = platform.checkosfilename
+    timer = time.time
+
+if safehasattr(time, "perf_counter"):
+    timer = time.perf_counter
 
 def makelock(info, pathname):
     try:
