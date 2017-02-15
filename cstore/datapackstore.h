@@ -17,7 +17,7 @@ extern "C" {
 #include <string>
 #include <vector>
 
-class Key;
+#include "key.h"
 
 class DeltaChainIterator {
   private:
@@ -49,6 +49,20 @@ class DeltaChainIterator {
     }
 };
 
+class DatapackStore;
+class DatapackStoreKeyIterator : public KeyIterator {
+  private:
+    DatapackStore &_store;
+    KeyIterator &_missing;
+
+  public:
+    DatapackStoreKeyIterator(DatapackStore &store, KeyIterator &missing) :
+      _store(store),
+      _missing(missing) {}
+
+    Key *next();
+};
+
 /* Manages access to a directory of datapack files. */
 class DatapackStore {
   private:
@@ -64,6 +78,8 @@ class DatapackStore {
     ~DatapackStore();
 
     DeltaChainIterator getDeltaChain(const Key &key);
+
+    DatapackStoreKeyIterator getMissing(KeyIterator &missing);
 };
 
 #endif //DATAPACKSTORE_H
