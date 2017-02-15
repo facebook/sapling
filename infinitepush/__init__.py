@@ -515,18 +515,31 @@ def _update(orig, ui, repo, node=None, rev=None, **opts):
         raise error.Abort(_("please specify just one revision"))
 
     if not opts.get('date') and (rev or node) not in repo:
-        mayberemotenode = rev or node
-        if len(mayberemotenode) == 40 and _maybehash(mayberemotenode):
+        mayberemote = rev or node
+        dopull = False
+        kwargs = {}
+        if _scratchbranchmatcher(mayberemote):
+            dopull = True
+            kwargs['bookmark'] = [mayberemote]
+        elif len(mayberemote) == 40 and _maybehash(mayberemote):
+            dopull = True
+            kwargs['rev'] = [mayberemote]
+
+        if dopull:
             ui.warn(
                 _("'%s' does not exist locally - looking for it " +
-                "remotely...\n") % mayberemotenode)
+                "remotely...\n") % mayberemote)
             # Try pulling node from remote repo
             try:
-                commands.pull(ui, repo, rev=[mayberemotenode])
+                cmdname = '^pull'
+                pullcmd = commands.table[cmdname][0]
+                pullopts = dict(opt[1:3] for opt in commands.table[cmdname][1])
+                pullopts.update(kwargs)
+                pullcmd(ui, repo, **pullopts)
             except Exception:
                 ui.warn(_('pull failed: %s\n') % sys.exc_info()[1])
             else:
-                ui.warn(_("'%s' found remotely\n") % mayberemotenode)
+                ui.warn(_("'%s' found remotely\n") % mayberemote)
     return orig(ui, repo, node, rev, **opts)
 
 def _pull(orig, ui, repo, source="default", **opts):

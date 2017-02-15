@@ -36,7 +36,7 @@ Make pull and check that scratch commit is not pulled
   $ hg pull
   pulling from ssh://user@dummy/server
   no changes found
-  $ hg up scratch/book
+  $ hg log -r scratch/book
   abort: unknown revision 'scratch/book'!
   [255]
 

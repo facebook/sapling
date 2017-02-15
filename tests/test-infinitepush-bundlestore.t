@@ -701,3 +701,32 @@ Trying to pull from bad path
   pull failed: repository $TESTTMP/client2/badpath not found
   abort: unknown revision 'c70aee6da07d7cdb9897375473690df3a8563339'!
   [255]
+
+Strip commit and pull it using hg update with bookmark name
+  $ hg strip -q d8fde0ddfc96
+  $ hg book -d scratch/mybranch
+  $ hg up scratch/mybranch
+  'scratch/mybranch' does not exist locally - looking for it remotely...
+  pulling from ssh://user@dummy/repo
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 2 files
+  (run 'hg update' to get a working copy)
+  'scratch/mybranch' found remotely
+  2 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  (activating bookmark scratch/mybranch)
+  $ hg log -G -T '{desc} {phase} {bookmarks} {node|short}'
+  @  testpullbycommithash2 draft scratch/mybranch d8fde0ddfc96
+  |
+  | o  publiccommit public scratch/scratchontopofpublic a79b6597f322
+  | |
+  o |  testpullbycommithash1 draft  33910bfe6ffe
+  |/
+  | o  scratchsecondpart draft scratch/secondpart 8db3891c220e
+  |/
+  | o  scratchfirstpart draft scratch/firstpart 176993b87e39
+  |/
+  o  initialcommit public  67145f466344
+  
