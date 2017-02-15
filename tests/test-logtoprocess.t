@@ -10,6 +10,7 @@ Test if logtoprocess correctly captures command-related log calls.
   > def foo(ui, repo):
   >     ui.log('foo', 'a message: %(bar)s\n', bar='spam')
   > EOF
+  $ cp $HGRCPATH $HGRCPATH.bak
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > logtoprocess=
@@ -52,3 +53,18 @@ ordering issues between the various processes we spawn:
   logtoprocess commandfinish output:
   logtoprocess foo output:
   spam
+
+Confirm that logging blocked time catches stdio properly:
+  $ cp $HGRCPATH.bak $HGRCPATH
+  $ cat >> $HGRCPATH << EOF
+  > [extensions]
+  > logtoprocess=
+  > pager=
+  > [logtoprocess]
+  > uiblocked=echo "\$EVENT command \$OPT_COMMAND_DURATION ms"
+  > [ui]
+  > logblockedtimes=True
+  > EOF
+
+  $ hg log
+  uiblocked command [0-9]+.[0-9]* ms (re)

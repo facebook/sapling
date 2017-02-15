@@ -7,6 +7,7 @@
 
 from __future__ import absolute_import
 
+import collections
 import contextlib
 import errno
 import getpass
@@ -138,6 +139,8 @@ class ui(object):
         self.callhooks = True
         # Insecure server connections requested.
         self.insecureconnections = False
+        # Blocked time
+        self.logblockedtimes = False
 
         if src:
             self.fout = src.fout
@@ -155,6 +158,7 @@ class ui(object):
             self.fixconfig()
 
             self.httppasswordmgrdb = src.httppasswordmgrdb
+            self._blockedtimes = src._blockedtimes
         else:
             self.fout = util.stdout
             self.ferr = util.stderr
@@ -164,6 +168,7 @@ class ui(object):
             self.environ = encoding.environ
 
             self.httppasswordmgrdb = httppasswordmgrdbproxy()
+            self._blockedtimes = collections.defaultdict(int)
 
         allowed = self.configlist('experimental', 'exportableenviron')
         if '*' in allowed:
@@ -191,6 +196,15 @@ class ui(object):
         if self._progbar:
             self._progbar.resetstate()  # reset last-print time of progress bar
         self.httppasswordmgrdb = httppasswordmgrdbproxy()
+
+    @contextlib.contextmanager
+    def timeblockedsection(self, key):
+        starttime = util.timer()
+        try:
+            yield
+        finally:
+            self._blockedtimes[key + '_blocked'] += \
+                (util.timer() - starttime) * 1000
 
     def formatter(self, topic, opts):
         return formatter.formatter(self, topic, opts)
@@ -295,6 +309,7 @@ class ui(object):
             self._reportuntrusted = self.debugflag or self.configbool("ui",
                 "report_untrusted", True)
             self.tracebackflag = self.configbool('ui', 'traceback', False)
+            self.logblockedtimes = self.configbool('ui', 'logblockedtimes')
 
         if section in (None, 'trusted'):
             # update trust information
