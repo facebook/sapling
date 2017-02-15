@@ -57,7 +57,7 @@ merge driver that always takes other versions
 (rc = 0, unresolved = n, driver-resolved = n)
 
   $ cat > ../mergedriver-other.py << EOF
-  > from mercurial import commands
+  > from mercurial import debugcommands
   > def preprocess(ui, repo, hooktype, mergestate, wctx, labels):
   >     backup = ui.backupconfig('ui', 'forcemerge')
   >     try:
@@ -70,7 +70,7 @@ merge driver that always takes other versions
   >     finally:
   >         ui.restoreconfig(backup)
   > 
-  >     return commands.debugmergestate(ui, repo)
+  >     return debugcommands.debugmergestate(ui, repo)
   > def conclude(ui, repo, hooktype, mergestate, wctx, labels):
   >     pass
   > EOF
@@ -233,14 +233,14 @@ leave no files unresolved, but files driver-resolved
 for the conclude step, also test that leaving files as driver-resolved
 implicitly makes them resolved
   $ cat > ../mergedriver-driveronly.py << EOF
-  > from mercurial import commands
+  > from mercurial import debugcommands
   > def preprocess(ui, repo, hooktype, mergestate, wctx, labels):
   >     repo.ui.status('* preprocess called\n')
   >     mergestate.mark('foo.txt', 'd')
   >     mergestate.mark('bar.txt', 'd')
   > def conclude(ui, repo, hooktype, mergestate, wctx, labels):
   >     repo.ui.status('* conclude called\n')
-  >     commands.debugmergestate(ui, repo)
+  >     debugcommands.debugmergestate(ui, repo)
   >     mergestate.mark('foo.txt', 'r')
   > EOF
   $ cat >> $HGRCPATH << EOF
