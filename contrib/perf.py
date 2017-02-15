@@ -1269,6 +1269,17 @@ def perflrucache(ui, size=4, gets=10000, sets=10000, mixed=10000,
         timer(fn, title=title)
         fm.end()
 
+@command('perfwrite', formatteropts)
+def perfwrite(ui, repo, **opts):
+    """microbenchmark ui.write
+    """
+    timer, fm = gettimer(ui, opts)
+    def write():
+        for i in range(100000):
+            ui.write(('Testing write performance\n'))
+    timer(write)
+    fm.end()
+
 def uisetup(ui):
     if (util.safehasattr(cmdutil, 'openrevlog') and
         not util.safehasattr(commands, 'debugrevlogopts')):
