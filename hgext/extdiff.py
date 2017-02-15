@@ -273,7 +273,7 @@ def dodiff(ui, repo, cmdline, pats, opts):
         cmdline = re.sub(regex, quote, cmdline)
 
         ui.debug('running %r in %s\n' % (cmdline, tmproot))
-        ui.system(cmdline, cwd=tmproot)
+        ui.system(cmdline, cwd=tmproot, blockedtag='extdiff')
 
         for copy_fn, working_fn, mtime in fns_and_mtime:
             if os.lstat(copy_fn).st_mtime != mtime:
