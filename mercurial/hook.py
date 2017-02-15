@@ -9,7 +9,6 @@ from __future__ import absolute_import
 
 import os
 import sys
-import time
 
 from .i18n import _
 from . import (
@@ -88,7 +87,7 @@ def _pythonhook(ui, repo, name, hname, funcname, args, throw):
                 % (hname, funcname))
 
     ui.note(_("calling hook %s: %s\n") % (hname, funcname))
-    starttime = time.time()
+    starttime = util.timer()
 
     try:
         r = obj(ui=ui, repo=repo, hooktype=name, **args)
@@ -106,7 +105,7 @@ def _pythonhook(ui, repo, name, hname, funcname, args, throw):
         ui.traceback()
         return True, True
     finally:
-        duration = time.time() - starttime
+        duration = util.timer() - starttime
         ui.log('pythonhook', 'pythonhook-%s: %s finished in %0.2f seconds\n',
                name, funcname, duration)
     if r:
@@ -118,7 +117,7 @@ def _pythonhook(ui, repo, name, hname, funcname, args, throw):
 def _exthook(ui, repo, name, cmd, args, throw):
     ui.note(_("running hook %s: %s\n") % (name, cmd))
 
-    starttime = time.time()
+    starttime = util.timer()
     env = {}
 
     # make in-memory changes visible to external process
@@ -145,7 +144,7 @@ def _exthook(ui, repo, name, cmd, args, throw):
         cwd = pycompat.getcwd()
     r = ui.system(cmd, environ=env, cwd=cwd)
 
-    duration = time.time() - starttime
+    duration = util.timer() - starttime
     ui.log('exthook', 'exthook-%s: %s finished in %0.2f seconds\n',
            name, cmd, duration)
     if r:

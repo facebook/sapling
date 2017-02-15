@@ -2797,13 +2797,13 @@ def timed(func):
     '''
 
     def wrapper(*args, **kwargs):
-        start = time.time()
+        start = timer()
         indent = 2
         _timenesting[0] += indent
         try:
             return func(*args, **kwargs)
         finally:
-            elapsed = time.time() - start
+            elapsed = timer() - start
             _timenesting[0] -= indent
             stderr.write('%s%s: %s\n' %
                          (' ' * _timenesting[0], func.__name__,

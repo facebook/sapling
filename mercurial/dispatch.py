@@ -123,7 +123,7 @@ def dispatch(req):
         return -1
 
     msg = ' '.join(' ' in a and repr(a) or a for a in req.args)
-    starttime = time.time()
+    starttime = util.timer()
     ret = None
     try:
         ret = _runcatch(req)
@@ -135,7 +135,7 @@ def dispatch(req):
                 raise
         ret = -1
     finally:
-        duration = time.time() - starttime
+        duration = util.timer() - starttime
         req.ui.flush()
         req.ui.log("commandfinish", "%s exited %s after %0.2f seconds\n",
                    msg, ret or 0, duration)

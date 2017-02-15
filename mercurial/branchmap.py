@@ -9,7 +9,6 @@ from __future__ import absolute_import
 
 import array
 import struct
-import time
 
 from .node import (
     bin,
@@ -21,6 +20,7 @@ from . import (
     encoding,
     error,
     scmutil,
+    util,
 )
 
 array = array.array
@@ -261,7 +261,7 @@ class branchcache(dict):
         missing heads, and a generator of nodes that are strictly a superset of
         heads missing, this function updates self to be correct.
         """
-        starttime = time.time()
+        starttime = util.timer()
         cl = repo.changelog
         # collect new branch entries
         newbranches = {}
@@ -314,7 +314,7 @@ class branchcache(dict):
                     self.tiprev = tiprev
         self.filteredhash = scmutil.filteredhash(repo, self.tiprev)
 
-        duration = time.time() - starttime
+        duration = util.timer() - starttime
         repo.ui.log('branchcache', 'updated %s branch cache in %.4f seconds\n',
                     repo.filtername, duration)
 

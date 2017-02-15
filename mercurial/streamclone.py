@@ -8,7 +8,6 @@
 from __future__ import absolute_import
 
 import struct
-import time
 
 from .i18n import _
 from . import (
@@ -297,7 +296,7 @@ def consumev1(repo, fp, filecount, bytecount):
                        (filecount, util.bytecount(bytecount)))
         handled_bytes = 0
         repo.ui.progress(_('clone'), 0, total=bytecount, unit=_('bytes'))
-        start = time.time()
+        start = util.timer()
 
         # TODO: get rid of (potential) inconsistency
         #
@@ -340,7 +339,7 @@ def consumev1(repo, fp, filecount, bytecount):
             # streamclone-ed file at next access
             repo.invalidate(clearfilecache=True)
 
-        elapsed = time.time() - start
+        elapsed = util.timer() - start
         if elapsed <= 0:
             elapsed = 0.001
         repo.ui.progress(_('clone'), None)

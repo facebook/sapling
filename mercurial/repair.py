@@ -12,7 +12,6 @@ import errno
 import hashlib
 import stat
 import tempfile
-import time
 
 from .i18n import _
 from .node import short
@@ -905,10 +904,10 @@ def _upgraderepo(ui, srcrepo, dstrepo, requirements, actions):
     # the operation nearly instantaneous and atomic (at least in well-behaved
     # environments).
     ui.write(_('replacing store...\n'))
-    tstart = time.time()
+    tstart = util.timer()
     util.rename(srcrepo.spath, backupvfs.join('store'))
     util.rename(dstrepo.spath, srcrepo.spath)
-    elapsed = time.time() - tstart
+    elapsed = util.timer() - tstart
     ui.write(_('store replacement complete; repository was inconsistent for '
                '%0.1fs\n') % elapsed)
 

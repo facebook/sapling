@@ -8,7 +8,6 @@
 from __future__ import absolute_import, print_function
 
 import contextlib
-import time
 
 from .i18n import _
 from . import (
@@ -66,7 +65,7 @@ def flameprofile(ui, fp):
     collapse_recursion = True
     thread = flamegraph.ProfileThread(fp, 1.0 / freq,
                                       filter_, collapse_recursion)
-    start_time = time.clock()
+    start_time = util.timer()
     try:
         thread.start()
         yield
@@ -74,7 +73,7 @@ def flameprofile(ui, fp):
         thread.stop()
         thread.join()
         print('Collected %d stack frames (%d unique) in %2.2f seconds.' % (
-            time.clock() - start_time, thread.num_frames(),
+            util.timer() - start_time, thread.num_frames(),
             thread.num_frames(unique=True)))
 
 @contextlib.contextmanager

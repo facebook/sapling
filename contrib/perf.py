@@ -190,13 +190,13 @@ def stub_timer(fm, func, title=None):
 
 def _timer(fm, func, title=None):
     results = []
-    begin = time.time()
+    begin = util.timer()
     count = 0
     while True:
         ostart = os.times()
-        cstart = time.time()
+        cstart = util.timer()
         r = func()
-        cstop = time.time()
+        cstop = util.timer()
         ostop = os.times()
         count += 1
         a, b = ostart, ostop
