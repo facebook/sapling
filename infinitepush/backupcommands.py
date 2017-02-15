@@ -217,9 +217,9 @@ def _getremote(repo, ui, dest, **opts):
     return hg.peer(repo, opts, dest)
 
 def _getcommandandoptions(command):
-    pushcmd = commands.table[command][0]
-    pushopts = dict(opt[1:3] for opt in commands.table[command][1])
-    return pushcmd, pushopts
+    cmd = commands.table[command][0]
+    opts = dict(opt[1:3] for opt in commands.table[command][1])
+    return cmd, opts
 
 # Backup helper functions
 
