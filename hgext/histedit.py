@@ -992,7 +992,8 @@ def _getgoal(opts):
 
 def _readfile(ui, path):
     if path == '-':
-        return ui.fin.read()
+        with ui.timeblockedsection('histedit'):
+            return ui.fin.read()
     else:
         with open(path, 'rb') as f:
             return f.read()
