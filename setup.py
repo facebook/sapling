@@ -45,6 +45,10 @@ def get_env_path_list(var_name, default=None):
 include_dirs = get_env_path_list('INCLUDE_DIRS')
 library_dirs = get_env_path_list('LIBRARY_DIRS')
 
+libraries = [
+  ('mpatch', {'sources': ['cstore/mpatch.c']}),
+]
+
 # Historical default values.
 # We should perhaps clean these up in the future after verifying that it
 # doesn't break the build on any platforms.
@@ -294,4 +298,5 @@ setup(
     install_requires=requires,
     py_modules=py_modules,
     ext_modules = ext_modules,
+    libraries=libraries,
 )
