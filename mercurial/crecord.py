@@ -1375,7 +1375,8 @@ the following are valid keystrokes:
             pass
         helpwin.refresh()
         try:
-            helpwin.getkey()
+            with self.ui.timeblockedsection('crecord'):
+                helpwin.getkey()
         except curses.error:
             pass
 
@@ -1392,7 +1393,8 @@ the following are valid keystrokes:
         self.stdscr.refresh()
         confirmwin.refresh()
         try:
-            response = chr(self.stdscr.getch())
+            with self.ui.timeblockedsection('crecord'):
+                response = chr(self.stdscr.getch())
         except ValueError:
             response = None
 
@@ -1412,7 +1414,8 @@ note: don't add/remove lines unless you also modify the range information.
 
 are you sure you want to review/edit and confirm the selected changes [yn]?
 """)
-        response = self.confirmationwindow(confirmtext)
+        with self.ui.timeblockedsection('crecord'):
+            response = self.confirmationwindow(confirmtext)
         if response is None:
             response = "n"
         if response.lower().startswith("y"):
@@ -1655,7 +1658,8 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
         while True:
             self.updatescreen()
             try:
-                keypressed = self.statuswin.getkey()
+                with self.ui.timeblockedsection('crecord'):
+                    keypressed = self.statuswin.getkey()
                 if self.errorstr is not None:
                     self.errorstr = None
                     continue
