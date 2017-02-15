@@ -199,6 +199,7 @@ class ui(object):
 
     @contextlib.contextmanager
     def timeblockedsection(self, key):
+        # this is open-coded below - search for timeblockedsection to find them
         starttime = util.timer()
         try:
             yield
@@ -776,31 +777,44 @@ class ui(object):
             self._buffers[-1].extend(a for a in args)
         else:
             self._progclear()
-            for a in args:
-                self.fout.write(a)
+            # opencode timeblockedsection because this is a critical path
+            starttime = util.timer()
+            try:
+                for a in args:
+                    self.fout.write(a)
+            finally:
+                self._blockedtimes['stdio_blocked'] += \
+                    (util.timer() - starttime) * 1000
 
     def write_err(self, *args, **opts):
         self._progclear()
         try:
             if self._bufferstates and self._bufferstates[-1][0]:
                 return self.write(*args, **opts)
-            if not getattr(self.fout, 'closed', False):
-                self.fout.flush()
-            for a in args:
-                self.ferr.write(a)
-            # stderr may be buffered under win32 when redirected to files,
-            # including stdout.
-            if not getattr(self.ferr, 'closed', False):
-                self.ferr.flush()
+            with self.timeblockedsection('stdio'):
+                if not getattr(self.fout, 'closed', False):
+                    self.fout.flush()
+                for a in args:
+                    self.ferr.write(a)
+                # stderr may be buffered under win32 when redirected to files,
+                # including stdout.
+                if not getattr(self.ferr, 'closed', False):
+                    self.ferr.flush()
         except IOError as inst:
             if inst.errno not in (errno.EPIPE, errno.EIO, errno.EBADF):
                 raise
 
     def flush(self):
-        try: self.fout.flush()
-        except (IOError, ValueError): pass
-        try: self.ferr.flush()
-        except (IOError, ValueError): pass
+        # opencode timeblockedsection because this is a critical path
+        starttime = util.timer()
+        try:
+            try: self.fout.flush()
+            except (IOError, ValueError): pass
+            try: self.ferr.flush()
+            except (IOError, ValueError): pass
+        finally:
+            self._blockedtimes['stdio_blocked'] += \
+                (util.timer() - starttime) * 1000
 
     def _isatty(self, fh):
         if self.configbool('ui', 'nontty', False):
@@ -962,7 +976,8 @@ class ui(object):
         sys.stdout = self.fout
         # prompt ' ' must exist; otherwise readline may delete entire line
         # - http://bugs.python.org/issue12833
-        line = raw_input(' ')
+        with self.timeblockedsection('stdio'):
+            line = raw_input(' ')
         sys.stdin = oldin
         sys.stdout = oldout
 
@@ -1042,13 +1057,14 @@ class ui(object):
             self.write_err(self.label(prompt or _('password: '), 'ui.prompt'))
             # disable getpass() only if explicitly specified. it's still valid
             # to interact with tty even if fin is not a tty.
-            if self.configbool('ui', 'nontty'):
-                l = self.fin.readline()
-                if not l:
-                    raise EOFError
-                return l.rstrip('\n')
-            else:
-                return getpass.getpass('')
+            with self.timeblockedsection('stdio'):
+                if self.configbool('ui', 'nontty'):
+                    l = self.fin.readline()
+                    if not l:
+                        raise EOFError
+                    return l.rstrip('\n')
+                else:
+                    return getpass.getpass('')
         except EOFError:
             raise error.ResponseExpected()
     def status(self, *msg, **opts):
