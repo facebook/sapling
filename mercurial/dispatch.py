@@ -749,6 +749,9 @@ def _dispatch(req):
             for ui_ in uis:
                 ui_.setconfig('ui', 'interactive', 'off', '-y')
 
+        if options['pager'] != 'auto' and not util.parsebool(options['pager']):
+            ui.neverpager()
+
         if cmdoptions.get('insecure', False):
             for ui_ in uis:
                 ui_.insecureconnections = True
