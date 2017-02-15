@@ -7,6 +7,7 @@
 
 from __future__ import absolute_import
 
+import atexit
 import collections
 import contextlib
 import errno
@@ -14,7 +15,9 @@ import getpass
 import inspect
 import os
 import re
+import signal
 import socket
+import subprocess
 import sys
 import tempfile
 import traceback
@@ -115,6 +118,8 @@ class httppasswordmgrdbproxy(object):
     def find_user_password(self, *args, **kwargs):
         return self._get_mgr().find_user_password(*args, **kwargs)
 
+def _catchterm(*args):
+    raise error.SignalInterrupt
 
 class ui(object):
     def __init__(self, src=None):
@@ -149,6 +154,7 @@ class ui(object):
             self.fout = src.fout
             self.ferr = src.ferr
             self.fin = src.fin
+            self.pageractive = src.pageractive
 
             self._tcfg = src._tcfg.copy()
             self._ucfg = src._ucfg.copy()
@@ -166,6 +172,7 @@ class ui(object):
             self.fout = util.stdout
             self.ferr = util.stderr
             self.fin = util.stdin
+            self.pageractive = False
 
             # shared read-only environment
             self.environ = encoding.environ
@@ -823,6 +830,77 @@ class ui(object):
         if self.configbool('ui', 'nontty', False):
             return False
         return util.isatty(fh)
+
+    def pager(self, command):
+        """Start a pager for subsequent command output.
+
+        Commands which produce a long stream of output should call
+        this function to activate the user's preferred pagination
+        mechanism (which may be no pager). Calling this function
+        precludes any future use of interactive functionality, such as
+        prompting the user or activating curses.
+
+        Args:
+          command: The full, non-aliased name of the command. That is, "log"
+                   not "history, "summary" not "summ", etc.
+        """
+        if (self.pageractive
+            # TODO: if we want to allow HGPLAINEXCEPT=pager,
+            # formatted() will need some adjustment.
+            or not self.formatted()
+            or self.plain()
+            # TODO: expose debugger-enabled on the UI object
+            or '--debugger' in sys.argv):
+            # We only want to paginate if the ui appears to be
+            # interactive, the user didn't say HGPLAIN or
+            # HGPLAINEXCEPT=pager, and the user didn't specify --debug.
+            return
+
+        # TODO: add a "system defaults" config section so this default
+        # of more(1) can be easily replaced with a global
+        # configuration file. For example, on OS X the sane default is
+        # less(1), not more(1), and on debian it's
+        # sensible-pager(1). We should probably also give the system
+        # default editor command similar treatment.
+        envpager = encoding.environ.get('PAGER', 'more')
+        pagercmd = self.config('pager', 'pager', envpager)
+        self.pageractive = True
+        # Preserve the formatted-ness of the UI. This is important
+        # because we mess with stdout, which might confuse
+        # auto-detection of things being formatted.
+        self.setconfig('ui', 'formatted', self.formatted(), 'pager')
+        self.setconfig('ui', 'interactive', False, 'pager')
+        if util.safehasattr(signal, "SIGPIPE"):
+            signal.signal(signal.SIGPIPE, _catchterm)
+        self._runpager(pagercmd)
+
+    def _runpager(self, command):
+        """Actually start the pager and set up file descriptors.
+
+        This is separate in part so that extensions (like chg) can
+        override how a pager is invoked.
+        """
+        pager = subprocess.Popen(command, shell=True, bufsize=-1,
+                                 close_fds=util.closefds, stdin=subprocess.PIPE,
+                                 stdout=util.stdout, stderr=util.stderr)
+
+        # back up original file descriptors
+        stdoutfd = os.dup(util.stdout.fileno())
+        stderrfd = os.dup(util.stderr.fileno())
+
+        os.dup2(pager.stdin.fileno(), util.stdout.fileno())
+        if self._isatty(util.stderr):
+            os.dup2(pager.stdin.fileno(), util.stderr.fileno())
+
+        @atexit.register
+        def killpager():
+            if util.safehasattr(signal, "SIGINT"):
+                signal.signal(signal.SIGINT, signal.SIG_IGN)
+            # restore original fds, closing pager.stdin copies in the process
+            os.dup2(stdoutfd, util.stdout.fileno())
+            os.dup2(stderrfd, util.stderr.fileno())
+            pager.stdin.close()
+            pager.wait()
 
     def interface(self, feature):
         """what interface to use for interactive console features?

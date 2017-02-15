@@ -60,19 +60,11 @@ you can use --pager=<value>::
 '''
 from __future__ import absolute_import
 
-import atexit
-import os
-import signal
-import subprocess
-import sys
-
 from mercurial.i18n import _
 from mercurial import (
     cmdutil,
     commands,
     dispatch,
-    encoding,
-    error,
     extensions,
     util,
     )
@@ -83,48 +75,14 @@ from mercurial import (
 # leave the attribute unspecified.
 testedwith = 'ships-with-hg-core'
 
-def _runpager(ui, p):
-    pager = subprocess.Popen(p, shell=True, bufsize=-1,
-                             close_fds=util.closefds, stdin=subprocess.PIPE,
-                             stdout=util.stdout, stderr=util.stderr)
-
-    # back up original file descriptors
-    stdoutfd = os.dup(util.stdout.fileno())
-    stderrfd = os.dup(util.stderr.fileno())
-
-    os.dup2(pager.stdin.fileno(), util.stdout.fileno())
-    if ui._isatty(util.stderr):
-        os.dup2(pager.stdin.fileno(), util.stderr.fileno())
-
-    @atexit.register
-    def killpager():
-        if util.safehasattr(signal, "SIGINT"):
-            signal.signal(signal.SIGINT, signal.SIG_IGN)
-        # restore original fds, closing pager.stdin copies in the process
-        os.dup2(stdoutfd, util.stdout.fileno())
-        os.dup2(stderrfd, util.stderr.fileno())
-        pager.stdin.close()
-        pager.wait()
-
-def catchterm(*args):
-    raise error.SignalInterrupt
-
 def uisetup(ui):
-    class pagerui(ui.__class__):
-        def _runpager(self, pagercmd):
-            _runpager(self, pagercmd)
-
-    ui.__class__ = pagerui
 
     def pagecmd(orig, ui, options, cmd, cmdfunc):
-        p = ui.config("pager", "pager", encoding.environ.get("PAGER"))
         usepager = False
         always = util.parsebool(options['pager'])
         auto = options['pager'] == 'auto'
 
-        if not p or '--debugger' in sys.argv or not ui.formatted():
-            pass
-        elif always:
+        if always:
             usepager = True
         elif not auto:
             usepager = False
@@ -143,14 +101,8 @@ def uisetup(ui):
                     usepager = True
                     break
 
-        setattr(ui, 'pageractive', usepager)
-
         if usepager:
-            ui.setconfig('ui', 'formatted', ui.formatted(), 'pager')
-            ui.setconfig('ui', 'interactive', False, 'pager')
-            if util.safehasattr(signal, "SIGPIPE"):
-                signal.signal(signal.SIGPIPE, catchterm)
-            ui._runpager(p)
+            ui.pager('extension-via-attend-' + cmd)
         return orig(ui, options, cmd, cmdfunc)
 
     # Wrap dispatch._runcommand after color is loaded so color can see
