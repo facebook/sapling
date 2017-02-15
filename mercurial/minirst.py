@@ -425,12 +425,14 @@ _admonitions = set([
     'warning',
 ])
 
-def findadmonitions(blocks):
+def findadmonitions(blocks, admonitions=None):
     """
     Makes the type of the block an admonition block if
     the first line is an admonition directive
     """
-    admonitionre = re.compile(r'\.\. (%s)::' % '|'.join(sorted(_admonitions)),
+    admonitions = admonitions or _admonitions
+
+    admonitionre = re.compile(r'\.\. (%s)::' % '|'.join(sorted(admonitions)),
                               flags=re.IGNORECASE)
 
     i = 0
@@ -642,7 +644,7 @@ def formathtml(blocks):
 
     return ''.join(out)
 
-def parse(text, indent=0, keep=None):
+def parse(text, indent=0, keep=None, admonitions=None):
     """Parse text into a list of blocks"""
     pruned = []
     blocks = findblocks(text)
@@ -657,7 +659,7 @@ def parse(text, indent=0, keep=None):
     blocks = splitparagraphs(blocks)
     blocks = updatefieldlists(blocks)
     blocks = updateoptionlists(blocks)
-    blocks = findadmonitions(blocks)
+    blocks = findadmonitions(blocks, admonitions=admonitions)
     blocks = addmargins(blocks)
     blocks = prunecomments(blocks)
     return blocks, pruned
