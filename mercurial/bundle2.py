@@ -515,7 +515,7 @@ class bundle20(object):
         """setup core part compression to <alg>"""
         if alg in (None, 'UN'):
             return
-        assert not any(n.lower() == 'Compression' for n, v in self._params)
+        assert not any(n.lower() == 'compression' for n, v in self._params)
         self.addparam('Compression', alg)
         self._compengine = util.compengines.forbundletype(alg)
         self._compopts = compopts
