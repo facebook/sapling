@@ -262,5 +262,9 @@ docker-centos7:
 .PHONY: help all local build doc cleanbutpackages clean install install-bin \
 	install-doc install-home install-home-bin install-home-doc \
 	dist dist-notests check tests check-code update-pot \
-	osx fedora20 docker-fedora20 fedora21 docker-fedora21 \
+	osx deb ppa docker-debian-jessie \
+	docker-ubuntu-trusty docker-ubuntu-trusty-ppa \
+	docker-ubuntu-xenial docker-ubuntu-xenial-ppa \
+	docker-ubuntu-yakkety docker-ubuntu-yakkety-ppa \
+	fedora20 docker-fedora20 fedora21 docker-fedora21 \
 	centos5 docker-centos5 centos6 docker-centos6 centos7 docker-centos7
