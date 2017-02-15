@@ -35,6 +35,9 @@ from . import (
 
 urlreq = util.urlreq
 
+# for use with str.translate(None, _keepalnum), to keep just alphanumerics
+_keepalnum = ''.join(c for c in map(chr, range(256)) if not c.isalnum())
+
 samplehgrcs = {
     'user':
 """# example user config (see 'hg help config' for more info)
@@ -1146,15 +1149,19 @@ class ui(object):
 
         return t
 
-    def system(self, cmd, environ=None, cwd=None, onerr=None, errprefix=None):
+    def system(self, cmd, environ=None, cwd=None, onerr=None, errprefix=None,
+               blockedtag=None):
         '''execute shell command with appropriate output stream. command
         output will be redirected if fout is not stdout.
         '''
+        if blockedtag is None:
+            blockedtag = 'unknown_system_' + cmd.translate(None, _keepalnum)
         out = self.fout
         if any(s[1] for s in self._bufferstates):
             out = self
-        return util.system(cmd, environ=environ, cwd=cwd, onerr=onerr,
-                           errprefix=errprefix, out=out)
+        with self.timeblockedsection(blockedtag):
+            return util.system(cmd, environ=environ, cwd=cwd, onerr=onerr,
+                               errprefix=errprefix, out=out)
 
     def traceback(self, exc=None, force=False):
         '''print exception traceback if traceback printing enabled or forced.
