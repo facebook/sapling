@@ -15,6 +15,7 @@ except ImportError:
     from mercurial.cmdutil import service as runservice
 
 known_translations = {}
+next_error_message = []
 
 class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     def handle_request(self, param):
@@ -23,6 +24,11 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         to_repo = param['to_repo']
         to_scm = param['to_scm']
         revs = param['revs']
+
+        if next_error_message:
+            self.send_response(500, next_error_message[0])
+            self.end_headers()
+            del next_error_message[0]
 
         translations = known_translations.get(
             (from_repo, from_scm, to_repo, to_scm), {})
@@ -89,6 +95,12 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         if len(path_comps) == 6:
             self.update("PUT", path_comps)
             return
+        elif len(path_comps) == 2 and path_comps[0] == 'fail_next':
+            # This allows tests to ask us to fail the next HTTP request
+            next_error_message.append(path_comps[1])
+            self.send_response(200)
+            self.end_headers()
+            return
 
         self.send_response(500)
         self.end_headers()
@@ -111,17 +123,23 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
 
 class simplehttpservice(object):
-    def __init__(self, host, port):
+    def __init__(self, host, port, port_file):
         self.address = (host, port)
+        self.port_file = port_file
     def init(self):
         self.httpd = BaseHTTPServer.HTTPServer(self.address, RequestHandler)
+        if self.port_file:
+            with open(self.port_file, 'w') as f:
+                f.write('%d\n' % self.httpd.server_port)
     def run(self):
         self.httpd.serve_forever()
 
 if __name__ == '__main__':
     parser = OptionParser()
-    parser.add_option('-p', '--port', dest='port', type='int', default=8000,
+    parser.add_option('-p', '--port', dest='port', type='int', default=0,
         help='TCP port to listen on', metavar='PORT')
+    parser.add_option('--port-file', dest='port_file',
+        help='file name where the server port should be written')
     parser.add_option('-H', '--host', dest='host', default='localhost',
         help='hostname or IP to listen on', metavar='HOST')
     parser.add_option('--pid', dest='pid',
@@ -141,6 +159,6 @@ if __name__ == '__main__':
     opts = {'pid_file': options.pid,
             'daemon': not options.foreground,
             'daemon_postexec': options.daemon_postexec}
-    service = simplehttpservice(options.host, options.port)
+    service = simplehttpservice(options.host, options.port, options.port_file)
     runservice(opts, initfn=service.init, runfn=service.run,
                runargs=[sys.executable, __file__] + sys.argv[1:])

@@ -191,7 +191,8 @@ def gitnode(repo, subset, x):
     backingrepos = repo.ui.configlist('fbconduit', 'backingrepos',
                                       default=[reponame])
 
-    translationerror = False
+    lasterror = None
+    hghash = None
     for backingrepo in backingrepos:
         try:
             result = call_conduit('scmquery.get.mirrored.revs',
@@ -204,16 +205,18 @@ def gitnode(repo, subset, x):
             hghash = result[n]
             if hghash != '':
                 break
-        except ConduitError:
-            pass
-    else:
-        translationerror = True
+        except Exception as ex:
+            lasterror = ex
 
-    if translationerror or result[n] == "":
-        repo.ui.warn(("Could not translate revision {0}.\n".format(n)))
+    if not hghash:
+        if lasterror:
+            repo.ui.warn(("Could not translate revision {0}: {1}\n".format(
+                n, lasterror)))
+        else:
+            repo.ui.warn(("Could not translate revision {0}\n".format(n)))
         return subset.filter(lambda r: False)
 
-    rn = repo[node.bin(result[n])].rev()
+    rn = repo[node.bin(hghash)].rev()
     return subset.filter(lambda r: r == rn)
 
 def overridestringset(orig, repo, subset, x):

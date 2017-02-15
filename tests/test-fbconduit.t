@@ -1,7 +1,8 @@
 Start up translation service.
 
-  $ python "$TESTDIR/conduithttp.py" -p 8543 --pid conduit.pid
+  $ python "$TESTDIR/conduithttp.py" --port-file conduit.port --pid conduit.pid
   $ cat conduit.pid >> $DAEMON_PIDS
+  $ CONDUIT_PORT=`cat conduit.port`
 
 Basic functionality.
 
@@ -11,7 +12,7 @@ Basic functionality.
   $ echo "fbconduit = $TESTDIR/../hgext3rd/fbconduit.py" >> .hg/hgrc
   $ echo "[fbconduit]" >> .hg/hgrc
   $ echo "reponame = basic" >> .hg/hgrc
-  $ echo "host = localhost:8543" >> .hg/hgrc
+  $ echo "host = localhost:$CONDUIT_PORT" >> .hg/hgrc
   $ echo "path = /intern/conduit/" >> .hg/hgrc
   $ echo "protocol = http" >> .hg/hgrc
   $ touch file
@@ -19,7 +20,7 @@ Basic functionality.
   $ hg ci -m "initial commit"
   $ commitid=`hg log -T "{label('custom.fullrev',node)}"`
   $ hg phase -p $commitid
-  $ curl -s -X PUT http://localhost:8543/basic/hg/basic/git/$commitid/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+  $ curl -s -X PUT http://localhost:$CONDUIT_PORT/basic/hg/basic/git/$commitid/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
   $ hg log -T '{gitnode}\n'
   aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
   $ hg log -T '{mirrornode("git")}\n'
@@ -27,10 +28,17 @@ Basic functionality.
   $ hg log -T '{mirrornode("basic", "git")}\n'
   aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
   $ hg log -r 'gitnode("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")'
-  Could not translate revision aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.
-  $ curl -s -X PUT http://localhost:8543/basic/git/basic/hg/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/$commitid
+  Could not translate revision aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+  $ curl -s -X PUT http://localhost:$CONDUIT_PORT/basic/git/basic/hg/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/$commitid
   $ hg log -r 'gitnode("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")' -T '{desc}\n'
   initial commit
+
+Make sure that we fail gracefully if the translation server returns an
+HTTP error code.
+
+  $ curl -s -X PUT http://localhost:$CONDUIT_PORT/fail_next/whoops
+  $ hg log -r 'gitnode("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")' -T '{desc}\n'
+  Could not translate revision aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa: whoops
   $ cd ..
 
 Test with one backing repos specified.
@@ -42,7 +50,7 @@ Test with one backing repos specified.
   $ echo "[fbconduit]" >> .hg/hgrc
   $ echo "reponame = single" >> .hg/hgrc
   $ echo "backingrepos = single_src" >> .hg/hgrc
-  $ echo "host = localhost:8543" >> .hg/hgrc
+  $ echo "host = localhost:$CONDUIT_PORT" >> .hg/hgrc
   $ echo "path = /intern/conduit/" >> .hg/hgrc
   $ echo "protocol = http" >> .hg/hgrc
   $ touch file
@@ -50,12 +58,12 @@ Test with one backing repos specified.
   $ hg ci -m "initial commit"
   $ commitid=`hg log -T "{label('custom.fullrev',node)}"`
   $ hg phase -p $commitid
-  $ curl -s -X PUT http://localhost:8543/single/hg/single_src/git/$commitid/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+  $ curl -s -X PUT http://localhost:$CONDUIT_PORT/single/hg/single_src/git/$commitid/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
   $ hg log -T '{gitnode}\n'
   aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
   $ hg log -r 'gitnode("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")'
-  Could not translate revision aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.
-  $ curl -s -X PUT http://localhost:8543/single_src/git/single/hg/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/$commitid
+  Could not translate revision aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+  $ curl -s -X PUT http://localhost:$CONDUIT_PORT/single_src/git/single/hg/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/$commitid
   $ hg log -r 'gitnode("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")' -T '{desc}\n'
   initial commit
   $ cd ..
@@ -69,7 +77,7 @@ Test with multiple backing repos specified.
   $ echo "[fbconduit]" >> .hg/hgrc
   $ echo "reponame = multiple" >> .hg/hgrc
   $ echo "backingrepos = src_a src_b src_c" >> .hg/hgrc
-  $ echo "host = localhost:8543" >> .hg/hgrc
+  $ echo "host = localhost:$CONDUIT_PORT" >> .hg/hgrc
   $ echo "path = /intern/conduit/" >> .hg/hgrc
   $ echo "protocol = http" >> .hg/hgrc
   $ touch file_a
@@ -87,10 +95,10 @@ Test with multiple backing repos specified.
   $ hg phase -p $commit_a_id
   $ hg phase -p $commit_b_id
   $ hg phase -p $commit_c_id
-  $ curl -s -X PUT http://localhost:8543/multiple/hg/src_a/git/$commit_a_id/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-  $ curl -s -X PUT http://localhost:8543/multiple/hg/src_b/git/$commit_b_id/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-  $ curl -s -X PUT http://localhost:8543/multiple/hg/src_c/git/$commit_c_id/cccccccccccccccccccccccccccccccccccccccc
-  $ curl -s -X PUT http://localhost:8543/multiple/hg/src_b/git/$commit_c_id/dddddddddddddddddddddddddddddddddddddddd
+  $ curl -s -X PUT http://localhost:$CONDUIT_PORT/multiple/hg/src_a/git/$commit_a_id/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+  $ curl -s -X PUT http://localhost:$CONDUIT_PORT/multiple/hg/src_b/git/$commit_b_id/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+  $ curl -s -X PUT http://localhost:$CONDUIT_PORT/multiple/hg/src_c/git/$commit_c_id/cccccccccccccccccccccccccccccccccccccccc
+  $ curl -s -X PUT http://localhost:$CONDUIT_PORT/multiple/hg/src_b/git/$commit_c_id/dddddddddddddddddddddddddddddddddddddddd
   $ hg log -T '{gitnode}\n' -r ".^^"
   src_a: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
   $ hg log -T '{gitnode}\n' -r ".^"
@@ -98,11 +106,11 @@ Test with multiple backing repos specified.
   $ hg log -T '{gitnode}\n' -r .
   src_b: dddddddddddddddddddddddddddddddddddddddd; src_c: cccccccccccccccccccccccccccccccccccccccc
   $ hg log -r 'gitnode("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")'
-  Could not translate revision aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.
-  $ curl -s -X PUT http://localhost:8543/src_a/git/multiple/hg/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/$commit_a_id
-  $ curl -s -X PUT http://localhost:8543/src_b/git/multiple/hg/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb/$commit_b_id
-  $ curl -s -X PUT http://localhost:8543/src_c/git/multiple/hg/cccccccccccccccccccccccccccccccccccccccc/$commit_c_id
-  $ curl -s -X PUT http://localhost:8543/src_b/git/multiple/hg/dddddddddddddddddddddddddddddddddddddddd/$commit_c_id
+  Could not translate revision aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+  $ curl -s -X PUT http://localhost:$CONDUIT_PORT/src_a/git/multiple/hg/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/$commit_a_id
+  $ curl -s -X PUT http://localhost:$CONDUIT_PORT/src_b/git/multiple/hg/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb/$commit_b_id
+  $ curl -s -X PUT http://localhost:$CONDUIT_PORT/src_c/git/multiple/hg/cccccccccccccccccccccccccccccccccccccccc/$commit_c_id
+  $ curl -s -X PUT http://localhost:$CONDUIT_PORT/src_b/git/multiple/hg/dddddddddddddddddddddddddddddddddddddddd/$commit_c_id
   $ hg log -r 'gitnode("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")' -T '{desc}\n'
   commit 1
   $ hg log -r 'gitnode("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")' -T '{desc}\n'
@@ -119,9 +127,31 @@ Test with multiple backing repos specified.
   commit 3
   $ hg log -r gdddddddddddddddddddddddddddddddddddddddd -T '{desc}\n'
   commit 3
+  $ cd ..
+
+Test with a bad server port, where we get connection refused errors.
+
+  $ hg init errortest
+  $ cd errortest
+  $ echo "[extensions]" >> .hg/hgrc
+  $ echo "fbconduit = $TESTDIR/../hgext3rd/fbconduit.py" >> .hg/hgrc
+  $ echo "[fbconduit]" >> .hg/hgrc
+  $ echo "reponame = errortest" >> .hg/hgrc
+  $ echo "host = localhost:9" >> .hg/hgrc
+  $ echo "path = /intern/conduit/" >> .hg/hgrc
+  $ echo "protocol = http" >> .hg/hgrc
+  $ touch file
+  $ hg add file
+  $ hg ci -m "initial commit"
+  $ commitid=`hg log -T "{label('custom.fullrev',node)}"`
+  $ hg phase -p $commitid
+  $ hg log -r 'gitnode("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")'
+  Could not translate revision aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa: * (glob)
+  $ cd ..
 
 Make sure the template keywords are documented correctly
 
+  $ cd basic
   $ hg help templates | grep gitnode
       gitnode       Return the git revision corresponding to a given hg rev
   $ cd ..
