@@ -1139,7 +1139,8 @@ class ui(object):
 
             self.system("%s \"%s\"" % (editor, name),
                         environ=environ,
-                        onerr=error.Abort, errprefix=_("edit failed"))
+                        onerr=error.Abort, errprefix=_("edit failed"),
+                        blockedtag='editor')
 
             f = open(name)
             t = f.read()
