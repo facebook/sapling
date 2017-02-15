@@ -24,13 +24,15 @@ for i, arg in enumerate(sys.argv):
 
 sys.argv = args
 
+cflags = []
+
 # if this is set, compile all C extensions with -O0 -g for easy debugging.  note
 # that this is not manifested in any way in the Makefile dependencies.
 # therefore, if you already have build products, they won't be rebuilt!
 if os.getenv('FB_HGEXT_CDEBUG') is not None:
-    cdebugflags = ["-O0", "-g"]
+    cflags.extend(["-O0", "-g"])
 else:
-    cdebugflags = []
+    cflags.append("-Werror")
 
 def get_env_path_list(var_name, default=None):
     '''Get a path list from an environment variable.  The variable is parsed as
@@ -115,8 +117,8 @@ else:
                 extra_compile_args=[
                     "-std=c99",
                     "-Wall",
-                    "-Werror", "-Werror=strict-prototypes",
-                ] + cdebugflags,
+                    "-Werror=strict-prototypes",
+                ] + cflags,
             ),
         ],
         'cstore' : [
@@ -139,8 +141,7 @@ else:
                 extra_compile_args=[
                     "-std=c++0x",
                     "-Wall",
-                    "-Werror",
-                ] + cdebugflags,
+                ] + cflags,
             ),
         ],
         'ctreemanifest' : [
@@ -163,8 +164,7 @@ else:
                 extra_compile_args=[
                     "-std=c++0x",
                     "-Wall",
-                    "-Werror",
-                ] + cdebugflags,
+                ] + cflags,
             ),
         ],
         'cfastmanifest' : [
@@ -193,8 +193,8 @@ else:
                 extra_compile_args=[
                     "-std=c99",
                     "-Wall",
-                    "-Werror", "-Werror=strict-prototypes",
-                ] + cdebugflags,
+                    "-Werror=strict-prototypes",
+                ] + cflags,
             ),
         ],
         'linelog' : [
@@ -203,7 +203,7 @@ else:
                 extra_compile_args=[
                     '-std=c99',
                     '-Wall', '-Wextra', '-Wconversion', '-pedantic',
-                ] + cdebugflags,
+                ] + cflags,
             ),
         ],
     }
