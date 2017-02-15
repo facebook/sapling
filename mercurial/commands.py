@@ -93,6 +93,8 @@ globalopts = [
     ('', 'version', None, _('output version information and exit')),
     ('h', 'help', None, _('display help and exit')),
     ('', 'hidden', False, _('consider hidden changesets')),
+    ('', 'pager', 'auto',
+     _("when to paginate (boolean, always, auto, or never)"), _('TYPE')),
 ]
 
 dryrunopts = [('n', 'dry-run', None,

@@ -326,6 +326,8 @@ Test short command list with verbose option
       --version           output version information and exit
    -h --help              display help and exit
       --hidden            consider hidden changesets
+      --pager TYPE        when to paginate (boolean, always, auto, or never)
+                          (default: auto)
   
   (use 'hg help' for the full list of commands)
 
@@ -422,6 +424,8 @@ Verbose help for add
       --version           output version information and exit
    -h --help              display help and exit
       --hidden            consider hidden changesets
+      --pager TYPE        when to paginate (boolean, always, auto, or never)
+                          (default: auto)
 
 Test the textwidth config option
 
@@ -2523,6 +2527,9 @@ Dish up an empty repo; serve it cold.
   <tr><td></td>
   <td>--hidden</td>
   <td>consider hidden changesets</td></tr>
+  <tr><td></td>
+  <td>--pager TYPE</td>
+  <td>when to paginate (boolean, always, auto, or never) (default: auto)</td></tr>
   </table>
   
   </div>
@@ -2718,6 +2725,9 @@ Dish up an empty repo; serve it cold.
   <tr><td></td>
   <td>--hidden</td>
   <td>consider hidden changesets</td></tr>
+  <tr><td></td>
+  <td>--pager TYPE</td>
+  <td>when to paginate (boolean, always, auto, or never) (default: auto)</td></tr>
   </table>
   
   </div>

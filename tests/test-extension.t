@@ -543,6 +543,8 @@ hide outer repo
       --version           output version information and exit
    -h --help              display help and exit
       --hidden            consider hidden changesets
+      --pager TYPE        when to paginate (boolean, always, auto, or never)
+                          (default: auto)
 
 
 
@@ -578,6 +580,8 @@ hide outer repo
       --version           output version information and exit
    -h --help              display help and exit
       --hidden            consider hidden changesets
+      --pager TYPE        when to paginate (boolean, always, auto, or never)
+                          (default: auto)
 
 
 
@@ -856,6 +860,8 @@ extension help itself
       --version           output version information and exit
    -h --help              display help and exit
       --hidden            consider hidden changesets
+      --pager TYPE        when to paginate (boolean, always, auto, or never)
+                          (default: auto)
 
 Make sure that single '-v' option shows help and built-ins only for 'dodo' command
   $ hg help -v dodo
@@ -889,6 +895,8 @@ Make sure that single '-v' option shows help and built-ins only for 'dodo' comma
       --version           output version information and exit
    -h --help              display help and exit
       --hidden            consider hidden changesets
+      --pager TYPE        when to paginate (boolean, always, auto, or never)
+                          (default: auto)
 
 In case when extension name doesn't match any of its commands,
 help message should ask for '-v' to get list of built-in aliases
@@ -960,6 +968,8 @@ help options '-v' and '-v -e' should be equivalent
       --version           output version information and exit
    -h --help              display help and exit
       --hidden            consider hidden changesets
+      --pager TYPE        when to paginate (boolean, always, auto, or never)
+                          (default: auto)
 
   $ hg help -v -e dudu
   dudu extension -
@@ -992,6 +1002,8 @@ help options '-v' and '-v -e' should be equivalent
       --version           output version information and exit
    -h --help              display help and exit
       --hidden            consider hidden changesets
+      --pager TYPE        when to paginate (boolean, always, auto, or never)
+                          (default: auto)
 
 Disabled extension commands:
 

@@ -60,13 +60,11 @@ you can use --pager=<value>::
 '''
 from __future__ import absolute_import
 
-from mercurial.i18n import _
 from mercurial import (
     cmdutil,
     commands,
     dispatch,
     extensions,
-    util,
     )
 
 # Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for
@@ -78,15 +76,9 @@ testedwith = 'ships-with-hg-core'
 def uisetup(ui):
 
     def pagecmd(orig, ui, options, cmd, cmdfunc):
-        usepager = False
-        always = util.parsebool(options['pager'])
         auto = options['pager'] == 'auto'
-
-        if always:
-            usepager = True
-        elif not auto:
+        if auto and not ui.pageractive:
             usepager = False
-        else:
             attend = ui.configlist('pager', 'attend', attended)
             ignore = ui.configlist('pager', 'ignore')
             cmds, _ = cmdutil.findcmd(cmd, commands.table)
@@ -101,8 +93,8 @@ def uisetup(ui):
                     usepager = True
                     break
 
-        if usepager:
-            ui.pager('extension-via-attend-' + cmd)
+            if usepager:
+                ui.pager('extension-via-attend-' + cmd)
         return orig(ui, options, cmd, cmdfunc)
 
     # Wrap dispatch._runcommand after color is loaded so color can see
@@ -111,11 +103,5 @@ def uisetup(ui):
     def afterloaded(loaded):
         extensions.wrapfunction(dispatch, '_runcommand', pagecmd)
     extensions.afterloaded('color', afterloaded)
-
-def extsetup(ui):
-    commands.globalopts.append(
-        ('', 'pager', 'auto',
-         _("when to paginate (boolean, always, auto, or never)"),
-         _('TYPE')))
 
 attended = ['annotate', 'cat', 'diff', 'export', 'glog', 'log', 'qdiff']

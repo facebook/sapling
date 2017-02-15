@@ -138,6 +138,7 @@ Show the global options
   --help
   --hidden
   --noninteractive
+  --pager
   --profile
   --quiet
   --repository
@@ -171,6 +172,7 @@ Show the options for the "serve" command
   --ipv6
   --name
   --noninteractive
+  --pager
   --pid-file
   --port
   --prefix

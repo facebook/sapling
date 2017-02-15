@@ -819,6 +819,8 @@ def _dispatch(req):
 
 def _runcommand(ui, options, cmd, cmdfunc):
     """Run a command function, possibly with profiling enabled."""
+    if util.parsebool(options['pager']):
+        ui.pager('internal-always-' + cmd)
     try:
         return cmdfunc()
     except error.SignatureError:
