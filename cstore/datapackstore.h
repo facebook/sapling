@@ -21,31 +21,65 @@ extern "C" {
 
 class DeltaChainIterator {
   private:
-    delta_chain_t _chain;
     size_t _index;
+  protected:
+    std::vector<delta_chain_t> _chains;
+    DeltaChainIterator() :
+      _index(0) {}
+    virtual delta_chain_t getNextChain(const Key &key) {
+      return (delta_chain_t) { GET_DELTA_CHAIN_NOT_FOUND };
+    }
   public:
     DeltaChainIterator(delta_chain_t chain) :
-      _chain(chain),
       _index(0) {
+      _chains.push_back(chain);
     }
 
     ~DeltaChainIterator() {
-      freedeltachain(_chain);
+      for(std::vector<delta_chain_t>::iterator it = _chains.begin();
+          it != _chains.end();
+          it++) {
+        freedeltachain(*it);
+      }
     }
 
     delta_chain_link_t *next() {
-      if (_index >= _chain.links_count) {
-        return NULL;
+      delta_chain_t *chain = &_chains.back();
+      if (_index >= chain->links_count) {
+        // If we're not at the end, and we have a callback to fetch more, do the
+        // fetch.
+        bool refreshed = false;
+        if (chain->links_count > 0) {
+          delta_chain_link_t *result = &chain->delta_chain_links[_index - 1];
+
+          const uint8_t *deltabasenode = result->deltabase_node;
+          if (memcmp(deltabasenode, NULLID, BIN_NODE_SIZE) != 0) {
+            Key key(result->filename, result->filename_sz,
+                    (const char*)deltabasenode, BIN_NODE_SIZE);
+
+            delta_chain_t newChain = this->getNextChain(key);
+            if (newChain.code == GET_DELTA_CHAIN_OK) {
+              // Do not free the old chain, since the iterator consumer may
+              // still be holding references to it.
+              _chains.push_back(newChain);
+              chain = &_chains.back();
+              _index = 0;
+              refreshed = true;
+            } else {
+              freedeltachain(newChain);
+            }
+          }
+        }
+
+        if (!refreshed) {
+          return NULL;
+        }
       }
 
-      delta_chain_link_t *result = &_chain.delta_chain_links[_index];
+      delta_chain_link_t *result = &chain->delta_chain_links[_index];
       _index++;
 
       return result;
-    }
-
-    size_t size() {
-      return _chain.links_count;
     }
 };
 
@@ -80,6 +114,8 @@ class DatapackStore {
     DeltaChainIterator getDeltaChain(const Key &key);
 
     DatapackStoreKeyIterator getMissing(KeyIterator &missing);
+
+    delta_chain_t getDeltaChainRaw(const Key &key);
 
     bool contains(const Key &key);
 };

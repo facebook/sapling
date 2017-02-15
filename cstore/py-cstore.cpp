@@ -73,7 +73,7 @@ static PyObject *datapackstore_getdeltachain(py_datapackstore *self, PyObject *a
 
     DeltaChainIterator chain = self->datapackstore.getDeltaChain(key);
 
-    PythonObj resultChain = PyList_New(chain.size());
+    PythonObj resultChain = PyList_New(0);
 
     delta_chain_link_t *link;
     size_t index = 0;
@@ -89,7 +89,7 @@ static PyObject *datapackstore_getdeltachain(py_datapackstore *self, PyObject *a
                                         (PyObject*)name, (PyObject*)deltabasenode,
                                         (PyObject*)delta);
 
-      if (PyList_SetItem((PyObject*)resultChain, index, tuple.returnval())) {
+      if (PyList_Append((PyObject*)resultChain, tuple.returnval())) {
         return NULL;
       }
 
@@ -277,6 +277,52 @@ static void uniondatapackstore_dealloc(py_uniondatapackstore *self) {
   PyObject_Del(self);
 }
 
+static PyObject *uniondatapackstore_getdeltachain(py_uniondatapackstore *self, PyObject *args) {
+  try {
+    char *name;
+    Py_ssize_t namelen;
+    char *node;
+    Py_ssize_t nodelen;
+    if (!PyArg_ParseTuple(args, "s#s#", &name, &namelen, &node, &nodelen)) {
+      return NULL;
+    }
+
+    Key key(name, namelen, node, nodelen);
+
+    UnionDeltaChainIterator chain = self->uniondatapackstore.getDeltaChain(key);
+
+    PythonObj resultChain = PyList_New(0);
+
+    delta_chain_link_t *link;
+    while ((link = chain.next()) != NULL) {
+      PythonObj name = PyString_FromStringAndSize(link->filename, link->filename_sz);
+      PythonObj retnode = PyString_FromStringAndSize((const char *) link->node, NODE_SZ);
+      PythonObj deltabasenode = PyString_FromStringAndSize(
+          (const char *) link->deltabase_node, NODE_SZ);
+      PythonObj delta = PyString_FromStringAndSize(
+          (const char *) link->delta, (Py_ssize_t) link->delta_sz);
+
+      PythonObj tuple = PyTuple_Pack(5, (PyObject*)name, (PyObject*)retnode,
+                                        (PyObject*)name, (PyObject*)deltabasenode,
+                                        (PyObject*)delta);
+
+      if (PyList_Append((PyObject*)resultChain, tuple.returnval())) {
+        return NULL;
+      }
+    }
+
+    return resultChain.returnval();
+  } catch (const pyexception &ex) {
+    return NULL;
+  } catch (const MissingKeyError &ex) {
+    PyErr_SetString(PyExc_KeyError, ex.what());
+    return NULL;
+  } catch (const std::exception &ex) {
+    PyErr_SetString(PyExc_RuntimeError, ex.what());
+    return NULL;
+  }
+}
+
 static PyObject *uniondatapackstore_getmissing(py_uniondatapackstore *self, PyObject *keys) {
   try {
     PythonObj result = PyList_New(0);
@@ -307,6 +353,7 @@ static PyObject *uniondatapackstore_getmissing(py_uniondatapackstore *self, PyOb
 // --------- UnionDatapackStore Declaration ---------
 
 static PyMethodDef uniondatapackstore_methods[] = {
+  {"getdeltachain", (PyCFunction)uniondatapackstore_getdeltachain, METH_VARARGS, ""},
   {"getmissing", (PyCFunction)uniondatapackstore_getmissing, METH_O, ""},
   {NULL, NULL}
 };

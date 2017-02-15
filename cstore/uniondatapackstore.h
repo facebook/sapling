@@ -35,6 +35,19 @@ class UnionDatapackStoreKeyIterator : public KeyIterator {
     Key *next();
 };
 
+class UnionDeltaChainIterator: public DeltaChainIterator {
+  private:
+    UnionDatapackStore &_store;
+  protected:
+    delta_chain_t getNextChain(const Key &key);
+  public:
+    UnionDeltaChainIterator(UnionDatapackStore &store, const Key &key) :
+      DeltaChainIterator(),
+      _store(store) {
+      _chains.push_back(this->getNextChain(key));
+    }
+};
+
 class UnionDatapackStore {
   public:
     std::vector<DatapackStore*> _stores;
@@ -42,6 +55,8 @@ class UnionDatapackStore {
     UnionDatapackStore(std::vector<DatapackStore*> stores);
 
     ~UnionDatapackStore();
+
+    UnionDeltaChainIterator getDeltaChain(const Key &key);
 
     bool contains(const Key &key);
 
