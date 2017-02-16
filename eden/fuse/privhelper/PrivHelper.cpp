@@ -78,10 +78,32 @@ class PrivHelper {
     auto requestXid = nextXid_;
     ++nextXid_;
     msg->xid = requestXid;
-    conn_.sendMsg(msg);
-    conn_.recvMsg(msg, fd);
 
-    if (msg->xid != requestXid) {
+    // Send the message
+    conn_.sendMsg(msg);
+
+    // Receive the response
+    size_t numRetries = 0;
+    while (true) {
+      conn_.recvMsg(msg, fd);
+      if (msg->xid == requestXid) {
+        break;
+      }
+
+      // If we timed out waiting for a response to a previous request
+      // we might receive it now, before the response to our request.
+      //
+      // If the transaction ID looks like a fairly recent one, just
+      // ignore it and try to receive another message.
+      if (msg->xid < requestXid && msg->xid >= requestXid - 5 &&
+          numRetries < 5) {
+        VLOG(1) << "ignoring stale privhelper response " << msg->xid
+                << " while waiting for " << requestXid;
+        numRetries++;
+        continue;
+      }
+
+      // Otherwise give up.
       throw std::runtime_error(folly::to<string>(
           "mismatched privhelper response: request XID was ",
           requestXid,
