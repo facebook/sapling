@@ -18,7 +18,7 @@ std::vector<std::string> getAvailablePackFiles(const std::string &path) {
   std::vector<std::string> results;
 
   std::string packpath(path);
-  if (!path.empty() && path[path.size() - 1] != '/') {
+  if (!path.empty() && path.back() != '/') {
     packpath.push_back('/');
   }
   size_t dirLength = packpath.size();
