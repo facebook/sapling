@@ -206,9 +206,7 @@ def _terminfosetup(ui, mode):
         if key.startswith('color.'):
             newval = (False, int(val), '')
             color._terminfo_params[key[6:]] = newval
-
-    for key, val in ui.configitems('color'):
-        if key.startswith('terminfo.'):
+        elif key.startswith('terminfo.'):
             newval = (True, '', val.replace('\\E', '\x1b'))
             color._terminfo_params[key[9:]] = newval
     try:
