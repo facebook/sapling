@@ -44,12 +44,4 @@ class MissingKeyError : public std::runtime_error {
       std::runtime_error(what_arg) {
     }
 };
-
-class KeyIterator {
-  protected:
-    KeyIterator() {}
-  public:
-    virtual Key *next() = 0;
-};
-
 #endif //KEY_H
