@@ -184,7 +184,7 @@ void EdenServer::unmount(StringPiece mountPath) {
   } catch (const std::exception& ex) {
     LOG(ERROR) << "Failed to perform unmount for \"" << mountPath
                << "\": " << folly::exceptionStr(ex);
-    throw ex;
+    throw;
   }
 }
 

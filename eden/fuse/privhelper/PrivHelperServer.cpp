@@ -22,6 +22,7 @@
 #include <sys/types.h>
 #include <sys/vfs.h>
 #include <unistd.h>
+#include <chrono>
 #include <set>
 
 #include "PrivHelperConn.h"
@@ -249,16 +250,25 @@ void PrivHelperServer::bindUnmount(const char* mountPath) {
   // Empirically, the unmount may not be complete when umount2() returns.
   // To work around this, we repeatedly invoke statfs on the bind mount
   // until it fails, demonstrating that it has finished unmounting.
-  struct statfs st;
-  int rc;
+  //
+  // Give up after 2 seconds.
+  constexpr auto timeout = std::chrono::seconds(2);
+  auto endTime = std::chrono::steady_clock::now() + timeout;
   while (true) {
     // This should have a non-zero exit code once the path is unmounted.
-    rc = statfs(mountPath, &st);
-    if (rc == 0) {
-      sched_yield();
-    } else {
+    struct statfs st;
+    int rc = statfs(mountPath, &st);
+    if (rc != 0) {
       break;
     }
+
+    auto now = std::chrono::steady_clock::now();
+    if (now > endTime) {
+      LOG(WARNING) << "error unmounting " << mountPath
+                   << ": mount did not go away after successful unmount call";
+      break;
+    }
+    sched_yield();
   }
 }
 
