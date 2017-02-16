@@ -59,58 +59,6 @@ class uniondatapackstoretests(unittest.TestCase):
         path = packer.close()
         return fastdatapack(path)
 
-    def testGetDeltaChainSingleRev(self):
-        """Test getting a 1-length delta chain."""
-        packdir = self.makeTempDir()
-
-        revisions = [("foo", self.getFakeHash(), nullid, "content")]
-        self.createPack(packdir, revisions=revisions)
-
-        unionstore = uniondatapackstore([datapackstore(packdir)])
-
-        chain = unionstore.getdeltachain(revisions[0][0], revisions[0][1])
-        self.assertEquals(1, len(chain))
-        self.assertEquals("content", chain[0][4])
-
-    def testGetDeltaChainMultiRev(self):
-        """Test getting a 2-length delta chain."""
-        packdir = self.makeTempDir()
-
-        firsthash = self.getFakeHash()
-        revisions = [
-            ("foo", firsthash, nullid, "content"),
-            ("foo", self.getFakeHash(), firsthash, "content2"),
-        ]
-        self.createPack(packdir, revisions=revisions)
-
-        unionstore = uniondatapackstore([datapackstore(packdir)])
-
-        chain = unionstore.getdeltachain(revisions[1][0], revisions[1][1])
-        self.assertEquals(2, len(chain))
-        self.assertEquals("content2", chain[0][4])
-        self.assertEquals("content", chain[1][4])
-
-    def testGetDeltaChainMultiPack(self):
-        """Test getting chains from multiple packs."""
-        packdir = self.makeTempDir()
-
-        revisions1 = [
-            ("foo", self.getFakeHash(), nullid, "content"),
-        ]
-        self.createPack(packdir, revisions=revisions1)
-
-        revisions2 = [
-            ("foo", self.getFakeHash(), revisions1[0][1], "content2"),
-        ]
-        self.createPack(packdir, revisions=revisions2)
-
-        unionstore = uniondatapackstore([datapackstore(packdir)])
-
-        chain = unionstore.getdeltachain(revisions2[0][0], revisions2[0][1])
-        self.assertEquals(2, len(chain))
-        self.assertEquals("content2", chain[0][4])
-        self.assertEquals("content", chain[1][4])
-
     def testGetMissing(self):
         packdir = self.makeTempDir()
 

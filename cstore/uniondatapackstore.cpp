@@ -21,25 +21,6 @@ UnionDatapackStore::~UnionDatapackStore() {
   // refcount in the py_uniondatapackstore type.
 }
 
-delta_chain_t UnionDeltaChainIterator::getNextChain(const Key &key) {
-  for(std::vector<DatapackStore*>::iterator it = _store._stores.begin();
-      it != _store._stores.end();
-      it++) {
-    DatapackStore *substore = *it;
-    delta_chain_t chain = substore->getDeltaChainRaw(key);
-    if (chain.code == GET_DELTA_CHAIN_OK) {
-      return chain;
-    }
-    freedeltachain(chain);
-  }
-
-  throw MissingKeyError("unable to find delta chain");
-}
-
-UnionDeltaChainIterator UnionDatapackStore::getDeltaChain(const Key &key) {
-  return UnionDeltaChainIterator(*this, key);
-}
-
 Key *UnionDatapackStoreKeyIterator::next() {
   Key *key;
   while ((key = _missing.next()) != NULL) {

@@ -91,17 +91,6 @@ DatapackStore::~DatapackStore() {
 }
 
 DeltaChainIterator DatapackStore::getDeltaChain(const Key &key) {
-  delta_chain_t chain = this->getDeltaChainRaw(key);
-  if (chain.code == GET_DELTA_CHAIN_OK) {
-    return DeltaChainIterator(chain);
-  }
-
-  freedeltachain(chain);
-
-  throw MissingKeyError("unable to find delta chain");
-}
-
-delta_chain_t DatapackStore::getDeltaChainRaw(const Key &key) {
   for(std::vector<datapack_handle_t*>::iterator it = _packs.begin();
       it != _packs.end();
       it++) {
@@ -118,10 +107,10 @@ delta_chain_t DatapackStore::getDeltaChainRaw(const Key &key) {
       continue;
     }
 
-    return chain;
+    return DeltaChainIterator(chain);
   }
 
-  return (delta_chain_t) { GET_DELTA_CHAIN_NOT_FOUND };
+  throw MissingKeyError("unable to find delta chain");
 }
 
 Key *DatapackStoreKeyIterator::next() {
