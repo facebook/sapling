@@ -535,7 +535,8 @@ class Test(unittest.TestCase):
                  timeout=defaults['timeout'],
                  startport=defaults['port'], extraconfigopts=None,
                  py3kwarnings=False, shell=None, hgcommand=None,
-                 slowtimeout=defaults['slowtimeout'], usechg=False):
+                 slowtimeout=defaults['slowtimeout'], usechg=False,
+                 useipv6=False):
         """Create a test from parameters.
 
         path is the full path to the file defining the test.
@@ -592,6 +593,11 @@ class Test(unittest.TestCase):
         self._skipped = None
         self._testtmp = None
         self._chgsockdir = None
+
+        # If IPv6 is used, set web.ipv6=1 in hgrc so servers will use IPv6
+        if useipv6:
+            self._extraconfigopts = list(self._extraconfigopts)
+            self._extraconfigopts.append('web.ipv6 = True')
 
         # If we're not in --debug mode and reference output file exists,
         # check test output against it.
@@ -2317,7 +2323,8 @@ class TestRunner(object):
                     py3kwarnings=self.options.py3k_warnings,
                     shell=self.options.shell,
                     hgcommand=self._hgcommand,
-                    usechg=bool(self.options.with_chg or self.options.chg))
+                    usechg=bool(self.options.with_chg or self.options.chg),
+                    useipv6=useipv6)
         t.should_reload = True
         return t
 

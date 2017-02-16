@@ -58,12 +58,12 @@ Test case sensitive configuration
   [
    {
     "name": "Section.KeY",
-    "source": "*.hgrc:16", (glob)
+    "source": "*.hgrc:*", (glob)
     "value": "Case Sensitive"
    },
    {
     "name": "Section.key",
-    "source": "*.hgrc:17", (glob)
+    "source": "*.hgrc:*", (glob)
     "value": "lower case"
    }
   ]
@@ -71,7 +71,7 @@ Test case sensitive configuration
   [
    {
     "name": "Section.KeY",
-    "source": "*.hgrc:16", (glob)
+    "source": "*.hgrc:*", (glob)
     "value": "Case Sensitive"
    }
   ]
