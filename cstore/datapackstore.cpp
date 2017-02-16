@@ -116,26 +116,25 @@ DeltaChainIterator DatapackStore::getDeltaChain(const Key &key) {
 Key *DatapackStoreKeyIterator::next() {
   Key *key;
   while ((key = _missing.next()) != NULL) {
-    if (!_store.contains(*key)) {
+    bool found = false;
+    for(std::vector<datapack_handle_t*>::iterator it = _store._packs.begin();
+        it != _store._packs.end();
+        it++) {
+      datapack_handle_t *pack = *it;
+
+      pack_index_entry_t packindex;
+      if (find(pack, (uint8_t*)key->node, &packindex)) {
+        found = true;
+        break;
+      }
+    }
+
+    if (!found) {
       return key;
     }
   }
 
   return NULL;
-}
-
-bool DatapackStore::contains(const Key &key) {
-  for(std::vector<datapack_handle_t*>::iterator it = _packs.begin();
-      it != _packs.end();
-      it++) {
-    datapack_handle_t *pack = *it;
-
-    pack_index_entry_t packindex;
-    if (find(pack, (uint8_t*)key.node, &packindex)) {
-      return true;
-    }
-  }
-  return false;
 }
 
 DatapackStoreKeyIterator DatapackStore::getMissing(KeyIterator &missing) {

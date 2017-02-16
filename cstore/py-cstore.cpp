@@ -18,9 +18,6 @@ extern "C" {
 #include "../ctreemanifest/pythonutil.h"
 #include "datapackstore.h"
 #include "key.h"
-#include "uniondatapackstore.h"
-
-// --------- DatapackStore Implementation ---------
 
 struct py_datapackstore {
   PyObject_HEAD;
@@ -164,8 +161,6 @@ static PyObject *datapackstore_getmissing(py_datapackstore *self, PyObject *keys
   }
 }
 
-// --------- DatapackStore Declaration ---------
-
 static PyMethodDef datapackstore_methods[] = {
   {"getdeltachain", (PyCFunction)datapackstore_getdeltachain, METH_VARARGS, ""},
   {"getmissing", (PyCFunction)datapackstore_getmissing, METH_O, ""},
@@ -213,145 +208,6 @@ static PyTypeObject datapackstoreType = {
   0,                                                /* tp_alloc */
 };
 
-// --------- UnionDatapackStore Implementation ---------
-
-struct py_uniondatapackstore {
-  PyObject_HEAD;
-
-  UnionDatapackStore uniondatapackstore;
-
-  // Keep a reference to the python objects so we can decref them later.
-  std::vector<PythonObj> substores;
-};
-
-/*
- * Initializes the contents of a uniondatapackstore
- */
-static int uniondatapackstore_init(py_uniondatapackstore *self, PyObject *args) {
-  PyObject *storeList;
-  if (!PyArg_ParseTuple(args, "O", &storeList)) {
-    return -1;
-  }
-
-  try {
-    std::vector<DatapackStore*> stores;
-    std::vector<PythonObj> pySubStores;
-
-    PyObject *item;
-    PythonObj inputIterator = PyObject_GetIter(storeList);
-    while ((item = PyIter_Next(inputIterator)) != NULL) {
-      // Record the substore references, so:
-      // A) We can decref them in case of an error.
-      // B) They don't get GC'd while the uniondatapackstore holds on to them.
-      pySubStores.push_back(PythonObj(item));
-
-      int isinstance = PyObject_IsInstance(item, (PyObject*)&datapackstoreType);
-      if (isinstance == 0) {
-        PyErr_SetString(PyExc_RuntimeError, "cuniondatapackstore only accepts cdatapackstore");
-        return -1;
-      } else if (isinstance != 1) {
-        // Error
-        return -1;
-      }
-
-      py_datapackstore *pySubStore = (py_datapackstore*)item;
-      stores.push_back(&pySubStore->datapackstore);
-    }
-
-    // We have to manually call the member constructor, since the provided 'self'
-    // is just zerod out memory.
-    new(&self->uniondatapackstore) UnionDatapackStore(stores);
-    new(&self->substores) std::vector<PythonObj>();
-    self->substores = pySubStores;
-  } catch (const std::exception &ex) {
-    PyErr_SetString(PyExc_RuntimeError, ex.what());
-    return -1;
-  }
-
-  return 0;
-}
-
-static void uniondatapackstore_dealloc(py_uniondatapackstore *self) {
-  self->uniondatapackstore.~UnionDatapackStore();
-  self->substores.~vector<PythonObj>();
-  PyObject_Del(self);
-}
-
-static PyObject *uniondatapackstore_getmissing(py_uniondatapackstore *self, PyObject *keys) {
-  try {
-    PythonObj result = PyList_New(0);
-
-    PythonObj inputIterator = PyObject_GetIter(keys);
-    PythonKeyIterator keysIter((PyObject*)inputIterator);
-
-    UnionDatapackStoreKeyIterator missingIter = self->uniondatapackstore.getMissing(keysIter);
-
-    Key *key;
-    while ((key = missingIter.next()) != NULL) {
-      PythonObj missingKey = Py_BuildValue("(s#s#)", key->name.c_str(), key->name.size(),
-                                                     key->node, 20);
-      if (PyList_Append(result, (PyObject*)missingKey)) {
-        return NULL;
-      }
-    }
-
-    return result.returnval();
-  } catch (const pyexception &ex) {
-    return NULL;
-  } catch (const std::exception &ex) {
-    PyErr_SetString(PyExc_RuntimeError, ex.what());
-    return NULL;
-  }
-}
-
-// --------- UnionDatapackStore Declaration ---------
-
-static PyMethodDef uniondatapackstore_methods[] = {
-  {"getmissing", (PyCFunction)uniondatapackstore_getmissing, METH_O, ""},
-  {NULL, NULL}
-};
-
-static PyTypeObject uniondatapackstoreType = {
-  PyObject_HEAD_INIT(NULL)
-  0,                                                /* ob_size */
-  "cstore.uniondatapackstore",                      /* tp_name */
-  sizeof(py_uniondatapackstore),                    /* tp_basicsize */
-  0,                                                /* tp_itemsize */
-  (destructor)uniondatapackstore_dealloc,           /* tp_dealloc */
-  0,                                                /* tp_print */
-  0,                                                /* tp_getattr */
-  0,                                                /* tp_setattr */
-  0,                                                /* tp_compare */
-  0,                                                /* tp_repr */
-  0,                                                /* tp_as_number */
-  0,                                                /* tp_as_sequence - length/contains */
-  0,                                                /* tp_as_mapping - getitem/setitem */
-  0,                                                /* tp_hash */
-  0,                                                /* tp_call */
-  0,                                                /* tp_str */
-  0,                                                /* tp_getattro */
-  0,                                                /* tp_setattro */
-  0,                                                /* tp_as_buffer */
-  Py_TPFLAGS_DEFAULT,                               /* tp_flags */
-  "TODO",                                           /* tp_doc */
-  0,                                                /* tp_traverse */
-  0,                                                /* tp_clear */
-  0,                                                /* tp_richcompare */
-  0,                                                /* tp_weaklistoffset */
-  0,                                                /* tp_iter */
-  0,                                                /* tp_iternext */
-  uniondatapackstore_methods,                       /* tp_methods */
-  0,                                                /* tp_members */
-  0,                                                /* tp_getset */
-  0,                                                /* tp_base */
-  0,                                                /* tp_dict */
-  0,                                                /* tp_descr_get */
-  0,                                                /* tp_descr_set */
-  0,                                                /* tp_dictoffset */
-  (initproc)uniondatapackstore_init,                /* tp_init */
-  0,                                                /* tp_alloc */
-};
-
 static PyMethodDef mod_methods[] = {
   {NULL, NULL}
 };
@@ -371,12 +227,4 @@ PyMODINIT_FUNC initcstore(void)
   }
   Py_INCREF(&datapackstoreType);
   PyModule_AddObject(mod, "datapackstore", (PyObject *)&datapackstoreType);
-
-  // Init datapackstore
-  uniondatapackstoreType.tp_new = PyType_GenericNew;
-  if (PyType_Ready(&uniondatapackstoreType) < 0) {
-    return;
-  }
-  Py_INCREF(&uniondatapackstoreType);
-  PyModule_AddObject(mod, "uniondatapackstore", (PyObject *)&uniondatapackstoreType);
 }
