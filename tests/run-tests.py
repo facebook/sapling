@@ -141,16 +141,15 @@ def checkportisavailable(port):
         family = socket.AF_INET6
     else:
         family = socket.AF_INET
-    if True:
-        try:
-            s = socket.socket(family, socket.SOCK_STREAM)
-            s.bind(('localhost', port))
-            s.close()
-            return True
-        except socket.error as exc:
-            if exc.errno not in (errno.EADDRINUSE, errno.EADDRNOTAVAIL,
-                                 errno.EPROTONOSUPPORT):
-                raise
+    try:
+        s = socket.socket(family, socket.SOCK_STREAM)
+        s.bind(('localhost', port))
+        s.close()
+        return True
+    except socket.error as exc:
+        if exc.errno not in (errno.EADDRINUSE, errno.EADDRNOTAVAIL,
+                             errno.EPROTONOSUPPORT):
+            raise
     return False
 
 closefds = os.name == 'posix'
