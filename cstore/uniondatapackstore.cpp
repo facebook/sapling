@@ -8,13 +8,8 @@
 // no-check-code
 
 #include <algorithm>
-#include <memory>
 
 #include "uniondatapackstore.h"
-
-extern "C" {
-#include "mpatch.h"
-}
 
 UnionDatapackStore::UnionDatapackStore(std::vector<DatapackStore*> stores) :
   _stores(stores) {
@@ -24,67 +19,6 @@ UnionDatapackStore::~UnionDatapackStore() {
   // TODO: we should manage the substore lifetimes here, but because they are
   // also controlled by Python, we need to let python handle it and manage the
   // refcount in the py_uniondatapackstore type.
-}
-
-mpatch_flist* getNextLink(void* container, ssize_t index) {
-  std::vector<delta_chain_link_t*> *links = (std::vector<delta_chain_link_t*>*)container;
-
-  if (index < 0 || (size_t)index >= links->size()) {
-    return NULL;
-  }
-
-  delta_chain_link_t *link = links->at(index);
-
-  struct mpatch_flist *res;
-  if ((mpatch_decode((const char*)link->delta, link->delta_sz, &res)) < 0) {
-    throw std::logic_error("invalid patch during patch application");
-  }
-
-  return res;
-}
-
-ConstantStringRef UnionDatapackStore::get(const Key &key) {
-  UnionDeltaChainIterator chain = this->getDeltaChain(key);
-
-  std::vector<delta_chain_link_t*> links;
-
-  delta_chain_link_t *link;
-  while ((link = chain.next()) != NULL) {
-    links.push_back(link);
-  }
-
-  delta_chain_link_t *fulltextLink = links.back();
-  links.pop_back();
-
-  // Short circuit and just return the full text if it's one long
-  if (links.size() == 0) {
-    char * finalText = new char[fulltextLink->delta_sz];
-    memcpy(finalText, fulltextLink->delta, fulltextLink->delta_sz);
-    return ConstantStringRef(finalText, fulltextLink->delta_sz);
-  }
-
-  std::reverse(links.begin(), links.end());
-
-  mpatch_flist *patch = mpatch_fold(&links, getNextLink, 0, links.size());
-  if (!patch) { /* error already set or memory error */
-    throw std::logic_error("mpatch failed to fold patches");
-  }
-
-  ssize_t outlen = mpatch_calcsize(fulltextLink->delta_sz, patch);
-  if (outlen < 0) {
-    mpatch_lfree(patch);
-    throw std::logic_error("mpatch failed to calculate size");
-  }
-
-  char *result= new char[outlen];
-  if (mpatch_apply(result, (const char*)fulltextLink->delta, fulltextLink->delta_sz, patch) < 0) {
-    delete result;
-    mpatch_lfree(patch);
-    throw std::logic_error("mpatch failed to apply patches");
-  }
-
-  mpatch_lfree(patch);
-  return ConstantStringRef(result, outlen);
 }
 
 delta_chain_t UnionDeltaChainIterator::getNextChain(const Key &key) {

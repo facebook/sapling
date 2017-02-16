@@ -277,32 +277,6 @@ static void uniondatapackstore_dealloc(py_uniondatapackstore *self) {
   PyObject_Del(self);
 }
 
-static PyObject *uniondatapackstore_get(py_uniondatapackstore *self, PyObject *args) {
-  try {
-    char *name;
-    Py_ssize_t namelen;
-    char *node;
-    Py_ssize_t nodelen;
-    if (!PyArg_ParseTuple(args, "s#s#", &name, &namelen, &node, &nodelen)) {
-      return NULL;
-    }
-
-    Key key(name, namelen, node, nodelen);
-
-    ConstantStringRef fulltext = self->uniondatapackstore.get(key);
-
-    return PyString_FromStringAndSize(fulltext.content(), fulltext.size());
-  } catch (const pyexception &ex) {
-    return NULL;
-  } catch (const MissingKeyError &ex) {
-    PyErr_SetString(PyExc_KeyError, ex.what());
-    return NULL;
-  } catch (const std::exception &ex) {
-    PyErr_SetString(PyExc_RuntimeError, ex.what());
-    return NULL;
-  }
-}
-
 static PyObject *uniondatapackstore_getdeltachain(py_uniondatapackstore *self, PyObject *args) {
   try {
     char *name;
@@ -379,7 +353,6 @@ static PyObject *uniondatapackstore_getmissing(py_uniondatapackstore *self, PyOb
 // --------- UnionDatapackStore Declaration ---------
 
 static PyMethodDef uniondatapackstore_methods[] = {
-  {"get", (PyCFunction)uniondatapackstore_get, METH_VARARGS, ""},
   {"getdeltachain", (PyCFunction)uniondatapackstore_getdeltachain, METH_VARARGS, ""},
   {"getmissing", (PyCFunction)uniondatapackstore_getmissing, METH_O, ""},
   {NULL, NULL}

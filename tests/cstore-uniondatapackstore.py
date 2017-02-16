@@ -24,7 +24,6 @@ from remotefilelog.datapack import (
     mutabledatapack,
 )
 
-from mercurial import mdiff
 from mercurial.node import nullid
 import mercurial.ui
 
@@ -59,35 +58,6 @@ class uniondatapackstoretests(unittest.TestCase):
 
         path = packer.close()
         return fastdatapack(path)
-
-    def testGetFromSingleDelta(self):
-        packdir = self.makeTempDir()
-
-        revisions = [("foo", self.getFakeHash(), nullid, "content")]
-        self.createPack(packdir, revisions=revisions)
-
-        unionstore = uniondatapackstore([datapackstore(packdir)])
-
-        text = unionstore.get(revisions[0][0], revisions[0][1])
-        self.assertEquals("content", text)
-
-    def testGetFromChainDeltas(self):
-        packdir = self.makeTempDir()
-
-        rev1 = "content"
-        rev2 = "content2"
-        firsthash = self.getFakeHash()
-        revisions = [
-            ("foo", firsthash, nullid, rev1),
-            ("foo", self.getFakeHash(), firsthash,
-             mdiff.textdiff(rev1, rev2)),
-        ]
-        self.createPack(packdir, revisions=revisions)
-
-        unionstore = uniondatapackstore([datapackstore(packdir)])
-
-        text = unionstore.get(revisions[1][0], revisions[1][1])
-        self.assertEquals(rev2, text)
 
     def testGetDeltaChainSingleRev(self):
         """Test getting a 1-length delta chain."""
