@@ -137,10 +137,11 @@ useipv6 = checkipv6available()
 
 def checkportisavailable(port):
     """return true if a port seems free to bind on localhost"""
-    families = [getattr(socket, i, None)
-                for i in ('AF_INET', 'AF_INET6')
-                if getattr(socket, i, None) is not None]
-    for family in families:
+    if useipv6:
+        family = socket.AF_INET6
+    else:
+        family = socket.AF_INET
+    if True:
         try:
             s = socket.socket(family, socket.SOCK_STREAM)
             s.bind(('localhost', port))
