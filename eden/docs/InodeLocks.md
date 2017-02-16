@@ -81,8 +81,17 @@ are as follows:
 
 ## EdenMount's rename lock:
 
-This lock is a very high level lock in our lock ordering stack--it is typically
-acquired before any other locks.
+This lock is a very high level lock in our lock ordering stack--it is
+acquired before any other individual inode-specific locks.
 
 This lock is held for the duration of a rename or unlink operation.  No
 InodeBase `location_` fields may be updated without holding this lock.
+
+## EdenMount's current snapshot lock:
+
+This lock is also a very high level lock in our lock ordering stack.
+It is acquired for the duration of any operation that updates the current
+snapshot that is checked out.
+
+Checkout operations acquire both the current snapshot lock and the rename lock.
+The snapshot lock is always acquired before the rename lock.

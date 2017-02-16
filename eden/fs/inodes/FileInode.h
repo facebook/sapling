@@ -16,6 +16,7 @@
 namespace facebook {
 namespace eden {
 
+class Blob;
 class FileHandle;
 class FileData;
 class Hash;
@@ -65,6 +66,8 @@ class FileInode : public InodeBase {
 
   /// Compute the path to the overlay file for this item.
   AbsolutePath getLocalPath() const;
+
+  bool isSameAs(const Blob& blob, mode_t mode);
 
  private:
   /**

@@ -42,8 +42,10 @@ class EdenServiceHandler : virtual public EdenServiceSvIf,
   void listMounts(std::vector<MountInfo>& results) override;
 
   void checkOutRevision(
+      std::vector<CheckoutConflict>& results,
       std::unique_ptr<std::string> mountPoint,
-      std::unique_ptr<std::string> hash) override;
+      std::unique_ptr<std::string> hash,
+      bool force) override;
 
   void getBindMounts(
       std::vector<std::string>& out,

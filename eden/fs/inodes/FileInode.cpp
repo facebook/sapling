@@ -149,6 +149,21 @@ AbsolutePath FileInode::getLocalPath() const {
   return getMount()->getOverlay()->getFilePath(getNodeId());
 }
 
+bool FileInode::isSameAs(const Blob& blob, mode_t mode) {
+  // When comparing mode bits, we only care about the
+  // file type and owner permissions.
+  auto relevantModeBits = [](mode_t m) { return (m & (S_IFMT | S_IRWXU)); };
+  if (relevantModeBits(entry_->mode) != relevantModeBits(mode)) {
+    return false;
+  }
+
+  if (!entry_->isMaterialized()) {
+    return entry_->getHash() == blob.getHash();
+  }
+
+  return getOrLoadData()->getSha1() == Hash::sha1(&blob.getContents());
+}
+
 folly::Future<std::shared_ptr<fusell::FileHandle>> FileInode::open(
     const struct fuse_file_info& fi) {
   auto data = getOrLoadData();

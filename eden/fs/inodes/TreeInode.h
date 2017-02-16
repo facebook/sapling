@@ -16,6 +16,8 @@
 namespace facebook {
 namespace eden {
 
+class CheckoutAction;
+class CheckoutContext;
 class EdenMount;
 class FileHandle;
 class InodeMap;
@@ -23,6 +25,7 @@ class ObjectStore;
 class Overlay;
 class RenameLock;
 class Tree;
+class TreeEntry;
 
 /**
  * Represents a directory in the file system.
@@ -262,12 +265,30 @@ class TreeInode : public InodeBase {
   folly::Future<folly::Unit> unlink(PathComponentPiece name);
   folly::Future<folly::Unit> rmdir(PathComponentPiece name);
 
-  /** Called in a thrift context to switch the active snapshot.
-   * Since this is called in a thrift context, RequestData::get() won't
-   * return the usual results and the appropriate information must
-   * be passed down from the thrift server itself.
+  /**
+   * Update this directory so that it matches the specified source control Tree
+   * object.
+   *
+   * @param ctx The CheckoutContext for the current checkout operation.
+   *     The caller guarantees that the CheckoutContext argument will remain
+   *     valid until the returned Future completes.
+   * @param fromTree The Tree object that the checkout operation is moving
+   *     from.  This argument is necessary to detect conflicts between the
+   *     current inode state and the expected previous source control state.
+   *     This argument may be null when updating a TreeInode that did not exist
+   *     in source control in the previous commit state.
+   * @param toTree The Tree object that the checkout operation is moving to.
+   *     This argument must not be null.  (In order to remove a file or tree
+   *     that does not exist in the new commit, checkoutRemoveChild() must be
+   *     invoked on the parent TreeInode instead.)
+   *
+   * @return Returns a future that will be fulfilled once this tree and all of
+   *     its children have been updated.
    */
-  void performCheckout(const Hash& hash);
+  folly::Future<folly::Unit> checkout(
+      CheckoutContext* ctx,
+      std::unique_ptr<Tree> fromTree,
+      std::unique_ptr<Tree> toTree);
 
   /** Ensure that the overlay is tracking metadata for this inode
    * This is required whenever we are about to make a structural change
@@ -306,8 +327,19 @@ class TreeInode : public InodeBase {
    */
   folly::Future<folly::Unit> loadMaterializedChildren();
 
+  // Helper functions to be used only by CheckoutAction
+  folly::Future<folly::Unit> checkoutReplaceEntry(
+      CheckoutContext* ctx,
+      InodePtr inode,
+      const TreeEntry& newScmEntry);
+  folly::Future<folly::Unit> checkoutRemoveChild(
+      CheckoutContext* ctx,
+      PathComponentPiece name,
+      InodePtr inode);
+
  private:
-  struct TreeRenameLocks;
+  class TreeRenameLocks;
+  class IncompleteInodeLoad;
 
   void registerInodeLoadComplete(
       folly::Future<std::unique_ptr<InodeBase>>& future,
@@ -351,6 +383,26 @@ class TreeInode : public InodeBase {
 
   folly::Future<folly::Unit>
   rmdirImpl(PathComponent name, TreeInodePtr child, unsigned int attemptNum);
+
+  /**
+   * This helper function starts loading a currently unloaded child inode.
+   * It must be held with the contents_ lock held.  (The Dir argument is only
+   * required as a parameter to ensure that the caller is actually holding the
+   * lock.)
+   */
+  folly::Future<InodePtr> loadChildLocked(
+      Dir& dir,
+      PathComponentPiece name,
+      Entry* entry,
+      std::vector<IncompleteInodeLoad>* pendingLoads);
+
+  void computeCheckoutActions(
+      CheckoutContext* ctx,
+      const Tree* fromTree,
+      const Tree* toTree,
+      std::vector<std::unique_ptr<CheckoutAction>>* actions,
+      std::vector<IncompleteInodeLoad>* pendingLoads);
+  void saveOverlayPostCheckout(CheckoutContext* ctx, const Tree* tree);
 
   folly::Synchronized<Dir> contents_;
   /** Can be nullptr for the root inode only, otherwise will be non-null */

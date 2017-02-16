@@ -114,13 +114,64 @@ struct ScmAddRemoveError {
   2: string errorMessage
 }
 
+enum ConflictType {
+  // We failed to update this particular path due to an error
+  ERROR,
+  // A locally modified file was deleted in the new Tree
+  MODIFIED_REMOVED,
+  // An untracked local file exists in the new Tree
+  UNTRACKED_ADDED,
+  // The file was removed locally, but modified in the new Tree
+  REMOVED_MODIFIED,
+  // The file was removed locally, and also removed in the new Tree.
+  MISSING_REMOVED,
+  // A locally modified file was modified in the new Tree
+  // This may be contents modifications, or a file type change (directory to
+  // file or vice-versa), or permissions changes.
+  MODIFIED,
+}
+
+/**
+ * Details about conflicts or errors that occurred during a checkout operation
+ */
+struct CheckoutConflict {
+  1: string path
+  2: ConflictType type
+  3: string message
+}
+
 service EdenService extends fb303.FacebookService {
   list<MountInfo> listMounts() throws (1: EdenError ex)
   void mount(1: MountInfo info) throws (1: EdenError ex)
   void unmount(1: string mountPoint) throws (1: EdenError ex)
 
-  void checkOutRevision(1: string mountPoint, 2: string hash)
-    throws (1: EdenError ex)
+  /**
+   * Check out the specified snapshot.
+   *
+   * This updates the contents of the mount point so that they match the
+   * contents of the given snapshot.
+   *
+   * Returns a list of conflicts and errors that occurred when performing the
+   * checkout operation.
+   *
+   * If the force parameter is true, the working directory will be forcibly
+   * updated to the contents of the new snapshot, even if there were conflicts.
+   * Conflicts will still be reported in the return value, but the files will
+   * be updated to their new state.  If the force parameter is false files with
+   * conflicts will be left unmodified.  Files that are untracked in both the
+   * source and destination snapshots are always left unchanged, even if force
+   * is true.
+   *
+   * On successful return from this function the mount point will point to the
+   * new commit, even if some paths had conflicts or errors.  The caller is
+   * responsible for taking appropriate action to update these paths as desired
+   * after checkOutRevision() returns.
+   */
+  list<CheckoutConflict> checkOutRevision(
+    1: string mountPoint,
+    2: string snapshotHash,
+    3: bool force)
+      throws (1: EdenError ex)
 
   // Mount-specific APIs.
 

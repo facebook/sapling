@@ -64,7 +64,7 @@ Hash ClientConfig::getSnapshotID() const {
   return Hash{snapshotID};
 }
 
-void ClientConfig::setSnapshotID(Hash& id) const {
+void ClientConfig::setSnapshotID(Hash id) const {
   auto snapshotPath = getSnapshotPath();
   auto hashStr = id.toString() + "\n";
   folly::writeFileAtomic(

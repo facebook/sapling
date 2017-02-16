@@ -97,13 +97,21 @@ Future<unique_ptr<Tree>> FakeBackingStore::getTreeForCommit(
       });
 }
 
+Blob FakeBackingStore::makeBlob(folly::StringPiece contents) {
+  return makeBlob(Hash::sha1(contents), contents);
+}
+
+Blob FakeBackingStore::makeBlob(Hash hash, folly::StringPiece contents) {
+  auto buf = IOBuf{IOBuf::COPY_BUFFER, ByteRange{contents}};
+  return Blob(hash, std::move(buf));
+}
+
 StoredBlob* FakeBackingStore::putBlob(StringPiece contents) {
   return putBlob(Hash::sha1(contents), contents);
 }
 
 StoredBlob* FakeBackingStore::putBlob(Hash hash, folly::StringPiece contents) {
-  auto buf = IOBuf{IOBuf::COPY_BUFFER, ByteRange{contents}};
-  auto storedBlob = make_unique<StoredBlob>(Blob(hash, std::move(buf)));
+  auto storedBlob = make_unique<StoredBlob>(makeBlob(hash, contents));
 
   {
     auto data = data_.wlock();

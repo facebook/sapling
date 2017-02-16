@@ -14,6 +14,7 @@
 #include <glog/logging.h>
 
 #include "eden/fs/config/ClientConfig.h"
+#include "eden/fs/inodes/CheckoutContext.h"
 #include "eden/fs/inodes/Dirstate.h"
 #include "eden/fs/inodes/EdenDispatcher.h"
 #include "eden/fs/inodes/EdenMounts.h"
@@ -27,6 +28,7 @@
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fuse/MountPoint.h"
 
+using std::make_unique;
 using std::unique_ptr;
 using std::vector;
 using folly::Future;
@@ -76,9 +78,12 @@ EdenMount::EdenMount(
   // Load the overlay, if present.
   auto rootOverlayDir = overlay_->loadOverlayDir(FUSE_ROOT_ID);
 
+  // Load the current snapshot ID from the on-disk config
+  auto snapshotID = config_->getSnapshotID();
+  *currentSnapshot_.wlock() = snapshotID;
+
   // Create the inode for the root of the tree using the hash contained
   // within the snapshotPath file
-  auto snapshotID = config_->getSnapshotID();
   TreeInodePtr rootInode;
   if (rootOverlayDir) {
     rootInode = TreeInodePtr::makeNew(this, std::move(rootOverlayDir.value()));
@@ -153,6 +158,52 @@ TreeInodePtr EdenMount::getTreeInodeBlocking(RelativePathPiece path) const {
 
 FileInodePtr EdenMount::getFileInodeBlocking(RelativePathPiece path) const {
   return getInodeBlocking(path).asFilePtr();
+}
+
+folly::Future<std::vector<CheckoutConflict>> EdenMount::checkout(
+    Hash snapshotHash,
+    bool force) {
+  // Hold the snapshot lock for the duration of the entire checkout operation.
+  //
+  // This prevents multiple checkout operations from running in parallel.
+  auto snapshotLock = currentSnapshot_.wlock();
+  auto oldSnapshot = *snapshotLock;
+  auto ctx = std::make_shared<CheckoutContext>(std::move(snapshotLock), force);
+  VLOG(1) << "starting checkout for " << this->getPath() << ": " << oldSnapshot
+          << " to " << snapshotHash;
+
+  auto fromTreeFuture = objectStore_->getTreeForCommit(oldSnapshot);
+  auto toTreeFuture = objectStore_->getTreeForCommit(snapshotHash);
+
+  return folly::collect(fromTreeFuture, toTreeFuture)
+      .then([this, ctx](
+          std::tuple<unique_ptr<Tree>, unique_ptr<Tree>> treeResults) {
+        auto& fromTree = std::get<0>(treeResults);
+        auto& toTree = std::get<1>(treeResults);
+        ctx->start(this->acquireRenameLock());
+        return this->getRootInode()->checkout(
+            ctx.get(), std::move(fromTree), std::move(toTree));
+      })
+      .then([this, ctx, oldSnapshot, snapshotHash]() {
+        // Save the new snapshot hash
+        VLOG(1) << "updating snapshot for " << this->getPath() << " to "
+                << snapshotHash;
+        this->config_->setSnapshotID(snapshotHash);
+        auto conflicts = ctx->finish(snapshotHash);
+
+        // Write a journal entry
+        // TODO: We don't include any file changes for now.  We'll need to
+        // figure out the desired data to pass to watchman.  We intentionally
+        // don't want to give it the full list of files that logically
+        // changed--we intentionally don't process files that were changed but
+        // have never been accessed.
+        auto journalDelta = make_unique<JournalDelta>();
+        journalDelta->fromHash = oldSnapshot;
+        journalDelta->toHash = snapshotHash;
+        journal_.wlock()->addDelta(std::move(journalDelta));
+
+        return conflicts;
+      });
 }
 
 RenameLock EdenMount::acquireRenameLock() {

@@ -30,6 +30,7 @@ class MountPoint;
 }
 
 class BindMount;
+class CheckoutConflict;
 class ClientConfig;
 class Dirstate;
 class EdenDispatcher;
@@ -93,6 +94,13 @@ class EdenMount {
    * Return the path to the mount point.
    */
   const AbsolutePath& getPath() const;
+
+  /**
+   * Get the hash of the currently checked out snapshot.
+   */
+  Hash getSnapshotID() const {
+    return *currentSnapshot_.rlock();
+  }
 
   /*
    * Return bind mounts that are applied for this mount. These are based on the
@@ -190,6 +198,10 @@ class EdenMount {
    */
   FileInodePtr getFileInodeBlocking(RelativePathPiece path) const;
 
+  folly::Future<std::vector<CheckoutConflict>> checkout(
+      Hash snapshotHash,
+      bool force = false);
+
   /**
    * Acquire the rename lock in exclusive mode.
    */
@@ -241,6 +253,12 @@ class EdenMount {
    * hold the rename lock.
    */
   folly::SharedMutex renameMutex_;
+
+  /**
+   * The hash of the current snapshot (i.e., commit) that is checked out in
+   * this mount point.
+   */
+  folly::Synchronized<Hash> currentSnapshot_;
 
   /*
    * Note that this config will not be updated if the user modifies the

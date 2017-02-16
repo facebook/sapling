@@ -19,6 +19,8 @@
 #include "InodeMap.h"
 #include "Overlay.h"
 #include "TreeInodeDirHandle.h"
+#include "eden/fs/inodes/CheckoutAction.h"
+#include "eden/fs/inodes/CheckoutContext.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileData.h"
 #include "eden/fs/inodes/InodeError.h"
@@ -37,9 +39,70 @@ using folly::StringPiece;
 using folly::Unit;
 using std::make_unique;
 using std::unique_ptr;
+using std::vector;
 
 namespace facebook {
 namespace eden {
+
+/**
+ * A helper class to track info about inode loads that we started while holding
+ * the contents_ lock.
+ *
+ * Once we release the contents_ lock we need to call
+ * registerInodeLoadComplete() for each load we started.  This structure
+ * exists to remember the arguments for each call that we need to make.
+ */
+class TreeInode::IncompleteInodeLoad {
+ public:
+  IncompleteInodeLoad(
+      TreeInode* inode,
+      Future<unique_ptr<InodeBase>>&& future,
+      PathComponentPiece name,
+      fuse_ino_t number)
+      : treeInode_{inode},
+        number_{number},
+        name_{name},
+        future_{std::move(future)} {}
+
+  IncompleteInodeLoad(IncompleteInodeLoad&&) = default;
+  IncompleteInodeLoad& operator=(IncompleteInodeLoad&&) = default;
+
+  ~IncompleteInodeLoad() {
+    // Ensure that we always call registerInodeLoadComplete().
+    //
+    // Normally the caller should always explicitly call finish() after they
+    // release the TreeInode's contents_ lock.  However if an exception occurs
+    // this might not happen, so we call it ourselves.  We want to make sure
+    // this happens even on exception code paths, since the InodeMap will
+    // otherwise never be notified about the success or failure of this load
+    // attempt, and requests for this inode would just be stuck forever.
+    if (treeInode_) {
+      LOG(WARNING) << "IncompleteInodeLoad destroyed without explicitly "
+                   << "calling finish()";
+      finish();
+    }
+  }
+
+  void finish() {
+    // Call treeInode_.release() here before registerInodeLoadComplete() to
+    // reset treeInode_ to null.  Setting it to null makes it clear to the
+    // destructor that finish() does not need to be called again.
+    treeInode_.release()->registerInodeLoadComplete(future_, name_, number_);
+  }
+
+ private:
+  struct NoopDeleter {
+    void operator()(TreeInode*) const {}
+  };
+
+  // We store the TreeInode as a unique_ptr just to make sure it gets reset
+  // to null in any IncompleteInodeLoad objects that are moved-away from.
+  // We don't actually own the TreeInode and we don't destroy it.
+  std::unique_ptr<TreeInode, NoopDeleter> treeInode_;
+  fuse_ino_t number_;
+  PathComponent name_;
+  Future<unique_ptr<InodeBase>> future_;
+};
 
 TreeInode::TreeInode(
     fuse_ino_t ino,
@@ -819,7 +882,8 @@ folly::Future<folly::Unit> TreeInode::rmdirImpl(
  *
  * This class helps acquire the locks in the correct order.
  */
-struct TreeInode::TreeRenameLocks {
+class TreeInode::TreeRenameLocks {
+ public:
   TreeRenameLocks() {}
 
   void acquireLocks(
@@ -1192,8 +1256,383 @@ const std::shared_ptr<Overlay>& TreeInode::getOverlay() const {
   return getMount()->getOverlay();
 }
 
-void TreeInode::performCheckout(const Hash& hash) {
-  throw std::runtime_error("not yet implemented");
+Future<Unit> TreeInode::checkout(
+    CheckoutContext* ctx,
+    std::unique_ptr<Tree> fromTree,
+    std::unique_ptr<Tree> toTree) {
+  VLOG(4) << "checkout: starting update of " << getLogPath() << ": "
+          << fromTree->getHash() << " --> " << toTree->getHash();
+  vector<unique_ptr<CheckoutAction>> actions;
+  vector<IncompleteInodeLoad> pendingLoads;
+
+  computeCheckoutActions(
+      ctx, fromTree.get(), toTree.get(), &actions, &pendingLoads);
+
+  // Wire up the callbacks for any pending inode loads we started
+  for (auto& load : pendingLoads) {
+    load.finish();
+  }
+
+  // Now start all of the checkout actions
+  vector<Future<Unit>> actionFutures;
+  for (const auto& action : actions) {
+    actionFutures.emplace_back(action->run(ctx, getStore()));
+  }
+  // Wait for all of the actions, and record any errors.
+  return folly::collectAll(actionFutures).then([
+    ctx,
+    self = inodePtrFromThis(),
+    toTree = std::move(toTree),
+    actions = std::move(actions)
+  ](vector<folly::Try<Unit>> actionResults) {
+    // Record any errors that occurred
+    size_t numErrors = 0;
+    for (size_t n = 0; n < actionResults.size(); ++n) {
+      auto& result = actionResults[n];
+      if (!result.hasException()) {
+        continue;
+      }
+      ++numErrors;
+      ctx->addError(self.get(), actions[n]->getEntryName(), result.exception());
+    }
+
+    // Update our state in the overlay
+    self->saveOverlayPostCheckout(ctx, toTree.get());
+
+    VLOG(4) << "checkout: finished update of " << self->getLogPath() << ": "
+            << numErrors << " errors";
+  });
+}
+
+void TreeInode::computeCheckoutActions(
+    CheckoutContext* ctx,
+    const Tree* fromTree,
+    const Tree* toTree,
+    vector<unique_ptr<CheckoutAction>>* actions,
+    vector<IncompleteInodeLoad>* pendingLoads) {
+  // Grab the contents_ lock for the duration of this function
+  auto contents = contents_.wlock();
+
+  // Helper function to process entries present in the new Tree
+  // but not present in the old Tree
+  auto processNewEntry = [&](const TreeEntry& newScmEntry) {
+    auto it = contents->entries.find(newScmEntry.getName());
+    if (it == contents->entries.end()) {
+      // Add the new entry.
+      if (ctx->shouldApplyChanges()) {
+        // TODO: add a JournalDelta
+        auto newEntry =
+            make_unique<Entry>(newScmEntry.getMode(), newScmEntry.getHash());
+        contents->entries.emplace(newScmEntry.getName(), std::move(newEntry));
+      }
+      return;
+    }
+
+    // We have an existing untracked file where the new tree needs to place a
+    // file.
+    ctx->addConflict(
+        ConflictType::UNTRACKED_ADDED, this, newScmEntry.getName());
+    if (!ctx->forceUpdate()) {
+      return;
+    }
+
+// FIXME: handle the force update in this case.
+// We need to update CheckoutAction to make the oldScmEntry optional in order
+// to handle this case.
+#if 0
+    auto& entry = it->second;
+    if (entry->inode) {
+      auto childPtr = InodePtr::newPtrLocked(entry->inode);
+      actions->push_back(make_unique<CheckoutAction>(
+          ctx, folly::none, newScmEntry, std::move(childPtr)));
+    } else {
+      auto inodeFuture = loadChildLocked(
+          *contents, oldScmEntry.getName(), entry.get(), pendingLoads);
+      actions->push_back(make_unique<CheckoutAction>(
+          ctx, folly::none, newScmEntry, std::move(inodeFuture)));
+    }
+#else
+    throw std::runtime_error(
+        "force checkout: adding a new entry over an "
+        "existing inode not supported yet");
+#endif
+  };
+
+  // Helper function to process entries present in the old Tree
+  // but not in the new Tree
+  auto processRemovedEntry = [&](const TreeEntry& oldScmEntry) {
+    auto it = contents->entries.find(oldScmEntry.getName());
+    if (it == contents->entries.end()) {
+      // We are missing a file that is removed in the new tree,
+      // so we are already in the desired state.
+      //
+      // However we still want to flag this conflict.
+      ctx->addConflict(
+          ConflictType::MISSING_REMOVED, this, oldScmEntry.getName());
+      return;
+    }
+
+    // Check to see if this entry is unchanged.
+    auto& entry = it->second;
+    if (entry->inode) {
+      // Add an action to verify that this inode is unmodified and then remove
+      // it.
+      auto childPtr = InodePtr::newPtrLocked(entry->inode);
+      actions->push_back(
+          make_unique<CheckoutAction>(ctx, oldScmEntry, std::move(childPtr)));
+    } else if (entry->isMaterialized()) {
+      // This child is potentially modified, but is not currently loaded.
+      // Start loading it.  Once it is loaded we will make sure it is
+      // unmodified before removing it.
+      auto inodeFuture = loadChildLocked(
+          *contents, oldScmEntry.getName(), entry.get(), pendingLoads);
+      actions->push_back(make_unique<CheckoutAction>(
+          ctx, oldScmEntry, std::move(inodeFuture)));
+    } else {
+      if (entry->getHash() != oldScmEntry.getHash()) {
+        // This file is modified.
+        ctx->addConflict(
+            ConflictType::MODIFIED_REMOVED, this, oldScmEntry.getName());
+        if (!ctx->forceUpdate()) {
+          return;
+        }
+      }
+      // This child is not currently loaded.
+      // We can go ahead and remove it now.
+      if (ctx->shouldApplyChanges()) {
+        // TODO: add a JournalDelta
+        contents->entries.erase(it);
+      }
+    }
+  };
+
+  // Helper function to process entries present in both the old and new Trees
+  auto processEntry = [&](
+      const TreeEntry& oldScmEntry, const TreeEntry& newScmEntry) {
+    if (oldScmEntry.getMode() == newScmEntry.getMode() &&
+        oldScmEntry.getHash() == newScmEntry.getHash()) {
+      // The entries didn't change.
+      // If we aren't doing a force checkout we have nothing to do.
+      if (!ctx->forceUpdate()) {
+        // TODO: Should we fall through anyway, to report any locally modified
+        // files as conflicts?
+        return;
+      }
+
+      // If we are doing a force update, we have to check and see if the entry
+      // has been modified in the working directory, and reset it back to the
+      // desired source control state.
+      //
+      // Fall through in this case.
+    }
+
+    auto it = contents->entries.find(newScmEntry.getName());
+    if (it == contents->entries.end()) {
+      // The file was removed locally, but modified in the new tree.
+      ctx->addConflict(
+          ConflictType::REMOVED_MODIFIED, this, oldScmEntry.getName());
+      if (ctx->forceUpdate()) {
+        // TODO: add a JournalDelta
+        auto newEntry =
+            make_unique<Entry>(newScmEntry.getMode(), newScmEntry.getHash());
+        contents->entries.emplace(newScmEntry.getName(), std::move(newEntry));
+      }
+      return;
+    }
+
+    auto& entry = it->second;
+    if (entry->inode) {
+      // Add an action to make sure the child inode is unmodified, then update
+      // it.
+      auto childPtr = InodePtr::newPtrLocked(entry->inode);
+      actions->push_back(make_unique<CheckoutAction>(
+          ctx, oldScmEntry, newScmEntry, std::move(childPtr)));
+    } else if (entry->isMaterialized()) {
+      // This child is potentially modified, but is not currently loaded.
+      // Start loading it.  Once it is loaded we will make sure it is
+      // unmodified before updating it.
+      auto inodeFuture = loadChildLocked(
+          *contents, oldScmEntry.getName(), entry.get(), pendingLoads);
+      actions->push_back(make_unique<CheckoutAction>(
+          ctx, oldScmEntry, newScmEntry, std::move(inodeFuture)));
+    } else {
+      if (entry->getHash() != oldScmEntry.getHash()) {
+        // This file is modified.
+        ctx->addConflict(ConflictType::MODIFIED, this, oldScmEntry.getName());
+        if (!ctx->forceUpdate()) {
+          return;
+        }
+      }
+      // Replace the entry with a new one for the modified file/directory.
+      if (ctx->shouldApplyChanges()) {
+        // TODO: add a JournalDelta
+        *entry = Entry{newScmEntry.getMode(), newScmEntry.getHash()};
+      }
+    }
+  };
+
+  // Walk through fromTree and toTree, and call the above helper functions as
+  // appropriate.
+  //
+  // Note that we completely ignore entries in our current contents_ that don't
+  // appear in either fromTree or toTree.  These are untracked in both the old
+  // and new trees.
+  size_t oldIdx = 0;
+  size_t newIdx = 0;
+  vector<TreeEntry> emptyEntries;
+  const auto& oldEntries = fromTree ? fromTree->getTreeEntries() : emptyEntries;
+  const auto& newEntries = toTree->getTreeEntries();
+  while (true) {
+    if (oldIdx >= oldEntries.size()) {
+      if (newIdx >= newEntries.size()) {
+        // All Done
+        break;
+      }
+
+      // This entry is present in the new tree but not the old one.
+      processNewEntry(newEntries[newIdx]);
+      ++newIdx;
+    } else if (newIdx >= newEntries.size()) {
+      // This entry is present in the old tree but not the old one.
+      processRemovedEntry(newEntries[newIdx]);
+      ++newIdx;
+    } else if (oldEntries[oldIdx].getName() < newEntries[newIdx].getName()) {
+      processRemovedEntry(oldEntries[oldIdx]);
+      ++oldIdx;
+    } else if (oldEntries[oldIdx].getName() > newEntries[newIdx].getName()) {
+      processNewEntry(newEntries[newIdx]);
+      ++newIdx;
+    } else {
+      processEntry(oldEntries[oldIdx], newEntries[newIdx]);
+      ++oldIdx;
+      ++newIdx;
+    }
+  }
+}
+
+Future<Unit> TreeInode::checkoutReplaceEntry(
+    CheckoutContext* ctx,
+    InodePtr inode,
+    const TreeEntry& newScmEntry) {
+  CHECK(ctx->shouldApplyChanges());
+  return checkoutRemoveChild(ctx, newScmEntry.getName(), inode)
+      .then([ self = inodePtrFromThis(), newScmEntry ]() {
+        auto contents = self->contents_.wlock();
+        auto newEntry =
+            make_unique<Entry>(newScmEntry.getMode(), newScmEntry.getHash());
+        contents->entries.emplace(newScmEntry.getName(), std::move(newEntry));
+      });
+}
+
+Future<Unit> TreeInode::checkoutRemoveChild(
+    CheckoutContext* ctx,
+    PathComponentPiece name,
+    InodePtr inode) {
+  CHECK(ctx->shouldApplyChanges());
+  std::unique_ptr<InodeBase> deletedInode;
+  auto contents = contents_.wlock();
+
+  // The CheckoutContext should be holding the rename lock, so the entry
+  // at this name should still be the specified inode.
+  auto it = contents->entries.find(name);
+  if (it == contents->entries.end()) {
+    auto bug = EDEN_BUG()
+        << "entry removed while holding rename lock during checkout: "
+        << inode->getLogPath();
+    return folly::makeFuture<Unit>(bug.toException());
+  }
+  if (it->second->inode != inode.get()) {
+    auto bug = EDEN_BUG()
+        << "entry changed while holding rename lock during checkout: "
+        << inode->getLogPath();
+    return folly::makeFuture<Unit>(bug.toException());
+  }
+
+  auto treeInode = inode.asTreePtrOrNull();
+  if (!treeInode) {
+    // This is a file, so we can simply unlink it
+    deletedInode = inode->markUnlinked(this, name, ctx->renameLock());
+    getOverlay()->removeOverlayData(inode->getNodeId());
+    contents->entries.erase(it);
+    // We don't save our own overlay data right now:
+    // we'll wait to do that until the checkout operation finishes touching all
+    // of our children in checkout().
+    return makeFuture();
+  }
+
+  // We have to recursively unlink everything inside this tree
+  // FIXME
+  return makeFuture<Unit>(std::runtime_error(
+      "TreeInode::checkoutRemoveChild() not implemented for trees"));
+}
+
+void TreeInode::saveOverlayPostCheckout(
+    CheckoutContext* /* ctx */,
+    const Tree* tree) {
+  auto contents = contents_.wlock();
+
+  // Check to see if we need to be materialized or not.
+  //
+  // If we can confirm that we are identical to the source control Tree we do
+  // not need to be materialized.
+  auto shouldMaterialize = [&]() {
+    const auto& scmEntries = tree->getTreeEntries();
+    // If we have a different number of entries we must be different from the
+    // Tree, and therefore must be materialized.
+    if (scmEntries.size() != contents->entries.size()) {
+      return true;
+    }
+
+    // This code relies on the fact that our contents->entries PathMap sorts
+    // paths in the same order as Tree's entry list.
+    auto inodeIter = contents->entries.begin();
+    auto scmIter = scmEntries.begin();
+    for (; scmIter != scmEntries.end(); ++inodeIter, ++scmIter) {
+      // If any of our children are materialized, we need to be materialized
+      // too to record the fact that we have materialized children.
+      //
+      // If our children are materialized this means they are likely different
+      // from the new source control state.  (This is not a 100% guarantee
+      // though, as writes may still be happening concurrently to the checkout
+      // operation.)  Even if the child is still identical to its source
+      // control state we still want to make sure we are materialized if the
+      // child is.
+      if (inodeIter->second->isMaterialized()) {
+        return true;
+      }
+
+      // If if the child is not materialized, it is the same as some source
+      // control object.  However, if it isn't the same as the object in our
+      // Tree, we have to materialize ourself.
+      if (inodeIter->second->getHash() != scmIter->getHash()) {
+        return true;
+      }
+    }
+
+    // If we're still here we are identical to the source control Tree.
+    // We can be dematerialized.
+    return false;
+  };
+
+  bool materialize = shouldMaterialize();
+  if (materialize) {
+    VLOG(6) << "post checkout: tree is materialized: " << getLogPath();
+    getOverlay()->saveOverlayDir(getNodeId(), &*contents);
+    if (entry_) {
+      entry_->setMaterialized(getNodeId());
+    }
+  } else {
+    VLOG(6) << "post checkout: tree is not materialized: " << getLogPath();
+    getOverlay()->removeOverlayData(getNodeId());
+    if (entry_) {
+      entry_->setUnmaterialized(tree->getHash());
+    }
+  }
+
+  // We don't need to inform our parent TreeInode about changes in our
+  // materialization state right now.  Our parent will recompute its own
+  // materialization status once all of its children finish their checkout
+  // operations.
 }
 
 namespace {
@@ -1208,19 +1647,41 @@ folly::Future<folly::Unit> recursivelyLoadMaterializedChildren(
 }
 }
 
-folly::Future<folly::Unit> TreeInode::loadMaterializedChildren() {
-  struct LoadInfo {
-    LoadInfo(
-        Future<unique_ptr<InodeBase>>&& f,
-        PathComponentPiece n,
-        fuse_ino_t num)
-        : future(std::move(f)), name(n), number(num) {}
+folly::Future<InodePtr> TreeInode::loadChildLocked(
+    Dir& /* contents */,
+    PathComponentPiece name,
+    Entry* entry,
+    std::vector<IncompleteInodeLoad>* pendingLoads) {
+  DCHECK(!entry->inode);
 
-    Future<unique_ptr<InodeBase>> future;
-    PathComponent name;
-    fuse_ino_t number;
-  };
-  std::vector<LoadInfo> pendingLoads;
+  bool startLoad;
+  fuse_ino_t childNumber;
+  folly::Promise<InodePtr> promise;
+  auto future = promise.getFuture();
+  if (entry->hasInodeNumber()) {
+    childNumber = entry->getInodeNumber();
+    startLoad = getInodeMap()->shouldLoadChild(
+        this, name, childNumber, std::move(promise));
+  } else {
+    childNumber =
+        getInodeMap()->newChildLoadStarted(this, name, std::move(promise));
+    // Immediately record the newly allocated inode number
+    entry->setInodeNumber(childNumber);
+    startLoad = true;
+  }
+
+  if (startLoad) {
+    auto loadFuture =
+        startLoadingInodeNoThrow(entry, name, entry->getInodeNumber());
+    pendingLoads->emplace_back(
+        this, std::move(loadFuture), name, entry->getInodeNumber());
+  }
+
+  return future;
+}
+
+folly::Future<folly::Unit> TreeInode::loadMaterializedChildren() {
+  std::vector<IncompleteInodeLoad> pendingLoads;
   std::vector<Future<InodePtr>> inodeFutures;
 
   {
@@ -1245,17 +1706,8 @@ folly::Future<folly::Unit> TreeInode::loadMaterializedChildren() {
         continue;
       }
 
-      folly::Promise<InodePtr> promise;
-      inodeFutures.emplace_back(promise.getFuture());
-      if (getInodeMap()->shouldLoadChild(
-              this, name, ent->getInodeNumber(), std::move(promise))) {
-        // The inode is not already being loaded.  We have to start loading it
-        // now.
-        auto loadFuture =
-            startLoadingInodeNoThrow(ent.get(), name, ent->getInodeNumber());
-        pendingLoads.emplace_back(
-            std::move(loadFuture), name, ent->getInodeNumber());
-      }
+      auto future = loadChildLocked(*contents, name, ent.get(), &pendingLoads);
+      inodeFutures.emplace_back(std::move(future));
     }
   }
 
@@ -1263,7 +1715,7 @@ folly::Future<folly::Unit> TreeInode::loadMaterializedChildren() {
   // then the futures are ready.  We can only do this after releasing the
   // contents_ lock.
   for (auto& load : pendingLoads) {
-    registerInodeLoadComplete(load.future, load.name, load.number);
+    load.finish();
   }
 
   // Now add callbacks to the Inode futures so that we recurse into

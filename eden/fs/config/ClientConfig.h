@@ -79,7 +79,7 @@ class ClientConfig {
 
   Hash getSnapshotID() const;
 
-  void setSnapshotID(Hash& id) const;
+  void setSnapshotID(Hash id) const;
 
   const AbsolutePath& getMountPath() const {
     return mountPath_;

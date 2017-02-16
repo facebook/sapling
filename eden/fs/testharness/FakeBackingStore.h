@@ -49,6 +49,9 @@ class FakeBackingStore : public BackingStore {
   StoredBlob* putBlob(folly::StringPiece contents);
   StoredBlob* putBlob(Hash hash, folly::StringPiece contents);
 
+  static Blob makeBlob(folly::StringPiece contents);
+  static Blob makeBlob(Hash hash, folly::StringPiece contents);
+
   /**
    * Helper functions for building a tree.
    *

@@ -160,8 +160,10 @@ void EdenServiceHandler::listMounts(std::vector<MountInfo>& results) {
 }
 
 void EdenServiceHandler::checkOutRevision(
+    std::vector<CheckoutConflict>& results,
     std::unique_ptr<std::string> mountPoint,
-    std::unique_ptr<std::string> hash) {
+    std::unique_ptr<std::string> hash,
+    bool force) {
   Hash hashObj(*hash);
   AbsolutePathPiece mountPointForClient(*mountPoint);
 
@@ -170,10 +172,8 @@ void EdenServiceHandler::checkOutRevision(
     throw EdenError("requested mount point is not known to this eden instance");
   }
 
-  auto root = edenMount->getRootInode();
-  CHECK_NOTNULL(root.get());
-
-  root->performCheckout(hashObj);
+  auto checkoutFuture = edenMount->checkout(hashObj, force);
+  results = checkoutFuture.get();
 }
 
 void EdenServiceHandler::getSHA1(

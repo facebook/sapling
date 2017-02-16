@@ -540,7 +540,8 @@ void InodeMap::unloadInode(
   }
 
   auto numErased = data->loadedInodes_.erase(inode->getNodeId());
-  CHECK_EQ(numErased, 1);
+  CHECK_EQ(numErased, 1) << "inconsistent loaded inodes data: "
+                         << inode->getLogPath();
 }
 
 bool InodeMap::shouldLoadChild(
