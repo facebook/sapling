@@ -153,21 +153,6 @@ struct PathOperators {
     return a.stringPiece() == b.stringPiece();
   }
 
-  // Inequality
-  friend bool operator!=(const Stored& a, const Stored& b) {
-    return a.stringPiece() != b.stringPiece();
-  }
-  friend bool operator!=(const Piece& a, const Stored& b) {
-    return a.stringPiece() != b.stringPiece();
-  }
-
-  friend bool operator!=(const Piece& a, const Piece& b) {
-    return a.stringPiece() != b.stringPiece();
-  }
-  friend bool operator!=(const Stored& a, const Piece& b) {
-    return a.stringPiece() != b.stringPiece();
-  }
-
   // Equality and Inequality vs stringy looking values.
   // We allow testing against anything that is convertible to StringPiece.
   // This template gunk generates the code for testing the following
@@ -218,10 +203,10 @@ template <
     >
 class PathBase :
     // ordering operators for this type
-    public boost::totally_ordered<
-        PathBase<Storage, SanityChecker, Stored, Piece>>,
-    // ordering operators between Stored and Piece variants
-    public boost::less_than_comparable<Stored, Piece>,
+    public std::conditional<
+        std::is_same<Storage, Stored>::value,
+        boost::totally_ordered<Stored, Piece>,
+        boost::totally_ordered<Piece>>::type,
     // equality operators, as boost's helpers get confused
     public PathOperators<Stored, Piece> {
  protected:

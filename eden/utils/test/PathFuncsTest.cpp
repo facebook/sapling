@@ -529,3 +529,49 @@ TEST(PathFuncs, realpath) {
   EXPECT_THROW_ERRNO(realpath("loop_b"), ELOOP);
   EXPECT_THROW_ERRNO(realpath("parent/nosuchfile"), ENOENT);
 }
+
+template <typename StoredType, typename PieceType>
+void compareHelper(StringPiece str1, StringPiece str2) {
+  EXPECT_TRUE(StoredType{str1} < StoredType{str2});
+  EXPECT_TRUE(PieceType{str1} < PieceType{str2});
+  EXPECT_TRUE(StoredType{str1} < PieceType{str2});
+  EXPECT_TRUE(PieceType{str1} < StoredType{str2});
+
+  EXPECT_TRUE(StoredType{str1} <= StoredType{str2});
+  EXPECT_TRUE(PieceType{str1} <= PieceType{str2});
+  EXPECT_TRUE(StoredType{str1} <= PieceType{str2});
+  EXPECT_TRUE(PieceType{str1} <= StoredType{str2});
+
+  EXPECT_FALSE(StoredType{str1} > StoredType{str2});
+  EXPECT_FALSE(PieceType{str1} > PieceType{str2});
+  EXPECT_FALSE(StoredType{str1} > PieceType{str2});
+  EXPECT_FALSE(PieceType{str1} > StoredType{str2});
+
+  EXPECT_FALSE(StoredType{str1} >= StoredType{str2});
+  EXPECT_FALSE(PieceType{str1} >= PieceType{str2});
+  EXPECT_FALSE(StoredType{str1} >= PieceType{str2});
+  EXPECT_FALSE(PieceType{str1} >= StoredType{str2});
+
+  EXPECT_FALSE(StoredType{str1} == StoredType{str2});
+  EXPECT_FALSE(PieceType{str1} == PieceType{str2});
+  EXPECT_FALSE(StoredType{str1} == PieceType{str2});
+  EXPECT_FALSE(PieceType{str1} == StoredType{str2});
+
+  EXPECT_TRUE(StoredType{str1} != StoredType{str2});
+  EXPECT_TRUE(PieceType{str1} != PieceType{str2});
+  EXPECT_TRUE(StoredType{str1} != PieceType{str2});
+  EXPECT_TRUE(PieceType{str1} != StoredType{str2});
+}
+
+TEST(PathFuncs, comparison) {
+  // Test various combinations of path comparison operators,
+  // mostly to make sure that the template instantiations all compile
+  // correctly and unambiguously.
+  compareHelper<PathComponent, PathComponentPiece>("abc", "def");
+  compareHelper<RelativePath, RelativePathPiece>("abc/def", "abc/xyz");
+  compareHelper<AbsolutePath, AbsolutePathPiece>("/abc/def", "/abc/xyz");
+
+  // We should always perform byte-by-byte comparisons (and ignore locale)
+  EXPECT_LT(PathComponent{"ABC"}, PathComponent{"abc"});
+  EXPECT_LT(PathComponent{"XYZ"}, PathComponent{"abc"});
+}
