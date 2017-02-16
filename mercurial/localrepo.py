@@ -270,7 +270,7 @@ class localrepository(object):
         self._phasedefaults = []
         try:
             self.ui.readconfig(self.join("hgrc"), self.root)
-            extensions.loadall(self.ui)
+            self._loadextensions()
         except IOError:
             pass
 
@@ -370,6 +370,9 @@ class localrepository(object):
 
     def close(self):
         self._writecaches()
+
+    def _loadextensions(self):
+        extensions.loadall(self.ui)
 
     def _writecaches(self):
         if self._revbranchcache:
