@@ -281,9 +281,19 @@ def _recordcommit(tr, hexnode, rev, vfs):
         _writeindexentry(fileobj, bin(hexnode), rev)
 
 def _partialmatch(orig, self, id):
-    if not _ispartialindexbuilt(self.opener):
+    # we only need the vfs for exists checks, not writing
+    # so if opener doesn't have `exists` method then we can't use
+    # partial index
+    opener = self._realopener
+    try:
+        indexbuilt = _ispartialindexbuilt(opener)
+        ui = opener.ui
+    except AttributeError:
+        # not a proper vfs, no exists method or ui, so we can't proceed.
+        indexbuilt = False
+    if not indexbuilt:
         return orig(self, id)
-    candidates = _findcandidates(self.opener.ui, self.opener, id)
+    candidates = _findcandidates(ui, opener, id)
     if candidates is None:
         return orig(self, id)
     elif len(candidates) == 0:
