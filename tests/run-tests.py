@@ -588,6 +588,7 @@ class Test(unittest.TestCase):
         self._shell = _bytespath(shell)
         self._hgcommand = hgcommand or b'hg'
         self._usechg = usechg
+        self._useipv6 = useipv6
 
         self._aborted = False
         self._daemonpids = []
@@ -878,6 +879,7 @@ class Test(unittest.TestCase):
         env["HGUSER"]   = "test"
         env["HGENCODING"] = "ascii"
         env["HGENCODINGMODE"] = "strict"
+        env['HGIPV6'] = str(int(self._useipv6))
 
         # Reset some environment variables to well-known values so that
         # the tests produce repeatable output.
