@@ -857,6 +857,12 @@ class Test(unittest.TestCase):
         else:
             return re.escape(p)
 
+    def _localip(self):
+        if self._useipv6:
+            return b'::1'
+        else:
+            return b'127.0.0.1'
+
     def _getenv(self):
         """Obtain environment variables to use during test execution."""
         def defineport(i):
@@ -880,6 +886,10 @@ class Test(unittest.TestCase):
         env["HGENCODING"] = "ascii"
         env["HGENCODINGMODE"] = "strict"
         env['HGIPV6'] = str(int(self._useipv6))
+
+        # LOCALIP could be ::1 or 127.0.0.1. Useful for tests that require raw
+        # IP addresses.
+        env['LOCALIP'] = self._localip()
 
         # Reset some environment variables to well-known values so that
         # the tests produce repeatable output.
