@@ -1,3 +1,7 @@
+ATTENTION: logtoprocess runs commands asynchronously. Be sure to append "| cat"
+to hg commands, to wait for the output, if you want to test its output.
+Otherwise the test will be flaky.
+
 Test if logtoprocess correctly captures command-related log calls.
 
   $ hg init
@@ -34,9 +38,8 @@ Test if logtoprocess correctly captures command-related log calls.
 Running a command triggers both a ui.log('command') and a
 ui.log('commandfinish') call. The foo command also uses ui.log.
 
-Use head to ensure we wait for all lines to be produced, and sort to avoid
-ordering issues between the various processes we spawn:
-  $ hg foo | head -n 17 | sort
+Use sort to avoid ordering issues between the various processes we spawn:
+  $ hg foo | cat | sort
   
   
   
@@ -66,5 +69,5 @@ Confirm that logging blocked time catches stdio properly:
   > logblockedtimes=True
   > EOF
 
-  $ hg log
+  $ hg log | cat
   uiblocked stdio [0-9]+.[0-9]* ms command [0-9]+.[0-9]* ms (re)
