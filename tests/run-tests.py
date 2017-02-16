@@ -599,11 +599,6 @@ class Test(unittest.TestCase):
         self._testtmp = None
         self._chgsockdir = None
 
-        # If IPv6 is used, set web.ipv6=1 in hgrc so servers will use IPv6
-        if useipv6:
-            self._extraconfigopts = list(self._extraconfigopts)
-            self._extraconfigopts.append('web.ipv6 = True')
-
         # If we're not in --debug mode and reference output file exists,
         # check test output against it.
         if debug:
@@ -935,6 +930,7 @@ class Test(unittest.TestCase):
                    (os.path.join(self._testtmp, b'.cache/largefiles')))
         hgrc.write(b'[web]\n')
         hgrc.write(b'address = localhost\n')
+        hgrc.write(b'ipv6 = %s\n' % self._useipv6)
 
         for opt in self._extraconfigopts:
             section, key = opt.split('.', 1)
