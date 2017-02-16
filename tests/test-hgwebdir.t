@@ -1421,7 +1421,7 @@ test listening address/port specified by web-conf (issue4699):
   > EOF
   $ hg serve -d --pid-file=hg.pid --web-conf paths.conf \
   >     -A access-paths.log -E error-paths-9.log
-  listening at http://*:$HGPORT1/ (bound to 127.0.0.1:$HGPORT1) (glob)
+  listening at http://*:$HGPORT1/ (bound to *$LOCALIP*:$HGPORT1) (glob)
   $ cat hg.pid >> $DAEMON_PIDS
   $ get-with-headers.py localhost:$HGPORT1 '?style=raw'
   200 Script output follows
@@ -1433,7 +1433,7 @@ test --port option overrides web.port:
   $ killdaemons.py
   $ hg serve -p $HGPORT2 -d -v --pid-file=hg.pid --web-conf paths.conf \
   >     -A access-paths.log -E error-paths-10.log
-  listening at http://*:$HGPORT2/ (bound to 127.0.0.1:$HGPORT2) (glob)
+  listening at http://*:$HGPORT2/ (bound to *$LOCALIP*:$HGPORT2) (glob)
   $ cat hg.pid >> $DAEMON_PIDS
   $ get-with-headers.py localhost:$HGPORT2 '?style=raw'
   200 Script output follows

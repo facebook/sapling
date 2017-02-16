@@ -32,7 +32,7 @@ Test raw style of hgweb
   It is very boring to read, but computers don't
   care about things like that.
   $ cat access.log error.log
-  127.0.0.1 - - [*] "GET /?f=bf0ff59095c9;file=sub/some%20text%25.txt;style=raw HTTP/1.1" 200 - (glob)
+  $LOCALIP - - [*] "GET /?f=bf0ff59095c9;file=sub/some%20text%25.txt;style=raw HTTP/1.1" 200 - (glob)
 
   $ rm access.log error.log
   $ hg serve -p $HGPORT -A access.log -E error.log -d --pid-file=hg.pid \
@@ -53,6 +53,6 @@ Test raw style of hgweb
   It is very boring to read, but computers don't
   care about things like that.
   $ cat access.log error.log
-  127.0.0.1 - - [*] "GET /?f=bf0ff59095c9;file=sub/some%20text%25.txt;style=raw HTTP/1.1" 200 - (glob)
+  $LOCALIP - - [*] "GET /?f=bf0ff59095c9;file=sub/some%20text%25.txt;style=raw HTTP/1.1" 200 - (glob)
 
   $ cd ..

@@ -34,13 +34,13 @@ errors
 With -v
 
   $ hgserve
-  listening at http://localhost/ (bound to 127.0.0.1:HGPORT1) (glob)
+  listening at http://localhost/ (bound to *$LOCALIP*:HGPORT1) (glob)
   % errors
 
 With -v and -p HGPORT2
 
   $ hgserve -p "$HGPORT2"
-  listening at http://localhost/ (bound to 127.0.0.1:HGPORT2) (glob)
+  listening at http://localhost/ (bound to *$LOCALIP*:HGPORT2) (glob)
   % errors
 
 With -v and -p daytime (should fail because low port)
@@ -57,25 +57,25 @@ With -v and -p daytime (should fail because low port)
 With --prefix foo
 
   $ hgserve --prefix foo
-  listening at http://localhost/foo/ (bound to 127.0.0.1:HGPORT1) (glob)
+  listening at http://localhost/foo/ (bound to *$LOCALIP*:HGPORT1) (glob)
   % errors
 
 With --prefix /foo
 
   $ hgserve --prefix /foo
-  listening at http://localhost/foo/ (bound to 127.0.0.1:HGPORT1) (glob)
+  listening at http://localhost/foo/ (bound to *$LOCALIP*:HGPORT1) (glob)
   % errors
 
 With --prefix foo/
 
   $ hgserve --prefix foo/
-  listening at http://localhost/foo/ (bound to 127.0.0.1:HGPORT1) (glob)
+  listening at http://localhost/foo/ (bound to *$LOCALIP*:HGPORT1) (glob)
   % errors
 
 With --prefix /foo/
 
   $ hgserve --prefix /foo/
-  listening at http://localhost/foo/ (bound to 127.0.0.1:HGPORT1) (glob)
+  listening at http://localhost/foo/ (bound to *$LOCALIP*:HGPORT1) (glob)
   % errors
 
   $ cd ..

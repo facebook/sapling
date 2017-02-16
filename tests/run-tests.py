@@ -842,6 +842,7 @@ class Test(unittest.TestCase):
             self._portmap(2),
             (br'(?m)^(saved backup bundle to .*\.hg)( \(glob\))?$',
              br'\1 (glob)'),
+            (br'([^0-9])%s' % re.escape(self._localip()), br'\1$LOCALIP'),
             ]
         r.append((self._escapepath(self._testtmp), b'$TESTTMP'))
 

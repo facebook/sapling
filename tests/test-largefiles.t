@@ -192,7 +192,7 @@ Test display of largefiles in hgweb
 
   $ hg serve -d -p $HGPORT --pid-file ../hg.pid
   $ cat ../hg.pid >> $DAEMON_PIDS
-  $ get-with-headers.py 127.0.0.1:$HGPORT 'file/tip/?style=raw'
+  $ get-with-headers.py $LOCALIP:$HGPORT 'file/tip/?style=raw'
   200 Script output follows
   
   
@@ -201,7 +201,7 @@ Test display of largefiles in hgweb
   -rw-r--r-- 9 normal3
   
   
-  $ get-with-headers.py 127.0.0.1:$HGPORT 'file/tip/sub/?style=raw'
+  $ get-with-headers.py $LOCALIP:$HGPORT 'file/tip/sub/?style=raw'
   200 Script output follows
   
   

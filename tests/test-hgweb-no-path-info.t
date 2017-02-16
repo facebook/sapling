@@ -49,7 +49,7 @@ should be used from d74fc8dec2b4 onward to route the request.
   >     'REQUEST_METHOD': 'GET',
   >     'PATH_INFO': '/',
   >     'SCRIPT_NAME': '',
-  >     'SERVER_NAME': '127.0.0.1',
+  >     'SERVER_NAME': '$LOCALIP',
   >     'SERVER_PORT': os.environ['HGPORT'],
   >     'SERVER_PROTOCOL': 'HTTP/1.0'
   > }
@@ -79,16 +79,16 @@ should be used from d74fc8dec2b4 onward to route the request.
   <?xml version="1.0" encoding="ascii"?>
   <feed xmlns="http://www.w3.org/2005/Atom">
    <!-- Changelog -->
-   <id>http://127.0.0.1:$HGPORT/</id> (glob)
-   <link rel="self" href="http://127.0.0.1:$HGPORT/atom-log"/> (glob)
-   <link rel="alternate" href="http://127.0.0.1:$HGPORT/"/> (glob)
+   <id>http://$LOCALIP:$HGPORT/</id> (glob)
+   <link rel="self" href="http://$LOCALIP:$HGPORT/atom-log"/> (glob)
+   <link rel="alternate" href="http://$LOCALIP:$HGPORT/"/> (glob)
    <title>repo Changelog</title>
    <updated>1970-01-01T00:00:00+00:00</updated>
   
    <entry>
     <title>[default] test</title>
-    <id>http://127.0.0.1:$HGPORT/#changeset-61c9426e69fef294feed5e2bbfc97d39944a5b1c</id> (glob)
-    <link href="http://127.0.0.1:$HGPORT/rev/61c9426e69fe"/> (glob)
+    <id>http://$LOCALIP:$HGPORT/#changeset-61c9426e69fef294feed5e2bbfc97d39944a5b1c</id> (glob)
+    <link href="http://$LOCALIP:$HGPORT/rev/61c9426e69fe"/> (glob)
     <author>
      <name>test</name>
      <email>&#116;&#101;&#115;&#116;</email>

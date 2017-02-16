@@ -1796,7 +1796,7 @@ Dish up an empty repo; serve it cold.
   $ hg serve -R "$TESTTMP/test" -n test -p $HGPORT -d --pid-file=hg.pid
   $ cat hg.pid >> $DAEMON_PIDS
 
-  $ get-with-headers.py 127.0.0.1:$HGPORT "help"
+  $ get-with-headers.py $LOCALIP:$HGPORT "help"
   200 Script output follows
   
   <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
@@ -2365,7 +2365,7 @@ Dish up an empty repo; serve it cold.
   </html>
   
 
-  $ get-with-headers.py 127.0.0.1:$HGPORT "help/add"
+  $ get-with-headers.py $LOCALIP:$HGPORT "help/add"
   200 Script output follows
   
   <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
@@ -2542,7 +2542,7 @@ Dish up an empty repo; serve it cold.
   </html>
   
 
-  $ get-with-headers.py 127.0.0.1:$HGPORT "help/remove"
+  $ get-with-headers.py $LOCALIP:$HGPORT "help/remove"
   200 Script output follows
   
   <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
@@ -2740,7 +2740,7 @@ Dish up an empty repo; serve it cold.
   </html>
   
 
-  $ get-with-headers.py 127.0.0.1:$HGPORT "help/dates"
+  $ get-with-headers.py $LOCALIP:$HGPORT "help/dates"
   200 Script output follows
   
   <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
@@ -2847,7 +2847,7 @@ Dish up an empty repo; serve it cold.
 
 Sub-topic indexes rendered properly
 
-  $ get-with-headers.py 127.0.0.1:$HGPORT "help/internals"
+  $ get-with-headers.py $LOCALIP:$HGPORT "help/internals"
   200 Script output follows
   
   <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
@@ -2943,7 +2943,7 @@ Sub-topic indexes rendered properly
 
 Sub-topic topics rendered properly
 
-  $ get-with-headers.py 127.0.0.1:$HGPORT "help/internals.changegroups"
+  $ get-with-headers.py $LOCALIP:$HGPORT "help/internals.changegroups"
   200 Script output follows
   
   <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
