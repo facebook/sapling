@@ -14,11 +14,6 @@
 
 #define NODE_SZ 20
 
-#define PACKSUFFIX ".datapack"
-#define PACKSUFFIXLEN 9
-#define INDEXSUFFIX ".dataidx"
-#define INDEXSUFFIXLEN 8
-
 typedef uint32_t index_offset_t;
 #define ntoh_index_offset ntohl
 #define FULLTEXTINDEXMARK ((index_offset_t) -1)
@@ -125,7 +120,7 @@ extern void close_datapack(datapack_handle_t *);
  * Finds a node using the index, and fills out the packindex pointer.
  * Returns true iff the node is found.
  */
-extern bool find(
+bool find(
     const datapack_handle_t *handle,
     const uint8_t node[NODE_SZ],
     pack_index_entry_t *packindex);
