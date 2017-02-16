@@ -26,6 +26,11 @@ httpserver = util.httpserver
 urlparse = util.urlparse
 socketserver = util.socketserver
 
+if os.environ.get('HGIPV6', '0') == '1':
+    family = socket.AF_INET6
+else:
+    family = socket.AF_INET
+
 class ProxyHandler (httpserver.basehttprequesthandler):
     __base = httpserver.basehttprequesthandler
     __base_handle = __base.handle
@@ -65,7 +70,7 @@ class ProxyHandler (httpserver.basehttprequesthandler):
         return 1
 
     def do_CONNECT(self):
-        soc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        soc = socket.socket(family, socket.SOCK_STREAM)
         try:
             if self._connect_to(self.path, soc):
                 self.log_request(200)
@@ -85,7 +90,7 @@ class ProxyHandler (httpserver.basehttprequesthandler):
         if scm != 'http' or fragment or not netloc:
             self.send_error(400, "bad url %s" % self.path)
             return
-        soc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        soc = socket.socket(family, socket.SOCK_STREAM)
         try:
             if self._connect_to(netloc, soc):
                 self.log_request()
