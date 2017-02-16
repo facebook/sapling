@@ -24,11 +24,12 @@
   b75a450e74d5a7708da8c3144fbeb4ac88694044
 
 Check permissions
-  $ ls -al .hg/store/partialindex/
-  total \d+ (re)
+  $ ls -al .hg/store/partialindex/ | sort
+  -rw-r--r--.* generationnum (re)
+  -rw-r--r--.* b7 (re)
   drwxr-xr-x.* \. (re)
   drwxr-xr-x.* \.\. (re)
-  -rw-r--r--.* b7 (re)
+  total \d+ (re)
 
 Check debug commands
   $ hg debugrebuildpartialindex
@@ -110,17 +111,19 @@ Test that new partial index entries are created during clone and pull
   $ cd ..
   $ hg clone -q ssh://user@dummy/repo cloned
   $ cd cloned
-  $ ls .hg/store/partialindex
+  $ ls .hg/store/partialindex | sort
   b7
+  generationnum
   $ cd ../repo
   $ mkcommit fromserver
   $ hg log -r . -T '{node}\n'
   3dd368d533d16f6172e27321f05f9a419ca354bf
   $ cd ../cloned
   $ hg pull -q
-  $ ls .hg/store/partialindex
+  $ ls .hg/store/partialindex | sort
   3d
   b7
+  generationnum
   $ hg debugprintpartialindexfile 3d
   3dd368d533d16f6172e27321f05f9a419ca354bf 1
 
@@ -204,10 +207,11 @@ Test histedit
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     first
   
-  $ ls .hg/store/partialindex
+  $ ls .hg/store/partialindex | sort
   1d
   8d
   b7
+  generationnum
 
 Abort strip and then restore. Check partial index
   $ rm -rf .hg/strip-backup/*
@@ -331,6 +335,7 @@ Test cache rebuilding
 Next command should set that cache needs rebuilding
   $ hg log -r 587cd78c6d0eb0259 > /dev/null
   $ hg debugfastpartialmatchstat
+  generation number: 0
   index will be rebuilt on the next pull
   file: 3d, entries: 1, out of them 1 sorted
   file: 58, entries: 1, out of them 0 sorted
@@ -342,6 +347,7 @@ Now do a pull and make sure that index was rebuilt (file '12' is not rebuilt
 because it was just pulled)
   $ hg pull -q
   $ hg debugfastpartialmatchstat
+  generation number: 0
   index will be rebuilt on the next pull
   file: 12, entries: 1, out of them 0 sorted
   file: 3d, entries: 1, out of them 1 sorted
@@ -357,6 +363,7 @@ to be rebuilt
   $ cd ../cloned2
   $ hg pull -q --config fastpartialmatch.unsortedthreshold=2
   $ hg debugfastpartialmatchstat
+  generation number: 0
   file: 12, entries: 1, out of them 1 sorted
   file: 3d, entries: 1, out of them 1 sorted
   file: 58, entries: 1, out of them 1 sorted
@@ -383,3 +390,53 @@ of permissions. Make sure it doesn't throw and just log the problem
   summary:     commitpermissionissue
   
   $ chmod u+w .hg/store/partialindex
+
+Temporarily disable the fastpartialmatch and make a commit.
+Bump index generation number version and check that index was deleted after next
+invocation
+
+  $ echo disabled > disabled
+  $ hg add disabled
+  $ hg --config extensions.fastpartialmatch=! ci -m disabled
+  $ hg debugcheckpartialindex
+  e26f27bfb47a8eb9df0ee8f0feeb850722bc416d node not found in partialindex
+  [1]
+  $ printf "\n[fastpartialmatch]\ngenerationnumber=1\n" >> .hg/hgrc
+  $ hg log -r . -T '{node}'
+  e26f27bfb47a8eb9df0ee8f0feeb850722bc416d (no-eol)
+  $ hg debugcheckpartialindex
+  partial index is not built
+  [1]
+
+Make pull to rebuild the index
+  $ cd ../repo
+  $ mkcommit servercommit
+  $ cd ../cloned2
+  $ hg pull -q
+  $ hg debugcheckpartialindex
+  $ hg debugfastpartialmatchstat
+  generation number: 1
+  index will be rebuilt on the next pull
+  file: 06, entries: 1, out of them 0 sorted
+  file: 12, entries: 1, out of them 1 sorted
+  file: 2b, entries: 1, out of them 1 sorted
+  file: 3d, entries: 1, out of them 1 sorted
+  file: 58, entries: 1, out of them 1 sorted
+  file: 64, entries: 1, out of them 1 sorted
+  file: ac, entries: 1, out of them 1 sorted
+  file: b7, entries: 1, out of them 1 sorted
+  file: e2, entries: 1, out of them 1 sorted
+  file: fd, entries: 1, out of them 1 sorted
+
+Write incorrect generation number
+  $ echo badgennum > .hg/store/partialindex/generationnum
+  $ hg log -r .
+  error happened while reading generation num: invalid literal for int() with base 10: 'badgennum\n'
+  changeset:   8:e26f27bfb47a
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     disabled
+  
+  $ hg debugcheckpartialindex
+  partial index is not built
+  [1]

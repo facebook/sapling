@@ -28,6 +28,10 @@ rev numbers for nodes should be correct too.
     # entries then index will be rebuilt when _changegrouphook will be triggered
     # (usually it's the next pull)
     unsortedthreshold = 1000
+
+    # if fastpartialmatch extension was temporarily disabled then index may miss
+    # some entries. By bumping generationnumber we can force index to be rebuilt
+    generationnumber = 0
 '''
 
 from collections import defaultdict
@@ -102,6 +106,13 @@ def reposetup(ui, repo):
         ui.setconfig('hooks', 'priority.pretxnclose.fastpartialmatch',
                      10)
 
+        if _ispartialindexbuilt(repo.svfs):
+            actualgennum = _readgenerationnum(ui, repo.svfs)
+            expectedgennum = ui.configint('fastpartialmatch',
+                                          'generationnumber', 0)
+            if actualgennum != expectedgennum:
+                repo.svfs.rmtree(_partialindexdir)
+
 @command('^debugprintpartialindexfile', [])
 def debugprintpartialindexfile(ui, repo, *args):
     '''Parses and prints partial index files
@@ -131,6 +142,10 @@ def debugcheckfastpartialindex(ui, repo):
     It checks that revision numbers are correct and checks that partial index
     has all the nodes from the repo.
     '''
+
+    if not repo.svfs.exists(_partialindexdir):
+        ui.warn(_('partial index is not built\n'))
+        return 1
     indexvfs = scmutil.vfs(repo.svfs.join(_partialindexdir))
     foundnodes = set()
     # Use unfiltered repo because index may have entries that point to hidden
@@ -174,6 +189,11 @@ def debugresolvepartialhash(ui, repo, *args):
 
 @command('^debugfastpartialmatchstat', [])
 def debugfastpartialmatchstat(ui, repo):
+    if not repo.svfs.exists(_partialindexdir):
+        ui.warn(_('partial index is not built\n'))
+        return 1
+    generationnum = _readgenerationnum(ui, repo.svfs)
+    ui.write(_('generation number: %d\n') % generationnum)
     if _needsrebuilding(repo.svfs):
         ui.write(_('index will be rebuilt on the next pull\n'))
     indexvfs = scmutil.vfs(repo.svfs.join(_partialindexdir))
@@ -221,6 +241,10 @@ def _rebuildpartialindex(ui, repo, skiphexnodes=None):
             header.write(fileobj)
             for node, rev in sorted(data, key=itemgetter(0)):
                 _writeindexentry(fileobj, node, rev)
+
+    with indexvfs('generationnum', 'w') as fp:
+        generationnum = ui.configint('fastpartialmatch', 'generationnumber', 0)
+        fp.write(str(generationnum))
     vfs.rename(tempdir, _partialindexdir)
 
 def _getopener(path):
@@ -431,6 +455,17 @@ def _markneedsrebuilding(ui, vfs):
             fileobj.write('content') # content doesn't matter
     except IOError as e:
         ui.warn(_('error happened while triggering rebuild: %s\n') % e)
+
+def _readgenerationnum(ui, vfs):
+    generationnumfile = os.path.join(_partialindexdir, 'generationnum')
+    if not vfs.exists(generationnumfile):
+        return 0
+    try:
+        with vfs(generationnumfile) as f:
+            return int(f.read())
+    except Exception as e:
+        ui.warn(_('error happened while reading generation num: %s\n') % e)
+    return 0
 
 def _writeindexentry(fileobj, node, rev):
     fileobj.write(node + _packstruct.pack(rev))
