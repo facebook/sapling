@@ -138,7 +138,7 @@ def findliteralblocks(blocks):
         i += 1
     return blocks
 
-_bulletre = re.compile(r'(-|[0-9A-Za-z]+\.|\(?[0-9A-Za-z]+\)|\|) ')
+_bulletre = re.compile(r'(\*|-|[0-9A-Za-z]+\.|\(?[0-9A-Za-z]+\)|\|) ')
 _optionre = re.compile(r'^(-([a-zA-Z0-9]), )?(--[a-z0-9-]+)'
                        r'((.*)  +)(.*)$')
 _fieldre = re.compile(r':(?![: ])([^:]*)(?<! ):[ ]+(.*)')
@@ -596,7 +596,7 @@ def formathtml(blocks):
             out.append(' <dt>%s\n <dd>%s\n' % (term, text))
         elif btype == 'bullet':
             bullet, head = lines[0].split(' ', 1)
-            if bullet == '-':
+            if bullet in ('*', '-'):
                 openlist('ul', level)
             else:
                 openlist('ol', level)

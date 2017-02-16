@@ -118,6 +118,13 @@ Line blocks are also a form of list:
 | This is the first line.
   The line continues here.
 | This is the second line.
+
+Bullet lists are also detected:
+
+* This is the first bullet
+* This is the second bullet
+  It has 2 lines
+* This is the third bullet
 """
 
 debugformats('lists', lists)
