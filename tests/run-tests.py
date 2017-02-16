@@ -112,6 +112,29 @@ else:
 # For Windows support
 wifexited = getattr(os, "WIFEXITED", lambda x: False)
 
+# Whether to use IPv6
+def checkipv6available(port=20058):
+    """return true if we can listen on localhost's IPv6 ports"""
+    family = getattr(socket, 'AF_INET6', None)
+    if family is None:
+        return False
+    try:
+        s = socket.socket(family, socket.SOCK_STREAM)
+        s.bind(('localhost', port))
+        s.close()
+        return True
+    except socket.error as exc:
+        if exc.errno == errno.EADDRINUSE:
+            return True
+        elif exc.errno in (errno.EADDRNOTAVAIL, errno.EPROTONOSUPPORT):
+            return False
+        else:
+            raise
+    else:
+        return False
+
+useipv6 = checkipv6available()
+
 def checkportisavailable(port):
     """return true if a port seems free to bind on localhost"""
     families = [getattr(socket, i, None)
