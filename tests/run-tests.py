@@ -933,6 +933,8 @@ class Test(unittest.TestCase):
         hgrc.write(b'[largefiles]\n')
         hgrc.write(b'usercache = %s\n' %
                    (os.path.join(self._testtmp, b'.cache/largefiles')))
+        hgrc.write(b'[web]\n')
+        hgrc.write(b'address = localhost\n')
 
         for opt in self._extraconfigopts:
             section, key = opt.split('.', 1)
