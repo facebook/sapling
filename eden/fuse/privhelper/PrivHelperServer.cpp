@@ -100,8 +100,12 @@ void PrivHelperServer::bindMount(
   checkUnixError(rc, "failed to mount");
 }
 
-void PrivHelperServer::fuseUnmount(const char* mountPath) {
-  auto rc = umount2(mountPath, UMOUNT_NOFOLLOW);
+void PrivHelperServer::fuseUnmount(const char* mountPath, bool force) {
+  int umountFlags = UMOUNT_NOFOLLOW;
+  if (force) {
+    umountFlags |= MNT_DETACH;
+  }
+  auto rc = umount2(mountPath, umountFlags);
   if (rc != 0) {
     int errnum = errno;
     // EINVAL simply means the path is no longer mounted.
@@ -226,6 +230,11 @@ void PrivHelperServer::cleanupMountPoints() {
   int numBindMountsRemoved = 0;
   for (const auto& mountPoint : mountPoints_) {
     // Clean up the bind mounts for a FUSE mount before the FUSE mount itself.
+    //
+    // Note that these unmounts might fail if the main eden process has already
+    // exited: these are inside an eden mount, and so accessing the parent
+    // directory will fail with ENOTCONN the eden has already closed the fuse
+    // connection.
     auto range = bindMountPoints_.equal_range(mountPoint);
     for (auto it = range.first; it != range.second; ++it) {
       auto bindMount = it->second;
@@ -234,9 +243,11 @@ void PrivHelperServer::cleanupMountPoints() {
       numBindMountsRemoved++;
     }
 
-    // This appears to fail sometimes with "Device or resource busy" if a
-    // terminal is still open with the mountPoint as the working directory.
-    fuseUnmount(mountPoint.c_str());
+    // Pass in force=true here so that Linux will remove this mount
+    // even if some of the bind unmounts above failed or if there are other
+    // processes with open file handles still referring to this mount.
+    // (This effectively does a lazy unmount.)
+    fuseUnmount(mountPoint.c_str(), true);
   }
 
   CHECK_EQ(bindMountPoints_.size(), numBindMountsRemoved)

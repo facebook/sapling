@@ -41,7 +41,7 @@ class PrivHelperTestServer : public PrivHelperServer {
 
  private:
   folly::File fuseMount(const char* mountPath) override;
-  void fuseUnmount(const char* mountPath) override;
+  void fuseUnmount(const char* mountPath, bool force) override;
   std::string getPathToMountMarker(folly::StringPiece mountPath) const;
 
   void bindMount(const char* clientPath, const char* mountPath) override;

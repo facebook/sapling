@@ -52,7 +52,7 @@ class PrivHelperServer {
 
   // These methods are virtual so we can override them during unit tests
   virtual folly::File fuseMount(const char* mountPath);
-  virtual void fuseUnmount(const char* mountPath);
+  virtual void fuseUnmount(const char* mountPath, bool force = false);
   // Both clientPath and mountPath must be existing directories.
   virtual void bindMount(const char* clientPath, const char* mountPath);
   virtual void bindUnmount(const char* mountPath);
