@@ -304,8 +304,8 @@ Non-fastforward scratch bookmark push
   pushing to ssh://user@dummy/repo
   searching for changes
   remote: non-forward push
+  remote: (use --non-forward-move to override)
   abort: push failed on remote
-  (use --non-forward-move to override)
   [255]
 
   $ hg push -r . --to scratch/mybranch --non-forward-move
