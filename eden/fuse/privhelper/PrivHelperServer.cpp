@@ -12,6 +12,7 @@
 #include <boost/algorithm/string/predicate.hpp>
 #include <fcntl.h>
 #include <folly/Exception.h>
+#include <folly/Expected.h>
 #include <folly/File.h>
 #include <folly/FileUtil.h>
 #include <folly/Format.h>
@@ -19,8 +20,8 @@
 #include <signal.h>
 #include <sys/mount.h>
 #include <sys/stat.h>
+#include <sys/statvfs.h>
 #include <sys/types.h>
-#include <sys/vfs.h>
 #include <unistd.h>
 #include <chrono>
 #include <set>
@@ -244,21 +245,40 @@ void PrivHelperServer::cleanupMountPoints() {
   mountPoints_.clear();
 }
 
+namespace {
+/// Get the file system ID, or an errno value on error
+folly::Expected<unsigned long, int> getFSID(const char* path) {
+  struct statvfs data;
+  int rc = statvfs(path, &data);
+  if (rc != 0) {
+    return folly::makeUnexpected(errno);
+  }
+  return folly::makeExpected<int>(data.f_fsid);
+}
+}
+
 void PrivHelperServer::bindUnmount(const char* mountPath) {
+  // Check the current filesystem information for this path,
+  // so we can confirm that it has been unmounted afterwards.
+  auto origFSID = getFSID(mountPath);
+
   fuseUnmount(mountPath);
 
   // Empirically, the unmount may not be complete when umount2() returns.
-  // To work around this, we repeatedly invoke statfs on the bind mount
-  // until it fails, demonstrating that it has finished unmounting.
+  // To work around this, we repeatedly invoke statvfs() on the bind mount
+  // until it fails or returns a different filesystem ID.
   //
-  // Give up after 2 seconds.
+  // Give up after 2 seconds even if the unmount does not appear complete.
   constexpr auto timeout = std::chrono::seconds(2);
   auto endTime = std::chrono::steady_clock::now() + timeout;
   while (true) {
-    // This should have a non-zero exit code once the path is unmounted.
-    struct statfs st;
-    int rc = statfs(mountPath, &st);
-    if (rc != 0) {
+    auto fsid = getFSID(mountPath);
+    if (!fsid.hasValue()) {
+      // Assume the file system is unmounted if the statvfs() call failed.
+      break;
+    }
+    if (origFSID.hasValue() && origFSID.value() != fsid.value()) {
+      // The unmount has succeeded if the filesystem ID is different now.
       break;
     }
 
