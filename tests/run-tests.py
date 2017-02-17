@@ -137,8 +137,8 @@ def checksocketfamily(name, port=20058):
     else:
         return False
 
-# IPv6 is used if IPv4 is not available and IPv6 is available.
-useipv6 = (not checksocketfamily('AF_INET')) and checksocketfamily('AF_INET6')
+# useipv6 will be set by parseargs
+useipv6 = None
 
 def checkportisavailable(port):
     """return true if a port seems free to bind on localhost"""
@@ -302,6 +302,8 @@ def getparser():
                       help="install and use chg wrapper in place of hg")
     parser.add_option("--with-chg", metavar="CHG",
                       help="use specified chg wrapper in place of hg")
+    parser.add_option("--ipv6", action="store_true",
+                      help="prefer IPv6 to IPv4 for network related tests")
     parser.add_option("-3", "--py3k-warnings", action="store_true",
         help="enable Py3k warnings on Python 2.6+")
     # This option should be deleted once test-check-py3-compat.t and other
@@ -370,6 +372,14 @@ def parseargs(args, parser):
         # chg shares installation location with hg
         parser.error('--chg does not work when --with-hg is specified '
                      '(use --with-chg instead)')
+
+    global useipv6
+    if options.ipv6:
+        useipv6 = checksocketfamily('AF_INET6')
+    else:
+        # only use IPv6 if IPv4 is unavailable and IPv6 is available
+        useipv6 = ((not checksocketfamily('AF_INET'))
+                   and checksocketfamily('AF_INET6'))
 
     options.anycoverage = options.cover or options.annotate or options.htmlcov
     if options.anycoverage:
