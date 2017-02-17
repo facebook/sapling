@@ -23,6 +23,7 @@ from mercurial import (
     phases,
     revset,
     scmutil,
+    smartset,
     util
 )
 from mercurial.i18n import _
@@ -486,7 +487,7 @@ class FastLogThread(Thread):
             gen = revset.generatorset(g, iterasc=False)
             gen.reverse()
             if revs:
-                revs = revset.addset(revs, gen, ascending=False)
+                revs = smartset.addset(revs, gen, ascending=False)
             else:
                 revs = gen
 
