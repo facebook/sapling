@@ -31,8 +31,11 @@ Config
 ::
 
   [chgserver]
-  idletimeout = 3600 # seconds, after which an idle server will exit
-  skiphash = False   # whether to skip config or env change checks
+  # how long (in seconds) should an idle chg server exit
+  idletimeout = 3600
+
+  # whether to skip config or env change checks
+  skiphash = False
 """
 
 from __future__ import absolute_import
