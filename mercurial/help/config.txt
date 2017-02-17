@@ -277,7 +277,7 @@ run arbitrary commands. As an example, ::
 will let you do ``hg echo foo`` to have ``foo`` printed in your
 terminal. A better example might be::
 
-   purge = !$HG status --no-status --unknown -0 re: | xargs -0 rm
+   purge = !$HG status --no-status --unknown -0 re: | xargs -0 rm -f
 
 which will make ``hg purge`` delete all unknown files in the
 repository in the same manner as the purge extension.
