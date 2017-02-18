@@ -14,7 +14,7 @@
    message = my custom message
    hint = my custom hint
 
-   The message and hint can contain an optional `{}` which will be substituted
+   The message and hint can contain an optional `{0}` which will be substituted
    with the hash of the hidden changeset.
 """
 
@@ -64,5 +64,5 @@ def _getstrings(ui):
     msg = ui.config('hiddenerror', 'message')
     hint = ui.config('hiddenerror', 'hint')
     if not msg:
-        msg = _("hidden changeset {}")
+        msg = _("hidden changeset {0}")
     return msg, hint
