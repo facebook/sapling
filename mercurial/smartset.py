@@ -171,8 +171,12 @@ class baseset(abstractsmartset):
                 self._set = data
                 # set has no order we pick one for stability purpose
                 self._ascending = True
-            data = list(data)
-        self._list = data
+                # converting set to list has a cost, do it lazily
+                data = None
+            else:
+                data = list(data)
+        if data is not None:
+            self._list = data
         self._datarepr = datarepr
 
     @util.propertycache
@@ -184,6 +188,12 @@ class baseset(abstractsmartset):
         asclist = self._list[:]
         asclist.sort()
         return asclist
+
+    @util.propertycache
+    def _list(self):
+        # _list is only lazily constructed if we have _set
+        assert '_set' in self.__dict__
+        return list(self._set)
 
     def __iter__(self):
         if self._ascending is None:
@@ -204,7 +214,7 @@ class baseset(abstractsmartset):
         return self._set.__contains__
 
     def __nonzero__(self):
-        return bool(self._list)
+        return bool(len(self))
 
     def sort(self, reverse=False):
         self._ascending = not bool(reverse)
@@ -218,7 +228,10 @@ class baseset(abstractsmartset):
         self._istopo = False
 
     def __len__(self):
-        return len(self._list)
+        if '_list' in self.__dict__:
+            return len(self._list)
+        else:
+            return len(self._set)
 
     def isascending(self):
         """Returns True if the collection is ascending order, False if not.
