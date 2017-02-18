@@ -4259,6 +4259,8 @@ def resolve(ui, repo, *pats, **opts):
 
     - :hg:`resolve -l`: list files which had or still have conflicts.
       In the printed list, ``U`` = unresolved and ``R`` = resolved.
+      You can use ``set:unresolved()`` or ``set:resolved()`` to filter
+      the list. See :hg:`help filesets` for details.
 
     .. note::
 
