@@ -1009,12 +1009,9 @@ def shellenviron(environ=None):
     env['HG'] = hgexecutable()
     return env
 
-def system(cmd, environ=None, cwd=None, onerr=None, errprefix=None, out=None):
+def system(cmd, environ=None, cwd=None, out=None):
     '''enhanced shell command execution.
     run with environment maybe modified, maybe in different dir.
-
-    if command fails and onerr is None, return status, else raise onerr
-    object as exception.
 
     if out is specified, it is assumed to be a file-like object that has a
     write() method. stdout and stderr will be redirected to out.'''
@@ -1022,7 +1019,6 @@ def system(cmd, environ=None, cwd=None, onerr=None, errprefix=None, out=None):
         stdout.flush()
     except Exception:
         pass
-    origcmd = cmd
     cmd = quotecommand(cmd)
     if pycompat.sysplatform == 'plan9' and (sys.version_info[0] == 2
                                     and sys.version_info[1] < 7):
@@ -1046,12 +1042,6 @@ def system(cmd, environ=None, cwd=None, onerr=None, errprefix=None, out=None):
             rc = proc.returncode
         if pycompat.sysplatform == 'OpenVMS' and rc & 1:
             rc = 0
-    if rc and onerr:
-        errmsg = '%s %s' % (os.path.basename(origcmd.split(None, 1)[0]),
-                            explainexit(rc)[0])
-        if errprefix:
-            errmsg = '%s: %s' % (errprefix, errmsg)
-        raise onerr(errmsg)
     return rc
 
 def checksignature(func):

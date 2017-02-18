@@ -179,7 +179,7 @@ def _newchgui(srcui, csystem, attachio):
             else:
                 self._csystem = csystem
 
-        def _runsystem(self, cmd, environ, cwd, onerr, errprefix, out):
+        def _runsystem(self, cmd, environ, cwd, out):
             # fallback to the original system method if the output needs to be
             # captured (to self._buffers), or the output stream is not stdout
             # (e.g. stderr, cStringIO), because the chg client is not aware of
@@ -187,17 +187,9 @@ def _newchgui(srcui, csystem, attachio):
             if (out is not self.fout
                 or not util.safehasattr(self.fout, 'fileno')
                 or self.fout.fileno() != util.stdout.fileno()):
-                return util.system(cmd, environ=environ, cwd=cwd, onerr=onerr,
-                                   errprefix=errprefix, out=out)
+                return util.system(cmd, environ=environ, cwd=cwd, out=out)
             self.flush()
-            rc = self._csystem(cmd, util.shellenviron(environ), cwd)
-            if rc and onerr:
-                errmsg = '%s %s' % (os.path.basename(cmd.split(None, 1)[0]),
-                                    util.explainexit(rc)[0])
-                if errprefix:
-                    errmsg = '%s: %s' % (errprefix, errmsg)
-                raise onerr(errmsg)
-            return rc
+            return self._csystem(cmd, util.shellenviron(environ), cwd)
 
         def _runpager(self, cmd):
             self._csystem(cmd, util.shellenviron(), type='pager',

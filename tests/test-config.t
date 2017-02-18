@@ -158,3 +158,9 @@ sub-options in [paths] aren't expanded
   $ hg showconfig paths
   paths.foo:suboption=~/foo
   paths.foo=$TESTTMP/foo
+
+edit failure
+
+  $ HGEDITOR=false hg config --edit
+  abort: edit failed: false exited with status 1
+  [255]

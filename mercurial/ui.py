@@ -1281,6 +1281,9 @@ class ui(object):
                blockedtag=None):
         '''execute shell command with appropriate output stream. command
         output will be redirected if fout is not stdout.
+
+        if command fails and onerr is None, return status, else raise onerr
+        object as exception.
         '''
         if blockedtag is None:
             blockedtag = 'unknown_system_' + cmd.translate(None, _keepalnum)
@@ -1288,14 +1291,19 @@ class ui(object):
         if any(s[1] for s in self._bufferstates):
             out = self
         with self.timeblockedsection(blockedtag):
-            return self._runsystem(cmd, environ=environ, cwd=cwd, onerr=onerr,
-                                   errprefix=errprefix, out=out)
+            rc = self._runsystem(cmd, environ=environ, cwd=cwd, out=out)
+        if rc and onerr:
+            errmsg = '%s %s' % (os.path.basename(cmd.split(None, 1)[0]),
+                                util.explainexit(rc)[0])
+            if errprefix:
+                errmsg = '%s: %s' % (errprefix, errmsg)
+            raise onerr(errmsg)
+        return rc
 
-    def _runsystem(self, cmd, environ, cwd, onerr, errprefix, out):
+    def _runsystem(self, cmd, environ, cwd, out):
         """actually execute the given shell command (can be overridden by
         extensions like chg)"""
-        return util.system(cmd, environ=environ, cwd=cwd, onerr=onerr,
-                           errprefix=errprefix, out=out)
+        return util.system(cmd, environ=environ, cwd=cwd, out=out)
 
     def traceback(self, exc=None, force=False):
         '''print exception traceback if traceback printing enabled or forced.
