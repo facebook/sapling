@@ -72,7 +72,7 @@ show the edit commands offered
   #  p, pick = use commit
   #  d, drop = remove commit from history
   #  f, fold = use commit, but combine it with the one above
-  #  r, roll = like fold, but discard this commit's description
+  #  r, roll = like fold, but discard this commit's description and date
   #
 
 edit the history
@@ -350,7 +350,7 @@ Verify that revsetalias entries work with histedit:
   #  p, pick = use commit
   #  d, drop = remove commit from history
   #  f, fold = use commit, but combine it with the one above
-  #  r, roll = like fold, but discard this commit's description
+  #  r, roll = like fold, but discard this commit's description and date
   #
 
 should also work if a commit message is missing

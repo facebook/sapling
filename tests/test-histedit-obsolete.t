@@ -136,7 +136,7 @@ Base setup for the rest of the testing
   #  p, pick = use commit
   #  d, drop = remove commit from history
   #  f, fold = use commit, but combine it with the one above
-  #  r, roll = like fold, but discard this commit's description
+  #  r, roll = like fold, but discard this commit's description and date
   #
   $ hg histedit 1 --commands - --verbose <<EOF | grep histedit
   > pick 177f92b77385 2 c

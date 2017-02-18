@@ -36,7 +36,7 @@ file open in your editor::
  #  p, pick = use commit
  #  e, edit = use commit, but stop for amending
  #  f, fold = use commit, but combine it with the one above
- #  r, roll = like fold, but discard this commit's description
+ #  r, roll = like fold, but discard this commit's description and date
  #  d, drop = remove commit from history
  #  m, mess = edit commit message without changing commit content
  #
@@ -58,7 +58,7 @@ would reorganize the file to look like this::
  #  p, pick = use commit
  #  e, edit = use commit, but stop for amending
  #  f, fold = use commit, but combine it with the one above
- #  r, roll = like fold, but discard this commit's description
+ #  r, roll = like fold, but discard this commit's description and date
  #  d, drop = remove commit from history
  #  m, mess = edit commit message without changing commit content
  #
@@ -725,6 +725,15 @@ class fold(histeditaction):
         """
         return True
 
+    def firstdate(self):
+        """Returns true if the rule should preserve the date of the first
+        change.
+
+        This exists mainly so that 'rollup' rules can be a subclass of
+        'fold'.
+        """
+        return False
+
     def finishfold(self, ui, repo, ctx, oldctx, newnode, internalchanges):
         parent = ctx.parents()[0].node()
         repo.ui.pushbuffer()
@@ -743,7 +752,10 @@ class fold(histeditaction):
                 [oldctx.description()]) + '\n'
         commitopts['message'] = newmessage
         # date
-        commitopts['date'] = max(ctx.date(), oldctx.date())
+        if self.firstdate():
+            commitopts['date'] = ctx.date()
+        else:
+            commitopts['date'] = max(ctx.date(), oldctx.date())
         extra = ctx.extra().copy()
         # histedit_source
         # note: ctx is likely a temporary commit but that the best we can do
@@ -810,12 +822,15 @@ class _multifold(fold):
         return True
 
 @action(["roll", "r"],
-        _("like fold, but discard this commit's description"))
+        _("like fold, but discard this commit's description and date"))
 class rollup(fold):
     def mergedescs(self):
         return False
 
     def skipprompt(self):
+        return True
+
+    def firstdate(self):
         return True
 
 @action(["drop", "d"],
@@ -887,7 +902,7 @@ def histedit(ui, repo, *freeargs, **opts):
 
     - `fold` to combine it with the preceding changeset (using the later date)
 
-    - `roll` like fold, but discarding this commit's description
+    - `roll` like fold, but discarding this commit's description and date
 
     - `edit` to edit this changeset (preserving date)
 

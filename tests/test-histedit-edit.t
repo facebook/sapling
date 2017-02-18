@@ -478,5 +478,5 @@ Attempting to fold a change into a public change should not work:
   #  p, fold = use commit
   #  d, drop = remove commit from history
   #  f, fold = use commit, but combine it with the one above
-  #  r, roll = like fold, but discard this commit's description
+  #  r, roll = like fold, but discard this commit's description and date
   #

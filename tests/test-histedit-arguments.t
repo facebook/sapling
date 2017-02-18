@@ -72,7 +72,7 @@ Run a dummy edit to make sure we get tip^^ correctly via revsingle.
   #  p, pick = use commit
   #  d, drop = remove commit from history
   #  f, fold = use commit, but combine it with the one above
-  #  r, roll = like fold, but discard this commit's description
+  #  r, roll = like fold, but discard this commit's description and date
   #
 
 Run on a revision not ancestors of the current working directory.
@@ -308,7 +308,7 @@ Test that trimming description using multi-byte characters
   #  p, pick = use commit
   #  d, drop = remove commit from history
   #  f, fold = use commit, but combine it with the one above
-  #  r, roll = like fold, but discard this commit's description
+  #  r, roll = like fold, but discard this commit's description and date
   #
 
 Test --continue with --keep
@@ -544,7 +544,7 @@ Check that 'roll' is selected by default
   #  p, pick = use commit
   #  d, drop = remove commit from history
   #  f, fold = use commit, but combine it with the one above
-  #  r, roll = like fold, but discard this commit's description
+  #  r, roll = like fold, but discard this commit's description and date
   #
 
   $ cd ..

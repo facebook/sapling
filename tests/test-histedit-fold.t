@@ -106,7 +106,7 @@ check histedit_source, including that it uses the later date, from the first cha
   
   
 
-rollup will fold without preserving the folded commit's message
+rollup will fold without preserving the folded commit's message or date
 
   $ OLDHGEDITOR=$HGEDITOR
   $ HGEDITOR=false
@@ -121,11 +121,11 @@ rollup will fold without preserving the folded commit's message
 
 log after edit
   $ hg logt --graph
-  @  3:fb13f1f49340 d
+  @  3:bab801520cec d
   |
-  o  2:6d4bc3727566 f
+  o  2:58c8f2bfc151 f
   |
-  o  1:563995ddbe65 b
+  o  1:5d939c56c72e b
   |
   o  0:8580ff50825a a
   
@@ -133,13 +133,13 @@ log after edit
 description is taken from rollup target commit
 
   $ hg log --debug --rev 1
-  changeset:   1:563995ddbe650c0e6b0e1c1d75f0a197b61cec50
+  changeset:   1:5d939c56c72e77e29f5167696218e2131a40f5cf
   phase:       draft
   parent:      0:8580ff50825a50c8f716709acdf8de0deddcd6ab
   parent:      -1:0000000000000000000000000000000000000000
   manifest:    1:b5e112a3a8354e269b1524729f0918662d847c38
   user:        test
-  date:        Thu Jan 01 00:00:05 1970 +0000
+  date:        Thu Jan 01 00:00:02 1970 +0000
   files+:      b e
   extra:       branch=default
   extra:       histedit_source=97d72e5f12c7e84f85064aa72e5a297142c36ed9,505a591af19eed18f560af827b9e03d2076773dc
@@ -171,13 +171,13 @@ check saving last-message.txt
   > EOF
 
   $ rm -f .hg/last-message.txt
-  $ hg status --rev '6d4bc3727566^1::fb13f1f49340'
+  $ hg status --rev '58c8f2bfc151^1::bab801520cec'
   A c
   A d
   A f
-  $ HGEDITOR="sh $TESTTMP/editor.sh" hg histedit 6d4bc3727566 --commands - 2>&1 <<EOF
-  > pick 6d4bc3727566 f
-  > fold fb13f1f49340 d
+  $ HGEDITOR="sh $TESTTMP/editor.sh" hg histedit 58c8f2bfc151 --commands - 2>&1 <<EOF
+  > pick 58c8f2bfc151 f
+  > fold bab801520cec d
   > EOF
   allow non-folding commit
   ==== before editing

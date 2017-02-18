@@ -183,7 +183,7 @@ manifest
 
   $ cd ..
 
-Repeat test using "roll", not "fold". "roll" folds in changes but drops message
+Repeat test using "roll", not "fold". "roll" folds in changes but drops message and date
 
   $ initrepo r2
   $ cd r2
@@ -276,15 +276,15 @@ just continue this time
 
 log after edit
   $ hg log --graph
-  @  changeset:   5:162978f027fb
+  @  changeset:   5:b538bcb461be
   |  tag:         tip
   |  user:        test
   |  date:        Thu Jan 01 00:00:06 1970 +0000
   |  summary:     f
   |
-  o  changeset:   4:74e5e6c6c32f
+  o  changeset:   4:317e37cb6d66
   |  user:        test
-  |  date:        Thu Jan 01 00:00:07 1970 +0000
+  |  date:        Thu Jan 01 00:00:04 1970 +0000
   |  summary:     d
   |
   o  changeset:   3:092e4ce14829
@@ -324,13 +324,13 @@ manifest
 description is taken from rollup target commit
 
   $ hg log --debug --rev 4
-  changeset:   4:74e5e6c6c32fa39f0eeed43302fd48633ea5926f
+  changeset:   4:317e37cb6d66c1c84628c00e5bf4c8c292831951
   phase:       draft
   parent:      3:092e4ce14829f4974399ce4316d59f64ef0b6725
   parent:      -1:0000000000000000000000000000000000000000
   manifest:    4:b068a323d969f22af1296ec6a5ea9384cef437ac
   user:        test
-  date:        Thu Jan 01 00:00:07 1970 +0000
+  date:        Thu Jan 01 00:00:04 1970 +0000
   files:       d e
   extra:       branch=default
   extra:       histedit_source=ae78f4c9d74ffa4b6cb5045001c303fe9204e890,42abbb61bede6f4366fa1e74a664343e5d558a70
