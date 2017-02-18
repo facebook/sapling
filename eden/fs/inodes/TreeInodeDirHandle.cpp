@@ -60,10 +60,6 @@ folly::Future<fusell::DirList> TreeInodeDirHandle::readdir(
   };
   folly::fbvector<Entry> entries;
 
-  // Fetch some info now so that we can be more efficient
-  // while populating entries.
-  auto myname = inode_->getPathBuggy();
-
   {
     auto dir = inode_->getContents().rlock();
     entries.reserve(2 /* "." and ".." */ + dir->entries.size());

@@ -128,27 +128,6 @@ class InodeBase {
   folly::Optional<RelativePath> getPath() const;
 
   /**
-   * Short term hack for existing code that is incorrectly using the path in
-   * racy ways.
-   *
-   * This is mostly used by the Overlay code.  The Overlay code needs to be
-   * switched to use inode numbers instead of path names.
-   *
-   * The value returned is not guaranteed to be up-to-date by the time it is
-   * used.  This may also throw if the file has been unlinked.
-   *
-   * TODO: Remove this method once the Overlay code is updated to use inode
-   * numbers instead of path names.
-   */
-  RelativePath getPathBuggy() const {
-    auto path = getPath();
-    if (!path.hasValue()) {
-      LOG(FATAL) << "getPathBuggy(): there is no path";
-    }
-    return path.value();
-  }
-
-  /**
    * Get a string to use to refer to this file in a log message.
    *
    * This will usually return the path to the file, but if the file has been
