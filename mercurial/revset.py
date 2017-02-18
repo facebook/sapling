@@ -1644,19 +1644,10 @@ def parents(repo, subset, x):
     ps -= set([node.nullrev])
     return subset & ps
 
-def _phase(repo, subset, target):
-    """helper to select all rev in phase <target>"""
-    repo._phasecache.loadphaserevs(repo) # ensure phase's sets are loaded
-    if repo._phasecache._phasesets:
-        s = repo._phasecache._phasesets[target] - repo.changelog.filteredrevs
-        s = baseset(s)
-        s.sort() # set are non ordered, so we enforce ascending
-        return subset & s
-    else:
-        phase = repo._phasecache.phase
-        condition = lambda r: phase(repo, r) == target
-        return subset.filter(condition, condrepr=('<phase %r>', target),
-                             cache=False)
+def _phase(repo, subset, *targets):
+    """helper to select all rev in <targets> phases"""
+    s = repo._phasecache.getrevset(repo, targets)
+    return subset & s
 
 @predicate('draft()', safe=True)
 def draft(repo, subset, x):
@@ -1717,20 +1708,7 @@ def present(repo, subset, x):
 @predicate('_notpublic', safe=True)
 def _notpublic(repo, subset, x):
     getargs(x, 0, 0, "_notpublic takes no arguments")
-    repo._phasecache.loadphaserevs(repo) # ensure phase's sets are loaded
-    if repo._phasecache._phasesets:
-        s = set()
-        for u in repo._phasecache._phasesets[1:]:
-            s.update(u)
-        s = baseset(s - repo.changelog.filteredrevs)
-        s.sort()
-        return subset & s
-    else:
-        phase = repo._phasecache.phase
-        target = phases.public
-        condition = lambda r: phase(repo, r) != target
-        return subset.filter(condition, condrepr=('<phase %r>', target),
-                             cache=False)
+    return _phase(repo, subset, phases.draft, phases.secret)
 
 @predicate('public()', safe=True)
 def public(repo, subset, x):
