@@ -219,16 +219,14 @@ class baseset(abstractsmartset):
         """
         self._ascending = None
         self._istopo = istopo
-        if not isinstance(data, list):
-            if isinstance(data, set):
-                self._set = data
-                # set has no order we pick one for stability purpose
-                self._ascending = True
-                # converting set to list has a cost, do it lazily
-                data = None
-            else:
+        if isinstance(data, set):
+            # converting set to list has a cost, do it lazily
+            self._set = data
+            # set has no order we pick one for stability purpose
+            self._ascending = True
+        else:
+            if not isinstance(data, list):
                 data = list(data)
-        if data is not None:
             self._list = data
         self._datarepr = datarepr
 
