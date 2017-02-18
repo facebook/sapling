@@ -32,6 +32,46 @@ long socket path
 
   $ cd ..
 
+editor
+------
+
+  $ cat >> pushbuffer.py <<EOF
+  > def reposetup(ui, repo):
+  >     repo.ui.pushbuffer(subproc=True)
+  > EOF
+
+  $ chg init editor
+  $ cd editor
+
+by default, system() should be redirected to the client:
+
+  $ touch foo
+  $ CHGDEBUG= HGEDITOR=cat chg ci -Am channeled --edit 2>&1 \
+  > | egrep "HG:|run 'cat"
+  chg: debug: run 'cat "*"' at '$TESTTMP/editor' (glob)
+  HG: Enter commit message.  Lines beginning with 'HG:' are removed.
+  HG: Leave message empty to abort commit.
+  HG: --
+  HG: user: test
+  HG: branch 'default'
+  HG: added foo
+
+but no redirection should be made if output is captured:
+
+  $ touch bar
+  $ CHGDEBUG= HGEDITOR=cat chg ci -Am bufferred --edit \
+  > --config extensions.pushbuffer="$TESTTMP/pushbuffer.py" 2>&1 \
+  > | egrep "HG:|run 'cat"
+  [1]
+
+check that commit commands succeeded:
+
+  $ hg log -T '{rev}:{desc}\n'
+  1:bufferred
+  0:channeled
+
+  $ cd ..
+
 pager
 -----
 

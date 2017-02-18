@@ -179,17 +179,16 @@ def _newchgui(srcui, csystem, attachio):
             else:
                 self._csystem = csystem
 
-        def system(self, cmd, environ=None, cwd=None, onerr=None,
-                   errprefix=None):
+        def _runsystem(self, cmd, environ, cwd, onerr, errprefix, out):
             # fallback to the original system method if the output needs to be
             # captured (to self._buffers), or the output stream is not stdout
             # (e.g. stderr, cStringIO), because the chg client is not aware of
             # these situations and will behave differently (write to stdout).
-            if (any(s[1] for s in self._bufferstates)
+            if (out is not self.fout
                 or not util.safehasattr(self.fout, 'fileno')
                 or self.fout.fileno() != util.stdout.fileno()):
-                return super(chgui, self).system(cmd, environ, cwd, onerr,
-                                                 errprefix)
+                return util.system(cmd, environ=environ, cwd=cwd, onerr=onerr,
+                                   errprefix=errprefix, out=out)
             self.flush()
             rc = self._csystem(cmd, util.shellenviron(environ), cwd)
             if rc and onerr:

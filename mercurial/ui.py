@@ -1288,8 +1288,14 @@ class ui(object):
         if any(s[1] for s in self._bufferstates):
             out = self
         with self.timeblockedsection(blockedtag):
-            return util.system(cmd, environ=environ, cwd=cwd, onerr=onerr,
-                               errprefix=errprefix, out=out)
+            return self._runsystem(cmd, environ=environ, cwd=cwd, onerr=onerr,
+                                   errprefix=errprefix, out=out)
+
+    def _runsystem(self, cmd, environ, cwd, onerr, errprefix, out):
+        """actually execute the given shell command (can be overridden by
+        extensions like chg)"""
+        return util.system(cmd, environ=environ, cwd=cwd, onerr=onerr,
+                           errprefix=errprefix, out=out)
 
     def traceback(self, exc=None, force=False):
         '''print exception traceback if traceback printing enabled or forced.
