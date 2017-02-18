@@ -5,6 +5,12 @@
   > histedit=
   > EOF
 
+  $ modwithdate ()
+  > {
+  >     echo $1 > $1
+  >     hg ci -m $1 -d "$2 0"
+  > }
+
   $ initrepo ()
   > {
   >     hg init $1
@@ -14,12 +20,14 @@
   >         hg add $x
   >     done
   >     hg ci -m 'Initial commit'
-  >     for x in a b c d e f ; do
-  >         echo $x > $x
-  >         hg ci -m $x
-  >     done
+  >     modwithdate a 1
+  >     modwithdate b 2
+  >     modwithdate c 3
+  >     modwithdate d 4
+  >     modwithdate e 5
+  >     modwithdate f 6
   >     echo 'I can haz no commute' > e
-  >     hg ci -m 'does not commute with e'
+  >     hg ci -m 'does not commute with e' -d '7 0'
   >     cd ..
   > }
 
@@ -34,48 +42,48 @@ Initial generation of the command files
   $ hg log --template 'pick {node|short} {rev} {desc}\n' -r 5 >> $EDITED
   $ hg log --template 'pick {node|short} {rev} {desc}\n' -r 6 >> $EDITED
   $ cat $EDITED
-  pick 65a9a84f33fd 3 c
-  pick 00f1c5383965 4 d
-  fold 39522b764e3d 7 does not commute with e
-  pick 7b4e2f4b7bcd 5 e
-  pick 500cac37a696 6 f
+  pick 092e4ce14829 3 c
+  pick ae78f4c9d74f 4 d
+  fold 42abbb61bede 7 does not commute with e
+  pick 7f3755409b00 5 e
+  pick dd184f2faeb0 6 f
 
 log before edit
   $ hg log --graph
-  @  changeset:   7:39522b764e3d
+  @  changeset:   7:42abbb61bede
   |  tag:         tip
   |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  date:        Thu Jan 01 00:00:07 1970 +0000
   |  summary:     does not commute with e
   |
-  o  changeset:   6:500cac37a696
+  o  changeset:   6:dd184f2faeb0
   |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  date:        Thu Jan 01 00:00:06 1970 +0000
   |  summary:     f
   |
-  o  changeset:   5:7b4e2f4b7bcd
+  o  changeset:   5:7f3755409b00
   |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  date:        Thu Jan 01 00:00:05 1970 +0000
   |  summary:     e
   |
-  o  changeset:   4:00f1c5383965
+  o  changeset:   4:ae78f4c9d74f
   |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  date:        Thu Jan 01 00:00:04 1970 +0000
   |  summary:     d
   |
-  o  changeset:   3:65a9a84f33fd
+  o  changeset:   3:092e4ce14829
   |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  date:        Thu Jan 01 00:00:03 1970 +0000
   |  summary:     c
   |
-  o  changeset:   2:da6535b52e45
+  o  changeset:   2:40ccdd8beb95
   |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  date:        Thu Jan 01 00:00:02 1970 +0000
   |  summary:     b
   |
-  o  changeset:   1:c1f09da44841
+  o  changeset:   1:cd997a145b29
   |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  date:        Thu Jan 01 00:00:01 1970 +0000
   |  summary:     a
   |
   o  changeset:   0:1715188a53c7
@@ -89,7 +97,7 @@ edit the history
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   merging e
   warning: conflicts while merging e! (edit, then use 'hg resolve --mark')
-  Fix up the change (fold 39522b764e3d)
+  Fix up the change (fold 42abbb61bede)
   (hg histedit --continue to resume)
 
 fix up
@@ -113,7 +121,7 @@ fix up
   HG: changed e
   merging e
   warning: conflicts while merging e! (edit, then use 'hg resolve --mark')
-  Fix up the change (pick 7b4e2f4b7bcd)
+  Fix up the change (pick 7f3755409b00)
   (hg histedit --continue to resume)
 
 just continue this time
@@ -124,34 +132,34 @@ keep the non-commuting change, and thus the pending change will be dropped
   continue: hg histedit --continue
   $ hg diff
   $ hg histedit --continue 2>&1 | fixbundle
-  7b4e2f4b7bcd: skipping changeset (no changes)
+  7f3755409b00: skipping changeset (no changes)
 
 log after edit
   $ hg log --graph
-  @  changeset:   5:d9cf42e54966
+  @  changeset:   5:1300355b1a54
   |  tag:         tip
   |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  date:        Thu Jan 01 00:00:06 1970 +0000
   |  summary:     f
   |
-  o  changeset:   4:10486af2e984
+  o  changeset:   4:e2ac33269083
   |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  date:        Thu Jan 01 00:00:07 1970 +0000
   |  summary:     d
   |
-  o  changeset:   3:65a9a84f33fd
+  o  changeset:   3:092e4ce14829
   |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  date:        Thu Jan 01 00:00:03 1970 +0000
   |  summary:     c
   |
-  o  changeset:   2:da6535b52e45
+  o  changeset:   2:40ccdd8beb95
   |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  date:        Thu Jan 01 00:00:02 1970 +0000
   |  summary:     b
   |
-  o  changeset:   1:c1f09da44841
+  o  changeset:   1:cd997a145b29
   |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  date:        Thu Jan 01 00:00:01 1970 +0000
   |  summary:     a
   |
   o  changeset:   0:1715188a53c7
@@ -189,48 +197,48 @@ Initial generation of the command files
   $ hg log --template 'pick {node|short} {rev} {desc}\n' -r 5 >> $EDITED
   $ hg log --template 'pick {node|short} {rev} {desc}\n' -r 6 >> $EDITED
   $ cat $EDITED
-  pick 65a9a84f33fd 3 c
-  pick 00f1c5383965 4 d
-  roll 39522b764e3d 7 does not commute with e
-  pick 7b4e2f4b7bcd 5 e
-  pick 500cac37a696 6 f
+  pick 092e4ce14829 3 c
+  pick ae78f4c9d74f 4 d
+  roll 42abbb61bede 7 does not commute with e
+  pick 7f3755409b00 5 e
+  pick dd184f2faeb0 6 f
 
 log before edit
   $ hg log --graph
-  @  changeset:   7:39522b764e3d
+  @  changeset:   7:42abbb61bede
   |  tag:         tip
   |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  date:        Thu Jan 01 00:00:07 1970 +0000
   |  summary:     does not commute with e
   |
-  o  changeset:   6:500cac37a696
+  o  changeset:   6:dd184f2faeb0
   |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  date:        Thu Jan 01 00:00:06 1970 +0000
   |  summary:     f
   |
-  o  changeset:   5:7b4e2f4b7bcd
+  o  changeset:   5:7f3755409b00
   |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  date:        Thu Jan 01 00:00:05 1970 +0000
   |  summary:     e
   |
-  o  changeset:   4:00f1c5383965
+  o  changeset:   4:ae78f4c9d74f
   |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  date:        Thu Jan 01 00:00:04 1970 +0000
   |  summary:     d
   |
-  o  changeset:   3:65a9a84f33fd
+  o  changeset:   3:092e4ce14829
   |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  date:        Thu Jan 01 00:00:03 1970 +0000
   |  summary:     c
   |
-  o  changeset:   2:da6535b52e45
+  o  changeset:   2:40ccdd8beb95
   |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  date:        Thu Jan 01 00:00:02 1970 +0000
   |  summary:     b
   |
-  o  changeset:   1:c1f09da44841
+  o  changeset:   1:cd997a145b29
   |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  date:        Thu Jan 01 00:00:01 1970 +0000
   |  summary:     a
   |
   o  changeset:   0:1715188a53c7
@@ -244,7 +252,7 @@ edit the history
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   merging e
   warning: conflicts while merging e! (edit, then use 'hg resolve --mark')
-  Fix up the change (roll 39522b764e3d)
+  Fix up the change (roll 42abbb61bede)
   (hg histedit --continue to resume)
 
 fix up
@@ -255,7 +263,7 @@ fix up
   $ hg histedit --continue 2>&1 | fixbundle | grep -v '2 files removed'
   merging e
   warning: conflicts while merging e! (edit, then use 'hg resolve --mark')
-  Fix up the change (pick 7b4e2f4b7bcd)
+  Fix up the change (pick 7f3755409b00)
   (hg histedit --continue to resume)
 
 just continue this time
@@ -264,34 +272,34 @@ just continue this time
   (no more unresolved files)
   continue: hg histedit --continue
   $ hg histedit --continue 2>&1 | fixbundle
-  7b4e2f4b7bcd: skipping changeset (no changes)
+  7f3755409b00: skipping changeset (no changes)
 
 log after edit
   $ hg log --graph
-  @  changeset:   5:e7c4f5d4eb75
+  @  changeset:   5:162978f027fb
   |  tag:         tip
   |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  date:        Thu Jan 01 00:00:06 1970 +0000
   |  summary:     f
   |
-  o  changeset:   4:803d1bb561fc
+  o  changeset:   4:74e5e6c6c32f
   |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  date:        Thu Jan 01 00:00:07 1970 +0000
   |  summary:     d
   |
-  o  changeset:   3:65a9a84f33fd
+  o  changeset:   3:092e4ce14829
   |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  date:        Thu Jan 01 00:00:03 1970 +0000
   |  summary:     c
   |
-  o  changeset:   2:da6535b52e45
+  o  changeset:   2:40ccdd8beb95
   |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  date:        Thu Jan 01 00:00:02 1970 +0000
   |  summary:     b
   |
-  o  changeset:   1:c1f09da44841
+  o  changeset:   1:cd997a145b29
   |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  date:        Thu Jan 01 00:00:01 1970 +0000
   |  summary:     a
   |
   o  changeset:   0:1715188a53c7
@@ -316,16 +324,16 @@ manifest
 description is taken from rollup target commit
 
   $ hg log --debug --rev 4
-  changeset:   4:803d1bb561fceac3129ec778db9da249a3106fc3
+  changeset:   4:74e5e6c6c32fa39f0eeed43302fd48633ea5926f
   phase:       draft
-  parent:      3:65a9a84f33fdeb1ad5679b3941ec885d2b24027b
+  parent:      3:092e4ce14829f4974399ce4316d59f64ef0b6725
   parent:      -1:0000000000000000000000000000000000000000
   manifest:    4:b068a323d969f22af1296ec6a5ea9384cef437ac
   user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
+  date:        Thu Jan 01 00:00:07 1970 +0000
   files:       d e
   extra:       branch=default
-  extra:       histedit_source=00f1c53839651fa5c76d423606811ea5455a79d0,39522b764e3d26103f08bd1fa2ccd3e3d7dbcf4e
+  extra:       histedit_source=ae78f4c9d74ffa4b6cb5045001c303fe9204e890,42abbb61bede6f4366fa1e74a664343e5d558a70
   description:
   d
   

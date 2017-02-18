@@ -71,11 +71,11 @@ those revisions together, offering you a chance to clean up the commit message::
  ***
  Add delta
 
-Edit the commit message to your liking, then close the editor. For
-this example, let's assume that the commit message was changed to
-``Add beta and delta.`` After histedit has run and had a chance to
-remove any old or temporary revisions it needed, the history looks
-like this::
+Edit the commit message to your liking, then close the editor. The date used
+for the commit will be the later of the two commits' dates. For this example,
+let's assume that the commit message was changed to ``Add beta and delta.``
+After histedit has run and had a chance to remove any old or temporary
+revisions it needed, the history looks like this::
 
  @  2[tip]   989b4d060121   2009-04-27 18:04 -0500   durin42
  |    Add beta and delta.
@@ -97,9 +97,10 @@ The ``edit`` operation will drop you back to a command prompt,
 allowing you to edit files freely, or even use ``hg record`` to commit
 some changes as a separate commit. When you're done, any remaining
 uncommitted changes will be committed as well. When done, run ``hg
-histedit --continue`` to finish this step. You'll be prompted for a
-new commit message, but the default commit message will be the
-original message for the ``edit`` ed revision.
+histedit --continue`` to finish this step. If there are uncommitted
+changes, you'll be prompted for a new commit message, but the default
+commit message will be the original message for the ``edit`` ed
+revision, and the date of the original commit will be preserved.
 
 The ``message`` operation will give you a chance to revise a commit
 message without changing the contents. It's a shortcut for doing
@@ -884,11 +885,11 @@ def histedit(ui, repo, *freeargs, **opts):
 
     - `mess` to reword the changeset commit message
 
-    - `fold` to combine it with the preceding changeset
+    - `fold` to combine it with the preceding changeset (using the later date)
 
     - `roll` like fold, but discarding this commit's description
 
-    - `edit` to edit this changeset
+    - `edit` to edit this changeset (preserving date)
 
     There are a number of ways to select the root changeset:
 

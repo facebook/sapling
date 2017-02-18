@@ -20,52 +20,60 @@ Initialization
 
 Simple folding
 --------------------
+  $ addwithdate ()
+  > {
+  >     echo $1 > $1
+  >     hg add $1
+  >     hg ci -m $1 -d "$2 0"
+  > }
+
   $ initrepo ()
   > {
   >     hg init r
   >     cd r
-  >     for x in a b c d e f ; do
-  >         echo $x > $x
-  >         hg add $x
-  >         hg ci -m $x
-  >     done
+  >     addwithdate a 1
+  >     addwithdate b 2
+  >     addwithdate c 3
+  >     addwithdate d 4
+  >     addwithdate e 5
+  >     addwithdate f 6
   > }
 
   $ initrepo
 
 log before edit
   $ hg logt --graph
-  @  5:652413bf663e f
+  @  5:178e35e0ce73 f
   |
-  o  4:e860deea161a e
+  o  4:1ddb6c90f2ee e
   |
-  o  3:055a42cdd887 d
+  o  3:532247a8969b d
   |
-  o  2:177f92b77385 c
+  o  2:ff2c9fa2018b c
   |
-  o  1:d2ae7f538514 b
+  o  1:97d72e5f12c7 b
   |
-  o  0:cb9a9f314b8b a
+  o  0:8580ff50825a a
   
 
-  $ hg histedit 177f92b77385 --commands - 2>&1 <<EOF | fixbundle
-  > pick e860deea161a e
-  > pick 652413bf663e f
-  > fold 177f92b77385 c
-  > pick 055a42cdd887 d
+  $ hg histedit ff2c9fa2018b --commands - 2>&1 <<EOF | fixbundle
+  > pick 1ddb6c90f2ee e
+  > pick 178e35e0ce73 f
+  > fold ff2c9fa2018b c
+  > pick 532247a8969b d
   > EOF
 
 log after edit
   $ hg logt --graph
-  @  4:9c277da72c9b d
+  @  4:c4d7f3def76d d
   |
-  o  3:6de59d13424a f
+  o  3:575228819b7e f
   |
-  o  2:ee283cb5f2d5 e
+  o  2:505a591af19e e
   |
-  o  1:d2ae7f538514 b
+  o  1:97d72e5f12c7 b
   |
-  o  0:cb9a9f314b8b a
+  o  0:8580ff50825a a
   
 
 post-fold manifest
@@ -78,19 +86,19 @@ post-fold manifest
   f
 
 
-check histedit_source
+check histedit_source, including that it uses the later date, from the first changeset
 
   $ hg log --debug --rev 3
-  changeset:   3:6de59d13424a8a13acd3e975514aed29dd0d9b2d
+  changeset:   3:575228819b7e6ed69e8c0a6a383ee59a80db7358
   phase:       draft
-  parent:      2:ee283cb5f2d5955443f23a27b697a04339e9a39a
+  parent:      2:505a591af19eed18f560af827b9e03d2076773dc
   parent:      -1:0000000000000000000000000000000000000000
   manifest:    3:81eede616954057198ead0b2c73b41d1f392829a
   user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
+  date:        Thu Jan 01 00:00:06 1970 +0000
   files+:      c f
   extra:       branch=default
-  extra:       histedit_source=a4f7421b80f79fcc59fff01bcbf4a53d127dd6d3,177f92b773850b59254aa5e923436f921b55483b
+  extra:       histedit_source=7cad1d7030207872dfd1c3a7cb430f24f2884086,ff2c9fa2018b15fa74b33363bda9527323e2a99f
   description:
   f
   ***
@@ -102,39 +110,39 @@ rollup will fold without preserving the folded commit's message
 
   $ OLDHGEDITOR=$HGEDITOR
   $ HGEDITOR=false
-  $ hg histedit d2ae7f538514 --commands - 2>&1 <<EOF | fixbundle
-  > pick d2ae7f538514 b
-  > roll ee283cb5f2d5 e
-  > pick 6de59d13424a f
-  > pick 9c277da72c9b d
+  $ hg histedit 97d72e5f12c7 --commands - 2>&1 <<EOF | fixbundle
+  > pick 97d72e5f12c7 b
+  > roll 505a591af19e e
+  > pick 575228819b7e f
+  > pick c4d7f3def76d d
   > EOF
 
   $ HGEDITOR=$OLDHGEDITOR
 
 log after edit
   $ hg logt --graph
-  @  3:c4a9eb7989fc d
+  @  3:fb13f1f49340 d
   |
-  o  2:8e03a72b6f83 f
+  o  2:6d4bc3727566 f
   |
-  o  1:391ee782c689 b
+  o  1:563995ddbe65 b
   |
-  o  0:cb9a9f314b8b a
+  o  0:8580ff50825a a
   
 
 description is taken from rollup target commit
 
   $ hg log --debug --rev 1
-  changeset:   1:391ee782c68930be438ccf4c6a403daedbfbffa5
+  changeset:   1:563995ddbe650c0e6b0e1c1d75f0a197b61cec50
   phase:       draft
-  parent:      0:cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b
+  parent:      0:8580ff50825a50c8f716709acdf8de0deddcd6ab
   parent:      -1:0000000000000000000000000000000000000000
   manifest:    1:b5e112a3a8354e269b1524729f0918662d847c38
   user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
+  date:        Thu Jan 01 00:00:05 1970 +0000
   files+:      b e
   extra:       branch=default
-  extra:       histedit_source=d2ae7f538514cd87c17547b0de4cea71fe1af9fb,ee283cb5f2d5955443f23a27b697a04339e9a39a
+  extra:       histedit_source=97d72e5f12c7e84f85064aa72e5a297142c36ed9,505a591af19eed18f560af827b9e03d2076773dc
   description:
   b
   
@@ -163,13 +171,13 @@ check saving last-message.txt
   > EOF
 
   $ rm -f .hg/last-message.txt
-  $ hg status --rev '8e03a72b6f83^1::c4a9eb7989fc'
+  $ hg status --rev '6d4bc3727566^1::fb13f1f49340'
   A c
   A d
   A f
-  $ HGEDITOR="sh $TESTTMP/editor.sh" hg histedit 8e03a72b6f83 --commands - 2>&1 <<EOF
-  > pick 8e03a72b6f83 f
-  > fold c4a9eb7989fc d
+  $ HGEDITOR="sh $TESTTMP/editor.sh" hg histedit 6d4bc3727566 --commands - 2>&1 <<EOF
+  > pick 6d4bc3727566 f
+  > fold fb13f1f49340 d
   > EOF
   allow non-folding commit
   ==== before editing
@@ -209,37 +217,37 @@ check saving last-message.txt
   $ cd ..
   $ rm -r r
 
-folding preserves initial author
---------------------------------
+folding preserves initial author but uses later date
+----------------------------------------------------
 
   $ initrepo
 
-  $ hg ci --user "someone else" --amend --quiet
+  $ hg ci -d '7 0' --user "someone else" --amend --quiet
 
 tip before edit
   $ hg log --rev .
-  changeset:   5:a00ad806cb55
+  changeset:   5:10c36dd37515
   tag:         tip
   user:        someone else
-  date:        Thu Jan 01 00:00:00 1970 +0000
+  date:        Thu Jan 01 00:00:07 1970 +0000
   summary:     f
   
 
   $ hg --config progress.debug=1 --debug \
-  > histedit e860deea161a --commands - 2>&1 <<EOF | \
+  > histedit 1ddb6c90f2ee --commands - 2>&1 <<EOF | \
   > egrep 'editing|unresolved'
-  > pick e860deea161a e
-  > fold a00ad806cb55 f
+  > pick 1ddb6c90f2ee e
+  > fold 10c36dd37515 f
   > EOF
-  editing: pick e860deea161a 4 e 1/2 changes (50.00%)
-  editing: fold a00ad806cb55 5 f 2/2 changes (100.00%)
+  editing: pick 1ddb6c90f2ee 4 e 1/2 changes (50.00%)
+  editing: fold 10c36dd37515 5 f 2/2 changes (100.00%)
 
-tip after edit
+tip after edit, which should use the later date, from the second changeset
   $ hg log --rev .
-  changeset:   4:698d4e8040a1
+  changeset:   4:e4f3ec5d0b40
   tag:         tip
   user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
+  date:        Thu Jan 01 00:00:07 1970 +0000
   summary:     e
   
 
