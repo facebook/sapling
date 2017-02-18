@@ -1120,7 +1120,7 @@ def _computeobsoleteset(repo):
     """the set of obsolete revisions"""
     obs = set()
     getnode = repo.changelog.node
-    notpublic = repo.revs("not public()")
+    notpublic = repo._phasecache.getrevset(repo, (phases.draft, phases.secret))
     for r in notpublic:
         if getnode(r) in repo.obsstore.successors:
             obs.add(r)
