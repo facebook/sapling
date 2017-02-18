@@ -115,6 +115,7 @@ from .node import (
 from . import (
     encoding,
     error,
+    smartset,
 )
 
 allphases = public, draft, secret = range(3)
@@ -169,6 +170,27 @@ class phasecache(object):
             self._phasesets = None
             self.filterunknown(repo)
             self.opener = repo.svfs
+
+    def getrevset(self, repo, phases):
+        """return a smartset for the given phases"""
+        self.loadphaserevs(repo) # ensure phase's sets are loaded
+
+        if self._phasesets and all(self._phasesets[p] is not None
+                                   for p in phases):
+            # fast path - use _phasesets
+            revs = self._phasesets[phases[0]]
+            if len(phases) > 1:
+                revs = revs.copy() # only copy when needed
+                for p in phases[1:]:
+                    revs.update(self._phasesets[p])
+            if repo.changelog.filteredrevs:
+                revs = revs - repo.changelog.filteredrevs
+            return smartset.baseset(revs)
+        else:
+            # slow path - enumerate all revisions
+            phase = self.phase
+            revs = (r for r in repo if phase(repo, r) in phases)
+            return smartset.generatorset(revs, iterasc=True)
 
     def copy(self):
         # Shallow copy meant to ensure isolation in
