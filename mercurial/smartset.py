@@ -158,6 +158,51 @@ class baseset(abstractsmartset):
     operation that it should be able to perform.
 
     Every method in this class should be implemented by any smartset class.
+
+    This class could be constructed by an (unordered) set, or an (ordered)
+    list-like object. If a set is provided, it'll be sorted lazily.
+
+    >>> x = [4, 0, 7, 6]
+    >>> y = [5, 6, 7, 3]
+
+    Construct by a set:
+    >>> xs = baseset(set(x))
+    >>> ys = baseset(set(y))
+    >>> [list(i) for i in [xs + ys, xs & ys, xs - ys]]
+    [[0, 4, 6, 7, 3, 5], [6, 7], [0, 4]]
+    >>> [type(i).__name__ for i in [xs + ys, xs & ys, xs - ys]]
+    ['addset', 'filteredset', 'filteredset']
+
+    Construct by a list-like:
+    >>> xs = baseset(x)
+    >>> ys = baseset(i for i in y)
+    >>> [list(i) for i in [xs + ys, xs & ys, xs - ys]]
+    [[4, 0, 7, 6, 5, 3], [7, 6], [4, 0]]
+    >>> [type(i).__name__ for i in [xs + ys, xs & ys, xs - ys]]
+    ['addset', 'filteredset', 'filteredset']
+
+    Populate "_set" fields in the lists so set optimization may be used:
+    >>> [1 in xs, 3 in ys]
+    [False, True]
+
+    Without sort(), results won't be changed:
+    >>> [list(i) for i in [xs + ys, xs & ys, xs - ys]]
+    [[4, 0, 7, 6, 5, 3], [7, 6], [4, 0]]
+    >>> [type(i).__name__ for i in [xs + ys, xs & ys, xs - ys]]
+    ['addset', 'filteredset', 'filteredset']
+
+    With sort():
+    >>> xs.sort(reverse=True)
+    >>> [list(i) for i in [xs + ys, xs & ys, xs - ys]]
+    [[7, 6, 4, 0, 5, 3], [7, 6], [4, 0]]
+    >>> [type(i).__name__ for i in [xs + ys, xs & ys, xs - ys]]
+    ['addset', 'filteredset', 'filteredset']
+
+    >>> ys.sort()
+    >>> [list(i) for i in [xs + ys, xs & ys, xs - ys]]
+    [[7, 6, 4, 0, 3, 5], [7, 6], [4, 0]]
+    >>> [type(i).__name__ for i in [xs + ys, xs & ys, xs - ys]]
+    ['addset', 'filteredset', 'filteredset']
     """
     def __init__(self, data=(), datarepr=None, istopo=False):
         """
