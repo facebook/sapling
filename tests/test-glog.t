@@ -82,18 +82,18 @@ o  (0) root
   > }
 
   $ cat > printrevset.py <<EOF
-  > from mercurial import extensions, revset, commands, cmdutil
+  > from mercurial import extensions, revsetlang, commands, cmdutil
   > 
   > def uisetup(ui):
   >     def printrevset(orig, ui, repo, *pats, **opts):
   >         if opts.get('print_revset'):
   >             expr = cmdutil.getgraphlogrevs(repo, pats, opts)[1]
   >             if expr:
-  >                 tree = revset.parse(expr)
+  >                 tree = revsetlang.parse(expr)
   >             else:
   >                 tree = []
   >             ui.write('%r\n' % (opts.get('rev', []),))
-  >             ui.write(revset.prettyformat(tree) + '\n')
+  >             ui.write(revsetlang.prettyformat(tree) + '\n')
   >             return 0
   >         return orig(ui, repo, *pats, **opts)
   >     entry = extensions.wrapcommand(commands.table, 'log', printrevset)

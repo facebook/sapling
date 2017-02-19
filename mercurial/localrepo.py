@@ -50,6 +50,7 @@ from . import (
     pushkey,
     repoview,
     revset,
+    revsetlang,
     scmutil,
     store,
     subrepo,
@@ -573,7 +574,7 @@ class localrepository(object):
         '''Find revisions matching a revset.
 
         The revset is specified as a string ``expr`` that may contain
-        %-formatting to escape certain types. See ``revset.formatspec``.
+        %-formatting to escape certain types. See ``revsetlang.formatspec``.
 
         Revset aliases from the configuration are not expanded. To expand
         user aliases, consider calling ``scmutil.revrange()``.
@@ -581,7 +582,7 @@ class localrepository(object):
         Returns a revset.abstractsmartset, which is a list-like interface
         that contains integer revisions.
         '''
-        expr = revset.formatspec(expr, *args)
+        expr = revsetlang.formatspec(expr, *args)
         m = revset.match(None, expr)
         return m(self)
 

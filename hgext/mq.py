@@ -89,7 +89,7 @@ from mercurial import (
     phases,
     pycompat,
     registrar,
-    revset,
+    revsetlang,
     scmutil,
     smartset,
     subrepo,
@@ -3568,7 +3568,7 @@ revsetpredicate = registrar.revsetpredicate()
 def revsetmq(repo, subset, x):
     """Changesets managed by MQ.
     """
-    revset.getargs(x, 0, 0, _("mq takes no arguments"))
+    revsetlang.getargs(x, 0, 0, _("mq takes no arguments"))
     applied = set([repo[r.node].rev() for r in repo.mq.applied])
     return smartset.baseset([r for r in subset if r in applied])
 

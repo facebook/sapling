@@ -44,7 +44,7 @@ from . import (
     patch,
     phases,
     pycompat,
-    revset,
+    revsetlang,
     scmutil,
     server,
     sshserver,
@@ -3414,7 +3414,7 @@ def log(ui, repo, *pats, **opts):
 
     """
     if opts.get('follow') and opts.get('rev'):
-        opts['rev'] = [revset.formatspec('reverse(::%lr)', opts.get('rev'))]
+        opts['rev'] = [revsetlang.formatspec('reverse(::%lr)', opts.get('rev'))]
         del opts['follow']
 
     if opts.get('graph'):
@@ -4093,7 +4093,7 @@ def push(ui, repo, dest=None, **opts):
     elif path.pushrev:
         # It doesn't make any sense to specify ancestor revisions. So limit
         # to DAG heads to make discovery simpler.
-        expr = revset.formatspec('heads(%r)', path.pushrev)
+        expr = revsetlang.formatspec('heads(%r)', path.pushrev)
         revs = scmutil.revrange(repo, [expr])
         revs = [repo[rev].node() for rev in revs]
         if not revs:

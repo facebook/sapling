@@ -52,6 +52,7 @@ from . import (
     repair,
     revlog,
     revset,
+    revsetlang,
     scmutil,
     setdiscovery,
     simplemerge,
@@ -1794,10 +1795,10 @@ def debugrevspec(ui, repo, expr, **opts):
     """
     stages = [
         ('parsed', lambda tree: tree),
-        ('expanded', lambda tree: revset.expandaliases(ui, tree)),
-        ('concatenated', revset.foldconcat),
-        ('analyzed', revset.analyze),
-        ('optimized', revset.optimize),
+        ('expanded', lambda tree: revsetlang.expandaliases(ui, tree)),
+        ('concatenated', revsetlang.foldconcat),
+        ('analyzed', revsetlang.analyze),
+        ('optimized', revsetlang.optimize),
     ]
     if opts['no_optimized']:
         stages = stages[:-1]
@@ -1826,13 +1827,13 @@ def debugrevspec(ui, repo, expr, **opts):
 
     treebystage = {}
     printedtree = None
-    tree = revset.parse(expr, lookup=repo.__contains__)
+    tree = revsetlang.parse(expr, lookup=repo.__contains__)
     for n, f in stages:
         treebystage[n] = tree = f(tree)
         if n in showalways or (n in showchanged and tree != printedtree):
             if opts['show_stage'] or n != 'parsed':
                 ui.write(("* %s:\n") % n)
-            ui.write(revset.prettyformat(tree), "\n")
+            ui.write(revsetlang.prettyformat(tree), "\n")
             printedtree = tree
 
     if opts['verify_optimized']:

@@ -20,6 +20,7 @@ from . import (
     pycompat,
     registrar,
     revset as revsetmod,
+    revsetlang,
     templatefilters,
     templatekw,
     util,
@@ -778,7 +779,7 @@ def revset(context, mapping, args):
 
     if len(args) > 1:
         formatargs = [evalfuncarg(context, mapping, a) for a in args[1:]]
-        revs = query(revsetmod.formatspec(raw, *formatargs))
+        revs = query(revsetlang.formatspec(raw, *formatargs))
         revs = list(revs)
     else:
         revsetcache = mapping['cache'].setdefault("revsetcache", {})

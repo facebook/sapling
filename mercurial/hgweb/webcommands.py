@@ -32,6 +32,7 @@ from .. import (
     error,
     graphmod,
     revset,
+    revsetlang,
     scmutil,
     smartset,
     templatefilters,
@@ -239,20 +240,20 @@ def _search(web, req, tmpl):
 
         revdef = 'reverse(%s)' % query
         try:
-            tree = revset.parse(revdef)
+            tree = revsetlang.parse(revdef)
         except error.ParseError:
             # can't parse to a revset tree
             return MODE_KEYWORD, query
 
-        if revset.depth(tree) <= 2:
+        if revsetlang.depth(tree) <= 2:
             # no revset syntax used
             return MODE_KEYWORD, query
 
         if any((token, (value or '')[:3]) == ('string', 're:')
-                    for token, value, pos in revset.tokenize(revdef)):
+               for token, value, pos in revsetlang.tokenize(revdef)):
             return MODE_KEYWORD, query
 
-        funcsused = revset.funcsused(tree)
+        funcsused = revsetlang.funcsused(tree)
         if not funcsused.issubset(revset.safesymbols):
             return MODE_KEYWORD, query
 
