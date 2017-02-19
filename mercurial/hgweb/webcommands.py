@@ -33,6 +33,7 @@ from .. import (
     graphmod,
     revset,
     scmutil,
+    smartset,
     templatefilters,
     templater,
     util,
@@ -1148,7 +1149,7 @@ def graph(web, req, tmpl):
         # We have to feed a baseset to dagwalker as it is expecting smartset
         # object. This does not have a big impact on hgweb performance itself
         # since hgweb graphing code is not itself lazy yet.
-        dag = graphmod.dagwalker(web.repo, revset.baseset(revs))
+        dag = graphmod.dagwalker(web.repo, smartset.baseset(revs))
         # As we said one line above... not lazy.
         tree = list(graphmod.colored(dag, web.repo))
 

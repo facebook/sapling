@@ -47,6 +47,7 @@ from mercurial import (
     repoview,
     revset,
     scmutil,
+    smartset,
     util,
 )
 
@@ -118,8 +119,8 @@ def _revsetdestrebase(repo, subset, x):
     # i18n: "_rebasedefaultdest" is a keyword
     sourceset = None
     if x is not None:
-        sourceset = revset.getset(repo, revset.fullreposet(repo), x)
-    return subset & revset.baseset([_destrebase(repo, sourceset)])
+        sourceset = revset.getset(repo, smartset.fullreposet(repo), x)
+    return subset & smartset.baseset([_destrebase(repo, sourceset)])
 
 class rebaseruntime(object):
     """This class is a container for rebase runtime state"""

@@ -41,6 +41,7 @@ from . import (
     revlog,
     revset,
     scmutil,
+    smartset,
     templatekw,
     templater,
     util,
@@ -2090,11 +2091,11 @@ def _logrevs(repo, opts):
     if opts.get('rev'):
         revs = scmutil.revrange(repo, opts['rev'])
     elif follow and repo.dirstate.p1() == nullid:
-        revs = revset.baseset()
+        revs = smartset.baseset()
     elif follow:
         revs = repo.revs('reverse(:.)')
     else:
-        revs = revset.spanset(repo)
+        revs = smartset.spanset(repo)
         revs.reverse()
     return revs
 
@@ -2109,7 +2110,7 @@ def getgraphlogrevs(repo, pats, opts):
     limit = loglimit(opts)
     revs = _logrevs(repo, opts)
     if not revs:
-        return revset.baseset(), None, None
+        return smartset.baseset(), None, None
     expr, filematcher = _makelogrevset(repo, pats, opts, revs)
     if opts.get('rev'):
         # User-specified revs might be unsorted, but don't sort before
@@ -2125,7 +2126,7 @@ def getgraphlogrevs(repo, pats, opts):
             if idx >= limit:
                 break
             limitedrevs.append(rev)
-        revs = revset.baseset(limitedrevs)
+        revs = smartset.baseset(limitedrevs)
 
     return revs, expr, filematcher
 
@@ -2140,7 +2141,7 @@ def getlogrevs(repo, pats, opts):
     limit = loglimit(opts)
     revs = _logrevs(repo, opts)
     if not revs:
-        return revset.baseset([]), None, None
+        return smartset.baseset([]), None, None
     expr, filematcher = _makelogrevset(repo, pats, opts, revs)
     if expr:
         matcher = revset.match(repo.ui, expr, order=revset.followorder)
@@ -2151,7 +2152,7 @@ def getlogrevs(repo, pats, opts):
             if limit <= idx:
                 break
             limitedrevs.append(r)
-        revs = revset.baseset(limitedrevs)
+        revs = smartset.baseset(limitedrevs)
 
     return revs, expr, filematcher
 

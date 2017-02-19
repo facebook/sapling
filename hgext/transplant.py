@@ -33,6 +33,7 @@ from mercurial import (
     revlog,
     revset,
     scmutil,
+    smartset,
     util,
 )
 
@@ -723,7 +724,7 @@ def revsettransplanted(repo, subset, x):
         s = revset.getset(repo, subset, x)
     else:
         s = subset
-    return revset.baseset([r for r in s if
+    return smartset.baseset([r for r in s if
         repo[r].extra().get('transplant_source')])
 
 templatekeyword = registrar.templatekeyword()

@@ -22,6 +22,7 @@ from __future__ import absolute_import
 from .node import nullrev
 from . import (
     revset,
+    smartset,
     util,
 )
 
@@ -67,8 +68,8 @@ def dagwalker(repo, revs):
             if gp is None:
                 # precompute slow query as we know reachableroots() goes
                 # through all revs (issue4782)
-                if not isinstance(revs, revset.baseset):
-                    revs = revset.baseset(revs)
+                if not isinstance(revs, smartset.baseset):
+                    revs = smartset.baseset(revs)
                 gp = gpcache[mpar] = sorted(set(revset.reachableroots(
                     repo, revs, [mpar])))
             if not gp:

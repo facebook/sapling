@@ -22,8 +22,8 @@ from mercurial import (
     match as matchmod,
     pathutil,
     registrar,
-    revset,
     scmutil,
+    smartset,
     util,
 )
 
@@ -855,7 +855,7 @@ def pulledrevsetsymbol(repo, subset, x):
         firstpulled = repo.firstpulled
     except AttributeError:
         raise error.Abort(_("pulled() only available in --lfrev"))
-    return revset.baseset([r for r in subset if r >= firstpulled])
+    return smartset.baseset([r for r in subset if r >= firstpulled])
 
 def overrideclone(orig, ui, source, dest=None, **opts):
     d = dest

@@ -91,6 +91,7 @@ from mercurial import (
     registrar,
     revset,
     scmutil,
+    smartset,
     subrepo,
     util,
 )
@@ -3569,7 +3570,7 @@ def revsetmq(repo, subset, x):
     """
     revset.getargs(x, 0, 0, _("mq takes no arguments"))
     applied = set([repo[r.node].rev() for r in repo.mq.applied])
-    return revset.baseset([r for r in subset if r in applied])
+    return smartset.baseset([r for r in subset if r in applied])
 
 # tell hggettext to extract docstrings from these functions:
 i18nfunctions = [revsetmq]
