@@ -747,10 +747,12 @@ def _checkunshelveuntrackedproblems(ui, repo, shelvectx):
            _('continue an incomplete unshelve operation')),
           ('k', 'keep', None,
            _('keep shelve after unshelving')),
+          ('n', 'name', '',
+           _('restore shelved change with given name'), _('NAME')),
           ('t', 'tool', '', _('specify merge tool')),
           ('', 'date', '',
            _('set date for temporary commits (DEPRECATED)'), _('DATE'))],
-         _('hg unshelve [SHELVED]'))
+         _('hg unshelve [[-n] SHELVED]'))
 def unshelve(ui, repo, *shelved, **opts):
     """restore a shelved change to the working directory
 
@@ -795,6 +797,9 @@ def _dounshelve(ui, repo, *shelved, **opts):
     continuef = opts.get('continue')
     if not abortf and not continuef:
         cmdutil.checkunfinished(repo)
+    shelved = list(shelved)
+    if opts.get("name"):
+        shelved.append(opts["name"])
 
     if abortf or continuef:
         if abortf and continuef:

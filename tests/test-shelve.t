@@ -493,7 +493,7 @@ ensure that metadata-only changes are shelved
   $ ln -s foo a/a
   $ hg shelve -q -n symlink a/a
   $ hg status a/a
-  $ hg unshelve -q symlink
+  $ hg unshelve -q -n symlink
   $ hg status a/a
   M a/a
   $ hg revert a/a
