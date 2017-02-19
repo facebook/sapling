@@ -171,7 +171,7 @@ class baseset(abstractsmartset):
     >>> [list(i) for i in [xs + ys, xs & ys, xs - ys]]
     [[0, 4, 6, 7, 3, 5], [6, 7], [0, 4]]
     >>> [type(i).__name__ for i in [xs + ys, xs & ys, xs - ys]]
-    ['addset', 'filteredset', 'filteredset']
+    ['addset', 'baseset', 'baseset']
 
     Construct by a list-like:
     >>> xs = baseset(x)
@@ -191,18 +191,18 @@ class baseset(abstractsmartset):
     >>> [type(i).__name__ for i in [xs + ys, xs & ys, xs - ys]]
     ['addset', 'filteredset', 'filteredset']
 
-    With sort():
+    With sort(), set optimization could be used:
     >>> xs.sort(reverse=True)
     >>> [list(i) for i in [xs + ys, xs & ys, xs - ys]]
     [[7, 6, 4, 0, 5, 3], [7, 6], [4, 0]]
     >>> [type(i).__name__ for i in [xs + ys, xs & ys, xs - ys]]
-    ['addset', 'filteredset', 'filteredset']
+    ['addset', 'baseset', 'baseset']
 
     >>> ys.sort()
     >>> [list(i) for i in [xs + ys, xs & ys, xs - ys]]
     [[7, 6, 4, 0, 3, 5], [7, 6], [4, 0]]
     >>> [type(i).__name__ for i in [xs + ys, xs & ys, xs - ys]]
-    ['addset', 'filteredset', 'filteredset']
+    ['addset', 'baseset', 'baseset']
     """
     def __init__(self, data=(), datarepr=None, istopo=False):
         """
@@ -321,6 +321,22 @@ class baseset(abstractsmartset):
             else:
                 return self._asclist[0]
         return None
+
+    def _fastsetop(self, other, op):
+        # try to use native set operations as fast paths
+        if (type(other) is baseset and '_set' in other.__dict__ and '_set' in
+            self.__dict__ and self._ascending is not None):
+            s = baseset(data=getattr(self._set, op)(other._set))
+            s._ascending = self._ascending
+        else:
+            s = getattr(super(baseset, self), op)(other)
+        return s
+
+    def __and__(self, other):
+        return self._fastsetop(other, '__and__')
+
+    def __sub__(self, other):
+        return self._fastsetop(other, '__sub__')
 
     def __repr__(self):
         d = {None: '', False: '-', True: '+'}[self._ascending]
