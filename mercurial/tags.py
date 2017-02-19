@@ -24,6 +24,7 @@ from .node import (
 from . import (
     encoding,
     error,
+    scmutil,
     util,
 )
 
@@ -277,8 +278,6 @@ def _readtagcache(ui, repo):
     If the cache is not up to date, the caller is responsible for reading tag
     info from each returned head. (See findglobaltags().)
     '''
-    from . import scmutil  # avoid cycle
-
     try:
         cachefile = repo.vfs(_filename(repo), 'r')
         # force reading the file for static-http

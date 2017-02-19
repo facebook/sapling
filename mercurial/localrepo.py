@@ -577,7 +577,8 @@ class localrepository(object):
         %-formatting to escape certain types. See ``revsetlang.formatspec``.
 
         Revset aliases from the configuration are not expanded. To expand
-        user aliases, consider calling ``scmutil.revrange()``.
+        user aliases, consider calling ``scmutil.revrange()`` or
+        ``repo.anyrevs([expr], user=True)``.
 
         Returns a revset.abstractsmartset, which is a list-like interface
         that contains integer revisions.
@@ -597,6 +598,18 @@ class localrepository(object):
         '''
         for r in self.revs(expr, *args):
             yield self[r]
+
+    def anyrevs(self, specs, user=False):
+        '''Find revisions matching one of the given revsets.
+
+        Revset aliases from the configuration are not expanded by default. To
+        expand user aliases, specify ``user=True``.
+        '''
+        if user:
+            m = revset.matchany(self.ui, specs, repo=self)
+        else:
+            m = revset.matchany(None, specs)
+        return m(self)
 
     def url(self):
         return 'file:' + self.root

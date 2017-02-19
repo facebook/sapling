@@ -12,6 +12,7 @@ from . import (
     bookmarks,
     error,
     obsolete,
+    scmutil,
 )
 
 def _destupdateobs(repo, clean):
@@ -342,9 +343,6 @@ histeditdefaultrevset = 'reverse(only(.) and not public() and not ::merge())'
 
 def desthistedit(ui, repo):
     """Default base revision to edit for `hg histedit`."""
-    # Avoid cycle: scmutil -> revset -> destutil
-    from . import scmutil
-
     default = ui.config('histedit', 'defaultrev', histeditdefaultrevset)
     if default:
         revs = scmutil.revrange(repo, [default])

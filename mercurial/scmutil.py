@@ -29,7 +29,6 @@ from . import (
     pathutil,
     phases,
     pycompat,
-    revset,
     revsetlang,
     similar,
     util,
@@ -950,8 +949,7 @@ def revrange(repo, specs):
         if isinstance(spec, int):
             spec = revsetlang.formatspec('rev(%d)', spec)
         allspecs.append(spec)
-    m = revset.matchany(repo.ui, allspecs, repo)
-    return m(repo)
+    return repo.anyrevs(allspecs, user=True)
 
 def meaningfulparents(repo, ctx):
     """Return list of meaningful (or all if debug) parentrevs for rev.
