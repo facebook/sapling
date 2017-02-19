@@ -28,7 +28,7 @@ from .common import (
 
 from .. import (
     archival,
-    context,
+    dagop,
     encoding,
     error,
     graphmod,
@@ -1013,9 +1013,9 @@ def filelog(web, req, tmpl):
         # would required a dedicated "revnav" class
         nav = None
         if descend:
-            it = context.blockdescendants(fctx, *lrange)
+            it = dagop.blockdescendants(fctx, *lrange)
         else:
-            it = context.blockancestors(fctx, *lrange)
+            it = dagop.blockancestors(fctx, *lrange)
         for i, (c, lr) in enumerate(it, 1):
             diffs = None
             if patch:

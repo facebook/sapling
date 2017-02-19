@@ -827,8 +827,6 @@ def followlines(repo, subset, x):
     descendants of 'startrev' are returned though renames are (currently) not
     followed in this direction.
     """
-    from . import context  # avoid circular import issues
-
     args = getargsdict(x, 'followlines', 'file *lines startrev descend')
     if len(args['lines']) != 1:
         raise error.ParseError(_("followlines requires a line range"))
@@ -868,12 +866,12 @@ def followlines(repo, subset, x):
     if descend:
         rs = generatorset(
             (c.rev() for c, _linerange
-             in context.blockdescendants(fctx, fromline, toline)),
+             in dagop.blockdescendants(fctx, fromline, toline)),
             iterasc=True)
     else:
         rs = generatorset(
             (c.rev() for c, _linerange
-             in context.blockancestors(fctx, fromline, toline)),
+             in dagop.blockancestors(fctx, fromline, toline)),
             iterasc=False)
     return subset & rs
 

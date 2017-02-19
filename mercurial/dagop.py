@@ -11,7 +11,9 @@ import heapq
 
 from . import (
     error,
+    mdiff,
     node,
+    patch,
     smartset,
 )
 
@@ -139,6 +141,89 @@ def reachableroots(repo, roots, heads, includepath=False):
     revs = baseset(revs)
     revs.sort()
     return revs
+
+def _changesrange(fctx1, fctx2, linerange2, diffopts):
+    """Return `(diffinrange, linerange1)` where `diffinrange` is True
+    if diff from fctx2 to fctx1 has changes in linerange2 and
+    `linerange1` is the new line range for fctx1.
+    """
+    blocks = mdiff.allblocks(fctx1.data(), fctx2.data(), diffopts)
+    filteredblocks, linerange1 = mdiff.blocksinrange(blocks, linerange2)
+    diffinrange = any(stype == '!' for _, stype in filteredblocks)
+    return diffinrange, linerange1
+
+def blockancestors(fctx, fromline, toline, followfirst=False):
+    """Yield ancestors of `fctx` with respect to the block of lines within
+    `fromline`-`toline` range.
+    """
+    diffopts = patch.diffopts(fctx._repo.ui)
+    introrev = fctx.introrev()
+    if fctx.rev() != introrev:
+        fctx = fctx.filectx(fctx.filenode(), changeid=introrev)
+    visit = {(fctx.linkrev(), fctx.filenode()): (fctx, (fromline, toline))}
+    while visit:
+        c, linerange2 = visit.pop(max(visit))
+        pl = c.parents()
+        if followfirst:
+            pl = pl[:1]
+        if not pl:
+            # The block originates from the initial revision.
+            yield c, linerange2
+            continue
+        inrange = False
+        for p in pl:
+            inrangep, linerange1 = _changesrange(p, c, linerange2, diffopts)
+            inrange = inrange or inrangep
+            if linerange1[0] == linerange1[1]:
+                # Parent's linerange is empty, meaning that the block got
+                # introduced in this revision; no need to go futher in this
+                # branch.
+                continue
+            # Set _descendantrev with 'c' (a known descendant) so that, when
+            # _adjustlinkrev is called for 'p', it receives this descendant
+            # (as srcrev) instead possibly topmost introrev.
+            p._descendantrev = c.rev()
+            visit[p.linkrev(), p.filenode()] = p, linerange1
+        if inrange:
+            yield c, linerange2
+
+def blockdescendants(fctx, fromline, toline):
+    """Yield descendants of `fctx` with respect to the block of lines within
+    `fromline`-`toline` range.
+    """
+    # First possibly yield 'fctx' if it has changes in range with respect to
+    # its parents.
+    try:
+        c, linerange1 = next(blockancestors(fctx, fromline, toline))
+    except StopIteration:
+        pass
+    else:
+        if c == fctx:
+            yield c, linerange1
+
+    diffopts = patch.diffopts(fctx._repo.ui)
+    fl = fctx.filelog()
+    seen = {fctx.filerev(): (fctx, (fromline, toline))}
+    for i in fl.descendants([fctx.filerev()]):
+        c = fctx.filectx(i)
+        inrange = False
+        for x in fl.parentrevs(i):
+            try:
+                p, linerange2 = seen[x]
+            except KeyError:
+                # nullrev or other branch
+                continue
+            inrangep, linerange1 = _changesrange(c, p, linerange2, diffopts)
+            inrange = inrange or inrangep
+            # If revision 'i' has been seen (it's a merge), we assume that its
+            # line range is the same independently of which parents was used
+            # to compute it.
+            assert i not in seen or seen[i][1] == linerange1, (
+                'computed line range for %s is not consistent between '
+                'ancestor branches' % c)
+            seen[i] = c, linerange1
+        if inrange:
+            yield c, linerange1
 
 def toposort(revs, parentsfunc, firstbranch=()):
     """Yield revisions from heads to roots one (topo) branch at a time.
