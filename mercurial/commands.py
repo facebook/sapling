@@ -361,7 +361,6 @@ def annotate(ui, repo, *pats, **opts):
 
     Returns 0 on success.
     """
-    ui.pager('annotate')
     if not pats:
         raise error.Abort(_('at least one filename or pattern is required'))
 
@@ -421,6 +420,8 @@ def annotate(ui, repo, *pats, **opts):
     linenumber = opts.get('line_number') is not None
     if linenumber and (not opts.get('changeset')) and (not opts.get('number')):
         raise error.Abort(_('at least one of -n/-c is required for -l'))
+
+    ui.pager('annotate')
 
     if fm.isplain():
         def makefunc(get, fmt):
