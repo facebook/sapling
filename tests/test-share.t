@@ -154,6 +154,67 @@ test sharing bookmarks
    * bm1                       2:c2e0ac586386
      bm3                       2:c2e0ac586386
 
+check whether HG_PENDING makes pending changes only in relatd
+repositories visible to an external hook.
+
+In "hg share" case, another transaction can't run in other
+repositories sharing same source repository, because starting
+transaction requires locking store of source repository.
+
+Therefore, this test scenario ignores checking visibility of
+.hg/bookmakrs.pending in repo2, which shares repo1 without bookmarks.
+
+  $ cat > $TESTTMP/checkbookmarks.sh <<EOF
+  > echo "@repo1"
+  > hg -R $TESTTMP/repo1 bookmarks
+  > echo "@repo2"
+  > hg -R $TESTTMP/repo2 bookmarks
+  > echo "@repo3"
+  > hg -R $TESTTMP/repo3 bookmarks
+  > exit 1 # to avoid adding new bookmark for subsequent tests
+  > EOF
+
+  $ cd ../repo1
+  $ hg --config hooks.pretxnclose="sh $TESTTMP/checkbookmarks.sh" -q book bmX
+  @repo1
+     bm1                       2:c2e0ac586386
+     bm3                       2:c2e0ac586386
+   * bmX                       2:c2e0ac586386
+  @repo2
+   * bm2                       3:0e6e70d1d5f1
+  @repo3
+     bm1                       2:c2e0ac586386
+   * bm3                       2:c2e0ac586386
+     bmX                       2:c2e0ac586386
+  transaction abort!
+  rollback completed
+  abort: pretxnclose hook exited with status 1
+  [255]
+  $ hg book bm1
+
+FYI, in contrast to above test, bmX is invisible in repo1 (= shared
+src), because (1) HG_PENDING refers only repo3 and (2)
+"bookmarks.pending" is written only into repo3.
+
+  $ cd ../repo3
+  $ hg --config hooks.pretxnclose="sh $TESTTMP/checkbookmarks.sh" -q book bmX
+  @repo1
+   * bm1                       2:c2e0ac586386
+     bm3                       2:c2e0ac586386
+  @repo2
+   * bm2                       3:0e6e70d1d5f1
+  @repo3
+     bm1                       2:c2e0ac586386
+     bm3                       2:c2e0ac586386
+   * bmX                       2:c2e0ac586386
+  transaction abort!
+  rollback completed
+  abort: pretxnclose hook exited with status 1
+  [255]
+  $ hg book bm3
+
+  $ cd ../repo1
+
 test that commits work
 
   $ echo 'shared bookmarks' > a

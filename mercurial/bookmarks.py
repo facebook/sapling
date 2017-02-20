@@ -19,6 +19,7 @@ from . import (
     error,
     lock as lockmod,
     obsolete,
+    txnutil,
     util,
 )
 
@@ -29,17 +30,8 @@ def _getbkfile(repo):
     bookmarks or the committed ones. Other extensions (like share)
     may need to tweak this behavior further.
     """
-    bkfile = None
-    if 'HG_PENDING' in encoding.environ:
-        try:
-            bkfile = repo.vfs('bookmarks.pending')
-        except IOError as inst:
-            if inst.errno != errno.ENOENT:
-                raise
-    if bkfile is None:
-        bkfile = repo.vfs('bookmarks')
-    return bkfile
-
+    fp, pending = txnutil.trypending(repo.root, repo.vfs, 'bookmarks')
+    return fp
 
 class bmstore(dict):
     """Storage for bookmarks.

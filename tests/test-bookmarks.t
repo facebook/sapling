@@ -896,3 +896,58 @@ ensure changelog is written before bookmarks
   $ touch $TESTTMP/unpause
 
   $ cd ..
+
+check whether HG_PENDING makes pending changes only in related
+repositories visible to an external hook.
+
+(emulate a transaction running concurrently by copied
+.hg/bookmarks.pending in subsequent test)
+
+  $ cat > $TESTTMP/savepending.sh <<EOF
+  > cp .hg/bookmarks.pending .hg/bookmarks.pending.saved
+  > exit 1 # to avoid adding new bookmark for subsequent tests
+  > EOF
+
+  $ hg init unrelated
+  $ cd unrelated
+  $ echo a > a
+  $ hg add a
+  $ hg commit -m '#0'
+  $ hg --config hooks.pretxnclose="sh $TESTTMP/savepending.sh" bookmarks INVISIBLE
+  transaction abort!
+  rollback completed
+  abort: pretxnclose hook exited with status 1
+  [255]
+  $ cp .hg/bookmarks.pending.saved .hg/bookmarks.pending
+
+(check visible bookmarks while transaction running in repo)
+
+  $ cat > $TESTTMP/checkpending.sh <<EOF
+  > echo "@repo"
+  > hg -R $TESTTMP/repo bookmarks
+  > echo "@unrelated"
+  > hg -R $TESTTMP/unrelated bookmarks
+  > exit 1 # to avoid adding new bookmark for subsequent tests
+  > EOF
+
+  $ cd ../repo
+  $ hg --config hooks.pretxnclose="sh $TESTTMP/checkpending.sh" bookmarks NEW
+  @repo
+   * NEW                       6:81dcce76aa0b
+     X2                        1:925d80f479bb
+     Y                         4:125c9a1d6df6
+     Z                         5:5fb12f0f2d51
+     Z@1                       1:925d80f479bb
+     Z@2                       4:125c9a1d6df6
+     foo                       3:9ba5f110a0b3
+     foo@1                     0:f7b1eb17ad24
+     foo@2                     2:db815d6d32e6
+     four                      3:9ba5f110a0b3
+     should-end-on-two         2:db815d6d32e6
+     x  y                      2:db815d6d32e6
+  @unrelated
+  no bookmarks set
+  transaction abort!
+  rollback completed
+  abort: pretxnclose hook exited with status 1
+  [255]

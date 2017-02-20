@@ -48,6 +48,7 @@ from mercurial import (
     error,
     extensions,
     hg,
+    txnutil,
     util,
 )
 
@@ -171,7 +172,28 @@ def getbkfile(orig, repo):
     if _hassharedbookmarks(repo):
         srcrepo = _getsrcrepo(repo)
         if srcrepo is not None:
+            # just orig(srcrepo) doesn't work as expected, because
+            # HG_PENDING refers repo.root.
+            try:
+                fp, pending = txnutil.trypending(repo.root, repo.vfs,
+                                                 'bookmarks')
+                if pending:
+                    # only in this case, bookmark information in repo
+                    # is up-to-date.
+                    return fp
+                fp.close()
+            except IOError as inst:
+                if inst.errno != errno.ENOENT:
+                    raise
+
+            # otherwise, we should read bookmarks from srcrepo,
+            # because .hg/bookmarks in srcrepo might be already
+            # changed via another sharing repo
             repo = srcrepo
+
+            # TODO: Pending changes in repo are still invisible in
+            # srcrepo, because bookmarks.pending is written only into repo.
+            # See also https://www.mercurial-scm.org/wiki/SharedRepository
     return orig(repo)
 
 def recordchange(orig, self, tr):
