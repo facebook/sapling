@@ -749,7 +749,9 @@ def _dispatch(req):
             for ui_ in uis:
                 ui_.setconfig('ui', 'interactive', 'off', '-y')
 
-        if options['pager'] != 'auto' and not util.parsebool(options['pager']):
+        if util.parsebool(options['pager']):
+            ui.pager('internal-always-' + cmd)
+        elif options['pager'] != 'auto':
             ui.disablepager()
 
         if cmdoptions.get('insecure', False):
@@ -822,8 +824,6 @@ def _dispatch(req):
 
 def _runcommand(ui, options, cmd, cmdfunc):
     """Run a command function, possibly with profiling enabled."""
-    if util.parsebool(options['pager']):
-        ui.pager('internal-always-' + cmd)
     try:
         return cmdfunc()
     except error.SignatureError:
