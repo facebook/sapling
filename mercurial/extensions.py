@@ -362,7 +362,8 @@ def _disabledpaths(strip_init=False):
     '''find paths of disabled extensions. returns a dict of {name: path}
     removes /__init__.py from packages if strip_init is True'''
     import hgext
-    extpath = os.path.dirname(os.path.abspath(hgext.__file__))
+    extpath = os.path.dirname(
+        os.path.abspath(pycompat.fsencode(hgext.__file__)))
     try: # might not be a filesystem path
         files = os.listdir(extpath)
     except OSError:

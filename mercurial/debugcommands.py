@@ -692,7 +692,7 @@ def debugextensions(ui, **opts):
     fm = ui.formatter('debugextensions', opts)
     for extname, extmod in sorted(exts, key=operator.itemgetter(0)):
         isinternal = extensions.ismoduleinternal(extmod)
-        extsource = extmod.__file__
+        extsource = pycompat.fsencode(extmod.__file__)
         if isinternal:
             exttestedwith = []  # never expose magic string to users
         else:
@@ -970,7 +970,7 @@ def debuginstall(ui, **opts):
     fm.write('hgmodulepolicy', _("checking module policy (%s)\n"),
              policy.policy)
     fm.write('hgmodules', _("checking installed modules (%s)...\n"),
-             os.path.dirname(__file__))
+             os.path.dirname(pycompat.fsencode(__file__)))
 
     err = None
     try:

@@ -724,7 +724,7 @@ def simplifypath(path):
 
     if path in _pathcache:
         return _pathcache[path]
-    hgpath = encoding.__file__.rsplit(os.sep, 2)[0]
+    hgpath = pycompat.fsencode(encoding.__file__).rsplit(os.sep, 2)[0]
     for p in [hgpath] + sys.path:
         prefix = p + os.sep
         if path.startswith(prefix):

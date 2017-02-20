@@ -720,7 +720,8 @@ def _defaultcacerts(ui):
     # to load the system CA store. If we're running on Apple Python, use this
     # trick.
     if _plainapplepython():
-        dummycert = os.path.join(os.path.dirname(__file__), 'dummycert.pem')
+        dummycert = os.path.join(
+            os.path.dirname(pycompat.fsencode(__file__)), 'dummycert.pem')
         if os.path.exists(dummycert):
             return dummycert
 
