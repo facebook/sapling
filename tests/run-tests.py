@@ -906,6 +906,7 @@ class Test(unittest.TestCase):
         env['TERM'] = 'xterm'
 
         for k in ('HG HGPROF CDPATH GREP_OPTIONS http_proxy no_proxy ' +
+                  'HGPLAIN HGPLAINEXCEPT ' +
                   'NO_PROXY CHGDEBUG').split():
             if k in env:
                 del env[k]
