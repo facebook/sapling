@@ -779,24 +779,35 @@ class ui(object):
     def write(self, *args, **opts):
         '''write args to output
 
-        By default, this method simply writes to the buffer or stdout,
-        but extensions or GUI tools may override this method,
-        write_err(), popbuffer(), and label() to style output from
-        various parts of hg.
+        By default, this method simply writes to the buffer or stdout.
+        Color mode can be set on the UI class to have the output decorated
+        with color modifier before being written to stdout.
 
-        An optional keyword argument, "label", can be passed in.
-        This should be a string containing label names separated by
-        space. Label names take the form of "topic.type". For example,
-        ui.debug() issues a label of "ui.debug".
+        The color used is controlled by an optional keyword argument, "label".
+        This should be a string containing label names separated by space.
+        Label names take the form of "topic.type". For example, ui.debug()
+        issues a label of "ui.debug".
 
         When labeling output for a specific command, a label of
         "cmdname.type" is recommended. For example, status issues
         a label of "status.modified" for modified files.
         '''
         if self._buffers and not opts.get('prompt', False):
-            self._buffers[-1].extend(a for a in args)
+            if self._bufferapplylabels:
+                label = opts.get('label', '')
+                self._buffers[-1].extend(self.label(a, label) for a in args)
+            else:
+                self._buffers[-1].extend(args)
+        elif self._colormode == 'win32':
+            # windows color printing is its own can of crab, defer to
+            # the color module and that is it.
+            color.win32print(self._write, *args, **opts)
         else:
-            self._write(*args, **opts)
+            msgs = args
+            if self._colormode is not None:
+                label = opts.get('label', '')
+                msgs = [self.label(a, label) for a in args]
+            self._write(*msgs, **opts)
 
     def _write(self, *msgs, **opts):
             self._progclear()
