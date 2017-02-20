@@ -127,6 +127,8 @@ def _catchterm(*args):
     raise error.SignalInterrupt
 
 class ui(object):
+    # color mode: see mercurial/color.py for possible value
+    _colormode = None
     def __init__(self, src=None):
         """Create a fresh new ui object if no src given
 

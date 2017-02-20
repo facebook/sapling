@@ -297,7 +297,6 @@ def _modesetup(ui, coloropt):
     return None
 
 class colorui(uimod.ui):
-    _colormode = None
     def write(self, *args, **opts):
         if self._colormode is None:
             return super(colorui, self).write(*args, **opts)
