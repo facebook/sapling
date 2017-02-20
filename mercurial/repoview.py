@@ -139,15 +139,13 @@ def trywritehiddencache(repo, hideable, hidden):
         if wlock:
             wlock.release()
 
-def tryreadcache(repo, hideable):
-    """read a cache if the cache exists and is valid, otherwise returns None."""
+def _readhiddencache(repo, cachefilename, newhash):
     hidden = fh = None
     try:
         if repo.vfs.exists(cachefile):
             fh = repo.vfs.open(cachefile, 'rb')
             version, = struct.unpack(">H", fh.read(2))
             oldhash = fh.read(20)
-            newhash = cachehash(repo, hideable)
             if (cacheversion, oldhash) == (version, newhash):
                 # cache is valid, so we can start reading the hidden revs
                 data = fh.read()
@@ -164,6 +162,11 @@ def tryreadcache(repo, hideable):
     finally:
         if fh:
             fh.close()
+
+def tryreadcache(repo, hideable):
+    """read a cache if the cache exists and is valid, otherwise returns None."""
+    newhash = cachehash(repo, hideable)
+    return _readhiddencache(repo, cachefile, newhash)
 
 def computehidden(repo):
     """compute the set of hidden revision to filter
