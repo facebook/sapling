@@ -113,9 +113,9 @@ from .node import (
     short,
 )
 from . import (
-    encoding,
     error,
     smartset,
+    txnutil,
 )
 
 allphases = public, draft, secret = range(3)
@@ -137,15 +137,7 @@ def _readroots(repo, phasedefaults=None):
     dirty = False
     roots = [set() for i in allphases]
     try:
-        f = None
-        if 'HG_PENDING' in encoding.environ:
-            try:
-                f = repo.svfs('phaseroots.pending')
-            except IOError as inst:
-                if inst.errno != errno.ENOENT:
-                    raise
-        if f is None:
-            f = repo.svfs('phaseroots')
+        f, pending = txnutil.trypending(repo.root, repo.svfs, 'phaseroots')
         try:
             for line in f:
                 phase, nh = line.split()

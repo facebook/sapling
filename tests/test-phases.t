@@ -590,3 +590,47 @@ because repo.cancopy() is False
   crosschecking files in changesets and manifests
   checking files
   7 files, 8 changesets, 7 total revisions
+
+  $ cd ..
+
+check whether HG_PENDING makes pending changes only in related
+repositories visible to an external hook.
+
+(emulate a transaction running concurrently by copied
+.hg/phaseroots.pending in subsequent test)
+
+  $ cat > $TESTTMP/savepending.sh <<EOF
+  > cp .hg/store/phaseroots.pending  .hg/store/phaseroots.pending.saved
+  > exit 1 # to avoid changing phase for subsequent tests
+  > EOF
+  $ cd push-dest
+  $ hg phase 6
+  6: draft
+  $ hg --config hooks.pretxnclose="sh $TESTTMP/savepending.sh" phase -f -s 6
+  transaction abort!
+  rollback completed
+  abort: pretxnclose hook exited with status 1
+  [255]
+  $ cp .hg/store/phaseroots.pending.saved .hg/store/phaseroots.pending
+
+(check (in)visibility of phaseroot while transaction running in repo)
+
+  $ cat > $TESTTMP/checkpending.sh <<EOF
+  > echo '@initialrepo'
+  > hg -R $TESTTMP/initialrepo phase 7
+  > echo '@push-dest'
+  > hg -R $TESTTMP/push-dest phase 6
+  > exit 1 # to avoid changing phase for subsequent tests
+  > EOF
+  $ cd ../initialrepo
+  $ hg phase 7
+  7: public
+  $ hg --config hooks.pretxnclose="sh $TESTTMP/checkpending.sh" phase -f -s 7
+  @initialrepo
+  7: secret
+  @push-dest
+  6: draft
+  transaction abort!
+  rollback completed
+  abort: pretxnclose hook exited with status 1
+  [255]
