@@ -160,7 +160,7 @@ class ui(object):
             self.ferr = src.ferr
             self.fin = src.fin
             self.pageractive = src.pageractive
-            self._neverpager = src._neverpager
+            self._disablepager = src._disablepager
 
             self._tcfg = src._tcfg.copy()
             self._ucfg = src._ucfg.copy()
@@ -179,7 +179,7 @@ class ui(object):
             self.ferr = util.stderr
             self.fin = util.stdin
             self.pageractive = False
-            self._neverpager = False
+            self._disablepager = False
 
             # shared read-only environment
             self.environ = encoding.environ
@@ -838,8 +838,8 @@ class ui(object):
             return False
         return util.isatty(fh)
 
-    def neverpager(self):
-        self._neverpager = True
+    def disablepager(self):
+        self._disablepager = True
 
     def pager(self, command):
         """Start a pager for subsequent command output.
@@ -854,7 +854,7 @@ class ui(object):
           command: The full, non-aliased name of the command. That is, "log"
                    not "history, "summary" not "summ", etc.
         """
-        if (self._neverpager
+        if (self._disablepager
             or self.pageractive
             or command in self.configlist('pager', 'ignore')
             or not self.configbool('pager', 'attend-' + command, True)

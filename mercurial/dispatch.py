@@ -750,7 +750,7 @@ def _dispatch(req):
                 ui_.setconfig('ui', 'interactive', 'off', '-y')
 
         if options['pager'] != 'auto' and not util.parsebool(options['pager']):
-            ui.neverpager()
+            ui.disablepager()
 
         if cmdoptions.get('insecure', False):
             for ui_ in uis:
