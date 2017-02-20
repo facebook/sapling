@@ -56,6 +56,7 @@ from . import (
     subrepo,
     tags as tagsmod,
     transaction,
+    txnutil,
     util,
 )
 
@@ -513,10 +514,8 @@ class localrepository(object):
     @storecache('00changelog.i')
     def changelog(self):
         c = changelog.changelog(self.svfs)
-        if 'HG_PENDING' in encoding.environ:
-            p = encoding.environ['HG_PENDING']
-            if p.startswith(self.root):
-                c.readpending('00changelog.i.a')
+        if txnutil.mayhavepending(self.root):
+            c.readpending('00changelog.i.a')
         return c
 
     def _constructmanifest(self):

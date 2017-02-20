@@ -832,6 +832,50 @@ pretxnclose hook failure should abort the transaction
   [1]
   $ cd ..
 
+check whether HG_PENDING makes pending changes only in related
+repositories visible to an external hook.
+
+(emulate a transaction running concurrently by copied
+.hg/store/00changelog.i.a in subsequent test)
+
+  $ cat > $TESTTMP/savepending.sh <<EOF
+  > cp .hg/store/00changelog.i.a  .hg/store/00changelog.i.a.saved
+  > exit 1 # to avoid adding new revision for subsequent tests
+  > EOF
+  $ cd a
+  $ hg tip -q
+  4:539e4b31b6dc
+  $ hg --config hooks.pretxnclose="sh $TESTTMP/savepending.sh" commit -m "invisible"
+  transaction abort!
+  rollback completed
+  abort: pretxnclose hook exited with status 1
+  [255]
+  $ cp .hg/store/00changelog.i.a.saved .hg/store/00changelog.i.a
+
+(check (in)visibility of new changeset while transaction running in
+repo)
+
+  $ cat > $TESTTMP/checkpending.sh <<EOF
+  > echo '@a'
+  > hg -R $TESTTMP/a tip -q
+  > echo '@a/nested'
+  > hg -R $TESTTMP/a/nested tip -q
+  > exit 1 # to avoid adding new revision for subsequent tests
+  > EOF
+  $ hg init nested
+  $ cd nested
+  $ echo a > a
+  $ hg add a
+  $ hg --config hooks.pretxnclose="sh $TESTTMP/checkpending.sh" commit -m '#0'
+  @a
+  4:539e4b31b6dc
+  @a/nested
+  0:bf5e395ced2c
+  transaction abort!
+  rollback completed
+  abort: pretxnclose hook exited with status 1
+  [255]
+
 Hook from untrusted hgrc are reported as failure
 ================================================
 
