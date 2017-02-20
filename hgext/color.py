@@ -328,21 +328,18 @@ class colorui(uimod.ui):
             return super(colorui, self).write_err(
                 *[self.label(a, label) for a in args], **opts)
 
-    def showlabel(self, msg, label):
-        if label and msg:
-            if msg[-1] == '\n':
-                return "[%s|%s]\n" % (label, msg[:-1])
-            else:
-                return "[%s|%s]" % (label, msg)
-        else:
-            return msg
-
     def label(self, msg, label):
         if self._colormode is None:
             return super(colorui, self).label(msg, label)
 
         if self._colormode == 'debug':
-            return self.showlabel(msg, label)
+            if label and msg:
+                if msg[-1] == '\n':
+                    return "[%s|%s]\n" % (label, msg[:-1])
+                else:
+                    return "[%s|%s]" % (label, msg)
+            else:
+                return msg
 
         effects = []
         for l in label.split():
