@@ -23,6 +23,7 @@ from . import (
     pathutil,
     pycompat,
     scmutil,
+    txnutil,
     util,
 )
 
@@ -58,22 +59,6 @@ def nonnormalentries(dmap):
     except AttributeError:
         return set(fname for fname, e in dmap.iteritems()
                    if e[0] != 'n' or e[3] == -1)
-
-def _trypending(root, vfs, filename):
-    '''Open  file to be read according to HG_PENDING environment variable
-
-    This opens '.pending' of specified 'filename' only when HG_PENDING
-    is equal to 'root'.
-
-    This returns '(fp, is_pending_opened)' tuple.
-    '''
-    if root == encoding.environ.get('HG_PENDING'):
-        try:
-            return (vfs('%s.pending' % filename), True)
-        except IOError as inst:
-            if inst.errno != errno.ENOENT:
-                raise
-    return (vfs(filename), False)
 
 class dirstate(object):
 
@@ -385,7 +370,7 @@ class dirstate(object):
             raise
 
     def _opendirstatefile(self):
-        fp, mode = _trypending(self._root, self._opener, self._filename)
+        fp, mode = txnutil.trypending(self._root, self._opener, self._filename)
         if self._pendingmode is not None and self._pendingmode != mode:
             fp.close()
             raise error.Abort(_('working directory state may be '
