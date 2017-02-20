@@ -296,18 +296,12 @@ def _modesetup(ui, coloropt):
         return realmode
     return None
 
-class colorui(uimod.ui):
-    pass
-
 def uisetup(ui):
     if ui.plain():
         return
-    if not isinstance(ui, colorui):
-        colorui.__bases__ = (ui.__class__,)
-        ui.__class__ = colorui
     def colorcmd(orig, ui_, opts, cmd, cmdfunc):
         mode = _modesetup(ui_, opts['color'])
-        colorui._colormode = mode
+        uimod.ui._colormode = mode
         if mode and mode != 'debug':
             color.configstyles(ui_)
         return orig(ui_, opts, cmd, cmdfunc)
