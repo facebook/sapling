@@ -297,19 +297,7 @@ def _modesetup(ui, coloropt):
     return None
 
 class colorui(uimod.ui):
-
-    def write_err(self, *args, **opts):
-        if self._colormode is None:
-            return super(colorui, self).write_err(*args, **opts)
-
-        label = opts.get('label', '')
-        if self._bufferstates and self._bufferstates[-1][0]:
-            return self.write(*args, **opts)
-        if self._colormode == 'win32':
-            color.win32print(super(colorui, self).write_err, *args, **opts)
-        else:
-            return super(colorui, self).write_err(
-                *[self.label(a, label) for a in args], **opts)
+    pass
 
 def uisetup(ui):
     if ui.plain():

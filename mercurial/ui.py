@@ -823,8 +823,17 @@ class ui(object):
     def write_err(self, *args, **opts):
         self._progclear()
         if self._bufferstates and self._bufferstates[-1][0]:
-            return self.write(*args, **opts)
-        self._write_err(*args, **opts)
+            self.write(*args, **opts)
+        elif self._colormode == 'win32':
+            # windows color printing is its own can of crab, defer to
+            # the color module and that is it.
+            color.win32print(self._write_err, *args, **opts)
+        else:
+            msgs = args
+            if self._colormode is not None:
+                label = opts.get('label', '')
+                msgs = [self.label(a, label) for a in args]
+            self._write_err(*msgs, **opts)
 
     def _write_err(self, *msgs, **opts):
         try:
