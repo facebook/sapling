@@ -250,7 +250,6 @@ Test extension help:
        censor        erase file content at a given revision
        churn         command to display statistics about repository history
        clonebundles  advertise pre-generated bundles to seed clones
-       color         colorize output from some commands
        convert       import revisions from foreign VCS repositories into
                      Mercurial
        eol           automatically manage newlines in repository files
@@ -317,7 +316,7 @@ Test short command list with verbose option
    -q --quiet             suppress output
    -v --verbose           enable additional output
       --color TYPE        when to colorize (boolean, always, auto, never, or
-                          debug) (EXPERIMENTAL)
+                          debug)
       --config CONFIG [+] set/override config option (use 'section.name=value')
       --debug             enable debugging output
       --debugger          start debugger
@@ -417,7 +416,7 @@ Verbose help for add
    -q --quiet             suppress output
    -v --verbose           enable additional output
       --color TYPE        when to colorize (boolean, always, auto, never, or
-                          debug) (EXPERIMENTAL)
+                          debug)
       --config CONFIG [+] set/override config option (use 'section.name=value')
       --debug             enable debugging output
       --debugger          start debugger
@@ -2522,7 +2521,7 @@ Dish up an empty repo; serve it cold.
   <td>enable additional output</td></tr>
   <tr><td></td>
   <td>--color TYPE</td>
-  <td>when to colorize (boolean, always, auto, never, or debug) (EXPERIMENTAL)</td></tr>
+  <td>when to colorize (boolean, always, auto, never, or debug)</td></tr>
   <tr><td></td>
   <td>--config CONFIG [+]</td>
   <td>set/override config option (use 'section.name=value')</td></tr>
@@ -2723,7 +2722,7 @@ Dish up an empty repo; serve it cold.
   <td>enable additional output</td></tr>
   <tr><td></td>
   <td>--color TYPE</td>
-  <td>when to colorize (boolean, always, auto, never, or debug) (EXPERIMENTAL)</td></tr>
+  <td>when to colorize (boolean, always, auto, never, or debug)</td></tr>
   <tr><td></td>
   <td>--config CONFIG [+]</td>
   <td>set/override config option (use 'section.name=value')</td></tr>

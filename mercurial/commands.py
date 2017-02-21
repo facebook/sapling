@@ -80,8 +80,7 @@ globalopts = [
     ('', 'color', '',
      # i18n: 'always', 'auto', 'never', and 'debug' are keywords
      # and should not be translated
-     _("when to colorize (boolean, always, auto, never, or debug)"
-       " (EXPERIMENTAL)"),
+     _("when to colorize (boolean, always, auto, never, or debug)"),
      _('TYPE')),
     ('', 'config', [],
      _('set/override config option (use \'section.name=value\')'),

@@ -386,6 +386,33 @@ Supported arguments:
 If no suitable authentication entry is found, the user is prompted
 for credentials as usual if required by the remote.
 
+``color``
+---------
+
+Configure the Mercurial color mode. For details about how to define your custom
+effect and style see :hg:`help color`.
+
+``mode``
+    String: control the method used to output color. One of ``auto``, ``ansi``,
+    ``win32``, ``terminfo`` or ``debug``. In auto mode the color extension will
+    use ANSI mode by default (or win32 mode on Windows) if it detects a
+    terminal. Any invalid value will disable color.
+
+``pagermode``
+    String: optinal override of ``color.mode`` used with pager (from the pager
+    extensions).
+
+    On some systems, terminfo mode may cause problems when using
+    color with the pager extension and less -R. less with the -R option
+    will only display ECMA-48 color codes, and terminfo mode may sometimes
+    emit codes that less doesn't understand. You can work around this by
+    either using ansi mode (or auto mode), or by using less -r (which will
+    pass through all terminal control codes, not just color control
+    codes).
+
+    On some systems (such as MSYS in Windows), the terminal may support
+    a different color mode than the pager (activated via the "pager"
+    extension).
 
 ``committemplate``
 ------------------
@@ -1796,6 +1823,13 @@ User interface controls.
     ``BUNDLESPEC=gzip-v2, COMPRESSION=gzip``.
 
     By default, the first bundle advertised by the server is used.
+
+``color``
+    String: when to use to colorize output. possible value are auto, always,
+    never, or debug (default: never). 'auto' will use color whenever it seems
+    possible. See :hg:`help color` for details.
+
+    (in addition a boolean can be used in place always/never)
 
 ``commitsubrepos``
     Whether to commit modified subrepositories when committing the

@@ -187,7 +187,6 @@ def _modesetup(ui):
     default = 'never'
     if _enabledbydefault:
         default = 'auto'
-    # experimental config: ui.color
     config = ui.config('ui', 'color', default)
     if config == 'debug':
         return 'debug'

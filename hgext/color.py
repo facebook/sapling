@@ -5,169 +5,20 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-'''colorize output from some commands
+'''enable Mercurial color mode (DEPRECATED)
 
-The color extension colorizes output from several Mercurial commands.
-For example, the diff command shows additions in green and deletions
-in red, while the status command shows modified files in magenta. Many
-other commands have analogous colors. It is possible to customize
-these colors.
+This extensions enable Mercurial color mode. The feature is now directly
+available in Mercurial core. You can access it using::
 
-Effects
--------
+  [ui]
+  color = auto
 
-Other effects in addition to color, like bold and underlined text, are
-also available. By default, the terminfo database is used to find the
-terminal codes used to change color and effect.  If terminfo is not
-available, then effects are rendered with the ECMA-48 SGR control
-function (aka ANSI escape codes).
-
-The available effects in terminfo mode are 'blink', 'bold', 'dim',
-'inverse', 'invisible', 'italic', 'standout', and 'underline'; in
-ECMA-48 mode, the options are 'bold', 'inverse', 'italic', and
-'underline'.  How each is rendered depends on the terminal emulator.
-Some may not be available for a given terminal type, and will be
-silently ignored.
-
-If the terminfo entry for your terminal is missing codes for an effect
-or has the wrong codes, you can add or override those codes in your
-configuration::
-
-  [color]
-  terminfo.dim = \E[2m
-
-where '\E' is substituted with an escape character.
-
-Labels
-------
-
-Text receives color effects depending on the labels that it has. Many
-default Mercurial commands emit labelled text. You can also define
-your own labels in templates using the label function, see :hg:`help
-templates`. A single portion of text may have more than one label. In
-that case, effects given to the last label will override any other
-effects. This includes the special "none" effect, which nullifies
-other effects.
-
-Labels are normally invisible. In order to see these labels and their
-position in the text, use the global --color=debug option. The same
-anchor text may be associated to multiple labels, e.g.
-
-  [log.changeset changeset.secret|changeset:   22611:6f0a53c8f587]
-
-The following are the default effects for some default labels. Default
-effects may be overridden from your configuration file::
-
-  [color]
-  status.modified = blue bold underline red_background
-  status.added = green bold
-  status.removed = red bold blue_background
-  status.deleted = cyan bold underline
-  status.unknown = magenta bold underline
-  status.ignored = black bold
-
-  # 'none' turns off all effects
-  status.clean = none
-  status.copied = none
-
-  qseries.applied = blue bold underline
-  qseries.unapplied = black bold
-  qseries.missing = red bold
-
-  diff.diffline = bold
-  diff.extended = cyan bold
-  diff.file_a = red bold
-  diff.file_b = green bold
-  diff.hunk = magenta
-  diff.deleted = red
-  diff.inserted = green
-  diff.changed = white
-  diff.tab =
-  diff.trailingwhitespace = bold red_background
-
-  # Blank so it inherits the style of the surrounding label
-  changeset.public =
-  changeset.draft =
-  changeset.secret =
-
-  resolve.unresolved = red bold
-  resolve.resolved = green bold
-
-  bookmarks.active = green
-
-  branches.active = none
-  branches.closed = black bold
-  branches.current = green
-  branches.inactive = none
-
-  tags.normal = green
-  tags.local = black bold
-
-  rebase.rebased = blue
-  rebase.remaining = red bold
-
-  shelve.age = cyan
-  shelve.newest = green bold
-  shelve.name = blue bold
-
-  histedit.remaining = red bold
-
-Custom colors
--------------
-
-Because there are only eight standard colors, this module allows you
-to define color names for other color slots which might be available
-for your terminal type, assuming terminfo mode.  For instance::
-
-  color.brightblue = 12
-  color.pink = 207
-  color.orange = 202
-
-to set 'brightblue' to color slot 12 (useful for 16 color terminals
-that have brighter colors defined in the upper eight) and, 'pink' and
-'orange' to colors in 256-color xterm's default color cube.  These
-defined colors may then be used as any of the pre-defined eight,
-including appending '_background' to set the background to that color.
-
-Modes
------
-
-By default, the color extension will use ANSI mode (or win32 mode on
-Windows) if it detects a terminal. To override auto mode (to enable
-terminfo mode, for example), set the following configuration option::
-
-  [color]
-  mode = terminfo
-
-Any value other than 'ansi', 'win32', 'terminfo', or 'auto' will
-disable color.
-
-Note that on some systems, terminfo mode may cause problems when using
-color with the pager extension and less -R. less with the -R option
-will only display ECMA-48 color codes, and terminfo mode may sometimes
-emit codes that less doesn't understand. You can work around this by
-either using ansi mode (or auto mode), or by using less -r (which will
-pass through all terminal control codes, not just color control
-codes).
-
-On some systems (such as MSYS in Windows), the terminal may support
-a different color mode than the pager (activated via the "pager"
-extension). It is possible to define separate modes depending on whether
-the pager is active::
-
-  [color]
-  mode = auto
-  pagermode = ansi
-
-If ``pagermode`` is not defined, the ``mode`` will be used.
+See :hg:`help color` for details.
 '''
 
 from __future__ import absolute_import
 
-from mercurial import (
-    color,
-    commands
-)
+from mercurial import color
 
 # Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
@@ -178,9 +29,3 @@ testedwith = 'ships-with-hg-core'
 def extsetup(ui):
     # change default color config
     color._enabledbydefault = True
-    for idx, entry in enumerate(commands.globalopts):
-        if entry[1] == 'color':
-            patch = (entry[3].replace(' (EXPERIMENTAL)', ''),)
-            new = entry[:3] + patch + entry[4:]
-            commands.globalopts[idx] = new
-            break

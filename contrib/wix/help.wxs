@@ -15,6 +15,7 @@
     <DirectoryRef Id="INSTALLDIR">
       <Directory Id="helpdir" Name="help" FileSource="$(var.SourceDir)">
         <Component Id="help.root" Guid="$(var.help.root.guid)" Win64='$(var.IsX64)'>
+          <File Name="color.txt" />
           <File Name="config.txt" KeyPath="yes" />
           <File Name="dates.txt" />
           <File Name="diffs.txt" />
