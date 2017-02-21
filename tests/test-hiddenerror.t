@@ -31,8 +31,8 @@ Test custom error message without hash.
 Test custom error message with hash.
   $ cat >> $HGRCPATH << EOF
   > [hiddenerror]
-  > message = message with hash {}
-  > hint = hint with hash {}
+  > message = message with hash {0}
+  > hint = hint with hash {0}
   > EOF
   $ hg log -r 0
   abort: message with hash 1ea73414a91b!
