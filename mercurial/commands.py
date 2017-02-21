@@ -3210,7 +3210,6 @@ def incoming(ui, repo, source="default", **opts):
             cmdutil.displaygraph(ui, repo, revdag, displayer,
                                  graphmod.asciiedges)
 
-        ui.pager('incoming')
         hg._incoming(display, lambda: 1, ui, repo, source, opts, buffered=True)
         return 0
 
@@ -3230,7 +3229,6 @@ def incoming(ui, repo, source="default", **opts):
 
     repo._subtoppath = ui.expandpath(source)
     try:
-        ui.pager('incoming')
         return hg.incoming(ui, repo, source, opts)
     finally:
         del repo._subtoppath

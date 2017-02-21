@@ -804,7 +804,7 @@ def _incoming(displaychlist, subreporecurse, ui, repo, source,
         if not chlist:
             ui.status(_("no changes found\n"))
             return subreporecurse()
-
+        ui.pager('incoming')
         displayer = cmdutil.show_changeset(ui, other, opts, buffered)
         displaychlist(other, chlist, displayer)
         displayer.close()
