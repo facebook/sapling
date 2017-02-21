@@ -55,12 +55,14 @@ samplehgrcs = {
 # username = Jane Doe <jdoe@example.com>
 username =
 
+# uncomment to colorize command output
+# color = auto
+
 [extensions]
 # uncomment these lines to enable some popular extensions
 # (see 'hg help extensions' for more info)
 #
-# pager =
-# color =""",
+# pager =""",
 
     'cloned':
 """# example repository config (see 'hg help config' for more info)
@@ -98,12 +100,15 @@ default = %s
     'global':
 """# example system-wide hg config (see 'hg help config' for more info)
 
+[ui]
+# uncomment to colorize command output
+# color = auto
+
 [extensions]
 # uncomment these lines to enable some popular extensions
 # (see 'hg help extensions' for more info)
 #
 # blackbox =
-# color =
 # pager =""",
 }
 
