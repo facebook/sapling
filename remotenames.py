@@ -158,8 +158,8 @@ def expull(orig, repo, remote, *args, **kwargs):
                 if args[0]:
                     heads = args[0]
                 args = args[1:]
-            for bookmark in bookmarks:
-                heads.append(remote.lookup(remotebookmarks[bookmark]))
+            for node in bookmarks.values():
+                heads.append(bin(node))
             kwargs['bookmarks'] = bookmarks
             kwargs['heads'] = heads
     else:
