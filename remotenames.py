@@ -85,19 +85,18 @@ def expushop(orig, pushop, repo, remote, force=False, revs=None,
 def _isselectivepull(ui):
     return ui.configbool('remotenames', 'selectivepull', False)
 
-def _getselectivepulldefaultbookmarks(ui, remotebookmarks):
+def _getselectivepulldefaultbookmarks(ui):
     default_books = ui.configlist('remotenames', 'selectivepulldefault')
     if not default_books:
         raise error.Abort(_('no default bookmarks specified for selectivepull'))
+    return default_books
 
+def _listremotebookmarks(remote, bookmarks):
+    remotebookmarks = remote.listkeys('bookmarks')
     result = {}
-    for default_book in default_books:
-        if default_book in remotebookmarks:
-            result[default_book] = remotebookmarks[default_book]
-
-    if not default_books:
-        raise error.Abort(
-            _('default bookmarks %s are not found on remote') % default_books)
+    for book in bookmarks:
+        if book in remotebookmarks:
+            result[book] = remotebookmarks[book]
     return result
 
 def _trypullremotebookmark(mayberemotebookmark, repo, ui):
@@ -122,7 +121,6 @@ def _trypullremotebookmark(mayberemotebookmark, repo, ui):
         ui.warn(_('`%s` found remotely\n') % mayberemotebookmark)
 
 def expull(orig, repo, remote, *args, **kwargs):
-    remotebookmarks = remote.listkeys('bookmarks')
     if _isselectivepull(repo.ui):
         # if selectivepull is enabled then we don't save all of the remote
         # bookmarks in remotenames file. Instead we save only bookmarks that
@@ -135,23 +133,21 @@ def expull(orig, repo, remote, *args, **kwargs):
         # Selectivepull is helpful when server has too many remote bookmarks
         # because it may slow down clients.
         path = activepath(repo.ui, remote)
-        bookmarks = {}
+        remotebookmarkslist = []
         if repo.vfs.exists(_selectivepullenabledfile):
             # 'selectivepullenabled' file is used for transition between
             # non-selectivepull repo to selectivepull repo. It is used as
             # indicator to whether "non-interesting" bookmarks were removed
             # from remotenames file.
-            for bookmark in readbookmarknames(repo, path):
-                if bookmark in remotebookmarks:
-                    bookmarks[bookmark] = remotebookmarks[bookmark]
-        if not bookmarks:
-            bookmarks = _getselectivepulldefaultbookmarks(repo.ui,
-                                                          remotebookmarks)
+            remotebookmarkslist = list(readbookmarknames(repo, path))
+        if not remotebookmarkslist:
+            remotebookmarkslist = _getselectivepulldefaultbookmarks(repo.ui)
 
         if kwargs.get('bookmarks'):
-            for bookmark in kwargs['bookmarks']:
-                bookmarks[bookmark] = remotebookmarks[bookmark]
+            remotebookmarkslist.extend(kwargs['bookmarks'])
+            bookmarks = _listremotebookmarks(remote, remotebookmarkslist)
         else:
+            bookmarks = _listremotebookmarks(remote, remotebookmarkslist)
             heads = kwargs.get('heads') or []
             # heads may be passed as positional args
             if len(args) > 0:
@@ -163,7 +159,7 @@ def expull(orig, repo, remote, *args, **kwargs):
             kwargs['bookmarks'] = bookmarks
             kwargs['heads'] = heads
     else:
-        bookmarks = remotebookmarks
+        bookmarks = remote.listkeys('bookmarks')
 
     res = orig(repo, remote, *args, **kwargs)
     pullremotenames(repo, remote, bookmarks)
