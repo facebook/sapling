@@ -177,7 +177,6 @@ from mercurial import (
     commands,
     dispatch,
     extensions,
-    subrepo,
     ui as uimod,
 )
 
@@ -198,14 +197,7 @@ def uisetup(ui):
         if mode and mode != 'debug':
             color.configstyles(ui_)
         return orig(ui_, opts, cmd, cmdfunc)
-    def colorgit(orig, gitsub, commands, env=None, stream=False, cwd=None):
-        if gitsub.ui._colormode and len(commands) and commands[0] == "diff":
-                # insert the argument in the front,
-                # the end of git diff arguments is used for paths
-                commands.insert(1, '--color')
-        return orig(gitsub, commands, env, stream, cwd)
     extensions.wrapfunction(dispatch, '_runcommand', colorcmd)
-    extensions.wrapfunction(subrepo.gitsubrepo, '_gitnodir', colorgit)
 
 def extsetup(ui):
     commands.globalopts.append(

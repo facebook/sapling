@@ -1414,6 +1414,10 @@ class gitsubrepo(abstractsubrepo):
         errpipe = None
         if self.ui.quiet:
             errpipe = open(os.devnull, 'w')
+        if self.ui._colormode and len(commands) and commands[0] == "diff":
+            # insert the argument in the front,
+            # the end of git diff arguments is used for paths
+            commands.insert(1, '--color')
         p = subprocess.Popen([self._gitexecutable] + commands, bufsize=-1,
                              cwd=cwd, env=env, close_fds=util.closefds,
                              stdout=subprocess.PIPE, stderr=errpipe)
