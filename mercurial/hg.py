@@ -872,6 +872,7 @@ def outgoing(ui, repo, dest, opts):
 
     if opts.get('newest_first'):
         o.reverse()
+    ui.pager('outgoing')
     displayer = cmdutil.show_changeset(ui, repo, opts)
     count = 0
     for n in o:

@@ -3641,13 +3641,13 @@ def outgoing(ui, repo, dest=None, **opts):
     """
     if opts.get('graph'):
         cmdutil.checkunsupportedgraphflags([], opts)
-        ui.pager('outgoing')
         o, other = hg._outgoing(ui, repo, dest, opts)
         if not o:
             cmdutil.outgoinghooks(ui, repo, other, opts, o)
             return
 
         revdag = cmdutil.graphrevs(repo, o, opts)
+        ui.pager('outgoing')
         displayer = cmdutil.show_changeset(ui, repo, opts, buffered=True)
         cmdutil.displaygraph(ui, repo, revdag, displayer, graphmod.asciiedges)
         cmdutil.outgoinghooks(ui, repo, other, opts, o)
@@ -3660,13 +3660,12 @@ def outgoing(ui, repo, dest=None, **opts):
         if 'bookmarks' not in other.listkeys('namespaces'):
             ui.warn(_("remote doesn't support bookmarks\n"))
             return 0
-        ui.pager('outgoing')
         ui.status(_('comparing with %s\n') % util.hidepassword(dest))
+        ui.pager('outgoing')
         return bookmarks.outgoing(ui, repo, other)
 
     repo._subtoppath = ui.expandpath(dest or 'default-push', dest or 'default')
     try:
-        ui.pager('outgoing')
         return hg.outgoing(ui, repo, dest, opts)
     finally:
         del repo._subtoppath
