@@ -33,6 +33,7 @@ from . import (
     extensions,
     fancyopts,
     fileset,
+    help,
     hg,
     hook,
     profiling,
@@ -242,19 +243,24 @@ def callcatch(ui, func):
         _formatparse(ui.warn, inst)
         return -1
     except error.UnknownCommand as inst:
-        ui.warn(_("hg: unknown command '%s'\n") % inst.args[0])
+        nocmdmsg = _("hg: unknown command '%s'\n") % inst.args[0]
         try:
             # check if the command is in a disabled extension
             # (but don't check for extensions themselves)
-            commands.help_(ui, inst.args[0], unknowncmd=True)
+            formatted = help.formattedhelp(ui, inst.args[0], unknowncmd=True)
+            ui.warn(nocmdmsg)
+            ui.write(formatted)
         except (error.UnknownCommand, error.Abort):
             suggested = False
             if len(inst.args) == 2:
                 sim = _getsimilar(inst.args[1], inst.args[0])
                 if sim:
+                    ui.warn(nocmdmsg)
                     _reportsimilar(ui.warn, sim)
                     suggested = True
             if not suggested:
+                ui.pager('help')
+                ui.warn(nocmdmsg)
                 commands.help_(ui, 'shortlist')
     except IOError:
         raise
