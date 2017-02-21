@@ -73,6 +73,7 @@ Show debug commands if there are no other candidates
   debugbuilddag
   debugbundle
   debugcheckstate
+  debugcolor
   debugcommands
   debugcomplete
   debugconfig
@@ -244,6 +245,7 @@ Show all commands + options
   debugbuilddag: mergeable-file, overwritten-file, new-file
   debugbundle: all, spec
   debugcheckstate: 
+  debugcolor: style
   debugcommands: 
   debugcomplete: options
   debugcreatestreamclonebundle: 

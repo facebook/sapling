@@ -864,6 +864,7 @@ Test list of internal help commands
    debugbundle   lists the contents of a bundle
    debugcheckstate
                  validate the correctness of the current dirstate
+   debugcolor    show available color, effects or style
    debugcommands
                  list all available commands and options
    debugcomplete

@@ -164,21 +164,11 @@ If ``pagermode`` is not defined, the ``mode`` will be used.
 
 from __future__ import absolute_import
 
-try:
-    import curses
-    curses.COLOR_BLACK # force import
-except ImportError:
-    curses = None
-
-from mercurial.i18n import _
 from mercurial import (
-    cmdutil,
     color,
-    commands,
+    commands
 )
 
-cmdtable = {}
-command = cmdutil.command(cmdtable)
 # Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
 # be specifying the version(s) of Mercurial they are tested with, or
@@ -194,48 +184,3 @@ def extsetup(ui):
             new = entry[:3] + patch + entry[4:]
             commands.globalopts[idx] = new
             break
-
-@command('debugcolor',
-        [('', 'style', None, _('show all configured styles'))],
-        'hg debugcolor')
-def debugcolor(ui, repo, **opts):
-    """show available color, effects or style"""
-    ui.write(('color mode: %s\n') % ui._colormode)
-    if opts.get('style'):
-        return _debugdisplaystyle(ui)
-    else:
-        return _debugdisplaycolor(ui)
-
-def _debugdisplaycolor(ui):
-    oldstyle = ui._styles.copy()
-    try:
-        ui._styles.clear()
-        for effect in color._effects.keys():
-            ui._styles[effect] = effect
-        if ui._terminfoparams:
-            for k, v in ui.configitems('color'):
-                if k.startswith('color.'):
-                    ui._styles[k] = k[6:]
-                elif k.startswith('terminfo.'):
-                    ui._styles[k] = k[9:]
-        ui.write(_('available colors:\n'))
-        # sort label with a '_' after the other to group '_background' entry.
-        items = sorted(ui._styles.items(),
-                       key=lambda i: ('_' in i[0], i[0], i[1]))
-        for colorname, label in items:
-            ui.write(('%s\n') % colorname, label=label)
-    finally:
-        ui._styles.clear()
-        ui._styles.update(oldstyle)
-
-def _debugdisplaystyle(ui):
-    ui.write(_('available style:\n'))
-    width = max(len(s) for s in ui._styles)
-    for label, effects in sorted(ui._styles.items()):
-        ui.write('%s' % label, label=label)
-        if effects:
-            # 50
-            ui.write(': ')
-            ui.write(' ' * (max(0, width - len(label))))
-            ui.write(', '.join(ui.label(e, e) for e in effects.split()))
-        ui.write('\n')
