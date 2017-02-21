@@ -168,7 +168,7 @@ def setup(ui, coloropts):
     argument. That function both set the colormode for the ui object and read
     the configuration looking for custom colors and effect definitions."""
     mode = _modesetup(ui, coloropts)
-    ui.__class__._colormode = mode
+    ui._colormode = mode
     if mode and mode != 'debug':
         configstyles(ui)
 

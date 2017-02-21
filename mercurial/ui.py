@@ -128,8 +128,6 @@ def _catchterm(*args):
     raise error.SignalInterrupt
 
 class ui(object):
-    # color mode: see mercurial/color.py for possible value
-    _colormode = None
     def __init__(self, src=None):
         """Create a fresh new ui object if no src given
 
@@ -157,6 +155,8 @@ class ui(object):
         self.insecureconnections = False
         # Blocked time
         self.logblockedtimes = False
+        # color mode: see mercurial/color.py for possible value
+        self._colormode = None
 
         if src:
             self.fout = src.fout
@@ -173,6 +173,8 @@ class ui(object):
             self.environ = src.environ
             self.callhooks = src.callhooks
             self.insecureconnections = src.insecureconnections
+            self._colormode = src._colormode
+
             self.fixconfig()
 
             self.httppasswordmgrdb = src.httppasswordmgrdb
