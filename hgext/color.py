@@ -175,9 +175,6 @@ from mercurial import (
     cmdutil,
     color,
     commands,
-    dispatch,
-    extensions,
-    ui as uimod,
 )
 
 cmdtable = {}
@@ -187,15 +184,6 @@ command = cmdutil.command(cmdtable)
 # be specifying the version(s) of Mercurial they are tested with, or
 # leave the attribute unspecified.
 testedwith = 'ships-with-hg-core'
-
-def uisetup(ui):
-    def colorcmd(orig, ui_, opts, cmd, cmdfunc):
-        mode = color._modesetup(ui_, opts['color'])
-        uimod.ui._colormode = mode
-        if mode and mode != 'debug':
-            color.configstyles(ui_)
-        return orig(ui_, opts, cmd, cmdfunc)
-    extensions.wrapfunction(dispatch, '_runcommand', colorcmd)
 
 def extsetup(ui):
     # change default color config

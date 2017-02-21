@@ -764,6 +764,10 @@ def _dispatch(req):
             for ui_ in uis:
                 ui_.insecureconnections = True
 
+        # setup color handling
+        for ui_ in uis:
+            color.setup(ui_, options['color'])
+
         if options['version']:
             return commands.version_(ui)
         if options['help']:

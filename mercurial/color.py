@@ -161,6 +161,17 @@ def _terminfosetup(ui, mode):
               "ECMA-48 color\n"))
         _terminfo_params.clear()
 
+def setup(ui, coloropts):
+    """configure color on a ui
+
+    The 'coloropts' argument is the value of the '--color' command line
+    argument. That function both set the colormode for the ui object and read
+    the configuration looking for custom colors and effect definitions."""
+    mode = _modesetup(ui, coloropts)
+    ui.__class__._colormode = mode
+    if mode and mode != 'debug':
+        configstyles(ui)
+
 def _modesetup(ui, coloropt):
     if ui.plain():
         return None
