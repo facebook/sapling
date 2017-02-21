@@ -325,3 +325,5 @@ Confirm that --help works (it didn't when we used an alias)
       --version           output version information and exit
    -h --help              display help and exit
       --hidden            consider hidden changesets
+      --pager TYPE        when to paginate (boolean, always, auto, or never)
+                          (default: auto)
