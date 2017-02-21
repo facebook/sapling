@@ -129,6 +129,7 @@ Show the alias of a debug command if there are no other candidates
 
 Show the global options
   $ hg debugcomplete --options | sort
+  --color
   --config
   --cwd
   --debug
@@ -158,6 +159,7 @@ Show the options for the "serve" command
   --address
   --certificate
   --cmdserver
+  --color
   --config
   --cwd
   --daemon

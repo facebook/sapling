@@ -77,6 +77,12 @@ globalopts = [
      _('do not prompt, automatically pick the first choice for all prompts')),
     ('q', 'quiet', None, _('suppress output')),
     ('v', 'verbose', None, _('enable additional output')),
+    ('', 'color', 'never',
+     # i18n: 'always', 'auto', 'never', and 'debug' are keywords
+     # and should not be translated
+     _("when to colorize (boolean, always, auto, never, or debug)"
+       " (EXPERIMENTAL)"),
+     _('TYPE')),
     ('', 'config', [],
      _('set/override config option (use \'section.name=value\')'),
      _('CONFIG')),

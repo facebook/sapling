@@ -198,12 +198,13 @@ def uisetup(ui):
     extensions.wrapfunction(dispatch, '_runcommand', colorcmd)
 
 def extsetup(ui):
-    commands.globalopts.append(
-        ('', 'color', 'auto',
-         # i18n: 'always', 'auto', 'never', and 'debug' are keywords
-         # and should not be translated
-         _("when to colorize (boolean, always, auto, never, or debug)"),
-         _('TYPE')))
+    # change default color config
+    for idx, entry in enumerate(commands.globalopts):
+        if entry[1] == 'color':
+            patch = ('auto', entry[3].replace(' (EXPERIMENTAL)', ''))
+            new = entry[:2] + patch + entry[4:]
+            commands.globalopts[idx] = new
+            break
 
 @command('debugcolor',
         [('', 'style', None, _('show all configured styles'))],
