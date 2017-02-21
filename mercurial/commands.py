@@ -39,7 +39,6 @@ from . import (
     hg,
     lock as lockmod,
     merge as mergemod,
-    minirst,
     obsolete,
     patch,
     phases,
@@ -2721,10 +2720,6 @@ def help_(ui, name=None, **opts):
 
     Returns 0 if successful.
     """
-    textwidth = ui.configint('ui', 'textwidth', 78)
-    termwidth = ui.termwidth() - 2
-    if textwidth <= 0 or termwidth < textwidth:
-        textwidth = termwidth
 
     keep = opts.get('system') or []
     if len(keep) == 0:
@@ -2740,37 +2735,7 @@ def help_(ui, name=None, **opts):
     if ui.verbose:
         keep.append('verbose')
 
-    fullname = name
-    section = None
-    subtopic = None
-    if name and '.' in name:
-        name, remaining = name.split('.', 1)
-        remaining = encoding.lower(remaining)
-        if '.' in remaining:
-            subtopic, section = remaining.split('.', 1)
-        else:
-            if name in help.subtopics:
-                subtopic = remaining
-            else:
-                section = remaining
-
-    text = help.help_(ui, name, subtopic=subtopic, **opts)
-
-    formatted, pruned = minirst.format(text, textwidth, keep=keep,
-                                       section=section)
-
-    # We could have been given a weird ".foo" section without a name
-    # to look for, or we could have simply failed to found "foo.bar"
-    # because bar isn't a section of foo
-    if section and not (formatted and name):
-        raise error.Abort(_("help section not found: %s") % fullname)
-
-    if 'verbose' in pruned:
-        keep.append('omitted')
-    else:
-        keep.append('notomitted')
-    formatted, pruned = minirst.format(text, textwidth, keep=keep,
-                                       section=section)
+    formatted = help.formattedhelp(ui, name, keep=keep, **opts)
     ui.pager('help')
     ui.write(formatted)
 
