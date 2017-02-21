@@ -162,6 +162,8 @@ def _terminfosetup(ui, mode):
         _terminfo_params.clear()
 
 def _modesetup(ui, coloropt):
+    if ui.plain():
+        return None
     if coloropt == 'debug':
         return 'debug'
 

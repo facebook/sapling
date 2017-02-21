@@ -189,8 +189,6 @@ command = cmdutil.command(cmdtable)
 testedwith = 'ships-with-hg-core'
 
 def uisetup(ui):
-    if ui.plain():
-        return
     def colorcmd(orig, ui_, opts, cmd, cmdfunc):
         mode = color._modesetup(ui_, opts['color'])
         uimod.ui._colormode = mode
