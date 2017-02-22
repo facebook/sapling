@@ -203,6 +203,14 @@ class baseset(abstractsmartset):
     [[7, 6, 4, 0, 3, 5], [7, 6], [4, 0]]
     >>> [type(i).__name__ for i in [xs + ys, xs & ys, xs - ys]]
     ['addset', 'baseset', 'baseset']
+
+    istopo is preserved across set operations
+    >>> xs = baseset(set(x), istopo=True)
+    >>> rs = xs & ys
+    >>> type(rs).__name__
+    'baseset'
+    >>> rs._istopo
+    True
     """
     def __init__(self, data=(), datarepr=None, istopo=False):
         """
@@ -326,7 +334,8 @@ class baseset(abstractsmartset):
         # try to use native set operations as fast paths
         if (type(other) is baseset and '_set' in other.__dict__ and '_set' in
             self.__dict__ and self._ascending is not None):
-            s = baseset(data=getattr(self._set, op)(other._set))
+            s = baseset(data=getattr(self._set, op)(other._set),
+                        istopo=self._istopo)
             s._ascending = self._ascending
         else:
             s = getattr(super(baseset, self), op)(other)
