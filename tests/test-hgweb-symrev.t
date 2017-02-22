@@ -616,6 +616,8 @@ Set up the repo
   <a href="/file/43c799df6e75/foo?style=gitweb">file</a> |
   <a href="/diff/43c799df6e75/foo?style=gitweb">diff</a> |
   <a href="/annotate/43c799df6e75/foo?style=gitweb">annotate</a>
+  <a href="/log/xyzzy/foo?revcount=30&style=gitweb">less</a>
+  <a href="/log/xyzzy/foo?revcount=120&style=gitweb">more</a>
   <a href="/log/43c799df6e75/foo?style=gitweb">(0)</a> <a href="/log/tip/foo?style=gitweb">tip</a> 
 
   $ "$TESTDIR/get-with-headers.py" $LOCALIP:$HGPORT 'annotate/xyzzy/foo?style=gitweb' | egrep $REVLINKS
