@@ -169,7 +169,7 @@ We need to disable the SCM_SAMPLING_FILEPATH env var because arcanist may set it
   >>> for record in data.strip("\0").split("\0"):
   ...     parsedrecord = json.loads(record)
   ...     if parsedrecord['category'] == 'sparse_profiles':
-  ...         print 'active_profiles:', ', '.join(parsedrecord['data']['active_profiles'])
+  ...         print 'active_profiles:', parsedrecord['data']['active_profiles']
   active_profiles: 
   active_profiles: 
-  active_profiles: profile_base, profile_extended
+  active_profiles: profile_base,profile_extended

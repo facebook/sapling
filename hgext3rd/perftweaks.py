@@ -257,5 +257,5 @@ def _tracksparseprofiles(runcommand, lui, repo, *args):
         if util.safehasattr(repo, 'getactiveprofiles'):
             profiles = repo.getactiveprofiles()
             lui.log('sparse_profiles', '',
-                    active_profiles=sorted(profiles))
+                    active_profiles=','.join(sorted(profiles)))
     return res
