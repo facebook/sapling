@@ -15,6 +15,11 @@ namespace py facebook.eden
  */
 typedef i64 /* (cpp.type = "std::uint64_t") */ unsigned64
 
+/**
+ * A source control hash, as a 20-byte binary value.
+ */
+typedef binary BinaryHash
+
 exception EdenError {
   1: required string message
   2: optional i32 errorCode
@@ -27,7 +32,7 @@ struct MountInfo {
 }
 
 union SHA1Result {
-  1: binary sha1
+  1: BinaryHash sha1
   2: EdenError error
 }
 
@@ -144,6 +149,12 @@ service EdenService extends fb303.FacebookService {
   list<MountInfo> listMounts() throws (1: EdenError ex)
   void mount(1: MountInfo info) throws (1: EdenError ex)
   void unmount(1: string mountPoint) throws (1: EdenError ex)
+
+  /**
+   * Get the current snapshot that is checked out in the given mount point.
+   */
+  BinaryHash getCurrentSnapshot(1: string mountPoint)
+    throws (1: EdenError ex)
 
   /**
    * Check out the specified snapshot.
