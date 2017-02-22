@@ -840,7 +840,6 @@ def getbundle(repo, proto, others):
             raise error.Abort(bundle2requiredmain,
                               hint=bundle2requiredhint)
 
-    #chunks = exchange.getbundlechunks(repo, 'serve', **opts)
     try:
         chunks = exchange.getbundlechunks(repo, 'serve', **opts)
     except error.Abort as exc:
