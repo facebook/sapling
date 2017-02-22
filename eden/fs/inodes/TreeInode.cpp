@@ -1313,164 +1313,6 @@ void TreeInode::computeCheckoutActions(
   // Grab the contents_ lock for the duration of this function
   auto contents = contents_.wlock();
 
-  // Helper function to process entries present in the new Tree
-  // but not present in the old Tree
-  auto processNewEntry = [&](const TreeEntry& newScmEntry) {
-    auto it = contents->entries.find(newScmEntry.getName());
-    if (it == contents->entries.end()) {
-      // Add the new entry.
-      if (ctx->shouldApplyChanges()) {
-        // TODO: add a JournalDelta
-        auto newEntry =
-            make_unique<Entry>(newScmEntry.getMode(), newScmEntry.getHash());
-        contents->entries.emplace(newScmEntry.getName(), std::move(newEntry));
-      }
-      return;
-    }
-
-    // We have an existing untracked file where the new tree needs to place a
-    // file.
-    ctx->addConflict(
-        ConflictType::UNTRACKED_ADDED, this, newScmEntry.getName());
-    if (!ctx->forceUpdate()) {
-      return;
-    }
-
-// FIXME: handle the force update in this case.
-// We need to update CheckoutAction to make the oldScmEntry optional in order
-// to handle this case.
-#if 0
-    auto& entry = it->second;
-    if (entry->inode) {
-      auto childPtr = InodePtr::newPtrLocked(entry->inode);
-      actions->push_back(make_unique<CheckoutAction>(
-          ctx, folly::none, newScmEntry, std::move(childPtr)));
-    } else {
-      auto inodeFuture = loadChildLocked(
-          *contents, oldScmEntry.getName(), entry.get(), pendingLoads);
-      actions->push_back(make_unique<CheckoutAction>(
-          ctx, folly::none, newScmEntry, std::move(inodeFuture)));
-    }
-#else
-    throw std::runtime_error(
-        "force checkout: adding a new entry over an "
-        "existing inode not supported yet");
-#endif
-  };
-
-  // Helper function to process entries present in the old Tree
-  // but not in the new Tree
-  auto processRemovedEntry = [&](const TreeEntry& oldScmEntry) {
-    auto it = contents->entries.find(oldScmEntry.getName());
-    if (it == contents->entries.end()) {
-      // We are missing a file that is removed in the new tree,
-      // so we are already in the desired state.
-      //
-      // However we still want to flag this conflict.
-      ctx->addConflict(
-          ConflictType::MISSING_REMOVED, this, oldScmEntry.getName());
-      return;
-    }
-
-    // Check to see if this entry is unchanged.
-    auto& entry = it->second;
-    if (entry->inode) {
-      // Add an action to verify that this inode is unmodified and then remove
-      // it.
-      auto childPtr = InodePtr::newPtrLocked(entry->inode);
-      actions->push_back(
-          make_unique<CheckoutAction>(ctx, oldScmEntry, std::move(childPtr)));
-    } else if (entry->isMaterialized()) {
-      // This child is potentially modified, but is not currently loaded.
-      // Start loading it.  Once it is loaded we will make sure it is
-      // unmodified before removing it.
-      auto inodeFuture = loadChildLocked(
-          *contents, oldScmEntry.getName(), entry.get(), pendingLoads);
-      actions->push_back(make_unique<CheckoutAction>(
-          ctx, oldScmEntry, std::move(inodeFuture)));
-    } else {
-      if (entry->getHash() != oldScmEntry.getHash()) {
-        // This file is modified.
-        ctx->addConflict(
-            ConflictType::MODIFIED_REMOVED, this, oldScmEntry.getName());
-        if (!ctx->forceUpdate()) {
-          return;
-        }
-      }
-      // This child is not currently loaded.
-      // We can go ahead and remove it now.
-      if (ctx->shouldApplyChanges()) {
-        // TODO: add a JournalDelta
-        contents->entries.erase(it);
-      }
-    }
-  };
-
-  // Helper function to process entries present in both the old and new Trees
-  auto processEntry = [&](
-      const TreeEntry& oldScmEntry, const TreeEntry& newScmEntry) {
-    if (oldScmEntry.getMode() == newScmEntry.getMode() &&
-        oldScmEntry.getHash() == newScmEntry.getHash()) {
-      // The entries didn't change.
-      // If we aren't doing a force checkout we have nothing to do.
-      if (!ctx->forceUpdate()) {
-        // TODO: Should we fall through anyway, to report any locally modified
-        // files as conflicts?
-        return;
-      }
-
-      // If we are doing a force update, we have to check and see if the entry
-      // has been modified in the working directory, and reset it back to the
-      // desired source control state.
-      //
-      // Fall through in this case.
-    }
-
-    auto it = contents->entries.find(newScmEntry.getName());
-    if (it == contents->entries.end()) {
-      // The file was removed locally, but modified in the new tree.
-      ctx->addConflict(
-          ConflictType::REMOVED_MODIFIED, this, oldScmEntry.getName());
-      if (ctx->forceUpdate()) {
-        // TODO: add a JournalDelta
-        auto newEntry =
-            make_unique<Entry>(newScmEntry.getMode(), newScmEntry.getHash());
-        contents->entries.emplace(newScmEntry.getName(), std::move(newEntry));
-      }
-      return;
-    }
-
-    auto& entry = it->second;
-    if (entry->inode) {
-      // Add an action to make sure the child inode is unmodified, then update
-      // it.
-      auto childPtr = InodePtr::newPtrLocked(entry->inode);
-      actions->push_back(make_unique<CheckoutAction>(
-          ctx, oldScmEntry, newScmEntry, std::move(childPtr)));
-    } else if (entry->isMaterialized()) {
-      // This child is potentially modified, but is not currently loaded.
-      // Start loading it.  Once it is loaded we will make sure it is
-      // unmodified before updating it.
-      auto inodeFuture = loadChildLocked(
-          *contents, oldScmEntry.getName(), entry.get(), pendingLoads);
-      actions->push_back(make_unique<CheckoutAction>(
-          ctx, oldScmEntry, newScmEntry, std::move(inodeFuture)));
-    } else {
-      if (entry->getHash() != oldScmEntry.getHash()) {
-        // This file is modified.
-        ctx->addConflict(ConflictType::MODIFIED, this, oldScmEntry.getName());
-        if (!ctx->forceUpdate()) {
-          return;
-        }
-      }
-      // Replace the entry with a new one for the modified file/directory.
-      if (ctx->shouldApplyChanges()) {
-        // TODO: add a JournalDelta
-        *entry = Entry{newScmEntry.getMode(), newScmEntry.getHash()};
-      }
-    }
-  };
-
   // Walk through fromTree and toTree, and call the above helper functions as
   // appropriate.
   //
@@ -1483,6 +1325,8 @@ void TreeInode::computeCheckoutActions(
   const auto& oldEntries = fromTree ? fromTree->getTreeEntries() : emptyEntries;
   const auto& newEntries = toTree->getTreeEntries();
   while (true) {
+    unique_ptr<CheckoutAction> action;
+
     if (oldIdx >= oldEntries.size()) {
       if (newIdx >= newEntries.size()) {
         // All Done
@@ -1490,24 +1334,168 @@ void TreeInode::computeCheckoutActions(
       }
 
       // This entry is present in the new tree but not the old one.
-      processNewEntry(newEntries[newIdx]);
+      action = processCheckoutEntry(
+          ctx, *contents, nullptr, &newEntries[newIdx], pendingLoads);
       ++newIdx;
     } else if (newIdx >= newEntries.size()) {
       // This entry is present in the old tree but not the old one.
-      processRemovedEntry(newEntries[newIdx]);
+      action = processCheckoutEntry(
+          ctx, *contents, &oldEntries[oldIdx], nullptr, pendingLoads);
       ++newIdx;
     } else if (oldEntries[oldIdx].getName() < newEntries[newIdx].getName()) {
-      processRemovedEntry(oldEntries[oldIdx]);
+      action = processCheckoutEntry(
+          ctx, *contents, &oldEntries[oldIdx], nullptr, pendingLoads);
       ++oldIdx;
     } else if (oldEntries[oldIdx].getName() > newEntries[newIdx].getName()) {
-      processNewEntry(newEntries[newIdx]);
+      action = processCheckoutEntry(
+          ctx, *contents, nullptr, &newEntries[newIdx], pendingLoads);
       ++newIdx;
     } else {
-      processEntry(oldEntries[oldIdx], newEntries[newIdx]);
+      action = processCheckoutEntry(
+          ctx,
+          *contents,
+          &oldEntries[oldIdx],
+          &newEntries[newIdx],
+          pendingLoads);
       ++oldIdx;
       ++newIdx;
     }
+
+    if (action) {
+      actions->push_back(std::move(action));
+    }
   }
+}
+
+unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
+    CheckoutContext* ctx,
+    Dir& contents,
+    const TreeEntry* oldScmEntry,
+    const TreeEntry* newScmEntry,
+    vector<IncompleteInodeLoad>* pendingLoads) {
+  // At most one of oldScmEntry and newScmEntry may be null.
+  DCHECK(oldScmEntry || newScmEntry);
+
+  // If we aren't doing a force checkout, we don't need to do anything
+  // for entries that are identical between the old and new source control
+  // trees.
+  //
+  // If we are doing a force checkout we need to process unmodified entries to
+  // revert them to the desired state if they were modified in the local
+  // filesystem.
+  if (!ctx->forceUpdate() && oldScmEntry && newScmEntry &&
+      oldScmEntry->getMode() == newScmEntry->getMode() &&
+      oldScmEntry->getHash() == newScmEntry->getHash()) {
+    // TODO: Should we perhaps fall through anyway to report conflicts for
+    // locally modified files?
+    return nullptr;
+  }
+
+  // Look to see if we have a child entry with this name.
+  const auto& name =
+      oldScmEntry ? oldScmEntry->getName() : newScmEntry->getName();
+  auto it = contents.entries.find(name);
+  if (it == contents.entries.end()) {
+    if (!oldScmEntry) {
+      // This is a new entry being added, that did not exist in the old tree
+      // and does not currently exist in the filesystem.  Go ahead and add it
+      // now.
+      if (ctx->shouldApplyChanges()) {
+        auto newEntry =
+            make_unique<Entry>(newScmEntry->getMode(), newScmEntry->getHash());
+        contents.entries.emplace(newScmEntry->getName(), std::move(newEntry));
+      }
+    } else if (!newScmEntry) {
+      // This file exists in the old tree, but is being removed in the new
+      // tree.  It has already been removed from the local filesystem, so
+      // we are already in the desired state.
+      //
+      // We can proceed, but we still flag this as a conflict.
+      ctx->addConflict(
+          ConflictType::MISSING_REMOVED, this, oldScmEntry->getName());
+    } else {
+      // The file was removed locally, but modified in the new tree.
+      ctx->addConflict(
+          ConflictType::REMOVED_MODIFIED, this, oldScmEntry->getName());
+      if (ctx->forceUpdate()) {
+        DCHECK(ctx->shouldApplyChanges());
+        auto newEntry =
+            make_unique<Entry>(newScmEntry->getMode(), newScmEntry->getHash());
+        contents.entries.emplace(newScmEntry->getName(), std::move(newEntry));
+      }
+    }
+
+    // Nothing else to do when there is no local inode.
+    return nullptr;
+  }
+
+  // If the file did not exist in the old source control tree we have a
+  // conflict.  If we aren't doing a force update all we need to do is report
+  // the conflict.
+  if (!oldScmEntry && !ctx->forceUpdate()) {
+    ctx->addConflict(
+        ConflictType::UNTRACKED_ADDED, this, newScmEntry->getName());
+    return nullptr;
+  }
+
+  auto& entry = it->second;
+  if (entry->inode) {
+    // If the inode is already loaded, create a CheckoutAction to process it
+    auto childPtr = InodePtr::newPtrLocked(entry->inode);
+    return make_unique<CheckoutAction>(
+        ctx, oldScmEntry, newScmEntry, std::move(childPtr));
+  }
+
+  // If this entry has an inode number assigned to it then load the InodeBase
+  // object to process it.
+  //
+  // We have to load the InodeBase object because another thread may already be
+  // trying to load it.
+  //
+  // This also handles materialized inodes--an inode cannot be materialized if
+  // it does not have an inode number assigned to it.
+  if (entry->hasInodeNumber()) {
+    // This child is potentially modified, but is not currently loaded.
+    // Start loading it and create a CheckoutAction to process it once it
+    // is loaded.
+    auto inodeFuture =
+        loadChildLocked(contents, name, entry.get(), pendingLoads);
+    return make_unique<CheckoutAction>(
+        ctx, oldScmEntry, newScmEntry, std::move(inodeFuture));
+  }
+
+  // Check for conflicts
+  if (!oldScmEntry) {
+    ctx->addConflict(
+        ConflictType::UNTRACKED_ADDED, this, newScmEntry->getName());
+    if (!ctx->forceUpdate()) {
+      // We currently shouldn't reach this code; this case is handled above.
+      // However, check again here just in case the code above is ever
+      // refactored.  This code path does the right thing, but log a message
+      // anyway since this is slightly unexpected.
+      VLOG(1) << "unexpected code path for handling untracked/added conflict";
+      return nullptr;
+    }
+  } else if (entry->getHash() != oldScmEntry->getHash()) {
+    ctx->addConflict(ConflictType::MODIFIED, this, name);
+    if (!ctx->forceUpdate()) {
+      return nullptr;
+    }
+  }
+
+  // Bail out now if we aren't actually supposed to apply changes.
+  if (!ctx->shouldApplyChanges()) {
+    return nullptr;
+  }
+
+  // Update the entry
+  if (!newScmEntry) {
+    contents.entries.erase(it);
+  } else {
+    *entry = Entry{newScmEntry->getMode(), newScmEntry->getHash()};
+  }
+
+  return nullptr;
 }
 
 Future<Unit> TreeInode::checkoutReplaceEntry(

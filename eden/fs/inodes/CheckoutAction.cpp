@@ -31,35 +31,38 @@ namespace eden {
 
 CheckoutAction::CheckoutAction(
     CheckoutContext* ctx,
-    const TreeEntry& oldScmEntry,
-    const TreeEntry& newScmEntry,
+    const TreeEntry* oldScmEntry,
+    const TreeEntry* newScmEntry,
     InodePtr&& inode)
-    : ctx_(ctx),
-      oldScmEntry_(oldScmEntry),
-      newScmEntry_(newScmEntry),
-      inode_(std::move(inode)) {}
-
-CheckoutAction::CheckoutAction(
-    CheckoutContext* ctx,
-    const TreeEntry& oldScmEntry,
-    InodePtr&& inode)
-    : ctx_(ctx), oldScmEntry_(oldScmEntry), inode_(std::move(inode)) {}
+    : ctx_(ctx), inode_(std::move(inode)) {
+  if (oldScmEntry) {
+    oldScmEntry_ = *oldScmEntry;
+  }
+  if (newScmEntry) {
+    newScmEntry_ = *newScmEntry;
+  }
+}
 
 CheckoutAction::CheckoutAction(
     InternalConstructor,
     CheckoutContext* ctx,
-    const TreeEntry& oldScmEntry,
-    const folly::Optional<TreeEntry>& newScmEntry,
+    const TreeEntry* oldScmEntry,
+    const TreeEntry* newScmEntry,
     folly::Future<InodePtr> inodeFuture)
-    : ctx_(ctx),
-      oldScmEntry_(oldScmEntry),
-      newScmEntry_(newScmEntry),
-      inodeFuture_(std::move(inodeFuture)) {}
+    : ctx_(ctx), inodeFuture_(std::move(inodeFuture)) {
+  if (oldScmEntry) {
+    oldScmEntry_ = *oldScmEntry;
+  }
+  if (newScmEntry) {
+    newScmEntry_ = *newScmEntry;
+  }
+}
 
 CheckoutAction::~CheckoutAction() {}
 
 PathComponentPiece CheckoutAction::getEntryName() const {
-  return oldScmEntry_.getName();
+  return oldScmEntry_.hasValue() ? oldScmEntry_.value().getName()
+                                 : newScmEntry_.value().getName();
 }
 
 class CheckoutAction::LoadingRefcount {
@@ -116,22 +119,24 @@ Future<Unit> CheckoutAction::run(
 
   try {
     // Load the Blob or Tree for the old TreeEntry.
-    if (oldScmEntry_.getType() == TreeEntryType::TREE) {
-      store->getTreeFuture(oldScmEntry_.getHash())
-          .then([rc = LoadingRefcount(this)](std::unique_ptr<Tree> oldTree) {
-            rc->setOldTree(std::move(oldTree));
-          })
-          .onError([rc = LoadingRefcount(this)](const exception_wrapper& ew) {
-            rc->error("error getting old tree", ew);
-          });
-    } else {
-      store->getBlobFuture(oldScmEntry_.getHash())
-          .then([rc = LoadingRefcount(this)](std::unique_ptr<Blob> oldBlob) {
-            rc->setOldBlob(std::move(oldBlob));
-          })
-          .onError([rc = LoadingRefcount(this)](const exception_wrapper& ew) {
-            rc->error("error getting old blob", ew);
-          });
+    if (oldScmEntry_.hasValue()) {
+      if (oldScmEntry_.value().getType() == TreeEntryType::TREE) {
+        store->getTreeFuture(oldScmEntry_.value().getHash())
+            .then([rc = LoadingRefcount(this)](std::unique_ptr<Tree> oldTree) {
+              rc->setOldTree(std::move(oldTree));
+            })
+            .onError([rc = LoadingRefcount(this)](const exception_wrapper& ew) {
+              rc->error("error getting old tree", ew);
+            });
+      } else {
+        store->getBlobFuture(oldScmEntry_.value().getHash())
+            .then([rc = LoadingRefcount(this)](std::unique_ptr<Blob> oldBlob) {
+              rc->setOldBlob(std::move(oldBlob));
+            })
+            .onError([rc = LoadingRefcount(this)](const exception_wrapper& ew) {
+              rc->error("error getting old blob", ew);
+            });
+      }
     }
 
     // If we have a new TreeEntry, load the corresponding Blob or Tree
@@ -247,7 +252,7 @@ bool CheckoutAction::ensureDataReady() noexcept {
   // Make sure we actually have all the data we need.
   // (Just in case something went wrong when wiring up the callbacks in such a
   // way that we also failed to call error().)
-  if (!oldTree_ && !oldBlob_) {
+  if (oldScmEntry_.hasValue() && (!oldTree_ && !oldBlob_)) {
     promise_.setException(
         std::runtime_error("failed to load data for old TreeEntry"));
     return false;
@@ -313,28 +318,33 @@ bool CheckoutAction::hasConflict() {
     // conflicts for individual leaf inodes that were modified, and not for the
     // parent directories.
     return false;
-  }
+  } else if (oldBlob_) {
+    auto fileInode = inode_.asFilePtrOrNull();
+    if (!fileInode) {
+      // This was a file, but has been replaced with a directory on disk
+      ctx_->addConflict(ConflictType::MODIFIED, inode_.get());
+      return true;
+    }
 
-  // If we are still here this used to be a file.
-  auto fileInode = inode_.asFilePtrOrNull();
-  if (!fileInode) {
-    // This was a file, but has been replaced with a directory on disk
-    ctx_->addConflict(ConflictType::MODIFIED, inode_.get());
+    // Check that the file contents are the same as the old source control entry
+    if (!fileInode->isSameAs(*oldBlob_, oldScmEntry_.value().getMode())) {
+      // The file contents or mode bits are different
+      ctx_->addConflict(ConflictType::MODIFIED, inode_.get());
+      return true;
+    }
+
+    // This file is the same as the old source control state.
+    return false;
+  } else {
+    // This entry did not exist in the old source control tree
+    ctx_->addConflict(ConflictType::UNTRACKED_ADDED, inode_.get());
     return true;
   }
-
-  // Check that the file contents are the same as the old source control entry
-  if (!fileInode->isSameAs(*oldBlob_, oldScmEntry_.getMode())) {
-    // The file contents or mode bits are different
-    ctx_->addConflict(ConflictType::MODIFIED, inode_.get());
-    return true;
-  }
-
-  // This file is the same as the old source control state.
-  return false;
 }
 
 Future<Unit> CheckoutAction::performTreeCheckout() {
+  // TODO: apply permissions changes
+
   auto treeInode = inode_.asTreePtrOrNull();
   if (treeInode) {
     // When going from a tree to a tree, use TreeInode::checkout()
@@ -360,7 +370,7 @@ Future<Unit> CheckoutAction::performBlobCheckout() {
 Future<Unit> CheckoutAction::performRemoval() {
   // As the parent TreeInode to remove this entry
   auto parent = inode_->getParent(ctx_->renameLock());
-  return parent->checkoutRemoveChild(ctx_, oldScmEntry_.getName(), inode_);
+  return parent->checkoutRemoveChild(ctx_, getEntryName(), inode_);
 }
 }
 }

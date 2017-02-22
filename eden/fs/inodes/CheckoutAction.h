@@ -47,25 +47,17 @@ class Tree;
 class CheckoutAction {
  public:
   /**
-   * Create a CheckoutAction to modify an existing inode.
+   * Create a CheckoutAction with an already loaded Inode object.
    */
   CheckoutAction(
       CheckoutContext* ctx,
-      const TreeEntry& oldScmEntry,
-      const TreeEntry& newScmEntry,
+      const TreeEntry* oldScmEntry,
+      const TreeEntry* newScmEntry,
       InodePtr&& inode);
 
   /**
-   * Create a CheckoutAction to remove an existing inode.
-   */
-  CheckoutAction(
-      CheckoutContext* ctx,
-      const TreeEntry& oldScmEntry,
-      InodePtr&& inode);
-
-  /**
-   * Create a CheckoutAction to modify an existing inode, where the Inode
-   * object in question is not loaded yet.
+   * Create a CheckoutAction where the Inode object in question is not loaded
+   * yet.
    *
    * (This is a template function purely to avoid ambiguity with the
    * constructor type above.  Future<InodePtr> is implicitly constructible from
@@ -75,35 +67,14 @@ class CheckoutAction {
   template <typename InodePtrType>
   CheckoutAction(
       CheckoutContext* ctx,
-      const TreeEntry& oldScmEntry,
-      const TreeEntry& newScmEntry,
+      const TreeEntry* oldScmEntry,
+      const TreeEntry* newScmEntry,
       folly::Future<InodePtrType> inodeFuture)
       : CheckoutAction(
             INTERNAL,
             ctx,
             oldScmEntry,
             newScmEntry,
-            std::move(inodeFuture)) {}
-
-  /**
-   * Create a CheckoutAction to remove an existing inode, where the Inode
-   * object in question is not loaded yet.
-   *
-   * (This is a template function purely to avoid ambiguity with the
-   * constructor type above.  Future<InodePtr> is implicitly constructible from
-   * an InodePtr, but we want to prefer the constructor above if we have an
-   * InodePtr.)
-   */
-  template <typename InodePtrType>
-  CheckoutAction(
-      CheckoutContext* ctx,
-      const TreeEntry& oldScmEntry,
-      folly::Future<InodePtrType> inodeFuture)
-      : CheckoutAction(
-            INTERNAL,
-            ctx,
-            oldScmEntry,
-            folly::none,
             std::move(inodeFuture)) {}
 
   /*
@@ -130,8 +101,8 @@ class CheckoutAction {
   CheckoutAction(
       InternalConstructor,
       CheckoutContext* ctx,
-      const TreeEntry& oldScmEntry,
-      const folly::Optional<TreeEntry>& newScmEntry,
+      const TreeEntry* oldScmEntry,
+      const TreeEntry* newScmEntry,
       folly::Future<InodePtr> inodeFuture);
 
   void setOldTree(std::unique_ptr<Tree> tree);
@@ -157,10 +128,9 @@ class CheckoutAction {
   /**
    * The TreeEntry in the old Tree that we are moving away from.
    *
-   * This is always set.  The checkout code can always immediately create new
-   * inode entries for new children; it never has to defer action for them.
+   * This will be none if the entry did not exist in the old Tree.
    */
-  TreeEntry oldScmEntry_;
+  folly::Optional<TreeEntry> oldScmEntry_;
 
   /**
    * The TreeEntry in the new Tree that we are checking out.

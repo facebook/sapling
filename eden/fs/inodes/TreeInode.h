@@ -402,6 +402,12 @@ class TreeInode : public InodeBase {
       const Tree* toTree,
       std::vector<std::unique_ptr<CheckoutAction>>* actions,
       std::vector<IncompleteInodeLoad>* pendingLoads);
+  std::unique_ptr<CheckoutAction> processCheckoutEntry(
+      CheckoutContext* ctx,
+      Dir& contents,
+      const TreeEntry* oldScmEntry,
+      const TreeEntry* newScmEntry,
+      std::vector<IncompleteInodeLoad>* pendingLoads);
   void saveOverlayPostCheckout(CheckoutContext* ctx, const Tree* tree);
 
   folly::Synchronized<Dir> contents_;
