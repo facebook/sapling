@@ -62,11 +62,16 @@ class MountPoint {
     return gid_;
   }
 
-  /** Returns the channel associated with this mount point.
+  /**
+   * Returns the channel associated with this mount point.
+   *
    * No smart pointer because the lifetime is managed solely
    * by the MountPoint instance.
-   * This method may return nullptr during initialization or
-   * finalization of a mount point.
+   *
+   * This method does not perform any synchronization.  It is the caller's
+   * responsibility to synchronize any calls to getChannel() with the call to
+   * start().  It is safe to access before start() has been called and once
+   * start() returns.
    */
   Channel* getChannel() {
     return channel_.get();

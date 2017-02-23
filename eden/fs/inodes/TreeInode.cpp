@@ -12,22 +12,22 @@
 #include <boost/polymorphic_cast.hpp>
 #include <folly/futures/Future.h>
 #include <vector>
-#include "EdenDispatcher.h"
-#include "EdenMount.h"
-#include "FileHandle.h"
-#include "FileInode.h"
-#include "InodeMap.h"
-#include "Overlay.h"
-#include "TreeInodeDirHandle.h"
 #include "eden/fs/inodes/CheckoutAction.h"
 #include "eden/fs/inodes/CheckoutContext.h"
+#include "eden/fs/inodes/EdenDispatcher.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileData.h"
+#include "eden/fs/inodes/FileHandle.h"
+#include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeError.h"
+#include "eden/fs/inodes/InodeMap.h"
+#include "eden/fs/inodes/Overlay.h"
+#include "eden/fs/inodes/TreeInodeDirHandle.h"
 #include "eden/fs/journal/JournalDelta.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/store/ObjectStore.h"
+#include "eden/fuse/Channel.h"
 #include "eden/fuse/MountPoint.h"
 #include "eden/fuse/RequestData.h"
 #include "eden/utils/Bug.h"
@@ -1495,6 +1495,13 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
     *entry = Entry{newScmEntry->getMode(), newScmEntry->getHash()};
   }
 
+  // Note that we intentionally don't bother calling
+  // fuseChannel->invalidateEntry() here.
+  //
+  // We always assign an inode number to entries when telling FUSE about
+  // directory entries.  Given that this entry does not have an inode number we
+  // must not have ever told FUSE about it.
+
   return nullptr;
 }
 
@@ -1542,6 +1549,13 @@ Future<Unit> TreeInode::checkoutRemoveChild(
     deletedInode = inode->markUnlinked(this, name, ctx->renameLock());
     getOverlay()->removeOverlayData(inode->getNodeId());
     contents->entries.erase(it);
+
+    // Tell FUSE to invalidate it's cache for this entry.
+    auto* fuseChannel = getMount()->getFuseChannel();
+    if (fuseChannel) {
+      fuseChannel->invalidateEntry(getNodeId(), name);
+    }
+
     // We don't save our own overlay data right now:
     // we'll wait to do that until the checkout operation finishes touching all
     // of our children in checkout().

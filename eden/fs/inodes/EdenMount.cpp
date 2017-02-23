@@ -122,6 +122,10 @@ void EdenMount::shutdownComplete() {
   delete this;
 }
 
+fusell::Channel* EdenMount::getFuseChannel() const {
+  return mountPoint_->getChannel();
+}
+
 const AbsolutePath& EdenMount::getPath() const {
   return mountPoint_->getPath();
 }

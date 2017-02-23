@@ -26,6 +26,7 @@ class Future;
 namespace facebook {
 namespace eden {
 namespace fusell {
+class Channel;
 class MountPoint;
 }
 
@@ -89,6 +90,16 @@ class EdenMount {
   fusell::MountPoint* getMountPoint() const {
     return mountPoint_.get();
   }
+
+  /**
+   * Get the FUSE channel for this mount point.
+   *
+   * This should only be called after the mount point has been successfully
+   * started.  (It is the caller's responsibility to perform proper
+   * synchronization here with the mount start operation.  This method provides
+   * no internal synchronization of its own.)
+   */
+  fusell::Channel* getFuseChannel() const;
 
   /**
    * Return the path to the mount point.
