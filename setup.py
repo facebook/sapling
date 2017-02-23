@@ -1,5 +1,6 @@
 from distutils.version import LooseVersion
 from distutils.core import setup, Extension
+import distutils
 from glob import glob
 
 import os, sys
@@ -57,11 +58,20 @@ if include_dirs is None:
         '/opt/local/include',
         '/opt/homebrew/include/',
     ]
+
+def distutils_dir_name(dname):
+    """Returns the name of a distutils build directory"""
+    f = "{dirname}.{platform}-{version}"
+    return f.format(dirname=dname,
+                    platform=distutils.util.get_platform(),
+                    version=sys.version[:3])
+
 if library_dirs is None:
     library_dirs = [
         '/usr/local/lib',
         '/opt/local/lib',
         '/opt/homebrew/lib/',
+        'build/' + distutils_dir_name('lib'),
     ]
 
 hgext3rd = [
@@ -93,7 +103,6 @@ else:
             Extension('cdatapack',
                 sources=[
                     'cdatapack/py-cdatapack.c',
-                    'cdatapack/cdatapack.c',
                 ],
                 include_dirs=[
                     'clib',
@@ -102,6 +111,7 @@ else:
                 library_dirs=library_dirs,
                 libraries=[
                     'crypto',
+                    'datapack',
                     'lz4',
                 ],
                 extra_compile_args=[
@@ -165,6 +175,27 @@ else:
                 ] + cdebugflags,
             ),
         ],
+        'libdatapack' : [
+            Extension('libdatapack',
+                sources=[
+                    'cdatapack/cdatapack.c',
+                ],
+                include_dirs=[
+                    'clib',
+                    'cdatapack',
+                ] + include_dirs,
+                library_dirs=library_dirs,
+                libraries=[
+                    'crypto',
+                    'lz4',
+                ],
+                extra_compile_args=[
+                    "-std=c99",
+                    "-Wall",
+                    "-Werror", "-Werror=strict-prototypes",
+                ] + cdebugflags,
+            ),
+        ],
         'linelog' : [
             Extension('linelog',
                 sources=['linelog/pyext/linelog.pyx'],
@@ -184,6 +215,7 @@ if not components:
 
 dependencies = {
     'absorb' : ['linelog'],
+    'cdatapack' : ['libdatapack'],
     'fastannotate' : ['linelog'],
     'infinitepush' : ['extutil'],
     'remotefilelog' : ['cdatapack', 'extutil'],
@@ -226,6 +258,15 @@ ext_modules = []
 for ext_module in availableextmodules:
     if ext_module in components:
         ext_modules.extend(availableextmodules[ext_module])
+
+# Dependencies between our native libraries means we need to build in order
+ext_order = {
+    'libdatapack' : 0,
+    'cdatapack' : 1,
+    'ctreemanifest' : 2,
+    'cstore' : 3,
+}
+ext_modules = sorted(ext_modules, key=lambda k: ext_order.get(k.name, 999))
 
 requires = []
 requireslz4 = ['remotefilelog', 'cdatapack']
