@@ -21,6 +21,79 @@ extern "C" {
 #include <vector>
 #include <stdexcept>
 
+class ConstantString {
+  friend class ConstantStringRef;
+  private:
+    char *_content;
+    size_t _size;
+    size_t _refCount;
+
+    ConstantString(char *content, size_t size) :
+      _content(content),
+      _size(size),
+      _refCount(1) {}
+  public:
+    ~ConstantString() {
+      delete _content;
+    }
+
+    char *content() {
+      return _content;
+    }
+
+    size_t size() {
+      return _size;
+    }
+
+    void incref() {
+      _refCount++;
+    }
+
+    size_t decref() {
+      if (_refCount > 0) {
+        _refCount--;
+      }
+      return _refCount;
+    }
+};
+
+class ConstantStringRef {
+  private:
+    ConstantString *_str;
+  public:
+    ConstantStringRef(char *str, size_t size) :
+      _str(new ConstantString(str, size)) {
+    }
+
+    ConstantStringRef(const ConstantStringRef &other) {
+      other._str->incref();
+      _str = other._str;
+    }
+
+    ~ConstantStringRef() {
+      if (_str->decref() == 0) {
+        delete _str;
+      }
+    }
+
+    ConstantStringRef& operator=(const ConstantStringRef &other) {
+      if (_str->decref() == 0) {
+        delete _str;
+      }
+      _str = other._str;
+      _str->incref();
+      return *this;
+    }
+
+    char *content() {
+      return _str->content();
+    }
+
+    size_t size() {
+      return _str->size();
+    }
+};
+
 class UnionDatapackStore;
 class UnionDatapackStoreKeyIterator : public KeyIterator {
   private:
@@ -55,6 +128,8 @@ class UnionDatapackStore {
     UnionDatapackStore(std::vector<DatapackStore*> stores);
 
     ~UnionDatapackStore();
+
+    ConstantStringRef get(const Key &key);
 
     UnionDeltaChainIterator getDeltaChain(const Key &key);
 
