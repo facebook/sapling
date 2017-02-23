@@ -18,6 +18,8 @@
 #include "manifest.h"
 #include "pythonutil.h"
 #include "treemanifest.h"
+#include "../cstore/uniondatapackstore.h"
+#include "../cstore/py-structs.h"
 
 #define FILENAME_BUFFER_SIZE 16348
 #define FLAG_SIZE 1
@@ -429,21 +431,33 @@ static void treemanifest_dealloc(py_treemanifest *self) {
  * Initializes the contents of a treemanifest
  */
 static int treemanifest_init(py_treemanifest *self, PyObject *args) {
-  PyObject *store;
+  PyObject *pystore;
   char *node = NULL;
   Py_ssize_t nodelen;
 
-  if (!PyArg_ParseTuple(args, "O|s#", &store, &node, &nodelen)) {
+  if (!PyArg_ParseTuple(args, "O|s#", &pystore, &node, &nodelen)) {
     return -1;
   }
 
-  Py_INCREF(store);
-  PythonObj storeObj = PythonObj(store);
+  Py_INCREF(pystore);
+  PythonObj storeObj = PythonObj(pystore);
+
+  PythonObj cstoreModule = PyImport_ImportModule("cstore");
+  PythonObj unionStoreType = cstoreModule.getattr("uniondatapackstore");
+
+  // If it's a cstore, we'll use it directly instead of through python.
+  std::shared_ptr<Store> store;
+  int isinstance = PyObject_IsInstance((PyObject*)storeObj, (PyObject*)unionStoreType);
+  if (isinstance == 1) {
+    store = ((py_uniondatapackstore*)(PyObject*)storeObj)->uniondatapackstore;
+  }
 
   // We have to manually call the member constructor, since the provided 'self'
   // is just zerod out memory.
   try {
-    std::shared_ptr<Store> store = std::make_shared<PythonStore>(storeObj);
+    if (!store) {
+      store = std::make_shared<PythonStore>(storeObj);
+    }
     if (node != NULL) {
       new(&self->tm) treemanifest(store, std::string(node, (size_t) nodelen));
     } else {
