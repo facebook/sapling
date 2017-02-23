@@ -165,6 +165,7 @@ else:
                 sources=[
                     'cstore/datapackstore.cpp',
                     'cstore/py-cstore.cpp',
+                    'cstore/uniondatapackstore.cpp',
                     'ctreemanifest/manifest.cpp',
                     'ctreemanifest/manifest_entry.cpp',
                     'ctreemanifest/manifest_fetcher.cpp',

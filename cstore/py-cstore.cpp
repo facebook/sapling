@@ -52,4 +52,12 @@ PyMODINIT_FUNC initcstore(void) {
   }
   Py_INCREF(&datapackstoreType);
   PyModule_AddObject(mod, "datapackstore", (PyObject *)&datapackstoreType);
+
+  // Init datapackstore
+  uniondatapackstoreType.tp_new = PyType_GenericNew;
+  if (PyType_Ready(&uniondatapackstoreType) < 0) {
+    return;
+  }
+  Py_INCREF(&uniondatapackstoreType);
+  PyModule_AddObject(mod, "uniondatapackstore", (PyObject *)&uniondatapackstoreType);
 }

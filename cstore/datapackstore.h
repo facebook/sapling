@@ -78,6 +78,8 @@ class DatapackStore {
     DeltaChainIterator getDeltaChain(const Key &key);
 
     DatapackStoreKeyIterator getMissing(KeyIterator &missing);
+
+    bool contains(const Key &key);
 };
 
 #endif //DATAPACKSTORE_H
