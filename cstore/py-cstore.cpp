@@ -14,6 +14,7 @@
 #include <Python.h>
 
 #include "py-cdatapack.h"
+#include "py-datapackstore.h"
 #include "py-treemanifest.h"
 
 static PyMethodDef mod_methods[] = {
@@ -26,20 +27,29 @@ static char mod_description[] =
 PyMODINIT_FUNC initcstore(void) {
   PyObject *mod;
 
+  mod = Py_InitModule3("cstore", mod_methods, mod_description);
+
+  // Init cdatapack
   cdatapack_type.tp_new = PyType_GenericNew;
   if (PyType_Ready(&cdatapack_type) < 0) {
     return;
   }
-
-  mod = Py_InitModule3("cstore", mod_methods, mod_description);
-
   Py_INCREF(&cdatapack_type);
   PyModule_AddObject(mod, "datapack", (PyObject *)&cdatapack_type);
 
+  // Init treemanifest
   treemanifestType.tp_new = PyType_GenericNew;
   if (PyType_Ready(&treemanifestType) < 0) {
     return;
   }
   Py_INCREF(&treemanifestType);
   PyModule_AddObject(mod, "treemanifest", (PyObject *)&treemanifestType);
+
+  // Init datapackstore
+  datapackstoreType.tp_new = PyType_GenericNew;
+  if (PyType_Ready(&datapackstoreType) < 0) {
+    return;
+  }
+  Py_INCREF(&datapackstoreType);
+  PyModule_AddObject(mod, "datapackstore", (PyObject *)&datapackstoreType);
 }

@@ -9,9 +9,12 @@ Get build path for native extensions
   $ chmod a+x $TESTTMP/getbuildpath.sh
   $ BUILD_PATH="`$TESTTMP/getbuildpath.sh`"
 
+  $ LD_LIBRARY_PATH="$BUILD_PATH"
+  $ export LD_LIBRARY_PATH
   $ PYTHONPATH="$BUILD_PATH:$PYTHONPATH"
   $ export PYTHONPATH
 
   $ python $TESTDIR/remotefilelog-datapack.py
   $ python $TESTDIR/remotefilelog-histpack.py
+  $ python $TESTDIR/cstore-datapackstore.py
   $ python $TESTDIR/cstore-treemanifest.py

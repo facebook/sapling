@@ -17,9 +17,6 @@ extern "C" {
 #include "../cdatapack/cdatapack.h"
 }
 
-#define DATAIDX_EXT  ".dataidx"
-#define DATAPACK_EXT ".datapack"
-
 // ====  Forward declarations ====
 
 struct py_cdatapack;
@@ -240,11 +237,11 @@ static int cdatapack_init(py_cdatapack *self, PyObject *args) {
     return -1;
   }
 
-  char idx_path[nodelen + sizeof(DATAIDX_EXT)];
-  char data_path[nodelen + sizeof(DATAPACK_EXT)];
+  char idx_path[nodelen + sizeof(INDEXSUFFIX)];
+  char data_path[nodelen + sizeof(PACKSUFFIX)];
 
-  sprintf(idx_path, "%s%s", node, DATAIDX_EXT);
-  sprintf(data_path, "%s%s", node, DATAPACK_EXT);
+  sprintf(idx_path, "%s%s", node, INDEXSUFFIX);
+  sprintf(data_path, "%s%s", node, PACKSUFFIX);
 
   self->handle = open_datapack(
       idx_path, strlen(idx_path),

@@ -146,6 +146,13 @@ availablepackages = [
     'linelog',
 ]
 
+def distutils_dir_name(dname):
+    """Returns the name of a distutils build directory"""
+    f = "{dirname}.{platform}-{version}"
+    return f.format(dirname=dname,
+                    platform=distutils.util.get_platform(),
+                    version=sys.version[:3])
+
 if os.name == 'nt':
     # The modules that successfully compile on Windows
     availableextmodules = {}
@@ -154,6 +161,7 @@ else:
         'cstore' : [
             Extension('cstore',
                 sources=[
+                    'cstore/datapackstore.cpp',
                     'cstore/py-cstore.cpp',
                     'ctreemanifest/manifest.cpp',
                     'ctreemanifest/manifest_entry.cpp',
@@ -163,9 +171,13 @@ else:
                 ],
                 include_dirs=[
                     'cdatapack',
+                    'clib'
+                    'cstore',
                     'ctreemanifest',
                 ] + include_dirs,
-                library_dirs=library_dirs,
+                library_dirs=[
+                    'build/' + distutils_dir_name('lib'),
+                ] + library_dirs,
                 libraries=[
                     'crypto',
                     'datapack',
@@ -174,7 +186,7 @@ else:
                 extra_compile_args=[
                     "-std=c++0x",
                     "-Wall",
-                    "-Werror", "-Werror=strict-prototypes",
+                    "-Werror",
                 ] + cdebugflags,
             ),
         ],
@@ -227,6 +239,7 @@ if not components:
 
 dependencies = {
     'absorb' : ['linelog'],
+    'cstore' : ['ctreemanifest', 'cdatapack'],
     'fastannotate' : ['linelog'],
     'infinitepush' : ['extutil'],
     'remotefilelog' : ['cstore', 'extutil'],
