@@ -20,15 +20,10 @@ extern "C" {
 #include "../ctreemanifest/pythonutil.h"
 #include "datapackstore.h"
 #include "key.h"
+#include "py-structs.h"
 #include "uniondatapackstore.h"
 
 // --------- DatapackStore Implementation ---------
-
-struct py_datapackstore {
-  PyObject_HEAD;
-
-  DatapackStore datapackstore;
-};
 
 /*
  * Initializes the contents of a datapackstore
@@ -216,15 +211,6 @@ static PyTypeObject datapackstoreType = {
 };
 
 // --------- UnionDatapackStore Implementation ---------
-
-struct py_uniondatapackstore {
-  PyObject_HEAD;
-
-  UnionDatapackStore uniondatapackstore;
-
-  // Keep a reference to the python objects so we can decref them later.
-  std::vector<PythonObj> substores;
-};
 
 /*
  * Initializes the contents of a uniondatapackstore

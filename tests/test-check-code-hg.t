@@ -60,6 +60,7 @@ New errors are not allowed. Warnings are strongly discouraged.
   Skipping cstore/py-cdatapack.h it has no-che?k-code (glob)
   Skipping cstore/py-cstore.cpp it has no-che?k-code (glob)
   Skipping cstore/py-datapackstore.h it has no-che?k-code (glob)
+  Skipping cstore/py-structs.h it has no-che?k-code (glob)
   Skipping cstore/py-treemanifest.h it has no-che?k-code (glob)
   Skipping cstore/store.h it has no-che?k-code (glob)
   Skipping cstore/uniondatapackstore.cpp it has no-che?k-code (glob)
