@@ -2235,6 +2235,8 @@ def graphlog(ui, repo, *pats, **opts):
         if opts.get('rev'):
             endrev = scmutil.revrange(repo, opts.get('rev')).max() + 1
         getrenamed = templatekw.getrenamedfn(repo, endrev=endrev)
+
+    ui.pager('log')
     displayer = show_changeset(ui, repo, opts, buffered=True)
     displaygraph(ui, repo, revdag, displayer, graphmod.asciiedges, getrenamed,
                  filematcher)
