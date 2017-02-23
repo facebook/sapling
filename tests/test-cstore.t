@@ -14,3 +14,4 @@ Get build path for native extensions
 
   $ python $TESTDIR/remotefilelog-datapack.py
   $ python $TESTDIR/remotefilelog-histpack.py
+  $ python $TESTDIR/cstore-treemanifest.py
