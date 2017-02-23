@@ -3,7 +3,7 @@ from mercurial import util
 from mercurial.node import nullid, hex
 from mercurial.i18n import _
 import basepack, constants
-import cdatapack
+import cstore
 
 # Index entry format is: <node><delta offset><pack data offset><pack data size>
 # See the mutabledatapack doccomment for more details.
@@ -237,7 +237,7 @@ class fastdatapack(basepack.basepack):
         self.path = path
         self.packpath = path + self.PACKSUFFIX
         self.indexpath = path + self.INDEXSUFFIX
-        self.datapack = cdatapack.datapack(path)
+        self.datapack = cstore.datapack(path)
 
     def getmissing(self, keys):
         missing = []

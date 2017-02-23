@@ -1,0 +1,37 @@
+// py-cstore.cpp - C++ implementation of a store
+//
+// Copyright 2016 Facebook, Inc.
+//
+// This software may be used and distributed according to the terms of the
+// GNU General Public License version 2 or any later version.
+//
+// no-check-code
+
+// The PY_SSIZE_T_CLEAN define must be defined before the Python.h include,
+// as per the documentation.
+#define PY_SSIZE_T_CLEAN
+
+#include <Python.h>
+
+#include "py-cdatapack.h"
+
+static PyMethodDef mod_methods[] = {
+  {NULL, NULL}
+};
+
+static char mod_description[] =
+    "Module containing a native store implementation";
+
+PyMODINIT_FUNC initcstore(void) {
+  PyObject *mod;
+
+  cdatapack_type.tp_new = PyType_GenericNew;
+  if (PyType_Ready(&cdatapack_type) < 0) {
+    return;
+  }
+
+  mod = Py_InitModule3("cstore", mod_methods, mod_description);
+
+  Py_INCREF(&cdatapack_type);
+  PyModule_AddObject(mod, "datapack", (PyObject *)&cdatapack_type);
+}

@@ -151,13 +151,12 @@ if os.name == 'nt':
     availableextmodules = {}
 else:
     availableextmodules = {
-        'cdatapack' : [
-            Extension('cdatapack',
+        'cstore' : [
+            Extension('cstore',
                 sources=[
-                    'cdatapack/py-cdatapack.c',
+                    'cstore/py-cstore.cpp',
                 ],
                 include_dirs=[
-                    'clib',
                     'cdatapack',
                 ] + include_dirs,
                 library_dirs=library_dirs,
@@ -167,7 +166,7 @@ else:
                     'lz4',
                 ],
                 extra_compile_args=[
-                    "-std=c99",
+                    "-std=c++0x",
                     "-Wall",
                     "-Werror", "-Werror=strict-prototypes",
                 ] + cdebugflags,
@@ -248,8 +247,8 @@ dependencies = {
     'absorb' : ['linelog'],
     'fastannotate' : ['linelog'],
     'infinitepush' : ['extutil'],
-    'remotefilelog' : ['cdatapack', 'extutil'],
-    'treemanifest' : ['ctreemanifest', 'cdatapack', 'fastmanifest'],
+    'remotefilelog' : ['cstore', 'extutil'],
+    'treemanifest' : ['ctreemanifest', 'cstore', 'fastmanifest'],
 }
 
 processdep = True
@@ -292,7 +291,6 @@ for ext_module in availableextmodules:
 # Dependencies between our native libraries means we need to build in order
 ext_order = {
     'libdatapack' : 0,
-    'cdatapack' : 1,
     'ctreemanifest' : 2,
     'cstore' : 3,
 }
