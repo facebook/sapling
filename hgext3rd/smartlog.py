@@ -39,6 +39,7 @@ from mercurial import (
     revset,
     revsetlang,
     scmutil,
+    smartset,
     templatekw,
     util,
 )
@@ -299,7 +300,7 @@ def getdag(ui, repo, revs, master):
             gp = gpcache.get(mpar)
             if gp is None:
                 gp = gpcache[mpar] = revset.reachableroots(
-                    repo, revset.baseset(revs), [mpar])
+                    repo, smartset.baseset(revs), [mpar])
             if not gp:
                 parents.append((graphmod.MISSINGPARENT, mpar))
             else:

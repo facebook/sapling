@@ -12,7 +12,6 @@ from mercurial import (
     util,
 )
 from mercurial.i18n import _
-import inspect
 
 testedwith = 'ships-with-fb-hgext'
 
@@ -104,5 +103,5 @@ def recordfilter(ui, headers, operation=None):
             h = specials[h.filename()]
         applied[h.filename()] = [h] + h.hunks
 
-    return (sum([h for h in applied.itervalues()
-               if h[0].special() or len(h) > 1], []), {})
+    return (sum([i for i in applied.itervalues()
+                 if i[0].special() or len(i) > 1], []), {})

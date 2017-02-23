@@ -12,22 +12,40 @@ import repack as repackmod
 from mercurial.node import hex
 from mercurial.i18n import _
 from mercurial.extensions import wrapfunction
-from mercurial import error, util
-from mercurial import repair, extensions, revlog, cmdutil
-from mercurial import copies, store, context, changegroup, localrepo, changelog
-from mercurial import commands, scmutil, dispatch, merge, context
-from mercurial import templatekw, repoview, revset, hg, patch
-from mercurial import match, exchange
+from mercurial import (
+    changegroup,
+    changelog,
+    cmdutil,
+    commands,
+    context,
+    context,
+    copies,
+    debugcommands as hgdebugcommands,
+    dispatch,
+    error,
+    exchange,
+    extensions,
+    hg,
+    localrepo,
+    match,
+    merge,
+    patch,
+    repair,
+    repoview,
+    revlog,
+    revset,
+    scmutil,
+    smartset,
+    store,
+    templatekw,
+    util,
+)
+
 import os
 import traceback
 
-try:
-    # debug commands were moved to a separate module
-    # importing it ensures the commands are registered
-    from mercurial import debugcommands as hgdebugcommands
-    hgdebugcommands.command
-except ImportError:
-    pass
+# ensures debug commands are registered
+hgdebugcommands.command
 
 try:
     from mercurial import streamclone
@@ -527,7 +545,7 @@ def filelogrevset(orig, repo, subset, x):
             for actx in fctx.ancestors():
                 s.add(actx.linkrev())
 
-    return revset.baseset([r for r in subset if r in s])
+    return smartset.baseset([r for r in subset if r in s])
 
 @command('gc', [], _('hg gc [REPO...]'), norepo=True)
 def gc(ui, *args, **opts):

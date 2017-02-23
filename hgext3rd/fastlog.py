@@ -271,10 +271,10 @@ def getfastlogrevs(orig, repo, pats, opts):
                     'only_merges', 'prune', 'user']
         if match.anypats() or any(opts.get(opt) for opt in complex):
             f = fastlog(repo, rev, dirs, None)
-            revs = revset.generatorset(f, iterasc=False)
+            revs = smartset.generatorset(f, iterasc=False)
             revs.reverse()
             if not revs:
-                return revset.baseset([]), None, None
+                return smartset.baseset([]), None, None
             expr, filematcher = cmdutil._makelogrevset(repo, pats, opts, revs)
             matcher = revset.match(repo.ui, expr)
             matched = matcher(repo, revs)
@@ -484,7 +484,7 @@ class FastLogThread(Thread):
         self._paths_to_fetch = len(paths)
         for path in paths:
             g = self.generate(path)
-            gen = revset.generatorset(g, iterasc=False)
+            gen = smartset.generatorset(g, iterasc=False)
             gen.reverse()
             if revs:
                 revs = smartset.addset(revs, gen, ascending=False)
