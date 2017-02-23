@@ -88,6 +88,8 @@ class PythonStore : public Store {
 
     PythonStore(const PythonStore &store);
 
+    virtual ~PythonStore() {}
+
     ConstantStringRef get(const Key &key);
 };
 

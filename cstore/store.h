@@ -103,6 +103,7 @@ class ConstantStringRef {
 
 class Store {
   public:
+    virtual ~Store() {}
     virtual ConstantStringRef get(const Key &key) = 0;
 };
 

@@ -11,6 +11,7 @@
 // as per the documentation.
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
+#include <memory>
 #include <string>
 
 #include "convert.h"
@@ -442,7 +443,7 @@ static int treemanifest_init(py_treemanifest *self, PyObject *args) {
   // We have to manually call the member constructor, since the provided 'self'
   // is just zerod out memory.
   try {
-    std::shared_ptr<PythonStore> store = std::make_shared<PythonStore>(storeObj);
+    std::shared_ptr<Store> store = std::make_shared<PythonStore>(storeObj);
     if (node != NULL) {
       new(&self->tm) treemanifest(store, std::string(node, (size_t) nodelen));
     } else {

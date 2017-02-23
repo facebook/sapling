@@ -11,6 +11,7 @@
 // as per the documentation.
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
+#include <memory>
 #include <string>
 
 extern "C" {
@@ -248,7 +249,7 @@ static int uniondatapackstore_init(py_uniondatapackstore *self, PyObject *args) 
 
     // We have to manually call the member constructor, since the provided 'self'
     // is just zerod out memory.
-    new(&self->uniondatapackstore) UnionDatapackStore(stores);
+    new(&self->uniondatapackstore) std::shared_ptr<UnionDatapackStore>(new UnionDatapackStore(stores));
     new(&self->substores) std::vector<PythonObj>();
     self->substores = pySubStores;
   } catch (const std::exception &ex) {
@@ -260,7 +261,7 @@ static int uniondatapackstore_init(py_uniondatapackstore *self, PyObject *args) 
 }
 
 static void uniondatapackstore_dealloc(py_uniondatapackstore *self) {
-  self->uniondatapackstore.~UnionDatapackStore();
+  self->uniondatapackstore.~shared_ptr<UnionDatapackStore>();
   self->substores.~vector<PythonObj>();
   PyObject_Del(self);
 }
@@ -277,7 +278,7 @@ static PyObject *uniondatapackstore_get(py_uniondatapackstore *self, PyObject *a
 
     Key key(name, namelen, node, nodelen);
 
-    ConstantStringRef fulltext = self->uniondatapackstore.get(key);
+    ConstantStringRef fulltext = self->uniondatapackstore->get(key);
 
     return PyString_FromStringAndSize(fulltext.content(), fulltext.size());
   } catch (const pyexception &ex) {
@@ -303,7 +304,7 @@ static PyObject *uniondatapackstore_getdeltachain(py_uniondatapackstore *self, P
 
     Key key(name, namelen, node, nodelen);
 
-    UnionDeltaChainIterator chain = self->uniondatapackstore.getDeltaChain(key);
+    UnionDeltaChainIterator chain = self->uniondatapackstore->getDeltaChain(key);
 
     PythonObj resultChain = PyList_New(0);
 
@@ -344,7 +345,7 @@ static PyObject *uniondatapackstore_getmissing(py_uniondatapackstore *self, PyOb
     PythonObj inputIterator = PyObject_GetIter(keys);
     PythonKeyIterator keysIter((PyObject*)inputIterator);
 
-    UnionDatapackStoreKeyIterator missingIter = self->uniondatapackstore.getMissing(keysIter);
+    UnionDatapackStoreKeyIterator missingIter = self->uniondatapackstore->getMissing(keysIter);
 
     Key *key;
     while ((key = missingIter.next()) != NULL) {

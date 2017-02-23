@@ -10,6 +10,8 @@
 #ifndef CSTORE_PY_STRUCTS
 #define CSTORE_PY_STRUCTS
 
+#include <memory>
+
 #include "datapackstore.h"
 #include "uniondatapackstore.h"
 
@@ -22,7 +24,7 @@ struct py_datapackstore {
 struct py_uniondatapackstore {
   PyObject_HEAD;
 
-  UnionDatapackStore uniondatapackstore;
+  std::shared_ptr<UnionDatapackStore> uniondatapackstore;
 
   // Keep a reference to the python objects so we can decref them later.
   std::vector<PythonObj> substores;
