@@ -546,7 +546,6 @@ def _pull(orig, ui, repo, source="default", **opts):
     # Copy paste from `pull` command
     source, branches = hg.parseurl(ui.expandpath(source), opts.get('branch'))
 
-    hasscratchbookmarks = False
     scratchbookmarks = {}
     if opts.get('bookmark'):
         bookmarks = []
@@ -569,7 +568,6 @@ def _pull(orig, ui, repo, source="default", **opts):
                                       bookmark)
                 scratchbookmarks[bookmark] = fetchedbookmarks[bookmark]
                 revs.append(fetchedbookmarks[bookmark])
-            hasscratchbookmarks = True
         opts['bookmark'] = bookmarks
         opts['rev'] = revs
 
@@ -591,7 +589,7 @@ def _pull(orig, ui, repo, source="default", **opts):
             except error.RepoLookupError:
                 pass
 
-    if hasscratchbookmarks:
+    if scratchbookmarks:
         # Set anyincoming to True
         oldfindcommonincoming = wrapfunction(discovery,
                                              'findcommonincoming',
@@ -611,7 +609,7 @@ def _pull(orig, ui, repo, source="default", **opts):
             _savelocalbookmarks(repo, scratchbookmarks)
         return result
     finally:
-        if hasscratchbookmarks:
+        if scratchbookmarks:
             discovery.findcommonincoming = oldfindcommonincoming
 
 def _readscratchremotebookmarks(ui, repo, other):
