@@ -89,6 +89,12 @@ Pager should not start if stdout is not a tty.
   $ hg log -l1 -q --config ui.formatted=False
   10:46106edeeb38
 
+Pager should be disabled if pager.pager is empty (otherwise the output would
+be silently lost.)
+
+  $ hg log -l1 -q --config pager.pager=
+  10:46106edeeb38
+
 Pager with color enabled allows colors to come through by default,
 even though stdout is no longer a tty.
   $ cat >> $HGRCPATH <<EOF

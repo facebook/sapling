@@ -869,7 +869,6 @@ class ui(object):
             # interactive, the user didn't say HGPLAIN or
             # HGPLAINEXCEPT=pager, and the user didn't specify --debug.
             return
-        self.debug('starting pager for command %r\n' % command)
 
         # TODO: add a "system defaults" config section so this default
         # of more(1) can be easily replaced with a global
@@ -879,6 +878,10 @@ class ui(object):
         # default editor command similar treatment.
         envpager = encoding.environ.get('PAGER', 'more')
         pagercmd = self.config('pager', 'pager', envpager)
+        if not pagercmd:
+            return
+
+        self.debug('starting pager for command %r\n' % command)
         self.pageractive = True
         # Preserve the formatted-ness of the UI. This is important
         # because we mess with stdout, which might confuse
