@@ -56,6 +56,7 @@ New errors are not allowed. Warnings are strongly discouraged.
   Skipping clib/null_test.c it has no-che?k-code (glob)
   Skipping cstore/py-cdatapack.h it has no-che?k-code (glob)
   Skipping cstore/py-cstore.cpp it has no-che?k-code (glob)
+  Skipping cstore/py-treemanifest.h it has no-che?k-code (glob)
   Skipping ctreemanifest/convert.h it has no-che?k-code (glob)
   Skipping ctreemanifest/manifest.cpp it has no-che?k-code (glob)
   Skipping ctreemanifest/manifest.h it has no-che?k-code (glob)

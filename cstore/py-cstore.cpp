@@ -14,6 +14,7 @@
 #include <Python.h>
 
 #include "py-cdatapack.h"
+#include "py-treemanifest.h"
 
 static PyMethodDef mod_methods[] = {
   {NULL, NULL}
@@ -34,4 +35,11 @@ PyMODINIT_FUNC initcstore(void) {
 
   Py_INCREF(&cdatapack_type);
   PyModule_AddObject(mod, "datapack", (PyObject *)&cdatapack_type);
+
+  treemanifestType.tp_new = PyType_GenericNew;
+  if (PyType_Ready(&treemanifestType) < 0) {
+    return;
+  }
+  Py_INCREF(&treemanifestType);
+  PyModule_AddObject(mod, "treemanifest", (PyObject *)&treemanifestType);
 }

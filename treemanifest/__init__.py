@@ -29,7 +29,7 @@ from mercurial.node import bin, nullid
 from remotefilelog.contentstore import unioncontentstore
 from remotefilelog.datapack import datapackstore, mutabledatapack
 from remotefilelog import shallowutil
-import ctreemanifest
+import cstore
 
 import struct
 
@@ -136,7 +136,7 @@ def recordmanifest(pack, repo, oldtip, newtip):
         p2node = mfrevlog.node(p2)
 
         if p1node == nullid:
-            origtree = ctreemanifest.treemanifest(repo.svfs.manifestdatastore)
+            origtree = cstore.treemanifest(repo.svfs.manifestdatastore)
         elif p1node in builttrees:
             origtree = builttrees[p1node]
         else:
@@ -147,7 +147,7 @@ def recordmanifest(pack, repo, oldtip, newtip):
                 continue
 
             p1mf = mfl[p1node].read()
-            origtree = ctreemanifest.treemanifest(repo.svfs.manifestdatastore)
+            origtree = cstore.treemanifest(repo.svfs.manifestdatastore)
             for filename, node, flag in p1mf.iterentries():
                 origtree.set(filename, node, flag)
             origtree.write(InterceptedMutablePack(pack, p1node, nullid))

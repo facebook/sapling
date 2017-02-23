@@ -10,7 +10,7 @@ import silenttestrunner
 # Add the repo root to the path so we can find the built ctreemanifest
 fullpath = os.path.join(os.getcwd(), __file__)
 sys.path.insert(0, os.path.dirname(os.path.dirname(fullpath)))
-import ctreemanifest
+import cstore
 
 from mercurial import (
     manifest,
@@ -48,31 +48,31 @@ class ctreemanifesttests(unittest.TestCase):
         random.seed(0)
 
     def testInitialization(self):
-        ctreemanifest.treemanifest(FakeStore())
+        cstore.treemanifest(FakeStore())
 
     def testEmptyFlag(self):
-        a = ctreemanifest.treemanifest(FakeStore())
+        a = cstore.treemanifest(FakeStore())
         h, f = hashflags()[0], ''
         a.set("abc", h, f)
         out = a.find("abc")
         self.assertEquals((h, f), out)
 
     def testNullFlag(self):
-        a = ctreemanifest.treemanifest(FakeStore())
+        a = cstore.treemanifest(FakeStore())
         h, f = hashflags()[0], '\0'
         a.set("abc", h, f)
         out = a.find("abc")
         self.assertEquals((h, f), out)
 
     def testSetGet(self):
-        a = ctreemanifest.treemanifest(FakeStore())
+        a = cstore.treemanifest(FakeStore())
         h, f = hashflags()
         a.set("abc", h, f)
         out = a.find("abc")
         self.assertEquals((h, f), out)
 
     def testUpdate(self):
-        a = ctreemanifest.treemanifest(FakeStore())
+        a = cstore.treemanifest(FakeStore())
         h, f = hashflags()
         a.set("abc", h, f)
         out = a.find("abc")
@@ -84,7 +84,7 @@ class ctreemanifesttests(unittest.TestCase):
         self.assertEquals((h, f), out)
 
     def testDirAfterFile(self):
-        a = ctreemanifest.treemanifest(FakeStore())
+        a = cstore.treemanifest(FakeStore())
         file_h, file_f = hashflags()
         a.set("abc", file_h, file_f)
         out = a.find("abc")
@@ -99,7 +99,7 @@ class ctreemanifesttests(unittest.TestCase):
         self.assertEquals((file_h, file_f), out)
 
     def testFileAfterDir(self):
-        a = ctreemanifest.treemanifest(FakeStore())
+        a = cstore.treemanifest(FakeStore())
         dir_h, dir_f = hashflags()
         a.set("abc/def", dir_h, dir_f)
         out = a.find("abc/def")
@@ -114,7 +114,7 @@ class ctreemanifesttests(unittest.TestCase):
         self.assertEquals((dir_h, dir_f), out)
 
     def testDeeplyNested(self):
-        a = ctreemanifest.treemanifest(FakeStore())
+        a = cstore.treemanifest(FakeStore())
         h, f = hashflags()
         a.set("abc/def/ghi/jkl", h, f)
         out = a.find("abc/def/ghi/jkl")
@@ -126,7 +126,7 @@ class ctreemanifesttests(unittest.TestCase):
         self.assertEquals((h, f), out)
 
     def testDeeplyNested(self):
-        a = ctreemanifest.treemanifest(FakeStore())
+        a = cstore.treemanifest(FakeStore())
         h, f = hashflags()
         a.set("abc/def/ghi/jkl", h, f)
         out = a.find("abc/def/ghi/jkl")
@@ -138,7 +138,7 @@ class ctreemanifesttests(unittest.TestCase):
         self.assertEquals((h, f), out)
 
     def testBushyTrees(self):
-        a = ctreemanifest.treemanifest(FakeStore())
+        a = cstore.treemanifest(FakeStore())
         nodes = {}
         for ix in range(111):
             h, f = hashflags()
@@ -152,7 +152,7 @@ class ctreemanifesttests(unittest.TestCase):
             self.assertEquals((h, f), out)
 
     def testFlagChanges(self):
-        a = ctreemanifest.treemanifest(FakeStore())
+        a = cstore.treemanifest(FakeStore())
 
         # go from no flags to with flags, back to no flags.
         h, f = hashflags(requireflag=True)
@@ -174,7 +174,7 @@ class ctreemanifesttests(unittest.TestCase):
         self.assertEquals('', out[1])
 
     def testSetRemove(self):
-        a = ctreemanifest.treemanifest(FakeStore())
+        a = cstore.treemanifest(FakeStore())
         h, f = hashflags()
         a.set("abc", h, f)
         out = a.find("abc")
@@ -188,7 +188,7 @@ class ctreemanifesttests(unittest.TestCase):
             pass
 
     def testCleanupAfterRemove(self):
-        a = ctreemanifest.treemanifest(FakeStore())
+        a = cstore.treemanifest(FakeStore())
         h, f = hashflags()
         a.set("abc/def/ghi", h, f)
         out = a.find("abc/def/ghi")
@@ -202,7 +202,7 @@ class ctreemanifesttests(unittest.TestCase):
         self.assertEquals((h, f), out)
 
     def testIterOrder(self):
-        a = ctreemanifest.treemanifest(FakeStore())
+        a = cstore.treemanifest(FakeStore())
         h, f = hashflags()
         a.set("abc/def/ghi", h, f)
         a.set("abc/def.ghi", h, f)
@@ -212,7 +212,7 @@ class ctreemanifesttests(unittest.TestCase):
         self.assertEquals(results[1], "abc/def/ghi")
 
     def testIterOrderSigned(self):
-        a = ctreemanifest.treemanifest(FakeStore())
+        a = cstore.treemanifest(FakeStore())
         h, f = hashflags()
         a.set("abc/def/\xe6\xe9", h, f)
         a.set("abc/def/gh", h, f)
@@ -222,7 +222,7 @@ class ctreemanifesttests(unittest.TestCase):
         self.assertEquals(results[1], "abc/def/\xe6\xe9")
 
     def testWrite(self):
-        a = ctreemanifest.treemanifest(FakeStore())
+        a = cstore.treemanifest(FakeStore())
         a.set("abc/def/x", *hashflags())
         a.set("abc/def/y", *hashflags())
         a.set("abc/z", *hashflags())
@@ -230,7 +230,7 @@ class ctreemanifesttests(unittest.TestCase):
         store = FakeStore()
         anode = a.write(store)
 
-        a2 = ctreemanifest.treemanifest(store, anode)
+        a2 = cstore.treemanifest(store, anode)
         self.assertEquals(list(a.iterentries()), list(a2.iterentries()))
 
         b = a2.copy()
@@ -239,12 +239,12 @@ class ctreemanifesttests(unittest.TestCase):
 
         bnode = b.write(store)
 
-        b2 = ctreemanifest.treemanifest(store, bnode)
+        b2 = cstore.treemanifest(store, bnode)
         self.assertEquals(list(b.iterentries()), list(b2.iterentries()))
 
     def testWriteReplaceFile(self):
         """Tests writing a manifest which replaces a file with a directory."""
-        a = ctreemanifest.treemanifest(FakeStore())
+        a = cstore.treemanifest(FakeStore())
         a.set("abc/a", *hashflags())
         a.set("abc/z", *hashflags())
 
@@ -257,11 +257,11 @@ class ctreemanifesttests(unittest.TestCase):
 
         bnode = b.write(store, a, useDeltas=False)
 
-        b2 = ctreemanifest.treemanifest(store, bnode)
+        b2 = cstore.treemanifest(store, bnode)
         self.assertEquals(list(b.iterentries()), list(b2.iterentries()))
 
     def testGet(self):
-        a = ctreemanifest.treemanifest(FakeStore())
+        a = cstore.treemanifest(FakeStore())
         zflags = hashflags()
         a.set("abc/z", *zflags)
 
@@ -270,7 +270,7 @@ class ctreemanifesttests(unittest.TestCase):
         self.assertEquals(a.get('abc'), None)
 
     def testFind(self):
-        a = ctreemanifest.treemanifest(FakeStore())
+        a = cstore.treemanifest(FakeStore())
         zflags = hashflags()
         a.set("abc/z", *zflags)
 
@@ -282,7 +282,7 @@ class ctreemanifesttests(unittest.TestCase):
             pass
 
     def testSetFlag(self):
-        a = ctreemanifest.treemanifest(FakeStore())
+        a = cstore.treemanifest(FakeStore())
         zflags = hashflags()
         a.set("abc/z", *zflags)
         a.setflag("abc/z", '')
@@ -298,7 +298,7 @@ class ctreemanifesttests(unittest.TestCase):
             pass
 
     def testSetItem(self):
-        a = ctreemanifest.treemanifest(FakeStore())
+        a = cstore.treemanifest(FakeStore())
         zflags = hashflags(requireflag=True)
         a.set("abc/z", *zflags)
 
@@ -311,7 +311,7 @@ class ctreemanifesttests(unittest.TestCase):
         self.assertEquals(a.find('abc/z'), (newnode, zflags[1]))
 
     def testText(self):
-        a = ctreemanifest.treemanifest(FakeStore())
+        a = cstore.treemanifest(FakeStore())
         zflags = hashflags(requireflag=True)
         a.set("abc/z", *zflags)
 
@@ -328,13 +328,13 @@ class ctreemanifesttests(unittest.TestCase):
         self.assertEquals(treetextv2, fulltextv2)
 
     def testDiff(self):
-        a = ctreemanifest.treemanifest(FakeStore())
+        a = cstore.treemanifest(FakeStore())
         zflags = hashflags()
         mflags = hashflags()
         a.set("abc/z", *zflags)
         a.set("xyz/m", *mflags)
 
-        b = ctreemanifest.treemanifest(FakeStore())
+        b = cstore.treemanifest(FakeStore())
         b.set("abc/z", *zflags)
         b.set("xyz/m", *mflags)
 
@@ -382,7 +382,7 @@ class ctreemanifesttests(unittest.TestCase):
         })
 
     def testHasDir(self):
-        a = ctreemanifest.treemanifest(FakeStore())
+        a = cstore.treemanifest(FakeStore())
         zflags = hashflags()
         a.set("abc/z", *zflags)
 
@@ -391,7 +391,7 @@ class ctreemanifesttests(unittest.TestCase):
         self.assertFalse(a.hasdir('xyz'))
 
     def testContains(self):
-        a = ctreemanifest.treemanifest(FakeStore())
+        a = cstore.treemanifest(FakeStore())
         zflags = hashflags()
         a.set("abc/z", *zflags)
 
@@ -400,7 +400,7 @@ class ctreemanifesttests(unittest.TestCase):
         self.assertFalse(None in a)
 
     def testDirs(self):
-        a = ctreemanifest.treemanifest(FakeStore())
+        a = cstore.treemanifest(FakeStore())
         zflags = hashflags()
         a.set("abc/z", *zflags)
 
@@ -409,14 +409,14 @@ class ctreemanifesttests(unittest.TestCase):
         self.assertFalse("abc/z" in dirs)
 
     def testNonZero(self):
-        a = ctreemanifest.treemanifest(FakeStore())
+        a = cstore.treemanifest(FakeStore())
         self.assertFalse(bool(a))
         zflags = hashflags()
         a.set("abc/z", *zflags)
         self.assertTrue(bool(a))
 
     def testFlags(self):
-        a = ctreemanifest.treemanifest(FakeStore())
+        a = cstore.treemanifest(FakeStore())
         zflags = hashflags(requireflag=True)
         a.set("abc/z", *zflags)
 
@@ -425,7 +425,7 @@ class ctreemanifesttests(unittest.TestCase):
         self.assertEquals(a.flags('abc/z'), zflags[1])
 
     def testMatches(self):
-        a = ctreemanifest.treemanifest(FakeStore())
+        a = cstore.treemanifest(FakeStore())
         zflags = hashflags()
         a.set("abc/z", *zflags)
         a.set("foo", *hashflags())
@@ -441,7 +441,7 @@ class ctreemanifesttests(unittest.TestCase):
         self.assertEquals(list(result.iterentries()), [])
 
     def testKeys(self):
-        a = ctreemanifest.treemanifest(FakeStore())
+        a = cstore.treemanifest(FakeStore())
         self.assertEquals(a.keys(), [])
 
         zflags = hashflags()
@@ -451,7 +451,7 @@ class ctreemanifesttests(unittest.TestCase):
         self.assertEquals(a.keys(), ["abc/z", "foo"])
 
     def testIterItems(self):
-        a = ctreemanifest.treemanifest(FakeStore())
+        a = cstore.treemanifest(FakeStore())
         self.assertEquals(list(a.iteritems()), [])
 
         zflags = hashflags()

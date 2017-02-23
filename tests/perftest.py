@@ -16,7 +16,7 @@ from remotefilelog import datapack, contentstore, shallowutil
 import hashlib, os, time
 from fastmanifest.implementation import fastmanifestcache
 from fastmanifest import cachemanager
-import ctreemanifest
+import cstore
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
@@ -236,7 +236,7 @@ def profiletreepack(repo, store, rev1, rev2, opts):
                 return result
     def ctreeconstructor(mfnode):
         # Enable the fake store to remove blob lookup time
-        treemf = ctreemanifest.treemanifest(store, mfnode)
+        treemf = cstore.treemanifest(store, mfnode)
         return treemf
 
     # Test bodies

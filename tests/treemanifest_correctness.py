@@ -14,7 +14,7 @@ from mercurial.node import nullid
 from remotefilelog import datapack, contentstore, shallowutil
 import difflib, hashlib, os, time
 from fastmanifest import cachemanager
-import ctreemanifest
+import cstore
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
@@ -204,7 +204,7 @@ def profiletreepack(repo, store, rev1, rev2, opts):
         return repo.manifest.read(mfnode)._flatmanifest()
 
     def ctreeconstructor(mfnode):
-        treemf = ctreemanifest.treemanifest(store, mfnode)
+        treemf = cstore.treemanifest(store, mfnode)
         return treemf
 
     # Test bodies

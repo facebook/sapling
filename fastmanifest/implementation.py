@@ -21,7 +21,7 @@ from constants import (
 )
 
 try:
-    import ctreemanifest
+    import cstore
     import treemanifest
     from remotefilelog import datapack, shallowutil
     supportsctree = True
@@ -137,12 +137,12 @@ class hybridmanifest(object):
                 self.__treemanifest = self.treecache[self.node]
             elif self.node == revlog.nullid:
                 store = self.opener.manifestdatastore
-                self.__treemanifest = ctreemanifest.treemanifest(store)
+                self.__treemanifest = cstore.treemanifest(store)
             else:
                 store = self.opener.manifestdatastore
                 missing = store.getmissing([('', self.node)])
                 if not missing:
-                    self.__treemanifest = ctreemanifest.treemanifest(store,
+                    self.__treemanifest = cstore.treemanifest(store,
                                                                      self.node)
                 else:
                     # Record that it doesn't exist, so we don't keep checking
@@ -212,7 +212,7 @@ class hybridmanifest(object):
 
     def fastdelta(self, base, changes):
         m = self._manifest('fastdelta')
-        if isinstance(m, ctreemanifest.treemanifest):
+        if isinstance(m, cstore.treemanifest):
             return fastdelta(m, m.find, base, changes)
         return m.fastdelta(base, changes)
 
@@ -223,7 +223,7 @@ class hybridmanifest(object):
             return hybridmanifest(self.ui, self.opener, fast=m)
         elif isinstance(m, manifest.manifestdict):
             return hybridmanifest(self.ui, self.opener, flat=m)
-        elif supportsctree and isinstance(m, ctreemanifest.treemanifest):
+        elif supportsctree and isinstance(m, cstore.treemanifest):
             return hybridmanifest(self.ui, self.opener, tree=m)
         else:
             raise ValueError("unknown manifest type {0}".format(type(m)))

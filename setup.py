@@ -155,9 +155,15 @@ else:
             Extension('cstore',
                 sources=[
                     'cstore/py-cstore.cpp',
+                    'ctreemanifest/manifest.cpp',
+                    'ctreemanifest/manifest_entry.cpp',
+                    'ctreemanifest/manifest_fetcher.cpp',
+                    'ctreemanifest/pythonutil.cpp',
+                    'ctreemanifest/treemanifest.cpp',
                 ],
                 include_dirs=[
                     'cdatapack',
+                    'ctreemanifest',
                 ] + include_dirs,
                 library_dirs=library_dirs,
                 libraries=[
@@ -169,30 +175,6 @@ else:
                     "-std=c++0x",
                     "-Wall",
                     "-Werror", "-Werror=strict-prototypes",
-                ] + cdebugflags,
-            ),
-        ],
-        'ctreemanifest' : [
-            Extension('ctreemanifest',
-                sources=[
-                    'ctreemanifest/py-treemanifest.cpp',
-                    'ctreemanifest/manifest.cpp',
-                    'ctreemanifest/manifest_entry.cpp',
-                    'ctreemanifest/manifest_fetcher.cpp',
-                    'ctreemanifest/pythonutil.cpp',
-                    'ctreemanifest/treemanifest.cpp',
-                ],
-                include_dirs=[
-                    'ctreemanifest',
-                ] + include_dirs,
-                library_dirs=library_dirs,
-                libraries=[
-                    'crypto',
-                ],
-                extra_compile_args=[
-                    "-std=c++0x",
-                    "-Wall",
-                    "-Werror",
                 ] + cdebugflags,
             ),
         ],
@@ -248,7 +230,7 @@ dependencies = {
     'fastannotate' : ['linelog'],
     'infinitepush' : ['extutil'],
     'remotefilelog' : ['cstore', 'extutil'],
-    'treemanifest' : ['ctreemanifest', 'cstore', 'fastmanifest'],
+    'treemanifest' : ['cstore'],
 }
 
 processdep = True
@@ -291,7 +273,6 @@ for ext_module in availableextmodules:
 # Dependencies between our native libraries means we need to build in order
 ext_order = {
     'libdatapack' : 0,
-    'ctreemanifest' : 2,
     'cstore' : 3,
 }
 ext_modules = sorted(ext_modules, key=lambda k: ext_order.get(k.name, 999))

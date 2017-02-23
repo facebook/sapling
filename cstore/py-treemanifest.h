@@ -4,6 +4,8 @@
 //
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
+//
+// no-check-code
 
 // The PY_SSIZE_T_CLEAN define must be defined before the Python.h include,
 // as per the documentation.
@@ -740,7 +742,7 @@ static PyObject *treemanifest_flags(py_treemanifest *self, PyObject *args, PyObj
 }
 
 static PyObject *treemanifest_copy(py_treemanifest *self) {
-  PythonObj module = PyImport_ImportModule("ctreemanifest");
+  PythonObj module = PyImport_ImportModule("cstore");
   PythonObj treetype = module.getattr("treemanifest");
   py_treemanifest *copy = PyObject_New(py_treemanifest, (PyTypeObject*)(PyObject*)treetype);
   PythonObj copyObj((PyObject*)copy);
@@ -1221,7 +1223,7 @@ static PyNumberMethods treemanifest_number_methods = {
 static PyTypeObject treemanifestType = {
   PyObject_HEAD_INIT(NULL)
   0,                                                /* ob_size */
-  "ctreemanifest.treemanifest",                     /* tp_name */
+  "cstore.treemanifest",                            /* tp_name */
   sizeof(py_treemanifest),                          /* tp_basicsize */
   0,                                                /* tp_itemsize */
   (destructor)treemanifest_dealloc,                 /* tp_dealloc */
@@ -1258,23 +1260,3 @@ static PyTypeObject treemanifestType = {
   (initproc)treemanifest_init,                      /* tp_init */
   0,                                                /* tp_alloc */
 };
-
-static PyMethodDef mod_methods[] = {
-  {NULL, NULL}
-};
-
-static char mod_description[] = "Module containing a native treemanifest implementation";
-
-PyMODINIT_FUNC initctreemanifest(void)
-{
-  PyObject *mod;
-
-  treemanifestType.tp_new = PyType_GenericNew;
-  if (PyType_Ready(&treemanifestType) < 0) {
-    return;
-  }
-
-  mod = Py_InitModule3("ctreemanifest", mod_methods, mod_description);
-  Py_INCREF(&treemanifestType);
-  PyModule_AddObject(mod, "treemanifest", (PyObject *)&treemanifestType);
-}
