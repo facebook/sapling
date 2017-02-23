@@ -331,29 +331,7 @@ class colorui(uimod.ui):
     def label(self, msg, label):
         if self._colormode is None:
             return super(colorui, self).label(msg, label)
-        return colorlabel(self, msg, label)
-
-def colorlabel(ui, msg, label):
-    """add color control code according to the mode"""
-    if ui._colormode == 'debug':
-        if label and msg:
-            if msg[-1] == '\n':
-                msg = "[%s|%s]\n" % (label, msg[:-1])
-            else:
-                msg = "[%s|%s]" % (label, msg)
-    elif ui._colormode is not None:
-        effects = []
-        for l in label.split():
-            s = color._styles.get(l, '')
-            if s:
-                effects.append(s)
-            elif color.valideffect(l):
-                effects.append(l)
-        effects = ' '.join(effects)
-        if effects:
-            msg = '\n'.join([color._render_effects(line, effects)
-                             for line in msg.split('\n')])
-    return msg
+        return color.colorlabel(self, msg, label)
 
 def uisetup(ui):
     if ui.plain():

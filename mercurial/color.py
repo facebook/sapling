@@ -175,6 +175,28 @@ def _render_effects(text, effects):
         stop = '\033[' + str(_effects['none']) + 'm'
     return ''.join([start, text, stop])
 
+def colorlabel(ui, msg, label):
+    """add color control code according to the mode"""
+    if ui._colormode == 'debug':
+        if label and msg:
+            if msg[-1] == '\n':
+                msg = "[%s|%s]\n" % (label, msg[:-1])
+            else:
+                msg = "[%s|%s]" % (label, msg)
+    elif ui._colormode is not None:
+        effects = []
+        for l in label.split():
+            s = _styles.get(l, '')
+            if s:
+                effects.append(s)
+            elif valideffect(l):
+                effects.append(l)
+        effects = ' '.join(effects)
+        if effects:
+            msg = '\n'.join([_render_effects(line, effects)
+                             for line in msg.split('\n')])
+    return msg
+
 w32effects = None
 if pycompat.osname == 'nt':
     import ctypes
