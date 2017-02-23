@@ -59,8 +59,18 @@
     # Sets mysql innodb_lock_wait_timeout option.
     locktimeout = 120
 
+    # Server-side option. Used only if indextype=sql.
+    # Name of the repository
+    reponame = ''
+
     # Client-side option
     pushbackuplog = FILE
+
+    [remotenames]
+    # Client-side option
+    # This option should be set only if remotenames extension is enabled.
+    # Whether remote bookmarks are tracked by remotenames extension.
+    bookmarks = True
 """
 
 from __future__ import absolute_import
