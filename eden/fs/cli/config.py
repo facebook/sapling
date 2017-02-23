@@ -435,6 +435,7 @@ by hand to make changes to the repository or remove it.''' % name)
             # contents.  Preserve SSH environment variables needed to do this.
             'SSH_AUTH_SOCK',
             'SSH_AGENT_PID',
+            'KRB5CCNAME',
         ]
 
         for name, value in os.environ.items():
