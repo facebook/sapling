@@ -14,8 +14,8 @@
 
 #include <string>
 
-#define HEX_NODE_SIZE 40
-#define BIN_NODE_SIZE 20
+const size_t BIN_NODE_SIZE = 20;
+const size_t HEX_NODE_SIZE = 40;
 
 const char *const NULLID = "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0";
 
@@ -47,7 +47,7 @@ static char chartable[16] = {
  * Converts a given 40-byte hex string into a 20-byte node.
  */
 inline void appendbinfromhex(const char *node, std::string &output) {
-  for (int i = 0; i < HEX_NODE_SIZE;) {
+  for (size_t i = 0; i < HEX_NODE_SIZE;) {
     int8_t hi = hextable[(unsigned char)node[i++]];
     int8_t lo = hextable[(unsigned char)node[i++]];
     output.push_back((hi << 4) | lo);

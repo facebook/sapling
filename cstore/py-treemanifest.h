@@ -329,9 +329,9 @@ static PyObject *treemanifest_set(PyObject *o, PyObject *args) {
     // this is a remove operation!!
     self->tm.remove(std::string(filename, (size_t) filenamelen));
     Py_RETURN_NONE;
-  } else if (hashlen != BIN_NODE_SIZE) {
+  } else if (hashlen != (ssize_t)BIN_NODE_SIZE) {
     PyErr_Format(PyExc_ValueError,
-        "hash length must be %d bytes long", BIN_NODE_SIZE);
+        "hash length must be %zu bytes long", BIN_NODE_SIZE);
     return NULL;
   } else if (flagstrlen > 1) {
     PyErr_Format(PyExc_ValueError,
@@ -666,7 +666,7 @@ static int treemanifest_setitem(py_treemanifest *self, PyObject *key, PyObject *
     return -1;
   }
 
-  if (nodelen != BIN_NODE_SIZE) {
+  if (nodelen != (ssize_t)BIN_NODE_SIZE) {
       PyErr_Format(PyExc_ValueError, "invalid node length %zd", nodelen);
       return -1;
   }

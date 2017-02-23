@@ -14,7 +14,7 @@
 #include <vector>
 #include <stdexcept>
 
-const size_t BIN_NODE_SIZE = 20;
+#include "convert.h"
 
 /* Represents a key into the Mercurial store. Each key is a (name, node) pair,
  * though store implementations can choose to ignore the name in some cases. */
@@ -28,7 +28,7 @@ struct Key {
   Key() :
     node() {}
 
-  Key(char *name, size_t namelen, char *node, size_t nodelen) :
+  Key(const char *name, size_t namelen, const char *node, size_t nodelen) :
     name(name, namelen) {
     if (nodelen != BIN_NODE_SIZE) {
       throw std::logic_error("invalid node length");
