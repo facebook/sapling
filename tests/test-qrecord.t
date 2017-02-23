@@ -39,9 +39,10 @@ help record (record)
   
       See 'hg help dates' for a list of formats valid for -d/--date.
   
-      You will be prompted for whether to record changes to each modified file,
-      and for files with multiple changes, for each change to use. For each
-      query, the following responses are possible:
+      If using the text interface (see 'hg help config'), you will be prompted
+      for whether to record changes to each modified file, and for files with
+      multiple changes, for each change to use. For each query, the following
+      responses are possible:
   
         y - record this change
         n - skip this change
