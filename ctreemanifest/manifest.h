@@ -10,8 +10,6 @@
 #ifndef REMOTEFILELOG_MANIFEST_H
 #define REMOTEFILELOG_MANIFEST_H
 
-#include "pythonutil.h"
-
 #include <list>
 #include <stdexcept>
 #include <openssl/sha.h>
@@ -42,6 +40,7 @@ class ManifestPtr {
 };
 
 #include "manifest_entry.h"
+#include "../cstore/store.h"
 
 enum FindResultType {
   RESULT_FILE,
@@ -58,8 +57,8 @@ enum FindResultType {
  * class just provides a view onto that existing storage.
  *
  * If the actual manifest data comes from the store, this class refers to it via
- * a PythonObj, and reference counting is used to determine when it's cleaned
- * up.
+ * a ConstantStringRef, and reference counting is used to determine when it's
+ * cleaned up.
  *
  * If the actual manifest data comes from an InMemoryManifest, then the life
  * time of that InMemoryManifest is managed elsewhere, and is unaffected by the
@@ -67,7 +66,7 @@ enum FindResultType {
  */
 class Manifest {
   private:
-    PythonObj _rawobj;
+    ConstantStringRef _rawobj;
     size_t _refcount;
     bool _mutable;
 
@@ -80,7 +79,7 @@ class Manifest {
       _mutable(true) {
     }
 
-    Manifest(PythonObj &rawobj);
+    Manifest(ConstantStringRef &rawobj);
 
     void incref();
     size_t decref();

@@ -437,18 +437,18 @@ static int treemanifest_init(py_treemanifest *self, PyObject *args) {
   }
 
   Py_INCREF(store);
+  PythonObj storeObj = PythonObj(store);
 
   // We have to manually call the member constructor, since the provided 'self'
   // is just zerod out memory.
   try {
+    std::shared_ptr<PythonStore> store = std::make_shared<PythonStore>(storeObj);
     if (node != NULL) {
-      new(&self->tm) treemanifest(
-          PythonObj(store), std::string(node, (size_t) nodelen));
+      new(&self->tm) treemanifest(store, std::string(node, (size_t) nodelen));
     } else {
-      new(&self->tm) treemanifest(PythonObj(store));
+      new(&self->tm) treemanifest(store);
     }
   } catch (const std::exception &ex) {
-    Py_DECREF(store);
     PyErr_SetString(PyExc_RuntimeError, ex.what());
     return -1;
   }

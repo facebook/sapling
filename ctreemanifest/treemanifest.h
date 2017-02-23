@@ -12,6 +12,7 @@
 
 #include "pythonutil.h"
 
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -114,7 +115,7 @@ struct treemanifest {
 
     ManifestEntry root;
 
-    treemanifest(PythonObj store, std::string rootNode) :
+    treemanifest(std::shared_ptr<Store> store, std::string rootNode) :
         fetcher(store) {
       std::string hexnode;
       hexnode.reserve(HEX_NODE_SIZE);
@@ -128,7 +129,7 @@ struct treemanifest {
       root.resolved = ManifestPtr();
     }
 
-    treemanifest(PythonObj store) :
+    treemanifest(std::shared_ptr<Store> store) :
         fetcher(store) {
       std::string hexnode;
       hexnode.assign(HEX_NODE_SIZE, '\0');

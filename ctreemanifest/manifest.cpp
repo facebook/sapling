@@ -9,14 +9,12 @@
 
 #include "manifest.h"
 
-Manifest::Manifest(PythonObj &rawobj) :
+Manifest::Manifest(ConstantStringRef &rawobj) :
     _rawobj(rawobj),
     _refcount(0),
     _mutable(false) {
-  char *parseptr, *endptr;
-  Py_ssize_t buf_sz;
-  PyString_AsStringAndSize(_rawobj, &parseptr, &buf_sz);
-  endptr = parseptr + buf_sz;
+  char *parseptr = _rawobj.content();
+  char *endptr = parseptr + _rawobj.size();
 
   while (parseptr < endptr) {
     ManifestEntry entry;

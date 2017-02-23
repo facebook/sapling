@@ -76,3 +76,43 @@ PythonObj PythonObj::callmethod(const char *name, const PythonObj &args) {
   PythonObj function = this->getattr(name);
   return PyObject_CallObject(function, args);
 }
+
+PythonStore::PythonStore(PythonObj store) :
+  _get(store.getattr("get")),
+  _storeObj(store) {
+}
+
+PythonStore::PythonStore(const PythonStore &store) :
+  _get(store._get),
+  _storeObj(store._storeObj) {
+}
+
+ConstantStringRef PythonStore::get(const Key &key) {
+  PythonObj arglist = Py_BuildValue("s#s#",
+      key.name.c_str(), (Py_ssize_t)key.name.size(),
+      key.node, (Py_ssize_t)BIN_NODE_SIZE);
+
+  PyObject *result = PyEval_CallObject(_get, arglist);
+
+  if (!result) {
+    if (PyErr_Occurred()) {
+      throw pyexception();
+    }
+
+    PyErr_Format(PyExc_RuntimeError,
+        "unable to find tree '%.*s:...'", (int) key.name.size(), key.name.c_str());
+    throw pyexception();
+  }
+
+  PythonObj resultobj(result);
+
+  char *path;
+  Py_ssize_t pathlen;
+  if (PyString_AsStringAndSize((PyObject*)result, &path, &pathlen)) {
+    throw pyexception();
+  }
+
+  char *buffer = new char[pathlen];
+  memcpy(buffer, path, pathlen);
+  return ConstantStringRef(buffer, pathlen);
+}

@@ -8,6 +8,7 @@
 // no-check-code
 
 #include "manifest_entry.h"
+#include <cassert>
 
 ManifestEntry::ManifestEntry() {
   this->filename = NULL;

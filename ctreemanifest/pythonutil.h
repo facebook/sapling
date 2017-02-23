@@ -20,6 +20,9 @@
 // Py_BuildValue treats NULL as NONE, so we have to have a non-null pointer.
 #define MAGIC_EMPTY_STRING ""
 
+#include "../cstore/store.h"
+#include "../cstore/key.h"
+
 /**
  * C++ exception that represents an issue at the python C api level.
  * When this is thrown, it's assumed that the python error message has been set
@@ -74,6 +77,18 @@ class PythonObj {
      * Invokes the specified method on this instance.
      */
     PythonObj callmethod(const char *name, const PythonObj &args);
+};
+
+class PythonStore : public Store {
+  private:
+    PythonObj _get;
+    PythonObj _storeObj;
+  public:
+    PythonStore(PythonObj store);
+
+    PythonStore(const PythonStore &store);
+
+    ConstantStringRef get(const Key &key);
 };
 
 #endif //REMOTEFILELOG_PYTHONOBJ_H

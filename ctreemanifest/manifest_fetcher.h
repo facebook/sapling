@@ -10,22 +10,22 @@
 #ifndef REMOTEFILELOG_MANIFEST_FETCHER_H
 #define REMOTEFILELOG_MANIFEST_FETCHER_H
 
-#include "pythonutil.h"
-
+#include <memory>
 #include <string>
 
 class ManifestFetcher;
 
 #include "manifest.h"
+#include "../cstore/store.h"
 
 /**
  * Class used to obtain Manifests, given a path and node.
  */
 class ManifestFetcher {
   private:
-    PythonObj _get;
+    std::shared_ptr<Store> _store;
   public:
-    ManifestFetcher(PythonObj &store);
+    ManifestFetcher(std::shared_ptr<Store> store);
 
     /**
      * Fetches the Manifest from the store for the provided manifest key.

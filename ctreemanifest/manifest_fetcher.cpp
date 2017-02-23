@@ -9,8 +9,8 @@
 
 #include "manifest_fetcher.h"
 
-ManifestFetcher::ManifestFetcher(PythonObj &store) :
-    _get(store.getattr("get")) {
+ManifestFetcher::ManifestFetcher(std::shared_ptr<Store> store) :
+  _store(store) {
 }
 
 /**
@@ -20,22 +20,6 @@ ManifestFetcher::ManifestFetcher(PythonObj &store) :
 ManifestPtr ManifestFetcher::get(
     const char *path, size_t pathlen,
     std::string &node) const {
-  PythonObj arglist = Py_BuildValue("s#s#",
-      path, (Py_ssize_t) pathlen,
-      node.c_str(), (Py_ssize_t)node.size());
-
-  PyObject *result = PyEval_CallObject(this->_get, arglist);
-
-  if (!result) {
-    if (PyErr_Occurred()) {
-      throw pyexception();
-    }
-
-    PyErr_Format(PyExc_RuntimeError,
-        "unable to find tree '%.*s:...'", (int) pathlen, path);
-    throw pyexception();
-  }
-
-  PythonObj resultobj(result);
-  return ManifestPtr(new Manifest(resultobj));
+    ConstantStringRef content = _store->get(Key(path, pathlen, node.c_str(), node.size()));
+    return ManifestPtr(new Manifest(content));
 }
