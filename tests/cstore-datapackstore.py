@@ -113,5 +113,24 @@ class datapackstoretests(unittest.TestCase):
         self.assertEquals(1, len(chain2))
         self.assertEquals("content", chain2[0][4])
 
+    def testGetMissing(self):
+        packdir = self.makeTempDir()
+
+        revisions = [("foo", self.getFakeHash(), nullid, "content")]
+        self.createPack(packdir, revisions=revisions)
+
+        store = datapackstore(packdir)
+
+        missinghash1 = self.getFakeHash()
+        missinghash2 = self.getFakeHash()
+        missing = store.getmissing([
+            (revisions[0][0], revisions[0][1]),
+            ("foo", missinghash1),
+            ("foo2", missinghash2),
+        ])
+        self.assertEquals(2, len(missing))
+        self.assertEquals(set([("foo", missinghash1), ("foo2", missinghash2)]),
+                          set(missing))
+
 if __name__ == '__main__':
     silenttestrunner.main(__name__)

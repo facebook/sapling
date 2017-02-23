@@ -107,8 +107,65 @@ static PyObject *datapackstore_getdeltachain(py_datapackstore *self, PyObject *a
   }
 }
 
+class PythonKeyIterator : public KeyIterator {
+  private:
+    PythonObj _input;
+    Key _current;
+  public:
+    PythonKeyIterator(PythonObj input) :
+      _input(input) {}
+
+    Key *next() {
+      PyObject *item;
+      while ((item = PyIter_Next((PyObject*)_input)) != NULL) {
+        PythonObj itemObj = item;
+
+        char *name;
+        Py_ssize_t namelen;
+        char *node;
+        Py_ssize_t nodelen;
+        if (!PyArg_ParseTuple(item, "s#s#", &name, &namelen, &node, &nodelen)) {
+          throw pyexception();
+        }
+
+        _current = Key(name, namelen, node, nodelen);
+        return &_current;
+      }
+
+      return NULL;
+    }
+};
+
+static PyObject *datapackstore_getmissing(py_datapackstore *self, PyObject *keys) {
+  try {
+    PythonObj result = PyList_New(0);
+
+    PythonObj inputIterator = PyObject_GetIter(keys);
+    PythonKeyIterator keysIter(inputIterator);
+
+    DatapackStoreKeyIterator missingIter = self->datapackstore.getMissing(keysIter);
+
+    Key *key;
+    while ((key = missingIter.next()) != NULL) {
+      PythonObj missingKey = Py_BuildValue("(s#s#)", key->name.c_str(), key->name.size(),
+                                                     key->node, 20);
+      if (PyList_Append(result, (PyObject*)missingKey)) {
+        return NULL;
+      }
+    }
+
+    return result.returnval();
+  } catch (const pyexception &ex) {
+    return NULL;
+  } catch (const std::exception &ex) {
+    PyErr_SetString(PyExc_RuntimeError, ex.what());
+    return NULL;
+  }
+}
+
 static PyMethodDef datapackstore_methods[] = {
   {"getdeltachain", (PyCFunction)datapackstore_getdeltachain, METH_VARARGS, ""},
+  {"getmissing", (PyCFunction)datapackstore_getmissing, METH_O, ""},
   {NULL, NULL}
 };
 
