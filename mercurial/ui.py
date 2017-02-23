@@ -26,6 +26,7 @@ from .i18n import _
 from .node import hex
 
 from . import (
+    color,
     config,
     encoding,
     error,
@@ -1364,13 +1365,15 @@ class ui(object):
     def label(self, msg, label):
         '''style msg based on supplied label
 
-        Like ui.write(), this just returns msg unchanged, but extensions
-        and GUI tools can override it to allow styling output without
-        writing it.
+        If some color mode is enabled, this will add the necessary control
+        characters to apply such color. In addition, 'debug' color mode adds
+        markup showing which label affects a piece of text.
 
         ui.write(s, 'label') is equivalent to
         ui.write(ui.label(s, 'label')).
         '''
+        if self._colormode is not None:
+            return color.colorlabel(self, msg, label)
         return msg
 
     def develwarn(self, msg, stacklevel=1, config=None):

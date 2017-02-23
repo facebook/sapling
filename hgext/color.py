@@ -328,11 +328,6 @@ class colorui(uimod.ui):
             return super(colorui, self).write_err(
                 *[self.label(a, label) for a in args], **opts)
 
-    def label(self, msg, label):
-        if self._colormode is None:
-            return super(colorui, self).label(msg, label)
-        return color.colorlabel(self, msg, label)
-
 def uisetup(ui):
     if ui.plain():
         return
