@@ -106,7 +106,7 @@ def build_libraries(self, libraries):
         # Now "link" the object files together into a static library.
         # (On Unix at least, this isn't really linking -- it just
         # builds an archive.  Whatever.)
-        libraries = build_info.get('libraries')
+        libraries = build_info.get('libraries', [])
         for lib in libraries:
             self.compiler.add_library(lib)
         self.compiler.create_static_lib(objects, lib_name,
@@ -125,6 +125,9 @@ libraries = [
             "-Wall",
             "-Werror", "-Werror=strict-prototypes",
         ] + cflags,
+    }),
+    ('mpatch', {
+        'sources': ['cstore/mpatch.c']
     }),
 ]
 
@@ -317,5 +320,5 @@ setup(
     install_requires=requires,
     py_modules=py_modules,
     ext_modules = ext_modules,
-    libraries = libraries,
+    libraries=libraries,
 )
