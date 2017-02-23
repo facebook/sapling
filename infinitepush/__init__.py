@@ -553,17 +553,23 @@ def _pull(orig, ui, repo, source="default", **opts):
         revs = opts.get('rev') or []
         for bookmark in opts.get('bookmark'):
             if _scratchbranchmatcher(bookmark):
-                other = hg.peer(repo, opts, source)
-                fetchedbookmarks = other.listkeyspatterns('bookmarks',
-                                                          patterns=[bookmark])
+                # rev is not known yet
+                # it will be fetched with listkeyspatterns next
+                scratchbookmarks[bookmark] = 'REVTOFETCH'
+            else:
+                bookmarks.append(bookmark)
+
+        if scratchbookmarks:
+            other = hg.peer(repo, opts, source)
+            fetchedbookmarks = other.listkeyspatterns(
+                'bookmarks', patterns=scratchbookmarks)
+            for bookmark in scratchbookmarks:
                 if bookmark not in fetchedbookmarks:
                     raise error.Abort('remote bookmark %s not found!' %
                                       bookmark)
                 scratchbookmarks[bookmark] = fetchedbookmarks[bookmark]
                 revs.append(fetchedbookmarks[bookmark])
-                hasscratchbookmarks = True
-            else:
-                bookmarks.append(bookmark)
+            hasscratchbookmarks = True
         opts['bookmark'] = bookmarks
         opts['rev'] = revs
 

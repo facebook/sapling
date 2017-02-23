@@ -588,13 +588,10 @@ Pull two bookmarks from the second client
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
   (run 'hg heads' to see heads, 'hg merge' to merge)
-  $ hg log -G -T '{desc} {phase} {bookmarks}'
-  o  scratchsecondpart draft scratch/secondpart
-  |
-  | o  scratchfirstpart draft scratch/firstpart
-  |/
-  @  initialcommit public
-  
+  $ hg log -r scratch/secondpart -T '{node}'
+  8db3891c220e216f6da214e8254bd4371f55efca (no-eol)
+  $ hg log -r scratch/firstpart -T '{node}'
+  176993b87e39bd88d66a2cccadabe33f0b346339 (no-eol)
 Make two commits to the scratch branch
   $ mkcommit testpullbycommithash1
   created new head
@@ -662,21 +659,8 @@ Make sure phase on the client is public.
   adding file changes
   added 1 changesets with 1 changes to 1 files
   (run 'hg heads .' to see heads, 'hg merge' to merge)
-  $ hg log -G -T '{desc} {phase} {bookmarks} {node|short}'
-  o  scratchontopofpublic draft scratch/scratchontopofpublic c70aee6da07d
-  |
-  o  publiccommit public  a79b6597f322
-  |
-  | @  testpullbycommithash2 draft scratch/mybranch d8fde0ddfc96
-  | |
-  | o  testpullbycommithash1 draft  33910bfe6ffe
-  |/
-  | o  scratchsecondpart draft scratch/secondpart 8db3891c220e
-  |/
-  | o  scratchfirstpart draft scratch/firstpart 176993b87e39
-  |/
-  o  initialcommit public  67145f466344
-  
+  $ hg log -r scratch/scratchontopofpublic -T '{phase}'
+  draft (no-eol)
 Strip scratchontopofpublic commit and do hg update
   $ hg log -r tip -T '{node}\n'
   c70aee6da07d7cdb9897375473690df3a8563339
@@ -717,16 +701,5 @@ Strip commit and pull it using hg update with bookmark name
   'scratch/mybranch' found remotely
   2 files updated, 0 files merged, 1 files removed, 0 files unresolved
   (activating bookmark scratch/mybranch)
-  $ hg log -G -T '{desc} {phase} {bookmarks} {node|short}'
-  @  testpullbycommithash2 draft scratch/mybranch d8fde0ddfc96
-  |
-  | o  publiccommit public scratch/scratchontopofpublic a79b6597f322
-  | |
-  o |  testpullbycommithash1 draft  33910bfe6ffe
-  |/
-  | o  scratchsecondpart draft scratch/secondpart 8db3891c220e
-  |/
-  | o  scratchfirstpart draft scratch/firstpart 176993b87e39
-  |/
-  o  initialcommit public  67145f466344
-  
+  $ hg log -r scratch/mybranch -T '{node}'
+  d8fde0ddfc962183977f92d2bc52d303b8840f9d (no-eol)
