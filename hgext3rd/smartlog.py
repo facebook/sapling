@@ -37,6 +37,7 @@ from mercurial import (
     phases,
     registrar,
     revset,
+    revsetlang,
     scmutil,
     templatekw,
     util,
@@ -567,8 +568,8 @@ Excludes:
             scope = 'all'
         else:
             scope = 'recent'
-        revstring = revset.formatspec('smartlog(%s, %s)', scope,
-                                      masterrevset)
+        revstring = revsetlang.formatspec('smartlog(%s, %s)', scope,
+                                          masterrevset)
         revs.update(scmutil.revrange(repo, [revstring]))
         masterrev = _masterrev(repo, masterrevset)
     else:

@@ -8,7 +8,7 @@
 import errno, os, tempfile, resource, time
 
 from mercurial import bundle2, cmdutil, hg, scmutil, exchange, commands
-from mercurial import util, error, discovery, changegroup, context, revset
+from mercurial import util, error, discovery, changegroup, context, revsetlang
 from mercurial import obsolete, pushkey, phases, extensions, manifest
 from mercurial import encoding
 from mercurial.extensions import wrapcommand, wrapfunction
@@ -126,7 +126,7 @@ def getrebasepart(repo, peer, outgoing, onto, newhead):
     if rebaseparttype not in bundle2.bundle2caps(peer):
         raise error.Abort(_('no server support for %r') % rebaseparttype)
 
-    validaterevset(repo, revset.formatspec('%ln', outgoing.missing))
+    validaterevset(repo, revsetlang.formatspec('%ln', outgoing.missing))
 
     cg = changegroup.getlocalchangegroupraw(repo, 'push', outgoing)
 

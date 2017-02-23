@@ -11,7 +11,7 @@ from mercurial import (
     bundle2,
     changegroup,
     error,
-    revset,
+    revsetlang,
 )
 from mercurial.i18n import _
 
@@ -26,7 +26,8 @@ def getscratchbranchpart(repo, peer, outgoing, confignonforwardmove,
     if scratchbranchparttype not in bundle2.bundle2caps(peer):
         raise error.Abort(_('no server support for %r') % scratchbranchparttype)
 
-    _validaterevset(repo, revset.formatspec('%ln', outgoing.missing), bookmark)
+    _validaterevset(repo, revsetlang.formatspec('%ln', outgoing.missing),
+                    bookmark)
 
     cgversion = '02'
     cg = changegroup.getlocalchangegroupraw(repo, 'push',
