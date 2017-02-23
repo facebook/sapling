@@ -14,6 +14,7 @@ help:
 local:
 	$(PYTHON) setup.py \
 	  build_py -c -d . \
+	  build_clib \
 	  build_ext -i
 
 install:

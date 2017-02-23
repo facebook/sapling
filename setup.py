@@ -74,6 +74,58 @@ if library_dirs is None:
         'build/' + distutils_dir_name('lib'),
     ]
 
+# Override the default c static library building code in distutils since it
+# doesn't pass enough args, like libraries and extra args.
+import distutils.command.build_clib
+from distutils.errors import DistutilsSetupError
+def build_libraries(self, libraries):
+    for (lib_name, build_info) in libraries:
+        sources = build_info.get('sources')
+        if sources is None or not isinstance(sources, (list, tuple)):
+            raise DistutilsSetupError(
+                   "in 'libraries' option (library '%s'), " +
+                   "'sources' must be present and must be " +
+                   "a list of source filenames") % lib_name
+        sources = list(sources)
+
+        # First, compile the source code to object files in the library
+        # directory.  (This should probably change to putting object
+        # files in a temporary build directory.)
+        macros = build_info.get('macros')
+        include_dirs = build_info.get('include_dirs')
+        extra_args = build_info.get('extra_args')
+        objects = self.compiler.compile(sources,
+                                        output_dir=self.build_temp,
+                                        macros=macros,
+                                        include_dirs=include_dirs,
+                                        debug=self.debug,
+                                        extra_postargs=extra_args)
+
+        # Now "link" the object files together into a static library.
+        # (On Unix at least, this isn't really linking -- it just
+        # builds an archive.  Whatever.)
+        libraries = build_info.get('libraries')
+        for lib in libraries:
+            self.compiler.add_library(lib)
+        self.compiler.create_static_lib(objects, lib_name,
+                                        output_dir=self.build_clib,
+                                        debug=self.debug)
+distutils.command.build_clib.build_clib.build_libraries = build_libraries
+
+# Static c libaries
+libraries = [
+    ("datapack", {
+        "sources" : ["cdatapack/cdatapack.c"],
+        "include_dirs" : ["clib"] + include_dirs,
+        "libraries" : ["lz4", "crypto"],
+        "extra_args" : [
+            "-std=c99",
+            "-Wall",
+            "-Werror", "-Werror=strict-prototypes",
+        ] + cdebugflags,
+    }),
+]
+
 hgext3rd = [
     p[:-3].replace('/', '.')
     for p in glob('hgext3rd/*.py')
@@ -175,27 +227,6 @@ else:
                 ] + cdebugflags,
             ),
         ],
-        'libdatapack' : [
-            Extension('libdatapack',
-                sources=[
-                    'cdatapack/cdatapack.c',
-                ],
-                include_dirs=[
-                    'clib',
-                    'cdatapack',
-                ] + include_dirs,
-                library_dirs=library_dirs,
-                libraries=[
-                    'crypto',
-                    'lz4',
-                ],
-                extra_compile_args=[
-                    "-std=c99",
-                    "-Wall",
-                    "-Werror", "-Werror=strict-prototypes",
-                ] + cdebugflags,
-            ),
-        ],
         'linelog' : [
             Extension('linelog',
                 sources=['linelog/pyext/linelog.pyx'],
@@ -215,7 +246,6 @@ if not components:
 
 dependencies = {
     'absorb' : ['linelog'],
-    'cdatapack' : ['libdatapack'],
     'fastannotate' : ['linelog'],
     'infinitepush' : ['extutil'],
     'remotefilelog' : ['cdatapack', 'extutil'],
@@ -293,4 +323,5 @@ setup(
     install_requires=requires,
     py_modules=py_modules,
     ext_modules = ext_modules,
+    libraries = libraries,
 )
