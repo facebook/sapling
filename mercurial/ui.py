@@ -796,11 +796,14 @@ class ui(object):
         if self._buffers and not opts.get('prompt', False):
             self._buffers[-1].extend(a for a in args)
         else:
+            self._write(*args, **opts)
+
+    def _write(self, *msgs, **opts):
             self._progclear()
             # opencode timeblockedsection because this is a critical path
             starttime = util.timer()
             try:
-                for a in args:
+                for a in msgs:
                     self.fout.write(a)
             finally:
                 self._blockedtimes['stdio_blocked'] += \
