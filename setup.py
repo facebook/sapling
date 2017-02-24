@@ -231,7 +231,7 @@ else:
                 extra_compile_args=[
                     '-std=c99',
                     '-Wall', '-Wextra', '-Wconversion', '-pedantic',
-                ] + cflags,
+                ],
             ),
         ],
     }
