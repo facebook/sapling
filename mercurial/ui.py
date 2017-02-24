@@ -822,9 +822,9 @@ class ui(object):
 
     def write_err(self, *args, **opts):
         self._progclear()
+        if self._bufferstates and self._bufferstates[-1][0]:
+            return self.write(*args, **opts)
         try:
-            if self._bufferstates and self._bufferstates[-1][0]:
-                return self.write(*args, **opts)
             with self.timeblockedsection('stdio'):
                 if not getattr(self.fout, 'closed', False):
                     self.fout.flush()
