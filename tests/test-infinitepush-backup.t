@@ -338,3 +338,14 @@ Make sure pushbackup works
   searching for changes
   $ scratchbookmarks
   infinitepush/backups/test/[0-9a-zA-Z.-]+\$TESTTMP/client/bookmarks/somebook 630839011471e17f808b92ab084bedfaca33b110 (re)
+
+Make secret commit and bookmark on top of it. Then run pushbackup.
+Make sure it wasn't backed up.
+  $ hg book bookonsecret
+  $ echo secret >> secret
+  $ hg add secret
+  $ hg ci -Am secret --secret
+  $ hg pushbackup
+  nothing to backup
+  $ scratchbookmarks
+  infinitepush/backups/test/devvm1840.lla2.facebook.com$TESTTMP/client/bookmarks/somebook 630839011471e17f808b92ab084bedfaca33b110

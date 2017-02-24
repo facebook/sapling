@@ -239,12 +239,15 @@ def _getdefaultbookmarkstobackup(ui, repo):
 
 def _getbookmarkstobackup(ui, repo):
     bookmarkstobackup = _getdefaultbookmarkstobackup(ui, repo)
+    secret = set(ctx.hex() for ctx in repo.set('secret()'))
     for bookmark, node in repo._bookmarks.iteritems():
         bookmark = _getbackupbookmarkname(ui, bookmark, repo)
         hexnode = hex(node)
+        if hexnode in secret:
+            continue
         bookmarkstobackup[bookmark] = hexnode
 
-    for headrev in repo.revs('head() & not public()'):
+    for headrev in repo.revs('head() & draft()'):
         hexhead = repo[headrev].hex()
         headbookmarksname = _getbackupheadname(ui, hexhead, repo)
         bookmarkstobackup[headbookmarksname] = hexhead
