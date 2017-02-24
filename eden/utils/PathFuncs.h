@@ -366,7 +366,9 @@ class PathComponentBase : public PathBase<
   PathComponentBase() = delete;
 };
 
-/** You may iterate over a composed path.
+/**
+ * An iterator over prefixes of a composed path
+ *
  * Iterating yields a series of composed path elements.
  * For example, iterating the path "foo/bar/baz" will yield
  * this series of Piece elements:
@@ -544,51 +546,166 @@ class ComposedPathIterator
   position_type pos_;
 };
 
-/** Represents any number of PathComponents composed together.
- * This is a base implementation that powers both RelativePath
- * and AbsolutePath so that we can share the definition of the methods below.
- * */
-template <
-    typename Storage, // eg: fbstring or StringPiece
-    typename SanityChecker, // "Deleter" style type for checks
-    typename Stored, // eg: Foo<fbstring>
-    typename Piece // eg: Foo<StringPiece>
-    >
-class ComposedPathBase
-    : public PathBase<Storage, SanityChecker, Stored, Piece> {
+/**
+ * An iterator over components in a composed path.
+ */
+template <bool IsReverse>
+class PathComponentIterator
+    : public std::iterator<std::input_iterator_tag, const PathComponentPiece> {
  public:
-  // Inherit constructors
-  using base_type = PathBase<Storage, SanityChecker, Stored, Piece>;
-  using base_type::base_type;
+  using position_type = folly::StringPiece::const_iterator;
+  enum EndEnum { END };
 
-  /// Return the final component of this path
-  PathComponentPiece basename() const {
-    return PathComponentPiece(
-        facebook::eden::basename(this->path_), SkipPathSanityCheck());
-  }
+  explicit PathComponentIterator() {}
 
-  /** Return the dirname.
-   * That is a non-stored reference to everything except the final
-   * component of the path. */
-  Piece dirname() const {
-    return Piece(
-        facebook::eden::dirname(this->stringPiece()), SkipPathSanityCheck());
-  }
-};
+  PathComponentIterator(const PathComponentIterator& other) = default;
+  PathComponentIterator& operator=(const PathComponentIterator& other) =
+      default;
 
-/// Asserts that val is well formed relative path
-struct RelativePathSanityCheck {
-  void operator()(folly::StringPiece val) const {
-    if (val.startsWith(kDirSeparator)) {
-      throw std::domain_error(folly::to<std::string>(
-          "attempt to construct a RelativePath from an absolute path string: ",
-          val));
+  // Construct a PathComponentIterator from a composed path
+  template <typename ComposedPathType>
+  explicit PathComponentIterator(const ComposedPathType& path)
+      : path_{path.stringPiece()} {
+    if (IsReverse) {
+      start_ = path_.end();
+      end_ = path_.end();
+      // Back start_ up to just after the last '/'
+      while (start_ != path_.begin() && *(start_ - 1) != '/') {
+        --start_;
+      }
+    } else {
+      // Skip over any leading slash, to handle absolute paths
+      start_ = path_.begin();
+      while (start_ != path_.end() && *start_ == '/') {
+        ++start_;
+      }
+      // Advance end_ until the next slash or the end of the path
+      end_ = start_;
+      while (end_ != path_.end() && *end_ != '/') {
+        ++end_;
+      }
     }
-    if (val.endsWith(kDirSeparator)) {
-      throw std::domain_error(folly::to<std::string>(
-          "RelativePath must not end with a slash: ", val));
+  }
+
+  template <typename ComposedPathType>
+  explicit PathComponentIterator(const ComposedPathType& path, EndEnum)
+      : path_{path.stringPiece()} {
+    if (IsReverse) {
+      start_ = path_.begin();
+      end_ = path_.begin();
+    } else {
+      start_ = path_.end();
+      end_ = path_.end();
     }
   }
+
+  bool operator==(const PathComponentIterator& other) const {
+    DCHECK_EQ(path_, other.path_);
+    // We have to check both start_ and end_ here.
+    // In most cases start_ will equal other.start_ if and only if end_ equals
+    // other.end_.  However, this is not always true because of end() and
+    // rend().  end_ points the same place at end() and end() - 1.
+    // start_ points to the same place at rend() and rend() - 1.
+    return (start_ == other.start_) && (end_ == other.end_);
+  }
+
+  bool operator!=(const PathComponentIterator& other) const {
+    DCHECK_EQ(path_, other.path_);
+    return (start_ != other.start_) || (end_ != other.end_);
+  }
+
+  /// ++iter;
+  PathComponentIterator& operator++() {
+    if (IsReverse) {
+      retreat();
+    } else {
+      advance();
+    }
+    return *this;
+  }
+
+  /// iter++;
+  PathComponentIterator operator++(int) {
+    PathComponentIterator tmp(*this);
+    ++(*this); // invoke the ++iter handler above.
+    return tmp;
+  }
+
+  /// --iter;
+  PathComponentIterator& operator--() {
+    if (IsReverse) {
+      advance();
+    } else {
+      retreat();
+    }
+    return *this;
+  }
+
+  /// iter--;
+  PathComponentIterator operator--(int) {
+    PathComponentIterator tmp(*this);
+    --(*this); // invoke the --iter handler above.
+    return tmp;
+  }
+
+  /// Returns the piece for the current iterator position.
+  PathComponentPiece piece() const {
+    return PathComponentPiece{folly::StringPiece{start_, end_},
+                              SkipPathSanityCheck{}};
+  }
+
+  /*
+   * Note: dereferencing a PathComponentIterator returns a new
+   * PathComponentPiece, and not a reference to an existing PathComponentPiece.
+   */
+  PathComponentPiece operator*() const {
+    return piece();
+  }
+
+  /*
+   * TODO: operator->() is not implemented
+   *
+   * Since the operator*() returns a new Piece and not a reference,
+   * operator->() can't really be implemented correctly, as it needs to return
+   * a pointer to some existing object.
+   */
+  // Piece* operator->() const;
+
+ private:
+  // Move the iterator forwards in the path.
+  void advance() {
+    DCHECK_NE(start_, path_.end());
+    if (end_ == path_.end()) {
+      start_ = end_;
+      return;
+    }
+    ++end_;
+    start_ = end_;
+    while (end_ != path_.end() && *end_ != '/') {
+      ++end_;
+    }
+  }
+
+  // Move the iterator backwards in the path.
+  void retreat() {
+    DCHECK_NE(end_, path_.begin());
+    if (start_ == path_.begin()) {
+      end_ = path_.begin();
+      return;
+    }
+
+    --start_;
+    end_ = start_;
+    while (start_ != path_.begin() && *(start_ - 1) != '/') {
+      --start_;
+    }
+  }
+
+  /// the path we're iterating over.
+  folly::StringPiece path_;
+  /// our current position within that path.
+  position_type start_{nullptr};
+  position_type end_{nullptr};
 };
 
 /** A pair of path iterators.
@@ -612,6 +729,88 @@ class PathIteratorRange {
  private:
   iterator begin_;
   iterator end_;
+};
+
+/** Represents any number of PathComponents composed together.
+ * This is a base implementation that powers both RelativePath
+ * and AbsolutePath so that we can share the definition of the methods below.
+ * */
+template <
+    typename Storage, // eg: fbstring or StringPiece
+    typename SanityChecker, // "Deleter" style type for checks
+    typename Stored, // eg: Foo<fbstring>
+    typename Piece // eg: Foo<StringPiece>
+    >
+class ComposedPathBase
+    : public PathBase<Storage, SanityChecker, Stored, Piece> {
+ public:
+  // Inherit constructors
+  using base_type = PathBase<Storage, SanityChecker, Stored, Piece>;
+  using base_type::base_type;
+
+  // Component iterator types
+  using component_iterator = PathComponentIterator<false>;
+  using reverse_component_iterator = PathComponentIterator<true>;
+  using component_iterator_range = PathIteratorRange<component_iterator>;
+  using reverse_component_iterator_range =
+      PathIteratorRange<reverse_component_iterator>;
+
+  /// Return the final component of this path
+  PathComponentPiece basename() const {
+    return PathComponentPiece(
+        facebook::eden::basename(this->path_), SkipPathSanityCheck());
+  }
+
+  /** Return the dirname.
+   * That is a non-stored reference to everything except the final
+   * component of the path. */
+  Piece dirname() const {
+    return Piece(
+        facebook::eden::dirname(this->stringPiece()), SkipPathSanityCheck());
+  }
+
+  /** Return an iterator range that will yield all components of this path.
+   *
+   * For example, iterating the relative path "foo/bar/baz" will yield
+   * this series of PathComponentPiece elements:
+   *
+   * 1. "foo"
+   * 2. "bar"
+   * 3. "baz"
+   *
+   * Iterating the absolute path "/foo/bar/baz" would also yield the same
+   * sequence.
+   */
+  component_iterator_range components() const {
+    auto p = this->piece();
+    return component_iterator_range(
+        component_iterator{p}, component_iterator{p, component_iterator::END});
+  }
+
+  /** Return an iterator range that will yield all components of this path in
+   * reverse.
+   */
+  reverse_component_iterator_range rcomponents() const {
+    auto p = this->piece();
+    return reverse_component_iterator_range(
+        reverse_component_iterator{p},
+        reverse_component_iterator{p, reverse_component_iterator::END});
+  }
+};
+
+/// Asserts that val is well formed relative path
+struct RelativePathSanityCheck {
+  void operator()(folly::StringPiece val) const {
+    if (val.startsWith(kDirSeparator)) {
+      throw std::domain_error(folly::to<std::string>(
+          "attempt to construct a RelativePath from an absolute path string: ",
+          val));
+    }
+    if (val.endsWith(kDirSeparator)) {
+      throw std::domain_error(folly::to<std::string>(
+          "RelativePath must not end with a slash: ", val));
+    }
+  }
 };
 
 /** Represents any number of PathComponents composed together.

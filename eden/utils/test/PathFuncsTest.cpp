@@ -153,6 +153,80 @@ TEST(PathFuncs, IteratorDecrement) {
   checkDecrement(abs, "rpaths", abs.rpaths(), expected);
 }
 
+TEST(PathFuncs, IterateComponents) {
+  RelativePath rel("foo/bar/baz");
+  std::vector<PathComponentPiece> relParts(
+      rel.components().begin(), rel.components().end());
+  EXPECT_EQ(3, relParts.size());
+  EXPECT_EQ(PathComponentPiece("foo"), relParts.at(0));
+  EXPECT_EQ(PathComponentPiece("bar"), relParts.at(1));
+  EXPECT_EQ(PathComponentPiece("baz"), relParts.at(2));
+
+  std::vector<PathComponentPiece> relRParts(
+      rel.rcomponents().begin(), rel.rcomponents().end());
+  EXPECT_EQ(3, relRParts.size());
+  EXPECT_EQ(PathComponentPiece("baz"), relRParts.at(0));
+  EXPECT_EQ(PathComponentPiece("bar"), relRParts.at(1));
+  EXPECT_EQ(PathComponentPiece("foo"), relRParts.at(2));
+
+  AbsolutePath abs("/foo/bar/baz");
+  std::vector<PathComponentPiece> absParts(
+      abs.components().begin(), abs.components().end());
+  EXPECT_EQ(3, absParts.size());
+  EXPECT_EQ(PathComponentPiece("foo"), absParts.at(0));
+  EXPECT_EQ(PathComponentPiece("bar"), absParts.at(1));
+  EXPECT_EQ(PathComponentPiece("baz"), absParts.at(2));
+
+  std::vector<PathComponentPiece> absRParts(
+      abs.rcomponents().begin(), abs.rcomponents().end());
+  EXPECT_EQ(3, absRParts.size());
+  EXPECT_EQ(PathComponentPiece("baz"), absRParts.at(0));
+  EXPECT_EQ(PathComponentPiece("bar"), absRParts.at(1));
+  EXPECT_EQ(PathComponentPiece("foo"), absRParts.at(2));
+
+  RelativePath rel2("r/s/t/u");
+  std::vector<PathComponentPiece> rel2Parts(
+      rel2.components().begin(), rel2.components().end());
+  EXPECT_EQ(4, rel2Parts.size());
+  EXPECT_EQ(PathComponentPiece("r"), rel2Parts.at(0));
+  EXPECT_EQ(PathComponentPiece("s"), rel2Parts.at(1));
+  EXPECT_EQ(PathComponentPiece("t"), rel2Parts.at(2));
+  EXPECT_EQ(PathComponentPiece("u"), rel2Parts.at(3));
+
+  std::vector<PathComponentPiece> rel2RParts(
+      rel2.rcomponents().begin(), rel2.rcomponents().end());
+  EXPECT_EQ(4, rel2RParts.size());
+  EXPECT_EQ(PathComponentPiece("u"), rel2RParts.at(0));
+  EXPECT_EQ(PathComponentPiece("t"), rel2RParts.at(1));
+  EXPECT_EQ(PathComponentPiece("s"), rel2RParts.at(2));
+  EXPECT_EQ(PathComponentPiece("r"), rel2RParts.at(3));
+
+  AbsolutePath abs2("/a/b/c/d");
+  std::vector<PathComponentPiece> abs2Parts(
+      abs2.components().begin(), abs2.components().end());
+  EXPECT_EQ(4, abs2Parts.size());
+  EXPECT_EQ(PathComponentPiece("a"), abs2Parts.at(0));
+  EXPECT_EQ(PathComponentPiece("b"), abs2Parts.at(1));
+  EXPECT_EQ(PathComponentPiece("c"), abs2Parts.at(2));
+  EXPECT_EQ(PathComponentPiece("d"), abs2Parts.at(3));
+
+  std::vector<PathComponentPiece> abs2RParts(
+      abs2.rcomponents().begin(), abs2.rcomponents().end());
+  EXPECT_EQ(4, abs2RParts.size());
+  EXPECT_EQ(PathComponentPiece("d"), abs2RParts.at(0));
+  EXPECT_EQ(PathComponentPiece("c"), abs2RParts.at(1));
+  EXPECT_EQ(PathComponentPiece("b"), abs2RParts.at(2));
+  EXPECT_EQ(PathComponentPiece("a"), abs2RParts.at(3));
+
+  RelativePath empty;
+  std::vector<PathComponentPiece> emptyParts(
+      empty.components().begin(), empty.components().end());
+  EXPECT_EQ(0, emptyParts.size());
+  std::vector<PathComponentPiece> emptyRParts(
+      empty.rcomponents().begin(), empty.rcomponents().end());
+  EXPECT_EQ(0, emptyParts.size());
+}
+
 TEST(PathFuncs, InitializeFromIter) {
   // Assert that we can build a vector of path components and convert
   // it to a RelativePath
