@@ -1341,7 +1341,7 @@ void TreeInode::computeCheckoutActions(
       // This entry is present in the old tree but not the old one.
       action = processCheckoutEntry(
           ctx, *contents, &oldEntries[oldIdx], nullptr, pendingLoads);
-      ++newIdx;
+      ++oldIdx;
     } else if (oldEntries[oldIdx].getName() < newEntries[newIdx].getName()) {
       action = processCheckoutEntry(
           ctx, *contents, &oldEntries[oldIdx], nullptr, pendingLoads);
