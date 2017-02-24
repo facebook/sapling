@@ -485,6 +485,7 @@ def listcmd(ui, repo, pats, opts):
     if not ui.plain():
         width = ui.termwidth()
     namelabel = 'shelve.newest'
+    ui.pager('shelve')
     for mtime, name in listshelves(repo):
         sname = util.split(name)[1]
         if pats and sname not in pats:
