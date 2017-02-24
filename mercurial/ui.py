@@ -824,11 +824,14 @@ class ui(object):
         self._progclear()
         if self._bufferstates and self._bufferstates[-1][0]:
             return self.write(*args, **opts)
+        self._write_err(*args, **opts)
+
+    def _write_err(self, *msgs, **opts):
         try:
             with self.timeblockedsection('stdio'):
                 if not getattr(self.fout, 'closed', False):
                     self.fout.flush()
-                for a in args:
+                for a in msgs:
                     self.ferr.write(a)
                 # stderr may be buffered under win32 when redirected to files,
                 # including stdout.
