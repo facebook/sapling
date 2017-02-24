@@ -601,9 +601,7 @@ def _pull(orig, ui, repo, source="default", **opts):
 
     if scratchbookmarks:
         # Set anyincoming to True
-        oldfindcommonincoming = wrapfunction(discovery,
-                                             'findcommonincoming',
-                                             _findcommonincoming)
+         wrapfunction(discovery, 'findcommonincoming', _findcommonincoming)
     try:
         # Remote scratch bookmarks will be deleted because remotenames doesn't
         # know about them. Let's save it before pull and restore after
@@ -620,7 +618,7 @@ def _pull(orig, ui, repo, source="default", **opts):
         return result
     finally:
         if scratchbookmarks:
-            discovery.findcommonincoming = oldfindcommonincoming
+            unwrapfunction(discovery, 'findcommonincoming')
 
 def _readscratchremotebookmarks(ui, repo, other):
     if isremotebooksenabled(ui):
