@@ -372,6 +372,13 @@ Use --force because this push creates new head
   $ hg book --list-remote scratch/*
      scratch/anotherbranch     1de1d7d92f8965260391d0513fe8a8d5973d3042
      scratch/mybranch          8872775dd97a750e1533dc1fbbca665644b32547
+  $ hg book --list-remote
+     newbook                   0000000000000000000000000000000000000000
+     scratch/anotherbranch     1de1d7d92f8965260391d0513fe8a8d5973d3042
+     scratch/mybranch          8872775dd97a750e1533dc1fbbca665644b32547
+  $ hg book --config infinitepush.defaultremotepatterns=scratch/another* --list-remote
+     newbook                   0000000000000000000000000000000000000000
+     scratch/anotherbranch     1de1d7d92f8965260391d0513fe8a8d5973d3042
   $ hg book --list-remote scratch/my
   $ hg book --list-remote scratch/my*
      scratch/mybranch          8872775dd97a750e1533dc1fbbca665644b32547

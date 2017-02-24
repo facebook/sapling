@@ -66,6 +66,10 @@
     # Client-side option
     pushbackuplog = FILE
 
+    # Client-side option. Used by --list-remote option. List of remote scratch
+    # patterns to list if no patterns are specified.
+    defaultremotepatterns = ['*']
+
     [remotenames]
     # Client-side option
     # This option should be set only if remotenames extension is enabled.
@@ -257,10 +261,15 @@ def clientextsetup(ui):
 
     bookcmd = extensions.wrapcommand(commands.table, 'bookmarks', exbookmarks)
     bookcmd[1].append(
-        ('', 'list-remote', '',
+        ('', 'list-remote', None,
          'list remote bookmarks. '
-         'Use \'*\' to find all bookmarks with the same prefix',
-         'PATTERN'))
+         'Positional arguments are interpreted as wildcard patterns. '
+         'Only allowed wildcard is \'*\' in the end of the pattern. '
+         'If no positional arguments are specified then it will list '
+         'the most "important" remote bookmarks. '
+         'Otherwise it will list remote bookmarks '
+         'that match at least one pattern '
+         ''))
     bookcmd[1].append(
         ('', 'remote-path', '',
          'name of the remote path to list the bookmarks'))
@@ -301,8 +310,15 @@ def exbookmarks(orig, ui, repo, *names, **opts):
         path = ui.paths.getpath(remotepath or None, default=('default'))
         destpath = path.pushloc or path.loc
         other = hg.peer(repo, opts, destpath)
-        fetchedbookmarks = other.listkeyspatterns('bookmarks',
-                                                  patterns=[pattern])
+        if not names:
+            defaultscratchpatterns = ui.configlist(
+                'infinitepush', 'defaultremotepatterns', ['*'])
+            fetchedbookmarks = other.listkeyspatterns(
+                'bookmarks', patterns=defaultscratchpatterns)
+            fetchedbookmarks.update(other.listkeys('bookmarks'))
+        else:
+            fetchedbookmarks = other.listkeyspatterns('bookmarks',
+                                                      patterns=names)
         _showbookmarks(ui, fetchedbookmarks, **opts)
         return
     return orig(ui, repo, *names, **opts)
