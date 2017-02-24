@@ -945,11 +945,7 @@ def followlines(repo, subset, x):
     lr = getrange(args['lines'][0], _("followlines expects a line range"))
     fromline, toline = [getinteger(a, _("line range bounds must be integers"))
                         for a in lr]
-    if toline - fromline < 0:
-        raise error.ParseError(_("line range must be positive"))
-    if fromline < 1:
-        raise error.ParseError(_("fromline must be strictly positive"))
-    fromline -= 1
+    fromline, toline = util.processlinerange(fromline, toline)
 
     fctx = repo[rev].filectx(fname)
     revs = (c.rev() for c, _linerange

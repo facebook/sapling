@@ -2160,6 +2160,27 @@ def unitcountfn(*unittable):
 
     return go
 
+def processlinerange(fromline, toline):
+    """Check that linerange <fromline>:<toline> makes sense and return a
+    0-based range.
+
+    >>> processlinerange(10, 20)
+    (9, 20)
+    >>> processlinerange(2, 1)
+    Traceback (most recent call last):
+        ...
+    ParseError: line range must be positive
+    >>> processlinerange(0, 5)
+    Traceback (most recent call last):
+        ...
+    ParseError: fromline must be strictly positive
+    """
+    if toline - fromline < 0:
+        raise error.ParseError(_("line range must be positive"))
+    if fromline < 1:
+        raise error.ParseError(_("fromline must be strictly positive"))
+    return fromline - 1, toline
+
 bytecount = unitcountfn(
     (100, 1 << 30, _('%.0f GB')),
     (10, 1 << 30, _('%.1f GB')),
