@@ -120,9 +120,12 @@ def _posixworker(ui, func, staticargs, args):
                         break
                     else:
                         raise
-            if p:
-                pids.discard(p)
-                st = _exitstatus(st)
+            if not p:
+                # skip subsequent steps, because child process should
+                # be still running in this case
+                continue
+            pids.discard(p)
+            st = _exitstatus(st)
             if st and not problem[0]:
                 problem[0] = st
     def sigchldhandler(signum, frame):
