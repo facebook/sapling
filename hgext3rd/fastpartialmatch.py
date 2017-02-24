@@ -337,10 +337,7 @@ def _changectxinit(orig, self, repo, changeid=''):
     if candidates is None:
         return orig(self, repo, changeid)
     elif len(candidates) == 0:
-        origres = orig(self, repo, changeid)
-        if origres is not None:
-            return _handleinconsistentindex(changeid, origres)
-        return None
+        return orig(self, repo, changeid)
     elif len(candidates) == 1:
         rev = candidates.values()[0]
         repo.ui.debug('using partial index cache %d\n' % rev)
