@@ -348,4 +348,4 @@ Make sure it wasn't backed up.
   $ hg pushbackup
   nothing to backup
   $ scratchbookmarks
-  infinitepush/backups/test/devvm1840.lla2.facebook.com$TESTTMP/client/bookmarks/somebook 630839011471e17f808b92ab084bedfaca33b110
+  infinitepush/backups/test/[0-9a-zA-Z.-]+\$TESTTMP/client/bookmarks/somebook 630839011471e17f808b92ab084bedfaca33b110 (re)
