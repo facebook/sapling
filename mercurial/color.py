@@ -288,7 +288,7 @@ if pycompat.osname == 'nt':
             ansire = re.compile('\033\[([^m]*)m([^\033]*)(.*)',
                                 re.MULTILINE | re.DOTALL)
 
-    def win32print(text, orig, **opts):
+    def win32print(text, writefunc, **opts):
         label = opts.get('label', '')
         attr = origattr
 
@@ -325,7 +325,7 @@ if pycompat.osname == 'nt':
                     if sattr:
                         attr = mapcolor(int(sattr), attr)
                 _kernel32.SetConsoleTextAttribute(stdout, attr)
-                orig(m.group(2), **opts)
+                writefunc(m.group(2), **opts)
                 m = re.match(ansire, m.group(3))
         finally:
             # Explicitly reset original attributes
