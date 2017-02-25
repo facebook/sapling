@@ -135,6 +135,18 @@ def introwanted(ui, opts, number):
         intro = 1 < number
     return intro
 
+def _formatprefix(flags, idx, total, numbered):
+    """build prefix to patch subject"""
+    flag = ' '.join(flags)
+    if flag:
+        flag = ' ' + flag
+
+    if not numbered:
+        return '[PATCH%s]' % flag
+    else:
+        tlen = len(str(total))
+        return '[PATCH %0*d of %d%s]' % (tlen, idx, total, flag)
+
 def makepatch(ui, repo, patchlines, opts, _charsets, idx, total, numbered,
               patchname=None):
 
@@ -202,16 +214,12 @@ def makepatch(ui, repo, patchlines, opts, _charsets, idx, total, numbered,
     else:
         msg = mail.mimetextpatch(body, display=opts.get('test'))
 
-    flag = ' '.join(opts.get('flag'))
-    if flag:
-        flag = ' ' + flag
-
+    prefix = _formatprefix(opts.get('flag'), idx, total, numbered)
     subj = desc[0].strip().rstrip('. ')
     if not numbered:
-        subj = '[PATCH%s] %s' % (flag, opts.get('subject') or subj)
+        subj = ' '.join([prefix, opts.get('subject') or subj])
     else:
-        tlen = len(str(total))
-        subj = '[PATCH %0*d of %d%s] %s' % (tlen, idx, total, flag, subj)
+        subj = ' '.join([prefix, subj])
     msg['Subject'] = mail.headencode(ui, subj, _charsets, opts.get('test'))
     msg['X-Mercurial-Node'] = node
     msg['X-Mercurial-Series-Index'] = '%i' % idx
@@ -309,13 +317,8 @@ def _makeintro(repo, sender, patches, **opts):
     email is returned as (subject, body, cumulative-diffstat)"""
     ui = repo.ui
     _charsets = mail._charsets(ui)
-    tlen = len(str(len(patches)))
 
-    flag = opts.get('flag') or ''
-    if flag:
-        flag = ' ' + ' '.join(flag)
-    prefix = '[PATCH %0*d of %d%s]' % (tlen, 0, len(patches), flag)
-
+    prefix = _formatprefix(opts.get('flag'), 0, len(patches), numbered=True)
     subj = (opts.get('subject') or
             prompt(ui, '(optional) Subject: ', rest=prefix, default=''))
     if not subj:
