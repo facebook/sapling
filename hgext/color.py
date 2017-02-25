@@ -187,10 +187,11 @@ testedwith = 'ships-with-hg-core'
 
 def extsetup(ui):
     # change default color config
+    color._enabledbydefault = True
     for idx, entry in enumerate(commands.globalopts):
         if entry[1] == 'color':
-            patch = ('auto', entry[3].replace(' (EXPERIMENTAL)', ''))
-            new = entry[:2] + patch + entry[4:]
+            patch = (entry[3].replace(' (EXPERIMENTAL)', ''),)
+            new = entry[:3] + patch + entry[4:]
             commands.globalopts[idx] = new
             break
 

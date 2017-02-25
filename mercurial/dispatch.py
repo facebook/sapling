@@ -765,8 +765,11 @@ def _dispatch(req):
                 ui_.insecureconnections = True
 
         # setup color handling
+        coloropt = options['color']
         for ui_ in uis:
-            color.setup(ui_, options['color'])
+            if coloropt:
+                ui_.setconfig('ui', 'color', coloropt, '--color')
+            color.setup(ui_)
 
         if options['version']:
             return commands.version_(ui)

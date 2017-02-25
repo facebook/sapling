@@ -43,6 +43,9 @@ except ImportError:
     curses = None
     _terminfo_params = {}
 
+# allow the extensions to change the default
+_enabledbydefault = False
+
 # start and stop parameters for effects
 _effects = {
     'none': 0,
@@ -167,25 +170,29 @@ def _terminfosetup(ui, mode):
               "ECMA-48 color\n"))
         _terminfo_params.clear()
 
-def setup(ui, coloropts):
+def setup(ui):
     """configure color on a ui
 
-    The 'coloropts' argument is the value of the '--color' command line
-    argument. That function both set the colormode for the ui object and read
+    That function both set the colormode for the ui object and read
     the configuration looking for custom colors and effect definitions."""
-    mode = _modesetup(ui, coloropts)
+    mode = _modesetup(ui)
     ui._colormode = mode
     if mode and mode != 'debug':
         configstyles(ui)
 
-def _modesetup(ui, coloropt):
+def _modesetup(ui):
     if ui.plain():
         return None
-    if coloropt == 'debug':
+    default = 'never'
+    if _enabledbydefault:
+        default = 'auto'
+    # experimental config: ui.color
+    config = ui.config('ui', 'color', default)
+    if config == 'debug':
         return 'debug'
 
-    auto = (coloropt == 'auto')
-    always = not auto and util.parsebool(coloropt)
+    auto = (config == 'auto')
+    always = not auto and util.parsebool(config)
     if not always and not auto:
         return None
 

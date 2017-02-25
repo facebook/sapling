@@ -533,7 +533,7 @@ hide outer repo
    -q --quiet             suppress output
    -v --verbose           enable additional output
       --color TYPE        when to colorize (boolean, always, auto, never, or
-                          debug) (EXPERIMENTAL) (default: never)
+                          debug) (EXPERIMENTAL)
       --config CONFIG [+] set/override config option (use 'section.name=value')
       --debug             enable debugging output
       --debugger          start debugger
@@ -572,7 +572,7 @@ hide outer repo
    -q --quiet             suppress output
    -v --verbose           enable additional output
       --color TYPE        when to colorize (boolean, always, auto, never, or
-                          debug) (EXPERIMENTAL) (default: never)
+                          debug) (EXPERIMENTAL)
       --config CONFIG [+] set/override config option (use 'section.name=value')
       --debug             enable debugging output
       --debugger          start debugger
@@ -854,7 +854,7 @@ extension help itself
    -q --quiet             suppress output
    -v --verbose           enable additional output
       --color TYPE        when to colorize (boolean, always, auto, never, or
-                          debug) (EXPERIMENTAL) (default: never)
+                          debug) (EXPERIMENTAL)
       --config CONFIG [+] set/override config option (use 'section.name=value')
       --debug             enable debugging output
       --debugger          start debugger
@@ -891,7 +891,7 @@ Make sure that single '-v' option shows help and built-ins only for 'dodo' comma
    -q --quiet             suppress output
    -v --verbose           enable additional output
       --color TYPE        when to colorize (boolean, always, auto, never, or
-                          debug) (EXPERIMENTAL) (default: never)
+                          debug) (EXPERIMENTAL)
       --config CONFIG [+] set/override config option (use 'section.name=value')
       --debug             enable debugging output
       --debugger          start debugger
@@ -966,7 +966,7 @@ help options '-v' and '-v -e' should be equivalent
    -q --quiet             suppress output
    -v --verbose           enable additional output
       --color TYPE        when to colorize (boolean, always, auto, never, or
-                          debug) (EXPERIMENTAL) (default: never)
+                          debug) (EXPERIMENTAL)
       --config CONFIG [+] set/override config option (use 'section.name=value')
       --debug             enable debugging output
       --debugger          start debugger
@@ -1002,7 +1002,7 @@ help options '-v' and '-v -e' should be equivalent
    -q --quiet             suppress output
    -v --verbose           enable additional output
       --color TYPE        when to colorize (boolean, always, auto, never, or
-                          debug) (EXPERIMENTAL) (default: never)
+                          debug) (EXPERIMENTAL)
       --config CONFIG [+] set/override config option (use 'section.name=value')
       --debug             enable debugging output
       --debugger          start debugger

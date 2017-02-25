@@ -317,7 +317,7 @@ Test short command list with verbose option
    -q --quiet             suppress output
    -v --verbose           enable additional output
       --color TYPE        when to colorize (boolean, always, auto, never, or
-                          debug) (EXPERIMENTAL) (default: never)
+                          debug) (EXPERIMENTAL)
       --config CONFIG [+] set/override config option (use 'section.name=value')
       --debug             enable debugging output
       --debugger          start debugger
@@ -417,7 +417,7 @@ Verbose help for add
    -q --quiet             suppress output
    -v --verbose           enable additional output
       --color TYPE        when to colorize (boolean, always, auto, never, or
-                          debug) (EXPERIMENTAL) (default: never)
+                          debug) (EXPERIMENTAL)
       --config CONFIG [+] set/override config option (use 'section.name=value')
       --debug             enable debugging output
       --debugger          start debugger
@@ -2521,7 +2521,7 @@ Dish up an empty repo; serve it cold.
   <td>enable additional output</td></tr>
   <tr><td></td>
   <td>--color TYPE</td>
-  <td>when to colorize (boolean, always, auto, never, or debug) (EXPERIMENTAL) (default: never)</td></tr>
+  <td>when to colorize (boolean, always, auto, never, or debug) (EXPERIMENTAL)</td></tr>
   <tr><td></td>
   <td>--config CONFIG [+]</td>
   <td>set/override config option (use 'section.name=value')</td></tr>
@@ -2722,7 +2722,7 @@ Dish up an empty repo; serve it cold.
   <td>enable additional output</td></tr>
   <tr><td></td>
   <td>--color TYPE</td>
-  <td>when to colorize (boolean, always, auto, never, or debug) (EXPERIMENTAL) (default: never)</td></tr>
+  <td>when to colorize (boolean, always, auto, never, or debug) (EXPERIMENTAL)</td></tr>
   <tr><td></td>
   <td>--config CONFIG [+]</td>
   <td>set/override config option (use 'section.name=value')</td></tr>
