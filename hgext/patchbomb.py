@@ -135,7 +135,7 @@ def introwanted(ui, opts, number):
         intro = 1 < number
     return intro
 
-def _formatprefix(flags, idx, total, numbered):
+def _formatprefix(ui, repo, rev, flags, idx, total, numbered):
     """build prefix to patch subject"""
     flag = ' '.join(flags)
     if flag:
@@ -147,7 +147,7 @@ def _formatprefix(flags, idx, total, numbered):
         tlen = len(str(total))
         return '[PATCH %0*d of %d%s]' % (tlen, idx, total, flag)
 
-def makepatch(ui, repo, patchlines, opts, _charsets, idx, total, numbered,
+def makepatch(ui, repo, rev, patchlines, opts, _charsets, idx, total, numbered,
               patchname=None):
 
     desc = []
@@ -214,7 +214,8 @@ def makepatch(ui, repo, patchlines, opts, _charsets, idx, total, numbered,
     else:
         msg = mail.mimetextpatch(body, display=opts.get('test'))
 
-    prefix = _formatprefix(opts.get('flag'), idx, total, numbered)
+    prefix = _formatprefix(ui, repo, rev, opts.get('flag'), idx, total,
+                           numbered)
     subj = desc[0].strip().rstrip('. ')
     if not numbered:
         subj = ' '.join([prefix, opts.get('subject') or subj])
@@ -311,14 +312,16 @@ def _getbundlemsgs(repo, sender, bundle, **opts):
     msg['Subject'] = mail.headencode(ui, subj, _charsets, opts.get('test'))
     return [(msg, subj, None)]
 
-def _makeintro(repo, sender, patches, **opts):
+def _makeintro(repo, sender, revs, patches, **opts):
     """make an introduction email, asking the user for content if needed
 
     email is returned as (subject, body, cumulative-diffstat)"""
     ui = repo.ui
     _charsets = mail._charsets(ui)
 
-    prefix = _formatprefix(opts.get('flag'), 0, len(patches), numbered=True)
+    # use the last revision which is likely to be a bookmarked head
+    prefix = _formatprefix(ui, repo, revs.last(), opts.get('flag'),
+                           0, len(patches), numbered=True)
     subj = (opts.get('subject') or
             prompt(ui, '(optional) Subject: ', rest=prefix, default=''))
     if not subj:
@@ -357,7 +360,7 @@ def _getpatchmsgs(repo, sender, revs, patchnames=None, **opts):
 
     # build the intro message, or skip it if the user declines
     if introwanted(ui, opts, len(patches)):
-        msg = _makeintro(repo, sender, patches, **opts)
+        msg = _makeintro(repo, sender, revs, patches, **opts)
         if msg:
             msgs.append(msg)
 
@@ -366,10 +369,11 @@ def _getpatchmsgs(repo, sender, revs, patchnames=None, **opts):
 
     # now generate the actual patch messages
     name = None
-    for i, p in enumerate(patches):
+    assert len(revs) == len(patches)
+    for i, (r, p) in enumerate(zip(revs, patches)):
         if patchnames:
             name = patchnames[i]
-        msg = makepatch(ui, repo, p, opts, _charsets, i + 1,
+        msg = makepatch(ui, repo, r, p, opts, _charsets, i + 1,
                         len(patches), numbered, name)
         msgs.append(msg)
 
