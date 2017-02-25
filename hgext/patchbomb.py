@@ -60,6 +60,14 @@ overwritten by command line flags like --intro and --desc::
   intro=never  # never include an introduction message
   intro=always # always include an introduction message
 
+You can specify a template for flags to be added in subject prefixes. Flags
+specified by --flag option are exported as ``{flags}`` keyword::
+
+  [patchbomb]
+  flagtemplate = "{separate(' ',
+                            ifeq(branch, 'default', '', branch|upper),
+                            flags)}"
+
 You can set patchbomb to always ask for confirmation by setting
 ``patchbomb.confirm`` to true.
 '''
@@ -77,11 +85,13 @@ from mercurial import (
     commands,
     encoding,
     error,
+    formatter,
     hg,
     mail,
     node as nodemod,
     patch,
     scmutil,
+    templater,
     util,
 )
 stringio = util.stringio
@@ -135,9 +145,22 @@ def introwanted(ui, opts, number):
         intro = 1 < number
     return intro
 
+def _formatflags(ui, repo, rev, flags):
+    """build flag string optionally by template"""
+    tmpl = ui.config('patchbomb', 'flagtemplate')
+    if not tmpl:
+        return ' '.join(flags)
+    out = util.stringio()
+    opts = {'template': templater.unquotestring(tmpl)}
+    with formatter.templateformatter(ui, out, 'patchbombflag', opts) as fm:
+        fm.startitem()
+        fm.context(ctx=repo[rev])
+        fm.write('flags', '%s', fm.formatlist(flags, name='flag'))
+    return out.getvalue()
+
 def _formatprefix(ui, repo, rev, flags, idx, total, numbered):
     """build prefix to patch subject"""
-    flag = ' '.join(flags)
+    flag = _formatflags(ui, repo, rev, flags)
     if flag:
         flag = ' ' + flag
 

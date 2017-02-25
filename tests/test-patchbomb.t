@@ -2371,6 +2371,128 @@ test multi-address parsing:
   
   
 
+test flag template:
+  $ echo foo > intro.text
+  $ hg email --date '1970-1-1 0:1' -n -f quux -t foo -r 0:1 \
+  > --desc intro.text --subject test \
+  > --config patchbomb.flagtemplate='R{rev}'
+  this patch series consists of 2 patches.
+  
+  Cc: 
+  
+  displaying [PATCH 0 of 2 R1] test ...
+  Content-Type: text/plain; charset="us-ascii"
+  MIME-Version: 1.0
+  Content-Transfer-Encoding: 7bit
+  Subject: [PATCH 0 of 2 R1] test
+  Message-Id: <patchbomb.60@*> (glob)
+  User-Agent: Mercurial-patchbomb/* (glob)
+  Date: Thu, 01 Jan 1970 00:01:00 +0000
+  From: quux
+  To: foo
+  
+  foo
+  
+  displaying [PATCH 1 of 2 R0] a ...
+  Content-Type: text/plain; charset="us-ascii"
+  MIME-Version: 1.0
+  Content-Transfer-Encoding: 7bit
+  Subject: [PATCH 1 of 2 R0] a
+  X-Mercurial-Node: 8580ff50825a50c8f716709acdf8de0deddcd6ab
+  X-Mercurial-Series-Index: 1
+  X-Mercurial-Series-Total: 2
+  Message-Id: <8580ff50825a50c8f716.61@*> (glob)
+  X-Mercurial-Series-Id: <8580ff50825a50c8f716.61@*> (glob)
+  In-Reply-To: <patchbomb.60@*> (glob)
+  References: <patchbomb.60@*> (glob)
+  User-Agent: Mercurial-patchbomb/* (glob)
+  Date: Thu, 01 Jan 1970 00:01:01 +0000
+  From: quux
+  To: foo
+  
+  # HG changeset patch
+  # User test
+  # Date 1 0
+  #      Thu Jan 01 00:00:01 1970 +0000
+  # Node ID 8580ff50825a50c8f716709acdf8de0deddcd6ab
+  # Parent  0000000000000000000000000000000000000000
+  a
+  
+  diff -r 000000000000 -r 8580ff50825a a
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/a	Thu Jan 01 00:00:01 1970 +0000
+  @@ -0,0 +1,1 @@
+  +a
+  
+  displaying [PATCH 2 of 2 R1] b ...
+  Content-Type: text/plain; charset="us-ascii"
+  MIME-Version: 1.0
+  Content-Transfer-Encoding: 7bit
+  Subject: [PATCH 2 of 2 R1] b
+  X-Mercurial-Node: 97d72e5f12c7e84f85064aa72e5a297142c36ed9
+  X-Mercurial-Series-Index: 2
+  X-Mercurial-Series-Total: 2
+  Message-Id: <97d72e5f12c7e84f8506.62@*> (glob)
+  X-Mercurial-Series-Id: <8580ff50825a50c8f716.61@*> (glob)
+  In-Reply-To: <patchbomb.60@*> (glob)
+  References: <patchbomb.60@*> (glob)
+  User-Agent: Mercurial-patchbomb/* (glob)
+  Date: Thu, 01 Jan 1970 00:01:02 +0000
+  From: quux
+  To: foo
+  
+  # HG changeset patch
+  # User test
+  # Date 2 0
+  #      Thu Jan 01 00:00:02 1970 +0000
+  # Node ID 97d72e5f12c7e84f85064aa72e5a297142c36ed9
+  # Parent  8580ff50825a50c8f716709acdf8de0deddcd6ab
+  b
+  
+  diff -r 8580ff50825a -r 97d72e5f12c7 b
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/b	Thu Jan 01 00:00:02 1970 +0000
+  @@ -0,0 +1,1 @@
+  +b
+  
+
+test flag template plus --flag:
+  $ hg email --date '1970-1-1 0:1' -n -f quux -t foo -r 0 --flag 'V2' \
+  > --config patchbomb.flagtemplate='{branch} {flags}'
+  this patch series consists of 1 patches.
+  
+  Cc: 
+  
+  displaying [PATCH default V2] a ...
+  Content-Type: text/plain; charset="us-ascii"
+  MIME-Version: 1.0
+  Content-Transfer-Encoding: 7bit
+  Subject: [PATCH default V2] a
+  X-Mercurial-Node: 8580ff50825a50c8f716709acdf8de0deddcd6ab
+  X-Mercurial-Series-Index: 1
+  X-Mercurial-Series-Total: 1
+  Message-Id: <8580ff50825a50c8f716.60@*> (glob)
+  X-Mercurial-Series-Id: <8580ff50825a50c8f716.60@*> (glob)
+  User-Agent: Mercurial-patchbomb/* (glob)
+  Date: Thu, 01 Jan 1970 00:01:00 +0000
+  From: quux
+  To: foo
+  
+  # HG changeset patch
+  # User test
+  # Date 1 0
+  #      Thu Jan 01 00:00:01 1970 +0000
+  # Node ID 8580ff50825a50c8f716709acdf8de0deddcd6ab
+  # Parent  0000000000000000000000000000000000000000
+  a
+  
+  diff -r 000000000000 -r 8580ff50825a a
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/a	Thu Jan 01 00:00:01 1970 +0000
+  @@ -0,0 +1,1 @@
+  +a
+  
+
 test multi-byte domain parsing:
   $ UUML=`$PYTHON -c 'import sys; sys.stdout.write("\374")'`
   $ HGENCODING=iso-8859-1

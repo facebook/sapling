@@ -1113,6 +1113,14 @@ Disabled extensions:
     intro=never  # never include an introduction message
     intro=always # always include an introduction message
   
+  You can specify a template for flags to be added in subject prefixes. Flags
+  specified by --flag option are exported as "{flags}" keyword:
+  
+    [patchbomb]
+    flagtemplate = "{separate(' ',
+                              ifeq(branch, 'default', '', branch|upper),
+                              flags)}"
+  
   You can set patchbomb to always ask for confirmation by setting
   "patchbomb.confirm" to true.
   
