@@ -1442,16 +1442,8 @@ class changeset_templater(changeset_printer):
 
     def __init__(self, ui, repo, matchfn, diffopts, tmpl, mapfile, buffered):
         changeset_printer.__init__(self, ui, repo, matchfn, diffopts, buffered)
-        defaulttempl = {
-            'parent': '{rev}:{node|formatnode} ',
-            'manifest': '{rev}:{node|formatnode}',
-            'file_copy': '{name} ({source})',
-            'envvar': '{key}={value}',
-            'extra': '{key}={value|stringescape}'
-            }
-        # filecopy is preserved for compatibility reasons
-        defaulttempl['filecopy'] = defaulttempl['file_copy']
         assert not (tmpl and mapfile)
+        defaulttempl = templatekw.defaulttempl
         if mapfile:
             self.t = templater.templater.frommapfile(mapfile,
                                                      cache=defaulttempl)
