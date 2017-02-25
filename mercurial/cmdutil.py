@@ -2768,6 +2768,7 @@ def commitforceeditor(repo, ctx, subs, finishdesc=None, extramsg=None,
     while forms:
         tmpl = repo.ui.config('committemplate', '.'.join(forms))
         if tmpl:
+            tmpl = templater.unquotestring(tmpl)
             templatetext = committext = buildcommittemplate(
                 repo, ctx, subs, extramsg, tmpl)
             break
