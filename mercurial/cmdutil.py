@@ -2154,6 +2154,7 @@ def _graphnodeformatter(ui, displayer):
     if not spec:
         return templatekw.showgraphnode  # fast path for "{graphnode}"
 
+    spec = templater.unquotestring(spec)
     templ = formatter.gettemplater(ui, 'graphnode', spec)
     cache = {}
     if isinstance(displayer, changeset_templater):

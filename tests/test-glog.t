@@ -2398,7 +2398,7 @@ working-directory revision
 
 node template with changeset_printer:
 
-  $ hg log -Gqr 5:7 --config ui.graphnodetemplate='{rev}'
+  $ hg log -Gqr 5:7 --config ui.graphnodetemplate='"{rev}"'
   7  7:02dbb8e276b8
   |
   6    6:fc281d8ff18d
