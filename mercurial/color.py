@@ -19,7 +19,7 @@ try:
     import curses
     # Mapping from effect name to terminfo attribute name (or raw code) or
     # color number.  This will also force-load the curses module.
-    _terminfo_params = {
+    _baseterminfoparams = {
         'none': (True, 'sgr0', ''),
         'standout': (True, 'smso', ''),
         'underline': (True, 'smul', ''),
@@ -41,7 +41,7 @@ try:
     }
 except ImportError:
     curses = None
-    _terminfo_params = {}
+    _baseterminfoparams = {}
 
 # allow the extensions to change the default
 _enabledbydefault = False
@@ -140,35 +140,36 @@ def _terminfosetup(ui, mode):
     # Otherwise, see what the config file says.
     if mode not in ('auto', 'terminfo'):
         return
+    ui._terminfoparams.update(_baseterminfoparams)
 
     for key, val in ui.configitems('color'):
         if key.startswith('color.'):
             newval = (False, int(val), '')
-            _terminfo_params[key[6:]] = newval
+            ui._terminfoparams[key[6:]] = newval
         elif key.startswith('terminfo.'):
             newval = (True, '', val.replace('\\E', '\x1b'))
-            _terminfo_params[key[9:]] = newval
+            ui._terminfoparams[key[9:]] = newval
     try:
         curses.setupterm()
     except curses.error as e:
-        _terminfo_params.clear()
+        ui._terminfoparams.clear()
         return
 
-    for key, (b, e, c) in _terminfo_params.items():
+    for key, (b, e, c) in ui._terminfoparams.items():
         if not b:
             continue
         if not c and not curses.tigetstr(e):
             # Most terminals don't support dim, invis, etc, so don't be
             # noisy and use ui.debug().
             ui.debug("no terminfo entry for %s\n" % e)
-            del _terminfo_params[key]
+            del ui._terminfoparams[key]
     if not curses.tigetstr('setaf') or not curses.tigetstr('setab'):
         # Only warn about missing terminfo entries if we explicitly asked for
         # terminfo mode.
         if mode == "terminfo":
             ui.warn(_("no terminfo entry for setab/setaf: reverting to "
               "ECMA-48 color\n"))
-        _terminfo_params.clear()
+        ui._terminfoparams.clear()
 
 def setup(ui):
     """configure color on a ui
@@ -232,16 +233,16 @@ def _modesetup(ui):
             ui.warn(_('warning: failed to set color mode to %s\n') % mode)
 
     if realmode == 'win32':
-        _terminfo_params.clear()
+        ui._terminfoparams.clear()
         if not w32effects:
             modewarn()
             return None
         _effects.update(w32effects)
     elif realmode == 'ansi':
-        _terminfo_params.clear()
+        ui._terminfoparams.clear()
     elif realmode == 'terminfo':
         _terminfosetup(ui, mode)
-        if not _terminfo_params:
+        if not ui._terminfoparams:
             ## FIXME Shouldn't we return None in this case too?
             modewarn()
             realmode = 'ansi'
@@ -270,9 +271,9 @@ def configstyles(ui):
 
 def valideffect(ui, effect):
     'Determine if the effect is valid or not.'
-    return ((not _terminfo_params and effect in _effects)
-             or (effect in _terminfo_params
-                 or effect[:-11] in _terminfo_params))
+    return ((not ui._terminfoparams and effect in _effects)
+             or (effect in ui._terminfoparams
+                 or effect[:-11] in ui._terminfoparams))
 
 def _effect_str(ui, effect):
     '''Helper function for render_effects().'''
@@ -282,7 +283,7 @@ def _effect_str(ui, effect):
         bg = True
         effect = effect[:-11]
     try:
-        attr, val, termcode = _terminfo_params[effect]
+        attr, val, termcode = ui._terminfoparams[effect]
     except KeyError:
         return ''
     if attr:
@@ -299,7 +300,7 @@ def _render_effects(ui, text, effects):
     'Wrap text in commands to turn on each effect.'
     if not text:
         return text
-    if _terminfo_params:
+    if ui._terminfoparams:
         start = ''.join(_effect_str(ui, effect)
                         for effect in ['none'] + effects.split())
         stop = _effect_str(ui, 'none')

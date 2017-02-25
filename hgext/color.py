@@ -212,7 +212,7 @@ def _debugdisplaycolor(ui):
         color._styles.clear()
         for effect in color._effects.keys():
             color._styles[effect] = effect
-        if color._terminfo_params:
+        if ui._terminfoparams:
             for k, v in ui.configitems('color'):
                 if k.startswith('color.'):
                     color._styles[k] = k[6:]

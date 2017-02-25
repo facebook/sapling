@@ -157,6 +157,7 @@ class ui(object):
         self.logblockedtimes = False
         # color mode: see mercurial/color.py for possible value
         self._colormode = None
+        self._terminfoparams = {}
 
         if src:
             self.fout = src.fout
@@ -174,6 +175,7 @@ class ui(object):
             self.callhooks = src.callhooks
             self.insecureconnections = src.insecureconnections
             self._colormode = src._colormode
+            self._terminfoparams = src._terminfoparams.copy()
 
             self.fixconfig()
 
