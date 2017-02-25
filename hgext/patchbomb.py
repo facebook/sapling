@@ -514,14 +514,12 @@ def email(ui, repo, *revs, **opts):
     mbox = opts.get('mbox')
     outgoing = opts.get('outgoing')
     rev = opts.get('rev')
-    # internal option used by pbranches
-    patches = opts.get('patches')
 
     if not (opts.get('test') or mbox):
         # really sending
         mail.validateconfig(ui)
 
-    if not (revs or rev or outgoing or bundle or patches):
+    if not (revs or rev or outgoing or bundle):
         raise error.Abort(_('specify at least one changeset with -r or -o'))
 
     if outgoing and bundle:
@@ -593,10 +591,7 @@ def email(ui, repo, *revs, **opts):
               ui.config('patchbomb', 'from') or
               prompt(ui, 'From', ui.username()))
 
-    if patches:
-        msgs = _getpatchmsgs(repo, sender, patches, opts.get('patchnames'),
-                             **opts)
-    elif bundle:
+    if bundle:
         bundledata = _getbundle(repo, dest, **opts)
         bundleopts = opts.copy()
         bundleopts.pop('bundle', None)  # already processed
