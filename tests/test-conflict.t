@@ -65,7 +65,10 @@
 Verify custom conflict markers
 
   $ hg up -q --clean .
-  $ printf "\n[ui]\nmergemarkertemplate={author} {rev}\n" >> .hg/hgrc
+  $ cat <<EOF >> .hg/hgrc
+  > [ui]
+  > mergemarkertemplate = '{author} {rev}'
+  > EOF
 
   $ hg merge 1
   merging a
