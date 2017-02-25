@@ -48,7 +48,8 @@ def extsetup(ui):
     try:
         inhibit = extensions.find('inhibit')
     except KeyError:
-        ui.warn(_("no inhibit extension detected - disabling debuginhibit"))
+        ui.debug("no inhibit extension detected - "
+                 "disabling debuginhibit\n")
         return
 
     if ui.configbool('debuginhibit', 'printnodes'):
