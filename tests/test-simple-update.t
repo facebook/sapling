@@ -84,7 +84,8 @@ update with worker processes
 
   $ hg update null
   0 files updated, 0 files merged, 100 files removed, 0 files unresolved
-  $ hg update
+  $ hg update -v | grep 100
+  getting 100
   100 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ cd ..

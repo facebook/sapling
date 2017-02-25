@@ -148,12 +148,16 @@ def _posixworker(ui, func, staticargs, args):
             # may do some clean-ups which could cause surprises like deadlock.
             # see sshpeer.cleanup for example.
             try:
-                scmutil.callcatch(ui, workerfunc)
+                try:
+                    scmutil.callcatch(ui, workerfunc)
+                finally:
+                    ui.flush()
             except KeyboardInterrupt:
                 os._exit(255)
             except: # never return, therefore no re-raises
                 try:
                     ui.traceback()
+                    ui.flush()
                 finally:
                     os._exit(255)
             else:
