@@ -357,26 +357,22 @@ def debugcolor(ui, repo, **opts):
         return _debugdisplaycolor(ui)
 
 def _debugdisplaycolor(ui):
-    oldstyle = ui._styles.copy()
-    try:
-        ui._styles.clear()
-        for effect in color._effects.keys():
-            ui._styles[effect] = effect
-        if ui._terminfoparams:
-            for k, v in ui.configitems('color'):
-                if k.startswith('color.'):
-                    ui._styles[k] = k[6:]
-                elif k.startswith('terminfo.'):
-                    ui._styles[k] = k[9:]
-        ui.write(_('available colors:\n'))
-        # sort label with a '_' after the other to group '_background' entry.
-        items = sorted(ui._styles.items(),
-                       key=lambda i: ('_' in i[0], i[0], i[1]))
-        for colorname, label in items:
-            ui.write(('%s\n') % colorname, label=label)
-    finally:
-        ui._styles.clear()
-        ui._styles.update(oldstyle)
+    ui = ui.copy()
+    ui._styles.clear()
+    for effect in color._effects.keys():
+        ui._styles[effect] = effect
+    if ui._terminfoparams:
+        for k, v in ui.configitems('color'):
+            if k.startswith('color.'):
+                ui._styles[k] = k[6:]
+            elif k.startswith('terminfo.'):
+                ui._styles[k] = k[9:]
+    ui.write(_('available colors:\n'))
+    # sort label with a '_' after the other to group '_background' entry.
+    items = sorted(ui._styles.items(),
+                   key=lambda i: ('_' in i[0], i[0], i[1]))
+    for colorname, label in items:
+        ui.write(('%s\n') % colorname, label=label)
 
 def _debugdisplaystyle(ui):
     ui.write(_('available style:\n'))
