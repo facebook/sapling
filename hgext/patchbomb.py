@@ -83,7 +83,6 @@ from mercurial.i18n import _
 from mercurial import (
     cmdutil,
     commands,
-    encoding,
     error,
     formatter,
     hg,
@@ -498,9 +497,7 @@ def email(ui, repo, *revs, **opts):
     With -n/--test, all steps will run, but mail will not be sent.
     You will be prompted for an email recipient address, a subject and
     an introductory message describing the patches of your patchbomb.
-    Then when all is done, patchbomb messages are displayed. If the
-    PAGER environment variable is set, your pager will be fired up once
-    for each patchbomb message, so you can verify everything is alright.
+    Then when all is done, patchbomb messages are displayed.
 
     In case email sending fails, you will find a backup of your series
     introductory message in ``.hg/last-email.txt``.
@@ -719,19 +716,14 @@ def email(ui, repo, *revs, **opts):
         if opts.get('test'):
             ui.status(_('displaying '), subj, ' ...\n')
             ui.flush()
-            if 'PAGER' in encoding.environ and not ui.plain():
-                fp = util.popen(encoding.environ['PAGER'], 'w')
-            else:
-                fp = ui
-            generator = emailmod.Generator.Generator(fp, mangle_from_=False)
+            ui.pager('email')
+            generator = emailmod.Generator.Generator(ui, mangle_from_=False)
             try:
                 generator.flatten(m, 0)
-                fp.write('\n')
+                ui.write('\n')
             except IOError as inst:
                 if inst.errno != errno.EPIPE:
                     raise
-            if fp is not ui:
-                fp.close()
         else:
             if not sendmail:
                 sendmail = mail.connect(ui, mbox=mbox)
