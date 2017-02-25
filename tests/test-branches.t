@@ -519,6 +519,12 @@ template output:
   $ hg branches --closed -T '{if(closed, "{branch}\n")}'
   c
 
+  $ hg branches -T '{word(0, branch)}: {desc|firstline}\n'
+  b: reopen branch with a change
+  a: Adding d branch
+  a: Adding b branch head 2
+  default: Adding root node
+
 Tests of revision branch name caching
 
 We rev branch cache is updated automatically. In these tests we use a trick to

@@ -1258,6 +1258,7 @@ def branches(ui, repo, active=False, closed=False, **opts):
         fmt = ' ' * padsize + ' %d:%s'
         fm.condwrite(not ui.quiet, 'rev node', fmt, rev, hexfunc(ctx.node()),
                      label='log.changeset changeset.%s' % ctx.phasestr())
+        fm.context(ctx=ctx)
         fm.data(active=isactive, closed=not isopen, current=current)
         if not ui.quiet:
             fm.plain(notice)
