@@ -821,15 +821,15 @@ class ui(object):
             self._write(*msgs, **opts)
 
     def _write(self, *msgs, **opts):
-            self._progclear()
-            # opencode timeblockedsection because this is a critical path
-            starttime = util.timer()
-            try:
-                for a in msgs:
-                    self.fout.write(a)
-            finally:
-                self._blockedtimes['stdio_blocked'] += \
-                    (util.timer() - starttime) * 1000
+        self._progclear()
+        # opencode timeblockedsection because this is a critical path
+        starttime = util.timer()
+        try:
+            for a in msgs:
+                self.fout.write(a)
+        finally:
+            self._blockedtimes['stdio_blocked'] += \
+                (util.timer() - starttime) * 1000
 
     def write_err(self, *args, **opts):
         self._progclear()
