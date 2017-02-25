@@ -260,7 +260,7 @@ def configstyles(ui):
         if cfgeffects:
             good = []
             for e in cfgeffects:
-                if valideffect(e):
+                if valideffect(ui, e):
                     good.append(e)
                 else:
                     ui.warn(_("ignoring unknown color/effect %r "
@@ -268,13 +268,13 @@ def configstyles(ui):
                             % (e, status))
             _styles[status] = ' '.join(good)
 
-def valideffect(effect):
+def valideffect(ui, effect):
     'Determine if the effect is valid or not.'
     return ((not _terminfo_params and effect in _effects)
              or (effect in _terminfo_params
                  or effect[:-11] in _terminfo_params))
 
-def _effect_str(effect):
+def _effect_str(ui, effect):
     '''Helper function for render_effects().'''
 
     bg = False
@@ -295,14 +295,14 @@ def _effect_str(effect):
     else:
         return curses.tparm(curses.tigetstr('setaf'), val)
 
-def _render_effects(text, effects):
+def _render_effects(ui, text, effects):
     'Wrap text in commands to turn on each effect.'
     if not text:
         return text
     if _terminfo_params:
-        start = ''.join(_effect_str(effect)
+        start = ''.join(_effect_str(ui, effect)
                         for effect in ['none'] + effects.split())
-        stop = _effect_str('none')
+        stop = _effect_str(ui, 'none')
     else:
         start = [str(_effects[e]) for e in ['none'] + effects.split()]
         start = '\033[' + ';'.join(start) + 'm'
@@ -323,11 +323,11 @@ def colorlabel(ui, msg, label):
             s = _styles.get(l, '')
             if s:
                 effects.append(s)
-            elif valideffect(l):
+            elif valideffect(ui, l):
                 effects.append(l)
         effects = ' '.join(effects)
         if effects:
-            msg = '\n'.join([_render_effects(line, effects)
+            msg = '\n'.join([_render_effects(ui, line, effects)
                              for line in msg.split('\n')])
     return msg
 
