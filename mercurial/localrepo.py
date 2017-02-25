@@ -28,6 +28,7 @@ from . import (
     bundle2,
     changegroup,
     changelog,
+    color,
     context,
     dirstate,
     dirstateguard,
@@ -285,6 +286,7 @@ class localrepository(object):
                     setupfunc(self.ui, self.supported)
         else:
             self.supported = self._basesupported
+        color.setup(self.ui)
 
         # Add compression engines.
         for name in util.compengines:
