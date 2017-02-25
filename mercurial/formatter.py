@@ -12,6 +12,7 @@ functions should be used in place of ui.write():
 
 - fm.write() for unconditional output
 - fm.condwrite() to show some extra data conditionally in plain output
+- fm.context() to provide changectx to template output
 - fm.data() to provide extra data to JSON or template output
 - fm.plain() to show raw text that isn't provided to JSON or template output
 
@@ -171,6 +172,9 @@ class baseformatter(object):
         # name is mandatory argument for now, but it could be optional if
         # we have default template keyword, e.g. {item}
         return self._converter.formatlist(data, name, fmt, sep)
+    def context(self, **ctxs):
+        '''insert context objects to be used to render template keywords'''
+        pass
     def data(self, **data):
         '''insert data into item that's not shown in default output'''
         self._item.update(data)
@@ -345,9 +349,28 @@ class templateformatter(baseformatter):
     def __init__(self, ui, topic, opts):
         baseformatter.__init__(self, ui, topic, opts, _templateconverter)
         self._topic = topic
-        self._t = gettemplater(ui, topic, opts.get('template', ''))
+        self._t = gettemplater(ui, topic, opts.get('template', ''),
+                               cache=templatekw.defaulttempl)
+        self._cache = {}  # for templatekw/funcs to store reusable data
+    def context(self, **ctxs):
+        '''insert context objects to be used to render template keywords'''
+        assert all(k == 'ctx' for k in ctxs)
+        self._item.update(ctxs)
     def _showitem(self):
-        g = self._t(self._topic, ui=self._ui, **self._item)
+        # TODO: add support for filectx. probably each template keyword or
+        # function will have to declare dependent resources. e.g.
+        # @templatekeyword(..., requires=('ctx',))
+        if 'ctx' in self._item:
+            props = templatekw.keywords.copy()
+            # explicitly-defined fields precede templatekw
+            props.update(self._item)
+            # but template resources must be always available
+            props['templ'] = self._t
+            props['repo'] = props['ctx'].repo()
+            props['revcache'] = {}
+        else:
+            props = self._item
+        g = self._t(self._topic, ui=self._ui, cache=self._cache, **props)
         self._ui.write(templater.stringify(g))
 
 def lookuptemplate(ui, topic, tmpl):
@@ -382,12 +405,12 @@ def lookuptemplate(ui, topic, tmpl):
     # constant string?
     return tmpl, None
 
-def gettemplater(ui, topic, spec):
+def gettemplater(ui, topic, spec, cache=None):
     tmpl, mapfile = lookuptemplate(ui, topic, spec)
     assert not (tmpl and mapfile)
     if mapfile:
-        return templater.templater.frommapfile(mapfile)
-    return maketemplater(ui, topic, tmpl)
+        return templater.templater.frommapfile(mapfile, cache=cache)
+    return maketemplater(ui, topic, tmpl, cache=cache)
 
 def maketemplater(ui, topic, tmpl, cache=None):
     """Create a templater from a string template 'tmpl'"""
