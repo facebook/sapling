@@ -715,7 +715,6 @@ def email(ui, repo, *revs, **opts):
             m['Reply-To'] = ', '.join(replyto)
         if opts.get('test'):
             ui.status(_('displaying '), subj, ' ...\n')
-            ui.flush()
             ui.pager('email')
             generator = emailmod.Generator.Generator(ui, mangle_from_=False)
             try:

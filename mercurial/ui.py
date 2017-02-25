@@ -845,6 +845,7 @@ class ui(object):
             return
 
         self.debug('starting pager for command %r\n' % command)
+        self.flush()
         self.pageractive = True
         # Preserve the formatted-ness of the UI. This is important
         # because we mess with stdout, which might confuse
