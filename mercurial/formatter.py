@@ -389,10 +389,10 @@ def gettemplater(ui, topic, spec):
         return templater.templater.frommapfile(mapfile)
     return maketemplater(ui, topic, tmpl)
 
-def maketemplater(ui, topic, tmpl, filters=None, cache=None):
+def maketemplater(ui, topic, tmpl, cache=None):
     """Create a templater from a string template 'tmpl'"""
     aliases = ui.configitems('templatealias')
-    t = templater.templater(filters=filters, cache=cache, aliases=aliases)
+    t = templater.templater(cache=cache, aliases=aliases)
     if tmpl:
         t.cache[topic] = tmpl
     return t
