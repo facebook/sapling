@@ -41,7 +41,14 @@ def uisetup(ui):
                     raise
 
                 rev = int(match.group(1))
-                node = repo.unfiltered().changelog.node(rev)
+                cl = repo.unfiltered().changelog
+
+                # If the number is beyond the changelog, it's a short hash that
+                # just happened to be a number.
+                if rev >= len(cl):
+                    raise
+
+                node = cl.node(rev)
                 shorthash = short(node)
 
                 # Get the error messages from the user's configuration and

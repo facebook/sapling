@@ -39,6 +39,12 @@ Test custom error message with hash.
   (hint with hash 1ea73414a91b)
   [255]
 
+Test accessing a rev beyond the end of the repo
+  $ hg log -r 1
+  abort: hidden revision '1'!
+  (use --hidden to access hidden revisions)
+  [255]
+
 Test that basic operations like `status` don't throw an exception due
 to the wrapped context constructor.
   $ hg status
