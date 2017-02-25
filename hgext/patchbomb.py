@@ -340,7 +340,7 @@ def _makeintro(repo, sender, patches, **opts):
                                      opts.get('test'))
     return (msg, subj, diffstat)
 
-def _getpatchmsgs(repo, sender, patches, patchnames=None, **opts):
+def _getpatchmsgs(repo, sender, revs, patchnames=None, **opts):
     """return a list of emails from a list of patches
 
     This involves introduction message creation if necessary.
@@ -349,6 +349,7 @@ def _getpatchmsgs(repo, sender, patches, patchnames=None, **opts):
     """
     ui = repo.ui
     _charsets = mail._charsets(ui)
+    patches = list(_getpatches(repo, revs, **opts))
     msgs = []
 
     ui.write(_('this patch series consists of %d patches.\n\n')
@@ -597,8 +598,7 @@ def email(ui, repo, *revs, **opts):
         bundleopts.pop('bundle', None)  # already processed
         msgs = _getbundlemsgs(repo, sender, bundledata, **bundleopts)
     else:
-        _patches = list(_getpatches(repo, revs, **opts))
-        msgs = _getpatchmsgs(repo, sender, _patches, **opts)
+        msgs = _getpatchmsgs(repo, sender, revs, **opts)
 
     showaddrs = []
 
