@@ -1442,8 +1442,6 @@ class changeset_templater(changeset_printer):
 
     def __init__(self, ui, repo, matchfn, diffopts, tmpl, mapfile, buffered):
         changeset_printer.__init__(self, ui, repo, matchfn, diffopts, buffered)
-        formatnode = ui.debugflag and (lambda x: x) or (lambda x: x[:12])
-        filters = {'formatnode': formatnode}
         defaulttempl = {
             'parent': '{rev}:{node|formatnode} ',
             'manifest': '{rev}:{node|formatnode}',
@@ -1455,11 +1453,10 @@ class changeset_templater(changeset_printer):
         defaulttempl['filecopy'] = defaulttempl['file_copy']
         assert not (tmpl and mapfile)
         if mapfile:
-            self.t = templater.templater.frommapfile(mapfile, filters=filters,
+            self.t = templater.templater.frommapfile(mapfile,
                                                      cache=defaulttempl)
         else:
             self.t = formatter.maketemplater(ui, 'changeset', tmpl,
-                                             filters=filters,
                                              cache=defaulttempl)
 
         self.cache = {}
