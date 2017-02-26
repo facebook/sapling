@@ -993,9 +993,9 @@ def overridearchive(orig, repo, dest, node, kind, decode=True, matchfn=None,
 
     archiver.done()
 
-def hgsubrepoarchive(orig, repo, archiver, prefix, match=None):
+def hgsubrepoarchive(orig, repo, archiver, prefix, match=None, decode=True):
     if not repo._repo.lfstatus:
-        return orig(repo, archiver, prefix, match)
+        return orig(repo, archiver, prefix, match, decode)
 
     repo._get(repo._state + ('hg',))
     rev = repo._state[1]
@@ -1010,6 +1010,8 @@ def hgsubrepoarchive(orig, repo, archiver, prefix, match=None):
         if match and not match(f):
             return
         data = getdata()
+        if decode:
+            data = repo._repo.wwritedata(name, data)
 
         archiver.addfile(prefix + repo._path + '/' + name, mode, islink, data)
 
@@ -1037,7 +1039,7 @@ def hgsubrepoarchive(orig, repo, archiver, prefix, match=None):
         sub = ctx.workingsub(subpath)
         submatch = matchmod.subdirmatcher(subpath, match)
         sub._repo.lfstatus = True
-        sub.archive(archiver, prefix + repo._path + '/', submatch)
+        sub.archive(archiver, prefix + repo._path + '/', submatch, decode)
 
 # If a largefile is modified, the change is not reflected in its
 # standin until a commit. cmdutil.bailifchanged() raises an exception

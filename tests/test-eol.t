@@ -470,6 +470,22 @@ Test eol.only-consistent can be specified in .hgeol
   > EOF
   $ hg commit -m 'consistent'
 
+  $ hg init subrepo
+  $ hg -R subrepo pull -qu .
+  $ echo "subrepo = subrepo" > .hgsub
+  $ hg ci -Am "add subrepo"
+  adding .hgeol
+  adding .hgsub
+  $ hg archive -S ../archive
+  $ find ../archive/* | sort
+  ../archive/a.txt
+  ../archive/subrepo
+  ../archive/subrepo/a.txt
+  $ cat ../archive/a.txt ../archive/subrepo/a.txt
+  first\r (esc)
+  second\r (esc)
+  first\r (esc)
+  second\r (esc)
 
 Test trailing newline
 
