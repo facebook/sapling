@@ -1386,7 +1386,7 @@ class manifestctx(object):
         return self._revlog().parents(self._node)
 
     def read(self):
-        if not self._data:
+        if self._data is None:
             if self._node == revlog.nullid:
                 self._data = manifestdict()
             else:
@@ -1484,7 +1484,7 @@ class treemanifestctx(object):
         return self._repo.manifestlog._revlog.dirlog(self._dir)
 
     def read(self):
-        if not self._data:
+        if self._data is None:
             rl = self._revlog()
             if self._node == revlog.nullid:
                 self._data = treemanifest()
