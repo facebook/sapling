@@ -166,7 +166,6 @@ path variables are expanded (~ is the same as $TESTTMP)
     help/hg.1.txt
     help/hgignore.5.txt
     help/hgrc.5.txt
-    help/pager.txt
   Not tracked:
 
   $ python wixxml.py templates
