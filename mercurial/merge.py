@@ -1469,23 +1469,23 @@ def update(repo, node, branchmerge, force, ancestor=None,
     This logic is tested by test-update-branches.t.
 
     -c  -C  dirty  rev  linear  |  result
+     y   y    *     *     *     |    (1)
      n   n    n     n     n     |     x
      n   n    n     n     y     |    ok
      n   n    n     y     *     |    ok
      n   n    y     n     n     |     x
      n   n    y     n     y     |   merge
-     n   n    y     y     n     |    (1)
+     n   n    y     y     n     |    (2)
      n   n    y     y     y     |   merge
      n   y    *     *     *     |  discard
-     y   n    y     *     *     |    (2)
+     y   n    y     *     *     |    (3)
      y   n    n     *     *     |    ok
-     y   y    *     *     *     |    (3)
 
     x = can't happen
     * = don't-care
-    1 = abort: uncommitted changes (commit or update --clean to discard changes)
-    2 = abort: uncommitted changes (checked in commands.py)
-    3 = incompatible options (checked in commands.py)
+    1 = incompatible options (checked in commands.py)
+    2 = abort: uncommitted changes (commit or update --clean to discard changes)
+    3 = abort: uncommitted changes (checked in commands.py)
 
     Return the same tuple as applyupdates().
     """
