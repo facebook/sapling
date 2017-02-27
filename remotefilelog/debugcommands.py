@@ -42,7 +42,8 @@ def buildtemprevlog(repo, file):
     # sort all entries based on linkrev
     fctxs = []
     for filenode in os.listdir(filedir):
-        fctxs.append(repo.filectx(file, fileid=bin(filenode)))
+        if '_old' not in filenode:
+            fctxs.append(repo.filectx(file, fileid=bin(filenode)))
 
     fctxs = sorted(fctxs, key=lambda x: x.linkrev())
 
