@@ -1470,23 +1470,20 @@ def update(repo, node, branchmerge, force, ancestor=None,
     This logic is tested by test-update-branches.t.
 
     -c  -C  dirty  rev  |  linear      same    cross
-     n   n    n     n   |    ok        (1)       x
+     n   n    n     n   |    ok         x        x
      n   n    n     y   |    ok        ok       ok
-     n   n    y     n   |   merge      (2)      (2)
-     n   n    y     y   |   merge      (3)      (3)
+     n   n    y     n   |   merge       x        x
+     n   n    y     y   |   merge      (1)      (1)
      n   y    *     *   |   discard   discard   discard
-     y   n    y     *   |    (4)       (4)      (4)
+     y   n    y     *   |    (2)       (2)      (2)
      y   n    n     *   |    ok        ok       ok
-     y   y    *     *   |    (5)       (5)      (5)
+     y   y    *     *   |    (3)       (3)      (3)
 
     x = can't happen
     * = don't-care
-    1 = abort: not a linear update (merge or update --check to force update)
-    2 = abort: uncommitted changes (commit and merge, or update --clean to
-                 discard changes)
-    3 = abort: uncommitted changes (commit or update --clean to discard changes)
-    4 = abort: uncommitted changes (checked in commands.py)
-    5 = incompatible options (checked in commands.py)
+    1 = abort: uncommitted changes (commit or update --clean to discard changes)
+    2 = abort: uncommitted changes (checked in commands.py)
+    3 = incompatible options (checked in commands.py)
 
     Return the same tuple as applyupdates().
     """
