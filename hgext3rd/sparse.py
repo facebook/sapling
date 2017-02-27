@@ -614,6 +614,7 @@ def _wraprepo(ui, repo):
     ('', 'enable-profile', False, _('enables the specified profile')),
     ('', 'disable-profile', False, _('disables the specified profile')),
     ('', 'import-rules', False, _('imports rules from a file')),
+    ('', 'clear-rules', False, _('clears local include/exclude rules')),
     ('', 'refresh', False, _('updates the working after sparseness changes')),
     ('', 'reset', False, _('makes the repo full again')),
     ],
@@ -654,6 +655,9 @@ def sparse(ui, repo, *pats, **opts):
     in bulk. Like the --include, --exclude and --enable-profile switches, the
     changes are applied immediately.
 
+    --clear-rules removes all local include and exclude rules, while leaving
+    any enabled profiles in place.
+
     Returns 0 if editing the sparse checkout succeeds.
     """
     include = opts.get('include')
@@ -662,11 +666,12 @@ def sparse(ui, repo, *pats, **opts):
     enableprofile = opts.get('enable_profile')
     disableprofile = opts.get('disable_profile')
     importrules = opts.get('import_rules')
+    clearrules = opts.get('clear_rules')
     delete = opts.get('delete')
     refresh = opts.get('refresh')
     reset = opts.get('reset')
     count = sum([include, exclude, enableprofile, disableprofile, delete,
-                 importrules, refresh, reset])
+                 importrules, refresh, clearrules, reset])
     if count > 1:
         raise error.Abort(_("too many flags specified"))
 
@@ -688,6 +693,9 @@ def sparse(ui, repo, *pats, **opts):
 
     if importrules:
         _import(ui, repo, pats, force=force)
+
+    if clearrules:
+        _clear(ui, repo, pats, force=force)
 
     if refresh:
         try:
@@ -788,6 +796,19 @@ def _import(ui, repo, files, force=False):
             oldstatus = repo.status()
             oldsparsematch = repo.sparsematch()
             repo.writesparseconfig(includes, excludes, profiles)
+            _refresh(ui, repo, oldstatus, oldsparsematch, force)
+
+def _clear(ui, repo, files, force=False):
+    with repo.wlock():
+        raw = ''
+        if repo.opener.exists('sparse'):
+            raw = repo.opener.read('sparse')
+        includes, excludes, profiles = repo.readsparseconfig(raw)
+
+        if includes or excludes:
+            oldstatus = repo.status()
+            oldsparsematch = repo.sparsematch()
+            repo.writesparseconfig(set(), set(), profiles)
             _refresh(ui, repo, oldstatus, oldsparsematch, force)
 
 def _refresh(ui, repo, origstatus, origsparsematch, force):
