@@ -1470,10 +1470,9 @@ def update(repo, node, branchmerge, force, ancestor=None,
 
     -c  -C  dirty  rev  linear  |  result
      y   y    *     *     *     |    (1)
-     n   n    n     n     n     |     x
+     n   n    *     n     n     |     x
      n   n    n     n     y     |    ok
      n   n    n     y     *     |    ok
-     n   n    y     n     n     |     x
      n   n    y     n     y     |   merge
      n   n    y     y     n     |    (2)
      n   n    y     y     y     |   merge
