@@ -1472,9 +1472,8 @@ def update(repo, node, branchmerge, force, ancestor=None,
      y   y    *     *     *     |    (1)
      *   *    *     n     n     |     x
      *   *    n     *     *     |    ok
-     n   n    y     n     y     |   merge
+     n   n    y     *     y     |   merge
      n   n    y     y     n     |    (2)
-     n   n    y     y     y     |   merge
      n   y    y     *     *     |  discard
      y   n    y     *     *     |    (3)
 
