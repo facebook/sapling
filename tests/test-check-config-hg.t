@@ -68,6 +68,7 @@ New errors are not allowed. Warnings are strongly discouraged.
   undocumented: remotefilelog.fastdatapack (bool)
   undocumented: remotefilelog.fetchpacks (bool)
   undocumented: remotefilelog.fetchwarning (str)
+  undocumented: remotefilelog.getfilesstep (int) [10000]
   undocumented: remotefilelog.history.gencountlimit (int) [2]
   undocumented: remotefilelog.includepattern (list)
   undocumented: remotefilelog.pullprefetch (str)

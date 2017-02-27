@@ -203,12 +203,12 @@ def _getfilesbatch(
             progresstick()
 
 def _getfiles(
-    remote, receivemissing, progresstick, missed, idmap):
+    remote, receivemissing, progresstick, missed, idmap, step):
     i = 0
     while i < len(missed):
         # issue a batch of requests
         start = i
-        end = min(len(missed), start + 10000)
+        end = min(len(missed), start + step)
         i = end
         for missingid in missed[start:end]:
             # issue new request
@@ -370,8 +370,10 @@ class fileserverclient(object):
                         if not getattr(remote, '_getfilescalled', False):
                             remote._callstream("getfiles")
                             remote._getfilescalled = True
+                        step = self.ui.configint('remotefilelog',
+                                                 'getfilesstep', 10000)
                         _getfiles(remote, self.receivemissing, progresstick,
-                                  missed, idmap)
+                                  missed, idmap, step)
                     elif remote.capable("getfile"):
                         batchdefault = 100 if remote.capable('batch') else 10
                         batchsize = self.ui.configint(
