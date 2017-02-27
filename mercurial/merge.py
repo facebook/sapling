@@ -1468,15 +1468,18 @@ def update(repo, node, branchmerge, force, ancestor=None,
 
     This logic is tested by test-update-branches.t.
 
-    -c  -C  dirty  rev  |  linear   non-linear
-     n   n    n     n   |    ok         x
-     n   n    n     y   |    ok        ok
-     n   n    y     n   |   merge       x
-     n   n    y     y   |   merge      (1)
-     n   y    *     *   |   discard   discard
-     y   n    y     *   |    (2)       (2)
-     y   n    n     *   |    ok        ok
-     y   y    *     *   |    (3)       (3)
+    -c  -C  dirty  rev  linear  |  result
+     n   n    n     n     n     |     x
+     n   n    n     n     y     |    ok
+     n   n    n     y     *     |    ok
+     n   n    y     n     n     |     x
+     n   n    y     n     y     |   merge
+     n   n    y     y     n     |    (1)
+     n   n    y     y     y     |   merge
+     n   y    *     *     *     |  discard
+     y   n    y     *     *     |    (2)
+     y   n    n     *     *     |    ok
+     y   y    *     *     *     |    (3)
 
     x = can't happen
     * = don't-care
