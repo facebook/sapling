@@ -1471,14 +1471,12 @@ def update(repo, node, branchmerge, force, ancestor=None,
     -c  -C  dirty  rev  linear  |  result
      y   y    *     *     *     |    (1)
      *   *    *     n     n     |     x
-     n   n    n     n     y     |    ok
-     n   n    n     y     *     |    ok
+     *   *    n     *     *     |    ok
      n   n    y     n     y     |   merge
      n   n    y     y     n     |    (2)
      n   n    y     y     y     |   merge
-     n   y    *     *     *     |  discard
+     n   y    y     *     *     |  discard
      y   n    y     *     *     |    (3)
-     y   n    n     *     *     |    ok
 
     x = can't happen
     * = don't-care
