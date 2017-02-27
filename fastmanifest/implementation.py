@@ -837,7 +837,7 @@ class hybridmanifestctx(object):
         """
         mf = self.read()
 
-        p1, p2 = self.parents()
+        p1, p2 = self.parents
         if p1 == revlog.nullid:
             return mf
 
