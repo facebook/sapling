@@ -1464,20 +1464,19 @@ def update(repo, node, branchmerge, force, ancestor=None,
     The table below shows all the behaviors of the update command
     given the -c and -C or no options, whether the working directory
     is dirty, whether a revision is specified, and the relationship of
-    the parent rev to the target rev (linear, on the same named
-    branch, or on another named branch).
+    the parent rev to the target rev (linear or not).
 
     This logic is tested by test-update-branches.t.
 
-    -c  -C  dirty  rev  |  linear      same    cross
-     n   n    n     n   |    ok         x        x
-     n   n    n     y   |    ok        ok       ok
-     n   n    y     n   |   merge       x        x
-     n   n    y     y   |   merge      (1)      (1)
-     n   y    *     *   |   discard   discard   discard
-     y   n    y     *   |    (2)       (2)      (2)
-     y   n    n     *   |    ok        ok       ok
-     y   y    *     *   |    (3)       (3)      (3)
+    -c  -C  dirty  rev  |  linear   non-linear
+     n   n    n     n   |    ok         x
+     n   n    n     y   |    ok        ok
+     n   n    y     n   |   merge       x
+     n   n    y     y   |   merge      (1)
+     n   y    *     *   |   discard   discard
+     y   n    y     *   |    (2)       (2)
+     y   n    n     *   |    ok        ok
+     y   y    *     *   |    (3)       (3)
 
     x = can't happen
     * = don't-care
