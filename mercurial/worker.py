@@ -120,9 +120,12 @@ def _posixworker(ui, func, staticargs, args):
                         break
                     else:
                         raise
-            if p:
-                pids.discard(p)
-                st = _exitstatus(st)
+            if not p:
+                # skip subsequent steps, because child process should
+                # be still running in this case
+                continue
+            pids.discard(p)
+            st = _exitstatus(st)
             if st and not problem[0]:
                 problem[0] = st
     def sigchldhandler(signum, frame):
@@ -145,12 +148,16 @@ def _posixworker(ui, func, staticargs, args):
             # may do some clean-ups which could cause surprises like deadlock.
             # see sshpeer.cleanup for example.
             try:
-                scmutil.callcatch(ui, workerfunc)
+                try:
+                    scmutil.callcatch(ui, workerfunc)
+                finally:
+                    ui.flush()
             except KeyboardInterrupt:
                 os._exit(255)
             except: # never return, therefore no re-raises
                 try:
                     ui.traceback()
+                    ui.flush()
                 finally:
                     os._exit(255)
             else:

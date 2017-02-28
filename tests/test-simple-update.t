@@ -56,3 +56,38 @@ update to rev 0 with a date
   [255]
 
   $ cd ..
+
+update with worker processes
+
+#if no-windows
+
+  $ cat <<EOF > forceworker.py
+  > from mercurial import extensions, worker
+  > def nocost(orig, ui, costperop, nops):
+  >     return worker._numworkers(ui) > 1
+  > def uisetup(ui):
+  >     extensions.wrapfunction(worker, 'worthwhile', nocost)
+  > EOF
+
+  $ hg init worker
+  $ cd worker
+  $ cat <<EOF >> .hg/hgrc
+  > [extensions]
+  > forceworker = $TESTTMP/forceworker.py
+  > [worker]
+  > numcpus = 4
+  > EOF
+  $ for i in `python $TESTDIR/seq.py 1 100`; do
+  >   echo $i > $i
+  > done
+  $ hg ci -qAm 'add 100 files'
+
+  $ hg update null
+  0 files updated, 0 files merged, 100 files removed, 0 files unresolved
+  $ hg update -v | grep 100
+  getting 100
+  100 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+  $ cd ..
+
+#endif

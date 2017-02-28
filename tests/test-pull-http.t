@@ -33,9 +33,9 @@ Cloning with a password in the URL should not save the password in .hg/hgrc:
   # path aliases to other clones of this repo in URLs or filesystem paths
   # (see 'hg help config.paths' for more info)
   #
-  # default-push = ssh://jdoe@example.net/hg/jdoes-fork
-  # my-fork      = ssh://jdoe@example.net/hg/jdoes-fork
-  # my-clone     = /home/jdoe/jdoes-clone
+  # default:pushurl = ssh://jdoe@example.net/hg/jdoes-fork
+  # my-fork         = ssh://jdoe@example.net/hg/jdoes-fork
+  # my-clone        = /home/jdoe/jdoes-clone
   
   [ui]
   # name and email (local to this repository, optional), e.g.
