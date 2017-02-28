@@ -66,12 +66,7 @@ def uisetup(ui):
                 ui.pager('extension-via-attend-' + cmd)
         return orig(ui, options, cmd, cmdfunc)
 
-    # Wrap dispatch._runcommand after color is loaded so color can see
-    # ui.pageractive. Otherwise, if we loaded first, color's wrapped
-    # dispatch._runcommand would run without having access to ui.pageractive.
-    def afterloaded(loaded):
-        extensions.wrapfunction(dispatch, '_runcommand', pagecmd)
-    extensions.afterloaded('color', afterloaded)
+    extensions.wrapfunction(dispatch, '_runcommand', pagecmd)
 
 attended = [
     'the-default-attend-list-is-now-empty-but-that-breaks-the-extension',
