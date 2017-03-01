@@ -208,6 +208,7 @@ def internalshelp(ui):
     return ''.join(lines)
 
 helptable = sorted([
+    (['color'], _("Colorizing Outputs"), loaddoc('color')),
     (["config", "hgrc"], _("Configuration Files"), loaddoc('config')),
     (["dates"], _("Date Formats"), loaddoc('dates')),
     (["patterns"], _("File Name Patterns"), loaddoc('patterns')),

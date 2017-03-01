@@ -1549,6 +1549,10 @@ help/ shows help topics
     ],
     "topics": [
       {
+        "summary": "Colorizing Outputs",
+        "topic": "color"
+      },
+      {
         "summary": "Configuration Files",
         "topic": "config"
       },

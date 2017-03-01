@@ -340,6 +340,7 @@ Testing -h/--help:
   
   additional help topics:
   
+   color         Colorizing Outputs
    config        Configuration Files
    dates         Date Formats
    diffs         Diff Formats
@@ -422,6 +423,7 @@ Testing -h/--help:
   
   additional help topics:
   
+   color         Colorizing Outputs
    config        Configuration Files
    dates         Date Formats
    diffs         Diff Formats

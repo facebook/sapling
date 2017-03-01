@@ -102,6 +102,7 @@ Short help:
   
   additional help topics:
   
+   color         Colorizing Outputs
    config        Configuration Files
    dates         Date Formats
    diffs         Diff Formats
@@ -178,6 +179,7 @@ Short help:
   
   additional help topics:
   
+   color         Colorizing Outputs
    config        Configuration Files
    dates         Date Formats
    diffs         Diff Formats
@@ -825,6 +827,7 @@ Test that default list of commands omits extension commands
   
   additional help topics:
   
+   color         Colorizing Outputs
    config        Configuration Files
    dates         Date Formats
    diffs         Diff Formats
@@ -1858,6 +1861,13 @@ Dish up an empty repo; serve it cold.
   <table class="bigtable">
   <tr><td colspan="2"><h2><a name="topics" href="#topics">Topics</a></h2></td></tr>
   
+  <tr><td>
+  <a href="/help/color">
+  color
+  </a>
+  </td><td>
+  Colorizing Outputs
+  </td></tr>
   <tr><td>
   <a href="/help/config">
   config
