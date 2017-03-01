@@ -27,7 +27,6 @@
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/model/Hash.h"
-#include "eden/fs/service/EdenMountHandler.h"
 #include "eden/fs/service/GlobNode.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fuse/MountPoint.h"
@@ -238,17 +237,6 @@ Future<Hash> EdenServiceHandler::getSHA1ForPath(
     }
     return fileInode->getSHA1();
   });
-}
-
-void EdenServiceHandler::getMaterializedEntries(
-    MaterializedResult& out,
-    std::unique_ptr<std::string> mountPoint) {
-  auto edenMount = server_->getMount(*mountPoint);
-  if (!edenMount) {
-    throw newEdenError(ENODEV, "no such mount point \"{}\"", *mountPoint);
-  }
-
-  return getMaterializedEntriesForMount(edenMount.get(), out);
 }
 
 void EdenServiceHandler::getBindMounts(

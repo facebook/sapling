@@ -60,10 +60,6 @@ class EdenServiceHandler : virtual public EdenServiceSvIf,
       std::unique_ptr<std::string> mountPoint,
       std::unique_ptr<std::vector<std::string>> paths) override;
 
-  void getMaterializedEntries(
-      MaterializedResult& out,
-      std::unique_ptr<std::string> mountPoint) override;
-
   void getCurrentJournalPosition(
       JournalPosition& out,
       std::unique_ptr<std::string> mountPoint) override;

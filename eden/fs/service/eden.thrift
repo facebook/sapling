@@ -88,14 +88,6 @@ struct FileDelta {
   3: list<string> paths
 }
 
-/** Holds information about the current set of materialized files.
- * It also includes the current sequence position so that deltas
- * can be computed from this point-in-time result. */
-struct MaterializedResult {
-  1: JournalPosition currentPosition
-  2: map<string, FileInformation> fileInfo
-}
-
 enum StatusCode {
   CLEAN = 0x0,
   MODIFIED = 0x1,
@@ -201,12 +193,6 @@ service EdenService extends fb303.FacebookService {
    * Returns a list of paths relative to the mountPoint.
    */
   list<string> getBindMounts(1: string mountPoint)
-    throws (1: EdenError ex)
-
-  /**
-   * Returns the current set of files (and dirs) materialized in the overlay
-   */
-  MaterializedResult getMaterializedEntries(1: string mountPoint)
     throws (1: EdenError ex)
 
   /** Returns the sequence position at the time the method is called.

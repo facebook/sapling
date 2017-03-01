@@ -9,7 +9,6 @@
 
 import errno
 import os
-import stat
 from .lib import testcase
 from facebook.eden import EdenService
 from facebook.eden.ttypes import FileInformationOrError
@@ -38,9 +37,6 @@ class MaterializedQueryTest:
         super().tearDown()
 
     def test_noEntries(self):
-        items = self.client.getMaterializedEntries(self.mount)
-        self.assertEqual({}, items.fileInfo)
-
         pos = self.client.getCurrentJournalPosition(self.mount)
         self.assertEqual(1, pos.sequenceNumber)
         self.assertNotEqual(0, pos.mountGeneration)
@@ -117,19 +113,6 @@ class MaterializedQueryTest:
                          changed.fromPosition.sequenceNumber,
                          msg='changes start AFTER initial_pos')
 
-        info = self.client.getMaterializedEntries(self.mount)
-        self.assertEqual(pos_after_overlaid, info.currentPosition,
-                         msg='consistent with getCurrentJournalPosition')
-
-        items = info.fileInfo
-        self.assertEqual(2, len(items))
-
-        self.assertTrue(stat.S_ISDIR(items[''].mode))
-
-        self.assertTrue(stat.S_ISREG(items['overlaid'].mode))
-        self.assertEqual(6, items['overlaid'].size)
-        self.assertNotEqual(0, items['overlaid'].mtime.seconds)
-
         name = os.path.join(self.mount, 'adir', 'file')
         with open(name, 'a') as f:
             pos = self.client.getCurrentJournalPosition(self.mount)
@@ -147,36 +130,3 @@ class MaterializedQueryTest:
         self.assertEqual(pos_after_overlaid.sequenceNumber + 1,
                          changed.fromPosition.sequenceNumber,
                          msg='changes start AFTER pos_after_overlaid')
-
-        info = self.client.getMaterializedEntries(self.mount)
-        self.assertEqual(pos, info.currentPosition,
-                         msg='consistent with getCurrentJournalPosition')
-        items = info.fileInfo
-        self.assertEqual(4, len(items))
-
-        self.assertTrue(stat.S_ISDIR(items[''].mode))
-
-        self.assertTrue(stat.S_ISREG(items['overlaid'].mode))
-        self.assertEqual(6, items['overlaid'].size)
-        self.assertNotEqual(0, items['overlaid'].mtime.seconds)
-
-    def test_rename_overlay_dir(self):
-        srcname = os.path.join(self.mount, 'overlay-1')
-        targetname = os.path.join(self.mount, 'overlay-2')
-        os.mkdir(srcname)
-
-        info = self.client.getMaterializedEntries(self.mount)
-        self.assertEqual(['', 'overlay-1'], sorted(info.fileInfo.keys()))
-
-        os.rename(srcname, targetname)
-
-        info = self.client.getMaterializedEntries(self.mount)
-        self.assertEqual(['', 'overlay-2'], sorted(info.fileInfo.keys()))
-
-    def test_bad_mount_path(self):
-        self.assertRaisesRegexp(EdenService.EdenError,
-                                'no such mount point "foobar"',
-                                self.client.getMaterializedEntries, 'foobar')
-        self.assertRaisesRegexp(EdenService.EdenError,
-                                'no such mount point ""',
-                                self.client.getMaterializedEntries, '')
