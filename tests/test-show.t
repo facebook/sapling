@@ -315,7 +315,7 @@ Confirm that --help works (it didn't when we used an alias)
    -q --quiet             suppress output
    -v --verbose           enable additional output
       --color TYPE        when to colorize (boolean, always, auto, never, or
-                          debug) (EXPERIMENTAL) (default: never)
+                          debug)
       --config CONFIG [+] set/override config option (use 'section.name=value')
       --debug             enable debugging output
       --debugger          start debugger
