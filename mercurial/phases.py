@@ -224,12 +224,8 @@ class phasecache(object):
         """ensure phase information is loaded in the object"""
         if self._phaserevs is None:
             try:
-                if repo.ui.configbool('experimental',
-                                      'nativephaseskillswitch'):
-                    self._computephaserevspure(repo)
-                else:
-                    res = self._getphaserevsnative(repo)
-                    self._phaserevs, self._phasesets = res
+                res = self._getphaserevsnative(repo)
+                self._phaserevs, self._phasesets = res
             except AttributeError:
                 self._computephaserevspure(repo)
 
