@@ -902,8 +902,8 @@ folly::Future<folly::Unit> TreeInode::rmdirImpl(
           self = inodePtrFromThis(),
           childName = PathComponent{std::move(name)},
           attemptNum
-        ](const TreeInodePtr& child) {
-          return self->rmdirImpl(childName, child, attemptNum + 1);
+        ](const TreeInodePtr& loadedChild) {
+          return self->rmdirImpl(childName, loadedChild, attemptNum + 1);
         });
       } else {
         // Just update to point to the current child, if it is still a tree

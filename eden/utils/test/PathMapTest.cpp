@@ -36,14 +36,13 @@ TEST(PathMap, insert) {
   EXPECT_THROW(map.at(PathComponentPiece("notpresent")), std::out_of_range);
 
   // Test the const version of find(), at() and operator[]
-  [](const PathMap<bool>& map) {
-    EXPECT_NE(map.cend(), map.find(PathComponentPiece("bar")));
-    EXPECT_FALSE(map.at(PathComponentPiece("bar")));
-    EXPECT_FALSE(map[PathComponentPiece("bar")]);
+  const PathMap<bool>& cmap = map;
+  EXPECT_NE(cmap.cend(), cmap.find(PathComponentPiece("bar")));
+  EXPECT_FALSE(cmap.at(PathComponentPiece("bar")));
+  EXPECT_FALSE(cmap[PathComponentPiece("bar")]);
 
-    // const operator[] throws for missing key
-    EXPECT_THROW(map[PathComponentPiece("notpresent")], std::out_of_range);
-  }(map);
+  // const operator[] throws for missing key
+  EXPECT_THROW(cmap[PathComponentPiece("notpresent")], std::out_of_range);
 }
 
 TEST(PathMap, iteration_and_erase) {

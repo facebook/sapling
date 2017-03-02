@@ -117,8 +117,8 @@ void PrivHelperConn::createConnPair(
   };
 
   auto setupSock = [](int sock) {
-    int rc = fcntl(sock, F_SETFD, FD_CLOEXEC);
-    checkUnixError(rc, "failed to set privhelper socket as close-on-exec");
+    int retcode = fcntl(sock, F_SETFD, FD_CLOEXEC);
+    checkUnixError(retcode, "failed to set privhelper socket as close-on-exec");
 
     // Make sure the socket buffer is big enough to support our maximum message
     // size.
@@ -128,8 +128,9 @@ void PrivHelperConn::createConnPair(
     // SOCK_DGRAM in order to be able to tell when the remote endpoint
     // closes the connection.
     int bufSize = MAX_MSG_LENGTH * 2;
-    rc = setsockopt(sock, SOL_SOCKET, SO_SNDBUF, &bufSize, sizeof(bufSize));
-    checkUnixError(rc, "failed to set privhelper socket send buffer size");
+    retcode =
+        setsockopt(sock, SOL_SOCKET, SO_SNDBUF, &bufSize, sizeof(bufSize));
+    checkUnixError(retcode, "failed to set privhelper socket send buffer size");
   };
 
   setupSock(sockpair[0]);

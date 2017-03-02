@@ -121,8 +121,8 @@ TEST_F(InterpTest, testMerge) {
 
   // A function that prevents merging a repo stanza over a pre-existing one
   auto accept = [](
-      const InterpolatedPropertyTree& tree, folly::StringPiece section) {
-    if (section.startsWith("repo ") && tree.hasSection(section)) {
+      const InterpolatedPropertyTree& ipt, folly::StringPiece section) {
+    if (section.startsWith("repo ") && ipt.hasSection(section)) {
       return InterpolatedPropertyTree::MergeDisposition::SkipAll;
     }
     return InterpolatedPropertyTree::MergeDisposition::UpdateAll;

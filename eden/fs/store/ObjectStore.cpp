@@ -59,8 +59,9 @@ Future<unique_ptr<Tree>> ObjectStore::getTreeFuture(const Hash& id) const {
   // layer.  Therefore we currently don't bother de-duping loads at this layer.
 
   // Load the tree from the BackingStore.
-  return backingStore_->getTree(id).then([id](std::unique_ptr<Tree> tree) {
-    if (!tree) {
+  return backingStore_->getTree(id).then([id](
+      std::unique_ptr<Tree> loadedTree) {
+    if (!loadedTree) {
       // TODO: Perhaps we should do some short-term negative caching?
       VLOG(2) << "unable to find tree " << id;
       throw std::domain_error(
@@ -71,9 +72,9 @@ Future<unique_ptr<Tree>> ObjectStore::getTreeFuture(const Hash& id) const {
     // saving the Tree object in the LocalStore, so we don't do anything
     // here.
     //
-    // localStore_->putTree(tree.get());
+    // localStore_->putTree(loadedTree.get());
     VLOG(3) << "tree " << id << " retrieved from backing store";
-    return tree;
+    return loadedTree;
   });
 }
 
@@ -90,8 +91,8 @@ Future<unique_ptr<Blob>> ObjectStore::getBlobFuture(const Hash& id) const {
 
   // Look in the BackingStore
   return backingStore_->getBlob(id).then(
-      [ localStore = localStore_, id ](std::unique_ptr<Blob> blob) {
-        if (!blob) {
+      [ localStore = localStore_, id ](std::unique_ptr<Blob> loadedBlob) {
+        if (!loadedBlob) {
           VLOG(2) << "unable to find blob " << id;
           // TODO: Perhaps we should do some short-term negative caching?
           throw std::domain_error(
@@ -99,8 +100,8 @@ Future<unique_ptr<Blob>> ObjectStore::getBlobFuture(const Hash& id) const {
         }
 
         VLOG(3) << "blob " << id << "  retrieved from backing store";
-        localStore->putBlob(id, blob.get());
-        return blob;
+        localStore->putBlob(id, loadedBlob.get());
+        return loadedBlob;
       });
 }
 

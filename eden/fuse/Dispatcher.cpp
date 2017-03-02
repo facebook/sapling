@@ -853,7 +853,9 @@ static void disp_bmap(fuse_req_t req,
   request.setRequestFuture(
       request.startRequest(dispatcher->getStats().bmap)
           .then([=, &request] { return dispatcher->bmap(ino, blocksize, idx); })
-          .then([](uint64_t idx) { RequestData::get().replyBmap(idx); }));
+          .then([](uint64_t resultIdx) {
+            RequestData::get().replyBmap(resultIdx);
+          }));
 }
 
 #if FUSE_MINOR_VERSION >= 8
