@@ -40,6 +40,7 @@ from . import (
     url,
     util,
     verify as verifymod,
+    vfs as vfsmod,
 )
 
 release = lock.release
@@ -219,8 +220,8 @@ def share(ui, source, dest=None, update=True, bookmarks=True, defaultpath=None,
 
     sharedpath = srcrepo.sharedpath # if our source is already sharing
 
-    destwvfs = scmutil.vfs(dest, realpath=True)
-    destvfs = scmutil.vfs(os.path.join(destwvfs.base, '.hg'), realpath=True)
+    destwvfs = vfsmod.vfs(dest, realpath=True)
+    destvfs = vfsmod.vfs(os.path.join(destwvfs.base, '.hg'), realpath=True)
 
     if destvfs.lexists():
         raise error.Abort(_('destination already exists'))
@@ -312,8 +313,8 @@ def copystore(ui, srcrepo, destpath):
             else:
                 ui.progress(topic, pos + num)
         srcpublishing = srcrepo.publishing()
-        srcvfs = scmutil.vfs(srcrepo.sharedpath)
-        dstvfs = scmutil.vfs(destpath)
+        srcvfs = vfsmod.vfs(srcrepo.sharedpath)
+        dstvfs = vfsmod.vfs(destpath)
         for f in srcrepo.store.copylist():
             if srcpublishing and f.endswith('phaseroots'):
                 continue
@@ -369,7 +370,7 @@ def clonewithshare(ui, peeropts, sharepath, source, srcpeer, dest, pull=False,
         if e.errno != errno.EEXIST:
             raise
 
-    poolvfs = scmutil.vfs(pooldir)
+    poolvfs = vfsmod.vfs(pooldir)
     basename = os.path.basename(sharepath)
 
     with lock.lock(poolvfs, '%s.lock' % basename):
@@ -474,7 +475,7 @@ def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
     if not dest:
         raise error.Abort(_("empty destination path is not valid"))
 
-    destvfs = scmutil.vfs(dest, expandpath=True)
+    destvfs = vfsmod.vfs(dest, expandpath=True)
     if destvfs.lexists():
         if not destvfs.isdir():
             raise error.Abort(_("destination '%s' already exists") % dest)
