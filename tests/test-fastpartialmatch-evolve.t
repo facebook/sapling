@@ -62,3 +62,9 @@ Try histedit
   > pick be6305906393 1 second
   > EOF
   $ hg debugcheckpartialindex
+
+Made commit, then amend it. Check partial index
+  $ mkcommit toamend
+  $ echo 1 > toamend
+  $ hg commit --amend -m amended
+  $ hg debugcheckpartialindex

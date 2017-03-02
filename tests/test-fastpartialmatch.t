@@ -451,3 +451,14 @@ with bookmark
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     newcommitwithbook
   
+Do amend and check index
+  $ hg debugrebuildpartialindex
+  $ mkcommit toamend
+  $ echo amended > toamend
+  $ hg ci -m amended --amend -q
+  $ hg debugcheckpartialindex
+
+Try to create empty commit
+  $ hg ci -m empty
+  nothing changed
+  [1]

@@ -42,8 +42,10 @@ from mercurial import (
     cmdutil,
     error,
     extensions,
+    localrepo,
     revlog,
     scmutil,
+    util,
 )
 
 from mercurial.i18n import _
@@ -79,6 +81,10 @@ _needrebuildfile = os.path.join(_partialindexdir, 'needrebuild')
 
 def extsetup(ui):
     extensions.wrapfunction(revlog.revlog, '_partialmatch', _partialmatch)
+    extensions.wrapfunction(localrepo.localrepository, 'commit',
+                            _localrepocommit)
+    extensions.wrapfunction(localrepo.localrepository, 'transaction',
+                            _localrepotransaction)
     global _raiseifinconsistent
     _raiseifinconsistent = ui.configbool('fastpartialmatch',
                                          'raiseifinconsistent', False)
@@ -206,6 +212,29 @@ def debugfastpartialmatchstat(ui, repo):
             ui.write(_('file: %s, entries: %d, out of them %d sorted\n') %
                      (indexfile, entriescount, header.sortedcount))
 
+def _localrepocommit(orig, self, *args, **kwargs):
+    '''Wrapper for localrepo.commit to record temporary amend commits
+
+    Upstream mercurial disables all hooks for temporary amend commits.
+    Use this hacky wrapper to record this commit anyway
+    '''
+
+    node = orig(self, *args, **kwargs)
+    if node is None:
+        return node
+    hexnode = hex(node)
+    tr = self.currenttransaction()
+    indexbuilt = _ispartialindexbuilt(self.svfs)
+    if tr and hexnode not in tr.addedcommits and indexbuilt:
+        _recordcommit(tr, hexnode, self.changelog.rev(node), self.svfs)
+    return node
+
+def _localrepotransaction(orig, *args, **kwargs):
+    tr = orig(*args, **kwargs)
+    if not util.safehasattr(tr, 'addedcommits'):
+        tr.addedcommits = set()
+    return tr
+
 def _iterindexfile(indexvfs):
     for entry in indexvfs.listdir():
         if len(entry) == 2 and indexvfs.isfile(entry):
@@ -304,6 +333,7 @@ def _recordcommit(tr, hexnode, rev, vfs):
             header = _header(0)
             header.write(fileobj)
         _writeindexentry(fileobj, bin(hexnode), rev)
+    tr.addedcommits.add(hexnode)
 
 def _partialmatch(orig, self, id):
     # we only need the vfs for exists checks, not writing
