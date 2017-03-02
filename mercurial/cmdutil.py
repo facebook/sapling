@@ -45,6 +45,7 @@ from . import (
     templatekw,
     templater,
     util,
+    vfs as vfsmod,
 )
 stringio = util.stringio
 
@@ -583,7 +584,7 @@ def openrevlog(repo, cmd, file_, opts):
             raise error.CommandError(cmd, _('invalid arguments'))
         if not os.path.isfile(file_):
             raise error.Abort(_("revlog '%s' not found") % file_)
-        r = revlog.revlog(scmutil.vfs(pycompat.getcwd(), audit=False),
+        r = revlog.revlog(vfsmod.vfs(pycompat.getcwd(), audit=False),
                           file_[:-2] + ".i")
     return r
 
