@@ -26,6 +26,7 @@ from . import (
     revlog,
     scmutil,
     util,
+    vfs as vfsmod,
 )
 
 def _bundle(repo, bases, heads, node, suffix, compress=True):
@@ -882,7 +883,7 @@ def _upgraderepo(ui, srcrepo, dstrepo, requirements, actions):
     ui.write(_('data fully migrated to temporary repository\n'))
 
     backuppath = tempfile.mkdtemp(prefix='upgradebackup.', dir=srcrepo.path)
-    backupvfs = scmutil.vfs(backuppath)
+    backupvfs = vfsmod.vfs(backuppath)
 
     # Make a backup of requires file first, as it is the first to be modified.
     util.copyfile(srcrepo.join('requires'), backupvfs.join('requires'))
