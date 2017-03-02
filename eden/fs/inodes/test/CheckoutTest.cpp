@@ -11,6 +11,7 @@
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
+#include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestMount.h"
 #include "eden/fs/testharness/TestUtil.h"
 
@@ -21,32 +22,20 @@ TEST(Checkout, simpleCheckout) {
   BaseTestMountBuilder builder;
   auto backingStore = builder.getBackingStore();
 
-  // <root>
-  // + src
-  // | + test.c
-  // | + main.c
-  // + doc
-  //   + readme.txt
-  auto main1 = backingStore->putBlob("int main() { return 0; }\n");
-  auto test1 = backingStore->putBlob("testy tests");
-  auto src1 = backingStore->putTree({{"main.c", main1}, {"test.c", test1}});
-  auto readme1 = backingStore->putBlob("all the words");
-  auto doc1 = backingStore->putTree({{"readme.txt", readme1}});
-  auto root1 = backingStore->putTree({{"src", src1}, {"doc", doc1}});
+  auto srcBuilder = backingStore->treeBuilder();
+  srcBuilder.setFile("src/main.c", "int main() { return 0; }\n");
+  srcBuilder.setFile("src/test.c", "testy tests");
+  srcBuilder.setFile("doc/readme.txt", "all the words");
+  srcBuilder.finalize(false);
 
-  builder.setCommit(makeTestHash("ccc"), root1->get().getHash());
-  // build() will hang unless the root tree is ready.
-  root1->setReady();
-
-  auto testMount = builder.build();
-  auto rootInode = testMount->getEdenMount()->getRootInode();
+  auto testMount = builder.build(srcBuilder);
 
   // Call EdenMount::getInode() to do a recursive lookup
   // This is just to make sure some inodes are loaded when we do the checkout
   auto main1Future =
       testMount->getEdenMount()->getInode(RelativePathPiece{"src/main.c"});
   EXPECT_FALSE(main1Future.isReady());
-  src1->setReady();
+  srcBuilder.setReady("src");
   ASSERT_TRUE(main1Future.isReady());
   auto main1Inode = main1Future.get().asFilePtr();
 
@@ -58,26 +47,25 @@ TEST(Checkout, simpleCheckout) {
       FakeBackingStore::makeBlob("testy tests"), S_IFREG | 0644));
 
   // Prepare a second tree
-  auto test2 = backingStore->putBlob("even more testy tests");
-  auto extra = backingStore->putBlob("extra stuff");
-  auto src2 = backingStore->putTree({
-      {"main.c", main1}, {"test.c", test2}, {"extra.h", extra},
-  });
-  auto root2 = backingStore->putTree({{"src", src2}, {"doc", doc1}});
-  auto commit2 =
-      backingStore->putCommit(makeTestHash("ddd"), root2->get().getHash());
+  auto destBuilder = srcBuilder.clone();
+  destBuilder.replaceFile("src/test.c", "even more testy tests");
+  destBuilder.setFile("src/extra.h", "extra stuff");
+  destBuilder.finalize(false);
+
+  auto commit2 = backingStore->putCommit("ddd", destBuilder);
   commit2->setReady();
 
   // Now do the checkout
   auto checkoutResult =
       testMount->getEdenMount()->checkout(makeTestHash("ddd"));
   EXPECT_FALSE(checkoutResult.isReady());
-  root2->setReady();
+  destBuilder.setReady("");
   EXPECT_FALSE(checkoutResult.isReady());
-  src2->setReady();
+  destBuilder.setReady("src");
   EXPECT_FALSE(checkoutResult.isReady());
-  test1->setReady();
-  test2->setReady();
+  srcBuilder.setReady("src/test.c");
+  EXPECT_FALSE(checkoutResult.isReady());
+  destBuilder.setReady("src/test.c");
   ASSERT_TRUE(checkoutResult.isReady());
   auto results = checkoutResult.get();
   EXPECT_EQ(0, results.size());

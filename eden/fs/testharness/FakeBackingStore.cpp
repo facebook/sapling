@@ -17,6 +17,7 @@
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/store/LocalStore.h"
+#include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestUtil.h"
 
 using folly::ByteRange;
@@ -111,16 +112,28 @@ StoredBlob* FakeBackingStore::putBlob(StringPiece contents) {
 }
 
 StoredBlob* FakeBackingStore::putBlob(Hash hash, folly::StringPiece contents) {
+  auto ret = maybePutBlob(hash, contents);
+  if (!ret.second) {
+    throw std::domain_error(
+        folly::sformat("blob with hash {} already exists", hash.toString()));
+  }
+  return ret.first;
+}
+
+std::pair<StoredBlob*, bool> FakeBackingStore::maybePutBlob(
+    folly::StringPiece contents) {
+  return maybePutBlob(Hash::sha1(contents), contents);
+}
+
+std::pair<StoredBlob*, bool> FakeBackingStore::maybePutBlob(
+    Hash hash,
+    folly::StringPiece contents) {
   auto storedBlob = make_unique<StoredBlob>(makeBlob(hash, contents));
 
   {
     auto data = data_.wlock();
     auto ret = data->blobs.emplace(hash, std::move(storedBlob));
-    if (!ret.second) {
-      throw std::domain_error(
-          folly::sformat("blob with hash {} already exists", hash.toString()));
-    }
-    return ret.first->second.get();
+    return std::make_pair(ret.first->second.get(), ret.second);
   }
 }
 
@@ -162,55 +175,105 @@ FakeBackingStore::TreeEntryData::TreeEntryData(
 
 StoredTree* FakeBackingStore::putTree(
     const std::initializer_list<TreeEntryData>& entryArgs) {
-  folly::ssl::OpenSSLHash::Digest digest;
-  digest.hash_init(EVP_sha1());
-
-  std::vector<TreeEntry> entries;
-  for (const auto& arg : entryArgs) {
-    digest.hash_update(ByteRange{arg.entry.getName().stringPiece()});
-    digest.hash_update(arg.entry.getHash().getBytes());
-    mode_t mode = arg.entry.getMode();
-    digest.hash_update(
-        ByteRange(reinterpret_cast<const uint8_t*>(&mode), sizeof(mode)));
-
-    entries.push_back(arg.entry);
-  }
-
-  Hash::Storage computedHashBytes;
-  digest.hash_final(folly::MutableByteRange{computedHashBytes.data(),
-                                            computedHashBytes.size()});
-  return putTreeImpl(Hash{computedHashBytes}, std::move(entries));
+  auto entries = buildTreeEntries(entryArgs);
+  auto hash = computeTreeHash(entries);
+  return putTree(hash, entries);
 }
 
 StoredTree* FakeBackingStore::putTree(
     Hash hash,
     const std::initializer_list<TreeEntryData>& entryArgs) {
+  auto entries = buildTreeEntries(entryArgs);
+  return putTreeImpl(hash, std::move(entries));
+}
+
+StoredTree* FakeBackingStore::putTree(std::vector<TreeEntry> entries) {
+  sortTreeEntries(entries);
+  auto hash = computeTreeHash(entries);
+  return putTreeImpl(hash, std::move(entries));
+}
+
+StoredTree* FakeBackingStore::putTree(
+    Hash hash,
+    std::vector<TreeEntry> entries) {
+  sortTreeEntries(entries);
+  return putTreeImpl(hash, std::move(entries));
+}
+
+std::pair<StoredTree*, bool> FakeBackingStore::maybePutTree(
+    const std::initializer_list<TreeEntryData>& entryArgs) {
+  return maybePutTree(buildTreeEntries(entryArgs));
+}
+
+std::pair<StoredTree*, bool> FakeBackingStore::maybePutTree(
+    std::vector<TreeEntry> entries) {
+  sortTreeEntries(entries);
+  auto hash = computeTreeHash(entries);
+  return maybePutTreeImpl(hash, std::move(entries));
+}
+
+std::vector<TreeEntry> FakeBackingStore::buildTreeEntries(
+    const std::initializer_list<TreeEntryData>& entryArgs) {
   std::vector<TreeEntry> entries;
   for (const auto& arg : entryArgs) {
     entries.push_back(arg.entry);
   }
-  return putTreeImpl(hash, std::move(entries));
+
+  sortTreeEntries(entries);
+  return entries;
 }
 
-StoredTree* FakeBackingStore::putTreeImpl(
-    Hash hash,
-    std::vector<TreeEntry>&& entries) {
-  // Sort the entries first
+void FakeBackingStore::sortTreeEntries(std::vector<TreeEntry>& entries) {
   auto cmpEntry = [](const TreeEntry& a, const TreeEntry& b) {
     return a.getName() < b.getName();
   };
   std::sort(entries.begin(), entries.end(), cmpEntry);
+}
 
-  auto storedTree = make_unique<StoredTree>(Tree{std::move(entries), hash});
+Hash FakeBackingStore::computeTreeHash(
+    const std::vector<TreeEntry>& sortedEntries) {
+  // Compute a SHA-1 hash over the entry contents.
+  // This doesn't match how we generate hashes for either git or mercurial
+  // backed stores, but that doesn't really matter.  We only need to be
+  // consistent within our own store.
+  folly::ssl::OpenSSLHash::Digest digest;
+  digest.hash_init(EVP_sha1());
+
+  for (const auto& entry : sortedEntries) {
+    digest.hash_update(ByteRange{entry.getName().stringPiece()});
+    digest.hash_update(entry.getHash().getBytes());
+    mode_t mode = entry.getMode();
+    digest.hash_update(
+        ByteRange(reinterpret_cast<const uint8_t*>(&mode), sizeof(mode)));
+  }
+
+  Hash::Storage computedHashBytes;
+  digest.hash_final(folly::MutableByteRange{computedHashBytes.data(),
+                                            computedHashBytes.size()});
+  return Hash{computedHashBytes};
+}
+
+StoredTree* FakeBackingStore::putTreeImpl(
+    Hash hash,
+    std::vector<TreeEntry>&& sortedEntries) {
+  auto ret = maybePutTreeImpl(hash, std::move(sortedEntries));
+  if (!ret.second) {
+    throw std::domain_error(
+        folly::sformat("tree with hash {} already exists", hash.toString()));
+  }
+  return ret.first;
+}
+
+std::pair<StoredTree*, bool> FakeBackingStore::maybePutTreeImpl(
+    Hash hash,
+    std::vector<TreeEntry>&& sortedEntries) {
+  auto storedTree =
+      make_unique<StoredTree>(Tree{std::move(sortedEntries), hash});
 
   {
     auto data = data_.wlock();
     auto ret = data->trees.emplace(hash, std::move(storedTree));
-    if (!ret.second) {
-      throw std::domain_error(
-          folly::sformat("tree with hash {} already exists", hash.toString()));
-    }
-    return ret.first->second.get();
+    return std::make_pair(ret.first->second.get(), ret.second);
   }
 }
 
@@ -231,6 +294,34 @@ StoredHash* FakeBackingStore::putCommit(Hash commitHash, Hash treeHash) {
     }
     return ret.first->second.get();
   }
+}
+
+StoredHash* FakeBackingStore::putCommit(
+    folly::StringPiece commitStr,
+    const FakeTreeBuilder& builder) {
+  return putCommit(makeTestHash(commitStr), builder.getRoot()->get().getHash());
+}
+
+StoredTree* FakeBackingStore::getStoredTree(Hash hash) {
+  auto data = data_.rlock();
+  auto it = data->trees.find(hash);
+  if (it == data->trees.end()) {
+    throw std::domain_error("stored tree " + hash.toString() + " not found");
+  }
+  return it->second.get();
+}
+
+StoredBlob* FakeBackingStore::getStoredBlob(Hash hash) {
+  auto data = data_.rlock();
+  auto it = data->blobs.find(hash);
+  if (it == data->blobs.end()) {
+    throw std::domain_error("stored blob " + hash.toString() + " not found");
+  }
+  return it->second.get();
+}
+
+FakeTreeBuilder FakeBackingStore::treeBuilder() {
+  return FakeTreeBuilder(this);
 }
 }
 } // facebook::eden

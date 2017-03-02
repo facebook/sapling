@@ -12,6 +12,7 @@
 #include <initializer_list>
 #include <memory>
 #include <unordered_map>
+#include <vector>
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
@@ -22,6 +23,7 @@
 namespace facebook {
 namespace eden {
 
+class FakeTreeBuilder;
 class LocalStore;
 
 /**
@@ -44,10 +46,27 @@ class FakeBackingStore : public BackingStore {
       const Hash& commitID) override;
 
   /**
-   * Add a Blob to the Backing store
+   * Add a Blob to the backing store
+   *
+   * If a hash is not explicitly given, one will be computed automatically.
+   * (The test code may not use the same hashing scheme as a production
+   * mercurial- or git-backed store, but it will be consistent for the
+   * duration of the test.)
    */
   StoredBlob* putBlob(folly::StringPiece contents);
   StoredBlob* putBlob(Hash hash, folly::StringPiece contents);
+
+  /**
+   * Add a blob to the backing store, or return the StoredBlob already present
+   * with this hash.
+   *
+   * The boolean in the return value is true if a new StoredBlob was created by
+   * this call, or false if a StoredBlob already existed with this hash.
+   */
+  std::pair<StoredBlob*, bool> maybePutBlob(folly::StringPiece contents);
+  std::pair<StoredBlob*, bool> maybePutBlob(
+      Hash hash,
+      folly::StringPiece contents);
 
   static Blob makeBlob(folly::StringPiece contents);
   static Blob makeBlob(Hash hash, folly::StringPiece contents);
@@ -67,12 +86,49 @@ class FakeBackingStore : public BackingStore {
   StoredTree* putTree(
       Hash hash,
       const std::initializer_list<TreeEntryData>& entries);
+  StoredTree* putTree(std::vector<TreeEntry> entries);
+  StoredTree* putTree(Hash hash, std::vector<TreeEntry> entries);
+
+  /**
+   * Add a tree to the backing store, or return the StoredTree already present
+   * with this hash.
+   *
+   * The boolean in the return value is true if a new StoredTree was created by
+   * this call, or false if a StoredTree already existed with this hash.
+   */
+  std::pair<StoredTree*, bool> maybePutTree(
+      const std::initializer_list<TreeEntryData>& entries);
+  std::pair<StoredTree*, bool> maybePutTree(std::vector<TreeEntry> entries);
 
   /**
    * Add a mapping from a commit ID to a root tree hash.
    */
   StoredHash* putCommit(Hash commitHash, const StoredTree* tree);
   StoredHash* putCommit(Hash commitHash, Hash treeHash);
+
+  StoredHash* putCommit(
+      folly::StringPiece commitStr,
+      const FakeTreeBuilder& builder);
+
+  /**
+   * Look up a StoredTree.
+   *
+   * Throws an error if the specified hash does not exist.  Never returns null.
+   */
+  StoredTree* getStoredTree(Hash hash);
+
+  /**
+   * Look up a StoredBlob.
+   *
+   * Throws an error if the specified hash does not exist.  Never returns null.
+   */
+  StoredBlob* getStoredBlob(Hash hash);
+
+  /**
+   * Create a new FakeTreeBuilder that can be used to populate data in this
+   * FakeBackingStore.
+   */
+  FakeTreeBuilder treeBuilder();
 
  private:
   struct Data {
@@ -81,7 +137,14 @@ class FakeBackingStore : public BackingStore {
     std::unordered_map<Hash, std::unique_ptr<StoredHash>> commits;
   };
 
-  StoredTree* putTreeImpl(Hash hash, std::vector<TreeEntry>&& entries);
+  static std::vector<TreeEntry> buildTreeEntries(
+      const std::initializer_list<TreeEntryData>& entryArgs);
+  static void sortTreeEntries(std::vector<TreeEntry>& entries);
+  static Hash computeTreeHash(const std::vector<TreeEntry>& sortedEntries);
+  StoredTree* putTreeImpl(Hash hash, std::vector<TreeEntry>&& sortedEntries);
+  std::pair<StoredTree*, bool> maybePutTreeImpl(
+      Hash hash,
+      std::vector<TreeEntry>&& sortedEntries);
 
   const std::shared_ptr<LocalStore> localStore_;
   folly::Synchronized<Data> data_;

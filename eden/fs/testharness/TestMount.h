@@ -25,6 +25,7 @@ namespace facebook {
 namespace eden {
 class ClientConfig;
 class FakeBackingStore;
+class FakeTreeBuilder;
 class FileInode;
 class LocalStore;
 class TreeInode;
@@ -120,6 +121,8 @@ class BaseTestMountBuilder {
    * calling build().
    */
   std::unique_ptr<TestMount> build();
+
+  std::unique_ptr<TestMount> build(const FakeTreeBuilder& rootBuilder);
 
   /**
    * Get the ClientConfig object.

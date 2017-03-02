@@ -261,3 +261,29 @@ TEST_F(FakeBackingStoreTest, getTreeForCommit) {
   EXPECT_THROW_RE(
       future2.get(), std::domain_error, "tree .* for commit .* not found");
 }
+
+TEST_F(FakeBackingStoreTest, maybePutBlob) {
+  auto foo1 = store_->maybePutBlob("foo\n");
+  EXPECT_TRUE(foo1.second);
+  auto foo2 = store_->maybePutBlob("foo\n");
+  EXPECT_FALSE(foo2.second);
+  EXPECT_EQ(foo1.first, foo2.first);
+}
+
+TEST_F(FakeBackingStoreTest, maybePutTree) {
+  auto* foo = store_->putBlob("foo\n");
+  auto* bar = store_->putBlob("bar\n");
+
+  auto dir1 = store_->maybePutTree({
+      {"foo", foo}, {"bar", bar},
+  });
+  EXPECT_TRUE(dir1.second);
+
+  // Listing the entries in a different order should still
+  // result in the same tree.
+  auto dir2 = store_->maybePutTree({
+      {"bar", bar}, {"foo", foo},
+  });
+  EXPECT_FALSE(dir2.second);
+  EXPECT_EQ(dir1.first, dir2.first);
+}

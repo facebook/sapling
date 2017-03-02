@@ -27,6 +27,7 @@
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/store/hg/HgManifestImporter.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
+#include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestUtil.h"
 #include "eden/fuse/MountPoint.h"
 
@@ -67,6 +68,22 @@ BaseTestMountBuilder::~BaseTestMountBuilder() {}
 unique_ptr<TestMount> BaseTestMountBuilder::build() {
   // Invoke populateStore() so subclasses can populate the stores, if needed.
   populateStore();
+
+  // Now create the EdenMount
+  unique_ptr<ObjectStore> objectStore =
+      make_unique<ObjectStore>(localStore_, backingStore_);
+  auto edenMount =
+      EdenMount::makeShared(std::move(config_), std::move(objectStore));
+  return make_unique<TestMount>(std::move(edenMount), std::move(testDir_));
+}
+
+std::unique_ptr<TestMount> BaseTestMountBuilder::build(
+    const FakeTreeBuilder& rootBuilder) {
+  auto rootTree = rootBuilder.getRoot();
+  // We have to make sure the root tree is ready.  The EdenMount constructor
+  // blocks until it is available, so we will hang below if it isn't ready.
+  rootTree->setReady();
+  setCommit(makeTestHash("1"), rootTree->get().getHash());
 
   // Now create the EdenMount
   unique_ptr<ObjectStore> objectStore =
