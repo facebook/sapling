@@ -27,8 +27,8 @@ from . import (
     pathutil,
     pycompat,
     revlog,
-    scmutil,
     util,
+    vfs as vfsmod,
 )
 
 class unionrevlog(revlog.revlog):
@@ -39,7 +39,7 @@ class unionrevlog(revlog.revlog):
         #
         # To differentiate a rev in the second revlog from a rev in the revlog,
         # we check revision against repotiprev.
-        opener = scmutil.readonlyvfs(opener)
+        opener = vfsmod.readonlyvfs(opener)
         revlog.revlog.__init__(self, opener, indexfile)
         self.revlog2 = revlog2
 
