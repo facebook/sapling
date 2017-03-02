@@ -46,6 +46,7 @@ from mercurial import (
     scmutil,
     templatefilters,
     util,
+    vfs as vfsmod,
 )
 
 from . import (
@@ -78,8 +79,8 @@ class shelvedfile(object):
     def __init__(self, repo, name, filetype=None):
         self.repo = repo
         self.name = name
-        self.vfs = scmutil.vfs(repo.join(shelvedir))
-        self.backupvfs = scmutil.vfs(repo.join(backupdir))
+        self.vfs = vfsmod.vfs(repo.join(shelvedir))
+        self.backupvfs = vfsmod.vfs(repo.join(backupdir))
         self.ui = self.repo.ui
         if filetype:
             self.fname = name + '.' + filetype
@@ -220,7 +221,7 @@ class shelvedstate(object):
         util.unlinkpath(repo.join(cls._filename), ignoremissing=True)
 
 def cleanupoldbackups(repo):
-    vfs = scmutil.vfs(repo.join(backupdir))
+    vfs = vfsmod.vfs(repo.join(backupdir))
     maxbackups = repo.ui.configint('shelve', 'maxbackups', 10)
     hgfiles = [f for f in vfs.listdir()
                if f.endswith('.' + patchextension)]
