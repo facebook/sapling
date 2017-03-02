@@ -27,6 +27,7 @@ from mercurial import (
     pycompat,
     scmutil,
     util,
+    vfs as vfsmod,
 )
 
 shortname = '.hglf'
@@ -144,7 +145,7 @@ def openlfdirstate(ui, repo, create=True):
     '''
     vfs = repo.vfs
     lfstoredir = longname
-    opener = scmutil.vfs(vfs.join(lfstoredir))
+    opener = vfsmod.vfs(vfs.join(lfstoredir))
     lfdirstate = largefilesdirstate(opener, ui, repo.root,
                                      repo.dirstate._validate)
 
