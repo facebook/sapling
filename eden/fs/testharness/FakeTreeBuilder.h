@@ -9,6 +9,7 @@
  */
 #pragma once
 
+#include <folly/ExceptionWrapper.h>
 #include <folly/Range.h>
 #include <memory>
 #include "eden/fs/model/TreeEntry.h"
@@ -41,7 +42,9 @@ using StoredBlob = StoredObject<Blob>;
  */
 class FakeTreeBuilder {
  public:
-  explicit FakeTreeBuilder(FakeBackingStore* backingStore);
+  class FileInfo;
+
+  FakeTreeBuilder();
 
   FakeTreeBuilder(FakeTreeBuilder&&) = default;
   FakeTreeBuilder& operator=(FakeTreeBuilder&&) = default;
@@ -87,6 +90,8 @@ class FakeTreeBuilder {
       int permissions = 0644) {
     setFileImpl(path, contents, false, FileType::REGULAR_FILE, permissions);
   }
+
+  void setFiles(const std::initializer_list<FileInfo>& fileArgs);
 
   /**
    * Replace the contents of a file at the given path.
@@ -138,12 +143,40 @@ class FakeTreeBuilder {
   }
 
   /**
-   * Look up the StoredTree or StoredBlob at the given path and mark it ready.
+   * Make sure a directory exists at the given path.
+   *
+   * This allows creating empty Tree objects in the backing store.
+   * This does not generally happen in practice, but is potentially useful to
+   * be able to do during testing.
+   */
+  void mkdir(folly::StringPiece path) {
+    mkdir(RelativePathPiece{path});
+  }
+  void mkdir(RelativePathPiece path);
+
+  /**
+   * Call setReady() on the StoredTree or StoredBlob at the given path.
    */
   void setReady(folly::StringPiece path) {
     setReady(RelativePathPiece{path});
   }
   void setReady(RelativePathPiece path);
+
+  /**
+   * Call triggerError() on the StoredTree or StoredBlob at the given path.
+   */
+  template <class E>
+  void triggerError(RelativePathPiece path, const E& e) {
+    triggerError(path, folly::make_exception_wrapper<E>(e));
+  }
+  template <class E>
+  void triggerError(folly::StringPiece path, const E& e) {
+    triggerError(RelativePathPiece{path}, folly::make_exception_wrapper<E>(e));
+  }
+  void triggerError(RelativePathPiece path, folly::exception_wrapper ew);
+  void triggerError(folly::StringPiece path, folly::exception_wrapper ew) {
+    triggerError(RelativePathPiece{path}, std::move(ew));
+  }
 
   /**
    * Update the FakeBackingStore with Tree and Blob objects from this
@@ -158,7 +191,7 @@ class FakeTreeBuilder {
    * the tree are identical to Trees and Blobs already present in the
    * FakeBackingStore.
    */
-  StoredTree* finalize(bool setReady);
+  StoredTree* finalize(std::shared_ptr<FakeBackingStore> store, bool setReady);
 
   StoredTree* getRoot() const;
 
@@ -199,9 +232,18 @@ class FakeTreeBuilder {
   EntryInfo* getDirEntry(RelativePathPiece path, bool create);
   StoredTree* getStoredTree(RelativePathPiece path);
 
-  FakeBackingStore* const store_{nullptr};
+  std::shared_ptr<FakeBackingStore> store_{nullptr};
   EntryInfo root_{FileType::DIRECTORY, 0b111};
   StoredTree* finalizedRoot_{nullptr};
+};
+
+struct FakeTreeBuilder::FileInfo {
+  RelativePath path;
+  std::string contents;
+  int permissions = 0644;
+
+  FileInfo(folly::StringPiece p, folly::StringPiece c, int perms = 0644)
+      : path(p), contents(c.str()), permissions(perms) {}
 };
 }
 }

@@ -124,12 +124,6 @@ class FakeBackingStore : public BackingStore {
    */
   StoredBlob* getStoredBlob(Hash hash);
 
-  /**
-   * Create a new FakeTreeBuilder that can be used to populate data in this
-   * FakeBackingStore.
-   */
-  FakeTreeBuilder treeBuilder();
-
  private:
   struct Data {
     std::unordered_map<Hash, std::unique_ptr<StoredTree>> trees;

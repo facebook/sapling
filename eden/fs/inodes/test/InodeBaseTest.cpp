@@ -11,6 +11,7 @@
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeBase.h"
 #include "eden/fs/inodes/TreeInode.h"
+#include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestMount.h"
 
 using namespace facebook::eden;
@@ -18,13 +19,13 @@ using folly::StringPiece;
 using std::dynamic_pointer_cast;
 
 TEST(InodeBase, getPath) {
-  TestMountBuilder builder;
-  builder.addFiles({
+  FakeTreeBuilder builder;
+  builder.setFiles({
       {"a/b/c/noop.c", "int main() { return 0; }\n"},
   });
-  auto testMount = builder.build();
+  TestMount testMount{builder};
 
-  auto root = testMount->getEdenMount()->getRootInode();
+  auto root = testMount.getEdenMount()->getRootInode();
   EXPECT_EQ(RelativePathPiece(), root->getPath().value());
   EXPECT_EQ("<root>", root->getLogPath());
 

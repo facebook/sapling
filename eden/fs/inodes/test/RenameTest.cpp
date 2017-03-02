@@ -16,7 +16,7 @@
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/TreeInode.h"
-#include "eden/fs/testharness/FakeBackingStore.h"
+#include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestMount.h"
 #include "eden/fs/testharness/TestUtil.h"
 #include "eden/utils/Bug.h"
@@ -30,8 +30,8 @@ class RenameTest : public ::testing::Test {
   void SetUp() override {
     // Set up a directory structure that we will use for most
     // of the tests below
-    TestMountBuilder builder;
-    builder.addFiles({
+    FakeTreeBuilder builder;
+    builder.setFiles({
         {"a/b/c/doc.txt", "This file is used for most of the file renames.\n"},
         {"a/readme.txt", "I exist to be replaced.\n"},
         {"a/b/readme.txt", "I exist to be replaced.\n"},
@@ -40,7 +40,7 @@ class RenameTest : public ::testing::Test {
         {"a/b/c/d/e/f/readme.txt", "I exist to be replaced.\n"},
         {"a/x/y/z/readme.txt", "I exist to be replaced.\n"},
     });
-    mount_ = builder.build();
+    mount_ = std::make_unique<TestMount>(builder);
     // Also create some empty directories for the tests
     mount_->mkdir("a/emptydir");
     mount_->mkdir("a/b/emptydir");
@@ -410,50 +410,22 @@ TEST_F(RenameTest, renameIntoUnlinkedDir) {
 class RenameLoadingTest : public ::testing::Test {
  protected:
   void SetUp() override {
-    // Set up a directory structure that we will use for most
-    // of the tests below
-    BaseTestMountBuilder builder;
-    auto backingStore = builder.getBackingStore();
-
-    // This sets up the following files:
-    // - a/b/c/doc.txt
-    // - a/b/c/readme.txt
-    // - a/b/testdir/sample.txt
-    // - a/b/empty/
-    doc_ = backingStore->putBlob("documentation\n");
-    readme_ = backingStore->putBlob("more docs\n");
-    sample_ = backingStore->putBlob("Lorem ipsum dolor sit amet\n");
-    a_b_c_ =
-        backingStore->putTree({{"doc.txt", doc_}, {"readme.txt", readme_}});
-    a_b_testdir_ = backingStore->putTree({{"sample.txt", sample_}});
-    // Empty directories generally aren't tracked by source control,
-    // but create one for testing purposes anyway.
-    a_b_empty_ = backingStore->putTree({});
-    a_b_ = backingStore->putTree(
-        {{"c", a_b_c_}, {"testdir", a_b_testdir_}, {"empty", a_b_empty_}});
-    a_ = backingStore->putTree({{"b", a_b_}});
-    root_ = backingStore->putTree({{"a", a_}});
-    builder.setCommit(makeTestHash("ccc"), root_->get().getHash());
-    // build() will hang unless the root tree is ready.
-    root_->setReady();
-    mount_ = builder.build();
+    builder_.setFiles({
+        {"a/b/c/doc.txt", "documentation\n"},
+        {"a/b/c/readme.txt", "more docs\n"},
+        {"a/b/testdir/sample.txt", "Lorem ipsum dolor sit amet\n"},
+    });
+    builder_.mkdir("a/b/empty");
+    mount_ = std::make_unique<TestMount>(builder_, false);
   }
 
+  FakeTreeBuilder builder_;
   std::unique_ptr<TestMount> mount_;
-  StoredBlob* doc_;
-  StoredBlob* readme_;
-  StoredBlob* sample_;
-  StoredTree* a_b_c_;
-  StoredTree* a_b_;
-  StoredTree* a_b_testdir_;
-  StoredTree* a_b_empty_;
-  StoredTree* a_;
-  StoredTree* root_;
 };
 
 TEST_F(RenameLoadingTest, renameDirSameDirectory) {
-  a_->setReady();
-  a_b_->setReady();
+  builder_.setReady("a");
+  builder_.setReady("a/b");
 
   // Perform a rename where the child inode ("a/b/c" in this case)
   // is not ready yet, because the data is not available from the BackingStore.
@@ -465,19 +437,19 @@ TEST_F(RenameLoadingTest, renameDirSameDirectory) {
   auto bInode = mount_->getTreeInode("a/b");
   auto renameFuture =
       bInode->rename(PathComponentPiece{"c"}, bInode, PathComponentPiece{"x"});
-  // The rename will not complete until a_b_c_ becomes ready
+  // The rename will not complete until a/b/c becomes ready
   EXPECT_FALSE(renameFuture.isReady());
 
-  // Now make a_b_c_ ready
-  a_b_c_->setReady();
+  // Now make a/b/c ready
+  builder_.setReady("a/b/c");
   ASSERT_TRUE(renameFuture.isReady());
   EXPECT_FALSE(renameFuture.hasException());
   renameFuture.get();
 }
 
 TEST_F(RenameLoadingTest, renameWithLoadPending) {
-  a_->setReady();
-  a_b_->setReady();
+  builder_.setReady("a");
+  builder_.setReady("a/b");
 
   // Start a lookup on a/b/c before we start the rename
   auto inodeFuture =
@@ -488,11 +460,11 @@ TEST_F(RenameLoadingTest, renameWithLoadPending) {
   auto bInode = mount_->getTreeInode("a/b");
   auto renameFuture =
       bInode->rename(PathComponentPiece{"c"}, bInode, PathComponentPiece{"x"});
-  // The rename will not complete until a_b_c_ becomes ready
+  // The rename will not complete until a/b/c becomes ready
   EXPECT_FALSE(renameFuture.isReady());
 
-  // Now make a_b_c_ ready
-  a_b_c_->setReady();
+  // Now make a/b/c ready
+  builder_.setReady("a/b/c");
 
   // Both the load and the rename should have completed
   ASSERT_TRUE(inodeFuture.isReady());
@@ -517,14 +489,14 @@ TEST_F(RenameLoadingTest, renameWithLoadPending) {
 }
 
 TEST_F(RenameLoadingTest, loadWithRenamePending) {
-  a_->setReady();
-  a_b_->setReady();
+  builder_.setReady("a");
+  builder_.setReady("a/b");
 
   // Perform a rename on a/b/c before that inode is ready.
   auto bInode = mount_->getTreeInode("a/b");
   auto renameFuture =
       bInode->rename(PathComponentPiece{"c"}, bInode, PathComponentPiece{"x"});
-  // The rename will not complete until a_b_c_ becomes ready
+  // The rename will not complete until a/b/c becomes ready
   EXPECT_FALSE(renameFuture.isReady());
 
   // Also start a lookup on a/b/c after starting the rename
@@ -532,8 +504,8 @@ TEST_F(RenameLoadingTest, loadWithRenamePending) {
       mount_->getEdenMount()->getInode(RelativePathPiece{"a/b/c"});
   EXPECT_FALSE(inodeFuture.isReady());
 
-  // Now make a_b_c_ ready
-  a_b_c_->setReady();
+  // Now make a/b/c ready
+  builder_.setReady("a/b/c");
 
   // Both the load and the rename should have completed
   ASSERT_TRUE(inodeFuture.isReady());
@@ -558,18 +530,18 @@ TEST_F(RenameLoadingTest, loadWithRenamePending) {
 }
 
 TEST_F(RenameLoadingTest, renameLoadFailure) {
-  a_->setReady();
-  a_b_->setReady();
+  builder_.setReady("a");
+  builder_.setReady("a/b");
 
   // Perform a rename on "a/b/c" before it is ready
   auto bInode = mount_->getTreeInode("a/b");
   auto renameFuture =
       bInode->rename(PathComponentPiece{"c"}, bInode, PathComponentPiece{"x"});
-  // The rename will not complete until a_b_c_ becomes ready
+  // The rename will not complete until a/b/c becomes ready
   EXPECT_FALSE(renameFuture.isReady());
 
-  // Fail the load of a_b_c_
-  a_b_c_->triggerError(std::domain_error("fake error for testing"));
+  // Fail the load of a/b/c
+  builder_.triggerError("a/b/c", std::domain_error("fake error for testing"));
   ASSERT_TRUE(renameFuture.isReady());
   EXPECT_THROW_RE(
       renameFuture.get(), std::domain_error, "fake error for testing");
@@ -578,21 +550,21 @@ TEST_F(RenameLoadingTest, renameLoadFailure) {
 // Test a rename that replaces a destination directory, where neither
 // the source nor destination are ready yet.
 TEST_F(RenameLoadingTest, renameLoadDest) {
-  a_->setReady();
-  a_b_->setReady();
+  builder_.setReady("a");
+  builder_.setReady("a/b");
 
   // Perform a rename on "a/b/c" before it is ready
   auto bInode = mount_->getTreeInode("a/b");
   auto renameFuture = bInode->rename(
       PathComponentPiece{"c"}, bInode, PathComponentPiece{"empty"});
-  // The rename will not complete until both a_b_c_ and a_b_empty_ become ready
+  // The rename will not complete until both a/b/c and a/b/empty become ready
   EXPECT_FALSE(renameFuture.isReady());
 
-  // Make a_b_c_ ready first
-  a_b_c_->setReady();
+  // Make a/b/c ready first
+  builder_.setReady("a/b/c");
   EXPECT_FALSE(renameFuture.isReady());
-  // Now make a_b_empty_ ready
-  a_b_empty_->setReady();
+  // Now make a/b/empty ready
+  builder_.setReady("a/b/empty");
 
   // Both the load and the rename should have completed
   ASSERT_TRUE(renameFuture.isReady());
@@ -601,21 +573,21 @@ TEST_F(RenameLoadingTest, renameLoadDest) {
 }
 
 TEST_F(RenameLoadingTest, renameLoadDestOtherOrder) {
-  a_->setReady();
-  a_b_->setReady();
+  builder_.setReady("a");
+  builder_.setReady("a/b");
 
   // Perform a rename on "a/b/c" before it is ready
   auto bInode = mount_->getTreeInode("a/b");
   auto renameFuture = bInode->rename(
       PathComponentPiece{"c"}, bInode, PathComponentPiece{"empty"});
-  // The rename will not complete until both a_b_c_ and a_b_empty_ become ready
+  // The rename will not complete until both a/b/c and a/b/empty become ready
   EXPECT_FALSE(renameFuture.isReady());
 
-  // Make a_b_empty_ ready first
-  a_b_empty_->setReady();
+  // Make a/b/empty ready first
+  builder_.setReady("a/b/empty");
   EXPECT_FALSE(renameFuture.isReady());
-  // Now make a_b_c_ ready
-  a_b_c_->setReady();
+  // Now make a/b/c ready
+  builder_.setReady("a/b/c");
 
   // Both the load and the rename should have completed
   ASSERT_TRUE(renameFuture.isReady());
@@ -626,21 +598,21 @@ TEST_F(RenameLoadingTest, renameLoadDestOtherOrder) {
 // Test a rename that replaces a destination directory, where neither
 // the source nor destination are ready yet.
 TEST_F(RenameLoadingTest, renameLoadDestNonempty) {
-  a_->setReady();
-  a_b_->setReady();
+  builder_.setReady("a");
+  builder_.setReady("a/b");
 
   // Perform a rename on "a/b/c" before it is ready
   auto bInode = mount_->getTreeInode("a/b");
   auto renameFuture = bInode->rename(
       PathComponentPiece{"c"}, bInode, PathComponentPiece{"testdir"});
-  // The rename will not complete until both a_b_c_ and a_b_empty_ become ready
+  // The rename will not complete until both a/b/c and a/b/empty become ready
   EXPECT_FALSE(renameFuture.isReady());
 
-  // Make a_b_c_ ready first
-  a_b_c_->setReady();
+  // Make a/b/c ready first
+  builder_.setReady("a/b/c");
   EXPECT_FALSE(renameFuture.isReady());
-  // Now make a_b_testdir_ ready
-  a_b_testdir_->setReady();
+  // Now make a/b/testdir ready
+  builder_.setReady("a/b/testdir");
 
   // The load should fail with ENOTEMPTY
   ASSERT_TRUE(renameFuture.isReady());
@@ -650,23 +622,23 @@ TEST_F(RenameLoadingTest, renameLoadDestNonempty) {
 // Test a rename that replaces a destination directory, where neither
 // the source nor destination are ready yet.
 TEST_F(RenameLoadingTest, renameLoadDestNonemptyOtherOrder) {
-  a_->setReady();
-  a_b_->setReady();
+  builder_.setReady("a");
+  builder_.setReady("a/b");
 
   // Perform a rename on "a/b/c" before it is ready
   auto bInode = mount_->getTreeInode("a/b");
   auto renameFuture = bInode->rename(
       PathComponentPiece{"c"}, bInode, PathComponentPiece{"testdir"});
-  // The rename will not complete until both a_b_c_ and a_b_empty_ become ready
+  // The rename will not complete until both a/b/c and a/b/empty become ready
   EXPECT_FALSE(renameFuture.isReady());
 
-  // Make a_b_testdir_ ready first.
-  a_b_testdir_->setReady();
+  // Make a/b/testdir ready first.
+  builder_.setReady("a/b/testdir");
   // The rename could potentially fail now, but it is also be fine for it to
   // wait for the source directory to be ready too before it performs
   // validation.  Therefore go ahead and make the source directory ready too
   // without checking renameFuture.isReady()
-  a_b_c_->setReady();
+  builder_.setReady("a/b/c");
 
   // The load should fail with ENOTEMPTY
   ASSERT_TRUE(renameFuture.isReady());
@@ -674,21 +646,22 @@ TEST_F(RenameLoadingTest, renameLoadDestNonemptyOtherOrder) {
 }
 
 TEST_F(RenameLoadingTest, renameLoadDestFailure) {
-  a_->setReady();
-  a_b_->setReady();
+  builder_.setReady("a");
+  builder_.setReady("a/b");
 
   // Perform a rename on "a/b/c" before it is ready
   auto bInode = mount_->getTreeInode("a/b");
   auto renameFuture = bInode->rename(
       PathComponentPiece{"c"}, bInode, PathComponentPiece{"empty"});
-  // The rename will not complete until both a_b_c_ and a_b_empty_ become ready
+  // The rename will not complete until both a/b/c and a/b/empty become ready
   EXPECT_FALSE(renameFuture.isReady());
 
-  // Make a_b_c_ ready first
-  a_b_c_->setReady();
+  // Make a/b/c ready first
+  builder_.setReady("a/b/c");
   EXPECT_FALSE(renameFuture.isReady());
-  // Now fail the load on a_b_empty_
-  a_b_empty_->triggerError(std::domain_error("fake error for testing"));
+  // Now fail the load on a/b/empty
+  builder_.triggerError(
+      "a/b/empty", std::domain_error("fake error for testing"));
 
   // Verify the rename failure
   ASSERT_TRUE(renameFuture.isReady());
@@ -697,22 +670,23 @@ TEST_F(RenameLoadingTest, renameLoadDestFailure) {
 }
 
 TEST_F(RenameLoadingTest, renameLoadDestFailureOtherOrder) {
-  a_->setReady();
-  a_b_->setReady();
+  builder_.setReady("a");
+  builder_.setReady("a/b");
 
   // Perform a rename on "a/b/c" before it is ready
   auto bInode = mount_->getTreeInode("a/b");
   auto renameFuture = bInode->rename(
       PathComponentPiece{"c"}, bInode, PathComponentPiece{"empty"});
-  // The rename will not complete until both a_b_c_ and a_b_empty_ become ready
+  // The rename will not complete until both a/b/c and a/b/empty become ready
   EXPECT_FALSE(renameFuture.isReady());
 
-  // Fail the load on a_b_empty_ first
-  a_b_empty_->triggerError(std::domain_error("fake error for testing"));
+  // Fail the load on a/b/empty first
+  builder_.triggerError(
+      "a/b/empty", std::domain_error("fake error for testing"));
   // The rename may fail immediately, but it's also fine for it to wait
   // for the source load to finish too.  Therefore go ahead and finish the load
-  // on a_b_c_ without checking renameFuture.isReady()
-  a_b_c_->setReady();
+  // on a/b/c without checking renameFuture.isReady()
+  builder_.setReady("a/b/c");
 
   // Verify the rename failure
   ASSERT_TRUE(renameFuture.isReady());
@@ -721,19 +695,21 @@ TEST_F(RenameLoadingTest, renameLoadDestFailureOtherOrder) {
 }
 
 TEST_F(RenameLoadingTest, renameLoadBothFailure) {
-  a_->setReady();
-  a_b_->setReady();
+  builder_.setReady("a");
+  builder_.setReady("a/b");
 
   // Perform a rename on "a/b/c" before it is ready
   auto bInode = mount_->getTreeInode("a/b");
   auto renameFuture = bInode->rename(
       PathComponentPiece{"c"}, bInode, PathComponentPiece{"empty"});
-  // The rename will not complete until both a_b_c_ and a_b_empty_ become ready
+  // The rename will not complete until both a/b/c and a/b/empty become ready
   EXPECT_FALSE(renameFuture.isReady());
 
   // Trigger errors on both inode loads
-  a_b_c_->triggerError(std::domain_error("fake error for testing: src"));
-  a_b_empty_->triggerError(std::domain_error("fake error for testing: dest"));
+  builder_.triggerError(
+      "a/b/c", std::domain_error("fake error for testing: src"));
+  builder_.triggerError(
+      "a/b/empty", std::domain_error("fake error for testing: dest"));
 
   // Verify the rename failure.
   // It doesn't matter which error we got, as long as one of

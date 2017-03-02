@@ -8,6 +8,7 @@
  *
  */
 #include "eden/fs/inodes/EdenMounts.h"
+#include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestMount.h"
 #include "eden/utils/PathFuncs.h"
 
@@ -16,9 +17,9 @@
 using namespace facebook::eden;
 
 TEST(EdenMountHandler, getModifiedDirectoriesForMountWithNoModifications) {
-  TestMountBuilder builder;
-  auto testMount = builder.build();
-  auto edenMount = testMount->getEdenMount();
+  FakeTreeBuilder builder;
+  TestMount testMount{builder};
+  auto edenMount = testMount.getEdenMount();
   auto toIgnore = std::unordered_set<RelativePathPiece>();
   auto modifiedDirectories =
       getModifiedDirectoriesForMount(edenMount.get(), &toIgnore);
@@ -27,29 +28,29 @@ TEST(EdenMountHandler, getModifiedDirectoriesForMountWithNoModifications) {
 }
 
 TEST(EdenMountHandler, getModifiedDirectoriesForMount) {
-  TestMountBuilder builder;
-  builder.addFiles({
+  FakeTreeBuilder builder;
+  builder.setFiles({
       {"animals/c/cat", "meow"}, {"animals/d/dog", "woof"},
   });
-  auto testMount = builder.build();
+  TestMount testMount{builder};
 
-  testMount->mkdir("x");
-  testMount->mkdir("x/y");
-  testMount->mkdir("x/y/z");
-  testMount->addFile("x/file.txt", "");
-  testMount->addFile("x/y/file.txt", "");
-  testMount->addFile("x/y/z/file.txt", "");
+  testMount.mkdir("x");
+  testMount.mkdir("x/y");
+  testMount.mkdir("x/y/z");
+  testMount.addFile("x/file.txt", "");
+  testMount.addFile("x/y/file.txt", "");
+  testMount.addFile("x/y/z/file.txt", "");
 
-  testMount->addFile("animals/c/cow", "moo");
+  testMount.addFile("animals/c/cow", "moo");
 
-  testMount->mkdir("a");
-  testMount->mkdir("a/b");
-  testMount->mkdir("a/b/c");
-  testMount->addFile("a/file.txt", "");
-  testMount->addFile("a/b/file.txt", "");
-  testMount->addFile("a/b/c/file.txt", "");
+  testMount.mkdir("a");
+  testMount.mkdir("a/b");
+  testMount.mkdir("a/b/c");
+  testMount.addFile("a/file.txt", "");
+  testMount.addFile("a/b/file.txt", "");
+  testMount.addFile("a/b/c/file.txt", "");
 
-  auto edenMount = testMount->getEdenMount();
+  auto edenMount = testMount.getEdenMount();
   auto nothingToIgnore = std::unordered_set<RelativePathPiece>();
   auto modifiedDirectories =
       getModifiedDirectoriesForMount(edenMount.get(), &nothingToIgnore);

@@ -23,8 +23,7 @@ using std::string;
 namespace facebook {
 namespace eden {
 
-FakeTreeBuilder::FakeTreeBuilder(FakeBackingStore* backingStore)
-    : store_{backingStore} {}
+FakeTreeBuilder::FakeTreeBuilder() {}
 
 /**
  * Create a clone of this FakeTreeBuilder.
@@ -33,10 +32,28 @@ FakeTreeBuilder::FakeTreeBuilder(FakeBackingStore* backingStore)
  * regardless of whether the original FakeTreeBuilder was finalized or not.
  */
 FakeTreeBuilder::FakeTreeBuilder(ExplicitClone, const FakeTreeBuilder* orig)
-    : store_{orig->store_}, root_{CLONE, orig->root_} {}
+    : root_{CLONE, orig->root_} {}
 
 FakeTreeBuilder FakeTreeBuilder::clone() const {
   return FakeTreeBuilder{CLONE, this};
+}
+
+void FakeTreeBuilder::setFiles(
+    const std::initializer_list<FileInfo>& fileArgs) {
+  for (const auto& arg : fileArgs) {
+    setFileImpl(
+        arg.path,
+        folly::ByteRange{folly::StringPiece{arg.contents}},
+        false,
+        FileType::REGULAR_FILE,
+        arg.permissions);
+  }
+}
+
+void FakeTreeBuilder::mkdir(RelativePathPiece path) {
+  // Use getDirEntry() to create a directory at this location if one
+  // does not already exist.
+  getDirEntry(path, true);
 }
 
 void FakeTreeBuilder::setFileImpl(
@@ -88,8 +105,31 @@ void FakeTreeBuilder::setReady(RelativePathPiece path) {
   }
 }
 
-StoredTree* FakeTreeBuilder::finalize(bool setReady) {
+void FakeTreeBuilder::triggerError(
+    RelativePathPiece path,
+    folly::exception_wrapper ew) {
+  CHECK(finalizedRoot_);
+
+  if (path.empty()) {
+    finalizedRoot_->triggerError(std::move(ew));
+    return;
+  }
+
+  auto* parent = getStoredTree(path.dirname());
+  const auto& entry = parent->get().getEntryAt(path.basename());
+  if (entry.getFileType() == FileType::DIRECTORY) {
+    store_->getStoredTree(entry.getHash())->triggerError(std::move(ew));
+  } else {
+    store_->getStoredBlob(entry.getHash())->triggerError(std::move(ew));
+  }
+}
+
+StoredTree* FakeTreeBuilder::finalize(
+    std::shared_ptr<FakeBackingStore> store,
+    bool setReady) {
   CHECK(!finalizedRoot_);
+  CHECK(!store_);
+  store_ = std::move(store);
 
   finalizedRoot_ = root_.finalizeTree(this, setReady);
   return finalizedRoot_;

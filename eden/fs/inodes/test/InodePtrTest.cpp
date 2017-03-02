@@ -12,6 +12,7 @@
 #include "eden/fs/inodes/InodeBase.h"
 #include "eden/fs/inodes/InodePtr.h"
 #include "eden/fs/inodes/TreeInode.h"
+#include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestMount.h"
 #include "eden/fs/testharness/TestUtil.h"
 #include "eden/utils/test/TestChecks.h"
@@ -40,11 +41,11 @@ class InodePtrTestHelper {
   EXPECT_EQ(expected, InodePtrTestHelper::getRefcount(inodePtr))
 
 TEST(InodePtr, constructionAndAssignment) {
-  TestMountBuilder builder;
-  auto testMount = builder.build();
+  FakeTreeBuilder emptyBuilder;
+  TestMount testMount{emptyBuilder};
 
   // Get the root inode
-  auto rootPtr = testMount->getEdenMount()->getRootInode();
+  auto rootPtr = testMount.getEdenMount()->getRootInode();
   // The refcount for the root should be 2:
   // - The InodeMap keeps 1 reference to the root inode
   // - We got a second reference
@@ -146,9 +147,9 @@ TEST(InodePtr, constructionAndAssignment) {
 }
 
 TEST(InodePtr, baseConstructionAndAssignment) {
-  TestMountBuilder builder;
-  auto testMount = builder.build();
-  auto rootPtr = testMount->getEdenMount()->getRootInode();
+  FakeTreeBuilder emptyBuilder;
+  TestMount testMount{emptyBuilder};
+  auto rootPtr = testMount.getEdenMount()->getRootInode();
   EXPECT_REFCOUNT(2, rootPtr);
 
   // Construct an InodePtr from TreeInodePtr
@@ -201,9 +202,9 @@ TEST(InodePtr, baseConstructionAndAssignment) {
 }
 
 TEST(InodePtr, baseCasting) {
-  TestMountBuilder builder;
-  auto testMount = builder.build();
-  auto rootPtr = testMount->getEdenMount()->getRootInode();
+  FakeTreeBuilder emptyBuilder;
+  TestMount testMount{emptyBuilder};
+  auto rootPtr = testMount.getEdenMount()->getRootInode();
   EXPECT_REFCOUNT(2, rootPtr);
 
   // Construct an InodePtr from TreeInodePtr

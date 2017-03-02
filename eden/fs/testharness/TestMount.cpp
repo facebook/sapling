@@ -50,50 +50,64 @@ bool TestMountFile::operator==(const TestMountFile& other) const {
       type == other.type;
 }
 
-TestMount::TestMount(
-    std::shared_ptr<EdenMount> edenMount,
-    std::unique_ptr<folly::test::TemporaryDirectory> testDir)
-    : testDir_(std::move(testDir)), edenMount_(std::move(edenMount)) {}
-
-TestMount::~TestMount() {}
-
-BaseTestMountBuilder::BaseTestMountBuilder() {
-  // Initialize the TestMount's temporary directory.
+TestMount::TestMount() {
+  // Initialize the temporary directory.
   // This sets both testDir_, config_, localStore_, and backingStore_
   initTestDirectory();
 }
 
-BaseTestMountBuilder::~BaseTestMountBuilder() {}
-
-unique_ptr<TestMount> BaseTestMountBuilder::build() {
-  // Invoke populateStore() so subclasses can populate the stores, if needed.
-  populateStore();
-
-  // Now create the EdenMount
-  unique_ptr<ObjectStore> objectStore =
-      make_unique<ObjectStore>(localStore_, backingStore_);
-  auto edenMount =
-      EdenMount::makeShared(std::move(config_), std::move(objectStore));
-  return make_unique<TestMount>(std::move(edenMount), std::move(testDir_));
+TestMount::TestMount(FakeTreeBuilder& rootBuilder, bool startReady) {
+  initTestDirectory();
+  initialize(rootBuilder, startReady);
 }
 
-std::unique_ptr<TestMount> BaseTestMountBuilder::build(
-    const FakeTreeBuilder& rootBuilder) {
+TestMount::TestMount(
+    Hash initialCommitHash,
+    FakeTreeBuilder& rootBuilder,
+    bool startReady) {
+  initTestDirectory();
+  initialize(initialCommitHash, rootBuilder, startReady);
+}
+
+TestMount::~TestMount() {}
+
+void TestMount::initialize(Hash commitHash, Hash rootTreeHash) {
+  // Set the initial commit ID
+  setInitialCommit(commitHash, rootTreeHash);
+
+  // Create edenMount_
+  unique_ptr<ObjectStore> objectStore =
+      make_unique<ObjectStore>(localStore_, backingStore_);
+  edenMount_ =
+      EdenMount::makeShared(std::move(config_), std::move(objectStore));
+}
+
+void TestMount::initialize(
+    Hash initialCommitHash,
+    FakeTreeBuilder& rootBuilder,
+    bool startReady) {
+  // Finalize rootBuilder and get the root Tree
+  rootBuilder.finalize(backingStore_, startReady);
   auto rootTree = rootBuilder.getRoot();
   // We have to make sure the root tree is ready.  The EdenMount constructor
   // blocks until it is available, so we will hang below if it isn't ready.
   rootTree->setReady();
-  setCommit(makeTestHash("1"), rootTree->get().getHash());
 
-  // Now create the EdenMount
+  // Set the commit to tree mapping, and record the current commit hash
+  setInitialCommit(initialCommitHash, rootTree->get().getHash());
+
+  // Create edenMount_
   unique_ptr<ObjectStore> objectStore =
       make_unique<ObjectStore>(localStore_, backingStore_);
-  auto edenMount =
+  edenMount_ =
       EdenMount::makeShared(std::move(config_), std::move(objectStore));
-  return make_unique<TestMount>(std::move(edenMount), std::move(testDir_));
 }
 
-void BaseTestMountBuilder::initTestDirectory() {
+void TestMount::initialize(FakeTreeBuilder& rootBuilder, bool startReady) {
+  initialize(makeTestHash("1"), rootBuilder, startReady);
+}
+
+void TestMount::initTestDirectory() {
   // Create the temporary directory
   testDir_ = make_unique<TemporaryDirectory>("eden_test");
 
@@ -118,97 +132,22 @@ void BaseTestMountBuilder::initTestDirectory() {
   backingStore_ = make_shared<FakeBackingStore>(localStore_);
 }
 
-void BaseTestMountBuilder::setCommit(Hash commitHash, Hash rootTreeHash) {
+void TestMount::setInitialCommit(Hash commitHash, Hash rootTreeHash) {
   // Record the commit hash to root tree hash mapping in the BackingStore
   auto* storedCommit = backingStore_->putCommit(commitHash, rootTreeHash);
   storedCommit->setReady();
 
   // Write the commit hash to the snapshot file
-  writeSnapshotFile(commitHash);
-}
-
-void BaseTestMountBuilder::writeSnapshotFile(Hash commitHash) {
   auto snapshotPath = config_->getSnapshotPath();
   folly::writeFileAtomic(
       snapshotPath.stringPiece(), commitHash.toString() + "\n");
 }
 
-void BaseTestMountBuilder::populateStore() {
-  // Base class implementation is a no-op
-}
-
-TestMountBuilder::TestMountBuilder() {}
-
-TestMountBuilder::~TestMountBuilder() {}
-
-void TestMountBuilder::populateStore() {
-  std::sort(
-      files_.begin(),
-      files_.end(),
-      [](const TestMountFile& a, const TestMountFile& b) {
-        return a.path < b.path;
-      });
-  // Make sure there are no two items with the same path.
-  if (files_.size() > 1) {
-    for (auto it = files_.begin() + 1; it != files_.end(); ++it) {
-      auto prev = it - 1;
-      if (prev->path == it->path) {
-        throw std::runtime_error(folly::to<std::string>(
-            "Duplicate path added to TestMountBuilder: ", it->path));
-      }
-    }
-  }
-
-  // Use HgManifestImporter to create the appropriate intermediate Tree objects
-  // for the set of files that the user specified with proper hashes.
-  HgManifestImporter manifestImporter(getLocalStore().get());
-  for (auto& file : files_) {
-    auto dirname = file.path.dirname();
-
-    // For simplicity, we use the SHA-1 of the contents as the Hash id of the
-    // Blob. Note this differs from Git where the id of a Blob is the SHA-1 of a
-    // header plus the contents.
-    auto bytes = ByteRange(StringPiece(file.contents));
-    auto sha1 = Hash::sha1(bytes);
-
-    Hash dummyHash;
-    auto buf = folly::IOBuf::copyBuffer(file.contents);
-    auto blobWithDummyHash = Blob(dummyHash, *buf);
-    // There's a few issues here:
-    // 1. Apparently putBlob() does not look at blob.getHash(). It seems
-    //    dangerous that we can construct a Blob with an arbitrary id that has
-    //    nothing to do with its contents.
-    // 2. putBlob() computes the SHA-1 of the blob's contents, which duplicates
-    //    what we have done above.
-    // 3. We cannot easily use the 3-arg form of putBlob() because it takes raw
-    //    blobData instead of inserting the required header as the two-arg form
-    //    of putBlob() does. The way the header insertion logic, as written, is
-    //    not easy to extract out.
-    getLocalStore()->putBlob(sha1, &blobWithDummyHash);
-
-    TreeEntry treeEntry(
-        sha1, file.path.basename().stringPiece(), file.type, file.rwx);
-    manifestImporter.processEntry(dirname, std::move(treeEntry));
-  }
-  auto rootTreeHash = manifestImporter.finish();
-
-  // If we have user directives, put them in the dirstate file
-  if (!userDirectives_.empty()) {
-    DirstatePersistence dirstatePersistence{
-        getConfig()->getDirstateStoragePath()};
-    dirstatePersistence.save(userDirectives_);
-  }
-
-  // Pick an arbitrary commit ID, and store that it maps to the root tree that
-  // HgManifestImporter built.
-  auto commitHash = makeTestHash("cccc");
-  setCommit(commitHash, rootTreeHash);
-}
-
-void TestMountBuilder::addUserDirectives(
+void TestMount::setInitialDirstate(
     const std::unordered_map<RelativePath, overlay::UserStatusDirective>&
         userDirectives) {
-  userDirectives_.insert(userDirectives.begin(), userDirectives.end());
+  DirstatePersistence dirstatePersistence{config_->getDirstateStoragePath()};
+  dirstatePersistence.save(userDirectives);
 }
 
 void TestMount::addFile(folly::StringPiece path, std::string contents) {

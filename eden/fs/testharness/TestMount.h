@@ -52,77 +52,70 @@ struct TestMountFile {
 
 class TestMount {
  public:
+  /**
+   * Create a new uninitialized TestMount.
+   *
+   * The TestMount will not be fully initialized yet.  The caller must
+   * populate the object store as desired, and then call initialize() to
+   * create the underlying EdenMount object once the commit has been set up.
+   */
+  TestMount();
+
+  /**
+   * Create a new TestMount
+   *
+   * If startReady is true, all of the Tree and Blob objects created by the
+   * rootBuilder will be made immediately ready in the FakeBackingStore.  If
+   * startReady is false the objects will not be ready, and attempts to
+   * retrieve them from the backing store will not complete until the caller
+   * explicitly marks them ready.
+   *
+   * However, the root Tree object is always marked ready.  This is necessary
+   * to create the EdenMount object.
+   *
+   * If an initialCommitHash is not explicitly specified, makeTestHash("1")
+   * will be used.
+   */
+  explicit TestMount(FakeTreeBuilder& rootBuilder, bool startReady = true);
   TestMount(
-      std::shared_ptr<EdenMount> edenMount,
-      std::unique_ptr<folly::test::TemporaryDirectory> testDir);
+      Hash initialCommitHash,
+      FakeTreeBuilder& rootBuilder,
+      bool startReady = true);
+
   ~TestMount();
 
   /**
-   * Add file to the mount; it will be available in the overlay.
-   */
-  void addFile(folly::StringPiece path, std::string contents);
-
-  void mkdir(folly::StringPiece path);
-
-  /** Overwrites the contents of an existing file. */
-  void overwriteFile(folly::StringPiece path, std::string contents);
-
-  std::string readFile(folly::StringPiece path);
-
-  /** Returns true if path identifies a regular file in the tree. */
-  bool hasFileAt(folly::StringPiece path);
-
-  void deleteFile(folly::StringPiece path);
-  void rmdir(folly::StringPiece path);
-
-  TreeInodePtr getTreeInode(RelativePathPiece path) const;
-  TreeInodePtr getTreeInode(folly::StringPiece path) const;
-  FileInodePtr getFileInode(RelativePathPiece path) const;
-  FileInodePtr getFileInode(folly::StringPiece path) const;
-
-  /** Convenience method for getting the Tree for the root of the mount. */
-  std::unique_ptr<Tree> getRootTree() const;
-
-  std::shared_ptr<EdenMount> getEdenMount() {
-    return edenMount_;
-  }
-
-  Dirstate* getDirstate() const;
-
- private:
-  /**
-   * The temporary directory for this TestMount.
+   * Initialize the mount.
    *
-   * This must be stored as a member variable to ensure the temporary directory
-   * lives for the duration of the test.
-   *
-   * We intentionally list it before the edenMount_ so it gets constructed
-   * first, and destroyed (and deleted from disk) after the EdenMount is
-   * destroyed.
+   * This should only be used if the TestMount was default-constructed.
+   * The caller must have already defined the root Tree in the object store.
    */
-  std::unique_ptr<folly::test::TemporaryDirectory> testDir_;
-
-  std::shared_ptr<EdenMount> edenMount_;
-};
-
-/**
- * A class for helping construct the temporary directories and other state
- * needed to create a TestMount.
- */
-class BaseTestMountBuilder {
- public:
-  BaseTestMountBuilder();
-  virtual ~BaseTestMountBuilder();
+  void initialize(Hash initialCommitHash, Hash rootTreeHash);
 
   /**
-   * Build the TestMount.
+   * Initialize the mount from the given root tree.
    *
-   * This BaseTestMountBuilder object should not be accessed again after
-   * calling build().
+   * This should only be used if the TestMount was default-constructed.
+   *
+   * If an initialCommitHash is not explicitly specified, makeTestHash("1")
+   * will be used.
    */
-  std::unique_ptr<TestMount> build();
+  void initialize(
+      Hash initialCommitHash,
+      FakeTreeBuilder& rootBuilder,
+      bool startReady = true);
+  void initialize(FakeTreeBuilder& rootBuilder, bool startReady = true);
 
-  std::unique_ptr<TestMount> build(const FakeTreeBuilder& rootBuilder);
+  /**
+   * Set the initial directives stored in the on-disk dirstate.
+   *
+   * This method should only be called before initialize().  This allows tests
+   * to imitate mounting an existing eden client that has saved dirstate
+   * information.
+   */
+  void setInitialDirstate(
+      const std::unordered_map<RelativePath, overlay::UserStatusDirective>&
+          userDirectives);
 
   /**
    * Get the ClientConfig object.
@@ -153,72 +146,61 @@ class BaseTestMountBuilder {
   }
 
   /**
-   * Store a commit ID to tree ID mapping in the BackingStore,
-   * and then write this commit ID to the current SNAPSHOT file.
-   *
-   * This automatically makes the commit ID --> tree ID mapping ready in the
-   * FakeBackingStore.
-   *
-   * Note that the EdenMount constructor currently blocks until the root tree
-   * is ready, so the caller must make the returned StoredHash ready before
-   * calling build.  The Tree referenced by the rootTreeHash must also be
-   * ready or available in the LocalStore.
+   * Add file to the mount; it will be available in the overlay.
    */
-  void setCommit(Hash commitHash, Hash rootTreeHash);
+  void addFile(folly::StringPiece path, std::string contents);
 
-  /**
-   * Write a commit ID to the current SNAPSHOT file.
-   *
-   * Note that the EdenMount constructor currently blocks until the root tree
-   * is ready, so the caller must ensure that the commit hash and root tree are
-   * both ready in the ObjectStore.
-   */
-  void writeSnapshotFile(Hash commitHash);
+  void mkdir(folly::StringPiece path);
+
+  /** Overwrites the contents of an existing file. */
+  void overwriteFile(folly::StringPiece path, std::string contents);
+
+  std::string readFile(folly::StringPiece path);
+
+  /** Returns true if path identifies a regular file in the tree. */
+  bool hasFileAt(folly::StringPiece path);
+
+  void deleteFile(folly::StringPiece path);
+  void rmdir(folly::StringPiece path);
+
+  TreeInodePtr getTreeInode(RelativePathPiece path) const;
+  TreeInodePtr getTreeInode(folly::StringPiece path) const;
+  FileInodePtr getFileInode(RelativePathPiece path) const;
+  FileInodePtr getFileInode(folly::StringPiece path) const;
+
+  /** Convenience method for getting the Tree for the root of the mount. */
+  std::unique_ptr<Tree> getRootTree() const;
+
+  const std::shared_ptr<EdenMount>& getEdenMount() const {
+    return edenMount_;
+  }
+
+  Dirstate* getDirstate() const;
 
  private:
   void initTestDirectory();
+  void setInitialCommit(Hash commitHash, Hash rootTreeHash);
 
-  virtual void populateStore();
-
+  /**
+   * The temporary directory for this TestMount.
+   *
+   * This must be stored as a member variable to ensure the temporary directory
+   * lives for the duration of the test.
+   *
+   * We intentionally list it before the edenMount_ so it gets constructed
+   * first, and destroyed (and deleted from disk) after the EdenMount is
+   * destroyed.
+   */
   std::unique_ptr<folly::test::TemporaryDirectory> testDir_;
-  std::unique_ptr<ClientConfig> config_;
+
+  std::shared_ptr<EdenMount> edenMount_;
   std::shared_ptr<LocalStore> localStore_;
   std::shared_ptr<FakeBackingStore> backingStore_;
-};
-
-/**
- * An implementation of BaseTestMountBuilder that helps populate the
- * LocalStore.
- *
- * All files defined with addFile()/addFiles() are added directly to the
- * LocalStore.  They will therefore always be immediately available, and the
- * test code cannot control when their Futures are fulfilled.
- */
-class TestMountBuilder : public BaseTestMountBuilder {
- public:
-  TestMountBuilder();
-  virtual ~TestMountBuilder();
-
-  void addFile(TestMountFile&& file) {
-    files_.emplace_back(std::move(file));
-  }
-
-  void addFiles(std::vector<TestMountFile>&& files) {
-    for (auto&& f : files) {
-      files_.emplace_back(std::move(f));
-    }
-  }
-
-  void addUserDirectives(
-      const std::unordered_map<RelativePath, overlay::UserStatusDirective>&
-          userDirectives);
-
- private:
-  void populateStore() override;
-
-  std::vector<TestMountFile> files_;
-  std::unordered_map<RelativePath, overlay::UserStatusDirective>
-      userDirectives_;
+  /*
+   * config_ is only set before edenMount_ has been initialized.
+   * When edenMount_ is created we pass ownership of the config to edenMount_.
+   */
+  std::unique_ptr<ClientConfig> config_;
 };
 }
 }

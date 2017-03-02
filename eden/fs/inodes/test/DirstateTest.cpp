@@ -10,6 +10,7 @@
 
 #include <gtest/gtest.h>
 #include "eden/fs/inodes/Dirstate.h"
+#include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestMount.h"
 
 using namespace facebook::eden;
@@ -107,26 +108,27 @@ void scmRemoveFileAndExpect(
 }
 
 TEST(Dirstate, createDirstate) {
-  TestMountBuilder builder;
-  auto testMount = builder.build();
+  FakeTreeBuilder builder;
+  TestMount testMount{builder};
 
-  auto dirstate = testMount->getDirstate();
+  auto dirstate = testMount.getDirstate();
   verifyEmptyDirstate(dirstate);
 }
 
 TEST(Dirstate, createDirstateWithInitialState) {
-  TestMountBuilder builder;
-  builder.addFile({"removed.txt", "nada"});
-  builder.addUserDirectives({
+  FakeTreeBuilder builder;
+  builder.setFile("removed.txt", "nada");
+  TestMount testMount;
+  testMount.setInitialDirstate({
       {RelativePath("deleted.txt"), overlay::UserStatusDirective::Remove},
       {RelativePath("missing.txt"), overlay::UserStatusDirective::Add},
       {RelativePath("newfile.txt"), overlay::UserStatusDirective::Add},
       {RelativePath("removed.txt"), overlay::UserStatusDirective::Remove},
   });
-  auto testMount = builder.build();
-  testMount->addFile("newfile.txt", "legitimate add");
+  testMount.initialize(builder);
+  testMount.addFile("newfile.txt", "legitimate add");
 
-  auto dirstate = testMount->getDirstate();
+  auto dirstate = testMount.getDirstate();
   verifyExpectedDirstate(
       dirstate,
       {
@@ -138,83 +140,83 @@ TEST(Dirstate, createDirstateWithInitialState) {
 }
 
 TEST(Dirstate, createDirstateWithUntrackedFile) {
-  TestMountBuilder builder;
-  auto testMount = builder.build();
-  auto dirstate = testMount->getDirstate();
+  FakeTreeBuilder builder;
+  TestMount testMount{builder};
+  auto dirstate = testMount.getDirstate();
 
-  testMount->addFile("hello.txt", "some contents");
+  testMount.addFile("hello.txt", "some contents");
   verifyExpectedDirstate(dirstate, {{"hello.txt", StatusCode::NOT_TRACKED}});
 }
 
 TEST(Dirstate, shouldIgnoreFilesInHgDirectory) {
-  TestMountBuilder builder;
-  auto testMount = builder.build();
-  auto dirstate = testMount->getDirstate();
+  FakeTreeBuilder builder;
+  TestMount testMount{builder};
+  auto dirstate = testMount.getDirstate();
 
-  testMount->mkdir(".hg");
-  testMount->addFile(".hg/a-file", "contents");
-  testMount->mkdir(".hg/some-extension");
-  testMount->addFile(".hg/some-extension/a-file", "contents");
-  testMount->mkdir(".hg/some-extension/with-a-directory");
-  testMount->addFile(".hg/some-extension/with-a-directory/a-file", "contents");
+  testMount.mkdir(".hg");
+  testMount.addFile(".hg/a-file", "contents");
+  testMount.mkdir(".hg/some-extension");
+  testMount.addFile(".hg/some-extension/a-file", "contents");
+  testMount.mkdir(".hg/some-extension/with-a-directory");
+  testMount.addFile(".hg/some-extension/with-a-directory/a-file", "contents");
   verifyEmptyDirstate(dirstate);
 }
 
 TEST(Dirstate, createDirstateWithAddedFile) {
-  TestMountBuilder builder;
-  auto testMount = builder.build();
-  auto dirstate = testMount->getDirstate();
+  FakeTreeBuilder builder;
+  TestMount testMount{builder};
+  auto dirstate = testMount.getDirstate();
 
-  testMount->addFile("hello.txt", "some contents");
+  testMount.addFile("hello.txt", "some contents");
   scmAddFile(dirstate, "hello.txt");
   verifyExpectedDirstate(dirstate, {{"hello.txt", StatusCode::ADDED}});
 }
 
 TEST(Dirstate, createDirstateWithMissingFile) {
-  TestMountBuilder builder;
-  auto testMount = builder.build();
-  auto dirstate = testMount->getDirstate();
+  FakeTreeBuilder builder;
+  TestMount testMount{builder};
+  auto dirstate = testMount.getDirstate();
 
-  testMount->addFile("hello.txt", "some contents");
+  testMount.addFile("hello.txt", "some contents");
   scmAddFile(dirstate, "hello.txt");
-  testMount->deleteFile("hello.txt");
+  testMount.deleteFile("hello.txt");
   verifyExpectedDirstate(dirstate, {{"hello.txt", StatusCode::MISSING}});
 }
 
 TEST(Dirstate, createDirstateWithModifiedFileContents) {
-  TestMountBuilder builder;
-  builder.addFile({"hello.txt", "some contents"});
-  auto testMount = builder.build();
-  auto dirstate = testMount->getDirstate();
+  FakeTreeBuilder builder;
+  builder.setFile("hello.txt", "some contents");
+  TestMount testMount{builder};
+  auto dirstate = testMount.getDirstate();
 
-  testMount->overwriteFile("hello.txt", "other contents");
+  testMount.overwriteFile("hello.txt", "other contents");
   verifyExpectedDirstate(dirstate, {{"hello.txt", StatusCode::MODIFIED}});
 }
 
 TEST(Dirstate, createDirstateWithTouchedFile) {
-  TestMountBuilder builder;
-  builder.addFile({"hello.txt", "some contents"});
-  auto testMount = builder.build();
-  auto dirstate = testMount->getDirstate();
+  FakeTreeBuilder builder;
+  builder.setFile("hello.txt", "some contents");
+  TestMount testMount{builder};
+  auto dirstate = testMount.getDirstate();
 
-  testMount->overwriteFile("hello.txt", "some contents");
+  testMount.overwriteFile("hello.txt", "some contents");
   // Although the file has been written, it has not changed in any significant
   // way.
   verifyEmptyDirstate(dirstate);
 }
 
 TEST(Dirstate, addDirectoriesWithMixOfFiles) {
-  TestMountBuilder builder;
-  builder.addFiles({
+  FakeTreeBuilder builder;
+  builder.setFiles({
       {"rootfile.txt", ""}, {"dir1/a.txt", "original contents"},
   });
-  auto testMount = builder.build();
+  TestMount testMount{builder};
 
-  testMount->addFile("dir1/b.txt", "");
-  testMount->mkdir("dir2");
-  testMount->addFile("dir2/c.txt", "");
+  testMount.addFile("dir1/b.txt", "");
+  testMount.mkdir("dir2");
+  testMount.addFile("dir2/c.txt", "");
 
-  auto dirstate = testMount->getDirstate();
+  auto dirstate = testMount.getDirstate();
   verifyExpectedDirstate(
       dirstate,
       {
@@ -233,7 +235,7 @@ TEST(Dirstate, addDirectoriesWithMixOfFiles) {
 
   // This is the equivalent of `hg forget dir1/a.txt`.
   scmRemoveFile(dirstate, "dir1/a.txt", /* force */ false);
-  testMount->addFile("dir1/a.txt", "original contents");
+  testMount.addFile("dir1/a.txt", "original contents");
   verifyExpectedDirstate(
       dirstate,
       {
@@ -252,7 +254,7 @@ TEST(Dirstate, addDirectoriesWithMixOfFiles) {
       });
 
   scmRemoveFile(dirstate, "dir1/a.txt", /* force */ false);
-  testMount->addFile("dir1/a.txt", "different contents");
+  testMount.addFile("dir1/a.txt", "different contents");
   // Running `hg add dir1` should remove the removal marker from dir1/a.txt, but
   // `hg status` should also reflect that it is modified.
   scmAddFile(dirstate, "dir1");
@@ -285,36 +287,36 @@ TEST(Dirstate, addDirectoriesWithMixOfFiles) {
 }
 
 TEST(Dirstate, createDirstateWithFileAndThenHgRemoveIt) {
-  TestMountBuilder builder;
-  builder.addFile({"hello.txt", "some contents"});
-  auto testMount = builder.build();
-  auto dirstate = testMount->getDirstate();
+  FakeTreeBuilder builder;
+  builder.setFile("hello.txt", "some contents");
+  TestMount testMount{builder};
+  auto dirstate = testMount.getDirstate();
 
   scmRemoveFile(dirstate, "hello.txt", /* force */ false);
-  EXPECT_FALSE(testMount->hasFileAt("hello.txt"));
+  EXPECT_FALSE(testMount.hasFileAt("hello.txt"));
 
   verifyExpectedDirstate(dirstate, {{"hello.txt", StatusCode::REMOVED}});
 }
 
 TEST(Dirstate, createDirstateWithFileRemoveItAndThenHgRemoveIt) {
-  TestMountBuilder builder;
-  builder.addFile({"hello.txt", "some contents"});
-  auto testMount = builder.build();
-  auto dirstate = testMount->getDirstate();
+  FakeTreeBuilder builder;
+  builder.setFile("hello.txt", "some contents");
+  TestMount testMount{builder};
+  auto dirstate = testMount.getDirstate();
 
-  testMount->deleteFile("hello.txt");
+  testMount.deleteFile("hello.txt");
   scmRemoveFile(dirstate, "hello.txt", /* force */ false);
 
   verifyExpectedDirstate(dirstate, {{"hello.txt", StatusCode::REMOVED}});
 }
 
 TEST(Dirstate, createDirstateWithFileTouchItAndThenHgRemoveIt) {
-  TestMountBuilder builder;
-  builder.addFile({"hello.txt", "original contents"});
-  auto testMount = builder.build();
-  auto dirstate = testMount->getDirstate();
+  FakeTreeBuilder builder;
+  builder.setFile("hello.txt", "original contents");
+  TestMount testMount{builder};
+  auto dirstate = testMount.getDirstate();
 
-  testMount->overwriteFile("hello.txt", "some other contents");
+  testMount.overwriteFile("hello.txt", "some other contents");
 
   scmRemoveFileAndExpect(
       dirstate,
@@ -324,62 +326,62 @@ TEST(Dirstate, createDirstateWithFileTouchItAndThenHgRemoveIt) {
                              "not removing hello.txt: file is modified "
                              "(use -f to force removal)"});
 
-  testMount->overwriteFile("hello.txt", "original contents");
+  testMount.overwriteFile("hello.txt", "original contents");
   scmRemoveFile(dirstate, "hello.txt", /* force */ false);
-  EXPECT_FALSE(testMount->hasFileAt("hello.txt"));
+  EXPECT_FALSE(testMount.hasFileAt("hello.txt"));
 
   verifyExpectedDirstate(dirstate, {{"hello.txt", StatusCode::REMOVED}});
 }
 
 TEST(Dirstate, createDirstateWithFileModifyItAndThenHgForceRemoveIt) {
-  TestMountBuilder builder;
-  builder.addFile({"hello.txt", "original contents"});
-  auto testMount = builder.build();
-  auto dirstate = testMount->getDirstate();
+  FakeTreeBuilder builder;
+  builder.setFile("hello.txt", "original contents");
+  TestMount testMount{builder};
+  auto dirstate = testMount.getDirstate();
 
-  testMount->overwriteFile("hello.txt", "some other contents");
+  testMount.overwriteFile("hello.txt", "some other contents");
   scmRemoveFile(dirstate, "hello.txt", /* force */ true);
-  EXPECT_FALSE(testMount->hasFileAt("hello.txt"));
+  EXPECT_FALSE(testMount.hasFileAt("hello.txt"));
   verifyExpectedDirstate(dirstate, {{"hello.txt", StatusCode::REMOVED}});
 }
 
 TEST(Dirstate, ensureSubsequentCallsToHgRemoveHaveNoEffect) {
-  TestMountBuilder builder;
-  builder.addFile({"hello.txt", "original contents"});
-  auto testMount = builder.build();
-  auto dirstate = testMount->getDirstate();
+  FakeTreeBuilder builder;
+  builder.setFile("hello.txt", "original contents");
+  TestMount testMount{builder};
+  auto dirstate = testMount.getDirstate();
 
   scmRemoveFile(dirstate, "hello.txt", /* force */ false);
-  EXPECT_FALSE(testMount->hasFileAt("hello.txt"));
+  EXPECT_FALSE(testMount.hasFileAt("hello.txt"));
   verifyExpectedDirstate(dirstate, {{"hello.txt", StatusCode::REMOVED}});
 
   // Calling `hg remove` again should have no effect and not throw any errors.
   scmRemoveFile(dirstate, "hello.txt", /* force */ false);
-  EXPECT_FALSE(testMount->hasFileAt("hello.txt"));
+  EXPECT_FALSE(testMount.hasFileAt("hello.txt"));
   verifyExpectedDirstate(dirstate, {{"hello.txt", StatusCode::REMOVED}});
 
   // Even if we restore the file, it should still show up as removed in
   // `hg status`.
-  testMount->addFile("hello.txt", "original contents");
-  EXPECT_TRUE(testMount->hasFileAt("hello.txt"));
+  testMount.addFile("hello.txt", "original contents");
+  EXPECT_TRUE(testMount.hasFileAt("hello.txt"));
   verifyExpectedDirstate(dirstate, {{"hello.txt", StatusCode::REMOVED}});
 
   // Calling `hg remove` again should have no effect and not throw any errors.
   scmRemoveFile(dirstate, "hello.txt", /* force */ false);
-  EXPECT_TRUE(testMount->hasFileAt("hello.txt"));
+  EXPECT_TRUE(testMount.hasFileAt("hello.txt"));
   verifyExpectedDirstate(dirstate, {{"hello.txt", StatusCode::REMOVED}});
 }
 
 TEST(Dirstate, createDirstateHgAddFileRemoveItThenHgRemoveIt) {
-  TestMountBuilder builder;
-  auto testMount = builder.build();
-  auto dirstate = testMount->getDirstate();
+  FakeTreeBuilder builder;
+  TestMount testMount{builder};
+  auto dirstate = testMount.getDirstate();
 
-  testMount->addFile("hello.txt", "I will be added.");
+  testMount.addFile("hello.txt", "I will be added.");
   scmAddFile(dirstate, "hello.txt");
   verifyExpectedDirstate(dirstate, {{"hello.txt", StatusCode::ADDED}});
 
-  testMount->deleteFile("hello.txt");
+  testMount.deleteFile("hello.txt");
   verifyExpectedDirstate(dirstate, {{"hello.txt", StatusCode::MISSING}});
 
   scmRemoveFile(dirstate, "hello.txt", /* force */ false);
@@ -387,19 +389,19 @@ TEST(Dirstate, createDirstateHgAddFileRemoveItThenHgRemoveIt) {
 }
 
 TEST(Dirstate, createDirstateHgAddFileRemoveItThenHgRemoveItInSubdirectory) {
-  TestMountBuilder builder;
-  auto testMount = builder.build();
-  auto dirstate = testMount->getDirstate();
+  FakeTreeBuilder builder;
+  TestMount testMount{builder};
+  auto dirstate = testMount.getDirstate();
 
-  testMount->mkdir("dir1");
-  testMount->mkdir("dir1/dir2");
-  testMount->addFile("dir1/dir2/hello.txt", "I will be added.");
+  testMount.mkdir("dir1");
+  testMount.mkdir("dir1/dir2");
+  testMount.addFile("dir1/dir2/hello.txt", "I will be added.");
   scmAddFile(dirstate, "dir1/dir2/hello.txt");
   verifyExpectedDirstate(
       dirstate, {{"dir1/dir2/hello.txt", StatusCode::ADDED}});
 
-  testMount->deleteFile("dir1/dir2/hello.txt");
-  testMount->rmdir("dir1/dir2");
+  testMount.deleteFile("dir1/dir2/hello.txt");
+  testMount.rmdir("dir1/dir2");
   verifyExpectedDirstate(
       dirstate, {{"dir1/dir2/hello.txt", StatusCode::MISSING}});
 
@@ -408,11 +410,11 @@ TEST(Dirstate, createDirstateHgAddFileRemoveItThenHgRemoveItInSubdirectory) {
 }
 
 TEST(Dirstate, createDirstateHgAddFileThenHgRemoveIt) {
-  TestMountBuilder builder;
-  auto testMount = builder.build();
-  auto dirstate = testMount->getDirstate();
+  FakeTreeBuilder builder;
+  TestMount testMount{builder};
+  auto dirstate = testMount.getDirstate();
 
-  testMount->addFile("hello.txt", "I will be added.");
+  testMount.addFile("hello.txt", "I will be added.");
   scmAddFile(dirstate, "hello.txt");
   verifyExpectedDirstate(dirstate, {{"hello.txt", StatusCode::ADDED}});
 
@@ -428,30 +430,30 @@ TEST(Dirstate, createDirstateHgAddFileThenHgRemoveIt) {
 }
 
 TEST(Dirstate, createDirstateWithFileAndThenDeleteItWithoutCallingHgRemove) {
-  TestMountBuilder builder;
-  builder.addFile({"hello.txt", "some contents"});
-  auto testMount = builder.build();
-  auto dirstate = testMount->getDirstate();
+  FakeTreeBuilder builder;
+  builder.setFile("hello.txt", "some contents");
+  TestMount testMount{builder};
+  auto dirstate = testMount.getDirstate();
 
-  testMount->deleteFile("hello.txt");
+  testMount.deleteFile("hello.txt");
   verifyExpectedDirstate(dirstate, {{"hello.txt", StatusCode::MISSING}});
 }
 
 TEST(Dirstate, removeAllOnADirectoryWithFilesInVariousStates) {
-  TestMountBuilder builder;
-  builder.addFiles({
+  FakeTreeBuilder builder;
+  builder.setFiles({
       {"mydir/a", "In the manifest."},
       {"mydir/b", "Will rm."},
       {"mydir/c", "Will hg rm."},
   });
-  auto testMount = builder.build();
-  auto dirstate = testMount->getDirstate();
+  TestMount testMount{builder};
+  auto dirstate = testMount.getDirstate();
 
-  testMount->deleteFile("mydir/b");
+  testMount.deleteFile("mydir/b");
   scmRemoveFile(dirstate, "mydir/c", /* force */ false);
-  testMount->addFile("mydir/d", "I will be added.");
+  testMount.addFile("mydir/d", "I will be added.");
   scmAddFile(dirstate, "mydir/d");
-  testMount->addFile("mydir/e", "I will be untracked");
+  testMount.addFile("mydir/e", "I will be untracked");
   verifyExpectedDirstate(
       dirstate,
       {{"mydir/b", StatusCode::MISSING},
@@ -474,29 +476,29 @@ TEST(Dirstate, removeAllOnADirectoryWithFilesInVariousStates) {
        {"mydir/c", StatusCode::REMOVED},
        {"mydir/d", StatusCode::ADDED},
        {"mydir/e", StatusCode::NOT_TRACKED}});
-  EXPECT_FALSE(testMount->hasFileAt("mydir/a"));
-  EXPECT_FALSE(testMount->hasFileAt("mydir/b"));
-  EXPECT_FALSE(testMount->hasFileAt("mydir/c"));
-  EXPECT_TRUE(testMount->hasFileAt("mydir/d"));
-  EXPECT_TRUE(testMount->hasFileAt("mydir/e"));
+  EXPECT_FALSE(testMount.hasFileAt("mydir/a"));
+  EXPECT_FALSE(testMount.hasFileAt("mydir/b"));
+  EXPECT_FALSE(testMount.hasFileAt("mydir/c"));
+  EXPECT_TRUE(testMount.hasFileAt("mydir/d"));
+  EXPECT_TRUE(testMount.hasFileAt("mydir/e"));
 }
 
 TEST(Dirstate, createDirstateAndAddNewDirectory) {
-  TestMountBuilder builder;
-  builder.addFile({"file-in-root.txt", "some contents"});
-  auto testMount = builder.build();
-  auto dirstate = testMount->getDirstate();
+  FakeTreeBuilder builder;
+  builder.setFile("file-in-root.txt", "some contents");
+  TestMount testMount{builder};
+  auto dirstate = testMount.getDirstate();
 
   // Add one folder that appears before file-in-root.txt alphabetically.
-  testMount->mkdir("a-new-folder");
-  testMount->addFile("a-new-folder/add.txt", "");
-  testMount->addFile("a-new-folder/not-tracked.txt", "");
+  testMount.mkdir("a-new-folder");
+  testMount.addFile("a-new-folder/add.txt", "");
+  testMount.addFile("a-new-folder/not-tracked.txt", "");
   scmAddFile(dirstate, "a-new-folder/add.txt");
 
   // Add one folder that appears after file-in-root.txt alphabetically.
-  testMount->mkdir("z-new-folder");
-  testMount->addFile("z-new-folder/add.txt", "");
-  testMount->addFile("z-new-folder/not-tracked.txt", "");
+  testMount.mkdir("z-new-folder");
+  testMount.addFile("z-new-folder/add.txt", "");
+  testMount.addFile("z-new-folder/not-tracked.txt", "");
   scmAddFile(dirstate, "z-new-folder/add.txt");
 
   verifyExpectedDirstate(
@@ -510,19 +512,19 @@ TEST(Dirstate, createDirstateAndAddNewDirectory) {
 }
 
 TEST(Dirstate, createDirstateAndRemoveExistingDirectory) {
-  TestMountBuilder builder;
-  builder.addFile({"file-in-root.txt", "some contents"});
+  FakeTreeBuilder builder;
+  builder.setFile("file-in-root.txt", "some contents");
 
   // Add one folder that appears before file-in-root.txt alphabetically.
-  builder.addFile({"a-new-folder/original1.txt", ""});
-  builder.addFile({"a-new-folder/original2.txt", ""});
+  builder.setFile("a-new-folder/original1.txt", "");
+  builder.setFile("a-new-folder/original2.txt", "");
 
   // Add one folder that appears after file-in-root.txt alphabetically.
-  builder.addFile({"z-new-folder/original1.txt", ""});
-  builder.addFile({"z-new-folder/original2.txt", ""});
+  builder.setFile("z-new-folder/original1.txt", "");
+  builder.setFile("z-new-folder/original2.txt", "");
 
-  auto testMount = builder.build();
-  auto dirstate = testMount->getDirstate();
+  TestMount testMount{builder};
+  auto dirstate = testMount.getDirstate();
 
   // Remove some files in the directories.
   auto force = false;
@@ -548,8 +550,8 @@ TEST(Dirstate, createDirstateAndRemoveExistingDirectory) {
       });
 
   // Deleting the directories should not change the results.
-  testMount->rmdir("a-new-folder");
-  testMount->rmdir("z-new-folder");
+  testMount.rmdir("a-new-folder");
+  testMount.rmdir("z-new-folder");
   verifyExpectedDirstate(
       dirstate,
       {
@@ -561,15 +563,15 @@ TEST(Dirstate, createDirstateAndRemoveExistingDirectory) {
 }
 
 TEST(Dirstate, createDirstateAndReplaceFileWithDirectory) {
-  TestMountBuilder builder;
-  builder.addFile({"dir/some-file", ""});
+  FakeTreeBuilder builder;
+  builder.setFile("dir/some-file", "");
 
-  auto testMount = builder.build();
-  auto dirstate = testMount->getDirstate();
+  TestMount testMount{builder};
+  auto dirstate = testMount.getDirstate();
 
   // Replace file with empty directory.
-  testMount->deleteFile("dir/some-file");
-  testMount->mkdir("dir/some-file");
+  testMount.deleteFile("dir/some-file");
+  testMount.mkdir("dir/some-file");
   verifyExpectedDirstate(
       dirstate,
       {
@@ -577,7 +579,7 @@ TEST(Dirstate, createDirstateAndReplaceFileWithDirectory) {
       });
 
   // Add file to new, empty directory.
-  testMount->addFile("dir/some-file/a-real-file.txt", "");
+  testMount.addFile("dir/some-file/a-real-file.txt", "");
   verifyExpectedDirstate(
       dirstate,
       {
@@ -592,21 +594,21 @@ TEST(Dirstate, createDirstateAndReplaceFileWithDirectory) {
 }
 
 TEST(Dirstate, createDirstateAndReplaceDirectoryWithFile) {
-  TestMountBuilder builder;
-  builder.addFile({"dir1/dir2/some-file", ""});
+  FakeTreeBuilder builder;
+  builder.setFile("dir1/dir2/some-file", "");
 
-  auto testMount = builder.build();
-  auto dirstate = testMount->getDirstate();
+  TestMount testMount{builder};
+  auto dirstate = testMount.getDirstate();
 
-  testMount->deleteFile("dir1/dir2/some-file");
-  testMount->rmdir("dir1/dir2");
+  testMount.deleteFile("dir1/dir2/some-file");
+  testMount.rmdir("dir1/dir2");
   verifyExpectedDirstate(
       dirstate,
       {
           {"dir1/dir2/some-file", StatusCode::MISSING},
       });
 
-  testMount->addFile("dir1/dir2", "");
+  testMount.addFile("dir1/dir2", "");
   verifyExpectedDirstate(
       dirstate,
       {
@@ -620,16 +622,15 @@ TEST(Dirstate, createDirstateAndReplaceDirectoryWithFile) {
 }
 
 TEST(Dirstate, createDirstateAndAddSubtree) {
-  TestMountBuilder builder;
+  FakeTreeBuilder builder;
+  TestMount testMount{builder};
+  auto dirstate = testMount.getDirstate();
 
-  auto testMount = builder.build();
-  auto dirstate = testMount->getDirstate();
-
-  testMount->addFile("root1.txt", "");
-  testMount->addFile("root2.txt", "");
-  testMount->mkdir("dir1");
-  testMount->addFile("dir1/aFile.txt", "");
-  testMount->addFile("dir1/bFile.txt", "");
+  testMount.addFile("root1.txt", "");
+  testMount.addFile("root2.txt", "");
+  testMount.mkdir("dir1");
+  testMount.addFile("dir1/aFile.txt", "");
+  testMount.addFile("dir1/bFile.txt", "");
   scmAddFile(dirstate, "root1.txt");
   scmAddFile(dirstate, "dir1/bFile.txt");
   verifyExpectedDirstate(
@@ -641,10 +642,10 @@ TEST(Dirstate, createDirstateAndAddSubtree) {
           {"dir1/bFile.txt", StatusCode::ADDED},
       });
 
-  testMount->mkdir("dir1/dir2");
-  testMount->mkdir("dir1/dir2/dir3");
-  testMount->mkdir("dir1/dir2/dir3/dir4");
-  testMount->addFile("dir1/dir2/dir3/dir4/cFile.txt", "");
+  testMount.mkdir("dir1/dir2");
+  testMount.mkdir("dir1/dir2/dir3");
+  testMount.mkdir("dir1/dir2/dir3/dir4");
+  testMount.addFile("dir1/dir2/dir3/dir4/cFile.txt", "");
   verifyExpectedDirstate(
       dirstate,
       {
@@ -668,34 +669,26 @@ TEST(Dirstate, createDirstateAndAddSubtree) {
 }
 
 TEST(Dirstate, createDirstateAndRemoveSubtree) {
-  TestMountBuilder builder;
-  builder.addFile({"root.txt", ""});
-  builder.addFile({"dir1/a-file.txt", ""});
-  builder.addFile({"dir1/b-file.txt", ""});
-  builder.addFile({"dir1/dir2/a-file.txt", ""});
-  builder.addFile({"dir1/dir2/b-file.txt", ""});
-  builder.addFile({"dir1/dir2/dir3/dir4/a-file.txt", ""});
-  builder.addFile({"dir1/dir2/dir3/dir4/b-file.txt", ""});
+  FakeTreeBuilder builder;
+  builder.setFile("root.txt", "");
+  builder.setFile("dir1/a-file.txt", "");
+  builder.setFile("dir1/b-file.txt", "");
+  builder.setFile("dir1/dir2/a-file.txt", "");
+  builder.setFile("dir1/dir2/b-file.txt", "");
+  builder.setFile("dir1/dir2/dir3/dir4/a-file.txt", "");
+  builder.setFile("dir1/dir2/dir3/dir4/b-file.txt", "");
 
-  auto testMount = builder.build();
-  auto dirstate = testMount->getDirstate();
+  TestMount testMount{builder};
+  auto dirstate = testMount.getDirstate();
 
-  testMount->deleteFile("dir1/dir2/dir3/dir4/a-file.txt");
+  testMount.deleteFile("dir1/dir2/dir3/dir4/a-file.txt");
   verifyExpectedDirstate(
       dirstate,
       {
           {"dir1/dir2/dir3/dir4/a-file.txt", StatusCode::MISSING},
       });
 
-  testMount->deleteFile("dir1/dir2/dir3/dir4/b-file.txt");
-  verifyExpectedDirstate(
-      dirstate,
-      {
-          {"dir1/dir2/dir3/dir4/a-file.txt", StatusCode::MISSING},
-          {"dir1/dir2/dir3/dir4/b-file.txt", StatusCode::MISSING},
-      });
-
-  testMount->rmdir("dir1/dir2/dir3/dir4");
+  testMount.deleteFile("dir1/dir2/dir3/dir4/b-file.txt");
   verifyExpectedDirstate(
       dirstate,
       {
@@ -703,7 +696,7 @@ TEST(Dirstate, createDirstateAndRemoveSubtree) {
           {"dir1/dir2/dir3/dir4/b-file.txt", StatusCode::MISSING},
       });
 
-  testMount->rmdir("dir1/dir2/dir3");
+  testMount.rmdir("dir1/dir2/dir3/dir4");
   verifyExpectedDirstate(
       dirstate,
       {
@@ -711,8 +704,16 @@ TEST(Dirstate, createDirstateAndRemoveSubtree) {
           {"dir1/dir2/dir3/dir4/b-file.txt", StatusCode::MISSING},
       });
 
-  testMount->deleteFile("dir1/dir2/a-file.txt");
-  testMount->deleteFile("dir1/dir2/b-file.txt");
+  testMount.rmdir("dir1/dir2/dir3");
+  verifyExpectedDirstate(
+      dirstate,
+      {
+          {"dir1/dir2/dir3/dir4/a-file.txt", StatusCode::MISSING},
+          {"dir1/dir2/dir3/dir4/b-file.txt", StatusCode::MISSING},
+      });
+
+  testMount.deleteFile("dir1/dir2/a-file.txt");
+  testMount.deleteFile("dir1/dir2/b-file.txt");
   verifyExpectedDirstate(
       dirstate,
       {
@@ -722,8 +723,8 @@ TEST(Dirstate, createDirstateAndRemoveSubtree) {
           {"dir1/dir2/dir3/dir4/b-file.txt", StatusCode::MISSING},
       });
 
-  testMount->deleteFile("dir1/a-file.txt");
-  testMount->deleteFile("dir1/b-file.txt");
+  testMount.deleteFile("dir1/a-file.txt");
+  testMount.deleteFile("dir1/b-file.txt");
   verifyExpectedDirstate(
       dirstate,
       {
@@ -735,9 +736,9 @@ TEST(Dirstate, createDirstateAndRemoveSubtree) {
           {"dir1/dir2/dir3/dir4/b-file.txt", StatusCode::MISSING},
       });
 
-  testMount->deleteFile("root.txt");
-  testMount->rmdir("dir1/dir2");
-  testMount->rmdir("dir1");
+  testMount.deleteFile("root.txt");
+  testMount.rmdir("dir1/dir2");
+  testMount.rmdir("dir1");
   verifyExpectedDirstate(
       dirstate,
       {
@@ -752,20 +753,20 @@ TEST(Dirstate, createDirstateAndRemoveSubtree) {
 }
 
 TEST(Dirstate, checkIgnoredBehavior) {
-  TestMountBuilder builder;
-  builder.addFiles({
+  FakeTreeBuilder builder;
+  builder.setFiles({
       {".gitignore", "hello*\n"},
       {"a/b/c/noop.c", "int main() { return 0; }\n"},
   });
-  auto testMount = builder.build();
-  testMount->addFile("hello.txt", "some contents");
-  testMount->addFile("goodbye.txt", "other contents");
-  testMount->addFile(
+  TestMount testMount{builder};
+  testMount.addFile("hello.txt", "some contents");
+  testMount.addFile("goodbye.txt", "other contents");
+  testMount.addFile(
       "a/b/c/noop.o",
       "\x7f"
       "ELF");
 
-  auto dirstate = testMount->getDirstate();
+  auto dirstate = testMount.getDirstate();
 
   verifyExpectedDirstate(
       dirstate,
@@ -775,7 +776,7 @@ TEST(Dirstate, checkIgnoredBehavior) {
           {"a/b/c/noop.o", StatusCode::NOT_TRACKED},
       });
 
-  testMount->addFile("a/b/.gitignore", "*.o\n");
+  testMount.addFile("a/b/.gitignore", "*.o\n");
   verifyExpectedDirstate(
       dirstate,
       {

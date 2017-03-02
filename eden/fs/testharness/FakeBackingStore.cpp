@@ -319,9 +319,5 @@ StoredBlob* FakeBackingStore::getStoredBlob(Hash hash) {
   }
   return it->second.get();
 }
-
-FakeTreeBuilder FakeBackingStore::treeBuilder() {
-  return FakeTreeBuilder(this);
-}
 }
 } // facebook::eden
