@@ -952,21 +952,34 @@ sub-topics can be accessed
   """"""""""""
   
       Changegroups are representations of repository revlog data, specifically
-      the changelog, manifest, and filelogs.
+      the changelog data, root/flat manifest data, treemanifest data, and
+      filelogs.
   
       There are 3 versions of changegroups: "1", "2", and "3". From a high-
       level, versions "1" and "2" are almost exactly the same, with the only
-      difference being a header on entries in the changeset segment. Version "3"
-      adds support for exchanging treemanifests and includes revlog flags in the
-      delta header.
+      difference being an additional item in the *delta header*.  Version "3"
+      adds support for revlog flags in the *delta header* and optionally
+      exchanging treemanifests (enabled by setting an option on the
+      "changegroup" part in the bundle2).
   
-      Changegroups consists of 3 logical segments:
+      Changegroups when not exchanging treemanifests consist of 3 logical
+      segments:
   
         +---------------------------------+
         |           |          |          |
         | changeset | manifest | filelogs |
         |           |          |          |
+        |           |          |          |
         +---------------------------------+
+  
+      When exchanging treemanifests, there are 4 logical segments:
+  
+        +-------------------------------------------------+
+        |           |          |               |          |
+        | changeset |   root   | treemanifests | filelogs |
+        |           | manifest |               |          |
+        |           |          |               |          |
+        +-------------------------------------------------+
   
       The principle building block of each segment is a *chunk*. A *chunk* is a
       framed piece of data:
@@ -974,15 +987,16 @@ sub-topics can be accessed
         +---------------------------------------+
         |           |                           |
         |  length   |           data            |
-        | (32 bits) |       <length> bytes      |
+        | (4 bytes) |   (<length - 4> bytes)    |
         |           |                           |
         +---------------------------------------+
   
-      Each chunk starts with a 32-bit big-endian signed integer indicating the
-      length of the raw data that follows.
+      All integers are big-endian signed integers. Each chunk starts with a
+      32-bit integer indicating the length of the entire chunk (including the
+      length field itself).
   
-      There is a special case chunk that has 0 length ("0x00000000"). We call
-      this an *empty chunk*.
+      There is a special case chunk that has a value of 0 for the length
+      ("0x00000000"). We call this an *empty chunk*.
   
       Delta Groups
       ============
@@ -996,26 +1010,27 @@ sub-topics can be accessed
         +------------------------------------------------------------------------+
         |                |             |               |             |           |
         | chunk0 length  | chunk0 data | chunk1 length | chunk1 data |    0x0    |
-        |   (32 bits)    |  (various)  |   (32 bits)   |  (various)  | (32 bits) |
+        |   (4 bytes)    |  (various)  |   (4 bytes)   |  (various)  | (4 bytes) |
         |                |             |               |             |           |
-        +------------------------------------------------------------+-----------+
+        +------------------------------------------------------------------------+
   
       Each *chunk*'s data consists of the following:
   
-        +-----------------------------------------+
-        |              |              |           |
-        | delta header | mdiff header |   delta   |
-        |  (various)   |  (12 bytes)  | (various) |
-        |              |              |           |
-        +-----------------------------------------+
+        +---------------------------------------+
+        |                        |              |
+        |     delta header       |  delta data  |
+        |  (various by version)  |  (various)   |
+        |                        |              |
+        +---------------------------------------+
   
-      The *length* field is the byte length of the remaining 3 logical pieces of
-      data. The *delta* is a diff from an existing entry in the changelog.
+      The *delta data* is a series of *delta*s that describe a diff from an
+      existing entry (either that the recipient already has, or previously
+      specified in the bundlei/changegroup).
   
       The *delta header* is different between versions "1", "2", and "3" of the
       changegroup format.
   
-      Version 1:
+      Version 1 (headerlen=80):
   
         +------------------------------------------------------+
         |            |             |             |             |
@@ -1024,7 +1039,7 @@ sub-topics can be accessed
         |            |             |             |             |
         +------------------------------------------------------+
   
-      Version 2:
+      Version 2 (headerlen=100):
   
         +------------------------------------------------------------------+
         |            |             |             |            |            |
@@ -1033,30 +1048,36 @@ sub-topics can be accessed
         |            |             |             |            |            |
         +------------------------------------------------------------------+
   
-      Version 3:
+      Version 3 (headerlen=102):
   
         +------------------------------------------------------------------------------+
         |            |             |             |            |            |           |
-        |    node    |   p1 node   |   p2 node   | base node  | link node  | flags     |
+        |    node    |   p1 node   |   p2 node   | base node  | link node  |   flags   |
         | (20 bytes) |  (20 bytes) |  (20 bytes) | (20 bytes) | (20 bytes) | (2 bytes) |
         |            |             |             |            |            |           |
         +------------------------------------------------------------------------------+
   
-      The *mdiff header* consists of 3 32-bit big-endian signed integers
-      describing offsets at which to apply the following delta content:
+      The *delta data* consists of "chunklen - 4 - headerlen" bytes, which
+      contain a series of *delta*s, densely packed (no separators). These deltas
+      describe a diff from an existing entry (either that the recipient already
+      has, or previously specified in the bundle/changegroup). The format is
+      described more fully in "hg help internals.bdiff", but briefly:
   
-        +-------------------------------------+
-        |           |            |            |
-        |  offset   | old length | new length |
-        | (32 bits) |  (32 bits) |  (32 bits) |
-        |           |            |            |
-        +-------------------------------------+
+         +---------------------------------------------------------------+ |
+         |            |            |                      | | start offset | end
+         offset | new length |        content       | |  (4 bytes)   |  (4
+         bytes) |  (4 bytes) | (<new length> bytes) | |              |
+         |            |                      |
+         +---------------------------------------------------------------+
+  
+      Please note that the length field in the delta data does *not* include
+      itself.
   
       In version 1, the delta is always applied against the previous node from
       the changegroup or the first parent if this is the first entry in the
       changegroup.
   
-      In version 2, the delta base node is encoded in the entry in the
+      In version 2 and up, the delta base node is encoded in the entry in the
       changegroup. This allows the delta to be expressed against any parent,
       which can result in smaller deltas and more efficient encoding of data.
   
@@ -1064,46 +1085,61 @@ sub-topics can be accessed
       =================
   
       The *changeset segment* consists of a single *delta group* holding
-      changelog data. It is followed by an *empty chunk* to denote the boundary
-      to the *manifests segment*.
+      changelog data. The *empty chunk* at the end of the *delta group* denotes
+      the boundary to the *manifest segment*.
   
       Manifest Segment
       ================
   
       The *manifest segment* consists of a single *delta group* holding manifest
-      data. It is followed by an *empty chunk* to denote the boundary to the
-      *filelogs segment*.
+      data. If treemanifests are in use, it contains only the manifest for the
+      root directory of the repository. Otherwise, it contains the entire
+      manifest data. The *empty chunk* at the end of the *delta group* denotes
+      the boundary to the next segment (either the *treemanifests segment* or
+      the *filelogs segment*, depending on version and the request options).
+  
+      Treemanifests Segment
+      ---------------------
+  
+      The *treemanifests segment* only exists in changegroup version "3", and
+      only if the 'treemanifest' param is part of the bundle2 changegroup part
+      (it is not possible to use changegroup version 3 outside of bundle2).
+      Aside from the filenames in the *treemanifests segment* containing a
+      trailing "/" character, it behaves identically to the *filelogs segment*
+      (see below). The final sub-segment is followed by an *empty chunk*
+      (logically, a sub-segment with filename size 0). This denotes the boundary
+      to the *filelogs segment*.
   
       Filelogs Segment
       ================
   
-      The *filelogs* segment consists of multiple sub-segments, each
+      The *filelogs segment* consists of multiple sub-segments, each
       corresponding to an individual file whose data is being described:
   
-        +--------------------------------------+
-        |          |          |          |     |
-        | filelog0 | filelog1 | filelog2 | ... |
-        |          |          |          |     |
-        +--------------------------------------+
+        +--------------------------------------------------+
+        |          |          |          |     |           |
+        | filelog0 | filelog1 | filelog2 | ... |    0x0    |
+        |          |          |          |     | (4 bytes) |
+        |          |          |          |     |           |
+        +--------------------------------------------------+
   
-      In version "3" of the changegroup format, filelogs may include directory
-      logs when treemanifests are in use. directory logs are identified by
-      having a trailing '/' on their filename (see below).
-  
-      The final filelog sub-segment is followed by an *empty chunk* to denote
-      the end of the segment and the overall changegroup.
+      The final filelog sub-segment is followed by an *empty chunk* (logically,
+      a sub-segment with filename size 0). This denotes the end of the segment
+      and of the overall changegroup.
   
       Each filelog sub-segment consists of the following:
   
-        +------------------------------------------+
-        |               |            |             |
-        | filename size |  filename  | delta group |
-        |   (32 bits)   |  (various) |  (various)  |
-        |               |            |             |
-        +------------------------------------------+
+        +------------------------------------------------------+
+        |                 |                      |             |
+        | filename length |       filename       | delta group |
+        |    (4 bytes)    | (<length - 4> bytes) |  (various)  |
+        |                 |                      |             |
+        +------------------------------------------------------+
   
       That is, a *chunk* consisting of the filename (not terminated or padded)
-      followed by N chunks constituting the *delta group* for this file.
+      followed by N chunks constituting the *delta group* for this file. The
+      *empty chunk* at the end of each *delta group* denotes the boundary to the
+      next filelog sub-segment.
 
 Test list of commands with command with no help text
 
@@ -3031,24 +3067,39 @@ Sub-topic topics rendered properly
   <h1>Changegroups</h1>
   <p>
   Changegroups are representations of repository revlog data, specifically
-  the changelog, manifest, and filelogs.
+  the changelog data, root/flat manifest data, treemanifest data, and
+  filelogs.
   </p>
   <p>
   There are 3 versions of changegroups: &quot;1&quot;, &quot;2&quot;, and &quot;3&quot;. From a
-  high-level, versions &quot;1&quot; and &quot;2&quot; are almost exactly the same, with
-  the only difference being a header on entries in the changeset
-  segment. Version &quot;3&quot; adds support for exchanging treemanifests and
-  includes revlog flags in the delta header.
+  high-level, versions &quot;1&quot; and &quot;2&quot; are almost exactly the same, with the
+  only difference being an additional item in the *delta header*.  Version
+  &quot;3&quot; adds support for revlog flags in the *delta header* and optionally
+  exchanging treemanifests (enabled by setting an option on the
+  &quot;changegroup&quot; part in the bundle2).
   </p>
   <p>
-  Changegroups consists of 3 logical segments:
+  Changegroups when not exchanging treemanifests consist of 3 logical
+  segments:
   </p>
   <pre>
   +---------------------------------+
   |           |          |          |
   | changeset | manifest | filelogs |
   |           |          |          |
+  |           |          |          |
   +---------------------------------+
+  </pre>
+  <p>
+  When exchanging treemanifests, there are 4 logical segments:
+  </p>
+  <pre>
+  +-------------------------------------------------+
+  |           |          |               |          |
+  | changeset |   root   | treemanifests | filelogs |
+  |           | manifest |               |          |
+  |           |          |               |          |
+  +-------------------------------------------------+
   </pre>
   <p>
   The principle building block of each segment is a *chunk*. A *chunk*
@@ -3058,17 +3109,18 @@ Sub-topic topics rendered properly
   +---------------------------------------+
   |           |                           |
   |  length   |           data            |
-  | (32 bits) |       &lt;length&gt; bytes      |
+  | (4 bytes) |   (&lt;length - 4&gt; bytes)    |
   |           |                           |
   +---------------------------------------+
   </pre>
   <p>
-  Each chunk starts with a 32-bit big-endian signed integer indicating
-  the length of the raw data that follows.
+  All integers are big-endian signed integers. Each chunk starts with a 32-bit
+  integer indicating the length of the entire chunk (including the length field
+  itself).
   </p>
   <p>
-  There is a special case chunk that has 0 length (&quot;0x00000000&quot;). We
-  call this an *empty chunk*.
+  There is a special case chunk that has a value of 0 for the length
+  (&quot;0x00000000&quot;). We call this an *empty chunk*.
   </p>
   <h2>Delta Groups</h2>
   <p>
@@ -3083,31 +3135,32 @@ Sub-topic topics rendered properly
   +------------------------------------------------------------------------+
   |                |             |               |             |           |
   | chunk0 length  | chunk0 data | chunk1 length | chunk1 data |    0x0    |
-  |   (32 bits)    |  (various)  |   (32 bits)   |  (various)  | (32 bits) |
+  |   (4 bytes)    |  (various)  |   (4 bytes)   |  (various)  | (4 bytes) |
   |                |             |               |             |           |
-  +------------------------------------------------------------+-----------+
+  +------------------------------------------------------------------------+
   </pre>
   <p>
   Each *chunk*'s data consists of the following:
   </p>
   <pre>
-  +-----------------------------------------+
-  |              |              |           |
-  | delta header | mdiff header |   delta   |
-  |  (various)   |  (12 bytes)  | (various) |
-  |              |              |           |
-  +-----------------------------------------+
+  +---------------------------------------+
+  |                        |              |
+  |     delta header       |  delta data  |
+  |  (various by version)  |  (various)   |
+  |                        |              |
+  +---------------------------------------+
   </pre>
   <p>
-  The *length* field is the byte length of the remaining 3 logical pieces
-  of data. The *delta* is a diff from an existing entry in the changelog.
+  The *delta data* is a series of *delta*s that describe a diff from an existing
+  entry (either that the recipient already has, or previously specified in the
+  bundlei/changegroup).
   </p>
   <p>
   The *delta header* is different between versions &quot;1&quot;, &quot;2&quot;, and
   &quot;3&quot; of the changegroup format.
   </p>
   <p>
-  Version 1:
+  Version 1 (headerlen=80):
   </p>
   <pre>
   +------------------------------------------------------+
@@ -3118,7 +3171,7 @@ Sub-topic topics rendered properly
   +------------------------------------------------------+
   </pre>
   <p>
-  Version 2:
+  Version 2 (headerlen=100):
   </p>
   <pre>
   +------------------------------------------------------------------+
@@ -3129,85 +3182,104 @@ Sub-topic topics rendered properly
   +------------------------------------------------------------------+
   </pre>
   <p>
-  Version 3:
+  Version 3 (headerlen=102):
   </p>
   <pre>
   +------------------------------------------------------------------------------+
   |            |             |             |            |            |           |
-  |    node    |   p1 node   |   p2 node   | base node  | link node  | flags     |
+  |    node    |   p1 node   |   p2 node   | base node  | link node  |   flags   |
   | (20 bytes) |  (20 bytes) |  (20 bytes) | (20 bytes) | (20 bytes) | (2 bytes) |
   |            |             |             |            |            |           |
   +------------------------------------------------------------------------------+
   </pre>
   <p>
-  The *mdiff header* consists of 3 32-bit big-endian signed integers
-  describing offsets at which to apply the following delta content:
+  The *delta data* consists of &quot;chunklen - 4 - headerlen&quot; bytes, which contain a
+  series of *delta*s, densely packed (no separators). These deltas describe a diff
+  from an existing entry (either that the recipient already has, or previously
+  specified in the bundle/changegroup). The format is described more fully in
+  &quot;hg help internals.bdiff&quot;, but briefly:
   </p>
-  <pre>
-  +-------------------------------------+
-  |           |            |            |
-  |  offset   | old length | new length |
-  | (32 bits) |  (32 bits) |  (32 bits) |
-  |           |            |            |
-  +-------------------------------------+
-  </pre>
+  <p>
+  +---------------------------------------------------------------+
+  |              |            |            |                      |
+  | start offset | end offset | new length |        content       |
+  |  (4 bytes)   |  (4 bytes) |  (4 bytes) | (&lt;new length&gt; bytes) |
+  |              |            |            |                      |
+  +---------------------------------------------------------------+
+  </p>
+  <p>
+  Please note that the length field in the delta data does *not* include itself.
+  </p>
   <p>
   In version 1, the delta is always applied against the previous node from
   the changegroup or the first parent if this is the first entry in the
   changegroup.
   </p>
   <p>
-  In version 2, the delta base node is encoded in the entry in the
+  In version 2 and up, the delta base node is encoded in the entry in the
   changegroup. This allows the delta to be expressed against any parent,
   which can result in smaller deltas and more efficient encoding of data.
   </p>
   <h2>Changeset Segment</h2>
   <p>
   The *changeset segment* consists of a single *delta group* holding
-  changelog data. It is followed by an *empty chunk* to denote the
-  boundary to the *manifests segment*.
+  changelog data. The *empty chunk* at the end of the *delta group* denotes
+  the boundary to the *manifest segment*.
   </p>
   <h2>Manifest Segment</h2>
   <p>
-  The *manifest segment* consists of a single *delta group* holding
-  manifest data. It is followed by an *empty chunk* to denote the boundary
-  to the *filelogs segment*.
+  The *manifest segment* consists of a single *delta group* holding manifest
+  data. If treemanifests are in use, it contains only the manifest for the
+  root directory of the repository. Otherwise, it contains the entire
+  manifest data. The *empty chunk* at the end of the *delta group* denotes
+  the boundary to the next segment (either the *treemanifests segment* or the
+  *filelogs segment*, depending on version and the request options).
+  </p>
+  <h3>Treemanifests Segment</h3>
+  <p>
+  The *treemanifests segment* only exists in changegroup version &quot;3&quot;, and
+  only if the 'treemanifest' param is part of the bundle2 changegroup part
+  (it is not possible to use changegroup version 3 outside of bundle2).
+  Aside from the filenames in the *treemanifests segment* containing a
+  trailing &quot;/&quot; character, it behaves identically to the *filelogs segment*
+  (see below). The final sub-segment is followed by an *empty chunk* (logically,
+  a sub-segment with filename size 0). This denotes the boundary to the
+  *filelogs segment*.
   </p>
   <h2>Filelogs Segment</h2>
   <p>
-  The *filelogs* segment consists of multiple sub-segments, each
+  The *filelogs segment* consists of multiple sub-segments, each
   corresponding to an individual file whose data is being described:
   </p>
   <pre>
-  +--------------------------------------+
-  |          |          |          |     |
-  | filelog0 | filelog1 | filelog2 | ... |
-  |          |          |          |     |
-  +--------------------------------------+
+  +--------------------------------------------------+
+  |          |          |          |     |           |
+  | filelog0 | filelog1 | filelog2 | ... |    0x0    |
+  |          |          |          |     | (4 bytes) |
+  |          |          |          |     |           |
+  +--------------------------------------------------+
   </pre>
   <p>
-  In version &quot;3&quot; of the changegroup format, filelogs may include
-  directory logs when treemanifests are in use. directory logs are
-  identified by having a trailing '/' on their filename (see below).
-  </p>
-  <p>
-  The final filelog sub-segment is followed by an *empty chunk* to denote
-  the end of the segment and the overall changegroup.
+  The final filelog sub-segment is followed by an *empty chunk* (logically,
+  a sub-segment with filename size 0). This denotes the end of the segment
+  and of the overall changegroup.
   </p>
   <p>
   Each filelog sub-segment consists of the following:
   </p>
   <pre>
-  +------------------------------------------+
-  |               |            |             |
-  | filename size |  filename  | delta group |
-  |   (32 bits)   |  (various) |  (various)  |
-  |               |            |             |
-  +------------------------------------------+
+  +------------------------------------------------------+
+  |                 |                      |             |
+  | filename length |       filename       | delta group |
+  |    (4 bytes)    | (&lt;length - 4&gt; bytes) |  (various)  |
+  |                 |                      |             |
+  +------------------------------------------------------+
   </pre>
   <p>
   That is, a *chunk* consisting of the filename (not terminated or padded)
-  followed by N chunks constituting the *delta group* for this file.
+  followed by N chunks constituting the *delta group* for this file. The
+  *empty chunk* at the end of each *delta group* denotes the boundary to the
+  next filelog sub-segment.
   </p>
   
   </div>
