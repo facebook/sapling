@@ -60,12 +60,12 @@ while cloning
 
   $ cat > delayer.py <<EOF
   > import time
-  > from mercurial import extensions, scmutil
+  > from mercurial import extensions, vfs
   > def __call__(orig, self, path, *args, **kwargs):
   >     if path == 'data/f1.i':
   >         time.sleep(2)
   >     return orig(self, path, *args, **kwargs)
-  > extensions.wrapfunction(scmutil.vfs, '__call__', __call__)
+  > extensions.wrapfunction(vfs.vfs, '__call__', __call__)
   > EOF
 
 prepare repo with small and big file to cover both code paths in emitrevlogdata
