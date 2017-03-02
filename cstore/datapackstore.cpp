@@ -83,7 +83,7 @@ datapack_handle_t *DatapackStore::addPack(const std::string &path) {
 
   if (pack->status == DATAPACK_HANDLE_OK) {
     _packs.push_back(pack);
-    _packPaths.emplace(path);
+    _packPaths.insert(path);
     return pack;
   } else {
     free(pack);
