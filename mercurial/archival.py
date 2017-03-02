@@ -22,8 +22,8 @@ from . import (
     encoding,
     error,
     match as matchmod,
-    scmutil,
     util,
+    vfs as vfsmod,
 )
 stringio = util.stringio
 
@@ -249,7 +249,7 @@ class fileit(object):
 
     def __init__(self, name, mtime):
         self.basedir = name
-        self.opener = scmutil.vfs(self.basedir)
+        self.opener = vfsmod.vfs(self.basedir)
 
     def addfile(self, name, mode, islink, data):
         if islink:
