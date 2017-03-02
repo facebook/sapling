@@ -1220,8 +1220,9 @@ class dirstate(object):
         # use '_writedirstate' instead of 'write' to write changes certainly,
         # because the latter omits writing out if transaction is running.
         # output file will be used to create backup of dirstate at this point.
-        self._writedirstate(self._opener(filename, "w", atomictemp=True,
-                                         checkambig=True))
+        if self._dirty or not self._opener.exists(filename):
+            self._writedirstate(self._opener(filename, "w", atomictemp=True,
+                                             checkambig=True))
 
         if tr:
             # ensure that subsequent tr.writepending returns True for
