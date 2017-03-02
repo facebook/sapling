@@ -9,15 +9,15 @@ import sys
 from mercurial import (
     node,
     revlog,
-    scmutil,
     transaction,
     util,
+    vfs as vfsmod,
 )
 
 for fp in (sys.stdin, sys.stdout, sys.stderr):
     util.setbinary(fp)
 
-opener = scmutil.vfs('.', False)
+opener = vfsmod.vfs('.', False)
 tr = transaction.transaction(sys.stderr.write, opener, {'store': opener},
                              "undump.journal")
 while True:
