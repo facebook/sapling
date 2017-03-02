@@ -257,9 +257,7 @@ class TreeInode : public InodeBase {
   const std::shared_ptr<Overlay>& getOverlay() const;
   folly::Future<CreateResult>
   create(PathComponentPiece name, mode_t mode, int flags);
-  folly::Future<fuse_entry_param> symlink(
-      PathComponentPiece name,
-      folly::StringPiece contents);
+  FileInodePtr symlink(PathComponentPiece name, folly::StringPiece contents);
 
   TreeInodePtr mkdir(PathComponentPiece name, mode_t mode);
   folly::Future<folly::Unit> unlink(PathComponentPiece name);

@@ -10,6 +10,7 @@
 #include "TreeInode.h"
 
 #include <boost/polymorphic_cast.hpp>
+#include <folly/FileUtil.h>
 #include <folly/futures/Future.h>
 #include <vector>
 #include "eden/fs/inodes/CheckoutAction.h"
@@ -618,11 +619,83 @@ TreeInode::create(PathComponentPiece name, mode_t mode, int flags) {
       });
 }
 
-folly::Future<fuse_entry_param> TreeInode::symlink(
-    PathComponentPiece /* name */,
-    folly::StringPiece /* contents */) {
-  // TODO
-  FUSELL_NOT_IMPL();
+FileInodePtr TreeInode::symlink(
+    PathComponentPiece name,
+    folly::StringPiece symlinkTarget) {
+  // Compute the effective name of the node they want to create.
+  RelativePath targetName;
+  std::shared_ptr<FileHandle> handle;
+  FileInodePtr inode;
+
+  materializeDirAndParents();
+
+  // We need to scope the write lock as the getattr call below implicitly
+  // wants to acquire a read lock.
+  {
+    // Acquire our contents lock
+    auto contents = contents_.wlock();
+
+    auto myPath = getPath();
+    // Make sure this directory has not been unlinked.
+    // We have to check this after acquiring the contents_ lock; otherwise
+    // we could race with rmdir() or rename() calls affecting us.
+    if (!myPath.hasValue()) {
+      throw InodeError(ENOENT, inodePtrFromThis());
+    }
+    // Compute the target path, so we can record it in the journal below.
+    targetName = myPath.value() + name;
+
+    auto entIter = contents->entries.find(name);
+    if (entIter != contents->entries.end()) {
+      throw InodeError(EEXIST, this->inodePtrFromThis(), name);
+    }
+
+    // Generate an inode number for this new entry.
+    auto* inodeMap = this->getInodeMap();
+    auto childNumber = inodeMap->allocateInodeNumber();
+
+    auto filePath = getOverlay()->getFilePath(childNumber);
+
+    folly::File file(filePath.c_str(), O_RDWR | O_CREAT | O_EXCL, 0600);
+    SCOPE_FAIL {
+      ::unlink(filePath.c_str());
+    };
+    auto wrote = folly::writeNoInt(
+        file.fd(), symlinkTarget.data(), symlinkTarget.size());
+    if (wrote == -1) {
+      folly::throwSystemError("writeNoInt(", filePath, ") failed");
+    }
+    if (wrote != symlinkTarget.size()) {
+      folly::throwSystemError(
+          "writeNoInt(",
+          filePath,
+          ") wrote only ",
+          wrote,
+          " of ",
+          symlinkTarget.size(),
+          " bytes");
+    }
+
+    auto entry = std::make_unique<Entry>(S_IFLNK | 0770, childNumber);
+
+    // build a corresponding FileInode
+    inode = FileInodePtr::makeNew(
+        childNumber,
+        this->inodePtrFromThis(),
+        name,
+        entry.get(),
+        std::move(file));
+    entry->inode = inode.get();
+    inodeMap->inodeCreated(inode);
+    contents->entries.emplace(name, std::move(entry));
+
+    this->getOverlay()->saveOverlayDir(getNodeId(), &*contents);
+  }
+
+  getMount()->getJournal().wlock()->addDelta(
+      std::make_unique<JournalDelta>(JournalDelta{targetName}));
+
+  return inode;
 }
 
 TreeInodePtr TreeInode::mkdir(PathComponentPiece name, mode_t mode) {

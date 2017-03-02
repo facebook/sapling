@@ -328,10 +328,11 @@ folly::Future<fuse_entry_param> EdenDispatcher::symlink(
   return inodeMap_->lookupTreeInode(parent).then(
       [ linkContents = link.str(),
         childName = PathComponent{name} ](const TreeInodePtr& inode) {
-        // TODO: TreeInode::symlink() isn't actually implemented yet.
-        // When it is, we need to call incFuseRefcount() on the
-        // new link inode
-        return inode->symlink(childName, linkContents);
+        auto symlinkInode = inode->symlink(childName, linkContents);
+        symlinkInode->incFuseRefcount();
+        return symlinkInode->getattr().then([symlinkInode](Attr&& attr) {
+          return computeEntryParam(symlinkInode->getNodeId(), attr);
+        });
       });
 }
 

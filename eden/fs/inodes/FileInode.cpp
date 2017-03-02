@@ -94,38 +94,21 @@ folly::Future<fusell::Dispatcher::Attr> FileInode::setattr(
 }
 
 folly::Future<std::string> FileInode::readlink() {
-  std::unique_lock<std::mutex> lock(mutex_);
+  auto data = getOrLoadData();
 
-  DCHECK_NOTNULL(entry_);
-  if (!S_ISLNK(entry_->mode)) {
-    // man 2 readlink says:  EINVAL The named file is not a symbolic link.
-    throw InodeError(EINVAL, inodePtrFromThis(), "not a symlink");
+  {
+    std::unique_lock<std::mutex> lock(mutex_);
+
+    DCHECK_NOTNULL(entry_);
+    if (!S_ISLNK(entry_->mode)) {
+      // man 2 readlink says:  EINVAL The named file is not a symbolic link.
+      throw InodeError(EINVAL, inodePtrFromThis(), "not a symlink");
+    }
   }
 
-  if (entry_->isMaterialized()) {
-    struct stat st;
-    auto localPath = getLocalPath();
-
-    // Figure out how much space we need to hold the symlink target.
-    checkUnixError(lstat(localPath.c_str(), &st));
-
-    // Allocate a string of the appropriate size.
-    std::string buf;
-    buf.resize(st.st_size, 0 /* filled with zeroes */);
-
-    // Read the link into the string buffer.
-    auto res = ::readlink(
-        localPath.c_str(), &buf[0], buf.size() + 1 /* for nul terminator */);
-    checkUnixError(res);
-    CHECK_EQ(st.st_size, res) << "symlink size TOCTOU";
-
-    return buf;
-  }
-
-  // Load the symlink contents from the store
-  auto blob = getMount()->getObjectStore()->getBlob(entry_->getHash());
-  auto buf = blob->getContents();
-  return buf.moveToFbString().toStdString();
+  // The symlink contents are simply the file contents!
+  data->materializeForRead(O_RDONLY);
+  return data->readAll();
 }
 
 std::shared_ptr<FileData> FileInode::getOrLoadData() {
@@ -171,6 +154,22 @@ folly::Future<std::shared_ptr<fusell::FileHandle>> FileInode::open(
     data.reset();
     fileHandleDidClose();
   };
+
+  {
+    std::unique_lock<std::mutex> lock(mutex_);
+
+    DCHECK_NOTNULL(entry_);
+    if (S_ISLNK(entry_->mode)) {
+      // Linux reports ELOOP if you try to open a symlink with O_NOFOLLOW set.
+      // Since it isn't clear whether FUSE will allow this to happen, this
+      // is a speculative defense against that happening; the O_PATH flag
+      // does allow a file handle to be opened on a symlink on Linux,
+      // but does not allow it to be used for real IO operations.  We're
+      // punting on handling those situations here for now.
+      throw InodeError(ELOOP, inodePtrFromThis(), "is a symlink");
+    }
+  }
+
   if (fi.flags & (O_RDWR | O_WRONLY | O_CREAT | O_TRUNC)) {
     getParentBuggy()->materializeDirAndParents();
     data->materializeForWrite(fi.flags);
