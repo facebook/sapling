@@ -240,7 +240,7 @@ def unidiff(a, ad, b, bd, fn1, fn2, opts=defaultopts):
         l3 = "@@ -1,%d +0,0 @@\n" % len(a)
         l = [l1, l2, l3] + ["-" + e for e in a]
     else:
-        l = list(_unidiff(a, b, opts=opts))
+        l = sum((hlines for hrange, hlines in _unidiff(a, b, opts=opts)), [])
         if not l:
             return ""
 
@@ -254,7 +254,14 @@ def unidiff(a, ad, b, bd, fn1, fn2, opts=defaultopts):
     return "".join(l)
 
 def _unidiff(t1, t2, opts=defaultopts):
-    """Yield hunks of a headerless unified diff from t1 and t2 texts."""
+    """Yield hunks of a headerless unified diff from t1 and t2 texts.
+
+    Each hunk consists of a (hunkrange, hunklines) tuple where `hunkrange` is a
+    tuple (s1, l1, s2, l2) representing the range information of the hunk to
+    form the '@@ -s1,l1 +s2,l2 @@' header and `hunklines` is a list of lines
+    of the hunk combining said header followed by line additions and
+    deletions.
+    """
     l1 = splitnewlines(t1)
     l2 = splitnewlines(t2)
     def contextend(l, len):
@@ -298,12 +305,13 @@ def _unidiff(t1, t2, opts=defaultopts):
         if blen:
             bstart += 1
 
-        yield "@@ -%d,%d +%d,%d @@%s\n" % (astart, alen,
-                                           bstart, blen, func)
-        for x in delta:
-            yield x
-        for x in xrange(a2, aend):
-            yield ' ' + l1[x]
+        hunkrange = astart, alen, bstart, blen
+        hunklines = (
+            ["@@ -%d,%d +%d,%d @@%s\n" % (hunkrange + (func,))]
+            + delta
+            + [' ' + l1[x] for x in xrange(a2, aend)]
+        )
+        yield hunkrange, hunklines
 
     # bdiff.blocks gives us the matching sequences in the files.  The loop
     # below finds the spaces between those matching sequences and translates
