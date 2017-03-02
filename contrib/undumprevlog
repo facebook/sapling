@@ -17,7 +17,7 @@ from mercurial import (
 for fp in (sys.stdin, sys.stdout, sys.stderr):
     util.setbinary(fp)
 
-opener = scmutil.opener('.', False)
+opener = scmutil.vfs('.', False)
 tr = transaction.transaction(sys.stderr.write, opener, {'store': opener},
                              "undump.journal")
 while True:

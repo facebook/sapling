@@ -449,7 +449,7 @@ class abstractbackend(object):
 class fsbackend(abstractbackend):
     def __init__(self, ui, basedir):
         super(fsbackend, self).__init__(ui)
-        self.opener = scmutil.opener(basedir)
+        self.opener = scmutil.vfs(basedir)
 
     def _join(self, f):
         return os.path.join(self.opener.base, f)
@@ -560,7 +560,7 @@ class filestore(object):
         else:
             if self.opener is None:
                 root = tempfile.mkdtemp(prefix='hg-patch-')
-                self.opener = scmutil.opener(root)
+                self.opener = scmutil.vfs(root)
             # Avoid filename issues with these simple names
             fn = str(self.created)
             self.opener.write(fn, data)

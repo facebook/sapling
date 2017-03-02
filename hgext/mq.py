@@ -434,7 +434,7 @@ class queue(object):
         except IOError:
             curpath = os.path.join(path, 'patches')
         self.path = patchdir or curpath
-        self.opener = scmutil.opener(self.path)
+        self.opener = scmutil.vfs(self.path)
         self.ui = ui
         self.baseui = baseui
         self.applieddirty = False

@@ -1146,8 +1146,8 @@ class svn_sink(converter_sink, commandline):
             self.run0('checkout', path, wcpath)
 
             self.wc = wcpath
-        self.opener = scmutil.opener(self.wc)
-        self.wopener = scmutil.opener(self.wc)
+        self.opener = scmutil.vfs(self.wc)
+        self.wopener = scmutil.vfs(self.wc)
         self.childmap = mapfile(ui, self.join('hg-childmap'))
         if util.checkexec(self.wc):
             self.is_exec = util.isexec

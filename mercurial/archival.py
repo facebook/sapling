@@ -249,7 +249,7 @@ class fileit(object):
 
     def __init__(self, name, mtime):
         self.basedir = name
-        self.opener = scmutil.opener(self.basedir)
+        self.opener = scmutil.vfs(self.basedir)
 
     def addfile(self, name, mode, islink, data):
         if islink:

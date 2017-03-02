@@ -42,7 +42,7 @@ We approximate that by reducing the read buffer to 1 byte.
   >         return getattr(self.real, key)
   > 
   > def opener(*args):
-  >     o = scmutil.opener(*args)
+  >     o = scmutil.vfs(*args)
   >     def wrapper(*a):
   >         f = o(*a)
   >         return singlebyteread(f)

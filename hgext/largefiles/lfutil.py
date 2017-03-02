@@ -144,7 +144,7 @@ def openlfdirstate(ui, repo, create=True):
     '''
     vfs = repo.vfs
     lfstoredir = longname
-    opener = scmutil.opener(vfs.join(lfstoredir))
+    opener = scmutil.vfs(vfs.join(lfstoredir))
     lfdirstate = largefilesdirstate(opener, ui, repo.root,
                                      repo.dirstate._validate)
 
