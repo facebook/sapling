@@ -1056,6 +1056,11 @@ def checksignature(func):
 
     return check
 
+# Hardlinks are problematic on CIFS, do not allow hardlinks
+# until we find a way to work around it cleanly (issue4546).
+# This is a variable so extensions can opt-in to using them.
+allowhardlinks = False
+
 def copyfile(src, dest, hardlink=False, copystat=False, checkambig=False):
     '''copy a file, preserving mode and optionally other stat info like
     atime/mtime
@@ -1072,9 +1077,7 @@ def copyfile(src, dest, hardlink=False, copystat=False, checkambig=False):
         if checkambig:
             oldstat = checkambig and filestat(dest)
         unlink(dest)
-    # hardlinks are problematic on CIFS, quietly ignore this flag
-    # until we find a way to work around it cleanly (issue4546)
-    if False and hardlink:
+    if allowhardlinks and hardlink:
         try:
             oslink(src, dest)
             return
