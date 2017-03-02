@@ -35,6 +35,7 @@ from . import (
     pycompat,
     scmutil,
     util,
+    vfs as vfsmod,
 )
 
 hg = None
@@ -615,7 +616,7 @@ class abstractsubrepo(object):
     def wvfs(self):
         """return vfs to access the working directory of this subrepository
         """
-        return scmutil.vfs(self._ctx.repo().wvfs.join(self._path))
+        return vfsmod.vfs(self._ctx.repo().wvfs.join(self._path))
 
     @propertycache
     def _relpath(self):
@@ -677,7 +678,7 @@ class hgsubrepo(abstractsubrepo):
 
     @propertycache
     def _cachestorehashvfs(self):
-        return scmutil.vfs(self._repo.join('cache/storehash'))
+        return vfsmod.vfs(self._repo.join('cache/storehash'))
 
     def _readstorehashcache(self, remotepath):
         '''read the store hash cache for a given remote repository'''
