@@ -37,8 +37,8 @@ from . import (
     phases,
     pycompat,
     revlog,
-    scmutil,
     util,
+    vfs as vfsmod,
 )
 
 class bundlerevlog(revlog.revlog):
@@ -50,7 +50,7 @@ class bundlerevlog(revlog.revlog):
         #
         # To differentiate a rev in the bundle from a rev in the revlog, we
         # check revision against repotiprev.
-        opener = scmutil.readonlyvfs(opener)
+        opener = vfsmod.readonlyvfs(opener)
         revlog.revlog.__init__(self, opener, indexfile)
         self.bundle = bundle
         n = len(self)
@@ -239,7 +239,7 @@ class bundlephasecache(phases.phasecache):
     def __init__(self, *args, **kwargs):
         super(bundlephasecache, self).__init__(*args, **kwargs)
         if util.safehasattr(self, 'opener'):
-            self.opener = scmutil.readonlyvfs(self.opener)
+            self.opener = vfsmod.readonlyvfs(self.opener)
 
     def write(self):
         raise NotImplementedError
