@@ -177,7 +177,7 @@ def capabilities(orig, repo, proto):
     # Only advertise if a manifest exists. This does add some I/O to requests.
     # But this should be cheaper than a wasted network round trip due to
     # missing file.
-    if repo.opener.exists('clonebundles.manifest'):
+    if repo.vfs.exists('clonebundles.manifest'):
         caps.append('clonebundles')
 
     return caps
