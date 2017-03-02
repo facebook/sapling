@@ -15,21 +15,37 @@ thrift_library(
     'eden.thrift': ['EdenService'],
   },
   py_base_module = 'facebook',
-  languages = ['cpp2', 'java', 'py'],
+  languages = ['java', 'py'],
   deps = [
     '@/common/fb303/if:fb303',
   ],
 )
 
+# This includes EdenService that is also present in the :thrift
+# target defined in this file.  Ideally we'd simply depend upon
+# :thrift and just define StreamingEdenService here as a separate
+# target, but Buck has problems locating the eden_types.h header
+# during compilation.  Instead we need to duplicate EdenService
+# here and add StreamingEdenService alongside it.  The result
+# of this is that we cannot then include cpp2 in the languages
+# selection for :thrift because Buck complains about the header
+# mapping being ambiguous (the headers are present in both of
+# these thrift_library targets).
 thrift_library(
   name = 'thrift-streaming',
   thrift_args = ['--strict'],
   thrift_srcs = {
-    'eden.thrift': ['EdenService'],
+    'streamingeden.thrift': [
+      'StreamingEdenService',
+    ],
+    'eden.thrift': [
+      'EdenService',
+    ],
   },
-  py_base_module = 'facebook',
   languages = ['cpp2'],
-  deps = [':thrift'],
+  deps = [
+    '@/common/fb303/if:fb303',
+  ],
 )
 
 python_library(

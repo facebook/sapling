@@ -10,7 +10,7 @@
 #pragma once
 
 #include "common/fb303/cpp/FacebookBase2.h"
-#include "eden/fs/service/gen-cpp2/EdenService.h"
+#include "eden/fs/service/gen-cpp2/StreamingEdenService.h"
 #include "eden/utils/PathFuncs.h"
 
 namespace folly {
@@ -28,7 +28,7 @@ class TreeInode;
 /*
  * Handler for the EdenService thrift interface
  */
-class EdenServiceHandler : virtual public EdenServiceSvIf,
+class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
                            public facebook::fb303::FacebookBase2 {
  public:
   explicit EdenServiceHandler(EdenServer* server);

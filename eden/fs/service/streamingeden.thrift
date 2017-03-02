@@ -5,7 +5,7 @@ namespace cpp2 facebook.eden
  * This is only available to cpp2 clients and won't compile for other
  * language/runtimes. */
 
-service StreamingEdenService extends EdenService {
+service StreamingEdenService extends eden.EdenService {
   /** Prototype of the subscription stream for watchman.
    * We'll certainly want to add some filter predicates to this, but I don't
    * want to get hung up on this in this draft of the API.  The caller can
@@ -19,7 +19,7 @@ service StreamingEdenService extends EdenService {
    * filter locally.  In the longer run we'll want to add a predicate to this
    * so that we reduce the bandwidth needed between eden and watchman.
    */
-  stream<FileDelta> subscribe(
+  stream<eden.FileDelta> subscribe(
     1: string mountPoint,
-    2: JournalPosition fromPosition)
+    2: eden.JournalPosition fromPosition)
 }
