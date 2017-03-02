@@ -886,7 +886,10 @@ def _getorcreateinfinitepushlogger(op):
     logger = op.records['infinitepushlogger']
     if not logger:
         ui = op.repo.ui
-        username = ui.shortuser(ui.username())
+        try:
+            username = util.getuser()
+        except Exception:
+            username = 'unknown'
         # Generate random request id to be able to find all logged entries
         # for the same request. Since requestid is pseudo-generated it may
         # not be unique, but we assume that (hostname, username, requestid)

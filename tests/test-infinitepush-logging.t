@@ -30,28 +30,28 @@
   $ hg push -r . --to scratch/scratchpush --create
   pushing to ssh://user@dummy/repo
   searching for changes
-  remote: infinitepush: b2x:infinitepush \(eventtype=start, hostname=.+, requestid=\d+, user=test\) (re)
+  remote: infinitepush: b2x:infinitepush \(eventtype=start, hostname=.+, requestid=\d+, user=\w+\) (re)
   remote: pushing 1 commit:
   remote:     7e6a6fd9c7c8  commit
-  remote: infinitepush: bundlestore \(bundlesize=546, eventtype=start, hostname=[-.0-9a-z]+, reponame=babar, requestid=\d+, user=test\) (re)
-  remote: infinitepush: bundlestore \(bundlesize=546, elapsed=.+, eventtype=success, hostname=[-.0-9a-z]+, reponame=babar, requestid=\d+, user=test\) (re)
-  remote: infinitepush: index \(eventtype=start, hostname=[-.0-9a-z]+, reponame=babar, requestid=\d+, user=test\) (re)
-  remote: infinitepush: index \(elapsed=.+, eventtype=success, hostname=[-.0-9a-z]+, reponame=babar, requestid=\d+, user=test\) (re)
-  remote: infinitepush: b2x:infinitepush \(elapsed=.+, eventtype=success, hostname=[-.0-9a-z]+, reponame=babar, requestid=\d+, user=test\) (re)
+  remote: infinitepush: bundlestore \(bundlesize=546, eventtype=start, hostname=[-.0-9a-z]+, reponame=babar, requestid=\d+, user=\w+\) (re)
+  remote: infinitepush: bundlestore \(bundlesize=546, elapsed=.+, eventtype=success, hostname=[-.0-9a-z]+, reponame=babar, requestid=\d+, user=\w+\) (re)
+  remote: infinitepush: index \(eventtype=start, hostname=[-.0-9a-z]+, reponame=babar, requestid=\d+, user=\w+\) (re)
+  remote: infinitepush: index \(elapsed=.+, eventtype=success, hostname=[-.0-9a-z]+, reponame=babar, requestid=\d+, user=\w+\) (re)
+  remote: infinitepush: b2x:infinitepush \(elapsed=.+, eventtype=success, hostname=[-.0-9a-z]+, reponame=babar, requestid=\d+, user=\w+\) (re)
   $ cd ..
 
 Check that logging works for b2x:infinitepushscratchbookmarks part
   $ cd client
   $ hg pushbackup
   searching for changes
-  remote: infinitepush: b2x:infinitepush \(eventtype=start, hostname=[-.0-9a-z]+, reponame=babar, requestid=\d+, user=test\) (re)
+  remote: infinitepush: b2x:infinitepush \(eventtype=start, hostname=[-.0-9a-z]+, reponame=babar, requestid=\d+, user=\w+\) (re)
   remote: pushing 1 commit:
   remote:     7e6a6fd9c7c8  commit
-  remote: infinitepush: index \(eventtype=start, hostname=[-.0-9a-z]+, reponame=babar, requestid=\d+, user=test\) (re)
-  remote: infinitepush: index \(elapsed=.+, eventtype=success, hostname=[-.0-9a-z]+, reponame=babar, requestid=\d+, user=test\) (re)
-  remote: infinitepush: b2x:infinitepush \(elapsed=.+, eventtype=success, hostname=[-.0-9a-z]+, reponame=babar, requestid=\d+, user=test\) (re)
-  remote: infinitepush: b2x:infinitepushscratchbookmarks \(eventtype=start, hostname=[-.0-9a-z]+, reponame=babar, requestid=\d+, user=test\) (re)
-  remote: infinitepush: b2x:infinitepushscratchbookmarks \(elapsed=.+, eventtype=success, hostname=[-.0-9a-z]+, reponame=babar, requestid=\d+, user=test\) (re)
+  remote: infinitepush: index \(eventtype=start, hostname=[-.0-9a-z]+, reponame=babar, requestid=\d+, user=\w+\) (re)
+  remote: infinitepush: index \(elapsed=.+, eventtype=success, hostname=[-.0-9a-z]+, reponame=babar, requestid=\d+, user=\w+\) (re)
+  remote: infinitepush: b2x:infinitepush \(elapsed=.+, eventtype=success, hostname=[-.0-9a-z]+, reponame=babar, requestid=\d+, user=\w+\) (re)
+  remote: infinitepush: b2x:infinitepushscratchbookmarks \(eventtype=start, hostname=[-.0-9a-z]+, reponame=babar, requestid=\d+, user=\w+\) (re)
+  remote: infinitepush: b2x:infinitepushscratchbookmarks \(elapsed=.+, eventtype=success, hostname=[-.0-9a-z]+, reponame=babar, requestid=\d+, user=\w+\) (re)
   $ cd ..
 
 Make upload to bundlestore fail
@@ -64,12 +64,12 @@ Make upload to bundlestore fail
   $ hg push -r . --to scratch/scratchpush 2> /dev/null
   pushing to ssh://user@dummy/repo
   searching for changes
-  remote: infinitepush: b2x:infinitepush \(eventtype=start, hostname=.+, requestid=\d+, user=test\) (re)
+  remote: infinitepush: b2x:infinitepush \(eventtype=start, hostname=.+, requestid=\d+, user=\w+\) (re)
   remote: pushing 2 commits:
   remote:     7e6a6fd9c7c8  commit
   remote:     bba29d9d577a  failpushcommit
-  remote: infinitepush: bundlestore \(bundlesize=1067, eventtype=start, hostname=.+, requestid=\d+, user=test\) (re)
-  remote: infinitepush: bundlestore \(bundlesize=1067, elapsed=[-+0-9.e]+, errormsg=\[Errno 20\] Not a directory: '/dev/null/\d+', eventtype=failure, hostname=[-.0-9a-z]+, reponame=babar, requestid=\d+, user=test\) (re)
-  remote: infinitepush: b2x:infinitepush \(elapsed=[-+0-9.e]+, errormsg=\[Errno 20\] Not a directory: '/dev/null/\d+', eventtype=failure, hostname=[-.0-9a-z]+, reponame=babar, requestid=\d+, user=test\) (re)
+  remote: infinitepush: bundlestore \(bundlesize=1067, eventtype=start, hostname=.+, requestid=\d+, user=\w+\) (re)
+  remote: infinitepush: bundlestore \(bundlesize=1067, elapsed=[-+0-9.e]+, errormsg=\[Errno 20\] Not a directory: '/dev/null/\d+', eventtype=failure, hostname=[-.0-9a-z]+, reponame=babar, requestid=\d+, user=\w+\) (re)
+  remote: infinitepush: b2x:infinitepush \(elapsed=[-+0-9.e]+, errormsg=\[Errno 20\] Not a directory: '/dev/null/\d+', eventtype=failure, hostname=[-.0-9a-z]+, reponame=babar, requestid=\d+, user=\w+\) (re)
   remote: abort: Not a directory: '/dev/null/\d+' (re)
   [255]
