@@ -393,6 +393,21 @@ renames and changes of PWD
   [255]
   $ hg -R thatdir/rel root
   $TESTTMP/thatdir/rel
+
+test unshare relshared repo
+
+  $ cd thatdir/rel
+  $ hg unshare
+  $ test -d .hg/store
+  $ test -f .hg/sharedpath
+  [1]
+  $ grep shared .hg/requires
+  [1]
+  $ hg unshare
+  abort: this is not a shared repo
+  [255]
+  $ cd ../..
+
   $ rm -r thatdir
 
 Explicitly kill daemons to let the test exit on Windows
