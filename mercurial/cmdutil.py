@@ -2976,11 +2976,11 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
         clean    = set(changes.clean)
         modadded = set()
 
-        # split between files known in target manifest and the others
-        smf = set(mf)
-
         # determine the exact nature of the deleted changesets
-        deladded = _deleted - smf
+        deladded = set(_deleted)
+        for path in _deleted:
+            if path in mf:
+                deladded.remove(path)
         deleted = _deleted - deladded
 
         # We need to account for the state of the file in the dirstate,
@@ -3024,7 +3024,10 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
         # in case of merge, files that are actually added can be reported as
         # modified, we need to post process the result
         if p2 != nullid:
-            mergeadd = dsmodified - smf
+            mergeadd = set(dsmodified)
+            for path in dsmodified:
+                if path in mf:
+                    mergeadd.remove(path)
             dsadded |= mergeadd
             dsmodified -= mergeadd
 
