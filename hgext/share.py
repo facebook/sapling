@@ -116,7 +116,7 @@ def unshare(ui, repo):
         sharefile = repo.join('sharedpath')
         util.rename(sharefile, sharefile + '.old')
 
-        repo.requirements.discard('sharedpath')
+        repo.requirements.discard('shared')
         repo._writerequirements()
     finally:
         destlock and destlock.release()

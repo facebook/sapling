@@ -114,6 +114,8 @@ test unshare command
   $ test -d .hg/store
   $ test -f .hg/sharedpath
   [1]
+  $ grep shared .hg/requires
+  [1]
   $ hg unshare
   abort: this is not a shared repo
   [255]
