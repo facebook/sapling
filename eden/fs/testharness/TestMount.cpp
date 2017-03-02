@@ -242,11 +242,19 @@ void TestMount::rmdir(folly::StringPiece path) {
   dispatcher->rmdir(treeInode->getNodeId(), relativePath.basename()).get();
 }
 
-TreeInodePtr TestMount::getTreeInode(RelativePathPiece path) const {
+InodePtr TestMount::getInode(RelativePathPiece path) const {
   // Call future.get() with a timeout.  Generally in tests we expect the future
   // to be immediately ready.  We want to make sure the test does not hang
   // forever if something goes wrong.
-  return edenMount_->getInode(path).get(std::chrono::seconds(1)).asTreePtr();
+  return edenMount_->getInode(path).get(std::chrono::milliseconds(1));
+}
+
+InodePtr TestMount::getInode(folly::StringPiece path) const {
+  return getInode(RelativePathPiece{path});
+}
+
+TreeInodePtr TestMount::getTreeInode(RelativePathPiece path) const {
+  return getInode(path).asTreePtr();
 }
 
 TreeInodePtr TestMount::getTreeInode(folly::StringPiece path) const {
@@ -254,10 +262,7 @@ TreeInodePtr TestMount::getTreeInode(folly::StringPiece path) const {
 }
 
 FileInodePtr TestMount::getFileInode(RelativePathPiece path) const {
-  // Call future.get() with a timeout.  Generally in tests we expect the future
-  // to be immediately ready.  We want to make sure the test does not hang
-  // forever if something goes wrong.
-  return edenMount_->getInode(path).get(std::chrono::seconds(1)).asFilePtr();
+  return getInode(path).asFilePtr();
 }
 
 FileInodePtr TestMount::getFileInode(folly::StringPiece path) const {

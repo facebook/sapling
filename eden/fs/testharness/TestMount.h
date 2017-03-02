@@ -171,6 +171,8 @@ class TestMount {
   void deleteFile(folly::StringPiece path);
   void rmdir(folly::StringPiece path);
 
+  InodePtr getInode(RelativePathPiece path) const;
+  InodePtr getInode(folly::StringPiece path) const;
   TreeInodePtr getTreeInode(RelativePathPiece path) const;
   TreeInodePtr getTreeInode(folly::StringPiece path) const;
   FileInodePtr getFileInode(RelativePathPiece path) const;

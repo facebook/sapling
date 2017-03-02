@@ -88,6 +88,21 @@ void FakeTreeBuilder::setFileImpl(
   }
 }
 
+void FakeTreeBuilder::removeFile(RelativePathPiece path) {
+  CHECK(!finalizedRoot_);
+
+  auto dir = getDirEntry(path.dirname(), true);
+  auto name = path.basename();
+  auto iter = dir->entries->find(name);
+  if (iter == dir->entries->end()) {
+    throw std::runtime_error(folly::to<string>(
+        "while building fake tree: expected to remove entry at ",
+        path,
+        " but no entry present with this name"));
+  }
+  dir->entries->erase(iter);
+}
+
 void FakeTreeBuilder::setReady(RelativePathPiece path) {
   CHECK(finalizedRoot_);
 

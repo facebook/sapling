@@ -143,6 +143,14 @@ class FakeTreeBuilder {
   }
 
   /**
+   * Remove a file or symlink at the given path.
+   */
+  void removeFile(folly::StringPiece path) {
+    removeFile(RelativePathPiece{path});
+  }
+  void removeFile(RelativePathPiece path);
+
+  /**
    * Make sure a directory exists at the given path.
    *
    * This allows creating empty Tree objects in the backing store.
