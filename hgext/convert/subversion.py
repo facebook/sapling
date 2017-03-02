@@ -13,8 +13,8 @@ from mercurial import (
     encoding,
     error,
     pycompat,
-    scmutil,
     util,
+    vfs as vfsmod,
 )
 
 from . import common
@@ -1146,8 +1146,8 @@ class svn_sink(converter_sink, commandline):
             self.run0('checkout', path, wcpath)
 
             self.wc = wcpath
-        self.opener = scmutil.vfs(self.wc)
-        self.wopener = scmutil.vfs(self.wc)
+        self.opener = vfsmod.vfs(self.wc)
+        self.wopener = vfsmod.vfs(self.wc)
         self.childmap = mapfile(ui, self.join('hg-childmap'))
         if util.checkexec(self.wc):
             self.is_exec = util.isexec
