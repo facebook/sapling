@@ -35,9 +35,13 @@ def _findexactmatches(repo, added, removed):
     for i, fctx in enumerate(added):
         repo.ui.progress(_('searching for exact renames'), i + len(removed),
                 total=numfiles, unit=_('files'))
-        h = hashlib.sha1(fctx.data()).digest()
+        adata = fctx.data()
+        h = hashlib.sha1(adata).digest()
         if h in hashes:
-            yield (hashes[h], fctx)
+            rfctx = hashes[h]
+            # compare between actual file contents for exact identity
+            if adata == rfctx.data():
+                yield (rfctx, fctx)
 
     # Done
     repo.ui.progress(_('searching for exact renames'), None)
