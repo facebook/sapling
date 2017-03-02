@@ -35,6 +35,7 @@ from mercurial import (
     scmutil,
     smartset,
     util,
+    vfs as vfsmod,
 )
 
 class TransplantError(error.Abort):
@@ -60,7 +61,7 @@ class transplants(object):
         self.opener = opener
 
         if not opener:
-            self.opener = scmutil.vfs(self.path)
+            self.opener = vfsmod.vfs(self.path)
         self.transplants = {}
         self.dirty = False
         self.read()
@@ -103,7 +104,7 @@ class transplanter(object):
     def __init__(self, ui, repo, opts):
         self.ui = ui
         self.path = repo.join('transplant')
-        self.opener = scmutil.vfs(self.path)
+        self.opener = vfsmod.vfs(self.path)
         self.transplants = transplants(self.path, 'transplants',
                                        opener=self.opener)
         def getcommiteditor():
