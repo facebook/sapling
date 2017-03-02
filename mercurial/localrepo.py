@@ -59,6 +59,7 @@ from . import (
     transaction,
     txnutil,
     util,
+    vfs as vfsmod,
 )
 
 release = lockmod.release
@@ -255,7 +256,7 @@ class localrepository(object):
     def __init__(self, baseui, path, create=False):
         self.requirements = set()
         # vfs to access the working copy
-        self.wvfs = scmutil.vfs(path, expandpath=True, realpath=True)
+        self.wvfs = vfsmod.vfs(path, expandpath=True, realpath=True)
         # vfs to access the content of the repository
         self.vfs = None
         # vfs to access the store part of the repository
@@ -266,7 +267,7 @@ class localrepository(object):
         self.auditor = pathutil.pathauditor(self.root, self._checknested)
         self.nofsauditor = pathutil.pathauditor(self.root, self._checknested,
                                                 realfs=False)
-        self.vfs = scmutil.vfs(self.path)
+        self.vfs = vfsmod.vfs(self.path)
         self.baseui = baseui
         self.ui = baseui.copy()
         self.ui.copy = baseui.copy # prevent copying repo configuration
@@ -331,8 +332,7 @@ class localrepository(object):
             sharedpath = self.vfs.read("sharedpath").rstrip('\n')
             if 'relshared' in self.requirements:
                 sharedpath = self.vfs.join(sharedpath)
-            vfs = scmutil.vfs(sharedpath, realpath=True)
-
+            vfs = vfsmod.vfs(sharedpath, realpath=True)
             s = vfs.base
             if not vfs.exists():
                 raise error.RepoError(
@@ -343,7 +343,7 @@ class localrepository(object):
                 raise
 
         self.store = store.store(
-                self.requirements, self.sharedpath, scmutil.vfs)
+                self.requirements, self.sharedpath, vfsmod.vfs)
         self.spath = self.store.path
         self.svfs = self.store.vfs
         self.sjoin = self.store.join
