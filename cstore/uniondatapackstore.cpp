@@ -132,3 +132,12 @@ bool UnionDatapackStore::contains(const Key &key) {
 UnionDatapackStoreKeyIterator UnionDatapackStore::getMissing(KeyIterator &missing) {
   return UnionDatapackStoreKeyIterator(*this, missing);
 }
+
+void UnionDatapackStore::markForRefresh() {
+  for(std::vector<DatapackStore*>::iterator it = _stores.begin();
+      it != _stores.end();
+      it++) {
+    DatapackStore *substore = *it;
+    substore->markForRefresh();
+  }
+}

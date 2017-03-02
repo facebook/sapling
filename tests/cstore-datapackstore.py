@@ -6,6 +6,7 @@ import random
 import shutil
 import sys
 import tempfile
+import time
 import unittest
 
 import silenttestrunner
@@ -131,6 +132,37 @@ class datapackstoretests(unittest.TestCase):
         self.assertEquals(2, len(missing))
         self.assertEquals(set([("foo", missinghash1), ("foo2", missinghash2)]),
                           set(missing))
+
+    def testRefreshPacks(self):
+        packdir = self.makeTempDir()
+
+        revisions = [("foo", self.getFakeHash(), nullid, "content")]
+        self.createPack(packdir, revisions=revisions)
+        store = datapackstore(packdir)
+
+        missing = store.getmissing([
+            (revisions[0][0], revisions[0][1])])
+        self.assertEquals(0, len(missing))
+
+        revisions2 = [("foo2", self.getFakeHash(), nullid, "content")]
+        self.createPack(packdir, revisions=revisions2)
+
+        # First miss should guarantee a refresh
+        missing = store.getmissing([
+            (revisions2[0][0], revisions2[0][1])])
+        self.assertEquals(0, len(missing))
+
+        revisions3 = [("foo3", self.getFakeHash(), nullid, "content")]
+        self.createPack(packdir, revisions=revisions3)
+
+        # Second miss should guarantee a refresh after 100ms.
+        # Use a busy loop since we listen to the clock timer internally.
+        now = time.time()
+        while time.time() - now < 0.2:
+            continue
+        missing = store.getmissing([
+            (revisions3[0][0], revisions3[0][1])])
+        self.assertEquals(0, len(missing))
 
 if __name__ == '__main__':
     silenttestrunner.main(__name__)

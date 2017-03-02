@@ -15,9 +15,13 @@ extern "C" {
 }
 
 #include <string>
+#include <ctime>
+#include <unordered_set>
 #include <vector>
 
 #include "key.h"
+
+const clock_t PACK_REFRESH_RATE = 0.1 * CLOCKS_PER_SEC;
 
 class DeltaChainIterator {
   private:
@@ -101,7 +105,13 @@ class DatapackStoreKeyIterator : public KeyIterator {
 class DatapackStore {
   private:
     std::string _path;
+    clock_t _lastRefresh;
 
+    std::unordered_set<std::string> _packPaths;
+
+    datapack_handle_t *addPack(const std::string &path);
+
+    std::vector<datapack_handle_t*> refresh();
   public:
     std::vector<datapack_handle_t*> _packs;
 
@@ -116,6 +126,8 @@ class DatapackStore {
     delta_chain_t getDeltaChainRaw(const Key &key);
 
     bool contains(const Key &key);
+
+    void markForRefresh();
 };
 
 #endif //DATAPACKSTORE_H

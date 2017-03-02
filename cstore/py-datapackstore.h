@@ -162,11 +162,17 @@ static PyObject *datapackstore_getmissing(py_datapackstore *self, PyObject *keys
   }
 }
 
+static PyObject *datapackstore_markforrefresh(py_datapackstore *self) {
+  self->datapackstore.markForRefresh();
+  Py_RETURN_NONE;
+}
+
 // --------- DatapackStore Declaration ---------
 
 static PyMethodDef datapackstore_methods[] = {
   {"getdeltachain", (PyCFunction)datapackstore_getdeltachain, METH_VARARGS, ""},
   {"getmissing", (PyCFunction)datapackstore_getmissing, METH_O, ""},
+  {"markforrefresh", (PyCFunction)datapackstore_markforrefresh, METH_NOARGS, ""},
   {NULL, NULL}
 };
 
@@ -365,12 +371,18 @@ static PyObject *uniondatapackstore_getmissing(py_uniondatapackstore *self, PyOb
   }
 }
 
+static PyObject *uniondatapackstore_markforrefresh(py_uniondatapackstore *self) {
+  self->uniondatapackstore->markForRefresh();
+  Py_RETURN_NONE;
+}
+
 // --------- UnionDatapackStore Declaration ---------
 
 static PyMethodDef uniondatapackstore_methods[] = {
   {"get", (PyCFunction)uniondatapackstore_get, METH_VARARGS, ""},
   {"getdeltachain", (PyCFunction)uniondatapackstore_getdeltachain, METH_VARARGS, ""},
   {"getmissing", (PyCFunction)uniondatapackstore_getmissing, METH_O, ""},
+  {"markforrefresh", (PyCFunction)uniondatapackstore_markforrefresh, METH_NOARGS, ""},
   {NULL, NULL}
 };
 

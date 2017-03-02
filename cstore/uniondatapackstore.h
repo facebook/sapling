@@ -64,6 +64,8 @@ class UnionDatapackStore : public Store {
     bool contains(const Key &key);
 
     UnionDatapackStoreKeyIterator getMissing(KeyIterator &missing);
+
+    void markForRefresh();
 };
 
 #endif //UNIONDATAPACKSTORE_H

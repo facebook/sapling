@@ -52,7 +52,8 @@ std::vector<std::string> getAvailablePackFiles(const std::string &path) {
 }
 
 DatapackStore::DatapackStore(const std::string &path) :
-    _path(path) {
+    _path(path),
+    _lastRefresh(0) {
   // Find pack files in path
   std::vector<std::string> files = getAvailablePackFiles(path);
 
@@ -61,24 +62,28 @@ DatapackStore::DatapackStore(const std::string &path) :
       it++) {
 
     std::string &packpath = *it;
-    char idx_path[packpath.size() + INDEXSUFFIXLEN];
-    char data_path[packpath.size() + PACKSUFFIXLEN];
+    addPack(packpath);
+  }
+}
 
-    sprintf(idx_path, "%s%s", packpath.c_str(), INDEXSUFFIX);
-    sprintf(data_path, "%s%s", packpath.c_str(), PACKSUFFIX);
+datapack_handle_t *DatapackStore::addPack(const std::string &path) {
+  std::string idx_path(path + INDEXSUFFIX);
+  std::string data_path(path + PACKSUFFIX);
 
-    datapack_handle_t *pack = open_datapack(
-      idx_path, strlen(idx_path),
-      data_path, strlen(data_path));
-    if (pack == NULL) {
-      continue;
-    }
+  datapack_handle_t *pack = open_datapack(
+    (char*)idx_path.c_str(), idx_path.size(),
+    (char*)data_path.c_str(), data_path.size());
+  if (pack == NULL) {
+    return NULL;
+  }
 
-    if (pack->status == DATAPACK_HANDLE_OK) {
-      _packs.push_back(pack);
-    } else {
-      free(pack);
-    }
+  if (pack->status == DATAPACK_HANDLE_OK) {
+    _packs.push_back(pack);
+    _packPaths.emplace(path);
+    return pack;
+  } else {
+    free(pack);
+    return NULL;
   }
 }
 
@@ -121,6 +126,27 @@ delta_chain_t DatapackStore::getDeltaChainRaw(const Key &key) {
     return chain;
   }
 
+  // Check if there are new packs available
+  std::vector<datapack_handle_t*> refreshed = refresh();
+  for(std::vector<datapack_handle_t*>::iterator it = refreshed.begin();
+      it != refreshed.end();
+      it++) {
+    datapack_handle_t *pack = *it;
+
+    delta_chain_t chain = getdeltachain(pack, (const uint8_t *) key.node);
+    if (chain.code == GET_DELTA_CHAIN_OOM) {
+      throw std::runtime_error("out of memory");
+    } else if (chain.code == GET_DELTA_CHAIN_NOT_FOUND) {
+      freedeltachain(chain);
+      continue;
+    } else if (chain.code != GET_DELTA_CHAIN_OK) {
+      freedeltachain(chain);
+      continue;
+    }
+
+    return chain;
+  }
+
   return (delta_chain_t) { GET_DELTA_CHAIN_NOT_FOUND };
 }
 
@@ -146,9 +172,51 @@ bool DatapackStore::contains(const Key &key) {
       return true;
     }
   }
+
+  // Check if there are new packs available
+  std::vector<datapack_handle_t*> refreshed = refresh();
+  for(std::vector<datapack_handle_t*>::iterator it = refreshed.begin();
+      it != refreshed.end();
+      it++) {
+    datapack_handle_t *pack = *it;
+
+    pack_index_entry_t packindex;
+    if (find(pack, (uint8_t*)key.node, &packindex)) {
+      return true;
+    }
+  }
+
   return false;
 }
 
 DatapackStoreKeyIterator DatapackStore::getMissing(KeyIterator &missing) {
   return DatapackStoreKeyIterator(*this, missing);
+}
+
+std::vector<datapack_handle_t*> DatapackStore::refresh() {
+  clock_t now = clock();
+
+  std::vector<datapack_handle_t*> newPacks;
+  if (now - _lastRefresh > PACK_REFRESH_RATE) {
+    std::vector<std::string> availablePacks = getAvailablePackFiles(_path);
+    for(std::vector<std::string>::iterator it = availablePacks.begin();
+        it != availablePacks.end();
+        it++) {
+      std::string &packPath = *it;
+      if (_packPaths.find(packPath) == _packPaths.end()) {
+        datapack_handle_t *newPack = addPack(packPath);
+        if (newPack) {
+          newPacks.push_back(newPack);
+        }
+      }
+    }
+
+    _lastRefresh = now;
+  }
+
+  return newPacks;
+}
+
+void DatapackStore::markForRefresh() {
+  _lastRefresh = 0;
 }
