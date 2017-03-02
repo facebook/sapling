@@ -13,6 +13,7 @@ from mercurial import (
     scmutil,
     ui as uimod,
     util,
+    vfs as vfsmod,
 )
 
 filecache = scmutil.filecache
@@ -73,7 +74,7 @@ def basic(repo):
     # atomic replace file, size doesn't change
     # hopefully st_mtime doesn't change as well so this doesn't use the cache
     # because of inode change
-    f = scmutil.vfs('.')('x', 'w', atomictemp=True)
+    f = vfsmod.vfs('.')('x', 'w', atomictemp=True)
     f.write('b')
     f.close()
 
@@ -97,7 +98,7 @@ def basic(repo):
     # should recreate the object
     repo.cached
 
-    f = scmutil.vfs('.')('y', 'w', atomictemp=True)
+    f = vfsmod.vfs('.')('y', 'w', atomictemp=True)
     f.write('B')
     f.close()
 
@@ -105,10 +106,10 @@ def basic(repo):
     print("* file y changed inode")
     repo.cached
 
-    f = scmutil.vfs('.')('x', 'w', atomictemp=True)
+    f = vfsmod.vfs('.')('x', 'w', atomictemp=True)
     f.write('c')
     f.close()
-    f = scmutil.vfs('.')('y', 'w', atomictemp=True)
+    f = vfsmod.vfs('.')('y', 'w', atomictemp=True)
     f.write('C')
     f.close()
 
@@ -200,12 +201,12 @@ def antiambiguity():
         # st_mtime is advanced multiple times as expected
         for i in xrange(repetition):
             # explicit closing
-            fp = scmutil.checkambigatclosing(open(filename, 'a'))
+            fp = vfsmod.checkambigatclosing(open(filename, 'a'))
             fp.write('FOO')
             fp.close()
 
             # implicit closing by "with" statement
-            with scmutil.checkambigatclosing(open(filename, 'a')) as fp:
+            with vfsmod.checkambigatclosing(open(filename, 'a')) as fp:
                 fp.write('BAR')
 
         newstat = os.stat(filename)
