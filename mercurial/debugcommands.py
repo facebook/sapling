@@ -63,6 +63,7 @@ from . import (
     templater,
     treediscovery,
     util,
+    vfs as vfsmod,
 )
 
 release = lockmod.release
@@ -76,7 +77,7 @@ def debugancestor(ui, repo, *args):
     """find the ancestor revision of two revisions in a given index"""
     if len(args) == 3:
         index, rev1, rev2 = args
-        r = revlog.revlog(scmutil.vfs(pycompat.getcwd(), audit=False), index)
+        r = revlog.revlog(vfsmod.vfs(pycompat.getcwd(), audit=False), index)
         lookup = r.lookup
     elif len(args) == 2:
         if not repo:
@@ -452,7 +453,7 @@ def debugdag(ui, repo, file_=None, *revs, **opts):
     spaces = opts.get('spaces')
     dots = opts.get('dots')
     if file_:
-        rlog = revlog.revlog(scmutil.vfs(pycompat.getcwd(), audit=False),
+        rlog = revlog.revlog(vfsmod.vfs(pycompat.getcwd(), audit=False),
                              file_)
         revs = set((int(r) for r in revs))
         def events():
