@@ -2,15 +2,12 @@ import string
 
 from mercurial.i18n import _
 
+def reposetup(ui, repo):
+    ui.setconfig('hooks', 'pretxncommit.checkmessage', checkcommitmessage)
+
 def checkcommitmessage(ui, repo, **kwargs):
     """
     Checks a single commit message for adherence to commit message rules.
-
-    To use add the following to your project .hg/hgrc for each
-    project you want to check, or to your user hgrc to apply to all projects.
-
-    [hooks]
-    pretxncommit = python:path/to/script/checkmessagehook.py:checkcommitmessage
     """
     hg_commit_message = repo['tip'].description()
     try:
