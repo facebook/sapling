@@ -857,3 +857,13 @@ other branch
   added 1 changesets with 1 changes to 1 files (+1 heads)
   (run 'hg heads' to see heads, 'hg merge' to merge)
 
+Committing a empty commit does not duplicate root treemanifest
+  $ echo z >> z
+  $ hg commit -Aqm 'pre-empty commit'
+  $ hg rm z
+  $ hg commit --amend -m 'empty commit'
+  saved backup bundle to $TESTTMP/grafted-dir-repo-clone/.hg/strip-backup/cb99d5717cea-de37743b-amend-backup.hg (glob)
+  $ hg log -r 'tip + tip^' -T '{manifest}\n'
+  1:678d3574b88c
+  1:678d3574b88c
+  $ hg --config extensions.strip= strip -r . -q

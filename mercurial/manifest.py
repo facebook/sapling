@@ -1250,7 +1250,7 @@ class manifestrevlog(revlog.revlog):
     def _addtree(self, m, transaction, link, m1, m2, readtree):
         # If the manifest is unchanged compared to one parent,
         # don't write a new revision
-        if m.unmodifiedsince(m1) or m.unmodifiedsince(m2):
+        if self._dir != '' and (m.unmodifiedsince(m1) or m.unmodifiedsince(m2)):
             return m.node()
         def writesubtree(subm, subp1, subp2):
             sublog = self.dirlog(subm.dir())
@@ -1258,13 +1258,17 @@ class manifestrevlog(revlog.revlog):
                        readtree=readtree)
         m.writesubtrees(m1, m2, writesubtree)
         text = m.dirtext(self._usemanifestv2)
-        # Double-check whether contents are unchanged to one parent
-        if text == m1.dirtext(self._usemanifestv2):
-            n = m1.node()
-        elif text == m2.dirtext(self._usemanifestv2):
-            n = m2.node()
-        else:
+        n = None
+        if self._dir != '':
+            # Double-check whether contents are unchanged to one parent
+            if text == m1.dirtext(self._usemanifestv2):
+                n = m1.node()
+            elif text == m2.dirtext(self._usemanifestv2):
+                n = m2.node()
+
+        if not n:
             n = self.addrevision(text, transaction, link, m1.node(), m2.node())
+
         # Save nodeid so parent manifest can calculate its nodeid
         m.setnode(n)
         return n
