@@ -121,9 +121,9 @@ class statichttprepository(localrepo.localrepository):
         u = util.url(path.rstrip('/') + "/.hg")
         self.path, authinfo = u.authinfo()
 
-        opener = build_opener(ui, authinfo)
-        self.opener = opener(self.path)
-        self.vfs = self.opener
+        vfsclass = build_opener(ui, authinfo)
+        self.vfs = vfsclass(self.path)
+        self.opener = self.vfs
         self._phasedefaults = []
 
         self.names = namespaces.namespaces()
@@ -148,7 +148,7 @@ class statichttprepository(localrepo.localrepository):
                 raise error.RepoError(msg)
 
         # setup store
-        self.store = store.store(requirements, self.path, opener)
+        self.store = store.store(requirements, self.path, vfsclass)
         self.spath = self.store.path
         self.svfs = self.store.opener
         self.sjoin = self.store.join
