@@ -1235,8 +1235,14 @@ class dirstate(object):
             # end of this transaction
             tr.registertmp(filename, location='plain')
 
-        self._opener.write(prefix + self._filename + suffix,
-                           self._opener.tryread(filename))
+        backupname = prefix + self._filename + suffix
+        assert backupname != filename
+        if self._opener.exists(backupname):
+            self._opener.unlink(backupname)
+        # hardlink backup is okay because _writedirstate is always called
+        # with an "atomictemp=True" file.
+        util.copyfile(self._opener.join(filename),
+                      self._opener.join(backupname), hardlink=True)
 
     def restorebackup(self, tr, suffix='', prefix=''):
         '''Restore dirstate by backup file with suffix'''
