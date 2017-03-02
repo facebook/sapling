@@ -89,9 +89,12 @@ def extsetup(ui):
                                       _unsortedthreshold)
 
 def reposetup(ui, repo):
-    if repo.local():
-        # Add `ui` object to access it from `_partialmatch` func
+    isbundlerepo = repo.url().startswith('bundle:')
+    if repo.local() and not isbundlerepo:
+        # Add `ui` object and `usefastpartialmatch` to access it
+        # from `_partialmatch` func
         repo.svfs.ui = ui
+        repo.svfs.usefastpartialmatch = True
         ui.setconfig('hooks', 'pretxncommit.fastpartialmatch', _commithook)
         ui.setconfig('hooks', 'pretxnchangegroup.fastpartialmatch',
                      _changegrouphook)
@@ -313,7 +316,7 @@ def _partialmatch(orig, self, id):
     except AttributeError:
         # not a proper vfs, no exists method or ui, so we can't proceed.
         indexbuilt = False
-    if not indexbuilt:
+    if not indexbuilt or not getattr(opener, 'usefastpartialmatch', None):
         return orig(self, id)
     candidates = _findcandidates(ui, opener, id)
     if candidates is None:
