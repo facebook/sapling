@@ -25,6 +25,10 @@ std::vector<std::string> getAvailablePackFiles(const std::string &path) {
   size_t dirLength = packpath.size();
 
   DIR *dirp = opendir(path.c_str());
+  if (!dirp) {
+    return results;
+  }
+
   try {
     dirent *entry;
     while ((entry = readdir(dirp)) != NULL) {

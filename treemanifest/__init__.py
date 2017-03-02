@@ -13,6 +13,12 @@ converted to trees during pull by specifying `treemanifest.allowedtreeroots`.
     [treemanifest]
     allowedtreeroots = master,stable
 
+Enabling `treemanifest.usecunionstore` will cause the extension to use the
+native implementation of the datapack stores.
+
+    [treemanifest]
+    usecunionstore = True
+
 """
 
 from mercurial import (
@@ -61,17 +67,24 @@ def wraprepo(repo):
     usecdatapack = repo.ui.configbool('remotefilelog', 'fastdatapack')
 
     packpath = shallowutil.getcachepackpath(repo, PACK_CATEGORY)
-    datastore = datapackstore(repo.ui, packpath, usecdatapack=usecdatapack)
 
     localpackpath = shallowutil.getlocalpackpath(repo.svfs.vfs.base,
                                                  PACK_CATEGORY)
-    localdatastore = datapackstore(repo.ui, localpackpath,
-                                   usecdatapack=usecdatapack)
+    if repo.ui.configbool("treemanifest", "usecunionstore"):
+        datastore = cstore.datapackstore(packpath)
+        localdatastore = cstore.datapackstore(localpackpath)
+        repo.svfs.manifestdatastore = cstore.uniondatapackstore(
+                [localdatastore, datastore])
+    else:
+        datastore = datapackstore(repo.ui, packpath, usecdatapack=usecdatapack)
+        localdatastore = datapackstore(repo.ui, localpackpath,
+                                       usecdatapack=usecdatapack)
+
+        repo.svfs.manifestdatastore = unioncontentstore(localdatastore,
+            datastore, writestore=localdatastore)
 
     repo.svfs.sharedmanifestdatastores = [datastore]
     repo.svfs.localmanifestdatastores = [localdatastore]
-    repo.svfs.manifestdatastore = unioncontentstore(localdatastore, datastore,
-        writestore=localdatastore)
 
 def _unpackmanifests(orig, self, repo, *args, **kwargs):
     mfrevlog = repo.manifestlog._revlog

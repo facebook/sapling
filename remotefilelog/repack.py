@@ -32,25 +32,24 @@ def fullrepack(repo):
                    constants.FILEPACK_CATEGORY)
 
     if util.safehasattr(repo.svfs, 'manifestdatastore'):
+        local, shared = _getmanifeststores(repo)
+        localpackpath, localstores = local
+        sharedpackpath, sharedstores = shared
+
         # Repack the shared manifest store
-        datasource = contentstore.unioncontentstore(
-                        *repo.svfs.sharedmanifestdatastores)
-        packpath = shallowutil.getcachepackpath(repo,
-                                                constants.TREEPACK_CATEGORY)
+        datasource = contentstore.unioncontentstore(*sharedstores)
         _runrepack(repo, datasource,
                    metadatastore.unionmetadatastore(),
-                   packpath,
+                   sharedpackpath,
                    constants.TREEPACK_CATEGORY)
 
         # Repack the local manifest store
         datasource = contentstore.unioncontentstore(
-                        *repo.svfs.localmanifestdatastores,
+                        *localstores,
                         allowincomplete=True)
-        packpath = shallowutil.getlocalpackpath(repo.svfs.vfs.base,
-                                                constants.TREEPACK_CATEGORY)
         _runrepack(repo, datasource,
                    metadatastore.unionmetadatastore(),
-                   packpath,
+                   localpackpath,
                    constants.TREEPACK_CATEGORY)
 
 def incrementalrepack(repo):
@@ -68,24 +67,44 @@ def incrementalrepack(repo):
                            constants.FILEPACK_CATEGORY)
 
     if util.safehasattr(repo.svfs, 'manifestdatastore'):
+        local, shared = _getmanifeststores(repo)
+        localpackpath, localstores = local
+        sharedpackpath, sharedstores = shared
+
         # Repack the shared manifest store
-        packpath = shallowutil.getcachepackpath(repo,
-                                                constants.TREEPACK_CATEGORY)
         _incrementalrepack(repo,
-                           repo.svfs.sharedmanifestdatastores,
+                           sharedstores,
                            [metadatastore.unionmetadatastore()],
-                           packpath,
+                           sharedpackpath,
                            constants.TREEPACK_CATEGORY)
 
         # Repack the local manifest store
-        packpath = shallowutil.getlocalpackpath(repo.svfs.vfs.base,
-                                                constants.TREEPACK_CATEGORY)
         _incrementalrepack(repo,
-                           repo.svfs.localmanifestdatastores,
+                           localstores,
                            [metadatastore.unionmetadatastore()],
-                           packpath,
+                           localpackpath,
                            constants.TREEPACK_CATEGORY,
                            allowincompletedata=True)
+
+def _getmanifeststores(repo):
+    sharedstores = repo.svfs.sharedmanifestdatastores
+    localstores = repo.svfs.localmanifestdatastores
+
+    sharedpackpath = shallowutil.getcachepackpath(repo,
+                                            constants.TREEPACK_CATEGORY)
+    localpackpath = shallowutil.getlocalpackpath(repo.svfs.vfs.base,
+                                            constants.TREEPACK_CATEGORY)
+
+    # The native stores don't support repacking yet, so fall back to the
+    # python versions.
+    if repo.ui.configbool("treemanifest", "usecunionstore"):
+        usecdatapack = repo.ui.configbool("remotefilelog", "fastdatapack")
+        sharedstores = [datapack.datapackstore(repo.ui, sharedpackpath,
+                                      usecdatapack=usecdatapack)]
+        localstores = [datapack.datapackstore(repo.ui, localpackpath,
+                                     usecdatapack=usecdatapack)]
+
+    return ((localpackpath, localstores), (sharedpackpath, sharedstores))
 
 def _incrementalrepack(repo, datastore, historystore, packpath, category,
         allowincompletedata=False):
