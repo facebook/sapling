@@ -1132,7 +1132,12 @@ class manifestrevlog(revlog.revlog):
     '''A revlog that stores manifest texts. This is responsible for caching the
     full-text manifest contents.
     '''
-    def __init__(self, opener, dir='', dirlogcache=None):
+    def __init__(self, opener, dir='', dirlogcache=None, indexfile=None):
+        """Constructs a new manifest revlog
+
+        `indexfile` - used by extensions to have two manifests at once, like
+        when transitioning between flatmanifeset and treemanifests.
+        """
         # During normal operations, we expect to deal with not more than four
         # revs at a time (such as during commit --amend). When rebasing large
         # stacks of commits, the number can go up, hence the config knob below.
@@ -1150,12 +1155,16 @@ class manifestrevlog(revlog.revlog):
 
         self._fulltextcache = util.lrucachedict(cachesize)
 
-        indexfile = "00manifest.i"
         if dir:
             assert self._treeondisk, 'opts is %r' % opts
             if not dir.endswith('/'):
                 dir = dir + '/'
-            indexfile = "meta/" + dir + "00manifest.i"
+
+        if indexfile is None:
+            indexfile = '00manifest.i'
+            if dir:
+                indexfile = "meta/" + dir + indexfile
+
         self._dir = dir
         # The dirlogcache is kept on the root manifest log
         if dir:
