@@ -40,7 +40,6 @@ from hgext3rd.generic_bisect import bisect
 
 from mercurial import (
     cmdutil,
-    context,
     error,
     extensions,
     revlog,
@@ -79,7 +78,6 @@ _unsortedthreshold = 1000
 _needrebuildfile = os.path.join(_partialindexdir, 'needrebuild')
 
 def extsetup(ui):
-    extensions.wrapfunction(context.changectx, '__init__', _changectxinit)
     extensions.wrapfunction(revlog.revlog, '_partialmatch', _partialmatch)
     global _raiseifinconsistent
     _raiseifinconsistent = ui.configbool('fastpartialmatch',
@@ -326,22 +324,9 @@ def _partialmatch(orig, self, id):
             return _handleinconsistentindex(id, origres)
         return None
     elif len(candidates) == 1:
-        return candidates.keys()[0]
-    else:
-        raise LookupError(id, _partialindexdir, _('ambiguous identifier'))
-
-def _changectxinit(orig, self, repo, changeid=''):
-    if not _ispartialindexbuilt(repo.svfs):
-        return orig(self, repo, changeid)
-    candidates = _findcandidates(repo.ui, repo.svfs, changeid)
-    if candidates is None:
-        return orig(self, repo, changeid)
-    elif len(candidates) == 0:
-        return orig(self, repo, changeid)
-    elif len(candidates) == 1:
-        rev = candidates.values()[0]
-        repo.ui.debug('using partial index cache %d\n' % rev)
-        return orig(self, repo, rev)
+        node, rev = candidates.popitem()
+        ui.debug('using partial index cache %d\n' % rev)
+        return node
     else:
         raise LookupError(id, _partialindexdir, _('ambiguous identifier'))
 

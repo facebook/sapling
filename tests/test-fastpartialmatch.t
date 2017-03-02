@@ -56,8 +56,6 @@ Check that debugcheckpartialindex fails on corrupted indexes
   $ hg log -r b75a
   failed to read partial index partialindex/b7 : corrupted header: run `hg debugrebuildpartialindex` to fix the issue
   failed to read partial index partialindex/b7 : corrupted header: run `hg debugrebuildpartialindex` to fix the issue
-  failed to read partial index partialindex/b7 : corrupted header: run `hg debugrebuildpartialindex` to fix the issue
-  failed to read partial index partialindex/b7 : corrupted header: run `hg debugrebuildpartialindex` to fix the issue
   changeset:   0:b75a450e74d5
   tag:         tip
   user:        test
@@ -348,7 +346,6 @@ because it was just pulled)
   $ hg pull -q
   $ hg debugfastpartialmatchstat
   generation number: 0
-  index will be rebuilt on the next pull
   file: 12, entries: 1, out of them 0 sorted
   file: 3d, entries: 1, out of them 1 sorted
   file: 58, entries: 1, out of them 1 sorted
@@ -364,7 +361,7 @@ to be rebuilt
   $ hg pull -q --config fastpartialmatch.unsortedthreshold=2
   $ hg debugfastpartialmatchstat
   generation number: 0
-  file: 12, entries: 1, out of them 1 sorted
+  file: 12, entries: 1, out of them 0 sorted
   file: 3d, entries: 1, out of them 1 sorted
   file: 58, entries: 1, out of them 1 sorted
   file: 64, entries: 1, out of them 1 sorted
@@ -416,7 +413,6 @@ Make pull to rebuild the index
   $ hg debugcheckpartialindex
   $ hg debugfastpartialmatchstat
   generation number: 1
-  index will be rebuilt on the next pull
   file: 06, entries: 1, out of them 0 sorted
   file: 12, entries: 1, out of them 1 sorted
   file: 2b, entries: 1, out of them 1 sorted
@@ -440,3 +436,18 @@ Write incorrect generation number
   $ hg debugcheckpartialindex
   partial index is not built
   [1]
+
+Create bookmark with the same prefix as commit hash. hg log should show commit
+with bookmark
+  $ hg debugrebuildpartialindex
+  $ hg book e26f27bf
+  $ mkcommit newcommitwithbook
+  $ hg log -r e26f27bf
+  changeset:   10:bf72b6cd3f5a
+  bookmark:    e26f27bf
+  tag:         tip
+  parent:      8:e26f27bfb47a
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     newcommitwithbook
+  
