@@ -17,8 +17,8 @@ from . import (
     error,
     parsers,
     pycompat,
-    scmutil,
     util,
+    vfs as vfsmod,
 )
 
 # This avoids a collision between a file named foo and a dir named
@@ -325,7 +325,7 @@ class basicstore(object):
         self.createmode = _calcmode(vfs)
         vfs.createmode = self.createmode
         self.rawvfs = vfs
-        self.vfs = scmutil.filtervfs(vfs, encodedir)
+        self.vfs = vfsmod.filtervfs(vfs, encodedir)
         self.opener = self.vfs
 
     def join(self, f):
@@ -398,7 +398,7 @@ class encodedstore(basicstore):
         self.createmode = _calcmode(vfs)
         vfs.createmode = self.createmode
         self.rawvfs = vfs
-        self.vfs = scmutil.filtervfs(vfs, encodefilename)
+        self.vfs = vfsmod.filtervfs(vfs, encodefilename)
         self.opener = self.vfs
 
     def datafiles(self):
@@ -477,9 +477,9 @@ class fncache(object):
             self._load()
         return iter(self.entries)
 
-class _fncachevfs(scmutil.abstractvfs, scmutil.auditvfs):
+class _fncachevfs(vfsmod.abstractvfs, vfsmod.auditvfs):
     def __init__(self, vfs, fnc, encode):
-        scmutil.auditvfs.__init__(self, vfs)
+        vfsmod.auditvfs.__init__(self, vfs)
         self.fncache = fnc
         self.encode = encode
 
