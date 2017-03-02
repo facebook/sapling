@@ -24,6 +24,7 @@ from . import (
     store,
     url,
     util,
+    vfs as vfsmod,
 )
 
 urlerr = util.urlerr
@@ -86,7 +87,7 @@ def build_opener(ui, authinfo):
     urlopener = url.opener(ui, authinfo)
     urlopener.add_handler(byterange.HTTPRangeHandler())
 
-    class statichttpvfs(scmutil.abstractvfs):
+    class statichttpvfs(vfsmod.abstractvfs):
         def __init__(self, base):
             self.base = base
 
