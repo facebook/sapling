@@ -26,7 +26,7 @@ We approximate that by reducing the read buffer to 1 byte.
   summary:     change foo
   
   $ cat >> test.py << EOF
-  > from mercurial import changelog, scmutil
+  > from mercurial import changelog, vfs
   > from mercurial.node import *
   > 
   > class singlebyteread(object):
@@ -42,7 +42,7 @@ We approximate that by reducing the read buffer to 1 byte.
   >         return getattr(self.real, key)
   > 
   > def opener(*args):
-  >     o = scmutil.vfs(*args)
+  >     o = vfs.vfs(*args)
   >     def wrapper(*a):
   >         f = o(*a)
   >         return singlebyteread(f)
@@ -67,8 +67,8 @@ Test SEGV caused by bad revision passed to reachableroots() (issue4775):
   $ cd a
 
   $ python <<EOF
-  > from mercurial import changelog, scmutil
-  > cl = changelog.changelog(scmutil.vfs('.hg/store'))
+  > from mercurial import changelog, vfs
+  > cl = changelog.changelog(vfs.vfs('.hg/store'))
   > print 'good heads:'
   > for head in [0, len(cl) - 1, -1]:
   >     print'%s: %r' % (head, cl.reachableroots(0, [head], [0]))
@@ -147,8 +147,8 @@ Test corrupted p1/p2 fields that could cause SEGV at parsers.c:
 
   $ cat <<EOF > test.py
   > import sys
-  > from mercurial import changelog, scmutil
-  > cl = changelog.changelog(scmutil.vfs(sys.argv[1]))
+  > from mercurial import changelog, vfs
+  > cl = changelog.changelog(vfs.vfs(sys.argv[1]))
   > n0, n1 = cl.node(0), cl.node(1)
   > ops = [
   >     ('reachableroots',
