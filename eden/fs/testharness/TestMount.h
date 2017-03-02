@@ -88,6 +88,14 @@ class TestMount {
    * Initialize the mount.
    *
    * This should only be used if the TestMount was default-constructed.
+   * The caller must have already defined the root commit.
+   */
+  void initialize(Hash initialCommitHash);
+
+  /**
+   * Initialize the mount.
+   *
+   * This should only be used if the TestMount was default-constructed.
    * The caller must have already defined the root Tree in the object store.
    */
   void initialize(Hash initialCommitHash, Hash rootTreeHash);
@@ -179,6 +187,7 @@ class TestMount {
 
  private:
   void initTestDirectory();
+  void setInitialCommit(Hash commitHash);
   void setInitialCommit(Hash commitHash, Hash rootTreeHash);
 
   /**

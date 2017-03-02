@@ -51,6 +51,17 @@ class FileData {
       TreeInode::Entry* entry,
       folly::File&& file);
 
+  /**
+   * Read up to size bytes from the file at the specified offset.
+   *
+   * Returns an IOBuf containing the data.  This may return fewer bytes than
+   * requested.  If the specified offset is at or past the end of the buffer an
+   * empty IOBuf will be returned.  Otherwise between 1 and size bytes will be
+   * returned.  If fewer than size bytes are returned this does *not* guarantee
+   * that the end of the file was reached.
+   *
+   * May throw exceptions on error.
+   */
   std::unique_ptr<folly::IOBuf> readIntoBuffer(size_t size, off_t off);
   fusell::BufVec read(size_t size, off_t off);
   size_t write(fusell::BufVec&& buf, off_t off);

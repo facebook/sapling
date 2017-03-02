@@ -71,6 +71,17 @@ TestMount::TestMount(
 
 TestMount::~TestMount() {}
 
+void TestMount::initialize(Hash initialCommitHash) {
+  // Set the initial commit ID
+  setInitialCommit(initialCommitHash);
+
+  // Create edenMount_
+  unique_ptr<ObjectStore> objectStore =
+      make_unique<ObjectStore>(localStore_, backingStore_);
+  edenMount_ =
+      EdenMount::makeShared(std::move(config_), std::move(objectStore));
+}
+
 void TestMount::initialize(Hash commitHash, Hash rootTreeHash) {
   // Set the initial commit ID
   setInitialCommit(commitHash, rootTreeHash);
@@ -132,15 +143,20 @@ void TestMount::initTestDirectory() {
   backingStore_ = make_shared<FakeBackingStore>(localStore_);
 }
 
+void TestMount::setInitialCommit(Hash commitHash) {
+  // Write the commit hash to the snapshot file
+  auto snapshotPath = config_->getSnapshotPath();
+  folly::writeFileAtomic(
+      snapshotPath.stringPiece(), commitHash.toString() + "\n");
+}
+
 void TestMount::setInitialCommit(Hash commitHash, Hash rootTreeHash) {
   // Record the commit hash to root tree hash mapping in the BackingStore
   auto* storedCommit = backingStore_->putCommit(commitHash, rootTreeHash);
   storedCommit->setReady();
 
-  // Write the commit hash to the snapshot file
-  auto snapshotPath = config_->getSnapshotPath();
-  folly::writeFileAtomic(
-      snapshotPath.stringPiece(), commitHash.toString() + "\n");
+  // Call setInitialCommit(hash) to write the snapshot file
+  setInitialCommit(commitHash);
 }
 
 void TestMount::setInitialDirstate(

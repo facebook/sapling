@@ -190,8 +190,8 @@ folly::Future<std::vector<CheckoutConflict>> EdenMount::checkout(
       })
       .then([this, ctx, oldSnapshot, snapshotHash]() {
         // Save the new snapshot hash
-        VLOG(1) << "updating snapshot for " << this->getPath() << " to "
-                << snapshotHash;
+        VLOG(1) << "updating snapshot for " << this->getPath() << " from "
+                << oldSnapshot << " to " << snapshotHash;
         this->config_->setSnapshotID(snapshotHash);
         auto conflicts = ctx->finish(snapshotHash);
 
@@ -208,6 +208,24 @@ folly::Future<std::vector<CheckoutConflict>> EdenMount::checkout(
 
         return conflicts;
       });
+}
+
+void EdenMount::resetCommit(Hash snapshotHash) {
+  // We currently don't verify that snapshotHash refers to a valid commit
+  // in the ObjectStore.  We could do that just for verification purposes.
+
+  auto snapshotLock = currentSnapshot_.wlock();
+  auto oldSnapshot = *snapshotLock;
+
+  VLOG(1) << "resetting snapshot for " << this->getPath() << " from "
+          << oldSnapshot << " to " << snapshotHash;
+  *snapshotLock = snapshotHash;
+  this->config_->setSnapshotID(snapshotHash);
+
+  auto journalDelta = make_unique<JournalDelta>();
+  journalDelta->fromHash = oldSnapshot;
+  journalDelta->toHash = snapshotHash;
+  journal_.wlock()->addDelta(std::move(journalDelta));
 }
 
 RenameLock EdenMount::acquireRenameLock() {

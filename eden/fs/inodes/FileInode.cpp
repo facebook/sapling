@@ -147,6 +147,15 @@ bool FileInode::isSameAs(const Blob& blob, mode_t mode) {
   return getOrLoadData()->getSha1() == Hash::sha1(&blob.getContents());
 }
 
+mode_t FileInode::getMode() const {
+  // TODO: This needs proper synchronization
+  return entry_->mode;
+}
+
+mode_t FileInode::getPermissions() const {
+  return (getMode() & 07777);
+}
+
 folly::Future<std::shared_ptr<fusell::FileHandle>> FileInode::open(
     const struct fuse_file_info& fi) {
   auto data = getOrLoadData();

@@ -67,7 +67,26 @@ class FileInode : public InodeBase {
   /// Compute the path to the overlay file for this item.
   AbsolutePath getLocalPath() const;
 
+  /**
+   * Check to see if the file has the same contents as the specified blob
+   * and the same mode.
+   *
+   * This is more efficient than manually comparing the contents, as it can
+   * perform a simple hash check if the file is not materialized.
+   */
   bool isSameAs(const Blob& blob, mode_t mode);
+
+  /**
+   * Get the file mode_t value.
+   */
+  mode_t getMode() const;
+
+  /**
+   * Get the permissions bits from the file mode.
+   *
+   * This returns the mode with the file type bits masked out.
+   */
+  mode_t getPermissions() const;
 
  private:
   /**

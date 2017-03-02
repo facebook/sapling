@@ -209,9 +209,18 @@ class EdenMount {
    */
   FileInodePtr getFileInodeBlocking(RelativePathPiece path) const;
 
+  /**
+   * Check out the specified commit.
+   */
   folly::Future<std::vector<CheckoutConflict>> checkout(
       Hash snapshotHash,
       bool force = false);
+
+  /**
+   * Reset the state to point to the specified commit, without modifying
+   * the working directory contents at all.
+   */
+  void resetCommit(Hash snapshotHash);
 
   /**
    * Acquire the rename lock in exclusive mode.
