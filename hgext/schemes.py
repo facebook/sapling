@@ -63,6 +63,7 @@ command = cmdutil.command(cmdtable)
 # leave the attribute unspecified.
 testedwith = 'ships-with-hg-core'
 
+_partre = re.compile(r'\{(\d+)\}'.encode(u'latin1'))
 
 class ShortRepository(object):
     def __init__(self, url, scheme, templater):
@@ -70,7 +71,7 @@ class ShortRepository(object):
         self.templater = templater
         self.url = url
         try:
-            self.parts = max(map(int, re.findall(r'\{(\d+)\}', self.url)))
+            self.parts = max(map(int, _partre.findall(self.url)))
         except ValueError:
             self.parts = 0
 
