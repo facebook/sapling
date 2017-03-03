@@ -169,5 +169,5 @@ class config(object):
 
     def read(self, path, fp=None, sections=None, remap=None):
         if not fp:
-            fp = util.posixfile(path)
+            fp = util.posixfile(path, 'rb')
         self.parse(path, fp.read(), sections, remap, self.read)
