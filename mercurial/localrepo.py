@@ -2012,6 +2012,14 @@ def aftertrans(files):
     def a():
         for vfs, src, dest in renamefiles:
             try:
+                # if src and dest refer to a same file, vfs.rename is a no-op,
+                # leaving both src and dest on disk. delete dest to make sure
+                # the rename couldn't be such a no-op.
+                vfs.unlink(dest)
+            except OSError as ex:
+                if ex.errno != errno.ENOENT:
+                    raise
+            try:
                 vfs.rename(src, dest)
             except OSError: # journal file does not yet exist
                 pass
