@@ -96,6 +96,9 @@ if ispy3:
     setattr = _wrapattrfunc(builtins.setattr)
     xrange = builtins.range
 
+    def open(name, mode='r', buffering=-1):
+        return builtins.open(name, sysstr(mode), buffering)
+
     # getopt.getopt() on Python 3 deals with unicodes internally so we cannot
     # pass bytes there. Passing unicodes will result in unicodes as return
     # values which we need to convert again to bytes.

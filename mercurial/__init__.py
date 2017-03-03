@@ -280,7 +280,7 @@ if sys.version_info[0] >= 3:
                     continue
                 r, c = t.start
                 l = (b'; from mercurial.pycompat import '
-                     b'delattr, getattr, hasattr, setattr, xrange\n')
+                     b'delattr, getattr, hasattr, setattr, xrange, open\n')
                 for u in tokenize.tokenize(io.BytesIO(l).readline):
                     if u.type in (tokenize.ENCODING, token.ENDMARKER):
                         continue
@@ -327,7 +327,7 @@ if sys.version_info[0] >= 3:
     # ``replacetoken`` or any mechanism that changes semantics of module
     # loading is changed. Otherwise cached bytecode may get loaded without
     # the new transformation mechanisms applied.
-    BYTECODEHEADER = b'HG\x00\x06'
+    BYTECODEHEADER = b'HG\x00\x07'
 
     class hgloader(importlib.machinery.SourceFileLoader):
         """Custom module loader that transforms source code.
