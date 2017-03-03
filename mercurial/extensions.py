@@ -18,6 +18,7 @@ from .i18n import (
 
 from . import (
     cmdutil,
+    encoding,
     error,
     pycompat,
     util,
@@ -104,11 +105,18 @@ def _importext(name, path=None, reportfunc=None):
                 mod = _importh(name)
     return mod
 
+def _forbytes(inst):
+    """Portably format an import error into a form suitable for
+    %-formatting into bytestrings."""
+    if pycompat.ispy3:
+        return encoding.tolocal(str(inst).encode('utf-8'))
+    return inst
+
 def _reportimporterror(ui, err, failed, next):
     # note: this ui.debug happens before --debug is processed,
     #       Use --config ui.debug=1 to see them.
     ui.debug('could not import %s (%s): trying %s\n'
-             % (failed, err, next))
+             % (failed, _forbytes(err), next))
     if ui.debugflag:
         ui.traceback()
 
@@ -168,6 +176,7 @@ def loadall(ui):
         except KeyboardInterrupt:
             raise
         except Exception as inst:
+            inst = _forbytes(inst)
             if path:
                 ui.warn(_("*** failed to import extension %s from %s: %s\n")
                         % (name, path, inst))
