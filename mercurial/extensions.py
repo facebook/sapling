@@ -160,7 +160,7 @@ def loadall(ui):
     newindex = len(_order)
     for (name, path) in result:
         if path:
-            if path[0] == '!':
+            if path[0:1] == '!':
                 _disabledextensions[name] = path[1:]
                 continue
         try:
