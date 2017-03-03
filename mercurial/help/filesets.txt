@@ -69,6 +69,10 @@ Some sample queries:
 
     hg revert "set:copied() and binary() and size('>1M')"
 
+- Revert files that were added to the working directory::
+
+    hg revert "set:wdir(added())"
+
 - Remove files listed in foo.lst that contain the letter a or b::
 
     hg remove "set: 'listfile:foo.lst' and (**a* or **b*)"

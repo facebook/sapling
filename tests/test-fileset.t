@@ -88,6 +88,35 @@ Test files status
   $ fileset 'copied()'
   c1
 
+Test files status in different revisions
+
+  $ hg status -m
+  M b2
+  $ fileset -r0 'revs("wdir()", modified())' --traceback
+  b2
+  $ hg status -a
+  A c1
+  $ fileset -r0 'revs("wdir()", added())'
+  c1
+  $ hg status --change 0 -a
+  A a1
+  A a2
+  A b1
+  A b2
+  $ hg status -mru
+  M b2
+  R a2
+  ? c3
+  $ fileset -r0 'added() and revs("wdir()", modified() or removed() or unknown())'
+  b2
+  a2
+  $ fileset -r0 'added() or revs("wdir()", added())'
+  a1
+  a2
+  b1
+  b2
+  c1
+
 Test files properties
 
   >>> file('bin', 'wb').write('\0a')
@@ -367,3 +396,128 @@ Test detection of unintentional 'matchctx.existing()' invocation
 
   $ fileset 'existingcaller()' 2>&1 | tail -1
   AssertionError: unexpected existing() invocation
+
+Test 'revs(...)'
+================
+
+small reminder of the repository state
+
+  $ hg log -G
+  @  changeset:   4:160936123545
+  |  tag:         tip
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     subrepo
+  |
+  o    changeset:   3:9d594e11b8c9
+  |\   parent:      2:55b05bdebf36
+  | |  parent:      1:830839835f98
+  | |  user:        test
+  | |  date:        Thu Jan 01 00:00:00 1970 +0000
+  | |  summary:     merge
+  | |
+  | o  changeset:   2:55b05bdebf36
+  | |  parent:      0:8a9576c51c1f
+  | |  user:        test
+  | |  date:        Thu Jan 01 00:00:00 1970 +0000
+  | |  summary:     diverging
+  | |
+  o |  changeset:   1:830839835f98
+  |/   user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    summary:     manychanges
+  |
+  o  changeset:   0:8a9576c51c1f
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     addfiles
+  
+  $ hg status --change 0
+  A a1
+  A a2
+  A b1
+  A b2
+  $ hg status --change 1
+  M b2
+  A 1k
+  A 2k
+  A b2link
+  A bin
+  A c1
+  A con.xml
+  R a2
+  $ hg status --change 2
+  M b2
+  $ hg status --change 3
+  M b2
+  A 1k
+  A 2k
+  A b2link
+  A bin
+  A c1
+  A con.xml
+  R a2
+  $ hg status --change 4
+  A .hgsub
+  A .hgsubstate
+  $ hg status
+  A dos
+  A mac
+  A mixed
+  R con.xml
+  ! a1
+  ? b2.orig
+  ? c3
+  ? unknown
+
+Test files at -r0 should be filtered by files at wdir
+-----------------------------------------------------
+
+  $ fileset -r0 '* and revs("wdir()", *)'
+  a1
+  b1
+  b2
+
+Test that "revs()" work at all
+------------------------------
+
+  $ fileset "revs('2', modified())"
+  b2
+
+Test that "revs()" work for file missing in the working copy/current context
+----------------------------------------------------------------------------
+
+(a2 not in working copy)
+
+  $ fileset "revs('0', added())"
+  a1
+  a2
+  b1
+  b2
+
+(none of the file exist in "0")
+
+  $ fileset -r 0 "revs('4', added())"
+  .hgsub
+  .hgsubstate
+
+Call with empty revset
+--------------------------
+
+  $ fileset "revs('2-2', modified())"
+
+Call with revset matching multiple revs
+---------------------------------------
+
+  $ fileset "revs('0+4', added())"
+  a1
+  a2
+  b1
+  b2
+  .hgsub
+  .hgsubstate
+
+overlapping set
+
+  $ fileset "revs('1+2', modified())"
+  b2

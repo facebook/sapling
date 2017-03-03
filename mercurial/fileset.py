@@ -15,6 +15,7 @@ from . import (
     merge,
     parser,
     registrar,
+    scmutil,
     util,
 )
 
@@ -438,6 +439,30 @@ def copied(mctx, x):
             s.append(f)
     return s
 
+@predicate('revs(revs, pattern)')
+def revs(mctx, x):
+    """``revs(set, revspec)``
+
+    Evaluate set in the specified revisions. If the revset match multiple revs,
+    this will return file matching pattern in any of the revision.
+    """
+    # i18n: "revs" is a keyword
+    r, x = getargs(x, 2, 2, _("revs takes two arguments"))
+    # i18n: "revs" is a keyword
+    revspec = getstring(r, _("first argument to revs must be a revision"))
+    repo = mctx.ctx.repo()
+    revs = scmutil.revrange(repo, [revspec])
+
+    found = set()
+    result = []
+    for r in revs:
+        ctx = repo[r]
+        for f in getset(mctx.switch(ctx, _buildstatus(ctx, x)), x):
+            if f not in found:
+                found.add(f)
+                result.append(f)
+    return result
+
 @predicate('subrepo([pattern])')
 def subrepo(mctx, x):
     """Subrepositories whose paths match the given pattern.
@@ -512,6 +537,7 @@ class fullmatchctx(matchctx):
 
 # filesets using matchctx.switch()
 _switchcallers = [
+    'revs',
 ]
 
 def _intree(funcs, tree):
