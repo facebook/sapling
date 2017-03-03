@@ -4,13 +4,11 @@ Latin-1 : Grüezi!
 UTF-8   : GrÃ¼ezi!
 <status modified=['foo'], added=[], removed=[], deleted=[], unknown=[], ignored=[], clean=[]>
 diff --git a/foo b/foo
-
 --- a/foo
 +++ b/foo
 @@ -1,1 +1,2 @@
  foo
 +bar
-
 = checking context.status():
 == checking workingctx.status:
 wctx._status=<status modified=['bar-m'], added=['bar-a'], removed=['bar-r'], deleted=[], unknown=[], ignored=[], clean=[]>
