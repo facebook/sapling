@@ -1213,14 +1213,14 @@ class ui(object):
         This adds an output label of "ui.status".
         '''
         if not self.quiet:
-            opts['label'] = opts.get('label', '') + ' ui.status'
+            opts[r'label'] = opts.get(r'label', '') + ' ui.status'
             self.write(*msg, **opts)
     def warn(self, *msg, **opts):
         '''write warning message to output (stderr)
 
         This adds an output label of "ui.warning".
         '''
-        opts['label'] = opts.get('label', '') + ' ui.warning'
+        opts[r'label'] = opts.get(r'label', '') + ' ui.warning'
         self.write_err(*msg, **opts)
     def note(self, *msg, **opts):
         '''write note to output (if ui.verbose is True)
@@ -1228,7 +1228,7 @@ class ui(object):
         This adds an output label of "ui.note".
         '''
         if self.verbose:
-            opts['label'] = opts.get('label', '') + ' ui.note'
+            opts[r'label'] = opts.get(r'label', '') + ' ui.note'
             self.write(*msg, **opts)
     def debug(self, *msg, **opts):
         '''write debug message to output (if ui.debugflag is True)
@@ -1236,7 +1236,7 @@ class ui(object):
         This adds an output label of "ui.debug".
         '''
         if self.debugflag:
-            opts['label'] = opts.get('label', '') + ' ui.debug'
+            opts[r'label'] = opts.get(r'label', '') + ' ui.debug'
             self.write(*msg, **opts)
 
     def edit(self, text, user, extra=None, editform=None, pending=None,
