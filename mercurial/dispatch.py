@@ -893,7 +893,12 @@ def _exceptionwarning(ui):
             bugtracker = _("https://mercurial-scm.org/wiki/BugTracker")
         warning = (_("** unknown exception encountered, "
                      "please report by visiting\n** ") + bugtracker + '\n')
-    warning += ((_("** Python %s\n") % sys.version.replace('\n', '')) +
+    if pycompat.ispy3:
+        sysversion = sys.version.encode(u'utf-8')
+    else:
+        sysversion = sys.version
+    sysversion = sysversion.replace('\n', '')
+    warning += ((_("** Python %s\n") % sysversion) +
                 (_("** Mercurial Distributed SCM (version %s)\n") %
                  util.version()) +
                 (_("** Extensions loaded: %s\n") %
