@@ -12,3 +12,14 @@ The full traceback is hidden to have a stable output.
   warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
   debuginstall
   TypeError: Can't convert 'bytes' object to str implicitly
+
+  $ cat > included-hgrc <<EOF
+  > [extensions]
+  > babar = imaginary_elephant
+  > EOF
+  $ cat >> $HGRCPATH <<EOF
+  > %include $TESTTMP/included-hgrc
+  > EOF
+  $ $PYTHON3 `which hg` version | tail -1
+  *** failed to import extension babar from imaginary_elephant: *: 'imaginary_elephant' (glob)
+  warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
