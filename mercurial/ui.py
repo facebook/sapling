@@ -569,37 +569,38 @@ class ui(object):
 
         def _parse_plain(parts, s, offset):
             whitespace = False
-            while offset < len(s) and (s[offset].isspace() or s[offset] == ','):
+            while offset < len(s) and (s[offset:offset + 1].isspace()
+                                       or s[offset:offset + 1] == ','):
                 whitespace = True
                 offset += 1
             if offset >= len(s):
                 return None, parts, offset
             if whitespace:
                 parts.append('')
-            if s[offset] == '"' and not parts[-1]:
+            if s[offset:offset + 1] == '"' and not parts[-1]:
                 return _parse_quote, parts, offset + 1
-            elif s[offset] == '"' and parts[-1][-1] == '\\':
-                parts[-1] = parts[-1][:-1] + s[offset]
+            elif s[offset:offset + 1] == '"' and parts[-1][-1] == '\\':
+                parts[-1] = parts[-1][:-1] + s[offset:offset + 1]
                 return _parse_plain, parts, offset + 1
-            parts[-1] += s[offset]
+            parts[-1] += s[offset:offset + 1]
             return _parse_plain, parts, offset + 1
 
         def _parse_quote(parts, s, offset):
-            if offset < len(s) and s[offset] == '"': # ""
+            if offset < len(s) and s[offset:offset + 1] == '"': # ""
                 parts.append('')
                 offset += 1
-                while offset < len(s) and (s[offset].isspace() or
-                        s[offset] == ','):
+                while offset < len(s) and (s[offset:offset + 1].isspace() or
+                        s[offset:offset + 1] == ','):
                     offset += 1
                 return _parse_plain, parts, offset
 
-            while offset < len(s) and s[offset] != '"':
-                if (s[offset] == '\\' and offset + 1 < len(s)
-                        and s[offset + 1] == '"'):
+            while offset < len(s) and s[offset:offset + 1] != '"':
+                if (s[offset:offset + 1] == '\\' and offset + 1 < len(s)
+                        and s[offset + 1:offset + 2] == '"'):
                     offset += 1
                     parts[-1] += '"'
                 else:
-                    parts[-1] += s[offset]
+                    parts[-1] += s[offset:offset + 1]
                 offset += 1
 
             if offset >= len(s):
@@ -613,11 +614,11 @@ class ui(object):
                 return None, parts, offset
 
             offset += 1
-            while offset < len(s) and s[offset] in [' ', ',']:
+            while offset < len(s) and s[offset:offset + 1] in [' ', ',']:
                 offset += 1
 
             if offset < len(s):
-                if offset + 1 == len(s) and s[offset] == '"':
+                if offset + 1 == len(s) and s[offset:offset + 1] == '"':
                     parts[-1] += '"'
                     offset += 1
                 else:
