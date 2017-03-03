@@ -1336,7 +1336,11 @@ class ui(object):
                                ''.join(exconly))
             else:
                 output = traceback.format_exception(exc[0], exc[1], exc[2])
-                self.write_err(''.join(output))
+                data = r''.join(output)
+                if pycompat.ispy3:
+                    enc = pycompat.sysstr(encoding.encoding)
+                    data = data.encode(enc, errors=r'replace')
+                self.write_err(data)
         return self.tracebackflag or force
 
     def geteditor(self):
