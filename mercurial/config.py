@@ -13,6 +13,7 @@ import os
 from .i18n import _
 from . import (
     error,
+    pycompat,
     util,
 )
 
@@ -69,6 +70,9 @@ class config(object):
     def items(self, section):
         return self._data.get(section, {}).items()
     def set(self, section, item, value, source=""):
+        if pycompat.ispy3:
+            assert not isinstance(value, str), (
+                'config values may not be unicode strings on Python 3')
         if section not in self:
             self._data[section] = util.sortdict()
         self._data[section][item] = value
