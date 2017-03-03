@@ -566,17 +566,23 @@ def getfileset(ctx, expr):
     tree = parse(expr)
     return getset(fullmatchctx(ctx, _buildstatus(ctx, tree)), tree)
 
-def _buildstatus(ctx, tree):
+def _buildstatus(ctx, tree, basectx=None):
     # do we need status info?
+
+    # temporaty boolean to simplify the next conditional
+    purewdir = ctx.rev() is None and basectx is None
+
     if (_intree(_statuscallers, tree) or
         # Using matchctx.existing() on a workingctx requires us to check
         # for deleted files.
-        (ctx.rev() is None and _intree(_existingcallers, tree))):
+        (purewdir and _intree(_existingcallers, tree))):
         unknown = _intree(['unknown'], tree)
         ignored = _intree(['ignored'], tree)
 
         r = ctx.repo()
-        return r.status(ctx.p1(), ctx,
+        if basectx is None:
+            basectx = ctx.p1()
+        return r.status(basectx, ctx,
                         unknown=unknown, ignored=ignored, clean=True)
     else:
         return None
