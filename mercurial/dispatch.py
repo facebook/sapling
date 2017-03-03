@@ -857,6 +857,8 @@ def _exceptionwarning(ui):
     if ui.config('ui', 'supportcontact', None) is None:
         for name, mod in extensions.extensions():
             testedwith = getattr(mod, 'testedwith', '')
+            if pycompat.ispy3 and isinstance(testedwith, str):
+                testedwith = testedwith.encode(u'utf-8')
             report = getattr(mod, 'buglink', _('the extension author.'))
             if not testedwith.strip():
                 # We found an untested extension. It's likely the culprit.
@@ -877,7 +879,7 @@ def _exceptionwarning(ui):
                 worst = name, nearest, report
     if worst[0] is not None:
         name, testedwith, report = worst
-        if not isinstance(testedwith, str):
+        if not isinstance(testedwith, (bytes, str)):
             testedwith = '.'.join([str(c) for c in testedwith])
         warning = (_('** Unknown exception encountered with '
                      'possibly-broken third-party extension %s\n'
