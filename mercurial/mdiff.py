@@ -196,12 +196,12 @@ def allblocks(text1, text2, opts=None, lines1=None, lines2=None):
         yield s1, '='
 
 def unidiff(a, ad, b, bd, fn1, fn2, opts=defaultopts):
-    """Return a unified diff as a (headers, hunkstext) tuple.
+    """Return a unified diff as a (headers, hunks) tuple.
 
     If the diff is not null, `headers` is a list with unified diff header
-    lines "--- <original>" and "+++ <new>" and `hunkstext` is a string
-    containing diff hunks. Otherwise, both `headers` and `hunkstext` are
-    empty.
+    lines "--- <original>" and "+++ <new>" and `hunks` is a generator yielding
+    (hunkrange, hunklines) coming from _unidiff().
+    Otherwise, `headers` and `hunks` are empty.
     """
     def datetag(date, fn=None):
         if not opts.git and not opts.nodates:
@@ -210,7 +210,7 @@ def unidiff(a, ad, b, bd, fn1, fn2, opts=defaultopts):
             return '\t'
         return ''
 
-    sentinel = [], ""
+    sentinel = [], ()
     if not a and not b:
         return sentinel
 
@@ -235,7 +235,7 @@ def unidiff(a, ad, b, bd, fn1, fn2, opts=defaultopts):
         if a and b and len(a) == len(b) and a == b:
             return sentinel
         headerlines = []
-        l = ['Binary file %s has changed\n' % fn1]
+        hunks = (None, ['Binary file %s has changed\n' % fn1]),
     elif not a:
         b = splitnewlines(b)
         if a is None:
@@ -244,7 +244,10 @@ def unidiff(a, ad, b, bd, fn1, fn2, opts=defaultopts):
             l1 = "--- %s%s%s" % (aprefix, fn1, datetag(ad, fn1))
         l2 = "+++ %s%s" % (bprefix + fn2, datetag(bd, fn2))
         headerlines = [l1, l2]
-        l = ["@@ -0,0 +1,%d @@\n" % len(b)] + ["+" + e for e in b]
+        size = len(b)
+        hunkrange = (0, 0, 1, size)
+        hunklines = ["@@ -0,0 +1,%d @@\n" % size] + ["+" + e for e in b]
+        hunks = (hunkrange, checknonewline(hunklines)),
     elif not b:
         a = splitnewlines(a)
         l1 = "--- %s%s%s" % (aprefix, fn1, datetag(ad, fn1))
@@ -253,18 +256,29 @@ def unidiff(a, ad, b, bd, fn1, fn2, opts=defaultopts):
         else:
             l2 = "+++ %s%s%s" % (bprefix, fn2, datetag(bd, fn2))
         headerlines = [l1, l2]
-        l = ["@@ -1,%d +0,0 @@\n" % len(a)] + ["-" + e for e in a]
+        size = len(a)
+        hunkrange = (1, size, 0, 0)
+        hunklines = ["@@ -1,%d +0,0 @@\n" % size] + ["-" + e for e in a]
+        hunks = (hunkrange, checknonewline(hunklines)),
     else:
-        l = sum((hlines for hrange, hlines in _unidiff(a, b, opts=opts)), [])
-        if not l:
+        diffhunks = _unidiff(a, b, opts=opts)
+        try:
+            hunkrange, hunklines = next(diffhunks)
+        except StopIteration:
             return sentinel
 
         headerlines = [
             "--- %s%s%s" % (aprefix, fn1, datetag(ad, fn1)),
             "+++ %s%s%s" % (bprefix, fn2, datetag(bd, fn2)),
         ]
+        def rewindhunks():
+            yield hunkrange, checknonewline(hunklines)
+            for hr, hl in diffhunks:
+                yield hr, checknonewline(hl)
 
-    return headerlines, "".join(checknonewline(l))
+        hunks = rewindhunks()
+
+    return headerlines, hunks
 
 def _unidiff(t1, t2, opts=defaultopts):
     """Yield hunks of a headerless unified diff from t1 and t2 texts.
