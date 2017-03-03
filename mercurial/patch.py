@@ -2215,8 +2215,8 @@ def difffeatureopts(ui, opts=None, untrusted=False, section='diff', git=False,
 
     return mdiff.diffopts(**buildopts)
 
-def diff(repo, node1=None, node2=None, match=None, changes=None, opts=None,
-         losedatafn=None, prefix='', relroot='', copy=None):
+def diff(repo, node1=None, node2=None, match=None, changes=None,
+         opts=None, losedatafn=None, prefix='', relroot='', copy=None):
     '''yields diff of changes to files between two nodes, or node and
     working directory.
 
@@ -2239,6 +2239,24 @@ def diff(repo, node1=None, node2=None, match=None, changes=None, opts=None,
 
     copy, if not empty, should contain mappings {dst@y: src@x} of copy
     information.'''
+    for header, hunks in diffhunks(repo, node1=node1, node2=node2, match=match,
+                                   changes=changes, opts=opts,
+                                   losedatafn=losedatafn, prefix=prefix,
+                                   relroot=relroot, copy=copy):
+        text = ''.join(sum((list(hlines) for hrange, hlines in hunks), []))
+        if header and (text or len(header) > 1):
+            yield '\n'.join(header) + '\n'
+        if text:
+            yield text
+
+def diffhunks(repo, node1=None, node2=None, match=None, changes=None,
+              opts=None, losedatafn=None, prefix='', relroot='', copy=None):
+    """Yield diff of changes to files in the form of (`header`, `hunks`) tuples
+    where `header` is a list of diff headers and `hunks` is an iterable of
+    (`hunkrange`, `hunklines`) tuples.
+
+    See diff() for the meaning of parameters.
+    """
 
     if opts is None:
         opts = mdiff.defaultopts
@@ -2539,6 +2557,7 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
             if text:
                 header.append('index %s..%s' %
                               (gitindex(content1), gitindex(content2)))
+            hunks = (None, [text]),
         else:
             if opts.git and opts.index > 0:
                 flag = flag1
@@ -2553,11 +2572,7 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
                                             content2, date2,
                                             path1, path2, opts=opts)
             header.extend(uheaders)
-            text = ''.join(sum((list(hlines) for hrange, hlines in hunks), []))
-        if header and (text or len(header) > 1):
-            yield '\n'.join(header) + '\n'
-        if text:
-            yield text
+        yield header, hunks
 
 def diffstatsum(stats):
     maxfile, maxtotal, addtotal, removetotal, binary = 0, 0, 0, 0, False
