@@ -225,6 +225,12 @@ def unidiff(a, ad, b, bd, fn1, fn2, opts=defaultopts):
     fn1 = util.pconvert(fn1)
     fn2 = util.pconvert(fn2)
 
+    def checknonewline(lines):
+        for text in lines:
+            if text[-1] != '\n':
+                text += "\n\ No newline at end of file\n"
+            yield text
+
     if not opts.text and (util.binary(a) or util.binary(b)):
         if a and b and len(a) == len(b) and a == b:
             return sentinel
@@ -258,11 +264,7 @@ def unidiff(a, ad, b, bd, fn1, fn2, opts=defaultopts):
             "+++ %s%s%s" % (bprefix, fn2, datetag(bd, fn2)),
         ]
 
-    for ln in xrange(len(l)):
-        if l[ln][-1] != '\n':
-            l[ln] += "\n\ No newline at end of file\n"
-
-    return headerlines, "".join(l)
+    return headerlines, "".join(checknonewline(l))
 
 def _unidiff(t1, t2, opts=defaultopts):
     """Yield hunks of a headerless unified diff from t1 and t2 texts.
