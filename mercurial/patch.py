@@ -2549,9 +2549,10 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
                                gitindex(content2)[0:opts.index],
                                gitmode[flag]))
 
-            text = mdiff.unidiff(content1, date1,
-                                 content2, date2,
-                                 path1, path2, opts=opts)
+            uheaders, text = mdiff.unidiff(content1, date1,
+                                           content2, date2,
+                                           path1, path2, opts=opts)
+            header.extend(uheaders)
         if header and (text or len(header) > 1):
             yield '\n'.join(header) + '\n'
         if text:
