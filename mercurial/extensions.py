@@ -8,6 +8,7 @@
 from __future__ import absolute_import
 
 import imp
+import inspect
 import os
 
 from .i18n import (
@@ -150,7 +151,7 @@ def _runextsetup(name, ui):
         try:
             extsetup(ui)
         except TypeError:
-            if extsetup.func_code.co_argcount != 0:
+            if inspect.getargspec(extsetup).args:
                 raise
             extsetup() # old extsetup with no ui argument
 
