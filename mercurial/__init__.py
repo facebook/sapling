@@ -307,13 +307,6 @@ if sys.version_info[0] >= 3:
                         if argidx is not None:
                             _ensureunicode(argidx)
 
-                # Bare open call (not an attribute on something else), the
-                # second argument (mode) must be a string, not bytes
-                elif fn == 'open' and not _isop(i - 1, '.'):
-                    arg1idx = _findargnofcall(1)
-                    if arg1idx is not None:
-                        _ensureunicode(arg1idx)
-
                 # It changes iteritems to items as iteritems is not
                 # present in Python 3 world.
                 elif fn == 'iteritems':
@@ -327,7 +320,7 @@ if sys.version_info[0] >= 3:
     # ``replacetoken`` or any mechanism that changes semantics of module
     # loading is changed. Otherwise cached bytecode may get loaded without
     # the new transformation mechanisms applied.
-    BYTECODEHEADER = b'HG\x00\x07'
+    BYTECODEHEADER = b'HG\x00\x08'
 
     class hgloader(importlib.machinery.SourceFileLoader):
         """Custom module loader that transforms source code.
