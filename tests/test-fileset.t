@@ -521,3 +521,101 @@ overlapping set
 
   $ fileset "revs('1+2', modified())"
   b2
+
+test 'status(...)'
+=================
+
+Simple case
+-----------
+
+  $ fileset "status(3, 4, added())"
+  .hgsub
+  .hgsubstate
+
+use rev to restrict matched file
+-----------------------------------------
+
+  $ hg status --removed --rev 0 --rev 1
+  R a2
+  $ fileset "status(0, 1, removed())"
+  a2
+  $ fileset "* and status(0, 1, removed())"
+  $ fileset -r 4 "status(0, 1, removed())"
+  a2
+  $ fileset -r 4 "* and status(0, 1, removed())"
+  $ fileset "revs('4', * and status(0, 1, removed()))"
+  $ fileset "revs('0', * and status(0, 1, removed()))"
+  a2
+
+check wdir()
+------------
+
+  $ hg status --removed  --rev 4
+  R con.xml
+  $ fileset "status(4, 'wdir()', removed())"
+  con.xml
+
+  $ hg status --removed --rev 2
+  R a2
+  $ fileset "status('2', 'wdir()', removed())"
+  a2
+
+test backward status
+--------------------
+
+  $ hg status --removed --rev 0 --rev 4
+  R a2
+  $ hg status --added --rev 4 --rev 0
+  A a2
+  $ fileset "status(4, 0, added())"
+  a2
+
+test cross branch status
+------------------------
+
+  $ hg status --added --rev 1 --rev 2
+  A a2
+  $ fileset "status(1, 2, added())"
+  a2
+
+test with multi revs revset
+---------------------------
+  $ hg status --added --rev 0:1 --rev 3:4
+  A .hgsub
+  A .hgsubstate
+  A 1k
+  A 2k
+  A b2link
+  A bin
+  A c1
+  A con.xml
+  $ fileset "status('0:1', '3:4', added())"
+  .hgsub
+  .hgsubstate
+  1k
+  2k
+  b2link
+  bin
+  c1
+  con.xml
+
+tests with empty value
+----------------------
+
+Fully empty revset
+
+  $ fileset "status('', '4', added())"
+  hg: parse error: first argument to status must be a revision
+  [255]
+  $ fileset "status('2', '', added())"
+  hg: parse error: second argument to status must be a revision
+  [255]
+
+Empty revset will error at the revset layer
+
+  $ fileset "status(' ', '4', added())"
+  hg: parse error at 1: not a prefix: end
+  [255]
+  $ fileset "status('2', ' ', added())"
+  hg: parse error at 1: not a prefix: end
+  [255]

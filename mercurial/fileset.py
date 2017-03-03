@@ -463,6 +463,32 @@ def revs(mctx, x):
                 result.append(f)
     return result
 
+@predicate('status(base, rev, pattern)')
+def status(mctx, x):
+    """``status(base, rev, revspec)``
+
+    Evaluate predicate using status change between ``base`` and
+    ``rev``. Examples:
+
+    - ``status(3, 7, added())`` - matches files added from "3" to "7"
+    """
+    repo = mctx.ctx.repo()
+    # i18n: "status" is a keyword
+    b, r, x = getargs(x, 3, 3, _("status takes three arguments"))
+    # i18n: "status" is a keyword
+    baseerr = _("first argument to status must be a revision")
+    baserevspec = getstring(b, baseerr)
+    if not baserevspec:
+        raise error.ParseError(baseerr)
+    reverr = _("second argument to status must be a revision")
+    revspec = getstring(r, reverr)
+    if not revspec:
+        raise error.ParseError(reverr)
+    basenode, node = scmutil.revpair(repo, [baserevspec, revspec])
+    basectx = repo[basenode]
+    ctx = repo[node]
+    return getset(mctx.switch(ctx, _buildstatus(ctx, x, basectx=basectx)), x)
+
 @predicate('subrepo([pattern])')
 def subrepo(mctx, x):
     """Subrepositories whose paths match the given pattern.
@@ -538,6 +564,7 @@ class fullmatchctx(matchctx):
 # filesets using matchctx.switch()
 _switchcallers = [
     'revs',
+    'status',
 ]
 
 def _intree(funcs, tree):
