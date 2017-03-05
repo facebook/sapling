@@ -62,15 +62,24 @@ def replaceclass(container, classname):
     return wrap
 
 try:
-    _compress = lz4.compressHC
-    _decompress = lz4.decompress
-    # don't crash horribly if invoked on an incompatible hg
+    # newer python-lz4 has these functions deprecated as top-level ones,
+    # so we are trying to import from lz4.block first
+    def _compressHC(*args, **kwargs):
+        return lz4.block.compress(*args, mode='high_compression', **kwargs)
+    _compress = _compressHC
+    _decompress = lz4.block.decompress
     usable = localrepo.localrepository.openerreqs
 except (AttributeError, ImportError):
-    def lz4missing(eek):
-        raise util.Abort(_('the lz4revlog extension requires lz4 support'))
-    _compress = _decompress = lz4missing
-    usable = False
+    try:
+        _compress = lz4.compressHC
+        _decompress = lz4.decompress
+        # don't crash horribly if invoked on an incompatible hg
+        usable = localrepo.localrepository.openerreqs
+    except (AttributeError, ImportError):
+        def lz4missing(eek):
+            raise util.Abort(_('the lz4revlog extension requires lz4 support'))
+        _compress = _decompress = lz4missing
+        usable = False
 
 def requirements(orig, repo):
     reqs = orig(repo)
