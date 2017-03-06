@@ -446,17 +446,21 @@ def getbundlechunks(orig, repo, source, heads=None, bundlecaps=None, **kwargs):
     try:
         for head in heads:
             if head not in repo.changelog.nodemap:
-                bundlerepo = getbundlerepo(repo, head)
-                allbundlerepos.append(bundlerepo)
-                bundlerevs = set(_readbundlerevs(bundlerepo))
-                bundlecaps = _includefilelogstobundle(bundlecaps, bundlerepo,
-                                                      bundlerevs, repo.ui)
-                cl = bundlerepo.changelog
-                bundleroots = _getbundleroots(repo, bundlerepo, bundlerevs)
-                for rev in bundlerevs:
-                    node = cl.node(rev)
-                    newphases[hex(node)] = str(phases.draft)
-                    nodestobundle[node] = (bundlerepo, bundleroots)
+                if head in nodestobundle:
+                    bundlerepo, bundleroots = nodestobundle[head]
+                else:
+                    bundlerepo = getbundlerepo(repo, head)
+                    allbundlerepos.append(bundlerepo)
+                    bundlerevs = set(_readbundlerevs(bundlerepo))
+                    bundlecaps = _includefilelogstobundle(
+                        bundlecaps, bundlerepo, bundlerevs, repo.ui)
+                    cl = bundlerepo.changelog
+                    bundleroots = _getbundleroots(repo, bundlerepo, bundlerevs)
+                    for rev in bundlerevs:
+                        node = cl.node(rev)
+                        newphases[hex(node)] = str(phases.draft)
+                        nodestobundle[node] = (bundlerepo, bundleroots)
+
                 outputbundleraw = _getoutputbundleraw(bundlerepo, bundleroots,
                                                       head)
                 scratchbundles.append(outputbundleraw)

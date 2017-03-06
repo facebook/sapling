@@ -121,3 +121,33 @@ Create a repo with `/bookmarks/` in path
      secondbook                0:c1bfda8efb6e
 
   $ cd ..
+
+Backup and restore two commits
+  $ cd backupsource
+  $ mkcommit firstinbatch
+  $ hg up 0
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  (leaving bookmark book/bookmarksbookmarks/somebook)
+  $ mkcommit secondinbatch
+  created new head
+  $ hg pushbackup
+  searching for changes
+  remote: pushing 3 commits:
+  remote:     89ecc969c0ac  firstcommit
+  remote:     33c1c9df81e9  firstinbatch
+  remote:     0e1a088ff282  secondinbatch
+  $ cd ../restored
+
+Install server-side extension that will print message every time when bundlerepo
+is created
+  $ cd ../repo
+  $ printf "\n[extensions]\nbundlerepologger=$TESTDIR/bundlerepologger.py" >> .hg/hgrc
+  $ hg st
+  $ cd ../restored
+
+Pull the backup and check bundlerepo was created only once
+  $ hg pullbackup --reporoot $TESTTMP/backupsource | grep 'creating bundlerepo'
+  remote: creating bundlerepo
+
+Make sure that commits were restored
+  $ hg log -r '33c1c9df81e9 + 0e1a088ff282' > /dev/null
