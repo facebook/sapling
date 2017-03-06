@@ -101,6 +101,7 @@ def backup(ui, repo, dest=None, **opts):
 
 @command('pullbackup', [
          ('', 'reporoot', '', 'root of the repo to restore'),
+         ('', 'user', '', 'user who ran the backup'),
          ('', 'hostname', '', 'hostname of the repo to restore')])
 def restore(ui, repo, dest=None, **opts):
     """
@@ -117,7 +118,7 @@ def restore(ui, repo, dest=None, **opts):
 
     sourcereporoot = opts.get('reporoot')
     sourcehostname = opts.get('hostname')
-    username = ui.shortuser(ui.username())
+    username = opts.get('user') or ui.shortuser(ui.username())
 
     pattern = _getcommonuserprefix(username) + '/*'
     fetchedbookmarks = other.listkeyspatterns('bookmarks', patterns=[pattern])

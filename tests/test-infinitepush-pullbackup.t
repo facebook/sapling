@@ -148,6 +148,30 @@ is created
 Pull the backup and check bundlerepo was created only once
   $ hg pullbackup --reporoot $TESTTMP/backupsource | grep 'creating bundlerepo'
   remote: creating bundlerepo
+  $ cd ../repo
+  $ printf "\n[extensions]\nbundlerepologger=!" >> .hg/hgrc
+  $ cd ../restored
 
 Make sure that commits were restored
   $ hg log -r '33c1c9df81e9 + 0e1a088ff282' > /dev/null
+
+Backup as another user, then restore it
+  $ cd ../backupsource
+  $ mkcommit backupasanotheruser
+  $ hg log -r . -T '{node}\n'
+  e0230a60975b38a9014f098fb973199efd25c46f
+  $ HGUSER=anotheruser hg pushbackup
+  searching for changes
+  remote: pushing 3 commits:
+  remote:     89ecc969c0ac  firstcommit
+  remote:     0e1a088ff282  secondinbatch
+  remote:     e0230a60975b  backupasanotheruser
+  $ cd ../restored
+
+Make sure commit was pulled by checking that commit is present
+  $ hg log -r e0230a60975b38a9014f098fb973199efd25c46f -T '{node}\n'
+  abort: unknown revision 'e0230a60975b38a9014f098fb973199efd25c46f'!
+  [255]
+  $ hg pullbackup --user anotheruser --reporoot $TESTTMP/backupsource > /dev/null
+  $ hg log -r tip -T '{node}\n'
+  e0230a60975b38a9014f098fb973199efd25c46f
