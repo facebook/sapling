@@ -1796,7 +1796,8 @@ def config(ui, repo, *values, **opts):
 
         editor = ui.geteditor()
         ui.system("%s \"%s\"" % (editor, f),
-                  onerr=error.Abort, errprefix=_("edit failed"))
+                  onerr=error.Abort, errprefix=_("edit failed"),
+                  blockedtag='config_edit')
         return
     ui.pager('config')
     fm = ui.formatter('config', opts)
