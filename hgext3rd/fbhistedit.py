@@ -99,7 +99,7 @@ def defineactions():
                                                  'exec_in_user_shell'):
                     cmd = "%s -c -i %s" % (shell, quote(cmd))
                 rc = repo.ui.system(cmd,  environ={'HGNODE': ctx.hex()},
-                                    cwd=self.cwd)
+                                    cwd=self.cwd, blockedtag='histedit_exec')
             except OSError as ose:
                 raise error.InterventionRequired(
                     _("Cannot execute command '%s': %s") % (self.command, ose))
