@@ -886,7 +886,8 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
                 # update state
                 state['current'] = [node]
                 hbisect.save_state(repo, state)
-                status = ui.system(command, environ={'HG_NODE': hex(node)})
+                status = ui.system(command, environ={'HG_NODE': hex(node)},
+                                   blockedtag='bisect_check')
                 if status == 125:
                     transition = "skip"
                 elif status == 0:
