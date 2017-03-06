@@ -1064,7 +1064,8 @@ the hunk is left unchanged.
                     # Start the editor and wait for it to complete
                     editor = ui.geteditor()
                     ret = ui.system("%s \"%s\"" % (editor, patchfn),
-                                    environ={'HGUSER': ui.username()})
+                                    environ={'HGUSER': ui.username()},
+                                    blockedtag='filterpatch')
                     if ret != 0:
                         ui.warn(_("editor exited with exit code %d\n") % ret)
                         continue
