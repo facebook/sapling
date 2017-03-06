@@ -354,7 +354,8 @@ class cmdalias(object):
                         return ''
                 cmd = re.sub(r'\$(\d+|\$)', _checkvar, self.definition[1:])
                 cmd = aliasinterpolate(self.name, args, cmd)
-                return ui.system(cmd, environ=env)
+                return ui.system(cmd, environ=env,
+                                 blockedtag='alias_%s' % self.name)
             self.fn = fn
             return
 
