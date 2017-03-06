@@ -152,6 +152,8 @@ def restore(ui, repo, dest=None, **opts):
             hint=_('set --hostname to disambiguate'))
     pullcmd, pullopts = _getcommandandoptions('^pull')
     pullopts['rev'] = list(nodestopull)
+    if dest:
+        pullopts['source'] = dest
     result = pullcmd(ui, repo, **pullopts)
 
     with repo.wlock():

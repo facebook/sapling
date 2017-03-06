@@ -120,6 +120,27 @@ Create a repo with `/bookmarks/` in path
      bookbackupsource3         2:a2a9ae518b62
      secondbook                0:c1bfda8efb6e
 
+Check that correct path is used in pushbackup
+  $ cd ../backupsource
+  $ hg --config paths.default=badpath --config paths.anotherpath=ssh://user@dummy/repo pushbackup
+  abort: repository $TESTTMP/backupsource/badpath not found!
+  [255]
+  $ hg pushbackup anotherpath --config paths.default=badpath --config paths.anotherpath=ssh://user@dummy/repo
+  nothing to backup
+  $ cd ../restored
+
+Check that correct path is used in pullbackup
+  $ hg pullbackup --config paths.default=badpath --config paths.anotherpath=ssh://user@dummy/repo --reporoot $TESTTMP/bookmarks/backupsource3
+  abort: repository $TESTTMP/restored/badpath not found!
+  [255]
+  $ hg pullbackup anotherpath --config paths.default=badpath --config paths.anotherpath=ssh://user@dummy/repo --reporoot $TESTTMP/bookmarks/backupsource3
+  pulling from ssh://user@dummy/repo
+  no changes found
+  adding changesets
+  adding manifests
+  adding file changes
+  added 0 changesets with 0 changes to 1 files
+
   $ cd ..
 
 Backup and restore two commits
