@@ -449,11 +449,10 @@ def getbundlechunks(orig, repo, source, heads=None, bundlecaps=None, **kwargs):
                 bundlecaps = _includefilelogstobundle(bundlecaps, bundlerepo,
                                                       bundlerevs, repo.ui)
                 cl = bundlerepo.changelog
+                bundleroots = _getbundleroots(repo, bundlerepo, bundlerevs)
                 for rev in bundlerevs:
                     node = cl.node(rev)
                     newphases[hex(node)] = str(phases.draft)
-
-                bundleroots = _getbundleroots(repo, bundlerepo, bundlerevs)
                 outputbundleraw = _getoutputbundleraw(bundlerepo, bundleroots,
                                                       head)
             finally:
