@@ -89,6 +89,7 @@ class dirstate(object):
         self._pendingfilename = '%s.pending' % self._filename
         self._plchangecallbacks = {}
         self._origpl = None
+        self._updatedfiles = set()
 
         # for consistent view between _pl() and _read() invocations
         self._pendingmode = None
@@ -431,6 +432,7 @@ class dirstate(object):
                 delattr(self, a)
         self._lastnormaltime = 0
         self._dirty = False
+        self._updatedfiles.clear()
         self._parentwriters = 0
         self._origpl = None
 
@@ -441,8 +443,11 @@ class dirstate(object):
         self._dirty = True
         if source is not None:
             self._copymap[dest] = source
+            self._updatedfiles.add(source)
+            self._updatedfiles.add(dest)
         elif dest in self._copymap:
             del self._copymap[dest]
+            self._updatedfiles.add(dest)
 
     def copied(self, file):
         return self._copymap.get(file, None)
@@ -458,6 +463,8 @@ class dirstate(object):
             normed = util.normcase(f)
             if normed in self._filefoldmap:
                 del self._filefoldmap[normed]
+
+        self._updatedfiles.add(f)
 
     def _addpath(self, f, state, mode, size, mtime):
         oldstate = self[f]
@@ -475,6 +482,7 @@ class dirstate(object):
         if oldstate in "?r" and "_dirs" in self.__dict__:
             self._dirs.addpath(f)
         self._dirty = True
+        self._updatedfiles.add(f)
         self._map[f] = dirstatetuple(state, mode, size, mtime)
         if state != 'n' or mtime == -1:
             self._nonnormalset.add(f)
@@ -656,6 +664,7 @@ class dirstate(object):
         self._copymap = {}
         self._pl = [nullid, nullid]
         self._lastnormaltime = 0
+        self._updatedfiles.clear()
         self._dirty = True
 
     def rebuild(self, parent, allfiles, changedfiles=None):
@@ -692,13 +701,15 @@ class dirstate(object):
             # emulate dropping timestamp in 'parsers.pack_dirstate'
             now = _getfsnow(self._opener)
             dmap = self._map
-            for f, e in dmap.iteritems():
-                if e[0] == 'n' and e[3] == now:
+            for f in self._updatedfiles:
+                e = dmap.get(f)
+                if e is not None and e[0] == 'n' and e[3] == now:
                     dmap[f] = dirstatetuple(e[0], e[1], e[2], -1)
                     self._nonnormalset.add(f)
 
             # emulate that all 'dirstate.normal' results are written out
             self._lastnormaltime = 0
+            self._updatedfiles.clear()
 
             # delay writing in-memory changes out
             tr.addfilegenerator('dirstate', (self._filename,),
