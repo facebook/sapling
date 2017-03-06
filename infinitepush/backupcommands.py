@@ -60,8 +60,9 @@ def backup(ui, repo, dest=None, **opts):
         runshellcommand(' '.join(background_cmd), os.environ)
         return 0
 
-    backuptip, bookmarkshash = _readbackupstatefile(ui, repo)
-    bookmarkstobackup = _getbookmarkstobackup(ui, repo)
+    username = ui.shortuser(ui.username())
+    backuptip, bookmarkshash = _readbackupstatefile(username, repo)
+    bookmarkstobackup = _getbookmarkstobackup(username, repo)
 
     # To avoid race conditions save current tip of the repo and backup
     # everything up to this revision.
@@ -116,15 +117,16 @@ def restore(ui, repo, dest=None, **opts):
 
     sourcereporoot = opts.get('reporoot')
     sourcehostname = opts.get('hostname')
+    username = ui.shortuser(ui.username())
 
-    pattern = _getcommonuserprefix(ui) + '/*'
+    pattern = _getcommonuserprefix(username) + '/*'
     fetchedbookmarks = other.listkeyspatterns('bookmarks', patterns=[pattern])
     reporoots = set()
     hostnames = set()
     nodestopull = set()
     localbookmarks = {}
     for book, node in fetchedbookmarks.iteritems():
-        parsed = _parsebackupbookmark(ui, book)
+        parsed = _parsebackupbookmark(username, book)
         if parsed:
             if sourcereporoot and sourcereporoot != parsed.reporoot:
                 continue
@@ -164,14 +166,13 @@ _backupedstatefile = 'infinitepushlastbackupedstate'
 
 # Common helper functions
 
-def _getcommonuserprefix(ui):
-    username = ui.shortuser(ui.username())
+def _getcommonuserprefix(username):
     return '/'.join(('infinitepush', 'backups', username))
 
-def _getcommonprefix(ui, repo):
+def _getcommonprefix(username, repo):
     hostname = socket.gethostname()
 
-    result = '/'.join((_getcommonuserprefix(ui), hostname))
+    result = '/'.join((_getcommonuserprefix(username), hostname))
     if not repo.origroot.startswith('/'):
         result += '/'
     result += repo.origroot
@@ -179,9 +180,8 @@ def _getcommonprefix(ui, repo):
         result = result[:-1]
     return result
 
-def _getbackupbookmarkprefix(ui, repo):
-    return '/'.join((_getcommonprefix(ui, repo),
-                     'bookmarks'))
+def _getbackupbookmarkprefix(username, repo):
+    return '/'.join((_getcommonprefix(username, repo), 'bookmarks'))
 
 def _escapebookmark(bookmark):
     '''
@@ -197,16 +197,15 @@ def _unescapebookmark(bookmark):
     bookmark = encoding.tolocal(bookmark)
     return bookmark.replace('bookmarksbookmarks', 'bookmarks')
 
-def _getbackupbookmarkname(ui, bookmark, repo):
+def _getbackupbookmarkname(username, bookmark, repo):
     bookmark = _escapebookmark(bookmark)
-    return '/'.join((_getbackupbookmarkprefix(ui, repo), bookmark))
+    return '/'.join((_getbackupbookmarkprefix(username, repo), bookmark))
 
-def _getbackupheadprefix(ui, repo):
-    return '/'.join((_getcommonprefix(ui, repo),
-                     'heads'))
+def _getbackupheadprefix(username, repo):
+    return '/'.join((_getcommonprefix(username, repo), 'heads'))
 
-def _getbackupheadname(ui, hexhead, repo):
-    return '/'.join((_getbackupheadprefix(ui, repo), hexhead))
+def _getbackupheadname(username, hexhead, repo):
+    return '/'.join((_getbackupheadprefix(username, repo), hexhead))
 
 def _getremote(repo, ui, dest, **opts):
     path = ui.paths.getpath(dest, default=('default-push', 'default'))
@@ -231,17 +230,17 @@ def _deltaparent(orig, self, revlog, rev, p1, p2, prev):
         return nullrev
     return p1
 
-def _getdefaultbookmarkstobackup(ui, repo):
+def _getdefaultbookmarkstobackup(username, repo):
     bookmarkstobackup = {}
-    bookmarkstobackup[_getbackupheadprefix(ui, repo) + '/*'] = ''
-    bookmarkstobackup[_getbackupbookmarkprefix(ui, repo) + '/*'] = ''
+    bookmarkstobackup[_getbackupheadprefix(username, repo) + '/*'] = ''
+    bookmarkstobackup[_getbackupbookmarkprefix(username, repo) + '/*'] = ''
     return bookmarkstobackup
 
-def _getbookmarkstobackup(ui, repo):
-    bookmarkstobackup = _getdefaultbookmarkstobackup(ui, repo)
+def _getbookmarkstobackup(username, repo):
+    bookmarkstobackup = _getdefaultbookmarkstobackup(username, repo)
     secret = set(ctx.hex() for ctx in repo.set('secret()'))
     for bookmark, node in repo._bookmarks.iteritems():
-        bookmark = _getbackupbookmarkname(ui, bookmark, repo)
+        bookmark = _getbackupbookmarkname(username, bookmark, repo)
         hexnode = hex(node)
         if hexnode in secret:
             continue
@@ -249,7 +248,7 @@ def _getbookmarkstobackup(ui, repo):
 
     for headrev in repo.revs('head() & draft()'):
         hexhead = repo[headrev].hex()
-        headbookmarksname = _getbackupheadname(ui, hexhead, repo)
+        headbookmarksname = _getbackupheadname(username, hexhead, repo)
         bookmarkstobackup[headbookmarksname] = hexhead
 
     return bookmarkstobackup
@@ -320,12 +319,13 @@ def _getrevstobackup(repo, other, backuptip, currenttiprev, bookmarkstobackup):
 
     return outgoing
 
-def _readbackupstatefile(ui, repo):
+def _readbackupstatefile(username, repo):
     backuptipbookmarkshash = repo.svfs.tryread(_backupedstatefile).split(' ')
     backuptip = 0
     # hash of the default bookmarks to backup. This is to prevent backuping of
     # empty repo
-    bookmarkshash = _getbookmarkshash(_getdefaultbookmarkstobackup(ui, repo))
+    bookmarkshash = _getbookmarkshash(
+        _getdefaultbookmarkstobackup(username, repo))
     if len(backuptipbookmarkshash) == 2:
         try:
             backuptip = int(backuptipbookmarkshash[0]) + 1
@@ -340,7 +340,7 @@ def _writebackupstatefile(vfs, backuptip, bookmarkshash):
         f.write(str(backuptip) + ' ' + bookmarkshash)
 
 # Restore helper functions
-def _parsebackupbookmark(ui, backupbookmark):
+def _parsebackupbookmark(username, backupbookmark):
     '''Parses backup bookmark and returns info about it
 
     Backup bookmark may represent either a local bookmark or a head.
@@ -351,7 +351,8 @@ def _parsebackupbookmark(ui, backupbookmark):
     represents a local bookmark and None otherwise.
     '''
 
-    commonre = '^{0}/([-\w.]+)(/.*)'.format(re.escape(_getcommonuserprefix(ui)))
+    backupbookmarkprefix = _getcommonuserprefix(username)
+    commonre = '^{0}/([-\w.]+)(/.*)'.format(re.escape(backupbookmarkprefix))
     bookmarkre = commonre + '/bookmarks/(.*)$'
     headsre = commonre + '/heads/[a-f0-9]{40}$'
 
