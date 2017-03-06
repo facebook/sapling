@@ -345,4 +345,4 @@ def view(ui, repo, *etc, **opts):
 
     cmd = ui.config("hgk", "path", "hgk") + " %s %s" % (optstr, " ".join(etc))
     ui.debug("running %s\n" % cmd)
-    ui.system(cmd)
+    ui.system(cmd, blockedtag='hgk_view')
