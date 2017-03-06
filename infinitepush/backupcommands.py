@@ -141,15 +141,16 @@ def restore(ui, repo, dest=None, **opts):
         else:
             ui.warn(_('wrong format of backup bookmark: %s') % book)
 
+    if len(hostnames) > 1:
+        raise error.Abort(
+            _('ambiguous hostname to restore: %s') % sorted(hostnames),
+            hint=_('set --hostname to disambiguate'))
+
     if len(reporoots) > 1:
         raise error.Abort(
             _('ambiguous repo root to restore: %s') % sorted(reporoots),
             hint=_('set --reporoot to disambiguate'))
 
-    if len(hostnames) > 1:
-        raise error.Abort(
-            _('ambiguous hostname to restore: %s') % sorted(hostnames),
-            hint=_('set --hostname to disambiguate'))
     pullcmd, pullopts = _getcommandandoptions('^pull')
     pullopts['rev'] = list(nodestopull)
     if dest:
