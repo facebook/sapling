@@ -380,29 +380,29 @@ Check the experimental config to invert the selection:
   3 hunks, 3 lines changed
   examine changes to 'folder1/g'? [Ynesfdaq?] y
   
-  @@ -1,5 +1,4 @@
-  -firstline
+  @@ -1,4 +1,5 @@
+  +firstline
    c
    1
    2
    3
   discard change 1/3 to 'folder1/g'? [Ynesfdaq?] y
   
-  @@ -2,7 +1,7 @@
+  @@ -1,7 +2,7 @@
    c
    1
    2
    3
-  - 3
-  +4
+  -4
+  + 3
    5
    d
   discard change 2/3 to 'folder1/g'? [Ynesfdaq?] y
   
-  @@ -7,3 +6,2 @@
+  @@ -6,2 +7,3 @@
    5
    d
-  -lastline
+  +lastline
   discard change 3/3 to 'folder1/g'? [Ynesfdaq?] n
   
   $ hg diff --nodates

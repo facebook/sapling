@@ -3247,15 +3247,18 @@ def _performrevert(repo, parents, ctx, actions, interactive=False,
         diffopts = patch.difffeatureopts(repo.ui, whitespace=True)
         diffopts.nodates = True
         diffopts.git = True
-        reversehunks = repo.ui.configbool('experimental',
-                                          'revertalternateinteractivemode',
-                                          True)
+        operation = 'discard'
+        reversehunks = True
+        if node != parent:
+            operation = 'revert'
+            reversehunks = repo.ui.configbool('experimental',
+                                              'revertalternateinteractivemode',
+                                              True)
         if reversehunks:
             diff = patch.diff(repo, ctx.node(), None, m, opts=diffopts)
         else:
             diff = patch.diff(repo, None, ctx.node(), m, opts=diffopts)
         originalchunks = patch.parsepatch(diff)
-        operation = 'discard' if node == parent else 'revert'
 
         try:
 
