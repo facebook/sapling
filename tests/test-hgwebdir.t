@@ -1566,6 +1566,119 @@ immediately.
   /b/
   /c/
   
+  $ killdaemons.py
+  $ cat > paths.conf << EOF
+  > [paths]
+  > /dir1/a_repo = $root/a
+  > /dir1/a_repo/b_repo = $root/b
+  > /dir1/dir2/index = $root/b
+  > EOF
+  $ hg serve -p $HGPORT1 -d --pid-file hg.pid --webdir-conf paths.conf
+  $ cat hg.pid >> $DAEMON_PIDS
+
+  $ echo 'index file' > $root/a/index
+  $ hg --cwd $root/a ci -Am 'add index file'
+  adding index
+
+  $ get-with-headers.py localhost:$HGPORT1 '' | grep 'a_repo'
+  <td><a href="/dir1/a_repo/">dir1/a_repo</a></td>
+  <a href="/dir1/a_repo/atom-log" title="subscribe to repository atom feed">
+  <td><a href="/dir1/a_repo/b_repo/">dir1/a_repo/b_repo</a></td>
+  <a href="/dir1/a_repo/b_repo/atom-log" title="subscribe to repository atom feed">
+
+  $ get-with-headers.py localhost:$HGPORT1 'index' | grep 'a_repo'
+  <td><a href="/dir1/a_repo/">dir1/a_repo</a></td>
+  <a href="/dir1/a_repo/atom-log" title="subscribe to repository atom feed">
+  <td><a href="/dir1/a_repo/b_repo/">dir1/a_repo/b_repo</a></td>
+  <a href="/dir1/a_repo/b_repo/atom-log" title="subscribe to repository atom feed">
+
+  $ get-with-headers.py localhost:$HGPORT1 'dir1' | grep 'a_repo'
+  <td><a href="/dir1/a_repo/">a_repo</a></td>
+  <a href="/dir1/a_repo/atom-log" title="subscribe to repository atom feed">
+  <td><a href="/dir1/a_repo/b_repo/">a_repo/b_repo</a></td>
+  <a href="/dir1/a_repo/b_repo/atom-log" title="subscribe to repository atom feed">
+
+  $ get-with-headers.py localhost:$HGPORT1 'dir1/index' | grep 'a_repo'
+  <td><a href="/dir1/a_repo/">a_repo</a></td>
+  <a href="/dir1/a_repo/atom-log" title="subscribe to repository atom feed">
+  <td><a href="/dir1/a_repo/b_repo/">a_repo/b_repo</a></td>
+  <a href="/dir1/a_repo/b_repo/atom-log" title="subscribe to repository atom feed">
+
+  $ get-with-headers.py localhost:$HGPORT1 'dir1/a_repo' | grep 'a_repo'
+  <link rel="icon" href="/dir1/a_repo/static/hgicon.png" type="image/png" />
+  <link rel="stylesheet" href="/dir1/a_repo/static/style-paper.css" type="text/css" />
+  <script type="text/javascript" src="/dir1/a_repo/static/mercurial.js"></script>
+  <title>dir1/a_repo: log</title>
+     href="/dir1/a_repo/atom-log" title="Atom feed for dir1/a_repo" />
+     href="/dir1/a_repo/rss-log" title="RSS feed for dir1/a_repo" />
+  <img src="/dir1/a_repo/static/hglogo.png" alt="mercurial" /></a>
+  <li><a href="/dir1/a_repo/graph/tip">graph</a></li>
+  <li><a href="/dir1/a_repo/tags">tags</a></li>
+  <li><a href="/dir1/a_repo/bookmarks">bookmarks</a></li>
+  <li><a href="/dir1/a_repo/branches">branches</a></li>
+  <li><a href="/dir1/a_repo/rev/tip">changeset</a></li>
+  <li><a href="/dir1/a_repo/file/tip">browse</a></li>
+   <li><a href="/dir1/a_repo/help">help</a></li>
+  <a href="/dir1/a_repo/atom-log" title="subscribe to atom feed">
+  <img class="atom-logo" src="/dir1/a_repo/static/feed-icon-14x14.png" alt="atom feed" />
+  <h2 class="breadcrumb"><a href="/">Mercurial</a> &gt; <a href="/dir1">dir1</a> &gt; <a href="/dir1/a_repo">a_repo</a> </h2>
+  <form class="search" action="/dir1/a_repo/log">
+  number or hash, or <a href="/dir1/a_repo/help/revsets">revset expression</a>.</div>
+  <a href="/dir1/a_repo/shortlog/tip?revcount=30">less</a>
+  <a href="/dir1/a_repo/shortlog/tip?revcount=120">more</a>
+  | rev 1: <a href="/dir1/a_repo/shortlog/8580ff50825a">(0)</a> <a href="/dir1/a_repo/shortlog/tip">tip</a> 
+     <a href="/dir1/a_repo/rev/71a89161f014">add index file</a>
+     <a href="/dir1/a_repo/rev/8580ff50825a">a</a>
+  <a href="/dir1/a_repo/shortlog/tip?revcount=30">less</a>
+  <a href="/dir1/a_repo/shortlog/tip?revcount=120">more</a>
+  | rev 1: <a href="/dir1/a_repo/shortlog/8580ff50825a">(0)</a> <a href="/dir1/a_repo/shortlog/tip">tip</a> 
+              '/dir1/a_repo/shortlog/%next%',
+
+  $ get-with-headers.py localhost:$HGPORT1 'dir1/a_repo/index' | grep 'a_repo'
+  <h2 class="breadcrumb"><a href="/">Mercurial</a> &gt; <a href="/dir1">dir1</a> &gt; <a href="/dir1/a_repo">a_repo</a> </h2>
+  <td><a href="/dir1/a_repo/b_repo/">b_repo</a></td>
+  <a href="/dir1/a_repo/b_repo/atom-log" title="subscribe to repository atom feed">
+
+Files named 'index' are not blocked
+
+  $ get-with-headers.py localhost:$HGPORT1 'dir1/a_repo/raw-file/tip/index'
+  200 Script output follows
+  
+  index file
+
+Repos named 'index' take precedence over the index file
+
+  $ get-with-headers.py localhost:$HGPORT1 'dir1/dir2/index' | grep 'index'
+  <link rel="icon" href="/dir1/dir2/index/static/hgicon.png" type="image/png" />
+  <meta name="robots" content="index, nofollow" />
+  <link rel="stylesheet" href="/dir1/dir2/index/static/style-paper.css" type="text/css" />
+  <script type="text/javascript" src="/dir1/dir2/index/static/mercurial.js"></script>
+  <title>dir1/dir2/index: log</title>
+     href="/dir1/dir2/index/atom-log" title="Atom feed for dir1/dir2/index" />
+     href="/dir1/dir2/index/rss-log" title="RSS feed for dir1/dir2/index" />
+  <img src="/dir1/dir2/index/static/hglogo.png" alt="mercurial" /></a>
+  <li><a href="/dir1/dir2/index/graph/tip">graph</a></li>
+  <li><a href="/dir1/dir2/index/tags">tags</a></li>
+  <li><a href="/dir1/dir2/index/bookmarks">bookmarks</a></li>
+  <li><a href="/dir1/dir2/index/branches">branches</a></li>
+  <li><a href="/dir1/dir2/index/rev/tip">changeset</a></li>
+  <li><a href="/dir1/dir2/index/file/tip">browse</a></li>
+   <li><a href="/dir1/dir2/index/help">help</a></li>
+  <a href="/dir1/dir2/index/atom-log" title="subscribe to atom feed">
+  <img class="atom-logo" src="/dir1/dir2/index/static/feed-icon-14x14.png" alt="atom feed" />
+  <h2 class="breadcrumb"><a href="/">Mercurial</a> &gt; <a href="/dir1">dir1</a> &gt; <a href="/dir1/dir2">dir2</a> &gt; <a href="/dir1/dir2/index">index</a> </h2>
+  <form class="search" action="/dir1/dir2/index/log">
+  number or hash, or <a href="/dir1/dir2/index/help/revsets">revset expression</a>.</div>
+  <a href="/dir1/dir2/index/shortlog/tip?revcount=30">less</a>
+  <a href="/dir1/dir2/index/shortlog/tip?revcount=120">more</a>
+  | rev 0: <a href="/dir1/dir2/index/shortlog/39505516671b">(0)</a> <a href="/dir1/dir2/index/shortlog/tip">tip</a> 
+     <a href="/dir1/dir2/index/rev/39505516671b">b</a>
+  <a href="/dir1/dir2/index/shortlog/tip?revcount=30">less</a>
+  <a href="/dir1/dir2/index/shortlog/tip?revcount=120">more</a>
+  | rev 0: <a href="/dir1/dir2/index/shortlog/39505516671b">(0)</a> <a href="/dir1/dir2/index/shortlog/tip">tip</a> 
+              '/dir1/dir2/index/shortlog/%next%',
+
+  $ killdaemons.py
 
 paths errors 1
 

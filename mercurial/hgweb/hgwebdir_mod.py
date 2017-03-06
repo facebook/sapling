@@ -254,13 +254,21 @@ class hgwebdir(object):
                 return []
 
             # top-level index
-            elif not virtual:
+
+            repos = dict(self.repos)
+
+            if not virtual or (virtual == 'index' and virtual not in repos):
                 req.respond(HTTP_OK, ctype)
                 return self.makeindex(req, tmpl)
 
             # nested indexes and hgwebs
 
-            repos = dict(self.repos)
+            if virtual.endswith('/index') and virtual not in repos:
+                subdir = virtual[:-len('index')]
+                if any(r.startswith(subdir) for r in repos):
+                    req.respond(HTTP_OK, ctype)
+                    return self.makeindex(req, tmpl, subdir)
+
             virtualrepo = virtual
             while virtualrepo:
                 real = repos.get(virtualrepo)
@@ -352,8 +360,7 @@ class hgwebdir(object):
                             pass
 
                 parts = [name]
-                if 'PATH_INFO' in req.env:
-                    parts.insert(0, req.env['PATH_INFO'].rstrip('/'))
+                parts.insert(0, '/' + subdir.rstrip('/'))
                 if req.env['SCRIPT_NAME']:
                     parts.insert(0, req.env['SCRIPT_NAME'])
                 url = re.sub(r'/+', '/', '/'.join(parts) + '/')
