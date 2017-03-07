@@ -35,7 +35,7 @@ from mercurial.node import bin, nullid
 
 from remotefilelog.contentstore import unioncontentstore
 from remotefilelog.datapack import datapackstore, mutabledatapack
-from remotefilelog.historypack import mutablehistorypack
+from remotefilelog.historypack import historypackstore, mutablehistorypack
 from remotefilelog import shallowutil
 import cstore
 
@@ -87,6 +87,13 @@ def wraprepo(repo):
 
     repo.svfs.sharedmanifestdatastores = [datastore]
     repo.svfs.localmanifestdatastores = [localdatastore]
+
+    repo.svfs.sharedmanifesthistorystores = [
+        historypackstore(repo.ui, packpath),
+    ]
+    repo.svfs.localmanifesthistorystores = [
+        historypackstore(repo.ui, localpackpath),
+    ]
 
 def _unpackmanifests(orig, self, repo, *args, **kwargs):
     mfrevlog = repo.manifestlog._revlog

@@ -33,10 +33,13 @@
 # Test repacking shared manifest packs
   $ hg pull -q -r 0
   $ hg pull -q -r 1
-  $ ls -l $CACHEDIR/master/packs/manifests | grep datapack
+  $ ls -l $CACHEDIR/master/packs/manifests | grep pack
+  *  181 * 095751e2986a69c95ca94f92e02aa5dc9f66570c.histpack (glob)
+  *   89 * 54d5b52963363915130d0d7bcddcfd70be1dd0fc.histpack (glob)
   *  100 * 65df85879cdd898607ee3f323a0b61edc7de25b8.datapack (glob)
   *  249 * e61e965008eb4449c7dd33d4cfe650606e00a0c8.datapack (glob)
 
+- Verify datapack contents
   $ hg debugdatapack $CACHEDIR/master/packs/manifests/65df85879cdd898607ee3f323a0b61edc7de25b8
   
   
@@ -52,21 +55,52 @@
   
   Node          Delta Base    Delta Length
   1832e0765de9  000000000000  89
+
+- Verify datapack contents
+  $ hg debughistorypack $CACHEDIR/master/packs/manifests/095751e2986a69c95ca94f92e02aa5dc9f66570c
+  
+  
+  Node          P1 Node       P2 Node       Link Node     Copy From
+  1832e0765de9  a0c8bcbbb45c  000000000000  8e83608cbe60  
+  
+  dir/
+  Node          P1 Node       P2 Node       Link Node     Copy From
+  23226e7a252c  000000000000  000000000000  8e83608cbe60  
+
+  $ hg debughistorypack $CACHEDIR/master/packs/manifests/54d5b52963363915130d0d7bcddcfd70be1dd0fc
+  
+  
+  Node          P1 Node       P2 Node       Link Node     Copy From
+  a0c8bcbbb45c  000000000000  000000000000  1f0dee641bb7  
+
+- Repack and reverify
   $ hg repack
 
-  $ ls -l $CACHEDIR/master/packs/manifests | grep datapack
-  *  348 * 8f4e0c3b3331b837667212f806314cbcb2c69f52.datapack (glob)
+  $ ls -l $CACHEDIR/master/packs/manifests | grep pack
+  *  316 * 4fa1c1e1a5f63679cb192ba1ab24f7363a79b7e9.datapack (glob)
+  *  263 * 812c2b1b119b5609e5c902abbd99455e32955cdf.histpack (glob)
 
-  $ hg debugdatapack $CACHEDIR/master/packs/manifests/8f4e0c3b3331b837667212f806314cbcb2c69f52
+  $ hg debugdatapack $CACHEDIR/master/packs/manifests/4fa1c1e1a5f63679cb192ba1ab24f7363a79b7e9
   
   
   Node          Delta Base    Delta Length
   1832e0765de9  000000000000  89
-  a0c8bcbbb45c  000000000000  43
+  a0c8bcbbb45c  1832e0765de9  12
   
   dir/
   Node          Delta Base    Delta Length
   23226e7a252c  000000000000  43
+
+  $ hg debughistorypack $CACHEDIR/master/packs/manifests/812c2b1b119b5609e5c902abbd99455e32955cdf
+  
+  
+  Node          P1 Node       P2 Node       Link Node     Copy From
+  1832e0765de9  a0c8bcbbb45c  000000000000  8e83608cbe60  
+  a0c8bcbbb45c  000000000000  000000000000  1f0dee641bb7  
+  
+  dir/
+  Node          P1 Node       P2 Node       Link Node     Copy From
+  23226e7a252c  000000000000  000000000000  8e83608cbe60  
 
 # Test repacking local manifest packs
   $ hg up -q 1
