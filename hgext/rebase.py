@@ -1156,8 +1156,11 @@ def abort(repo, originalwd, target, state, activebookmark=None):
             if rebased:
                 strippoints = [
                         c.node() for c in repo.set('roots(%ld)', rebased)]
-                shouldupdate = len([
-                        c.node() for c in repo.set('. & (%ld)', rebased)]) > 0
+
+            updateifonnodes = set(rebased)
+            updateifonnodes.add(target)
+            updateifonnodes.add(originalwd)
+            shouldupdate = repo['.'].rev() in updateifonnodes
 
             # Update away from the rebase if necessary
             if shouldupdate or needupdate(repo, state):
