@@ -777,16 +777,16 @@ class hybridmanifestctx(object):
     """A class representing a single revision of a manifest, including its
     contents, its parent revs, and its linkrev.
     """
-    def __init__(self, ui, repo, revlog, node):
+    def __init__(self, ui, manifestlog, revlog, node):
         self._ui = ui
-        self._repo = repo
-        self._opener = repo.svfs
+        self._manifestlog = manifestlog
+        self._opener = revlog.opener
         self._revlog = revlog
         self._node = node
         self._hybridmanifest = None
 
     def copy(self):
-        memmf = manifest.memmanifestctx(self._repo)
+        memmf = manifest.memmanifestctx(self._manifestlog)
         memmf._manifestdict = self.read().copy()
         return memmf
 
@@ -814,7 +814,7 @@ class hybridmanifestctx(object):
         if rl._usemanifestv2:
             # Need to perform a slow delta
             r0 = revlog.deltaparent(revlog.rev(self._node))
-            m0 = manifest.manifestctx(self._repo, rl.node(r0)).read()
+            m0 = manifest.manifestctx(self._manifestlog, rl.node(r0)).read()
             m1 = self.read()
             md = manifest.manifestdict()
             for f, ((n0, fl0), (n1, fl1)) in m0.diff(m1).iteritems():
@@ -841,7 +841,7 @@ class hybridmanifestctx(object):
         if p1 == revlog.nullid:
             return mf
 
-        parentmf = self._repo.manifestlog[p1].read()
+        parentmf = self._manifestlog[p1].read()
 
         fastmf = None
         pfastmf = None
@@ -870,7 +870,7 @@ class hybridmanifestctx(object):
                     result.setflag(path, newf)
         else:
             # Otherwise, fall back to flat readfast
-            flatctx = manifest.manifestctx(self._repo, self._node)
+            flatctx = manifest.manifestctx(self._manifestlog, self._node)
             result = flatctx.readfast(shallow=shallow)
 
         return mf._converttohybridmanifest(result)
@@ -893,7 +893,7 @@ class manifestfactory(object):
         if node in mfl._dirmancache.get(dir, ()):
             return mfl._dirmancache[dir][node]
 
-        m = hybridmanifestctx(self.ui, mfl._repo, mfl._revlog, node)
+        m = hybridmanifestctx(self.ui, mfl, mfl._revlog, node)
 
         if node != revlog.nullid:
             mancache = mfl._dirmancache.get(dir)
