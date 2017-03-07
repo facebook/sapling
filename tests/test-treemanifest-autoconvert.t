@@ -53,3 +53,9 @@ Test auto creating trees for merge commit
   $ hg manifest -r tip
   x
   z
+  $ hg debughistorypack $TESTTMP/hgcache/master/packs/manifests/1e23508fdb2c2598bfaad1777f1c8e05d3fdcb60
+  
+  
+  Node          P1 Node       P2 Node       Link Node     Copy From
+  ddb35f099a64  000000000000  000000000000  d32fd17cb041  
+  13532a598745  bc0c2c938b92  000000000000  92f4ca0e667c  

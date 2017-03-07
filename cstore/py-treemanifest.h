@@ -1062,7 +1062,8 @@ static PyObject *treemanifest_walk(py_treemanifest *self, PyObject *args) {
 
 void writestore(Manifest *mainManifest, const std::vector<char*> &cmpNodes,
                 const std::vector<Manifest*> &cmpManifests,
-                PythonObj &pack, const ManifestFetcher &fetcher,
+                PythonObj &datapack, PythonObj &historypack,
+                char *linknode, const ManifestFetcher &fetcher,
                 bool useDeltas) {
   NewTreeIterator iterator(mainManifest, cmpNodes, cmpManifests, fetcher);
 
@@ -1077,12 +1078,12 @@ void writestore(Manifest *mainManifest, const std::vector<char*> &cmpNodes,
   while (iterator.next(&path, &result, &p1, &p2)) {
     result->manifest->serialize(raw);
 
-    char* p1node = (char*)NULLID;
+    char *deltanode = (char*)NULLID;
     if (!useDeltas || memcmp(p1->node, NULLID, BIN_NODE_SIZE) == 0) {
       p1raw.erase();
     } else {
       p1->manifest->serialize(p1raw);
-      p1node = p1->node;
+      deltanode = p1->node;
 
       PythonObj deltaArgs = Py_BuildValue("(s#s#)",
           p1raw.c_str(), (Py_ssize_t)p1raw.size(),
@@ -1096,25 +1097,44 @@ void writestore(Manifest *mainManifest, const std::vector<char*> &cmpNodes,
       raw.assign(deltabytes, deltabytelen);
     }
 
-    PythonObj args = Py_BuildValue("(s#s#s#s#)",
-                                   path->c_str(), (Py_ssize_t)path->size(),
-                                   result->node, (Py_ssize_t)BIN_NODE_SIZE,
-                                   p1node, (Py_ssize_t)BIN_NODE_SIZE,
-                                   raw.c_str(), (Py_ssize_t)raw.size());
-    pack.callmethod("add", args);
+    PythonObj dataargs = Py_BuildValue("(s#s#s#s#)",
+                                       path->c_str(), (Py_ssize_t)path->size(),
+                                       result->node, (Py_ssize_t)BIN_NODE_SIZE,
+                                       deltanode, (Py_ssize_t)BIN_NODE_SIZE,
+                                       raw.c_str(), (Py_ssize_t)raw.size());
+    datapack.callmethod("add", dataargs);
+
+    PythonObj historyargs = Py_BuildValue("(s#s#s#s#s#s#)",
+                                          path->c_str(), (Py_ssize_t)path->size(), // filename
+                                          result->node, (Py_ssize_t)BIN_NODE_SIZE, // node
+                                          p1->node, (Py_ssize_t)BIN_NODE_SIZE, // p1
+                                          p2->node, (Py_ssize_t)BIN_NODE_SIZE, // p2
+                                          linknode, (Py_ssize_t)BIN_NODE_SIZE, // linknode
+                                          Py_None, (Py_ssize_t)0 // copyfrom
+                                          );
+    historypack.callmethod("add", historyargs);
   }
 }
 
 static PyObject *treemanifest_write(py_treemanifest *self, PyObject *args,
                                     PyObject *kwargs) {
-  PyObject* packObj;
-  PyObject* p1treeObj = NULL;
-  PyObject* useDeltaObj = NULL;
+  PyObject *datapackObj;
+  PyObject *historypackObj;
+  PyObject *p1treeObj = NULL;
+  PyObject *useDeltaObj = NULL;
+  char *linknode = NULL;
+  Py_ssize_t linknodesize = 0;
 
-  static char const *kwlist[] = {"pack", "p1tree", "useDeltas", NULL};
+  static char const *kwlist[] = {"datapack", "historypack", "linknode", "p1tree", "useDeltas", NULL};
 
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|OO", (char**)kwlist,
-                                   &packObj, &p1treeObj, &useDeltaObj)) {
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "OOs#|OO", (char**)kwlist,
+                                   &datapackObj, &historypackObj, &linknode,
+                                   &linknodesize, &p1treeObj, &useDeltaObj)) {
+    return NULL;
+  }
+
+  if (linknodesize != BIN_NODE_SIZE) {
+    PyErr_SetString(PyExc_ValueError, "linknode must be 20 bytes");
     return NULL;
   }
 
@@ -1125,8 +1145,10 @@ static PyObject *treemanifest_write(py_treemanifest *self, PyObject *args,
 
   // ParseTuple doesn't increment the ref, but the PythonObj will decrement on
   // destruct, so let's increment now.
-  Py_INCREF(packObj);
-  PythonObj pack = packObj;
+  Py_INCREF(datapackObj);
+  PythonObj datapack = datapackObj;
+  Py_INCREF(historypackObj);
+  PythonObj historypack = historypackObj;
 
   bool useDeltas = useDeltaObj ? PyObject_IsTrue(useDeltaObj) : true;
 
@@ -1139,7 +1161,8 @@ static PyObject *treemanifest_write(py_treemanifest *self, PyObject *args,
       cmpManifests.push_back(p1tree->tm.getRootManifest());
     }
 
-    writestore(self->tm.getRootManifest(), cmpNodes, cmpManifests, pack, self->tm.fetcher, useDeltas);
+    writestore(self->tm.getRootManifest(), cmpNodes, cmpManifests, datapack, historypack,
+               linknode, self->tm.fetcher, useDeltas);
 
     char tempnode[20];
     self->tm.getRootManifest()->computeNode(p1tree ? binfromhex(p1tree->tm.root.node).c_str() : NULLID, NULLID, tempnode);

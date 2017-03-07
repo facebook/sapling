@@ -997,10 +997,12 @@ class manifestfactory(object):
                     transaction.addpostclose('treepack', postclose)
                     transaction.addabort('treepack', abort)
 
-                pack = treemanifest.InterceptedMutablePack(
+                dpack = treemanifest.InterceptedMutableDataPack(
                         transaction.treepack,
                         node, p1)
-                newtree.write(pack, tree)
+                hpack = treemanifest.InterceptedMutableHistoryPack(
+                        node, p1)
+                newtree.write(dpack, hpack, revlog.nullid, p1tree=tree)
 
                 treemanifestcache.getinstance(origself.opener,
                                               self.ui)[node] = newtree

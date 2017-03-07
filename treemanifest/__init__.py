@@ -34,6 +34,7 @@ from mercurial.node import bin, nullid
 
 from remotefilelog.contentstore import unioncontentstore
 from remotefilelog.datapack import datapackstore, mutabledatapack
+from remotefilelog.historypack import mutablehistorypack
 from remotefilelog import shallowutil
 import cstore
 
@@ -98,16 +99,16 @@ def _unpackmanifests(orig, self, repo, *args, **kwargs):
         # TODO: only put in cache if pulling from main server
         packpath = shallowutil.getcachepackpath(repo, PACK_CATEGORY)
         with mutabledatapack(repo.ui, packpath) as dpack:
-            recordmanifest(dpack, repo, oldtip, len(mfrevlog))
-            dpack.close()
+            with mutablehistorypack(repo.ui, packpath) as hpack:
+                recordmanifest(dpack, hpack, repo, oldtip, len(mfrevlog))
 
         # Alert the store that there may be new packs
         repo.svfs.manifestdatastore.markforrefresh()
 
-class InterceptedMutablePack(object):
-    """This classes intercepts pack writes and replaces the node for the root
-    with the provided node. This is useful for forcing a tree manifest to be
-    referencable via its flat hash.
+class InterceptedMutableDataPack(object):
+    """This classes intercepts data pack writes and replaces the node for the
+    root with the provided node. This is useful for forcing a tree manifest to
+    be referencable via its flat hash.
     """
     def __init__(self, pack, node, p1node):
         self._pack = pack
@@ -122,7 +123,30 @@ class InterceptedMutablePack(object):
                 deltabasenode = self._p1node
         return self._pack.add(name, node, deltabasenode, delta)
 
-def recordmanifest(pack, repo, oldtip, newtip):
+class InterceptedMutableHistoryPack(object):
+    """This classes intercepts history pack writes and does two things:
+    1. replaces the node for the root with the provided node. This is
+       useful for forcing a tree manifest to be referencable via its flat hash.
+    2. Records the adds instead of sending them on. Since mutablehistorypack
+       requires all entries for a file to be written contiguously, we need to
+       record all the writes across the manifest import before sending them to
+       the actual mutablehistorypack.
+    """
+    def __init__(self, node, p1node):
+        self._node = node
+        self._p1node = p1node
+        self.entries = []
+
+    def add(self, filename, node, p1, p2, linknode, copyfrom):
+        # For the root node, provide the flat manifest as the key
+        if filename == "":
+            node = self._node
+            if p1 != nullid:
+                p1 = self._p1node
+        self.entries.append((filename, node, p1, p2, linknode, copyfrom))
+
+def recordmanifest(datapack, historypack, repo, oldtip, newtip):
+    cl = repo.changelog
     mfl = repo.manifestlog
     mfrevlog = mfl._revlog
     total = newtip - oldtip
@@ -142,11 +166,14 @@ def recordmanifest(pack, repo, oldtip, newtip):
         if name in repo:
             allowedtreeroots.add(repo[name].manifestnode())
 
+    historyentries = {}
     for rev in xrange(oldtip, newtip):
         ui.progress(message, rev - oldtip, total=total)
         p1, p2 = mfrevlog.parentrevs(rev)
         p1node = mfrevlog.node(p1)
         p2node = mfrevlog.node(p2)
+        linkrev = mfrevlog.linkrev(rev)
+        linknode = cl.node(linkrev)
 
         if p1node == nullid:
             origtree = cstore.treemanifest(repo.svfs.manifestdatastore)
@@ -160,10 +187,13 @@ def recordmanifest(pack, repo, oldtip, newtip):
                 continue
 
             p1mf = mfl[p1node].read()
+            p1linknode = cl.node(mfrevlog.linkrev(p1))
             origtree = cstore.treemanifest(repo.svfs.manifestdatastore)
             for filename, node, flag in p1mf.iterentries():
                 origtree.set(filename, node, flag)
-            origtree.write(InterceptedMutablePack(pack, p1node, nullid))
+            origtree.write(InterceptedMutableDataPack(datapack, p1node, nullid),
+                           InterceptedMutableHistoryPack(p1node, nullid),
+                           p1linknode)
             builttrees[p1node] = origtree
 
         # Remove the tree from the cache once we've processed its final use.
@@ -220,7 +250,7 @@ def recordmanifest(pack, repo, oldtip, newtip):
                     fflag = rest[40:]
                     adds.append((fname, bin(fnode), fflag))
 
-            allfiles = set(repo.changelog.readfiles(mfrevlog.linkrev(rev)))
+            allfiles = set(repo.changelog.readfiles(linkrev))
             deletes = allfiles.difference(fname for fname, fnode, fflag in adds)
 
         # Apply the changes on top of the parent tree
@@ -231,8 +261,16 @@ def recordmanifest(pack, repo, oldtip, newtip):
         for fname, fnode, fflags in adds:
             newtree.set(fname, fnode, fflags)
 
-        newtree.write(InterceptedMutablePack(pack, mfrevlog.node(rev), p1node),
-                      origtree if p1node != nullid else None)
+        tempdatapack = InterceptedMutableDataPack(datapack, mfrevlog.node(rev),
+                                                  p1node)
+        temphistorypack = InterceptedMutableHistoryPack(mfrevlog.node(rev),
+                                                        p1node)
+        newtree.write(tempdatapack, temphistorypack, linknode,
+                      p1tree=origtree if p1node != nullid else None)
+
+        for entry in temphistorypack.entries:
+            filename, values = entry[0], entry[1:]
+            historyentries.setdefault(filename, []).append(values)
 
         if ui.configbool('treemanifest', 'verifyautocreate', False):
             diff = newtree.diff(origtree)
@@ -275,3 +313,7 @@ def recordmanifest(pack, repo, oldtip, newtip):
             builttrees[mfnode] = newtree
 
     ui.progress(message, None)
+
+    for filename, entries in sorted(historyentries.iteritems()):
+        for entry in entries:
+            historypack.add(filename, *entry)
