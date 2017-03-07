@@ -300,10 +300,10 @@ class repoview(object):
     """
 
     def __init__(self, repo, filtername):
-        object.__setattr__(self, '_unfilteredrepo', repo)
-        object.__setattr__(self, 'filtername', filtername)
-        object.__setattr__(self, '_clcachekey', None)
-        object.__setattr__(self, '_clcache', None)
+        object.__setattr__(self, r'_unfilteredrepo', repo)
+        object.__setattr__(self, r'filtername', filtername)
+        object.__setattr__(self, r'_clcachekey', None)
+        object.__setattr__(self, r'_clcache', None)
 
     # not a propertycache on purpose we shall implement a proper cache later
     @property
