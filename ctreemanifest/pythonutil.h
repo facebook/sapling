@@ -23,6 +23,7 @@
 #include "../cstore/store.h"
 #include "../cstore/key.h"
 #include "../cstore/match.h"
+#include "../ctreemanifest/treemanifest.h"
 
 /**
  * C++ exception that represents an issue at the python C api level.
@@ -110,4 +111,19 @@ class PythonMatcher : public Matcher {
     bool visitdir(const std::string &path);
 };
 
+class PythonDiffResult : public DiffResult {
+  private:
+    PythonObj _diff;
+  public:
+    PythonDiffResult(PythonObj diff) :
+      _diff(diff) {
+    }
+    virtual void add(const std::string &path,
+                     const char *beforeNode, const char *beforeFlag,
+                     const char *afterNode, const char *afterFlag);
+    virtual void addclean(const std::string &path);
+    PythonObj getDiff() {
+      return this->_diff;
+    }
+};
 #endif //REMOTEFILELOG_PYTHONOBJ_H

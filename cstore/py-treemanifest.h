@@ -294,7 +294,7 @@ static PyObject *treemanifest_diff(
     clean = true;
   }
 
-  PythonObj results = PyDict_New();
+  PythonDiffResult results(PyDict_New());
 
   ManifestFetcher fetcher = self->tm.fetcher;
 
@@ -314,7 +314,7 @@ static PyObject *treemanifest_diff(
     return NULL;
   }
 
-  return results.returnval();
+  return results.getDiff().returnval();
 }
 
 static PyObject *treemanifest_get(
@@ -1042,7 +1042,7 @@ static PyObject *treemanifest_filesnotin(py_treemanifest *self, PyObject *args) 
     return NULL;
   }
 
-  PythonObj diffresults = PyDict_New();
+  PythonDiffResult diffresults(PyDict_New());
 
   ManifestFetcher fetcher = self->tm.fetcher;
 
@@ -1068,7 +1068,8 @@ static PyObject *treemanifest_filesnotin(py_treemanifest *self, PyObject *args) 
   Py_ssize_t iterpos = 0;
   PyObject *pathkey;
   PyObject *diffentry;
-  while (PyDict_Next(diffresults, &iterpos, &pathkey, &diffentry)) {
+  PythonObj diff = diffresults.getDiff();
+  while (PyDict_Next(diff, &iterpos, &pathkey, &diffentry)) {
     // Each value is a `((m1node, m1flag), (m2node, m2flag))` tuple.
     // If m2node is None, then this file doesn't exist in m2.
     PyObject *targetvalue = PyTuple_GetItem(diffentry, 1);

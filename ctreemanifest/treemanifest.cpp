@@ -8,59 +8,7 @@
 // no-check-code
 
 #include "treemanifest.h"
-
-/**
- * Constructs a result python tuple of the given diff data.
- */
-static PythonObj treemanifest_diffentry(
-    const std::string *anode, const char *aflag,
-    const std::string *bnode, const char *bflag) {
-  const char *astr = anode != NULL ? anode->c_str() : NULL;
-  Py_ssize_t alen = anode != NULL ? anode->length() : 0;
-  const char *bstr = bnode != NULL ? bnode->c_str() : NULL;
-  Py_ssize_t blen = bnode != NULL ? bnode->length() : 0;
-  PythonObj result = Py_BuildValue(
-      "((s#s#)(s#s#))",
-      astr, alen,
-      (aflag == NULL) ? MAGIC_EMPTY_STRING : aflag, Py_ssize_t(aflag ? 1 : 0),
-      bstr, blen,
-      (bflag == NULL) ? MAGIC_EMPTY_STRING : bflag, Py_ssize_t(bflag ? 1 : 0));
-  return result;
-}
-
-/**
- * Simple class for representing a single diff between two files in the
- * manifest.
- */
-class DiffEntry {
-  private:
-    const std::string *selfnode;
-    const std::string *othernode;
-    const char *selfflag;
-    const char *otherflag;
-  public:
-    DiffEntry(const std::string *selfnode, const char *selfflag,
-        const std::string *othernode, const char *otherflag) {
-      this->selfnode = selfnode;
-      this->othernode = othernode;
-      this->selfflag = selfflag;
-      this->otherflag = otherflag;
-    }
-
-    void addtodiff(const PythonObj &diff, const std::string &path) {
-      PythonObj entry = treemanifest_diffentry(this->selfnode, this->selfflag,
-          this->othernode, this->otherflag);
-      PythonObj pathObj = PyString_FromStringAndSize(path.c_str(), path.length());
-
-      PyDict_SetItem(diff, pathObj, entry);
-    }
-
-    void addcleantodiff(const PythonObj &diff, const std::string &path) {
-      PythonObj pathObj = PyString_FromStringAndSize(path.c_str(), path.length());
-      Py_INCREF(Py_None);
-      PyDict_SetItem(diff, pathObj, Py_None);
-    }
-};
+#include <cassert>
 
 /**
  * Helper function that performs the actual recursion on the tree entries.
@@ -69,7 +17,7 @@ void treemanifest_diffrecurse(
     Manifest *selfmf,
     Manifest *othermf,
     std::string &path,
-    const PythonObj &diff,
+    DiffResult &diff,
     const ManifestFetcher &fetcher,
     bool clean) {
   ManifestIterator selfiter;
@@ -124,8 +72,7 @@ void treemanifest_diffrecurse(
             fetcher, path.c_str(), path.size());
         treemanifest_diffrecurse(selfchildmanifest, NULL, path, diff, fetcher, clean);
       } else {
-        DiffEntry entry(&selfbinnode, selfentry->flag, NULL, NULL);
-        entry.addtodiff(diff, path);
+        diff.add(path, selfbinnode.c_str(), selfentry->flag, NULL, NULL);
       }
       selfiter.next();
     } else if (cmp > 0) {
@@ -136,8 +83,7 @@ void treemanifest_diffrecurse(
             fetcher, path.c_str(), path.size());
         treemanifest_diffrecurse(NULL, otherchildmanifest, path, diff, fetcher, clean);
       } else {
-        DiffEntry entry(NULL, NULL, &otherbinnode, otherentry->flag);
-        entry.addtodiff(diff, path);
+        diff.add(path, NULL, NULL, otherbinnode.c_str(), otherentry->flag);
       }
       otheriter.next();
     } else {
@@ -165,8 +111,7 @@ void treemanifest_diffrecurse(
       } else if (selfentry->isdirectory() && !otherentry->isdirectory()) {
         // self is directory, other is not - process other then self
         otherentry->appendtopath(path);
-        DiffEntry entry(NULL, NULL, &otherbinnode, otherentry->flag);
-        entry.addtodiff(diff, path);
+        diff.add(path, NULL, NULL, otherbinnode.c_str(), otherentry->flag);
 
         path.append(1, '/');
         Manifest *selfchildmanifest = selfentry->get_manifest(fetcher,
@@ -178,8 +123,7 @@ void treemanifest_diffrecurse(
       } else if (!selfentry->isdirectory() && otherentry->isdirectory()) {
         // self is not directory, other is - process self then other
         selfentry->appendtopath(path);
-        DiffEntry entry(&selfbinnode, selfentry->flag, NULL, NULL);
-        entry.addtodiff(diff, path);
+        diff.add(path, selfbinnode.c_str(), selfentry->flag, NULL, NULL);
 
         path.append(1, '/');
         Manifest *otherchildmanifest = otherentry->get_manifest(fetcher,
@@ -198,12 +142,11 @@ void treemanifest_diffrecurse(
 
         if (selfbinnode != otherbinnode || flagsdiffer) {
           selfentry->appendtopath(path);
-          DiffEntry entry(&selfbinnode, selfentry->flag, &otherbinnode, otherentry->flag);
-          entry.addtodiff(diff, path);
+          diff.add(path, selfbinnode.c_str(), selfentry->flag,
+                         otherbinnode.c_str(), otherentry->flag);
         } else if (clean) {
           selfentry->appendtopath(path);
-          DiffEntry entry(&selfbinnode, selfentry->flag, &otherbinnode, otherentry->flag);
-          entry.addcleantodiff(diff, path);
+          diff.addclean(path);
         }
 
         selfiter.next();

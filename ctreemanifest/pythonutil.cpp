@@ -138,3 +138,31 @@ bool PythonMatcher::visitdir(const std::string &path) {
   PythonObj matched = this->_matcherObj.callmethod("visitdir", matchArgs);
   return PyObject_IsTrue(matched) == 1;
 }
+
+void PythonDiffResult::add(const std::string &path,
+                           const char *beforeNode, const char *beforeFlag,
+                           const char *afterNode, const char *afterFlag) {
+  Py_ssize_t beforeLen = beforeNode != NULL ? BIN_NODE_SIZE : 0;
+  Py_ssize_t afterLen = afterNode != NULL ? BIN_NODE_SIZE : 0;
+
+  PythonObj entry = Py_BuildValue(
+    "((s#s#)(s#s#))",
+    beforeNode, beforeLen,
+    (beforeFlag == NULL) ? MAGIC_EMPTY_STRING : beforeFlag, Py_ssize_t(beforeFlag ? 1 : 0),
+    afterNode, afterLen,
+    (afterFlag == NULL) ? MAGIC_EMPTY_STRING : afterFlag, Py_ssize_t(afterFlag ? 1 : 0));
+
+  PythonObj pathObj = PyString_FromStringAndSize(path.c_str(), path.length());
+
+  if (PyDict_SetItem(this->_diff, pathObj, entry)) {
+    throw pyexception();
+  }
+}
+
+void PythonDiffResult::addclean(const std::string &path) {
+  PythonObj pathObj = PyString_FromStringAndSize(path.c_str(), path.length());
+  Py_INCREF(Py_None);
+  if (PyDict_SetItem(this->_diff, pathObj, Py_None)) {
+    throw pyexception();
+  }
+}

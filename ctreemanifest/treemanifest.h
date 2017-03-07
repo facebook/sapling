@@ -10,8 +10,6 @@
 #ifndef REMOTEFILELOG_TREEMANIFEST_H
 #define REMOTEFILELOG_TREEMANIFEST_H
 
-#include "pythonutil.h"
-
 #include <memory>
 #include <string>
 #include <vector>
@@ -318,11 +316,19 @@ struct fileiter {
   }
 };
 
+struct DiffResult {
+  virtual ~DiffResult() {}
+  virtual void add(const std::string &path,
+                   const char *beforeNode, const char *beforeFlag,
+                   const char *afterNode, const char *afterFlag) = 0;
+  virtual void addclean(const std::string &path) = 0;
+};
+
 extern void treemanifest_diffrecurse(
     Manifest *selfmf,
     Manifest *othermf,
     std::string &path,
-    const PythonObj &diff,
+    DiffResult &diff,
     const ManifestFetcher &fetcher,
     bool clean);
 
