@@ -168,11 +168,11 @@ else:
                 sources=[
                     'cstore/datapackstore.cpp',
                     'cstore/py-cstore.cpp',
+                    'cstore/pythonutil.cpp',
                     'cstore/uniondatapackstore.cpp',
                     'ctreemanifest/manifest.cpp',
                     'ctreemanifest/manifest_entry.cpp',
                     'ctreemanifest/manifest_fetcher.cpp',
-                    'ctreemanifest/pythonutil.cpp',
                     'ctreemanifest/treemanifest.cpp',
                 ],
                 include_dirs=[

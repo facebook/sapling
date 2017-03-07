@@ -18,7 +18,7 @@ extern "C" {
 #include "../cdatapack/cdatapack.h"
 }
 
-#include "../ctreemanifest/pythonutil.h"
+#include "pythonutil.h"
 #include "datapackstore.h"
 #include "key.h"
 #include "py-structs.h"
