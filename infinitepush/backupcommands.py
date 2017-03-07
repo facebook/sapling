@@ -37,6 +37,12 @@ command = cmdutil.command(cmdtable)
 backupbookmarktuple = namedtuple('backupbookmarktuple',
                                  ['hostname', 'reporoot', 'localbookmark'])
 
+restoreoptions = [
+     ('', 'reporoot', '', 'root of the repo to restore'),
+     ('', 'user', '', 'user who ran the backup'),
+     ('', 'hostname', '', 'hostname of the repo to restore'),
+]
+
 @command('pushbackup',
          [('', 'background', None, 'run backup in background')])
 def backup(ui, repo, dest=None, **opts):
@@ -99,10 +105,7 @@ def backup(ui, repo, dest=None, **opts):
         unwrapfunction(changegroup.cg2packer, 'deltaparent', _deltaparent)
     return 0
 
-@command('pullbackup', [
-         ('', 'reporoot', '', 'root of the repo to restore'),
-         ('', 'user', '', 'user who ran the backup'),
-         ('', 'hostname', '', 'hostname of the repo to restore')])
+@command('pullbackup', restoreoptions)
 def restore(ui, repo, dest=None, **opts):
     """
     Pulls commits from infinitepush that were previously saved with
@@ -120,6 +123,31 @@ def restore(ui, repo, dest=None, **opts):
     sourcehostname = opts.get('hostname')
     username = opts.get('user') or ui.shortuser(ui.username())
 
+    result = _getbackupstate(ui, other, sourcereporoot,
+                             sourcehostname, username)
+    reporoots, hostnames, hexnodestopull, localbookmarks = result
+    _checkrestorehostsreporoots(hostnames, reporoots)
+
+    pullcmd, pullopts = _getcommandandoptions('^pull')
+    pullopts['rev'] = list(hexnodestopull)
+    if dest:
+        pullopts['source'] = dest
+    result = pullcmd(ui, repo, **pullopts)
+
+    with repo.wlock():
+        with repo.lock():
+            with repo.transaction('bookmark') as tr:
+                for scratchbook, hexnode in localbookmarks.iteritems():
+                    repo._bookmarks[scratchbook] = bin(hexnode)
+                repo._bookmarks.recordchange(tr)
+
+    return result
+
+_backupedstatefile = 'infinitepushlastbackupedstate'
+
+# Common helper functions
+
+def _getbackupstate(ui, other, sourcereporoot, sourcehostname, username):
     pattern = _getcommonuserprefix(username) + '/*'
     fetchedbookmarks = other.listkeyspatterns('bookmarks', patterns=[pattern])
     reporoots = set()
@@ -141,6 +169,9 @@ def restore(ui, repo, dest=None, **opts):
         else:
             ui.warn(_('wrong format of backup bookmark: %s') % book)
 
+    return reporoots, hostnames, hexnodestopull, localbookmarks
+
+def _checkrestorehostsreporoots(hostnames, reporoots):
     if len(hostnames) > 1:
         raise error.Abort(
             _('ambiguous hostname to restore: %s') % sorted(hostnames),
@@ -150,25 +181,6 @@ def restore(ui, repo, dest=None, **opts):
         raise error.Abort(
             _('ambiguous repo root to restore: %s') % sorted(reporoots),
             hint=_('set --reporoot to disambiguate'))
-
-    pullcmd, pullopts = _getcommandandoptions('^pull')
-    pullopts['rev'] = list(hexnodestopull)
-    if dest:
-        pullopts['source'] = dest
-    result = pullcmd(ui, repo, **pullopts)
-
-    with repo.wlock():
-        with repo.lock():
-            with repo.transaction('bookmark') as tr:
-                for scratchbook, hexnode in localbookmarks.iteritems():
-                    repo._bookmarks[scratchbook] = bin(hexnode)
-                repo._bookmarks.recordchange(tr)
-
-    return result
-
-_backupedstatefile = 'infinitepushlastbackupedstate'
-
-# Common helper functions
 
 def _getcommonuserprefix(username):
     return '/'.join(('infinitepush', 'backups', username))
