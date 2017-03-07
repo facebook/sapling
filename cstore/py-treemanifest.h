@@ -1183,122 +1183,6 @@ static PyObject *treemanifest_walk(py_treemanifest *self, PyObject *args) {
       matcher);
 }
 
-void writestore(Manifest *mainManifest, const std::vector<char*> &cmpNodes,
-                const std::vector<Manifest*> &cmpManifests,
-                PythonObj &datapack, PythonObj &historypack,
-                char *linknode, const ManifestFetcher &fetcher,
-                bool useDeltas) {
-  NewTreeIterator iterator(mainManifest, cmpNodes, cmpManifests, fetcher);
-
-  PythonObj mdiff = PyImport_ImportModule("mercurial.mdiff");
-
-  std::string *path = NULL;
-  ManifestNode *result = NULL;
-  ManifestNode *p1 = NULL;
-  ManifestNode *p2 = NULL;
-  std::string raw;
-  std::string p1raw;
-  while (iterator.next(&path, &result, &p1, &p2)) {
-    result->manifest->serialize(raw);
-
-    char *deltanode = (char*)NULLID;
-    if (!useDeltas || memcmp(p1->node, NULLID, BIN_NODE_SIZE) == 0) {
-      p1raw.erase();
-    } else {
-      p1->manifest->serialize(p1raw);
-      deltanode = p1->node;
-
-      PythonObj deltaArgs = Py_BuildValue("(s#s#)",
-          p1raw.c_str(), (Py_ssize_t)p1raw.size(),
-          raw.c_str(), (Py_ssize_t)raw.size());
-      PythonObj delta = mdiff.callmethod("textdiff", deltaArgs);
-      char *deltabytes;
-      Py_ssize_t deltabytelen;
-      if (PyString_AsStringAndSize(delta, &deltabytes, &deltabytelen)) {
-        throw pyexception();
-      }
-      raw.assign(deltabytes, deltabytelen);
-    }
-
-    PythonObj dataargs = Py_BuildValue("(s#s#s#s#)",
-                                       path->c_str(), (Py_ssize_t)path->size(),
-                                       result->node, (Py_ssize_t)BIN_NODE_SIZE,
-                                       deltanode, (Py_ssize_t)BIN_NODE_SIZE,
-                                       raw.c_str(), (Py_ssize_t)raw.size());
-    datapack.callmethod("add", dataargs);
-
-    PythonObj historyargs = Py_BuildValue("(s#s#s#s#s#s#)",
-                                          path->c_str(), (Py_ssize_t)path->size(), // filename
-                                          result->node, (Py_ssize_t)BIN_NODE_SIZE, // node
-                                          p1->node, (Py_ssize_t)BIN_NODE_SIZE, // p1
-                                          p2->node, (Py_ssize_t)BIN_NODE_SIZE, // p2
-                                          linknode, (Py_ssize_t)BIN_NODE_SIZE, // linknode
-                                          Py_None, (Py_ssize_t)0 // copyfrom
-                                          );
-    historypack.callmethod("add", historyargs);
-  }
-}
-
-static PyObject *treemanifest_write(py_treemanifest *self, PyObject *args,
-                                    PyObject *kwargs) {
-  PyObject *datapackObj;
-  PyObject *historypackObj;
-  PyObject *p1treeObj = NULL;
-  PyObject *useDeltaObj = NULL;
-  char *linknode = NULL;
-  Py_ssize_t linknodesize = 0;
-
-  static char const *kwlist[] = {"datapack", "historypack", "linknode", "p1tree", "useDeltas", NULL};
-
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "OOs#|OO", (char**)kwlist,
-                                   &datapackObj, &historypackObj, &linknode,
-                                   &linknodesize, &p1treeObj, &useDeltaObj)) {
-    return NULL;
-  }
-
-  if (linknodesize != BIN_NODE_SIZE) {
-    PyErr_SetString(PyExc_ValueError, "linknode must be 20 bytes");
-    return NULL;
-  }
-
-  py_treemanifest *p1tree = NULL;
-  if (p1treeObj && p1treeObj != Py_None) {
-    p1tree = (py_treemanifest*)p1treeObj;
-  }
-
-  // ParseTuple doesn't increment the ref, but the PythonObj will decrement on
-  // destruct, so let's increment now.
-  Py_INCREF(datapackObj);
-  PythonObj datapack = datapackObj;
-  Py_INCREF(historypackObj);
-  PythonObj historypack = historypackObj;
-
-  bool useDeltas = useDeltaObj ? PyObject_IsTrue(useDeltaObj) : true;
-
-  try {
-    std::vector<char*> cmpNodes;
-    std::vector<Manifest*> cmpManifests;
-    if (p1tree) {
-      assert(p1tree->tm.root.node);
-      cmpNodes.push_back(p1tree->tm.root.node);
-      cmpManifests.push_back(p1tree->tm.getRootManifest());
-    }
-
-    writestore(self->tm.getRootManifest(), cmpNodes, cmpManifests, datapack, historypack,
-               linknode, self->tm.fetcher, useDeltas);
-
-    char tempnode[20];
-    self->tm.getRootManifest()->computeNode(p1tree ? binfromhex(p1tree->tm.root.node).c_str() : NULLID, NULLID, tempnode);
-    std::string hexnode;
-    hexfrombin(tempnode, hexnode);
-    self->tm.root.update(hexnode.c_str(), MANIFEST_DIRECTORY_FLAGPTR);
-
-    return PyString_FromStringAndSize(tempnode, BIN_NODE_SIZE);
-  } catch (const pyexception &ex) {
-    return NULL;
-  }
-}
-
 static PyObject *treemanifest_finalize(py_treemanifest *self, PyObject *args,
                                        PyObject *kwargs) {
   PyObject *p1treeObj = NULL;
@@ -1376,8 +1260,6 @@ static PyMethodDef treemanifest_methods[] = {
     "returns the text form of the manifest"},
   {"walk", (PyCFunction)treemanifest_walk, METH_VARARGS,
     "returns a iterator for walking the manifest"},
-  {"write", (PyCFunction)treemanifest_write, METH_VARARGS|METH_KEYWORDS,
-    "writes any pending tree changes to the given store"},
   {"finalize", (PyCFunction)treemanifest_finalize, METH_VARARGS|METH_KEYWORDS,
     "Returns an iterator that outputs each piece of the tree that is new."
     "When the iterator completes, the tree is marked as immutable."},

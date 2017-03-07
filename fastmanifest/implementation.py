@@ -1002,7 +1002,14 @@ class manifestfactory(object):
                         node, p1)
                 hpack = treemanifest.InterceptedMutableHistoryPack(
                         node, p1)
-                newtree.write(dpack, hpack, revlog.nullid, p1tree=tree)
+                newtreeiter = newtree.finalize(tree)
+                for nname, nnode, ntext, np1text, np1, np2 in newtreeiter:
+                    if np1 != revlog.nullid:
+                        delta = mdiff.textdiff(np1text, ntext)
+                    else:
+                        delta = ntext
+                    dpack.add(nname, nnode, np1, delta)
+                    hpack.add(nname, nnode, np1, np2, revlog.nullid, '')
 
                 treemanifestcache.getinstance(origself.opener,
                                               self.ui)[node] = newtree

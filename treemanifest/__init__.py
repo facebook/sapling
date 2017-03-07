@@ -27,6 +27,7 @@ from mercurial import (
     error,
     extensions,
     localrepo,
+    mdiff,
     util,
 )
 from mercurial.i18n import _
@@ -191,9 +192,15 @@ def recordmanifest(datapack, historypack, repo, oldtip, newtip):
             origtree = cstore.treemanifest(repo.svfs.manifestdatastore)
             for filename, node, flag in p1mf.iterentries():
                 origtree.set(filename, node, flag)
-            origtree.write(InterceptedMutableDataPack(datapack, p1node, nullid),
-                           InterceptedMutableHistoryPack(p1node, nullid),
-                           p1linknode)
+
+            tempdatapack = InterceptedMutableDataPack(datapack, p1node, nullid)
+            temphistorypack = InterceptedMutableHistoryPack(p1node, nullid)
+            for nname, nnode, ntext, np1text, np1, np2 in origtree.finalize():
+                # No need to compute a delta, since we know the parent isn't
+                # already a tree.
+                tempdatapack.add(nname, nnode, nullid, ntext)
+                temphistorypack.add(nname, nnode, np1, np2, p1linknode, '')
+
             builttrees[p1node] = origtree
 
         # Remove the tree from the cache once we've processed its final use.
@@ -265,8 +272,14 @@ def recordmanifest(datapack, historypack, repo, oldtip, newtip):
                                                   p1node)
         temphistorypack = InterceptedMutableHistoryPack(mfrevlog.node(rev),
                                                         p1node)
-        newtree.write(tempdatapack, temphistorypack, linknode,
-                      p1tree=origtree if p1node != nullid else None)
+        newtreeiter = newtree.finalize(origtree if p1node != nullid else None)
+        for nname, nnode, ntext, np1text, np1, np2 in newtreeiter:
+            if np1 != nullid:
+                delta = mdiff.textdiff(np1text, ntext)
+            else:
+                delta = ntext
+            tempdatapack.add(nname, nnode, np1, delta)
+            temphistorypack.add(nname, nnode, np1, np2, linknode, '')
 
         for entry in temphistorypack.entries:
             filename, values = entry[0], entry[1:]

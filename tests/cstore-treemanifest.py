@@ -252,7 +252,11 @@ class ctreemanifesttests(unittest.TestCase):
 
         dstore = FakeDataStore()
         hstore = FakeHistoryStore()
-        anode = a.write(dstore, hstore, alinknode)
+        for name, node, text, p1text, p1, p2 in a.finalize():
+            dstore.add(name, node, nullid, text)
+            hstore.add(name, node, p1, p2, alinknode, '')
+            if not name:
+                anode = node
 
         a2 = cstore.treemanifest(dstore, anode)
         self.assertEquals(list(a.iterentries()), list(a2.iterentries()))
@@ -265,7 +269,11 @@ class ctreemanifesttests(unittest.TestCase):
         b.set("abc/z", *hashflags())
         blinknode = hashflags()[0]
 
-        bnode = b.write(dstore, hstore, blinknode)
+        for name, node, text, p1text, p1, p2 in b.finalize():
+            dstore.add(name, node, nullid, text)
+            hstore.add(name, node, p1, p2, blinknode, '')
+            if not name:
+                bnode = node
 
         b2 = cstore.treemanifest(dstore, bnode)
         self.assertEquals(list(b.iterentries()), list(b2.iterentries()))
@@ -282,14 +290,22 @@ class ctreemanifesttests(unittest.TestCase):
 
         dstore = FakeDataStore()
         hstore = FakeHistoryStore()
-        anode = a.write(dstore, hstore, alinknode)
+        for name, node, text, p1text, p1, p2 in a.finalize():
+            dstore.add(name, node, nullid, text)
+            hstore.add(name, node, p1, p2, alinknode, '')
+            if not name:
+                anode = node
 
         b = a.copy()
         b.set("abc/a", None, None)
         b.set("abc/a/foo", *hashflags())
         blinknode = hashflags()[0]
 
-        bnode = b.write(dstore, hstore, blinknode, p1tree=a, useDeltas=False)
+        for name, node, text, p1text, p1, p2 in b.finalize(a):
+            dstore.add(name, node, nullid, text)
+            hstore.add(name, node, p1, p2, blinknode, '')
+            if not name:
+                bnode = node
 
         b2 = cstore.treemanifest(dstore, bnode)
         self.assertEquals(list(b.iterentries()), list(b2.iterentries()))
@@ -386,8 +402,12 @@ class ctreemanifesttests(unittest.TestCase):
         # - committed trees
         dstore = FakeDataStore()
         hstore = FakeHistoryStore()
-        a.write(dstore, hstore, alinknode)
-        b.write(dstore, hstore, blinknode)
+        for name, node, text, p1text, p1, p2 in a.finalize():
+            dstore.add(name, node, nullid, text)
+            hstore.add(name, node, p1, p2, alinknode, '')
+        for name, node, text, p1text, p1, p2 in b.finalize():
+            dstore.add(name, node, nullid, text)
+            hstore.add(name, node, p1, p2, blinknode, '')
         diff = a.diff(b)
         self.assertEquals(diff, {})
 
@@ -405,8 +425,12 @@ class ctreemanifesttests(unittest.TestCase):
         })
 
         # - committed trees
-        a.write(dstore, hstore, alinknode)
-        b.write(dstore, hstore, blinknode)
+        for name, node, text, p1text, p1, p2 in a.finalize():
+            dstore.add(name, node, nullid, text)
+            hstore.add(name, node, p1, p2, alinknode, '')
+        for name, node, text, p1text, p1, p2 in b.finalize():
+            dstore.add(name, node, nullid, text)
+            hstore.add(name, node, p1, p2, blinknode, '')
 
         diff = a.diff(b)
         self.assertEquals(diff, {
