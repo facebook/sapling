@@ -668,6 +668,17 @@ static bool fileiter_next(fileiter &iter, char *path, size_t pathcapacity,
     // If a directory, push it and loop again
     if (entry->isdirectory()) {
       iter.path.append(entry->filename, entry->filenamelen);
+
+      // Check if we should visit the directory
+      if ((PyObject*)iter.matcher) {
+        PythonObj matchArgs = Py_BuildValue("(s#)", iter.path.c_str(), (Py_ssize_t)iter.path.size());
+        PythonObj matched = iter.matcher.callmethod("visitdir", matchArgs);
+        if (!PyObject_IsTrue(matched)) {
+          iter.path.erase(iter.path.size() - entry->filenamelen);
+          continue;
+        }
+      }
+
       iter.path.append(1, '/');
 
       Manifest *submanifest = entry->get_manifest(iter.fetcher,
