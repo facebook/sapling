@@ -124,18 +124,18 @@ def restore(ui, repo, dest=None, **opts):
     fetchedbookmarks = other.listkeyspatterns('bookmarks', patterns=[pattern])
     reporoots = set()
     hostnames = set()
-    nodestopull = set()
+    hexnodestopull = set()
     localbookmarks = {}
-    for book, node in fetchedbookmarks.iteritems():
+    for book, hexnode in fetchedbookmarks.iteritems():
         parsed = _parsebackupbookmark(username, book)
         if parsed:
             if sourcereporoot and sourcereporoot != parsed.reporoot:
                 continue
             if sourcehostname and sourcehostname != parsed.hostname:
                 continue
-            nodestopull.add(node)
+            hexnodestopull.add(hexnode)
             if parsed.localbookmark:
-                localbookmarks[parsed.localbookmark] = node
+                localbookmarks[parsed.localbookmark] = hexnode
             reporoots.add(parsed.reporoot)
             hostnames.add(parsed.hostname)
         else:
@@ -152,7 +152,7 @@ def restore(ui, repo, dest=None, **opts):
             hint=_('set --reporoot to disambiguate'))
 
     pullcmd, pullopts = _getcommandandoptions('^pull')
-    pullopts['rev'] = list(nodestopull)
+    pullopts['rev'] = list(hexnodestopull)
     if dest:
         pullopts['source'] = dest
     result = pullcmd(ui, repo, **pullopts)
