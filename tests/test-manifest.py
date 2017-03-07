@@ -320,7 +320,7 @@ class basemanifesttests(object):
             'bar/baz/qux.py': None,
             'foo': (MISSING, (BIN_HASH_1, '')),
             }
-        self.assertEqual(want, pruned.diff(short, True))
+        self.assertEqual(want, pruned.diff(short, clean=True))
 
     def testReversedLines(self):
         backwards = ''.join(

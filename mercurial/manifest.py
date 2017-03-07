@@ -445,8 +445,12 @@ class manifestdict(object):
     def keys(self):
         return list(self.iterkeys())
 
-    def filesnotin(self, m2):
+    def filesnotin(self, m2, match=None):
         '''Set of files in this manifest that are not in the other'''
+        if match:
+            m1 = self.matches(match)
+            m2 = m2.matches(match)
+            return m1.filesnotin(m2)
         diff = self.diff(m2)
         files = set(filepath
                     for filepath, hashflags in diff.iteritems()
@@ -523,7 +527,7 @@ class manifestdict(object):
         m._lm = self._lm.filtercopy(match)
         return m
 
-    def diff(self, m2, clean=False):
+    def diff(self, m2, match=None, clean=False):
         '''Finds changes between the current manifest and m2.
 
         Args:
@@ -538,6 +542,10 @@ class manifestdict(object):
         the nodeid will be None and the flags will be the empty
         string.
         '''
+        if match:
+            m1 = self.matches(match)
+            m2 = m2.matches(match)
+            return m1.diff(m2, clean=clean)
         return self._lm.diff(m2._lm, clean)
 
     def setflag(self, key, flag):
@@ -906,8 +914,13 @@ class treemanifest(object):
             copy._copyfunc = self._copyfunc
         return copy
 
-    def filesnotin(self, m2):
+    def filesnotin(self, m2, match=None):
         '''Set of files in this manifest that are not in the other'''
+        if match:
+            m1 = self.matches(match)
+            m2 = m2.matches(match)
+            return m1.filesnotin(m2)
+
         files = set()
         def _filesnotin(t1, t2):
             if t1._node == t2._node and not t1._dirty and not t2._dirty:
@@ -1025,7 +1038,7 @@ class treemanifest(object):
             ret._dirty = True
         return ret
 
-    def diff(self, m2, clean=False):
+    def diff(self, m2, match=None, clean=False):
         '''Finds changes between the current manifest and m2.
 
         Args:
@@ -1040,6 +1053,10 @@ class treemanifest(object):
         the nodeid will be None and the flags will be the empty
         string.
         '''
+        if match:
+            m1 = self.matches(match)
+            m2 = m2.matches(match)
+            return m1.diff(m2, clean=clean)
         result = {}
         emptytree = treemanifest()
         def _diff(t1, t2):
