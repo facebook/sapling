@@ -159,6 +159,31 @@ class rebaseruntime(object):
         self.keepopen = opts.get('keepopen', False)
         self.obsoletenotrebased = {}
 
+    def storestatus(self):
+        """Store the current status to allow recovery"""
+        repo = self.repo
+        f = repo.vfs("rebasestate", "w")
+        f.write(repo[self.originalwd].hex() + '\n')
+        f.write(repo[self.target].hex() + '\n')
+        f.write(repo[self.external].hex() + '\n')
+        f.write('%d\n' % int(self.collapsef))
+        f.write('%d\n' % int(self.keepf))
+        f.write('%d\n' % int(self.keepbranchesf))
+        f.write('%s\n' % (self.activebookmark or ''))
+        for d, v in self.state.iteritems():
+            oldrev = repo[d].hex()
+            if v >= 0:
+                newrev = repo[v].hex()
+            elif v == revtodo:
+                # To maintain format compatibility, we have to use nullid.
+                # Please do remove this special case when upgrading the format.
+                newrev = hex(nullid)
+            else:
+                newrev = v
+            f.write("%s:%s\n" % (oldrev, newrev))
+        f.close()
+        repo.ui.debug('rebase status stored\n')
+
     def restorestatus(self):
         """Restore a previously stored status"""
         repo = self.repo
@@ -358,10 +383,7 @@ class rebaseruntime(object):
                                              self.state,
                                              self.targetancestors,
                                              self.obsoletenotrebased)
-                storestatus(repo, self.originalwd, self.target,
-                            self.state, self.collapsef, self.keepf,
-                            self.keepbranchesf, self.external,
-                            self.activebookmark)
+                self.storestatus()
                 storecollapsemsg(repo, self.collapsemsg)
                 if len(repo[None].parents()) == 2:
                     repo.ui.debug('resuming interrupted rebase\n')
@@ -1075,31 +1097,6 @@ def restorecollapsemsg(repo):
             raise
         raise error.Abort(_('no rebase in progress'))
     return collapsemsg
-
-def storestatus(repo, originalwd, target, state, collapse, keep, keepbranches,
-                external, activebookmark):
-    'Store the current status to allow recovery'
-    f = repo.vfs("rebasestate", "w")
-    f.write(repo[originalwd].hex() + '\n')
-    f.write(repo[target].hex() + '\n')
-    f.write(repo[external].hex() + '\n')
-    f.write('%d\n' % int(collapse))
-    f.write('%d\n' % int(keep))
-    f.write('%d\n' % int(keepbranches))
-    f.write('%s\n' % (activebookmark or ''))
-    for d, v in state.iteritems():
-        oldrev = repo[d].hex()
-        if v >= 0:
-            newrev = repo[v].hex()
-        elif v == revtodo:
-            # To maintain format compatibility, we have to use nullid.
-            # Please do remove this special case when upgrading the format.
-            newrev = hex(nullid)
-        else:
-            newrev = v
-        f.write("%s:%s\n" % (oldrev, newrev))
-    f.close()
-    repo.ui.debug('rebase status stored\n')
 
 def clearstatus(repo):
     'Remove the status files'
