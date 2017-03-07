@@ -23,6 +23,7 @@ from .node import (
     nullrev,
     short,
     wdirid,
+    wdirnodes,
 )
 from . import (
     encoding,
@@ -140,7 +141,7 @@ class basectx(object):
                 removed.append(fn)
             elif flag1 != flag2:
                 modified.append(fn)
-            elif node2 != newnodeid:
+            elif node2 not in wdirnodes:
                 # When comparing files between two commits, we save time by
                 # not comparing the file contents when the nodeids differ.
                 # Note that this means we incorrectly report a reverted change
