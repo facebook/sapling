@@ -295,8 +295,8 @@ File conflict is not allowed
   $ hg up -qC 3
   $ echo dirty >> a
   $ hg up -q 4
-  abort: uncommitted changes
-  (commit or update --merge to allow merge)
+  abort: conflicting changes
+  (commit or update --clean to discard changes)
   [255]
   $ hg up -m 4
   merging a

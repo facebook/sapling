@@ -1602,8 +1602,8 @@ def update(repo, node, branchmerge, force, ancestor=None,
         if updatecheck == 'noconflict':
             for f, (m, args, msg) in actionbyfile.iteritems():
                 if m not in ('g', 'k', 'r'):
-                    msg = _("uncommitted changes")
-                    hint = _("commit or update --merge to allow merge")
+                    msg = _("conflicting changes")
+                    hint = _("commit or update --clean to discard changes")
                     raise error.Abort(msg, hint=hint)
 
         # Prompt and create actions. Most of this is in the resolve phase
