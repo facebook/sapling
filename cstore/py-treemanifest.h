@@ -30,6 +30,49 @@ struct py_treemanifest {
   treemanifest tm;
 };
 
+struct py_newtreeiter {
+  PyObject_HEAD;
+
+  NewTreeIterator iter;
+
+  py_treemanifest *treemf;
+};
+
+static void newtreeiter_dealloc(py_newtreeiter *self);
+static PyObject* newtreeiter_iternext(py_newtreeiter *self);
+static PyTypeObject newtreeiterType = {
+  PyObject_HEAD_INIT(NULL)
+  0,                               /*ob_size */
+  "treemanifest.newtreeiter",      /*tp_name */
+  sizeof(py_newtreeiter),          /*tp_basicsize */
+  0,                               /*tp_itemsize */
+  (destructor)newtreeiter_dealloc, /*tp_dealloc */
+  0,                               /*tp_print */
+  0,                               /*tp_getattr */
+  0,                               /*tp_setattr */
+  0,                               /*tp_compare */
+  0,                               /*tp_repr */
+  0,                               /*tp_as_number */
+  0,                               /*tp_as_sequence */
+  0,                               /*tp_as_mapping */
+  0,                               /*tp_hash */
+  0,                               /*tp_call */
+  0,                               /*tp_str */
+  0,                               /*tp_getattro */
+  0,                               /*tp_setattro */
+  0,                               /*tp_as_buffer */
+  /* tp_flags: Py_TPFLAGS_HAVE_ITER tells python to
+     use tp_iter and tp_iternext fields. */
+  Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_ITER,
+  "TODO",                          /* tp_doc */
+  0,                               /* tp_traverse */
+  0,                               /* tp_clear */
+  0,                               /* tp_richcompare */
+  0,                               /* tp_weaklistoffset */
+  PyObject_SelfIter,               /* tp_iter: __iter__() method */
+  (iternextfunc)newtreeiter_iternext, /* tp_iternext: next() method */
+};
+
 /**
  * The python iteration object for iterating over a tree.  This is separate from
  * the fileiter above because it lets us just call the constructor on
@@ -123,6 +166,86 @@ static py_fileiter *createfileiter(py_treemanifest *pytm,
       includeflag,
       true,                       // we care about sort order.
       PythonObj());
+}
+
+// ==== py_newtreeiter functions ====
+
+/**
+ * Destructor for the newtree iterator. Cleans up all the member data of the
+ * iterator.
+ */
+static void newtreeiter_dealloc(py_newtreeiter *self) {
+  self->iter.~NewTreeIterator();
+  Py_XDECREF(self->treemf);
+  PyObject_Del(self);
+}
+
+static py_newtreeiter *newtreeiter_create(py_treemanifest *treemf, Manifest *mainManifest,
+                                       const std::vector<char*> &cmpNodes,
+                                       const std::vector<Manifest*> &cmpManifests,
+                                       const ManifestFetcher &fetcher) {
+  py_newtreeiter *i = PyObject_New(py_newtreeiter, &newtreeiterType);
+  if (i) {
+    try {
+      i->treemf = treemf;
+      Py_INCREF(treemf);
+
+      // The provided created struct hasn't initialized our iter member, so
+      // we do it manually.
+      new (&i->iter) NewTreeIterator(mainManifest, cmpNodes, cmpManifests, fetcher);
+      return i;
+    } catch (const pyexception &ex) {
+      Py_DECREF(i);
+      return NULL;
+    } catch (const std::exception &ex) {
+      Py_DECREF(i);
+      PyErr_SetString(PyExc_RuntimeError, ex.what());
+      return NULL;
+    }
+  } else {
+    return NULL;
+  }
+}
+
+/**
+ * Returns the next new tree. If it's the final root node, it marks the tree as
+ * complete and immutable.
+ */
+static PyObject *newtreeiter_iternext(py_newtreeiter *self) {
+  NewTreeIterator &iterator = self->iter;
+
+  std::string *path = NULL;
+  ManifestNode *result = NULL;
+  ManifestNode *p1 = NULL;
+  ManifestNode *p2 = NULL;
+  std::string raw;
+  std::string p1raw;
+  while (iterator.next(&path, &result, &p1, &p2)) {
+    result->manifest->serialize(raw);
+
+    if (memcmp(p1->node, NULLID, BIN_NODE_SIZE) == 0) {
+      p1raw.erase();
+    } else {
+      p1->manifest->serialize(p1raw);
+    }
+
+    if (path->size() == 0) {
+      // Record the root hash. This marks the tree as final and immutable.
+      std::string hexnode;
+      hexfrombin(result->node, hexnode);
+      self->treemf->tm.root.update(hexnode.c_str(), MANIFEST_DIRECTORY_FLAGPTR);
+    }
+
+    return Py_BuildValue("(s#s#s#s#s#s#)",
+                         path->c_str(), (Py_ssize_t)path->size(),
+                         result->node, (Py_ssize_t)BIN_NODE_SIZE,
+                         raw.c_str(), (Py_ssize_t)raw.size(),
+                         p1raw.c_str(), (Py_ssize_t)p1raw.size(),
+                         p1->node, (Py_ssize_t)BIN_NODE_SIZE,
+                         p2->node, (Py_ssize_t)BIN_NODE_SIZE);
+  }
+
+  return NULL;
 }
 
 // ==== treemanifest functions ====
@@ -1176,6 +1299,39 @@ static PyObject *treemanifest_write(py_treemanifest *self, PyObject *args,
   }
 }
 
+static PyObject *treemanifest_finalize(py_treemanifest *self, PyObject *args,
+                                       PyObject *kwargs) {
+  PyObject *p1treeObj = NULL;
+
+  static char const *kwlist[] = {"p1tree", NULL};
+
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|O", (char**)kwlist,
+                                   &p1treeObj)) {
+    return NULL;
+  }
+
+  py_treemanifest *p1tree = NULL;
+  if (p1treeObj && p1treeObj != Py_None) {
+    p1tree = (py_treemanifest*)p1treeObj;
+  }
+
+  try {
+    std::vector<char*> cmpNodes;
+    std::vector<Manifest*> cmpManifests;
+    if (p1tree) {
+      assert(p1tree->tm.root.node);
+      cmpNodes.push_back(p1tree->tm.root.node);
+      cmpManifests.push_back(p1tree->tm.getRootManifest());
+    }
+
+    return (PyObject*)newtreeiter_create(self, self->tm.getRootManifest(),
+                                         cmpNodes, cmpManifests,
+                                         self->tm.fetcher);
+  } catch (const pyexception &ex) {
+    return NULL;
+  }
+}
+
 static int treemanifest_nonzero(py_treemanifest *self) {
   try {
     if (self->tm.getRootManifest()->children() > 0) {
@@ -1222,6 +1378,9 @@ static PyMethodDef treemanifest_methods[] = {
     "returns a iterator for walking the manifest"},
   {"write", (PyCFunction)treemanifest_write, METH_VARARGS|METH_KEYWORDS,
     "writes any pending tree changes to the given store"},
+  {"finalize", (PyCFunction)treemanifest_finalize, METH_VARARGS|METH_KEYWORDS,
+    "Returns an iterator that outputs each piece of the tree that is new."
+    "When the iterator completes, the tree is marked as immutable."},
   {NULL, NULL}
 };
 
