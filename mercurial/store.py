@@ -101,7 +101,7 @@ def _buildencodefun():
     e = '_'
     if pycompat.ispy3:
         xchr = lambda x: bytes([x])
-        asciistr = [bytes(a) for a in range(127)]
+        asciistr = [bytes([a]) for a in range(127)]
     else:
         xchr = chr
         asciistr = map(chr, xrange(127))
@@ -128,7 +128,7 @@ def _buildencodefun():
                     pass
             else:
                 raise KeyError
-    return (lambda s: ''.join([cmap[c] for c in s]),
+    return (lambda s: ''.join([cmap[s[c:c + 1]] for c in xrange(len(s))]),
             lambda s: ''.join(list(decode(s))))
 
 _encodefname, _decodefname = _buildencodefun()
