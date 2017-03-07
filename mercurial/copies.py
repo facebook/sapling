@@ -149,10 +149,7 @@ def _computeforwardmissing(a, b, match=None):
     """
     ma = a.manifest()
     mb = b.manifest()
-    if match:
-        ma = ma.matches(match)
-        mb = mb.matches(match)
-    return mb.filesnotin(ma)
+    return mb.filesnotin(ma, match=match)
 
 def _forwardcopies(a, b, match=None):
     '''find {dst@b: src@a} copy mapping where a is an ancestor of b'''
