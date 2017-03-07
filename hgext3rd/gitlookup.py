@@ -107,7 +107,7 @@ def _getbundlegitmetapart(bundler, repo, source, bundlecaps=None, **kwargs):
     if 'fb_gitmeta' in bundlecaps:
         for fname in sorted(gitmetafiles):
             try:
-                f = repo.opener(fname)
+                f = repo.vfs(fname)
             except (IOError, OSError) as e:
                 if e.errno != errno.ENOENT:
                     repo.ui.warn(_("warning: unable to read %s: %s\n") %
@@ -130,7 +130,7 @@ def bundle2getgitmeta(op, part):
         op.repo.ui.warn(_("warning: gitmeta: unknown file '%s' skipped\n")
                         % fname)
         return
-    f = op.repo.opener(fname, 'w+', atomictemp=True)
+    f = op.repo.vfs(fname, 'w+', atomictemp=True)
     try:
         data = part.read()
         op.repo.ui.note(_('writing .hg/%s\n') % fname)
