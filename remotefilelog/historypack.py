@@ -220,7 +220,6 @@ class historypack(basepack.basepack):
             # <2 byte len> + <filename>
             filenamelen = struct.unpack('!H', data[offset:offset +
                                                    constants.FILENAMESIZE])[0]
-            assert (filenamelen > 0)
             offset += constants.FILENAMESIZE
             filename = data[offset:offset + filenamelen]
             offset += filenamelen
@@ -318,7 +317,7 @@ class mutablehistorypack(basepack.mutablebasepack):
             if filename in self.pastfiles:
                 raise RuntimeError("cannot add file node after another file's "
                                    "nodes have been added")
-            if self.currentfile:
+            if self.currentfile is not None:
                 self._writependingsection()
 
             self.currentfile = filename
@@ -355,7 +354,7 @@ class mutablehistorypack(basepack.mutablebasepack):
         if self._closed:
             return
 
-        if self.currentfile:
+        if self.currentfile is not None:
             self._writependingsection()
 
         return super(mutablehistorypack, self).close(ledger=ledger)
