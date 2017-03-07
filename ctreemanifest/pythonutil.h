@@ -22,6 +22,7 @@
 
 #include "../cstore/store.h"
 #include "../cstore/key.h"
+#include "../cstore/match.h"
 
 /**
  * C++ exception that represents an issue at the python C api level.
@@ -55,6 +56,8 @@ class PythonObj {
     PythonObj& operator=(const PythonObj &other);
 
     operator PyObject* () const;
+
+    operator bool() const;
 
     /**
      * Function used to obtain a return value that will persist beyond the life
@@ -91,6 +94,20 @@ class PythonStore : public Store {
     virtual ~PythonStore() {}
 
     ConstantStringRef get(const Key &key);
+};
+
+class PythonMatcher : public Matcher {
+  private:
+    PythonObj _matcherObj;
+  public:
+    PythonMatcher(PythonObj matcher) :
+      _matcherObj(matcher) {}
+
+    virtual ~PythonMatcher() {}
+
+    bool matches(const std::string &path);
+    bool matches(const char *path, const size_t pathlen);
+    bool visitdir(const std::string &path);
 };
 
 #endif //REMOTEFILELOG_PYTHONOBJ_H

@@ -18,6 +18,7 @@
 
 #include "manifest.h"
 #include "manifest_fetcher.h"
+#include "../cstore/match.h"
 
 enum FindResult {
   FIND_PATH_OK,
@@ -293,7 +294,7 @@ struct fileiter {
   bool sorted;                  // enable mercurial sorting?
 
   // If provided, the given matcher filters the results by path
-  PythonObj matcher;
+  std::shared_ptr<Matcher> matcher;
 
   fileiter(treemanifest &tm, bool sorted) :
       fetcher(tm.fetcher),

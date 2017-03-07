@@ -44,6 +44,10 @@ PythonObj::operator PyObject* () const {
   return this->obj;
 }
 
+PythonObj::operator bool() const {
+  return this->obj != NULL;
+}
+
 /**
  * Function used to obtain a return value that will persist beyond the life
  * of the PythonObj. This is useful for returning objects to Python C apis
@@ -115,4 +119,22 @@ ConstantStringRef PythonStore::get(const Key &key) {
   char *buffer = new char[pathlen];
   memcpy(buffer, path, pathlen);
   return ConstantStringRef(buffer, pathlen);
+}
+
+bool PythonMatcher::matches(const std::string &path) {
+  PythonObj matchArgs = Py_BuildValue("(s#)", path.c_str(), (Py_ssize_t)path.size());
+  PythonObj matched = this->_matcherObj.call(matchArgs);
+  return PyObject_IsTrue(matched) == 1;
+}
+
+bool PythonMatcher::matches(const char *path, const size_t pathlen) {
+  PythonObj matchArgs = Py_BuildValue("(s#)", path, (Py_ssize_t)pathlen);
+  PythonObj matched = this->_matcherObj.call(matchArgs);
+  return PyObject_IsTrue(matched) == 1;
+}
+
+bool PythonMatcher::visitdir(const std::string &path) {
+  PythonObj matchArgs = Py_BuildValue("(s#)", path.c_str(), (Py_ssize_t)path.size());
+  PythonObj matched = this->_matcherObj.callmethod("visitdir", matchArgs);
+  return PyObject_IsTrue(matched) == 1;
 }

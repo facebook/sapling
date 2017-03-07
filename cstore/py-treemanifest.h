@@ -142,7 +142,9 @@ static py_fileiter *createfileiter(py_treemanifest *pytm,
       // The provided py_fileiter struct hasn't initialized our fileiter member, so
       // we do it manually.
       new (&i->iter) fileiter(pytm->tm, sorted);
-      i->iter.matcher = matcher;
+      if (matcher) {
+        i->iter.matcher = std::make_shared<PythonMatcher>(matcher);
+      }
       return i;
     } catch (const pyexception &ex) {
       Py_DECREF(i);
@@ -670,13 +672,9 @@ static bool fileiter_next(fileiter &iter, char *path, size_t pathcapacity,
       iter.path.append(entry->filename, entry->filenamelen);
 
       // Check if we should visit the directory
-      if ((PyObject*)iter.matcher) {
-        PythonObj matchArgs = Py_BuildValue("(s#)", iter.path.c_str(), (Py_ssize_t)iter.path.size());
-        PythonObj matched = iter.matcher.callmethod("visitdir", matchArgs);
-        if (!PyObject_IsTrue(matched)) {
-          iter.path.erase(iter.path.size() - entry->filenamelen);
-          continue;
-        }
+      if (iter.matcher && !iter.matcher->visitdir(iter.path)) {
+        iter.path.erase(iter.path.size() - entry->filenamelen);
+        continue;
       }
 
       iter.path.append(1, '/');
@@ -698,12 +696,8 @@ static bool fileiter_next(fileiter &iter, char *path, size_t pathcapacity,
       size_t pathlen = iter.path.size() + entry->filenamelen;
       path[pathlen] = '\0';
 
-      if ((PyObject*)iter.matcher) {
-        PythonObj matchArgs = Py_BuildValue("(s#)", path, pathlen);
-        PythonObj matched = iter.matcher.call(matchArgs);
-        if (!PyObject_IsTrue(matched)) {
-          continue;
-        }
+      if (iter.matcher && !iter.matcher->matches(path, pathlen)) {
+        continue;
       }
 
       std::string binnode = binfromhex(entry->node);
@@ -1009,7 +1003,9 @@ static PyObject *treemanifest_matches(py_treemanifest *self, PyObject *args) {
     PythonObj result = manifestdict.call(emptyargs);
 
     fileiter iter = fileiter(self->tm, false);
-    iter.matcher = matcher;
+    if (matcher) {
+      iter.matcher = std::make_shared<PythonMatcher>(matcher);
+    }
 
     char path[FILENAME_BUFFER_SIZE];
     char node[BIN_NODE_SIZE];
