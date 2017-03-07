@@ -143,6 +143,30 @@ def restore(ui, repo, dest=None, **opts):
 
     return result
 
+@command('debugcheckbackup', restoreoptions)
+def checkbackup(ui, repo, dest=None, **opts):
+    """
+    Checks that all the nodes that backup needs are available in bundlestore
+    """
+    other = _getremote(repo, ui, dest, **opts)
+
+    sourcereporoot = opts.get('reporoot')
+    sourcehostname = opts.get('hostname')
+    username = opts.get('user') or ui.shortuser(ui.username())
+
+    result = _getbackupstate(ui, other, sourcereporoot,
+                             sourcehostname, username)
+    reporoots, hostnames, nodestopull, localbookmarks = result
+    _checkrestorehostsreporoots(hostnames, reporoots)
+    batch = other.iterbatch()
+    for hexnode in list(nodestopull) + localbookmarks.values():
+        batch.lookup(hexnode)
+    batch.submit()
+    lookupresults = batch.results()
+    for r in lookupresults:
+        # iterate over results to make it throw if revision was not found
+        pass
+
 _backupedstatefile = 'infinitepushlastbackupedstate'
 
 # Common helper functions

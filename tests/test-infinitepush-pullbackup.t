@@ -196,3 +196,10 @@ Make sure commit was pulled by checking that commit is present
   $ hg pullbackup --user anotheruser --reporoot $TESTTMP/backupsource > /dev/null
   $ hg log -r tip -T '{node}\n'
   e0230a60975b38a9014f098fb973199efd25c46f
+
+Test debugcheckbackup
+  $ hg debugcheckbackup --user anotheruser --reporoot $TESTTMP/backupsource
+  $ rm ../repo/.hg/scratchbranches/index/nodemap/e0230a60975b38a9014f098fb973199efd25c46f
+  $ hg debugcheckbackup --user anotheruser --reporoot $TESTTMP/backupsource
+  abort: unknown revision 'e0230a60975b38a9014f098fb973199efd25c46f'!
+  [255]
