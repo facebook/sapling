@@ -217,10 +217,10 @@ def _clonesparsecmd(orig, ui, repo, *args, **opts):
     if sum([include, exclude, enableprofile]) > 1:
         raise error.Abort(_("too many flags specified."))
     if include or exclude or enableprofile:
-        def clone_sparse(orig, self, node, overwrite):
+        def clone_sparse(orig, self, node, overwrite, *args, **kwargs):
             _config(self.ui, self.unfiltered(), pat, include=include,
                     exclude=exclude, enableprofile=enableprofile)
-            return orig(self, node, overwrite)
+            return orig(self, node, overwrite, *args, **kwargs)
         extensions.wrapfunction(hg, 'updaterepo', clone_sparse)
     return orig(ui, repo, *args, **opts)
 
