@@ -1,3 +1,5 @@
+include_defs('//eden/DEFS')
+
 cpp_unittest(
   name = 'test',
   srcs = glob(['*Test.cpp']),
@@ -14,17 +16,22 @@ cpp_unittest(
   ],
 )
 
-cpp_benchmark(
-  name = 'benchmark',
-  srcs = glob(['*Benchmark.cpp']),
-  deps = [
-    '@/eden/fs/model/git:glob',
-    '@/folly:benchmark',
-    '@/folly:folly',
-    '@/folly/init:init',
-    '@/watchman/thirdparty/wildmatch:wildmatch',
-  ],
-  external_deps = [
-    ('re2', None),
-  ],
-)
+# This cpp_benchmark() rule depends on a library watchman.
+# We disable it on non-Facebook internal builds, just so that the open source
+# build doesn't depend on watchman.  This is the only thing that requires
+# watchman.
+if is_facebook_internal():
+  cpp_benchmark(
+    name = 'benchmark',
+    srcs = glob(['*Benchmark.cpp']),
+    deps = [
+      '@/eden/fs/model/git:glob',
+      '@/folly:benchmark',
+      '@/folly:folly',
+      '@/folly/init:init',
+      '@/watchman/thirdparty/wildmatch:wildmatch',
+    ],
+    external_deps = [
+      ('re2', None),
+    ],
+  )

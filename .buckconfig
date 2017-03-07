@@ -11,4 +11,17 @@
 [codebase]
   mode = public
 
-# TODO: Add a [thrift] section with the necessary tools in the toolchain.
+[thrift]
+  compiler = external/thrift.sh
+  cpp2_library = //external:thriftcpp2
+  cpp_reflection_library = //external:thriftcpp2
+  python_library = //external:thriftpy
+
+[cxx]
+  gtest_dep = //external:gtest_main
+  cache_links = false
+  # TODO: It would be nice to fix the code so we can drop
+  # -Wno-unused-variable and -Wno-sign-compare
+  cxxflags = -std=gnu++1z -g -Werror -Wall \
+    -Wno-unused-parameter -Wno-unused-variable -Wno-sign-compare \
+    -Wno-unused-but-set-variable

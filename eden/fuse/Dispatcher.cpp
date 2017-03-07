@@ -165,7 +165,7 @@ static void disp_forget(fuse_req_t req, fuse_ino_t ino, unsigned long nlookup) {
           .then([]() { RequestData::get().replyNone(); }));
 }
 
-#if FUSE_MINOR_VERSION >= 9
+#if FUSE_MAJOR_VERSION == 2 && FUSE_MINOR_VERSION >= 9
 static void
 disp_forget_multi(fuse_req_t req, size_t count, fuse_forget_data* forgets) {
   auto& request = RequestData::create(req);
@@ -955,12 +955,16 @@ static const fuse_lowlevel_ops dispatcher_ops = {
     .getlk = disp_getlk,
     .setlk = disp_setlk,
     .bmap = disp_bmap,
-#if FUSE_MINOR_VERSION >= 8
+#if FUSE_MAJOR_VERSION == 2 && FUSE_MINOR_VERSION >= 8
     .ioctl = disp_ioctl,
     .poll = disp_poll,
 #endif
-#if FUSE_MINOR_VERSION >= 9
+#if FUSE_MAJOR_VERSION == 2 && FUSE_MINOR_VERSION >= 9
+    .write_buf = nullptr,
+    .retrieve_reply = nullptr,
     .forget_multi = disp_forget_multi,
+    .flock = nullptr,
+    .fallocate = nullptr,
 #endif
 };
 
