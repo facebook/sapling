@@ -159,10 +159,17 @@ class rebaseruntime(object):
         self.keepopen = opts.get('keepopen', False)
         self.obsoletenotrebased = {}
 
-    def storestatus(self):
+    def storestatus(self, tr=None):
         """Store the current status to allow recovery"""
+        if tr:
+            tr.addfilegenerator('rebasestate', ('rebasestate',),
+                                self._writestatus, location='plain')
+        else:
+            with self.repo.vfs("rebasestate", "w") as f:
+                self._writestatus(f)
+
+    def _writestatus(self, f):
         repo = self.repo
-        f = repo.vfs("rebasestate", "w")
         f.write(repo[self.originalwd].hex() + '\n')
         f.write(repo[self.target].hex() + '\n')
         f.write(repo[self.external].hex() + '\n')
@@ -181,7 +188,6 @@ class rebaseruntime(object):
             else:
                 newrev = v
             f.write("%s:%s\n" % (oldrev, newrev))
-        f.close()
         repo.ui.debug('rebase status stored\n')
 
     def restorestatus(self):
