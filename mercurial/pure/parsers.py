@@ -14,6 +14,9 @@ from .node import nullid
 from . import pycompat
 stringio = pycompat.stringio
 
+if pycompat.ispy3:
+    long = int
+
 _pack = struct.pack
 _unpack = struct.unpack
 _compress = zlib.compress
