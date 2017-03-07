@@ -3,10 +3,19 @@
 """upload useful diagnostics and give instructions for asking for help"""
 
 from mercurial.i18n import _
-from mercurial import cmdutil, util, commands, bookmarks, encoding, error
+from mercurial import (
+    cmdutil,
+    bookmarks,
+    commands,
+    debugcommands,
+    encoding,
+    error,
+    util,
+)
 from mercurial import pycompat, scmutil
 from hgext import blackbox
 from hgext3rd import (
+    debuginhibit,
     smartlog,
     sparse,
 )
@@ -96,7 +105,7 @@ def obsoleteinfo(repo, hgcmd):
     unfi = repo.unfiltered()
     revs = scmutil.revrange(unfi, ["smartlog()"])
     hashes = '|'.join(unfi[rev].hex() for rev in revs)
-    markers = hgcmd(commands.debugobsolete, rev=[])
+    markers = hgcmd(debugcommands.debugobsolete, rev=[])
     pat = re.compile('(^.*(?:'+hashes+').*$)', re.MULTILINE)
     relevant = pat.findall(markers)
     return "\n".join(relevant)
@@ -173,8 +182,11 @@ def rage(ui, repo, *pats, **opts):
 
     detailed = [
         ('df -h', _failsafe(lambda: shcmd('df -h', check=False))),
+        # smartlog as the user sees it
+        ('hg sl (filtered)', _failsafe(lambda: hgcmd(
+            smartlog.smartlog, template='{hsl}'))),
         # unfiltered smartlog for recent hidden changesets
-        ('hg sl', _failsafe(lambda: hgcmd(
+        ('hg sl (unfiltered)', _failsafe(lambda: hgcmd(
             smartlog.smartlog, _repo=repo.unfiltered(), template='{hsl}'))),
         ('first 20 lines of "hg status"',
             _failsafe(lambda:
@@ -198,6 +210,8 @@ def rage(ui, repo, *pats, **opts):
                           '--getinfo', check=False))),
         ('hg debugobsolete <smartlog>',
             _failsafe(lambda: obsoleteinfo(repo, hgcmd))),
+        ('hg debuginhibit',
+            _failsafe(lambda: hgcmd(debuginhibit.debuginhibit))),
         ('hg config (all)', _failsafe(lambda: hgcmd(commands.config))),
     ]
 
