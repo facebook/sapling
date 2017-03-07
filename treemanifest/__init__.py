@@ -167,6 +167,7 @@ def recordmanifest(datapack, historypack, repo, oldtip, newtip):
         if name in repo:
             allowedtreeroots.add(repo[name].manifestnode())
 
+    includedentries = set()
     historyentries = {}
     for rev in xrange(oldtip, newtip):
         ui.progress(message, rev - oldtip, total=total)
@@ -200,6 +201,7 @@ def recordmanifest(datapack, historypack, repo, oldtip, newtip):
                 # already a tree.
                 tempdatapack.add(nname, nnode, nullid, ntext)
                 temphistorypack.add(nname, nnode, np1, np2, p1linknode, '')
+                includedentries.add((nname, nnode))
 
             builttrees[p1node] = origtree
 
@@ -274,12 +276,16 @@ def recordmanifest(datapack, historypack, repo, oldtip, newtip):
                                                         p1node)
         newtreeiter = newtree.finalize(origtree if p1node != nullid else None)
         for nname, nnode, ntext, np1text, np1, np2 in newtreeiter:
-            if np1 != nullid:
+            # Only use deltas if the delta base is in this same pack file
+            if np1 != nullid and (nname, np1) in includedentries:
                 delta = mdiff.textdiff(np1text, ntext)
+                deltabase = np1
             else:
                 delta = ntext
-            tempdatapack.add(nname, nnode, np1, delta)
+                deltabase = nullid
+            tempdatapack.add(nname, nnode, deltabase, delta)
             temphistorypack.add(nname, nnode, np1, np2, linknode, '')
+            includedentries.add((nname, nnode))
 
         for entry in temphistorypack.entries:
             filename, values = entry[0], entry[1:]

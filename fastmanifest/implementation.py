@@ -1004,11 +1004,9 @@ class manifestfactory(object):
                         node, p1)
                 newtreeiter = newtree.finalize(tree)
                 for nname, nnode, ntext, np1text, np1, np2 in newtreeiter:
-                    if np1 != revlog.nullid:
-                        delta = mdiff.textdiff(np1text, ntext)
-                    else:
-                        delta = ntext
-                    dpack.add(nname, nnode, np1, delta)
+                    # Not using deltas, since there aren't any other trees in
+                    # this pack it could delta against.
+                    dpack.add(nname, nnode, revlog.nullid, ntext)
                     hpack.add(nname, nnode, np1, np2, revlog.nullid, '')
 
                 treemanifestcache.getinstance(origself.opener,

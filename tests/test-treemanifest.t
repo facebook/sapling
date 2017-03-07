@@ -79,17 +79,17 @@ Test that commit creates local trees
   $ hg commit -qAm 'modify subdir/z'
   $ ls -l .hg/store/packs/manifests
   * (glob)
-  * 1106 * 1dd1aee1963db4b1c6cd63c0d5a9cbec352481a9.dataidx (glob)
-  * 230 * 1dd1aee1963db4b1c6cd63c0d5a9cbec352481a9.datapack (glob)
-  $ hg debugdatapack .hg/store/packs/manifests/1dd1aee1963db4b1c6cd63c0d5a9cbec352481a9
+  * 1106 * 5ae421f7ddd38490fe5bb8fb379861746c7377d4.dataidx (glob)
+  *  255 * 5ae421f7ddd38490fe5bb8fb379861746c7377d4.datapack (glob)
+  $ hg debugdatapack .hg/store/packs/manifests/5ae421f7ddd38490fe5bb8fb379861746c7377d4
   
   subdir/
   Node          Delta Base    Delta Length
-  ac728a786423  ddb35f099a64  55
+  ac728a786423  000000000000  43
   
   
   Node          Delta Base    Delta Length
-  7a911436836f  70f2c6726cec  61
+  7a911436836f  000000000000  92
 
 Test that manifest matchers work
   $ hg status --rev 1 --rev 2 -I subdir/a
