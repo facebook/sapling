@@ -288,11 +288,8 @@ Locally added file is allowed
 
 Locally removed file is allowed
   $ hg up -qC 3
-  $ hg rm a
+  $ hg rm foo
   $ hg up -q 4
-  abort: uncommitted changes
-  (commit or update --merge to allow merge)
-  [255]
 
 File conflict is not allowed
   $ hg up -qC 3
