@@ -69,7 +69,8 @@ if ispy3:
     #
     # TODO: On Windows, the native argv is wchar_t, so we'll need a different
     # workaround to simulate the Python 2 (i.e. ANSI Win32 API) behavior.
-    sysargv = list(map(os.fsencode, sys.argv))
+    if getattr(sys, 'argv', None) is not None:
+        sysargv = list(map(os.fsencode, sys.argv))
 
     def sysstr(s):
         """Return a keyword str to be passed to Python functions such as
@@ -165,7 +166,8 @@ else:
     stdin = sys.stdin
     stdout = sys.stdout
     stderr = sys.stderr
-    sysargv = sys.argv
+    if getattr(sys, 'argv', None) is not None:
+        sysargv = sys.argv
     sysplatform = sys.platform
     getcwd = os.getcwd
     sysexecutable = sys.executable
