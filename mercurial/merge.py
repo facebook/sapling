@@ -27,6 +27,7 @@ from . import (
     copies,
     error,
     filemerge,
+    match as matchmod,
     obsolete,
     pycompat,
     scmutil,
@@ -818,11 +819,10 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, matcher,
         if any(wctx.sub(s).dirty() for s in wctx.substate):
             m1['.hgsubstate'] = modifiednodeid
 
-    # Compare manifests
-    if matcher is not None:
-        m1 = m1.matches(matcher)
-        m2 = m2.matches(matcher)
-    diff = m1.diff(m2)
+    diff = m1.diff(m2, match=matcher)
+
+    if matcher is None:
+        matcher = matchmod.always('', '')
 
     actions = {}
     for f, ((n1, fl1), (n2, fl2)) in diff.iteritems():
@@ -858,7 +858,7 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, matcher,
                 pass # we'll deal with it on m2 side
             elif f in movewithdir: # directory rename, move local
                 f2 = movewithdir[f]
-                if f2 in m2:
+                if matcher(f2) and f2 in m2:
                     actions[f2] = ('m', (f, f2, None, True, pa.node()),
                                    "remote directory rename, both created")
                 else:
@@ -887,7 +887,7 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, matcher,
                 pass # we'll deal with it on m1 side
             elif f in movewithdir:
                 f2 = movewithdir[f]
-                if f2 in m1:
+                if matcher(f2) and f2 in m1:
                     actions[f2] = ('m', (f2, f, None, False, pa.node()),
                                    "local directory rename, both created")
                 else:
@@ -895,7 +895,7 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, matcher,
                                    "local directory rename - get from " + f)
             elif f in copy:
                 f2 = copy[f]
-                if f2 in m2:
+                if matcher(f2) and f2 in m2:
                     actions[f] = ('m', (f2, f, f2, False, pa.node()),
                                   "remote copied from " + f2)
                 else:
@@ -927,7 +927,7 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, matcher,
                         # new file added in a directory that was moved
                         df = dirmove[d] + f[len(d):]
                         break
-                if df in m1:
+                if matcher(df) and df in m1:
                     actions[df] = ('m', (df, f, f, False, pa.node()),
                             "local directory rename - respect move from " + f)
                 elif acceptremote:
