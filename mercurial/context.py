@@ -117,10 +117,12 @@ class basectx(object):
         # 1000 and cache it so that when you read 1001, we just need to apply a
         # delta to what's in the cache. So that's one full reconstruction + one
         # delta application.
+        mf2 = None
         if self.rev() is not None and self.rev() < other.rev():
-            self.manifest()
+            mf2 = self._manifestmatches(match, s)
         mf1 = other._manifestmatches(match, s)
-        mf2 = self._manifestmatches(match, s)
+        if mf2 is None:
+            mf2 = self._manifestmatches(match, s)
 
         modified, added = [], []
         removed = []
