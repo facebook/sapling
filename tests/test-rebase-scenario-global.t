@@ -272,7 +272,8 @@ G onto B - merge revision with both parents not in ancestors of target:
   rebasing 6:eea13746799a "G"
   abort: cannot use revision 6 as base, result would have 3 parents
   [255]
-
+  $ hg rebase --abort
+  rebase aborted
 
 These will abort gracefully (using --base):
 

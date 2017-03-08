@@ -218,6 +218,7 @@ Check that the right ancestors is used while rebasing a merge (issue4041)
   
   $ hg rebase -s9 -d2 --debug # use debug to really check merge base used
   rebase onto 4bc80088dc6b starting from e31216eec445
+  rebase status stored
   ignoring null merge rebase of 3
   ignoring null merge rebase of 4
   ignoring null merge rebase of 6

@@ -283,7 +283,7 @@ class rebaseruntime(object):
     def _prepareabortorcontinue(self, isabort):
         try:
             self.restorestatus()
-            self.collapsemsg = restorecollapsemsg(self.repo)
+            self.collapsemsg = restorecollapsemsg(self.repo, isabort)
         except error.RepoLookupError:
             if isabort:
                 clearstatus(self.repo)
@@ -368,6 +368,10 @@ class rebaseruntime(object):
         self.activebookmark = self.activebookmark or repo._activebookmark
         if self.activebookmark:
             bookmarks.deactivate(repo)
+
+        # Store the state before we begin so users can run 'hg rebase --abort'
+        # if we fail before the transaction closes.
+        self.storestatus()
 
         sortedrevs = repo.revs('sort(%ld, -topo)', self.state)
         cands = [k for k, v in self.state.iteritems() if v == revtodo]
@@ -1092,7 +1096,7 @@ def clearcollapsemsg(repo):
     'Remove collapse message file'
     util.unlinkpath(repo.join("last-message.txt"), ignoremissing=True)
 
-def restorecollapsemsg(repo):
+def restorecollapsemsg(repo, isabort):
     'Restore previously stored collapse message'
     try:
         f = repo.vfs("last-message.txt")
@@ -1101,7 +1105,11 @@ def restorecollapsemsg(repo):
     except IOError as err:
         if err.errno != errno.ENOENT:
             raise
-        raise error.Abort(_('no rebase in progress'))
+        if isabort:
+            # Oh well, just abort like normal
+            collapsemsg = ''
+        else:
+            raise error.Abort(_('missing .hg/last-message.txt for rebase'))
     return collapsemsg
 
 def clearstatus(repo):
