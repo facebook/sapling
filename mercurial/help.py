@@ -618,6 +618,8 @@ def formattedhelp(ui, name, keep=None, unknowncmd=False, full=True, **opts):
     """
     if keep is None:
         keep = []
+    else:
+        keep = list(keep) # make a copy so we can mutate this later
     fullname = name
     section = None
     subtopic = None
