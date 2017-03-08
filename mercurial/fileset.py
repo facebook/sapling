@@ -441,10 +441,8 @@ def copied(mctx, x):
 
 @predicate('revs(revs, pattern)')
 def revs(mctx, x):
-    """``revs(set, revspec)``
-
-    Evaluate set in the specified revisions. If the revset match multiple revs,
-    this will return file matching pattern in any of the revision.
+    """Evaluate set in the specified revisions. If the revset match multiple
+    revs, this will return file matching pattern in any of the revision.
     """
     # i18n: "revs" is a keyword
     r, x = getargs(x, 2, 2, _("revs takes two arguments"))
@@ -465,9 +463,7 @@ def revs(mctx, x):
 
 @predicate('status(base, rev, pattern)')
 def status(mctx, x):
-    """``status(base, rev, revspec)``
-
-    Evaluate predicate using status change between ``base`` and
+    """Evaluate predicate using status change between ``base`` and
     ``rev``. Examples:
 
     - ``status(3, 7, added())`` - matches files added from "3" to "7"
