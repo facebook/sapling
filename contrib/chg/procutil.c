@@ -115,6 +115,11 @@ void setupsignalhandler(pid_t pid, pid_t pgid)
 	sa.sa_flags = SA_RESTART;
 	if (sigaction(SIGWINCH, &sa, NULL) < 0)
 		goto error;
+	/* forward user-defined signals */
+	if (sigaction(SIGUSR1, &sa, NULL) < 0)
+		goto error;
+	if (sigaction(SIGUSR2, &sa, NULL) < 0)
+		goto error;
 	/* propagate job control requests to worker */
 	sa.sa_handler = forwardsignal;
 	sa.sa_flags = SA_RESTART;
