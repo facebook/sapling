@@ -5,10 +5,16 @@ from __future__ import absolute_import
 import doctest
 import os
 import sys
+
+ispy3 = (sys.version_info[0] >= 3)
+
 if 'TERM' in os.environ:
     del os.environ['TERM']
 
-def testmod(name, optionflags=0, testtarget=None):
+# TODO: migrate doctests to py3 and enable them on both versions
+def testmod(name, optionflags=0, testtarget=None, py2=True, py3=False):
+    if not (not ispy3 and py2 or ispy3 and py3):
+        return
     __import__(name)
     mod = sys.modules[name]
     if testtarget is not None:
