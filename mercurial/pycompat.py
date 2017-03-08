@@ -76,6 +76,67 @@ if ispy3:
 
     bytechr = struct.Struct('>B').pack
 
+    class bytestr(bytes):
+        """A bytes which mostly acts as a Python 2 str
+
+        >>> bytestr(), bytestr(bytearray(b'foo')), bytestr(u'ascii'), bytestr(1)
+        (b'', b'foo', b'ascii', b'1')
+        >>> s = bytestr(b'foo')
+        >>> assert s is bytestr(s)
+
+        There's no implicit conversion from non-ascii str as its encoding is
+        unknown:
+
+        >>> bytestr(chr(0x80)) # doctest: +ELLIPSIS
+        Traceback (most recent call last):
+          ...
+        UnicodeEncodeError: ...
+
+        Comparison between bytestr and bytes should work:
+
+        >>> assert bytestr(b'foo') == b'foo'
+        >>> assert b'foo' == bytestr(b'foo')
+        >>> assert b'f' in bytestr(b'foo')
+        >>> assert bytestr(b'f') in b'foo'
+
+        Sliced elements should be bytes, not integer:
+
+        >>> s[1], s[:2]
+        (b'o', b'fo')
+        >>> list(s), list(reversed(s))
+        ([b'f', b'o', b'o'], [b'o', b'o', b'f'])
+
+        As bytestr type isn't propagated across operations, you need to cast
+        bytes to bytestr explicitly:
+
+        >>> s = bytestr(b'foo').upper()
+        >>> t = bytestr(s)
+        >>> s[0], t[0]
+        (70, b'F')
+
+        Be careful to not pass a bytestr object to a function which expects
+        bytearray-like behavior.
+
+        >>> t = bytes(t)  # cast to bytes
+        >>> assert type(t) is bytes
+        """
+
+        def __new__(cls, s=b''):
+            if isinstance(s, bytestr):
+                return s
+            if not isinstance(s, (bytes, bytearray)):
+                s = str(s).encode(u'ascii')
+            return bytes.__new__(cls, s)
+
+        def __getitem__(self, key):
+            s = bytes.__getitem__(self, key)
+            if not isinstance(s, bytes):
+                s = bytechr(s)
+            return s
+
+        def __iter__(self):
+            return iterbytestr(bytes.__iter__(self))
+
     def iterbytestr(s):
         """Iterate bytes as if it were a str object of Python 2"""
         return map(bytechr, s)
@@ -146,6 +207,7 @@ else:
     import cStringIO
 
     bytechr = chr
+    bytestr = str
     iterbytestr = iter
 
     def sysstr(s):
