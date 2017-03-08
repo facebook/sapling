@@ -137,6 +137,9 @@ if sys.version_info[0] >= 3:
             # Only handle Mercurial-related modules.
             if not fullname.startswith(('mercurial.', 'hgext.', 'hgext3rd.')):
                 return None
+            # zstd is already dual-version clean, don't try and mangle it
+            if fullname.startswith('mercurial.zstd'):
+                return None
 
             # This assumes Python 3 doesn't support loading C modules.
             if fullname in _dualmodules:
