@@ -437,6 +437,16 @@ Create deeper repo with tree manifests.
 
   $ hg ci -Aqm 'initial'
 
+  $ echo >> .A/one.txt
+  $ echo >> .A/two.txt
+  $ echo >> b/bar/fruits.txt
+  $ echo >> b/bar/orange/fly/gnat.py
+  $ echo >> b/bar/orange/fly/housefly.txt
+  $ echo >> b/foo/apple/bees/flower.py
+  $ echo >> c.txt
+  $ echo >> d.py
+  $ hg ci -Aqm 'second'
+
 We'll see that visitdir works by removing some treemanifest revlogs and running
 the files command with various parameters.
 
@@ -468,6 +478,12 @@ Test files for a subdirectory.
   b/bar/orange/fly/gnat.py (glob)
   b/bar/orange/fly/housefly.txt (glob)
   b/foo/apple/bees/flower.py (glob)
+  $ hg diff -r '.^' -r . --stat b
+   b/bar/fruits.txt              |  1 +
+   b/bar/orange/fly/gnat.py      |  1 +
+   b/bar/orange/fly/housefly.txt |  1 +
+   b/foo/apple/bees/flower.py    |  1 +
+   4 files changed, 4 insertions(+), 0 deletions(-)
   $ cp -R .hg/store-copy/. .hg/store
 
 Test files with just includes and excludes.
@@ -477,6 +493,9 @@ Test files with just includes and excludes.
   $ rm -r .hg/store/meta/b/foo/apple/bees
   $ hg files -r . -I path:b/bar -X path:b/bar/orange/fly -I path:b/foo -X path:b/foo/apple/bees
   b/bar/fruits.txt (glob)
+  $ hg diff -r '.^' -r . --stat -I path:b/bar -X path:b/bar/orange/fly -I path:b/foo -X path:b/foo/apple/bees
+   b/bar/fruits.txt |  1 +
+   1 files changed, 1 insertions(+), 0 deletions(-)
   $ cp -R .hg/store-copy/. .hg/store
 
 Test files for a subdirectory, excluding a directory within it.
@@ -487,6 +506,11 @@ Test files for a subdirectory, excluding a directory within it.
   b/bar/fruits.txt (glob)
   b/bar/orange/fly/gnat.py (glob)
   b/bar/orange/fly/housefly.txt (glob)
+  $ hg diff -r '.^' -r . --stat -X path:b/foo b
+   b/bar/fruits.txt              |  1 +
+   b/bar/orange/fly/gnat.py      |  1 +
+   b/bar/orange/fly/housefly.txt |  1 +
+   3 files changed, 3 insertions(+), 0 deletions(-)
   $ cp -R .hg/store-copy/. .hg/store
 
 Test files for a sub directory, including only a directory within it, and
@@ -497,6 +521,10 @@ including an unrelated directory.
   $ hg files -r . -I path:b/bar/orange -I path:a b
   b/bar/orange/fly/gnat.py (glob)
   b/bar/orange/fly/housefly.txt (glob)
+  $ hg diff -r '.^' -r . --stat -I path:b/bar/orange -I path:a b
+   b/bar/orange/fly/gnat.py      |  1 +
+   b/bar/orange/fly/housefly.txt |  1 +
+   2 files changed, 2 insertions(+), 0 deletions(-)
   $ cp -R .hg/store-copy/. .hg/store
 
 Test files for a pattern, including a directory, and excluding a directory
@@ -507,6 +535,9 @@ within that.
   $ rm -r .hg/store/meta/b/bar/orange
   $ hg files -r . glob:**.txt -I path:b/bar -X path:b/bar/orange
   b/bar/fruits.txt (glob)
+  $ hg diff -r '.^' -r . --stat glob:**.txt -I path:b/bar -X path:b/bar/orange
+   b/bar/fruits.txt |  1 +
+   1 files changed, 1 insertions(+), 0 deletions(-)
   $ cp -R .hg/store-copy/. .hg/store
 
 Add some more changes to the deep repo
@@ -522,7 +553,7 @@ Verify works
   checking directory manifests
   crosschecking files in changesets and manifests
   checking files
-  8 files, 3 changesets, 10 total revisions
+  8 files, 4 changesets, 18 total revisions
 
 Dirlogs are included in fncache
   $ grep meta/.A/00manifest.i .hg/store/fncache
@@ -563,8 +594,9 @@ Verify reports missing dirlog
   checking directory manifests
    0: empty or missing b/
    b/@0: parent-directory manifest refers to unknown revision 67688a370455
-   b/@1: parent-directory manifest refers to unknown revision f38e85d334c5
-   b/@2: parent-directory manifest refers to unknown revision 99c9792fd4b0
+   b/@1: parent-directory manifest refers to unknown revision f065da70369e
+   b/@2: parent-directory manifest refers to unknown revision ac0d30948e0b
+   b/@3: parent-directory manifest refers to unknown revision 367152e6af28
   warning: orphan revlog 'meta/b/bar/00manifest.i'
   warning: orphan revlog 'meta/b/bar/orange/00manifest.i'
   warning: orphan revlog 'meta/b/bar/orange/fly/00manifest.i'
@@ -577,9 +609,9 @@ Verify reports missing dirlog
    b/bar/orange/fly/housefly.txt@0: in changeset but not in manifest
    b/foo/apple/bees/flower.py@0: in changeset but not in manifest
   checking files
-  8 files, 3 changesets, 10 total revisions
+  8 files, 4 changesets, 18 total revisions
   6 warnings encountered!
-  8 integrity errors encountered!
+  9 integrity errors encountered!
   (first damaged changeset appears to be 0)
   [1]
   $ cp -R .hg/store-newcopy/. .hg/store
@@ -590,22 +622,22 @@ Verify reports missing dirlog entry
   checking changesets
   checking manifests
   checking directory manifests
-   b/@1: parent-directory manifest refers to unknown revision f38e85d334c5
-   b/@2: parent-directory manifest refers to unknown revision 99c9792fd4b0
-   b/bar/@?: rev 1 points to unexpected changeset 1
-   b/bar/@?: 5e03c4ee5e4a not in parent-directory manifest
+   b/@2: parent-directory manifest refers to unknown revision ac0d30948e0b
+   b/@3: parent-directory manifest refers to unknown revision 367152e6af28
    b/bar/@?: rev 2 points to unexpected changeset 2
-   b/bar/@?: 1b16940d66d6 not in parent-directory manifest
-   b/bar/orange/@?: rev 1 points to unexpected changeset 2
+   b/bar/@?: 44d7e1146e0d not in parent-directory manifest
+   b/bar/@?: rev 3 points to unexpected changeset 3
+   b/bar/@?: 70b10c6b17b7 not in parent-directory manifest
+   b/bar/orange/@?: rev 2 points to unexpected changeset 3
    (expected None)
-   b/bar/orange/fly/@?: rev 1 points to unexpected changeset 2
+   b/bar/orange/fly/@?: rev 2 points to unexpected changeset 3
    (expected None)
   crosschecking files in changesets and manifests
   checking files
-  8 files, 3 changesets, 10 total revisions
+  8 files, 4 changesets, 18 total revisions
   2 warnings encountered!
   8 integrity errors encountered!
-  (first damaged changeset appears to be 1)
+  (first damaged changeset appears to be 2)
   [1]
   $ cp -R .hg/store-newcopy/. .hg/store
 
@@ -621,7 +653,7 @@ We can clone even with the knob turned off and we'll get a treemanifest repo.
   adding changesets
   adding manifests
   adding file changes
-  added 3 changesets with 10 changes to 8 files
+  added 4 changesets with 18 changes to 8 files
   updating to branch default
   8 files updated, 0 files merged, 0 files removed, 0 files unresolved
 No server errors.
@@ -656,7 +688,7 @@ Verify passes.
   checking directory manifests
   crosschecking files in changesets and manifests
   checking files
-  8 files, 3 changesets, 10 total revisions
+  8 files, 4 changesets, 18 total revisions
   $ cd ..
 
 Create clones using old repo formats to use in later tests
@@ -667,7 +699,7 @@ Create clones using old repo formats to use in later tests
   adding changesets
   adding manifests
   adding file changes
-  added 3 changesets with 10 changes to 8 files
+  added 4 changesets with 18 changes to 8 files
   updating to branch default
   8 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd deeprepo-basicstore
@@ -683,7 +715,7 @@ Create clones using old repo formats to use in later tests
   adding changesets
   adding manifests
   adding file changes
-  added 3 changesets with 10 changes to 8 files
+  added 4 changesets with 18 changes to 8 files
   updating to branch default
   8 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd deeprepo-encodedstore
@@ -701,7 +733,7 @@ Local clone with basicstore
   checking directory manifests
   crosschecking files in changesets and manifests
   checking files
-  8 files, 3 changesets, 10 total revisions
+  8 files, 4 changesets, 18 total revisions
 
 Local clone with encodedstore
   $ hg clone -U deeprepo-encodedstore local-clone-encodedstore
@@ -711,7 +743,7 @@ Local clone with encodedstore
   checking directory manifests
   crosschecking files in changesets and manifests
   checking files
-  8 files, 3 changesets, 10 total revisions
+  8 files, 4 changesets, 18 total revisions
 
 Local clone with fncachestore
   $ hg clone -U deeprepo local-clone-fncachestore
@@ -721,7 +753,7 @@ Local clone with fncachestore
   checking directory manifests
   crosschecking files in changesets and manifests
   checking files
-  8 files, 3 changesets, 10 total revisions
+  8 files, 4 changesets, 18 total revisions
 
 Stream clone with basicstore
   $ hg clone --config experimental.changegroup3=True --uncompressed -U \
@@ -737,7 +769,7 @@ Stream clone with basicstore
   checking directory manifests
   crosschecking files in changesets and manifests
   checking files
-  8 files, 3 changesets, 10 total revisions
+  8 files, 4 changesets, 18 total revisions
 
 Stream clone with encodedstore
   $ hg clone --config experimental.changegroup3=True --uncompressed -U \
@@ -753,7 +785,7 @@ Stream clone with encodedstore
   checking directory manifests
   crosschecking files in changesets and manifests
   checking files
-  8 files, 3 changesets, 10 total revisions
+  8 files, 4 changesets, 18 total revisions
 
 Stream clone with fncachestore
   $ hg clone --config experimental.changegroup3=True --uncompressed -U \
@@ -769,11 +801,11 @@ Stream clone with fncachestore
   checking directory manifests
   crosschecking files in changesets and manifests
   checking files
-  8 files, 3 changesets, 10 total revisions
+  8 files, 4 changesets, 18 total revisions
 
 Packed bundle
   $ hg -R deeprepo debugcreatestreamclonebundle repo-packed.hg
-  writing 3349 bytes for 18 files
+  writing 5330 bytes for 18 files
   bundle requirements: generaldelta, revlogv1, treemanifest
   $ hg debugbundle --spec repo-packed.hg
   none-packed1;requirements%3Dgeneraldelta%2Crevlogv1%2Ctreemanifest
