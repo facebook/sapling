@@ -941,7 +941,7 @@ class Test(unittest.TestCase):
                    (os.path.join(self._testtmp, b'.cache/largefiles')))
         hgrc.write(b'[web]\n')
         hgrc.write(b'address = localhost\n')
-        hgrc.write(b'ipv6 = %s\n' % self._useipv6)
+        hgrc.write(b'ipv6 = %s\n' % str(self._useipv6).encode('ascii'))
 
         for opt in self._extraconfigopts:
             section, key = opt.split('.', 1)
