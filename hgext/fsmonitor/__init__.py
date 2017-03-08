@@ -91,14 +91,17 @@ will disable itself if any of those are active.
 
 from __future__ import absolute_import
 
+import codecs
 import hashlib
 import os
 import stat
+import sys
 
 from mercurial.i18n import _
 from mercurial import (
     context,
     encoding,
+    error,
     extensions,
     localrepo,
     merge,
@@ -110,6 +113,7 @@ from mercurial import (
 from mercurial import match as matchmod
 
 from . import (
+    pywatchman,
     state,
     watchmanclient,
 )
@@ -158,6 +162,28 @@ def _hashignore(ignore):
             sha1.update(f)
     sha1.update('\0')
     return sha1.hexdigest()
+
+_watchmanencoding = pywatchman.encoding.get_local_encoding()
+_fsencoding = sys.getfilesystemencoding() or sys.getdefaultencoding()
+_fixencoding = codecs.lookup(_watchmanencoding) != codecs.lookup(_fsencoding)
+
+def _watchmantofsencoding(path):
+    """Fix path to match watchman and local filesystem encoding
+
+    watchman's paths encoding can differ from filesystem encoding. For example,
+    on Windows, it's always utf-8.
+    """
+    try:
+        decoded = path.decode(_watchmanencoding)
+    except UnicodeDecodeError as e:
+        raise error.Abort(str(e), hint='watchman encoding error')
+
+    try:
+        encoded = decoded.encode(_fsencoding, 'strict')
+    except UnicodeEncodeError as e:
+        raise error.Abort(str(e))
+
+    return encoded
 
 def overridewalk(orig, self, match, subrepos, unknown, ignored, full=True):
     '''Replacement for dirstate.walk, hooking into Watchman.
@@ -303,6 +329,8 @@ def overridewalk(orig, self, match, subrepos, unknown, ignored, full=True):
     # for name case changes.
     for entry in result['files']:
         fname = entry['name']
+        if _fixencoding:
+            fname = _watchmantofsencoding(fname)
         if switch_slashes:
             fname = fname.replace('\\', '/')
         if normalize:
