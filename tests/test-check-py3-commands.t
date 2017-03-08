@@ -11,7 +11,7 @@ The full traceback is hidden to have a stable output.
   version
   warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
   debuginstall
-  TypeError: Can't convert 'bytes' object to str implicitly
+  no problems detected
 
   $ cat > included-hgrc <<EOF
   > [extensions]

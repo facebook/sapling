@@ -39,7 +39,7 @@ if '__pypy__' in sys.builtin_module_names:
 # Our C extensions aren't yet compatible with Python 3. So use pure Python
 # on Python 3 for now.
 if sys.version_info[0] >= 3:
-    policy = 'py'
+    policy = b'py'
 
 # Environment variable can always force settings.
 policy = os.environ.get('HGMODULEPOLICY', policy)
