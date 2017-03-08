@@ -10,6 +10,7 @@ Set up test environment.
   > inhibit=
   > rebase=
   > strip=
+  > tweakdefaults=
   > [experimental]
   > evolution = createmarkers
   > evolutioncommands = prev next split fold
@@ -29,7 +30,7 @@ Set up test environment.
   >   cd userestack
   > }
   $ showgraph() {
-  >   hg log --graph -T "{rev} {desc|firstline}"
+  >   hg log --graph -r '(::.)::' -T "{rev} {desc|firstline}" | sed \$d
   > }
   $ hg init userestack && cd userestack
 
@@ -57,10 +58,10 @@ Test hg amend --fixup.
   | o  1 add b
   |/
   o  0 add a
-  
+
   $ hg amend --fixup
-  rebasing 2:4538525df7e2 "add c"
-  rebasing 3:47d2a3944de8 "add d"
+  rebasing 2:* "add c" (glob)
+  rebasing 3:* "add d" (glob)
   $ showgraph
   o  6 add d
   |
@@ -69,12 +70,17 @@ Test hg amend --fixup.
   @  4 amended
   |
   o  0 add a
-  
+
+Test that the operation field on the metadata is correctly set.
+  $ hg debugobsolete
+  [a-f0-9]* [a-f0-9]* 0 .* {'operation': 'amend', 'user': 'test'} (re)
+  [a-f0-9]* [a-f0-9]* 0 .* {'operation': 'rebase', 'user': 'test'} (re)
+  [a-f0-9]* [a-f0-9]* 0 .* {'operation': 'rebase', 'user': 'test'} (re)
 
 Test hg amend --rebase
   $ hg amend -m "amended again" --rebase
-  rebasing 5:89333fbce6cd "add c"
-  rebasing 6:33b3e8631c12 "add d"
+  rebasing 5:* "add c" (glob)
+  rebasing 6:* "add d" (glob)
   $ showgraph
   o  9 add d
   |
@@ -83,4 +89,3 @@ Test hg amend --rebase
   @  7 amended again
   |
   o  0 add a
-  
