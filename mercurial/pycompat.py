@@ -71,6 +71,9 @@ if ispy3:
     # workaround to simulate the Python 2 (i.e. ANSI Win32 API) behavior.
     sysargv = list(map(os.fsencode, sys.argv))
 
+    def bytechr(i):
+        return bytes([i])
+
     def sysstr(s):
         """Return a keyword str to be passed to Python functions such as
         getattr() and str.encode()
@@ -134,6 +137,8 @@ if ispy3:
         return [a.encode('latin-1') for a in ret]
 
 else:
+    bytechr = chr
+
     def sysstr(s):
         return s
 

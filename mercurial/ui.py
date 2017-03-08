@@ -40,12 +40,8 @@ from . import (
 urlreq = util.urlreq
 
 # for use with str.translate(None, _keepalnum), to keep just alphanumerics
-if pycompat.ispy3:
-    _bytes = [bytes([c]) for c in range(256)]
-    _notalnum = [s for s in _bytes if not s.isalnum()]
-else:
-    _notalnum = [c for c in map(chr, range(256)) if not c.isalnum()]
-_keepalnum = ''.join(_notalnum)
+_keepalnum = ''.join(c for c in map(pycompat.bytechr, range(256))
+                     if not c.isalnum())
 
 samplehgrcs = {
     'user':

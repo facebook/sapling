@@ -99,12 +99,8 @@ def _buildencodefun():
     'the\\x07quick\\xadshot'
     '''
     e = '_'
-    if pycompat.ispy3:
-        xchr = lambda x: bytes([x])
-        asciistr = [bytes([a]) for a in range(127)]
-    else:
-        xchr = chr
-        asciistr = map(chr, xrange(127))
+    xchr = pycompat.bytechr
+    asciistr = list(map(xchr, range(127)))
     capitals = list(range(ord("A"), ord("Z") + 1))
 
     cmap = dict((x, x) for x in asciistr)
