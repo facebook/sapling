@@ -18,7 +18,6 @@ from .node import (
     bin,
     hex,
     modifiednodeid,
-    newnodeid,
     nullid,
     nullrev,
     short,
@@ -91,14 +90,11 @@ class basectx(object):
     def __iter__(self):
         return iter(self._manifest)
 
-    def _manifestmatches(self, match, s):
-        """generate a new manifest filtered by the match argument
-
-        This method is for internal use only and mainly exists to provide an
-        object oriented way for other contexts to customize the manifest
-        generation.
-        """
-        return self.manifest().matches(match)
+    def _buildstatusmanifest(self, status):
+        """Builds a manifest that includes the given status results, if this is
+        a working copy context. For non-working copy contexts, it just returns
+        the normal manifest."""
+        return self.manifest()
 
     def _matchstatus(self, other, match):
         """return match.always if match is none
@@ -119,17 +115,17 @@ class basectx(object):
         # delta application.
         mf2 = None
         if self.rev() is not None and self.rev() < other.rev():
-            mf2 = self._manifestmatches(match, s)
-        mf1 = other._manifestmatches(match, s)
+            mf2 = self._buildstatusmanifest(s)
+        mf1 = other._buildstatusmanifest(s)
         if mf2 is None:
-            mf2 = self._manifestmatches(match, s)
+            mf2 = self._buildstatusmanifest(s)
 
         modified, added = [], []
         removed = []
         clean = []
         deleted, unknown, ignored = s.deleted, s.unknown, s.ignored
         deletedset = set(deleted)
-        d = mf1.diff(mf2, clean=listclean)
+        d = mf1.diff(mf2, match=match, clean=listclean)
         for fn, value in d.iteritems():
             if fn in deletedset:
                 continue
@@ -156,8 +152,10 @@ class basectx(object):
 
         if removed:
             # need to filter files if they are already reported as removed
-            unknown = [fn for fn in unknown if fn not in mf1]
-            ignored = [fn for fn in ignored if fn not in mf1]
+            unknown = [fn for fn in unknown if fn not in mf1 and
+                                               (not match or match(fn))]
+            ignored = [fn for fn in ignored if fn not in mf1 and
+                                               (not match or match(fn))]
             # if they're deleted, don't report them as removed
             removed = [fn for fn in removed if fn not in deletedset]
 
@@ -1580,22 +1578,6 @@ class workingctx(committablectx):
             except error.LockError:
                 pass
         return modified, fixup
-
-    def _manifestmatches(self, match, s):
-        """Slow path for workingctx
-
-        The fast path is when we compare the working directory to its parent
-        which means this function is comparing with a non-parent; therefore we
-        need to build a manifest and return what matches.
-        """
-        mf = self._repo['.']._manifestmatches(match, s)
-        for f in s.modified + s.added:
-            mf[f] = newnodeid
-            mf.setflag(f, self.flags(f))
-        for f in s.removed:
-            if f in mf:
-                del mf[f]
-        return mf
 
     def _dirstatestatus(self, match=None, ignored=False, clean=False,
                         unknown=False):
