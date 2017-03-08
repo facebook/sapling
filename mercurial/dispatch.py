@@ -234,9 +234,11 @@ def callcatch(ui, func):
                 (inst.args[0], " ".join(inst.args[1])))
     except error.CommandError as inst:
         if inst.args[0]:
+            ui.pager('help')
             ui.warn(_("hg %s: %s\n") % (inst.args[0], inst.args[1]))
             commands.help_(ui, inst.args[0], full=False, command=True)
         else:
+            ui.pager('help')
             ui.warn(_("hg: %s\n") % inst.args[1])
             commands.help_(ui, 'shortlist')
     except error.ParseError as inst:
