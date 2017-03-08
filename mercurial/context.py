@@ -1266,35 +1266,6 @@ class committablectx(basectx):
         return self._repo.dirstate.flagfunc(self._buildflagfunc)
 
     @propertycache
-    def _manifest(self):
-        """generate a manifest corresponding to the values in self._status
-
-        This reuse the file nodeid from parent, but we append an extra letter
-        when modified. Modified files get an extra 'm' while added files get
-        an extra 'a'. This is used by manifests merge to see that files
-        are different and by update logic to avoid deleting newly added files.
-        """
-        parents = self.parents()
-
-        man = parents[0].manifest().copy()
-
-        ff = self._flagfunc
-        for i, l in ((addednodeid, self._status.added),
-                     (modifiednodeid, self._status.modified)):
-            for f in l:
-                man[f] = i
-                try:
-                    man.setflag(f, ff(f))
-                except OSError:
-                    pass
-
-        for f in self._status.deleted + self._status.removed:
-            if f in man:
-                del man[f]
-
-        return man
-
-    @propertycache
     def _status(self):
         return self._repo.status()
 
@@ -1654,6 +1625,39 @@ class workingctx(committablectx):
                 self._status = s
 
         return s
+
+    @propertycache
+    def _manifest(self):
+        """generate a manifest corresponding to the values in self._status
+
+        This reuse the file nodeid from parent, but we use special node
+        identifiers for added and modified files. This is used by manifests
+        merge to see that files are different and by update logic to avoid
+        deleting newly added files.
+        """
+        return self._buildstatusmanifest(self._status)
+
+    def _buildstatusmanifest(self, status):
+        """Builds a manifest that includes the given status results."""
+        parents = self.parents()
+
+        man = parents[0].manifest().copy()
+
+        ff = self._flagfunc
+        for i, l in ((addednodeid, status.added),
+                     (modifiednodeid, status.modified)):
+            for f in l:
+                man[f] = i
+                try:
+                    man.setflag(f, ff(f))
+                except OSError:
+                    pass
+
+        for f in status.deleted + status.removed:
+            if f in man:
+                del man[f]
+
+        return man
 
     def _buildstatus(self, other, s, match, listignored, listclean,
                      listunknown):
