@@ -343,7 +343,7 @@ class rebaseruntime(object):
         if dest.closesbranch() and not self.keepbranchesf:
             self.ui.status(_('reopening closed branch head %s\n') % dest)
 
-    def _performrebase(self):
+    def _performrebase(self, tr):
         repo, ui, opts = self.repo, self.ui, self.opts
         if self.keepbranchesf:
             # insert _savebranch at the start of extrafns so if
@@ -393,7 +393,7 @@ class rebaseruntime(object):
                                              self.state,
                                              self.targetancestors,
                                              self.obsoletenotrebased)
-                self.storestatus()
+                self.storestatus(tr=tr)
                 storecollapsemsg(repo, self.collapsemsg)
                 if len(repo[None].parents()) == 2:
                     repo.ui.debug('resuming interrupted rebase\n')
@@ -711,7 +711,12 @@ def rebase(ui, repo, **opts):
             if retcode is not None:
                 return retcode
 
-        rbsrt._performrebase()
+        with repo.transaction('rebase') as tr:
+            try:
+                rbsrt._performrebase(tr)
+            except error.InterventionRequired:
+                tr.close()
+                raise
         rbsrt._finishrebase()
     finally:
         release(lock, wlock)
