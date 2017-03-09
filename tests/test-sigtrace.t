@@ -42,6 +42,6 @@ Test the signal config option
   $ hg signal USR1 || false
   * (glob)
   [1]
-  $ ls $TESTTMP/dump-*.log
+  $ ls $TESTTMP/dump-*.log || false
   ls: * (glob)
-  [2]
+  [1]
