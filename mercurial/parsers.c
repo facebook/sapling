@@ -2166,7 +2166,7 @@ static PyObject *index_commonancestorsheads(indexObject *self, PyObject *args)
 	int *revs;
 
 	argcount = PySequence_Length(args);
-	revs = malloc(argcount * sizeof(*revs));
+	revs = PyMem_Malloc(argcount * sizeof(*revs));
 	if (argcount > 0 && revs == NULL)
 		return PyErr_NoMemory();
 	len = index_length(self) - 1;
@@ -2237,11 +2237,11 @@ static PyObject *index_commonancestorsheads(indexObject *self, PyObject *args)
 		goto bail;
 
 done:
-	free(revs);
+	PyMem_Free(revs);
 	return ret;
 
 bail:
-	free(revs);
+	PyMem_Free(revs);
 	Py_XDECREF(ret);
 	return NULL;
 }
