@@ -678,7 +678,7 @@ class hgsubrepo(abstractsubrepo):
 
     @propertycache
     def _cachestorehashvfs(self):
-        return vfsmod.vfs(self._repo.join('cache/storehash'))
+        return vfsmod.vfs(self._repo.vfs.join('cache/storehash'))
 
     def _readstorehashcache(self, remotepath):
         '''read the store hash cache for a given remote repository'''
