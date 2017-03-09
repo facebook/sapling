@@ -1063,12 +1063,12 @@ sub-topics can be accessed
       has, or previously specified in the bundle/changegroup). The format is
       described more fully in "hg help internals.bdiff", but briefly:
   
-         +---------------------------------------------------------------+ |
-         |            |            |                      | | start offset | end
-         offset | new length |        content       | |  (4 bytes)   |  (4
-         bytes) |  (4 bytes) | (<new length> bytes) | |              |
-         |            |                      |
-         +---------------------------------------------------------------+
+        +---------------------------------------------------------------+
+        |              |            |            |                      |
+        | start offset | end offset | new length |        content       |
+        |  (4 bytes)   |  (4 bytes) |  (4 bytes) | (<new length> bytes) |
+        |              |            |            |                      |
+        +---------------------------------------------------------------+
   
       Please note that the length field in the delta data does *not* include
       itself.
@@ -3199,14 +3199,14 @@ Sub-topic topics rendered properly
   specified in the bundle/changegroup). The format is described more fully in
   &quot;hg help internals.bdiff&quot;, but briefly:
   </p>
-  <p>
+  <pre>
   +---------------------------------------------------------------+
   |              |            |            |                      |
   | start offset | end offset | new length |        content       |
   |  (4 bytes)   |  (4 bytes) |  (4 bytes) | (&lt;new length&gt; bytes) |
   |              |            |            |                      |
   +---------------------------------------------------------------+
-  </p>
+  </pre>
   <p>
   Please note that the length field in the delta data does *not* include itself.
   </p>

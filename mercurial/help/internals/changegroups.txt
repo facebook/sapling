@@ -108,7 +108,7 @@ The *delta data* consists of ``chunklen - 4 - headerlen`` bytes, which contain a
 series of *delta*s, densely packed (no separators). These deltas describe a diff
 from an existing entry (either that the recipient already has, or previously
 specified in the bundle/changegroup). The format is described more fully in
-``hg help internals.bdiff``, but briefly:
+``hg help internals.bdiff``, but briefly::
 
    +---------------------------------------------------------------+
    |              |            |            |                      |
