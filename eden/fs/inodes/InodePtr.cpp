@@ -10,6 +10,7 @@
 #include "eden/fs/inodes/InodePtr.h"
 #include "eden/fs/inodes/InodePtr-defs.h"
 
+#include <type_traits>
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeBase.h"
 #include "eden/fs/inodes/InodeError.h"
@@ -19,23 +20,22 @@ namespace facebook {
 namespace eden {
 template <typename InodeType>
 template <typename SubclassRawPtrType>
-SubclassRawPtrType InodeBasePtrImpl<InodeType>::asSubclass(
-    int errnoValue) const {
+SubclassRawPtrType InodeBasePtrImpl<InodeType>::asSubclass() const {
   if (this->value_ == nullptr) {
     return nullptr;
   }
 
   auto* subclassPtr = dynamic_cast<SubclassRawPtrType>(this->value_);
   if (subclassPtr == nullptr) {
-    throw InodeError(errnoValue, *this);
+    throw InodeError(
+        std::remove_pointer<SubclassRawPtrType>::type::WRONG_TYPE_ERRNO, *this);
   }
   return subclassPtr;
 }
 
 template <typename InodeType>
 template <typename SubclassPtrType>
-SubclassPtrType InodeBasePtrImpl<InodeType>::asSubclassPtr(
-    int errnoValue) const {
+SubclassPtrType InodeBasePtrImpl<InodeType>::asSubclassPtr() const {
   if (this->value_ == nullptr) {
     return SubclassPtrType{};
   }
@@ -43,15 +43,22 @@ SubclassPtrType InodeBasePtrImpl<InodeType>::asSubclassPtr(
   auto* subclassPtr =
       dynamic_cast<typename SubclassPtrType::InodeType*>(this->value_);
   if (subclassPtr == nullptr) {
-    throw InodeError(errnoValue, *this);
+    throw InodeError(SubclassPtrType::InodeType::WRONG_TYPE_ERRNO, *this);
   }
   return SubclassPtrType{subclassPtr, SubclassPtrType::NORMAL_INCREMENT};
 }
 
 template <typename InodeType>
 template <typename SubclassPtrType>
-SubclassPtrType InodeBasePtrImpl<InodeType>::extractSubclassPtr(
-    int errnoValue) {
+SubclassPtrType InodeBasePtrImpl<InodeType>::asSubclassPtrOrNull() const& {
+  return SubclassPtrType{
+      dynamic_cast<typename SubclassPtrType::InodeType*>(this->value_),
+      SubclassPtrType::NORMAL_INCREMENT};
+}
+
+template <typename InodeType>
+template <typename SubclassPtrType>
+SubclassPtrType InodeBasePtrImpl<InodeType>::extractSubclassPtr() {
   if (this->value_ == nullptr) {
     return SubclassPtrType{};
   }
@@ -59,7 +66,7 @@ SubclassPtrType InodeBasePtrImpl<InodeType>::extractSubclassPtr(
   auto* subclassPtr =
       dynamic_cast<typename SubclassPtrType::InodeType*>(this->value_);
   if (subclassPtr == nullptr) {
-    throw InodeError(errnoValue, *this);
+    throw InodeError(SubclassPtrType::InodeType::WRONG_TYPE_ERRNO, *this);
   }
   this->value_ = nullptr;
   return SubclassPtrType{subclassPtr, SubclassPtrType::NO_INCREMENT};
@@ -83,19 +90,19 @@ SubclassPtrType InodeBasePtrImpl<InodeType>::extractSubclassPtrOrNull() {
 template <typename InodeType>
 typename detail::InodePtrTraits<InodeType>::FileInode*
 InodeBasePtrImpl<InodeType>::asFile() const {
-  return asSubclass<FileInodeRawPtr>(EISDIR);
+  return asSubclass<FileInodeRawPtr>();
 }
 
 template <typename InodeType>
 typename detail::InodePtrTraits<InodeType>::FileInodePtr
 InodeBasePtrImpl<InodeType>::asFilePtr() const& {
-  return asSubclassPtr<FileInodePtr>(EISDIR);
+  return asSubclassPtr<FileInodePtr>();
 }
 
 template <typename InodeType>
 typename detail::InodePtrTraits<InodeType>::FileInodePtr
 InodeBasePtrImpl<InodeType>::asFilePtr()&& {
-  return extractSubclassPtr<FileInodePtr>(EISDIR);
+  return extractSubclassPtr<FileInodePtr>();
 }
 
 template <typename InodeType>
@@ -120,19 +127,19 @@ InodeBasePtrImpl<InodeType>::asFilePtrOrNull()&& {
 template <typename InodeType>
 typename detail::InodePtrTraits<InodeType>::TreeInode*
 InodeBasePtrImpl<InodeType>::asTree() const {
-  return asSubclass<TreeInodeRawPtr>(ENOTDIR);
+  return asSubclass<TreeInodeRawPtr>();
 }
 
 template <typename InodeType>
 typename detail::InodePtrTraits<InodeType>::TreeInodePtr
 InodeBasePtrImpl<InodeType>::asTreePtr() const& {
-  return asSubclassPtr<TreeInodePtr>(ENOTDIR);
+  return asSubclassPtr<TreeInodePtr>();
 }
 
 template <typename InodeType>
 typename detail::InodePtrTraits<InodeType>::TreeInodePtr
 InodeBasePtrImpl<InodeType>::asTreePtr()&& {
-  return extractSubclassPtr<TreeInodePtr>(ENOTDIR);
+  return extractSubclassPtr<TreeInodePtr>();
 }
 
 template <typename InodeType>
@@ -158,5 +165,9 @@ InodeBasePtrImpl<InodeType>::asTreePtrOrNull()&& {
 template class InodeBasePtrImpl<InodeBase>;
 template class InodePtrImpl<FileInode>;
 template class InodePtrImpl<TreeInode>;
+template FileInodePtr
+InodeBasePtrImpl<InodeBase>::asSubclassPtrOrNull<FileInodePtr>() const&;
+template TreeInodePtr
+InodeBasePtrImpl<InodeBase>::asSubclassPtrOrNull<TreeInodePtr>() const&;
 }
 }

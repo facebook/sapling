@@ -759,104 +759,38 @@ TreeInodePtr TreeInode::mkdir(PathComponentPiece name, mode_t mode) {
 }
 
 folly::Future<folly::Unit> TreeInode::unlink(PathComponentPiece name) {
-  // Acquire the rename lock since we need to update our child's location
-  auto renameLock = getMount()->acquireRenameLock();
-
-  RelativePath targetName;
-
-  // Check pre-conditions with a read lock before we materialize anything
-  // in case we're processing spurious unlink for a non-existent entry;
-  // we don't want to materialize part of a tree if we're not actually
-  // going to do any work in it.
-  {
-    auto contents = contents_.rlock();
-    auto entIter = contents->entries.find(name);
-    if (entIter == contents->entries.end()) {
-      return makeFuture<Unit>(
-          InodeError(ENOENT, this->inodePtrFromThis(), name));
-    }
-    if (S_ISDIR(entIter->second->mode)) {
-      return makeFuture<Unit>(
-          InodeError(EISDIR, this->inodePtrFromThis(), name));
-    }
-  }
-
-  materializeDirAndParents();
-
-  std::unique_ptr<InodeBase> deletedInode;
-  {
-    auto contents = contents_.wlock();
-
-    // Re-check the pre-conditions in case we raced
-    auto entIter = contents->entries.find(name);
-    if (entIter == contents->entries.end()) {
-      return makeFuture<Unit>(
-          InodeError(ENOENT, this->inodePtrFromThis(), name));
-    }
-
-    auto& ent = entIter->second;
-    if (S_ISDIR(ent->mode)) {
-      return makeFuture<Unit>(
-          InodeError(EISDIR, this->inodePtrFromThis(), name));
-    }
-
-    auto myPath = getPath();
-    if (!myPath.hasValue()) {
-      // This shouldn't be possible.  We cannot be unlinked
-      // if we still contain a child.
-      LOG(FATAL) << "found unlinked but non-empty directory: " << getLogPath()
-                 << " still contains " << name;
-    }
-    targetName = myPath.value() + name;
-
-    auto overlay = this->getOverlay();
-
-    // If the child inode in question is loaded, inform it that it has been
-    // unlinked.
-    //
-    // FIXME: If our child is not loaded, we need to tell the InodeMap so it
-    // can update its state if the child is present in the unloadedInodes_ map.
-    // (It would probably be best to just always load our child before
-    // unlinking it, similar to the way rmdir() does.)
-    if (ent->inode) {
-      deletedInode = ent->inode->markUnlinked(this, name, renameLock);
-      overlay->removeOverlayData(ent->inode->getNodeId());
-    }
-
-    // And actually remove it
-    contents->entries.erase(entIter);
-    overlay->saveOverlayDir(getNodeId(), &*contents);
-  }
-
-  getMount()->getJournal().wlock()->addDelta(
-      std::make_unique<JournalDelta>(JournalDelta{targetName}));
-
-  deletedInode.reset();
-  return folly::Unit{};
-}
-
-folly::Future<folly::Unit> TreeInode::rmdir(PathComponentPiece name) {
-  return getOrLoadChildTree(name).then(
+  return getOrLoadChild(name).then(
       [ self = inodePtrFromThis(),
-        childName = PathComponent{name} ](const TreeInodePtr& child) {
-        return self->rmdirImpl(childName, child, 1);
+        childName = PathComponent{name} ](const InodePtr& child) {
+        return self->removeImpl<FileInodePtr>(childName, child, 1);
       });
 }
 
-folly::Future<folly::Unit> TreeInode::rmdirImpl(
+folly::Future<folly::Unit> TreeInode::rmdir(PathComponentPiece name) {
+  return getOrLoadChild(name).then(
+      [ self = inodePtrFromThis(),
+        childName = PathComponent{name} ](const InodePtr& child) {
+        return self->removeImpl<TreeInodePtr>(childName, child, 1);
+      });
+}
+
+template <typename InodePtrType>
+folly::Future<folly::Unit> TreeInode::removeImpl(
     PathComponent name,
-    TreeInodePtr child,
+    InodePtr childBasePtr,
     unsigned int attemptNum) {
   // Acquire the rename lock since we need to update our child's location
   auto renameLock = getMount()->acquireRenameLock();
 
-  // Verify that the child directory is empty before we materialize ourself
-  {
-    auto childContents = child->contents_.rlock();
-    if (!childContents->entries.empty()) {
-      throw InodeError(ENOTEMPTY, child);
-    }
+  // Make sure the child is of the desired type
+  auto child = childBasePtr.asSubclassPtrOrNull<InodePtrType>();
+  if (!child) {
+    return makeFuture<Unit>(
+        InodeError(InodePtrType::InodeType::WRONG_TYPE_ERRNO, child));
   }
+
+  // Verify that we can remove the child before we materialize ourself
+  checkPreRemove(child);
 
   materializeDirAndParents();
 
@@ -875,16 +809,15 @@ folly::Future<folly::Unit> TreeInode::rmdirImpl(
     }
     auto& ent = entIter->second;
     if (ent->inode != child.get()) {
-      // This child was replaced since the rmdir attempt started.
+      // This child was replaced since the remove attempt started.
       if (ent->inode == nullptr) {
-        constexpr unsigned int kMaxRmdirRetries = 3;
-        if (attemptNum > kMaxRmdirRetries) {
+        constexpr unsigned int kMaxRemoveRetries = 3;
+        if (attemptNum > kMaxRemoveRetries) {
           throw InodeError(
               EIO,
               inodePtrFromThis(),
               name,
-              "directory was removed/renamed after "
-              "rmdir() started");
+              "inode was removed/renamed after remove started");
         }
         contents.unlock();
         // Note that we intentially create childFuture() in a separate
@@ -897,21 +830,26 @@ folly::Future<folly::Unit> TreeInode::rmdirImpl(
         // getOrLoadChildTree(name).  C++17 fixes this order to guarantee that
         // the left side of "." will always get evaluated before the right
         // side.
-        auto childFuture = getOrLoadChildTree(name);
+        auto childFuture = getOrLoadChild(name);
         return childFuture.then([
           self = inodePtrFromThis(),
           childName = PathComponent{std::move(name)},
           attemptNum
-        ](const TreeInodePtr& loadedChild) {
-          return self->rmdirImpl(childName, loadedChild, attemptNum + 1);
+        ](const InodePtr& loadedChild) {
+          return self->removeImpl<InodePtrType>(
+              childName, loadedChild, attemptNum + 1);
         });
       } else {
         // Just update to point to the current child, if it is still a tree
-        auto* currentChildTree = dynamic_cast<TreeInode*>(ent->inode);
-        if (!currentChildTree) {
-          throw InodeError(ENOTDIR, inodePtrFromThis(), name);
+        auto* currentChild =
+            dynamic_cast<typename InodePtrType::InodeType*>(ent->inode);
+        if (!currentChild) {
+          throw InodeError(
+              InodePtrType::InodeType::WRONG_TYPE_ERRNO,
+              inodePtrFromThis(),
+              name);
         }
-        child = TreeInodePtr::newPtrLocked(currentChildTree);
+        child = InodePtrType::newPtrLocked(currentChild);
       }
     }
 
@@ -925,11 +863,8 @@ folly::Future<folly::Unit> TreeInode::rmdirImpl(
     }
     targetName = myPath.value() + name;
 
-    // Lock the child contents, and make sure they are still empty
-    auto childContents = child->contents_.rlock();
-    if (!childContents->entries.empty()) {
-      throw InodeError(ENOTEMPTY, child);
-    }
+    // Verify that the child is still in a good state to remove
+    checkPreRemove(child);
 
     // Inform the child it is now unlinked
     deletedInode = child->markUnlinked(this, name, renameLock);
@@ -948,6 +883,18 @@ folly::Future<folly::Unit> TreeInode::rmdirImpl(
       std::make_unique<JournalDelta>(JournalDelta{targetName}));
 
   return folly::Unit{};
+}
+
+void TreeInode::checkPreRemove(const TreeInodePtr& child) {
+  // Lock the child contents, and make sure they are empty
+  auto childContents = child->contents_.rlock();
+  if (!childContents->entries.empty()) {
+    throw InodeError(ENOTEMPTY, child);
+  }
+}
+
+void TreeInode::checkPreRemove(const FileInodePtr& /* child */) {
+  // Nothing to do
 }
 
 /**

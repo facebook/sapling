@@ -312,13 +312,20 @@ class InodeBasePtrImpl : public InodePtrImpl<InodeTypeParam> {
   TreeInodePtr asTreePtrOrNull() const&;
   TreeInodePtr asTreePtrOrNull() &&;
 
+  template <typename SubclassPtrType>
+  SubclassPtrType asSubclassPtrOrNull() const&;
+  template <typename SubclassPtrType>
+  SubclassPtrType asSubclassPtrOrNull() && {
+    return extractSubclassPtrOrNull();
+  }
+
  private:
   template <typename SubclassRawPtrType>
-  SubclassRawPtrType asSubclass(int errnoValue) const;
+  SubclassRawPtrType asSubclass() const;
   template <typename SubclassPtrType>
-  SubclassPtrType asSubclassPtr(int errnoValue) const;
+  SubclassPtrType asSubclassPtr() const;
   template <typename SubclassPtrType>
-  SubclassPtrType extractSubclassPtr(int errnoValue);
+  SubclassPtrType extractSubclassPtr();
   template <typename SubclassPtrType>
   SubclassPtrType extractSubclassPtrOrNull();
 };

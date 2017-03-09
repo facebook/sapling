@@ -166,7 +166,7 @@ void TestMount::setInitialDirstate(
   dirstatePersistence.save(userDirectives);
 }
 
-void TestMount::addFile(folly::StringPiece path, std::string contents) {
+void TestMount::addFile(folly::StringPiece path, folly::StringPiece contents) {
   RelativePathPiece relativePath(path);
   auto treeInode = getTreeInode(relativePath.dirname());
   mode_t mode = 0644;

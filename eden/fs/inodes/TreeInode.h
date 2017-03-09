@@ -32,6 +32,8 @@ class TreeEntry;
  */
 class TreeInode : public InodeBase {
  public:
+  enum : int { WRONG_TYPE_ERRNO = ENOTDIR };
+
   /**
    * Represents a directory entry.
    *
@@ -379,8 +381,11 @@ class TreeInode : public InodeBase {
     return TreeInodePtr::newPtrFromExisting(this);
   }
 
+  template <typename InodePtrType>
   folly::Future<folly::Unit>
-  rmdirImpl(PathComponent name, TreeInodePtr child, unsigned int attemptNum);
+  removeImpl(PathComponent name, InodePtr child, unsigned int attemptNum);
+  static void checkPreRemove(const TreeInodePtr& child);
+  static void checkPreRemove(const FileInodePtr& child);
 
   /**
    * This helper function starts loading a currently unloaded child inode.

@@ -23,6 +23,8 @@ class Hash;
 
 class FileInode : public InodeBase {
  public:
+  enum : int { WRONG_TYPE_ERRNO = EISDIR };
+
   /** Construct an inode using an overlay entry */
   FileInode(
       fuse_ino_t ino,

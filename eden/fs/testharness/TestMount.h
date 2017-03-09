@@ -156,7 +156,7 @@ class TestMount {
   /**
    * Add file to the mount; it will be available in the overlay.
    */
-  void addFile(folly::StringPiece path, std::string contents);
+  void addFile(folly::StringPiece path, folly::StringPiece contents);
 
   void mkdir(folly::StringPiece path);
 
