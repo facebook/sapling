@@ -71,7 +71,7 @@ Some sample queries:
 
 - Revert files that were added to the working directory::
 
-    hg revert "set:wdir(added())"
+    hg revert "set:revs('wdir()', added())"
 
 - Remove files listed in foo.lst that contain the letter a or b::
 
