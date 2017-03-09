@@ -155,6 +155,80 @@ def getmanifestlog(orig, self):
 
     return mfl
 
+@command('backfilltree', [
+    ('l', 'limit', '10000000', _(''))
+    ], _('hg backfilltree [OPTIONS]'))
+def backfilltree(ui, repo, *args, **opts):
+    with repo.wlock():
+        with repo.lock():
+            with repo.transaction('backfilltree') as tr:
+                _backfill(tr, repo, int(opts.get('limit')))
+
+def _backfill(tr, repo, limit):
+    ui = repo.ui
+    cl = repo.changelog
+    mfl = repo.manifestlog
+    tmfl = mfl.treemanifestlog
+    treerevlog = tmfl._revlog
+
+    maxrev = len(treerevlog) - 1
+    start = treerevlog.linkrev(maxrev) + 1
+    end = min(len(cl), start + limit)
+
+    converting = _("converting")
+
+    ui.progress(converting, 0, total=end - start)
+    for i in xrange(start, end):
+        ctx = repo[i]
+        newflat = ctx.manifest()
+        p1 = ctx.p1()
+        p2 = ctx.p2()
+        p1node = p1.manifestnode()
+        p2node = p2.manifestnode()
+        if p1node != nullid:
+            if (p1node not in treerevlog.nodemap or
+                (p2node != nullid and p2node not in treerevlog.nodemap)):
+                ui.warn(_("unable to find parent nodes %s %s\n") % (hex(p1node),
+                                                                   hex(p2node)))
+                return
+            parentflat = mfl[p1node].read()
+            parenttree = tmfl[p1node].read()
+        else:
+            parentflat = manifest.manifestdict()
+            parenttree = manifest.treemanifest()
+
+        diff = parentflat.diff(newflat)
+
+        newtree = parenttree.copy()
+        added = []
+        removed = []
+        for filename, (old, new) in diff.iteritems():
+            if new is not None and new[0] is not None:
+                added.append(filename)
+                newtree[filename] = new[0]
+                newtree.setflag(filename, new[1])
+            else:
+                removed.append(filename)
+                del newtree[filename]
+
+        try:
+            oldaddrevision = treerevlog.addrevision
+            def addusingnode(*args, **kwargs):
+                newkwargs = kwargs.copy()
+                newkwargs['node'] = ctx.manifestnode()
+                return oldaddrevision(*args, **newkwargs)
+            treerevlog.addrevision = addusingnode
+            def readtree(dir, node):
+                return tmfl.get(dir, node).read()
+            treerevlog.add(newtree, tr, ctx.rev(), p1node, p2node, added,
+                    removed, readtree=readtree)
+        finally:
+            del treerevlog.__dict__['addrevision']
+
+        ui.progress(converting, i - start, total=end - start)
+
+    ui.progress(converting, None)
+
 def _unpackmanifests(orig, self, repo, *args, **kwargs):
     mfrevlog = repo.manifestlog._revlog
     oldtip = len(mfrevlog)
