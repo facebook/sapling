@@ -55,10 +55,16 @@ def _getfsnow(vfs):
 def nonnormalentries(dmap):
     '''Compute the nonnormal dirstate entries from the dmap'''
     try:
-        return parsers.nonnormalentries(dmap)
+        return parsers.nonnormalotherparententries(dmap)
     except AttributeError:
-        return set(fname for fname, e in dmap.iteritems()
-                   if e[0] != 'n' or e[3] == -1)
+        nonnorm = set()
+        otherparent = set()
+        for fname, e in dmap.iteritems():
+            if e[0] != 'n' or e[3] == -1:
+                nonnorm.add(fname)
+            if e[0] == 'n' and e[2] == -2:
+                otherparent.add(fname)
+        return nonnorm, otherparent
 
 class dirstate(object):
 
@@ -131,7 +137,15 @@ class dirstate(object):
 
     @propertycache
     def _nonnormalset(self):
-        return nonnormalentries(self._map)
+        nonnorm, otherparents = nonnormalentries(self._map)
+        self._otherparentset = otherparents
+        return nonnorm
+
+    @propertycache
+    def _otherparentset(self):
+        nonnorm, otherparents = nonnormalentries(self._map)
+        self._nonnormalset = nonnorm
+        return otherparents
 
     @propertycache
     def _filefoldmap(self):
@@ -341,7 +355,12 @@ class dirstate(object):
         self._pl = p1, p2
         copies = {}
         if oldp2 != nullid and p2 == nullid:
-            for f, s in self._map.iteritems():
+            candidatefiles = self._nonnormalset.union(self._otherparentset)
+            for f in candidatefiles:
+                s = self._map.get(f)
+                if s is None:
+                    continue
+
                 # Discard 'm' markers when moving away from a merge state
                 if s[0] == 'm':
                     if f in self._copymap:
@@ -427,7 +446,8 @@ class dirstate(object):
 
     def invalidate(self):
         for a in ("_map", "_copymap", "_filefoldmap", "_dirfoldmap", "_branch",
-                  "_pl", "_dirs", "_ignore", "_nonnormalset"):
+                  "_pl", "_dirs", "_ignore", "_nonnormalset",
+                  "_otherparentset"):
             if a in self.__dict__:
                 delattr(self, a)
         self._lastnormaltime = 0
@@ -486,6 +506,8 @@ class dirstate(object):
         self._map[f] = dirstatetuple(state, mode, size, mtime)
         if state != 'n' or mtime == -1:
             self._nonnormalset.add(f)
+        if size == -2:
+            self._otherparentset.add(f)
 
     def normal(self, f):
         '''Mark a file normal and clean.'''
@@ -560,6 +582,7 @@ class dirstate(object):
                 size = -1
             elif entry[0] == 'n' and entry[2] == -2: # other parent
                 size = -2
+                self._otherparentset.add(f)
         self._map[f] = dirstatetuple('r', 0, size, 0)
         self._nonnormalset.add(f)
         if size == 0 and f in self._copymap:
@@ -659,6 +682,7 @@ class dirstate(object):
     def clear(self):
         self._map = {}
         self._nonnormalset = set()
+        self._otherparentset = set()
         if "_dirs" in self.__dict__:
             delattr(self, "_dirs")
         self._copymap = {}
@@ -758,7 +782,7 @@ class dirstate(object):
                     break
 
         st.write(parsers.pack_dirstate(self._map, self._copymap, self._pl, now))
-        self._nonnormalset = nonnormalentries(self._map)
+        self._nonnormalset, self._otherparentset = nonnormalentries(self._map)
         st.close()
         self._lastnormaltime = 0
         self._dirty = self._dirtypl = False
