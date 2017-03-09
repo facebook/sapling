@@ -100,10 +100,10 @@ int main(int argc, char **argv) {
 
   // Set some default glog settings, to be applied unless overridden on the
   // command line
-  google::SetCommandLineOptionWithMode(
-      "logtostderr", "1", google::SET_FLAGS_DEFAULT);
-  google::SetCommandLineOptionWithMode(
-      "minloglevel", "0", google::SET_FLAGS_DEFAULT);
+  gflags::SetCommandLineOptionWithMode(
+      "logtostderr", "1", gflags::SET_FLAGS_DEFAULT);
+  gflags::SetCommandLineOptionWithMode(
+      "minloglevel", "0", gflags::SET_FLAGS_DEFAULT);
 
   // Fork the privhelper process, then drop privileges in the main process.
   // This should be done as early as possible, so that everything else we do
