@@ -314,7 +314,7 @@ def reposetup(ui, repo):
 
             oldeol = None
             try:
-                cachemtime = os.path.getmtime(self.join("eol.cache"))
+                cachemtime = os.path.getmtime(self.vfs.join("eol.cache"))
             except OSError:
                 cachemtime = 0
             else:
