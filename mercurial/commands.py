@@ -1772,7 +1772,7 @@ def config(ui, repo, *values, **opts):
         if opts.get('local'):
             if not repo:
                 raise error.Abort(_("can't use --local outside a repository"))
-            paths = [repo.join('hgrc')]
+            paths = [repo.vfs.join('hgrc')]
         elif opts.get('global'):
             paths = scmutil.systemrcpath()
         else:
