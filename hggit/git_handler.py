@@ -183,7 +183,7 @@ class GitHandler(object):
         map_git_real = {}
         map_hg_real = {}
         if os.path.exists(self.repo.join(self.map_file)):
-            for line in self.repo.opener(self.map_file):
+            for line in self.repo.vfs(self.map_file):
                 # format is <40 hex digits> <40 hex digits>\n
                 if len(line) != 82:
                     raise ValueError(
@@ -197,7 +197,7 @@ class GitHandler(object):
         self._map_hg_real = map_hg_real
 
     def save_map(self, map_file):
-        file = self.repo.opener(map_file, 'w+', atomictemp=True)
+        file = self.repo.vfs(map_file, 'w+', atomictemp=True)
         map_hg = self._map_hg
         buf = cStringIO.StringIO()
         bwrite = buf.write
@@ -211,12 +211,12 @@ class GitHandler(object):
     def load_tags(self):
         self.tags = {}
         if os.path.exists(self.repo.join(self.tags_file)):
-            for line in self.repo.opener(self.tags_file):
+            for line in self.repo.vfs(self.tags_file):
                 sha, name = line.strip().split(' ', 1)
                 self.tags[name] = sha
 
     def save_tags(self):
-        file = self.repo.opener(self.tags_file, 'w+', atomictemp=True)
+        file = self.repo.vfs(self.tags_file, 'w+', atomictemp=True)
         for name, sha in sorted(self.tags.iteritems()):
             if not self.repo.tagtype(name) == 'global':
                 file.write("%s %s\n" % (sha, name))

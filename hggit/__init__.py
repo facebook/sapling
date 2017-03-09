@@ -262,11 +262,11 @@ def gverify(ui, repo, **opts):
 def git_cleanup(ui, repo):
     '''clean up Git commit map after history editing'''
     new_map = []
-    for line in repo.opener(GitHandler.map_file):
+    for line in repo.vfs(GitHandler.map_file):
         gitsha, hgsha = line.strip().split(' ', 1)
         if hgsha in repo:
             new_map.append('%s %s\n' % (gitsha, hgsha))
-    f = repo.opener(GitHandler.map_file, 'wb')
+    f = repo.vfs(GitHandler.map_file, 'wb')
     map(f.write, new_map)
     ui.status(_('git commit map cleaned\n'))
 
