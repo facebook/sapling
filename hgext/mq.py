@@ -2920,7 +2920,7 @@ def push(ui, repo, patch=None, **opts):
     opts = fixkeepchangesopts(ui, opts)
     if opts.get('merge'):
         if opts.get('name'):
-            newpath = repo.join(opts.get('name'))
+            newpath = repo.vfs.join(opts.get('name'))
         else:
             newpath, i = lastsavename(q.path)
         if not newpath:
@@ -2960,7 +2960,7 @@ def pop(ui, repo, patch=None, **opts):
     opts = fixkeepchangesopts(ui, opts)
     localupdate = True
     if opts.get('name'):
-        q = queue(ui, repo.baseui, repo.path, repo.join(opts.get('name')))
+        q = queue(ui, repo.baseui, repo.path, repo.vfs.join(opts.get('name')))
         ui.warn(_('using patch queue: %s\n') % q.path)
         localupdate = False
     else:
@@ -3314,9 +3314,9 @@ def qqueue(ui, repo, name=None, **opts):
 
     def _queuedir(name):
         if name == 'patches':
-            return repo.join('patches')
+            return repo.vfs.join('patches')
         else:
-            return repo.join('patches-' + name)
+            return repo.vfs.join('patches-' + name)
 
     def _validname(name):
         for n in name:
