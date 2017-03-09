@@ -206,7 +206,7 @@ static PyObject *_listdir(char *path, int plen, int wantstat, char *skip)
 	char *pattern;
 
 	/* build the path + \* pattern string */
-	pattern = malloc(plen + 3); /* path + \* + \0 */
+	pattern = PyMem_Malloc(plen + 3); /* path + \* + \0 */
 	if (!pattern) {
 		PyErr_NoMemory();
 		goto error_nomem;
@@ -269,7 +269,7 @@ error:
 error_list:
 	FindClose(fh);
 error_file:
-	free(pattern);
+	PyMem_Free(pattern);
 error_nomem:
 	return rval;
 }
