@@ -103,7 +103,7 @@ class transplants(object):
 class transplanter(object):
     def __init__(self, ui, repo, opts):
         self.ui = ui
-        self.path = repo.join('transplant')
+        self.path = repo.vfs.join('transplant')
         self.opener = vfsmod.vfs(self.path)
         self.transplants = transplants(self.path, 'transplants',
                                        opener=self.opener)
