@@ -201,7 +201,7 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall,
                     newlyaddedandmodifiedfiles]
         backups = {}
         if tobackup:
-            backupdir = repo.join('record-backups')
+            backupdir = repo.vfs.join('record-backups')
             try:
                 os.mkdir(backupdir)
             except OSError as err:
@@ -3412,7 +3412,7 @@ def clearunfinished(repo):
             raise error.Abort(msg, hint=hint)
     for f, clearable, allowcommit, msg, hint in unfinishedstates:
         if clearable and repo.vfs.exists(f):
-            util.unlink(repo.join(f))
+            util.unlink(repo.vfs.join(f))
 
 afterresolvedstates = [
     ('graftstate',
