@@ -78,7 +78,9 @@ def wraprepo(repo):
         return
 
     repo.svfs.treemanifestserver = repo.ui.configbool('treemanifest', 'server')
-    if not repo.svfs.treemanifestserver:
+    if repo.svfs.treemanifestserver:
+        serverreposetup(repo)
+    else:
         clientreposetup(repo)
 
 def clientreposetup(repo):
@@ -139,6 +141,14 @@ class treemanifestlog(manifest.manifestlog):
         self._dirmancache[''] = util.lrucachedict(cachesize)
 
         self.cachesize = cachesize
+
+def serverreposetup(repo):
+    extensions.wrapfunction(manifest.manifestrevlog, 'addgroup',
+                            _addmanifestgroup)
+
+def _addmanifestgroup(*args, **kwargs):
+    raise error.Abort(_("cannot push commits to a treemanifest transition "
+                        "server without pushrebase"))
 
 def getmanifestlog(orig, self):
     mfl = orig(self)
