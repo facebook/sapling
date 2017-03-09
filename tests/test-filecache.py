@@ -10,25 +10,30 @@ if subprocess.call(['python', '%s/hghave' % os.environ['TESTDIR'],
 from mercurial import (
     extensions,
     hg,
-    scmutil,
+    localrepo,
     ui as uimod,
     util,
     vfs as vfsmod,
 )
 
-filecache = scmutil.filecache
-
 class fakerepo(object):
     def __init__(self):
         self._filecache = {}
 
-    def join(self, p):
-        return p
+    class fakevfs(object):
+
+        def join(self, p):
+            return p
+
+    vfs = fakevfs()
+
+    def unfiltered(self):
+        return self
 
     def sjoin(self, p):
         return p
 
-    @filecache('x', 'y')
+    @localrepo.repofilecache('x', 'y')
     def cached(self):
         print('creating')
         return 'string from function'
