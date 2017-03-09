@@ -4,6 +4,17 @@
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
+"""
+The treemanifest extension is to aid in the transition from flat manifests to
+treemanifests. It has a client portion that's used to construct trees during
+client pulls and commits, and a server portion which is used to generate
+tree manifests side-by-side normal flat manifests.
+
+Configs:
+
+    ``treemanifest.server`` is used to indicate that this repo can serve
+    treemanifests
+"""
 
 """allows using and migrating to tree manifests
 
@@ -27,7 +38,11 @@ from mercurial import (
     error,
     extensions,
     localrepo,
+    manifest,
     mdiff,
+    revlog,
+    scmutil,
+    store,
     util,
 )
 from mercurial.i18n import _
@@ -49,6 +64,9 @@ PACK_CATEGORY='manifests'
 def extsetup(ui):
     extensions.wrapfunction(changegroup.cg1unpacker, '_unpackmanifests',
                             _unpackmanifests)
+    extensions.wrapfunction(revlog.revlog, 'checkhash', _checkhash)
+
+    wrappropertycache(localrepo.localrepository, 'manifestlog', getmanifestlog)
 
 def reposetup(ui, repo):
     wraprepo(repo)
@@ -57,6 +75,10 @@ def wraprepo(repo):
     if not isinstance(repo, localrepo.localrepository):
         return
 
+    if not repo.ui.configbool('treemanifest', 'server'):
+        clientreposetup(repo)
+
+def clientreposetup(repo):
     repo.name = repo.ui.config('remotefilelog', 'reponame')
     if not repo.name:
         raise error.Abort(_("remotefilelog.reponame must be configured"))
@@ -94,6 +116,44 @@ def wraprepo(repo):
     repo.svfs.localmanifesthistorystores = [
         historypackstore(repo.ui, localpackpath),
     ]
+
+class treemanifestlog(manifest.manifestlog):
+    def __init__(self, opener):
+        usetreemanifest = False
+        cachesize = 4
+
+        opts = getattr(opener, 'options', None)
+        if opts is not None:
+            usetreemanifest = opts.get('treemanifest', usetreemanifest)
+            cachesize = opts.get('manifestcachesize', cachesize)
+        self._treeinmem = usetreemanifest
+
+        self._revlog = manifest.manifestrevlog(opener,
+                                               indexfile='00manifesttree.i')
+
+        # A cache of the manifestctx or treemanifestctx for each directory
+        self._dirmancache = {}
+        self._dirmancache[''] = util.lrucachedict(cachesize)
+
+        self.cachesize = cachesize
+
+def getmanifestlog(orig, self):
+    mfl = orig(self)
+
+    # The treemanifest needs a special opener with special options to enable
+    # trees. The only way to get a copy of the opener with the exact same
+    # configuration as the repo is to create it via a store, which requires the
+    # repo object. So we need to build the opener here, then store it for later.
+    pseudostore = store.store(self.requirements, self.path,
+                              scmutil.vfs)
+    opener = pseudostore.vfs
+    opener.options = self.svfs.options.copy()
+    opener.options.update({
+        'treemanifest': True,
+    })
+    mfl.treemanifestlog = treemanifestlog(opener)
+
+    return mfl
 
 def _unpackmanifests(orig, self, repo, *args, **kwargs):
     mfrevlog = repo.manifestlog._revlog
@@ -343,3 +403,27 @@ def recordmanifest(datapack, historypack, repo, oldtip, newtip):
     for filename, entries in sorted(historyentries.iteritems()):
         for entry in entries:
             historypack.add(filename, *entry)
+
+def _checkhash(orig, self, *args, **kwargs):
+    # Don't validate root hashes during the transition to treemanifest
+    if self.indexfile.endswith('00manifesttree.i'):
+        return
+    return orig(self, *args, **kwargs)
+
+def wrappropertycache(cls, propname, wrapper):
+    """Wraps a filecache property. These can't be wrapped using the normal
+    wrapfunction. This should eventually go into upstream Mercurial.
+    """
+    assert callable(wrapper)
+    for currcls in cls.__mro__:
+        if propname in currcls.__dict__:
+            origfn = currcls.__dict__[propname].func
+            assert callable(origfn)
+            def wrap(*args, **kwargs):
+                return wrapper(origfn, *args, **kwargs)
+            currcls.__dict__[propname].func = wrap
+            break
+
+    if currcls is object:
+        raise AttributeError(_("%s has no property '%s'") %
+                             (type(currcls), propname))
