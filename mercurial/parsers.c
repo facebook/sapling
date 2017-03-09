@@ -817,8 +817,8 @@ static const char *index_deref(indexObject *self, Py_ssize_t pos)
 {
 	if (self->inlined && pos > 0) {
 		if (self->offsets == NULL) {
-			self->offsets = malloc(self->raw_length *
-					       sizeof(*self->offsets));
+			self->offsets = PyMem_Malloc(self->raw_length *
+					             sizeof(*self->offsets));
 			if (self->offsets == NULL)
 				return (const char *)PyErr_NoMemory();
 			inline_scan(self, self->offsets);
@@ -1031,7 +1031,7 @@ static void _index_clearcaches(indexObject *self)
 		self->cache = NULL;
 	}
 	if (self->offsets) {
-		free(self->offsets);
+		PyMem_Free(self->offsets);
 		self->offsets = NULL;
 	}
 	if (self->nt) {
