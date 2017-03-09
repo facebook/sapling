@@ -68,6 +68,8 @@ def extsetup(ui):
 
     wrappropertycache(localrepo.localrepository, 'manifestlog', getmanifestlog)
 
+    extensions.wrapfunction(manifest.memmanifestctx, 'write', _writemanifest)
+
 def reposetup(ui, repo):
     wraprepo(repo)
 
@@ -75,7 +77,8 @@ def wraprepo(repo):
     if not isinstance(repo, localrepo.localrepository):
         return
 
-    if not repo.ui.configbool('treemanifest', 'server'):
+    repo.svfs.treemanifestserver = repo.ui.configbool('treemanifest', 'server')
+    if not repo.svfs.treemanifestserver:
         clientreposetup(repo)
 
 def clientreposetup(repo):
@@ -154,6 +157,52 @@ def getmanifestlog(orig, self):
     mfl.treemanifestlog = treemanifestlog(opener)
 
     return mfl
+
+def _writemanifest(orig, self, transaction, link, p1, p2, added, removed):
+    n = orig(self, transaction, link, p1, p2, added, removed)
+
+    if not self._manifestlog._revlog.opener.treemanifestserver:
+        return n
+
+    # Since we're adding the root flat manifest, let's add the corresponding
+    # root tree manifest.
+    mfl = self._manifestlog
+    treemfl = mfl.treemanifestlog
+
+    m = self._manifestdict
+
+    parentflat = mfl[p1].read()
+    diff = parentflat.diff(m)
+
+    newtree = treemfl[p1].read().copy()
+    added = []
+    removed = []
+    for filename, (old, new) in diff.iteritems():
+        if new is not None and new[0] is not None:
+            added.append(filename)
+            newtree[filename] = new[0]
+            newtree.setflag(filename, new[1])
+        else:
+            removed.append(filename)
+            del newtree[filename]
+
+    try:
+        treemfrevlog = treemfl._revlog
+        oldaddrevision = treemfrevlog.addrevision
+        def addusingnode(*args, **kwargs):
+            newkwargs = kwargs.copy()
+            newkwargs['node'] = n
+            return oldaddrevision(*args, **newkwargs)
+        treemfrevlog.addrevision = addusingnode
+
+        def readtree(dir, node):
+            return treemfl.get(dir, node).read()
+        treemfrevlog.add(newtree, transaction, link, p1, p2, added, removed,
+                         readtree=readtree)
+    finally:
+        del treemfrevlog.__dict__['addrevision']
+
+    return n
 
 @command('backfilltree', [
     ('l', 'limit', '10000000', _(''))
