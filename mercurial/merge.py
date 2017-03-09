@@ -124,7 +124,7 @@ class mergestate(object):
             self._mdstate = 's'
         else:
             self._mdstate = 'u'
-        shutil.rmtree(self._repo.join('merge'), True)
+        shutil.rmtree(self._repo.vfs.join('merge'), True)
         self._results = {}
         self._dirty = False
 
@@ -1678,7 +1678,7 @@ def update(repo, node, branchmerge, force, ancestor=None,
             repo.setparents(fp1, fp2)
             recordupdates(repo, actions, branchmerge)
             # update completed, clear state
-            util.unlink(repo.join('updatestate'))
+            util.unlink(repo.vfs.join('updatestate'))
 
             if not branchmerge:
                 repo.dirstate.setbranch(p2.branch())
