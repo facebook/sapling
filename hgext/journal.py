@@ -163,7 +163,7 @@ def unsharejournal(orig, ui, repo, repopath):
             # to copy. move shared date over from source to destination but
             # move the local file first
             if repo.vfs.exists('namejournal'):
-                journalpath = repo.join('namejournal')
+                journalpath = repo.vfs.join('namejournal')
                 util.rename(journalpath, journalpath + '.bak')
             storage = repo.journal
             local = storage._open(
