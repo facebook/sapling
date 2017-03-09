@@ -305,10 +305,10 @@ class jsonformatter(baseformatter):
         baseformatter.__init__(self, ui, topic, opts, _nullconverter)
         self._out = out
         self._out.write("[")
-        self._ui._first = True
+        self._first = True
     def _showitem(self):
-        if self._ui._first:
-            self._ui._first = False
+        if self._first:
+            self._first = False
         else:
             self._out.write(",")
 
