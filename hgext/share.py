@@ -113,7 +113,7 @@ def unshare(ui, repo):
 
         destlock = hg.copystore(ui, repo, repo.path)
 
-        sharefile = repo.join('sharedpath')
+        sharefile = repo.vfs.join('sharedpath')
         util.rename(sharefile, sharefile + '.old')
 
         repo.requirements.discard('shared')
