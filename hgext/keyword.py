@@ -438,7 +438,7 @@ def demo(ui, repo, *args, **opts):
             # simulate hgrc parsing
             rcmaps = '[keywordmaps]\n%s\n' % '\n'.join(args)
             repo.vfs.write('hgrc', rcmaps)
-            ui.readconfig(repo.join('hgrc'))
+            ui.readconfig(repo.vfs.join('hgrc'))
         kwmaps = dict(ui.configitems('keywordmaps'))
     elif opts.get('default'):
         if svn:
