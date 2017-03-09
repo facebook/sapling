@@ -1171,7 +1171,7 @@ def _aborthistedit(ui, repo, state):
 
         # Recover our old commits if necessary
         if not state.topmost in repo and state.backupfile:
-            backupfile = repo.join(state.backupfile)
+            backupfile = repo.vfs.join(state.backupfile)
             f = hg.openpath(ui, backupfile)
             gen = exchange.readbundle(ui, f, backupfile)
             with repo.transaction('histedit.abort') as tr:
@@ -1357,7 +1357,7 @@ def ruleeditor(repo, ui, actions, editcomment=""):
     # Save edit rules in .hg/histedit-last-edit.txt in case
     # the user needs to ask for help after something
     # surprising happens.
-    f = open(repo.join('histedit-last-edit.txt'), 'w')
+    f = open(repo.vfs.join('histedit-last-edit.txt'), 'w')
     f.write(rules)
     f.close()
 
@@ -1598,7 +1598,7 @@ def stripwrapper(orig, ui, repo, nodelist, *args, **kwargs):
 extensions.wrapfunction(repair, 'strip', stripwrapper)
 
 def summaryhook(ui, repo):
-    if not os.path.exists(repo.join('histedit-state')):
+    if not os.path.exists(repo.vfs.join('histedit-state')):
         return
     state = histeditstate(repo)
     state.read()
