@@ -886,7 +886,7 @@ def _upgraderepo(ui, srcrepo, dstrepo, requirements, actions):
     backupvfs = vfsmod.vfs(backuppath)
 
     # Make a backup of requires file first, as it is the first to be modified.
-    util.copyfile(srcrepo.join('requires'), backupvfs.join('requires'))
+    util.copyfile(srcrepo.vfs.join('requires'), backupvfs.join('requires'))
 
     # We install an arbitrary requirement that clients must not support
     # as a mechanism to lock out new clients during the data swap. This is
