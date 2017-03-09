@@ -484,9 +484,9 @@ class localrepository(object):
         """Return a filtered version of a repository"""
         # build a new class with the mixin and the current class
         # (possibly subclass of the repo)
-        class proxycls(repoview.repoview, self.unfiltered().__class__):
+        class filteredrepo(repoview.repoview, self.unfiltered().__class__):
             pass
-        return proxycls(self, name)
+        return filteredrepo(self, name)
 
     @repofilecache('bookmarks', 'bookmarks.current')
     def _bookmarks(self):
