@@ -69,6 +69,9 @@ def readauthforuri(ui, uri, user):
     # Read configuration
     groups = {}
     for key, val in ui.configitems('auth'):
+        if key in ('cookiefile',):
+            continue
+
         if '.' not in key:
             ui.warn(_("ignoring invalid [auth] key '%s'\n") % key)
             continue
