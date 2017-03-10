@@ -1100,7 +1100,7 @@ def _continuehistedit(ui, repo, state):
     pos = 0
     while state.actions:
         state.write()
-        actobj = state.actions.pop(0)
+        actobj = state.actions[0]
         pos += 1
         ui.progress(_("editing"), pos, actobj.torule(),
                     _('changes'), total)
@@ -1109,6 +1109,7 @@ def _continuehistedit(ui, repo, state):
         parentctx, replacement_ = actobj.run()
         state.parentctxnode = parentctx.node()
         state.replacements.extend(replacement_)
+        state.actions.pop(0)
     state.write()
     ui.progress(_("editing"), None)
 
