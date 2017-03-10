@@ -6,6 +6,7 @@ cpp_unittest(
     '@/eden/fs/testharness:testharness',
     '@/eden/utils:utils',
     '@/eden/utils/test:test_lib',
+    '@/folly/test:test_utils',
   ],
   external_deps = [
     'gtest',

@@ -8,6 +8,7 @@
  *
  */
 #include <folly/Conv.h>
+#include <folly/test/TestUtils.h>
 #include <gtest/gtest.h>
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
@@ -271,18 +272,7 @@ void testModifyConflict(
   auto results = checkoutResult.get();
   ASSERT_EQ(1, results.size());
 
-// We currently don't always report conflicts accurately.
-//
-// When we run into an unloaded, non-materialized directory with conflicts,
-// we just replace it, and report the directory as a conflict, rather than
-// loading it and  recursing down into it to find the exact file names with
-// conflicts.
-//
-// TODO: We probably need to update the code to recurse down into the tree
-// just to return an accurate conflict list in this case.
-#if 0
   EXPECT_EQ(path, results[0].path);
-#endif
   EXPECT_EQ(ConflictType::MODIFIED, results[0].type);
 
   auto postInode = testMount.getFileInode(path);

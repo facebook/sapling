@@ -1449,15 +1449,6 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
     return nullptr;
   }
 
-  // If the file did not exist in the old source control tree we have a
-  // conflict.  If we aren't doing a force update all we need to do is report
-  // the conflict.
-  if (!oldScmEntry && !ctx->forceUpdate()) {
-    ctx->addConflict(
-        ConflictType::UNTRACKED_ADDED, this, newScmEntry->getName());
-    return nullptr;
-  }
-
   auto& entry = it->second;
   if (entry->inode) {
     // If the inode is already loaded, create a CheckoutAction to process it
@@ -1485,19 +1476,25 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
   }
 
   // Check for conflicts
+  auto conflictType = ConflictType::ERROR;
   if (!oldScmEntry) {
-    ctx->addConflict(
-        ConflictType::UNTRACKED_ADDED, this, newScmEntry->getName());
-    if (!ctx->forceUpdate()) {
-      // We currently shouldn't reach this code; this case is handled above.
-      // However, check again here just in case the code above is ever
-      // refactored.  This code path does the right thing, but log a message
-      // anyway since this is slightly unexpected.
-      VLOG(1) << "unexpected code path for handling untracked/added conflict";
-      return nullptr;
-    }
+    conflictType = ConflictType::UNTRACKED_ADDED;
   } else if (entry->getHash() != oldScmEntry->getHash()) {
-    ctx->addConflict(ConflictType::MODIFIED, this, name);
+    conflictType = ConflictType::MODIFIED;
+  }
+  if (conflictType != ConflictType::ERROR) {
+    // If this is are a directory we unfortunately have to load the directory
+    // and recurse into it just so we can accurately report the list of files
+    // with conflicts.
+    if (mode_to_dtype(entry->mode) == dtype_t::Dir) {
+      auto inodeFuture =
+          loadChildLocked(contents, name, entry.get(), pendingLoads);
+      return make_unique<CheckoutAction>(
+          ctx, oldScmEntry, newScmEntry, std::move(inodeFuture));
+    }
+
+    // Report the conflict, and then bail out if we aren't doing a force update
+    ctx->addConflict(conflictType, this, name);
     if (!ctx->forceUpdate()) {
       return nullptr;
     }
