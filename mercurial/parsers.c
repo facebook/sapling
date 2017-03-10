@@ -604,6 +604,8 @@ static PyObject *nonnormalotherparententries(PyObject *self, PyObject *args) {
 	result = Py_BuildValue("(OO)", nonnset, otherpset);
 	if (result == NULL)
 		goto bail;
+	Py_DECREF(nonnset);
+	Py_DECREF(otherpset);
 	return result;
 bail:
 	Py_XDECREF(nonnset);
