@@ -67,13 +67,13 @@ class httpsendfile(object):
 # moved here from url.py to avoid a cycle
 def readauthforuri(ui, uri, user):
     # Read configuration
-    config = {}
+    groups = {}
     for key, val in ui.configitems('auth'):
         if '.' not in key:
             ui.warn(_("ignoring invalid [auth] key '%s'\n") % key)
             continue
         group, setting = key.rsplit('.', 1)
-        gdict = config.setdefault(group, {})
+        gdict = groups.setdefault(group, {})
         if setting in ('username', 'cert', 'key'):
             val = util.expandpath(val)
         gdict[setting] = val
@@ -83,7 +83,7 @@ def readauthforuri(ui, uri, user):
     bestuser = None
     bestlen = 0
     bestauth = None
-    for group, auth in config.iteritems():
+    for group, auth in groups.iteritems():
         if user and user != auth.get('username', user):
             # If a username was set in the URI, the entry username
             # must either match it or be unset
