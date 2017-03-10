@@ -965,3 +965,41 @@ def gddeltaconfig(ui):
     """
     # experimental config: format.generaldelta
     return ui.configbool('format', 'generaldelta', False)
+
+class simplekeyvaluefile(object):
+    """A simple file with key=value lines
+
+    Keys must be alphanumerics and start with a letter, values must not
+    contain '\n' characters"""
+
+    def __init__(self, vfs, path, keys=None):
+        self.vfs = vfs
+        self.path = path
+
+    def read(self):
+        lines = self.vfs.readlines(self.path)
+        try:
+            d = dict(line[:-1].split('=', 1) for line in lines if line)
+        except ValueError as e:
+            raise error.CorruptedState(str(e))
+        return d
+
+    def write(self, data):
+        """Write key=>value mapping to a file
+        data is a dict. Keys must be alphanumerical and start with a letter.
+        Values must not contain newline characters."""
+        lines = []
+        for k, v in data.items():
+            if not k[0].isalpha():
+                e = "keys must start with a letter in a key-value file"
+                raise error.ProgrammingError(e)
+            if not k.isalnum():
+                e = "invalid key name in a simple key-value file"
+                raise error.ProgrammingError(e)
+            if '\n' in v:
+                e = "invalid value in a simple key-value file"
+                raise error.ProgrammingError(e)
+            lines.append("%s=%s\n" % (k, v))
+        with self.vfs(self.path, mode='wb', atomictemp=True) as fp:
+            fp.write(''.join(lines))
+
