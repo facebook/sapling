@@ -168,6 +168,15 @@ the drop to be implicit for missing commits by adding::
   [histedit]
   dropmissing = True
 
+By default, histedit will close the transaction after each action. For
+performance purposes, you can configure histedit to use a single transaction
+across the entire histedit. WARNING: This setting introduces a significant risk
+of losing the work you've done in a histedit if the histedit aborts
+unexpectedly::
+
+  [histedit]
+  singletransaction = True
+
 """
 
 from __future__ import absolute_import
@@ -269,6 +278,7 @@ class histeditstate(object):
         self.lock = lock
         self.wlock = wlock
         self.backupfile = None
+        self.tr = None
         if replacements is None:
             self.replacements = []
         else:
@@ -1098,18 +1108,45 @@ def _continuehistedit(ui, repo, state):
 
     total = len(state.actions)
     pos = 0
-    while state.actions:
-        state.write()
-        actobj = state.actions[0]
-        pos += 1
-        ui.progress(_("editing"), pos, actobj.torule(),
-                    _('changes'), total)
-        ui.debug('histedit: processing %s %s\n' % (actobj.verb,\
-                                                   actobj.torule()))
-        parentctx, replacement_ = actobj.run()
-        state.parentctxnode = parentctx.node()
-        state.replacements.extend(replacement_)
-        state.actions.pop(0)
+    state.tr = None
+
+    # Force an initial state file write, so the user can run --abort/continue
+    # even if there's an exception before the first transaction serialize.
+    state.write()
+    try:
+        # Don't use singletransaction by default since it rolls the entire
+        # transaction back if an unexpected exception happens (like a
+        # pretxncommit hook throws, or the user aborts the commit msg editor).
+        if ui.configbool("histedit", "singletransaction", False):
+            # Don't use a 'with' for the transaction, since actions may close
+            # and reopen a transaction. For example, if the action executes an
+            # external process it may choose to commit the transaction first.
+            state.tr = repo.transaction('histedit')
+
+        while state.actions:
+            state.write(tr=state.tr)
+            actobj = state.actions[0]
+            pos += 1
+            ui.progress(_("editing"), pos, actobj.torule(),
+                        _('changes'), total)
+            ui.debug('histedit: processing %s %s\n' % (actobj.verb,\
+                                                       actobj.torule()))
+            parentctx, replacement_ = actobj.run()
+            state.parentctxnode = parentctx.node()
+            state.replacements.extend(replacement_)
+            state.actions.pop(0)
+
+        if state.tr is not None:
+            state.tr.close()
+    except error.InterventionRequired:
+        if state.tr is not None:
+            state.tr.close()
+        raise
+    except Exception:
+        if state.tr is not None:
+            state.tr.abort()
+        raise
+
     state.write()
     ui.progress(_("editing"), None)
 
