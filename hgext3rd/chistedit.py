@@ -26,14 +26,16 @@ algorithm might still be able to merge these files without conflict.
 
 from __future__ import print_function
 from hgext import histedit
-from mercurial import cmdutil
-from mercurial import extensions
-from mercurial import node
-from mercurial import scmutil
-from mercurial import error
-from mercurial import util
+from mercurial import (
+    cmdutil,
+    extensions,
+    node,
+    scmutil,
+    error,
+    util,
+    color
+)
 from mercurial.i18n import _
-from hgext import color
 
 import functools
 import os
@@ -546,13 +548,10 @@ testedwith = 'ships-with-fb-hgext'
 def chistedit(ui, repo, *freeargs, **opts):
     """Provides a ncurses interface to histedit. Press ? in chistedit mode
     to see an extensive help. Requires python-curses to be installed."""
-    def nocolor(orig, text, effects):
+    def nocolor(orig, ui, text, effects):
         return text
 
-    # disable coloring only if we call histedit
-    import hgext.color
-    extensions.wrapfunction(hgext.color, 'render_effects', nocolor)
-    color.render_effect = lambda text, effects: text
+    extensions.wrapfunction(color, '_render_effects', nocolor)
 
     try:
         keep = opts.get('keep')
