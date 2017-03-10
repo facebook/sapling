@@ -63,7 +63,10 @@ import re
 import shutil
 import tempfile
 from distutils import log
-if 'FORCE_SETUPTOOLS' in os.environ:
+# We have issues with setuptools on some platforms and builders. Until
+# those are resolved, setuptools is opt-in except for platforms where
+# we don't have issues.
+if os.name == 'nt' or 'FORCE_SETUPTOOLS' in os.environ:
     from setuptools import setup
 else:
     from distutils.core import setup
