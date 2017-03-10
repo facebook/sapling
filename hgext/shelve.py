@@ -63,7 +63,7 @@ testedwith = 'ships-with-hg-core'
 
 backupdir = 'shelve-backup'
 shelvedir = 'shelved'
-shelvefileextensions = ['hg', 'patch']
+shelvefileextensions = ['hg', 'patch', 'oshelve']
 # universal extension is present in all types of shelves
 patchextension = 'patch'
 
@@ -153,6 +153,12 @@ class shelvedfile(object):
                                            version=cgversion)
         bundle2.writebundle(self.ui, cg, self.fname, btype, self.vfs,
                                 compression=compression)
+
+    def writeobsshelveinfo(self, info):
+        scmutil.simplekeyvaluefile(self.vfs, self.fname).write(info)
+
+    def readobsshelveinfo(self):
+        return scmutil.simplekeyvaluefile(self.vfs, self.fname).read()
 
 class shelvedstate(object):
     """Handle persistence during unshelving operations.
