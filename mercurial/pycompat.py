@@ -18,12 +18,14 @@ import sys
 ispy3 = (sys.version_info[0] >= 3)
 
 if not ispy3:
+    import cookielib
     import cPickle as pickle
     import httplib
     import Queue as _queue
     import SocketServer as socketserver
     import xmlrpclib
 else:
+    import http.cookielib as cookielib
     import http.client as httplib
     import pickle
     import queue as _queue

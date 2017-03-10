@@ -49,6 +49,7 @@ from . import (
     pycompat,
 )
 
+cookielib = pycompat.cookielib
 empty = pycompat.empty
 httplib = pycompat.httplib
 httpserver = pycompat.httpserver
