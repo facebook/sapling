@@ -189,6 +189,8 @@ def loaddoc(topic, subdir=None):
 internalstable = sorted([
     (['bundles'], _('Bundles'),
      loaddoc('bundles', subdir='internals')),
+    (['censor'], _('Censor'),
+     loaddoc('censor', subdir='internals')),
     (['changegroups'], _('Changegroups'),
      loaddoc('changegroups', subdir='internals')),
     (['requirements'], _('Repository Requirements'),

@@ -940,6 +940,7 @@ internals topic renders index of available sub-topics
   """""""""""""""""""""""""""""""
   
        bundles       Bundles
+       censor        Censor
        changegroups  Changegroups
        requirements  Repository Requirements
        revlogs       Revision Logs
@@ -2974,6 +2975,13 @@ Sub-topic indexes rendered properly
   </a>
   </td><td>
   Bundles
+  </td></tr>
+  <tr><td>
+  <a href="/help/internals.censor">
+  censor
+  </a>
+  </td><td>
+  Censor
   </td></tr>
   <tr><td>
   <a href="/help/internals.changegroups">
