@@ -63,7 +63,7 @@ command = cmdutil.command(cmdtable)
 # leave the attribute unspecified.
 testedwith = 'ships-with-hg-core'
 
-_partre = re.compile(r'\{(\d+)\}'.encode(u'latin1'))
+_partre = re.compile(br'\{(\d+)\}')
 
 class ShortRepository(object):
     def __init__(self, url, scheme, templater):
