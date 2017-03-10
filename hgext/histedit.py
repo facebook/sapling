@@ -300,8 +300,15 @@ class histeditstate(object):
         self.replacements = replacements
         self.backupfile = backupfile
 
-    def write(self):
-        fp = self.repo.vfs('histedit-state', 'w')
+    def write(self, tr=None):
+        if tr:
+            tr.addfilegenerator('histedit-state', ('histedit-state',),
+                                self._write, location='plain')
+        else:
+            with self.repo.vfs("histedit-state", "w") as f:
+                self._write(f)
+
+    def _write(self, fp):
         fp.write('v1\n')
         fp.write('%s\n' % node.hex(self.parentctxnode))
         fp.write('%s\n' % node.hex(self.topmost))
@@ -317,7 +324,6 @@ class histeditstate(object):
         if not backupfile:
             backupfile = ''
         fp.write('%s\n' % backupfile)
-        fp.close()
 
     def _load(self):
         fp = self.repo.vfs('histedit-state', 'r')
