@@ -417,6 +417,35 @@ class httpbasicauthhandler(urlreq.httpbasicauthhandler):
         else:
             return None
 
+class cookiehandler(urlreq.basehandler):
+    def __init__(self, ui):
+        self.cookiejar = None
+
+        cookiefile = ui.config('auth', 'cookiefile')
+        if not cookiefile:
+            return
+
+        cookiefile = util.expandpath(cookiefile)
+        try:
+            cookiejar = util.cookielib.MozillaCookieJar(cookiefile)
+            cookiejar.load()
+            self.cookiejar = cookiejar
+        except util.cookielib.LoadError as e:
+            ui.warn(_('(error loading cookie file %s: %s; continuing without '
+                      'cookies)\n') % (cookiefile, str(e)))
+
+    def http_request(self, request):
+        if self.cookiejar:
+            self.cookiejar.add_cookie_header(request)
+
+        return request
+
+    def https_request(self, request):
+        if self.cookiejar:
+            self.cookiejar.add_cookie_header(request)
+
+        return request
+
 handlerfuncs = []
 
 def opener(ui, authinfo=None):
@@ -450,6 +479,7 @@ def opener(ui, authinfo=None):
     handlers.extend((httpbasicauthhandler(passmgr),
                      httpdigestauthhandler(passmgr)))
     handlers.extend([h(ui, passmgr) for h in handlerfuncs])
+    handlers.append(cookiehandler(ui))
     opener = urlreq.buildopener(*handlers)
 
     # The user agent should should *NOT* be used by servers for e.g.

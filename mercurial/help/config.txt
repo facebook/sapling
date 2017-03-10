@@ -323,12 +323,32 @@ related options for the diff command.
 ``auth``
 --------
 
-Authentication credentials for HTTP authentication. This section
-allows you to store usernames and passwords for use when logging
-*into* HTTP servers. See :hg:`help config.web` if
-you want to configure *who* can login to your HTTP server.
+Authentication credentials and other authentication-like configuration
+for HTTP connections. This section allows you to store usernames and
+passwords for use when logging *into* HTTP servers. See
+:hg:`help config.web` if you want to configure *who* can login to
+your HTTP server.
 
-Each line has the following format::
+The following options apply to all hosts.
+
+``cookiefile``
+    Path to a file containing HTTP cookie lines. Cookies matching a
+    host will be sent automatically.
+
+    The file format uses the Mozilla cookies.txt format, which defines cookies
+    on their own lines. Each line contains 7 fields delimited by the tab
+    character (domain, is_domain_cookie, path, is_secure, expires, name,
+    value). For more info, do an Internet search for "Netscape cookies.txt
+    format."
+
+    Note: the cookies parser does not handle port numbers on domains. You
+    will need to remove ports from the domain for the cookie to be recognized.
+    This could result in a cookie being disclosed to an unwanted server.
+
+    The cookies file is read-only.
+
+Other options in this section are grouped by name and have the following
+format::
 
     <name>.<argument> = <value>
 
