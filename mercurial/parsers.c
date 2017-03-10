@@ -615,29 +615,6 @@ bail:
 }
 
 /*
- * Build a set of non-normal entries from the dirstate dmap
-*/
-static PyObject *nonnormalentries(PyObject *self, PyObject *args)
-{
-	PyObject *nonnset = NULL, *combined = NULL;
-
-	combined = nonnormalotherparententries(self, args);
-	if (!combined) {
-		return NULL;
-	}
-
-	nonnset = PyTuple_GetItem(combined, 0);
-	if (!nonnset) {
-		Py_DECREF(combined);
-		return NULL;
-	}
-
-	Py_INCREF(nonnset);
-	Py_DECREF(combined);
-	return nonnset;
-}
-
-/*
  * Efficiently pack a dirstate object into its on-disk format.
  */
 static PyObject *pack_dirstate(PyObject *self, PyObject *args)
@@ -2854,8 +2831,6 @@ PyObject *lowerencode(PyObject *self, PyObject *args);
 
 static PyMethodDef methods[] = {
 	{"pack_dirstate", pack_dirstate, METH_VARARGS, "pack a dirstate\n"},
-	{"nonnormalentries", nonnormalentries, METH_VARARGS,
-	"create a set containing non-normal entries of given dirstate\n"},
 	{"nonnormalotherparententries", nonnormalotherparententries, METH_VARARGS,
 	"create a set containing non-normal and other parent entries of given "
 	"dirstate\n"},
