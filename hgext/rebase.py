@@ -250,7 +250,7 @@ class rebaseruntime(object):
         repo.ui.debug('computed skipped revs: %s\n' %
                         (' '.join(str(r) for r in sorted(skipped)) or None))
         repo.ui.debug('rebase status resumed\n')
-        _setrebasesetvisibility(repo, state.keys())
+        _setrebasesetvisibility(repo, set(state.keys()))
 
         self.originalwd = originalwd
         self.target = target
@@ -1203,7 +1203,7 @@ def buildstate(repo, dest, rebaseset, collapse, obsoletenotrebased):
     dest: context
     rebaseset: set of rev
     '''
-    _setrebasesetvisibility(repo, rebaseset)
+    _setrebasesetvisibility(repo, set(rebaseset))
 
     # This check isn't strictly necessary, since mq detects commits over an
     # applied patch. But it prevents messing up the working directory when
@@ -1389,7 +1389,6 @@ def _setrebasesetvisibility(repo, revs):
     This is used by another function to prevent rebased revision to because
     hidden (see issue4504)"""
     repo = repo.unfiltered()
-    revs = set(revs)
     repo._rebaseset = revs
     # invalidate cache if visibility changes
     hiddens = repo.filteredrevcache.get('visible', set())
