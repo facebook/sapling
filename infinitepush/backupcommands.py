@@ -156,10 +156,10 @@ def checkbackup(ui, repo, dest=None, **opts):
 
     result = _getbackupstate(ui, other, sourcereporoot,
                              sourcehostname, username)
-    reporoots, hostnames, nodestopull, localbookmarks = result
+    reporoots, hostnames, hexnodestopull, localbookmarks = result
     _checkrestorehostsreporoots(hostnames, reporoots)
     batch = other.iterbatch()
-    for hexnode in list(nodestopull) + localbookmarks.values():
+    for hexnode in list(hexnodestopull) + localbookmarks.values():
         batch.lookup(hexnode)
     batch.submit()
     lookupresults = batch.results()
