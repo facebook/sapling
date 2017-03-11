@@ -279,11 +279,27 @@ even though it is hidden (until we're moved there).
   $ hg --hidden up -qr 'first(hidden())'
   $ hg rebase --rev 13 --dest 15
   rebasing 13:98f6af4ee953 "C"
-  transaction abort!
-  rollback completed
-  abort: hidden revision '1'!
-  (use --hidden to access hidden revisions)
-  [255]
+  $ hg log -G
+  o  16:294a2b93eb4d C
+  |
+  o  15:627d46148090 D
+  |
+  | o  12:462a34d07e59 B
+  | |
+  | o  11:4596109a6a43 D
+  | |
+  | o  7:02de42196ebe H
+  | |
+  +---o  6:eea13746799a G
+  | |/
+  | o  5:24b6387c8c8c F
+  | |
+  o |  4:9520eea781bc E
+  |/
+  | @  1:42ccdea3bb16 B
+  |/
+  o  0:cd010b8cd998 A
+  
 
   $ cd ..
 
