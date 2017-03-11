@@ -898,7 +898,6 @@ folly::Future<folly::Unit> TreeInode::removeImpl(
     // Update the on-disk overlay
     auto overlay = this->getOverlay();
     overlay->saveOverlayDir(getNodeId(), &*contents);
-    overlay->removeOverlayData(child->getNodeId());
   }
   deletedInode.reset();
 
@@ -1590,7 +1589,6 @@ Future<Unit> TreeInode::checkoutRemoveChild(
   if (!treeInode) {
     // This is a file, so we can simply unlink it
     deletedInode = inode->markUnlinked(this, name, ctx->renameLock());
-    getOverlay()->removeOverlayData(inode->getNodeId());
     contents->entries.erase(it);
 
     // Tell FUSE to invalidate it's cache for this entry.

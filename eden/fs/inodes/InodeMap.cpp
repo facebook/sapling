@@ -13,6 +13,7 @@
 #include <folly/Likely.h>
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
+#include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/ParentInodeInfo.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/utils/Bug.h"
@@ -537,6 +538,13 @@ void InodeMap::unloadInode(
   } else {
     VLOG(5) << "forgetting unreferenced inode " << inode->getNodeId() << ": "
             << inode->getLogPath();
+    // If this inode is unlinked, it can never be loaded again, since there are
+    // no outstanding pointer or fuse references to it, and it cannot be
+    // accessed by path either.  Delete any data about it from the overlay in
+    // this case.
+    if (isUnlinked) {
+      mount_->getOverlay()->removeOverlayData(inode->getNodeId());
+    }
   }
 
   auto numErased = data->loadedInodes_.erase(inode->getNodeId());
