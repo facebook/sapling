@@ -1246,7 +1246,7 @@ def buildstate(repo, dest, rebaseset, collapse, obsoletenotrebased):
     if not roots:
         raise error.Abort(_('no matching revisions'))
     roots.sort()
-    state = {}
+    state = dict.fromkeys(rebaseset, revtodo)
     detachset = set()
     for root in roots:
         commonbase = root.ancestor(dest)
@@ -1264,7 +1264,6 @@ def buildstate(repo, dest, rebaseset, collapse, obsoletenotrebased):
                 return None
 
         repo.ui.debug('rebase onto %s starting from %s\n' % (dest, root))
-        state.update(dict.fromkeys(rebaseset, revtodo))
         # Rebase tries to turn <dest> into a parent of <root> while
         # preserving the number of parents of rebased changesets:
         #
