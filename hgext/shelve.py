@@ -184,7 +184,7 @@ class shelvedstate(object):
             wctx = nodemod.bin(fp.readline().strip())
             pendingctx = nodemod.bin(fp.readline().strip())
             parents = [nodemod.bin(h) for h in fp.readline().split()]
-            stripnodes = [nodemod.bin(h) for h in fp.readline().split()]
+            nodestoprune = [nodemod.bin(h) for h in fp.readline().split()]
             branchtorestore = fp.readline().strip()
             keep = fp.readline().strip() == cls._keep
         except (ValueError, TypeError) as err:
@@ -198,7 +198,7 @@ class shelvedstate(object):
             obj.wctx = repo[wctx]
             obj.pendingctx = repo[pendingctx]
             obj.parents = parents
-            obj.stripnodes = stripnodes
+            obj.nodestoprune = nodestoprune
             obj.branchtorestore = branchtorestore
             obj.keep = keep
         except error.RepoLookupError as err:
@@ -207,7 +207,7 @@ class shelvedstate(object):
         return obj
 
     @classmethod
-    def save(cls, repo, name, originalwctx, pendingctx, stripnodes,
+    def save(cls, repo, name, originalwctx, pendingctx, nodestoprune,
              branchtorestore, keep=False):
         fp = repo.vfs(cls._filename, 'wb')
         fp.write('%i\n' % cls._version)
@@ -217,7 +217,7 @@ class shelvedstate(object):
         fp.write('%s\n' %
                  ' '.join([nodemod.hex(p) for p in repo.dirstate.parents()]))
         fp.write('%s\n' %
-                 ' '.join([nodemod.hex(n) for n in stripnodes]))
+                 ' '.join([nodemod.hex(n) for n in nodestoprune]))
         fp.write('%s\n' % branchtorestore)
         fp.write('%s\n' % (cls._keep if keep else cls._nokeep))
         fp.close()
@@ -562,7 +562,7 @@ def unshelveabort(ui, repo, state, opts):
                 raise
 
             mergefiles(ui, repo, state.wctx, state.pendingctx)
-            repair.strip(ui, repo, state.stripnodes, backup=False,
+            repair.strip(ui, repo, state.nodestoprune, backup=False,
                          topic='shelve')
         finally:
             shelvedstate.clear(repo)
@@ -633,12 +633,12 @@ def unshelvecontinue(ui, repo, state, opts):
             shelvectx = state.pendingctx
         else:
             # only strip the shelvectx if the rebase produced it
-            state.stripnodes.append(shelvectx.node())
+            state.nodestoprune.append(shelvectx.node())
 
         mergefiles(ui, repo, state.wctx, shelvectx)
         restorebranch(ui, repo, state.branchtorestore)
 
-        repair.strip(ui, repo, state.stripnodes, backup=False, topic='shelve')
+        repair.strip(ui, repo, state.nodestoprune, backup=False, topic='shelve')
         shelvedstate.clear(repo)
         unshelvecleanup(ui, repo, state.name, opts)
         ui.status(_("unshelve of '%s' complete\n") % state.name)
@@ -690,9 +690,9 @@ def _rebaserestoredcommit(ui, repo, opts, tr, oldtiprev, basename, pctx,
     except error.InterventionRequired:
         tr.close()
 
-        stripnodes = [repo.changelog.node(rev)
-                      for rev in xrange(oldtiprev, len(repo))]
-        shelvedstate.save(repo, basename, pctx, tmpwctx, stripnodes,
+        nodestoprune = [repo.changelog.node(rev)
+                        for rev in xrange(oldtiprev, len(repo))]
+        shelvedstate.save(repo, basename, pctx, tmpwctx, nodestoprune,
                           branchtorestore, opts.get('keep'))
 
         repo.vfs.rename('rebasestate', 'unshelverebasestate')
