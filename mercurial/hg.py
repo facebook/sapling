@@ -716,7 +716,7 @@ _update = update
 def clean(repo, node, show_stats=True, quietempty=False):
     """forcibly switch the working directory to node, clobbering changes"""
     stats = updaterepo(repo, node, True)
-    util.unlinkpath(repo.join('graftstate'), ignoremissing=True)
+    repo.vfs.unlinkpath('graftstate', ignoremissing=True)
     if show_stats:
         _showstats(repo, stats, quietempty)
     return stats[3] > 0

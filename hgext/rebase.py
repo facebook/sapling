@@ -1099,7 +1099,7 @@ def storecollapsemsg(repo, collapsemsg):
 
 def clearcollapsemsg(repo):
     'Remove collapse message file'
-    util.unlinkpath(repo.join("last-message.txt"), ignoremissing=True)
+    repo.vfs.unlinkpath("last-message.txt", ignoremissing=True)
 
 def restorecollapsemsg(repo, isabort):
     'Restore previously stored collapse message'
@@ -1120,7 +1120,7 @@ def restorecollapsemsg(repo, isabort):
 def clearstatus(repo):
     'Remove the status files'
     _clearrebasesetvisibiliy(repo)
-    util.unlinkpath(repo.join("rebasestate"), ignoremissing=True)
+    repo.vfs.unlinkpath("rebasestate", ignoremissing=True)
 
 def needupdate(repo, state):
     '''check whether we should `update --clean` away from a merge, or if

@@ -218,7 +218,7 @@ class shelvedstate(object):
 
     @classmethod
     def clear(cls, repo):
-        util.unlinkpath(repo.join(cls._filename), ignoremissing=True)
+        repo.vfs.unlinkpath(cls._filename, ignoremissing=True)
 
 def cleanupoldbackups(repo):
     vfs = vfsmod.vfs(repo.join(backupdir))
