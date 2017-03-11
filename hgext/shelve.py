@@ -551,15 +551,13 @@ def unshelveabort(ui, repo, state, opts):
         try:
             checkparents(repo, state)
 
-            util.rename(repo.join('unshelverebasestate'),
-                        repo.join('rebasestate'))
+            repo.vfs.rename('unshelverebasestate', 'rebasestate')
             try:
                 rebase.rebase(ui, repo, **{
                     'abort' : True
                 })
             except Exception:
-                util.rename(repo.join('rebasestate'),
-                            repo.join('unshelverebasestate'))
+                repo.vfs.rename('rebasestate', 'unshelverebasestate')
                 raise
 
             mergefiles(ui, repo, state.wctx, state.pendingctx)
@@ -619,15 +617,13 @@ def unshelvecontinue(ui, repo, state, opts):
                 _("unresolved conflicts, can't continue"),
                 hint=_("see 'hg resolve', then 'hg unshelve --continue'"))
 
-        util.rename(repo.join('unshelverebasestate'),
-                    repo.join('rebasestate'))
+        repo.vfs.rename('unshelverebasestate', 'rebasestate')
         try:
             rebase.rebase(ui, repo, **{
                 'continue' : True
             })
         except Exception:
-            util.rename(repo.join('rebasestate'),
-                        repo.join('unshelverebasestate'))
+            repo.vfs.rename('rebasestate', 'unshelverebasestate')
             raise
 
         shelvectx = repo['tip']
@@ -698,8 +694,7 @@ def _rebaserestoredcommit(ui, repo, opts, tr, oldtiprev, basename, pctx,
         shelvedstate.save(repo, basename, pctx, tmpwctx, stripnodes,
                           branchtorestore, opts.get('keep'))
 
-        util.rename(repo.join('rebasestate'),
-                    repo.join('unshelverebasestate'))
+        repo.vfs.rename('rebasestate', 'unshelverebasestate')
         raise error.InterventionRequired(
             _("unresolved conflicts (see 'hg resolve', then "
               "'hg unshelve --continue')"))

@@ -3339,7 +3339,7 @@ def qqueue(ui, repo, name=None, **opts):
                 continue
             fh.write('%s\n' % (queue,))
         fh.close()
-        util.rename(repo.join('patches.queues.new'), repo.join(_allqueues))
+        repo.vfs.rename('patches.queues.new', _allqueues)
 
     if not name or opts.get('list') or opts.get('active'):
         current = _getcurrent()
@@ -3392,7 +3392,7 @@ def qqueue(ui, repo, name=None, **opts):
                 else:
                     fh.write('%s\n' % (queue,))
             fh.close()
-            util.rename(repo.join('patches.queues.new'), repo.join(_allqueues))
+            repo.vfs.rename('patches.queues.new', _allqueues)
             _setactivenocheck(name)
         elif opts.get('delete'):
             _delete(name)
