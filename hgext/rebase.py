@@ -326,11 +326,11 @@ class rebaseruntime(object):
             self.ui.status(_('nothing to rebase\n'))
             return _nothingtorebase()
 
-        root = min(rebaseset)
-        if not self.keepf and not self.repo[root].mutable():
-            raise error.Abort(_("can't rebase public changeset %s")
-                             % self.repo[root],
-                             hint=_("see 'hg help phases' for details"))
+        for root in self.repo.set('roots(%ld)', rebaseset):
+            if not self.keepf and not root.mutable():
+                raise error.Abort(_("can't rebase public changeset %s")
+                                  % root,
+                                  hint=_("see 'hg help phases' for details"))
 
         (self.originalwd, self.target, self.state) = result
         if self.collapsef:

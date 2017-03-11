@@ -329,6 +329,10 @@ Check rebasing public changeset
   abort: can't rebase public changeset e1c4361dd923
   (see 'hg help phases' for details)
   [255]
+  $ hg rebase -d 5 -r '1 + (6::)'
+  abort: can't rebase public changeset e1c4361dd923
+  (see 'hg help phases' for details)
+  [255]
 
   $ hg rebase -d 5 -b 6 --keep
   rebasing 6:e1c4361dd923 "C"
