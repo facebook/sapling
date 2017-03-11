@@ -104,6 +104,11 @@ class FileInode : public InodeBase {
     return FileInodePtr::newPtrFromExisting(this);
   }
 
+  /**
+   * Mark this FileInode materialized in its parent directory.
+   */
+  void materializeInParent();
+
   /// Called as part of shutting down an open handle.
   void fileHandleDidClose();
 

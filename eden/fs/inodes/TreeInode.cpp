@@ -468,54 +468,77 @@ folly::Future<std::shared_ptr<fusell::DirHandle>> TreeInode::opendir(
   return std::make_shared<TreeInodeDirHandle>(inodePtrFromThis());
 }
 
+void TreeInode::materialize(const RenameLock* renameLock) {
+  // Write out our data in the overlay before we update our parent.
+  // If we crash partway through it's better if our parent does not say that we
+  // are materialized yet even if we actually do have overlay data present,
+  // rather than to have our parent indicate that we are materialized but we
+  // don't have overlay data present.
+  //
+  // In the former case, our overlay data should still be identical to the hash
+  // mentioned in the parent, so that's fine and we'll still be able to load
+  // data correctly the next time we restart.  However, if our parent says we
+  // are materialized but we don't actually have overlay data present we won't
+  // have any state indicating which source control hash our contents are from.
+  {
+    auto contents = contents_.wlock();
+    if (contents->materialized) {
+      return;
+    }
+    contents->materialized = true;
+    getOverlay()->saveOverlayDir(this->getNodeId(), &*contents);
+  }
+
+  // Now update our parent to record that we are materialized.
+  {
+    // Acquire the rename lock now, if it wasn't passed in
+    RenameLock renameLock2;
+    if (!renameLock) {
+      renameLock2 = getMount()->acquireRenameLock();
+      renameLock = &renameLock2;
+    }
+
+    // Mark ourself materialized in our parent directory (if we have one)
+    auto loc = getLocationInfo(*renameLock);
+    if (loc.parent && !loc.unlinked) {
+      loc.parent->childMaterialized(*renameLock, loc.name, getNodeId());
+    }
+  }
+}
+
 /* If we don't yet have an overlay entry for this portion of the tree,
  * populate it from the Tree.  In order to materialize a dir we have
  * to also materialize its parents. */
-void TreeInode::materializeDirAndParents() {
-  if (contents_.rlock()->materialized) {
-    // Already materialized, all done!
-    return;
-  }
-
-  // Ensure that our parent(s) are materialized.  We can't go higher
-  // than the root inode though.
-  if (getNodeId() != FUSE_ROOT_ID) {
-    auto parentInode = getParentBuggy();
-    parentInode->materializeDirAndParents();
-  }
-
-  // Atomically, wrt. to concurrent callers, cause the materialized flag
-  // to be set to true both for this directory and for our entry in the
-  // parent directory in the in-memory state.
-  bool updateParent = contents_.withWLockPtr([&](auto wlock) {
-    if (wlock->materialized) {
-      // Someone else materialized it in the meantime
-      return false;
+void TreeInode::childMaterialized(
+    const RenameLock& renameLock,
+    PathComponentPiece childName,
+    fuse_ino_t childNodeId) {
+  {
+    auto contents = contents_.wlock();
+    auto iter = contents->entries.find(childName);
+    if (iter == contents->entries.end()) {
+      // This should never happen.
+      // We should only get called with legitimate children names.
+      EDEN_BUG() << "error attempting to materialize " << childName << " in "
+                 << getLogPath() << ": entry not present";
     }
 
-    auto overlay = this->getOverlay();
-    wlock->materialized = true;
-    overlay->saveOverlayDir(this->getNodeId(), &*wlock);
-
-    if (entry_ && !entry_->isMaterialized()) {
-      entry_->setMaterialized(this->getNodeId());
-      return true;
+    auto* childEntry = iter->second.get();
+    if (contents->materialized && childEntry->isMaterialized()) {
+      // Nothing to do
+      return;
     }
 
-    return false;
-  });
+    childEntry->setMaterialized(childNodeId);
+    contents->materialized = true;
+    getOverlay()->saveOverlayDir(this->getNodeId(), &*contents);
+  }
 
-  // If we just set materialized on the entry, we need to arrange for that
-  // state to be saved to disk.  This is not atomic wrt. to the property
-  // change, but definitely does not have a lock-order-acquisition deadlock.
-  // This means that there is a small window of time where our in-memory and
-  // on-disk state for the overlay are not in sync.
-  if (updateParent) {
-    // FIXME: We probably need to grab the rename lock here to make sure we are
-    // updating the correct parent.
-    auto parentInode = getParentBuggy();
-    getOverlay()->saveOverlayDir(
-        parentInode->getNodeId(), &*parentInode->contents_.wlock());
+  // If we have a parent directory, ask our parent to materialize itself
+  // and mark us materialized when it does so.
+  auto location = getLocationInfo(renameLock);
+  if (location.parent && !location.unlinked) {
+    location.parent->childMaterialized(renameLock, location.name, getNodeId());
   }
 }
 
@@ -545,7 +568,7 @@ TreeInode::create(PathComponentPiece name, mode_t mode, int flags) {
   std::shared_ptr<FileHandle> handle;
   FileInodePtr inode;
 
-  materializeDirAndParents();
+  materialize();
 
   // We need to scope the write lock as the getattr call below implicitly
   // wants to acquire a read lock.
@@ -627,7 +650,7 @@ FileInodePtr TreeInode::symlink(
   std::shared_ptr<FileHandle> handle;
   FileInodePtr inode;
 
-  materializeDirAndParents();
+  materialize();
 
   // We need to scope the write lock as the getattr call below implicitly
   // wants to acquire a read lock.
@@ -701,7 +724,7 @@ FileInodePtr TreeInode::symlink(
 TreeInodePtr TreeInode::mkdir(PathComponentPiece name, mode_t mode) {
   RelativePath targetName;
   // Compute the effective name of the node they want to create.
-  materializeDirAndParents();
+  materialize();
 
   TreeInodePtr newChild;
   {
@@ -792,7 +815,7 @@ folly::Future<folly::Unit> TreeInode::removeImpl(
   // Verify that we can remove the child before we materialize ourself
   checkPreRemove(child);
 
-  materializeDirAndParents();
+  materialize(&renameLock);
 
   // Lock our contents in write mode.
   // We will hold it for the duration of the unlink.
@@ -907,6 +930,7 @@ class TreeInode::TreeRenameLocks {
   TreeRenameLocks() {}
 
   void acquireLocks(
+      RenameLock&& renameLock,
       TreeInode* srcTree,
       TreeInode* destTree,
       PathComponentPiece destName);
@@ -989,17 +1013,18 @@ Future<Unit> TreeInode::rename(
     PathComponentPiece name,
     TreeInodePtr destParent,
     PathComponentPiece destName) {
-  materializeDirAndParents();
-  if (destParent.get() != this) {
-    destParent->materializeDirAndParents();
-  }
-
   bool needSrc = false;
   bool needDest = false;
   {
+    auto renameLock = getMount()->acquireRenameLock();
+    materialize(&renameLock);
+    if (destParent.get() != this) {
+      destParent->materialize(&renameLock);
+    }
+
     // Acquire the locks required to do the rename
     TreeRenameLocks locks;
-    locks.acquireLocks(this, destParent.get(), destName);
+    locks.acquireLocks(std::move(renameLock), this, destParent.get(), destName);
 
     // Look up the source entry.  The destination entry info was already
     // loaded by TreeRenameLocks::acquireLocks().
@@ -1204,11 +1229,12 @@ Future<Unit> TreeInode::doRename(
  * ancestor TreeInode's before any of their descendants.
  */
 void TreeInode::TreeRenameLocks::acquireLocks(
+    RenameLock&& renameLock,
     TreeInode* srcTree,
     TreeInode* destTree,
     PathComponentPiece destName) {
-  // First grab the mountpoint-wide rename lock.
-  renameLock_ = srcTree->getMount()->acquireRenameLock();
+  // Store the mountpoint-wide rename lock.
+  renameLock_ = std::move(renameLock);
 
   if (srcTree == destTree) {
     // If the source and destination directories are the same,

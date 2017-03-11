@@ -290,10 +290,16 @@ class TreeInode : public InodeBase {
       std::unique_ptr<Tree> fromTree,
       std::unique_ptr<Tree> toTree);
 
-  /** Ensure that the overlay is tracking metadata for this inode
-   * This is required whenever we are about to make a structural change
-   * in the tree; renames, creation, deletion. */
-  void materializeDirAndParents();
+  /**
+   * Update this directory after a child entry has been materialized.
+   *
+   * This will materialize this directory if it is not already materialized,
+   * and will record that the child in question is materialized.
+   */
+  void childMaterialized(
+      const RenameLock& renameLock,
+      PathComponentPiece childName,
+      fuse_ino_t childNodeId);
 
   /**
    * Internal API only for use by InodeMap.
@@ -356,6 +362,14 @@ class TreeInode : public InodeBase {
 
   folly::Future<std::unique_ptr<InodeBase>>
   startLoadingInode(Entry* entry, PathComponentPiece name, fuse_ino_t number);
+
+  /**
+   * Materialize this directory in the overlay.
+   *
+   * This is required whenever we are about to make a structural change
+   * in the tree; renames, creation, deletion.
+   */
+  void materialize(const RenameLock* renameLock = nullptr);
 
   folly::Future<folly::Unit> doRename(
       TreeRenameLocks&& locks,

@@ -76,9 +76,8 @@ folly::Future<fusell::Dispatcher::Attr> FileInode::setattr(
     open_flags |= O_TRUNC;
   }
 
-  getParentBuggy()->materializeDirAndParents();
-
   data->materializeForWrite(open_flags);
+  materializeInParent();
 
   fusell::Dispatcher::Attr result(getMount()->getMountPoint());
   result.st = data->setAttr(attr, to_set);
@@ -180,13 +179,21 @@ folly::Future<std::shared_ptr<fusell::FileHandle>> FileInode::open(
   }
 
   if (fi.flags & (O_RDWR | O_WRONLY | O_CREAT | O_TRUNC)) {
-    getParentBuggy()->materializeDirAndParents();
     data->materializeForWrite(fi.flags);
+    materializeInParent();
   } else {
     data->materializeForRead(fi.flags);
   }
 
   return std::make_shared<FileHandle>(inodePtrFromThis(), data, fi.flags);
+}
+
+void FileInode::materializeInParent() {
+  auto renameLock = getMount()->acquireRenameLock();
+  auto loc = getLocationInfo(renameLock);
+  if (loc.parent && !loc.unlinked) {
+    loc.parent->childMaterialized(renameLock, loc.name, getNodeId());
+  }
 }
 
 std::shared_ptr<FileHandle> FileInode::finishCreate() {

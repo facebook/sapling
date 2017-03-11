@@ -239,6 +239,11 @@ class InodeBase {
   /**
    * Get the parent directory of this inode.
    *
+   * This returns nullptr only if the current inode is the root of the mount.
+   * If this inode has been unlinked this returns the TreeInode that this inode
+   * used to be a child of.  Use getParentInfo() if you also want to tell if
+   * this file is unlinked.
+   *
    * This must be called while holding the rename lock, to ensure the parent
    * does not change before the return value can be used.
    */
@@ -266,11 +271,6 @@ class InodeBase {
     return location_.rlock()->parent;
   }
 
- private:
-  template <typename InodeType>
-  friend class InodePtrImpl;
-  friend class InodePtrTestHelper;
-
   struct LocationInfo {
     LocationInfo(TreeInodePtr p, PathComponentPiece n)
         : parent(std::move(p)), name(n) {}
@@ -291,6 +291,22 @@ class InodeBase {
     bool unlinked{false};
     PathComponent name;
   };
+
+  /**
+   * Get information about the path to this Inode in the mount point.
+   *
+   * This must be called while holding the rename lock, to ensure the location
+   * does not change before the return value can be used.
+   */
+  LocationInfo getLocationInfo(const RenameLock&) const {
+    auto loc = location_.rlock();
+    return *loc;
+  }
+
+ private:
+  template <typename InodeType>
+  friend class InodePtrImpl;
+  friend class InodePtrTestHelper;
 
   bool getPathHelper(std::vector<PathComponent>& names, bool stopOnUnlinked)
       const;
