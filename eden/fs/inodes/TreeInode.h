@@ -102,7 +102,7 @@ class TreeInode : public InodeBase {
       inodeNumber_ = inode;
       hash_.clear();
     }
-    void setUnmaterialized(Hash hash) {
+    void setDematerialized(Hash hash) {
       hash_ = hash;
     }
 
@@ -184,7 +184,6 @@ class TreeInode : public InodeBase {
       fuse_ino_t ino,
       TreeInodePtr parent,
       PathComponentPiece name,
-      Entry* entry,
       std::unique_ptr<Tree>&& tree);
 
   /// Construct an inode that only has backing in the Overlay area
@@ -192,7 +191,6 @@ class TreeInode : public InodeBase {
       fuse_ino_t ino,
       TreeInodePtr parent,
       PathComponentPiece name,
-      Entry* entry,
       Dir&& dir);
 
   /// Constructors for the root TreeInode
@@ -291,15 +289,45 @@ class TreeInode : public InodeBase {
       std::unique_ptr<Tree> toTree);
 
   /**
-   * Update this directory after a child entry has been materialized.
+   * Update this directory when a child entry is materialized.
    *
    * This will materialize this directory if it is not already materialized,
    * and will record that the child in question is materialized.
+   *
+   * This method should only be called by the child inode in question.
+   *
+   * With regards to specific implementation details of this API:
+   * - The child inode must not be holding locks on itself when calling this
+   *   method.  Typically the child updates its own in-memory state first, then
+   *   releases its lock before calling childMaterialized() on its parent.
+   * - The child should have written out its overlay data on disk before
+   *   calling this method.  This ensures that the child always has overlay
+   *   data on disk whenever its parent directory's overlay data indicates that
+   *   the child is materialized.
    */
   void childMaterialized(
       const RenameLock& renameLock,
       PathComponentPiece childName,
       fuse_ino_t childNodeId);
+
+  /**
+   * Update this directory when a child entry is dematerialized.
+   *
+   * This method should only be called by the child inode in question.
+   *
+   * With regards to specific implementation details of this API:
+   * - The child inode must not be holding locks on itself when calling this
+   *   method.  Typically the child updates its own in-memory state first, then
+   *   releases its lock before calling childMaterialized() on its parent.
+   * - The child should delay removing its on-disk overlay state until after
+   *   this method returns.  This ensures that the child always has overlay
+   *   data on disk whenever its parent directory's overlay data indicates that
+   *   the child is materialized.
+   */
+  void childDematerialized(
+      const RenameLock& renameLock,
+      PathComponentPiece childName,
+      Hash childScmHash);
 
   /**
    * Internal API only for use by InodeMap.
@@ -428,8 +456,6 @@ class TreeInode : public InodeBase {
   void saveOverlayPostCheckout(CheckoutContext* ctx, const Tree* tree);
 
   folly::Synchronized<Dir> contents_;
-  /** Can be nullptr for the root inode only, otherwise will be non-null */
-  TreeInode::Entry* entry_{nullptr};
 };
 }
 }

@@ -109,26 +109,23 @@ TreeInode::TreeInode(
     fuse_ino_t ino,
     TreeInodePtr parent,
     PathComponentPiece name,
-    Entry* entry,
     std::unique_ptr<Tree>&& tree)
-    : TreeInode(ino, parent, name, entry, buildDirFromTree(tree.get())) {}
+    : TreeInode(ino, parent, name, buildDirFromTree(tree.get())) {}
 
 TreeInode::TreeInode(
     fuse_ino_t ino,
     TreeInodePtr parent,
     PathComponentPiece name,
-    Entry* entry,
     Dir&& dir)
-    : InodeBase(ino, parent, name), contents_(std::move(dir)), entry_(entry) {
+    : InodeBase(ino, parent, name), contents_(std::move(dir)) {
   DCHECK_NE(ino, FUSE_ROOT_ID);
-  DCHECK_NOTNULL(entry_);
 }
 
 TreeInode::TreeInode(EdenMount* mount, std::unique_ptr<Tree>&& tree)
     : TreeInode(mount, buildDirFromTree(tree.get())) {}
 
 TreeInode::TreeInode(EdenMount* mount, Dir&& dir)
-    : InodeBase(mount), contents_(std::move(dir)), entry_(nullptr) {}
+    : InodeBase(mount), contents_(std::move(dir)) {}
 
 TreeInode::~TreeInode() {}
 
@@ -447,20 +444,22 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
     return getStore()->getTreeFuture(entry->getHash()).then([
       self = inodePtrFromThis(),
       childName = PathComponent{name},
-      entry,
       number
     ](std::unique_ptr<Tree> tree)->unique_ptr<InodeBase> {
-      return make_unique<TreeInode>(
-          number, self, childName, entry, std::move(tree));
+      return make_unique<TreeInode>(number, self, childName, std::move(tree));
     });
   }
 
   // No corresponding TreeEntry, this exists only in the overlay.
   CHECK_EQ(number, entry->getInodeNumber());
   auto overlayDir = getOverlay()->loadOverlayDir(number);
-  DCHECK(overlayDir) << "missing overlay for " << getLogPath() << " / " << name;
+  if (!overlayDir) {
+    auto bug = EDEN_BUG() << "missing overlay for " << getLogPath() << " / "
+                          << name;
+    return folly::makeFuture<unique_ptr<InodeBase>>(bug.toException());
+  }
   return make_unique<TreeInode>(
-      number, inodePtrFromThis(), name, entry, std::move(overlayDir.value()));
+      number, inodePtrFromThis(), name, std::move(overlayDir.value()));
 }
 
 folly::Future<std::shared_ptr<fusell::DirHandle>> TreeInode::opendir(
@@ -469,33 +468,52 @@ folly::Future<std::shared_ptr<fusell::DirHandle>> TreeInode::opendir(
 }
 
 void TreeInode::materialize(const RenameLock* renameLock) {
-  // Write out our data in the overlay before we update our parent.
-  // If we crash partway through it's better if our parent does not say that we
-  // are materialized yet even if we actually do have overlay data present,
-  // rather than to have our parent indicate that we are materialized but we
-  // don't have overlay data present.
-  //
-  // In the former case, our overlay data should still be identical to the hash
-  // mentioned in the parent, so that's fine and we'll still be able to load
-  // data correctly the next time we restart.  However, if our parent says we
-  // are materialized but we don't actually have overlay data present we won't
-  // have any state indicating which source control hash our contents are from.
-  {
-    auto contents = contents_.wlock();
+  // If we don't have the rename lock yet, do a quick check first
+  // to avoid acquiring it if we don't actually need to change anything.
+  if (!renameLock) {
+    auto contents = contents_.rlock();
     if (contents->materialized) {
       return;
     }
-    contents->materialized = true;
-    getOverlay()->saveOverlayDir(this->getNodeId(), &*contents);
   }
 
-  // Now update our parent to record that we are materialized.
   {
     // Acquire the rename lock now, if it wasn't passed in
+    //
+    // Only performing materialization state changes with the RenameLock held
+    // makes reasoning about update ordering a bit simpler.  This guarantees
+    // that materialization and dematerialization operations cannot be
+    // interleaved.  We don't want it to be possible for a
+    // materialization/dematerialization to interleave the order in which they
+    // update the local overlay data and our parent directory's overlay data,
+    // possibly resulting in an inconsistent state where the parent thinks we
+    // are materialized but we don't think we are.
     RenameLock renameLock2;
     if (!renameLock) {
       renameLock2 = getMount()->acquireRenameLock();
       renameLock = &renameLock2;
+    }
+
+    // Write out our data in the overlay before we update our parent.  If we
+    // crash partway through it's better if our parent does not say that we are
+    // materialized yet even if we actually do have overlay data present,
+    // rather than to have our parent indicate that we are materialized but we
+    // don't have overlay data present.
+    //
+    // In the former case, our overlay data should still be identical to the
+    // hash mentioned in the parent, so that's fine and we'll still be able to
+    // load data correctly the next time we restart.  However, if our parent
+    // says we are materialized but we don't actually have overlay data present
+    // we won't have any state indicating which source control hash our
+    // contents are from.
+    {
+      auto contents = contents_.wlock();
+      // Double check that we still need to be materialized
+      if (contents->materialized) {
+        return;
+      }
+      contents->materialized = true;
+      getOverlay()->saveOverlayDir(this->getNodeId(), &*contents);
     }
 
     // Mark ourself materialized in our parent directory (if we have one)
@@ -534,6 +552,51 @@ void TreeInode::childMaterialized(
     getOverlay()->saveOverlayDir(this->getNodeId(), &*contents);
   }
 
+  // If we have a parent directory, ask our parent to materialize itself
+  // and mark us materialized when it does so.
+  auto location = getLocationInfo(renameLock);
+  if (location.parent && !location.unlinked) {
+    location.parent->childMaterialized(renameLock, location.name, getNodeId());
+  }
+}
+
+void TreeInode::childDematerialized(
+    const RenameLock& renameLock,
+    PathComponentPiece childName,
+    Hash childScmHash) {
+  {
+    auto contents = contents_.wlock();
+    auto iter = contents->entries.find(childName);
+    if (iter == contents->entries.end()) {
+      // This should never happen.
+      // We should only get called with legitimate children names.
+      EDEN_BUG() << "error attempting to dematerialize " << childName << " in "
+                 << getLogPath() << ": entry not present";
+    }
+
+    auto* childEntry = iter->second.get();
+    if (!childEntry->isMaterialized() &&
+        childEntry->getHash() == childScmHash) {
+      // Nothing to do.  Our child's state and our own are both unchanged.
+      return;
+    }
+
+    // Mark the child dematerialized.
+    childEntry->setDematerialized(childScmHash);
+
+    // Mark us materialized!
+    //
+    // Even though our child is dematerialized, we always materialize ourself
+    // so we make sure we record the correct source control hash for our child.
+    // Currently dematerialization only happens on the checkout() flow.  Once
+    // checkout finishes processing all of the children it will call
+    // saveOverlayPostCheckout() on this directory, and here we will check to
+    // see if we can dematerialize ourself.
+    contents->materialized = true;
+    getOverlay()->saveOverlayDir(this->getNodeId(), &*contents);
+  }
+
+  // We are materialized now.
   // If we have a parent directory, ask our parent to materialize itself
   // and mark us materialized when it does so.
   auto location = getLocationInfo(renameLock);
@@ -754,24 +817,29 @@ TreeInodePtr TreeInode::mkdir(PathComponentPiece name, mode_t mode) {
     // The mode passed in by the caller may not have the file type bits set.
     // Ensure that we mark this as a directory.
     mode = S_IFDIR | (07777 & mode);
-    auto entry = std::make_unique<Entry>(mode, childNumber);
 
     // Store the overlay entry for this dir
     Dir emptyDir;
     emptyDir.materialized = true;
     overlay->saveOverlayDir(childNumber, &emptyDir);
 
+    // Add a new entry to contents_.entries
+    auto emplaceResult = contents->entries.emplace(
+        name, std::make_unique<Entry>(mode, childNumber));
+    CHECK(emplaceResult.second)
+        << "directory contents should not have changed since the check above";
+    auto& entry = emplaceResult.first->second;
+
     // Create the TreeInode
     newChild = TreeInodePtr::makeNew(
         childNumber,
         this->inodePtrFromThis(),
         name,
-        entry.get(),
         std::move(emptyDir));
     entry->inode = newChild.get();
     inodeMap->inodeCreated(newChild);
 
-    contents->entries.emplace(name, std::move(entry));
+    // Save our updated overlay data
     overlay->saveOverlayDir(getNodeId(), &*contents);
   }
 
@@ -1610,72 +1678,101 @@ Future<Unit> TreeInode::checkoutRemoveChild(
 }
 
 void TreeInode::saveOverlayPostCheckout(
-    CheckoutContext* /* ctx */,
+    CheckoutContext* ctx,
     const Tree* tree) {
-  auto contents = contents_.wlock();
+  bool materialize;
+  bool stateChanged;
+  {
+    auto contents = contents_.wlock();
 
-  // Check to see if we need to be materialized or not.
-  //
-  // If we can confirm that we are identical to the source control Tree we do
-  // not need to be materialized.
-  auto shouldMaterialize = [&]() {
-    const auto& scmEntries = tree->getTreeEntries();
-    // If we have a different number of entries we must be different from the
-    // Tree, and therefore must be materialized.
-    if (scmEntries.size() != contents->entries.size()) {
-      return true;
-    }
-
-    // This code relies on the fact that our contents->entries PathMap sorts
-    // paths in the same order as Tree's entry list.
-    auto inodeIter = contents->entries.begin();
-    auto scmIter = scmEntries.begin();
-    for (; scmIter != scmEntries.end(); ++inodeIter, ++scmIter) {
-      // If any of our children are materialized, we need to be materialized
-      // too to record the fact that we have materialized children.
-      //
-      // If our children are materialized this means they are likely different
-      // from the new source control state.  (This is not a 100% guarantee
-      // though, as writes may still be happening concurrently to the checkout
-      // operation.)  Even if the child is still identical to its source
-      // control state we still want to make sure we are materialized if the
-      // child is.
-      if (inodeIter->second->isMaterialized()) {
+    // Check to see if we need to be materialized or not.
+    //
+    // If we can confirm that we are identical to the source control Tree we do
+    // not need to be materialized.
+    auto shouldMaterialize = [&]() {
+      const auto& scmEntries = tree->getTreeEntries();
+      // If we have a different number of entries we must be different from the
+      // Tree, and therefore must be materialized.
+      if (scmEntries.size() != contents->entries.size()) {
         return true;
       }
 
-      // If if the child is not materialized, it is the same as some source
-      // control object.  However, if it isn't the same as the object in our
-      // Tree, we have to materialize ourself.
-      if (inodeIter->second->getHash() != scmIter->getHash()) {
-        return true;
+      // This code relies on the fact that our contents->entries PathMap sorts
+      // paths in the same order as Tree's entry list.
+      auto inodeIter = contents->entries.begin();
+      auto scmIter = scmEntries.begin();
+      for (; scmIter != scmEntries.end(); ++inodeIter, ++scmIter) {
+        // If any of our children are materialized, we need to be materialized
+        // too to record the fact that we have materialized children.
+        //
+        // If our children are materialized this means they are likely different
+        // from the new source control state.  (This is not a 100% guarantee
+        // though, as writes may still be happening concurrently to the checkout
+        // operation.)  Even if the child is still identical to its source
+        // control state we still want to make sure we are materialized if the
+        // child is.
+        if (inodeIter->second->isMaterialized()) {
+          return true;
+        }
+
+        // If if the child is not materialized, it is the same as some source
+        // control object.  However, if it isn't the same as the object in our
+        // Tree, we have to materialize ourself.
+        if (inodeIter->second->getHash() != scmIter->getHash()) {
+          return true;
+        }
       }
-    }
 
-    // If we're still here we are identical to the source control Tree.
-    // We can be dematerialized.
-    return false;
-  };
+      // If we're still here we are identical to the source control Tree.
+      // We can be dematerialized.
+      return false;
+    };
 
-  bool materialize = shouldMaterialize();
-  if (materialize) {
-    VLOG(6) << "post checkout: tree is materialized: " << getLogPath();
-    getOverlay()->saveOverlayDir(getNodeId(), &*contents);
-    if (entry_) {
-      entry_->setMaterialized(getNodeId());
+    materialize = shouldMaterialize();
+    stateChanged = (materialize != contents->materialized);
+    if (materialize) {
+      // If we need to be materialized, write out our state to the overlay.
+      // (It's possible our state is unchanged from what's already on disk,
+      // but for now we can't detect this, and just always write it out.)
+      getOverlay()->saveOverlayDir(getNodeId(), &*contents);
     }
-  } else {
-    VLOG(6) << "post checkout: tree is not materialized: " << getLogPath();
-    getOverlay()->removeOverlayData(getNodeId());
-    if (entry_) {
-      entry_->setUnmaterialized(tree->getHash());
-    }
+    contents->materialized = materialize;
   }
 
-  // We don't need to inform our parent TreeInode about changes in our
-  // materialization state right now.  Our parent will recompute its own
-  // materialization status once all of its children finish their checkout
-  // operations.
+  // If our state changed, tell our parent.
+  //
+  // TODO: Currently we end up writing out overlay data for TreeInodes pretty
+  // often during the checkout process.  Each time a child entry is processed
+  // we will likely end up rewriting data for it's parent TreeInode, and then
+  // once all children are processed we do another pass through here in
+  // saveOverlayPostCheckout() and possibly write it out again.
+  //
+  // It would be nicer if we could only save the data for each TreeInode once.
+  // The downside of this is that the on-disk overlay state would be
+  // potentially inconsistent until the checkout completes.  There may be
+  // periods of time where a parent directory says the child is materialized
+  // when the child has decided to be dematerialized.  This would cause
+  // problems when we tried to load the overlay data later.  If we update the
+  // code to be able to handle this somehow then maybe we could avoid doing all
+  // of the intermediate updates to the parent as we process each child entry.
+  if (stateChanged) {
+    auto loc = getLocationInfo(ctx->renameLock());
+    if (loc.parent && !loc.unlinked) {
+      if (materialize) {
+        loc.parent->childMaterialized(ctx->renameLock(), loc.name, getNodeId());
+      } else {
+        loc.parent->childDematerialized(
+            ctx->renameLock(), loc.name, tree->getHash());
+      }
+    }
+
+    // If we were dematerialized, remove our overlay data only after updating
+    // our parent.  This ensures that we always have overlay data on disk when
+    // our parent thinks we do.
+    if (!materialize) {
+      getOverlay()->removeOverlayData(getNodeId());
+    }
+  }
 }
 
 namespace {
