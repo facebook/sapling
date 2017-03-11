@@ -428,7 +428,12 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
     // Eventually we may want to go ahead start loading some of the blob data
     // now, but we don't have to wait for it to be ready before marking the
     // inode loaded.
-    return make_unique<FileInode>(number, inodePtrFromThis(), name, entry);
+    return make_unique<FileInode>(
+        number,
+        inodePtrFromThis(),
+        name,
+        entry->mode,
+        entry->getOptionalHash());
   }
 
   // TODO:
@@ -671,11 +676,7 @@ TreeInode::create(PathComponentPiece name, mode_t mode, int flags) {
 
     // build a corresponding FileInode
     inode = FileInodePtr::makeNew(
-        childNumber,
-        this->inodePtrFromThis(),
-        name,
-        entry.get(),
-        std::move(file));
+        childNumber, this->inodePtrFromThis(), name, mode, std::move(file));
     entry->inode = inode.get();
     inodeMap->inodeCreated(inode);
 
@@ -769,7 +770,7 @@ FileInodePtr TreeInode::symlink(
         childNumber,
         this->inodePtrFromThis(),
         name,
-        entry.get(),
+        entry->mode,
         std::move(file));
     entry->inode = inode.get();
     inodeMap->inodeCreated(inode);

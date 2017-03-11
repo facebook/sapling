@@ -248,7 +248,9 @@ class IgnoreChecker {
     }
 
     auto data = ignoreInode->getOrLoadData();
-    data->materializeForRead(O_RDONLY);
+    auto materializeFuture = data->ensureDataLoaded();
+    // TODO: Use a future callback rather than blocking here
+    materializeFuture.get();
     ignore->loadFile(data->readAll());
   }
 

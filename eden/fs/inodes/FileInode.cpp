@@ -14,116 +14,134 @@
 #include "FileHandle.h"
 #include "InodeError.h"
 #include "Overlay.h"
+#include "TreeInode.h"
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/utils/XAttr.h"
 
-using folly::Future;
-using folly::StringPiece;
 using folly::checkUnixError;
+using folly::Future;
+using folly::makeFuture;
+using folly::StringPiece;
+using std::shared_ptr;
 using std::string;
 using std::vector;
 
 namespace facebook {
 namespace eden {
 
-FileInode::FileInode(
-    fuse_ino_t ino,
-    TreeInodePtr parentInode,
-    PathComponentPiece name,
-    TreeInode::Entry* entry)
-    : InodeBase(ino, std::move(parentInode), name),
-      entry_(entry),
-      data_(std::make_shared<FileData>(this, mutex_, entry)) {}
+FileInode::State::State(
+    FileInode* inode,
+    mode_t m,
+    const folly::Optional<Hash>& h)
+    : data(std::make_shared<FileData>(inode, h)), mode(m), hash(h) {}
+
+FileInode::State::State(FileInode* inode, mode_t m, folly::File&& file)
+    : data(std::make_shared<FileData>(inode, std::move(file))), mode(m) {}
 
 FileInode::FileInode(
     fuse_ino_t ino,
     TreeInodePtr parentInode,
     PathComponentPiece name,
-    TreeInode::Entry* entry,
+    mode_t mode,
+    const folly::Optional<Hash>& hash)
+    : InodeBase(ino, std::move(parentInode), name),
+      state_(folly::construct_in_place, this, mode, hash) {}
+
+FileInode::FileInode(
+    fuse_ino_t ino,
+    TreeInodePtr parentInode,
+    PathComponentPiece name,
+    mode_t mode,
     folly::File&& file)
     : InodeBase(ino, std::move(parentInode), name),
-      entry_(entry),
-      data_(std::make_shared<FileData>(this, mutex_, entry_, std::move(file))) {
-}
+      state_(folly::construct_in_place, this, mode, std::move(file)) {}
 
 folly::Future<fusell::Dispatcher::Attr> FileInode::getattr() {
   auto data = getOrLoadData();
 
   // Future optimization opportunity: right now, if we have not already
-  // materialized the data from the entry_, we have to materialize it
+  // materialized the data from the entry, we have to materialize it
   // from the store.  If we augmented our metadata we could avoid this,
   // and this would speed up operations like `ls`.
-  data->materializeForRead(O_RDONLY);
-
-  fusell::Dispatcher::Attr attr(getMount()->getMountPoint());
-  attr.st = data->stat();
-  attr.st.st_ino = getNodeId();
-  return attr;
+  return data->ensureDataLoaded().then([ self = inodePtrFromThis(), data ]() {
+    auto attr = fusell::Dispatcher::Attr{self->getMount()->getMountPoint()};
+    attr.st = data->stat();
+    attr.st.st_ino = self->getNodeId();
+    return attr;
+  });
 }
 
 folly::Future<fusell::Dispatcher::Attr> FileInode::setattr(
     const struct stat& attr,
     int to_set) {
   auto data = getOrLoadData();
-  int open_flags = O_RDWR;
+  int openFlags = O_RDWR;
 
   // Minor optimization: if we know that the file is being completed truncated
   // as part of this operation, there's no need to fetch the underlying data,
   // so pass on the truncate flag our underlying open call
   if ((to_set & FUSE_SET_ATTR_SIZE) && attr.st_size == 0) {
-    open_flags |= O_TRUNC;
+    openFlags |= O_TRUNC;
   }
 
-  data->materializeForWrite(open_flags);
-  materializeInParent();
+  return data->materializeForWrite(openFlags).then(
+      [ self = inodePtrFromThis(), data, attr, to_set ]() {
+        self->materializeInParent();
 
-  fusell::Dispatcher::Attr result(getMount()->getMountPoint());
-  result.st = data->setAttr(attr, to_set);
-  result.st.st_ino = getNodeId();
+        auto result =
+            fusell::Dispatcher::Attr{self->getMount()->getMountPoint()};
+        result.st = data->setAttr(attr, to_set);
+        result.st.st_ino = self->getNodeId();
 
-  auto path = getPath();
-  if (path.hasValue()) {
-    getMount()->getJournal().wlock()->addDelta(
-        std::make_unique<JournalDelta>(JournalDelta{path.value()}));
-  }
+        auto path = self->getPath();
+        if (path.hasValue()) {
+          self->getMount()->getJournal().wlock()->addDelta(
+              std::make_unique<JournalDelta>(JournalDelta{path.value()}));
+        }
 
-  return result;
+        return result;
+      });
 }
 
 folly::Future<std::string> FileInode::readlink() {
-  auto data = getOrLoadData();
-
+  shared_ptr<FileData> data;
   {
-    std::unique_lock<std::mutex> lock(mutex_);
-
-    DCHECK_NOTNULL(entry_);
-    if (!S_ISLNK(entry_->mode)) {
+    auto state = state_.wlock();
+    if (!S_ISLNK(state->mode)) {
       // man 2 readlink says:  EINVAL The named file is not a symbolic link.
       throw InodeError(EINVAL, inodePtrFromThis(), "not a symlink");
     }
+
+    data = getOrLoadData(state);
   }
 
   // The symlink contents are simply the file contents!
-  data->materializeForRead(O_RDONLY);
-  return data->readAll();
+  return data->ensureDataLoaded().then(
+      [ self = inodePtrFromThis(), data ]() { return data->readAll(); });
 }
 
 std::shared_ptr<FileData> FileInode::getOrLoadData() {
-  std::unique_lock<std::mutex> lock(mutex_);
-  if (!data_) {
-    data_ = std::make_shared<FileData>(this, mutex_, entry_);
+  return getOrLoadData(state_.wlock());
+}
+
+std::shared_ptr<FileData> FileInode::getOrLoadData(
+    const folly::Synchronized<State>::LockedPtr& state) {
+  if (!state->data) {
+    state->data = std::make_shared<FileData>(this, state->hash);
   }
 
-  return data_;
+  return state->data;
 }
 
 void FileInode::fileHandleDidClose() {
-  std::unique_lock<std::mutex> lock(mutex_);
-  if (data_.unique()) {
-    // We're the only remaining user, no need to keep it around
-    data_.reset();
+  {
+    auto state = state_.wlock();
+    if (state->data.unique()) {
+      // We're the only remaining user, no need to keep it around
+      state->data.reset();
+    }
   }
 }
 
@@ -135,39 +153,59 @@ bool FileInode::isSameAs(const Blob& blob, mode_t mode) {
   // When comparing mode bits, we only care about the
   // file type and owner permissions.
   auto relevantModeBits = [](mode_t m) { return (m & (S_IFMT | S_IRWXU)); };
-  if (relevantModeBits(entry_->mode) != relevantModeBits(mode)) {
-    return false;
+
+  shared_ptr<FileData> data;
+  {
+    auto state = state_.wlock();
+    if (relevantModeBits(state->mode) != relevantModeBits(mode)) {
+      return false;
+    }
+
+    if (state->hash.hasValue()) {
+      // This file is not materialized, so we can just compare hashes
+      return state->hash.value() == blob.getHash();
+    }
+
+    data = getOrLoadData(state);
   }
 
-  if (!entry_->isMaterialized()) {
-    return entry_->getHash() == blob.getHash();
-  }
-
-  return getOrLoadData()->getSha1() == Hash::sha1(&blob.getContents());
+  return data->getSha1() == Hash::sha1(&blob.getContents());
 }
 
 mode_t FileInode::getMode() const {
-  // TODO: This needs proper synchronization
-  return entry_->mode;
+  return state_.rlock()->mode;
 }
 
 mode_t FileInode::getPermissions() const {
   return (getMode() & 07777);
 }
 
+folly::Optional<Hash> FileInode::getBlobHash() const {
+  return state_.rlock()->hash;
+}
+
 folly::Future<std::shared_ptr<fusell::FileHandle>> FileInode::open(
     const struct fuse_file_info& fi) {
-  auto data = getOrLoadData();
+  shared_ptr<FileData> data;
+
+// TODO: We currently should ideally call fileHandleDidClose() if we fail
+// to create a FileHandle.  It's currently slightly tricky to do this right
+// on all code paths.
+//
+// I think it will be better in the long run to just refactor how we do this.
+// fileHandleDidClose() currently uses std::shared_ptr::unique(), which is
+// deprecated in future versions of C++.
+#if 0
   SCOPE_EXIT {
     data.reset();
     fileHandleDidClose();
   };
+#endif
 
   {
-    std::unique_lock<std::mutex> lock(mutex_);
+    auto state = state_.wlock();
 
-    DCHECK_NOTNULL(entry_);
-    if (S_ISLNK(entry_->mode)) {
+    if (S_ISLNK(state->mode)) {
       // Linux reports ELOOP if you try to open a symlink with O_NOFOLLOW set.
       // Since it isn't clear whether FUSE will allow this to happen, this
       // is a speculative defense against that happening; the O_PATH flag
@@ -176,16 +214,24 @@ folly::Future<std::shared_ptr<fusell::FileHandle>> FileInode::open(
       // punting on handling those situations here for now.
       throw InodeError(ELOOP, inodePtrFromThis(), "is a symlink");
     }
+
+    data = getOrLoadData(state);
   }
 
   if (fi.flags & (O_RDWR | O_WRONLY | O_CREAT | O_TRUNC)) {
-    data->materializeForWrite(fi.flags);
-    materializeInParent();
+    return data->materializeForWrite(fi.flags).then(
+        [ self = inodePtrFromThis(), data, flags = fi.flags ]() {
+          self->materializeInParent();
+          return shared_ptr<fusell::FileHandle>{
+              std::make_shared<FileHandle>(self, data, flags)};
+        });
   } else {
-    data->materializeForRead(fi.flags);
+    return data->ensureDataLoaded().then(
+        [ self = inodePtrFromThis(), data, flags = fi.flags ]() {
+          return shared_ptr<fusell::FileHandle>{
+              std::make_shared<FileHandle>(self, data, flags)};
+        });
   }
-
-  return std::make_shared<FileHandle>(inodePtrFromThis(), data, fi.flags);
 }
 
 void FileInode::materializeInParent() {
@@ -202,8 +248,6 @@ std::shared_ptr<FileHandle> FileInode::finishCreate() {
     data.reset();
     fileHandleDidClose();
   };
-  data->materializeForWrite(0);
-
   return std::make_shared<FileHandle>(inodePtrFromThis(), data, 0);
 }
 
@@ -212,8 +256,11 @@ Future<vector<string>> FileInode::listxattr() {
   // assume that the SHA-1 is present without checking the ObjectStore.
   vector<string> attributes;
 
-  if (S_ISREG(entry_->mode)) {
-    attributes.emplace_back(kXattrSha1.str());
+  {
+    auto state = state_.rlock();
+    if (S_ISREG(state->mode)) {
+      attributes.emplace_back(kXattrSha1.str());
+    }
   }
   return attributes;
 }
@@ -221,47 +268,33 @@ Future<vector<string>> FileInode::listxattr() {
 Future<string> FileInode::getxattr(StringPiece name) {
   // Currently, we only support the xattr for the SHA-1 of a regular file.
   if (name != kXattrSha1) {
-    throw InodeError(kENOATTR, inodePtrFromThis());
+    return makeFuture<string>(InodeError(kENOATTR, inodePtrFromThis()));
   }
 
-  return getSHA1().get().toString();
+  return getSHA1().then([](Hash hash) { return hash.toString(); });
 }
 
 Future<Hash> FileInode::getSHA1() {
-  // Some ugly looking stuff to avoid materializing the file if we haven't
-  // done so already.
-  std::unique_lock<std::mutex> lock(mutex_);
-  if (data_) {
-    // We already have context, ask it to supply the results.
-    return data_->getSha1Locked(lock);
-  }
-  CHECK_NOTNULL(entry_);
+  std::shared_ptr<FileData> data;
+  folly::Optional<Hash> hash;
+  {
+    auto state = state_.wlock();
+    if (!S_ISREG(state->mode)) {
+      // We only define a SHA-1 value for regular files
+      return makeFuture<Hash>(InodeError(kENOATTR, inodePtrFromThis()));
+    }
 
-  if (!S_ISREG(entry_->mode)) {
-    // We only define a SHA-1 value for regular files
-    throw InodeError(kENOATTR, inodePtrFromThis());
-  }
-
-  if (entry_->isMaterialized()) {
-    // The O_NOFOLLOW here prevents us from attempting to read attributes
-    // from a symlink.
-    auto filePath = getLocalPath();
-    folly::File file(filePath.c_str(), O_RDONLY | O_NOFOLLOW);
-
-    // Return the property from the existing file.
-    // If it isn't set it means that someone was poking into the overlay and
-    // we'll return the standard kENOATTR back to the caller in that case.
-    return Hash(fgetxattr(file.fd(), kXattrSha1));
+    hash = state->hash;
+    if (!hash.hasValue()) {
+      data = getOrLoadData(state);
+    }
   }
 
-  // TODO(mbolin): Make this more fault-tolerant. Currently, there is no logic
-  // to account for the case where we don't have the SHA-1 for the blob, the
-  // hash doesn't correspond to a blob, etc.
-  return getMount()->getObjectStore()->getSha1ForBlob(entry_->getHash());
-}
+  if (hash.hasValue()) {
+    return getMount()->getObjectStore()->getSha1ForBlob(hash.value());
+  }
 
-const TreeInode::Entry* FileInode::getEntry() const {
-  return entry_;
+  return data->getSha1();
 }
 }
 }

@@ -7,11 +7,12 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
-#include "FileHandle.h"
+#include "eden/fs/inodes/FileHandle.h"
 
-#include "EdenMount.h"
-#include "FileData.h"
-#include "FileInode.h"
+#include "eden/fs/inodes/EdenMount.h"
+#include "eden/fs/inodes/FileData.h"
+#include "eden/fs/inodes/FileInode.h"
+#include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/store/LocalStore.h"
 
 

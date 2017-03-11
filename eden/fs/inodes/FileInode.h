@@ -8,10 +8,14 @@
  *
  */
 #pragma once
-#include <folly/File.h>
-#include "InodeBase.h"
-#include "TreeInode.h"
+#include <folly/Optional.h>
+#include <folly/Synchronized.h>
+#include "eden/fs/inodes/InodeBase.h"
 #include "eden/fs/model/Tree.h"
+
+namespace folly {
+class File;
+}
 
 namespace facebook {
 namespace eden {
@@ -30,7 +34,8 @@ class FileInode : public InodeBase {
       fuse_ino_t ino,
       TreeInodePtr parentInode,
       PathComponentPiece name,
-      TreeInode::Entry* entry);
+      mode_t mode,
+      const folly::Optional<Hash>& hash);
 
   /** Construct an inode using a freshly created overlay file.
    * file must be moved in and must have been created by a call to
@@ -40,7 +45,7 @@ class FileInode : public InodeBase {
       fuse_ino_t ino,
       TreeInodePtr parentInode,
       PathComponentPiece name,
-      TreeInode::Entry* entry,
+      mode_t mode,
       folly::File&& file);
 
   folly::Future<fusell::Dispatcher::Attr> getattr() override;
@@ -60,8 +65,6 @@ class FileInode : public InodeBase {
   folly::Future<std::vector<std::string>> listxattr() override;
   folly::Future<std::string> getxattr(folly::StringPiece name) override;
   folly::Future<Hash> getSHA1();
-
-  const TreeInode::Entry* getEntry() const;
 
   /// Ensure that underlying storage information is loaded
   std::shared_ptr<FileData> getOrLoadData();
@@ -90,7 +93,35 @@ class FileInode : public InodeBase {
    */
   mode_t getPermissions() const;
 
+  /**
+   * If this file is backed by a source control Blob, return the hash of the
+   * Blob, or return folly::none if this file is materialized in the overlay.
+   *
+   * Beware that the file's materialization state may have changed by the time
+   * you use the return value of this method.  This method is primarily
+   * intended for use in tests and debugging functions.  Its return value
+   * generally cannot be trusted in situations where there may be concurrent
+   * modifications by other threads.
+   */
+  folly::Optional<Hash> getBlobHash() const;
+
  private:
+  /**
+   * The contents of a FileInode.
+   *
+   * This structure exists to allow the entire contents to be protected inside
+   * folly::Synchronized.  This ensures proper synchronization when accessing
+   * any member variables of FileInode.
+   */
+  struct State {
+    State(FileInode* inode, mode_t mode, const folly::Optional<Hash>& hash);
+    State(FileInode* inode, mode_t mode, folly::File&& hash);
+
+    std::shared_ptr<FileData> data;
+    mode_t mode{0};
+    folly::Optional<Hash> hash;
+  };
+
   /**
    * Get a FileInodePtr to ourself.
    *
@@ -103,6 +134,8 @@ class FileInode : public InodeBase {
   FileInodePtr inodePtrFromThis() {
     return FileInodePtr::newPtrFromExisting(this);
   }
+  std::shared_ptr<FileData> getOrLoadData(
+      const folly::Synchronized<State>::LockedPtr& state);
 
   /**
    * Mark this FileInode materialized in its parent directory.
@@ -112,23 +145,10 @@ class FileInode : public InodeBase {
   /// Called as part of shutting down an open handle.
   void fileHandleDidClose();
 
-  /**
-   * Our Entry in our parent TreeInode's contents_
-   *
-   * TODO: We need to replace this with our own copy.  As-is we should never
-   * access this without holding our parent's contents_ lock, which we aren't
-   * doing correctly.
-   */
-  TreeInode::Entry* entry_{nullptr};
-
-  std::shared_ptr<FileData> data_;
-  /// for managing consistency, especially when materializing.
-  // The corresponding FileData instance tracked by data_ above
-  // keeps a (non-owning) reference on this mutex and has methods
-  // that will acquire this mutex.
-  std::mutex mutex_;
+  folly::Synchronized<State> state_;
 
   friend class ::facebook::eden::FileHandle;
+  friend class ::facebook::eden::FileData;
 };
 }
 }

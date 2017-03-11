@@ -9,10 +9,16 @@
  */
 #pragma once
 #include <folly/File.h>
+#include <folly/futures/Future.h>
 #include <folly/io/IOBuf.h>
 #include <mutex>
-#include "eden/fs/inodes/TreeInode.h"
+#include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/model/Tree.h"
+
+namespace folly {
+template <typename T>
+class Optional;
+}
 
 namespace facebook {
 namespace eden {
@@ -21,8 +27,8 @@ class BufVec;
 }
 
 class Blob;
-class FileInode;
 class Hash;
+class ObjectStore;
 class Overlay;
 
 /**
@@ -38,18 +44,14 @@ class Overlay;
 class FileData {
  public:
   /** Construct a FileData from an overlay entry */
-  FileData(FileInode* inode, std::mutex& mutex, TreeInode::Entry* entry);
+  FileData(FileInode* inode, const folly::Optional<Hash>& hash);
 
   /** Construct a freshly created FileData from a pre-opened File object.
    * file must be moved in (it has no copy constructor) and must have
    * been created by a call to Overlay::createFile.  This constructor
    * is used in the TreeInode::create case and is required to implement
    * O_EXCL correctly. */
-  FileData(
-      FileInode* inode,
-      std::mutex& mutex,
-      TreeInode::Entry* entry,
-      folly::File&& file);
+  FileData(FileInode* inode, folly::File&& file);
 
   /**
    * Read up to size bytes from the file at the specified offset.
@@ -79,8 +81,6 @@ class FileData {
 
   /// Returns the sha1 hash of the content.
   Hash getSha1();
-  /// Returns the sha1 hash of the content, for existing lock holders.
-  Hash getSha1Locked(const std::unique_lock<std::mutex>&);
 
   /**
    * Read the entire file contents, and return them as a string.
@@ -97,30 +97,27 @@ class FileData {
    * copy it locally to the overlay.  If we are truncating we just
    * need to create an empty file in the overlay.  Otherwise we
    * need to go out to the LocalStore to obtain the backing data.
-   *
-   * TODO: The overlay argument should be passed in as a raw pointer.  We do
-   * not need ownership of it.
    */
-  void materializeForWrite(int openFlags);
+  [[nodiscard]] folly::Future<folly::Unit> materializeForWrite(int openFlags);
 
   /**
-   * Materializes the file data.
+   * Load the file data so it can be used for reading.
    *
-   * This variant is optimized for the read case; if there is
-   * no locally available version of the file in the overlay,
-   * this method will fetch it from the LocalStore.
-   *
-   * TODO: The overlay argument should be passed in as a raw pointer.  We do
-   * not need ownership of it.
+   * If this file is materialized, this opens it's file in the overlay.
+   * If the file is not materialized, this loads the Blob data from the
+   * ObjectStore.
    */
-  void materializeForRead(int openFlags);
+  [[nodiscard]] folly::Future<folly::Unit> ensureDataLoaded();
 
  private:
   ObjectStore* getObjectStore() const;
 
   /// Recompute the SHA1 content hash of the open file_.
-  // The mutex must be owned by the caller.
-  Hash recomputeAndStoreSha1();
+  Hash recomputeAndStoreSha1(
+      const folly::Synchronized<FileInode::State>::LockedPtr& state);
+  void storeSha1(
+      const folly::Synchronized<FileInode::State>::LockedPtr& state,
+      Hash sha1);
 
   /**
    * The FileInode that this FileData object belongs to.
@@ -130,27 +127,6 @@ class FileData {
    * access this pointer without locking.
    */
   FileInode* const inode_{nullptr};
-
-  /**
-   * Reference to the mutex in the associated inode.
-   * It must be held by readers and writers before interpreting the filedata,
-   * as any actor may cause materialization or truncation of the data.
-   * Recommended practice in the implementation of methods on this class is to
-   * hold a unique_lock as a guard for the duration of the method.
-   *
-   * TODO: Maybe we should just make FileData a friend of FileInode,
-   * and access this as inode_->mutex_
-   */
-  std::mutex& mutex_;
-
-  /** Metadata about the file.
-   * This points to the entry that is owned by the parent TreeInode
-   * of this file.  It will always be non-null.
-   *
-   * TODO: Maybe we should just make FileData a friend of FileInode,
-   * and access this as inode_->entry_
-   */
-  TreeInode::Entry* entry_{nullptr};
 
   /// if backed by tree, the data from the tree, else nullptr.
   std::unique_ptr<Blob> blob_;

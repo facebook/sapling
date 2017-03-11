@@ -70,9 +70,7 @@ TEST_F(UnlinkTest, inodeAssigned) {
   EXPECT_THROW_ERRNO(dir->getChildInodeNumber(childPath), ENOENT);
 }
 
-// FIXME: disabled until we fix overlay handling for unlinked files.
-// Currently the final EXPECT_FILE_INODE() check fails.
-TEST_F(UnlinkTest, DISABLED_loaded) {
+TEST_F(UnlinkTest, loaded) {
   auto dir = mount_.getTreeInode("dir");
   auto childPath = PathComponentPiece{"a.txt"};
 
@@ -85,12 +83,10 @@ TEST_F(UnlinkTest, DISABLED_loaded) {
 
   EXPECT_THROW_ERRNO(dir->getChildInodeNumber(childPath), ENOENT);
   // We should still be able to read from the FileInode
-  EXPECT_FILE_INODE(file, "This is a.txt\n", 0644);
+  EXPECT_FILE_INODE(file, "This is a.txt.\n", 0644);
 }
 
-// FIXME: disabled until we fix overlay handling for unlinked files.
-// Currently the final EXPECT_FILE_INODE() check fails.
-TEST_F(UnlinkTest, DISABLED_modified) {
+TEST_F(UnlinkTest, modified) {
   auto dir = mount_.getTreeInode("dir");
   auto childPath = PathComponentPiece{"a.txt"};
 
@@ -98,7 +94,7 @@ TEST_F(UnlinkTest, DISABLED_modified) {
   auto file = mount_.getFileInode("dir/a.txt");
   EXPECT_EQ(file->getNodeId(), dir->getChildInodeNumber(childPath));
   auto fileData = file->getOrLoadData();
-  fileData->materializeForWrite(O_WRONLY);
+  fileData->materializeForWrite(O_WRONLY).get();
   auto newContents = StringPiece{
       "new contents for the file\n"
       "testing testing\n"
@@ -117,9 +113,7 @@ TEST_F(UnlinkTest, DISABLED_modified) {
   EXPECT_FILE_INODE(file, newContents, 0644);
 }
 
-// FIXME: disabled until we fix overlay handling for unlinked files.
-// Currently the final EXPECT_FILE_INODE() check fails.
-TEST_F(UnlinkTest, DISABLED_created) {
+TEST_F(UnlinkTest, created) {
   auto dir = mount_.getTreeInode("dir");
   auto childPath = PathComponentPiece{"new.txt"};
   auto contents =

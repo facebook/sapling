@@ -39,14 +39,14 @@ TEST(TestMount, createSimpleTestMount) {
   });
   TestMount testMount{builder};
 
-  auto fileTreeEntry = testMount.getFileInode("path1");
-  EXPECT_NE(nullptr, fileTreeEntry.get())
+  auto path1Inode = testMount.getFileInode("path1");
+  EXPECT_NE(nullptr, path1Inode.get())
       << "Should be able to find FileInode for path1";
 
-  auto entry = fileTreeEntry->getEntry();
-  ASSERT_FALSE(entry->isMaterialized());
+  auto blobHash = path1Inode->getBlobHash();
+  ASSERT_TRUE(blobHash.hasValue());
   auto expectedSha1 = Hash::sha1(ByteRange(StringPiece("first!")));
-  EXPECT_EQ(expectedSha1, entry->getHash())
+  EXPECT_EQ(expectedSha1, blobHash.value())
       << "For simplicity, TestMount uses the SHA-1 of the contents as "
       << "the id for a Blob.";
 

@@ -83,6 +83,9 @@ class TreeInode : public InodeBase {
       // authoritative source of data.
       return hash_.value();
     }
+    const folly::Optional<Hash>& getOptionalHash() const {
+      return hash_;
+    }
 
     bool hasInodeNumber() const {
       return inodeNumber_ != 0;

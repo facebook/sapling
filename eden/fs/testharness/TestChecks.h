@@ -22,7 +22,9 @@
 #define EXPECT_FILE_INODE(fileInode, expectedData, expectedPerms)         \
   do {                                                                    \
     auto fileDataForCheck = (fileInode)->getOrLoadData();                 \
-    fileDataForCheck->materializeForRead(O_RDONLY);                       \
+    auto loadFuture = fileDataForCheck->ensureDataLoaded();               \
+    ASSERT_TRUE(loadFuture.isReady());                                    \
+    loadFuture.get();                                                     \
     EXPECT_EQ(                                                            \
         (expectedData), folly::StringPiece{fileDataForCheck->readAll()}); \
     EXPECT_EQ(                                                            \

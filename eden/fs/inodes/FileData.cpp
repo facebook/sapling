@@ -11,6 +11,9 @@
 
 #include <folly/Exception.h>
 #include <folly/FileUtil.h>
+#include <folly/Optional.h>
+#include <folly/Range.h>
+#include <folly/String.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
 #include <openssl/sha.h>
@@ -26,27 +29,27 @@
 #include "eden/fuse/fuse_headers.h"
 #include "eden/utils/XAttr.h"
 
+using folly::ByteRange;
+using folly::checkUnixError;
+using folly::Future;
+using folly::makeFuture;
+using folly::Unit;
+
 namespace facebook {
 namespace eden {
 
-using folly::checkUnixError;
-
-FileData::FileData(FileInode* inode, std::mutex& mutex, TreeInode::Entry* entry)
-    : inode_(inode), mutex_(mutex), entry_(entry) {
+FileData::FileData(FileInode* inode, const folly::Optional<Hash>& hash)
+    : inode_(inode) {
   // The rest of the FileData code assumes that we always have file_ if
   // this is a materialized file.
-  if (entry_->isMaterialized()) {
+  if (!hash.hasValue()) {
     auto filePath = inode_->getLocalPath();
     file_ = folly::File(filePath.c_str(), O_RDWR | O_NOFOLLOW, 0600);
   }
 }
 
-FileData::FileData(
-    FileInode* inode,
-    std::mutex& mutex,
-    TreeInode::Entry* entry,
-    folly::File&& file)
-    : inode_(inode), mutex_(mutex), entry_(entry), file_(std::move(file)) {}
+FileData::FileData(FileInode* inode, folly::File&& file)
+    : inode_(inode), file_(std::move(file)) {}
 
 // Conditionally updates target with either the value provided by
 // the caller, or with the current time value, depending on the value
@@ -72,7 +75,7 @@ static void resolveTimeForSetAttr(
 // Valid values for to_set are found in fuse_lowlevel.h and have symbolic
 // names matching FUSE_SET_*.
 struct stat FileData::setAttr(const struct stat& attr, int to_set) {
-  std::unique_lock<std::mutex> lock(mutex_);
+  auto state = inode_->state_.wlock();
 
   CHECK(file_) << "MUST have a materialized file at this point";
 
@@ -96,11 +99,11 @@ struct stat FileData::setAttr(const struct stat& attr, int to_set) {
   }
 
   if (to_set & FUSE_SET_ATTR_MODE) {
-    // The mode data is stored only in entry_.
+    // The mode data is stored only in inode_->state_.
     // (We don't set mode bits on the overlay file as that may incorrectly
     // prevent us from reading or writing the overlay data).
     // Make sure we preserve the file type bits, and only update permissions.
-    entry_->mode = (entry_->mode & S_IFMT) | (07777 & attr.st_mode);
+    state->mode = (state->mode & S_IFMT) | (07777 & attr.st_mode);
   }
 
   if (to_set & (FUSE_SET_ATTR_ATIME | FUSE_SET_ATTR_MTIME |
@@ -129,7 +132,7 @@ struct stat FileData::setAttr(const struct stat& attr, int to_set) {
   // We need to return the now-current stat information for this file.
   struct stat returnedStat;
   checkUnixError(fstat(file_.fd(), &returnedStat));
-  returnedStat.st_mode = entry_->mode;
+  returnedStat.st_mode = state->mode;
 
   return returnedStat;
 }
@@ -138,19 +141,17 @@ struct stat FileData::stat() {
   auto st = inode_->getMount()->getMountPoint()->initStatData();
   st.st_nlink = 1;
 
-  std::unique_lock<std::mutex> lock(mutex_);
+  auto state = inode_->state_.rlock();
 
   if (file_) {
     // stat() the overlay file.
     checkUnixError(fstat(file_.fd(), &st));
-    st.st_mode = entry_->mode;
+    st.st_mode = state->mode;
     return st;
   }
 
   CHECK(blob_);
-  CHECK(entry_);
-
-  st.st_mode = entry_->mode;
+  st.st_mode = state->mode;
 
   auto buf = blob_->getContents();
   st.st_size = buf.computeChainDataLength();
@@ -162,14 +163,14 @@ struct stat FileData::stat() {
 void FileData::flush(uint64_t /* lock_owner */) {
   // We have no write buffers, so there is nothing for us to flush,
   // but let's take this opportunity to update the sha1 attribute.
-  std::unique_lock<std::mutex> lock(mutex_);
+  auto state = inode_->state_.wlock();
   if (file_ && !sha1Valid_) {
-    recomputeAndStoreSha1();
+    recomputeAndStoreSha1(state);
   }
 }
 
 void FileData::fsync(bool datasync) {
-  std::unique_lock<std::mutex> lock(mutex_);
+  auto state = inode_->state_.wlock();
   if (!file_) {
     // If we don't have an overlay file then we have nothing to sync.
     return;
@@ -184,12 +185,12 @@ void FileData::fsync(bool datasync) {
 
   // let's take this opportunity to update the sha1 attribute.
   if (!sha1Valid_) {
-    recomputeAndStoreSha1();
+    recomputeAndStoreSha1(state);
   }
 }
 
 std::unique_ptr<folly::IOBuf> FileData::readIntoBuffer(size_t size, off_t off) {
-  std::unique_lock<std::mutex> lock(mutex_);
+  auto state = inode_->state_.rlock();
 
   if (file_) {
     auto buf = folly::IOBuf::createCombined(size);
@@ -215,7 +216,7 @@ std::unique_ptr<folly::IOBuf> FileData::readIntoBuffer(size_t size, off_t off) {
 }
 
 std::string FileData::readAll() {
-  std::unique_lock<std::mutex> lock(mutex_);
+  auto state = inode_->state_.rlock();
   if (file_) {
     std::string result;
     auto rc = lseek(file_.fd(), 0, SEEK_SET);
@@ -235,7 +236,7 @@ fusell::BufVec FileData::read(size_t size, off_t off) {
 }
 
 size_t FileData::write(fusell::BufVec&& buf, off_t off) {
-  std::unique_lock<std::mutex> lock(mutex_);
+  auto state = inode_->state_.wlock();
   if (!file_) {
     // Not open for write
     folly::throwSystemErrorExplicit(EINVAL);
@@ -249,7 +250,7 @@ size_t FileData::write(fusell::BufVec&& buf, off_t off) {
 }
 
 size_t FileData::write(folly::StringPiece data, off_t off) {
-  std::unique_lock<std::mutex> lock(mutex_);
+  auto state = inode_->state_.wlock();
   if (!file_) {
     // Not open for write
     folly::throwSystemErrorExplicit(EINVAL);
@@ -261,153 +262,113 @@ size_t FileData::write(folly::StringPiece data, off_t off) {
   return xfer;
 }
 
-void FileData::materializeForRead(int openFlags) {
-  DCHECK((openFlags & (O_WRONLY | O_RDWR | O_CREAT | O_TRUNC)) == 0)
-      << "this is the read only materialization method";
-  std::unique_lock<std::mutex> lock(mutex_);
+Future<Unit> FileData::ensureDataLoaded() {
+  auto state = inode_->state_.wlock();
 
-  // FIXME: Our parent TreeInode owns entry_.  It isn't safe to access it
-  // here without holding the TreeInode's contents_ lock.  We need our own copy
-  // of this data instead.
-  if (entry_->isMaterialized()) {
-    // If we have a pre-existing overlay file, we do not need to go to
-    // the store at all.
-    if (!file_) {
-      auto filePath = inode_->getLocalPath();
-      // O_NOFOLLOW because it never makes sense for the kernel to ask
-      // a fuse server to open a file that is a symlink to something else.
-      file_ = folly::File(filePath.c_str(), O_RDWR | O_NOFOLLOW);
-      // A freshly opened file has a valid sha1 attribute (assuming no
-      // outside interference)
-      sha1Valid_ = true;
-    }
-  } else {
-    // We are backed by a source control Blob
-    if (!blob_) {
-      // Load the blob data.
-      blob_ = getObjectStore()->getBlob(entry_->getHash());
-    }
+  if (!state->hash.hasValue()) {
+    // We should always have the file open if we are materialized.
+    CHECK(file_);
+    return makeFuture();
   }
+
+  if (blob_) {
+    DCHECK_EQ(blob_->getHash(), state->hash.value());
+    return makeFuture();
+  }
+
+  // Load the blob data.
+  //
+  // TODO: We really should use a Future-based API for this rather than
+  // blocking until the load completes.  However, for that to work we will need
+  // to add some extra data tracking whether or not we are already in the
+  // process of loading the data.  We need to avoid multiple threads all trying
+  // to load the data at the same time.
+  //
+  // For now doing a blocking load with the inode_->state_ lock held ensures
+  // that only one thread can load the data at a time.  It's pretty unfortunate
+  // to block with the lock held, though :-(
+  blob_ = getObjectStore()->getBlob(state->hash.value());
+  return makeFuture();
 }
 
-void FileData::materializeForWrite(int openFlags) {
-  std::unique_lock<std::mutex> lock(mutex_);
+Future<Unit> FileData::materializeForWrite(int openFlags) {
+  auto state = inode_->state_.wlock();
 
-  // FIXME: Our parent TreeInode owns entry_.  It isn't safe to access it
-  // here without holding the TreeInode's contents_ lock.  We need our own copy
-  // of this data instead.
-
-  // If we have a tree entry, assume that we will need the blob data...
-  bool needBlob = !entry_->isMaterialized();
-  // ... and that we don't need an overlay file handle.
-  bool needFile = false;
-
-  if ((openFlags & O_TRUNC) != 0) {
-    // Truncation is a write operation, so we will need an overlay file.
-    needFile = true;
-    // No need to materialize the blob from the store if we're just
-    // going to truncate it anyway.
-    needBlob = false;
-  }
-  if ((openFlags & (O_RDWR | O_WRONLY)) != 0) {
-    // Write operations require an overlay file.
-    needFile = true;
+  // If we already have a materialized overlay file then we don't
+  // need to do much
+  if (file_) {
+    CHECK(!state->hash.hasValue());
+    if ((openFlags & O_TRUNC) != 0) {
+      // truncating a file that we already have open
+      sha1Valid_ = false;
+      checkUnixError(ftruncate(file_.fd(), 0));
+      auto emptySha1 = Hash::sha1(ByteRange{});
+      storeSha1(state, emptySha1);
+    }
+    return makeFuture();
   }
 
+  // We must not be materialized yet
+  CHECK(state->hash.hasValue());
+
+  Hash sha1;
   auto filePath = inode_->getLocalPath();
-
-  // If we have a pre-existing overlay file, we do not need to go to
-  // the store at all.
-  if (!file_ && entry_->isMaterialized()) {
-    // O_NOFOLLOW because it never makes sense for the kernel to ask
-    // a fuse server to open a file that is a symlink to something else.
-    file_ = folly::File(filePath.c_str(), O_RDWR | O_NOFOLLOW, 0600);
-    // since we have a pre-existing overlay file, we don't need the blob.
-    needBlob = false;
-    // A freshly opened file has a valid sha1 attribute (assuming no
-    // outside interference)
-    sha1Valid_ = true;
-  }
-
-  if (needBlob && !blob_) {
-    // Load the blob data.
-    blob_ = getObjectStore()->getBlob(entry_->getHash());
-  }
-
-  if (needFile && !file_) {
-    // We need an overlay file and don't yet have one.
-    // We always create our internal file handle read/write regardless of
-    // the mode that the client is requesting.
-    auto file = folly::File(filePath.c_str(), O_RDWR | O_CREAT, 0600);
-    Hash blobHash;
-    if (needBlob) {
-      blobHash = entry_->getHash();
-    }
-    entry_->setMaterialized(inode_->getNodeId());
-
-    // We typically need to populate our newly opened file with the data
-    // from the overlay.  The O_TRUNC check above may have set needBlob
-    // to false, so we'll end up just creating an empty file and skipping
-    // the blob copy.
-    if (needBlob) {
-      auto buf = blob_->getContents();
-      auto iov = buf.getIov();
-      auto wrote = folly::writevNoInt(file.fd(), iov.data(), iov.size());
-      auto err = errno;
-      if (wrote != buf.computeChainDataLength()) {
-        folly::throwSystemErrorExplicit(
-            wrote == -1 ? err : EIO,
-            "failed to materialize ",
-            inode_->getLogPath());
-      }
-
-      // Copy and apply the sha1 to the new file.  This saves us from
-      // recomputing it again in the case that something opens the file
-      // read/write and closes it without changing it.
-      auto sha1 = getObjectStore()->getSha1ForBlob(blobHash);
-      fsetxattr(file.fd(), kXattrSha1, sha1.toString());
-      sha1Valid_ = true;
+  if ((openFlags & O_TRUNC) != 0) {
+    file_ = folly::File(filePath.c_str(), O_RDWR | O_CREAT | O_TRUNC, 0600);
+    sha1 = Hash::sha1(ByteRange{});
+  } else {
+    if (!blob_) {
+      // TODO: Load the blob using the non-blocking Future APIs.
+      // However, just as in ensureDataLoaded() above we will also need
+      // to add a mechanism to wait for already in-progress loads.
+      blob_ = getObjectStore()->getBlob(state->hash.value());
     }
 
-    // transfer ownership of the fd to us.  Do this after dealing with any
-    // errors during materialization so that our internal state is easier
-    // to reason about.
-    file_ = std::move(file);
-    sha1Valid_ = false;
-  } else if (file_ && (openFlags & O_TRUNC) != 0) {
-    // truncating a file that we already have open
-    sha1Valid_ = false;
-    checkUnixError(ftruncate(file_.fd(), 0));
+    // Write the blob contents out to the overlay
+    auto iov = blob_->getContents().getIov();
+    folly::writeFileAtomic(
+        filePath.stringPiece(), iov.data(), iov.size(), 0600);
+    file_ = folly::File(filePath.c_str(), O_RDWR);
+
+    sha1 = getObjectStore()->getSha1ForBlob(state->hash.value());
   }
+
+  // Copy and apply the sha1 to the new file.  This saves us from
+  // recomputing it again in the case that something opens the file
+  // read/write and closes it without changing it.
+  storeSha1(state, sha1);
+
+  // Update the FileInode to indicate that we are materialized now
+  blob_.reset();
+  state->hash = folly::none;
+
+  return makeFuture();
 }
 
 Hash FileData::getSha1() {
-  std::unique_lock<std::mutex> lock(mutex_);
-  return getSha1Locked(lock);
-}
-
-Hash FileData::getSha1Locked(const std::unique_lock<std::mutex>&) {
+  auto state = inode_->state_.wlock();
   if (file_) {
     std::string shastr;
     if (sha1Valid_) {
       shastr = fgetxattr(file_.fd(), kXattrSha1);
     }
     if (shastr.empty()) {
-      return recomputeAndStoreSha1();
+      return recomputeAndStoreSha1(state);
     } else {
       return Hash(shastr);
     }
   }
 
-  CHECK(!entry_->isMaterialized());
-  return getObjectStore()->getSha1ForBlob(entry_->getHash());
+  CHECK(state->hash.hasValue());
+  return getObjectStore()->getSha1ForBlob(state->hash.value());
 }
 
 ObjectStore* FileData::getObjectStore() const {
   return inode_->getMount()->getObjectStore();
 }
 
-Hash FileData::recomputeAndStoreSha1() {
+Hash FileData::recomputeAndStoreSha1(
+    const folly::Synchronized<FileInode::State>::LockedPtr& state) {
   uint8_t buf[8192];
   off_t off = 0;
   SHA_CTX ctx;
@@ -432,13 +393,24 @@ Hash FileData::recomputeAndStoreSha1() {
 
   uint8_t digest[SHA_DIGEST_LENGTH];
   SHA1_Final(digest, &ctx);
-  auto hash = Hash(folly::ByteRange(digest, sizeof(digest)));
-  auto sha1 = hash.toString();
+  auto sha1 = Hash(folly::ByteRange(digest, sizeof(digest)));
+  storeSha1(state, sha1);
+  return sha1;
+}
 
-  fsetxattr(file_.fd(), kXattrSha1, sha1);
-  sha1Valid_ = true;
-
-  return hash;
+void FileData::storeSha1(
+    const folly::Synchronized<FileInode::State>::LockedPtr& /* state */,
+    Hash sha1) {
+  try {
+    fsetxattr(file_.fd(), kXattrSha1, sha1.toString());
+    sha1Valid_ = true;
+  } catch (const std::exception& ex) {
+    // If something goes wrong storing the attribute just log a warning
+    // and leave sha1Valid_ as false.  We'll have to recompute the value
+    // next time we need it.
+    LOG(WARNING) << "error setting SHA1 attribute in the overlay: "
+                 << folly::exceptionStr(ex);
+  }
 }
 }
 }

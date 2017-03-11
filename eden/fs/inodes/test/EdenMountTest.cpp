@@ -11,6 +11,7 @@
 #include <gtest/gtest.h>
 #include "eden/fs/config/ClientConfig.h"
 #include "eden/fs/inodes/EdenMount.h"
+#include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/journal/Journal.h"
 #include "eden/fs/journal/JournalDelta.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
