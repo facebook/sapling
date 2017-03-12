@@ -19,9 +19,9 @@ import sys
 #    py - only load pure Python modules
 #
 # By default, require the C extensions for performance reasons.
-policy = 'c'
-policynoc = ('cffi', 'cffi-allow', 'py')
-policynocffi = ('c', 'py')
+policy = b'c'
+policynoc = (b'cffi', b'cffi-allow', b'py')
+policynocffi = (b'c', b'py')
 
 try:
     from . import __modulepolicy__
@@ -42,4 +42,8 @@ if sys.version_info[0] >= 3:
     policy = b'py'
 
 # Environment variable can always force settings.
-policy = os.environ.get('HGMODULEPOLICY', policy)
+if sys.version_info[0] >= 3:
+    if 'HGMODULEPOLICY' in os.environ:
+        policy = os.environ['HGMODULEPOLICY'].encode('utf-8')
+else:
+    policy = os.environ.get('HGMODULEPOLICY', policy)

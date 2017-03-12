@@ -68,7 +68,7 @@ class hgimporter(object):
                 # indicates the type of module. So just assume what we found
                 # is OK (even though it could be a pure Python module).
             except ImportError:
-                if modulepolicy == 'c':
+                if modulepolicy == b'c':
                     raise
                 zl = ziploader('mercurial', 'pure')
                 mod = zl.load_module(name)
@@ -106,7 +106,7 @@ class hgimporter(object):
                                   'version should exist' % name)
 
         except ImportError:
-            if modulepolicy == 'c':
+            if modulepolicy == b'c':
                 raise
 
             # Could not load the C extension and pure Python is allowed. So

@@ -27,8 +27,14 @@ New errors are not allowed. Warnings are strongly discouraged.
    use encoding.environ instead (py3)
   Skipping mercurial/httpclient/__init__.py it has no-che?k-code (glob)
   Skipping mercurial/httpclient/_readers.py it has no-che?k-code (glob)
-  mercurial/policy.py:45:
-   > policy = os.environ.get('HGMODULEPOLICY', policy)
+  mercurial/policy.py:46:
+   >     if 'HGMODULEPOLICY' in os.environ:
+   use encoding.environ instead (py3)
+  mercurial/policy.py:47:
+   >         policy = os.environ['HGMODULEPOLICY'].encode('utf-8')
+   use encoding.environ instead (py3)
+  mercurial/policy.py:49:
+   >     policy = os.environ.get('HGMODULEPOLICY', policy)
    use encoding.environ instead (py3)
   Skipping mercurial/statprof.py it has no-che?k-code (glob)
   [1]
