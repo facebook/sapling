@@ -66,7 +66,7 @@ def termsize(ui):
             if not os.isatty(fd):
                 continue
             arri = fcntl.ioctl(fd, TIOCGWINSZ, '\0' * 8)
-            height, width = array.array('h', arri)[:2]
+            height, width = array.array(r'h', arri)[:2]
             if width > 0 and height > 0:
                 return width, height
         except ValueError:
