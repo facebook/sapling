@@ -33,6 +33,7 @@ from . import (
     obsolete as obsmod,
     patch,
     phases,
+    pycompat,
     repoview,
     revlog,
     scmutil,
@@ -419,7 +420,7 @@ class changectx(basectx):
                 self._node = repo.changelog.node(changeid)
                 self._rev = changeid
                 return
-            if isinstance(changeid, long):
+            if not pycompat.ispy3 and isinstance(changeid, long):
                 changeid = str(changeid)
             if changeid == 'null':
                 self._node = nullid
