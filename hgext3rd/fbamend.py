@@ -160,6 +160,9 @@ def uisetup(ui):
             ('', 'no-activate-bookmark', False,
                 _('do not activate the bookmark on the destination changeset')
             ),
+            ('', 'towards', "",
+                _('move linearly towards the specified head')
+            ),
         ])
 
         # Wrap `hg split`.
@@ -590,6 +593,8 @@ def _moverelative(ui, repo, args, opts, reverse=False):
             raise error.Abort(_("cannot use both --top and --bookmark"))
         if opts.get('bottom', False):
             raise error.Abort(_("cannot use both --bottom and --bookmark"))
+    if opts.get('towards', False) and opts.get('top', False):
+            raise error.Abort(_("cannot use both --top and --towards"))
 
     # Check if there is an outstanding operation or uncommited changes.
     cmdutil.checkunfinished(repo)
@@ -646,6 +651,7 @@ def _findtarget(ui, repo, n, opts, reverse):
        `hg next` based on the provided options. May rebase the traversed
        changesets if the rebase option is given in the opts dict.
     """
+    towards = opts.get('towards')
     newest = opts.get('newest', False)
     bookmark = opts.get('bookmark', False)
     rebase = opts.get('rebase', False)
@@ -661,7 +667,8 @@ def _findtarget(ui, repo, n, opts, reverse):
     elif reverse:
         return _findprevtarget(ui, repo, n, bookmark, newest)
     else:
-        return _findnexttarget(ui, repo, n, bookmark, newest, rebase, top)
+        return _findnexttarget(ui, repo, n, bookmark, newest, rebase, top,
+                               towards)
 
 def _findprevtarget(ui, repo, n=None, bookmark=False, newest=False):
     """Get the revision n levels down the stack from the current revision.
@@ -708,7 +715,7 @@ def _findprevtarget(ui, repo, n=None, bookmark=False, newest=False):
     return ctx.rev()
 
 def _findnexttarget(ui, repo, n=None, bookmark=False, newest=False,
-                    rebase=False, top=False):
+                    rebase=False, top=False, towards=None):
     """Get the revision n levels up the stack from the current revision.
        If newest is True, if a changeset has multiple children the newest
        will always be chosen. Otherwise, throws an exception. If the rebase
@@ -726,6 +733,20 @@ def _findnexttarget(ui, repo, n=None, bookmark=False, newest=False,
     if not rebase:
         childrenof = _getchildrelationships(repo, [rev])
 
+    # If we're moving towards a rev, get the chain of revs up to that rev.
+    line = set()
+    if towards:
+        towardsrevs = scmutil.revrange(repo, [towards])
+        if len(towardsrevs) > 1:
+            raise error.Abort(_("'%s' refers to multiple changesets")
+                              % towards)
+        towardsrev = towardsrevs.first()
+        line = set(repo.revs('.::%d', towardsrev))
+        if not line:
+            raise error.Abort(
+                _("the current changeset is not an ancestor of '%s'")
+                % towards)
+
     for i in count(0):
         # Loop until we're gone the desired number of steps, or we reach a
         # node with a bookmark if the bookmark option was specified.
@@ -740,9 +761,12 @@ def _findnexttarget(ui, repo, n=None, bookmark=False, newest=False,
         # This means we can't rely on precomputed child relationships.
         if rebase:
             _restackonce(ui, repo, rev, childrenonly=True)
-            children = [c.rev() for c in repo[rev].children()]
+            children = set(c.rev() for c in repo[rev].children())
         else:
             children = childrenof[rev]
+
+        # Remove children not along the specified line.
+        children = (children & line) or children
 
         # Have we reached a head?
         if not children:
@@ -758,8 +782,8 @@ def _findnexttarget(ui, repo, n=None, bookmark=False, newest=False,
                       % short(repo[rev].node()))
             _showchangesets(ui, repo, revs=children)
             raise error.Abort(_("ambiguous next changeset"),
-                              hint=_("use the --newest flag to always "
-                                     "pick the newest child at each step"))
+                              hint=_("use the --newest or --towards flags "
+                                     "to specify which child to pick"))
 
         # Get the child with the highest revision number.
         rev = max(children)
