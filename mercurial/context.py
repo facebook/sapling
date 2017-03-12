@@ -65,6 +65,12 @@ class basectx(object):
         return o
 
     def __str__(self):
+        r = short(self.node())
+        if pycompat.ispy3:
+            return r.decode('ascii')
+        return r
+
+    def __bytes__(self):
         return short(self.node())
 
     def __int__(self):
