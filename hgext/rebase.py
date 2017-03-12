@@ -1224,7 +1224,12 @@ def buildstate(repo, dest, rebaseset, collapse, obsoletenotrebased):
         if commonbase == root:
             raise error.Abort(_('source is ancestor of destination'))
         if commonbase == dest:
-            samebranch = root.branch() == dest.branch()
+            wctx = repo[None]
+            if dest == wctx.p1():
+                # when rebasing to '.', it will use the current wd branch name
+                samebranch = root.branch() == wctx.branch()
+            else:
+                samebranch = root.branch() == dest.branch()
             if not collapse and samebranch and root in dest.children():
                 repo.ui.debug('source is a child of destination\n')
                 return None

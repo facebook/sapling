@@ -387,4 +387,23 @@ rebase 'c1' to the branch head 'c2' that is closed
   o  0: '0'
   
 
+  $ hg up -cr 1
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg branch x
+  marked working directory as branch x
+  $ hg rebase -r 3:: -d .
+  rebasing 3:76abc1c6f8c7 "b1"
+  rebasing 4:8427af5d86f2 "c2 closed" (tip)
+  note: rebase of 4:8427af5d86f2 created no changes to commit
+  saved backup bundle to $TESTTMP/case2/.hg/strip-backup/76abc1c6f8c7-cd698d13-backup.hg (glob)
+  $ hg tglog
+  o  3: 'b1' x
+  |
+  | o  2: 'c1' c
+  | |
+  @ |  1: 'b2' b
+  |/
+  o  0: '0'
+  
+
   $ cd ..
