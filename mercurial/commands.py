@@ -4812,7 +4812,7 @@ def summary(ui, repo, **opts):
         # label with log.changeset (instead of log.parent) since this
         # shows a working directory parent *changeset*:
         # i18n: column positioning for "hg summary"
-        ui.write(_('parent: %d:%s ') % (p.rev(), str(p)),
+        ui.write(_('parent: %d:%s ') % (p.rev(), p),
                  label=cmdutil._changesetlabels(p))
         ui.write(' '.join(p.tags()), label='log.tag')
         if p.bookmarks():
