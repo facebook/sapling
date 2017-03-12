@@ -331,8 +331,8 @@ class repoview(object):
         if cl is None:
             cl = copy.copy(unfichangelog)
             cl.filteredrevs = revs
-            object.__setattr__(self, '_clcache', cl)
-            object.__setattr__(self, '_clcachekey', newkey)
+            object.__setattr__(self, r'_clcache', cl)
+            object.__setattr__(self, r'_clcachekey', newkey)
         return cl
 
     def unfiltered(self):
