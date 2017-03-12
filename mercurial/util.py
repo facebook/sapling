@@ -2651,6 +2651,11 @@ class url(object):
         >>> print url(r'file:///D:\data\hg')
         file:///D:\data\hg
         """
+        if pycompat.ispy3:
+            return encoding.fromlocal(self.__bytes__()).decode('utf-8')
+        return self.__bytes__()
+
+    def __bytes__(self):
         if self._localpath:
             s = self.path
             if self.scheme == 'bundle':
