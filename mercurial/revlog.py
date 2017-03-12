@@ -1277,7 +1277,7 @@ class revlog(object):
 
         bins = self._chunks(chain, df=_df)
         if text is None:
-            text = str(bins[0])
+            text = bytes(bins[0])
             bins = bins[1:]
 
         text = mdiff.patches(text, bins)
