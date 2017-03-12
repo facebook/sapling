@@ -7,7 +7,6 @@
 
 from __future__ import absolute_import
 
-import array
 import struct
 
 from .node import (
@@ -23,7 +22,6 @@ from . import (
     util,
 )
 
-array = array.array
 calcsize = struct.calcsize
 pack = struct.pack
 unpack = struct.unpack

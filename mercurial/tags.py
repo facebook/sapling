@@ -12,7 +12,6 @@
 
 from __future__ import absolute_import
 
-import array
 import errno
 
 from .node import (
@@ -27,8 +26,6 @@ from . import (
     scmutil,
     util,
 )
-
-array = array.array
 
 # Tags computation can be expensive and caches exist to make it fast in
 # the common case.
