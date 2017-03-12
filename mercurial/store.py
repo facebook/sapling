@@ -193,22 +193,22 @@ def _auxencode(path, dotencode):
         if not n:
             continue
         if dotencode and n[0] in '. ':
-            n = "~%02x" % ord(n[0]) + n[1:]
+            n = "~%02x" % ord(n[0:1]) + n[1:]
             path[i] = n
         else:
             l = n.find('.')
             if l == -1:
                 l = len(n)
             if ((l == 3 and n[:3] in _winres3) or
-                (l == 4 and n[3] <= '9' and n[3] >= '1'
+                (l == 4 and n[3:4] <= '9' and n[3:4] >= '1'
                         and n[:3] in _winres4)):
                 # encode third letter ('aux' -> 'au~78')
-                ec = "~%02x" % ord(n[2])
+                ec = "~%02x" % ord(n[2:3])
                 n = n[0:2] + ec + n[3:]
                 path[i] = n
         if n[-1] in '. ':
             # encode last period or space ('foo...' -> 'foo..~2e')
-            path[i] = n[:-1] + "~%02x" % ord(n[-1])
+            path[i] = n[:-1] + "~%02x" % ord(n[-1:])
     return path
 
 _maxstorepathlen = 120
