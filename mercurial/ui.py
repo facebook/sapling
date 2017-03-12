@@ -901,7 +901,7 @@ class ui(object):
             or not self.formatted()
             or self.plain()
             # TODO: expose debugger-enabled on the UI object
-            or '--debugger' in sys.argv):
+            or '--debugger' in pycompat.sysargv):
             # We only want to paginate if the ui appears to be
             # interactive, the user didn't say HGPLAIN or
             # HGPLAINEXCEPT=pager, and the user didn't specify --debug.
