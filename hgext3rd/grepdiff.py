@@ -87,13 +87,14 @@ def ctxaddsremoves(ctx, files, regexp):
     'regexp' is a compiled regular expression against which to match"""
     addcount = 0
     removecount = 0
+    filenamelines = []
     for diffitem in ctx.diff():
         # ctx.diff() is a generator that returns a list of strings that are
         # supposed to be printed and some of them are concatenations of
         # multiple '\n'-separated lines. Here's an example of such a list:
-        # ["diff --git a/setup.py b/setup.py\n",
+        # ["diff --git a/setup.py b/setup.py\n" +\
         #  "--- a/setup.py\n" +\
-        #  "+++ b/setup.py\n" +\
+        #  "+++ b/setup.py\n",
         #  "@@ -1,7 +1,7 @@\n" +\
         #  " from distutils.core import setup, Extension\n" +\
         #  " \n" +\
@@ -107,8 +108,8 @@ def ctxaddsremoves(ctx, files, regexp):
         # second string is manually separated into individual lines as they
         # would've been printed.
         # It can be seen that the first element of the list starts with 'diff'
-        # and is of no interest since it does not contain the actual changes.
-        # The second element however has the changes that happened to a some
+        # and contains the filenames for the upcoming chunks.
+        # The second element however has the changes that happened to the
         # file separated by '\n', so we want to parse that, find which ones
         # start with '+' or '-', group them into blocks and match the regex
         # against those blocks.
@@ -116,18 +117,17 @@ def ctxaddsremoves(ctx, files, regexp):
             # title line that start diff for some file, does not contain
             # the diff itself. the next iteration of this loop wil hit the
             # actual diff line
+            lines = diffitem.split('\n')
+            filenamelines = lines[1:3]
             continue
+
         # a changeblock is a set of consequtive change lines which share the
         # same sign (+/-). we want to join those lines into blocks in order
         # to be able to perform multi-line regex matches
         changeblocks, currentblock, currentsign = [], [], ''
         lines = diffitem.split('\n')
-        if len(lines) < 2:
-            # a minimum of two lines is needed to contain filenames
-            continue
-        filenamelines = lines[:2]
         # an extra iteration is necessary to save the last block
-        for line in lines[2:] + ["@"]:
+        for line in lines + ["@"]:
             if not line:
                 continue
             if line[0] == currentsign:
