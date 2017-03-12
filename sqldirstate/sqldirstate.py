@@ -437,6 +437,13 @@ def makedirstate(cls):
         def _nonnormalset(self):
             return self._map.nonnormalentries()
 
+        @propertycache
+        def _otherparentset(self):
+            result = set()
+            for f, s in self._map.otherparententries():
+                result.add(f)
+            return result
+
         def invalidate(self):
             # Transaction will be rolled back on the next open of the file.
             # The close is faster in the case where we replace  the whole
