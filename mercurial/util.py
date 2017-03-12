@@ -2241,13 +2241,16 @@ def wrap(line, width, initindent='', hangindent=''):
     if width <= maxindent:
         # adjust for weird terminal size
         width = max(78, maxindent + 1)
-    line = line.decode(encoding.encoding, encoding.encodingmode)
-    initindent = initindent.decode(encoding.encoding, encoding.encodingmode)
-    hangindent = hangindent.decode(encoding.encoding, encoding.encodingmode)
+    line = line.decode(pycompat.sysstr(encoding.encoding),
+                    pycompat.sysstr(encoding.encodingmode))
+    initindent = initindent.decode(pycompat.sysstr(encoding.encoding),
+                    pycompat.sysstr(encoding.encodingmode))
+    hangindent = hangindent.decode(pycompat.sysstr(encoding.encoding),
+                    pycompat.sysstr(encoding.encodingmode))
     wrapper = MBTextWrapper(width=width,
                             initial_indent=initindent,
                             subsequent_indent=hangindent)
-    return wrapper.fill(line).encode(encoding.encoding)
+    return wrapper.fill(line).encode(pycompat.sysstr(encoding.encoding))
 
 if (pyplatform.python_implementation() == 'CPython' and
     sys.version_info < (3, 0)):
