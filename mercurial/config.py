@@ -18,11 +18,11 @@ from . import (
 )
 
 class config(object):
-    def __init__(self, data=None, includepaths=[]):
+    def __init__(self, data=None, includepaths=None):
         self._data = {}
         self._source = {}
         self._unset = []
-        self._includepaths = includepaths
+        self._includepaths = includepaths or []
         if data:
             for k in data._data:
                 self._data[k] = data[k].copy()
