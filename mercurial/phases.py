@@ -213,7 +213,7 @@ class phasecache(object):
         self._phaserevs = revs
         self._populatephaseroots(repo)
         for phase in trackedphases:
-            roots = map(repo.changelog.rev, self.phaseroots[phase])
+            roots = list(map(repo.changelog.rev, self.phaseroots[phase]))
             if roots:
                 for rev in roots:
                     revs[rev] = phase
