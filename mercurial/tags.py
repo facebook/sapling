@@ -428,13 +428,12 @@ class hgtagsfnodescache(object):
         self.lookupcount = 0
         self.hitcount = 0
 
-        self._raw = array('c')
 
         try:
             data = repo.vfs.read(_fnodescachefile)
         except (OSError, IOError):
             data = ""
-        self._raw.fromstring(data)
+        self._raw = bytearray(data)
 
         # The end state of self._raw is an array that is of the exact length
         # required to hold a record for every revision in the repository.
@@ -475,7 +474,7 @@ class hgtagsfnodescache(object):
         self.lookupcount += 1
 
         offset = rev * _fnodesrecsize
-        record = self._raw[offset:offset + _fnodesrecsize].tostring()
+        record = '%s' % self._raw[offset:offset + _fnodesrecsize]
         properprefix = node[0:4]
 
         # Validate and return existing entry.
@@ -516,7 +515,7 @@ class hgtagsfnodescache(object):
 
     def _writeentry(self, offset, prefix, fnode):
         # Slices on array instances only accept other array.
-        entry = array('c', prefix + fnode)
+        entry = bytearray(prefix + fnode)
         self._raw[offset:offset + _fnodesrecsize] = entry
         # self._dirtyoffset could be None.
         self._dirtyoffset = min(self._dirtyoffset, offset) or 0

@@ -7,7 +7,6 @@
 
 from __future__ import absolute_import
 
-import array
 import heapq
 import os
 import struct
@@ -628,8 +627,9 @@ class manifestdict(object):
         else:
             # For large changes, it's much cheaper to just build the text and
             # diff it.
-            arraytext = array.array('c', self.text())
-            deltatext = mdiff.textdiff(base, arraytext)
+            arraytext = bytearray(self.text())
+            deltatext = mdiff.textdiff(
+                util.buffer(base), util.buffer(arraytext))
 
         return arraytext, deltatext
 
@@ -687,12 +687,12 @@ def _addlistdelta(addlist, x):
     # for large addlist arrays, building a new array is cheaper
     # than repeatedly modifying the existing one
     currentposition = 0
-    newaddlist = array.array('c')
+    newaddlist = bytearray()
 
     for start, end, content in x:
         newaddlist += addlist[currentposition:start]
         if content:
-            newaddlist += array.array('c', content)
+            newaddlist += bytearray(content)
 
         currentposition = end
 
@@ -1240,7 +1240,7 @@ class manifestrevlog(revlog.revlog):
             else:
                 text = m.text(self._usemanifestv2)
                 n = self.addrevision(text, transaction, link, p1, p2)
-                arraytext = array.array('c', text)
+                arraytext = bytearray(text)
 
         if arraytext is not None:
             self.fulltextcache[n] = arraytext
@@ -1420,7 +1420,7 @@ class manifestctx(object):
             else:
                 rl = self._revlog()
                 text = rl.revision(self._node)
-                arraytext = array.array('c', text)
+                arraytext = bytearray(text)
                 rl._fulltextcache[self._node] = arraytext
                 self._data = manifestdict(text)
         return self._data
@@ -1529,7 +1529,7 @@ class treemanifestctx(object):
                 self._data = m
             else:
                 text = rl.revision(self._node)
-                arraytext = array.array('c', text)
+                arraytext = bytearray(text)
                 rl.fulltextcache[self._node] = arraytext
                 self._data = treemanifest(dir=self._dir, text=text)
 

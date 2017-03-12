@@ -357,7 +357,7 @@ class revbranchcache(object):
         assert repo.filtername is None
         self._repo = repo
         self._names = [] # branch names in local encoding with static index
-        self._rbcrevs = array('c') # structs of type _rbcrecfmt
+        self._rbcrevs = bytearray()
         self._rbcsnameslen = 0 # length of names read at _rbcsnameslen
         try:
             bndata = repo.vfs.read(_rbcnames)
@@ -371,7 +371,7 @@ class revbranchcache(object):
         if self._names:
             try:
                 data = repo.vfs.read(_rbcrevs)
-                self._rbcrevs.fromstring(data)
+                self._rbcrevs[:] = data
             except (IOError, OSError) as inst:
                 repo.ui.debug("couldn't read revision branch cache: %s\n" %
                               inst)
@@ -390,8 +390,7 @@ class revbranchcache(object):
         self._rbcnamescount = 0
         self._namesreverse.clear()
         self._rbcrevslen = len(self._repo.changelog)
-        self._rbcrevs = array('c')
-        self._rbcrevs.fromstring('\0' * (self._rbcrevslen * _rbcrecsize))
+        self._rbcrevs = bytearray(self._rbcrevslen * _rbcrecsize)
 
     def branchinfo(self, rev):
         """Return branch name and close flag for rev, using and updating
@@ -454,8 +453,7 @@ class revbranchcache(object):
     def _setcachedata(self, rev, node, branchidx):
         """Writes the node's branch data to the in-memory cache data."""
         rbcrevidx = rev * _rbcrecsize
-        rec = array('c')
-        rec.fromstring(pack(_rbcrecfmt, node, branchidx))
+        rec = bytearray(pack(_rbcrecfmt, node, branchidx))
         if len(self._rbcrevs) < rbcrevidx + _rbcrecsize:
             self._rbcrevs.extend('\0' *
                                  (len(self._repo.changelog) * _rbcrecsize -
