@@ -38,9 +38,9 @@ def _parsev1(data):
         prev = l
         f, n = l.split('\0')
         if len(n) > 40:
-            yield f, revlog.bin(n[:40]), n[40:]
+            yield f, bin(n[:40]), n[40:]
         else:
-            yield f, revlog.bin(n), ''
+            yield f, bin(n), ''
 
 def _parsev2(data):
     metadataend = data.find('\n')
