@@ -394,17 +394,28 @@ cleanup:
   }
 }
 
-static PyObject *fastmanifest_diff(fastmanifest *self, PyObject *args) {
+static PyObject *fastmanifest_diff(fastmanifest *self, PyObject *args, PyObject *kwargs) {
   fastmanifest *other;
-  PyObject *pyclean = NULL;
+  PyObject *match = NULL, *pyclean = NULL;
   PyObject *emptyTuple = NULL, *ret = NULL;
   PyObject *es;
   fastmanifest_diff_context_t context;
   context.error_occurred = false;
 
-  if (!PyArg_ParseTuple(args, "O!|O", &fastmanifestType, &other, &pyclean)) {
+  static char const *kwlist[] = {"m2", "match", "clean", NULL};
+
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O!|OO", (char**)kwlist,
+                                   &fastmanifestType, &other,
+                                   &match, &pyclean)) {
     return NULL;
   }
+
+  if (match && match != Py_None) {
+    PyErr_Format(PyExc_ValueError,
+          "fastmaniest.diff does not support the match argument");
+    return NULL;
+  }
+
   context.listclean = (!pyclean) ? false : PyObject_IsTrue(pyclean);
   es = PyString_FromString("");
   if (!es) {
@@ -671,7 +682,7 @@ static PyMethodDef fastmanifest_methods[] = {
    "Save a fastmanifest to a file"},
   {"load", (PyCFunction)fastmanifest_load, METH_VARARGS | METH_CLASS,
    "Load a tree manifest from a file"},
-  {"diff", (PyCFunction)fastmanifest_diff, METH_VARARGS,
+  {"diff", (PyCFunction)fastmanifest_diff, METH_VARARGS | METH_KEYWORDS,
    "Compare this fastmanifest to another one."},
   {"text", (PyCFunction)fastmanifest_text, METH_NOARGS,
    "Encode this manifest to text."},

@@ -351,9 +351,7 @@ def _getrevs(bundle, onto):
         for rev in revs:
             files |= set(rev.files())
         filematcher = scmutil.matchfiles(bundle, files)
-        commonmanifest = oldonto.manifest().matches(filematcher)
-        ontomanifest = onto.manifest().matches(filematcher)
-        conflicts = ontomanifest.diff(commonmanifest).keys()
+        conflicts = onto.manifest().diff(oldonto.manifest(), filematcher).keys()
         if conflicts:
             raise error.Abort(_('conflicting changes in:\n%s') %
                              ''.join('    %s\n' % f for f in sorted(conflicts)))

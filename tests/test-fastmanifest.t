@@ -88,11 +88,10 @@ manifest of each parent, one is cached (-1) and the other is not:
   [FM-METRICS] kind: filesnotincachehitratio, kwargs: [('filesnotincachehitratio', -1)]
   [FM-METRICS] End metrics
   $ hg diff -c . --debug --nodate
-  [FM] cache miss for fastmanifest f064a7f8e3e138341587096641d86e9d23cd9778
-  [FM] cache miss for fastmanifest 7ab5760d084a24168f7595c38c00f4bbc2e308d9
   [FM] performing diff
   [FM] diff: other side is hybrid manifest
   [FM] diff: cache and tree miss
+  [FM] cache miss for fastmanifest 7ab5760d084a24168f7595c38c00f4bbc2e308d9
   diff -r 47d2a3944de8b013de3be9578e8e344ea2e6c097 -r 9d206ffc875e1bc304590549be293be36821e66c e
   --- /dev/null
   +++ b/e
@@ -126,10 +125,10 @@ manifest of each parent, one is cached (-1) and the other is not:
   a539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7|1
   a0c8bcbbb45c63b90b70ad007bf38961f64f2af0|0
   $ hg diff -c . --debug --nodate
-  [FM] cache hit for fastmanifest f064a7f8e3e138341587096641d86e9d23cd9778
-  [FM] cache hit for fastmanifest 7ab5760d084a24168f7595c38c00f4bbc2e308d9
   [FM] performing diff
   [FM] diff: other side is hybrid manifest
+  [FM] cache hit for fastmanifest f064a7f8e3e138341587096641d86e9d23cd9778
+  [FM] cache hit for fastmanifest 7ab5760d084a24168f7595c38c00f4bbc2e308d9
   diff -r 47d2a3944de8b013de3be9578e8e344ea2e6c097 -r 9d206ffc875e1bc304590549be293be36821e66c e
   --- /dev/null
   +++ b/e
@@ -146,11 +145,10 @@ Test the --pruneall command to prune all the cached manifests
   [FM] removing cached manifest fast7ab5760d084a24168f7595c38c00f4bbc2e308d9
 
   $ hg diff -c . --debug --nodate
-  [FM] cache miss for fastmanifest f064a7f8e3e138341587096641d86e9d23cd9778
-  [FM] cache miss for fastmanifest 7ab5760d084a24168f7595c38c00f4bbc2e308d9
   [FM] performing diff
   [FM] diff: other side is hybrid manifest
   [FM] diff: cache and tree miss
+  [FM] cache miss for fastmanifest 7ab5760d084a24168f7595c38c00f4bbc2e308d9
   diff -r 47d2a3944de8b013de3be9578e8e344ea2e6c097 -r 9d206ffc875e1bc304590549be293be36821e66c e
   --- /dev/null
   +++ b/e
@@ -183,10 +181,10 @@ Test the --pruneall command to prune all the cached manifests
   [FM] refreshing a539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7 with delay 8
   [FM] refreshing a0c8bcbbb45c63b90b70ad007bf38961f64f2af0 with delay 10
   $ hg diff -c . --debug --nodate
-  [FM] cache hit for fastmanifest 7ab5760d084a24168f7595c38c00f4bbc2e308d9
-  [FM] cache hit for fastmanifest 1853a742c28c3a531336bbb3d677d2e2d8937027
   [FM] performing diff
   [FM] diff: other side is hybrid manifest
+  [FM] cache hit for fastmanifest 7ab5760d084a24168f7595c38c00f4bbc2e308d9
+  [FM] cache hit for fastmanifest 1853a742c28c3a531336bbb3d677d2e2d8937027
   diff -r 9d206ffc875e1bc304590549be293be36821e66c -r bbc3e467917630e7d77cd77298e1027030972893 f
   --- /dev/null
   +++ b/f
