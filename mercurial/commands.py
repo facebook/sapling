@@ -2083,7 +2083,7 @@ def files(ui, repo, *pats, **opts):
     Returns 0 if a match is found, 1 otherwise.
 
     """
-    ctx = scmutil.revsingle(repo, opts.get('rev'), None)
+    ctx = scmutil.revsingle(repo, opts.get(r'rev'), None)
 
     end = '\n'
     if opts.get('print0'):
