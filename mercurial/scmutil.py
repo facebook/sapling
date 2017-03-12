@@ -328,7 +328,7 @@ def filteredhash(repo, maxrev):
     if revs:
         s = hashlib.sha1()
         for rev in revs:
-            s.update('%s;' % rev)
+            s.update('%d;' % rev)
         key = s.digest()
     return key
 
