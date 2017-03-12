@@ -1616,7 +1616,7 @@ class path(object):
 
         self.name = name
         self.rawloc = rawloc
-        self.loc = str(u)
+        self.loc = '%s' % u
 
         # When given a raw location but not a symbolic name, validate the
         # location is valid.
