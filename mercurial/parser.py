@@ -265,7 +265,7 @@ def parseerrordetail(inst):
     """Compose error message from specified ParseError object
     """
     if len(inst.args) > 1:
-        return _('at %s: %s') % (inst.args[1], inst.args[0])
+        return _('at %d: %s') % (inst.args[1], inst.args[0])
     else:
         return inst.args[0]
 
