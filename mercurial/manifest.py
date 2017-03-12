@@ -123,6 +123,8 @@ class lazymanifestiter(object):
         zeropos = data.find('\x00', pos)
         return data[pos:zeropos]
 
+    __next__ = next
+
 class lazymanifestiterentries(object):
     def __init__(self, lm):
         self.lm = lm
@@ -145,6 +147,8 @@ class lazymanifestiterentries(object):
         flags = self.lm._getflags(data, self.pos, zeropos)
         self.pos += 1
         return (data[pos:zeropos], hashval, flags)
+
+    __next__ = next
 
 def unhexlify(data, extra, pos, length):
     s = data[pos:pos + length].decode('hex')
