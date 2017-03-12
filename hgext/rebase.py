@@ -169,7 +169,7 @@ class rebaseruntime(object):
                 self._writestatus(f)
 
     def _writestatus(self, f):
-        repo = self.repo
+        repo = self.repo.unfiltered()
         f.write(repo[self.originalwd].hex() + '\n')
         f.write(repo[self.target].hex() + '\n')
         f.write(repo[self.external].hex() + '\n')
