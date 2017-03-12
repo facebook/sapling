@@ -454,7 +454,7 @@ class changectx(basectx):
 
             try:
                 r = int(changeid)
-                if str(r) != changeid:
+                if '%d' % r != changeid:
                     raise ValueError
                 l = len(repo.changelog)
                 if r < 0:
