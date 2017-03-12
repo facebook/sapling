@@ -19,7 +19,6 @@ ispy3 = (sys.version_info[0] >= 3)
 
 if not ispy3:
     import cPickle as pickle
-    import cStringIO as io
     import httplib
     import Queue as _queue
     import SocketServer as socketserver
@@ -28,7 +27,6 @@ if not ispy3:
     import xmlrpclib
 else:
     import http.client as httplib
-    import io
     import pickle
     import queue as _queue
     import socketserver
@@ -39,6 +37,8 @@ else:
 if ispy3:
     import builtins
     import functools
+    import io
+
     fsencode = os.fsencode
     fsdecode = os.fsdecode
     # A bytes version of os.name.
@@ -139,6 +139,8 @@ if ispy3:
         return [a.encode('latin-1') for a in ret]
 
 else:
+    import cStringIO
+
     bytechr = chr
 
     def sysstr(s):
@@ -181,7 +183,7 @@ else:
     getcwd = os.getcwd
     sysexecutable = sys.executable
     shlexsplit = shlex.split
-    stringio = io.StringIO
+    stringio = cStringIO.StringIO
 
 empty = _queue.Empty
 queue = _queue.Queue
