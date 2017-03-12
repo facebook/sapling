@@ -1051,10 +1051,14 @@ static PyObject *treemanifest_matches(py_treemanifest *self, PyObject *args) {
   return NULL;
 }
 
-static PyObject *treemanifest_filesnotin(py_treemanifest *self, PyObject *args) {
+static PyObject *treemanifest_filesnotin(py_treemanifest *self, PyObject *args, PyObject *kwargs) {
   py_treemanifest* other;
+  PyObject *matcherObj = NULL;
 
-  if (!PyArg_ParseTuple(args, "O", &other)) {
+  static char const *kwlist[] = {"m2", "match", NULL};
+
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|O", (char**)kwlist,
+                                   &other, &matcherObj)) {
     return NULL;
   }
 
@@ -1062,15 +1066,27 @@ static PyObject *treemanifest_filesnotin(py_treemanifest *self, PyObject *args) 
 
   ManifestFetcher fetcher = self->tm.fetcher;
 
+  PythonObj matcher;
+  if (matcherObj && matcherObj != Py_None) {
+    matcher = matcherObj;
+    Py_INCREF(matcherObj);
+  }
+
+  PythonMatcher pythonMatcher(matcher);
+  AlwaysMatcher alwaysMatcher;
+  Matcher *matcherPtr = &alwaysMatcher;
+  if (matcher) {
+    matcherPtr = &pythonMatcher;
+  }
+
   std::string path;
   try {
     path.reserve(1024);
-    AlwaysMatcher matcher;
     treemanifest_diffrecurse(
         self->tm.getRootManifest(),
         other->tm.getRootManifest(),
         path, diffresults, fetcher, /*clean=*/false,
-        matcher);
+        *matcherPtr);
   } catch (const pyexception &ex) {
     // Python has already set the error message
     return NULL;
@@ -1260,7 +1276,8 @@ static PyMethodDef treemanifest_methods[] = {
   {"copy", (PyCFunction)treemanifest_copy, METH_NOARGS, "copies the treemanifest"},
   {"diff", (PyCFunction)treemanifest_diff, METH_VARARGS|METH_KEYWORDS, "performs a diff of the given two manifests\n"},
   {"dirs", (PyCFunction)treemanifest_dirs, METH_NOARGS, "gets a collection of all the directories in this manifest"},
-  {"filesnotin", (PyCFunction)treemanifest_filesnotin, METH_VARARGS, "returns the set of files in m1 but not m2\n"},
+  {"filesnotin", (PyCFunction)treemanifest_filesnotin, METH_VARARGS|METH_KEYWORDS,
+    "returns the set of files in m1 but not m2\n"},
   {"find", treemanifest_find, METH_VARARGS, "returns the node and flag for the given filepath\n"},
   {"flags", (PyCFunction)treemanifest_flags, METH_VARARGS|METH_KEYWORDS,
     "returns the flag for the given filepath\n"},

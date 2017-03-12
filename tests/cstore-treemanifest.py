@@ -459,6 +459,65 @@ class ctreemanifesttests(unittest.TestCase):
             "xyz/m": None
         })
 
+    def testFilesNotIn(self):
+        a = cstore.treemanifest(FakeDataStore())
+        zflags = hashflags()
+        mflags = hashflags()
+        a.set("abc/z", *zflags)
+        a.set("xyz/m", *mflags)
+        alinknode = hashflags()[0]
+
+        b = cstore.treemanifest(FakeDataStore())
+        b.set("abc/z", *zflags)
+        b.set("xyz/m", *mflags)
+        blinknode = hashflags()[0]
+
+        # filesnotin matching trees
+        # - uncommitted trees
+        diff = a.filesnotin(b)
+        self.assertEquals(diff, set())
+
+        # - committed trees
+        dstore = FakeDataStore()
+        hstore = FakeHistoryStore()
+        for name, node, text, p1text, p1, p2 in a.finalize():
+            dstore.add(name, node, nullid, text)
+            hstore.add(name, node, p1, p2, alinknode, '')
+        for name, node, text, p1text, p1, p2 in b.finalize():
+            dstore.add(name, node, nullid, text)
+            hstore.add(name, node, p1, p2, blinknode, '')
+        diff = a.filesnotin(b)
+        self.assertEquals(diff, set())
+
+        # filesnotin with modifications
+        newfileflags = hashflags()
+        newzflags = hashflags()
+        b.set("newfile", *newfileflags)
+        b.set("abc/z", *newzflags)
+
+        # In 'a' and not in 'b'
+        files = a.filesnotin(b)
+        self.assertEquals(files, set())
+
+        # In 'b' and not in 'a'
+        files = b.filesnotin(a)
+        self.assertEquals(files, set(["newfile"]))
+
+        # With dir matcher
+        match = matchmod.match('/', '/', ['abc/*'])
+        files = b.filesnotin(a, match=match)
+        self.assertEquals(files, set())
+
+        # With file matcher
+        match = matchmod.match('/', '/', ['newfile'])
+        files = b.filesnotin(a, match=match)
+        self.assertEquals(files, set(['newfile']))
+
+        # With no matches
+        match = matchmod.match('/', '/', ['xxx'])
+        files = b.filesnotin(a, match=match)
+        self.assertEquals(files, set([]))
+
     def testHasDir(self):
         a = cstore.treemanifest(FakeDataStore())
         zflags = hashflags()
