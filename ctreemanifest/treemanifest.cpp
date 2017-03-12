@@ -87,11 +87,16 @@ void treemanifest_diffrecurse(
       }
       otheriter.next();
     } else {
+      // Append the non-directory form to the path when possible
+      if (!selfentry->isdirectory()) {
+        selfentry->appendtopath(path);
+      } else {
+        otherentry->appendtopath(path);
+      }
+
       // Filenames match - now compare directory vs file
       if (selfentry->isdirectory() && otherentry->isdirectory()) {
         // Both are directories - recurse
-        selfentry->appendtopath(path);
-
         if (selfbinnode != otherbinnode || clean || selfbinnode.size() == 0) {
           Manifest *selfchildmanifest = selfentry->get_manifest(fetcher,
               path.c_str(), path.size());
@@ -106,11 +111,8 @@ void treemanifest_diffrecurse(
               fetcher,
               clean);
         }
-        selfiter.next();
-        otheriter.next();
       } else if (selfentry->isdirectory() && !otherentry->isdirectory()) {
         // self is directory, other is not - process other then self
-        otherentry->appendtopath(path);
         diff.add(path, NULL, NULL, otherbinnode.c_str(), otherentry->flag);
 
         path.append(1, '/');
@@ -118,11 +120,8 @@ void treemanifest_diffrecurse(
             path.c_str(), path.size());
         treemanifest_diffrecurse(selfchildmanifest, NULL, path, diff, fetcher, clean);
 
-        selfiter.next();
-        otheriter.next();
       } else if (!selfentry->isdirectory() && otherentry->isdirectory()) {
         // self is not directory, other is - process self then other
-        selfentry->appendtopath(path);
         diff.add(path, selfbinnode.c_str(), selfentry->flag, NULL, NULL);
 
         path.append(1, '/');
@@ -131,8 +130,6 @@ void treemanifest_diffrecurse(
         );
         treemanifest_diffrecurse(NULL, otherchildmanifest, path, diff, fetcher, clean);
 
-        selfiter.next();
-        otheriter.next();
       } else {
         // both are files
         bool flagsdiffer = (
@@ -141,17 +138,15 @@ void treemanifest_diffrecurse(
         );
 
         if (selfbinnode != otherbinnode || flagsdiffer) {
-          selfentry->appendtopath(path);
           diff.add(path, selfbinnode.c_str(), selfentry->flag,
                          otherbinnode.c_str(), otherentry->flag);
         } else if (clean) {
-          selfentry->appendtopath(path);
           diff.addclean(path);
         }
-
-        selfiter.next();
-        otheriter.next();
       }
+
+      selfiter.next();
+      otheriter.next();
     }
     path.erase(originalpathsize);
   }
