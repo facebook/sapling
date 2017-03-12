@@ -1060,6 +1060,18 @@ def checksignature(func):
 # This is a variable so extensions can opt-in to using them.
 allowhardlinks = False
 
+# a whilelist of known filesystems where hardlink works reliably
+_hardlinkfswhitelist = set([
+    'btrfs',
+    'ext2',
+    'ext3',
+    'ext4',
+    'jfs',
+    'reiserfs',
+    'tmpfs',
+    'xfs',
+])
+
 def copyfile(src, dest, hardlink=False, copystat=False, checkambig=False):
     '''copy a file, preserving mode and optionally other stat info like
     atime/mtime
@@ -1076,6 +1088,13 @@ def copyfile(src, dest, hardlink=False, copystat=False, checkambig=False):
         if checkambig:
             oldstat = checkambig and filestat(dest)
         unlink(dest)
+    if hardlink:
+        # Hardlinks are problematic on CIFS (issue4546), do not allow hardlinks
+        # unless we are confident that dest is on a whitelisted filesystem.
+        destdir = os.path.dirname(dest)
+        fstype = getattr(osutil, 'getfstype', lambda x: None)(destdir)
+        if fstype not in _hardlinkfswhitelist:
+            hardlink = False
     if allowhardlinks and hardlink:
         try:
             oslink(src, dest)
