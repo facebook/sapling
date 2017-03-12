@@ -1055,11 +1055,6 @@ def checksignature(func):
 
     return check
 
-# Hardlinks are problematic on CIFS, do not allow hardlinks
-# until we find a way to work around it cleanly (issue4546).
-# This is a variable so extensions can opt-in to using them.
-allowhardlinks = False
-
 # a whilelist of known filesystems where hardlink works reliably
 _hardlinkfswhitelist = set([
     'btrfs',
@@ -1095,7 +1090,7 @@ def copyfile(src, dest, hardlink=False, copystat=False, checkambig=False):
         fstype = getattr(osutil, 'getfstype', lambda x: None)(destdir)
         if fstype not in _hardlinkfswhitelist:
             hardlink = False
-    if allowhardlinks and hardlink:
+    if hardlink:
         try:
             oslink(src, dest)
             return
