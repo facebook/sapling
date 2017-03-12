@@ -7,6 +7,13 @@
 
 """This extension logs different pieces of information that will be used
 by SCM wrappers
+
+::
+
+    [logging]
+    # list of config options to log
+    configoptions = section1.option1,section2.option2
+
 """
 
 import os
@@ -20,7 +27,17 @@ def _localrepoinit(orig, self, baseui, path=None, create=False):
     reponame = self.ui.config('paths', 'default', path)
     if reponame:
         reponame = os.path.basename(reponame)
+    configoptstolog = self.ui.configlist('logging', 'configoptions')
     kwargs = {'repo': reponame}
+    for option in configoptstolog:
+        splitted = option.split('.')
+        if len(splitted) != 2:
+            continue
+        section, name = splitted
+        value = self.ui.config(section, name, None)
+        if value is not None:
+            kwargs[name] = value
+
     self.ui.log("logginghelper",
                 "",           # ui.log requires a format string as args[0].
                 **kwargs)
