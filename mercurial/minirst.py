@@ -26,6 +26,7 @@ import re
 from .i18n import _
 from . import (
     encoding,
+    pycompat,
     util,
 )
 
@@ -59,10 +60,10 @@ def replace(text, substs):
     # ASCII characters other than control/alphabet/digit as a part of
     # multi-bytes characters, so direct replacing with such characters
     # on strings in local encoding causes invalid byte sequences.
-    utext = text.decode(encoding.encoding)
+    utext = text.decode(pycompat.sysstr(encoding.encoding))
     for f, t in substs:
         utext = utext.replace(f.decode("ascii"), t.decode("ascii"))
-    return utext.encode(encoding.encoding)
+    return utext.encode(pycompat.sysstr(encoding.encoding))
 
 _blockre = re.compile(br"\n(?:\s*\n)+")
 
