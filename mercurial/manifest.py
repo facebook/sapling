@@ -12,6 +12,7 @@ import os
 import struct
 
 from .i18n import _
+from .node import bin
 from . import (
     error,
     mdiff,
@@ -151,7 +152,7 @@ class lazymanifestiterentries(object):
     __next__ = next
 
 def unhexlify(data, extra, pos, length):
-    s = data[pos:pos + length].decode('hex')
+    s = bin(data[pos:pos + length])
     if extra:
         s += chr(extra & 0xff)
     return s
