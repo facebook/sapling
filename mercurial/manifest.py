@@ -172,7 +172,7 @@ class _lazymanifest(object):
         if not data:
             return []
         pos = data.find("\n")
-        if pos == -1 or data[-1] != '\n':
+        if pos == -1 or data[-1:] != '\n':
             raise ValueError("Manifest did not end in a newline.")
         positions = [0]
         prev = data[:data.find('\x00')]
