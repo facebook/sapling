@@ -409,7 +409,7 @@ class revbranchcache(object):
         # fast path: extract data from cache, use it if node is matching
         reponode = changelog.node(rev)[:_rbcnodelen]
         cachenode, branchidx = unpack(
-            _rbcrecfmt, buffer(self._rbcrevs, rbcrevidx, _rbcrecsize))
+            _rbcrecfmt, util.buffer(self._rbcrevs, rbcrevidx, _rbcrecsize))
         close = bool(branchidx & _rbccloseflag)
         if close:
             branchidx &= _rbcbranchidxmask
