@@ -96,7 +96,7 @@ def tokenize(program, lookup=None, syminitletters=None, symletters=None):
 
     pos, l = 0, len(program)
     while pos < l:
-        c = program[pos]
+        c = program[pos:pos + 1]
         if c.isspace(): # skip inter-token whitespace
             pass
         elif c == ':' and program[pos:pos + 2] == '::': # look ahead carefully
@@ -114,14 +114,14 @@ def tokenize(program, lookup=None, syminitletters=None, symletters=None):
               program[pos:pos + 2] in ("r'", 'r"')): # handle quoted strings
             if c == 'r':
                 pos += 1
-                c = program[pos]
+                c = program[pos:pos + 1]
                 decode = lambda x: x
             else:
                 decode = parser.unescapestr
             pos += 1
             s = pos
             while pos < l: # find closing quote
-                d = program[pos]
+                d = program[pos:pos + 1]
                 if d == '\\': # skip over escaped characters
                     pos += 2
                     continue
@@ -136,10 +136,11 @@ def tokenize(program, lookup=None, syminitletters=None, symletters=None):
             s = pos
             pos += 1
             while pos < l: # find end of symbol
-                d = program[pos]
+                d = program[pos:pos + 1]
                 if d not in symletters:
                     break
-                if d == '.' and program[pos - 1] == '.': # special case for ..
+                if (d == '.'
+                    and program[pos - 1:pos] == '.'): # special case for ..
                     pos -= 1
                     break
                 pos += 1
