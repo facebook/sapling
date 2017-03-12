@@ -64,7 +64,7 @@ def replace(text, substs):
         utext = utext.replace(f.decode("ascii"), t.decode("ascii"))
     return utext.encode(encoding.encoding)
 
-_blockre = re.compile(r"\n(?:\s*\n)+")
+_blockre = re.compile(br"\n(?:\s*\n)+")
 
 def findblocks(text):
     """Find continuous blocks of lines in text.
@@ -138,12 +138,12 @@ def findliteralblocks(blocks):
         i += 1
     return blocks
 
-_bulletre = re.compile(r'(\*|-|[0-9A-Za-z]+\.|\(?[0-9A-Za-z]+\)|\|) ')
-_optionre = re.compile(r'^(-([a-zA-Z0-9]), )?(--[a-z0-9-]+)'
-                       r'((.*)  +)(.*)$')
-_fieldre = re.compile(r':(?![: ])([^:]*)(?<! ):[ ]+(.*)')
-_definitionre = re.compile(r'[^ ]')
-_tablere = re.compile(r'(=+\s+)*=+')
+_bulletre = re.compile(br'(\*|-|[0-9A-Za-z]+\.|\(?[0-9A-Za-z]+\)|\|) ')
+_optionre = re.compile(br'^(-([a-zA-Z0-9]), )?(--[a-z0-9-]+)'
+                       br'((.*)  +)(.*)$')
+_fieldre = re.compile(br':(?![: ])([^:]*)(?<! ):[ ]+(.*)')
+_definitionre = re.compile(br'[^ ]')
+_tablere = re.compile(br'(=+\s+)*=+')
 
 def splitparagraphs(blocks):
     """Split paragraphs into lists."""
@@ -286,7 +286,7 @@ def prunecontainers(blocks, keep):
         i += 1
     return blocks, pruned
 
-_sectionre = re.compile(r"""^([-=`:.'"~^_*+#])\1+$""")
+_sectionre = re.compile(br"""^([-=`:.'"~^_*+#])\1+$""")
 
 def findtables(blocks):
     '''Find simple tables
@@ -432,7 +432,7 @@ def findadmonitions(blocks, admonitions=None):
     """
     admonitions = admonitions or _admonitions
 
-    admonitionre = re.compile(r'\.\. (%s)::' % '|'.join(sorted(admonitions)),
+    admonitionre = re.compile(br'\.\. (%s)::' % '|'.join(sorted(admonitions)),
                               flags=re.IGNORECASE)
 
     i = 0
