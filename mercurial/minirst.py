@@ -549,7 +549,7 @@ def formatblock(block, width):
     elif block['type'] == 'option':
         return formatoption(block, width)
 
-    text = ' '.join(map(str.strip, block['lines']))
+    text = ' '.join(map(bytes.strip, block['lines']))
     return util.wrap(text, width=width,
                      initindent=indent,
                      hangindent=subindent) + '\n'
