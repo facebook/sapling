@@ -1521,7 +1521,7 @@ class revlog(object):
         #
         # According to `hg perfrevlogchunks`, this is ~0.5% faster for zlib
         # compressed chunks. And this matters for changelog and manifest reads.
-        t = data[0]
+        t = data[0:1]
 
         if t == 'x':
             try:
