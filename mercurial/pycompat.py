@@ -55,6 +55,7 @@ if ispy3:
     sysexecutable = sys.executable
     if sysexecutable:
         sysexecutable = os.fsencode(sysexecutable)
+    stringio = io.BytesIO
 
     # TODO: .buffer might not exist if std streams were replaced; we'll need
     # a silly wrapper to make a bytes stream backed by a unicode one.
@@ -180,8 +181,8 @@ else:
     getcwd = os.getcwd
     sysexecutable = sys.executable
     shlexsplit = shlex.split
+    stringio = io.StringIO
 
-stringio = io.StringIO
 empty = _queue.Empty
 queue = _queue.Queue
 
