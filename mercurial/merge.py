@@ -1544,7 +1544,7 @@ def update(repo, node, branchmerge, force, ancestor=None,
                 raise error.Abort(_("merging with a working directory ancestor"
                                    " has no effect"))
             elif pas == [p1]:
-                if not mergeancestor and p1.branch() == p2.branch():
+                if not mergeancestor and wc.branch() == p2.branch():
                     raise error.Abort(_("nothing to merge"),
                                      hint=_("use 'hg update' "
                                             "or check 'hg heads'"))
