@@ -542,7 +542,7 @@ class ui(object):
         ConfigError: foo.invalid is not a byte quantity ('somevalue')
         """
 
-        value = self.config(section, name)
+        value = self.config(section, name, None, untrusted)
         if value is None:
             if not isinstance(default, str):
                 return default

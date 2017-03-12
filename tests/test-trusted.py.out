@@ -177,3 +177,19 @@ not trusting file .hg/hgrc from untrusted user abc, group def
 ('foo', '.hg/hgrc:1')
 # same user, same group
 ('foo', '.hg/hgrc:1')
+
+# access typed information
+# different user, different group
+not trusting file .hg/hgrc from untrusted user abc, group def
+# suboptions, trusted and untrusted
+(None, []) ('main', [('one', 'one'), ('two', 'two')])
+# path, trusted and untrusted
+None .hg/monty/python
+# bool, trusted and untrusted
+False True
+# int, trusted and untrusted
+0 42
+# bytes, trusted and untrusted
+0 84934656
+# list, trusted and untrusted
+[] ['spam', 'ham', 'eggs']

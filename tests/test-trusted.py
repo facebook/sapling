@@ -201,3 +201,41 @@ try:
     testui(debug=True, silent=True)
 except error.ParseError as inst:
     print(inst)
+
+print()
+print('# access typed information')
+with open('.hg/hgrc', 'w') as f:
+    f.write('''\
+[foo]
+sub=main
+sub:one=one
+sub:two=two
+path=monty/python
+bool=true
+int=42
+bytes=81mb
+list=spam,ham,eggs
+''')
+u = testui(user='abc', group='def', cuser='foo', silent=True)
+print('# suboptions, trusted and untrusted')
+trusted = u.configsuboptions('foo', 'sub')
+untrusted = u.configsuboptions('foo', 'sub', untrusted=True)
+print(
+    (trusted[0], sorted(trusted[1].items())),
+    (untrusted[0], sorted(untrusted[1].items())))
+print('# path, trusted and untrusted')
+print(u.configpath('foo', 'path'), u.configpath('foo', 'path', untrusted=True))
+print('# bool, trusted and untrusted')
+print(u.configbool('foo', 'bool'), u.configbool('foo', 'bool', untrusted=True))
+print('# int, trusted and untrusted')
+print(
+    u.configint('foo', 'int', 0),
+    u.configint('foo', 'int', 0, untrusted=True))
+print('# bytes, trusted and untrusted')
+print(
+    u.configbytes('foo', 'bytes', 0),
+    u.configbytes('foo', 'bytes', 0, untrusted=True))
+print('# list, trusted and untrusted')
+print(
+    u.configlist('foo', 'list', []),
+    u.configlist('foo', 'list', [], untrusted=True))
