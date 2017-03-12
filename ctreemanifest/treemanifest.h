@@ -330,6 +330,7 @@ extern void treemanifest_diffrecurse(
     std::string &path,
     DiffResult &diff,
     const ManifestFetcher &fetcher,
-    bool clean);
+    bool clean,
+    Matcher &matcher);
 
 #endif //REMOTEFILELOG_TREEMANIFEST_H

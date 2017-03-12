@@ -18,4 +18,13 @@ class Matcher {
     virtual bool visitdir(const std::string &path) = 0;
 };
 
+class AlwaysMatcher : public Matcher {
+  public:
+    AlwaysMatcher() {}
+    virtual ~AlwaysMatcher() {}
+    virtual bool matches(const std::string &path) { return true; }
+    virtual bool matches(const char *path, const size_t pathlen) { return true; }
+    virtual bool visitdir(const std::string &path) { return true; }
+};
+
 #endif // MATCH_H

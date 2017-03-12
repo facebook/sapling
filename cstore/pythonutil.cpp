@@ -134,7 +134,12 @@ bool PythonMatcher::matches(const char *path, const size_t pathlen) {
 }
 
 bool PythonMatcher::visitdir(const std::string &path) {
-  PythonObj matchArgs = Py_BuildValue("(s#)", path.c_str(), (Py_ssize_t)path.size());
+  Py_ssize_t size = path.size();
+  if (size > 1 && path[size - 1] == '/') {
+    size--;
+  }
+
+  PythonObj matchArgs = Py_BuildValue("(s#)", path.c_str(), (Py_ssize_t)size);
   PythonObj matched = this->_matcherObj.callmethod("visitdir", matchArgs);
   return PyObject_IsTrue(matched) == 1;
 }

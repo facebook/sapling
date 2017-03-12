@@ -280,14 +280,29 @@ static PyObject *treemanifest_diff(
     PyObject *o, PyObject *args, PyObject *kwargs) {
   py_treemanifest *self = (py_treemanifest*)o;
   PyObject *otherObj;
+  PyObject *matcherObj = NULL;
   PyObject *cleanObj = NULL;
-  static char const *kwlist[] = {"m2", "clean", NULL};
+  static char const *kwlist[] = {"m2", "match", "clean", NULL};
 
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|O", (char**)kwlist, &otherObj, &cleanObj)) {
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|OO", (char**)kwlist,
+                                   &otherObj, &matcherObj, &cleanObj)) {
     return NULL;
   }
 
   py_treemanifest *other = (py_treemanifest*)otherObj;
+
+  PythonObj matcher;
+  if (matcherObj && matcherObj != Py_None) {
+    matcher = matcherObj;
+    Py_INCREF(matcherObj);
+  }
+
+  PythonMatcher pythonMatcher(matcher);
+  AlwaysMatcher alwaysMatcher;
+  Matcher *matcherPtr = &alwaysMatcher;
+  if (matcher) {
+    matcherPtr = &pythonMatcher;
+  }
 
   bool clean = false;
   if (cleanObj && PyObject_IsTrue(cleanObj)) {
@@ -305,7 +320,8 @@ static PyObject *treemanifest_diff(
     treemanifest_diffrecurse(
         self->tm.getRootManifest(),
         other->tm.getRootManifest(),
-        path, results, fetcher, clean);
+        path, results, fetcher, clean,
+        *matcherPtr);
   } catch (const pyexception &ex) {
     // Python has already set the error message
     return NULL;
@@ -1049,10 +1065,12 @@ static PyObject *treemanifest_filesnotin(py_treemanifest *self, PyObject *args) 
   std::string path;
   try {
     path.reserve(1024);
+    AlwaysMatcher matcher;
     treemanifest_diffrecurse(
         self->tm.getRootManifest(),
         other->tm.getRootManifest(),
-        path, diffresults, fetcher, /*clean=*/false);
+        path, diffresults, fetcher, /*clean=*/false,
+        matcher);
   } catch (const pyexception &ex) {
     // Python has already set the error message
     return NULL;

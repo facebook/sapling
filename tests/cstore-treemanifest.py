@@ -424,6 +424,19 @@ class ctreemanifesttests(unittest.TestCase):
             "abc/z": (zflags, newzflags)
         })
 
+        # - uncommitted trees with matcher
+        match = matchmod.match('/', '/', ['abc/*'])
+        diff = a.diff(b, match=match)
+        self.assertEquals(diff, {
+            "abc/z": (zflags, newzflags)
+        })
+
+        match = matchmod.match('/', '/', ['newfile'])
+        diff = a.diff(b, match=match)
+        self.assertEquals(diff, {
+            "newfile": ((None, ''), newfileflags),
+        })
+
         # - committed trees
         for name, node, text, p1text, p1, p2 in a.finalize():
             dstore.add(name, node, nullid, text)
