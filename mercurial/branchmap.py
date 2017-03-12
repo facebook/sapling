@@ -233,7 +233,7 @@ class branchcache(dict):
     def write(self, repo):
         try:
             f = repo.vfs(_filename(repo), "w", atomictemp=True)
-            cachekey = [hex(self.tipnode), str(self.tiprev)]
+            cachekey = [hex(self.tipnode), '%d' % self.tiprev]
             if self.filteredhash is not None:
                 cachekey.append(hex(self.filteredhash))
             f.write(" ".join(cachekey) + '\n')
