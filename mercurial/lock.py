@@ -15,6 +15,7 @@ import time
 import warnings
 
 from . import (
+    encoding,
     error,
     pycompat,
     util,
@@ -27,7 +28,8 @@ def _getlockprefix():
     confidence. Typically it's just hostname. On modern linux, we include an
     extra Linux-specific pid namespace identifier.
     """
-    result = socket.gethostname()
+    result = socket.gethostname().encode(
+        pycompat.sysstr(encoding.encoding), 'replace')
     if pycompat.sysplatform.startswith('linux'):
         try:
             result += '/%x' % os.stat('/proc/self/ns/pid').st_ino
