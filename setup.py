@@ -661,7 +661,14 @@ for root in ('templates',):
             packagedata['mercurial'].append(f)
 
 datafiles = []
-setupversion = version
+
+# distutils expects version to be str/unicode. Converting it to
+# unicode on Python 2 still works because it won't contain any
+# non-ascii bytes and will be implicitly converted back to bytes
+# when operated on.
+assert isinstance(version, bytes)
+setupversion = version.decode('ascii')
+
 extra = {}
 
 if py2exeloaded:
