@@ -118,7 +118,7 @@ class lock(object):
             return
         if lock._host is None:
             lock._host = _getlockprefix()
-        lockname = '%s:%s' % (lock._host, self.pid)
+        lockname = '%s:%d' % (lock._host, self.pid)
         retry = 5
         while not self.held and retry:
             retry -= 1
