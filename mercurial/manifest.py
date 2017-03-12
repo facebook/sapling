@@ -255,8 +255,8 @@ class _lazymanifest(object):
         return self.data[start:end]
 
     def __getitem__(self, key):
-        if not isinstance(key, str):
-            raise TypeError("getitem: manifest keys must be a string.")
+        if not isinstance(key, bytes):
+            raise TypeError("getitem: manifest keys must be a bytes.")
         needle = self.bsearch(key)
         if needle == -1:
             raise KeyError
