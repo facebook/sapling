@@ -66,19 +66,21 @@ try:
     # so we are trying to import from lz4.block first
     def _compressHC(*args, **kwargs):
         return lz4.block.compress(*args, mode='high_compression', **kwargs)
-    _compress = _compressHC
-    _decompress = lz4.block.decompress
+    lz4compress = lz4.block.compress
+    lz4compressHC = _compressHC
+    lz4decompress = lz4.block.decompress
     usable = localrepo.localrepository.openerreqs
 except (AttributeError, ImportError):
     try:
-        _compress = lz4.compressHC
-        _decompress = lz4.decompress
+        lz4compress = lz4.compress
+        lz4compressHC = lz4.compressHC
+        lz4decompress = lz4.decompress
         # don't crash horribly if invoked on an incompatible hg
         usable = localrepo.localrepository.openerreqs
     except (AttributeError, ImportError):
         def lz4missing(eek):
             raise util.Abort(_('the lz4revlog extension requires lz4 support'))
-        _compress = _decompress = lz4missing
+        lz4compress = lz4compressHC = lz4decompress = lz4missing
         usable = False
 
 def requirements(orig, repo):
@@ -111,7 +113,7 @@ if usable:
                 if not text:
                     return ('', text)
                 l = len(text)
-                c = _compress(text)
+                c = lz4compressHC(text)
                 if len(text) <= len(c):
                     if text[0] == '\0':
                         return ('', text)
@@ -126,7 +128,7 @@ if usable:
             if t == '\0':
                 return bin
             if t == '4':
-                return _decompress(bin[1:])
+                return lz4decompress(bin[1:])
             return super(lz4revlog, self).decompress(bin)
 
     cls = localrepo.localrepository
