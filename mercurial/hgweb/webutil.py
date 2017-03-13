@@ -434,7 +434,7 @@ def listfilediffs(tmpl, files, node, max):
     if len(files) > max:
         yield tmpl('fileellipses')
 
-def diffs(web, tmpl, ctx, basectx, files, style):
+def diffs(web, tmpl, ctx, basectx, files, style, linerange=None):
 
     def prettyprintlines(lines, blockno):
         for lineno, l in enumerate(lines, 1):
@@ -470,6 +470,11 @@ def diffs(web, tmpl, ctx, basectx, files, style):
             header = header[1:]
         lines = [h + '\n' for h in header]
         for hunkrange, hunklines in hunks:
+            if linerange is not None and hunkrange is not None:
+                s1, l1, s2, l2 = hunkrange
+                lb, ub = linerange
+                if not (lb <= s2 < ub or lb < s2 + l2 <= ub):
+                    continue
             lines.extend(hunklines)
         if lines:
             yield tmpl('diffblock', parity=next(parity), blockno=blockno,
