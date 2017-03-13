@@ -269,7 +269,6 @@ if not ispy3:
 else:
     import urllib.parse
     urlreq._registeraliases(urllib.parse, (
-        "quote",
         "splitattr",
         "splitpasswd",
         "splitport",
@@ -313,3 +312,12 @@ else:
         "SimpleHTTPRequestHandler",
         "CGIHTTPRequestHandler",
     ))
+
+    # urllib.parse.quote() accepts both str and bytes, decodes bytes
+    # (if necessary), and returns str. This is wonky. We provide a custom
+    # implementation that only accepts bytes and emits bytes.
+    def quote(s, safe=r'/'):
+        s = urllib.parse.quote_from_bytes(s, safe=safe)
+        return s.encode('ascii', 'strict')
+
+    urlreq.quote = quote
