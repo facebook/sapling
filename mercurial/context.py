@@ -298,10 +298,10 @@ class basectx(object):
         '''
         return subrepo.subrepo(self, path, allowwdir=True)
 
-    def match(self, pats=[], include=None, exclude=None, default='glob',
+    def match(self, pats=None, include=None, exclude=None, default='glob',
               listsubrepos=False, badfn=None):
         r = self._repo
-        return matchmod.match(r.root, r.getcwd(), pats,
+        return matchmod.match(r.root, r.getcwd(), pats or [],
                               include, exclude, default,
                               auditor=r.nofsauditor, ctx=self,
                               listsubrepos=listsubrepos, badfn=badfn)
@@ -1515,18 +1515,18 @@ class workingctx(committablectx):
                     self._repo.dirstate.normallookup(dest)
                 self._repo.dirstate.copy(source, dest)
 
-    def match(self, pats=[], include=None, exclude=None, default='glob',
+    def match(self, pats=None, include=None, exclude=None, default='glob',
               listsubrepos=False, badfn=None):
         r = self._repo
 
         # Only a case insensitive filesystem needs magic to translate user input
         # to actual case in the filesystem.
         if not util.fscasesensitive(r.root):
-            return matchmod.icasefsmatcher(r.root, r.getcwd(), pats, include,
-                                           exclude, default, r.auditor, self,
-                                           listsubrepos=listsubrepos,
+            return matchmod.icasefsmatcher(r.root, r.getcwd(), pats or [],
+                                           include, exclude, default, r.auditor,
+                                           self, listsubrepos=listsubrepos,
                                            badfn=badfn)
-        return matchmod.match(r.root, r.getcwd(), pats,
+        return matchmod.match(r.root, r.getcwd(), pats or [],
                               include, exclude, default,
                               auditor=r.auditor, ctx=self,
                               listsubrepos=listsubrepos, badfn=badfn)
