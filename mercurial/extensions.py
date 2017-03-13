@@ -108,9 +108,7 @@ def _importext(name, path=None, reportfunc=None):
 def _forbytes(inst):
     """Portably format an import error into a form suitable for
     %-formatting into bytestrings."""
-    if pycompat.ispy3:
-        return encoding.unitolocal(str(inst))
-    return inst
+    return encoding.strtolocal(str(inst))
 
 def _reportimporterror(ui, err, failed, next):
     # note: this ui.debug happens before --debug is processed,

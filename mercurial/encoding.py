@@ -204,6 +204,16 @@ def unifromlocal(s):
     """Convert a byte string of local encoding to a unicode string"""
     return fromlocal(s).decode('utf-8')
 
+# converter functions between native str and byte string. use these if the
+# character encoding is not aware (e.g. exception message) or is known to
+# be locale dependent (e.g. date formatting.)
+if pycompat.ispy3:
+    strtolocal = unitolocal
+    strfromlocal = unifromlocal
+else:
+    strtolocal = str
+    strfromlocal = str
+
 if not _nativeenviron:
     # now encoding and helper functions are available, recreate the environ
     # dict to be exported to other modules
