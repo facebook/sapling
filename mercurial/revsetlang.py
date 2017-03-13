@@ -644,10 +644,10 @@ def formatspec(expr, *args):
     pos = 0
     arg = 0
     while pos < len(expr):
-        c = expr[pos]
+        c = expr[pos:pos + 1]
         if c == '%':
             pos += 1
-            d = expr[pos]
+            d = expr[pos:pos + 1]
             if d == '%':
                 ret += d
             elif d in 'dsnbr':
@@ -656,7 +656,7 @@ def formatspec(expr, *args):
             elif d == 'l':
                 # a list of some type
                 pos += 1
-                d = expr[pos]
+                d = expr[pos:pos + 1]
                 ret += listexp(list(args[arg]), d)
                 arg += 1
             else:
