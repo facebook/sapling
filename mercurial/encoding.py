@@ -196,6 +196,14 @@ def fromlocal(s):
     except LookupError as k:
         raise error.Abort(k, hint="please check your locale settings")
 
+def unitolocal(u):
+    """Convert a unicode string to a byte string of local encoding"""
+    return tolocal(u.encode('utf-8'))
+
+def unifromlocal(s):
+    """Convert a byte string of local encoding to a unicode string"""
+    return fromlocal(s).decode('utf-8')
+
 if not _nativeenviron:
     # now encoding and helper functions are available, recreate the environ
     # dict to be exported to other modules

@@ -109,7 +109,7 @@ def _forbytes(inst):
     """Portably format an import error into a form suitable for
     %-formatting into bytestrings."""
     if pycompat.ispy3:
-        return encoding.tolocal(str(inst).encode('utf-8'))
+        return encoding.unitolocal(str(inst))
     return inst
 
 def _reportimporterror(ui, err, failed, next):

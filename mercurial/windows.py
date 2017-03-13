@@ -442,7 +442,7 @@ def lookupreg(key, valname=None, scope=None):
         try:
             val = winreg.QueryValueEx(winreg.OpenKey(s, key), valname)[0]
             # never let a Unicode string escape into the wild
-            return encoding.tolocal(val.encode('UTF-8'))
+            return encoding.unitolocal(val)
         except EnvironmentError:
             pass
 

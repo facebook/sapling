@@ -2654,7 +2654,7 @@ class url(object):
         file:///D:\data\hg
         """
         if pycompat.ispy3:
-            return encoding.fromlocal(self.__bytes__()).decode('utf-8')
+            return encoding.unifromlocal(self.__bytes__())
         return self.__bytes__()
 
     def __bytes__(self):

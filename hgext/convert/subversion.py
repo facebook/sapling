@@ -1186,7 +1186,7 @@ class svn_sink(converter_sink, commandline):
                 # best bet is to assume they are in local
                 # encoding. They will be passed to command line calls
                 # later anyway, so they better be.
-                m.add(encoding.tolocal(name.encode('utf-8')))
+                m.add(encoding.unitolocal(name))
                 break
         return m
 

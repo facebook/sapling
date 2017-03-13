@@ -22,7 +22,7 @@ New errors are not allowed. Warnings are strongly discouraged.
   mercurial/encoding.py:61:
    >                    for k, v in os.environ.items())
    use encoding.environ instead (py3)
-  mercurial/encoding.py:203:
+  mercurial/encoding.py:211:
    >                    for k, v in os.environ.items())
    use encoding.environ instead (py3)
   Skipping mercurial/httpclient/__init__.py it has no-che?k-code (glob)
