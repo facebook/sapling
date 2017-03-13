@@ -74,3 +74,7 @@ Test bytes-ness of policy.policy with HGMODULEPOLICY
   $ export HGMODULEPOLICY
   $ $PYTHON3 `which hg` debuginstall 2>&1 2>&1 | tail -1
   no problems detected
+
+`hg init` can create empty repos
+
+  $ $PYTHON3 `which hg` init emptyrepo
