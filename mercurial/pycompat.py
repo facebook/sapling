@@ -267,11 +267,18 @@ if not ispy3:
     ))
 
 else:
+    import urllib.parse
+    urlreq._registeraliases(urllib.parse, (
+        "quote",
+        "splitattr",
+        "splitpasswd",
+        "splitport",
+        "splituser",
+        "unquote",
+    ))
     import urllib.request
     urlreq._registeraliases(urllib.request, (
         "AbstractHTTPHandler",
-        "addclosehook",
-        "addinfourl",
         "BaseHandler",
         "build_opener",
         "FileHandler",
@@ -285,15 +292,14 @@ else:
         "HTTPDigestAuthHandler",
         "HTTPPasswordMgrWithDefaultRealm",
         "ProxyHandler",
-        "quote",
         "Request",
-        "splitattr",
-        "splitpasswd",
-        "splitport",
-        "splituser",
-        "unquote",
         "url2pathname",
         "urlopen",
+    ))
+    import urllib.response
+    urlreq._registeraliases(urllib.response, (
+        "addclosehook",
+        "addinfourl",
     ))
     import urllib.error
     urlerr._registeraliases(urllib.error, (
