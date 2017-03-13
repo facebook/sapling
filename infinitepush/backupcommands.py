@@ -2,8 +2,16 @@
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
+"""
+    [infinitepushbackup]
+    # There can be at most one backup process per repo. This config options
+    # determines how much time to wait on the lock. If timeout happens then
+    # backups process aborts.
+    waittimeout = 30
+"""
 
 from __future__ import absolute_import
+import errno
 import hashlib
 import os
 import re
@@ -22,6 +30,7 @@ from mercurial import (
     encoding,
     error,
     hg,
+    lock as lockmod,
     util,
 )
 
@@ -66,44 +75,16 @@ def backup(ui, repo, dest=None, **opts):
         runshellcommand(' '.join(background_cmd), os.environ)
         return 0
 
-    username = ui.shortuser(ui.username())
-    backuptip, bookmarkshash = _readbackupstatefile(username, repo)
-    bookmarkstobackup = _getbookmarkstobackup(username, repo)
-
-    # To avoid race conditions save current tip of the repo and backup
-    # everything up to this revision.
-    currenttiprev = len(repo) - 1
-    other = _getremote(repo, ui, dest, **opts)
-    outgoing = _getrevstobackup(repo, other, backuptip,
-                                currenttiprev, bookmarkstobackup)
-    currentbookmarkshash = _getbookmarkshash(bookmarkstobackup)
-
-    # Wrap deltaparent function to make sure that bundle takes less space
-    # See _deltaparent comments for details
-    wrapfunction(changegroup.cg2packer, 'deltaparent', _deltaparent)
     try:
-        bundler = _createbundler(ui, repo, other)
-        backup = False
-        if outgoing and outgoing.missing:
-            backup = True
-            bundler.addpart(getscratchbranchpart(repo, other, outgoing,
-                                                 confignonforwardmove=False,
-                                                 ui=ui, bookmark=None,
-                                                 create=False))
-
-        if currentbookmarkshash != bookmarkshash:
-            backup = True
-            bundler.addpart(getscratchbookmarkspart(other, bookmarkstobackup))
-
-        if backup:
-            _sendbundle(bundler, other)
-            _writebackupstatefile(repo.svfs, currenttiprev,
-                                   currentbookmarkshash)
+        timeout = ui.configint('infinitepushbackup', 'waittimeout', 30)
+        with lockmod.lock(repo.vfs, 'infinitepushbackup.lock', timeout=timeout):
+            return _dobackup(ui, repo, dest, **opts)
+    except error.LockHeld as e:
+        if e.errno == errno.ETIMEDOUT:
+            ui.warn(_('timeout waiting on backup lock'))
+            return 0
         else:
-            ui.status(_('nothing to backup\n'))
-    finally:
-        unwrapfunction(changegroup.cg2packer, 'deltaparent', _deltaparent)
-    return 0
+            raise
 
 @command('pullbackup', restoreoptions)
 def restore(ui, repo, dest=None, **opts):
@@ -166,6 +147,46 @@ def checkbackup(ui, repo, dest=None, **opts):
     for r in lookupresults:
         # iterate over results to make it throw if revision was not found
         pass
+
+def _dobackup(ui, repo, dest, **opts):
+    username = ui.shortuser(ui.username())
+    backuptip, bookmarkshash = _readbackupstatefile(username, repo)
+    bookmarkstobackup = _getbookmarkstobackup(username, repo)
+
+    # To avoid race conditions save current tip of the repo and backup
+    # everything up to this revision.
+    currenttiprev = len(repo) - 1
+    other = _getremote(repo, ui, dest, **opts)
+    outgoing = _getrevstobackup(repo, other, backuptip,
+                                currenttiprev, bookmarkstobackup)
+    currentbookmarkshash = _getbookmarkshash(bookmarkstobackup)
+
+    # Wrap deltaparent function to make sure that bundle takes less space
+    # See _deltaparent comments for details
+    wrapfunction(changegroup.cg2packer, 'deltaparent', _deltaparent)
+    try:
+        bundler = _createbundler(ui, repo, other)
+        backup = False
+        if outgoing and outgoing.missing:
+            backup = True
+            bundler.addpart(getscratchbranchpart(repo, other, outgoing,
+                                                 confignonforwardmove=False,
+                                                 ui=ui, bookmark=None,
+                                                 create=False))
+
+        if currentbookmarkshash != bookmarkshash:
+            backup = True
+            bundler.addpart(getscratchbookmarkspart(other, bookmarkstobackup))
+
+        if backup:
+            _sendbundle(bundler, other)
+            _writebackupstatefile(repo.svfs, currenttiprev,
+                                   currentbookmarkshash)
+        else:
+            ui.status(_('nothing to backup\n'))
+    finally:
+        unwrapfunction(changegroup.cg2packer, 'deltaparent', _deltaparent)
+    return 0
 
 _backupedstatefile = 'infinitepushlastbackupedstate'
 
