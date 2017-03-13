@@ -51,6 +51,17 @@ out some potential warnings that come from hgrc as yet.
   \s*14 (re)
   $ $PYTHON3 $HGBIN files | wc -l
   \s*15 (re)
+
+Test if `hg tip` works:
+
+  $ $PYTHON3 $HGBIN tip
+  changeset:   10:e76ed1e480ef
+  tag:         tip
+  user:        oxymoron@cinder.waste.org
+  date:        Tue May 03 23:37:43 2005 -0800
+  summary:     Fix linking of changeset revs when merging
+  
+
   $ cd ..
 #endif
 
