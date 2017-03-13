@@ -973,6 +973,10 @@ def filelog(web, req, tmpl):
     morevars = copy.copy(tmpl.defaults['sessionvars'])
     morevars['revcount'] = revcount * 2
 
+    patch = 'patch' in req.form
+    if patch:
+        lessvars['patch'] = morevars['patch'] = req.form['patch'][0]
+
     count = fctx.filerev() + 1
     start = max(0, count - revcount) # first rev on this page
     end = min(count, start + revcount) # last rev on this page
@@ -981,12 +985,27 @@ def filelog(web, req, tmpl):
     repo = web.repo
     revs = fctx.filelog().revs(start, end - 1)
     entries = []
+
+    diffstyle = web.config('web', 'style', 'paper')
+    if 'style' in req.form:
+        diffstyle = req.form['style'][0]
+
+    def diff(fctx):
+        ctx = fctx.changectx()
+        basectx = ctx.p1()
+        path = fctx.path()
+        return webutil.diffs(web, tmpl, ctx, basectx, [path], diffstyle)
+
     for i in revs:
         iterfctx = fctx.filectx(i)
+        diffs = None
+        if patch:
+            diffs = diff(iterfctx)
         entries.append(dict(
             parity=next(parity),
             filerev=i,
             file=f,
+            diff=diffs,
             rename=webutil.renamelink(iterfctx),
             **webutil.commonentry(repo, iterfctx)))
     entries.reverse()
@@ -1000,6 +1019,7 @@ def filelog(web, req, tmpl):
                 nav=nav,
                 symrev=webutil.symrevorshortnode(req, fctx),
                 entries=entries,
+                patch=patch,
                 latestentry=latestentry,
                 revcount=revcount,
                 morevars=morevars,
