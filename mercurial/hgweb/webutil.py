@@ -388,8 +388,7 @@ def changesetentry(web, req, tmpl, ctx):
     if 'style' in req.form:
         style = req.form['style'][0]
 
-    parity = paritygen(web.stripecount)
-    diff = diffs(web.repo, tmpl, ctx, basectx, None, parity, style)
+    diff = diffs(web, tmpl, ctx, basectx, None, style)
 
     parity = paritygen(web.stripecount)
     diffstatsgen = diffstatgen(ctx, basectx)
@@ -414,7 +413,7 @@ def listfilediffs(tmpl, files, node, max):
     if len(files) > max:
         yield tmpl('fileellipses')
 
-def diffs(repo, tmpl, ctx, basectx, files, parity, style):
+def diffs(web, tmpl, ctx, basectx, files, style):
 
     def prettyprintlines(lines, blockno):
         for lineno, l in enumerate(lines, 1):
@@ -433,6 +432,7 @@ def diffs(repo, tmpl, ctx, basectx, files, parity, style):
                        lineid="l%s" % difflineno,
                        linenumber="% 8s" % difflineno)
 
+    repo = web.repo
     if files:
         m = match.exact(repo.root, repo.getcwd(), files)
     else:
@@ -441,6 +441,7 @@ def diffs(repo, tmpl, ctx, basectx, files, parity, style):
     diffopts = patch.diffopts(repo.ui, untrusted=True)
     node1 = basectx.node()
     node2 = ctx.node()
+    parity = paritygen(web.stripecount)
 
     diffhunks = patch.diffhunks(repo, node1, node2, m, opts=diffopts)
     for blockno, (header, hunks) in enumerate(diffhunks, 1):
