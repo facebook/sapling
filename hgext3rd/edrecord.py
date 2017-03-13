@@ -74,8 +74,8 @@ def recordfilter(ui, headers, operation=None):
                 if h.startswith('index '):
                     # starting at 'index', the headers for binary files tend to
                     # stop offering useful info for the viewer
-                    patch.write(_("""
-# this modifies a binary file (all or nothing)\n
+                    patch.write(_("""\
+# this modifies a binary file (all or nothing)
 """))
                     break
                 if not h.startswith('diff '):
