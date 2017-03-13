@@ -721,7 +721,8 @@ class queue(object):
                     util.rename(absf, absorig)
 
     def printdiff(self, repo, diffopts, node1, node2=None, files=None,
-                  fp=None, changes=None, opts={}):
+                  fp=None, changes=None, opts=None):
+        opts = opts or {}
         stat = opts.get('stat')
         m = scmutil.match(repo[node1], files, opts)
         cmdutil.diffordiffstat(self.ui, repo, diffopts, node1, node2,  m,
