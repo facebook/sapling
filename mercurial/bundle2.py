@@ -271,6 +271,8 @@ class unbundlerecords(object):
     def __nonzero__(self):
         return bool(self._sequences)
 
+    __bool__ = __nonzero__
+
 class bundleoperation(object):
     """an object that represents a single bundling process
 

@@ -534,6 +534,8 @@ class changectx(basectx):
     def __nonzero__(self):
         return self._rev != nullrev
 
+    __bool__ = __nonzero__
+
     @propertycache
     def _changeset(self):
         return self._repo.changelog.changelogrevision(self.rev())
@@ -721,6 +723,8 @@ class basefilectx(object):
         except error.LookupError:
             # file is missing
             return False
+
+    __bool__ = __nonzero__
 
     def __str__(self):
         try:
@@ -1238,6 +1242,8 @@ class committablectx(basectx):
     def __nonzero__(self):
         return True
 
+    __bool__ = __nonzero__
+
     def _buildflagfunc(self):
         # Create a fallback function for getting file flags when the
         # filesystem doesn't support them
@@ -1710,6 +1716,8 @@ class committablefilectx(basefilectx):
 
     def __nonzero__(self):
         return True
+
+    __bool__ = __nonzero__
 
     def linkrev(self):
         # linked to self._changectx no matter if file is modified or not

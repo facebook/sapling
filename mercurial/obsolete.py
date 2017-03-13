@@ -552,6 +552,8 @@ class obsstore(object):
                 pass
         return bool(self._all)
 
+    __bool__ = __nonzero__
+
     @property
     def readonly(self):
         """True if marker creation is disabled

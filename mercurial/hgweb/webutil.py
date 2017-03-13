@@ -72,6 +72,8 @@ class revnav(object):
         """return True if any revision to navigate over"""
         return self._first() is not None
 
+    __bool__ = __nonzero__
+
     def _first(self):
         """return the minimum non-filtered changeset or None"""
         try:

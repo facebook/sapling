@@ -40,6 +40,8 @@ class abstractsmartset(object):
         """True if the smartset is not empty"""
         raise NotImplementedError()
 
+    __bool__ = __nonzero__
+
     def __contains__(self, rev):
         """provide fast membership testing"""
         raise NotImplementedError()
@@ -267,6 +269,8 @@ class baseset(abstractsmartset):
     def __nonzero__(self):
         return bool(len(self))
 
+    __bool__ = __nonzero__
+
     def sort(self, reverse=False):
         self._ascending = not bool(reverse)
         self._istopo = False
@@ -419,6 +423,8 @@ class filteredset(abstractsmartset):
         for r in it:
             return True
         return False
+
+    __bool__ = __nonzero__
 
     def __len__(self):
         # Basic implementation to be changed in future patches.
@@ -592,6 +598,8 @@ class addset(abstractsmartset):
     def __nonzero__(self):
         return bool(self._r1) or bool(self._r2)
 
+    __bool__ = __nonzero__
+
     @util.propertycache
     def _list(self):
         if not self._genlist:
@@ -751,6 +759,8 @@ class generatorset(abstractsmartset):
         for r in self._consumegen():
             return True
         return False
+
+    __bool__ = __nonzero__
 
     def __contains__(self, x):
         if x in self._cache:
@@ -969,6 +979,8 @@ class spanset(abstractsmartset):
         for r in self:
             return True
         return False
+
+    __bool__ = __nonzero__
 
     def __len__(self):
         if not self._hiddenrevs:

@@ -318,7 +318,7 @@ pypats = [
      'legacy exception syntax; use "as" instead of ","'),
     (r':\n(    )*( ){1,3}[^ ]', "must indent 4 spaces"),
     (r'release\(.*wlock, .*lock\)', "wrong lock release order"),
-    (r'\b__bool__\b', "__bool__ should be __nonzero__ in Python 2"),
+    (r'\bdef\s+__bool__\b', "__bool__ should be __nonzero__ in Python 2"),
     (r'os\.path\.join\(.*, *(""|\'\')\)',
      "use pathutil.normasprefix(path) instead of os.path.join(path, '')"),
     (r'\s0[0-7]+\b', 'legacy octal syntax; use "0o" prefix instead of "0"'),

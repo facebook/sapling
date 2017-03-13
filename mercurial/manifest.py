@@ -431,6 +431,8 @@ class manifestdict(object):
         # makes it easier for extensions to override.
         return len(self._lm) != 0
 
+    __bool__ = __nonzero__
+
     def __setitem__(self, key, node):
         self._lm[key] = node, self.flags(key, '')
 
