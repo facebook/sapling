@@ -65,6 +65,9 @@ out some potential warnings that come from hgrc as yet.
   *** failed to import extension babar from imaginary_elephant: *: 'imaginary_elephant' (glob)
   warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
+  $ rm included-hgrc
+  $ touch included-hgrc
+
 Test bytes-ness of policy.policy with HGMODULEPOLICY
 
   $ HGMODULEPOLICY=py
