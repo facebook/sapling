@@ -76,6 +76,10 @@ if ispy3:
     def bytechr(i):
         return bytes([i])
 
+    def iterbytestr(s):
+        """Iterate bytes as if it were a str object of Python 2"""
+        return iter(s[i:i + 1] for i in range(len(s)))
+
     def sysstr(s):
         """Return a keyword str to be passed to Python functions such as
         getattr() and str.encode()
@@ -142,6 +146,7 @@ else:
     import cStringIO
 
     bytechr = chr
+    iterbytestr = iter
 
     def sysstr(s):
         return s
