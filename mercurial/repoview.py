@@ -104,7 +104,7 @@ def cachehash(repo, hideable):
     """
     h = hashlib.sha1()
     h.update(''.join(repo.heads()))
-    h.update(str(hash(frozenset(hideable))))
+    h.update('%d' % hash(frozenset(hideable)))
     return h.digest()
 
 def _writehiddencache(cachefile, cachehash, hidden):
