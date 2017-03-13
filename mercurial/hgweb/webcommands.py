@@ -993,11 +993,12 @@ def filelog(web, req, tmpl):
     if 'style' in req.form:
         diffstyle = req.form['style'][0]
 
-    def diff(fctx):
+    def diff(fctx, linerange=None):
         ctx = fctx.changectx()
         basectx = ctx.p1()
         path = fctx.path()
-        return webutil.diffs(web, tmpl, ctx, basectx, [path], diffstyle)
+        return webutil.diffs(web, tmpl, ctx, basectx, [path], diffstyle,
+                             linerange=linerange)
 
     linerange = None
     if lrange is not None:
@@ -1009,7 +1010,7 @@ def filelog(web, req, tmpl):
         for i, (c, lr) in enumerate(ancestors, 1):
             diffs = None
             if patch:
-                diffs = diff(c)
+                diffs = diff(c, linerange=lr)
             # follow renames accross filtered (not in range) revisions
             path = c.path()
             entries.append(dict(
