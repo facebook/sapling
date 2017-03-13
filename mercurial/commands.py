@@ -2705,6 +2705,7 @@ def heads(ui, repo, *branchrevs, **opts):
     if not heads:
         return 1
 
+    ui.pager('heads')
     heads = sorted(heads, key=lambda x: -x.rev())
     displayer = cmdutil.show_changeset(ui, repo, opts)
     for ctx in heads:
