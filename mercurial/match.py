@@ -85,7 +85,7 @@ def _kindpatsalwaysmatch(kindpats):
     return True
 
 class match(object):
-    def __init__(self, root, cwd, patterns, include=[], exclude=[],
+    def __init__(self, root, cwd, patterns, include=None, exclude=None,
                  default='glob', exact=False, auditor=None, ctx=None,
                  listsubrepos=False, warn=None, badfn=None):
         """build an object to match a set of file patterns
@@ -117,6 +117,8 @@ class match(object):
                               the same directory
         '<something>' - a pattern of the specified default type
         """
+        include = include or []
+        exclude = exclude or []
 
         self._root = root
         self._cwd = cwd
