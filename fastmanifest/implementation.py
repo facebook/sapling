@@ -5,7 +5,6 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import array
 import collections
 import os
 import time
@@ -530,7 +529,7 @@ def fastdelta(mf, mfgetter, base, changes):
     else:
         # For large changes, it's much cheaper to just build the text and
         # diff it.
-        arraytext = array.array('c', mf.text())
+        arraytext = bytearray(mf.text())
         deltatext = mdiff.textdiff(base, arraytext)
 
     return arraytext, deltatext
@@ -805,7 +804,7 @@ class hybridmanifestctx(object):
                 # access the node/p1/linkrev data without having to parse the
                 # whole manifest.
                 data = self._revlog.revision(self._node)
-                arraytext = array.array('c', data)
+                arraytext = bytearray(data)
                 self._revlog._fulltextcache[self._node] = arraytext
                 return manifest.manifestdict(data)
 
@@ -942,7 +941,7 @@ class manifestfactory(object):
 
             # TODO: potential for optimization: avoid this silly conversion to a
             # python array.
-            manifestarray = array.array('c', p1text)
+            manifestarray = bytearray(p1text)
 
             arraytext, deltatext = m.fastdelta(manifestarray, work)
             cachedelta = origself.rev(p1), deltatext
@@ -969,7 +968,7 @@ class manifestfactory(object):
                 # access the node/p1/linkrev data without having to parse the
                 # whole manifest.
                 data = origself.revision(p1)
-                arraytext = array.array('c', data)
+                arraytext = bytearray(data)
                 origself._fulltextcache[p1] = arraytext
                 return manifest.manifestdict(data)
             tree = hybridmanifest(self.ui, origself.opener, loadflat=loadflat,
