@@ -1792,7 +1792,7 @@ def datestr(date=None, format='%a %b %d %H:%M:%S %Y %1%2'):
     # because they use the gmtime() system call which is buggy on Windows
     # for negative values.
     t = datetime.datetime(1970, 1, 1) + datetime.timedelta(seconds=d)
-    s = t.strftime(format)
+    s = encoding.strtolocal(t.strftime(encoding.strfromlocal(format)))
     return s
 
 def shortdate(date=None):
