@@ -28,12 +28,10 @@ from __future__ import print_function
 from hgext import histedit
 from mercurial import (
     cmdutil,
-    extensions,
     node,
     scmutil,
     error,
     util,
-    color
 )
 from mercurial.i18n import _
 
@@ -548,10 +546,9 @@ testedwith = 'ships-with-fb-hgext'
 def chistedit(ui, repo, *freeargs, **opts):
     """Provides a ncurses interface to histedit. Press ? in chistedit mode
     to see an extensive help. Requires python-curses to be installed."""
-    def nocolor(orig, ui, text, effects):
-        return text
 
-    extensions.wrapfunction(color, '_render_effects', nocolor)
+    # disable color
+    ui._colormode = None
 
     try:
         keep = opts.get('keep')
