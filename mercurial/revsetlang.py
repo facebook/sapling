@@ -45,6 +45,9 @@ elements = {
 
 keywords = set(['and', 'or', 'not'])
 
+_quoteletters = set(['"', "'"])
+_simpleopletters = set(pycompat.iterbytestr("():=,-|&+!~^%"))
+
 # default set of valid characters for the initial letter of symbols
 _syminitletters = set(pycompat.iterbytestr(
     string.ascii_letters.encode('ascii') +
@@ -109,9 +112,9 @@ def tokenize(program, lookup=None, syminitletters=None, symletters=None):
         elif c == '#' and program[pos:pos + 2] == '##': # look ahead carefully
             yield ('##', None, pos)
             pos += 1 # skip ahead
-        elif c in "():=,-|&+!~^%": # handle simple operators
+        elif c in _simpleopletters: # handle simple operators
             yield (c, None, pos)
-        elif (c in '"\'' or c == 'r' and
+        elif (c in _quoteletters or c == 'r' and
               program[pos:pos + 2] in ("r'", 'r"')): # handle quoted strings
             if c == 'r':
                 pos += 1
