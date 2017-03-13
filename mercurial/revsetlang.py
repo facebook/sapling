@@ -46,12 +46,13 @@ elements = {
 keywords = set(['and', 'or', 'not'])
 
 # default set of valid characters for the initial letter of symbols
-_syminitletters = set(
-    string.ascii_letters +
-    string.digits + pycompat.sysstr('._@')) | set(map(chr, xrange(128, 256)))
+_syminitletters = set(pycompat.iterbytestr(
+    string.ascii_letters.encode('ascii') +
+    string.digits.encode('ascii') +
+    '._@')) | set(map(pycompat.bytechr, xrange(128, 256)))
 
 # default set of valid characters for non-initial letters of symbols
-_symletters = _syminitletters | set(pycompat.sysstr('-/'))
+_symletters = _syminitletters | set(pycompat.iterbytestr('-/'))
 
 def tokenize(program, lookup=None, syminitletters=None, symletters=None):
     '''
