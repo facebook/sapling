@@ -52,6 +52,8 @@ restoreoptions = [
      ('', 'hostname', '', 'hostname of the repo to restore'),
 ]
 
+_backuplockname = 'infinitepushbackup.lock'
+
 @command('pushbackup',
          [('', 'background', None, 'run backup in background')])
 def backup(ui, repo, dest=None, **opts):
@@ -77,7 +79,7 @@ def backup(ui, repo, dest=None, **opts):
 
     try:
         timeout = ui.configint('infinitepushbackup', 'waittimeout', 30)
-        with lockmod.lock(repo.vfs, 'infinitepushbackup.lock', timeout=timeout):
+        with lockmod.lock(repo.vfs, _backuplockname, timeout=timeout):
             return _dobackup(ui, repo, dest, **opts)
     except error.LockHeld as e:
         if e.errno == errno.ETIMEDOUT:
@@ -147,6 +149,24 @@ def checkbackup(ui, repo, dest=None, **opts):
     for r in lookupresults:
         # iterate over results to make it throw if revision was not found
         pass
+
+@command('debugwaitbackup', [('', 'timeout', '', 'timeout value')])
+def waitbackup(ui, repo, timeout):
+    try:
+        if timeout:
+            timeout = int(timeout)
+        else:
+            timeout = -1
+    except ValueError:
+        raise error.Abort('timeout should be integer')
+
+    try:
+        with lockmod.lock(repo.vfs, _backuplockname, timeout=timeout):
+            pass
+    except error.LockHeld as e:
+        if e.errno == errno.ETIMEDOUT:
+            raise error.Abort(_('timeout while waiting for backup'))
+        raise
 
 def _dobackup(ui, repo, dest, **opts):
     username = ui.shortuser(ui.username())

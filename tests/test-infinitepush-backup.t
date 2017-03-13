@@ -9,19 +9,13 @@
   > evolutioncommands=obsolete
   > EOF
   > }
+  $ waitbgbackup() {
+  >   sleep 1
+  >   hg debugwaitbackup
+  > }
   $ . "$TESTDIR/library.sh"
   $ . "$TESTDIR/library-infinitepush.sh"
   $ setupcommon
-
-  $ cat >> wait_for_background_backup.py << EOF
-  > from time import sleep
-  > import sys
-  > for i in range(200):
-  >   sleep(0.1)
-  >   backuptip = int(open('.hg/store/infinitepushlastbackupedstate').read().split(' ')[0])
-  >   if backuptip == int(sys.argv[1]):
-  >     break
-  > EOF
 
 Setup server
   $ hg init repo
@@ -142,7 +136,7 @@ Backup in background
   6 [0-9a-f]{40} \(no-eol\) (re)
   $ mkcommit newcommit
   $ hg pushbackup --background
-  $ python ../wait_for_background_backup.py `hg log -r tip -T '{rev}'`
+  $ waitbgbackup
   $ cat .hg/store/infinitepushlastbackupedstate
   7 [0-9a-f]{40} \(no-eol\) (re)
 
@@ -300,7 +294,7 @@ Backup to different path
 Backup in background to different path
   $ mkcommit backgroundcommittodifferentpath
   $ hg pushbackup nondefault --background
-  $ python ../wait_for_background_backup.py `hg log -r tip -T '{rev}'`
+  $ waitbgbackup
   $ cat .hg/store/infinitepushlastbackupedstate
   12 [0-9a-f]{40} \(no-eol\) (re)
 
