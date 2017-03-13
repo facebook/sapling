@@ -1223,6 +1223,7 @@ def branches(ui, repo, active=False, closed=False, **opts):
     Returns 0.
     """
 
+    ui.pager('branches')
     fm = ui.formatter('branches', opts)
     hexfunc = fm.hexfunc
 
