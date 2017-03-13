@@ -310,10 +310,10 @@ if sys.version_info[0] >= 3:
                         if argidx is not None:
                             _ensureunicode(argidx)
 
-                # It changes iteritems to items as iteritems is not
+                # It changes iteritems/values to items/values as they are not
                 # present in Python 3 world.
-                elif fn == 'iteritems':
-                    yield t._replace(string='items')
+                elif fn in ('iteritems', 'itervalues'):
+                    yield t._replace(string=fn[4:])
                     continue
 
             # Emit unmodified token.
@@ -323,7 +323,7 @@ if sys.version_info[0] >= 3:
     # ``replacetoken`` or any mechanism that changes semantics of module
     # loading is changed. Otherwise cached bytecode may get loaded without
     # the new transformation mechanisms applied.
-    BYTECODEHEADER = b'HG\x00\x08'
+    BYTECODEHEADER = b'HG\x00\x09'
 
     class hgloader(importlib.machinery.SourceFileLoader):
         """Custom module loader that transforms source code.
