@@ -3398,7 +3398,7 @@ def log(ui, repo, *pats, **opts):
         del opts['follow']
 
     if opts.get('graph'):
-        return cmdutil.graphlog(ui, repo, *pats, **opts)
+        return cmdutil.graphlog(ui, repo, pats, opts)
 
     revs, expr, filematcher = cmdutil.getlogrevs(repo, pats, opts)
     limit = cmdutil.loglimit(opts)

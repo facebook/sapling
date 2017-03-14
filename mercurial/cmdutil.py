@@ -2212,7 +2212,7 @@ def displaygraph(ui, repo, dag, displayer, edgefn, getrenamed=None,
             graphmod.ascii(ui, state, type, char, lines, coldata)
     displayer.close()
 
-def graphlog(ui, repo, *pats, **opts):
+def graphlog(ui, repo, pats, opts):
     # Parameters are identical to log command ones
     revs, expr, filematcher = getgraphlogrevs(repo, pats, opts)
     revdag = graphmod.dagwalker(repo, revs)
