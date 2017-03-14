@@ -1830,7 +1830,7 @@ def parsetimezone(s):
 def strdate(string, format, defaults=None):
     """parse a localized time string and return a (unixtime, offset) tuple.
     if the string cannot be parsed, ValueError is raised."""
-    defaults = defaults or []
+    defaults = defaults or {}
 
     # NOTE: unixtime = localunixtime + offset
     offset, date = parsetimezone(string)
