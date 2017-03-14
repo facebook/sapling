@@ -1580,28 +1580,6 @@ def movebookmarks(ui, repo, mapping, oldtopmost, newtopmost):
         finally:
             release(tr, lock)
 
-def cleanupnode(ui, repo, name, nodes):
-    """strip a group of nodes from the repository
-
-    The set of node to strip may contains unknown nodes."""
-    ui.debug('should strip %s nodes %s\n' %
-             (name, ', '.join([node.short(n) for n in nodes])))
-    with repo.lock():
-        # do not let filtering get in the way of the cleanse
-        # we should probably get rid of obsolescence marker created during the
-        # histedit, but we currently do not have such information.
-        repo = repo.unfiltered()
-        # Find all nodes that need to be stripped
-        # (we use %lr instead of %ln to silently ignore unknown items)
-        nm = repo.changelog.nodemap
-        nodes = sorted(n for n in nodes if n in nm)
-        roots = [c.node() for c in repo.set("roots(%ln)", nodes)]
-        for c in roots:
-            # We should process node in reverse order to strip tip most first.
-            # but this trigger a bug in changegroup hook.
-            # This would reduce bundle overhead
-            repair.strip(ui, repo, c)
-
 def safecleanupnode(ui, repo, name, nodes):
     """strip or obsolete nodes
 
@@ -1628,7 +1606,23 @@ def safecleanupnode(ui, repo, name, nodes):
         if markers:
             obsolete.createmarkers(repo, markers)
     else:
-        return cleanupnode(ui, repo, name, nodes)
+        ui.debug('should strip %s nodes %s\n' %
+                 (name, ', '.join([node.short(n) for n in nodes])))
+        with repo.lock():
+            # Do not let filtering get in the way of the cleanse we should
+            # probably get rid of obsolescence marker created during the
+            # histedit, but we currently do not have such information.
+            repo = repo.unfiltered()
+            # Find all nodes that need to be stripped
+            # (we use %lr instead of %ln to silently ignore unknown items)
+            nm = repo.changelog.nodemap
+            nodes = sorted(n for n in nodes if n in nm)
+            roots = [c.node() for c in repo.set("roots(%ln)", nodes)]
+            for c in roots:
+                # We should process node in reverse order to strip tip most
+                # first, but this trigger a bug in changegroup hook. This
+                # would reduce bundle overhead
+                repair.strip(ui, repo, c)
 
 def stripwrapper(orig, ui, repo, nodelist, *args, **kwargs):
     if isinstance(nodelist, str):
