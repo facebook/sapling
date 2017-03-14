@@ -395,8 +395,57 @@ TEST(Checkout, modifyConflict) {
   runModifyConflictTests("a/b/zzz.txt");
 }
 
+void testAddSubdirectory(folly::StringPiece newDirPath, LoadBehavior loadType) {
+  auto builder1 = FakeTreeBuilder();
+  builder1.setFile("src/main.c", "int main() { return 0; }\n");
+  builder1.setFile("src/test/test.c", "testy tests");
+  TestMount testMount{builder1};
+
+  // Prepare a second tree, by starting with builder1 then adding
+  // the new directory
+  auto builder2 = builder1.clone();
+  RelativePathPiece newDir{newDirPath};
+  builder2.setFile(newDir + PathComponentPiece{"doc.txt"}, "docs\n");
+  builder2.setFile(newDir + PathComponentPiece{"file1.c"}, "src\n");
+  builder2.setFile(newDir + RelativePathPiece{"include/file1.h"}, "header\n");
+  builder2.finalize(testMount.getBackingStore(), true);
+  auto commit2 = testMount.getBackingStore()->putCommit("2", builder2);
+  commit2->setReady();
+
+  loadInodes(testMount, newDirPath, loadType);
+
+  auto checkoutResult = testMount.getEdenMount()->checkout(makeTestHash("2"));
+  ASSERT_TRUE(checkoutResult.isReady());
+  auto results = checkoutResult.get();
+  EXPECT_EQ(0, results.size());
+
+  // Confirm that the tree has been updated correctly.
+  EXPECT_FILE_INODE(
+      testMount.getFileInode(newDir + PathComponentPiece{"doc.txt"}),
+      "docs\n",
+      0644);
+  EXPECT_FILE_INODE(
+      testMount.getFileInode(newDir + PathComponentPiece{"file1.c"}),
+      "src\n",
+      0644);
+  EXPECT_FILE_INODE(
+      testMount.getFileInode(newDir + RelativePathPiece{"include/file1.h"}),
+      "header\n",
+      0644);
+}
+
+TEST(Checkout, addSubdirectory) {
+  // Test with multiple paths to exercise the case where the modification is at
+  // the start of the directory listing, at the end, and in the middle.
+  for (const auto& path : {"src/aaa", "src/ppp", "src/zzz"}) {
+    for (auto loadType : kAddLoadTypes) {
+      SCOPED_TRACE(folly::to<string>("path ", path, " load type ", loadType));
+      testAddSubdirectory(path, loadType);
+    }
+  }
+}
+
 // TODO:
-// - add sub directory
 // - remove subdirectory
 //   - with no untracked/ignored files, it should get removed entirely
 //   - remove subdirectory with untracked files
