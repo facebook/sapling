@@ -1600,7 +1600,7 @@ def update(repo, node, branchmerge, force, ancestor=None,
 
         if updatecheck == 'noconflict':
             for f, (m, args, msg) in actionbyfile.iteritems():
-                if m not in ('g', 'k', 'r'):
+                if m not in ('g', 'k', 'e', 'r'):
                     msg = _("conflicting changes")
                     hint = _("commit or update --clean to discard changes")
                     raise error.Abort(msg, hint=hint)
