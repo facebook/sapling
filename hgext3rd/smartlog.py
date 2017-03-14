@@ -628,7 +628,7 @@ Excludes:
             ui, repo, revdag, displayer, graphmod.asciiedges, None, None)
 
         try:
-            with open(repo.join('completionhints'), 'w+') as f:
+            with open(repo.vfs.join('completionhints'), 'w+') as f:
                 for rev in revdag:
                     commit_hash = rev[2].node()
                     # Skip fakectxt nodes

@@ -234,4 +234,4 @@ def _rebase(orig, ui, repo, **opts):
     histedit.ruleeditor(repo, ui, rules, editcomment=editcomment)
 
     return histedit.histedit(ui, repo, node.hex(src), keep=keepf,
-                             commands=repo.join('histedit-last-edit.txt'))
+                             commands=repo.vfs.join('histedit-last-edit.txt'))

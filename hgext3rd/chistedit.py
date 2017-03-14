@@ -588,7 +588,7 @@ def chistedit(ui, repo, *freeargs, **opts):
         if type(rc) is list:
             ui.status(_("running histedit\n"))
             rules = makecommands(rc)
-            filename = repo.join('chistedit')
+            filename = repo.vfs.join('chistedit')
             with open(filename, 'w+') as fp:
                 for r in rules:
                     fp.write(r)

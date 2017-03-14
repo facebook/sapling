@@ -442,7 +442,7 @@ def fixupamend(ui, repo):
             # by the rebase logic (because the file generator was already on the
             # transaction). Until we fix it in core, let's manually unlink the
             # rebasestate so the rebase isn't left pending.
-            util.unlinkpath(repo.join("rebasestate"), ignoremissing=True)
+            util.unlinkpath(repo.vfs.join("rebasestate"), ignoremissing=True)
             return
 
         preamendname = _preamendname(repo, current.node())
@@ -516,7 +516,7 @@ def wrapsplit(orig, ui, repo, *args, **opts):
                 _restackonce(ui, repo, top)
             # The rebasestate file is incorrectly left behind, so cleanup.
             # See the earlier comment on util.unlinkpath for more details.
-            util.unlinkpath(repo.join("rebasestate"), ignoremissing=True)
+            util.unlinkpath(repo.vfs.join("rebasestate"), ignoremissing=True)
 
     # Fix up bookmarks, if any.
     _fixbookmarks(repo, [rev])
@@ -556,7 +556,7 @@ def wrapfold(orig, ui, repo, *args, **opts):
                 _deinhibit(repo, (repo[r] for r in visible))
         # The rebasestate file is incorrectly left behind, so cleanup.
         # See the earlier comment on util.unlinkpath for more details.
-        util.unlinkpath(repo.join("rebasestate"), ignoremissing=True)
+        util.unlinkpath(repo.vfs.join("rebasestate"), ignoremissing=True)
 
     # Fix up bookmarks, if any.
     _fixbookmarks(repo, revs)
@@ -660,7 +660,7 @@ def _moverelative(ui, repo, args, opts, reverse=False):
             repo.invalidatevolatilesets()
         # The rebasestate file is incorrectly left behind, so cleanup.
         # See the earlier comment on util.unlinkpath for more details.
-        util.unlinkpath(repo.join("rebasestate"), ignoremissing=True)
+        util.unlinkpath(repo.vfs.join("rebasestate"), ignoremissing=True)
 
 def _findtarget(ui, repo, n, opts, reverse):
     """Find the appropriate target changeset for `hg previous` and
@@ -931,7 +931,7 @@ def restack(ui, repo, rebaseopts=None):
             repo.invalidatevolatilesets()
         # The rebasestate file is incorrectly left behind, so cleanup.
         # See the earlier comment on util.unlinkpath for more details.
-        util.unlinkpath(repo.join("rebasestate"), ignoremissing=True)
+        util.unlinkpath(repo.vfs.join("rebasestate"), ignoremissing=True)
 
 def _restackonce(ui, repo, rev, rebaseopts=None, childrenonly=False):
     """Rebase all descendants of precursors of rev onto rev, thereby

@@ -49,7 +49,7 @@ def backups(ui, repo, *pats, **opts):
         # Warn users of obsolescence markers that they probably don't want to
         # use backups but reflog instead
         ui.warn(msgwithcreatermarkers)
-    backuppath = repo.join("strip-backup")
+    backuppath = repo.vfs.join("strip-backup")
     backups = filter(os.path.isfile, glob.glob(backuppath + "/*.hg"))
     backups.sort(key=lambda x: os.path.getmtime(x), reverse=True)
 
