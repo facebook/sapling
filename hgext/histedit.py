@@ -1169,29 +1169,13 @@ def _finishhistedit(ui, repo, state):
                     for n in succs[1:]:
                         ui.debug(m % node.short(n))
 
-    supportsmarkers = obsolete.isenabled(repo, obsolete.createmarkersopt)
-    if supportsmarkers:
-        # Only create markers if the temp nodes weren't already removed.
-        obsolete.createmarkers(repo, ((repo[t],()) for t in sorted(tmpnodes)
-                                       if t in repo))
-    else:
-        cleanupnode(ui, repo, 'temp', tmpnodes)
+    safecleanupnode(ui, repo, 'temp', tmpnodes)
 
     if not state.keep:
         if mapping:
             movebookmarks(ui, repo, mapping, state.topmost, ntm)
             # TODO update mq state
-        if supportsmarkers:
-            markers = []
-            # sort by revision number because it sound "right"
-            for prec in sorted(mapping, key=repo.changelog.rev):
-                succs = mapping[prec]
-                markers.append((repo[prec],
-                                tuple(repo[s] for s in succs)))
-            if markers:
-                obsolete.createmarkers(repo, markers)
-        else:
-            cleanupnode(ui, repo, 'replaced', mapping)
+        safecleanupnode(ui, repo, 'replaced', mapping)
 
     state.clear()
     if os.path.exists(repo.sjoin('undo')):
