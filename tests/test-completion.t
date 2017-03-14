@@ -358,3 +358,18 @@ Test debugnamecomplete
   fee
   fie
   fo
+
+Test debuglabelcomplete, a deprecated name for debugnamecomplete that is still
+used for completions in some shells.
+
+  $ hg debuglabelcomplete
+  Fum
+  default
+  fee
+  fie
+  fo
+  tip
+  $ hg debuglabelcomplete f
+  fee
+  fie
+  fo

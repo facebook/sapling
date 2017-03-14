@@ -1127,7 +1127,7 @@ def debugknown(ui, repopath, *ids, **opts):
 @command('debuglabelcomplete', [], _('LABEL...'))
 def debuglabelcomplete(ui, repo, *args):
     '''backwards compatibility with old bash completion scripts (DEPRECATED)'''
-    commands.debugnamecomplete(ui, repo, *args)
+    debugnamecomplete(ui, repo, *args)
 
 @command('debuglocks',
          [('L', 'force-lock', None, _('free the store lock (DANGEROUS)')),
