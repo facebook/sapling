@@ -52,7 +52,7 @@ out some potential warnings that come from hgrc as yet.
   $ $PYTHON3 $HGBIN files | wc -l
   \s*15 (re)
 
-Test if `hg tip` works:
+Test if log-like commands work:
 
   $ $PYTHON3 $HGBIN tip
   changeset:   10:e76ed1e480ef
@@ -60,6 +60,13 @@ Test if `hg tip` works:
   user:        oxymoron@cinder.waste.org
   date:        Tue May 03 23:37:43 2005 -0800
   summary:     Fix linking of changeset revs when merging
+  
+
+  $ $PYTHON3 $HGBIN log -r0
+  changeset:   0:9117c6561b0b
+  user:        mpm@selenic.com
+  date:        Tue May 03 13:16:10 2005 -0800
+  summary:     Add back links from file revisions to changeset revisions
   
 
   $ cd ..

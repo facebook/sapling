@@ -3393,6 +3393,7 @@ def log(ui, repo, *pats, **opts):
     Returns 0 on success.
 
     """
+    opts = pycompat.byteskwargs(opts)
     if opts.get('follow') and opts.get('rev'):
         opts['rev'] = [revsetlang.formatspec('reverse(::%lr)', opts.get('rev'))]
         del opts['follow']
