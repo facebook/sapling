@@ -1618,6 +1618,34 @@ def cleanupnode(ui, repo, name, nodes):
             # This would reduce bundle overhead
             repair.strip(ui, repo, c)
 
+def safecleanupnode(ui, repo, name, nodes):
+    """strip or obsolete nodes
+
+    nodes could be either a set or dict which maps to replacements.
+    nodes could be unknown (outside the repo).
+    """
+    supportsmarkers = obsolete.isenabled(repo, obsolete.createmarkersopt)
+    if supportsmarkers:
+        if util.safehasattr(nodes, 'get'):
+            # nodes is a dict-like mapping
+            # use unfiltered repo for successors in case they are hidden
+            urepo = repo.unfiltered()
+            def getmarker(prec):
+                succs = tuple(urepo[n] for n in nodes.get(prec, ()))
+                return (repo[prec], succs)
+        else:
+            # nodes is a set-like
+            def getmarker(prec):
+                return (repo[prec], ())
+        # sort by revision number because it sound "right"
+        sortednodes = sorted([n for n in nodes if n in repo],
+                             key=repo.changelog.rev)
+        markers = [getmarker(t) for t in sortednodes]
+        if markers:
+            obsolete.createmarkers(repo, markers)
+    else:
+        return cleanupnode(ui, repo, name, nodes)
+
 def stripwrapper(orig, ui, repo, nodelist, *args, **kwargs):
     if isinstance(nodelist, str):
         nodelist = [nodelist]
