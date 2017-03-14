@@ -2739,6 +2739,7 @@ static PyObject *fm1readmarker(const char *databegin, const char *dataend,
 		data += nparents * hashwidth;
 	} else {
 		parents = Py_None;
+		Py_INCREF(parents);
 	}
 
 	if (data + 2 * nmetadata > dataend) {
@@ -2781,8 +2782,7 @@ bail:
 	Py_XDECREF(prec);
 	Py_XDECREF(succs);
 	Py_XDECREF(metadata);
-	if (parents != Py_None)
-		Py_XDECREF(parents);
+	Py_XDECREF(parents);
 	return ret;
 }
 
