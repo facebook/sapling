@@ -295,7 +295,7 @@ def _jsonifyobj(v):
         return 'true'
     elif v is False:
         return 'false'
-    elif isinstance(v, (int, float)):
+    elif isinstance(v, (int, long, float)):
         return str(v)
     else:
         return '"%s"' % encoding.jsonescape(v)
