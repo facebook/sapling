@@ -7,6 +7,7 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
+#include <folly/Array.h>
 #include <folly/Conv.h>
 #include <folly/test/TestUtils.h>
 #include <gtest/gtest.h>
@@ -24,13 +25,123 @@ using namespace facebook::eden;
 using folly::StringPiece;
 using std::string;
 
-enum LoadBehavior {
-  LOAD_NONE,
-  // TODO: add LIST_PARENT and LIST_FILE, where we list the parent directory
-  // to assign an inode number to these entries, but do not load them yet.
-  LOAD_PARENT,
-  LOAD_FILE
+/**
+ * An enum to control behavior for many of the checkout tests.
+ *
+ * Whether or not inodes are loaded when checkout runs affects which code
+ * paths we hit, but it should not affect the user-visible behavior.
+ */
+enum class LoadBehavior {
+  // None of the inodes in question are explicitly loaded
+  // before the checkout operation.
+  NONE,
+  // Assign an inode number for the parent directory, but do not load it yet.
+  ASSIGN_PARENT_INODE,
+  // Load the parent TreeInode object before starting the checkout.
+  PARENT,
+  // Load the parent TreeInode object, and assign an inode number to the
+  // child in question, but do not load the child InodeBase.
+  ASSIGN_INODE,
+  // Load the InodeBase affected by the test before starting the checkout.
+  INODE,
 };
+
+static constexpr auto kAllLoadTypes = folly::make_array(
+    LoadBehavior::NONE,
+    LoadBehavior::ASSIGN_PARENT_INODE,
+    LoadBehavior::PARENT,
+    LoadBehavior::ASSIGN_INODE,
+    LoadBehavior::INODE);
+
+// LoadTypes that can be used with tests that add a new file
+static constexpr auto kAddLoadTypes = folly::make_array(
+    LoadBehavior::NONE,
+    LoadBehavior::ASSIGN_PARENT_INODE,
+    LoadBehavior::PARENT);
+
+std::ostream& operator<<(std::ostream& os, LoadBehavior loadType) {
+  switch (loadType) {
+    case LoadBehavior::NONE:
+      os << "NONE";
+      return os;
+    case LoadBehavior::ASSIGN_PARENT_INODE:
+      os << "ASSIGN_PARENT_INODE";
+      return os;
+    case LoadBehavior::PARENT:
+      os << "PARENT";
+      return os;
+    case LoadBehavior::ASSIGN_INODE:
+      os << "ASSIGN_INODE";
+      return os;
+    case LoadBehavior::INODE:
+      os << "INODE";
+      return os;
+  }
+
+  os << "<unknown LoadBehavior " << int(loadType) << ">";
+  return os;
+}
+
+void loadInodes(
+    TestMount& testMount,
+    RelativePathPiece path,
+    LoadBehavior loadType,
+    folly::Optional<folly::StringPiece> expectedContents,
+    mode_t expectedPerms) {
+  switch (loadType) {
+    case LoadBehavior::NONE:
+      return;
+    case LoadBehavior::ASSIGN_PARENT_INODE: {
+      // Load the parent TreeInode but not the affected file
+      testMount.getTreeInode(path.dirname());
+      auto parentPath = path.dirname();
+      auto grandparentInode = testMount.getTreeInode(parentPath.dirname());
+      grandparentInode->getChildInodeNumber(parentPath.basename());
+      return;
+    }
+    case LoadBehavior::PARENT:
+      // Load the parent TreeInode but not the affected file
+      testMount.getTreeInode(path.dirname());
+      return;
+    case LoadBehavior::ASSIGN_INODE: {
+      auto parent = testMount.getTreeInode(path.dirname());
+      parent->getChildInodeNumber(path.basename());
+      return;
+    }
+    case LoadBehavior::INODE: {
+      // Load the file inode and make sure its contents are as we expect.
+      // This ensures the affected FileInode has been loaded
+      auto fileInode = testMount.getFileInode(path);
+      if (expectedContents.hasValue()) {
+        EXPECT_FILE_INODE(fileInode, expectedContents.value(), expectedPerms);
+      }
+      return;
+    }
+  }
+
+  FAIL() << "unknown load behavior: " << loadType;
+}
+
+void loadInodes(
+    TestMount& testMount,
+    folly::StringPiece path,
+    LoadBehavior loadType,
+    folly::StringPiece expectedContents,
+    mode_t expectedPerms = 0644) {
+  loadInodes(
+      testMount,
+      RelativePathPiece{path},
+      loadType,
+      expectedContents,
+      expectedPerms);
+}
+
+void loadInodes(
+    TestMount& testMount,
+    folly::StringPiece path,
+    LoadBehavior loadType) {
+  loadInodes(testMount, RelativePathPiece{path}, loadType, folly::none, 0644);
+}
 
 void testAddFile(
     folly::StringPiece newFilePath,
@@ -48,11 +159,7 @@ void testAddFile(
   auto commit2 = testMount.getBackingStore()->putCommit("2", builder2);
   commit2->setReady();
 
-  if (loadType != LOAD_NONE) {
-    // Make sure the new path doesn't exist beforehand.
-    // This mostly makes sure that the TreeInode for src gets loaded.
-    EXPECT_THROW_ERRNO(testMount.getInode(newFilePath), ENOENT);
-  }
+  loadInodes(testMount, newFilePath, loadType);
 
   auto checkoutResult = testMount.getEdenMount()->checkout(makeTestHash("2"));
   ASSERT_TRUE(checkoutResult.isReady());
@@ -65,8 +172,8 @@ void testAddFile(
 }
 
 void runAddFileTests(folly::StringPiece path) {
-  for (auto loadType : {LOAD_NONE, LOAD_PARENT, LOAD_FILE}) {
-    SCOPED_TRACE(folly::to<string>("add ", path, " load type ", int(loadType)));
+  for (auto loadType : kAddLoadTypes) {
+    SCOPED_TRACE(folly::to<string>("add ", path, " load type ", loadType));
     testAddFile(path, loadType);
     testAddFile(path, loadType, 0444);
     testAddFile(path, loadType, 0755);
@@ -82,30 +189,22 @@ TEST(Checkout, addFile) {
   runAddFileTests("src/zzz.c");
 }
 
-void testRemoveFile(folly::StringPiece newFilePath, LoadBehavior loadType) {
+void testRemoveFile(folly::StringPiece filePath, LoadBehavior loadType) {
   auto builder1 = FakeTreeBuilder();
   builder1.setFile("src/main.c", "int main() { return 0; }\n");
   builder1.setFile("src/test/test.c", "testy tests");
-  builder1.setFile(newFilePath, "this file will be removed\n");
+  builder1.setFile(filePath, "this file will be removed\n");
   TestMount testMount{builder1};
 
   // Prepare a second tree, by starting with builder1 then removing the desired
   // file
   auto builder2 = builder1.clone();
-  builder2.removeFile(newFilePath);
+  builder2.removeFile(filePath);
   builder2.finalize(testMount.getBackingStore(), true);
   auto commit2 = testMount.getBackingStore()->putCommit("2", builder2);
   commit2->setReady();
 
-  if (loadType == LOAD_FILE) {
-    // Load the file inode and make sure its contents are as we expect.
-    // This ensures the affected FileInode has been loaded
-    auto fileInode = testMount.getFileInode(newFilePath);
-    EXPECT_FILE_INODE(fileInode, "this file will be removed\n", 0644);
-  } else if (loadType == LOAD_PARENT) {
-    // Load the parent TreeInode but not the affected file
-    testMount.getTreeInode(RelativePathPiece{newFilePath}.dirname());
-  }
+  loadInodes(testMount, filePath, loadType, "this file will be removed\n");
 
   auto checkoutResult = testMount.getEdenMount()->checkout(makeTestHash("2"));
   ASSERT_TRUE(checkoutResult.isReady());
@@ -113,14 +212,13 @@ void testRemoveFile(folly::StringPiece newFilePath, LoadBehavior loadType) {
   EXPECT_EQ(0, results.size());
 
   // Make sure the path doesn't exist any more.
-  EXPECT_THROW_ERRNO(testMount.getInode(newFilePath), ENOENT);
+  EXPECT_THROW_ERRNO(testMount.getInode(filePath), ENOENT);
 }
 
 void runRemoveFileTests(folly::StringPiece path) {
   // Modify just the file contents, but not the permissions
-  for (auto loadType : {LOAD_NONE, LOAD_PARENT, LOAD_FILE}) {
-    SCOPED_TRACE(
-        folly::to<string>("remove ", path, " load type ", int(loadType)));
+  for (auto loadType : kAllLoadTypes) {
+    SCOPED_TRACE(folly::to<string>("remove ", path, " load type ", loadType));
     testRemoveFile(path, loadType);
   }
 }
@@ -156,14 +254,7 @@ void testModifyFile(
   auto commit2 = testMount.getBackingStore()->putCommit("2", builder2);
   commit2->setReady();
 
-  if (loadType == LOAD_FILE) {
-    // Load the FileInode and make sure its contents are as we expect.
-    auto preInode = testMount.getFileInode(path);
-    EXPECT_FILE_INODE(preInode, contents1, perms1);
-  } else if (loadType == LOAD_PARENT) {
-    // Load the parent TreeInode but not the affected file
-    testMount.getTreeInode(RelativePathPiece{path}.dirname());
-  }
+  loadInodes(testMount, path, loadType, contents1, perms1);
 
   auto checkoutResult = testMount.getEdenMount()->checkout(makeTestHash("2"));
   ASSERT_TRUE(checkoutResult.isReady());
@@ -185,24 +276,24 @@ void testModifyFile(
 
 void runModifyFileTests(folly::StringPiece path) {
   // Modify just the file contents, but not the permissions
-  for (auto loadType : {LOAD_NONE, LOAD_PARENT, LOAD_FILE}) {
+  for (auto loadType : kAllLoadTypes) {
     SCOPED_TRACE(folly::to<string>(
-        "contents change, path ", path, " load type ", int(loadType)));
+        "contents change, path ", path, " load type ", loadType));
     testModifyFile(
         path, loadType, "contents v1", "updated file contents\nextra stuff\n");
   }
 
   // Modify just the permissions, but not the contents
-  for (auto loadType : {LOAD_NONE, LOAD_PARENT, LOAD_FILE}) {
-    SCOPED_TRACE(folly::to<string>(
-        "mode change, path ", path, " load type ", int(loadType)));
+  for (auto loadType : kAllLoadTypes) {
+    SCOPED_TRACE(
+        folly::to<string>("mode change, path ", path, " load type ", loadType));
     testModifyFile(path, loadType, "unchanged", 0755, "unchanged", 0644);
   }
 
   // Modify the contents and the permissions
-  for (auto loadType : {LOAD_NONE, LOAD_PARENT, LOAD_FILE}) {
+  for (auto loadType : kAllLoadTypes) {
     SCOPED_TRACE(folly::to<string>(
-        "contents+mode change, path ", path, " load type ", int(loadType)));
+        "contents+mode change, path ", path, " load type ", loadType));
     testModifyFile(
         path, loadType, "contents v1", 0644, "executable contents", 0755);
   }
@@ -258,14 +349,7 @@ void testModifyConflict(
   auto commit2 = testMount.getBackingStore()->putCommit("b", builder2);
   commit2->setReady();
 
-  if (loadType == LOAD_FILE) {
-    // Load the FileInode and make sure its contents are as we expect.
-    auto preInode = testMount.getFileInode(path);
-    EXPECT_FILE_INODE(preInode, currentContents, currentPerms);
-  } else if (loadType == LOAD_PARENT) {
-    // Load the parent TreeInode but not the affected file
-    testMount.getTreeInode(RelativePathPiece{path}.dirname());
-  }
+  loadInodes(testMount, path, loadType, currentContents, currentPerms);
 
   auto checkoutResult =
       testMount.getEdenMount()->checkout(makeTestHash("b"), force);
@@ -287,31 +371,21 @@ void testModifyConflict(
 }
 
 void runModifyConflictTests(folly::StringPiece path) {
-  for (auto loadType : {LOAD_NONE, LOAD_PARENT, LOAD_FILE}) {
-    SCOPED_TRACE(folly::to<string>(
-        "path ", path, " load type ", int(loadType), " force"));
-    testModifyConflict(
-        path,
-        loadType,
-        true,
-        "orig file contents.txt",
-        0644,
-        "current file contents.txt",
-        0644,
-        "new file contents.txt",
-        0644);
-    SCOPED_TRACE(folly::to<string>(
-        "path ", path, " load type ", int(loadType), " not force"));
-    testModifyConflict(
-        path,
-        loadType,
-        false,
-        "orig file contents.txt",
-        0644,
-        "current file contents.txt",
-        0644,
-        "new file contents.txt",
-        0644);
+  for (auto loadType : kAllLoadTypes) {
+    for (bool force : {true, false}) {
+      SCOPED_TRACE(folly::to<string>(
+          "path ", path, " load type ", loadType, " force=", force));
+      testModifyConflict(
+          path,
+          loadType,
+          force,
+          "orig file contents.txt",
+          0644,
+          "current file contents.txt",
+          0644,
+          "new file contents.txt",
+          0644);
+    }
   }
 }
 
