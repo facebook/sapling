@@ -50,14 +50,13 @@ By default diff and log are paged, but summary is not:
   paged! 'summary:     modify a 9\n'
   paged! '\n'
 
-BROKEN: should not be paged by default
   $ hg summary
-  paged! 'parent: 10:46106edeeb38 tip\n'
-  paged! ' modify a 10\n'
-  paged! 'branch: default\n'
-  paged! 'commit: (clean)\n'
-  paged! 'update: (current)\n'
-  paged! 'phases: 11 draft\n'
+  parent: 10:46106edeeb38 tip
+   modify a 10
+  branch: default
+  commit: (clean)
+  update: (current)
+  phases: 11 draft
 
 We can enable the pager on summary:
 
@@ -79,15 +78,14 @@ We can enable the pager on summary:
   +a 2
 
 If we completely change the attend list that's respected:
-BROKEN: diff should not be paged
   $ hg --config pager.attend=summary diff -c 2
-  paged! 'diff -r f4be7687d414 -r bce265549556 a\n'
-  paged! '--- a/a\tThu Jan 01 00:00:00 1970 +0000\n'
-  paged! '+++ b/a\tThu Jan 01 00:00:00 1970 +0000\n'
-  paged! '@@ -1,2 +1,3 @@\n'
-  paged! ' a\n'
-  paged! ' a 1\n'
-  paged! '+a 2\n'
+  diff -r f4be7687d414 -r bce265549556 a
+  --- a/a	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/a	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,2 +1,3 @@
+   a
+   a 1
+  +a 2
 
 If 'log' is in attend, then 'history' should also be paged:
   $ hg history --limit 2 --config pager.attend=log

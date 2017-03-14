@@ -64,10 +64,10 @@ def uisetup(ui):
                 # behavior is preserved.
                 ui.setconfig('pager', 'ignore', '', 'pager')
                 ui.pager('extension-via-attend-' + cmd)
+            else:
+                ui.disablepager()
         return orig(ui, options, cmd, cmdfunc)
 
     extensions.wrapfunction(dispatch, '_runcommand', pagecmd)
 
-attended = [
-    'the-default-attend-list-is-now-empty-but-that-breaks-the-extension',
-]
+attended = ['annotate', 'cat', 'diff', 'export', 'glog', 'log', 'qdiff']
