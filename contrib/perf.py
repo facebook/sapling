@@ -20,6 +20,7 @@
 
 from __future__ import absolute_import
 import functools
+import gc
 import os
 import random
 import sys
@@ -189,6 +190,7 @@ def stub_timer(fm, func, title=None):
     func()
 
 def _timer(fm, func, title=None):
+    gc.collect()
     results = []
     begin = util.timer()
     count = 0
