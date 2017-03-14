@@ -3,7 +3,11 @@ from mercurial import util
 from mercurial.node import nullid, hex
 from mercurial.i18n import _
 import basepack, constants
-import cstore
+try:
+    import cstore
+    cstore.datapack
+except ImportError:
+    cstore = None
 
 # Index entry format is: <node><delta offset><pack data offset><pack data size>
 # See the mutabledatapack doccomment for more details.
