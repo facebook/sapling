@@ -4,6 +4,12 @@
 # GNU General Public License version 2 or any later version.
 """
     [infinitepushbackup]
+    # path to the directory where pushback logs should be stored
+    logdir = path/to/dir
+
+    # max number of logs for one repo for one user
+    maxlognumber = 5
+
     # There can be at most one backup process per repo. This config options
     # determines how much time to wait on the lock. If timeout happens then
     # backups process aborts.
@@ -16,6 +22,7 @@ import hashlib
 import os
 import re
 import socket
+import time
 
 from .bundleparts import (
     getscratchbookmarkspart,
@@ -31,6 +38,7 @@ from mercurial import (
     error,
     hg,
     lock as lockmod,
+    osutil,
     util,
 )
 
@@ -71,9 +79,25 @@ def backup(ui, repo, dest=None, **opts):
         background_cmd = ['hg', 'pushbackup']
         if dest:
             background_cmd.append(dest)
-        logfile = ui.config('infinitepush', 'pushbackuplog')
-        if logfile:
-            background_cmd.extend(('>>', logfile, '2>&1'))
+        logdir = ui.config('infinitepushbackup', 'logdir')
+        if logdir:
+            try:
+                try:
+                    username = ui.shortuser(ui.username())
+                except Exception:
+                    username = 'unknown'
+                userlogdir = os.path.join(logdir, username)
+                util.makedirs(userlogdir)
+                reporoot = repo.origroot
+                reponame = os.path.basename(reporoot)
+
+                maxlogfilenumber = ui.configint('infinitepushbackup',
+                                                'maxlognumber', 5)
+                _removeoldlogfiles(userlogdir, reponame, maxlogfilenumber)
+                logfile = _getlogfilename(logdir, username, reponame)
+                background_cmd.extend(('>>', logfile, '2>&1'))
+            except (OSError, IOError) as e:
+                ui.warn(_('infinitepush backup log is disabled: %s\n') % e)
         runshellcommand(' '.join(background_cmd), os.environ)
         return 0
 
@@ -451,3 +475,36 @@ def _parsebackupbookmark(username, backupbookmark):
     return backupbookmarktuple(hostname=match.group(1),
                                reporoot=match.group(2),
                                localbookmark=_unescapebookmark(match.group(3)))
+
+_timeformat = '%Y%m%d'
+
+def _getlogfilename(logdir, username, reponame):
+    '''Returns name of the log file for particular user and repo
+
+    Different users have different directories inside logdir. Log filename
+    consists of reponame (basename of repo path) and current day
+    (see _timeformat). That means that two different repos with the same name
+    can share the same log file. This is not a big problem so we ignore it.
+    '''
+
+    currentday = time.strftime(_timeformat)
+    return os.path.join(logdir, username, reponame + currentday)
+
+def _removeoldlogfiles(userlogdir, reponame, maxlogfilenumber):
+    existinglogfiles = []
+    for entry in osutil.listdir(userlogdir):
+        filename = entry[0]
+        fullpath = os.path.join(userlogdir, filename)
+        if filename.startswith(reponame) and os.path.isfile(fullpath):
+            try:
+                time.strptime(filename[len(reponame):], _timeformat)
+            except ValueError:
+                continue
+            existinglogfiles.append(filename)
+
+    # _timeformat gives us a property that if we sort log file names in
+    # descending order then newer files are going to be in the beginning
+    existinglogfiles = sorted(existinglogfiles, reverse=True)
+    if len(existinglogfiles) > maxlogfilenumber:
+        for filename in existinglogfiles[maxlogfilenumber:]:
+            os.unlink(os.path.join(userlogdir, filename))

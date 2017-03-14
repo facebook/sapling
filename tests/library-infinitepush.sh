@@ -108,3 +108,8 @@ echo "reponame=babar" >> .hg/hgrc
 
 createdb
 }
+
+waitbgbackup() {
+  sleep 1
+  hg debugwaitbackup
+}

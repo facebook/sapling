@@ -9,10 +9,6 @@
   > evolutioncommands=obsolete
   > EOF
   > }
-  $ waitbgbackup() {
-  >   sleep 1
-  >   hg debugwaitbackup
-  > }
   $ . "$TESTDIR/library.sh"
   $ . "$TESTDIR/library-infinitepush.sh"
   $ setupcommon
