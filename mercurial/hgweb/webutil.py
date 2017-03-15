@@ -143,7 +143,9 @@ class filerevnav(revnav):
 
 class _siblings(object):
     def __init__(self, siblings=None, hiderev=None):
-        self.siblings = [s for s in siblings or [] if s.node() != nullid]
+        if siblings is None:
+            siblings = []
+        self.siblings = [s for s in siblings if s.node() != nullid]
         if len(self.siblings) == 1 and self.siblings[0].rev() == hiderev:
             self.siblings = []
 
