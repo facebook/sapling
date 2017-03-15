@@ -2920,7 +2920,7 @@ class dirs(object):
             del dirs[base]
 
     def __iter__(self):
-        return self._dirs.iterkeys()
+        return iter(self._dirs)
 
     def __contains__(self, d):
         return d in self._dirs
