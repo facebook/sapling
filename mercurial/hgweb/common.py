@@ -96,7 +96,9 @@ class ErrorResponse(Exception):
             message = _statusmessage(code)
         Exception.__init__(self, message)
         self.code = code
-        self.headers = headers or []
+        if headers is None:
+            headers = []
+        self.headers = headers
 
 class continuereader(object):
     def __init__(self, f, write):
