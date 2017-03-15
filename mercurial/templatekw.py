@@ -336,7 +336,7 @@ def showextras(**args):
     c = [makemap(k) for k in extras]
     f = _showlist('extra', c, plural='extras', **args)
     return _hybrid(f, extras, makemap,
-                   lambda x: '%s=%s' % (x['key'], x['value']))
+                   lambda x: '%s=%s' % (x['key'], util.escapestr(x['value'])))
 
 @templatekeyword('file_adds')
 def showfileadds(**args):

@@ -94,6 +94,15 @@ rebase b onto r1
   1  r2
   0  r1
 
+test format of transplant_source
+
+  $ hg log -r7 --debug | grep transplant_source
+  extra:       transplant_source=\xa52Q\xcd\xf7\x17g\x9d\x19\x07\xb2\x89\xf9\x91SK\xe0\\\x99z
+  $ hg log -r7 -T '{extras}\n'
+  branch=defaulttransplant_source=\xa52Q\xcd\xf7\x17g\x9d\x19\x07\xb2\x89\xf9\x91SK\xe0\\\x99z
+  $ hg log -r7 -T '{join(extras, " ")}\n'
+  branch=default transplant_source=\xa52Q\xcd\xf7\x17g\x9d\x19\x07\xb2\x89\xf9\x91SK\xe0\\\x99z
+
 test transplanted revset
 
   $ hg log -r 'transplanted()' --template '{rev} {parents} {desc}\n'
