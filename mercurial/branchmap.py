@@ -452,6 +452,8 @@ class revbranchcache(object):
 
     def _setcachedata(self, rev, node, branchidx):
         """Writes the node's branch data to the in-memory cache data."""
+        if rev == nullrev:
+            return
         rbcrevidx = rev * _rbcrecsize
         if len(self._rbcrevs) < rbcrevidx + _rbcrecsize:
             self._rbcrevs.extend('\0' *

@@ -1,5 +1,10 @@
   $ hg init a
   $ cd a
+
+Verify checking branch of nullrev before the cache is created doesnt crash
+  $ hg log -r 'branch(.)' -T '{branch}\n'
+
+Basic test
   $ echo 'root' >root
   $ hg add root
   $ hg commit -d '0 0' -m "Adding root node"
