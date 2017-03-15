@@ -119,7 +119,9 @@ legacycaps = moderncaps.union(set(['changegroupsubset']))
 class localpeer(peer.peerrepository):
     '''peer for a local repo; reflects only the most recent API'''
 
-    def __init__(self, repo, caps=moderncaps):
+    def __init__(self, repo, caps=None):
+        if caps is None:
+            caps = moderncaps.copy()
         peer.peerrepository.__init__(self)
         self._repo = repo.filtered('served')
         self.ui = repo.ui
