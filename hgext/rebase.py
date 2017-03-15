@@ -725,7 +725,8 @@ def _definesets(ui, repo, destf=None, srcf=None, basef=None, revf=None,
                 destspace=None):
     """use revisions argument to define destination and rebase set
     """
-    revf = revf or []
+    if revf is None:
+        revf = []
 
     # destspace is here to work around issues with `hg pull --rebase` see
     # issue5214 for details
