@@ -3439,7 +3439,9 @@ def reposetup(ui, repo):
                     raise error.Abort(errmsg)
 
         def commit(self, text="", user=None, date=None, match=None,
-                   force=False, editor=False, extra={}):
+                   force=False, editor=False, extra=None):
+            if extra is None:
+                extra = {}
             self.abortifwdirpatched(
                 _('cannot commit over an applied mq patch'),
                 force)
