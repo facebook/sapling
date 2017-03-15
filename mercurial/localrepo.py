@@ -691,11 +691,11 @@ class localrepository(object):
             return
 
         try:
-            fp = self.wfile('.hgtags', 'rb+')
+            fp = self.wvfs('.hgtags', 'rb+')
         except IOError as e:
             if e.errno != errno.ENOENT:
                 raise
-            fp = self.wfile('.hgtags', 'ab')
+            fp = self.wvfs('.hgtags', 'ab')
         else:
             prevtags = fp.read()
 
