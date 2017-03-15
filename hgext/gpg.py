@@ -281,7 +281,7 @@ def _dosign(ui, repo, *revs, **opts):
             raise error.Abort(_("working copy of .hgsigs is changed "),
                              hint=_("please commit .hgsigs manually"))
 
-    sigsfile = repo.wfile(".hgsigs", "ab")
+    sigsfile = repo.wvfs(".hgsigs", "ab")
     sigsfile.write(sigmessage)
     sigsfile.close()
 
