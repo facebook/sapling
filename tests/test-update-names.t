@@ -88,3 +88,19 @@ Test that warning is printed if cwd is deleted during update
   (consider changing to repo root: $TESTTMP/r1/r4)
 
 #endif
+
+  $ cd $TESTTMP
+  $ cat >> $HGRCPATH <<EOF
+  > [commands]
+  > update.requiredest = True
+  > EOF
+  $ hg init dest
+  $ cd dest
+  $ echo a >> a
+  $ hg commit -qAm aa
+  $ hg up
+  abort: you must specify a destination
+  (for example: hg update ".::")
+  [255]
+  $ hg up .
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved

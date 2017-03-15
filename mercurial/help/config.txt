@@ -414,6 +414,15 @@ effect and style see :hg:`help color`.
     a different color mode than the pager (activated via the "pager"
     extension).
 
+``commands``
+----------
+
+``update.requiredest``
+    Require that the user pass a destination when running ``hg update``.
+    For example, ``hg update .::`` will be allowed, but a plain ``hg update``
+    will be disallowed.
+    (default: False)
+
 ``committemplate``
 ------------------
 
