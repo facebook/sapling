@@ -8,6 +8,7 @@ from mercurial import (
     ancestor,
     changelog,
     manifest,
+    match as matchmod,
     context,
     util,
 )
@@ -99,7 +100,13 @@ class overlaymanifest(object):
         self.load()
         return self._map.get(path, default)
 
-    def diff(self, m2, clean=False):
+    def diff(self, m2, match=None, clean=False):
+        # Older mercurial clients used diff(m2, clean=False). If a caller failed
+        # to specify clean as a keyword arg, it might get passed as match here.
+        if isinstance(match, bool):
+            clean = match
+            match = None
+
         self.load()
         if isinstance(m2, overlaymanifest):
             m2.load()
@@ -113,7 +120,11 @@ class overlaymanifest(object):
             # Mercurial <= 3.3
             m2flagget = m2._flags.get
 
+        if match is None:
+            match = matchmod.always('', '')
         for fn, n1 in self.iteritems():
+            if not match(fn):
+                continue
             fl1 = self._flags.get(fn, '')
             n2 = m2.get(fn, None)
             fl2 = m2flagget(fn, '')
@@ -126,6 +137,8 @@ class overlaymanifest(object):
 
         for fn, n2 in m2.iteritems():
             if fn not in self:
+                if not match(fn):
+                    continue
                 fl2 = m2flagget(fn, '')
                 diff[fn] = ((None, ''), (n2, fl2))
 
@@ -134,17 +147,30 @@ class overlaymanifest(object):
     def __delitem__(self, path):
         del self._map[path]
 
-def wrapmanifestdictdiff(orig, self, m2, clean=False):
+def wrapmanifestdictdiff(orig, self, m2, match=None, clean=False):
     '''avoid calling into lazymanifest code if m2 is an overlaymanifest'''
+    # Older mercurial clients used diff(m2, clean=False). If a caller failed
+    # to specify clean as a keyword arg, it might get passed as match here.
+    if isinstance(match, bool):
+        clean = match
+        match = None
+
+    kwargs = {
+        'clean' : clean
+    }
+    # Older versions of mercurial don't support the match arg, so only add it if
+    # it exists.
+    if match is not None:
+        kwargs['match'] = match
     if isinstance(m2, overlaymanifest):
-        diff = m2.diff(self, clean=clean)
+        diff = m2.diff(self, **kwargs)
         # since we calculated the diff with m2 vs m1, flip it around
         for fn in diff:
             c1, c2 = diff[fn]
             diff[fn] = c2, c1
         return diff
     else:
-        return orig(self, m2, clean=clean)
+        return orig(self, m2, **kwargs)
 
 class overlayfilectx(object):
     def __init__(self, repo, path, fileid=None):
