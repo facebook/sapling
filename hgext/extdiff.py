@@ -342,7 +342,7 @@ class savedcmd(object):
     def __init__(self, path, cmdline):
         # We can't pass non-ASCII through docstrings (and path is
         # in an unknown encoding anyway)
-        docpath = path.encode("string-escape")
+        docpath = util.escapestr(path)
         self.__doc__ = self.__doc__ % {'path': util.uirepr(docpath)}
         self._cmdline = cmdline
 

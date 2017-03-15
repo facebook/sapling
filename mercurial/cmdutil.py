@@ -1300,7 +1300,7 @@ class changeset_printer(object):
             for key, value in sorted(extra.items()):
                 # i18n: column positioning for "hg log"
                 self.ui.write(_("extra:       %s=%s\n")
-                              % (key, value.encode('string_escape')),
+                              % (key, util.escapestr(value)),
                               label='ui.debug log.extra')
 
         description = ctx.description().strip()

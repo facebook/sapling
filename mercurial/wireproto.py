@@ -900,7 +900,7 @@ def known(repo, proto, nodes, others):
 def pushkey(repo, proto, namespace, key, old, new):
     # compatibility with pre-1.8 clients which were accidentally
     # sending raw binary nodes rather than utf-8-encoded hex
-    if len(new) == 20 and new.encode('string-escape') != new:
+    if len(new) == 20 and util.escapestr(new) != new:
         # looks like it could be a binary node
         try:
             new.decode('utf-8')

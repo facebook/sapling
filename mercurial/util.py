@@ -2130,6 +2130,9 @@ bytecount = unitcountfn(
     (1, 1, _('%.0f bytes')),
     )
 
+def escapestr(s):
+    return s.encode('string_escape')
+
 def uirepr(s):
     # Avoid double backslash in Windows path repr()
     return repr(s).replace('\\\\', '\\')

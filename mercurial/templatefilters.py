@@ -345,7 +345,7 @@ def splitlines(text):
 
 @templatefilter('stringescape')
 def stringescape(text):
-    return text.encode('string_escape')
+    return util.escapestr(text)
 
 @templatefilter('stringify')
 def stringify(thing):

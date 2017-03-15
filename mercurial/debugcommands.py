@@ -1514,8 +1514,8 @@ def debugpushkey(ui, repopath, namespace, *keyinfo, **opts):
         return not r
     else:
         for k, v in sorted(target.listkeys(namespace).iteritems()):
-            ui.write("%s\t%s\n" % (k.encode('string-escape'),
-                                   v.encode('string-escape')))
+            ui.write("%s\t%s\n" % (util.escapestr(k),
+                                   util.escapestr(v)))
 
 @command('debugpvec', [], _('A B'))
 def debugpvec(ui, repo, a, b=None):
