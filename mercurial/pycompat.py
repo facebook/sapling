@@ -78,7 +78,7 @@ if ispy3:
 
     def iterbytestr(s):
         """Iterate bytes as if it were a str object of Python 2"""
-        return iter(s[i:i + 1] for i in range(len(s)))
+        return map(bytechr, s)
 
     def sysstr(s):
         """Return a keyword str to be passed to Python functions such as
