@@ -38,6 +38,7 @@ if ispy3:
     import builtins
     import functools
     import io
+    import struct
 
     fsencode = os.fsencode
     fsdecode = os.fsdecode
@@ -73,8 +74,7 @@ if ispy3:
     if getattr(sys, 'argv', None) is not None:
         sysargv = list(map(os.fsencode, sys.argv))
 
-    def bytechr(i):
-        return bytes([i])
+    bytechr = struct.Struct('>B').pack
 
     def iterbytestr(s):
         """Iterate bytes as if it were a str object of Python 2"""
