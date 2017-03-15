@@ -117,8 +117,10 @@ class match(object):
                               the same directory
         '<something>' - a pattern of the specified default type
         """
-        include = include or []
-        exclude = exclude or []
+        if include is None:
+            include = []
+        if exclude is None:
+            exclude = []
 
         self._root = root
         self._cwd = cwd
