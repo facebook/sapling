@@ -71,8 +71,10 @@ testedwith = 'ships-with-hg-core'
     inferrepo=True)
 def difftree(ui, repo, node1=None, node2=None, *files, **opts):
     """diff trees from two commits"""
-    def __difftree(repo, node1, node2, files=[]):
+    def __difftree(repo, node1, node2, files=None):
         assert node2 is not None
+        if files is None:
+            files = []
         mmap = repo[node1].manifest()
         mmap2 = repo[node2].manifest()
         m = scmutil.match(repo[node1], files)
