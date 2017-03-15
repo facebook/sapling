@@ -108,7 +108,7 @@ class GitHandler(object):
         if ui.configbool('git', 'intree'):
             self.gitdir = self.repo.wjoin('.git')
         else:
-            self.gitdir = self.repo.join('git')
+            self.gitdir = self.repo.vfs.join('git')
 
         self.init_author_file()
 
@@ -182,7 +182,7 @@ class GitHandler(object):
     def load_map(self):
         map_git_real = {}
         map_hg_real = {}
-        if os.path.exists(self.repo.join(self.map_file)):
+        if os.path.exists(self.repo.vfs.join(self.map_file)):
             for line in self.repo.vfs(self.map_file):
                 # format is <40 hex digits> <40 hex digits>\n
                 if len(line) != 82:
@@ -210,7 +210,7 @@ class GitHandler(object):
 
     def load_tags(self):
         self.tags = {}
-        if os.path.exists(self.repo.join(self.tags_file)):
+        if os.path.exists(self.repo.vfs.join(self.tags_file)):
             for line in self.repo.vfs(self.tags_file):
                 sha, name = line.strip().split(' ', 1)
                 self.tags[name] = sha
@@ -402,7 +402,7 @@ class GitHandler(object):
         return ret
 
     def clear(self):
-        mapfile = self.repo.join(self.map_file)
+        mapfile = self.repo.vfs.join(self.map_file)
         if os.path.exists(self.gitdir):
             for root, dirs, files in os.walk(self.gitdir, topdown=False):
                 for name in files:
