@@ -300,8 +300,10 @@ class basectx(object):
 
     def match(self, pats=None, include=None, exclude=None, default='glob',
               listsubrepos=False, badfn=None):
+        if pats is None:
+            pats = []
         r = self._repo
-        return matchmod.match(r.root, r.getcwd(), pats or [],
+        return matchmod.match(r.root, r.getcwd(), pats,
                               include, exclude, default,
                               auditor=r.nofsauditor, ctx=self,
                               listsubrepos=listsubrepos, badfn=badfn)
@@ -1517,16 +1519,18 @@ class workingctx(committablectx):
 
     def match(self, pats=None, include=None, exclude=None, default='glob',
               listsubrepos=False, badfn=None):
+        if pats is None:
+            pats = []
         r = self._repo
 
         # Only a case insensitive filesystem needs magic to translate user input
         # to actual case in the filesystem.
         if not util.fscasesensitive(r.root):
-            return matchmod.icasefsmatcher(r.root, r.getcwd(), pats or [],
+            return matchmod.icasefsmatcher(r.root, r.getcwd(), pats,
                                            include, exclude, default, r.auditor,
                                            self, listsubrepos=listsubrepos,
                                            badfn=badfn)
-        return matchmod.match(r.root, r.getcwd(), pats or [],
+        return matchmod.match(r.root, r.getcwd(), pats,
                               include, exclude, default,
                               auditor=r.auditor, ctx=self,
                               listsubrepos=listsubrepos, badfn=badfn)
