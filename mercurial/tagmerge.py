@@ -169,7 +169,7 @@ def writemergedtags(repo, mergedtags):
     # finally we can join the sorted groups to get the final contents of the
     # merged .hgtags file, and then write it to disk
     mergedtagstring = '\n'.join([tags for rank, tags in finaltags if tags])
-    fp = repo.wfile('.hgtags', 'wb')
+    fp = repo.wvfs('.hgtags', 'wb')
     fp.write(mergedtagstring + '\n')
     fp.close()
 
