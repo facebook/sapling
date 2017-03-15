@@ -17,6 +17,7 @@ from __future__ import absolute_import
 
 import bz2
 import calendar
+import codecs
 import collections
 import datetime
 import errno
@@ -2131,7 +2132,9 @@ bytecount = unitcountfn(
     )
 
 def escapestr(s):
-    return s.encode('string_escape')
+    # call underlying function of s.encode('string_escape') directly for
+    # Python 3 compatibility
+    return codecs.escape_encode(s)[0]
 
 def uirepr(s):
     # Avoid double backslash in Windows path repr()
