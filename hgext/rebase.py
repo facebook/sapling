@@ -662,6 +662,16 @@ def rebase(ui, repo, **opts):
 
           hg rebase -r "branch(featureX)" -d 1.3 --keepbranches
 
+    Configuration Options:
+
+    You can make rebase require a destination if you set the following config
+    option:
+
+      [commands]
+      rebase.requiredest = False
+
+    Return Values:
+
     Returns 0 on success, 1 if nothing to rebase or there are
     unresolved conflicts.
 
@@ -675,6 +685,12 @@ def rebase(ui, repo, **opts):
 
         # Validate input and define rebasing points
         destf = opts.get('dest', None)
+
+        if ui.config('commands', 'rebase.requiredest', False):
+            if not destf:
+                raise error.Abort(_('you must specify a destination'),
+                                  hint=_('use: hg rebase -d REV'))
+
         srcf = opts.get('source', None)
         basef = opts.get('base', None)
         revf = opts.get('rev', [])
