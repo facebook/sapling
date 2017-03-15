@@ -1525,15 +1525,13 @@ class workingctx(committablectx):
 
         # Only a case insensitive filesystem needs magic to translate user input
         # to actual case in the filesystem.
+        matcherfunc = matchmod.match
         if not util.fscasesensitive(r.root):
-            return matchmod.icasefsmatcher(r.root, r.getcwd(), pats,
-                                           include, exclude, default, r.auditor,
-                                           self, listsubrepos=listsubrepos,
-                                           badfn=badfn)
-        return matchmod.match(r.root, r.getcwd(), pats,
-                              include, exclude, default,
-                              auditor=r.auditor, ctx=self,
-                              listsubrepos=listsubrepos, badfn=badfn)
+            matcherfunc = matchmod.icasefsmatcher
+        return matcherfunc(r.root, r.getcwd(), pats,
+                           include, exclude, default,
+                           auditor=r.auditor, ctx=self,
+                           listsubrepos=listsubrepos, badfn=badfn)
 
     def _filtersuspectsymlink(self, files):
         if not files or self._repo.dirstate._checklink:
