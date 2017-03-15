@@ -102,7 +102,11 @@ class CheckoutContext {
   bool const force_{false};
   folly::Synchronized<Hash>::LockedPtr snapshotLock_;
   RenameLock renameLock_;
-  std::vector<CheckoutConflict> conflicts_;
+
+  // The checkout processing may occur across many threads,
+  // if some data load operations complete asynchronously on other threads.
+  // Therefore access to the conflicts list must be synchronized.
+  folly::Synchronized<std::vector<CheckoutConflict>> conflicts_;
 };
 }
 }

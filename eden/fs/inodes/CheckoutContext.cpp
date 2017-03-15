@@ -44,7 +44,7 @@ vector<CheckoutConflict> CheckoutContext::finish(Hash newSnapshot) {
 
   // Return conflicts_ via a move operation.  We don't need them any more, and
   // can give ownership directly to our caller.
-  return std::move(conflicts_);
+  return std::move(*conflicts_.wlock());
 }
 
 void CheckoutContext::addConflict(ConflictType type, RelativePathPiece path) {
@@ -55,7 +55,7 @@ void CheckoutContext::addConflict(ConflictType type, RelativePathPiece path) {
   CheckoutConflict conflict;
   conflict.path = path.value().str();
   conflict.type = type;
-  conflicts_.push_back(std::move(conflict));
+  conflicts_.wlock()->push_back(std::move(conflict));
 }
 
 void CheckoutContext::addConflict(
@@ -94,7 +94,7 @@ void CheckoutContext::addError(
   conflict.path = path.value().toStdString();
   conflict.type = ConflictType::ERROR;
   conflict.message = folly::exceptionStr(ew).toStdString();
-  conflicts_.push_back(std::move(conflict));
+  conflicts_.wlock()->push_back(std::move(conflict));
 }
 }
 }
