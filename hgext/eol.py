@@ -223,7 +223,7 @@ def parseeol(ui, repo, nodes):
                 if node is None:
                     # Cannot use workingctx.data() since it would load
                     # and cache the filters before we configure them.
-                    data = repo.wfile('.hgeol').read()
+                    data = repo.wvfs('.hgeol').read()
                 else:
                     data = repo[node]['.hgeol'].data()
                 return eolfile(ui, repo.root, data)
