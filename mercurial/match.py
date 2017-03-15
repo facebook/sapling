@@ -742,7 +742,7 @@ def readpatternfile(filepath, warn, sourceinfo=False):
     syntax = 'relre:'
     patterns = []
 
-    fp = open(filepath)
+    fp = open(filepath, 'rb')
     for lineno, line in enumerate(util.iterfile(fp), start=1):
         if "#" in line:
             global _commentre
