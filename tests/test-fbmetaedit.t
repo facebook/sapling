@@ -1,6 +1,7 @@
 based on test-evolve.t from mutable-history extension
   $ . $TESTDIR/require-ext.sh evolve
 
+  $ REPOROOT=`dirname $TESTDIR`
   $ cat >> $HGRCPATH <<EOF
   > [defaults]
   > amend=-d "0 0"
@@ -18,7 +19,7 @@ based on test-evolve.t from mutable-history extension
   > unified = 0
   > [extensions]
   > hgext.graphlog=
-  > fbmetaedit=
+  > fbmetaedit=$REPOROOT/hgext3rd/fbmetaedit.py
   > evolve=
   > EOF
   $ mkcommit() {
@@ -123,7 +124,13 @@ check that metaedit respects allowunstable
   $ hg log --template '{rev}: {author}\n' -r .
   7: foobar
 
-  $ HGEDITOR="sed -i'' -e 's/add f/add f nicely/g'" hg metaedit -d '1 1' '.^::.'
+  $ cat >> $TESTTMP/modifymsg.sh <<EOF
+  > #!/bin/bash
+  > sed -e 's/add f/add f nicely/g' \$1 > $TESTTMP/newmsg
+  > mv $TESTTMP/newmsg \$1
+  > EOF
+  $ chmod a+x $TESTTMP/modifymsg.sh
+  $ HGEDITOR="$TESTTMP/modifymsg.sh" hg metaedit -d '1 1' '.^::.'
 
   $ HGEDITOR=cat hg metaedit '.^::.' --fold
   HG: This is a fold of 2 changesets.
