@@ -272,7 +272,9 @@ def reposetup(ui, repo):
         # contents updated to reflect the hash of their largefile.
         # Do that here.
         def commit(self, text="", user=None, date=None, match=None,
-                force=False, editor=False, extra={}):
+                force=False, editor=False, extra=None):
+            if extra is None:
+                extra = {}
             orig = super(lfilesrepo, self).commit
 
             with self.wlock():
