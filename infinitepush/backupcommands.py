@@ -163,7 +163,11 @@ def restore(ui, repo, dest=None, **opts):
         with repo.lock():
             with repo.transaction('bookmark') as tr:
                 for book, hexnode in backupstate.localbookmarks.iteritems():
-                    repo._bookmarks[book] = bin(hexnode)
+                    if hexnode in repo:
+                        repo._bookmarks[book] = bin(hexnode)
+                    else:
+                        ui.warn(_('%s not found, not creating %s bookmark') %
+                                (hexnode, book))
                 repo._bookmarks.recordchange(tr)
 
     return result
