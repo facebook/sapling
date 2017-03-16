@@ -493,9 +493,9 @@ def _globre(pat):
     group = 0
     escape = util.re.escape
     def peek():
-        return i < n and pat[i]
+        return i < n and pat[i:i + 1]
     while i < n:
-        c = pat[i]
+        c = pat[i:i + 1]
         i += 1
         if c not in '*?[{},\\':
             res += escape(c)
@@ -513,18 +513,18 @@ def _globre(pat):
             res += '.'
         elif c == '[':
             j = i
-            if j < n and pat[j] in '!]':
+            if j < n and pat[j:j + 1] in '!]':
                 j += 1
-            while j < n and pat[j] != ']':
+            while j < n and pat[j:j + 1] != ']':
                 j += 1
             if j >= n:
                 res += '\\['
             else:
                 stuff = pat[i:j].replace('\\','\\\\')
                 i = j + 1
-                if stuff[0] == '!':
+                if stuff[0:1] == '!':
                     stuff = '^' + stuff[1:]
-                elif stuff[0] == '^':
+                elif stuff[0:1] == '^':
                     stuff = '\\' + stuff
                 res = '%s[%s]' % (res, stuff)
         elif c == '{':
