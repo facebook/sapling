@@ -286,7 +286,7 @@ def aliasargs(fn, givenargs):
             if num < len(givenargs):
                 return givenargs[num]
             raise error.Abort(_('too few arguments for command alias'))
-        cmd = re.sub(r'\$(\d+|\$)', replacer, cmd)
+        cmd = re.sub(br'\$(\d+|\$)', replacer, cmd)
         givenargs = [x for i, x in enumerate(givenargs)
                      if i not in nums]
         args = pycompat.shlexsplit(cmd)
