@@ -42,7 +42,7 @@ from mercurial import (
     util,
 )
 
-from collections import namedtuple
+from collections import defaultdict, namedtuple
 from hgext3rd.extutil import runshellcommand
 from mercurial.extensions import wrapfunction, unwrapfunction
 from mercurial.node import bin, hex, nullrev
@@ -53,6 +53,14 @@ command = cmdutil.command(cmdtable)
 
 backupbookmarktuple = namedtuple('backupbookmarktuple',
                                  ['hostname', 'reporoot', 'localbookmark'])
+
+class backupstate(object):
+    def __init__(self):
+        self.heads = set()
+        self.localbookmarks = {}
+
+    def empty(self):
+        return not self.heads and not self.localbookmarks
 
 restoreoptions = [
      ('', 'reporoot', '', 'root of the repo to restore'),
@@ -130,13 +138,18 @@ def restore(ui, repo, dest=None, **opts):
     sourcehostname = opts.get('hostname')
     username = opts.get('user') or ui.shortuser(ui.username())
 
-    result = _getbackupstate(ui, other, sourcereporoot,
-                             sourcehostname, username)
-    reporoots, hostnames, hexnodestopull, localbookmarks = result
-    _checkrestorehostsreporoots(hostnames, reporoots)
+    allbackupstates = _downloadbackupstate(ui, other, sourcereporoot,
+                                           sourcehostname, username)
+    if len(allbackupstates) == 0:
+        ui.warn(_('no backups found!'))
+        return 1
+    _checkbackupstates(allbackupstates)
 
+    __, backupstate = allbackupstates.popitem()
     pullcmd, pullopts = _getcommandandoptions('^pull')
-    pullopts['rev'] = list(hexnodestopull)
+    # pull backuped heads and nodes that are pointed by bookmarks
+    pullopts['rev'] = list(backupstate.heads |
+                           set(backupstate.localbookmarks.values()))
     if dest:
         pullopts['source'] = dest
     result = pullcmd(ui, repo, **pullopts)
@@ -144,8 +157,8 @@ def restore(ui, repo, dest=None, **opts):
     with repo.wlock():
         with repo.lock():
             with repo.transaction('bookmark') as tr:
-                for scratchbook, hexnode in localbookmarks.iteritems():
-                    repo._bookmarks[scratchbook] = bin(hexnode)
+                for book, hexnode in backupstate.localbookmarks.iteritems():
+                    repo._bookmarks[book] = bin(hexnode)
                 repo._bookmarks.recordchange(tr)
 
     return result
@@ -161,12 +174,13 @@ def checkbackup(ui, repo, dest=None, **opts):
     sourcehostname = opts.get('hostname')
     username = opts.get('user') or ui.shortuser(ui.username())
 
-    result = _getbackupstate(ui, other, sourcereporoot,
-                             sourcehostname, username)
-    reporoots, hostnames, hexnodestopull, localbookmarks = result
-    _checkrestorehostsreporoots(hostnames, reporoots)
+    allbackupstates = _downloadbackupstate(ui, other, sourcereporoot,
+                                           sourcehostname, username)
+
+    _checkbackupstates(allbackupstates)
+    __, bkpstate = allbackupstates.popitem()
     batch = other.iterbatch()
-    for hexnode in list(hexnodestopull) + localbookmarks.values():
+    for hexnode in list(bkpstate.heads) + bkpstate.localbookmarks.values():
         batch.lookup(hexnode)
     batch.submit()
     lookupresults = batch.results()
@@ -239,13 +253,10 @@ _backupedstatefile = 'infinitepushlastbackupedstate'
 
 # Common helper functions
 
-def _getbackupstate(ui, other, sourcereporoot, sourcehostname, username):
+def _downloadbackupstate(ui, other, sourcereporoot, sourcehostname, username):
     pattern = _getcommonuserprefix(username) + '/*'
     fetchedbookmarks = other.listkeyspatterns('bookmarks', patterns=[pattern])
-    reporoots = set()
-    hostnames = set()
-    hexnodestopull = set()
-    localbookmarks = {}
+    allbackupstates = defaultdict(backupstate)
     for book, hexnode in fetchedbookmarks.iteritems():
         parsed = _parsebackupbookmark(username, book)
         if parsed:
@@ -253,17 +264,24 @@ def _getbackupstate(ui, other, sourcereporoot, sourcehostname, username):
                 continue
             if sourcehostname and sourcehostname != parsed.hostname:
                 continue
-            hexnodestopull.add(hexnode)
+            key = (parsed.hostname, parsed.reporoot)
             if parsed.localbookmark:
-                localbookmarks[parsed.localbookmark] = hexnode
-            reporoots.add(parsed.reporoot)
-            hostnames.add(parsed.hostname)
+                bookname = parsed.localbookmark
+                allbackupstates[key].localbookmarks[bookname] = hexnode
+            else:
+                allbackupstates[key].heads.add(hexnode)
         else:
             ui.warn(_('wrong format of backup bookmark: %s') % book)
 
-    return reporoots, hostnames, hexnodestopull, localbookmarks
+    return allbackupstates
 
-def _checkrestorehostsreporoots(hostnames, reporoots):
+def _checkbackupstates(allbackupstates):
+    if len(allbackupstates) == 0:
+        raise error.Abort('no backups found!')
+
+    hostnames = set(key[0] for key in allbackupstates.iterkeys())
+    reporoots = set(key[1] for key in allbackupstates.iterkeys())
+
     if len(hostnames) > 1:
         raise error.Abort(
             _('ambiguous hostname to restore: %s') % sorted(hostnames),
