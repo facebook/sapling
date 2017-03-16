@@ -613,14 +613,10 @@ def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
                     else:
                         stream = None
                 # internal config: ui.quietbookmarkmove
-                quiet = local.ui.backupconfig('ui', 'quietbookmarkmove')
-                try:
-                    local.ui.setconfig(
-                        'ui', 'quietbookmarkmove', True, 'clone')
+                overrides = {('ui', 'quietbookmarkmove'): True}
+                with local.ui.configoverride(overrides, 'clone'):
                     exchange.pull(local, srcpeer, revs,
                                   streamclonerequested=stream)
-                finally:
-                    local.ui.restoreconfig(quiet)
             elif srcrepo:
                 exchange.push(srcrepo, destpeer, revs=revs,
                               bookmarks=srcrepo._bookmarks.keys())
