@@ -851,10 +851,9 @@ def concludenode(repo, rev, p1, p2, commitmsg=None, editor=None, extrafn=None,
         if extrafn:
             extrafn(ctx, extra)
 
-        backup = repo.ui.backupconfig('phases', 'new-commit')
-        try:
-            targetphase = max(ctx.phase(), phases.draft)
-            repo.ui.setconfig('phases', 'new-commit', targetphase, 'rebase')
+        targetphase = max(ctx.phase(), phases.draft)
+        overrides = {('phases', 'new-commit'): targetphase}
+        with repo.ui.configoverride(overrides, 'rebase'):
             if keepbranch:
                 repo.ui.setconfig('ui', 'allowemptycommit', True)
             # Commit might fail if unresolved files exist
@@ -862,8 +861,6 @@ def concludenode(repo, rev, p1, p2, commitmsg=None, editor=None, extrafn=None,
                 date = ctx.date()
             newnode = repo.commit(text=commitmsg, user=ctx.user(),
                                   date=date, extra=extra, editor=editor)
-        finally:
-            repo.ui.restoreconfig(backup)
 
         repo.dirstate.setbranch(repo[newnode].branch())
         dsguard.close()
