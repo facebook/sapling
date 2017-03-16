@@ -400,6 +400,8 @@ error:
 	Py_XDECREF(stat);
 error_list:
 	closedir(dir);
+	/* closedir also closes its dirfd */
+	goto error_value;
 error_dir:
 #ifdef AT_SYMLINK_NOFOLLOW
 	close(dfd);
