@@ -540,14 +540,21 @@ class fileserverclient(object):
             self.remotecache = simplecache()
 
     def close(self):
-        if fetches and self.debugoutput:
-            self.ui.warn(("%s files fetched over %d fetches - " +
-                "(%d misses, %0.2f%% hit ratio) over %0.2fs\n") % (
-                    fetched,
-                    fetches,
-                    fetchmisses,
-                    float(fetched - fetchmisses) / float(fetched) * 100.0,
-                    fetchcost))
+        if fetches:
+            msg = ("%s files fetched over %d fetches - " +
+                   "(%d misses, %0.2f%% hit ratio) over %0.2fs\n") % (
+                       fetched,
+                       fetches,
+                       fetchmisses,
+                       float(fetched - fetchmisses) / float(fetched) * 100.0,
+                       fetchcost)
+            if self.debugoutput:
+                self.ui.warn(msg)
+            self.ui.log("remotefilelog.prefetch", msg.replace("%", "%%"),
+                remotefilelogfetched=fetched,
+                remotefilelogfetches=fetches,
+                remotefilelogfetchmisses=fetchmisses,
+                remotefilelogfetchtime=fetchcost * 1000)
 
         if self.remotecache.connected:
             self.remotecache.close()
