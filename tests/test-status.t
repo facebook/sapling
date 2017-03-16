@@ -402,6 +402,8 @@ reverted and committed file with changed flag should appear modified
 
 #endif
 
+  $ cd ..
+
 hg status of binary file starting with '\1\n', a separator for metadata:
 
   $ hg init repo5
