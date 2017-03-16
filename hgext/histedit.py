@@ -502,16 +502,12 @@ def commitfuncfor(repo, src):
     """
     phasemin = src.phase()
     def commitfunc(**kwargs):
-        phasebackup = repo.ui.backupconfig('phases', 'new-commit')
-        try:
-            repo.ui.setconfig('phases', 'new-commit', phasemin,
-                              'histedit')
+        overrides = {('phases', 'new-commit'): phasemin}
+        with repo.ui.configoverride(overrides, 'histedit'):
             extra = kwargs.get('extra', {}).copy()
             extra['histedit_source'] = src.hex()
             kwargs['extra'] = extra
             return repo.commit(**kwargs)
-        finally:
-            repo.ui.restoreconfig(phasebackup)
     return commitfunc
 
 def applychanges(ui, repo, ctx, opts):
@@ -762,14 +758,11 @@ class fold(histeditaction):
         #       here. This is sufficient to solve issue3681 anyway.
         extra['histedit_source'] = '%s,%s' % (ctx.hex(), oldctx.hex())
         commitopts['extra'] = extra
-        phasebackup = repo.ui.backupconfig('phases', 'new-commit')
-        try:
-            phasemin = max(ctx.phase(), oldctx.phase())
-            repo.ui.setconfig('phases', 'new-commit', phasemin, 'histedit')
+        phasemin = max(ctx.phase(), oldctx.phase())
+        overrides = {('phases', 'new-commit'): phasemin}
+        with repo.ui.configoverride(overrides, 'histedit'):
             n = collapse(repo, ctx, repo[newnode], commitopts,
                          skipprompt=self.skipprompt())
-        finally:
-            repo.ui.restoreconfig(phasebackup)
         if n is None:
             return ctx, []
         repo.ui.pushbuffer()
