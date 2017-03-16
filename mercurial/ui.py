@@ -935,9 +935,22 @@ class ui(object):
         This is separate in part so that extensions (like chg) can
         override how a pager is invoked.
         """
-        pager = subprocess.Popen(command, shell=True, bufsize=-1,
-                                 close_fds=util.closefds, stdin=subprocess.PIPE,
-                                 stdout=util.stdout, stderr=util.stderr)
+        # If the command doesn't contain any of these characters, we
+        # assume it's a binary and exec it directly. This means for
+        # simple pager command configurations, we can degrade
+        # gracefully and tell the user about their broken pager.
+        shell = any(c in command for c in "|&;<>()$`\\\"' \t\n*?[#~=%")
+        try:
+            pager = subprocess.Popen(
+                command, shell=shell, bufsize=-1,
+                close_fds=util.closefds, stdin=subprocess.PIPE,
+                stdout=util.stdout, stderr=util.stderr)
+        except OSError as e:
+            if e.errno == errno.ENOENT and not shell:
+                self.warn(_("missing pager command '%s', skipping pager\n")
+                          % command)
+                return
+            raise
 
         # back up original file descriptors
         stdoutfd = os.dup(util.stdout.fileno())
