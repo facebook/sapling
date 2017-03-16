@@ -130,7 +130,11 @@ def parsebundlespec(repo, spec, strict=True, externalnames=False):
         if spec in util.compengines.supportedbundlenames:
             compression = spec
             version = 'v1'
+            # Generaldelta repos require v2.
             if 'generaldelta' in repo.requirements:
+                version = 'v2'
+            # Modern compression engines require v2.
+            if compression not in _bundlespecv1compengines:
                 version = 'v2'
         elif spec in _bundlespeccgversions:
             if spec == 'packed1':

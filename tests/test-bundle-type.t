@@ -187,9 +187,7 @@ Explicit request for zstd on non-generaldelta repos
   $ hg --config format.usegeneraldelta=false init nogd
   $ hg -q -R nogd pull t1
   $ hg -R nogd bundle -a -t zstd nogd-zstd
-  abort: compression engine zstd is not supported on v1 bundles
-  (see 'hg help bundle' for supported values for --type)
-  [255]
+  1 changesets found
 
 zstd-v1 always fails
 
