@@ -295,6 +295,11 @@ def _dobackup(ui, repo, dest, **opts):
         else:
             ui.status(_('nothing to backup\n'))
     finally:
+        # cleanup ensures that all pipes are flushed
+        try:
+            other.cleanup()
+        except Exception:
+            ui.warn(_('remote connection cleanup failed\n'))
         ui.status(_('finished in %f seconds\n') % (time.time() - start))
         unwrapfunction(changegroup.cg2packer, 'deltaparent', _deltaparent)
     return 0
