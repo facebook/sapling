@@ -11,6 +11,7 @@ syntax: regexp
 ^tests/report\.json
 .idea
 .testtimes*
+^hgext3rd/.*\.c$
 
 subinclude:cfastmanifest/.hgignore
 subinclude:linelog/.hgignore

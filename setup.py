@@ -234,6 +234,15 @@ else:
                 ],
             ),
         ],
+        'patchrmdir': [
+            Extension('hgext3rd.patchrmdir',
+                sources=['hgext3rd/patchrmdir.pyx'],
+                extra_compile_args=[
+                    '-std=c99',
+                    '-Wall', '-Wextra', '-Wconversion', '-pedantic',
+                ],
+            ),
+        ],
     }
 
 COMPONENTS = sorted(availablepackages + availableextmodules.keys() +
@@ -267,6 +276,7 @@ if os.name == 'nt':
 else:
     cythonmodules = [
         'linelog',
+        'patchrmdir',
     ]
 for cythonmodule in cythonmodules:
     if cythonmodule in components:
