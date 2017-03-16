@@ -4720,6 +4720,7 @@ def status(ui, repo, *pats, **opts):
     Returns 0 on success.
     """
 
+    opts = pycompat.byteskwargs(opts)
     revs = opts.get('rev')
     change = opts.get('change')
 
