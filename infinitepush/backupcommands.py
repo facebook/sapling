@@ -18,7 +18,7 @@
 
 from __future__ import absolute_import
 import errno
-import hashlib
+import json
 import os
 import re
 import socket
@@ -210,16 +210,36 @@ def _dobackup(ui, repo, dest, **opts):
     ui.status(_('starting backup %s\n') % time.strftime('%H:%M:%S %d %b %Y %Z'))
     start = time.time()
     username = ui.shortuser(ui.username())
-    backuptip, bookmarkshash = _readbackupstatefile(username, repo)
-    bookmarkstobackup = _getbookmarkstobackup(username, repo)
+    bkpstate = _readlocalbackupstate(ui, repo)
 
-    # To avoid race conditions save current tip of the repo and backup
-    # everything up to this revision.
-    currenttiprev = len(repo) - 1
+    currentheads = set((ctx.hex() for ctx in repo.set('head() & draft()')))
+    newheads = currentheads - bkpstate.heads
+    removedheads = bkpstate.heads - currentheads
     other = _getremote(repo, ui, dest, **opts)
-    outgoing = _getrevstobackup(repo, other, backuptip,
-                                currenttiprev, bookmarkstobackup)
-    currentbookmarkshash = _getbookmarkshash(bookmarkstobackup)
+    outgoing, badhexnodes = _getrevstobackup(repo, other, newheads)
+
+    newheads = set(filter(lambda hex: hex not in badhexnodes, newheads))
+    currentheads = set(filter(lambda hex: hex not in badhexnodes, currentheads))
+
+    localbookmarks = {}
+    secret = set(ctx.hex() for ctx in repo.set('secret()'))
+    for bookmark, node in repo._bookmarks.iteritems():
+        hexnode = hex(node)
+        if hexnode not in secret and hexnode not in badhexnodes:
+            localbookmarks[bookmark] = hexnode
+
+    newbookmarks = _dictdiff(localbookmarks, bkpstate.localbookmarks)
+    removedbookmarks = _dictdiff(bkpstate.localbookmarks, localbookmarks)
+
+    bookmarkstobackup = _getbookmarkstobackup(
+        username, repo, newbookmarks, removedbookmarks,
+        newheads, removedheads)
+
+    # Special case if backup state is empty. Clean all backup bookmarks from the
+    # server.
+    if bkpstate.empty():
+        bookmarkstobackup[_getbackupheadprefix(username, repo) + '/*'] = ''
+        bookmarkstobackup[_getbackupbookmarkprefix(username, repo) + '/*'] = ''
 
     # Wrap deltaparent function to make sure that bundle takes less space
     # See _deltaparent comments for details
@@ -234,14 +254,13 @@ def _dobackup(ui, repo, dest, **opts):
                                                  ui=ui, bookmark=None,
                                                  create=False))
 
-        if currentbookmarkshash != bookmarkshash:
+        if bookmarkstobackup:
             backup = True
             bundler.addpart(getscratchbookmarkspart(other, bookmarkstobackup))
 
         if backup:
             _sendbundle(bundler, other)
-            _writebackupstatefile(repo.svfs, currenttiprev,
-                                   currentbookmarkshash)
+            _writelocalbackupstate(repo.vfs, currentheads, localbookmarks)
         else:
             ui.status(_('nothing to backup\n'))
     finally:
@@ -249,7 +268,7 @@ def _dobackup(ui, repo, dest, **opts):
         unwrapfunction(changegroup.cg2packer, 'deltaparent', _deltaparent)
     return 0
 
-_backupedstatefile = 'infinitepushlastbackupedstate'
+_backupstatefile = 'infinitepushbackupstate'
 
 # Common helper functions
 
@@ -356,35 +375,27 @@ def _deltaparent(orig, self, revlog, rev, p1, p2, prev):
         return nullrev
     return p1
 
-def _getdefaultbookmarkstobackup(username, repo):
+def _getbookmarkstobackup(username, repo, newbookmarks, removedbookmarks,
+                          newheads, removedheads):
     bookmarkstobackup = {}
-    bookmarkstobackup[_getbackupheadprefix(username, repo) + '/*'] = ''
-    bookmarkstobackup[_getbackupbookmarkprefix(username, repo) + '/*'] = ''
-    return bookmarkstobackup
 
-def _getbookmarkstobackup(username, repo):
-    bookmarkstobackup = _getdefaultbookmarkstobackup(username, repo)
-    secret = set(ctx.hex() for ctx in repo.set('secret()'))
-    for bookmark, node in repo._bookmarks.iteritems():
-        bookmark = _getbackupbookmarkname(username, bookmark, repo)
-        hexnode = hex(node)
-        if hexnode in secret:
-            continue
-        bookmarkstobackup[bookmark] = hexnode
+    for bookmark, hexnode in removedbookmarks.items():
+        backupbookmark = _getbackupbookmarkname(username, bookmark, repo)
+        bookmarkstobackup[backupbookmark] = ''
 
-    for headrev in repo.revs('head() & draft()'):
-        hexhead = repo[headrev].hex()
+    for bookmark, hexnode in newbookmarks.items():
+        backupbookmark = _getbackupbookmarkname(username, bookmark, repo)
+        bookmarkstobackup[backupbookmark] = hexnode
+
+    for hexhead in removedheads:
+        headbookmarksname = _getbackupheadname(username, hexhead, repo)
+        bookmarkstobackup[headbookmarksname] = ''
+
+    for hexhead in newheads:
         headbookmarksname = _getbackupheadname(username, hexhead, repo)
         bookmarkstobackup[headbookmarksname] = hexhead
 
     return bookmarkstobackup
-
-def _getbookmarkshash(bookmarkstobackup):
-    currentbookmarkshash = hashlib.sha1()
-    for book, node in sorted(bookmarkstobackup.iteritems()):
-        currentbookmarkshash.update(book)
-        currentbookmarkshash.update(node)
-    return currentbookmarkshash.hexdigest()
 
 def _createbundler(ui, repo, other):
     bundler = bundle2.bundle20(ui, bundle2.bundle2caps(other))
@@ -409,13 +420,8 @@ def findcommonoutgoing(repo, other, heads):
     else:
         return None
 
-def _getrevstobackup(repo, other, backuptip, currenttiprev, bookmarkstobackup):
-    # Use unfiltered repo because backuptip may now point to filtered commit
-    repo = repo.unfiltered()
-    revs = []
-    if backuptip <= currenttiprev:
-        revset = 'head() & draft() & %d:' % backuptip
-        revs = list(repo.revs(revset))
+def _getrevstobackup(repo, other, headstobackup):
+    revs = list(repo[hexnode].rev() for hexnode in headstobackup)
 
     outgoing = findcommonoutgoing(repo, other, revs)
     rootstofilter = []
@@ -432,38 +438,43 @@ def _getrevstobackup(repo, other, backuptip, currenttiprev, bookmarkstobackup):
                 except error.ManifestLookupError:
                     rootstofilter.append(changectx.rev())
 
+    badhexnodes = set()
     if rootstofilter:
         revstofilter = list(repo.revs('%ld::', rootstofilter))
+        badhexnodes = set(repo[rev].hex() for rev in revstofilter)
         revs = set(revs) - set(revstofilter)
         outgoing = findcommonoutgoing(repo, other, revs)
-        filteredhexnodes = set([repo[filteredrev].hex()
-                                for filteredrev in revstofilter])
-        # Use list(...) to make it work in python2 and python3
-        for book, hexnode in list(bookmarkstobackup.items()):
-            if hexnode in filteredhexnodes:
-                del bookmarkstobackup[book]
 
-    return outgoing
+    return outgoing, badhexnodes
 
-def _readbackupstatefile(username, repo):
-    backuptipbookmarkshash = repo.svfs.tryread(_backupedstatefile).split(' ')
-    backuptip = 0
-    # hash of the default bookmarks to backup. This is to prevent backuping of
-    # empty repo
-    bookmarkshash = _getbookmarkshash(
-        _getdefaultbookmarkstobackup(username, repo))
-    if len(backuptipbookmarkshash) == 2:
+def _readlocalbackupstate(ui, repo):
+    if not repo.vfs.exists(_backupstatefile):
+        return backupstate()
+
+    errormsg = 'corrupt %s file' % _backupstatefile
+    with repo.vfs(_backupstatefile) as f:
         try:
-            backuptip = int(backuptipbookmarkshash[0]) + 1
-        except ValueError:
-            pass
-        if len(backuptipbookmarkshash[1]) == 40:
-            bookmarkshash = backuptipbookmarkshash[1]
-    return backuptip, bookmarkshash
+            state = json.loads(f.read())
+            if 'bookmarks' not in state or 'heads' not in state:
+                ui.warn(_('%s\n') % errormsg)
+                return backupstate()
+            if (type(state['bookmarks']) != type({}) or
+                    type(state['heads']) != type([])):
+                ui.warn(_('%s\n') % errormsg)
+                return backupstate()
 
-def _writebackupstatefile(vfs, backuptip, bookmarkshash):
-    with vfs(_backupedstatefile, mode="w", atomictemp=True) as f:
-        f.write(str(backuptip) + ' ' + bookmarkshash)
+            result = backupstate()
+            result.heads = set(state['heads'])
+            result.localbookmarks = state['bookmarks']
+            return result
+        except ValueError:
+            ui.warn(_('%s\n') % errormsg)
+            return backupstate()
+    return backupstate()
+
+def _writelocalbackupstate(vfs, heads, bookmarks):
+    with vfs(_backupstatefile, 'w') as f:
+        f.write(json.dumps({'heads': list(heads), 'bookmarks': bookmarks}))
 
 # Restore helper functions
 def _parsebackupbookmark(username, backupbookmark):
@@ -529,3 +540,13 @@ def _removeoldlogfiles(userlogdir, reponame, maxlogfilenumber):
     if len(existinglogfiles) > maxlogfilenumber:
         for filename in existinglogfiles[maxlogfilenumber:]:
             os.unlink(os.path.join(userlogdir, filename))
+
+def _dictdiff(first, second):
+    '''Returns new dict that contains items from the first dict that are missing
+    from the second dict.
+    '''
+    result = {}
+    for book, hexnode in first.items():
+        if second.get(book) != hexnode:
+            result[book] = hexnode
+    return result
