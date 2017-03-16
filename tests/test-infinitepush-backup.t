@@ -24,7 +24,9 @@ Backup empty repo
   $ cd client
   $ setupevolve
   $ hg pushbackup
+  starting backup .* (re)
   nothing to backup
+  finished in \d+\.(\d+)? seconds (re)
   $ mkcommit commit
   $ hg prune .
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
@@ -32,9 +34,11 @@ Backup empty repo
   1 changesets pruned
   $ mkcommit newcommit
   $ hg pushbackup
+  starting backup .* (re)
   searching for changes
   remote: pushing 1 commit:
   remote:     606a357e69ad  newcommit
+  finished in \d+\.(\d+)? seconds (re)
 
 Re-clone the client
   $ cd ..
@@ -49,9 +53,11 @@ Make commit and backup it. Use lockfail.py to make sure lock is not taken during
 pushbackup
   $ mkcommit commit
   $ hg pushbackup --config extensions.lockfail=$TESTDIR/lockfail.py
+  starting backup .* (re)
   searching for changes
   remote: pushing 1 commit:
   remote:     7e6a6fd9c7c8  commit
+  finished in \d+\.(\d+)? seconds (re)
   $ scratchnodes
   606a357e69adb2e36d559ae3237626e82a955c9d 9fa7f02468b18919035248ab21c8267674c0a3d6
   7e6a6fd9c7c8c8c307ee14678f03d63af3a7b455 168423c30397d95ef5f44d883f0887f0f5be0936
@@ -70,9 +76,11 @@ Make first commit public (by doing push) and then backup new commit
   remote: added 1 changesets with 1 changes to 1 files
   $ mkcommit newcommit
   $ hg pushbackup
+  starting backup .* (re)
   searching for changes
   remote: pushing 1 commit:
   remote:     94a60f5ad8b2  newcommit
+  finished in \d+\.(\d+)? seconds (re)
   $ scratchbookmarks
   infinitepush/backups/test/[0-9a-zA-Z.-]+\$TESTTMP/client/heads/94a60f5ad8b2e007240007edab982b3638a3f38d 94a60f5ad8b2e007240007edab982b3638a3f38d (re)
   $ cat .hg/store/infinitepushlastbackupedstate
@@ -94,11 +102,13 @@ Make obsoleted commit non-extinct by committing on top of it
 
 Backup both of them
   $ hg pushbackup
+  starting backup .* (re)
   searching for changes
   remote: pushing 3 commits:
   remote:     94a60f5ad8b2  newcommit
   remote:     361e89f06232  obsoletedcommit
   remote:     d5609f7fa633  ontopofobsoleted
+  finished in \d+\.(\d+)? seconds (re)
   $ cat .hg/store/infinitepushlastbackupedstate
   3 [0-9a-f]{40} \(no-eol\) (re)
 
@@ -108,9 +118,11 @@ Create one more head and run `hg pushbackup`. Make sure that only new head is pu
   $ mkcommit newhead
   created new head
   $ hg pushbackup
+  starting backup .* (re)
   searching for changes
   remote: pushing 1 commit:
   remote:     3a30e220fe42  newhead
+  finished in \d+\.(\d+)? seconds (re)
 
 Create two more heads and backup them
   $ hg up 0
@@ -122,10 +134,12 @@ Create two more heads and backup them
   $ mkcommit newhead2
   created new head
   $ hg pushbackup
+  starting backup .* (re)
   searching for changes
   remote: pushing 2 commits:
   remote:     f79c5017def3  newhead1
   remote:     667453c0787e  newhead2
+  finished in \d+\.(\d+)? seconds (re)
 
 Backup in background
   $ cat .hg/store/infinitepushlastbackupedstate
@@ -140,11 +154,13 @@ Backup with bookmark
   $ mkcommit commitwithbookmark
   $ hg book abook
   $ hg pushbackup
+  starting backup .* (re)
   searching for changes
   remote: pushing 3 commits:
   remote:     667453c0787e  newhead2
   remote:     773a3ba2e7c2  newcommit
   remote:     166ff4468f7d  commitwithbookmark
+  finished in \d+\.(\d+)? seconds (re)
   $ scratchbookmarks
   infinitepush/backups/test/[0-9a-zA-Z.-]+\$TESTTMP/client/bookmarks/abook 166ff4468f7da443df90d268158ba7d75d52585a (re)
   infinitepush/backups/test/[0-9a-zA-Z.-]+\$TESTTMP/client/heads/166ff4468f7da443df90d268158ba7d75d52585a 166ff4468f7da443df90d268158ba7d75d52585a (re)
@@ -155,6 +171,8 @@ Backup with bookmark
 Backup only bookmarks
   $ hg book newbook
   $ hg pushbackup
+  starting backup .* (re)
+  finished in \d+\.(\d+)? seconds (re)
   $ scratchbookmarks
   infinitepush/backups/test/[0-9a-zA-Z.-]+\$TESTTMP/client/bookmarks/abook 166ff4468f7da443df90d268158ba7d75d52585a (re)
   infinitepush/backups/test/[0-9a-zA-Z.-]+\$TESTTMP/client/bookmarks/newbook 166ff4468f7da443df90d268158ba7d75d52585a (re)
@@ -165,7 +183,9 @@ Backup only bookmarks
 
 Nothing changed, make sure no backup happens
   $ hg pushbackup
+  starting backup .* (re)
   nothing to backup
+  finished in \d+\.(\d+)? seconds (re)
 
 Obsolete a head, make sure backup happens
   $ hg prune .
@@ -173,6 +193,8 @@ Obsolete a head, make sure backup happens
   working directory now at 773a3ba2e7c2
   1 changesets pruned
   $ hg pushbackup
+  starting backup .* (re)
+  finished in \d+\.(\d+)? seconds (re)
   $ scratchbookmarks
   infinitepush/backups/test/[0-9a-zA-Z.-]+\$TESTTMP/client/bookmarks/abook 773a3ba2e7c25358df2e5b3cced70371333bc61c (re)
   infinitepush/backups/test/[0-9a-zA-Z.-]+\$TESTTMP/client/bookmarks/newbook 773a3ba2e7c25358df2e5b3cced70371333bc61c (re)
@@ -202,11 +224,13 @@ Rebase + backup. Make sure that two heads were deleted and head was saved
   $ hg rebase -s f79c5017de -d 773a3ba2e7c2
   rebasing 5:f79c5017def3 "newhead1"
   $ hg pushbackup
+  starting backup .* (re)
   searching for changes
   remote: pushing 3 commits:
   remote:     667453c0787e  newhead2
   remote:     773a3ba2e7c2  newcommit
   remote:     2d2e01441947  newhead1
+  finished in \d+\.(\d+)? seconds (re)
   $ scratchbookmarks
   infinitepush/backups/test/[0-9a-zA-Z.-]+\$TESTTMP/client/bookmarks/abook 773a3ba2e7c25358df2e5b3cced70371333bc61c (re)
   infinitepush/backups/test/[0-9a-zA-Z.-]+\$TESTTMP/client/bookmarks/newbook 773a3ba2e7c25358df2e5b3cced70371333bc61c (re)
@@ -250,17 +274,23 @@ Make a few public commits. Make sure we don't backup them
   o  7e6a6fd9c7c8c8c307ee14678f03d63af3a7b455 commit public
   
   $ hg pushbackup
+  starting backup .* (re)
+  finished in \d+\.(\d+)? seconds (re)
   $ scratchbookmarks
   infinitepush/backups/test/[0-9a-zA-Z.-]+\$TESTTMP/client/bookmarks/abook 773a3ba2e7c25358df2e5b3cced70371333bc61c (re)
   infinitepush/backups/test/[0-9a-zA-Z.-]+\$TESTTMP/client/bookmarks/newbook 773a3ba2e7c25358df2e5b3cced70371333bc61c (re)
   infinitepush/backups/test/[0-9a-zA-Z.-]+\$TESTTMP/client/heads/3a30e220fe42e969e34bbe8001b951a20f31f2e8 3a30e220fe42e969e34bbe8001b951a20f31f2e8 (re)
   infinitepush/backups/test/[0-9a-zA-Z.-]+\$TESTTMP/client/heads/d5609f7fa63352da538eeffbe3ffabed1779aafc d5609f7fa63352da538eeffbe3ffabed1779aafc (re)
   $ hg pushbackup
+  starting backup .* (re)
   nothing to backup
+  finished in \d+\.(\d+)? seconds (re)
 
 Backup bookmark that has '/bookmarks/' in the name. Make sure it was escaped
   $ hg book new/bookmarks/book
   $ hg pushbackup
+  starting backup .* (re)
+  finished in \d+\.(\d+)? seconds (re)
   $ scratchbookmarks
   infinitepush/backups/test/[0-9a-zA-Z.-]+\$TESTTMP/client/bookmarks/abook 773a3ba2e7c25358df2e5b3cced70371333bc61c (re)
   infinitepush/backups/test/[0-9a-zA-Z.-]+\$TESTTMP/client/bookmarks/new/bookmarksbookmarks/book 3446a384dd701da41cd83cbd9562805fc6412c0e (re)
@@ -276,9 +306,12 @@ Backup to different path
   > EOF
   $ hg book somebook
   $ hg --config paths.default=brokenpath pushbackup
+  starting backup .* (re)
   abort: repository $TESTTMP/client/brokenpath not found!
   [255]
   $ hg pushbackup nondefault --traceback
+  starting backup .* (re)
+  finished in \d+\.(\d+)? seconds (re)
   $ scratchbookmarks
   infinitepush/backups/test/[0-9a-zA-Z.-]+\$TESTTMP/client/bookmarks/abook 773a3ba2e7c25358df2e5b3cced70371333bc61c (re)
   infinitepush/backups/test/[0-9a-zA-Z.-]+\$TESTTMP/client/bookmarks/new/bookmarksbookmarks/book 3446a384dd701da41cd83cbd9562805fc6412c0e (re)
@@ -325,7 +358,9 @@ Make sure pushbackup works
   1 changesets pruned
   $ hg book somebook
   $ hg pushbackup
+  starting backup .* (re)
   searching for changes
+  finished in \d+\.(\d+)? seconds (re)
   $ scratchbookmarks
   infinitepush/backups/test/[0-9a-zA-Z.-]+\$TESTTMP/client/bookmarks/somebook 630839011471e17f808b92ab084bedfaca33b110 (re)
 
@@ -336,6 +371,8 @@ Make sure it wasn't backed up.
   $ hg add secret
   $ hg ci -Am secret --secret
   $ hg pushbackup
+  starting backup .* (re)
   nothing to backup
+  finished in \d+\.(\d+)? seconds (re)
   $ scratchbookmarks
   infinitepush/backups/test/[0-9a-zA-Z.-]+\$TESTTMP/client/bookmarks/somebook 630839011471e17f808b92ab084bedfaca33b110 (re)

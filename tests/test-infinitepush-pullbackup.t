@@ -20,9 +20,11 @@ Backup
   $ mkcommit firstcommit
   $ hg book abook
   $ hg pushbackup
+  starting backup .* (re)
   searching for changes
   remote: pushing 1 commit:
   remote:     89ecc969c0ac  firstcommit
+  finished in \d+\.(\d+)? seconds (re)
   $ cd ..
 
 Restore
@@ -47,9 +49,11 @@ Create second backup source
   $ mkcommit secondcommit
   $ hg book secondbook
   $ hg pushbackup
+  starting backup .* (re)
   searching for changes
   remote: pushing 1 commit:
   remote:     c1bfda8efb6e  secondcommit
+  finished in \d+\.(\d+)? seconds (re)
   $ cd ..
 
 Restore with ambiguous repo root
@@ -77,6 +81,8 @@ Check bookmarks escaping
   $ hg book book/bookmarks/somebook
   $ hg book book/bookmarksbookmarks/somebook
   $ hg pushbackup
+  starting backup .* (re)
+  finished in \d+\.(\d+)? seconds (re)
   $ cd ../restored
   $ hg pullbackup --reporoot $TESTTMP/backupsource
   pulling from ssh://user@dummy/repo
@@ -101,9 +107,11 @@ Create a repo with `/bookmarks/` in path
   $ mkcommit commitinweirdrepo
   $ hg book bookbackupsource3
   $ hg pushbackup
+  starting backup .* (re)
   searching for changes
   remote: pushing 1 commit:
   remote:     a2a9ae518b62  commitinweirdrepo
+  finished in \d+\.(\d+)? seconds (re)
   $ cd ../../restored
   $ hg pullbackup --reporoot $TESTTMP/bookmarks/backupsource3
   pulling from ssh://user@dummy/repo
@@ -123,10 +131,13 @@ Create a repo with `/bookmarks/` in path
 Check that correct path is used in pushbackup
   $ cd ../backupsource
   $ hg --config paths.default=badpath --config paths.anotherpath=ssh://user@dummy/repo pushbackup
+  starting backup .* (re)
   abort: repository $TESTTMP/backupsource/badpath not found!
   [255]
   $ hg pushbackup anotherpath --config paths.default=badpath --config paths.anotherpath=ssh://user@dummy/repo
+  starting backup .* (re)
   nothing to backup
+  finished in \d+\.(\d+)? seconds (re)
   $ cd ../restored
 
 Check that correct path is used in pullbackup
@@ -152,11 +163,13 @@ Backup and restore two commits
   $ mkcommit secondinbatch
   created new head
   $ hg pushbackup
+  starting backup .* (re)
   searching for changes
   remote: pushing 3 commits:
   remote:     89ecc969c0ac  firstcommit
   remote:     33c1c9df81e9  firstinbatch
   remote:     0e1a088ff282  secondinbatch
+  finished in \d+\.(\d+)? seconds (re)
   $ cd ../restored
 
 Install server-side extension that will print message every time when bundlerepo
@@ -182,11 +195,13 @@ Backup as another user, then restore it
   $ hg log -r . -T '{node}\n'
   e0230a60975b38a9014f098fb973199efd25c46f
   $ HGUSER=anotheruser hg pushbackup
+  starting backup .* (re)
   searching for changes
   remote: pushing 3 commits:
   remote:     89ecc969c0ac  firstcommit
   remote:     0e1a088ff282  secondinbatch
   remote:     e0230a60975b  backupasanotheruser
+  finished in \d+\.(\d+)? seconds (re)
   $ cd ../restored
 
 Make sure commit was pulled by checking that commit is present

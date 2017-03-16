@@ -78,7 +78,9 @@ Strip commit server-side
 Now do a backup, it should not fail
   $ cd ../client
   $ hg pushbackup
+  starting backup .* (re)
   searching for changes
+  finished in \d+\.(\d+)? seconds (re)
 
 Now try to restore it from different client. Make sure bookmark
 `goodbooktobackup` is restored

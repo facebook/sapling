@@ -193,6 +193,8 @@ def waitbackup(ui, repo, timeout):
         raise
 
 def _dobackup(ui, repo, dest, **opts):
+    ui.status(_('starting backup %s\n') % time.strftime('%H:%M:%S %d %b %Y %Z'))
+    start = time.time()
     username = ui.shortuser(ui.username())
     backuptip, bookmarkshash = _readbackupstatefile(username, repo)
     bookmarkstobackup = _getbookmarkstobackup(username, repo)
@@ -229,6 +231,7 @@ def _dobackup(ui, repo, dest, **opts):
         else:
             ui.status(_('nothing to backup\n'))
     finally:
+        ui.status(_('finished in %f seconds\n') % (time.time() - start))
         unwrapfunction(changegroup.cg2packer, 'deltaparent', _deltaparent)
     return 0
 

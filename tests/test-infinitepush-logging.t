@@ -43,6 +43,7 @@
 Check that logging works for b2x:infinitepushscratchbookmarks part
   $ cd client
   $ hg pushbackup
+  starting backup .* (re)
   searching for changes
   remote: infinitepush: b2x:infinitepush \(eventtype=start, hostname=[-.0-9a-z]+, reponame=babar, requestid=\d+, user=\w+\) (re)
   remote: pushing 1 commit:
@@ -52,6 +53,7 @@ Check that logging works for b2x:infinitepushscratchbookmarks part
   remote: infinitepush: b2x:infinitepush \(elapsed=.+, eventtype=success, hostname=[-.0-9a-z]+, reponame=babar, requestid=\d+, user=\w+\) (re)
   remote: infinitepush: b2x:infinitepushscratchbookmarks \(eventtype=start, hostname=[-.0-9a-z]+, reponame=babar, requestid=\d+, user=\w+\) (re)
   remote: infinitepush: b2x:infinitepushscratchbookmarks \(elapsed=.+, eventtype=success, hostname=[-.0-9a-z]+, reponame=babar, requestid=\d+, user=\w+\) (re)
+  finished in \d+\.(\d+)? seconds (re)
   $ cd ..
 
 Make upload to bundlestore fail
