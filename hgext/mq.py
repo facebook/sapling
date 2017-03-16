@@ -405,18 +405,12 @@ def newcommit(repo, phase, *args, **kwargs):
     if phase is None:
         if repo.ui.configbool('mq', 'secret', False):
             phase = phases.secret
+    overrides = {('ui', 'allowemptycommit'): True}
     if phase is not None:
-        phasebackup = repo.ui.backupconfig('phases', 'new-commit')
-    allowemptybackup = repo.ui.backupconfig('ui', 'allowemptycommit')
-    try:
-        if phase is not None:
-            repo.ui.setconfig('phases', 'new-commit', phase, 'mq')
+        overrides[('phases', 'new-commit')] = phase
+    with repo.ui.configoverride(overrides, 'mq'):
         repo.ui.setconfig('ui', 'allowemptycommit', True)
         return repo.commit(*args, **kwargs)
-    finally:
-        repo.ui.restoreconfig(allowemptybackup)
-        if phase is not None:
-            repo.ui.restoreconfig(phasebackup)
 
 class AbortNoCleanup(error.Abort):
     pass
