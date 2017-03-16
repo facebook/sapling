@@ -4754,7 +4754,7 @@ def status(ui, repo, *pats, **opts):
     stat = repo.status(node1, node2, m,
                        'ignored' in show, 'clean' in show, 'unknown' in show,
                        opts.get('subrepos'))
-    changestates = zip(states, 'MAR!?IC', stat)
+    changestates = zip(states, pycompat.iterbytestr('MAR!?IC'), stat)
 
     if (opts.get('all') or opts.get('copies')
         or ui.configbool('ui', 'statuscopies')) and not opts.get('no_status'):
