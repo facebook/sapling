@@ -640,14 +640,15 @@ def formatspec(expr, *args):
         m = l // 2
         return '(%s or %s)' % (listexp(s[:m], t), listexp(s[m:], t))
 
+    expr = pycompat.bytestr(expr)
     ret = ''
     pos = 0
     arg = 0
     while pos < len(expr):
-        c = expr[pos:pos + 1]
+        c = expr[pos]
         if c == '%':
             pos += 1
-            d = expr[pos:pos + 1]
+            d = expr[pos]
             if d == '%':
                 ret += d
             elif d in 'dsnbr':
@@ -656,7 +657,7 @@ def formatspec(expr, *args):
             elif d == 'l':
                 # a list of some type
                 pos += 1
-                d = expr[pos:pos + 1]
+                d = expr[pos]
                 ret += listexp(list(args[arg]), d)
                 arg += 1
             else:
