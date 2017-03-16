@@ -172,30 +172,47 @@ def restore(ui, repo, dest=None, **opts):
 
     return result
 
-@command('debugcheckbackup', restoreoptions)
+@command('debugcheckbackup',
+         [('', 'all', None, _('check all backups that user have')),
+         ] + restoreoptions)
 def checkbackup(ui, repo, dest=None, **opts):
     """
     Checks that all the nodes that backup needs are available in bundlestore
+    This command can check either specific backup (see restoreoptions) or all
+    backups for the user
     """
-    other = _getremote(repo, ui, dest, **opts)
 
     sourcereporoot = opts.get('reporoot')
     sourcehostname = opts.get('hostname')
     username = opts.get('user') or ui.shortuser(ui.username())
 
+    other = _getremote(repo, ui, dest, **opts)
     allbackupstates = _downloadbackupstate(ui, other, sourcereporoot,
                                            sourcehostname, username)
+    if not opts.get('all'):
+        _checkbackupstates(allbackupstates)
 
-    _checkbackupstates(allbackupstates)
-    __, bkpstate = allbackupstates.popitem()
-    batch = other.iterbatch()
-    for hexnode in list(bkpstate.heads) + bkpstate.localbookmarks.values():
-        batch.lookup(hexnode)
-    batch.submit()
-    lookupresults = batch.results()
-    for r in lookupresults:
-        # iterate over results to make it throw if revision was not found
-        pass
+    ret = 0
+    while allbackupstates:
+        # recreate remote because `lookup` request might have failed and
+        # connection was closed
+        other = _getremote(repo, ui, dest, **opts)
+        key, bkpstate = allbackupstates.popitem()
+        ui.status(_('checking %s on %s\n') % (key[1], key[0]))
+        batch = other.iterbatch()
+        for hexnode in list(bkpstate.heads) + bkpstate.localbookmarks.values():
+            batch.lookup(hexnode)
+        batch.submit()
+        lookupresults = batch.results()
+        try:
+            for r in lookupresults:
+                # iterate over results to make it throw if revision
+                # was not found
+                pass
+        except error.RepoError as e:
+            ui.warn(_('%s\n') % e)
+            ret = 255
+    return ret
 
 @command('debugwaitbackup', [('', 'timeout', '', 'timeout value')])
 def waitbackup(ui, repo, timeout):

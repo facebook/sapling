@@ -213,8 +213,36 @@ Make sure commit was pulled by checking that commit is present
   e0230a60975b38a9014f098fb973199efd25c46f
 
 Test debugcheckbackup
+  $ hg debugcheckbackup
+  abort: ambiguous repo root to restore: ['$TESTTMP', '$TESTTMP/backupsource', '$TESTTMP/backupsource2', '$TESTTMP/bookmarks/backupsource3']
+  (set --reporoot to disambiguate)
+  [255]
   $ hg debugcheckbackup --user anotheruser --reporoot $TESTTMP/backupsource
+  checking \$TESTTMP/backupsource on .* (re)
+  $ hg debugcheckbackup --all | sort
+  checking \$TESTTMP on .* (re)
+  checking \$TESTTMP/backupsource on .* (re)
+  checking \$TESTTMP/backupsource2 on .* (re)
+  checking \$TESTTMP/bookmarks/backupsource3 on .* (re)
   $ rm ../repo/.hg/scratchbranches/index/nodemap/e0230a60975b38a9014f098fb973199efd25c46f
   $ hg debugcheckbackup --user anotheruser --reporoot $TESTTMP/backupsource
-  abort: unknown revision 'e0230a60975b38a9014f098fb973199efd25c46f'!
+  checking \$TESTTMP/backupsource on .* (re)
+  unknown revision 'e0230a60975b38a9014f098fb973199efd25c46f'
   [255]
+
+Make another backup from backupsource2 and run `hg debugcheckbackup --all` again.
+Make sure that both repos were checked even though check for one of them fails
+  $ cd ../backupsource2
+  $ mkcommit newcommit
+  $ HGUSER=anotheruser hg pushbackup
+  starting backup .* (re)
+  searching for changes
+  remote: pushing 2 commits:
+  remote:     c1bfda8efb6e  secondcommit
+  remote:     c03baa769a20  newcommit
+  finished in \d+\.(\d+)? seconds (re)
+  $ cd ../backupsource
+  $ hg debugcheckbackup --user anotheruser --all | sort
+  unknown revision 'e0230a60975b38a9014f098fb973199efd25c46f'
+  checking \$TESTTMP/backupsource on .* (re)
+  checking \$TESTTMP/backupsource2 on .* (re)
