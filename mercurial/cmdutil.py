@@ -971,20 +971,18 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
                     editor = None
                 else:
                     editor = getcommiteditor(editform=editform, **opts)
-                allowemptyback = repo.ui.backupconfig('ui', 'allowemptycommit')
                 extra = {}
                 for idfunc in extrapreimport:
                     extrapreimportmap[idfunc](repo, extractdata, extra, opts)
-                try:
-                    if partial:
-                        repo.ui.setconfig('ui', 'allowemptycommit', True)
+                overrides = {}
+                if partial:
+                    overrides[('ui', 'allowemptycommit')] = True
+                with repo.ui.configoverride(overrides, 'import'):
                     n = repo.commit(message, user,
                                     date, match=m,
                                     editor=editor, extra=extra)
                     for idfunc in extrapostimport:
                         extrapostimportmap[idfunc](repo[n])
-                finally:
-                    repo.ui.restoreconfig(allowemptyback)
         else:
             if opts.get('exact') or importbranch:
                 branch = branch or 'default'
