@@ -1079,7 +1079,7 @@ class dirstate(object):
             # a) not matching matchfn b) ignored, c) missing, or d) under a
             # symlink directory.
             if not results and matchalways:
-                visit = dmap.keys()
+                visit = [f for f in dmap]
             else:
                 visit = [f for f in dmap if f not in results and matchfn(f)]
             visit.sort()
