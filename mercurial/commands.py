@@ -1702,25 +1702,22 @@ def _docommit(ui, repo, *pats, **opts):
             return 1
     else:
         def commitfunc(ui, repo, message, match, opts):
-            backup = ui.backupconfig('phases', 'new-commit')
+            overrides = {}
+            if opts.get('secret'):
+                overrides[('phases', 'new-commit')] = 'secret'
+
             baseui = repo.baseui
-            basebackup = baseui.backupconfig('phases', 'new-commit')
-            try:
-                if opts.get('secret'):
-                    ui.setconfig('phases', 'new-commit', 'secret', 'commit')
-                    # Propagate to subrepos
-                    baseui.setconfig('phases', 'new-commit', 'secret', 'commit')
-
-                editform = cmdutil.mergeeditform(repo[None], 'commit.normal')
-                editor = cmdutil.getcommiteditor(editform=editform, **opts)
-                return repo.commit(message, opts.get('user'), opts.get('date'),
-                                   match,
-                                   editor=editor,
-                                   extra=extra)
-            finally:
-                ui.restoreconfig(backup)
-                repo.baseui.restoreconfig(basebackup)
-
+            with baseui.configoverride(overrides, 'commit'):
+                with ui.configoverride(overrides, 'commit'):
+                    editform = cmdutil.mergeeditform(repo[None],
+                                                     'commit.normal')
+                    editor = cmdutil.getcommiteditor(editform=editform, **opts)
+                    return repo.commit(message,
+                                       opts.get('user'),
+                                       opts.get('date'),
+                                       match,
+                                       editor=editor,
+                                       extra=extra)
 
         node = cmdutil.commit(ui, repo, commitfunc, pats, opts)
 
