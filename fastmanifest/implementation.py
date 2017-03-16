@@ -530,7 +530,7 @@ def fastdelta(mf, mfgetter, base, changes):
         # For large changes, it's much cheaper to just build the text and
         # diff it.
         arraytext = bytearray(mf.text())
-        deltatext = mdiff.textdiff(base, arraytext)
+        deltatext = mdiff.textdiff(util.buffer(base), util.buffer(arraytext))
 
     return arraytext, deltatext
 

@@ -360,3 +360,17 @@ Ensure shelve works (t15991119)
   $ hg shelve --config extensions.shelve=
   shelved as default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cd ..
+
+Test committing large commits (fastdelta code path)
+  $ hg init largecommit
+  $ cd largecommit
+  $ cat >> .hg/hgrc << EOF
+  > [extensions]
+  > fastmanifest=
+  > EOF
+  $ echo a > first
+  $ hg commit -Aqm 'first commit'
+  $ hg debugcachemanifest -r .
+  $ for i in {0..1001} ; do echo a > $i ; done
+  $ hg commit -Aqm 'big commit'
