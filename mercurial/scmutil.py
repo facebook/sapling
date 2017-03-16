@@ -885,7 +885,7 @@ class filecache(object):
 
     def __call__(self, func):
         self.func = func
-        self.name = func.__name__
+        self.name = func.__name__.encode('ascii')
         return self
 
     def __get__(self, obj, type=None):
