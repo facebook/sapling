@@ -14,6 +14,10 @@
     # determines how much time to wait on the lock. If timeout happens then
     # backups process aborts.
     waittimeout = 30
+
+    # Backup at most maxheadstobackup heads, other heads are ignored.
+    # Negative number means backup everything.
+    maxheadstobackup = -1
 """
 
 from __future__ import absolute_import
@@ -39,6 +43,7 @@ from mercurial import (
     hg,
     lock as lockmod,
     osutil,
+    phases,
     util,
 )
 
@@ -212,7 +217,15 @@ def _dobackup(ui, repo, dest, **opts):
     username = ui.shortuser(ui.username())
     bkpstate = _readlocalbackupstate(ui, repo)
 
-    currentheads = set((ctx.hex() for ctx in repo.set('head() & draft()')))
+    maxheadstobackup = ui.configint('infinitepushbackup',
+                                    'maxheadstobackup', -1)
+
+    currentheads = [ctx.hex() for ctx in repo.set('head() & draft()')]
+    if maxheadstobackup > 0:
+        currentheads = currentheads[-maxheadstobackup:]
+    elif maxheadstobackup == 0:
+        currentheads = []
+    currentheads = set(currentheads)
     newheads = currentheads - bkpstate.heads
     removedheads = bkpstate.heads - currentheads
     other = _getremote(repo, ui, dest, **opts)
@@ -221,12 +234,9 @@ def _dobackup(ui, repo, dest, **opts):
     newheads = set(filter(lambda hex: hex not in badhexnodes, newheads))
     currentheads = set(filter(lambda hex: hex not in badhexnodes, currentheads))
 
-    localbookmarks = {}
-    secret = set(ctx.hex() for ctx in repo.set('secret()'))
-    for bookmark, node in repo._bookmarks.iteritems():
-        hexnode = hex(node)
-        if hexnode not in secret and hexnode not in badhexnodes:
-            localbookmarks[bookmark] = hexnode
+    localbookmarks = _getlocalbookmarks(repo)
+    localbookmarks = _filterbookmarks(localbookmarks, repo, currentheads,
+                                      badhexnodes)
 
     newbookmarks = _dictdiff(localbookmarks, bkpstate.localbookmarks)
     removedbookmarks = _dictdiff(bkpstate.localbookmarks, localbookmarks)
@@ -271,6 +281,31 @@ def _dobackup(ui, repo, dest, **opts):
 _backupstatefile = 'infinitepushbackupstate'
 
 # Common helper functions
+
+def _getlocalbookmarks(repo):
+    localbookmarks = {}
+    for bookmark, node in repo._bookmarks.iteritems():
+        hexnode = hex(node)
+        localbookmarks[bookmark] = hexnode
+    return localbookmarks
+
+def _filterbookmarks(localbookmarks, repo, headstobackup, badhexnodes):
+    '''Filters out some bookmarks from being backed up
+
+    Filters out bookmarks that point to secret commits and bookmarks that do not
+    point to ancestors of headstobackup or public commits
+    '''
+
+    headrevstobackup = [repo[hexhead].rev() for hexhead in headstobackup]
+    ancestors = repo.changelog.ancestors(headrevstobackup, inclusive=True)
+    secret = set(ctx.hex() for ctx in repo.set('secret()'))
+    filteredbooks = {}
+    for bookmark, hexnode in localbookmarks.iteritems():
+        if (hexnode not in secret and hexnode not in badhexnodes and
+                (repo[hexnode].rev() in ancestors or
+                 repo[hexnode].phase() == phases.public)):
+            filteredbooks[bookmark] = hexnode
+    return filteredbooks
 
 def _downloadbackupstate(ui, other, sourcereporoot, sourcehostname, username):
     pattern = _getcommonuserprefix(username) + '/*'

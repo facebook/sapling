@@ -386,3 +386,27 @@ Make sure it wasn't backed up.
   finished in \d+\.(\d+)? seconds (re)
   $ scratchbookmarks
   infinitepush/backups/test/[0-9a-zA-Z.-]+\$TESTTMP/client/bookmarks/somebook 630839011471e17f808b92ab084bedfaca33b110 (re)
+
+Create two heads, set maxheadstobackup to 1, make sure only latest head was backed up
+  $ hg up -q 0
+  $ mkcommit headone
+  created new head
+  $ hg up -q 0
+  $ mkcommit headtwo
+  created new head
+  $ hg pushbackup --config infinitepushbackup.maxheadstobackup=1
+  starting backup .* (re)
+  searching for changes
+  remote: pushing 1 commit:
+  remote:     6c4f4b30ae4c  headtwo
+  finished in \d+\.(\d+)? seconds (re)
+  $ scratchbookmarks
+  infinitepush/backups/test/[0-9a-zA-Z.-]+\$TESTTMP/client/bookmarks/somebook 630839011471e17f808b92ab084bedfaca33b110 (re)
+  infinitepush/backups/test/[0-9a-zA-Z.-]+\$TESTTMP/client/heads/6c4f4b30ae4c2dd928d551836c70c741ee836650 6c4f4b30ae4c2dd928d551836c70c741ee836650 (re)
+
+Now set maxheadstobackup to 0 and backup again. Make sure nothing is backed up now
+  $ hg pushbackup --config infinitepushbackup.maxheadstobackup=0
+  starting backup .* (re)
+  finished in \d+\.(\d+)? seconds (re)
+  $ scratchbookmarks
+  infinitepush/backups/test/[0-9a-zA-Z.-]+\$TESTTMP/client/bookmarks/somebook 630839011471e17f808b92ab084bedfaca33b110 (re)
