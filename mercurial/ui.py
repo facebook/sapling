@@ -935,6 +935,9 @@ class ui(object):
         This is separate in part so that extensions (like chg) can
         override how a pager is invoked.
         """
+        if command == 'cat':
+            # Save ourselves some work.
+            return
         # If the command doesn't contain any of these characters, we
         # assume it's a binary and exec it directly. This means for
         # simple pager command configurations, we can degrade
