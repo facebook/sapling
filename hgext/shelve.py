@@ -314,17 +314,16 @@ def getcommitfunc(extra, interactive, editor=False):
         hasmq = util.safehasattr(repo, 'mq')
         if hasmq:
             saved, repo.mq.checkapplied = repo.mq.checkapplied, False
-        backup = repo.ui.backupconfig('phases', 'new-commit')
+        overrides = {('phases', 'new-commit'): phases.secret}
         try:
-            repo.ui.setconfig('phases', 'new-commit', phases.secret)
             editor_ = False
             if editor:
                 editor_ = cmdutil.getcommiteditor(editform='shelve.shelve',
                                                   **opts)
-            return repo.commit(message, shelveuser, opts.get('date'), match,
-                               editor=editor_, extra=extra)
+            with repo.ui.configoverride(overrides):
+                return repo.commit(message, shelveuser, opts.get('date'),
+                                   match, editor=editor_, extra=extra)
         finally:
-            repo.ui.restoreconfig(backup)
             if hasmq:
                 repo.mq.checkapplied = saved
 
@@ -850,9 +849,7 @@ def _dounshelve(ui, repo, *shelved, **opts):
 
     oldquiet = ui.quiet
     lock = tr = None
-    forcemerge = ui.backupconfig('ui', 'forcemerge')
     try:
-        ui.setconfig('ui', 'forcemerge', opts.get('tool', ''), 'unshelve')
         lock = repo.lock()
 
         tr = repo.transaction('unshelve', report=lambda x: None)
@@ -866,31 +863,33 @@ def _dounshelve(ui, repo, *shelved, **opts):
         # and shelvectx is the unshelved changes. Then we merge it all down
         # to the original pctx.
 
-        tmpwctx, addedbefore = _commitworkingcopychanges(ui, repo, opts,
-                                                         tmpwctx)
+        overrides = {('ui', 'forcemerge'): opts.get('tool', '')}
+        with ui.configoverride(overrides, 'unshelve'):
+            tmpwctx, addedbefore = _commitworkingcopychanges(ui, repo, opts,
+                                                             tmpwctx)
 
-        repo, shelvectx = _unshelverestorecommit(ui, repo, basename, oldquiet)
-        _checkunshelveuntrackedproblems(ui, repo, shelvectx)
-        branchtorestore = ''
-        if shelvectx.branch() != shelvectx.p1().branch():
-            branchtorestore = shelvectx.branch()
+            repo, shelvectx = _unshelverestorecommit(ui, repo, basename,
+                                                     oldquiet)
+            _checkunshelveuntrackedproblems(ui, repo, shelvectx)
+            branchtorestore = ''
+            if shelvectx.branch() != shelvectx.p1().branch():
+                branchtorestore = shelvectx.branch()
 
-        shelvectx = _rebaserestoredcommit(ui, repo, opts, tr, oldtiprev,
-                                          basename, pctx, tmpwctx, shelvectx,
-                                          branchtorestore)
-        mergefiles(ui, repo, pctx, shelvectx)
-        restorebranch(ui, repo, branchtorestore)
-        _forgetunknownfiles(repo, shelvectx, addedbefore)
+            shelvectx = _rebaserestoredcommit(ui, repo, opts, tr, oldtiprev,
+                                              basename, pctx, tmpwctx,
+                                              shelvectx, branchtorestore)
+            mergefiles(ui, repo, pctx, shelvectx)
+            restorebranch(ui, repo, branchtorestore)
+            _forgetunknownfiles(repo, shelvectx, addedbefore)
 
-        shelvedstate.clear(repo)
-        _finishunshelve(repo, oldtiprev, tr)
-        unshelvecleanup(ui, repo, basename, opts)
+            shelvedstate.clear(repo)
+            _finishunshelve(repo, oldtiprev, tr)
+            unshelvecleanup(ui, repo, basename, opts)
     finally:
         ui.quiet = oldquiet
         if tr:
             tr.release()
         lockmod.release(lock)
-        ui.restoreconfig(forcemerge)
 
 @command('shelve',
          [('A', 'addremove', None,
