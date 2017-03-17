@@ -179,3 +179,86 @@ class config(object):
                 fp, fp.mode))
         self.parse(path, fp.read(),
                    sections=sections, remap=remap, include=self.read)
+
+def parselist(value):
+    """parse a configuration value as a list of comma/space separated strings
+
+    >>> parselist('this,is "a small" ,test')
+    ['this', 'is', 'a small', 'test']
+    """
+
+    def _parse_plain(parts, s, offset):
+        whitespace = False
+        while offset < len(s) and (s[offset:offset + 1].isspace()
+                                   or s[offset:offset + 1] == ','):
+            whitespace = True
+            offset += 1
+        if offset >= len(s):
+            return None, parts, offset
+        if whitespace:
+            parts.append('')
+        if s[offset:offset + 1] == '"' and not parts[-1]:
+            return _parse_quote, parts, offset + 1
+        elif s[offset:offset + 1] == '"' and parts[-1][-1] == '\\':
+            parts[-1] = parts[-1][:-1] + s[offset:offset + 1]
+            return _parse_plain, parts, offset + 1
+        parts[-1] += s[offset:offset + 1]
+        return _parse_plain, parts, offset + 1
+
+    def _parse_quote(parts, s, offset):
+        if offset < len(s) and s[offset:offset + 1] == '"': # ""
+            parts.append('')
+            offset += 1
+            while offset < len(s) and (s[offset:offset + 1].isspace() or
+                    s[offset:offset + 1] == ','):
+                offset += 1
+            return _parse_plain, parts, offset
+
+        while offset < len(s) and s[offset:offset + 1] != '"':
+            if (s[offset:offset + 1] == '\\' and offset + 1 < len(s)
+                    and s[offset + 1:offset + 2] == '"'):
+                offset += 1
+                parts[-1] += '"'
+            else:
+                parts[-1] += s[offset:offset + 1]
+            offset += 1
+
+        if offset >= len(s):
+            real_parts = _configlist(parts[-1])
+            if not real_parts:
+                parts[-1] = '"'
+            else:
+                real_parts[0] = '"' + real_parts[0]
+                parts = parts[:-1]
+                parts.extend(real_parts)
+            return None, parts, offset
+
+        offset += 1
+        while offset < len(s) and s[offset:offset + 1] in [' ', ',']:
+            offset += 1
+
+        if offset < len(s):
+            if offset + 1 == len(s) and s[offset:offset + 1] == '"':
+                parts[-1] += '"'
+                offset += 1
+            else:
+                parts.append('')
+        else:
+            return None, parts, offset
+
+        return _parse_plain, parts, offset
+
+    def _configlist(s):
+        s = s.rstrip(' ,')
+        if not s:
+            return []
+        parser, parts, offset = _parse_plain, [''], 0
+        while parser:
+            parser, parts, offset = parser(parts, s, offset)
+        return parts
+
+    if value is not None and isinstance(value, bytes):
+        result = _configlist(value.lstrip(' ,\n'))
+    else:
+        result = value
+    return result or []

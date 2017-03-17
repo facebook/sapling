@@ -562,85 +562,11 @@ class ui(object):
         >>> u.configlist(s, 'list1')
         ['this', 'is', 'a small', 'test']
         """
-
-        def _parse_plain(parts, s, offset):
-            whitespace = False
-            while offset < len(s) and (s[offset:offset + 1].isspace()
-                                       or s[offset:offset + 1] == ','):
-                whitespace = True
-                offset += 1
-            if offset >= len(s):
-                return None, parts, offset
-            if whitespace:
-                parts.append('')
-            if s[offset:offset + 1] == '"' and not parts[-1]:
-                return _parse_quote, parts, offset + 1
-            elif s[offset:offset + 1] == '"' and parts[-1][-1] == '\\':
-                parts[-1] = parts[-1][:-1] + s[offset:offset + 1]
-                return _parse_plain, parts, offset + 1
-            parts[-1] += s[offset:offset + 1]
-            return _parse_plain, parts, offset + 1
-
-        def _parse_quote(parts, s, offset):
-            if offset < len(s) and s[offset:offset + 1] == '"': # ""
-                parts.append('')
-                offset += 1
-                while offset < len(s) and (s[offset:offset + 1].isspace() or
-                        s[offset:offset + 1] == ','):
-                    offset += 1
-                return _parse_plain, parts, offset
-
-            while offset < len(s) and s[offset:offset + 1] != '"':
-                if (s[offset:offset + 1] == '\\' and offset + 1 < len(s)
-                        and s[offset + 1:offset + 2] == '"'):
-                    offset += 1
-                    parts[-1] += '"'
-                else:
-                    parts[-1] += s[offset:offset + 1]
-                offset += 1
-
-            if offset >= len(s):
-                real_parts = _configlist(parts[-1])
-                if not real_parts:
-                    parts[-1] = '"'
-                else:
-                    real_parts[0] = '"' + real_parts[0]
-                    parts = parts[:-1]
-                    parts.extend(real_parts)
-                return None, parts, offset
-
-            offset += 1
-            while offset < len(s) and s[offset:offset + 1] in [' ', ',']:
-                offset += 1
-
-            if offset < len(s):
-                if offset + 1 == len(s) and s[offset:offset + 1] == '"':
-                    parts[-1] += '"'
-                    offset += 1
-                else:
-                    parts.append('')
-            else:
-                return None, parts, offset
-
-            return _parse_plain, parts, offset
-
-        def _configlist(s):
-            s = s.rstrip(' ,')
-            if not s:
-                return []
-            parser, parts, offset = _parse_plain, [''], 0
-            while parser:
-                parser, parts, offset = parser(parts, s, offset)
-            return parts
-
-        result = self.config(section, name, untrusted=untrusted)
-        if result is None:
-            result = default or []
-        if isinstance(result, bytes):
-            result = _configlist(result.lstrip(' ,\n'))
-            if result is None:
-                result = default or []
-        return result
+        # default is not always a list
+        if isinstance(default, bytes):
+            default = config.parselist(default)
+        return self.configwith(config.parselist, section, name, default or [],
+                               'list', untrusted)
 
     def hasconfig(self, section, name, untrusted=False):
         return self._data(untrusted).hasitem(section, name)
