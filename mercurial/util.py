@@ -2137,6 +2137,9 @@ def escapestr(s):
     # Python 3 compatibility
     return codecs.escape_encode(s)[0]
 
+def unescapestr(s):
+    return s.decode('string_escape')
+
 def uirepr(s):
     # Avoid double backslash in Windows path repr()
     return repr(s).replace('\\\\', '\\')

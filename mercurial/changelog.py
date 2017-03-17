@@ -32,7 +32,7 @@ def _string_escape(text):
     >>> s
     'ab\\ncd\\\\\\\\n\\x00ab\\rcd\\\\\\n'
     >>> res = _string_escape(s)
-    >>> s == res.decode('string_escape')
+    >>> s == util.unescapestr(res)
     True
     """
     # subset of the string_escape codec
@@ -57,7 +57,7 @@ def decodeextra(text):
                 l = l.replace('\\\\', '\\\\\n')
                 l = l.replace('\\0', '\0')
                 l = l.replace('\n', '')
-            k, v = l.decode('string_escape').split(':', 1)
+            k, v = util.unescapestr(l).split(':', 1)
             extra[k] = v
     return extra
 
