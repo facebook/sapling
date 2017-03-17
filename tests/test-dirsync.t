@@ -592,3 +592,96 @@ Dont mirror during shelve
   unshelving change 'default'
   $ hg status
   M dir1/a
+
+  $ cd ..
+
+Test .dirsync in the working copy
+
+  $ rm -rf repo
+  $ hg init repo
+  $ cd repo
+  $ cat >> .hg/hgrc <<EOF
+  > [dirsync]
+  > group1.dir1 = dir1/
+  > group1.dir2 = dir2/
+  > EOF
+  $ cat >> .dirsync <<EOF
+  > group1.dir3 = dir3/
+  > group2.dir1 = dir4/
+  > group2.dir2 = dir5/
+  > EOF
+  $ mkdir dir2 dir5
+  $ echo a > dir2/a
+  $ echo b > dir5/b
+  $ hg commit -m init -A dir2/a dir5/b
+  mirrored adding 'dir2/a' to 'dir1/a'
+  mirrored adding 'dir2/a' to 'dir3/a'
+  mirrored adding 'dir5/b' to 'dir4/b'
+  $ hg log -p -r .
+  changeset:   0:1cde422b6101
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     init
+  
+  diff -r 000000000000 -r 1cde422b6101 dir1/a
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/dir1/a	Thu Jan 01 00:00:00 1970 +0000
+  @@ -0,0 +1,1 @@
+  +a
+  diff -r 000000000000 -r 1cde422b6101 dir2/a
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/dir2/a	Thu Jan 01 00:00:00 1970 +0000
+  @@ -0,0 +1,1 @@
+  +a
+  diff -r 000000000000 -r 1cde422b6101 dir3/a
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/dir3/a	Thu Jan 01 00:00:00 1970 +0000
+  @@ -0,0 +1,1 @@
+  +a
+  diff -r 000000000000 -r 1cde422b6101 dir4/b
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/dir4/b	Thu Jan 01 00:00:00 1970 +0000
+  @@ -0,0 +1,1 @@
+  +b
+  diff -r 000000000000 -r 1cde422b6101 dir5/b
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/dir5/b	Thu Jan 01 00:00:00 1970 +0000
+  @@ -0,0 +1,1 @@
+  +b
+  
+
+Change .dirsync in the working copy affects what will be synced
+
+  $ rm .dirsync
+
+  $ echo c > dir2/c
+  $ echo d > dir4/d
+  $ hg commit -m subdir -A dir2/c dir4/d
+  mirrored adding 'dir2/c' to 'dir1/c'
+
+  $ cat >> .dirsync <<EOF
+  > group1.dir6 = dir6/
+  > group1.dir7 = dir7/
+  > EOF
+
+  $ echo c >> dir2/c
+  $ hg commit -m 'modify group1'
+  mirrored changes in 'dir2/c' to 'dir1/c'
+  mirrored changes in 'dir2/c' to 'dir6/c'
+  mirrored changes in 'dir2/c' to 'dir7/c'
+
+Only the ".dirsync" at the top of the repo is effective
+
+  $ cd dir1
+  $ cat >> .dirsync <<'EOF'
+  > group1.dir8 = dir8/
+  > group1.dir9 = dir9/
+  > EOF
+  $ echo c >> c
+  $ hg commit -m 'modify group1 again'
+  mirrored changes in 'dir1/c' to 'dir2/c'
+  mirrored changes in 'dir1/c' to 'dir6/c'
+  mirrored changes in 'dir1/c' to 'dir7/c'
+
+  $ cd ../..

@@ -30,11 +30,17 @@ projectY.dir2 = foo/bar
 projectY.dir3 = foo/goo/hoo
 """
 
+from __future__ import absolute_import
+
 from collections import defaultdict
 import errno
-from mercurial import extensions, localrepo, util
-from mercurial import match as matchmod
-from mercurial import error
+from mercurial import (
+    error,
+    extensions,
+    localrepo,
+    match as matchmod,
+    util,
+)
 from mercurial.i18n import _
 
 testedwith = 'ships-with-fb-hgext'
@@ -60,7 +66,15 @@ def _bypassdirsync(orig, ui, repo, *args, **kwargs):
     finally:
         ui.restoreconfig(backup)
 
-def getconfigs(ui):
+def getconfigs(repo):
+    # bypass "repoui.copy = baseui.copy # prevent copying repo configuration"
+    ui = repo.ui.__class__.copy(repo.ui)
+
+    # also read from wvfs/.dirsync
+    content = repo.wvfs.tryread('.dirsync')
+    if content:
+        ui._tcfg.parse('.dirsync', '[dirsync]\n%s' % content, ['dirsync'])
+
     maps = defaultdict(list)
     for key, value in ui.configitems('dirsync'):
         if '.' not in key:
@@ -70,7 +84,6 @@ def getconfigs(ui):
         if value[-1] != '/':
             value = value + '/'
         maps[name].append(value)
-
     return maps
 
 def getmirrors(maps, filename):
@@ -87,7 +100,7 @@ def _commit(orig, self, *args, **kwargs):
 
     wlock = self.wlock()
     try:
-        maps = getconfigs(self.ui)
+        maps = getconfigs(self)
         mirroredfiles = set()
         if maps:
             match = args[3] if len(args) >= 4 else kwargs.get('match')
