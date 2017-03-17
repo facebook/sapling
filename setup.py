@@ -5,6 +5,7 @@ from glob import glob
 
 import os, sys
 
+iswindows = os.name == 'nt'
 # --component allows the caller to specify what components they want. We can't
 # use argparse like normal, because setup() at the bottom has it's own argument
 # logic.
@@ -115,21 +116,24 @@ def build_libraries(self, libraries):
 distutils.command.build_clib.build_clib.build_libraries = build_libraries
 
 # Static c libaries
-libraries = [
-    ("datapack", {
-        "sources" : ["cdatapack/cdatapack.c"],
-        "include_dirs" : ["clib"] + include_dirs,
-        "libraries" : ["lz4", "crypto"],
-        "extra_args" : [
-            "-std=c99",
-            "-Wall",
-            "-Werror", "-Werror=strict-prototypes",
-        ] + cflags,
-    }),
-    ('mpatch', {
-        'sources': ['cstore/mpatch.c']
-    }),
-]
+if iswindows:
+    libraries = []
+else:
+    libraries = [
+        ("datapack", {
+            "sources" : ["cdatapack/cdatapack.c"],
+            "include_dirs" : ["clib"] + include_dirs,
+            "libraries" : ["lz4", "crypto"],
+            "extra_args" : [
+                "-std=c99",
+                "-Wall",
+                "-Werror", "-Werror=strict-prototypes",
+            ] + cflags,
+        }),
+        ('mpatch', {
+            'sources': ['cstore/mpatch.c']
+        }),
+    ]
 
 hgext3rd = [
     p[:-3].replace('/', '.')
@@ -141,15 +145,19 @@ availablepymodules = dict([(x[9:], x) for x in hgext3rd])
 availablepymodules['statprof'] = 'statprof'
 
 availablepackages = [
-    'fastannotate',
-    'fastmanifest',
     'infinitepush',
     'phabricator',
     'sqldirstate',
     'remotefilelog',
-    'treemanifest',
-    'linelog',
 ]
+
+if iswindows:
+    availablepackages += [
+        'fastannotate',
+        'fastmanifest',
+        'treemanifest',
+        'linelog',
+    ]
 
 def distutils_dir_name(dname):
     """Returns the name of a distutils build directory"""
@@ -158,7 +166,7 @@ def distutils_dir_name(dname):
                     platform=distutils.util.get_platform(),
                     version=sys.version[:3])
 
-if os.name == 'nt':
+if iswindows:
     # The modules that successfully compile on Windows
     availableextmodules = {}
 else:
@@ -270,7 +278,7 @@ while processdep:
                     components.append(dep)
                     processdep = True
 
-if os.name == 'nt':
+if iswindows:
     # The modules that successfully compile on Windows
     cythonmodules = []
 else:
