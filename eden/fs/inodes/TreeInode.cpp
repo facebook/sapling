@@ -854,7 +854,7 @@ folly::Future<folly::Unit> TreeInode::unlink(PathComponentPiece name) {
   return getOrLoadChild(name).then(
       [ self = inodePtrFromThis(),
         childName = PathComponent{name} ](const InodePtr& child) {
-        return self->removeImpl<FileInodePtr>(childName, child, 1);
+        return self->removeImpl<FileInodePtr>(std::move(childName), child, 1);
       });
 }
 
@@ -862,7 +862,7 @@ folly::Future<folly::Unit> TreeInode::rmdir(PathComponentPiece name) {
   return getOrLoadChild(name).then(
       [ self = inodePtrFromThis(),
         childName = PathComponent{name} ](const InodePtr& child) {
-        return self->removeImpl<TreeInodePtr>(childName, child, 1);
+        return self->removeImpl<TreeInodePtr>(std::move(childName), child, 1);
       });
 }
 
@@ -871,9 +871,6 @@ folly::Future<folly::Unit> TreeInode::removeImpl(
     PathComponent name,
     InodePtr childBasePtr,
     unsigned int attemptNum) {
-  // Acquire the rename lock since we need to update our child's location
-  auto renameLock = getMount()->acquireRenameLock();
-
   // Make sure the child is of the desired type
   auto child = childBasePtr.asSubclassPtrOrNull<InodePtrType>();
   if (!child) {
@@ -882,13 +879,87 @@ folly::Future<folly::Unit> TreeInode::removeImpl(
   }
 
   // Verify that we can remove the child before we materialize ourself
-  checkPreRemove(child);
+  int checkResult = checkPreRemove(child);
+  if (checkResult != 0) {
+    return makeFuture<Unit>(InodeError(checkResult, child));
+  }
 
+  // Acquire the rename lock since we need to update our child's location
+  auto renameLock = getMount()->acquireRenameLock();
+
+  // Get the path to the child, so we can update the journal later.
+  // Make sure we only do this after we acquire the rename lock, so that the
+  // path reported in the journal will be accurate.
+  auto myPath = getPath();
+  if (!myPath.hasValue()) {
+    // It appears we have already been unlinked.  It's possible someone other
+    // thread has already renamed child to another location and unlinked us.
+    // Just fail with ENOENT in this case.
+    return makeFuture<Unit>(InodeError(ENOENT, inodePtrFromThis()));
+  }
+  auto targetName = myPath.value() + name;
+
+  // The entry in question may have been renamed since we loaded the child
+  // Inode pointer.  If this happens, that's fine, and we just want to go ahead
+  // and try removing whatever is present with this name anyway.
+  //
+  // Therefore leave the child parameter for tryRemoveChild() as null, and let
+  // it remove whatever it happens to find with this name.
+  int errnoValue = tryRemoveChild<InodePtrType>(renameLock, name, nullptr);
+  if (errnoValue == 0) {
+    // We successfuly removed the child.
+    getMount()->getJournal().wlock()->addDelta(
+        std::make_unique<JournalDelta>(JournalDelta{targetName}));
+
+    return folly::Unit{};
+  }
+
+  // EBADF means that the child in question has been replaced since we looked
+  // it up earlier, and the child inode now at this location is not loaded.
+  if (errnoValue != EBADF) {
+    return makeFuture<Unit>(InodeError(errnoValue, inodePtrFromThis(), name));
+  }
+
+  // Give up after 3 retries
+  constexpr unsigned int kMaxRemoveRetries = 3;
+  if (attemptNum > kMaxRemoveRetries) {
+    throw InodeError(
+        EIO,
+        inodePtrFromThis(),
+        name,
+        "inode was removed/renamed after remove started");
+  }
+
+  // Note that we intentially create childFuture() in a separate
+  // statement before calling then() on it, since we std::move()
+  // the name into the lambda capture for then().
+  //
+  // Pre-C++17 this has undefined behavior if they are both in the same
+  // statement: argument evaluation order is undefined, so we could
+  // create the lambda (and invalidate name) before calling
+  // getOrLoadChildTree(name).  C++17 fixes this order to guarantee that
+  // the left side of "." will always get evaluated before the right
+  // side.
+  auto childFuture = getOrLoadChild(name);
+  return childFuture.then([
+    self = inodePtrFromThis(),
+    childName = PathComponent{std::move(name)},
+    attemptNum
+  ](const InodePtr& loadedChild) {
+    return self->removeImpl<InodePtrType>(
+        childName, loadedChild, attemptNum + 1);
+  });
+}
+
+template <typename InodePtrType>
+int TreeInode::tryRemoveChild(
+    const RenameLock& renameLock,
+    PathComponentPiece name,
+    InodePtrType child) {
   materialize(&renameLock);
 
   // Lock our contents in write mode.
   // We will hold it for the duration of the unlink.
-  RelativePath targetName;
   std::unique_ptr<InodeBase> deletedInode;
   {
     auto contents = contents_.wlock();
@@ -897,66 +968,34 @@ folly::Future<folly::Unit> TreeInode::removeImpl(
     // looked up.
     auto entIter = contents->entries.find(name);
     if (entIter == contents->entries.end()) {
-      throw InodeError(ENOENT, inodePtrFromThis(), name);
+      return ENOENT;
     }
     auto& ent = entIter->second;
-    if (ent->inode != child.get()) {
-      // This child was replaced since the remove attempt started.
-      if (ent->inode == nullptr) {
-        constexpr unsigned int kMaxRemoveRetries = 3;
-        if (attemptNum > kMaxRemoveRetries) {
-          throw InodeError(
-              EIO,
-              inodePtrFromThis(),
-              name,
-              "inode was removed/renamed after remove started");
-        }
-        contents.unlock();
-        // Note that we intentially create childFuture() in a separate
-        // statement before calling then() on it, since we std::move()
-        // the name into the lambda capture for then().
-        //
-        // Pre-C++17 this has undefined behavior if they are both in the same
-        // statement: argument evaluation order is undefined, so we could
-        // create the lambda (and invalidate name) before calling
-        // getOrLoadChildTree(name).  C++17 fixes this order to guarantee that
-        // the left side of "." will always get evaluated before the right
-        // side.
-        auto childFuture = getOrLoadChild(name);
-        return childFuture.then([
-          self = inodePtrFromThis(),
-          childName = PathComponent{std::move(name)},
-          attemptNum
-        ](const InodePtr& loadedChild) {
-          return self->removeImpl<InodePtrType>(
-              childName, loadedChild, attemptNum + 1);
-        });
-      } else {
-        // Just update to point to the current child, if it is still a tree
-        auto* currentChild =
-            dynamic_cast<typename InodePtrType::InodeType*>(ent->inode);
-        if (!currentChild) {
-          throw InodeError(
-              InodePtrType::InodeType::WRONG_TYPE_ERRNO,
-              inodePtrFromThis(),
-              name);
-        }
-        child = InodePtrType::newPtrLocked(currentChild);
+    if (!ent->inode) {
+      // The inode in question is not loaded.  The caller will need to load it
+      // and retry (if they want to retry).
+      return EBADF;
+    }
+    if (child) {
+      if (ent->inode != child.get()) {
+        // This entry no longer refers to what the caller expected.
+        return EBADF;
       }
+    } else {
+      // Make sure the entry being removed is the expected file/directory type.
+      auto* currentChild =
+          dynamic_cast<typename InodePtrType::InodeType*>(ent->inode);
+      if (!currentChild) {
+        return InodePtrType::InodeType::WRONG_TYPE_ERRNO;
+      }
+      child = InodePtrType::newPtrLocked(currentChild);
     }
-
-    // Get the path to the child, so we can update the journal later.
-    auto myPath = getPath();
-    if (!myPath.hasValue()) {
-      // This shouldn't be possible.  We cannot be unlinked
-      // if we still contain a child.
-      LOG(FATAL) << "found unlinked but non-empty directory: " << getLogPath()
-                 << " still contains " << name;
-    }
-    targetName = myPath.value() + name;
 
     // Verify that the child is still in a good state to remove
-    checkPreRemove(child);
+    auto checkError = checkPreRemove(child);
+    if (checkError != 0) {
+      return checkError;
+    }
 
     // Inform the child it is now unlinked
     deletedInode = child->markUnlinked(this, name, renameLock);
@@ -969,23 +1008,21 @@ folly::Future<folly::Unit> TreeInode::removeImpl(
     overlay->saveOverlayDir(getNodeId(), &*contents);
   }
   deletedInode.reset();
-
-  getMount()->getJournal().wlock()->addDelta(
-      std::make_unique<JournalDelta>(JournalDelta{targetName}));
-
-  return folly::Unit{};
+  return 0;
 }
 
-void TreeInode::checkPreRemove(const TreeInodePtr& child) {
+int TreeInode::checkPreRemove(const TreeInodePtr& child) {
   // Lock the child contents, and make sure they are empty
   auto childContents = child->contents_.rlock();
   if (!childContents->entries.empty()) {
-    throw InodeError(ENOTEMPTY, child);
+    return ENOTEMPTY;
   }
+  return 0;
 }
 
-void TreeInode::checkPreRemove(const FileInodePtr& /* child */) {
+int TreeInode::checkPreRemove(const FileInodePtr& /* child */) {
   // Nothing to do
+  return 0;
 }
 
 /**
@@ -1437,7 +1474,7 @@ void TreeInode::computeCheckoutActions(
   size_t newIdx = 0;
   vector<TreeEntry> emptyEntries;
   const auto& oldEntries = fromTree ? fromTree->getTreeEntries() : emptyEntries;
-  const auto& newEntries = toTree->getTreeEntries();
+  const auto& newEntries = toTree ? toTree->getTreeEntries() : emptyEntries;
   while (true) {
     unique_ptr<CheckoutAction> action;
 
@@ -1616,51 +1653,48 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
   return nullptr;
 }
 
-Future<Unit> TreeInode::checkoutReplaceEntry(
-    CheckoutContext* ctx,
-    InodePtr inode,
-    const TreeEntry& newScmEntry) {
-  CHECK(ctx->shouldApplyChanges());
-  return checkoutRemoveChild(ctx, newScmEntry.getName(), inode)
-      .then([ self = inodePtrFromThis(), newScmEntry ]() {
-        auto contents = self->contents_.wlock();
-        auto newEntry =
-            make_unique<Entry>(newScmEntry.getMode(), newScmEntry.getHash());
-        contents->entries.emplace(newScmEntry.getName(), std::move(newEntry));
-      });
-}
-
-Future<Unit> TreeInode::checkoutRemoveChild(
+Future<Unit> TreeInode::checkoutUpdateEntry(
     CheckoutContext* ctx,
     PathComponentPiece name,
-    InodePtr inode) {
+    InodePtr inode,
+    std::unique_ptr<Tree> oldTree,
+    std::unique_ptr<Tree> newTree,
+    folly::Optional<TreeEntry> newScmEntry) {
   CHECK(ctx->shouldApplyChanges());
-  std::unique_ptr<InodeBase> deletedInode;
-  auto contents = contents_.wlock();
-
-  // The CheckoutContext should be holding the rename lock, so the entry
-  // at this name should still be the specified inode.
-  auto it = contents->entries.find(name);
-  if (it == contents->entries.end()) {
-    auto bug = EDEN_BUG()
-        << "entry removed while holding rename lock during checkout: "
-        << inode->getLogPath();
-    return folly::makeFuture<Unit>(bug.toException());
-  }
-  if (it->second->inode != inode.get()) {
-    auto bug = EDEN_BUG()
-        << "entry changed while holding rename lock during checkout: "
-        << inode->getLogPath();
-    return folly::makeFuture<Unit>(bug.toException());
-  }
 
   auto treeInode = inode.asTreePtrOrNull();
   if (!treeInode) {
-    // This is a file, so we can simply unlink it
-    deletedInode = inode->markUnlinked(this, name, ctx->renameLock());
-    contents->entries.erase(it);
+    std::unique_ptr<InodeBase> deletedInode;
+    auto contents = contents_.wlock();
 
-    // Tell FUSE to invalidate it's cache for this entry.
+    // The CheckoutContext should be holding the rename lock, so the entry
+    // at this name should still be the specified inode.
+    auto it = contents->entries.find(name);
+    if (it == contents->entries.end()) {
+      auto bug = EDEN_BUG()
+          << "entry removed while holding rename lock during checkout: "
+          << inode->getLogPath();
+      return folly::makeFuture<Unit>(bug.toException());
+    }
+    if (it->second->inode != inode.get()) {
+      auto bug = EDEN_BUG()
+          << "entry changed while holding rename lock during checkout: "
+          << inode->getLogPath();
+      return folly::makeFuture<Unit>(bug.toException());
+    }
+
+    // This is a file, so we can simply unlink it, and replace/remove the entry
+    // as desired.
+    deletedInode = inode->markUnlinked(this, name, ctx->renameLock());
+    if (newScmEntry) {
+      DCHECK_EQ(newScmEntry->getName(), name);
+      it->second =
+          make_unique<Entry>(newScmEntry->getMode(), newScmEntry->getHash());
+    } else {
+      contents->entries.erase(it);
+    }
+
+    // Tell FUSE to invalidate its cache for this entry.
     auto* fuseChannel = getMount()->getFuseChannel();
     if (fuseChannel) {
       fuseChannel->invalidateEntry(getNodeId(), name);
@@ -1672,10 +1706,64 @@ Future<Unit> TreeInode::checkoutRemoveChild(
     return makeFuture();
   }
 
-  // We have to recursively unlink everything inside this tree
-  // FIXME
-  return makeFuture<Unit>(std::runtime_error(
-      "TreeInode::checkoutRemoveChild() not implemented for trees"));
+  // If we are going from a directory to a directory, all we need to do
+  // is call checkout().
+  if (newTree) {
+    // TODO: Also apply permissions changes to the entry.
+
+    CHECK(newScmEntry.hasValue());
+    CHECK_EQ(TreeEntryType::TREE, newScmEntry->getType());
+    return treeInode->checkout(ctx, std::move(oldTree), std::move(newTree));
+  }
+
+  // We need to remove this directory (and possibly replace it with a file).
+  // First we have to recursively unlink everything inside the directory.
+  // Fortunately, calling checkout() with an empty destination tree does
+  // exactly what we want.  checkout() will even remove the directory before it
+  // returns if the directory is empty.
+  return treeInode->checkout(ctx, std::move(oldTree), nullptr).then([
+    ctx,
+    name = PathComponent{name},
+    parentInode = inodePtrFromThis(),
+    treeInode,
+    newEntry = std::move(newScmEntry)
+  ]() {
+    // Make sure the treeInode was completely removed by the checkout.
+    // If there were still untracked files inside of it, it won't have
+    // been deleted, and we have a conflict that we cannot resolve.
+    if (!treeInode->isUnlinked()) {
+      ctx->addConflict(ConflictType::DIRECTORY_NOT_EMPTY, treeInode.get());
+      return;
+    }
+
+    if (!newEntry) {
+      // We're done
+      return;
+    }
+
+    // Add the new entry
+    auto contents = parentInode->contents_.wlock();
+    DCHECK_EQ(TreeEntryType::BLOB, newEntry->getType());
+    auto newTreeEntry =
+        make_unique<Entry>(newEntry->getMode(), newEntry->getHash());
+    auto ret = contents->entries.emplace(name, std::move(newTreeEntry));
+    if (!ret.second) {
+      // Hmm.  Someone else already created a new entry in this location
+      // before we had a chance to add our new entry.  We don't block new file
+      // or directory creations during a checkout operation, so this is
+      // possible.  Just report an error in this case.
+      contents.unlock();
+      ctx->addError(
+          parentInode.get(),
+          name,
+          InodeError(
+              EEXIST,
+              parentInode,
+              name,
+              "new file created with this name while checkout operation "
+              "was in progress"));
+    }
+  });
 }
 
 void TreeInode::saveOverlayPostCheckout(
@@ -1683,6 +1771,7 @@ void TreeInode::saveOverlayPostCheckout(
     const Tree* tree) {
   bool materialize;
   bool stateChanged;
+  bool deleteSelf;
   {
     auto contents = contents_.wlock();
 
@@ -1691,6 +1780,14 @@ void TreeInode::saveOverlayPostCheckout(
     // If we can confirm that we are identical to the source control Tree we do
     // not need to be materialized.
     auto shouldMaterialize = [&]() {
+      // If the new tree does not exist in source control, we must be
+      // materialized, since there is no source control Tree to refer to.
+      // (If we are empty in this case we will set deleteSelf and try to remove
+      // ourself entirely.)
+      if (!tree) {
+        return true;
+      }
+
       const auto& scmEntries = tree->getTreeEntries();
       // If we have a different number of entries we must be different from the
       // Tree, and therefore must be materialized.
@@ -1729,6 +1826,10 @@ void TreeInode::saveOverlayPostCheckout(
       return false;
     };
 
+    // If we are now empty as a result of the checkout we can remove ourself
+    // entirely.  For now we only delete ourself if this directory doesn't
+    // exist in source control either.
+    deleteSelf = (!tree && contents->entries.empty());
     materialize = shouldMaterialize();
     stateChanged = (materialize != contents->materialized);
     if (materialize) {
@@ -1740,23 +1841,36 @@ void TreeInode::saveOverlayPostCheckout(
     contents->materialized = materialize;
   }
 
-  // If our state changed, tell our parent.
-  //
-  // TODO: Currently we end up writing out overlay data for TreeInodes pretty
-  // often during the checkout process.  Each time a child entry is processed
-  // we will likely end up rewriting data for it's parent TreeInode, and then
-  // once all children are processed we do another pass through here in
-  // saveOverlayPostCheckout() and possibly write it out again.
-  //
-  // It would be nicer if we could only save the data for each TreeInode once.
-  // The downside of this is that the on-disk overlay state would be
-  // potentially inconsistent until the checkout completes.  There may be
-  // periods of time where a parent directory says the child is materialized
-  // when the child has decided to be dematerialized.  This would cause
-  // problems when we tried to load the overlay data later.  If we update the
-  // code to be able to handle this somehow then maybe we could avoid doing all
-  // of the intermediate updates to the parent as we process each child entry.
+  if (deleteSelf) {
+    // If we should be removed entirely, delete ourself.
+    if (checkoutTryRemoveEmptyDir(ctx)) {
+      return;
+    }
+
+    // We failed to remove ourself.  The most likely reason is that someone
+    // created a new entry inside this directory between when we set deleteSelf
+    // above and when we attempted to remove ourself.  Fall through and perform
+    // the normal materialization state update in this case.
+  }
+
   if (stateChanged) {
+    // If our state changed, tell our parent.
+    //
+    // TODO: Currently we end up writing out overlay data for TreeInodes pretty
+    // often during the checkout process.  Each time a child entry is processed
+    // we will likely end up rewriting data for it's parent TreeInode, and then
+    // once all children are processed we do another pass through here in
+    // saveOverlayPostCheckout() and possibly write it out again.
+    //
+    // It would be nicer if we could only save the data for each TreeInode
+    // once.  The downside of this is that the on-disk overlay state would be
+    // potentially inconsistent until the checkout completes.  There may be
+    // periods of time where a parent directory says the child is materialized
+    // when the child has decided to be dematerialized.  This would cause
+    // problems when we tried to load the overlay data later.  If we update the
+    // code to be able to handle this somehow then maybe we could avoid doing
+    // all of the intermediate updates to the parent as we process each child
+    // entry.
     auto loc = getLocationInfo(ctx->renameLock());
     if (loc.parent && !loc.unlinked) {
       if (materialize) {
@@ -1774,6 +1888,19 @@ void TreeInode::saveOverlayPostCheckout(
       getOverlay()->removeOverlayData(getNodeId());
     }
   }
+}
+
+bool TreeInode::checkoutTryRemoveEmptyDir(CheckoutContext* ctx) {
+  auto location = getLocationInfo(ctx->renameLock());
+  DCHECK(!location.unlinked);
+  if (!location.parent) {
+    // We can't ever remove the root directory.
+    return false;
+  }
+
+  auto errnoValue = location.parent->tryRemoveChild(
+      ctx->renameLock(), location.name, inodePtrFromThis());
+  return errnoValue == 0;
 }
 
 namespace {

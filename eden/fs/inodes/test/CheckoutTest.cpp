@@ -10,6 +10,7 @@
 #include <folly/Array.h>
 #include <folly/Conv.h>
 #include <folly/test/TestUtils.h>
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
@@ -22,8 +23,12 @@
 #include "eden/utils/test/TestChecks.h"
 
 using namespace facebook::eden;
+using folly::Future;
+using folly::makeFuture;
 using folly::StringPiece;
+using folly::Unit;
 using std::string;
+using testing::UnorderedElementsAre;
 
 /**
  * An enum to control behavior for many of the checkout tests.
@@ -44,6 +49,8 @@ enum class LoadBehavior {
   ASSIGN_INODE,
   // Load the InodeBase affected by the test before starting the checkout.
   INODE,
+  // Walk the tree and load every inode
+  ALL,
 };
 
 static constexpr auto kAllLoadTypes = folly::make_array(
@@ -51,35 +58,72 @@ static constexpr auto kAllLoadTypes = folly::make_array(
     LoadBehavior::ASSIGN_PARENT_INODE,
     LoadBehavior::PARENT,
     LoadBehavior::ASSIGN_INODE,
-    LoadBehavior::INODE);
+    LoadBehavior::INODE,
+    LoadBehavior::ALL);
 
 // LoadTypes that can be used with tests that add a new file
 static constexpr auto kAddLoadTypes = folly::make_array(
     LoadBehavior::NONE,
     LoadBehavior::ASSIGN_PARENT_INODE,
-    LoadBehavior::PARENT);
+    LoadBehavior::PARENT,
+    LoadBehavior::ALL);
 
-std::ostream& operator<<(std::ostream& os, LoadBehavior loadType) {
+std::string loadBehaviorToString(LoadBehavior loadType) {
   switch (loadType) {
     case LoadBehavior::NONE:
-      os << "NONE";
-      return os;
+      return "NONE";
     case LoadBehavior::ASSIGN_PARENT_INODE:
-      os << "ASSIGN_PARENT_INODE";
-      return os;
+      return "ASSIGN_PARENT_INODE";
     case LoadBehavior::PARENT:
-      os << "PARENT";
-      return os;
+      return "PARENT";
     case LoadBehavior::ASSIGN_INODE:
-      os << "ASSIGN_INODE";
-      return os;
+      return "ASSIGN_INODE";
     case LoadBehavior::INODE:
-      os << "INODE";
-      return os;
+      return "INODE";
+    case LoadBehavior::ALL:
+      return "ALL";
+  }
+  return folly::to<std::string>("<unknown LoadBehavior ", int(loadType), ">");
+}
+
+template <typename TargetType>
+typename std::enable_if<folly::IsSomeString<TargetType>::value>::type toAppend(
+    LoadBehavior loadType,
+    TargetType* result) {
+  result->append(loadBehaviorToString(loadType));
+}
+
+std::ostream& operator<<(std::ostream& os, LoadBehavior loadType) {
+  os << loadBehaviorToString(loadType);
+  return os;
+}
+
+Future<Unit> loadAllInodes(const TreeInodePtr& treeInode) {
+  // Build a list of child names to load.
+  // (If necessary we could make a more efficient version of this that starts
+  // all the child loads while holding the lock.  However, we don't really care
+  // about efficiency for test code, and this is much simpler.)
+  std::vector<PathComponent> childNames;
+  {
+    auto contents = treeInode->getContents().rlock();
+    for (const auto& entry : contents->entries) {
+      childNames.emplace_back(entry.first);
+    }
   }
 
-  os << "<unknown LoadBehavior " << int(loadType) << ">";
-  return os;
+  // Now start all the loads.
+  std::vector<Future<Unit>> childFutures;
+  for (const auto& name : childNames) {
+    auto childFuture = treeInode->getOrLoadChild(name).then([](InodePtr child) {
+      TreeInodePtr childTree = child.asTreePtrOrNull();
+      if (childTree) {
+        return loadAllInodes(childTree);
+      }
+      return makeFuture();
+    });
+    childFutures.emplace_back(std::move(childFuture));
+  }
+  return folly::collect(childFutures).unit();
 }
 
 void loadInodes(
@@ -109,14 +153,20 @@ void loadInodes(
       return;
     }
     case LoadBehavior::INODE: {
-      // Load the file inode and make sure its contents are as we expect.
-      // This ensures the affected FileInode has been loaded
-      auto fileInode = testMount.getFileInode(path);
       if (expectedContents.hasValue()) {
+        // The inode in question must be a file.  Load it and verify the
+        // contents are what we expect.
+        auto fileInode = testMount.getFileInode(path);
         EXPECT_FILE_INODE(fileInode, expectedContents.value(), expectedPerms);
+      } else {
+        // The inode might be a tree or a file.
+        testMount.getInode(path);
       }
       return;
     }
+    case LoadBehavior::ALL:
+      loadAllInodes(testMount.getEdenMount()->getRootInode());
+      return;
   }
 
   FAIL() << "unknown load behavior: " << loadType;
@@ -134,6 +184,13 @@ void loadInodes(
       loadType,
       expectedContents,
       expectedPerms);
+}
+
+void loadInodes(
+    TestMount& testMount,
+    RelativePathPiece path,
+    LoadBehavior loadType) {
+  loadInodes(testMount, path, loadType, folly::none, 0644);
 }
 
 void loadInodes(
@@ -442,6 +499,55 @@ TEST(Checkout, addSubdirectory) {
       SCOPED_TRACE(folly::to<string>("path ", path, " load type ", loadType));
       testAddSubdirectory(path, loadType);
     }
+  }
+}
+
+void testRemoveSubdirectory(LoadBehavior loadType) {
+  // Build the destination source control tree first
+  auto destBuilder = FakeTreeBuilder();
+  destBuilder.setFile("src/main.c", "int main() { return 0; }\n");
+  destBuilder.setFile("src/test/test.c", "testy tests");
+
+  // Prepare the soruce tree by adding a new subdirectory (which will be
+  // removed when we checkout from the src to the dest tree).
+  auto srcBuilder = destBuilder.clone();
+  RelativePathPiece path{"src/todelete"};
+  srcBuilder.setFile(path + PathComponentPiece{"doc.txt"}, "docs\n");
+  srcBuilder.setFile(path + PathComponentPiece{"file1.c"}, "src\n");
+  srcBuilder.setFile(path + RelativePathPiece{"include/file1.h"}, "header\n");
+
+  TestMount testMount{srcBuilder};
+  destBuilder.finalize(testMount.getBackingStore(), true);
+  auto commit2 = testMount.getBackingStore()->putCommit("2", destBuilder);
+  commit2->setReady();
+
+  loadInodes(testMount, path, loadType);
+
+  auto checkoutResult = testMount.getEdenMount()->checkout(makeTestHash("2"));
+  ASSERT_TRUE(checkoutResult.isReady());
+  auto results = checkoutResult.get();
+  EXPECT_EQ(0, results.size());
+
+  // Confirm that the tree no longer exists.
+  // None of the files should exist.
+  EXPECT_THROW_ERRNO(
+      testMount.getFileInode(path + PathComponentPiece{"doc.txt"}), ENOENT);
+  EXPECT_THROW_ERRNO(
+      testMount.getFileInode(path + PathComponentPiece{"file1.c"}), ENOENT);
+  EXPECT_THROW_ERRNO(
+      testMount.getFileInode(path + RelativePathPiece{"include/file1.h"}),
+      ENOENT);
+  // The two directories should have been removed too
+  EXPECT_THROW_ERRNO(
+      testMount.getTreeInode(path + RelativePathPiece{"include"}), ENOENT);
+  EXPECT_THROW_ERRNO(testMount.getTreeInode(path), ENOENT);
+}
+
+// Remove a subdirectory with no conflicts or untracked files left behind
+TEST(Checkout, removeSubdirectorySimple) {
+  for (auto loadType : kAllLoadTypes) {
+    SCOPED_TRACE(folly::to<string>(" load type ", loadType));
+    testRemoveSubdirectory(loadType);
   }
 }
 

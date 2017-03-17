@@ -9,6 +9,7 @@ cpp_unittest(
     '@/folly/test:test_utils',
   ],
   external_deps = [
+    'gmock',
     'gtest',
   ],
 )

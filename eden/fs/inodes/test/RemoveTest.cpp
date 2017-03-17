@@ -155,6 +155,22 @@ TEST_F(UnlinkTest, created) {
 // async:
 // - concurrent load+rmdir
 // - concurrent rename+rmdir
+// - concurrent rmdir+rmdir
+//
+// - concurrent rename+rmdir+rmdir:
+//   1. make sure a/b/c/ is not ready yet.
+//   2. start rename(a/b/c --> other_dir/c)
+//   3. start rmdir(a/b/c)
+//   4. start rmdir(a/b/c)
+//   5. make a/b/c ready
+//
+// - concurrent rename+rmdir+rmdir:
+//   1. make sure neither a/b nor a/b/c/ are ready yet.
+//   2. start rename(a/b/c --> other_dir/c).then(rmdir a/b)
+//   3. start rmdir(a/b/c)
+//   4. make a/b/c ready
+//   This should hopefully trigger the rmdir(a/b) to succeed before
+//   rmdir(a/b/c) completes.
 //
 // - attempt to create child in subdir after rmdir
 // - attempt to mkdir child in subdir after rmdir

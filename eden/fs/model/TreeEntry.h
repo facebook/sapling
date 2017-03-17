@@ -14,6 +14,7 @@
 #include "eden/utils/PathFuncs.h"
 
 #include <folly/String.h>
+#include <iosfwd>
 
 namespace facebook {
 namespace eden {
@@ -95,5 +96,7 @@ class TreeEntry {
   Hash hash_;
   PathComponent name_;
 };
+
+std::ostream& operator<<(std::ostream& os, TreeEntryType type);
 }
 }

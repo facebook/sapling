@@ -9,6 +9,7 @@
  */
 #pragma once
 #include <folly/Optional.h>
+#include <folly/Portability.h>
 #include "eden/fs/inodes/InodeBase.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/utils/PathMap.h"
@@ -279,9 +280,11 @@ class TreeInode : public InodeBase {
    *     This argument may be null when updating a TreeInode that did not exist
    *     in source control in the previous commit state.
    * @param toTree The Tree object that the checkout operation is moving to.
-   *     This argument must not be null.  (In order to remove a file or tree
-   *     that does not exist in the new commit, checkoutRemoveChild() must be
-   *     invoked on the parent TreeInode instead.)
+   *     This argument may be null if this path no longer exists in the
+   *     destination commit.  If the destination location is empty, and this
+   *     TreeInode is empty after the checkout operation (no untracked entries
+   *     remain inside it), then this TreeInode itself will be unlinked as
+   *     well.
    *
    * @return Returns a future that will be fulfilled once this tree and all of
    *     its children have been updated.
@@ -364,15 +367,37 @@ class TreeInode : public InodeBase {
    */
   folly::Future<folly::Unit> loadMaterializedChildren();
 
-  // Helper functions to be used only by CheckoutAction
-  folly::Future<folly::Unit> checkoutReplaceEntry(
-      CheckoutContext* ctx,
-      InodePtr inode,
-      const TreeEntry& newScmEntry);
-  folly::Future<folly::Unit> checkoutRemoveChild(
+  /*
+   * Update a tree entry as part of a checkout operation.
+   *
+   * This helper function is only to be used by CheckoutAction.
+   *
+   * @param ctx The CheckoutContext for the current checkout operation.
+   *     The caller guarantees that the CheckoutContext argument will remain
+   *     valid until the returned Future completes.
+   * @param name The name of the child entry being replaced.
+   * @param inode A pointer to the child InodeBase that is being updated.
+   *     The path to this inode is guaranteed to match the name parameter.
+   * @param oldTree If this entry referred to Tree in the source commit,
+   *     then oldTree will be a pointer to its source control state.  oldTree
+   *     will be null if this entry did not exist or if it referred to a Blob
+   *     in the source commit.
+   * @param newTree If this entry refers to Tree in the destination commit,
+   *     then newTree will be a pointer to its source control state.  newTree
+   *     will be null if this entry does not exist or if it refers to a Blob in
+   *     the source commit.
+   * @param newScmEntry The desired source control state for the new entry,
+   *     or folly::none if the entry does not exist in the destination commit.
+   *     This entry will refer to a tree if and only if the newTree parameter
+   *     is non-null.
+   */
+  folly::Future<folly::Unit> checkoutUpdateEntry(
       CheckoutContext* ctx,
       PathComponentPiece name,
-      InodePtr inode);
+      InodePtr inode,
+      std::unique_ptr<Tree> oldTree,
+      std::unique_ptr<Tree> newTree,
+      folly::Optional<TreeEntry> newScmEntry);
 
  private:
   class TreeRenameLocks;
@@ -426,11 +451,60 @@ class TreeInode : public InodeBase {
     return TreeInodePtr::newPtrFromExisting(this);
   }
 
+  /**
+   * removeImpl() is the actual implementation used for unlink() and rmdir().
+   *
+   * The child inode in question must already be loaded.  removeImpl() will
+   * confirm that this is still the correct inode for the given name, and
+   * remove it if so.  If not it will attempt to load the child again, and will
+   * retry the remove again (hence the attemptNum parameter).
+   */
   template <typename InodePtrType>
   folly::Future<folly::Unit>
   removeImpl(PathComponent name, InodePtr child, unsigned int attemptNum);
-  static void checkPreRemove(const TreeInodePtr& child);
-  static void checkPreRemove(const FileInodePtr& child);
+
+  /**
+   * tryRemoveChild() actually unlinks a child from our entry list.
+   *
+   * The caller must already be holding the mountpoint-wide RenameLock.
+   *
+   * This method also updates the overlay state if the child was removed
+   * successfully.
+   *
+   * @param renameLock A reference to the rename lock (this parameter is
+   *     required mostly to ensure that the caller is holding it).
+   * @param name The entry name to remove.
+   * @param child If this parameter is non-null, then only remove the entry if
+   *     it refers to the specified inode.  If the entry does not refer to the
+   *     inode in question, EBADF will be returned.
+   *
+   * @return Returns an errno value on error, or 0 on success.  Notable errors
+   * include:
+   * - ENOENT: no entry exists the specified name
+   * - EBADF: An entry exists with the specified name, but the InodeBase object
+   *   for it is not loaded, or it does not refer to the same inode as the
+   *   child parameter (if child was non-null).
+   * - EISDIR: the entry with the specified name is a directory (only returned
+   *   if InodePtrType is FileInodePtr).
+   * - ENOTDIR: the entry with the specified name is not a directory (only
+   *   returned if InodePtrType is TreeInodePtr).
+   * - ENOTEMPTY: the directory being removed is not empty.
+   *
+   * Callers should assume that tryRemoveChild() may still throw an exception
+   * on other unexpected error cases.
+   */
+  template <typename InodePtrType>
+  FOLLY_WARN_UNUSED_RESULT int tryRemoveChild(
+      const RenameLock& renameLock,
+      PathComponentPiece name,
+      InodePtrType child);
+
+  /**
+   * checkPreRemove() is called by tryRemoveChild() for file or directory
+   * specific checks before unlinking an entry.  Returns an errno value or 0.
+   */
+  static FOLLY_WARN_UNUSED_RESULT int checkPreRemove(const TreeInodePtr& child);
+  static FOLLY_WARN_UNUSED_RESULT int checkPreRemove(const FileInodePtr& child);
 
   /**
    * This helper function starts loading a currently unloaded child inode.
@@ -457,6 +531,15 @@ class TreeInode : public InodeBase {
       const TreeEntry* newScmEntry,
       std::vector<IncompleteInodeLoad>* pendingLoads);
   void saveOverlayPostCheckout(CheckoutContext* ctx, const Tree* tree);
+
+  /**
+   * Attempt to remove an empty directory during a checkout operation.
+   *
+   * Returns true on success, or false if the directory could not be removed.
+   * The most likely cause of a failure is an ENOTEMPTY error if someone else
+   * has already created a new file in a directory made empty by a checkout.
+   */
+  FOLLY_WARN_UNUSED_RESULT bool checkoutTryRemoveEmptyDir(CheckoutContext* ctx);
 
   folly::Synchronized<Dir> contents_;
 };

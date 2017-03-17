@@ -116,9 +116,6 @@ class CheckoutAction {
   bool ensureDataReady() noexcept;
   bool hasConflict();
   folly::Future<folly::Unit> doAction();
-  folly::Future<folly::Unit> performTreeCheckout();
-  folly::Future<folly::Unit> performBlobCheckout();
-  folly::Future<folly::Unit> performRemoval();
 
   /**
    * The context for the in-progress checkout operation.
@@ -161,6 +158,10 @@ class CheckoutAction {
    *
    * Only one each oldTree_ and oldBlob_ will be loaded,
    * and the same goes for newTree_ and newBlob_.
+   *
+   * TODO: We don't actually ever need the data from new blob.  If the
+   * destination entry is a blob we could just record this fact, and not bother
+   * loading the blob data itself.
    */
   InodePtr inode_;
   std::unique_ptr<Tree> oldTree_;

@@ -280,9 +280,6 @@ Future<Unit> CheckoutAction::doAction() {
   //   (blob, tree, not present)
   // - What's the current status of the inode in the file system?
   //   (file, tree)
-  //   Fortunately we don't have to worry about not present here.
-  //   That case is already handled immediately in TreeInode::checkout()
-  //   TODO: this isn't the case for forceUpdate()
   // - What type of checkout are we performing?
   //   (merge, check-only, force)
 
@@ -292,14 +289,14 @@ Future<Unit> CheckoutAction::doAction() {
     return makeFuture();
   }
 
-  // Switch on the desired entry type
-  if (newTree_) {
-    return performTreeCheckout();
-  } else if (newBlob_) {
-    return performBlobCheckout();
-  } else {
-    return performRemoval();
-  }
+  auto parent = inode_->getParent(ctx_->renameLock());
+  return parent->checkoutUpdateEntry(
+      ctx_,
+      getEntryName(),
+      std::move(inode_),
+      std::move(oldTree_),
+      std::move(newTree_),
+      std::move(newScmEntry_));
 }
 
 bool CheckoutAction::hasConflict() {
@@ -340,37 +337,6 @@ bool CheckoutAction::hasConflict() {
     ctx_->addConflict(ConflictType::UNTRACKED_ADDED, inode_.get());
     return true;
   }
-}
-
-Future<Unit> CheckoutAction::performTreeCheckout() {
-  // TODO: apply permissions changes
-
-  auto treeInode = inode_.asTreePtrOrNull();
-  if (treeInode) {
-    // When going from a tree to a tree, use TreeInode::checkout()
-    //
-    // Note that we always pass in oldTree_ here, even if the old value might
-    // have been a blob instead.  Calling checkout() with the old tree value as
-    // null will do the right thing here.
-    return treeInode->checkout(ctx_, std::move(oldTree_), std::move(newTree_));
-  } else {
-    // When going from a file to a tree, ask the parent to do the replacement.
-    auto parent = inode_->getParent(ctx_->renameLock());
-    return parent->checkoutReplaceEntry(ctx_, inode_, newScmEntry_.value());
-  }
-}
-
-Future<Unit> CheckoutAction::performBlobCheckout() {
-  // As the parent TreeInode to replace whatever is currently at this location
-  // with the new blob.
-  auto parent = inode_->getParent(ctx_->renameLock());
-  return parent->checkoutReplaceEntry(ctx_, inode_, newScmEntry_.value());
-}
-
-Future<Unit> CheckoutAction::performRemoval() {
-  // As the parent TreeInode to remove this entry
-  auto parent = inode_->getParent(ctx_->renameLock());
-  return parent->checkoutRemoveChild(ctx_, getEntryName(), inode_);
 }
 }
 }
