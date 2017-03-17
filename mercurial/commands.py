@@ -1810,7 +1810,7 @@ def config(ui, repo, *values, **opts):
     matched = False
     for section, name, value in ui.walkconfig(untrusted=untrusted):
         source = ui.configsource(section, name, untrusted)
-        value = str(value)
+        value = pycompat.bytestr(value)
         if fm.isplain():
             source = source or 'none'
             value = value.replace('\n', '\\n')
