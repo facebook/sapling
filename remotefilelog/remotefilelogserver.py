@@ -12,7 +12,8 @@ from mercurial.hgweb import protocol as httpprotocol
 from mercurial.node import bin, hex, nullid, nullrev
 from mercurial.i18n import _
 import constants, shallowrepo
-import errno, stat, os, lz4, struct, time
+from lz4wrapper import lzcompresshc
+import errno, stat, os, struct, time
 from shallowutil import readexactly, readunpack
 
 try:
@@ -210,7 +211,7 @@ def _loadfileblob(repo, cachepath, path, node):
             filectx = repo.filectx(path, fileid=node)
 
         text = createfileblob(filectx)
-        text = lz4.compressHC(text)
+        text = lzcompresshc(text)
 
         # everything should be user & group read/writable
         oldumask = os.umask(0o002)

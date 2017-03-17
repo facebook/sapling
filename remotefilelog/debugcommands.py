@@ -9,7 +9,8 @@ from mercurial import error, filelog, revlog
 from mercurial.node import bin, hex, nullid, short
 from mercurial.i18n import _
 import datapack, historypack, shallowrepo, fileserverclient
-import hashlib, os, lz4
+from lz4wrapper import lz4decompress
+import hashlib, os
 
 def debugremotefilelog(ui, path, **opts):
     decompress = opts.get('decompress')
@@ -163,7 +164,7 @@ def parsefileblob(path, decompress):
         f.close()
 
     if decompress:
-        raw = lz4.decompress(raw)
+        raw = lz4decompress(raw)
 
     index = raw.index('\0')
     size = int(raw[:index])

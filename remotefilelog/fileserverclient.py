@@ -9,10 +9,11 @@ from mercurial.i18n import _
 from mercurial.node import hex, bin, nullid
 from mercurial import util, sshpeer, hg, error, util, wireproto, httppeer
 from mercurial import extensions
-import hashlib, os, lz4, time, io, struct
+import hashlib, os, time, io, struct
 import itertools
 
 import constants, datapack, historypack, shallowutil
+from lz4wrapper import lz4decompress
 from shallowutil import readexactly, readunpack
 
 # Statistics for debugging
@@ -427,7 +428,7 @@ class fileserverclient(object):
                                       % (len(data), size))
 
         self.writedata.addremotefilelognode(filename, bin(node),
-                                             lz4.decompress(data))
+                                             lz4decompress(data))
 
     def requestpack(self, fileids):
         """Requests the given file revisions from the server in a pack format.

@@ -1,8 +1,9 @@
-import lz4, struct
+import struct
 from mercurial import util
 from mercurial.node import nullid, hex
 from mercurial.i18n import _
 import basepack, constants
+from lz4wrapper import lz4compress, lz4decompress
 try:
     import cstore
     cstore.datapack
@@ -115,7 +116,7 @@ class datapack(basepack.basepack):
             deltalen = struct.unpack('!Q', rawdeltalen)[0]
 
             delta = rawentry[deltastart + 8:deltastart + 8 + deltalen]
-            delta = lz4.decompress(delta)
+            delta = lz4decompress(delta)
 
             deltachain.append((filename, node, filename, deltabasenode, delta))
 
@@ -361,7 +362,7 @@ class mutabledatapack(basepack.mutablebasepack):
             return
 
         # TODO: allow configurable compression
-        delta = lz4.compress(delta)
+        delta = lz4compress(delta)
         rawdata = "%s%s%s%s%s%s" % (
             struct.pack('!H', len(name)), # unsigned 2 byte int
             name,

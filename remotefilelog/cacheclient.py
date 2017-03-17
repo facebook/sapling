@@ -49,13 +49,13 @@ def writefile(path, content):
 def compress(value):
     # Real world implementations will want to compress values.
     # Insert your favorite compression here, ex:
-    # return lz4.compressHC(value)
+    # return lz4wrapper.lzcompresshc(value)
     return value
 
 def decompress(value):
     # Real world implementations will want to compress values.
     # Insert your favorite compression here, ex:
-    # return lz4.decompress(value)
+    # return lz4wrapper.lz4decompress(value)
     return value
 
 def generateKey(id):
