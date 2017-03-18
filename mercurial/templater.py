@@ -575,6 +575,9 @@ def pad(context, mapping, args):
     fillchar = ' '
     if len(args) > 2:
         fillchar = evalstring(context, mapping, args[2])
+        if len(fillchar) != 1:
+            # i18n: "pad" is a keyword
+            raise error.ParseError(_("pad() expects a single fill character"))
     if len(args) > 3:
         left = evalboolean(context, mapping, args[3])
 

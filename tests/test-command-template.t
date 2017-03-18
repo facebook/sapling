@@ -3521,6 +3521,15 @@ Test width argument passed to pad function
   hg: parse error: pad() expects an integer width
   [255]
 
+Test invalid fillchar passed to pad function
+
+  $ hg log -r 0 -T '{pad(rev, 10, "")}\n'
+  hg: parse error: pad() expects a single fill character
+  [255]
+  $ hg log -r 0 -T '{pad(rev, 10, "--")}\n'
+  hg: parse error: pad() expects a single fill character
+  [255]
+
 Test boolean argument passed to pad function
 
  no crash
