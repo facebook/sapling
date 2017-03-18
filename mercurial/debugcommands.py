@@ -2019,7 +2019,7 @@ def debugtemplate(ui, repo, tmpl, **opts):
     for d in opts['define']:
         try:
             k, v = (e.strip() for e in d.split('=', 1))
-            if not k:
+            if not k or k == 'ui':
                 raise ValueError
             props[k] = v
         except ValueError:
@@ -2037,7 +2037,7 @@ def debugtemplate(ui, repo, tmpl, **opts):
     if revs is None:
         k = 'debugtemplate'
         t = formatter.maketemplater(ui, k, tmpl)
-        ui.write(templater.stringify(t(k, **props)))
+        ui.write(templater.stringify(t(k, ui=ui, **props)))
     else:
         displayer = cmdutil.changeset_templater(ui, repo, None, opts, tmpl,
                                                 mapfile, buffered=False)
