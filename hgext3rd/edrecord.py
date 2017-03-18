@@ -42,13 +42,10 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall,
         return originaldorecord(ui, repo, commitfunc, cmdsuggest, backupall,
                                 filterfn, *pats, **opts)
 
-    backup = ui.backupconfig('ui', 'interactive')
-    try:
-        ui.setconfig('ui', 'interactive', True)
+    overrides = {('ui', 'interactive'): True}
+    with ui.configoverride(overrides, 'edrecord'):
         originaldorecord(ui, repo, commitfunc, cmdsuggest, backupall, filterfn,
                         *pats, **opts)
-    finally:
-        ui.restoreconfig(backup)
 
 def recordfilter(ui, headers, operation=None):
 

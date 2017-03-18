@@ -704,14 +704,14 @@ def _findcommonincoming(orig, *args, **kwargs):
     return common, True, remoteheads
 
 def _push(orig, ui, repo, dest=None, *args, **opts):
-    oldbookmark = ui.backupconfig(experimental, configbookmark)
-    oldcreate = ui.backupconfig(experimental, configcreate)
+    bookmark = opts.get('to') or ''
+    create = opts.get('create') or False
+
     oldphasemove = None
+    overrides = {(experimental, configbookmark): bookmark,
+                 (experimental, configcreate): create}
 
-    try:
-        bookmark = opts.get('to') or ''
-        create = opts.get('create') or False
-
+    with ui.configoverride(overrides, 'infinitepush'):
         scratchpush = opts.get('bundle_store')
         if _scratchbranchmatcher(bookmark):
             # Hack to fix interaction with remotenames. Remotenames push
@@ -724,8 +724,6 @@ def _push(orig, ui, repo, dest=None, *args, **opts):
             if 'create' in opts:
                 del opts['create']
             opts['allow_anon'] = True
-            ui.setconfig(experimental, configbookmark, bookmark, '--to')
-            ui.setconfig(experimental, configcreate, create, '--create')
             scratchpush = True
             # bundle2 can be sent back after push (for example, bundle2
             # containing `pushkey` part to update bookmarks)
@@ -758,11 +756,8 @@ def _push(orig, ui, repo, dest=None, *args, **opts):
                                                           patterns=[bookmark])
                 remotescratchbookmarks.update(fetchedbookmarks)
             _saveremotebookmarks(repo, remotescratchbookmarks, destpath)
-    finally:
-        ui.restoreconfig(oldbookmark)
-        ui.restoreconfig(oldcreate)
-        if oldphasemove:
-            exchange._localphasemove = oldphasemove
+    if oldphasemove:
+        exchange._localphasemove = oldphasemove
     return result
 
 def _phasemove(orig, pushop, nodes, phase=phases.public):

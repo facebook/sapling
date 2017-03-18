@@ -59,16 +59,14 @@ merge driver that always takes other versions
   $ cat > ../mergedriver-other.py << EOF
   > from mercurial import debugcommands
   > def preprocess(ui, repo, hooktype, mergestate, wctx, labels):
-  >     backup = ui.backupconfig('ui', 'forcemerge')
-  >     try:
+  >     overrides = {('ui', 'forcemerge'): ':other'}
+  >     with ui.configoverride(overrides, 'mergedriver'):
   >         ui.setconfig('ui', 'forcemerge', ':other', 'mergedriver')
   >         mergestate.preresolve('foo.txt', wctx)
   >         mergestate.resolve('foo.txt', wctx)
   >         mergestate.preresolve('bar.txt', wctx)
   >         mergestate.resolve('bar.txt', wctx)
   >         mergestate.commit()
-  >     finally:
-  >         ui.restoreconfig(backup)
   > 
   >     return debugcommands.debugmergestate(ui, repo)
   > def conclude(ui, repo, hooktype, mergestate, wctx, labels):
@@ -282,16 +280,13 @@ indicate merge driver is necessary at commit
   $ cat > ../mergedriver-special.py << EOF
   > def preprocess(ui, repo, hooktype, mergestate, wctx, labels):
   >     repo.ui.status('* preprocess called\n')
-  >     backup = ui.backupconfig('ui', 'forcemerge')
-  >     try:
-  >         ui.setconfig('ui', 'forcemerge', ':other', 'mergedriver')
+  >     overrides = {('ui', 'forcemerge'): ':other'}
+  >     with ui.configoverride(overrides, 'mergedriver'):
   >         mergestate.preresolve('foo.txt', wctx)
   >         mergestate.resolve('foo.txt', wctx)
   >         mergestate.preresolve('bar.txt', wctx)
   >         mergestate.resolve('bar.txt', wctx)
   >         mergestate.commit()
-  >     finally:
-  >         ui.restoreconfig(backup)
   > 
   >     return True
   > def conclude(ui, repo, hooktype, mergestate, wctx, labels):

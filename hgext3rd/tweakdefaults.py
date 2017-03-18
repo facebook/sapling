@@ -589,12 +589,9 @@ def markermetadatawritingcommand(ui, origcmd, operationame):
 
     def cmd(*args, **kwargs):
         repo = args[repo_index]
-        backupconfig = repo.ui.backupconfig(globaldata, createmarkersoperation)
-        repo.ui.setconfig(globaldata, createmarkersoperation, operationame)
-        try:
+        overrides = {(globaldata, createmarkersoperation): operationame}
+        with repo.ui.configoverride(overrides, 'tweakdefaults'):
             return origcmd(*args, **kwargs)
-        finally:
-            repo.ui.restoreconfig(backupconfig)
     return cmd
 
 def _rebase(orig, ui, repo, **opts):
@@ -638,16 +635,15 @@ def _computeobsoletenotrebasedwrapper(orig, repo, rebaseobsrevs, dest):
     return res
 
 def _checkobsrebasewrapper(orig, repo, ui, *args):
-    cfgbackup = repo.ui.backupconfig('experimental', 'allowdivergence')
+    overrides = {}
     try:
         extensions.find('inhibit')
-        repo.ui.setconfig('experimental', 'allowdivergence', 'on',
-                          'tweakdefaults')
+        # if inhibit is enabled, allow divergence
+        overrides[('experimental', 'allowdivergence')] = True
     except KeyError:
         pass
-    finally:
+    with repo.ui.configoverride(overrides, 'tweakdefaults'):
         orig(repo, ui, *args)
-        repo.ui.restoreconfig(cfgbackup)
 
 def currentdate():
     return "%d %d" % util.makedate(time.time())

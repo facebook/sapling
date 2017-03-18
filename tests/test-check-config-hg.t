@@ -23,7 +23,6 @@ New errors are not allowed. Warnings are strongly discouraged.
       if ui.configbool("experimental", "histeditng"):
   
   conflict on experimental.histeditng: ('bool', '') != ('str', '')
-  undocumented: dirsync._tempdisable (bool)
   undocumented: extensions.fbamend (str)
   undocumented: fastlog.debug (str)
   undocumented: fastlog.enabled (bool)

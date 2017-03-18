@@ -81,13 +81,10 @@ def allowunstable(orig, ui, repo, *args, **kwargs):
     if obsolete.createmarkersopt not in config:
         return orig(ui, repo, *args, **kwargs)
 
-    backup = ui.backupconfig('experimental', 'evolution')
     config.add(obsolete.allowunstableopt)
-    repo.ui.setconfig('experimental', 'evolution', config)
-    try:
+    overrides = {('experimental', 'evolution'): config}
+    with repo.ui.configoverride(overrides, 'allowunstable'):
         return orig(ui, repo, *args, **kwargs)
-    finally:
-        ui.restoreconfig(backup)
 
 def setcreatemarkersop(operation):
     """Return a wrapper function that sets the 'operation' field in the
@@ -103,18 +100,9 @@ def setcreatemarkersop(operation):
         return lambda orig, *args, **kwargs: orig(*args, **kwargs)
 
     def wrapper(orig, ui, repo, *args, **kwargs):
-        backup = ui.backupconfig(
-            tweakdefaults.globaldata,
-            tweakdefaults.createmarkersoperation
-        )
-        repo.ui.setconfig(
-            tweakdefaults.globaldata,
-            tweakdefaults.createmarkersoperation,
-            operation
-        )
-        try:
+        overrides = {(tweakdefaults.globaldata,
+                      tweakdefaults.createmarkersoperation): operation}
+        with repo.ui.configoverride(overrides, 'allowunstable'):
             return orig(ui, repo, *args, **kwargs)
-        finally:
-            ui.restoreconfig(backup)
 
     return wrapper

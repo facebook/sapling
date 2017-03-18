@@ -77,14 +77,14 @@ def wrapmdprop(orig, self):
 
 def wrapresolve(orig, ui, repo, *pats, **opts):
     backup = None
+    overrides = {}
     if opts.get('skip'):
-        backup = ui.backupconfig('experimental', 'mergedriver')
-        ui.setconfig('experimental', 'mergedriver', '',
-                     'mergedriver extension')
+        backup = ui.config('experimental', 'mergedriver')
+        overrides[('experimental', 'mergedriver')] = ''
         ui.warn(_('warning: skipping merge driver '
                   '(you MUST regenerate artifacts afterwards)\n'))
 
-    try:
+    with ui.configoverride(overrides, 'mergedriver'):
         ret = orig(ui, repo, *pats, **opts)
         # load up and commit the merge state again to make sure the driver gets
         # written out
@@ -96,9 +96,6 @@ def wrapresolve(orig, ui, repo, *pats, **opts):
                     ms.mark(f, 'u')
             ms.commit()
         return ret
-    finally:
-        if backup is not None:
-            ui.restoreconfig(backup)
 
 def _rundriver(repo, ms, op, wctx, labels):
     ui = repo.ui

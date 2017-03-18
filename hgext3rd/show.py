@@ -76,19 +76,11 @@ def show(ui, repo, *args, **opts):
     opts['patch'] = True
     opts['verbose'] = True
 
-    verbosebackup = ui.backupconfig('ui', 'verbose')
     # Copy tracking is slow when doing a git diff. Override hgrc, and rely on
     # opts getting us a git diff if it's been requested. Ideally, we'd find and
     # fix the slowness in copy tracking, but this works for now.
     # On a commit with lots of possible copies, Bryan O'Sullivan found that this
     # reduces "time hg show" from 1.76 seconds to 0.81 seconds.
-    gitdiffbackup = ui.backupconfig('diff', 'git')
-
-    try:
-        ui.setconfig('ui', 'verbose', True)
-        ui.setconfig('diff', 'git', False)
+    overrides = {('diff', 'git'): opts.get('git'), ('ui', 'verbose'): True}
+    with ui.configoverride(overrides, 'show'):
         commands.log(ui, repo, *pats, **opts)
-
-    finally:
-        ui.restoreconfig(gitdiffbackup)
-        ui.restoreconfig(verbosebackup)

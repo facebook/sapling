@@ -52,7 +52,6 @@ pager.attended.append('smartlog')
 cmdtable = {}
 command = cmdutil.command(cmdtable)
 testedwith = 'ships-with-fb-hgext'
-enabled = False
 commit_info = False
 hiddenchanges = 0
 
@@ -615,31 +614,25 @@ Excludes:
         return
 
     # Print it!
-    global enabled
-    backupconfig = ui.backupconfig('experimental', 'graphstyle.grandparent')
-    try:
-        if ui.config('experimental', 'graphstyle.grandparent') == '|':
-            ui.setconfig('experimental', 'graphstyle.grandparent', '2.')
-        enabled = True
-
+    overrides = {}
+    if ui.config('experimental', 'graphstyle.grandparent') == '|':
+        overrides[('experimental', 'graphstyle.grandparent')] = '2.'
+    with ui.configoverride(overrides, 'smartlog'):
         revdag = getdag(ui, repo, revs, masterrev)
         displayer = cmdutil.show_changeset(ui, repo, opts, buffered=True)
         cmdutil.displaygraph(
             ui, repo, revdag, displayer, graphmod.asciiedges, None, None)
 
-        try:
-            with open(repo.vfs.join('completionhints'), 'w+') as f:
-                for rev in revdag:
-                    commit_hash = rev[2].node()
-                    # Skip fakectxt nodes
-                    if commit_hash != '...':
-                        f.write(nodemod.short(commit_hash) + '\n')
-        except IOError:
-            # No write access. No big deal.
-            pass
-    finally:
-        ui.restoreconfig(backupconfig)
-        enabled = False
+    try:
+        with open(repo.vfs.join('completionhints'), 'w+') as f:
+            for rev in revdag:
+                commit_hash = rev[2].node()
+                # Skip fakectxt nodes
+                if commit_hash != '...':
+                    f.write(nodemod.short(commit_hash) + '\n')
+    except IOError:
+        # No write access. No big deal.
+        pass
 
     if hiddenchanges:
         msg = _(

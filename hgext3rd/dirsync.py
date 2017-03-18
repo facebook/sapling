@@ -45,6 +45,8 @@ from mercurial.i18n import _
 
 testedwith = 'ships-with-fb-hgext'
 
+_disabled = [False]
+
 def extsetup(ui):
     extensions.wrapfunction(localrepo.localrepository, 'commit', _commit)
     def wrapshelve(loaded=False):
@@ -59,12 +61,11 @@ def extsetup(ui):
     extensions.afterloaded('shelve', wrapshelve)
 
 def _bypassdirsync(orig, ui, repo, *args, **kwargs):
-    backup = ui.backupconfig('dirsync', '_tempdisable')
+    _disabled[0] = True
     try:
-        ui.setconfig('dirsync', '_tempdisable', True)
         return orig(ui, repo, *args, **kwargs)
     finally:
-        ui.restoreconfig(backup)
+        _disabled[0] = False
 
 def getconfigs(repo):
     # bypass "repoui.copy = baseui.copy # prevent copying repo configuration"
@@ -95,7 +96,7 @@ def getmirrors(maps, filename):
     return []
 
 def _commit(orig, self, *args, **kwargs):
-    if self.ui.configbool('dirsync', '_tempdisable', False):
+    if _disabled[0]:
         return orig(self, *args, **kwargs)
 
     wlock = self.wlock()

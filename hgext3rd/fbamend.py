@@ -958,7 +958,7 @@ def _restackonce(ui, repo, rev, rebaseopts=None, childrenonly=False):
     # We need to ensure that the 'operation' field in the obsmarker metadata
     # is always set to 'rebase', regardless of the current command so that
     # the restacked commits will appear as 'rebased' in smartlog.
-    backup = None
+    overrides = {}
     try:
         tweakdefaults = extensions.find('tweakdefaults')
     except KeyError:
@@ -966,23 +966,12 @@ def _restackonce(ui, repo, rev, rebaseopts=None, childrenonly=False):
         # to set the metadata.
         pass
     else:
-        backup = ui.backupconfig(
-            tweakdefaults.globaldata,
-            tweakdefaults.createmarkersoperation
-        )
-        repo.ui.setconfig(
-            tweakdefaults.globaldata,
-            tweakdefaults.createmarkersoperation,
-            'rebase'
-        )
+        overrides[(tweakdefaults.globaldata,
+                   tweakdefaults.createmarkersoperation)] = 'rebase'
 
     # Perform rebase.
-    try:
+    with repo.ui.configoverride(overrides, 'restack'):
         rebasemod.rebase(ui, repo, **rebaseopts)
-    finally:
-        # Reset the configuration to what it was before.
-        if backup is not None:
-            ui.restoreconfig(backup)
 
     # Remove any preamend bookmarks on precursors.
     _clearpreamend(repo, allprecursors)
