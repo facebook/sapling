@@ -44,6 +44,9 @@ _bundlespeccgversions = {'v1': '01',
                          'bundle2': '02', #legacy
                         }
 
+# Compression engines allowed in version 1. THIS SHOULD NEVER CHANGE.
+_bundlespecv1compengines = set(['gzip', 'bzip2', 'none'])
+
 def parsebundlespec(repo, spec, strict=True, externalnames=False):
     """Parse a bundle string specification into parts.
 
@@ -127,7 +130,11 @@ def parsebundlespec(repo, spec, strict=True, externalnames=False):
         if spec in util.compengines.supportedbundlenames:
             compression = spec
             version = 'v1'
+            # Generaldelta repos require v2.
             if 'generaldelta' in repo.requirements:
+                version = 'v2'
+            # Modern compression engines require v2.
+            if compression not in _bundlespecv1compengines:
                 version = 'v2'
         elif spec in _bundlespeccgversions:
             if spec == 'packed1':
@@ -138,6 +145,12 @@ def parsebundlespec(repo, spec, strict=True, externalnames=False):
         else:
             raise error.UnsupportedBundleSpecification(
                     _('%s is not a recognized bundle specification') % spec)
+
+    # Bundle version 1 only supports a known set of compression engines.
+    if version == 'v1' and compression not in _bundlespecv1compengines:
+        raise error.UnsupportedBundleSpecification(
+            _('compression engine %s is not supported on v1 bundles') %
+            compression)
 
     # The specification for packed1 can optionally declare the data formats
     # required to apply it. If we see this metadata, compare against what the

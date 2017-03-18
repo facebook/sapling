@@ -33,6 +33,23 @@ bundle w/o type option
   summary:     a
   $ cd ..
 
+Unknown compression type is rejected
+
+  $ hg init t3
+  $ cd t3
+  $ hg -q pull ../b1
+  $ hg bundle -a -t unknown out.hg
+  abort: unknown is not a recognized bundle specification
+  (see 'hg help bundle' for supported values for --type)
+  [255]
+
+  $ hg bundle -a -t unknown-v2 out.hg
+  abort: unknown compression is not supported
+  (see 'hg help bundle' for supported values for --type)
+  [255]
+
+  $ cd ..
+
 test bundle types
 
   $ testbundle() {
@@ -164,6 +181,21 @@ Compression level can be adjusted for bundle2 bundles
       c35a0f9217e65d1fdb90c936ffa7dbe679f83ddf
   zstd-v2
   
+
+Explicit request for zstd on non-generaldelta repos
+
+  $ hg --config format.usegeneraldelta=false init nogd
+  $ hg -q -R nogd pull t1
+  $ hg -R nogd bundle -a -t zstd nogd-zstd
+  1 changesets found
+
+zstd-v1 always fails
+
+  $ hg -R tzstd bundle -a -t zstd-v1 zstd-v1
+  abort: compression engine zstd is not supported on v1 bundles
+  (see 'hg help bundle' for supported values for --type)
+  [255]
+
 #else
 
 zstd is a valid engine but isn't available
