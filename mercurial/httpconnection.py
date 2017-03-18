@@ -44,10 +44,10 @@ class httpsendfile(object):
         self._total = self.length // 1024 * 2
 
     def read(self, *args, **kwargs):
-        try:
-            ret = self._data.read(*args, **kwargs)
-        except EOFError:
+        ret = self._data.read(*args, **kwargs)
+        if not ret:
             self.ui.progress(_('sending'), None)
+            return ret
         self._pos += len(ret)
         # We pass double the max for total because we currently have
         # to send the bundle twice in the case of a server that
