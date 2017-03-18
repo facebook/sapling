@@ -3354,6 +3354,12 @@ color effects can be nested (issue5413)
   > '{label(red, "red{label(magenta, "ma{label(cyan, "cyan")}{label(yellow, "yellow")}genta")}")}\n'
   \x1b[0;31mred\x1b[0;35mma\x1b[0;36mcyan\x1b[0m\x1b[0;31m\x1b[0;35m\x1b[0;33myellow\x1b[0m\x1b[0;31m\x1b[0;35mgenta\x1b[0m (esc)
 
+pad() should interact well with color codes (issue5416)
+
+  $ hg debugtemplate --color=always \
+  > '{pad(label(red, "red"), 5, label(cyan, "-"))}\n'
+  \x1b[0;31mred\x1b[0m\x1b[0;36m-\x1b[0m\x1b[0;36m-\x1b[0m (esc)
+
 label should be no-op if color is disabled:
 
   $ hg log --color=never -l 1 --template '{label(red, "text\n")}'

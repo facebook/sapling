@@ -13,6 +13,7 @@ import types
 
 from .i18n import _
 from . import (
+    color,
     config,
     encoding,
     error,
@@ -576,13 +577,13 @@ def pad(context, mapping, args):
     fillchar = ' '
     if len(args) > 2:
         fillchar = evalstring(context, mapping, args[2])
-        if len(fillchar) != 1:
+        if len(color.stripeffects(fillchar)) != 1:
             # i18n: "pad" is a keyword
             raise error.ParseError(_("pad() expects a single fill character"))
     if len(args) > 3:
         left = evalboolean(context, mapping, args[3])
 
-    fillwidth = width - encoding.colwidth(text)
+    fillwidth = width - encoding.colwidth(color.stripeffects(text))
     if fillwidth <= 0:
         return text
     if left:

@@ -7,6 +7,8 @@
 
 from __future__ import absolute_import
 
+import re
+
 from .i18n import _
 
 from . import (
@@ -327,6 +329,12 @@ def _render_effects(ui, text, effects):
         stop = '\033[' + str(_effects['none']) + 'm'
     return _mergeeffects(text, start, stop)
 
+_ansieffectre = re.compile(br'\x1b\[[0-9;]*m')
+
+def stripeffects(text):
+    """Strip ANSI control codes which could be inserted by colorlabel()"""
+    return _ansieffectre.sub('', text)
+
 def colorlabel(ui, msg, label):
     """add color control code according to the mode"""
     if ui._colormode == 'debug':
@@ -352,7 +360,6 @@ def colorlabel(ui, msg, label):
 w32effects = None
 if pycompat.osname == 'nt':
     import ctypes
-    import re
 
     _kernel32 = ctypes.windll.kernel32
 
