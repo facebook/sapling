@@ -14,6 +14,7 @@ import types
 from .i18n import _
 from . import (
     config,
+    encoding,
     error,
     minirst,
     parser,
@@ -581,10 +582,13 @@ def pad(context, mapping, args):
     if len(args) > 3:
         left = evalboolean(context, mapping, args[3])
 
+    fillwidth = width - encoding.colwidth(text)
+    if fillwidth <= 0:
+        return text
     if left:
-        return text.rjust(width, fillchar)
+        return fillchar * fillwidth + text
     else:
-        return text.ljust(width, fillchar)
+        return text + fillchar * fillwidth
 
 @templatefunc('indent(text, indentchars[, firstline])')
 def indent(context, mapping, args):

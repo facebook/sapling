@@ -4115,6 +4115,11 @@ utf8 filter:
   abort: template filter 'utf8' is not compatible with keyword 'rev'
   [255]
 
+pad width:
+
+  $ HGENCODING=utf-8 hg debugtemplate "{pad('`cat utf-8`', 2, '-')}\n"
+  \xc3\xa9- (esc)
+
   $ cd ..
 
 Test that template function in extension is registered as expected
