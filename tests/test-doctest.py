@@ -23,6 +23,7 @@ def testmod(name, optionflags=0, testtarget=None, py2=True, py3=False):
 
 testmod('mercurial.changegroup')
 testmod('mercurial.changelog')
+testmod('mercurial.color')
 testmod('mercurial.config')
 testmod('mercurial.dagparser', optionflags=doctest.NORMALIZE_WHITESPACE)
 testmod('mercurial.dispatch')

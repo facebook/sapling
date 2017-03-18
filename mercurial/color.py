@@ -296,6 +296,23 @@ def _effect_str(ui, effect):
     else:
         return curses.tparm(curses.tigetstr('setaf'), val)
 
+def _mergeeffects(text, start, stop):
+    """Insert start sequence at every occurrence of stop sequence
+
+    >>> s = _mergeeffects('cyan', '[C]', '|')
+    >>> s = _mergeeffects(s + 'yellow', '[Y]', '|')
+    >>> s = _mergeeffects('ma' + s + 'genta', '[M]', '|')
+    >>> s = _mergeeffects('red' + s, '[R]', '|')
+    >>> s
+    '[R]red[M]ma[Y][C]cyan|[R][M][Y]yellow|[R][M]genta|'
+    """
+    parts = []
+    for t in text.split(stop):
+        if not t:
+            continue
+        parts.extend([start, t, stop])
+    return ''.join(parts)
+
 def _render_effects(ui, text, effects):
     'Wrap text in commands to turn on each effect.'
     if not text:
@@ -308,7 +325,7 @@ def _render_effects(ui, text, effects):
         start = [str(_effects[e]) for e in ['none'] + effects.split()]
         start = '\033[' + ';'.join(start) + 'm'
         stop = '\033[' + str(_effects['none']) + 'm'
-    return ''.join([start, text, stop])
+    return _mergeeffects(text, start, stop)
 
 def colorlabel(ui, msg, label):
     """add color control code according to the mode"""

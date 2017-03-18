@@ -3348,6 +3348,12 @@ color effect can be specified without quoting:
   $ hg log --color=always -l 1 --template '{label(red, "text\n")}'
   \x1b[0;31mtext\x1b[0m (esc)
 
+color effects can be nested (issue5413)
+
+  $ hg debugtemplate --color=always \
+  > '{label(red, "red{label(magenta, "ma{label(cyan, "cyan")}{label(yellow, "yellow")}genta")}")}\n'
+  \x1b[0;31mred\x1b[0;35mma\x1b[0;36mcyan\x1b[0m\x1b[0;31m\x1b[0;35m\x1b[0;33myellow\x1b[0m\x1b[0;31m\x1b[0;35mgenta\x1b[0m (esc)
+
 label should be no-op if color is disabled:
 
   $ hg log --color=never -l 1 --template '{label(red, "text\n")}'
