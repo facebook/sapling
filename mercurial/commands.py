@@ -1636,10 +1636,12 @@ def commit(ui, repo, *pats, **opts):
         release(lock, wlock)
 
 def _docommit(ui, repo, *pats, **opts):
+    opts = pycompat.byteskwargs(opts)
     if opts.get('interactive'):
         opts.pop('interactive')
         ret = cmdutil.dorecord(ui, repo, commit, None, False,
-                               cmdutil.recordfilter, *pats, **opts)
+                               cmdutil.recordfilter, *pats,
+                               **pycompat.strkwargs(opts))
         # ret can be 0 (no changes to record) or the value returned by
         # commit(), 1 if nothing changed or None on success.
         return 1 if ret == 0 else ret
@@ -1711,7 +1713,8 @@ def _docommit(ui, repo, *pats, **opts):
                 with ui.configoverride(overrides, 'commit'):
                     editform = cmdutil.mergeeditform(repo[None],
                                                      'commit.normal')
-                    editor = cmdutil.getcommiteditor(editform=editform, **opts)
+                    editor = cmdutil.getcommiteditor(
+                        editform=editform, **pycompat.strkwargs(opts))
                     return repo.commit(message,
                                        opts.get('user'),
                                        opts.get('date'),
