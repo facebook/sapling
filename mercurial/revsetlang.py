@@ -573,6 +573,9 @@ def foldconcat(tree):
 def parse(spec, lookup=None):
     return _parsewith(spec, lookup=lookup)
 
+def _quote(s):
+    return repr(str(s))
+
 def formatspec(expr, *args):
     '''
     This is a convenience function for using revsets internally, and
@@ -606,21 +609,18 @@ def formatspec(expr, *args):
     "root(_list('a\\x00b\\x00c\\x00d'))"
     '''
 
-    def quote(s):
-        return repr(str(s))
-
     def argtype(c, arg):
         if c == 'd':
             return '%d' % int(arg)
         elif c == 's':
-            return quote(arg)
+            return _quote(arg)
         elif c == 'r':
             parse(arg) # make sure syntax errors are confined
             return '(%s)' % arg
         elif c == 'n':
-            return quote(node.hex(arg))
+            return _quote(node.hex(arg))
         elif c == 'b':
-            return quote(arg.branch())
+            return _quote(arg.branch())
 
     def listexp(s, t):
         l = len(s)
