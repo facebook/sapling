@@ -139,7 +139,7 @@
   $ hg blackbox -l 9
   1970/01/01 00:00:00 bob @cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b (5000)> devel-warn: revset "oldstyle" uses list instead of smartset
   (compatibility will be dropped after Mercurial-3.9, update your code.) at: *mercurial/revset.py:* (mfunc) (glob)
-  1970/01/01 00:00:00 bob @cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b (5000)> log -r oldstyle() -T {rev}\n exited 0 after * seconds (glob)
+  1970/01/01 00:00:00 bob @cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b (5000)> log -r 'oldstyle()' -T '{rev}\n' exited 0 after * seconds (glob)
   1970/01/01 00:00:00 bob @cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b (5000)> oldanddeprecated
   1970/01/01 00:00:00 bob @cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b (5000)> devel-warn: foorbar is deprecated, go shopping
   (compatibility will be dropped after Mercurial-42.1337, update your code.) at: $TESTTMP/buggylocking.py:* (oldanddeprecated) (glob)

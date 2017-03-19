@@ -92,13 +92,8 @@ def _formatparse(write, inst):
     if inst.hint:
         write(_("(%s)\n") % inst.hint)
 
-def _mayberepr(a):
-    if ' ' in a:
-        return encoding.strtolocal(repr(a))
-    return a
-
 def _formatargs(args):
-    return ' '.join(_mayberepr(a) for a in args)
+    return ' '.join(util.shellquote(a) for a in args)
 
 def dispatch(req):
     "run the command specified in req.args"
