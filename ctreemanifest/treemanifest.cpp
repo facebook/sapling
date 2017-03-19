@@ -508,6 +508,8 @@ bool NewTreeIterator::popResult(std::string **path, ManifestNode **result,
   memcpy(this->parents[1].node, NULLID, BIN_NODE_SIZE);
 
   bool alreadyExists = false;
+  int matchingParent = -1;
+  bool isRootManifest = this->mainStack.size() == 1;
 
   // Record the nodes of all cmp manifest equivalents
   for (size_t i = 0; i < cmpStacks.size(); i++) {
@@ -529,6 +531,7 @@ bool NewTreeIterator::popResult(std::string **path, ManifestNode **result,
         // verify their content until now.
         if (cmpSerialized.compare(mainSerialized) == 0) {
           alreadyExists = true;
+          matchingParent = i;
         }
       }
 
@@ -557,11 +560,19 @@ bool NewTreeIterator::popResult(std::string **path, ManifestNode **result,
   }
 
   char tempnode[BIN_NODE_SIZE];
-  mainManifest->computeNode(this->parents[0].node, this->parents[1].node,
-                            tempnode);
+  if (alreadyExists && !isRootManifest) {
+    // Reuse existing node if we're not the root node. This is important,
+    // because otherwise we compute a new node for the same content, since p1/p2
+    // will be different. The root node is special since it changes when
+    // given a different p1/p2, regardless of content.
+    memcpy(tempnode, this->parents[matchingParent].node, BIN_NODE_SIZE);
+  } else {
+    mainManifest->computeNode(this->parents[0].node, this->parents[1].node,
+                              tempnode);
+  }
 
   // Update the node on the manifest entry
-  if (mainStack.size() > 0) {
+  if (!isRootManifest) {
     // Peek back up the stack so we can put the right node on the
     // ManifestEntry.
     stackframe &priorFrame = mainStack[mainStack.size() - 1];
@@ -578,7 +589,7 @@ bool NewTreeIterator::popResult(std::string **path, ManifestNode **result,
   // If the current manifest has the same contents as a cmp manifest,
   // just give up now. Unless we're the root node (because the root node
   // will always change based on the parent nodes).
-  if (alreadyExists && this->mainStack.size() > 1) {
+  if (alreadyExists && !isRootManifest) {
     size_t slashoffset = this->path.find_last_of('/', this->path.size() - 2);
     if (slashoffset == std::string::npos) {
       this->path.erase();
