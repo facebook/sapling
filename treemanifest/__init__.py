@@ -54,6 +54,7 @@ from remotefilelog.historypack import historypackstore, mutablehistorypack
 from remotefilelog import shallowutil
 import cstore
 
+import os
 import struct
 
 cmdtable = {}
@@ -214,6 +215,28 @@ def _writemanifest(orig, self, transaction, link, p1, p2, added, removed):
 
     return n
 
+@command('debuggentrees', [
+    ('s', 'skip-allowed-roots', None,
+     _('skips the check for only generating on allowed roots')),
+    ('', 'verify', None,
+     _('verify consistency of tree data')),
+    ], _('hg debuggentrees FIRSTREV LASTREV'))
+def debuggentrees(ui, repo, rev1, rev2, *args, **opts):
+    rev1 = repo.revs(rev1).first()
+    rev2 = repo.revs(rev2).last()
+
+    mfrevlog = repo.manifestlog._revlog
+    mfrev1 = mfrevlog.rev(repo[rev1].manifestnode())
+    mfrev2 = mfrevlog.rev(repo[rev2].manifestnode()) + 1
+
+    packpath = shallowutil.getcachepackpath(repo, PACK_CATEGORY)
+    if opts.get('skip_allowed_roots', False):
+        ui.setconfig('treemanifest', 'allowedtreeroots', None)
+    with mutabledatapack(repo.ui, packpath) as dpack:
+        with mutablehistorypack(repo.ui, packpath) as hpack:
+            recordmanifest(dpack, hpack, repo, mfrev1, mfrev2,
+                           verify=opts.get('verify', False))
+
 @command('backfilltree', [
     ('l', 'limit', '10000000', _(''))
     ], _('hg backfilltree [OPTIONS]'))
@@ -346,7 +369,7 @@ class InterceptedMutableHistoryPack(object):
                 p1 = self._p1node
         self.entries.append((filename, node, p1, p2, linknode, copyfrom))
 
-def recordmanifest(datapack, historypack, repo, oldtip, newtip):
+def recordmanifest(datapack, historypack, repo, oldtip, newtip, verify=False):
     cl = repo.changelog
     mfl = repo.manifestlog
     mfrevlog = mfl._revlog
@@ -474,8 +497,27 @@ def recordmanifest(datapack, historypack, repo, oldtip, newtip):
                                                   p1node)
         temphistorypack = InterceptedMutableHistoryPack(mfrevlog.node(rev),
                                                         p1node)
+        mfdatastore = repo.svfs.manifestdatastore
         newtreeiter = newtree.finalize(origtree if p1node != nullid else None)
         for nname, nnode, ntext, np1text, np1, np2 in newtreeiter:
+            if verify:
+                # Verify all children of the tree already exist in the store
+                # somewhere.
+                lines = ntext.split('\n')
+                for line in lines:
+                    if not line:
+                        continue
+                    childname, nodeflag = line.split('\0')
+                    childpath = os.path.join(nname, childname)
+                    cnode = nodeflag[:40]
+                    cflag = nodeflag[40:]
+                    if (cflag == 't' and
+                        (childpath + '/', bin(cnode)) not in includedentries and
+                        mfdatastore.getmissing([(childpath, bin(cnode))])):
+                        import pdb
+                        pdb.set_trace()
+                        pass
+
             # Only use deltas if the delta base is in this same pack file
             if np1 != nullid and (nname, np1) in includedentries:
                 delta = mdiff.textdiff(np1text, ntext)
@@ -493,10 +535,6 @@ def recordmanifest(datapack, historypack, repo, oldtip, newtip):
 
         if ui.configbool('treemanifest', 'verifyautocreate', False):
             diff = newtree.diff(origtree)
-            if len(diff) != len(adds) + len(deletes):
-                import pdb
-                pdb.set_trace()
-
             for fname in deletes:
                 fdiff = diff.get(fname)
                 if fdiff is None:
