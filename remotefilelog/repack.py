@@ -332,20 +332,16 @@ class repacker(object):
                         deltabases[p2] = node
 
                 # Compute delta
+                # TODO: Optimize the deltachain fetching. Since we're
+                # iterating over the different version of the file, we may
+                # be fetching the same deltachain over and over again.
                 # TODO: reuse existing deltas if it matches our deltabase
                 if deltabase != nullid:
                     deltabasetext = self.data.get(filename, deltabase)
                     original = self.data.get(filename, node)
                     delta = mdiff.textdiff(deltabasetext, original)
                 else:
-                    # TODO: Optimize the deltachain fetching. Since we're
-                    # iterating over the different version of the file, we may
-                    # be fetching the same deltachain over and over again.
-                    chain = self.data.getdeltachain(filename, node)
-                    x, x, deltabasename, deltabase, delta = chain[0]
-                    if deltabasename != filename:
-                        deltabase = nullid
-                        delta = self.data.get(filename, node)
+                    delta = self.data.get(filename, node)
 
                 # TODO: don't use the delta if it's larger than the fulltext
                 # TODO: don't use the delta if the chain is already long
