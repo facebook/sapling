@@ -475,12 +475,24 @@ class rebaseruntime(object):
                 editopt = True
             editor = cmdutil.getcommiteditor(edit=editopt, editform=editform)
             revtoreuse = max(self.state)
-            newnode = concludenode(repo, revtoreuse, p1, self.external,
-                                   commitmsg=commitmsg,
-                                   extrafn=_makeextrafn(self.extrafns),
-                                   editor=editor,
-                                   keepbranches=self.keepbranchesf,
-                                   date=self.date)
+            dsguard = dirstateguard.dirstateguard(repo, 'rebase')
+            try:
+                newnode = concludenode(repo, revtoreuse, p1, self.external,
+                                       commitmsg=commitmsg,
+                                       extrafn=_makeextrafn(self.extrafns),
+                                       editor=editor,
+                                       keepbranches=self.keepbranchesf,
+                                       date=self.date)
+                dsguard.close()
+                release(dsguard)
+            except error.InterventionRequired:
+                dsguard.close()
+                release(dsguard)
+                raise
+            except Exception:
+                release(dsguard)
+                raise
+
             if newnode is None:
                 newrev = self.target
             else:
@@ -712,10 +724,18 @@ def rebase(ui, repo, **opts):
                 return retcode
 
         with repo.transaction('rebase') as tr:
+            dsguard = dirstateguard.dirstateguard(repo, 'rebase')
             try:
                 rbsrt._performrebase(tr)
+                dsguard.close()
+                release(dsguard)
             except error.InterventionRequired:
+                dsguard.close()
+                release(dsguard)
                 tr.close()
+                raise
+            except Exception:
+                release(dsguard)
                 raise
         rbsrt._finishrebase()
     finally:
@@ -840,33 +860,28 @@ def concludenode(repo, rev, p1, p2, commitmsg=None, editor=None, extrafn=None,
     '''Commit the wd changes with parents p1 and p2. Reuse commit info from rev
     but also store useful information in extra.
     Return node of committed revision.'''
-    dsguard = dirstateguard.dirstateguard(repo, 'rebase')
-    try:
-        repo.setparents(repo[p1].node(), repo[p2].node())
-        ctx = repo[rev]
-        if commitmsg is None:
-            commitmsg = ctx.description()
-        keepbranch = keepbranches and repo[p1].branch() != ctx.branch()
-        extra = {'rebase_source': ctx.hex()}
-        if extrafn:
-            extrafn(ctx, extra)
+    repo.setparents(repo[p1].node(), repo[p2].node())
+    ctx = repo[rev]
+    if commitmsg is None:
+        commitmsg = ctx.description()
+    keepbranch = keepbranches and repo[p1].branch() != ctx.branch()
+    extra = {'rebase_source': ctx.hex()}
+    if extrafn:
+        extrafn(ctx, extra)
 
-        targetphase = max(ctx.phase(), phases.draft)
-        overrides = {('phases', 'new-commit'): targetphase}
-        with repo.ui.configoverride(overrides, 'rebase'):
-            if keepbranch:
-                repo.ui.setconfig('ui', 'allowemptycommit', True)
-            # Commit might fail if unresolved files exist
-            if date is None:
-                date = ctx.date()
-            newnode = repo.commit(text=commitmsg, user=ctx.user(),
-                                  date=date, extra=extra, editor=editor)
+    targetphase = max(ctx.phase(), phases.draft)
+    overrides = {('phases', 'new-commit'): targetphase}
+    with repo.ui.configoverride(overrides, 'rebase'):
+        if keepbranch:
+            repo.ui.setconfig('ui', 'allowemptycommit', True)
+        # Commit might fail if unresolved files exist
+        if date is None:
+            date = ctx.date()
+        newnode = repo.commit(text=commitmsg, user=ctx.user(),
+                              date=date, extra=extra, editor=editor)
 
-        repo.dirstate.setbranch(repo[newnode].branch())
-        dsguard.close()
-        return newnode
-    finally:
-        release(dsguard)
+    repo.dirstate.setbranch(repo[newnode].branch())
+    return newnode
 
 def rebasenode(repo, rev, p1, base, state, collapse, target):
     'Rebase a single revision rev on top of p1 using base as merge ancestor'
