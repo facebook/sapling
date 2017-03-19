@@ -57,6 +57,7 @@ if ispy3:
     if sysexecutable:
         sysexecutable = os.fsencode(sysexecutable)
     stringio = io.BytesIO
+    maplist = lambda *args: list(map(*args))
 
     # TODO: .buffer might not exist if std streams were replaced; we'll need
     # a silly wrapper to make a bytes stream backed by a unicode one.
@@ -251,6 +252,7 @@ else:
     sysexecutable = sys.executable
     shlexsplit = shlex.split
     stringio = cStringIO.StringIO
+    maplist = map
 
 empty = _queue.Empty
 queue = _queue.Queue
