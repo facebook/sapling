@@ -969,7 +969,7 @@ def hgexecutable():
     """
     if _hgexecutable is None:
         hg = encoding.environ.get('HG')
-        mainmod = sys.modules['__main__']
+        mainmod = sys.modules[pycompat.sysstr('__main__')]
         if hg:
             _sethgexecutable(hg)
         elif mainfrozen():
