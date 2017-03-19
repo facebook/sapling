@@ -92,6 +92,9 @@ def _formatparse(write, inst):
     if inst.hint:
         write(_("(%s)\n") % inst.hint)
 
+def _formatargs(args):
+    return ' '.join(' ' in a and repr(a) or a for a in args)
+
 def dispatch(req):
     "run the command specified in req.args"
     if req.ferr:
@@ -123,7 +126,7 @@ def dispatch(req):
         _formatparse(ferr.write, inst)
         return -1
 
-    msg = ' '.join(' ' in a and repr(a) or a for a in req.args)
+    msg = _formatargs(req.args)
     starttime = util.timer()
     ret = None
     try:
@@ -829,7 +832,7 @@ def _dispatch(req):
         elif rpath:
             ui.warn(_("warning: --repository ignored\n"))
 
-        msg = ' '.join(' ' in a and repr(a) or a for a in fullargs)
+        msg = _formatargs(fullargs)
         ui.log("command", '%s\n', msg)
         strcmdopt = pycompat.strkwargs(cmdoptions)
         d = lambda: util.checksignature(func)(ui, *args, **strcmdopt)
