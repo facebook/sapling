@@ -181,7 +181,7 @@ def checkexec(path):
                     except OSError as e:
                         if e.errno != errno.ENOENT:
                             raise
-                        file(checknoexec, 'w').close() # might fail
+                        open(checknoexec, 'w').close() # might fail
                         m = os.stat(checknoexec).st_mode
                     if m & EXECFLAGS == 0:
                         # check-exec is exec and check-no-exec is not exec
