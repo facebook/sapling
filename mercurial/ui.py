@@ -1196,7 +1196,7 @@ class ui(object):
                                       dir=rdir)
         try:
             f = os.fdopen(fd, pycompat.sysstr("w"))
-            f.write(text)
+            f.write(encoding.strfromlocal(text))
             f.close()
 
             environ = {'HGUSER': user}
@@ -1219,7 +1219,7 @@ class ui(object):
                         blockedtag='editor')
 
             f = open(name)
-            t = f.read()
+            t = encoding.strtolocal(f.read())
             f.close()
         finally:
             os.unlink(name)
