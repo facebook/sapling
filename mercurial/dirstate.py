@@ -1115,9 +1115,9 @@ class dirstate(object):
             else:
                 # We may not have walked the full directory tree above,
                 # so stat and check everything we missed.
-                nf = iter(visit).next
+                iv = iter(visit)
                 for st in util.statfiles([join(i) for i in visit]):
-                    results[nf()] = st
+                    results[next(iv)] = st
         return results
 
     def status(self, match, subrepos, ignored, clean, unknown):
