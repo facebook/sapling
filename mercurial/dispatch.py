@@ -475,7 +475,8 @@ def _parse(ui, args):
         args = aliasargs(entry[0], args)
         defaults = ui.config("defaults", cmd)
         if defaults:
-            args = map(util.expandpath, pycompat.shlexsplit(defaults)) + args
+            args = pycompat.maplist(
+                util.expandpath, pycompat.shlexsplit(defaults)) + args
         c = list(entry[1])
     else:
         cmd = None
