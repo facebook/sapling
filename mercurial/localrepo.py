@@ -1318,7 +1318,7 @@ class localrepository(object):
         redundant one doesn't).
         '''
         unfiltered = self.unfiltered() # all file caches are stored unfiltered
-        for k in self._filecache.keys():
+        for k in list(self._filecache.keys()):
             # dirstate is invalidated separately in invalidatedirstate()
             if k == 'dirstate':
                 continue
