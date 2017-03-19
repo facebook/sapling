@@ -1101,7 +1101,7 @@ class localrepository(object):
         def validate(tr):
             """will run pre-closing hooks"""
             reporef().hook('pretxnclose', throw=True,
-                           txnname=desc, **tr.hookargs)
+                           txnname=desc, **pycompat.strkwargs(tr.hookargs))
         def releasefn(tr, success):
             repo = reporef()
             if success:
@@ -1142,7 +1142,7 @@ class localrepository(object):
 
             def hook():
                 reporef().hook('txnclose', throw=False, txnname=desc,
-                               **hookargs)
+                               **pycompat.strkwargs(hookargs))
             reporef()._afterlock(hook)
         tr.addfinalize('txnclose-hook', txnclosehook)
         def txnaborthook(tr2):
