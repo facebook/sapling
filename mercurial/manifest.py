@@ -284,17 +284,17 @@ class _lazymanifest(object):
             self.data = self.data[:cur] + '\x00' + self.data[cur + 1:]
 
     def __setitem__(self, key, value):
-        if not isinstance(key, str):
-            raise TypeError("setitem: manifest keys must be a string.")
+        if not isinstance(key, bytes):
+            raise TypeError("setitem: manifest keys must be a byte string.")
         if not isinstance(value, tuple) or len(value) != 2:
             raise TypeError("Manifest values must be a tuple of (node, flags).")
         hashval = value[0]
-        if not isinstance(hashval, str) or not 20 <= len(hashval) <= 22:
-            raise TypeError("node must be a 20-byte string")
+        if not isinstance(hashval, bytes) or not 20 <= len(hashval) <= 22:
+            raise TypeError("node must be a 20-byte byte string")
         flags = value[1]
         if len(hashval) == 22:
             hashval = hashval[:-1]
-        if not isinstance(flags, str) or len(flags) > 1:
+        if not isinstance(flags, bytes) or len(flags) > 1:
             raise TypeError("flags must a 0 or 1 byte string, got %r", flags)
         needle, found = self.bsearch2(key)
         if found:
