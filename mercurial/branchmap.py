@@ -426,7 +426,7 @@ class revbranchcache(object):
         else:
             # rev/node map has changed, invalidate the cache from here up
             self._repo.ui.debug("history modification detected - truncating "
-                "revision branch cache to revision %s\n" % rev)
+                "revision branch cache to revision %d\n" % rev)
             truncate = rbcrevidx + _rbcrecsize
             del self._rbcrevs[truncate:]
             self._rbcrevslen = min(self._rbcrevslen, truncate)
@@ -503,7 +503,7 @@ class revbranchcache(object):
                            len(self._rbcrevs) // _rbcrecsize)
                 f = repo.vfs.open(_rbcrevs, 'ab')
                 if f.tell() != start:
-                    repo.ui.debug("truncating %s to %s\n" % (_rbcrevs, start))
+                    repo.ui.debug("truncating %s to %d\n" % (_rbcrevs, start))
                     f.seek(start)
                     if f.tell() != start:
                         start = 0
