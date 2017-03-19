@@ -12,7 +12,10 @@ import os
 import struct
 
 from .i18n import _
-from .node import bin
+from .node import (
+    bin,
+    hex,
+)
 from . import (
     error,
     mdiff,
@@ -355,7 +358,7 @@ class _lazymanifest(object):
         self.extradata = []
 
     def _pack(self, d):
-        return d[0] + '\x00' + d[1][:20].encode('hex') + d[2] + '\n'
+        return d[0] + '\x00' + hex(d[1][:20]) + d[2] + '\n'
 
     def text(self):
         self._compact()
