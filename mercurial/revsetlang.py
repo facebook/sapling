@@ -629,7 +629,7 @@ def formatspec(expr, *args):
         elif l == 1:
             return argtype(t, s[0])
         elif t == 'd':
-            return "_intlist('%s')" % "\0".join(str(int(a)) for a in s)
+            return "_intlist('%s')" % "\0".join('%d' % int(a) for a in s)
         elif t == 's':
             return "_list('%s')" % "\0".join(s)
         elif t == 'n':
