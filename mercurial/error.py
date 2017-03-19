@@ -22,7 +22,7 @@ class Hint(object):
     pass remaining arguments to the exception class.
     """
     def __init__(self, *args, **kw):
-        self.hint = kw.pop('hint', None)
+        self.hint = kw.pop(r'hint', None)
         super(Hint, self).__init__(*args, **kw)
 
 class RevlogError(Hint, Exception):
