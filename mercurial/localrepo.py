@@ -49,6 +49,7 @@ from . import (
     peer,
     phases,
     pushkey,
+    pycompat,
     repoview,
     revset,
     revsetlang,
@@ -1082,7 +1083,10 @@ class localrepository(object):
                 hint=_("run 'hg recover' to clean up transaction"))
 
         idbase = "%.40f#%f" % (random.random(), time.time())
-        txnid = 'TXN:' + hashlib.sha1(idbase).hexdigest()
+        ha = hashlib.sha1(idbase).hexdigest()
+        if pycompat.ispy3:
+            ha = ha.encode('latin1')
+        txnid = 'TXN:' + ha
         self.hook('pretxnopen', throw=True, txnname=desc, txnid=txnid)
 
         self._writejournal(desc)
