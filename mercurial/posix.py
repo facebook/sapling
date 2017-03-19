@@ -230,13 +230,16 @@ def checklink(path):
         else:
             checkdir = path
             cachedir = None
-        name = tempfile.mktemp(dir=checkdir, prefix='checklink-')
+        fscheckdir = pycompat.fsdecode(checkdir)
+        name = tempfile.mktemp(dir=fscheckdir,
+                               prefix=r'checklink-')
+        name = pycompat.fsencode(name)
         try:
             fd = None
             if cachedir is None:
-                fd = tempfile.NamedTemporaryFile(dir=checkdir,
-                                                 prefix='hg-checklink-')
-                target = os.path.basename(fd.name)
+                fd = tempfile.NamedTemporaryFile(dir=fscheckdir,
+                                                 prefix=r'hg-checklink-')
+                target = pycompat.fsencode(os.path.basename(fd.name))
             else:
                 # create a fixed file to link to; doesn't matter if it
                 # already exists.
