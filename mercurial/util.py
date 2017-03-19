@@ -1331,7 +1331,7 @@ def fspath(name, root):
         seps = seps + pycompat.osaltsep
     # Protect backslashes. This gets silly very quickly.
     seps.replace('\\','\\\\')
-    pattern = remod.compile(r'([^%s]+)|([%s]+)' % (seps, seps))
+    pattern = remod.compile(br'([^%s]+)|([%s]+)' % (seps, seps))
     dir = os.path.normpath(root)
     result = []
     for part, sep in pattern.findall(name):
