@@ -94,7 +94,7 @@ def _formatparse(write, inst):
 
 def _mayberepr(a):
     if ' ' in a:
-        return repr(a)
+        return encoding.strtolocal(repr(a))
     return a
 
 def _formatargs(args):
