@@ -1177,7 +1177,7 @@ def checkwinfilename(path):
     for n in path.replace('\\', '/').split('/'):
         if not n:
             continue
-        for c in n:
+        for c in pycompat.bytestr(n):
             if c in _winreservedchars:
                 return _("filename contains '%s', which is reserved "
                          "on Windows") % c
