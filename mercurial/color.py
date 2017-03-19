@@ -463,9 +463,11 @@ if pycompat.osname == 'nt':
                 for sattr in m.group(1).split(';'):
                     if sattr:
                         attr = mapcolor(int(sattr), attr)
+                ui.flush()
                 _kernel32.SetConsoleTextAttribute(stdout, attr)
                 writefunc(m.group(2), **opts)
                 m = re.match(ansire, m.group(3))
         finally:
             # Explicitly reset original attributes
+            ui.flush()
             _kernel32.SetConsoleTextAttribute(stdout, origattr)
