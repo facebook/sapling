@@ -312,7 +312,7 @@ def _computehidden(repo):
 
 def _cachehash(repo):
     h = hashlib.sha1()
-    for filename in ['phaseroots', '00changelog.i', 'obsstore']:
+    for filename in ['phaseroots', '00changelog.i', 'obsstore', 'obsinhibit']:
         size, mtime = _safegetsizemtime(repo, filename)
         h.update(str(size))
         h.update(str(mtime))
