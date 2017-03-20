@@ -1116,6 +1116,10 @@ class queue(object):
         if name in self._reserved:
             raise error.Abort(_('"%s" cannot be used as the name of a patch')
                              % name)
+        if name != name.strip():
+            # whitespace is stripped by parseseries()
+            raise error.Abort(_('patch name cannot begin or end with '
+                                'whitespace'))
         for prefix in ('.hg', '.mq'):
             if name.startswith(prefix):
                 raise error.Abort(_('patch name cannot begin with "%s"')

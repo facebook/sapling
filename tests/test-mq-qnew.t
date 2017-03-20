@@ -22,6 +22,8 @@
   >     hg qnew 'foo#bar'
   >     hg qnew 'foo:bar'
   >     hg qnew "`echo foo; echo bar`"
+  >     hg qnew ' foo'
+  >     hg qnew 'foo '
   > 
   >     hg qinit -c
   > 
@@ -112,6 +114,8 @@ plain headers
   abort: '#' cannot be used in the name of a patch
   abort: ':' cannot be used in the name of a patch
   abort: '\n' cannot be used in the name of a patch
+  abort: patch name cannot begin or end with whitespace
+  abort: patch name cannot begin or end with whitespace
   % qnew with name containing slash
   abort: path ends in directory separator: foo/ (glob)
   abort: "foo" already exists as a directory
@@ -180,6 +184,8 @@ hg headers
   abort: '#' cannot be used in the name of a patch
   abort: ':' cannot be used in the name of a patch
   abort: '\n' cannot be used in the name of a patch
+  abort: patch name cannot begin or end with whitespace
+  abort: patch name cannot begin or end with whitespace
   % qnew with name containing slash
   abort: path ends in directory separator: foo/ (glob)
   abort: "foo" already exists as a directory
@@ -313,36 +319,3 @@ Test saving last-message.txt
   > [hooks]
   > pretxncommit.unexpectedabort =
   > EOF
-
-#if unix-permissions
-
-Test handling default message with the patch filename with tail whitespaces
-
-  $ cat > $TESTTMP/editor.sh << EOF
-  > echo "==== before editing"
-  > cat \$1
-  > echo "===="
-  > echo "[mq]: patch        " > \$1
-  > EOF
-
-  $ rm -f .hg/last-message.txt
-  $ hg status
-  $ HGEDITOR="sh $TESTTMP/editor.sh" hg qnew -e "patch "
-  ==== before editing
-  
-  
-  HG: Enter commit message.  Lines beginning with 'HG:' are removed.
-  HG: Leave message empty to use default message.
-  HG: --
-  HG: user: test
-  HG: branch 'default'
-  HG: no files changed
-  ====
-  $ cat ".hg/patches/patch "
-  # HG changeset patch
-  # Parent  0000000000000000000000000000000000000000
-  
-
-  $ cd ..
-
-#endif

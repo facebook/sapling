@@ -247,10 +247,27 @@ qimport -e --name with --force
   this-name-is-better
   url.diff
 
+import patch of bad filename
+
+  $ touch '../ bad.diff'
+  $ hg qimport '../ bad.diff'
+  abort: patch name cannot begin or end with whitespace
+  [255]
+  $ touch '.hg/patches/ bad.diff'
+  $ hg qimport -e ' bad.diff'
+  abort: patch name cannot begin or end with whitespace
+  [255]
+
 qimport with bad name, should abort before reading file
 
   $ hg qimport non-existent-file --name .hg
   abort: patch name cannot begin with ".hg"
+  [255]
+  $ hg qimport non-existent-file --name ' foo'
+  abort: patch name cannot begin or end with whitespace
+  [255]
+  $ hg qimport non-existent-file --name 'foo '
+  abort: patch name cannot begin or end with whitespace
   [255]
 
 qimport http:// patch with leading slashes in url
