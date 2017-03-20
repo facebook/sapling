@@ -846,6 +846,15 @@ class ui(object):
         if not pagercmd:
             return
 
+        if pycompat.osname == 'nt':
+            # `more` cannot be invoked with shell=False, but `more.com` can.
+            # Hide this implementation detail from the user, so we can also get
+            # sane bad PAGER behavior.  If args are also given, the space in the
+            # command line forces shell=True, so that case doesn't need to be
+            # handled here.
+            if pagercmd == 'more':
+                pagercmd = 'more.com'
+
         self.debug('starting pager for command %r\n' % command)
         self.flush()
         self.pageractive = True
