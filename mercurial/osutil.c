@@ -1079,6 +1079,20 @@ const char *getfstype(const char *path) {
 	/* End of Linux filesystems */
 	return NULL;
 }
+
+static PyObject *pygetfstype(PyObject *self, PyObject *args)
+{
+	const char *path = NULL;
+	if (!PyArg_ParseTuple(args, "s", &path))
+		return NULL;
+
+	const char *type = getfstype(path);
+	if (type == NULL)
+		Py_RETURN_NONE;
+
+	PyObject *result = Py_BuildValue("s", type);
+	return result;
+}
 #endif /* def HAVE_STATFS */
 
 #endif /* ndef _WIN32 */
@@ -1256,6 +1270,10 @@ static PyMethodDef methods[] = {
 #ifndef SETPROCNAME_USE_NONE
 	{"setprocname", (PyCFunction)setprocname, METH_VARARGS,
 	 "set process title (best-effort)\n"},
+#endif
+#ifdef HAVE_STATFS
+	{"getfstype", (PyCFunction)pygetfstype, METH_VARARGS,
+	 "get filesystem type (best-effort)\n"},
 #endif
 #endif /* ndef _WIN32 */
 #ifdef __APPLE__
