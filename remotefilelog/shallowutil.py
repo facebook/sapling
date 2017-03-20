@@ -238,10 +238,45 @@ def readunpack(stream, fmt):
     data = readexactly(stream, struct.calcsize(fmt))
     return struct.unpack(fmt, data)
 
+def getgid(groupname):
+    try:
+        gid = grp.getgrnam(groupname).gr_gid
+        return gid
+    except KeyError:
+        return None
+
+def setstickygroupdir(path, gid, warn=None):
+    if gid is None:
+        return
+    try:
+        os.chown(path, -1, gid)
+        os.chmod(path, 0o2775)
+    except (IOError, OSError) as ex:
+        if warn:
+            warn(_('unable to chown/chmod on %s: %s\n') % (path, ex))
+
 def mkstickygroupdir(ui, path):
     """Creates the given directory (if it doesn't exist) and give it a
     particular group with setgid enabled."""
-    if os.path.exists(path):
+    gid = None
+    groupname = ui.config("remotefilelog", "cachegroup")
+    if groupname:
+        gid = getgid(groupname)
+        if gid is None:
+            ui.warn(_('unable to resolve group name: %s\n') % groupname)
+
+    # we use a single stat syscall to test the existence and mode / group bit
+    st = None
+    try:
+        st = os.stat(path)
+    except OSError:
+        pass
+
+    if st:
+        # exists
+        if (st.st_mode & 0o2775) != 0o2775 or st.st_gid != gid:
+            # permission needs to be fixed
+            setstickygroupdir(path, gid, ui.warn)
         return
 
     oldumask = os.umask(0o002)
@@ -255,19 +290,7 @@ def mkstickygroupdir(ui, path):
         for path in reversed(missingdirs):
             os.mkdir(path)
 
-        groupname = ui.config("remotefilelog", "cachegroup")
-        if groupname:
-            if os.name == 'nt':
-                raise error.Abort(_('cachegroup option not'
-                                    ' supported on Windows'))
-            gid = grp.getgrnam(groupname).gr_gid
-            if gid:
-                uid = os.getuid()
-                for path in missingdirs:
-                    try:
-                        os.chown(path, uid, gid)
-                        os.chmod(path, 0o2775)
-                    except (IOError, OSError) as ex:
-                        ui.debug('unable to chown/chmod sticky group: %s' % ex)
+        for path in missingdirs:
+            setstickygroupdir(path, gid, ui.warn)
     finally:
         os.umask(oldumask)
