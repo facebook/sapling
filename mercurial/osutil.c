@@ -24,6 +24,18 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+#ifdef HAVE_LINUX_MAGIC_H
+#include <linux/magic.h>
+#endif
+#ifdef HAVE_SYS_MOUNT_H
+#include <sys/mount.h>
+#endif
+#ifdef HAVE_SYS_PARAM_H
+#include <sys/param.h>
+#endif
+#ifdef HAVE_SYS_VFS_H
+#include <sys/vfs.h>
+#endif
 #endif
 
 #ifdef __APPLE__
@@ -785,6 +797,289 @@ static PyObject *setprocname(PyObject *self, PyObject *args)
 	Py_RETURN_NONE;
 }
 #endif /* ndef SETPROCNAME_USE_NONE */
+
+#ifdef HAVE_STATFS
+/* given a directory path, return filesystem type (best-effort), or None */
+const char *getfstype(const char *path) {
+	struct statfs buf;
+	int r;
+	memset(&buf, 0, sizeof(buf));
+	r = statfs(path, &buf);
+	if (r != 0)
+		return NULL;
+	/* Begin of Linux filesystems */
+#ifdef ADFS_SUPER_MAGIC
+	if (buf.f_type == ADFS_SUPER_MAGIC)
+		return "adfs";
+#endif
+#ifdef AFFS_SUPER_MAGIC
+	if (buf.f_type == AFFS_SUPER_MAGIC)
+		return "affs";
+#endif
+#ifdef BDEVFS_MAGIC
+	if (buf.f_type == BDEVFS_MAGIC)
+		return "bdevfs";
+#endif
+#ifdef BEFS_SUPER_MAGIC
+	if (buf.f_type == BEFS_SUPER_MAGIC)
+		return "befs";
+#endif
+#ifdef BFS_MAGIC
+	if (buf.f_type == BFS_MAGIC)
+		return "bfs";
+#endif
+#ifdef BINFMTFS_MAGIC
+	if (buf.f_type == BINFMTFS_MAGIC)
+		return "binfmtfs";
+#endif
+#ifdef BTRFS_SUPER_MAGIC
+	if (buf.f_type == BTRFS_SUPER_MAGIC)
+		return "btrfs";
+#endif
+#ifdef CGROUP_SUPER_MAGIC
+	if (buf.f_type == CGROUP_SUPER_MAGIC)
+		return "cgroup";
+#endif
+#ifdef CIFS_MAGIC_NUMBER
+	if (buf.f_type == CIFS_MAGIC_NUMBER)
+		return "cifs";
+#endif
+#ifdef CODA_SUPER_MAGIC
+	if (buf.f_type == CODA_SUPER_MAGIC)
+		return "coda";
+#endif
+#ifdef COH_SUPER_MAGIC
+	if (buf.f_type == COH_SUPER_MAGIC)
+		return "coh";
+#endif
+#ifdef CRAMFS_MAGIC
+	if (buf.f_type == CRAMFS_MAGIC)
+		return "cramfs";
+#endif
+#ifdef DEBUGFS_MAGIC
+	if (buf.f_type == DEBUGFS_MAGIC)
+		return "debugfs";
+#endif
+#ifdef DEVFS_SUPER_MAGIC
+	if (buf.f_type == DEVFS_SUPER_MAGIC)
+		return "devfs";
+#endif
+#ifdef DEVPTS_SUPER_MAGIC
+	if (buf.f_type == DEVPTS_SUPER_MAGIC)
+		return "devpts";
+#endif
+#ifdef EFIVARFS_MAGIC
+	if (buf.f_type == EFIVARFS_MAGIC)
+		return "efivarfs";
+#endif
+#ifdef EFS_SUPER_MAGIC
+	if (buf.f_type == EFS_SUPER_MAGIC)
+		return "efs";
+#endif
+#ifdef EXT_SUPER_MAGIC
+	if (buf.f_type == EXT_SUPER_MAGIC)
+		return "ext";
+#endif
+#ifdef EXT2_OLD_SUPER_MAGIC
+	if (buf.f_type == EXT2_OLD_SUPER_MAGIC)
+		return "ext2";
+#endif
+#ifdef EXT2_SUPER_MAGIC
+	if (buf.f_type == EXT2_SUPER_MAGIC)
+		return "ext2";
+#endif
+#ifdef EXT3_SUPER_MAGIC
+	if (buf.f_type == EXT3_SUPER_MAGIC)
+		return "ext3";
+#endif
+#ifdef EXT4_SUPER_MAGIC
+	if (buf.f_type == EXT4_SUPER_MAGIC)
+		return "ext4";
+#endif
+#ifdef FUSE_SUPER_MAGIC
+	if (buf.f_type == FUSE_SUPER_MAGIC)
+		return "fuse";
+#endif
+#ifdef FUTEXFS_SUPER_MAGIC
+	if (buf.f_type == FUTEXFS_SUPER_MAGIC)
+		return "futexfs";
+#endif
+#ifdef HFS_SUPER_MAGIC
+	if (buf.f_type == HFS_SUPER_MAGIC)
+		return "hfs";
+#endif
+#ifdef HOSTFS_SUPER_MAGIC
+	if (buf.f_type == HOSTFS_SUPER_MAGIC)
+		return "hostfs";
+#endif
+#ifdef HPFS_SUPER_MAGIC
+	if (buf.f_type == HPFS_SUPER_MAGIC)
+		return "hpfs";
+#endif
+#ifdef HUGETLBFS_MAGIC
+	if (buf.f_type == HUGETLBFS_MAGIC)
+		return "hugetlbfs";
+#endif
+#ifdef ISOFS_SUPER_MAGIC
+	if (buf.f_type == ISOFS_SUPER_MAGIC)
+		return "isofs";
+#endif
+#ifdef JFFS2_SUPER_MAGIC
+	if (buf.f_type == JFFS2_SUPER_MAGIC)
+		return "jffs2";
+#endif
+#ifdef JFS_SUPER_MAGIC
+	if (buf.f_type == JFS_SUPER_MAGIC)
+		return "jfs";
+#endif
+#ifdef MINIX_SUPER_MAGIC
+	if (buf.f_type == MINIX_SUPER_MAGIC)
+		return "minix";
+#endif
+#ifdef MINIX2_SUPER_MAGIC
+	if (buf.f_type == MINIX2_SUPER_MAGIC)
+		return "minix2";
+#endif
+#ifdef MINIX3_SUPER_MAGIC
+	if (buf.f_type == MINIX3_SUPER_MAGIC)
+		return "minix3";
+#endif
+#ifdef MQUEUE_MAGIC
+	if (buf.f_type == MQUEUE_MAGIC)
+		return "mqueue";
+#endif
+#ifdef MSDOS_SUPER_MAGIC
+	if (buf.f_type == MSDOS_SUPER_MAGIC)
+		return "msdos";
+#endif
+#ifdef NCP_SUPER_MAGIC
+	if (buf.f_type == NCP_SUPER_MAGIC)
+		return "ncp";
+#endif
+#ifdef NFS_SUPER_MAGIC
+	if (buf.f_type == NFS_SUPER_MAGIC)
+		return "nfs";
+#endif
+#ifdef NILFS_SUPER_MAGIC
+	if (buf.f_type == NILFS_SUPER_MAGIC)
+		return "nilfs";
+#endif
+#ifdef NTFS_SB_MAGIC
+	if (buf.f_type == NTFS_SB_MAGIC)
+		return "ntfs-sb";
+#endif
+#ifdef OCFS2_SUPER_MAGIC
+	if (buf.f_type == OCFS2_SUPER_MAGIC)
+		return "ocfs2";
+#endif
+#ifdef OPENPROM_SUPER_MAGIC
+	if (buf.f_type == OPENPROM_SUPER_MAGIC)
+		return "openprom";
+#endif
+#ifdef PIPEFS_MAGIC
+	if (buf.f_type == PIPEFS_MAGIC)
+		return "pipefs";
+#endif
+#ifdef PROC_SUPER_MAGIC
+	if (buf.f_type == PROC_SUPER_MAGIC)
+		return "proc";
+#endif
+#ifdef PSTOREFS_MAGIC
+	if (buf.f_type == PSTOREFS_MAGIC)
+		return "pstorefs";
+#endif
+#ifdef QNX4_SUPER_MAGIC
+	if (buf.f_type == QNX4_SUPER_MAGIC)
+		return "qnx4";
+#endif
+#ifdef QNX6_SUPER_MAGIC
+	if (buf.f_type == QNX6_SUPER_MAGIC)
+		return "qnx6";
+#endif
+#ifdef RAMFS_MAGIC
+	if (buf.f_type == RAMFS_MAGIC)
+		return "ramfs";
+#endif
+#ifdef REISERFS_SUPER_MAGIC
+	if (buf.f_type == REISERFS_SUPER_MAGIC)
+		return "reiserfs";
+#endif
+#ifdef ROMFS_MAGIC
+	if (buf.f_type == ROMFS_MAGIC)
+		return "romfs";
+#endif
+#ifdef SELINUX_MAGIC
+	if (buf.f_type == SELINUX_MAGIC)
+		return "selinux";
+#endif
+#ifdef SMACK_MAGIC
+	if (buf.f_type == SMACK_MAGIC)
+		return "smack";
+#endif
+#ifdef SMB_SUPER_MAGIC
+	if (buf.f_type == SMB_SUPER_MAGIC)
+		return "smb";
+#endif
+#ifdef SOCKFS_MAGIC
+	if (buf.f_type == SOCKFS_MAGIC)
+		return "sockfs";
+#endif
+#ifdef SQUASHFS_MAGIC
+	if (buf.f_type == SQUASHFS_MAGIC)
+		return "squashfs";
+#endif
+#ifdef SYSFS_MAGIC
+	if (buf.f_type == SYSFS_MAGIC)
+		return "sysfs";
+#endif
+#ifdef SYSV2_SUPER_MAGIC
+	if (buf.f_type == SYSV2_SUPER_MAGIC)
+		return "sysv2";
+#endif
+#ifdef SYSV4_SUPER_MAGIC
+	if (buf.f_type == SYSV4_SUPER_MAGIC)
+		return "sysv4";
+#endif
+#ifdef TMPFS_MAGIC
+	if (buf.f_type == TMPFS_MAGIC)
+		return "tmpfs";
+#endif
+#ifdef UDF_SUPER_MAGIC
+	if (buf.f_type == UDF_SUPER_MAGIC)
+		return "udf";
+#endif
+#ifdef UFS_MAGIC
+	if (buf.f_type == UFS_MAGIC)
+		return "ufs";
+#endif
+#ifdef USBDEVICE_SUPER_MAGIC
+	if (buf.f_type == USBDEVICE_SUPER_MAGIC)
+		return "usbdevice";
+#endif
+#ifdef V9FS_MAGIC
+	if (buf.f_type == V9FS_MAGIC)
+		return "v9fs";
+#endif
+#ifdef VXFS_SUPER_MAGIC
+	if (buf.f_type == VXFS_SUPER_MAGIC)
+		return "vxfs";
+#endif
+#ifdef XENFS_SUPER_MAGIC
+	if (buf.f_type == XENFS_SUPER_MAGIC)
+		return "xenfs";
+#endif
+#ifdef XENIX_SUPER_MAGIC
+	if (buf.f_type == XENIX_SUPER_MAGIC)
+		return "xenix";
+#endif
+#ifdef XFS_SUPER_MAGIC
+	if (buf.f_type == XFS_SUPER_MAGIC)
+		return "xfs";
+#endif
+	/* End of Linux filesystems */
+	return NULL;
+}
+#endif /* def HAVE_STATFS */
 
 #endif /* ndef _WIN32 */
 
