@@ -22,7 +22,12 @@
   [1]
   $ ls .hg/cache/ | grep hidden
   [1]
-  $ hg prune . --debug | grep 'hidden cache'
+  $ hg --config perftweaks.fasthiddencache=True prune . --debug | grep 'hidden cache'
+  recomputing hidden cache
+  $ hg log -r . --debug | grep 'hidden cache'
+  [1]
+  $ printf '[perftweaks]\nfasthiddencache=True' >> .hg/hgrc
+  $ hg log -r . --debug | grep 'hidden cache'
   recomputing hidden cache
   $ hg log -r . --debug | grep 'hidden cache'
   using hidden cache
