@@ -72,6 +72,22 @@ Test if log-like commands work:
   $ cd ..
 #endif
 
+Test if `hg config` works:
+
+  $ $PYTHON3 $HGBIN config
+  defaults.backout=-d "0 0"
+  defaults.commit=-d "0 0"
+  defaults.shelve=--date "0 0"
+  defaults.tag=-d "0 0"
+  devel.all-warnings=true
+  largefiles.usercache=$TESTTMP/.cache/largefiles
+  ui.slash=True
+  ui.interactive=False
+  ui.mergemarkers=detailed
+  ui.promptecho=True
+  web.address=localhost
+  web.ipv6=False
+
   $ cat > included-hgrc <<EOF
   > [extensions]
   > babar = imaginary_elephant
