@@ -96,7 +96,7 @@ def backup(ui, repo, dest=None, **opts):
         if logdir:
             try:
                 try:
-                    username = ui.shortuser(ui.username())
+                    username = util.shortuser(ui.username())
                 except Exception:
                     username = 'unknown'
                 userlogdir = os.path.join(logdir, username)
@@ -141,7 +141,7 @@ def restore(ui, repo, dest=None, **opts):
 
     sourcereporoot = opts.get('reporoot')
     sourcehostname = opts.get('hostname')
-    username = opts.get('user') or ui.shortuser(ui.username())
+    username = opts.get('user') or util.shortuser(ui.username())
 
     allbackupstates = _downloadbackupstate(ui, other, sourcereporoot,
                                            sourcehostname, username)
@@ -184,7 +184,7 @@ def checkbackup(ui, repo, dest=None, **opts):
 
     sourcereporoot = opts.get('reporoot')
     sourcehostname = opts.get('hostname')
-    username = opts.get('user') or ui.shortuser(ui.username())
+    username = opts.get('user') or util.shortuser(ui.username())
 
     other = _getremote(repo, ui, dest, **opts)
     allbackupstates = _downloadbackupstate(ui, other, sourcereporoot,
@@ -235,7 +235,7 @@ def waitbackup(ui, repo, timeout):
 def _dobackup(ui, repo, dest, **opts):
     ui.status(_('starting backup %s\n') % time.strftime('%H:%M:%S %d %b %Y %Z'))
     start = time.time()
-    username = ui.shortuser(ui.username())
+    username = util.shortuser(ui.username())
     bkpstate = _readlocalbackupstate(ui, repo)
 
     maxheadstobackup = ui.configint('infinitepushbackup',
