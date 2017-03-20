@@ -94,17 +94,13 @@ if os.name == 'nt':
     # We remove hg.bat if we are able to build hg.exe.
     scripts.append('contrib/win32/hg.bat')
 
-# simplified version of distutils.ccompiler.CCompiler.has_function
-# that actually removes its temporary files.
-def hasfunction(cc, funcname):
+def cancompile(cc, code):
     tmpdir = tempfile.mkdtemp(prefix='hg-install-')
     devnull = oldstderr = None
     try:
-        fname = os.path.join(tmpdir, 'funcname.c')
+        fname = os.path.join(tmpdir, 'testcomp.c')
         f = open(fname, 'w')
-        f.write('int main(void) {\n')
-        f.write('    %s();\n' % funcname)
-        f.write('}\n')
+        f.write(code)
         f.close()
         # Redirect stderr to /dev/null to hide any error messages
         # from the compiler.
@@ -124,6 +120,12 @@ def hasfunction(cc, funcname):
         if devnull is not None:
             devnull.close()
         shutil.rmtree(tmpdir)
+
+# simplified version of distutils.ccompiler.CCompiler.has_function
+# that actually removes its temporary files.
+def hasfunction(cc, funcname):
+    code = 'int main(void) { %s(); }\n' % funcname
+    return cancompile(cc, code)
 
 # py2exe needs to be installed to work
 try:
