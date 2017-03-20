@@ -194,7 +194,9 @@ def submerge(repo, wctx, mctx, actx, overwrite, labels=None):
             r = "%s:%s:%s" % r
         repo.ui.debug("  subrepo %s: %s %s\n" % (s, msg, r))
 
+    promptssrc = filemerge.partextras(labels)
     for s, l in sorted(s1.iteritems()):
+        prompts = None
         a = sa.get(s, nullstate)
         ld = l # local state with possible dirty flag for compares
         if wctx.sub(s).dirty():
@@ -202,9 +204,9 @@ def submerge(repo, wctx, mctx, actx, overwrite, labels=None):
         if wctx == actx: # overwrite
             a = ld
 
+        prompts = promptssrc.copy()
+        prompts['s'] = s
         if s in s2:
-            prompts = filemerge.partextras(labels)
-            prompts['s'] = s
             r = s2[s]
             if ld == r or r == a: # no change or local is newer
                 sm[s] = l
@@ -267,6 +269,7 @@ def submerge(repo, wctx, mctx, actx, overwrite, labels=None):
                 wctx.sub(s).remove()
 
     for s, r in sorted(s2.items()):
+        prompts = None
         if s in s1:
             continue
         elif s not in sa:
@@ -274,6 +277,8 @@ def submerge(repo, wctx, mctx, actx, overwrite, labels=None):
             mctx.sub(s).get(r)
             sm[s] = r
         elif r != sa[s]:
+            prompts = promptssrc.copy()
+            prompts['s'] = s
             if repo.ui.promptchoice(
                 _(' remote%(o)s changed subrepository %(s)s'
                   ' which local%(l)s removed\n'

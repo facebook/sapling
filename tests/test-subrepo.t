@@ -349,7 +349,7 @@ should conflict
 local removed, remote changed, keep changed
 
   $ hg merge 6
-   remote [merge rev] changed subrepository s which local [working copy] removed
+   remote [merge rev] changed subrepository t which local [working copy] removed
   use (c)hanged version or (d)elete? c
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
@@ -380,7 +380,7 @@ local removed, remote changed, keep removed
   $ hg merge --config ui.interactive=true 6 <<EOF
   > d
   > EOF
-   remote [merge rev] changed subrepository s which local [working copy] removed
+   remote [merge rev] changed subrepository t which local [working copy] removed
   use (c)hanged version or (d)elete? d
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
@@ -404,7 +404,7 @@ local changed, remote removed, keep changed
   $ hg co -C 6
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg merge 11
-   local [working copy] changed subrepository s which remote [merge rev] removed
+   local [working copy] changed subrepository t which remote [merge rev] removed
   use (c)hanged version or (d)elete? c
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
@@ -436,7 +436,7 @@ local changed, remote removed, keep removed
   $ hg merge --config ui.interactive=true 11 <<EOF
   > d
   > EOF
-   local [working copy] changed subrepository s which remote [merge rev] removed
+   local [working copy] changed subrepository t which remote [merge rev] removed
   use (c)hanged version or (d)elete? d
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
