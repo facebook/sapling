@@ -2,15 +2,14 @@
 
   $ . "$TESTDIR/helpers-testrepo.sh"
 
-  $ OUTPUTDIR=`pwd`
+  $ OUTPUTDIR="`pwd`"
   $ export OUTPUTDIR
   $ KEEPMPKG=yes
   $ export KEEPMPKG
 
   $ cd "$TESTDIR"/..
-  $ rm -rf dist
-  $ make osx > $OUTPUTDIR/build.log 2>&1
-  $ cd $OUTPUTDIR
+  $ make osx > "$OUTPUTDIR/build.log" 2>&1
+  $ cd "$OUTPUTDIR"
   $ ls -d *.pkg
   Mercurial-*-macosx10.*.pkg (glob)
 
