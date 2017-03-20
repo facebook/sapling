@@ -182,6 +182,9 @@ def asciiedges(type, char, lines, state, rev, parents):
     knownparents = []
     newparents = []
     for ptype, parent in parents:
+        if parent == rev:
+            # self reference (should only be seen in null rev)
+            continue
         if parent in seen:
             knownparents.append(parent)
         else:
@@ -191,8 +194,7 @@ def asciiedges(type, char, lines, state, rev, parents):
     ncols = len(seen)
     nextseen = seen[:]
     nextseen[nodeidx:nodeidx + 1] = newparents
-    edges = [(nodeidx, nextseen.index(p))
-             for p in knownparents if p != nullrev]
+    edges = [(nodeidx, nextseen.index(p)) for p in knownparents]
 
     seen[:] = nextseen
     while len(newparents) > 2:

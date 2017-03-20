@@ -3424,3 +3424,39 @@ the right node styles are used (issue5174):
      summary:     0
   
 
+  $ cd ..
+
+Multiple roots (issue5440):
+
+  $ hg init multiroots
+  $ cd multiroots
+  $ cat <<EOF > .hg/hgrc
+  > [ui]
+  > logtemplate = '{rev} {desc}\n\n'
+  > EOF
+
+  $ touch foo
+  $ hg ci -Aqm foo
+  $ hg co -q null
+  $ touch bar
+  $ hg ci -Aqm bar
+
+  $ hg log -Gr null:
+  @  1 bar
+  |
+  | o  0 foo
+  |/
+  o  -1
+  
+  $ hg log -Gr null+0
+  o  0 foo
+  |
+  o  -1
+  
+  $ hg log -Gr null+1
+  @  1 bar
+  |
+  o  -1
+  
+
+  $ cd ..
