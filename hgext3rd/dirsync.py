@@ -71,10 +71,11 @@ def getconfigs(repo):
     # bypass "repoui.copy = baseui.copy # prevent copying repo configuration"
     ui = repo.ui.__class__.copy(repo.ui)
 
-    # also read from wvfs/.dirsync
-    content = repo.wvfs.tryread('.dirsync')
+    # also read from wvfs/.hgdirsync
+    filename = '.hgdirsync'
+    content = repo.wvfs.tryread(filename)
     if content:
-        ui._tcfg.parse('.dirsync', '[dirsync]\n%s' % content, ['dirsync'])
+        ui._tcfg.parse(filename, '[dirsync]\n%s' % content, ['dirsync'])
 
     maps = defaultdict(list)
     for key, value in ui.configitems('dirsync'):

@@ -595,7 +595,7 @@ Dont mirror during shelve
 
   $ cd ..
 
-Test .dirsync in the working copy
+Test .hgdirsync in the working copy
 
   $ rm -rf repo
   $ hg init repo
@@ -605,7 +605,7 @@ Test .dirsync in the working copy
   > group1.dir1 = dir1/
   > group1.dir2 = dir2/
   > EOF
-  $ cat >> .dirsync <<EOF
+  $ cat >> .hgdirsync <<EOF
   > group1.dir3 = dir3/
   > group2.dir1 = dir4/
   > group2.dir2 = dir5/
@@ -651,16 +651,16 @@ Test .dirsync in the working copy
   +b
   
 
-Change .dirsync in the working copy affects what will be synced
+Change .hgdirsync in the working copy affects what will be synced
 
-  $ rm .dirsync
+  $ rm .hgdirsync
 
   $ echo c > dir2/c
   $ echo d > dir4/d
   $ hg commit -m subdir -A dir2/c dir4/d
   mirrored adding 'dir2/c' to 'dir1/c'
 
-  $ cat >> .dirsync <<EOF
+  $ cat >> .hgdirsync <<EOF
   > group1.dir6 = dir6/
   > group1.dir7 = dir7/
   > EOF
@@ -671,10 +671,10 @@ Change .dirsync in the working copy affects what will be synced
   mirrored changes in 'dir2/c' to 'dir6/c'
   mirrored changes in 'dir2/c' to 'dir7/c'
 
-Only the ".dirsync" at the top of the repo is effective
+Only the ".hgdirsync" at the top of the repo is effective
 
   $ cd dir1
-  $ cat >> .dirsync <<'EOF'
+  $ cat >> .hgdirsync <<'EOF'
   > group1.dir8 = dir8/
   > group1.dir9 = dir9/
   > EOF
