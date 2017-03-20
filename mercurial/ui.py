@@ -1235,7 +1235,10 @@ class ui(object):
         object as exception.
         '''
         if blockedtag is None:
-            blockedtag = 'unknown_system_' + cmd.translate(None, _keepalnum)
+            # Long cmds tend to be because of an absolute path on cmd. Keep
+            # the tail end instead
+            cmdsuffix = cmd.translate(None, _keepalnum)[-85:]
+            blockedtag = 'unknown_system_' + cmdsuffix
         out = self.fout
         if any(s[1] for s in self._bufferstates):
             out = self
