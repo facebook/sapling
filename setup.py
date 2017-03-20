@@ -590,9 +590,9 @@ common_depends = ['mercurial/bitmanipulation.h',
 osutil_cflags = []
 osutil_ldflags = []
 
-# platform specific macros: HAVE_SETPROCTITLE
-for plat, func in [(re.compile('freebsd'), 'setproctitle')]:
-    if plat.search(sys.platform) and hasfunction(new_compiler(), func):
+# platform specific macros
+for plat, func in [('bsd', 'setproctitle'), ('bsd|darwin|linux', 'statfs')]:
+    if re.search(plat, sys.platform) and hasfunction(new_compiler(), func):
         osutil_cflags.append('-DHAVE_%s' % func.upper())
 
 if sys.platform == 'darwin':
