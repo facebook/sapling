@@ -176,6 +176,14 @@ osx:
         # location of our own.
 	install -d build/mercurial/usr/local/hg/contrib/
 	install -m 0644 contrib/bash_completion build/mercurial/usr/local/hg/contrib/hg-completion.bash
+	make -C contrib/chg \
+	  HGPATH=/usr/local/bin/hg \
+	  PYTHON=/usr/bin/python2.7 \
+	  HG=/usr/local/bin/hg \
+	  HGEXTDIR=/Library/Python/2.7/site-packages/hgext \
+	  DESTDIR=../../build/mercurial \
+	  PREFIX=/usr/local \
+	  clean install
 	mkdir -p $${OUTPUTDIR:-dist}
 	HGVER=$$((cat build/mercurial/Library/Python/2.7/site-packages/mercurial/__version__.py; echo 'print(version)') | python) && \
 	OSXVER=$$(sw_vers -productVersion | cut -d. -f1,2) && \
