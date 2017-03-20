@@ -127,6 +127,10 @@ def hasfunction(cc, funcname):
     code = 'int main(void) { %s(); }\n' % funcname
     return cancompile(cc, code)
 
+def hasheader(cc, headername):
+    code = '#include <%s>\nint main(void) { return 0; }\n' % headername
+    return cancompile(cc, code)
+
 # py2exe needs to be installed to work
 try:
     import py2exe
