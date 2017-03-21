@@ -131,11 +131,7 @@ class bmstore(dict):
                 finally:
                     f.close()
             else:
-                try:
-                    self._repo.vfs.unlink('bookmarks.current')
-                except OSError as inst:
-                    if inst.errno != errno.ENOENT:
-                        raise
+                self._repo.vfs.tryunlink('bookmarks.current')
         self._aclean = True
 
     def _write(self, fp):
