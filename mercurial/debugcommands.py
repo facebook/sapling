@@ -794,7 +794,7 @@ def debugfsinfo(ui, path="."):
     ui.write(('hardlink: %s\n') % (util.checknlink(path) and 'yes' or 'no'))
     ui.write(('case-sensitive: %s\n') % (util.fscasesensitive('.debugfsinfo')
                                 and 'yes' or 'no'))
-    os.unlink('.debugfsinfo')
+    util.tryunlink('.debugfsinfo')
 
 @command('debuggetbundle',
     [('H', 'head', [], _('id of head node'), _('ID')),
