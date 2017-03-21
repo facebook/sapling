@@ -1617,6 +1617,14 @@ def unlinkpath(f, ignoremissing=False):
     except OSError:
         pass
 
+def tryunlink(f):
+    """Attempt to remove a file, ignoring ENOENT errors."""
+    try:
+        unlink(f)
+    except OSError as e:
+        if e.errno != errno.ENOENT:
+            raise
+
 def makedirs(name, mode=None, notindexed=False):
     """recursive directory creation with parent mode inheritance
 
