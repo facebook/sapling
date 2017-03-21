@@ -260,11 +260,13 @@ class localrepository(object):
 
     def __init__(self, baseui, path, create=False):
         self.requirements = set()
-        # vfs to access the working copy
+        # wvfs: rooted at the repository root, used to access the working copy
         self.wvfs = vfsmod.vfs(path, expandpath=True, realpath=True)
-        # vfs to access the content of the repository
+        # vfs: rooted at .hg, used to access repo files outside of .hg/store
         self.vfs = None
-        # vfs to access the store part of the repository
+        # svfs: usually rooted at .hg/store, used to access repository history
+        # If this is a shared repository, this vfs may point to another
+        # repository's .hg/store directory.
         self.svfs = None
         self.root = self.wvfs.base
         self.path = self.wvfs.join(".hg")
