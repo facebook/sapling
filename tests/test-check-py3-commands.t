@@ -68,6 +68,17 @@ Test if log-like commands work:
   date:        Tue May 03 13:16:10 2005 -0800
   summary:     Add back links from file revisions to changeset revisions
   
+Test if `hg status` works:
+
+  $ mkdir a b a/1 b/1 b/2
+  $ touch in_root a/in_a b/in_b a/1/in_a_1 b/1/in_b_1 b/2/in_b_2
+  $ $PYTHON3 $HGBIN status
+  ? a/1/in_a_1
+  ? a/in_a
+  ? b/1/in_b_1
+  ? b/2/in_b_2
+  ? b/in_b
+  ? in_root
 
   $ cd ..
 #endif
