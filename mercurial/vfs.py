@@ -223,6 +223,10 @@ class abstractvfs(object):
     def unlink(self, path=None):
         return util.unlink(self.join(path))
 
+    def tryunlink(self, path=None):
+        """Attempt to remove a file, ignoring missing file errors."""
+        util.tryunlink(self.join(path))
+
     def unlinkpath(self, path=None, ignoremissing=False):
         return util.unlinkpath(self.join(path), ignoremissing=ignoremissing)
 
