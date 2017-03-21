@@ -28,6 +28,7 @@
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/service/GlobNode.h"
+#include "eden/fs/service/StreamingSubscriber.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fuse/MountPoint.h"
 
@@ -262,6 +263,22 @@ void EdenServiceHandler::getCurrentJournalPosition(
   out.mountGeneration = edenMount->getMountGeneration();
   out.sequenceNumber = latest->toSequence;
   out.snapshotHash = StringPiece(latest->toHash.getBytes()).str();
+}
+
+void EdenServiceHandler::async_tm_subscribe(
+    std::unique_ptr<apache::thrift::StreamingHandlerCallback<
+        std::unique_ptr<JournalPosition>>> callback,
+    std::unique_ptr<std::string> mountPoint) {
+  auto edenMount = server_->getMount(*mountPoint);
+  auto delta = edenMount->getJournal().rlock()->getLatest();
+
+  auto sub = std::make_shared<StreamingSubscriber>(
+      std::move(callback), std::move(edenMount));
+  // The subscribe call sets up a journal subscriber which captures
+  // a reference to the `sub` shared_ptr.  This keeps it alive for
+  // the duration of the subscription so that it doesn't get immediately
+  // deleted when sub falls out of scope at the bottom of this method call.
+  sub->subscribe();
 }
 
 void EdenServiceHandler::getFilesChangedSince(

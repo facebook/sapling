@@ -8,8 +8,10 @@
  *
  */
 #pragma once
+#include <folly/Function.h>
 #include <cstdint>
 #include <memory>
+#include <unordered_map>
 
 namespace facebook {
 namespace eden {
@@ -52,12 +54,30 @@ class Journal {
    * supplied delta is moved in and replaces current tip. */
   void replaceJournal(std::unique_ptr<JournalDelta>&& delta);
 
+  /** Register a subscriber.
+   * A subscriber is just a callback that is called whenever the
+   * journal has changed.
+   * It is recommended that the subscriber callback do the minimal
+   * amount of work needed to schedule the real work to happen in
+   * some other context because journal updates are likely to happen
+   * in awkward contexts or in the middle of some batch of mutations
+   * where it is not appropriate to do any heavy lifting.
+   * The return value of registerSubscriber is an identifier than
+   * can be passed to cancelSubscriber to later remove the registration.
+   */
+  uint64_t registerSubscriber(folly::Function<void()>&& callback);
+  void cancelSubscriber(uint64_t id);
+
  private:
   /** The sequence number that we'll use for the next entry
    * that we link into the chain */
   SequenceNumber nextSequence_{1};
   /** The most recently recorded entry */
   std::shared_ptr<const JournalDelta> latest_;
+  /** The next id to assign to subscribers */
+  uint64_t nextSubscriberId_{1};
+  /** The subscribers */
+  std::unordered_map<uint64_t, folly::Function<void()>> subscribers_;
 };
 }
 }

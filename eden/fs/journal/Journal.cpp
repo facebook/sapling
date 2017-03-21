@@ -30,6 +30,10 @@ void Journal::addDelta(std::unique_ptr<JournalDelta>&& delta) {
   }
 
   latest_ = std::shared_ptr<const JournalDelta>(std::move(delta));
+
+  for (auto& sub : subscribers_) {
+    sub.second();
+  }
 }
 
 std::shared_ptr<const JournalDelta> Journal::getLatest() const {
@@ -38,6 +42,16 @@ std::shared_ptr<const JournalDelta> Journal::getLatest() const {
 
 void Journal::replaceJournal(std::unique_ptr<JournalDelta>&& delta) {
   latest_ = std::shared_ptr<const JournalDelta>(std::move(delta));
+}
+
+uint64_t Journal::registerSubscriber(folly::Function<void()>&& callback) {
+  auto id = nextSubscriberId_++;
+  subscribers_[id] = std::move(callback);
+  return id;
+}
+
+void Journal::cancelSubscriber(uint64_t id) {
+  subscribers_.erase(id);
 }
 }
 }
