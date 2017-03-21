@@ -545,7 +545,7 @@ def unlinkpath(f, ignoremissing=False):
             raise
     # try removing directories that might now be empty
     try:
-        os.removedirs(os.path.dirname(f))
+        removedirs(os.path.dirname(f))
     except OSError:
         pass
 
