@@ -7,7 +7,6 @@
 
 from __future__ import absolute_import
 
-import errno
 import os
 import sys
 import tempfile
@@ -60,11 +59,7 @@ def runservice(opts, parentfn=None, initfn=None, runfn=None, logfile=None,
                 raise error.Abort(_('child process failed to start'))
             writepid(pid)
         finally:
-            try:
-                os.unlink(lockpath)
-            except OSError as e:
-                if e.errno != errno.ENOENT:
-                    raise
+            util.tryunlink(lockpath)
         if parentfn:
             return parentfn(pid)
         else:
