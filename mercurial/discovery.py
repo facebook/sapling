@@ -343,38 +343,13 @@ def checkheads(pushop):
         oldhs.update(unsyncedheads)
         candidate_newhs.update(unsyncedheads)
         dhs = None # delta heads, the new heads on branch
-        discardedheads = set()
         if not repo.obsstore:
+            discardedheads = set()
             newhs = candidate_newhs
         else:
-            # remove future heads which are actually obsoleted by another
-            # pushed element:
-            #
-            # XXX as above, There are several cases this code does not handle
-            # XXX properly
-            #
-            # (1) if <nh> is public, it won't be affected by obsolete marker
-            #     and a new is created
-            #
-            # (2) if the new heads have ancestors which are not obsolete and
-            #     not ancestors of any other heads we will have a new head too.
-            #
-            # These two cases will be easy to handle for known changeset but
-            # much more tricky for unsynced changes.
-            #
-            # In addition, this code is confused by prune as it only looks for
-            # successors of the heads (none if pruned) leading to issue4354
-            newhs = set()
-            for nh in candidate_newhs:
-                if nh in repo and repo[nh].phase() <= phases.public:
-                    newhs.add(nh)
-                else:
-                    for suc in obsolete.allsuccessors(repo.obsstore, [nh]):
-                        if suc != nh and suc in allfuturecommon:
-                            discardedheads.add(nh)
-                            break
-                    else:
-                        newhs.add(nh)
+            newhs, discardedheads = _postprocessobsolete(pushop,
+                                                         allfuturecommon,
+                                                         candidate_newhs)
         unsynced = sorted(h for h in unsyncedheads if h not in discardedheads)
         if unsynced:
             if None in unsynced:
@@ -434,3 +409,42 @@ def checkheads(pushop):
                 repo.ui.note((" %s\n") % short(h))
     if errormsg:
         raise error.Abort(errormsg, hint=hint)
+
+def _postprocessobsolete(pushop, futurecommon, candidate_newhs):
+    """post process the list of new heads with obsolescence information
+
+    Exists as a subfunction to contain the complexity and allow extensions to
+    experiment with smarter logic.
+    Returns (newheads, discarded_heads) tuple
+    """
+    # remove future heads which are actually obsoleted by another
+    # pushed element:
+    #
+    # XXX as above, There are several cases this code does not handle
+    # XXX properly
+    #
+    # (1) if <nh> is public, it won't be affected by obsolete marker
+    #     and a new is created
+    #
+    # (2) if the new heads have ancestors which are not obsolete and
+    #     not ancestors of any other heads we will have a new head too.
+    #
+    # These two cases will be easy to handle for known changeset but
+    # much more tricky for unsynced changes.
+    #
+    # In addition, this code is confused by prune as it only looks for
+    # successors of the heads (none if pruned) leading to issue4354
+    repo = pushop.repo
+    newhs = set()
+    discarded = set()
+    for nh in candidate_newhs:
+        if nh in repo and repo[nh].phase() <= phases.public:
+            newhs.add(nh)
+        else:
+            for suc in obsolete.allsuccessors(repo.obsstore, [nh]):
+                if suc != nh and suc in futurecommon:
+                    discarded.add(nh)
+                    break
+            else:
+                newhs.add(nh)
+    return newhs, discarded
