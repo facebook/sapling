@@ -236,11 +236,7 @@ def cleanupoldbackups(repo):
             continue
         base = f[:-(1 + len(patchextension))]
         for ext in shelvefileextensions:
-            try:
-                vfs.unlink(base + '.' + ext)
-            except OSError as err:
-                if err.errno != errno.ENOENT:
-                    raise
+            vfs.tryunlink(base + '.' + ext)
 
 def _aborttransaction(repo):
     '''Abort current transaction for shelve/unshelve, but keep dirstate
