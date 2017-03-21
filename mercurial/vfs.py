@@ -401,10 +401,7 @@ class vfs(abstractvfs):
     def symlink(self, src, dst):
         self.audit(dst)
         linkname = self.join(dst)
-        try:
-            os.unlink(linkname)
-        except OSError:
-            pass
+        util.tryunlink(linkname)
 
         util.makedirs(os.path.dirname(linkname), self.createmode)
 
