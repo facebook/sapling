@@ -136,7 +136,6 @@ statislink = platform.statislink
 testpid = platform.testpid
 umask = platform.umask
 unlink = platform.unlink
-unlinkpath = platform.unlinkpath
 username = platform.username
 
 # Python compatibility
@@ -1604,6 +1603,19 @@ class atomictempfile(object):
             self.discard()
         else:
             self.close()
+
+def unlinkpath(f, ignoremissing=False):
+    """unlink and remove the directory if it is empty"""
+    try:
+        unlink(f)
+    except OSError as e:
+        if not (ignoremissing and e.errno == errno.ENOENT):
+            raise
+    # try removing directories that might now be empty
+    try:
+        removedirs(os.path.dirname(f))
+    except OSError:
+        pass
 
 def makedirs(name, mode=None, notindexed=False):
     """recursive directory creation with parent mode inheritance
