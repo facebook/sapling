@@ -153,8 +153,8 @@ void PrivHelperServer::processUnmountMsg(PrivHelperConn::Message* msg) {
     for (auto it = range.first; it != range.second; ++it) {
       auto bindMount = it->second;
       bindUnmount(bindMount.c_str());
-      bindMountPoints_.erase(it->first);
     }
+    bindMountPoints_.erase(range.first, range.second);
 
     fuseUnmount(mountPath.c_str());
     mountPoints_.erase(mountPath);

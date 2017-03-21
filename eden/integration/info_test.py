@@ -11,7 +11,6 @@ from .lib import testcase
 import hashlib
 import json
 import os
-import unittest
 
 # This is the name of the default repository created by EdenRepoTestBase.
 repo_name = 'main'
@@ -23,7 +22,6 @@ class InfoTest:
         self.repo.write_file('hello', 'hola\n')
         self.repo.commit('Initial commit.')
 
-    @unittest.skip('bind-mounts are not torn down correctly')
     def test_info_with_bind_mounts(self):
         edenrc = os.path.join(os.environ['HOME'], '.edenrc')
         with open(edenrc, 'w') as f:
