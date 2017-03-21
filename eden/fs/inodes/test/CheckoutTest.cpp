@@ -15,6 +15,7 @@
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/TreeInode.h"
+#include "eden/fs/service/PrettyPrinters.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestChecks.h"
@@ -29,6 +30,8 @@ using folly::StringPiece;
 using folly::Unit;
 using std::string;
 using testing::UnorderedElementsAre;
+
+namespace {
 
 /**
  * An enum to control behavior for many of the checkout tests.
@@ -171,6 +174,16 @@ void loadInodes(
     LoadBehavior loadType) {
   loadInodes(testMount, RelativePathPiece{path}, loadType, folly::none, 0644);
 }
+
+CheckoutConflict
+makeConflict(ConflictType type, StringPiece path, StringPiece message = "") {
+  CheckoutConflict conflict;
+  conflict.type = type;
+  conflict.path = path.str();
+  conflict.message = message.str();
+  return conflict;
+}
+} // unnamed namespace
 
 void testAddFile(
     folly::StringPiece newFilePath,
@@ -422,6 +435,43 @@ TEST(Checkout, modifyConflict) {
   runModifyConflictTests("a/b/aaa.txt");
   runModifyConflictTests("a/b/mmm.txt");
   runModifyConflictTests("a/b/zzz.txt");
+}
+
+TEST(Checkout, modifyThenRevert) {
+  // Prepare a "before" tree
+  auto srcBuilder = FakeTreeBuilder();
+  srcBuilder.setFile("readme.txt", "just filling out the tree\n");
+  srcBuilder.setFile("a/abc.txt", "foo\n");
+  srcBuilder.setFile("a/test.txt", "test contents\n");
+  srcBuilder.setFile("a/xyz.txt", "bar\n");
+  TestMount testMount{srcBuilder};
+  auto originalCommit = testMount.getEdenMount()->getSnapshotID();
+
+  // Modify a file.
+  // We use the "normal" dispatcher APIs here, which will materialize the file.
+  testMount.overwriteFile("a/test.txt", "temporary edit\n");
+
+  auto preInode = testMount.getFileInode("a/test.txt");
+  EXPECT_FILE_INODE(preInode, "temporary edit\n", 0644);
+
+  // Now perform a forced checkout to the current commit,
+  // which should discard our edits.
+  bool force = true;
+  auto checkoutResult =
+      testMount.getEdenMount()->checkout(originalCommit, force);
+  ASSERT_TRUE(checkoutResult.isReady());
+  // The checkout should report a/test.txt as a conflict
+  EXPECT_THAT(
+      checkoutResult.get(),
+      UnorderedElementsAre(makeConflict(ConflictType::MODIFIED, "a/test.txt")));
+
+  // The checkout operation updates files by replacing them, so
+  // there should be a new inode at this location now, with the original
+  // contents.
+  auto postInode = testMount.getFileInode("a/test.txt");
+  EXPECT_FILE_INODE(postInode, "test contents\n", 0644);
+  EXPECT_NE(preInode->getNodeId(), postInode->getNodeId());
+  EXPECT_FILE_INODE(preInode, "temporary edit\n", 0644);
 }
 
 void testAddSubdirectory(folly::StringPiece newDirPath, LoadBehavior loadType) {

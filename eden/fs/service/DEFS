@@ -27,7 +27,7 @@ def create_eden_fs_rules(suffix, subdir, server_srcs, server_deps):
             "GlobNode.cpp",
         ] + server_srcs,
         deps = [
-            ":thrift-streaming-cpp2",
+            ":thrift_cpp",
             "@/common/fb303/cpp:fb303",
             "@/eden/fuse:fusell",
             "@/eden/fuse/privhelper:privhelper",

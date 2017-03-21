@@ -8,6 +8,12 @@ create_eden_fs_rules(
   server_deps = [],
 )
 
+# The eden.thrift interface.
+#
+# Note: C++ users should probably depend on the thrift_cpp rule below,
+# rather than directly depending on this thrift_library().  The thrift_cpp rule
+# includes this thrift_library() plus some extra utility code for working with
+# the thrift C++ data structures.
 thrift_library(
   name = 'thrift',
   thrift_args = ['--strict'],
@@ -45,6 +51,24 @@ thrift_library(
   languages = ['cpp2'],
   deps = [
     '@/common/fb303/if:fb303',
+  ],
+)
+
+# A helper library for C++ that depends on the generated thrift stubs,
+# and includes a few other utilities for working with the thrift types.
+#
+# Most C++ users should depend on this rule rather than directly using the
+# thrift or thrift-streaming rules above.
+cpp_library(
+  name = 'thrift_cpp',
+  headers = [
+    'PrettyPrinters.h',
+  ],
+  srcs = [
+    'PrettyPrinters.cpp',
+  ],
+  deps = [
+    ':thrift-streaming-cpp2',
   ],
 )
 
