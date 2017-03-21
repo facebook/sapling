@@ -41,14 +41,21 @@ void startPrivHelper(PrivHelperServer* server, uid_t uid, gid_t gid);
 /*
  * Explicitly stop the privhelper process.
  *
- * Normally you don't need to call this.   The privhelper process will
- * exit automatically when the main process exits.   This method is primarly
- * provided for exercising the privhelper server in unit tests.
+ * The privhelper process will exit automatically when the main process exits
+ * even if this method is not called.  However, this method can be used to
+ * explictly stop the privhelper process, and check its exit code.
  *
  * Note that when the privhelper is stopped it will unmount any outstanding
  * mounts points.
+ *
+ * If the privhelper exited normally, the exit code is returned.
+ * If the privhelper was terminated due to a signal, the signal number is
+ * returned as a negative number.
+ *
+ * Throws an exception if the privhelper was not running, or if any other error
+ * occurs.
  */
-void stopPrivHelper();
+int stopPrivHelper();
 
 /*
  * Drop privileges down to the UID and GID requested when

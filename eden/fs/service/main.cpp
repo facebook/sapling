@@ -168,5 +168,21 @@ int main(int argc, char **argv) {
 
   LOG(INFO) << "edenfs performing orderly shutdown";
 
+  // Clean up all the server mount points before shutting down the privhelper
+  server.unmountAll();
+
+  // Explicitly stop the privhelper process so we can verify that it
+  // exits normally.
+  auto privhelperExitCode = fusell::stopPrivHelper();
+  if (privhelperExitCode != 0) {
+    if (privhelperExitCode > 0) {
+      LOG(WARNING) << "privhelper process exited with unexpected code "
+                   << privhelperExitCode;
+    } else {
+      LOG(WARNING) << "privhelper process was killed by signal "
+                   << privhelperExitCode;
+    }
+    return EX_SOFTWARE;
+  }
   return EX_OK;
 }

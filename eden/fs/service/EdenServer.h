@@ -59,16 +59,45 @@ class EdenServer {
       AbsolutePathPiece rocksPath);
   virtual ~EdenServer();
 
+  /**
+   * Run the EdenServer.
+   *
+   * This is primarily responsible for running the thrift server loop.
+   * run() will not return until stop() is called in another thread.
+   *
+   * When run() returns there may still be outstanding FUSE mount points
+   * running.  (These are driven by a separate FUSE thread pool.)
+   * unmountAll() can be called after run() returns to unmount all mount
+   * points.
+   */
   void run();
 
   /**
    * Stops this server, which includes the underlying Thrift server.
+   *
+   * This may be called from any thread while a call to run() is outstanding,
+   * and will cause run() to return.
    */
   void stop() const;
 
+  /**
+   * Mount an EdenMount.
+   *
+   * This function blocks until the main mount point is successfully started,
+   * and throws an error if an error occurs.
+   */
   void mount(std::shared_ptr<EdenMount> edenMount);
 
+  /**
+   * Unmount an EdenMount.
+   */
   void unmount(folly::StringPiece mountPath);
+
+  /**
+   * Unmount all mount points maintained by this server, and wait for them to
+   * be completely unmounted.
+   */
+  void unmountAll();
 
   const std::shared_ptr<EdenServiceHandler>& getHandler() const {
     return handler_;

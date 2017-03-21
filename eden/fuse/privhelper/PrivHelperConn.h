@@ -85,6 +85,10 @@ class PrivHelperConn {
 
   void close();
 
+  bool isClosed() const {
+    return socket_ == -1;
+  }
+
   int getSocket() const {
     return socket_;
   }

@@ -10,6 +10,7 @@
 #include "PrivHelper.h"
 
 #include <folly/Exception.h>
+#include <folly/Expected.h>
 #include <folly/File.h>
 #include <folly/String.h>
 #include <sys/types.h>
@@ -29,7 +30,7 @@ namespace fusell {
 
 namespace {
 
-/*
+/**
  * PrivHelper contains the client-side logic (in the parent process)
  * for talking to the remote privileged process.
  */
@@ -38,6 +39,23 @@ class PrivHelper {
   PrivHelper(PrivHelperConn&& conn, pid_t helperPid, uid_t uid, gid_t gid)
       : conn_(std::move(conn)), helperPid_(helperPid), uid_(uid), gid_(gid) {}
   ~PrivHelper() {
+    if (!conn_.isClosed()) {
+      cleanup();
+    }
+  }
+
+  /**
+   * Close the socket to the privhelper server, and wait for it to exit.
+   *
+   * Returns the exit status of the privhelper process, or an errno value on
+   * error.
+   */
+  folly::Expected<int, int> cleanup() {
+    if (conn_.isClosed()) {
+      // The privhelper process was already closed
+      return folly::makeUnexpected(ESRCH);
+    }
+
     // Close the socket.  This signals the privhelper process to exit.
     conn_.close();
 
@@ -50,10 +68,16 @@ class PrivHelper {
     if (pid == -1) {
       LOG(ERROR) << "error waiting on privhelper process: "
                  << folly::errnoStr(errno);
+      return folly::makeUnexpected(errno);
     }
+    if (WIFSIGNALED(status)) {
+      return folly::makeExpected<int>(-WTERMSIG(status));
+    }
+    DCHECK(WIFEXITED(status)) << "unexpected exit status type: " << status;
+    return folly::makeExpected<int>(WEXITSTATUS(status));
   }
 
-  /*
+  /**
    * Drop priviliges down to those requested when creating the PrivHelper
    */
   void dropPrivileges() {
@@ -63,7 +87,7 @@ class PrivHelper {
     checkUnixError(rc, "failed to drop user privileges");
   }
 
-  /*
+  /**
    * Send a request then receive the response.
    *
    * The response is placed into the same message buffer used for the request.
@@ -164,8 +188,18 @@ void startPrivHelper(PrivHelperServer* server, uid_t uid, gid_t gid) {
   _exit(rc);
 }
 
-void stopPrivHelper() {
+int stopPrivHelper() {
+  if (!gPrivHelper) {
+    throw std::runtime_error(
+        "attempted to stop the privhelper process when it was not running");
+  }
+  auto result = gPrivHelper->cleanup();
   gPrivHelper.reset();
+  if (result.hasError()) {
+    folly::throwSystemErrorExplicit(
+        result.error(), "error shutting down privhelper process");
+  }
+  return result.value();
 }
 
 void dropPrivileges() {

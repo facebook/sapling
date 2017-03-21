@@ -75,6 +75,10 @@ EdenServer::EdenServer(
       rocksPath_(rocksPath) {}
 
 EdenServer::~EdenServer() {
+  unmountAll();
+}
+
+void EdenServer::unmountAll() {
   // Stop all of the mount points.
   // They will each call mountFinished() as they exit.
   {
