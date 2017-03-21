@@ -1083,9 +1083,7 @@ class localrepository(object):
                 hint=_("run 'hg recover' to clean up transaction"))
 
         idbase = "%.40f#%f" % (random.random(), time.time())
-        ha = hashlib.sha1(idbase).hexdigest()
-        if pycompat.ispy3:
-            ha = ha.encode('latin1')
+        ha = hex(hashlib.sha1(idbase).digest())
         txnid = 'TXN:' + ha
         self.hook('pretxnopen', throw=True, txnname=desc, txnid=txnid)
 
