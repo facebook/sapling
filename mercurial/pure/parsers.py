@@ -14,8 +14,6 @@ from .node import nullid
 from . import pycompat
 stringio = pycompat.stringio
 
-if pycompat.ispy3:
-    long = int
 
 _pack = struct.pack
 _unpack = struct.unpack
@@ -37,7 +35,7 @@ def gettype(q):
     return int(q & 0xFFFF)
 
 def offset_type(offset, type):
-    return long(long(offset) << 16 | type)
+    return int(int(offset) << 16 | type)
 
 class BaseIndexObject(object):
     def __len__(self):
