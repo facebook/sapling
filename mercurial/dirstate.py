@@ -1262,8 +1262,7 @@ class dirstate(object):
 
         backupname = prefix + self._filename + suffix
         assert backupname != filename
-        if self._opener.exists(backupname):
-            self._opener.unlink(backupname)
+        self._opener.tryunlink(backupname)
         # hardlink backup is okay because _writedirstate is always called
         # with an "atomictemp=True" file.
         util.copyfile(self._opener.join(filename),
