@@ -40,7 +40,6 @@ Config
 
 from __future__ import absolute_import
 
-import errno
 import hashlib
 import inspect
 import os
@@ -543,11 +542,7 @@ class chgunixservicehandler(object):
         # remove another server's socket file. but that's okay
         # since that server will detect and exit automatically and
         # the client will start a new server on demand.
-        try:
-            os.unlink(self._realaddress)
-        except OSError as exc:
-            if exc.errno != errno.ENOENT:
-                raise
+        util.tryunlink(self._realaddress)
 
     def printbanner(self, address):
         # no "listening at" message should be printed to simulate hg behavior
