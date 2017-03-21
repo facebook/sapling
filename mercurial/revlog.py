@@ -33,6 +33,7 @@ from . import (
     error,
     mdiff,
     parsers,
+    pycompat,
     templatefilters,
     util,
 )
@@ -943,7 +944,7 @@ class revlog(object):
             ancs = self.index.commonancestorsheads(a, b)
         except (AttributeError, OverflowError): # C implementation failed
             ancs = ancestor.commonancestorsheads(self.parentrevs, a, b)
-        return map(self.node, ancs)
+        return pycompat.maplist(self.node, ancs)
 
     def isancestor(self, a, b):
         """return True if node a is an ancestor of node b
