@@ -196,6 +196,8 @@ class hybridmanifest(object):
     def __nonzero__(self):
         return bool(self._manifest('__nonzero__'))
 
+    __bool__ = __nonzero__
+
     def __len__(self):
         return self._manifest('__len__').__len__()
 
@@ -317,6 +319,8 @@ class fastmanifestdict(object):
         for x in self:
             return True
         return False
+
+    __bool__ = __nonzero__
 
     def __len__(self):
         return len(self._fm)
