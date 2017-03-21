@@ -1606,11 +1606,10 @@ class atomictempfile(object):
 
 def unlinkpath(f, ignoremissing=False):
     """unlink and remove the directory if it is empty"""
-    try:
+    if ignoremissing:
+        tryunlink(f)
+    else:
         unlink(f)
-    except OSError as e:
-        if not (ignoremissing and e.errno == errno.ENOENT):
-            raise
     # try removing directories that might now be empty
     try:
         removedirs(os.path.dirname(f))
