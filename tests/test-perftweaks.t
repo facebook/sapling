@@ -31,7 +31,7 @@ Test disabling the tag cache
   tip                                1:2cc13e58bcd8
   $ hg blackbox | grep tag
   *> tags (glob)
-  *> tags --config perftweaks.disabletags=True exited 0 after * seconds (glob)
+  *> tags --config 'perftweaks.disabletags=True' exited 0 after * seconds (glob)
 
   $ cd ..
 
@@ -78,7 +78,7 @@ Test disabling the branchcache
   *> commit -Aqm a (glob)
   *> perftweaks updated served branch cache (glob)
   *> wrote served branch cache with 1 labels and 1 nodes (glob)
-  *> commit -Aqm a --config perftweaks.disablebranchcache=True exited 0 after * seconds (glob)
+  *> commit -Aqm a --config 'perftweaks.disablebranchcache=True' exited 0 after * seconds (glob)
   *> blackbox (glob)
 
   $ cd ..

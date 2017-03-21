@@ -166,6 +166,8 @@ Test hg status is normal after rebase abort
 
 Test rebase with an interrupted update:
   $ hg $breakupdateflag rebase -s 2977a57ce863 -d 79361b8cdbb5 -q
+  transaction abort!
+  rollback completed
   $ hg status
   
   # The repository is in an unfinished *rebase* state.
