@@ -62,6 +62,10 @@ def extsetup(ui):
     if ui.config('perftweaks', 'fasthiddencache'):
         repoview.filtertable['visible'] = _computehidden
 
+    # Hardlinks are disabled in core because they are problematic on CIFS.
+    # Enable them to make transactional backups more performant.
+    util.allowhardlinks = True
+
 def reposetup(ui, repo):
     if repo.local() is not None:
         _preloadrevs(repo)
