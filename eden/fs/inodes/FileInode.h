@@ -64,7 +64,7 @@ class FileInode : public InodeBase {
 
   folly::Future<std::vector<std::string>> listxattr() override;
   folly::Future<std::string> getxattr(folly::StringPiece name) override;
-  folly::Future<Hash> getSHA1();
+  folly::Future<Hash> getSHA1(bool failIfSymlink = true);
 
   /// Ensure that underlying storage information is loaded
   std::shared_ptr<FileData> getOrLoadData();

@@ -34,6 +34,7 @@ using std::vector;
 using folly::Future;
 using folly::makeFuture;
 using folly::StringPiece;
+using folly::Unit;
 
 namespace facebook {
 namespace eden {
@@ -138,14 +139,15 @@ TreeInodePtr EdenMount::getRootInode() const {
   return inodeMap_->getRootInode();
 }
 
+folly::Future<std::unique_ptr<Tree>> EdenMount::getRootTreeFuture() const {
+  auto commitHash = Hash{*currentSnapshot_.rlock()};
+  return objectStore_->getTreeForCommit(commitHash);
+}
+
 std::unique_ptr<Tree> EdenMount::getRootTree() const {
-  auto rootInode = inodeMap_->getRootInode();
-  {
-    auto dir = rootInode->getContents().rlock();
-    auto& rootTreeHash = dir->treeHash.value();
-    auto tree = objectStore_->getTree(rootTreeHash);
-    return tree;
-  }
+  // TODO: We should convert callers of this API to use the Future-based
+  // version.
+  return getRootTreeFuture().get();
 }
 
 Future<InodePtr> EdenMount::getInode(RelativePathPiece path) const {
@@ -207,6 +209,16 @@ folly::Future<std::vector<CheckoutConflict>> EdenMount::checkout(
         journal_.wlock()->addDelta(std::move(journalDelta));
 
         return conflicts;
+      });
+}
+
+Future<Unit> EdenMount::diff(InodeDiffCallback* callback, bool listIgnored) {
+  auto rootInode = getRootInode();
+  return getRootTreeFuture().then(
+      [ callback, listIgnored, rootInode = std::move(rootInode) ](
+          std::unique_ptr<Tree> && rootTree) {
+        return rootInode->diff(
+            RelativePathPiece{}, rootTree.get(), callback, false, listIgnored);
       });
 }
 

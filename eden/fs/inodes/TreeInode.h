@@ -21,6 +21,7 @@ class CheckoutAction;
 class CheckoutContext;
 class EdenMount;
 class FileHandle;
+class InodeDiffCallback;
 class InodeMap;
 class ObjectStore;
 class Overlay;
@@ -109,6 +110,22 @@ class TreeInode : public InodeBase {
     void setDematerialized(Hash hash) {
       hash_ = hash;
     }
+
+    mode_t getMode() const {
+      // Callers should not check getMode() if an inode is loaded.
+      // If the child inode is loaded it is the authoritative source for
+      // the mode bits.
+      DCHECK(!inode);
+      return mode;
+    }
+
+    /**
+     * Check if the entry is a directory or not.
+     *
+     * It is okay for callers to call isDirectory() even if the inode is
+     * loaded.  The file type for an existing entry never changes.
+     */
+    bool isDirectory() const;
 
     // TODO: Make mode private and provide an accessor method instead
     /** The complete st_mode value for this entry */
@@ -266,6 +283,41 @@ class TreeInode : public InodeBase {
   TreeInodePtr mkdir(PathComponentPiece name, mode_t mode);
   folly::Future<folly::Unit> unlink(PathComponentPiece name);
   folly::Future<folly::Unit> rmdir(PathComponentPiece name);
+
+  /**
+   * Compute differences between a source control Tree and the current inode
+   * state.
+   *
+   * @param currentPath The path to this Tree, as used for the purpose of diff
+   *     computation.  Note that we do not block renames and other filesystem
+   *     layout changes during diff operations, so this might not actually
+   *     correspond to the current TreeInode's path.  However, it was the path
+   *     that we used for computing ignored status, so we want to report diff
+   *     results using this path.  Even if it may not currently be the
+   *     TreeInode's path it reflects the path that used to be correct at some
+   *     point since the diff started.
+   * @param tree The source control Tree to compare the current state against.
+   *     This may be null when comparing a portion of the file system tree that
+   *     does not exist in source control.
+   * @param callback A callback to invoke when changes are detected.
+   * @param isIgnored  Whether or not the current directory is ignored
+   *     according to source control ignore rules.
+   * @param listIgnored  If listIgnored is true information about ignored files
+   *     will be reported.  If listIgnored is false then ignoredFile() will
+   *     never be called on the callback.  The diff operation may be faster
+   *     with listIgnored=false, since it can completely omit processing
+   *     ignored subdirectories.
+   *
+   * @return Returns a Future that will be fulfilled when the diff operation
+   *     completes.  The caller must ensure that the InodeDiffCallback parameter
+   *     remains valid until this Future completes.
+   */
+  folly::Future<folly::Unit> diff(
+      RelativePathPiece currentPath,
+      const Tree* tree,
+      InodeDiffCallback* callback,
+      bool isIgnored,
+      bool listIgnored);
 
   /**
    * Update this directory so that it matches the specified source control Tree

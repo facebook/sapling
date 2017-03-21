@@ -15,11 +15,13 @@
 #include <vector>
 #include "eden/fs/inodes/CheckoutAction.h"
 #include "eden/fs/inodes/CheckoutContext.h"
+#include "eden/fs/inodes/DeferredDiffEntry.h"
 #include "eden/fs/inodes/EdenDispatcher.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileData.h"
 #include "eden/fs/inodes/FileHandle.h"
 #include "eden/fs/inodes/FileInode.h"
+#include "eden/fs/inodes/InodeDiffCallback.h"
 #include "eden/fs/inodes/InodeError.h"
 #include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/inodes/Overlay.h"
@@ -32,6 +34,7 @@
 #include "eden/fuse/MountPoint.h"
 #include "eden/fuse/RequestData.h"
 #include "eden/utils/Bug.h"
+#include "eden/utils/DirType.h"
 #include "eden/utils/PathFuncs.h"
 
 using folly::Future;
@@ -104,6 +107,10 @@ class TreeInode::IncompleteInodeLoad {
   PathComponent name_;
   Future<unique_ptr<InodeBase>> future_;
 };
+
+bool TreeInode::Entry::isDirectory() const {
+  return mode_to_dtype(mode) == dtype_t::Dir;
+}
 
 TreeInode::TreeInode(
     fuse_ino_t ino,
@@ -435,15 +442,6 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
         entry->mode,
         entry->getOptionalHash());
   }
-
-  // TODO:
-  // - Always load the Tree if this entry has one.  This is needed so we can
-  //   compute diffs from the current commit state.  This will simplify
-  //   Dirstate computation.
-  // - The ObjectStore APIs should be updated to return a Future when loading
-  //   the Tree, since this can potentially be a costly operation.
-  // - We can potentially start loading the overlay data in parallel with
-  //   loading the Tree.
 
   if (!entry->isMaterialized()) {
     return getStore()->getTreeFuture(entry->getHash()).then([
@@ -1069,7 +1067,7 @@ class TreeInode::TreeRenameLocks {
   }
   bool destChildIsDirectory() const {
     DCHECK(destChildExists());
-    return mode_to_dtype(destChildIter_->second->mode) == dtype_t::Dir;
+    return destChildIter_->second->isDirectory();
   }
   bool destChildIsEmpty() const {
     DCHECK_NOTNULL(destChildContents_);
@@ -1144,7 +1142,7 @@ Future<Unit> TreeInode::rename(
     // loads that might be necessary.
 
     // Validate invalid file/directory replacement
-    if (mode_to_dtype(srcEntry->mode) == dtype_t::Dir) {
+    if (srcEntry->isDirectory()) {
       // The source is a directory.
       // The destination must not exist, or must be an empty directory,
       // or the exact same directory.
@@ -1260,7 +1258,7 @@ Future<Unit> TreeInode::doRename(
   // We don't have to worry about the source being a child of the destination
   // directory.  That will have already been caught by the earlier check that
   // ensures the destination directory is non-empty.
-  if (mode_to_dtype(srcEntry->mode) == dtype_t::Dir) {
+  if (srcEntry->isDirectory()) {
     // Our caller has already verified that the source is also a
     // directory here.
     auto* srcTreeInode =
@@ -1405,6 +1403,262 @@ ObjectStore* TreeInode::getStore() const {
 
 const std::shared_ptr<Overlay>& TreeInode::getOverlay() const {
   return getMount()->getOverlay();
+}
+
+Future<Unit> TreeInode::diff(
+    RelativePathPiece currentPath,
+    const Tree* tree,
+    InodeDiffCallback* callback,
+    bool isIgnored,
+    bool listIgnored) {
+  // A list of entries that have been removed
+  std::vector<const TreeEntry*> removedEntries;
+
+  // A list of untracked files
+  std::vector<PathComponent> untrackedFiles;
+  // A list of ignored files
+  std::vector<PathComponent> ignoredFiles;
+  // A list of modified files
+  std::vector<PathComponent> modifiedFiles;
+
+  std::vector<std::unique_ptr<DeferredDiffEntry>> deferredEntries;
+  auto self = inodePtrFromThis();
+
+  // Grab the contents_ lock, and loop to find children that might be
+  // different.  In this first pass we primarily build the list of children to
+  // examine, but we wait until after we release our contents_ lock to actually
+  // examine any children InodeBase objects.
+  std::vector<IncompleteInodeLoad> pendingLoads;
+  {
+    // Even though diffing conceptually seems like a read-only operation, we
+    // need a write lock since we may have to load child inodes, affecting
+    // their entry state.
+    auto contents = contents_.wlock();
+
+    auto processUntracked =
+        [&self,
+         &currentPath,
+         &callback,
+         &listIgnored,
+         &contents,
+         &pendingLoads,
+         &deferredEntries](PathComponentPiece name, Entry* inodeEntry) {
+          // TODO: calculate entryIgnored correctly
+          bool entryIgnored = false;
+
+          if (inodeEntry->isDirectory()) {
+            if (!entryIgnored || listIgnored) {
+              if (inodeEntry->inode) {
+                auto childPtr = InodePtr::newPtrLocked(inodeEntry->inode);
+                deferredEntries.emplace_back(
+                    DeferredDiffEntry::createUntrackedEntryFromInodeFuture(
+                        currentPath + name,
+                        std::move(childPtr),
+                        entryIgnored,
+                        listIgnored));
+              } else {
+                auto inodeFuture = self->loadChildLocked(
+                    *contents, name, inodeEntry, &pendingLoads);
+                deferredEntries.emplace_back(
+                    DeferredDiffEntry::createUntrackedEntryFromInodeFuture(
+                        currentPath + name,
+                        std::move(inodeFuture),
+                        entryIgnored,
+                        listIgnored));
+              }
+            }
+          } else {
+            if (!entryIgnored) {
+              callback->untrackedFile(currentPath + name);
+            } else if (listIgnored) {
+              callback->ignoredFile(currentPath + name);
+            } else {
+              // Don't bother reporting this ignored file since
+              // listIgnored is false.
+            }
+          }
+        };
+
+    auto processRemoved = [&self, &currentPath, &callback, &deferredEntries](
+        const TreeEntry& scmEntry) {
+      if (scmEntry.getType() == TreeEntryType::TREE) {
+        deferredEntries.emplace_back(DeferredDiffEntry::createRemovedEntry(
+            currentPath + scmEntry.getName(), self->getStore(), scmEntry));
+      } else {
+        callback->removedFile(currentPath + scmEntry.getName(), scmEntry);
+      }
+    };
+
+    auto processBothPresent =
+        [&self,
+         &currentPath,
+         &callback,
+         &listIgnored,
+         &contents,
+         &pendingLoads,
+         &deferredEntries](const TreeEntry& scmEntry, Entry* inodeEntry) {
+          // TODO: Calculate isIgnored correctly, and only compute it if
+          // necessary.
+          bool entryIgnored = false;
+
+          if (inodeEntry->inode) {
+            // This inode is already loaded.
+            auto childInodePtr = InodePtr::newPtrLocked(inodeEntry->inode);
+            deferredEntries.emplace_back(DeferredDiffEntry::createModifiedEntry(
+                currentPath + scmEntry.getName(),
+                scmEntry,
+                std::move(childInodePtr),
+                entryIgnored,
+                listIgnored));
+          } else if (inodeEntry->isMaterialized()) {
+            // This inode is not loaded but is materialized.
+            // We'll have to load it to confirm if it is the same or different.
+            auto inodeFuture = self->loadChildLocked(
+                *contents, scmEntry.getName(), inodeEntry, &pendingLoads);
+            deferredEntries.emplace_back(DeferredDiffEntry::createModifiedEntry(
+                currentPath + scmEntry.getName(),
+                self->getStore(),
+                scmEntry,
+                std::move(inodeFuture),
+                entryIgnored,
+                listIgnored));
+          } else if (
+              inodeEntry->getMode() == scmEntry.getMode() &&
+              inodeEntry->getHash() == scmEntry.getHash()) {
+            // This file or directory is unchanged.  We can skip it.
+          } else if (inodeEntry->isDirectory()) {
+            // This is a modified directory.  We have to load it then recurse
+            // into it to find files with differences.
+            auto inodeFuture = self->loadChildLocked(
+                *contents, scmEntry.getName(), inodeEntry, &pendingLoads);
+            deferredEntries.emplace_back(DeferredDiffEntry::createModifiedEntry(
+                currentPath + scmEntry.getName(),
+                self->getStore(),
+                scmEntry,
+                std::move(inodeFuture),
+                entryIgnored,
+                listIgnored));
+          } else if (scmEntry.getType() == TreeEntryType::TREE) {
+            // This used to be a directory in the source control state,
+            // but is now a file or symlink.  Report the new file, then add a
+            // deferred entry to report the entire source control Tree as
+            // removed.
+            if (entryIgnored) {
+              if (listIgnored) {
+                callback->ignoredFile(currentPath + scmEntry.getName());
+              }
+            } else {
+              callback->untrackedFile(currentPath + scmEntry.getName());
+            }
+            deferredEntries.emplace_back(DeferredDiffEntry::createRemovedEntry(
+                currentPath + scmEntry.getName(), self->getStore(), scmEntry));
+          } else {
+            // This file corresponds to a different blob hash, or has a
+            // different mode.
+            //
+            // Ideally we should be able to assume that the file is
+            // modified--if two blobs have different hashes we should be able
+            // to assume that their contents are different.  Unfortunately this
+            // is not the case for now with our mercurial blob IDs, since the
+            // mercurial blob data includes the path name and past history
+            // information.
+            //
+            // TODO: Once we build a new backing store and can replace our
+            // janky hashing scheme for mercurial data, we should be able just
+            // immediately assume the file is different here, without checking.
+            if (inodeEntry->getMode() != scmEntry.getMode()) {
+              // The mode is definitely modified
+              callback->modifiedFile(
+                  currentPath + scmEntry.getName(), scmEntry);
+            } else {
+              // TODO: Hopefully at some point we will track file sizes in the
+              // parent TreeInode::Entry and the TreeEntry.  Once we have file
+              // sizes, we could check for differing file sizes first, and
+              // avoid loading the blob if they are different.
+              deferredEntries.emplace_back(
+                  DeferredDiffEntry::createModifiedEntry(
+                      currentPath + scmEntry.getName(),
+                      self->getStore(),
+                      scmEntry,
+                      inodeEntry->getHash()));
+            }
+          }
+        };
+
+    // Walk through the source control tree entries and our inode entries to
+    // look for differences.
+    //
+    // This code relies on the fact that the source control entries and our
+    // inode entries are both sorted in the same order.
+    vector<TreeEntry> emptyEntries;
+    const auto& scEntries = tree ? tree->getTreeEntries() : emptyEntries;
+    const auto& inodeEntries = contents->entries;
+    size_t scIdx = 0;
+    auto inodeIter = inodeEntries.begin();
+    while (true) {
+      if (scIdx >= scEntries.size()) {
+        if (inodeIter == inodeEntries.end()) {
+          // All Done
+          break;
+        }
+
+        // This entry is present locally but not in the source control tree.
+        processUntracked(inodeIter->first, inodeIter->second.get());
+        ++inodeIter;
+      } else if (inodeIter == inodeEntries.end()) {
+        // This entry is present in the old tree but not the old one.
+        processRemoved(scEntries[scIdx]);
+        ++scIdx;
+      } else if (scEntries[scIdx].getName() < inodeIter->first) {
+        processRemoved(scEntries[scIdx]);
+        ++scIdx;
+      } else if (scEntries[scIdx].getName() > inodeIter->first) {
+        processUntracked(inodeIter->first, inodeIter->second.get());
+        ++inodeIter;
+      } else {
+        const auto& scmEntry = scEntries[scIdx];
+        auto* inodeEntry = inodeIter->second.get();
+        ++scIdx;
+        ++inodeIter;
+        processBothPresent(scmEntry, inodeEntry);
+      }
+    }
+  }
+
+  // Finish setting up any load operations we started while holding the
+  // contents_ lock above.
+  for (auto& load : pendingLoads) {
+    load.finish();
+  }
+
+  // Now process all of the deferred work.
+  vector<Future<Unit>> deferredFutures;
+  for (auto& entry : deferredEntries) {
+    deferredFutures.push_back(entry->run(callback));
+  }
+
+  // Wait on all of the deferred entries to complete.
+  // Note that we explicitly move-capture the deferredFutures vector into this
+  // callback, to ensure that the DeferredDiffEntry objects do not get
+  // destroyed before they complete.
+  return folly::collectAll(deferredFutures).then([
+    self = std::move(self),
+    currentPath = RelativePath{std::move(currentPath)},
+    callback,
+    deferredJobs = std::move(deferredEntries)
+  ](vector<folly::Try<Unit>> results) {
+    // Call diffError() for any jobs that failed.
+    for (size_t n = 0; n < results.size(); ++n) {
+      auto& result = results[n];
+      if (result.hasException()) {
+        callback->diffError(deferredJobs[n]->getPath(), result.exception());
+      }
+    }
+    // Report success here, even if some of our deferred jobs failed.
+    // We will have reported those errors to the callback already, and so we
+    // don't want our parent to report a new error at our path.
+    return makeFuture();
+  });
 }
 
 Future<Unit> TreeInode::checkout(
@@ -1617,7 +1871,7 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
     // If this is are a directory we unfortunately have to load the directory
     // and recurse into it just so we can accurately report the list of files
     // with conflicts.
-    if (mode_to_dtype(entry->mode) == dtype_t::Dir) {
+    if (entry->isDirectory()) {
       auto inodeFuture =
           loadChildLocked(contents, name, entry.get(), pendingLoads);
       return make_unique<CheckoutAction>(

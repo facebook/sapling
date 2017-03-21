@@ -9,6 +9,7 @@
  */
 #pragma once
 
+#include <folly/Portability.h>
 #include <folly/Range.h>
 #include <folly/experimental/TestUtil.h>
 #include <sys/stat.h>
@@ -20,6 +21,12 @@
 #include "eden/fs/inodes/gen-cpp2/overlay_types.h"
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/utils/PathFuncs.h"
+
+namespace folly {
+template <typename T>
+class Future;
+class Unit;
+}
 
 namespace facebook {
 namespace eden {
@@ -171,12 +178,27 @@ class TestMount {
   void deleteFile(folly::StringPiece path);
   void rmdir(folly::StringPiece path);
 
+  void chmod(folly::StringPiece path, mode_t permissions);
+
   InodePtr getInode(RelativePathPiece path) const;
   InodePtr getInode(folly::StringPiece path) const;
   TreeInodePtr getTreeInode(RelativePathPiece path) const;
   TreeInodePtr getTreeInode(folly::StringPiece path) const;
   FileInodePtr getFileInode(RelativePathPiece path) const;
   FileInodePtr getFileInode(folly::StringPiece path) const;
+
+  /**
+   * Walk the entire tree and load all inode objects.
+   */
+  void loadAllInodes();
+  FOLLY_WARN_UNUSED_RESULT folly::Future<folly::Unit> loadAllInodesFuture();
+
+  /**
+   * Load all inodes [recursively] under the specified subdirectory.
+   */
+  static void loadAllInodes(const TreeInodePtr& treeInode);
+  static FOLLY_WARN_UNUSED_RESULT folly::Future<folly::Unit>
+  loadAllInodesFuture(const TreeInodePtr& treeInode);
 
   /** Convenience method for getting the Tree for the root of the mount. */
   std::unique_ptr<Tree> getRootTree() const;
@@ -186,6 +208,24 @@ class TestMount {
   }
 
   Dirstate* getDirstate() const;
+
+  /**
+   * Get a hash to use for the next commit.
+   *
+   * This mostly just helps pick easily readable commit IDs that increment
+   * over the course of a test.
+   *
+   * This returns "0000000000000000000000000000000000000001" on the first call,
+   * "0000000000000000000000000000000000000002" on the second, etc.
+   */
+  Hash nextCommitHash();
+
+  /**
+   * Helper function to create a commit from a FakeTreeBuilder and call
+   * EdenMount::resetCommit() with the result.
+   */
+  void resetCommit(FakeTreeBuilder& builder, bool setReady);
+  void resetCommit(Hash commitHash, FakeTreeBuilder& builder, bool setReady);
 
  private:
   void initTestDirectory();
@@ -212,6 +252,15 @@ class TestMount {
    * When edenMount_ is created we pass ownership of the config to edenMount_.
    */
   std::unique_ptr<ClientConfig> config_;
+
+  /**
+   * A counter for creating temporary commit hashes via the nextCommitHash()
+   * function.
+   *
+   * This is atomic just in case, but in general I would expect most tests to
+   * perform all TestMount manipulation from a single thread.
+   */
+  std::atomic<uint64_t> commitNumber_{1};
 };
 }
 }

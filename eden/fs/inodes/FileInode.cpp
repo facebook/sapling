@@ -274,12 +274,12 @@ Future<string> FileInode::getxattr(StringPiece name) {
   return getSHA1().then([](Hash hash) { return hash.toString(); });
 }
 
-Future<Hash> FileInode::getSHA1() {
+Future<Hash> FileInode::getSHA1(bool failIfSymlink) {
   std::shared_ptr<FileData> data;
   folly::Optional<Hash> hash;
   {
     auto state = state_.wlock();
-    if (!S_ISREG(state->mode)) {
+    if (failIfSymlink && !S_ISREG(state->mode)) {
       // We only define a SHA-1 value for regular files
       return makeFuture<Hash>(InodeError(kENOATTR, inodePtrFromThis()));
     }

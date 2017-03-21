@@ -35,6 +35,7 @@ class CheckoutConflict;
 class ClientConfig;
 class Dirstate;
 class EdenDispatcher;
+class InodeDiffCallback;
 class InodeMap;
 class ObjectStore;
 class Overlay;
@@ -168,6 +169,7 @@ class EdenMount {
 
   /** Convenience method for getting the Tree for the root of the mount. */
   std::unique_ptr<Tree> getRootTree() const;
+  folly::Future<std::unique_ptr<Tree>> getRootTreeFuture() const;
 
   /**
    * Look up the Inode object for the specified path.
@@ -215,6 +217,22 @@ class EdenMount {
   folly::Future<std::vector<CheckoutConflict>> checkout(
       Hash snapshotHash,
       bool force = false);
+
+  /**
+   * Compute differences between the current commit and the working directory
+   * state.
+   *
+   * @param callback This callback will be invoked as differences are found.
+   *     Note that the callback methods may be invoked simultaneously from
+   *     multiple different threads, and the callback is responsible for
+   *     performing synchronization (if it is needed).
+   * @param listIgnored Whether or not to inform the callback of ignored files.
+   *     When listIgnored to false can speed up the diff computation, as the
+   *     code does not need to descend into ignord directories at all.
+   */
+  folly::Future<folly::Unit> diff(
+      InodeDiffCallback* callback,
+      bool listIgnored = false);
 
   /**
    * Reset the state to point to the specified commit, without modifying

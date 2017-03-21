@@ -98,34 +98,6 @@ std::ostream& operator<<(std::ostream& os, LoadBehavior loadType) {
   return os;
 }
 
-Future<Unit> loadAllInodes(const TreeInodePtr& treeInode) {
-  // Build a list of child names to load.
-  // (If necessary we could make a more efficient version of this that starts
-  // all the child loads while holding the lock.  However, we don't really care
-  // about efficiency for test code, and this is much simpler.)
-  std::vector<PathComponent> childNames;
-  {
-    auto contents = treeInode->getContents().rlock();
-    for (const auto& entry : contents->entries) {
-      childNames.emplace_back(entry.first);
-    }
-  }
-
-  // Now start all the loads.
-  std::vector<Future<Unit>> childFutures;
-  for (const auto& name : childNames) {
-    auto childFuture = treeInode->getOrLoadChild(name).then([](InodePtr child) {
-      TreeInodePtr childTree = child.asTreePtrOrNull();
-      if (childTree) {
-        return loadAllInodes(childTree);
-      }
-      return makeFuture();
-    });
-    childFutures.emplace_back(std::move(childFuture));
-  }
-  return folly::collect(childFutures).unit();
-}
-
 void loadInodes(
     TestMount& testMount,
     RelativePathPiece path,
@@ -165,7 +137,7 @@ void loadInodes(
       return;
     }
     case LoadBehavior::ALL:
-      loadAllInodes(testMount.getEdenMount()->getRootInode());
+      testMount.loadAllInodes();
       return;
   }
 

@@ -12,6 +12,7 @@
 #include <folly/FileUtil.h>
 #include <folly/experimental/TestUtil.h>
 #include <folly/io/IOBuf.h>
+#include <sys/types.h>
 #include "eden/fs/config/ClientConfig.h"
 #include "eden/fs/inodes/Dirstate.h"
 #include "eden/fs/inodes/EdenDispatcher.h"
@@ -33,12 +34,16 @@
 
 using facebook::eden::fusell::MountPoint;
 using folly::ByteRange;
+using folly::Future;
+using folly::makeFuture;
 using folly::StringPiece;
 using folly::test::TemporaryDirectory;
 using folly::test::TemporaryFile;
+using folly::Unit;
 using std::make_shared;
 using std::make_unique;
 using std::shared_ptr;
+using std::string;
 using std::unique_ptr;
 using std::vector;
 
@@ -114,8 +119,13 @@ void TestMount::initialize(
       EdenMount::makeShared(std::move(config_), std::move(objectStore));
 }
 
+Hash TestMount::nextCommitHash() {
+  auto number = commitNumber_.fetch_add(1);
+  return makeTestHash(folly::to<string>(number));
+}
+
 void TestMount::initialize(FakeTreeBuilder& rootBuilder, bool startReady) {
-  initialize(makeTestHash("1"), rootBuilder, startReady);
+  initialize(nextCommitHash(), rootBuilder, startReady);
 }
 
 void TestMount::initTestDirectory() {
@@ -141,6 +151,21 @@ void TestMount::initTestDirectory() {
   localStore_ =
       make_shared<LocalStore>(testDirPath + PathComponentPiece("rocksdb"));
   backingStore_ = make_shared<FakeBackingStore>(localStore_);
+}
+
+void TestMount::resetCommit(FakeTreeBuilder& builder, bool setReady) {
+  resetCommit(nextCommitHash(), builder, setReady);
+}
+
+void TestMount::resetCommit(
+    Hash commitHash,
+    FakeTreeBuilder& builder,
+    bool setReady) {
+  auto* rootTree = builder.finalize(backingStore_, setReady);
+  auto* storedCommit =
+      backingStore_->putCommit(commitHash, rootTree->get().getHash());
+  storedCommit->setReady();
+  edenMount_->resetCommit(commitHash);
 }
 
 void TestMount::setInitialCommit(Hash commitHash) {
@@ -242,6 +267,15 @@ void TestMount::rmdir(folly::StringPiece path) {
   dispatcher->rmdir(treeInode->getNodeId(), relativePath.basename()).get();
 }
 
+void TestMount::chmod(folly::StringPiece path, mode_t permissions) {
+  auto inode = getInode(RelativePathPiece{path});
+
+  struct stat desiredAttr;
+  memset(&desiredAttr, 0, sizeof(desiredAttr));
+  desiredAttr.st_mode = permissions;
+  inode->setattr(desiredAttr, FUSE_SET_ATTR_MODE).get();
+}
+
 InodePtr TestMount::getInode(RelativePathPiece path) const {
   // Call future.get() with a timeout.  Generally in tests we expect the future
   // to be immediately ready.  We want to make sure the test does not hang
@@ -267,6 +301,46 @@ FileInodePtr TestMount::getFileInode(RelativePathPiece path) const {
 
 FileInodePtr TestMount::getFileInode(folly::StringPiece path) const {
   return getFileInode(RelativePathPiece{path});
+}
+
+void TestMount::loadAllInodes() {
+  loadAllInodesFuture().get();
+}
+
+Future<Unit> TestMount::loadAllInodesFuture() {
+  return loadAllInodesFuture(edenMount_->getRootInode());
+}
+
+void TestMount::loadAllInodes(const TreeInodePtr& treeInode) {
+  loadAllInodesFuture(treeInode).get();
+}
+
+Future<Unit> TestMount::loadAllInodesFuture(const TreeInodePtr& treeInode) {
+  // Build a list of child names to load.
+  // (If necessary we could make a more efficient version of this that starts
+  // all the child loads while holding the lock.  However, we don't really care
+  // about efficiency for test code, and this is much simpler.)
+  std::vector<PathComponent> childNames;
+  {
+    auto contents = treeInode->getContents().rlock();
+    for (const auto& entry : contents->entries) {
+      childNames.emplace_back(entry.first);
+    }
+  }
+
+  // Now start all the loads.
+  std::vector<Future<Unit>> childFutures;
+  for (const auto& name : childNames) {
+    auto childFuture = treeInode->getOrLoadChild(name).then([](InodePtr child) {
+      TreeInodePtr childTree = child.asTreePtrOrNull();
+      if (childTree) {
+        return loadAllInodesFuture(childTree);
+      }
+      return makeFuture();
+    });
+    childFutures.emplace_back(std::move(childFuture));
+  }
+  return folly::collect(childFutures).unit();
 }
 
 std::unique_ptr<Tree> TestMount::getRootTree() const {

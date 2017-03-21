@@ -171,6 +171,23 @@ class FakeTreeBuilder {
   void setReady(RelativePathPiece path);
 
   /**
+   * Call setReady() on all Trees and Blobs used by this FakeTreeBuilder's root
+   * Tree.
+   *
+   * Note that this will mark all Tree and Blob objects as ready if they are
+   * referenced somehow by this builder's root Tree, even if they were already
+   * present in the BackingStore when finalize() was called on this builder.
+   */
+  void setAllReady();
+
+  /**
+   * Call setReady() on all Trees and Blobs under the specified Tree.
+   *
+   * This also calls setReady() in the input Tree itself.
+   */
+  void setAllReadyUnderTree(StoredTree* tree);
+
+  /**
    * Call triggerError() on the StoredTree or StoredBlob at the given path.
    */
   template <class E>

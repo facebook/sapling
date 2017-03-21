@@ -120,6 +120,24 @@ void FakeTreeBuilder::setReady(RelativePathPiece path) {
   }
 }
 
+void FakeTreeBuilder::setAllReady() {
+  CHECK(finalizedRoot_);
+  setAllReadyUnderTree(finalizedRoot_);
+}
+
+void FakeTreeBuilder::setAllReadyUnderTree(StoredTree* tree) {
+  tree->setReady();
+  for (const auto& entry : tree->get().getTreeEntries()) {
+    if (entry.getType() == TreeEntryType::TREE) {
+      auto* child = store_->getStoredTree(entry.getHash());
+      setAllReadyUnderTree(child);
+    } else {
+      auto* child = store_->getStoredBlob(entry.getHash());
+      child->setReady();
+    }
+  }
+}
+
 void FakeTreeBuilder::triggerError(
     RelativePathPiece path,
     folly::exception_wrapper ew) {
