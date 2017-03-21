@@ -572,7 +572,7 @@ def recordmanifest(datapack, historypack, repo, oldtip, newtip, verify=False):
     ui.progress(message, None)
 
     for filename, entries in sorted(historyentries.iteritems()):
-        for entry in entries:
+        for entry in reversed(entries):
             historypack.add(filename, *entry)
 
 def _checkhash(orig, self, *args, **kwargs):
