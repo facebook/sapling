@@ -60,7 +60,6 @@ stdin = pycompat.stdin
 stdout = pycompat.stdout
 stringio = pycompat.stringio
 urlerr = pycompat.urlerr
-urlparse = pycompat.urlparse
 urlreq = pycompat.urlreq
 xmlrpclib = pycompat.xmlrpclib
 

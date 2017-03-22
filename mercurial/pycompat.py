@@ -22,14 +22,12 @@ if not ispy3:
     import httplib
     import Queue as _queue
     import SocketServer as socketserver
-    import urlparse
     import xmlrpclib
 else:
     import http.client as httplib
     import pickle
     import queue as _queue
     import socketserver
-    import urllib.parse as urlparse
     import xmlrpc.client as xmlrpclib
 
 if ispy3:
