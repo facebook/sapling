@@ -13,6 +13,7 @@
 #include <fcntl.h>
 #include <folly/Exception.h>
 #include <folly/experimental/TestUtil.h>
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -25,6 +26,7 @@ using folly::StringPiece;
 using std::string;
 using std::vector;
 using namespace facebook::eden;
+using testing::ElementsAre;
 
 TEST(PathFuncs, StringCompare) {
   PathComponentPiece piece("foo");
@@ -157,74 +159,180 @@ TEST(PathFuncs, IterateComponents) {
   RelativePath rel("foo/bar/baz");
   std::vector<PathComponentPiece> relParts(
       rel.components().begin(), rel.components().end());
-  EXPECT_EQ(3, relParts.size());
-  EXPECT_EQ(PathComponentPiece("foo"), relParts.at(0));
-  EXPECT_EQ(PathComponentPiece("bar"), relParts.at(1));
-  EXPECT_EQ(PathComponentPiece("baz"), relParts.at(2));
+  EXPECT_THAT(
+      relParts,
+      ElementsAre(
+          PathComponentPiece{"foo"},
+          PathComponentPiece{"bar"},
+          PathComponentPiece{"baz"}));
 
   std::vector<PathComponentPiece> relRParts(
       rel.rcomponents().begin(), rel.rcomponents().end());
-  EXPECT_EQ(3, relRParts.size());
-  EXPECT_EQ(PathComponentPiece("baz"), relRParts.at(0));
-  EXPECT_EQ(PathComponentPiece("bar"), relRParts.at(1));
-  EXPECT_EQ(PathComponentPiece("foo"), relRParts.at(2));
+  EXPECT_THAT(
+      relRParts,
+      ElementsAre(
+          PathComponentPiece{"baz"},
+          PathComponentPiece{"bar"},
+          PathComponentPiece{"foo"}));
 
   AbsolutePath abs("/foo/bar/baz");
   std::vector<PathComponentPiece> absParts(
       abs.components().begin(), abs.components().end());
-  EXPECT_EQ(3, absParts.size());
-  EXPECT_EQ(PathComponentPiece("foo"), absParts.at(0));
-  EXPECT_EQ(PathComponentPiece("bar"), absParts.at(1));
-  EXPECT_EQ(PathComponentPiece("baz"), absParts.at(2));
+  EXPECT_THAT(
+      absParts,
+      ElementsAre(
+          PathComponentPiece{"foo"},
+          PathComponentPiece{"bar"},
+          PathComponentPiece{"baz"}));
 
   std::vector<PathComponentPiece> absRParts(
       abs.rcomponents().begin(), abs.rcomponents().end());
-  EXPECT_EQ(3, absRParts.size());
-  EXPECT_EQ(PathComponentPiece("baz"), absRParts.at(0));
-  EXPECT_EQ(PathComponentPiece("bar"), absRParts.at(1));
-  EXPECT_EQ(PathComponentPiece("foo"), absRParts.at(2));
+  EXPECT_THAT(
+      absRParts,
+      ElementsAre(
+          PathComponentPiece{"baz"},
+          PathComponentPiece{"bar"},
+          PathComponentPiece{"foo"}));
 
   RelativePath rel2("r/s/t/u");
   std::vector<PathComponentPiece> rel2Parts(
       rel2.components().begin(), rel2.components().end());
-  EXPECT_EQ(4, rel2Parts.size());
-  EXPECT_EQ(PathComponentPiece("r"), rel2Parts.at(0));
-  EXPECT_EQ(PathComponentPiece("s"), rel2Parts.at(1));
-  EXPECT_EQ(PathComponentPiece("t"), rel2Parts.at(2));
-  EXPECT_EQ(PathComponentPiece("u"), rel2Parts.at(3));
+  EXPECT_THAT(
+      rel2Parts,
+      ElementsAre(
+          PathComponentPiece{"r"},
+          PathComponentPiece{"s"},
+          PathComponentPiece{"t"},
+          PathComponentPiece{"u"}));
 
   std::vector<PathComponentPiece> rel2RParts(
       rel2.rcomponents().begin(), rel2.rcomponents().end());
-  EXPECT_EQ(4, rel2RParts.size());
-  EXPECT_EQ(PathComponentPiece("u"), rel2RParts.at(0));
-  EXPECT_EQ(PathComponentPiece("t"), rel2RParts.at(1));
-  EXPECT_EQ(PathComponentPiece("s"), rel2RParts.at(2));
-  EXPECT_EQ(PathComponentPiece("r"), rel2RParts.at(3));
+  EXPECT_THAT(
+      rel2RParts,
+      ElementsAre(
+          PathComponentPiece{"u"},
+          PathComponentPiece{"t"},
+          PathComponentPiece{"s"},
+          PathComponentPiece{"r"}));
 
   AbsolutePath abs2("/a/b/c/d");
   std::vector<PathComponentPiece> abs2Parts(
       abs2.components().begin(), abs2.components().end());
-  EXPECT_EQ(4, abs2Parts.size());
-  EXPECT_EQ(PathComponentPiece("a"), abs2Parts.at(0));
-  EXPECT_EQ(PathComponentPiece("b"), abs2Parts.at(1));
-  EXPECT_EQ(PathComponentPiece("c"), abs2Parts.at(2));
-  EXPECT_EQ(PathComponentPiece("d"), abs2Parts.at(3));
+  EXPECT_THAT(
+      abs2Parts,
+      ElementsAre(
+          PathComponentPiece{"a"},
+          PathComponentPiece{"b"},
+          PathComponentPiece{"c"},
+          PathComponentPiece{"d"}));
 
   std::vector<PathComponentPiece> abs2RParts(
       abs2.rcomponents().begin(), abs2.rcomponents().end());
-  EXPECT_EQ(4, abs2RParts.size());
-  EXPECT_EQ(PathComponentPiece("d"), abs2RParts.at(0));
-  EXPECT_EQ(PathComponentPiece("c"), abs2RParts.at(1));
-  EXPECT_EQ(PathComponentPiece("b"), abs2RParts.at(2));
-  EXPECT_EQ(PathComponentPiece("a"), abs2RParts.at(3));
+  EXPECT_THAT(
+      abs2RParts,
+      ElementsAre(
+          PathComponentPiece{"d"},
+          PathComponentPiece{"c"},
+          PathComponentPiece{"b"},
+          PathComponentPiece{"a"}));
 
   RelativePath empty;
   std::vector<PathComponentPiece> emptyParts(
       empty.components().begin(), empty.components().end());
-  EXPECT_EQ(0, emptyParts.size());
+  EXPECT_THAT(emptyParts, ElementsAre());
   std::vector<PathComponentPiece> emptyRParts(
       empty.rcomponents().begin(), empty.rcomponents().end());
-  EXPECT_EQ(0, emptyParts.size());
+  EXPECT_THAT(emptyRParts, ElementsAre());
+}
+
+TEST(PathFuncs, IterateSuffixes) {
+  RelativePath rel("foo/bar/baz");
+  std::vector<RelativePathPiece> relParts(
+      rel.suffixes().begin(), rel.suffixes().end());
+  EXPECT_THAT(
+      relParts,
+      ElementsAre(
+          RelativePathPiece{"foo/bar/baz"},
+          RelativePathPiece{"bar/baz"},
+          RelativePathPiece{"baz"}));
+
+  std::vector<RelativePathPiece> relRParts(
+      rel.rsuffixes().begin(), rel.rsuffixes().end());
+  EXPECT_THAT(
+      relRParts,
+      ElementsAre(
+          RelativePathPiece{"baz"},
+          RelativePathPiece{"bar/baz"},
+          RelativePathPiece{"foo/bar/baz"}));
+
+  AbsolutePath abs("/foo/bar/baz");
+  std::vector<RelativePathPiece> absParts(
+      abs.suffixes().begin(), abs.suffixes().end());
+  EXPECT_THAT(
+      absParts,
+      ElementsAre(
+          RelativePathPiece{"foo/bar/baz"},
+          RelativePathPiece{"bar/baz"},
+          RelativePathPiece{"baz"}));
+
+  std::vector<RelativePathPiece> absRParts(
+      abs.rsuffixes().begin(), abs.rsuffixes().end());
+  EXPECT_THAT(
+      absRParts,
+      ElementsAre(
+          RelativePathPiece{"baz"},
+          RelativePathPiece{"bar/baz"},
+          RelativePathPiece{"foo/bar/baz"}));
+
+  RelativePath rel2("r/s/t/u");
+  std::vector<RelativePathPiece> rel2Parts(
+      rel2.suffixes().begin(), rel2.suffixes().end());
+  EXPECT_THAT(
+      rel2Parts,
+      ElementsAre(
+          RelativePathPiece{"r/s/t/u"},
+          RelativePathPiece{"s/t/u"},
+          RelativePathPiece{"t/u"},
+          RelativePathPiece{"u"}));
+
+  std::vector<RelativePathPiece> rel2RParts(
+      rel2.rsuffixes().begin(), rel2.rsuffixes().end());
+  EXPECT_THAT(
+      rel2RParts,
+      ElementsAre(
+          RelativePathPiece{"u"},
+          RelativePathPiece{"t/u"},
+          RelativePathPiece{"s/t/u"},
+          RelativePathPiece{"r/s/t/u"}));
+
+  AbsolutePath abs2("/a/b/c/d");
+  std::vector<RelativePathPiece> abs2Parts(
+      abs2.suffixes().begin(), abs2.suffixes().end());
+  EXPECT_THAT(
+      abs2Parts,
+      ElementsAre(
+          RelativePathPiece{"a/b/c/d"},
+          RelativePathPiece{"b/c/d"},
+          RelativePathPiece{"c/d"},
+          RelativePathPiece{"d"}));
+
+  std::vector<RelativePathPiece> abs2RParts(
+      abs2.rsuffixes().begin(), abs2.rsuffixes().end());
+  EXPECT_THAT(
+      abs2RParts,
+      ElementsAre(
+          RelativePathPiece{"d"},
+          RelativePathPiece{"c/d"},
+          RelativePathPiece{"b/c/d"},
+          RelativePathPiece{"a/b/c/d"}));
+
+  RelativePath empty;
+  std::vector<RelativePathPiece> emptyParts(
+      empty.suffixes().begin(), empty.suffixes().end());
+  EXPECT_THAT(emptyParts, ElementsAre());
+  std::vector<RelativePathPiece> emptyRParts(
+      empty.rsuffixes().begin(), empty.rsuffixes().end());
+  EXPECT_THAT(emptyRParts, ElementsAre());
 }
 
 TEST(PathFuncs, InitializeFromIter) {

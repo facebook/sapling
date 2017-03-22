@@ -708,6 +708,9 @@ class PathComponentIterator
   position_type end_{nullptr};
 };
 
+template <bool IsReverse>
+class PathSuffixIterator;
+
 /** A pair of path iterators.
  * This is used to implement the paths() and allPaths() methods.
  */
@@ -848,8 +851,15 @@ class RelativePathBase : public ComposedPathBase<
   using reverse_iterator = ComposedPathIterator<RelativePathPiece, true>;
   using iterator_range = PathIteratorRange<iterator>;
   using reverse_iterator_range = PathIteratorRange<reverse_iterator>;
+  // Suffix iterator types
+  using suffix_iterator = PathSuffixIterator<false>;
+  using suffix_iterator_range = PathIteratorRange<suffix_iterator>;
+  using reverse_suffix_iterator = PathSuffixIterator<true>;
+  using reverse_suffix_iterator_range =
+      PathIteratorRange<reverse_suffix_iterator>;
 
-  /** Return an iterator range that will yield all parent directories of this
+  /**
+   * Return an iterator range that will yield all parent directories of this
    * path, and then the path itself.
    *
    * For example, iterating the path "foo/bar/baz" will yield
@@ -858,13 +868,17 @@ class RelativePathBase : public ComposedPathBase<
    * 1. "foo"
    * 2. "foo/bar"
    * 3. "foo/bar/baz"
+   *
+   * See also the suffixes() and rsuffixes() methods, which provide iterators
+   * over directory suffixes.
    */
   iterator_range paths() const {
     auto p = this->piece();
     return iterator_range(++iterator{p}, iterator{p, nullptr});
   }
 
-  /** Return an iterator range that will yield all parent directories of this
+  /**
+   * Return an iterator range that will yield all parent directories of this
    * path, and then the path itself.
    *
    * This is very similar to paths(), but also includes the empty string
@@ -883,7 +897,11 @@ class RelativePathBase : public ComposedPathBase<
     return iterator_range(iterator{p}, iterator{p, nullptr});
   }
 
-  /** Return a reverse_iterator over all parent directories and this path.
+  /**
+   * Return a reverse_iterator over all parent directories and this path.
+   *
+   * See also the suffixes() and rsuffixes() methods, which provide iterators
+   * over directory suffixes.
    */
   reverse_iterator_range rpaths() const {
     auto p = this->piece();
@@ -901,6 +919,37 @@ class RelativePathBase : public ComposedPathBase<
         reverse_iterator{p, this->stringPiece().end()},
         reverse_iterator{p, nullptr});
   }
+
+  /**
+   * Return an iterator range over all directory suffixes of the path.
+   *
+   * For example, iterating the path "foo/bar/baz" will yield
+   * this series of Piece elements:
+   *
+   * 1. "foo/bar/baz"
+   * 2. "bar/baz"
+   * 3. "baz"
+   *
+   * See also the paths() and rpaths() methods, which provide iterators over
+   * directory prefixes.
+   */
+  suffix_iterator_range suffixes() const;
+
+  /**
+   * Return an iterator range over all directory suffixes of the path, from
+   * back to front.
+   *
+   * For example, iterating the path "foo/bar/baz" will yield
+   * this series of Piece elements:
+   *
+   * 1. "baz"
+   * 2. "bar/baz"
+   * 3. "foo/bar/baz"
+   *
+   * See also the paths() and rpaths() methods, which provide iterators over
+   * directory prefixes.
+   */
+  reverse_suffix_iterator_range rsuffixes() const;
 
   /** Return an iterator to the specified parent directory of this path.
    * If parent is not a parent directory of this path, returns
@@ -1033,6 +1082,12 @@ class AbsolutePathBase : public ComposedPathBase<
   using reverse_iterator = ComposedPathIterator<AbsolutePathPiece, true>;
   using iterator_range = PathIteratorRange<iterator>;
   using reverse_iterator_range = PathIteratorRange<reverse_iterator>;
+  // Suffix iterator types
+  using suffix_iterator = PathSuffixIterator<false>;
+  using suffix_iterator_range = PathIteratorRange<suffix_iterator>;
+  using reverse_suffix_iterator = PathSuffixIterator<true>;
+  using reverse_suffix_iterator_range =
+      PathIteratorRange<reverse_suffix_iterator>;
 
   iterator_range paths() const {
     auto p = this->piece();
@@ -1048,6 +1103,31 @@ class AbsolutePathBase : public ComposedPathBase<
         reverse_iterator{p, this->stringPiece().end()},
         reverse_iterator{p, nullptr});
   }
+
+  /**
+   * Return an iterator range over all suffixes of the path.
+   *
+   * For example, iterating the path "/foo/bar/baz" will yield
+   * this series of Piece elements:
+   *
+   * 1. "foo/bar/baz"
+   * 2. "bar/baz"
+   * 3. "baz"
+   */
+  suffix_iterator_range suffixes() const;
+
+  /**
+   * Return an iterator range over all suffixes of the path, from back to
+   * front.
+   *
+   * For example, iterating the path "/foo/bar/baz" will yield
+   * this series of Piece elements:
+   *
+   * 1. "baz"
+   * 2. "bar/baz"
+   * 3. "foo/bar/baz"
+   */
+  reverse_suffix_iterator_range rsuffixes() const;
 
   /**
    * This must be equal to or an ancestor of the specified path.
@@ -1126,6 +1206,208 @@ class AbsolutePathBase : public ComposedPathBase<
     return this->path_.c_str();
   }
 };
+
+/**
+ * An iterator over suffixes in a composed path.
+ *
+ * PathSuffixIterator always returns RelativePathPiece objects, even when
+ * iterating over an AbsolutePath.  This is intentional, since the suffixes are
+ * relative to some other location inside the path.
+ *
+ * For example, when iterating forwards over the path "foo/bar/baz", the
+ * iterator yields:
+ *   "foo/bar/baz"
+ *   "bar/baz"
+ *   "baz"
+ *
+ * When iterating in reverse it yeilds:
+ *   "baz"
+ *   "bar/baz"
+ *   "foo/bar/baz"
+ */
+template <bool IsReverse>
+class PathSuffixIterator
+    : public std::iterator<std::input_iterator_tag, const RelativePathPiece> {
+ public:
+  explicit PathSuffixIterator() {}
+  explicit PathSuffixIterator(folly::StringPiece path, size_t start = 0)
+      : path_{path}, start_{start} {}
+
+  PathSuffixIterator(const PathSuffixIterator& other) = default;
+  PathSuffixIterator& operator=(const PathSuffixIterator& other) = default;
+
+  static PathIteratorRange<PathSuffixIterator<IsReverse>> createRange(
+      folly::StringPiece p) {
+    if (IsReverse) {
+      auto end = PathSuffixIterator{p, p.size()};
+      ++end;
+      return PathIteratorRange<PathSuffixIterator<IsReverse>>(
+          end, PathSuffixIterator{p, folly::StringPiece::npos});
+    } else {
+      return PathIteratorRange<PathSuffixIterator<IsReverse>>(
+          PathSuffixIterator{p}, PathSuffixIterator{p, p.size()});
+    }
+  }
+
+  bool operator==(const PathSuffixIterator& other) const {
+    DCHECK_EQ(path_, other.path_);
+    // We have to check both start_ and end_ here.
+    // In most cases start_ will equal other.start_ if and only if end_ equals
+    // other.end_.  However, this is not always true because of end() and
+    // rend().  end_ points the same place at end() and end() - 1.
+    // start_ points to the same place at rend() and rend() - 1.
+    return start_ == other.start_;
+  }
+
+  bool operator!=(const PathSuffixIterator& other) const {
+    DCHECK_EQ(path_, other.path_);
+    return start_ != other.start_;
+  }
+
+  /// ++iter;
+  PathSuffixIterator& operator++() {
+    if (IsReverse) {
+      retreat();
+    } else {
+      advance();
+    }
+    return *this;
+  }
+
+  /// iter++;
+  PathSuffixIterator operator++(int) {
+    PathSuffixIterator tmp(*this);
+    ++(*this); // invoke the ++iter handler above.
+    return tmp;
+  }
+
+  /// --iter;
+  PathSuffixIterator& operator--() {
+    if (IsReverse) {
+      advance();
+    } else {
+      retreat();
+    }
+    return *this;
+  }
+
+  /// iter--;
+  PathSuffixIterator operator--(int) {
+    PathSuffixIterator tmp(*this);
+    --(*this); // invoke the --iter handler above.
+    return tmp;
+  }
+
+  /// Returns the piece for the current iterator position.
+  RelativePathPiece piece() const {
+    return RelativePathPiece{
+        folly::StringPiece{path_.begin() + start_, path_.end()},
+        SkipPathSanityCheck{}};
+  }
+
+  /*
+   * Note: dereferencing a PathSuffixIterator returns a new
+   * RelativePathPiece, and not a reference to an existing RelativePathPiece.
+   */
+  RelativePathPiece operator*() const {
+    return piece();
+  }
+
+  /*
+   * TODO: operator->() is not implemented
+   *
+   * Since the operator*() returns a new Piece and not a reference,
+   * operator->() can't really be implemented correctly, as it needs to return
+   * a pointer to some existing object.
+   */
+  // Piece* operator->() const;
+
+ private:
+  // Move the iterator forwards in the path.
+  void advance() {
+    DCHECK_LT(start_, path_.size());
+
+    // npos is used to represent one before the beginning (that is,
+    // path.rsuffixes().end()).  Advance from npos to 0.
+    if (start_ == folly::StringPiece::npos) {
+      start_ = 0;
+      return;
+    }
+
+    // In all other cases, move to just past the next /
+    auto next = path_.find(kDirSeparator, start_ + 1);
+    if (next == folly::StringPiece::npos) {
+      start_ = path_.size();
+    } else {
+      start_ = next + 1;
+    }
+  }
+
+  // Move the iterator backwards in the path.
+  void retreat() {
+    DCHECK_NE(start_, folly::StringPiece::npos);
+    // If we are at the start of the string, move to npos
+    if (start_ == 0) {
+      start_ = folly::StringPiece::npos;
+      return;
+    }
+
+    // Otherwise move to just past the previous /
+    auto next =
+        rfind(folly::StringPiece{path_.begin(), start_ - 1}, kDirSeparator);
+    if (next == folly::StringPiece::npos) {
+      start_ = 0;
+    } else {
+      start_ = next + 1;
+    }
+  }
+
+  /**
+   * The path we're iterating over.
+   */
+  folly::StringPiece path_;
+  /**
+   * Our current position within that path.
+   *
+   * This is the start of the current subpiece that we represent.  The end of
+   * the subpiece is always path_.end().
+   *
+   * For reverse iteration, we use StringPiece::npos to represent the end.
+   * That is, when retreat() is called when (start_ == 0), we move to
+   * StringPiece::npos next.
+   */
+  size_t start_{0};
+};
+
+template <typename Storage>
+typename RelativePathBase<Storage>::suffix_iterator_range
+RelativePathBase<Storage>::suffixes() const {
+  return suffix_iterator::createRange(this->stringPiece());
+}
+
+template <typename Storage>
+typename RelativePathBase<Storage>::reverse_suffix_iterator_range
+RelativePathBase<Storage>::rsuffixes() const {
+  return reverse_suffix_iterator::createRange(this->stringPiece());
+}
+
+template <typename Storage>
+typename AbsolutePathBase<Storage>::suffix_iterator_range
+AbsolutePathBase<Storage>::suffixes() const {
+  // The PathSuffixIterator code assumes that the StringPiece it is given is
+  // relative, so for absolute paths just strip off the leading directory
+  // separator.
+  return suffix_iterator::createRange(this->stringPiece().subpiece(1));
+}
+
+template <typename Storage>
+typename AbsolutePathBase<Storage>::reverse_suffix_iterator_range
+AbsolutePathBase<Storage>::rsuffixes() const {
+  // The PathSuffixIterator code assumes that the StringPiece it is given is
+  // relative, so for absolute paths just strip off the leading directory
+  // separator.
+  return reverse_suffix_iterator::createRange(this->stringPiece().subpiece(1));
+}
 
 // Allow boost to compute hash values
 template <typename A>
