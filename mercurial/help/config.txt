@@ -415,7 +415,7 @@ effect and style see :hg:`help color`.
     extension).
 
 ``commands``
-----------
+------------
 
 ``status.relative``
     Make paths in ``hg status`` output relative to the current directory.
