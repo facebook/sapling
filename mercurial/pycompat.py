@@ -23,7 +23,6 @@ if not ispy3:
     import Queue as _queue
     import SocketServer as socketserver
     import urlparse
-    urlunquote = urlparse.unquote
     import xmlrpclib
 else:
     import http.client as httplib
@@ -31,7 +30,6 @@ else:
     import queue as _queue
     import socketserver
     import urllib.parse as urlparse
-    urlunquote = urlparse.unquote_to_bytes
     import xmlrpc.client as xmlrpclib
 
 if ispy3:
