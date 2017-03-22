@@ -2637,7 +2637,7 @@ class url(object):
                   'path', 'fragment'):
             v = getattr(self, a)
             if v is not None:
-                setattr(self, a, pycompat.urlunquote(v))
+                setattr(self, a, urlreq.unquote(v))
 
     def __repr__(self):
         attrs = []
