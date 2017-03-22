@@ -330,7 +330,7 @@ pypats = [
     (r'^import cStringIO', "don't use cStringIO.StringIO, use util.stringio"),
     (r'^import urllib', "don't use urllib, use util.urlreq/util.urlerr"),
     (r'^import SocketServer', "don't use SockerServer, use util.socketserver"),
-    (r'^import urlparse', "don't use urlparse, use util.urlparse"),
+    (r'^import urlparse', "don't use urlparse, use util.urlreq"),
     (r'^import xmlrpclib', "don't use xmlrpclib, use util.xmlrpclib"),
     (r'^import cPickle', "don't use cPickle, use util.pickle"),
     (r'^import pickle', "don't use pickle, use util.pickle"),
