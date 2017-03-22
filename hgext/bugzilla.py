@@ -307,7 +307,6 @@ from mercurial import (
     util,
 )
 
-urlparse = util.urlparse
 xmlrpclib = util.xmlrpclib
 
 # Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for
@@ -657,7 +656,7 @@ class bzxmlrpc(bzaccess):
         self.bztoken = login.get('token', '')
 
     def transport(self, uri):
-        if urlparse.urlparse(uri, "http")[0] == "https":
+        if util.urlreq.urlparse(uri, "http")[0] == "https":
             return cookiesafetransport()
         else:
             return cookietransport()
