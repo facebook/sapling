@@ -50,23 +50,24 @@ class testsimplekeyvaluefile(unittest.TestCase):
 
     def testinvalidkeys(self):
         d = {'0key1': 'value1', 'Key2': 'value2'}
-        with self.assertRaisesRegexp(error.ProgrammingError,
-                                     "keys must start with a letter.*"):
-            scmutil.simplekeyvaluefile(self.vfs, 'kvfile').write(d)
+        self.assertRaises(error.ProgrammingError,
+                          scmutil.simplekeyvaluefile(self.vfs, 'kvfile').write,
+                          d)
         d = {'key1@': 'value1', 'Key2': 'value2'}
-        with self.assertRaisesRegexp(error.ProgrammingError, "invalid key.*"):
-            scmutil.simplekeyvaluefile(self.vfs, 'kvfile').write(d)
+        self.assertRaises(error.ProgrammingError,
+                          scmutil.simplekeyvaluefile(self.vfs, 'kvfile').write,
+                          d)
 
     def testinvalidvalues(self):
         d = {'key1': 'value1', 'Key2': 'value2\n'}
-        with self.assertRaisesRegexp(error.ProgrammingError, "invalid val.*"):
-            scmutil.simplekeyvaluefile(self.vfs, 'kvfile').write(d)
+        self.assertRaises(error.ProgrammingError,
+                          scmutil.simplekeyvaluefile(self.vfs, 'kvfile').write,
+                          d)
 
     def testcorruptedfile(self):
         self.vfs.contents['badfile'] = 'ababagalamaga\n'
-        with self.assertRaisesRegexp(error.CorruptedState,
-                                     "dictionary.*element.*"):
-            scmutil.simplekeyvaluefile(self.vfs, 'badfile').read()
+        self.assertRaises(error.CorruptedState,
+                          scmutil.simplekeyvaluefile(self.vfs, 'badfile').read)
 
 if __name__ == "__main__":
     silenttestrunner.main(__name__)
