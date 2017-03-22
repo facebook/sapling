@@ -284,6 +284,8 @@ class ui(object):
                     del cfg['ui'][k]
             for k, v in cfg.items('defaults'):
                 del cfg['defaults'][k]
+            for k, v in cfg.items('commands'):
+                del cfg['commands'][k]
         # Don't remove aliases from the configuration if in the exceptionlist
         if self.plain('alias'):
             for k, v in cfg.items('alias'):

@@ -5349,7 +5349,7 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False,
     if rev and node:
         raise error.Abort(_("please specify just one revision"))
 
-    if ui.configbool('commands', 'update.requiredest', False):
+    if ui.configbool('commands', 'update.requiredest'):
         if not node and not rev and not date:
             raise error.Abort(_('you must specify a destination'),
                               hint=_('for example: hg update ".::"'))
