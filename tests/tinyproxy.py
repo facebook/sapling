@@ -23,8 +23,8 @@ import sys
 from mercurial import util
 
 httpserver = util.httpserver
-urlparse = util.urlparse
 socketserver = util.socketserver
+urlreq = util.urlreq
 
 if os.environ.get('HGIPV6', '0') == '1':
     family = socket.AF_INET6
@@ -85,7 +85,7 @@ class ProxyHandler (httpserver.basehttprequesthandler):
             self.connection.close()
 
     def do_GET(self):
-        (scm, netloc, path, params, query, fragment) = urlparse.urlparse(
+        (scm, netloc, path, params, query, fragment) = urlreq.urlparse(
             self.path, 'http')
         if scm != 'http' or fragment or not netloc:
             self.send_error(400, "bad url %s" % self.path)
@@ -96,7 +96,7 @@ class ProxyHandler (httpserver.basehttprequesthandler):
                 self.log_request()
                 soc.send("%s %s %s\r\n" % (
                     self.command,
-                    urlparse.urlunparse(('', '', path, params, query, '')),
+                    urlreq.urlunparse(('', '', path, params, query, '')),
                     self.request_version))
                 self.headers['Connection'] = 'close'
                 del self.headers['Proxy-Connection']
