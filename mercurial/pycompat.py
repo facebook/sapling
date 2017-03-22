@@ -287,6 +287,7 @@ if not ispy3:
     import SimpleHTTPServer
     import urllib2
     import urllib
+    import urlparse
     urlreq._registeraliases(urllib, (
         "addclosehook",
         "addinfourl",
@@ -317,6 +318,10 @@ if not ispy3:
         "Request",
         "urlopen",
     ))
+    urlreq._registeraliases(urlparse, (
+        "urlparse",
+        "urlunparse",
+    ))
     urlerr._registeraliases(urllib2, (
         "HTTPError",
         "URLError",
@@ -339,6 +344,8 @@ else:
         "splitpasswd",
         "splitport",
         "splituser",
+        "urlparse",
+        "urlunparse",
     ))
     urlreq._registeralias(urllib.parse, "unquote_to_bytes", "unquote")
     import urllib.request
