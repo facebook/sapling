@@ -141,5 +141,23 @@ convert again
   rev=1 desc="change a" tags="" files="a"
   rev=0 desc="initial" tags="" files="a b/c"
 
+empty commit message
+  $ p4 edit a
+  //depot/test-mercurial-import/a#3 - opened for edit
+  $ echo aaaaa >> a
+  $ p4 submit -d ""
+  Submitting change 6.
+  Locking 1 files ...
+  edit //depot/test-mercurial-import/a#4
+  Change 6 submitted.
+  $ hg convert -s p4 $DEPOTPATH dst
+  scanning source...
+  reading p4 views
+  collecting p4 changelists
+  6 **empty changelist description**
+  sorting...
+  converting...
+  0 
+
 exit trap:
   stopping the p4 server

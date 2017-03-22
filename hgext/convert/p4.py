@@ -161,7 +161,12 @@ class p4_source(common.converter_source):
             d = self._fetch_revision(change)
             c = self._construct_commit(d, parents)
 
-            shortdesc = c.desc.splitlines(True)[0].rstrip('\r\n')
+            descarr = c.desc.splitlines(True)
+            if len(descarr) > 0:
+                shortdesc = descarr[0].rstrip('\r\n')
+            else:
+                shortdesc = '**empty changelist description**'
+
             t = '%s %s' % (c.rev, repr(shortdesc)[1:-1])
             ui.status(util.ellipsis(t, 80) + '\n')
 
