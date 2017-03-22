@@ -268,6 +268,10 @@ class _pycompatstub(object):
             (item.replace(sysstr('_'), sysstr('')).lower(), (origin, item))
             for item in items)
 
+    def _registeralias(self, origin, attr, name):
+        """Alias ``origin``.``attr`` as ``name``"""
+        self._aliases[sysstr(name)] = (origin, sysstr(attr))
+
     def __getattr__(self, name):
         try:
             origin, item = self._aliases[name]
@@ -337,8 +341,8 @@ else:
         "splitpasswd",
         "splitport",
         "splituser",
-        "unquote",
     ))
+    urlreq._registeralias(urllib.parse, "unquote_to_bytes", "unquote")
     import urllib.request
     urlreq._registeraliases(urllib.request, (
         "AbstractHTTPHandler",
