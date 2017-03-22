@@ -4734,7 +4734,7 @@ def status(ui, repo, *pats, **opts):
     else:
         node1, node2 = scmutil.revpair(repo, revs)
 
-    if pats:
+    if pats or ui.configbool('commands', 'status.relative'):
         cwd = repo.getcwd()
     else:
         cwd = ''

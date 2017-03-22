@@ -107,6 +107,27 @@ combining patterns with root and patterns without a root works
   ? a/in_a
   ? b/in_b
 
+relative paths can be requested
+
+  $ cat >> $HGRCPATH <<EOF
+  > [commands]
+  > status.relative = True
+  > EOF
+  $ hg status --cwd a
+  ? 1/in_a_1
+  ? in_a
+  ? ../b/1/in_b_1
+  ? ../b/2/in_b_2
+  ? ../b/in_b
+  ? ../in_root
+  $ HGPLAIN=1 hg status --cwd a
+  ? a/1/in_a_1
+  ? a/in_a
+  ? b/1/in_b_1
+  ? b/2/in_b_2
+  ? b/in_b
+  ? in_root
+
   $ cd ..
 
   $ hg init repo2
