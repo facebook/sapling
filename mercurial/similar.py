@@ -93,6 +93,9 @@ def _findsimilarmatches(repo, added, removed, threshold):
         source, bscore = v
         yield source, dest, bscore
 
+def _dropempty(fctxs):
+    return [x for x in fctxs if x.size() > 0]
+
 def findrenames(repo, added, removed, threshold):
     '''find renamed files -- yields (before, after, score) tuples'''
     wctx = repo[None]
@@ -101,10 +104,8 @@ def findrenames(repo, added, removed, threshold):
     # Zero length files will be frequently unrelated to each other, and
     # tracking the deletion/addition of such a file will probably cause more
     # harm than good. We strip them out here to avoid matching them later on.
-    addedfiles = [wctx[fp] for fp in sorted(added)
-                  if wctx[fp].size() > 0]
-    removedfiles = [pctx[fp] for fp in sorted(removed)
-                    if fp in pctx and pctx[fp].size() > 0]
+    addedfiles = _dropempty(wctx[fp] for fp in sorted(added))
+    removedfiles = _dropempty(pctx[fp] for fp in sorted(removed) if fp in pctx)
 
     # Find exact matches.
     matchedfiles = set()
