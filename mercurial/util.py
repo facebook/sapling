@@ -1086,8 +1086,7 @@ def copyfile(src, dest, hardlink=False, copystat=False, checkambig=False):
     if hardlink:
         # Hardlinks are problematic on CIFS (issue4546), do not allow hardlinks
         # unless we are confident that dest is on a whitelisted filesystem.
-        destdir = os.path.dirname(dest)
-        fstype = getattr(osutil, 'getfstype', lambda x: None)(destdir)
+        fstype = getfstype(os.path.dirname(dest))
         if fstype not in _hardlinkfswhitelist:
             hardlink = False
     if hardlink:
