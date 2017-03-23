@@ -13,7 +13,7 @@ import time
 from mercurial import util
 import arcconfig
 
-urlparse = util.urlparse
+urlreq = util.urlreq
 
 DEFAULT_HOST = 'https://phabricator.fb.com/api/'
 DEFAULT_TIMEOUT = 60
@@ -55,7 +55,7 @@ class Client(object):
                 'output': 'json',
             }
         )
-        urlparts = urlparse.urlparse(self._host)
+        urlparts = urlreq.urlparse(self._host)
         if self._connection is None:
             if urlparts.scheme == 'http':
                 self._connection = httplib.HTTPConnection(
@@ -118,4 +118,3 @@ def call_conduit(method, args, timeout=DEFAULT_TIMEOUT):
     client = Client()
     client.apply_arcconfig(arcconfig.load_for_path(os.getcwd()))
     return client.call(method, args, timeout=timeout)
-
