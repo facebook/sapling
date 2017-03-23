@@ -151,7 +151,7 @@ availablepackages = [
     'remotefilelog',
 ]
 
-if iswindows:
+if not iswindows:
     availablepackages += [
         'fastannotate',
         'fastmanifest',
