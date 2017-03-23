@@ -790,10 +790,7 @@ def debugfsinfo(ui, path="."):
     """show information detected about current filesystem"""
     util.writefile('.debugfsinfo', '')
     ui.write(('exec: %s\n') % (util.checkexec(path) and 'yes' or 'no'))
-    from . import osutil
-    if util.safehasattr(osutil, 'getfstype'):
-        fstype = osutil.getfstype('.')
-        ui.write(('fstype: %s\n') % (fstype or '(unknown)'))
+    ui.write(('fstype: %s\n') % (util.getfstype('.') or '(unknown)'))
     ui.write(('symlink: %s\n') % (util.checklink(path) and 'yes' or 'no'))
     ui.write(('hardlink: %s\n') % (util.checknlink(path) and 'yes' or 'no'))
     ui.write(('case-sensitive: %s\n') % (util.fscasesensitive('.debugfsinfo')
