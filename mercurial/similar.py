@@ -107,12 +107,14 @@ def findrenames(repo, added, removed, threshold):
                     if fp in parentctx and parentctx[fp].size() > 0]
 
     # Find exact matches.
-    for (a, b) in _findexactmatches(repo, addedfiles[:], removedfiles):
-        addedfiles.remove(b)
+    matchedfiles = set()
+    for (a, b) in _findexactmatches(repo, addedfiles, removedfiles):
+        matchedfiles.add(b)
         yield (a.path(), b.path(), 1.0)
 
     # If the user requested similar files to be matched, search for them also.
     if threshold < 1.0:
+        addedfiles = [x for x in addedfiles if x not in matchedfiles]
         for (a, b, score) in _findsimilarmatches(repo, addedfiles,
                                                  removedfiles, threshold):
             yield (a.path(), b.path(), score)
