@@ -95,16 +95,16 @@ def _findsimilarmatches(repo, added, removed, threshold):
 
 def findrenames(repo, added, removed, threshold):
     '''find renamed files -- yields (before, after, score) tuples'''
-    parentctx = repo['.']
-    workingctx = repo[None]
+    wctx = repo[None]
+    pctx = wctx.p1()
 
     # Zero length files will be frequently unrelated to each other, and
     # tracking the deletion/addition of such a file will probably cause more
     # harm than good. We strip them out here to avoid matching them later on.
-    addedfiles = [workingctx[fp] for fp in sorted(added)
-                  if workingctx[fp].size() > 0]
-    removedfiles = [parentctx[fp] for fp in sorted(removed)
-                    if fp in parentctx and parentctx[fp].size() > 0]
+    addedfiles = [wctx[fp] for fp in sorted(added)
+                  if wctx[fp].size() > 0]
+    removedfiles = [pctx[fp] for fp in sorted(removed)
+                    if fp in pctx and pctx[fp].size() > 0]
 
     # Find exact matches.
     matchedfiles = set()
