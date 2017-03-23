@@ -51,7 +51,7 @@ def get_test_env_and_deps(suffix=''):
     }
     deps = []
 
-    for name, dep in env_to_target.items():
+    for name, dep in sorted(env_to_target.items()):
         envs[name] = '$(location %s)' % dep
         deps.append(dep)
 
