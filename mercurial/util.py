@@ -1367,6 +1367,13 @@ def fspath(name, root):
 
     return ''.join(result)
 
+def getfstype(dirpath):
+    '''Get the filesystem type name from a directory (best-effort)
+
+    Returns None if we are unsure, or errors like ENOENT, EPERM happen.
+    '''
+    return getattr(osutil, 'getfstype', lambda x: None)(dirpath)
+
 def checknlink(testfile):
     '''check whether hardlink count reporting works properly'''
 
