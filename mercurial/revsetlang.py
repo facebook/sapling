@@ -611,7 +611,7 @@ def formatspec(expr, *args):
 
     def argtype(c, arg):
         if c == 'd':
-            return str(int(arg))
+            return '%d' % int(arg)
         elif c == 's':
             return quote(arg)
         elif c == 'r':
