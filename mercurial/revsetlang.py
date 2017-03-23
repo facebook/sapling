@@ -574,6 +574,17 @@ def parse(spec, lookup=None):
     return _parsewith(spec, lookup=lookup)
 
 def _quote(s):
+    r"""Quote a value in order to make it safe for the revset engine.
+
+    >>> _quote('asdf')
+    "'asdf'"
+    >>> _quote("asdf'\"")
+    '\'asdf\\\'"\''
+    >>> _quote('asdf\'')
+    '"asdf\'"'
+    >>> _quote(1)
+    "'1'"
+    """
     return repr(str(s))
 
 def formatspec(expr, *args):
