@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import errno, os, tempfile, resource, time
+import errno, os, tempfile, mmap, time
 
 from mercurial import bundle2, cmdutil, hg, scmutil, exchange, commands
 from mercurial import util, error, discovery, changegroup, context, revsetlang
@@ -298,10 +298,10 @@ def _makebundlefile(part):
             fp = os.fdopen(fd, 'wb')
             magic = 'HG10UN'
             fp.write(magic)
-            data = part.read(resource.getpagesize() - len(magic))
+            data = part.read(mmap.PAGESIZE - len(magic))
             while data:
                 fp.write(data)
-                data = part.read(resource.getpagesize())
+                data = part.read(mmap.PAGESIZE)
         finally:
             fp.close()
     except Exception:
