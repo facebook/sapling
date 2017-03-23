@@ -25,7 +25,7 @@ def _findexactmatches(repo, added, removed):
 
     # Get hashes of removed files.
     hashes = {}
-    for i, fctx in enumerate(removed):
+    for i, fctx in enumerate(reversed(removed)):
         repo.ui.progress(_('searching for exact renames'), i, total=numfiles,
                          unit=_('files'))
         h = hashlib.sha1(fctx.data()).digest()
@@ -85,7 +85,7 @@ def _findsimilarmatches(repo, added, removed, threshold):
             if data is None:
                 data = _ctxdata(r)
             myscore = _score(a, data)
-            if myscore >= bestscore:
+            if myscore > bestscore:
                 copies[a] = (r, myscore)
     repo.ui.progress(_('searching'), None)
 

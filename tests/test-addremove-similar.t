@@ -101,7 +101,7 @@ pick one from many identical files
   removing 8
   removing 9
   adding a
-  recording removal of 9 as rename to a (100% similar)
+  recording removal of 0 as rename to a (100% similar)
   $ hg revert -aq
 
 pick one from many similar files
@@ -124,7 +124,7 @@ pick one from many similar files
   removing 8
   removing 9
   adding a
-  recording removal of 9 as rename to a (99% similar)
+  recording removal of 0 as rename to a (99% similar)
   $ hg commit -m 'always the same file should be selected'
 
 should all fail
