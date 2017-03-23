@@ -7,7 +7,7 @@
 
 from . import fileserverclient, remotefilelog, shallowutil
 import os
-from mercurial.node import bin, hex, nullid, nullrev
+from mercurial.node import bin, hex, nullid
 from mercurial import changegroup, mdiff, match, bundlerepo
 from mercurial import util, error
 from mercurial.i18n import _
@@ -147,16 +147,17 @@ class shallowcg1packer(changegroup.cg1packer):
                 results.append(fnode)
         return results
 
-    def nodechunk(self, revlog, node, prev, linknode):
+    def nodechunk(self, revlog, node, prevnode, linknode):
         prefix = ''
-        if prev == nullrev:
+        if prevnode == nullid:
             delta = revlog.revision(node)
             prefix = mdiff.trivialdiffheader(len(delta))
         else:
-            delta = revlog.revdiff(prev, node)
+            # Actually uses remotefilelog.revdiff which works on nodes, not revs
+            delta = revlog.revdiff(prevnode, node)
         p1, p2 = revlog.parents(node)
         flags = revlog.flags(node)
-        meta = self.builddeltaheader(node, p1, p2, prev, linknode, flags)
+        meta = self.builddeltaheader(node, p1, p2, prevnode, linknode, flags)
         meta += prefix
         l = len(meta) + len(delta)
         yield changegroup.chunkheader(l)
