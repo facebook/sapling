@@ -15,6 +15,7 @@ from . import (
     node,
     parser,
     pycompat,
+    util,
 )
 
 elements = {
@@ -581,11 +582,11 @@ def _quote(s):
     >>> _quote("asdf'\"")
     '\'asdf\\\'"\''
     >>> _quote('asdf\'')
-    '"asdf\'"'
+    "'asdf\\''"
     >>> _quote(1)
     "'1'"
     """
-    return repr(str(s))
+    return "'%s'" % util.escapestr('%s' % s)
 
 def formatspec(expr, *args):
     '''
