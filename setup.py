@@ -596,13 +596,21 @@ for plat, func in [('bsd', 'setproctitle'), ('bsd|darwin|linux', 'statfs')]:
         osutil_cflags.append('-DHAVE_%s' % func.upper())
 
 for plat, header in [
-    ('bsd|darwin|linux', 'sys/mount.h'),
-    ('bsd|darwin|linux', 'sys/param.h'),
     ('linux', 'linux/magic.h'),
     ('linux', 'sys/vfs.h'),
 ]:
     if re.search(plat, sys.platform) and hasheader(new_compiler(), header):
         macro = header.replace('/', '_').replace('.', '_').upper()
+        osutil_cflags.append('-DHAVE_%s' % macro)
+
+for plat, macro, code in [
+    ('bsd|darwin', 'BSD_STATFS', '''
+     #include <sys/param.h>
+     #include <sys/mount.h>
+     int main() { struct statfs s; return sizeof(s.f_fstypename); }
+     '''),
+]:
+    if re.search(plat, sys.platform) and cancompile(new_compiler(), code):
         osutil_cflags.append('-DHAVE_%s' % macro)
 
 if sys.platform == 'darwin':
