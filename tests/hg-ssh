@@ -1,0 +1,86 @@
+#!/usr/bin/env python
+#
+# Copyright 2005-2007 by Intevation GmbH <intevation@intevation.de>
+#
+# Author(s):
+# Thomas Arendsen Hein <thomas@intevation.de>
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2 or any later version.
+
+"""
+hg-ssh - a wrapper for ssh access to a limited set of mercurial repos
+
+To be used in ~/.ssh/authorized_keys with the "command" option, see sshd(8):
+command="hg-ssh path/to/repo1 /path/to/repo2 ~/repo3 ~user/repo4" ssh-dss ...
+(probably together with these other useful options:
+ no-port-forwarding,no-X11-forwarding,no-agent-forwarding)
+
+This allows pull/push over ssh from/to the repositories given as arguments.
+
+If all your repositories are subdirectories of a common directory, you can
+allow shorter paths with:
+command="cd path/to/my/repositories && hg-ssh repo1 subdir/repo2"
+
+You can use pattern matching of your normal shell, e.g.:
+command="cd repos && hg-ssh user/thomas/* projects/{mercurial,foo}"
+
+You can also add a --read-only flag to allow read-only access to a key, e.g.:
+command="hg-ssh --read-only repos/*"
+"""
+
+# enable importing on demand to reduce startup time
+from mercurial import demandimport; demandimport.enable()
+
+from mercurial import dispatch
+
+import sys, os, shlex
+
+def main():
+    cwd = os.getcwd()
+    readonly = False
+    args = sys.argv[1:]
+    while len(args):
+        if args[0] == '--read-only':
+            readonly = True
+            args.pop(0)
+        else:
+            break
+    allowed_paths = [os.path.normpath(os.path.join(cwd,
+                                                   os.path.expanduser(path)))
+                     for path in args]
+    orig_cmd = os.getenv('SSH_ORIGINAL_COMMAND', '?')
+    try:
+        cmdargv = shlex.split(orig_cmd)
+    except ValueError as e:
+        sys.stderr.write('Illegal command "%s": %s\n' % (orig_cmd, e))
+        sys.exit(255)
+
+    if cmdargv[:2] == ['hg', '-R'] and cmdargv[3:] == ['serve', '--stdio']:
+        path = cmdargv[2]
+        repo = os.path.normpath(os.path.join(cwd, os.path.expanduser(path)))
+        if repo in allowed_paths:
+            cmd = ['-R', repo, 'serve', '--stdio']
+            if readonly:
+                cmd += [
+                    '--config',
+                    'hooks.pretxnopen.hg-ssh=python:__main__.rejectpush',
+                    '--config',
+                    'hooks.prepushkey.hg-ssh=python:__main__.rejectpush'
+                    ]
+            dispatch.dispatch(dispatch.request(cmd))
+        else:
+            sys.stderr.write('Illegal repository "%s"\n' % repo)
+            sys.exit(255)
+    else:
+        sys.stderr.write('Illegal command "%s"\n' % orig_cmd)
+        sys.exit(255)
+
+def rejectpush(ui, **kwargs):
+    ui.warn(("Permission denied\n"))
+    # mercurial hooks use unix process conventions for hook return values
+    # so a truthy return means failure
+    return True
+
+if __name__ == '__main__':
+    main()

@@ -46,7 +46,10 @@ An example server configuration:
 
 **Database**
 
-The MySQL database needs to contain two tables: revisions and revision_references. See the comment at the top of hgsql.py for the latest CREATE TABLE commands to set up your database.
+See `schema.sql` for required tables. You can create them using commands like:
+
+    :::bash
+    mysql -uroot -D hgsql < ./schema.sql
 
 **Client**
 
@@ -75,18 +78,13 @@ Contributing
 
 Patches are welcome as pull requests, though they will be collapsed and rebased to maintain a linear history.
 
-Running tests require that an executable tests/getdb.sh file be created that specifies the host, port, and database name of a database that can be written to. An example getdb.sh file might be:
+To run tests, copy `tests/getdb.sh.example` to `tests/getdb.sh`, and edit it to provide MySQL host, port, user and password. Then run the actual tests via:
 
     :::bash
-    DBHOST=localhost
-    DBPORT=12345
-    DBNAME=mydb
-    echo "$DBHOST:$DBPORT:$DBNAME"
-
-Once getdb.sh is in place, run the actual tests via:
-
-    :::bash
-    ./run-tests --with-hg=path/to/hgrepo/hg
+    cd tests
+    ./run-tests.py --with-hg=/path/to/hg
+    # Alternatively, you can use run-tests.py from a checkout of the hg repo
+    /path/to/repo/hg/tests/run-tests.py
 
 We (Facebook) have to ask for a "Contributor License Agreement" from someone who sends in a patch or code that we want to include in the codebase. This is a legal requirement; a similar situation applies to Apache and other ASF projects.
 

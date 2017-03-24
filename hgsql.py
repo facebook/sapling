@@ -5,33 +5,6 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-"""
-CREATE TABLE revisions(
-repo CHAR(64) BINARY NOT NULL,
-path VARCHAR(512) BINARY NOT NULL,
-chunk INT UNSIGNED NOT NULL,
-chunkcount INT UNSIGNED NOT NULL,
-linkrev INT UNSIGNED NOT NULL,
-rev INT UNSIGNED NOT NULL,
-node CHAR(40) BINARY NOT NULL,
-entry BINARY(64) NOT NULL,
-data0 CHAR(1) NOT NULL,
-data1 LONGBLOB NOT NULL,
-createdtime DATETIME NOT NULL,
-INDEX linkrevs (repo, linkrev),
-PRIMARY KEY (repo, path, rev, chunk)
-);
-
-CREATE TABLE revision_references(
-autoid INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
-repo CHAR(32) BINARY NOT NULL,
-namespace CHAR(32) BINARY NOT NULL,
-name VARCHAR(256) BINARY,
-value char(40) BINARY NOT NULL,
-UNIQUE KEY bookmarkindex (repo, namespace, name)
-);
-"""
-
 from mercurial.node import bin, hex, nullid, nullrev
 from mercurial.i18n import _
 from mercurial.extensions import wrapfunction, wrapcommand

@@ -1,42 +1,41 @@
-test -f "$TESTDIR/getdb.sh" || (echo "getdb.sh missing" && exit 80)
-DBHOSTPORT=$($TESTDIR/getdb.sh)
-DBHOST=`echo $DBHOSTPORT | cut -d : -f 1`
-DBPORT=`echo $DBHOSTPORT | cut -d : -f 2`
-DBNAME=`echo $DBHOSTPORT | cut -d : -f 3`
-DBUSER=`echo $DBHOSTPORT | cut -d : -f 4`
-DBPASS=`echo $DBHOSTPORT | cut -d : -f 5-`
+TESTDIR=${TESTDIR:-.}
+if [[ ! -f "$TESTDIR/getdb.sh" ]]; then
+  echo "skipped: getdb.sh missing. copy from getdb.sh.example and edit it"
+  exit 80
+fi
 
-mysql -h $DBHOST -P $DBPORT -u $DBUSER -p"$DBPASS" -e "
-CREATE DATABASE IF NOT EXISTS $DBNAME;" 2>/dev/null
-mysql -h $DBHOST -P $DBPORT -D $DBNAME -u $DBUSER -p"$DBPASS" -e '
+source "$TESTDIR/getdb.sh" >/dev/null
+
+# Convert legacy fields from legacy getdb.sh implementation
+if [[ -z $DBHOST && -z $DBPORT && -n $DBHOSTPORT ]]; then
+    # Assuming they are set using the legacy way: $DBHOSTPORT
+    DBHOST=`echo $DBHOSTPORT | cut -d : -f 1`
+    DBPORT=`echo $DBHOSTPORT | cut -d : -f 2`
+fi
+[[ -z $DBHOST ]] && DBHOST=localhost
+[[ -z $DBPORT ]] && DBPORT=3306
+[[ -z $DBPASS && -n $PASSWORD ]] && DBPASS="$PASSWORD"
+[[ -z $DBUSER && -n $USER ]] && DBUSER="$USER"
+[[ -z $DBNAME ]] && DBNAME="testdb_hgsql_$$_$(date +%s)" && DBAUTODROP=1
+[[ -n $DBPASS ]] && DBPASSOPT="-p$DBPASS"
+
+MYSQLLOG="${MYSQLLOG:-/dev/null}"
+
+mysql -h "$DBHOST" -P "$DBPORT" -u "$DBUSER" "$DBPASSOPT" &>> "$MYSQLLOG" <<EOF
+CREATE DATABASE IF NOT EXISTS $DBNAME;
+USE $DBNAME;
 DROP TABLE IF EXISTS revisions;
-
-CREATE TABLE IF NOT EXISTS revisions(
-repo CHAR(32) BINARY NOT NULL,
-path VARCHAR(256) BINARY NOT NULL,
-chunk INT UNSIGNED NOT NULL,
-chunkcount INT UNSIGNED NOT NULL,
-linkrev INT UNSIGNED NOT NULL,
-rev INT UNSIGNED NOT NULL,
-node CHAR(40) BINARY NOT NULL,
-entry BINARY(64) NOT NULL,
-data0 CHAR(1) NOT NULL,
-data1 LONGBLOB NOT NULL,
-createdtime DATETIME NOT NULL,
-INDEX linkrevs (repo, linkrev),
-PRIMARY KEY (repo, path, rev, chunk)
-);
-
 DROP TABLE IF EXISTS revision_references;
+$(cat $TESTDIR/../schema.sql)
+EOF
 
-CREATE TABLE revision_references(
-autoid INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
-repo CHAR(32) BINARY NOT NULL,
-namespace CHAR(32) BINARY NOT NULL,
-name VARCHAR(256) BINARY,
-value char(40) BINARY NOT NULL,
-UNIQUE KEY bookmarkindex (repo, namespace, name)
-);' 2>/dev/null
+function droptestdb() {
+mysql -h "$DBHOST" -P "$DBPORT" -u "$DBUSER" "$DBPASSOPT" &>> "$MYSQLLOG" <<EOF
+DROP DATABASE $DBNAME;
+EOF
+}
+
+[[ $DBAUTODROP == 1 ]] && trap droptestdb EXIT
 
 function initserver() {
   hg init --config extensions.hgsql=$TESTDIR/../hgsql.py $1

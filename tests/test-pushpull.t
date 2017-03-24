@@ -138,7 +138,7 @@
   > export SSH_ORIGINAL_COMMAND
   > PYTHONPATH="$PYTHONPATH"
   > export PYTHONPATH
-  > python "$(which hg-ssh)" --read-only "$TESTTMP/master"
+  > ${PYTHON:-python} "$TESTDIR/hg-ssh" --read-only "$TESTTMP/master"
   > EOF
 
   $ hg -R master --config hgsql.bypass=True strip -r tip
