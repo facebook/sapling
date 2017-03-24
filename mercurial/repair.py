@@ -214,15 +214,10 @@ def strip(ui, repo, nodelist, backup=True, topic='backup'):
 
         for m in updatebm:
             bm[m] = repo[newbmtarget].node()
-        lock = tr = None
-        try:
-            lock = repo.lock()
-            tr = repo.transaction('repair')
-            bm.recordchange(tr)
-            tr.close()
-        finally:
-            tr.release()
-            lock.release()
+
+        with repo.lock():
+            with repo.transaction('repair') as tr:
+                bm.recordchange(tr)
 
         # remove undo files
         for undovfs, undofile in repo.undofiles():
