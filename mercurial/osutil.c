@@ -27,10 +27,8 @@
 #ifdef HAVE_LINUX_MAGIC_H
 #include <linux/magic.h>
 #endif
-#ifdef HAVE_SYS_MOUNT_H
+#ifdef HAVE_BSD_STATFS
 #include <sys/mount.h>
-#endif
-#ifdef HAVE_SYS_PARAM_H
 #include <sys/param.h>
 #endif
 #ifdef HAVE_SYS_VFS_H
@@ -801,12 +799,21 @@ static PyObject *setprocname(PyObject *self, PyObject *args)
 #ifdef HAVE_STATFS
 /* given a directory path, return filesystem type (best-effort), or None */
 const char *getfstype(const char *path) {
+#ifdef HAVE_BSD_STATFS
+	/* need to return a string field */
+	static struct statfs buf;
+#else
 	struct statfs buf;
+#endif
 	int r;
 	memset(&buf, 0, sizeof(buf));
 	r = statfs(path, &buf);
 	if (r != 0)
 		return NULL;
+#ifdef HAVE_BSD_STATFS
+	/* BSD or OSX provides a f_fstypename field */
+	return buf.f_fstypename;
+#endif
 	/* Begin of Linux filesystems */
 #ifdef ADFS_SUPER_MAGIC
 	if (buf.f_type == ADFS_SUPER_MAGIC)
