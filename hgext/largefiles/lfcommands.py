@@ -246,7 +246,7 @@ def _lfconvert_addchangeset(rsrc, rdst, ctx, revmap, lfiles, normalfiles,
     def getfilectx(repo, memctx, f):
         if lfutil.isstandin(f):
             # if the file isn't in the manifest then it was removed
-            # or renamed, raise IOError to indicate this
+            # or renamed, return None to indicate this
             srcfname = lfutil.splitstandin(f)
             try:
                 fctx = ctx.filectx(srcfname)

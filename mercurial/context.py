@@ -1864,8 +1864,8 @@ class memctx(committablectx):
     commit function for every file in 'files', but calls order is
     undefined. If the file is available in the revision being
     committed (updated or added), filectxfn returns a memfilectx
-    object. If the file was removed, filectxfn raises an
-    IOError. Moved files are represented by marking the source file
+    object. If the file was removed, filectxfn return None for recent
+    Mercurial. Moved files are represented by marking the source file
     removed and the new file added with copy information (see
     memfilectx).
 
