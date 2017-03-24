@@ -4,6 +4,11 @@ if [[ ! -f "$TESTDIR/getdb.sh" ]]; then
   exit 80
 fi
 
+if ! ${PYTHON:-python} -c "import mysql.connector" 2>/dev/null; then
+  echo "skipped: mysql-connector-python missing"
+  exit 80
+fi
+
 source "$TESTDIR/getdb.sh" >/dev/null
 
 # Convert legacy fields from legacy getdb.sh implementation
@@ -28,6 +33,11 @@ DROP TABLE IF EXISTS revisions;
 DROP TABLE IF EXISTS revision_references;
 $(cat $TESTDIR/../schema.sql)
 EOF
+
+if [[ $? != 0 ]]; then
+  echo "skipped: unable to initialize the database. check your getdb.sh"
+  exit 80
+fi
 
 function droptestdb() {
 mysql -h "$DBHOST" -P "$DBPORT" -u "$DBUSER" "$DBPASSOPT" &>> "$MYSQLLOG" <<EOF
