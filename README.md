@@ -51,6 +51,8 @@ See `schema.sql` for required tables. You can create them using commands like:
     :::bash
     mysql -uroot -D hgsql < ./schema.sql
 
+MySQL is recommended. Other implementations like MariaDB may have compatibility issues.
+
 **Client**
 
 Clients do not need hgsql installed, nor any special configuration to talk to hgsql based Mercurial servers.
