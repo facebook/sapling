@@ -245,9 +245,9 @@ def copyfromcache(repo, hash, filename):
         return False
     return True
 
-def copytostore(repo, rev, file, uploaded=False):
+def copytostore(repo, revorctx, file, uploaded=False):
     wvfs = repo.wvfs
-    hash = readstandin(repo, file, rev)
+    hash = readstandin(repo, file, revorctx)
     if instore(repo, hash):
         return
     if wvfs.exists(file):
@@ -263,7 +263,7 @@ def copyalltostore(repo, node):
     for filename in ctx.files():
         realfile = splitstandin(filename)
         if realfile is not None and filename in ctx.manifest():
-            copytostore(repo, ctx.node(), realfile)
+            copytostore(repo, ctx, realfile)
 
 def copytostoreabsolute(repo, file, hash):
     if inusercache(repo.ui, hash):
@@ -485,6 +485,11 @@ def markcommitted(orig, ctx, node):
     lfdirstate.write()
 
     # As part of committing, copy all of the largefiles into the cache.
+    #
+    # Using "node" instead of "ctx" implies additional "repo[node]"
+    # lookup while copyalltostore(), but can omit redundant check for
+    # files comming from the 2nd parent, which should exist in store
+    # at merging.
     copyalltostore(repo, node)
 
 def getlfilestoupdate(oldstandins, newstandins):
