@@ -351,7 +351,7 @@ def overridelog(orig, ui, repo, *pats, **opts):
             pats.update(fixpats(f, tostandin) for f in p)
         else:
             def tostandin(f):
-                if lfutil.splitstandin(f):
+                if lfutil.isstandin(f):
                     return f
                 return lfutil.standin(f)
             pats.update(fixpats(f, tostandin) for f in p)
