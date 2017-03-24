@@ -343,13 +343,14 @@ def splitstandin(filename):
         return None
 
 def updatestandin(repo, standin):
-    file = repo.wjoin(splitstandin(standin))
-    if repo.wvfs.exists(splitstandin(standin)):
+    lfile = splitstandin(standin)
+    file = repo.wjoin(lfile)
+    if repo.wvfs.exists(lfile):
         hash = hashfile(file)
         executable = getexecutable(file)
         writestandin(repo, standin, hash, executable)
     else:
-        raise error.Abort(_('%s: file not found!') % splitstandin(standin))
+        raise error.Abort(_('%s: file not found!') % lfile)
 
 def readstandin(repo, filename, node=None):
     '''read hex hash from standin for filename at given node, or working
