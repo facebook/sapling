@@ -370,9 +370,6 @@ def copyandhash(instream, outfile):
         outfile.write(data)
     return hasher.hexdigest()
 
-def hashrepofile(repo, file):
-    return hashfile(repo.wjoin(file))
-
 def hashfile(file):
     if not os.path.exists(file):
         return ''

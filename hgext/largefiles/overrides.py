@@ -1400,7 +1400,7 @@ def mergeupdate(orig, repo, node, branchmerge, force,
             lfileabs = repo.wvfs.join(lfile)
             if not repo.wvfs.exists(lfileabs):
                 continue
-            lfhash = lfutil.hashrepofile(repo, lfile)
+            lfhash = lfutil.hashfile(lfileabs)
             standin = lfutil.standin(lfile)
             lfutil.writestandin(repo, standin, lfhash,
                                 lfutil.getexecutable(lfileabs))
