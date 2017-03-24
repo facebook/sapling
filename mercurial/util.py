@@ -1061,10 +1061,13 @@ _hardlinkfswhitelist = set([
     'ext2',
     'ext3',
     'ext4',
+    'hfs',
     'jfs',
     'reiserfs',
     'tmpfs',
+    'ufs',
     'xfs',
+    'zfs',
 ])
 
 def copyfile(src, dest, hardlink=False, copystat=False, checkambig=False):
