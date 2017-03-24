@@ -419,6 +419,5 @@ Require a destination
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/889b0bc6a730-41ec4f81-backup.hg (glob)
   $ hg rebase -d 0 -r . -q
   $ hg --config commands.rebase.requiredest=False rebase
-  abort: you must specify a destination
-  (use: hg rebase -d REV)
-  [255]
+  rebasing 2:279de9495438 "cc" (tip)
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/279de9495438-ab0a5128-backup.hg (glob)

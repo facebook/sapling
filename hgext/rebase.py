@@ -686,7 +686,7 @@ def rebase(ui, repo, **opts):
         # Validate input and define rebasing points
         destf = opts.get('dest', None)
 
-        if ui.config('commands', 'rebase.requiredest'):
+        if ui.configbool('commands', 'rebase.requiredest'):
             if not destf:
                 raise error.Abort(_('you must specify a destination'),
                                   hint=_('use: hg rebase -d REV'))
