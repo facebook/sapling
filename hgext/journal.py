@@ -4,7 +4,7 @@
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
-"""Track previous positions of bookmarks (EXPERIMENTAL)
+"""track previous positions of bookmarks (EXPERIMENTAL)
 
 This extension adds a new command: `hg journal`, which shows you where
 bookmarks were previously located.
