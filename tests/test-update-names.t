@@ -106,3 +106,5 @@ Test that warning is printed if cwd is deleted during update
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ HGPLAIN=1 hg up
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg --config commands.update.requiredest=False up
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
