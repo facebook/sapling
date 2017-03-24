@@ -371,6 +371,13 @@ pyfilters = [
           (?P=quote))""", reppython),
 ]
 
+# extension non-filter patterns
+pyextnfpats = [
+    [(r'^"""\n?[A-Z]', "don't capitalize docstring title")],
+    # warnings
+    [],
+]
+
 txtfilters = []
 
 txtpats = [
@@ -480,6 +487,7 @@ py3pats = [
 
 checks = [
     ('python', r'.*\.(py|cgi)$', r'^#!.*python', pyfilters, pypats),
+    ('python', r'.*hgext.*\.py$', '', [], pyextnfpats),
     ('python 3', r'.*(hgext|mercurial).*(?<!pycompat)\.py', '',
             pyfilters, py3pats),
     ('test script', r'(.*/)?test-[^.~]*$', '', testfilters, testpats),
