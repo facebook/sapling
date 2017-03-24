@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 """
-Loading order for extensions.
+loading order for extensions.
 
 In the extorder section of your hgrc you can define order of extension loading.
 For example:

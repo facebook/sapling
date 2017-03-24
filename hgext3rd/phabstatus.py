@@ -132,7 +132,7 @@ def showphabstatus(repo, ctx, templ, **args):
             return "Error"
 
 """
-In order to determine whether the local changeset is in sync with the
+in order to determine whether the local changeset is in sync with the
 remote one we compare the hash of the current changeset with the one we
 get from the remote (phabricator) repo. There are three different cases
 and we deal with them seperately.

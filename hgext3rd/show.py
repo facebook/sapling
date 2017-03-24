@@ -4,7 +4,7 @@
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
-"""Show changesets in detail with full log message, patches etc
+"""show changesets in detail with full log message, patches etc
 
 For example, 'hg show --stat' prints something like:
 

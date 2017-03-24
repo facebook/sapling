@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 """
-An interactive ncurses interface to histedit
+an interactive ncurses interface to histedit
 
 This extensions allows you to interactively move around changesets
 or change the action to perform while keeping track of possible

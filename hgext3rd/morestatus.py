@@ -4,7 +4,7 @@
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
-"""Make status give a bit more context
+"""make status give a bit more context
 
 This extension will wrap the status command to make it show more context about
 the state of the repo

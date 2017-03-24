@@ -5,4 +5,4 @@
   > EOF
 
   $ hg help -e show | head -n 1
-  show extension - Show commits in detail with full log message, patches etc
+  show extension - show commits in detail with full log message, patches etc
