@@ -261,8 +261,8 @@ def copyalltostore(repo, node):
 
     ctx = repo[node]
     for filename in ctx.files():
-        if isstandin(filename) and filename in ctx.manifest():
-            realfile = splitstandin(filename)
+        realfile = splitstandin(filename)
+        if realfile is not None and filename in ctx.manifest():
             copytostore(repo, ctx.node(), realfile)
 
 def copytostoreabsolute(repo, file, hash):
@@ -478,8 +478,8 @@ def markcommitted(orig, ctx, node):
 
     lfdirstate = openlfdirstate(repo.ui, repo)
     for f in ctx.files():
-        if isstandin(f):
-            lfile = splitstandin(f)
+        lfile = splitstandin(f)
+        if lfile is not None:
             synclfdirstate(repo, lfdirstate, lfile, False)
     lfdirstate.write()
 

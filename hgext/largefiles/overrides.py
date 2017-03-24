@@ -649,10 +649,13 @@ def overridecopy(orig, ui, repo, pats, opts, rename=False):
             m._files = [lfutil.standin(f) for f in m._files if lfile(f)]
             m._fileroots = set(m._files)
             origmatchfn = m.matchfn
-            m.matchfn = lambda f: (lfutil.isstandin(f) and
-                                (f in manifest) and
-                                origmatchfn(lfutil.splitstandin(f)) or
-                                None)
+            def matchfn(f):
+                lfile = lfutil.splitstandin(f)
+                return (lfile is not None and
+                        (f in manifest) and
+                        origmatchfn(lfile) or
+                        None)
+            m.matchfn = matchfn
             return m
         oldmatch = installmatchfn(overridematch)
         listpats = []
@@ -767,8 +770,9 @@ def overriderevert(orig, ui, repo, ctx, parents, *pats, **opts):
             m._fileroots = set(m._files)
             origmatchfn = m.matchfn
             def matchfn(f):
-                if lfutil.isstandin(f):
-                    return (origmatchfn(lfutil.splitstandin(f)) and
+                lfile = lfutil.splitstandin(f)
+                if lfile is not None:
+                    return (origmatchfn(lfile) and
                             (f in ctx or f in mctx))
                 return origmatchfn(f)
             m.matchfn = matchfn
@@ -968,18 +972,19 @@ def overridearchive(orig, repo, dest, node, kind, decode=True, matchfn=None,
     for f in ctx:
         ff = ctx.flags(f)
         getdata = ctx[f].data
-        if lfutil.isstandin(f):
+        lfile = lfutil.splitstandin(f)
+        if lfile is not None:
             if node is not None:
                 path = lfutil.findfile(repo, getdata().strip())
 
                 if path is None:
                     raise error.Abort(
                        _('largefile %s not found in repo store or system cache')
-                       % lfutil.splitstandin(f))
+                       % lfile)
             else:
-                path = lfutil.splitstandin(f)
+                path = lfile
 
-            f = lfutil.splitstandin(f)
+            f = lfile
 
             getdata = lambda: util.readfile(path)
         write(f, 'x' in ff and 0o755 or 0o644, 'l' in ff, getdata)
@@ -1018,18 +1023,19 @@ def hgsubrepoarchive(orig, repo, archiver, prefix, match=None, decode=True):
     for f in ctx:
         ff = ctx.flags(f)
         getdata = ctx[f].data
-        if lfutil.isstandin(f):
+        lfile = lfutil.splitstandin(f)
+        if lfile is not None:
             if ctx.node() is not None:
                 path = lfutil.findfile(repo._repo, getdata().strip())
 
                 if path is None:
                     raise error.Abort(
                        _('largefile %s not found in repo store or system cache')
-                       % lfutil.splitstandin(f))
+                       % lfile)
             else:
-                path = lfutil.splitstandin(f)
+                path = lfile
 
-            f = lfutil.splitstandin(f)
+            f = lfile
 
             getdata = lambda: util.readfile(os.path.join(prefix, path))
 
@@ -1433,7 +1439,11 @@ def mergeupdate(orig, repo, node, branchmerge, force,
 def scmutilmarktouched(orig, repo, files, *args, **kwargs):
     result = orig(repo, files, *args, **kwargs)
 
-    filelist = [lfutil.splitstandin(f) for f in files if lfutil.isstandin(f)]
+    filelist = []
+    for f in files:
+        lf = lfutil.splitstandin(f)
+        if lf is not None:
+            filelist.append(lf)
     if filelist:
         lfcommands.updatelfiles(repo.ui, repo, filelist=filelist,
                                 printmessage=False, normallookup=True)
