@@ -7,7 +7,7 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
-#include "TreeInode.h"
+#include "eden/fs/inodes/TreeInode.h"
 
 #include <boost/polymorphic_cast.hpp>
 #include <folly/FileUtil.h>
@@ -16,6 +16,7 @@
 #include "eden/fs/inodes/CheckoutAction.h"
 #include "eden/fs/inodes/CheckoutContext.h"
 #include "eden/fs/inodes/DeferredDiffEntry.h"
+#include "eden/fs/inodes/DiffContext.h"
 #include "eden/fs/inodes/EdenDispatcher.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileData.h"
@@ -29,6 +30,7 @@
 #include "eden/fs/journal/JournalDelta.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
+#include "eden/fs/model/git/GitIgnoreStack.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fuse/Channel.h"
 #include "eden/fuse/MountPoint.h"
@@ -39,6 +41,7 @@
 
 using folly::Future;
 using folly::makeFuture;
+using folly::Optional;
 using folly::StringPiece;
 using folly::Unit;
 using std::make_unique;
@@ -1406,11 +1409,190 @@ const std::shared_ptr<Overlay>& TreeInode::getOverlay() const {
 }
 
 Future<Unit> TreeInode::diff(
+    const DiffContext* context,
     RelativePathPiece currentPath,
-    const Tree* tree,
-    InodeDiffCallback* callback,
-    bool isIgnored,
-    bool listIgnored) {
+    unique_ptr<Tree> tree,
+    GitIgnoreStack* parentIgnore,
+    bool isIgnored) {
+  static const PathComponentPiece kIgnoreFilename{".gitignore"};
+
+  // If this directory is already ignored, we don't need to bother loading its
+  // .gitignore file.  Everything inside this directory must also be ignored,
+  // unless it is explicitly tracked in source control.
+  //
+  // Explicit include rules cannot be used to unignore files inside an ignored
+  // directory.
+  if (isIgnored) {
+    // We can pass in a null GitIgnoreStack pointer here.
+    // Since the entire directory is ignored, we don't need to check ignore
+    // status for any entries that aren't already tracked in source control.
+    return computeDiff(
+        contents_.wlock(),
+        context,
+        currentPath,
+        std::move(tree),
+        nullptr,
+        isIgnored);
+  }
+
+  // Load the ignore rules for this directory.
+  //
+  // In our repositories less than .1% of directories contain a .gitignore
+  // file, so we optimize for the case where a .gitignore isn't present.
+  // When there is no .gitignore file we avoid acquiring and releasing the
+  // contents_ lock twice, and we avoid creating a Future to load the
+  // .gitignore data.
+  InodePtr inode;
+  Optional<Future<InodePtr>> inodeFuture;
+  vector<IncompleteInodeLoad> pendingLoads;
+  {
+    // We have to get a write lock since we may have to load
+    // the .gitignore inode, which changes the entry status
+    auto contents = contents_.wlock();
+
+    VLOG(4) << "Loading ignore file for " << getLogPath();
+    Entry* inodeEntry = nullptr;
+    auto iter = contents->entries.find(kIgnoreFilename);
+    if (iter != contents->entries.end()) {
+      inodeEntry = iter->second.get();
+      if (inodeEntry->isDirectory()) {
+        // Ignore .gitignore directories
+        VLOG(4) << "Ignoring .gitignore directory in " << getLogPath();
+        inodeEntry = nullptr;
+      }
+    }
+
+    if (!inodeEntry) {
+      // Just create an empty GitIgnoreStack for this directory,
+      // with no ignore rules.
+      auto ignore = make_unique<GitIgnoreStack>(parentIgnore);
+      return computeDiff(
+          std::move(contents),
+          context,
+          currentPath,
+          std::move(tree),
+          std::move(ignore),
+          isIgnored);
+    }
+
+    if (inodeEntry->inode) {
+      inode = InodePtr::newPtrLocked(inodeEntry->inode);
+    } else {
+      inodeFuture = loadChildLocked(
+          *contents, kIgnoreFilename, inodeEntry, &pendingLoads);
+    }
+  }
+
+  // Finish setting up any load operations we started while holding the
+  // contents_ lock above.
+  for (auto& load : pendingLoads) {
+    load.finish();
+  }
+
+  if (inodeFuture.hasValue()) {
+    return inodeFuture.value().then([
+      self = inodePtrFromThis(),
+      context,
+      currentPath = RelativePath{currentPath},
+      tree = std::move(tree),
+      parentIgnore,
+      isIgnored
+    ](InodePtr && loadedInode) mutable {
+      return self->loadGitIgnoreThenDiff(
+          std::move(loadedInode),
+          context,
+          currentPath,
+          std::move(tree),
+          parentIgnore,
+          isIgnored);
+    });
+  } else {
+    return loadGitIgnoreThenDiff(
+        std::move(inode),
+        context,
+        currentPath,
+        std::move(tree),
+        parentIgnore,
+        isIgnored);
+  }
+}
+
+Future<Unit> TreeInode::loadGitIgnoreThenDiff(
+    InodePtr gitignoreInode,
+    const DiffContext* context,
+    RelativePathPiece currentPath,
+    unique_ptr<Tree> tree,
+    GitIgnoreStack* parentIgnore,
+    bool isIgnored) {
+  auto fileInode = gitignoreInode.asFileOrNull();
+  if (!fileInode) {
+    // Ignore .gitignore directories.
+    // We should have caught this already in diff(), though, so it's unexpected
+    // if we reach here with a TreeInode.
+    LOG(WARNING) << "loadGitIgnoreThenDiff() invoked with a non-file inode: "
+                 << gitignoreInode->getLogPath();
+    auto ignore = make_unique<GitIgnoreStack>(parentIgnore);
+    return computeDiff(
+        contents_.wlock(),
+        context,
+        currentPath,
+        std::move(tree),
+        std::move(ignore),
+        isIgnored);
+  }
+
+  auto data = fileInode->getOrLoadData();
+  if (S_ISLNK(fileInode->getMode())) {
+    auto dataFuture = data->ensureDataLoaded();
+    return dataFuture.then(
+        [ fileInode = std::move(fileInode), data = std::move(data) ]() {
+          // auto symlinkContents = data->readAll();
+          // TODO: Look up the symlink destination and continue.
+          // The symlink might point to another path inside our mount point, or
+          // it may point outside.
+          return makeFuture<Unit>(std::runtime_error(
+              "handling .gitignore symlinks not implemented yet"));
+        });
+  }
+
+  // Load the file data
+  // We intentionally call data->ensureDataLoaded() as a separate statement
+  // from creating the future callback with then(), since the callback
+  // move-captures.  Before C++17 the ordering is undefined here, and the
+  // compiler may decide to move data away before evaluating
+  // data->ensureDataLoaded().
+  auto dataFuture = data->ensureDataLoaded();
+  return dataFuture.then([
+    self = inodePtrFromThis(),
+    context,
+    currentPath = RelativePath{currentPath},
+    tree = std::move(tree),
+    parentIgnore,
+    isIgnored,
+    data = std::move(data)
+  ]() mutable {
+    auto ignoreFileContents = data->readAll();
+    auto ignore = make_unique<GitIgnoreStack>(parentIgnore, ignoreFileContents);
+    return self->computeDiff(
+        self->contents_.wlock(),
+        context,
+        currentPath,
+        std::move(tree),
+        std::move(ignore),
+        isIgnored);
+  });
+}
+
+Future<Unit> TreeInode::computeDiff(
+    folly::Synchronized<Dir>::LockedPtr contentsLock,
+    const DiffContext* context,
+    RelativePathPiece currentPath,
+    unique_ptr<Tree> tree,
+    std::unique_ptr<GitIgnoreStack> ignore,
+    bool isIgnored) {
+  DCHECK(isIgnored || ignore != nullptr)
+      << "the ignore stack is required if this directory is not ignored";
+
   // A list of entries that have been removed
   std::vector<const TreeEntry*> removedEntries;
 
@@ -1430,98 +1612,101 @@ Future<Unit> TreeInode::diff(
   // examine any children InodeBase objects.
   std::vector<IncompleteInodeLoad> pendingLoads;
   {
+    // Move the contents lock into a variable inside this scope so it
+    // will be released at the end of this scope.
+    //
     // Even though diffing conceptually seems like a read-only operation, we
     // need a write lock since we may have to load child inodes, affecting
     // their entry state.
-    auto contents = contents_.wlock();
+    auto contents = std::move(contentsLock);
 
-    auto processUntracked =
-        [&self,
-         &currentPath,
-         &callback,
-         &listIgnored,
-         &contents,
-         &pendingLoads,
-         &deferredEntries](PathComponentPiece name, Entry* inodeEntry) {
-          // TODO: calculate entryIgnored correctly
-          bool entryIgnored = false;
+    auto processUntracked = [&](PathComponentPiece name, Entry* inodeEntry) {
+      bool entryIgnored = isIgnored;
+      auto entryPath = currentPath + name;
+      if (!isIgnored) {
+        entryIgnored = ignore->isIgnored(entryPath);
+      }
 
-          if (inodeEntry->isDirectory()) {
-            if (!entryIgnored || listIgnored) {
-              if (inodeEntry->inode) {
-                auto childPtr = InodePtr::newPtrLocked(inodeEntry->inode);
-                deferredEntries.emplace_back(
-                    DeferredDiffEntry::createUntrackedEntryFromInodeFuture(
-                        currentPath + name,
-                        std::move(childPtr),
-                        entryIgnored,
-                        listIgnored));
-              } else {
-                auto inodeFuture = self->loadChildLocked(
-                    *contents, name, inodeEntry, &pendingLoads);
-                deferredEntries.emplace_back(
-                    DeferredDiffEntry::createUntrackedEntryFromInodeFuture(
-                        currentPath + name,
-                        std::move(inodeFuture),
-                        entryIgnored,
-                        listIgnored));
-              }
-            }
+      if (inodeEntry->isDirectory()) {
+        if (!entryIgnored || context->listIgnored) {
+          if (inodeEntry->inode) {
+            auto childPtr = InodePtr::newPtrLocked(inodeEntry->inode);
+            deferredEntries.emplace_back(
+                DeferredDiffEntry::createUntrackedEntryFromInodeFuture(
+                    context,
+                    entryPath,
+                    std::move(childPtr),
+                    ignore.get(),
+                    entryIgnored));
           } else {
-            if (!entryIgnored) {
-              callback->untrackedFile(currentPath + name);
-            } else if (listIgnored) {
-              callback->ignoredFile(currentPath + name);
-            } else {
-              // Don't bother reporting this ignored file since
-              // listIgnored is false.
-            }
+            auto inodeFuture = self->loadChildLocked(
+                *contents, name, inodeEntry, &pendingLoads);
+            deferredEntries.emplace_back(
+                DeferredDiffEntry::createUntrackedEntryFromInodeFuture(
+                    context,
+                    entryPath,
+                    std::move(inodeFuture),
+                    ignore.get(),
+                    entryIgnored));
           }
-        };
+        }
+      } else {
+        if (!entryIgnored) {
+          context->callback->untrackedFile(entryPath);
+        } else if (context->listIgnored) {
+          context->callback->ignoredFile(entryPath);
+        } else {
+          // Don't bother reporting this ignored file since
+          // listIgnored is false.
+        }
+      }
+    };
 
-    auto processRemoved = [&self, &currentPath, &callback, &deferredEntries](
-        const TreeEntry& scmEntry) {
+    auto processRemoved = [&](const TreeEntry& scmEntry) {
       if (scmEntry.getType() == TreeEntryType::TREE) {
         deferredEntries.emplace_back(DeferredDiffEntry::createRemovedEntry(
-            currentPath + scmEntry.getName(), self->getStore(), scmEntry));
+            context, currentPath + scmEntry.getName(), scmEntry));
       } else {
-        callback->removedFile(currentPath + scmEntry.getName(), scmEntry);
+        context->callback->removedFile(
+            currentPath + scmEntry.getName(), scmEntry);
       }
     };
 
     auto processBothPresent =
-        [&self,
-         &currentPath,
-         &callback,
-         &listIgnored,
-         &contents,
-         &pendingLoads,
-         &deferredEntries](const TreeEntry& scmEntry, Entry* inodeEntry) {
-          // TODO: Calculate isIgnored correctly, and only compute it if
-          // necessary.
-          bool entryIgnored = false;
+        [&](const TreeEntry& scmEntry, Entry* inodeEntry) {
+          // We only need to know the ignored status if this is a directory.
+          // If this is a regular file on disk and in source control, then it
+          // is always included since it is already tracked in source control.
+          bool entryIgnored = isIgnored;
+          auto entryPath = currentPath + scmEntry.getName();
+          if (!isIgnored && (inodeEntry->isDirectory() ||
+                             scmEntry.getType() == TreeEntryType::TREE)) {
+            entryIgnored = ignore->isIgnored(entryPath);
+          }
 
           if (inodeEntry->inode) {
             // This inode is already loaded.
             auto childInodePtr = InodePtr::newPtrLocked(inodeEntry->inode);
             deferredEntries.emplace_back(DeferredDiffEntry::createModifiedEntry(
-                currentPath + scmEntry.getName(),
+                context,
+                entryPath,
                 scmEntry,
                 std::move(childInodePtr),
-                entryIgnored,
-                listIgnored));
+                ignore.get(),
+                entryIgnored));
           } else if (inodeEntry->isMaterialized()) {
             // This inode is not loaded but is materialized.
             // We'll have to load it to confirm if it is the same or different.
             auto inodeFuture = self->loadChildLocked(
                 *contents, scmEntry.getName(), inodeEntry, &pendingLoads);
-            deferredEntries.emplace_back(DeferredDiffEntry::createModifiedEntry(
-                currentPath + scmEntry.getName(),
-                self->getStore(),
-                scmEntry,
-                std::move(inodeFuture),
-                entryIgnored,
-                listIgnored));
+            deferredEntries.emplace_back(
+                DeferredDiffEntry::createModifiedEntryFromInodeFuture(
+                    context,
+                    entryPath,
+                    scmEntry,
+                    std::move(inodeFuture),
+                    ignore.get(),
+                    entryIgnored));
           } else if (
               inodeEntry->getMode() == scmEntry.getMode() &&
               inodeEntry->getHash() == scmEntry.getHash()) {
@@ -1531,27 +1716,28 @@ Future<Unit> TreeInode::diff(
             // into it to find files with differences.
             auto inodeFuture = self->loadChildLocked(
                 *contents, scmEntry.getName(), inodeEntry, &pendingLoads);
-            deferredEntries.emplace_back(DeferredDiffEntry::createModifiedEntry(
-                currentPath + scmEntry.getName(),
-                self->getStore(),
-                scmEntry,
-                std::move(inodeFuture),
-                entryIgnored,
-                listIgnored));
+            deferredEntries.emplace_back(
+                DeferredDiffEntry::createModifiedEntryFromInodeFuture(
+                    context,
+                    entryPath,
+                    scmEntry,
+                    std::move(inodeFuture),
+                    ignore.get(),
+                    entryIgnored));
           } else if (scmEntry.getType() == TreeEntryType::TREE) {
             // This used to be a directory in the source control state,
             // but is now a file or symlink.  Report the new file, then add a
             // deferred entry to report the entire source control Tree as
             // removed.
             if (entryIgnored) {
-              if (listIgnored) {
-                callback->ignoredFile(currentPath + scmEntry.getName());
+              if (context->listIgnored) {
+                context->callback->ignoredFile(entryPath);
               }
             } else {
-              callback->untrackedFile(currentPath + scmEntry.getName());
+              context->callback->untrackedFile(entryPath);
             }
             deferredEntries.emplace_back(DeferredDiffEntry::createRemovedEntry(
-                currentPath + scmEntry.getName(), self->getStore(), scmEntry));
+                context, entryPath, scmEntry));
           } else {
             // This file corresponds to a different blob hash, or has a
             // different mode.
@@ -1568,8 +1754,7 @@ Future<Unit> TreeInode::diff(
             // immediately assume the file is different here, without checking.
             if (inodeEntry->getMode() != scmEntry.getMode()) {
               // The mode is definitely modified
-              callback->modifiedFile(
-                  currentPath + scmEntry.getName(), scmEntry);
+              context->callback->modifiedFile(entryPath, scmEntry);
             } else {
               // TODO: Hopefully at some point we will track file sizes in the
               // parent TreeInode::Entry and the TreeEntry.  Once we have file
@@ -1577,10 +1762,7 @@ Future<Unit> TreeInode::diff(
               // avoid loading the blob if they are different.
               deferredEntries.emplace_back(
                   DeferredDiffEntry::createModifiedEntry(
-                      currentPath + scmEntry.getName(),
-                      self->getStore(),
-                      scmEntry,
-                      inodeEntry->getHash()));
+                      context, entryPath, scmEntry, inodeEntry->getHash()));
             }
           }
         };
@@ -1634,7 +1816,7 @@ Future<Unit> TreeInode::diff(
   // Now process all of the deferred work.
   vector<Future<Unit>> deferredFutures;
   for (auto& entry : deferredEntries) {
-    deferredFutures.push_back(entry->run(callback));
+    deferredFutures.push_back(entry->run());
   }
 
   // Wait on all of the deferred entries to complete.
@@ -1644,14 +1826,18 @@ Future<Unit> TreeInode::diff(
   return folly::collectAll(deferredFutures).then([
     self = std::move(self),
     currentPath = RelativePath{std::move(currentPath)},
-    callback,
+    context,
+    // Capture ignore to ensure it remains valid until all of our children's
+    // diff operations complete.
+    ignore = std::move(ignore),
     deferredJobs = std::move(deferredEntries)
   ](vector<folly::Try<Unit>> results) {
     // Call diffError() for any jobs that failed.
     for (size_t n = 0; n < results.size(); ++n) {
       auto& result = results[n];
       if (result.hasException()) {
-        callback->diffError(deferredJobs[n]->getPath(), result.exception());
+        context->callback->diffError(
+            deferredJobs[n]->getPath(), result.exception());
       }
     }
     // Report success here, even if some of our deferred jobs failed.

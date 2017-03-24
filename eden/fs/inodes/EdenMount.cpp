@@ -15,6 +15,7 @@
 
 #include "eden/fs/config/ClientConfig.h"
 #include "eden/fs/inodes/CheckoutContext.h"
+#include "eden/fs/inodes/DiffContext.h"
 #include "eden/fs/inodes/Dirstate.h"
 #include "eden/fs/inodes/EdenDispatcher.h"
 #include "eden/fs/inodes/EdenMounts.h"
@@ -25,6 +26,7 @@
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
+#include "eden/fs/model/git/GitIgnoreStack.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fuse/MountPoint.h"
 
@@ -213,13 +215,29 @@ folly::Future<std::vector<CheckoutConflict>> EdenMount::checkout(
 }
 
 Future<Unit> EdenMount::diff(InodeDiffCallback* callback, bool listIgnored) {
+  // Create a DiffContext object for this diff operation.
+  auto context =
+      make_unique<DiffContext>(callback, listIgnored, getObjectStore());
+  const DiffContext* ctxPtr = context.get();
+
+  // TODO: Load the system-wide ignore settings and user-specific
+  // ignore settings.
+  auto ignore = make_unique<GitIgnoreStack>(nullptr);
+  auto* ignorePtr = ignore.get();
+
+  // stateHolder() exists to ensure that the DiffContext and GitIgnoreStack
+  // exists until the diff completes.
+  auto stateHolder =
+      [ ctx = std::move(context), ignore = std::move(ignore) ](){};
+
   auto rootInode = getRootInode();
-  return getRootTreeFuture().then(
-      [ callback, listIgnored, rootInode = std::move(rootInode) ](
+  return getRootTreeFuture()
+      .then([ ctxPtr, ignorePtr, rootInode = std::move(rootInode) ](
           std::unique_ptr<Tree> && rootTree) {
         return rootInode->diff(
-            RelativePathPiece{}, rootTree.get(), callback, false, listIgnored);
-      });
+            ctxPtr, RelativePathPiece{}, std::move(rootTree), ignorePtr, false);
+      })
+      .ensure(std::move(stateHolder));
 }
 
 void EdenMount::resetCommit(Hash snapshotHash) {

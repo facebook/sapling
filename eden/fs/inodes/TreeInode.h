@@ -10,6 +10,7 @@
 #pragma once
 #include <folly/Optional.h>
 #include <folly/Portability.h>
+#include <folly/Synchronized.h>
 #include "eden/fs/inodes/InodeBase.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/utils/PathMap.h"
@@ -19,8 +20,10 @@ namespace eden {
 
 class CheckoutAction;
 class CheckoutContext;
+class DiffContext;
 class EdenMount;
 class FileHandle;
+class GitIgnoreStack;
 class InodeDiffCallback;
 class InodeMap;
 class ObjectStore;
@@ -288,6 +291,9 @@ class TreeInode : public InodeBase {
    * Compute differences between a source control Tree and the current inode
    * state.
    *
+   * @param context A pointer to the DiffContext containing parameters for the
+   *     current diff operation.  The caller is responsible for ensuring that
+   *     the DiffContext object remains valid until this diff completes.
    * @param currentPath The path to this Tree, as used for the purpose of diff
    *     computation.  Note that we do not block renames and other filesystem
    *     layout changes during diff operations, so this might not actually
@@ -299,25 +305,23 @@ class TreeInode : public InodeBase {
    * @param tree The source control Tree to compare the current state against.
    *     This may be null when comparing a portion of the file system tree that
    *     does not exist in source control.
-   * @param callback A callback to invoke when changes are detected.
+   * @param parentIgnore A GitIgnoreStack containing the gitignore data for all
+   *     parent directories of this one.  This parameter may be null if
+   *     isIgnored is true.  The caller must ensure that this GitIgnoreStack
+   *     object remains valid until the returned Future object completes.
    * @param isIgnored  Whether or not the current directory is ignored
    *     according to source control ignore rules.
-   * @param listIgnored  If listIgnored is true information about ignored files
-   *     will be reported.  If listIgnored is false then ignoredFile() will
-   *     never be called on the callback.  The diff operation may be faster
-   *     with listIgnored=false, since it can completely omit processing
-   *     ignored subdirectories.
    *
    * @return Returns a Future that will be fulfilled when the diff operation
    *     completes.  The caller must ensure that the InodeDiffCallback parameter
    *     remains valid until this Future completes.
    */
   folly::Future<folly::Unit> diff(
+      const DiffContext* context,
       RelativePathPiece currentPath,
-      const Tree* tree,
-      InodeDiffCallback* callback,
-      bool isIgnored,
-      bool listIgnored);
+      std::unique_ptr<Tree> tree,
+      GitIgnoreStack* parentIgnore,
+      bool isIgnored);
 
   /**
    * Update this directory so that it matches the specified source control Tree
@@ -569,6 +573,34 @@ class TreeInode : public InodeBase {
       PathComponentPiece name,
       Entry* entry,
       std::vector<IncompleteInodeLoad>* pendingLoads);
+
+  /**
+   * Load the .gitignore file for this directory, then call computeDiff() once
+   * it is loaded.
+   */
+  folly::Future<folly::Unit> loadGitIgnoreThenDiff(
+      InodePtr gitignoreInode,
+      const DiffContext* context,
+      RelativePathPiece currentPath,
+      std::unique_ptr<Tree> tree,
+      GitIgnoreStack* parentIgnore,
+      bool isIgnored);
+
+  /**
+   * The bulk of the actual implementation of diff()
+   *
+   * The main diff() function's GitIgnoreStack parameter contains the ignore
+   * data for the ancestors of this directory.  diff() loads .gitignore data
+   * for the current directory and then invokes computeDiff() to perform the
+   * diff once all .gitignore data is loaded.
+   */
+  folly::Future<folly::Unit> computeDiff(
+      folly::Synchronized<Dir>::LockedPtr contentsLock,
+      const DiffContext* context,
+      RelativePathPiece currentPath,
+      std::unique_ptr<Tree> tree,
+      std::unique_ptr<GitIgnoreStack> ignore,
+      bool isIgnored);
 
   void computeCheckoutActions(
       CheckoutContext* ctx,

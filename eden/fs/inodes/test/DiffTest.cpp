@@ -153,15 +153,15 @@ class DiffTest {
     mount_.initialize(builder_);
   }
 
-  DiffResults diff() {
+  DiffResults diff(bool listIgnored = false) {
     DiffResultsCallback callback;
-    auto diffFuture = mount_.getEdenMount()->diff(&callback);
+    auto diffFuture = mount_.getEdenMount()->diff(&callback, listIgnored);
     EXPECT_FUTURE_RESULT(diffFuture);
     return callback.extractResults();
   }
-  folly::Future<DiffResults> diffFuture() {
+  folly::Future<DiffResults> diffFuture(bool listIgnored = false) {
     auto callback = std::make_unique<DiffResultsCallback>();
-    auto diffFuture = mount_.getEdenMount()->diff(callback.get());
+    auto diffFuture = mount_.getEdenMount()->diff(callback.get(), listIgnored);
     return diffFuture.then([callback = std::move(callback)]() {
       return callback->extractResults();
     });
@@ -698,4 +698,261 @@ TEST(DiffTest, resetReplaceFileWithDir) {
   testResetReplaceFileWithDir(true, true);
   testResetReplaceFileWithDir(true, false);
   testResetReplaceFileWithDir(false, false);
+}
+
+// Test with a .gitignore file in the top-level directory
+TEST(DiffTest, ignoreToplevelOnly) {
+  DiffTest test({
+      {".gitignore", "/1.txt\nignore.txt\n"},
+      {"a/b.txt", "test\n"},
+      {"src/x.txt", "test\n"},
+      {"src/y.txt", "test\n"},
+      {"src/z.txt", "test\n"},
+      {"src/foo/bar.txt", "test\n"},
+  });
+
+  // Add some untracked files, some of which match the ignore patterns
+  test.getMount().addFile("1.txt", "new\n");
+  test.getMount().addFile("ignore.txt", "new\n");
+  test.getMount().addFile("src/1.txt", "new\n");
+  test.getMount().addFile("src/foo/ignore.txt", "new\n");
+  test.getMount().mkdir("src/foo/abc");
+  test.getMount().mkdir("src/foo/abc/xyz");
+  test.getMount().addFile("src/foo/abc/xyz/ignore.txt", "new\n");
+
+  auto result = test.diff();
+  EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
+  EXPECT_THAT(
+      result.getUntracked(), UnorderedElementsAre(RelativePath{"src/1.txt"}));
+  EXPECT_THAT(result.getIgnored(), UnorderedElementsAre());
+  EXPECT_THAT(result.getRemoved(), UnorderedElementsAre());
+  EXPECT_THAT(result.getModified(), UnorderedElementsAre());
+
+  result = test.diff(true);
+  EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
+  EXPECT_THAT(
+      result.getUntracked(), UnorderedElementsAre(RelativePath{"src/1.txt"}));
+  EXPECT_THAT(
+      result.getIgnored(),
+      UnorderedElementsAre(
+          RelativePath{"1.txt"},
+          RelativePath{"ignore.txt"},
+          RelativePath{"src/foo/ignore.txt"},
+          RelativePath{"src/foo/abc/xyz/ignore.txt"}));
+  EXPECT_THAT(result.getRemoved(), UnorderedElementsAre());
+  EXPECT_THAT(result.getModified(), UnorderedElementsAre());
+}
+
+// Test with a .gitignore file in the top-level directory
+TEST(DiffTest, ignoreInSubdirectories) {
+  DiffTest test({
+      {".gitignore", "**/foo/bar.txt\n"},
+      {"foo/.gitignore", "stuff\ntest\nwhatever\n"},
+      {"foo/foo/.gitignore", "!/bar.txt\ntest\n"},
+      {"abc/def/.gitignore", "*.log\n"},
+      {"abc/def/other.txt", "test\n"},
+      {"a/.gitignore", "b/c/d.txt\n"},
+      {"a/b/c/x.txt", "test\n"},
+      {"b/c/x.txt", "test\n"},
+  });
+
+  // Add some untracked files, some of which match the ignore patterns
+  test.getMount().addFile("foo/bar.txt", "new\n");
+  test.getMount().addFile("foo/foo/bar.txt", "new\n");
+  test.getMount().mkdir("foo/test");
+  test.getMount().addFile("foo/test/1.txt", "new\n");
+  test.getMount().addFile("foo/test/2.txt", "new\n");
+  test.getMount().mkdir("foo/test/3");
+  test.getMount().addFile("foo/test/3/4.txt", "new\n");
+  test.getMount().addFile("foo/foo/test", "new\n");
+  test.getMount().addFile("test", "test\n");
+  test.getMount().addFile("abc/def/test", "test\n");
+  test.getMount().addFile("abc/def/test.log", "test\n");
+  test.getMount().addFile("abc/def/another.log", "test\n");
+  test.getMount().addFile("abc/test.log", "test\n");
+  test.getMount().mkdir("abc/foo");
+  test.getMount().addFile("abc/foo/bar.txt", "test\n");
+  test.getMount().mkdir("other");
+  test.getMount().addFile("other/bar.txt", "test\n");
+  test.getMount().addFile("a/b/c/d.txt", "test\n");
+  test.getMount().addFile("b/c/d.txt", "test\n");
+
+  auto result = test.diff();
+  EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
+  EXPECT_THAT(
+      result.getUntracked(),
+      UnorderedElementsAre(
+          RelativePath{"abc/test.log"},
+          RelativePath{"abc/def/test"},
+          RelativePath{"b/c/d.txt"},
+          // Matches exlude rule in top-level .gitignore, but explicitly
+          // included by "!bar.txt" rule in foo/foo/.gitignore
+          RelativePath{"foo/foo/bar.txt"},
+          RelativePath{"other/bar.txt"},
+          RelativePath{"test"}));
+  EXPECT_THAT(result.getIgnored(), UnorderedElementsAre());
+  EXPECT_THAT(result.getRemoved(), UnorderedElementsAre());
+  EXPECT_THAT(result.getModified(), UnorderedElementsAre());
+
+  result = test.diff(true);
+  EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
+  EXPECT_THAT(
+      result.getUntracked(),
+      UnorderedElementsAre(
+          RelativePath{"abc/test.log"},
+          RelativePath{"abc/def/test"},
+          RelativePath{"b/c/d.txt"},
+          RelativePath{"foo/foo/bar.txt"},
+          RelativePath{"other/bar.txt"},
+          RelativePath{"test"}));
+  EXPECT_THAT(
+      result.getIgnored(),
+      UnorderedElementsAre(
+          RelativePath{"a/b/c/d.txt"},
+          // Ignored by "*.log" rule in abc/def/.gitignore
+          RelativePath{"abc/def/test.log"},
+          RelativePath{"abc/def/another.log"},
+          // Ignored by "**/foo/bar.txt" rule in top-level .gitignore file
+          RelativePath{"abc/foo/bar.txt"},
+          // Ignored by "**/foo/bar.txt" rule in top-level .gitignore file
+          RelativePath{"foo/bar.txt"},
+          // Ignored by "test" rule in foo/.gitignore
+          RelativePath{"foo/test/1.txt"},
+          RelativePath{"foo/test/2.txt"},
+          RelativePath{"foo/test/3/4.txt"},
+          // Also ignored by "test" rule in foo/.gitignore
+          RelativePath{"foo/foo/test"}));
+  EXPECT_THAT(result.getRemoved(), UnorderedElementsAre());
+  EXPECT_THAT(result.getModified(), UnorderedElementsAre());
+}
+
+// Test when files already tracked in source control match ignore patterns
+TEST(DiffTest, explicitlyTracked) {
+  DiffTest test({
+      {".gitignore", "1.txt\njunk\n"},
+      {"junk/a/b/c.txt", "test\n"},
+      {"junk/a/b/d.txt", "test\n"},
+      {"junk/x/foo.txt", "test\n"},
+      {"src/1.txt", "test\n"},
+      {"docs/test.txt", "test\n"},
+  });
+
+  test.getMount().addFile("docs/1.txt", "new\n");
+  test.getMount().addFile("junk/foo.txt", "new\n");
+  test.getMount().addFile("junk/test.txt", "new\n");
+  test.getMount().addFile("junk/a/b/xyz.txt", "new\n");
+  test.getMount().addFile("other.txt", "new\n");
+  test.getMount().overwriteFile("junk/a/b/c.txt", "new\n");
+  test.getMount().deleteFile("junk/x/foo.txt");
+
+  auto result = test.diff();
+  EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
+  EXPECT_THAT(
+      result.getUntracked(), UnorderedElementsAre(RelativePath{"other.txt"}));
+  EXPECT_THAT(result.getIgnored(), UnorderedElementsAre());
+  EXPECT_THAT(
+      result.getRemoved(),
+      UnorderedElementsAre(RelativePath{"junk/x/foo.txt"}));
+  EXPECT_THAT(
+      result.getModified(),
+      UnorderedElementsAre(RelativePath{"junk/a/b/c.txt"}));
+
+  result = test.diff(true);
+  EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
+  EXPECT_THAT(
+      result.getUntracked(), UnorderedElementsAre(RelativePath{"other.txt"}));
+  EXPECT_THAT(
+      result.getIgnored(),
+      UnorderedElementsAre(
+          RelativePath{"docs/1.txt"},
+          RelativePath{"junk/foo.txt"},
+          RelativePath{"junk/test.txt"},
+          RelativePath{"junk/a/b/xyz.txt"}));
+  EXPECT_THAT(
+      result.getRemoved(),
+      UnorderedElementsAre(RelativePath{"junk/x/foo.txt"}));
+  EXPECT_THAT(
+      result.getModified(),
+      UnorderedElementsAre(RelativePath{"junk/a/b/c.txt"}));
+}
+
+// Test making modifications to the .gitignore file
+TEST(DiffTest, ignoreFileModified) {
+  DiffTest test({
+      {"a/.gitignore", "foo.txt\n"},
+  });
+
+  test.getMount().addFile("a/foo.txt", "test\n");
+  test.getMount().addFile("a/bar.txt", "test\n");
+  test.getMount().addFile("a/test.txt", "test\n");
+
+  auto result = test.diff(true);
+  EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
+  EXPECT_THAT(
+      result.getUntracked(),
+      UnorderedElementsAre(
+          RelativePath{"a/bar.txt"}, RelativePath{"a/test.txt"}));
+  EXPECT_THAT(
+      result.getIgnored(), UnorderedElementsAre(RelativePath{"a/foo.txt"}));
+  EXPECT_THAT(result.getRemoved(), UnorderedElementsAre());
+  EXPECT_THAT(result.getModified(), UnorderedElementsAre());
+
+  // Changes to the gitignore file should take effect immediately
+  test.getMount().overwriteFile("a/.gitignore", "bar.txt\n");
+
+  result = test.diff(true);
+  EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
+  EXPECT_THAT(
+      result.getUntracked(),
+      UnorderedElementsAre(
+          RelativePath{"a/foo.txt"}, RelativePath{"a/test.txt"}));
+  EXPECT_THAT(
+      result.getIgnored(), UnorderedElementsAre(RelativePath{"a/bar.txt"}));
+  EXPECT_THAT(result.getRemoved(), UnorderedElementsAre());
+  EXPECT_THAT(
+      result.getModified(), UnorderedElementsAre(RelativePath{"a/.gitignore"}));
+
+  // Newly added gitignore files should also take effect immediately
+  test.getMount().addFile(".gitignore", "test.txt\n");
+
+  result = test.diff(true);
+  EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
+  EXPECT_THAT(
+      result.getUntracked(),
+      UnorderedElementsAre(
+          RelativePath{".gitignore"}, RelativePath{"a/foo.txt"}));
+  EXPECT_THAT(
+      result.getIgnored(),
+      UnorderedElementsAre(
+          RelativePath{"a/bar.txt"}, RelativePath{"a/test.txt"}));
+  EXPECT_THAT(result.getRemoved(), UnorderedElementsAre());
+  EXPECT_THAT(
+      result.getModified(), UnorderedElementsAre(RelativePath{"a/.gitignore"}));
+}
+
+// Make sure the code ignores .gitignore directories
+TEST(DiffTest, ignoreFileIsDirectory) {
+  DiffTest test({
+      {".gitignore", "1.txt\nignore.txt\n"},
+      {"a/b.txt", "test\n"},
+      {"a/.gitignore/b.txt", "test\n"},
+      {"a/b/c.txt", "test\n"},
+  });
+
+  test.getMount().addFile("a/b/1.txt", "new\n");
+
+  auto result = test.diff();
+  EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
+  EXPECT_THAT(result.getUntracked(), UnorderedElementsAre());
+  EXPECT_THAT(result.getIgnored(), UnorderedElementsAre());
+  EXPECT_THAT(result.getRemoved(), UnorderedElementsAre());
+  EXPECT_THAT(result.getModified(), UnorderedElementsAre());
+
+  result = test.diff(true);
+  EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
+  EXPECT_THAT(result.getUntracked(), UnorderedElementsAre());
+  EXPECT_THAT(
+      result.getIgnored(), UnorderedElementsAre(RelativePath{"a/b/1.txt"}));
+  EXPECT_THAT(result.getRemoved(), UnorderedElementsAre());
+  EXPECT_THAT(result.getModified(), UnorderedElementsAre());
 }

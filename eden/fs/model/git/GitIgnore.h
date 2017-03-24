@@ -35,6 +35,12 @@ class GitIgnorePattern;
  * excluded, explicitly included, or was not matched.  If the path was
  * explicitly excluded or included, stop and use that result.  Otherwise
  * proceed to the next highest precedence GitIgnore object.
+ *
+ * If a directory is ignored, everything inside it is always ignored.  Files
+ * inside this directory may be explicitly added to source control, but
+ * untracked files inside this directory (and any children directories) are
+ * always ignored: explicit include rules cannot be used to unignore files
+ * inside an ignored directory.
  */
 class GitIgnore {
  public:

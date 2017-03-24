@@ -22,6 +22,8 @@ class Unit;
 namespace facebook {
 namespace eden {
 
+class DiffContext;
+class GitIgnoreStack;
 class Hash;
 class ObjectStore;
 class TreeEntry;
@@ -39,20 +41,22 @@ class InodeDiffCallback;
  */
 class DeferredDiffEntry {
  public:
-  explicit DeferredDiffEntry(RelativePath&& path) : path_{std::move(path)} {}
+  explicit DeferredDiffEntry(const DiffContext* context, RelativePath&& path)
+      : context_{context}, path_{std::move(path)} {}
   virtual ~DeferredDiffEntry() {}
 
   const RelativePath& getPath() const {
     return path_;
   }
 
-  virtual folly::Future<folly::Unit> run(InodeDiffCallback* callback) = 0;
+  virtual folly::Future<folly::Unit> run() = 0;
 
   static std::unique_ptr<DeferredDiffEntry> createUntrackedEntry(
+      const DiffContext* context,
       RelativePath path,
       InodePtr inode,
-      bool isIgnored,
-      bool listIgnored);
+      GitIgnoreStack* ignore,
+      bool isIgnored);
 
   /*
    * This is named differently from the createUntrackedEntry() function above
@@ -63,39 +67,42 @@ class DeferredDiffEntry {
    * now.
    */
   static std::unique_ptr<DeferredDiffEntry> createUntrackedEntryFromInodeFuture(
+      const DiffContext* context,
       RelativePath path,
       folly::Future<InodePtr>&& inodeFuture,
-      bool isIgnored,
-      bool listIgnored);
+      GitIgnoreStack* ignore,
+      bool isIgnored);
 
   static std::unique_ptr<DeferredDiffEntry> createRemovedEntry(
+      const DiffContext* context,
       RelativePath path,
-      ObjectStore* store,
       const TreeEntry& scmEntry);
 
   static std::unique_ptr<DeferredDiffEntry> createModifiedEntry(
+      const DiffContext* context,
       RelativePath path,
       const TreeEntry& scmEntry,
       InodePtr inode,
-      bool isIgnored,
-      bool listIgnored);
+      GitIgnoreStack* ignore,
+      bool isIgnored);
 
-  static std::unique_ptr<DeferredDiffEntry> createModifiedEntry(
+  static std::unique_ptr<DeferredDiffEntry> createModifiedEntryFromInodeFuture(
+      const DiffContext* context,
       RelativePath path,
-      ObjectStore* store,
       const TreeEntry& scmEntry,
       folly::Future<InodePtr>&& inodeFuture,
-      bool isIgnored,
-      bool listIgnored);
+      GitIgnoreStack* ignore,
+      bool isIgnored);
 
   static std::unique_ptr<DeferredDiffEntry> createModifiedEntry(
+      const DiffContext* context,
       RelativePath path,
-      ObjectStore* store,
       const TreeEntry& scmEntry,
       Hash currentBlobHash);
 
- private:
-  RelativePath path_;
+ protected:
+  const DiffContext* const context_;
+  RelativePath const path_;
 };
 }
 }

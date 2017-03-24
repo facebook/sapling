@@ -23,10 +23,12 @@ cpp_library(
   srcs = [
     'GitIgnore.cpp',
     'GitIgnorePattern.cpp',
+    'GitIgnoreStack.cpp',
   ],
   headers = [
     'GitIgnore.h',
     'GitIgnorePattern.h',
+    'GitIgnoreStack.h',
   ],
   deps = [
     ':glob',
