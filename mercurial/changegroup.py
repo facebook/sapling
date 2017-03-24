@@ -294,7 +294,7 @@ class cg1unpacker(object):
                 # will not see an inconsistent view
                 cl = repo.changelog
                 cl.delayupdate(tr)
-                oldheads = cl.heads()
+                oldheads = set(cl.heads())
 
                 trp = weakref.proxy(tr)
                 # pull off the changeset group
