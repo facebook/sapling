@@ -24,15 +24,13 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
-#ifdef HAVE_LINUX_MAGIC_H
+#ifdef HAVE_LINUX_STATFS
 #include <linux/magic.h>
+#include <sys/vfs.h>
 #endif
 #ifdef HAVE_BSD_STATFS
 #include <sys/mount.h>
 #include <sys/param.h>
-#endif
-#ifdef HAVE_SYS_VFS_H
-#include <sys/vfs.h>
 #endif
 #endif
 
@@ -796,7 +794,7 @@ static PyObject *setprocname(PyObject *self, PyObject *args)
 }
 #endif /* ndef SETPROCNAME_USE_NONE */
 
-#ifdef HAVE_STATFS
+#if defined(HAVE_BSD_STATFS) || defined(HAVE_LINUX_STATFS)
 /* given a directory path, return filesystem type (best-effort), or None */
 const char *getfstype(const char *path) {
 #ifdef HAVE_BSD_STATFS
@@ -810,10 +808,10 @@ const char *getfstype(const char *path) {
 	r = statfs(path, &buf);
 	if (r != 0)
 		return NULL;
-#ifdef HAVE_BSD_STATFS
+#if defined(HAVE_BSD_STATFS)
 	/* BSD or OSX provides a f_fstypename field */
 	return buf.f_fstypename;
-#endif
+#elif defined(HAVE_LINUX_STATFS)
 	/* Begin of Linux filesystems */
 #ifdef ADFS_SUPER_MAGIC
 	if (buf.f_type == ADFS_SUPER_MAGIC)
@@ -1084,6 +1082,7 @@ const char *getfstype(const char *path) {
 		return "xfs";
 #endif
 	/* End of Linux filesystems */
+#endif /* def HAVE_LINUX_STATFS */
 	return NULL;
 }
 
@@ -1100,7 +1099,7 @@ static PyObject *pygetfstype(PyObject *self, PyObject *args)
 	PyObject *result = Py_BuildValue("s", type);
 	return result;
 }
-#endif /* def HAVE_STATFS */
+#endif /* defined(HAVE_LINUX_STATFS) || defined(HAVE_BSD_STATFS) */
 
 #endif /* ndef _WIN32 */
 
@@ -1278,7 +1277,7 @@ static PyMethodDef methods[] = {
 	{"setprocname", (PyCFunction)setprocname, METH_VARARGS,
 	 "set process title (best-effort)\n"},
 #endif
-#ifdef HAVE_STATFS
+#if defined(HAVE_BSD_STATFS) || defined(HAVE_LINUX_STATFS)
 	{"getfstype", (PyCFunction)pygetfstype, METH_VARARGS,
 	 "get filesystem type (best-effort)\n"},
 #endif
