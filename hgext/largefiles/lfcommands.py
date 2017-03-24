@@ -220,7 +220,8 @@ def _lfconvert_addchangeset(rsrc, rdst, ctx, revmap, lfiles, normalfiles,
                 normalfiles.add(f)
 
         if f in lfiles:
-            dstfiles.append(lfutil.standin(f))
+            fstandin = lfutil.standin(f)
+            dstfiles.append(fstandin)
             # largefile in manifest if it has not been removed/renamed
             if f in ctx.manifest():
                 fctx = ctx.filectx(f)
@@ -236,7 +237,7 @@ def _lfconvert_addchangeset(rsrc, rdst, ctx, revmap, lfiles, normalfiles,
                 if f not in lfiletohash or lfiletohash[f] != hash:
                     rdst.wwrite(f, ctx[f].data(), ctx[f].flags())
                     executable = 'x' in ctx[f].flags()
-                    lfutil.writestandin(rdst, lfutil.standin(f), hash,
+                    lfutil.writestandin(rdst, fstandin, hash,
                         executable)
                     lfiletohash[f] = hash
         else:

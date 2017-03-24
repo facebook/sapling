@@ -739,8 +739,9 @@ def overriderevert(orig, ui, repo, ctx, parents, *pats, **opts):
         for lfile in s.modified:
             lfutil.updatestandin(repo, lfutil.standin(lfile))
         for lfile in s.deleted:
-            if (repo.wvfs.exists(lfutil.standin(lfile))):
-                repo.wvfs.unlink(lfutil.standin(lfile))
+            fstandin = lfutil.standin(lfile)
+            if (repo.wvfs.exists(fstandin)):
+                repo.wvfs.unlink(fstandin)
 
         oldstandins = lfutil.getstandinsstate(repo)
 
@@ -1080,8 +1081,8 @@ def cmdutilforget(orig, ui, repo, match, prefix, explicitonly):
     forget = [f for f in forget if lfutil.standin(f) in repo[None].manifest()]
 
     for f in forget:
-        if lfutil.standin(f) not in repo.dirstate and not \
-                repo.wvfs.isdir(lfutil.standin(f)):
+        fstandin = lfutil.standin(f)
+        if fstandin not in repo.dirstate and not repo.wvfs.isdir(fstandin):
             ui.warn(_('not removing %s: file is already untracked\n')
                     % m.rel(f))
             bad.append(f)

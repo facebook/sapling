@@ -557,13 +557,13 @@ def updatestandinsbymatch(repo, match):
         # removed/renamed)
         for lfile in lfiles:
             if lfile in modifiedfiles:
-                if repo.wvfs.exists(standin(lfile)):
+                fstandin = standin(lfile)
+                if repo.wvfs.exists(fstandin):
                     # this handles the case where a rebase is being
                     # performed and the working copy is not updated
                     # yet.
                     if repo.wvfs.exists(lfile):
-                        updatestandin(repo,
-                            standin(lfile))
+                        updatestandin(repo, fstandin)
 
         return match
 
