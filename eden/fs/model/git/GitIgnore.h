@@ -45,9 +45,26 @@ class GitIgnorePattern;
 class GitIgnore {
  public:
   enum MatchResult {
+    /**
+     * This path is explicitly excluded by the ignore rules.
+     */
     EXCLUDE,
+    /**
+     * This path is explicitly included by the ignore rules.
+     */
     INCLUDE,
+    /**
+     * This path does not match any ignore rules.
+     * Processing may continue to the next GitIgnore object.  If no rules match
+     * in any GitIgnore object, the path is implicitly included.
+     */
     NO_MATCH,
+    /**
+     * This is a special hidden path.
+     * It should not be reported at all, not even as an ignored file.
+     * This is used for special directories like .hg and .eden
+     */
+    HIDDEN,
   };
 
   GitIgnore();
@@ -90,7 +107,23 @@ class GitIgnore {
    * GitIgnore object, provide no modifying operations are being done to the
    * GitIgnore object at the same time.
    */
-  MatchResult match(RelativePathPiece path) const;
+  MatchResult match(RelativePathPiece path) const {
+    return match(path, path.basename());
+  }
+
+  /**
+   * A version of match() that accepts both the path and the basename.
+   *
+   * The path parameter should still include the basename (it should not be
+   * just the dirname component).
+   *
+   * While match() could just compute the basename on its own, many patterns
+   * require the basename, and code checking the ignore status for a path
+   * generally checks the path against many patterns across several GitIgnore
+   * files.  It is slightly more efficient for the caller to compute the
+   * basename once, rather than re-computing it for each pattern that needs it.
+   */
+  MatchResult match(RelativePathPiece path, PathComponentPiece basename) const;
 
   /**
    * Get a human-readable description of a MatchResult enum value.

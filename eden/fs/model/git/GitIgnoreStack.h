@@ -61,14 +61,7 @@ class GitIgnoreStack {
   }
 
   /**
-   * Check to see if a path is ignored.
-   */
-  bool isIgnored(RelativePathPiece path) const {
-    return match(path) == GitIgnore::EXCLUDE;
-  }
-
-  /**
-   * Get the detailed MatchResult for a path.
+   * Get the MatchResult for a path.
    */
   GitIgnore::MatchResult match(RelativePathPiece path) const;
 

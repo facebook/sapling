@@ -956,3 +956,31 @@ TEST(DiffTest, ignoreFileIsDirectory) {
   EXPECT_THAT(result.getRemoved(), UnorderedElementsAre());
   EXPECT_THAT(result.getModified(), UnorderedElementsAre());
 }
+
+// Files under the .hg directory should never be reported in diff results
+TEST(DiffTest, ignoreHidden) {
+  DiffTest test({
+      {"a/b.txt", "test\n"},
+      {"a/c/d.txt", "test\n"},
+      {"a/c/1.txt", "test\n"},
+      {"a/c/2.txt", "test\n"},
+  });
+
+  test.getMount().mkdir(".hg");
+  test.getMount().addFile(".hg/hgrc", "# hgrc contents would go here\n");
+  test.getMount().addFile(".hg/bookmarks", "123456789 foobar\n");
+  test.getMount().mkdir(".hg/store");
+  test.getMount().mkdir(".hg/store/data");
+  test.getMount().addFile(".hg/store/data/00changelog.d", "stuff\n");
+  test.getMount().addFile(".hg/store/data/00changelog.i", "stuff\n");
+
+  test.getMount().overwriteFile("a/c/1.txt", "updated contents\n");
+
+  auto result = test.diff(true);
+  EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
+  EXPECT_THAT(result.getUntracked(), UnorderedElementsAre());
+  EXPECT_THAT(result.getIgnored(), UnorderedElementsAre());
+  EXPECT_THAT(result.getRemoved(), UnorderedElementsAre());
+  EXPECT_THAT(
+      result.getModified(), UnorderedElementsAre(RelativePath{"a/c/1.txt"}));
+}

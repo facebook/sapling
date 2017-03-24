@@ -147,7 +147,9 @@ GitIgnorePattern::GitIgnorePattern(uint32_t flags, GlobMatcher&& matcher)
 
 GitIgnorePattern::~GitIgnorePattern() {}
 
-GitIgnore::MatchResult GitIgnorePattern::match(RelativePathPiece path) const {
+GitIgnore::MatchResult GitIgnorePattern::match(
+    RelativePathPiece path,
+    PathComponentPiece basename) const {
   if (flags_ & FLAG_MUST_BE_DIR) {
     // TODO: get the file type, and reject the file if it's not a directory.
     // git does this lazily-ish.  It may or may not know the entry type ahead
@@ -157,7 +159,7 @@ GitIgnore::MatchResult GitIgnorePattern::match(RelativePathPiece path) const {
   bool isMatch = false;
   if (flags_ & FLAG_BASENAME_ONLY) {
     // Match only on the file basename.
-    isMatch = matcher_.match(path.basename().stringPiece());
+    isMatch = matcher_.match(basename.stringPiece());
   } else {
     // Match on full relative path to the file from this directory.
     isMatch = matcher_.match(path.stringPiece());

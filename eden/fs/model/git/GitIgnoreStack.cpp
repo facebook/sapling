@@ -13,6 +13,21 @@ namespace facebook {
 namespace eden {
 
 GitIgnore::MatchResult GitIgnoreStack::match(RelativePathPiece path) const {
+  // Explicitly hide any entry named .hg or .eden
+  //
+  // We only check the very last component of the path.  Since these
+  // directories are hidden the status code generally should not descend into
+  // them and have to check ignore status for path names inside these
+  // directories.
+  const static PathComponentPiece kHgName{".hg"};
+  const static PathComponentPiece kEdenName{".eden"};
+  auto basename = path.basename();
+  if (basename == kHgName || basename == kEdenName) {
+    return GitIgnore::HIDDEN;
+  }
+
+  // Walk upwards through the GitIgnore stack, checking the path relative to
+  // each directory against the GitIgnore rules for that directory.
   auto* node = this;
   auto suffixRange = path.rsuffixes();
   auto suffixIter = suffixRange.begin();
@@ -33,7 +48,7 @@ GitIgnore::MatchResult GitIgnoreStack::match(RelativePathPiece path) const {
     const GitIgnore* ignore = &node->ignore_;
     node = node->parent_;
 
-    auto result = ignore->match(suffix);
+    auto result = ignore->match(suffix, basename);
     if (result != GitIgnore::NO_MATCH) {
       return result;
     }

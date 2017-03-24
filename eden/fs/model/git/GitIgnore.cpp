@@ -65,9 +65,11 @@ void GitIgnore::loadFile(StringPiece contents) {
   std::swap(rules_, newRules);
 }
 
-GitIgnore::MatchResult GitIgnore::match(RelativePathPiece path) const {
+GitIgnore::MatchResult GitIgnore::match(
+    RelativePathPiece path,
+    PathComponentPiece basename) const {
   for (const auto& pattern : rules_) {
-    auto result = pattern.match(path);
+    auto result = pattern.match(path, basename);
     if (result != NO_MATCH) {
       return result;
     }
@@ -84,6 +86,8 @@ string GitIgnore::matchString(MatchResult result) {
       return "include";
     case NO_MATCH:
       return "no match";
+    case HIDDEN:
+      return "hidden";
   }
   return folly::to<string>("unexpected result", int(result));
 }

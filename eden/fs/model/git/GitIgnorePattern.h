@@ -46,7 +46,25 @@ class GitIgnorePattern {
    * <repo_root>/foo/bar/.gitignore, when testing the file
    * <repo_root>/foo/bar/abc/xyz.txt, pass in the path as "abc/xyz.txt"
    */
-  GitIgnore::MatchResult match(RelativePathPiece path) const;
+  GitIgnore::MatchResult match(RelativePathPiece path) const {
+    return match(path, path.basename());
+  }
+
+  /**
+   * A version of match() that accepts both the path and the basename.
+   *
+   * The path parameter should still include the basename (it should not be
+   * just the dirname component).
+   *
+   * While match() could just compute the basename on its own, many patterns
+   * require the basename, and code checking the ignore status for a path
+   * generally checks the path against many patterns across several GitIgnore
+   * files.  It is slightly more efficient for the caller to compute the
+   * basename once, rather than re-computing it for each pattern that needs it.
+   */
+  GitIgnore::MatchResult match(
+      RelativePathPiece path,
+      PathComponentPiece basename) const;
 
  private:
   /**
