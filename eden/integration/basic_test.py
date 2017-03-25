@@ -34,7 +34,7 @@ class BasicTest:
 
     def test_fileList(self):
         entries = sorted(os.listdir(self.mount))
-        self.assertEqual(['adir', 'bdir', 'hello', 'slink'], entries)
+        self.assertEqual(['.eden', 'adir', 'bdir', 'hello', 'slink'], entries)
 
         adir = os.path.join(self.mount, 'adir')
         st = os.lstat(adir)
@@ -73,7 +73,7 @@ class BasicTest:
             f.write('created\n')
 
         entries = sorted(os.listdir(self.mount))
-        self.assertEqual(['adir', 'bdir', 'hello', 'notinrepo', 'slink'],
+        self.assertEqual(['.eden', 'adir', 'bdir', 'hello', 'notinrepo', 'slink'],
                          entries)
 
         with open(filename, 'r') as f:
@@ -135,7 +135,7 @@ class BasicTest:
         self.assertTrue(stat.S_ISDIR(st.st_mode))
 
         entries = sorted(os.listdir(self.mount))
-        self.assertEqual(['adir', 'bdir', 'buck-out', 'hello', 'slink'],
+        self.assertEqual(['.eden', 'adir', 'bdir', 'buck-out', 'hello', 'slink'],
                          entries)
 
         # Prove that we can recursively build out a directory tree
@@ -180,7 +180,7 @@ class BasicTest:
 
     def test_unmount(self):
         entries = sorted(os.listdir(self.mount))
-        self.assertEqual(['adir', 'bdir', 'hello', 'slink'], entries)
+        self.assertEqual(['.eden', 'adir', 'bdir', 'hello', 'slink'], entries)
 
         self.assertTrue(self.eden.in_proc_mounts(self.mount))
 
@@ -192,7 +192,7 @@ class BasicTest:
         self.eden.clone(self.repo_name, self.mount)
 
         entries = sorted(os.listdir(self.mount))
-        self.assertEqual(['adir', 'bdir', 'hello', 'slink'], entries)
+        self.assertEqual(['.eden', 'adir', 'bdir', 'hello', 'slink'], entries)
 
         self.assertTrue(self.eden.in_proc_mounts(self.mount))
 
@@ -204,7 +204,7 @@ class BasicTest:
             f.write('foo!\n')
 
         entries = sorted(os.listdir(self.mount))
-        self.assertEqual(['adir', 'bdir', 'hello', 'overlayonly', 'slink'],
+        self.assertEqual(['.eden', 'adir', 'bdir', 'hello', 'overlayonly', 'slink'],
                          entries)
         self.assertTrue(self.eden.in_proc_mounts(self.mount))
 
@@ -220,7 +220,7 @@ class BasicTest:
 
         self.assertTrue(self.eden.in_proc_mounts(self.mount))
         entries = sorted(os.listdir(self.mount))
-        self.assertEqual(['adir', 'bdir', 'hello', 'overlayonly', 'slink'],
+        self.assertEqual(['.eden', 'adir', 'bdir', 'hello', 'overlayonly', 'slink'],
                          entries)
 
         with open(filename, 'r') as f:
@@ -237,4 +237,4 @@ class BasicTest:
 
         self.assertTrue(self.eden.in_proc_mounts(self.mount))
         entries = sorted(os.listdir(self.mount))
-        self.assertEqual(['adir', 'bdir', 'hello', 'slink'], entries)
+        self.assertEqual(['.eden', 'adir', 'bdir', 'hello', 'slink'], entries)

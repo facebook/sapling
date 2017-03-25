@@ -106,6 +106,8 @@ class EdenServer {
     return server_;
   }
 
+  AbsolutePath getSocketPath() const;
+
   MountList getMountPoints() const;
   std::shared_ptr<EdenMount> getMount(folly::StringPiece mountPath) const;
 

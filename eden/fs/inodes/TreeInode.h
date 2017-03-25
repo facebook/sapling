@@ -32,6 +32,8 @@ class RenameLock;
 class Tree;
 class TreeEntry;
 
+constexpr folly::StringPiece kDotEdenName{".eden"};
+
 /**
  * Represents a directory in the file system.
  */

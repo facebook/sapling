@@ -59,15 +59,17 @@ static std::atomic<uint16_t> mountGeneration{0};
 
 std::shared_ptr<EdenMount> EdenMount::makeShared(
     std::unique_ptr<ClientConfig> config,
-    std::unique_ptr<ObjectStore> objectStore) {
+    std::unique_ptr<ObjectStore> objectStore,
+    AbsolutePathPiece socketPath) {
   return std::shared_ptr<EdenMount>{
-      new EdenMount{std::move(config), std::move(objectStore)},
+      new EdenMount{std::move(config), std::move(objectStore), socketPath},
       EdenMountDeleter{}};
 }
 
 EdenMount::EdenMount(
     std::unique_ptr<ClientConfig> config,
-    std::unique_ptr<ObjectStore> objectStore)
+    std::unique_ptr<ObjectStore> objectStore,
+    AbsolutePathPiece socketPath)
     : config_(std::move(config)),
       inodeMap_{new InodeMap(this)},
       dispatcher_{new EdenDispatcher(this)},
@@ -77,7 +79,8 @@ EdenMount::EdenMount(
       overlay_(std::make_shared<Overlay>(config_->getOverlayPath())),
       dirstate_(std::make_unique<Dirstate>(this)),
       bindMounts_(config_->getBindMounts()),
-      mountGeneration_(globalProcessGeneration | ++mountGeneration) {
+      mountGeneration_(globalProcessGeneration | ++mountGeneration),
+      socketPath_(socketPath) {
   // Load the overlay, if present.
   auto rootOverlayDir = overlay_->loadOverlayDir(FUSE_ROOT_ID);
 
@@ -101,6 +104,7 @@ EdenMount::EdenMount(
     rootInode = TreeInodePtr::makeNew(this, std::move(rootTree));
   }
   auto maxInodeNumber = overlay_->getMaxRecordedInode();
+
   inodeMap_->initialize(std::move(rootInode), maxInodeNumber);
   VLOG(2) << "Initializing eden mount " << getPath()
           << "; max existing inode number is " << maxInodeNumber;
@@ -111,6 +115,26 @@ EdenMount::EdenMount(
   auto delta = std::make_unique<JournalDelta>();
   delta->toHash = snapshotID;
   journal_.wlock()->addDelta(std::move(delta));
+
+  // Set up the magic .eden dir
+  getRootInode()
+      ->getOrLoadChildTree(PathComponentPiece{kDotEdenName})
+      .then([=](TreeInodePtr dotEdenInode) {
+        // We could perhaps do something here to ensure that it reflects the
+        // current state of the world, but for the moment we trust that it
+        // still reflects how things were when we set it up.
+        dotEdenInodeNumber_ = dotEdenInode->getNodeId();
+      })
+      .onError([=](const InodeError& err) {
+        auto dotEdenInode =
+            getRootInode()->mkdir(PathComponentPiece{kDotEdenName}, 0744);
+        dotEdenInodeNumber_ = dotEdenInode->getNodeId();
+        dotEdenInode->symlink(
+            PathComponentPiece{"root"}, config_->getMountPath().stringPiece());
+        dotEdenInode->symlink(
+            PathComponentPiece{"socket"}, getSocketPath().stringPiece());
+      })
+      .get();
 }
 
 EdenMount::~EdenMount() {}
@@ -133,6 +157,10 @@ const AbsolutePath& EdenMount::getPath() const {
   return mountPoint_->getPath();
 }
 
+const AbsolutePath& EdenMount::getSocketPath() const {
+  return socketPath_;
+}
+
 const vector<BindMount>& EdenMount::getBindMounts() const {
   return bindMounts_;
 }
@@ -144,6 +172,10 @@ TreeInodePtr EdenMount::getRootInode() const {
 folly::Future<std::unique_ptr<Tree>> EdenMount::getRootTreeFuture() const {
   auto commitHash = Hash{*currentSnapshot_.rlock()};
   return objectStore_->getTreeForCommit(commitHash);
+}
+
+fuse_ino_t EdenMount::getDotEdenInodeNumber() const {
+  return dotEdenInodeNumber_;
 }
 
 std::unique_ptr<Tree> EdenMount::getRootTree() const {

@@ -57,7 +57,7 @@ class RenameTest:
                          msg='no longer visible as old name')
 
         entries = sorted(os.listdir(self.mount))
-        self.assertEqual(['a-new-target', 'adir', 'slink'], entries)
+        self.assertEqual(['.eden', 'a-new-target', 'adir', 'slink'], entries)
 
         with open(targetname, 'r') as f:
             self.assertEqual('hola\n', f.read(),
@@ -69,7 +69,7 @@ class RenameTest:
             os.rename(targetname, hello)
 
             entries = sorted(os.listdir(self.mount))
-            self.assertEqual(['adir', 'hello', 'slink'], entries)
+            self.assertEqual(['.eden', 'adir', 'hello', 'slink'], entries)
 
             with open(hello, 'r+') as write_f:
                 write_f.seek(0, os.SEEK_END)
@@ -95,7 +95,7 @@ class RenameTest:
                          msg='no longer visible as old name')
 
         entries = sorted(os.listdir(self.mount))
-        self.assertEqual(['adir', 'hello', 'overlay-b', 'slink'], entries)
+        self.assertEqual(['.eden', 'adir', 'hello', 'overlay-b', 'slink'], entries)
 
         with open(to_name, 'r') as f:
             self.assertEqual('overlay-a\n', f.read(),
@@ -107,7 +107,7 @@ class RenameTest:
             os.rename(to_name, from_name)
 
             entries = sorted(os.listdir(self.mount))
-            self.assertEqual(['adir', 'hello', 'overlay-a', 'slink'], entries)
+            self.assertEqual(['.eden', 'adir', 'hello', 'overlay-a', 'slink'], entries)
 
             with open(from_name, 'r+') as write_f:
                 write_f.seek(0, os.SEEK_END)
@@ -133,7 +133,7 @@ class RenameTest:
                          msg='no longer visible as old name')
 
         entries = sorted(os.listdir(self.mount))
-        self.assertEqual(['adir', 'hello', 'slink'], entries)
+        self.assertEqual(['.eden', 'adir', 'hello', 'slink'], entries)
 
         with open(to_name, 'r') as f:
             self.assertEqual('overlay-a\n', f.read(),

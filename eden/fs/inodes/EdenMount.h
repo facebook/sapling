@@ -16,6 +16,7 @@
 #include <shared_mutex>
 #include "eden/fs/inodes/InodePtrFwd.h"
 #include "eden/fs/journal/JournalDelta.h"
+#include "eden/fuse/fuse_headers.h"
 #include "eden/utils/PathFuncs.h"
 
 namespace folly {
@@ -59,7 +60,8 @@ class EdenMount {
  public:
   EdenMount(
       std::unique_ptr<ClientConfig> config,
-      std::unique_ptr<ObjectStore> objectStore);
+      std::unique_ptr<ObjectStore> objectStore,
+      AbsolutePathPiece socketPath);
 
   /**
    * Create a shared_ptr to an EdenMount.
@@ -69,7 +71,8 @@ class EdenMount {
    */
   static std::shared_ptr<EdenMount> makeShared(
       std::unique_ptr<ClientConfig> config,
-      std::unique_ptr<ObjectStore> objectStore);
+      std::unique_ptr<ObjectStore> objectStore,
+      AbsolutePathPiece socketPath);
 
   /**
    * Destroy the EdenMount.
@@ -167,6 +170,9 @@ class EdenMount {
   /** Get the TreeInode for the root of the mount. */
   TreeInodePtr getRootInode() const;
 
+  /** Get the inode number for the .eden dir */
+  fuse_ino_t getDotEdenInodeNumber() const;
+
   /** Convenience method for getting the Tree for the root of the mount. */
   std::unique_ptr<Tree> getRootTree() const;
   folly::Future<std::unique_ptr<Tree>> getRootTreeFuture() const;
@@ -258,6 +264,8 @@ class EdenMount {
    */
   void shutdownComplete();
 
+  const AbsolutePath& getSocketPath() const;
+
  private:
   friend class RenameLock;
   friend class SharedRenameLock;
@@ -282,6 +290,7 @@ class EdenMount {
   std::unique_ptr<ObjectStore> objectStore_;
   std::shared_ptr<Overlay> overlay_;
   std::unique_ptr<Dirstate> dirstate_;
+  fuse_ino_t dotEdenInodeNumber_{0};
 
   /**
    * A mutex around all name-changing operations in this mount point.
@@ -311,6 +320,11 @@ class EdenMount {
    * We use bits from the process id and the time at which we were mounted.
    */
   const uint64_t mountGeneration_;
+
+  /**
+   * The path to the unix socket that can be used to address us via thrift
+   */
+  AbsolutePath socketPath_;
 };
 
 /**

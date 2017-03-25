@@ -303,6 +303,14 @@ void EdenServer::acquireEdenLock() {
   }
 }
 
+AbsolutePath EdenServer::getSocketPath() const {
+  const auto& addr = server_->getAddress();
+  CHECK_EQ(addr.getFamily(), AF_UNIX);
+  // Need to make a copy rather than a Piece here because getPath returns
+  // a temporary std::string instance.
+  return AbsolutePath{addr.getPath()};
+}
+
 void EdenServer::prepareThriftAddress() {
   // If we are serving on a local Unix socket, remove any old socket file
   // that may be left over from a previous instance.

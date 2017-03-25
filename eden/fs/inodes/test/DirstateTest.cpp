@@ -786,3 +786,81 @@ TEST(Dirstate, checkIgnoredBehavior) {
           {"a/b/c/noop.o", StatusCode::IGNORED},
       });
 }
+
+TEST(Dirstate, checkAddingDotEden) {
+  FakeTreeBuilder builder;
+  builder.setFiles({{"foo/bar", "bar\n"}});
+  TestMount mount{builder};
+  auto dirstate = mount.getDirstate();
+
+  verifyEmptyDirstate(dirstate);
+
+  scmAddFileAndExpect(
+      dirstate,
+      ".eden",
+      DirstateAddRemoveError{RelativePath(".eden"),
+                             ".eden: cannot be part of a commit"});
+  verifyEmptyDirstate(dirstate);
+
+  scmAddFileAndExpect(
+      dirstate,
+      ".eden/socket",
+      DirstateAddRemoveError{RelativePath(".eden/socket"),
+                             ".eden/socket: cannot be part of a commit"});
+  verifyEmptyDirstate(dirstate);
+
+  scmAddFileAndExpect(
+      dirstate,
+      "foo/.eden",
+      DirstateAddRemoveError{RelativePath("foo/.eden"),
+                             "foo/.eden: cannot be part of a commit"});
+  verifyEmptyDirstate(dirstate);
+
+  scmAddFileAndExpect(
+      dirstate,
+      "foo/.eden/socket",
+      DirstateAddRemoveError{RelativePath("foo/.eden/socket"),
+                             "foo/.eden/socket: cannot be part of a commit"});
+  verifyEmptyDirstate(dirstate);
+}
+
+TEST(Dirstate, checkRemovingDotEden) {
+  FakeTreeBuilder builder;
+  builder.setFiles({{"foo/bar", "bar\n"}});
+  TestMount mount{builder};
+  auto dirstate = mount.getDirstate();
+
+  verifyEmptyDirstate(dirstate);
+
+  scmRemoveFileAndExpect(
+      dirstate,
+      ".eden",
+      /* force = */ false,
+      DirstateAddRemoveError{RelativePath(".eden"),
+                             ".eden: cannot be part of a commit"});
+  verifyEmptyDirstate(dirstate);
+
+  scmRemoveFileAndExpect(
+      dirstate,
+      ".eden/socket",
+      /* force = */ false,
+      DirstateAddRemoveError{RelativePath(".eden/socket"),
+                             ".eden/socket: cannot be part of a commit"});
+  verifyEmptyDirstate(dirstate);
+
+  scmRemoveFileAndExpect(
+      dirstate,
+      "foo/.eden",
+      /* force = */ false,
+      DirstateAddRemoveError{RelativePath("foo/.eden"),
+                             "foo/.eden: cannot be part of a commit"});
+  verifyEmptyDirstate(dirstate);
+
+  scmRemoveFileAndExpect(
+      dirstate,
+      "foo/.eden/socket",
+      /* force = */ false,
+      DirstateAddRemoveError{RelativePath("foo/.eden/socket"),
+                             "foo/.eden/socket: cannot be part of a commit"});
+  verifyEmptyDirstate(dirstate);
+}

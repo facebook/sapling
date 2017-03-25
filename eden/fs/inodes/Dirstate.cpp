@@ -274,10 +274,10 @@ std::unique_ptr<HgStatus> Dirstate::getStatus() const {
 
 std::unique_ptr<HgStatus> Dirstate::getStatusForExistingDirectory(
     RelativePathPiece directory) const {
-  auto hgDir = RelativePathPiece(".hg");
   std::unordered_set<RelativePathPiece> toIgnore;
   if (directory.empty()) {
-    toIgnore.insert(hgDir);
+    toIgnore.insert(RelativePathPiece(".hg"));
+    toIgnore.insert(RelativePathPiece{kDotEdenName});
   }
 
   // Find the modified directories in the overlay and compare them with what is
@@ -618,12 +618,29 @@ void assignAddAction(
   // need to complain or anything like that?
 }
 
-enum WorkingCopyStatus { File, Directory, DoesNotExist };
+enum WorkingCopyStatus { File, Directory, DoesNotExist, MagicPath };
+
+static bool isMagicPath(RelativePathPiece path) {
+  // If any component of the path name is .eden, then this path is a magic
+  // path that we won't allow to be checked in or show up in the dirstate.
+  for (auto p : path.paths()) {
+    if (p.basename().stringPiece() == kDotEdenName) {
+      return true;
+    }
+  }
+  return false;
+}
 
 WorkingCopyStatus getPathStatus(
     RelativePathPiece path,
     const EdenMount* mount) {
   try {
+    // If any component of the path name is .eden, then this path is a magic
+    // path that we won't allow to be checked in or show up in the dirstate.
+    if (isMagicPath(path)) {
+      return WorkingCopyStatus::MagicPath;
+    }
+
     // Use getInodeBlocking() as a test of whether the path exists.
     auto inodeBase = mount->getInodeBlocking(path);
     if (inodeBase.asFilePtrOrNull() != nullptr) {
@@ -673,6 +690,9 @@ void Dirstate::addAll(
     } else if (pathStatus == WorkingCopyStatus::DoesNotExist) {
       addDirstateAddRemoveError(
           path, "{}: No such file or directory", errorsToReport);
+    } else if (pathStatus == WorkingCopyStatus::MagicPath) {
+      addDirstateAddRemoveError(
+          path, "{}: cannot be part of a commit", errorsToReport);
     } else {
       throw std::runtime_error("Unhandled enum value");
     }
@@ -776,6 +796,12 @@ void Dirstate::removeAll(
   auto rootTree = mount_->getRootTree();
   auto objectStore = mount_->getObjectStore();
   for (auto& path : paths) {
+    if (isMagicPath(path)) {
+      addDirstateAddRemoveError(
+          path, "{}: cannot be part of a commit", errorsToReport);
+      continue;
+    }
+
     // A file (or directory) must be tracked in order for it to be
     // removed, though it does not need to exist on disk (it could be in the
     // MISSING state when this is called, for example).
@@ -1045,8 +1071,8 @@ void Dirstate::markCommitted(
   // Perform a depth-first traversal of directories in the overlay and update
   // the treeHash, as appropriate.
   auto overlay = mount_->getOverlay();
-  auto hgDir = RelativePathPiece(".hg");
-  auto toIgnore = std::unordered_set<RelativePathPiece>{hgDir};
+  auto toIgnore = std::unordered_set<RelativePathPiece>{
+      RelativePathPiece{".hg"}, RelativePathPiece{kDotEdenName}};
   auto modifiedDirectories = getModifiedDirectoriesForMount(mount_, &toIgnore);
   for (auto& directory : modifiedDirectories) {
     auto treeForDirectory =

@@ -171,6 +171,10 @@ Future<InodePtr> TreeInode::getOrLoadChild(PathComponentPiece name) {
     auto contents = contents_.wlock();
     auto iter = contents->entries.find(name);
     if (iter == contents->entries.end()) {
+      if (name == kDotEdenName && getNodeId() != FUSE_ROOT_ID) {
+        return getInodeMap()->lookupInode(getMount()->getDotEdenInodeNumber());
+      }
+
       VLOG(5) << "attempted to load non-existent entry \"" << name << "\" in "
               << getLogPath();
       return makeFuture<InodePtr>(InodeError(ENOENT, inodePtrFromThis(), name));
@@ -958,6 +962,11 @@ int TreeInode::tryRemoveChild(
     PathComponentPiece name,
     InodePtrType child) {
   materialize(&renameLock);
+
+  // prevent unlinking files in the .eden directory
+  if (getNodeId() == getMount()->getDotEdenInodeNumber()) {
+    return EPERM;
+  }
 
   // Lock our contents in write mode.
   // We will hold it for the duration of the unlink.

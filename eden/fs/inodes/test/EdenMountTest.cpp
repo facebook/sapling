@@ -48,7 +48,7 @@ TEST(EdenMount, resetCommit) {
   EXPECT_EQ(makeTestHash("1"), edenMount->getSnapshotID());
   EXPECT_EQ(makeTestHash("1"), edenMount->getConfig()->getSnapshotID());
   auto latestJournalEntry = edenMount->getJournal()->getLatest();
-  EXPECT_EQ(makeTestHash("0"), latestJournalEntry->fromHash);
+  EXPECT_EQ(makeTestHash("1"), latestJournalEntry->fromHash);
   EXPECT_EQ(makeTestHash("1"), latestJournalEntry->toHash);
   EXPECT_FILE_INODE(testMount.getFileInode("src/test.c"), "testy tests", 0644);
   EXPECT_FALSE(testMount.hasFileAt("src/extra.h"));

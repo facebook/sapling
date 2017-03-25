@@ -76,7 +76,7 @@ TEST(TestMount, addFileAfterMountIsCreated) {
   {
     auto dir = dirTreeEntry->getContents().rlock();
     auto& rootEntries = dir->entries;
-    EXPECT_EQ(2, rootEntries.size()) << "New entry is visible in MountPoint";
+    EXPECT_EQ(3, rootEntries.size()) << "New entry is visible in MountPoint";
   }
 
   auto rootTree = testMount.getRootTree();

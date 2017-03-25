@@ -19,6 +19,7 @@ namespace eden {
 class FileInode;
 class InodeBase;
 class TreeInode;
+class DotEdenInode;
 
 template <typename InodeType>
 class InodePtrImpl;
@@ -28,9 +29,11 @@ class InodeBasePtrImpl;
 /*
  * Friendly names for the various InodePtr classes.
  */
+using DotEdenInodePtr = InodePtrImpl<DotEdenInode>;
 using FileInodePtr = InodePtrImpl<FileInode>;
 using TreeInodePtr = InodePtrImpl<TreeInode>;
 using InodePtr = InodeBasePtrImpl<InodeBase>;
+using ConstDotEdenInodePtr = InodePtrImpl<const DotEdenInode>;
 using ConstFileInodePtr = InodePtrImpl<const FileInode>;
 using ConstTreeInodePtr = InodePtrImpl<const TreeInode>;
 using ConstInodePtr = InodeBasePtrImpl<const InodeBase>;

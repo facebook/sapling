@@ -38,7 +38,8 @@ class MaterializedQueryTest:
 
     def test_noEntries(self):
         pos = self.client.getCurrentJournalPosition(self.mount)
-        self.assertEqual(1, pos.sequenceNumber)
+        # setting up the .eden dir bumps the sequence number
+        self.assertEqual(4, pos.sequenceNumber)
         self.assertNotEqual(0, pos.mountGeneration)
 
         changed = self.client.getFilesChangedSince(self.mount, pos)
@@ -88,12 +89,12 @@ class MaterializedQueryTest:
 
     def test_addFile(self):
         initial_pos = self.client.getCurrentJournalPosition(self.mount)
-        self.assertEqual(1, initial_pos.sequenceNumber)
+        self.assertEqual(4, initial_pos.sequenceNumber)
 
         name = os.path.join(self.mount, 'overlaid')
         with open(name, 'w+') as f:
             pos = self.client.getCurrentJournalPosition(self.mount)
-            self.assertEqual(2, pos.sequenceNumber,
+            self.assertEqual(5, pos.sequenceNumber,
                              msg='creating a file bumps the journal')
 
             changed = self.client.getFilesChangedSince(self.mount, initial_pos)
@@ -105,7 +106,7 @@ class MaterializedQueryTest:
             f.write('NAME!\n')
 
         pos_after_overlaid = self.client.getCurrentJournalPosition(self.mount)
-        self.assertEqual(3, pos_after_overlaid.sequenceNumber,
+        self.assertEqual(6, pos_after_overlaid.sequenceNumber,
                          msg='writing bumps the journal')
         changed = self.client.getFilesChangedSince(self.mount, initial_pos)
         self.assertEqual(['overlaid'], changed.paths)
@@ -116,12 +117,12 @@ class MaterializedQueryTest:
         name = os.path.join(self.mount, 'adir', 'file')
         with open(name, 'a') as f:
             pos = self.client.getCurrentJournalPosition(self.mount)
-            self.assertEqual(3, pos.sequenceNumber,
+            self.assertEqual(6, pos.sequenceNumber,
                              msg='journal still in same place for append')
             f.write('more stuff on the end\n')
 
         pos = self.client.getCurrentJournalPosition(self.mount)
-        self.assertEqual(4, pos.sequenceNumber,
+        self.assertEqual(7, pos.sequenceNumber,
                          msg='appending bumps the journal')
 
         changed = self.client.getFilesChangedSince(

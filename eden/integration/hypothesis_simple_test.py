@@ -37,7 +37,8 @@ class HypothesisSimpleTest:
 
         entries = sorted(os.listdir(self.mount))
         self.assertEqual(
-            sorted(['adir', 'bdir', 'hello', basename, 'slink']), entries)
+            sorted(['.eden', 'adir', 'bdir', 'hello', basename, 'slink']),
+            entries)
 
         with open(filename, 'r') as f:
             self.assertEqual(f.read(), 'created\n')

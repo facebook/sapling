@@ -40,11 +40,11 @@ class RemountTest:
         # Verify that clients are remounted on startup
         for i in range(5):
             entries = sorted(os.listdir(self.mount + '-' + str(i)))
-            self.assertEqual(['adir', 'hello', 'slink'], entries)
+            self.assertEqual(['.eden', 'adir', 'hello', 'slink'], entries)
 
         # Verify that default repo created by EdenRepoTestBase is remounted
         entries = sorted(os.listdir(self.mount))
-        self.assertEqual(['adir', 'hello', 'slink'], entries)
+        self.assertEqual(['.eden', 'adir', 'hello', 'slink'], entries)
 
     def test_git_and_hg(self):
         # Create git and hg repositories for mounting
@@ -75,7 +75,7 @@ class RemountTest:
             for i in range(3):
                 mount_path = os.path.join(self.mounts_dir, name + '-' + str(i))
                 entries = sorted(os.listdir(mount_path))
-                self.assertEqual(['hello'], entries)
+                self.assertEqual(['.eden', 'hello'], entries)
 
                 hello = os.path.join(mount_path, 'hello')
                 with open(hello, 'r') as f:
@@ -96,7 +96,7 @@ class RemountTest:
         # Verify that clients that were still mounted at shutdown are remounted
         for i in range(5):
             entries = sorted(os.listdir(self.mount + '-' + str(i)))
-            self.assertEqual(['adir', 'hello', 'slink'], entries)
+            self.assertEqual(['.eden', 'adir', 'hello', 'slink'], entries)
 
         # Verify that unmounted client is not remounted
         self.assertFalse(os.path.exists(self.mount))
@@ -121,7 +121,7 @@ class RemountTest:
             if i == 3:
                 continue
             entries = sorted(os.listdir(self.mount + '-' + str(i)))
-            self.assertEqual(['adir', 'hello', 'slink'], entries)
+            self.assertEqual(['.eden', 'adir', 'hello', 'slink'], entries)
 
         # Verify that unmounted clients are not remounted
         self.assertFalse(os.path.exists(self.mount))

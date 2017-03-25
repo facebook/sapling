@@ -23,7 +23,7 @@ TEST(EdenMountHandler, getModifiedDirectoriesForMountWithNoModifications) {
   auto toIgnore = std::unordered_set<RelativePathPiece>();
   auto modifiedDirectories =
       getModifiedDirectoriesForMount(edenMount.get(), &toIgnore);
-  std::vector<RelativePath> expected = {};
+  std::vector<RelativePath> expected = {RelativePath(), RelativePath(".eden")};
   EXPECT_EQ(expected, modifiedDirectories);
 }
 
@@ -57,6 +57,7 @@ TEST(EdenMountHandler, getModifiedDirectoriesForMount) {
 
   std::vector<RelativePath> expected = {
       RelativePath(),
+      RelativePath(".eden"),
       RelativePath("a"),
       RelativePath("a/b"),
       RelativePath("a/b/c"),
@@ -74,7 +75,10 @@ TEST(EdenMountHandler, getModifiedDirectoriesForMount) {
   auto modifiedDirectoriesWithFilter =
       getModifiedDirectoriesForMount(edenMount.get(), &toIgnore);
   std::vector<RelativePath> expectedWithFilter = {
-      RelativePath(), RelativePath("animals"), RelativePath("animals/c"),
+      RelativePath(),
+      RelativePath(".eden"),
+      RelativePath("animals"),
+      RelativePath("animals/c"),
   };
   EXPECT_EQ(expectedWithFilter, modifiedDirectoriesWithFilter);
 }
