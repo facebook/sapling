@@ -514,6 +514,14 @@ def shownode(repo, ctx, templ, **args):
     """
     return ctx.hex()
 
+@templatekeyword('obsolete')
+def showobsolete(repo, ctx, templ, **args):
+    """String. Whether the changeset is obsolete.
+    """
+    if ctx.obsolete():
+        return 'obsolete'
+    return ''
+
 @templatekeyword('p1rev')
 def showp1rev(repo, ctx, templ, **args):
     """Integer. The repository-local revision number of the changeset's
