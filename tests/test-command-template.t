@@ -1108,11 +1108,11 @@ Error if no style:
 
   $ hg log --style notexist
   abort: style 'notexist' not found
-  (available styles: bisect, changelog, compact, default, phases, status, xml)
+  (available styles: bisect, changelog, compact, default, phases, show, status, xml)
   [255]
 
   $ hg log -T list
-  available styles: bisect, changelog, compact, default, phases, status, xml
+  available styles: bisect, changelog, compact, default, phases, show, status, xml
   abort: specify a template
   [255]
 
