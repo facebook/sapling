@@ -348,8 +348,8 @@ def has_hardlink():
 
 @check("hardlink-whitelisted", "hardlinks on whitelisted filesystems")
 def has_hardlink_whitelisted():
-    from mercurial import osutil, util
-    fstype = getattr(osutil, 'getfstype', lambda x: None)('.')
+    from mercurial import util
+    fstype = util.getfstype('.')
     return fstype in util._hardlinkfswhitelist
 
 @check("rmcwd", "can remove current working directory")
