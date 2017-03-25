@@ -1095,7 +1095,7 @@ static const char *describefstype(const struct statfs *pbuf)
 
 #if defined(HAVE_BSD_STATFS) || defined(HAVE_LINUX_STATFS)
 /* given a directory path, return filesystem type name (best-effort) */
-static PyObject *pygetfstype(PyObject *self, PyObject *args)
+static PyObject *getfstype(PyObject *self, PyObject *args)
 {
 	const char *path = NULL;
 	struct statfs buf;
@@ -1288,7 +1288,7 @@ static PyMethodDef methods[] = {
 	 "set process title (best-effort)\n"},
 #endif
 #if defined(HAVE_BSD_STATFS) || defined(HAVE_LINUX_STATFS)
-	{"getfstype", (PyCFunction)pygetfstype, METH_VARARGS,
+	{"getfstype", (PyCFunction)getfstype, METH_VARARGS,
 	 "get filesystem type (best-effort)\n"},
 #endif
 #endif /* ndef _WIN32 */
