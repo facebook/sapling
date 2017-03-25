@@ -1106,7 +1106,7 @@ static PyObject *getfstype(PyObject *self, PyObject *args)
 	memset(&buf, 0, sizeof(buf));
 	r = statfs(path, &buf);
 	if (r != 0)
-		Py_RETURN_NONE;
+		return PyErr_SetFromErrno(PyExc_OSError);
 	return Py_BuildValue("s", describefstype(&buf));
 }
 #endif /* defined(HAVE_LINUX_STATFS) || defined(HAVE_BSD_STATFS) */

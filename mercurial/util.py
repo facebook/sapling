@@ -1089,7 +1089,10 @@ def copyfile(src, dest, hardlink=False, copystat=False, checkambig=False):
     if hardlink:
         # Hardlinks are problematic on CIFS (issue4546), do not allow hardlinks
         # unless we are confident that dest is on a whitelisted filesystem.
-        fstype = getfstype(os.path.dirname(dest))
+        try:
+            fstype = getfstype(os.path.dirname(dest))
+        except OSError:
+            fstype = None
         if fstype not in _hardlinkfswhitelist:
             hardlink = False
     if hardlink:
@@ -1372,7 +1375,7 @@ def fspath(name, root):
 def getfstype(dirpath):
     '''Get the filesystem type name from a directory (best-effort)
 
-    Returns None if we are unsure, or errors like ENOENT, EPERM happen.
+    Returns None if we are unsure. Raises OSError on ENOENT, EPERM, etc.
     '''
     return getattr(osutil, 'getfstype', lambda x: None)(dirpath)
 
