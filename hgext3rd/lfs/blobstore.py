@@ -1,15 +1,16 @@
 from __future__ import absolute_import
 
 import errno
+import functools
 import json
 import os
 import re
 
 from mercurial import (
-    i18n,
-    revlog,
+    error,
     util,
 )
+from mercurial.i18n import _
 
 class StoreID(object):
     def __init__(self, oid, size):
@@ -69,7 +70,7 @@ class remote(object):
         user = ui.config('lfs', 'remoteuser', None)
         password = ui.config('lfs', 'remotepassword', None)
         assert url is not None
-        self.ui=ui
+        self.ui = ui
         self.baseurl = url
         if user is not None and password is not None:
             urlreq = util.urlreq
@@ -119,8 +120,9 @@ class remote(object):
 
         # Batch upload the blobs to git-lfs.
         if self.ui:
-            self.ui.write('lfs: mapping blobs to %s URLs\n' % action)
-        batchreq = urlreq.request(self.baseurl + 'objects/batch', data=requestdata)
+            self.ui.write(_('lfs: mapping blobs to %s URLs\n') % action)
+        batchreq = urlreq.request(self.baseurl + 'objects/batch',
+                                  data=requestdata)
         batchreq.add_header('Accept', 'application/vnd.git-lfs+json')
         batchreq.add_header('Content-Type', 'application/vnd.git-lfs+json')
         raw_response = urlreq.urlopen(batchreq)
@@ -129,7 +131,9 @@ class remote(object):
         topic = 'lfs: ' + action + 'ing blobs'
         runningsize = 0
         if total is None:
-            alttotal = reduce(lambda acc, x: acc + long(x.get('size', 0)), response.get('objects'), 0)
+            alttotal = functools.reduce(
+                lambda acc, x: acc + long(x.get('size', 0)),
+                response.get('objects'), 0)
             if alttotal > 0:
                 total = alttotal
         if self.ui:
@@ -179,7 +183,7 @@ class remote(object):
 
         if self.ui:
             self.ui.progress(topic, pos=None, total=total)
-            self.ui.write('lfs: %s completed\n' % action)
+            self.ui.write(_('lfs: %s completed\n') % action)
 
 class dummy(object):
     """Dummy store storing blobs to temp directory."""
@@ -187,7 +191,7 @@ class dummy(object):
     def __init__(self, ui):
         path = ui.config('lfs', 'remotepath', None)
         if path is None:
-            raise Exception('Dummy remotestore: must set "remotepath"')
+            raise error.ProgrammingError('dummystore: must set "remotepath"')
         try:
             os.makedirs(path)
         except OSError as exc:
@@ -234,23 +238,21 @@ class dummy(object):
         filename = os.path.join(self._storepath, storeid.oid)
         return filename
 
-class UnknownBlobstoreError(revlog.RevlogError):
+class UnknownBlobstoreError(error.RevlogError):
     def __init__(self):
-        message = 'attempt to access unknown blobstore'
-        revlog.RevlogError.__init__(self, i18n._(message))
+        message = _('attempt to access unknown blobstore')
+        super(UnknownBlobstoreError, self).__init__(message)
 
-class RequestFailedError(revlog.RevlogError):
+class RequestFailedError(error.RevlogError):
     def __init__(self, oid, action):
-        message = 'the requested file could be %sed: %s' % (action, oid)
-        revlog.RevlogError.__init__(self, i18n._(message))
+        message = _('the requested file could be %sed: %s') % (action, oid)
+        super(RequestFailedError, self).__init__(message)
 
-class UnavailableBatchOperationError(revlog.RevlogError):
+class UnavailableBatchOperationError(error.RevlogError):
     def __init__(self, oid, action):
         self.oid = oid
         self.action = action
 
-        message = 'unknown batch operation "%s"' % self.action
-        if self.oid:
-            message += ' for blob "%s"' % self.oid
-        revlog.RevlogError.__init__(self, i18n._(message))
-
+        message = (_('unknown batch operation "%s" for blob "%s"')
+                   % (self.action, self.oid or 'unknown'))
+        super(UnavailableBatchOperationError, self).__init__(message)

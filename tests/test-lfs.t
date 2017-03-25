@@ -5,7 +5,7 @@
   $ cd client
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > lfs=$TESTDIR/../hgext/lfs/
+  > lfs=$TESTDIR/../hgext3rd/lfs/
   > [lfs]
   > threshold=1000B
   > chunksize=1000B
@@ -63,7 +63,7 @@
   > [paths]
   > default = $TESTTMP/server
   > [extensions]
-  > lfs=$TESTDIR/../hgext/lfs/
+  > lfs=$TESTDIR/../hgext3rd/lfs/
   > [lfs]
   > threshold=1000B
   > chunksize=1000B
@@ -83,7 +83,7 @@
   (run 'hg update' to get a working copy)
 
 # Check the blobstore is not yet populated
-  $ [ -e .hg/cache/localblobstore ]
+  $ [ -f .hg/cache/localblobstore ]
   [1]
 
 # Update to the last revision containing the large file

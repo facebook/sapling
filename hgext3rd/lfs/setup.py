@@ -21,7 +21,7 @@ def threshold(ui, repo):
 def localblobstore(ui, repo):
     """Configure local blobstore"""
     storepath = ui.config('lfs', 'blobstore', 'cache/localblobstore')
-    localblobstore = blobstore.local(storepath, repo.opener)
+    localblobstore = blobstore.local(storepath, repo.vfs)
     repo.lfslocalblobstore = localblobstore
     repo.svfs.lfslocalblobstore = localblobstore
 
@@ -44,5 +44,3 @@ def remoteblobstore(ui, repo):
         raise error.ProgrammingError(message)
     repo.lfsremoteblobstore = knownblobstores[remotestore](ui)
     repo.svfs.lfsremoteblobstore = repo.lfsremoteblobstore
-
-

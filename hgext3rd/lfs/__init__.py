@@ -1,4 +1,22 @@
 # coding=UTF-8
+"""lfs - large file support
+
+Configs::
+
+    [lfs]
+    # remote endpoint
+    remoteurl = https://example.com/lfs
+    # user for HTTP auth
+    remoteuser = user
+    # password for HTTP auth
+    remotepassword = password
+    # blobstore type. "git-lfs", or "dummy" (test-only)
+    remotestore = git-lfs
+    # local filesystem path (only used by the dummy blobstore, test-only)
+    remotepath = /tmp/test
+    # location of the blob storage
+    blobstore = cache/localblobstore
+"""
 
 from __future__ import absolute_import
 

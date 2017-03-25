@@ -5,9 +5,9 @@ from __future__ import absolute_import
 from mercurial import (
     node,
     revlog,
+    util as hgutil,
 )
-
-from mercurial.util import bytecount
+from mercurial.i18n import _
 
 from . import (
     blobstore,
@@ -60,7 +60,7 @@ def writetostore(self, text):
         chunksize = len(text)
 
     while offset < len(text):
-        chunk = text[offset:offset+chunksize]  # Python handles overflows
+        chunk = text[offset:offset + chunksize]  # Python handles overflows
         chunklen = len(chunk)
         # compute sha256 for git-lfs
         sha = util.sha256(chunk)
@@ -109,7 +109,7 @@ def prepush(pushop):
     if threshold is not None:
         remoterepo.svfs.options['lfsthreshold'] = threshold
 
-    ui.write('lfs: computing set of blobs to upload\n')
+    ui.write(_('lfs: computing set of blobs to upload\n'))
     toupload = []
     totalsize = 0
     for i, n in enumerate(pushop.outgoing.missing):
@@ -144,16 +144,13 @@ def prepush(pushop):
                 else:
                     toupload.append(storeids)
             except pointer.PointerDeserializationError:
-                ui.write('lfs: could not deserialize pointer for file %s, revision %s\n' % (
-                    f,
-                    filectx.filerev(),
-                ))
+                msg = _('lfs: could not deserialize pointer for file %s, '
+                        'revision %s\n')
+                ui.write(msg % (f, filectx.filerev()))
                 raise
 
     remoteblob = blobstore.remote.get(repo.svfs)
-    ui.write('lfs: uploading the blobs to the remote (%s chunk(s), %s)\n' % (
-        len(toupload),
-        bytecount(totalsize),
-    ))
-    remoteblob.writebatch(toupload, blobstore.local.get(repo.svfs), total=totalsize)
-
+    msg = _('lfs: uploading the blobs to the remote (%s chunk(s), %s)\n')
+    ui.write(msg % (len(toupload), hgutil.bytecount(totalsize)))
+    remoteblob.writebatch(toupload, blobstore.local.get(repo.svfs),
+                          total=totalsize)

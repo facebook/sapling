@@ -4,19 +4,16 @@ from __future__ import absolute_import
 import re
 
 from mercurial import (
-    i18n,
-    revlog,
-    util,
+    error,
 )
+from mercurial.i18n import _
 
 from .blobstore import StoreID
 
-RevlogError = revlog.RevlogError
-
-class PointerDeserializationError(RevlogError):
+class PointerDeserializationError(error.RevlogError):
     def __init__(self):
-        message = 'invalid lfs pointer format detected'
-        RevlogError.__init__(self, i18n._(message))
+        message = _('invalid lfs pointer format detected')
+        super(PointerDeserializationError, self).__init__(message)
 
 class BasePointer(object):
 
