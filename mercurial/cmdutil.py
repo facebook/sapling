@@ -1155,6 +1155,8 @@ def diffordiffstat(ui, repo, diffopts, node1, node2, match,
 
 def _changesetlabels(ctx):
     labels = ['log.changeset', 'changeset.%s' % ctx.phasestr()]
+    if ctx.obsolete():
+        labels.append('changeset.obsolete')
     if ctx.troubled():
         labels.append('changeset.troubled')
         for trouble in ctx.troubles():
