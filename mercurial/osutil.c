@@ -1104,12 +1104,7 @@ static PyObject *pygetfstype(PyObject *self, PyObject *args)
 		return NULL;
 
 	memset(&buf, 0, sizeof(buf));
-	const char *type = getfstype(path, &buf);
-	if (type == NULL)
-		Py_RETURN_NONE;
-
-	PyObject *result = Py_BuildValue("s", type);
-	return result;
+	return Py_BuildValue("s", getfstype(path, &buf));
 }
 #endif /* defined(HAVE_LINUX_STATFS) || defined(HAVE_BSD_STATFS) */
 
