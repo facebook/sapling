@@ -794,18 +794,15 @@ static PyObject *setprocname(PyObject *self, PyObject *args)
 }
 #endif /* ndef SETPROCNAME_USE_NONE */
 
-#if defined(HAVE_BSD_STATFS) || defined(HAVE_LINUX_STATFS)
-/* given a directory path and a zero-initialized statfs buffer, return
- * filesystem type name (best-effort), or NULL. */
-const char *getfstype(const char *path, struct statfs *pbuf) {
-	int r;
-	r = statfs(path, pbuf);
-	if (r != 0)
-		return NULL;
 #if defined(HAVE_BSD_STATFS)
+static const char *describefstype(const struct statfs *pbuf)
+{
 	/* BSD or OSX provides a f_fstypename field */
 	return pbuf->f_fstypename;
+}
 #elif defined(HAVE_LINUX_STATFS)
+static const char *describefstype(const struct statfs *pbuf)
+{
 	/* Begin of Linux filesystems */
 #ifdef ADFS_SUPER_MAGIC
 	if (pbuf->f_type == ADFS_SUPER_MAGIC)
@@ -1092,19 +1089,25 @@ const char *getfstype(const char *path, struct statfs *pbuf) {
 		return "xfs";
 #endif
 	/* End of Linux filesystems */
-#endif /* def HAVE_LINUX_STATFS */
 	return NULL;
 }
+#endif /* def HAVE_LINUX_STATFS */
 
+#if defined(HAVE_BSD_STATFS) || defined(HAVE_LINUX_STATFS)
+/* given a directory path, return filesystem type name (best-effort) */
 static PyObject *pygetfstype(PyObject *self, PyObject *args)
 {
 	const char *path = NULL;
 	struct statfs buf;
+	int r;
 	if (!PyArg_ParseTuple(args, "s", &path))
 		return NULL;
 
 	memset(&buf, 0, sizeof(buf));
-	return Py_BuildValue("s", getfstype(path, &buf));
+	r = statfs(path, &buf);
+	if (r != 0)
+		Py_RETURN_NONE;
+	return Py_BuildValue("s", describefstype(&buf));
 }
 #endif /* defined(HAVE_LINUX_STATFS) || defined(HAVE_BSD_STATFS) */
 
