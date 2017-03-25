@@ -830,6 +830,13 @@ test the default cmdline template
   trouble:     unstable, bumped
   summary:     add babar
   
+  $ hg log -T default -r 'obsolete()'
+  changeset:   6:3de5eca88c00
+  parent:      3:6f9641995072
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     add obsolete_e
+  
 
 test summary output
 
