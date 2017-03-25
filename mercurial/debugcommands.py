@@ -360,7 +360,7 @@ def debugcolor(ui, repo, **opts):
 def _debugdisplaycolor(ui):
     ui = ui.copy()
     ui._styles.clear()
-    for effect in color._effects.keys():
+    for effect in color._activeeffects(ui).keys():
         ui._styles[effect] = effect
     if ui._terminfoparams:
         for k, v in ui.configitems('color'):

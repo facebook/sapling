@@ -238,7 +238,6 @@ def _modesetup(ui):
         if not w32effects:
             modewarn()
             return None
-        _effects.update(w32effects)
     elif realmode == 'ansi':
         ui._terminfoparams.clear()
     elif realmode == 'terminfo':
@@ -271,9 +270,17 @@ def configstyles(ui):
                             % (e, status))
             ui._styles[status] = ' '.join(good)
 
+def _activeeffects(ui):
+    '''Return the effects map for the color mode set on the ui.'''
+    if ui._colormode == 'win32':
+        return w32effects
+    elif ui._colormode is not None:
+        return _effects
+    return {}
+
 def valideffect(ui, effect):
     'Determine if the effect is valid or not.'
-    return ((not ui._terminfoparams and effect in _effects)
+    return ((not ui._terminfoparams and effect in _activeeffects(ui))
              or (effect in ui._terminfoparams
                  or effect[:-11] in ui._terminfoparams))
 
@@ -324,9 +331,10 @@ def _render_effects(ui, text, effects):
                         for effect in ['none'] + effects.split())
         stop = _effect_str(ui, 'none')
     else:
-        start = [str(_effects[e]) for e in ['none'] + effects.split()]
+        activeeffects = _activeeffects(ui)
+        start = [str(activeeffects[e]) for e in ['none'] + effects.split()]
         start = '\033[' + ';'.join(start) + 'm'
-        stop = '\033[' + str(_effects['none']) + 'm'
+        stop = '\033[' + str(activeeffects['none']) + 'm'
     return _mergeeffects(text, start, stop)
 
 _ansieffectre = re.compile(br'\x1b\[[0-9;]*m')
