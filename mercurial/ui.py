@@ -867,6 +867,12 @@ class ui(object):
             # auto-detection of things being formatted.
             self.setconfig('ui', 'formatted', wasformatted, 'pager')
             self.setconfig('ui', 'interactive', False, 'pager')
+
+            # If pagermode differs from color.mode, reconfigure color now that
+            # pageractive is set.
+            cm = self._colormode
+            if cm != self.config('color', 'pagermode', cm):
+                color.setup(self)
         else:
             # If the pager can't be spawned in dispatch when --pager=on is
             # given, don't try again when the command runs, to avoid a duplicate
