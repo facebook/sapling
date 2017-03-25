@@ -4834,6 +4834,8 @@ def summary(ui, repo, **opts):
                 ui.write(_(' (empty repository)'))
             else:
                 ui.write(_(' (no revision checked out)'))
+        if p.obsolete():
+            ui.write(_(' (obsolete)'))
         if p.troubled():
             ui.write(' ('
                      + ', '.join(ui.label(trouble, 'trouble.%s' % trouble)

@@ -851,6 +851,17 @@ test summary output
   phases: 4 draft
   unstable: 2 changesets
   bumped: 1 changesets
+  $ hg up -r 'obsolete()'
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg summary
+  parent: 6:3de5eca88c00  (obsolete)
+   add obsolete_e
+  branch: default
+  commit: (clean)
+  update: 3 new changesets (update)
+  phases: 4 draft
+  unstable: 2 changesets
+  bumped: 1 changesets
 
 Test incoming/outcoming with changesets obsoleted remotely, known locally
 ===============================================================================
