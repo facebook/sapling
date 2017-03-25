@@ -145,6 +145,10 @@ pre.sourcelines.stripes > span:target {
 	background-color: #bfdfff;
 }
 
+.description {
+    font-family: monospace;
+}
+
 /* Graph */
 div#wrapper {
 	position: relative;
