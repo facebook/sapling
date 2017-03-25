@@ -51,8 +51,6 @@ class EdenStats {
   Histogram removexattr{createHistogram()};
   Histogram access{createHistogram()};
   Histogram create{createHistogram()};
-  Histogram getlk{createHistogram()};
-  Histogram setlk{createHistogram()};
   Histogram bmap{createHistogram()};
   Histogram ioctl{createHistogram()};
   Histogram poll{createHistogram()};

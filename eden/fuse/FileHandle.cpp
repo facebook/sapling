@@ -19,17 +19,6 @@ bool FileHandle::usesDirectIO() const { return false; }
 bool FileHandle::preserveCache() const { return false; }
 bool FileHandle::isSeekable() const { return true; }
 
-folly::Future<struct flock> FileHandle::getlk(struct flock lock,
-                                              uint64_t lock_owner) {
-    FUSELL_NOT_IMPL();
-}
-
-folly::Future<folly::Unit> FileHandle::setlk(struct flock lock,
-                                             bool sleep,
-                                             uint64_t lock_owner) {
-    FUSELL_NOT_IMPL();
-}
-
 }
 }
 }

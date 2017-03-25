@@ -806,38 +806,6 @@ static void disp_create(fuse_req_t req,
           }));
 }
 
-static void disp_getlk(fuse_req_t req,
-                       fuse_ino_t ino,
-                       struct fuse_file_info* fi,
-                       struct flock* lock) {
-  auto& request = RequestData::create(req);
-  auto* dispatcher = request.getDispatcher();
-  request.setRequestFuture(
-      request.startRequest(dispatcher->getStats().getlk)
-          .then([ =, &request, fi = *fi ] {
-            auto fh = dispatcher->getFileHandle(fi.fh);
-            return fh->getlk(*lock, fi.lock_owner);
-          })
-          .then([](struct flock lock) { RequestData::get().replyLock(lock); }));
-}
-
-static void disp_setlk(fuse_req_t req,
-                       fuse_ino_t ino,
-                       struct fuse_file_info* fi,
-                       struct flock* lock,
-                       int sleep) {
-  auto& request = RequestData::create(req);
-  auto* dispatcher = request.getDispatcher();
-  request.setRequestFuture(
-      request.startRequest(dispatcher->getStats().setlk)
-          .then([ =, &request, fi = *fi ] {
-            auto fh = dispatcher->getFileHandle(fi.fh);
-
-            return fh->setlk(*lock, sleep, fi.lock_owner);
-          })
-          .then([]() { RequestData::get().replyError(0); }));
-}
-
 folly::Future<uint64_t> Dispatcher::bmap(fuse_ino_t ino,
                                          size_t blocksize,
                                          uint64_t idx) {
@@ -952,8 +920,9 @@ static const fuse_lowlevel_ops dispatcher_ops = {
     .removexattr = disp_removexattr,
     .access = disp_access,
     .create = disp_create,
-    .getlk = disp_getlk,
-    .setlk = disp_setlk,
+    // Leave it to the kernel to handle locking
+    .getlk = nullptr,
+    .setlk = nullptr,
     .bmap = disp_bmap,
 #if FUSE_MAJOR_VERSION == 2 && FUSE_MINOR_VERSION >= 8
     .ioctl = disp_ioctl,
