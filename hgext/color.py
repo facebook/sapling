@@ -7,7 +7,7 @@
 
 '''enable Mercurial color mode (DEPRECATED)
 
-This extensions enable Mercurial color mode. The feature is now directly
+This extension enables Mercurial color mode. The feature is now directly
 available in Mercurial core. You can access it using::
 
   [ui]
