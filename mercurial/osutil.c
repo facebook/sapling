@@ -815,6 +815,10 @@ const char *getfstype(const char *path, struct statfs *pbuf) {
 	if (pbuf->f_type == AFFS_SUPER_MAGIC)
 		return "affs";
 #endif
+#ifdef AUTOFS_SUPER_MAGIC
+	if (pbuf->f_type == AUTOFS_SUPER_MAGIC)
+		return "autofs";
+#endif
 #ifdef BDEVFS_MAGIC
 	if (pbuf->f_type == BDEVFS_MAGIC)
 		return "bdevfs";
@@ -894,6 +898,10 @@ const char *getfstype(const char *path, struct statfs *pbuf) {
 #ifdef EXT4_SUPER_MAGIC
 	if (pbuf->f_type == EXT4_SUPER_MAGIC)
 		return "ext4";
+#endif
+#ifdef F2FS_SUPER_MAGIC
+	if (pbuf->f_type == F2FS_SUPER_MAGIC)
+		return "f2fs";
 #endif
 #ifdef FUSE_SUPER_MAGIC
 	if (pbuf->f_type == FUSE_SUPER_MAGIC)
@@ -975,6 +983,10 @@ const char *getfstype(const char *path, struct statfs *pbuf) {
 	if (pbuf->f_type == OPENPROM_SUPER_MAGIC)
 		return "openprom";
 #endif
+#ifdef OVERLAYFS_SUPER_MAGIC
+	if (pbuf->f_type == OVERLAYFS_SUPER_MAGIC)
+		return "overlay";
+#endif
 #ifdef PIPEFS_MAGIC
 	if (pbuf->f_type == PIPEFS_MAGIC)
 		return "pipefs";
@@ -1006,6 +1018,10 @@ const char *getfstype(const char *path, struct statfs *pbuf) {
 #ifdef ROMFS_MAGIC
 	if (pbuf->f_type == ROMFS_MAGIC)
 		return "romfs";
+#endif
+#ifdef SECURITYFS_MAGIC
+	if (pbuf->f_type == SECURITYFS_MAGIC)
+		return "securityfs";
 #endif
 #ifdef SELINUX_MAGIC
 	if (pbuf->f_type == SELINUX_MAGIC)
