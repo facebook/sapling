@@ -61,8 +61,8 @@ class mixedfilemodewrapper(object):
     OPWRITE = 2
 
     def __init__(self, fp):
-        object.__setattr__(self, '_fp', fp)
-        object.__setattr__(self, '_lastop', 0)
+        object.__setattr__(self, r'_fp', fp)
+        object.__setattr__(self, r'_lastop', 0)
 
     def __getattr__(self, name):
         return getattr(self._fp, name)
@@ -74,42 +74,42 @@ class mixedfilemodewrapper(object):
         self._fp.seek(0, os.SEEK_CUR)
 
     def seek(self, *args, **kwargs):
-        object.__setattr__(self, '_lastop', self.OPNONE)
+        object.__setattr__(self, r'_lastop', self.OPNONE)
         return self._fp.seek(*args, **kwargs)
 
     def write(self, d):
         if self._lastop == self.OPREAD:
             self._noopseek()
 
-        object.__setattr__(self, '_lastop', self.OPWRITE)
+        object.__setattr__(self, r'_lastop', self.OPWRITE)
         return self._fp.write(d)
 
     def writelines(self, *args, **kwargs):
         if self._lastop == self.OPREAD:
             self._noopeseek()
 
-        object.__setattr__(self, '_lastop', self.OPWRITE)
+        object.__setattr__(self, r'_lastop', self.OPWRITE)
         return self._fp.writelines(*args, **kwargs)
 
     def read(self, *args, **kwargs):
         if self._lastop == self.OPWRITE:
             self._noopseek()
 
-        object.__setattr__(self, '_lastop', self.OPREAD)
+        object.__setattr__(self, r'_lastop', self.OPREAD)
         return self._fp.read(*args, **kwargs)
 
     def readline(self, *args, **kwargs):
         if self._lastop == self.OPWRITE:
             self._noopseek()
 
-        object.__setattr__(self, '_lastop', self.OPREAD)
+        object.__setattr__(self, r'_lastop', self.OPREAD)
         return self._fp.readline(*args, **kwargs)
 
     def readlines(self, *args, **kwargs):
         if self._lastop == self.OPWRITE:
             self._noopseek()
 
-        object.__setattr__(self, '_lastop', self.OPREAD)
+        object.__setattr__(self, r'_lastop', self.OPREAD)
         return self._fp.readlines(*args, **kwargs)
 
 def posixfile(name, mode='r', buffering=-1):

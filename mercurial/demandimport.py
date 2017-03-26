@@ -76,9 +76,9 @@ class _demandmod(object):
         else:
             head = name
             after = []
-        object.__setattr__(self, "_data",
+        object.__setattr__(self, r"_data",
                            (head, globals, locals, after, level, set()))
-        object.__setattr__(self, "_module", None)
+        object.__setattr__(self, r"_module", None)
     def _extend(self, name):
         """add to the list of submodules to load"""
         self._data[3].append(name)
@@ -138,7 +138,7 @@ class _demandmod(object):
                 if modref and getattr(modref, head, None) == self:
                     setattr(modref, head, mod)
 
-            object.__setattr__(self, "_module", mod)
+            object.__setattr__(self, r"_module", mod)
 
     def __repr__(self):
         if self._module:

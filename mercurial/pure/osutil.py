@@ -342,8 +342,8 @@ else:
             # unfortunately, f.name is '<fdopen>' at this point -- so we store
             # the name on this wrapper. We cannot just assign to f.name,
             # because that attribute is read-only.
-            object.__setattr__(self, 'name', name)
-            object.__setattr__(self, '_file', f)
+            object.__setattr__(self, r'name', name)
+            object.__setattr__(self, r'_file', f)
 
         def __iter__(self):
             return self._file
