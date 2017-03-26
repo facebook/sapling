@@ -123,19 +123,12 @@ Test bytes-ness of policy.policy with HGMODULEPOLICY
   $ $PYTHON3 $HGBIN commit --message 'commit performed in Python 3'
   $ $PYTHON3 $HGBIN status
 
-TODO: bdiff is broken on Python 3 so we can't do a second commit yet,
-when that works remove this rollback command.
-  $ hg rollback
-  repository tip rolled back to revision -1 (undo commit)
-  working directory now based on revision -1
-
   $ mkdir A
   $ echo "This is the file 'mu'." > A/mu
   $ $PYTHON3 $HGBIN addremove
   adding A/mu
   $ $PYTHON3 $HGBIN status
   A A/mu
-  A iota
   $ HGEDITOR='echo message > ' $PYTHON3 $HGBIN commit
   $ $PYTHON3 $HGBIN status
 
@@ -145,11 +138,16 @@ Prove the repo is valid using the Python 2 `hg`:
   checking manifests
   crosschecking files in changesets and manifests
   checking files
-  2 files, 1 changesets, 2 total revisions
+  2 files, 2 changesets, 2 total revisions
   $ hg log
-  changeset:   0:e825505ba339
+  changeset:   1:e1e9167203d4
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     message
+  
+  changeset:   0:71c96e924262
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     commit performed in Python 3
   
