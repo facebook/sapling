@@ -315,13 +315,15 @@ class mergestate(object):
     @util.propertycache
     def localctx(self):
         if self._local is None:
-            raise RuntimeError("localctx accessed but self._local isn't set")
+            msg = "localctx accessed but self._local isn't set"
+            raise error.ProgrammingError(msg)
         return self._repo[self._local]
 
     @util.propertycache
     def otherctx(self):
         if self._other is None:
-            raise RuntimeError("otherctx accessed but self._other isn't set")
+            msg = "otherctx accessed but self._other isn't set"
+            raise error.ProgrammingError(msg)
         return self._repo[self._other]
 
     def active(self):
