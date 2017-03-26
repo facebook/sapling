@@ -1616,8 +1616,10 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
 
         origsigwinchhandler = signal.signal(signal.SIGWINCH,
                                             self.sigwinchhandler)
-        return self._main(stdscr)
-        signal.signal(signal.SIGWINCH, origsigwinchhandler)
+        try:
+            return self._main(stdscr)
+        finally:
+            signal.signal(signal.SIGWINCH, origsigwinchhandler)
 
     def _main(self, stdscr):
         self.stdscr = stdscr
