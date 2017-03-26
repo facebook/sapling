@@ -402,7 +402,7 @@ class cmdalias(object):
 
     @property
     def args(self):
-        args = map(util.expandpath, self.givenargs)
+        args = pycompat.maplist(util.expandpath, self.givenargs)
         return aliasargs(self.fn, args)
 
     def __getattr__(self, name):
