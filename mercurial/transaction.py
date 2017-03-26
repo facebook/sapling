@@ -226,7 +226,7 @@ class transaction(object):
         """
         if self._queue:
             msg = 'cannot use transaction.addbackup inside "group"'
-            raise RuntimeError(msg)
+            raise error.ProgrammingError(msg)
 
         if file in self.map or file in self._backupmap:
             return
