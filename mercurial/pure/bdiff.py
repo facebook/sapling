@@ -54,12 +54,9 @@ def _normalizeblocks(a, b, blocks):
     r.append(prev)
     return r
 
-def _tostring(c):
-    return str(c)
-
 def bdiff(a, b):
-    a = _tostring(a).splitlines(True)
-    b = _tostring(b).splitlines(True)
+    a = bytes(a).splitlines(True)
+    b = bytes(b).splitlines(True)
 
     if not a:
         s = "".join(b)
