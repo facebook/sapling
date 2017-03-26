@@ -120,7 +120,7 @@ class appender(object):
         return ret
 
     def write(self, s):
-        self.data.append(str(s))
+        self.data.append(bytes(s))
         self.offset += len(s)
         self._end += len(s)
 
