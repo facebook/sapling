@@ -855,7 +855,7 @@ class bundlepart(object):
         self._seenparams = set()
         for pname, __ in self._mandatoryparams + self._advisoryparams:
             if pname in self._seenparams:
-                raise RuntimeError('duplicated params: %s' % pname)
+                raise error.ProgrammingError('duplicated params: %s' % pname)
             self._seenparams.add(pname)
         # status of the part's generation:
         # - None: not started,
@@ -913,7 +913,7 @@ class bundlepart(object):
     # methods used to generates the bundle2 stream
     def getchunks(self, ui):
         if self._generated is not None:
-            raise RuntimeError('part can only be consumed once')
+            raise error.ProgrammingError('part can only be consumed once')
         self._generated = False
 
         if ui.debugflag:
@@ -1082,7 +1082,7 @@ class interruptoperation(object):
 
     @property
     def repo(self):
-        raise RuntimeError('no repo access from stream interruption')
+        raise error.ProgrammingError('no repo access from stream interruption')
 
     def gettransaction(self):
         raise TransactionUnavailable('no repo access from stream interruption')
