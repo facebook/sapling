@@ -650,10 +650,10 @@ def _msearch(m, s, lo=0, hi=None):
     that string.  If start == end the string was not found and
     they indicate the proper sorted insertion point.
 
-    m should be a buffer or a string
-    s is a string'''
+    m should be a buffer, a memoryview or a byte string.
+    s is a byte string'''
     def advance(i, c):
-        while i < lenm and m[i] != c:
+        while i < lenm and m[i:i + 1] != c:
             i += 1
         return i
     if not s:
@@ -664,10 +664,10 @@ def _msearch(m, s, lo=0, hi=None):
     while lo < hi:
         mid = (lo + hi) // 2
         start = mid
-        while start > 0 and m[start - 1] != '\n':
+        while start > 0 and m[start - 1:start] != '\n':
             start -= 1
         end = advance(start, '\0')
-        if m[start:end] < s:
+        if bytes(m[start:end]) < s:
             # we know that after the null there are 40 bytes of sha1
             # this translates to the bisect lo = mid + 1
             lo = advance(end + 40, '\n') + 1
