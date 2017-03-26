@@ -2213,7 +2213,7 @@ def difffeatureopts(ui, opts=None, untrusted=False, section='diff', git=False,
         buildopts['nobinary'] = get('nobinary', forceplain=False)
         buildopts['noprefix'] = get('noprefix', forceplain=False)
 
-    return mdiff.diffopts(**buildopts)
+    return mdiff.diffopts(**pycompat.strkwargs(buildopts))
 
 def diff(repo, node1=None, node2=None, match=None, changes=None,
          opts=None, losedatafn=None, prefix='', relroot='', copy=None):

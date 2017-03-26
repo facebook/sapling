@@ -17,6 +17,7 @@ from . import (
     bdiff,
     error,
     mpatch,
+    pycompat,
     util,
 )
 
@@ -61,6 +62,7 @@ class diffopts(object):
         }
 
     def __init__(self, **opts):
+        opts = pycompat.byteskwargs(opts)
         for k in self.defaults.keys():
             v = opts.get(k)
             if v is None:
