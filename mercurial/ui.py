@@ -856,15 +856,22 @@ class ui(object):
 
         self.debug('starting pager for command %r\n' % command)
         self.flush()
-        self.pageractive = True
-        # Preserve the formatted-ness of the UI. This is important
-        # because we mess with stdout, which might confuse
-        # auto-detection of things being formatted.
-        self.setconfig('ui', 'formatted', self.formatted(), 'pager')
-        self.setconfig('ui', 'interactive', False, 'pager')
+
+        wasformatted = self.formatted()
         if util.safehasattr(signal, "SIGPIPE"):
             signal.signal(signal.SIGPIPE, _catchterm)
-        self._runpager(pagercmd)
+        if self._runpager(pagercmd):
+            self.pageractive = True
+            # Preserve the formatted-ness of the UI. This is important
+            # because we mess with stdout, which might confuse
+            # auto-detection of things being formatted.
+            self.setconfig('ui', 'formatted', wasformatted, 'pager')
+            self.setconfig('ui', 'interactive', False, 'pager')
+        else:
+            # If the pager can't be spawned in dispatch when --pager=on is
+            # given, don't try again when the command runs, to avoid a duplicate
+            # warning about a missing pager command.
+            self.disablepager()
 
     def _runpager(self, command):
         """Actually start the pager and set up file descriptors.
@@ -874,7 +881,7 @@ class ui(object):
         """
         if command == 'cat':
             # Save ourselves some work.
-            return
+            return False
         # If the command doesn't contain any of these characters, we
         # assume it's a binary and exec it directly. This means for
         # simple pager command configurations, we can degrade
@@ -891,7 +898,7 @@ class ui(object):
             if not fullcmd:
                 self.warn(_("missing pager command '%s', skipping pager\n")
                           % command)
-                return
+                return False
 
             command = fullcmd
 
@@ -904,7 +911,7 @@ class ui(object):
             if e.errno == errno.ENOENT and not shell:
                 self.warn(_("missing pager command '%s', skipping pager\n")
                           % command)
-                return
+                return False
             raise
 
         # back up original file descriptors
@@ -924,6 +931,8 @@ class ui(object):
             os.dup2(stderrfd, util.stderr.fileno())
             pager.stdin.close()
             pager.wait()
+
+        return True
 
     def interface(self, feature):
         """what interface to use for interactive console features?
