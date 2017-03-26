@@ -586,7 +586,7 @@ def _quote(s):
     >>> _quote(1)
     "'1'"
     """
-    return "'%s'" % util.escapestr('%s' % s)
+    return "'%s'" % util.escapestr(pycompat.bytestr(s))
 
 def formatspec(expr, *args):
     '''
