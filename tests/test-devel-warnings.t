@@ -106,11 +106,10 @@
   $ echo a > a
   $ hg add a
   $ hg commit -m a
-  $ hg stripintr
+  $ hg stripintr 2>&1 | egrep -v '^(\*\*|  )'
   saved backup bundle to $TESTTMP/lock-checker/.hg/strip-backup/*-backup.hg (glob)
-  abort: programming error: cannot strip from inside a transaction
-  (contact your extension maintainer)
-  [255]
+  Traceback (most recent call last):
+  mercurial.error.ProgrammingError: cannot strip from inside a transaction
 
   $ hg log -r "oldstyle()" -T '{rev}\n'
   devel-warn: revset "oldstyle" uses list instead of smartset
