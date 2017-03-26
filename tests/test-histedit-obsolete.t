@@ -503,3 +503,74 @@ Note that there is a few reordering in this series for more extensive test
   abort: cannot edit history that contains merges
   [255]
   $ cd ..
+
+Check abort behavior
+-------------------------------------------
+
+We checks that abort properly clean the repository so the same histedit can be
+attempted later.
+
+  $ cp -R base abort
+  $ cd abort
+  $ hg histedit -r 'b449568bf7fc' --commands - << EOF
+  > pick b449568bf7fc 13 f
+  > pick 7395e1ff83bd 15 h
+  > pick 6b70183d2492 14 g
+  > pick b605fb7503f2 16 i
+  > roll 3a6c53ee7f3d 17 j
+  > edit ee118ab9fa44 18 k
+  > EOF
+  Editing (ee118ab9fa44), you may commit or record as needed now.
+  (hg histedit --continue to resume)
+  [1]
+
+  $ hg histedit --abort
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  saved backup bundle to $TESTTMP/abort/.hg/strip-backup/4dc06258baa6-dff4ef05-backup.hg (glob)
+
+  $ hg log -G
+  @  18:ee118ab9fa44 (secret) k
+  |
+  o  17:3a6c53ee7f3d (secret) j
+  |
+  o  16:b605fb7503f2 (secret) i
+  |
+  o  15:7395e1ff83bd (draft) h
+  |
+  o  14:6b70183d2492 (draft) g
+  |
+  o  13:b449568bf7fc (draft) f
+  |
+  o  12:40db8afa467b (public) c
+  |
+  o  0:cb9a9f314b8b (public) a
+  
+  $ hg histedit -r 'b449568bf7fc' --commands - << EOF
+  > pick b449568bf7fc 13 f
+  > pick 7395e1ff83bd 15 h
+  > pick 6b70183d2492 14 g
+  > pick b605fb7503f2 16 i
+  > pick 3a6c53ee7f3d 17 j
+  > edit ee118ab9fa44 18 k
+  > EOF
+  Editing (ee118ab9fa44), you may commit or record as needed now.
+  (hg histedit --continue to resume)
+  [1]
+  $ hg histedit --continue
+  $ hg log -G
+  @  23:175d6b286a22 (secret) k
+  |
+  o  22:44ca09d59ae4 (secret) j
+  |
+  o  21:31747692a644 (secret) i
+  |
+  o  20:9985cd4f21fa (draft) g
+  |
+  o  19:4dc06258baa6 (draft) h
+  |
+  o  13:b449568bf7fc (draft) f
+  |
+  o  12:40db8afa467b (public) c
+  |
+  o  0:cb9a9f314b8b (public) a
+  
