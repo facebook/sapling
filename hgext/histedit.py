@@ -1209,8 +1209,8 @@ def _aborthistedit(ui, repo, state):
         if repo.unfiltered().revs('parents() and (%n  or %ln::)',
                                 state.parentctxnode, leafs | tmpnodes):
             hg.clean(repo, state.topmost, show_stats=True, quietempty=True)
-        safecleanupnode(ui, repo, 'created', tmpnodes)
-        safecleanupnode(ui, repo, 'temp', leafs)
+        cleanupnode(ui, repo, 'created', tmpnodes)
+        cleanupnode(ui, repo, 'temp', leafs)
     except Exception:
         if state.inprogress():
             ui.warn(_('warning: encountered an exception during histedit '
