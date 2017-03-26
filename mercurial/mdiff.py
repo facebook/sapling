@@ -229,7 +229,7 @@ def unidiff(a, ad, b, bd, fn1, fn2, opts=defaultopts):
 
     def checknonewline(lines):
         for text in lines:
-            if text[-1] != '\n':
+            if text[-1:] != '\n':
                 text += "\n\ No newline at end of file\n"
             yield text
 

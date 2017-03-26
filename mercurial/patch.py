@@ -737,7 +737,7 @@ class patchfile(object):
         for x in self.rej:
             for l in x.hunk:
                 lines.append(l)
-                if l[-1] != '\n':
+                if l[-1:] != '\n':
                     lines.append("\n\ No newline at end of file\n")
         self.backend.writerej(self.fname, len(self.rej), self.hunks, lines)
 
