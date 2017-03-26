@@ -1488,7 +1488,7 @@ class revlog(object):
             # The revlog compressor added the header in the returned data.
             return '', compressed
 
-        if data[0] == '\0':
+        if data[0:1] == '\0':
             return '', data
         return 'u', data
 
