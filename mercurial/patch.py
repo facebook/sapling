@@ -42,8 +42,8 @@ from . import (
 )
 stringio = util.stringio
 
-gitre = re.compile('diff --git a/(.*) b/(.*)')
-tabsplitter = re.compile(r'(\t+|[^\t]+)')
+gitre = re.compile(br'diff --git a/(.*) b/(.*)')
+tabsplitter = re.compile(br'(\t+|[^\t]+)')
 
 class PatchError(Exception):
     pass
