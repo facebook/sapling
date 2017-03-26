@@ -1616,6 +1616,10 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
 
         origsigwinchhandler = signal.signal(signal.SIGWINCH,
                                             self.sigwinchhandler)
+        return self._main(stdscr)
+        signal.signal(signal.SIGWINCH, origsigwinchhandler)
+
+    def _main(self, stdscr):
         self.stdscr = stdscr
         # error during initialization, cannot be printed in the curses
         # interface, it should be printed by the calling code
@@ -1667,4 +1671,3 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
                 keypressed = "foobar"
             if self.handlekeypressed(keypressed):
                 break
-        signal.signal(signal.SIGWINCH, origsigwinchhandler)
