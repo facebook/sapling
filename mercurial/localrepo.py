@@ -650,35 +650,8 @@ class localrepository(object):
         return hook.hook(self.ui, self, name, throw, **args)
 
     def tag(self, names, node, message, local, user, date, editor=False):
-        '''tag a revision with one or more symbolic names.
-
-        names is a list of strings or, when adding a single tag, names may be a
-        string.
-
-        if local is True, the tags are stored in a per-repository file.
-        otherwise, they are stored in the .hgtags file, and a new
-        changeset is committed with the change.
-
-        keyword arguments:
-
-        local: whether to store tags in non-version-controlled file
-        (default False)
-
-        message: commit message to use if committing
-
-        user: name of user to use if committing
-
-        date: date tuple to use if committing'''
-
-        if not local:
-            m = matchmod.exact(self.root, '', ['.hgtags'])
-            if any(self.status(match=m, unknown=True, ignored=True)):
-                raise error.Abort(_('working copy of .hgtags is changed'),
-                                 hint=_('please commit .hgtags manually'))
-
-        self.tags() # instantiate the cache
-        tagsmod._tag(self.unfiltered(), names, node, message, local, user, date,
-                     editor=editor)
+        tagsmod.tag(self, names, node, message, local, user, date,
+                    editor=editor)
 
     @filteredpropertycache
     def _tagscache(self):
