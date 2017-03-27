@@ -1326,9 +1326,7 @@ class ui(object):
         else:
             editor = 'vi'
         return (encoding.environ.get("HGEDITOR") or
-                self.config("ui", "editor") or
-                encoding.environ.get("VISUAL") or
-                encoding.environ.get("EDITOR", editor))
+                self.config("ui", "editor", editor))
 
     @util.propertycache
     def _progbar(self):
