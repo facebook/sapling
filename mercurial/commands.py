@@ -43,6 +43,7 @@ from . import (
     patch,
     phases,
     pycompat,
+    rcutil,
     revsetlang,
     scmutil,
     server,
@@ -1776,9 +1777,9 @@ def config(ui, repo, *values, **opts):
                 raise error.Abort(_("can't use --local outside a repository"))
             paths = [repo.vfs.join('hgrc')]
         elif opts.get('global'):
-            paths = scmutil.systemrcpath()
+            paths = rcutil.systemrcpath()
         else:
-            paths = scmutil.userrcpath()
+            paths = rcutil.userrcpath()
 
         for f in paths:
             if os.path.exists(f):
@@ -1803,7 +1804,7 @@ def config(ui, repo, *values, **opts):
         return
     ui.pager('config')
     fm = ui.formatter('config', opts)
-    for f in scmutil.rcpath():
+    for f in rcutil.rcpath():
         ui.debug('read config from: %s\n' % f)
     untrusted = bool(opts.get('untrusted'))
     if values:

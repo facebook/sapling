@@ -33,6 +33,7 @@ from . import (
     formatter,
     progress,
     pycompat,
+    rcutil,
     scmutil,
     util,
 )
@@ -211,7 +212,7 @@ class ui(object):
         """Create a ui and load global and user configs"""
         u = cls()
         # we always trust global config files
-        for f in scmutil.rcpath():
+        for f in rcutil.rcpath():
             u.readconfig(f, trust=True)
         return u
 
