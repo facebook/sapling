@@ -32,6 +32,28 @@ def _expandrcpath(path):
         return [join(p, f) for f, k in osutil.listdir(p) if f.endswith('.rc')]
     return [p]
 
+def envrcitems(env=None):
+    '''Return [(section, name, value, source)] config items.
+
+    The config items are extracted from environment variables specified by env,
+    used to override systemrc, but not userrc.
+
+    If env is not provided, encoding.environ will be used.
+    '''
+    if env is None:
+        env = encoding.environ
+    checklist = [
+        ('EDITOR', 'ui', 'editor'),
+        ('VISUAL', 'ui', 'editor'),
+        ('PAGER', 'pager', 'pager'),
+    ]
+    result = []
+    for envname, section, configname in checklist:
+        if envname not in env:
+            continue
+        result.append((section, configname, env[envname], '$%s' % envname))
+    return result
+
 def defaultrcpath():
     '''return rc paths in default.d'''
     path = []
