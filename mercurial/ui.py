@@ -211,10 +211,20 @@ class ui(object):
     def load(cls):
         """Create a ui and load global and user configs"""
         u = cls()
-        # we always trust global config files
+        # we always trust global config files and environment variables
         for t, f in rcutil.rccomponents():
             if t == 'path':
                 u.readconfig(f, trust=True)
+            elif t == 'items':
+                sections = set()
+                for section, name, value, source in f:
+                    # do not set u._ocfg
+                    # XXX clean this up once immutable config object is a thing
+                    u._tcfg.set(section, name, value, source)
+                    u._ucfg.set(section, name, value, source)
+                    sections.add(section)
+                for section in sections:
+                    u.fixconfig(section=section)
             else:
                 raise error.ProgrammingError('unknown rctype: %s' % t)
         return u

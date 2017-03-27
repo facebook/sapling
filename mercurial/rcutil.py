@@ -76,15 +76,22 @@ def rccomponents():
     and is the config file path. if type is 'items', obj is a list of (section,
     name, value, source) that should fill the config directly.
     '''
+    envrc = ('items', envrcitems())
+
     global _rccomponents
     if _rccomponents is None:
         if 'HGRCPATH' in encoding.environ:
-            _rccomponents = []
+            # assume HGRCPATH is all about user configs so environments can be
+            # overridden.
+            _rccomponents = [envrc]
             for p in encoding.environ['HGRCPATH'].split(pycompat.ospathsep):
                 if not p:
                     continue
                 _rccomponents.extend(('path', p) for p in _expandrcpath(p))
         else:
-            paths = defaultrcpath() + systemrcpath() + userrcpath()
+            paths = defaultrcpath() + systemrcpath()
             _rccomponents = [('path', os.path.normpath(p)) for p in paths]
+            _rccomponents.append(envrc)
+            paths = userrcpath()
+            _rccomponents.extend(('path', os.path.normpath(p)) for p in paths)
     return _rccomponents

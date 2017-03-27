@@ -1,0 +1,6 @@
+pager.pager=p0 # $TESTTMP/sysrc:4
+ui.editor=e1 # $TESTTMP/userrc:2
+
+pager.pager=p2 # $PAGER
+ui.editor=e1 # $TESTTMP/userrc:2
+

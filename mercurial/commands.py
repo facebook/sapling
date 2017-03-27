@@ -1807,6 +1807,8 @@ def config(ui, repo, *values, **opts):
     for t, f in rcutil.rccomponents():
         if t == 'path':
             ui.debug('read config from: %s\n' % f)
+        elif t == 'items':
+            pass
         else:
             raise error.ProgrammingError('unknown rctype: %s' % t)
     untrusted = bool(opts.get('untrusted'))
