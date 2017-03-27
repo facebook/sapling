@@ -1397,6 +1397,7 @@ def mergeupdate(orig, repo, node, branchmerge, force,
                                       [], False, True, False)
         oldclean = set(s.clean)
         pctx = repo['.']
+        dctx = repo[node]
         for lfile in unsure + s.modified:
             lfileabs = repo.wvfs.join(lfile)
             if not repo.wvfs.exists(lfileabs):
@@ -1409,7 +1410,12 @@ def mergeupdate(orig, repo, node, branchmerge, force,
                 lfhash == lfutil.readstandin(repo, lfile, pctx)):
                 oldclean.add(lfile)
         for lfile in s.added:
-            lfutil.updatestandin(repo, lfutil.standin(lfile))
+            fstandin = lfutil.standin(lfile)
+            if fstandin not in dctx:
+                # in this case, content of standin file is meaningless
+                # (in dctx, lfile is unknown, or normal file)
+                continue
+            lfutil.updatestandin(repo, fstandin)
         # mark all clean largefiles as dirty, just in case the update gets
         # interrupted before largefiles and lfdirstate are synchronized
         for lfile in oldclean:
