@@ -24,17 +24,14 @@ else:
 systemrcpath = scmplatform.systemrcpath
 userrcpath = scmplatform.userrcpath
 
-def osrcpath():
-    '''return default os-specific hgrc search path'''
+def defaultrcpath():
+    '''return rc paths in default.d'''
     path = []
     defaultpath = os.path.join(util.datapath, 'default.d')
     if os.path.isdir(defaultpath):
         for f, kind in osutil.listdir(defaultpath):
             if f.endswith('.rc'):
                 path.append(os.path.join(defaultpath, f))
-    path.extend(systemrcpath())
-    path.extend(userrcpath())
-    path = [os.path.normpath(f) for f in path]
     return path
 
 _rcpath = None
@@ -60,5 +57,6 @@ def rcpath():
                 else:
                     _rcpath.append(p)
         else:
-            _rcpath = osrcpath()
+            paths = defaultrcpath() + systemrcpath() + userrcpath()
+            _rcpath = pycompat.maplist(os.path.normpath, paths)
     return _rcpath
