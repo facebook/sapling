@@ -48,6 +48,7 @@ from . import (
     server,
     sshserver,
     streamclone,
+    tags as tagsmod,
     templatekw,
     ui as uimod,
     util,
@@ -5172,8 +5173,8 @@ def tag(ui, repo, name1, *names, **opts):
             scmutil.revsingle(repo, rev_).rev() == nullrev):
             raise error.Abort(_("cannot tag null revision"))
 
-        repo.tag(names, r, message, opts.get('local'), opts.get('user'), date,
-                 editor=editor)
+        tagsmod.tag(repo, names, r, message, opts.get('local'),
+                    opts.get('user'), date, editor=editor)
     finally:
         release(lock, wlock)
 
