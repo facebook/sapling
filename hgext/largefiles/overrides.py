@@ -365,10 +365,9 @@ def overridelog(orig, ui, repo, *pats, **opts):
             # support naming a directory on the command line with only
             # largefiles.  The original directory is kept to support normal
             # files.
-            if standin in repo[ctx.node()]:
+            if standin in ctx:
                 m._files[i] = standin
-            elif m._files[i] not in repo[ctx.node()] \
-                    and repo.wvfs.isdir(standin):
+            elif m._files[i] not in ctx and repo.wvfs.isdir(standin):
                 m._files.append(standin)
 
         m._fileroots = set(m._files)
