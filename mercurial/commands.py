@@ -1808,7 +1808,8 @@ def config(ui, repo, *values, **opts):
         if t == 'path':
             ui.debug('read config from: %s\n' % f)
         elif t == 'items':
-            pass
+            for section, name, value, source in f:
+                ui.debug('set config by: %s\n' % source)
         else:
             raise error.ProgrammingError('unknown rctype: %s' % t)
     untrusted = bool(opts.get('untrusted'))
