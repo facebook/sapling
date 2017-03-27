@@ -759,15 +759,16 @@ def overriderevert(orig, ui, repo, ctx, parents, *pats, **opts):
                                                False)
 
             wctx = repo[None]
-            def tostandin(f):
+            matchfiles = []
+            for f in m._files:
                 standin = lfutil.standin(f)
                 if standin in ctx or standin in mctx:
-                    return standin
+                    matchfiles.append(standin)
                 elif standin in wctx or lfdirstate[f] == 'r':
-                    return None
-                return f
-            m._files = [tostandin(f) for f in m._files]
-            m._files = [f for f in m._files if f is not None]
+                    continue
+                else:
+                    matchfiles.append(f)
+            m._files = matchfiles
             m._fileroots = set(m._files)
             origmatchfn = m.matchfn
             def matchfn(f):
