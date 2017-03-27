@@ -849,14 +849,8 @@ class ui(object):
             # HGPLAINEXCEPT=pager, and the user didn't specify --debug.
             return
 
-        # TODO: add a "system defaults" config section so this default
-        # of more(1) can be easily replaced with a global
-        # configuration file. For example, on OS X the sane default is
-        # less(1), not more(1), and on debian it's
-        # sensible-pager(1). We should probably also give the system
-        # default editor command similar treatment.
-        envpager = encoding.environ.get('PAGER', 'more')
-        pagercmd = self.config('pager', 'pager', envpager)
+        fallbackpager = 'more'
+        pagercmd = self.config('pager', 'pager', fallbackpager)
         if not pagercmd:
             return
 
