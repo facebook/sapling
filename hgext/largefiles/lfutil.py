@@ -342,8 +342,11 @@ def splitstandin(filename):
     else:
         return None
 
-def updatestandin(repo, standin):
-    lfile = splitstandin(standin)
+def updatestandin(repo, lfile, standin):
+    """Re-calculate hash value of lfile and write it into standin
+
+    This assumes that "lfutil.standin(lfile) == standin", for efficiency.
+    """
     file = repo.wjoin(lfile)
     if repo.wvfs.exists(lfile):
         hash = hashfile(file)
@@ -560,7 +563,7 @@ def updatestandinsbymatch(repo, match):
                     # performed and the working copy is not updated
                     # yet.
                     if repo.wvfs.exists(lfile):
-                        updatestandin(repo, fstandin)
+                        updatestandin(repo, lfile, fstandin)
 
         return match
 
@@ -586,7 +589,7 @@ def updatestandinsbymatch(repo, match):
     for fstandin in standins:
         lfile = splitstandin(fstandin)
         if lfdirstate[lfile] != 'r':
-            updatestandin(repo, fstandin)
+            updatestandin(repo, lfile, fstandin)
 
     # Cook up a new matcher that only matches regular files or
     # standins corresponding to the big files requested by the

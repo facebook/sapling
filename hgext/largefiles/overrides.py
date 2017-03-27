@@ -736,7 +736,7 @@ def overriderevert(orig, ui, repo, ctx, parents, *pats, **opts):
         s = lfutil.lfdirstatestatus(lfdirstate, repo)
         lfdirstate.write()
         for lfile in s.modified:
-            lfutil.updatestandin(repo, lfutil.standin(lfile))
+            lfutil.updatestandin(repo, lfile, lfutil.standin(lfile))
         for lfile in s.deleted:
             fstandin = lfutil.standin(lfile)
             if (repo.wvfs.exists(fstandin)):
@@ -1417,7 +1417,7 @@ def mergeupdate(orig, repo, node, branchmerge, force,
                 # in this case, content of standin file is meaningless
                 # (in dctx, lfile is unknown, or normal file)
                 continue
-            lfutil.updatestandin(repo, fstandin)
+            lfutil.updatestandin(repo, lfile, fstandin)
         # mark all clean largefiles as dirty, just in case the update gets
         # interrupted before largefiles and lfdirstate are synchronized
         for lfile in oldclean:
