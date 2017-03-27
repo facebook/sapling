@@ -373,11 +373,8 @@ def copyandhash(instream, outfile):
 def hashfile(file):
     if not os.path.exists(file):
         return ''
-    hasher = hashlib.sha1('')
     with open(file, 'rb') as fd:
-        for data in util.filechunkiter(fd):
-            hasher.update(data)
-    return hasher.hexdigest()
+        return hexsha1(fd)
 
 def getexecutable(filename):
     mode = os.stat(filename).st_mode
@@ -398,11 +395,11 @@ def urljoin(first, second, *arg):
         url = join(url, a)
     return url
 
-def hexsha1(data):
+def hexsha1(fileobj):
     """hexsha1 returns the hex-encoded sha1 sum of the data in the file-like
     object data"""
     h = hashlib.sha1()
-    for chunk in util.filechunkiter(data):
+    for chunk in util.filechunkiter(fileobj):
         h.update(chunk)
     return h.hexdigest()
 
