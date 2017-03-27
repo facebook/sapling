@@ -564,7 +564,7 @@ class curseschunkselector(object):
 
         # affects some ui text
         if operation not in _headermessages:
-            raise RuntimeError('unexpected operation: %s' % operation)
+            raise error.ProgrammingError('unexpected operation: %s' % operation)
         self.operation = operation
 
     def uparrowevent(self):
