@@ -212,8 +212,11 @@ class ui(object):
         """Create a ui and load global and user configs"""
         u = cls()
         # we always trust global config files
-        for f in rcutil.rccomponents():
-            u.readconfig(f, trust=True)
+        for t, f in rcutil.rccomponents():
+            if t == 'path':
+                u.readconfig(f, trust=True)
+            else:
+                raise error.ProgrammingError('unknown rctype: %s' % t)
         return u
 
     def copy(self):

@@ -1804,8 +1804,11 @@ def config(ui, repo, *values, **opts):
         return
     ui.pager('config')
     fm = ui.formatter('config', opts)
-    for f in rcutil.rccomponents():
-        ui.debug('read config from: %s\n' % f)
+    for t, f in rcutil.rccomponents():
+        if t == 'path':
+            ui.debug('read config from: %s\n' % f)
+        else:
+            raise error.ProgrammingError('unknown rctype: %s' % t)
     untrusted = bool(opts.get('untrusted'))
     if values:
         sections = [v for v in values if '.' not in v]
