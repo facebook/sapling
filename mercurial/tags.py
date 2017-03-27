@@ -20,9 +20,11 @@ from .node import (
     nullid,
     short,
 )
+from .i18n import _
 from . import (
     encoding,
     error,
+    match as matchmod,
     scmutil,
     util,
 )
@@ -392,6 +394,79 @@ def _writetagcache(ui, repo, valid, cachetags):
         cachefile.close()
     except (OSError, IOError):
         pass
+
+def _tag(repo, names, node, message, local, user, date, extra=None,
+         editor=False):
+    if isinstance(names, str):
+        names = (names,)
+
+    branches = repo.branchmap()
+    for name in names:
+        repo.hook('pretag', throw=True, node=hex(node), tag=name,
+                  local=local)
+        if name in branches:
+            repo.ui.warn(_("warning: tag %s conflicts with existing"
+            " branch name\n") % name)
+
+    def writetags(fp, names, munge, prevtags):
+        fp.seek(0, 2)
+        if prevtags and prevtags[-1] != '\n':
+            fp.write('\n')
+        for name in names:
+            if munge:
+                m = munge(name)
+            else:
+                m = name
+
+            if (repo._tagscache.tagtypes and
+                name in repo._tagscache.tagtypes):
+                old = repo.tags().get(name, nullid)
+                fp.write('%s %s\n' % (hex(old), m))
+            fp.write('%s %s\n' % (hex(node), m))
+        fp.close()
+
+    prevtags = ''
+    if local:
+        try:
+            fp = repo.vfs('localtags', 'r+')
+        except IOError:
+            fp = repo.vfs('localtags', 'a')
+        else:
+            prevtags = fp.read()
+
+        # local tags are stored in the current charset
+        writetags(fp, names, None, prevtags)
+        for name in names:
+            repo.hook('tag', node=hex(node), tag=name, local=local)
+        return
+
+    try:
+        fp = repo.wvfs('.hgtags', 'rb+')
+    except IOError as e:
+        if e.errno != errno.ENOENT:
+            raise
+        fp = repo.wvfs('.hgtags', 'ab')
+    else:
+        prevtags = fp.read()
+
+    # committed tags are stored in UTF-8
+    writetags(fp, names, encoding.fromlocal, prevtags)
+
+    fp.close()
+
+    repo.invalidatecaches()
+
+    if '.hgtags' not in repo.dirstate:
+        repo[None].add(['.hgtags'])
+
+    m = matchmod.exact(repo.root, '', ['.hgtags'])
+    tagnode = repo.commit(message, user, date, extra=extra, match=m,
+                          editor=editor)
+
+    for name in names:
+        repo.hook('tag', node=hex(node), tag=name, local=local)
+
+    return tagnode
 
 _fnodescachefile = 'cache/hgtagsfnodes1'
 _fnodesrecsize = 4 + 20 # changeset fragment + filenode

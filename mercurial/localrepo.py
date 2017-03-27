@@ -649,80 +649,6 @@ class localrepository(object):
         """
         return hook.hook(self.ui, self, name, throw, **args)
 
-    @unfilteredmethod
-    def _tag(self, names, node, message, local, user, date, extra=None,
-             editor=False):
-        if isinstance(names, str):
-            names = (names,)
-
-        branches = self.branchmap()
-        for name in names:
-            self.hook('pretag', throw=True, node=hex(node), tag=name,
-                      local=local)
-            if name in branches:
-                self.ui.warn(_("warning: tag %s conflicts with existing"
-                " branch name\n") % name)
-
-        def writetags(fp, names, munge, prevtags):
-            fp.seek(0, 2)
-            if prevtags and prevtags[-1] != '\n':
-                fp.write('\n')
-            for name in names:
-                if munge:
-                    m = munge(name)
-                else:
-                    m = name
-
-                if (self._tagscache.tagtypes and
-                    name in self._tagscache.tagtypes):
-                    old = self.tags().get(name, nullid)
-                    fp.write('%s %s\n' % (hex(old), m))
-                fp.write('%s %s\n' % (hex(node), m))
-            fp.close()
-
-        prevtags = ''
-        if local:
-            try:
-                fp = self.vfs('localtags', 'r+')
-            except IOError:
-                fp = self.vfs('localtags', 'a')
-            else:
-                prevtags = fp.read()
-
-            # local tags are stored in the current charset
-            writetags(fp, names, None, prevtags)
-            for name in names:
-                self.hook('tag', node=hex(node), tag=name, local=local)
-            return
-
-        try:
-            fp = self.wvfs('.hgtags', 'rb+')
-        except IOError as e:
-            if e.errno != errno.ENOENT:
-                raise
-            fp = self.wvfs('.hgtags', 'ab')
-        else:
-            prevtags = fp.read()
-
-        # committed tags are stored in UTF-8
-        writetags(fp, names, encoding.fromlocal, prevtags)
-
-        fp.close()
-
-        self.invalidatecaches()
-
-        if '.hgtags' not in self.dirstate:
-            self[None].add(['.hgtags'])
-
-        m = matchmod.exact(self.root, '', ['.hgtags'])
-        tagnode = self.commit(message, user, date, extra=extra, match=m,
-                              editor=editor)
-
-        for name in names:
-            self.hook('tag', node=hex(node), tag=name, local=local)
-
-        return tagnode
-
     def tag(self, names, node, message, local, user, date, editor=False):
         '''tag a revision with one or more symbolic names.
 
@@ -751,7 +677,8 @@ class localrepository(object):
                                  hint=_('please commit .hgtags manually'))
 
         self.tags() # instantiate the cache
-        self._tag(names, node, message, local, user, date, editor=editor)
+        tagsmod._tag(self.unfiltered(), names, node, message, local, user, date,
+                     editor=editor)
 
     @filteredpropertycache
     def _tagscache(self):
