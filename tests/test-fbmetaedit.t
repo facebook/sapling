@@ -152,6 +152,7 @@ check that metaedit respects allowunstable
   HG: added f
   HG: added g
   2 changesets folded
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ glog -r .
   @  10:09b4ac0f24fc@default(draft) add f nicely
