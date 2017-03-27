@@ -1034,7 +1034,7 @@ checkcodeglobpats = [
     re.compile(br'^pulling from \$TESTTMP/.*[^)]$'),
     # Not all platforms have 127.0.0.1 as loopback (though most do),
     # so we always glob that too.
-    re.compile(br'.*127.0.0.1.*$'),
+    re.compile(br'.*\$LOCALIP.*$'),
 ]
 
 bchr = chr
@@ -1342,7 +1342,7 @@ class TTest(Test):
                         return True
                 return b'-glob'
             return True
-        el = el.replace(b'127.0.0.1', b'*')
+        el = el.replace(b'$LOCALIP', b'*')
         i, n = 0, len(el)
         res = b''
         while i < n:

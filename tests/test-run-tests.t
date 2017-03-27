@@ -735,9 +735,11 @@ backslash on end of line with glob matching is handled properly
 
   $ rm -f test-glob-backslash.t
 
-Test globbing of 127.0.0.1
+Test globbing of local IP addresses
   $ echo 172.16.18.1
-  127.0.0.1 (glob)
+  $LOCALIP (glob)
+  $ echo dead:beef::1
+  $LOCALIP (glob)
 
 Test reusability for third party tools
 ======================================

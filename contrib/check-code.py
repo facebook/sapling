@@ -210,8 +210,8 @@ utestpats = [
   ],
   # warnings
   [
-    (r'^  (?!.*127\.0\.0\.1)[^*?/\n]* \(glob\)$',
-     "glob match with no glob string (?, *, /, and 127.0.0.1)"),
+    (r'^  (?!.*\$LOCALIP)[^*?/\n]* \(glob\)$',
+     "glob match with no glob string (?, *, /, and $LOCALIP)"),
   ]
 ]
 
