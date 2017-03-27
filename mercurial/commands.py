@@ -1804,7 +1804,7 @@ def config(ui, repo, *values, **opts):
         return
     ui.pager('config')
     fm = ui.formatter('config', opts)
-    for f in rcutil.rcpath():
+    for f in rcutil.rccomponents():
         ui.debug('read config from: %s\n' % f)
     untrusted = bool(opts.get('untrusted'))
     if values:

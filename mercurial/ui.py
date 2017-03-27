@@ -212,7 +212,7 @@ class ui(object):
         """Create a ui and load global and user configs"""
         u = cls()
         # we always trust global config files
-        for f in rcutil.rcpath():
+        for f in rcutil.rccomponents():
             u.readconfig(f, trust=True)
         return u
 

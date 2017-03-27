@@ -40,23 +40,23 @@ def defaultrcpath():
         path = _expandrcpath(defaultpath)
     return path
 
-_rcpath = None
+_rccomponents = None
 
-def rcpath():
+def rccomponents():
     '''return hgrc search path. if env var HGRCPATH is set, use it.
     for each item in path, if directory, use files ending in .rc,
     else use item.
     make HGRCPATH empty to only look in .hg/hgrc of current repo.
     if no HGRCPATH, use default os-specific path.'''
-    global _rcpath
-    if _rcpath is None:
+    global _rccomponents
+    if _rccomponents is None:
         if 'HGRCPATH' in encoding.environ:
-            _rcpath = []
+            _rccomponents = []
             for p in encoding.environ['HGRCPATH'].split(pycompat.ospathsep):
                 if not p:
                     continue
-                _rcpath.extend(_expandrcpath(p))
+                _rccomponents.extend(_expandrcpath(p))
         else:
             paths = defaultrcpath() + systemrcpath() + userrcpath()
-            _rcpath = pycompat.maplist(os.path.normpath, paths)
-    return _rcpath
+            _rccomponents = pycompat.maplist(os.path.normpath, paths)
+    return _rccomponents
