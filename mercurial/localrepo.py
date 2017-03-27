@@ -650,6 +650,7 @@ class localrepository(object):
         return hook.hook(self.ui, self, name, throw, **args)
 
     def tag(self, names, node, message, local, user, date, editor=False):
+        self.ui.deprecwarn("use 'tagsmod.tag' instead of 'repo.tag'", '4.2')
         tagsmod.tag(self, names, node, message, local, user, date,
                     editor=editor)
 
