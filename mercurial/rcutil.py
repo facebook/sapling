@@ -24,14 +24,20 @@ else:
 systemrcpath = scmplatform.systemrcpath
 userrcpath = scmplatform.userrcpath
 
+def _expandrcpath(path):
+    '''path could be a file or a directory. return a list of file paths'''
+    p = util.expandpath(path)
+    if os.path.isdir(p):
+        join = os.path.join
+        return [join(p, f) for f, k in osutil.listdir(p) if f.endswith('.rc')]
+    return [p]
+
 def defaultrcpath():
     '''return rc paths in default.d'''
     path = []
     defaultpath = os.path.join(util.datapath, 'default.d')
     if os.path.isdir(defaultpath):
-        for f, kind in osutil.listdir(defaultpath):
-            if f.endswith('.rc'):
-                path.append(os.path.join(defaultpath, f))
+        path = _expandrcpath(defaultpath)
     return path
 
 _rcpath = None
@@ -49,13 +55,7 @@ def rcpath():
             for p in encoding.environ['HGRCPATH'].split(pycompat.ospathsep):
                 if not p:
                     continue
-                p = util.expandpath(p)
-                if os.path.isdir(p):
-                    for f, kind in osutil.listdir(p):
-                        if f.endswith('.rc'):
-                            _rcpath.append(os.path.join(p, f))
-                else:
-                    _rcpath.append(p)
+                _rcpath.extend(_expandrcpath(p))
         else:
             paths = defaultrcpath() + systemrcpath() + userrcpath()
             _rcpath = pycompat.maplist(os.path.normpath, paths)
