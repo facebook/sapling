@@ -759,11 +759,12 @@ def overriderevert(orig, ui, repo, ctx, parents, *pats, **opts):
             lfdirstate = lfutil.openlfdirstate(mctx.repo().ui, mctx.repo(),
                                                False)
 
+            wctx = repo[None]
             def tostandin(f):
                 standin = lfutil.standin(f)
                 if standin in ctx or standin in mctx:
                     return standin
-                elif standin in repo[None] or lfdirstate[f] == 'r':
+                elif standin in wctx or lfdirstate[f] == 'r':
                     return None
                 return f
             m._files = [tostandin(f) for f in m._files]
@@ -1077,8 +1078,9 @@ def cmdutilforget(orig, ui, repo, match, prefix, explicitonly):
         s = repo.status(match=m, clean=True)
     finally:
         repo.lfstatus = False
+    manifest = repo[None].manifest()
     forget = sorted(s.modified + s.added + s.deleted + s.clean)
-    forget = [f for f in forget if lfutil.standin(f) in repo[None].manifest()]
+    forget = [f for f in forget if lfutil.standin(f) in manifest]
 
     for f in forget:
         fstandin = lfutil.standin(f)

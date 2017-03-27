@@ -403,9 +403,10 @@ def cachelfiles(ui, repo, node, filelist=None):
         lfiles = set(lfiles) & set(filelist)
     toget = []
 
+    ctx = repo[node]
     for lfile in lfiles:
         try:
-            expectedhash = repo[node][lfutil.standin(lfile)].data().strip()
+            expectedhash = ctx[lfutil.standin(lfile)].data().strip()
         except IOError as err:
             if err.errno == errno.ENOENT:
                 continue # node must be None and standin wasn't found in wctx
@@ -457,6 +458,7 @@ def updatelfiles(ui, repo, filelist=None, printmessage=None,
         update = {}
         updated, removed = 0, 0
         wvfs = repo.wvfs
+        wctx = repo[None]
         for lfile in lfiles:
             rellfile = lfile
             rellfileorig = os.path.relpath(
@@ -474,7 +476,7 @@ def updatelfiles(ui, repo, filelist=None, printmessage=None,
                     wvfs.unlinkpath(relstandinorig)
                 expecthash = lfutil.readstandin(repo, lfile)
                 if expecthash != '':
-                    if lfile not in repo[None]: # not switched to normal file
+                    if lfile not in wctx: # not switched to normal file
                         wvfs.unlinkpath(rellfile, ignoremissing=True)
                     # use normallookup() to allocate an entry in largefiles
                     # dirstate to prevent lfilesrepo.status() from reporting
@@ -487,7 +489,7 @@ def updatelfiles(ui, repo, filelist=None, printmessage=None,
                 # largefile is converted back to a normal file: the standin
                 # disappears, but a new (normal) file appears as the lfile.
                 if (wvfs.exists(rellfile) and
-                    repo.dirstate.normalize(lfile) not in repo[None]):
+                    repo.dirstate.normalize(lfile) not in wctx):
                     wvfs.unlinkpath(rellfile)
                     removed += 1
 
