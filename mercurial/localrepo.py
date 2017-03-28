@@ -708,9 +708,10 @@ class localrepository(object):
         # quo fine?
 
 
-        globaldata = tagsmod.findglobaltags(self.ui, self)
-        alltags = globaldata[0]   # map tag name to (node, hist)
-        tagtypes = globaldata[1]  # map tag name to tag type
+        # map tag name to (node, hist)
+        alltags = tagsmod.findglobaltags(self.ui, self)
+        # map tag name to tag type
+        tagtypes = dict((tag, 'global') for tag in alltags)
 
         tagsmod.readlocaltags(self.ui, self, alltags, tagtypes)
 

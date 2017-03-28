@@ -79,17 +79,13 @@ from . import (
 # setting it) for each tag is last.
 
 def findglobaltags(ui, repo):
-    '''Find global tags in a repo: return (alltags, tagtypes)
+    '''Find global tags in a repo: return a tagsmap
 
-    "alltags" maps tag name to (node, hist) 2-tuples.
-
-    "tagtypes" maps tag name to tag type. Global tags always have the
-    "global" tag type.
+    tagsmap: tag name to (node, hist) 2-tuples.
 
     The tags cache is read and updated as a side-effect of calling.
     '''
     alltags = {}
-    tagtypes = {}
 
     (heads, tagfnode, valid, cachetags, shouldwrite) = _readtagcache(ui, repo)
     if cachetags is not None:
@@ -97,8 +93,8 @@ def findglobaltags(ui, repo):
         # XXX is this really 100% correct?  are there oddball special
         # cases where a global tag should outrank a local tag but won't,
         # because cachetags does not contain rank info?
-        _updatetags(cachetags, alltags, 'global', tagtypes)
-        return alltags, tagtypes
+        _updatetags(cachetags, alltags)
+        return alltags
 
     seen = set()  # set of fnode
     fctx = None
@@ -115,12 +111,12 @@ def findglobaltags(ui, repo):
                 fctx = fctx.filectx(fnode)
 
             filetags = _readtags(ui, repo, fctx.data().splitlines(), fctx)
-            _updatetags(filetags, alltags, 'global', tagtypes)
+            _updatetags(filetags, alltags)
 
     # and update the cache (if necessary)
     if shouldwrite:
         _writetagcache(ui, repo, valid, alltags)
-    return alltags, tagtypes
+    return alltags
 
 def readlocaltags(ui, repo, alltags, tagtypes):
     '''Read local tags in repo. Update alltags and tagtypes.'''
