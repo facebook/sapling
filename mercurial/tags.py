@@ -78,6 +78,18 @@ from . import (
 # The most recent changeset (in terms of revlog ordering for the head
 # setting it) for each tag is last.
 
+def fnoderevs(ui, repo, revs):
+    """return the list of '.hgtags' fnodes used in a set revisions
+
+    This is returned as list of unique fnodes. We use a list instead of a set
+    because order matters when it comes to tags."""
+    unfi = repo.unfiltered()
+    tonode = unfi.changelog.node
+    nodes = [tonode(r) for r in revs]
+    fnodes = _getfnodes(ui, repo, nodes[::-1]) # reversed help the cache
+    fnodes = _filterfnodes(fnodes, nodes)
+    return fnodes
+
 def findglobaltags(ui, repo):
     '''Find global tags in a repo: return a tagsmap
 
