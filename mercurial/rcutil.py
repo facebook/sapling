@@ -76,20 +76,18 @@ def rccomponents():
     '''
     envrc = ('items', envrcitems())
 
-    _rccomponents = None
-    if _rccomponents is None:
-        if 'HGRCPATH' in encoding.environ:
-            # assume HGRCPATH is all about user configs so environments can be
-            # overridden.
-            _rccomponents = [envrc]
-            for p in encoding.environ['HGRCPATH'].split(pycompat.ospathsep):
-                if not p:
-                    continue
-                _rccomponents.extend(('path', p) for p in _expandrcpath(p))
-        else:
-            paths = defaultrcpath() + systemrcpath()
-            _rccomponents = [('path', os.path.normpath(p)) for p in paths]
-            _rccomponents.append(envrc)
-            paths = userrcpath()
-            _rccomponents.extend(('path', os.path.normpath(p)) for p in paths)
+    if 'HGRCPATH' in encoding.environ:
+        # assume HGRCPATH is all about user configs so environments can be
+        # overridden.
+        _rccomponents = [envrc]
+        for p in encoding.environ['HGRCPATH'].split(pycompat.ospathsep):
+            if not p:
+                continue
+            _rccomponents.extend(('path', p) for p in _expandrcpath(p))
+    else:
+        paths = defaultrcpath() + systemrcpath()
+        _rccomponents = [('path', os.path.normpath(p)) for p in paths]
+        _rccomponents.append(envrc)
+        paths = userrcpath()
+        _rccomponents.extend(('path', os.path.normpath(p)) for p in paths)
     return _rccomponents
