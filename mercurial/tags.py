@@ -341,15 +341,27 @@ def _readtagcache(ui, repo):
         # potentially expensive search.
         return ([], {}, valid, None, True)
 
-    starttime = util.timer()
 
     # Now we have to lookup the .hgtags filenode for every new head.
     # This is the most expensive part of finding tags, so performance
     # depends primarily on the size of newheads.  Worst case: no cache
     # file, so newheads == repoheads.
+    cachefnode = _getfnodes(ui, repo, repoheads)
+
+    # Caller has to iterate over all heads, but can use the filenodes in
+    # cachefnode to get to each .hgtags revision quickly.
+    return (repoheads, cachefnode, valid, None, True)
+
+def _getfnodes(ui, repo, nodes):
+    """return .hgtags fnodes for a list of changeset nodes
+
+    Return value is a {node: fnode} mapping. There will be no entry for nodes
+    without a '.hgtags' file.
+    """
+    starttime = util.timer()
     fnodescache = hgtagsfnodescache(repo.unfiltered())
     cachefnode = {}
-    for head in reversed(repoheads):
+    for head in reversed(nodes):
         fnode = fnodescache.getfnode(head)
         if fnode != nullid:
             cachefnode[head] = fnode
@@ -361,10 +373,7 @@ def _readtagcache(ui, repo):
            '%d/%d cache hits/lookups in %0.4f '
            'seconds\n',
            fnodescache.hitcount, fnodescache.lookupcount, duration)
-
-    # Caller has to iterate over all heads, but can use the filenodes in
-    # cachefnode to get to each .hgtags revision quickly.
-    return (repoheads, cachefnode, valid, None, True)
+    return cachefnode
 
 def _writetagcache(ui, repo, valid, cachetags):
     filename = _filename(repo)
