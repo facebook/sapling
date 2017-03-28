@@ -657,8 +657,16 @@ def wraprepo(repo):
                 self._filecache.pop('manifestlog', None)
                 self._filecache.pop('_phasecache', None)
 
-                # Refill the cache
-                self.manifestlog._dirmancache = oldmancache
+                # Refill the cache. We can't just reuse the exact contents of
+                # the old cached ctx, since the old ctx contains a reference to
+                # the old revlog, which is now out of date.
+                mfl = self.manifestlog
+                for dirname, lrucache in oldmancache.iteritems():
+                    if dirname == '':
+                        for oldmfnode in lrucache:
+                            oldmfctx = lrucache[oldmfnode]
+                            if oldmfctx._data is not None:
+                                mfl[oldmfnode]._data = oldmfctx._data
 
                 heads = set(self.heads())
                 heads.discard(nullid)
