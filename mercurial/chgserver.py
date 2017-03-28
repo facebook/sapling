@@ -213,8 +213,8 @@ def _loadnewui(srcui, args):
     # stolen from tortoisehg.util.copydynamicconfig()
     for section, name, value in srcui.walkconfig():
         source = srcui.configsource(section, name)
-        if ':' in source or source == '--config':
-            # path:line or command line
+        if ':' in source or source == '--config' or source.startswith('$'):
+            # path:line or command line, or environ
             continue
         newui.setconfig(section, name, value, source)
 
