@@ -223,15 +223,22 @@ def _readtags(ui, repo, lines, fn, recode=None, calcnodelines=False):
         newtags[tag] = (taghist[-1], taghist[:-1])
     return newtags
 
-def _updatetags(filetags, alltags, tagtype, tagtypes):
-    '''Incorporate the tag info read from one file into the two
-    dictionaries, alltags and tagtypes, that contain all tag
-    info (global across all heads plus local).'''
+def _updatetags(filetags, alltags, tagtype=None, tagtypes=None):
+    """Incorporate the tag info read from one file into dictionnaries
+
+    The first one, 'alltags', is a "tagmaps" (see 'findglobaltags' for details).
+
+    The second one, 'tagtypes', is optional and will be updated to track the
+    "tagtype" of entries in the tagmaps. When set, the 'tagtype' argument also
+    needs to be set."""
+    if tagtype is None:
+        assert tagtypes is None
 
     for name, nodehist in filetags.iteritems():
         if name not in alltags:
             alltags[name] = nodehist
-            tagtypes[name] = tagtype
+            if tagtype is not None:
+                tagtypes[name] = tagtype
             continue
 
         # we prefer alltags[name] if:
@@ -243,7 +250,7 @@ def _updatetags(filetags, alltags, tagtype, tagtypes):
         if (bnode != anode and anode in bhist and
             (bnode not in ahist or len(bhist) > len(ahist))):
             anode = bnode
-        else:
+        elif tagtype is not None:
             tagtypes[name] = tagtype
         ahist.extend([n for n in bhist if n not in ahist])
         alltags[name] = anode, ahist
