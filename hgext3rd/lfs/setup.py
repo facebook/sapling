@@ -4,11 +4,12 @@ from __future__ import absolute_import
 
 from mercurial import (
     error,
-    i18n,
 )
+from mercurial.i18n import _
 
 from . import (
     blobstore,
+    util as lfsutil,
 )
 
 def threshold(ui, repo):
@@ -21,7 +22,7 @@ def threshold(ui, repo):
 def localblobstore(ui, repo):
     """Configure local blobstore"""
     storepath = ui.config('lfs', 'blobstore', 'cache/localblobstore')
-    localblobstore = blobstore.local(storepath, repo.vfs)
+    localblobstore = blobstore.local(repo.vfs.join(storepath))
     repo.lfslocalblobstore = localblobstore
     repo.svfs.lfslocalblobstore = localblobstore
 
@@ -40,7 +41,7 @@ def remoteblobstore(ui, repo):
     }
     remotestore = ui.config('lfs', 'remotestore', 'git-lfs')
     if not remotestore in knownblobstores:
-        message = i18n._("Unknown remote store %s") % (remotestore)
+        message = _("Unknown remote store %s") % (remotestore)
         raise error.ProgrammingError(message)
     repo.lfsremoteblobstore = knownblobstores[remotestore](ui)
     repo.svfs.lfsremoteblobstore = repo.lfsremoteblobstore

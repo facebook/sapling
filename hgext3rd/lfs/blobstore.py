@@ -4,13 +4,16 @@ import errno
 import functools
 import json
 import os
-import re
 
 from mercurial import (
     error,
     util,
 )
 from mercurial.i18n import _
+
+from . import (
+    util as lfsutil,
+)
 
 class StoreID(object):
     def __init__(self, oid, size):
@@ -24,9 +27,8 @@ class local(object):
     to be uploaded to the remote blobstore.
     """
 
-    def __init__(self, path, opener):
-        self._opener = opener
-        self._storepath = path
+    def __init__(self, path):
+        self.vfs = lfsutil.lfsvfs(path)
 
     @staticmethod
     def get(opener):
@@ -37,31 +39,17 @@ class local(object):
 
     def write(self, storeid, data):
         """Write blob to local blobstore."""
-        assert re.match('[a-f0-9]{40}', storeid.oid)
-        fp = self._opener(self.filename(storeid), 'w+', atomictemp=True)
-        try:
+        with self.vfs(storeid.oid, 'wb', atomictemp=True) as fp:
             fp.write(data)
-        finally:
-            fp.close()
 
     def read(self, storeid):
         """Read blob from local blobstore."""
-        assert re.match('[a-f0-9]{40}', storeid.oid)
-        fp = self._opener(self.filename(storeid), 'r')
-        try:
-            return fp.read()
-        finally:
-            fp.close()
+        return self.vfs.read(storeid.oid)
 
     def has(self, storeid):
         """Returns True if the local blobstore contains the requested blob,
         False otherwise."""
-        return self._opener.exists(self.filename(storeid))
-
-    def filename(self, storeid):
-        """Generates filename for a blob in the local blob store. Defaults to
-        .hg/cache/blobstore/XX/XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"""
-        return os.path.join(self._storepath, storeid.oid[0:2], storeid.oid[2:])
+        return self.vfs.exists(storeid.oid)
 
 class remote(object):
 
