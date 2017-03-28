@@ -29,7 +29,7 @@ lfile_copies_switch = '{if(file_copies_switch,
 
 # General templates
 _trouble_label = 'trouble.{trouble}'
-_cset_labels = 'log.changeset changeset.{phase}{if(troubles, " changeset.troubled {troubles%_trouble_label}")}'
+_cset_labels = '{separate(" ", "log.changeset", "changeset.{phase}", "{if(troubles, "changeset.troubled {troubles%_trouble_label}")}")}'
 cset = '{label("{_cset_labels}",
                "changeset:   {rev}:{node|short}")}\n'
 
