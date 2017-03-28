@@ -95,23 +95,31 @@ def findglobaltags(ui, repo):
         _updatetags(cachetags, alltags)
         return alltags
 
-    seen = set()  # set of fnode
-    fnodes = []
     for head in reversed(heads):  # oldest to newest
         assert head in repo.changelog.nodemap, \
                "tag cache returned bogus head %s" % short(head)
-
-        fnode = tagfnode.get(head)
-        if fnode and fnode not in seen:
-            seen.add(fnode)
-            fnodes.append(fnode)
-
+    fnodes = _filterfnodes(tagfnode, reversed(heads))
     alltags = _tagsfromfnodes(ui, repo, fnodes)
 
     # and update the cache (if necessary)
     if shouldwrite:
         _writetagcache(ui, repo, valid, alltags)
     return alltags
+
+def _filterfnodes(tagfnode, nodes):
+    """return a list of unique fnodes
+
+    The order of this list matches the order of "nodes". Preserving this order
+    is important as reading tags in different order provides different
+    results."""
+    seen = set()  # set of fnode
+    fnodes = []
+    for no in nodes:  # oldest to newest
+        fnode = tagfnode.get(no)
+        if fnode and fnode not in seen:
+            seen.add(fnode)
+            fnodes.append(fnode)
+    return fnodes
 
 def _tagsfromfnodes(ui, repo, fnodes):
     """return a tagsmap from a list of file-node
