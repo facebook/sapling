@@ -1,3 +1,19 @@
+  $ cat >> $HGRCPATH << EOF
+  > [experimental]
+  > hook-track-tags=1
+  > [hooks]
+  > txnclose.track-tag=${TESTTMP}/taghook.sh
+  > EOF
+
+  $ cat << EOF > taghook.sh
+  > #!/bin/sh
+  > # escape the "$" otherwise the test runner interpret it when writting the
+  > # file...
+  > if [ -n "\$HG_TAG_MOVED" ]; then
+  >     echo 'hook: tag changes detected'
+  > fi
+  > EOF
+  $ chmod +x taghook.sh
   $ hg init test
   $ cd test
 
@@ -20,6 +36,7 @@
 specified)
 
   $ HGEDITOR=cat hg tag "bleah"
+  hook: tag changes detected
   $ hg history
   changeset:   1:d4f0d2909abc
   tag:         tip
@@ -68,10 +85,14 @@ specified)
   [255]
 
   $ hg tag -r 0 "bleah0"
+  hook: tag changes detected
   $ hg tag -l -r 1 "bleah1"
   $ hg tag gack gawk gorp
+  hook: tag changes detected
   $ hg tag -f gack
+  hook: tag changes detected
   $ hg tag --remove gack gorp
+  hook: tag changes detected
 
   $ hg tag "bleah "
   abort: tag 'bleah' already exists (use -f to force)
@@ -83,7 +104,9 @@ specified)
   abort: tag 'bleah' already exists (use -f to force)
   [255]
   $ hg tag -r 0 "  bleahbleah  "
+  hook: tag changes detected
   $ hg tag -r 0 " bleah bleah "
+  hook: tag changes detected
 
   $ cat .hgtags
   acb14030fe0a21b60322c440ad2d20cf7685a376 bleah
@@ -112,6 +135,7 @@ tagging on a non-head revision
   abort: working directory is not at a branch head (use -f to force)
   [255]
   $ hg tag -f "foobar"
+  hook: tag changes detected
   $ cat .hgtags
   acb14030fe0a21b60322c440ad2d20cf7685a376 foobar
   $ cat .hg/localtags
@@ -169,16 +193,19 @@ cloning local tags
   summary:     Removed tag gack, gorp
   
   $ hg clone -q -rbleah1 test test1
+  hook: tag changes detected
   $ hg -R test1 parents --style=compact
   1[tip]   d4f0d2909abc   1970-01-01 00:00 +0000   test
     Added tag bleah for changeset acb14030fe0a
   
   $ hg clone -q -r5 test#bleah1 test2
+  hook: tag changes detected
   $ hg -R test2 parents --style=compact
   5[tip]   b4bb47aaff09   1970-01-01 00:00 +0000   test
     Removed tag gack, gorp
   
   $ hg clone -q -U test#bleah1 test3
+  hook: tag changes detected
   $ hg -R test3 parents --style=compact
 
   $ cd test
@@ -203,9 +230,11 @@ doesn't end with EOL
   > f = file('.hgtags', 'w'); f.write(last); f.close()
   > EOF
   $ hg ci -m'broken manual edit of .hgtags'
+  hook: tag changes detected
   $ cat .hgtags; echo
   acb14030fe0a21b60322c440ad2d20cf7685a376 foobar
   $ hg tag newline
+  hook: tag changes detected
   $ cat .hgtags; echo
   acb14030fe0a21b60322c440ad2d20cf7685a376 foobar
   a0eea09de1eeec777b46f2085260a373b2fbc293 newline
@@ -219,6 +248,7 @@ tag and branch using same name
   $ hg ci -m"discouraged"
   $ hg tag tag-and-branch-same-name
   warning: tag tag-and-branch-same-name conflicts with existing branch name
+  hook: tag changes detected
 
 test custom commit messages
 
@@ -303,6 +333,7 @@ then, test custom commit message itself
   HG: branch 'tag-and-branch-same-name'
   HG: changed .hgtags
   ====
+  hook: tag changes detected
   $ hg log -l1 --template "{desc}\n"
   custom tag message
   second line
@@ -311,6 +342,7 @@ then, test custom commit message itself
 local tag with .hgtags modified
 
   $ hg tag hgtags-modified
+  hook: tag changes detected
   $ hg rollback
   repository tip rolled back to revision 13 (undo commit)
   working directory now based on revision 13
@@ -330,9 +362,11 @@ tagging when at named-branch-head that's not a topo-head
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ hg ci -m 'merge named branch'
+  hook: tag changes detected
   $ hg up 13
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg tag new-topo-head
+  hook: tag changes detected
 
 tagging on null rev
 
@@ -399,12 +433,14 @@ commit hook on tag used to be run without write lock - issue3344
   > hg push "$TESTTMP/repo-tag-target"
   > EOF
   $ hg -R repo-tag --config hooks.commit="sh ../issue3344.sh" tag tag
+  hook: tag changes detected
   pushing to $TESTTMP/repo-tag-target (glob)
   searching for changes
   adding changesets
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files
+  hook: tag changes detected
 
 automatically merge resolvable tag conflicts (i.e. tags that differ in rank)
 create two clones with some different tags as well as some common tags
@@ -416,6 +452,7 @@ check that we can merge tags that differ in rank
   $ hg ci -A -m0
   adding f0
   $ hg tag tbase
+  hook: tag changes detected
   $ hg up -qr '.^'
   $ hg log -r 'wdir()' -T "{latesttagdistance}\n"
   1
@@ -431,18 +468,23 @@ check that we can merge tags that differ in rank
   $ hg ci -A -m1
   adding f1
   $ hg tag t1 t2 t3
+  hook: tag changes detected
   $ hg tag --remove t2
+  hook: tag changes detected
   $ hg tag t5
+  hook: tag changes detected
   $ echo c2 > f2
   $ hg ci -A -m2
   adding f2
   $ hg tag -f t3
+  hook: tag changes detected
 
   $ cd ../repo-automatic-tag-merge
   $ echo c3 > f3
   $ hg ci -A -m3
   adding f3
   $ hg tag -f t4 t5 t6
+  hook: tag changes detected
 
   $ hg up -q '.^'
   $ hg log -r 'wdir()' -T "{changessincelatesttag} changes since {latesttag}\n"
@@ -455,6 +497,7 @@ check that we can merge tags that differ in rank
   $ hg up -qC
 
   $ hg tag --remove t5
+  hook: tag changes detected
   $ echo c4 > f4
   $ hg log -r '.' -T "{changessincelatesttag} changes since {latesttag}\n"
   2 changes since t4:t6
@@ -473,7 +516,9 @@ check that we can merge tags that differ in rank
   $ hg log -r 'wdir()' -T "{changessincelatesttag} changes since {latesttag}\n"
   4 changes since t4:t6
   $ hg tag t2
+  hook: tag changes detected
   $ hg tag -f t6
+  hook: tag changes detected
 
   $ cd ../repo-automatic-tag-merge-clone
   $ hg pull
@@ -483,6 +528,7 @@ check that we can merge tags that differ in rank
   adding manifests
   adding file changes
   added 6 changesets with 6 changes to 3 files (+1 heads)
+  hook: tag changes detected
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg merge --tool internal:tagmerge
   merging .hgtags
@@ -543,10 +589,12 @@ detect merge tag conflicts
   $ hg update -C -r tip
   3 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ hg tag t7
+  hook: tag changes detected
   $ hg update -C -r 'first(sort(head()))'
   3 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ printf "%s %s\n" `hg log -r . --template "{node} t7"` >> .hgtags
   $ hg commit -m "manually add conflicting t7 tag"
+  hook: tag changes detected
   $ hg merge --tool internal:tagmerge
   merging .hgtags
   automatic .hgtags merge failed
@@ -581,11 +629,13 @@ handle the loss of tags
   $ hg ci -A -m5
   adding f5
   $ hg tag -f t7
+  hook: tag changes detected
   $ hg update -r 'p1(t7)'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ printf '' > .hgtags
   $ hg commit -m 'delete all tags'
   created new head
+  hook: tag changes detected
   $ hg log -r 'max(t7::)'
   changeset:   17:ffe462b50880
   user:        test

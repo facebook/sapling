@@ -1001,8 +1001,54 @@ class localrepository(object):
         vfsmap = {'plain': self.vfs} # root of .hg/
         # we must avoid cyclic reference between repo and transaction.
         reporef = weakref.ref(self)
-        def validate(tr):
+        # Code to track tag movement
+        #
+        # Since tags are all handled as file content, it is actually quite hard
+        # to track these movement from a code perspective. So we fallback to a
+        # tracking at the repository level. One could envision to track changes
+        # to the '.hgtags' file through changegroup apply but that fails to
+        # cope with case where transaction expose new heads without changegroup
+        # being involved (eg: phase movement).
+        #
+        # For now, We gate the feature behind a flag since this likely comes
+        # with performance impacts. The current code run more often than needed
+        # and do not use caches as much as it could.  The current focus is on
+        # the behavior of the feature so we disable it by default. The flag
+        # will be removed when we are happy with the performance impact.
+        tracktags = lambda x: None
+        # experimental config: experimental.hook-track-tags
+        shouldtracktags = self.ui.configbool('experimental', 'hook-track-tags',
+                                             False)
+        if desc != 'strip' and shouldtracktags:
+            oldheads = self.changelog.headrevs()
+            def tracktags(tr2):
+                repo = reporef()
+                oldfnodes = tagsmod.fnoderevs(repo.ui, repo, oldheads)
+                newheads = repo.changelog.headrevs()
+                newfnodes = tagsmod.fnoderevs(repo.ui, repo, newheads)
+                # notes: we compare lists here.
+                # As we do it only once buiding set would not be cheaper
+                if oldfnodes != newfnodes:
+                    tr2.hookargs['tag_moved'] = '1'
+        def validate(tr2):
             """will run pre-closing hooks"""
+            # XXX the transaction API is a bit lacking here so we take a hacky
+            # path for now
+            #
+            # We cannot add this as a "pending" hooks since the 'tr.hookargs'
+            # dict is copied before these run. In addition we needs the data
+            # available to in memory hooks too.
+            #
+            # Moreover, we also need to make sure this runs before txnclose
+            # hooks and there is no "pending" mechanism that would execute
+            # logic only if hooks are about to run.
+            #
+            # Fixing this limitation of the transaction is also needed to track
+            # other families of changes (bookmarks, phases, obsolescence).
+            #
+            # This will have to be fixed before we remove the experimental
+            # gating.
+            tracktags(tr2)
             reporef().hook('pretxnclose', throw=True,
                            txnname=desc, **pycompat.strkwargs(tr.hookargs))
         def releasefn(tr, success):
