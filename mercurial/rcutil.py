@@ -62,8 +62,6 @@ def defaultrcpath():
         path = _expandrcpath(defaultpath)
     return path
 
-_rccomponents = None
-
 def rccomponents():
     '''return an ordered [(type, obj)] about where to load configs.
 
@@ -78,7 +76,7 @@ def rccomponents():
     '''
     envrc = ('items', envrcitems())
 
-    global _rccomponents
+    _rccomponents = None
     if _rccomponents is None:
         if 'HGRCPATH' in encoding.environ:
             # assume HGRCPATH is all about user configs so environments can be
