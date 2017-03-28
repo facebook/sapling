@@ -154,7 +154,7 @@ def modified(mctx, x):
     """
     # i18n: "modified" is a keyword
     getargs(x, 0, 0, _("modified takes no arguments"))
-    s = mctx.status().modified
+    s = set(mctx.status().modified)
     return [f for f in mctx.subset if f in s]
 
 @predicate('added()', callstatus=True)
@@ -163,7 +163,7 @@ def added(mctx, x):
     """
     # i18n: "added" is a keyword
     getargs(x, 0, 0, _("added takes no arguments"))
-    s = mctx.status().added
+    s = set(mctx.status().added)
     return [f for f in mctx.subset if f in s]
 
 @predicate('removed()', callstatus=True)
@@ -172,7 +172,7 @@ def removed(mctx, x):
     """
     # i18n: "removed" is a keyword
     getargs(x, 0, 0, _("removed takes no arguments"))
-    s = mctx.status().removed
+    s = set(mctx.status().removed)
     return [f for f in mctx.subset if f in s]
 
 @predicate('deleted()', callstatus=True)
@@ -181,7 +181,7 @@ def deleted(mctx, x):
     """
     # i18n: "deleted" is a keyword
     getargs(x, 0, 0, _("deleted takes no arguments"))
-    s = mctx.status().deleted
+    s = set(mctx.status().deleted)
     return [f for f in mctx.subset if f in s]
 
 @predicate('missing()', callstatus=True)
@@ -190,7 +190,7 @@ def missing(mctx, x):
     """
     # i18n: "missing" is a keyword
     getargs(x, 0, 0, _("missing takes no arguments"))
-    s = mctx.status().deleted
+    s = set(mctx.status().deleted)
     return [f for f in mctx.subset if f in s]
 
 @predicate('unknown()', callstatus=True)
@@ -200,7 +200,7 @@ def unknown(mctx, x):
     """
     # i18n: "unknown" is a keyword
     getargs(x, 0, 0, _("unknown takes no arguments"))
-    s = mctx.status().unknown
+    s = set(mctx.status().unknown)
     return [f for f in mctx.subset if f in s]
 
 @predicate('ignored()', callstatus=True)
@@ -210,7 +210,7 @@ def ignored(mctx, x):
     """
     # i18n: "ignored" is a keyword
     getargs(x, 0, 0, _("ignored takes no arguments"))
-    s = mctx.status().ignored
+    s = set(mctx.status().ignored)
     return [f for f in mctx.subset if f in s]
 
 @predicate('clean()', callstatus=True)
@@ -219,7 +219,7 @@ def clean(mctx, x):
     """
     # i18n: "clean" is a keyword
     getargs(x, 0, 0, _("clean takes no arguments"))
-    s = mctx.status().clean
+    s = set(mctx.status().clean)
     return [f for f in mctx.subset if f in s]
 
 def func(mctx, a, b):
