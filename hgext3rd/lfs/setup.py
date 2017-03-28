@@ -9,7 +9,6 @@ from mercurial.i18n import _
 
 from . import (
     blobstore,
-    util as lfsutil,
 )
 
 def threshold(ui, repo):
