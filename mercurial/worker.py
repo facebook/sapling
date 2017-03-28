@@ -133,6 +133,7 @@ def _posixworker(ui, func, staticargs, args):
         if problem[0]:
             killworkers()
     oldchldhandler = signal.signal(signal.SIGCHLD, sigchldhandler)
+    ui.flush()
     for pargs in partition(args, workers):
         pid = os.fork()
         if pid == 0:
