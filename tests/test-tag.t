@@ -230,7 +230,6 @@ doesn't end with EOL
   > f = file('.hgtags', 'w'); f.write(last); f.close()
   > EOF
   $ hg ci -m'broken manual edit of .hgtags'
-  hook: tag changes detected
   $ cat .hgtags; echo
   acb14030fe0a21b60322c440ad2d20cf7685a376 foobar
   $ hg tag newline
@@ -635,7 +634,6 @@ handle the loss of tags
   $ printf '' > .hgtags
   $ hg commit -m 'delete all tags'
   created new head
-  hook: tag changes detected
   $ hg log -r 'max(t7::)'
   changeset:   17:ffe462b50880
   user:        test

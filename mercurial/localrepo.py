@@ -1028,7 +1028,8 @@ class localrepository(object):
                 newfnodes = tagsmod.fnoderevs(repo.ui, repo, newheads)
                 # notes: we compare lists here.
                 # As we do it only once buiding set would not be cheaper
-                if oldfnodes != newfnodes:
+                changes = tagsmod.difftags(repo.ui, repo, oldfnodes, newfnodes)
+                if changes:
                     tr2.hookargs['tag_moved'] = '1'
         def validate(tr2):
             """will run pre-closing hooks"""

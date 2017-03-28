@@ -90,6 +90,45 @@ def fnoderevs(ui, repo, revs):
     fnodes = _filterfnodes(fnodes, nodes)
     return fnodes
 
+def _nulltonone(value):
+    """convert nullid to None
+
+    For tag value, nullid means "deleted". This small utility function helps
+    translating that to None."""
+    if value == nullid:
+        return None
+    return value
+
+def difftags(ui, repo, oldfnodes, newfnodes):
+    """list differences between tags expressed in two set of file-nodes
+
+    The list contains entries in the form: (tagname, oldvalue, new value).
+    None is used to expressed missing value:
+        ('foo', None, 'abcd') is a new tag,
+        ('bar', 'ef01', None) is a deletion,
+        ('baz', 'abcd', 'ef01') is a tag movement.
+    """
+    if oldfnodes == newfnodes:
+        return []
+    oldtags = _tagsfromfnodes(ui, repo, oldfnodes)
+    newtags = _tagsfromfnodes(ui, repo, newfnodes)
+
+    # list of (tag, old, new): None means missing
+    entries = []
+    for tag, (new, __) in newtags.items():
+        new = _nulltonone(new)
+        old, __ = oldtags.pop(tag, (None, None))
+        old = _nulltonone(old)
+        if old != new:
+            entries.append((tag, old, new))
+    # handle deleted tags
+    for tag, (old, __) in oldtags.items():
+        old = _nulltonone(old)
+        if old is not None:
+            entries.append((tag, old, None))
+    entries.sort()
+    return entries
+
 def findglobaltags(ui, repo):
     '''Find global tags in a repo: return a tagsmap
 
