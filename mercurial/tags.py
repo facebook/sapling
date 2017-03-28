@@ -85,19 +85,18 @@ def findglobaltags(ui, repo):
 
     The tags cache is read and updated as a side-effect of calling.
     '''
-    alltags = {}
-
     (heads, tagfnode, valid, cachetags, shouldwrite) = _readtagcache(ui, repo)
     if cachetags is not None:
         assert not shouldwrite
         # XXX is this really 100% correct?  are there oddball special
         # cases where a global tag should outrank a local tag but won't,
         # because cachetags does not contain rank info?
+        alltags = {}
         _updatetags(cachetags, alltags)
         return alltags
 
     seen = set()  # set of fnode
-    fctx = None
+    fnodes = []
     for head in reversed(heads):  # oldest to newest
         assert head in repo.changelog.nodemap, \
                "tag cache returned bogus head %s" % short(head)
@@ -105,17 +104,30 @@ def findglobaltags(ui, repo):
         fnode = tagfnode.get(head)
         if fnode and fnode not in seen:
             seen.add(fnode)
-            if not fctx:
-                fctx = repo.filectx('.hgtags', fileid=fnode)
-            else:
-                fctx = fctx.filectx(fnode)
+            fnodes.append(fnode)
 
-            filetags = _readtags(ui, repo, fctx.data().splitlines(), fctx)
-            _updatetags(filetags, alltags)
+    alltags = _tagsfromfnodes(ui, repo, fnodes)
 
     # and update the cache (if necessary)
     if shouldwrite:
         _writetagcache(ui, repo, valid, alltags)
+    return alltags
+
+def _tagsfromfnodes(ui, repo, fnodes):
+    """return a tagsmap from a list of file-node
+
+    tagsmap: tag name to (node, hist) 2-tuples.
+
+    The order of the list matters."""
+    alltags = {}
+    fctx = None
+    for fnode in fnodes:
+        if fctx is None:
+            fctx = repo.filectx('.hgtags', fileid=fnode)
+        else:
+            fctx = fctx.filectx(fnode)
+        filetags = _readtags(ui, repo, fctx.data().splitlines(), fctx)
+        _updatetags(filetags, alltags)
     return alltags
 
 def readlocaltags(ui, repo, alltags, tagtypes):
