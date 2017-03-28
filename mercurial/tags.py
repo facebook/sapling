@@ -97,7 +97,7 @@ def findglobaltags(ui, repo):
         # XXX is this really 100% correct?  are there oddball special
         # cases where a global tag should outrank a local tag but won't,
         # because cachetags does not contain rank info?
-        _updatetags(cachetags, 'global', alltags, tagtypes)
+        _updatetags(cachetags, alltags, 'global', tagtypes)
         return alltags, tagtypes
 
     seen = set()  # set of fnode
@@ -115,7 +115,7 @@ def findglobaltags(ui, repo):
                 fctx = fctx.filectx(fnode)
 
             filetags = _readtags(ui, repo, fctx.data().splitlines(), fctx)
-            _updatetags(filetags, 'global', alltags, tagtypes)
+            _updatetags(filetags, alltags, 'global', tagtypes)
 
     # and update the cache (if necessary)
     if shouldwrite:
@@ -145,7 +145,7 @@ def readlocaltags(ui, repo, alltags, tagtypes):
         except (LookupError, ValueError):
             del filetags[t]
 
-    _updatetags(filetags, "local", alltags, tagtypes)
+    _updatetags(filetags, alltags, 'local', tagtypes)
 
 def _readtaghist(ui, repo, lines, fn, recode=None, calcnodelines=False):
     '''Read tag definitions from a file (or any source of lines).
@@ -223,7 +223,7 @@ def _readtags(ui, repo, lines, fn, recode=None, calcnodelines=False):
         newtags[tag] = (taghist[-1], taghist[:-1])
     return newtags
 
-def _updatetags(filetags, tagtype, alltags, tagtypes):
+def _updatetags(filetags, alltags, tagtype, tagtypes):
     '''Incorporate the tag info read from one file into the two
     dictionaries, alltags and tagtypes, that contain all tag
     info (global across all heads plus local).'''
