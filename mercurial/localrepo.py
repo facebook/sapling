@@ -707,10 +707,11 @@ class localrepository(object):
         # be one tagtype for all such "virtual" tags?  Or is the status
         # quo fine?
 
-        alltags = {}                    # map tag name to (node, hist)
-        tagtypes = {}
 
-        tagsmod.findglobaltags(self.ui, self, alltags, tagtypes)
+        globaldata = tagsmod.findglobaltags(self.ui, self)
+        alltags = globaldata[0]   # map tag name to (node, hist)
+        tagtypes = globaldata[1]  # map tag name to tag type
+
         tagsmod.readlocaltags(self.ui, self, alltags, tagtypes)
 
         # Build the return dicts.  Have to re-encode tag names because

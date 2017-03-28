@@ -78,23 +78,18 @@ from . import (
 # The most recent changeset (in terms of revlog ordering for the head
 # setting it) for each tag is last.
 
-def findglobaltags(ui, repo, alltags, tagtypes):
-    '''Find global tags in a repo.
+def findglobaltags(ui, repo):
+    '''Find global tags in a repo: return (alltags, tagtypes)
 
     "alltags" maps tag name to (node, hist) 2-tuples.
 
     "tagtypes" maps tag name to tag type. Global tags always have the
     "global" tag type.
 
-    The "alltags" and "tagtypes" dicts are updated in place. Empty dicts
-    should be passed in.
-
     The tags cache is read and updated as a side-effect of calling.
     '''
-    # This is so we can be lazy and assume alltags contains only global
-    # tags when we pass it to _writetagcache().
-    assert len(alltags) == len(tagtypes) == 0, \
-           "findglobaltags() should be called first"
+    alltags = {}
+    tagtypes = {}
 
     (heads, tagfnode, valid, cachetags, shouldwrite) = _readtagcache(ui, repo)
     if cachetags is not None:
@@ -103,7 +98,7 @@ def findglobaltags(ui, repo, alltags, tagtypes):
         # cases where a global tag should outrank a local tag but won't,
         # because cachetags does not contain rank info?
         _updatetags(cachetags, 'global', alltags, tagtypes)
-        return
+        return alltags, tagtypes
 
     seen = set()  # set of fnode
     fctx = None
@@ -125,6 +120,7 @@ def findglobaltags(ui, repo, alltags, tagtypes):
     # and update the cache (if necessary)
     if shouldwrite:
         _writetagcache(ui, repo, valid, alltags)
+    return alltags, tagtypes
 
 def readlocaltags(ui, repo, alltags, tagtypes):
     '''Read local tags in repo. Update alltags and tagtypes.'''
