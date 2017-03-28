@@ -85,9 +85,8 @@ def rccomponents():
                 continue
             _rccomponents.extend(('path', p) for p in _expandrcpath(p))
     else:
-        paths = defaultrcpath() + systemrcpath()
-        _rccomponents = [('path', os.path.normpath(p)) for p in paths]
+        normpaths = lambda paths: [('path', os.path.normpath(p)) for p in paths]
+        _rccomponents = normpaths(defaultrcpath() + systemrcpath())
         _rccomponents.append(envrc)
-        paths = userrcpath()
-        _rccomponents.extend(('path', os.path.normpath(p)) for p in paths)
+        _rccomponents.extend(normpaths(userrcpath()))
     return _rccomponents
