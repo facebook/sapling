@@ -129,6 +129,44 @@ def difftags(ui, repo, oldfnodes, newfnodes):
     entries.sort()
     return entries
 
+def writediff(fp, difflist):
+    """write tags diff information to a file.
+
+    Data are stored with a line based format:
+
+        <action> <hex-node> <tag-name>\n
+
+    Action are defined as follow:
+       -R tag is removed,
+       +A tag is added,
+       -M tag is moved (old value),
+       +M tag is moved (new value),
+
+    Example:
+
+         +A 875517b4806a848f942811a315a5bce30804ae85 t5
+
+    See documentation of difftags output for details about the input.
+    """
+    add = '+A %s %s\n'
+    remove = '-R %s %s\n'
+    updateold = '-M %s %s\n'
+    updatenew = '+M %s %s\n'
+    for tag, old, new in difflist:
+        # translate to hex
+        if old is not None:
+            old = hex(old)
+        if new is not None:
+            new = hex(new)
+        # write to file
+        if old is None:
+            fp.write(add % (new, tag))
+        elif new is None:
+            fp.write(remove % (old, tag))
+        else:
+            fp.write(updateold % (old, tag))
+            fp.write(updatenew % (new, tag))
+
 def findglobaltags(ui, repo):
     '''Find global tags in a repo: return a tagsmap
 

@@ -1015,6 +1015,25 @@ class localrepository(object):
         # and do not use caches as much as it could.  The current focus is on
         # the behavior of the feature so we disable it by default. The flag
         # will be removed when we are happy with the performance impact.
+        #
+        # Once this feature is no longer experimental move the following
+        # documentation to the appropriate help section:
+        #
+        # The ``HG_TAG_MOVED`` variable will be set if the transaction touched
+        # tags (new or changed or deleted tags). In addition the details of
+        # these changes are made available in a file at:
+        #     ``REPOROOT/.hg/changes/tags.changes``.
+        # Make sure you check for HG_TAG_MOVED before reading that file as it
+        # might exist from a previous transaction even if no tag were touched
+        # in this one. Changes are recorded in a line base format::
+        #
+        #     <action> <hex-node> <tag-name>\n
+        #
+        # Actions are defined as follow:
+        #   "-R": tag is removed,
+        #   "+A": tag is added,
+        #   "-M": tag is moved (old value),
+        #   "+M": tag is moved (new value),
         tracktags = lambda x: None
         # experimental config: experimental.hook-track-tags
         shouldtracktags = self.ui.configbool('experimental', 'hook-track-tags',
@@ -1031,6 +1050,12 @@ class localrepository(object):
                 changes = tagsmod.difftags(repo.ui, repo, oldfnodes, newfnodes)
                 if changes:
                     tr2.hookargs['tag_moved'] = '1'
+                    with repo.vfs('changes/tags.changes', 'w',
+                                  atomictemp=True) as changesfile:
+                        # note: we do not register the file to the transaction
+                        # because we needs it to still exist on the transaction
+                        # is close (for txnclose hooks)
+                        tagsmod.writediff(changesfile, changes)
         def validate(tr2):
             """will run pre-closing hooks"""
             # XXX the transaction API is a bit lacking here so we take a hacky
