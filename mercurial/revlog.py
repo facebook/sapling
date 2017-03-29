@@ -438,7 +438,7 @@ class revlog(object):
         if l >= 0:
             return l
 
-        t = self.revision(self.node(rev))
+        t = self.revision(rev)
         return len(t)
     size = rawsize
 
@@ -1596,7 +1596,7 @@ class revlog(object):
                     fh = ifh
                 else:
                     fh = dfh
-                basetext = self.revision(self.node(baserev), _df=fh, raw=raw)
+                basetext = self.revision(baserev, _df=fh, raw=raw)
                 btext[0] = mdiff.patch(basetext, delta)
 
             try:
@@ -1628,7 +1628,7 @@ class revlog(object):
                         fh = ifh
                     else:
                         fh = dfh
-                    ptext = self.revision(self.node(rev), _df=fh)
+                    ptext = self.revision(rev, _df=fh)
                     delta = mdiff.textdiff(ptext, t)
             header, data = self.compress(delta)
             deltalen = len(header) + len(data)

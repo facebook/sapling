@@ -45,15 +45,6 @@ New errors are not allowed. Warnings are strongly discouraged.
   mercurial/policy.py:49:
    >     policy = os.environ.get('HGMODULEPOLICY', policy)
    use encoding.environ instead (py3)
-  mercurial/revlog.py:441:
-   >         t = self.revision(self.node(rev))
-   don't covert rev to node before passing to revision(nodeorrev)
-  mercurial/revlog.py:1599:
-   >                 basetext = self.revision(self.node(baserev), _df=fh, raw=raw)
-   don't covert rev to node before passing to revision(nodeorrev)
-  mercurial/revlog.py:1631:
-   >                     ptext = self.revision(self.node(rev), _df=fh)
-   don't covert rev to node before passing to revision(nodeorrev)
   Skipping mercurial/statprof.py it has no-che?k-code (glob)
   mercurial/unionrepo.py:93:
    >         return mdiff.textdiff(self.revision(self.node(rev1)),
