@@ -332,9 +332,10 @@ def _render_effects(ui, text, effects):
         stop = _effect_str(ui, 'none')
     else:
         activeeffects = _activeeffects(ui)
-        start = [str(activeeffects[e]) for e in ['none'] + effects.split()]
+        start = [pycompat.bytestr(activeeffects[e])
+                 for e in ['none'] + effects.split()]
         start = '\033[' + ';'.join(start) + 'm'
-        stop = '\033[' + str(activeeffects['none']) + 'm'
+        stop = '\033[' + pycompat.bytestr(activeeffects['none']) + 'm'
     return _mergeeffects(text, start, stop)
 
 _ansieffectre = re.compile(br'\x1b\[[0-9;]*m')
