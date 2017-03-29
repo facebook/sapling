@@ -505,6 +505,16 @@ def _addpushbackparts(op, replacements):
             _addpushbackchangegroup(op.repo, op.reply, outgoing)
             _addpushbackobsolete(op.repo, op.reply, replacements.values())
 
+def resolveonto(repo, ontoarg):
+    try:
+        if ontoarg != donotrebasemarker:
+            return scmutil.revsingle(repo, ontoarg)
+    except error.RepoLookupError:
+        # Probably a new bookmark. Leave onto as None to not do any rebasing
+        pass
+    # onto is None means don't do rebasing
+    return None
+
 @bundle2.parthandler(rebaseparttype, ('onto', 'newhead'))
 def bundle2rebase(op, part):
     '''unbundle a bundle2 containing a changegroup to rebase'''
@@ -529,6 +539,21 @@ def bundle2rebase(op, part):
         op.repo.hook("prepushrebase", throw=True, **prelockrebaseargs)
 
         op.repo.ui.setconfig('pushrebase', pushrebasemarker, True)
+
+        preonto = resolveonto(bundle, params.get('onto', donotrebasemarker))
+        preontocache = None
+        if preonto:
+            cache = bundle.manifestlog._revlog._cache
+            if cache:
+                cachenode, cacherev, cachetext = cache
+                if cachenode == preonto.node():
+                    preontocache = cache
+            if not preontocache:
+                cachenode = preonto.manifestnode()
+                cacherev = bundle.manifestlog._revlog.rev(cachenode)
+                cachetext = bundle.manifestlog[cachenode].read().text()
+                preontocache = (cachenode, cacherev, cachetext)
+
         tr = op.gettransaction()
         hookargs = dict(tr.hookargs)
 
@@ -551,15 +576,7 @@ def bundle2rebase(op, part):
         newfulltextcache = op.repo.manifestlog._revlog._fulltextcache.copy()
         bundle.manifestlog._revlog._fulltextcache = newfulltextcache
 
-        try:
-            # onto is None means don't do rebasing
-            onto = None
-            ontoarg = params.get('onto', donotrebasemarker)
-            if ontoarg != donotrebasemarker:
-                onto = scmutil.revsingle(op.repo, ontoarg)
-        except error.RepoLookupError:
-            # Probably a new bookmark. Leave onto as None to not do any rebasing
-            pass
+        onto = resolveonto(op.repo, params.get('onto', donotrebasemarker))
 
         if not params['newhead']:
             if not op.repo.revs('%r and head()', params['onto']):
@@ -596,6 +613,13 @@ def bundle2rebase(op, part):
             op.repo.ui.warn(("    ...\n"))
             firstline = bundle[revs[-1]].description().split('\n')[0][:50]
             op.repo.ui.warn(("    %s  %s\n") % (revs[-1], firstline))
+
+        # Prepopulate the revlog _cache with the original onto's fulltext. This
+        # means reading the new onto's manifest will likely have a much shorter
+        # delta chain to traverse.
+        if preontocache:
+            op.repo.manifestlog._revlog._cache = preontocache
+            onto.manifest()
 
         lastdestnode = None
         for rev in revs:
