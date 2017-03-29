@@ -101,3 +101,12 @@ Check that our revset and template mappings work
   $ hg ci -mb
   $ hg log -r . --template "{gitnode}\n"
   
+Check that gitnode revset and template work on the server
+  $ cd ../repo1
+  $ hg log -r . --template "{node}-{gitnode}\n"
+  3903775176ed42b1458a6281db4a0ccf4d9f287a-ffffffffffffffffffffffffffffffffffffffff
+  $ hg log -r "gitnode(ffffffffffffffffffffffffffffffffffffffff)" --template "{node}\n"
+  3903775176ed42b1458a6281db4a0ccf4d9f287a
+  $ hg log -r "gitnode(unknown)" --template "{node}\n"
+  abort: unknown revision 'unknown'!
+  [255]

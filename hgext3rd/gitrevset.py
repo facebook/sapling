@@ -27,40 +27,51 @@ templatekeyword = registrar.templatekeyword()
 @templatekeyword("gitnode")
 def showgitnode(repo, ctx, templ, **args):
     """Return the git revision corresponding to a given hg rev"""
-    peerpath = repo.ui.expandpath('default')
-
-    # sshing can cause junk 'remote: ...' output to stdout, so we need to
-    # redirect it temporarily so automation can parse the result easily.
-    oldfout = repo.ui.fout
-    try:
-        repo.baseui.fout = repo.ui.ferr
-        remoterepo = hg.peer(repo, {}, peerpath)
-        remoterev = remoterepo.lookup('_gitlookup_hg_%s' % ctx.hex())
-    except error.RepoError:
-        # templates are expected to return an empty string when no data exists
-        return ''
-    finally:
-        repo.baseui.fout = oldfout
-    return remoterev.encode('hex')
+    hexgitnode = _lookup_node(repo, ctx.hex(), from_scm_type='hg')
+    # templates are expected to return an empty string when no
+    # data exists
+    return hexgitnode.encode('hex') if hexgitnode else ''
 
 def gitnode(repo, subset, x):
     """``gitnode(id)``
     Return the hg revision corresponding to a given git rev."""
     l = revset.getargs(x, 1, 1, _("id requires one argument"))
     n = revset.getstring(l[0], _("id requires a string"))
-    peerpath = repo.ui.expandpath('default')
 
-    # sshing can cause junk 'remote: ...' output to stdout, so we need to
-    # redirect it temporarily so automation can parse the result easily.
-    oldfout = repo.ui.fout
+    hexhgnode = _lookup_node(repo, n, from_scm_type='git')
+    if not hexhgnode:
+        raise error.RepoLookupError(_("unknown revision '%s'") % n)
+
+    rev = repo[hexhgnode].rev()
+    return subset.filter(lambda r: r == rev)
+
+def _lookup_node(repo, hexnode, from_scm_type):
+    gitlookupnode = '_gitlookup_%s_%s' % (from_scm_type, hexnode)
+
+    # ui.expandpath('default') returns 'default' if there is no default
+    # path. This can be the case when command is ran on the server.
+    # In that case let's run lookup() command locally.
     try:
-        repo.baseui.fout = repo.ui.ferr
-        remoterepo = hg.peer(repo, {}, peerpath)
-        remoterev = remoterepo.lookup('_gitlookup_git_%s' % n)
-    finally:
-        repo.baseui.fout = oldfout
-    rn = repo[remoterev].rev()
-    return subset.filter(lambda r: r == rn)
+        return repo.lookup(gitlookupnode)
+    except error.RepoLookupError:
+        # Note: RepoLookupError is caught here because repo.lookup()
+        # can throw only this exception.
+        peerpath = repo.ui.expandpath('default')
+
+        # sshing can cause junk 'remote: ...' output to stdout, so we need to
+        # redirect it temporarily so automation can parse the result easily.
+        oldfout = repo.ui.fout
+        try:
+            repo.baseui.fout = repo.ui.ferr
+            remoterepo = hg.peer(repo, {}, peerpath)
+            return remoterepo.lookup(gitlookupnode)
+        except error.RepoError:
+            # Note: RepoError can be thrown by hg.peer(), RepoLookupError
+            # can be thrown by remoterepo.lookup(). RepoLookupError is a
+            # subclass of RepoError so catching just error.RepoError is enough.
+            return None
+        finally:
+            repo.baseui.fout = oldfout
 
 def overridestringset(orig, repo, subset, x):
     m = githashre.match(x)

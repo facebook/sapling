@@ -21,9 +21,9 @@
 # This also provides client and server commands to download all the Git metadata
 # via bundle2.
 
-from mercurial import bundle2, cmdutil, exchange, encoding, hg
-from mercurial import util, wireproto, error
-from mercurial.node import nullid
+from mercurial import bundle2, cmdutil, exchange, encoding, extensions, hg
+from mercurial import localrepo, util, wireproto, error
+from mercurial.node import bin, nullid
 from mercurial.i18n import _
 import errno, urllib
 
@@ -51,6 +51,13 @@ def remotelookup(orig, repo, proto, key):
             success = 1
             return '%s %s\n' % (success, ret)
     return orig(repo, proto, key)
+
+def locallookup(orig, repo, key):
+    gitlookup = _dolookup(repo, key)
+    if gitlookup:
+        return bin(gitlookup)
+    else:
+        return orig(repo, key)
 
 def _dolookup(repo, key):
     mapfile = repo.ui.configpath('gitlookup', 'mapfile')
@@ -141,4 +148,4 @@ def bundle2getgitmeta(op, part):
 
 def extsetup(ui):
     wrapwireprotocommand('lookup', remotelookup)
-
+    extensions.wrapfunction(localrepo.localrepository, 'lookup', locallookup)
