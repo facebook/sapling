@@ -40,12 +40,6 @@ New errors are not allowed. Warnings are strongly discouraged.
    >     policy = os.environ.get('HGMODULEPOLICY', policy)
    use encoding.environ instead (py3)
   Skipping mercurial/statprof.py it has no-che?k-code (glob)
-  mercurial/unionrepo.py:93:
-   >         return mdiff.textdiff(self.revision(self.node(rev1)),
-   don't covert rev to node before passing to revision(nodeorrev)
-  mercurial/unionrepo.py:94:
-   >                               self.revision(self.node(rev2)))
-   don't covert rev to node before passing to revision(nodeorrev)
   [1]
 
 @commands in debugcommands.py should be in alphabetical order.
