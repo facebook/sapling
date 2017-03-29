@@ -57,3 +57,20 @@ New errors are not allowed. Warnings are strongly discouraged.
   ...         print('commands in debugcommands.py not sorted; first differing '
   ...               'command is %s; expected %s' % (commands[i], command))
   ...         break
+
+Prevent adding new files in the root directory accidentally.
+
+  $ hg files 'glob:*'
+  .editorconfig
+  .hgignore
+  .hgsigs
+  .hgtags
+  CONTRIBUTING
+  CONTRIBUTORS
+  COPYING
+  Makefile
+  README
+  hg
+  hgeditor
+  hgweb.cgi
+  setup.py
