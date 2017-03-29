@@ -1232,11 +1232,11 @@ class ui(object):
         if self.configbool('experimental', 'editortmpinhg'):
             rdir = repopath
         (fd, name) = tempfile.mkstemp(prefix='hg-' + extra['prefix'] + '-',
-                                      suffix=extra['suffix'], text=True,
+                                      suffix=extra['suffix'],
                                       dir=rdir)
         try:
-            f = os.fdopen(fd, pycompat.sysstr("w"))
-            f.write(encoding.strfromlocal(text))
+            f = os.fdopen(fd, r'wb')
+            f.write(util.tonativeeol(text))
             f.close()
 
             environ = {'HGUSER': user}
@@ -1258,8 +1258,8 @@ class ui(object):
                         onerr=error.Abort, errprefix=_("edit failed"),
                         blockedtag='editor')
 
-            f = open(name)
-            t = encoding.strtolocal(f.read())
+            f = open(name, r'rb')
+            t = util.fromnativeeol(f.read())
             f.close()
         finally:
             os.unlink(name)
