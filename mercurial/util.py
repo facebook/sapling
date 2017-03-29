@@ -1144,7 +1144,7 @@ def copyfiles(src, dst, hardlink=None, progress=lambda t, pos: None):
             num += n
     else:
         if hardlink is None:
-            hardlink = (os.stat(src).st_dev ==
+            hardlink = (os.stat(os.path.dirname(src)).st_dev ==
                         os.stat(os.path.dirname(dst)).st_dev)
         topic = gettopic()
 
