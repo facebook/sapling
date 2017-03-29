@@ -339,16 +339,36 @@ def _getrevs(bundle, onto):
                               % onto.hex())
         oldonto = oldonto[0]
 
-        # Computes a list of all files that are in the changegroup, and diffs it
-        # against all the files that changed between the old onto (ex: our old
-        # bookmark location) and the new onto (ex: the server's actual bookmark
-        # location). Since oldonto->onto is the distance of the rebase, this
-        # should catch any conflicting changes.
-        files = set()
-        for rev in revs:
-            files |= set(rev.files())
-        filematcher = scmutil.matchfiles(bundle, files)
-        conflicts = onto.manifest().diff(oldonto.manifest(), filematcher).keys()
+        # Computes a list of all the incoming file changes
+        bundlefiles = set()
+        for bundlerev in revs:
+            bundlefiles.update(bundlerev.files())
+
+        def findconflicts():
+            # Returns all the files touched in the bundle that are also touched
+            # between the old onto (ex: our old bookmark location) and the new
+            # onto (ex: the server's actual bookmark location).
+            filematcher = scmutil.matchfiles(bundle, bundlefiles)
+            return onto.manifest().diff(oldonto.manifest(), filematcher).keys()
+
+        def findconflictsfast():
+            # Fast path for detecting conflicting files. Inspects the changelog
+            # file list instead of loading manifests. This only works for
+            # non-merge commits, since merge commit file lists do not include
+            # all the files changed in the merged.
+            ontofiles = set()
+            for betweenctx in bundle.set('%d %% %d', onto.rev(), oldonto.rev()):
+                ontofiles.update(betweenctx.files())
+
+            return bundlefiles.intersection(ontofiles)
+
+        if bundle.revs('(%d %% %d) - not merge()', onto.rev(), oldonto.rev()):
+            # If anything between oldonto and newonto is a merge commit, use the
+            # slower manifest diff path.
+            conflicts = findconflicts()
+        else:
+            conflicts = findconflictsfast()
+
         if conflicts:
             raise error.Abort(_('conflicting changes in:\n%s') %
                              ''.join('    %s\n' % f for f in sorted(conflicts)))
