@@ -414,8 +414,10 @@ def wrapsocket(sock, keyfile, certfile, ui, serverhostname=None):
         # a hint to the user.
         # Only modern ssl module exposes SSLContext.get_ca_certs() so we can
         # only show this warning if modern ssl is available.
-        # The exception handler is here because of
-        # https://bugs.python.org/issue20916.
+        # The exception handler is here to handle bugs around cert attributes:
+        # https://bugs.python.org/issue20916#msg213479.  (See issues5313.)
+        # When the main 20916 bug occurs, 'sslcontext.get_ca_certs()' is a
+        # non-empty list, but the following conditional is otherwise True.
         try:
             if (caloaded and settings['verifymode'] == ssl.CERT_REQUIRED and
                 modernssl and not sslcontext.get_ca_certs()):
