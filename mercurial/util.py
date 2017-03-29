@@ -2211,6 +2211,13 @@ def tolf(s):
 def tocrlf(s):
     return _eolre.sub('\r\n', s)
 
+if pycompat.oslinesep == '\r\n':
+    tonativeeol = tocrlf
+    fromnativeeol = tolf
+else:
+    tonativeeol = pycompat.identity
+    fromnativeeol = pycompat.identity
+
 def escapestr(s):
     # call underlying function of s.encode('string_escape') directly for
     # Python 3 compatibility
