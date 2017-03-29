@@ -113,11 +113,6 @@ testedwith = 'ships-with-hg-core'
 
 # Matches a lone LF, i.e., one that is not part of CRLF.
 singlelf = re.compile('(^|[^\r])\n')
-# Matches a single EOL which can either be a CRLF where repeated CR
-# are removed or a LF. We do not care about old Macintosh files, so a
-# stray CR is an error.
-eolre = re.compile('\r*\n')
-
 
 def inconsistenteol(data):
     return '\r\n' in data and singlelf.search(data)
@@ -131,7 +126,7 @@ def tolf(s, params, ui, **kwargs):
     if (ui.configbool('eol', 'fix-trailing-newline', False)
         and s and s[-1] != '\n'):
         s = s + '\n'
-    return eolre.sub('\n', s)
+    return util.tolf(s)
 
 def tocrlf(s, params, ui, **kwargs):
     """Filter to convert to CRLF EOLs."""
@@ -142,7 +137,7 @@ def tocrlf(s, params, ui, **kwargs):
     if (ui.configbool('eol', 'fix-trailing-newline', False)
         and s and s[-1] != '\n'):
         s = s + '\n'
-    return eolre.sub('\r\n', s)
+    return util.tocrlf(s)
 
 def isbinary(s, params):
     """Filter to do nothing with the file."""
