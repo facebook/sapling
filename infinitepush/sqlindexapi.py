@@ -26,24 +26,7 @@ def _convertbookmarkpattern(pattern):
 
 class sqlindexapi(indexapi):
     '''
-    Sql backend for infinitepush index. See tables.
-
-    CREATE TABLE IF NOT EXISTS nodestobundle(
-    node CHAR(40) BINARY NOT NULL,
-    bundle VARCHAR(512) BINARY NOT NULL,
-    reponame CHAR(255) BINARY NOT NULL,
-    PRIMARY KEY(node, reponame));
-
-    CREATE TABLE IF NOT EXISTS bookmarkstonode(
-    node CHAR(40) BINARY NOT NULL,
-    bookmark VARCHAR(512) BINARY NOT NULL,
-    reponame CHAR(255) BINARY NOT NULL,
-    PRIMARY KEY(reponame, bookmark));
-
-    CREATE TABLE IF NOT EXISTS bundles(
-    bundle VARCHAR(512) BINARY NOT NULL,
-    reponame CHAR(255) BINARY NOT NULL,
-    PRIMARY KEY(bundle, reponame));
+    Sql backend for infinitepush index. See schema.sql
     '''
 
     def __init__(self, reponame, host, port,

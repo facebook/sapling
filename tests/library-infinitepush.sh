@@ -65,26 +65,12 @@ EOF
 
 createdb() {
 mysql -h $DBHOST -P $DBPORT -u $DBUSER -p"$DBPASS" -e "CREATE DATABASE IF NOT EXISTS $DBNAME;" 2>/dev/null
-mysql -h $DBHOST -P $DBPORT -D $DBNAME -u $DBUSER -p"$DBPASS" -e '
+mysql -h $DBHOST -P $DBPORT -D $DBNAME -u $DBUSER -p"$DBPASS" <<EOF
 DROP TABLE IF EXISTS nodestobundle;
 DROP TABLE IF EXISTS bookmarkstonode;
 DROP TABLE IF EXISTS bundles;
-CREATE TABLE IF NOT EXISTS nodestobundle(
-node CHAR(40) BINARY NOT NULL,
-bundle VARCHAR(512) BINARY NOT NULL,
-reponame CHAR(255) BINARY NOT NULL,
-PRIMARY KEY(node, reponame));
-
-CREATE TABLE IF NOT EXISTS bookmarkstonode(
-node CHAR(40) BINARY NOT NULL,
-bookmark VARCHAR(512) BINARY NOT NULL,
-reponame CHAR(255) BINARY NOT NULL,
-PRIMARY KEY(reponame, bookmark));
-
-CREATE TABLE IF NOT EXISTS bundles(
-bundle VARCHAR(512) BINARY NOT NULL,
-reponame CHAR(255) BINARY NOT NULL,
-PRIMARY KEY(bundle, reponame));' 2>/dev/null
+$(cat $TESTDIR/../infinitepush/schema.sql)
+EOF
 }
 
 setupdb() {
