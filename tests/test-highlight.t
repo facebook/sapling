@@ -149,7 +149,7 @@ hgweb filerevision, html
   <div class="overflow">
   <div class="sourcefirst linewraptoggle">line wrap: <a class="linewraplink" href="javascript:toggleLinewrap()">on</a></div>
   <div class="sourcefirst"> line source</div>
-  <pre class="sourcelines stripes4 wrap bottomline">
+  <pre class="sourcelines stripes4 wrap bottomline" data-logurl="/log/tip/primes.py">
   <span id="l1"><span class="c">#!/usr/bin/env python</span></span><a href="#l1"></a>
   <span id="l2"></span><a href="#l2"></a>
   <span id="l3"><span class="sd">&quot;&quot;&quot;Fun with generators. Corresponding Haskell implementation:</span></span><a href="#l3"></a>
@@ -184,6 +184,9 @@ hgweb filerevision, html
   <span id="l32">    <span class="kn">print</span> <span class="s">&quot;The first </span><span class="si">%d</span><span class="s"> primes: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="nb">list</span><span class="p">(</span><span class="n">islice</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">n</span><span class="p">)))</span></span><a href="#l32"></a>
   <span id="l33"></span><a href="#l33"></a></pre>
   </div>
+  
+  <script type="text/javascript" src="/static/linerangelog.js"></script>
+  
   </div>
   </div>
   

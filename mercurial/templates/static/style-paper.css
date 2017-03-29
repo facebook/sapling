@@ -280,6 +280,46 @@ td.annotate:hover div.annotate-info { display: inline; }
   background-color: #bfdfff;
 }
 
+div.overflow pre.sourcelines > span:hover {
+  cursor: cell;
+}
+
+pre.sourcelines > span.followlines-selected {
+  background-color: #99C7E9;
+}
+
+div#followlines {
+  background-color: #B7B7B7;
+  border: 1px solid #CCC;
+  border-radius: 5px;
+  padding: 4px;
+  position: absolute;
+}
+
+div.followlines-cancel {
+  text-align: right;
+}
+
+div.followlines-cancel > button {
+  line-height: 80%;
+  padding: 0;
+  border: 0;
+  border-radius: 2px;
+  background-color: inherit;
+  font-weight: bold;
+}
+
+div.followlines-cancel > button:hover {
+  color: #FFFFFF;
+  background-color: #CF1F1F;
+}
+
+div.followlines-link {
+  margin: 2px;
+  margin-top: 4px;
+  font-family: sans-serif;
+}
+
 .sourcelines > a {
     display: inline-block;
     position: absolute;
