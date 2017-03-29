@@ -101,6 +101,7 @@ from mercurial import (
     error,
     extensions,
     match,
+    pycompat,
     util,
 )
 
@@ -170,7 +171,7 @@ class eolfile(object):
 
         isrepolf = self.cfg.get('repository', 'native') != 'CRLF'
         self._encode['NATIVE'] = isrepolf and 'to-lf' or 'to-crlf'
-        iswdlf = ui.config('eol', 'native', os.linesep) in ('LF', '\n')
+        iswdlf = ui.config('eol', 'native', pycompat.oslinesep) in ('LF', '\n')
         self._decode['NATIVE'] = iswdlf and 'to-lf' or 'to-crlf'
 
         include = []

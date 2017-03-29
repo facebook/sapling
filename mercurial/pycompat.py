@@ -42,6 +42,7 @@ if ispy3:
     fsencode = os.fsencode
     fsdecode = os.fsdecode
     # A bytes version of os.name.
+    oslinesep = os.linesep.encode('ascii')
     osname = os.name.encode('ascii')
     ospathsep = os.pathsep.encode('ascii')
     ossep = os.sep.encode('ascii')
@@ -231,6 +232,7 @@ else:
     strkwargs = identity
     byteskwargs = identity
 
+    oslinesep = os.linesep
     osname = os.name
     ospathsep = os.pathsep
     ossep = os.sep

@@ -1102,7 +1102,7 @@ class ui(object):
 
         # When stdin is in binary mode on Windows, it can cause
         # raw_input() to emit an extra trailing carriage return
-        if os.linesep == '\r\n' and line and line[-1] == '\r':
+        if pycompat.oslinesep == '\r\n' and line and line[-1] == '\r':
             line = line[:-1]
         return line
 
