@@ -1,7 +1,7 @@
 import re
 from operator import itemgetter
 
-diffrevisionregex = re.compile('Differential Revision:.*/D(\d+)')
+diffrevisionregex = re.compile('^Differential Revision:.*/D(\d+)', re.M)
 
 def parserevfromcommitmsg(description):
     """Parses the D123 revision number from a commit message.

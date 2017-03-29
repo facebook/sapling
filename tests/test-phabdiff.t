@@ -33,6 +33,16 @@ Test phabdiff template mapping
   $ hg log -r . --template "{phabdiff}: {tasks}\n"
   D1245: 123456 456
 
+Only match the Differential Revision label at the start of a line
+
+  $ echo e > e
+  $ hg commit -Aqm "Test Commit
+  > Test Plan: tested on Differential Revision: http://phabricator.intern.facebook.com/D1000
+  > Differential Revision: http://phabricator.intern.facebook.com/D6789
+  > "
+  $ hg log -r . --template "{phabdiff}\n"
+  D6789
+
 Make sure the template keywords are documented correctly
 
   $ hg help templates | egrep 'phabdiff|tasks'
