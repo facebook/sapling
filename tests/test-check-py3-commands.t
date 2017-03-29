@@ -111,6 +111,7 @@ Test bytes-ness of policy.policy with HGMODULEPOLICY
 
 `hg init` can create empty repos
 `hg status works fine`
+`hg summary` also works!
 
   $ $PYTHON3 `which hg` init py3repo
   $ cd py3repo
@@ -131,6 +132,13 @@ Test bytes-ness of policy.policy with HGMODULEPOLICY
   A A/mu
   $ HGEDITOR='echo message > ' $PYTHON3 $HGBIN commit
   $ $PYTHON3 $HGBIN status
+  $ $PYHON3 $HGBIN summary
+  parent: 1:e1e9167203d4 tip
+   message
+  branch: default
+  commit: (clean)
+  update: (current)
+  phases: 2 draft
 
 Prove the repo is valid using the Python 2 `hg`:
   $ hg verify
