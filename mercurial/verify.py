@@ -379,7 +379,53 @@ class verifier(object):
                     else:
                         del filenodes[f][n]
 
-                # verify contents
+                # Verify contents. 4 cases to care about:
+                #
+                #   common: the most common case
+                #   rename: with a rename
+                #   meta: file content starts with b'\1\n', the metadata
+                #         header defined in filelog.py, but without a rename
+                #   ext: content stored externally
+                #
+                # More formally, their differences are shown below:
+                #
+                #                       | common | rename | meta  | ext
+                #  -------------------------------------------------------
+                #   flags()             | 0      | 0      | 0     | not 0
+                #   renamed()           | False  | True   | False | ?
+                #   rawtext[0:2]=='\1\n'| False  | True   | True  | ?
+                #
+                # "rawtext" means the raw text stored in revlog data, which
+                # could be retrieved by "revision(rev, raw=True)". "text"
+                # mentioned below is "revision(rev, raw=False)".
+                #
+                # There are 3 different lengths stored physically:
+                #  1. L1: rawsize, stored in revlog index
+                #  2. L2: len(rawtext), stored in revlog data
+                #  3. L3: len(text), stored in revlog data if flags==0, or
+                #     possibly somewhere else if flags!=0
+                #
+                # L1 should be equal to L2. L3 could be different from them.
+                # "text" may or may not affect commit hash depending on flag
+                # processors (see revlog.addflagprocessor).
+                #
+                #              | common  | rename | meta  | ext
+                # -------------------------------------------------
+                #    rawsize() | L1      | L1     | L1    | L1
+                #       size() | L1      | L2-LM  | L1(*) | L1 (?)
+                # len(rawtext) | L2      | L2     | L2    | L2
+                #    len(text) | L2      | L2     | L2    | L3
+                #  len(read()) | L2      | L2-LM  | L2-LM | L3 (?)
+                #
+                # LM:  length of metadata, depending on rawtext
+                # (*): not ideal, see comment in filelog.size
+                # (?): could be "- len(meta)" if the resolved content has
+                #      rename metadata
+                #
+                # Checks needed to be done:
+                #  1. length check: L1 == L2, in all cases.
+                #  2. hash check: depending on flag processor, we may need to
+                #     use either "text" (external), or "rawtext" (in revlog).
                 try:
                     l = len(fl.read(n))
                     rp = fl.renamed(n)
