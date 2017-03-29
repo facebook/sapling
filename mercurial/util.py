@@ -1129,10 +1129,9 @@ def copyfiles(src, dst, hardlink=None, progress=lambda t, pos: None):
     if hardlink is None:
         hardlink = (os.stat(src).st_dev ==
                     os.stat(os.path.dirname(dst)).st_dev)
-    if hardlink:
-        topic = _('linking')
-    else:
-        topic = _('copying')
+
+    gettopic = lambda: hardlink and _('linking') or _('copying')
+    topic = gettopic()
 
     if os.path.isdir(src):
         os.mkdir(dst)
