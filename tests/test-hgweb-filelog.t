@@ -1165,6 +1165,8 @@ filelog with 'linerange' and 'patch'
   b
   c
   $ cat <<EOF > c
+  > 0
+  > 0
   > b
   > c+
   > 
@@ -1177,6 +1179,8 @@ filelog with 'linerange' and 'patch'
   > EOF
   $ hg ci -m 'make c bigger and touch its beginning' c
   $ cat <<EOF > c
+  > 0
+  > 0
   > b
   > c+
   > 
@@ -1189,6 +1193,8 @@ filelog with 'linerange' and 'patch'
   > EOF
   $ hg ci -m 'just touch end of c' c
   $ cat <<EOF > c
+  > 0
+  > 0
   > b
   > c++
   > 
@@ -1201,6 +1207,8 @@ filelog with 'linerange' and 'patch'
   > EOF
   $ hg ci -m 'touch beginning of c' c
   $ cat <<EOF > c
+  > 0
+  > 0
   > b-
   > c++
   > 
@@ -1212,7 +1220,7 @@ filelog with 'linerange' and 'patch'
   > f+
   > EOF
   $ hg ci -m 'touching beginning and end of c' c
-  $ hg log -r 'followlines(c, 1:2, startrev=tip) and follow(c)' -p
+  $ hg log -r 'followlines(c, 3:4, startrev=tip) and follow(c)' -p
   changeset:   0:6563da9dcf87
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -1237,16 +1245,18 @@ filelog with 'linerange' and 'patch'
    b
   +c
   
-  changeset:   8:c40702dbfc57
+  changeset:   8:5c6574614c37
   branch:      a-branch
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     make c bigger and touch its beginning
   
-  diff -r 46c1a66bd8fc -r c40702dbfc57 c
+  diff -r 46c1a66bd8fc -r 5c6574614c37 c
   --- a/c	Thu Jan 01 00:00:00 1970 +0000
   +++ b/c	Thu Jan 01 00:00:00 1970 +0000
-  @@ -1,2 +1,9 @@
+  @@ -1,2 +1,11 @@
+  +0
+  +0
    b
   -c
   +c+
@@ -1258,16 +1268,18 @@ filelog with 'linerange' and 'patch'
   +e
   +f
   
-  changeset:   10:f94018eca295
+  changeset:   10:e95928d60479
   branch:      a-branch
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     touch beginning of c
   
-  diff -r 07faa31d6d1c -r f94018eca295 c
+  diff -r e1d3e9c5a23f -r e95928d60479 c
   --- a/c	Thu Jan 01 00:00:00 1970 +0000
   +++ b/c	Thu Jan 01 00:00:00 1970 +0000
-  @@ -1,5 +1,5 @@
+  @@ -1,7 +1,7 @@
+   0
+   0
    b
   -c+
   +c++
@@ -1275,30 +1287,32 @@ filelog with 'linerange' and 'patch'
    a
    a
   
-  changeset:   11:ea4193bdd9bf
+  changeset:   11:fb9bc322513a
   branch:      a-branch
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     touching beginning and end of c
   
-  diff -r f94018eca295 -r ea4193bdd9bf c
+  diff -r e95928d60479 -r fb9bc322513a c
   --- a/c	Thu Jan 01 00:00:00 1970 +0000
   +++ b/c	Thu Jan 01 00:00:00 1970 +0000
-  @@ -1,4 +1,4 @@
+  @@ -1,6 +1,6 @@
+   0
+   0
   -b
   +b-
    c++
    
    a
-  @@ -6,4 +6,4 @@
+  @@ -8,4 +8,4 @@
    
    d
    e+
   -f
   +f+
   
-  $ (get-with-headers.py localhost:$HGPORT 'log/tip/c?linerange=1:2&patch=')
+  $ (get-with-headers.py localhost:$HGPORT 'log/tip/c?linerange=3:4&patch=')
   200 Script output follows
   
   <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
@@ -1355,9 +1369,9 @@ filelog with 'linerange' and 'patch'
   <div class="main">
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
   <h3>
-   log c @ 11:<a href="/rev/ea4193bdd9bf">ea4193bdd9bf</a>
+   log c @ 11:<a href="/rev/fb9bc322513a">fb9bc322513a</a>
    <span class="branchname">a-branch</span> <span class="tag">tip</span> 
-    (following lines 1:2 <a href="/log/tip/c">back to filelog</a>)
+    (following lines 3:4 <a href="/log/tip/c">back to filelog</a>)
   </h3>
   
   <form class="search" action="/log">
@@ -1368,8 +1382,8 @@ filelog with 'linerange' and 'patch'
   </form>
   
   <div class="navigate">
-  <a href="/log/tip/c?linerange=1%3A2&patch=&revcount=30">less</a>
-  <a href="/log/tip/c?linerange=1%3A2&patch=&revcount=120">more</a>
+  <a href="/log/tip/c?linerange=3%3A4&patch=&revcount=30">less</a>
+  <a href="/log/tip/c?linerange=3%3A4&patch=&revcount=120">more</a>
   |  </div>
   
   <table class="bigtable">
@@ -1385,59 +1399,65 @@ filelog with 'linerange' and 'patch'
     <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
     <td class="author">test</td>
     <td class="description">
-     <a href="/rev/ea4193bdd9bf">touching beginning and end of c</a>
+     <a href="/rev/fb9bc322513a">touching beginning and end of c</a>
      <span class="branchhead">a-branch</span> <span class="tag">tip</span> 
     </td>
    </tr>
    <tr><td colspan="3"><div class="bottomline inc-lineno"><pre class="sourcelines wrap">
   <span id="l1.1" class="minusline">--- a/c	Thu Jan 01 00:00:00 1970 +0000</span><a href="#l1.1"></a>
   <span id="l1.2" class="plusline">+++ b/c	Thu Jan 01 00:00:00 1970 +0000</span><a href="#l1.2"></a>
-  <span id="l1.3" class="atline">@@ -1,4 +1,4 @@</span><a href="#l1.3"></a>
-  <span id="l1.4" class="minusline">-b</span><a href="#l1.4"></a>
-  <span id="l1.5" class="plusline">+b-</span><a href="#l1.5"></a>
-  <span id="l1.6"> c++</span><a href="#l1.6"></a>
-  <span id="l1.7"> </span><a href="#l1.7"></a>
-  <span id="l1.8"> a</span><a href="#l1.8"></a></pre></div></td></tr>
+  <span id="l1.3" class="atline">@@ -1,6 +1,6 @@</span><a href="#l1.3"></a>
+  <span id="l1.4"> 0</span><a href="#l1.4"></a>
+  <span id="l1.5"> 0</span><a href="#l1.5"></a>
+  <span id="l1.6" class="minusline">-b</span><a href="#l1.6"></a>
+  <span id="l1.7" class="plusline">+b-</span><a href="#l1.7"></a>
+  <span id="l1.8"> c++</span><a href="#l1.8"></a>
+  <span id="l1.9"> </span><a href="#l1.9"></a>
+  <span id="l1.10"> a</span><a href="#l1.10"></a></pre></div></td></tr>
    <tr>
     <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
     <td class="author">test</td>
     <td class="description">
-     <a href="/rev/f94018eca295">touch beginning of c</a>
+     <a href="/rev/e95928d60479">touch beginning of c</a>
      <span class="branchname">a-branch</span> 
     </td>
    </tr>
    <tr><td colspan="3"><div class="bottomline inc-lineno"><pre class="sourcelines wrap">
   <span id="l1.1" class="minusline">--- a/c	Thu Jan 01 00:00:00 1970 +0000</span><a href="#l1.1"></a>
   <span id="l1.2" class="plusline">+++ b/c	Thu Jan 01 00:00:00 1970 +0000</span><a href="#l1.2"></a>
-  <span id="l1.3" class="atline">@@ -1,5 +1,5 @@</span><a href="#l1.3"></a>
-  <span id="l1.4"> b</span><a href="#l1.4"></a>
-  <span id="l1.5" class="minusline">-c+</span><a href="#l1.5"></a>
-  <span id="l1.6" class="plusline">+c++</span><a href="#l1.6"></a>
-  <span id="l1.7"> </span><a href="#l1.7"></a>
-  <span id="l1.8"> a</span><a href="#l1.8"></a>
-  <span id="l1.9"> a</span><a href="#l1.9"></a></pre></div></td></tr>
+  <span id="l1.3" class="atline">@@ -1,7 +1,7 @@</span><a href="#l1.3"></a>
+  <span id="l1.4"> 0</span><a href="#l1.4"></a>
+  <span id="l1.5"> 0</span><a href="#l1.5"></a>
+  <span id="l1.6"> b</span><a href="#l1.6"></a>
+  <span id="l1.7" class="minusline">-c+</span><a href="#l1.7"></a>
+  <span id="l1.8" class="plusline">+c++</span><a href="#l1.8"></a>
+  <span id="l1.9"> </span><a href="#l1.9"></a>
+  <span id="l1.10"> a</span><a href="#l1.10"></a>
+  <span id="l1.11"> a</span><a href="#l1.11"></a></pre></div></td></tr>
    <tr>
     <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
     <td class="author">test</td>
     <td class="description">
-     <a href="/rev/c40702dbfc57">make c bigger and touch its beginning</a>
+     <a href="/rev/5c6574614c37">make c bigger and touch its beginning</a>
      <span class="branchname">a-branch</span> 
     </td>
    </tr>
    <tr><td colspan="3"><div class="bottomline inc-lineno"><pre class="sourcelines wrap">
   <span id="l1.1" class="minusline">--- a/c	Thu Jan 01 00:00:00 1970 +0000</span><a href="#l1.1"></a>
   <span id="l1.2" class="plusline">+++ b/c	Thu Jan 01 00:00:00 1970 +0000</span><a href="#l1.2"></a>
-  <span id="l1.3" class="atline">@@ -1,2 +1,9 @@</span><a href="#l1.3"></a>
-  <span id="l1.4"> b</span><a href="#l1.4"></a>
-  <span id="l1.5" class="minusline">-c</span><a href="#l1.5"></a>
-  <span id="l1.6" class="plusline">+c+</span><a href="#l1.6"></a>
-  <span id="l1.7" class="plusline">+</span><a href="#l1.7"></a>
-  <span id="l1.8" class="plusline">+a</span><a href="#l1.8"></a>
-  <span id="l1.9" class="plusline">+a</span><a href="#l1.9"></a>
-  <span id="l1.10" class="plusline">+</span><a href="#l1.10"></a>
-  <span id="l1.11" class="plusline">+d</span><a href="#l1.11"></a>
-  <span id="l1.12" class="plusline">+e</span><a href="#l1.12"></a>
-  <span id="l1.13" class="plusline">+f</span><a href="#l1.13"></a></pre></div></td></tr>
+  <span id="l1.3" class="atline">@@ -1,2 +1,11 @@</span><a href="#l1.3"></a>
+  <span id="l1.4" class="plusline">+0</span><a href="#l1.4"></a>
+  <span id="l1.5" class="plusline">+0</span><a href="#l1.5"></a>
+  <span id="l1.6"> b</span><a href="#l1.6"></a>
+  <span id="l1.7" class="minusline">-c</span><a href="#l1.7"></a>
+  <span id="l1.8" class="plusline">+c+</span><a href="#l1.8"></a>
+  <span id="l1.9" class="plusline">+</span><a href="#l1.9"></a>
+  <span id="l1.10" class="plusline">+a</span><a href="#l1.10"></a>
+  <span id="l1.11" class="plusline">+a</span><a href="#l1.11"></a>
+  <span id="l1.12" class="plusline">+</span><a href="#l1.12"></a>
+  <span id="l1.13" class="plusline">+d</span><a href="#l1.13"></a>
+  <span id="l1.14" class="plusline">+e</span><a href="#l1.14"></a>
+  <span id="l1.15" class="plusline">+f</span><a href="#l1.15"></a></pre></div></td></tr>
    <tr>
     <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
     <td class="author">test</td>
@@ -1468,8 +1488,8 @@ filelog with 'linerange' and 'patch'
   </table>
   
   <div class="navigate">
-  <a href="/log/tip/c?linerange=1%3A2&patch=&revcount=30">less</a>
-  <a href="/log/tip/c?linerange=1%3A2&patch=&revcount=120">more</a>
+  <a href="/log/tip/c?linerange=3%3A4&patch=&revcount=30">less</a>
+  <a href="/log/tip/c?linerange=3%3A4&patch=&revcount=120">more</a>
   |  
   </div>
   
