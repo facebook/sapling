@@ -540,6 +540,16 @@ def bundle2rebase(op, part):
 
         op.repo.ui.setconfig('pushrebase', pushrebasemarker, True)
 
+        # We will need the bundle revs after the lock is taken, so let's
+        # precache all the bundle rev manifests.
+        bundlerepocache = {}
+        bundlectxs = list(bundle.set('bundle()'))
+        manifestcachesize = op.repo.ui.configint('format',
+                                                 'manifestcachesize') or 10
+        if len(bundlectxs) < manifestcachesize:
+            for ctx in bundlectxs:
+                bundlerepocache[ctx.manifestnode()] = ctx.manifestctx().read()
+
         preonto = resolveonto(bundle, params.get('onto', donotrebasemarker))
         preontocache = None
         if preonto:
@@ -573,6 +583,12 @@ def bundle2rebase(op, part):
                 newmfctx = manifest.manifestctx(bundle, mfnode)
                 newmfctx._data = mfctx._data
                 newdirmancache[dir][mfnode] = newmfctx
+
+        for mfnode, mfdict in bundlerepocache.iteritems():
+            newmfctx = manifest.manifestctx(bundle, mfnode)
+            newmfctx._data = mfdict
+            newdirmancache[""][mfnode] = newmfctx
+
         newfulltextcache = op.repo.manifestlog._revlog._fulltextcache.copy()
         bundle.manifestlog._revlog._fulltextcache = newfulltextcache
 
