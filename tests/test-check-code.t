@@ -13,12 +13,6 @@ New errors are not allowed. Warnings are strongly discouraged.
    >             r.revision(r.node(x))
    don't covert rev to node before passing to revision(nodeorrev)
   Skipping i18n/polib.py it has no-che?k-code (glob)
-  mercurial/bundlerepo.py:117:
-   >         return mdiff.textdiff(self.revision(self.node(rev1)),
-   don't covert rev to node before passing to revision(nodeorrev)
-  mercurial/bundlerepo.py:118:
-   >                               self.revision(self.node(rev2)))
-   don't covert rev to node before passing to revision(nodeorrev)
   mercurial/demandimport.py:312:
    >     if os.environ.get('HGDEMANDIMPORT') != 'disable':
    use encoding.environ instead (py3)

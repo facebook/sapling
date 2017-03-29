@@ -114,8 +114,7 @@ class bundlerevlog(revlog.revlog):
         elif rev1 <= self.repotiprev and rev2 <= self.repotiprev:
             return revlog.revlog.revdiff(self, rev1, rev2)
 
-        return mdiff.textdiff(self.revision(self.node(rev1)),
-                              self.revision(self.node(rev2)))
+        return mdiff.textdiff(self.revision(rev1), self.revision(rev2))
 
     def revision(self, nodeorrev, raw=False):
         """return an uncompressed revision of a given node or revision
