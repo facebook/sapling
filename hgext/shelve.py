@@ -592,9 +592,7 @@ def unshelveabort(ui, repo, state, opts):
 def mergefiles(ui, repo, wctx, shelvectx):
     """updates to wctx and merges the changes from shelvectx into the
     dirstate."""
-    oldquiet = ui.quiet
-    try:
-        ui.quiet = True
+    with ui.configoverride({('ui', 'quiet'): True}):
         hg.update(repo, wctx.node())
         files = []
         files.extend(shelvectx.files())
@@ -609,8 +607,6 @@ def mergefiles(ui, repo, wctx, shelvectx):
                        *pathtofiles(repo, files),
                        **{'no_backup': True})
         ui.popbuffer()
-    finally:
-        ui.quiet = oldquiet
 
 def restorebranch(ui, repo, branchtorestore):
     if branchtorestore and branchtorestore != repo.dirstate.branch():
@@ -680,17 +676,16 @@ def _commitworkingcopychanges(ui, repo, opts, tmpwctx):
     tempopts = {}
     tempopts['message'] = "pending changes temporary commit"
     tempopts['date'] = opts.get('date')
-    ui.quiet = True
-    node = cmdutil.commit(ui, repo, commitfunc, [], tempopts)
+    with ui.configoverride({('ui', 'quiet'): True}):
+        node = cmdutil.commit(ui, repo, commitfunc, [], tempopts)
     tmpwctx = repo[node]
     return tmpwctx, addedbefore
 
-def _unshelverestorecommit(ui, repo, basename, oldquiet):
+def _unshelverestorecommit(ui, repo, basename):
     """Recreate commit in the repository during the unshelve"""
-    ui.quiet = True
-    shelvedfile(repo, basename, 'hg').applybundle()
-    shelvectx = repo['tip']
-    ui.quiet = oldquiet
+    with ui.configoverride({('ui', 'quiet'): True}):
+        shelvedfile(repo, basename, 'hg').applybundle()
+        shelvectx = repo['tip']
     return repo, shelvectx
 
 def _rebaserestoredcommit(ui, repo, opts, tr, oldtiprev, basename, pctx,
@@ -873,11 +868,9 @@ def _dounshelve(ui, repo, *shelved, **opts):
     if not shelvedfile(repo, basename, patchextension).exists():
         raise error.Abort(_("shelved change '%s' not found") % basename)
 
-    oldquiet = ui.quiet
     lock = tr = None
     try:
         lock = repo.lock()
-
         tr = repo.transaction('unshelve', report=lambda x: None)
         oldtiprev = len(repo)
 
@@ -894,9 +887,7 @@ def _dounshelve(ui, repo, *shelved, **opts):
         with ui.configoverride(overrides, 'unshelve'):
             tmpwctx, addedbefore = _commitworkingcopychanges(ui, repo, opts,
                                                              tmpwctx)
-
-            repo, shelvectx = _unshelverestorecommit(ui, repo, basename,
-                                                     oldquiet)
+            repo, shelvectx = _unshelverestorecommit(ui, repo, basename)
             _checkunshelveuntrackedproblems(ui, repo, shelvectx)
             branchtorestore = ''
             if shelvectx.branch() != shelvectx.p1().branch():
@@ -914,7 +905,6 @@ def _dounshelve(ui, repo, *shelved, **opts):
             _finishunshelve(repo, oldtiprev, tr, activebookmark)
             unshelvecleanup(ui, repo, basename, opts)
     finally:
-        ui.quiet = oldquiet
         if tr:
             tr.release()
         lockmod.release(lock)
