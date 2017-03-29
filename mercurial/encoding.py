@@ -211,8 +211,8 @@ if pycompat.ispy3:
     strtolocal = unitolocal
     strfromlocal = unifromlocal
 else:
-    strtolocal = str
-    strfromlocal = str
+    strtolocal = pycompat.identity
+    strfromlocal = pycompat.identity
 
 if not _nativeenviron:
     # now encoding and helper functions are available, recreate the environ

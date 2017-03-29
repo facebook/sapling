@@ -30,6 +30,9 @@ else:
     import socketserver
     import xmlrpc.client as xmlrpclib
 
+def identity(a):
+    return a
+
 if ispy3:
     import builtins
     import functools
@@ -206,9 +209,7 @@ else:
     bytechr = chr
     bytestr = str
     iterbytestr = iter
-
-    def sysstr(s):
-        return s
+    sysstr = identity
 
     # Partial backport from os.py in Python 3, which only accepts bytes.
     # In Python 2, our paths should only ever be bytes, a unicode path
@@ -222,17 +223,13 @@ else:
 
     # In Python 2, fsdecode() has a very chance to receive bytes. So it's
     # better not to touch Python 2 part as it's already working fine.
-    def fsdecode(filename):
-        return filename
+    fsdecode = identity
 
     def getoptb(args, shortlist, namelist):
         return getopt.getopt(args, shortlist, namelist)
 
-    def strkwargs(dic):
-        return dic
-
-    def byteskwargs(dic):
-        return dic
+    strkwargs = identity
+    byteskwargs = identity
 
     osname = os.name
     ospathsep = os.pathsep
