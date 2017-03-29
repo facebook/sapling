@@ -680,14 +680,22 @@ def wraprepo(repo):
                 transaction = self.transaction("syncdb_bookmarks")
                 try:
                     bm = self._bookmarks
-                    bm.clear()
+                    oldbm = bm.copy()
+
                     self.sqlcursor.execute("""SELECT name, value FROM revision_references
                         WHERE namespace = 'bookmarks' AND repo = %s""",
                         (self.sqlreponame,))
-                    for name, node in self.sqlcursor:
+                    fetchedbookmarks = self.sqlcursor.fetchall()
+
+                    for name, node in fetchedbookmarks:
                         node = bin(node)
-                        if node in self:
+                        if node != oldbm.get(name):
                             bm[name] = node
+
+                    for deletebm in set(oldbm.keys()).difference(k for k, v in
+                                        fetchedbookmarks):
+                        del bm[deletebm]
+
                     bm.recordchange(transaction)
                     transaction.close()
                 finally:

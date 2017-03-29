@@ -73,6 +73,18 @@
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     z
   
+# Delete a bookmark in one, verify in the other
+
+  $ hg book book1
+  $ cd ../master
+  $ hg book
+     book1                     -1:000000000000
+     mybook                    2:d47967ce72a5
+  $ hg book -d book1
+  $ cd ../master2
+  $ hg book
+     mybook                    2:d47967ce72a5
+
 # Verify that --forcesync works
 
   $ cd ../
