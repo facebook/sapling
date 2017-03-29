@@ -614,11 +614,11 @@ Make sure testpullbycommithash2 has not fetched
   $ hg pull -r `cat ../testpullbycommithash1`
   pulling from ssh://user@dummy/repo
   searching for changes
-  no changes found
   adding changesets
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  (run 'hg update' to get a working copy)
   $ hg log -G -T '{desc} {phase} {bookmarks}'
   o  testpullbycommithash1 draft
   |
@@ -676,11 +676,11 @@ Strip scratchontopofpublic commit and do hg update
   'c70aee6da07d7cdb9897375473690df3a8563339' does not exist locally - looking for it remotely...
   pulling from ssh://user@dummy/repo
   searching for changes
-  no changes found
   adding changesets
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  (run 'hg update' to get a working copy)
   'c70aee6da07d7cdb9897375473690df3a8563339' found remotely
   2 files updated, 0 files merged, 2 files removed, 0 files unresolved
 

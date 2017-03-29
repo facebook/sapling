@@ -31,11 +31,11 @@ Restore
   $ cd restored
   $ hg pullbackup
   pulling from ssh://user@dummy/repo
-  no changes found
   adding changesets
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  (run 'hg update' to get a working copy)
   $ hg log --graph -T '{desc}'
   o  firstcommit
   
@@ -66,11 +66,11 @@ Restore with ambiguous repo root
   [255]
   $ hg pullbackup --reporoot $TESTTMP/backupsource2
   pulling from ssh://user@dummy/repo
-  no changes found
   adding changesets
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  (run 'hg update' to get a working copy)
   $ hg log --graph -T '{desc}'
   o  secondcommit
   
@@ -87,11 +87,11 @@ Check bookmarks escaping
   $ hg pullbackup --reporoot $TESTTMP/backupsource
   pulling from ssh://user@dummy/repo
   searching for changes
-  no changes found
   adding changesets
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
+  (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg book
      abook                     1:89ecc969c0ac
      book/bookmarks/somebook   1:89ecc969c0ac
@@ -116,11 +116,11 @@ Create a repo with `/bookmarks/` in path
   $ hg pullbackup --reporoot $TESTTMP/bookmarks/backupsource3
   pulling from ssh://user@dummy/repo
   searching for changes
-  no changes found
   adding changesets
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
+  (run 'hg heads .' to see heads, 'hg merge' to merge)
   $ hg book
      abook                     1:89ecc969c0ac
      book/bookmarks/somebook   1:89ecc969c0ac

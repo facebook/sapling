@@ -581,6 +581,11 @@ def _pull(orig, ui, repo, source="default", **opts):
     source, branches = hg.parseurl(ui.expandpath(source), opts.get('branch'))
 
     scratchbookmarks = {}
+    unfi = repo.unfiltered()
+    unknownnodes = []
+    for rev in opts.get('rev', []):
+        if rev not in unfi:
+            unknownnodes.append(rev)
     if opts.get('bookmark'):
         bookmarks = []
         revs = opts.get('rev') or []
@@ -623,9 +628,9 @@ def _pull(orig, ui, repo, source="default", **opts):
             except error.RepoLookupError:
                 pass
 
-    if scratchbookmarks:
+    if scratchbookmarks or unknownnodes:
         # Set anyincoming to True
-         wrapfunction(discovery, 'findcommonincoming', _findcommonincoming)
+        wrapfunction(discovery, 'findcommonincoming', _findcommonincoming)
     try:
         # Remote scratch bookmarks will be deleted because remotenames doesn't
         # know about them. Let's save it before pull and restore after
