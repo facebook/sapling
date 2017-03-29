@@ -430,7 +430,8 @@ class verifier(object):
                     l = len(fl.read(n))
                     rp = fl.renamed(n)
                     if l != fl.size(i):
-                        if len(fl.revision(n)) != fl.size(i):
+                        # the "L1 == L2" check
+                        if len(fl.revision(n, raw=True)) != fl.rawsize(i):
                             self.err(lr, _("unpacked size is %s, %s expected") %
                                      (l, fl.size(i)), f)
                 except error.CensoredNodeError:
