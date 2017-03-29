@@ -1126,14 +1126,13 @@ def copyfiles(src, dst, hardlink=None, progress=lambda t, pos: None):
     """Copy a directory tree using hardlinks if possible."""
     num = 0
 
-    if hardlink is None:
-        hardlink = (os.stat(src).st_dev ==
-                    os.stat(os.path.dirname(dst)).st_dev)
-
     gettopic = lambda: hardlink and _('linking') or _('copying')
-    topic = gettopic()
 
     if os.path.isdir(src):
+        if hardlink is None:
+            hardlink = (os.stat(src).st_dev ==
+                        os.stat(os.path.dirname(dst)).st_dev)
+        topic = gettopic()
         os.mkdir(dst)
         for name, kind in osutil.listdir(src):
             srcname = os.path.join(src, name)
@@ -1144,6 +1143,11 @@ def copyfiles(src, dst, hardlink=None, progress=lambda t, pos: None):
             hardlink, n = copyfiles(srcname, dstname, hardlink, progress=nprog)
             num += n
     else:
+        if hardlink is None:
+            hardlink = (os.stat(src).st_dev ==
+                        os.stat(os.path.dirname(dst)).st_dev)
+        topic = gettopic()
+
         if hardlink:
             try:
                 oslink(src, dst)
