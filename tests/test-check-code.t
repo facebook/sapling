@@ -9,7 +9,16 @@ New errors are not allowed. Warnings are strongly discouraged.
 
   $ hg locate -X contrib/python-zstandard -X hgext/fsmonitor/pywatchman |
   > sed 's-\\-/-g' | xargs "$check_code" --warnings --per-file=0 || false
+  contrib/perf.py:859:
+   >             r.revision(r.node(x))
+   don't covert rev to node before passing to revision(nodeorrev)
   Skipping i18n/polib.py it has no-che?k-code (glob)
+  mercurial/bundlerepo.py:117:
+   >         return mdiff.textdiff(self.revision(self.node(rev1)),
+   don't covert rev to node before passing to revision(nodeorrev)
+  mercurial/bundlerepo.py:118:
+   >                               self.revision(self.node(rev2)))
+   don't covert rev to node before passing to revision(nodeorrev)
   mercurial/demandimport.py:312:
    >     if os.environ.get('HGDEMANDIMPORT') != 'disable':
    use encoding.environ instead (py3)
@@ -36,7 +45,22 @@ New errors are not allowed. Warnings are strongly discouraged.
   mercurial/policy.py:49:
    >     policy = os.environ.get('HGMODULEPOLICY', policy)
    use encoding.environ instead (py3)
+  mercurial/revlog.py:441:
+   >         t = self.revision(self.node(rev))
+   don't covert rev to node before passing to revision(nodeorrev)
+  mercurial/revlog.py:1599:
+   >                 basetext = self.revision(self.node(baserev), _df=fh, raw=raw)
+   don't covert rev to node before passing to revision(nodeorrev)
+  mercurial/revlog.py:1631:
+   >                     ptext = self.revision(self.node(rev), _df=fh)
+   don't covert rev to node before passing to revision(nodeorrev)
   Skipping mercurial/statprof.py it has no-che?k-code (glob)
+  mercurial/unionrepo.py:93:
+   >         return mdiff.textdiff(self.revision(self.node(rev1)),
+   don't covert rev to node before passing to revision(nodeorrev)
+  mercurial/unionrepo.py:94:
+   >                               self.revision(self.node(rev2)))
+   don't covert rev to node before passing to revision(nodeorrev)
   [1]
 
 @commands in debugcommands.py should be in alphabetical order.
