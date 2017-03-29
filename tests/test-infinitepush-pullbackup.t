@@ -246,3 +246,17 @@ Make sure that both repos were checked even though check for one of them fails
   unknown revision 'e0230a60975b38a9014f098fb973199efd25c46f'
   checking \$TESTTMP/backupsource on .* (re)
   checking \$TESTTMP/backupsource2 on .* (re)
+
+Test getavailablebackups command
+  $ hg getavailablebackups
+  user test has 4 available backups:
+  \$TESTTMP on .* (re)
+  \$TESTTMP/backupsource on .* (re)
+  \$TESTTMP/backupsource2 on .* (re)
+  \$TESTTMP/bookmarks/backupsource3 on .* (re)
+  $ hg getavailablebackups --user anotheruser
+  user anotheruser has 2 available backups:
+  \$TESTTMP/backupsource on .* (re)
+  \$TESTTMP/backupsource2 on .* (re)
+  $ hg getavailablebackups --json
+  {".*": \["\$TESTTMP", "\$TESTTMP/backupsource", "\$TESTTMP/backupsource2", "\$TESTTMP/bookmarks/backupsource3"\]} (re)

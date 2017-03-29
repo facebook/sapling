@@ -172,6 +172,37 @@ def restore(ui, repo, dest=None, **opts):
 
     return result
 
+@command('getavailablebackups',
+    [('', 'user', '', _('username, defaults to current user')),
+     ('', 'json', None, _('print available backups in json format'))])
+def getavailablebackups(ui, repo, dest=None, **opts):
+    other = _getremote(repo, ui, dest, **opts)
+
+    sourcereporoot = opts.get('reporoot')
+    sourcehostname = opts.get('hostname')
+    username = opts.get('user') or ui.shortuser(ui.username())
+
+    allbackupstates = _downloadbackupstate(ui, other, sourcereporoot,
+                                           sourcehostname, username)
+
+    if opts.get('json'):
+        jsondict = defaultdict(list)
+        for hostname, reporoot in allbackupstates.keys():
+            jsondict[hostname].append(reporoot)
+            # make sure the output is sorted. That's not an efficient way to
+            # keep list sorted but we don't have that many backups.
+            jsondict[hostname].sort()
+        ui.write('%s\n' % json.dumps(jsondict))
+    else:
+        if not allbackupstates:
+            ui.write(_('no backups available for %s\n') % username)
+
+        ui.write(_('user %s has %d available backups:\n') %
+                 (username, len(allbackupstates)))
+
+        for hostname, reporoot in sorted(allbackupstates.keys()):
+            ui.write(_('%s on %s\n') % (reporoot, hostname))
+
 @command('debugcheckbackup',
          [('', 'all', None, _('check all backups that user have')),
          ] + restoreoptions)
