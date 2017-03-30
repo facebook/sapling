@@ -8,7 +8,7 @@
 from mercurial.node import bin, hex, nullid, nullrev
 from mercurial.i18n import _
 from mercurial.extensions import wrapfunction, wrapcommand
-from mercurial import error, cmdutil, revlog, localrepo
+from mercurial import error, cmdutil, revlog, localrepo, extensions
 from mercurial import wireproto, bookmarks, repair, commands, hg, mdiff, phases
 from mercurial import util, changegroup, exchange, bundle2, bundlerepo
 from mercurial import demandimport
@@ -78,6 +78,12 @@ def uisetup(ui):
     else:
         # Mercurial 3.6+
         wrapfunction(changegroup.cg1unpacker, 'apply', changegroupapply)
+
+    try:
+        treemfmod = extensions.find('treemanifest')
+        wrapcommand(treemfmod.cmdtable, 'backfilltree', backfilltree)
+    except KeyError:
+        pass
 
     # Record revlog writes
     def writeentry(orig, self, transaction, ifh, dfh, entry, data, link, offset):
@@ -217,6 +223,14 @@ def addchangegroup(orig, *args, **kwargs):
         return executewithsql(repo, orig, True, *args, **kwargs)
     else:
         return orig(*args, **kwargs)
+
+def backfilltree(orig, ui, repo, *args, **kwargs):
+    if issqlrepo(repo):
+        def _helper():
+            return orig(ui, repo, *args, **kwargs)
+        return executewithsql(repo, _helper, True)
+    else:
+        return orig(ui, repo, *args, **kwargs)
 
 def changegroupapply(orig, *args, **kwargs):
     repo = args[1]
