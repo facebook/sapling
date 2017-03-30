@@ -685,12 +685,6 @@ def rebase(ui, repo, **opts):
 
         # Validate input and define rebasing points
         destf = opts.get('dest', None)
-
-        if ui.configbool('commands', 'rebase.requiredest'):
-            if not destf:
-                raise error.Abort(_('you must specify a destination'),
-                                  hint=_('use: hg rebase -d REV'))
-
         srcf = opts.get('source', None)
         basef = opts.get('base', None)
         revf = opts.get('rev', [])
@@ -775,6 +769,10 @@ def _definesets(ui, repo, destf=None, srcf=None, basef=None, revf=None,
 
     cmdutil.checkunfinished(repo)
     cmdutil.bailifchanged(repo)
+
+    if ui.configbool('commands', 'rebase.requiredest') and not destf:
+        raise error.Abort(_('you must specify a destination'),
+                          hint=_('use: hg rebase -d REV'))
 
     if destf:
         dest = scmutil.revsingle(repo, destf)

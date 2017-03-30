@@ -55,6 +55,5 @@ Requiring dest should not break continue or other rebase options
   (no more unresolved files)
   continue: hg rebase --continue
   $ hg rebase --continue
-  abort: you must specify a destination
-  (use: hg rebase -d REV)
-  [255]
+  rebasing 3:0537f6b50def "dc" (tip)
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/0537f6b50def-be4c7386-backup.hg (glob)
