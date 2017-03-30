@@ -452,15 +452,17 @@ def findadmonitions(blocks, admonitions=None):
         i = i + 1
     return blocks
 
-_admonitiontitles = {'attention': _('Attention:'),
-                     'caution': _('Caution:'),
-                     'danger': _('!Danger!')  ,
-                     'error': _('Error:'),
-                     'hint': _('Hint:'),
-                     'important': _('Important:'),
-                     'note': _('Note:'),
-                     'tip': _('Tip:'),
-                     'warning': _('Warning!')}
+_admonitiontitles = {
+    'attention': _('Attention:'),
+    'caution': _('Caution:'),
+    'danger': _('!Danger!'),
+    'error': _('Error:'),
+    'hint': _('Hint:'),
+    'important': _('Important:'),
+    'note': _('Note:'),
+    'tip': _('Tip:'),
+    'warning': _('Warning!'),
+}
 
 def formatoption(block, width):
     desc = ' '.join(map(str.strip, block['lines']))
