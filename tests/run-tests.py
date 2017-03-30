@@ -848,6 +848,7 @@ class Test(unittest.TestCase):
             (br'(?m)^(saved backup bundle to .*\.hg)( \(glob\))?$',
              br'\1 (glob)'),
             (br'([^0-9])%s' % re.escape(self._localip()), br'\1$LOCALIP'),
+            (br'\bHG_TXNID=TXN:[a-f0-9]{40}\b', br'HG_TXNID=TXN:$ID$'),
             ]
         r.append((self._escapepath(self._testtmp), b'$TESTTMP'))
 
