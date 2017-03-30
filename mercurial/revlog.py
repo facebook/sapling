@@ -88,11 +88,17 @@ def addflagprocessor(flag, processor):
     - Only one flag processor can be registered on a specific flag.
     - flagprocessors must be 3-tuples of functions (read, write, raw) with the
       following signatures:
-          - (read)  f(self, text) -> newtext, bool
-          - (write) f(self, text) -> newtext, bool
-          - (raw)   f(self, text) -> bool
+          - (read)  f(self, rawtext) -> text, bool
+          - (write) f(self, text) -> rawtext, bool
+          - (raw)   f(self, rawtext) -> bool
+      "text" is presented to the user. "rawtext" is stored in revlog data, not
+      directly visible to the user.
       The boolean returned by these transforms is used to determine whether
-      'newtext' can be used for hash integrity checking.
+      the returned text can be used for hash integrity checking. For example,
+      if "write" returns False, then "text" is used to generate hash. If
+      "write" returns True, that basically means "rawtext" returned by "write"
+      should be used to generate hash. Usually, "write" and "read" return
+      different booleans. And "raw" returns a same boolean as "write".
 
       Note: The 'raw' transform is used for changegroup generation and in some
       debug commands. In this case the transform only indicates whether the
