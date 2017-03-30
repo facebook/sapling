@@ -1,19 +1,32 @@
 CREATE TABLE `bookmarkstonode` (
-  `node` char(40) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
-  `bookmark` varchar(512) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
-  `reponame` varchar(255) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `node` varbinary(64) NOT NULL,
+  `bookmark` varbinary(512) NOT NULL,
+  `reponame` varbinary(255) NOT NULL,
   PRIMARY KEY (`reponame`,`bookmark`)
-) ENGINE=InnoDB DEFAULT CHARSET=ascii;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 CREATE TABLE `bundles` (
-  `bundle` varchar(512) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
-  `reponame` varchar(255) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `bundle` varbinary(512) NOT NULL,
+  `reponame` varbinary(255) NOT NULL,
   PRIMARY KEY (`bundle`,`reponame`)
-) ENGINE=InnoDB DEFAULT CHARSET=ascii;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 CREATE TABLE `nodestobundle` (
-  `node` char(40) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
-  `bundle` varchar(512) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
-  `reponame` varchar(255) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `node` varbinary(64) NOT NULL,
+  `bundle` varbinary(512) NOT NULL,
+  `reponame` varbinary(255) NOT NULL,
   PRIMARY KEY (`node`,`reponame`)
-) ENGINE=InnoDB DEFAULT CHARSET=ascii;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+CREATE TABLE `nodesmetadata` (
+  `node` varbinary(64) NOT NULL,
+  `message` mediumblob NOT NULL,
+  `p1` varbinary(64) NOT NULL,
+  `p2` varbinary(64) DEFAULT NULL,
+  `author` varbinary(255) NOT NULL,
+  `committer` varbinary(255) DEFAULT NULL,
+  `author_date` bigint(20) NOT NULL,
+  `committer_date` bigint(20) DEFAULT NULL,
+  `reponame` varbinary(255) NOT NULL,
+  PRIMARY KEY (`reponame`,`node`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;

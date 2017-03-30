@@ -30,9 +30,9 @@ class indexapi(object):
     def __exit__(self, exc_type, exc_val, exc_tb):
         pass
 
-    def addbundle(self, bundleid, nodes):
-        """Takes a bundleid and a list of nodes in that bundle and records that
-        each node is contained in that bundle."""
+    def addbundle(self, bundleid, nodesctx):
+        """Takes a bundleid and a list of node contexts for each node
+        in that bundle and records that."""
         raise NotImplementedError()
 
     def addbookmark(self, bookmark, node):

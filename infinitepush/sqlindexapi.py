@@ -106,21 +106,35 @@ class sqlindexapi(indexapi):
         else:
             self.sqlconn.rollback()
 
-    def addbundle(self, bundleid, nodes):
-        """Takes a bundleid and a list of nodes in that bundle and records that
-        each node is contained in that bundle."""
+    def addbundle(self, bundleid, nodesctx):
         if not self._connected:
             self.sqlconnect()
-        self.log.info("ADD BUNDLE %r %r %r" % (self.reponame, bundleid, nodes))
+        self.log.info("ADD BUNDLE %r %r" % (self.reponame, bundleid))
         self.sqlcursor.execute(
             "INSERT INTO bundles(bundle, reponame) VALUES "
             "(%s, %s)", params=(bundleid, self.reponame))
-        for node in nodes:
+        for ctx in nodesctx:
             self.sqlcursor.execute(
                 "INSERT INTO nodestobundle(node, bundle, reponame) "
                 "VALUES (%s, %s, %s) ON DUPLICATE KEY UPDATE "
                 "bundle=VALUES(bundle)",
-                params=(node, bundleid, self.reponame))
+                params=(ctx.hex(), bundleid, self.reponame))
+
+            extra = ctx.extra()
+            author_name = ctx.user()
+            committer_name = extra.get('committer', ctx.user())
+            author_date = int(ctx.date()[0])
+            committer_date = int(extra.get('committer_date', author_date))
+            self.sqlcursor.execute(
+                "INSERT IGNORE INTO nodesmetadata(node, message, p1, p2, "
+                "author, committer, author_date, committer_date, "
+                "reponame) VALUES "
+                "(%s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                params=(ctx.hex(), ctx.description(),
+                        ctx.p1().hex(), ctx.p2().hex(), author_name,
+                        committer_name, author_date, committer_date,
+                        self.reponame)
+            )
 
     def addbookmark(self, bookmark, node):
         """Takes a bookmark name and hash, and records mapping in the metadata

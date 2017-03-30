@@ -68,4 +68,7 @@ Pull scratch commit from the second client
      scratch/book              2d9cfa7512136a84a6edb6a7c288145229c2ef7f
   $ hg book --list-remote 'scratch/%*'
      scratch/%erversidebook    0000000000000000000000000000000000000000
+  $ mysql -h $DBHOST -P $DBPORT -D $DBNAME -u $DBUSER -p"$DBPASS" -e 'select * from nodesmetadata'
+  node	message	p1	p2	author	committer	author_date	committer_date	reponame
+  2d9cfa7512136a84a6edb6a7c288145229c2ef7f	scratchcommit	0000000000000000000000000000000000000000	0000000000000000000000000000000000000000	test	test	0	0	babar
 #endif

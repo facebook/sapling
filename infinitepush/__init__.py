@@ -969,14 +969,14 @@ def bundle2scratchbranch(op, part):
             firstline = bundle[revs[-1]].description().split('\n')[0][:50]
             op.repo.ui.warn(("    %s  %s\n") % (revs[-1], firstline))
 
-        nodes = [hex(rev.node()) for rev in revs]
+        nodesctx = [bundle[rev] for rev in revs]
         inindex = lambda rev: bool(index.getbundle(bundle[rev].hex()))
         hasnewheads = any(not inindex(rev) for rev in bundleheads)
         # If there's a bookmark specified, there should be only one head,
         # so we choose the last node, which will be that head.
         # If a bug or malicious client allows there to be a bookmark
         # with multiple heads, we will place the bookmark on the last head.
-        bookmarknode = nodes[-1] if nodes else None
+        bookmarknode = nodesctx[-1].hex() if nodesctx else None
         key = None
         if hasnewheads:
             with open(bundlefile, 'r') as f:
@@ -988,7 +988,7 @@ def bundle2scratchbranch(op, part):
         with logservicecall(log, 'index'):
             with index:
                 if key:
-                    index.addbundle(key, nodes)
+                    index.addbundle(key, nodesctx)
                 if bookmark:
                     index.addbookmark(bookmark, bookmarknode)
                     _maybeaddpushbackpart(op, bookmark, bookmarknode,

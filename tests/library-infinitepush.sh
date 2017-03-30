@@ -70,6 +70,7 @@ mysql -h $DBHOST -P $DBPORT -D $DBNAME -u $DBUSER -p"$DBPASS" <<EOF
 DROP TABLE IF EXISTS nodestobundle;
 DROP TABLE IF EXISTS bookmarkstonode;
 DROP TABLE IF EXISTS bundles;
+DROP TABLE IF EXISTS nodesmetadata;
 $(cat $TESTDIR/../infinitepush/schema.sql)
 EOF
 }

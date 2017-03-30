@@ -30,9 +30,9 @@ class fileindexapi(indexapi):
         self._nodemap = os.path.join(root, 'nodemap')
         self._bookmarkmap = os.path.join(root, 'bookmarkmap')
 
-    def addbundle(self, bundleid, nodes):
-        for node in nodes:
-            nodepath = os.path.join(self._nodemap, node)
+    def addbundle(self, bundleid, nodesctx):
+        for node in nodesctx:
+            nodepath = os.path.join(self._nodemap, node.hex())
             self._write(nodepath, bundleid)
 
     def addbookmark(self, bookmark, node):
