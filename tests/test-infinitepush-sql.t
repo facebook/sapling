@@ -10,7 +10,7 @@
 With no configuration it should abort
   $ hg init server
   $ cd server
-  $ setupsqlserverhgrc
+  $ setupsqlserverhgrc babar
   $ hg st
   abort: please set infinitepush.sqlhost
   [255]

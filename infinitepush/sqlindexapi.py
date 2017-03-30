@@ -161,8 +161,9 @@ class sqlindexapi(indexapi):
         for pattern in patterns:
             pattern = _convertbookmarkpattern(pattern)
             self.sqlcursor.execute(
-                "DELETE from bookmarkstonode WHERE bookmark LIKE (%s)",
-                params=(pattern,))
+                "DELETE from bookmarkstonode WHERE bookmark LIKE (%s) "
+                "and reponame = %s",
+                params=(pattern, self.reponame))
 
     def getbundle(self, node):
         """Returns the bundleid for the bundle that contains the given node."""

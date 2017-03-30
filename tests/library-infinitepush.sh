@@ -60,6 +60,7 @@ branchpattern=re:scratch/.+
 server=True
 indextype=sql
 storetype=disk
+reponame=$1
 EOF
 }
 
@@ -90,7 +91,6 @@ fi
 [[ -z $DBNAME ]] && DBNAME="testdb_hg_$$_$TIME"
 
 echo "sqlhost=$DBHOST:$DBPORT:$DBNAME:$DBUSER:$DBPASS" >> .hg/hgrc
-echo "reponame=babar" >> .hg/hgrc
 
 createdb
 }
