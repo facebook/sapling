@@ -1124,10 +1124,10 @@ filelog with patch
     </td>
    </tr>
    <tr><td colspan="3"><div class="bottomline inc-lineno"><pre class="sourcelines wrap">
-  <span id="l1.1" class="minusline">--- /dev/null	Thu Jan 01 00:00:00 1970 +0000</span><a href="#l1.1"></a>
-  <span id="l1.2" class="plusline">+++ b/a	Thu Jan 01 00:00:00 1970 +0000</span><a href="#l1.2"></a>
-  <span id="l1.3" class="atline">@@ -0,0 +1,1 @@</span><a href="#l1.3"></a>
-  <span id="l1.4" class="plusline">+b</span><a href="#l1.4"></a></pre></div></td></tr>
+  <span id="3f41bc784e7e-l1.1" class="minusline">--- /dev/null	Thu Jan 01 00:00:00 1970 +0000</span><a href="#3f41bc784e7e-l1.1"></a>
+  <span id="3f41bc784e7e-l1.2" class="plusline">+++ b/a	Thu Jan 01 00:00:00 1970 +0000</span><a href="#3f41bc784e7e-l1.2"></a>
+  <span id="3f41bc784e7e-l1.3" class="atline">@@ -0,0 +1,1 @@</span><a href="#3f41bc784e7e-l1.3"></a>
+  <span id="3f41bc784e7e-l1.4" class="plusline">+b</span><a href="#3f41bc784e7e-l1.4"></a></pre></div></td></tr>
    <tr>
     <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
     <td class="author">test</td>
@@ -1137,10 +1137,10 @@ filelog with patch
     </td>
    </tr>
    <tr><td colspan="3"><div class="bottomline inc-lineno"><pre class="sourcelines wrap">
-  <span id="l1.1" class="minusline">--- /dev/null	Thu Jan 01 00:00:00 1970 +0000</span><a href="#l1.1"></a>
-  <span id="l1.2" class="plusline">+++ b/a	Thu Jan 01 00:00:00 1970 +0000</span><a href="#l1.2"></a>
-  <span id="l1.3" class="atline">@@ -0,0 +1,1 @@</span><a href="#l1.3"></a>
-  <span id="l1.4" class="plusline">+a</span><a href="#l1.4"></a></pre></div></td></tr>
+  <span id="5ed941583260-l1.1" class="minusline">--- /dev/null	Thu Jan 01 00:00:00 1970 +0000</span><a href="#5ed941583260-l1.1"></a>
+  <span id="5ed941583260-l1.2" class="plusline">+++ b/a	Thu Jan 01 00:00:00 1970 +0000</span><a href="#5ed941583260-l1.2"></a>
+  <span id="5ed941583260-l1.3" class="atline">@@ -0,0 +1,1 @@</span><a href="#5ed941583260-l1.3"></a>
+  <span id="5ed941583260-l1.4" class="plusline">+a</span><a href="#5ed941583260-l1.4"></a></pre></div></td></tr>
   
   </tbody>
   </table>
@@ -1404,16 +1404,16 @@ filelog with 'linerange' and 'patch'
     </td>
    </tr>
    <tr><td colspan="3"><div class="bottomline inc-lineno"><pre class="sourcelines wrap">
-  <span id="l1.1" class="minusline">--- a/c	Thu Jan 01 00:00:00 1970 +0000</span><a href="#l1.1"></a>
-  <span id="l1.2" class="plusline">+++ b/c	Thu Jan 01 00:00:00 1970 +0000</span><a href="#l1.2"></a>
-  <span id="l1.3" class="atline">@@ -1,6 +1,6 @@</span><a href="#l1.3"></a>
-  <span id="l1.4"> 0</span><a href="#l1.4"></a>
-  <span id="l1.5"> 0</span><a href="#l1.5"></a>
-  <span id="l1.6" class="minusline">-b</span><a href="#l1.6"></a>
-  <span id="l1.7" class="plusline">+b-</span><a href="#l1.7"></a>
-  <span id="l1.8"> c++</span><a href="#l1.8"></a>
-  <span id="l1.9"> </span><a href="#l1.9"></a>
-  <span id="l1.10"> a</span><a href="#l1.10"></a></pre></div></td></tr>
+  <span id="fb9bc322513a-l1.1" class="minusline">--- a/c	Thu Jan 01 00:00:00 1970 +0000</span><a href="#fb9bc322513a-l1.1"></a>
+  <span id="fb9bc322513a-l1.2" class="plusline">+++ b/c	Thu Jan 01 00:00:00 1970 +0000</span><a href="#fb9bc322513a-l1.2"></a>
+  <span id="fb9bc322513a-l1.3" class="atline">@@ -1,6 +1,6 @@</span><a href="#fb9bc322513a-l1.3"></a>
+  <span id="fb9bc322513a-l1.4"> 0</span><a href="#fb9bc322513a-l1.4"></a>
+  <span id="fb9bc322513a-l1.5"> 0</span><a href="#fb9bc322513a-l1.5"></a>
+  <span id="fb9bc322513a-l1.6" class="minusline">-b</span><a href="#fb9bc322513a-l1.6"></a>
+  <span id="fb9bc322513a-l1.7" class="plusline">+b-</span><a href="#fb9bc322513a-l1.7"></a>
+  <span id="fb9bc322513a-l1.8"> c++</span><a href="#fb9bc322513a-l1.8"></a>
+  <span id="fb9bc322513a-l1.9"> </span><a href="#fb9bc322513a-l1.9"></a>
+  <span id="fb9bc322513a-l1.10"> a</span><a href="#fb9bc322513a-l1.10"></a></pre></div></td></tr>
    <tr>
     <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
     <td class="author">test</td>
@@ -1423,17 +1423,17 @@ filelog with 'linerange' and 'patch'
     </td>
    </tr>
    <tr><td colspan="3"><div class="bottomline inc-lineno"><pre class="sourcelines wrap">
-  <span id="l1.1" class="minusline">--- a/c	Thu Jan 01 00:00:00 1970 +0000</span><a href="#l1.1"></a>
-  <span id="l1.2" class="plusline">+++ b/c	Thu Jan 01 00:00:00 1970 +0000</span><a href="#l1.2"></a>
-  <span id="l1.3" class="atline">@@ -1,7 +1,7 @@</span><a href="#l1.3"></a>
-  <span id="l1.4"> 0</span><a href="#l1.4"></a>
-  <span id="l1.5"> 0</span><a href="#l1.5"></a>
-  <span id="l1.6"> b</span><a href="#l1.6"></a>
-  <span id="l1.7" class="minusline">-c+</span><a href="#l1.7"></a>
-  <span id="l1.8" class="plusline">+c++</span><a href="#l1.8"></a>
-  <span id="l1.9"> </span><a href="#l1.9"></a>
-  <span id="l1.10"> a</span><a href="#l1.10"></a>
-  <span id="l1.11"> a</span><a href="#l1.11"></a></pre></div></td></tr>
+  <span id="e95928d60479-l1.1" class="minusline">--- a/c	Thu Jan 01 00:00:00 1970 +0000</span><a href="#e95928d60479-l1.1"></a>
+  <span id="e95928d60479-l1.2" class="plusline">+++ b/c	Thu Jan 01 00:00:00 1970 +0000</span><a href="#e95928d60479-l1.2"></a>
+  <span id="e95928d60479-l1.3" class="atline">@@ -1,7 +1,7 @@</span><a href="#e95928d60479-l1.3"></a>
+  <span id="e95928d60479-l1.4"> 0</span><a href="#e95928d60479-l1.4"></a>
+  <span id="e95928d60479-l1.5"> 0</span><a href="#e95928d60479-l1.5"></a>
+  <span id="e95928d60479-l1.6"> b</span><a href="#e95928d60479-l1.6"></a>
+  <span id="e95928d60479-l1.7" class="minusline">-c+</span><a href="#e95928d60479-l1.7"></a>
+  <span id="e95928d60479-l1.8" class="plusline">+c++</span><a href="#e95928d60479-l1.8"></a>
+  <span id="e95928d60479-l1.9"> </span><a href="#e95928d60479-l1.9"></a>
+  <span id="e95928d60479-l1.10"> a</span><a href="#e95928d60479-l1.10"></a>
+  <span id="e95928d60479-l1.11"> a</span><a href="#e95928d60479-l1.11"></a></pre></div></td></tr>
    <tr>
     <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
     <td class="author">test</td>
@@ -1443,21 +1443,21 @@ filelog with 'linerange' and 'patch'
     </td>
    </tr>
    <tr><td colspan="3"><div class="bottomline inc-lineno"><pre class="sourcelines wrap">
-  <span id="l1.1" class="minusline">--- a/c	Thu Jan 01 00:00:00 1970 +0000</span><a href="#l1.1"></a>
-  <span id="l1.2" class="plusline">+++ b/c	Thu Jan 01 00:00:00 1970 +0000</span><a href="#l1.2"></a>
-  <span id="l1.3" class="atline">@@ -1,2 +1,11 @@</span><a href="#l1.3"></a>
-  <span id="l1.4" class="plusline">+0</span><a href="#l1.4"></a>
-  <span id="l1.5" class="plusline">+0</span><a href="#l1.5"></a>
-  <span id="l1.6"> b</span><a href="#l1.6"></a>
-  <span id="l1.7" class="minusline">-c</span><a href="#l1.7"></a>
-  <span id="l1.8" class="plusline">+c+</span><a href="#l1.8"></a>
-  <span id="l1.9" class="plusline">+</span><a href="#l1.9"></a>
-  <span id="l1.10" class="plusline">+a</span><a href="#l1.10"></a>
-  <span id="l1.11" class="plusline">+a</span><a href="#l1.11"></a>
-  <span id="l1.12" class="plusline">+</span><a href="#l1.12"></a>
-  <span id="l1.13" class="plusline">+d</span><a href="#l1.13"></a>
-  <span id="l1.14" class="plusline">+e</span><a href="#l1.14"></a>
-  <span id="l1.15" class="plusline">+f</span><a href="#l1.15"></a></pre></div></td></tr>
+  <span id="5c6574614c37-l1.1" class="minusline">--- a/c	Thu Jan 01 00:00:00 1970 +0000</span><a href="#5c6574614c37-l1.1"></a>
+  <span id="5c6574614c37-l1.2" class="plusline">+++ b/c	Thu Jan 01 00:00:00 1970 +0000</span><a href="#5c6574614c37-l1.2"></a>
+  <span id="5c6574614c37-l1.3" class="atline">@@ -1,2 +1,11 @@</span><a href="#5c6574614c37-l1.3"></a>
+  <span id="5c6574614c37-l1.4" class="plusline">+0</span><a href="#5c6574614c37-l1.4"></a>
+  <span id="5c6574614c37-l1.5" class="plusline">+0</span><a href="#5c6574614c37-l1.5"></a>
+  <span id="5c6574614c37-l1.6"> b</span><a href="#5c6574614c37-l1.6"></a>
+  <span id="5c6574614c37-l1.7" class="minusline">-c</span><a href="#5c6574614c37-l1.7"></a>
+  <span id="5c6574614c37-l1.8" class="plusline">+c+</span><a href="#5c6574614c37-l1.8"></a>
+  <span id="5c6574614c37-l1.9" class="plusline">+</span><a href="#5c6574614c37-l1.9"></a>
+  <span id="5c6574614c37-l1.10" class="plusline">+a</span><a href="#5c6574614c37-l1.10"></a>
+  <span id="5c6574614c37-l1.11" class="plusline">+a</span><a href="#5c6574614c37-l1.11"></a>
+  <span id="5c6574614c37-l1.12" class="plusline">+</span><a href="#5c6574614c37-l1.12"></a>
+  <span id="5c6574614c37-l1.13" class="plusline">+d</span><a href="#5c6574614c37-l1.13"></a>
+  <span id="5c6574614c37-l1.14" class="plusline">+e</span><a href="#5c6574614c37-l1.14"></a>
+  <span id="5c6574614c37-l1.15" class="plusline">+f</span><a href="#5c6574614c37-l1.15"></a></pre></div></td></tr>
    <tr>
     <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
     <td class="author">test</td>
@@ -1467,11 +1467,11 @@ filelog with 'linerange' and 'patch'
     </td>
    </tr>
    <tr><td colspan="3"><div class="bottomline inc-lineno"><pre class="sourcelines wrap">
-  <span id="l1.1" class="minusline">--- a/c	Thu Jan 01 00:00:00 1970 +0000</span><a href="#l1.1"></a>
-  <span id="l1.2" class="plusline">+++ b/c	Thu Jan 01 00:00:00 1970 +0000</span><a href="#l1.2"></a>
-  <span id="l1.3" class="atline">@@ -1,1 +1,2 @@</span><a href="#l1.3"></a>
-  <span id="l1.4"> b</span><a href="#l1.4"></a>
-  <span id="l1.5" class="plusline">+c</span><a href="#l1.5"></a></pre></div></td></tr>
+  <span id="46c1a66bd8fc-l1.1" class="minusline">--- a/c	Thu Jan 01 00:00:00 1970 +0000</span><a href="#46c1a66bd8fc-l1.1"></a>
+  <span id="46c1a66bd8fc-l1.2" class="plusline">+++ b/c	Thu Jan 01 00:00:00 1970 +0000</span><a href="#46c1a66bd8fc-l1.2"></a>
+  <span id="46c1a66bd8fc-l1.3" class="atline">@@ -1,1 +1,2 @@</span><a href="#46c1a66bd8fc-l1.3"></a>
+  <span id="46c1a66bd8fc-l1.4"> b</span><a href="#46c1a66bd8fc-l1.4"></a>
+  <span id="46c1a66bd8fc-l1.5" class="plusline">+c</span><a href="#46c1a66bd8fc-l1.5"></a></pre></div></td></tr>
    <tr>
     <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
     <td class="author">test</td>
@@ -1481,8 +1481,8 @@ filelog with 'linerange' and 'patch'
     </td>
    </tr>
    <tr><td colspan="3"><div class="bottomline inc-lineno"><pre class="sourcelines wrap">
-  <span id="l1.1" class="minusline">--- /dev/null	Thu Jan 01 00:00:00 1970 +0000</span><a href="#l1.1"></a>
-  <span id="l1.2" class="plusline">+++ b/b	Thu Jan 01 00:00:00 1970 +0000</span><a href="#l1.2"></a></pre></div></td></tr>
+  <span id="6563da9dcf87-l1.1" class="minusline">--- /dev/null	Thu Jan 01 00:00:00 1970 +0000</span><a href="#6563da9dcf87-l1.1"></a>
+  <span id="6563da9dcf87-l1.2" class="plusline">+++ b/b	Thu Jan 01 00:00:00 1970 +0000</span><a href="#6563da9dcf87-l1.2"></a></pre></div></td></tr>
   
   </tbody>
   </table>

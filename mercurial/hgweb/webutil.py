@@ -434,7 +434,8 @@ def listfilediffs(tmpl, files, node, max):
     if len(files) > max:
         yield tmpl('fileellipses')
 
-def diffs(web, tmpl, ctx, basectx, files, style, linerange=None):
+def diffs(web, tmpl, ctx, basectx, files, style, linerange=None,
+          lineidprefix=''):
 
     def prettyprintlines(lines, blockno):
         for lineno, l in enumerate(lines, 1):
@@ -450,7 +451,7 @@ def diffs(web, tmpl, ctx, basectx, files, style, linerange=None):
             yield tmpl(ltype,
                        line=l,
                        lineno=lineno,
-                       lineid="l%s" % difflineno,
+                       lineid=lineidprefix + "l%s" % difflineno,
                        linenumber="% 8s" % difflineno)
 
     repo = web.repo

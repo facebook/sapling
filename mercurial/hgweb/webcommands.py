@@ -998,7 +998,8 @@ def filelog(web, req, tmpl):
         basectx = ctx.p1()
         path = fctx.path()
         return webutil.diffs(web, tmpl, ctx, basectx, [path], diffstyle,
-                             linerange=linerange)
+                             linerange=linerange,
+                             lineidprefix='%s-' % ctx.hex()[:12])
 
     linerange = None
     if lrange is not None:
