@@ -414,7 +414,6 @@ def prunecomments(blocks):
 
 
 _admonitions = set([
-    'admonition',
     'attention',
     'caution',
     'danger',
