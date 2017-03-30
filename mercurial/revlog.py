@@ -1267,7 +1267,9 @@ class revlog(object):
             return ""
         if self._cache:
             if self._cache[0] == node:
-                return self._cache[2]
+                # _cache only stores rawtext
+                if raw:
+                    return self._cache[2]
             cachedrev = self._cache[1]
 
         # look up what we need to read
@@ -1294,7 +1296,7 @@ class revlog(object):
         if validatehash:
             self.checkhash(text, node, rev=rev)
 
-        self._cache = (node, rev, text)
+        self._cache = (node, rev, rawtext)
         return text
 
     def hash(self, text, p1, p2):
