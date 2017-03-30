@@ -13,6 +13,7 @@ import operator
 import os
 import random
 import socket
+import ssl
 import string
 import sys
 import tempfile
@@ -2056,6 +2057,66 @@ def debugsetparents(ui, repo, rev1, rev2=None):
 
     with repo.wlock():
         repo.setparents(r1, r2)
+
+@command('debugssl', [], '[SOURCE]', optionalrepo=True)
+def debugssl(ui, repo, source=None, **opts):
+    '''test a secure connection to a server
+
+    This builds the certificate chain for the server on Windows, installing the
+    missing intermediates and trusted root via Windows Update if necessary.  It
+    does nothing on other platforms.
+
+    If SOURCE is omitted, the 'default' path will be used.  If a URL is given,
+    that server is used. See :hg:`help urls` for more information.
+
+    If the update succeeds, retry the original operation.  Otherwise, the cause
+    of the SSL error is likely another issue.
+    '''
+    if pycompat.osname != 'nt':
+        raise error.Abort(_('Certificate chain building is only possible on '
+                            'Windows'))
+
+    if not source:
+        source = "default"
+    elif not repo:
+        raise error.Abort(_("there is no Mercurial repository here, and no "
+                            "server specified"))
+
+    source, branches = hg.parseurl(ui.expandpath(source))
+    url = util.url(source)
+    addr = None
+
+    if url.scheme == 'https':
+        addr = (url.host, url.port or 443)
+    elif url.scheme == 'ssh':
+        addr = (url.host, url.port or 22)
+    else:
+        raise error.Abort(_("Only https and ssh connections are supported"))
+
+    from . import win32
+
+    s = ssl.wrap_socket(socket.socket(), ssl_version=ssl.PROTOCOL_TLS,
+                        cert_reqs=ssl.CERT_NONE, ca_certs=None)
+
+    try:
+        s.connect(addr)
+        cert = s.getpeercert(True)
+
+        ui.status(_('Checking the certificate chain for %s.\n') % url.host)
+
+        complete = win32.checkcertificatechain(cert, build=False)
+
+        if not complete:
+            ui.status(_('The certificate chain is incomplete.  Updating... '))
+
+            if not win32.checkcertificatechain(cert):
+                ui.status(_('Failed.\n'))
+            else:
+                ui.status(_('Done.\n'))
+        else:
+            ui.status(_('The full certificate chain is available.\n'))
+    finally:
+        s.close()
 
 @command('debugsub',
     [('r', 'rev', '',

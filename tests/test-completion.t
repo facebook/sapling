@@ -108,6 +108,7 @@ Show debug commands if there are no other candidates
   debugrevlog
   debugrevspec
   debugsetparents
+  debugssl
   debugsub
   debugsuccessorssets
   debugtemplate
@@ -283,6 +284,7 @@ Show all commands + options
   debugrevlog: changelog, manifest, dir, dump
   debugrevspec: optimize, show-revs, show-set, show-stage, no-optimized, verify-optimized
   debugsetparents: 
+  debugssl: 
   debugsub: rev
   debugsuccessorssets: closest
   debugtemplate: rev, define

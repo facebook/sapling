@@ -952,6 +952,7 @@ Test list of internal help commands
    debugrevspec  parse and apply a revision specification
    debugsetparents
                  manually set the parents of the current working directory
+   debugssl      test a secure connection to a server
    debugsub      (no help text available)
    debugsuccessorssets
                  show set of successors for revision
