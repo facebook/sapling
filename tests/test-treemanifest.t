@@ -60,6 +60,16 @@ Test that we can replay backfills into an existing repo
   $ hg sqlreplay
   $ ls .hg/store/meta/dir
   00manifest.i
+  $ rm -rf .hg/store/00manifesttree* .hg/store/meta
+  $ hg sqlreplay --start 0 --end 0
+  $ hg debugindex .hg/store/00manifesttree.i
+     rev    offset  length  delta linkrev nodeid       p1           p2
+       0         0      44     -1       0 8515d4bfda76 000000000000 000000000000
+  $ hg sqlreplay --start 1 --end 2
+  $ hg debugindex .hg/store/00manifesttree.i
+     rev    offset  length  delta linkrev nodeid       p1           p2
+       0         0      44     -1       0 8515d4bfda76 000000000000 000000000000
+       1        44      58      0       1 898d94054864 8515d4bfda76 000000000000
   $ cd ..
 
 Test that trees created during push are synced to the db

@@ -1627,6 +1627,8 @@ class CustomConverter(mysql.connector.conversion.MySQLConverter):
         return str(value)
 
 @command('^sqlreplay', [
+    ('', 'start', '', _('the rev to start with'), ''),
+    ('', 'end', '', _('the rev to end with'), ''),
     ], _('hg sqlreplay'))
 def sqlreplay(ui, repo, *args, **opts):
     """goes through the entire sql history and performs missing revlog writes
@@ -1637,9 +1639,14 @@ def sqlreplay(ui, repo, *args, **opts):
     revlogs from things being appended out of order.
     """
     maxrev = len(repo.changelog) - 1
+    startrev = int(opts.get('start') or '0')
+    endrev = int(opts.get('end') or str(maxrev))
+
+    startrev = max(startrev, 0)
+    endrev = min(endrev, maxrev)
 
     def _helper():
-        _sqlreplay(repo, 0, maxrev)
+        _sqlreplay(repo, startrev, endrev)
     executewithsql(repo, _helper, False)
 
 def _sqlreplay(repo, startrev, endrev):
@@ -1652,7 +1659,6 @@ def _sqlreplay(repo, startrev, endrev):
         # technically already commited.
         for name, value in repo.ui.configitems("hooks"):
             if name.startswith("pretxnclose"):
-                configbackups.append(repo.ui.backupconfig("hooks", name))
                 repo.ui.setconfig("hooks", name, None)
 
         transaction = repo.transaction("sqlreplay")
