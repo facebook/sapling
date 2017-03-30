@@ -57,3 +57,28 @@ Requiring dest should not break continue or other rebase options
   $ hg rebase --continue
   rebasing 3:0537f6b50def "dc" (tip)
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/0537f6b50def-be4c7386-backup.hg (glob)
+
+  $ cd ..
+
+Check rebase.requiredest interaction with pull --rebase
+  $ hg clone repo clone
+  updating to branch default
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cd repo
+  $ echo e > e
+  $ hg commit -qAm ee
+  $ cd ..
+  $ cd clone
+  $ echo f > f
+  $ hg commit -qAm ff
+  $ hg pull --rebase
+  pulling from $TESTTMP/repo
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 2 changes to 2 files (+1 heads)
+  abort: you must specify a destination
+  (use: hg rebase -d REV)
+  [255]
+
