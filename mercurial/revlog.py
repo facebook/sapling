@@ -1271,26 +1271,26 @@ class revlog(object):
             cachedrev = self._cache[1]
 
         # look up what we need to read
-        text = None
+        rawtext = None
         if rev is None:
             rev = self.rev(node)
 
         chain, stopped = self._deltachain(rev, stoprev=cachedrev)
         if stopped:
-            text = self._cache[2]
+            rawtext = self._cache[2]
 
         # drop cache to save memory
         self._cache = None
 
         bins = self._chunks(chain, df=_df)
-        if text is None:
-            text = bytes(bins[0])
+        if rawtext is None:
+            rawtext = bytes(bins[0])
             bins = bins[1:]
 
-        text = mdiff.patches(text, bins)
+        rawtext = mdiff.patches(rawtext, bins)
 
-        text, validatehash = self._processflags(text, self.flags(rev), 'read',
-                                                raw=raw)
+        text, validatehash = self._processflags(rawtext, self.flags(rev),
+                                                'read', raw=raw)
         if validatehash:
             self.checkhash(text, node, rev=rev)
 
@@ -1451,32 +1451,31 @@ class revlog(object):
         if flags:
             node = node or self.hash(text, p1, p2)
 
-        newtext, validatehash = self._processflags(text, flags, 'write')
+        rawtext, validatehash = self._processflags(text, flags, 'write')
 
         # If the flag processor modifies the revision data, ignore any provided
         # cachedelta.
-        if newtext != text:
+        if rawtext != text:
             cachedelta = None
-        text = newtext
 
-        if len(text) > _maxentrysize:
+        if len(rawtext) > _maxentrysize:
             raise RevlogError(
                 _("%s: size of %d bytes exceeds maximum revlog storage of 2GiB")
-                % (self.indexfile, len(text)))
+                % (self.indexfile, len(rawtext)))
 
-        node = node or self.hash(text, p1, p2)
+        node = node or self.hash(rawtext, p1, p2)
         if node in self.nodemap:
             return node
 
         if validatehash:
-            self.checkhash(text, node, p1=p1, p2=p2)
+            self.checkhash(rawtext, node, p1=p1, p2=p2)
 
         dfh = None
         if not self._inline:
             dfh = self.opener(self.datafile, "a+")
         ifh = self.opener(self.indexfile, "a+", checkambig=self._checkambig)
         try:
-            return self._addrevision(node, text, transaction, link, p1, p2,
+            return self._addrevision(node, rawtext, transaction, link, p1, p2,
                                      flags, cachedelta, ifh, dfh)
         finally:
             if dfh:
