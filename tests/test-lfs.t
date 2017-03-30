@@ -120,3 +120,103 @@
   $ hg commit -m initcommit
   $ [ -f $TESTTMP/global-store/ed/0f071aa4ff28ab9863b6cfc5f407e915612d70502422e4ab9b09f3dfec4a74 ]
   $ [ -f $TESTTMP/global-store/d7/dbc611df1fe7dfacfe267a2bfd32ba8fc27ad16aa72af7e6c553a120b92f18 ]
+
+  $ cd ..
+
+# Check rename, and switch between large and small files
+
+  $ hg init repo3
+  $ cd repo3
+  $ cat >> .hg/hgrc << EOF
+  > [lfs]
+  > threshold=10B
+  > chunksize=10B
+  > EOF
+
+  $ echo LONGER-THAN-TEN-BYTES-WILL-TRIGGER-LFS > large
+  $ echo SHORTER > small
+  $ hg add . -q
+  $ hg commit -m 'commit with lfs content'
+
+  $ hg mv large l
+  $ hg mv small s
+  $ hg commit -m 'renames'
+
+  $ echo SHORT > l
+  $ echo BECOME-LARGER-FROM-SHORTER > s
+  $ hg commit -m 'large to small, small to large'
+
+  $ echo 1 >> l
+  $ echo 2 >> s
+  $ hg commit -m 'random modifications'
+
+  $ echo RESTORE-TO-BE-LARGE > l
+  $ echo SHORTER > s
+  $ hg commit -m 'switch large and small again'
+
+# Push and pull the above repo
+
+  $ hg --cwd .. init repo4
+  $ hg push ../repo4
+  pushing to ../repo4
+  searching for changes
+  lfs: computing set of blobs to upload
+  lfs: uploading the blobs to the remote (31 chunk(s), 294 bytes)
+  adding changesets
+  adding manifests
+  adding file changes
+  added 5 changesets with 10 changes to 4 files
+
+  $ hg --cwd .. init repo5
+  $ hg --cwd ../repo5 pull ../repo3
+  pulling from ../repo3
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 5 changesets with 10 changes to 4 files
+  (run 'hg update' to get a working copy)
+
+  $ cd ..
+
+# Verify the repos
+
+  $ cat > $TESTTMP/dumpflog.py << EOF
+  > # print raw revision sizes, flags, and hashes for certain files
+  > import hashlib
+  > from mercurial import revlog
+  > from mercurial.node import short
+  > def hash(rawtext):
+  >     h = hashlib.sha512()
+  >     h.update(rawtext)
+  >     return h.hexdigest()[:4]
+  > def reposetup(ui, repo):
+  >     # these 2 files are interesting
+  >     for name in ['l', 's']:
+  >         fl = repo.file(name)
+  >         if len(fl) == 0:
+  >             continue
+  >         sizes = [revlog.revlog.rawsize(fl, i) for i in fl]
+  >         texts = [fl.revision(i, raw=True) for i in fl]
+  >         flags = [fl.flags(i) for i in fl]
+  >         hashes = [hash(t) for t in texts]
+  >         print('  %s: rawsizes=%r flags=%r hashes=%r'
+  >               % (name, sizes, flags, hashes))
+  > EOF
+
+  $ for i in client client2 server repo3 repo4 repo5; do
+  >   echo 'repo:' $i
+  >   hg --cwd $i verify --config extensions.dumpflog=$TESTTMP/dumpflog.py -q
+  > done
+  repo: client
+  repo: client2
+  repo: server
+  repo: repo3
+    l: rawsizes=[828, 6, 8, 216] flags=[8192, 0, 0, 8192] hashes=['2791', '948c', 'cc88', '5f1a']
+    s: rawsizes=[623, 283, 283, 8] flags=[8192, 8192, 8192, 0] hashes=['db08', 'ff24', '2217', '826b']
+  repo: repo4
+    l: rawsizes=[828, 6, 8, 216] flags=[8192, 0, 0, 8192] hashes=['2791', '948c', 'cc88', '5f1a']
+    s: rawsizes=[623, 283, 283, 8] flags=[8192, 8192, 8192, 0] hashes=['db08', 'ff24', '2217', '826b']
+  repo: repo5
+    l: rawsizes=[828, 6, 8, 216] flags=[8192, 0, 0, 8192] hashes=['2791', '948c', 'cc88', '5f1a']
+    s: rawsizes=[623, 283, 283, 8] flags=[8192, 8192, 8192, 0] hashes=['db08', 'ff24', '2217', '826b']

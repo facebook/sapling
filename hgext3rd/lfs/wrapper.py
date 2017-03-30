@@ -37,19 +37,16 @@ def readfromstore(self, text):
     Returns a 2-typle (text, validatehash) where validatehash is True as the
     contents of the blobstore should be checked using checkhash.
     """
-    try:
-        metadata = pointer.deserialize(text)
-        storeids = metadata.tostoreids()
-        store = blobstore.local.get(self.opener)
-        if not isinstance(storeids, list):
-            storeids = [storeids]
-        missing = filter(lambda id: not store.has(id), storeids)
-        if missing:
-            blobstore.remote.get(self.opener).readbatch(missing, store)
-        text = ''.join([store.read(id) for id in storeids])
-        return (text, True)
-    except Exception:
-        return (text), True
+    metadata = pointer.deserialize(text)
+    storeids = metadata.tostoreids()
+    store = blobstore.local.get(self.opener)
+    if not isinstance(storeids, list):
+        storeids = [storeids]
+    missing = filter(lambda id: not store.has(id), storeids)
+    if missing:
+        blobstore.remote.get(self.opener).readbatch(missing, store)
+    text = ''.join([store.read(id) for id in storeids])
+    return (text, True)
 
 def writetostore(self, text):
     offset = 0
@@ -131,6 +128,8 @@ def prepush(pushop):
                     files.add(f)
 
         for f in files:
+            if f not in ctx:
+                continue
             filectx = ctx[f]
             flags = filectx.filelog().flags(filectx.filerev())
             if flags & revlog.REVIDX_EXTSTORED != revlog.REVIDX_EXTSTORED:
