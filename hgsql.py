@@ -228,7 +228,11 @@ def backfilltree(orig, ui, repo, *args, **kwargs):
     if issqlrepo(repo):
         def _helper():
             return orig(ui, repo, *args, **kwargs)
-        return executewithsql(repo, _helper, True)
+        try:
+            repo.sqlreplaytransaction = True
+            return executewithsql(repo, _helper, True)
+        finally:
+            repo.sqlreplaytransaction = False
     else:
         return orig(ui, repo, *args, **kwargs)
 
@@ -987,10 +991,12 @@ def wraprepo(repo):
                 raise CorruptionException(("multiple tips for %s in " +
                     " the database") % reponame)
 
-            minlinkrev = min(self.pendingrevs, key= lambda x: x[1])[1]
-            if maxlinkrev == None or maxlinkrev != minlinkrev - 1:
-                raise CorruptionException("attempting to write non-sequential " +
-                    "linkrev %s, expected %s" % (minlinkrev, maxlinkrev + 1))
+            if (not util.safehasattr(self, 'sqlreplaytransaction')
+                or not self.sqlreplaytransaction):
+                minlinkrev = min(self.pendingrevs, key= lambda x: x[1])[1]
+                if maxlinkrev == None or maxlinkrev != minlinkrev - 1:
+                    raise CorruptionException("attempting to write non-sequential " +
+                        "linkrev %s, expected %s" % (minlinkrev, maxlinkrev + 1))
 
             # Clean up excess revisions left from interrupted commits.
             # Since MySQL can only hold so much data in a transaction, we allow
@@ -1652,6 +1658,7 @@ def _sqlreplay(repo, startrev, endrev):
         transaction = repo.transaction("sqlreplay")
 
         try:
+            repo.sqlreplaytransaction = True
             queue = Queue.Queue()
             abort = threading.Event()
 
@@ -1667,6 +1674,7 @@ def _sqlreplay(repo, startrev, endrev):
             transaction.close()
         finally:
             transaction.release()
+            repo.sqlreplaytransaction = False
     finally:
         if lock:
             lock.release()

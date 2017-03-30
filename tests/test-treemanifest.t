@@ -15,12 +15,6 @@ Test that treemanifest backfill populates the database
   $ initserver master-alreadysynced master
   $ initserver master-new master
   $ cd master
-  $ cat >> .hg/hgrc <<EOF
-  > [extensions]
-  > treemanifest=
-  > [treemanifest]
-  > server = True
-  > EOF
   $ touch a && hg ci -Aqm a
   $ mkdir dir
   $ touch dir/b && hg ci -Aqm b
@@ -37,7 +31,13 @@ Test that treemanifest backfill populates the database
   1
 
   $ cd ../master
-  $ hg backfilltree
+  $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > treemanifest=
+  > [treemanifest]
+  > server = True
+  > EOF
+  $ DBGD=1 hg backfilltree
   $ ls .hg/store/meta/dir
   00manifest.i
 
@@ -55,9 +55,15 @@ Test that an empty repo syncs the tree revlogs
   $ ls .hg/store/meta/dir
   00manifest.i
 
+Test that we can replay backfills into an existing repo
+  $ cd ../master-alreadysynced
+  $ hg sqlreplay
+  $ ls .hg/store/meta/dir
+  00manifest.i
+  $ cd ..
+
 Test that trees created during push are synced to the db
 
-  $ cd ..
   $ initclient client
   $ cd client
   $ hg pull -q ssh://user@dummy/master
@@ -81,11 +87,3 @@ Test that trees created during push are synced to the db
   $ hg debugdata .hg/store/meta/dir/00manifest.i 1
   b\x00b80de5d138758541c5f05265ad144ab9fa86d1db (esc)
   c\x00b80de5d138758541c5f05265ad144ab9fa86d1db (esc)
-
-Test that we can replay backfills into an existing repo
-  $ cd ../master-alreadysynced
-  $ hg sqlreplay
-  $ ls .hg/store/meta/dir
-  00manifest.i
-  $ cd ..
-
