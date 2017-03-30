@@ -72,13 +72,7 @@ Check rebase.requiredest interaction with pull --rebase
   $ echo f > f
   $ hg commit -qAm ff
   $ hg pull --rebase
-  pulling from $TESTTMP/repo
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 2 changes to 2 files (+1 heads)
-  abort: you must specify a destination
-  (use: hg rebase -d REV)
+  abort: rebase destination required by configuration
+  (use hg pull followed by hg rebase -d DEST)
   [255]
 

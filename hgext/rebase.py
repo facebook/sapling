@@ -1362,6 +1362,11 @@ def pullrebase(orig, ui, repo, *args, **opts):
     'Call rebase after pull if the latter has been invoked with --rebase'
     ret = None
     if opts.get('rebase'):
+        if ui.configbool('commands', 'rebase.requiredest'):
+            msg = _('rebase destination required by configuration')
+            hint = _('use hg pull followed by hg rebase -d DEST')
+            raise error.Abort(msg, hint=hint)
+
         wlock = lock = None
         try:
             wlock = repo.wlock()
