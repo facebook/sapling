@@ -413,24 +413,12 @@ def prunecomments(blocks):
     return blocks
 
 
-_admonitions = set([
-    'attention',
-    'caution',
-    'danger',
-    'error',
-    'hint',
-    'important',
-    'note',
-    'tip',
-    'warning',
-])
-
 def findadmonitions(blocks, admonitions=None):
     """
     Makes the type of the block an admonition block if
     the first line is an admonition directive
     """
-    admonitions = admonitions or _admonitions
+    admonitions = admonitions or _admonitiontitles.keys()
 
     admonitionre = re.compile(br'\.\. (%s)::' % '|'.join(sorted(admonitions)),
                               flags=re.IGNORECASE)
