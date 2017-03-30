@@ -212,7 +212,12 @@ _kernel32.PeekNamedPipe.argtypes = [_HANDLE, ctypes.c_void_p, _DWORD,
 _kernel32.PeekNamedPipe.restype = _BOOL
 
 def _raiseoserror(name):
-    err = ctypes.WinError()
+    # Force the code to a signed int to avoid an 'int too large' error.
+    # See https://bugs.python.org/issue28474
+    code = _kernel32.GetLastError()
+    if code > 0x7fffffff:
+        code -= 2**32
+    err = ctypes.WinError(code=code)
     raise OSError(err.errno, '%s: %s' % (name, err.strerror))
 
 def _getfileinfo(name):
