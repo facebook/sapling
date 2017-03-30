@@ -62,7 +62,7 @@ This file tests that normal mercurial operations almost never read the flat mani
   $ hg pull -q -r 0
   read flat manifest
     File "*/mercurial/revlog.py", line *, in revdiff (glob)
-      self.revision(rev2))
+      self.revision(rev2*)) (glob)
   
 # Test that no flat manifests are read during pull and update
   $ hg pull -q -r 1
