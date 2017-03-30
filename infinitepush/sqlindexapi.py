@@ -164,20 +164,6 @@ class sqlindexapi(indexapi):
                 "DELETE from bookmarkstonode WHERE bookmark LIKE (%s)",
                 params=(pattern,))
 
-    def listbookmarks(self):
-        if not self._connected:
-            self.sqlconnect()
-        self.log.info("LIST BOOKMARKS")
-        self.sqlcursor.execute("SELECT bookmark, node from bookmarkstonode")
-        result = self.sqlcursor.fetchall()
-        if not self._connected:
-            self.sqlconnect()
-        self.log.info("Found %d bookmarks")
-        bookmarks = {}
-        for row in result:
-            bookmarks[row[0]] = row[1]
-        return bookmarks
-
     def getbundle(self, node):
         """Returns the bundleid for the bundle that contains the given node."""
         if not self._connected:
