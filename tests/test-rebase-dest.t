@@ -31,3 +31,30 @@ Require a destination
   rebasing 2:279de9495438 "cc" (tip)
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/279de9495438-ab0a5128-backup.hg (glob)
 
+Requiring dest should not break continue or other rebase options
+  $ hg up 1 -q
+  $ echo d >> c
+  $ hg commit -qAm dc
+  $ hg log -G -T '{rev} {desc}'
+  @  3 dc
+  |
+  | o  2 cc
+  |/
+  o  1 bb
+  |
+  o  0 aa
+  
+  $ hg rebase -d 2
+  rebasing 3:0537f6b50def "dc" (tip)
+  merging c
+  warning: conflicts while merging c! (edit, then use 'hg resolve --mark')
+  unresolved conflicts (see hg resolve, then hg rebase --continue)
+  [1]
+  $ echo d > c
+  $ hg resolve --mark --all
+  (no more unresolved files)
+  continue: hg rebase --continue
+  $ hg rebase --continue
+  abort: you must specify a destination
+  (use: hg rebase -d REV)
+  [255]
