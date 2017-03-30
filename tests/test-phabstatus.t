@@ -17,7 +17,8 @@ With an invalid arc configuration
 
   $ hg log -T '{phabstatus}\n' -r .
   arcconfig configuration problem. No diff information can be provided.
-  Error info: no .arcconfig foundError
+  Error info: no .arcconfig found
+  Error
 
 Configure arc...
 
@@ -37,7 +38,8 @@ And now with bad responses:
   > EOF
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg log -T '{phabstatus}\n' -r .
   Error talking to phabricator. No diff information can be provided.
-  Error info: failed, yoError
+  Error info: failed, yo
+  Error
 
 Missing status field is treated as an error
 
@@ -62,3 +64,12 @@ Make sure the template keywords are documented correctly
   $ hg help templates | egrep 'phabstatus|syncstatus'
       phabstatus    String. Return the diff approval status for a given hg rev
       syncstatus    String. Return whether the local revision is in sync with
+
+Make sure we get decent error messages when .arcrc is missing credential
+information.  We intentionally do not use HG_ARC_CONDUIT_MOCK for this test,
+so it tries to parse the (empty) arc config files.
+
+  $ hg log -T '{phabstatus}\n' -r .
+  arcconfig configuration problem. No diff information can be provided.
+  Error info: arcrc is missing user credentials for host https://phabricator.fb.com/api/
+  Error

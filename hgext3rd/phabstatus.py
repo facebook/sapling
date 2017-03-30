@@ -80,12 +80,12 @@ def getdiffstatus(repo, *diffid):
     except conduit.ClientError as ex:
         msg = _('Error talking to phabricator. No diff information can be '
                 'provided.\n')
-        hint = _("Error info: ") + str(ex)
+        hint = _("Error info: %s\n") % str(ex)
         return _fail(repo, diffid, msg, hint)
     except arcconfig.ArcConfigError as ex:
         msg = _('arcconfig configuration problem. No diff information can be '
                 'provided.\n')
-        hint = _("Error info: ") + str(ex)
+        hint = _("Error info: %s\n") % str(ex)
         return _fail(repo, diffid, msg, hint)
 
     if not resp:

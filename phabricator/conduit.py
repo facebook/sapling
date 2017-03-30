@@ -34,9 +34,13 @@ class Client(object):
 
     def apply_arcconfig(self, config):
         self._host = config.get('conduit_uri', DEFAULT_HOST)
-        hostconfig = config['hosts'][self._host]
-        self._user = hostconfig['user']
-        self._cert = hostconfig['cert']
+        try:
+            hostconfig = config['hosts'][self._host]
+            self._user = hostconfig['user']
+            self._cert = hostconfig['cert']
+        except KeyError:
+            raise arcconfig.ArcConfigError('arcrc is missing user credentials '
+                                           'for host %s' % self._host)
         self._actas = self._user
         self._connection = None
 
