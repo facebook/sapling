@@ -1128,7 +1128,7 @@ class bufferedopener(object):
         self.flush()
         self.closed = True
 
-def addentries(repo, queue, transaction):
+def addentries(repo, queue, transaction, ignoreexisting=False):
     """Reads new rev entries from a queue and writes them to a buffered
     revlog. At the end it flushes all the new data to disk.
     """
@@ -1154,7 +1154,7 @@ def addentries(repo, queue, transaction):
             revlog.dfh = dfh
 
         revlog.addentry(transaction, revlog.ifh, revlog.dfh, entry,
-                        data0, data1)
+                        data0, data1, ignoreexisting=ignoreexisting)
 
     leftover = None
     exit = False
@@ -1229,7 +1229,8 @@ class EntryRevlog(revlog.revlog):
             self.version &= ~revlog.REVLOGGENERALDELTA
             self._generaldelta = False
 
-    def addentry(self, transaction, ifh, dfh, entry, data0, data1):
+    def addentry(self, transaction, ifh, dfh, entry, data0, data1,
+                 ignoreexisting=False):
         curr = len(self)
         offset = self.end(curr - 1)
 
@@ -1244,6 +1245,9 @@ class EntryRevlog(revlog.revlog):
             offsettype = revlog.offset_type(0, type)
             elist[0] = offsettype
             e = tuple(elist)
+
+        if ignoreexisting and node in self.nodemap:
+            return
 
         # Verify that the rev's parents and base appear earlier in the revlog
         if p1r >= curr or p2r >= curr:
@@ -1615,3 +1619,56 @@ class CustomConverter(mysql.connector.conversion.MySQLConverter):
 
     def _BLOB_to_python(self, value, dsc=None):
         return str(value)
+
+@command('^sqlreplay', [
+    ], _('hg sqlreplay'))
+def sqlreplay(ui, repo, *args, **opts):
+    """goes through the entire sql history and performs missing revlog writes
+
+    This is useful for adding entirely new revlogs to history, like when
+    converting repos to a new format. The replays perform the same validation
+    before appending to a revlog, so you will never end up with incorrect
+    revlogs from things being appended out of order.
+    """
+    maxrev = len(repo.changelog) - 1
+
+    def _helper():
+        _sqlreplay(repo, 0, maxrev)
+    executewithsql(repo, _helper, False)
+
+def _sqlreplay(repo, startrev, endrev):
+    wlock = lock = None
+
+    try:
+        wlock = repo.wlock()
+        lock = repo.lock()
+        # Disable all pretxnclose hooks, since these revisions are
+        # technically already commited.
+        for name, value in repo.ui.configitems("hooks"):
+            if name.startswith("pretxnclose"):
+                configbackups.append(repo.ui.backupconfig("hooks", name))
+                repo.ui.setconfig("hooks", name, None)
+
+        transaction = repo.transaction("sqlreplay")
+
+        try:
+            queue = Queue.Queue()
+            abort = threading.Event()
+
+            t = threading.Thread(target=repo.fetchthread,
+                args=(queue, abort, startrev, endrev))
+            t.setDaemon(True)
+            try:
+                t.start()
+                addentries(repo, queue, transaction, ignoreexisting=True)
+            finally:
+                abort.set()
+
+            transaction.close()
+        finally:
+            transaction.release()
+    finally:
+        if lock:
+            lock.release()
+        if wlock:
+            wlock.release()

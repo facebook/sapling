@@ -81,3 +81,11 @@ Test that trees created during push are synced to the db
   $ hg debugdata .hg/store/meta/dir/00manifest.i 1
   b\x00b80de5d138758541c5f05265ad144ab9fa86d1db (esc)
   c\x00b80de5d138758541c5f05265ad144ab9fa86d1db (esc)
+
+Test that we can replay backfills into an existing repo
+  $ cd ../master-alreadysynced
+  $ hg sqlreplay
+  $ ls .hg/store/meta/dir
+  00manifest.i
+  $ cd ..
+
