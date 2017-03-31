@@ -245,9 +245,9 @@ def copyfromcache(repo, hash, filename):
         return False
     return True
 
-def copytostore(repo, revorctx, file, fstandin):
+def copytostore(repo, ctx, file, fstandin):
     wvfs = repo.wvfs
-    hash = readasstandin(repo[revorctx][fstandin])
+    hash = readasstandin(ctx[fstandin])
     if instore(repo, hash):
         return
     if wvfs.exists(file):
