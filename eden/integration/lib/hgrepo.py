@@ -28,13 +28,15 @@ class HgRepository(repobase.Repository):
         self.hg_bin = distutils.spawn.find_executable(
             'hg.real') or distutils.spawn.find_executable('hg')
 
-    def hg(self, *args, stdout_charset='utf-8'):
+    def hg(self, *args, stdout_charset='utf-8', stdout=subprocess.PIPE,
+           stderr=subprocess.PIPE):
         cmd = [self.hg_bin] + list(args)
-        completed_process = subprocess.run(cmd, stdout=subprocess.PIPE,
-                                           stderr=subprocess.PIPE,
+        completed_process = subprocess.run(cmd, stdout=stdout,
+                                           stderr=stderr,
                                            check=True, cwd=self.path,
                                            env=self.hg_environment)
-        return completed_process.stdout.decode(stdout_charset)
+        if completed_process.stdout is not None:
+            return completed_process.stdout.decode(stdout_charset)
 
     def init(self):
         self.hg('init')
@@ -82,3 +84,10 @@ class HgRepository(repobase.Repository):
     def status(self):
         '''Returns the output of `hg status` as a string.'''
         return self.hg('status')
+
+    def update(self, rev, clean=False):
+        if clean:
+            args = ['update', '--clean', rev]
+        else:
+            args = ['update', rev]
+        self.hg(*args, stdout=None, stderr=None)

@@ -90,6 +90,14 @@ class HgExtensionTestBase(testcase.EdenHgTest):
             f.write(contents)
         os.chmod(fullpath, mode)
 
+    def read_file(self, path):
+        '''Read the file with the specified path inside the eden repository,
+        and return its contents.
+        '''
+        fullpath = self.get_path(path)
+        with open(fullpath, 'r') as f:
+            return f.read()
+
     def mkdir(self, path):
         '''Call mkdir for the specified path relative to the clone.'''
         fullpath = self.get_path(path)
