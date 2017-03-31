@@ -37,12 +37,46 @@ POST_CLONE = _find_post_clone()
 EDEN_EXT_DIR = _eden_ext_dir()
 
 
-class HgExtensionTestBase(testcase.EdenHgTest):
-    def amend_edenrc_before_clone(self):
-        # Most likely, subclasses will want to use self.repo_for_mount rather
-        # than self.repo.
-        self.repo_for_mount = hgrepo.HgRepository(self.mount)
+class HgExtensionTestBase(testcase.EdenTestCase):
+    '''
+    A test case class for integration tests that exercise mercurial commands
+    inside an eden client.
 
+    This test case sets up two repositories:
+    - self.backing_repo:
+      This is the underlying mercurial repository that provides the data for
+      the eden mount point.  This has to be populated with an initial commit
+      before the eden client is configured, but after initalization most of the
+      test interaction will generally be with self.repo instead.
+
+    - self.repo
+      This is the hg repository in the eden client.  This is the repository
+      where most mercurial commands are actually being tested.
+    '''
+    def setup_eden_test(self):
+        super().setup_eden_test()
+
+        # Create the backing repository
+        self.backing_repo_name = 'backing_repo'
+        self.mount = os.path.join(self.mounts_dir, self.backing_repo_name)
+        self.backing_repo = self.create_repo(self.backing_repo_name,
+                                             hgrepo.HgRepository)
+        self.populate_backing_repo(self.backing_repo)
+
+        self.eden.add_repository(self.backing_repo_name, self.backing_repo.path)
+        # Edit the edenrc file to set up post-clone hooks that will correctly
+        # populate the .hg directory inside the eden client.
+        self.amend_edenrc_before_clone()
+        self.eden.clone(self.backing_repo_name, self.mount)
+
+        # Now create the repository object that refers to the eden client
+        self.repo = hgrepo.HgRepository(self.mount)
+
+    def populate_backing_repo(self, repo):
+        raise NotImplementedError('individual test classes must implement '
+                                  'populate_backing_repo()')
+
+    def amend_edenrc_before_clone(self):
         # This is a poor man's version of the generate-hooks-dir script.
         hooks_dir = os.path.join(self.tmp_dir, 'the_hooks')
         os.mkdir(hooks_dir)
@@ -56,7 +90,7 @@ class HgExtensionTestBase(testcase.EdenHgTest):
         config['hooks'] = {}
         config['hooks']['hg.edenextension'] = EDEN_EXT_DIR
 
-        config['repository %s' % self.repo_name]['hooks'] = hooks_dir
+        config['repository %s' % self.backing_repo_name]['hooks'] = hooks_dir
 
         with open(edenrc, 'w') as f:
             config.write(f)
@@ -71,11 +105,11 @@ class HgExtensionTestBase(testcase.EdenHgTest):
         Returns the stdout decoded as a utf8 string. To use a different charset,
         specify the `stdout_charset` as a keyword argument.
         '''
-        return self.repo_for_mount.hg(*args, stdout_charset=stdout_charset)
+        return self.repo.hg(*args, stdout_charset=stdout_charset)
 
     def status(self):
         '''Returns the output of `hg status` as a string.'''
-        return self.repo_for_mount.status()
+        return self.repo.status()
 
     def touch(self, path):
         '''Touch the file at the specified path relative to the clone.'''

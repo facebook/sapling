@@ -15,9 +15,9 @@ class HgExtensionTestBaseTest(HgExtensionTestBase):
     '''Test to make sure that HgExtensionTestBase creates Eden mounts that are
     properly configured with the Hg extension.
     '''
-    def populate_repo(self):
-        self.repo.write_file('hello.txt', 'hola')
-        self.repo.commit('Initial commit.')
+    def populate_backing_repo(self, repo):
+        repo.write_file('hello.txt', 'hola')
+        repo.commit('Initial commit.')
 
     def test_setup(self):
         hg_dir = os.path.join(self.mount, '.hg')

@@ -214,13 +214,7 @@ class EdenRepoTestBase(EdenTestCase):
         self.populate_repo()
 
         self.eden.add_repository(self.repo_name, self.repo.path)
-        self.amend_edenrc_before_clone()
         self.eden.clone(self.repo_name, self.mount)
-
-    def amend_edenrc_before_clone(self):
-        '''Let the test update the ~/.edenrc file before running `eden clone`.
-        '''
-        pass
 
     def populate_repo(self):
         raise NotImplementedError('individual test classes must implement '

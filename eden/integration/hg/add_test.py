@@ -12,10 +12,10 @@ import subprocess
 
 
 class AddTest(HgExtensionTestBase):
-    def populate_repo(self):
-        self.repo.write_file('rootfile.txt', '')
-        self.repo.write_file('dir1/a.txt', 'original contents')
-        self.repo.commit('Initial commit.')
+    def populate_backing_repo(self, repo):
+        repo.write_file('rootfile.txt', '')
+        repo.write_file('dir1/a.txt', 'original contents')
+        repo.commit('Initial commit.')
 
     def test_add(self):
         self.touch('dir1/b.txt')

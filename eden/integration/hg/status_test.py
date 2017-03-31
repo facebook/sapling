@@ -11,9 +11,9 @@ from .lib.hg_extension_test_base import HgExtensionTestBase
 
 
 class StatusTest(HgExtensionTestBase):
-    def populate_repo(self):
-        self.repo.write_file('hello.txt', 'hola')
-        self.repo.commit('Initial commit.')
+    def populate_backing_repo(self, repo):
+        repo.write_file('hello.txt', 'hola')
+        repo.commit('Initial commit.')
 
     def test_status(self):
         '''Test various `hg status` states in the root of an Eden mount.'''

@@ -11,9 +11,9 @@ from .lib.hg_extension_test_base import HgExtensionTestBase
 
 
 class UpdateTest(HgExtensionTestBase):
-    def populate_repo(self):
-        self.repo.write_file('hello.txt', 'hola')
-        self.repo.commit('Initial commit.')
+    def populate_backing_repo(self, repo):
+        repo.write_file('hello.txt', 'hola')
+        repo.commit('Initial commit.')
 
     def test_update_clean_dot(self):
         '''Test using `hg update --clean .` to revert file modifications.'''
@@ -23,6 +23,6 @@ class UpdateTest(HgExtensionTestBase):
         self.write_file('hello.txt', 'saluton')
         self.assertEqual('M hello.txt\n', self.status())
 
-        self.repo_for_mount.update('.', clean=True)
+        self.repo.update('.', clean=True)
         self.assertEqual('hola', self.read_file('hello.txt'))
         self.assertEqual('', self.status())
