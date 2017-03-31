@@ -1577,19 +1577,19 @@ class revlog(object):
 
         return True
 
-    def _addrevision(self, node, text, transaction, link, p1, p2, flags,
-                     cachedelta, ifh, dfh, alwayscache=False, raw=False):
+    def _addrevision(self, node, rawtext, transaction, link, p1, p2, flags,
+                     cachedelta, ifh, dfh, alwayscache=False):
         """internal function to add revisions to the log
 
         see addrevision for argument descriptions.
+
+        note: "addrevision" takes non-raw text, "_addrevision" takes raw text.
+
         invariants:
-        - text is optional (can be None); if not set, cachedelta must be set.
+        - rawtext is optional (can be None); if not set, cachedelta must be set.
           if both are set, they must correspond to each other.
-        - raw is optional; if set to True, it indicates the revision data is to
-          be treated by _processflags() as raw. It is usually set by changegroup
-          generation and debug commands.
         """
-        btext = [text]
+        btext = [rawtext]
         def buildtext():
             if btext[0] is not None:
                 return btext[0]
@@ -1607,11 +1607,11 @@ class revlog(object):
                     fh = ifh
                 else:
                     fh = dfh
-                basetext = self.revision(baserev, _df=fh, raw=raw)
+                basetext = self.revision(baserev, _df=fh, raw=True)
                 btext[0] = mdiff.patch(basetext, delta)
 
             try:
-                res = self._processflags(btext[0], flags, 'read', raw=raw)
+                res = self._processflags(btext[0], flags, 'read', raw=True)
                 btext[0], validatehash = res
                 if validatehash:
                     self.checkhash(btext[0], node, p1=p1, p2=p2)
@@ -1663,11 +1663,11 @@ class revlog(object):
 
         # full versions are inserted when the needed deltas
         # become comparable to the uncompressed text
-        if text is None:
+        if rawtext is None:
             textlen = mdiff.patchedsize(self.rawsize(cachedelta[0]),
                                         cachedelta[1])
         else:
-            textlen = len(text)
+            textlen = len(rawtext)
 
         # should we try to build a delta?
         if prev != nullrev and self.storedeltachains:
@@ -1708,8 +1708,8 @@ class revlog(object):
         if delta is not None:
             dist, l, data, base, chainbase, chainlen, compresseddeltalen = delta
         else:
-            text = buildtext()
-            data = self.compress(text)
+            rawtext = buildtext()
+            data = self.compress(rawtext)
             l = len(data[1]) + len(data[0])
             base = chainbase = curr
 
@@ -1721,11 +1721,11 @@ class revlog(object):
         entry = self._io.packentry(e, self.node, self.version, curr)
         self._writeentry(transaction, ifh, dfh, entry, data, link, offset)
 
-        if alwayscache and text is None:
-            text = buildtext()
+        if alwayscache and rawtext is None:
+            rawtext = buildtext()
 
-        if type(text) == str: # only accept immutable objects
-            self._cache = (node, curr, text)
+        if type(rawtext) == str: # only accept immutable objects
+            self._cache = (node, curr, rawtext)
         self._chainbasecache[curr] = chainbase
         return node
 
@@ -1847,8 +1847,7 @@ class revlog(object):
                 chain = self._addrevision(node, None, transaction, link,
                                           p1, p2, flags, (baserev, delta),
                                           ifh, dfh,
-                                          alwayscache=bool(addrevisioncb),
-                                          raw=True)
+                                          alwayscache=bool(addrevisioncb))
 
                 if addrevisioncb:
                     addrevisioncb(self, chain)

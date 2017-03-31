@@ -1,4 +1,4 @@
 local test passed
 addgroupcopy test passed
 clone test passed
-abort: crashed: integrity check failed on _destrevlog.i:5
+lowlevelcopy test passed
