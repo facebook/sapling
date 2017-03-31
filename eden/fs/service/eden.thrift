@@ -240,7 +240,10 @@ service EdenService extends fb303.FacebookService {
   //////// HG COMMANDS ////////
 
   // TODO(mbolin): `hg status` has a ton of command line flags to support.
-  ThriftHgStatus scmGetStatus(1: string mountPoint) throws (1: EdenError ex)
+  ThriftHgStatus scmGetStatus(
+    1: string mountPoint,
+    2: bool listIgnored,
+  ) throws (1: EdenError ex)
 
   list<ScmAddRemoveError> scmAdd(
     1: string mountPoint,

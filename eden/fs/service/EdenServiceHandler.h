@@ -86,7 +86,8 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
 
   void scmGetStatus(
       ThriftHgStatus& out,
-      std::unique_ptr<std::string> mountPoint) override;
+      std::unique_ptr<std::string> mountPoint,
+      bool listIgnored) override;
 
   void scmAdd(
       std::vector<ScmAddRemoveError>& errorsToReport,

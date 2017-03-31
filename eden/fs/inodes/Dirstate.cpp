@@ -22,6 +22,7 @@
 #include "eden/fs/inodes/FileData.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeBase.h"
+#include "eden/fs/inodes/InodeDiffCallback.h"
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/model/Blob.h"
@@ -31,7 +32,9 @@
 #include "eden/fs/store/ObjectStores.h"
 #include "eden/fuse/MountPoint.h"
 
+using folly::StringKeyedUnorderedMap;
 using folly::StringPiece;
+using facebook::eden::overlay::UserStatusDirective;
 
 namespace {
 /**
@@ -257,7 +260,140 @@ class IgnoreChecker {
   EdenMount* const mountPoint_{nullptr};
   folly::StringKeyedUnorderedMap<GitIgnore> ignoreCache_;
 };
-}
+
+class ThriftStatusCallback : public InodeDiffCallback {
+ public:
+  explicit ThriftStatusCallback(
+      const std::unordered_map<RelativePath, UserStatusDirective>&
+          userDirectives)
+      : data_{folly::construct_in_place, userDirectives} {}
+
+  void ignoredFile(RelativePathPiece path) override {
+    processChangedFile(
+        path, UserStatusDirective::Add, StatusCode::ADDED, StatusCode::IGNORED);
+  }
+  void untrackedFile(RelativePathPiece path) override {
+    processChangedFile(
+        path,
+        UserStatusDirective::Add,
+        StatusCode::ADDED,
+        StatusCode::NOT_TRACKED);
+  }
+  void removedFile(
+      RelativePathPiece path,
+      const TreeEntry& /* sourceControlEntry */) override {
+    processChangedFile(
+        path,
+        UserStatusDirective::Remove,
+        StatusCode::REMOVED,
+        StatusCode::MISSING);
+  }
+  void modifiedFile(
+      RelativePathPiece path,
+      const TreeEntry& /* sourceControlEntry */) override {
+    processChangedFile(
+        path,
+        UserStatusDirective::Remove,
+        StatusCode::REMOVED,
+        StatusCode::MODIFIED);
+  }
+  void diffError(RelativePathPiece path, const folly::exception_wrapper& ew)
+      override {
+    // TODO: It would be nice to have a mechanism to return error info as part
+    // of the thrift result.
+    LOG(WARNING) << "error computing status data for " << path << ": "
+                 << folly::exceptionStr(ew);
+  }
+
+  /**
+   * Extract the ThriftHgStatus object from this callback.
+   *
+   * This method should be called no more than once, as this destructively
+   * moves the results out of the callback.  It should only be invoked after
+   * the diff operation has completed.
+   */
+  ThriftHgStatus extractStatus() {
+    ThriftHgStatus status;
+
+    {
+      auto data = data_.wlock();
+      status.entries.swap(data->status);
+
+      // Process any remaining user directives that weren't seen during the diff
+      // walk.
+      //
+      // TODO: I believe this isn't really right, but it should be good enough
+      // for initial testing.
+      //
+      // We really need to also check if these entries exist currently on
+      // disk and in source control.  For files that are removed but exist on
+      // disk we also need to check their ignored status.
+      //
+      // - UserStatusDirective::Add, exists on disk, and in source control:
+      //   -> skip
+      // - UserStatusDirective::Add, exists on disk, not in SCM, but ignored:
+      //   -> ADDED
+      // - UserStatusDirective::Add, not on disk or in source control:
+      //   -> MISSING
+      // - UserStatusDirective::Remove, exists on disk, and in source control:
+      //   -> REMOVED
+      // - UserStatusDirective::Remove, exists on disk, not in SCM, but ignored:
+      //   -> skip
+      // - UserStatusDirective::Remove, not on disk, not in source control:
+      //   -> skip
+      for (const auto& entry : data->userDirectives) {
+        auto hgStatusCode = (entry.second == UserStatusDirective::Add)
+            ? StatusCode::MISSING
+            : StatusCode::REMOVED;
+        status.entries.emplace(entry.first.str(), hgStatusCode);
+      }
+    }
+
+    return status;
+  }
+
+ private:
+  /**
+   * The implementation used for the ignoredFile(), untrackedFile(),
+   * removedFile(), and modifiedFile().
+   *
+   * The logic is:
+   * - If the file is present in userDirectives as userDirectiveType,
+   *   then remove it from userDirectives and report the status as
+   *   userDirectiveStatus.
+   * - Otherwise, report the status as defaultStatus
+   */
+  void processChangedFile(
+      RelativePathPiece path,
+      UserStatusDirective userDirectiveType,
+      StatusCode userDirectiveStatus,
+      StatusCode defaultStatus) {
+    auto data = data_.wlock();
+    auto iter = data->userDirectives.find(path.stringPiece());
+    if (iter != data->userDirectives.end()) {
+      if (iter->second == userDirectiveType) {
+        data->status.emplace(path.stringPiece().str(), userDirectiveStatus);
+        data->userDirectives.erase(iter);
+        return;
+      }
+    }
+    data->status.emplace(path.stringPiece().str(), defaultStatus);
+  }
+
+  struct Data {
+    explicit Data(
+        const std::unordered_map<RelativePath, UserStatusDirective>& ud) {
+      for (const auto& entry : ud) {
+        userDirectives.emplace(entry.first.stringPiece(), entry.second);
+      }
+    }
+
+    std::map<std::string, StatusCode> status;
+    StringKeyedUnorderedMap<UserStatusDirective> userDirectives;
+  };
+  folly::Synchronized<Data> data_;
+};
+} // unnamed namespace
 
 Dirstate::Dirstate(EdenMount* mount)
     : mount_(mount),
@@ -268,8 +404,10 @@ Dirstate::Dirstate(EdenMount* mount)
 
 Dirstate::~Dirstate() {}
 
-std::unique_ptr<HgStatus> Dirstate::getStatus() const {
-  return getStatusForExistingDirectory(RelativePathPiece(""));
+ThriftHgStatus Dirstate::getStatus(bool listIgnored) const {
+  ThriftStatusCallback callback(*userDirectives_.rlock());
+  mount_->diff(&callback, listIgnored);
+  return callback.extractStatus();
 }
 
 std::unique_ptr<HgStatus> Dirstate::getStatusForExistingDirectory(

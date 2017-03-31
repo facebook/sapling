@@ -11,6 +11,23 @@
 
 #include <ostream>
 
+namespace {
+template <typename ThriftEnum>
+std::ostream& outputThriftEnum(
+    std::ostream& os,
+    ThriftEnum value,
+    const std::map<ThriftEnum, const char*>& valuesToNames,
+    folly::StringPiece typeName) {
+  auto iter = valuesToNames.find(value);
+  if (iter == valuesToNames.end()) {
+    os << typeName << "::" << int(value);
+  } else {
+    os << iter->second;
+  }
+  return os;
+}
+} // unnamed namespace
+
 namespace facebook {
 namespace eden {
 
@@ -18,13 +35,8 @@ namespace eden {
  * Pretty-print a CheckoutConflict
  */
 std::ostream& operator<<(std::ostream& os, ConflictType conflictType) {
-  auto iter = _ConflictType_VALUES_TO_NAMES.find(conflictType);
-  if (iter == _ConflictType_VALUES_TO_NAMES.end()) {
-    os << "ConflictType::" << int(conflictType);
-  } else {
-    os << iter->second;
-  }
-  return os;
+  return outputThriftEnum(
+      os, conflictType, _ConflictType_VALUES_TO_NAMES, "ConflictType");
 }
 
 /**
@@ -34,6 +46,14 @@ std::ostream& operator<<(std::ostream& os, const CheckoutConflict& conflict) {
   os << "CheckoutConflict(type=" << conflict.type << ", path=\""
      << conflict.path << "\", message=\"" << conflict.message << "\")";
   return os;
+}
+
+/**
+ * Pretty-print a StatusCode
+ */
+std::ostream& operator<<(std::ostream& os, StatusCode statusCode) {
+  return outputThriftEnum(
+      os, statusCode, _StatusCode_VALUES_TO_NAMES, "StatusCode");
 }
 }
 }

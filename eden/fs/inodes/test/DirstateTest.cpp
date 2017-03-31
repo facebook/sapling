@@ -8,12 +8,15 @@
  *
  */
 
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include "eden/fs/inodes/Dirstate.h"
+#include "eden/fs/service/PrettyPrinters.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestMount.h"
 
 using namespace facebook::eden;
+using ::testing::UnorderedElementsAre;
 
 TEST(HgStatus, toString) {
   std::unordered_map<RelativePath, StatusCode> statuses({{
@@ -39,18 +42,14 @@ TEST(HgStatus, toString) {
 
 void verifyExpectedDirstate(
     const Dirstate* dirstate,
-    std::unordered_map<std::string, StatusCode>&& statuses) {
-  std::unordered_map<RelativePath, StatusCode> expected;
-  for (auto& pair : statuses) {
-    expected.emplace(RelativePath(pair.first), pair.second);
-  }
-  auto expectedStatus = HgStatus(std::move(expected));
-  EXPECT_EQ(expectedStatus, *dirstate->getStatus().get());
+    const std::map<std::string, StatusCode>& expectedStatus) {
+  EXPECT_EQ(expectedStatus, dirstate->getStatus(true).entries);
 }
 
 void verifyEmptyDirstate(const Dirstate* dirstate) {
-  auto status = dirstate->getStatus();
-  EXPECT_EQ(0, status->size()) << "Expected dirstate to be empty.";
+  auto status = dirstate->getStatus(true);
+  EXPECT_THAT(status.entries, UnorderedElementsAre())
+      << "Expected dirstate to be empty.";
 }
 
 /**

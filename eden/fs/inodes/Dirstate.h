@@ -121,8 +121,16 @@ class Dirstate {
   explicit Dirstate(EdenMount* mount);
   ~Dirstate();
 
-  /** Analogous to calling `hg status`. */
-  std::unique_ptr<HgStatus> getStatus() const;
+  /**
+   * Get the status information about files that are changed.
+   *
+   * This is used for implementing "hg status".  Returns the data as a thrift
+   * structure that can be returned to the eden hg extension.
+   *
+   * @param listIgnored Whether or not to report information about ignored
+   *     files.
+   */
+  ThriftHgStatus getStatus(bool listIgnored) const;
 
   /**
    * Analogous to `hg add <path1> <path2> ...` where each `<path>` identifies an

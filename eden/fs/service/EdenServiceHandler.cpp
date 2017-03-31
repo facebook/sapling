@@ -384,17 +384,13 @@ void EdenServiceHandler::glob(
 
 void EdenServiceHandler::scmGetStatus(
     ThriftHgStatus& out,
-    std::unique_ptr<std::string> mountPoint) {
+    std::unique_ptr<std::string> mountPoint,
+    bool listIgnored) {
   auto dirstate = server_->getMount(*mountPoint)->getDirstate();
   DCHECK(dirstate != nullptr) << "Failed to get dirstate for "
                               << mountPoint.get();
 
-  auto status = dirstate->getStatus();
-  auto& entries = out.entries;
-  for (auto& pair : *status->list()) {
-    auto statusCode = pair.second;
-    entries[pair.first.stringPiece().str()] = statusCode;
-  }
+  out = dirstate->getStatus(listIgnored);
 }
 
 void EdenServiceHandler::scmAdd(

@@ -23,5 +23,6 @@ namespace facebook {
 namespace eden {
 std::ostream& operator<<(std::ostream& os, ConflictType conflictType);
 std::ostream& operator<<(std::ostream& os, const CheckoutConflict& conflict);
+std::ostream& operator<<(std::ostream& os, StatusCode statusCode);
 }
 }
