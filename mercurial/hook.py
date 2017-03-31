@@ -114,7 +114,7 @@ def _pythonhook(ui, repo, htype, hname, funcname, args, throw):
         ui.warn(_('warning: %s hook failed\n') % hname)
     return r, False
 
-def _exthook(ui, repo, name, cmd, args, throw):
+def _exthook(ui, repo, htype, name, cmd, args, throw):
     ui.note(_("running hook %s: %s\n") % (name, cmd))
 
     starttime = util.timer()
@@ -126,6 +126,7 @@ def _exthook(ui, repo, name, cmd, args, throw):
         repo.dirstate.write(tr)
         if tr and tr.writepending():
             env['HG_PENDING'] = repo.root
+    env['HG_HOOKTYPE'] = htype
 
     for k, v in args.iteritems():
         if callable(v):
@@ -248,7 +249,7 @@ def runhooks(ui, repo, htype, hooks, throw=False, **args):
                 r, raised = _pythonhook(ui, repo, htype, hname, hookfn, args,
                                         throw)
             else:
-                r = _exthook(ui, repo, hname, cmd, args, throw)
+                r = _exthook(ui, repo, htype, hname, cmd, args, throw)
                 raised = False
 
             res[hname] = r, raised

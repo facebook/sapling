@@ -842,8 +842,11 @@ Example ``.hg/hgrc``::
   priority.incoming.autobuild = 1
 
 Most hooks are run with environment variables set that give useful
-additional information. For each hook below, the environment
-variables it is passed are listed with names of the form ``$HG_foo``.
+additional information. For each hook below, the environment variables
+it is passed are listed with names of the form ``$HG_foo``. The
+``$HG_HOOKTYPE`` variable is set for all hooks. It contains the type of
+hook which triggered the run. In the example about this will be
+``$HG_HOOKTYPE=incoming``.
 
 ``changegroup``
   Run after a changegroup has been added via push, pull or unbundle.  ID of the

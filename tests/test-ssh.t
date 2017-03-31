@@ -498,7 +498,7 @@ debug output
   Got arguments 1:user@dummy 2:hg -R local serve --stdio
   Got arguments 1:user@dummy 2:hg -R $TESTTMP/local serve --stdio
   Got arguments 1:user@dummy 2:hg -R remote serve --stdio
-  changegroup-in-remote hook: HG_BUNDLE2=1 HG_NODE=a28a9d1a809cab7d4e2fde4bee738a9ede948b60 HG_NODE_LAST=a28a9d1a809cab7d4e2fde4bee738a9ede948b60 HG_SOURCE=serve HG_TXNID=TXN:$ID$ HG_URL=remote:ssh:$LOCALIP
+  changegroup-in-remote hook: HG_BUNDLE2=1 HG_HOOKTYPE=changegroup HG_NODE=a28a9d1a809cab7d4e2fde4bee738a9ede948b60 HG_NODE_LAST=a28a9d1a809cab7d4e2fde4bee738a9ede948b60 HG_SOURCE=serve HG_TXNID=TXN:$ID$ HG_URL=remote:ssh:$LOCALIP
   Got arguments 1:user@dummy 2:hg -R remote serve --stdio
   Got arguments 1:user@dummy 2:hg -R remote serve --stdio
   Got arguments 1:user@dummy 2:hg -R remote serve --stdio
@@ -508,7 +508,7 @@ debug output
   Got arguments 1:user@dummy 2:hg -R remote serve --stdio
   Got arguments 1:user@dummy 2:hg -R remote serve --stdio
   Got arguments 1:user@dummy 2:hg -R remote serve --stdio
-  changegroup-in-remote hook: HG_BUNDLE2=1 HG_NODE=1383141674ec756a6056f6a9097618482fe0f4a6 HG_NODE_LAST=1383141674ec756a6056f6a9097618482fe0f4a6 HG_SOURCE=serve HG_TXNID=TXN:$ID$ HG_URL=remote:ssh:$LOCALIP
+  changegroup-in-remote hook: HG_BUNDLE2=1 HG_HOOKTYPE=changegroup HG_NODE=1383141674ec756a6056f6a9097618482fe0f4a6 HG_NODE_LAST=1383141674ec756a6056f6a9097618482fe0f4a6 HG_SOURCE=serve HG_TXNID=TXN:$ID$ HG_URL=remote:ssh:$LOCALIP
   Got arguments 1:user@dummy 2:hg -R remote serve --stdio
   Got arguments 1:user@dummy 2:hg init 'a repo'
   Got arguments 1:user@dummy 2:hg -R 'a repo' serve --stdio
@@ -516,7 +516,7 @@ debug output
   Got arguments 1:user@dummy 2:hg -R 'a repo' serve --stdio
   Got arguments 1:user@dummy 2:hg -R 'a repo' serve --stdio
   Got arguments 1:user@dummy 2:hg -R remote serve --stdio
-  changegroup-in-remote hook: HG_BUNDLE2=1 HG_NODE=65c38f4125f9602c8db4af56530cc221d93b8ef8 HG_NODE_LAST=65c38f4125f9602c8db4af56530cc221d93b8ef8 HG_SOURCE=serve HG_TXNID=TXN:$ID$ HG_URL=remote:ssh:$LOCALIP
+  changegroup-in-remote hook: HG_BUNDLE2=1 HG_HOOKTYPE=changegroup HG_NODE=65c38f4125f9602c8db4af56530cc221d93b8ef8 HG_NODE_LAST=65c38f4125f9602c8db4af56530cc221d93b8ef8 HG_SOURCE=serve HG_TXNID=TXN:$ID$ HG_URL=remote:ssh:$LOCALIP
   Got arguments 1:user@dummy 2:hg -R remote serve --stdio
 
 remote hook failure is attributed to remote
