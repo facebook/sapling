@@ -60,17 +60,21 @@ static std::atomic<uint16_t> mountGeneration{0};
 std::shared_ptr<EdenMount> EdenMount::makeShared(
     std::unique_ptr<ClientConfig> config,
     std::unique_ptr<ObjectStore> objectStore,
-    AbsolutePathPiece socketPath) {
+    AbsolutePathPiece socketPath,
+    folly::ThreadLocal<fusell::EdenStats>* globalStats) {
   return std::shared_ptr<EdenMount>{
-      new EdenMount{std::move(config), std::move(objectStore), socketPath},
+      new EdenMount{
+          std::move(config), std::move(objectStore), socketPath, globalStats},
       EdenMountDeleter{}};
 }
 
 EdenMount::EdenMount(
     std::unique_ptr<ClientConfig> config,
     std::unique_ptr<ObjectStore> objectStore,
-    AbsolutePathPiece socketPath)
-    : config_(std::move(config)),
+    AbsolutePathPiece socketPath,
+    folly::ThreadLocal<fusell::EdenStats>* globalStats)
+    : globalEdenStats_(globalStats),
+      config_(std::move(config)),
       inodeMap_{new InodeMap(this)},
       dispatcher_{new EdenDispatcher(this)},
       mountPoint_(
@@ -159,6 +163,10 @@ const AbsolutePath& EdenMount::getPath() const {
 
 const AbsolutePath& EdenMount::getSocketPath() const {
   return socketPath_;
+}
+
+folly::ThreadLocal<fusell::EdenStats>* EdenMount::getStats() const {
+  return globalEdenStats_;
 }
 
 const vector<BindMount>& EdenMount::getBindMounts() const {

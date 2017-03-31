@@ -84,7 +84,7 @@ void TestMount::initialize(Hash initialCommitHash) {
   unique_ptr<ObjectStore> objectStore =
       make_unique<ObjectStore>(localStore_, backingStore_);
   edenMount_ = EdenMount::makeShared(
-      std::move(config_), std::move(objectStore), AbsolutePathPiece());
+      std::move(config_), std::move(objectStore), AbsolutePathPiece(), &stats_);
 }
 
 void TestMount::initialize(Hash commitHash, Hash rootTreeHash) {
@@ -95,7 +95,7 @@ void TestMount::initialize(Hash commitHash, Hash rootTreeHash) {
   unique_ptr<ObjectStore> objectStore =
       make_unique<ObjectStore>(localStore_, backingStore_);
   edenMount_ = EdenMount::makeShared(
-      std::move(config_), std::move(objectStore), AbsolutePathPiece());
+      std::move(config_), std::move(objectStore), AbsolutePathPiece(), &stats_);
 }
 
 void TestMount::initialize(
@@ -116,7 +116,7 @@ void TestMount::initialize(
   unique_ptr<ObjectStore> objectStore =
       make_unique<ObjectStore>(localStore_, backingStore_);
   edenMount_ = EdenMount::makeShared(
-      std::move(config_), std::move(objectStore), AbsolutePathPiece());
+      std::move(config_), std::move(objectStore), AbsolutePathPiece(), &stats_);
 }
 
 Hash TestMount::nextCommitHash() {

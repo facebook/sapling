@@ -8,6 +8,7 @@
  *
  */
 #pragma once
+#include <folly/ThreadLocal.h>
 #include <folly/futures/Future.h>
 #include <folly/io/async/Request.h>
 #include "eden/fuse/EdenStats.h"
@@ -26,7 +27,8 @@ class RequestData : public folly::RequestData {
   std::weak_ptr<folly::RequestContext> requestContext_;
   // Needed to track stats
   std::chrono::time_point<std::chrono::steady_clock> startTime_;
-  EdenStats::Histogram* latencyHistogram_{nullptr};
+  EdenStats::HistogramPtr latencyHistogram_{nullptr};
+  folly::ThreadLocal<EdenStats>* stats_{nullptr};
 
   static void interrupter(fuse_req_t req, void* data);
   fuse_req_t stealReq();
@@ -50,7 +52,9 @@ class RequestData : public folly::RequestData {
   // a FUSE request, false otherwise.
   static bool isFuseRequest();
 
-  folly::Future<folly::Unit> startRequest(EdenStats::Histogram& histogram);
+  folly::Future<folly::Unit> startRequest(
+      folly::ThreadLocal<EdenStats>* stats,
+      EdenStats::HistogramPtr histogram);
   void finishRequest();
 
   // Returns the request context, which holds uid, gid, pid and umask info

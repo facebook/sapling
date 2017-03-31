@@ -76,7 +76,8 @@ void EdenServiceHandler::mountImpl(const MountInfo& info) {
   auto edenMount = EdenMount::makeShared(
       std::move(initialConfig),
       std::move(objectStore),
-      server_->getSocketPath());
+      server_->getSocketPath(),
+      server_->getStats());
   // We gave ownership of initialConfig to the EdenMount.
   // Get a pointer to it that we can use for the remainder of this function.
   auto* config = edenMount->getConfig();

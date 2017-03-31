@@ -13,6 +13,7 @@
 #include <folly/Range.h>
 #include <folly/SocketAddress.h>
 #include <folly/Synchronized.h>
+#include <folly/ThreadLocal.h>
 #include <folly/experimental/StringKeyedMap.h>
 #include <condition_variable>
 #include <memory>
@@ -21,6 +22,7 @@
 #include <unordered_map>
 #include <vector>
 #include "eden/fs/config/InterpolatedPropertyTree.h"
+#include "eden/fuse/EdenStats.h"
 #include "eden/utils/PathFuncs.h"
 
 namespace apache {
@@ -137,6 +139,10 @@ class EdenServer {
     return edenDir_;
   }
 
+  folly::ThreadLocal<fusell::EdenStats>* getStats() const {
+    return &edenStats_;
+  }
+
  private:
   using BackingStoreKey = std::pair<std::string, std::string>;
   using BackingStoreMap =
@@ -181,6 +187,7 @@ class EdenServer {
   mutable std::mutex mountPointsMutex_;
   std::condition_variable mountPointsCV_;
   MountMap mountPoints_;
+  mutable folly::ThreadLocal<fusell::EdenStats> edenStats_;
 };
 }
 } // facebook::eden

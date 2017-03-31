@@ -61,18 +61,22 @@ RequestData& RequestData::create(fuse_req_t req) {
   return get();
 }
 
-Future<folly::Unit> RequestData::startRequest(EdenStats::Histogram& histogram) {
+Future<folly::Unit> RequestData::startRequest(
+    folly::ThreadLocal<EdenStats>* stats,
+    EdenStats::HistogramPtr histogram) {
   startTime_ = steady_clock::now();
   DCHECK(latencyHistogram_ == nullptr);
-  latencyHistogram_ = &histogram;
+  latencyHistogram_ = histogram;
+  stats_ = stats;
   return folly::Unit{};
 }
 
 void RequestData::finishRequest() {
   auto now = duration_cast<seconds>(steady_clock::now().time_since_epoch());
   auto diff = duration_cast<microseconds>(steady_clock::now() - startTime_);
-  (*latencyHistogram_)->addValue(now, diff.count());
+  stats_->get()->recordLatency(latencyHistogram_, diff, now);
   latencyHistogram_ = nullptr;
+  stats_ = nullptr;
 }
 
 fuse_req_t RequestData::stealReq() {

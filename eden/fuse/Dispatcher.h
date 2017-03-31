@@ -12,6 +12,7 @@
 #include <folly/Exception.h>
 #include <folly/Portability.h>
 #include <folly/Range.h>
+#include <folly/ThreadLocal.h>
 #include <folly/futures/Future.h>
 #include "eden/fuse/EdenStats.h"
 #include "eden/fuse/FileHandleMap.h"
@@ -46,18 +47,18 @@ class Dispatcher {
    * This pointer is not set until the MountPoint is started.
    */
   MountPoint* mountPoint_{nullptr};
-  EdenStats stats_;
+  folly::ThreadLocal<EdenStats>* stats_{nullptr};
   FileHandleMap fileHandles_;
 
  public:
   virtual ~Dispatcher();
 
+  explicit Dispatcher(folly::ThreadLocal<EdenStats>* stats);
   static void disp_init(void* userdata, struct fuse_conn_info* conn);
   std::unique_ptr<fuse_session, SessionDeleter> makeSession(
       Channel& channel,
       bool debug);
-  EdenStats& getStats();
-  const EdenStats& getStats() const;
+  folly::ThreadLocal<EdenStats>* getStats() const;
 
   // Returns the channel.  Must not be called if the channel
   // is not assigned!  (will terminate the program)

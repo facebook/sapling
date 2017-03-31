@@ -261,6 +261,8 @@ class TestMount {
    * perform all TestMount manipulation from a single thread.
    */
   std::atomic<uint64_t> commitNumber_{1};
+
+  folly::ThreadLocal<fusell::EdenStats> stats_;
 };
 }
 }

@@ -59,7 +59,9 @@ namespace facebook {
 namespace eden {
 
 EdenDispatcher::EdenDispatcher(EdenMount* mount)
-    : mount_(mount), inodeMap_(mount_->getInodeMap()) {}
+    : Dispatcher(mount->getStats()),
+      mount_(mount),
+      inodeMap_(mount_->getInodeMap()) {}
 
 namespace {
 /* We use this class to warm up the kernel inode/vnode cache after we've

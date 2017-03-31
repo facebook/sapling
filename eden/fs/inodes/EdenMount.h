@@ -11,11 +11,13 @@
 
 #include <folly/SharedMutex.h>
 #include <folly/Synchronized.h>
+#include <folly/ThreadLocal.h>
 #include <memory>
 #include <mutex>
 #include <shared_mutex>
 #include "eden/fs/inodes/InodePtrFwd.h"
 #include "eden/fs/journal/JournalDelta.h"
+#include "eden/fuse/EdenStats.h"
 #include "eden/fuse/fuse_headers.h"
 #include "eden/utils/PathFuncs.h"
 
@@ -61,7 +63,8 @@ class EdenMount {
   EdenMount(
       std::unique_ptr<ClientConfig> config,
       std::unique_ptr<ObjectStore> objectStore,
-      AbsolutePathPiece socketPath);
+      AbsolutePathPiece socketPath,
+      folly::ThreadLocal<fusell::EdenStats>* globalStats);
 
   /**
    * Create a shared_ptr to an EdenMount.
@@ -72,7 +75,8 @@ class EdenMount {
   static std::shared_ptr<EdenMount> makeShared(
       std::unique_ptr<ClientConfig> config,
       std::unique_ptr<ObjectStore> objectStore,
-      AbsolutePathPiece socketPath);
+      AbsolutePathPiece socketPath,
+      folly::ThreadLocal<fusell::EdenStats>* globalStats);
 
   /**
    * Destroy the EdenMount.
@@ -266,6 +270,12 @@ class EdenMount {
 
   const AbsolutePath& getSocketPath() const;
 
+  /**
+   * Returns a pointer to a stats instance associated with this mountpoint.
+   * Today this is the global stats instance, but in the future it will be
+   * a mount point specific instance. */
+  folly::ThreadLocal<fusell::EdenStats>* getStats() const;
+
  private:
   friend class RenameLock;
   friend class SharedRenameLock;
@@ -282,6 +292,14 @@ class EdenMount {
    * std::unique_ptr or std::shared_ptr).
    */
   ~EdenMount();
+
+  /**
+   * The stats instance associated with this mount point.
+   * This is just a reference to a global stats instance today, but we'd
+   * like to make this its own child instance that aggregates up into
+   * the global instance in the future.
+   */
+  folly::ThreadLocal<fusell::EdenStats>* globalEdenStats_{nullptr};
 
   std::unique_ptr<ClientConfig> config_;
   std::unique_ptr<InodeMap> inodeMap_;

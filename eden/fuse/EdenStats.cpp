@@ -33,13 +33,42 @@ namespace fusell {
 
 EdenStats::EdenStats() {}
 
-folly::TimeseriesHistogram<int64_t> EdenStats::createHistogram() {
+#if EDEN_HAS_COMMON_STATS
+EdenStats::Histogram EdenStats::createHistogram(const std::string& name) {
+  return Histogram{this,
+                   name,
+                   kBucketSize.count(),
+                   kMinValue.count(),
+                   kMaxValue.count(),
+                   facebook::stats::COUNT,
+                   50,
+                   90,
+                   99};
+}
+
+#else
+
+folly::TimeseriesHistogram<int64_t> EdenStats::createHistogram(
+    const std::string& /* name */) {
   return folly::TimeseriesHistogram<int64_t>{
       kBucketSize.count(),
       kMinValue.count(),
       kMaxValue.count(),
       MultiLevelTimeSeries<int64_t>{
           kNumTimeseriesBuckets, kDurations.size(), kDurations.data()}};
+}
+#endif
+
+void EdenStats::recordLatency(
+    HistogramPtr item,
+    std::chrono::microseconds elapsed,
+    std::chrono::seconds now) {
+#if EDEN_HAS_COMMON_STATS
+  (void)now; // we don't use it in this code path
+  (this->*item).addValue(elapsed.count());
+#else
+  (this->*item)->addValue(now, elapsed.count());
+#endif
 }
 }
 }

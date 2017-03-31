@@ -9,6 +9,7 @@
  */
 
 #include <folly/Conv.h>
+#include <folly/experimental/FunctionScheduler.h>
 #include <folly/init/Init.h>
 #include <gflags/gflags.h>
 #include <pwd.h>
@@ -164,9 +165,17 @@ int main(int argc, char **argv) {
 
   // Run the eden server
   EdenServer server(edenDir, etcEdenDir, configPath, rocksPath);
+
+  folly::FunctionScheduler functionScheduler;
+  functionScheduler.addFunction(
+      [&server] { server.getStats()->get()->aggregate(); },
+      std::chrono::seconds(1));
+  functionScheduler.setThreadName("stats_aggregator");
+  functionScheduler.start();
   server.run();
 
   LOG(INFO) << "edenfs performing orderly shutdown";
+  functionScheduler.shutdown();
 
   // Clean up all the server mount points before shutting down the privhelper
   server.unmountAll();
