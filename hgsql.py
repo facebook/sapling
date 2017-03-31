@@ -1352,7 +1352,7 @@ def addgroup(orig, self, bundle, linkmapper, transaction, addrevisioncb=None):
                 if node in fulltexts:
                     return fulltexts[node]
                 if node in self.nodemap:
-                    return self.revision(node)
+                    return self.revision(node, raw=True)
 
                 chunkdata = chunkmap[node]
                 deltabase = chunkdata['deltabase']
@@ -1365,7 +1365,7 @@ def addgroup(orig, self, bundle, linkmapper, transaction, addrevisioncb=None):
                         deltachain.append(fulltexts[currentbase])
                         break
                     elif currentbase in self.nodemap:
-                        deltachain.append(self.revision(currentbase))
+                        deltachain.append(self.revision(currentbase, raw=True))
                         break
                     elif currentbase == nullid:
                         break
@@ -1407,6 +1407,7 @@ def addgroup(orig, self, bundle, linkmapper, transaction, addrevisioncb=None):
             cs = chunkdata['cs']
             deltabase = chunkdata['deltabase']
             delta = chunkdata['delta']
+            flags = chunkdata['flags'] or revlog.REVIDX_DEFAULT_FLAGS
 
             content.append(node)
 
@@ -1426,7 +1427,7 @@ def addgroup(orig, self, bundle, linkmapper, transaction, addrevisioncb=None):
 
             baserev = self.rev(deltabase)
             chain = self._addrevision(node, None, transaction, link, p1, p2,
-                                      revlog.REVIDX_DEFAULT_FLAGS, (baserev, delta),
+                                      flags, (baserev, delta),
                                       ifh, dfh)
 
             if addrevisioncb:
