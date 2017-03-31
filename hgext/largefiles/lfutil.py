@@ -355,10 +355,16 @@ def updatestandin(repo, lfile, standin):
     else:
         raise error.Abort(_('%s: file not found!') % lfile)
 
+def readasstandin(fctx):
+    '''read hex hash from given filectx of standin file
+
+    This encapsulates how "standin" data is stored into storage layer.'''
+    return fctx.data().strip()
+
 def readstandin(repo, filename, node=None):
     '''read hex hash from standin for filename at given node, or working
     directory if no node is given'''
-    return repo[node][standin(filename)].data().strip()
+    return readasstandin(repo[node][standin(filename)])
 
 def writestandin(repo, standin, hash, executable):
     '''write hash to <repo.root>/<standin>'''
