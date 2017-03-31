@@ -127,6 +127,7 @@ def _exthook(ui, repo, htype, name, cmd, args, throw):
         if tr and tr.writepending():
             env['HG_PENDING'] = repo.root
     env['HG_HOOKTYPE'] = htype
+    env['HG_HOOKNAME'] = name
 
     for k, v in args.iteritems():
         if callable(v):

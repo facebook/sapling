@@ -844,9 +844,10 @@ Example ``.hg/hgrc``::
 Most hooks are run with environment variables set that give useful
 additional information. For each hook below, the environment variables
 it is passed are listed with names of the form ``$HG_foo``. The
-``$HG_HOOKTYPE`` variable is set for all hooks. It contains the type of
-hook which triggered the run. In the example about this will be
-``$HG_HOOKTYPE=incoming``.
+``$HG_HOOKTYPE`` and ``$HG_HOOKNAME`` variables are set for all hooks.
+their respectively contains the type of hook which triggered the run and
+the full name of the hooks in the config. In the example about this will
+be ``$HG_HOOKTYPE=incoming`` and ``$HG_HOOKNAME=incoming.email``.
 
 ``changegroup``
   Run after a changegroup has been added via push, pull or unbundle.  ID of the
