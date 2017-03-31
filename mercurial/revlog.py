@@ -2084,14 +2084,14 @@ class revlog(object):
                 # (Possibly) reuse the delta from the revlog if allowed and
                 # the revlog chunk is a delta.
                 cachedelta = None
-                text = None
+                rawtext = None
                 if populatecachedelta:
                     dp = self.deltaparent(rev)
                     if dp != nullrev:
                         cachedelta = (dp, str(self._chunk(rev)))
 
                 if not cachedelta:
-                    text = self.revision(rev)
+                    rawtext = self.revision(rev, raw=True)
 
                 ifh = destrevlog.opener(destrevlog.indexfile, 'a+',
                                         checkambig=False)
@@ -2099,7 +2099,7 @@ class revlog(object):
                 if not destrevlog._inline:
                     dfh = destrevlog.opener(destrevlog.datafile, 'a+')
                 try:
-                    destrevlog._addrevision(node, text, tr, linkrev, p1, p2,
+                    destrevlog._addrevision(node, rawtext, tr, linkrev, p1, p2,
                                             flags, cachedelta, ifh, dfh)
                 finally:
                     if dfh:

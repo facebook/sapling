@@ -1,3 +1,4 @@
 local test passed
 addgroupcopy test passed
-abort: crashed: invalid patch
+clone test passed
+abort: crashed: integrity check failed on _destrevlog.i:5
