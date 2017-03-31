@@ -245,9 +245,9 @@ def copyfromcache(repo, hash, filename):
         return False
     return True
 
-def copytostore(repo, revorctx, file, uploaded=False):
+def copytostore(repo, revorctx, file, fstandin, uploaded=False):
     wvfs = repo.wvfs
-    hash = readstandin(repo, file, revorctx)
+    hash = readasstandin(repo[revorctx][fstandin])
     if instore(repo, hash):
         return
     if wvfs.exists(file):
@@ -263,7 +263,7 @@ def copyalltostore(repo, node):
     for filename in ctx.files():
         realfile = splitstandin(filename)
         if realfile is not None and filename in ctx.manifest():
-            copytostore(repo, ctx, realfile)
+            copytostore(repo, ctx, realfile, filename)
 
 def copytostoreabsolute(repo, file, hash):
     if inusercache(repo.ui, hash):
