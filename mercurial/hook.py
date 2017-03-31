@@ -19,7 +19,7 @@ from . import (
     util,
 )
 
-def _pythonhook(ui, repo, name, hname, funcname, args, throw):
+def _pythonhook(ui, repo, htype, hname, funcname, args, throw):
     '''call python hook. hook is callable object, looked up as
     name in python module. if callable returns "true", hook
     fails, else passes. if hook raises exception, treated as
@@ -90,7 +90,7 @@ def _pythonhook(ui, repo, name, hname, funcname, args, throw):
     starttime = util.timer()
 
     try:
-        r = obj(ui=ui, repo=repo, hooktype=name, **args)
+        r = obj(ui=ui, repo=repo, hooktype=htype, **args)
     except Exception as exc:
         if isinstance(exc, error.Abort):
             ui.warn(_('error: %s hook failed: %s\n') %
@@ -107,7 +107,7 @@ def _pythonhook(ui, repo, name, hname, funcname, args, throw):
     finally:
         duration = util.timer() - starttime
         ui.log('pythonhook', 'pythonhook-%s: %s finished in %0.2f seconds\n',
-               name, funcname, duration)
+               htype, funcname, duration)
     if r:
         if throw:
             raise error.HookAbort(_('%s hook failed') % hname)
