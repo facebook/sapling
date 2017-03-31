@@ -153,15 +153,30 @@ Channel::~Channel() {
 
 void Channel::invalidateInode(fuse_ino_t ino, off_t off, off_t len) {
 #if FUSE_MINOR_VERSION >= 8
-  checkKernelError(fuse_lowlevel_notify_inval_inode(ch_, ino, off, len));
+  int err = fuse_lowlevel_notify_inval_inode(ch_, ino, off, len);
+  // Ignore ENOENT.  This can happen for inode numbers that we allocated on our
+  // own and haven't actually told the kernel about yet.
+  if (err != 0 && err != -ENOENT) {
+    throwSystemErrorExplicit(-err, "error invalidating FUSE inode ", ino);
+  }
 #endif
 }
 
 void Channel::invalidateEntry(fuse_ino_t parent, PathComponentPiece name) {
 #if FUSE_MINOR_VERSION >= 8
   auto namePiece = name.stringPiece();
-  checkKernelError(fuse_lowlevel_notify_inval_entry(
-      ch_, parent, namePiece.data(), namePiece.size()));
+  int err = fuse_lowlevel_notify_inval_entry(
+      ch_, parent, namePiece.data(), namePiece.size());
+  // Ignore ENOENT.  This can happen for inode numbers that we allocated on our
+  // own and haven't actually told the kernel about yet.
+  if (err != 0 && err != -ENOENT) {
+    throwSystemErrorExplicit(
+        -err,
+        "error invalidating FUSE entry ",
+        name,
+        " in directory inode ",
+        parent);
+  }
 #endif
 }
 
