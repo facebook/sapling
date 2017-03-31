@@ -1274,6 +1274,13 @@ class revlog(object):
                 # _cache only stores rawtext
                 if raw:
                     return self._cache[2]
+                # duplicated, but good for perf
+                if rev is None:
+                    rev = self.rev(node)
+                # no extra flags set, no flag processor runs, text = rawtext
+                if self.flags(rev) == REVIDX_DEFAULT_FLAGS:
+                    return self._cache[2]
+
             cachedrev = self._cache[1]
 
         # look up what we need to read
