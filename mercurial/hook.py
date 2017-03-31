@@ -186,16 +186,16 @@ def redirect(state):
     global _redirect
     _redirect = state
 
-def hook(ui, repo, name, throw=False, **args):
+def hook(ui, repo, htype, throw=False, **args):
     if not ui.callhooks:
         return False
 
     hooks = []
     for hname, cmd in _allhooks(ui):
-        if hname.split('.')[0] == name and cmd:
+        if hname.split('.')[0] == htype and cmd:
             hooks.append((hname, cmd))
 
-    res = runhooks(ui, repo, name, hooks, throw=throw, **args)
+    res = runhooks(ui, repo, htype, hooks, throw=throw, **args)
     r = False
     for hname, cmd in hooks:
         r = res[hname][0] or r
