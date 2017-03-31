@@ -1357,7 +1357,7 @@ def overridecat(orig, ui, repo, file1, *pats, **opts):
                     data = repo.wwritedata(f, data)
                 fp.write(data)
             else:
-                hash = lfutil.readstandin(repo, lf, ctx)
+                hash = lfutil.readasstandin(ctx[f])
                 if not lfutil.inusercache(repo.ui, hash):
                     store = storefactory.openstore(repo)
                     success, missing = store.get([(lf, hash)])
@@ -1409,7 +1409,7 @@ def mergeupdate(orig, repo, node, branchmerge, force,
             lfutil.writestandin(repo, standin, lfhash,
                                 lfutil.getexecutable(lfileabs))
             if (standin in pctx and
-                lfhash == lfutil.readstandin(repo, lfile, pctx)):
+                lfhash == lfutil.readasstandin(pctx[standin])):
                 oldclean.add(lfile)
         for lfile in s.added:
             fstandin = lfutil.standin(lfile)

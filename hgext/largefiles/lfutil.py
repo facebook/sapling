@@ -434,10 +434,11 @@ class storeprotonotcapable(Exception):
 def getstandinsstate(repo):
     standins = []
     matcher = getstandinmatcher(repo)
+    wctx = repo[None]
     for standin in repo.dirstate.walk(matcher, [], False, False):
         lfile = splitstandin(standin)
         try:
-            hash = readstandin(repo, lfile)
+            hash = readasstandin(wctx[standin])
         except IOError:
             hash = None
         standins.append((lfile, hash))

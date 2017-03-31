@@ -474,7 +474,7 @@ def updatelfiles(ui, repo, filelist=None, printmessage=None,
                     shutil.copyfile(wvfs.join(rellfile),
                                     wvfs.join(rellfileorig))
                     wvfs.unlinkpath(relstandinorig)
-                expecthash = lfutil.readstandin(repo, lfile)
+                expecthash = lfutil.readasstandin(wctx[relstandin])
                 if expecthash != '':
                     if lfile not in wctx: # not switched to normal file
                         wvfs.unlinkpath(rellfile, ignoremissing=True)
