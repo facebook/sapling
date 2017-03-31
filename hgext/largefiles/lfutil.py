@@ -361,11 +361,6 @@ def readasstandin(fctx):
     This encapsulates how "standin" data is stored into storage layer.'''
     return fctx.data().strip()
 
-def readstandin(repo, filename, node=None):
-    '''read hex hash from standin for filename at given node, or working
-    directory if no node is given'''
-    return readasstandin(repo[node][standin(filename)])
-
 def writestandin(repo, standin, hash, executable):
     '''write hash to <repo.root>/<standin>'''
     repo.wwrite(standin, hash + '\n', executable and 'x' or '')
