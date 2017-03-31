@@ -1635,7 +1635,7 @@ class revlog(object):
                         fh = ifh
                     else:
                         fh = dfh
-                    ptext = self.revision(rev, _df=fh)
+                    ptext = self.revision(rev, _df=fh, raw=True)
                     delta = mdiff.textdiff(ptext, t)
             header, data = self.compress(delta)
             deltalen = len(header) + len(data)

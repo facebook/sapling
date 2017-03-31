@@ -1,1 +1,2 @@
-abort: crashed: integrity check failed on _testrevlog.i:11
+local test passed
+abort: crashed: invalid patch
