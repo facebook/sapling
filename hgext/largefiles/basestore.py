@@ -130,7 +130,7 @@ class basestore(object):
                     key = (filename, fctx.filenode())
                     if key not in verified:
                         verified.add(key)
-                        expectedhash = fctx.data().strip()
+                        expectedhash = lfutil.readasstandin(fctx)
                         filestocheck.append((cset, filename, expectedhash))
 
         failed = self._verifyfiles(contents, filestocheck)

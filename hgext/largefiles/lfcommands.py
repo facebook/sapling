@@ -406,7 +406,7 @@ def cachelfiles(ui, repo, node, filelist=None):
     ctx = repo[node]
     for lfile in lfiles:
         try:
-            expectedhash = ctx[lfutil.standin(lfile)].data().strip()
+            expectedhash = lfutil.readasstandin(ctx[lfutil.standin(lfile)])
         except IOError as err:
             if err.errno == errno.ENOENT:
                 continue # node must be None and standin wasn't found in wctx

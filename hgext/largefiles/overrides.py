@@ -553,9 +553,9 @@ def overridefilemerge(origfn, premerge, repo, mynode, orig, fcd, fco, fca,
         return origfn(premerge, repo, mynode, orig, fcd, fco, fca,
                       labels=labels)
 
-    ahash = fca.data().strip().lower()
-    dhash = fcd.data().strip().lower()
-    ohash = fco.data().strip().lower()
+    ahash = lfutil.readasstandin(fca).lower()
+    dhash = lfutil.readasstandin(fcd).lower()
+    ohash = lfutil.readasstandin(fco).lower()
     if (ohash != ahash and
         ohash != dhash and
         (dhash == ahash or

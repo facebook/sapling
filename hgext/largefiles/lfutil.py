@@ -174,7 +174,7 @@ def lfdirstatestatus(lfdirstate, repo):
             fctx = pctx[standin(lfile)]
         except LookupError:
             fctx = None
-        if not fctx or fctx.data().strip() != hashfile(repo.wjoin(lfile)):
+        if not fctx or readasstandin(fctx) != hashfile(repo.wjoin(lfile)):
             modified.append(lfile)
         else:
             clean.append(lfile)
@@ -528,7 +528,7 @@ def getlfilestoupload(repo, missing, addfunc):
                     files.add(f)
         for fn in files:
             if isstandin(fn) and fn in ctx:
-                addfunc(fn, ctx[fn].data().strip())
+                addfunc(fn, readasstandin(ctx[fn]))
     repo.ui.progress(_('finding outgoing largefiles'), None)
 
 def updatestandinsbymatch(repo, match):

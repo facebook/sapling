@@ -172,7 +172,7 @@ def reposetup(ui, repo):
                             if standin not in ctx1:
                                 # from second parent
                                 modified.append(lfile)
-                            elif ctx1[standin].data().strip() \
+                            elif lfutil.readasstandin(ctx1[standin]) \
                                     != lfutil.hashfile(self.wjoin(lfile)):
                                 modified.append(lfile)
                             else:
@@ -188,7 +188,7 @@ def reposetup(ui, repo):
                             standin = lfutil.standin(lfile)
                             if standin in ctx1:
                                 abslfile = self.wjoin(lfile)
-                                if ((ctx1[standin].data().strip() !=
+                                if ((lfutil.readasstandin(ctx1[standin]) !=
                                      lfutil.hashfile(abslfile)) or
                                     (checkexec and
                                      ('x' in ctx1.flags(standin)) !=
