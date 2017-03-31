@@ -201,7 +201,7 @@ def hook(ui, repo, name, throw=False, **args):
         r = res[hname][0] or r
     return r
 
-def runhooks(ui, repo, name, hooks, throw=False, **args):
+def runhooks(ui, repo, htype, hooks, throw=False, **args):
     res = {}
     oldstdout = -1
 
@@ -229,7 +229,8 @@ def runhooks(ui, repo, name, hooks, throw=False, **args):
                 r = 1
                 raised = False
             elif callable(cmd):
-                r, raised = _pythonhook(ui, repo, name, hname, cmd, args, throw)
+                r, raised = _pythonhook(ui, repo, htype, hname, cmd, args,
+                                        throw)
             elif cmd.startswith('python:'):
                 if cmd.count(':') >= 2:
                     path, cmd = cmd[7:].rsplit(':', 1)
@@ -244,7 +245,7 @@ def runhooks(ui, repo, name, hooks, throw=False, **args):
                     hookfn = getattr(mod, cmd)
                 else:
                     hookfn = cmd[7:].strip()
-                r, raised = _pythonhook(ui, repo, name, hname, hookfn, args,
+                r, raised = _pythonhook(ui, repo, htype, hname, hookfn, args,
                                         throw)
             else:
                 r = _exthook(ui, repo, hname, cmd, args, throw)
