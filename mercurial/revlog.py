@@ -1239,12 +1239,16 @@ class revlog(object):
             return rev - 1
 
     def revdiff(self, rev1, rev2):
-        """return or calculate a delta between two revisions"""
+        """return or calculate a delta between two revisions
+
+        The delta calculated is in binary form and is intended to be written to
+        revlog data directly. So this function needs raw revision data.
+        """
         if rev1 != nullrev and self.deltaparent(rev2) == rev1:
             return bytes(self._chunk(rev2))
 
-        return mdiff.textdiff(self.revision(rev1),
-                              self.revision(rev2))
+        return mdiff.textdiff(self.revision(rev1, raw=True),
+                              self.revision(rev2, raw=True))
 
     def revision(self, nodeorrev, _df=None, raw=False):
         """return an uncompressed revision of a given node or revision
