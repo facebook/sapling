@@ -17,7 +17,8 @@ With an invalid arc configuration
 
   $ hg log -T '{syncstatus}\n' -r .
   arcconfig configuration problem. No diff information can be provided.
-  Error info: no .arcconfig foundError
+  Error info: no .arcconfig found
+  Error
 
 Configure arc...
 
@@ -37,7 +38,8 @@ And now with bad responses:
   > EOF
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg log -T '{syncstatus}\n' -r .
   Error talking to phabricator. No diff information can be provided.
-  Error info: failed, yoError
+  Error info: failed, yo
+  Error
 
 Missing status field is treated as an error
 
