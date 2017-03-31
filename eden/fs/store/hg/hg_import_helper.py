@@ -295,8 +295,17 @@ class HgServer(object):
         Send the manifest data.
         '''
         start = time.time()
-        ctx = mercurial.scmutil.revsingle(self.repo, rev)
-        mf = ctx.manifest()
+        try:
+            ctx = mercurial.scmutil.revsingle(self.repo, rev)
+            mf = ctx.manifest()
+        except Exception:
+            # The mercurial call may fail with a "no node" error if this
+            # revision in question has added to the repository after we
+            # originally opened it.  Invalidate the repository and try again,
+            # in case our cached repo data is just stale.
+            self.repo.invalidate()
+            ctx = mercurial.scmutil.revsingle(self.repo, rev)
+            mf = ctx.manifest()
 
         # How many paths to send in each chunk
         # Empirically, 100 seems like a decent number.
@@ -327,7 +336,11 @@ class HgServer(object):
                    num_paths, time.time() - start)
 
     def get_file(self, path, rev_hash):
-        fctx = self.repo.filectx(path, fileid=rev_hash)
+        try:
+            fctx = self.repo.filectx(path, fileid=rev_hash)
+        except Exception:
+            self.repo.invalidate()
+            fctx = self.repo.filectx(path, fileid=rev_hash)
         return fctx.data()
 
     def prefetch(self, rev):
@@ -335,7 +348,12 @@ class HgServer(object):
             # This repo isn't using remotefilelog, so nothing to do.
             return
 
-        rev_range = mercurial.scmutil.revrange(self.repo, rev)
+        try:
+            rev_range = mercurial.scmutil.revrange(self.repo, rev)
+        except Exception:
+            self.repo.invalidate()
+            rev_range = mercurial.scmutil.revrange(self.repo, rev)
+
         self.debug('prefetching')
         self.repo.prefetch(rev_range)
         self.debug('done prefetching')

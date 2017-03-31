@@ -63,3 +63,21 @@ class UpdateTest(HgExtensionTestBase):
         self.assertEqual('? foo/_data\n', self.status(),
                          msg='now only test.log should be ignored')
         self.assertEqual('*.log\n', self.read_file('foo/.gitignore'))
+
+    def test_update_with_new_commits(self):
+        '''
+        Test running `hg update` to check out commits that were created after
+        the edenfs daemon originally started.
+
+        This makes sure edenfs can correctly import new commits that appear in
+        the backing store repository.
+        '''
+        new_contents = 'changed in commit 3\n'
+        self.backing_repo.write_file('foo/bar.txt', new_contents)
+        new_commit = self.backing_repo.commit('Update foo/bar.txt')
+
+        self.assertEqual('', self.status())
+
+        self.repo.update(new_commit)
+        self.assertEqual(new_contents, self.read_file('foo/bar.txt'))
+        self.assertEqual('', self.status())
