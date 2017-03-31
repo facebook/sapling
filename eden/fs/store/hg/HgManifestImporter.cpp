@@ -11,6 +11,7 @@
 
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
+#include <rocksdb/db.h>
 
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
@@ -21,6 +22,11 @@ using folly::ByteRange;
 using folly::io::Appender;
 using folly::IOBuf;
 using std::string;
+
+DEFINE_int32(
+    hgManifestImportBufferSize,
+    256 * 1024 * 1024, // 256MB
+    "Buffer size for batching LocalStore writes during hg manifest imports");
 
 namespace facebook {
 namespace eden {
@@ -94,6 +100,7 @@ Hash HgManifestImporter::PartialTree::record(LocalStore* store) {
 HgManifestImporter::HgManifestImporter(LocalStore* store) : store_(store) {
   // Push the root directory onto the stack
   dirStack_.emplace_back(RelativePath(""));
+  store_->enableBatchMode(FLAGS_hgManifestImportBufferSize);
 }
 
 HgManifestImporter::~HgManifestImporter() {}
@@ -154,6 +161,9 @@ Hash HgManifestImporter::finish() {
   auto rootHash = dirStack_.back().record(store_);
   dirStack_.pop_back();
   CHECK(dirStack_.empty());
+
+  store_->disableBatchMode();
+
   return rootHash;
 }
 

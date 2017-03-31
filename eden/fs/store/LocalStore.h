@@ -10,6 +10,8 @@
 #pragma once
 
 #include <folly/Range.h>
+#include <folly/Synchronized.h>
+#include <folly/experimental/StringKeyedUnorderedSet.h>
 #include <memory>
 #include "eden/fs/store/BlobMetadata.h"
 #include "eden/utils/PathFuncs.h"
@@ -20,6 +22,7 @@ class Optional;
 }
 namespace rocksdb {
 class DB;
+class WriteBatch;
 }
 
 namespace facebook {
@@ -111,8 +114,69 @@ class LocalStore {
    */
   void put(folly::ByteRange key, folly::ByteRange value);
 
+  /**
+   * Enables batch loading mode.
+   * This configures the store to optimize for a bulk load of data
+   * during manifest import.
+   * In bulk loading mode, put operations will be deferred until flush
+   * is called, or until a read operation is performed.
+   *
+   * The bufferSize configures the maximum amount of data to accumulate
+   * (in encoded bytes) before flushing to storage.
+   */
+  void enableBatchMode(size_t bufferSize);
+
+  /**
+   * Disables batch loading mode.
+   * This will disable batch loading mode and flush any pending data.
+   * This may throw a RocksException if the flush fails.
+   */
+  void disableBatchMode();
+
+  /**
+   * Flushes any batched writes.
+   * Will throw RocksException if an error is encountered.
+   */
+  void flush();
+
+  /**
+   * Test whether the key is stored, or whether the key is pending storage
+   * as part of batch mode */
+  bool hasKey(folly::ByteRange key) const;
+  bool hasKey(const Hash& id) const;
+
  private:
+  /**
+   * In order to preserve read after write consistency, we must flush
+   * any pending writes prior to a read operation.  This is a const
+   * version of flush with some different logging to help detect
+   * and protect against this. */
+  void flushForRead() const;
+
+  /**
+   * Flushes the writeBatch if batch loading mode is not enabled, or
+   * if the writeBatchBufferSize_ is exceeded */
+  void flushIfNotBatch();
+
   std::unique_ptr<rocksdb::DB> db_;
+
+  struct PendingWrite {
+    /**
+     * We need to track this via a pointer to avoid pulling in the full
+     * rocksdb headers */
+    std::unique_ptr<rocksdb::WriteBatch> writeBatch;
+    /**
+     * Tracks all of the keys inserted since enableBatchMode() was
+     * called. */
+    folly::StringKeyedUnorderedSet batchedKeys;
+  };
+  mutable folly::Synchronized<PendingWrite> pending_;
+
+  /**
+   * Controls whether we are in batch mode or not.
+   * 0 means no, otherwise it holds the size of the buffer to use for batching.
+   */
+  size_t writeBatchBufferSize_{0};
 };
 }
 }

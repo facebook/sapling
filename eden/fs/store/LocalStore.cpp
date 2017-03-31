@@ -149,6 +149,7 @@ LocalStore::~LocalStore() {
 
 StoreResult LocalStore::get(ByteRange key) const {
   string value;
+  flushForRead();
   auto status = db_.get()->Get(ReadOptions(), _createSlice(key), &value);
   if (!status.ok()) {
     if (status.IsNotFound()) {
@@ -218,6 +219,10 @@ BlobMetadata LocalStore::putBlob(const Hash& id, const Blob* blob) {
 
   BlobMetadata metadata{Hash::sha1(&contents),
                         contents.computeChainDataLength()};
+  if (hasKey(id)) {
+    return metadata;
+  }
+
   BlobMetadataKey metadataKey(id);
   SerializedBlobMetadata metadataBytes(metadata);
 
@@ -245,19 +250,23 @@ BlobMetadata LocalStore::putBlob(const Hash& id, const Blob* blob) {
 
   SliceParts bodyParts(bodySlices.data(), bodySlices.size());
 
-  WriteBatch blobWrites;
-  blobWrites.Put(keyParts, bodyParts);
-  blobWrites.Put(metadataKey.slice(), metadataBytes.slice());
-  auto status = db_->Write(WriteOptions(), &blobWrites);
-  if (!status.ok()) {
-    // We don't use RocksException::check(), since we don't want to waste our
-    // time computing the hex string of the key if we succeeded.
-    throw RocksException::build(
-        status,
-        "error putting blob ",
-        folly::hexlify(id.getBytes()),
-        " in local store");
+  {
+    auto pending = pending_.wlock();
+    if (!pending->writeBatch) {
+      pending->writeBatch = std::make_unique<WriteBatch>(writeBatchBufferSize_);
+    }
+
+    pending->writeBatch->Put(keyParts, bodyParts);
+    pending->writeBatch->Put(metadataKey.slice(), metadataBytes.slice());
+
+    if (writeBatchBufferSize_ > 0) {
+      // Only track the inserted keys in batch mode
+      pending->batchedKeys.insert(StringPiece{id.getBytes()});
+      pending->batchedKeys.insert(StringPiece{metadataKey.bytes()});
+    }
   }
+
+  flushIfNotBatch();
 
   return metadata;
 }
@@ -279,17 +288,121 @@ Hash LocalStore::putTree(const Tree* tree) {
 }
 
 void LocalStore::put(folly::ByteRange key, folly::ByteRange value) {
-  auto status =
-      db_->Put(WriteOptions(), _createSlice(key), _createSlice(value));
+  if (hasKey(key)) {
+    // Don't try to overwrite an existing key
+    return;
+  }
+
+  {
+    auto pending = pending_.wlock();
+    if (!pending->writeBatch) {
+      pending->writeBatch = std::make_unique<WriteBatch>(writeBatchBufferSize_);
+    }
+
+    pending->writeBatch->Put(_createSlice(key), _createSlice(value));
+    if (writeBatchBufferSize_ > 0) {
+      // Only track the inserted keys in batch mode
+      pending->batchedKeys.insert(StringPiece{key});
+    }
+  }
+
+  flushIfNotBatch();
+}
+
+void LocalStore::flushIfNotBatch() {
+  bool needFlush = writeBatchBufferSize_ == 0;
+
+  if (!needFlush) {
+    auto pending = pending_.wlock();
+    if (!pending->writeBatch) {
+      return;
+    }
+    needFlush = pending->writeBatch->GetDataSize() >= writeBatchBufferSize_;
+  }
+
+  if (needFlush) {
+    flush();
+  }
+}
+
+void LocalStore::enableBatchMode(size_t bufferSize) {
+  CHECK_EQ(writeBatchBufferSize_, 0) << "Must not already be in batch mode";
+  writeBatchBufferSize_ = bufferSize;
+}
+
+void LocalStore::disableBatchMode() {
+  CHECK_NE(writeBatchBufferSize_, 0) << "Should not already be in batch mode";
+  writeBatchBufferSize_ = 0;
+  pending_.wlock()->batchedKeys.clear();
+  flush();
+}
+
+void LocalStore::flush() {
+  auto pending = pending_.wlock();
+  if (!pending->writeBatch) {
+    return;
+  }
+
+  VLOG(5) << "Flushing " << pending->writeBatch->Count()
+          << " entries with data size of "
+          << pending->writeBatch->GetDataSize();
+  auto status = db_->Write(WriteOptions(), pending->writeBatch.get());
+  VLOG(5) << "... Flushed";
+  pending->writeBatch.reset();
+
   if (!status.ok()) {
+    throw RocksException::build(
+        status, "error putting blob batch in local store");
+  }
+}
+
+void LocalStore::flushForRead() const {
+  auto pending = pending_.wlock();
+  if (!pending->writeBatch) {
+    return;
+  }
+
+  VLOG(5) << "READ op: Flushing " << pending->writeBatch->Count()
+          << " entries with data size of "
+          << pending->writeBatch->GetDataSize();
+  auto status = db_->Write(WriteOptions(), pending->writeBatch.get());
+  VLOG(5) << "... Flushed";
+  pending->writeBatch.reset();
+
+  if (!status.ok()) {
+    throw RocksException::build(
+        status, "error putting blob batch in local store");
+  }
+}
+
+bool LocalStore::hasKey(folly::ByteRange key) const {
+  {
+    auto pending = pending_.rlock();
+    auto keyStr = StringPiece{key};
+    if (pending->batchedKeys.find(keyStr) != pending->batchedKeys.end()) {
+      return true;
+    }
+  }
+  string value;
+  auto status = db_.get()->Get(ReadOptions(), _createSlice(key), &value);
+  if (!status.ok()) {
+    if (status.IsNotFound()) {
+      return false;
+    }
+
+    // TODO: RocksDB can return a "TryAgain" error.
+    // Should we try again for the user, rather than re-throwing the error?
+
     // We don't use RocksException::check(), since we don't want to waste our
     // time computing the hex string of the key if we succeeded.
     throw RocksException::build(
-        status,
-        "error putting data for key ",
-        folly::hexlify(key),
-        " in local store");
+        status, "failed to get ", folly::hexlify(key), " from local store");
   }
+  return true;
+}
+
+bool LocalStore::hasKey(const Hash& id) const {
+  return hasKey(id.getBytes());
 }
 
 }
