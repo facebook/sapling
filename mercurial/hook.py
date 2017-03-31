@@ -223,9 +223,9 @@ def runhooks(ui, repo, name, hooks, throw=False, **args):
             if cmd is _fromuntrusted:
                 if throw:
                     raise error.HookAbort(
-                        _('untrusted hook %s not executed') % name,
+                        _('untrusted hook %s not executed') % hname,
                         hint = _("see 'hg help config.trusted'"))
-                ui.warn(_('warning: untrusted hook %s not executed\n') % name)
+                ui.warn(_('warning: untrusted hook %s not executed\n') % hname)
                 r = 1
                 raised = False
             elif callable(cmd):

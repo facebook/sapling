@@ -904,7 +904,7 @@ Non-blocking hook
   > txnclose.testing=echo txnclose hook called
   > EOF
   $ touch a && hg commit -Aqm a
-  warning: untrusted hook txnclose not executed
+  warning: untrusted hook txnclose.testing not executed
   $ hg log
   changeset:   0:3903775176ed
   tag:         tip
@@ -923,7 +923,7 @@ Non-blocking hook
   $ touch b && hg commit -Aqm a
   transaction abort!
   rollback completed
-  abort: untrusted hook pretxnclose not executed
+  abort: untrusted hook pretxnclose.testing not executed
   (see 'hg help config.trusted')
   [255]
   $ hg log
