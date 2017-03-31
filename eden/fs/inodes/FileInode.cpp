@@ -37,8 +37,14 @@ FileInode::State::State(
     const folly::Optional<Hash>& h)
     : data(std::make_shared<FileData>(inode, h)), mode(m), hash(h) {}
 
-FileInode::State::State(FileInode* inode, mode_t m, folly::File&& file)
-    : data(std::make_shared<FileData>(inode, std::move(file))), mode(m) {}
+FileInode::State::State(
+    FileInode* inode,
+    mode_t m,
+    folly::File&& file,
+    dev_t rdev)
+    : data(std::make_shared<FileData>(inode, std::move(file))),
+      mode(m),
+      rdev(rdev) {}
 
 FileInode::FileInode(
     fuse_ino_t ino,
@@ -54,9 +60,10 @@ FileInode::FileInode(
     TreeInodePtr parentInode,
     PathComponentPiece name,
     mode_t mode,
-    folly::File&& file)
+    folly::File&& file,
+    dev_t rdev)
     : InodeBase(ino, std::move(parentInode), name),
-      state_(folly::construct_in_place, this, mode, std::move(file)) {}
+      state_(folly::construct_in_place, this, mode, std::move(file), rdev) {}
 
 folly::Future<fusell::Dispatcher::Attr> FileInode::getattr() {
   auto data = getOrLoadData();

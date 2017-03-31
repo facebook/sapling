@@ -790,6 +790,76 @@ FileInodePtr TreeInode::symlink(
   return inode;
 }
 
+FileInodePtr
+TreeInode::mknod(PathComponentPiece name, mode_t mode, dev_t rdev) {
+  // Compute the effective name of the node they want to create.
+  RelativePath targetName;
+  std::shared_ptr<FileHandle> handle;
+  FileInodePtr inode;
+
+  if (!S_ISSOCK(mode)) {
+    throw InodeError(
+        EPERM,
+        inodePtrFromThis(),
+        name,
+        "only unix domain sockets are supported by mknod");
+  }
+
+  materialize();
+
+  // We need to scope the write lock as the getattr call below implicitly
+  // wants to acquire a read lock.
+  {
+    // Acquire our contents lock
+    auto contents = contents_.wlock();
+
+    auto myPath = getPath();
+    // Make sure this directory has not been unlinked.
+    // We have to check this after acquiring the contents_ lock; otherwise
+    // we could race with rmdir() or rename() calls affecting us.
+    if (!myPath.hasValue()) {
+      throw InodeError(ENOENT, inodePtrFromThis());
+    }
+    // Compute the target path, so we can record it in the journal below.
+    targetName = myPath.value() + name;
+
+    auto entIter = contents->entries.find(name);
+    if (entIter != contents->entries.end()) {
+      throw InodeError(EEXIST, this->inodePtrFromThis(), name);
+    }
+
+    // Generate an inode number for this new entry.
+    auto* inodeMap = this->getInodeMap();
+    auto childNumber = inodeMap->allocateInodeNumber();
+
+    auto filePath = getOverlay()->getFilePath(childNumber);
+    folly::File file(filePath.c_str(), O_RDWR | O_CREAT | O_EXCL, 0600);
+    SCOPE_FAIL {
+      ::unlink(filePath.c_str());
+    };
+
+    auto entry = std::make_unique<Entry>(mode, childNumber, rdev);
+
+    // build a corresponding FileInode
+    inode = FileInodePtr::makeNew(
+        childNumber,
+        this->inodePtrFromThis(),
+        name,
+        entry->mode,
+        std::move(file));
+    entry->inode = inode.get();
+    inodeMap->inodeCreated(inode);
+    contents->entries.emplace(name, std::move(entry));
+
+    this->getOverlay()->saveOverlayDir(getNodeId(), &*contents);
+  }
+
+  getMount()->getJournal().wlock()->addDelta(
+      std::make_unique<JournalDelta>(JournalDelta{targetName}));
+
+  return inode;
+}
+
 TreeInodePtr TreeInode::mkdir(PathComponentPiece name, mode_t mode) {
   RelativePath targetName;
   // Compute the effective name of the node they want to create.

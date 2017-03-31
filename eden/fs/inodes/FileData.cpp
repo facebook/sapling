@@ -147,6 +147,7 @@ struct stat FileData::stat() {
     // stat() the overlay file.
     checkUnixError(fstat(file_.fd(), &st));
     st.st_mode = state->mode;
+    st.st_rdev = state->rdev;
     return st;
   }
 
@@ -156,6 +157,9 @@ struct stat FileData::stat() {
   auto buf = blob_->getContents();
   st.st_size = buf.computeChainDataLength();
   // TODO: set atime, mtime, and ctime
+
+  // NOTE: we don't set rdev to anything special here because we
+  // don't support committing special device nodes.
 
   return st;
 }

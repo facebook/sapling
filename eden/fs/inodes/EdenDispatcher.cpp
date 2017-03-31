@@ -268,11 +268,15 @@ folly::Future<fuse_entry_param> EdenDispatcher::mknod(
     dev_t rdev) {
   VLOG(7) << folly::sformat(
       "mknod({}, {}, {:#x}, {:#x})", parent, name, mode, rdev);
-  // We intentionally do not support device nodes.
-  // The mknod(3) man page indicates that EPERM should be thrown if the
-  // filesystem does not support the type of node requested.
-  folly::throwSystemErrorExplicit(
-      EPERM, "device node creation not supported in eden mount points");
+  return inodeMap_->lookupTreeInode(parent).then(
+      [ childName = PathComponent{name}, mode, rdev ](
+          const TreeInodePtr& inode) {
+        auto child = inode->mknod(childName, mode, rdev);
+        return child->getattr().then([child](fusell::Dispatcher::Attr attr) {
+          child->incFuseRefcount();
+          return computeEntryParam(child->getNodeId(), attr);
+        });
+      });
 }
 
 folly::Future<fuse_entry_param>

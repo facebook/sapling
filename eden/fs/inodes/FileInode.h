@@ -46,7 +46,8 @@ class FileInode : public InodeBase {
       TreeInodePtr parentInode,
       PathComponentPiece name,
       mode_t mode,
-      folly::File&& file);
+      folly::File&& file,
+      dev_t rdev = 0);
 
   folly::Future<fusell::Dispatcher::Attr> getattr() override;
   folly::Future<fusell::Dispatcher::Attr> setattr(
@@ -87,6 +88,11 @@ class FileInode : public InodeBase {
   mode_t getMode() const;
 
   /**
+   * Get the file dev_t value.
+   */
+  dev_t getRdev() const;
+
+  /**
    * Get the permissions bits from the file mode.
    *
    * This returns the mode with the file type bits masked out.
@@ -115,10 +121,11 @@ class FileInode : public InodeBase {
    */
   struct State {
     State(FileInode* inode, mode_t mode, const folly::Optional<Hash>& hash);
-    State(FileInode* inode, mode_t mode, folly::File&& hash);
+    State(FileInode* inode, mode_t mode, folly::File&& hash, dev_t rdev = 0);
 
     std::shared_ptr<FileData> data;
     mode_t mode{0};
+    dev_t rdev{0};
     folly::Optional<Hash> hash;
   };
 

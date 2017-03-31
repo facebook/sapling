@@ -73,7 +73,8 @@ class TreeInode : public InodeBase {
     /**
      * Create a hash for a materialized entry.
      */
-    Entry(mode_t m, fuse_ino_t number) : mode(m), inodeNumber_{number} {}
+    Entry(mode_t m, fuse_ino_t number, dev_t rdev = 0)
+        : mode(m), inodeNumber_{number}, rdev_(rdev) {}
 
     Entry(Entry&& e) = default;
     Entry& operator=(Entry&& e) = default;
@@ -136,6 +137,14 @@ class TreeInode : public InodeBase {
     /** The complete st_mode value for this entry */
     mode_t mode{0};
 
+    dev_t getRdev() const {
+      // Callers should not check getRdev() if an inode is loaded.
+      // If the child inode is loaded it is the authoritative source for
+      // the mode bits.
+      DCHECK(!inode);
+      return rdev_;
+    }
+
    private:
     /**
      * If the entry is not materialized, this contains the hash
@@ -158,6 +167,12 @@ class TreeInode : public InodeBase {
      * is set.)
      */
     fuse_ino_t inodeNumber_{0};
+
+    /**
+     * The value of the rdev field that we report in stat.
+     * This is used for mknod and thus for unix domain sockets.
+     **/
+    dev_t rdev_{0};
 
    public:
     // TODO: Make inode private and provide an accessor method instead
@@ -288,6 +303,13 @@ class TreeInode : public InodeBase {
   TreeInodePtr mkdir(PathComponentPiece name, mode_t mode);
   folly::Future<folly::Unit> unlink(PathComponentPiece name);
   folly::Future<folly::Unit> rmdir(PathComponentPiece name);
+
+  /**
+   * Create a special filesystem node.
+   * Only unix domain sockets are supported; attempting to create any
+   * other kind of node will fail.
+   */
+  FileInodePtr mknod(PathComponentPiece name, mode_t mode, dev_t rdev);
 
   /**
    * Compute differences between a source control Tree and the current inode
