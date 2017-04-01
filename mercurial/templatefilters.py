@@ -221,7 +221,7 @@ def indent(text, prefix):
 def json(obj):
     if obj is None or obj is False or obj is True:
         return {None: 'null', False: 'false', True: 'true'}[obj]
-    elif isinstance(obj, int) or isinstance(obj, float):
+    elif isinstance(obj, (int, long, float)):
         return str(obj)
     elif isinstance(obj, str):
         return '"%s"' % encoding.jsonescape(obj, paranoid=True)
