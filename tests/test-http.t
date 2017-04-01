@@ -19,7 +19,7 @@ Test server address cannot be reused
 
 #if windows
   $ hg serve -p $HGPORT1 2>&1
-  abort: cannot start server at ':$HGPORT1': * (glob)
+  abort: cannot start server at 'localhost:$HGPORT1': * (glob)
   [255]
 #else
   $ hg serve -p $HGPORT1 2>&1

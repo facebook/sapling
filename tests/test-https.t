@@ -36,7 +36,7 @@ Test server address cannot be reused
 
 #if windows
   $ hg serve -p $HGPORT --certificate=$PRIV 2>&1
-  abort: cannot start server at 'localhost:$HGPORT':
+  abort: cannot start server at 'localhost:$HGPORT': * (glob)
   [255]
 #else
   $ hg serve -p $HGPORT --certificate=$PRIV 2>&1
