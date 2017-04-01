@@ -8,6 +8,11 @@
 
 /* A Python C extension for Zstandard. */
 
+#if defined(_WIN32)
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
+#endif
+
 #include "python-zstandard.h"
 
 PyObject *ZstdError;
@@ -49,9 +54,22 @@ PyDoc_STRVAR(train_dictionary__doc__,
 "\n"
 "The raw dictionary content will be returned\n");
 
+PyDoc_STRVAR(train_cover_dictionary__doc__,
+"train_cover_dictionary(dict_size, samples, k=None, d=None, notifications=0, dict_id=0, level=0)\n"
+"\n"
+"Train a dictionary from sample data using the COVER algorithm.\n"
+"\n"
+"This behaves like ``train_dictionary()`` except a different algorithm is\n"
+"used to create the dictionary. The algorithm has 2 parameters: ``k`` and\n"
+"``d``. These control the *segment size* and *dmer size*. A reasonable range\n"
+"for ``k`` is ``[16, 2048+]``. A reasonable range for ``d`` is ``[6, 16]``.\n"
+"``d`` must be less than or equal to ``k``.\n"
+);
+
 static char zstd_doc[] = "Interface to zstandard";
 
 static PyMethodDef zstd_methods[] = {
+	/* TODO remove since it is a method on CompressionParameters. */
 	{ "estimate_compression_context_size", (PyCFunction)estimate_compression_context_size,
 	METH_VARARGS, estimate_compression_context_size__doc__ },
 	{ "estimate_decompression_context_size", (PyCFunction)estimate_decompression_context_size,
@@ -62,14 +80,16 @@ static PyMethodDef zstd_methods[] = {
 	METH_VARARGS, get_frame_parameters__doc__ },
 	{ "train_dictionary", (PyCFunction)train_dictionary,
 	METH_VARARGS | METH_KEYWORDS, train_dictionary__doc__ },
+	{ "train_cover_dictionary", (PyCFunction)train_cover_dictionary,
+	METH_VARARGS | METH_KEYWORDS, train_cover_dictionary__doc__ },
 	{ NULL, NULL }
 };
 
+void bufferutil_module_init(PyObject* mod);
 void compressobj_module_init(PyObject* mod);
 void compressor_module_init(PyObject* mod);
 void compressionparams_module_init(PyObject* mod);
 void constants_module_init(PyObject* mod);
-void dictparams_module_init(PyObject* mod);
 void compressiondict_module_init(PyObject* mod);
 void compressionwriter_module_init(PyObject* mod);
 void compressoriterator_module_init(PyObject* mod);
@@ -100,8 +120,8 @@ void zstd_module_init(PyObject* m) {
 		return;
 	}
 
+	bufferutil_module_init(m);
 	compressionparams_module_init(m);
-	dictparams_module_init(m);
 	compressiondict_module_init(m);
 	compressobj_module_init(m);
 	compressor_module_init(m);
@@ -143,3 +163,48 @@ PyMODINIT_FUNC initzstd(void) {
 	}
 }
 #endif
+
+/* Attempt to resolve the number of CPUs in the system. */
+int cpu_count() {
+	int count = 0;
+
+#if defined(_WIN32)
+	SYSTEM_INFO si;
+	si.dwNumberOfProcessors = 0;
+	GetSystemInfo(&si);
+	count = si.dwNumberOfProcessors;
+#elif defined(__APPLE__)
+	int num;
+	size_t size = sizeof(int);
+
+	if (0 == sysctlbyname("hw.logicalcpu", &num, &size, NULL, 0)) {
+		count = num;
+	}
+#elif defined(__linux__)
+	count = sysconf(_SC_NPROCESSORS_ONLN);
+#elif defined(__OpenBSD__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__DragonFly__)
+	int mib[2];
+	size_t len = sizeof(count);
+	mib[0] = CTL_HW;
+	mib[1] = HW_NCPU;
+	if (0 != sysctl(mib, 2, &count, &len, NULL, 0)) {
+		count = 0;
+	}
+#elif defined(__hpux)
+	count = mpctl(MPC_GETNUMSPUS, NULL, NULL);
+#endif
+
+	return count;
+}
+
+size_t roundpow2(size_t i) {
+	i--;
+	i |= i >> 1;
+	i |= i >> 2;
+	i |= i >> 4;
+	i |= i >> 8;
+	i |= i >> 16;
+	i++;
+
+	return i;
+}

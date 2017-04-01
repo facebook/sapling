@@ -7,12 +7,15 @@
   contrib/python-zstandard/setup.py not using absolute_import
   contrib/python-zstandard/setup_zstd.py not using absolute_import
   contrib/python-zstandard/tests/common.py not using absolute_import
+  contrib/python-zstandard/tests/test_buffer_util.py not using absolute_import
   contrib/python-zstandard/tests/test_compressor.py not using absolute_import
+  contrib/python-zstandard/tests/test_compressor_fuzzing.py not using absolute_import
   contrib/python-zstandard/tests/test_data_structures.py not using absolute_import
+  contrib/python-zstandard/tests/test_data_structures_fuzzing.py not using absolute_import
   contrib/python-zstandard/tests/test_decompressor.py not using absolute_import
+  contrib/python-zstandard/tests/test_decompressor_fuzzing.py not using absolute_import
   contrib/python-zstandard/tests/test_estimate_sizes.py not using absolute_import
   contrib/python-zstandard/tests/test_module_attributes.py not using absolute_import
-  contrib/python-zstandard/tests/test_roundtrip.py not using absolute_import
   contrib/python-zstandard/tests/test_train_dictionary.py not using absolute_import
   i18n/check-translation.py not using absolute_import
   setup.py not using absolute_import

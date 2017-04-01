@@ -1,5 +1,6 @@
 import inspect
 import io
+import os
 import types
 
 
@@ -59,3 +60,29 @@ class OpCountingBytesIO(io.BytesIO):
     def write(self, data):
         self._write_count += 1
         return super(OpCountingBytesIO, self).write(data)
+
+
+_source_files = []
+
+
+def random_input_data():
+    """Obtain the raw content of source files.
+
+    This is used for generating "random" data to feed into fuzzing, since it is
+    faster than random content generation.
+    """
+    if _source_files:
+        return _source_files
+
+    for root, dirs, files in os.walk(os.path.dirname(__file__)):
+        dirs[:] = list(sorted(dirs))
+        for f in sorted(files):
+            try:
+                with open(os.path.join(root, f), 'rb') as fh:
+                    data = fh.read()
+                    if data:
+                        _source_files.append(data)
+            except OSError:
+                pass
+
+    return _source_files

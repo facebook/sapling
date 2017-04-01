@@ -67,6 +67,8 @@ static int CompressionParameters_init(CompressionParametersObject* self, PyObjec
 	unsigned searchLength;
 	unsigned targetLength;
 	unsigned strategy;
+	ZSTD_compressionParameters params;
+	size_t zresult;
 
 	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "IIIIIII:CompressionParameters",
 		kwlist, &windowLog, &chainLog, &hashLog, &searchLog, &searchLength,
@@ -117,7 +119,28 @@ static int CompressionParameters_init(CompressionParametersObject* self, PyObjec
 	self->targetLength = targetLength;
 	self->strategy = strategy;
 
+	ztopy_compression_parameters(self, &params);
+	zresult = ZSTD_checkCParams(params);
+
+	if (ZSTD_isError(zresult)) {
+		PyErr_Format(PyExc_ValueError, "invalid compression parameters: %s",
+			ZSTD_getErrorName(zresult));
+		return -1;
+	}
+
 	return 0;
+}
+
+PyDoc_STRVAR(CompressionParameters_estimated_compression_context_size__doc__,
+"Estimate the size in bytes of a compression context for compression parameters\n"
+);
+
+PyObject* CompressionParameters_estimated_compression_context_size(CompressionParametersObject* self) {
+	ZSTD_compressionParameters params;
+
+	ztopy_compression_parameters(self, &params);
+
+	return PyLong_FromSize_t(ZSTD_estimateCCtxSize(params));
 }
 
 PyObject* estimate_compression_context_size(PyObject* self, PyObject* args) {
@@ -141,6 +164,16 @@ PyDoc_STRVAR(CompressionParameters__doc__,
 static void CompressionParameters_dealloc(PyObject* self) {
 	PyObject_Del(self);
 }
+
+static PyMethodDef CompressionParameters_methods[] = {
+	{
+		"estimated_compression_context_size",
+		(PyCFunction)CompressionParameters_estimated_compression_context_size,
+		METH_NOARGS,
+		CompressionParameters_estimated_compression_context_size__doc__
+	},
+	{ NULL, NULL }
+};
 
 static PyMemberDef CompressionParameters_members[] = {
 	{ "window_log", T_UINT,
@@ -195,7 +228,7 @@ PyTypeObject CompressionParametersType = {
 	0,                         /* tp_weaklistoffset */
 	0,                         /* tp_iter */
 	0,                         /* tp_iternext */
-	0,                         /* tp_methods */
+	CompressionParameters_methods, /* tp_methods */
 	CompressionParameters_members, /* tp_members */
 	0,                         /* tp_getset */
 	0,                         /* tp_base */
@@ -214,7 +247,7 @@ void compressionparams_module_init(PyObject* mod) {
 		return;
 	}
 
-	Py_IncRef((PyObject*)&CompressionParametersType);
+	Py_INCREF(&CompressionParametersType);
 	PyModule_AddObject(mod, "CompressionParameters",
 		(PyObject*)&CompressionParametersType);
 }

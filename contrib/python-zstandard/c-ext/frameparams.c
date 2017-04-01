@@ -127,6 +127,6 @@ void frameparams_module_init(PyObject* mod) {
 		return;
 	}
 
-	Py_IncRef((PyObject*)&FrameParametersType);
+	Py_INCREF(&FrameParametersType);
 	PyModule_AddObject(mod, "FrameParameters", (PyObject*)&FrameParametersType);
 }

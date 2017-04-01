@@ -27,6 +27,7 @@ SOURCES = ['zstd/%s' % p for p in (
     'compress/fse_compress.c',
     'compress/huf_compress.c',
     'compress/zstd_compress.c',
+    'compress/zstdmt_compress.c',
     'decompress/huf_decompress.c',
     'decompress/zstd_decompress.c',
     'dictBuilder/cover.c',
@@ -34,9 +35,10 @@ SOURCES = ['zstd/%s' % p for p in (
     'dictBuilder/zdict.c',
 )]
 
+# Headers whose preprocessed output will be fed into cdef().
 HEADERS = [os.path.join(HERE, 'zstd', *p) for p in (
     ('zstd.h',),
-    ('common', 'pool.h'),
+    ('compress', 'zstdmt_compress.h'),
     ('dictBuilder', 'zdict.h'),
 )]
 
@@ -76,11 +78,30 @@ else:
     raise Exception('unsupported compiler type: %s' % compiler.compiler_type)
 
 def preprocess(path):
-    # zstd.h includes <stddef.h>, which is also included by cffi's boilerplate.
-    # This can lead to duplicate declarations. So we strip this include from the
-    # preprocessor invocation.
     with open(path, 'rb') as fh:
-        lines = [l for l in fh if not l.startswith(b'#include <stddef.h>')]
+        lines = []
+        for l in fh:
+            # zstd.h includes <stddef.h>, which is also included by cffi's
+            # boilerplate. This can lead to duplicate declarations. So we strip
+            # this include from the preprocessor invocation.
+            #
+            # The same things happens for including zstd.h, so give it the same
+            # treatment.
+            #
+            # We define ZSTD_STATIC_LINKING_ONLY, which is redundant with the inline
+            # #define in zstdmt_compress.h and results in a compiler warning. So drop
+            # the inline #define.
+            if l.startswith((b'#include <stddef.h>',
+                             b'#include "zstd.h"',
+                             b'#define ZSTD_STATIC_LINKING_ONLY')):
+                continue
+
+            # ZSTDLIB_API may not be defined if we dropped zstd.h. It isn't
+            # important so just filter it out.
+            if l.startswith(b'ZSTDLIB_API'):
+                l = l[len(b'ZSTDLIB_API '):]
+
+            lines.append(l)
 
     fd, input_file = tempfile.mkstemp(suffix='.h')
     os.write(fd, b''.join(lines))
@@ -116,25 +137,30 @@ def normalize_output(output):
 
 
 ffi = cffi.FFI()
+# *_DISABLE_DEPRECATE_WARNINGS prevents the compiler from emitting a warning
+# when cffi uses the function. Since we statically link against zstd, even
+# if we use the deprecated functions it shouldn't be a huge problem.
 ffi.set_source('_zstd_cffi', '''
 #include "mem.h"
 #define ZSTD_STATIC_LINKING_ONLY
 #include "zstd.h"
 #define ZDICT_STATIC_LINKING_ONLY
-#include "pool.h"
+#define ZDICT_DISABLE_DEPRECATE_WARNINGS
 #include "zdict.h"
+#include "zstdmt_compress.h"
 ''', sources=SOURCES, include_dirs=INCLUDE_DIRS)
 
 DEFINE = re.compile(b'^\\#define ([a-zA-Z0-9_]+) ')
 
 sources = []
 
+# Feed normalized preprocessor output for headers into the cdef parser.
 for header in HEADERS:
     preprocessed = preprocess(header)
     sources.append(normalize_output(preprocessed))
 
-    # Do another pass over source and find constants that were preprocessed
-    # away.
+    # #define's are effectively erased as part of going through preprocessor.
+    # So perform a manual pass to re-add those to the cdef source.
     with open(header, 'rb') as fh:
         for line in fh:
             line = line.strip()
@@ -142,13 +168,20 @@ for header in HEADERS:
             if not m:
                 continue
 
+            if m.group(1) == b'ZSTD_STATIC_LINKING_ONLY':
+                continue
+
             # The parser doesn't like some constants with complex values.
             if m.group(1) in (b'ZSTD_LIB_VERSION', b'ZSTD_VERSION_STRING'):
                 continue
 
+            # The ... is magic syntax by the cdef parser to resolve the
+            # value at compile time.
             sources.append(m.group(0) + b' ...')
 
-ffi.cdef(u'\n'.join(s.decode('latin1') for s in sources))
+cdeflines = b'\n'.join(sources).splitlines()
+cdeflines = [l for l in cdeflines if l.strip()]
+ffi.cdef(b'\n'.join(cdeflines).decode('latin1'))
 
 if __name__ == '__main__':
     ffi.compile()

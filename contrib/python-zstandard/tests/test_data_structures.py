@@ -1,15 +1,7 @@
-import io
-
 try:
     import unittest2 as unittest
 except ImportError:
     import unittest
-
-try:
-    import hypothesis
-    import hypothesis.strategies as strategies
-except ImportError:
-    hypothesis = None
 
 import zstd
 
@@ -32,7 +24,7 @@ class TestCompressionParameters(unittest.TestCase):
                                    zstd.CHAINLOG_MIN,
                                    zstd.HASHLOG_MIN,
                                    zstd.SEARCHLOG_MIN,
-                                   zstd.SEARCHLENGTH_MIN,
+                                   zstd.SEARCHLENGTH_MIN + 1,
                                    zstd.TARGETLENGTH_MIN,
                                    zstd.STRATEGY_FAST)
 
@@ -40,7 +32,7 @@ class TestCompressionParameters(unittest.TestCase):
                                    zstd.CHAINLOG_MAX,
                                    zstd.HASHLOG_MAX,
                                    zstd.SEARCHLOG_MAX,
-                                   zstd.SEARCHLENGTH_MAX,
+                                   zstd.SEARCHLENGTH_MAX - 1,
                                    zstd.TARGETLENGTH_MAX,
                                    zstd.STRATEGY_BTOPT)
 
@@ -59,6 +51,13 @@ class TestCompressionParameters(unittest.TestCase):
         self.assertEqual(p.search_length, 5)
         self.assertEqual(p.target_length, 8)
         self.assertEqual(p.strategy, 1)
+
+    def test_estimated_compression_context_size(self):
+        p = zstd.CompressionParameters(20, 16, 17,  1,  5, 16, zstd.STRATEGY_DFAST)
+
+        # 32-bit has slightly different values from 64-bit.
+        self.assertAlmostEqual(p.estimated_compression_context_size(), 1287076,
+                               delta=110)
 
 
 @make_cffi
@@ -122,65 +121,3 @@ class TestFrameParameters(unittest.TestCase):
         self.assertEqual(params.window_size, 262144)
         self.assertEqual(params.dict_id, 15)
         self.assertTrue(params.has_checksum)
-
-
-if hypothesis:
-    s_windowlog = strategies.integers(min_value=zstd.WINDOWLOG_MIN,
-                                      max_value=zstd.WINDOWLOG_MAX)
-    s_chainlog = strategies.integers(min_value=zstd.CHAINLOG_MIN,
-                                     max_value=zstd.CHAINLOG_MAX)
-    s_hashlog = strategies.integers(min_value=zstd.HASHLOG_MIN,
-                                    max_value=zstd.HASHLOG_MAX)
-    s_searchlog = strategies.integers(min_value=zstd.SEARCHLOG_MIN,
-                                      max_value=zstd.SEARCHLOG_MAX)
-    s_searchlength = strategies.integers(min_value=zstd.SEARCHLENGTH_MIN,
-                                         max_value=zstd.SEARCHLENGTH_MAX)
-    s_targetlength = strategies.integers(min_value=zstd.TARGETLENGTH_MIN,
-                                         max_value=zstd.TARGETLENGTH_MAX)
-    s_strategy = strategies.sampled_from((zstd.STRATEGY_FAST,
-                                          zstd.STRATEGY_DFAST,
-                                          zstd.STRATEGY_GREEDY,
-                                          zstd.STRATEGY_LAZY,
-                                          zstd.STRATEGY_LAZY2,
-                                          zstd.STRATEGY_BTLAZY2,
-                                          zstd.STRATEGY_BTOPT))
-
-
-    @make_cffi
-    class TestCompressionParametersHypothesis(unittest.TestCase):
-        @hypothesis.given(s_windowlog, s_chainlog, s_hashlog, s_searchlog,
-                          s_searchlength, s_targetlength, s_strategy)
-        def test_valid_init(self, windowlog, chainlog, hashlog, searchlog,
-                            searchlength, targetlength, strategy):
-            p = zstd.CompressionParameters(windowlog, chainlog, hashlog,
-                                           searchlog, searchlength,
-                                           targetlength, strategy)
-
-            # Verify we can instantiate a compressor with the supplied values.
-            # ZSTD_checkCParams moves the goal posts on us from what's advertised
-            # in the constants. So move along with them.
-            if searchlength == zstd.SEARCHLENGTH_MIN and strategy in (zstd.STRATEGY_FAST, zstd.STRATEGY_GREEDY):
-                searchlength += 1
-                p = zstd.CompressionParameters(windowlog, chainlog, hashlog,
-                                searchlog, searchlength,
-                                targetlength, strategy)
-            elif searchlength == zstd.SEARCHLENGTH_MAX and strategy != zstd.STRATEGY_FAST:
-                searchlength -= 1
-                p = zstd.CompressionParameters(windowlog, chainlog, hashlog,
-                                searchlog, searchlength,
-                                targetlength, strategy)
-
-            cctx = zstd.ZstdCompressor(compression_params=p)
-            with cctx.write_to(io.BytesIO()):
-                pass
-
-        @hypothesis.given(s_windowlog, s_chainlog, s_hashlog, s_searchlog,
-                          s_searchlength, s_targetlength, s_strategy)
-        def test_estimate_compression_context_size(self, windowlog, chainlog,
-                                                   hashlog, searchlog,
-                                                   searchlength, targetlength,
-                                                   strategy):
-            p = zstd.CompressionParameters(windowlog, chainlog, hashlog,
-                                searchlog, searchlength,
-                                targetlength, strategy)
-            size = zstd.estimate_compression_context_size(p)

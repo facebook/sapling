@@ -15,11 +15,6 @@ PyDoc_STRVAR(DecompressionObj__doc__,
 );
 
 static void DecompressionObj_dealloc(ZstdDecompressionObj* self) {
-	if (self->dstream) {
-		ZSTD_freeDStream(self->dstream);
-		self->dstream = NULL;
-	}
-
 	Py_XDECREF(self->decompressor);
 
 	PyObject_Del(self);
@@ -34,6 +29,9 @@ static PyObject* DecompressionObj_decompress(ZstdDecompressionObj* self, PyObjec
 	size_t outSize = ZSTD_DStreamOutSize();
 	PyObject* result = NULL;
 	Py_ssize_t resultSize = 0;
+
+	/* Constructor should ensure stream is populated. */
+	assert(self->decompressor->dstream);
 
 	if (self->finished) {
 		PyErr_SetString(ZstdError, "cannot use a decompressobj multiple times");
@@ -64,7 +62,7 @@ static PyObject* DecompressionObj_decompress(ZstdDecompressionObj* self, PyObjec
 	/* Read input until exhausted. */
 	while (input.pos < input.size) {
 		Py_BEGIN_ALLOW_THREADS
-		zresult = ZSTD_decompressStream(self->dstream, &output, &input);
+		zresult = ZSTD_decompressStream(self->decompressor->dstream, &output, &input);
 		Py_END_ALLOW_THREADS
 
 		if (ZSTD_isError(zresult)) {
@@ -106,8 +104,7 @@ static PyObject* DecompressionObj_decompress(ZstdDecompressionObj* self, PyObjec
 	goto finally;
 
 except:
-	Py_DecRef(result);
-	result = NULL;
+	Py_CLEAR(result);
 
 finally:
 	PyMem_Free(output.dst);

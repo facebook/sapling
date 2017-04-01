@@ -25,9 +25,14 @@ if "--legacy" in sys.argv:
 # facilitate reuse in other projects.
 extensions = [setup_zstd.get_c_extension(SUPPORT_LEGACY, 'zstd')]
 
+install_requires = []
+
 if cffi:
     import make_cffi
     extensions.append(make_cffi.ffi.distutils_extension())
+
+    # Need change in 1.8 for ffi.from_buffer() behavior.
+    install_requires.append('cffi>=1.8')
 
 version = None
 
@@ -67,4 +72,5 @@ setup(
     keywords='zstandard zstd compression',
     ext_modules=extensions,
     test_suite='tests',
+    install_requires=install_requires,
 )

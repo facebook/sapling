@@ -19,6 +19,7 @@ zstd_sources = ['zstd/%s' % p for p in (
     'compress/fse_compress.c',
     'compress/huf_compress.c',
     'compress/zstd_compress.c',
+    'compress/zstdmt_compress.c',
     'decompress/huf_decompress.c',
     'decompress/zstd_decompress.c',
     'dictBuilder/cover.c',
@@ -55,6 +56,7 @@ zstd_includes_legacy = [
 
 ext_sources = [
     'zstd.c',
+    'c-ext/bufferutil.c',
     'c-ext/compressiondict.c',
     'c-ext/compressobj.c',
     'c-ext/compressor.c',
@@ -66,7 +68,6 @@ ext_sources = [
     'c-ext/decompressor.c',
     'c-ext/decompressoriterator.c',
     'c-ext/decompressionwriter.c',
-    'c-ext/dictparams.c',
     'c-ext/frameparams.c',
 ]
 
@@ -89,8 +90,13 @@ def get_c_extension(support_legacy=False, name='zstd'):
 
     depends = [os.path.join(root, p) for p in zstd_depends]
 
+    extra_args = ['-DZSTD_MULTITHREAD']
+
+    if support_legacy:
+        extra_args.append('-DZSTD_LEGACY_SUPPORT=1')
+
     # TODO compile with optimizations.
     return Extension(name, sources,
                      include_dirs=include_dirs,
                      depends=depends,
-                     extra_compile_args=["-DZSTD_LEGACY_SUPPORT=1"] if support_legacy else [])
+                     extra_compile_args=extra_args)
