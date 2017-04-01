@@ -333,7 +333,7 @@ Testing -h/--help:
    summary       summarize working directory state
    tag           add one or more tags for the current or given revision
    tags          list repository tags
-   unbundle      apply one or more changegroup files
+   unbundle      apply one or more bundle files
    update        update working directory (or switch revisions)
    verify        verify the integrity of the repository
    version       output version and copyright information
@@ -417,7 +417,7 @@ Testing -h/--help:
    summary       summarize working directory state
    tag           add one or more tags for the current or given revision
    tags          list repository tags
-   unbundle      apply one or more changegroup files
+   unbundle      apply one or more bundle files
    update        update working directory (or switch revisions)
    verify        verify the integrity of the repository
    version       output version and copyright information

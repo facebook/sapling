@@ -1535,7 +1535,7 @@ help/ shows help topics
         "topic": "tags"
       },
       {
-        "summary": "apply one or more changegroup files",
+        "summary": "apply one or more bundle files",
         "topic": "unbundle"
       },
       {

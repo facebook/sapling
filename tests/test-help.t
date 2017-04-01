@@ -95,7 +95,7 @@ Short help:
    summary       summarize working directory state
    tag           add one or more tags for the current or given revision
    tags          list repository tags
-   unbundle      apply one or more changegroup files
+   unbundle      apply one or more bundle files
    update        update working directory (or switch revisions)
    verify        verify the integrity of the repository
    version       output version and copyright information
@@ -173,7 +173,7 @@ Short help:
    summary       summarize working directory state
    tag           add one or more tags for the current or given revision
    tags          list repository tags
-   unbundle      apply one or more changegroup files
+   unbundle      apply one or more bundle files
    update        update working directory (or switch revisions)
    verify        verify the integrity of the repository
    version       output version and copyright information
@@ -818,7 +818,7 @@ Test that default list of commands omits extension commands
    summary       summarize working directory state
    tag           add one or more tags for the current or given revision
    tags          list repository tags
-   unbundle      apply one or more changegroup files
+   unbundle      apply one or more bundle files
    update        update working directory (or switch revisions)
    verify        verify the integrity of the repository
    version       output version and copyright information
@@ -2428,7 +2428,7 @@ Dish up an empty repo; serve it cold.
   unbundle
   </a>
   </td><td>
-  apply one or more changegroup files
+  apply one or more bundle files
   </td></tr>
   <tr><td>
   <a href="/help/verify">
