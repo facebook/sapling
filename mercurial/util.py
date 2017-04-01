@@ -3288,6 +3288,9 @@ class compressionengine(object):
 
         If bundle compression is supported, the class must also implement
         ``compressstream`` and `decompressorreader``.
+
+        The docstring of this method is used in the help system to tell users
+        about this engine.
         """
         return None
 
@@ -3372,6 +3375,12 @@ class _zlibengine(compressionengine):
         return 'zlib'
 
     def bundletype(self):
+        """zlib compression using the DEFLATE algorithm.
+
+        All Mercurial clients should support this format. The compression
+        algorithm strikes a reasonable balance between compression ratio
+        and size.
+        """
         return 'gzip', 'GZ'
 
     def wireprotosupport(self):
@@ -3453,6 +3462,17 @@ class _bz2engine(compressionengine):
         return 'bz2'
 
     def bundletype(self):
+        """An algorithm that produces smaller bundles than ``gzip``.
+
+        All Mercurial clients should support this format.
+
+        This engine will likely produce smaller bundles than ``gzip`` but
+        will be significantly slower, both during compression and
+        decompression.
+
+        If available, the ``zstd`` engine can yield similar or better
+        compression at much higher speeds.
+        """
         return 'bzip2', 'BZ'
 
     # We declare a protocol name but don't advertise by default because
@@ -3506,6 +3526,10 @@ class _noopengine(compressionengine):
         return 'none'
 
     def bundletype(self):
+        """No compression is performed.
+
+        Use this compression engine to explicitly disable compression.
+        """
         return 'none', 'UN'
 
     # Clients always support uncompressed payloads. Servers don't because
@@ -3552,6 +3576,17 @@ class _zstdengine(compressionengine):
         return bool(self._module)
 
     def bundletype(self):
+        """A modern compression algorithm that is fast and highly flexible.
+
+        Only supported by Mercurial 4.1 and newer clients.
+
+        With the default settings, zstd compression is both faster and yields
+        better compression than ``gzip``. It also frequently yields better
+        compression than ``bzip2`` while operating at much higher speeds.
+
+        If this engine is available and backwards compatibility is not a
+        concern, it is likely the best available engine.
+        """
         return 'zstd', 'ZS'
 
     def wireprotosupport(self):
@@ -3649,6 +3684,36 @@ class _zstdengine(compressionengine):
                                          level=opts.get('level', 3))
 
 compengines.register(_zstdengine())
+
+def bundlecompressiontopics():
+    """Obtains a list of available bundle compressions for use in help."""
+    # help.makeitemsdocs() expects a dict of names to items with a .__doc__.
+    items = {}
+
+    # We need to format the docstring. So use a dummy object/type to hold it
+    # rather than mutating the original.
+    class docobject(object):
+        pass
+
+    for name in compengines:
+        engine = compengines[name]
+
+        if not engine.available():
+            continue
+
+        bt = engine.bundletype()
+        if not bt or not bt[0]:
+            continue
+
+        doc = pycompat.sysstr('``%s``\n    %s' % (
+            bt[0], engine.bundletype.__doc__))
+
+        value = docobject()
+        value.__doc__ = doc
+
+        items[bt[0]] = value
+
+    return items
 
 # convenient shortcut
 dst = debugstacktrace
