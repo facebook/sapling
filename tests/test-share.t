@@ -168,11 +168,11 @@ Therefore, this test scenario ignores checking visibility of
 
   $ cat > $TESTTMP/checkbookmarks.sh <<EOF
   > echo "@repo1"
-  > hg -R $TESTTMP/repo1 bookmarks
+  > hg -R "$TESTTMP/repo1" bookmarks
   > echo "@repo2"
-  > hg -R $TESTTMP/repo2 bookmarks
+  > hg -R "$TESTTMP/repo2" bookmarks
   > echo "@repo3"
-  > hg -R $TESTTMP/repo3 bookmarks
+  > hg -R "$TESTTMP/repo3" bookmarks
   > exit 1 # to avoid adding new bookmark for subsequent tests
   > EOF
 

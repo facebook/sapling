@@ -609,9 +609,9 @@ repositories visible to an external hook.
 
   $ cat > $TESTTMP/checkpending.sh <<EOF
   > echo '@initialrepo'
-  > hg -R $TESTTMP/initialrepo phase 7
+  > hg -R "$TESTTMP/initialrepo" phase 7
   > echo '@push-dest'
-  > hg -R $TESTTMP/push-dest phase 6
+  > hg -R "$TESTTMP/push-dest" phase 6
   > exit 1 # to avoid changing phase for subsequent tests
   > EOF
   $ cd ../initialrepo

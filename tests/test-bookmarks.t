@@ -924,9 +924,9 @@ repositories visible to an external hook.
 
   $ cat > $TESTTMP/checkpending.sh <<EOF
   > echo "@repo"
-  > hg -R $TESTTMP/repo bookmarks
+  > hg -R "$TESTTMP/repo" bookmarks
   > echo "@unrelated"
-  > hg -R $TESTTMP/unrelated bookmarks
+  > hg -R "$TESTTMP/unrelated" bookmarks
   > exit 1 # to avoid adding new bookmark for subsequent tests
   > EOF
 

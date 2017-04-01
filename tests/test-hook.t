@@ -857,9 +857,9 @@ repo)
 
   $ cat > $TESTTMP/checkpending.sh <<EOF
   > echo '@a'
-  > hg -R $TESTTMP/a tip -q
+  > hg -R "$TESTTMP/a" tip -q
   > echo '@a/nested'
-  > hg -R $TESTTMP/a/nested tip -q
+  > hg -R "$TESTTMP/a/nested" tip -q
   > exit 1 # to avoid adding new revision for subsequent tests
   > EOF
   $ hg init nested
