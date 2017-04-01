@@ -257,7 +257,7 @@ class hgwebdir(object):
 
             repos = dict(self.repos)
 
-            if not virtual or (virtual == 'index' and virtual not in repos):
+            if (not virtual or virtual == 'index') and virtual not in repos:
                 req.respond(HTTP_OK, ctype)
                 return self.makeindex(req, tmpl)
 
@@ -269,8 +269,17 @@ class hgwebdir(object):
                     req.respond(HTTP_OK, ctype)
                     return self.makeindex(req, tmpl, subdir)
 
-            virtualrepo = virtual
-            while virtualrepo:
+            def _virtualdirs():
+                # Check the full virtual path, each parent, and the root ('')
+                if virtual != '':
+                    yield virtual
+
+                    for p in util.finddirs(virtual):
+                        yield p
+
+                yield ''
+
+            for virtualrepo in _virtualdirs():
                 real = repos.get(virtualrepo)
                 if real:
                     req.env['REPO_NAME'] = virtualrepo
@@ -283,11 +292,6 @@ class hgwebdir(object):
                         raise ErrorResponse(HTTP_SERVER_ERROR, msg)
                     except error.RepoError as inst:
                         raise ErrorResponse(HTTP_SERVER_ERROR, str(inst))
-
-                up = virtualrepo.rfind('/')
-                if up < 0:
-                    break
-                virtualrepo = virtualrepo[:up]
 
             # browse subdirectories
             subdir = virtual + '/'

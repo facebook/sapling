@@ -1680,6 +1680,22 @@ Repos named 'index' take precedence over the index file
 
   $ killdaemons.py
 
+  $ cat > paths.conf << EOF
+  > [paths]
+  > / = $root/a
+  > EOF
+  $ hg serve -p $HGPORT1 -d --pid-file hg.pid --webdir-conf paths.conf
+  $ cat hg.pid >> $DAEMON_PIDS
+
+  $ hg id http://localhost:$HGPORT1
+  71a89161f014
+
+  $ get-with-headers.py localhost:$HGPORT1 '' | grep 'index'
+  <meta name="robots" content="index, nofollow" />
+     <a href="/rev/71a89161f014">add index file</a>
+
+  $ killdaemons.py
+
 paths errors 1
 
   $ cat error-paths-1.log

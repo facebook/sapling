@@ -335,7 +335,7 @@ class hgweb(object):
         req.url = req.env['SCRIPT_NAME']
         if not req.url.endswith('/'):
             req.url += '/'
-        if 'REPO_NAME' in req.env:
+        if req.env.get('REPO_NAME'):
             req.url += req.env['REPO_NAME'] + '/'
 
         if 'PATH_INFO' in req.env:
