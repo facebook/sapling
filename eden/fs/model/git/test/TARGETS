@@ -11,8 +11,8 @@ cpp_unittest(
   ],
   external_deps = [
     'glog',
-    'gmock',
-    'gtest',
+    ('googletest', None, 'gmock'),
+    ('googletest', None, 'gtest'),
   ],
 )
 

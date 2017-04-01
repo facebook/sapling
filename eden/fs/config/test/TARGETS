@@ -7,6 +7,6 @@ cpp_unittest(
     '@/folly/experimental:test_util',
   ],
   external_deps = [
-    'gtest',
+    ('googletest', None, 'gtest'),
   ],
 )

@@ -6,6 +6,6 @@ cpp_unittest(
     '@/eden/utils/test:test_lib',
   ],
   external_deps = [
-    'gtest',
+    ('googletest', None, 'gtest'),
   ],
 )
