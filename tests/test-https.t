@@ -97,11 +97,12 @@ we are able to load CA certs.
   [255]
 #endif
 
-Specifying a per-host certificate file that doesn't exist will abort
+Specifying a per-host certificate file that doesn't exist will abort.  The full
+C:/path/to/msysroot will print on Windows.
 
   $ hg --config hostsecurity.localhost:verifycertsfile=/does/not/exist clone https://localhost:$HGPORT/
   warning: connecting to localhost using legacy security technology (TLS 1.0); see https://mercurial-scm.org/wiki/SecureConnections for more info (?)
-  abort: path specified by hostsecurity.localhost:verifycertsfile does not exist: /does/not/exist
+  abort: path specified by hostsecurity.localhost:verifycertsfile does not exist: */does/not/exist (glob)
   [255]
 
 A malformed per-host certificate file will raise an error

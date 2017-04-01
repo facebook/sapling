@@ -116,11 +116,11 @@ Criss cross merging
 
   $ f --dump --recurse *
   d2: directory with 2 files
-  d2/f3:
+  d2/f3: (glob)
   >>>
   0 base
   <<<
-  d2/f4:
+  d2/f4: (glob)
   >>>
   0 base
   <<<
@@ -222,11 +222,11 @@ Redo merge with merge.preferancestor="*" to enable bid merge
 
   $ f --dump --recurse *
   d2: directory with 2 files
-  d2/f3:
+  d2/f3: (glob)
   >>>
   0 base
   <<<
-  d2/f4:
+  d2/f4: (glob)
   >>>
   0 base
   <<<
@@ -308,11 +308,11 @@ The other way around:
 
   $ f --dump --recurse *
   d2: directory with 2 files
-  d2/f3:
+  d2/f3: (glob)
   >>>
   0 base
   <<<
-  d2/f4:
+  d2/f4: (glob)
   >>>
   0 base
   <<<

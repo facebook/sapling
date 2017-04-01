@@ -367,7 +367,7 @@ test shared clones using relative paths work
   $ hg share -U thisdir/orig thisdir/abs
   $ hg share -U --relative thisdir/abs thisdir/rel
   $ cat thisdir/rel/.hg/sharedpath
-  ../../orig/.hg (no-eol)
+  ../../orig/.hg (no-eol) (glob)
   $ grep shared thisdir/*/.hg/requires
   thisdir/abs/.hg/requires:shared
   thisdir/rel/.hg/requires:shared
@@ -377,22 +377,22 @@ test that relative shared paths aren't relative to $PWD
 
   $ cd thisdir
   $ hg -R rel root
-  $TESTTMP/thisdir/rel
+  $TESTTMP/thisdir/rel (glob)
   $ cd ..
 
 now test that relative paths really are relative, survive across
 renames and changes of PWD
 
   $ hg -R thisdir/abs root
-  $TESTTMP/thisdir/abs
+  $TESTTMP/thisdir/abs (glob)
   $ hg -R thisdir/rel root
-  $TESTTMP/thisdir/rel
+  $TESTTMP/thisdir/rel (glob)
   $ mv thisdir thatdir
   $ hg -R thatdir/abs root
-  abort: .hg/sharedpath points to nonexistent directory $TESTTMP/thisdir/orig/.hg!
+  abort: .hg/sharedpath points to nonexistent directory $TESTTMP/thisdir/orig/.hg! (glob)
   [255]
   $ hg -R thatdir/rel root
-  $TESTTMP/thatdir/rel
+  $TESTTMP/thatdir/rel (glob)
 
 test unshare relshared repo
 
