@@ -102,6 +102,7 @@ Short help:
   
   additional help topics:
   
+   bundlespec    Bundle File Formats
    color         Colorizing Outputs
    config        Configuration Files
    dates         Date Formats
@@ -179,6 +180,7 @@ Short help:
   
   additional help topics:
   
+   bundlespec    Bundle File Formats
    color         Colorizing Outputs
    config        Configuration Files
    dates         Date Formats
@@ -827,6 +829,7 @@ Test that default list of commands omits extension commands
   
   additional help topics:
   
+   bundlespec    Bundle File Formats
    color         Colorizing Outputs
    config        Configuration Files
    dates         Date Formats
@@ -1838,6 +1841,15 @@ Test dynamic list of merge tools only shows up once
       See the merge-tools and ui sections of hgrc(5) for details on the
       configuration of merge tools.
 
+Compression engines listed in `hg help bundlespec`
+
+  $ hg help bundlespec | grep gzip
+          "v1" bundles can only use the "gzip", "bzip2", and "none" compression
+        An algorithm that produces smaller bundles than "gzip".
+        This engine will likely produce smaller bundles than "gzip" but will be
+      "gzip"
+        better compression than "gzip". It also frequently yields better
+
 Test usage of section marks in help documents
 
   $ cd "$TESTDIR"/../doc
@@ -1898,6 +1910,13 @@ Dish up an empty repo; serve it cold.
   <table class="bigtable">
   <tr><td colspan="2"><h2><a name="topics" href="#topics">Topics</a></h2></td></tr>
   
+  <tr><td>
+  <a href="/help/bundlespec">
+  bundlespec
+  </a>
+  </td><td>
+  Bundle File Formats
+  </td></tr>
   <tr><td>
   <a href="/help/color">
   color

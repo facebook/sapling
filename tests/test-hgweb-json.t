@@ -1549,6 +1549,10 @@ help/ shows help topics
     ],
     "topics": [
       {
+        "summary": "Bundle File Formats",
+        "topic": "bundlespec"
+      },
+      {
         "summary": "Colorizing Outputs",
         "topic": "color"
       },

@@ -340,6 +340,7 @@ Testing -h/--help:
   
   additional help topics:
   
+   bundlespec    Bundle File Formats
    color         Colorizing Outputs
    config        Configuration Files
    dates         Date Formats
@@ -423,6 +424,7 @@ Testing -h/--help:
   
   additional help topics:
   
+   bundlespec    Bundle File Formats
    color         Colorizing Outputs
    config        Configuration Files
    dates         Date Formats

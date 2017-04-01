@@ -210,6 +210,7 @@ def internalshelp(ui):
     return ''.join(lines)
 
 helptable = sorted([
+    (['bundlespec'], _("Bundle File Formats"), loaddoc('bundlespec')),
     (['color'], _("Colorizing Outputs"), loaddoc('color')),
     (["config", "hgrc"], _("Configuration Files"), loaddoc('config')),
     (["dates"], _("Date Formats"), loaddoc('dates')),
@@ -283,6 +284,8 @@ def addtopicsymbols(topic, marker, symbols, dedent=False):
         return makeitemsdoc(ui, topic, doc, marker, symbols, dedent=dedent)
     addtopichook(topic, add)
 
+addtopicsymbols('bundlespec', '.. bundlecompressionmarker',
+                util.bundlecompressiontopics())
 addtopicsymbols('filesets', '.. predicatesmarker', fileset.symbols)
 addtopicsymbols('merge-tools', '.. internaltoolsmarker',
                 filemerge.internalsdoc)
