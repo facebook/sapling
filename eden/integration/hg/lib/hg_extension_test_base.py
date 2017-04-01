@@ -111,6 +111,27 @@ class HgExtensionTestBase(testcase.EdenTestCase):
         '''Returns the output of `hg status` as a string.'''
         return self.repo.status()
 
+    def assert_status(self, expected, msg=None, check_ignored=True):
+        '''Returns the output of `hg status` as a string.'''
+        args = ['status', '--print0']
+        if check_ignored:
+            args.append('-mardui')
+
+        output = self.hg(*args)
+        actual_status = {}
+        for entry in output.split('\0'):
+            if not entry:
+                continue
+            flag = entry[0]
+            path = entry[2:]
+            actual_status[path] = flag
+
+        self.assertDictEqual(expected, actual_status)
+
+    def assert_status_empty(self, msg=None, check_ignored=True):
+        '''Ensures that `hg status` reports no modifications.'''
+        self.assert_status({}, msg=msg, check_ignored=check_ignored)
+
     def touch(self, path):
         '''Touch the file at the specified path relative to the clone.'''
         fullpath = self.get_path(path)

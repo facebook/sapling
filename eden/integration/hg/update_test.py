@@ -24,14 +24,14 @@ class UpdateTest(HgExtensionTestBase):
 
     def test_update_clean_dot(self):
         '''Test using `hg update --clean .` to revert file modifications.'''
-        self.assertEqual('', self.status())
+        self.assert_status_empty()
 
         self.write_file('hello.txt', 'saluton')
-        self.assertEqual('M hello.txt\n', self.status())
+        self.assert_status({'hello.txt': 'M'})
 
         self.repo.update('.', clean=True)
         self.assertEqual('hola', self.read_file('hello.txt'))
-        self.assertEqual('', self.status())
+        self.assert_status_empty()
 
     def test_update_with_gitignores(self):
         '''
@@ -47,12 +47,16 @@ class UpdateTest(HgExtensionTestBase):
         '''
         # Call `hg status`, which causes eden to internally create FileInode
         # objects for the .gitignore files.
-        self.assertEqual('', self.status())
+        self.assert_status_empty()
 
         self.write_file('foo/subdir/test.log', 'log data')
         self.write_file('foo/_data', 'data file')
-        self.assertEqual('', self.status(),
-                         msg='test.log and _data should be ignored')
+        self.assert_status_empty(check_ignored=False,
+                                 msg='test.log and _data should be ignored')
+        self.assert_status({
+            'foo/subdir/test.log': 'I',
+            'foo/_data': 'I',
+        })
 
         # Call `hg update` to move from commit2 to commit1, which will
         # change the contents of foo/.gitignore.  This will cause edenfs
@@ -60,8 +64,13 @@ class UpdateTest(HgExtensionTestBase):
         # about this inode in the first place.  edenfs should ignore the
         # resulting ENOENT error in response to the invalidation request.
         self.repo.update(self.commit1)
-        self.assertEqual('? foo/_data\n', self.status(),
-                         msg='now only test.log should be ignored')
+        self.assert_status({
+            'foo/_data': '?',
+        }, check_ignored=False)
+        self.assert_status({
+            'foo/subdir/test.log': 'I',
+            'foo/_data': '?',
+        })
         self.assertEqual('*.log\n', self.read_file('foo/.gitignore'))
 
     def test_update_with_new_commits(self):
@@ -76,8 +85,8 @@ class UpdateTest(HgExtensionTestBase):
         self.backing_repo.write_file('foo/bar.txt', new_contents)
         new_commit = self.backing_repo.commit('Update foo/bar.txt')
 
-        self.assertEqual('', self.status())
+        self.assert_status_empty()
 
         self.repo.update(new_commit)
         self.assertEqual(new_contents, self.read_file('foo/bar.txt'))
-        self.assertEqual('', self.status())
+        self.assert_status_empty()
