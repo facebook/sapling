@@ -27,6 +27,7 @@ from .. import (
     context,
     error,
     match,
+    mdiff,
     patch,
     pathutil,
     templatefilters,
@@ -473,8 +474,7 @@ def diffs(web, tmpl, ctx, basectx, files, style, linerange=None,
         for hunkrange, hunklines in hunks:
             if linerange is not None and hunkrange is not None:
                 s1, l1, s2, l2 = hunkrange
-                lb, ub = linerange
-                if not (lb < s2 + l2 and ub > s2):
+                if not mdiff.hunkinrange((s2, l2), linerange):
                     continue
             lines.extend(hunklines)
         if lines:

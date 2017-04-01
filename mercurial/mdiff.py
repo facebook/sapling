@@ -117,6 +117,31 @@ def splitblock(base1, lines1, base2, lines2, opts):
         s1 = i1
         s2 = i2
 
+def hunkinrange(hunk, linerange):
+    """Return True if `hunk` defined as (start, length) is in `linerange`
+    defined as (lowerbound, upperbound).
+
+    >>> hunkinrange((5, 10), (2, 7))
+    True
+    >>> hunkinrange((5, 10), (6, 12))
+    True
+    >>> hunkinrange((5, 10), (13, 17))
+    True
+    >>> hunkinrange((5, 10), (3, 17))
+    True
+    >>> hunkinrange((5, 10), (1, 3))
+    False
+    >>> hunkinrange((5, 10), (18, 20))
+    False
+    >>> hunkinrange((5, 10), (1, 5))
+    False
+    >>> hunkinrange((5, 10), (15, 27))
+    False
+    """
+    start, length = hunk
+    lowerbound, upperbound = linerange
+    return lowerbound < start + length and start < upperbound
+
 def blocksinrange(blocks, rangeb):
     """filter `blocks` like (a1, a2, b1, b2) from items outside line range
     `rangeb` from ``(b1, b2)`` point of view.
@@ -150,7 +175,7 @@ def blocksinrange(blocks, rangeb):
                     uba = a1 + (ubb - b1)
                 else:
                     uba = a2
-        if lbb < b2 and b1 < ubb:
+        if hunkinrange((b1, (b2 - b1)), rangeb):
             filteredblocks.append(block)
     if lba is None or uba is None or uba < lba:
         raise error.Abort(_('line range exceeds file size'))
