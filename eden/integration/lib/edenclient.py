@@ -22,7 +22,8 @@ from .find_executables import EDEN_CLI, EDEN_DAEMON
 class EdenFS(object):
     '''Manages an instance of the eden fuse server.'''
 
-    def __init__(self, eden_dir=None, etc_eden_dir=None, home_dir=None):
+    def __init__(self, eden_dir=None, etc_eden_dir=None, home_dir=None,
+                 vmodule_settings=None):
         if eden_dir is None:
             eden_dir = tempfile.mkdtemp(prefix='eden_test.')
         self._eden_dir = eden_dir
@@ -30,6 +31,7 @@ class EdenFS(object):
         self._process = None
         self._etc_eden_dir = etc_eden_dir
         self._home_dir = home_dir
+        self._vmodule_settings = vmodule_settings
 
     @property
     def eden_dir(self):
@@ -177,7 +179,11 @@ class EdenFS(object):
 
         # Turn up the VLOG level for the fuse server so that errors are logged
         # with an explanation when they bubble up to RequestData::catchErrors
-        args.extend(['--', '--vmodule=RequestData=5'])
+        if self._vmodule_settings:
+            vmodule_arg = ','.join('%s=%s' % (module, level)
+                                   for module, level in sorted(
+                                       self._vmodule_settings.items()))
+            args.extend(['--', '--vmodule=' + vmodule_arg])
         if 'EDEN_DAEMON_ARGS' in os.environ:
             args.extend(shlex.split(os.environ['EDEN_DAEMON_ARGS']))
 

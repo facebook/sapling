@@ -27,6 +27,9 @@ class MaterializedQueryTest:
         self.repo.symlink('slink', 'hello')
         self.repo.commit('Initial commit.')
 
+    def edenfs_vmodule_settings(self):
+        return {'RequestData': 5}
+
     def setUp(self):
         super().setUp()
         self.client = self.get_thrift_client()
