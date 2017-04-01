@@ -135,6 +135,17 @@ def get_stat(spath, fn):
 def get_mtime(spath):
     return get_stat(spath, "00changelog.i").st_mtime
 
+def ispathsafe(path):
+    """Determine if a path is safe to use for filesystem access."""
+    parts = path.split('/')
+    for part in parts:
+        if (part in ('', os.curdir, os.pardir) or
+            pycompat.ossep in part or
+            pycompat.osaltsep is not None and pycompat.osaltsep in part):
+            return False
+
+    return True
+
 def staticfile(directory, fname, req):
     """return a file inside directory with guessed Content-Type header
 
@@ -144,13 +155,10 @@ def staticfile(directory, fname, req):
     Return an empty string if fname is illegal or file not found.
 
     """
-    parts = fname.split('/')
-    for part in parts:
-        if (part in ('', os.curdir, os.pardir) or
-            pycompat.ossep in part or
-            pycompat.osaltsep is not None and pycompat.osaltsep in part):
-            return
-    fpath = os.path.join(*parts)
+    if not ispathsafe(fname):
+        return
+
+    fpath = os.path.join(*fname.split('/'))
     if isinstance(directory, str):
         directory = [directory]
     for d in directory:
