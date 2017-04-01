@@ -14,10 +14,39 @@ from __future__ import unicode_literals
 
 import distutils.spawn
 import os
+import shlex
 import subprocess
 import tempfile
 
 from . import repobase
+
+
+class HgError(subprocess.CalledProcessError):
+    '''
+    A wrapper around subprocess.CalledProcessError that also includes
+    includes the process's stderr when converted to a string.
+    '''
+    def __init__(self, orig):
+        super().__init__(orig.returncode, orig.cmd,
+                         output=orig.output, stderr=orig.stderr)
+
+    def __str__(self):
+        if not self.stderr:
+            return super().__str__()
+
+        cmd_str = ' '.join(shlex.quote(arg) for arg in self.cmd)
+
+        stderr_str = self.stderr
+        if isinstance(self.stderr, bytes):
+            stderr_str = self.stderr.decode('utf-8', errors='replace')
+
+        # Indent the stderr output just to help indicate where it starts
+        # and ends in the test output.
+        stderr_str = stderr_str.replace('\n', '\n  ')
+
+        msg = 'Command [%s] failed with status %s\nstderr:\n  %s' % (
+            cmd_str, self.returncode, stderr_str)
+        return msg
 
 
 class HgRepository(repobase.Repository):
@@ -31,10 +60,13 @@ class HgRepository(repobase.Repository):
     def hg(self, *args, stdout_charset='utf-8', stdout=subprocess.PIPE,
            stderr=subprocess.PIPE):
         cmd = [self.hg_bin] + list(args)
-        completed_process = subprocess.run(cmd, stdout=stdout,
-                                           stderr=stderr,
-                                           check=True, cwd=self.path,
-                                           env=self.hg_environment)
+        try:
+            completed_process = subprocess.run(cmd, stdout=stdout,
+                                               stderr=stderr,
+                                               check=True, cwd=self.path,
+                                               env=self.hg_environment)
+        except subprocess.CalledProcessError as ex:
+            raise HgError(ex) from ex
         if completed_process.stdout is not None:
             return completed_process.stdout.decode(stdout_charset)
 
