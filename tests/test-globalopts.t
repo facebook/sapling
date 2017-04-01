@@ -296,7 +296,7 @@ Testing -h/--help:
    bookmarks     create a new bookmark or list existing bookmarks
    branch        set or show the current branch name
    branches      list repository named branches
-   bundle        create a changegroup file
+   bundle        create a bundle file
    cat           output the current or given revision of files
    clone         make a copy of an existing repository
    commit        commit the specified files or all outstanding changes
@@ -380,7 +380,7 @@ Testing -h/--help:
    bookmarks     create a new bookmark or list existing bookmarks
    branch        set or show the current branch name
    branches      list repository named branches
-   bundle        create a changegroup file
+   bundle        create a bundle file
    cat           output the current or given revision of files
    clone         make a copy of an existing repository
    commit        commit the specified files or all outstanding changes

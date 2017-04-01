@@ -1443,7 +1443,7 @@ help/ shows help topics
         "topic": "branches"
       },
       {
-        "summary": "create a changegroup file",
+        "summary": "create a bundle file",
         "topic": "bundle"
       },
       {

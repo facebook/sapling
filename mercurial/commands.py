@@ -1281,12 +1281,11 @@ def branches(ui, repo, active=False, closed=False, **opts):
     ('a', 'all', None, _('bundle all changesets in the repository')),
     ('t', 'type', 'bzip2', _('bundle compression type to use'), _('TYPE')),
     ] + remoteopts,
-    _('[-f] [-t TYPE] [-a] [-r REV]... [--base REV]... FILE [DEST]'))
+    _('[-f] [-t BUNDLESPEC] [-a] [-r REV]... [--base REV]... FILE [DEST]'))
 def bundle(ui, repo, fname, dest=None, **opts):
-    """create a changegroup file
+    """create a bundle file
 
-    Generate a changegroup file collecting changesets to be added
-    to a repository.
+    Generate a bundle file containing data to be added to a repository.
 
     To create a bundle containing all changesets, use -a/--all
     (or --base null). Otherwise, hg assumes the destination will have
@@ -1294,11 +1293,10 @@ def bundle(ui, repo, fname, dest=None, **opts):
     will assume the repository has all the nodes in destination, or
     default-push/default if no destination is specified.
 
-    You can change bundle format with the -t/--type option. You can
-    specify a compression, a bundle version or both using a dash
-    (comp-version). The available compression methods are: none, bzip2,
-    and gzip (by default, bundles are compressed using bzip2). The
-    available formats are: v1, v2 (default to most suitable).
+    You can change bundle format with the -t/--type option. See
+    :hg:`help bundlespec` for documentation on this format. By default,
+    the most appropriate format is used and compression defaults to
+    bzip2.
 
     The bundle file can then be transferred using conventional means
     and applied to another repository with the unbundle or pull
@@ -1323,7 +1321,7 @@ def bundle(ui, repo, fname, dest=None, **opts):
                 repo, bundletype, strict=False)
     except error.UnsupportedBundleSpecification as e:
         raise error.Abort(str(e),
-                          hint=_("see 'hg help bundle' for supported "
+                          hint=_("see 'hg help bundlespec' for supported "
                                  "values for --type"))
 
     # Packed bundles are a pseudo bundle format for now.

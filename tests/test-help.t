@@ -58,7 +58,7 @@ Short help:
    bookmarks     create a new bookmark or list existing bookmarks
    branch        set or show the current branch name
    branches      list repository named branches
-   bundle        create a changegroup file
+   bundle        create a bundle file
    cat           output the current or given revision of files
    clone         make a copy of an existing repository
    commit        commit the specified files or all outstanding changes
@@ -136,7 +136,7 @@ Short help:
    bookmarks     create a new bookmark or list existing bookmarks
    branch        set or show the current branch name
    branches      list repository named branches
-   bundle        create a changegroup file
+   bundle        create a bundle file
    cat           output the current or given revision of files
    clone         make a copy of an existing repository
    commit        commit the specified files or all outstanding changes
@@ -781,7 +781,7 @@ Test that default list of commands omits extension commands
    bookmarks     create a new bookmark or list existing bookmarks
    branch        set or show the current branch name
    branches      list repository named branches
-   bundle        create a changegroup file
+   bundle        create a bundle file
    cat           output the current or given revision of files
    clone         make a copy of an existing repository
    commit        commit the specified files or all outstanding changes
@@ -2246,7 +2246,7 @@ Dish up an empty repo; serve it cold.
   bundle
   </a>
   </td><td>
-  create a changegroup file
+  create a bundle file
   </td></tr>
   <tr><td>
   <a href="/help/cat">
