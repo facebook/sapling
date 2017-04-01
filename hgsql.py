@@ -805,14 +805,14 @@ def wraprepo(repo):
         def committodb(self, tr):
             """Commits all pending revisions to the database
             """
+            if self.disablesync:
+                return
+
             if self.sqlconn == None:
                 raise util.Abort("invalid repo change - only hg push and pull" +
                     " are allowed")
 
             if not self.pendingrevs and not 'bookmark_moved' in tr.hookargs:
-                return
-
-            if self.disablesync:
                 return
 
             reponame = self.sqlreponame
