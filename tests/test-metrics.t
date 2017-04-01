@@ -52,7 +52,7 @@
   pushing to ssh://user@dummy/master
   searching for changes
   remote: sqllock: failed to get sql lock after * seconds (glob)
-  remote:  (elapsed=*, success=false, valuetype=lockwait) (glob)
+  remote:  (elapsed=*, repository=$TESTTMP/master, success=false, valuetype=lockwait) (glob)
   remote: abort: fake timeout
   abort: not a Mercurial bundle
   [255]
@@ -65,10 +65,10 @@
   pushing to ssh://user@dummy/master
   searching for changes
   remote: sqllock: waited for sql lock for * seconds (glob)
-  remote:  (elapsed=*, success=true, valuetype=lockwait) (glob)
+  remote:  (elapsed=*, repository=$TESTTMP/master, success=true, valuetype=lockwait) (glob)
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
   remote: added 1 changesets with 1 changes to 1 files
   remote: sqllock: held sql lock for * seconds (glob)
-  remote:  (elapsed=*, valuetype=lockheld) (glob)
+  remote:  (elapsed=*, repository=$TESTTMP/master, valuetype=lockheld) (glob)
