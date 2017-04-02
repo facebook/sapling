@@ -441,7 +441,7 @@ a large file from the server rather than to get it from the cache
   1 largefiles updated, 0 removed
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
-  $ rm hg.pid access.log
   $ killdaemons.py
+  $ rm hg.pid access.log
 
 #endif
