@@ -2254,11 +2254,7 @@ def makematcher(tree):
     def mfunc(repo, subset=None):
         if subset is None:
             subset = fullreposet(repo)
-        if util.safehasattr(subset, 'isascending'):
-            result = getset(repo, subset, tree)
-        else:
-            result = getset(repo, baseset(subset), tree)
-        return result
+        return getset(repo, subset, tree)
     return mfunc
 
 def loadpredicate(ui, extname, registrarobj):
