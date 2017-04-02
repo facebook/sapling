@@ -230,15 +230,11 @@ def json(obj):
     elif isinstance(obj, str):
         return '"%s"' % encoding.jsonescape(obj, paranoid=True)
     elif util.safehasattr(obj, 'keys'):
-        out = []
-        for k, v in sorted(obj.iteritems()):
-            s = '%s: %s' % (json(k), json(v))
-            out.append(s)
+        out = ['%s: %s' % (json(k), json(v))
+               for k, v in sorted(obj.iteritems())]
         return '{' + ', '.join(out) + '}'
     elif util.safehasattr(obj, '__iter__'):
-        out = []
-        for i in obj:
-            out.append(json(i))
+        out = [json(i) for i in obj]
         return '[' + ', '.join(out) + ']'
     else:
         raise TypeError('cannot encode type %s' % obj.__class__.__name__)
