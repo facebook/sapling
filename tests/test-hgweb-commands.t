@@ -2222,6 +2222,11 @@ Test paging
 
   $ cat errors.log
 
+MSYS changes environment variables starting with '/' into 'C:/MinGW/msys/1.0',
+which changes the status line to '400 no such method: C:'.
+
+#if no-msys
+
 bookmarks view doesn't choke on bookmarks on secret changesets (issue3774)
 
   $ hg phase -fs 4
@@ -2387,7 +2392,7 @@ filtered '0' changeset
   node:        (0, 6) (color 1)
   
   
-
+#endif
 
 
   $ cd ..

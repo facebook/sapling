@@ -45,7 +45,7 @@ With -v and -p HGPORT2
 
 With -v and -p daytime (should fail because low port)
 
-#if no-root
+#if no-root no-windows
   $ KILLQUIETLY=Y
   $ hgserve -p daytime
   abort: cannot start server at 'localhost:13': Permission denied
