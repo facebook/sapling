@@ -3,7 +3,7 @@
   > """A small extension that tests our developer warnings
   > """
   > 
-  > from mercurial import cmdutil, repair, revset
+  > from mercurial import cmdutil, repair
   > 
   > cmdtable = {}
   > command = cmdutil.command(cmdtable)
@@ -58,11 +58,6 @@
   >     def foobar(ui):
   >         ui.deprecwarn('foorbar is deprecated, go shopping', '42.1337')
   >     foobar(ui)
-  > 
-  > def oldstylerevset(repo, subset, x):
-  >     return list(subset)
-  > 
-  > revset.symbols['oldstyle'] = oldstylerevset
   > EOF
 
   $ cat << EOF >> $HGRCPATH
@@ -111,10 +106,6 @@
   Traceback (most recent call last):
   mercurial.error.ProgrammingError: cannot strip from inside a transaction
 
-  $ hg log -r "oldstyle()" -T '{rev}\n'
-  devel-warn: revset "oldstyle" uses list instead of smartset
-  (compatibility will be dropped after Mercurial-3.9, update your code.) at: *mercurial/revset.py:* (mfunc) (glob)
-  0
   $ hg oldanddeprecated
   devel-warn: foorbar is deprecated, go shopping
   (compatibility will be dropped after Mercurial-42.1337, update your code.) at: $TESTTMP/buggylocking.py:* (oldanddeprecated) (glob)
@@ -135,10 +126,7 @@
    */mercurial/dispatch.py:* in <lambda> (glob)
    */mercurial/util.py:* in check (glob)
    $TESTTMP/buggylocking.py:* in oldanddeprecated (glob)
-  $ hg blackbox -l 9
-  1970/01/01 00:00:00 bob @cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b (5000)> devel-warn: revset "oldstyle" uses list instead of smartset
-  (compatibility will be dropped after Mercurial-3.9, update your code.) at: *mercurial/revset.py:* (mfunc) (glob)
-  1970/01/01 00:00:00 bob @cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b (5000)> log -r *oldstyle()* -T *{rev}\n* exited 0 after * seconds (glob)
+  $ hg blackbox -l 7
   1970/01/01 00:00:00 bob @cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b (5000)> oldanddeprecated
   1970/01/01 00:00:00 bob @cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b (5000)> devel-warn: foorbar is deprecated, go shopping
   (compatibility will be dropped after Mercurial-42.1337, update your code.) at: $TESTTMP/buggylocking.py:* (oldanddeprecated) (glob)
@@ -160,7 +148,7 @@
    */mercurial/util.py:* in check (glob)
    $TESTTMP/buggylocking.py:* in oldanddeprecated (glob)
   1970/01/01 00:00:00 bob @cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b (5000)> oldanddeprecated --traceback exited 0 after * seconds (glob)
-  1970/01/01 00:00:00 bob @cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b (5000)> blackbox -l 9
+  1970/01/01 00:00:00 bob @cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b (5000)> blackbox -l 7
 
 Test programming error failure:
 

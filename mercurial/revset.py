@@ -169,16 +169,7 @@ def reachableroots(repo, roots, heads, includepath=False):
 def getset(repo, subset, x):
     if not x:
         raise error.ParseError(_("missing argument"))
-    s = methods[x[0]](repo, subset, *x[1:])
-    if util.safehasattr(s, 'isascending'):
-        return s
-    # else case should not happen, because all non-func are internal,
-    # ignoring for now.
-    if x[0] == 'func' and x[1][0] == 'symbol' and x[1][1] in symbols:
-        repo.ui.deprecwarn('revset "%s" uses list instead of smartset'
-                           % x[1][1],
-                           '3.9')
-    return baseset(s)
+    return methods[x[0]](repo, subset, *x[1:])
 
 def _getrevsource(repo, r):
     extra = repo[r].extra()
