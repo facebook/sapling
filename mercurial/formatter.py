@@ -347,16 +347,16 @@ class templateformatter(baseformatter):
         # TODO: add support for filectx. probably each template keyword or
         # function will have to declare dependent resources. e.g.
         # @templatekeyword(..., requires=('ctx',))
+        props = {}
         if 'ctx' in self._item:
-            props = templatekw.keywords.copy()
-            # explicitly-defined fields precede templatekw
-            props.update(self._item)
+            props.update(templatekw.keywords)
+        # explicitly-defined fields precede templatekw
+        props.update(self._item)
+        if 'ctx' in self._item:
             # but template resources must be always available
             props['templ'] = self._t
             props['repo'] = props['ctx'].repo()
             props['revcache'] = {}
-        else:
-            props = self._item
         g = self._t(self._topic, ui=self._ui, cache=self._cache, **props)
         self._out.write(templater.stringify(g))
 
