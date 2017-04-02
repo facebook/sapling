@@ -219,8 +219,12 @@ def indent(text, prefix):
 
 @templatefilter('json')
 def json(obj):
-    if obj is None or obj is False or obj is True:
-        return {None: 'null', False: 'false', True: 'true'}[obj]
+    if obj is None:
+        return 'null'
+    elif obj is False:
+        return 'false'
+    elif obj is True:
+        return 'true'
     elif isinstance(obj, (int, long, float)):
         return str(obj)
     elif isinstance(obj, str):
