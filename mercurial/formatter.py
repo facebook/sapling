@@ -112,8 +112,8 @@ from .node import (
 )
 
 from . import (
-    encoding,
     error,
+    templatefilters,
     templatekw,
     templater,
     util,
@@ -282,24 +282,6 @@ class pickleformatter(baseformatter):
         baseformatter.end(self)
         self._out.write(pickle.dumps(self._data))
 
-def _jsonifyobj(v):
-    if isinstance(v, dict):
-        xs = ['"%s": %s' % (encoding.jsonescape(k), _jsonifyobj(u))
-              for k, u in sorted(v.iteritems())]
-        return '{' + ', '.join(xs) + '}'
-    elif isinstance(v, (list, tuple)):
-        return '[' + ', '.join(_jsonifyobj(e) for e in v) + ']'
-    elif v is None:
-        return 'null'
-    elif v is True:
-        return 'true'
-    elif v is False:
-        return 'false'
-    elif isinstance(v, (int, long, float)):
-        return str(v)
-    else:
-        return '"%s"' % encoding.jsonescape(v)
-
 class jsonformatter(baseformatter):
     def __init__(self, ui, out, topic, opts):
         baseformatter.__init__(self, ui, topic, opts, _nullconverter)
@@ -319,7 +301,8 @@ class jsonformatter(baseformatter):
                 first = False
             else:
                 self._out.write(",\n")
-            self._out.write('  "%s": %s' % (k, _jsonifyobj(v)))
+            u = templatefilters.json(v, paranoid=False)
+            self._out.write('  "%s": %s' % (k, u))
         self._out.write("\n }")
     def end(self):
         baseformatter.end(self)

@@ -218,7 +218,7 @@ def indent(text, prefix):
     return "".join(indenter())
 
 @templatefilter('json')
-def json(obj):
+def json(obj, paranoid=True):
     if obj is None:
         return 'null'
     elif obj is False:
@@ -228,7 +228,7 @@ def json(obj):
     elif isinstance(obj, (int, long, float)):
         return str(obj)
     elif isinstance(obj, str):
-        return '"%s"' % encoding.jsonescape(obj, paranoid=True)
+        return '"%s"' % encoding.jsonescape(obj, paranoid=paranoid)
     elif util.safehasattr(obj, 'keys'):
         out = ['%s: %s' % (json(k), json(v))
                for k, v in sorted(obj.iteritems())]
