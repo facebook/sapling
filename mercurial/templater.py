@@ -545,10 +545,20 @@ def date(context, mapping, args):
         # i18n: "date" is a keyword
         raise error.ParseError(_("date expects a date information"))
 
-@templatefunc('dict([key=value...])', argspec='**kwargs')
+@templatefunc('dict([[key=]value...])', argspec='*args **kwargs')
 def dict_(context, mapping, args):
-    """Construct a dict from key-value pairs."""
+    """Construct a dict from key-value pairs. A key may be omitted if
+    a value expression can provide an unambiguous name."""
     data = util.sortdict()
+
+    for v in args['args']:
+        k = findsymbolicname(v)
+        if not k:
+            raise error.ParseError(_('dict key cannot be inferred'))
+        if k in data or k in args['kwargs']:
+            raise error.ParseError(_("duplicated dict key '%s' inferred") % k)
+        data[k] = evalfuncarg(context, mapping, v)
+
     data.update((k, evalfuncarg(context, mapping, v))
                 for k, v in args['kwargs'].iteritems())
     return templatekw.hybriddict(data)

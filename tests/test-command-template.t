@@ -3424,6 +3424,21 @@ Test dict constructor:
   $ hg log -r 0 -T '{dict()|json}\n'
   {}
 
+  $ hg log -r 0 -T '{dict(rev, node=node|short)}\n'
+  rev=0 node=f7769ec2ab97
+  $ hg log -r 0 -T '{dict(rev, node|short)}\n'
+  rev=0 node=f7769ec2ab97
+
+  $ hg log -r 0 -T '{dict(rev, rev=rev)}\n'
+  hg: parse error: duplicated dict key 'rev' inferred
+  [255]
+  $ hg log -r 0 -T '{dict(node, node|short)}\n'
+  hg: parse error: duplicated dict key 'node' inferred
+  [255]
+  $ hg log -r 0 -T '{dict(1 + 2)}'
+  hg: parse error: dict key cannot be inferred
+  [255]
+
   $ hg log -r 0 -T '{dict(x=rev, x=node)}'
   hg: parse error: dict got multiple values for keyword argument 'x'
   [255]
