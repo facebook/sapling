@@ -134,6 +134,18 @@ But negate binds closer still:
     ('string', '\n'))
   -3
 
+Keyword arguments:
+
+  $ hg debugtemplate -r0 -v '{foo=bar|baz}'
+  (template
+    (keyvalue
+      ('symbol', 'foo')
+      (|
+        ('symbol', 'bar')
+        ('symbol', 'baz'))))
+  hg: parse error: can't use a key-value pair in this context
+  [255]
+
 Second branch starting at nullrev:
 
   $ hg update null
@@ -2668,7 +2680,7 @@ Error in nested template:
   hg: parse error at 2: unterminated string
   [255]
 
-  $ hg log -T '{"foo{date|=}"}'
+  $ hg log -T '{"foo{date|?}"}'
   hg: parse error at 11: syntax error
   [255]
 

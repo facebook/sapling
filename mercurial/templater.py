@@ -39,6 +39,7 @@ elements = {
     "/": (5, None, None, ("/", 5), None),
     "+": (4, None, None, ("+", 4), None),
     "-": (4, None, ("negate", 19), ("-", 4), None),
+    "=": (3, None, None, ("keyvalue", 3), None),
     ",": (2, None, None, ("list", 2), None),
     ")": (0, None, None, None, None),
     "integer": (0, "integer", None, None, None),
@@ -56,7 +57,7 @@ def tokenize(program, start, end, term=None):
         c = program[pos]
         if c.isspace(): # skip inter-token whitespace
             pass
-        elif c in "(,)%|+-*/": # handle simple operators
+        elif c in "(=,)%|+-*/": # handle simple operators
             yield (c, None, pos)
         elif c in '"\'': # handle quoted templates
             s = pos + 1
@@ -461,6 +462,9 @@ def buildfunc(exp, context):
         f = context._filters[n]
         return (runfilter, (args[0], f))
     raise error.ParseError(_("unknown function '%s'") % n)
+
+def buildkeyvaluepair(exp, content):
+    raise error.ParseError(_("can't use a key-value pair in this context"))
 
 # dict of template built-in functions
 funcs = {}
@@ -984,6 +988,7 @@ exprmethods = {
     "|": buildfilter,
     "%": buildmap,
     "func": buildfunc,
+    "keyvalue": buildkeyvaluepair,
     "+": lambda e, c: buildarithmetic(e, c, lambda a, b: a + b),
     "-": lambda e, c: buildarithmetic(e, c, lambda a, b: a - b),
     "negate": buildnegate,
