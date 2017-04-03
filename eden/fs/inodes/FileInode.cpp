@@ -35,7 +35,10 @@ FileInode::State::State(
     FileInode* inode,
     mode_t m,
     const folly::Optional<Hash>& h)
-    : data(std::make_shared<FileData>(inode, h)), mode(m), hash(h) {}
+    : data(std::make_shared<FileData>(inode, h)),
+      mode(m),
+      creationTime(std::chrono::system_clock::now()),
+      hash(h) {}
 
 FileInode::State::State(
     FileInode* inode,
@@ -44,7 +47,8 @@ FileInode::State::State(
     dev_t rdev)
     : data(std::make_shared<FileData>(inode, std::move(file))),
       mode(m),
-      rdev(rdev) {}
+      rdev(rdev),
+      creationTime(std::chrono::system_clock::now()) {}
 
 FileInode::FileInode(
     fuse_ino_t ino,

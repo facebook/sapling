@@ -9,6 +9,7 @@
 
 import errno
 import os
+import stat
 from .lib import testcase
 from facebook.eden import EdenService
 from facebook.eden.ttypes import FileInformationOrError
@@ -69,7 +70,11 @@ class MaterializedQueryTest:
                                  msg='mode matches for ' + path)
                 self.assertEqual(st.st_size, info.size,
                                  msg='size matches for ' + path)
-                self.assertEqual(st.st_mtime, info.mtime.seconds)
+                self.assertEqual(int(st.st_mtime), info.mtime.seconds)
+                if not stat.S_ISDIR(st.st_mode):
+                    self.assertNotEqual(0, st.st_mtime)
+                    self.assertNotEqual(0, st.st_ctime)
+                    self.assertNotEqual(0, st.st_atime)
             except OSError as e:
                 self.assertEqual(FileInformationOrError.ERROR, info_list[
                                  idx].getType(),

@@ -10,6 +10,7 @@
 #pragma once
 #include <folly/Optional.h>
 #include <folly/Synchronized.h>
+#include <chrono>
 #include "eden/fs/inodes/InodeBase.h"
 #include "eden/fs/model/Tree.h"
 
@@ -126,6 +127,10 @@ class FileInode : public InodeBase {
     std::shared_ptr<FileData> data;
     mode_t mode{0};
     dev_t rdev{0};
+    /**
+     * The time this FileInode object was first loaded.
+     */
+    std::chrono::system_clock::time_point creationTime;
     folly::Optional<Hash> hash;
   };
 

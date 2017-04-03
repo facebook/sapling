@@ -145,6 +145,18 @@ struct stat FileData::stat() {
 
   if (file_) {
     // stat() the overlay file.
+    //
+    // TODO: We need to get timestamps accurately here.
+    // The timestamps on the underlying file are not correct, because we keep
+    // file_ open for a long time, and do not close it when FUSE file handles
+    // close.  (Timestamps are typically only updated on close operations.)
+    // This results our reported timestamps not changing correctly after the
+    // file is changed through FUSE APIs.
+    //
+    // We probably should update the overlay file to include a header,
+    // so we can store the atime, mtime, and ctime in the header data.
+    // Otherwise we won't be able to report the ctime accurately if we just
+    // keep using the overlay file timestamps.
     checkUnixError(fstat(file_.fd(), &st));
     st.st_mode = state->mode;
     st.st_rdev = state->rdev;
@@ -156,7 +168,25 @@ struct stat FileData::stat() {
 
   auto buf = blob_->getContents();
   st.st_size = buf.computeChainDataLength();
-  // TODO: set atime, mtime, and ctime
+
+  // Report atime, mtime, and ctime as the time when we first loaded this
+  // FileInode.  It hasn't been materialized yet, so this is a reasonble time
+  // to use.  Once it is materialized we use the timestamps on the underlying
+  // overlay file, which the kernel keeps up-to-date.
+  auto epochTime = state->creationTime.time_since_epoch();
+  auto epochSeconds =
+      std::chrono::duration_cast<std::chrono::seconds>(epochTime);
+  st.st_atime = epochSeconds.count();
+  st.st_mtime = epochSeconds.count();
+  st.st_ctime = epochSeconds.count();
+#if defined(_BSD_SOURCE) || defined(_SVID_SOURCE) || \
+    _POSIX_C_SOURCE >= 200809L || _XOPEN_SOURCE >= 700
+  auto nsec = std::chrono::duration_cast<std::chrono::nanoseconds>(
+      epochTime - epochSeconds);
+  st.st_atim.tv_nsec = nsec.count();
+  st.st_mtim.tv_nsec = nsec.count();
+  st.st_ctim.tv_nsec = nsec.count();
+#endif
 
   // NOTE: we don't set rdev to anything special here because we
   // don't support committing special device nodes.
