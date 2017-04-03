@@ -16,7 +16,7 @@ from mercurial import (
 tvfs = vfs.vfs(encoding.environ.get('TESTTMP', b'/tmp'))
 
 # Enable generaldelta otherwise revlog won't use delta as expected by the test
-tvfs.options = {'generaldelta': True, 'revlogv1': True, 'revlogv1': True}
+tvfs.options = {'generaldelta': True, 'revlogv1': True}
 
 # The test wants to control whether to use delta explicitly, based on
 # "storedeltachains".
