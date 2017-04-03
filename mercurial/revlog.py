@@ -444,7 +444,7 @@ class revlog(object):
         if l >= 0:
             return l
 
-        t = self.revision(rev)
+        t = self.revision(rev, raw=True)
         return len(t)
     size = rawsize
 
