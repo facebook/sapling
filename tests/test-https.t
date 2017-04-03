@@ -282,14 +282,14 @@ cacert mismatch
   > https://$LOCALIP:$HGPORT/
   pulling from https://*:$HGPORT/ (glob)
   warning: connecting to $LOCALIP using legacy security technology (TLS 1.0); see https://mercurial-scm.org/wiki/SecureConnections for more info (?)
-  abort: $LOCALIP certificate error: certificate is for localhost
+  abort: $LOCALIP certificate error: certificate is for localhost (glob)
   (set hostsecurity.$LOCALIP:certfingerprints=sha256:20:de:b3:ad:b4:cd:a5:42:f0:74:41:1c:a2:70:1e:da:6e:c0:5c:16:9e:e7:22:0f:f1:b7:e5:6e:e4:92:af:7e config setting or use --insecure to connect insecurely)
   [255]
   $ hg -R copy-pull pull --config web.cacerts="$CERTSDIR/pub.pem" \
   > https://$LOCALIP:$HGPORT/ --insecure
   pulling from https://*:$HGPORT/ (glob)
   warning: connecting to $LOCALIP using legacy security technology (TLS 1.0); see https://mercurial-scm.org/wiki/SecureConnections for more info (?)
-  warning: connection security to $LOCALIP is disabled per current settings; communication is susceptible to eavesdropping and tampering
+  warning: connection security to $LOCALIP is disabled per current settings; communication is susceptible to eavesdropping and tampering (glob)
   searching for changes
   no changes found
   $ hg -R copy-pull pull --config web.cacerts="$CERTSDIR/pub-other.pem"
