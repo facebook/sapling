@@ -3404,6 +3404,22 @@ Test branches inside if statement:
   $ hg log -r 0 --template '{if(branches, "yes", "no")}\n'
   no
 
+Test dict constructor:
+
+  $ hg log -r 0 -T '{dict(y=node|short, x=rev)}\n'
+  y=f7769ec2ab97 x=0
+  $ hg log -r 0 -T '{dict(x=rev, y=node|short) % "{key}={value}\n"}'
+  x=0
+  y=f7769ec2ab97
+  $ hg log -r 0 -T '{dict(x=rev, y=node|short)|json}\n'
+  {"x": 0, "y": "f7769ec2ab97"}
+  $ hg log -r 0 -T '{dict()|json}\n'
+  {}
+
+  $ hg log -r 0 -T '{dict(x=rev, x=node)}'
+  hg: parse error: dict got multiple values for keyword argument 'x'
+  [255]
+
 Test get function:
 
   $ hg log -r 0 --template '{get(extras, "branch")}\n'

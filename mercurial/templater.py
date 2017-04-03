@@ -532,6 +532,14 @@ def date(context, mapping, args):
         # i18n: "date" is a keyword
         raise error.ParseError(_("date expects a date information"))
 
+@templatefunc('dict([key=value...])', argspec='**kwargs')
+def dict_(context, mapping, args):
+    """Construct a dict from key-value pairs."""
+    data = util.sortdict()
+    data.update((k, evalfuncarg(context, mapping, v))
+                for k, v in args['kwargs'].iteritems())
+    return templatekw.hybriddict(data)
+
 @templatefunc('diff([includepattern [, excludepattern]])')
 def diff(context, mapping, args):
     """Show a diff, optionally
