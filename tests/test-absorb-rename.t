@@ -6,7 +6,7 @@
   > [diff]
   > git=1
   > [extensions]
-  > absorb=$extpath/hgext3rd/absorb.py
+  > absorb=$extpath/hgext3rd/absorb
   > EOF
 
   $ sedi() { # workaround check-code

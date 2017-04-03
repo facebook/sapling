@@ -4,7 +4,7 @@
   $ extpath=`dirname $TESTDIR`
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > absorb=$extpath/hgext3rd/absorb.py
+  > absorb=$extpath/hgext3rd/absorb
   > EOF
 
   $ hg init repo1

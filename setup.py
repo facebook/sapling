@@ -135,11 +135,18 @@ else:
         }),
     ]
 
+# modules that are single files in hgext3rd
 hgext3rd = [
     p[:-3].replace('/', '.')
     for p in glob('hgext3rd/*.py')
     if p != 'hgext3rd/__init__.py'
 ]
+
+# modules that are directories in hgext3rd
+hgext3rd.extend(
+    p[:-12].replace('/', '.')
+    for p in glob('hgext3rd/*/__init__.py')
+)
 
 availablepymodules = dict([(x[9:], x) for x in hgext3rd])
 availablepymodules['statprof'] = 'statprof'
