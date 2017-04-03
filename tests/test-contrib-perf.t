@@ -167,5 +167,5 @@ Check perf.py for historical portability
   > "$TESTDIR"/check-perf-code.py contrib/perf.py
   contrib/perf.py:859:
    >             r.revision(r.node(x))
-   don't covert rev to node before passing to revision(nodeorrev)
+   don't convert rev to node before passing to revision(nodeorrev)
   [1]

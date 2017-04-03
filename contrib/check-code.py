@@ -338,7 +338,7 @@ pypats = [
     (r'^import BaseHTTPServer', "use util.httpserver instead"),
     (r'\.next\(\)', "don't use .next(), use next(...)"),
     (r'([a-z]*).revision\(\1\.node\(',
-     "don't covert rev to node before passing to revision(nodeorrev)"),
+     "don't convert rev to node before passing to revision(nodeorrev)"),
 
     # rules depending on implementation of repquote()
     (r' x+[xpqo%APM][\'"]\n\s+[\'"]x',

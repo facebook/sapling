@@ -11,7 +11,7 @@ New errors are not allowed. Warnings are strongly discouraged.
   > sed 's-\\-/-g' | xargs "$check_code" --warnings --per-file=0 || false
   contrib/perf.py:859:
    >             r.revision(r.node(x))
-   don't covert rev to node before passing to revision(nodeorrev)
+   don't convert rev to node before passing to revision(nodeorrev)
   Skipping i18n/polib.py it has no-che?k-code (glob)
   mercurial/demandimport.py:312:
    >     if os.environ.get('HGDEMANDIMPORT') != 'disable':
