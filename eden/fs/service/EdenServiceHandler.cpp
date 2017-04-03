@@ -167,10 +167,6 @@ void EdenServiceHandler::getCurrentSnapshot(
     std::string& result,
     std::unique_ptr<std::string> mountPoint) {
   auto edenMount = server_->getMount(*mountPoint);
-  if (!edenMount) {
-    throw EdenError("requested mount point is not known to this eden instance");
-  }
-
   result = StringPiece(edenMount->getSnapshotID().getBytes()).str();
 }
 
@@ -182,10 +178,6 @@ void EdenServiceHandler::checkOutRevision(
   Hash hashObj(*hash);
 
   auto edenMount = server_->getMount(*mountPoint);
-  if (!edenMount) {
-    throw EdenError("requested mount point is not known to this eden instance");
-  }
-
   auto checkoutFuture = edenMount->checkout(hashObj, force);
   results = checkoutFuture.get();
 }

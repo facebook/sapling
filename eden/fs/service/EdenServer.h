@@ -111,7 +111,20 @@ class EdenServer {
   AbsolutePath getSocketPath() const;
 
   MountList getMountPoints() const;
+
+  /**
+   * Look up an EdenMount by the path where it is mounted.
+   *
+   * Throws an EdenError if no mount exists with the specified path.
+   */
   std::shared_ptr<EdenMount> getMount(folly::StringPiece mountPath) const;
+
+  /**
+   * Look up an EdenMount by the path where it is mounted.
+   *
+   * Returns nullptr if no mount exists with the specified path.
+   */
+  std::shared_ptr<EdenMount> getMountOrNull(folly::StringPiece mountPath) const;
 
   std::shared_ptr<LocalStore> getLocalStore() const {
     return localStore_;

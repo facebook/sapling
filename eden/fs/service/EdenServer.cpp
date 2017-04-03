@@ -222,6 +222,15 @@ EdenServer::MountList EdenServer::getMountPoints() const {
 }
 
 shared_ptr<EdenMount> EdenServer::getMount(StringPiece mountPath) const {
+  auto mount = getMountOrNull(mountPath);
+  if (!mount) {
+    throw EdenError(folly::to<string>(
+        "mount point \"", mountPath, "\" is not known to this eden instance"));
+  }
+  return mount;
+}
+
+shared_ptr<EdenMount> EdenServer::getMountOrNull(StringPiece mountPath) const {
   std::lock_guard<std::mutex> guard(mountPointsMutex_);
   auto it = mountPoints_.find(mountPath);
   if (it == mountPoints_.end()) {
