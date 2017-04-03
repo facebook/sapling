@@ -591,7 +591,7 @@ class manifestdict(object):
             return self._lm.text()
 
     def fastdelta(self, base, changes):
-        """Given a base manifest text as an array.array and a list of changes
+        """Given a base manifest text as a bytearray and a list of changes
         relative to that text, compute a delta that can be used by revlog.
         """
         delta = []
