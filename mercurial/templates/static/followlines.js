@@ -1,4 +1,4 @@
-// linerangelog.js - JavaScript utilities for followlines UI
+// followlines.js - JavaScript utilities for followlines UI
 //
 // Copyright 2017 Logilab SA <contact@logilab.fr>
 //

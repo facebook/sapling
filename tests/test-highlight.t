@@ -185,7 +185,7 @@ hgweb filerevision, html
   <span id="l33"></span><a href="#l33"></a></pre>
   </div>
   
-  <script type="text/javascript" src="/static/linerangelog.js"></script>
+  <script type="text/javascript" src="/static/followlines.js"></script>
   
   </div>
   </div>

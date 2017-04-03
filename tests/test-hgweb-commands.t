@@ -1347,7 +1347,7 @@ File-related
   <span id="l1">foo</span><a href="#l1"></a></pre>
   </div>
   
-  <script type="text/javascript" src="/static/linerangelog.js"></script>
+  <script type="text/javascript" src="/static/followlines.js"></script>
   
   </div>
   </div>
@@ -1475,7 +1475,7 @@ File-related
   <span id="l1">another</span><a href="#l1"></a></pre>
   </div>
   
-  <script type="text/javascript" src="/static/linerangelog.js"></script>
+  <script type="text/javascript" src="/static/followlines.js"></script>
   
   </div>
   </div>
