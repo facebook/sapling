@@ -36,13 +36,17 @@ union SHA1Result {
   2: EdenError error
 }
 
-// Effectively a `struct timespec`
+/**
+ * Effectively a `struct timespec`
+ */
 struct TimeSpec {
   1: i64 seconds
   2: i64 nanoSeconds
 }
 
-// Information that we return when querying entries
+/**
+ * Information that we return when querying entries
+ */
 struct FileInformation {
   1: unsigned64 size        // wish thrift had unsigned numbers
   2: TimeSpec mtime
@@ -112,22 +116,36 @@ struct ScmAddRemoveError {
 }
 
 enum ConflictType {
-  // We failed to update this particular path due to an error
+  /**
+   * We failed to update this particular path due to an error
+   */
   ERROR,
-  // A locally modified file was deleted in the new Tree
+  /**
+   * A locally modified file was deleted in the new Tree
+   */
   MODIFIED_REMOVED,
-  // An untracked local file exists in the new Tree
+  /**
+   * An untracked local file exists in the new Tree
+   */
   UNTRACKED_ADDED,
-  // The file was removed locally, but modified in the new Tree
+  /**
+   * The file was removed locally, but modified in the new Tree
+   */
   REMOVED_MODIFIED,
-  // The file was removed locally, and also removed in the new Tree.
+  /**
+   * The file was removed locally, and also removed in the new Tree.
+   */
   MISSING_REMOVED,
-  // A locally modified file was modified in the new Tree
-  // This may be contents modifications, or a file type change (directory to
-  // file or vice-versa), or permissions changes.
+  /**
+   * A locally modified file was modified in the new Tree
+   * This may be contents modifications, or a file type change (directory to
+   * file or vice-versa), or permissions changes.
+   */
   MODIFIED,
-  // A directory was supposed to be removed or replaced with a file,
-  // but it contains untracked files preventing us from updating it.
+  /**
+   * A directory was supposed to be removed or replaced with a file,
+   * but it contains untracked files preventing us from updating it.
+   */
   DIRECTORY_NOT_EMPTY,
 }
 
@@ -138,6 +156,54 @@ struct CheckoutConflict {
   1: string path
   2: ConflictType type
   3: string message
+}
+
+struct ScmBlobMetadata {
+  1: i64 size
+  2: BinaryHash contentsSha1
+}
+
+struct ScmTreeEntry {
+  1: binary name
+  2: i32 mode
+  3: BinaryHash id
+}
+
+struct TreeInodeEntryDebugInfo {
+  /**
+   * The entry name.  This is just a PathComponent, not the full path
+   */
+  1: binary name
+  /**
+   * The inode number, or 0 if no inode number has been assigned to
+   * this entry
+   */
+  2: i64 inodeNumber
+  /**
+   * The entry mode_t value
+   */
+  3: i32 mode
+  /**
+   * True if an InodeBase object exists for this inode or not.
+   */
+  4: bool loaded
+  /**
+   * True if an the inode is materialized in the overlay
+   */
+  5: bool materialized
+  /**
+   * If materialized is false, hash contains the ID of the underlying source
+   * control Blob or Tree.
+   */
+  6: BinaryHash hash
+}
+
+struct TreeInodeDebugInfo {
+  1: i64 inodeNumber
+  2: binary path
+  3: bool materialized
+  4: BinaryHash treeHash
+  5: list<TreeInodeEntryDebugInfo> entries
 }
 
 service EdenService extends fb303.FacebookService {
@@ -237,7 +303,7 @@ service EdenService extends fb303.FacebookService {
     2: list<string> globs)
       throws (1: EdenError ex)
 
-  //////// HG COMMANDS ////////
+  //////// Source Control APIs ////////
 
   // TODO(mbolin): `hg status` has a ton of command line flags to support.
   ThriftHgStatus scmGetStatus(
@@ -261,5 +327,76 @@ service EdenService extends fb303.FacebookService {
     2: binary commitID,
     3: list<string> pathsToClean,
     4: list<string> pathsToDrop,
+  ) throws (1: EdenError ex)
+
+  //////// Debugging APIs ////////
+
+  /**
+   * Get the contents of a source control Tree.
+   *
+   * This can be used to confirm if eden's LocalStore contains information
+   * for the tree, and that the information is correct.
+   *
+   * If localStoreOnly is true, the data is loaded directly from the
+   * LocalStore, and an error will be raised if it is not already present in
+   * the LocalStore.  If localStoreOnly is false, the data may be retrieved
+   * from the BackingStore if it is not already present in the LocalStore.
+   */
+  list<ScmTreeEntry> debugGetScmTree(
+    1: string mountPoint,
+    2: BinaryHash id,
+    3: bool localStoreOnly,
+  ) throws (1: EdenError ex)
+
+  /**
+   * Get the contents of a source control Blob.
+   *
+   * This can be used to confirm if eden's LocalStore contains information
+   * for the blob, and that the information is correct.
+   */
+  binary debugGetScmBlob(
+    1: string mountPoint,
+    2: BinaryHash id,
+    3: bool localStoreOnly,
+  ) throws (1: EdenError ex)
+
+  /**
+   * Get the metadata about a source control Blob.
+   *
+   * This retrieves the metadata about a source control Blob.  This returns
+   * the size and contents SHA1 of the blob, which eden stores separately from
+   * the blob itself.  This can also be a useful alternative to
+   * debugGetScmBlob() when getting data about extremely large blobs.
+   */
+  ScmBlobMetadata debugGetScmBlobMetadata(
+    1: string mountPoint,
+    2: BinaryHash id,
+    3: bool localStoreOnly,
+  ) throws (1: EdenError ex)
+
+  /**
+   * Get status about currently loaded inode objects.
+   *
+   * This returns details about all currently loaded inode objects under the
+   * given path.
+   *
+   * If the path argument is the empty string data will be returned about all
+   * inodes in the entire mount point.  Otherwise the path argument should
+   * refer to a subdirectory, and data will be returned for all inodes under
+   * the specified subdirectory.
+   *
+   * The rename lock is not held while gathering this information, so the path
+   * name information returned may not always be internally consistent.  If
+   * renames were taking place while gathering the data, some inodes may show
+   * up under multiple parents.  It's also possible that we may miss some
+   * inodes during the tree walk if they were renamed from a directory that was
+   * not yet walked into a directory that has already been walked.
+   *
+   * This API cannot return data about inodes that have been unlinked but still
+   * have outstanding references.
+   */
+  list<TreeInodeDebugInfo> debugInodeStatus(
+    1: string mountPoint,
+    2: string path,
   ) throws (1: EdenError ex)
 }

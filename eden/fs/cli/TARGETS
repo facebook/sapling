@@ -13,8 +13,10 @@ python_binary(
 python_library(
   name = 'lib',
   srcs = [
+    'cmd_util.py',
     'config.py',
     'configinterpolator.py',
+    'debug.py',
     'util.py',
   ],
 )

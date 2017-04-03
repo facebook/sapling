@@ -26,9 +26,15 @@
 #include "eden/fs/inodes/InodeError.h"
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/TreeInode.h"
+#include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Hash.h"
+#include "eden/fs/model/Tree.h"
+#include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/service/GlobNode.h"
 #include "eden/fs/service/StreamingSubscriber.h"
+#include "eden/fs/service/ThriftUtil.h"
+#include "eden/fs/store/BlobMetadata.h"
+#include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fuse/MountPoint.h"
 
@@ -36,6 +42,7 @@ using std::make_unique;
 using std::string;
 using std::unique_ptr;
 using std::vector;
+using folly::Optional;
 using folly::Future;
 using folly::makeFuture;
 using folly::StringPiece;
@@ -167,7 +174,7 @@ void EdenServiceHandler::getCurrentSnapshot(
     std::string& result,
     std::unique_ptr<std::string> mountPoint) {
   auto edenMount = server_->getMount(*mountPoint);
-  result = StringPiece(edenMount->getSnapshotID().getBytes()).str();
+  result = thriftHash(edenMount->getSnapshotID());
 }
 
 void EdenServiceHandler::checkOutRevision(
@@ -196,7 +203,7 @@ void EdenServiceHandler::getSHA1(
     out.emplace_back();
     SHA1Result& sha1Result = out.back();
     if (result.hasValue()) {
-      sha1Result.set_sha1(StringPiece{result.value().getBytes()}.str());
+      sha1Result.set_sha1(thriftHash(result.value()));
     } else {
       sha1Result.set_error(newEdenError(result.exception()));
     }
@@ -258,7 +265,7 @@ void EdenServiceHandler::getCurrentJournalPosition(
 
   out.mountGeneration = edenMount->getMountGeneration();
   out.sequenceNumber = latest->toSequence;
-  out.snapshotHash = StringPiece(latest->toHash.getBytes()).str();
+  out.snapshotHash = thriftHash(latest->toHash);
 }
 
 void EdenServiceHandler::async_tm_subscribe(
@@ -295,7 +302,7 @@ void EdenServiceHandler::getFilesChangedSince(
   std::unordered_set<RelativePath> changedFiles;
 
   out.toPosition.sequenceNumber = delta->toSequence;
-  out.toPosition.snapshotHash = StringPiece(delta->toHash.getBytes()).str();
+  out.toPosition.snapshotHash = thriftHash(delta->toHash);
   out.toPosition.mountGeneration = edenMount->getMountGeneration();
 
   out.fromPosition = out.toPosition;
@@ -311,8 +318,7 @@ void EdenServiceHandler::getFilesChangedSince(
         delta->changedFilesInOverlay.end());
 
     out.fromPosition.sequenceNumber = delta->fromSequence;
-    out.fromPosition.snapshotHash =
-        StringPiece(delta->fromHash.getBytes()).str();
+    out.fromPosition.snapshotHash = thriftHash(delta->fromHash);
     out.fromPosition.mountGeneration = edenMount->getMountGeneration();
 
     delta = delta->previous;
@@ -435,8 +441,8 @@ namespace {
  * becomes a std::unique_ptr<std::string> when turned into a C++ parameter, this
  * provides a convenience method for converting the std::string into a Hash.
  */
-Hash createHashForCommitID(const std::string* commitID) {
-  return Hash(folly::ByteRange(folly::StringPiece(*commitID)));
+Hash convertBinaryHashArgument(const std::string& commitID) {
+  return Hash(folly::ByteRange(folly::StringPiece(commitID)));
 }
 }
 
@@ -449,7 +455,7 @@ void EdenServiceHandler::scmMarkCommitted(
   DCHECK(dirstate != nullptr) << "Failed to get dirstate for "
                               << mountPoint.get();
 
-  auto hash = createHashForCommitID(commitID.get());
+  auto hash = convertBinaryHashArgument(*commitID);
   std::vector<RelativePathPiece> pathsToClean;
   pathsToClean.reserve(pathsToCleanAsStrings->size());
   for (auto& path : *pathsToCleanAsStrings.get()) {
@@ -463,6 +469,100 @@ void EdenServiceHandler::scmMarkCommitted(
   }
 
   dirstate->markCommitted(hash, pathsToClean, pathsToDrop);
+}
+
+void EdenServiceHandler::debugGetScmTree(
+    vector<ScmTreeEntry>& entries,
+    unique_ptr<string> mountPoint,
+    unique_ptr<string> idStr,
+    bool localStoreOnly) {
+  auto edenMount = server_->getMount(*mountPoint);
+  auto id = convertBinaryHashArgument(*idStr);
+
+  std::unique_ptr<Tree> tree;
+  auto store = edenMount->getObjectStore();
+  if (localStoreOnly) {
+    auto localStore = store->getLocalStore();
+    tree = localStore->getTree(id);
+  } else {
+    tree = store->getTreeFuture(id).get();
+  }
+
+  if (!tree) {
+    throw newEdenError("no tree found for id ", *idStr);
+  }
+
+  for (const auto& entry : tree->getTreeEntries()) {
+    entries.emplace_back();
+    auto& out = entries.back();
+    out.name = entry.getName().stringPiece().str();
+    out.mode = entry.getMode();
+    out.id = thriftHash(entry.getHash());
+  }
+}
+
+void EdenServiceHandler::debugGetScmBlob(
+    string& data,
+    unique_ptr<string> mountPoint,
+    unique_ptr<string> idStr,
+    bool localStoreOnly) {
+  auto edenMount = server_->getMount(*mountPoint);
+  auto id = convertBinaryHashArgument(*idStr);
+
+  std::unique_ptr<Blob> blob;
+  auto store = edenMount->getObjectStore();
+  if (localStoreOnly) {
+    auto localStore = store->getLocalStore();
+    blob = localStore->getBlob(id);
+  } else {
+    blob = store->getBlobFuture(id).get();
+  }
+
+  if (!blob) {
+    throw newEdenError("no blob found for id ", *idStr);
+  }
+  auto dataBuf = blob->getContents().cloneCoalescedAsValue();
+  data.assign(reinterpret_cast<const char*>(dataBuf.data()), dataBuf.length());
+}
+
+void EdenServiceHandler::debugGetScmBlobMetadata(
+    ScmBlobMetadata& result,
+    unique_ptr<string> mountPoint,
+    unique_ptr<string> idStr,
+    bool localStoreOnly) {
+  auto edenMount = server_->getMount(*mountPoint);
+  auto id = convertBinaryHashArgument(*idStr);
+
+  Optional<BlobMetadata> metadata;
+  auto store = edenMount->getObjectStore();
+  if (localStoreOnly) {
+    auto localStore = store->getLocalStore();
+    metadata = localStore->getBlobMetadata(id);
+  } else {
+    metadata = store->getBlobMetadata(id).get();
+  }
+
+  if (!metadata.hasValue()) {
+    throw newEdenError("no blob metadata found for id ", *idStr);
+  }
+  result.size = metadata->size;
+  result.contentsSha1 = thriftHash(metadata->sha1);
+}
+
+void EdenServiceHandler::debugInodeStatus(
+    vector<TreeInodeDebugInfo>& inodeInfo,
+    unique_ptr<string> mountPoint,
+    std::unique_ptr<std::string> path) {
+  auto edenMount = server_->getMount(*mountPoint);
+
+  TreeInodePtr inode;
+  if (path->empty()) {
+    inode = edenMount->getRootInode();
+  } else {
+    inode = edenMount->getInode(RelativePathPiece{*path}).get().asTreePtr();
+  }
+
+  inode->getDebugStatus(inodeInfo);
 }
 
 void EdenServiceHandler::shutdown() {

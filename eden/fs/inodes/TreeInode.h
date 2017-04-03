@@ -31,6 +31,7 @@ class Overlay;
 class RenameLock;
 class Tree;
 class TreeEntry;
+class TreeInodeDebugInfo;
 
 constexpr folly::StringPiece kDotEdenName{".eden"};
 
@@ -478,6 +479,14 @@ class TreeInode : public InodeBase {
       std::unique_ptr<Tree> oldTree,
       std::unique_ptr<Tree> newTree,
       folly::Optional<TreeEntry> newScmEntry);
+
+  /**
+   * Get debug data about this TreeInode and all of its children (recursively).
+   *
+   * This populates the results argument with TreeInodeDebugInfo objects for
+   * this TreeInode and all subdirectories inside of it.
+   */
+  void getDebugStatus(std::vector<TreeInodeDebugInfo>& results) const;
 
  private:
   class TreeRenameLocks;

@@ -15,15 +15,10 @@ import os
 import sys
 
 from . import config as config_mod
+from . import debug as debug_mod
 from . import util
+from .cmd_util import create_config
 from facebook.eden import EdenService
-
-# Relative to the user's $HOME/%USERPROFILE% directory.
-# TODO: This value should be .eden outside of Facebook devservers.
-DEFAULT_CONFIG_DIR = 'local/.eden'
-
-# Environment variable that can be used instead of specifying --config-dir.
-CONFIG_DIR_ENVIRONMENT_VARIABLE = 'EDEN_CONFIG_DIR'
 
 
 def infer_client_from_cwd(config, clientname):
@@ -36,7 +31,7 @@ def infer_client_from_cwd(config, clientname):
     # Keep going while we're not in the root, as dirname(/) is /
     # and we can keep iterating forever.
     while len(path) > 1:
-        for client, info in all_clients.items():
+        for _, info in all_clients.items():
             if info['mount'] == path:
                 return info['mount']
         path = os.path.dirname(path)
@@ -383,12 +378,12 @@ def create_parser():
         '(default=%(default)s).  If timeout is 0, then do not wait at all.')
     shutdown_parser.set_defaults(func=do_shutdown)
 
-    unmount_parser = subparsers.add_parser(
+    mount_parser = subparsers.add_parser(
         'mount', help='Remount an existing client (for instance, after it was '
         'unmounted with "unmount -n")')
-    unmount_parser.add_argument(
+    mount_parser.add_argument(
         'path', help='The client mount path')
-    unmount_parser.set_defaults(func=do_mount)
+    mount_parser.set_defaults(func=do_mount)
 
     unmount_parser = subparsers.add_parser(
         'unmount', help='Unmount a specific client')
@@ -402,29 +397,15 @@ def create_parser():
         'path', help='Path where client should be unmounted from')
     unmount_parser.set_defaults(func=do_unmount)
 
+    # We intentionally do not specify a help option for debug, so it
+    # does not show up in the --help output.  (It appears that add_parser()
+    # unfortunately does not honor help=argparse.SUPPRESS the same way
+    # that add_argument() does.  Not specifying help at all suppresses the
+    # output instead.)
+    debug_parser = subparsers.add_parser('debug')
+    debug_mod.setup_argparse(debug_parser)
+
     return parser, subparsers
-
-
-def find_default_config_dir():
-    '''Returns the path to default Eden config directory.
-
-    If the environment variable $EDEN_CONFIG_DIR is set, it takes precedence
-    over the default, which is "$HOME/.eden".
-
-    Note that the path is not guaranteed to correspond to an existing directory.
-    '''
-    config_dir = os.getenv(CONFIG_DIR_ENVIRONMENT_VARIABLE)
-    if config_dir:
-        return config_dir
-
-    home_dir = util.get_home_dir()
-    return os.path.join(home_dir, DEFAULT_CONFIG_DIR)
-
-
-def create_config(args):
-    config = args.config_dir or find_default_config_dir()
-    home_dir = args.home_dir or util.get_home_dir()
-    return config_mod.Config(config, args.etc_eden_dir, home_dir)
 
 
 def main():

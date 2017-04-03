@@ -63,6 +63,7 @@ cpp_library(
   name = 'thrift_cpp',
   headers = [
     'PrettyPrinters.h',
+    'ThriftUtil.h',
   ],
   srcs = [
     'PrettyPrinters.cpp',

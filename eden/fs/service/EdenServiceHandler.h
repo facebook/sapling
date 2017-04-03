@@ -106,6 +106,29 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
       std::unique_ptr<std::vector<std::string>> pathsToClear,
       std::unique_ptr<std::vector<std::string>> pathsToDrop) override;
 
+  void debugGetScmTree(
+      std::vector<ScmTreeEntry>& entries,
+      std::unique_ptr<std::string> mountPoint,
+      std::unique_ptr<std::string> id,
+      bool localStoreOnly) override;
+
+  void debugGetScmBlob(
+      std::string& data,
+      std::unique_ptr<std::string> mountPoint,
+      std::unique_ptr<std::string> id,
+      bool localStoreOnly) override;
+
+  void debugGetScmBlobMetadata(
+      ScmBlobMetadata& metadata,
+      std::unique_ptr<std::string> mountPoint,
+      std::unique_ptr<std::string> id,
+      bool localStoreOnly) override;
+
+  void debugInodeStatus(
+      std::vector<TreeInodeDebugInfo>& inodeInfo,
+      std::unique_ptr<std::string> mountPoint,
+      std::unique_ptr<std::string> path) override;
+
   /**
    * When this Thrift handler is notified to shutdown, it notifies the
    * EdenServer to shut down, as well.

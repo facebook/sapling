@@ -31,6 +31,8 @@
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/model/git/GitIgnoreStack.h"
+#include "eden/fs/service/ThriftUtil.h"
+#include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fuse/Channel.h"
 #include "eden/fuse/MountPoint.h"
@@ -2571,6 +2573,94 @@ void TreeInode::unloadChildrenNow() {
   // Note: during mount point shutdown, returning from this function and
   // destroying the treeChildren map will decrement the reference count on
   // all of our children trees, which may result in them being destroyed.
+}
+
+void TreeInode::getDebugStatus(vector<TreeInodeDebugInfo>& results) const {
+  TreeInodeDebugInfo info;
+  info.inodeNumber = getNodeId();
+
+  auto myPath = getPath();
+  if (myPath.hasValue()) {
+    info.path = myPath.value().stringPiece().str();
+  }
+
+  vector<std::pair<PathComponent, InodePtr>> childInodes;
+  {
+    auto contents = contents_.rlock();
+
+    info.materialized = contents->materialized;
+    info.treeHash = thriftHash(contents->treeHash);
+
+    for (const auto& entry : contents->entries) {
+      if (entry.second->inode) {
+        // A child inode exists, so just grab an InodePtr and add it to the
+        // childInodes list.  We will process all loaded children after
+        // releasing our own contents_ lock (since we need to grab each child
+        // Inode's own lock to get its data).
+        childInodes.emplace_back(
+            entry.first, InodePtr::newPtrLocked(entry.second->inode));
+      } else {
+        // We can store data about unloaded entries immediately, since we have
+        // the authoritative data ourself, and don't need to ask a separate
+        // InodeBase object.
+        info.entries.emplace_back();
+        auto& infoEntry = info.entries.back();
+        auto* inodeEntry = entry.second.get();
+        infoEntry.name = entry.first.stringPiece().str();
+        if (inodeEntry->hasInodeNumber()) {
+          infoEntry.inodeNumber = inodeEntry->getInodeNumber();
+        } else {
+          infoEntry.inodeNumber = 0;
+        }
+        infoEntry.mode = inodeEntry->getMode();
+        infoEntry.loaded = false;
+        infoEntry.materialized = inodeEntry->isMaterialized();
+        if (!infoEntry.materialized) {
+          infoEntry.hash = thriftHash(inodeEntry->getHash());
+        }
+      }
+    }
+  }
+
+  for (const auto& childData : childInodes) {
+    info.entries.emplace_back();
+    auto& infoEntry = info.entries.back();
+    infoEntry.name = childData.first.stringPiece().str();
+    infoEntry.inodeNumber = childData.second->getNodeId();
+    infoEntry.loaded = true;
+
+    auto childTree = childData.second.asTreePtrOrNull();
+    if (childTree) {
+      // The child will also store its own data when we recurse, but go ahead
+      // and grab the materialization and status info now.
+      {
+        auto childContents = childTree->contents_.rlock();
+        infoEntry.materialized = childContents->materialized;
+        infoEntry.hash = thriftHash(childContents->treeHash);
+        // TODO: We don't currently store mode data for TreeInodes.  We should.
+        infoEntry.mode = (S_IFDIR | 0755);
+      }
+    } else {
+      auto childFile = childData.second.asFilePtr();
+
+      infoEntry.mode = childFile->getMode();
+      auto blobHash = childFile->getBlobHash();
+      infoEntry.materialized = !blobHash.hasValue();
+      infoEntry.hash = thriftHash(blobHash);
+    }
+  }
+  results.push_back(info);
+
+  // Recurse into all children directories after we finish building our own
+  // results.  We do this separately from the loop above just to order the
+  // results nicely: parents appear before their children, and children
+  // are sorted alphabetically (since contents_.entries are sorted).
+  for (const auto& childData : childInodes) {
+    auto childTree = childData.second.asTreePtrOrNull();
+    if (childTree) {
+      childTree->getDebugStatus(results);
+    }
+  }
 }
 }
 }
