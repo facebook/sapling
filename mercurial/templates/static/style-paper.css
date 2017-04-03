@@ -280,7 +280,7 @@ td.annotate:hover div.annotate-info { display: inline; }
   background-color: #bfdfff;
 }
 
-div.overflow pre.sourcelines > span:hover {
+div.overflow pre.sourcelines > span.followlines-select:hover {
   cursor: cell;
 }
 

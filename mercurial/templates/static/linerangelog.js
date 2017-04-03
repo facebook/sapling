@@ -22,6 +22,11 @@ document.addEventListener('DOMContentLoaded', function() {
         sourcelines.children,
         function(x) { return x.tagName === 'SPAN' });
 
+    // add a "followlines-select" class to change cursor type in CSS
+    for (var i = 0; i < spans.length; i++) {
+        spans[i].classList.add('followlines-select');
+    }
+
     var lineSelectedCSSClass = 'followlines-selected';
 
     //** add CSS class on <span> element in `from`-`to` line range */
