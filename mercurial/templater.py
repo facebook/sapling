@@ -370,14 +370,15 @@ def runtemplate(context, mapping, template):
         yield func(context, mapping, data)
 
 def buildfilter(exp, context):
-    arg = compileexp(exp[1], context, methods)
     n = getsymbol(exp[2])
     if n in context._filters:
         filt = context._filters[n]
+        arg = compileexp(exp[1], context, methods)
         return (runfilter, (arg, filt))
     if n in funcs:
         f = funcs[n]
-        return (f, [arg])
+        args = _buildfuncargs(exp[1], context, methods, n, f._argspec)
+        return (f, args)
     raise error.ParseError(_("unknown function '%s'") % n)
 
 def runfilter(context, mapping, data):
@@ -452,16 +453,40 @@ def runarithmetic(context, mapping, data):
 
 def buildfunc(exp, context):
     n = getsymbol(exp[1])
-    args = [compileexp(x, context, exprmethods) for x in getlist(exp[2])]
     if n in funcs:
         f = funcs[n]
+        args = _buildfuncargs(exp[2], context, exprmethods, n, f._argspec)
         return (f, args)
     if n in context._filters:
+        args = _buildfuncargs(exp[2], context, exprmethods, n, argspec=None)
         if len(args) != 1:
             raise error.ParseError(_("filter %s expects one argument") % n)
         f = context._filters[n]
         return (runfilter, (args[0], f))
     raise error.ParseError(_("unknown function '%s'") % n)
+
+def _buildfuncargs(exp, context, curmethods, funcname, argspec):
+    """Compile parsed tree of function arguments into list or dict of
+    (func, data) pairs"""
+    def compiledict(xs):
+        return dict((k, compileexp(x, context, curmethods))
+                    for k, x in xs.iteritems())
+    def compilelist(xs):
+        return [compileexp(x, context, curmethods) for x in xs]
+
+    if not argspec:
+        # filter or function with no argspec: return list of positional args
+        return compilelist(getlist(exp))
+
+    # function with argspec: return dict of named args
+    _poskeys, varkey, _keys = argspec = parser.splitargspec(argspec)
+    treeargs = parser.buildargsdict(getlist(exp), funcname, argspec,
+                                    keyvaluenode='keyvalue', keynode='symbol')
+    compargs = {}
+    if varkey:
+        compargs[varkey] = compilelist(treeargs.pop(varkey))
+    compargs.update(compiledict(treeargs))
+    return compargs
 
 def buildkeyvaluepair(exp, content):
     raise error.ParseError(_("can't use a key-value pair in this context"))
@@ -832,16 +857,16 @@ def rstdoc(context, mapping, args):
 
     return minirst.format(text, style=style, keep=['verbose'])
 
-@templatefunc('separate(sep, args)')
+@templatefunc('separate(sep, args)', argspec='sep *args')
 def separate(context, mapping, args):
     """Add a separator between non-empty arguments."""
-    if not args:
+    if 'sep' not in args:
         # i18n: "separate" is a keyword
         raise error.ParseError(_("separate expects at least one argument"))
 
-    sep = evalstring(context, mapping, args[0])
+    sep = evalstring(context, mapping, args['sep'])
     first = True
-    for arg in args[1:]:
+    for arg in args['args']:
         argstr = evalstring(context, mapping, arg)
         if not argstr:
             continue

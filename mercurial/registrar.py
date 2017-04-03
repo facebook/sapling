@@ -234,13 +234,17 @@ class templatefunc(_templateregistrarbase):
 
         templatefunc = registrar.templatefunc()
 
-        @templatefunc('myfunc(arg1, arg2[, arg3])')
+        @templatefunc('myfunc(arg1, arg2[, arg3])', argspec='arg1 arg2 arg3')
         def myfuncfunc(context, mapping, args):
             '''Explanation of this template function ....
             '''
             pass
 
     The first string argument is used also in online help.
+
+    If optional 'argspec' is defined, the function will receive 'args' as
+    a dict of named arguments. Otherwise 'args' is a list of positional
+    arguments.
 
     'templatefunc' instance in example above can be used to
     decorate multiple functions.
@@ -252,3 +256,6 @@ class templatefunc(_templateregistrarbase):
     Otherwise, explicit 'templater.loadfunction()' is needed.
     """
     _getname = _funcregistrarbase._parsefuncdecl
+
+    def _extrasetup(self, name, func, argspec=None):
+        func._argspec = argspec
