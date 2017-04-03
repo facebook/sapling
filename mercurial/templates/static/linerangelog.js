@@ -6,7 +6,7 @@
 // GNU General Public License version 2 or any later version.
 
 //** Install event listeners for line block selection and followlines action */
-function installLineSelect() {
+document.addEventListener('DOMContentLoaded', function() {
     var sourcelines = document.getElementsByClassName('sourcelines')[0];
     if (typeof sourcelines === 'undefined') {
         return;
@@ -127,37 +127,35 @@ function installLineSelect() {
 
     sourcelines.addEventListener('click', lineSelectStart);
 
-}
+    //** return a <div id="followlines"> and inner cancel <button> elements */
+    function followlinesBox(targetUri, fromline, toline) {
+        // <div id="followlines">
+        var div = document.createElement('div');
+        div.id = 'followlines';
 
-//** return a <div id="followlines"> and inner cancel <button> elements */
-function followlinesBox(targetUri, fromline, toline) {
-    // <div id="followlines">
-    var div = document.createElement('div');
-    div.id = 'followlines';
+        //   <div class="followlines-cancel">
+        var buttonDiv = document.createElement('div');
+        buttonDiv.classList.add('followlines-cancel');
 
-    //   <div class="followlines-cancel">
-    var buttonDiv = document.createElement('div');
-    buttonDiv.classList.add('followlines-cancel');
+        //     <button>x</button>
+        var button = document.createElement('button');
+        button.textContent = 'x';
+        buttonDiv.appendChild(button);
+        div.appendChild(buttonDiv);
 
-    //     <button>x</button>
-    var button = document.createElement('button');
-    button.textContent = 'x';
-    buttonDiv.appendChild(button);
-    div.appendChild(buttonDiv);
+        //   <div class="followlines-link">
+        var aDiv = document.createElement('div');
+        aDiv.classList.add('followlines-link');
 
-    //   <div class="followlines-link">
-    var aDiv = document.createElement('div');
-    aDiv.classList.add('followlines-link');
+        //     <a href="/log/<rev>/<file>?patch=&linerange=...">
+        var a = document.createElement('a');
+        var url = targetUri + '?patch=&linerange=' + fromline + ':' + toline;
+        a.setAttribute('href', url);
+        a.textContent = 'follow lines ' + fromline + ':' + toline;
+        aDiv.appendChild(a);
+        div.appendChild(aDiv);
 
-    //     <a href="/log/<rev>/<file>?patch=&linerange=...">
-    var a = document.createElement('a');
-    var url = targetUri + '?patch=&linerange=' + fromline + ':' + toline;
-    a.setAttribute('href', url);
-    a.textContent = 'follow lines ' + fromline + ':' + toline;
-    aDiv.appendChild(a);
-    div.appendChild(aDiv);
+        return [div, button];
+    }
 
-    return [div, button];
-}
-
-document.addEventListener('DOMContentLoaded', installLineSelect, false);
+}, false);
