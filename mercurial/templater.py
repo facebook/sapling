@@ -589,29 +589,30 @@ def formatnode(context, mapping, args):
         return node
     return templatefilters.short(node)
 
-@templatefunc('pad(text, width[, fillchar=\' \'[, left=False]])')
+@templatefunc('pad(text, width[, fillchar=\' \'[, left=False]])',
+              argspec='text width fillchar left')
 def pad(context, mapping, args):
     """Pad text with a
     fill character."""
-    if not (2 <= len(args) <= 4):
+    if 'text' not in args or 'width' not in args:
         # i18n: "pad" is a keyword
         raise error.ParseError(_("pad() expects two to four arguments"))
 
-    width = evalinteger(context, mapping, args[1],
+    width = evalinteger(context, mapping, args['width'],
                         # i18n: "pad" is a keyword
                         _("pad() expects an integer width"))
 
-    text = evalstring(context, mapping, args[0])
+    text = evalstring(context, mapping, args['text'])
 
     left = False
     fillchar = ' '
-    if len(args) > 2:
-        fillchar = evalstring(context, mapping, args[2])
+    if 'fillchar' in args:
+        fillchar = evalstring(context, mapping, args['fillchar'])
         if len(color.stripeffects(fillchar)) != 1:
             # i18n: "pad" is a keyword
             raise error.ParseError(_("pad() expects a single fill character"))
-    if len(args) > 3:
-        left = evalboolean(context, mapping, args[3])
+    if 'left' in args:
+        left = evalboolean(context, mapping, args['left'])
 
     fillwidth = width - encoding.colwidth(color.stripeffects(text))
     if fillwidth <= 0:

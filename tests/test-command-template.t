@@ -146,6 +146,9 @@ Keyword arguments:
   hg: parse error: can't use a key-value pair in this context
   [255]
 
+  $ hg debugtemplate '{pad("foo", width=10, left=true)}\n'
+         foo
+
 Call function which takes named arguments by filter syntax:
 
   $ hg debugtemplate '{" "|separate}'
