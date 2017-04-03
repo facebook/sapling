@@ -380,10 +380,10 @@ def _getfnodes(ui, repo, nodes):
     starttime = util.timer()
     fnodescache = hgtagsfnodescache(repo.unfiltered())
     cachefnode = {}
-    for head in reversed(nodes):
-        fnode = fnodescache.getfnode(head)
+    for node in reversed(nodes):
+        fnode = fnodescache.getfnode(node)
         if fnode != nullid:
-            cachefnode[head] = fnode
+            cachefnode[node] = fnode
 
     fnodescache.write()
 
