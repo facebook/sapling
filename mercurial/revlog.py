@@ -1267,6 +1267,7 @@ class revlog(object):
             rev = None
 
         cachedrev = None
+        flags = None
         if node == nullid:
             return ""
         if self._cache:
@@ -1277,8 +1278,10 @@ class revlog(object):
                 # duplicated, but good for perf
                 if rev is None:
                     rev = self.rev(node)
+                if flags is None:
+                    flags = self.flags(rev)
                 # no extra flags set, no flag processor runs, text = rawtext
-                if self.flags(rev) == REVIDX_DEFAULT_FLAGS:
+                if flags == REVIDX_DEFAULT_FLAGS:
                     return self._cache[2]
 
             cachedrev = self._cache[1]
@@ -1302,8 +1305,10 @@ class revlog(object):
 
         rawtext = mdiff.patches(rawtext, bins)
 
-        text, validatehash = self._processflags(rawtext, self.flags(rev),
-                                                'read', raw=raw)
+        if flags is None:
+            flags = self.flags(rev)
+
+        text, validatehash = self._processflags(rawtext, flags, 'read', raw=raw)
         if validatehash:
             self.checkhash(text, node, rev=rev)
 
