@@ -1268,6 +1268,7 @@ class revlog(object):
 
         cachedrev = None
         flags = None
+        rawtext = None
         if node == nullid:
             return ""
         if self._cache:
@@ -1283,11 +1284,12 @@ class revlog(object):
                 # no extra flags set, no flag processor runs, text = rawtext
                 if flags == REVIDX_DEFAULT_FLAGS:
                     return self._cache[2]
+                # rawtext is reusable. need to run flag processor
+                rawtext = self._cache[2]
 
             cachedrev = self._cache[1]
 
         # look up what we need to read
-        rawtext = None
         if rawtext is None:
             if rev is None:
                 rev = self.rev(node)
@@ -1305,15 +1307,17 @@ class revlog(object):
                 bins = bins[1:]
 
             rawtext = mdiff.patches(rawtext, bins)
+            self._cache = (node, rev, rawtext)
 
         if flags is None:
+            if rev is None:
+                rev = self.rev(node)
             flags = self.flags(rev)
 
         text, validatehash = self._processflags(rawtext, flags, 'read', raw=raw)
         if validatehash:
             self.checkhash(text, node, rev=rev)
 
-        self._cache = (node, rev, rawtext)
         return text
 
     def hash(self, text, p1, p2):
