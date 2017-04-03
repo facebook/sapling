@@ -166,6 +166,7 @@ def genbits(n):
 
     # Gray Code. See https://en.wikipedia.org/wiki/Gray_code
     gray = lambda x: x ^ (x >> 1)
+    reversegray = dict((gray(i), i) for i in range(m))
 
     # Generate (n * 2) bit gray code, yield lower n bits as X, and look for
     # the next unused gray code where higher n bits equal to X.
@@ -177,7 +178,9 @@ def genbits(n):
     x = 0
     yield x
     for i in range(m * m):
+        x = reversegray[x]
         y = gray(a[x] + x * m) & (m - 1)
+        assert a[x] < m
         a[x] += 1
         x = y
         yield x
