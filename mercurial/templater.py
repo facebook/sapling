@@ -33,12 +33,12 @@ from . import (
 elements = {
     # token-type: binding-strength, primary, prefix, infix, suffix
     "(": (20, None, ("group", 1, ")"), ("func", 1, ")"), None),
-    "%": (6, None, None, ("%", 6), None),
-    "|": (5, None, None, ("|", 5), None),
-    "*": (4, None, None, ("*", 4), None),
-    "/": (4, None, None, ("/", 4), None),
-    "+": (3, None, None, ("+", 3), None),
-    "-": (3, None, ("negate", 10), ("-", 3), None),
+    "%": (16, None, None, ("%", 16), None),
+    "|": (15, None, None, ("|", 15), None),
+    "*": (5, None, None, ("*", 5), None),
+    "/": (5, None, None, ("/", 5), None),
+    "+": (4, None, None, ("+", 4), None),
+    "-": (4, None, ("negate", 19), ("-", 4), None),
     ",": (2, None, None, ("list", 2), None),
     ")": (0, None, None, None, None),
     "integer": (0, "integer", None, None, None),
