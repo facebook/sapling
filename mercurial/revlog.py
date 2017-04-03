@@ -1288,22 +1288,23 @@ class revlog(object):
 
         # look up what we need to read
         rawtext = None
-        if rev is None:
-            rev = self.rev(node)
-
-        chain, stopped = self._deltachain(rev, stoprev=cachedrev)
-        if stopped:
-            rawtext = self._cache[2]
-
-        # drop cache to save memory
-        self._cache = None
-
-        bins = self._chunks(chain, df=_df)
         if rawtext is None:
-            rawtext = bytes(bins[0])
-            bins = bins[1:]
+            if rev is None:
+                rev = self.rev(node)
 
-        rawtext = mdiff.patches(rawtext, bins)
+            chain, stopped = self._deltachain(rev, stoprev=cachedrev)
+            if stopped:
+                rawtext = self._cache[2]
+
+            # drop cache to save memory
+            self._cache = None
+
+            bins = self._chunks(chain, df=_df)
+            if rawtext is None:
+                rawtext = bytes(bins[0])
+                bins = bins[1:]
+
+            rawtext = mdiff.patches(rawtext, bins)
 
         if flags is None:
             flags = self.flags(rev)
