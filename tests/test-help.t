@@ -1848,7 +1848,7 @@ Compression engines listed in `hg help bundlespec`
         An algorithm that produces smaller bundles than "gzip".
         This engine will likely produce smaller bundles than "gzip" but will be
       "gzip"
-        better compression than "gzip". It also frequently yields better
+        better compression than "gzip". It also frequently yields better (?)
 
 Test usage of section marks in help documents
 
