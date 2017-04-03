@@ -329,15 +329,25 @@ def filteredhash(repo, maxrev):
         key = s.digest()
     return key
 
+def _deprecated(old, new, func):
+    msg = ('class at mercurial.scmutil.%s moved to mercurial.vfs.%s'
+           % (old, new))
+    def wrapper(*args, **kwargs):
+        util.nouideprecwarn(msg, '4.2')
+        return func(*args, **kwargs)
+    return wrapper
+
 # compatibility layer since all 'vfs' code moved to 'mercurial.vfs'
 #
 # This is hard to instal deprecation warning to this since we do not have
 # access to a 'ui' object.
-opener = vfs = vfsmod.vfs
-filteropener = filtervfs = vfsmod.filtervfs
-abstractvfs = vfsmod.abstractvfs
-readonlyvfs = vfsmod.readonlyvfs
-auditvfs = vfsmod.auditvfs
+opener = _deprecated('opener', 'vfs', vfsmod.vfs)
+vfs = _deprecated('vfs', 'vfs', vfsmod.vfs)
+filteropener = _deprecated('filteropener', 'filtervfs', vfsmod.filtervfs)
+filtervfs = _deprecated('filtervfs', 'filtervfs', vfsmod.filtervfs)
+abstractvfs = _deprecated('abstractvfs', 'abstractvfs', vfsmod.abstractvfs)
+readonlyvfs = _deprecated('readonlyvfs', 'readonlyvfs', vfsmod.readonlyvfs)
+auditvfs = _deprecated('auditvfs', 'auditvfs', vfsmod.auditvfs)
 checkambigatclosing = vfsmod.checkambigatclosing
 
 def walkrepos(path, followsym=False, seen_dirs=None, recurse=False):
@@ -960,4 +970,3 @@ class simplekeyvaluefile(object):
             lines.append("%s=%s\n" % (k, v))
         with self.vfs(self.path, mode='wb', atomictemp=True) as fp:
             fp.write(''.join(lines))
-
