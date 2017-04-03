@@ -94,41 +94,55 @@ class parser(object):
         return t
 
 def splitargspec(spec):
-    """Parse spec of function arguments into (poskeys, varkey, keys)
+    """Parse spec of function arguments into (poskeys, varkey, keys, optkey)
 
     >>> splitargspec('')
-    ([], None, [])
+    ([], None, [], None)
     >>> splitargspec('foo bar')
-    ([], None, ['foo', 'bar'])
-    >>> splitargspec('foo *bar baz')
-    (['foo'], 'bar', ['baz'])
+    ([], None, ['foo', 'bar'], None)
+    >>> splitargspec('foo *bar baz **qux')
+    (['foo'], 'bar', ['baz'], 'qux')
     >>> splitargspec('*foo')
-    ([], 'foo', [])
+    ([], 'foo', [], None)
+    >>> splitargspec('**foo')
+    ([], None, [], 'foo')
     """
-    pre, sep, post = spec.partition('*')
+    optkey = None
+    pre, sep, post = spec.partition('**')
+    if sep:
+        posts = post.split()
+        if not posts:
+            raise error.ProgrammingError('no **optkey name provided')
+        if len(posts) > 1:
+            raise error.ProgrammingError('excessive **optkey names provided')
+        optkey = posts[0]
+
+    pre, sep, post = pre.partition('*')
     pres = pre.split()
     posts = post.split()
     if sep:
         if not posts:
             raise error.ProgrammingError('no *varkey name provided')
-        return pres, posts[0], posts[1:]
-    return [], None, pres
+        return pres, posts[0], posts[1:], optkey
+    return [], None, pres, optkey
 
 def buildargsdict(trees, funcname, argspec, keyvaluenode, keynode):
     """Build dict from list containing positional and keyword arguments
 
-    Arguments are specified by a tuple of ``(poskeys, varkey, keys)`` where
+    Arguments are specified by a tuple of ``(poskeys, varkey, keys, optkey)``
+    where
 
     - ``poskeys``: list of names of positional arguments
     - ``varkey``: optional argument name that takes up remainder
     - ``keys``: list of names that can be either positional or keyword arguments
+    - ``optkey``: optional argument name that takes up excess keyword arguments
 
     If ``varkey`` specified, all ``keys`` must be given as keyword arguments.
 
     Invalid keywords, too few positional arguments, or too many positional
     arguments are rejected, but missing keyword arguments are just omitted.
     """
-    poskeys, varkey, keys = argspec
+    poskeys, varkey, keys, optkey = argspec
     kwstart = next((i for i, x in enumerate(trees) if x[0] == keyvaluenode),
                    len(trees))
     if kwstart < len(poskeys):
@@ -150,20 +164,26 @@ def buildargsdict(trees, funcname, argspec, keyvaluenode, keynode):
         for k, x in zip(keys, trees[len(args):kwstart]):
             args[k] = x
     # remainder should be keyword arguments
+    if optkey:
+        args[optkey] = {}
     for x in trees[kwstart:]:
         if x[0] != keyvaluenode or x[1][0] != keynode:
             raise error.ParseError(_("%(func)s got an invalid argument")
                                    % {'func': funcname})
         k = x[1][1]
-        if k not in keys:
+        if k in keys:
+            d = args
+        elif not optkey:
             raise error.ParseError(_("%(func)s got an unexpected keyword "
                                      "argument '%(key)s'")
                                    % {'func': funcname, 'key': k})
-        if k in args:
+        else:
+            d = args[optkey]
+        if k in d:
             raise error.ParseError(_("%(func)s got multiple values for keyword "
                                      "argument '%(key)s'")
                                    % {'func': funcname, 'key': k})
-        args[k] = x[2]
+        d[k] = x[2]
     return args
 
 def unescapestr(s):

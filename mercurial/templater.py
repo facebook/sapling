@@ -467,7 +467,19 @@ def buildfunc(exp, context):
 
 def _buildfuncargs(exp, context, curmethods, funcname, argspec):
     """Compile parsed tree of function arguments into list or dict of
-    (func, data) pairs"""
+    (func, data) pairs
+
+    >>> context = engine(lambda t: (runsymbol, t))
+    >>> def fargs(expr, argspec):
+    ...     x = _parseexpr(expr)
+    ...     n = getsymbol(x[1])
+    ...     return _buildfuncargs(x[2], context, exprmethods, n, argspec)
+    >>> sorted(fargs('a(l=1, k=2)', 'k l m').keys())
+    ['k', 'l']
+    >>> args = fargs('a(opts=1, k=2)', '**opts')
+    >>> args.keys(), sorted(args['opts'].keys())
+    (['opts'], ['k', 'opts'])
+    """
     def compiledict(xs):
         return dict((k, compileexp(x, context, curmethods))
                     for k, x in xs.iteritems())
@@ -479,12 +491,14 @@ def _buildfuncargs(exp, context, curmethods, funcname, argspec):
         return compilelist(getlist(exp))
 
     # function with argspec: return dict of named args
-    _poskeys, varkey, _keys = argspec = parser.splitargspec(argspec)
+    _poskeys, varkey, _keys, optkey = argspec = parser.splitargspec(argspec)
     treeargs = parser.buildargsdict(getlist(exp), funcname, argspec,
                                     keyvaluenode='keyvalue', keynode='symbol')
     compargs = {}
     if varkey:
         compargs[varkey] = compilelist(treeargs.pop(varkey))
+    if optkey:
+        compargs[optkey] = compiledict(treeargs.pop(optkey))
     compargs.update(compiledict(treeargs))
     return compargs
 
