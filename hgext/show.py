@@ -19,6 +19,7 @@ from mercurial import (
     cmdutil,
     commands,
     error,
+    pycompat,
     registrar,
 )
 
@@ -133,5 +134,5 @@ def showbookmarks(ui, repo, fm):
 # TODO make this more robust.
 longest = max(map(len, showview._table.keys()))
 for key in sorted(showview._table.keys()):
-    cmdtable['show'][0].__doc__ += ' %s   %s\n' % (
-        key.ljust(longest), showview._table[key]._origdoc)
+    cmdtable['show'][0].__doc__ += pycompat.sysstr(' %s   %s\n' % (
+        key.ljust(longest), showview._table[key]._origdoc))

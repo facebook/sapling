@@ -142,6 +142,14 @@ if ispy3:
         """Iterate bytes as if it were a str object of Python 2"""
         return map(bytechr, s)
 
+    def sysbytes(s):
+        """Convert an internal str (e.g. keyword, __doc__) back to bytes
+
+        This never raises UnicodeEncodeError, but only ASCII characters
+        can be round-trip by sysstr(sysbytes(s)).
+        """
+        return s.encode(u'utf-8')
+
     def sysstr(s):
         """Return a keyword str to be passed to Python functions such as
         getattr() and str.encode()
@@ -210,6 +218,7 @@ else:
     bytechr = chr
     bytestr = str
     iterbytestr = iter
+    sysbytes = identity
     sysstr = identity
 
     # Partial backport from os.py in Python 3, which only accepts bytes.

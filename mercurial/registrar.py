@@ -56,9 +56,9 @@ class _funcregistrarbase(object):
             raise error.ProgrammingError(msg)
 
         if func.__doc__ and not util.safehasattr(func, '_origdoc'):
-            doc = func.__doc__.strip()
+            doc = pycompat.sysbytes(func.__doc__).strip()
             func._origdoc = doc
-            func.__doc__ = self._formatdoc(decl, doc)
+            func.__doc__ = pycompat.sysstr(self._formatdoc(decl, doc))
 
         self._table[name] = func
         self._extrasetup(name, func, *args, **kwargs)
@@ -127,7 +127,7 @@ class revsetpredicate(_funcregistrarbase):
     Otherwise, explicit 'revset.loadpredicate()' is needed.
     """
     _getname = _funcregistrarbase._parsefuncdecl
-    _docformat = pycompat.sysstr("``%s``\n    %s")
+    _docformat = "``%s``\n    %s"
 
     def _extrasetup(self, name, func, safe=False, takeorder=False):
         func._safe = safe
@@ -166,7 +166,7 @@ class filesetpredicate(_funcregistrarbase):
     Otherwise, explicit 'fileset.loadpredicate()' is needed.
     """
     _getname = _funcregistrarbase._parsefuncdecl
-    _docformat = pycompat.sysstr("``%s``\n    %s")
+    _docformat = "``%s``\n    %s"
 
     def _extrasetup(self, name, func, callstatus=False, callexisting=False):
         func._callstatus = callstatus
@@ -175,7 +175,7 @@ class filesetpredicate(_funcregistrarbase):
 class _templateregistrarbase(_funcregistrarbase):
     """Base of decorator to register functions as template specific one
     """
-    _docformat = pycompat.sysstr(":%s: %s")
+    _docformat = ":%s: %s"
 
 class templatekeyword(_templateregistrarbase):
     """Decorator to register template keyword
