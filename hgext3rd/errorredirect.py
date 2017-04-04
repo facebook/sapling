@@ -30,6 +30,7 @@ Examples::
   script = (echo "$WARNING"; cat) | cat >&2
 """
 
+import signal
 import subprocess
 import traceback
 
@@ -39,18 +40,50 @@ from mercurial import (
     extensions,
 )
 
-def _handlecommandexception(orig, ui):
-    script = ui.config('errorredirect', 'script')
-    if not script:
-        return orig(ui)
+def _printtrace(ui, warning):
+    # Like dispatch.handlecommandexception, but avoids an unnecessary ui.log
+    ui.warn(warning)
+    return False # return value for "handlecommandexception", re-raises
 
+def _handlecommandexception(orig, ui):
     warning = dispatch._exceptionwarning(ui)
     trace = traceback.format_exc()
+
+    # let blackbox log it (if it is configured to do so)
+    ui.log("commandexception", "%s\n%s\n", warning, trace)
+
+    script = ui.config('errorredirect', 'script')
+    if not script:
+        return _printtrace(ui, warning)
+
+    # run the external script
     env = encoding.environ.copy()
     env['WARNING'] = warning
     env['TRACE'] = trace
-    p = subprocess.Popen(script, shell=True, stdin=subprocess.PIPE, env=env)
-    p.communicate(trace)
+
+    # decide whether to use shell smartly, see 9335dc6b2a9c in hg
+    shell = any(c in script for c in "|&;<>()$`\\\"' \t\n*?[#~=%")
+
+    try:
+        p = subprocess.Popen(script, shell=shell, stdin=subprocess.PIPE,
+                             env=env)
+        p.communicate(trace)
+    except StandardError:
+        # The binary cannot be executed, or some other issues. For example,
+        # "script" is not in PATH, and shell is False; or the peer closes the
+        # pipe early. Fallback to the plain error reporting.
+        return _printtrace(ui, warning)
+    else:
+        ret = p.returncode
+
+        # Python returns negative exit code for signal-terminated process. The
+        # shell converts singal-terminated process to a positive exit code by
+        # +128. Ctrl+C generates SIGTERM. Re-report the error unless the
+        # process exits cleanly or is terminated by SIGTERM (Ctrl+C).
+        ctrlc = (ret == signal.SIGTERM + 128) or (ret == -signal.SIGTERM)
+        if ret != 0 and not ctrlc:
+            return _printtrace(ui, warning)
+
     return True # do not re-raise
 
 def uisetup(ui):
