@@ -63,6 +63,8 @@ def _dolookup(repo, key):
     mapfile = repo.ui.configpath('gitlookup', 'mapfile')
     if mapfile is None:
         return None
+    if not isinstance(key, str):
+        return None
     # direction: git to hg = g, hg to git = h
     if key.startswith('_gitlookup_git_'):
         direction = 'tohg'

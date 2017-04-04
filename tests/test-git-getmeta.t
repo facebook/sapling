@@ -110,3 +110,11 @@ Check that gitnode revset and template work on the server
   $ hg log -r "gitnode(unknown)" --template "{node}\n"
   abort: unknown revision 'unknown'!
   [255]
+
+Check that using revision numbers instead of hashes still works. Use `bundle` command
+because it calls `repo.lookup(...)` with int argument
+  $ touch b
+  $ hg add b
+  $ hg ci -mb
+  $ hg bundle -r . --base 0 file.txt
+  1 changesets found
