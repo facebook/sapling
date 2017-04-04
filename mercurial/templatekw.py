@@ -35,8 +35,6 @@ class _hybrid(object):
         self.values = values
         self._makemap = makemap
         self.joinfmt = joinfmt
-    def __iter__(self):
-        return self.gen
     def itermaps(self):
         makemap = self._makemap
         for x in self.values:
@@ -49,6 +47,13 @@ class _hybrid(object):
         if name != 'get':
             raise AttributeError(name)
         return getattr(self.values, name)
+
+def unwraphybrid(thing):
+    """Return an object which can be stringified possibly by using a legacy
+    template"""
+    if not util.safehasattr(thing, 'gen'):
+        return thing
+    return thing.gen
 
 def showlist(name, values, plural=None, element=None, separator=' ', **args):
     if not element:

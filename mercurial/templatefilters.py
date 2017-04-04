@@ -350,6 +350,7 @@ def stringify(thing):
     """Any type. Turns the value into text by converting values into
     text and concatenating them.
     """
+    thing = templatekw.unwraphybrid(thing)
     if util.safehasattr(thing, '__iter__') and not isinstance(thing, str):
         return "".join([stringify(t) for t in thing if t is not None])
     if thing is None:

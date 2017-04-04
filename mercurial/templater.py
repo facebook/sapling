@@ -1020,6 +1020,7 @@ stringify = templatefilters.stringify
 
 def _flatten(thing):
     '''yield a single stream from a possibly nested set of iterators'''
+    thing = templatekw.unwraphybrid(thing)
     if isinstance(thing, str):
         yield thing
     elif thing is None:
@@ -1028,6 +1029,7 @@ def _flatten(thing):
         yield str(thing)
     else:
         for i in thing:
+            i = templatekw.unwraphybrid(i)
             if isinstance(i, str):
                 yield i
             elif i is None:
