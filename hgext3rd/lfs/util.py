@@ -7,7 +7,6 @@ import re
 
 from mercurial import (
     error,
-    revlog,
     util,
     vfs as vfsmod,
 )
@@ -18,15 +17,6 @@ def sha256(text):
     digest = hashlib.sha256()
     digest.update(text)
     return digest.hexdigest()
-
-def hash(text, p1, p2):
-    return revlog.hash(text, p1, p2)
-
-def getoption(opener, option):
-    options = getattr(opener, 'options', None)
-    if options:
-        return options.get(option)
-    return None
 
 # 40 bytes for SHA1, 64 bytes for SHA256
 _lfsre = re.compile(r'\A[a-f0-9]{40,64}\Z')

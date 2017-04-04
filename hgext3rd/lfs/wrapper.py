@@ -57,7 +57,7 @@ def writetostore(self, text):
 
     offset = 0
     chunkoids = []
-    chunksize = util.getoption(self.opener, 'lfschunksize')
+    chunksize = self.opener.options['lfschunksize']
 
     if not chunksize:
         chunksize = len(text)

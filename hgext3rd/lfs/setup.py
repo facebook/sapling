@@ -14,23 +14,18 @@ from . import (
 def threshold(ui, repo):
     """Configure threshold for a file to be handled by LFS"""
     threshold = ui.configbytes('lfs', 'threshold', None)
-    if threshold:
-        repo.lfsthreshold = threshold
-        repo.svfs.options['lfsthreshold'] = threshold
+    repo.svfs.options['lfsthreshold'] = threshold
 
 def localblobstore(ui, repo):
     """Configure local blobstore"""
     storepath = ui.config('lfs', 'blobstore', 'cache/localblobstore')
     localblobstore = blobstore.local(repo.vfs.join(storepath))
-    repo.lfslocalblobstore = localblobstore
     repo.svfs.lfslocalblobstore = localblobstore
 
 def chunking(ui, repo):
     """Configure chunking for massive blobs to be split into smaller chunks."""
     chunksize = ui.configbytes('lfs', 'chunksize', None)
-    if chunksize:
-        repo.lfschunksize = chunksize
-        repo.svfs.options['lfschunksize'] =  chunksize
+    repo.svfs.options['lfschunksize'] =  chunksize
 
 def remoteblobstore(ui, repo):
     """Configure remote blobstore."""
@@ -42,5 +37,4 @@ def remoteblobstore(ui, repo):
     if not remotestore in knownblobstores:
         message = _("Unknown remote store %s") % (remotestore)
         raise error.ProgrammingError(message)
-    repo.lfsremoteblobstore = knownblobstores[remotestore](ui)
-    repo.svfs.lfsremoteblobstore = repo.lfsremoteblobstore
+    repo.svfs.lfsremoteblobstore = knownblobstores[remotestore](ui)
