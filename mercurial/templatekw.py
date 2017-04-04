@@ -32,21 +32,21 @@ class _hybrid(object):
 
     def __init__(self, gen, values, makemap, joinfmt):
         self.gen = gen
-        self.values = values
+        self._values = values
         self._makemap = makemap
         self.joinfmt = joinfmt
     def itermaps(self):
         makemap = self._makemap
-        for x in self.values:
+        for x in self._values:
             yield makemap(x)
     def __contains__(self, x):
-        return x in self.values
+        return x in self._values
     def __len__(self):
-        return len(self.values)
+        return len(self._values)
     def __getattr__(self, name):
         if name != 'get':
             raise AttributeError(name)
-        return getattr(self.values, name)
+        return getattr(self._values, name)
 
 def unwraphybrid(thing):
     """Return an object which can be stringified possibly by using a legacy
