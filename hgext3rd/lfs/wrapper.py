@@ -86,7 +86,7 @@ def addrevision(orig, self, text, transaction, link, p1, p2, cachedelta=None,
                 node=None, flags=revlog.REVIDX_DEFAULT_FLAGS):
     # filelog.addrevision wrapper
     if not self.opener.options['lfsbypass']:
-        threshold = util.getoption(self.opener, 'lfsthreshold')
+        threshold = self.opener.options['lfsthreshold']
 
         if threshold and len(text) > threshold:
             flags |= revlog.REVIDX_EXTSTORED
