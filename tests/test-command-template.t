@@ -3392,6 +3392,13 @@ Test get function:
   hg: parse error: get() expects a dict as first argument
   [255]
 
+Test json filter applied to hybrid object:
+
+  $ hg log -r0 -T '{files|json}\n'
+  ["a"]
+  $ hg log -r0 -T '{extras|json}\n'
+  {"branch": "default"}
+
 Test localdate(date, tz) function:
 
   $ TZ=JST-09 hg log -r0 -T '{date|localdate|isodate}\n'

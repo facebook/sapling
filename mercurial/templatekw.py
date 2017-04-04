@@ -28,6 +28,7 @@ class _hybrid(object):
     and to access raw values:
     - "{ifcontains(file, files, ...)}", "{ifcontains(key, extras, ...)}"
     - "{get(extras, key)}"
+    - "{files|json}"
     """
 
     def __init__(self, gen, values, makemap, joinfmt):
@@ -43,8 +44,11 @@ class _hybrid(object):
         return x in self._values
     def __len__(self):
         return len(self._values)
+    def __iter__(self):
+        return iter(self._values)
     def __getattr__(self, name):
-        if name != 'get':
+        if name not in ('get', 'items', 'iteritems', 'iterkeys', 'itervalues',
+                        'keys', 'values'):
             raise AttributeError(name)
         return getattr(self._values, name)
 
