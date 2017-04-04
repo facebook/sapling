@@ -179,6 +179,45 @@
 
   $ cd ..
 
+# Test clone
+
+  $ hg init repo6
+  $ cd repo6
+  $ cat >> .hg/hgrc << EOF
+  > [lfs]
+  > threshold=30B
+  > chunksize=20B
+  > EOF
+
+  $ echo LARGE-BECAUSE-IT-IS-MORE-THAN-30-BYTES > large
+  $ echo SMALL > small
+  $ hg commit -Aqm 'create a lfs file' large small
+
+  $ cd ..
+
+  $ hg clone repo6 repo7
+  updating to branch default
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cd repo7
+  $ cat large
+  LARGE-BECAUSE-IT-IS-MORE-THAN-30-BYTES
+  $ cat small
+  SMALL
+
+# Test bypass
+
+  $ hg cat -r tip large --config lfs.remotepath=$TESTTMP/404 --config lfs.blobstore=cache/404
+  abort: No such file or directory: $TESTTMP/404/2e81056070ae365867a5e7f804abe39c12e07bdf11c098994d1bc0ab9981910a
+  [255]
+
+  $ hg cat -r tip large --config lfs.remotepath=$TESTTMP/404 --config lfs.blobstore=cache/404 --config lfs.bypass=1
+  version https://git-lfs.github.com/spec/chunking
+  chunks 2e81056070ae365867a5e7f804abe39c12e07bdf11c098994d1bc0ab9981910a:20,903f301311488de7befd35be124433f73d3b7b6bce1d75440474907ff2ae7591:19
+  hashalgo sha256
+  size 39
+
+  $ cd ..
+
 # Verify the repos
 
   $ cat > $TESTTMP/dumpflog.py << EOF
@@ -204,7 +243,7 @@
   >               % (name, sizes, flags, hashes))
   > EOF
 
-  $ for i in client client2 server repo3 repo4 repo5; do
+  $ for i in client client2 server repo3 repo4 repo5 repo6 repo7; do
   >   echo 'repo:' $i
   >   hg --cwd $i verify --config extensions.dumpflog=$TESTTMP/dumpflog.py -q
   > done
@@ -220,3 +259,5 @@
   repo: repo5
     l: rawsizes=[828, 6, 8, 216] flags=[8192, 0, 0, 8192] hashes=['2791', '948c', 'cc88', '5f1a']
     s: rawsizes=[623, 283, 283, 8] flags=[8192, 8192, 8192, 0] hashes=['db08', 'ff24', '2217', '826b']
+  repo: repo6
+  repo: repo7

@@ -37,6 +37,9 @@ def readfromstore(self, text):
     Returns a 2-typle (text, validatehash) where validatehash is True as the
     contents of the blobstore should be checked using checkhash.
     """
+    if self.opener.options['lfsbypass']:
+        return (text, False)
+
     metadata = pointer.deserialize(text)
     storeids = metadata.tostoreids()
     store = blobstore.local.get(self.opener)
@@ -49,6 +52,9 @@ def readfromstore(self, text):
     return (text, True)
 
 def writetostore(self, text):
+    if self.opener.options['lfsbypass']:
+        return (text, False)
+
     offset = 0
     chunkoids = []
     chunksize = util.getoption(self.opener, 'lfschunksize')
@@ -78,13 +84,12 @@ def writetostore(self, text):
 
 def addrevision(orig, self, text, transaction, link, p1, p2, cachedelta=None,
                 node=None, flags=revlog.REVIDX_DEFAULT_FLAGS):
-    """filelog.addrevision wrapper.
-    FIXME
-    """
-    threshold = util.getoption(self.opener, 'lfsthreshold')
+    # filelog.addrevision wrapper
+    if not self.opener.options['lfsbypass']:
+        threshold = util.getoption(self.opener, 'lfsthreshold')
 
-    if threshold and len(text) > threshold:
-        flags |= revlog.REVIDX_EXTSTORED
+        if threshold and len(text) > threshold:
+            flags |= revlog.REVIDX_EXTSTORED
 
     return orig(self, text, transaction, link, p1, p2, cachedelta=cachedelta,
                 node=node, flags=flags)
