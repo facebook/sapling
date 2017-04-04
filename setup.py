@@ -259,8 +259,8 @@ else:
         ],
     }
 
-COMPONENTS = sorted(availablepackages + availableextmodules.keys() +
-                    availablepymodules)
+allnames = availablepackages + availableextmodules.keys() + availablepymodules
+COMPONENTS = sorted(name.split('.')[-1] for name in allnames)
 
 if not components:
     components = COMPONENTS
