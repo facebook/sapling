@@ -508,7 +508,7 @@ bool NewTreeIterator::popResult(std::string **path, ManifestNode **result,
   memcpy(this->parents[1].node, NULLID, BIN_NODE_SIZE);
 
   bool alreadyExists = false;
-  int matchingParent = -1;
+  size_t matchingParent = -1;
   bool isRootManifest = this->mainStack.size() == 1;
 
   // Record the nodes of all cmp manifest equivalents
