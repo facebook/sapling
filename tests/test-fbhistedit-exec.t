@@ -375,25 +375,18 @@ Test abort a stopped evolve histedit
   $ hg commit --amend -m e
   $ hg histedit --abort --traceback
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  saved backup bundle to $TESTTMP/r/.hg/strip-backup/abce911bf7cf-8dbdf3a3-backup.hg (glob)
   $ hg log -G --hidden -T '{node|short} {desc|firstline}\n'
-  x  2b451ea9fdb0 e
+  @  0d9a4961b100 f
   |
-  | x  909a42c62566 temporary amend commit for 1d7ed205640e
-  | |
-  | x  1d7ed205640e e
-  |/
-  x  abce911bf7cf d
+  o  8800a5180f91 d
   |
-  | @  0d9a4961b100 f
+  | x  640ef1d53e8f temporary amend commit for 883a5225844a
   | |
-  | o  8800a5180f91 d
-  | |
-  | | x  640ef1d53e8f temporary amend commit for 883a5225844a
-  | | |
-  | | x  883a5225844a d
-  | |/
-  | o  d8249471110a e
+  | x  883a5225844a d
   |/
+  o  d8249471110a e
+  |
   | x  652413bf663e f
   | |
   | x  e860deea161a e
