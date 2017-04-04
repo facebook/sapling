@@ -18,9 +18,7 @@ def threshold(ui, repo):
 
 def localblobstore(ui, repo):
     """Configure local blobstore"""
-    storepath = ui.config('lfs', 'blobstore', 'cache/localblobstore')
-    localblobstore = blobstore.local(repo.vfs.join(storepath))
-    repo.svfs.lfslocalblobstore = localblobstore
+    repo.svfs.lfslocalblobstore = blobstore.local(repo)
 
 def chunking(ui, repo):
     """Configure chunking for massive blobs to be split into smaller chunks."""
@@ -37,4 +35,4 @@ def remoteblobstore(ui, repo):
     if not remotestore in knownblobstores:
         message = _("Unknown remote store %s") % (remotestore)
         raise error.ProgrammingError(message)
-    repo.svfs.lfsremoteblobstore = knownblobstores[remotestore](ui)
+    repo.svfs.lfsremoteblobstore = knownblobstores[remotestore](repo)

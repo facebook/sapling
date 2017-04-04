@@ -27,8 +27,10 @@ class local(object):
     to be uploaded to the remote blobstore.
     """
 
-    def __init__(self, path):
-        self.vfs = lfsutil.lfsvfs(path)
+    def __init__(self, repo):
+        storepath = repo.ui.config('lfs', 'blobstore', 'cache/localblobstore')
+        fullpath = repo.vfs.join(storepath)
+        self.vfs = lfsutil.lfsvfs(fullpath)
 
     @staticmethod
     def get(opener):
@@ -53,7 +55,8 @@ class local(object):
 
 class remote(object):
 
-    def __init__(self, ui):
+    def __init__(self, repo):
+        ui = repo.ui
         url = ui.config('lfs', 'remoteurl', None)
         user = ui.config('lfs', 'remoteuser', None)
         password = ui.config('lfs', 'remotepassword', None)
@@ -176,8 +179,8 @@ class remote(object):
 class dummy(object):
     """Dummy store storing blobs to temp directory."""
 
-    def __init__(self, ui):
-        path = ui.config('lfs', 'remotepath', None)
+    def __init__(self, repo):
+        path = repo.ui.config('lfs', 'remotepath', None)
         if path is None:
             raise error.ProgrammingError('dummystore: must set "remotepath"')
         try:
