@@ -38,6 +38,7 @@ import tempfile
 import textwrap
 import time
 import traceback
+import warnings
 import zlib
 
 from . import (
@@ -155,6 +156,31 @@ def bitsfrom(container):
     for bit in container:
         bits |= bit
     return bits
+
+# python 2.6 still have deprecation warning enabled by default. We do not want
+# to display anything to standard user so detect if we are running test and
+# only use python deprecation warning in this case.
+_dowarn = bool(encoding.environ.get('HGEMITWARNINGS'))
+if _dowarn:
+    # explicitly unfilter our warning for python 2.7
+    #
+    # The option of setting PYTHONWARNINGS in the test runner was investigated.
+    # However, module name set through PYTHONWARNINGS was exactly matched, so
+    # we cannot set 'mercurial' and have it match eg: 'mercurial.scmutil'. This
+    # makes the whole PYTHONWARNINGS thing useless for our usecase.
+    warnings.filterwarnings('default', '', DeprecationWarning, 'mercurial')
+    warnings.filterwarnings('default', '', DeprecationWarning, 'hgext')
+    warnings.filterwarnings('default', '', DeprecationWarning, 'hgext3rd')
+
+def nouideprecwarn(msg, version, stacklevel=1):
+    """Issue an python native deprecation warning
+
+    This is a noop outside of tests, use 'ui.deprecwarn' when possible.
+    """
+    if _dowarn:
+        msg += ("\n(compatibility will be dropped after Mercurial-%s,"
+                " update your code.)") % version
+        warnings.warn(msg, DeprecationWarning, stacklevel + 1)
 
 DIGESTS = {
     'md5': hashlib.md5,

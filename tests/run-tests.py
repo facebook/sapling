@@ -884,6 +884,7 @@ class Test(unittest.TestCase):
         env = os.environ.copy()
         if sysconfig is not None:
             env['PYTHONUSERBASE'] = sysconfig.get_config_var('userbase')
+        env['HGEMITWARNINGS'] = '1'
         env['TESTTMP'] = self._testtmp
         env['HOME'] = self._testtmp
         # This number should match portneeded in _getport

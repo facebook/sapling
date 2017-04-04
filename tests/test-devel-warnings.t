@@ -3,7 +3,7 @@
   > """A small extension that tests our developer warnings
   > """
   > 
-  > from mercurial import cmdutil, repair
+  > from mercurial import cmdutil, repair, util
   > 
   > cmdtable = {}
   > command = cmdutil.command(cmdtable)
@@ -58,6 +58,9 @@
   >     def foobar(ui):
   >         ui.deprecwarn('foorbar is deprecated, go shopping', '42.1337')
   >     foobar(ui)
+  > @command('nouiwarning', [], '')
+  > def nouiwarning(ui, repo):
+  >     util.nouideprecwarn('this is a test', '13.37')
   > EOF
 
   $ cat << EOF >> $HGRCPATH
@@ -162,5 +165,16 @@ Test programming error failure:
   ** Extensions loaded: * (glob)
   Traceback (most recent call last):
   mercurial.error.ProgrammingError: transaction requires locking
+
+Old style deprecation warning
+
+  $ hg nouiwarning
+  $TESTTMP/buggylocking.py:61: DeprecationWarning: this is a test
+  (compatibility will be dropped after Mercurial-13.37, update your code.)
+    util.nouideprecwarn('this is a test', '13.37')
+
+(disabled outside of test run)
+
+  $ HGEMITWARNINGS= hg nouiwarning
 
   $ cd ..
