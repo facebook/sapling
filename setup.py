@@ -142,16 +142,15 @@ hgext3rd = [
     if p != 'hgext3rd/__init__.py'
 ]
 
-# modules that are directories in hgext3rd
-hgext3rd.extend(
+# packages that are directories in hgext3rd
+hgext3rdpkgs = [
     p[:-12].replace('/', '.')
     for p in glob('hgext3rd/*/__init__.py')
-)
+]
 
-availablepymodules = dict([(x[9:], x) for x in hgext3rd])
-availablepymodules['statprof'] = 'statprof'
+availablepymodules = hgext3rd + ['statprof']
 
-availablepackages = [
+availablepackages = hgext3rdpkgs + [
     'infinitepush',
     'phabricator',
     'sqldirstate',
@@ -261,7 +260,7 @@ else:
     }
 
 COMPONENTS = sorted(availablepackages + availableextmodules.keys() +
-                    availablepymodules.keys())
+                    availablepymodules)
 
 if not components:
     components = COMPONENTS
@@ -305,7 +304,7 @@ for cythonmodule in cythonmodules:
 
 packages = []
 for package in availablepackages:
-    if package in components:
+    if package.split('.')[-1] in components:
         packages.append(package)
 
 ext_modules = []
@@ -327,8 +326,8 @@ if any(c for c in components if c in requireslz4):
 
 py_modules = []
 for module in availablepymodules:
-    if module in components:
-        py_modules.append(availablepymodules[module])
+    if module.split('.')[-1] in components:
+        py_modules.append(module)
 
 setup(
     name='fbhgext',
