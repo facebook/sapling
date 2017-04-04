@@ -65,7 +65,7 @@ Traces are logged in blackbox
   > EOF
 
   $ hg blackbox -l 2
-  * quark @0000000000000000000000000000000000000000 (*) [command]> blackbox -l 2 (glob)
+  * @0000000000000000000000000000000000000000 (*) [command]> blackbox -l 2 (glob)
   $ hg crash --config errorredirect.script='echo Works'
   Works
   [255]
