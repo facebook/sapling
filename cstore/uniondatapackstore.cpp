@@ -36,7 +36,8 @@ mpatch_flist* getNextLink(void* container, ssize_t index) {
   delta_chain_link_t *link = links->at(index);
 
   struct mpatch_flist *res;
-  if ((mpatch_decode((const char*)link->delta, link->delta_sz, &res)) < 0) {
+  if ((mpatch_decode((const char*)link->delta,
+		     (ssize_t)link->delta_sz, &res)) < 0) {
     throw std::logic_error("invalid patch during patch application");
   }
 
@@ -59,8 +60,8 @@ ConstantStringRef UnionDatapackStore::get(const Key &key) {
   // Short circuit and just return the full text if it's one long
   if (links.size() == 0) {
     char * finalText = new char[fulltextLink->delta_sz];
-    memcpy(finalText, fulltextLink->delta, fulltextLink->delta_sz);
-    return ConstantStringRef(finalText, fulltextLink->delta_sz);
+    memcpy(finalText, fulltextLink->delta, (size_t)fulltextLink->delta_sz);
+    return ConstantStringRef(finalText, (size_t)fulltextLink->delta_sz);
   }
 
   std::reverse(links.begin(), links.end());
@@ -70,14 +71,15 @@ ConstantStringRef UnionDatapackStore::get(const Key &key) {
     throw std::logic_error("mpatch failed to fold patches");
   }
 
-  ssize_t outlen = mpatch_calcsize(fulltextLink->delta_sz, patch);
+  ssize_t outlen = mpatch_calcsize((ssize_t)fulltextLink->delta_sz, patch);
   if (outlen < 0) {
     mpatch_lfree(patch);
     throw std::logic_error("mpatch failed to calculate size");
   }
 
   char *result= new char[outlen];
-  if (mpatch_apply(result, (const char*)fulltextLink->delta, fulltextLink->delta_sz, patch) < 0) {
+  if (mpatch_apply(result, (const char*)fulltextLink->delta,
+		   (ssize_t)fulltextLink->delta_sz, patch) < 0) {
     delete[] result;
     mpatch_lfree(patch);
     throw std::logic_error("mpatch failed to apply patches");
