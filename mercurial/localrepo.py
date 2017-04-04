@@ -842,7 +842,7 @@ class localrepository(object):
         return None
 
     def join(self, f, *insidef):
-        self.ui.deprecwarn("use 'repo.vfs.join' instead of 'repo.join'", '4.0')
+        self.ui.deprecwarn("use 'repo.vfs.join' instead of 'repo.join'", '4.2')
         return self.vfs.join(os.path.join(f, *insidef))
 
     def wjoin(self, f, *insidef):
