@@ -62,6 +62,11 @@ class _hybrid(object):
             raise AttributeError(name)
         return getattr(self._values, name)
 
+def hybriddict(data, key='key', value='value', fmt='%s=%s', gen=None):
+    """Wrap data to support both dict-like and string-like operations"""
+    return _hybrid(gen, data, lambda k: {key: k, value: data[k]},
+                   lambda d: fmt % (d[key], d[value]))
+
 def hybridlist(data, name, fmt='%s', gen=None):
     """Wrap data to support both list-like and string-like operations"""
     return _hybrid(gen, data, lambda x: {name: x}, lambda d: fmt % d[name])
