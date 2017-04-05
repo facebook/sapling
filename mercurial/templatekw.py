@@ -81,10 +81,10 @@ def unwraphybrid(thing):
 def showlist(name, values, plural=None, element=None, separator=' ', **mapping):
     if not element:
         element = name
-    f = _showlist(name, values, plural, separator, **mapping)
+    f = _showlist(name, values, mapping, plural, separator)
     return hybridlist(values, name=element, gen=f)
 
-def _showlist(name, values, plural=None, separator=' ', **mapping):
+def _showlist(name, values, mapping, plural=None, separator=' '):
     '''expand set of values.
     name is name of key in template map.
     values is list of strings or dicts.
@@ -295,7 +295,7 @@ def showbookmarks(**args):
     bookmarks = args['ctx'].bookmarks()
     active = repo._activebookmark
     makemap = lambda v: {'bookmark': v, 'active': active, 'current': active}
-    f = _showlist('bookmark', bookmarks, **args)
+    f = _showlist('bookmark', bookmarks, args)
     return _hybrid(f, bookmarks, makemap, lambda x: x['bookmark'])
 
 @templatekeyword('children')
@@ -353,7 +353,7 @@ def showenvvars(repo, **args):
     env = util.sortdict((k, env[k]) for k in sorted(env))
     makemap = lambda k: {'key': k, 'value': env[k]}
     c = [makemap(k) for k in env]
-    f = _showlist('envvar', c, plural='envvars', **args)
+    f = _showlist('envvar', c, args, plural='envvars')
     return _hybrid(f, env, makemap,
                    lambda x: '%s=%s' % (x['key'], x['value']))
 
@@ -365,7 +365,7 @@ def showextras(**args):
     extras = util.sortdict((k, extras[k]) for k in sorted(extras))
     makemap = lambda k: {'key': k, 'value': extras[k]}
     c = [makemap(k) for k in extras]
-    f = _showlist('extra', c, plural='extras', **args)
+    f = _showlist('extra', c, args, plural='extras')
     return _hybrid(f, extras, makemap,
                    lambda x: '%s=%s' % (x['key'], util.escapestr(x['value'])))
 
@@ -396,7 +396,7 @@ def showfilecopies(**args):
     copies = util.sortdict(copies)
     makemap = lambda k: {'name': k, 'source': copies[k]}
     c = [makemap(k) for k in copies]
-    f = _showlist('file_copy', c, plural='file_copies', **args)
+    f = _showlist('file_copy', c, args, plural='file_copies')
     return _hybrid(f, copies, makemap,
                    lambda x: '%s (%s)' % (x['name'], x['source']))
 
@@ -412,7 +412,7 @@ def showfilecopiesswitch(**args):
     copies = util.sortdict(copies)
     makemap = lambda k: {'name': k, 'source': copies[k]}
     c = [makemap(k) for k in copies]
-    f = _showlist('file_copy', c, plural='file_copies', **args)
+    f = _showlist('file_copy', c, args, plural='file_copies')
     return _hybrid(f, copies, makemap,
                    lambda x: '%s (%s)' % (x['name'], x['source']))
 
@@ -484,7 +484,7 @@ def showlatesttags(pattern, **args):
     }
 
     tags = latesttags[2]
-    f = _showlist('latesttag', tags, separator=':', **args)
+    f = _showlist('latesttag', tags, args, separator=':')
     return _hybrid(f, tags, makemap, lambda x: x['latesttag'])
 
 @templatekeyword('latesttagdistance')
@@ -540,7 +540,7 @@ def shownamespaces(**args):
     namespaces = util.sortdict((k, showlist('name', ns.names(repo, ctx.node()),
                                             **args))
                                for k, ns in repo.names.iteritems())
-    f = _showlist('namespace', list(namespaces), **args)
+    f = _showlist('namespace', list(namespaces), args)
     return _hybrid(f, namespaces,
                    lambda k: {'namespace': k, 'names': namespaces[k]},
                    lambda x: x['namespace'])
@@ -599,7 +599,7 @@ def showparents(**args):
                 ('node', p.hex()),
                 ('phase', p.phasestr())]
                for p in pctxs]
-    f = _showlist('parent', parents, **args)
+    f = _showlist('parent', parents, args)
     return _hybrid(f, prevs, lambda x: {'ctx': repo[int(x)], 'revcache': {}},
                    lambda d: _formatrevnode(d['ctx']))
 
@@ -623,7 +623,7 @@ def showrevslist(name, revs, **args):
     be evaluated"""
     repo = args['ctx'].repo()
     revs = [str(r) for r in revs]  # ifcontains() needs a list of str
-    f = _showlist(name, revs, **args)
+    f = _showlist(name, revs, args)
     return _hybrid(f, revs,
                    lambda x: {name: x, 'ctx': repo[int(x)], 'revcache': {}},
                    lambda d: d[name])
