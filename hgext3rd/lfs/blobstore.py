@@ -96,7 +96,7 @@ class _gitlfsremote(object):
         })
 
         # Batch upload the blobs to git-lfs.
-        if self.ui:
+        if self.ui.verbose:
             self.ui.write(_('lfs: mapping blobs to %s URLs\n') % action)
         batchreq = urlreq.request(self.baseurl + 'objects/batch',
                                   data=requestdata)
@@ -105,7 +105,8 @@ class _gitlfsremote(object):
         raw_response = urlreq.urlopen(batchreq)
         response = json.loads(raw_response.read())
 
-        topic = 'lfs: ' + action + 'ing blobs'
+        topic = {'upload': _('lfs uploading'),
+                 'download': _('lfs downloading')}[action]
         runningsize = 0
         if total is None:
             alttotal = functools.reduce(
@@ -158,8 +159,8 @@ class _gitlfsremote(object):
                 else:
                     raise RequestFailedError(oid, action)
 
-        if self.ui:
-            self.ui.progress(topic, pos=None, total=total)
+        self.ui.progress(topic, pos=None, total=total)
+        if self.ui.verbose:
             self.ui.write(_('lfs: %s completed\n') % action)
 
 class _dummyremote(object):

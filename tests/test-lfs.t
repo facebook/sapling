@@ -48,11 +48,12 @@
   CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 
 # Push changes to the server
-  $ hg push
+  $ hg push -v | egrep -v '^(uncompressed| )'
   pushing to $TESTTMP/server (glob)
   searching for changes
   lfs: computing set of blobs to upload
-  lfs: uploading the blobs to the remote (2 chunk(s), 1.47 KB)
+  lfs: uploading blobs to the remote (2 chunk(s), 1.47 KB)
+  2 changesets found
   adding changesets
   adding manifests
   adding file changes
@@ -166,8 +167,6 @@
   $ hg push ../repo4
   pushing to ../repo4
   searching for changes
-  lfs: computing set of blobs to upload
-  lfs: uploading the blobs to the remote (31 chunk(s), 294 bytes)
   adding changesets
   adding manifests
   adding file changes

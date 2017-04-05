@@ -111,7 +111,8 @@ def prepush(pushop):
     if threshold is not None:
         remoterepo.svfs.options['lfsthreshold'] = threshold
 
-    ui.write(_('lfs: computing set of blobs to upload\n'))
+    if ui.verbose:
+        ui.write(_('lfs: computing set of blobs to upload\n'))
     toupload = []
     totalsize = 0
     for i, n in enumerate(pushop.outgoing.missing):
@@ -153,8 +154,13 @@ def prepush(pushop):
                 ui.write(msg % (f, filectx.filerev()))
                 raise
 
+    if not toupload:
+        return
+
+    if ui.verbose:
+        msg = _('lfs: uploading blobs to the remote (%s chunk(s), %s)\n')
+        ui.write(msg % (len(toupload), hgutil.bytecount(totalsize)))
+
     remoteblob = repo.svfs.lfsremoteblobstore
-    msg = _('lfs: uploading the blobs to the remote (%s chunk(s), %s)\n')
-    ui.write(msg % (len(toupload), hgutil.bytecount(totalsize)))
     remoteblob.writebatch(toupload, repo.svfs.lfslocalblobstore,
                           total=totalsize)
