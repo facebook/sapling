@@ -18,12 +18,17 @@
     # Backup at most maxheadstobackup heads, other heads are ignored.
     # Negative number means backup everything.
     maxheadstobackup = -1
+
+    # With probability 1/N confirm if current backup is consistent. If this is
+    # zero or negative then no backup checks will be performed
+    backupcheckfreq = 50
 """
 
 from __future__ import absolute_import
 import errno
 import json
 import os
+import random
 import re
 import socket
 import time
@@ -117,10 +122,21 @@ def backup(ui, repo, dest=None, **opts):
     try:
         timeout = ui.configint('infinitepushbackup', 'waittimeout', 30)
         with lockmod.lock(repo.vfs, _backuplockname, timeout=timeout):
+            backupcheckfreq = ui.configint('infinitepushbackup',
+                                           'backupcheckfreq', 50)
+            if backupcheckfreq > 0 and random.randrange(backupcheckfreq) == 0:
+                bkpstate = _readlocalbackupstate(ui, repo)
+                if not _dobackupcheck(bkpstate, ui, repo, dest, **opts):
+                    ui.log('infinitepushbackup',
+                           'failed infinitepush backup check',
+                           infinitepushbackupcheck='failure')
+
             return _dobackup(ui, repo, dest, **opts)
     except error.LockHeld as e:
         if e.errno == errno.ETIMEDOUT:
-            ui.warn(_('timeout waiting on backup lock'))
+            ui.warn(_('timeout waiting on backup lock\n'))
+            ui.log('infinitepushbackup', 'timeout waiting on backup lock',
+                   infinitepushbackuplock='timeout')
             return 0
         else:
             raise
@@ -225,23 +241,9 @@ def checkbackup(ui, repo, dest=None, **opts):
 
     ret = 0
     while allbackupstates:
-        # recreate remote because `lookup` request might have failed and
-        # connection was closed
-        other = _getremote(repo, ui, dest, **opts)
         key, bkpstate = allbackupstates.popitem()
         ui.status(_('checking %s on %s\n') % (key[1], key[0]))
-        batch = other.iterbatch()
-        for hexnode in list(bkpstate.heads) + bkpstate.localbookmarks.values():
-            batch.lookup(hexnode)
-        batch.submit()
-        lookupresults = batch.results()
-        try:
-            for r in lookupresults:
-                # iterate over results to make it throw if revision
-                # was not found
-                pass
-        except error.RepoError as e:
-            ui.warn(_('%s\n') % e)
+        if not _dobackupcheck(bkpstate, ui, repo, dest, **opts):
             ret = 255
     return ret
 
@@ -272,7 +274,7 @@ def _dobackup(ui, repo, dest, **opts):
     maxheadstobackup = ui.configint('infinitepushbackup',
                                     'maxheadstobackup', -1)
 
-    revset = 'head() & draft() & not extinct()'
+    revset = 'head() & draft() & not obsolete()'
     # This variable will store what heads will be saved in backup state file
     # if backup finishes successfully
     afterbackupheads = [ctx.hex() for ctx in repo.set(revset)]
@@ -341,6 +343,26 @@ def _dobackup(ui, repo, dest, **opts):
         ui.status(_('finished in %f seconds\n') % (time.time() - start))
         unwrapfunction(changegroup.cg2packer, 'deltaparent', _deltaparent)
     return 0
+
+def _dobackupcheck(bkpstate, ui, repo, dest, **opts):
+    remotehexnodes = list(bkpstate.heads) + bkpstate.localbookmarks.values()
+    if not remotehexnodes:
+        return True
+    other = _getremote(repo, ui, dest, **opts)
+    batch = other.iterbatch()
+    for hexnode in remotehexnodes:
+        batch.lookup(hexnode)
+    batch.submit()
+    lookupresults = batch.results()
+    try:
+        for r in lookupresults:
+            # iterate over results to make it throw if revision
+            # was not found
+            pass
+        return True
+    except error.RepoError as e:
+        ui.warn(_('%s\n') % e)
+        return False
 
 _backupstatefile = 'infinitepushbackupstate'
 

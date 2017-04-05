@@ -19,7 +19,9 @@ Backup
   $ cd backupsource
   $ mkcommit firstcommit
   $ hg book abook
-  $ hg pushbackup
+
+Actually do a backup, make sure that backup check doesn't fail for empty backup state
+  $ hg pushbackup --config infinitepushbackup.backupcheckfreq=1
   starting backup .* (re)
   searching for changes
   remote: pushing 1 commit:
@@ -246,6 +248,21 @@ Make sure that both repos were checked even though check for one of them fails
   unknown revision 'e0230a60975b38a9014f098fb973199efd25c46f'
   checking \$TESTTMP/backupsource on .* (re)
   checking \$TESTTMP/backupsource2 on .* (re)
+
+Check infinitepushbackup.backupcheckfreq config option
+  $ HGUSER=anotheruser hg pushbackup --config infinitepushbackup.backupcheckfreq=1
+  unknown revision 'e0230a60975b38a9014f098fb973199efd25c46f'
+  starting backup .* (re)
+  nothing to backup
+  finished in \d+\.(\d+)? seconds (re)
+  $ HGUSER=anotheruser hg pushbackup --config infinitepushbackup.backupcheckfreq=0
+  starting backup .* (re)
+  nothing to backup
+  finished in \d+\.(\d+)? seconds (re)
+  $ HGUSER=anotheruser hg pushbackup --config infinitepushbackup.backupcheckfreq=-100
+  starting backup .* (re)
+  nothing to backup
+  finished in \d+\.(\d+)? seconds (re)
 
 Test getavailablebackups command
   $ hg getavailablebackups
