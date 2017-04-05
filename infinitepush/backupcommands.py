@@ -288,8 +288,7 @@ def _dobackup(ui, repo, dest, **opts):
     currentheads = set(filter(lambda hex: hex not in badhexnodes, currentheads))
 
     localbookmarks = _getlocalbookmarks(repo)
-    localbookmarks = _filterbookmarks(localbookmarks, repo, currentheads,
-                                      badhexnodes)
+    localbookmarks = _filterbookmarks(localbookmarks, repo, currentheads)
 
     newbookmarks = _dictdiff(localbookmarks, bkpstate.localbookmarks)
     removedbookmarks = _dictdiff(bkpstate.localbookmarks, localbookmarks)
@@ -347,21 +346,19 @@ def _getlocalbookmarks(repo):
         localbookmarks[bookmark] = hexnode
     return localbookmarks
 
-def _filterbookmarks(localbookmarks, repo, headstobackup, badhexnodes):
+def _filterbookmarks(localbookmarks, repo, headstobackup):
     '''Filters out some bookmarks from being backed up
 
-    Filters out bookmarks that point to secret commits and bookmarks that do not
-    point to ancestors of headstobackup or public commits
+    Filters out bookmarks that do not point to ancestors of headstobackup or
+    public commits
     '''
 
     headrevstobackup = [repo[hexhead].rev() for hexhead in headstobackup]
     ancestors = repo.changelog.ancestors(headrevstobackup, inclusive=True)
-    secret = set(ctx.hex() for ctx in repo.set('secret()'))
     filteredbooks = {}
     for bookmark, hexnode in localbookmarks.iteritems():
-        if (hexnode not in secret and hexnode not in badhexnodes and
-                (repo[hexnode].rev() in ancestors or
-                 repo[hexnode].phase() == phases.public)):
+        if (repo[hexnode].rev() in ancestors or
+                repo[hexnode].phase() == phases.public):
             filteredbooks[bookmark] = hexnode
     return filteredbooks
 
