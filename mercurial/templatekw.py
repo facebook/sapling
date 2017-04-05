@@ -78,7 +78,7 @@ def unwraphybrid(thing):
         return thing
     return thing.gen
 
-def showlist(name, values, plural=None, element=None, separator=' ', **mapping):
+def showlist(name, values, mapping, plural=None, element=None, separator=' '):
     if not element:
         element = name
     f = _showlist(name, values, mapping, plural, separator)
@@ -283,8 +283,8 @@ def showbranches(**args):
     """
     branch = args['ctx'].branch()
     if branch != 'default':
-        return showlist('branch', [branch], plural='branches', **args)
-    return showlist('branch', [], plural='branches', **args)
+        return showlist('branch', [branch], args, plural='branches')
+    return showlist('branch', [], args, plural='branches')
 
 @templatekeyword('bookmarks')
 def showbookmarks(**args):
@@ -303,7 +303,7 @@ def showchildren(**args):
     """List of strings. The children of the changeset."""
     ctx = args['ctx']
     childrevs = ['%d:%s' % (cctx, cctx) for cctx in ctx.children()]
-    return showlist('children', childrevs, element='child', **args)
+    return showlist('children', childrevs, args, element='child')
 
 # Deprecated, but kept alive for help generation a purpose.
 @templatekeyword('currentbookmark')
@@ -373,8 +373,8 @@ def showextras(**args):
 def showfileadds(**args):
     """List of strings. Files added by this changeset."""
     repo, ctx, revcache = args['repo'], args['ctx'], args['revcache']
-    return showlist('file_add', getfiles(repo, ctx, revcache)[1],
-                    element='file', **args)
+    return showlist('file_add', getfiles(repo, ctx, revcache)[1], args,
+                    element='file')
 
 @templatekeyword('file_copies')
 def showfilecopies(**args):
@@ -420,22 +420,22 @@ def showfilecopiesswitch(**args):
 def showfiledels(**args):
     """List of strings. Files removed by this changeset."""
     repo, ctx, revcache = args['repo'], args['ctx'], args['revcache']
-    return showlist('file_del', getfiles(repo, ctx, revcache)[2],
-                    element='file', **args)
+    return showlist('file_del', getfiles(repo, ctx, revcache)[2], args,
+                    element='file')
 
 @templatekeyword('file_mods')
 def showfilemods(**args):
     """List of strings. Files modified by this changeset."""
     repo, ctx, revcache = args['repo'], args['ctx'], args['revcache']
-    return showlist('file_mod', getfiles(repo, ctx, revcache)[0],
-                    element='file', **args)
+    return showlist('file_mod', getfiles(repo, ctx, revcache)[0], args,
+                    element='file')
 
 @templatekeyword('files')
 def showfiles(**args):
     """List of strings. All files modified, added, or removed by this
     changeset.
     """
-    return showlist('file', args['ctx'].files(), **args)
+    return showlist('file', args['ctx'].files(), args)
 
 @templatekeyword('graphnode')
 def showgraphnode(repo, ctx, **args):
@@ -529,7 +529,7 @@ def shownames(namespace, **args):
     repo = ctx.repo()
     ns = repo.names[namespace]
     names = ns.names(repo, ctx.node())
-    return showlist(ns.templatename, names, plural=namespace, **args)
+    return showlist(ns.templatename, names, args, plural=namespace)
 
 @templatekeyword('namespaces')
 def shownamespaces(**args):
@@ -538,7 +538,7 @@ def shownamespaces(**args):
     ctx = args['ctx']
     repo = ctx.repo()
     namespaces = util.sortdict((k, showlist('name', ns.names(repo, ctx.node()),
-                                            **args))
+                                            args))
                                for k, ns in repo.names.iteritems())
     f = _showlist('namespace', list(namespaces), args)
     return _hybrid(f, namespaces,
@@ -634,7 +634,7 @@ def showsubrepos(**args):
     ctx = args['ctx']
     substate = ctx.substate
     if not substate:
-        return showlist('subrepo', [], **args)
+        return showlist('subrepo', [], args)
     psubstate = ctx.parents()[0].substate or {}
     subrepos = []
     for sub in substate:
@@ -643,7 +643,7 @@ def showsubrepos(**args):
     for sub in psubstate:
         if sub not in substate:
             subrepos.append(sub) # removed in ctx
-    return showlist('subrepo', sorted(subrepos), **args)
+    return showlist('subrepo', sorted(subrepos), args)
 
 # don't remove "showtags" definition, even though namespaces will put
 # a helper function for "tags" keyword into "keywords" map automatically,
@@ -670,7 +670,7 @@ def showtroubles(**args):
 
     (EXPERIMENTAL)
     """
-    return showlist('trouble', args['ctx'].troubles(), **args)
+    return showlist('trouble', args['ctx'].troubles(), args)
 
 # tell hggettext to extract docstrings from these functions:
 i18nfunctions = keywords.values()

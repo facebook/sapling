@@ -595,7 +595,7 @@ def files(context, mapping, args):
     ctx = mapping['ctx']
     m = ctx.match([raw])
     files = list(ctx.matches(m))
-    return templatekw.showlist("file", files, **mapping)
+    return templatekw.showlist("file", files, mapping)
 
 @templatefunc('fill(text[, width[, initialident[, hangindent]]])')
 def fill(context, mapping, args):

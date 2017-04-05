@@ -339,7 +339,7 @@ def shortdate(text):
 @templatefilter('splitlines')
 def splitlines(text):
     """Any text. Split text into a list of lines."""
-    return templatekw.showlist('line', text.splitlines(), 'lines')
+    return templatekw.showlist('line', text.splitlines(), {}, plural='lines')
 
 @templatefilter('stringescape')
 def stringescape(text):
