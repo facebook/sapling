@@ -2552,7 +2552,7 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
         elif revs and not repo.ui.quiet:
             header.append(diffline(path1, revs))
 
-        if binary and opts.git and not opts.nobinary:
+        if binary and opts.git and not opts.nobinary and not opts.text:
             text = mdiff.b85diff(content1, content2)
             if text:
                 header.append('index %s..%s' %

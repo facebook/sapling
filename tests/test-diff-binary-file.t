@@ -73,5 +73,39 @@
   literal 5
   Mc$_OqttjCF00uV!&;S4c
   
+  $ cd ..
+
+Test text mode with extended git-style diff format
+  $ hg init b
+  $ cd b
+  $ cat > writebin.py <<EOF
+  > import sys
+  > path = sys.argv[1]
+  > open(path, 'wb').write('\x00\x01\x02\x03')
+  > EOF
+  $ python writebin.py binfile.bin
+  $ hg add binfile.bin
+  $ hg ci -m 'add binfile.bin'
+
+  $ echo >> binfile.bin
+  $ hg ci -m 'change binfile.bin'
+
+  $ hg diff --git -a -r 0 -r 1
+  diff --git a/binfile.bin b/binfile.bin
+  --- a/binfile.bin
+  +++ b/binfile.bin
+  @@ -1,1 +1,1 @@
+  -\x00\x01\x02\x03 (esc)
+  \ No newline at end of file
+  +\x00\x01\x02\x03 (esc)
+
+  $ HGPLAIN=1 hg diff --git -a -r 0 -r 1
+  diff --git a/binfile.bin b/binfile.bin
+  --- a/binfile.bin
+  +++ b/binfile.bin
+  @@ -1,1 +1,1 @@
+  -\x00\x01\x02\x03 (esc)
+  \ No newline at end of file
+  +\x00\x01\x02\x03 (esc)
 
   $ cd ..
