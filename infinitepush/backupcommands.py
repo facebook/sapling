@@ -272,7 +272,8 @@ def _dobackup(ui, repo, dest, **opts):
     maxheadstobackup = ui.configint('infinitepushbackup',
                                     'maxheadstobackup', -1)
 
-    currentheads = [ctx.hex() for ctx in repo.set('head() & draft()')]
+    revset = 'head() & draft() & not extinct()'
+    currentheads = [ctx.hex() for ctx in repo.set(revset)]
     if maxheadstobackup > 0:
         currentheads = currentheads[-maxheadstobackup:]
     elif maxheadstobackup == 0:
