@@ -106,11 +106,10 @@ def _showlist(name, values, plural=None, separator=' ', **args):
     expand 'end_foos'.
     '''
     templ = args['templ']
-    if plural:
-        names = plural
-    else: names = name + 's'
+    if not plural:
+        plural = name + 's'
     if not values:
-        noname = 'no_' + names
+        noname = 'no_' + plural
         if noname in templ:
             yield templ(noname, **args)
         return
@@ -121,7 +120,7 @@ def _showlist(name, values, plural=None, separator=' ', **args):
             for v in values:
                 yield dict(v, **args)
         return
-    startname = 'start_' + names
+    startname = 'start_' + plural
     if startname in templ:
         yield templ(startname, **args)
     vargs = args.copy()
@@ -144,7 +143,7 @@ def _showlist(name, values, plural=None, separator=' ', **args):
         yield one(v)
     if last is not None:
         yield one(last, tag=lastname)
-    endname = 'end_' + names
+    endname = 'end_' + plural
     if endname in templ:
         yield templ(endname, **args)
 
