@@ -58,6 +58,12 @@
   adding file changes
   added 2 changesets with 2 changes to 2 files
 
+# Unknown remotestore
+
+  $ hg push --config lfs.remotestore=404
+  abort: lfs: unknown remotestore: 404
+  [255]
+
   $ cd ../
 
 # Initialize new client (not cloning) and setup extension

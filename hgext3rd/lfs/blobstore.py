@@ -32,13 +32,6 @@ class local(object):
         fullpath = repo.vfs.join(storepath)
         self.vfs = lfsutil.lfsvfs(fullpath)
 
-    @staticmethod
-    def get(opener):
-        """Get the stored local blobstore instance."""
-        if util.safehasattr(opener, 'lfslocalblobstore'):
-            return opener.lfslocalblobstore
-        raise UnknownBlobstoreError()
-
     def write(self, storeid, data):
         """Write blob to local blobstore."""
         with self.vfs(storeid.oid, 'wb', atomictemp=True) as fp:
@@ -53,7 +46,7 @@ class local(object):
         False otherwise."""
         return self.vfs.exists(storeid.oid)
 
-class remote(object):
+class _gitlfsremote(object):
 
     def __init__(self, repo):
         ui = repo.ui
@@ -70,13 +63,6 @@ class remote(object):
             authenticator = urlreq.httpbasicauthhandler(passwdmanager)
             opener = urlreq.buildopener(authenticator)
             urlreq.installopener(opener)
-
-    @staticmethod
-    def get(opener):
-        """Get the stored remote blobstore instance."""
-        if util.safehasattr(opener, 'lfsremoteblobstore'):
-            return opener.lfsremoteblobstore
-        raise UnknownBlobstoreError()
 
     def writebatch(self, storeids, fromstore, total=None):
         """Batch upload from local to remote blobstore."""
@@ -176,7 +162,7 @@ class remote(object):
             self.ui.progress(topic, pos=None, total=total)
             self.ui.write(_('lfs: %s completed\n') % action)
 
-class dummy(object):
+class _dummyremote(object):
     """Dummy store storing blobs to temp directory."""
 
     def __init__(self, repo):
@@ -191,13 +177,6 @@ class dummy(object):
             else:
                 raise
         self._storepath = path
-
-    @staticmethod
-    def get(opener):
-        """Get the stored remote blobstore instance."""
-        if util.safehasattr(opener, 'lfsremoteblobstore'):
-            return opener.lfsremoteblobstore
-        raise UnknownBlobstoreError()
 
     def write(self, storeid, data):
         fname = self.filename(storeid)
@@ -229,10 +208,17 @@ class dummy(object):
         filename = os.path.join(self._storepath, storeid.oid)
         return filename
 
-class UnknownBlobstoreError(error.RevlogError):
-    def __init__(self):
-        message = _('attempt to access unknown blobstore')
-        super(UnknownBlobstoreError, self).__init__(message)
+_storemap = {
+    'git-lfs': _gitlfsremote,
+    'dummy': _dummyremote,
+}
+
+def remote(repo):
+    """remotestore factory. return a store in _storemap depending on config"""
+    storename = repo.ui.config('lfs', 'remotestore', 'git-lfs')
+    if storename not in _storemap:
+        raise error.Abort(_('lfs: unknown remotestore: %s') % storename)
+    return _storemap[storename](repo)
 
 class RequestFailedError(error.RevlogError):
     def __init__(self, oid, action):

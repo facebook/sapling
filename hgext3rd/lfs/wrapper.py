@@ -42,12 +42,12 @@ def readfromstore(self, text):
 
     metadata = pointer.deserialize(text)
     storeids = metadata.tostoreids()
-    store = blobstore.local.get(self.opener)
+    store = self.opener.lfslocalblobstore
     if not isinstance(storeids, list):
         storeids = [storeids]
     missing = filter(lambda id: not store.has(id), storeids)
     if missing:
-        blobstore.remote.get(self.opener).readbatch(missing, store)
+        self.opener.lfsremoteblobstore.readbatch(missing, store)
     text = ''.join([store.read(id) for id in storeids])
     return (text, True)
 
@@ -69,7 +69,7 @@ def writetostore(self, text):
         sha = util.sha256(chunk)
         # Store actual contents to local blobstore
         storeid = blobstore.StoreID(sha, chunklen)
-        blobstore.local.get(self.opener).write(storeid, chunk)
+        self.opener.lfslocalblobstore.write(storeid, chunk)
         chunkoids.append(storeid)
         offset += chunklen
 
@@ -153,8 +153,8 @@ def prepush(pushop):
                 ui.write(msg % (f, filectx.filerev()))
                 raise
 
-    remoteblob = blobstore.remote.get(repo.svfs)
+    remoteblob = repo.svfs.lfsremoteblobstore
     msg = _('lfs: uploading the blobs to the remote (%s chunk(s), %s)\n')
     ui.write(msg % (len(toupload), hgutil.bytecount(totalsize)))
-    remoteblob.writebatch(toupload, blobstore.local.get(repo.svfs),
+    remoteblob.writebatch(toupload, repo.svfs.lfslocalblobstore,
                           total=totalsize)

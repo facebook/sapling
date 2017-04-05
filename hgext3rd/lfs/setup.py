@@ -2,11 +2,6 @@
 
 from __future__ import absolute_import
 
-from mercurial import (
-    error,
-)
-from mercurial.i18n import _
-
 from . import (
     blobstore,
 )
@@ -27,12 +22,4 @@ def chunking(ui, repo):
 
 def remoteblobstore(ui, repo):
     """Configure remote blobstore."""
-    knownblobstores = {
-        'git-lfs': blobstore.remote,
-        'dummy': blobstore.dummy,
-    }
-    remotestore = ui.config('lfs', 'remotestore', 'git-lfs')
-    if not remotestore in knownblobstores:
-        message = _("Unknown remote store %s") % (remotestore)
-        raise error.ProgrammingError(message)
-    repo.svfs.lfsremoteblobstore = knownblobstores[remotestore](repo)
+    repo.svfs.lfsremoteblobstore = blobstore.remote(repo)
