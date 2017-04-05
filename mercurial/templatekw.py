@@ -78,6 +78,12 @@ def unwraphybrid(thing):
         return thing
     return thing.gen
 
+def showdict(name, data, mapping, plural=None, key='key', value='value',
+             fmt='%s=%s', separator=' '):
+    c = [{key: k, value: v} for k, v in data.iteritems()]
+    f = _showlist(name, c, mapping, plural, separator)
+    return hybriddict(data, key=key, value=value, fmt=fmt, gen=f)
+
 def showlist(name, values, mapping, plural=None, element=None, separator=' '):
     if not element:
         element = name
@@ -348,14 +354,9 @@ def showdiffstat(repo, ctx, templ, **args):
 @templatekeyword('envvars')
 def showenvvars(repo, **args):
     """A dictionary of environment variables. (EXPERIMENTAL)"""
-
     env = repo.ui.exportableenviron()
     env = util.sortdict((k, env[k]) for k in sorted(env))
-    makemap = lambda k: {'key': k, 'value': env[k]}
-    c = [makemap(k) for k in env]
-    f = _showlist('envvar', c, args, plural='envvars')
-    return _hybrid(f, env, makemap,
-                   lambda x: '%s=%s' % (x['key'], x['value']))
+    return showdict('envvar', env, args, plural='envvars')
 
 @templatekeyword('extras')
 def showextras(**args):
@@ -394,11 +395,8 @@ def showfilecopies(**args):
                 copies.append((fn, rename[0]))
 
     copies = util.sortdict(copies)
-    makemap = lambda k: {'name': k, 'source': copies[k]}
-    c = [makemap(k) for k in copies]
-    f = _showlist('file_copy', c, args, plural='file_copies')
-    return _hybrid(f, copies, makemap,
-                   lambda x: '%s (%s)' % (x['name'], x['source']))
+    return showdict('file_copy', copies, args, plural='file_copies',
+                    key='name', value='source', fmt='%s (%s)')
 
 # showfilecopiesswitch() displays file copies only if copy records are
 # provided before calling the templater, usually with a --copies
@@ -410,11 +408,8 @@ def showfilecopiesswitch(**args):
     """
     copies = args['revcache'].get('copies') or []
     copies = util.sortdict(copies)
-    makemap = lambda k: {'name': k, 'source': copies[k]}
-    c = [makemap(k) for k in copies]
-    f = _showlist('file_copy', c, args, plural='file_copies')
-    return _hybrid(f, copies, makemap,
-                   lambda x: '%s (%s)' % (x['name'], x['source']))
+    return showdict('file_copy', copies, args, plural='file_copies',
+                    key='name', value='source', fmt='%s (%s)')
 
 @templatekeyword('file_dels')
 def showfiledels(**args):
