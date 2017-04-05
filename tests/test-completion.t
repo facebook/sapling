@@ -216,8 +216,8 @@ Show all commands + options
   annotate: rev, follow, no-follow, text, user, file, date, number, changeset, line-number, ignore-all-space, ignore-space-change, ignore-blank-lines, include, exclude, template
   clone: noupdate, updaterev, rev, branch, pull, uncompressed, ssh, remotecmd, insecure
   commit: addremove, close-branch, amend, secret, edit, interactive, include, exclude, message, logfile, date, user, subrepos
-  diff: rev, change, text, git, nodates, noprefix, show-function, reverse, ignore-all-space, ignore-space-change, ignore-blank-lines, unified, stat, root, include, exclude, subrepos
-  export: output, switch-parent, rev, text, git, nodates
+  diff: rev, change, text, git, binary, nodates, noprefix, show-function, reverse, ignore-all-space, ignore-space-change, ignore-blank-lines, unified, stat, root, include, exclude, subrepos
+  export: output, switch-parent, rev, text, git, binary, nodates
   forget: include, exclude
   init: ssh, remotecmd, insecure
   log: follow, follow-first, date, copies, keyword, rev, removed, only-merges, user, only-branch, branch, prune, patch, git, limit, no-merges, stat, graph, style, template, include, exclude

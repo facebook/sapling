@@ -2210,7 +2210,9 @@ def difffeatureopts(ui, opts=None, untrusted=False, section='diff', git=False,
                                             'ignoreblanklines')
     if formatchanging:
         buildopts['text'] = opts and opts.get('text')
-        buildopts['nobinary'] = get('nobinary', forceplain=False)
+        binary = None if opts is None else opts.get('binary')
+        buildopts['nobinary'] = (not binary if binary is not None
+                                 else get('nobinary', forceplain=False))
         buildopts['noprefix'] = get('noprefix', forceplain=False)
 
     return mdiff.diffopts(**pycompat.strkwargs(buildopts))

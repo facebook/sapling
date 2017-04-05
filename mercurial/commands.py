@@ -162,6 +162,7 @@ logopts = [
 diffopts = [
     ('a', 'text', None, _('treat all files as text')),
     ('g', 'git', None, _('use git extended diff format')),
+    ('', 'binary', None, _('generate binary diffs in git mode (default)')),
     ('', 'nodates', None, _('omit dates from diff headers'))
 ]
 

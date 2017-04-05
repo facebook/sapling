@@ -108,4 +108,37 @@ Test text mode with extended git-style diff format
   \ No newline at end of file
   +\x00\x01\x02\x03 (esc)
 
+Test binary mode with extended git-style diff format
+  $ hg diff --no-binary -r 0 -r 1
+  diff -r fb45f71337ad -r 9ca112d1a3c1 binfile.bin
+  Binary file binfile.bin has changed
+
+  $ hg diff --git --no-binary -r 0 -r 1
+  diff --git a/binfile.bin b/binfile.bin
+  Binary file binfile.bin has changed
+
+  $ hg diff --git --binary -r 0 -r 1
+  diff --git a/binfile.bin b/binfile.bin
+  index eaf36c1daccfdf325514461cd1a2ffbc139b5464..ba71a782e93f3fb63a428383706065e3ec2828e9
+  GIT binary patch
+  literal 5
+  Mc${NkWMbw50018V5dZ)H
+  
+  $ hg diff --git --binary --config diff.nobinary=True -r 0 -r 1
+  diff --git a/binfile.bin b/binfile.bin
+  index eaf36c1daccfdf325514461cd1a2ffbc139b5464..ba71a782e93f3fb63a428383706065e3ec2828e9
+  GIT binary patch
+  literal 5
+  Mc${NkWMbw50018V5dZ)H
+  
+
+  $ hg diff --git --binary --text -r 0 -r 1
+  diff --git a/binfile.bin b/binfile.bin
+  --- a/binfile.bin
+  +++ b/binfile.bin
+  @@ -1,1 +1,1 @@
+  -\x00\x01\x02\x03 (esc)
+  \ No newline at end of file
+  +\x00\x01\x02\x03 (esc)
+
   $ cd ..

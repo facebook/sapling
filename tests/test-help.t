@@ -545,6 +545,7 @@ Test command without options
    -c --change REV          change made by revision
    -a --text                treat all files as text
    -g --git                 use git extended diff format
+      --binary              generate binary diffs in git mode (default)
       --nodates             omit dates from diff headers
       --noprefix            omit a/ and b/ prefixes from filenames
    -p --show-function       show which function each change is in
