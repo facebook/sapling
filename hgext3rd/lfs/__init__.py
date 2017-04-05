@@ -35,7 +35,7 @@ from mercurial import (
 )
 
 from . import (
-    setup,
+    blobstore,
     wrapper,
 )
 
@@ -48,10 +48,13 @@ def reposetup(ui, repo):
         # Do not setup blobstores if bypass is True
         return
 
-    setup.threshold(ui, repo)
-    setup.localblobstore(ui, repo)
-    setup.chunking(ui, repo)
-    setup.remoteblobstore(ui, repo)
+    threshold = repo.ui.configbytes('lfs', 'threshold', None)
+    chunksize = repo.ui.configbytes('lfs', 'chunksize', None)
+
+    repo.svfs.options['lfsthreshold'] = threshold
+    repo.svfs.options['lfschunksize'] = chunksize
+    repo.svfs.lfslocalblobstore = blobstore.local(repo)
+    repo.svfs.lfsremoteblobstore = blobstore.remote(repo)
 
     # Push hook
     repo.prepushoutgoinghooks.add('lfs', wrapper.prepush)
