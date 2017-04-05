@@ -6,6 +6,17 @@ from glob import glob
 import os, sys
 
 iswindows = os.name == 'nt'
+WERROR = "/WX" if iswindows else "-Werror"
+WSTRICTPROTOTYPES = None if iswindows else "-Werror=strict-prototypes"
+WALL = "/Wall" if iswindows else "-Wall"
+STDC99 = "" if iswindows else "-std=c99"
+STDCPP0X = "" if iswindows else "-std=c++0x"
+WEXTRA = "" if iswindows else "-Wextra"
+WCONVERSION = "" if iswindows else "-Wconversion"
+PEDANTIC = "" if iswindows else "-pedantic"
+NOOPTIMIZATION = "/Od" if iswindows else "-O0"
+PRODUCEDEBUGSYMBOLS = "/DEBUG:FULL" if iswindows else "-g"
+
 # --component allows the caller to specify what components they want. We can't
 # use argparse like normal, because setup() at the bottom has it's own argument
 # logic.
@@ -31,9 +42,9 @@ cflags = []
 # that this is not manifested in any way in the Makefile dependencies.
 # therefore, if you already have build products, they won't be rebuilt!
 if os.getenv('FB_HGEXT_CDEBUG') is not None:
-    cflags.extend(["-O0", "-g"])
+    cflags.extend([NOOPTIMIZATION, PRODUCEDEBUGSYMBOLS])
 else:
-    cflags.append("-Werror")
+    cflags.append(WERROR)
 
 def get_env_path_list(var_name, default=None):
     '''Get a path list from an environment variable.  The variable is parsed as
@@ -56,11 +67,14 @@ library_dirs = get_env_path_list('LIBRARY_DIRS')
 #
 # The /opt/local paths may be necessary on Darwin builds.
 if include_dirs is None:
-    include_dirs = [
-        '/usr/local/include',
-        '/opt/local/include',
-        '/opt/homebrew/include/',
-    ]
+    if iswindows:
+        include_dirs = []
+    else:
+        include_dirs = [
+            '/usr/local/include',
+            '/opt/local/include',
+            '/opt/homebrew/include/',
+        ]
 
 def distutils_dir_name(dname):
     """Returns the name of a distutils build directory"""
@@ -70,12 +84,15 @@ def distutils_dir_name(dname):
                     version=sys.version[:3])
 
 if library_dirs is None:
-    library_dirs = [
-        '/usr/local/lib',
-        '/opt/local/lib',
-        '/opt/homebrew/lib/',
-        'build/' + distutils_dir_name('lib'),
-    ]
+    if iswindows:
+        library_dirs = []
+    else:
+        library_dirs = [
+            '/usr/local/lib',
+            '/opt/local/lib',
+            '/opt/homebrew/lib/',
+        ]
+    library_dirs.append('build/' + distutils_dir_name('lib'))
 
 # Override the default c static library building code in distutils since it
 # doesn't pass enough args, like libraries and extra args.
@@ -124,11 +141,8 @@ else:
             "sources" : ["cdatapack/cdatapack.c"],
             "include_dirs" : ["clib"] + include_dirs,
             "libraries" : ["lz4", "crypto"],
-            "extra_args" : [
-                "-std=c99",
-                "-Wall",
-                "-Werror", "-Werror=strict-prototypes",
-            ] + cflags,
+            "extra_args" : filter(None,
+                [STDC99, WALL, WERROR, WSTRICTPROTOTYPES] + cflags),
         }),
         ('mpatch', {
             'sources': ['cstore/mpatch.c']
@@ -203,10 +217,7 @@ else:
                     'datapack',
                     'lz4',
                 ],
-                extra_compile_args=[
-                    "-std=c++0x",
-                    "-Wall",
-                ] + cflags,
+                extra_compile_args=filter(None, [STDCPP0X, WALL] + cflags),
             ),
         ],
         'cfastmanifest' : [
@@ -232,29 +243,27 @@ else:
                 library_dirs=library_dirs,
                 libraries=['crypto',
                 ],
-                extra_compile_args=[
-                    "-std=c99",
-                    "-Wall",
-                    "-Werror=strict-prototypes",
-                ] + cflags,
+                extra_compile_args=filter(None, [
+                    STDC99,
+                    WALL,
+                    WSTRICTPROTOTYPES,
+                ] + cflags),
             ),
         ],
         'linelog' : [
             Extension('linelog',
                 sources=['linelog/pyext/linelog.pyx'],
-                extra_compile_args=[
-                    '-std=c99',
-                    '-Wall', '-Wextra', '-Wconversion', '-pedantic',
-                ],
+                extra_compile_args=filter(None, [
+                    STDC99, WALL, WEXTRA, WCONVERSION, PEDANTIC,
+                ]),
             ),
         ],
         'patchrmdir': [
             Extension('hgext3rd.patchrmdir',
                 sources=['hgext3rd/patchrmdir.pyx'],
-                extra_compile_args=[
-                    '-std=c99',
-                    '-Wall', '-Wextra', '-Wconversion', '-pedantic',
-                ],
+                extra_compile_args=filter(None, [
+                    STDC99, WALL, WEXTRA, WCONVERSION, PEDANTIC,
+                ]),
             ),
         ],
     }
