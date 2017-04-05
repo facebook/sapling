@@ -273,25 +273,31 @@ def _dobackup(ui, repo, dest, **opts):
                                     'maxheadstobackup', -1)
 
     revset = 'head() & draft() & not extinct()'
-    currentheads = [ctx.hex() for ctx in repo.set(revset)]
+    # This variable will store what heads will be saved in backup state file
+    # if backup finishes successfully
+    afterbackupheads = [ctx.hex() for ctx in repo.set(revset)]
     if maxheadstobackup > 0:
-        currentheads = currentheads[-maxheadstobackup:]
+        afterbackupheads = afterbackupheads[-maxheadstobackup:]
     elif maxheadstobackup == 0:
-        currentheads = []
-    currentheads = set(currentheads)
-    newheads = currentheads - bkpstate.heads
-    removedheads = bkpstate.heads - currentheads
+        afterbackupheads = []
+    afterbackupheads = set(afterbackupheads)
     other = _getremote(repo, ui, dest, **opts)
-    outgoing, badhexnodes = _getrevstobackup(repo, other, newheads)
+    outgoing, badhexnodes = _getrevstobackup(repo, other,
+                                             afterbackupheads - bkpstate.heads)
+    # If remotefilelog extension is enabled then there can be nodes that we
+    # can't backup. In this case let's remove them from afterbackupheads
+    afterbackupheads.difference_update(badhexnodes)
 
-    newheads = set(filter(lambda hex: hex not in badhexnodes, newheads))
-    currentheads = set(filter(lambda hex: hex not in badhexnodes, currentheads))
+    # As afterbackupheads this variable stores what heads will be saved in
+    # backup state file if backup finishes successfully
+    afterbackuplocalbooks = _getlocalbookmarks(repo)
+    afterbackuplocalbooks = _filterbookmarks(
+        afterbackuplocalbooks, repo, afterbackupheads)
 
-    localbookmarks = _getlocalbookmarks(repo)
-    localbookmarks = _filterbookmarks(localbookmarks, repo, currentheads)
-
-    newbookmarks = _dictdiff(localbookmarks, bkpstate.localbookmarks)
-    removedbookmarks = _dictdiff(bkpstate.localbookmarks, localbookmarks)
+    newheads = afterbackupheads - bkpstate.heads
+    removedheads = bkpstate.heads - afterbackupheads
+    newbookmarks = _dictdiff(afterbackuplocalbooks, bkpstate.localbookmarks)
+    removedbookmarks = _dictdiff(bkpstate.localbookmarks, afterbackuplocalbooks)
 
     bookmarkstobackup = _getbookmarkstobackup(
         username, repo, newbookmarks, removedbookmarks,
@@ -322,7 +328,8 @@ def _dobackup(ui, repo, dest, **opts):
 
         if backup:
             _sendbundle(bundler, other)
-            _writelocalbackupstate(repo.vfs, currentheads, localbookmarks)
+            _writelocalbackupstate(repo.vfs, afterbackupheads,
+                                   afterbackuplocalbooks)
         else:
             ui.status(_('nothing to backup\n'))
     finally:
