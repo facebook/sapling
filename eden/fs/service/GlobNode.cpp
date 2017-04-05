@@ -16,7 +16,7 @@ using std::unique_ptr;
 using std::vector;
 using folly::Future;
 using folly::makeFuture;
-using folly::make_unique;
+using std::make_unique;
 using folly::StringPiece;
 using std::unordered_set;
 
