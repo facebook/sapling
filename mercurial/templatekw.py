@@ -62,6 +62,10 @@ class _hybrid(object):
             raise AttributeError(name)
         return getattr(self._values, name)
 
+def hybridlist(data, name, fmt='%s', gen=None):
+    """Wrap data to support both list-like and string-like operations"""
+    return _hybrid(gen, data, lambda x: {name: x}, lambda d: fmt % d[name])
+
 def unwraphybrid(thing):
     """Return an object which can be stringified possibly by using a legacy
     template"""
@@ -73,7 +77,7 @@ def showlist(name, values, plural=None, element=None, separator=' ', **args):
     if not element:
         element = name
     f = _showlist(name, values, plural, separator, **args)
-    return _hybrid(f, values, lambda x: {element: x}, lambda d: d[element])
+    return hybridlist(values, name=element, gen=f)
 
 def _showlist(name, values, plural=None, separator=' ', **args):
     '''expand set of values.

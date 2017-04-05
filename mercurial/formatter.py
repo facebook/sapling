@@ -329,8 +329,7 @@ class _templateconverter(object):
         data = list(data)
         def f():
             yield _plainconverter.formatlist(data, name, fmt, sep)
-        return templatekw._hybrid(f(), data, lambda x: {name: x},
-                                  lambda d: fmt % d[name])
+        return templatekw.hybridlist(data, name=name, fmt=fmt, gen=f())
 
 class templateformatter(baseformatter):
     def __init__(self, ui, out, topic, opts):
