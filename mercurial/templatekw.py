@@ -78,13 +78,13 @@ def unwraphybrid(thing):
         return thing
     return thing.gen
 
-def showlist(name, values, plural=None, element=None, separator=' ', **args):
+def showlist(name, values, plural=None, element=None, separator=' ', **mapping):
     if not element:
         element = name
-    f = _showlist(name, values, plural, separator, **args)
+    f = _showlist(name, values, plural, separator, **mapping)
     return hybridlist(values, name=element, gen=f)
 
-def _showlist(name, values, plural=None, separator=' ', **args):
+def _showlist(name, values, plural=None, separator=' ', **mapping):
     '''expand set of values.
     name is name of key in template map.
     values is list of strings or dicts.
@@ -105,35 +105,35 @@ def _showlist(name, values, plural=None, separator=' ', **args):
 
     expand 'end_foos'.
     '''
-    templ = args['templ']
+    templ = mapping['templ']
     if not plural:
         plural = name + 's'
     if not values:
         noname = 'no_' + plural
         if noname in templ:
-            yield templ(noname, **args)
+            yield templ(noname, **mapping)
         return
     if name not in templ:
         if isinstance(values[0], str):
             yield separator.join(values)
         else:
             for v in values:
-                yield dict(v, **args)
+                yield dict(v, **mapping)
         return
     startname = 'start_' + plural
     if startname in templ:
-        yield templ(startname, **args)
-    vargs = args.copy()
+        yield templ(startname, **mapping)
+    vmapping = mapping.copy()
     def one(v, tag=name):
         try:
-            vargs.update(v)
+            vmapping.update(v)
         except (AttributeError, ValueError):
             try:
                 for a, b in v:
-                    vargs[a] = b
+                    vmapping[a] = b
             except ValueError:
-                vargs[name] = v
-        return templ(tag, **vargs)
+                vmapping[name] = v
+        return templ(tag, **vmapping)
     lastname = 'last_' + name
     if lastname in templ:
         last = values.pop()
@@ -145,7 +145,7 @@ def _showlist(name, values, plural=None, separator=' ', **args):
         yield one(last, tag=lastname)
     endname = 'end_' + plural
     if endname in templ:
-        yield templ(endname, **args)
+        yield templ(endname, **mapping)
 
 def _formatrevnode(ctx):
     """Format changeset as '{rev}:{node|formatnode}', which is the default
