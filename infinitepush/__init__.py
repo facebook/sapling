@@ -398,18 +398,16 @@ def _includefilelogstobundle(bundlecaps, bundlerepo, bundlerevs, ui):
 
     return newcaps
 
-def getbundlerepo(repo, unknownhead):
+def downloadbundle(repo, unknownhead):
     index = repo.bundlestore.index
     store = repo.bundlestore.store
     bundleid = index.getbundle(hex(unknownhead))
     if bundleid is None:
         raise error.Abort('%s head is not known' % hex(unknownhead))
     bundleraw = store.read(bundleid)
-    bundlefile = _makebundlefromraw(bundleraw)
-    bundlepath = "bundle:%s+%s" % (repo.root, bundlefile)
-    return repository(repo.ui, bundlepath)
+    return _makebundlefromraw(bundleraw)
 
-def _getoutputbundleraw(bundlerepo, bundleroots, unknownhead):
+def _rebundle(bundlerepo, bundleroots, unknownhead, version):
     '''
     Bundle may include more revision then user requested. For example,
     if user asks for revision but bundle also consists its descendants.
@@ -418,7 +416,8 @@ def _getoutputbundleraw(bundlerepo, bundleroots, unknownhead):
     outgoing = discovery.outgoing(bundlerepo, commonheads=bundleroots,
                                   missingheads=[unknownhead])
     outputbundleraw = changegroup.getlocalchangegroupraw(bundlerepo, 'pull',
-                                                         outgoing)
+                                                         outgoing,
+                                                         version=version)
     return util.chunkbuffer(outputbundleraw).read()
 
 def _getbundleroots(oldrepo, bundlerepo, bundlerevs):
@@ -433,6 +432,11 @@ def _getbundleroots(oldrepo, bundlerepo, bundlerevs):
             if parent in oldrepo:
                 bundleroots.append(parent)
     return bundleroots
+
+def _needsrebundling(head, bundlerepo):
+    bundleheads = list(bundlerepo.revs('heads(bundle())'))
+    return not (len(bundleheads) == 1 and
+                bundlerepo[bundleheads[0]].node() == head)
 
 def getbundlechunks(orig, repo, source, heads=None, bundlecaps=None, **kwargs):
     heads = heads or []
@@ -449,7 +453,10 @@ def getbundlechunks(orig, repo, source, heads=None, bundlecaps=None, **kwargs):
                 if head in nodestobundle:
                     bundlerepo, bundleroots = nodestobundle[head]
                 else:
-                    bundlerepo = getbundlerepo(repo, head)
+                    bundlefile = downloadbundle(repo, head)
+                    bundlepath = "bundle:%s+%s" % (repo.root, bundlefile)
+                    bundlerepo = repository(repo.ui, bundlepath)
+
                     allbundlerepos.append(bundlerepo)
                     bundlerevs = set(_readbundlerevs(bundlerepo))
                     bundlecaps = _includefilelogstobundle(
@@ -461,9 +468,17 @@ def getbundlechunks(orig, repo, source, heads=None, bundlecaps=None, **kwargs):
                         newphases[hex(node)] = str(phases.draft)
                         nodestobundle[node] = (bundlerepo, bundleroots)
 
-                outputbundleraw = _getoutputbundleraw(bundlerepo, bundleroots,
-                                                      head)
-                scratchbundles.append(outputbundleraw)
+                if not _needsrebundling(head, bundlerepo):
+                    with util.posixfile(bundlefile, "rb") as f:
+                        unbundler = exchange.readbundle(repo.ui, f, bundlefile)
+                        for part in unbundler.iterparts():
+                            if part.type == 'changegroup':
+                                version = part.params.get('version', '01')
+                                scratchbundles.append((part.read(), version))
+                else:
+                    outputbundleraw = _rebundle(bundlerepo, bundleroots,
+                                                head, version='02')
+                    scratchbundles.append((outputbundleraw, '02'))
                 newheads.extend(bundleroots)
                 scratchheads.append(head)
     finally:
@@ -480,8 +495,9 @@ def getbundlechunks(orig, repo, source, heads=None, bundlecaps=None, **kwargs):
             # and only then add parts with scratch bundles because
             # non-scratch part contains parents of roots of scratch bundles.
             result = oldchangegrouppart(bundler, *args, **kwargs)
-            for bundle in scratchbundles:
-                bundler.newpart('changegroup', data=bundle)
+            for bundle, version in scratchbundles:
+                part = bundler.newpart('changegroup', data=bundle)
+                part.addparam('version', version)
             return result
 
         exchange.getbundle2partsmapping['changegroup'] = _changegrouppart
