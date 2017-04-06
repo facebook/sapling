@@ -211,10 +211,10 @@ r4 has hardlinks in the working dir (not just inside .hg):
   2 r4/.hg/00changelog.i
   2 r4/.hg/branch
   2 r4/.hg/cache/branch2-served
-  2 r4/.hg/cache/checkisexec
+  2 r4/.hg/cache/checkisexec (execbit !)
   3 r4/.hg/cache/checklink (?)
-  ? r4/.hg/cache/checklink-target (glob)
-  2 r4/.hg/cache/checknoexec
+  ? r4/.hg/cache/checklink-target (glob) (symlink !)
+  2 r4/.hg/cache/checknoexec (execbit !)
   2 r4/.hg/cache/rbc-names-v1
   2 r4/.hg/cache/rbc-revs-v1
   2 r4/.hg/dirstate
@@ -251,9 +251,9 @@ Update back to revision 11 in r4 should break hardlink of file f1:
   2 r4/.hg/00changelog.i
   1 r4/.hg/branch
   2 r4/.hg/cache/branch2-served
-  2 r4/.hg/cache/checkisexec
-  2 r4/.hg/cache/checklink-target
-  2 r4/.hg/cache/checknoexec
+  2 r4/.hg/cache/checkisexec (execbit !)
+  2 r4/.hg/cache/checklink-target (symlink !)
+  2 r4/.hg/cache/checknoexec (execbit !)
   2 r4/.hg/cache/rbc-names-v1
   2 r4/.hg/cache/rbc-revs-v1
   1 r4/.hg/dirstate

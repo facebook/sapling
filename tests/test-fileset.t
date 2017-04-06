@@ -441,10 +441,10 @@ small reminder of the repository state
   M b2
   A 1k
   A 2k
-  A b2link
+  A b2link (no-windows !)
   A bin
   A c1
-  A con.xml
+  A con.xml (no-windows !)
   R a2
   $ hg status --change 2
   M b2
@@ -452,10 +452,10 @@ small reminder of the repository state
   M b2
   A 1k
   A 2k
-  A b2link
+  A b2link (no-windows !)
   A bin
   A c1
-  A con.xml
+  A con.xml (no-windows !)
   R a2
   $ hg status --change 4
   A .hgsub
@@ -464,7 +464,7 @@ small reminder of the repository state
   A dos
   A mac
   A mixed
-  R con.xml
+  R con.xml (no-windows !)
   ! a1
   ? b2.orig
   ? c3
@@ -551,9 +551,9 @@ check wdir()
 ------------
 
   $ hg status --removed  --rev 4
-  R con.xml
+  R con.xml (no-windows !)
   $ fileset "status(4, 'wdir()', removed())"
-  con.xml
+  con.xml (no-windows !)
 
   $ hg status --removed --rev 2
   R a2
@@ -585,19 +585,19 @@ test with multi revs revset
   A .hgsubstate
   A 1k
   A 2k
-  A b2link
+  A b2link (no-windows !)
   A bin
   A c1
-  A con.xml
+  A con.xml (no-windows !)
   $ fileset "status('0:1', '3:4', added())"
   .hgsub
   .hgsubstate
   1k
   2k
-  b2link
+  b2link (no-windows !)
   bin
   c1
-  con.xml
+  con.xml (no-windows !)
 
 tests with empty value
 ----------------------

@@ -672,9 +672,9 @@ Missing tags2* files means the cache wasn't written through the normal mechanism
 
   $ ls tagsclient/.hg/cache
   branch2-served
-  checkisexec
-  checklink
-  checklink-target
+  checkisexec (execbit !)
+  checklink (symlink !)
+  checklink-target (symlink !)
   hgtagsfnodes1
   rbc-names-v1
   rbc-revs-v1
@@ -699,9 +699,9 @@ Running hg tags should produce tags2* file and not change cache
 
   $ ls tagsclient/.hg/cache
   branch2-served
-  checkisexec
-  checklink
-  checklink-target
+  checkisexec (execbit !)
+  checklink (symlink !)
+  checklink-target (symlink !)
   hgtagsfnodes1
   rbc-names-v1
   rbc-revs-v1
