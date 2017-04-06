@@ -39,6 +39,19 @@ error paths
   $ rm hg
 #endif
 
+Features for testing optional lines
+===================================
+
+  $ cat > hghaveaddon.py <<EOF
+  > import hghave
+  > @hghave.check("custom", "custom hghave feature")
+  > def has_custom():
+  >     return True
+  > @hghave.check("missing", "missing hghave feature")
+  > def has_missing():
+  >     return False
+  > EOF
+
 an empty test
 =======================
 
@@ -67,6 +80,13 @@ a succesful test
   >   def (?)
   >   456 (?)
   >   xyz
+  >   $ printf 'zyx\nwvu\ntsr\n'
+  >   abc (?)
+  >   zyx (custom !)
+  >   wvu
+  >   no_print (no-custom !)
+  >   tsr (no-missing !)
+  >   missing (missing !)
   > EOF
 
   $ rt
@@ -341,6 +361,12 @@ Running In Debug Mode
   xyz
   + echo *SALT* 15 0 (glob)
   *SALT* 15 0 (glob)
+  + printf *zyx\nwvu\ntsr\n* (glob)
+  zyx
+  wvu
+  tsr
+  + echo *SALT* 22 0 (glob)
+  *SALT* 22 0 (glob)
   .
   # Ran 2 tests, 0 skipped, 0 warned, 0 failed.
 

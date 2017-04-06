@@ -497,6 +497,12 @@ def vlog(*msg):
 # sans \t, \n and \r
 CDATA_EVIL = re.compile(br"[\000-\010\013\014\016-\037]")
 
+# Match feature conditionalized output lines in the form, capturing the feature
+# list in group 2, and the preceeding line output in group 1:
+#
+#   output..output (feature !)\n
+optline = re.compile(b'(.+) \((.+?) !\)\n$')
+
 def cdatasafe(data):
     """Make a string safe to include in a CDATA block.
 
@@ -1271,8 +1277,19 @@ class TTest(Test):
                     if r:
                         els.pop(i)
                         break
-                    if el and el.endswith(b" (?)\n"):
-                        optional.append(i)
+                    if el:
+                        if el.endswith(b" (?)\n"):
+                            optional.append(i)
+                        else:
+                            m = optline.match(el)
+                            if m:
+                                conditions = [c for c in m.group(2).split(' ')]
+
+                                if self._hghave(conditions)[0]:
+                                    lout = el
+                                else:
+                                    optional.append(i)
+
                     i += 1
 
                 if r:
@@ -1298,8 +1315,10 @@ class TTest(Test):
                 # clean up any optional leftovers
                 while expected.get(pos, None):
                     el = expected[pos].pop(0)
-                    if el and not el.endswith(b" (?)\n"):
-                        break
+                    if el:
+                        if (not optline.match(el)
+                            and not el.endswith(b" (?)\n")):
+                            break
                     postout.append(b'  ' + el)
 
             if lcmd:
@@ -1371,6 +1390,12 @@ class TTest(Test):
             if el.endswith(b" (?)\n"):
                 retry = "retry"
                 el = el[:-5] + b"\n"
+            else:
+                m = optline.match(el)
+                if m:
+                    el = m.group(1) + b"\n"
+                    retry = "retry"
+
             if el.endswith(b" (esc)\n"):
                 if PYTHON3:
                     el = el[:-7].decode('unicode_escape') + '\n'
