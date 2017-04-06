@@ -22,8 +22,14 @@ int main(int argc, char *argv[]) {
   }
 
   long len = strlen(argv[1]);
-  char idx_path[len + sizeof(DATAIDX_EXT)];
-  char data_path[len + sizeof(DATAPACK_EXT)];
+  char* idx_path = (char*) malloc(len + sizeof(DATAIDX_EXT));
+  char* data_path = (char*) malloc(len + sizeof(DATAPACK_EXT));
+  if (idx_path == NULL || data_path == NULL) {
+      free(idx_path);
+      free(data_path);
+      fprintf(stderr, "Failed to allocate memory for idx_path or data_path\n");
+      exit(1);
+  }
 
   sprintf(idx_path, "%s%s", argv[1], DATAIDX_EXT);
   sprintf(data_path, "%s%s", argv[1], DATAPACK_EXT);
@@ -31,6 +37,8 @@ int main(int argc, char *argv[]) {
   datapack_handle_t *handle = open_datapack(
       idx_path, strlen(idx_path),
       data_path, strlen(data_path));
+  free(data_path);
+  free(idx_path);
 
   const uint8_t *ptr = handle->data_mmap;
   const uint8_t *end = ptr + handle->data_file_sz;

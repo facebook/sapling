@@ -237,8 +237,14 @@ static int cdatapack_init(py_cdatapack *self, PyObject *args) {
     return -1;
   }
 
-  char idx_path[nodelen + sizeof(INDEXSUFFIX)];
-  char data_path[nodelen + sizeof(PACKSUFFIX)];
+  char* idx_path = (char*)malloc(nodelen + sizeof(INDEXSUFFIX));
+  char* data_path = (char*)malloc(nodelen + sizeof(PACKSUFFIX));
+  if(idx_path == NULL || data_path == NULL) {
+    free(data_path);
+    free(idx_path);
+    PyErr_NoMemory();
+    return -1;
+  }
 
   sprintf(idx_path, "%s%s", node, INDEXSUFFIX);
   sprintf(data_path, "%s%s", node, PACKSUFFIX);
@@ -246,6 +252,8 @@ static int cdatapack_init(py_cdatapack *self, PyObject *args) {
   self->handle = open_datapack(
       idx_path, strlen(idx_path),
       data_path, strlen(data_path));
+  free(data_path);
+  free(idx_path);
 
   if (self->handle == NULL) {
     PyErr_NoMemory();
