@@ -85,7 +85,14 @@ def recordfilter(ui, headers, operation=None):
             for hunk in header.hunks:
                 hunk.write(patch)
 
-    patch = ui.edit(patch.getvalue(), "", extra={'suffix': '.diff'})
+    patcheditor = ui.config('ui', 'editor.chunkselector', None)
+    if patcheditor is not None:
+        override = {('ui', 'editor'): patcheditor}
+    else:
+        override = {}
+
+    with ui.configoverride(override):
+        patch = ui.edit(patch.getvalue(), "", extra={'suffix': '.diff'})
 
     # remove comments from patch
     # if there's an empty line, add a space to it

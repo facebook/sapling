@@ -93,3 +93,4 @@ New errors are not allowed. Warnings are strongly discouraged.
   undocumented: ssl.timeout (int) [5]
   undocumented: treemanifest.autocreatetrees (bool)
   undocumented: treemanifest.verifyautocreate (bool)
+  undocumented: ui.editor.chunkselector (str)

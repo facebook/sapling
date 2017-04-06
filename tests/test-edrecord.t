@@ -29,6 +29,11 @@ Include nothing in the commit
   $ HGEDITOR="\"sh\" \"`pwd`/editor.sh\"" hg commit -i -m "initial commit"
   no changes to record
 
+Test the 'ui.editor.chunkselector' config option
+
+  $ HGEDITOR="" hg commit -i -m "initial commit" --config ui.editor.chunkselector="\"sh\" \"`pwd`/editor.sh\""
+  no changes to record
+
 Only include changes in a to the commit
 
   $ cat > editor.sh << '__EOF__'
