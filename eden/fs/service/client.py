@@ -47,9 +47,12 @@ class EdenClient(EdenService.Client):
     - Implement the context manager __enter__ and __exit__ methods, so it can
       be used in with statements.
     '''
-    def __init__(self, eden_dir):
+    def __init__(self, eden_dir=None, mounted_path=None):
         self._eden_dir = eden_dir
-        sock_path = os.path.join(self._eden_dir, SOCKET_PATH)
+        if mounted_path:
+            sock_path = os.path.join(mounted_path, '.eden', 'socket')
+        else:
+            sock_path = os.path.join(self._eden_dir, SOCKET_PATH)
         self._socket = TSocket(unix_socket=sock_path)
         self._socket.setTimeout(60000)  # in milliseconds
         self._transport = THeaderTransport(self._socket)
@@ -77,10 +80,10 @@ class EdenClient(EdenService.Client):
             self._transport = None
 
 
-def create_thrift_client(config_dir):
+def create_thrift_client(eden_dir=None, mounted_path=None):
     '''Construct a thrift client to speak to the running eden server
     instance associated with the specified mount point.
 
     @return Returns a context manager for EdenService.Client.
     '''
-    return EdenClient(config_dir)
+    return EdenClient(eden_dir=eden_dir, mounted_path=mounted_path)
