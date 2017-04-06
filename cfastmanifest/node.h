@@ -16,6 +16,7 @@
 #include <string.h>
 
 #include "internal_result.h"
+#include "portability.h"
 
 #define STORAGE_INCREMENT_PERCENTAGE 20
 #define MIN_STORAGE_INCREMENT        10

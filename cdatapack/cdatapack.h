@@ -1,6 +1,6 @@
 // Copyright 2016-present Facebook. All Rights Reserved.
 //
-// cdatapack: 
+// cdatapack:
 //
 // no-check-code
 
@@ -11,6 +11,8 @@
 #include <stddef.h>
 #include <stdbool.h>
 #include <sys/types.h>
+
+#include "portability.h"
 
 #define NODE_SZ 20
 

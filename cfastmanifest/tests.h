@@ -11,6 +11,7 @@
 #include <stdlib.h>
 
 #include "node.h"
+#include "portability.h"
 #include "result.h"
 #include "tree.h"
 
