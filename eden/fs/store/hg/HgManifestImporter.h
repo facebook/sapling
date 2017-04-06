@@ -52,8 +52,7 @@ class HgManifestImporter {
   HgManifestImporter(const HgManifestImporter&) = delete;
   HgManifestImporter& operator=(const HgManifestImporter&) = delete;
 
-  void popAndRecordCurrentDir();
-  Hash recordCurrentDir();
+  void popCurrentDir();
 
   LocalStore* store_{nullptr};
   std::vector<PartialTree> dirStack_;

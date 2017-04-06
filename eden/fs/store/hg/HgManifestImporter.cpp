@@ -48,20 +48,45 @@ class HgManifestImporter::PartialTree {
   }
 
   void addEntry(TreeEntry&& entry);
+
+  /** move in a computed sub-tree.
+   * The tree will be recorded in the store in the second pass of
+   * the import, but only if the parent(s) are not stored. */
+  void addPartialTree(PartialTree&& tree);
+
+  /** Record this node against the store.
+   * May only be called after compute() has been called (this method
+   * will check and assert on this). */
   Hash record(LocalStore* store);
+
+  /** Compute the serialized version of this tree.
+   * Records the id and data ready to be stored by a later call
+   * to the record() method. */
+  Hash compute(LocalStore* store);
 
  private:
   // The full path from the root of this repository
   RelativePath path_;
 
-  // LocalStore currently requires that all data be stored in git tree format.
-  GitTreeSerializer serializer_;
   unsigned int numPaths_{0};
   std::vector<TreeEntry> entries_;
+
+  // Serialized data and id that we may need to store;
+  // this is the representation of this PartialTree instance.
+  Hash id_;
+  folly::IOBuf treeData_;
+  bool computed_{false};
+
+  // Children that we may need to store
+  std::vector<PartialTree> trees_;
 };
 
 HgManifestImporter::PartialTree::PartialTree(RelativePathPiece path)
     : path_(std::move(path)) {}
+
+void HgManifestImporter::PartialTree::addPartialTree(PartialTree&& tree) {
+  trees_.emplace_back(std::move(tree));
+}
 
 void HgManifestImporter::PartialTree::addEntry(TreeEntry&& entry) {
   // Common case should be that we append because we expect the entries
@@ -87,14 +112,39 @@ void HgManifestImporter::PartialTree::addEntry(TreeEntry&& entry) {
   ++numPaths_;
 }
 
-Hash HgManifestImporter::PartialTree::record(LocalStore* store) {
+Hash HgManifestImporter::PartialTree::compute(LocalStore* store) {
+  DCHECK(!computed_) << "Can only compute a PartialTree once";
   auto tree = Tree(std::move(entries_));
-  auto hash = store->putTree(&tree);
+  std::tie(id_, treeData_) = store->serializeTree(&tree);
 
-  VLOG(6) << "record tree: '" << path_ << "' --> " << hash.toString() << " ("
+  computed_ = true;
+  VLOG(6) << "compute tree: '" << path_ << "' --> " << id_.toString() << " ("
           << numPaths_ << " paths)";
 
-  return hash;
+  return id_;
+}
+
+Hash HgManifestImporter::PartialTree::record(LocalStore* store) {
+  DCHECK(computed_) << "Must have computed PartialTree prior to recording";
+  // If the store already has data on this node, then we don't need to
+  // recurse into any of our children; we're done!
+  if (store->hasKey(id_)) {
+    return id_;
+  }
+
+  // make sure that we try to store each of our children before we try
+  // to store this node, so that failure to store one of these prevents
+  // us from storing a parent for which we have no children computed.
+  for (auto& it : trees_) {
+    it.record(store);
+  }
+
+  store->put(id_, treeData_.coalesce());
+
+  VLOG(6) << "record tree: '" << path_ << "' --> " << id_.toString() << " ("
+          << numPaths_ << " paths, " << trees_.size() << " trees)";
+
+  return id_;
 }
 
 HgManifestImporter::HgManifestImporter(LocalStore* store) : store_(store) {
@@ -140,7 +190,7 @@ void HgManifestImporter::processEntry(
     // the stack.
     VLOG(5) << "pop '" << dirStack_.back().getPath() << "' --> '"
             << (dirStack_.end() - 2)->getPath() << "'  # '" << dirname << "'";
-    popAndRecordCurrentDir();
+    popCurrentDir();
     CHECK(!dirStack_.empty());
     // Continue around the while loop, now that the current directory
     // is updated.
@@ -155,10 +205,11 @@ Hash HgManifestImporter::finish() {
   // Pop everything off dirStack_, and record the trees as we go.
   while (dirStack_.size() > 1) {
     VLOG(5) << "final pop '" << dirStack_.back().getPath() << "'";
-    popAndRecordCurrentDir();
+    popCurrentDir();
   }
 
-  auto rootHash = dirStack_.back().record(store_);
+  auto rootHash = dirStack_.back().compute(store_);
+  dirStack_.back().record(store_);
   dirStack_.pop_back();
   CHECK(dirStack_.empty());
 
@@ -167,17 +218,20 @@ Hash HgManifestImporter::finish() {
   return rootHash;
 }
 
-void HgManifestImporter::popAndRecordCurrentDir() {
+void HgManifestImporter::popCurrentDir() {
   PathComponent entryName = dirStack_.back().getPath().basename().copy();
 
-  auto dirHash = dirStack_.back().record(store_);
+  PartialTree back = std::move(dirStack_.back());
   dirStack_.pop_back();
   DCHECK(!dirStack_.empty());
+
+  auto dirHash = back.compute(store_);
 
   uint8_t ownerPermissions = 0111;
   TreeEntry dirEntry(
       dirHash, entryName.stringPiece(), FileType::DIRECTORY, ownerPermissions);
   dirStack_.back().addEntry(std::move(dirEntry));
+  dirStack_.back().addPartialTree(std::move(back));
 }
 }
 } // facebook::eden

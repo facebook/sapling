@@ -99,6 +99,15 @@ class LocalStore {
    */
   folly::Optional<Hash> getSha1ForBlob(const Hash& id) const;
 
+  /**
+   * Compute the serialized version of the tree.
+   * Returns the key and the (not coalesced) serialized data.
+   * This does not modify the contents of the store; it is the method
+   * used by the putTree method to compute the data that it stores.
+   * This is useful when computing the overal set of data during a
+   * two phase import. */
+  std::pair<Hash, folly::IOBuf> serializeTree(const Tree* tree) const;
+
   Hash putTree(const Tree* tree);
 
   /**
@@ -113,6 +122,7 @@ class LocalStore {
    * Put arbitrary data in the store.
    */
   void put(folly::ByteRange key, folly::ByteRange value);
+  void put(const Hash& id, folly::ByteRange value);
 
   /**
    * Enables batch loading mode.

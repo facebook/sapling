@@ -271,20 +271,32 @@ BlobMetadata LocalStore::putBlob(const Hash& id, const Blob* blob) {
   return metadata;
 }
 
-Hash LocalStore::putTree(const Tree* tree) {
+std::pair<Hash, folly::IOBuf> LocalStore::serializeTree(
+    const Tree* tree) const {
   GitTreeSerializer serializer;
   for (auto& entry : tree->getTreeEntries()) {
     serializer.addEntry(std::move(entry));
   }
   IOBuf treeBuf = serializer.finalize();
-  ByteRange treeData = treeBuf.coalesce();
 
   auto id = tree->getHash();
   if (id == Hash()) {
     id = Hash::sha1(&treeBuf);
   }
+  return std::make_pair(id, treeBuf);
+}
+
+Hash LocalStore::putTree(const Tree* tree) {
+  auto serialized = serializeTree(tree);
+  ByteRange treeData = serialized.second.coalesce();
+
+  auto& id = serialized.first;
   put(id.getBytes(), treeData);
   return id;
+}
+
+void LocalStore::put(const Hash& id, folly::ByteRange value) {
+  put(id.getBytes(), value);
 }
 
 void LocalStore::put(folly::ByteRange key, folly::ByteRange value) {
