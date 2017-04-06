@@ -71,6 +71,10 @@ void ClientConfig::setSnapshotID(Hash id) const {
       snapshotPath.stringPiece(), folly::StringPiece(hashStr));
 }
 
+const AbsolutePath& ClientConfig::getClientDirectory() const {
+  return clientDirectory_;
+}
+
 AbsolutePath ClientConfig::getSnapshotPath() const {
   return clientDirectory_ + kSnapshotFile;
 }

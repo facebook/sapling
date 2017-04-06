@@ -137,6 +137,9 @@ EdenMount::EdenMount(
             PathComponentPiece{"root"}, config_->getMountPath().stringPiece());
         dotEdenInode->symlink(
             PathComponentPiece{"socket"}, getSocketPath().stringPiece());
+        dotEdenInode->symlink(
+            PathComponentPiece{"client"},
+            config_->getClientDirectory().stringPiece());
       })
       .get();
 }

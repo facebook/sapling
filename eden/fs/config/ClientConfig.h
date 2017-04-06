@@ -124,6 +124,9 @@ class ClientConfig {
   /** Path to the file where the current commit ID is stored */
   AbsolutePath getSnapshotPath() const;
 
+  /** Path to the client directory */
+  const AbsolutePath& getClientDirectory() const;
+
  private:
   ClientConfig(
       AbsolutePathPiece clientDirectory,
