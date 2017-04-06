@@ -25,6 +25,14 @@ document.addEventListener('DOMContentLoaded', function() {
     tooltip.textContent = initTooltipText;
     sourcelines.appendChild(tooltip);
 
+    //* position "element" on top-right of cursor */
+    function positionTopRight(element, event) {
+        var x = (event.clientX + 10) + 'px',
+            y = (event.clientY - 20) + 'px';
+        element.style.top = y;
+        element.style.left = x;
+    }
+
     var tooltipTimeoutID;
     //* move the "tooltip" with cursor (top-right) and show it after 1s */
     function moveAndShowTooltip(e) {
@@ -33,10 +41,7 @@ document.addEventListener('DOMContentLoaded', function() {
             window.clearTimeout(tooltipTimeoutID);
         }
         tooltip.classList.add('hidden');
-        var x = (e.clientX + 10) + 'px',
-            y = (e.clientY - 20) + 'px';
-        tooltip.style.top = y;
-        tooltip.style.left = x;
+        positionTopRight(tooltip, e);
         tooltipTimeoutID = window.setTimeout(function() {
             tooltip.classList.remove('hidden');
         }, 1000);
@@ -152,6 +157,8 @@ document.addEventListener('DOMContentLoaded', function() {
             var div = divAndButton[0],
                 button = divAndButton[1];
             inviteElement.appendChild(div);
+            // set position close to cursor (top-right)
+            positionTopRight(div, e);
 
             //** event handler for cancelling selection */
             function cancel() {

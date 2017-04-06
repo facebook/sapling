@@ -293,7 +293,7 @@ div#followlines {
   border: 1px solid #CCC;
   border-radius: 5px;
   padding: 4px;
-  position: absolute;
+  position: fixed;
 }
 
 div.followlines-cancel {
