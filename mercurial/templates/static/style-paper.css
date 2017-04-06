@@ -320,6 +320,22 @@ div.followlines-link {
   font-family: sans-serif;
 }
 
+div#followlines-tooltip {
+  display: none;
+  position: fixed;
+  background-color: #ffc;
+  border: 1px solid #999;
+  padding: 2px;
+}
+
+.sourcelines:hover > div#followlines-tooltip {
+  display: inline;
+}
+
+.sourcelines:hover > div#followlines-tooltip.hidden {
+  display: none;
+}
+
 .sourcelines > a {
     display: inline-block;
     position: absolute;

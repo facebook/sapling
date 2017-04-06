@@ -17,6 +17,34 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
 
+    // tooltip to invite on lines selection
+    var tooltip = document.createElement('div');
+    tooltip.id = 'followlines-tooltip';
+    tooltip.classList.add('hidden');
+    var initTooltipText = 'click to start following lines history from here';
+    tooltip.textContent = initTooltipText;
+    sourcelines.appendChild(tooltip);
+
+    var tooltipTimeoutID;
+    //* move the "tooltip" with cursor (top-right) and show it after 1s */
+    function moveAndShowTooltip(e) {
+        if (typeof tooltipTimeoutID !== 'undefined') {
+            // avoid accumulation of timeout callbacks (blinking)
+            window.clearTimeout(tooltipTimeoutID);
+        }
+        tooltip.classList.add('hidden');
+        var x = (e.clientX + 10) + 'px',
+            y = (e.clientY - 20) + 'px';
+        tooltip.style.top = y;
+        tooltip.style.left = x;
+        tooltipTimeoutID = window.setTimeout(function() {
+            tooltip.classList.remove('hidden');
+        }, 1000);
+    }
+
+    // on mousemove, show tooltip close to cursor position
+    sourcelines.addEventListener('mousemove', moveAndShowTooltip);
+
     // retrieve all direct <span> children of <pre class="sourcelines">
     var spans = Array.prototype.filter.call(
         sourcelines.children,
@@ -65,6 +93,10 @@ document.addEventListener('DOMContentLoaded', function() {
             // registered for other click with <span> target
             return;
         }
+
+        // update tooltip text
+        tooltip.textContent = 'click again to terminate line block selection here';
+
         var startId = parseInt(startElement.id.slice(1));
         startElement.classList.add(lineSelectedCSSClass); // CSS
 
@@ -83,13 +115,25 @@ document.addEventListener('DOMContentLoaded', function() {
             // remove this event listener
             sourcelines.removeEventListener('click', lineSelectEnd);
 
+            // hide tooltip and disable motion tracking
+            tooltip.classList.add('hidden');
+            sourcelines.removeEventListener('mousemove', moveAndShowTooltip);
+            window.clearTimeout(tooltipTimeoutID);
+
+            //* restore initial "tooltip" state */
+            function restoreTooltip() {
+                tooltip.textContent = initTooltipText;
+                sourcelines.addEventListener('mousemove', moveAndShowTooltip);
+            }
+
             // compute line range (startId, endId)
             var endId = parseInt(endElement.id.slice(1));
             if (endId == startId) {
                 // clicked twice the same line, cancel and reset initial state
-                // (CSS and event listener for selection start)
+                // (CSS, event listener for selection start, tooltip)
                 removeSelectedCSSClass();
                 sourcelines.addEventListener('click', lineSelectStart);
+                restoreTooltip();
                 return;
             }
             var inviteElement = endElement;
@@ -118,6 +162,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 sourcelines.removeEventListener('click', cancel);
                 // remove styles on selected lines
                 removeSelectedCSSClass();
+                // restore tooltip element
+                restoreTooltip();
             }
 
             // bind cancel event to click on <button>
