@@ -151,7 +151,7 @@ delta_chain_t DatapackStore::getDeltaChainRaw(const Key &key) {
     return chain;
   }
 
-  return (delta_chain_t) { GET_DELTA_CHAIN_NOT_FOUND };
+  return COMPOUND_LITERAL(delta_chain_t) { GET_DELTA_CHAIN_NOT_FOUND };
 }
 
 Key *DatapackStoreKeyIterator::next() {

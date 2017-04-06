@@ -113,7 +113,7 @@ static inline size_t read_noint(FILE *fh, void *_buf, size_t nbytes) {
 read_from_file_result_t read_from_file(char *fname, size_t fname_sz) {
   char *fname_dst = malloc(fname_sz + 1);
   if (fname_dst == NULL) {
-    return (read_from_file_result_t) {READ_FROM_FILE_OOM, 0, NULL};
+    return COMPOUND_LITERAL(read_from_file_result_t) {READ_FROM_FILE_OOM, 0, NULL};
   }
   memcpy(fname_dst, fname, fname_sz);
   fname_dst[fname_sz] = '\x00';

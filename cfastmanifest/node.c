@@ -260,7 +260,7 @@ node_search_children_result_t search_children(
       node);
 
   if (offset >= node->num_children) {
-    return (node_search_children_result_t) {NULL, UINT32_MAX};
+    return COMPOUND_LITERAL(node_search_children_result_t) {NULL, UINT32_MAX};
   }
 
   // ensure the spot we found is an exact match.
@@ -268,10 +268,10 @@ node_search_children_result_t search_children(
   node_t *child = get_child_from_diff(node, diff);
   if (name_compare(name, name_sz, child) == 0) {
     // huzzah, we found it.
-    return (node_search_children_result_t) {child, (uint32_t) offset};
+    return COMPOUND_LITERAL(node_search_children_result_t) {child, (uint32_t) offset};
   }
 
-  return (node_search_children_result_t) {NULL, UINT32_MAX};
+  return COMPOUND_LITERAL(node_search_children_result_t) {NULL, UINT32_MAX};
 }
 
 uint32_t get_child_index(

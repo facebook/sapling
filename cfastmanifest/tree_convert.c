@@ -192,7 +192,7 @@ static close_folder_result_t close_folder(
           close_folder(state, folder_index + 1);
 
       if (close_folder_result.code != CLOSE_FOLDER_OK) {
-        return (close_folder_result_t) {
+        return COMPOUND_LITERAL(close_folder_result_t) {
             close_folder_result.code, NULL};
       }
     }
@@ -207,7 +207,7 @@ static close_folder_result_t close_folder(
           folder->closed_children_count);
 
   if (arena_alloc_node_result.code == ARENA_ALLOC_OOM) {
-    return (close_folder_result_t) {
+    return COMPOUND_LITERAL(close_folder_result_t) {
         CLOSE_FOLDER_OOM, NULL};
   }
   node_t *node = arena_alloc_node_result.node;
@@ -239,12 +239,12 @@ static close_folder_result_t close_folder(
   if (folder_index > 0) {
     open_folder_t *parent_folder = &state->folders[folder_index - 1];
     if (folder_add_child(state, parent_folder, node) == false) {
-      return (close_folder_result_t) {
+      return COMPOUND_LITERAL(close_folder_result_t) {
           CLOSE_FOLDER_OOM, NULL};
     }
   }
 
-  return (close_folder_result_t) {
+  return COMPOUND_LITERAL(close_folder_result_t) {
       CLOSE_FOLDER_OK, node};
 }
 
@@ -286,7 +286,7 @@ static process_path_result_t process_path(
        path[path_scan_index] != 0;
        path_scan_index++) {
     if (path_scan_index == max_len) {
-      return (process_path_result_t) {
+      return COMPOUND_LITERAL(process_path_result_t) {
           PROCESS_PATH_CORRUPT, NULL, 0};
     }
 
@@ -313,7 +313,7 @@ static process_path_result_t process_path(
         close_folder_result_t close_folder_result =
             close_folder(state, open_folder_index + 1);
         if (close_folder_result.code == CLOSE_FOLDER_OOM) {
-          return (process_path_result_t) {PROCESS_PATH_OOM, NULL, 0};
+          return COMPOUND_LITERAL(process_path_result_t) {PROCESS_PATH_OOM, NULL, 0};
         }
       }
     }
@@ -345,7 +345,7 @@ static process_path_result_t process_path(
     close_folder_result_t close_folder_result =
         close_folder(state, open_folder_index + 1);
     if (close_folder_result.code == CLOSE_FOLDER_OOM) {
-      return (process_path_result_t) {PROCESS_PATH_OOM, NULL, 0};
+      return COMPOUND_LITERAL(process_path_result_t) {PROCESS_PATH_OOM, NULL, 0};
     }
   }
 
@@ -359,7 +359,7 @@ static process_path_result_t process_path(
           0);
 
   if (arena_alloc_node_result.code == ARENA_ALLOC_OOM) {
-    return (process_path_result_t) {PROCESS_PATH_OOM, NULL, 0};
+    return COMPOUND_LITERAL(process_path_result_t) {PROCESS_PATH_OOM, NULL, 0};
   }
 
   arena_alloc_node_result.node->type = TYPE_LEAF;
@@ -368,7 +368,7 @@ static process_path_result_t process_path(
   open_folder_t *folder = &state->folders[open_folder_index];
   folder_add_child(state, folder, arena_alloc_node_result.node);
 
-  return (process_path_result_t) {
+  return COMPOUND_LITERAL(process_path_result_t) {
       PROCESS_PATH_OK, arena_alloc_node_result.node, path_scan_index + 1};
 }
 
@@ -389,10 +389,10 @@ static convert_from_flat_result_t convert_from_flat_helper(
 
     switch (pp_result.code) {
       case PROCESS_PATH_OOM:
-        return (convert_from_flat_result_t) {
+        return COMPOUND_LITERAL(convert_from_flat_result_t) {
             CONVERT_FROM_FLAT_OOM, NULL};
       case PROCESS_PATH_CORRUPT:
-        return (convert_from_flat_result_t) {
+        return COMPOUND_LITERAL(convert_from_flat_result_t) {
             CONVERT_FROM_FLAT_WTF, NULL};
       case PROCESS_PATH_OK:
         break;
@@ -405,13 +405,13 @@ static convert_from_flat_result_t convert_from_flat_helper(
     if (remaining <= SHA1_BYTES * 2) {
       // not enough characters for the checksum and the NL.  well, that's a
       // fail.
-      return (convert_from_flat_result_t) {
+      return COMPOUND_LITERAL(convert_from_flat_result_t) {
           CONVERT_FROM_FLAT_WTF, NULL};
     }
 
     if (unhexlify(&manifest[ptr], SHA1_BYTES * 2, node->checksum) ==
         false) {
-      return (convert_from_flat_result_t) {
+      return COMPOUND_LITERAL(convert_from_flat_result_t) {
           CONVERT_FROM_FLAT_WTF, NULL};
     }
     node->checksum_sz = SHA1_BYTES;
@@ -434,14 +434,14 @@ static convert_from_flat_result_t convert_from_flat_helper(
   // close the root folder.
   close_folder_result_t close_result = close_folder(state, 0);
   if (close_result.code == CLOSE_FOLDER_OOM) {
-    return (convert_from_flat_result_t) {
+    return COMPOUND_LITERAL(convert_from_flat_result_t) {
         CONVERT_FROM_FLAT_OOM, NULL};
   }
 
   close_result.node->type = TYPE_ROOT;
   add_child(state->tree->shadow_root, close_result.node);
 
-  return (convert_from_flat_result_t) {
+  return COMPOUND_LITERAL(convert_from_flat_result_t) {
       CONVERT_FROM_FLAT_OK, state->tree};
 }
 
@@ -544,7 +544,7 @@ convert_from_flat_result_t convert_from_flat(
     state = NULL;
   }
   if (state == NULL) {
-    return (convert_from_flat_result_t) {
+    return COMPOUND_LITERAL(convert_from_flat_result_t) {
         CONVERT_FROM_FLAT_OOM, NULL};
   }
 
@@ -582,9 +582,9 @@ convert_to_flat_result_t convert_to_flat(tree_t *tree) {
   if (result != CONVERT_TO_FLAT_OK) {
     // free the buffer if any error occurred.
     free(state.output_buffer);
-    return (convert_to_flat_result_t) {result, NULL, 0};
+    return COMPOUND_LITERAL(convert_to_flat_result_t) {result, NULL, 0};
   } else {
-    return (convert_to_flat_result_t) {
+    return COMPOUND_LITERAL(convert_to_flat_result_t) {
         CONVERT_TO_FLAT_OK, state.output_buffer, state.output_buffer_idx};
   }
 }

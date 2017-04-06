@@ -26,13 +26,13 @@ static find_path_callback_result_t get_path_unfiltered_callback(
   // does the path already exist?
   node_t *child = get_child_by_name(root, name, name_sz);
   if (child == NULL) {
-    return (find_path_callback_result_t) {
+    return COMPOUND_LITERAL(find_path_callback_result_t) {
         FIND_PATH_NOT_FOUND, root};
   }
 
   metadata->node = child;
 
-  return (find_path_callback_result_t) {FIND_PATH_OK, root};
+  return COMPOUND_LITERAL(find_path_callback_result_t) {FIND_PATH_OK, root};
 }
 
 get_path_unfiltered_result_t get_path_unfiltered(
@@ -46,7 +46,7 @@ get_path_unfiltered_result_t get_path_unfiltered(
   node_t *real_root = get_child_by_index(shadow_root, 0);
 
   if (real_root == NULL) {
-    return (get_path_unfiltered_result_t) {GET_PATH_WTF, NULL};
+    return COMPOUND_LITERAL(get_path_unfiltered_result_t) {GET_PATH_WTF, NULL};
   }
 
   find_path_result_t result =
@@ -66,13 +66,13 @@ get_path_unfiltered_result_t get_path_unfiltered(
 
   switch (result) {
     case FIND_PATH_OK:
-      return (get_path_unfiltered_result_t) {GET_PATH_OK, metadata.node};
+      return COMPOUND_LITERAL(get_path_unfiltered_result_t) {GET_PATH_OK, metadata.node};
     case FIND_PATH_NOT_FOUND:
     case FIND_PATH_CONFLICT:
       // `FIND_PATH_CONFLICT` is returned if there is a leaf node where we
       // expect a directory node.  this is treated the same as a NOT_FOUND.
-      return (get_path_unfiltered_result_t) {GET_PATH_NOT_FOUND, NULL};
+      return COMPOUND_LITERAL(get_path_unfiltered_result_t) {GET_PATH_NOT_FOUND, NULL};
     default:
-      return (get_path_unfiltered_result_t) {GET_PATH_WTF, NULL};
+      return COMPOUND_LITERAL(get_path_unfiltered_result_t) {GET_PATH_WTF, NULL};
   }
 }

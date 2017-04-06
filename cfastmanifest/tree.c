@@ -135,13 +135,13 @@ find_path_callback_result_t get_path_callback(
   // does the path already exist?
   node_t *child = get_child_by_name(root, name, name_sz);
   if (child == NULL || child->type != TYPE_LEAF) {
-    return (find_path_callback_result_t) {
+    return COMPOUND_LITERAL(find_path_callback_result_t) {
         FIND_PATH_NOT_FOUND, root};
   }
 
   metadata->node = child;
 
-  return (find_path_callback_result_t) {FIND_PATH_OK, root};
+  return COMPOUND_LITERAL(find_path_callback_result_t) {FIND_PATH_OK, root};
 }
 
 get_path_result_t get_path(
@@ -155,7 +155,7 @@ get_path_result_t get_path(
   node_t *real_root = get_child_by_index(shadow_root, 0);
 
   if (real_root == NULL) {
-    return (get_path_result_t) {GET_PATH_WTF, NULL};
+    return COMPOUND_LITERAL(get_path_result_t) {GET_PATH_WTF, NULL};
   }
 
   find_path_result_t result =
@@ -175,7 +175,7 @@ get_path_result_t get_path(
 
   switch (result) {
     case FIND_PATH_OK:
-      return (get_path_result_t) {
+      return COMPOUND_LITERAL(get_path_result_t) {
           GET_PATH_OK,
           metadata.node->checksum,
           metadata.node->checksum_sz,
@@ -185,9 +185,9 @@ get_path_result_t get_path(
     case FIND_PATH_CONFLICT:
       // `FIND_PATH_CONFLICT` is returned if there is a leaf node where we
       // expect a directory node.  this is treated the same as a NOT_FOUND.
-      return (get_path_result_t) {GET_PATH_NOT_FOUND, NULL};
+      return COMPOUND_LITERAL(get_path_result_t) {GET_PATH_NOT_FOUND, NULL};
     default:
-      return (get_path_result_t) {GET_PATH_WTF, NULL};
+      return COMPOUND_LITERAL(get_path_result_t) {GET_PATH_WTF, NULL};
   }
 }
 
@@ -220,10 +220,10 @@ find_path_callback_result_t add_or_update_path_callback(
             changes);
     switch (tree_add_child_result.code) {
       case TREE_ADD_CHILD_OOM:
-        return (find_path_callback_result_t) {
+        return COMPOUND_LITERAL(find_path_callback_result_t) {
             FIND_PATH_OOM, NULL};
       case TREE_ADD_CHILD_WTF:
-        return (find_path_callback_result_t) {
+        return COMPOUND_LITERAL(find_path_callback_result_t) {
             FIND_PATH_WTF, NULL};
       case TREE_ADD_CHILD_OK:
         break;
@@ -239,14 +239,14 @@ find_path_callback_result_t add_or_update_path_callback(
   } else {
     if (child->type == TYPE_IMPLICIT) {
       // was previously a directory
-      return (find_path_callback_result_t) {
+      return COMPOUND_LITERAL(find_path_callback_result_t) {
           FIND_PATH_CONFLICT, NULL};
     }
   }
 
   // update the node.
   if (metadata->checksum_sz > CHECKSUM_BYTES) {
-    return (find_path_callback_result_t) {
+    return COMPOUND_LITERAL(find_path_callback_result_t) {
         FIND_PATH_WTF, NULL};
   }
 
@@ -257,7 +257,7 @@ find_path_callback_result_t add_or_update_path_callback(
 
   changes->checksum_dirty = true;
 
-  return (find_path_callback_result_t) {FIND_PATH_OK, root};
+  return COMPOUND_LITERAL(find_path_callback_result_t) {FIND_PATH_OK, root};
 }
 
 add_update_path_result_t add_or_update_path(
@@ -323,7 +323,7 @@ find_path_callback_result_t remove_path_callback(
       search_children(root, name, name_sz);
 
   if (search_result.child == NULL) {
-    return (find_path_callback_result_t) {
+    return COMPOUND_LITERAL(find_path_callback_result_t) {
         FIND_PATH_NOT_FOUND, NULL};
   }
 
@@ -336,9 +336,9 @@ find_path_callback_result_t remove_path_callback(
       remove_child(root, search_result.child_num);
 
   if (remove_result == REMOVE_CHILD_OK) {
-    return (find_path_callback_result_t) {FIND_PATH_OK, root};
+    return COMPOUND_LITERAL(find_path_callback_result_t) {FIND_PATH_OK, root};
   } else {
-    return (find_path_callback_result_t) {FIND_PATH_WTF, root};
+    return COMPOUND_LITERAL(find_path_callback_result_t) {FIND_PATH_WTF, root};
   }
 }
 

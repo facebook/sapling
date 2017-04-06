@@ -466,7 +466,7 @@ const get_delta_chain_link_result_t getdeltachainlink(
 
   uint8_t *decompress_output = malloc((size_t) link->delta_sz);
   if (decompress_output == NULL) {
-    return (get_delta_chain_link_result_t) { GET_DELTA_CHAIN_LINK_OOM, NULL };
+    return COMPOUND_LITERAL(get_delta_chain_link_result_t) { GET_DELTA_CHAIN_LINK_OOM, NULL };
   }
 
   int32_t outbytes = LZ4_decompress_fast(
@@ -474,14 +474,14 @@ const get_delta_chain_link_result_t getdeltachainlink(
       (char *) decompress_output,
       (int32_t) link->delta_sz);
   if (link->delta_sz != 0 && outbytes != compressed_sz) {
-    return (get_delta_chain_link_result_t) { GET_DELTA_CHAIN_LINK_CORRUPT,
+    return COMPOUND_LITERAL(get_delta_chain_link_result_t) { GET_DELTA_CHAIN_LINK_CORRUPT,
                                              NULL };
   }
   link->delta = decompress_output;
 
   ptr += compressed_sz;
 
-  return (get_delta_chain_link_result_t) { GET_DELTA_CHAIN_LINK_OK, ptr };
+  return COMPOUND_LITERAL(get_delta_chain_link_result_t) { GET_DELTA_CHAIN_LINK_OK, ptr };
 }
 
 delta_chain_t getdeltachain(
@@ -491,10 +491,10 @@ delta_chain_t getdeltachain(
 
   switch (pack_chain.code) {
     case PACK_CHAIN_NOT_FOUND:
-      return (delta_chain_t) { GET_DELTA_CHAIN_NOT_FOUND };
+      return COMPOUND_LITERAL(delta_chain_t) { GET_DELTA_CHAIN_NOT_FOUND };
 
     case PACK_CHAIN_OOM:
-      return (delta_chain_t) { GET_DELTA_CHAIN_OOM };
+      return COMPOUND_LITERAL(delta_chain_t) { GET_DELTA_CHAIN_OOM };
 
     case PACK_CHAIN_OK:
       break;

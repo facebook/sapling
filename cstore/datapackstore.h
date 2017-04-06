@@ -32,7 +32,7 @@ class DeltaChainIterator {
     DeltaChainIterator() :
       _index(0) {}
     virtual delta_chain_t getNextChain(const Key &key) {
-      return (delta_chain_t) { GET_DELTA_CHAIN_NOT_FOUND };
+      return COMPOUND_LITERAL(delta_chain_t) { GET_DELTA_CHAIN_NOT_FOUND };
     }
   public:
     DeltaChainIterator(delta_chain_t chain) :

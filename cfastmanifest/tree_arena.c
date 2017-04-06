@@ -33,7 +33,7 @@ arena_alloc_node_result_t arena_alloc_node_helper(
   // that they're not too large for the types in node.h
   if (!VERIFY_NAME_SZ(name_sz) ||
       !VERIFY_CHILD_NUM(max_children)) {
-    return (arena_alloc_node_result_t) {
+    return COMPOUND_LITERAL(arena_alloc_node_result_t) {
         ARENA_ALLOC_EXCEEDED_LIMITS, NULL};
   }
 
@@ -48,7 +48,7 @@ arena_alloc_node_result_t arena_alloc_node_helper(
 
     if (next == NULL) {
       if (policy == ARENA_POLICY_FAIL) {
-        return (arena_alloc_node_result_t) {
+        return COMPOUND_LITERAL(arena_alloc_node_result_t) {
             ARENA_ALLOC_OOM, NULL};
       } else {
         size_t new_arena_sz =
@@ -69,7 +69,7 @@ arena_alloc_node_result_t arena_alloc_node_helper(
         void *new_arena = realloc(tree->arena, new_arena_sz);
 
         if (new_arena == NULL) {
-          return (arena_alloc_node_result_t) {
+          return COMPOUND_LITERAL(arena_alloc_node_result_t) {
               ARENA_ALLOC_OOM, NULL};
         }
 
@@ -98,7 +98,7 @@ arena_alloc_node_result_t arena_alloc_node_helper(
     } else {
       tree->arena_free_start = next;
       tree->consumed_memory += candidate->block_sz;
-      return (arena_alloc_node_result_t) {
+      return COMPOUND_LITERAL(arena_alloc_node_result_t) {
           ARENA_ALLOC_OK, candidate};
     }
   } while (true);

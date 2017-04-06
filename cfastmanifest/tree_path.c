@@ -50,7 +50,7 @@ tree_add_child_result_t tree_add_child(
 
   if (!VERIFY_CHILD_NUM(num_children_hint) ||
       !VERIFY_NAME_SZ(name_sz)) {
-    return (tree_add_child_result_t) {
+    return COMPOUND_LITERAL(tree_add_child_result_t) {
         TREE_ADD_CHILD_WTF, NULL, NULL};
   }
 
@@ -65,7 +65,7 @@ tree_add_child_result_t tree_add_child(
   node_t *node = alloc_node(name, (name_sz_t) name_sz,
       (child_num_t) num_children_hint);
   if (node == NULL) {
-    return (tree_add_child_result_t) {
+    return COMPOUND_LITERAL(tree_add_child_result_t) {
         TREE_ADD_CHILD_OOM, NULL, NULL};
   }
 
@@ -86,17 +86,17 @@ tree_add_child_result_t tree_add_child(
     // children, and a binary search for nodes with a lot of children.
     uint32_t index = get_child_index(root_parent, root);
     if (index == UINT32_MAX) {
-      return (tree_add_child_result_t) {
+      return COMPOUND_LITERAL(tree_add_child_result_t) {
           TREE_ADD_CHILD_WTF, NULL, NULL};
     }
     node_enlarge_child_capacity_result_t enlarge_result =
         enlarge_child_capacity(root_parent, index);
 
     if (enlarge_result.code == ENLARGE_OOM) {
-      return (tree_add_child_result_t) {
+      return COMPOUND_LITERAL(tree_add_child_result_t) {
           TREE_ADD_CHILD_OOM, NULL, NULL};
     } else if (enlarge_result.code != ENLARGE_OK) {
-      return (tree_add_child_result_t) {
+      return COMPOUND_LITERAL(tree_add_child_result_t) {
           TREE_ADD_CHILD_WTF, NULL, NULL};
     }
 
@@ -114,11 +114,11 @@ tree_add_child_result_t tree_add_child(
     // add the child again.
     add_child_result = add_child(root, node);
     if (add_child_result != ADD_CHILD_OK) {
-      return (tree_add_child_result_t) {
+      return COMPOUND_LITERAL(tree_add_child_result_t) {
           TREE_ADD_CHILD_WTF, NULL, NULL};
     }
   } else if (add_child_result != ADD_CHILD_OK) {
-    return (tree_add_child_result_t) {
+    return COMPOUND_LITERAL(tree_add_child_result_t) {
         TREE_ADD_CHILD_WTF, NULL, NULL};
   }
 
