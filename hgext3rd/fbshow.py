@@ -1,4 +1,4 @@
-# show.py
+# fbshow.py
 #
 # Copyright 2016 Facebook, Inc.
 #
