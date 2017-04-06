@@ -1385,7 +1385,7 @@ class TTest(Test):
                 # ignore '(glob)' added to l by 'replacements'
                 if l.endswith(b" (glob)\n"):
                     l = l[:-8] + b"\n"
-                return TTest.globmatch(el[:-8], l)
+                return TTest.globmatch(el[:-8], l) or retry
             if os.altsep and l.replace(b'\\', b'/') == el:
                 return b'+glob'
         return retry

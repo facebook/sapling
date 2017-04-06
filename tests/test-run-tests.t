@@ -55,7 +55,10 @@ a succesful test
   >   $ echo babar
   >   babar
   >   $ echo xyzzy
+  >   dont_print (?)
+  >   nothing[42]line (re) (?)
   >   never*happens (glob) (?)
+  >   more_nothing (?)
   >   xyzzy
   >   nor this (?)
   >   $ printf 'abc\ndef\nxyz\n'
@@ -326,14 +329,14 @@ Running In Debug Mode
   *SALT* 2 0 (glob)
   + echo xyzzy
   xyzzy
-  + echo *SALT* 6 0 (glob)
-  *SALT* 6 0 (glob)
+  + echo *SALT* 9 0 (glob)
+  *SALT* 9 0 (glob)
   + printf *abc\ndef\nxyz\n* (glob)
   abc
   def
   xyz
-  + echo *SALT* 12 0 (glob)
-  *SALT* 12 0 (glob)
+  + echo *SALT* 15 0 (glob)
+  *SALT* 15 0 (glob)
   .
   # Ran 2 tests, 0 skipped, 0 warned, 0 failed.
 
