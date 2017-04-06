@@ -67,6 +67,16 @@ def safehasattr(thing, attr):
 setattr(util, 'safehasattr', safehasattr)
 
 # for "historical portability":
+# define util.timer forcibly, because util.timer has been available
+# since ae5d60bb70c9
+if safehasattr(time, 'perf_counter'):
+    util.timer = time.perf_counter
+elif os.name == 'nt':
+    util.timer = time.clock
+else:
+    util.timer = time.time
+
+# for "historical portability":
 # use locally defined empty option list, if formatteropts isn't
 # available, because commands.formatteropts has been available since
 # 3.2 (or 7a7eed5176a4), even though formatting itself has been

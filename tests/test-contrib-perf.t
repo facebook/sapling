@@ -165,7 +165,7 @@ Check perf.py for historical portability
   $ (hg files -r 1.2 glob:mercurial/*.c glob:mercurial/*.py;
   >  hg files -r tip glob:mercurial/*.c glob:mercurial/*.py) |
   > "$TESTDIR"/check-perf-code.py contrib/perf.py
-  contrib/perf.py:859:
+  contrib/perf.py:869:
    >             r.revision(r.node(x))
    don't convert rev to node before passing to revision(nodeorrev)
   [1]
