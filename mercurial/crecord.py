@@ -473,14 +473,17 @@ def chunkselector(ui, headerlist, operation=None):
     """
     ui.write(_('starting interactive selection\n'))
     chunkselector = curseschunkselector(headerlist, ui, operation)
-    f = signal.getsignal(signal.SIGTSTP)
+    origsigtstp = sentinel = object()
+    if util.safehasattr(signal, 'SIGTSTP'):
+        origsigtstp = signal.getsignal(signal.SIGTSTP)
     try:
         curses.wrapper(chunkselector.main)
         if chunkselector.initerr is not None:
             raise error.Abort(chunkselector.initerr)
         # ncurses does not restore signal handler for SIGTSTP
     finally:
-        signal.signal(signal.SIGTSTP, f)
+        if origsigtstp is not sentinel:
+            signal.signal(signal.SIGTSTP, origsigtstp)
     return chunkselector.opts
 
 def testdecorator(testfn, f):
