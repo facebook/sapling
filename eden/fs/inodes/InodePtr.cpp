@@ -18,9 +18,8 @@
 
 namespace facebook {
 namespace eden {
-template <typename InodeType>
 template <typename SubclassRawPtrType>
-SubclassRawPtrType InodeBasePtrImpl<InodeType>::asSubclass() const {
+SubclassRawPtrType InodePtr::asSubclass() const {
   if (this->value_ == nullptr) {
     return nullptr;
   }
@@ -33,9 +32,8 @@ SubclassRawPtrType InodeBasePtrImpl<InodeType>::asSubclass() const {
   return subclassPtr;
 }
 
-template <typename InodeType>
 template <typename SubclassPtrType>
-SubclassPtrType InodeBasePtrImpl<InodeType>::asSubclassPtr() const {
+SubclassPtrType InodePtr::asSubclassPtr() const {
   if (this->value_ == nullptr) {
     return SubclassPtrType{};
   }
@@ -48,17 +46,15 @@ SubclassPtrType InodeBasePtrImpl<InodeType>::asSubclassPtr() const {
   return SubclassPtrType{subclassPtr, SubclassPtrType::NORMAL_INCREMENT};
 }
 
-template <typename InodeType>
 template <typename SubclassPtrType>
-SubclassPtrType InodeBasePtrImpl<InodeType>::asSubclassPtrOrNull() const& {
+SubclassPtrType InodePtr::asSubclassPtrOrNull() const& {
   return SubclassPtrType{
       dynamic_cast<typename SubclassPtrType::InodeType*>(this->value_),
       SubclassPtrType::NORMAL_INCREMENT};
 }
 
-template <typename InodeType>
 template <typename SubclassPtrType>
-SubclassPtrType InodeBasePtrImpl<InodeType>::extractSubclassPtr() {
+SubclassPtrType InodePtr::extractSubclassPtr() {
   if (this->value_ == nullptr) {
     return SubclassPtrType{};
   }
@@ -72,9 +68,8 @@ SubclassPtrType InodeBasePtrImpl<InodeType>::extractSubclassPtr() {
   return SubclassPtrType{subclassPtr, SubclassPtrType::NO_INCREMENT};
 }
 
-template <typename InodeType>
 template <typename SubclassPtrType>
-SubclassPtrType InodeBasePtrImpl<InodeType>::extractSubclassPtrOrNull() {
+SubclassPtrType InodePtr::extractSubclassPtrOrNull() {
   if (this->value_ == nullptr) {
     return SubclassPtrType{};
   }
@@ -87,87 +82,60 @@ SubclassPtrType InodeBasePtrImpl<InodeType>::extractSubclassPtrOrNull() {
   return SubclassPtrType{subclassPtr, SubclassPtrType::NO_INCREMENT};
 }
 
-template <typename InodeType>
-typename detail::InodePtrTraits<InodeType>::FileInode*
-InodeBasePtrImpl<InodeType>::asFile() const {
-  return asSubclass<FileInodeRawPtr>();
+FileInode* InodePtr::asFile() const {
+  return asSubclass<FileInode*>();
 }
 
-template <typename InodeType>
-typename detail::InodePtrTraits<InodeType>::FileInodePtr
-InodeBasePtrImpl<InodeType>::asFilePtr() const& {
+FileInodePtr InodePtr::asFilePtr() const& {
   return asSubclassPtr<FileInodePtr>();
 }
 
-template <typename InodeType>
-typename detail::InodePtrTraits<InodeType>::FileInodePtr
-InodeBasePtrImpl<InodeType>::asFilePtr()&& {
+FileInodePtr InodePtr::asFilePtr()&& {
   return extractSubclassPtr<FileInodePtr>();
 }
 
-template <typename InodeType>
-typename detail::InodePtrTraits<InodeType>::FileInode*
-InodeBasePtrImpl<InodeType>::asFileOrNull() const {
-  return dynamic_cast<FileInodeRawPtr>(this->value_);
+FileInode* InodePtr::asFileOrNull() const {
+  return dynamic_cast<FileInode*>(this->value_);
 }
 
-template <typename InodeType>
-typename detail::InodePtrTraits<InodeType>::FileInodePtr
-InodeBasePtrImpl<InodeType>::asFilePtrOrNull() const& {
-  return FileInodePtr{dynamic_cast<FileInodeRawPtr>(this->value_),
+FileInodePtr InodePtr::asFilePtrOrNull() const& {
+  return FileInodePtr{dynamic_cast<FileInode*>(this->value_),
                       FileInodePtr::NORMAL_INCREMENT};
 }
 
-template <typename InodeType>
-typename detail::InodePtrTraits<InodeType>::FileInodePtr
-InodeBasePtrImpl<InodeType>::asFilePtrOrNull()&& {
+FileInodePtr InodePtr::asFilePtrOrNull()&& {
   return extractSubclassPtrOrNull<FileInodePtr>();
 }
 
-template <typename InodeType>
-typename detail::InodePtrTraits<InodeType>::TreeInode*
-InodeBasePtrImpl<InodeType>::asTree() const {
-  return asSubclass<TreeInodeRawPtr>();
+TreeInode* InodePtr::asTree() const {
+  return asSubclass<TreeInode*>();
 }
 
-template <typename InodeType>
-typename detail::InodePtrTraits<InodeType>::TreeInodePtr
-InodeBasePtrImpl<InodeType>::asTreePtr() const& {
+TreeInodePtr InodePtr::asTreePtr() const& {
   return asSubclassPtr<TreeInodePtr>();
 }
 
-template <typename InodeType>
-typename detail::InodePtrTraits<InodeType>::TreeInodePtr
-InodeBasePtrImpl<InodeType>::asTreePtr()&& {
+TreeInodePtr InodePtr::asTreePtr()&& {
   return extractSubclassPtr<TreeInodePtr>();
 }
 
-template <typename InodeType>
-typename detail::InodePtrTraits<InodeType>::TreeInode*
-InodeBasePtrImpl<InodeType>::asTreeOrNull() const {
-  return dynamic_cast<TreeInodeRawPtr>(this->value_);
+TreeInode* InodePtr::asTreeOrNull() const {
+  return dynamic_cast<TreeInode*>(this->value_);
 }
 
-template <typename InodeType>
-typename detail::InodePtrTraits<InodeType>::TreeInodePtr
-InodeBasePtrImpl<InodeType>::asTreePtrOrNull() const& {
-  return TreeInodePtr{dynamic_cast<TreeInodeRawPtr>(this->value_),
+TreeInodePtr InodePtr::asTreePtrOrNull() const& {
+  return TreeInodePtr{dynamic_cast<TreeInode*>(this->value_),
                       TreeInodePtr::NORMAL_INCREMENT};
 }
 
-template <typename InodeType>
-typename detail::InodePtrTraits<InodeType>::TreeInodePtr
-InodeBasePtrImpl<InodeType>::asTreePtrOrNull()&& {
+TreeInodePtr InodePtr::asTreePtrOrNull()&& {
   return extractSubclassPtrOrNull<TreeInodePtr>();
 }
 
 // Explicitly instantiate InodePtrImpl for all inode class types
-template class InodeBasePtrImpl<InodeBase>;
 template class InodePtrImpl<FileInode>;
 template class InodePtrImpl<TreeInode>;
-template FileInodePtr
-InodeBasePtrImpl<InodeBase>::asSubclassPtrOrNull<FileInodePtr>() const&;
-template TreeInodePtr
-InodeBasePtrImpl<InodeBase>::asSubclassPtrOrNull<TreeInodePtr>() const&;
+template FileInodePtr InodePtr::asSubclassPtrOrNull<FileInodePtr>() const&;
+template TreeInodePtr InodePtr::asSubclassPtrOrNull<TreeInodePtr>() const&;
 }
 }

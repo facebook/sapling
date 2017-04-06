@@ -71,7 +71,7 @@ Future<InodePtr> InodeMap::lookupInode(fuse_ino_t number) {
     // makeFuture()'s memory allocation without the lock held.
     auto result = InodePtr::newPtrLocked(loadedIter->second);
     data.unlock();
-    return folly::makeFuture<InodePtr>(result);
+    return folly::makeFuture<InodePtr>(std::move(result));
   }
 
   // Look up the data in the unloadedInodes_ map.

@@ -23,8 +23,6 @@ class DotEdenInode;
 
 template <typename InodeType>
 class InodePtrImpl;
-template <typename InodeType>
-class InodeBasePtrImpl;
 
 /*
  * Friendly names for the various InodePtr classes.
@@ -32,10 +30,6 @@ class InodeBasePtrImpl;
 using DotEdenInodePtr = InodePtrImpl<DotEdenInode>;
 using FileInodePtr = InodePtrImpl<FileInode>;
 using TreeInodePtr = InodePtrImpl<TreeInode>;
-using InodePtr = InodeBasePtrImpl<InodeBase>;
-using ConstDotEdenInodePtr = InodePtrImpl<const DotEdenInode>;
-using ConstFileInodePtr = InodePtrImpl<const FileInode>;
-using ConstTreeInodePtr = InodePtrImpl<const TreeInode>;
-using ConstInodePtr = InodeBasePtrImpl<const InodeBase>;
+class InodePtr;
 }
 }
