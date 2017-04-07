@@ -163,3 +163,36 @@
   $ hg commit -Aqm 'add file'
   abort: cannot register multiple processors on flag '0x8'.
   [255]
+
+  $ cd ..
+
+# TEST: bundle repo
+  $ hg init bundletest
+  $ cd bundletest
+
+  $ cat >> .hg/hgrc << EOF
+  > [extensions]
+  > flagprocessor=$TESTDIR/flagprocessorext.py
+  > EOF
+
+  $ for i in 0 single two three 4; do
+  >   echo '[BASE64]a-bit-longer-'$i > base64
+  >   hg commit -m base64-$i -A base64
+  > done
+
+  $ hg update 2 -q
+  $ echo '[BASE64]a-bit-longer-branching' > base64
+  $ hg commit -q -m branching
+
+  $ hg bundle --base 1 bundle.hg
+  4 changesets found
+  $ hg --config extensions.strip= strip -r 2 --no-backup --force -q
+  $ hg -R bundle.hg log --stat -T '{rev} {desc}\n' base64 2>&1 | egrep -v '^(\*\*|  )'
+  Traceback (most recent call last):
+  mercurial.mpatch.mpatchError: invalid patch
+
+  $ hg bundle -R bundle.hg --base 1 bundle-again.hg -q 2>&1 | egrep -v '^(\*\*|  )'
+  Traceback (most recent call last):
+  TypeError: Incorrect padding
+  $ hg -R bundle-again.hg log --stat -T '{rev} {desc}\n' base64 2>&1 | egrep -v '^(\*\*|  )'
+  abort: repository bundle-again.hg not found!
