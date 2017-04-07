@@ -158,7 +158,7 @@ class bundlerevlog(revlog.revlog):
         # Revlog subclasses may override 'revision' method to modify format of
         # content retrieved from revlog. To use bundlerevlog with such class one
         # needs to override 'baserevision' and make more specific call here.
-        return revlog.revlog.revision(self, nodeorrev)
+        return revlog.revlog.revision(self, nodeorrev, raw=True)
 
     def addrevision(self, text, transaction, link, p1=None, p2=None, d=None):
         raise NotImplementedError
@@ -186,7 +186,7 @@ class bundlechangelog(bundlerevlog, changelog.changelog):
         oldfilter = self.filteredrevs
         try:
             self.filteredrevs = ()
-            return changelog.changelog.revision(self, nodeorrev)
+            return changelog.changelog.revision(self, nodeorrev, raw=True)
         finally:
             self.filteredrevs = oldfilter
 
@@ -210,7 +210,7 @@ class bundlemanifest(bundlerevlog, manifest.manifestrevlog):
         if node in self.fulltextcache:
             result = '%s' % self.fulltextcache[node]
         else:
-            result = manifest.manifestrevlog.revision(self, nodeorrev)
+            result = manifest.manifestrevlog.revision(self, nodeorrev, raw=True)
         return result
 
     def dirlog(self, d):
@@ -228,7 +228,7 @@ class bundlefilelog(bundlerevlog, filelog.filelog):
                               linkmapper)
 
     def baserevision(self, nodeorrev):
-        return filelog.filelog.revision(self, nodeorrev)
+        return filelog.filelog.revision(self, nodeorrev, raw=True)
 
 class bundlepeer(localrepo.localpeer):
     def canpush(self):
