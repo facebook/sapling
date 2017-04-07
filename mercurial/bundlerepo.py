@@ -131,28 +131,28 @@ class bundlerevlog(revlog.revlog):
         if node == nullid:
             return ""
 
-        text = None
+        rawtext = None
         chain = []
         iterrev = rev
         # reconstruct the revision if it is from a changegroup
         while iterrev > self.repotiprev:
             if self._cache and self._cache[1] == iterrev:
-                text = self._cache[2]
+                rawtext = self._cache[2]
                 break
             chain.append(iterrev)
             iterrev = self.index[iterrev][3]
-        if text is None:
-            text = self.baserevision(iterrev)
+        if rawtext is None:
+            rawtext = self.baserevision(iterrev)
 
         while chain:
             delta = self._chunk(chain.pop())
-            text = mdiff.patches(text, [delta])
+            rawtext = mdiff.patches(rawtext, [delta])
 
-        text, validatehash = self._processflags(text, self.flags(rev),
+        text, validatehash = self._processflags(rawtext, self.flags(rev),
                                                 'read', raw=raw)
         if validatehash:
             self.checkhash(text, node, rev=rev)
-        self._cache = (node, rev, text)
+        self._cache = (node, rev, rawtext)
         return text
 
     def baserevision(self, nodeorrev):

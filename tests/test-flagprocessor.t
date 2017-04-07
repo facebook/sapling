@@ -188,11 +188,33 @@
   4 changesets found
   $ hg --config extensions.strip= strip -r 2 --no-backup --force -q
   $ hg -R bundle.hg log --stat -T '{rev} {desc}\n' base64 2>&1 | egrep -v '^(\*\*|  )'
-  Traceback (most recent call last):
-  mercurial.mpatch.mpatchError: invalid patch
+  5 branching
+   base64 |  2 +-
+   1 files changed, 1 insertions(+), 1 deletions(-)
+  
+  4 base64-4
+   base64 |  2 +-
+   1 files changed, 1 insertions(+), 1 deletions(-)
+  
+  3 base64-three
+   base64 |  2 +-
+   1 files changed, 1 insertions(+), 1 deletions(-)
+  
+  2 base64-two
+   base64 |  2 +-
+   1 files changed, 1 insertions(+), 1 deletions(-)
+  
+  1 base64-single
+   base64 |  2 +-
+   1 files changed, 1 insertions(+), 1 deletions(-)
+  
+  0 base64-0
+   base64 |  1 +
+   1 files changed, 1 insertions(+), 0 deletions(-)
+  
 
   $ hg bundle -R bundle.hg --base 1 bundle-again.hg -q 2>&1 | egrep -v '^(\*\*|  )'
-  Traceback (most recent call last):
-  mercurial.mpatch.mpatchError: invalid patch
+  [1]
   $ hg -R bundle-again.hg log --stat -T '{rev} {desc}\n' base64 2>&1 | egrep -v '^(\*\*|  )'
-  abort: repository bundle-again.hg not found!
+  Traceback (most recent call last):
+  TypeError: Incorrect padding
