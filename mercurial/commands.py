@@ -2027,6 +2027,7 @@ def export(ui, repo, *changesets, **opts):
 
     Returns 0 on success.
     """
+    opts = pycompat.byteskwargs(opts)
     changesets += tuple(opts.get('rev', []))
     if not changesets:
         changesets = ['.']
@@ -3185,6 +3186,7 @@ def incoming(ui, repo, source="default", **opts):
 
     Returns 0 if there are incoming changes, 1 otherwise.
     """
+    opts = pycompat.byteskwargs(opts)
     if opts.get('graph'):
         cmdutil.checkunsupportedgraphflags([], opts)
         def display(other, chlist, displayer):
