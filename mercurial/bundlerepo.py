@@ -65,6 +65,7 @@ class bundlerevlog(revlog.revlog):
             cs = chunkdata['cs']
             deltabase = chunkdata['deltabase']
             delta = chunkdata['delta']
+            flags = chunkdata['flags']
 
             size = len(delta)
             start = bundle.tell() - size
@@ -87,7 +88,7 @@ class bundlerevlog(revlog.revlog):
 
             baserev = self.rev(deltabase)
             # start, size, full unc. size, base (unused), link, p1, p2, node
-            e = (revlog.offset_type(start, 0), size, -1, baserev, link,
+            e = (revlog.offset_type(start, flags), size, -1, baserev, link,
                  self.rev(p1), self.rev(p2), node)
             self.index.insert(-1, e)
             self.nodemap[node] = n

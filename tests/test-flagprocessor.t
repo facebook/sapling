@@ -188,7 +188,8 @@
   4 changesets found
   $ hg --config extensions.strip= strip -r 2 --no-backup --force -q
   $ hg -R bundle.hg log --stat -T '{rev} {desc}\n' base64 2>&1 | egrep -v '^(\*\*|  )'
-  abort: integrity check failed on data/base64.i:2!
+  Traceback (most recent call last):
+  mercurial.mpatch.mpatchError: invalid patch
 
   $ hg bundle -R bundle.hg --base 1 bundle-again.hg -q 2>&1 | egrep -v '^(\*\*|  )'
   Traceback (most recent call last):
