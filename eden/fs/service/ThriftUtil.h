@@ -35,5 +35,13 @@ inline std::string thriftHash(const folly::Optional<Hash> hash) {
   }
   return std::string{};
 }
+
+/**
+ * Convert thrift BinaryHash data type (a std::string containing the binary
+ * hash bytes) into a Hash object.
+ */
+inline Hash hashFromThrift(const std::string& commitID) {
+  return Hash(folly::ByteRange(folly::StringPiece(commitID)));
+}
 }
 }

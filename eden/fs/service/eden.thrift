@@ -241,7 +241,7 @@ service EdenService extends fb303.FacebookService {
    */
   list<CheckoutConflict> checkOutRevision(
     1: string mountPoint,
-    2: string snapshotHash,
+    2: BinaryHash snapshotHash,
     3: bool force)
       throws (1: EdenError ex)
 

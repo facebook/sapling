@@ -182,7 +182,7 @@ void EdenServiceHandler::checkOutRevision(
     std::unique_ptr<std::string> mountPoint,
     std::unique_ptr<std::string> hash,
     bool force) {
-  Hash hashObj(*hash);
+  auto hashObj = hashFromThrift(*hash);
 
   auto edenMount = server_->getMount(*mountPoint);
   auto checkoutFuture = edenMount->checkout(hashObj, force);
@@ -435,17 +435,6 @@ void EdenServiceHandler::scmRemove(
   }
 }
 
-namespace {
-/**
- * Because a 20-byte hash is declared as "binary" in a .thrift file, which
- * becomes a std::unique_ptr<std::string> when turned into a C++ parameter, this
- * provides a convenience method for converting the std::string into a Hash.
- */
-Hash convertBinaryHashArgument(const std::string& commitID) {
-  return Hash(folly::ByteRange(folly::StringPiece(commitID)));
-}
-}
-
 void EdenServiceHandler::scmMarkCommitted(
     std::unique_ptr<std::string> mountPoint,
     std::unique_ptr<std::string> commitID,
@@ -455,7 +444,7 @@ void EdenServiceHandler::scmMarkCommitted(
   DCHECK(dirstate != nullptr) << "Failed to get dirstate for "
                               << mountPoint.get();
 
-  auto hash = convertBinaryHashArgument(*commitID);
+  auto hash = hashFromThrift(*commitID);
   std::vector<RelativePathPiece> pathsToClean;
   pathsToClean.reserve(pathsToCleanAsStrings->size());
   for (auto& path : *pathsToCleanAsStrings.get()) {
@@ -477,7 +466,7 @@ void EdenServiceHandler::debugGetScmTree(
     unique_ptr<string> idStr,
     bool localStoreOnly) {
   auto edenMount = server_->getMount(*mountPoint);
-  auto id = convertBinaryHashArgument(*idStr);
+  auto id = hashFromThrift(*idStr);
 
   std::unique_ptr<Tree> tree;
   auto store = edenMount->getObjectStore();
@@ -507,7 +496,7 @@ void EdenServiceHandler::debugGetScmBlob(
     unique_ptr<string> idStr,
     bool localStoreOnly) {
   auto edenMount = server_->getMount(*mountPoint);
-  auto id = convertBinaryHashArgument(*idStr);
+  auto id = hashFromThrift(*idStr);
 
   std::unique_ptr<Blob> blob;
   auto store = edenMount->getObjectStore();
@@ -531,7 +520,7 @@ void EdenServiceHandler::debugGetScmBlobMetadata(
     unique_ptr<string> idStr,
     bool localStoreOnly) {
   auto edenMount = server_->getMount(*mountPoint);
-  auto id = convertBinaryHashArgument(*idStr);
+  auto id = hashFromThrift(*idStr);
 
   Optional<BlobMetadata> metadata;
   auto store = edenMount->getObjectStore();
