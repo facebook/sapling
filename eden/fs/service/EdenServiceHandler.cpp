@@ -189,6 +189,14 @@ void EdenServiceHandler::checkOutRevision(
   results = checkoutFuture.get();
 }
 
+void EdenServiceHandler::resetParentCommit(
+    std::unique_ptr<std::string> mountPoint,
+    std::unique_ptr<std::string> hash) {
+  auto hashObj = hashFromThrift(*hash);
+  auto edenMount = server_->getMount(*mountPoint);
+  edenMount->resetCommit(hashObj);
+}
+
 void EdenServiceHandler::getSHA1(
     vector<SHA1Result>& out,
     unique_ptr<string> mountPoint,

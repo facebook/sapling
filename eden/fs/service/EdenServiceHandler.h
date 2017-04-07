@@ -51,6 +51,10 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
       std::unique_ptr<std::string> hash,
       bool force) override;
 
+  void resetParentCommit(
+      std::unique_ptr<std::string> mountPoint,
+      std::unique_ptr<std::string> hash) override;
+
   void getBindMounts(
       std::vector<std::string>& out,
       std::unique_ptr<std::string> mountPoint) override;

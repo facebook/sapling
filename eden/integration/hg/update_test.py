@@ -22,6 +22,9 @@ class UpdateTest(HgExtensionTestBase):
         repo.write_file('foo/.gitignore', '*.log\n/_*\n')
         self.commit2 = repo.commit('Update foo/.gitignore')
 
+        repo.write_file('foo/bar.txt', 'updated in commit 3\n')
+        self.commit3 = repo.commit('Update foo/.gitignore')
+
     def test_update_clean_dot(self):
         '''Test using `hg update --clean .` to revert file modifications.'''
         self.assert_status_empty()
@@ -72,6 +75,7 @@ class UpdateTest(HgExtensionTestBase):
             'foo/_data': '?',
         })
         self.assertEqual('*.log\n', self.read_file('foo/.gitignore'))
+        self.assertEqual('test\n', self.read_file('foo/bar.txt'))
 
     def test_update_with_new_commits(self):
         '''
@@ -81,12 +85,28 @@ class UpdateTest(HgExtensionTestBase):
         This makes sure edenfs can correctly import new commits that appear in
         the backing store repository.
         '''
-        new_contents = 'changed in commit 3\n'
+        new_contents = 'New contents for bar.txt\n'
         self.backing_repo.write_file('foo/bar.txt', new_contents)
         new_commit = self.backing_repo.commit('Update foo/bar.txt')
 
         self.assert_status_empty()
+        self.assertNotEqual(new_contents, self.read_file('foo/bar.txt'))
 
         self.repo.update(new_commit)
         self.assertEqual(new_contents, self.read_file('foo/bar.txt'))
         self.assert_status_empty()
+
+    def test_reset(self):
+        '''
+        Test `hg reset`
+        '''
+        self.assert_status_empty()
+        self.assertEqual('updated in commit 3\n', self.read_file('foo/bar.txt'))
+
+        self.repo.reset(self.commit2, keep=True)
+        self.assert_status({'foo/bar.txt': 'M'})
+        self.assertEqual('updated in commit 3\n', self.read_file('foo/bar.txt'))
+
+        self.repo.update(self.commit2, clean=True)
+        self.assert_status_empty()
+        self.assertEqual('test\n', self.read_file('foo/bar.txt'))

@@ -245,6 +245,17 @@ service EdenService extends fb303.FacebookService {
     3: bool force)
       throws (1: EdenError ex)
 
+  /**
+   * Reset the working directory's parent commit, without changing the working
+   * directory contents.
+   *
+   * This operation is equivalent to `git reset --soft` or `hg reset --keep`
+   */
+  void resetParentCommit(
+    1: string mountPoint,
+    2: BinaryHash snapshotHash)
+      throws (1: EdenError ex)
+
   // Mount-specific APIs.
 
   /**

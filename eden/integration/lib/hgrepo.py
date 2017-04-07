@@ -126,3 +126,10 @@ class HgRepository(repobase.Repository):
         else:
             args = ['update', rev]
         self.hg(*args, stdout=None, stderr=None)
+
+    def reset(self, rev, keep=True):
+        if keep:
+            args = ['reset', '--keep', rev]
+        else:
+            args = ['reset', rev]
+        self.hg(*args, stdout=None, stderr=None)
