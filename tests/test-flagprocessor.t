@@ -187,7 +187,7 @@
   $ hg bundle --base 1 bundle.hg
   4 changesets found
   $ hg --config extensions.strip= strip -r 2 --no-backup --force -q
-  $ hg -R bundle.hg log --stat -T '{rev} {desc}\n' base64 2>&1 | egrep -v '^(\*\*|  )'
+  $ hg -R bundle.hg log --stat -T '{rev} {desc}\n' base64
   5 branching
    base64 |  2 +-
    1 files changed, 1 insertions(+), 1 deletions(-)
@@ -213,9 +213,8 @@
    1 files changed, 1 insertions(+), 0 deletions(-)
   
 
-  $ hg bundle -R bundle.hg --base 1 bundle-again.hg -q 2>&1 | egrep -v '^(\*\*|  )'
-  [1]
-  $ hg -R bundle-again.hg log --stat -T '{rev} {desc}\n' base64 2>&1 | egrep -v '^(\*\*|  )'
+  $ hg bundle -R bundle.hg --base 1 bundle-again.hg -q
+  $ hg -R bundle-again.hg log --stat -T '{rev} {desc}\n' base64
   5 branching
    base64 |  2 +-
    1 files changed, 1 insertions(+), 1 deletions(-)
