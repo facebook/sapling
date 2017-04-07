@@ -261,7 +261,7 @@ def findoptimizations(repo):
 
     return optimizations
 
-def determineactions(repo, improvements, sourcereqs, destreqs):
+def determineactions(repo, deficiencies, sourcereqs, destreqs):
     """Determine upgrade actions that will be performed.
 
     Given a list of improvements as returned by ``finddeficiencies`` and
@@ -278,16 +278,15 @@ def determineactions(repo, improvements, sourcereqs, destreqs):
 
     knownreqs = supporteddestrequirements(repo)
 
-    for i in improvements:
-        name = i.name
+    for d in deficiencies:
+        name = d.name
 
         # If the action is a requirement that doesn't show up in the
         # destination requirements, prune the action.
         if name in knownreqs and name not in destreqs:
             continue
 
-        if i.type == deficiency:
-            newactions.append(name)
+        newactions.append(name)
 
     # FUTURE consider adding some optimizations here for certain transitions.
     # e.g. adding generaldelta could schedule parent redeltas.
