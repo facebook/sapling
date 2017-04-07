@@ -2054,10 +2054,10 @@ class metadataonlyctx(committablectx):
         # sanity check to ensure that the reused manifest parents are
         # manifests of our commit parents
         mp1, mp2 = self.manifestctx().parents
-        if p1 != nullid and p1.changeset()[0] != mp1:
+        if p1 != nullid and p1.manifestnode() != mp1:
             raise RuntimeError('can\'t reuse the manifest: '
                                'its p1 doesn\'t match the new ctx p1')
-        if p2 != nullid and p2.changeset()[0] != mp2:
+        if p2 != nullid and p2.manifestnode() != mp2:
             raise RuntimeError('can\'t reuse the manifest: '
                                'its p2 doesn\'t match the new ctx p2')
 
