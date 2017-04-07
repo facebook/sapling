@@ -621,7 +621,7 @@ def upgraderepo(ui, repo, run=False, optimize=None):
                           _(', ').join(sorted(unsupportedreqs)))
 
     # Find and validate all improvements that can be made.
-    optimizations = findoptimizations(repo)
+    alloptimizations = optimizations = findoptimizations(repo)
 
     # Validate arguments.
     unknownoptimize = optimize - set(i.name for i in optimizations)
@@ -701,8 +701,8 @@ def upgraderepo(ui, repo, run=False, optimize=None):
         printrequirements()
         printupgradeactions()
 
-        unusedoptimize = [i for i in improvements
-                          if i.name not in actions and i.type == optimisation]
+        unusedoptimize = [i for i in alloptimizations
+                          if i.name not in actions]
         if unusedoptimize:
             ui.write(_('additional optimizations are available by specifying '
                      '"--optimize <name>":\n\n'))
