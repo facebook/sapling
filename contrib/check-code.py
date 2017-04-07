@@ -673,7 +673,7 @@ def checkfile(f, logfunc=_defaultlogger.log, maxerr=None, warnings=False,
     return result
 
 def main():
-    parser = optparse.OptionParser("%prog [options] [files]")
+    parser = optparse.OptionParser("%prog [options] [files | -]")
     parser.add_option("-w", "--warnings", action="store_true",
                       help="include warning-level checks")
     parser.add_option("-p", "--per-file", type="int",
@@ -691,6 +691,9 @@ def main():
 
     if len(args) == 0:
         check = glob.glob("*")
+    elif args == ['-']:
+        # read file list from stdin
+        check = sys.stdin.read().splitlines()
     else:
         check = args
 
