@@ -3938,6 +3938,12 @@ def pull(ui, repo, source="default", **opts):
 
     Returns 0 on success, 1 if an update had unresolved files.
     """
+
+    if ui.configbool('commands', 'update.requiredest') and opts.get('update'):
+        msg = _('update destination required by configuration')
+        hint = _('use hg pull followed by hg update DEST')
+        raise error.Abort(msg, hint=hint)
+
     source, branches = hg.parseurl(ui.expandpath(source), opts.get('branch'))
     ui.status(_('pulling from %s\n') % util.hidepassword(source))
     other = hg.peer(repo, opts, source)

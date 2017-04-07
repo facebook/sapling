@@ -21,3 +21,15 @@ Test update.requiredest
 
   $ cd ..
 
+Check update.requiredest interaction with pull --update
+  $ hg clone repo clone
+  updating to branch default
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cd repo
+  $ echo a >> a
+  $ hg commit -qAm aa
+  $ cd ../clone
+  $ hg pull --update
+  abort: update destination required by configuration
+  (use hg pull followed by hg update DEST)
+  [255]
