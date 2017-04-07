@@ -1377,9 +1377,11 @@ def bundle(ui, repo, fname, dest=None, **opts):
             bcompression = 'UN'
         bversion = 'HG10' + bcompression
         bcompression = None
-    else:
-        assert cgversion == '02'
+    elif cgversion in ('02', '03'):
         bversion = 'HG20'
+    else:
+        raise error.ProgrammingError(
+            'bundle: unexpected changegroup version %s' % cgversion)
 
     # TODO compression options should be derived from bundlespec parsing.
     # This is a temporary hack to allow adjusting bundle compression
