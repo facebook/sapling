@@ -19,6 +19,7 @@ from mercurial import (
     cmdutil,
     commands,
     error,
+    formatter,
     pycompat,
     registrar,
 )
@@ -109,8 +110,11 @@ def showbookmarks(ui, repo, fm):
     """bookmarks and their associated changeset"""
     marks = repo._bookmarks
     if not len(marks):
-        # TODO json output is corrupted; consider using formatter
-        ui.write(_('(no bookmarks set)\n'))
+        # This is a bit hacky. Ideally, templates would have a way to
+        # specify an empty output, but we shouldn't corrupt JSON while
+        # waiting for this functionality.
+        if not isinstance(fm, formatter.jsonformatter):
+            ui.write(_('(no bookmarks set)\n'))
         return
 
     active = repo._activebookmark

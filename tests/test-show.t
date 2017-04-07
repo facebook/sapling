@@ -114,4 +114,12 @@ bookmarks JSON works
    }
   ]
 
+JSON works with no bookmarks
+
+  $ hg book -d a-longer-bookmark
+  $ hg book -d book1
+  $ hg show bookmarks -T json
+  [
+  ]
+
   $ cd ..
