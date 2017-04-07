@@ -13,3 +13,7 @@ Current checks:
   $ pylint --rcfile=$TESTTMP/fakerc --disable=all \
   >   --enable=W0102 --reports=no \
   >   mercurial hgext hgext3rd
+   (?)
+  ------------------------------------ (?)
+  Your code has been rated at 10.00/10 (?)
+   (?)
