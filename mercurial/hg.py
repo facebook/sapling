@@ -103,7 +103,7 @@ def parseurl(path, branches=None):
     if u.fragment:
         branch = u.fragment
         u.fragment = None
-    return str(u), (branch, branches or [])
+    return bytes(u), (branch, branches or [])
 
 schemes = {
     'bundle': bundlerepo,

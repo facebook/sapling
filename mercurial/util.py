@@ -2799,7 +2799,7 @@ class url(object):
         user, passwd = self.user, self.passwd
         try:
             self.user, self.passwd = None, None
-            s = str(self)
+            s = bytes(self)
         finally:
             self.user, self.passwd = user, passwd
         if not self.user:
@@ -2854,7 +2854,7 @@ def hidepassword(u):
     u = url(u)
     if u.passwd:
         u.passwd = '***'
-    return str(u)
+    return bytes(u)
 
 def removeauth(u):
     '''remove all authentication information from a url string'''
