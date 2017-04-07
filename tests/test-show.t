@@ -55,8 +55,8 @@ Unknown view prints error
 HGPLAIN results in abort
 
   $ HGPLAIN=1 hg show bookmarks
-  abort: "hg show" cannot be used in plain mode because output is not stable
-  (unset HGPLAIN and invoke with -T/--template to control output)
+  abort: must specify a template in plain mode
+  (invoke with -T/--template to control output format)
   [255]
 
 But not if a template is specified

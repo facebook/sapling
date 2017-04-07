@@ -73,10 +73,8 @@ def show(ui, repo, view=None, template=None):
 
     """
     if ui.plain() and not template:
-        raise error.Abort(_('"hg show" cannot be used in plain mode because '
-                            'output is not stable'),
-                          hint=_('unset HGPLAIN and invoke with -T/--template '
-                                 'to control output'))
+        hint = _('invoke with -T/--template to control output format')
+        raise error.Abort(_('must specify a template in plain mode'), hint=hint)
 
     views = showview._table
 
