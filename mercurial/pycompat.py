@@ -399,4 +399,11 @@ else:
         s = urllib.parse.quote_from_bytes(s, safe=safe)
         return s.encode('ascii', 'strict')
 
+    # urllib.parse.urlencode() returns str. We use this function to make
+    # sure we return bytes.
+    def urlencode(query, doseq=False):
+            s = urllib.parse.urlencode(query, doseq=doseq)
+            return s.encode('ascii')
+
     urlreq.quote = quote
+    urlreq.urlencode = urlencode
