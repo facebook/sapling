@@ -8,7 +8,7 @@ New errors are not allowed. Warnings are strongly discouraged.
 (The writing "no-che?k-code" is for not skipping this file when checking.)
 
   $ hg locate -X contrib/python-zstandard -X hgext/fsmonitor/pywatchman |
-  > sed 's-\\-/-g' | xargs "$check_code" --warnings --per-file=0 || false
+  > sed 's-\\-/-g' | "$check_code" --warnings --per-file=0 - || false
   contrib/perf.py:869:
    >             r.revision(r.node(x))
    don't convert rev to node before passing to revision(nodeorrev)
