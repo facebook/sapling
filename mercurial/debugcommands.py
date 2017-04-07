@@ -62,6 +62,7 @@ from . import (
     streamclone,
     templater,
     treediscovery,
+    upgrade,
     util,
     vfs as vfsmod,
 )
@@ -2072,7 +2073,7 @@ def debugupgraderepo(ui, repo, run=False, optimize=None):
     should complete almost instantaneously and the chances of a consumer being
     unable to access the repository should be low.
     """
-    return repair.upgraderepo(ui, repo, run=run, optimize=optimize)
+    return upgrade.upgraderepo(ui, repo, run=run, optimize=optimize)
 
 @command('debugwalk', commands.walkopts, _('[OPTION]... [FILE]...'),
          inferrepo=True)
