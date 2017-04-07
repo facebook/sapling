@@ -1690,3 +1690,85 @@ def _sqlreplay(repo, startrev, endrev):
             lock.release()
         if wlock:
             wlock.release()
+
+@command('^sqlverify', [
+    ('', 'earliest-rev', '', _('the earliest rev to process'), ''),
+    ], _('hg sqlverify'))
+def sqlverify(ui, repo, *args, **opts):
+    """verifies the current revlog indexes match the data in mysql
+
+    Runs in reverse order, so it verifies the latest commits first.
+    """
+    maxrev = len(repo.changelog) - 1
+    minrev = int(opts.get('earliest_rev') or '0')
+
+    def _helper():
+        stepsize = 1000
+        firstrev = max(minrev, maxrev - stepsize)
+        lastrev = maxrev
+
+        ui.progress('verifying', 0, total=maxrev - minrev)
+        while True:
+            _sqlverify(repo, firstrev, lastrev)
+            ui.progress('verifying', maxrev - firstrev, total=maxrev - minrev)
+            if firstrev == minrev:
+                break
+            lastrev = firstrev - 1
+            firstrev = max(minrev, firstrev - stepsize)
+
+        ui.progress('verifying', None)
+        ui.status("Verification passed\n")
+
+    executewithsql(repo, _helper, False)
+
+def _sqlverify(repo, minrev, maxrev):
+    queue = Queue.Queue()
+    abort = threading.Event()
+    t = threading.Thread(target=repo.fetchthread,
+        args=(queue, abort, minrev, maxrev))
+    t.setDaemon(True)
+
+    try:
+        t.start()
+
+        while True:
+            revdata = queue.get()
+            if not revdata:
+                return
+
+            # The background thread had an exception, rethrow from the
+            # foreground thread.
+            if isinstance(revdata, Exception):
+                raise revdata
+
+            # Validate revdata
+            path = revdata[0]
+            linkrev = revdata[3]
+            packedentry = revdata[4]
+
+            sqlentry = struct.unpack(revlog.indexformatng, packedentry)
+
+            rl = None
+            if path == '00changelog.i':
+                rl = repo.changelog
+            elif path == '00manifest.i':
+                rl = repo.manifestlog._revlog
+            else:
+                rl = revlog.revlog(repo.svfs, path)
+
+            node = sqlentry[7]
+            rev = rl.rev(node)
+            if rev == 0:
+                # The first entry has special whole-revlog flags in place of the
+                # offset in entry[0] that are not returned from revlog.index,
+                # so strip that data.
+                type = revlog.gettype(sqlentry[0])
+                sqlentry = (revlog.offset_type(0, type),) + sqlentry[1:]
+
+            revlogentry = rl.index[rev]
+            if revlogentry != sqlentry:
+                raise CorruptionException(("'%s:%s' with linkrev %s, disk does "
+                                           "not match mysql") %
+                                          (path, hex(node), str(linkrev)))
+    finally:
+        abort.set()
