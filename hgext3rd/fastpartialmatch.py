@@ -226,7 +226,7 @@ def _localrepocommit(orig, self, *args, **kwargs):
     tr = self.currenttransaction()
     indexbuilt = _ispartialindexbuilt(self.svfs)
     if tr and hexnode not in tr.addedcommits and indexbuilt:
-        _recordcommit(tr, hexnode, self.changelog.rev(node), self.svfs)
+        _recordcommit(self.ui, tr, hexnode, self.changelog.rev(node), self.svfs)
     return node
 
 def _localrepotransaction(orig, *args, **kwargs):
@@ -296,7 +296,7 @@ def _commithook(ui, repo, hooktype, node, parent1, parent2):
         # Append new entries only if index is built
         hexnode = node  # it's actually a hexnode
         tr = repo.currenttransaction()
-        _recordcommit(tr, hexnode, repo[hexnode].rev(), repo.svfs)
+        _recordcommit(ui, tr, hexnode, repo[hexnode].rev(), repo.svfs)
 
 def _changegrouphook(ui, repo, hooktype, **hookargs):
     tr = repo.currenttransaction()
@@ -315,12 +315,12 @@ def _changegrouphook(ui, repo, hooktype, **hookargs):
         if not vfs.exists(_partialindexdir) or _needsrebuilding(vfs):
             _rebuildpartialindex(ui, repo, skiphexnodes=set(newhexnodes))
         for i, hexnode in enumerate(newhexnodes):
-            _recordcommit(tr, hexnode, rev_first + i, vfs)
+            _recordcommit(ui, tr, hexnode, rev_first + i, vfs)
     else:
         ui.warn(_('unexpected hookargs parameters: `node` and ' +
                   '`node_last` should be present\n'))
 
-def _recordcommit(tr, hexnode, rev, vfs):
+def _recordcommit(ui, tr, hexnode, rev, vfs):
     vfs = _getopener(vfs.join(''))
     filename = os.path.join(_partialindexdir, hexnode[:2])
     if vfs.exists(filename):
@@ -328,11 +328,24 @@ def _recordcommit(tr, hexnode, rev, vfs):
     else:
         size = 0
     tr.add(filename, size)
-    with vfs(filename, 'a') as fileobj:
-        if not size:
-            header = _header(0)
-            header.write(fileobj)
-        _writeindexentry(fileobj, bin(hexnode), rev)
+    try:
+        with vfs(filename, 'a') as fileobj:
+            if not size:
+                header = _header(0)
+                header.write(fileobj)
+            _writeindexentry(fileobj, bin(hexnode), rev)
+    except (OSError, IOError) as e:
+        # failed to record commit, index maybe inconsistent
+        # let's delete it
+        msgfmt = ('failed to record commit in partial index: %s, ' +
+                  'index will be rebuilt on next pull\n')
+        ui.warn(_(msgfmt) % e)
+        try:
+            vfs.rmtree(_partialindexdir)
+        except (OSError, IOError) as e:
+            fullpath = vfs.join(_partialindexdir)
+            msgfmt = 'failed to remove %s: %s, please remove it manually\n'
+            ui.warn(_(msgfmt) % (fullpath, e))
     tr.addedcommits.add(hexnode)
 
 def _partialmatch(orig, self, id):
