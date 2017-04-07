@@ -239,3 +239,10 @@
    base64 |  1 +
    1 files changed, 1 insertions(+), 0 deletions(-)
   
+  $ rm bundle.hg bundle-again.hg
+
+# TEST: hg status
+
+  $ hg status
+  M base64
+  $ hg diff
