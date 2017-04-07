@@ -174,6 +174,7 @@ if ispy3:
     hasattr = _wrapattrfunc(builtins.hasattr)
     setattr = _wrapattrfunc(builtins.setattr)
     xrange = builtins.range
+    unicode = str
 
     def open(name, mode='r', buffering=-1):
         return builtins.open(name, sysstr(mode), buffering)
