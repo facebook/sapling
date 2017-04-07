@@ -7,8 +7,8 @@
 
 from mercurial import (
     encoding,
-    formatter,
     node,
+    templatefilters,
     util,
 )
 
@@ -135,7 +135,8 @@ class jsonformatter(defaultformatter):
             for j, p in enumerate(pieces):
                 k, vs = p
                 result += ('  "%s": %s%s\n'
-                           % (k, formatter._jsonifyobj(vs[i]), seps[j]))
+                           % (k, templatefilters.json(vs[i], paranoid=False),
+                              seps[j]))
             result += ' }%s' % ('' if i == lasti else ',')
         if lasti >= 0:
             self.needcomma = True
