@@ -3,11 +3,11 @@
 from __future__ import absolute_import
 
 from mercurial import (
-    node,
     revlog,
     util as hgutil,
 )
 from mercurial.i18n import _
+from mercurial.node import bin, nullid
 
 from . import (
     blobstore,
@@ -78,21 +78,64 @@ def writetostore(self, text):
         chunks=[{'oid': v.oid, 'size': v.size} for v in chunkoids],
         hashalgo='sha256',
         size=len(text))
+
+    # hg filelog metadata (includes rename, etc)
+    hgmeta = getattr(self, '_filelogmeta', None)
+    if hgmeta:
+        # only care about a whitelist of hg filelog metadata
+        for name in ['copy', 'copyrev']:
+            if name in hgmeta:
+                metadata['x-hg-%s' % name] = hgmeta[name]
     text = str(metadata)
 
     return (text, False)
 
-def addrevision(orig, self, text, transaction, link, p1, p2, cachedelta=None,
-                node=None, flags=revlog.REVIDX_DEFAULT_FLAGS):
-    # filelog.addrevision wrapper
+def _islfs(rlog, node):
+    if node == nullid:
+        return False
+    rev = rlog.rev(node)
+    flags = revlog.revlog.flags(rlog, rev)
+    return bool(flags & revlog.REVIDX_EXTSTORED)
+
+def filelogadd(orig, self, text, meta, transaction, link, p1=None, p2=None):
+    # drop meta (usually used for renaming tracking), to simplify blob handling
     if not self.opener.options['lfsbypass']:
         threshold = self.opener.options['lfsthreshold']
 
         if threshold and len(text) > threshold:
-            flags |= revlog.REVIDX_EXTSTORED
+            flags = revlog.REVIDX_EXTSTORED | revlog.REVIDX_DEFAULT_FLAGS
+            self._filelogmeta = meta # for flagprocessor to pick up
+            try:
+                return self.addrevision(text, transaction, link, p1, p2,
+                                        flags=flags)
+            finally:
+                self._filelogmeta = None
 
-    return orig(self, text, transaction, link, p1, p2, cachedelta=cachedelta,
-                node=node, flags=flags)
+    return orig(self, text, meta, transaction, link, p1, p2)
+
+def filelogread(orig, self, node):
+    if _islfs(self, node):
+        # no metadata stored, no need to test metadata header ("\1\n")
+        return self.revision(node)
+    return orig(self, node)
+
+def filelogcmp(orig, self, node, text):
+    if text.startswith('\1\n') and _islfs(self, node):
+        # do not prepend '\1\n' in lfs's case, test directly
+        return self.revision(node) != text
+    return orig(self, node, text)
+
+def filelogrenamed(orig, self, node):
+    if _islfs(self, node):
+        rawtext = self.revision(node, raw=True)
+        if not rawtext:
+            return False
+        metadata = pointer.deserialize(rawtext)
+        if 'x-hg-copy' in metadata and 'x-hg-copyrev' in metadata:
+            return metadata['x-hg-copy'], bin(metadata['x-hg-copyrev'])
+        else:
+            return False
+    return orig(self, node)
 
 def prepush(pushop):
     """Prepush hook.
@@ -118,7 +161,7 @@ def prepush(pushop):
     for i, n in enumerate(pushop.outgoing.missing):
         ctx = repo[n]
         files = set(ctx.files())
-        parents = [p for p in ctx.parents() if p != node.nullid]
+        parents = [p for p in ctx.parents() if p != nullid]
         if len(parents) == 2:
             mc = ctx.manifest()
             mp1 = ctx.parents()[0].manifest()

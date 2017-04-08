@@ -223,6 +223,79 @@
 
   $ cd ..
 
+# Test rename and status
+
+  $ hg init repo8
+  $ cd repo8
+  $ cat >> .hg/hgrc << EOF
+  > [lfs]
+  > threshold=10B
+  > EOF
+
+  $ echo THIS-IS-LFS-BECAUSE-10-BYTES > a1
+  $ echo SMALL > a2
+  $ hg commit -m a -A a1 a2
+  $ hg status
+  $ hg mv a1 b1
+  $ hg mv a2 a1
+  $ hg mv b1 a2
+  $ hg commit -m b
+  $ hg status
+  $ HEADER=$'\1\n'
+  $ printf '%sSTART-WITH-HG-FILELOG-METADATA' "$HEADER" > a2
+  $ printf '%sMETA\n' "$HEADER" > a1
+  $ hg commit -m meta
+  $ hg status
+  $ hg log -T '{rev}: {file_copies} | {file_dels} | {file_adds}\n'
+  2:  |  | 
+  1: a1 (a2)a2 (a1) |  | 
+  0:  |  | a1 a2
+
+  $ for n in a1 a2; do
+  >   for r in 0 1 2; do
+  >     printf '\n%s @ %s\n' $n $r
+  >     hg debugdata $n $r
+  >   done
+  > done
+  
+  a1 @ 0
+  version https://git-lfs.github.com/spec/chunking
+  chunks 5bb8341bee63b3649f222b2215bde37322bea075a30575aa685d8f8d21c77024:29
+  hashalgo sha256
+  size 29
+  
+  a1 @ 1
+  \x01 (esc)
+  copy: a2
+  copyrev: 50470ad23cf937b1f4b9f80bfe54df38e65b50d9
+  \x01 (esc)
+  SMALL
+  
+  a1 @ 2
+  \x01 (esc)
+  \x01 (esc)
+  \x01 (esc)
+  META
+  
+  a2 @ 0
+  SMALL
+  
+  a2 @ 1
+  version https://git-lfs.github.com/spec/chunking
+  chunks 5bb8341bee63b3649f222b2215bde37322bea075a30575aa685d8f8d21c77024:29
+  hashalgo sha256
+  size 29
+  x-hg-copy a1
+  x-hg-copyrev be23af27908a582af43e5cda209a5a9b319de8d4
+  
+  a2 @ 2
+  version https://git-lfs.github.com/spec/chunking
+  chunks 876dadc86a8542f9798048f2c47f51dbf8e4359aed883e8ec80c5db825f0d943:32
+  hashalgo sha256
+  size 32
+
+  $ cd ..
+
 # Verify the repos
 
   $ cat > $TESTTMP/dumpflog.py << EOF
@@ -248,7 +321,7 @@
   >               % (name, sizes, flags, hashes))
   > EOF
 
-  $ for i in client client2 server repo3 repo4 repo5 repo6 repo7; do
+  $ for i in client client2 server repo3 repo4 repo5 repo6 repo7 repo8; do
   >   echo 'repo:' $i
   >   hg --cwd $i verify --config extensions.dumpflog=$TESTTMP/dumpflog.py -q
   > done
@@ -256,13 +329,14 @@
   repo: client2
   repo: server
   repo: repo3
-    l: rawsizes=[828, 6, 8, 216] flags=[8192, 0, 0, 8192] hashes=['2791', '948c', 'cc88', '5f1a']
-    s: rawsizes=[623, 283, 283, 8] flags=[8192, 8192, 8192, 0] hashes=['db08', 'ff24', '2217', '826b']
+    l: rawsizes=[421, 6, 8, 216] flags=[8192, 0, 0, 8192] hashes=['0c9b', '948c', 'cc88', '5f1a']
+    s: rawsizes=[74, 283, 283, 8] flags=[0, 8192, 8192, 0] hashes=['3c80', 'ff24', '2217', '826b']
   repo: repo4
-    l: rawsizes=[828, 6, 8, 216] flags=[8192, 0, 0, 8192] hashes=['2791', '948c', 'cc88', '5f1a']
-    s: rawsizes=[623, 283, 283, 8] flags=[8192, 8192, 8192, 0] hashes=['db08', 'ff24', '2217', '826b']
+    l: rawsizes=[421, 6, 8, 216] flags=[8192, 0, 0, 8192] hashes=['0c9b', '948c', 'cc88', '5f1a']
+    s: rawsizes=[74, 283, 283, 8] flags=[0, 8192, 8192, 0] hashes=['3c80', 'ff24', '2217', '826b']
   repo: repo5
-    l: rawsizes=[828, 6, 8, 216] flags=[8192, 0, 0, 8192] hashes=['2791', '948c', 'cc88', '5f1a']
-    s: rawsizes=[623, 283, 283, 8] flags=[8192, 8192, 8192, 0] hashes=['db08', 'ff24', '2217', '826b']
+    l: rawsizes=[421, 6, 8, 216] flags=[8192, 0, 0, 8192] hashes=['0c9b', '948c', 'cc88', '5f1a']
+    s: rawsizes=[74, 283, 283, 8] flags=[0, 8192, 8192, 0] hashes=['3c80', 'ff24', '2217', '826b']
   repo: repo6
   repo: repo7
+  repo: repo8

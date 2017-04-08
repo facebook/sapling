@@ -62,7 +62,10 @@ def reposetup(ui, repo):
 def extsetup(ui):
     wrapfunction = extensions.wrapfunction
 
-    wrapfunction(filelog.filelog, 'addrevision', wrapper.addrevision)
+    wrapfunction(filelog.filelog, 'add', wrapper.filelogadd)
+    wrapfunction(filelog.filelog, 'cmp', wrapper.filelogcmp)
+    wrapfunction(filelog.filelog, 'read', wrapper.filelogread)
+    wrapfunction(filelog.filelog, 'renamed', wrapper.filelogrenamed)
     wrapfunction(changegroup,
                  'supportedoutgoingversions',
                  wrapper.supportedoutgoingversions)

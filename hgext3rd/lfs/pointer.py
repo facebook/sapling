@@ -17,8 +17,10 @@ class PointerDeserializationError(error.RevlogError):
 
 class BasePointer(object):
 
-    def __init__(self):
+    def __init__(self, extrameta=None):
         self.__metadata = dict()
+        if extrameta:
+            self.__metadata.update(extrameta)
 
     def __str__(self):
         return self.serialize()
@@ -40,6 +42,8 @@ class BasePointer(object):
         text = 'version ' + self.VERSION
         keys = sorted(self.__metadata.keys())
         for key in keys:
+            if key == 'version':
+                continue
             assert matcher.match(key)
             text = text + self._transformkv(key, self.__metadata[key])
         return text
@@ -48,8 +52,8 @@ class GithubPointer(BasePointer):
 
     VERSION = 'https://git-lfs.github.com/spec/v1\n'
 
-    def __init__(self, oid, hashalgo, size):
-        super(GithubPointer, self).__init__()
+    def __init__(self, oid, hashalgo, size, extrameta=None):
+        super(GithubPointer, self).__init__(extrameta)
         self['oid'] = oid
         self['hashalgo'] = hashalgo
         self['size'] = size
@@ -79,7 +83,8 @@ class GithubPointer(BasePointer):
         return GithubPointer(
             oid=metadata['oid'],
             hashalgo=metadata['hashalgo'],
-            size=metadata['size'])
+            size=metadata['size'],
+            extrameta=metadata)
 
     def tostoreids(self):
         return [StoreID(self['oid'], self['size'])]
@@ -88,8 +93,8 @@ class ChunkingPointer(BasePointer):
 
     VERSION = 'https://git-lfs.github.com/spec/chunking\n'
 
-    def __init__(self, chunks, hashalgo, size):
-        super(ChunkingPointer, self).__init__()
+    def __init__(self, chunks, hashalgo, size, extrameta=None):
+        super(ChunkingPointer, self).__init__(extrameta)
         self['chunks'] = chunks
         self['hashalgo'] = hashalgo
         self['size'] = size
@@ -119,8 +124,8 @@ class ChunkingPointer(BasePointer):
         return ChunkingPointer(
             chunks=metadata['chunks'],
             hashalgo=metadata['hashalgo'],
-            size=metadata['size'])
-
+            size=metadata['size'],
+            extrameta=metadata)
 
     @staticmethod
     def _transformkv(key, value):
