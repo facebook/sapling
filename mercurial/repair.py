@@ -875,8 +875,8 @@ def _upgraderepo(ui, srcrepo, dstrepo, requirements, actions):
             continue
 
         srcrepo.ui.write(_('copying %s\n') % p)
-        src = srcrepo.store.vfs.join(p)
-        dst = dstrepo.store.vfs.join(p)
+        src = srcrepo.store.rawvfs.join(p)
+        dst = dstrepo.store.rawvfs.join(p)
         util.copyfile(src, dst, copystat=True)
 
     _upgradefinishdatamigration(ui, srcrepo, dstrepo, requirements)

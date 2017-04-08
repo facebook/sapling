@@ -339,8 +339,16 @@ store files with special filenames aren't encoded during copy
   finished migrating 1 changelog revisions; change in size: 0 bytes
   finished migrating 3 total revisions; total change in store size: 0 bytes
   copying .XX_special_filename
+  copying phaseroots
+  data fully migrated to temporary repository
+  marking source repository as being upgraded; clients will be unable to read from repository
+  starting in-place swap of repository data
+  replaced files will be backed up at $TESTTMP/store-filenames/.hg/upgradebackup.* (glob)
+  replacing store...
+  store replacement complete; repository was inconsistent for *s (glob)
+  finalizing requirements file and making repository readable again
   removing temporary repository $TESTTMP/store-filenames/.hg/upgrade.* (glob)
-  abort: No such file or directory: $TESTTMP/store-filenames/.hg/store/~2e_x_x__special__filename
-  [255]
+  copy of old repository backed up at $TESTTMP/store-filenames/.hg/upgradebackup.* (glob)
+  the old repository will not be deleted; remove it to free up disk space once the upgraded repository is verified
 
   $ cd ..
