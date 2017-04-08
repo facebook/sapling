@@ -348,7 +348,6 @@ Test with a revision
 
 Test safety of 'encoding' on removed files
 
-#if symlink
   $ fileset 'encoding("ascii")'
   dos
   mac
@@ -359,23 +358,9 @@ Test safety of 'encoding' on removed files
   2k
   b1
   b2
-  b2link
+  b2link (symlink !)
   bin
   c1
-#else
-  $ fileset 'encoding("ascii")'
-  dos
-  mac
-  mixed
-  .hgsub
-  .hgsubstate
-  1k
-  2k
-  b1
-  b2
-  bin
-  c1
-#endif
 
 Test detection of unintentional 'matchctx.existing()' invocation
 
