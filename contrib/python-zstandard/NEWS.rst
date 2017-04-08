@@ -1,6 +1,11 @@
 Version History
 ===============
 
+0.8.1 (released 2017-04-08)
+---------------------------
+
+* Add #includes so compilation on OS X and BSDs works (#20).
+
 0.8.0 (released 2017-03-08)
 ---------------------------
 
