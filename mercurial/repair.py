@@ -868,7 +868,8 @@ def _upgraderepo(ui, srcrepo, dstrepo, requirements, actions):
                      'redeltamultibase' in actions)
 
     # Now copy other files in the store directory.
-    for p, kind, st in srcrepo.store.vfs.readdir('', stat=True):
+    # The sorted() makes execution deterministic.
+    for p, kind, st in sorted(srcrepo.store.vfs.readdir('', stat=True)):
         if not _upgradefilterstorefile(srcrepo, dstrepo, requirements,
                                        p, kind, st):
             continue
