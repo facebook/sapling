@@ -403,15 +403,15 @@ Test 'revs(...)'
 small reminder of the repository state
 
   $ hg log -G
-  @  changeset:   4:160936123545
+  @  changeset:   4:* (glob)
   |  tag:         tip
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     subrepo
   |
-  o    changeset:   3:9d594e11b8c9
+  o    changeset:   3:* (glob)
   |\   parent:      2:55b05bdebf36
-  | |  parent:      1:830839835f98
+  | |  parent:      1:* (glob)
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
   | |  summary:     merge
@@ -422,7 +422,7 @@ small reminder of the repository state
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
   | |  summary:     diverging
   | |
-  o |  changeset:   1:830839835f98
+  o |  changeset:   1:* (glob)
   |/   user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
   |    summary:     manychanges
