@@ -284,6 +284,18 @@ def gettemplate(exp, context):
         return context._load(exp[1])
     raise error.ParseError(_("expected template specifier"))
 
+def findsymbolicname(arg):
+    """Find symbolic name for the given compiled expression; returns None
+    if nothing found reliably"""
+    while True:
+        func, data = arg
+        if func is runsymbol:
+            return data
+        elif func is runfilter:
+            arg = data[0]
+        else:
+            return None
+
 def evalfuncarg(context, mapping, arg):
     func, data = arg
     # func() may return string, generator of strings or arbitrary object such
@@ -387,12 +399,13 @@ def runfilter(context, mapping, data):
     try:
         return filt(thing)
     except (ValueError, AttributeError, TypeError):
-        if isinstance(arg[1], tuple):
-            dt = arg[1][1]
+        sym = findsymbolicname(arg)
+        if sym:
+            msg = (_("template filter '%s' is not compatible with keyword '%s'")
+                   % (filt.func_name, sym))
         else:
-            dt = arg[1]
-        raise error.Abort(_("template filter '%s' is not compatible with "
-                           "keyword '%s'") % (filt.func_name, dt))
+            msg = _("incompatible use of template filter '%s'") % filt.func_name
+        raise error.Abort(msg)
 
 def buildmap(exp, context):
     func, data = compileexp(exp[1], context, methods)

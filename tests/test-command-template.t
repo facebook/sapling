@@ -2684,6 +2684,14 @@ Behind the scenes, this will throw ValueError
   hg: parse error: date expects a date information
   [255]
 
+  $ hg tip -T '{author|email|shortdate}\n'
+  abort: template filter 'shortdate' is not compatible with keyword 'author'
+  [255]
+
+  $ hg tip -T '{get(extras, "branch")|shortdate}\n'
+  abort: incompatible use of template filter 'shortdate'
+  [255]
+
 Error in nested template:
 
   $ hg log -T '{"date'
