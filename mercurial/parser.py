@@ -135,8 +135,9 @@ def buildargsdict(trees, funcname, argspec, keyvaluenode, keynode):
         raise error.ParseError(_("%(func)s takes at least %(nargs)d positional "
                                  "arguments")
                                % {'func': funcname, 'nargs': len(poskeys)})
-    if not varkey and len(trees) > len(poskeys) + len(keys):
-        raise error.ParseError(_("%(func)s takes at most %(nargs)d arguments")
+    if not varkey and kwstart > len(poskeys) + len(keys):
+        raise error.ParseError(_("%(func)s takes at most %(nargs)d positional "
+                                 "arguments")
                                % {'func': funcname,
                                   'nargs': len(poskeys) + len(keys)})
     args = {}

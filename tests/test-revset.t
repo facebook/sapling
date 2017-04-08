@@ -454,7 +454,7 @@ keyword arguments
   0
 
   $ log 'extra(branch, a, b)'
-  hg: parse error: extra takes at most 2 arguments
+  hg: parse error: extra takes at most 2 positional arguments
   [255]
   $ log 'extra(a, label=b)'
   hg: parse error: extra got multiple values for keyword argument 'label'
