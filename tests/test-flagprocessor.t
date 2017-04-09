@@ -244,5 +244,4 @@
 # TEST: hg status
 
   $ hg status
-  M base64
   $ hg diff

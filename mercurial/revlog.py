@@ -446,7 +446,16 @@ class revlog(object):
 
         t = self.revision(rev, raw=True)
         return len(t)
-    size = rawsize
+
+    def size(self, rev):
+        """length of non-raw text (processed by a "read" flag processor)"""
+        # fast path: if no "read" flag processor could change the content,
+        # size is rawsize. note: ELLIPSIS is known to not change the content.
+        flags = self.flags(rev)
+        if flags & (REVIDX_KNOWN_FLAGS ^ REVIDX_ELLIPSIS) == 0:
+            return self.rawsize(rev)
+
+        return len(self.revision(rev, raw=False))
 
     def chainbase(self, rev):
         base = self._chainbasecache.get(rev)
