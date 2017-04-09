@@ -660,11 +660,6 @@ class unpackermixin(object):
                     raise
         return None
 
-    def close(self):
-        """close underlying file"""
-        if util.safehasattr(self._fp, 'close'):
-            return self._fp.close()
-
 def getunbundler(ui, fp, magicstring=None):
     """return a valid unbundler object for a given magicstring"""
     if magicstring is None:
@@ -816,6 +811,11 @@ class unbundle20(unpackermixin):
     def compressed(self):
         self.params # load params
         return self._compressed
+
+    def close(self):
+        """close underlying file"""
+        if util.safehasattr(self._fp, 'close'):
+            return self._fp.close()
 
 formatmap = {'20': unbundle20}
 
