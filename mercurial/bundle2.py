@@ -621,12 +621,24 @@ class unpackermixin(object):
                           util.safehasattr(fp, 'tell'))
 
     def _unpack(self, format):
-        """unpack this struct format from the stream"""
+        """unpack this struct format from the stream
+
+        This method is meant for internal usage by the bundle2 protocol only.
+        They directly manipulate the low level stream including bundle2 level
+        instruction.
+
+        Do not use it to implement higher-level logic or methods."""
         data = self._readexact(struct.calcsize(format))
         return _unpack(format, data)
 
     def _readexact(self, size):
-        """read exactly <size> bytes from the stream"""
+        """read exactly <size> bytes from the stream
+
+        This method is meant for internal usage by the bundle2 protocol only.
+        They directly manipulate the low level stream including bundle2 level
+        instruction.
+
+        Do not use it to implement higher-level logic or methods."""
         return changegroup.readexactly(self._fp, size)
 
     def seek(self, offset, whence=0):
