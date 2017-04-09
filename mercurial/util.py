@@ -555,11 +555,11 @@ class sortdict(dict):
         dict.__delitem__(self, key)
         self._list.remove(key)
     def pop(self, key, *args, **kwargs):
-        dict.pop(self, key, *args, **kwargs)
         try:
             self._list.remove(key)
         except ValueError:
             pass
+        return dict.pop(self, key, *args, **kwargs)
     def keys(self):
         return self._list[:]
     def iterkeys(self):
