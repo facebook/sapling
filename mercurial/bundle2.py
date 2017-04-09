@@ -617,8 +617,6 @@ class unpackermixin(object):
 
     def __init__(self, fp):
         self._fp = fp
-        self._seekable = (util.safehasattr(fp, 'seek') and
-                          util.safehasattr(fp, 'tell'))
 
     def _unpack(self, format):
         """unpack this struct format from the stream
@@ -640,25 +638,6 @@ class unpackermixin(object):
 
         Do not use it to implement higher-level logic or methods."""
         return changegroup.readexactly(self._fp, size)
-
-    def seek(self, offset, whence=0):
-        """move the underlying file pointer"""
-        if self._seekable:
-            return self._fp.seek(offset, whence)
-        else:
-            raise NotImplementedError(_('File pointer is not seekable'))
-
-    def tell(self):
-        """return the file offset, or None if file is not seekable"""
-        if self._seekable:
-            try:
-                return self._fp.tell()
-            except IOError as e:
-                if e.errno == errno.ESPIPE:
-                    self._seekable = False
-                else:
-                    raise
-        return None
 
 def getunbundler(ui, fp, magicstring=None):
     """return a valid unbundler object for a given magicstring"""
@@ -1111,6 +1090,8 @@ class unbundlepart(unpackermixin):
 
     def __init__(self, ui, header, fp):
         super(unbundlepart, self).__init__(fp)
+        self._seekable = (util.safehasattr(fp, 'seek') and
+                          util.safehasattr(fp, 'tell'))
         self.ui = ui
         # unbundle state attr
         self._headerdata = header
@@ -1158,11 +1139,11 @@ class unbundlepart(unpackermixin):
         '''seek to specified chunk and start yielding data'''
         if len(self._chunkindex) == 0:
             assert chunknum == 0, 'Must start with chunk 0'
-            self._chunkindex.append((0, super(unbundlepart, self).tell()))
+            self._chunkindex.append((0, self._tellfp()))
         else:
             assert chunknum < len(self._chunkindex), \
                    'Unknown chunk %d' % chunknum
-            super(unbundlepart, self).seek(self._chunkindex[chunknum][1])
+            self._seekfp(self._chunkindex[chunknum][1])
 
         pos = self._chunkindex[chunknum][0]
         payloadsize = self._unpack(_fpayloadsize)[0]
@@ -1180,8 +1161,7 @@ class unbundlepart(unpackermixin):
                 chunknum += 1
                 pos += payloadsize
                 if chunknum == len(self._chunkindex):
-                    self._chunkindex.append((pos,
-                                             super(unbundlepart, self).tell()))
+                    self._chunkindex.append((pos, self._tellfp()))
                 yield result
             payloadsize = self._unpack(_fpayloadsize)[0]
             indebug(self.ui, 'payload chunk size: %i' % payloadsize)
@@ -1273,6 +1253,37 @@ class unbundlepart(unpackermixin):
             if len(adjust) != internaloffset:
                 raise error.Abort(_('Seek failed\n'))
             self._pos = newpos
+
+    def _seekfp(self, offset, whence=0):
+        """move the underlying file pointer
+
+        This method is meant for internal usage by the bundle2 protocol only.
+        They directly manipulate the low level stream including bundle2 level
+        instruction.
+
+        Do not use it to implement higher-level logic or methods."""
+        if self._seekable:
+            return self._fp.seek(offset, whence)
+        else:
+            raise NotImplementedError(_('File pointer is not seekable'))
+
+    def _tellfp(self):
+        """return the file offset, or None if file is not seekable
+
+        This method is meant for internal usage by the bundle2 protocol only.
+        They directly manipulate the low level stream including bundle2 level
+        instruction.
+
+        Do not use it to implement higher-level logic or methods."""
+        if self._seekable:
+            try:
+                return self._fp.tell()
+            except IOError as e:
+                if e.errno == errno.ESPIPE:
+                    self._seekable = False
+                else:
+                    raise
+        return None
 
 # These are only the static capabilities.
 # Check the 'getrepocaps' function for the rest.
