@@ -432,7 +432,8 @@ def showindex(**args):
 @templatekeyword('latesttag')
 def showlatesttag(**args):
     """List of strings. The global tags on the most recent globally
-    tagged ancestor of this changeset.
+    tagged ancestor of this changeset.  If no such tags exist, the list
+    consists of the single string "null".
     """
     return showlatesttags(None, **args)
 
