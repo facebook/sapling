@@ -900,6 +900,13 @@ class bundlepart(object):
         return tuple(self._advisoryparams)
 
     def addparam(self, name, value='', mandatory=True):
+        """add a parameter to the part
+
+        If 'mandatory' is set to True, the remote handler must claim support
+        for this parameter or the unbundling will be aborted.
+
+        The 'name' and 'value' cannot exceed 255 bytes each.
+        """
         if self._generated is not None:
             raise error.ReadOnlyPartError('part is being generated')
         if name in self._seenparams:
