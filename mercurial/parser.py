@@ -154,7 +154,7 @@ def buildargsdict(trees, funcname, argspec, keyvaluenode, keynode):
                                  "arguments")
                                % {'func': funcname,
                                   'nargs': len(poskeys) + len(keys)})
-    args = {}
+    args = util.sortdict()
     # consume positional arguments
     for k, x in zip(poskeys, trees[:kwstart]):
         args[k] = x
@@ -165,7 +165,7 @@ def buildargsdict(trees, funcname, argspec, keyvaluenode, keynode):
             args[k] = x
     # remainder should be keyword arguments
     if optkey:
-        args[optkey] = {}
+        args[optkey] = util.sortdict()
     for x in trees[kwstart:]:
         if x[0] != keyvaluenode or x[1][0] != keynode:
             raise error.ParseError(_("%(func)s got an invalid argument")
