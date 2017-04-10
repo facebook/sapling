@@ -138,22 +138,18 @@ class improvement(object):
         for k, v in kwargs.items():
             setattr(self, k, v)
 
-def findimprovements(repo):
-    """Determine improvements that can be made to the repo during upgrade.
-
-    Returns a list of ``upgradeimprovement`` describing repository deficiencies
-    and optimizations.
-    """
+def finddeficiencies(repo):
+    """returns a list of deficiencies that the repo suffer from"""
     newreporeqs = localrepo.newreporequirements(repo)
 
-    improvements = []
+    deficiencies = []
 
     # We could detect lack of revlogv1 and store here, but they were added
     # in 0.9.2 and we don't support upgrading repos without these
     # requirements, so let's not bother.
 
     if 'fncache' not in repo.requirements:
-        improvements.append(improvement(
+        deficiencies.append(improvement(
             name='fncache',
             type=deficiency,
             description=_('long and reserved filenames may not work correctly; '
@@ -165,7 +161,7 @@ def findimprovements(repo):
             fromconfig='fncache' in newreporeqs))
 
     if 'dotencode' not in repo.requirements:
-        improvements.append(improvement(
+        deficiencies.append(improvement(
             name='dotencode',
             type=deficiency,
             description=_('storage of filenames beginning with a period or '
@@ -176,7 +172,7 @@ def findimprovements(repo):
             fromconfig='dotencode' in newreporeqs))
 
     if 'generaldelta' not in repo.requirements:
-        improvements.append(improvement(
+        deficiencies.append(improvement(
             name='generaldelta',
             type=deficiency,
             description=_('deltas within internal storage are unable to '
@@ -200,7 +196,7 @@ def findimprovements(repo):
     for rev in cl:
         chainbase = cl.chainbase(rev)
         if chainbase != rev:
-            improvements.append(improvement(
+            deficiencies.append(improvement(
                 name='removecldeltachain',
                 type=deficiency,
                 description=_('changelog storage is using deltas instead of '
@@ -214,12 +210,15 @@ def findimprovements(repo):
                 fromconfig=True))
             break
 
-    # Now for the optimizations.
+    return deficiencies
 
+def findoptimizations(repo):
+    """Determine optimisation that could be used during upgrade"""
     # These are unconditionally added. There is logic later that figures out
     # which ones to apply.
+    optimizations = []
 
-    improvements.append(improvement(
+    optimizations.append(improvement(
         name='redeltaparent',
         type=optimisation,
         description=_('deltas within internal storage will be recalculated to '
@@ -232,7 +231,7 @@ def findimprovements(repo):
         upgrademessage=_('deltas within internal storage will choose a new '
                          'base revision if needed')))
 
-    improvements.append(improvement(
+    optimizations.append(improvement(
         name='redeltamultibase',
         type=optimisation,
         description=_('deltas within internal storage will be recalculated '
@@ -249,7 +248,7 @@ def findimprovements(repo):
                          'parents; may slow down execution time '
                          'significantly')))
 
-    improvements.append(improvement(
+    optimizations.append(improvement(
         name='redeltaall',
         type=optimisation,
         description=_('deltas within internal storage will always be '
@@ -260,14 +259,15 @@ def findimprovements(repo):
                          'recomputed; this will likely drastically slow down '
                          'execution time')))
 
-    return improvements
+    return optimizations
 
 def determineactions(repo, improvements, sourcereqs, destreqs,
                             optimize):
     """Determine upgrade actions that will be performed.
 
-    Given a list of improvements as returned by ``upgradefindimprovements``,
-    determine the list of upgrade actions that will be performed.
+    Given a list of improvements as returned by ``finddeficiencies`` and
+    ``findoptimizations``, determine the list of upgrade actions that
+    will be performed.
 
     The role of this function is to filter improvements if needed, apply
     recommended optimizations from the improvements list that make sense,
@@ -621,7 +621,7 @@ def upgraderepo(ui, repo, run=False, optimize=None):
                           _(', ').join(sorted(unsupportedreqs)))
 
     # Find and validate all improvements that can be made.
-    improvements = findimprovements(repo)
+    improvements = finddeficiencies(repo) + findoptimizations(repo)
     for i in improvements:
         if i.type not in (deficiency, optimisation):
             raise error.Abort(_('unexpected improvement type %s for %s') % (
