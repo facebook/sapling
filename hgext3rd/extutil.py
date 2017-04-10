@@ -8,7 +8,6 @@
 import os
 import platform
 import subprocess
-import sys
 
 if platform.system() == 'Windows':
     # no fork on Windows, but we can create a detached process
@@ -17,37 +16,63 @@ if platform.system() == 'Windows':
     DETACHED_PROCESS = 0x00000008
     _creationflags = DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
 
-    def runshellcommand(script, env):
+    def runbgcommand(script, env, shell=False, stdout=None, stderr=None):
+        '''Spawn a command without waiting for it to finish.'''
         # we can't use close_fds *and* redirect stdin. I'm not sure that we
         # need to because the detached process has no console connection.
         subprocess.Popen(
-            script, shell=True, env=env, close_fds=True,
-            creationflags=_creationflags)
+            script, shell=shell, env=env, close_fds=True,
+            creationflags=_creationflags, stdout=stdout, stderr=stderr)
 else:
-    def runshellcommand(script, env):
+    def runbgcommand(cmd, env, shell=False, stdout=None, stderr=None):
+        '''Spawn a command without waiting for it to finish.'''
         # double-fork to completely detach from the parent process
         # based on http://code.activestate.com/recipes/278731
         pid = os.fork()
         if pid:
-            # parent
+            # Parent process
+            (_pid, status) = os.waitpid(pid, 0)
+            if os.WIFEXITED(status):
+                returncode = os.WEXITSTATUS(status)
+            else:
+                returncode = -os.WTERMSIG(status)
+            if returncode != 0:
+                raise subprocess.CalledProcessError(returncode, cmd)
             return
-        # subprocess.Popen() forks again, all we need to add is
-        # flag the new process as a new session.
-        if sys.version_info < (3, 2):
-            newsession = {'preexec_fn': os.setsid}
-        else:
-            newsession = {'start_new_session': True}
+
         try:
+            # Start a new session
+            os.setsid()
+
+            stdin = open(os.devnull, 'r')
+            if stdout is None:
+                stdout = open(os.devnull, 'w')
+            if stderr is None:
+                stderr = open(os.devnull, 'w')
+
             # connect stdin to devnull to make sure the subprocess can't
             # muck up that stream for mercurial.
             subprocess.Popen(
-                script, shell=True, stdout=open(os.devnull, 'w'),
-                stderr=open(os.devnull, 'w'), stdin=open(os.devnull, 'r'),
-                env=env, close_fds=True, **newsession)
+                cmd, shell=shell, env=env, close_fds=True,
+                stdin=stdin, stdout=stdout, stderr=stderr)
+        except Exception:
+            os._exit(255)
         finally:
             # mission accomplished, this child needs to exit and not
             # continue the hg process here.
             os._exit(0)
+
+def runshellcommand(script, env):
+    '''
+    Run a shell command in the background.
+    This spawns the command and returns before it completes.
+
+    Prefer using runbgcommand() instead of this function.  This function should
+    be discouraged in new code.  Running commands through a subshell requires
+    you to be very careful about correctly escaping arguments, and you need to
+    make sure your command works with both Windows and Unix shells.
+    '''
+    runbgcommand(script, env=env, shell=True)
 
 def replaceclass(container, classname):
     '''Replace a class with another in a module, and interpose it into
