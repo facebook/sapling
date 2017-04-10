@@ -100,7 +100,7 @@ def rephere(m):
 
 testpats = [
   [
-    (r'pushd|popd', "don't use 'pushd' or 'popd', use 'cd'"),
+    (r'\b(push|pop)d\b', "don't use 'pushd' or 'popd', use 'cd'"),
     (r'\W\$?\(\([^\)\n]*\)\)', "don't use (()) or $(()), use 'expr'"),
     (r'grep.*-q', "don't use 'grep -q', redirect to /dev/null"),
     (r'(?<!hg )grep.* -a', "don't use 'grep -a', use in-line python"),
