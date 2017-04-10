@@ -292,7 +292,7 @@ def determineactions(repo, deficiencies, sourcereqs, destreqs):
         if name in knownreqs and name not in destreqs:
             continue
 
-        newactions.append(name)
+        newactions.append(d)
 
     # FUTURE consider adding some optimizations here for certain transitions.
     # e.g. adding generaldelta could schedule parent redeltas.
@@ -639,11 +639,10 @@ def upgraderepo(ui, repo, run=False, optimize=None):
                                  'optimizations'))
 
     deficiencies = finddeficiencies(repo)
-    improvements = deficiencies + optimizations
     actions = determineactions(repo, deficiencies, repo.requirements, newreqs)
-    actions.extend(o.name for o in sorted(optimizations)
+    actions.extend(o for o in sorted(optimizations)
                    # determineactions could have added optimisation
-                   if o.name not in actions)
+                   if o not in actions)
 
     def printrequirements():
         ui.write(_('requirements\n'))
@@ -661,11 +660,8 @@ def upgraderepo(ui, repo, run=False, optimize=None):
         ui.write('\n')
 
     def printupgradeactions():
-        for action in actions:
-            for i in improvements:
-                if i.name == action:
-                    ui.write('%s\n   %s\n\n' %
-                             (i.name, i.upgrademessage))
+        for a in actions:
+            ui.write('%s\n   %s\n\n' % (a.name, a.upgrademessage))
 
     if not run:
         fromdefault = []
@@ -705,8 +701,8 @@ def upgraderepo(ui, repo, run=False, optimize=None):
         printrequirements()
         printupgradeactions()
 
-        unusedoptimize = [i for i in alloptimizations
-                          if i.name not in actions]
+        unusedoptimize = [i for i in alloptimizations if i not in actions]
+
         if unusedoptimize:
             ui.write(_('additional optimizations are available by specifying '
                      '"--optimize <name>":\n\n'))
@@ -718,6 +714,8 @@ def upgraderepo(ui, repo, run=False, optimize=None):
     ui.write(_('upgrade will perform the following actions:\n\n'))
     printrequirements()
     printupgradeactions()
+
+    upgradeactions = [a.name for a in actions]
 
     ui.write(_('beginning upgrade...\n'))
     with repo.wlock():
@@ -740,7 +738,7 @@ def upgraderepo(ui, repo, run=False, optimize=None):
                 with dstrepo.wlock():
                     with dstrepo.lock():
                         backuppath = _upgraderepo(ui, repo, dstrepo, newreqs,
-                                                  actions)
+                                                  upgradeactions)
 
             finally:
                 ui.write(_('removing temporary repository %s\n') % tmppath)
