@@ -621,21 +621,18 @@ def upgraderepo(ui, repo, run=False, optimize=None):
                           _(', ').join(sorted(unsupportedreqs)))
 
     # Find and validate all improvements that can be made.
-    improvements = finddeficiencies(repo) + findoptimizations(repo)
-    for i in improvements:
-        if i.type not in (deficiency, optimisation):
-            raise error.Abort(_('unexpected improvement type %s for %s') % (
-                i.type, i.name))
+    optimizations = findoptimizations(repo)
 
     # Validate arguments.
-    unknownoptimize = optimize - set(i.name for i in improvements
-                                     if i.type == optimisation)
+    unknownoptimize = optimize - set(i.name for i in optimizations)
     if unknownoptimize:
         raise error.Abort(_('unknown optimization action requested: %s') %
                           ', '.join(sorted(unknownoptimize)),
                           hint=_('run without arguments to see valid '
                                  'optimizations'))
 
+    deficiencies = finddeficiencies(repo)
+    improvements = deficiencies + optimizations
     actions = determineactions(repo, improvements, repo.requirements,
                                       newreqs, optimize)
 
