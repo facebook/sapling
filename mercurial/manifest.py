@@ -1155,6 +1155,22 @@ class treemanifest(object):
                 subp1, subp2 = subp2, subp1
             writesubtree(subm, subp1, subp2)
 
+    def walksubtrees(self, matcher=None):
+        """Returns an iterator of the subtrees of this manifest, including this
+        manifest itself.
+
+        If `matcher` is provided, it only returns subtrees that match.
+        """
+        if matcher and not matcher.visitdir(self._dir[:-1] or '.'):
+            return
+        if not matcher or matcher(self._dir[:-1]):
+            yield self
+
+        self._load()
+        for d, subm in self._dirs.iteritems():
+            for subtree in subm.walksubtrees(matcher=matcher):
+                yield subtree
+
 class manifestrevlog(revlog.revlog):
     '''A revlog that stores manifest texts. This is responsible for caching the
     full-text manifest contents.

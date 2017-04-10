@@ -467,5 +467,21 @@ class testtreemanifest(unittest.TestCase, basemanifesttests):
     def parsemanifest(self, text):
         return manifestmod.treemanifest('', text)
 
+    def testWalkSubtrees(self):
+        m = self.parsemanifest(A_DEEPER_MANIFEST)
+
+        dirs = [s._dir for s in m.walksubtrees()]
+        self.assertEqual(
+            sorted(['', 'a/', 'a/c/', 'a/d/', 'a/b/', 'a/b/c/', 'a/b/d/']),
+            sorted(dirs)
+        )
+
+        match = matchmod.match('/', '', ['path:a/b/'])
+        dirs = [s._dir for s in m.walksubtrees(matcher=match)]
+        self.assertEqual(
+            sorted(['a/b/', 'a/b/c/', 'a/b/d/']),
+            sorted(dirs)
+        )
+
 if __name__ == '__main__':
     silenttestrunner.main(__name__)
