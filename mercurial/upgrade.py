@@ -265,7 +265,7 @@ def findimprovements(repo):
 
     return improvements
 
-def upgradedetermineactions(repo, improvements, sourcereqs, destreqs,
+def determineactions(repo, improvements, sourcereqs, destreqs,
                             optimize):
     """Determine upgrade actions that will be performed.
 
@@ -641,7 +641,7 @@ def upgraderepo(ui, repo, run=False, optimize=None):
                           hint=_('run without arguments to see valid '
                                  'optimizations'))
 
-    actions = upgradedetermineactions(repo, improvements, repo.requirements,
+    actions = determineactions(repo, improvements, repo.requirements,
                                       newreqs, optimize)
 
     def printrequirements():
