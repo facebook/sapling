@@ -97,7 +97,7 @@ def upgradeallowednewrequirements(repo):
 deficiency = 'deficiency'
 optimisation = 'optimization'
 
-class upgradeimprovement(object):
+class improvement(object):
     """Represents an improvement that can be made as part of an upgrade.
 
     The following attributes are defined on each instance:
@@ -156,7 +156,7 @@ def upgradefindimprovements(repo):
     # requirements, so let's not bother.
 
     if 'fncache' not in repo.requirements:
-        improvements.append(upgradeimprovement(
+        improvements.append(improvement(
             name='fncache',
             type=deficiency,
             description=_('long and reserved filenames may not work correctly; '
@@ -168,7 +168,7 @@ def upgradefindimprovements(repo):
             fromconfig='fncache' in newreporeqs))
 
     if 'dotencode' not in repo.requirements:
-        improvements.append(upgradeimprovement(
+        improvements.append(improvement(
             name='dotencode',
             type=deficiency,
             description=_('storage of filenames beginning with a period or '
@@ -179,7 +179,7 @@ def upgradefindimprovements(repo):
             fromconfig='dotencode' in newreporeqs))
 
     if 'generaldelta' not in repo.requirements:
-        improvements.append(upgradeimprovement(
+        improvements.append(improvement(
             name='generaldelta',
             type=deficiency,
             description=_('deltas within internal storage are unable to '
@@ -203,7 +203,7 @@ def upgradefindimprovements(repo):
     for rev in cl:
         chainbase = cl.chainbase(rev)
         if chainbase != rev:
-            improvements.append(upgradeimprovement(
+            improvements.append(improvement(
                 name='removecldeltachain',
                 type=deficiency,
                 description=_('changelog storage is using deltas instead of '
@@ -222,7 +222,7 @@ def upgradefindimprovements(repo):
     # These are unconditionally added. There is logic later that figures out
     # which ones to apply.
 
-    improvements.append(upgradeimprovement(
+    improvements.append(improvement(
         name='redeltaparent',
         type=optimisation,
         description=_('deltas within internal storage will be recalculated to '
@@ -235,7 +235,7 @@ def upgradefindimprovements(repo):
         upgrademessage=_('deltas within internal storage will choose a new '
                          'base revision if needed')))
 
-    improvements.append(upgradeimprovement(
+    improvements.append(improvement(
         name='redeltamultibase',
         type=optimisation,
         description=_('deltas within internal storage will be recalculated '
@@ -252,7 +252,7 @@ def upgradefindimprovements(repo):
                          'parents; may slow down execution time '
                          'significantly')))
 
-    improvements.append(upgradeimprovement(
+    improvements.append(improvement(
         name='redeltaall',
         type=optimisation,
         description=_('deltas within internal storage will always be '
