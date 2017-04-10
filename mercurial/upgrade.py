@@ -120,23 +120,12 @@ class improvement(object):
     upgrademessage
        Message intended for humans explaining what an upgrade addressing this
        issue will do. Should be worded in the future tense.
-
-    fromdefault (``deficiency`` types only)
-       Boolean indicating whether the current (deficient) state deviates
-       from Mercurial's default configuration.
-
-    fromconfig (``deficiency`` types only)
-       Boolean indicating whether the current (deficient) state deviates
-       from the current Mercurial configuration.
     """
-    def __init__(self, name, type, description, upgrademessage, **kwargs):
+    def __init__(self, name, type, description, upgrademessage):
         self.name = name
         self.type = type
         self.description = description
         self.upgrademessage = upgrademessage
-
-        for k, v in kwargs.items():
-            setattr(self, k, v)
 
     def __eq__(self, other):
         if not isinstance(other, improvement):
@@ -150,6 +139,27 @@ class improvement(object):
     def __hash__(self):
         return hash(self.name)
 
+class formatvariant(improvement):
+    """an improvement subclass dedicated to repository format
+
+    extra attributes:
+
+    fromdefault (``deficiency`` types only)
+       Boolean indicating whether the current (deficient) state deviates
+       from Mercurial's default configuration.
+
+    fromconfig (``deficiency`` types only)
+       Boolean indicating whether the current (deficient) state deviates
+       from the current Mercurial configuration.
+    """
+
+    def __init__(self, name, description, upgrademessage, fromdefault,
+                 fromconfig):
+        super(formatvariant, self).__init__(name, deficiency, description,
+                                            upgrademessage)
+        self.fromdefault = fromdefault
+        self.fromconfig = fromconfig
+
 def finddeficiencies(repo):
     """returns a list of deficiencies that the repo suffer from"""
     newreporeqs = localrepo.newreporequirements(repo)
@@ -161,9 +171,8 @@ def finddeficiencies(repo):
     # requirements, so let's not bother.
 
     if 'fncache' not in repo.requirements:
-        deficiencies.append(improvement(
+        deficiencies.append(formatvariant(
             name='fncache',
-            type=deficiency,
             description=_('long and reserved filenames may not work correctly; '
                           'repository performance is sub-optimal'),
             upgrademessage=_('repository will be more resilient to storing '
@@ -173,9 +182,8 @@ def finddeficiencies(repo):
             fromconfig='fncache' in newreporeqs))
 
     if 'dotencode' not in repo.requirements:
-        deficiencies.append(improvement(
+        deficiencies.append(formatvariant(
             name='dotencode',
-            type=deficiency,
             description=_('storage of filenames beginning with a period or '
                           'space may not work correctly'),
             upgrademessage=_('repository will be better able to store files '
@@ -184,9 +192,8 @@ def finddeficiencies(repo):
             fromconfig='dotencode' in newreporeqs))
 
     if 'generaldelta' not in repo.requirements:
-        deficiencies.append(improvement(
+        deficiencies.append(formatvariant(
             name='generaldelta',
-            type=deficiency,
             description=_('deltas within internal storage are unable to '
                           'choose optimal revisions; repository is larger and '
                           'slower than it could be; interaction with other '
@@ -208,9 +215,8 @@ def finddeficiencies(repo):
     for rev in cl:
         chainbase = cl.chainbase(rev)
         if chainbase != rev:
-            deficiencies.append(improvement(
+            deficiencies.append(formatvariant(
                 name='removecldeltachain',
-                type=deficiency,
                 description=_('changelog storage is using deltas instead of '
                               'raw entries; changelog reading and any '
                               'operation relying on changelog data are slower '
