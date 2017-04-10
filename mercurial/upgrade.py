@@ -53,7 +53,7 @@ def blocksourcerequirements(repo):
         'shared',
     ])
 
-def upgradesupportremovedrequirements(repo):
+def supportremovedrequirements(repo):
     """Obtain requirements that can be removed during an upgrade.
 
     If an upgrade were to create a repository that dropped a requirement,
@@ -607,7 +607,7 @@ def upgraderepo(ui, repo, run=False, optimize=None):
     newreqs = localrepo.newreporequirements(repo)
 
     noremovereqs = (repo.requirements - newreqs -
-                   upgradesupportremovedrequirements(repo))
+                   supportremovedrequirements(repo))
     if noremovereqs:
         raise error.Abort(_('cannot upgrade repository; requirement would be '
                             'removed: %s') % _(', ').join(sorted(noremovereqs)))
