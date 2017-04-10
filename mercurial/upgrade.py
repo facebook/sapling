@@ -22,7 +22,7 @@ from . import (
     vfs as vfsmod,
 )
 
-def upgraderequiredsourcerequirements(repo):
+def requiredsourcerequirements(repo):
     """Obtain requirements required to be present to upgrade a repo.
 
     An upgrade will not be allowed if the repository doesn't have the
@@ -591,7 +591,7 @@ def upgraderepo(ui, repo, run=False, optimize=None):
     repo = repo.unfiltered()
 
     # Ensure the repository can be upgraded.
-    missingreqs = upgraderequiredsourcerequirements(repo) - repo.requirements
+    missingreqs = requiredsourcerequirements(repo) - repo.requirements
     if missingreqs:
         raise error.Abort(_('cannot upgrade repository; requirement '
                             'missing: %s') % _(', ').join(sorted(missingreqs)))
