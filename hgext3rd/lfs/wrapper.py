@@ -74,10 +74,15 @@ def writetostore(self, text):
         offset += chunklen
 
     # replace contents with metadata
-    metadata = pointer.ChunkingPointer(
-        chunks=[{'oid': v.oid, 'size': v.size} for v in chunkoids],
-        hashalgo='sha256',
-        size=len(text))
+    hashalgo = 'sha256'
+    if len(chunkoids) == 1:
+        storeid = chunkoids[0]
+        metadata = pointer.GithubPointer(storeid.oid, hashalgo, storeid.size)
+    else:
+        metadata = pointer.ChunkingPointer(
+            chunks=[{'oid': v.oid, 'size': v.size} for v in chunkoids],
+            hashalgo=hashalgo,
+            size=len(text))
 
     # hg filelog metadata (includes rename, etc)
     hgmeta = getattr(self, '_filelogmeta', None)
@@ -213,7 +218,7 @@ def prepush(pushop):
         return
 
     if ui.verbose:
-        msg = _('lfs: uploading blobs to the remote (%s chunk(s), %s)\n')
+        msg = _('lfs: need to upload %s objects (%s)\n')
         ui.write(msg % (len(toupload), hgutil.bytecount(totalsize)))
 
     remoteblob = repo.svfs.lfsremoteblobstore

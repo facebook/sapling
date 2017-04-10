@@ -16,6 +16,12 @@ Configs::
     remotepath = /tmp/test
     # location of the blob storage
     blobstore = cache/localblobstore
+    # size of a file to make it use LFS
+    threshold = 10M
+    # chunk large files into small blobs client-side. note: this feature is
+    # an extension, not part of the standard Git-LFS specification. if this is
+    # not set, large files will not be chunked.
+    chunksize = 10M
 
     # When bypass is set to True, lfs will bypass downloading or uploading
     # blobs, and only skip some hash checks. For example, "hg cat FILE" will

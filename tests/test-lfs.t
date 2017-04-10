@@ -52,7 +52,7 @@
   pushing to $TESTTMP/server (glob)
   searching for changes
   lfs: computing set of blobs to upload
-  lfs: uploading blobs to the remote (2 chunk(s), 1.47 KB)
+  lfs: need to upload 2 objects (1.47 KB)
   2 changesets found
   adding changesets
   adding manifests
@@ -259,9 +259,8 @@
   > done
   
   a1 @ 0
-  version https://git-lfs.github.com/spec/chunking
-  chunks 5bb8341bee63b3649f222b2215bde37322bea075a30575aa685d8f8d21c77024:29
-  hashalgo sha256
+  version https://git-lfs.github.com/spec/v1
+  oid sha256:5bb8341bee63b3649f222b2215bde37322bea075a30575aa685d8f8d21c77024
   size 29
   
   a1 @ 1
@@ -281,17 +280,15 @@
   SMALL
   
   a2 @ 1
-  version https://git-lfs.github.com/spec/chunking
-  chunks 5bb8341bee63b3649f222b2215bde37322bea075a30575aa685d8f8d21c77024:29
-  hashalgo sha256
+  version https://git-lfs.github.com/spec/v1
+  oid sha256:5bb8341bee63b3649f222b2215bde37322bea075a30575aa685d8f8d21c77024
   size 29
   x-hg-copy a1
   x-hg-copyrev be23af27908a582af43e5cda209a5a9b319de8d4
   
   a2 @ 2
-  version https://git-lfs.github.com/spec/chunking
-  chunks 876dadc86a8542f9798048f2c47f51dbf8e4359aed883e8ec80c5db825f0d943:32
-  hashalgo sha256
+  version https://git-lfs.github.com/spec/v1
+  oid sha256:876dadc86a8542f9798048f2c47f51dbf8e4359aed883e8ec80c5db825f0d943
   size 32
 
   $ cd ..
