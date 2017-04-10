@@ -48,6 +48,15 @@ def words(path):
     """
     return re.split('[^\w]+', os.path.splitext(path)[0])
 
+def alltests(include_checks=True):
+    tests = [p for p in os.listdir(os.path.join(reporoot, 'tests'))
+             if p.startswith('test-') and p[-2:] in ['py', '.t']]
+
+    if not include_checks:
+        tests = [t for t in tests if not t.startswith('test-check')]
+
+    return tests
+
 def interestingtests(changed_files, include_checks=True):
     """return a list of interesting test filenames"""
     tests = [p for p in os.listdir(os.path.join(reporoot, 'tests'))
@@ -139,17 +148,25 @@ def main():
     op.add_option('-j', '--json',
                   metavar='FILE',
                   help='Write a JSON result file at the specified location')
+    op.add_option('--all',
+                  action='store_true', default=False,
+                  help='Run all tests.')
     op.add_option('--skip-checks',
                   action='store_true', default=False,
                   help='Do not automatically include all "check" tests.')
     opts, args = op.parse_args()
 
-    if args:
-        changed_files = args
+    if opts.all:
+        tests = alltests(include_checks=not opts.skip_checks)
     else:
-        changed_files = changedfiles()
+        if args:
+            changed_files = args
+        else:
+            changed_files = changedfiles()
 
-    tests = interestingtests(changed_files, include_checks=not opts.skip_checks)
+        tests = interestingtests(changed_files,
+                                 include_checks=not opts.skip_checks)
+
     if tests:
         info('%d test%s to run: %s\n'
              % (len(tests), ('' if len(tests) == 1 else 's'), ' '.join(tests)))
