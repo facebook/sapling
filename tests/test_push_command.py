@@ -139,6 +139,20 @@ class PushTests(test_util.TestBase):
              'w').write('[general]\nanon-access=write\n[sasl]\n')
         self.port = random.randint(socket.IPPORT_USERRESERVED, 65535)
         self.host = socket.gethostname()
+
+        # The `svnserve` binary appears to use the obsolete `gethostbyname(3)`
+        # function, which always returns an IPv4 address, even on hosts that
+        # support and expect IPv6. As a workaround, resolve the hostname
+        # within the test harness with `getaddrinfo(3)` to ensure that the
+        # client and server both use the same IPv4 or IPv6 address.
+        addrinfo = socket.getaddrinfo(self.host, self.port)
+        self.host = addrinfo[0][4][0]
+
+        # If we're connecting via IPv6 the need to put brackets around the
+        # hostname in the URL.
+        ipv6 = addrinfo[0][0] == socket.AF_INET6
+        urlfmt = 'svn://[%s]:%d/%s' if ipv6 else 'svn://%s:%d/%s'
+
         args = ['svnserve', '--daemon', '--foreground',
                 '--listen-port=%d' % self.port,
                 '--listen-host=%s' % self.host,
@@ -152,7 +166,7 @@ class PushTests(test_util.TestBase):
             import shutil
             shutil.rmtree(self.wc_path)
             commands.clone(self.ui(),
-                           'svn://%s:%d/%s' % (self.host, self.port, subdir),
+                           urlfmt % (self.host, self.port, subdir),
                            self.wc_path, noupdate=True)
 
             repo = self.repo
