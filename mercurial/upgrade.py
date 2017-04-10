@@ -35,7 +35,7 @@ def requiredsourcerequirements(repo):
         'store',
     ])
 
-def upgradeblocksourcerequirements(repo):
+def blocksourcerequirements(repo):
     """Obtain requirements that will prevent an upgrade from occurring.
 
     An upgrade cannot be performed if the source repository contains a
@@ -596,7 +596,7 @@ def upgraderepo(ui, repo, run=False, optimize=None):
         raise error.Abort(_('cannot upgrade repository; requirement '
                             'missing: %s') % _(', ').join(sorted(missingreqs)))
 
-    blockedreqs = upgradeblocksourcerequirements(repo) & repo.requirements
+    blockedreqs = blocksourcerequirements(repo) & repo.requirements
     if blockedreqs:
         raise error.Abort(_('cannot upgrade repository; unsupported source '
                             'requirement: %s') %
