@@ -8,6 +8,7 @@ from mercurial import (
     encoding,
     rcutil,
     ui as uimod,
+    util,
 )
 
 testtmp = encoding.environ['TESTTMP']
@@ -40,7 +41,7 @@ def printconfigs(env):
     ui = uimod.ui.load()
     for section, name, value in ui.walkconfig():
         source = ui.configsource(section, name)
-        print('%s.%s=%s # %s' % (section, name, value, source))
+        print('%s.%s=%s # %s' % (section, name, value, util.pconvert(source)))
     print('')
 
 # environment variable overrides

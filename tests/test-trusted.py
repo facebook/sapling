@@ -74,14 +74,14 @@ def testui(user='foo', group='bar', tusers=(), tgroups=(),
         return u
     print('trusted')
     for name, path in u.configitems('paths'):
-        print('   ', name, '=', path)
+        print('   ', name, '=', util.pconvert(path))
     print('untrusted')
     for name, path in u.configitems('paths', untrusted=True):
         print('.', end=' ')
         u.config('paths', name) # warning with debug=True
         print('.', end=' ')
         u.config('paths', name, untrusted=True) # no warnings
-        print(name, '=', path)
+        print(name, '=', util.pconvert(path))
     print()
 
     return u
@@ -217,6 +217,12 @@ bytes=81mb
 list=spam,ham,eggs
 ''')
 u = testui(user='abc', group='def', cuser='foo', silent=True)
+def configpath(section, name, default=None, untrusted=False):
+    path = u.configpath(section, name, default, untrusted)
+    if path is None:
+        return None
+    return util.pconvert(path)
+
 print('# suboptions, trusted and untrusted')
 trusted = u.configsuboptions('foo', 'sub')
 untrusted = u.configsuboptions('foo', 'sub', untrusted=True)
@@ -224,7 +230,7 @@ print(
     (trusted[0], sorted(trusted[1].items())),
     (untrusted[0], sorted(untrusted[1].items())))
 print('# path, trusted and untrusted')
-print(u.configpath('foo', 'path'), u.configpath('foo', 'path', untrusted=True))
+print(configpath('foo', 'path'), configpath('foo', 'path', untrusted=True))
 print('# bool, trusted and untrusted')
 print(u.configbool('foo', 'bool'), u.configbool('foo', 'bool', untrusted=True))
 print('# int, trusted and untrusted')
