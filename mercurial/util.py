@@ -2161,7 +2161,7 @@ def unitcountfn(*unittable):
 
     def go(count):
         for multiplier, divisor, format in unittable:
-            if count >= divisor * multiplier:
+            if abs(count) >= divisor * multiplier:
                 return format % (count / float(divisor))
         return unittable[-1][2] % count
 
