@@ -456,7 +456,7 @@ def _copyrevlogs(ui, srcrepo, dstrepo, tr, deltareuse, aggressivemergedeltas):
     ui.write(_('finished migrating %d total revisions; total change in store '
                'size: %s\n') % (revcount, util.bytecount(dstsize - srcsize)))
 
-def _upgradefilterstorefile(srcrepo, dstrepo, requirements, path, mode, st):
+def _filterstorefile(srcrepo, dstrepo, requirements, path, mode, st):
     """Determine whether to copy a store file during upgrade.
 
     This function is called when migrating store files from ``srcrepo`` to
@@ -525,7 +525,7 @@ def _upgraderepo(ui, srcrepo, dstrepo, requirements, actions):
 
     # Now copy other files in the store directory.
     for p, kind, st in srcrepo.store.vfs.readdir('', stat=True):
-        if not _upgradefilterstorefile(srcrepo, dstrepo, requirements,
+        if not _filterstorefile(srcrepo, dstrepo, requirements,
                                        p, kind, st):
             continue
 
