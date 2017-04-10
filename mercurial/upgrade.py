@@ -664,19 +664,16 @@ def upgraderepo(ui, repo, run=False, optimize=None):
             ui.write('%s\n   %s\n\n' % (a.name, a.upgrademessage))
 
     if not run:
-        fromdefault = []
         fromconfig = []
+        onlydefault = []
 
         for d in deficiencies:
-            if d.fromdefault:
-                fromdefault.append(d)
             if d.fromconfig:
                 fromconfig.append(d)
+            elif d.fromdefault:
+                onlydefault.append(d)
 
-        if fromdefault or fromconfig:
-            fromconfignames = set(x.name for x in fromconfig)
-            onlydefault = [i for i in fromdefault
-                           if i.name not in fromconfignames]
+        if fromconfig or onlydefault:
 
             if fromconfig:
                 ui.write(_('repository lacks features recommended by '
