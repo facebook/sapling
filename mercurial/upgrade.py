@@ -62,7 +62,7 @@ def supportremovedrequirements(repo):
     """
     return set()
 
-def upgradesupporteddestrequirements(repo):
+def supporteddestrequirements(repo):
     """Obtain requirements that upgrade supports in the destination.
 
     If the result of the upgrade would create requirements not in this set,
@@ -280,7 +280,7 @@ def upgradedetermineactions(repo, improvements, sourcereqs, destreqs,
     """
     newactions = []
 
-    knownreqs = upgradesupporteddestrequirements(repo)
+    knownreqs = supporteddestrequirements(repo)
 
     for i in improvements:
         name = i.name
@@ -619,7 +619,7 @@ def upgraderepo(ui, repo, run=False, optimize=None):
                             'requirement: %s') %
                           _(', ').join(sorted(noaddreqs)))
 
-    unsupportedreqs = newreqs - upgradesupporteddestrequirements(repo)
+    unsupportedreqs = newreqs - supporteddestrequirements(repo)
     if unsupportedreqs:
         raise error.Abort(_('cannot upgrade repository; do not support '
                             'destination requirement: %s') %
