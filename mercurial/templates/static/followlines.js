@@ -204,13 +204,23 @@ document.addEventListener('DOMContentLoaded', function() {
         //   <div class="followlines-link">
         var aDiv = document.createElement('div');
         aDiv.classList.add('followlines-link');
-
-        //     <a href="/log/<rev>/<file>?patch=&linerange=...">
-        var a = document.createElement('a');
+        aDiv.textContent = 'follow history of lines ' + fromline + ':' + toline + ':';
+        var linesep = document.createElement('br');
+        aDiv.appendChild(linesep);
+        //     link to "ascending" followlines
+        var aAsc = document.createElement('a');
         var url = targetUri + '?patch=&linerange=' + fromline + ':' + toline;
-        a.setAttribute('href', url);
-        a.textContent = 'follow lines ' + fromline + ':' + toline;
-        aDiv.appendChild(a);
+        aAsc.setAttribute('href', url);
+        aAsc.textContent = 'ascending';
+        aDiv.appendChild(aAsc);
+        var sep = document.createTextNode(' / ');
+        aDiv.appendChild(sep);
+        //     link to "descending" followlines
+        var aDesc = document.createElement('a');
+        aDesc.setAttribute('href', url + '&descend=');
+        aDesc.textContent = 'descending';
+        aDiv.appendChild(aDesc);
+
         div.appendChild(aDiv);
 
         return [div, button];
