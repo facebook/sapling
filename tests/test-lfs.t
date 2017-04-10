@@ -296,6 +296,130 @@
 
   $ cd ..
 
+# Test bundle
+
+  $ hg init repo9
+  $ cd repo9
+  $ cat >> .hg/hgrc << EOF
+  > [lfs]
+  > threshold=10B
+  > [diff]
+  > git=1
+  > EOF
+
+  $ for i in 0 single two three 4; do
+  >   echo 'THIS-IS-LFS-'$i > a
+  >   hg commit -m a-$i -A a
+  > done
+
+  $ hg update 2 -q
+  $ echo 'THIS-IS-LFS-2-CHILD' > a
+  $ hg commit -m branching -q
+
+  $ hg bundle --base 1 bundle.hg
+  4 changesets found
+  $ hg --config extensions.strip= strip -r 2 --no-backup --force -q
+  $ hg -R bundle.hg log -p -T '{rev} {desc}\n' a
+  5 branching
+  diff --git a/a b/a
+  --- a/a
+  +++ b/a
+  @@ -1,1 +1,1 @@
+  -THIS-IS-LFS-two
+  +THIS-IS-LFS-2-CHILD
+  
+  4 a-4
+  diff --git a/a b/a
+  --- a/a
+  +++ b/a
+  @@ -1,1 +1,1 @@
+  -THIS-IS-LFS-three
+  +THIS-IS-LFS-4
+  
+  3 a-three
+  diff --git a/a b/a
+  --- a/a
+  +++ b/a
+  @@ -1,1 +1,1 @@
+  -THIS-IS-LFS-two
+  +THIS-IS-LFS-three
+  
+  2 a-two
+  diff --git a/a b/a
+  --- a/a
+  +++ b/a
+  @@ -1,1 +1,1 @@
+  -THIS-IS-LFS-single
+  +THIS-IS-LFS-two
+  
+  1 a-single
+  diff --git a/a b/a
+  --- a/a
+  +++ b/a
+  @@ -1,1 +1,1 @@
+  -THIS-IS-LFS-0
+  +THIS-IS-LFS-single
+  
+  0 a-0
+  diff --git a/a b/a
+  new file mode 100644
+  --- /dev/null
+  +++ b/a
+  @@ -0,0 +1,1 @@
+  +THIS-IS-LFS-0
+  
+  $ hg bundle -R bundle.hg --base 1 bundle-again.hg -q
+  $ hg -R bundle-again.hg log -p -T '{rev} {desc}\n' a
+  5 branching
+  diff --git a/a b/a
+  --- a/a
+  +++ b/a
+  @@ -1,1 +1,1 @@
+  -THIS-IS-LFS-two
+  +THIS-IS-LFS-2-CHILD
+  
+  4 a-4
+  diff --git a/a b/a
+  --- a/a
+  +++ b/a
+  @@ -1,1 +1,1 @@
+  -THIS-IS-LFS-three
+  +THIS-IS-LFS-4
+  
+  3 a-three
+  diff --git a/a b/a
+  --- a/a
+  +++ b/a
+  @@ -1,1 +1,1 @@
+  -THIS-IS-LFS-two
+  +THIS-IS-LFS-three
+  
+  2 a-two
+  diff --git a/a b/a
+  --- a/a
+  +++ b/a
+  @@ -1,1 +1,1 @@
+  -THIS-IS-LFS-single
+  +THIS-IS-LFS-two
+  
+  1 a-single
+  diff --git a/a b/a
+  --- a/a
+  +++ b/a
+  @@ -1,1 +1,1 @@
+  -THIS-IS-LFS-0
+  +THIS-IS-LFS-single
+  
+  0 a-0
+  diff --git a/a b/a
+  new file mode 100644
+  --- /dev/null
+  +++ b/a
+  @@ -0,0 +1,1 @@
+  +THIS-IS-LFS-0
+  
+  $ cd ..
+
 # Verify the repos
 
   $ cat > $TESTTMP/dumpflog.py << EOF

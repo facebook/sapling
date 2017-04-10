@@ -137,6 +137,18 @@ def filelogrenamed(orig, self, node):
             return False
     return orig(self, node)
 
+def vfsinit(orig, self, othervfs):
+    orig(self, othervfs)
+    # copy lfs related options
+    for k, v in othervfs.options.items():
+        if k.startswith('lfs'):
+            self.options[k] = v
+    # also copy lfs blobstores. note: this can run before reposetup, so lfs
+    # blobstore attributes are not always ready at this time.
+    for name in ['lfslocalblobstore', 'lfsremoteblobstore']:
+        if hgutil.safehasattr(othervfs, name):
+            setattr(self, name, getattr(othervfs, name))
+
 def prepush(pushop):
     """Prepush hook.
 

@@ -29,9 +29,11 @@ from __future__ import absolute_import
 
 from mercurial import (
     changegroup,
+    exchange,
     extensions,
     filelog,
     revlog,
+    vfs as vfsmod,
 )
 
 from . import (
@@ -81,3 +83,14 @@ def extsetup(ui):
             wrapper.bypasscheckhash,
         ),
     )
+
+    # Make bundle choose changegroup3 instead of changegroup2. This affects
+    # "hg bundle" command. Note: it does not cover all bundle formats like
+    # "packed1". Using "packed1" with lfs will likely cause trouble.
+    names = [k for k, v in exchange._bundlespeccgversions.items() if v == '02']
+    for k in names:
+        exchange._bundlespeccgversions[k] = '03'
+
+    # bundlerepo uses "vfsmod.readonlyvfs(othervfs)", we need to make sure lfs
+    # options and blob stores are passed from othervfs to the new readonlyvfs.
+    wrapfunction(vfsmod.readonlyvfs, '__init__', wrapper.vfsinit)
