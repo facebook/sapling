@@ -138,7 +138,7 @@ class improvement(object):
         for k, v in kwargs.items():
             setattr(self, k, v)
 
-def upgradefindimprovements(repo):
+def findimprovements(repo):
     """Determine improvements that can be made to the repo during upgrade.
 
     Returns a list of ``upgradeimprovement`` describing repository deficiencies
@@ -626,7 +626,7 @@ def upgraderepo(ui, repo, run=False, optimize=None):
                           _(', ').join(sorted(unsupportedreqs)))
 
     # Find and validate all improvements that can be made.
-    improvements = upgradefindimprovements(repo)
+    improvements = findimprovements(repo)
     for i in improvements:
         if i.type not in (deficiency, optimisation):
             raise error.Abort(_('unexpected improvement type %s for %s') % (
