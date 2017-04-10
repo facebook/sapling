@@ -78,7 +78,7 @@ def upgradesupporteddestrequirements(repo):
         'store',
     ])
 
-def upgradeallowednewrequirements(repo):
+def allowednewrequirements(repo):
     """Obtain requirements that can be added to a repository during upgrade.
 
     This is used to disallow proposed requirements from being added when
@@ -613,7 +613,7 @@ def upgraderepo(ui, repo, run=False, optimize=None):
                             'removed: %s') % _(', ').join(sorted(noremovereqs)))
 
     noaddreqs = (newreqs - repo.requirements -
-                 upgradeallowednewrequirements(repo))
+                 allowednewrequirements(repo))
     if noaddreqs:
         raise error.Abort(_('cannot upgrade repository; do not support adding '
                             'requirement: %s') %
