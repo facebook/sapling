@@ -138,6 +138,12 @@ class improvement(object):
         for k, v in kwargs.items():
             setattr(self, k, v)
 
+    def __eq__(self, other):
+        if not isinstance(other, improvement):
+            # This is what python tell use to do
+            return NotImplemented
+        return self.name == other.name
+
 def finddeficiencies(repo):
     """returns a list of deficiencies that the repo suffer from"""
     newreporeqs = localrepo.newreporequirements(repo)
