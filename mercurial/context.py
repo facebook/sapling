@@ -1208,6 +1208,26 @@ def blockancestors(fctx, fromline, toline, followfirst=False):
         if inrange:
             yield c, linerange2
 
+def blockdescendants(fctx, fromline, toline):
+    """Yield descendants of `fctx` with respect to the block of lines within
+    `fromline`-`toline` range.
+    """
+    diffopts = patch.diffopts(fctx._repo.ui)
+    fl = fctx.filelog()
+    seen = {fctx.filerev(): (fctx, (fromline, toline))}
+    for i in fl.descendants([fctx.filerev()]):
+        c = fctx.filectx(i)
+        for x in fl.parentrevs(i):
+            try:
+                p, linerange2 = seen.pop(x)
+            except KeyError:
+                # nullrev or other branch
+                continue
+            inrange, linerange1 = _changesrange(c, p, linerange2, diffopts)
+            if inrange:
+                yield c, linerange1
+            seen[i] = c, linerange1
+
 class committablectx(basectx):
     """A committablectx object provides common functionality for a context that
     wants the ability to commit, e.g. workingctx or memctx."""
