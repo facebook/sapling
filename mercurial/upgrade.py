@@ -664,17 +664,12 @@ def upgraderepo(ui, repo, run=False, optimize=None):
     if not run:
         fromdefault = []
         fromconfig = []
-        optimizations = []
 
-        for i in improvements:
-            assert i.type in (deficiency, optimisation)
-            if i.type == deficiency:
-                if i.fromdefault:
-                    fromdefault.append(i)
-                if i.fromconfig:
-                    fromconfig.append(i)
-            else:
-                optimizations.append(i)
+        for d in deficiencies:
+            if d.fromdefault:
+                fromdefault.append(d)
+            if d.fromconfig:
+                fromconfig.append(d)
 
         if fromdefault or fromconfig:
             fromconfignames = set(x.name for x in fromconfig)
