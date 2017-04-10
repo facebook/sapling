@@ -979,6 +979,9 @@ def filelog(web, req, tmpl):
     patch = 'patch' in req.form
     if patch:
         lessvars['patch'] = morevars['patch'] = req.form['patch'][0]
+    descend = 'descend' in req.form
+    if descend:
+        lessvars['descend'] = morevars['descend'] = req.form['descend'][0]
 
     count = fctx.filerev() + 1
     start = max(0, count - revcount) # first rev on this page
@@ -1007,8 +1010,11 @@ def filelog(web, req, tmpl):
         # deactivate numeric nav links when linerange is specified as this
         # would required a dedicated "revnav" class
         nav = None
-        ancestors = context.blockancestors(fctx, *lrange)
-        for i, (c, lr) in enumerate(ancestors, 1):
+        if descend:
+            it = context.blockdescendants(fctx, *lrange)
+        else:
+            it = context.blockancestors(fctx, *lrange)
+        for i, (c, lr) in enumerate(it, 1):
             diffs = None
             if patch:
                 diffs = diff(c, linerange=lr)
@@ -1049,6 +1055,7 @@ def filelog(web, req, tmpl):
                 nav=nav,
                 symrev=webutil.symrevorshortnode(req, fctx),
                 entries=entries,
+                descend=descend,
                 patch=patch,
                 latestentry=latestentry,
                 linerange=linerange,
