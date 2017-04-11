@@ -200,7 +200,8 @@ def rage(ui, repo, *pats, **opts):
                 lambda: hgcmd(
                     sparse.sparse, include=False, exclude=False, delete=False,
                     force=False, enable_profile=False, disable_profile=False,
-                    refresh=False, reset=False))),
+                    refresh=False, reset=False, import_rules=False,
+                    clear_rules=False))),
         ('usechg', _failsafe(usechginfo)),
         ('rpm info', _failsafe(rpminfo)),
         ('ifconfig', _failsafe(lambda: shcmd('ifconfig'))),
