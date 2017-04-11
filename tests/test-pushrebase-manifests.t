@@ -95,7 +95,8 @@ Make some non-conflicting commits in all three repos.
 Add an extension that logs whenever `manifest.readmf()` is called when the lock is held.
   $ cat >> $TESTTMP/manifestcheck.py <<EOF
   > import sys, traceback, os
-  > from mercurial import extensions, manifest, nullrev
+  > from mercurial import extensions, manifest
+  > from mercurial.node import nullrev
   > def uisetup(ui):
   >     extensions.wrapfunction(manifest.manifestrevlog, 'revision', readmf)
   > def readmf(orig, self, nodeorrev, **kwargs):
@@ -159,9 +160,11 @@ blocking. There shouldn't be any "[client1 push]" output here.
   [client2 push] searching for changes
   [client2 push] remote: read manifest outside the lock :)
   [client2 push] remote: read manifest outside the lock :)
+  [client2 push] remote:  (?)
   [client2 push] remote: pushing 1 changset:
   [client2 push] remote:     4ab7e28729f6  c2 => yyy (second)
   [client2 push] remote: read flat manifest :(
+  [client2 push] remote:  (?)
   [client2 push] remote: 2 new changesets from the server will be downloaded
   [client2 push] adding changesets
   [client2 push] adding manifests
@@ -192,7 +195,9 @@ Check that the first push is still running/blocked...
   [client1 push] remote:     8cf3b846b3a4  c1 => xxx (third)
   [client1 push] remote:     1fe62957ca8a  c1 => baz (fourth)
   [client1 push] remote: read flat manifest :(
+  [client1 push] remote:  (?)
   [client1 push] remote: read flat manifest :(
+  [client1 push] remote:  (?)
   [client1 push] remote: 4 new changesets from the server will be downloaded
   [client1 push] adding changesets
   [client1 push] adding manifests

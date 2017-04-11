@@ -454,14 +454,15 @@ def _graft(repo, rev, mapping, lastdestnode):
                           rev.extra(),
                          ).commit()
 
-def _buildobsolete(replacements, oldrepo, newrepo):
-    'adds obsolete markers in replacements if enabled in newrepo'
+def _buildobsolete(replacements, oldrepo, newrepo, date):
+    '''return obsmarkers, add them locally (server-side) if obsstore enabled'''
+    markers = [(oldrepo[oldrev], (newrepo[newrev],),
+                {'operation': 'push', 'user': newrepo[newrev].user()})
+               for oldrev, newrev in replacements.items()
+               if newrev != oldrev]
     if obsolete.isenabled(newrepo, obsolete.createmarkersopt):
-        markers = [(oldrepo[oldrev], (newrepo[newrev],))
-                   for oldrev, newrev in replacements.items()
-                   if newrev != oldrev]
-
-        obsolete.createmarkers(newrepo, markers)
+        obsolete.createmarkers(newrepo, markers, date=date)
+    return markers
 
 def _addpushbackchangegroup(repo, reply, outgoing):
     '''adds changegroup part to reply containing revs from outgoing.missing'''
@@ -479,17 +480,24 @@ def _addpushbackchangegroup(repo, reply, outgoing):
     if version != '01':
         cgpart.addparam('version', version)
 
-def _addpushbackobsolete(repo, reply, newrevs):
-    '''adds obsoletion markers to reply that are relevant to newrevs
-    (if enabled)'''
-    if (obsolete.isenabled(repo, obsolete.exchangeopt) and repo.obsstore):
-        try:
-            markers = repo.obsstore.relevantmarkers(newrevs)
-            exchange.buildobsmarkerspart(reply, markers)
-        except ValueError as exc:
-            repo.ui.status(_("can't send obsolete markers: %s") % exc.message)
+def _addpushbackobsolete(repo, reply, markers, markerdate):
+    '''adds obsmarkers to reply'''
+    # if the client talks about obsmarkers, send them, regardless of if
+    # obsstore is enabled server-side or not.
+    v = obsolete.commonversion(bundle2.obsmarkersversion(reply.capabilities))
+    if v is None:
+        return
+    flag = 0
+    parents = None
+    try:
+        rawmarkers = [(pre.node(), tuple(s.node() for s in sucs), flag,
+                       tuple(sorted(meta.items())), markerdate, parents)
+                      for pre, sucs, meta in markers]
+        exchange.buildobsmarkerspart(reply, rawmarkers)
+    except ValueError as exc:
+        repo.ui.status(_("can't send obsolete markers: %s") % exc.message)
 
-def _addpushbackparts(op, replacements):
+def _addpushbackparts(op, replacements, markers, markerdate):
     '''adds pushback to reply if supported by the client'''
     if (op.records[commonheadsparttype]
         and op.reply
@@ -503,7 +511,7 @@ def _addpushbackparts(op, replacements):
             op.repo.ui.warn(_("%s new changeset%s from the server will be "
                               "downloaded\n") % (len(outgoing.missing), plural))
             _addpushbackchangegroup(op.repo, op.reply, outgoing)
-            _addpushbackobsolete(op.repo, op.reply, replacements.values())
+            _addpushbackobsolete(op.repo, op.reply, markers, markerdate)
 
 def resolveonto(repo, ontoarg):
     try:
@@ -523,6 +531,8 @@ def bundle2rebase(op, part):
 
     bundlefile = None
     bundle = None
+    markers = []
+    markerdate = util.makedate()
 
     try: # guards bundlefile
         bundlefile = _makebundlefile(part)
@@ -658,7 +668,7 @@ def bundle2rebase(op, part):
                 tr.hookargs['node'] = hex(newnode)
             hookargs['node'] = hex(newnode)
 
-        _buildobsolete(replacements, bundle, op.repo)
+        markers = _buildobsolete(replacements, bundle, op.repo, markerdate)
     finally:
         try:
             if bundlefile:
@@ -688,7 +698,7 @@ def bundle2rebase(op, part):
     tr.addpostclose('serverrebase-cg-hooks',
                     lambda tr: op.repo._afterlock(runhooks))
 
-    _addpushbackparts(op, replacements)
+    _addpushbackparts(op, replacements, markers, markerdate)
 
     for k in replacements.keys():
         replacements[hex(k)] = hex(replacements[k])

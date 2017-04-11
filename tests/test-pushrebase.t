@@ -828,3 +828,60 @@ Make sure that no hg-bundle-* files left
 and osx)
   $ ls ../server/.hg/hg-bundle-* || true
   ls: *../server/.hg/hg-bundle-*: No such file or directory (glob)
+
+Server with obsstore disabled can still send obsmarkers useful to client
+
+  $ cat >> $HGRCPATH << EOF
+  > [extensions]
+  > bundle2hooks =
+  > [experimental]
+  > evolution =
+  > EOF
+
+  $ cd ..
+  $ hg init server1
+  $ cd server1
+  $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > pushrebase =
+  > EOF
+  $ echo a > a
+  $ hg commit -m a -A a -q
+  $ cd ..
+
+  $ cp -R server1 client1
+  $ cd server1
+  $ echo b > b
+  $ hg commit -m b -A b -q
+
+  $ cd ../client1
+  $ echo a2 >> a
+  $ hg commit -m a2
+  $ cat >> .hg/hgrc <<EOF
+  > [experimental]
+  > evolution = all
+  > [paths]
+  > default = ../server1
+  > EOF
+
+  $ hg push -r . --to default
+  pushing to $TESTTMP/server1 (glob)
+  searching for changes
+  pushing 1 changset:
+      045279cde9f0  a2
+  2 new changesets from the server will be downloaded
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 1 changes to 2 files (+1 heads)
+  1 new obsolescence markers
+  $ hg up tip -q
+  $ hg log -G --hidden -T '{rev}: {desc}'
+  @  3: a2
+  |
+  o  2: b
+  |
+  | x  1: a2
+  |/
+  o  0: a
+  
