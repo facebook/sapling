@@ -807,10 +807,15 @@ class ui(object):
         # opencode timeblockedsection because this is a critical path
         starttime = util.timer()
         try:
-            try: self.fout.flush()
-            except (IOError, ValueError): pass
-            try: self.ferr.flush()
-            except (IOError, ValueError): pass
+            try:
+                self.fout.flush()
+            except IOError as err:
+                raise error.StdioError(err)
+            finally:
+                try:
+                    self.ferr.flush()
+                except IOError as err:
+                    raise error.StdioError(err)
         finally:
             self._blockedtimes['stdio_blocked'] += \
                 (util.timer() - starttime) * 1000
