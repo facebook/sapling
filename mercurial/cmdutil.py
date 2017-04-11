@@ -1593,7 +1593,9 @@ class changeset_templater(changeset_printer):
             (self.ui.debugflag, 'debug'),
         ]
 
-        self._parts = {'header': '', 'footer': '', 'changeset': 'changeset',
+        self._tref = tmplspec.ref
+        self._parts = {'header': '', 'footer': '',
+                       tmplspec.ref: tmplspec.ref,
                        'docheader': '', 'docfooter': ''}
         for mode, postfix in tmplmodes:
             for t in self._parts:
@@ -1637,7 +1639,7 @@ class changeset_templater(changeset_printer):
                     self.ui.write(h)
 
         # write changeset metadata, then patch if requested
-        key = self._parts['changeset']
+        key = self._parts[self._tref]
         self.ui.write(templater.stringify(self.t(key, **props)))
         self.showpatch(ctx, matchfn)
 
