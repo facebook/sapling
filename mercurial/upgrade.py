@@ -1,4 +1,4 @@
-# repair.py - functions for repository repair for mercurial
+# upgrade.py - functions for in place upgrade of Mercurial repository
 #
 # Copyright 2005, 2006 Chris Mason <mason@suse.com>
 # Copyright 2007 Matt Mackall
