@@ -310,3 +310,45 @@ old store should be backed up
   undo.phaseroots
 
   $ cd ..
+
+store files with special filenames aren't encoded during copy
+
+  $ hg init store-filenames
+  $ cd store-filenames
+  $ touch foo
+  $ hg -q commit -A -m initial
+  $ touch .hg/store/.XX_special_filename
+
+  $ hg debugupgraderepo --run
+  upgrade will perform the following actions:
+  
+  requirements
+     preserved: dotencode, fncache, generaldelta, revlogv1, store
+  
+  beginning upgrade...
+  repository locked and read-only
+  creating temporary repository to stage migrated data: $TESTTMP/store-filenames/.hg/upgrade.* (glob)
+  (it is safe to interrupt this process any time before data migration completes)
+  migrating 3 total revisions (1 in filelogs, 1 in manifests, 1 in changelog)
+  migrating 109 bytes in store; 107 bytes tracked data
+  migrating 1 filelogs containing 1 revisions (0 bytes in store; 0 bytes tracked data)
+  finished migrating 1 filelog revisions across 1 filelogs; change in size: 0 bytes
+  migrating 1 manifests containing 1 revisions (46 bytes in store; 45 bytes tracked data)
+  finished migrating 1 manifest revisions across 1 manifests; change in size: 0 bytes
+  migrating changelog containing 1 revisions (63 bytes in store; 62 bytes tracked data)
+  finished migrating 1 changelog revisions; change in size: 0 bytes
+  finished migrating 3 total revisions; total change in store size: 0 bytes
+  copying .XX_special_filename
+  copying phaseroots
+  data fully migrated to temporary repository
+  marking source repository as being upgraded; clients will be unable to read from repository
+  starting in-place swap of repository data
+  replaced files will be backed up at $TESTTMP/store-filenames/.hg/upgradebackup.* (glob)
+  replacing store...
+  store replacement complete; repository was inconsistent for *s (glob)
+  finalizing requirements file and making repository readable again
+  removing temporary repository $TESTTMP/store-filenames/.hg/upgrade.* (glob)
+  copy of old repository backed up at $TESTTMP/store-filenames/.hg/upgradebackup.* (glob)
+  the old repository will not be deleted; remove it to free up disk space once the upgraded repository is verified
+
+  $ cd ..
