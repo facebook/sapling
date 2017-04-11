@@ -15,6 +15,7 @@ from .i18n import _
 from . import (
     changelog,
     error,
+    localrepo,
     manifest,
     revlog,
     scmutil,
@@ -144,9 +145,6 @@ def findimprovements(repo):
     Returns a list of ``upgradeimprovement`` describing repository deficiencies
     and optimizations.
     """
-    # Avoid cycle: cmdutil -> repair -> localrepo -> cmdutil
-    from . import localrepo
-
     newreporeqs = localrepo.newreporequirements(repo)
 
     improvements = []
@@ -585,9 +583,6 @@ def _upgraderepo(ui, srcrepo, dstrepo, requirements, actions):
 
 def upgraderepo(ui, repo, run=False, optimize=None):
     """Upgrade a repository in place."""
-    # Avoid cycle: cmdutil -> repair -> localrepo -> cmdutil
-    from . import localrepo
-
     optimize = set(optimize or [])
     repo = repo.unfiltered()
 
