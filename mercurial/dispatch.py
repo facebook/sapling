@@ -77,7 +77,22 @@ class request(object):
 
 def run():
     "run the command in sys.argv"
-    sys.exit((dispatch(request(pycompat.sysargv[1:])) or 0) & 255)
+    req = request(pycompat.sysargv[1:])
+    err = None
+    try:
+        status = (dispatch(req) or 0) & 255
+    except error.StdioError as err:
+        status = -1
+    if util.safehasattr(req.ui, 'fout'):
+        try:
+            req.ui.fout.close()
+        except IOError as err:
+            status = -1
+    if util.safehasattr(req.ui, 'ferr'):
+        if err is not None and err.errno != errno.EPIPE:
+            req.ui.ferr.write('abort: %s\n' % err.strerror)
+        req.ui.ferr.close()
+    sys.exit(status & 255)
 
 def _getsimilar(symbols, value):
     sim = lambda x: difflib.SequenceMatcher(None, value, x).ratio()
