@@ -74,6 +74,7 @@ def extsetup(ui):
     wrapfunction(filelog.filelog, 'cmp', wrapper.filelogcmp)
     wrapfunction(filelog.filelog, 'read', wrapper.filelogread)
     wrapfunction(filelog.filelog, 'renamed', wrapper.filelogrenamed)
+    wrapfunction(filelog.filelog, 'size', wrapper.filelogsize)
     wrapfunction(changegroup,
                  'supportedoutgoingversions',
                  wrapper.supportedoutgoingversions)

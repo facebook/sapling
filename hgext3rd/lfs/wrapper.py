@@ -95,10 +95,13 @@ def writetostore(self, text):
 
     return (text, False)
 
-def _islfs(rlog, node):
+def _islfs(rlog, node=None, rev=None):
+    if rev is None:
+        rev = rlog.rev(node)
+    else:
+        node = rlog.node(rev)
     if node == nullid:
         return False
-    rev = rlog.rev(node)
     flags = revlog.revlog.flags(rlog, rev)
     return bool(flags & revlog.REVIDX_EXTSTORED)
 
@@ -141,6 +144,14 @@ def filelogrenamed(orig, self, node):
         else:
             return False
     return orig(self, node)
+
+def filelogsize(orig, self, rev):
+    if _islfs(self, rev=rev):
+        # fast path: use lfs metadata to answer size
+        rawtext = self.revision(rev, raw=True)
+        metadata = pointer.deserialize(rawtext)
+        return int(metadata['size'])
+    return orig(self, rev)
 
 def vfsinit(orig, self, othervfs):
     orig(self, othervfs)
