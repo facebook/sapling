@@ -768,6 +768,8 @@ class ui(object):
         try:
             for a in msgs:
                 self.fout.write(a)
+        except IOError as err:
+            raise error.StdioError(err)
         finally:
             self._blockedtimes['stdio_blocked'] += \
                 (util.timer() - starttime) * 1000
