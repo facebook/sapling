@@ -7,7 +7,6 @@
 
 from __future__ import absolute_import, print_function
 
-import atexit
 import difflib
 import errno
 import getopt
@@ -767,7 +766,7 @@ def _dispatch(req):
                 ui.warn(
                     _("time: real %.3f secs (user %.3f+%.3f sys %.3f+%.3f)\n") %
                     (t[4]-s[4], t[0]-s[0], t[2]-s[2], t[1]-s[1], t[3]-s[3]))
-            atexit.register(print_time)
+            ui.atexit(print_time)
 
         if options['verbose'] or options['debug'] or options['quiet']:
             for opt in ('verbose', 'debug', 'quiet'):

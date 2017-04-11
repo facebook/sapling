@@ -7,7 +7,6 @@
 
 from __future__ import absolute_import
 
-import atexit
 import collections
 import contextlib
 import errno
@@ -937,7 +936,7 @@ class ui(object):
         if self._isatty(util.stderr):
             os.dup2(pager.stdin.fileno(), util.stderr.fileno())
 
-        @atexit.register
+        @self.atexit
         def killpager():
             if util.safehasattr(signal, "SIGINT"):
                 signal.signal(signal.SIGINT, signal.SIG_IGN)
