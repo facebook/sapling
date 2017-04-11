@@ -2846,6 +2846,7 @@ dest#branch URIs:
   @@ -0,0 +1,1 @@
   +d
   
+#if no-windows
 
 Set up a fake sendmail program
 
@@ -3026,3 +3027,4 @@ multiple heads are missing at public
   (use 'hg push $TESTTMP/t3 -r ff2c9fa2018b -r 3b6f1ec9dde9')
   [255]
 
+#endif
