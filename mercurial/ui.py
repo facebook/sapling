@@ -139,6 +139,8 @@ class ui(object):
         """
         # _buffers: used for temporary capture of output
         self._buffers = []
+        # _exithandlers: callbacks run at the end of a request
+        self._exithandlers = []
         # 3-tuple describing how each buffer in the stack behaves.
         # Values are (capture stderr, capture subprocesses, apply labels).
         self._bufferstates = []
@@ -163,6 +165,7 @@ class ui(object):
         self._styles = {}
 
         if src:
+            self._exithandlers = src._exithandlers
             self.fout = src.fout
             self.ferr = src.ferr
             self.fin = src.fin
@@ -945,6 +948,13 @@ class ui(object):
             pager.wait()
 
         return True
+
+    def atexit(self, func, *args, **kwargs):
+        '''register a function to run after dispatching a request
+
+        Handlers do not stay registered across request boundaries.'''
+        self._exithandlers.append((func, args, kwargs))
+        return func
 
     def interface(self, feature):
         """what interface to use for interactive console features?

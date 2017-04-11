@@ -59,6 +59,23 @@ class request(object):
         self.fout = fout
         self.ferr = ferr
 
+    def _runexithandlers(self):
+        exc = None
+        handlers = self.ui._exithandlers
+        try:
+            while handlers:
+                func, args, kwargs = handlers.pop()
+                try:
+                    func(*args, **kwargs)
+                except: # re-raises below
+                    if exc is None:
+                        exc = sys.exc_info()[1]
+                    self.ui.warn(('error in exit handlers:\n'))
+                    self.ui.traceback(force=True)
+        finally:
+            if exc is not None:
+                raise exc
+
 def run():
     "run the command in sys.argv"
     sys.exit((dispatch(request(pycompat.sysargv[1:])) or 0) & 255)
@@ -146,6 +163,10 @@ def dispatch(req):
             req.ui.log('uiblocked', 'ui blocked ms', **req.ui._blockedtimes)
         req.ui.log("commandfinish", "%s exited %s after %0.2f seconds\n",
                    msg, ret or 0, duration)
+        try:
+            req._runexithandlers()
+        except: # exiting, so no re-raises
+            ret = ret or -1
     return ret
 
 def _runcatch(req):
