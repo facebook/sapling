@@ -122,6 +122,12 @@ class CapabilityError(RepoError):
 class RequirementError(RepoError):
     """Exception raised if .hg/requires has an unknown entry."""
 
+class StdioError(IOError):
+    """Raised if I/O to stdout or stderr fails"""
+
+    def __init__(self, err):
+        IOError.__init__(self, err.errno, err.strerror)
+
 class UnsupportedMergeRecords(Abort):
     def __init__(self, recordtypes):
         from .i18n import _
