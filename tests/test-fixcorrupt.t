@@ -103,11 +103,11 @@ Verify backups
   *-00manifest.i.backup-byte-128-to-320 (glob)
 
   $ wc -c .hg/store/00changelog* .hg/store/00manifest* | sort
-   99 .hg/store/00manifest.d
-  110 .hg/store/00changelog.d
-  128 .hg/store/00changelog.i
-  128 .hg/store/00manifest.i
-  465 total
+  *99 .hg/store/00manifest.d (glob)
+  *110 .hg/store/00changelog.d (glob)
+  *128 .hg/store/00changelog.i (glob)
+  *128 .hg/store/00manifest.i (glob)
+  *465 total (glob)
 
   $ for i in 00changelog.i 00changelog.d 00manifest.i 00manifest.d; do
   >   printf '%s: before fix: ' $i
