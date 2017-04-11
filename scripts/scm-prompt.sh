@@ -109,8 +109,11 @@ _scm_prompt()
     elif [[ -d "$hg/.hg/merge" ]]; then
       extra="|MERGE"
     fi
-    local dirstate=$(test -f "$hg/.hg/dirstate" && \
-      command hexdump -vn 20 -e '1/1 "%02x"' "$hg/.hg/dirstate" || \
+    local dirstate=$( \
+      (test -f "$hg/.hg/dirstate" && \
+      command hexdump -vn 20 -e '1/1 "%02x"' "$hg/.hg/dirstate") || \
+      (test -f "$hg/.eden/client/SNAPSHOT" && \
+      command cat "$hg/.eden/client/SNAPSHOT") || \
       command echo "empty")
     local active="$hg/.hg/bookmarks.current"
     if  [[ -f "$active" ]]; then
