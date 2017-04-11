@@ -178,6 +178,10 @@ def extsetup(ui):
 
     # Tweak Behavior
     tweakbehaviors(ui)
+    _fixpager(ui)
+
+def reposetup(ui, repo):
+    _fixpager(ui)
 
 def tweakorder():
     """
@@ -789,3 +793,10 @@ def _createmarkers(orig, repo, relations, flag=0, date=None, metadata=None):
         metadata = {}
     metadata['operation'] = operation
     return orig(repo, relations, flag, date, metadata)
+
+def _fixpager(ui):
+    # users may mistakenly set PAGER=less, which will affect "pager.pager".
+    # raw "less" does not support colors and is not friendly, add "-FRQX"
+    # automatically.
+    if ui.config('pager', 'pager', '').strip() == 'less':
+        ui.setconfig('pager', 'pager', 'less -FRQX')
