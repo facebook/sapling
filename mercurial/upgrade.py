@@ -261,8 +261,7 @@ def findoptimizations(repo):
 
     return optimizations
 
-def determineactions(repo, improvements, sourcereqs, destreqs,
-                            optimize):
+def determineactions(repo, improvements, sourcereqs, destreqs):
     """Determine upgrade actions that will be performed.
 
     Given a list of improvements as returned by ``finddeficiencies`` and
@@ -289,8 +288,6 @@ def determineactions(repo, improvements, sourcereqs, destreqs,
 
         if i.type == deficiency:
             newactions.append(name)
-
-    newactions.extend(o for o in sorted(optimize) if o not in newactions)
 
     # FUTURE consider adding some optimizations here for certain transitions.
     # e.g. adding generaldelta could schedule parent redeltas.
@@ -621,20 +618,27 @@ def upgraderepo(ui, repo, run=False, optimize=None):
                           _(', ').join(sorted(unsupportedreqs)))
 
     # Find and validate all improvements that can be made.
-    alloptimizations = optimizations = findoptimizations(repo)
+    alloptimizations = findoptimizations(repo)
 
-    # Validate arguments.
-    unknownoptimize = optimize - set(i.name for i in optimizations)
-    if unknownoptimize:
+    # Apply and Validate arguments.
+    optimizations = []
+    for o in alloptimizations:
+        if o.name in optimize:
+            optimizations.append(o)
+            optimize.discard(o.name)
+
+    if optimize: # anything left is unknown
         raise error.Abort(_('unknown optimization action requested: %s') %
-                          ', '.join(sorted(unknownoptimize)),
+                          ', '.join(sorted(optimize)),
                           hint=_('run without arguments to see valid '
                                  'optimizations'))
 
     deficiencies = finddeficiencies(repo)
     improvements = deficiencies + optimizations
-    actions = determineactions(repo, improvements, repo.requirements,
-                                      newreqs, optimize)
+    actions = determineactions(repo, deficiencies, repo.requirements, newreqs)
+    actions.extend(o.name for o in sorted(optimizations)
+                   # determineactions could have added optimisation
+                   if o.name not in actions)
 
     def printrequirements():
         ui.write(_('requirements\n'))
