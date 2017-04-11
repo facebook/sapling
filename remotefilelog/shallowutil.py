@@ -238,6 +238,23 @@ def readunpack(stream, fmt):
     data = readexactly(stream, struct.calcsize(fmt))
     return struct.unpack(fmt, data)
 
+def readpath(stream):
+    rawlen = readexactly(stream, constants.FILENAMESIZE)
+    pathlen = struct.unpack(constants.FILENAMESTRUCT, rawlen)[0]
+    return readexactly(stream, pathlen)
+
+def readnodelist(stream):
+    rawlen = readexactly(stream, constants.NODECOUNTSIZE)
+    nodecount = struct.unpack(constants.NODECOUNTSTRUCT, rawlen)[0]
+    for i in xrange(nodecount):
+        yield readexactly(stream, constants.NODESIZE)
+
+def readpathlist(stream):
+    rawlen = readexactly(stream, constants.PATHCOUNTSIZE)
+    pathcount = struct.unpack(constants.PATHCOUNTSTRUCT, rawlen)[0]
+    for i in xrange(pathcount):
+        yield readpath(stream)
+
 def getgid(groupname):
     try:
         gid = grp.getgrnam(groupname).gr_gid

@@ -12,9 +12,8 @@ from mercurial import extensions
 import hashlib, os, time, io, struct
 import itertools
 
-import constants, datapack, historypack, shallowutil
+import constants, shallowutil, wirepack
 from lz4wrapper import lz4decompress
-from shallowutil import readexactly, readunpack
 
 # Statistics for debugging
 fetchcost = 0
@@ -438,28 +437,12 @@ class fileserverclient(object):
         remote = self._connect()
         remote._callstream("getpackv1")
 
-        groupedfiles = self._sendpackrequest(remote, fileids)
-
-        i = 0
-        self.ui.progress(_downloading, i, total=len(groupedfiles))
+        self._sendpackrequest(remote, fileids)
 
         packpath = shallowutil.getcachepackpath(self.repo,
                                                 constants.FILEPACK_CATEGORY)
-        shallowutil.mkstickygroupdir(self.repo.ui, packpath)
-
-        with datapack.mutabledatapack(self.ui, packpath) as dpack:
-            with historypack.mutablehistorypack(self.ui, packpath) as hpack:
-                for filename in self.readfiles(remote):
-                    i += 1
-                    self.ui.progress(_downloading, i, total=len(groupedfiles))
-                    for value in self.readhistory(remote):
-                        node, p1, p2, linknode, copyfrom = value
-                        hpack.add(filename, node, p1, p2, linknode, copyfrom)
-
-                    for node, deltabase, delta in self.readdeltas(remote):
-                        dpack.add(filename, node, deltabase, delta)
-
-        self.ui.progress(_downloading, None)
+        receiveddata, receivedhistory = wirepack.receivepack(self.repo.ui,
+                                                             remote, packpath)
 
     def _sendpackrequest(self, remote, fileids):
         """Formats and writes the given fileids to the remote as part of a
@@ -481,33 +464,6 @@ class fileserverclient(object):
             remote.pipeo.flush()
         remote.pipeo.write(struct.pack(constants.FILENAMESTRUCT, 0))
         remote.pipeo.flush()
-
-        return grouped
-
-    def readfiles(self, remote):
-        while True:
-            filenamelen = readunpack(remote.pipei, constants.FILENAMESTRUCT)[0]
-            if filenamelen == 0:
-                break
-            yield readexactly(remote.pipei, filenamelen)
-
-    def readhistory(self, remote):
-        count = readunpack(remote.pipei, '!I')[0]
-        for i in xrange(count):
-            entry = readunpack(remote.pipei,'!20s20s20s20sH')
-            if entry[4] != 0:
-                copyfrom = readexactly(remote.pipei, entry[4])
-            else:
-                copyfrom = ''
-            entry = entry[:4] + (copyfrom,)
-            yield entry
-
-    def readdeltas(self, remote):
-        count = readunpack(remote.pipei, '!I')[0]
-        for i in xrange(count):
-            node, deltabase, deltalen = readunpack(remote.pipei, '!20s20sQ')
-            delta = readexactly(remote.pipei, deltalen)
-            yield (node, deltabase, delta)
 
     def connect(self):
         if self.cacheprocess:

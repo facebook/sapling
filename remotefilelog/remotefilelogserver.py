@@ -11,9 +11,9 @@ from mercurial.extensions import wrapfunction
 from mercurial.hgweb import protocol as httpprotocol
 from mercurial.node import bin, hex, nullid, nullrev
 from mercurial.i18n import _
-import constants, shallowrepo
+import constants, shallowrepo, wirepack
 from lz4wrapper import lzcompresshc
-import errno, stat, os, struct, time
+import errno, stat, os, time
 from shallowutil import readexactly, readunpack
 
 try:
@@ -385,12 +385,12 @@ def getpack(repo, proto, args):
                       [<node: 20 byte>,...]
 
         Response format:
-        [<fileresponse>,...]
+        [<fileresponse>,...]<10 null bytes>
         fileresponse = <filename len: 2 byte><filename><history><deltas>
         history = <count: 4 byte>[<history entry>,...]
         historyentry = <node: 20 byte><p1: 20 byte><p2: 20 byte>
                        <linknode: 20 byte><copyfrom len: 2 byte><copyfrom>
-        deltas = [<delta entry>,...]
+        deltas = <count: 4 byte>[<delta entry>,...]
         deltaentry = <node: 20 byte><deltabase: 20 byte>
                      <delta len: 8 byte><delta>
         """
@@ -399,10 +399,6 @@ def getpack(repo, proto, args):
         # Sort the files by name, so we provide deterministic results
         for filename, nodes in sorted(files.iteritems()):
             fl = repo.file(filename)
-
-            rawfilenamelen = struct.pack(constants.FILENAMESTRUCT,
-                                         len(filename))
-            yield '%s%s' % (rawfilenamelen, filename)
 
             # Compute history
             history = []
@@ -421,28 +417,13 @@ def getpack(repo, proto, args):
 
                 history.append((node, p1node, p2node, linknode, copyfrom))
 
-            # Serialize and send history
-            historylen = struct.pack('!I', len(history))
-            rawhistory = ''
-            for entry in history:
-                copyfrom = entry[4]
-                copyfromlen = len(copyfrom)
-                tup = entry[:-1] + (copyfromlen,)
-                rawhistory += struct.pack('!20s20s20s20sH', *tup)
-                if copyfrom:
-                    rawhistory += copyfrom
-
-            yield '%s%s' % (historylen, rawhistory)
-
             # Scan and send deltas
             chain = _getdeltachain(fl, nodes, -1)
-            yield struct.pack('!I', len(chain))
 
-            for node, deltabase, delta in chain:
-                deltalen = struct.pack('!Q', len(delta))
-                yield '%s%s%s%s' % (node, deltabase, deltalen, delta)
+            for chunk in wirepack.sendpackpart(filename, history, chain):
+                yield chunk
 
-        yield '\0\0'
+        yield wirepack.closepart()
         proto.fout.flush()
 
     return wireproto.streamres(streamer())
