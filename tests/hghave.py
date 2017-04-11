@@ -634,3 +634,7 @@ def has_zstd():
         return True
     except ImportError:
         return False
+
+@check("devfull", "/dev/full special file")
+def has_dev_full():
+    return os.path.exists('/dev/full')
