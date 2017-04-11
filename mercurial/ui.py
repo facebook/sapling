@@ -801,8 +801,7 @@ class ui(object):
                 if not getattr(self.ferr, 'closed', False):
                     self.ferr.flush()
         except IOError as inst:
-            if inst.errno not in (errno.EPIPE, errno.EIO, errno.EBADF):
-                raise
+            raise error.StdioError(inst)
 
     def flush(self):
         # opencode timeblockedsection because this is a critical path
