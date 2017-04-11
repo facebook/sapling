@@ -5,6 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
+import errno
 import os
 import platform
 import subprocess
@@ -37,9 +38,20 @@ else:
             else:
                 returncode = -os.WTERMSIG(status)
             if returncode != 0:
-                raise subprocess.CalledProcessError(returncode, cmd)
+                # The child process's return code is 0 on success, an errno
+                # value on failure, or 255 if we don't have a valid errno
+                # value.
+                #
+                # (It would be slightly nicer to return the full exception info
+                # over a pipe as the subprocess module does.  For now it
+                # doesn't seem worth adding that complexity here, though.)
+                if returncode == 255:
+                    returncode = errno.EINVAL
+                raise OSError(returncode, 'error running %r: %s' %
+                              (cmd, os.strerror(returncode)))
             return
 
+        returncode = 255
         try:
             # Start a new session
             os.setsid()
@@ -55,12 +67,19 @@ else:
             subprocess.Popen(
                 cmd, shell=shell, env=env, close_fds=True,
                 stdin=stdin, stdout=stdout, stderr=stderr)
+            returncode = 0
+        except EnvironmentError as ex:
+            returncode = (ex.errno & 0xff)
+            if returncode == 0:
+                # This shouldn't happen, but just in case make sure the
+                # return code is never 0 here.
+                returncode = 255
         except Exception:
-            os._exit(255)
+            returncode = 255
         finally:
             # mission accomplished, this child needs to exit and not
             # continue the hg process here.
-            os._exit(0)
+            os._exit(returncode)
 
 def runshellcommand(script, env):
     '''
