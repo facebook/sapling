@@ -177,7 +177,7 @@ error:
 
 /* This implementation is based on hgext/pager.py (post 369741ef7253)
  * Return 0 if pager is not started, or pid of the pager */
-pid_t setuppager(const char *pagercmd)
+pid_t setuppager(const char *pagercmd, const char *envp[])
 {
 	assert(pagerpid == 0);
 	if (!pagercmd)
@@ -205,7 +205,8 @@ pid_t setuppager(const char *pagercmd)
 		close(pipefds[0]);
 		close(pipefds[1]);
 
-		int r = execlp("/bin/sh", "/bin/sh", "-c", pagercmd, NULL);
+		int r = execle("/bin/sh", "/bin/sh", "-c", pagercmd, NULL,
+				envp);
 		if (r < 0) {
 			abortmsgerrno("cannot start pager '%s'", pagercmd);
 		}

@@ -252,7 +252,7 @@ static void handlesystemrequest(hgclient_t *hgc)
 		ctx->datasize = sizeof(r_n);
 		writeblock(hgc);
 	} else if (strcmp(args[0], "pager") == 0) {
-		setuppager(args[1]);
+		setuppager(args[1], args + 3);
 		if (hgc->capflags & CAP_ATTACHIO)
 			attachio(hgc);
 		/* unblock the server */
