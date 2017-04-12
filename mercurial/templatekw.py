@@ -32,10 +32,20 @@ class _hybrid(object):
     """
 
     def __init__(self, gen, values, makemap, joinfmt):
-        self.gen = gen
+        if gen is not None:
+            self.gen = gen
         self._values = values
         self._makemap = makemap
         self.joinfmt = joinfmt
+    @util.propertycache
+    def gen(self):
+        return self._defaultgen()
+    def _defaultgen(self):
+        """Generator to stringify this as {join(self, ' ')}"""
+        for i, d in enumerate(self.itermaps()):
+            if i > 0:
+                yield ' '
+            yield self.joinfmt(d)
     def itermaps(self):
         makemap = self._makemap
         for x in self._values:
