@@ -212,6 +212,18 @@ verify that largefiles doesn't break filesets
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add files
   
+sharing a largefile repo automatically enables largefiles on the share
+
+  $ hg share --config extensions.share= . ../shared_lfrepo
+  updating working directory
+  getting changed largefiles
+  1 largefiles updated, 0 removed
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cat ../shared_lfrepo/.hg/hgrc
+  
+  [extensions]
+  largefiles=
+
 verify that large files in subrepos handled properly
   $ hg init subrepo
   $ echo "subrepo = subrepo" > .hgsub

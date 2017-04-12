@@ -120,6 +120,7 @@ def uisetup(ui):
                  _('download all versions of all largefiles'))]
     entry[1].extend(cloneopt)
     entry = extensions.wrapfunction(hg, 'clone', overrides.hgclone)
+    entry = extensions.wrapfunction(hg, 'postshare', overrides.hgpostshare)
 
     entry = extensions.wrapcommand(commands.table, 'cat',
                                    overrides.overridecat)

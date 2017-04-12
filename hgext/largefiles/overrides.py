@@ -903,6 +903,14 @@ def hgclone(orig, ui, opts, *args, **kwargs):
 
     return result
 
+def hgpostshare(orig, sourcerepo, destrepo, bookmarks=True, defaultpath=None):
+    orig(sourcerepo, destrepo, bookmarks, defaultpath)
+
+    # If largefiles is required for this repo, permanently enable it locally
+    if 'largefiles' in destrepo.requirements:
+        with destrepo.vfs('hgrc', 'a+', text=True) as fp:
+            fp.write('\n[extensions]\nlargefiles=\n')
+
 def overriderebase(orig, ui, repo, **opts):
     if not util.safehasattr(repo, '_largefilesenabled'):
         return orig(ui, repo, **opts)
