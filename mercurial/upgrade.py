@@ -140,93 +140,153 @@ class improvement(object):
         return hash(self.name)
 
 class formatvariant(improvement):
-    """an improvement subclass dedicated to repository format
+    """an improvement subclass dedicated to repository format"""
+    type = deficiency
+    ### The following attributes should be defined for each class:
 
-    extra attributes:
+    # machine-readable string uniquely identifying this improvement. it will be
+    # mapped to an action later in the upgrade process.
+    name = None
 
-    fromdefault (``deficiency`` types only)
-       Boolean indicating whether the current (deficient) state deviates
-       from Mercurial's default configuration.
+    # message intended for humans explaining the improvement in more detail,
+    # including the implications of it ``deficiency`` types, should be worded
+    # in the present tense.
+    description = None
 
-    fromconfig (``deficiency`` types only)
-       Boolean indicating whether the current (deficient) state deviates
-       from the current Mercurial configuration.
+    # message intended for humans explaining what an upgrade addressing this
+    # issue will do. should be worded in the future tense.
+    upgrademessage = None
+
+    # value of current Mercurial default for new repository
+    default = None
+
+    def __init__(self):
+        raise NotImplementedError()
+
+    @staticmethod
+    def fromrepo(repo):
+        """current value of the variant in the repository"""
+        raise NotImplementedError()
+
+    @staticmethod
+    def fromconfig(repo):
+        """current value of the variant in the configuration"""
+        raise NotImplementedError()
+
+class requirementformatvariant(formatvariant):
+    """formatvariant based on a 'requirement' name.
+
+    Many format variant are controlled by a 'requirement'. We define a small
+    subclass to factor the code.
     """
 
-    def __init__(self, name, description, upgrademessage, fromdefault,
-                 fromconfig):
-        super(formatvariant, self).__init__(name, deficiency, description,
-                                            upgrademessage)
-        self.fromdefault = fromdefault
-        self.fromconfig = fromconfig
+    # the requirement that control this format variant
+    _requirement = None
+
+    @staticmethod
+    def _newreporequirements(repo):
+        return localrepo.newreporequirements(repo)
+
+    @classmethod
+    def fromrepo(cls, repo):
+        assert cls._requirement is not None
+        return cls._requirement in repo.requirements
+
+    @classmethod
+    def fromconfig(cls, repo):
+        assert cls._requirement is not None
+        return cls._requirement in cls._newreporequirements(repo)
+
+class fncache(requirementformatvariant):
+    name = 'fncache'
+
+    _requirement = 'fncache'
+
+    default = True
+
+    description = _('long and reserved filenames may not work correctly; '
+                    'repository performance is sub-optimal')
+
+    upgrademessage = _('repository will be more resilient to storing '
+                       'certain paths and performance of certain '
+                       'operations should be improved')
+
+class dotencode(requirementformatvariant):
+    name = 'dotencode'
+
+    _requirement = 'dotencode'
+
+    default = True
+
+    description = _('storage of filenames beginning with a period or '
+                    'space may not work correctly')
+
+    upgrademessage = _('repository will be better able to store files '
+                       'beginning with a space or period')
+
+class generaldelta(requirementformatvariant):
+    name = 'generaldelta'
+
+    _requirement = 'generaldelta'
+
+    default = True
+
+    description = _('deltas within internal storage are unable to '
+                    'choose optimal revisions; repository is larger and '
+                    'slower than it could be; interaction with other '
+                    'repositories may require extra network and CPU '
+                    'resources, making "hg push" and "hg pull" slower')
+
+    upgrademessage = _('repository storage will be able to create '
+                       'optimal deltas; new repository data will be '
+                       'smaller and read times should decrease; '
+                       'interacting with other repositories using this '
+                       'storage model should require less network and '
+                       'CPU resources, making "hg push" and "hg pull" '
+                       'faster')
+
+class removecldeltachain(formatvariant):
+    name = 'removecldeltachain'
+
+    default = True
+
+    description = _('changelog storage is using deltas instead of '
+                    'raw entries; changelog reading and any '
+                    'operation relying on changelog data are slower '
+                    'than they could be')
+
+    upgrademessage = _('changelog storage will be reformated to '
+                       'store raw entries; changelog reading will be '
+                       'faster; changelog size may be reduced')
+
+    @staticmethod
+    def fromrepo(repo):
+        # Mercurial 4.0 changed changelogs to not use delta chains. Search for
+        # changelogs with deltas.
+        cl = repo.changelog
+        chainbase = cl.chainbase
+        return all(rev == chainbase(rev) for rev in cl)
+
+    @staticmethod
+    def fromconfig(repo):
+        return True
 
 def finddeficiencies(repo):
     """returns a list of deficiencies that the repo suffer from"""
-    newreporeqs = localrepo.newreporequirements(repo)
-
     deficiencies = []
 
     # We could detect lack of revlogv1 and store here, but they were added
     # in 0.9.2 and we don't support upgrading repos without these
     # requirements, so let's not bother.
 
-    if 'fncache' not in repo.requirements:
-        deficiencies.append(formatvariant(
-            name='fncache',
-            description=_('long and reserved filenames may not work correctly; '
-                          'repository performance is sub-optimal'),
-            upgrademessage=_('repository will be more resilient to storing '
-                             'certain paths and performance of certain '
-                             'operations should be improved'),
-            fromdefault=True,
-            fromconfig='fncache' in newreporeqs))
-
-    if 'dotencode' not in repo.requirements:
-        deficiencies.append(formatvariant(
-            name='dotencode',
-            description=_('storage of filenames beginning with a period or '
-                          'space may not work correctly'),
-            upgrademessage=_('repository will be better able to store files '
-                             'beginning with a space or period'),
-            fromdefault=True,
-            fromconfig='dotencode' in newreporeqs))
-
-    if 'generaldelta' not in repo.requirements:
-        deficiencies.append(formatvariant(
-            name='generaldelta',
-            description=_('deltas within internal storage are unable to '
-                          'choose optimal revisions; repository is larger and '
-                          'slower than it could be; interaction with other '
-                          'repositories may require extra network and CPU '
-                          'resources, making "hg push" and "hg pull" slower'),
-            upgrademessage=_('repository storage will be able to create '
-                             'optimal deltas; new repository data will be '
-                             'smaller and read times should decrease; '
-                             'interacting with other repositories using this '
-                             'storage model should require less network and '
-                             'CPU resources, making "hg push" and "hg pull" '
-                             'faster'),
-            fromdefault=True,
-            fromconfig='generaldelta' in newreporeqs))
-
-    # Mercurial 4.0 changed changelogs to not use delta chains. Search for
-    # changelogs with deltas.
-    cl = repo.changelog
-    for rev in cl:
-        chainbase = cl.chainbase(rev)
-        if chainbase != rev:
-            deficiencies.append(formatvariant(
-                name='removecldeltachain',
-                description=_('changelog storage is using deltas instead of '
-                              'raw entries; changelog reading and any '
-                              'operation relying on changelog data are slower '
-                              'than they could be'),
-                upgrademessage=_('changelog storage will be reformated to '
-                                 'store raw entries; changelog reading will be '
-                                 'faster; changelog size may be reduced'),
-                fromdefault=True,
-                fromconfig=True))
-            break
+    if not fncache.fromrepo(repo):
+        deficiencies.append(fncache)
+    if not dotencode.fromrepo(repo):
+        deficiencies.append(dotencode)
+    if not generaldelta.fromrepo(repo):
+        deficiencies.append(generaldelta)
+    if not removecldeltachain.fromrepo(repo):
+        deficiencies.append(removecldeltachain)
 
     return deficiencies
 
@@ -680,9 +740,9 @@ def upgraderepo(ui, repo, run=False, optimize=None):
         onlydefault = []
 
         for d in deficiencies:
-            if d.fromconfig:
+            if d.fromconfig(repo):
                 fromconfig.append(d)
-            elif d.fromdefault:
+            elif d.default:
                 onlydefault.append(d)
 
         if fromconfig or onlydefault:
