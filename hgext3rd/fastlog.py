@@ -439,7 +439,7 @@ class FastLogThread(Thread):
                 else:
                     results = conduit.call_conduit('scmquery.log_v2',
                         repo = reponame,
-                        scm = self.scm,
+                        scm_type = self.scm,
                         rev = start,
                         file_paths = [path],
                         skip = skip,
