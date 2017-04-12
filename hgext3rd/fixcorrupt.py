@@ -22,18 +22,21 @@ testedwith = 'ships-with-fb-hgext'
 cmdtable = {}
 command = cmdutil.command(cmdtable)
 
-def quickchecklog(ui, log, checklen, name, knownbroken):
+def quickchecklog(ui, log, name, knownbroken):
     """
     knownbroken: a set of known broken *changelog* revisions
 
     returns (rev, linkrev) of the first bad entry
     returns (None, None) if nothing is bad
     """
-    if checklen > len(log):
-        checklen = len(log)
-    for i in range(checklen):
-        ui.progress(_('checking %s') % name, i, total=checklen)
-        rev = len(log) - checklen + i
+    lookback = 10
+    rev = max(0, len(log) - lookback)
+    numchecked = 0
+    seengood = False
+    topic = _('checking %s') % name
+    while rev < len(log):
+        numchecked += 1
+        ui.progress(topic, numchecked, item=rev)
         linkrev = log.linkrev(rev)
         if linkrev in knownbroken:
             ui.write(_('%s: marked corrupted at rev %d (linkrev=%d)\n')
@@ -41,7 +44,17 @@ def quickchecklog(ui, log, checklen, name, knownbroken):
             return rev, linkrev
         try:
             log.revision(rev, raw=True)
-        except Exception: #  RevlogError, mpatchError
+            seengood = True
+            rev += 1
+        except Exception: #  RevlogError, mpatchError, ValueError, etc
+            if rev == 0:
+                raise error.RevlogError(_('all %s entries appear corrupt!') %
+                                        (name,))
+            if not seengood:
+                # If the earliest rev we looked at is bad, look back farther
+                lookback *= 2
+                rev = max(0, len(log) - lookback)
+                continue
             ui.write(_('%s: corrupted at rev %d (linkrev=%d)\n')
                      % (name, rev, linkrev))
             return rev, linkrev
@@ -52,7 +65,11 @@ def truncate(ui, repo, path, size, dryrun=True, backupprefix=''):
     oldsize = repo.svfs.stat(path).st_size
     if oldsize == size:
         return
-    ui.write(_('truncating %s to from %s to %s bytes\n')
+    if oldsize < size:
+        ui.write(_('%s: bad truncation request: %s to %s bytes\n')
+                 % (path, oldsize, size))
+        return
+    ui.write(_('truncating %s from %s to %s bytes\n')
              % (path, oldsize, size))
     if dryrun:
         return
@@ -72,7 +89,6 @@ def truncate(ui, repo, path, size, dryrun=True, backupprefix=''):
 
 @command('debugfixcorrupt',
          [('', 'no-dryrun', None, _('write changes (destructive)')),
-          ('', 'checklen', 10, _('number of revisions to check')),
          ], _('[OPTION]... [REV [FILE]...]'))
 def fixcorrupt(ui, repo, *args, **opts):
     """
@@ -85,7 +101,6 @@ def fixcorrupt(ui, repo, *args, **opts):
         and not encoding.environ.get('SKIPREMOTEFILELOGCHECK')):
         raise error.Abort(_('only remotefilelog repo is supported'))
 
-    checklen = opts['checklen']
     dryrun = not opts['no_dryrun']
 
     # we may access hidden nodes
@@ -110,19 +125,18 @@ def fixcorrupt(ui, repo, *args, **opts):
     badrevs = {}
     knownbadrevs = set()
     for name, log in logs:
-        rev, linkrev = quickchecklog(ui, log, checklen, name, knownbadrevs)
+        rev, linkrev = quickchecklog(ui, log, name, knownbadrevs)
         if rev is None:
             continue
         # sanity check
-        if rev >= len(log) or rev + checklen < len(log):
+        if rev >= len(log):
             raise error.Abort(_('%s index is corrupted') % name)
         # save the rev numbers
         badrevs[name] = (rev, linkrev)
         knownbadrevs.add(linkrev)
 
     if not badrevs:
-        ui.write(_('nothing to do\n(hint: increase --checklen '
-                   'to check more revisions)\n'))
+        ui.write(_('nothing to do\n'))
         return 1
 
     # sync broken revisions from manifest to changelog

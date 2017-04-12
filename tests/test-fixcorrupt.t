@@ -48,7 +48,6 @@ Nothing wrong
   changelog looks okay
   manifest looks okay
   nothing to do
-  (hint: increase --checklen to check more revisions)
   [1]
 
 Changelog corruption
@@ -60,11 +59,11 @@ Changelog corruption
   changelog: corrupted at rev 2 (linkrev=2)
   manifest: marked corrupted at rev 2 (linkrev=2)
   changelog: will lose 2 revisions
-  truncating 00changelog.d to from 275 to 110 bytes
-  truncating 00changelog.i to from 320 to 128 bytes
+  truncating 00changelog.d from 275 to 110 bytes
+  truncating 00changelog.i from 320 to 128 bytes
   manifest: will lose 2 revisions
-  truncating 00manifest.d to from 264 to 99 bytes
-  truncating 00manifest.i to from 320 to 128 bytes
+  truncating 00manifest.d from 264 to 99 bytes
+  truncating 00manifest.i from 320 to 128 bytes
   fix completed. re-run to check more revisions.
   $ hg verify -q 2>&1 | grep error
   [1]
@@ -78,11 +77,11 @@ Manifest corruption
   changelog looks okay
   manifest: corrupted at rev 2 (linkrev=2)
   changelog: will lose 2 revisions
-  truncating 00changelog.d to from 275 to 110 bytes
-  truncating 00changelog.i to from 320 to 128 bytes
+  truncating 00changelog.d from 275 to 110 bytes
+  truncating 00changelog.i from 320 to 128 bytes
   manifest: will lose 2 revisions
-  truncating 00manifest.d to from 264 to 99 bytes
-  truncating 00manifest.i to from 320 to 128 bytes
+  truncating 00manifest.d from 264 to 99 bytes
+  truncating 00manifest.i from 320 to 128 bytes
   fix completed. re-run to check more revisions.
   $ hg verify -q 2>&1 | grep error
   [1]
