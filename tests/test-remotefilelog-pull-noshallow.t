@@ -35,10 +35,10 @@ We should see the remotefilelog capability here, which advertises that
 the server supports our custom getfiles method.
 
   $ cd master
-  $ echo 'hello' | hg serve --stdio
+  $ echo 'hello' | hg -R . serve --stdio
   * (glob)
   capabilities: lookup * remotefilelog getflogheads getfile (glob)
-  $ echo 'capabilities' | hg serve --stdio ; echo
+  $ echo 'capabilities' | hg -R . serve --stdio ; echo
   * (glob)
   * remotefilelog getflogheads getfile (glob)
 
