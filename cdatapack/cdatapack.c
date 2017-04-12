@@ -40,7 +40,7 @@
 #include <lz4.h>
 
 #include "cdatapack.h"
-#include "buffer.h"
+#include "../clib/buffer.h"
 
 #define MAX_PAGED_IN_DATAPACK  (1024 * 1024 * 1024)
 

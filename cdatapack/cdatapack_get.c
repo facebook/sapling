@@ -9,8 +9,9 @@
 #include <inttypes.h>
 #include <memory.h>
 #include <stdio.h>
-#include "convert.h"
+#include "../clib/convert.h"
 #include "cdatapack.h"
+#include <stdlib.h>
 
 #define DATAIDX_EXT  ".dataidx"
 #define DATAPACK_EXT ".datapack"

@@ -75,7 +75,6 @@ if include_dirs is None:
             '/opt/local/include',
             '/opt/homebrew/include/',
         ]
-include_dirs.append('portability')
 
 def distutils_dir_name(dname):
     """Returns the name of a distutils build directory"""

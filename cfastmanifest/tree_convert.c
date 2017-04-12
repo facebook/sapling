@@ -10,7 +10,7 @@
 #include "buffer.h"
 #include "convert.h"
 #include "path_buffer.h"
-#include "portability.h"
+#include "../portability/portability.h"
 #include "tree.h"
 #include "tree_arena.h"
 
@@ -588,4 +588,3 @@ convert_to_flat_result_t convert_to_flat(tree_t *tree) {
         CONVERT_TO_FLAT_OK, state.output_buffer, state.output_buffer_idx};
   }
 }
-

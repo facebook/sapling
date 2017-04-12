@@ -9,7 +9,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <inttypes.h>
-#include "convert.h"
+#include "../clib/convert.h"
 #include "cdatapack.h"
 
 #define DATAIDX_EXT  ".dataidx"

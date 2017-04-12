@@ -12,7 +12,7 @@
 #include <stdbool.h>
 #include <sys/types.h>
 
-#include "portability.h"
+#include "../portability/portability.h"
 
 #define NODE_SZ 20
 

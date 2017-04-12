@@ -20,7 +20,7 @@ extern "C" {
 #include <vector>
 
 #include "key.h"
-#include "portability.h"
+#include "../portability/portability.h"
 
 const clock_t PACK_REFRESH_RATE = 0.1 * CLOCKS_PER_SEC;
 
@@ -40,7 +40,7 @@ class DeltaChainIterator {
       _chains.push_back(chain);
     }
 
-    ~DeltaChainIterator() {
+    virtual ~DeltaChainIterator() {
       for(std::vector<delta_chain_t>::iterator it = _chains.begin();
           it != _chains.end();
           it++) {
