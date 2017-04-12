@@ -64,6 +64,12 @@ class mixedfilemodewrapper(object):
         object.__setattr__(self, r'_fp', fp)
         object.__setattr__(self, r'_lastop', 0)
 
+    def __enter__(self):
+        return self._fp.__enter__()
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self._fp.__exit__(exc_type, exc_val, exc_tb)
+
     def __getattr__(self, name):
         return getattr(self._fp, name)
 
