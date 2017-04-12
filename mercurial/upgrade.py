@@ -139,6 +139,12 @@ class improvement(object):
     def __hash__(self):
         return hash(self.name)
 
+allformatvariant = []
+
+def registerformatvariant(cls):
+    allformatvariant.append(cls)
+    return cls
+
 class formatvariant(improvement):
     """an improvement subclass dedicated to repository format"""
     type = deficiency
@@ -197,6 +203,7 @@ class requirementformatvariant(formatvariant):
         assert cls._requirement is not None
         return cls._requirement in cls._newreporequirements(repo)
 
+@registerformatvariant
 class fncache(requirementformatvariant):
     name = 'fncache'
 
@@ -211,6 +218,7 @@ class fncache(requirementformatvariant):
                        'certain paths and performance of certain '
                        'operations should be improved')
 
+@registerformatvariant
 class dotencode(requirementformatvariant):
     name = 'dotencode'
 
@@ -224,6 +232,7 @@ class dotencode(requirementformatvariant):
     upgrademessage = _('repository will be better able to store files '
                        'beginning with a space or period')
 
+@registerformatvariant
 class generaldelta(requirementformatvariant):
     name = 'generaldelta'
 
@@ -245,6 +254,7 @@ class generaldelta(requirementformatvariant):
                        'CPU resources, making "hg push" and "hg pull" '
                        'faster')
 
+@registerformatvariant
 class removecldeltachain(formatvariant):
     name = 'removecldeltachain'
 
@@ -279,14 +289,9 @@ def finddeficiencies(repo):
     # in 0.9.2 and we don't support upgrading repos without these
     # requirements, so let's not bother.
 
-    if not fncache.fromrepo(repo):
-        deficiencies.append(fncache)
-    if not dotencode.fromrepo(repo):
-        deficiencies.append(dotencode)
-    if not generaldelta.fromrepo(repo):
-        deficiencies.append(generaldelta)
-    if not removecldeltachain.fromrepo(repo):
-        deficiencies.append(removecldeltachain)
+    for fv in allformatvariant:
+        if not fv.fromrepo(repo):
+            deficiencies.append(fv)
 
     return deficiencies
 
