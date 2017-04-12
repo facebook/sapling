@@ -112,7 +112,7 @@ void EdenServiceHandler::mountImpl(const MountInfo& info) {
       // repoSource from that. Then the hook would only take two args.
       folly::Subprocess proc(
           {postCloneScript.c_str(), repoType, info.mountPoint, repoSource},
-          folly::Subprocess::pipeStdin());
+          folly::Subprocess::Options().pipeStdin());
       proc.closeParentFd(STDIN_FILENO);
       proc.waitChecked();
       LOG(INFO) << "Finished post-clone hook '" << postCloneScript << "' for "

@@ -84,11 +84,13 @@ HgDirInformation& HgTreeInformation::makeDir(folly::StringPiece name) {
 void HgTreeInformation::loadManifest() {
   std::thread thr([this] {
     LOG(INFO) << "Parsing manifest for " << repoDir_ << " @ " << rev_;
-    folly::Subprocess proc({"hg", "manifest", "-v", "-r", rev_},
-                           folly::Subprocess::pipeStdout()
-                               .chdir(repoDir_)
-                               .closeOtherFds()
-                               .usePath());
+    folly::Subprocess proc(
+        {"hg", "manifest", "-v", "-r", rev_},
+        folly::Subprocess::Options()
+            .pipeStdout()
+            .chdir(repoDir_)
+            .closeOtherFds()
+            .usePath());
     auto read_cb = folly::Subprocess::readLinesCallback(
         [this](int fd, folly::StringPiece line) {
           if (fd == STDOUT_FILENO) {
@@ -128,11 +130,13 @@ void HgTreeInformation::buildTree() {
   LOG(INFO) << "Parsing file list for " << repoDir_ << " @ " << rev_;
   size_t num_files = 0;
 
-  folly::Subprocess proc({"hg", "files", "-r", rev_},
-                         folly::Subprocess::pipeStdout()
-                             .chdir(repoDir_)
-                             .closeOtherFds()
-                             .usePath());
+  folly::Subprocess proc(
+      {"hg", "files", "-r", rev_},
+      folly::Subprocess::Options()
+          .pipeStdout()
+          .chdir(repoDir_)
+          .closeOtherFds()
+          .usePath());
 
   auto read_cb = folly::Subprocess::readLinesCallback(
       [this, &num_files](int fd, folly::StringPiece line) {
@@ -212,11 +216,13 @@ HgTreeInformation::rawStatFile(const std::string& filename) {
                                        "-vT",
                                        "{size}\\0{flags}\\0{abspath}\\n",
                                        filename};
-      folly::Subprocess proc(args,
-                             folly::Subprocess::pipeStdout()
-                                 .chdir(repoDir_)
-                                 .closeOtherFds()
-                                 .usePath());
+      folly::Subprocess proc(
+          args,
+          folly::Subprocess::Options()
+              .pipeStdout()
+              .chdir(repoDir_)
+              .closeOtherFds()
+              .usePath());
       auto output = proc.communicate();
       proc.waitChecked();
 
@@ -317,7 +323,11 @@ const std::string& HgCommand::getRepoRev() { return rev_; }
 std::string HgCommand::run(const std::vector<std::string>& args) {
   folly::Subprocess proc(
       args,
-      folly::Subprocess::pipeStdout().pipeStderr().closeOtherFds().usePath());
+      folly::Subprocess::Options()
+          .pipeStdout()
+          .pipeStderr()
+          .closeOtherFds()
+          .usePath());
   auto output = proc.communicate();
   auto res = proc.returnCode();
   if (!res.exited() || res.exitStatus() != 0) {
@@ -348,7 +358,7 @@ HgCommand::HgCommand() : treeInfo_(16) {}
 std::string HgCommand::identifyRev() {
   folly::Subprocess proc(
       {"hg", "log", "-r", ".", "-T", "{node}"},
-      folly::Subprocess::pipeStdout().closeOtherFds().usePath().chdir(
+      folly::Subprocess::Options().pipeStdout().closeOtherFds().usePath().chdir(
           repoDir_));
   auto output = proc.communicate();
   proc.waitChecked();
