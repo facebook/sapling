@@ -19,19 +19,8 @@ Create log dir
 Setup infinitepush backup logging
   $ printf "\n[infinitepushbackup]\nlogdir=$TESTTMP/logs" >> .hg/hgrc
   $ mkcommit first
-  $ hg pushbackup --background
-  $ waitbgbackup
-  $ ls $TESTTMP/logs/test
-  client\d{8} (re)
 
-Set maxlognumber to 1, create a few fake log files and run pushbackup. Make sure
-outdated files are deleted
-  $ printf "\n[infinitepushbackup]\nmaxlognumber=1" >> .hg/hgrc
-  $ touch $TESTTMP/logs/test/client19700101
-  $ ls $TESTTMP/logs/test
-  client\d{8} (re)
-  client\d{8} (re)
+Check that logging fails because of wrong permissions
   $ hg pushbackup --background
+  $TESTTMP/logs directory has incorrect permission, infinitepush backup logging will be disabled
   $ waitbgbackup
-  $ ls $TESTTMP/logs/test
-  client\d{8} (re)

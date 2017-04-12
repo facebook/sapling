@@ -31,6 +31,8 @@ import os
 import random
 import re
 import socket
+import stat
+import subprocess
 import time
 
 from .bundleparts import (
@@ -53,7 +55,6 @@ from mercurial import (
 )
 
 from collections import defaultdict, namedtuple
-from hgext3rd.extutil import runshellcommand
 from mercurial.extensions import wrapfunction, unwrapfunction
 from mercurial.node import bin, hex, nullrev
 from mercurial.i18n import _
@@ -71,6 +72,10 @@ class backupstate(object):
 
     def empty(self):
         return not self.heads and not self.localbookmarks
+
+class WrongPermissionsException(Exception):
+    def __init__(self, logdir):
+        self.logdir = logdir
 
 restoreoptions = [
      ('', 'reporoot', '', 'root of the repo to restore'),
@@ -97,15 +102,26 @@ def backup(ui, repo, dest=None, **opts):
         background_cmd = ['hg', 'pushbackup']
         if dest:
             background_cmd.append(dest)
+        logfile = None
         logdir = ui.config('infinitepushbackup', 'logdir')
         if logdir:
+            # make newly created files and dirs non-writable
+            oldumask = os.umask(0o022)
             try:
                 try:
                     username = util.shortuser(ui.username())
                 except Exception:
                     username = 'unknown'
+
+                if not _checkcommonlogdir(logdir):
+                    raise WrongPermissionsException(logdir)
+
                 userlogdir = os.path.join(logdir, username)
                 util.makedirs(userlogdir)
+
+                if not _checkuserlogdir(userlogdir):
+                    raise WrongPermissionsException(userlogdir)
+
                 reporoot = repo.origroot
                 reponame = os.path.basename(reporoot)
 
@@ -113,10 +129,21 @@ def backup(ui, repo, dest=None, **opts):
                                                 'maxlognumber', 5)
                 _removeoldlogfiles(userlogdir, reponame, maxlogfilenumber)
                 logfile = _getlogfilename(logdir, username, reponame)
-                background_cmd.extend(('>>', logfile, '2>&1'))
             except (OSError, IOError) as e:
                 ui.warn(_('infinitepush backup log is disabled: %s\n') % e)
-        runshellcommand(' '.join(background_cmd), os.environ)
+            except WrongPermissionsException as e:
+                ui.warn(_('%s directory has incorrect permission, ' +
+                          'infinitepush backup logging will be disabled\n') %
+                        e.logdir)
+            finally:
+                os.umask(oldumask)
+
+        if not logfile:
+            logfile = os.devnull
+
+        with open(logfile, 'a') as f:
+            subprocess.Popen(background_cmd, shell=False, stdout=f,
+                             stderr=subprocess.STDOUT)
         return 0
 
     try:
@@ -659,6 +686,38 @@ def _removeoldlogfiles(userlogdir, reponame, maxlogfilenumber):
     if len(existinglogfiles) > maxlogfilenumber:
         for filename in existinglogfiles[maxlogfilenumber:]:
             os.unlink(os.path.join(userlogdir, filename))
+
+def _checkcommonlogdir(logdir):
+    '''Checks permissions of the log directory
+
+    We want log directory to actually be a directory, have restricting
+    deletion flag set (sticky bit)
+    '''
+
+    try:
+        st = os.stat(logdir)
+        return stat.S_ISDIR(st.st_mode) and st.st_mode & stat.S_ISVTX
+    except OSError:
+        # is raised by os.stat()
+        return False
+
+def _checkuserlogdir(userlogdir):
+    '''Checks permissions of the user log directory
+
+    We want user log directory to be writable only by the user who created it
+    and be owned by `username`
+    '''
+
+    try:
+        st = os.stat(userlogdir)
+        # Check that `userlogdir` is owned by `username`
+        if os.getuid() != st.st_uid:
+            return False
+        return ((st.st_mode & (stat.S_IWUSR | stat.S_IWGRP | stat.S_IWOTH)) ==
+                stat.S_IWUSR)
+    except OSError:
+        # is raised by os.stat()
+        return False
 
 def _dictdiff(first, second):
     '''Returns new dict that contains items from the first dict that are missing
