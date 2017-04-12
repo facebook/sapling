@@ -32,7 +32,7 @@ command="hg-ssh --read-only repos/*"
 # enable importing on demand to reduce startup time
 from mercurial import demandimport; demandimport.enable()
 
-from mercurial import dispatch
+from mercurial import dispatch, ui as uimod
 
 import sys, os, shlex
 
@@ -61,14 +61,15 @@ def main():
         repo = os.path.normpath(os.path.join(cwd, os.path.expanduser(path)))
         if repo in allowed_paths:
             cmd = ['-R', repo, 'serve', '--stdio']
+            req = dispatch.request(cmd)
             if readonly:
-                cmd += [
-                    '--config',
-                    'hooks.pretxnopen.hg-ssh=python:__main__.rejectpush',
-                    '--config',
-                    'hooks.prepushkey.hg-ssh=python:__main__.rejectpush'
-                    ]
-            dispatch.dispatch(dispatch.request(cmd))
+                if not req.ui:
+                    req.ui = uimod.ui.load()
+                req.ui.setconfig('hooks', 'pretxnopen.hg-ssh',
+                                 'python:__main__.rejectpush', 'hg-ssh')
+                req.ui.setconfig('hooks', 'prepushkey.hg-ssh',
+                                 'python:__main__.rejectpush', 'hg-ssh')
+            dispatch.dispatch(req)
         else:
             sys.stderr.write('Illegal repository "%s"\n' % repo)
             sys.exit(255)

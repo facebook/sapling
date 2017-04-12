@@ -357,6 +357,19 @@ Test (non-)escaping of remote paths with spaces when cloning (issue3145):
   abort: destination 'a repo' is not empty
   [255]
 
+Make sure hg is really paranoid in serve --stdio mode. It used to be
+possible to get a debugger REPL by specifying a repo named --debugger.
+  $ hg -R --debugger serve --stdio
+  abort: potentially unsafe serve --stdio invocation: ['-R', '--debugger', 'serve', '--stdio']
+  [255]
+  $ hg -R --config=ui.debugger=yes serve --stdio
+  abort: potentially unsafe serve --stdio invocation: ['-R', '--config=ui.debugger=yes', 'serve', '--stdio']
+  [255]
+Abbreviations of 'serve' also don't work, to avoid shenanigans.
+  $ hg -R narf serv --stdio
+  abort: potentially unsafe serve --stdio invocation: ['-R', 'narf', 'serv', '--stdio']
+  [255]
+
 Test hg-ssh using a helper script that will restore PYTHONPATH (which might
 have been cleared by a hg.exe wrapper) and invoke hg-ssh with the right
 parameters:

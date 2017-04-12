@@ -155,6 +155,37 @@ def _runcatch(req):
         pass # happens if called in a thread
 
     def _runcatchfunc():
+        realcmd = None
+        try:
+            cmdargs = fancyopts.fancyopts(req.args[:], commands.globalopts, {})
+            cmd = cmdargs[0]
+            aliases, entry = cmdutil.findcmd(cmd, commands.table, False)
+            realcmd = aliases[0]
+        except (error.UnknownCommand, error.AmbiguousCommand,
+                IndexError, getopt.GetoptError):
+            # Don't handle this here. We know the command is
+            # invalid, but all we're worried about for now is that
+            # it's not a command that server operators expect to
+            # be safe to offer to users in a sandbox.
+            pass
+        if realcmd == 'serve' and '--stdio' in cmdargs:
+            # We want to constrain 'hg serve --stdio' instances pretty
+            # closely, as many shared-ssh access tools want to grant
+            # access to run *only* 'hg -R $repo serve --stdio'. We
+            # restrict to exactly that set of arguments, and prohibit
+            # any repo name that starts with '--' to prevent
+            # shenanigans wherein a user does something like pass
+            # --debugger or --config=ui.debugger=1 as a repo
+            # name. This used to actually run the debugger.
+            if (len(req.args) != 4 or
+                req.args[0] != '-R' or
+                req.args[1].startswith('--') or
+                req.args[2] != 'serve' or
+                req.args[3] != '--stdio'):
+                raise error.Abort(
+                    _('potentially unsafe serve --stdio invocation: %r') %
+                    (req.args,))
+
         try:
             debugger = 'pdb'
             debugtrace = {
