@@ -447,11 +447,11 @@ int main(int argc, const char *argv[], const char *envp[])
 	}
 
 	setupsignalhandler(hgc_peerpid(hgc), hgc_peerpgid(hgc));
+	atexit(waitpager);
 	int exitcode = hgc_runcommand(hgc, argv + 1, argc - 1);
 	restoresignalhandler();
 	hgc_close(hgc);
 	freecmdserveropts(&opts);
-	waitpager();
 
 	return exitcode;
 }

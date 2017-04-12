@@ -102,6 +102,37 @@ pager should be enabled if the attached client has a tty:
   $ chg log -l1 -q --config ui.formatted=False
   0:1f7b0de80e11
 
+chg waits for pager if runcommand raises
+
+  $ cat > $TESTTMP/crash.py <<EOF
+  > from mercurial import cmdutil
+  > cmdtable = {}
+  > command = cmdutil.command(cmdtable)
+  > @command('crash')
+  > def pagercrash(ui, repo, *pats, **opts):
+  >     ui.write('going to crash\n')
+  >     raise Exception('.')
+  > EOF
+
+  $ cat > $TESTTMP/fakepager.py <<EOF
+  > import sys, time
+  > for line in iter(sys.stdin.readline, ''):
+  >     if 'crash' in line: # only interested in lines containing 'crash'
+  >         # if chg exits when pager is sleeping (incorrectly), the output
+  >         # will be captured by the next test case
+  >         time.sleep(1)
+  >         sys.stdout.write('crash-pager: %s' % line)
+  > EOF
+
+  $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > crash = $TESTTMP/crash.py
+  > EOF
+
+  $ chg crash --pager=on --config ui.formatted=True 2>/dev/null
+  crash-pager: going to crash
+  [255]
+
   $ cd ..
 
 server lifecycle
