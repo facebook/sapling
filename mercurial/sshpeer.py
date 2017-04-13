@@ -62,7 +62,7 @@ class doublepipe(object):
     large read for data not yet emitted by the server.
 
     The main pipe is expected to be a 'bufferedinputpipe' from the util module
-    that handle all the os specific bites. This class lives in this module
+    that handle all the os specific bits. This class lives in this module
     because it focus on behavior specific to the ssh protocol."""
 
     def __init__(self, ui, main, side):
