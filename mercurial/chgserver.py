@@ -190,8 +190,8 @@ def _newchgui(srcui, csystem, attachio):
             self.flush()
             return self._csystem(cmd, util.shellenviron(environ), cwd)
 
-        def _runpager(self, cmd):
-            self._csystem(cmd, util.shellenviron(), type='pager',
+        def _runpager(self, cmd, env=None):
+            self._csystem(cmd, util.shellenviron(env), type='pager',
                           cmdtable={'attachio': attachio})
             return True
 

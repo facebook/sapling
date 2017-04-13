@@ -90,3 +90,9 @@ def rccomponents():
         _rccomponents.append(envrc)
         _rccomponents.extend(normpaths(userrcpath()))
     return _rccomponents
+
+def defaultpagerenv():
+    '''return a dict of default environment variables and their values,
+    intended to be set before starting a pager.
+    '''
+    return {'LESS': 'FRX', 'LV': '-c'}

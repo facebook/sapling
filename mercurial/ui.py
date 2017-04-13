@@ -854,13 +854,18 @@ class ui(object):
         if not pagercmd:
             return
 
+        pagerenv = {}
+        for name, value in rcutil.defaultpagerenv().items():
+            if name not in encoding.environ:
+                pagerenv[name] = value
+
         self.debug('starting pager for command %r\n' % command)
         self.flush()
 
         wasformatted = self.formatted()
         if util.safehasattr(signal, "SIGPIPE"):
             signal.signal(signal.SIGPIPE, _catchterm)
-        if self._runpager(pagercmd):
+        if self._runpager(pagercmd, pagerenv):
             self.pageractive = True
             # Preserve the formatted-ness of the UI. This is important
             # because we mess with stdout, which might confuse
@@ -879,7 +884,7 @@ class ui(object):
             # warning about a missing pager command.
             self.disablepager()
 
-    def _runpager(self, command):
+    def _runpager(self, command, env=None):
         """Actually start the pager and set up file descriptors.
 
         This is separate in part so that extensions (like chg) can
@@ -912,7 +917,8 @@ class ui(object):
             pager = subprocess.Popen(
                 command, shell=shell, bufsize=-1,
                 close_fds=util.closefds, stdin=subprocess.PIPE,
-                stdout=util.stdout, stderr=util.stderr)
+                stdout=util.stdout, stderr=util.stderr,
+                env=util.shellenviron(env))
         except OSError as e:
             if e.errno == errno.ENOENT and not shell:
                 self.warn(_("missing pager command '%s', skipping pager\n")

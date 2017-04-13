@@ -254,3 +254,29 @@ Put annotate in the ignore list for pager:
    8: a 8
    9: a 9
   10: a 10
+
+Environment variables like LESS and LV are set automatically:
+  $ cat > $TESTTMP/printlesslv.py <<EOF
+  > import os, sys
+  > sys.stdin.read()
+  > for name in ['LESS', 'LV']:
+  >     sys.stdout.write(('%s=%s\n') % (name, os.environ.get(name, '-')))
+  > sys.stdout.flush()
+  > EOF
+
+  $ cat >> $HGRCPATH <<EOF
+  > [alias]
+  > noop = log -r 0 -T ''
+  > [ui]
+  > formatted=1
+  > [pager]
+  > pager = $PYTHON $TESTTMP/printlesslv.py
+  > EOF
+  $ unset LESS
+  $ unset LV
+  $ hg noop --pager=on
+  LESS=FRX
+  LV=-c
+  $ LESS=EFGH hg noop --pager=on
+  LESS=EFGH
+  LV=-c
