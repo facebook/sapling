@@ -31,7 +31,10 @@ revisions |
 {nav%filenav}
 </div>
 
-<div class="title" >{file|urlescape}</div>
+<div class="title" >
+  {file|urlescape}{if(linerange,
+' (following lines {linerange}{if(descend, ', descending')} <a href="{url|urlescape}log/{symrev}/{file|urlescape}{sessionvars%urlparameter}">back to filelog</a>)')}
+</div>
 
 <table>
 {entries%filelogentry}
