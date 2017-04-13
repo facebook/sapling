@@ -653,7 +653,7 @@ class fixupstate(object):
         return self.finalnode
 
     def printchunkstats(self):
-        """print things like '1 of 2 chunks(s) applied'"""
+        """print things like '1 of 2 chunk(s) applied'"""
         ui = self.ui
         chunkstats = self.chunkstats
         if ui.verbose:
@@ -666,7 +666,7 @@ class fixupstate(object):
             # a summary for all files
             stats = chunkstats.values()
             applied, total = (sum(s[i] for s in stats) for i in (0, 1))
-            ui.write(_('%d of %d chunks(s) applied\n') % (applied, total))
+            ui.write(_('%d of %d chunk(s) applied\n') % (applied, total))
 
     def _commitstack(self):
         """make new commits. update self.finalnode, self.replacemap.

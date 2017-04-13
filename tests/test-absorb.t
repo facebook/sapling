@@ -68,7 +68,7 @@ Run absorb:
 
   $ hg absorb
   saved backup bundle to * (glob)
-  2 of 2 chunks(s) applied
+  2 of 2 chunk(s) applied
   $ hg annotate a
   0: 1a
   1: 2b
@@ -84,7 +84,7 @@ Delete a few lines and related commits will be removed if they will be empty:
   > EOF
   $ hg absorb
   saved backup bundle to * (glob)
-  3 of 3 chunks(s) applied
+  3 of 3 chunk(s) applied
   $ hg annotate a
   1: 2b
   2: 4d
@@ -160,7 +160,7 @@ Non-mofified files are ignored:
   $ sedi 's/INSERT/Insert/' a
   $ hg absorb
   saved backup bundle to * (glob)
-  2 of 2 chunks(s) applied
+  2 of 2 chunk(s) applied
   $ hg status
   A c
   R b
@@ -179,7 +179,7 @@ Public commits will not be changed:
   85b4e0e +insert aftert 4d
   $ hg absorb
   saved backup bundle to * (glob)
-  1 of 2 chunks(s) applied
+  1 of 2 chunk(s) applied
   $ hg diff -U 0
   diff -r 1c8eadede62a a
   --- a/a	Thu Jan 01 00:00:00 1970 +0000
@@ -256,7 +256,7 @@ Use pattern to select files to be fixed up:
   M b
   $ hg absorb a
   saved backup bundle to * (glob)
-  1 of 1 chunks(s) applied
+  1 of 1 chunk(s) applied
   $ hg status
   M b
   $ hg absorb --exclude b
@@ -264,7 +264,7 @@ Use pattern to select files to be fixed up:
   [1]
   $ hg absorb b
   saved backup bundle to * (glob)
-  1 of 1 chunks(s) applied
+  1 of 1 chunk(s) applied
   $ hg status
   $ cat a b
   a Line 1
@@ -306,14 +306,14 @@ Test obsolete markers creation:
 
   $ hg --config absorb.maxstacksize=3 sf
   absorb: only the recent 3 changesets will be analysed
-  2 of 2 chunks(s) applied
+  2 of 2 chunk(s) applied
   $ hg log -T '{rev}:{node|short} {desc} {get(extras, "absorb_source")}\n'
   6:3dfde4199b46 commit b 2 712d16a8f445834e36145408eabc1d29df05ec09
   5:99cfab7da5ff commit b 1 74cfa6294160149d60adbf7582b99ce37a4597ec
   4:fec2b3bd9e08 commit a 2 28f10dcf96158f84985358a2e5d5b3505ca69c22
   0:f9a81da8dc53 commit a 1 
   $ hg absorb
-  1 of 1 chunks(s) applied
+  1 of 1 chunk(s) applied
   $ hg log -T '{rev}:{node|short} {desc} {get(extras, "absorb_source")}\n'
   10:e1c8c1e030a4 commit b 2 3dfde4199b4610ea6e3c6fa9f5bdad8939d69524
   9:816c30955758 commit b 1 99cfab7da5ffdaf3b9fc6643b14333e194d87f46
@@ -356,7 +356,7 @@ Test config option absorb.amendflags and running as a sub command of amend:
   $ echo END >> b
   $ hg rm a
   $ hg amend --correlated
-  1 of 2 chunks(s) applied
+  1 of 2 chunk(s) applied
   
   # changes not applied and left in working directory:
   # M b : 1 modified chunks were ignored
@@ -384,7 +384,7 @@ Executable files:
   99b4ae7 -
   99b4ae7 +bla
   $ hg absorb
-  1 of 1 chunks(s) applied
+  1 of 1 chunk(s) applied
   $ hg diff -c .
   diff --git a/foo.py b/foo.py
   new file mode 100755
