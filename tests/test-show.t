@@ -46,6 +46,8 @@ No arguments shows available views
   
   options:
   
+   -T --template TEMPLATE display with template
+  
   (some details hidden, use --verbose to show complete help)
 
 Unknown view prints error

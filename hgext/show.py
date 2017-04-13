@@ -18,7 +18,6 @@ from mercurial.i18n import _
 from mercurial.node import nullrev
 from mercurial import (
     cmdutil,
-    commands,
     error,
     formatter,
     graphmod,
@@ -58,7 +57,14 @@ class showcmdfunc(registrar._funcregistrarbase):
 
 showview = showcmdfunc()
 
-@command('show', commands.formatteropts, _('VIEW'))
+@command('show', [
+    # TODO: Switch this template flag to use commands.formatteropts if
+    # 'hg show' becomes stable before --template/-T is stable. For now,
+    # we are putting it here without the '(EXPERIMENTAL)' flag because it
+    # is an important part of the 'hg show' user experience and the entire
+    # 'hg show' experience is experimental.
+    ('T', 'template', '', ('display with template'), _('TEMPLATE')),
+    ], _('VIEW'))
 def show(ui, repo, view=None, template=None):
     """show various repository information
 
