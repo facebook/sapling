@@ -25,7 +25,7 @@ if not ispy3:
     import SocketServer as socketserver
     import xmlrpclib
 else:
-    import http.cookielib as cookielib
+    import http.cookiejar as cookielib
     import http.client as httplib
     import pickle
     import queue as _queue
