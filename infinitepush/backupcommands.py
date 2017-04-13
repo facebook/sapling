@@ -22,6 +22,11 @@
     # With probability 1/N confirm if current backup is consistent. If this is
     # zero or negative then no backup checks will be performed
     backupcheckfreq = 50
+
+    # Previously there was a bug in infinitepush backup and it made separate
+    # backup for the same repo if pushbackup was called from different working
+    # copies. This option cleans up the mess
+    tempcleanworkingcopiesbackups = False
 """
 
 from __future__ import absolute_import
@@ -148,12 +153,13 @@ def backup(ui, repo, dest=None, **opts):
 
     try:
         timeout = ui.configint('infinitepushbackup', 'waittimeout', 30)
-        with lockmod.lock(repo.vfs, _backuplockname, timeout=timeout):
+        srcrepo = _getsrcrepo(repo)
+        with lockmod.lock(srcrepo.vfs, _backuplockname, timeout=timeout):
             backupcheckfreq = ui.configint('infinitepushbackup',
                                            'backupcheckfreq', 50)
             if backupcheckfreq > 0 and random.randrange(backupcheckfreq) == 0:
-                bkpstate = _readlocalbackupstate(ui, repo)
-                if not _dobackupcheck(bkpstate, ui, repo, dest, **opts):
+                bkpstate = _readlocalbackupstate(ui, srcrepo)
+                if not _dobackupcheck(bkpstate, ui, srcrepo, dest, **opts):
                     ui.log('infinitepushbackup',
                            'failed infinitepush backup check',
                            infinitepushbackupcheck='failure')
@@ -285,6 +291,7 @@ def waitbackup(ui, repo, timeout):
         raise error.Abort('timeout should be integer')
 
     try:
+        repo = _getsrcrepo(repo)
         with lockmod.lock(repo.vfs, _backuplockname, timeout=timeout):
             pass
     except error.LockHeld as e:
@@ -297,6 +304,8 @@ def _dobackup(ui, repo, dest, **opts):
     start = time.time()
     username = util.shortuser(ui.username())
     bkpstate = _readlocalbackupstate(ui, repo)
+    origreporoot = repo.origroot
+    repo = _getsrcrepo(repo)
 
     maxheadstobackup = ui.configint('infinitepushbackup',
                                     'maxheadstobackup', -1)
@@ -331,6 +340,16 @@ def _dobackup(ui, repo, dest, **opts):
     bookmarkstobackup = _getbookmarkstobackup(
         username, repo, newbookmarks, removedbookmarks,
         newheads, removedheads)
+
+    if origreporoot != repo.origroot:
+        if ui.config('infinitepushbackup', 'tempcleanworkingcopiesbackups'):
+            # Previously there was a bug in infinitepush backup and it
+            # made multiple backups for the same repo if pushbackup was called
+            # from different working copies. Let's delete bookmarks for the
+            # same working copy
+            bookmarkprefixtodelete = '/'.join(
+                (_getcommonprefix(username, origreporoot), '*'))
+            bookmarkstobackup[bookmarkprefixtodelete] = ''
 
     # Special case if backup state is empty. Clean all backup bookmarks from the
     # server.
@@ -460,19 +479,19 @@ def _checkbackupstates(allbackupstates):
 def _getcommonuserprefix(username):
     return '/'.join(('infinitepush', 'backups', username))
 
-def _getcommonprefix(username, repo):
+def _getcommonprefix(username, reporoot):
     hostname = socket.gethostname()
 
     result = '/'.join((_getcommonuserprefix(username), hostname))
-    if not repo.origroot.startswith('/'):
+    if not reporoot.startswith('/'):
         result += '/'
-    result += repo.origroot
+    result += reporoot
     if result.endswith('/'):
         result = result[:-1]
     return result
 
 def _getbackupbookmarkprefix(username, repo):
-    return '/'.join((_getcommonprefix(username, repo), 'bookmarks'))
+    return '/'.join((_getcommonprefix(username, repo.origroot), 'bookmarks'))
 
 def _escapebookmark(bookmark):
     '''
@@ -493,7 +512,7 @@ def _getbackupbookmarkname(username, bookmark, repo):
     return '/'.join((_getbackupbookmarkprefix(username, repo), bookmark))
 
 def _getbackupheadprefix(username, repo):
-    return '/'.join((_getcommonprefix(username, repo), 'heads'))
+    return '/'.join((_getcommonprefix(username, repo.origroot), 'heads'))
 
 def _getbackupheadname(username, hexhead, repo):
     return '/'.join((_getbackupheadprefix(username, repo), hexhead))
@@ -728,3 +747,16 @@ def _dictdiff(first, second):
         if second.get(book) != hexnode:
             result[book] = hexnode
     return result
+
+def _getsrcrepo(repo):
+    if repo.sharedpath == repo.path:
+        return repo
+
+    # the sharedpath always ends in the .hg; we want the path to the repo
+    source = repo.vfs.split(repo.sharedpath)[0]
+    srcurl, branches = hg.parseurl(source)
+    srcrepo = hg.repository(repo.ui, srcurl)
+    if srcrepo.local():
+        return srcrepo
+    else:
+        return repo
