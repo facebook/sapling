@@ -71,7 +71,6 @@ def show(ui, repo, view=None, template=None):
        ``-T/--template``.
 
     List of available views:
-
     """
     if ui.plain() and not template:
         hint = _('invoke with -T/--template to control output format')
@@ -134,7 +133,15 @@ def showbookmarks(ui, repo, fm):
 # into core or when another extension wants to provide a view, we'll need
 # to do this more robustly.
 # TODO make this more robust.
-longest = max(map(len, showview._table.keys()))
-for key in sorted(showview._table.keys()):
-    cmdtable['show'][0].__doc__ += pycompat.sysstr(' %s   %s\n' % (
-        key.ljust(longest), showview._table[key]._origdoc))
+def _updatedocstring():
+    longest = max(map(len, showview._table.keys()))
+    entries = []
+    for key in sorted(showview._table.keys()):
+        entries.append(pycompat.sysstr('    %s   %s' % (
+            key.ljust(longest), showview._table[key]._origdoc)))
+
+    cmdtable['show'][0].__doc__ = pycompat.sysstr('%s\n\n%s\n    ') % (
+        cmdtable['show'][0].__doc__.rstrip(),
+        pycompat.sysstr('\n\n').join(entries))
+
+_updatedocstring()

@@ -37,7 +37,7 @@ No arguments shows available views
   
       List of available views:
   
-       bookmarks   bookmarks and their associated changeset
+      bookmarks   bookmarks and their associated changeset
   
   (use 'hg help -e show' to show help for the show extension)
   
