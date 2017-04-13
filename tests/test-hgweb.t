@@ -337,7 +337,7 @@ static file
 
   $ get-with-headers.py --twice localhost:$HGPORT 'static/style-gitweb.css' - date etag server
   200 Script output follows
-  content-length: 7032
+  content-length: 8012
   content-type: text/css
   
   body { font-family: sans-serif; font-size: 12px; border:solid #d9d8d1; border-width:1px; margin:10px; background: white; color: black; }
@@ -491,6 +491,62 @@ static file
       font-family: monospace;
   }
   
+  /* Followlines */
+  div.page_body pre.sourcelines > span.followlines-select:hover {
+    cursor: cell;
+  }
+  
+  pre.sourcelines > span.followlines-selected {
+    background-color: #99C7E9 !important;
+  }
+  
+  div#followlines {
+    background-color: #B7B7B7;
+    border: 1px solid #CCC;
+    border-radius: 5px;
+    padding: 4px;
+    position: fixed;
+  }
+  
+  div.followlines-cancel {
+    text-align: right;
+  }
+  
+  div.followlines-cancel > button {
+    line-height: 80%;
+    padding: 0;
+    border: 0;
+    border-radius: 2px;
+    background-color: inherit;
+    font-weight: bold;
+  }
+  
+  div.followlines-cancel > button:hover {
+    color: #FFFFFF;
+    background-color: #CF1F1F;
+  }
+  
+  div.followlines-link {
+    margin: 2px;
+    margin-top: 4px;
+    font-family: sans-serif;
+  }
+  
+  div#followlines-tooltip {
+    display: none;
+    position: fixed;
+    background-color: #ffc;
+    border: 1px solid #999;
+    padding: 2px;
+  }
+  
+  .sourcelines:hover > div#followlines-tooltip {
+    display: inline;
+  }
+  
+  .sourcelines:hover > div#followlines-tooltip.hidden {
+    display: none;
+  }
   /* Graph */
   div#wrapper {
   	position: relative;
