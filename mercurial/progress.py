@@ -157,14 +157,14 @@ class progbar(object):
             out = spacejoin(head, prog, tail)
         else:
             out = spacejoin(head, tail)
-        self.ui.ferr.write('\r' + encoding.trim(out, termwidth))
+        self._writeerr('\r' + encoding.trim(out, termwidth))
         self.lasttopic = topic
-        self.ui.ferr.flush()
+        self._flusherr()
 
     def clear(self):
         if not self.printed or not self.lastprint or not shouldprint(self.ui):
             return
-        self.ui.ferr.write('\r%s\r' % (' ' * self.width()))
+        self._writeerr('\r%s\r' % (' ' * self.width()))
         if self.printed:
             # force immediate re-paint of progress bar
             self.lastprint = 0
@@ -175,8 +175,14 @@ class progbar(object):
         if self.ui.configbool('progress', 'clear-complete', default=True):
             self.clear()
         else:
-            self.ui.ferr.write('\n')
+            self._writeerr('\n')
+        self._flusherr()
+
+    def _flusherr(self):
         self.ui.ferr.flush()
+
+    def _writeerr(self, msg):
+        self.ui.ferr.write(msg)
 
     def width(self):
         tw = self.ui.termwidth()
