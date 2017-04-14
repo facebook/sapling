@@ -21,12 +21,18 @@ class Cursor;
 }
 }
 
+/* forward declare support classes from mercurial */
+class DatapackStore;
+class UnionDatapackStore;
+
 namespace facebook {
 namespace eden {
 
 class Hash;
 class HgManifestImporter;
 class LocalStore;
+class StoreResult;
+class Tree;
 
 /**
  * HgImporter provides an API for extracting data out of a mercurial
@@ -61,6 +67,14 @@ class HgImporter {
   Hash importManifest(folly::StringPiece revName);
 
   /**
+   * Import the tree with the specified tree manifest hash.
+   *
+   * Returns the Tree, or throws on error.
+   * Requires that tree manifest data be available.
+   */
+  std::unique_ptr<Tree> importTree(const Hash& edenBlobHash);
+
+  /**
    * Import file information
    *
    * Takes a hash identifying the requested blob.  (For instance, blob hashes
@@ -69,6 +83,16 @@ class HgImporter {
    * Returns an IOBuf containing the file contents.
    */
   folly::IOBuf importFileContents(Hash blobHash);
+
+  /**
+   * Resolve the manifest node for the specified revision.
+   *
+   * This is used to locate the mercurial tree manifest data for
+   * the root tree of a given commit.
+   *
+   * Returns a Hash identifying the manifest node for the revision.
+   */
+  Hash resolveManifestNode(folly::StringPiece revName);
 
  private:
   /**
@@ -91,6 +115,8 @@ class HgImporter {
     CMD_RESPONSE = 1,
     CMD_MANIFEST = 2,
     CMD_CAT_FILE = 3,
+    CMD_MANIFEST_NODE_FOR_COMMIT = 4,
+    CMD_GET_CACHE_PATH = 5,
   };
   struct ChunkHeader {
     uint32_t requestID;
@@ -131,6 +157,26 @@ class HgImporter {
    * of the given file at the specified file revision.
    */
   void sendFileRequest(RelativePathPiece path, Hash fileRevHash);
+  /**
+   * Send a request to the helper process, asking it to send us the
+   * manifest node (NOT the full manifest!) for the specified revision.
+   */
+  void sendManifestNodeRequest(folly::StringPiece revName);
+  /**
+   * Determine the shared tree manifest pack location associated with
+   * this repo.
+   */
+  std::string getCachePath();
+  /**
+   * Send a request to the helper process, asking it to send us the
+   * tree manifest pack location.
+   */
+  void sendGetCachePathRequest();
+
+  std::unique_ptr<Tree> importTreeImpl(
+      const Hash& manifestNode,
+      const Hash& edenBlobHash,
+      RelativePathPiece path);
 
   folly::Subprocess helper_;
   LocalStore* store_{nullptr};
@@ -145,6 +191,9 @@ class HgImporter {
    */
   int helperIn_{-1};
   int helperOut_{-1};
+
+  std::vector<std::unique_ptr<DatapackStore>> dataPackStores_;
+  std::unique_ptr<UnionDatapackStore> unionStore_;
 };
 }
 } // facebook::eden

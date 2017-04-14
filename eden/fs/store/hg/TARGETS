@@ -13,6 +13,7 @@ cpp_library(
     '@/eden/fs/model:model',
     '@/eden/fs/model/git:git',
     '@/eden/fs/store:store',
+    '@/eden/hg/datastorage:datapack',
     '@/folly:folly',
     '@/folly:subprocess',
   ],

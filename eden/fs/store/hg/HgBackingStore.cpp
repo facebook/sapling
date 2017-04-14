@@ -34,12 +34,8 @@ HgBackingStore::HgBackingStore(StringPiece repository, LocalStore* localStore)
 HgBackingStore::~HgBackingStore() {}
 
 Future<unique_ptr<Tree>> HgBackingStore::getTree(const Hash& id) {
-  // HgBackingStore imports all relevant Tree objects when the root Tree is
-  // imported by getTreeForCommit().  We should never have a case where
-  // we are asked for a Tree that hasn't already been imported.
-  LOG(ERROR) << "HgBackingStore asked for unknown tree ID " << id.toString();
-  return makeFuture<unique_ptr<Tree>>(std::domain_error(
-      "HgBackingStore asked for unknown tree ID " + id.toString()));
+  return folly::makeFutureWith(
+      [&id, this] { return importer_->importTree(id); });
 }
 
 Future<unique_ptr<Blob>> HgBackingStore::getBlob(const Hash& id) {

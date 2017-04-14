@@ -24,6 +24,7 @@ import mercurial.hg
 import mercurial.node
 import mercurial.scmutil
 import mercurial.ui
+from remotefilelog import shallowutil, constants
 
 #
 # Message chunk header format.
@@ -64,6 +65,8 @@ CMD_STARTED = 0
 CMD_RESPONSE = 1
 CMD_MANIFEST = 2
 CMD_CAT_FILE = 3
+CMD_MANIFEST_NODE_FOR_COMMIT = 4
+CMD_GET_CACHE_PATH = 5
 
 #
 # Flag values.
@@ -269,6 +272,50 @@ class HgServer(object):
         contents = self.get_file(path, rev_hash)
         self.send_chunk(request, contents)
 
+    @cmd(CMD_MANIFEST_NODE_FOR_COMMIT)
+    def cmd_manifest_node_for_commit(self, request):
+        '''
+        Handler for CMD_MANIFEST_NODE_FOR_COMMIT requests.
+
+        Given a commit hash, resolve the manifest node.
+
+        Request body format:
+        - Revision name (string)
+          This is the mercurial revision ID.  This can be any string that will
+          be understood by mercurial to identify a single revision.  (For
+          instance, this might be ".", ".^", a 40-character hexadecmial hash,
+          or a unique hash prefix, etc.)
+
+        Response body format:
+          The response body is the manifest node, a 20-byte binary value.
+        '''
+        rev_name = request.body
+        self.debug('resolving manifest node for revision %r', rev_name)
+        self.send_chunk(request, self.get_manifest_node(rev_name))
+
+    @cmd(CMD_GET_CACHE_PATH)
+    def cmd_get_cache_path(self, request):
+        '''
+        Handler for CMD_GET_CACHE_PATH requests.
+
+        Computes the tree pack cache path for the repo.
+
+        Request body format: no arguments.
+
+        Response body format:
+        - The path holding tree packs (string)
+        '''
+        if not hasattr(self.repo, 'name'):
+            # The repo doesn't have the appropriate extensions configured
+            # to support tree manifests, so return an empty path.
+            # This happens in our integration test suite.
+            cache_path = ''
+        else:
+            cache_path = shallowutil.getcachepackpath(self.repo,
+                                                      constants.TREEPACK_CATEGORY)
+        self.send_chunk(request, cache_path)
+
+
     def send_chunk(self, request, data, is_last=True):
         flags = 0
         if not is_last:
@@ -334,6 +381,19 @@ class HgServer(object):
         self.send_chunk(request, b''.join(chunked_paths), is_last=True)
         self.debug('sent manifest with %d paths in %s seconds',
                    num_paths, time.time() - start)
+
+    def get_manifest_node(self, rev):
+        try:
+            ctx = mercurial.scmutil.revsingle(self.repo, rev)
+            return ctx.manifestnode()
+        except Exception:
+            # The mercurial call may fail with a "no node" error if this
+            # revision in question has added to the repository after we
+            # originally opened it.  Invalidate the repository and try again,
+            # in case our cached repo data is just stale.
+            self.repo.invalidate()
+            ctx = mercurial.scmutil.revsingle(self.repo, rev)
+            return ctx.manifestnode()
 
     def get_file(self, path, rev_hash):
         try:
