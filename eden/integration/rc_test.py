@@ -11,7 +11,7 @@ import os
 import stat
 import tempfile
 from .lib import testcase
-from eden.fs.cli import util
+from eden.cli import util
 
 
 @testcase.eden_repo_test

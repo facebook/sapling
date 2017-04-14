@@ -119,7 +119,7 @@ ClientConfig::ConfigData ClientConfig::loadConfigData(
   };
 
   // Define replacements for use in interpolating the config files.
-  // These are coupled with the equivalent code in eden/fs/cli/config.py
+  // These are coupled with the equivalent code in eden/cli/config.py
   // and must be kept in sync.
   ConfigData resultData{{"HOME", getenv("HOME") ? getenv("HOME") : "/"},
                         {"USER", getenv("USER") ? getenv("USER") : ""}};

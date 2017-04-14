@@ -1,6 +1,6 @@
 [alias]
-  eden = //eden/fs/cli:all
-  eden-cli = //eden/fs/cli:cli
+  eden = //eden/cli:all
+  eden-cli = //eden/cli:cli
   eden-daemon = //eden/fs/service:edenfs
 
 [buildfile]

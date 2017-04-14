@@ -53,7 +53,7 @@ EDENFS_SUFFIX = os.environ.get('EDENFS_SUFFIX', '')
 def _find_cli():
     cli = os.environ.get('EDENFS_CLI_PATH')
     if not cli:
-        cli = os.path.join(BUCK_OUT, 'gen/eden/fs/cli/cli.par')
+        cli = os.path.join(BUCK_OUT, 'gen/eden/cli/cli.par')
     if not os.access(cli, os.X_OK):
         msg = 'unable to find eden CLI for integration testing: {!r}'.format(
             cli)
