@@ -1226,6 +1226,12 @@ def blockdescendants(fctx, fromline, toline):
                 continue
             inrangep, linerange1 = _changesrange(c, p, linerange2, diffopts)
             inrange = inrange or inrangep
+            # If revision 'i' has been seen (it's a merge), we assume that its
+            # line range is the same independently of which parents was used
+            # to compute it.
+            assert i not in seen or seen[i][1] == linerange1, (
+                'computed line range for %s is not consistent between '
+                'ancestor branches' % c)
             seen[i] = c, linerange1
         if inrange:
             yield c, linerange1

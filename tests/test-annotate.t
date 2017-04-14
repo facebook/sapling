@@ -606,7 +606,7 @@ we follow all branches in descending direction
   $ mv baz.new baz
   $ hg ci -m 'baz:3->+3'
   created new head
-  $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 3:5, startrev=16, descend=True)' --graph
+  $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 2:5, startrev=16, descend=True)' --graph
   @  29: baz:3->+3
   :
   : o  26: baz:3+->3-
@@ -615,10 +615,11 @@ we follow all branches in descending direction
   :/
   o    20: baz:4
   |\
-  | ~
-  o  19: baz:3
-  |
-  ~
+  | o  19: baz:3
+  |/
+  o    18: baz:2
+  |\
+  ~ ~
 
 check error cases
   $ hg up 23 --quiet
