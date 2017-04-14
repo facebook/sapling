@@ -31,30 +31,6 @@ httplib = util.httplib
 urlerr = util.urlerr
 urlreq = util.urlreq
 
-# FUTURE: consider refactoring this API to use generators. This will
-# require a compression engine API to emit generators.
-def decompressresponse(response, engine):
-    try:
-        reader = engine.decompressorreader(response)
-    except httplib.HTTPException:
-        raise IOError(None, _('connection ended unexpectedly'))
-
-    # We need to wrap reader.read() so HTTPException on subsequent
-    # reads is also converted.
-    # Ideally we'd use super() here. However, if ``reader`` isn't a new-style
-    # class, this can raise:
-    # TypeError: super() argument 1 must be type, not classobj
-    origread = reader.read
-    class readerproxy(reader.__class__):
-        def read(self, *args, **kwargs):
-            try:
-                return origread(*args, **kwargs)
-            except httplib.HTTPException:
-                raise IOError(None, _('connection ended unexpectedly'))
-
-    reader.__class__ = readerproxy
-    return reader
-
 def encodevalueinheaders(value, header, limit):
     """Encode a string value into multiple HTTP headers.
 
@@ -297,9 +273,11 @@ class httppeer(wireproto.wirepeer):
                 raise error.RepoError(_("'%s' sent a broken Content-Type "
                                         "header (%s)") % (safeurl, proto))
 
+            # TODO consider switching to a decompression reader that uses
+            # generators.
             if version_info == (0, 1):
                 if _compressible:
-                    return decompressresponse(resp, util.compengines['zlib'])
+                    return util.compengines['zlib'].decompressorreader(resp)
                 return resp
             elif version_info == (0, 2):
                 # application/mercurial-0.2 always identifies the compression
@@ -307,13 +285,13 @@ class httppeer(wireproto.wirepeer):
                 elen = struct.unpack('B', resp.read(1))[0]
                 ename = resp.read(elen)
                 engine = util.compengines.forwiretype(ename)
-                return decompressresponse(resp, engine)
+                return engine.decompressorreader(resp)
             else:
                 raise error.RepoError(_("'%s' uses newer protocol %s") %
                                       (safeurl, version))
 
         if _compressible:
-            return decompressresponse(resp, util.compengines['zlib'])
+            return util.compengines['zlib'].decompressorreader(resp)
 
         return resp
 
