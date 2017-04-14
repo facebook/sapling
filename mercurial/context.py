@@ -1212,6 +1212,16 @@ def blockdescendants(fctx, fromline, toline):
     """Yield descendants of `fctx` with respect to the block of lines within
     `fromline`-`toline` range.
     """
+    # First possibly yield 'fctx' if it has changes in range with respect to
+    # its parents.
+    try:
+        c, linerange1 = next(blockancestors(fctx, fromline, toline))
+    except StopIteration:
+        pass
+    else:
+        if c == fctx:
+            yield c, linerange1
+
     diffopts = patch.diffopts(fctx._repo.ui)
     fl = fctx.filelog()
     seen = {fctx.filerev(): (fctx, (fromline, toline))}

@@ -500,6 +500,7 @@ when they should.
   16: baz:0
   19: baz:3
   $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 3:5, startrev=19, descend=True)'
+  19: baz:3
   20: baz:4
   $ printf "0\n0\n" | cat - baz > baz1
   $ mv baz1 baz
@@ -509,6 +510,7 @@ when they should.
   19: baz:3
   20: baz:4
   $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 3:5, descend=True, startrev=19)'
+  19: baz:3
   20: baz:4
   $ echo 6 >> baz
   $ hg ci -m 'added line 8'
@@ -517,6 +519,7 @@ when they should.
   19: baz:3
   20: baz:4
   $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 3:5, startrev=19, descend=True)'
+  19: baz:3
   20: baz:4
   $ sed 's/3/3+/' baz > baz.new
   $ mv baz.new baz
@@ -526,7 +529,8 @@ when they should.
   19: baz:3
   20: baz:4
   23: baz:3->3+
-  $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 3:5, startrev=19, descend=True)'
+  $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 3:5, startrev=17, descend=True)'
+  19: baz:3
   20: baz:4
   23: baz:3->3+
   $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 1:2)'
@@ -617,9 +621,11 @@ we follow all branches in descending direction
   |\
   | o  19: baz:3
   |/
-  o    18: baz:2
-  |\
-  ~ ~
+  o  18: baz:2
+  :
+  o  16: baz:0
+  |
+  ~
 
 check error cases
   $ hg up 23 --quiet

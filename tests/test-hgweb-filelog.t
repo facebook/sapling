@@ -1502,6 +1502,29 @@ filelog with 'linerange' and 'patch'
   </html>
   
   $ hg log -r 'followlines(c, 3:4, startrev=8, descend=True) and follow(c)' -p
+  changeset:   8:5c6574614c37
+  branch:      a-branch
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     make c bigger and touch its beginning
+  
+  diff -r 46c1a66bd8fc -r 5c6574614c37 c
+  --- a/c	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/c	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,2 +1,11 @@
+  +0
+  +0
+   b
+  -c
+  +c+
+  +
+  +a
+  +a
+  +
+  +d
+  +e
+  +f
+  
   changeset:   10:e95928d60479
   branch:      a-branch
   user:        test
@@ -1629,6 +1652,15 @@ filelog with 'linerange' and 'patch'
    </tr>
   </thead>
   <tbody class="stripes2">
+   <tr>
+    <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
+    <td class="author">test</td>
+    <td class="description">
+     <a href="/rev/5c6574614c37">make c bigger and touch its beginning</a>
+     <span class="branchname">a-branch</span> 
+    </td>
+   </tr>
+   
    <tr>
     <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
     <td class="author">test</td>
