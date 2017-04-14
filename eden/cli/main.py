@@ -217,7 +217,7 @@ def _find_default_daemon_binary():
 
     # This is where the binary will be found relative to this file when it is
     # run out of buck-out in debug mode.
-    candidate = os.path.normpath(os.path.join(script_dir, '../service/edenfs'))
+    candidate = os.path.normpath(os.path.join(script_dir, '../fs/service/edenfs'))
     if os.access(candidate, permissions):
         return candidate
     else:
