@@ -40,6 +40,7 @@ New errors are not allowed. Warnings are strongly discouraged.
    >     policy = os.environ.get('HGMODULEPOLICY', policy)
    use encoding.environ instead (py3)
   Skipping mercurial/statprof.py it has no-che?k-code (glob)
+  Skipping tests/badserverext.py it has no-che?k-code (glob)
   [1]
 
 @commands in debugcommands.py should be in alphabetical order.
