@@ -116,6 +116,7 @@ from . import (
     error,
     smartset,
     txnutil,
+    util,
 )
 
 allphases = public, draft, secret = range(3)
@@ -386,7 +387,8 @@ def retractboundary(repo, tr, targetphase, nodes):
 
 def listphases(repo):
     """List phases root for serialization over pushkey"""
-    keys = {}
+    # Use ordered dictionary so behavior is deterministic.
+    keys = util.sortdict()
     value = '%i' % draft
     for root in repo._phasecache.phaseroots[draft]:
         keys[hex(root)] = value
