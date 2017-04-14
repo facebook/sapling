@@ -267,10 +267,10 @@ Server sends an incomplete capabilities response body
   $ hg --config badserver.closeaftersendbytes=180 serve -p $HGPORT -d --pid-file=hg.pid -E error.log
   $ cat hg.pid > $DAEMON_PIDS
 
-TODO client spews a stack due to uncaught httplib.IncompleteRead
-
-  $ hg clone http://localhost:$HGPORT/ clone 2> /dev/null
-  [1]
+  $ hg clone http://localhost:$HGPORT/ clone
+  abort: HTTP request error (incomplete response; expected 385 bytes got 20)
+  (this may be an intermittent network failure; if the error persists, consider contacting the network or server operator)
+  [255]
 
   $ killdaemons.py $DAEMON_PIDS
 
@@ -461,11 +461,11 @@ Server sends empty HTTP body for getbundle
   $ hg --config badserver.closeaftersendbytes=933 serve -p $HGPORT -d --pid-file=hg.pid -E error.log
   $ cat hg.pid > $DAEMON_PIDS
 
-TODO client spews a stack due to uncaught httplib.IncompleteRead
-
-  $ hg clone http://localhost:$HGPORT/ clone 2> /dev/null
+  $ hg clone http://localhost:$HGPORT/ clone
   requesting all changes
-  [1]
+  abort: HTTP request error (incomplete response)
+  (this may be an intermittent network failure; if the error persists, consider contacting the network or server operator)
+  [255]
 
   $ killdaemons.py $DAEMON_PIDS
 
@@ -525,11 +525,11 @@ Server sends partial compression string
   $ hg --config badserver.closeaftersendbytes=945 serve -p $HGPORT -d --pid-file=hg.pid -E error.log
   $ cat hg.pid > $DAEMON_PIDS
 
-TODO client spews a stack due to uncaught httplib.IncompleteRead
-
-  $ hg clone http://localhost:$HGPORT/ clone 2> /dev/null
+  $ hg clone http://localhost:$HGPORT/ clone
   requesting all changes
-  [1]
+  abort: HTTP request error (incomplete response; expected 1 bytes got 3)
+  (this may be an intermittent network failure; if the error persists, consider contacting the network or server operator)
+  [255]
 
   $ killdaemons.py $DAEMON_PIDS
 
@@ -593,7 +593,8 @@ Server sends partial bundle2 header magic
 
   $ hg clone http://localhost:$HGPORT/ clone
   requesting all changes
-  abort: connection ended unexpectedly
+  abort: HTTP request error (incomplete response; expected 1 bytes got 3)
+  (this may be an intermittent network failure; if the error persists, consider contacting the network or server operator)
   [255]
 
   $ killdaemons.py $DAEMON_PIDS
@@ -616,7 +617,8 @@ Server sends incomplete bundle2 stream params length
 
   $ hg clone http://localhost:$HGPORT/ clone
   requesting all changes
-  abort: connection ended unexpectedly
+  abort: HTTP request error (incomplete response; expected 1 bytes got 3)
+  (this may be an intermittent network failure; if the error persists, consider contacting the network or server operator)
   [255]
 
   $ killdaemons.py $DAEMON_PIDS
@@ -640,7 +642,8 @@ Servers stops after bundle2 stream params header
 
   $ hg clone http://localhost:$HGPORT/ clone
   requesting all changes
-  abort: connection ended unexpectedly
+  abort: HTTP request error (incomplete response)
+  (this may be an intermittent network failure; if the error persists, consider contacting the network or server operator)
   [255]
 
   $ killdaemons.py $DAEMON_PIDS
@@ -664,7 +667,8 @@ Server stops sending after bundle2 part header length
 
   $ hg clone http://localhost:$HGPORT/ clone
   requesting all changes
-  abort: connection ended unexpectedly
+  abort: HTTP request error (incomplete response)
+  (this may be an intermittent network failure; if the error persists, consider contacting the network or server operator)
   [255]
 
   $ killdaemons.py $DAEMON_PIDS
@@ -785,7 +789,8 @@ Server stops sending after 0 length payload chunk size
   added 1 changesets with 1 changes to 1 files
   transaction abort!
   rollback completed
-  abort: connection ended unexpectedly
+  abort: HTTP request error (incomplete response)
+  (this may be an intermittent network failure; if the error persists, consider contacting the network or server operator)
   [255]
 
   $ killdaemons.py $DAEMON_PIDS

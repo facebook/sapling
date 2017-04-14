@@ -75,6 +75,41 @@ def encodevalueinheaders(value, header, limit):
 
     return result
 
+def _wraphttpresponse(resp):
+    """Wrap an HTTPResponse with common error handlers.
+
+    This ensures that any I/O from any consumer raises the appropriate
+    error and messaging.
+    """
+    origread = resp.read
+
+    class readerproxy(resp.__class__):
+        def read(self, size=None):
+            try:
+                return origread(size)
+            except httplib.IncompleteRead as e:
+                # e.expected is an integer if length known or None otherwise.
+                if e.expected:
+                    msg = _('HTTP request error (incomplete response; '
+                            'expected %d bytes got %d)') % (e.expected,
+                                                           len(e.partial))
+                else:
+                    msg = _('HTTP request error (incomplete response)')
+
+                raise error.RichIOError(
+                    msg,
+                    hint=_('this may be an intermittent network failure; '
+                           'if the error persists, consider contacting the '
+                           'network or server operator'))
+            except httplib.HTTPException as e:
+                raise error.RichIOError(
+                    _('HTTP request error (%s)') % e,
+                    hint=_('this may be an intermittent failure; '
+                           'if the error persists, consider contacting the '
+                           'network or server operator'))
+
+    resp.__class__ = readerproxy
+
 class httppeer(wireproto.wirepeer):
     def __init__(self, ui, path):
         self.path = path
@@ -223,6 +258,10 @@ class httppeer(wireproto.wirepeer):
             self.ui.debug('http error while sending %s command\n' % cmd)
             self.ui.traceback()
             raise IOError(None, inst)
+
+        # Insert error handlers for common I/O failures.
+        _wraphttpresponse(resp)
+
         # record the url we got redirected to
         resp_url = resp.geturl()
         if resp_url.endswith(qs):
