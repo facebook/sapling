@@ -13,7 +13,7 @@ New errors are not allowed. Warnings are strongly discouraged.
    >             r.revision(r.node(x))
    don't convert rev to node before passing to revision(nodeorrev)
   Skipping i18n/polib.py it has no-che?k-code (glob)
-  mercurial/demandimport.py:312:
+  mercurial/demandimport.py:313:
    >     if os.environ.get('HGDEMANDIMPORT') != 'disable':
    use encoding.environ instead (py3)
   mercurial/encoding.py:54:

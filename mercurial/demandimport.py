@@ -274,6 +274,7 @@ ignore = [
     'fcntl',
     'nt', # pathlib2 tests the existence of built-in 'nt' module
     'win32com.gen_py',
+    'win32com.shell', # 'appdirs' tries to import win32com.shell
     '_winreg', # 2.7 mimetypes needs immediate ImportError
     'pythoncom',
     # imported by tarfile, not available under Windows
