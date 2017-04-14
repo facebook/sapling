@@ -1217,16 +1217,18 @@ def blockdescendants(fctx, fromline, toline):
     seen = {fctx.filerev(): (fctx, (fromline, toline))}
     for i in fl.descendants([fctx.filerev()]):
         c = fctx.filectx(i)
+        inrange = False
         for x in fl.parentrevs(i):
             try:
-                p, linerange2 = seen.pop(x)
+                p, linerange2 = seen[x]
             except KeyError:
                 # nullrev or other branch
                 continue
-            inrange, linerange1 = _changesrange(c, p, linerange2, diffopts)
-            if inrange:
-                yield c, linerange1
+            inrangep, linerange1 = _changesrange(c, p, linerange2, diffopts)
+            inrange = inrange or inrangep
             seen[i] = c, linerange1
+        if inrange:
+            yield c, linerange1
 
 class committablectx(basectx):
     """A committablectx object provides common functionality for a context that

@@ -600,7 +600,28 @@ we are missing the branch with rename when following children
   $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 5:7, startrev=25, descend=True)'
   26: baz:3+->3-
 
+we follow all branches in descending direction
+  $ hg up 22 --quiet
+  $ sed 's/3/+3/' baz > baz.new
+  $ mv baz.new baz
+  $ hg ci -m 'baz:3->+3'
+  created new head
+  $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 3:5, startrev=16, descend=True)' --graph
+  @  29: baz:3->+3
+  :
+  : o  26: baz:3+->3-
+  : :
+  : o  23: baz:3->3+
+  :/
+  o    20: baz:4
+  |\
+  | ~
+  o  19: baz:3
+  |
+  ~
+
 check error cases
+  $ hg up 23 --quiet
   $ hg log -r 'followlines()'
   hg: parse error: followlines takes at least 1 positional arguments
   [255]
