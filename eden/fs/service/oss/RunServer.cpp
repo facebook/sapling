@@ -13,8 +13,8 @@
 
 namespace facebook {
 namespace eden {
-void EdenServer::runThriftServer() {
-  server_->serve();
+void runServer(const EdenServer& server) {
+  server.getServer()->serve();
 }
 }
 } // facebook::eden

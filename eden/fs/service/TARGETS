@@ -4,8 +4,55 @@ include_defs('//eden/fs/service/DEFS')
 create_eden_fs_rules(
   suffix = get_oss_suffix(),
   subdir = 'out.oss',
-  server_srcs = ['oss/EdenServer.cpp'],
+  server_srcs = ['oss/RunServer.cpp'],
   server_deps = [],
+)
+
+if is_facebook_internal():
+    include_defs('//eden/fs/service/facebook/DEFS')
+    create_eden_fs_rules(
+        suffix = get_fb_suffix(),
+        subdir = 'out.fb',
+        server_srcs = [
+          'facebook/RunServer.cpp',
+        ],
+        server_deps = [
+          '@/common/services/cpp:cpp',
+        ],
+    )
+
+cpp_library(
+    name = "server",
+    headers = [
+        "EdenError.h",
+        "EdenServer.h",
+        "EdenServiceHandler.h",
+        "GlobNode.h",
+        "StreamingSubscriber.h",
+    ],
+    srcs = [
+        "EdenError.cpp",
+        "EdenServer.cpp",
+        "EdenServiceHandler.cpp",
+        "GlobNode.cpp",
+        "StreamingSubscriber.cpp",
+    ],
+    deps = [
+        ":thrift_cpp",
+        "@/common/fb303/cpp:fb303",
+        "@/eden/fs/config:config",
+        "@/eden/fs/fuse:fusell",
+        "@/eden/fs/fuse/privhelper:privhelper",
+        "@/eden/fs/inodes:inodes",
+        "@/eden/fs/store/git:git",
+        "@/eden/fs/store/hg:hg",
+        "@/folly/experimental:experimental",
+        "@/folly/init:init",
+        "@/thrift/lib/cpp2:server",
+    ],
+    external_deps = [
+      ("boost", None, "boost_filesystem"),
+    ],
 )
 
 # The eden.thrift interface.
@@ -84,19 +131,6 @@ python_library(
     '@/eden/fs/service:thrift-py',
   ],
 )
-
-if is_facebook_internal():
-    include_defs('//eden/fs/service/facebook/DEFS')
-    create_eden_fs_rules(
-        suffix = get_fb_suffix(),
-        subdir = 'out.fb',
-        server_srcs = [
-          'facebook/EdenServer.cpp',
-        ],
-        server_deps = [
-          '@/common/services/cpp:cpp',
-        ],
-    )
 
 # JAVA BINDINGS FOR THRIFT ENDPOINT
 #

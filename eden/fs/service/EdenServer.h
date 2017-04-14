@@ -62,17 +62,15 @@ class EdenServer {
   virtual ~EdenServer();
 
   /**
-   * Run the EdenServer.
+   * Prepare to run the EdenServer.
    *
-   * This is primarily responsible for running the thrift server loop.
-   * run() will not return until stop() is called in another thread.
+   * This acquires the lock on the eden directory, remounts configured mount
+   * points, and prepares the thrift server to run.
    *
-   * When run() returns there may still be outstanding FUSE mount points
-   * running.  (These are driven by a separate FUSE thread pool.)
-   * unmountAll() can be called after run() returns to unmount all mount
-   * points.
+   * After prepare returns the caller can call getServer()->serve() to
+   * run the thrift server main loop.
    */
-  void run();
+  void prepare();
 
   /**
    * Stops this server, which includes the underlying Thrift server.
@@ -168,7 +166,6 @@ class EdenServer {
   std::shared_ptr<BackingStore> createBackingStore(
       folly::StringPiece type,
       folly::StringPiece name);
-  void runThriftServer();
   void createThriftServer();
   void acquireEdenLock();
   void prepareThriftAddress();

@@ -97,7 +97,7 @@ void EdenServer::unmountAll() {
   }
 }
 
-void EdenServer::run() {
+void EdenServer::prepare() {
   acquireEdenLock();
   createThriftServer();
   localStore_ = make_shared<LocalStore>(rocksPath_);
@@ -130,7 +130,6 @@ void EdenServer::run() {
     }
   }
   prepareThriftAddress();
-  runThriftServer();
 }
 
 void EdenServer::mount(shared_ptr<EdenMount> edenMount) {

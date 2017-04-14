@@ -35,6 +35,12 @@ DEFINE_int32(
 using namespace facebook::eden::fusell;
 using namespace facebook::eden;
 
+namespace facebook {
+namespace eden {
+void runServer(const EdenServer& server);
+}
+}
+
 uid_t determineUid() {
   // First check the real UID.  If it is non-root, use that.
   // This happens if our binary is setuid root and invoked by a non-root user.
@@ -163,16 +169,20 @@ int main(int argc, char **argv) {
       folly::to<std::string>(FLAGS_fuseThreadStack).c_str(),
       1);
 
-  // Run the eden server
+  // Create the eden server
   EdenServer server(edenDir, etcEdenDir, configPath, rocksPath);
 
+  // Start stats aggregation
   folly::FunctionScheduler functionScheduler;
   functionScheduler.addFunction(
       [&server] { server.getStats()->get()->aggregate(); },
       std::chrono::seconds(1));
   functionScheduler.setThreadName("stats_aggregator");
   functionScheduler.start();
-  server.run();
+
+  // Get the EdenServer ready, then run the thrift server.
+  server.prepare();
+  runServer(server);
 
   LOG(INFO) << "edenfs performing orderly shutdown";
   functionScheduler.shutdown();
