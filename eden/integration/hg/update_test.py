@@ -11,6 +11,9 @@ from .lib.hg_extension_test_base import HgExtensionTestBase
 
 
 class UpdateTest(HgExtensionTestBase):
+    def edenfs_vmodule_settings(self):
+        return {'TreeInode': 5, 'CheckoutAction': 5}
+
     def populate_backing_repo(self, repo):
         repo.write_file('hello.txt', 'hola')
         repo.write_file('.gitignore', 'ignoreme\n')
@@ -110,3 +113,37 @@ class UpdateTest(HgExtensionTestBase):
         self.repo.update(self.commit2, clean=True)
         self.assert_status_empty()
         self.assertEqual('test\n', self.read_file('foo/bar.txt'))
+
+    def test_update_replace_untracked_dir(self):
+        '''
+        Create a local untracked directory, then run "hg update -C" to
+        checkout a commit where this directory exists in source control.
+        '''
+        self.assert_status_empty()
+        # Write some new files in the eden working directory
+        self.mkdir('new_project')
+        self.write_file('new_project/newcode.c', 'test\n')
+        self.write_file('new_project/Makefile', 'all:\n\techo done!\n')
+        self.write_file('new_project/.gitignore', '*.o\n')
+        self.write_file('new_project/newcode.o', '\x00\x01\x02\x03\x04')
+
+        # Add the same files to a commit in the backing repository
+        self.backing_repo.write_file('new_project/newcode.c', 'test\n')
+        self.backing_repo.write_file('new_project/Makefile',
+                                     'all:\n\techo done!\n')
+        self.backing_repo.write_file('new_project/.gitignore', '*.o\n')
+        new_commit = self.backing_repo.commit('Add new_project')
+
+        # Check the status before we update
+        self.assert_status({
+            'new_project/newcode.o': 'I',
+            'new_project/newcode.c': '?',
+            'new_project/Makefile': '?',
+            'new_project/.gitignore': '?',
+        })
+
+        # Now run "hg update -C new_commit"
+        self.repo.update(new_commit, clean=True)
+        self.assert_status({
+            'new_project/newcode.o': 'I',
+        })

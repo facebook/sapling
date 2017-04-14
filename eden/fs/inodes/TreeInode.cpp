@@ -1949,7 +1949,8 @@ Future<Unit> TreeInode::checkout(
     std::unique_ptr<Tree> fromTree,
     std::unique_ptr<Tree> toTree) {
   VLOG(4) << "checkout: starting update of " << getLogPath() << ": "
-          << fromTree->getHash() << " --> " << toTree->getHash();
+          << (fromTree ? fromTree->getHash().toString() : "<none>") << " --> "
+          << (toTree ? toTree->getHash().toString() : "<none>");
   vector<unique_ptr<CheckoutAction>> actions;
   vector<IncompleteInodeLoad> pendingLoads;
 
@@ -2196,7 +2197,7 @@ Future<Unit> TreeInode::checkoutUpdateEntry(
     InodePtr inode,
     std::unique_ptr<Tree> oldTree,
     std::unique_ptr<Tree> newTree,
-    folly::Optional<TreeEntry> newScmEntry) {
+    const folly::Optional<TreeEntry>& newScmEntry) {
   CHECK(ctx->shouldApplyChanges());
 
   auto treeInode = inode.asTreePtrOrNull();
@@ -2263,7 +2264,7 @@ Future<Unit> TreeInode::checkoutUpdateEntry(
     name = PathComponent{name},
     parentInode = inodePtrFromThis(),
     treeInode,
-    newEntry = std::move(newScmEntry)
+    newScmEntry
   ]() {
     // Make sure the treeInode was completely removed by the checkout.
     // If there were still untracked files inside of it, it won't have
@@ -2273,16 +2274,16 @@ Future<Unit> TreeInode::checkoutUpdateEntry(
       return;
     }
 
-    if (!newEntry) {
+    if (!newScmEntry) {
       // We're done
       return;
     }
 
     // Add the new entry
     auto contents = parentInode->contents_.wlock();
-    DCHECK_EQ(TreeEntryType::BLOB, newEntry->getType());
+    DCHECK_EQ(TreeEntryType::BLOB, newScmEntry->getType());
     auto newTreeEntry =
-        make_unique<Entry>(newEntry->getMode(), newEntry->getHash());
+        make_unique<Entry>(newScmEntry->getMode(), newScmEntry->getHash());
     auto ret = contents->entries.emplace(name, std::move(newTreeEntry));
     if (!ret.second) {
       // Hmm.  Someone else already created a new entry in this location

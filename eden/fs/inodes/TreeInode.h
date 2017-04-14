@@ -478,7 +478,7 @@ class TreeInode : public InodeBase {
       InodePtr inode,
       std::unique_ptr<Tree> oldTree,
       std::unique_ptr<Tree> newTree,
-      folly::Optional<TreeEntry> newScmEntry);
+      const folly::Optional<TreeEntry>& newScmEntry);
 
   /**
    * Get debug data about this TreeInode and all of its children (recursively).

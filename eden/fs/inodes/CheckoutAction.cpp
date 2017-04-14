@@ -35,6 +35,7 @@ CheckoutAction::CheckoutAction(
     const TreeEntry* newScmEntry,
     InodePtr&& inode)
     : ctx_(ctx), inode_(std::move(inode)) {
+  DCHECK(oldScmEntry || newScmEntry);
   if (oldScmEntry) {
     oldScmEntry_ = *oldScmEntry;
   }
@@ -50,6 +51,7 @@ CheckoutAction::CheckoutAction(
     const TreeEntry* newScmEntry,
     folly::Future<InodePtr> inodeFuture)
     : ctx_(ctx), inodeFuture_(std::move(inodeFuture)) {
+  DCHECK(oldScmEntry || newScmEntry);
   if (oldScmEntry) {
     oldScmEntry_ = *oldScmEntry;
   }
@@ -61,6 +63,7 @@ CheckoutAction::CheckoutAction(
 CheckoutAction::~CheckoutAction() {}
 
 PathComponentPiece CheckoutAction::getEntryName() const {
+  DCHECK(oldScmEntry_.hasValue() || newScmEntry_.hasValue());
   return oldScmEntry_.hasValue() ? oldScmEntry_.value().getName()
                                  : newScmEntry_.value().getName();
 }
@@ -272,16 +275,6 @@ bool CheckoutAction::ensureDataReady() noexcept {
 
 Future<Unit> CheckoutAction::doAction() {
   // All the data is ready and we're ready to go!
-  //
-  // Unfortunately there are a lot of combinations of cases to handle:
-  // - What's the status of the entry in the old source control tree?
-  //   (blob, tree, not present)
-  // - What's the desired status of the entry in the new source control tree?
-  //   (blob, tree, not present)
-  // - What's the current status of the inode in the file system?
-  //   (file, tree)
-  // - What type of checkout are we performing?
-  //   (merge, check-only, force)
 
   // Check for conflicts first.
   if (hasConflict() && !ctx_->forceUpdate()) {
@@ -289,6 +282,13 @@ Future<Unit> CheckoutAction::doAction() {
     return makeFuture();
   }
 
+  // Call TreeInode::checkoutUpdateEntry() to actually do the work.
+  //
+  // Note that we are moving most of our state into the checkoutUpdateEntry()
+  // arguments.  We have to be slightly careful here: getEntryName() returns a
+  // PathComponentPiece that is pointing into a PathComponent owned either by
+  // oldScmEntry_ or newScmEntry_.  Therefore don't move these scm entries,
+  // to make sure we don't invalidate the PathComponentPiece data.
   auto parent = inode_->getParent(ctx_->renameLock());
   return parent->checkoutUpdateEntry(
       ctx_,
@@ -296,7 +296,7 @@ Future<Unit> CheckoutAction::doAction() {
       std::move(inode_),
       std::move(oldTree_),
       std::move(newTree_),
-      std::move(newScmEntry_));
+      newScmEntry_);
 }
 
 bool CheckoutAction::hasConflict() {
