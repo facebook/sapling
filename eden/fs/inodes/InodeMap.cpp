@@ -16,7 +16,7 @@
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/ParentInodeInfo.h"
 #include "eden/fs/inodes/TreeInode.h"
-#include "eden/utils/Bug.h"
+#include "eden/fs/utils/Bug.h"
 
 using folly::Future;
 using folly::Promise;

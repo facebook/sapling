@@ -26,7 +26,7 @@
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/StoreResult.h"
-#include "eden/utils/PathFuncs.h"
+#include "eden/fs/utils/PathFuncs.h"
 
 using folly::ByteRange;
 using folly::Endian;

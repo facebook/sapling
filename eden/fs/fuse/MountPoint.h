@@ -12,7 +12,7 @@
 #include <condition_variable>
 #include <memory>
 #include <mutex>
-#include "eden/utils/PathFuncs.h"
+#include "eden/fs/utils/PathFuncs.h"
 
 struct stat;
 

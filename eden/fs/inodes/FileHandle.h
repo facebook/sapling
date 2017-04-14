@@ -8,8 +8,8 @@
  *
  */
 #pragma once
+#include "eden/fs/fuse/FileHandle.h"
 #include "eden/fs/inodes/InodePtr.h"
-#include "eden/fuse/FileHandle.h"
 
 namespace facebook {
 namespace eden {

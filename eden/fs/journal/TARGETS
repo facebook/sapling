@@ -4,7 +4,7 @@ cpp_library(
   headers = glob(['*.h']),
   deps = [
     '@/eden/fs/model:model',
-    '@/eden/utils:utils',
+    '@/eden/fs/utils:utils',
     '@/folly:folly',
   ],
   external_deps = [

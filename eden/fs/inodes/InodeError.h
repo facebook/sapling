@@ -15,7 +15,7 @@
 #include <memory>
 #include <system_error>
 #include "eden/fs/inodes/InodePtr.h"
-#include "eden/utils/PathFuncs.h"
+#include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook {
 namespace eden {

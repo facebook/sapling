@@ -11,9 +11,9 @@
 #include <folly/Optional.h>
 #include <folly/Range.h>
 #include "TreeInode.h"
-#include "eden/utils/DirType.h"
-#include "eden/utils/PathFuncs.h"
-#include "eden/utils/PathMap.h"
+#include "eden/fs/utils/DirType.h"
+#include "eden/fs/utils/PathFuncs.h"
+#include "eden/fs/utils/PathMap.h"
 
 namespace facebook {
 namespace eden {

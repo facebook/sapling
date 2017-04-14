@@ -18,6 +18,7 @@
 #include "EdenError.h"
 #include "EdenServer.h"
 #include "eden/fs/config/ClientConfig.h"
+#include "eden/fs/fuse/MountPoint.h"
 #include "eden/fs/inodes/Dirstate.h"
 #include "eden/fs/inodes/DirstatePersistence.h"
 #include "eden/fs/inodes/EdenDispatcher.h"
@@ -36,7 +37,6 @@
 #include "eden/fs/store/BlobMetadata.h"
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/ObjectStore.h"
-#include "eden/fuse/MountPoint.h"
 
 using std::make_unique;
 using std::string;

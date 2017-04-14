@@ -9,7 +9,7 @@
  */
 #pragma once
 #include "Channel.h"
-#include "eden/fuse/fuse_headers.h"
+#include "eden/fs/fuse/fuse_headers.h"
 
 namespace facebook {
 namespace eden {

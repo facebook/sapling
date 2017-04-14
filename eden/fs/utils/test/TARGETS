@@ -3,7 +3,7 @@ cpp_unittest(
   srcs = glob(['*Test.cpp']),
   deps = [
     ':test_lib',
-    '@/eden/utils:utils',
+    '@/eden/fs/utils:utils',
     '@/folly/experimental:test_util',
   ],
   external_deps = [

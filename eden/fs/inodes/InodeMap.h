@@ -15,9 +15,9 @@
 #include <memory>
 #include <unordered_map>
 
+#include "eden/fs/fuse/fuse_headers.h"
 #include "eden/fs/inodes/InodePtr.h"
-#include "eden/fuse/fuse_headers.h"
-#include "eden/utils/PathFuncs.h"
+#include "eden/fs/utils/PathFuncs.h"
 
 namespace folly {
 class exception_wrapper;

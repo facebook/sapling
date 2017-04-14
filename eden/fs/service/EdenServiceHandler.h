@@ -11,7 +11,7 @@
 
 #include "common/fb303/cpp/FacebookBase2.h"
 #include "eden/fs/service/gen-cpp2/StreamingEdenService.h"
-#include "eden/utils/PathFuncs.h"
+#include "eden/fs/utils/PathFuncs.h"
 
 namespace folly {
 template <typename T>

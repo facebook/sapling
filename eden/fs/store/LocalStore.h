@@ -14,7 +14,7 @@
 #include <folly/experimental/StringKeyedUnorderedSet.h>
 #include <memory>
 #include "eden/fs/store/BlobMetadata.h"
-#include "eden/utils/PathFuncs.h"
+#include "eden/fs/utils/PathFuncs.h"
 
 namespace folly {
 template <typename T>

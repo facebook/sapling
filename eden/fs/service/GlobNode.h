@@ -11,7 +11,7 @@
 #include <folly/futures/Future.h>
 #include "eden/fs/inodes/InodePtrFwd.h"
 #include "eden/fs/model/git/GlobMatcher.h"
-#include "eden/utils/PathFuncs.h"
+#include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook {
 namespace eden {

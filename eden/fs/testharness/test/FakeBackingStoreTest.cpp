@@ -15,8 +15,8 @@
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
 #include "eden/fs/testharness/TestUtil.h"
-#include "eden/utils/PathFuncs.h"
-#include "eden/utils/test/TestChecks.h"
+#include "eden/fs/utils/PathFuncs.h"
+#include "eden/fs/utils/test/TestChecks.h"
 
 using namespace facebook::eden;
 using folly::io::Cursor;

@@ -8,8 +8,8 @@
  *
  */
 #pragma once
+#include "eden/fs/fuse/Dispatcher.h"
 #include "eden/fs/inodes/InodePtr.h"
-#include "eden/fuse/Dispatcher.h"
 
 namespace facebook {
 namespace eden {

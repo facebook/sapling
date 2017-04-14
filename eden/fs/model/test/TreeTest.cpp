@@ -13,7 +13,7 @@
 #include <gtest/gtest.h>
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/TreeEntry.h"
-#include "eden/utils/PathFuncs.h"
+#include "eden/fs/utils/PathFuncs.h"
 
 using facebook::eden::Hash;
 using facebook::eden::FileType;

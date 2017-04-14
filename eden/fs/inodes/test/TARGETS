@@ -4,8 +4,8 @@ cpp_unittest(
   deps = [
     '@/eden/fs/inodes:inodes',
     '@/eden/fs/testharness:testharness',
-    '@/eden/utils:utils',
-    '@/eden/utils/test:test_lib',
+    '@/eden/fs/utils:utils',
+    '@/eden/fs/utils/test:test_lib',
     '@/folly/test:test_utils',
   ],
   external_deps = [

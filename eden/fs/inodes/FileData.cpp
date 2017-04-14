@@ -18,16 +18,16 @@
 #include <folly/io/IOBuf.h>
 #include <openssl/sha.h>
 #include "Overlay.h"
+#include "eden/fs/fuse/BufVec.h"
+#include "eden/fs/fuse/MountPoint.h"
+#include "eden/fs/fuse/fuse_headers.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/store/ObjectStore.h"
-#include "eden/fuse/BufVec.h"
-#include "eden/fuse/MountPoint.h"
-#include "eden/fuse/fuse_headers.h"
-#include "eden/utils/XAttr.h"
+#include "eden/fs/utils/XAttr.h"
 
 using folly::ByteRange;
 using folly::checkUnixError;

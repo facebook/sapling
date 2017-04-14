@@ -8,7 +8,7 @@
  *
  */
 #include <gtest/gtest.h>
-#include "eden/utils/PathMap.h"
+#include "eden/fs/utils/PathMap.h"
 
 using facebook::eden::PathMap;
 using facebook::eden::PathComponent;

@@ -15,11 +15,11 @@
 #include <memory>
 #include <mutex>
 #include <shared_mutex>
+#include "eden/fs/fuse/EdenStats.h"
+#include "eden/fs/fuse/fuse_headers.h"
 #include "eden/fs/inodes/InodePtrFwd.h"
 #include "eden/fs/journal/JournalDelta.h"
-#include "eden/fuse/EdenStats.h"
-#include "eden/fuse/fuse_headers.h"
-#include "eden/utils/PathFuncs.h"
+#include "eden/fs/utils/PathFuncs.h"
 
 namespace folly {
 template <typename T>

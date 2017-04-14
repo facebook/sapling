@@ -11,7 +11,7 @@
 
 #include <folly/Synchronized.h>
 #include "eden/fs/inodes/TreeInode.h"
-#include "eden/utils/PathFuncs.h"
+#include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook {
 namespace eden {

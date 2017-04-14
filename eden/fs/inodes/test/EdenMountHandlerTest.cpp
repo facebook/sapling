@@ -10,7 +10,7 @@
 #include "eden/fs/inodes/EdenMounts.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestMount.h"
-#include "eden/utils/PathFuncs.h"
+#include "eden/fs/utils/PathFuncs.h"
 
 #include <gtest/gtest.h>
 

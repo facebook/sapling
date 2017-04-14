@@ -15,6 +15,7 @@
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
 #include "eden/fs/config/ClientConfig.h"
+#include "eden/fs/fuse/MountPoint.h"
 #include "eden/fs/inodes/DirstatePersistence.h"
 #include "eden/fs/inodes/EdenDispatcher.h"
 #include "eden/fs/inodes/EdenMount.h"
@@ -30,7 +31,6 @@
 #include "eden/fs/model/git/GitIgnorePattern.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/store/ObjectStores.h"
-#include "eden/fuse/MountPoint.h"
 
 using folly::StringKeyedUnorderedMap;
 using folly::StringPiece;

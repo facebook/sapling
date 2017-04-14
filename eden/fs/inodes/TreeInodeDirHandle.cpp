@@ -12,7 +12,7 @@
 #include "Overlay.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/model/Tree.h"
-#include "eden/utils/DirType.h"
+#include "eden/fs/utils/DirType.h"
 
 namespace facebook {
 namespace eden {

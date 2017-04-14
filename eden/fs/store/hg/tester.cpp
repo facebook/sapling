@@ -15,7 +15,7 @@
 
 #include "HgImporter.h"
 #include "eden/fs/store/LocalStore.h"
-#include "eden/utils/PathFuncs.h"
+#include "eden/fs/utils/PathFuncs.h"
 
 DEFINE_string(edenDir, "", "The path to the .eden directory");
 DEFINE_string(rev, "", "The revision ID to import");

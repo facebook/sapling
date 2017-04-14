@@ -7,7 +7,7 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
-#include "eden/utils/PathFuncs.h"
+#include "eden/fs/utils/PathFuncs.h"
 
 #include <boost/functional/hash.hpp>
 #include <fcntl.h>
@@ -18,7 +18,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <sstream>
-#include "eden/utils/test/TestChecks.h"
+#include "eden/fs/utils/test/TestChecks.h"
 
 using facebook::eden::dirname;
 using facebook::eden::basename;

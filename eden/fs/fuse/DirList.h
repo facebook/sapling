@@ -10,7 +10,7 @@
 #pragma once
 #include <folly/Range.h>
 #include <sys/stat.h>
-#include "eden/utils/DirType.h"
+#include "eden/fs/utils/DirType.h"
 
 namespace facebook {
 namespace eden {

@@ -23,7 +23,7 @@
 #include "Dispatcher.h"
 #include "MountPoint.h"
 #include "SessionDeleter.h"
-#include "eden/fuse/privhelper/PrivHelper.h"
+#include "eden/fs/fuse/privhelper/PrivHelper.h"
 
 using namespace folly;
 

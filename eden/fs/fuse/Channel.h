@@ -9,8 +9,8 @@
  */
 #pragma once
 #include <folly/Range.h>
-#include "eden/fuse/fuse_headers.h"
-#include "eden/utils/PathFuncs.h"
+#include "eden/fs/fuse/fuse_headers.h"
+#include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook {
 namespace eden {

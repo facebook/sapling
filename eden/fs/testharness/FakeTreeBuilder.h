@@ -13,8 +13,8 @@
 #include <folly/Range.h>
 #include <memory>
 #include "eden/fs/model/TreeEntry.h"
-#include "eden/utils/PathFuncs.h"
-#include "eden/utils/PathMap.h"
+#include "eden/fs/utils/PathFuncs.h"
+#include "eden/fs/utils/PathMap.h"
 
 namespace facebook {
 namespace eden {

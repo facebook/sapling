@@ -20,7 +20,7 @@
 #include "eden/fs/inodes/InodePtr.h"
 #include "eden/fs/inodes/gen-cpp2/overlay_types.h"
 #include "eden/fs/model/TreeEntry.h"
-#include "eden/utils/PathFuncs.h"
+#include "eden/fs/utils/PathFuncs.h"
 
 namespace folly {
 template <typename T>

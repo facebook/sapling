@@ -11,7 +11,7 @@
 
 #include <gtest/gtest.h>
 #include "eden/fs/model/Hash.h"
-#include "eden/utils/test/TestChecks.h"
+#include "eden/fs/utils/test/TestChecks.h"
 
 using namespace facebook::eden;
 

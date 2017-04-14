@@ -3,7 +3,7 @@ cpp_unittest(
   srcs = glob(['*.cpp']),
   headers = glob(['*.h']),
   deps = [
-    '@/eden/fuse/privhelper:privhelper',
+    '@/eden/fs/fuse/privhelper:privhelper',
     '@/folly/experimental:test_util',
   ],
   external_deps = [

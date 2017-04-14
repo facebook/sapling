@@ -13,6 +13,9 @@
 #include <folly/FileUtil.h>
 #include <folly/futures/Future.h>
 #include <vector>
+#include "eden/fs/fuse/Channel.h"
+#include "eden/fs/fuse/MountPoint.h"
+#include "eden/fs/fuse/RequestData.h"
 #include "eden/fs/inodes/CheckoutAction.h"
 #include "eden/fs/inodes/CheckoutContext.h"
 #include "eden/fs/inodes/DeferredDiffEntry.h"
@@ -34,12 +37,9 @@
 #include "eden/fs/service/ThriftUtil.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/store/ObjectStore.h"
-#include "eden/fuse/Channel.h"
-#include "eden/fuse/MountPoint.h"
-#include "eden/fuse/RequestData.h"
-#include "eden/utils/Bug.h"
-#include "eden/utils/DirType.h"
-#include "eden/utils/PathFuncs.h"
+#include "eden/fs/utils/Bug.h"
+#include "eden/fs/utils/DirType.h"
+#include "eden/fs/utils/PathFuncs.h"
 
 using folly::Future;
 using folly::makeFuture;

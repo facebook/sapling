@@ -11,8 +11,8 @@
 #include <folly/ThreadLocal.h>
 #include <folly/futures/Future.h>
 #include <folly/io/async/Request.h>
-#include "eden/fuse/EdenStats.h"
-#include "eden/fuse/fuse_headers.h"
+#include "eden/fs/fuse/EdenStats.h"
+#include "eden/fs/fuse/fuse_headers.h"
 
 namespace facebook {
 namespace eden {

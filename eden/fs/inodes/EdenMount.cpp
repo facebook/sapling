@@ -14,6 +14,7 @@
 #include <glog/logging.h>
 
 #include "eden/fs/config/ClientConfig.h"
+#include "eden/fs/fuse/MountPoint.h"
 #include "eden/fs/inodes/CheckoutContext.h"
 #include "eden/fs/inodes/DiffContext.h"
 #include "eden/fs/inodes/Dirstate.h"
@@ -28,7 +29,6 @@
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/git/GitIgnoreStack.h"
 #include "eden/fs/store/ObjectStore.h"
-#include "eden/fuse/MountPoint.h"
 
 using std::make_unique;
 using std::unique_ptr;

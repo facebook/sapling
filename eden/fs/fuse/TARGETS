@@ -5,8 +5,8 @@ cpp_library(
   srcs = glob(['*.cpp']),
   headers = glob(['*.h']),
   deps = [
-    '@/eden/fuse/privhelper:privhelper',
-    '@/eden/utils:utils',
+    '@/eden/fs/fuse/privhelper:privhelper',
+    '@/eden/fs/utils:utils',
     '@/folly:folly',
     '@/folly:stats',
     '@/folly:synchronized',

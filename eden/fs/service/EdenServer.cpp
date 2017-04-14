@@ -20,14 +20,14 @@
 
 #include "EdenServiceHandler.h"
 #include "eden/fs/config/ClientConfig.h"
+#include "eden/fs/fuse/MountPoint.h"
+#include "eden/fs/fuse/privhelper/PrivHelper.h"
 #include "eden/fs/inodes/Dirstate.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/store/EmptyBackingStore.h"
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/git/GitBackingStore.h"
 #include "eden/fs/store/hg/HgBackingStore.h"
-#include "eden/fuse/MountPoint.h"
-#include "eden/fuse/privhelper/PrivHelper.h"
 
 DEFINE_bool(debug, false, "run fuse in debug mode");
 

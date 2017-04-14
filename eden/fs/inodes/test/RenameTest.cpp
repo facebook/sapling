@@ -19,8 +19,8 @@
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestMount.h"
 #include "eden/fs/testharness/TestUtil.h"
-#include "eden/utils/Bug.h"
-#include "eden/utils/test/TestChecks.h"
+#include "eden/fs/utils/Bug.h"
+#include "eden/fs/utils/test/TestChecks.h"
 
 using namespace facebook::eden;
 using folly::StringPiece;

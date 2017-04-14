@@ -19,7 +19,7 @@
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/store/BlobMetadata.h"
 #include "eden/fs/store/ObjectStore.h"
-#include "eden/utils/Bug.h"
+#include "eden/fs/utils/Bug.h"
 
 using folly::makeFuture;
 using folly::Future;

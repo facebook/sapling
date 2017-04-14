@@ -11,7 +11,7 @@
 #include <boost/property_tree/ini_parser.hpp>
 #include <folly/Optional.h>
 #include <folly/experimental/StringKeyedUnorderedMap.h>
-#include "eden/utils/PathFuncs.h"
+#include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook {
 namespace eden {

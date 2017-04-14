@@ -12,7 +12,7 @@
 #include <folly/Range.h>
 #include <folly/Subprocess.h>
 
-#include "eden/utils/PathFuncs.h"
+#include "eden/fs/utils/PathFuncs.h"
 
 namespace folly {
 class IOBuf;

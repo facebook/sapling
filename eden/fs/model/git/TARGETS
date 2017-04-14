@@ -32,7 +32,7 @@ cpp_library(
   ],
   deps = [
     ':glob',
-    '@/eden/utils:utils',
+    '@/eden/fs/utils:utils',
     '@/folly:folly',
   ],
 )

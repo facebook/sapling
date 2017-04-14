@@ -9,7 +9,7 @@
  */
 #pragma once
 
-#include "eden/fuse/privhelper/PrivHelperServer.h"
+#include "eden/fs/fuse/privhelper/PrivHelperServer.h"
 
 #include <folly/Range.h>
 

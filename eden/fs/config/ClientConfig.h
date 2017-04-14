@@ -14,7 +14,7 @@
 #include <folly/dynamic.h>
 #include "InterpolatedPropertyTree.h"
 #include "eden/fs/model/Hash.h"
-#include "eden/utils/PathFuncs.h"
+#include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook {
 namespace eden {

@@ -16,7 +16,7 @@
 #include <stdlib.h>
 #include <sysexits.h>
 #include "EdenServer.h"
-#include "eden/fuse/privhelper/PrivHelper.h"
+#include "eden/fs/fuse/privhelper/PrivHelper.h"
 
 DEFINE_bool(allowRoot, false, "Allow running eden directly as root");
 DEFINE_string(edenDir, "", "The path to the .eden directory");

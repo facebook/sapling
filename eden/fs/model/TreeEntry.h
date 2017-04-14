@@ -11,7 +11,7 @@
 
 #include "Hash.h"
 #include "TreeEntry.h"
-#include "eden/utils/PathFuncs.h"
+#include "eden/fs/utils/PathFuncs.h"
 
 #include <folly/String.h>
 #include <iosfwd>

@@ -11,7 +11,7 @@
 
 #include <vector>
 
-#include "eden/utils/PathFuncs.h"
+#include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook {
 namespace eden {

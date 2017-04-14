@@ -22,8 +22,8 @@
 #include <unordered_map>
 #include <vector>
 #include "eden/fs/config/InterpolatedPropertyTree.h"
-#include "eden/fuse/EdenStats.h"
-#include "eden/utils/PathFuncs.h"
+#include "eden/fs/fuse/EdenStats.h"
+#include "eden/fs/utils/PathFuncs.h"
 
 namespace apache {
 namespace thrift {

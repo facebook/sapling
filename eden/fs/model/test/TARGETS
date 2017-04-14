@@ -3,7 +3,7 @@ cpp_unittest(
   srcs = glob(['*Test.cpp']),
   deps = [
     '@/eden/fs/model:model',
-    '@/eden/utils:utils',
+    '@/eden/fs/utils:utils',
   ],
   external_deps = [
     ('googletest', None, 'gtest'),

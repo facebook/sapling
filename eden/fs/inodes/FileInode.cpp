@@ -18,7 +18,7 @@
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/store/ObjectStore.h"
-#include "eden/utils/XAttr.h"
+#include "eden/fs/utils/XAttr.h"
 
 using folly::checkUnixError;
 using folly::Future;

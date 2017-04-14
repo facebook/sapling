@@ -11,7 +11,7 @@
 
 #include <memory>
 #include "eden/fs/inodes/InodePtrFwd.h"
-#include "eden/utils/PathFuncs.h"
+#include "eden/fs/utils/PathFuncs.h"
 
 namespace folly {
 template <typename T>

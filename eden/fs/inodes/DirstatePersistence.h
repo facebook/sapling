@@ -11,7 +11,7 @@
 
 #include <unordered_map>
 #include "eden/fs/inodes/gen-cpp2/overlay_types.h"
-#include "eden/utils/PathFuncs.h"
+#include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook {
 namespace eden {

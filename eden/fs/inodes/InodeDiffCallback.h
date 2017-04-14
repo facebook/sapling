@@ -9,7 +9,7 @@
  */
 #pragma once
 
-#include "eden/utils/PathFuncs.h"
+#include "eden/fs/utils/PathFuncs.h"
 
 namespace folly {
 class exception_wrapper;

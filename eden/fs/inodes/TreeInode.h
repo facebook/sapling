@@ -13,7 +13,7 @@
 #include <folly/Synchronized.h>
 #include "eden/fs/inodes/InodeBase.h"
 #include "eden/fs/model/Hash.h"
-#include "eden/utils/PathMap.h"
+#include "eden/fs/utils/PathMap.h"
 
 namespace facebook {
 namespace eden {

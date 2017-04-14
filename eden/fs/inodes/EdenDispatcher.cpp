@@ -19,10 +19,10 @@
 #include "FileInode.h"
 #include "InodeMap.h"
 #include "TreeInode.h"
-#include "eden/fuse/Channel.h"
-#include "eden/fuse/DirHandle.h"
-#include "eden/fuse/FileHandle.h"
-#include "eden/fuse/RequestData.h"
+#include "eden/fs/fuse/Channel.h"
+#include "eden/fs/fuse/DirHandle.h"
+#include "eden/fs/fuse/FileHandle.h"
+#include "eden/fs/fuse/RequestData.h"
 
 using namespace folly;
 using facebook::eden::PathComponentPiece;

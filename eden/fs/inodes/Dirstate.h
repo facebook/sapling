@@ -14,7 +14,7 @@
 #include "eden/fs/inodes/gen-cpp2/overlay_types.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/service/gen-cpp2/EdenService.h"
-#include "eden/utils/PathFuncs.h"
+#include "eden/fs/utils/PathFuncs.h"
 
 namespace {
 class DirectoryDelta;

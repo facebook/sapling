@@ -14,10 +14,10 @@
 #include <folly/Range.h>
 #include <folly/ThreadLocal.h>
 #include <folly/futures/Future.h>
-#include "eden/fuse/EdenStats.h"
-#include "eden/fuse/FileHandleMap.h"
-#include "eden/fuse/fuse_headers.h"
-#include "eden/utils/PathFuncs.h"
+#include "eden/fs/fuse/EdenStats.h"
+#include "eden/fs/fuse/FileHandleMap.h"
+#include "eden/fs/fuse/fuse_headers.h"
+#include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook {
 namespace eden {

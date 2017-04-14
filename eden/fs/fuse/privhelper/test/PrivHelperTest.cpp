@@ -8,8 +8,8 @@
  *
  */
 #include "PrivHelperTestServer.h"
-#include "eden/fuse/privhelper/PrivHelper.h"
-#include "eden/fuse/privhelper/PrivHelperConn.h"
+#include "eden/fs/fuse/privhelper/PrivHelper.h"
+#include "eden/fs/fuse/privhelper/PrivHelperConn.h"
 
 #include <boost/filesystem.hpp>
 #include <folly/Exception.h>

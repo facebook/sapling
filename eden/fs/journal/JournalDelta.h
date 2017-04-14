@@ -13,7 +13,7 @@
 #include <chrono>
 #include <unordered_set>
 #include "eden/fs/model/Hash.h"
-#include "eden/utils/PathFuncs.h"
+#include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook {
 namespace eden {

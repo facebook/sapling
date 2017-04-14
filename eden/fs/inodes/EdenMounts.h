@@ -11,7 +11,7 @@
 
 #include <memory>
 #include <vector>
-#include "eden/utils/PathFuncs.h"
+#include "eden/fs/utils/PathFuncs.h"
 
 /**
  * Utility functions for use with various members of EdenMount.
