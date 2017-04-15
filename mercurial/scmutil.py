@@ -142,7 +142,11 @@ def callcatch(ui, func):
     and return an exit code accordingly. does not handle all exceptions.
     """
     try:
-        return func()
+        try:
+            return func()
+        except: # re-raises
+            ui.traceback()
+            raise
     # Global exception handling, alphabetically
     # Mercurial-specific first, followed by built-in and library exceptions
     except error.LockHeld as inst:

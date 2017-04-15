@@ -255,7 +255,6 @@ def _runcatch(req):
             if '--debugger' in req.args:
                 traceback.print_exc()
                 debugmortem[debugger](sys.exc_info()[2])
-            ui.traceback()
             raise
 
     return _callcatch(ui, _runcatchfunc)
