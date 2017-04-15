@@ -184,6 +184,7 @@ Show the options for the "serve" command
   --repository
   --stdio
   --style
+  --subrepos
   --templates
   --time
   --traceback
@@ -194,6 +195,7 @@ Show the options for the "serve" command
   -A
   -E
   -R
+  -S
   -a
   -d
   -h
@@ -225,7 +227,7 @@ Show all commands + options
   pull: update, force, rev, bookmark, branch, ssh, remotecmd, insecure
   push: force, rev, bookmark, branch, new-branch, ssh, remotecmd, insecure
   remove: after, force, subrepos, include, exclude
-  serve: accesslog, daemon, daemon-postexec, errorlog, port, address, prefix, name, web-conf, webdir-conf, pid-file, stdio, cmdserver, templates, style, ipv6, certificate
+  serve: accesslog, daemon, daemon-postexec, errorlog, port, address, prefix, name, web-conf, webdir-conf, pid-file, stdio, cmdserver, templates, style, ipv6, certificate, subrepos
   status: all, modified, added, removed, deleted, clean, unknown, ignored, no-status, copies, print0, rev, change, include, exclude, subrepos, template
   summary: remote
   update: clean, check, merge, date, rev, tool

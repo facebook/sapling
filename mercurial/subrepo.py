@@ -444,6 +444,15 @@ class abstractsubrepo(object):
         self._ctx = ctx
         self._path = path
 
+    def addwebdirpath(self, serverpath, webconf):
+        """Add the hgwebdir entries for this subrepo, and any of its subrepos.
+
+        ``serverpath`` is the path component of the URL for this repo.
+
+        ``webconf`` is the dictionary of hgwebdir entries.
+        """
+        pass
+
     def storeclean(self, path):
         """
         returns true if the repository has not changed since it was last
@@ -650,6 +659,10 @@ class hgsubrepo(abstractsubrepo):
         # internal config: ui._usedassubrepo
         self.ui.setconfig('ui', '_usedassubrepo', 'True', 'subrepo')
         self._initrepo(r, state[0], create)
+
+    @annotatesubrepoerror
+    def addwebdirpath(self, serverpath, webconf):
+        cmdutil.addwebdirpath(self._repo, subrelpath(self), webconf)
 
     def storeclean(self, path):
         with self._repo.lock():

@@ -2290,6 +2290,15 @@ def add(ui, repo, match, prefix, explicitonly, **opts):
         bad.extend(f for f in rejected if f in match.files())
     return bad
 
+def addwebdirpath(repo, serverpath, webconf):
+    webconf[serverpath] = repo.root
+    repo.ui.debug('adding %s = %s\n' % (serverpath, repo.root))
+
+    for r in repo.revs('filelog("path:.hgsub")'):
+        ctx = repo[r]
+        for subpath in ctx.substate:
+            ctx.sub(subpath).addwebdirpath(serverpath, webconf)
+
 def forget(ui, repo, match, prefix, explicitonly):
     join = lambda f: os.path.join(prefix, f)
     bad = []
