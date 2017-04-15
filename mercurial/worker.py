@@ -159,7 +159,7 @@ def _posixworker(ui, func, staticargs, args):
                 os._exit(255)
             except: # never return, therefore no re-raises
                 try:
-                    ui.traceback()
+                    ui.traceback(force=True)
                     ui.flush()
                 finally:
                     os._exit(255)

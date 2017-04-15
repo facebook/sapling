@@ -13,12 +13,18 @@ Test UI worker interaction
   >         # by first worker for test stability
   >         raise error.Abort('known exception')
   >     return runme(ui, [])
+  > def exc(ui, args):
+  >     if args[0] == 0:
+  >         # by first worker for test stability
+  >         raise Exception('unknown exception')
+  >     return runme(ui, [])
   > def runme(ui, args):
   >     for arg in args:
   >         ui.status('run\n')
   >         yield 1, arg
   > functable = {
   >     'abort': abort,
+  >     'exc': exc,
   >     'runme': runme,
   > }
   > cmdtable = {}
@@ -75,4 +81,10 @@ Known exception should be caught, but printed if --traceback is enabled
   $ hg --config "extensions.t=$abspath" --config 'worker.numcpus=2' \
   > test 100000.0 abort --traceback 2>&1 | grep '^Traceback'
   Traceback (most recent call last):
+  Traceback (most recent call last):
+
+Traceback must be printed for unknown exceptions
+
+  $ hg --config "extensions.t=$abspath" --config 'worker.numcpus=2' \
+  > test 100000.0 exc 2>&1 | grep '^Traceback'
   Traceback (most recent call last):
