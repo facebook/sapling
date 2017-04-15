@@ -509,7 +509,7 @@ when they should.
   16: baz:0
   19: baz:3
   20: baz:4
-  $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 3:5, descend=True, startrev=19)'
+  $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 3:5, descend=true, startrev=19)'
   19: baz:3
   20: baz:4
   $ echo 6 >> baz
@@ -518,13 +518,13 @@ when they should.
   16: baz:0
   19: baz:3
   20: baz:4
-  $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 3:5, startrev=19, descend=True)'
+  $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 3:5, startrev=19, descend=1)'
   19: baz:3
   20: baz:4
   $ sed 's/3/3+/' baz > baz.new
   $ mv baz.new baz
   $ hg ci -m 'baz:3->3+'
-  $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 5:7)'
+  $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 5:7, descend=0)'
   16: baz:0
   19: baz:3
   20: baz:4
@@ -533,7 +533,7 @@ when they should.
   19: baz:3
   20: baz:4
   23: baz:3->3+
-  $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 1:2)'
+  $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 1:2, descend=false)'
   21: added two lines with 0
 
 file patterns are okay
@@ -661,6 +661,12 @@ check error cases
   [255]
   $ hg log -r 'followlines(baz, 2:40)'
   abort: line range exceeds file size
+  [255]
+  $ hg log -r 'followlines(baz, 2:4, startrev=20, descend=[1])'
+  hg: parse error at 43: syntax error in revset 'followlines(baz, 2:4, startrev=20, descend=[1])'
+  [255]
+  $ hg log -r 'followlines(baz, 2:4, startrev=20, descend=a)'
+  hg: parse error: 'descend' argument must be a boolean
   [255]
 
 Test annotate with whitespace options

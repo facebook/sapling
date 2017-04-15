@@ -32,6 +32,7 @@ from . import (
 getsymbol = revsetlang.getsymbol
 getstring = revsetlang.getstring
 getinteger = revsetlang.getinteger
+getboolean = revsetlang.getboolean
 getlist = revsetlang.getlist
 getrange = revsetlang.getrange
 getargs = revsetlang.getargs
@@ -944,7 +945,11 @@ def followlines(repo, subset, x):
     fromline, toline = util.processlinerange(fromline, toline)
 
     fctx = repo[rev].filectx(fname)
-    if args.get('descend', False):
+    descend = False
+    if 'descend' in args:
+        descend = getboolean(args['descend'],
+                             _("'descend' argument must be a boolean"))
+    if descend:
         rs = generatorset(
             (c.rev() for c, _linerange
              in context.blockdescendants(fctx, fromline, toline)),
