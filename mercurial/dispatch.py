@@ -258,9 +258,9 @@ def _runcatch(req):
             ui.traceback()
             raise
 
-    return callcatch(ui, _runcatchfunc)
+    return _callcatch(ui, _runcatchfunc)
 
-def callcatch(ui, func):
+def _callcatch(ui, func):
     """like scmutil.callcatch but handles more high-level exceptions about
     config parsing and commands. besides, use handlecommandexception to handle
     uncaught exceptions.
