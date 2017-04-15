@@ -144,13 +144,15 @@ def _posixworker(ui, func, staticargs, args):
                 os.close(rfd)
                 for i, item in func(*(staticargs + (pargs,))):
                     os.write(wfd, '%d %s\n' % (i, item))
+                return 0
 
             # make sure we use os._exit in all code paths. otherwise the worker
             # may do some clean-ups which could cause surprises like deadlock.
             # see sshpeer.cleanup for example.
+            ret = 0
             try:
                 try:
-                    scmutil.callcatch(ui, workerfunc)
+                    ret = scmutil.callcatch(ui, workerfunc)
                 finally:
                     ui.flush()
             except KeyboardInterrupt:
@@ -162,7 +164,7 @@ def _posixworker(ui, func, staticargs, args):
                 finally:
                     os._exit(255)
             else:
-                os._exit(0)
+                os._exit(ret & 255)
         pids.add(pid)
     os.close(wfd)
     fp = os.fdopen(rfd, pycompat.sysstr('rb'), 0)

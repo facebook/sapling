@@ -70,8 +70,9 @@ Known exception should be caught, but printed if --traceback is enabled
   > test 100000.0 abort
   start
   abort: known exception
-  done
+  [255]
 
   $ hg --config "extensions.t=$abspath" --config 'worker.numcpus=2' \
   > test 100000.0 abort --traceback 2>&1 | grep '^Traceback'
+  Traceback (most recent call last):
   Traceback (most recent call last):
