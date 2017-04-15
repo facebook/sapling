@@ -3894,6 +3894,11 @@ Test splitlines
   o  foo line 1
      foo line 2
 
+  $ hg log -R a -r0 -T '{desc|splitlines}\n'
+  line 1 line 2
+  $ hg log -R a -r0 -T '{join(desc|splitlines, "|")}\n'
+  line 1|line 2
+
 Test startswith
   $ hg log -Gv -R a --template "{startswith(desc)}"
   hg: parse error: startswith expects two arguments
