@@ -7,8 +7,11 @@
 
 from __future__ import absolute_import
 
+import functools
+
 from .i18n import _
 from .node import (
+    hex,
     nullid,
     short,
 )
@@ -17,7 +20,6 @@ from . import (
     bookmarks,
     branchmap,
     error,
-    obsolete,
     phases,
     setdiscovery,
     treediscovery,
@@ -413,38 +415,105 @@ def checkheads(pushop):
 def _postprocessobsolete(pushop, futurecommon, candidate_newhs):
     """post process the list of new heads with obsolescence information
 
-    Exists as a subfunction to contain the complexity and allow extensions to
+    Exists as a sub-function to contain the complexity and allow extensions to
     experiment with smarter logic.
+
     Returns (newheads, discarded_heads) tuple
     """
-    # remove future heads which are actually obsoleted by another
-    # pushed element:
+    # known issue
     #
-    # XXX as above, There are several cases this code does not handle
-    # XXX properly
+    # * We "silently" skip processing on all changeset unknown locally
     #
-    # (1) if <nh> is public, it won't be affected by obsolete marker
-    #     and a new is created
-    #
-    # (2) if the new heads have ancestors which are not obsolete and
-    #     not ancestors of any other heads we will have a new head too.
-    #
-    # These two cases will be easy to handle for known changeset but
-    # much more tricky for unsynced changes.
-    #
-    # In addition, this code is confused by prune as it only looks for
-    # successors of the heads (none if pruned) leading to issue4354
+    # * if <nh> is public on the remote, it won't be affected by obsolete
+    #     marker and a new is created
+
+    # define various utilities and containers
     repo = pushop.repo
-    newhs = set()
-    discarded = set()
-    for nh in candidate_newhs:
-        if nh in repo and repo[nh].phase() <= phases.public:
+    unfi = repo.unfiltered()
+    tonode = unfi.changelog.node
+    public = phases.public
+    getphase = unfi._phasecache.phase
+    ispublic = (lambda r: getphase(unfi, r) == public)
+    hasoutmarker = functools.partial(pushingmarkerfor, unfi.obsstore,
+                                     futurecommon)
+    successorsmarkers = unfi.obsstore.successors
+    newhs = set() # final set of new heads
+    discarded = set() # new head of fully replaced branch
+
+    localcandidate = set() # candidate heads known locally
+    unknownheads = set() # candidate heads unknown locally
+    for h in candidate_newhs:
+        if h in unfi:
+            localcandidate.add(h)
+        else:
+            if successorsmarkers.get(h) is not None:
+                msg = ('checkheads: remote head unknown locally has'
+                       ' local marker: %s\n')
+                repo.ui.debug(msg % hex(h))
+            unknownheads.add(h)
+
+    # fast path the simple case
+    if len(localcandidate) == 1:
+        return unknownheads | set(candidate_newhs), set()
+
+    # actually process branch replacement
+    while localcandidate:
+        nh = localcandidate.pop()
+        # run this check early to skip the evaluation of the whole branch
+        if (nh in futurecommon
+                or unfi[nh].phase() <= public):
+            newhs.add(nh)
+            continue
+
+        # Get all revs/nodes on the branch exclusive to this head
+        # (already filtered heads are "ignored"))
+        branchrevs = unfi.revs('only(%n, (%ln+%ln))',
+                               nh, localcandidate, newhs)
+        branchnodes = [tonode(r) for r in branchrevs]
+
+        # The branch won't be hidden on the remote if
+        # * any part of it is public,
+        # * any part of it is considered part of the result by previous logic,
+        # * if we have no markers to push to obsolete it.
+        if (any(ispublic(r) for r in branchrevs)
+                or any(n in futurecommon for n in branchnodes)
+                or any(not hasoutmarker(n) for n in branchnodes)):
             newhs.add(nh)
         else:
-            for suc in obsolete.allsuccessors(repo.obsstore, [nh]):
-                if suc != nh and suc in futurecommon:
-                    discarded.add(nh)
-                    break
-            else:
-                newhs.add(nh)
+            # note: there is a corner case if there is a merge in the branch.
+            # we might end up with -more- heads.  However, these heads are not
+            # "added" by the push, but more by the "removal" on the remote so I
+            # think is a okay to ignore them,
+            discarded.add(nh)
+    newhs |= unknownheads
     return newhs, discarded
+
+def pushingmarkerfor(obsstore, pushset, node):
+    """true if some markers are to be pushed for node
+
+    We cannot just look in to the pushed obsmarkers from the pushop because
+    discovery might have filtered relevant markers. In addition listing all
+    markers relevant to all changesets in the pushed set would be too expensive
+    (O(len(repo)))
+
+    (note: There are cache opportunity in this function. but it would requires
+    a two dimensional stack.)
+    """
+    successorsmarkers = obsstore.successors
+    stack = [node]
+    seen = set(stack)
+    while stack:
+        current = stack.pop()
+        if current in pushset:
+            return True
+        markers = successorsmarkers.get(current, ())
+        # markers fields = ('prec', 'succs', 'flag', 'meta', 'date', 'parents')
+        for m in markers:
+            nexts = m[1] # successors
+            if not nexts: # this is a prune marker
+                nexts = m[5] # parents
+            for n in nexts:
+                if n not in seen:
+                    seen.add(n)
+                    stack.append(n)
+    return False
