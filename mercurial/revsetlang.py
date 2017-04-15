@@ -199,6 +199,12 @@ def getinteger(x, err, default=_notset):
     except ValueError:
         raise error.ParseError(err)
 
+def getboolean(x, err):
+    value = util.parsebool(getsymbol(x))
+    if value is not None:
+        return value
+    raise error.ParseError(err)
+
 def getlist(x):
     if not x:
         return []
