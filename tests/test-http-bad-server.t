@@ -688,7 +688,8 @@ Server stops sending after bundle2 part header
   adding changesets
   transaction abort!
   rollback completed
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  abort: HTTP request error (incomplete response)
+  (this may be an intermittent network failure; if the error persists, consider contacting the network or server operator)
   [255]
 
   $ killdaemons.py $DAEMON_PIDS
@@ -717,7 +718,8 @@ Server stops after bundle2 part payload chunk size
   adding changesets
   transaction abort!
   rollback completed
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  abort: HTTP request error (incomplete response)
+  (this may be an intermittent network failure; if the error persists, consider contacting the network or server operator)
   [255]
 
   $ killdaemons.py $DAEMON_PIDS
@@ -747,7 +749,8 @@ Server stops sending in middle of bundle2 payload chunk
   adding changesets
   transaction abort!
   rollback completed
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  abort: HTTP request error (incomplete response)
+  (this may be an intermittent network failure; if the error persists, consider contacting the network or server operator)
   [255]
 
   $ killdaemons.py $DAEMON_PIDS

@@ -354,9 +354,19 @@ def processbundle(repo, unbundler, transactiongetter=None, op=None):
         for nbpart, part in iterparts:
             _processpart(op, part)
     except Exception as exc:
-        for nbpart, part in iterparts:
-            # consume the bundle content
-            part.seek(0, 2)
+        # Any exceptions seeking to the end of the bundle at this point are
+        # almost certainly related to the underlying stream being bad.
+        # And, chances are that the exception we're handling is related to
+        # getting in that bad state. So, we swallow the seeking error and
+        # re-raise the original error.
+        seekerror = False
+        try:
+            for nbpart, part in iterparts:
+                # consume the bundle content
+                part.seek(0, 2)
+        except Exception:
+            seekerror = True
+
         # Small hack to let caller code distinguish exceptions from bundle2
         # processing from processing the old format. This is mostly
         # needed to handle different return codes to unbundle according to the
@@ -370,7 +380,13 @@ def processbundle(repo, unbundler, transactiongetter=None, op=None):
             replycaps = op.reply.capabilities
         exc._replycaps = replycaps
         exc._bundle2salvagedoutput = salvaged
-        raise
+
+        # Re-raising from a variable loses the original stack. So only use
+        # that form if we need to.
+        if seekerror:
+            raise exc
+        else:
+            raise
     finally:
         repo.ui.debug('bundle2-input-bundle: %i parts total\n' % nbpart)
 
