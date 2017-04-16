@@ -218,7 +218,9 @@ class httppeer(wireproto.wirepeer):
                 headers[header] = value
                 varyheaders.append(header)
 
-        headers['Vary'] = ','.join(varyheaders)
+        if varyheaders:
+            headers['Vary'] = ','.join(varyheaders)
+
         req = self.requestbuilder(cu, data, headers)
 
         if data is not None:

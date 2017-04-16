@@ -104,11 +104,10 @@ Failure on subsequent HTTP request on the same socket (cmd?batch)
   $ cat error.log
   readline(210 from 65537) -> (33) GET /?cmd=capabilities HTTP/1.1\r\n
   readline(177 from -1) -> (27) Accept-Encoding: identity\r\n
-  readline(150 from -1) -> (8) vary: \r\n
-  readline(142 from -1) -> (35) accept: application/mercurial-0.1\r\n
-  readline(107 from -1) -> (23) host: localhost:$HGPORT\r\n
-  readline(84 from -1) -> (49) user-agent: mercurial/proto-1.0 (Mercurial 4.2)\r\n
-  readline(35 from -1) -> (2) \r\n
+  readline(150 from -1) -> (35) accept: application/mercurial-0.1\r\n
+  readline(115 from -1) -> (23) host: localhost:$HGPORT\r\n
+  readline(92 from -1) -> (49) user-agent: mercurial/proto-1.0 (Mercurial 4.2)\r\n
+  readline(43 from -1) -> (2) \r\n
   write(36) -> HTTP/1.1 200 Script output follows\r\n
   write(23) -> Server: badhttpserver\r\n
   write(37) -> Date: Fri, 14 Apr 2017 00:00:00 GMT\r\n
@@ -116,8 +115,8 @@ Failure on subsequent HTTP request on the same socket (cmd?batch)
   write(21) -> Content-Length: 405\r\n
   write(2) -> \r\n
   write(405) -> lookup changegroupsubset branchmap pushkey known getbundle unbundlehash batch streamreqs=generaldelta,revlogv1 bundle2=HG20%0Achangegroup%3D01%2C02%0Adigests%3Dmd5%2Csha1%2Csha512%0Aerror%3Dabort%2Cunsupportedcontent%2Cpushraced%2Cpushkey%0Ahgtagsfnodes%0Alistkeys%0Apushkey%0Aremote-changegroup%3Dhttp%2Chttps unbundle=HG10GZ,HG10BZ,HG10UN httpheader=1024 httpmediatype=0.1rx,0.1tx,0.2tx compression=none
-  readline(33 from 65537) -> (26) GET /?cmd=batch HTTP/1.1\r\n
-  readline(7 from -1) -> (7) Accept-
+  readline(41 from 65537) -> (26) GET /?cmd=batch HTTP/1.1\r\n
+  readline(15 from -1) -> (15) Accept-Encoding
   read limit reached; closing socket
   readline(210 from 65537) -> (26) GET /?cmd=batch HTTP/1.1\r\n
   readline(184 from -1) -> (27) Accept-Encoding: identity\r\n
@@ -132,7 +131,7 @@ Failure on subsequent HTTP request on the same socket (cmd?batch)
 
 Failure to read getbundle HTTP request
 
-  $ hg --config badserver.closeafterrecvbytes=300 serve -p $HGPORT -d --pid-file=hg.pid -E error.log
+  $ hg --config badserver.closeafterrecvbytes=292 serve -p $HGPORT -d --pid-file=hg.pid -E error.log
   $ cat hg.pid > $DAEMON_PIDS
   $ hg clone http://localhost:$HGPORT/ clone
   requesting all changes
@@ -142,9 +141,8 @@ Failure to read getbundle HTTP request
   $ killdaemons.py $DAEMON_PIDS
 
   $ cat error.log
-  readline(300 from 65537) -> (33) GET /?cmd=capabilities HTTP/1.1\r\n
-  readline(267 from -1) -> (27) Accept-Encoding: identity\r\n
-  readline(240 from -1) -> (8) vary: \r\n
+  readline(292 from 65537) -> (33) GET /?cmd=capabilities HTTP/1.1\r\n
+  readline(259 from -1) -> (27) Accept-Encoding: identity\r\n
   readline(232 from -1) -> (35) accept: application/mercurial-0.1\r\n
   readline(197 from -1) -> (23) host: localhost:$HGPORT\r\n
   readline(174 from -1) -> (49) user-agent: mercurial/proto-1.0 (Mercurial 4.2)\r\n
@@ -161,15 +159,15 @@ Failure to read getbundle HTTP request
   readline(70 from -1) -> (29) vary: X-HgArg-1,X-HgProto-1\r\n
   readline(41 from -1) -> (41) x-hgarg-1: cmds=heads+%3Bknown+nodes%3D\r\n
   read limit reached; closing socket
-  readline(300 from 65537) -> (26) GET /?cmd=batch HTTP/1.1\r\n
-  readline(274 from -1) -> (27) Accept-Encoding: identity\r\n
-  readline(247 from -1) -> (29) vary: X-HgArg-1,X-HgProto-1\r\n
-  readline(218 from -1) -> (41) x-hgarg-1: cmds=heads+%3Bknown+nodes%3D\r\n
-  readline(177 from -1) -> (48) x-hgproto-1: 0.1 0.2 comp=zstd,zlib,none,bzip2\r\n
-  readline(129 from -1) -> (35) accept: application/mercurial-0.1\r\n
-  readline(94 from -1) -> (23) host: localhost:$HGPORT\r\n
-  readline(71 from -1) -> (49) user-agent: mercurial/proto-1.0 (Mercurial 4.2)\r\n
-  readline(22 from -1) -> (2) \r\n
+  readline(292 from 65537) -> (26) GET /?cmd=batch HTTP/1.1\r\n
+  readline(266 from -1) -> (27) Accept-Encoding: identity\r\n
+  readline(239 from -1) -> (29) vary: X-HgArg-1,X-HgProto-1\r\n
+  readline(210 from -1) -> (41) x-hgarg-1: cmds=heads+%3Bknown+nodes%3D\r\n
+  readline(169 from -1) -> (48) x-hgproto-1: 0.1 0.2 comp=zstd,zlib,none,bzip2\r\n
+  readline(121 from -1) -> (35) accept: application/mercurial-0.1\r\n
+  readline(86 from -1) -> (23) host: localhost:$HGPORT\r\n
+  readline(63 from -1) -> (49) user-agent: mercurial/proto-1.0 (Mercurial 4.2)\r\n
+  readline(14 from -1) -> (2) \r\n
   write(36) -> HTTP/1.1 200 Script output follows\r\n
   write(23) -> Server: badhttpserver\r\n
   write(37) -> Date: Fri, 14 Apr 2017 00:00:00 GMT\r\n
@@ -177,12 +175,12 @@ Failure to read getbundle HTTP request
   write(20) -> Content-Length: 42\r\n
   write(2) -> \r\n
   write(42) -> 96ee1d7354c4ad7372047672c36a1f561e3a6a4c\n;
-  readline(20 from 65537) -> (20) GET /?cmd=getbundle 
+  readline(12 from 65537) -> (12) GET /?cmd=ge
   read limit reached; closing socket
-  readline(300 from 65537) -> (30) GET /?cmd=getbundle HTTP/1.1\r\n
-  readline(270 from -1) -> (27) Accept-Encoding: identity\r\n
-  readline(243 from -1) -> (29) vary: X-HgArg-1,X-HgProto-1\r\n
-  readline(214 from -1) -> (214) x-hgarg-1: bundlecaps=HG20%2Cbundle2%3DHG20%250Achangegroup%253D01%252C02%250Adigests%253Dmd5%252Csha1%252Csha512%250Aerror%253Dabort%252Cunsupportedcontent%252Cpushraced%252Cpushkey%250Ahgtagsfnodes%250Alistkeys%2
+  readline(292 from 65537) -> (30) GET /?cmd=getbundle HTTP/1.1\r\n
+  readline(262 from -1) -> (27) Accept-Encoding: identity\r\n
+  readline(235 from -1) -> (29) vary: X-HgArg-1,X-HgProto-1\r\n
+  readline(206 from -1) -> (206) x-hgarg-1: bundlecaps=HG20%2Cbundle2%3DHG20%250Achangegroup%253D01%252C02%250Adigests%253Dmd5%252Csha1%252Csha512%250Aerror%253Dabort%252Cunsupportedcontent%252Cpushraced%252Cpushkey%250Ahgtagsfnodes%250Ali
   read limit reached; closing socket
 
   $ rm -f error.log
@@ -201,11 +199,10 @@ Now do a variation using POST to send arguments
   $ cat error.log
   readline(315 from 65537) -> (33) GET /?cmd=capabilities HTTP/1.1\r\n
   readline(282 from -1) -> (27) Accept-Encoding: identity\r\n
-  readline(255 from -1) -> (8) vary: \r\n
-  readline(247 from -1) -> (35) accept: application/mercurial-0.1\r\n
-  readline(212 from -1) -> (23) host: localhost:$HGPORT\r\n
-  readline(189 from -1) -> (49) user-agent: mercurial/proto-1.0 (Mercurial 4.2)\r\n
-  readline(140 from -1) -> (2) \r\n
+  readline(255 from -1) -> (35) accept: application/mercurial-0.1\r\n
+  readline(220 from -1) -> (23) host: localhost:$HGPORT\r\n
+  readline(197 from -1) -> (49) user-agent: mercurial/proto-1.0 (Mercurial 4.2)\r\n
+  readline(148 from -1) -> (2) \r\n
   write(36) -> HTTP/1.1 200 Script output follows\r\n
   write(23) -> Server: badhttpserver\r\n
   write(37) -> Date: Fri, 14 Apr 2017 00:00:00 GMT\r\n
@@ -213,12 +210,12 @@ Now do a variation using POST to send arguments
   write(21) -> Content-Length: 418\r\n
   write(2) -> \r\n
   write(418) -> lookup changegroupsubset branchmap pushkey known getbundle unbundlehash batch streamreqs=generaldelta,revlogv1 bundle2=HG20%0Achangegroup%3D01%2C02%0Adigests%3Dmd5%2Csha1%2Csha512%0Aerror%3Dabort%2Cunsupportedcontent%2Cpushraced%2Cpushkey%0Ahgtagsfnodes%0Alistkeys%0Apushkey%0Aremote-changegroup%3Dhttp%2Chttps unbundle=HG10GZ,HG10BZ,HG10UN httpheader=1024 httppostargs httpmediatype=0.1rx,0.1tx,0.2tx compression=none
-  readline(138 from 65537) -> (27) POST /?cmd=batch HTTP/1.1\r\n
-  readline(111 from -1) -> (27) Accept-Encoding: identity\r\n
-  readline(84 from -1) -> (41) content-type: application/mercurial-0.1\r\n
-  readline(43 from -1) -> (19) vary: X-HgProto-1\r\n
-  readline(24 from -1) -> (19) x-hgargs-post: 28\r\n
-  readline(5 from -1) -> (5) x-hgp
+  readline(146 from 65537) -> (27) POST /?cmd=batch HTTP/1.1\r\n
+  readline(119 from -1) -> (27) Accept-Encoding: identity\r\n
+  readline(92 from -1) -> (41) content-type: application/mercurial-0.1\r\n
+  readline(51 from -1) -> (19) vary: X-HgProto-1\r\n
+  readline(32 from -1) -> (19) x-hgargs-post: 28\r\n
+  readline(13 from -1) -> (13) x-hgproto-1: 
   read limit reached; closing socket
   readline(315 from 65537) -> (27) POST /?cmd=batch HTTP/1.1\r\n
   readline(288 from -1) -> (27) Accept-Encoding: identity\r\n
@@ -253,7 +250,6 @@ Server sends a single character from the HTTP response line
   $ cat error.log
   readline(65537) -> (33) GET /?cmd=capabilities HTTP/1.1\r\n
   readline(-1) -> (27) Accept-Encoding: identity\r\n
-  readline(-1) -> (8) vary: \r\n
   readline(-1) -> (35) accept: application/mercurial-0.1\r\n
   readline(-1) -> (23) host: localhost:$HGPORT\r\n
   readline(-1) -> (49) user-agent: mercurial/proto-1.0 (Mercurial 4.2)\r\n
@@ -279,7 +275,6 @@ Server sends an incomplete capabilities response body
   $ cat error.log
   readline(65537) -> (33) GET /?cmd=capabilities HTTP/1.1\r\n
   readline(-1) -> (27) Accept-Encoding: identity\r\n
-  readline(-1) -> (8) vary: \r\n
   readline(-1) -> (35) accept: application/mercurial-0.1\r\n
   readline(-1) -> (23) host: localhost:$HGPORT\r\n
   readline(-1) -> (49) user-agent: mercurial/proto-1.0 (Mercurial 4.2)\r\n
@@ -315,7 +310,6 @@ TODO this output is horrible
   $ cat error.log
   readline(65537) -> (33) GET /?cmd=capabilities HTTP/1.1\r\n
   readline(-1) -> (27) Accept-Encoding: identity\r\n
-  readline(-1) -> (8) vary: \r\n
   readline(-1) -> (35) accept: application/mercurial-0.1\r\n
   readline(-1) -> (23) host: localhost:$HGPORT\r\n
   readline(-1) -> (49) user-agent: mercurial/proto-1.0 (Mercurial 4.2)\r\n
@@ -359,7 +353,6 @@ TODO client spews a stack due to uncaught ValueError in batch.results()
   $ cat error.log
   readline(65537) -> (33) GET /?cmd=capabilities HTTP/1.1\r\n
   readline(-1) -> (27) Accept-Encoding: identity\r\n
-  readline(-1) -> (8) vary: \r\n
   readline(-1) -> (35) accept: application/mercurial-0.1\r\n
   readline(-1) -> (23) host: localhost:$HGPORT\r\n
   readline(-1) -> (49) user-agent: mercurial/proto-1.0 (Mercurial 4.2)\r\n
@@ -412,7 +405,6 @@ TODO this output is terrible
   $ cat error.log
   readline(65537) -> (33) GET /?cmd=capabilities HTTP/1.1\r\n
   readline(-1) -> (27) Accept-Encoding: identity\r\n
-  readline(-1) -> (8) vary: \r\n
   readline(-1) -> (35) accept: application/mercurial-0.1\r\n
   readline(-1) -> (23) host: localhost:$HGPORT\r\n
   readline(-1) -> (49) user-agent: mercurial/proto-1.0 (Mercurial 4.2)\r\n
@@ -474,7 +466,6 @@ Server sends empty HTTP body for getbundle
   $ cat error.log
   readline(65537) -> (33) GET /?cmd=capabilities HTTP/1.1\r\n
   readline(-1) -> (27) Accept-Encoding: identity\r\n
-  readline(-1) -> (8) vary: \r\n
   readline(-1) -> (35) accept: application/mercurial-0.1\r\n
   readline(-1) -> (23) host: localhost:$HGPORT\r\n
   readline(-1) -> (49) user-agent: mercurial/proto-1.0 (Mercurial 4.2)\r\n
@@ -538,7 +529,6 @@ Server sends partial compression string
   $ cat error.log
   readline(65537) -> (33) GET /?cmd=capabilities HTTP/1.1\r\n
   readline(-1) -> (27) Accept-Encoding: identity\r\n
-  readline(-1) -> (8) vary: \r\n
   readline(-1) -> (35) accept: application/mercurial-0.1\r\n
   readline(-1) -> (23) host: localhost:$HGPORT\r\n
   readline(-1) -> (49) user-agent: mercurial/proto-1.0 (Mercurial 4.2)\r\n
