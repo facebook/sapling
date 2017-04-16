@@ -45,8 +45,7 @@ except ImportError:
     curses = None
     _baseterminfoparams = {}
 
-# allow the extensions to change the default
-_enabledbydefault = False
+_enabledbydefault = pycompat.osname != 'nt'
 
 # start and stop parameters for effects
 _effects = {

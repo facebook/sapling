@@ -10,6 +10,7 @@ pager was running.
   $ cat >> $HGRCPATH <<EOF
   > [ui]
   > formatted = yes
+  > color = no
   > [extensions]
   > pager=
   > [pager]
