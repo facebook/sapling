@@ -1,6 +1,13 @@
 #!/bin/sh
 # setup config and various utility to test obsolescence marker exchanges tests
 
+cat >> $TESTTMP/prune.sh << EOF
+rev=\`hg log --hidden --template '{node}\n' --rev "\$3"\`
+
+hg debugobsolete --record-parents \$1 "\$2" \$rev \
+   && hg up --quiet 'max((::.) - obsolete())'
+EOF
+
 cat >> $HGRCPATH <<EOF
 [web]
 # We test http pull and push, drop authentication requirement
@@ -29,8 +36,7 @@ hgext.strip=
 # fix date used to create obsolete markers.
 debugobsolete=debugobsolete -d '0 0'
 # poor man substiture to the evolve 'hg prune'. using prune makes the test clearer and 
-prune =!hg debugobsolete --record-parents \$1 "\$2" \`hg log --hidden --template '{node}\n' --rev "\$3"\`;\
-        hg up --quiet 'max((::.) - obsolete())'
+prune = !sh $TESTTMP/prune.sh \$1 "\$2" "\$3"
 EOF
 
 mkcommit() {
