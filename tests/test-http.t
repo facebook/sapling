@@ -341,7 +341,7 @@ corrupt cookies file should yield a warning
   > EOF
 
   $ hg --config auth.cookiefile=$TESTTMP/cookies.txt id http://localhost:$HGPORT/
-  (error loading cookie file $TESTTMP/cookies.txt: '$TESTTMP/cookies.txt' does not look like a Netscape format cookies file; continuing without cookies)
+  (error loading cookie file $TESTTMP/cookies.txt: '*/cookies.txt' does not look like a Netscape format cookies file; continuing without cookies) (glob)
   56f9bc90cce6
 
   $ killdaemons.py
