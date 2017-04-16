@@ -72,13 +72,13 @@ def _wraphttpresponse(resp):
                 else:
                     msg = _('HTTP request error (incomplete response)')
 
-                raise error.RichIOError(
+                raise error.PeerTransportError(
                     msg,
                     hint=_('this may be an intermittent network failure; '
                            'if the error persists, consider contacting the '
                            'network or server operator'))
             except httplib.HTTPException as e:
-                raise error.RichIOError(
+                raise error.PeerTransportError(
                     _('HTTP request error (%s)') % e,
                     hint=_('this may be an intermittent failure; '
                            'if the error persists, consider contacting the '

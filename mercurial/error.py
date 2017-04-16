@@ -253,5 +253,5 @@ class UnsupportedBundleSpecification(Exception):
 class CorruptedState(Exception):
     """error raised when a command is not able to read its state from file"""
 
-class RichIOError(Abort):
-    """An IOError that can also have a hint attached."""
+class PeerTransportError(Abort):
+    """Transport-level I/O error when communicating with a peer repo."""
