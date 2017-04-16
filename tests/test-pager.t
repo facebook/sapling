@@ -96,8 +96,8 @@ be silently lost.)
 Pager with color enabled allows colors to come through by default,
 even though stdout is no longer a tty.
   $ cat >> $HGRCPATH <<EOF
-  > [extensions]
-  > color=
+  > [ui]
+  > color = yes
   > [color]
   > mode = ansi
   > EOF
