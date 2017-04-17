@@ -111,6 +111,7 @@ class fileobjectproxy(object):
 
         object.__getattribute__(self, '_logfp').write(msg)
         object.__getattribute__(self, '_logfp').write('\n')
+        object.__getattribute__(self, '_logfp').flush()
 
     def read(self, size=-1):
         remaining = object.__getattribute__(self, '_closeafterrecvbytes')
