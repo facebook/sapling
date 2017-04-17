@@ -144,6 +144,9 @@ class improvement(object):
             return NotImplemented
         return self.name == other.name
 
+    def __ne__(self, other):
+        return not self == other
+
 def finddeficiencies(repo):
     """returns a list of deficiencies that the repo suffer from"""
     newreporeqs = localrepo.newreporequirements(repo)
