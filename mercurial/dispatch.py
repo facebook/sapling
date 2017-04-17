@@ -165,6 +165,10 @@ def dispatch(req):
     except KeyboardInterrupt:
         try:
             req.ui.warn(_("interrupted!\n"))
+        except error.SignalInterrupt:
+            # maybe pager would quit without consuming all the output, and
+            # SIGPIPE was raised. we cannot print anything in this case.
+            pass
         except IOError as inst:
             if inst.errno != errno.EPIPE:
                 raise
