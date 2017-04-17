@@ -2,7 +2,7 @@
   > [experimental]
   > hook-track-tags=1
   > [hooks]
-  > txnclose.track-tag=${TESTTMP}/taghook.sh
+  > txnclose.track-tag=sh ${TESTTMP}/taghook.sh
   > EOF
 
   $ cat << EOF > taghook.sh
@@ -14,7 +14,6 @@
   >     sed 's/^/hook: /' .hg/changes/tags.changes
   > fi
   > EOF
-  $ chmod +x taghook.sh
   $ hg init test
   $ cd test
 
