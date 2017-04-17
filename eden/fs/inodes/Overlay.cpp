@@ -251,7 +251,8 @@ void Overlay::saveOverlayDir(
       DCHECK_NE(oent.inodeNumber, 0);
     } else {
       oent.inodeNumber = 0;
-      auto bytes = ent->getHash().getBytes();
+      auto entHash = ent->getHash();
+      auto bytes = entHash.getBytes();
       oent.hash = std::string(
           reinterpret_cast<const char*>(bytes.data()), bytes.size());
     }
