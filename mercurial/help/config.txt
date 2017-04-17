@@ -1863,7 +1863,7 @@ User interface controls.
 
 ``color``
     String: when to use to colorize output. possible value are auto, always,
-    never, or debug (default: never). 'auto' will use color whenever it seems
+    never, or debug (default: auto). 'auto' will use color whenever it seems
     possible. See :hg:`help color` for details.
 
     (in addition a boolean can be used in place always/never)
