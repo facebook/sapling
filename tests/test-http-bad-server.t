@@ -34,7 +34,8 @@ Failure to accept() socket should result in connection related error message
   $ cat hg.pid > $DAEMON_PIDS
 
   $ hg clone http://localhost:$HGPORT/ clone
-  abort: error: Connection reset by peer
+  abort: error: Connection reset by peer (no-windows !)
+  abort: error: An existing connection was forcibly closed by the remote host (windows !)
   [255]
 
 (The server exits on its own, but there is a race between that and starting a new server.
@@ -48,7 +49,8 @@ Failure immediately after accept() should yield connection related error message
   $ cat hg.pid > $DAEMON_PIDS
 
   $ hg clone http://localhost:$HGPORT/ clone
-  abort: error: Connection reset by peer
+  abort: error: Connection reset by peer (no-windows !)
+  abort: error: An existing connection was forcibly closed by the remote host (windows !)
   [255]
 
   $ killdaemons.py $DAEMON_PIDS
