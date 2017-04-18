@@ -26,4 +26,4 @@ def showtasks(**args):
     match = re.search('(Tasks?|Task ID):(.*)', descr)
     if match:
         tasks = re.findall('\d+', match.group(0))
-    return templatekw.showlist('task', tasks, **args)
+    return templatekw.showlist('task', tasks, args)

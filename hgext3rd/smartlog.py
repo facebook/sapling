@@ -150,25 +150,25 @@ def singlepublicsuccessor(repo, ctx, templ, **args):
 def rebasesuccessors(repo, ctx, **args):
     """Return all of the node's successors created as a result of rebase"""
     rsnodes = list(modifysuccessors(ctx, 'rebase'))
-    return templatekw.showlist('rebasesuccessor', rsnodes, **args)
+    return templatekw.showlist('rebasesuccessor', rsnodes, args)
 
 @templatekeyword('amendsuccessors')
 def amendsuccessors(repo, ctx, **args):
     """Return all of the node's successors created as a result of amend"""
     asnodes = list(modifysuccessors(ctx, 'amend'))
-    return templatekw.showlist('amendsuccessor', asnodes, **args)
+    return templatekw.showlist('amendsuccessor', asnodes, args)
 
 @templatekeyword('splitsuccessors')
 def splitsuccessors(repo, ctx, **args):
     """Return all of the node's successors created as a result of split"""
     asnodes = list(modifysuccessors(ctx, 'split'))
-    return templatekw.showlist('splitsuccessor', asnodes, **args)
+    return templatekw.showlist('splitsuccessor', asnodes, args)
 
 @templatekeyword('foldsuccessors')
 def foldsuccessors(repo, ctx, **args):
     """Return all of the node's successors created as a result of fold"""
     asnodes = list(modifysuccessors(ctx, 'fold'))
-    return templatekw.showlist('foldsuccessor', asnodes, **args)
+    return templatekw.showlist('foldsuccessor', asnodes, args)
 
 @templatekeyword('histeditsuccessors')
 def histeditsuccessors(repo, ctx, **args):
@@ -176,7 +176,7 @@ def histeditsuccessors(repo, ctx, **args):
        histedit
     """
     asnodes = list(modifysuccessors(ctx, 'histedit'))
-    return templatekw.showlist('histeditsuccessor', asnodes, **args)
+    return templatekw.showlist('histeditsuccessor', asnodes, args)
 
 def showgraphnode(orig, repo, ctx, **args):
     """Show obsolete nodes as 'x', even when inhibited."""

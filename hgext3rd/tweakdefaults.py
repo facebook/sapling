@@ -384,6 +384,7 @@ def blame(orig, ui, repo, *pats, **opts):
 
     Returns 0 on success.
     """
+    @templater.templatefunc('blame_phabdiffid')
     def phabdiff(context, mapping, args):
         """Fetch the Phab Diff Id from the node in mapping"""
         res = ' ' * 8
@@ -404,55 +405,41 @@ def blame(orig, ui, repo, *pats, **opts):
                                      'date', 'file']):
         opts['changeset'] = True
 
-    # We want to register template `blame_phabdiffid` function
-    # just for this call so that we don't pollute the function
-    # namespaces for other commandss. The reason is mainly
-    # because `blame_phabdiffid` relies on 'rev' value being
-    # present in the `mapping` argument passed to it (which
-    # would not necessarily be the case for other non-log-like
-    # commands.
-    # tl/dr: this is a dirty hack and we want to have is as
-    # restricted as possible
-    templater.funcs['blame_phabdiffid'] = phabdiff
-
-    try:
-        # without --phabdiff or with -T, use the default formatter
-        if not opts.get('phabdiff') or opts.get('template'):
-            return orig(ui, repo, *pats, **opts)
-
-        # to show the --phabdiff column, we want to modify "opmap" in
-        # commands.annotate - not doable directly so let's use templates to
-        # workaround.
-        ptmpl = ['']
-
-        def append(t, sep=' '):
-            if ptmpl[0]:
-                ptmpl[0] += sep
-            ptmpl[0] += t
-
-        if opts.get('user'):
-            append("{pad(user|emailuser, 13, ' ', True)}")
-        if opts.get('number'):
-            width = len(str(len(repo)))
-            append("{pad(rev, %d)}" % width)
-        if opts.get('changeset'):
-            append("{short(node)}")
-        if opts.get('phabdiff'):
-            opts['number'] = True # makes mapping['rev'] available in phabdiff
-            append("{pad(blame_phabdiffid(), 8)}")
-        if opts.get('date'):
-            if ui.quiet:
-                append("{pad(date|shortdate, 10)}")
-            else:
-                append("{pad(date|rfc822date, 12)}")
-        if opts.get('file'):
-            append("{file}")
-        if opts.get('line_number'):
-            append("{pad(line_number, 5, ' ', True)}", sep=':')
-        opts['template'] = ptmpl[0] + ': {line}'
+    # without --phabdiff or with -T, use the default formatter
+    if not opts.get('phabdiff') or opts.get('template'):
         return orig(ui, repo, *pats, **opts)
-    finally:
-        del templater.funcs['blame_phabdiffid']
+
+    # to show the --phabdiff column, we want to modify "opmap" in
+    # commands.annotate - not doable directly so let's use templates to
+    # workaround.
+    ptmpl = ['']
+
+    def append(t, sep=' '):
+        if ptmpl[0]:
+            ptmpl[0] += sep
+        ptmpl[0] += t
+
+    if opts.get('user'):
+        append("{pad(user|emailuser, 13, ' ', True)}")
+    if opts.get('number'):
+        width = len(str(len(repo)))
+        append("{pad(rev, %d)}" % width)
+    if opts.get('changeset'):
+        append("{short(node)}")
+    if opts.get('phabdiff'):
+        opts['number'] = True # makes mapping['rev'] available in phabdiff
+        append("{pad(blame_phabdiffid(), 8)}")
+    if opts.get('date'):
+        if ui.quiet:
+            append("{pad(date|shortdate, 10)}")
+        else:
+            append("{pad(date|rfc822date, 12)}")
+    if opts.get('file'):
+        append("{file}")
+    if opts.get('line_number'):
+        append("{pad(line_number, 5, ' ', True)}", sep=':')
+    opts['template'] = ptmpl[0] + ': {line}'
+    return orig(ui, repo, *pats, **opts)
 
 @command('histgrep', commands.table['grep'][1], commands.table['grep'][2])
 def histgrep(ui, repo, pattern, *pats, **opts):

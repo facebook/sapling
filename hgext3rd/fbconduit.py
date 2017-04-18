@@ -40,7 +40,6 @@ def extsetup(ui):
     if not conduit_config(ui):
         ui.warn(_('No conduit host specified in config; disabling fbconduit\n'))
         return
-    templater.funcs['mirrornode'] = mirrornode
 
     revset.symbols['gitnode'] = gitnode
     extensions.wrapfunction(revset, 'stringset', overridestringset)
@@ -102,6 +101,7 @@ def call_conduit(method, **kwargs):
 
     # don't close the connection b/c we want to avoid the connection overhead
 
+@templater.templatefunc('mirrornode')
 def mirrornode(ctx, mapping, args):
     '''template: find this commit in other repositories'''
 
