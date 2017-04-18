@@ -564,10 +564,11 @@ def grep(ui, repo, pattern, *pats, **opts):
     ds = repo.dirstate
     getkind = stat.S_IFMT
     lnkkind = stat.S_IFLNK
-    for f in wctx.matches(m):
+    results = ds.walk(m, subrepos=[], unknown=False, ignored=False)
+    for f in sorted(results.keys()):
+        st = results[f]
         # skip symlinks and removed files
-        t = ds._map[f]
-        if t[0] == 'r' or getkind(t[1]) == lnkkind:
+        if st is None or getkind(st.st_mode) == lnkkind:
             continue
         write(m.rel(f) + '\0')
 
