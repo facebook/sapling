@@ -1,3 +1,5 @@
+#require p4
+
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "p4fastimport=" >> $HGRCPATH
   $ echo "[p4fastimport]" >> $HGRCPATH
