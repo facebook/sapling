@@ -1,3 +1,9 @@
-# TODO add label() once we figure out which namespace the labels belong on.
+# TODO there are a few deficiencies in this file:
+# * Due to the way the file is loaded, references to other entities in the
+#   template doesn't work. That requires us to inline.
+# * The "namespace" of the labels needs to be worked out. We currently
+#   piggyback on existing values so color works.
+# * Obsolescence isn't considered for node labels. See _cset_labels in
+#   map-cmdline.default.
 showbookmarks = '{if(active, "*", " ")} {pad(bookmark, longestbookmarklen + 4)}{shortest(node, 5)}\n'
-showwork = '{shortest(node, 5)}{if(branches, " ({branch})")}{if(bookmarks, " ({bookmarks})")} {desc|firstline}'
+showwork = '{label("log.changeset changeset.{phase}", shortest(node, 5))}{if(branches, " ({label("log.branch", branch)})")}{if(bookmarks, " ({label("log.bookmarks", bookmarks)})")} {label("log.description", desc|firstline)}'
