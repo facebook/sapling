@@ -11,7 +11,7 @@ No arguments shows available views
   available views:
   
   bookmarks -- bookmarks and their associated changeset
-  underway -- changesets that aren't finished
+  work -- changesets that aren't finished
   
   abort: no view requested
   (use "hg show VIEW" to choose a view)
@@ -40,7 +40,7 @@ No arguments shows available views
   
       bookmarks   bookmarks and their associated changeset
   
-      underway    changesets that aren't finished
+      work        changesets that aren't finished
   
   (use 'hg help -e show' to show help for the show extension)
   

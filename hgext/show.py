@@ -189,8 +189,8 @@ def underwayrevset(repo, subset, x):
 
     return subset & relevant
 
-@showview('underway', fmtopic='underway')
-def showunderway(ui, repo, fm):
+@showview('work', fmtopic='work')
+def showwork(ui, repo, fm):
     """changesets that aren't finished"""
     # TODO support date-based limiting when calling revset.
     revs = repo.revs('sort(_underway(), topo)')
