@@ -85,6 +85,7 @@ from mercurial import (
     error,
     node,
     scmutil,
+    tags as tagsmod,
 )
 
 cmdtable = {}
@@ -308,4 +309,5 @@ def debugdrawdag(ui, repo, **opts):
         ctx = simplecommitctx(repo, name, pctxs, [name])
         n = ctx.commit()
         committed[name] = n
-        repo.tag(name, n, message=None, user=None, date=None, local=True)
+        tagsmod.tag(repo, name, n, message=None, user=None, date=None,
+                    local=True)

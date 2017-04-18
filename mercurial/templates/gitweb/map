@@ -282,7 +282,7 @@ shortlogentry = '
     </td>
   </tr>'
 filelogentry = '
-  <tr class="parity{parity}">
+  <tr class="parity{if(patch, '1', '{parity}')}">
     <td class="age"><i class="age">{date|rfc822date}</i></td>
     <td><i>{author|person}</i></td>
     <td>
@@ -297,7 +297,8 @@ filelogentry = '
       <a href="{url|urlescape}annotate/{node|short}/{file|urlescape}{sessionvars%urlparameter}">annotate</a>
       {rename%filelogrename}
     </td>
-  </tr>'
+  </tr>
+  {if(patch, '<tr><td colspan="4">{diff}</td></tr>')}'
 archiveentry = ' | <a href="{url|urlescape}archive/{symrev}{extension}{ifeq(path,'/','',path|urlescape)}">{type|escape}</a> '
 indexentry = '
   <tr class="parity{parity}">

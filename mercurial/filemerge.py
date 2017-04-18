@@ -35,7 +35,9 @@ def _toolstr(ui, tool, part, default=""):
 def _toolbool(ui, tool, part, default=False):
     return ui.configbool("merge-tools", tool + "." + part, default)
 
-def _toollist(ui, tool, part, default=[]):
+def _toollist(ui, tool, part, default=None):
+    if default is None:
+        default = []
     return ui.configlist("merge-tools", tool + "." + part, default)
 
 internals = {}
@@ -489,8 +491,11 @@ def _xmerge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
     args = util.interpolate(r'\$', replace, args,
                             lambda s: util.shellquote(util.localpath(s)))
     cmd = toolpath + ' ' + args
+    if _toolbool(ui, tool, "gui"):
+        repo.ui.status(_('running merge tool %s for file %s\n') %
+                       (tool, fcd.path()))
     repo.ui.debug('launching merge tool: %s\n' % cmd)
-    r = ui.system(cmd, cwd=repo.root, environ=env)
+    r = ui.system(cmd, cwd=repo.root, environ=env, blockedtag='mergetool')
     repo.ui.debug('merge tool returned: %s\n' % r)
     return True, r, False
 
@@ -538,6 +543,7 @@ def _formatlabels(repo, fcd, fco, fca, labels):
 
     ui = repo.ui
     template = ui.config('ui', 'mergemarkertemplate', _defaultconflictmarker)
+    template = templater.unquotestring(template)
     tmpl = formatter.maketemplater(ui, 'conflictmarker', template)
 
     pad = max(len(l) for l in labels)
@@ -582,7 +588,7 @@ def _filemerge(premerge, repo, mynode, orig, fcd, fco, fca, labels=None):
         pre = "%s~%s." % (os.path.basename(fullbase), prefix)
         (fd, name) = tempfile.mkstemp(prefix=pre, suffix=ext)
         data = repo.wwritedata(ctx.path(), ctx.data())
-        f = os.fdopen(fd, "wb")
+        f = os.fdopen(fd, pycompat.sysstr("wb"))
         f.write(data)
         f.close()
         return name

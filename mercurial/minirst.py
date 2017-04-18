@@ -26,6 +26,7 @@ import re
 from .i18n import _
 from . import (
     encoding,
+    pycompat,
     util,
 )
 
@@ -59,12 +60,12 @@ def replace(text, substs):
     # ASCII characters other than control/alphabet/digit as a part of
     # multi-bytes characters, so direct replacing with such characters
     # on strings in local encoding causes invalid byte sequences.
-    utext = text.decode(encoding.encoding)
+    utext = text.decode(pycompat.sysstr(encoding.encoding))
     for f, t in substs:
         utext = utext.replace(f.decode("ascii"), t.decode("ascii"))
-    return utext.encode(encoding.encoding)
+    return utext.encode(pycompat.sysstr(encoding.encoding))
 
-_blockre = re.compile(r"\n(?:\s*\n)+")
+_blockre = re.compile(br"\n(?:\s*\n)+")
 
 def findblocks(text):
     """Find continuous blocks of lines in text.
@@ -138,12 +139,12 @@ def findliteralblocks(blocks):
         i += 1
     return blocks
 
-_bulletre = re.compile(r'(-|[0-9A-Za-z]+\.|\(?[0-9A-Za-z]+\)|\|) ')
-_optionre = re.compile(r'^(-([a-zA-Z0-9]), )?(--[a-z0-9-]+)'
-                       r'((.*)  +)(.*)$')
-_fieldre = re.compile(r':(?![: ])([^:]*)(?<! ):[ ]+(.*)')
-_definitionre = re.compile(r'[^ ]')
-_tablere = re.compile(r'(=+\s+)*=+')
+_bulletre = re.compile(br'(\*|-|[0-9A-Za-z]+\.|\(?[0-9A-Za-z]+\)|\|) ')
+_optionre = re.compile(br'^(-([a-zA-Z0-9]), )?(--[a-z0-9-]+)'
+                       br'((.*)  +)(.*)$')
+_fieldre = re.compile(br':(?![: ])([^:]*)(?<! ):[ ]+(.*)')
+_definitionre = re.compile(br'[^ ]')
+_tablere = re.compile(br'(=+\s+)*=+')
 
 def splitparagraphs(blocks):
     """Split paragraphs into lists."""
@@ -286,7 +287,7 @@ def prunecontainers(blocks, keep):
         i += 1
     return blocks, pruned
 
-_sectionre = re.compile(r"""^([-=`:.'"~^_*+#])\1+$""")
+_sectionre = re.compile(br"""^([-=`:.'"~^_*+#])\1+$""")
 
 def findtables(blocks):
     '''Find simple tables
@@ -411,18 +412,20 @@ def prunecomments(blocks):
             i += 1
     return blocks
 
-_admonitionre = re.compile(r"\.\. (admonition|attention|caution|danger|"
-                           r"error|hint|important|note|tip|warning)::",
-                           flags=re.IGNORECASE)
 
-def findadmonitions(blocks):
+def findadmonitions(blocks, admonitions=None):
     """
     Makes the type of the block an admonition block if
     the first line is an admonition directive
     """
+    admonitions = admonitions or _admonitiontitles.keys()
+
+    admonitionre = re.compile(br'\.\. (%s)::' % '|'.join(sorted(admonitions)),
+                              flags=re.IGNORECASE)
+
     i = 0
     while i < len(blocks):
-        m = _admonitionre.match(blocks[i]['lines'][0])
+        m = admonitionre.match(blocks[i]['lines'][0])
         if m:
             blocks[i]['type'] = 'admonition'
             admonitiontitle = blocks[i]['lines'][0][3:m.end() - 2].lower()
@@ -436,15 +439,17 @@ def findadmonitions(blocks):
         i = i + 1
     return blocks
 
-_admonitiontitles = {'attention': _('Attention:'),
-                     'caution': _('Caution:'),
-                     'danger': _('!Danger!')  ,
-                     'error': _('Error:'),
-                     'hint': _('Hint:'),
-                     'important': _('Important:'),
-                     'note': _('Note:'),
-                     'tip': _('Tip:'),
-                     'warning': _('Warning!')}
+_admonitiontitles = {
+    'attention': _('Attention:'),
+    'caution': _('Caution:'),
+    'danger': _('!Danger!'),
+    'error': _('Error:'),
+    'hint': _('Hint:'),
+    'important': _('Important:'),
+    'note': _('Note:'),
+    'tip': _('Tip:'),
+    'warning': _('Warning!'),
+}
 
 def formatoption(block, width):
     desc = ' '.join(map(str.strip, block['lines']))
@@ -533,7 +538,7 @@ def formatblock(block, width):
     elif block['type'] == 'option':
         return formatoption(block, width)
 
-    text = ' '.join(map(str.strip, block['lines']))
+    text = ' '.join(map(bytes.strip, block['lines']))
     return util.wrap(text, width=width,
                      initindent=indent,
                      hangindent=subindent) + '\n'
@@ -596,7 +601,7 @@ def formathtml(blocks):
             out.append(' <dt>%s\n <dd>%s\n' % (term, text))
         elif btype == 'bullet':
             bullet, head = lines[0].split(' ', 1)
-            if bullet == '-':
+            if bullet in ('*', '-'):
                 openlist('ul', level)
             else:
                 openlist('ol', level)
@@ -629,7 +634,7 @@ def formathtml(blocks):
 
     return ''.join(out)
 
-def parse(text, indent=0, keep=None):
+def parse(text, indent=0, keep=None, admonitions=None):
     """Parse text into a list of blocks"""
     pruned = []
     blocks = findblocks(text)
@@ -644,7 +649,7 @@ def parse(text, indent=0, keep=None):
     blocks = splitparagraphs(blocks)
     blocks = updatefieldlists(blocks)
     blocks = updateoptionlists(blocks)
-    blocks = findadmonitions(blocks)
+    blocks = findadmonitions(blocks, admonitions=admonitions)
     blocks = addmargins(blocks)
     blocks = prunecomments(blocks)
     return blocks, pruned

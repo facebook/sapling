@@ -15,6 +15,7 @@ from . import (
     merge,
     parser,
     registrar,
+    scmutil,
     util,
 )
 
@@ -153,7 +154,7 @@ def modified(mctx, x):
     """
     # i18n: "modified" is a keyword
     getargs(x, 0, 0, _("modified takes no arguments"))
-    s = mctx.status().modified
+    s = set(mctx.status().modified)
     return [f for f in mctx.subset if f in s]
 
 @predicate('added()', callstatus=True)
@@ -162,7 +163,7 @@ def added(mctx, x):
     """
     # i18n: "added" is a keyword
     getargs(x, 0, 0, _("added takes no arguments"))
-    s = mctx.status().added
+    s = set(mctx.status().added)
     return [f for f in mctx.subset if f in s]
 
 @predicate('removed()', callstatus=True)
@@ -171,7 +172,7 @@ def removed(mctx, x):
     """
     # i18n: "removed" is a keyword
     getargs(x, 0, 0, _("removed takes no arguments"))
-    s = mctx.status().removed
+    s = set(mctx.status().removed)
     return [f for f in mctx.subset if f in s]
 
 @predicate('deleted()', callstatus=True)
@@ -180,7 +181,7 @@ def deleted(mctx, x):
     """
     # i18n: "deleted" is a keyword
     getargs(x, 0, 0, _("deleted takes no arguments"))
-    s = mctx.status().deleted
+    s = set(mctx.status().deleted)
     return [f for f in mctx.subset if f in s]
 
 @predicate('missing()', callstatus=True)
@@ -189,7 +190,7 @@ def missing(mctx, x):
     """
     # i18n: "missing" is a keyword
     getargs(x, 0, 0, _("missing takes no arguments"))
-    s = mctx.status().deleted
+    s = set(mctx.status().deleted)
     return [f for f in mctx.subset if f in s]
 
 @predicate('unknown()', callstatus=True)
@@ -199,7 +200,7 @@ def unknown(mctx, x):
     """
     # i18n: "unknown" is a keyword
     getargs(x, 0, 0, _("unknown takes no arguments"))
-    s = mctx.status().unknown
+    s = set(mctx.status().unknown)
     return [f for f in mctx.subset if f in s]
 
 @predicate('ignored()', callstatus=True)
@@ -209,7 +210,7 @@ def ignored(mctx, x):
     """
     # i18n: "ignored" is a keyword
     getargs(x, 0, 0, _("ignored takes no arguments"))
-    s = mctx.status().ignored
+    s = set(mctx.status().ignored)
     return [f for f in mctx.subset if f in s]
 
 @predicate('clean()', callstatus=True)
@@ -218,7 +219,7 @@ def clean(mctx, x):
     """
     # i18n: "clean" is a keyword
     getargs(x, 0, 0, _("clean takes no arguments"))
-    s = mctx.status().clean
+    s = set(mctx.status().clean)
     return [f for f in mctx.subset if f in s]
 
 def func(mctx, a, b):
@@ -438,6 +439,52 @@ def copied(mctx, x):
             s.append(f)
     return s
 
+@predicate('revs(revs, pattern)')
+def revs(mctx, x):
+    """Evaluate set in the specified revisions. If the revset match multiple
+    revs, this will return file matching pattern in any of the revision.
+    """
+    # i18n: "revs" is a keyword
+    r, x = getargs(x, 2, 2, _("revs takes two arguments"))
+    # i18n: "revs" is a keyword
+    revspec = getstring(r, _("first argument to revs must be a revision"))
+    repo = mctx.ctx.repo()
+    revs = scmutil.revrange(repo, [revspec])
+
+    found = set()
+    result = []
+    for r in revs:
+        ctx = repo[r]
+        for f in getset(mctx.switch(ctx, _buildstatus(ctx, x)), x):
+            if f not in found:
+                found.add(f)
+                result.append(f)
+    return result
+
+@predicate('status(base, rev, pattern)')
+def status(mctx, x):
+    """Evaluate predicate using status change between ``base`` and
+    ``rev``. Examples:
+
+    - ``status(3, 7, added())`` - matches files added from "3" to "7"
+    """
+    repo = mctx.ctx.repo()
+    # i18n: "status" is a keyword
+    b, r, x = getargs(x, 3, 3, _("status takes three arguments"))
+    # i18n: "status" is a keyword
+    baseerr = _("first argument to status must be a revision")
+    baserevspec = getstring(b, baseerr)
+    if not baserevspec:
+        raise error.ParseError(baseerr)
+    reverr = _("second argument to status must be a revision")
+    revspec = getstring(r, reverr)
+    if not revspec:
+        raise error.ParseError(reverr)
+    basenode, node = scmutil.revpair(repo, [baserevspec, revspec])
+    basectx = repo[basenode]
+    ctx = repo[node]
+    return getset(mctx.switch(ctx, _buildstatus(ctx, x, basectx=basectx)), x)
+
 @predicate('subrepo([pattern])')
 def subrepo(mctx, x):
     """Subrepositories whose paths match the given pattern.
@@ -474,7 +521,7 @@ methods = {
 }
 
 class matchctx(object):
-    def __init__(self, ctx, subset=None, status=None):
+    def __init__(self, ctx, subset, status=None):
         self.ctx = ctx
         self.subset = subset
         self._status = status
@@ -497,39 +544,71 @@ class matchctx(object):
                 if (f in self.ctx and f not in removed) or f in unknown)
     def narrow(self, files):
         return matchctx(self.ctx, self.filter(files), self._status)
+    def switch(self, ctx, status=None):
+        subset = self.filter(_buildsubset(ctx, status))
+        return matchctx(ctx, subset, status)
+
+class fullmatchctx(matchctx):
+    """A match context where any files in any revisions should be valid"""
+
+    def __init__(self, ctx, status=None):
+        subset = _buildsubset(ctx, status)
+        super(fullmatchctx, self).__init__(ctx, subset, status)
+    def switch(self, ctx, status=None):
+        return fullmatchctx(ctx, status)
+
+# filesets using matchctx.switch()
+_switchcallers = [
+    'revs',
+    'status',
+]
 
 def _intree(funcs, tree):
     if isinstance(tree, tuple):
         if tree[0] == 'func' and tree[1][0] == 'symbol':
             if tree[1][1] in funcs:
                 return True
+            if tree[1][1] in _switchcallers:
+                # arguments won't be evaluated in the current context
+                return False
         for s in tree[1:]:
             if _intree(funcs, s):
                 return True
     return False
 
+def _buildsubset(ctx, status):
+    if status:
+        subset = []
+        for c in status:
+            subset.extend(c)
+        return subset
+    else:
+        return list(ctx.walk(ctx.match([])))
+
 def getfileset(ctx, expr):
     tree = parse(expr)
+    return getset(fullmatchctx(ctx, _buildstatus(ctx, tree)), tree)
 
+def _buildstatus(ctx, tree, basectx=None):
     # do we need status info?
+
+    # temporaty boolean to simplify the next conditional
+    purewdir = ctx.rev() is None and basectx is None
+
     if (_intree(_statuscallers, tree) or
         # Using matchctx.existing() on a workingctx requires us to check
         # for deleted files.
-        (ctx.rev() is None and _intree(_existingcallers, tree))):
+        (purewdir and _intree(_existingcallers, tree))):
         unknown = _intree(['unknown'], tree)
         ignored = _intree(['ignored'], tree)
 
         r = ctx.repo()
-        status = r.status(ctx.p1(), ctx,
-                          unknown=unknown, ignored=ignored, clean=True)
-        subset = []
-        for c in status:
-            subset.extend(c)
+        if basectx is None:
+            basectx = ctx.p1()
+        return r.status(basectx, ctx,
+                        unknown=unknown, ignored=ignored, clean=True)
     else:
-        status = None
-        subset = list(ctx.walk(ctx.match([])))
-
-    return getset(matchctx(ctx, subset, status), tree)
+        return None
 
 def prettyformat(tree):
     return parser.prettyformat(tree, ('string', 'symbol'))

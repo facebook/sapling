@@ -7,7 +7,6 @@
 
 from __future__ import absolute_import
 
-import errno
 import os
 import sys
 import tempfile
@@ -16,6 +15,7 @@ from .i18n import _
 
 from . import (
     chgserver,
+    cmdutil,
     commandserver,
     error,
     hgweb,
@@ -60,11 +60,7 @@ def runservice(opts, parentfn=None, initfn=None, runfn=None, logfile=None,
                 raise error.Abort(_('child process failed to start'))
             writepid(pid)
         finally:
-            try:
-                os.unlink(lockpath)
-            except OSError as e:
-                if e.errno != errno.ENOENT:
-                    raise
+            util.tryunlink(lockpath)
         if parentfn:
             return parentfn(pid)
         else:
@@ -135,11 +131,22 @@ def _createhgwebservice(ui, repo, opts):
         baseui = ui
     webconf = opts.get('web_conf') or opts.get('webdir_conf')
     if webconf:
+        if opts.get('subrepos'):
+            raise error.Abort(_('--web-conf cannot be used with --subrepos'))
+
         # load server settings (e.g. web.port) to "copied" ui, which allows
         # hgwebdir to reload webconf cleanly
         servui = ui.copy()
         servui.readconfig(webconf, sections=['web'])
         alluis.add(servui)
+    elif opts.get('subrepos'):
+        servui = ui
+
+        # If repo is None, hgweb.createapp() already raises a proper abort
+        # message as long as webconf is None.
+        if repo:
+            webconf = dict()
+            cmdutil.addwebdirpath(repo, "", webconf)
     else:
         servui = ui
 

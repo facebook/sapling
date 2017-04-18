@@ -1737,9 +1737,15 @@ def unbundle(repo, cg, heads, source, url):
     if url.startswith('remote:http:') or url.startswith('remote:https:'):
         captureoutput = True
     try:
+        # note: outside bundle1, 'heads' is expected to be empty and this
+        # 'check_heads' call wil be a no-op
         check_heads(repo, heads, 'uploading changes')
         # push can proceed
-        if util.safehasattr(cg, 'params'):
+        if not util.safehasattr(cg, 'params'):
+            # legacy case: bundle1 (changegroup 01)
+            lockandtr[1] = repo.lock()
+            r = cg.apply(repo, source, url)
+        else:
             r = None
             try:
                 def gettransaction():
@@ -1778,9 +1784,6 @@ def unbundle(repo, cg, heads, source, url):
                                                   mandatory=False)
                         parts.append(part)
                 raise
-        else:
-            lockandtr[1] = repo.lock()
-            r = cg.apply(repo, source, url)
     finally:
         lockmod.release(lockandtr[2], lockandtr[1], lockandtr[0])
         if recordout is not None:

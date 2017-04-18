@@ -33,14 +33,17 @@ from .hgweb import (
     webcommands,
 )
 
-_exclkeywords = [
+_exclkeywords = set([
+    "(ADVANCED)",
     "(DEPRECATED)",
     "(EXPERIMENTAL)",
+    # i18n: "(ADVANCED)" is a keyword, must be translated consistently
+    _("(ADVANCED)"),
     # i18n: "(DEPRECATED)" is a keyword, must be translated consistently
     _("(DEPRECATED)"),
     # i18n: "(EXPERIMENTAL)" is a keyword, must be translated consistently
     _("(EXPERIMENTAL)"),
-    ]
+    ])
 
 def listexts(header, exts, indent=1, showdeprecated=False):
     '''return a text listing of the given extensions'''
@@ -186,6 +189,8 @@ def loaddoc(topic, subdir=None):
 internalstable = sorted([
     (['bundles'], _('Bundles'),
      loaddoc('bundles', subdir='internals')),
+    (['censor'], _('Censor'),
+     loaddoc('censor', subdir='internals')),
     (['changegroups'], _('Changegroups'),
      loaddoc('changegroups', subdir='internals')),
     (['requirements'], _('Repository Requirements'),
@@ -205,6 +210,8 @@ def internalshelp(ui):
     return ''.join(lines)
 
 helptable = sorted([
+    (['bundlespec'], _("Bundle File Formats"), loaddoc('bundlespec')),
+    (['color'], _("Colorizing Outputs"), loaddoc('color')),
     (["config", "hgrc"], _("Configuration Files"), loaddoc('config')),
     (["dates"], _("Date Formats"), loaddoc('dates')),
     (["patterns"], _("File Name Patterns"), loaddoc('patterns')),
@@ -230,6 +237,7 @@ helptable = sorted([
      loaddoc('scripting')),
     (['internals'], _("Technical implementation topics"),
      internalshelp),
+    (['pager'], _("Pager Support"), loaddoc('pager')),
 ])
 
 # Maps topics with sub-topics to a list of their sub-topics.
@@ -276,6 +284,8 @@ def addtopicsymbols(topic, marker, symbols, dedent=False):
         return makeitemsdoc(ui, topic, doc, marker, symbols, dedent=dedent)
     addtopichook(topic, add)
 
+addtopicsymbols('bundlespec', '.. bundlecompressionmarker',
+                util.bundlecompressiontopics())
 addtopicsymbols('filesets', '.. predicatesmarker', fileset.symbols)
 addtopicsymbols('merge-tools', '.. internaltoolsmarker',
                 filemerge.internalsdoc)
@@ -605,3 +615,49 @@ def help_(ui, name, unknowncmd=False, full=True, subtopic=None, **opts):
         rst.extend(helplist(None, **opts))
 
     return ''.join(rst)
+
+def formattedhelp(ui, name, keep=None, unknowncmd=False, full=True, **opts):
+    """get help for a given topic (as a dotted name) as rendered rst
+
+    Either returns the rendered help text or raises an exception.
+    """
+    if keep is None:
+        keep = []
+    else:
+        keep = list(keep) # make a copy so we can mutate this later
+    fullname = name
+    section = None
+    subtopic = None
+    if name and '.' in name:
+        name, remaining = name.split('.', 1)
+        remaining = encoding.lower(remaining)
+        if '.' in remaining:
+            subtopic, section = remaining.split('.', 1)
+        else:
+            if name in subtopics:
+                subtopic = remaining
+            else:
+                section = remaining
+    textwidth = ui.configint('ui', 'textwidth', 78)
+    termwidth = ui.termwidth() - 2
+    if textwidth <= 0 or termwidth < textwidth:
+        textwidth = termwidth
+    text = help_(ui, name,
+                 subtopic=subtopic, unknowncmd=unknowncmd, full=full, **opts)
+
+    formatted, pruned = minirst.format(text, textwidth, keep=keep,
+                                       section=section)
+
+    # We could have been given a weird ".foo" section without a name
+    # to look for, or we could have simply failed to found "foo.bar"
+    # because bar isn't a section of foo
+    if section and not (formatted and name):
+        raise error.Abort(_("help section not found: %s") % fullname)
+
+    if 'verbose' in pruned:
+        keep.append('omitted')
+    else:
+        keep.append('notomitted')
+    formatted, pruned = minirst.format(text, textwidth, keep=keep,
+                                       section=section)
+    return formatted

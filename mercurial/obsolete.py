@@ -552,6 +552,8 @@ class obsstore(object):
                 pass
         return bool(self._all)
 
+    __bool__ = __nonzero__
+
     @property
     def readonly(self):
         """True if marker creation is disabled
@@ -1120,7 +1122,7 @@ def _computeobsoleteset(repo):
     """the set of obsolete revisions"""
     obs = set()
     getnode = repo.changelog.node
-    notpublic = repo.revs("not public()")
+    notpublic = repo._phasecache.getrevset(repo, (phases.draft, phases.secret))
     for r in notpublic:
         if getnode(r) in repo.obsstore.successors:
             obs.add(r)

@@ -8,6 +8,7 @@
 from __future__ import absolute_import
 
 import imp
+import inspect
 import os
 
 from .i18n import (
@@ -17,6 +18,7 @@ from .i18n import (
 
 from . import (
     cmdutil,
+    encoding,
     error,
     pycompat,
     util,
@@ -103,11 +105,16 @@ def _importext(name, path=None, reportfunc=None):
                 mod = _importh(name)
     return mod
 
+def _forbytes(inst):
+    """Portably format an import error into a form suitable for
+    %-formatting into bytestrings."""
+    return encoding.strtolocal(str(inst))
+
 def _reportimporterror(ui, err, failed, next):
     # note: this ui.debug happens before --debug is processed,
     #       Use --config ui.debug=1 to see them.
     ui.debug('could not import %s (%s): trying %s\n'
-             % (failed, err, next))
+             % (failed, _forbytes(err), next))
     if ui.debugflag:
         ui.traceback()
 
@@ -150,7 +157,7 @@ def _runextsetup(name, ui):
         try:
             extsetup(ui)
         except TypeError:
-            if extsetup.func_code.co_argcount != 0:
+            if inspect.getargspec(extsetup).args:
                 raise
             extsetup() # old extsetup with no ui argument
 
@@ -159,7 +166,7 @@ def loadall(ui):
     newindex = len(_order)
     for (name, path) in result:
         if path:
-            if path[0] == '!':
+            if path[0:1] == '!':
                 _disabledextensions[name] = path[1:]
                 continue
         try:
@@ -167,6 +174,7 @@ def loadall(ui):
         except KeyboardInterrupt:
             raise
         except Exception as inst:
+            inst = _forbytes(inst)
             if path:
                 ui.warn(_("*** failed to import extension %s from %s: %s\n")
                         % (name, path, inst))
@@ -362,7 +370,8 @@ def _disabledpaths(strip_init=False):
     '''find paths of disabled extensions. returns a dict of {name: path}
     removes /__init__.py from packages if strip_init is True'''
     import hgext
-    extpath = os.path.dirname(os.path.abspath(hgext.__file__))
+    extpath = os.path.dirname(
+        os.path.abspath(pycompat.fsencode(hgext.__file__)))
     try: # might not be a filesystem path
         files = os.listdir(extpath)
     except OSError:

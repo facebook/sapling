@@ -273,7 +273,7 @@ def dodiff(ui, repo, cmdline, pats, opts):
         cmdline = re.sub(regex, quote, cmdline)
 
         ui.debug('running %r in %s\n' % (cmdline, tmproot))
-        ui.system(cmdline, cwd=tmproot)
+        ui.system(cmdline, cwd=tmproot, blockedtag='extdiff')
 
         for copy_fn, working_fn, mtime in fns_and_mtime:
             if os.lstat(copy_fn).st_mtime != mtime:
@@ -342,7 +342,7 @@ class savedcmd(object):
     def __init__(self, path, cmdline):
         # We can't pass non-ASCII through docstrings (and path is
         # in an unknown encoding anyway)
-        docpath = path.encode("string-escape")
+        docpath = util.escapestr(path)
         self.__doc__ = self.__doc__ % {'path': util.uirepr(docpath)}
         self._cmdline = cmdline
 

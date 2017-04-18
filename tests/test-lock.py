@@ -10,7 +10,7 @@ import unittest
 from mercurial import (
     error,
     lock,
-    scmutil,
+    vfs as vfsmod,
 )
 
 testlockname = 'testlock'
@@ -36,7 +36,7 @@ class teststate(object):
         self._acquirecalled = False
         self._releasecalled = False
         self._postreleasecalled = False
-        self.vfs = scmutil.vfs(dir, audit=False)
+        self.vfs = vfsmod.vfs(dir, audit=False)
         self._pidoffset = pidoffset
 
     def makelock(self, *args, **kwargs):

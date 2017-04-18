@@ -68,7 +68,7 @@ class hgimporter(object):
                 # indicates the type of module. So just assume what we found
                 # is OK (even though it could be a pure Python module).
             except ImportError:
-                if modulepolicy == 'c':
+                if modulepolicy == b'c':
                     raise
                 zl = ziploader('mercurial', 'pure')
                 mod = zl.load_module(name)
@@ -106,7 +106,7 @@ class hgimporter(object):
                                   'version should exist' % name)
 
         except ImportError:
-            if modulepolicy == 'c':
+            if modulepolicy == b'c':
                 raise
 
             # Could not load the C extension and pure Python is allowed. So
@@ -136,6 +136,9 @@ if sys.version_info[0] >= 3:
         def find_spec(self, fullname, path, target=None):
             # Only handle Mercurial-related modules.
             if not fullname.startswith(('mercurial.', 'hgext.', 'hgext3rd.')):
+                return None
+            # zstd is already dual-version clean, don't try and mangle it
+            if fullname.startswith('mercurial.zstd'):
                 return None
 
             # This assumes Python 3 doesn't support loading C modules.
@@ -280,7 +283,8 @@ if sys.version_info[0] >= 3:
                     continue
                 r, c = t.start
                 l = (b'; from mercurial.pycompat import '
-                     b'delattr, getattr, hasattr, setattr, xrange\n')
+                     b'delattr, getattr, hasattr, setattr, xrange, '
+                     b'open, unicode\n')
                 for u in tokenize.tokenize(io.BytesIO(l).readline):
                     if u.type in (tokenize.ENCODING, token.ENDMARKER):
                         continue
@@ -307,17 +311,10 @@ if sys.version_info[0] >= 3:
                         if argidx is not None:
                             _ensureunicode(argidx)
 
-                # Bare open call (not an attribute on something else), the
-                # second argument (mode) must be a string, not bytes
-                elif fn == 'open' and not _isop(i - 1, '.'):
-                    arg1idx = _findargnofcall(1)
-                    if arg1idx is not None:
-                        _ensureunicode(arg1idx)
-
-                # It changes iteritems to items as iteritems is not
+                # It changes iteritems/values to items/values as they are not
                 # present in Python 3 world.
-                elif fn == 'iteritems':
-                    yield t._replace(string='items')
+                elif fn in ('iteritems', 'itervalues'):
+                    yield t._replace(string=fn[4:])
                     continue
 
             # Emit unmodified token.
@@ -327,7 +324,7 @@ if sys.version_info[0] >= 3:
     # ``replacetoken`` or any mechanism that changes semantics of module
     # loading is changed. Otherwise cached bytecode may get loaded without
     # the new transformation mechanisms applied.
-    BYTECODEHEADER = b'HG\x00\x06'
+    BYTECODEHEADER = b'HG\x00\x0a'
 
     class hgloader(importlib.machinery.SourceFileLoader):
         """Custom module loader that transforms source code.

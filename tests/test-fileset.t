@@ -88,6 +88,35 @@ Test files status
   $ fileset 'copied()'
   c1
 
+Test files status in different revisions
+
+  $ hg status -m
+  M b2
+  $ fileset -r0 'revs("wdir()", modified())' --traceback
+  b2
+  $ hg status -a
+  A c1
+  $ fileset -r0 'revs("wdir()", added())'
+  c1
+  $ hg status --change 0 -a
+  A a1
+  A a2
+  A b1
+  A b2
+  $ hg status -mru
+  M b2
+  R a2
+  ? c3
+  $ fileset -r0 'added() and revs("wdir()", modified() or removed() or unknown())'
+  b2
+  a2
+  $ fileset -r0 'added() or revs("wdir()", added())'
+  a1
+  a2
+  b1
+  b2
+  c1
+
 Test files properties
 
   >>> file('bin', 'wb').write('\0a')
@@ -319,7 +348,6 @@ Test with a revision
 
 Test safety of 'encoding' on removed files
 
-#if symlink
   $ fileset 'encoding("ascii")'
   dos
   mac
@@ -330,23 +358,9 @@ Test safety of 'encoding' on removed files
   2k
   b1
   b2
-  b2link
+  b2link (symlink !)
   bin
   c1
-#else
-  $ fileset 'encoding("ascii")'
-  dos
-  mac
-  mixed
-  .hgsub
-  .hgsubstate
-  1k
-  2k
-  b1
-  b2
-  bin
-  c1
-#endif
 
 Test detection of unintentional 'matchctx.existing()' invocation
 
@@ -367,3 +381,226 @@ Test detection of unintentional 'matchctx.existing()' invocation
 
   $ fileset 'existingcaller()' 2>&1 | tail -1
   AssertionError: unexpected existing() invocation
+
+Test 'revs(...)'
+================
+
+small reminder of the repository state
+
+  $ hg log -G
+  @  changeset:   4:* (glob)
+  |  tag:         tip
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     subrepo
+  |
+  o    changeset:   3:* (glob)
+  |\   parent:      2:55b05bdebf36
+  | |  parent:      1:* (glob)
+  | |  user:        test
+  | |  date:        Thu Jan 01 00:00:00 1970 +0000
+  | |  summary:     merge
+  | |
+  | o  changeset:   2:55b05bdebf36
+  | |  parent:      0:8a9576c51c1f
+  | |  user:        test
+  | |  date:        Thu Jan 01 00:00:00 1970 +0000
+  | |  summary:     diverging
+  | |
+  o |  changeset:   1:* (glob)
+  |/   user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    summary:     manychanges
+  |
+  o  changeset:   0:8a9576c51c1f
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     addfiles
+  
+  $ hg status --change 0
+  A a1
+  A a2
+  A b1
+  A b2
+  $ hg status --change 1
+  M b2
+  A 1k
+  A 2k
+  A b2link (no-windows !)
+  A bin
+  A c1
+  A con.xml (no-windows !)
+  R a2
+  $ hg status --change 2
+  M b2
+  $ hg status --change 3
+  M b2
+  A 1k
+  A 2k
+  A b2link (no-windows !)
+  A bin
+  A c1
+  A con.xml (no-windows !)
+  R a2
+  $ hg status --change 4
+  A .hgsub
+  A .hgsubstate
+  $ hg status
+  A dos
+  A mac
+  A mixed
+  R con.xml (no-windows !)
+  ! a1
+  ? b2.orig
+  ? c3
+  ? unknown
+
+Test files at -r0 should be filtered by files at wdir
+-----------------------------------------------------
+
+  $ fileset -r0 '* and revs("wdir()", *)'
+  a1
+  b1
+  b2
+
+Test that "revs()" work at all
+------------------------------
+
+  $ fileset "revs('2', modified())"
+  b2
+
+Test that "revs()" work for file missing in the working copy/current context
+----------------------------------------------------------------------------
+
+(a2 not in working copy)
+
+  $ fileset "revs('0', added())"
+  a1
+  a2
+  b1
+  b2
+
+(none of the file exist in "0")
+
+  $ fileset -r 0 "revs('4', added())"
+  .hgsub
+  .hgsubstate
+
+Call with empty revset
+--------------------------
+
+  $ fileset "revs('2-2', modified())"
+
+Call with revset matching multiple revs
+---------------------------------------
+
+  $ fileset "revs('0+4', added())"
+  a1
+  a2
+  b1
+  b2
+  .hgsub
+  .hgsubstate
+
+overlapping set
+
+  $ fileset "revs('1+2', modified())"
+  b2
+
+test 'status(...)'
+=================
+
+Simple case
+-----------
+
+  $ fileset "status(3, 4, added())"
+  .hgsub
+  .hgsubstate
+
+use rev to restrict matched file
+-----------------------------------------
+
+  $ hg status --removed --rev 0 --rev 1
+  R a2
+  $ fileset "status(0, 1, removed())"
+  a2
+  $ fileset "* and status(0, 1, removed())"
+  $ fileset -r 4 "status(0, 1, removed())"
+  a2
+  $ fileset -r 4 "* and status(0, 1, removed())"
+  $ fileset "revs('4', * and status(0, 1, removed()))"
+  $ fileset "revs('0', * and status(0, 1, removed()))"
+  a2
+
+check wdir()
+------------
+
+  $ hg status --removed  --rev 4
+  R con.xml (no-windows !)
+  $ fileset "status(4, 'wdir()', removed())"
+  con.xml (no-windows !)
+
+  $ hg status --removed --rev 2
+  R a2
+  $ fileset "status('2', 'wdir()', removed())"
+  a2
+
+test backward status
+--------------------
+
+  $ hg status --removed --rev 0 --rev 4
+  R a2
+  $ hg status --added --rev 4 --rev 0
+  A a2
+  $ fileset "status(4, 0, added())"
+  a2
+
+test cross branch status
+------------------------
+
+  $ hg status --added --rev 1 --rev 2
+  A a2
+  $ fileset "status(1, 2, added())"
+  a2
+
+test with multi revs revset
+---------------------------
+  $ hg status --added --rev 0:1 --rev 3:4
+  A .hgsub
+  A .hgsubstate
+  A 1k
+  A 2k
+  A b2link (no-windows !)
+  A bin
+  A c1
+  A con.xml (no-windows !)
+  $ fileset "status('0:1', '3:4', added())"
+  .hgsub
+  .hgsubstate
+  1k
+  2k
+  b2link (no-windows !)
+  bin
+  c1
+  con.xml (no-windows !)
+
+tests with empty value
+----------------------
+
+Fully empty revset
+
+  $ fileset "status('', '4', added())"
+  hg: parse error: first argument to status must be a revision
+  [255]
+  $ fileset "status('2', '', added())"
+  hg: parse error: second argument to status must be a revision
+  [255]
+
+Empty revset will error at the revset layer
+
+  $ fileset "status(' ', '4', added())"
+  hg: parse error at 1: not a prefix: end
+  [255]
+  $ fileset "status('2', ' ', added())"
+  hg: parse error at 1: not a prefix: end
+  [255]

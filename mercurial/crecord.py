@@ -473,12 +473,17 @@ def chunkselector(ui, headerlist, operation=None):
     """
     ui.write(_('starting interactive selection\n'))
     chunkselector = curseschunkselector(headerlist, ui, operation)
-    f = signal.getsignal(signal.SIGTSTP)
-    curses.wrapper(chunkselector.main)
-    if chunkselector.initerr is not None:
-        raise error.Abort(chunkselector.initerr)
-    # ncurses does not restore signal handler for SIGTSTP
-    signal.signal(signal.SIGTSTP, f)
+    origsigtstp = sentinel = object()
+    if util.safehasattr(signal, 'SIGTSTP'):
+        origsigtstp = signal.getsignal(signal.SIGTSTP)
+    try:
+        curses.wrapper(chunkselector.main)
+        if chunkselector.initerr is not None:
+            raise error.Abort(chunkselector.initerr)
+        # ncurses does not restore signal handler for SIGTSTP
+    finally:
+        if origsigtstp is not sentinel:
+            signal.signal(signal.SIGTSTP, origsigtstp)
     return chunkselector.opts
 
 def testdecorator(testfn, f):
@@ -564,7 +569,7 @@ class curseschunkselector(object):
 
         # affects some ui text
         if operation not in _headermessages:
-            raise RuntimeError('unexpected operation: %s' % operation)
+            raise error.ProgrammingError('unexpected operation: %s' % operation)
         self.operation = operation
 
     def uparrowevent(self):
@@ -1375,7 +1380,8 @@ the following are valid keystrokes:
             pass
         helpwin.refresh()
         try:
-            helpwin.getkey()
+            with self.ui.timeblockedsection('crecord'):
+                helpwin.getkey()
         except curses.error:
             pass
 
@@ -1392,7 +1398,8 @@ the following are valid keystrokes:
         self.stdscr.refresh()
         confirmwin.refresh()
         try:
-            response = chr(self.stdscr.getch())
+            with self.ui.timeblockedsection('crecord'):
+                response = chr(self.stdscr.getch())
         except ValueError:
             response = None
 
@@ -1412,7 +1419,8 @@ note: don't add/remove lines unless you also modify the range information.
 
 are you sure you want to review/edit and confirm the selected changes [yn]?
 """)
-        response = self.confirmationwindow(confirmtext)
+        with self.ui.timeblockedsection('crecord'):
+            response = self.confirmationwindow(confirmtext)
         if response is None:
             response = "n"
         if response.lower().startswith("y"):
@@ -1611,8 +1619,17 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
         method to be wrapped by curses.wrapper() for selecting chunks.
         """
 
-        origsigwinchhandler = signal.signal(signal.SIGWINCH,
-                                            self.sigwinchhandler)
+        origsigwinch = sentinel = object()
+        if util.safehasattr(signal, 'SIGWINCH'):
+            origsigwinch = signal.signal(signal.SIGWINCH,
+                                         self.sigwinchhandler)
+        try:
+            return self._main(stdscr)
+        finally:
+            if origsigwinch is not sentinel:
+                signal.signal(signal.SIGWINCH, origsigwinch)
+
+    def _main(self, stdscr):
         self.stdscr = stdscr
         # error during initialization, cannot be printed in the curses
         # interface, it should be printed by the calling code
@@ -1655,7 +1672,8 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
         while True:
             self.updatescreen()
             try:
-                keypressed = self.statuswin.getkey()
+                with self.ui.timeblockedsection('crecord'):
+                    keypressed = self.statuswin.getkey()
                 if self.errorstr is not None:
                     self.errorstr = None
                     continue
@@ -1663,4 +1681,3 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
                 keypressed = "foobar"
             if self.handlekeypressed(keypressed):
                 break
-        signal.signal(signal.SIGWINCH, origsigwinchhandler)

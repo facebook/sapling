@@ -20,7 +20,7 @@ _versionformat = ">I"
 
 class state(object):
     def __init__(self, repo):
-        self._opener = repo.opener
+        self._vfs = repo.vfs
         self._ui = repo.ui
         self._rootdir = pathutil.normasprefix(repo.root)
         self._lastclock = None
@@ -33,7 +33,7 @@ class state(object):
 
     def get(self):
         try:
-            file = self._opener('fsmonitor.state', 'rb')
+            file = self._vfs('fsmonitor.state', 'rb')
         except IOError as inst:
             if inst.errno != errno.ENOENT:
                 raise
@@ -91,7 +91,7 @@ class state(object):
             return
 
         try:
-            file = self._opener('fsmonitor.state', 'wb', atomictemp=True)
+            file = self._vfs('fsmonitor.state', 'wb', atomictemp=True)
         except (IOError, OSError):
             self._ui.warn(_("warning: unable to write out fsmonitor state\n"))
             return

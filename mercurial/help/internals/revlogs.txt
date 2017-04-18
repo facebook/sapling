@@ -108,9 +108,9 @@ follows, with byte 0 being the first byte (all data stored as big endian):
 
 16-19 (4 bytes)
    Base or previous revision this revision's delta was produced against.
-   -1 means this revision holds full text (as opposed to a delta).
-   For generaldelta repos, this is the previous revision in the delta
-   chain. For non-generaldelta repos, this is the base or first
+   This revision holds full text (as opposed to a delta) if it points to
+   itself. For generaldelta repos, this is the previous revision in the
+   delta chain. For non-generaldelta repos, this is the base or first
    revision in the delta chain.
 
 20-23 (4 bytes)

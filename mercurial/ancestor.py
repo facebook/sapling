@@ -296,6 +296,8 @@ class lazyancestors(object):
         except StopIteration:
             return False
 
+    __bool__ = __nonzero__
+
     def __iter__(self):
         """Generate the ancestors of _initrevs in reverse topological order.
 

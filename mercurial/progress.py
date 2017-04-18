@@ -7,6 +7,7 @@
 
 from __future__ import absolute_import
 
+import errno
 import threading
 import time
 
@@ -59,6 +60,24 @@ def fmtremaining(seconds):
     weeks -= years * 52
     # i18n: format X years and YY weeks as "XyYYw"
     return _("%dy%02dw") % (years, weeks)
+
+# file_write() and file_flush() of Python 2 do not restart on EINTR if
+# the file is attached to a "slow" device (e.g. a terminal) and raise
+# IOError. We cannot know how many bytes would be written by file_write(),
+# but a progress text is known to be short enough to be written by a
+# single write() syscall, so we can just retry file_write() with the whole
+# text. (issue5532)
+#
+# This should be a short-term workaround. We'll need to fix every occurrence
+# of write() to a terminal or pipe.
+def _eintrretry(func, *args):
+    while True:
+        try:
+            return func(*args)
+        except IOError as err:
+            if err.errno == errno.EINTR:
+                continue
+            raise
 
 class progbar(object):
     def __init__(self, ui):
@@ -157,14 +176,14 @@ class progbar(object):
             out = spacejoin(head, prog, tail)
         else:
             out = spacejoin(head, tail)
-        self.ui.ferr.write('\r' + encoding.trim(out, termwidth))
+        self._writeerr('\r' + encoding.trim(out, termwidth))
         self.lasttopic = topic
-        self.ui.ferr.flush()
+        self._flusherr()
 
     def clear(self):
         if not self.printed or not self.lastprint or not shouldprint(self.ui):
             return
-        self.ui.ferr.write('\r%s\r' % (' ' * self.width()))
+        self._writeerr('\r%s\r' % (' ' * self.width()))
         if self.printed:
             # force immediate re-paint of progress bar
             self.lastprint = 0
@@ -175,8 +194,14 @@ class progbar(object):
         if self.ui.configbool('progress', 'clear-complete', default=True):
             self.clear()
         else:
-            self.ui.ferr.write('\n')
-        self.ui.ferr.flush()
+            self._writeerr('\n')
+        self._flusherr()
+
+    def _flusherr(self):
+        _eintrretry(self.ui.ferr.flush)
+
+    def _writeerr(self, msg):
+        _eintrretry(self.ui.ferr.write, msg)
 
     def width(self):
         tw = self.ui.termwidth()

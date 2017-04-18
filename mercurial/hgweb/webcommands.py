@@ -28,11 +28,14 @@ from .common import (
 
 from .. import (
     archival,
+    context,
     encoding,
     error,
     graphmod,
     revset,
+    revsetlang,
     scmutil,
+    smartset,
     templatefilters,
     templater,
     util,
@@ -238,20 +241,20 @@ def _search(web, req, tmpl):
 
         revdef = 'reverse(%s)' % query
         try:
-            tree = revset.parse(revdef)
+            tree = revsetlang.parse(revdef)
         except error.ParseError:
             # can't parse to a revset tree
             return MODE_KEYWORD, query
 
-        if revset.depth(tree) <= 2:
+        if revsetlang.depth(tree) <= 2:
             # no revset syntax used
             return MODE_KEYWORD, query
 
         if any((token, (value or '')[:3]) == ('string', 're:')
-                    for token, value, pos in revset.tokenize(revdef)):
+               for token, value, pos in revsetlang.tokenize(revdef)):
             return MODE_KEYWORD, query
 
-        funcsused = revset.funcsused(tree)
+        funcsused = revsetlang.funcsused(tree)
         if not funcsused.issubset(revset.safesymbols):
             return MODE_KEYWORD, query
 
@@ -752,13 +755,13 @@ def filediff(web, req, tmpl):
     if fctx is not None:
         path = fctx.path()
         ctx = fctx.changectx()
+    basectx = ctx.p1()
 
-    parity = paritygen(web.stripecount)
     style = web.config('web', 'style', 'paper')
     if 'style' in req.form:
         style = req.form['style'][0]
 
-    diffs = webutil.diffs(web.repo, tmpl, ctx, None, [path], parity, style)
+    diffs = webutil.diffs(web, tmpl, ctx, basectx, [path], style)
     if fctx is not None:
         rename = webutil.renamelink(fctx)
         ctx = fctx
@@ -966,10 +969,19 @@ def filelog(web, req, tmpl):
         except ValueError:
             pass
 
+    lrange = webutil.linerange(req)
+
     lessvars = copy.copy(tmpl.defaults['sessionvars'])
     lessvars['revcount'] = max(revcount / 2, 1)
     morevars = copy.copy(tmpl.defaults['sessionvars'])
     morevars['revcount'] = revcount * 2
+
+    patch = 'patch' in req.form
+    if patch:
+        lessvars['patch'] = morevars['patch'] = req.form['patch'][0]
+    descend = 'descend' in req.form
+    if descend:
+        lessvars['descend'] = morevars['descend'] = req.form['descend'][0]
 
     count = fctx.filerev() + 1
     start = max(0, count - revcount) # first rev on this page
@@ -979,26 +991,74 @@ def filelog(web, req, tmpl):
     repo = web.repo
     revs = fctx.filelog().revs(start, end - 1)
     entries = []
-    for i in revs:
-        iterfctx = fctx.filectx(i)
-        entries.append(dict(
-            parity=next(parity),
-            filerev=i,
-            file=f,
-            rename=webutil.renamelink(iterfctx),
-            **webutil.commonentry(repo, iterfctx)))
-    entries.reverse()
+
+    diffstyle = web.config('web', 'style', 'paper')
+    if 'style' in req.form:
+        diffstyle = req.form['style'][0]
+
+    def diff(fctx, linerange=None):
+        ctx = fctx.changectx()
+        basectx = ctx.p1()
+        path = fctx.path()
+        return webutil.diffs(web, tmpl, ctx, basectx, [path], diffstyle,
+                             linerange=linerange,
+                             lineidprefix='%s-' % ctx.hex()[:12])
+
+    linerange = None
+    if lrange is not None:
+        linerange = webutil.formatlinerange(*lrange)
+        # deactivate numeric nav links when linerange is specified as this
+        # would required a dedicated "revnav" class
+        nav = None
+        if descend:
+            it = context.blockdescendants(fctx, *lrange)
+        else:
+            it = context.blockancestors(fctx, *lrange)
+        for i, (c, lr) in enumerate(it, 1):
+            diffs = None
+            if patch:
+                diffs = diff(c, linerange=lr)
+            # follow renames accross filtered (not in range) revisions
+            path = c.path()
+            entries.append(dict(
+                parity=next(parity),
+                filerev=c.rev(),
+                file=path,
+                diff=diffs,
+                linerange=webutil.formatlinerange(*lr),
+                **webutil.commonentry(repo, c)))
+            if i == revcount:
+                break
+        lessvars['linerange'] = webutil.formatlinerange(*lrange)
+        morevars['linerange'] = lessvars['linerange']
+    else:
+        for i in revs:
+            iterfctx = fctx.filectx(i)
+            diffs = None
+            if patch:
+                diffs = diff(iterfctx)
+            entries.append(dict(
+                parity=next(parity),
+                filerev=i,
+                file=f,
+                diff=diffs,
+                rename=webutil.renamelink(iterfctx),
+                **webutil.commonentry(repo, iterfctx)))
+        entries.reverse()
+        revnav = webutil.filerevnav(web.repo, fctx.path())
+        nav = revnav.gen(end - 1, revcount, count)
 
     latestentry = entries[:1]
 
-    revnav = webutil.filerevnav(web.repo, fctx.path())
-    nav = revnav.gen(end - 1, revcount, count)
     return tmpl("filelog",
                 file=f,
                 nav=nav,
                 symrev=webutil.symrevorshortnode(req, fctx),
                 entries=entries,
+                descend=descend,
+                patch=patch,
                 latestentry=latestentry,
+                linerange=linerange,
                 revcount=revcount,
                 morevars=morevars,
                 lessvars=lessvars,
@@ -1148,7 +1208,7 @@ def graph(web, req, tmpl):
         # We have to feed a baseset to dagwalker as it is expecting smartset
         # object. This does not have a big impact on hgweb performance itself
         # since hgweb graphing code is not itself lazy yet.
-        dag = graphmod.dagwalker(web.repo, revset.baseset(revs))
+        dag = graphmod.dagwalker(web.repo, smartset.baseset(revs))
         # As we said one line above... not lazy.
         tree = list(graphmod.colored(dag, web.repo))
 

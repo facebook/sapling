@@ -35,6 +35,7 @@ from . import (
     pycompat,
     scmutil,
     util,
+    vfs as vfsmod,
 )
 
 hg = None
@@ -129,7 +130,7 @@ def state(ctx, ui):
         for pattern, repl in p.items('subpaths'):
             # Turn r'C:\foo\bar' into r'C:\\foo\\bar' since re.sub
             # does a string decode.
-            repl = repl.encode('string-escape')
+            repl = util.escapestr(repl)
             # However, we still want to allow back references to go
             # through unharmed, so we turn r'\\1' into r'\1'. Again,
             # extra escapes are needed because re.sub string decodes.
@@ -443,6 +444,15 @@ class abstractsubrepo(object):
         self._ctx = ctx
         self._path = path
 
+    def addwebdirpath(self, serverpath, webconf):
+        """Add the hgwebdir entries for this subrepo, and any of its subrepos.
+
+        ``serverpath`` is the path component of the URL for this repo.
+
+        ``webconf`` is the dictionary of hgwebdir entries.
+        """
+        pass
+
     def storeclean(self, path):
         """
         returns true if the repository has not changed since it was last
@@ -547,8 +557,8 @@ class abstractsubrepo(object):
         """return filename iterator"""
         raise NotImplementedError
 
-    def filedata(self, name):
-        """return file data"""
+    def filedata(self, name, decode):
+        """return file data, optionally passed through repo decoders"""
         raise NotImplementedError
 
     def fileflags(self, name):
@@ -563,7 +573,7 @@ class abstractsubrepo(object):
         """handle the files command for this subrepo"""
         return 1
 
-    def archive(self, archiver, prefix, match=None):
+    def archive(self, archiver, prefix, match=None, decode=True):
         if match is not None:
             files = [f for f in self.files() if match(f)]
         else:
@@ -577,7 +587,7 @@ class abstractsubrepo(object):
             mode = 'x' in flags and 0o755 or 0o644
             symlink = 'l' in flags
             archiver.addfile(prefix + self._path + '/' + name,
-                             mode, symlink, self.filedata(name))
+                             mode, symlink, self.filedata(name, decode))
             self.ui.progress(_('archiving (%s)') % relpath, i + 1,
                              unit=_('files'), total=total)
         self.ui.progress(_('archiving (%s)') % relpath, None)
@@ -620,7 +630,7 @@ class abstractsubrepo(object):
     def wvfs(self):
         """return vfs to access the working directory of this subrepository
         """
-        return scmutil.vfs(self._ctx.repo().wvfs.join(self._path))
+        return vfsmod.vfs(self._ctx.repo().wvfs.join(self._path))
 
     @propertycache
     def _relpath(self):
@@ -649,6 +659,10 @@ class hgsubrepo(abstractsubrepo):
         # internal config: ui._usedassubrepo
         self.ui.setconfig('ui', '_usedassubrepo', 'True', 'subrepo')
         self._initrepo(r, state[0], create)
+
+    @annotatesubrepoerror
+    def addwebdirpath(self, serverpath, webconf):
+        cmdutil.addwebdirpath(self._repo, subrelpath(self), webconf)
 
     def storeclean(self, path):
         with self._repo.lock():
@@ -682,7 +696,7 @@ class hgsubrepo(abstractsubrepo):
 
     @propertycache
     def _cachestorehashvfs(self):
-        return scmutil.vfs(self._repo.join('cache/storehash'))
+        return vfsmod.vfs(self._repo.vfs.join('cache/storehash'))
 
     def _readstorehashcache(self, remotepath):
         '''read the store hash cache for a given remote repository'''
@@ -787,7 +801,7 @@ class hgsubrepo(abstractsubrepo):
                           % (inst, subrelpath(self)))
 
     @annotatesubrepoerror
-    def archive(self, archiver, prefix, match=None):
+    def archive(self, archiver, prefix, match=None, decode=True):
         self._get(self._state + ('hg',))
         total = abstractsubrepo.archive(self, archiver, prefix, match)
         rev = self._state[1]
@@ -795,7 +809,8 @@ class hgsubrepo(abstractsubrepo):
         for subpath in ctx.substate:
             s = subrepo(ctx, subpath, True)
             submatch = matchmod.subdirmatcher(subpath, match)
-            total += s.archive(archiver, prefix + self._path + '/', submatch)
+            total += s.archive(archiver, prefix + self._path + '/', submatch,
+                               decode)
         return total
 
     @annotatesubrepoerror
@@ -961,9 +976,12 @@ class hgsubrepo(abstractsubrepo):
         ctx = self._repo[rev]
         return ctx.manifest().keys()
 
-    def filedata(self, name):
+    def filedata(self, name, decode):
         rev = self._state[1]
-        return self._repo[rev][name].data()
+        data = self._repo[rev][name].data()
+        if decode:
+            data = self._repo.wwritedata(name, data)
+        return data
 
     def fileflags(self, name):
         rev = self._state[1]
@@ -1297,7 +1315,7 @@ class svnsubrepo(abstractsubrepo):
             paths.append(name.encode('utf-8'))
         return paths
 
-    def filedata(self, name):
+    def filedata(self, name, decode):
         return self._svncommand(['cat'], name)[0]
 
 
@@ -1415,6 +1433,10 @@ class gitsubrepo(abstractsubrepo):
         errpipe = None
         if self.ui.quiet:
             errpipe = open(os.devnull, 'w')
+        if self.ui._colormode and len(commands) and commands[0] == "diff":
+            # insert the argument in the front,
+            # the end of git diff arguments is used for paths
+            commands.insert(1, '--color')
         p = subprocess.Popen([self._gitexecutable] + commands, bufsize=-1,
                              cwd=cwd, env=env, close_fds=util.closefds,
                              stdout=subprocess.PIPE, stderr=errpipe)
@@ -1777,7 +1799,7 @@ class gitsubrepo(abstractsubrepo):
             else:
                 self.wvfs.unlink(f)
 
-    def archive(self, archiver, prefix, match=None):
+    def archive(self, archiver, prefix, match=None, decode=True):
         total = 0
         source, revision = self._state
         if not revision:

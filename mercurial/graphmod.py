@@ -22,6 +22,7 @@ from __future__ import absolute_import
 from .node import nullrev
 from . import (
     revset,
+    smartset,
     util,
 )
 
@@ -67,8 +68,8 @@ def dagwalker(repo, revs):
             if gp is None:
                 # precompute slow query as we know reachableroots() goes
                 # through all revs (issue4782)
-                if not isinstance(revs, revset.baseset):
-                    revs = revset.baseset(revs)
+                if not isinstance(revs, smartset.baseset):
+                    revs = smartset.baseset(revs)
                 gp = gpcache[mpar] = sorted(set(revset.reachableroots(
                     repo, revs, [mpar])))
             if not gp:
@@ -181,6 +182,9 @@ def asciiedges(type, char, lines, state, rev, parents):
     knownparents = []
     newparents = []
     for ptype, parent in parents:
+        if parent == rev:
+            # self reference (should only be seen in null rev)
+            continue
         if parent in seen:
             knownparents.append(parent)
         else:
@@ -190,8 +194,7 @@ def asciiedges(type, char, lines, state, rev, parents):
     ncols = len(seen)
     nextseen = seen[:]
     nextseen[nodeidx:nodeidx + 1] = newparents
-    edges = [(nodeidx, nextseen.index(p))
-             for p in knownparents if p != nullrev]
+    edges = [(nodeidx, nextseen.index(p)) for p in knownparents]
 
     seen[:] = nextseen
     while len(newparents) > 2:

@@ -1,5 +1,10 @@
   $ hg init a
   $ cd a
+
+Verify checking branch of nullrev before the cache is created doesnt crash
+  $ hg log -r 'branch(.)' -T '{branch}\n'
+
+Basic test
   $ echo 'root' >root
   $ hg add root
   $ hg commit -d '0 0' -m "Adding root node"
@@ -518,6 +523,12 @@ template output:
 
   $ hg branches --closed -T '{if(closed, "{branch}\n")}'
   c
+
+  $ hg branches -T '{word(0, branch)}: {desc|firstline}\n'
+  b: reopen branch with a change
+  a: Adding d branch
+  a: Adding b branch head 2
+  default: Adding root node
 
 Tests of revision branch name caching
 

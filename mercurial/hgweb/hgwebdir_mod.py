@@ -254,15 +254,32 @@ class hgwebdir(object):
                 return []
 
             # top-level index
-            elif not virtual:
+
+            repos = dict(self.repos)
+
+            if (not virtual or virtual == 'index') and virtual not in repos:
                 req.respond(HTTP_OK, ctype)
                 return self.makeindex(req, tmpl)
 
             # nested indexes and hgwebs
 
-            repos = dict(self.repos)
-            virtualrepo = virtual
-            while virtualrepo:
+            if virtual.endswith('/index') and virtual not in repos:
+                subdir = virtual[:-len('index')]
+                if any(r.startswith(subdir) for r in repos):
+                    req.respond(HTTP_OK, ctype)
+                    return self.makeindex(req, tmpl, subdir)
+
+            def _virtualdirs():
+                # Check the full virtual path, each parent, and the root ('')
+                if virtual != '':
+                    yield virtual
+
+                    for p in util.finddirs(virtual):
+                        yield p
+
+                yield ''
+
+            for virtualrepo in _virtualdirs():
                 real = repos.get(virtualrepo)
                 if real:
                     req.env['REPO_NAME'] = virtualrepo
@@ -275,11 +292,6 @@ class hgwebdir(object):
                         raise ErrorResponse(HTTP_SERVER_ERROR, msg)
                     except error.RepoError as inst:
                         raise ErrorResponse(HTTP_SERVER_ERROR, str(inst))
-
-                up = virtualrepo.rfind('/')
-                if up < 0:
-                    break
-                virtualrepo = virtualrepo[:up]
 
             # browse subdirectories
             subdir = virtual + '/'
@@ -352,8 +364,7 @@ class hgwebdir(object):
                             pass
 
                 parts = [name]
-                if 'PATH_INFO' in req.env:
-                    parts.insert(0, req.env['PATH_INFO'].rstrip('/'))
+                parts.insert(0, '/' + subdir.rstrip('/'))
                 if req.env['SCRIPT_NAME']:
                     parts.insert(0, req.env['SCRIPT_NAME'])
                 url = re.sub(r'/+', '/', '/'.join(parts) + '/')

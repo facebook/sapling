@@ -56,6 +56,7 @@ ones.
 
   - ``<repo>/.hg/hgrc`` (per-repository)
   - ``$HOME/.hgrc`` (per-user)
+  - ``${XDG_CONFIG_HOME:-$HOME/.config}/hg/hgrc`` (per-user)
   - ``<install-root>/etc/mercurial/hgrc`` (per-installation)
   - ``<install-root>/etc/mercurial/hgrc.d/*.rc`` (per-installation)
   - ``/etc/mercurial/hgrc`` (per-system)
@@ -276,7 +277,7 @@ run arbitrary commands. As an example, ::
 will let you do ``hg echo foo`` to have ``foo`` printed in your
 terminal. A better example might be::
 
-   purge = !$HG status --no-status --unknown -0 re: | xargs -0 rm
+   purge = !$HG status --no-status --unknown -0 re: | xargs -0 rm -f
 
 which will make ``hg purge`` delete all unknown files in the
 repository in the same manner as the purge extension.
@@ -322,12 +323,32 @@ related options for the diff command.
 ``auth``
 --------
 
-Authentication credentials for HTTP authentication. This section
-allows you to store usernames and passwords for use when logging
-*into* HTTP servers. See :hg:`help config.web` if
-you want to configure *who* can login to your HTTP server.
+Authentication credentials and other authentication-like configuration
+for HTTP connections. This section allows you to store usernames and
+passwords for use when logging *into* HTTP servers. See
+:hg:`help config.web` if you want to configure *who* can login to
+your HTTP server.
 
-Each line has the following format::
+The following options apply to all hosts.
+
+``cookiefile``
+    Path to a file containing HTTP cookie lines. Cookies matching a
+    host will be sent automatically.
+
+    The file format uses the Mozilla cookies.txt format, which defines cookies
+    on their own lines. Each line contains 7 fields delimited by the tab
+    character (domain, is_domain_cookie, path, is_secure, expires, name,
+    value). For more info, do an Internet search for "Netscape cookies.txt
+    format."
+
+    Note: the cookies parser does not handle port numbers on domains. You
+    will need to remove ports from the domain for the cookie to be recognized.
+    This could result in a cookie being disclosed to an unwanted server.
+
+    The cookies file is read-only.
+
+Other options in this section are grouped by name and have the following
+format::
 
     <name>.<argument> = <value>
 
@@ -385,6 +406,46 @@ Supported arguments:
 If no suitable authentication entry is found, the user is prompted
 for credentials as usual if required by the remote.
 
+``color``
+---------
+
+Configure the Mercurial color mode. For details about how to define your custom
+effect and style see :hg:`help color`.
+
+``mode``
+    String: control the method used to output color. One of ``auto``, ``ansi``,
+    ``win32``, ``terminfo`` or ``debug``. In auto mode the color extension will
+    use ANSI mode by default (or win32 mode on Windows) if it detects a
+    terminal. Any invalid value will disable color.
+
+``pagermode``
+    String: optinal override of ``color.mode`` used with pager (from the pager
+    extensions).
+
+    On some systems, terminfo mode may cause problems when using
+    color with the pager extension and less -R. less with the -R option
+    will only display ECMA-48 color codes, and terminfo mode may sometimes
+    emit codes that less doesn't understand. You can work around this by
+    either using ansi mode (or auto mode), or by using less -r (which will
+    pass through all terminal control codes, not just color control
+    codes).
+
+    On some systems (such as MSYS in Windows), the terminal may support
+    a different color mode than the pager (activated via the "pager"
+    extension).
+
+``commands``
+------------
+
+``status.relative``
+    Make paths in ``hg status`` output relative to the current directory.
+    (default: False)
+
+``update.requiredest``
+    Require that the user pass a destination when running ``hg update``.
+    For example, ``hg update .::`` will be allowed, but a plain ``hg update``
+    will be disallowed.
+    (default: False)
 
 ``committemplate``
 ------------------
@@ -700,8 +761,8 @@ or ``foo = !`` when path is not supplied.
 Example for ``~/.hgrc``::
 
   [extensions]
-  # (the color extension will get loaded from Mercurial's path)
-  color =
+  # (the churn extension will get loaded from Mercurial's path)
+  churn =
   # (this extension will get loaded from the file specified)
   myfeature = ~/.hgext/myfeature.py
 
@@ -801,8 +862,12 @@ Example ``.hg/hgrc``::
   priority.incoming.autobuild = 1
 
 Most hooks are run with environment variables set that give useful
-additional information. For each hook below, the environment
-variables it is passed are listed with names of the form ``$HG_foo``.
+additional information. For each hook below, the environment variables
+it is passed are listed with names of the form ``$HG_foo``. The
+``$HG_HOOKTYPE`` and ``$HG_HOOKNAME`` variables are set for all hooks.
+their respectively contains the type of hook which triggered the run and
+the full name of the hooks in the config. In the example about this will
+be ``$HG_HOOKTYPE=incoming`` and ``$HG_HOOKNAME=incoming.email``.
 
 ``changegroup``
   Run after a changegroup has been added via push, pull or unbundle.  ID of the
@@ -1795,6 +1860,13 @@ User interface controls.
     ``BUNDLESPEC=gzip-v2, COMPRESSION=gzip``.
 
     By default, the first bundle advertised by the server is used.
+
+``color``
+    String: when to use to colorize output. possible value are auto, always,
+    never, or debug (default: auto). 'auto' will use color whenever it seems
+    possible. See :hg:`help color` for details.
+
+    (in addition a boolean can be used in place always/never)
 
 ``commitsubrepos``
     Whether to commit modified subrepositories when committing the

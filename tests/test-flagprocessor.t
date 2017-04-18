@@ -163,3 +163,85 @@
   $ hg commit -Aqm 'add file'
   abort: cannot register multiple processors on flag '0x8'.
   [255]
+
+  $ cd ..
+
+# TEST: bundle repo
+  $ hg init bundletest
+  $ cd bundletest
+
+  $ cat >> .hg/hgrc << EOF
+  > [extensions]
+  > flagprocessor=$TESTDIR/flagprocessorext.py
+  > EOF
+
+  $ for i in 0 single two three 4; do
+  >   echo '[BASE64]a-bit-longer-'$i > base64
+  >   hg commit -m base64-$i -A base64
+  > done
+
+  $ hg update 2 -q
+  $ echo '[BASE64]a-bit-longer-branching' > base64
+  $ hg commit -q -m branching
+
+  $ hg bundle --base 1 bundle.hg
+  4 changesets found
+  $ hg --config extensions.strip= strip -r 2 --no-backup --force -q
+  $ hg -R bundle.hg log --stat -T '{rev} {desc}\n' base64
+  5 branching
+   base64 |  2 +-
+   1 files changed, 1 insertions(+), 1 deletions(-)
+  
+  4 base64-4
+   base64 |  2 +-
+   1 files changed, 1 insertions(+), 1 deletions(-)
+  
+  3 base64-three
+   base64 |  2 +-
+   1 files changed, 1 insertions(+), 1 deletions(-)
+  
+  2 base64-two
+   base64 |  2 +-
+   1 files changed, 1 insertions(+), 1 deletions(-)
+  
+  1 base64-single
+   base64 |  2 +-
+   1 files changed, 1 insertions(+), 1 deletions(-)
+  
+  0 base64-0
+   base64 |  1 +
+   1 files changed, 1 insertions(+), 0 deletions(-)
+  
+
+  $ hg bundle -R bundle.hg --base 1 bundle-again.hg -q
+  $ hg -R bundle-again.hg log --stat -T '{rev} {desc}\n' base64
+  5 branching
+   base64 |  2 +-
+   1 files changed, 1 insertions(+), 1 deletions(-)
+  
+  4 base64-4
+   base64 |  2 +-
+   1 files changed, 1 insertions(+), 1 deletions(-)
+  
+  3 base64-three
+   base64 |  2 +-
+   1 files changed, 1 insertions(+), 1 deletions(-)
+  
+  2 base64-two
+   base64 |  2 +-
+   1 files changed, 1 insertions(+), 1 deletions(-)
+  
+  1 base64-single
+   base64 |  2 +-
+   1 files changed, 1 insertions(+), 1 deletions(-)
+  
+  0 base64-0
+   base64 |  1 +
+   1 files changed, 1 insertions(+), 0 deletions(-)
+  
+  $ rm bundle.hg bundle-again.hg
+
+# TEST: hg status
+
+  $ hg status
+  $ hg diff

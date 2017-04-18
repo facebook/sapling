@@ -298,11 +298,12 @@ class KeepAliveHandler(object):
 
     def _start_transaction(self, h, req):
         # What follows mostly reimplements HTTPConnection.request()
-        # except it adds self.parent.addheaders in the mix.
-        headers = dict(self.parent.addheaders)
-        headers.update(req.headers)
-        headers.update(req.unredirected_hdrs)
-        headers = dict((n.lower(), v) for n, v in headers.items())
+        # except it adds self.parent.addheaders in the mix and sends headers
+        # in a deterministic order (to make testing easier).
+        headers = util.sortdict(self.parent.addheaders)
+        headers.update(sorted(req.headers.items()))
+        headers.update(sorted(req.unredirected_hdrs.items()))
+        headers = util.sortdict((n.lower(), v) for n, v in headers.items())
         skipheaders = {}
         for n in ('host', 'accept-encoding'):
             if n in headers:
@@ -310,14 +311,16 @@ class KeepAliveHandler(object):
         try:
             if req.has_data():
                 data = req.get_data()
-                h.putrequest('POST', req.get_selector(), **skipheaders)
+                h.putrequest(
+                    req.get_method(), req.get_selector(), **skipheaders)
                 if 'content-type' not in headers:
                     h.putheader('Content-type',
                                 'application/x-www-form-urlencoded')
                 if 'content-length' not in headers:
                     h.putheader('Content-length', '%d' % len(data))
             else:
-                h.putrequest('GET', req.get_selector(), **skipheaders)
+                h.putrequest(
+                    req.get_method(), req.get_selector(), **skipheaders)
         except socket.error as err:
             raise urlerr.urlerror(err)
         for k, v in headers.items():

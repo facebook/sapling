@@ -55,17 +55,15 @@ except ImportError:
 import mercurial.util
 import mercurial.dispatch
 
-import time
-
 def timer(func, title=None):
     results = []
-    begin = time.time()
+    begin = mercurial.util.timer()
     count = 0
     while True:
         ostart = os.times()
-        cstart = time.time()
+        cstart = mercurial.util.timer()
         r = func()
-        cstop = time.time()
+        cstop = mercurial.util.timer()
         ostop = os.times()
         count += 1
         a, b = ostart, ostop

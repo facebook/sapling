@@ -28,11 +28,11 @@ Test server address cannot be reused
 
 #if windows
   $ hg serve -p $HGPORT1 2>&1
-  abort: cannot start server at ':$HGPORT1': * (glob)
+  abort: cannot start server at 'localhost:$HGPORT1': * (glob)
   [255]
 #else
   $ hg serve -p $HGPORT1 2>&1
-  abort: cannot start server at ':$HGPORT1': Address already in use
+  abort: cannot start server at 'localhost:$HGPORT1': Address already in use
   [255]
 #endif
   $ cd ..
@@ -138,7 +138,7 @@ pull
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  changegroup hook: HG_NODE=5fed3813f7f5e1824344fdc9cf8f63bb662c292d HG_NODE_LAST=5fed3813f7f5e1824344fdc9cf8f63bb662c292d HG_SOURCE=pull HG_TXNID=TXN:* HG_URL=http://localhost:$HGPORT1/ (glob)
+  changegroup hook: HG_HOOKNAME=changegroup HG_HOOKTYPE=changegroup HG_NODE=5fed3813f7f5e1824344fdc9cf8f63bb662c292d HG_NODE_LAST=5fed3813f7f5e1824344fdc9cf8f63bb662c292d HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=http://localhost:$HGPORT1/
   (run 'hg update' to get a working copy)
   $ cd ..
 

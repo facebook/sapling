@@ -17,6 +17,7 @@ from __future__ import absolute_import
 
 import bz2
 import calendar
+import codecs
 import collections
 import datetime
 import errno
@@ -37,6 +38,7 @@ import tempfile
 import textwrap
 import time
 import traceback
+import warnings
 import zlib
 
 from . import (
@@ -48,6 +50,7 @@ from . import (
     pycompat,
 )
 
+cookielib = pycompat.cookielib
 empty = pycompat.empty
 httplib = pycompat.httplib
 httpserver = pycompat.httpserver
@@ -59,13 +62,24 @@ stdin = pycompat.stdin
 stdout = pycompat.stdout
 stringio = pycompat.stringio
 urlerr = pycompat.urlerr
-urlparse = pycompat.urlparse
 urlreq = pycompat.urlreq
 xmlrpclib = pycompat.xmlrpclib
 
+def isatty(fp):
+    try:
+        return fp.isatty()
+    except AttributeError:
+        return False
+
+# glibc determines buffering on first write to stdout - if we replace a TTY
+# destined stdout with a pipe destined stdout (e.g. pager), we want line
+# buffering
+if isatty(stdout):
+    stdout = os.fdopen(stdout.fileno(), pycompat.sysstr('wb'), 1)
+
 if pycompat.osname == 'nt':
     from . import windows as platform
-    stdout = platform.winstdout(pycompat.stdout)
+    stdout = platform.winstdout(stdout)
 else:
     from . import posix as platform
 
@@ -123,7 +137,6 @@ statislink = platform.statislink
 testpid = platform.testpid
 umask = platform.umask
 unlink = platform.unlink
-unlinkpath = platform.unlinkpath
 username = platform.username
 
 # Python compatibility
@@ -143,6 +156,31 @@ def bitsfrom(container):
     for bit in container:
         bits |= bit
     return bits
+
+# python 2.6 still have deprecation warning enabled by default. We do not want
+# to display anything to standard user so detect if we are running test and
+# only use python deprecation warning in this case.
+_dowarn = bool(encoding.environ.get('HGEMITWARNINGS'))
+if _dowarn:
+    # explicitly unfilter our warning for python 2.7
+    #
+    # The option of setting PYTHONWARNINGS in the test runner was investigated.
+    # However, module name set through PYTHONWARNINGS was exactly matched, so
+    # we cannot set 'mercurial' and have it match eg: 'mercurial.scmutil'. This
+    # makes the whole PYTHONWARNINGS thing useless for our usecase.
+    warnings.filterwarnings(r'default', r'', DeprecationWarning, r'mercurial')
+    warnings.filterwarnings(r'default', r'', DeprecationWarning, r'hgext')
+    warnings.filterwarnings(r'default', r'', DeprecationWarning, r'hgext3rd')
+
+def nouideprecwarn(msg, version, stacklevel=1):
+    """Issue an python native deprecation warning
+
+    This is a noop outside of tests, use 'ui.deprecwarn' when possible.
+    """
+    if _dowarn:
+        msg += ("\n(compatibility will be dropped after Mercurial-%s,"
+                " update your code.)") % version
+        warnings.warn(msg, DeprecationWarning, stacklevel + 1)
 
 DIGESTS = {
     'md5': hashlib.md5,
@@ -544,11 +582,11 @@ class sortdict(dict):
         dict.__delitem__(self, key)
         self._list.remove(key)
     def pop(self, key, *args, **kwargs):
-        dict.pop(self, key, *args, **kwargs)
         try:
             self._list.remove(key)
         except ValueError:
             pass
+        return dict.pop(self, key, *args, **kwargs)
     def keys(self):
         return self._list[:]
     def iterkeys(self):
@@ -797,7 +835,7 @@ def tempfilter(s, cmd):
     inname, outname = None, None
     try:
         infd, inname = tempfile.mkstemp(prefix='hg-filter-in-')
-        fp = os.fdopen(infd, 'wb')
+        fp = os.fdopen(infd, pycompat.sysstr('wb'))
         fp.write(s)
         fp.close()
         outfd, outname = tempfile.mkstemp(prefix='hg-filter-out-')
@@ -943,10 +981,7 @@ if mainfrozen() and getattr(sys, 'frozen', None) != 'macosx_app':
     # executable version (py2exe) doesn't support __file__
     datapath = os.path.dirname(pycompat.sysexecutable)
 else:
-    datapath = os.path.dirname(__file__)
-
-if not isinstance(datapath, bytes):
-    datapath = pycompat.fsencode(datapath)
+    datapath = os.path.dirname(pycompat.fsencode(__file__))
 
 i18n.setdatapath(datapath)
 
@@ -959,7 +994,7 @@ def hgexecutable():
     """
     if _hgexecutable is None:
         hg = encoding.environ.get('HG')
-        mainmod = sys.modules['__main__']
+        mainmod = sys.modules[pycompat.sysstr('__main__')]
         if hg:
             _sethgexecutable(hg)
         elif mainfrozen():
@@ -968,8 +1003,9 @@ def hgexecutable():
                 _sethgexecutable(encoding.environ['EXECUTABLEPATH'])
             else:
                 _sethgexecutable(pycompat.sysexecutable)
-        elif os.path.basename(getattr(mainmod, '__file__', '')) == 'hg':
-            _sethgexecutable(mainmod.__file__)
+        elif (os.path.basename(
+            pycompat.fsencode(getattr(mainmod, '__file__', ''))) == 'hg'):
+            _sethgexecutable(pycompat.fsencode(mainmod.__file__))
         else:
             exe = findexe('hg') or os.path.basename(sys.argv[0])
             _sethgexecutable(exe)
@@ -999,12 +1035,9 @@ def shellenviron(environ=None):
     env['HG'] = hgexecutable()
     return env
 
-def system(cmd, environ=None, cwd=None, onerr=None, errprefix=None, out=None):
+def system(cmd, environ=None, cwd=None, out=None):
     '''enhanced shell command execution.
     run with environment maybe modified, maybe in different dir.
-
-    if command fails and onerr is None, return status, else raise onerr
-    object as exception.
 
     if out is specified, it is assumed to be a file-like object that has a
     write() method. stdout and stderr will be redirected to out.'''
@@ -1012,7 +1045,6 @@ def system(cmd, environ=None, cwd=None, onerr=None, errprefix=None, out=None):
         stdout.flush()
     except Exception:
         pass
-    origcmd = cmd
     cmd = quotecommand(cmd)
     if pycompat.sysplatform == 'plan9' and (sys.version_info[0] == 2
                                     and sys.version_info[1] < 7):
@@ -1036,12 +1068,6 @@ def system(cmd, environ=None, cwd=None, onerr=None, errprefix=None, out=None):
             rc = proc.returncode
         if pycompat.sysplatform == 'OpenVMS' and rc & 1:
             rc = 0
-    if rc and onerr:
-        errmsg = '%s %s' % (os.path.basename(origcmd.split(None, 1)[0]),
-                            explainexit(rc)[0])
-        if errprefix:
-            errmsg = '%s: %s' % (errprefix, errmsg)
-        raise onerr(errmsg)
     return rc
 
 def checksignature(func):
@@ -1055,6 +1081,21 @@ def checksignature(func):
             raise
 
     return check
+
+# a whilelist of known filesystems where hardlink works reliably
+_hardlinkfswhitelist = set([
+    'btrfs',
+    'ext2',
+    'ext3',
+    'ext4',
+    'hfs',
+    'jfs',
+    'reiserfs',
+    'tmpfs',
+    'ufs',
+    'xfs',
+    'zfs',
+])
 
 def copyfile(src, dest, hardlink=False, copystat=False, checkambig=False):
     '''copy a file, preserving mode and optionally other stat info like
@@ -1072,9 +1113,16 @@ def copyfile(src, dest, hardlink=False, copystat=False, checkambig=False):
         if checkambig:
             oldstat = checkambig and filestat(dest)
         unlink(dest)
-    # hardlinks are problematic on CIFS, quietly ignore this flag
-    # until we find a way to work around it cleanly (issue4546)
-    if False and hardlink:
+    if hardlink:
+        # Hardlinks are problematic on CIFS (issue4546), do not allow hardlinks
+        # unless we are confident that dest is on a whitelisted filesystem.
+        try:
+            fstype = getfstype(os.path.dirname(dest))
+        except OSError:
+            fstype = None
+        if fstype not in _hardlinkfswhitelist:
+            hardlink = False
+    if hardlink:
         try:
             oslink(src, dest)
             return
@@ -1105,15 +1153,13 @@ def copyfiles(src, dst, hardlink=None, progress=lambda t, pos: None):
     """Copy a directory tree using hardlinks if possible."""
     num = 0
 
-    if hardlink is None:
-        hardlink = (os.stat(src).st_dev ==
-                    os.stat(os.path.dirname(dst)).st_dev)
-    if hardlink:
-        topic = _('linking')
-    else:
-        topic = _('copying')
+    gettopic = lambda: hardlink and _('linking') or _('copying')
 
     if os.path.isdir(src):
+        if hardlink is None:
+            hardlink = (os.stat(src).st_dev ==
+                        os.stat(os.path.dirname(dst)).st_dev)
+        topic = gettopic()
         os.mkdir(dst)
         for name, kind in osutil.listdir(src):
             srcname = os.path.join(src, name)
@@ -1124,6 +1170,11 @@ def copyfiles(src, dst, hardlink=None, progress=lambda t, pos: None):
             hardlink, n = copyfiles(srcname, dstname, hardlink, progress=nprog)
             num += n
     else:
+        if hardlink is None:
+            hardlink = (os.stat(os.path.dirname(src)).st_dev ==
+                        os.stat(os.path.dirname(dst)).st_dev)
+        topic = gettopic()
+
         if hardlink:
             try:
                 oslink(src, dst)
@@ -1173,7 +1224,7 @@ def checkwinfilename(path):
     for n in path.replace('\\', '/').split('/'):
         if not n:
             continue
-        for c in n:
+        for c in pycompat.bytestr(n):
             if c in _winreservedchars:
                 return _("filename contains '%s', which is reserved "
                          "on Windows") % c
@@ -1191,8 +1242,13 @@ def checkwinfilename(path):
 
 if pycompat.osname == 'nt':
     checkosfilename = checkwinfilename
+    timer = time.clock
 else:
     checkosfilename = platform.checkosfilename
+    timer = time.time
+
+if safehasattr(time, "perf_counter"):
+    timer = time.perf_counter
 
 def makelock(info, pathname):
     try:
@@ -1322,7 +1378,7 @@ def fspath(name, root):
         seps = seps + pycompat.osaltsep
     # Protect backslashes. This gets silly very quickly.
     seps.replace('\\','\\\\')
-    pattern = remod.compile(r'([^%s]+)|([%s]+)' % (seps, seps))
+    pattern = remod.compile(br'([^%s]+)|([%s]+)' % (seps, seps))
     dir = os.path.normpath(root)
     result = []
     for part, sep in pattern.findall(name):
@@ -1345,6 +1401,13 @@ def fspath(name, root):
         dir = os.path.join(dir, part)
 
     return ''.join(result)
+
+def getfstype(dirpath):
+    '''Get the filesystem type name from a directory (best-effort)
+
+    Returns None if we are unsure. Raises OSError on ENOENT, EPERM, etc.
+    '''
+    return getattr(osutil, 'getfstype', lambda x: None)(dirpath)
 
 def checknlink(testfile):
     '''check whether hardlink count reporting works properly'''
@@ -1596,6 +1659,26 @@ class atomictempfile(object):
         else:
             self.close()
 
+def unlinkpath(f, ignoremissing=False):
+    """unlink and remove the directory if it is empty"""
+    if ignoremissing:
+        tryunlink(f)
+    else:
+        unlink(f)
+    # try removing directories that might now be empty
+    try:
+        removedirs(os.path.dirname(f))
+    except OSError:
+        pass
+
+def tryunlink(f):
+    """Attempt to remove a file, ignoring ENOENT errors."""
+    try:
+        unlink(f)
+    except OSError as e:
+        if e.errno != errno.ENOENT:
+            raise
+
 def makedirs(name, mode=None, notindexed=False):
     """recursive directory creation with parent mode inheritance
 
@@ -1784,7 +1867,7 @@ def datestr(date=None, format='%a %b %d %H:%M:%S %Y %1%2'):
     # because they use the gmtime() system call which is buggy on Windows
     # for negative values.
     t = datetime.datetime(1970, 1, 1) + datetime.timedelta(seconds=d)
-    s = t.strftime(format)
+    s = encoding.strtolocal(t.strftime(encoding.strfromlocal(format)))
     return s
 
 def shortdate(date=None):
@@ -1819,9 +1902,12 @@ def parsetimezone(s):
 
     return None, s
 
-def strdate(string, format, defaults=[]):
+def strdate(string, format, defaults=None):
     """parse a localized time string and return a (unixtime, offset) tuple.
     if the string cannot be parsed, ValueError is raised."""
+    if defaults is None:
+        defaults = {}
+
     # NOTE: unixtime = localunixtime + offset
     offset, date = parsetimezone(string)
 
@@ -2101,11 +2187,32 @@ def unitcountfn(*unittable):
 
     def go(count):
         for multiplier, divisor, format in unittable:
-            if count >= divisor * multiplier:
+            if abs(count) >= divisor * multiplier:
                 return format % (count / float(divisor))
         return unittable[-1][2] % count
 
     return go
+
+def processlinerange(fromline, toline):
+    """Check that linerange <fromline>:<toline> makes sense and return a
+    0-based range.
+
+    >>> processlinerange(10, 20)
+    (9, 20)
+    >>> processlinerange(2, 1)
+    Traceback (most recent call last):
+        ...
+    ParseError: line range must be positive
+    >>> processlinerange(0, 5)
+    Traceback (most recent call last):
+        ...
+    ParseError: fromline must be strictly positive
+    """
+    if toline - fromline < 0:
+        raise error.ParseError(_("line range must be positive"))
+    if fromline < 1:
+        raise error.ParseError(_("fromline must be strictly positive"))
+    return fromline - 1, toline
 
 bytecount = unitcountfn(
     (100, 1 << 30, _('%.0f GB')),
@@ -2119,6 +2226,32 @@ bytecount = unitcountfn(
     (1, 1 << 10, _('%.2f KB')),
     (1, 1, _('%.0f bytes')),
     )
+
+# Matches a single EOL which can either be a CRLF where repeated CR
+# are removed or a LF. We do not care about old Macintosh files, so a
+# stray CR is an error.
+_eolre = remod.compile(br'\r*\n')
+
+def tolf(s):
+    return _eolre.sub('\n', s)
+
+def tocrlf(s):
+    return _eolre.sub('\r\n', s)
+
+if pycompat.oslinesep == '\r\n':
+    tonativeeol = tocrlf
+    fromnativeeol = tolf
+else:
+    tonativeeol = pycompat.identity
+    fromnativeeol = pycompat.identity
+
+def escapestr(s):
+    # call underlying function of s.encode('string_escape') directly for
+    # Python 3 compatibility
+    return codecs.escape_encode(s)[0]
+
+def unescapestr(s):
+    return codecs.escape_decode(s)[0]
 
 def uirepr(s):
     # Avoid double backslash in Windows path repr()
@@ -2233,13 +2366,16 @@ def wrap(line, width, initindent='', hangindent=''):
     if width <= maxindent:
         # adjust for weird terminal size
         width = max(78, maxindent + 1)
-    line = line.decode(encoding.encoding, encoding.encodingmode)
-    initindent = initindent.decode(encoding.encoding, encoding.encodingmode)
-    hangindent = hangindent.decode(encoding.encoding, encoding.encodingmode)
+    line = line.decode(pycompat.sysstr(encoding.encoding),
+                    pycompat.sysstr(encoding.encodingmode))
+    initindent = initindent.decode(pycompat.sysstr(encoding.encoding),
+                    pycompat.sysstr(encoding.encodingmode))
+    hangindent = hangindent.decode(pycompat.sysstr(encoding.encoding),
+                    pycompat.sysstr(encoding.encodingmode))
     wrapper = MBTextWrapper(width=width,
                             initial_indent=initindent,
                             subsequent_indent=hangindent)
-    return wrapper.fill(line).encode(encoding.encoding)
+    return wrapper.fill(line).encode(pycompat.sysstr(encoding.encoding))
 
 if (pyplatform.python_implementation() == 'CPython' and
     sys.version_info < (3, 0)):
@@ -2595,7 +2731,7 @@ class url(object):
                   'path', 'fragment'):
             v = getattr(self, a)
             if v is not None:
-                setattr(self, a, pycompat.urlunquote(v))
+                setattr(self, a, urlreq.unquote(v))
 
     def __repr__(self):
         attrs = []
@@ -2640,6 +2776,9 @@ class url(object):
         >>> print url(r'file:///D:\data\hg')
         file:///D:\data\hg
         """
+        return encoding.strfromlocal(self.__bytes__())
+
+    def __bytes__(self):
         if self._localpath:
             s = self.path
             if self.scheme == 'bundle':
@@ -2687,7 +2826,7 @@ class url(object):
         user, passwd = self.user, self.passwd
         try:
             self.user, self.passwd = None, None
-            s = str(self)
+            s = bytes(self)
         finally:
             self.user, self.passwd = user, passwd
         if not self.user:
@@ -2742,19 +2881,13 @@ def hidepassword(u):
     u = url(u)
     if u.passwd:
         u.passwd = '***'
-    return str(u)
+    return bytes(u)
 
 def removeauth(u):
     '''remove all authentication information from a url string'''
     u = url(u)
     u.user = u.passwd = None
     return str(u)
-
-def isatty(fp):
-    try:
-        return fp.isatty()
-    except AttributeError:
-        return False
 
 timecount = unitcountfn(
     (1, 1e3, _('%.0f s')),
@@ -2786,13 +2919,13 @@ def timed(func):
     '''
 
     def wrapper(*args, **kwargs):
-        start = time.time()
+        start = timer()
         indent = 2
         _timenesting[0] += indent
         try:
             return func(*args, **kwargs)
         finally:
-            elapsed = time.time() - start
+            elapsed = timer() - start
             _timenesting[0] -= indent
             stderr.write('%s%s: %s\n' %
                          (' ' * _timenesting[0], func.__name__,
@@ -2839,9 +2972,9 @@ class hooks(object):
             results.append(hook(*args))
         return results
 
-def getstackframes(skip=0, line=' %-*s in %s\n', fileline='%s:%s'):
+def getstackframes(skip=0, line=' %-*s in %s\n', fileline='%s:%s', depth=0):
     '''Yields lines for a nicely formatted stacktrace.
-    Skips the 'skip' last entries.
+    Skips the 'skip' last entries, then return the last 'depth' entries.
     Each file+linenumber is formatted according to fileline.
     Each line is formatted according to line.
     If line is None, it yields:
@@ -2852,7 +2985,8 @@ def getstackframes(skip=0, line=' %-*s in %s\n', fileline='%s:%s'):
     Not be used in production code but very convenient while developing.
     '''
     entries = [(fileline % (fn, ln), func)
-        for fn, ln, func, _text in traceback.extract_stack()[:-skip - 1]]
+        for fn, ln, func, _text in traceback.extract_stack()[:-skip - 1]
+        ][-depth:]
     if entries:
         fnmax = max(len(entry[0]) for entry in entries)
         for fnln, func in entries:
@@ -2861,16 +2995,18 @@ def getstackframes(skip=0, line=' %-*s in %s\n', fileline='%s:%s'):
             else:
                 yield line % (fnmax, fnln, func)
 
-def debugstacktrace(msg='stacktrace', skip=0, f=stderr, otherf=stdout):
+def debugstacktrace(msg='stacktrace', skip=0,
+                    f=stderr, otherf=stdout, depth=0):
     '''Writes a message to f (stderr) with a nicely formatted stacktrace.
-    Skips the 'skip' last entries. By default it will flush stdout first.
+    Skips the 'skip' entries closest to the call, then show 'depth' entries.
+    By default it will flush stdout first.
     It can be used everywhere and intentionally does not require an ui object.
     Not be used in production code but very convenient while developing.
     '''
     if otherf:
         otherf.flush()
-    f.write('%s at:\n' % msg)
-    for line in getstackframes(skip + 1):
+    f.write('%s at:\n' % msg.rstrip())
+    for line in getstackframes(skip + 1, depth=depth):
         f.write(line)
     f.flush()
 
@@ -2905,7 +3041,7 @@ class dirs(object):
             del dirs[base]
 
     def __iter__(self):
-        return self._dirs.iterkeys()
+        return iter(self._dirs)
 
     def __contains__(self, d):
         return d in self._dirs
@@ -3179,6 +3315,9 @@ class compressionengine(object):
 
         If bundle compression is supported, the class must also implement
         ``compressstream`` and `decompressorreader``.
+
+        The docstring of this method is used in the help system to tell users
+        about this engine.
         """
         return None
 
@@ -3263,6 +3402,12 @@ class _zlibengine(compressionengine):
         return 'zlib'
 
     def bundletype(self):
+        """zlib compression using the DEFLATE algorithm.
+
+        All Mercurial clients should support this format. The compression
+        algorithm strikes a reasonable balance between compression ratio
+        and size.
+        """
         return 'gzip', 'GZ'
 
     def wireprotosupport(self):
@@ -3344,6 +3489,17 @@ class _bz2engine(compressionengine):
         return 'bz2'
 
     def bundletype(self):
+        """An algorithm that produces smaller bundles than ``gzip``.
+
+        All Mercurial clients should support this format.
+
+        This engine will likely produce smaller bundles than ``gzip`` but
+        will be significantly slower, both during compression and
+        decompression.
+
+        If available, the ``zstd`` engine can yield similar or better
+        compression at much higher speeds.
+        """
         return 'bzip2', 'BZ'
 
     # We declare a protocol name but don't advertise by default because
@@ -3397,6 +3553,10 @@ class _noopengine(compressionengine):
         return 'none'
 
     def bundletype(self):
+        """No compression is performed.
+
+        Use this compression engine to explicitly disable compression.
+        """
         return 'none', 'UN'
 
     # Clients always support uncompressed payloads. Servers don't because
@@ -3443,6 +3603,17 @@ class _zstdengine(compressionengine):
         return bool(self._module)
 
     def bundletype(self):
+        """A modern compression algorithm that is fast and highly flexible.
+
+        Only supported by Mercurial 4.1 and newer clients.
+
+        With the default settings, zstd compression is both faster and yields
+        better compression than ``gzip``. It also frequently yields better
+        compression than ``bzip2`` while operating at much higher speeds.
+
+        If this engine is available and backwards compatibility is not a
+        concern, it is likely the best available engine.
+        """
         return 'zstd', 'ZS'
 
     def wireprotosupport(self):
@@ -3540,6 +3711,36 @@ class _zstdengine(compressionengine):
                                          level=opts.get('level', 3))
 
 compengines.register(_zstdengine())
+
+def bundlecompressiontopics():
+    """Obtains a list of available bundle compressions for use in help."""
+    # help.makeitemsdocs() expects a dict of names to items with a .__doc__.
+    items = {}
+
+    # We need to format the docstring. So use a dummy object/type to hold it
+    # rather than mutating the original.
+    class docobject(object):
+        pass
+
+    for name in compengines:
+        engine = compengines[name]
+
+        if not engine.available():
+            continue
+
+        bt = engine.bundletype()
+        if not bt or not bt[0]:
+            continue
+
+        doc = pycompat.sysstr('``%s``\n    %s') % (
+            bt[0], engine.bundletype.__doc__)
+
+        value = docobject()
+        value.__doc__ = doc
+
+        items[bt[0]] = value
+
+    return items
 
 # convenient shortcut
 dst = debugstacktrace

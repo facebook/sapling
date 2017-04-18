@@ -176,6 +176,20 @@ plain hgrc
   --debug: ui.debug=True
   --quiet: ui.quiet=False
 
+with environment variables
+
+  $ PAGER=p1 EDITOR=e1 VISUAL=e2 hg showconfig --debug
+  set config by: $EDITOR
+  set config by: $VISUAL
+  set config by: $PAGER
+  read config from: $TESTTMP/hgrc
+  repo: bundle.mainreporoot=$TESTTMP
+  $PAGER: pager.pager=p1
+  $VISUAL: ui.editor=e2
+  --verbose: ui.verbose=False
+  --debug: ui.debug=True
+  --quiet: ui.quiet=False
+
 plain mode with exceptions
 
   $ cat > plain.py <<EOF

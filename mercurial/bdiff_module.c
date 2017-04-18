@@ -158,7 +158,7 @@ static PyObject *fixws(PyObject *self, PyObject *args)
 	r = PyBytes_AsString(s);
 	rlen = PyBytes_Size(s);
 
-	w = (char *)malloc(rlen ? rlen : 1);
+	w = (char *)PyMem_Malloc(rlen ? rlen : 1);
 	if (!w)
 		goto nomem;
 
@@ -178,7 +178,7 @@ static PyObject *fixws(PyObject *self, PyObject *args)
 	result = PyBytes_FromStringAndSize(w, wlen);
 
 nomem:
-	free(w);
+	PyMem_Free(w);
 	return result ? result : PyErr_NoMemory();
 }
 

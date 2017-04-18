@@ -414,8 +414,10 @@ def wrapsocket(sock, keyfile, certfile, ui, serverhostname=None):
         # a hint to the user.
         # Only modern ssl module exposes SSLContext.get_ca_certs() so we can
         # only show this warning if modern ssl is available.
-        # The exception handler is here because of
-        # https://bugs.python.org/issue20916.
+        # The exception handler is here to handle bugs around cert attributes:
+        # https://bugs.python.org/issue20916#msg213479.  (See issues5313.)
+        # When the main 20916 bug occurs, 'sslcontext.get_ca_certs()' is a
+        # non-empty list, but the following conditional is otherwise True.
         try:
             if (caloaded and settings['verifymode'] == ssl.CERT_REQUIRED and
                 modernssl and not sslcontext.get_ca_certs()):
@@ -720,7 +722,8 @@ def _defaultcacerts(ui):
     # to load the system CA store. If we're running on Apple Python, use this
     # trick.
     if _plainapplepython():
-        dummycert = os.path.join(os.path.dirname(__file__), 'dummycert.pem')
+        dummycert = os.path.join(
+            os.path.dirname(pycompat.fsencode(__file__)), 'dummycert.pem')
         if os.path.exists(dummycert):
             return dummycert
 
@@ -814,6 +817,16 @@ def validatesocket(sock):
             if peerfingerprints[hash].lower() == fingerprint:
                 ui.debug('%s certificate matched fingerprint %s:%s\n' %
                          (host, hash, fmtfingerprint(fingerprint)))
+                if settings['legacyfingerprint']:
+                    ui.warn(_('(SHA-1 fingerprint for %s found in legacy '
+                              '[hostfingerprints] section; '
+                              'if you trust this fingerprint, set the '
+                              'following config value in [hostsecurity] and '
+                              'remove the old one from [hostfingerprints] '
+                              'to upgrade to a more secure SHA-256 '
+                              'fingerprint: '
+                              '%s.fingerprints=%s)\n') % (
+                                  host, host, nicefingerprint))
                 return
 
         # Pinned fingerprint didn't match. This is a fatal error.

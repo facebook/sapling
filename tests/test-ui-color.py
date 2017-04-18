@@ -1,16 +1,13 @@
 from __future__ import absolute_import, print_function
 
 import os
-from hgext import (
-    color,
-)
 from mercurial import (
     dispatch,
     ui as uimod,
 )
 
 # ensure errors aren't buffered
-testui = color.colorui()
+testui = uimod.ui()
 testui.pushbuffer()
 testui.write(('buffered\n'))
 testui.warn(('warning\n'))
@@ -35,6 +32,7 @@ def runcmd():
     dispatch.dispatch(dispatch.request(['version', '-q'], ui_))
 
 runcmd()
-print("colored? " + str(issubclass(ui_.__class__, color.colorui)))
+print("colored? %s" % (ui_._colormode is not None))
 runcmd()
-print("colored? " + str(issubclass(ui_.__class__, color.colorui)))
+print("colored? %s" % (ui_._colormode is not None))
+

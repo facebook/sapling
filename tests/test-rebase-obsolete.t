@@ -175,7 +175,7 @@ set.
   32af7686d403cf45b5d95f2d70cebea587ac806a 0 {5fddd98957c8a54a4d436dfe1da9d87f21a1b97b} (*) {'user': 'test'} (glob)
 
 
-More complex case were part of the rebase set were already rebased
+More complex case where part of the rebase set were already rebased
 
   $ hg rebase --rev 'desc(D)' --dest 'desc(H)'
   rebasing 9:08483444fef9 "D"
@@ -272,6 +272,35 @@ More complex case were part of the rebase set were already rebased
   D
   
   
+Start rebase from a commit that is obsolete but not hidden only because it's
+a working copy parent. We should be moved back to the starting commit as usual
+even though it is hidden (until we're moved there).
+
+  $ hg --hidden up -qr 'first(hidden())'
+  $ hg rebase --rev 13 --dest 15
+  rebasing 13:98f6af4ee953 "C"
+  $ hg log -G
+  o  16:294a2b93eb4d C
+  |
+  o  15:627d46148090 D
+  |
+  | o  12:462a34d07e59 B
+  | |
+  | o  11:4596109a6a43 D
+  | |
+  | o  7:02de42196ebe H
+  | |
+  +---o  6:eea13746799a G
+  | |/
+  | o  5:24b6387c8c8c F
+  | |
+  o |  4:9520eea781bc E
+  |/
+  | @  1:42ccdea3bb16 B
+  |/
+  o  0:cd010b8cd998 A
+  
+
   $ cd ..
 
 collapse rebase

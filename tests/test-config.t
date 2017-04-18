@@ -58,12 +58,12 @@ Test case sensitive configuration
   [
    {
     "name": "Section.KeY",
-    "source": "*.hgrc:16", (glob)
+    "source": "*.hgrc:*", (glob)
     "value": "Case Sensitive"
    },
    {
     "name": "Section.key",
-    "source": "*.hgrc:17", (glob)
+    "source": "*.hgrc:*", (glob)
     "value": "lower case"
    }
   ]
@@ -71,7 +71,7 @@ Test case sensitive configuration
   [
    {
     "name": "Section.KeY",
-    "source": "*.hgrc:16", (glob)
+    "source": "*.hgrc:*", (glob)
     "value": "Case Sensitive"
    }
   ]
@@ -158,3 +158,23 @@ sub-options in [paths] aren't expanded
   $ hg showconfig paths
   paths.foo:suboption=~/foo
   paths.foo=$TESTTMP/foo
+
+edit failure
+
+  $ HGEDITOR=false hg config --edit
+  abort: edit failed: false exited with status 1
+  [255]
+
+config affected by environment variables
+
+  $ EDITOR=e1 VISUAL=e2 hg config --debug | grep 'ui\.editor'
+  $VISUAL: ui.editor=e2
+
+  $ VISUAL=e2 hg config --debug --config ui.editor=e3 | grep 'ui\.editor'
+  --config: ui.editor=e3
+
+  $ PAGER=p1 hg config --debug | grep 'pager\.pager'
+  $PAGER: pager.pager=p1
+
+  $ PAGER=p1 hg config --debug --config pager.pager=p2 | grep 'pager\.pager'
+  --config: pager.pager=p2

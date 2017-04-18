@@ -40,8 +40,15 @@ def systemrcpath():
 def userrcpath():
     if pycompat.sysplatform == 'plan9':
         return [encoding.environ['home'] + '/lib/hgrc']
-    else:
+    elif pycompat.sysplatform == 'darwin':
         return [os.path.expanduser('~/.hgrc')]
+    else:
+        confighome = encoding.environ.get('XDG_CONFIG_HOME')
+        if confighome is None or not os.path.isabs(confighome):
+            confighome = os.path.expanduser('~/.config')
+
+        return [os.path.expanduser('~/.hgrc'),
+                os.path.join(confighome, 'hg', 'hgrc')]
 
 def termsize(ui):
     try:
@@ -59,7 +66,7 @@ def termsize(ui):
             if not os.isatty(fd):
                 continue
             arri = fcntl.ioctl(fd, TIOCGWINSZ, '\0' * 8)
-            height, width = array.array('h', arri)[:2]
+            height, width = array.array(r'h', arri)[:2]
             if width > 0 and height > 0:
                 return width, height
         except ValueError:

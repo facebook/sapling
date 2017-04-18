@@ -254,9 +254,27 @@ setup
   @  b4952fcf48cf (public) add base
   
 
-Push should not complain about new heads.
+We do not have enought data to take the right decision, we should fail
 
-  $ hg push --traceback
+  $ hg push
+  pushing to $TESTTMP/remote (glob)
+  searching for changes
+  remote has heads on branch 'default' that are not known locally: c70b08862e08
+  abort: push creates new remote head 71e3228bffe1!
+  (pull and merge or see 'hg help push' for details about pushing new heads)
+  [255]
+
+Pulling the missing data makes it work
+
+  $ hg pull
+  pulling from $TESTTMP/remote (glob)
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files (+1 heads)
+  (run 'hg heads' to see heads)
+  $ hg push
   pushing to $TESTTMP/remote (glob)
   searching for changes
   adding changesets

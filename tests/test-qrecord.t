@@ -239,6 +239,12 @@ qrecord with bad patch name, should abort before prompting
   $ hg qrecord .hg
   abort: patch name cannot begin with ".hg"
   [255]
+  $ hg qrecord ' foo'
+  abort: patch name cannot begin or end with whitespace
+  [255]
+  $ hg qrecord 'foo '
+  abort: patch name cannot begin or end with whitespace
+  [255]
 
 qrecord a.patch
 

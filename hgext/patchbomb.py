@@ -60,6 +60,14 @@ overwritten by command line flags like --intro and --desc::
   intro=never  # never include an introduction message
   intro=always # always include an introduction message
 
+You can specify a template for flags to be added in subject prefixes. Flags
+specified by --flag option are exported as ``{flags}`` keyword::
+
+  [patchbomb]
+  flagtemplate = "{separate(' ',
+                            ifeq(branch, 'default', '', branch|upper),
+                            flags)}"
+
 You can set patchbomb to always ask for confirmation by setting
 ``patchbomb.confirm`` to true.
 '''
@@ -75,13 +83,14 @@ from mercurial.i18n import _
 from mercurial import (
     cmdutil,
     commands,
-    encoding,
     error,
+    formatter,
     hg,
     mail,
     node as nodemod,
     patch,
     scmutil,
+    templater,
     util,
 )
 stringio = util.stringio
@@ -135,7 +144,32 @@ def introwanted(ui, opts, number):
         intro = 1 < number
     return intro
 
-def makepatch(ui, repo, patchlines, opts, _charsets, idx, total, numbered,
+def _formatflags(ui, repo, rev, flags):
+    """build flag string optionally by template"""
+    tmpl = ui.config('patchbomb', 'flagtemplate')
+    if not tmpl:
+        return ' '.join(flags)
+    out = util.stringio()
+    opts = {'template': templater.unquotestring(tmpl)}
+    with formatter.templateformatter(ui, out, 'patchbombflag', opts) as fm:
+        fm.startitem()
+        fm.context(ctx=repo[rev])
+        fm.write('flags', '%s', fm.formatlist(flags, name='flag'))
+    return out.getvalue()
+
+def _formatprefix(ui, repo, rev, flags, idx, total, numbered):
+    """build prefix to patch subject"""
+    flag = _formatflags(ui, repo, rev, flags)
+    if flag:
+        flag = ' ' + flag
+
+    if not numbered:
+        return '[PATCH%s]' % flag
+    else:
+        tlen = len(str(total))
+        return '[PATCH %0*d of %d%s]' % (tlen, idx, total, flag)
+
+def makepatch(ui, repo, rev, patchlines, opts, _charsets, idx, total, numbered,
               patchname=None):
 
     desc = []
@@ -202,16 +236,13 @@ def makepatch(ui, repo, patchlines, opts, _charsets, idx, total, numbered,
     else:
         msg = mail.mimetextpatch(body, display=opts.get('test'))
 
-    flag = ' '.join(opts.get('flag'))
-    if flag:
-        flag = ' ' + flag
-
+    prefix = _formatprefix(ui, repo, rev, opts.get('flag'), idx, total,
+                           numbered)
     subj = desc[0].strip().rstrip('. ')
     if not numbered:
-        subj = '[PATCH%s] %s' % (flag, opts.get('subject') or subj)
+        subj = ' '.join([prefix, opts.get('subject') or subj])
     else:
-        tlen = len(str(total))
-        subj = '[PATCH %0*d of %d%s] %s' % (tlen, idx, total, flag, subj)
+        subj = ' '.join([prefix, subj])
     msg['Subject'] = mail.headencode(ui, subj, _charsets, opts.get('test'))
     msg['X-Mercurial-Node'] = node
     msg['X-Mercurial-Series-Index'] = '%i' % idx
@@ -303,19 +334,16 @@ def _getbundlemsgs(repo, sender, bundle, **opts):
     msg['Subject'] = mail.headencode(ui, subj, _charsets, opts.get('test'))
     return [(msg, subj, None)]
 
-def _makeintro(repo, sender, patches, **opts):
+def _makeintro(repo, sender, revs, patches, **opts):
     """make an introduction email, asking the user for content if needed
 
     email is returned as (subject, body, cumulative-diffstat)"""
     ui = repo.ui
     _charsets = mail._charsets(ui)
-    tlen = len(str(len(patches)))
 
-    flag = opts.get('flag') or ''
-    if flag:
-        flag = ' ' + ' '.join(flag)
-    prefix = '[PATCH %0*d of %d%s]' % (tlen, 0, len(patches), flag)
-
+    # use the last revision which is likely to be a bookmarked head
+    prefix = _formatprefix(ui, repo, revs.last(), opts.get('flag'),
+                           0, len(patches), numbered=True)
     subj = (opts.get('subject') or
             prompt(ui, '(optional) Subject: ', rest=prefix, default=''))
     if not subj:
@@ -337,7 +365,7 @@ def _makeintro(repo, sender, patches, **opts):
                                      opts.get('test'))
     return (msg, subj, diffstat)
 
-def _getpatchmsgs(repo, sender, patches, patchnames=None, **opts):
+def _getpatchmsgs(repo, sender, revs, patchnames=None, **opts):
     """return a list of emails from a list of patches
 
     This involves introduction message creation if necessary.
@@ -346,6 +374,7 @@ def _getpatchmsgs(repo, sender, patches, patchnames=None, **opts):
     """
     ui = repo.ui
     _charsets = mail._charsets(ui)
+    patches = list(_getpatches(repo, revs, **opts))
     msgs = []
 
     ui.write(_('this patch series consists of %d patches.\n\n')
@@ -353,7 +382,7 @@ def _getpatchmsgs(repo, sender, patches, patchnames=None, **opts):
 
     # build the intro message, or skip it if the user declines
     if introwanted(ui, opts, len(patches)):
-        msg = _makeintro(repo, sender, patches, **opts)
+        msg = _makeintro(repo, sender, revs, patches, **opts)
         if msg:
             msgs.append(msg)
 
@@ -362,10 +391,11 @@ def _getpatchmsgs(repo, sender, patches, patchnames=None, **opts):
 
     # now generate the actual patch messages
     name = None
-    for i, p in enumerate(patches):
+    assert len(revs) == len(patches)
+    for i, (r, p) in enumerate(zip(revs, patches)):
         if patchnames:
             name = patchnames[i]
-        msg = makepatch(ui, repo, p, opts, _charsets, i + 1,
+        msg = makepatch(ui, repo, r, p, opts, _charsets, i + 1,
                         len(patches), numbered, name)
         msgs.append(msg)
 
@@ -467,9 +497,7 @@ def email(ui, repo, *revs, **opts):
     With -n/--test, all steps will run, but mail will not be sent.
     You will be prompted for an email recipient address, a subject and
     an introductory message describing the patches of your patchbomb.
-    Then when all is done, patchbomb messages are displayed. If the
-    PAGER environment variable is set, your pager will be fired up once
-    for each patchbomb message, so you can verify everything is alright.
+    Then when all is done, patchbomb messages are displayed.
 
     In case email sending fails, you will find a backup of your series
     introductory message in ``.hg/last-email.txt``.
@@ -511,14 +539,12 @@ def email(ui, repo, *revs, **opts):
     mbox = opts.get('mbox')
     outgoing = opts.get('outgoing')
     rev = opts.get('rev')
-    # internal option used by pbranches
-    patches = opts.get('patches')
 
     if not (opts.get('test') or mbox):
         # really sending
         mail.validateconfig(ui)
 
-    if not (revs or rev or outgoing or bundle or patches):
+    if not (revs or rev or outgoing or bundle):
         raise error.Abort(_('specify at least one changeset with -r or -o'))
 
     if outgoing and bundle:
@@ -590,17 +616,13 @@ def email(ui, repo, *revs, **opts):
               ui.config('patchbomb', 'from') or
               prompt(ui, 'From', ui.username()))
 
-    if patches:
-        msgs = _getpatchmsgs(repo, sender, patches, opts.get('patchnames'),
-                             **opts)
-    elif bundle:
+    if bundle:
         bundledata = _getbundle(repo, dest, **opts)
         bundleopts = opts.copy()
         bundleopts.pop('bundle', None)  # already processed
         msgs = _getbundlemsgs(repo, sender, bundledata, **bundleopts)
     else:
-        _patches = list(_getpatches(repo, revs, **opts))
-        msgs = _getpatchmsgs(repo, sender, _patches, **opts)
+        msgs = _getpatchmsgs(repo, sender, revs, **opts)
 
     showaddrs = []
 
@@ -693,20 +715,14 @@ def email(ui, repo, *revs, **opts):
             m['Reply-To'] = ', '.join(replyto)
         if opts.get('test'):
             ui.status(_('displaying '), subj, ' ...\n')
-            ui.flush()
-            if 'PAGER' in encoding.environ and not ui.plain():
-                fp = util.popen(encoding.environ['PAGER'], 'w')
-            else:
-                fp = ui
-            generator = emailmod.Generator.Generator(fp, mangle_from_=False)
+            ui.pager('email')
+            generator = emailmod.Generator.Generator(ui, mangle_from_=False)
             try:
                 generator.flatten(m, 0)
-                fp.write('\n')
+                ui.write('\n')
             except IOError as inst:
                 if inst.errno != errno.EPIPE:
                     raise
-            if fp is not ui:
-                fp.close()
         else:
             if not sendmail:
                 sendmail = mail.connect(ui, mbox=mbox)

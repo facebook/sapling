@@ -7,12 +7,8 @@ Set up SMTP server:
 
   $ python "$TESTDIR/dummysmtpd.py" -p $HGPORT --pid-file a.pid -d \
   > --tls smtps --certificate `pwd`/server.pem
-  listening at localhost:$HGPORT
+  listening at localhost:$HGPORT (?)
   $ cat a.pid >> $DAEMON_PIDS
-
-Ensure hg email output is sent to stdout:
-
-  $ unset PAGER
 
 Set up repository:
 

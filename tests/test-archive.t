@@ -99,7 +99,7 @@ invalid arch type should give 404
   > except AttributeError:
   >     stdout = sys.stdout
   > try:
-  >     f = util.urlreq.urlopen('http://127.0.0.1:%s/?%s'
+  >     f = util.urlreq.urlopen('http://$LOCALIP:%s/?%s'
   >                     % (os.environ['HGPORT'], requeststr))
   >     stdout.write(f.read())
   > except util.urlerr.httperror as e:

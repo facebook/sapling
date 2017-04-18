@@ -78,8 +78,8 @@ def request(host, path, show):
         else:
             sys.stdout.write(data)
 
-        if twice and response.getheader('ETag', None):
-            tag = response.getheader('ETag')
+    if twice and response.getheader('ETag', None):
+        tag = response.getheader('ETag')
 
     return response.status
 

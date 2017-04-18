@@ -7,6 +7,7 @@ import zlib
 
 from mercurial import (
     changegroup,
+    exchange,
     extensions,
     filelog,
     revlog,
@@ -102,6 +103,10 @@ def extsetup(ui):
     flags = [REVIDX_NOOP, REVIDX_BASE64, REVIDX_GZIP, REVIDX_FAIL]
     revlog.REVIDX_KNOWN_FLAGS |= util.bitsfrom(flags)
     revlog.REVIDX_FLAGS_ORDER.extend(flags)
+
+    # Teach exchange to use changegroup 3
+    for k in exchange._bundlespeccgversions.keys():
+        exchange._bundlespeccgversions[k] = '03'
 
     # Add wrappers for addrevision, responsible to set flags depending on the
     # revision data contents.

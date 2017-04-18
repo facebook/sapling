@@ -187,6 +187,12 @@ Line blocks are also a form of list:
 
 This is the first line. The line continues here.
 This is the second line.
+
+Bullet lists are also detected:
+
+* This is the first bullet
+* This is the second bullet It has 2 lines
+* This is the third bullet
 ----------------------------------------------------------------------
 
 30 column format:
@@ -231,6 +237,14 @@ list:
 This is the first line. The
 line continues here.
 This is the second line.
+
+Bullet lists are also
+detected:
+
+* This is the first bullet
+* This is the second bullet It
+  has 2 lines
+* This is the third bullet
 ----------------------------------------------------------------------
 
 html format:
@@ -276,6 +290,14 @@ Line blocks are also a form of list:
  <li> This is the first line.   The line continues here.
  <li> This is the second line.
 </ol>
+<p>
+Bullet lists are also detected:
+</p>
+<ul>
+ <li> This is the first bullet
+ <li> This is the second bullet   It has 2 lines
+ <li> This is the third bullet
+</ul>
 ----------------------------------------------------------------------
 
 == options ==

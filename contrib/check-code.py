@@ -100,7 +100,7 @@ def rephere(m):
 
 testpats = [
   [
-    (r'pushd|popd', "don't use 'pushd' or 'popd', use 'cd'"),
+    (r'\b(push|pop)d\b', "don't use 'pushd' or 'popd', use 'cd'"),
     (r'\W\$?\(\([^\)\n]*\)\)', "don't use (()) or $(()), use 'expr'"),
     (r'grep.*-q', "don't use 'grep -q', redirect to /dev/null"),
     (r'(?<!hg )grep.* -a', "don't use 'grep -a', use in-line python"),
@@ -190,8 +190,10 @@ utestpats = [
     (r'^  .*: largefile \S+ not available from file:.*/.*[^)]$', winglobmsg),
     (r'^  .*file://\$TESTTMP',
      'write "file:/*/$TESTTMP" + (glob) to match on windows too'),
-    (r'^  [^$>].*27\.0\.0\.1.*[^)]$',
-     'use (glob) to match localhost IP on hosts without 127.0.0.1 too'),
+    (r'^  [^$>].*27\.0\.0\.1',
+     'use $LOCALIP not an explicit loopback address'),
+    (r'^  [^$>].*\$LOCALIP.*[^)]$',
+     'mark $LOCALIP output lines with (glob) to help tests in BSD jails'),
     (r'^  (cat|find): .*: No such file or directory',
      'use test -f to test for file existence'),
     (r'^  diff -[^ -]*p',
@@ -210,8 +212,8 @@ utestpats = [
   ],
   # warnings
   [
-    (r'^  (?!.*127\.0\.0\.1)[^*?/\n]* \(glob\)$',
-     "glob match with no glob string (?, *, /, and 127.0.0.1)"),
+    (r'^  (?!.*\$LOCALIP)[^*?/\n]* \(glob\)$',
+     "glob match with no glob string (?, *, /, and $LOCALIP)"),
   ]
 ]
 
@@ -237,7 +239,7 @@ pypats = [
     (r'lambda\s*\(.*,.*\)',
      "tuple parameter unpacking not available in Python 3+"),
     (r'(?<!def)\s+(cmp)\(', "cmp is not available in Python 3+"),
-    (r'\breduce\s*\(.*', "reduce is not available in Python 3+"),
+    (r'(?<!\.)\breduce\s*\(.*', "reduce is not available in Python 3+"),
     (r'\bdict\(.*=', 'dict() is different in Py2 and 3 and is slower than {}',
      'dict-from-generator'),
     (r'\.has_key\b', "dict.has_key is not available in Python 3+"),
@@ -318,7 +320,7 @@ pypats = [
      'legacy exception syntax; use "as" instead of ","'),
     (r':\n(    )*( ){1,3}[^ ]', "must indent 4 spaces"),
     (r'release\(.*wlock, .*lock\)', "wrong lock release order"),
-    (r'\b__bool__\b', "__bool__ should be __nonzero__ in Python 2"),
+    (r'\bdef\s+__bool__\b', "__bool__ should be __nonzero__ in Python 2"),
     (r'os\.path\.join\(.*, *(""|\'\')\)',
      "use pathutil.normasprefix(path) instead of os.path.join(path, '')"),
     (r'\s0[0-7]+\b', 'legacy octal syntax; use "0o" prefix instead of "0"'),
@@ -330,13 +332,15 @@ pypats = [
     (r'^import cStringIO', "don't use cStringIO.StringIO, use util.stringio"),
     (r'^import urllib', "don't use urllib, use util.urlreq/util.urlerr"),
     (r'^import SocketServer', "don't use SockerServer, use util.socketserver"),
-    (r'^import urlparse', "don't use urlparse, use util.urlparse"),
+    (r'^import urlparse', "don't use urlparse, use util.urlreq"),
     (r'^import xmlrpclib', "don't use xmlrpclib, use util.xmlrpclib"),
     (r'^import cPickle', "don't use cPickle, use util.pickle"),
     (r'^import pickle', "don't use pickle, use util.pickle"),
     (r'^import httplib', "don't use httplib, use util.httplib"),
     (r'^import BaseHTTPServer', "use util.httpserver instead"),
     (r'\.next\(\)', "don't use .next(), use next(...)"),
+    (r'([a-z]*).revision\(\1\.node\(',
+     "don't convert rev to node before passing to revision(nodeorrev)"),
 
     # rules depending on implementation of repquote()
     (r' x+[xpqo%APM][\'"]\n\s+[\'"]x',
@@ -369,6 +373,13 @@ pyfilters = [
          ((?P<quote>('''|\"\"\"|(?<!')'(?!')|(?<!")"(?!")))
           (?P<text>(([^\\]|\\.)*?))
           (?P=quote))""", reppython),
+]
+
+# extension non-filter patterns
+pyextnfpats = [
+    [(r'^"""\n?[A-Z]', "don't capitalize docstring title")],
+    # warnings
+    [],
 ]
 
 txtfilters = []
@@ -480,6 +491,7 @@ py3pats = [
 
 checks = [
     ('python', r'.*\.(py|cgi)$', r'^#!.*python', pyfilters, pypats),
+    ('python', r'.*hgext.*\.py$', '', [], pyextnfpats),
     ('python 3', r'.*(hgext|mercurial).*(?<!pycompat)\.py', '',
             pyfilters, py3pats),
     ('test script', r'(.*/)?test-[^.~]*$', '', testfilters, testpats),
@@ -661,7 +673,7 @@ def checkfile(f, logfunc=_defaultlogger.log, maxerr=None, warnings=False,
     return result
 
 def main():
-    parser = optparse.OptionParser("%prog [options] [files]")
+    parser = optparse.OptionParser("%prog [options] [files | -]")
     parser.add_option("-w", "--warnings", action="store_true",
                       help="include warning-level checks")
     parser.add_option("-p", "--per-file", type="int",
@@ -679,6 +691,9 @@ def main():
 
     if len(args) == 0:
         check = glob.glob("*")
+    elif args == ['-']:
+        # read file list from stdin
+        check = sys.stdin.read().splitlines()
     else:
         check = args
 

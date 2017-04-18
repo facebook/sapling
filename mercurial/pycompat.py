@@ -18,30 +18,33 @@ import sys
 ispy3 = (sys.version_info[0] >= 3)
 
 if not ispy3:
+    import cookielib
     import cPickle as pickle
-    import cStringIO as io
     import httplib
     import Queue as _queue
     import SocketServer as socketserver
-    import urlparse
-    urlunquote = urlparse.unquote
     import xmlrpclib
 else:
+    import http.cookiejar as cookielib
     import http.client as httplib
-    import io
     import pickle
     import queue as _queue
     import socketserver
-    import urllib.parse as urlparse
-    urlunquote = urlparse.unquote_to_bytes
     import xmlrpc.client as xmlrpclib
+
+def identity(a):
+    return a
 
 if ispy3:
     import builtins
     import functools
+    import io
+    import struct
+
     fsencode = os.fsencode
     fsdecode = os.fsdecode
     # A bytes version of os.name.
+    oslinesep = os.linesep.encode('ascii')
     osname = os.name.encode('ascii')
     ospathsep = os.pathsep.encode('ascii')
     ossep = os.sep.encode('ascii')
@@ -55,6 +58,8 @@ if ispy3:
     sysexecutable = sys.executable
     if sysexecutable:
         sysexecutable = os.fsencode(sysexecutable)
+    stringio = io.BytesIO
+    maplist = lambda *args: list(map(*args))
 
     # TODO: .buffer might not exist if std streams were replaced; we'll need
     # a silly wrapper to make a bytes stream backed by a unicode one.
@@ -71,6 +76,81 @@ if ispy3:
     # workaround to simulate the Python 2 (i.e. ANSI Win32 API) behavior.
     if getattr(sys, 'argv', None) is not None:
         sysargv = list(map(os.fsencode, sys.argv))
+
+    bytechr = struct.Struct('>B').pack
+
+    class bytestr(bytes):
+        """A bytes which mostly acts as a Python 2 str
+
+        >>> bytestr(), bytestr(bytearray(b'foo')), bytestr(u'ascii'), bytestr(1)
+        (b'', b'foo', b'ascii', b'1')
+        >>> s = bytestr(b'foo')
+        >>> assert s is bytestr(s)
+
+        There's no implicit conversion from non-ascii str as its encoding is
+        unknown:
+
+        >>> bytestr(chr(0x80)) # doctest: +ELLIPSIS
+        Traceback (most recent call last):
+          ...
+        UnicodeEncodeError: ...
+
+        Comparison between bytestr and bytes should work:
+
+        >>> assert bytestr(b'foo') == b'foo'
+        >>> assert b'foo' == bytestr(b'foo')
+        >>> assert b'f' in bytestr(b'foo')
+        >>> assert bytestr(b'f') in b'foo'
+
+        Sliced elements should be bytes, not integer:
+
+        >>> s[1], s[:2]
+        (b'o', b'fo')
+        >>> list(s), list(reversed(s))
+        ([b'f', b'o', b'o'], [b'o', b'o', b'f'])
+
+        As bytestr type isn't propagated across operations, you need to cast
+        bytes to bytestr explicitly:
+
+        >>> s = bytestr(b'foo').upper()
+        >>> t = bytestr(s)
+        >>> s[0], t[0]
+        (70, b'F')
+
+        Be careful to not pass a bytestr object to a function which expects
+        bytearray-like behavior.
+
+        >>> t = bytes(t)  # cast to bytes
+        >>> assert type(t) is bytes
+        """
+
+        def __new__(cls, s=b''):
+            if isinstance(s, bytestr):
+                return s
+            if not isinstance(s, (bytes, bytearray)):
+                s = str(s).encode(u'ascii')
+            return bytes.__new__(cls, s)
+
+        def __getitem__(self, key):
+            s = bytes.__getitem__(self, key)
+            if not isinstance(s, bytes):
+                s = bytechr(s)
+            return s
+
+        def __iter__(self):
+            return iterbytestr(bytes.__iter__(self))
+
+    def iterbytestr(s):
+        """Iterate bytes as if it were a str object of Python 2"""
+        return map(bytechr, s)
+
+    def sysbytes(s):
+        """Convert an internal str (e.g. keyword, __doc__) back to bytes
+
+        This never raises UnicodeEncodeError, but only ASCII characters
+        can be round-trip by sysstr(sysbytes(s)).
+        """
+        return s.encode(u'utf-8')
 
     def sysstr(s):
         """Return a keyword str to be passed to Python functions such as
@@ -96,6 +176,10 @@ if ispy3:
     hasattr = _wrapattrfunc(builtins.hasattr)
     setattr = _wrapattrfunc(builtins.setattr)
     xrange = builtins.range
+    unicode = str
+
+    def open(name, mode='r', buffering=-1):
+        return builtins.open(name, sysstr(mode), buffering)
 
     # getopt.getopt() on Python 3 deals with unicodes internally so we cannot
     # pass bytes there. Passing unicodes will result in unicodes as return
@@ -132,8 +216,13 @@ if ispy3:
         return [a.encode('latin-1') for a in ret]
 
 else:
-    def sysstr(s):
-        return s
+    import cStringIO
+
+    bytechr = chr
+    bytestr = str
+    iterbytestr = iter
+    sysbytes = identity
+    sysstr = identity
 
     # Partial backport from os.py in Python 3, which only accepts bytes.
     # In Python 2, our paths should only ever be bytes, a unicode path
@@ -147,18 +236,15 @@ else:
 
     # In Python 2, fsdecode() has a very chance to receive bytes. So it's
     # better not to touch Python 2 part as it's already working fine.
-    def fsdecode(filename):
-        return filename
+    fsdecode = identity
 
     def getoptb(args, shortlist, namelist):
         return getopt.getopt(args, shortlist, namelist)
 
-    def strkwargs(dic):
-        return dic
+    strkwargs = identity
+    byteskwargs = identity
 
-    def byteskwargs(dic):
-        return dic
-
+    oslinesep = os.linesep
     osname = os.name
     ospathsep = os.pathsep
     ossep = os.sep
@@ -172,8 +258,9 @@ else:
     getcwd = os.getcwd
     sysexecutable = sys.executable
     shlexsplit = shlex.split
+    stringio = cStringIO.StringIO
+    maplist = map
 
-stringio = io.StringIO
 empty = _queue.Empty
 queue = _queue.Queue
 
@@ -187,6 +274,10 @@ class _pycompatstub(object):
         self._aliases.update(
             (item.replace(sysstr('_'), sysstr('')).lower(), (origin, item))
             for item in items)
+
+    def _registeralias(self, origin, attr, name):
+        """Alias ``origin``.``attr`` as ``name``"""
+        self._aliases[sysstr(name)] = (origin, sysstr(attr))
 
     def __getattr__(self, name):
         try:
@@ -205,6 +296,7 @@ if not ispy3:
     import SimpleHTTPServer
     import urllib2
     import urllib
+    import urlparse
     urlreq._registeraliases(urllib, (
         "addclosehook",
         "addinfourl",
@@ -235,6 +327,10 @@ if not ispy3:
         "Request",
         "urlopen",
     ))
+    urlreq._registeraliases(urlparse, (
+        "urlparse",
+        "urlunparse",
+    ))
     urlerr._registeraliases(urllib2, (
         "HTTPError",
         "URLError",
@@ -251,11 +347,19 @@ if not ispy3:
     ))
 
 else:
+    import urllib.parse
+    urlreq._registeraliases(urllib.parse, (
+        "splitattr",
+        "splitpasswd",
+        "splitport",
+        "splituser",
+        "urlparse",
+        "urlunparse",
+    ))
+    urlreq._registeralias(urllib.parse, "unquote_to_bytes", "unquote")
     import urllib.request
     urlreq._registeraliases(urllib.request, (
         "AbstractHTTPHandler",
-        "addclosehook",
-        "addinfourl",
         "BaseHandler",
         "build_opener",
         "FileHandler",
@@ -269,15 +373,14 @@ else:
         "HTTPDigestAuthHandler",
         "HTTPPasswordMgrWithDefaultRealm",
         "ProxyHandler",
-        "quote",
         "Request",
-        "splitattr",
-        "splitpasswd",
-        "splitport",
-        "splituser",
-        "unquote",
         "url2pathname",
         "urlopen",
+    ))
+    import urllib.response
+    urlreq._registeraliases(urllib.response, (
+        "addclosehook",
+        "addinfourl",
     ))
     import urllib.error
     urlerr._registeraliases(urllib.error, (
@@ -291,3 +394,19 @@ else:
         "SimpleHTTPRequestHandler",
         "CGIHTTPRequestHandler",
     ))
+
+    # urllib.parse.quote() accepts both str and bytes, decodes bytes
+    # (if necessary), and returns str. This is wonky. We provide a custom
+    # implementation that only accepts bytes and emits bytes.
+    def quote(s, safe=r'/'):
+        s = urllib.parse.quote_from_bytes(s, safe=safe)
+        return s.encode('ascii', 'strict')
+
+    # urllib.parse.urlencode() returns str. We use this function to make
+    # sure we return bytes.
+    def urlencode(query, doseq=False):
+            s = urllib.parse.urlencode(query, doseq=doseq)
+            return s.encode('ascii')
+
+    urlreq.quote = quote
+    urlreq.urlencode = urlencode

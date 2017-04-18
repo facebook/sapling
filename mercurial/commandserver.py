@@ -304,8 +304,8 @@ def _protectio(ui):
     ui.flush()
     newfiles = []
     nullfd = os.open(os.devnull, os.O_RDWR)
-    for f, sysf, mode in [(ui.fin, util.stdin, 'rb'),
-                          (ui.fout, util.stdout, 'wb')]:
+    for f, sysf, mode in [(ui.fin, util.stdin, pycompat.sysstr('rb')),
+                          (ui.fout, util.stdout, pycompat.sysstr('wb'))]:
         if f is sysf:
             newfd = os.dup(f.fileno())
             os.dup2(nullfd, f.fileno())
@@ -447,6 +447,7 @@ class unixforkingservice(object):
         self._sock = None
         self._oldsigchldhandler = None
         self._workerpids = set()  # updated by signal handler; do not iterate
+        self._socketunlinked = None
 
     def init(self):
         self._sock = socket.socket(socket.AF_UNIX)
@@ -455,11 +456,17 @@ class unixforkingservice(object):
         o = signal.signal(signal.SIGCHLD, self._sigchldhandler)
         self._oldsigchldhandler = o
         self._servicehandler.printbanner(self.address)
+        self._socketunlinked = False
+
+    def _unlinksocket(self):
+        if not self._socketunlinked:
+            self._servicehandler.unlinksocket(self.address)
+            self._socketunlinked = True
 
     def _cleanup(self):
         signal.signal(signal.SIGCHLD, self._oldsigchldhandler)
         self._sock.close()
-        self._servicehandler.unlinksocket(self.address)
+        self._unlinksocket()
         # don't kill child processes as they have active clients, just wait
         self._reapworkers(0)
 
@@ -470,11 +477,23 @@ class unixforkingservice(object):
             self._cleanup()
 
     def _mainloop(self):
+        exiting = False
         h = self._servicehandler
-        while not h.shouldexit():
+        while True:
+            if not exiting and h.shouldexit():
+                # clients can no longer connect() to the domain socket, so
+                # we stop queuing new requests.
+                # for requests that are queued (connect()-ed, but haven't been
+                # accept()-ed), handle them before exit. otherwise, clients
+                # waiting for recv() will receive ECONNRESET.
+                self._unlinksocket()
+                exiting = True
             try:
                 ready = select.select([self._sock], [], [], h.pollinterval)[0]
                 if not ready:
+                    # only exit if we completed all queued requests
+                    if exiting:
+                        break
                     continue
                 conn, _addr = self._sock.accept()
             except (select.error, socket.error) as inst:

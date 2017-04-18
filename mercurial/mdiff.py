@@ -17,6 +17,7 @@ from . import (
     bdiff,
     error,
     mpatch,
+    pycompat,
     util,
 )
 
@@ -61,6 +62,7 @@ class diffopts(object):
         }
 
     def __init__(self, **opts):
+        opts = pycompat.byteskwargs(opts)
         for k in self.defaults.keys():
             v = opts.get(k)
             if v is None:
@@ -115,6 +117,31 @@ def splitblock(base1, lines1, base2, lines2, opts):
         s1 = i1
         s2 = i2
 
+def hunkinrange(hunk, linerange):
+    """Return True if `hunk` defined as (start, length) is in `linerange`
+    defined as (lowerbound, upperbound).
+
+    >>> hunkinrange((5, 10), (2, 7))
+    True
+    >>> hunkinrange((5, 10), (6, 12))
+    True
+    >>> hunkinrange((5, 10), (13, 17))
+    True
+    >>> hunkinrange((5, 10), (3, 17))
+    True
+    >>> hunkinrange((5, 10), (1, 3))
+    False
+    >>> hunkinrange((5, 10), (18, 20))
+    False
+    >>> hunkinrange((5, 10), (1, 5))
+    False
+    >>> hunkinrange((5, 10), (15, 27))
+    False
+    """
+    start, length = hunk
+    lowerbound, upperbound = linerange
+    return lowerbound < start + length and start < upperbound
+
 def blocksinrange(blocks, rangeb):
     """filter `blocks` like (a1, a2, b1, b2) from items outside line range
     `rangeb` from ``(b1, b2)`` point of view.
@@ -148,7 +175,7 @@ def blocksinrange(blocks, rangeb):
                     uba = a1 + (ubb - b1)
                 else:
                     uba = a2
-        if lbb < b2 and b1 < ubb:
+        if hunkinrange((b1, (b2 - b1)), rangeb):
             filteredblocks.append(block)
     if lba is None or uba is None or uba < lba:
         raise error.Abort(_('line range exceeds file size'))
@@ -196,15 +223,23 @@ def allblocks(text1, text2, opts=None, lines1=None, lines2=None):
         yield s1, '='
 
 def unidiff(a, ad, b, bd, fn1, fn2, opts=defaultopts):
+    """Return a unified diff as a (headers, hunks) tuple.
+
+    If the diff is not null, `headers` is a list with unified diff header
+    lines "--- <original>" and "+++ <new>" and `hunks` is a generator yielding
+    (hunkrange, hunklines) coming from _unidiff().
+    Otherwise, `headers` and `hunks` are empty.
+    """
     def datetag(date, fn=None):
         if not opts.git and not opts.nodates:
-            return '\t%s\n' % date
+            return '\t%s' % date
         if fn and ' ' in fn:
-            return '\t\n'
-        return '\n'
+            return '\t'
+        return ''
 
+    sentinel = [], ()
     if not a and not b:
-        return ""
+        return sentinel
 
     if opts.noprefix:
         aprefix = bprefix = ''
@@ -217,10 +252,17 @@ def unidiff(a, ad, b, bd, fn1, fn2, opts=defaultopts):
     fn1 = util.pconvert(fn1)
     fn2 = util.pconvert(fn2)
 
+    def checknonewline(lines):
+        for text in lines:
+            if text[-1:] != '\n':
+                text += "\n\ No newline at end of file\n"
+            yield text
+
     if not opts.text and (util.binary(a) or util.binary(b)):
         if a and b and len(a) == len(b) and a == b:
-            return ""
-        l = ['Binary file %s has changed\n' % fn1]
+            return sentinel
+        headerlines = []
+        hunks = (None, ['Binary file %s has changed\n' % fn1]),
     elif not a:
         b = splitnewlines(b)
         if a is None:
@@ -228,8 +270,11 @@ def unidiff(a, ad, b, bd, fn1, fn2, opts=defaultopts):
         else:
             l1 = "--- %s%s%s" % (aprefix, fn1, datetag(ad, fn1))
         l2 = "+++ %s%s" % (bprefix + fn2, datetag(bd, fn2))
-        l3 = "@@ -0,0 +1,%d @@\n" % len(b)
-        l = [l1, l2, l3] + ["+" + e for e in b]
+        headerlines = [l1, l2]
+        size = len(b)
+        hunkrange = (0, 0, 1, size)
+        hunklines = ["@@ -0,0 +1,%d @@\n" % size] + ["+" + e for e in b]
+        hunks = (hunkrange, checknonewline(hunklines)),
     elif not b:
         a = splitnewlines(a)
         l1 = "--- %s%s%s" % (aprefix, fn1, datetag(ad, fn1))
@@ -237,28 +282,42 @@ def unidiff(a, ad, b, bd, fn1, fn2, opts=defaultopts):
             l2 = '+++ /dev/null%s' % datetag(epoch)
         else:
             l2 = "+++ %s%s%s" % (bprefix, fn2, datetag(bd, fn2))
-        l3 = "@@ -1,%d +0,0 @@\n" % len(a)
-        l = [l1, l2, l3] + ["-" + e for e in a]
+        headerlines = [l1, l2]
+        size = len(a)
+        hunkrange = (1, size, 0, 0)
+        hunklines = ["@@ -1,%d +0,0 @@\n" % size] + ["-" + e for e in a]
+        hunks = (hunkrange, checknonewline(hunklines)),
     else:
-        al = splitnewlines(a)
-        bl = splitnewlines(b)
-        l = list(_unidiff(a, b, al, bl, opts=opts))
-        if not l:
-            return ""
+        diffhunks = _unidiff(a, b, opts=opts)
+        try:
+            hunkrange, hunklines = next(diffhunks)
+        except StopIteration:
+            return sentinel
 
-        l.insert(0, "--- %s%s%s" % (aprefix, fn1, datetag(ad, fn1)))
-        l.insert(1, "+++ %s%s%s" % (bprefix, fn2, datetag(bd, fn2)))
+        headerlines = [
+            "--- %s%s%s" % (aprefix, fn1, datetag(ad, fn1)),
+            "+++ %s%s%s" % (bprefix, fn2, datetag(bd, fn2)),
+        ]
+        def rewindhunks():
+            yield hunkrange, checknonewline(hunklines)
+            for hr, hl in diffhunks:
+                yield hr, checknonewline(hl)
 
-    for ln in xrange(len(l)):
-        if l[ln][-1] != '\n':
-            l[ln] += "\n\ No newline at end of file\n"
+        hunks = rewindhunks()
 
-    return "".join(l)
+    return headerlines, hunks
 
-# creates a headerless unified diff
-# t1 and t2 are the text to be diffed
-# l1 and l2 are the text broken up into lines
-def _unidiff(t1, t2, l1, l2, opts=defaultopts):
+def _unidiff(t1, t2, opts=defaultopts):
+    """Yield hunks of a headerless unified diff from t1 and t2 texts.
+
+    Each hunk consists of a (hunkrange, hunklines) tuple where `hunkrange` is a
+    tuple (s1, l1, s2, l2) representing the range information of the hunk to
+    form the '@@ -s1,l1 +s2,l2 @@' header and `hunklines` is a list of lines
+    of the hunk combining said header followed by line additions and
+    deletions.
+    """
+    l1 = splitnewlines(t1)
+    l2 = splitnewlines(t2)
     def contextend(l, len):
         ret = l + opts.context
         if ret > len:
@@ -300,12 +359,13 @@ def _unidiff(t1, t2, l1, l2, opts=defaultopts):
         if blen:
             bstart += 1
 
-        yield "@@ -%d,%d +%d,%d @@%s\n" % (astart, alen,
-                                           bstart, blen, func)
-        for x in delta:
-            yield x
-        for x in xrange(a2, aend):
-            yield ' ' + l1[x]
+        hunkrange = astart, alen, bstart, blen
+        hunklines = (
+            ["@@ -%d,%d +%d,%d @@%s\n" % (hunkrange + (func,))]
+            + delta
+            + [' ' + l1[x] for x in xrange(a2, aend)]
+        )
+        yield hunkrange, hunklines
 
     # bdiff.blocks gives us the matching sequences in the files.  The loop
     # below finds the spaces between those matching sequences and translates

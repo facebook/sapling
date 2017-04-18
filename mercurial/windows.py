@@ -61,8 +61,14 @@ class mixedfilemodewrapper(object):
     OPWRITE = 2
 
     def __init__(self, fp):
-        object.__setattr__(self, '_fp', fp)
-        object.__setattr__(self, '_lastop', 0)
+        object.__setattr__(self, r'_fp', fp)
+        object.__setattr__(self, r'_lastop', 0)
+
+    def __enter__(self):
+        return self._fp.__enter__()
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self._fp.__exit__(exc_type, exc_val, exc_tb)
 
     def __getattr__(self, name):
         return getattr(self._fp, name)
@@ -74,42 +80,42 @@ class mixedfilemodewrapper(object):
         self._fp.seek(0, os.SEEK_CUR)
 
     def seek(self, *args, **kwargs):
-        object.__setattr__(self, '_lastop', self.OPNONE)
+        object.__setattr__(self, r'_lastop', self.OPNONE)
         return self._fp.seek(*args, **kwargs)
 
     def write(self, d):
         if self._lastop == self.OPREAD:
             self._noopseek()
 
-        object.__setattr__(self, '_lastop', self.OPWRITE)
+        object.__setattr__(self, r'_lastop', self.OPWRITE)
         return self._fp.write(d)
 
     def writelines(self, *args, **kwargs):
         if self._lastop == self.OPREAD:
             self._noopeseek()
 
-        object.__setattr__(self, '_lastop', self.OPWRITE)
+        object.__setattr__(self, r'_lastop', self.OPWRITE)
         return self._fp.writelines(*args, **kwargs)
 
     def read(self, *args, **kwargs):
         if self._lastop == self.OPWRITE:
             self._noopseek()
 
-        object.__setattr__(self, '_lastop', self.OPREAD)
+        object.__setattr__(self, r'_lastop', self.OPREAD)
         return self._fp.read(*args, **kwargs)
 
     def readline(self, *args, **kwargs):
         if self._lastop == self.OPWRITE:
             self._noopseek()
 
-        object.__setattr__(self, '_lastop', self.OPREAD)
+        object.__setattr__(self, r'_lastop', self.OPREAD)
         return self._fp.readline(*args, **kwargs)
 
     def readlines(self, *args, **kwargs):
         if self._lastop == self.OPWRITE:
             self._noopseek()
 
-        object.__setattr__(self, '_lastop', self.OPREAD)
+        object.__setattr__(self, r'_lastop', self.OPREAD)
         return self._fp.readlines(*args, **kwargs)
 
 def posixfile(name, mode='r', buffering=-1):
@@ -385,19 +391,6 @@ def removedirs(name):
             break
         head, tail = os.path.split(head)
 
-def unlinkpath(f, ignoremissing=False):
-    """unlink and remove the directory if it is empty"""
-    try:
-        unlink(f)
-    except OSError as e:
-        if not (ignoremissing and e.errno == errno.ENOENT):
-            raise
-    # try removing directories that might now be empty
-    try:
-        removedirs(os.path.dirname(f))
-    except OSError:
-        pass
-
 def rename(src, dst):
     '''atomically rename file src to dst, replacing dst if it exists'''
     try:
@@ -442,7 +435,7 @@ def lookupreg(key, valname=None, scope=None):
         try:
             val = winreg.QueryValueEx(winreg.OpenKey(s, key), valname)[0]
             # never let a Unicode string escape into the wild
-            return encoding.tolocal(val.encode('UTF-8'))
+            return encoding.unitolocal(val)
         except EnvironmentError:
             pass
 

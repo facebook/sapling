@@ -54,7 +54,7 @@ show the edit commands offered by outgoing
   #  p, pick = use commit
   #  d, drop = remove commit from history
   #  f, fold = use commit, but combine it with the one above
-  #  r, roll = like fold, but discard this commit's description
+  #  r, roll = like fold, but discard this commit's description and date
   #
   $ cd ..
 
@@ -88,7 +88,7 @@ show the error from unrelated repos
   #  p, pick = use commit
   #  d, drop = remove commit from history
   #  f, fold = use commit, but combine it with the one above
-  #  r, roll = like fold, but discard this commit's description
+  #  r, roll = like fold, but discard this commit's description and date
   #
   $ cd ..
 
@@ -114,7 +114,7 @@ test sensitivity to branch in URL:
   #  p, pick = use commit
   #  d, drop = remove commit from history
   #  f, fold = use commit, but combine it with the one above
-  #  r, roll = like fold, but discard this commit's description
+  #  r, roll = like fold, but discard this commit's description and date
   #
 
 test to check number of roots in outgoing revisions

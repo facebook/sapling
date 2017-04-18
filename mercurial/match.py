@@ -85,7 +85,7 @@ def _kindpatsalwaysmatch(kindpats):
     return True
 
 class match(object):
-    def __init__(self, root, cwd, patterns, include=[], exclude=[],
+    def __init__(self, root, cwd, patterns, include=None, exclude=None,
                  default='glob', exact=False, auditor=None, ctx=None,
                  listsubrepos=False, warn=None, badfn=None):
         """build an object to match a set of file patterns
@@ -104,7 +104,10 @@ class match(object):
         a pattern is one of:
         'glob:<glob>' - a glob relative to cwd
         're:<regexp>' - a regular expression
-        'path:<path>' - a path relative to repository root
+        'path:<path>' - a path relative to repository root, which is matched
+                        recursively
+        'rootfilesin:<path>' - a path relative to repository root, which is
+                        matched non-recursively (will not match subdirectories)
         'relglob:<glob>' - an unrooted glob (*.c matches C files in all dirs)
         'relpath:<path>' - a path relative to cwd
         'relre:<regexp>' - a regexp that needn't match the start of a name
@@ -114,6 +117,10 @@ class match(object):
                               the same directory
         '<something>' - a pattern of the specified default type
         """
+        if include is None:
+            include = []
+        if exclude is None:
+            exclude = []
 
         self._root = root
         self._cwd = cwd
@@ -122,9 +129,12 @@ class match(object):
         self._always = False
         self._pathrestricted = bool(include or exclude or patterns)
         self._warn = warn
+
+        # roots are directories which are recursively included/excluded.
         self._includeroots = set()
-        self._includedirs = set(['.'])
         self._excluderoots = set()
+        # dirs are directories which are non-recursively included.
+        self._includedirs = set(['.'])
 
         if badfn is not None:
             self.bad = badfn
@@ -134,14 +144,20 @@ class match(object):
             kindpats = self._normalize(include, 'glob', root, cwd, auditor)
             self.includepat, im = _buildmatch(ctx, kindpats, '(?:/|$)',
                                               listsubrepos, root)
-            self._includeroots.update(_roots(kindpats))
-            self._includedirs.update(util.dirs(self._includeroots))
+            roots, dirs = _rootsanddirs(kindpats)
+            self._includeroots.update(roots)
+            self._includedirs.update(dirs)
             matchfns.append(im)
         if exclude:
             kindpats = self._normalize(exclude, 'glob', root, cwd, auditor)
             self.excludepat, em = _buildmatch(ctx, kindpats, '(?:/|$)',
                                               listsubrepos, root)
             if not _anypats(kindpats):
+                # Only consider recursive excludes as such - if a non-recursive
+                # exclude is used, we must still recurse into the excluded
+                # directory, at least to find subdirectories. In such a case,
+                # the regex still won't match the non-recursively-excluded
+                # files.
                 self._excluderoots.update(_roots(kindpats))
             matchfns.append(lambda f: not em(f))
         if exact:
@@ -153,7 +169,7 @@ class match(object):
         elif patterns:
             kindpats = self._normalize(patterns, default, root, cwd, auditor)
             if not _kindpatsalwaysmatch(kindpats):
-                self._files = _roots(kindpats)
+                self._files = _explicitfiles(kindpats)
                 self._anypats = self._anypats or _anypats(kindpats)
                 self.patternspat, pm = _buildmatch(ctx, kindpats, '$',
                                                    listsubrepos, root)
@@ -238,7 +254,7 @@ class match(object):
             return 'all'
         if dir in self._excluderoots:
             return False
-        if (self._includeroots and
+        if ((self._includeroots or self._includedirs != set(['.'])) and
             '.' not in self._includeroots and
             dir not in self._includeroots and
             dir not in self._includedirs and
@@ -286,7 +302,7 @@ class match(object):
         for kind, pat in [_patsplit(p, default) for p in patterns]:
             if kind in ('glob', 'relpath'):
                 pat = pathutil.canonpath(root, cwd, pat, auditor)
-            elif kind in ('relglob', 'path'):
+            elif kind in ('relglob', 'path', 'rootfilesin'):
                 pat = util.normpath(pat)
             elif kind in ('listfile', 'listfile0'):
                 try:
@@ -419,7 +435,9 @@ class icasefsmatcher(match):
         # m.exact(file) must be based off of the actual user input, otherwise
         # inexact case matches are treated as exact, and not noted without -v.
         if self._files:
-            self._fileroots = set(_roots(self._kp))
+            roots, dirs = _rootsanddirs(self._kp)
+            self._fileroots = set(roots)
+            self._fileroots.update(dirs)
 
     def _normalize(self, patterns, default, root, cwd, auditor):
         self._kp = super(icasefsmatcher, self)._normalize(patterns, default,
@@ -447,7 +465,8 @@ def _patsplit(pattern, default):
     if ':' in pattern:
         kind, pat = pattern.split(':', 1)
         if kind in ('re', 'glob', 'path', 'relglob', 'relpath', 'relre',
-                    'listfile', 'listfile0', 'set', 'include', 'subinclude'):
+                    'listfile', 'listfile0', 'set', 'include', 'subinclude',
+                    'rootfilesin'):
             return kind, pat
     return default, pattern
 
@@ -476,9 +495,9 @@ def _globre(pat):
     group = 0
     escape = util.re.escape
     def peek():
-        return i < n and pat[i]
+        return i < n and pat[i:i + 1]
     while i < n:
-        c = pat[i]
+        c = pat[i:i + 1]
         i += 1
         if c not in '*?[{},\\':
             res += escape(c)
@@ -496,18 +515,18 @@ def _globre(pat):
             res += '.'
         elif c == '[':
             j = i
-            if j < n and pat[j] in '!]':
+            if j < n and pat[j:j + 1] in '!]':
                 j += 1
-            while j < n and pat[j] != ']':
+            while j < n and pat[j:j + 1] != ']':
                 j += 1
             if j >= n:
                 res += '\\['
             else:
                 stuff = pat[i:j].replace('\\','\\\\')
                 i = j + 1
-                if stuff[0] == '!':
+                if stuff[0:1] == '!':
                     stuff = '^' + stuff[1:]
-                elif stuff[0] == '^':
+                elif stuff[0:1] == '^':
                     stuff = '\\' + stuff
                 res = '%s[%s]' % (res, stuff)
         elif c == '{':
@@ -540,6 +559,14 @@ def _regex(kind, pat, globsuffix):
         if pat == '.':
             return ''
         return '^' + util.re.escape(pat) + '(?:/|$)'
+    if kind == 'rootfilesin':
+        if pat == '.':
+            escaped = ''
+        else:
+            # Pattern is a directory name.
+            escaped = util.re.escape(pat) + '/'
+        # Anything after the pattern must be a non-directory.
+        return '^' + escaped + '[^/]+$'
     if kind == 'relglob':
         return '(?:|.*/)' + _globre(pat) + globsuffix
     if kind == 'relpath':
@@ -609,17 +636,16 @@ def _buildregexmatch(kindpats, globsuffix):
                     raise error.Abort(_("invalid pattern (%s): %s") % (k, p))
         raise error.Abort(_("invalid pattern"))
 
-def _roots(kindpats):
-    '''return roots and exact explicitly listed files from patterns
+def _patternrootsanddirs(kindpats):
+    '''Returns roots and directories corresponding to each pattern.
 
-    >>> _roots([('glob', 'g/*', ''), ('glob', 'g', ''), ('glob', 'g*', '')])
-    ['g', 'g', '.']
-    >>> _roots([('relpath', 'r', ''), ('path', 'p/p', ''), ('path', '', '')])
-    ['r', 'p/p', '.']
-    >>> _roots([('relglob', 'rg*', ''), ('re', 're/', ''), ('relre', 'rr', '')])
-    ['.', '.', '.']
+    This calculates the roots and directories exactly matching the patterns and
+    returns a tuple of (roots, dirs) for each. It does not return other
+    directories which may also need to be considered, like the parent
+    directories.
     '''
     r = []
+    d = []
     for kind, pat, source in kindpats:
         if kind == 'glob': # find the non-glob prefix
             root = []
@@ -630,13 +656,63 @@ def _roots(kindpats):
             r.append('/'.join(root) or '.')
         elif kind in ('relpath', 'path'):
             r.append(pat or '.')
+        elif kind in ('rootfilesin',):
+            d.append(pat or '.')
         else: # relglob, re, relre
             r.append('.')
-    return r
+    return r, d
+
+def _roots(kindpats):
+    '''Returns root directories to match recursively from the given patterns.'''
+    roots, dirs = _patternrootsanddirs(kindpats)
+    return roots
+
+def _rootsanddirs(kindpats):
+    '''Returns roots and exact directories from patterns.
+
+    roots are directories to match recursively, whereas exact directories should
+    be matched non-recursively. The returned (roots, dirs) tuple will also
+    include directories that need to be implicitly considered as either, such as
+    parent directories.
+
+    >>> _rootsanddirs(\
+        [('glob', 'g/h/*', ''), ('glob', 'g/h', ''), ('glob', 'g*', '')])
+    (['g/h', 'g/h', '.'], ['g'])
+    >>> _rootsanddirs(\
+        [('rootfilesin', 'g/h', ''), ('rootfilesin', '', '')])
+    ([], ['g/h', '.', 'g'])
+    >>> _rootsanddirs(\
+        [('relpath', 'r', ''), ('path', 'p/p', ''), ('path', '', '')])
+    (['r', 'p/p', '.'], ['p'])
+    >>> _rootsanddirs(\
+        [('relglob', 'rg*', ''), ('re', 're/', ''), ('relre', 'rr', '')])
+    (['.', '.', '.'], [])
+    '''
+    r, d = _patternrootsanddirs(kindpats)
+
+    # Append the parents as non-recursive/exact directories, since they must be
+    # scanned to get to either the roots or the other exact directories.
+    d.extend(util.dirs(d))
+    d.extend(util.dirs(r))
+
+    return r, d
+
+def _explicitfiles(kindpats):
+    '''Returns the potential explicit filenames from the patterns.
+
+    >>> _explicitfiles([('path', 'foo/bar', '')])
+    ['foo/bar']
+    >>> _explicitfiles([('rootfilesin', 'foo/bar', '')])
+    []
+    '''
+    # Keep only the pattern kinds where one can specify filenames (vs only
+    # directory names).
+    filable = [kp for kp in kindpats if kp[0] not in ('rootfilesin',)]
+    return _roots(filable)
 
 def _anypats(kindpats):
     for kind, pat, source in kindpats:
-        if kind in ('glob', 're', 'relglob', 'relre', 'set'):
+        if kind in ('glob', 're', 'relglob', 'relre', 'set', 'rootfilesin'):
             return True
 
 _commentre = None
@@ -668,12 +744,12 @@ def readpatternfile(filepath, warn, sourceinfo=False):
     syntax = 'relre:'
     patterns = []
 
-    fp = open(filepath)
+    fp = open(filepath, 'rb')
     for lineno, line in enumerate(util.iterfile(fp), start=1):
         if "#" in line:
             global _commentre
             if not _commentre:
-                _commentre = util.re.compile(r'((?:^|[^\\])(?:\\\\)*)#.*')
+                _commentre = util.re.compile(br'((?:^|[^\\])(?:\\\\)*)#.*')
             # remove comments prefixed by an even number of escapes
             m = _commentre.search(line)
             if m:

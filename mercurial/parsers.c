@@ -560,11 +560,11 @@ quit:
 }
 
 /*
- * Build a set of non-normal entries from the dirstate dmap
+ * Build a set of non-normal and other parent entries from the dirstate dmap
 */
-static PyObject *nonnormalentries(PyObject *self, PyObject *args)
-{
-	PyObject *dmap, *nonnset = NULL, *fname, *v;
+static PyObject *nonnormalotherparententries(PyObject *self, PyObject *args) {
+	PyObject *dmap, *fname, *v;
+	PyObject *nonnset = NULL, *otherpset = NULL, *result = NULL;
 	Py_ssize_t pos;
 
 	if (!PyArg_ParseTuple(args, "O!:nonnormalentries",
@@ -573,6 +573,10 @@ static PyObject *nonnormalentries(PyObject *self, PyObject *args)
 
 	nonnset = PySet_New(NULL);
 	if (nonnset == NULL)
+		goto bail;
+
+	otherpset = PySet_New(NULL);
+	if (otherpset == NULL)
 		goto bail;
 
 	pos = 0;
@@ -585,15 +589,28 @@ static PyObject *nonnormalentries(PyObject *self, PyObject *args)
 		}
 		t = (dirstateTupleObject *)v;
 
+		if (t->state == 'n' && t->size == -2) {
+			if (PySet_Add(otherpset, fname) == -1) {
+				goto bail;
+			}
+		}
+
 		if (t->state == 'n' && t->mtime != -1)
 			continue;
 		if (PySet_Add(nonnset, fname) == -1)
 			goto bail;
 	}
 
-	return nonnset;
+	result = Py_BuildValue("(OO)", nonnset, otherpset);
+	if (result == NULL)
+		goto bail;
+	Py_DECREF(nonnset);
+	Py_DECREF(otherpset);
+	return result;
 bail:
 	Py_XDECREF(nonnset);
+	Py_XDECREF(otherpset);
+	Py_XDECREF(result);
 	return NULL;
 }
 
@@ -800,8 +817,8 @@ static const char *index_deref(indexObject *self, Py_ssize_t pos)
 {
 	if (self->inlined && pos > 0) {
 		if (self->offsets == NULL) {
-			self->offsets = malloc(self->raw_length *
-					       sizeof(*self->offsets));
+			self->offsets = PyMem_Malloc(self->raw_length *
+					             sizeof(*self->offsets));
 			if (self->offsets == NULL)
 				return (const char *)PyErr_NoMemory();
 			inline_scan(self, self->offsets);
@@ -1014,7 +1031,7 @@ static void _index_clearcaches(indexObject *self)
 		self->cache = NULL;
 	}
 	if (self->offsets) {
-		free(self->offsets);
+		PyMem_Free(self->offsets);
 		self->offsets = NULL;
 	}
 	if (self->nt) {
@@ -2149,7 +2166,7 @@ static PyObject *index_commonancestorsheads(indexObject *self, PyObject *args)
 	int *revs;
 
 	argcount = PySequence_Length(args);
-	revs = malloc(argcount * sizeof(*revs));
+	revs = PyMem_Malloc(argcount * sizeof(*revs));
 	if (argcount > 0 && revs == NULL)
 		return PyErr_NoMemory();
 	len = index_length(self) - 1;
@@ -2220,11 +2237,11 @@ static PyObject *index_commonancestorsheads(indexObject *self, PyObject *args)
 		goto bail;
 
 done:
-	free(revs);
+	PyMem_Free(revs);
 	return ret;
 
 bail:
-	free(revs);
+	PyMem_Free(revs);
 	Py_XDECREF(ret);
 	return NULL;
 }
@@ -2722,6 +2739,7 @@ static PyObject *fm1readmarker(const char *databegin, const char *dataend,
 		data += nparents * hashwidth;
 	} else {
 		parents = Py_None;
+		Py_INCREF(parents);
 	}
 
 	if (data + 2 * nmetadata > dataend) {
@@ -2764,8 +2782,7 @@ bail:
 	Py_XDECREF(prec);
 	Py_XDECREF(succs);
 	Py_XDECREF(metadata);
-	if (parents != Py_None)
-		Py_XDECREF(parents);
+	Py_XDECREF(parents);
 	return ret;
 }
 
@@ -2814,8 +2831,9 @@ PyObject *lowerencode(PyObject *self, PyObject *args);
 
 static PyMethodDef methods[] = {
 	{"pack_dirstate", pack_dirstate, METH_VARARGS, "pack a dirstate\n"},
-	{"nonnormalentries", nonnormalentries, METH_VARARGS,
-	"create a set containing non-normal entries of given dirstate\n"},
+	{"nonnormalotherparententries", nonnormalotherparententries, METH_VARARGS,
+	"create a set containing non-normal and other parent entries of given "
+	"dirstate\n"},
 	{"parse_manifest", parse_manifest, METH_VARARGS, "parse a manifest\n"},
 	{"parse_dirstate", parse_dirstate, METH_VARARGS, "parse a dirstate\n"},
 	{"parse_index2", parse_index2, METH_VARARGS, "parse a revlog index\n"},

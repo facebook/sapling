@@ -622,7 +622,7 @@ def createchangeset(ui, log, fuzz=60, mergefrom=None, mergeto=None):
     # Sort changesets by date
 
     odd = set()
-    def cscmp(l, r, odd=odd):
+    def cscmp(l, r):
         d = sum(l.date) - sum(r.date)
         if d:
             return d

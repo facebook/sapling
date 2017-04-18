@@ -74,7 +74,7 @@ def checknewline(s, newline, ui=None, repo=None, filename=None):
                   'and does not need EOL conversion by the win32text plugin.\n'
                   'Before your next commit, please reconsider your '
                   'encode/decode settings in \nMercurial.ini or %s.\n') %
-                (filename, newlinestr[newline], repo.join('hgrc')))
+                (filename, newlinestr[newline], repo.vfs.join('hgrc')))
 
 def dumbdecode(s, cmd, **kwargs):
     checknewline(s, '\r\n', **kwargs)

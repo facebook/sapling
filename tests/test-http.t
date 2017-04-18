@@ -1,4 +1,4 @@
-#require serve
+#require killdaemons serve
 
   $ hg init test
   $ cd test
@@ -19,11 +19,11 @@ Test server address cannot be reused
 
 #if windows
   $ hg serve -p $HGPORT1 2>&1
-  abort: cannot start server at ':$HGPORT1': * (glob)
+  abort: cannot start server at 'localhost:$HGPORT1': * (glob)
   [255]
 #else
   $ hg serve -p $HGPORT1 2>&1
-  abort: cannot start server at ':$HGPORT1': Address already in use
+  abort: cannot start server at 'localhost:$HGPORT1': Address already in use
   [255]
 #endif
   $ cd ..
@@ -129,7 +129,7 @@ pull
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  changegroup hook: HG_NODE=5fed3813f7f5e1824344fdc9cf8f63bb662c292d HG_NODE_LAST=5fed3813f7f5e1824344fdc9cf8f63bb662c292d HG_SOURCE=pull HG_TXNID=TXN:* HG_URL=http://localhost:$HGPORT1/ (glob)
+  changegroup hook: HG_HOOKNAME=changegroup HG_HOOKTYPE=changegroup HG_NODE=5fed3813f7f5e1824344fdc9cf8f63bb662c292d HG_NODE_LAST=5fed3813f7f5e1824344fdc9cf8f63bb662c292d HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=http://localhost:$HGPORT1/
   (run 'hg update' to get a working copy)
   $ cd ..
 
@@ -333,3 +333,64 @@ check abort error reporting while pulling/cloning
   abort: pull failed on remote
   [255]
   $ cat error.log
+
+corrupt cookies file should yield a warning
+
+  $ cat > $TESTTMP/cookies.txt << EOF
+  > bad format
+  > EOF
+
+  $ hg --config auth.cookiefile=$TESTTMP/cookies.txt id http://localhost:$HGPORT/
+  (error loading cookie file $TESTTMP/cookies.txt: '*/cookies.txt' does not look like a Netscape format cookies file; continuing without cookies) (glob)
+  56f9bc90cce6
+
+  $ killdaemons.py
+
+Create dummy authentication handler that looks for cookies. It doesn't do anything
+useful. It just raises an HTTP 500 with details about the Cookie request header.
+We raise HTTP 500 because its message is printed in the abort message.
+
+  $ cat > cookieauth.py << EOF
+  > from mercurial import util
+  > from mercurial.hgweb import common
+  > def perform_authentication(hgweb, req, op):
+  >     cookie = req.env.get('HTTP_COOKIE')
+  >     if not cookie:
+  >         raise common.ErrorResponse(common.HTTP_SERVER_ERROR, 'no-cookie')
+  >     raise common.ErrorResponse(common.HTTP_SERVER_ERROR, 'Cookie: %s' % cookie)
+  > def extsetup():
+  >     common.permhooks.insert(0, perform_authentication)
+  > EOF
+
+  $ hg serve --config extensions.cookieauth=cookieauth.py -R test -p $HGPORT -d --pid-file=pid
+  $ cat pid > $DAEMON_PIDS
+
+Request without cookie sent should fail due to lack of cookie
+
+  $ hg id http://localhost:$HGPORT
+  abort: HTTP Error 500: no-cookie
+  [255]
+
+Populate a cookies file
+
+  $ cat > cookies.txt << EOF
+  > # HTTP Cookie File
+  > # Expiration is 2030-01-01 at midnight
+  > .example.com	TRUE	/	FALSE	1893456000	hgkey	examplevalue
+  > EOF
+
+Should not send a cookie for another domain
+
+  $ hg --config auth.cookiefile=cookies.txt id http://localhost:$HGPORT/
+  abort: HTTP Error 500: no-cookie
+  [255]
+
+Add a cookie entry for our test server and verify it is sent
+
+  $ cat >> cookies.txt << EOF
+  > localhost.local	FALSE	/	FALSE	1893456000	hgkey	localhostvalue
+  > EOF
+
+  $ hg --config auth.cookiefile=cookies.txt id http://localhost:$HGPORT/
+  abort: HTTP Error 500: Cookie: hgkey=localhostvalue
+  [255]

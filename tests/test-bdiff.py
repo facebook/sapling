@@ -3,8 +3,6 @@ import collections
 import struct
 import unittest
 
-import silenttestrunner
-
 from mercurial import (
     bdiff,
     mpatch,
@@ -148,4 +146,5 @@ class BdiffTests(unittest.TestCase):
                          ['a\n', diffreplace(2, 10, 'a\na\na\na\n', '')])
 
 if __name__ == '__main__':
+    import silenttestrunner
     silenttestrunner.main(__name__)

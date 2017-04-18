@@ -296,7 +296,7 @@ Testing -h/--help:
    bookmarks     create a new bookmark or list existing bookmarks
    branch        set or show the current branch name
    branches      list repository named branches
-   bundle        create a changegroup file
+   bundle        create a bundle file
    cat           output the current or given revision of files
    clone         make a copy of an existing repository
    commit        commit the specified files or all outstanding changes
@@ -333,13 +333,15 @@ Testing -h/--help:
    summary       summarize working directory state
    tag           add one or more tags for the current or given revision
    tags          list repository tags
-   unbundle      apply one or more changegroup files
+   unbundle      apply one or more bundle files
    update        update working directory (or switch revisions)
    verify        verify the integrity of the repository
    version       output version and copyright information
   
   additional help topics:
   
+   bundlespec    Bundle File Formats
+   color         Colorizing Outputs
    config        Configuration Files
    dates         Date Formats
    diffs         Diff Formats
@@ -351,6 +353,7 @@ Testing -h/--help:
    hgweb         Configuring hgweb
    internals     Technical implementation topics
    merge-tools   Merge Tools
+   pager         Pager Support
    patterns      File Name Patterns
    phases        Working with Phases
    revisions     Specifying Revisions
@@ -377,7 +380,7 @@ Testing -h/--help:
    bookmarks     create a new bookmark or list existing bookmarks
    branch        set or show the current branch name
    branches      list repository named branches
-   bundle        create a changegroup file
+   bundle        create a bundle file
    cat           output the current or given revision of files
    clone         make a copy of an existing repository
    commit        commit the specified files or all outstanding changes
@@ -414,13 +417,15 @@ Testing -h/--help:
    summary       summarize working directory state
    tag           add one or more tags for the current or given revision
    tags          list repository tags
-   unbundle      apply one or more changegroup files
+   unbundle      apply one or more bundle files
    update        update working directory (or switch revisions)
    verify        verify the integrity of the repository
    version       output version and copyright information
   
   additional help topics:
   
+   bundlespec    Bundle File Formats
+   color         Colorizing Outputs
    config        Configuration Files
    dates         Date Formats
    diffs         Diff Formats
@@ -432,6 +437,7 @@ Testing -h/--help:
    hgweb         Configuring hgweb
    internals     Technical implementation topics
    merge-tools   Merge Tools
+   pager         Pager Support
    patterns      File Name Patterns
    phases        Working with Phases
    revisions     Specifying Revisions

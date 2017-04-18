@@ -32,6 +32,7 @@
           <File Name="map-cmdline.changelog" KeyPath="yes" />
           <File Name="map-cmdline.compact" />
           <File Name="map-cmdline.default" />
+          <File Name="map-cmdline.show" />
           <File Name="map-cmdline.bisect" />
           <File Name="map-cmdline.xml" />
           <File Name="map-cmdline.status" />
@@ -225,6 +226,7 @@
             <File Id="static.coal.file.png"      Name="coal-file.png" />
             <File Id="static.coal.folder.png"    Name="coal-folder.png" />
             <File Id="static.excanvas.js"        Name="excanvas.js" />
+            <File Id="static.followlines.js"     Name="followlines.js" />
             <File Id="static.mercurial.js"       Name="mercurial.js" />
             <File Id="static.hgicon.png"         Name="hgicon.png" />
             <File Id="static.hglogo.png"         Name="hglogo.png" />

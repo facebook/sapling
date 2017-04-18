@@ -631,7 +631,7 @@ class HTTPConnection(object):
         self.close()
         self._connect(pheaders)
 
-    def request(self, method, path, body=None, headers={},
+    def request(self, method, path, body=None, headers=None,
                 expect_continue=False):
         """Send a request to the server.
 
@@ -642,6 +642,8 @@ class HTTPConnection(object):
         available. Use the `getresponse()` method to retrieve the
         response.
         """
+        if headers is None:
+            headers = {}
         method = _ensurebytes(method)
         path = _ensurebytes(path)
         if self.busy():

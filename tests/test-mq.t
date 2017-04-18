@@ -25,7 +25,7 @@ help
   Known patches are represented as patch files in the .hg/patches directory.
   Applied patches are both patch files and changesets.
   
-  Common tasks (use 'hg help command' for more details):
+  Common tasks (use 'hg help COMMAND' for more details):
   
     create new patch                          qnew
     import existing patch                     qimport
@@ -365,10 +365,10 @@ pop/push -a in subdir
 
 setting columns & formatted tests truncating (issue1912)
 
-  $ COLUMNS=4 hg qseries --config ui.formatted=true
+  $ COLUMNS=4 hg qseries --config ui.formatted=true --color=no
   test.patch
   test2.patch
-  $ COLUMNS=20 hg qseries --config ui.formatted=true -vs
+  $ COLUMNS=20 hg qseries --config ui.formatted=true -vs --color=no
   0 A test.patch: f...
   1 A test2.patch: 
   $ hg qpop

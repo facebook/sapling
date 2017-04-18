@@ -56,9 +56,9 @@ class _funcregistrarbase(object):
             raise error.ProgrammingError(msg)
 
         if func.__doc__ and not util.safehasattr(func, '_origdoc'):
-            doc = func.__doc__.strip()
+            doc = pycompat.sysbytes(func.__doc__).strip()
             func._origdoc = doc
-            func.__doc__ = self._formatdoc(decl, doc)
+            func.__doc__ = pycompat.sysstr(self._formatdoc(decl, doc))
 
         self._table[name] = func
         self._extrasetup(name, func, *args, **kwargs)
@@ -127,7 +127,7 @@ class revsetpredicate(_funcregistrarbase):
     Otherwise, explicit 'revset.loadpredicate()' is needed.
     """
     _getname = _funcregistrarbase._parsefuncdecl
-    _docformat = pycompat.sysstr("``%s``\n    %s")
+    _docformat = "``%s``\n    %s"
 
     def _extrasetup(self, name, func, safe=False, takeorder=False):
         func._safe = safe
@@ -166,7 +166,7 @@ class filesetpredicate(_funcregistrarbase):
     Otherwise, explicit 'fileset.loadpredicate()' is needed.
     """
     _getname = _funcregistrarbase._parsefuncdecl
-    _docformat = pycompat.sysstr("``%s``\n    %s")
+    _docformat = "``%s``\n    %s"
 
     def _extrasetup(self, name, func, callstatus=False, callexisting=False):
         func._callstatus = callstatus
@@ -175,7 +175,7 @@ class filesetpredicate(_funcregistrarbase):
 class _templateregistrarbase(_funcregistrarbase):
     """Base of decorator to register functions as template specific one
     """
-    _docformat = pycompat.sysstr(":%s: %s")
+    _docformat = ":%s: %s"
 
 class templatekeyword(_templateregistrarbase):
     """Decorator to register template keyword
@@ -234,13 +234,17 @@ class templatefunc(_templateregistrarbase):
 
         templatefunc = registrar.templatefunc()
 
-        @templatefunc('myfunc(arg1, arg2[, arg3])')
+        @templatefunc('myfunc(arg1, arg2[, arg3])', argspec='arg1 arg2 arg3')
         def myfuncfunc(context, mapping, args):
             '''Explanation of this template function ....
             '''
             pass
 
     The first string argument is used also in online help.
+
+    If optional 'argspec' is defined, the function will receive 'args' as
+    a dict of named arguments. Otherwise 'args' is a list of positional
+    arguments.
 
     'templatefunc' instance in example above can be used to
     decorate multiple functions.
@@ -252,3 +256,6 @@ class templatefunc(_templateregistrarbase):
     Otherwise, explicit 'templater.loadfunction()' is needed.
     """
     _getname = _funcregistrarbase._parsefuncdecl
+
+    def _extrasetup(self, name, func, argspec=None):
+        func._argspec = argspec

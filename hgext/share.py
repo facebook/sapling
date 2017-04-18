@@ -48,6 +48,7 @@ from mercurial import (
     error,
     extensions,
     hg,
+    txnutil,
     util,
 )
 
@@ -64,10 +65,14 @@ testedwith = 'ships-with-hg-core'
 
 @command('share',
     [('U', 'noupdate', None, _('do not create a working directory')),
-     ('B', 'bookmarks', None, _('also share bookmarks'))],
+     ('B', 'bookmarks', None, _('also share bookmarks')),
+     ('', 'relative', None, _('point to source using a relative path '
+                              '(EXPERIMENTAL)')),
+    ],
     _('[-U] [-B] SOURCE [DEST]'),
     norepo=True)
-def share(ui, source, dest=None, noupdate=False, bookmarks=False):
+def share(ui, source, dest=None, noupdate=False, bookmarks=False,
+          relative=False):
     """create a new shared repository
 
     Initialize a new repository and working directory that shares its
@@ -86,7 +91,7 @@ def share(ui, source, dest=None, noupdate=False, bookmarks=False):
     """
 
     return hg.share(ui, source, dest=dest, update=not noupdate,
-                    bookmarks=bookmarks)
+                    bookmarks=bookmarks, relative=relative)
 
 @command('unshare', [], '')
 def unshare(ui, repo):
@@ -108,10 +113,11 @@ def unshare(ui, repo):
 
         destlock = hg.copystore(ui, repo, repo.path)
 
-        sharefile = repo.join('sharedpath')
+        sharefile = repo.vfs.join('sharedpath')
         util.rename(sharefile, sharefile + '.old')
 
-        repo.requirements.discard('sharedpath')
+        repo.requirements.discard('shared')
+        repo.requirements.discard('relshared')
         repo._writerequirements()
     finally:
         destlock and destlock.release()
@@ -171,7 +177,28 @@ def getbkfile(orig, repo):
     if _hassharedbookmarks(repo):
         srcrepo = _getsrcrepo(repo)
         if srcrepo is not None:
+            # just orig(srcrepo) doesn't work as expected, because
+            # HG_PENDING refers repo.root.
+            try:
+                fp, pending = txnutil.trypending(repo.root, repo.vfs,
+                                                 'bookmarks')
+                if pending:
+                    # only in this case, bookmark information in repo
+                    # is up-to-date.
+                    return fp
+                fp.close()
+            except IOError as inst:
+                if inst.errno != errno.ENOENT:
+                    raise
+
+            # otherwise, we should read bookmarks from srcrepo,
+            # because .hg/bookmarks in srcrepo might be already
+            # changed via another sharing repo
             repo = srcrepo
+
+            # TODO: Pending changes in repo are still invisible in
+            # srcrepo, because bookmarks.pending is written only into repo.
+            # See also https://www.mercurial-scm.org/wiki/SharedRepository
     return orig(repo)
 
 def recordchange(orig, self, tr):

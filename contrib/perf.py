@@ -20,6 +20,7 @@
 
 from __future__ import absolute_import
 import functools
+import gc
 import os
 import random
 import sys
@@ -64,6 +65,16 @@ _undefined = object()
 def safehasattr(thing, attr):
     return getattr(thing, attr, _undefined) is not _undefined
 setattr(util, 'safehasattr', safehasattr)
+
+# for "historical portability":
+# define util.timer forcibly, because util.timer has been available
+# since ae5d60bb70c9
+if safehasattr(time, 'perf_counter'):
+    util.timer = time.perf_counter
+elif os.name == 'nt':
+    util.timer = time.clock
+else:
+    util.timer = time.time
 
 # for "historical portability":
 # use locally defined empty option list, if formatteropts isn't
@@ -164,6 +175,7 @@ def gettimer(ui, opts=None):
                     self.hexfunc = node.short
             def __nonzero__(self):
                 return False
+            __bool__ = __nonzero__
             def startitem(self):
                 pass
             def data(self, **data):
@@ -189,14 +201,15 @@ def stub_timer(fm, func, title=None):
     func()
 
 def _timer(fm, func, title=None):
+    gc.collect()
     results = []
-    begin = time.time()
+    begin = util.timer()
     count = 0
     while True:
         ostart = os.times()
-        cstart = time.time()
+        cstart = util.timer()
         r = func()
-        cstop = time.time()
+        cstop = util.timer()
         ostop = os.times()
         count += 1
         a, b = ostart, ostop
@@ -993,6 +1006,26 @@ def perfrevlogrevision(ui, repo, file_, rev=None, cache=None, **opts):
     node = r.lookup(rev)
     rev = r.rev(node)
 
+    def getrawchunks(data, chain):
+        start = r.start
+        length = r.length
+        inline = r._inline
+        iosize = r._io.size
+        buffer = util.buffer
+        offset = start(chain[0])
+
+        chunks = []
+        ladd = chunks.append
+
+        for rev in chain:
+            chunkstart = start(rev)
+            if inline:
+                chunkstart += (rev + 1) * iosize
+            chunklength = length(rev)
+            ladd(buffer(data, chunkstart - offset, chunklength))
+
+        return chunks
+
     def dodeltachain(rev):
         if not cache:
             r.clearcaches()
@@ -1003,24 +1036,15 @@ def perfrevlogrevision(ui, repo, file_, rev=None, cache=None, **opts):
             r.clearcaches()
         r._chunkraw(chain[0], chain[-1])
 
-    def dodecompress(data, chain):
+    def dorawchunks(data, chain):
         if not cache:
             r.clearcaches()
+        getrawchunks(data, chain)
 
-        start = r.start
-        length = r.length
-        inline = r._inline
-        iosize = r._io.size
-        buffer = util.buffer
-        offset = start(chain[0])
-
-        for rev in chain:
-            chunkstart = start(rev)
-            if inline:
-                chunkstart += (rev + 1) * iosize
-            chunklength = length(rev)
-            b = buffer(data, chunkstart - offset, chunklength)
-            r.decompress(b)
+    def dodecompress(chunks):
+        decomp = r.decompress
+        for chunk in chunks:
+            decomp(chunk)
 
     def dopatch(text, bins):
         if not cache:
@@ -1039,6 +1063,7 @@ def perfrevlogrevision(ui, repo, file_, rev=None, cache=None, **opts):
 
     chain = r._deltachain(rev)[0]
     data = r._chunkraw(chain[0], chain[-1])[1]
+    rawchunks = getrawchunks(data, chain)
     bins = r._chunks(chain)
     text = str(bins[0])
     bins = bins[1:]
@@ -1048,7 +1073,8 @@ def perfrevlogrevision(ui, repo, file_, rev=None, cache=None, **opts):
         (lambda: dorevision(), 'full'),
         (lambda: dodeltachain(rev), 'deltachain'),
         (lambda: doread(chain), 'read'),
-        (lambda: dodecompress(data, chain), 'decompress'),
+        (lambda: dorawchunks(data, chain), 'rawchunks'),
+        (lambda: dodecompress(rawchunks), 'decompress'),
         (lambda: dopatch(text, bins), 'patch'),
         (lambda: dohash(text), 'hash'),
     ]
@@ -1255,6 +1281,17 @@ def perflrucache(ui, size=4, gets=10000, sets=10000, mixed=10000,
         timer, fm = gettimer(ui, opts)
         timer(fn, title=title)
         fm.end()
+
+@command('perfwrite', formatteropts)
+def perfwrite(ui, repo, **opts):
+    """microbenchmark ui.write
+    """
+    timer, fm = gettimer(ui, opts)
+    def write():
+        for i in range(100000):
+            ui.write(('Testing write performance\n'))
+    timer(write)
+    fm.end()
 
 def uisetup(ui):
     if (util.safehasattr(cmdutil, 'openrevlog') and

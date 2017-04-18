@@ -22,7 +22,7 @@ class Hint(object):
     pass remaining arguments to the exception class.
     """
     def __init__(self, *args, **kw):
-        self.hint = kw.pop('hint', None)
+        self.hint = kw.pop(r'hint', None)
         super(Hint, self).__init__(*args, **kw)
 
 class RevlogError(Hint, Exception):
@@ -121,6 +121,12 @@ class CapabilityError(RepoError):
 
 class RequirementError(RepoError):
     """Exception raised if .hg/requires has an unknown entry."""
+
+class StdioError(IOError):
+    """Raised if I/O to stdout or stderr fails"""
+
+    def __init__(self, err):
+        IOError.__init__(self, err.errno, err.strerror)
 
 class UnsupportedMergeRecords(Abort):
     def __init__(self, recordtypes):
@@ -246,3 +252,6 @@ class UnsupportedBundleSpecification(Exception):
 
 class CorruptedState(Exception):
     """error raised when a command is not able to read its state from file"""
+
+class PeerTransportError(Abort):
+    """Transport-level I/O error when communicating with a peer repo."""

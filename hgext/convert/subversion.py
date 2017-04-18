@@ -13,8 +13,8 @@ from mercurial import (
     encoding,
     error,
     pycompat,
-    scmutil,
     util,
+    vfs as vfsmod,
 )
 
 from . import common
@@ -1146,8 +1146,8 @@ class svn_sink(converter_sink, commandline):
             self.run0('checkout', path, wcpath)
 
             self.wc = wcpath
-        self.opener = scmutil.opener(self.wc)
-        self.wopener = scmutil.opener(self.wc)
+        self.opener = vfsmod.vfs(self.wc)
+        self.wopener = vfsmod.vfs(self.wc)
         self.childmap = mapfile(ui, self.join('hg-childmap'))
         if util.checkexec(self.wc):
             self.is_exec = util.isexec
@@ -1186,7 +1186,7 @@ class svn_sink(converter_sink, commandline):
                 # best bet is to assume they are in local
                 # encoding. They will be passed to command line calls
                 # later anyway, so they better be.
-                m.add(encoding.tolocal(name.encode('utf-8')))
+                m.add(encoding.unitolocal(name))
                 break
         return m
 
@@ -1306,7 +1306,7 @@ class svn_sink(converter_sink, commandline):
             self.setexec = []
 
         fd, messagefile = tempfile.mkstemp(prefix='hg-convert-')
-        fp = os.fdopen(fd, 'w')
+        fp = os.fdopen(fd, pycompat.sysstr('w'))
         fp.write(commit.desc)
         fp.close()
         try:

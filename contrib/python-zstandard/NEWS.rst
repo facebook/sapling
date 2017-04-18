@@ -1,6 +1,66 @@
 Version History
 ===============
 
+0.8.1 (released 2017-04-08)
+---------------------------
+
+* Add #includes so compilation on OS X and BSDs works (#20).
+
+0.8.0 (released 2017-03-08)
+---------------------------
+
+* CompressionParameters now has a estimated_compression_context_size() method.
+  zstd.estimate_compression_context_size() is now deprecated and slated for
+  removal.
+* Implemented a lot of fuzzing tests.
+* CompressionParameters instances now perform extra validation by calling
+  ZSTD_checkCParams() at construction time.
+* multi_compress_to_buffer() API for compressing multiple inputs as a
+  single operation, as efficiently as possible.
+* ZSTD_CStream instances are now used across multiple operations on
+  ZstdCompressor instances, resulting in much better performance for
+  APIs that do streaming.
+* ZSTD_DStream instances are now used across multiple operations on
+  ZstdDecompressor instances, resulting in much better performance for
+  APIs that do streaming.
+* train_dictionary() now releases the GIL.
+* Support for training dictionaries using the COVER algorithm.
+* multi_decompress_to_buffer() API for decompressing multiple frames as a
+  single operation, as efficiently as possible.
+* Support for multi-threaded compression.
+* Disable deprecation warnings when compiling CFFI module.
+* Fixed memory leak in train_dictionary().
+* Removed DictParameters type.
+* train_dictionary() now accepts keyword arguments instead of a
+  DictParameters instance to control dictionary generation.
+
+0.7.0 (released 2017-02-07)
+---------------------------
+
+* Added zstd.get_frame_parameters() to obtain info about a zstd frame.
+* Added ZstdDecompressor.decompress_content_dict_chain() for efficient
+  decompression of *content-only dictionary chains*.
+* CFFI module fully implemented; all tests run against both C extension and
+  CFFI implementation.
+* Vendored version of zstd updated to 1.1.3.
+* Use ZstdDecompressor.decompress() now uses ZSTD_createDDict_byReference()
+  to avoid extra memory allocation of dict data.
+* Add function names to error messages (by using ":name" in PyArg_Parse*
+  functions).
+* Reuse decompression context across operations. Previously, we created a
+  new ZSTD_DCtx for each decompress(). This was measured to slow down
+  decompression by 40-200MB/s. The API guarantees say ZstdDecompressor
+  is not thread safe. So we reuse the ZSTD_DCtx across operations and make
+  things faster in the process.
+* ZstdCompressor.write_to()'s compress() and flush() methods now return number
+  of bytes written.
+* ZstdDecompressor.write_to()'s write() method now returns the number of bytes
+  written to the underlying output object.
+* CompressionParameters instances now expose their values as attributes.
+* CompressionParameters instances no longer are subscriptable nor behave
+  as tuples (backwards incompatible). Use attributes to obtain values.
+* DictParameters instances now expose their values as attributes.
+
 0.6.0 (released 2017-01-14)
 ---------------------------
 

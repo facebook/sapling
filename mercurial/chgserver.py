@@ -31,13 +31,15 @@ Config
 ::
 
   [chgserver]
-  idletimeout = 3600 # seconds, after which an idle server will exit
-  skiphash = False   # whether to skip config or env change checks
+  # how long (in seconds) should an idle chg server exit
+  idletimeout = 3600
+
+  # whether to skip config or env change checks
+  skiphash = False
 """
 
 from __future__ import absolute_import
 
-import errno
 import hashlib
 import inspect
 import os
@@ -176,30 +178,22 @@ def _newchgui(srcui, csystem, attachio):
             else:
                 self._csystem = csystem
 
-        def system(self, cmd, environ=None, cwd=None, onerr=None,
-                   errprefix=None):
+        def _runsystem(self, cmd, environ, cwd, out):
             # fallback to the original system method if the output needs to be
             # captured (to self._buffers), or the output stream is not stdout
             # (e.g. stderr, cStringIO), because the chg client is not aware of
             # these situations and will behave differently (write to stdout).
-            if (any(s[1] for s in self._bufferstates)
+            if (out is not self.fout
                 or not util.safehasattr(self.fout, 'fileno')
                 or self.fout.fileno() != util.stdout.fileno()):
-                return super(chgui, self).system(cmd, environ, cwd, onerr,
-                                                 errprefix)
+                return util.system(cmd, environ=environ, cwd=cwd, out=out)
             self.flush()
-            rc = self._csystem(cmd, util.shellenviron(environ), cwd)
-            if rc and onerr:
-                errmsg = '%s %s' % (os.path.basename(cmd.split(None, 1)[0]),
-                                    util.explainexit(rc)[0])
-                if errprefix:
-                    errmsg = '%s: %s' % (errprefix, errmsg)
-                raise onerr(errmsg)
-            return rc
+            return self._csystem(cmd, util.shellenviron(environ), cwd)
 
-        def _runpager(self, cmd):
-            self._csystem(cmd, util.shellenviron(), type='pager',
+        def _runpager(self, cmd, env=None):
+            self._csystem(cmd, util.shellenviron(env), type='pager',
                           cmdtable={'attachio': attachio})
+            return True
 
     return chgui(srcui)
 
@@ -219,8 +213,8 @@ def _loadnewui(srcui, args):
     # stolen from tortoisehg.util.copydynamicconfig()
     for section, name, value in srcui.walkconfig():
         source = srcui.configsource(section, name)
-        if ':' in source or source == '--config':
-            # path:line or command line
+        if ':' in source or source == '--config' or source.startswith('$'):
+            # path:line or command line, or environ
             continue
         newui.setconfig(section, name, value, source)
 
@@ -287,9 +281,9 @@ class channeledsystem(object):
 
 _iochannels = [
     # server.ch, ui.fp, mode
-    ('cin', 'fin', 'rb'),
-    ('cout', 'fout', 'wb'),
-    ('cerr', 'ferr', 'wb'),
+    ('cin', 'fin', pycompat.sysstr('rb')),
+    ('cout', 'fout', pycompat.sysstr('wb')),
+    ('cerr', 'ferr', pycompat.sysstr('wb')),
 ]
 
 class chgcmdserver(commandserver.server):
@@ -549,11 +543,7 @@ class chgunixservicehandler(object):
         # remove another server's socket file. but that's okay
         # since that server will detect and exit automatically and
         # the client will start a new server on demand.
-        try:
-            os.unlink(self._realaddress)
-        except OSError as exc:
-            if exc.errno != errno.ENOENT:
-                raise
+        util.tryunlink(self._realaddress)
 
     def printbanner(self, address):
         # no "listening at" message should be printed to simulate hg behavior

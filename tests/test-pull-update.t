@@ -16,6 +16,21 @@
   $ echo 1.2 > foo
   $ hg ci -Am m
 
+Should respect config to disable dirty update
+  $ hg co -qC 0
+  $ echo 2 > foo
+  $ hg --config experimental.updatecheck=abort pull -u ../tt
+  pulling from ../tt
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files (+1 heads)
+  abort: uncommitted changes
+  [255]
+  $ hg --config extensions.strip= strip --no-backup tip
+  $ hg co -qC tip
+
 Should not update to the other topological branch:
 
   $ hg pull -u ../tt

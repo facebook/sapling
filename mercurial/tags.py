@@ -12,9 +12,7 @@
 
 from __future__ import absolute_import
 
-import array
 import errno
-import time
 
 from .node import (
     bin,
@@ -22,13 +20,14 @@ from .node import (
     nullid,
     short,
 )
+from .i18n import _
 from . import (
     encoding,
     error,
+    match as matchmod,
+    scmutil,
     util,
 )
-
-array = array.array
 
 # Tags computation can be expensive and caches exist to make it fast in
 # the common case.
@@ -79,53 +78,154 @@ array = array.array
 # The most recent changeset (in terms of revlog ordering for the head
 # setting it) for each tag is last.
 
-def findglobaltags(ui, repo, alltags, tagtypes):
-    '''Find global tags in a repo.
+def fnoderevs(ui, repo, revs):
+    """return the list of '.hgtags' fnodes used in a set revisions
 
-    "alltags" maps tag name to (node, hist) 2-tuples.
+    This is returned as list of unique fnodes. We use a list instead of a set
+    because order matters when it comes to tags."""
+    unfi = repo.unfiltered()
+    tonode = unfi.changelog.node
+    nodes = [tonode(r) for r in revs]
+    fnodes = _getfnodes(ui, repo, nodes[::-1]) # reversed help the cache
+    fnodes = _filterfnodes(fnodes, nodes)
+    return fnodes
 
-    "tagtypes" maps tag name to tag type. Global tags always have the
-    "global" tag type.
+def _nulltonone(value):
+    """convert nullid to None
 
-    The "alltags" and "tagtypes" dicts are updated in place. Empty dicts
-    should be passed in.
+    For tag value, nullid means "deleted". This small utility function helps
+    translating that to None."""
+    if value == nullid:
+        return None
+    return value
+
+def difftags(ui, repo, oldfnodes, newfnodes):
+    """list differences between tags expressed in two set of file-nodes
+
+    The list contains entries in the form: (tagname, oldvalue, new value).
+    None is used to expressed missing value:
+        ('foo', None, 'abcd') is a new tag,
+        ('bar', 'ef01', None) is a deletion,
+        ('baz', 'abcd', 'ef01') is a tag movement.
+    """
+    if oldfnodes == newfnodes:
+        return []
+    oldtags = _tagsfromfnodes(ui, repo, oldfnodes)
+    newtags = _tagsfromfnodes(ui, repo, newfnodes)
+
+    # list of (tag, old, new): None means missing
+    entries = []
+    for tag, (new, __) in newtags.items():
+        new = _nulltonone(new)
+        old, __ = oldtags.pop(tag, (None, None))
+        old = _nulltonone(old)
+        if old != new:
+            entries.append((tag, old, new))
+    # handle deleted tags
+    for tag, (old, __) in oldtags.items():
+        old = _nulltonone(old)
+        if old is not None:
+            entries.append((tag, old, None))
+    entries.sort()
+    return entries
+
+def writediff(fp, difflist):
+    """write tags diff information to a file.
+
+    Data are stored with a line based format:
+
+        <action> <hex-node> <tag-name>\n
+
+    Action are defined as follow:
+       -R tag is removed,
+       +A tag is added,
+       -M tag is moved (old value),
+       +M tag is moved (new value),
+
+    Example:
+
+         +A 875517b4806a848f942811a315a5bce30804ae85 t5
+
+    See documentation of difftags output for details about the input.
+    """
+    add = '+A %s %s\n'
+    remove = '-R %s %s\n'
+    updateold = '-M %s %s\n'
+    updatenew = '+M %s %s\n'
+    for tag, old, new in difflist:
+        # translate to hex
+        if old is not None:
+            old = hex(old)
+        if new is not None:
+            new = hex(new)
+        # write to file
+        if old is None:
+            fp.write(add % (new, tag))
+        elif new is None:
+            fp.write(remove % (old, tag))
+        else:
+            fp.write(updateold % (old, tag))
+            fp.write(updatenew % (new, tag))
+
+def findglobaltags(ui, repo):
+    '''Find global tags in a repo: return a tagsmap
+
+    tagsmap: tag name to (node, hist) 2-tuples.
 
     The tags cache is read and updated as a side-effect of calling.
     '''
-    # This is so we can be lazy and assume alltags contains only global
-    # tags when we pass it to _writetagcache().
-    assert len(alltags) == len(tagtypes) == 0, \
-           "findglobaltags() should be called first"
-
     (heads, tagfnode, valid, cachetags, shouldwrite) = _readtagcache(ui, repo)
     if cachetags is not None:
         assert not shouldwrite
         # XXX is this really 100% correct?  are there oddball special
         # cases where a global tag should outrank a local tag but won't,
         # because cachetags does not contain rank info?
-        _updatetags(cachetags, 'global', alltags, tagtypes)
-        return
+        alltags = {}
+        _updatetags(cachetags, alltags)
+        return alltags
 
-    seen = set()  # set of fnode
-    fctx = None
     for head in reversed(heads):  # oldest to newest
         assert head in repo.changelog.nodemap, \
                "tag cache returned bogus head %s" % short(head)
-
-        fnode = tagfnode.get(head)
-        if fnode and fnode not in seen:
-            seen.add(fnode)
-            if not fctx:
-                fctx = repo.filectx('.hgtags', fileid=fnode)
-            else:
-                fctx = fctx.filectx(fnode)
-
-            filetags = _readtags(ui, repo, fctx.data().splitlines(), fctx)
-            _updatetags(filetags, 'global', alltags, tagtypes)
+    fnodes = _filterfnodes(tagfnode, reversed(heads))
+    alltags = _tagsfromfnodes(ui, repo, fnodes)
 
     # and update the cache (if necessary)
     if shouldwrite:
         _writetagcache(ui, repo, valid, alltags)
+    return alltags
+
+def _filterfnodes(tagfnode, nodes):
+    """return a list of unique fnodes
+
+    The order of this list matches the order of "nodes". Preserving this order
+    is important as reading tags in different order provides different
+    results."""
+    seen = set()  # set of fnode
+    fnodes = []
+    for no in nodes:  # oldest to newest
+        fnode = tagfnode.get(no)
+        if fnode and fnode not in seen:
+            seen.add(fnode)
+            fnodes.append(fnode)
+    return fnodes
+
+def _tagsfromfnodes(ui, repo, fnodes):
+    """return a tagsmap from a list of file-node
+
+    tagsmap: tag name to (node, hist) 2-tuples.
+
+    The order of the list matters."""
+    alltags = {}
+    fctx = None
+    for fnode in fnodes:
+        if fctx is None:
+            fctx = repo.filectx('.hgtags', fileid=fnode)
+        else:
+            fctx = fctx.filectx(fnode)
+        filetags = _readtags(ui, repo, fctx.data().splitlines(), fctx)
+        _updatetags(filetags, alltags)
+    return alltags
 
 def readlocaltags(ui, repo, alltags, tagtypes):
     '''Read local tags in repo. Update alltags and tagtypes.'''
@@ -150,7 +250,7 @@ def readlocaltags(ui, repo, alltags, tagtypes):
         except (LookupError, ValueError):
             del filetags[t]
 
-    _updatetags(filetags, "local", alltags, tagtypes)
+    _updatetags(filetags, alltags, 'local', tagtypes)
 
 def _readtaghist(ui, repo, lines, fn, recode=None, calcnodelines=False):
     '''Read tag definitions from a file (or any source of lines).
@@ -228,15 +328,22 @@ def _readtags(ui, repo, lines, fn, recode=None, calcnodelines=False):
         newtags[tag] = (taghist[-1], taghist[:-1])
     return newtags
 
-def _updatetags(filetags, tagtype, alltags, tagtypes):
-    '''Incorporate the tag info read from one file into the two
-    dictionaries, alltags and tagtypes, that contain all tag
-    info (global across all heads plus local).'''
+def _updatetags(filetags, alltags, tagtype=None, tagtypes=None):
+    """Incorporate the tag info read from one file into dictionnaries
+
+    The first one, 'alltags', is a "tagmaps" (see 'findglobaltags' for details).
+
+    The second one, 'tagtypes', is optional and will be updated to track the
+    "tagtype" of entries in the tagmaps. When set, the 'tagtype' argument also
+    needs to be set."""
+    if tagtype is None:
+        assert tagtypes is None
 
     for name, nodehist in filetags.iteritems():
         if name not in alltags:
             alltags[name] = nodehist
-            tagtypes[name] = tagtype
+            if tagtype is not None:
+                tagtypes[name] = tagtype
             continue
 
         # we prefer alltags[name] if:
@@ -248,7 +355,7 @@ def _updatetags(filetags, tagtype, alltags, tagtypes):
         if (bnode != anode and anode in bhist and
             (bnode not in ahist or len(bhist) > len(ahist))):
             anode = bnode
-        else:
+        elif tagtype is not None:
             tagtypes[name] = tagtype
         ahist.extend([n for n in bhist if n not in ahist])
         alltags[name] = anode, ahist
@@ -278,8 +385,6 @@ def _readtagcache(ui, repo):
     If the cache is not up to date, the caller is responsible for reading tag
     info from each returned head. (See findglobaltags().)
     '''
-    from . import scmutil  # avoid cycle
-
     try:
         cachefile = repo.vfs(_filename(repo), 'r')
         # force reading the file for static-http
@@ -344,30 +449,39 @@ def _readtagcache(ui, repo):
         # potentially expensive search.
         return ([], {}, valid, None, True)
 
-    starttime = time.time()
 
     # Now we have to lookup the .hgtags filenode for every new head.
     # This is the most expensive part of finding tags, so performance
     # depends primarily on the size of newheads.  Worst case: no cache
     # file, so newheads == repoheads.
-    fnodescache = hgtagsfnodescache(repo.unfiltered())
-    cachefnode = {}
-    for head in reversed(repoheads):
-        fnode = fnodescache.getfnode(head)
-        if fnode != nullid:
-            cachefnode[head] = fnode
-
-    fnodescache.write()
-
-    duration = time.time() - starttime
-    ui.log('tagscache',
-           '%d/%d cache hits/lookups in %0.4f '
-           'seconds\n',
-           fnodescache.hitcount, fnodescache.lookupcount, duration)
+    cachefnode = _getfnodes(ui, repo, repoheads)
 
     # Caller has to iterate over all heads, but can use the filenodes in
     # cachefnode to get to each .hgtags revision quickly.
     return (repoheads, cachefnode, valid, None, True)
+
+def _getfnodes(ui, repo, nodes):
+    """return .hgtags fnodes for a list of changeset nodes
+
+    Return value is a {node: fnode} mapping. There will be no entry for nodes
+    without a '.hgtags' file.
+    """
+    starttime = util.timer()
+    fnodescache = hgtagsfnodescache(repo.unfiltered())
+    cachefnode = {}
+    for node in reversed(nodes):
+        fnode = fnodescache.getfnode(node)
+        if fnode != nullid:
+            cachefnode[node] = fnode
+
+    fnodescache.write()
+
+    duration = util.timer() - starttime
+    ui.log('tagscache',
+           '%d/%d cache hits/lookups in %0.4f '
+           'seconds\n',
+           fnodescache.hitcount, fnodescache.lookupcount, duration)
+    return cachefnode
 
 def _writetagcache(ui, repo, valid, cachetags):
     filename = _filename(repo)
@@ -397,6 +511,110 @@ def _writetagcache(ui, repo, valid, cachetags):
         cachefile.close()
     except (OSError, IOError):
         pass
+
+def tag(repo, names, node, message, local, user, date, editor=False):
+    '''tag a revision with one or more symbolic names.
+
+    names is a list of strings or, when adding a single tag, names may be a
+    string.
+
+    if local is True, the tags are stored in a per-repository file.
+    otherwise, they are stored in the .hgtags file, and a new
+    changeset is committed with the change.
+
+    keyword arguments:
+
+    local: whether to store tags in non-version-controlled file
+    (default False)
+
+    message: commit message to use if committing
+
+    user: name of user to use if committing
+
+    date: date tuple to use if committing'''
+
+    if not local:
+        m = matchmod.exact(repo.root, '', ['.hgtags'])
+        if any(repo.status(match=m, unknown=True, ignored=True)):
+            raise error.Abort(_('working copy of .hgtags is changed'),
+                             hint=_('please commit .hgtags manually'))
+
+    repo.tags() # instantiate the cache
+    _tag(repo.unfiltered(), names, node, message, local, user, date,
+         editor=editor)
+
+def _tag(repo, names, node, message, local, user, date, extra=None,
+         editor=False):
+    if isinstance(names, str):
+        names = (names,)
+
+    branches = repo.branchmap()
+    for name in names:
+        repo.hook('pretag', throw=True, node=hex(node), tag=name,
+                  local=local)
+        if name in branches:
+            repo.ui.warn(_("warning: tag %s conflicts with existing"
+            " branch name\n") % name)
+
+    def writetags(fp, names, munge, prevtags):
+        fp.seek(0, 2)
+        if prevtags and prevtags[-1] != '\n':
+            fp.write('\n')
+        for name in names:
+            if munge:
+                m = munge(name)
+            else:
+                m = name
+
+            if (repo._tagscache.tagtypes and
+                name in repo._tagscache.tagtypes):
+                old = repo.tags().get(name, nullid)
+                fp.write('%s %s\n' % (hex(old), m))
+            fp.write('%s %s\n' % (hex(node), m))
+        fp.close()
+
+    prevtags = ''
+    if local:
+        try:
+            fp = repo.vfs('localtags', 'r+')
+        except IOError:
+            fp = repo.vfs('localtags', 'a')
+        else:
+            prevtags = fp.read()
+
+        # local tags are stored in the current charset
+        writetags(fp, names, None, prevtags)
+        for name in names:
+            repo.hook('tag', node=hex(node), tag=name, local=local)
+        return
+
+    try:
+        fp = repo.wvfs('.hgtags', 'rb+')
+    except IOError as e:
+        if e.errno != errno.ENOENT:
+            raise
+        fp = repo.wvfs('.hgtags', 'ab')
+    else:
+        prevtags = fp.read()
+
+    # committed tags are stored in UTF-8
+    writetags(fp, names, encoding.fromlocal, prevtags)
+
+    fp.close()
+
+    repo.invalidatecaches()
+
+    if '.hgtags' not in repo.dirstate:
+        repo[None].add(['.hgtags'])
+
+    m = matchmod.exact(repo.root, '', ['.hgtags'])
+    tagnode = repo.commit(message, user, date, extra=extra, match=m,
+                          editor=editor)
+
+    for name in names:
+        repo.hook('tag', node=hex(node), tag=name, local=local)
+
+    return tagnode
 
 _fnodescachefile = 'cache/hgtagsfnodes1'
 _fnodesrecsize = 4 + 20 # changeset fragment + filenode
@@ -430,13 +648,12 @@ class hgtagsfnodescache(object):
         self.lookupcount = 0
         self.hitcount = 0
 
-        self._raw = array('c')
 
         try:
             data = repo.vfs.read(_fnodescachefile)
         except (OSError, IOError):
             data = ""
-        self._raw.fromstring(data)
+        self._raw = bytearray(data)
 
         # The end state of self._raw is an array that is of the exact length
         # required to hold a record for every revision in the repository.
@@ -477,7 +694,7 @@ class hgtagsfnodescache(object):
         self.lookupcount += 1
 
         offset = rev * _fnodesrecsize
-        record = self._raw[offset:offset + _fnodesrecsize].tostring()
+        record = '%s' % self._raw[offset:offset + _fnodesrecsize]
         properprefix = node[0:4]
 
         # Validate and return existing entry.
@@ -518,7 +735,7 @@ class hgtagsfnodescache(object):
 
     def _writeentry(self, offset, prefix, fnode):
         # Slices on array instances only accept other array.
-        entry = array('c', prefix + fnode)
+        entry = bytearray(prefix + fnode)
         self._raw[offset:offset + _fnodesrecsize] = entry
         # self._dirtyoffset could be None.
         self._dirtyoffset = min(self._dirtyoffset, offset) or 0

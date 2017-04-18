@@ -493,7 +493,7 @@ ensure that metadata-only changes are shelved
   $ ln -s foo a/a
   $ hg shelve -q -n symlink a/a
   $ hg status a/a
-  $ hg unshelve -q symlink
+  $ hg unshelve -q -n symlink
   $ hg status a/a
   M a/a
   $ hg revert a/a
@@ -1692,7 +1692,7 @@ Unshelve respects --keep even if user intervention is needed
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo 3 >> file && hg ci -Am 13
   $ hg shelve --list
-  default         (1s ago)    changes to: 1
+  default         (*s ago)    changes to: 1 (glob)
   $ hg unshelve --keep
   unshelving change 'default'
   rebasing shelved changes

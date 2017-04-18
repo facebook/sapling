@@ -7,6 +7,7 @@
 
 from __future__ import absolute_import
 
+from .i18n import _
 from .node import hex, nullid
 from . import (
     encoding,
@@ -18,41 +19,78 @@ from . import (
     util,
 )
 
-# This helper class allows us to handle both:
-#  "{files}" (legacy command-line-specific list hack) and
-#  "{files % '{file}\n'}" (hgweb-style with inlining and function support)
-# and to access raw values:
-#  "{ifcontains(file, files, ...)}", "{ifcontains(key, extras, ...)}"
-#  "{get(extras, key)}"
-
 class _hybrid(object):
+    """Wrapper for list or dict to support legacy template
+
+    This class allows us to handle both:
+    - "{files}" (legacy command-line-specific list hack) and
+    - "{files % '{file}\n'}" (hgweb-style with inlining and function support)
+    and to access raw values:
+    - "{ifcontains(file, files, ...)}", "{ifcontains(key, extras, ...)}"
+    - "{get(extras, key)}"
+    - "{files|json}"
+    """
+
     def __init__(self, gen, values, makemap, joinfmt):
-        self.gen = gen
-        self.values = values
+        if gen is not None:
+            self.gen = gen
+        self._values = values
         self._makemap = makemap
         self.joinfmt = joinfmt
-    def __iter__(self):
-        return self.gen
+    @util.propertycache
+    def gen(self):
+        return self._defaultgen()
+    def _defaultgen(self):
+        """Generator to stringify this as {join(self, ' ')}"""
+        for i, d in enumerate(self.itermaps()):
+            if i > 0:
+                yield ' '
+            yield self.joinfmt(d)
     def itermaps(self):
         makemap = self._makemap
-        for x in self.values:
+        for x in self._values:
             yield makemap(x)
     def __contains__(self, x):
-        return x in self.values
+        return x in self._values
     def __len__(self):
-        return len(self.values)
+        return len(self._values)
+    def __iter__(self):
+        return iter(self._values)
     def __getattr__(self, name):
-        if name != 'get':
+        if name not in ('get', 'items', 'iteritems', 'iterkeys', 'itervalues',
+                        'keys', 'values'):
             raise AttributeError(name)
-        return getattr(self.values, name)
+        return getattr(self._values, name)
 
-def showlist(name, values, plural=None, element=None, separator=' ', **args):
+def hybriddict(data, key='key', value='value', fmt='%s=%s', gen=None):
+    """Wrap data to support both dict-like and string-like operations"""
+    return _hybrid(gen, data, lambda k: {key: k, value: data[k]},
+                   lambda d: fmt % (d[key], d[value]))
+
+def hybridlist(data, name, fmt='%s', gen=None):
+    """Wrap data to support both list-like and string-like operations"""
+    return _hybrid(gen, data, lambda x: {name: x}, lambda d: fmt % d[name])
+
+def unwraphybrid(thing):
+    """Return an object which can be stringified possibly by using a legacy
+    template"""
+    if not util.safehasattr(thing, 'gen'):
+        return thing
+    return thing.gen
+
+def showdict(name, data, mapping, plural=None, key='key', value='value',
+             fmt='%s=%s', separator=' '):
+    c = [{key: k, value: v} for k, v in data.iteritems()]
+    f = _showlist(name, c, mapping, plural, separator)
+    return hybriddict(data, key=key, value=value, fmt=fmt, gen=f)
+
+def showlist(name, values, mapping, plural=None, element=None, separator=' '):
     if not element:
         element = name
-    f = _showlist(name, values, plural, separator, **args)
-    return _hybrid(f, values, lambda x: {element: x}, lambda d: d[element])
+    f = _showlist(name, values, mapping, plural, separator)
+    return hybridlist(values, name=element, gen=f)
 
-def _showlist(name, values, plural=None, separator=' ', **args):
+def _showlist(name, values, mapping, plural=None, separator=' '):
     '''expand set of values.
     name is name of key in template map.
     values is list of strings or dicts.
@@ -73,36 +111,35 @@ def _showlist(name, values, plural=None, separator=' ', **args):
 
     expand 'end_foos'.
     '''
-    templ = args['templ']
-    if plural:
-        names = plural
-    else: names = name + 's'
+    templ = mapping['templ']
+    if not plural:
+        plural = name + 's'
     if not values:
-        noname = 'no_' + names
+        noname = 'no_' + plural
         if noname in templ:
-            yield templ(noname, **args)
+            yield templ(noname, **mapping)
         return
     if name not in templ:
         if isinstance(values[0], str):
             yield separator.join(values)
         else:
             for v in values:
-                yield dict(v, **args)
+                yield dict(v, **mapping)
         return
-    startname = 'start_' + names
+    startname = 'start_' + plural
     if startname in templ:
-        yield templ(startname, **args)
-    vargs = args.copy()
+        yield templ(startname, **mapping)
+    vmapping = mapping.copy()
     def one(v, tag=name):
         try:
-            vargs.update(v)
+            vmapping.update(v)
         except (AttributeError, ValueError):
             try:
                 for a, b in v:
-                    vargs[a] = b
+                    vmapping[a] = b
             except ValueError:
-                vargs[name] = v
-        return templ(tag, **vargs)
+                vmapping[name] = v
+        return templ(tag, **vmapping)
     lastname = 'last_' + name
     if lastname in templ:
         last = values.pop()
@@ -112,9 +149,9 @@ def _showlist(name, values, plural=None, separator=' ', **args):
         yield one(v)
     if last is not None:
         yield one(last, tag=lastname)
-    endname = 'end_' + names
+    endname = 'end_' + plural
     if endname in templ:
-        yield templ(endname, **args)
+        yield templ(endname, **mapping)
 
 def _formatrevnode(ctx):
     """Format changeset as '{rev}:{node|formatnode}', which is the default
@@ -204,6 +241,17 @@ def getrenamedfn(repo, endrev=None):
 
     return getrenamed
 
+# default templates internally used for rendering of lists
+defaulttempl = {
+    'parent': '{rev}:{node|formatnode} ',
+    'manifest': '{rev}:{node|formatnode}',
+    'file_copy': '{name} ({source})',
+    'envvar': '{key}={value}',
+    'extra': '{key}={value|stringescape}'
+}
+# filecopy is preserved for compatibility reasons
+defaulttempl['filecopy'] = defaulttempl['file_copy']
+
 # keywords are callables like:
 # fn(repo, ctx, templ, cache, revcache, **args)
 # with:
@@ -241,8 +289,8 @@ def showbranches(**args):
     """
     branch = args['ctx'].branch()
     if branch != 'default':
-        return showlist('branch', [branch], plural='branches', **args)
-    return showlist('branch', [], plural='branches', **args)
+        return showlist('branch', [branch], args, plural='branches')
+    return showlist('branch', [], args, plural='branches')
 
 @templatekeyword('bookmarks')
 def showbookmarks(**args):
@@ -253,7 +301,7 @@ def showbookmarks(**args):
     bookmarks = args['ctx'].bookmarks()
     active = repo._activebookmark
     makemap = lambda v: {'bookmark': v, 'active': active, 'current': active}
-    f = _showlist('bookmark', bookmarks, **args)
+    f = _showlist('bookmark', bookmarks, args)
     return _hybrid(f, bookmarks, makemap, lambda x: x['bookmark'])
 
 @templatekeyword('children')
@@ -261,7 +309,7 @@ def showchildren(**args):
     """List of strings. The children of the changeset."""
     ctx = args['ctx']
     childrevs = ['%d:%s' % (cctx, cctx) for cctx in ctx.children()]
-    return showlist('children', childrevs, element='child', **args)
+    return showlist('children', childrevs, args, element='child')
 
 # Deprecated, but kept alive for help generation a purpose.
 @templatekeyword('currentbookmark')
@@ -306,14 +354,9 @@ def showdiffstat(repo, ctx, templ, **args):
 @templatekeyword('envvars')
 def showenvvars(repo, **args):
     """A dictionary of environment variables. (EXPERIMENTAL)"""
-
     env = repo.ui.exportableenviron()
     env = util.sortdict((k, env[k]) for k in sorted(env))
-    makemap = lambda k: {'key': k, 'value': env[k]}
-    c = [makemap(k) for k in env]
-    f = _showlist('envvar', c, plural='envvars', **args)
-    return _hybrid(f, env, makemap,
-                   lambda x: '%s=%s' % (x['key'], x['value']))
+    return showdict('envvar', env, args, plural='envvars')
 
 @templatekeyword('extras')
 def showextras(**args):
@@ -323,16 +366,16 @@ def showextras(**args):
     extras = util.sortdict((k, extras[k]) for k in sorted(extras))
     makemap = lambda k: {'key': k, 'value': extras[k]}
     c = [makemap(k) for k in extras]
-    f = _showlist('extra', c, plural='extras', **args)
+    f = _showlist('extra', c, args, plural='extras')
     return _hybrid(f, extras, makemap,
-                   lambda x: '%s=%s' % (x['key'], x['value']))
+                   lambda x: '%s=%s' % (x['key'], util.escapestr(x['value'])))
 
 @templatekeyword('file_adds')
 def showfileadds(**args):
     """List of strings. Files added by this changeset."""
     repo, ctx, revcache = args['repo'], args['ctx'], args['revcache']
-    return showlist('file_add', getfiles(repo, ctx, revcache)[1],
-                    element='file', **args)
+    return showlist('file_add', getfiles(repo, ctx, revcache)[1], args,
+                    element='file')
 
 @templatekeyword('file_copies')
 def showfilecopies(**args):
@@ -352,11 +395,8 @@ def showfilecopies(**args):
                 copies.append((fn, rename[0]))
 
     copies = util.sortdict(copies)
-    makemap = lambda k: {'name': k, 'source': copies[k]}
-    c = [makemap(k) for k in copies]
-    f = _showlist('file_copy', c, plural='file_copies', **args)
-    return _hybrid(f, copies, makemap,
-                   lambda x: '%s (%s)' % (x['name'], x['source']))
+    return showdict('file_copy', copies, args, plural='file_copies',
+                    key='name', value='source', fmt='%s (%s)')
 
 # showfilecopiesswitch() displays file copies only if copy records are
 # provided before calling the templater, usually with a --copies
@@ -368,32 +408,29 @@ def showfilecopiesswitch(**args):
     """
     copies = args['revcache'].get('copies') or []
     copies = util.sortdict(copies)
-    makemap = lambda k: {'name': k, 'source': copies[k]}
-    c = [makemap(k) for k in copies]
-    f = _showlist('file_copy', c, plural='file_copies', **args)
-    return _hybrid(f, copies, makemap,
-                   lambda x: '%s (%s)' % (x['name'], x['source']))
+    return showdict('file_copy', copies, args, plural='file_copies',
+                    key='name', value='source', fmt='%s (%s)')
 
 @templatekeyword('file_dels')
 def showfiledels(**args):
     """List of strings. Files removed by this changeset."""
     repo, ctx, revcache = args['repo'], args['ctx'], args['revcache']
-    return showlist('file_del', getfiles(repo, ctx, revcache)[2],
-                    element='file', **args)
+    return showlist('file_del', getfiles(repo, ctx, revcache)[2], args,
+                    element='file')
 
 @templatekeyword('file_mods')
 def showfilemods(**args):
     """List of strings. Files modified by this changeset."""
     repo, ctx, revcache = args['repo'], args['ctx'], args['revcache']
-    return showlist('file_mod', getfiles(repo, ctx, revcache)[0],
-                    element='file', **args)
+    return showlist('file_mod', getfiles(repo, ctx, revcache)[0], args,
+                    element='file')
 
 @templatekeyword('files')
 def showfiles(**args):
     """List of strings. All files modified, added, or removed by this
     changeset.
     """
-    return showlist('file', args['ctx'].files(), **args)
+    return showlist('file', args['ctx'].files(), args)
 
 @templatekeyword('graphnode')
 def showgraphnode(repo, ctx, **args):
@@ -411,10 +448,17 @@ def showgraphnode(repo, ctx, **args):
     else:
         return 'o'
 
+@templatekeyword('index')
+def showindex(**args):
+    """Integer. The current iteration of the loop. (0 indexed)"""
+    # just hosts documentation; should be overridden by template mapping
+    raise error.Abort(_("can't use index in this context"))
+
 @templatekeyword('latesttag')
 def showlatesttag(**args):
     """List of strings. The global tags on the most recent globally
-    tagged ancestor of this changeset.
+    tagged ancestor of this changeset.  If no such tags exist, the list
+    consists of the single string "null".
     """
     return showlatesttags(None, **args)
 
@@ -435,7 +479,7 @@ def showlatesttags(pattern, **args):
     }
 
     tags = latesttags[2]
-    f = _showlist('latesttag', tags, separator=':', **args)
+    f = _showlist('latesttag', tags, args, separator=':')
     return _hybrid(f, tags, makemap, lambda x: x['latesttag'])
 
 @templatekeyword('latesttagdistance')
@@ -480,7 +524,7 @@ def shownames(namespace, **args):
     repo = ctx.repo()
     ns = repo.names[namespace]
     names = ns.names(repo, ctx.node())
-    return showlist(ns.templatename, names, plural=namespace, **args)
+    return showlist(ns.templatename, names, args, plural=namespace)
 
 @templatekeyword('namespaces')
 def shownamespaces(**args):
@@ -489,9 +533,9 @@ def shownamespaces(**args):
     ctx = args['ctx']
     repo = ctx.repo()
     namespaces = util.sortdict((k, showlist('name', ns.names(repo, ctx.node()),
-                                            **args))
+                                            args))
                                for k, ns in repo.names.iteritems())
-    f = _showlist('namespace', list(namespaces), **args)
+    f = _showlist('namespace', list(namespaces), args)
     return _hybrid(f, namespaces,
                    lambda k: {'namespace': k, 'names': namespaces[k]},
                    lambda x: x['namespace'])
@@ -502,6 +546,14 @@ def shownode(repo, ctx, templ, **args):
     digit string.
     """
     return ctx.hex()
+
+@templatekeyword('obsolete')
+def showobsolete(repo, ctx, templ, **args):
+    """String. Whether the changeset is obsolete.
+    """
+    if ctx.obsolete():
+        return 'obsolete'
+    return ''
 
 @templatekeyword('p1rev')
 def showp1rev(repo, ctx, templ, **args):
@@ -542,7 +594,7 @@ def showparents(**args):
                 ('node', p.hex()),
                 ('phase', p.phasestr())]
                for p in pctxs]
-    f = _showlist('parent', parents, **args)
+    f = _showlist('parent', parents, args)
     return _hybrid(f, prevs, lambda x: {'ctx': repo[int(x)], 'revcache': {}},
                    lambda d: _formatrevnode(d['ctx']))
 
@@ -566,7 +618,7 @@ def showrevslist(name, revs, **args):
     be evaluated"""
     repo = args['ctx'].repo()
     revs = [str(r) for r in revs]  # ifcontains() needs a list of str
-    f = _showlist(name, revs, **args)
+    f = _showlist(name, revs, args)
     return _hybrid(f, revs,
                    lambda x: {name: x, 'ctx': repo[int(x)], 'revcache': {}},
                    lambda d: d[name])
@@ -577,7 +629,7 @@ def showsubrepos(**args):
     ctx = args['ctx']
     substate = ctx.substate
     if not substate:
-        return showlist('subrepo', [], **args)
+        return showlist('subrepo', [], args)
     psubstate = ctx.parents()[0].substate or {}
     subrepos = []
     for sub in substate:
@@ -586,7 +638,7 @@ def showsubrepos(**args):
     for sub in psubstate:
         if sub not in substate:
             subrepos.append(sub) # removed in ctx
-    return showlist('subrepo', sorted(subrepos), **args)
+    return showlist('subrepo', sorted(subrepos), args)
 
 # don't remove "showtags" definition, even though namespaces will put
 # a helper function for "tags" keyword into "keywords" map automatically,
@@ -613,7 +665,7 @@ def showtroubles(**args):
 
     (EXPERIMENTAL)
     """
-    return showlist('trouble', args['ctx'].troubles(), **args)
+    return showlist('trouble', args['ctx'].troubles(), args)
 
 # tell hggettext to extract docstrings from these functions:
 i18nfunctions = keywords.values()

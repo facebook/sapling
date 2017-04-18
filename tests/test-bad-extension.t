@@ -1,3 +1,31 @@
+ensure that failing ui.atexit handlers report sensibly
+
+  $ cat > $TESTTMP/bailatexit.py <<EOF
+  > from mercurial import util
+  > def bail():
+  >     raise RuntimeError('ui.atexit handler exception')
+  > 
+  > def extsetup(ui):
+  >     ui.atexit(bail)
+  > EOF
+  $ hg -q --config extensions.bailatexit=$TESTTMP/bailatexit.py \
+  >  help help
+  hg help [-ecks] [TOPIC]
+  
+  show help for a given topic or a help overview
+  error in exit handlers:
+  Traceback (most recent call last):
+    File "*/mercurial/dispatch.py", line *, in _runexithandlers (glob)
+      func(*args, **kwargs)
+    File "$TESTTMP/bailatexit.py", line *, in bail (glob)
+      raise RuntimeError('ui.atexit handler exception')
+  RuntimeError: ui.atexit handler exception
+  [255]
+
+  $ rm $TESTTMP/bailatexit.py
+
+another bad extension
+
   $ echo 'raise Exception("bit bucket overflow")' > badext.py
   $ abspathexc=`pwd`/badext.py
 

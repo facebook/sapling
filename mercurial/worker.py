@@ -133,6 +133,7 @@ def _posixworker(ui, func, staticargs, args):
         if problem[0]:
             killworkers()
     oldchldhandler = signal.signal(signal.SIGCHLD, sigchldhandler)
+    ui.flush()
     for pargs in partition(args, workers):
         pid = os.fork()
         if pid == 0:
@@ -143,28 +144,30 @@ def _posixworker(ui, func, staticargs, args):
                 os.close(rfd)
                 for i, item in func(*(staticargs + (pargs,))):
                     os.write(wfd, '%d %s\n' % (i, item))
+                return 0
 
             # make sure we use os._exit in all code paths. otherwise the worker
             # may do some clean-ups which could cause surprises like deadlock.
             # see sshpeer.cleanup for example.
+            ret = 0
             try:
                 try:
-                    scmutil.callcatch(ui, workerfunc)
+                    ret = scmutil.callcatch(ui, workerfunc)
                 finally:
                     ui.flush()
             except KeyboardInterrupt:
                 os._exit(255)
             except: # never return, therefore no re-raises
                 try:
-                    ui.traceback()
+                    ui.traceback(force=True)
                     ui.flush()
                 finally:
                     os._exit(255)
             else:
-                os._exit(0)
+                os._exit(ret & 255)
         pids.add(pid)
     os.close(wfd)
-    fp = os.fdopen(rfd, 'rb', 0)
+    fp = os.fdopen(rfd, pycompat.sysstr('rb'), 0)
     def cleanup():
         signal.signal(signal.SIGINT, oldhandler)
         waitforworkers()

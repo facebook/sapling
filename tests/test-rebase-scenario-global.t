@@ -270,9 +270,12 @@ G onto B - merge revision with both parents not in ancestors of target:
 
   $ hg rebase -s 6 -d 1
   rebasing 6:eea13746799a "G"
+  transaction abort!
+  rollback completed
   abort: cannot use revision 6 as base, result would have 3 parents
   [255]
-
+  $ hg rebase --abort
+  rebase aborted
 
 These will abort gracefully (using --base):
 
@@ -325,6 +328,10 @@ Check rebasing public changeset
   nothing to rebase
   [1]
   $ hg rebase -d 5 -b 6
+  abort: can't rebase public changeset e1c4361dd923
+  (see 'hg help phases' for details)
+  [255]
+  $ hg rebase -d 5 -r '1 + (6::)'
   abort: can't rebase public changeset e1c4361dd923
   (see 'hg help phases' for details)
   [255]
@@ -773,7 +780,7 @@ Test that rebase is not confused by $CWD disappearing during rebase (issue4121)
 Get back to the root of cwd-vanish. Note that even though `cd ..`
 works on most systems, it does not work on FreeBSD 10, so we use an
 absolute path to get back to the repository.
-  $ cd $TESTTMP/cwd-vanish
+  $ cd $TESTTMP
 
 Test that rebase is done in topo order (issue5370)
 
@@ -819,7 +826,7 @@ Test that rebase is done in topo order (issue5370)
   rebasing 4:82ae8dc7a9b7 "E"
   rebasing 3:ab709c9f7171 "D"
   rebasing 5:412b391de760 "F"
-  saved backup bundle to $TESTTMP/cwd-vanish/order/.hg/strip-backup/76035bbd54bd-e341bc99-backup.hg (glob)
+  saved backup bundle to $TESTTMP/order/.hg/strip-backup/76035bbd54bd-e341bc99-backup.hg (glob)
 
   $ hg tglog
   o  6: 'F'
@@ -840,7 +847,7 @@ Test that rebase is done in topo order (issue5370)
 Test experimental revset
 ========================
 
-  $ cd ..
+  $ cd ../cwd-vanish
 
 Make the repo a bit more interesting
 

@@ -27,8 +27,8 @@ from . import (
     pathutil,
     pycompat,
     revlog,
-    scmutil,
     util,
+    vfs as vfsmod,
 )
 
 class unionrevlog(revlog.revlog):
@@ -39,7 +39,7 @@ class unionrevlog(revlog.revlog):
         #
         # To differentiate a rev in the second revlog from a rev in the revlog,
         # we check revision against repotiprev.
-        opener = scmutil.readonlyvfs(opener)
+        opener = vfsmod.readonlyvfs(opener)
         revlog.revlog.__init__(self, opener, indexfile)
         self.revlog2 = revlog2
 
@@ -90,8 +90,7 @@ class unionrevlog(revlog.revlog):
         elif rev1 <= self.repotiprev and rev2 <= self.repotiprev:
             return self.baserevdiff(rev1, rev2)
 
-        return mdiff.textdiff(self.revision(self.node(rev1)),
-                              self.revision(self.node(rev2)))
+        return mdiff.textdiff(self.revision(rev1), self.revision(rev2))
 
     def revision(self, nodeorrev, raw=False):
         """return an uncompressed revision of a given node or revision

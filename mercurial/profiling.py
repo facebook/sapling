@@ -8,7 +8,6 @@
 from __future__ import absolute_import, print_function
 
 import contextlib
-import time
 
 from .i18n import _
 from . import (
@@ -66,7 +65,7 @@ def flameprofile(ui, fp):
     collapse_recursion = True
     thread = flamegraph.ProfileThread(fp, 1.0 / freq,
                                       filter_, collapse_recursion)
-    start_time = time.clock()
+    start_time = util.timer()
     try:
         thread.start()
         yield
@@ -74,7 +73,7 @@ def flameprofile(ui, fp):
         thread.stop()
         thread.join()
         print('Collected %d stack frames (%d unique) in %2.2f seconds.' % (
-            time.clock() - start_time, thread.num_frames(),
+            util.timer() - start_time, thread.num_frames(),
             thread.num_frames(unique=True)))
 
 @contextlib.contextmanager
@@ -103,6 +102,7 @@ def statprofile(ui, fp):
             'bymethod': statprof.DisplayFormats.ByMethod,
             'hotpath': statprof.DisplayFormats.Hotpath,
             'json': statprof.DisplayFormats.Json,
+            'chrome': statprof.DisplayFormats.Chrome,
         }
 
         if profformat in formats:
@@ -111,7 +111,23 @@ def statprofile(ui, fp):
             ui.warn(_('unknown profiler output format: %s\n') % profformat)
             displayformat = statprof.DisplayFormats.Hotpath
 
-        statprof.display(fp, data=data, format=displayformat)
+        kwargs = {}
+
+        def fraction(s):
+            if s.endswith('%'):
+                v = float(s[:-1]) / 100
+            else:
+                v = float(s)
+            if 0 <= v <= 1:
+                return v
+            raise ValueError(s)
+
+        if profformat == 'chrome':
+            showmin = ui.configwith(fraction, 'profiling', 'showmin', 0.005)
+            showmax = ui.configwith(fraction, 'profiling', 'showmax', 0.999)
+            kwargs.update(minthreshold=showmin, maxthreshold=showmax)
+
+        statprof.display(fp, data=data, format=displayformat, **kwargs)
 
 @contextlib.contextmanager
 def profile(ui):

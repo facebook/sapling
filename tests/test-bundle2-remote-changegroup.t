@@ -39,7 +39,7 @@ Create an extension to test bundle2 remote-changegroup parts
   >         part = bundler.newpart(name, data=data)
   >         return part
   > 
-  >     for line in open(repo.join('bundle2maker'), 'r'):
+  >     for line in open(repo.vfs.join('bundle2maker'), 'r'):
   >         line = line.strip()
   >         try:
   >             verb, args = line.split(None, 1)

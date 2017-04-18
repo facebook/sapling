@@ -7,7 +7,6 @@
 
 from __future__ import absolute_import
 
-import array
 import difflib
 import re
 import struct
@@ -55,15 +54,9 @@ def _normalizeblocks(a, b, blocks):
     r.append(prev)
     return r
 
-def _tostring(c):
-    if type(c) is array.array:
-        # this copy overhead isn't ideal
-        return c.tostring()
-    return str(c)
-
 def bdiff(a, b):
-    a = _tostring(a).splitlines(True)
-    b = _tostring(b).splitlines(True)
+    a = bytes(a).splitlines(True)
+    b = bytes(b).splitlines(True)
 
     if not a:
         s = "".join(b)

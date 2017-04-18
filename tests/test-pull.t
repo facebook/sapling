@@ -88,7 +88,11 @@ Test 'file:' uri handling:
   abort: file:// URLs can only refer to localhost
   [255]
 
+MSYS changes 'file:' into 'file;'
+
+#if no-msys
   $ hg pull -q file:../test  # no-msys
+#endif
 
 It's tricky to make file:// URLs working on every platform with
 regular shell commands.

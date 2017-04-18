@@ -67,51 +67,35 @@ int main(int argc, char *argv[])
 	}
 
 	pydll = NULL;
-	/*
-	We first check, that environment variable PYTHONHOME is *not* set.
-	This just mimicks the behavior of the regular python.exe, which uses
-	PYTHONHOME to find its installation directory (if it has been set).
-	Note: Users of HackableMercurial are expected to *not* set PYTHONHOME!
-	*/
-	if (GetEnvironmentVariable("PYTHONHOME", envpyhome,
-				   sizeof(envpyhome)) == 0)
-	{
-		/*
-		Environment var PYTHONHOME is *not* set. Let's see if we are
-		running inside a HackableMercurial.
-		*/
 
-		p = strrchr(pyhome, '\\');
-		if (p == NULL) {
-			err = "can't find backslash in module filename";
+	p = strrchr(pyhome, '\\');
+	if (p == NULL) {
+		err = "can't find backslash in module filename";
+		goto bail;
+	}
+	*p = 0; /* cut at directory */
+
+	/* check for private Python of HackableMercurial */
+	strcat_s(pyhome, sizeof(pyhome), "\\hg-python");
+
+	hfind = FindFirstFile(pyhome, &fdata);
+	if (hfind != INVALID_HANDLE_VALUE) {
+		/* Path .\hg-python exists. We are probably in HackableMercurial
+		scenario, so let's load python dll from this dir. */
+		FindClose(hfind);
+		strcpy_s(pydllfile, sizeof(pydllfile), pyhome);
+		strcat_s(pydllfile, sizeof(pydllfile), "\\" HGPYTHONLIB ".dll");
+		pydll = LoadLibrary(pydllfile);
+		if (pydll == NULL) {
+			err = "failed to load private Python DLL " HGPYTHONLIB ".dll";
 			goto bail;
 		}
-		*p = 0; /* cut at directory */
-
-		/* check for private Python of HackableMercurial */
-		strcat_s(pyhome, sizeof(pyhome), "\\hg-python");
-
-		hfind = FindFirstFile(pyhome, &fdata);
-		if (hfind != INVALID_HANDLE_VALUE) {
-			/* path pyhome exists, let's use it */
-			FindClose(hfind);
-			strcpy_s(pydllfile, sizeof(pydllfile), pyhome);
-			strcat_s(pydllfile, sizeof(pydllfile),
-				 "\\" HGPYTHONLIB ".dll");
-			pydll = LoadLibrary(pydllfile);
-			if (pydll == NULL) {
-				err = "failed to load private Python DLL "
-				      HGPYTHONLIB ".dll";
-				goto bail;
-			}
-			Py_SetPythonHome = (void*)GetProcAddress(pydll,
-							"Py_SetPythonHome");
-			if (Py_SetPythonHome == NULL) {
-				err = "failed to get Py_SetPythonHome";
-				goto bail;
-			}
-			Py_SetPythonHome(pyhome);
+		Py_SetPythonHome = (void*)GetProcAddress(pydll, "Py_SetPythonHome");
+		if (Py_SetPythonHome == NULL) {
+			err = "failed to get Py_SetPythonHome";
+			goto bail;
 		}
+		Py_SetPythonHome(pyhome);
 	}
 
 	if (pydll == NULL) {

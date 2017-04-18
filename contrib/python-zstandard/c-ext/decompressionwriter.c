@@ -18,11 +18,6 @@ static void ZstdDecompressionWriter_dealloc(ZstdDecompressionWriter* self) {
 	Py_XDECREF(self->decompressor);
 	Py_XDECREF(self->writer);
 
-	if (self->dstream) {
-		ZSTD_freeDStream(self->dstream);
-		self->dstream = NULL;
-	}
-
 	PyObject_Del(self);
 }
 
@@ -32,8 +27,7 @@ static PyObject* ZstdDecompressionWriter_enter(ZstdDecompressionWriter* self) {
 		return NULL;
 	}
 
-	self->dstream = DStream_from_ZstdDecompressor(self->decompressor);
-	if (!self->dstream) {
+	if (0 != init_dstream(self->decompressor)) {
 		return NULL;
 	}
 
@@ -46,22 +40,17 @@ static PyObject* ZstdDecompressionWriter_enter(ZstdDecompressionWriter* self) {
 static PyObject* ZstdDecompressionWriter_exit(ZstdDecompressionWriter* self, PyObject* args) {
 	self->entered = 0;
 
-	if (self->dstream) {
-		ZSTD_freeDStream(self->dstream);
-		self->dstream = NULL;
-	}
-
 	Py_RETURN_FALSE;
 }
 
 static PyObject* ZstdDecompressionWriter_memory_size(ZstdDecompressionWriter* self) {
-	if (!self->dstream) {
+	if (!self->decompressor->dstream) {
 		PyErr_SetString(ZstdError, "cannot determine size of inactive decompressor; "
 			"call when context manager is active");
 		return NULL;
 	}
 
-	return PyLong_FromSize_t(ZSTD_sizeof_DStream(self->dstream));
+	return PyLong_FromSize_t(ZSTD_sizeof_DStream(self->decompressor->dstream));
 }
 
 static PyObject* ZstdDecompressionWriter_write(ZstdDecompressionWriter* self, PyObject* args) {
@@ -71,11 +60,12 @@ static PyObject* ZstdDecompressionWriter_write(ZstdDecompressionWriter* self, Py
 	ZSTD_inBuffer input;
 	ZSTD_outBuffer output;
 	PyObject* res;
+	Py_ssize_t totalWrite = 0;
 
 #if PY_MAJOR_VERSION >= 3
-	if (!PyArg_ParseTuple(args, "y#", &source, &sourceSize)) {
+	if (!PyArg_ParseTuple(args, "y#:write", &source, &sourceSize)) {
 #else
-	if (!PyArg_ParseTuple(args, "s#", &source, &sourceSize)) {
+	if (!PyArg_ParseTuple(args, "s#:write", &source, &sourceSize)) {
 #endif
 		return NULL;
 	}
@@ -84,6 +74,8 @@ static PyObject* ZstdDecompressionWriter_write(ZstdDecompressionWriter* self, Py
 		PyErr_SetString(ZstdError, "write must be called from an active context manager");
 		return NULL;
 	}
+
+	assert(self->decompressor->dstream);
 
 	output.dst = PyMem_Malloc(self->outSize);
 	if (!output.dst) {
@@ -98,7 +90,7 @@ static PyObject* ZstdDecompressionWriter_write(ZstdDecompressionWriter* self, Py
 
 	while ((ssize_t)input.pos < sourceSize) {
 		Py_BEGIN_ALLOW_THREADS
-		zresult = ZSTD_decompressStream(self->dstream, &output, &input);
+		zresult = ZSTD_decompressStream(self->decompressor->dstream, &output, &input);
 		Py_END_ALLOW_THREADS
 
 		if (ZSTD_isError(zresult)) {
@@ -116,15 +108,15 @@ static PyObject* ZstdDecompressionWriter_write(ZstdDecompressionWriter* self, Py
 #endif
 				output.dst, output.pos);
 			Py_XDECREF(res);
+			totalWrite += output.pos;
 			output.pos = 0;
 		}
 	}
 
 	PyMem_Free(output.dst);
 
-	/* TODO return bytes written */
-	Py_RETURN_NONE;
-	}
+	return PyLong_FromSsize_t(totalWrite);
+}
 
 static PyMethodDef ZstdDecompressionWriter_methods[] = {
 	{ "__enter__", (PyCFunction)ZstdDecompressionWriter_enter, METH_NOARGS,

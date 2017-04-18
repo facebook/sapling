@@ -39,6 +39,19 @@ error paths
   $ rm hg
 #endif
 
+Features for testing optional lines
+===================================
+
+  $ cat > hghaveaddon.py <<EOF
+  > import hghave
+  > @hghave.check("custom", "custom hghave feature")
+  > def has_custom():
+  >     return True
+  > @hghave.check("missing", "missing hghave feature")
+  > def has_missing():
+  >     return False
+  > EOF
+
 an empty test
 =======================
 
@@ -55,7 +68,10 @@ a succesful test
   >   $ echo babar
   >   babar
   >   $ echo xyzzy
+  >   dont_print (?)
+  >   nothing[42]line (re) (?)
   >   never*happens (glob) (?)
+  >   more_nothing (?)
   >   xyzzy
   >   nor this (?)
   >   $ printf 'abc\ndef\nxyz\n'
@@ -64,6 +80,13 @@ a succesful test
   >   def (?)
   >   456 (?)
   >   xyz
+  >   $ printf 'zyx\nwvu\ntsr\n'
+  >   abc (?)
+  >   zyx (custom !)
+  >   wvu
+  >   no_print (no-custom !)
+  >   tsr (no-missing !)
+  >   missing (missing !)
   > EOF
 
   $ rt
@@ -102,6 +125,10 @@ basic failing test
   >   rataxes
   > This is a noop statement so that
   > this test is still more bytes than success.
+  > pad pad pad pad............................................................
+  > pad pad pad pad............................................................
+  > pad pad pad pad............................................................
+  > pad pad pad pad............................................................
   > pad pad pad pad............................................................
   > pad pad pad pad............................................................
   > EOF
@@ -316,8 +343,8 @@ Running In Debug Mode
   *SALT* 0 0 (glob)
   + echo babar
   babar
-  + echo *SALT* 6 0 (glob)
-  *SALT* 6 0 (glob)
+  + echo *SALT* 10 0 (glob)
+  *SALT* 10 0 (glob)
   *+ echo *SALT* 0 0 (glob)
   *SALT* 0 0 (glob)
   + echo babar
@@ -326,14 +353,20 @@ Running In Debug Mode
   *SALT* 2 0 (glob)
   + echo xyzzy
   xyzzy
-  + echo *SALT* 6 0 (glob)
-  *SALT* 6 0 (glob)
+  + echo *SALT* 9 0 (glob)
+  *SALT* 9 0 (glob)
   + printf *abc\ndef\nxyz\n* (glob)
   abc
   def
   xyz
-  + echo *SALT* 12 0 (glob)
-  *SALT* 12 0 (glob)
+  + echo *SALT* 15 0 (glob)
+  *SALT* 15 0 (glob)
+  + printf *zyx\nwvu\ntsr\n* (glob)
+  zyx
+  wvu
+  tsr
+  + echo *SALT* 22 0 (glob)
+  *SALT* 22 0 (glob)
   .
   # Ran 2 tests, 0 skipped, 0 warned, 0 failed.
 
@@ -412,6 +445,10 @@ Refuse the fix
   this test is still more bytes than success.
   pad pad pad pad............................................................
   pad pad pad pad............................................................
+  pad pad pad pad............................................................
+  pad pad pad pad............................................................
+  pad pad pad pad............................................................
+  pad pad pad pad............................................................
 
 Interactive with custom view
 
@@ -449,12 +486,14 @@ Accept the fix
   
   --- $TESTTMP/test-failure.t
   +++ $TESTTMP/test-failure.t.err
-  @@ -1,11 +1,11 @@
+  @@ -1,5 +1,5 @@
      $ echo babar
   -  rataxes
   +  babar
    This is a noop statement so that
    this test is still more bytes than success.
+   pad pad pad pad............................................................
+  @@ -9,7 +9,7 @@
    pad pad pad pad............................................................
    pad pad pad pad............................................................
      $ echo 'saved backup bundle to $TESTTMP/foo.hg'
@@ -471,6 +510,10 @@ Accept the fix
     babar
   This is a noop statement so that
   this test is still more bytes than success.
+  pad pad pad pad............................................................
+  pad pad pad pad............................................................
+  pad pad pad pad............................................................
+  pad pad pad pad............................................................
   pad pad pad pad............................................................
   pad pad pad pad............................................................
     $ echo 'saved backup bundle to $TESTTMP/foo.hg'
@@ -735,9 +778,11 @@ backslash on end of line with glob matching is handled properly
 
   $ rm -f test-glob-backslash.t
 
-Test globbing of 127.0.0.1
+Test globbing of local IP addresses
   $ echo 172.16.18.1
-  127.0.0.1 (glob)
+  $LOCALIP (glob)
+  $ echo dead:beef::1
+  $LOCALIP (glob)
 
 Test reusability for third party tools
 ======================================

@@ -7,9 +7,7 @@
 
 from __future__ import absolute_import
 
-import array
 import struct
-import time
 
 from .node import (
     bin,
@@ -21,12 +19,12 @@ from . import (
     encoding,
     error,
     scmutil,
+    util,
 )
 
-array = array.array
 calcsize = struct.calcsize
-pack = struct.pack
-unpack = struct.unpack
+pack_into = struct.pack_into
+unpack_from = struct.unpack_from
 
 def _filename(repo):
     """name of a branchcache file for a given repo or repoview"""
@@ -233,7 +231,7 @@ class branchcache(dict):
     def write(self, repo):
         try:
             f = repo.vfs(_filename(repo), "w", atomictemp=True)
-            cachekey = [hex(self.tipnode), str(self.tiprev)]
+            cachekey = [hex(self.tipnode), '%d' % self.tiprev]
             if self.filteredhash is not None:
                 cachekey.append(hex(self.filteredhash))
             f.write(" ".join(cachekey) + '\n')
@@ -261,7 +259,7 @@ class branchcache(dict):
         missing heads, and a generator of nodes that are strictly a superset of
         heads missing, this function updates self to be correct.
         """
-        starttime = time.time()
+        starttime = util.timer()
         cl = repo.changelog
         # collect new branch entries
         newbranches = {}
@@ -314,7 +312,7 @@ class branchcache(dict):
                     self.tiprev = tiprev
         self.filteredhash = scmutil.filteredhash(repo, self.tiprev)
 
-        duration = time.time() - starttime
+        duration = util.timer() - starttime
         repo.ui.log('branchcache', 'updated %s branch cache in %.4f seconds\n',
                     repo.filtername, duration)
 
@@ -357,12 +355,14 @@ class revbranchcache(object):
         assert repo.filtername is None
         self._repo = repo
         self._names = [] # branch names in local encoding with static index
-        self._rbcrevs = array('c') # structs of type _rbcrecfmt
+        self._rbcrevs = bytearray()
         self._rbcsnameslen = 0 # length of names read at _rbcsnameslen
         try:
             bndata = repo.vfs.read(_rbcnames)
             self._rbcsnameslen = len(bndata) # for verification before writing
-            self._names = [encoding.tolocal(bn) for bn in bndata.split('\0')]
+            if bndata:
+                self._names = [encoding.tolocal(bn)
+                               for bn in bndata.split('\0')]
         except (IOError, OSError):
             if readonly:
                 # don't try to use cache - fall back to the slow path
@@ -371,7 +371,7 @@ class revbranchcache(object):
         if self._names:
             try:
                 data = repo.vfs.read(_rbcrevs)
-                self._rbcrevs.fromstring(data)
+                self._rbcrevs[:] = data
             except (IOError, OSError) as inst:
                 repo.ui.debug("couldn't read revision branch cache: %s\n" %
                               inst)
@@ -390,8 +390,7 @@ class revbranchcache(object):
         self._rbcnamescount = 0
         self._namesreverse.clear()
         self._rbcrevslen = len(self._repo.changelog)
-        self._rbcrevs = array('c')
-        self._rbcrevs.fromstring('\0' * (self._rbcrevslen * _rbcrecsize))
+        self._rbcrevs = bytearray(self._rbcrevslen * _rbcrecsize)
 
     def branchinfo(self, rev):
         """Return branch name and close flag for rev, using and updating
@@ -409,8 +408,8 @@ class revbranchcache(object):
 
         # fast path: extract data from cache, use it if node is matching
         reponode = changelog.node(rev)[:_rbcnodelen]
-        cachenode, branchidx = unpack(
-            _rbcrecfmt, buffer(self._rbcrevs, rbcrevidx, _rbcrecsize))
+        cachenode, branchidx = unpack_from(
+            _rbcrecfmt, util.buffer(self._rbcrevs), rbcrevidx)
         close = bool(branchidx & _rbccloseflag)
         if close:
             branchidx &= _rbcbranchidxmask
@@ -427,7 +426,7 @@ class revbranchcache(object):
         else:
             # rev/node map has changed, invalidate the cache from here up
             self._repo.ui.debug("history modification detected - truncating "
-                "revision branch cache to revision %s\n" % rev)
+                "revision branch cache to revision %d\n" % rev)
             truncate = rbcrevidx + _rbcrecsize
             del self._rbcrevs[truncate:]
             self._rbcrevslen = min(self._rbcrevslen, truncate)
@@ -453,14 +452,14 @@ class revbranchcache(object):
 
     def _setcachedata(self, rev, node, branchidx):
         """Writes the node's branch data to the in-memory cache data."""
+        if rev == nullrev:
+            return
         rbcrevidx = rev * _rbcrecsize
-        rec = array('c')
-        rec.fromstring(pack(_rbcrecfmt, node, branchidx))
         if len(self._rbcrevs) < rbcrevidx + _rbcrecsize:
             self._rbcrevs.extend('\0' *
                                  (len(self._repo.changelog) * _rbcrecsize -
                                   len(self._rbcrevs)))
-        self._rbcrevs[rbcrevidx:rbcrevidx + _rbcrecsize] = rec
+        pack_into(_rbcrecfmt, self._rbcrevs, rbcrevidx, node, branchidx)
         self._rbcrevslen = min(self._rbcrevslen, rev)
 
         tr = self._repo.currenttransaction()
@@ -504,7 +503,7 @@ class revbranchcache(object):
                            len(self._rbcrevs) // _rbcrecsize)
                 f = repo.vfs.open(_rbcrevs, 'ab')
                 if f.tell() != start:
-                    repo.ui.debug("truncating %s to %s\n" % (_rbcrevs, start))
+                    repo.ui.debug("truncating %s to %d\n" % (_rbcrevs, start))
                     f.seek(start)
                     if f.tell() != start:
                         start = 0

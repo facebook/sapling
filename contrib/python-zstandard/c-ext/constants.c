@@ -41,7 +41,7 @@ void constants_module_init(PyObject* mod) {
 	PyTuple_SetItem(zstdVersion, 0, PyLong_FromLong(ZSTD_VERSION_MAJOR));
 	PyTuple_SetItem(zstdVersion, 1, PyLong_FromLong(ZSTD_VERSION_MINOR));
 	PyTuple_SetItem(zstdVersion, 2, PyLong_FromLong(ZSTD_VERSION_RELEASE));
-	Py_IncRef(zstdVersion);
+	Py_INCREF(zstdVersion);
 	PyModule_AddObject(mod, "ZSTD_VERSION", zstdVersion);
 
 	frameHeader = PyBytes_FromStringAndSize(frame_header, sizeof(frame_header));

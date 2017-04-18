@@ -18,11 +18,11 @@ from .node import (
     bin,
     hex,
     modifiednodeid,
-    newnodeid,
     nullid,
     nullrev,
     short,
     wdirid,
+    wdirnodes,
 )
 from . import (
     encoding,
@@ -33,6 +33,7 @@ from . import (
     obsolete as obsmod,
     patch,
     phases,
+    pycompat,
     repoview,
     revlog,
     scmutil,
@@ -64,6 +65,12 @@ class basectx(object):
         return o
 
     def __str__(self):
+        r = short(self.node())
+        if pycompat.ispy3:
+            return r.decode('ascii')
+        return r
+
+    def __bytes__(self):
         return short(self.node())
 
     def __int__(self):
@@ -90,14 +97,11 @@ class basectx(object):
     def __iter__(self):
         return iter(self._manifest)
 
-    def _manifestmatches(self, match, s):
-        """generate a new manifest filtered by the match argument
-
-        This method is for internal use only and mainly exists to provide an
-        object oriented way for other contexts to customize the manifest
-        generation.
-        """
-        return self.manifest().matches(match)
+    def _buildstatusmanifest(self, status):
+        """Builds a manifest that includes the given status results, if this is
+        a working copy context. For non-working copy contexts, it just returns
+        the normal manifest."""
+        return self.manifest()
 
     def _matchstatus(self, other, match):
         """return match.always if match is none
@@ -116,17 +120,19 @@ class basectx(object):
         # 1000 and cache it so that when you read 1001, we just need to apply a
         # delta to what's in the cache. So that's one full reconstruction + one
         # delta application.
+        mf2 = None
         if self.rev() is not None and self.rev() < other.rev():
-            self.manifest()
-        mf1 = other._manifestmatches(match, s)
-        mf2 = self._manifestmatches(match, s)
+            mf2 = self._buildstatusmanifest(s)
+        mf1 = other._buildstatusmanifest(s)
+        if mf2 is None:
+            mf2 = self._buildstatusmanifest(s)
 
         modified, added = [], []
         removed = []
         clean = []
         deleted, unknown, ignored = s.deleted, s.unknown, s.ignored
         deletedset = set(deleted)
-        d = mf1.diff(mf2, clean=listclean)
+        d = mf1.diff(mf2, match=match, clean=listclean)
         for fn, value in d.iteritems():
             if fn in deletedset:
                 continue
@@ -140,7 +146,7 @@ class basectx(object):
                 removed.append(fn)
             elif flag1 != flag2:
                 modified.append(fn)
-            elif node2 != newnodeid:
+            elif node2 not in wdirnodes:
                 # When comparing files between two commits, we save time by
                 # not comparing the file contents when the nodeids differ.
                 # Note that this means we incorrectly report a reverted change
@@ -153,8 +159,10 @@ class basectx(object):
 
         if removed:
             # need to filter files if they are already reported as removed
-            unknown = [fn for fn in unknown if fn not in mf1]
-            ignored = [fn for fn in ignored if fn not in mf1]
+            unknown = [fn for fn in unknown if fn not in mf1 and
+                                               (not match or match(fn))]
+            ignored = [fn for fn in ignored if fn not in mf1 and
+                                               (not match or match(fn))]
             # if they're deleted, don't report them as removed
             removed = [fn for fn in removed if fn not in deletedset]
 
@@ -290,8 +298,10 @@ class basectx(object):
         '''
         return subrepo.subrepo(self, path, allowwdir=True)
 
-    def match(self, pats=[], include=None, exclude=None, default='glob',
+    def match(self, pats=None, include=None, exclude=None, default='glob',
               listsubrepos=False, badfn=None):
+        if pats is None:
+            pats = []
         r = self._repo
         return matchmod.match(r.root, r.getcwd(), pats,
                               include, exclude, default,
@@ -397,6 +407,19 @@ def makememctx(repo, parents, text, user, date, branch, files, store,
                  date, extra, editor)
     return ctx
 
+def _filterederror(repo, changeid):
+    """build an exception to be raised about a filtered changeid
+
+    This is extracted in a function to help extensions (eg: evolve) to
+    experiment with various message variants."""
+    if repo.filtername.startswith('visible'):
+        msg = _("hidden revision '%s'") % changeid
+        hint = _('use --hidden to access hidden revisions')
+        return error.FilteredRepoLookupError(msg, hint=hint)
+    msg = _("filtered revision '%s' (not in '%s' subset)")
+    msg %= (changeid, repo.filtername)
+    return error.FilteredRepoLookupError(msg)
+
 class changectx(basectx):
     """A changecontext object makes access to data related to a particular
     changeset convenient. It represents a read-only context already present in
@@ -418,7 +441,7 @@ class changectx(basectx):
                 self._node = repo.changelog.node(changeid)
                 self._rev = changeid
                 return
-            if isinstance(changeid, long):
+            if not pycompat.ispy3 and isinstance(changeid, long):
                 changeid = str(changeid)
             if changeid == 'null':
                 self._node = nullid
@@ -446,7 +469,7 @@ class changectx(basectx):
 
             try:
                 r = int(changeid)
-                if str(r) != changeid:
+                if '%d' % r != changeid:
                     raise ValueError
                 l = len(repo.changelog)
                 if r < 0:
@@ -503,13 +526,7 @@ class changectx(basectx):
                 pass
         except (error.FilteredIndexError, error.FilteredLookupError,
                 error.FilteredRepoLookupError):
-            if repo.filtername.startswith('visible'):
-                msg = _("hidden revision '%s'") % changeid
-                hint = _('use --hidden to access hidden revisions')
-                raise error.FilteredRepoLookupError(msg, hint=hint)
-            msg = _("filtered revision '%s' (not in '%s' subset)")
-            msg %= (changeid, repo.filtername)
-            raise error.FilteredRepoLookupError(msg)
+            raise _filterederror(repo, changeid)
         except IndexError:
             pass
         raise error.RepoLookupError(
@@ -523,6 +540,8 @@ class changectx(basectx):
 
     def __nonzero__(self):
         return self._rev != nullrev
+
+    __bool__ = __nonzero__
 
     @propertycache
     def _changeset(self):
@@ -711,6 +730,8 @@ class basefilectx(object):
         except error.LookupError:
             # file is missing
             return False
+
+    __bool__ = __nonzero__
 
     def __str__(self):
         try:
@@ -1166,7 +1187,7 @@ def _changesrange(fctx1, fctx2, linerange2, diffopts):
     diffinrange = any(stype == '!' for _, stype in filteredblocks)
     return diffinrange, linerange1
 
-def blockancestors(fctx, fromline, toline):
+def blockancestors(fctx, fromline, toline, followfirst=False):
     """Yield ancestors of `fctx` with respect to the block of lines within
     `fromline`-`toline` range.
     """
@@ -1175,9 +1196,11 @@ def blockancestors(fctx, fromline, toline):
     while visit:
         c, linerange2 = visit.pop(max(visit))
         pl = c.parents()
+        if followfirst:
+            pl = pl[:1]
         if not pl:
             # The block originates from the initial revision.
-            yield c
+            yield c, linerange2
             continue
         inrange = False
         for p in pl:
@@ -1190,7 +1213,45 @@ def blockancestors(fctx, fromline, toline):
                 continue
             visit[p.linkrev(), p.filenode()] = p, linerange1
         if inrange:
-            yield c
+            yield c, linerange2
+
+def blockdescendants(fctx, fromline, toline):
+    """Yield descendants of `fctx` with respect to the block of lines within
+    `fromline`-`toline` range.
+    """
+    # First possibly yield 'fctx' if it has changes in range with respect to
+    # its parents.
+    try:
+        c, linerange1 = next(blockancestors(fctx, fromline, toline))
+    except StopIteration:
+        pass
+    else:
+        if c == fctx:
+            yield c, linerange1
+
+    diffopts = patch.diffopts(fctx._repo.ui)
+    fl = fctx.filelog()
+    seen = {fctx.filerev(): (fctx, (fromline, toline))}
+    for i in fl.descendants([fctx.filerev()]):
+        c = fctx.filectx(i)
+        inrange = False
+        for x in fl.parentrevs(i):
+            try:
+                p, linerange2 = seen[x]
+            except KeyError:
+                # nullrev or other branch
+                continue
+            inrangep, linerange1 = _changesrange(c, p, linerange2, diffopts)
+            inrange = inrange or inrangep
+            # If revision 'i' has been seen (it's a merge), we assume that its
+            # line range is the same independently of which parents was used
+            # to compute it.
+            assert i not in seen or seen[i][1] == linerange1, (
+                'computed line range for %s is not consistent between '
+                'ancestor branches' % c)
+            seen[i] = c, linerange1
+        if inrange:
+            yield c, linerange1
 
 class committablectx(basectx):
     """A committablectx object provides common functionality for a context that
@@ -1225,6 +1286,8 @@ class committablectx(basectx):
 
     def __nonzero__(self):
         return True
+
+    __bool__ = __nonzero__
 
     def _buildflagfunc(self):
         # Create a fallback function for getting file flags when the
@@ -1261,35 +1324,6 @@ class committablectx(basectx):
     @propertycache
     def _flagfunc(self):
         return self._repo.dirstate.flagfunc(self._buildflagfunc)
-
-    @propertycache
-    def _manifest(self):
-        """generate a manifest corresponding to the values in self._status
-
-        This reuse the file nodeid from parent, but we append an extra letter
-        when modified. Modified files get an extra 'm' while added files get
-        an extra 'a'. This is used by manifests merge to see that files
-        are different and by update logic to avoid deleting newly added files.
-        """
-        parents = self.parents()
-
-        man = parents[0].manifest().copy()
-
-        ff = self._flagfunc
-        for i, l in ((addednodeid, self._status.added),
-                     (modifiednodeid, self._status.modified)):
-            for f in l:
-                man[f] = i
-                try:
-                    man.setflag(f, ff(f))
-                except OSError:
-                    pass
-
-        for f in self._status.deleted + self._status.removed:
-            if f in man:
-                del man[f]
-
-        return man
 
     @propertycache
     def _status(self):
@@ -1534,21 +1568,21 @@ class workingctx(committablectx):
                     self._repo.dirstate.normallookup(dest)
                 self._repo.dirstate.copy(source, dest)
 
-    def match(self, pats=[], include=None, exclude=None, default='glob',
+    def match(self, pats=None, include=None, exclude=None, default='glob',
               listsubrepos=False, badfn=None):
+        if pats is None:
+            pats = []
         r = self._repo
 
         # Only a case insensitive filesystem needs magic to translate user input
         # to actual case in the filesystem.
+        matcherfunc = matchmod.match
         if not util.fscasesensitive(r.root):
-            return matchmod.icasefsmatcher(r.root, r.getcwd(), pats, include,
-                                           exclude, default, r.auditor, self,
-                                           listsubrepos=listsubrepos,
-                                           badfn=badfn)
-        return matchmod.match(r.root, r.getcwd(), pats,
-                              include, exclude, default,
-                              auditor=r.auditor, ctx=self,
-                              listsubrepos=listsubrepos, badfn=badfn)
+            matcherfunc = matchmod.icasefsmatcher
+        return matcherfunc(r.root, r.getcwd(), pats,
+                           include, exclude, default,
+                           auditor=r.auditor, ctx=self,
+                           listsubrepos=listsubrepos, badfn=badfn)
 
     def _filtersuspectsymlink(self, files):
         if not files or self._repo.dirstate._checklink:
@@ -1605,22 +1639,6 @@ class workingctx(committablectx):
                 pass
         return modified, fixup
 
-    def _manifestmatches(self, match, s):
-        """Slow path for workingctx
-
-        The fast path is when we compare the working directory to its parent
-        which means this function is comparing with a non-parent; therefore we
-        need to build a manifest and return what matches.
-        """
-        mf = self._repo['.']._manifestmatches(match, s)
-        for f in s.modified + s.added:
-            mf[f] = newnodeid
-            mf.setflag(f, self.flags(f))
-        for f in s.removed:
-            if f in mf:
-                del mf[f]
-        return mf
-
     def _dirstatestatus(self, match=None, ignored=False, clean=False,
                         unknown=False):
         '''Gets the status from the dirstate -- internal use only.'''
@@ -1651,6 +1669,39 @@ class workingctx(committablectx):
                 self._status = s
 
         return s
+
+    @propertycache
+    def _manifest(self):
+        """generate a manifest corresponding to the values in self._status
+
+        This reuse the file nodeid from parent, but we use special node
+        identifiers for added and modified files. This is used by manifests
+        merge to see that files are different and by update logic to avoid
+        deleting newly added files.
+        """
+        return self._buildstatusmanifest(self._status)
+
+    def _buildstatusmanifest(self, status):
+        """Builds a manifest that includes the given status results."""
+        parents = self.parents()
+
+        man = parents[0].manifest().copy()
+
+        ff = self._flagfunc
+        for i, l in ((addednodeid, status.added),
+                     (modifiednodeid, status.modified)):
+            for f in l:
+                man[f] = i
+                try:
+                    man.setflag(f, ff(f))
+                except OSError:
+                    pass
+
+        for f in status.deleted + status.removed:
+            if f in man:
+                del man[f]
+
+        return man
 
     def _buildstatus(self, other, s, match, listignored, listclean,
                      listunknown):
@@ -1710,6 +1761,8 @@ class committablefilectx(basefilectx):
 
     def __nonzero__(self):
         return True
+
+    __bool__ = __nonzero__
 
     def linkrev(self):
         # linked to self._changectx no matter if file is modified or not
@@ -1779,7 +1832,7 @@ class workingfilectx(committablefilectx):
 
     def remove(self, ignoremissing=False):
         """wraps unlink for a repo's working directory"""
-        util.unlinkpath(self._repo.wjoin(self._path), ignoremissing)
+        self._repo.wvfs.unlinkpath(self._path, ignoremissing=ignoremissing)
 
     def write(self, data, flags):
         """wraps repo.wwrite"""
@@ -1856,8 +1909,8 @@ class memctx(committablectx):
     commit function for every file in 'files', but calls order is
     undefined. If the file is available in the revision being
     committed (updated or added), filectxfn returns a memfilectx
-    object. If the file was removed, filectxfn raises an
-    IOError. Moved files are represented by marking the source file
+    object. If the file was removed, filectxfn return None for recent
+    Mercurial. Moved files are represented by marking the source file
     removed and the new file added with copy information (see
     memfilectx).
 
@@ -2046,10 +2099,10 @@ class metadataonlyctx(committablectx):
         # sanity check to ensure that the reused manifest parents are
         # manifests of our commit parents
         mp1, mp2 = self.manifestctx().parents
-        if p1 != nullid and p1.manifestctx().node() != mp1:
+        if p1 != nullid and p1.manifestnode() != mp1:
             raise RuntimeError('can\'t reuse the manifest: '
                                'its p1 doesn\'t match the new ctx p1')
-        if p2 != nullid and p2.manifestctx().node() != mp2:
+        if p2 != nullid and p2.manifestnode() != mp2:
             raise RuntimeError('can\'t reuse the manifest: '
                                'its p2 doesn\'t match the new ctx p2')
 

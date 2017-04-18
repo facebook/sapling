@@ -251,6 +251,60 @@ Status between revisions:
    z1
   +z2
 
+#if serve
+  $ cd ..
+  $ hg serve -R repo --debug -S -p $HGPORT -d --pid-file=hg1.pid -E error.log -A access.log
+  adding  = $TESTTMP/repo (glob)
+  adding foo = $TESTTMP/repo/foo (glob)
+  adding foo/bar = $TESTTMP/repo/foo/bar (glob)
+  listening at http://*:$HGPORT/ (bound to *:$HGPORT) (glob) (?)
+  adding  = $TESTTMP/repo (glob) (?)
+  adding foo = $TESTTMP/repo/foo (glob) (?)
+  adding foo/bar = $TESTTMP/repo/foo/bar (glob) (?)
+  $ cat hg1.pid >> $DAEMON_PIDS
+
+  $ hg clone http://localhost:$HGPORT clone  --config progress.disable=True
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 3 changesets with 5 changes to 3 files
+  updating to branch default
+  cloning subrepo foo from http://localhost:$HGPORT/foo
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 4 changesets with 7 changes to 3 files
+  cloning subrepo foo/bar from http://localhost:$HGPORT/foo/bar (glob)
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 3 changesets with 3 changes to 1 files
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+  $ cat clone/foo/bar/z.txt
+  z1
+  z2
+  z3
+
+  $ cat access.log
+  * "GET /?cmd=capabilities HTTP/1.1" 200 - (glob)
+  * "GET /?cmd=batch HTTP/1.1" 200 - * (glob)
+  * "GET /?cmd=getbundle HTTP/1.1" 200 - * (glob)
+  * "GET /foo?cmd=capabilities HTTP/1.1" 200 - (glob)
+  * "GET /foo?cmd=batch HTTP/1.1" 200 - * (glob)
+  * "GET /foo?cmd=getbundle HTTP/1.1" 200 - * (glob)
+  * "GET /foo/bar?cmd=capabilities HTTP/1.1" 200 - (glob)
+  * "GET /foo/bar?cmd=batch HTTP/1.1" 200 - * (glob)
+  * "GET /foo/bar?cmd=getbundle HTTP/1.1" 200 - * (glob)
+
+  $ killdaemons.py
+  $ rm hg1.pid error.log access.log
+  $ cd repo
+#endif
+
 Enable progress extension for archive tests:
 
   $ cp $HGRCPATH $HGRCPATH.no-progress

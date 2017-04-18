@@ -59,7 +59,7 @@ print(ctxb.status(ctxa))
 # test performing a diff on a memctx
 
 for d in ctxb.diff(ctxa, git=True):
-    print(d)
+    print(d, end='')
 
 # test safeness and correctness of "ctx.status()"
 print('= checking context.status():')

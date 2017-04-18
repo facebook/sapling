@@ -18,6 +18,7 @@ from ..node import hex, nullid, short
 
 from .common import (
     ErrorResponse,
+    HTTP_BAD_REQUEST,
     HTTP_NOT_FOUND,
     paritygen,
 )
@@ -26,6 +27,7 @@ from .. import (
     context,
     error,
     match,
+    mdiff,
     patch,
     pathutil,
     templatefilters,
@@ -71,6 +73,8 @@ class revnav(object):
     def __nonzero__(self):
         """return True if any revision to navigate over"""
         return self._first() is not None
+
+    __bool__ = __nonzero__
 
     def _first(self):
         """return the minimum non-filtered changeset or None"""
@@ -142,7 +146,9 @@ class filerevnav(revnav):
         return hex(self._changelog.node(self._revlog.linkrev(rev)))
 
 class _siblings(object):
-    def __init__(self, siblings=[], hiderev=None):
+    def __init__(self, siblings=None, hiderev=None):
+        if siblings is None:
+            siblings = []
         self.siblings = [s for s in siblings if s.node() != nullid]
         if len(self.siblings) == 1 and self.siblings[0].rev() == hiderev:
             self.siblings = []
@@ -313,6 +319,26 @@ def filectx(repo, req):
 
     return fctx
 
+def linerange(req):
+    linerange = req.form.get('linerange')
+    if linerange is None:
+        return None
+    if len(linerange) > 1:
+        raise ErrorResponse(HTTP_BAD_REQUEST,
+                            'redundant linerange parameter')
+    try:
+        fromline, toline = map(int, linerange[0].split(':', 1))
+    except ValueError:
+        raise ErrorResponse(HTTP_BAD_REQUEST,
+                            'invalid linerange parameter')
+    try:
+        return util.processlinerange(fromline, toline)
+    except error.ParseError as exc:
+        raise ErrorResponse(HTTP_BAD_REQUEST, str(exc))
+
+def formatlinerange(fromline, toline):
+    return '%d:%d' % (fromline + 1, toline)
+
 def commonentry(repo, ctx):
     node = ctx.node()
     return {
@@ -384,8 +410,7 @@ def changesetentry(web, req, tmpl, ctx):
     if 'style' in req.form:
         style = req.form['style'][0]
 
-    parity = paritygen(web.stripecount)
-    diff = diffs(web.repo, tmpl, ctx, basectx, None, parity, style)
+    diff = diffs(web, tmpl, ctx, basectx, None, style)
 
     parity = paritygen(web.stripecount)
     diffstatsgen = diffstatgen(ctx, basectx)
@@ -410,18 +435,12 @@ def listfilediffs(tmpl, files, node, max):
     if len(files) > max:
         yield tmpl('fileellipses')
 
-def diffs(repo, tmpl, ctx, basectx, files, parity, style):
+def diffs(web, tmpl, ctx, basectx, files, style, linerange=None,
+          lineidprefix=''):
 
-    def countgen():
-        start = 1
-        while True:
-            yield start
-            start += 1
-
-    blockcount = countgen()
-    def prettyprintlines(diff, blockno):
-        for lineno, l in enumerate(diff.splitlines(True)):
-            difflineno = "%d.%d" % (blockno, lineno + 1)
+    def prettyprintlines(lines, blockno):
+        for lineno, l in enumerate(lines, 1):
+            difflineno = "%d.%d" % (blockno, lineno)
             if l.startswith('+'):
                 ltype = "difflineplus"
             elif l.startswith('-'):
@@ -432,39 +451,35 @@ def diffs(repo, tmpl, ctx, basectx, files, parity, style):
                 ltype = "diffline"
             yield tmpl(ltype,
                        line=l,
-                       lineno=lineno + 1,
-                       lineid="l%s" % difflineno,
+                       lineno=lineno,
+                       lineid=lineidprefix + "l%s" % difflineno,
                        linenumber="% 8s" % difflineno)
 
+    repo = web.repo
     if files:
         m = match.exact(repo.root, repo.getcwd(), files)
     else:
         m = match.always(repo.root, repo.getcwd())
 
     diffopts = patch.diffopts(repo.ui, untrusted=True)
-    if basectx is None:
-        parents = ctx.parents()
-        if parents:
-            node1 = parents[0].node()
-        else:
-            node1 = nullid
-    else:
-        node1 = basectx.node()
+    node1 = basectx.node()
     node2 = ctx.node()
+    parity = paritygen(web.stripecount)
 
-    block = []
-    for chunk in patch.diff(repo, node1, node2, m, opts=diffopts):
-        if chunk.startswith('diff') and block:
-            blockno = next(blockcount)
+    diffhunks = patch.diffhunks(repo, node1, node2, m, opts=diffopts)
+    for blockno, (header, hunks) in enumerate(diffhunks, 1):
+        if style != 'raw':
+            header = header[1:]
+        lines = [h + '\n' for h in header]
+        for hunkrange, hunklines in hunks:
+            if linerange is not None and hunkrange is not None:
+                s1, l1, s2, l2 = hunkrange
+                if not mdiff.hunkinrange((s2, l2), linerange):
+                    continue
+            lines.extend(hunklines)
+        if lines:
             yield tmpl('diffblock', parity=next(parity), blockno=blockno,
-                       lines=prettyprintlines(''.join(block), blockno))
-            block = []
-        if chunk.startswith('diff') and style != 'raw':
-            chunk = ''.join(chunk.splitlines(True)[1:])
-        block.append(chunk)
-    blockno = next(blockcount)
-    yield tmpl('diffblock', parity=next(parity), blockno=blockno,
-               lines=prettyprintlines(''.join(block), blockno))
+                       lines=prettyprintlines(lines, blockno))
 
 def compare(tmpl, context, leftlines, rightlines):
     '''Generator function that provides side-by-side comparison data.'''

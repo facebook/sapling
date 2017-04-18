@@ -14,7 +14,7 @@ applied patches (subset of known patches).
 Known patches are represented as patch files in the .hg/patches
 directory. Applied patches are both patch files and changesets.
 
-Common tasks (use :hg:`help command` for more details)::
+Common tasks (use :hg:`help COMMAND` for more details)::
 
   create new patch                          qnew
   import existing patch                     qimport
@@ -89,10 +89,12 @@ from mercurial import (
     phases,
     pycompat,
     registrar,
-    revset,
+    revsetlang,
     scmutil,
+    smartset,
     subrepo,
     util,
+    vfs as vfsmod,
 )
 
 release = lockmod.release
@@ -403,18 +405,12 @@ def newcommit(repo, phase, *args, **kwargs):
     if phase is None:
         if repo.ui.configbool('mq', 'secret', False):
             phase = phases.secret
+    overrides = {('ui', 'allowemptycommit'): True}
     if phase is not None:
-        phasebackup = repo.ui.backupconfig('phases', 'new-commit')
-    allowemptybackup = repo.ui.backupconfig('ui', 'allowemptycommit')
-    try:
-        if phase is not None:
-            repo.ui.setconfig('phases', 'new-commit', phase, 'mq')
+        overrides[('phases', 'new-commit')] = phase
+    with repo.ui.configoverride(overrides, 'mq'):
         repo.ui.setconfig('ui', 'allowemptycommit', True)
         return repo.commit(*args, **kwargs)
-    finally:
-        repo.ui.restoreconfig(allowemptybackup)
-        if phase is not None:
-            repo.ui.restoreconfig(phasebackup)
 
 class AbortNoCleanup(error.Abort):
     pass
@@ -433,7 +429,7 @@ class queue(object):
         except IOError:
             curpath = os.path.join(path, 'patches')
         self.path = patchdir or curpath
-        self.opener = scmutil.opener(self.path)
+        self.opener = vfsmod.vfs(self.path)
         self.ui = ui
         self.baseui = baseui
         self.applieddirty = False
@@ -719,7 +715,9 @@ class queue(object):
                     util.rename(absf, absorig)
 
     def printdiff(self, repo, diffopts, node1, node2=None, files=None,
-                  fp=None, changes=None, opts={}):
+                  fp=None, changes=None, opts=None):
+        if opts is None:
+            opts = {}
         stat = opts.get('stat')
         m = scmutil.match(repo[node1], files, opts)
         cmdutil.diffordiffstat(self.ui, repo, diffopts, node1, node2,  m,
@@ -1118,6 +1116,10 @@ class queue(object):
         if name in self._reserved:
             raise error.Abort(_('"%s" cannot be used as the name of a patch')
                              % name)
+        if name != name.strip():
+            # whitespace is stripped by parseseries()
+            raise error.Abort(_('patch name cannot begin or end with '
+                                'whitespace'))
         for prefix in ('.hg', '.mq'):
             if name.startswith(prefix):
                 raise error.Abort(_('patch name cannot begin with "%s"')
@@ -1477,7 +1479,7 @@ class queue(object):
                 # created while patching
                 for f in all_files:
                     if f not in repo.dirstate:
-                        util.unlinkpath(repo.wjoin(f), ignoremissing=True)
+                        repo.wvfs.unlinkpath(f, ignoremissing=True)
                 self.ui.warn(_('done\n'))
                 raise
 
@@ -1580,7 +1582,7 @@ class queue(object):
                 self.backup(repo, tobackup)
                 repo.dirstate.beginparentchange()
                 for f in a:
-                    util.unlinkpath(repo.wjoin(f), ignoremissing=True)
+                    repo.wvfs.unlinkpath(f, ignoremissing=True)
                     repo.dirstate.drop(f)
                 for f in m + r:
                     fctx = ctx[f]
@@ -2675,6 +2677,7 @@ def diff(ui, repo, *pats, **opts):
 
     Returns 0 on success.
     """
+    ui.pager('qdiff')
     repo.mq.diff(repo, pats, opts)
     return 0
 
@@ -2917,7 +2920,7 @@ def push(ui, repo, patch=None, **opts):
     opts = fixkeepchangesopts(ui, opts)
     if opts.get('merge'):
         if opts.get('name'):
-            newpath = repo.join(opts.get('name'))
+            newpath = repo.vfs.join(opts.get('name'))
         else:
             newpath, i = lastsavename(q.path)
         if not newpath:
@@ -2957,7 +2960,7 @@ def pop(ui, repo, patch=None, **opts):
     opts = fixkeepchangesopts(ui, opts)
     localupdate = True
     if opts.get('name'):
-        q = queue(ui, repo.baseui, repo.path, repo.join(opts.get('name')))
+        q = queue(ui, repo.baseui, repo.path, repo.vfs.join(opts.get('name')))
         ui.warn(_('using patch queue: %s\n') % q.path)
         localupdate = False
     else:
@@ -3311,9 +3314,9 @@ def qqueue(ui, repo, name=None, **opts):
 
     def _queuedir(name):
         if name == 'patches':
-            return repo.join('patches')
+            return repo.vfs.join('patches')
         else:
-            return repo.join('patches-' + name)
+            return repo.vfs.join('patches-' + name)
 
     def _validname(name):
         for n in name:
@@ -3336,7 +3339,7 @@ def qqueue(ui, repo, name=None, **opts):
                 continue
             fh.write('%s\n' % (queue,))
         fh.close()
-        util.rename(repo.join('patches.queues.new'), repo.join(_allqueues))
+        repo.vfs.rename('patches.queues.new', _allqueues)
 
     if not name or opts.get('list') or opts.get('active'):
         current = _getcurrent()
@@ -3389,7 +3392,7 @@ def qqueue(ui, repo, name=None, **opts):
                 else:
                     fh.write('%s\n' % (queue,))
             fh.close()
-            util.rename(repo.join('patches.queues.new'), repo.join(_allqueues))
+            repo.vfs.rename('patches.queues.new', _allqueues)
             _setactivenocheck(name)
         elif opts.get('delete'):
             _delete(name)
@@ -3435,7 +3438,9 @@ def reposetup(ui, repo):
                     raise error.Abort(errmsg)
 
         def commit(self, text="", user=None, date=None, match=None,
-                   force=False, editor=False, extra={}):
+                   force=False, editor=False, extra=None):
+            if extra is None:
+                extra = {}
             self.abortifwdirpatched(
                 _('cannot commit over an applied mq patch'),
                 force)
@@ -3567,9 +3572,9 @@ revsetpredicate = registrar.revsetpredicate()
 def revsetmq(repo, subset, x):
     """Changesets managed by MQ.
     """
-    revset.getargs(x, 0, 0, _("mq takes no arguments"))
+    revsetlang.getargs(x, 0, 0, _("mq takes no arguments"))
     applied = set([repo[r.node].rev() for r in repo.mq.applied])
-    return revset.baseset([r for r in subset if r in applied])
+    return smartset.baseset([r for r in subset if r in applied])
 
 # tell hggettext to extract docstrings from these functions:
 i18nfunctions = [revsetmq]

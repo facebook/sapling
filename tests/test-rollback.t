@@ -148,6 +148,8 @@ presents the correct tip changeset:
   working directory now based on revision 0
   $ hg id default
   791dd2169706
+
+  $ killdaemons.py
 #endif
 
 update to older changeset and then refuse rollback, because

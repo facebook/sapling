@@ -311,6 +311,7 @@ merge tests
    branchmerge: True, force: False, partial: False
    ancestor: 6747d179aa9a, local: 20a0db6fbf6c+, remote: 7af322bc1198
    preserving t for resolve of t
+  starting 4 threads for background file closing (?)
    t: versions differ -> m (premerge)
   picked tool ':merge' for t (binary False symlink False changedelete False)
   merging t

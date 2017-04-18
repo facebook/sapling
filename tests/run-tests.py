@@ -112,17 +112,50 @@ else:
 # For Windows support
 wifexited = getattr(os, "WIFEXITED", lambda x: False)
 
-def checkportisavailable(port):
-    """return true if a port seems free to bind on localhost"""
+# Whether to use IPv6
+def checksocketfamily(name, port=20058):
+    """return true if we can listen on localhost using family=name
+
+    name should be either 'AF_INET', or 'AF_INET6'.
+    port being used is okay - EADDRINUSE is considered as successful.
+    """
+    family = getattr(socket, name, None)
+    if family is None:
+        return False
     try:
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s = socket.socket(family, socket.SOCK_STREAM)
         s.bind(('localhost', port))
         s.close()
         return True
     except socket.error as exc:
-        if not exc.errno == errno.EADDRINUSE:
+        if exc.errno == errno.EADDRINUSE:
+            return True
+        elif exc.errno in (errno.EADDRNOTAVAIL, errno.EPROTONOSUPPORT):
+            return False
+        else:
             raise
+    else:
         return False
+
+# useipv6 will be set by parseargs
+useipv6 = None
+
+def checkportisavailable(port):
+    """return true if a port seems free to bind on localhost"""
+    if useipv6:
+        family = socket.AF_INET6
+    else:
+        family = socket.AF_INET
+    try:
+        s = socket.socket(family, socket.SOCK_STREAM)
+        s.bind(('localhost', port))
+        s.close()
+        return True
+    except socket.error as exc:
+        if exc.errno not in (errno.EADDRINUSE, errno.EADDRNOTAVAIL,
+                             errno.EPROTONOSUPPORT):
+            raise
+    return False
 
 closefds = os.name == 'posix'
 def Popen4(cmd, wd, timeout, env=None):
@@ -269,6 +302,8 @@ def getparser():
                       help="install and use chg wrapper in place of hg")
     parser.add_option("--with-chg", metavar="CHG",
                       help="use specified chg wrapper in place of hg")
+    parser.add_option("--ipv6", action="store_true",
+                      help="prefer IPv6 to IPv4 for network related tests")
     parser.add_option("-3", "--py3k-warnings", action="store_true",
         help="enable Py3k warnings on Python 2.6+")
     # This option should be deleted once test-check-py3-compat.t and other
@@ -337,6 +372,14 @@ def parseargs(args, parser):
         # chg shares installation location with hg
         parser.error('--chg does not work when --with-hg is specified '
                      '(use --with-chg instead)')
+
+    global useipv6
+    if options.ipv6:
+        useipv6 = checksocketfamily('AF_INET6')
+    else:
+        # only use IPv6 if IPv4 is unavailable and IPv6 is available
+        useipv6 = ((not checksocketfamily('AF_INET'))
+                   and checksocketfamily('AF_INET6'))
 
     options.anycoverage = options.cover or options.annotate or options.htmlcov
     if options.anycoverage:
@@ -454,6 +497,12 @@ def vlog(*msg):
 # sans \t, \n and \r
 CDATA_EVIL = re.compile(br"[\000-\010\013\014\016-\037]")
 
+# Match feature conditionalized output lines in the form, capturing the feature
+# list in group 2, and the preceeding line output in group 1:
+#
+#   output..output (feature !)\n
+optline = re.compile(b'(.+) \((.+?) !\)\n$')
+
 def cdatasafe(data):
     """Make a string safe to include in a CDATA block.
 
@@ -506,7 +555,8 @@ class Test(unittest.TestCase):
                  timeout=defaults['timeout'],
                  startport=defaults['port'], extraconfigopts=None,
                  py3kwarnings=False, shell=None, hgcommand=None,
-                 slowtimeout=defaults['slowtimeout'], usechg=False):
+                 slowtimeout=defaults['slowtimeout'], usechg=False,
+                 useipv6=False):
         """Create a test from parameters.
 
         path is the full path to the file defining the test.
@@ -554,6 +604,7 @@ class Test(unittest.TestCase):
         self._shell = _bytespath(shell)
         self._hgcommand = hgcommand or b'hg'
         self._usechg = usechg
+        self._useipv6 = useipv6
 
         self._aborted = False
         self._daemonpids = []
@@ -802,6 +853,8 @@ class Test(unittest.TestCase):
             self._portmap(2),
             (br'(?m)^(saved backup bundle to .*\.hg)( \(glob\))?$',
              br'\1 (glob)'),
+            (br'([^0-9])%s' % re.escape(self._localip()), br'\1$LOCALIP'),
+            (br'\bHG_TXNID=TXN:[a-f0-9]{40}\b', br'HG_TXNID=TXN:$ID$'),
             ]
         r.append((self._escapepath(self._testtmp), b'$TESTTMP'))
 
@@ -817,6 +870,12 @@ class Test(unittest.TestCase):
         else:
             return re.escape(p)
 
+    def _localip(self):
+        if self._useipv6:
+            return b'::1'
+        else:
+            return b'127.0.0.1'
+
     def _getenv(self):
         """Obtain environment variables to use during test execution."""
         def defineport(i):
@@ -825,6 +884,7 @@ class Test(unittest.TestCase):
         env = os.environ.copy()
         if sysconfig is not None:
             env['PYTHONUSERBASE'] = sysconfig.get_config_var('userbase')
+        env['HGEMITWARNINGS'] = '1'
         env['TESTTMP'] = self._testtmp
         env['HOME'] = self._testtmp
         # This number should match portneeded in _getport
@@ -839,6 +899,11 @@ class Test(unittest.TestCase):
         env["HGUSER"]   = "test"
         env["HGENCODING"] = "ascii"
         env["HGENCODINGMODE"] = "strict"
+        env['HGIPV6'] = str(int(self._useipv6))
+
+        # LOCALIP could be ::1 or 127.0.0.1. Useful for tests that require raw
+        # IP addresses.
+        env['LOCALIP'] = self._localip()
 
         # Reset some environment variables to well-known values so that
         # the tests produce repeatable output.
@@ -849,6 +914,7 @@ class Test(unittest.TestCase):
         env['TERM'] = 'xterm'
 
         for k in ('HG HGPROF CDPATH GREP_OPTIONS http_proxy no_proxy ' +
+                  'HGPLAIN HGPLAINEXCEPT EDITOR VISUAL PAGER ' +
                   'NO_PROXY CHGDEBUG').split():
             if k in env:
                 del env[k]
@@ -881,6 +947,9 @@ class Test(unittest.TestCase):
         hgrc.write(b'[largefiles]\n')
         hgrc.write(b'usercache = %s\n' %
                    (os.path.join(self._testtmp, b'.cache/largefiles')))
+        hgrc.write(b'[web]\n')
+        hgrc.write(b'address = localhost\n')
+        hgrc.write(b'ipv6 = %s\n' % str(self._useipv6).encode('ascii'))
 
         for opt in self._extraconfigopts:
             section, key = opt.split('.', 1)
@@ -973,7 +1042,7 @@ checkcodeglobpats = [
     re.compile(br'^pulling from \$TESTTMP/.*[^)]$'),
     # Not all platforms have 127.0.0.1 as loopback (though most do),
     # so we always glob that too.
-    re.compile(br'.*127.0.0.1.*$'),
+    re.compile(br'.*\$LOCALIP.*$'),
 ]
 
 bchr = chr
@@ -1209,8 +1278,19 @@ class TTest(Test):
                     if r:
                         els.pop(i)
                         break
-                    if el and el.endswith(b" (?)\n"):
-                        optional.append(i)
+                    if el:
+                        if el.endswith(b" (?)\n"):
+                            optional.append(i)
+                        else:
+                            m = optline.match(el)
+                            if m:
+                                conditions = [c for c in m.group(2).split(' ')]
+
+                                if self._hghave(conditions)[0]:
+                                    lout = el
+                                else:
+                                    optional.append(i)
+
                     i += 1
 
                 if r:
@@ -1236,8 +1316,10 @@ class TTest(Test):
                 # clean up any optional leftovers
                 while expected.get(pos, None):
                     el = expected[pos].pop(0)
-                    if el and not el.endswith(b" (?)\n"):
-                        break
+                    if el:
+                        if (not optline.match(el)
+                            and not el.endswith(b" (?)\n")):
+                            break
                     postout.append(b'  ' + el)
 
             if lcmd:
@@ -1281,7 +1363,7 @@ class TTest(Test):
                         return True
                 return b'-glob'
             return True
-        el = el.replace(b'127.0.0.1', b'*')
+        el = el.replace(b'$LOCALIP', b'*')
         i, n = 0, len(el)
         res = b''
         while i < n:
@@ -1309,6 +1391,12 @@ class TTest(Test):
             if el.endswith(b" (?)\n"):
                 retry = "retry"
                 el = el[:-5] + b"\n"
+            else:
+                m = optline.match(el)
+                if m:
+                    el = m.group(1) + b"\n"
+                    retry = "retry"
+
             if el.endswith(b" (esc)\n"):
                 if PYTHON3:
                     el = el[:-7].decode('unicode_escape') + '\n'
@@ -1323,7 +1411,7 @@ class TTest(Test):
                 # ignore '(glob)' added to l by 'replacements'
                 if l.endswith(b" (glob)\n"):
                     l = l[:-8] + b"\n"
-                return TTest.globmatch(el[:-8], l)
+                return TTest.globmatch(el[:-8], l) or retry
             if os.altsep and l.replace(b'\\', b'/') == el:
                 return b'+glob'
         return retry
@@ -2288,7 +2376,8 @@ class TestRunner(object):
                     py3kwarnings=self.options.py3k_warnings,
                     shell=self.options.shell,
                     hgcommand=self._hgcommand,
-                    usechg=bool(self.options.with_chg or self.options.chg))
+                    usechg=bool(self.options.with_chg or self.options.chg),
+                    useipv6=useipv6)
         t.should_reload = True
         return t
 

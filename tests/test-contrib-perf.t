@@ -109,6 +109,7 @@ perfstatus
    perfvolatilesets
                  benchmark the computation of various volatile set
    perfwalk      (no help text available)
+   perfwrite     microbenchmark ui.write
   
   (use 'hg help -v perfstatusext' to show built-in aliases and global options)
   $ hg perfaddremove
@@ -164,3 +165,7 @@ Check perf.py for historical portability
   $ (hg files -r 1.2 glob:mercurial/*.c glob:mercurial/*.py;
   >  hg files -r tip glob:mercurial/*.c glob:mercurial/*.py) |
   > "$TESTDIR"/check-perf-code.py contrib/perf.py
+  contrib/perf.py:869:
+   >             r.revision(r.node(x))
+   don't convert rev to node before passing to revision(nodeorrev)
+  [1]

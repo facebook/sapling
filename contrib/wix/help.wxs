@@ -15,6 +15,8 @@
     <DirectoryRef Id="INSTALLDIR">
       <Directory Id="helpdir" Name="help" FileSource="$(var.SourceDir)">
         <Component Id="help.root" Guid="$(var.help.root.guid)" Win64='$(var.IsX64)'>
+          <File Name="bundlespec.txt" />
+          <File Name="color.txt" />
           <File Name="config.txt" KeyPath="yes" />
           <File Name="dates.txt" />
           <File Name="diffs.txt" />
@@ -25,6 +27,7 @@
           <File Name="hgignore.txt" />
           <File Name="hgweb.txt" />
           <File Name="merge-tools.txt" />
+          <File Name="pager.txt" />
           <File Name="patterns.txt" />
           <File Name="phases.txt" />
           <File Name="revisions.txt" />
@@ -37,6 +40,7 @@
         <Directory Id="help.internaldir" Name="internals">
           <Component Id="help.internals" Guid="$(var.help.internals.guid)" Win64='$(var.IsX64)'>
             <File Id="internals.bundles.txt"      Name="bundles.txt" KeyPath="yes" />
+            <File Id="internals.censor.txt"       Name="censor.txt" KeyPath="yes" />
             <File Id="internals.changegroups.txt" Name="changegroups.txt" />
             <File Id="internals.requirements.txt" Name="requirements.txt" />
             <File Id="internals.revlogs.txt"      Name="revlogs.txt" />

@@ -28,11 +28,14 @@ from mercurial import (
     merge,
     node as nodemod,
     patch,
+    pycompat,
     registrar,
     revlog,
     revset,
     scmutil,
+    smartset,
     util,
+    vfs as vfsmod,
 )
 
 class TransplantError(error.Abort):
@@ -58,7 +61,7 @@ class transplants(object):
         self.opener = opener
 
         if not opener:
-            self.opener = scmutil.opener(self.path)
+            self.opener = vfsmod.vfs(self.path)
         self.transplants = {}
         self.dirty = False
         self.read()
@@ -100,8 +103,8 @@ class transplants(object):
 class transplanter(object):
     def __init__(self, ui, repo, opts):
         self.ui = ui
-        self.path = repo.join('transplant')
-        self.opener = scmutil.opener(self.path)
+        self.path = repo.vfs.join('transplant')
+        self.opener = vfsmod.vfs(self.path)
         self.transplants = transplants(self.path, 'transplants',
                                        opener=self.opener)
         def getcommiteditor():
@@ -197,7 +200,7 @@ class transplanter(object):
                     patchfile = None
                 else:
                     fd, patchfile = tempfile.mkstemp(prefix='hg-transplant-')
-                    fp = os.fdopen(fd, 'w')
+                    fp = os.fdopen(fd, pycompat.sysstr('w'))
                     gen = patch.diff(source, parent, node, opts=diffopts)
                     for chunk in gen:
                         fp.write(chunk)
@@ -245,7 +248,7 @@ class transplanter(object):
         self.ui.status(_('filtering %s\n') % patchfile)
         user, date, msg = (changelog[1], changelog[2], changelog[4])
         fd, headerfile = tempfile.mkstemp(prefix='hg-transplant-')
-        fp = os.fdopen(fd, 'w')
+        fp = os.fdopen(fd, pycompat.sysstr('w'))
         fp.write("# HG changeset patch\n")
         fp.write("# User %s\n" % user)
         fp.write("# Date %d %d\n" % date)
@@ -258,7 +261,8 @@ class transplanter(object):
                            environ={'HGUSER': changelog[1],
                                     'HGREVISION': nodemod.hex(node),
                                     },
-                           onerr=error.Abort, errprefix=_('filter failed'))
+                           onerr=error.Abort, errprefix=_('filter failed'),
+                           blockedtag='transplant_filter')
             user, date, msg = self.parselog(file(headerfile))[1:4]
         finally:
             os.unlink(headerfile)
@@ -722,7 +726,7 @@ def revsettransplanted(repo, subset, x):
         s = revset.getset(repo, subset, x)
     else:
         s = subset
-    return revset.baseset([r for r in s if
+    return smartset.baseset([r for r in s if
         repo[r].extra().get('transplant_source')])
 
 templatekeyword = registrar.templatekeyword()

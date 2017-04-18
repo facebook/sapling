@@ -105,7 +105,7 @@ def setflags(f, l, x):
             fp = open(f)
             data = fp.read()
             fp.close()
-            os.unlink(f)
+            unlink(f)
             try:
                 os.symlink(data, f)
             except OSError:
@@ -118,7 +118,7 @@ def setflags(f, l, x):
     if stat.S_ISLNK(s):
         # switch link to file
         data = os.readlink(f)
-        os.unlink(f)
+        unlink(f)
         fp = open(f, "w")
         fp.write(data)
         fp.close()
@@ -181,15 +181,15 @@ def checkexec(path):
                     except OSError as e:
                         if e.errno != errno.ENOENT:
                             raise
-                        file(checknoexec, 'w').close() # might fail
+                        open(checknoexec, 'w').close() # might fail
                         m = os.stat(checknoexec).st_mode
                     if m & EXECFLAGS == 0:
                         # check-exec is exec and check-no-exec is not exec
                         return True
                     # checknoexec exists but is exec - delete it
-                    os.unlink(checknoexec)
+                    unlink(checknoexec)
                 # checkisexec exists but is not exec - delete it
-                os.unlink(checkisexec)
+                unlink(checkisexec)
 
             # check using one file, leave it as checkisexec
             checkdir = cachedir
@@ -210,7 +210,7 @@ def checkexec(path):
                     return True
         finally:
             if fn is not None:
-                os.unlink(fn)
+                unlink(fn)
     except (IOError, OSError):
         # we don't care, the user probably won't be able to commit anyway
         return False
@@ -230,13 +230,16 @@ def checklink(path):
         else:
             checkdir = path
             cachedir = None
-        name = tempfile.mktemp(dir=checkdir, prefix='checklink-')
+        fscheckdir = pycompat.fsdecode(checkdir)
+        name = tempfile.mktemp(dir=fscheckdir,
+                               prefix=r'checklink-')
+        name = pycompat.fsencode(name)
         try:
             fd = None
             if cachedir is None:
-                fd = tempfile.NamedTemporaryFile(dir=checkdir,
-                                                 prefix='hg-checklink-')
-                target = os.path.basename(fd.name)
+                fd = tempfile.NamedTemporaryFile(dir=fscheckdir,
+                                                 prefix=r'hg-checklink-')
+                target = pycompat.fsencode(os.path.basename(fd.name))
             else:
                 # create a fixed file to link to; doesn't matter if it
                 # already exists.
@@ -245,12 +248,12 @@ def checklink(path):
             try:
                 os.symlink(target, name)
                 if cachedir is None:
-                    os.unlink(name)
+                    unlink(name)
                 else:
                     try:
                         os.rename(name, checklink)
                     except OSError:
-                        os.unlink(name)
+                        unlink(name)
                 return True
             except OSError as inst:
                 # link creation might race, try again
@@ -265,7 +268,7 @@ def checklink(path):
         except OSError as inst:
             # sshfs might report failure while successfully creating the link
             if inst[0] == errno.EIO and os.path.exists(name):
-                os.unlink(name)
+                unlink(name)
             return False
 
 def checkosfilename(path):
@@ -408,7 +411,7 @@ def shellquote(s):
         return '"%s"' % s
     global _needsshellquote
     if _needsshellquote is None:
-        _needsshellquote = re.compile(r'[^a-zA-Z0-9._/+-]').search
+        _needsshellquote = re.compile(br'[^a-zA-Z0-9._/+-]').search
     if s and not _needsshellquote(s):
         # "s" shouldn't have to be quoted
         return s
@@ -532,19 +535,6 @@ def gethgcmd():
 
 def makedir(path, notindexed):
     os.mkdir(path)
-
-def unlinkpath(f, ignoremissing=False):
-    """unlink and remove the directory if it is empty"""
-    try:
-        os.unlink(f)
-    except OSError as e:
-        if not (ignoremissing and e.errno == errno.ENOENT):
-            raise
-    # try removing directories that might now be empty
-    try:
-        os.removedirs(os.path.dirname(f))
-    except OSError:
-        pass
 
 def lookupreg(key, name=None, scope=None):
     return None

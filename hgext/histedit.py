@@ -36,7 +36,7 @@ file open in your editor::
  #  p, pick = use commit
  #  e, edit = use commit, but stop for amending
  #  f, fold = use commit, but combine it with the one above
- #  r, roll = like fold, but discard this commit's description
+ #  r, roll = like fold, but discard this commit's description and date
  #  d, drop = remove commit from history
  #  m, mess = edit commit message without changing commit content
  #
@@ -58,7 +58,7 @@ would reorganize the file to look like this::
  #  p, pick = use commit
  #  e, edit = use commit, but stop for amending
  #  f, fold = use commit, but combine it with the one above
- #  r, roll = like fold, but discard this commit's description
+ #  r, roll = like fold, but discard this commit's description and date
  #  d, drop = remove commit from history
  #  m, mess = edit commit message without changing commit content
  #
@@ -71,11 +71,11 @@ those revisions together, offering you a chance to clean up the commit message::
  ***
  Add delta
 
-Edit the commit message to your liking, then close the editor. For
-this example, let's assume that the commit message was changed to
-``Add beta and delta.`` After histedit has run and had a chance to
-remove any old or temporary revisions it needed, the history looks
-like this::
+Edit the commit message to your liking, then close the editor. The date used
+for the commit will be the later of the two commits' dates. For this example,
+let's assume that the commit message was changed to ``Add beta and delta.``
+After histedit has run and had a chance to remove any old or temporary
+revisions it needed, the history looks like this::
 
  @  2[tip]   989b4d060121   2009-04-27 18:04 -0500   durin42
  |    Add beta and delta.
@@ -97,9 +97,10 @@ The ``edit`` operation will drop you back to a command prompt,
 allowing you to edit files freely, or even use ``hg record`` to commit
 some changes as a separate commit. When you're done, any remaining
 uncommitted changes will be committed as well. When done, run ``hg
-histedit --continue`` to finish this step. You'll be prompted for a
-new commit message, but the default commit message will be the
-original message for the ``edit`` ed revision.
+histedit --continue`` to finish this step. If there are uncommitted
+changes, you'll be prompted for a new commit message, but the default
+commit message will be the original message for the ``edit`` ed
+revision, and the date of the original commit will be preserved.
 
 The ``message`` operation will give you a chance to revise a commit
 message without changing the contents. It's a shortcut for doing
@@ -166,6 +167,15 @@ the drop to be implicit for missing commits by adding::
 
   [histedit]
   dropmissing = True
+
+By default, histedit will close the transaction after each action. For
+performance purposes, you can configure histedit to use a single transaction
+across the entire histedit. WARNING: This setting introduces a significant risk
+of losing the work you've done in a histedit if the histedit aborts
+unexpectedly::
+
+  [histedit]
+  singletransaction = True
 
 """
 
@@ -268,6 +278,7 @@ class histeditstate(object):
         self.lock = lock
         self.wlock = wlock
         self.backupfile = None
+        self.tr = None
         if replacements is None:
             self.replacements = []
         else:
@@ -299,8 +310,15 @@ class histeditstate(object):
         self.replacements = replacements
         self.backupfile = backupfile
 
-    def write(self):
-        fp = self.repo.vfs('histedit-state', 'w')
+    def write(self, tr=None):
+        if tr:
+            tr.addfilegenerator('histedit-state', ('histedit-state',),
+                                self._write, location='plain')
+        else:
+            with self.repo.vfs("histedit-state", "w") as f:
+                self._write(f)
+
+    def _write(self, fp):
         fp.write('v1\n')
         fp.write('%s\n' % node.hex(self.parentctxnode))
         fp.write('%s\n' % node.hex(self.topmost))
@@ -316,7 +334,6 @@ class histeditstate(object):
         if not backupfile:
             backupfile = ''
         fp.write('%s\n' % backupfile)
-        fp.close()
 
     def _load(self):
         fp = self.repo.vfs('histedit-state', 'r')
@@ -501,16 +518,12 @@ def commitfuncfor(repo, src):
     """
     phasemin = src.phase()
     def commitfunc(**kwargs):
-        phasebackup = repo.ui.backupconfig('phases', 'new-commit')
-        try:
-            repo.ui.setconfig('phases', 'new-commit', phasemin,
-                              'histedit')
+        overrides = {('phases', 'new-commit'): phasemin}
+        with repo.ui.configoverride(overrides, 'histedit'):
             extra = kwargs.get('extra', {}).copy()
             extra['histedit_source'] = src.hex()
             kwargs['extra'] = extra
             return repo.commit(**kwargs)
-        finally:
-            repo.ui.restoreconfig(phasebackup)
     return commitfunc
 
 def applychanges(ui, repo, ctx, opts):
@@ -724,6 +737,15 @@ class fold(histeditaction):
         """
         return True
 
+    def firstdate(self):
+        """Returns true if the rule should preserve the date of the first
+        change.
+
+        This exists mainly so that 'rollup' rules can be a subclass of
+        'fold'.
+        """
+        return False
+
     def finishfold(self, ui, repo, ctx, oldctx, newnode, internalchanges):
         parent = ctx.parents()[0].node()
         repo.ui.pushbuffer()
@@ -742,21 +764,21 @@ class fold(histeditaction):
                 [oldctx.description()]) + '\n'
         commitopts['message'] = newmessage
         # date
-        commitopts['date'] = max(ctx.date(), oldctx.date())
+        if self.firstdate():
+            commitopts['date'] = ctx.date()
+        else:
+            commitopts['date'] = max(ctx.date(), oldctx.date())
         extra = ctx.extra().copy()
         # histedit_source
         # note: ctx is likely a temporary commit but that the best we can do
         #       here. This is sufficient to solve issue3681 anyway.
         extra['histedit_source'] = '%s,%s' % (ctx.hex(), oldctx.hex())
         commitopts['extra'] = extra
-        phasebackup = repo.ui.backupconfig('phases', 'new-commit')
-        try:
-            phasemin = max(ctx.phase(), oldctx.phase())
-            repo.ui.setconfig('phases', 'new-commit', phasemin, 'histedit')
+        phasemin = max(ctx.phase(), oldctx.phase())
+        overrides = {('phases', 'new-commit'): phasemin}
+        with repo.ui.configoverride(overrides, 'histedit'):
             n = collapse(repo, ctx, repo[newnode], commitopts,
                          skipprompt=self.skipprompt())
-        finally:
-            repo.ui.restoreconfig(phasebackup)
         if n is None:
             return ctx, []
         repo.ui.pushbuffer()
@@ -809,12 +831,15 @@ class _multifold(fold):
         return True
 
 @action(["roll", "r"],
-        _("like fold, but discard this commit's description"))
+        _("like fold, but discard this commit's description and date"))
 class rollup(fold):
     def mergedescs(self):
         return False
 
     def skipprompt(self):
+        return True
+
+    def firstdate(self):
         return True
 
 @action(["drop", "d"],
@@ -884,11 +909,11 @@ def histedit(ui, repo, *freeargs, **opts):
 
     - `mess` to reword the changeset commit message
 
-    - `fold` to combine it with the preceding changeset
+    - `fold` to combine it with the preceding changeset (using the later date)
 
-    - `roll` like fold, but discarding this commit's description
+    - `roll` like fold, but discarding this commit's description and date
 
-    - `edit` to edit this changeset
+    - `edit` to edit this changeset (preserving date)
 
     There are a number of ways to select the root changeset:
 
@@ -992,7 +1017,8 @@ def _getgoal(opts):
 
 def _readfile(ui, path):
     if path == '-':
-        return ui.fin.read()
+        with ui.timeblockedsection('histedit'):
+            return ui.fin.read()
     else:
         with open(path, 'rb') as f:
             return f.read()
@@ -1082,17 +1108,45 @@ def _continuehistedit(ui, repo, state):
 
     total = len(state.actions)
     pos = 0
-    while state.actions:
-        state.write()
-        actobj = state.actions.pop(0)
-        pos += 1
-        ui.progress(_("editing"), pos, actobj.torule(),
-                    _('changes'), total)
-        ui.debug('histedit: processing %s %s\n' % (actobj.verb,\
-                                                   actobj.torule()))
-        parentctx, replacement_ = actobj.run()
-        state.parentctxnode = parentctx.node()
-        state.replacements.extend(replacement_)
+    state.tr = None
+
+    # Force an initial state file write, so the user can run --abort/continue
+    # even if there's an exception before the first transaction serialize.
+    state.write()
+    try:
+        # Don't use singletransaction by default since it rolls the entire
+        # transaction back if an unexpected exception happens (like a
+        # pretxncommit hook throws, or the user aborts the commit msg editor).
+        if ui.configbool("histedit", "singletransaction", False):
+            # Don't use a 'with' for the transaction, since actions may close
+            # and reopen a transaction. For example, if the action executes an
+            # external process it may choose to commit the transaction first.
+            state.tr = repo.transaction('histedit')
+
+        while state.actions:
+            state.write(tr=state.tr)
+            actobj = state.actions[0]
+            pos += 1
+            ui.progress(_("editing"), pos, actobj.torule(),
+                        _('changes'), total)
+            ui.debug('histedit: processing %s %s\n' % (actobj.verb,\
+                                                       actobj.torule()))
+            parentctx, replacement_ = actobj.run()
+            state.parentctxnode = parentctx.node()
+            state.replacements.extend(replacement_)
+            state.actions.pop(0)
+
+        if state.tr is not None:
+            state.tr.close()
+    except error.InterventionRequired:
+        if state.tr is not None:
+            state.tr.close()
+        raise
+    except Exception:
+        if state.tr is not None:
+            state.tr.abort()
+        raise
+
     state.write()
     ui.progress(_("editing"), None)
 
@@ -1115,29 +1169,13 @@ def _finishhistedit(ui, repo, state):
                     for n in succs[1:]:
                         ui.debug(m % node.short(n))
 
-    supportsmarkers = obsolete.isenabled(repo, obsolete.createmarkersopt)
-    if supportsmarkers:
-        # Only create markers if the temp nodes weren't already removed.
-        obsolete.createmarkers(repo, ((repo[t],()) for t in sorted(tmpnodes)
-                                       if t in repo))
-    else:
-        cleanupnode(ui, repo, 'temp', tmpnodes)
+    safecleanupnode(ui, repo, 'temp', tmpnodes)
 
     if not state.keep:
         if mapping:
             movebookmarks(ui, repo, mapping, state.topmost, ntm)
             # TODO update mq state
-        if supportsmarkers:
-            markers = []
-            # sort by revision number because it sound "right"
-            for prec in sorted(mapping, key=repo.changelog.rev):
-                succs = mapping[prec]
-                markers.append((repo[prec],
-                                tuple(repo[s] for s in succs)))
-            if markers:
-                obsolete.createmarkers(repo, markers)
-        else:
-            cleanupnode(ui, repo, 'replaced', mapping)
+        safecleanupnode(ui, repo, 'replaced', mapping)
 
     state.clear()
     if os.path.exists(repo.sjoin('undo')):
@@ -1154,7 +1192,7 @@ def _aborthistedit(ui, repo, state):
 
         # Recover our old commits if necessary
         if not state.topmost in repo and state.backupfile:
-            backupfile = repo.join(state.backupfile)
+            backupfile = repo.vfs.join(state.backupfile)
             f = hg.openpath(ui, backupfile)
             gen = exchange.readbundle(ui, f, backupfile)
             with repo.transaction('histedit.abort') as tr:
@@ -1340,7 +1378,7 @@ def ruleeditor(repo, ui, actions, editcomment=""):
     # Save edit rules in .hg/histedit-last-edit.txt in case
     # the user needs to ask for help after something
     # surprising happens.
-    f = open(repo.join('histedit-last-edit.txt'), 'w')
+    f = open(repo.vfs.join('histedit-last-edit.txt'), 'w')
     f.write(rules)
     f.close()
 
@@ -1564,6 +1602,34 @@ def cleanupnode(ui, repo, name, nodes):
             # This would reduce bundle overhead
             repair.strip(ui, repo, c)
 
+def safecleanupnode(ui, repo, name, nodes):
+    """strip or obsolete nodes
+
+    nodes could be either a set or dict which maps to replacements.
+    nodes could be unknown (outside the repo).
+    """
+    supportsmarkers = obsolete.isenabled(repo, obsolete.createmarkersopt)
+    if supportsmarkers:
+        if util.safehasattr(nodes, 'get'):
+            # nodes is a dict-like mapping
+            # use unfiltered repo for successors in case they are hidden
+            urepo = repo.unfiltered()
+            def getmarker(prec):
+                succs = tuple(urepo[n] for n in nodes.get(prec, ()))
+                return (repo[prec], succs)
+        else:
+            # nodes is a set-like
+            def getmarker(prec):
+                return (repo[prec], ())
+        # sort by revision number because it sound "right"
+        sortednodes = sorted([n for n in nodes if n in repo],
+                             key=repo.changelog.rev)
+        markers = [getmarker(t) for t in sortednodes]
+        if markers:
+            obsolete.createmarkers(repo, markers)
+    else:
+        return cleanupnode(ui, repo, name, nodes)
+
 def stripwrapper(orig, ui, repo, nodelist, *args, **kwargs):
     if isinstance(nodelist, str):
         nodelist = [nodelist]
@@ -1581,7 +1647,7 @@ def stripwrapper(orig, ui, repo, nodelist, *args, **kwargs):
 extensions.wrapfunction(repair, 'strip', stripwrapper)
 
 def summaryhook(ui, repo):
-    if not os.path.exists(repo.join('histedit-state')):
+    if not os.path.exists(repo.vfs.join('histedit-state')):
         return
     state = histeditstate(repo)
     state.read()

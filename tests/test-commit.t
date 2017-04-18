@@ -387,12 +387,12 @@ specific template keywords work well
 
   $ cat >> .hg/hgrc <<EOF
   > [committemplate]
-  > changeset.commit.normal = HG: this is "commit.normal" template
+  > changeset.commit.normal = 'HG: this is "commit.normal" template
   >     HG: {extramsg}
   >     {if(activebookmark,
   >    "HG: bookmark '{activebookmark}' is activated\n",
   >    "HG: no bookmark is activated\n")}{subrepos %
-  >    "HG: subrepo '{subrepo}' is changed\n"}
+  >    "HG: subrepo '{subrepo}' is changed\n"}'
   > 
   > changeset.commit = HG: this is "commit" template
   >     HG: {extramsg}

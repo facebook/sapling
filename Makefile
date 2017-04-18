@@ -159,10 +159,21 @@ i18n/hg.pot: $(PYFILES) $(DOCFILES) i18n/posplit i18n/hggettext
 # Packaging targets
 
 osx:
+	rm -rf build/mercurial
 	/usr/bin/python2.7 setup.py install --optimize=1 \
 	  --root=build/mercurial/ --prefix=/usr/local/ \
 	  --install-lib=/Library/Python/2.7/site-packages/
 	make -C doc all install DESTDIR="$(PWD)/build/mercurial/"
+        # install zsh completions - this location appears to be
+        # searched by default as of macOS Sierra.
+	install -d build/mercurial/usr/local/share/zsh/site-functions/
+	install -m 0644 contrib/zsh_completion build/mercurial/usr/local/share/zsh/site-functions/hg
+        # install bash completions - there doesn't appear to be a
+        # place that's searched by default for bash, so we'll follow
+        # the lead of Apple's git install and just put it in a
+        # location of our own.
+	install -d build/mercurial/usr/local/hg/contrib/
+	install -m 0644 contrib/bash_completion build/mercurial/usr/local/hg/contrib/hg-completion.bash
 	mkdir -p $${OUTPUTDIR:-dist}
 	HGVER=$$((cat build/mercurial/Library/Python/2.7/site-packages/mercurial/__version__.py; echo 'print(version)') | python) && \
 	OSXVER=$$(sw_vers -productVersion | cut -d. -f1,2) && \
@@ -262,5 +273,9 @@ docker-centos7:
 .PHONY: help all local build doc cleanbutpackages clean install install-bin \
 	install-doc install-home install-home-bin install-home-doc \
 	dist dist-notests check tests check-code update-pot \
-	osx fedora20 docker-fedora20 fedora21 docker-fedora21 \
+	osx deb ppa docker-debian-jessie \
+	docker-ubuntu-trusty docker-ubuntu-trusty-ppa \
+	docker-ubuntu-xenial docker-ubuntu-xenial-ppa \
+	docker-ubuntu-yakkety docker-ubuntu-yakkety-ppa \
+	fedora20 docker-fedora20 fedora21 docker-fedora21 \
 	centos5 docker-centos5 centos6 docker-centos6 centos7 docker-centos7

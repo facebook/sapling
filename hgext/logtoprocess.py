@@ -4,7 +4,7 @@
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
-"""Send ui.log() data to a subprocess (EXPERIMENTAL)
+"""send ui.log() data to a subprocess (EXPERIMENTAL)
 
 This extension lets you specify a shell command per ui.log() event,
 sending all remaining arguments to as environment variables to that command.

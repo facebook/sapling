@@ -1,0 +1,35 @@
+Some Mercurial commands produce a lot of output, and Mercurial will
+attempt to use a pager to make those commands more pleasant.
+
+To set the pager that should be used, set the application variable::
+
+  [pager]
+  pager = less -FRX
+
+If no pager is set, the pager extensions uses the environment variable
+$PAGER. If neither pager.pager, nor $PAGER is set, a default pager
+will be used, typically `more`.
+
+You can disable the pager for certain commands by adding them to the
+pager.ignore list::
+
+  [pager]
+  ignore = version, help, update
+
+To ignore global commands like :hg:`version` or :hg:`help`, you have
+to specify them in your user configuration file.
+
+To control whether the pager is used at all for an individual command,
+you can use --pager=<value>::
+
+  - use as needed: `auto`.
+  - require the pager: `yes` or `on`.
+  - suppress the pager: `no` or `off` (any unrecognized value
+  will also work).
+
+To globally turn off all attempts to use a pager, set::
+
+  [pager]
+  enable = false
+
+which will prevent the pager from running.

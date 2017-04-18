@@ -172,7 +172,7 @@ def reposetup(ui, repo):
                             if standin not in ctx1:
                                 # from second parent
                                 modified.append(lfile)
-                            elif ctx1[standin].data().strip() \
+                            elif lfutil.readasstandin(ctx1[standin]) \
                                     != lfutil.hashfile(self.wjoin(lfile)):
                                 modified.append(lfile)
                             else:
@@ -188,7 +188,7 @@ def reposetup(ui, repo):
                             standin = lfutil.standin(lfile)
                             if standin in ctx1:
                                 abslfile = self.wjoin(lfile)
-                                if ((ctx1[standin].data().strip() !=
+                                if ((lfutil.readasstandin(ctx1[standin]) !=
                                      lfutil.hashfile(abslfile)) or
                                     (checkexec and
                                      ('x' in ctx1.flags(standin)) !=
@@ -272,7 +272,9 @@ def reposetup(ui, repo):
         # contents updated to reflect the hash of their largefile.
         # Do that here.
         def commit(self, text="", user=None, date=None, match=None,
-                force=False, editor=False, extra={}):
+                force=False, editor=False, extra=None):
+            if extra is None:
+                extra = {}
             orig = super(lfilesrepo, self).commit
 
             with self.wlock():

@@ -104,7 +104,7 @@ def cachehash(repo, hideable):
     """
     h = hashlib.sha1()
     h.update(''.join(repo.heads()))
-    h.update(str(hash(frozenset(hideable))))
+    h.update('%d' % hash(frozenset(hideable)))
     return h.digest()
 
 def _writehiddencache(cachefile, cachehash, hidden):
@@ -139,15 +139,13 @@ def trywritehiddencache(repo, hideable, hidden):
         if wlock:
             wlock.release()
 
-def tryreadcache(repo, hideable):
-    """read a cache if the cache exists and is valid, otherwise returns None."""
+def _readhiddencache(repo, cachefilename, newhash):
     hidden = fh = None
     try:
         if repo.vfs.exists(cachefile):
             fh = repo.vfs.open(cachefile, 'rb')
             version, = struct.unpack(">H", fh.read(2))
             oldhash = fh.read(20)
-            newhash = cachehash(repo, hideable)
             if (cacheversion, oldhash) == (version, newhash):
                 # cache is valid, so we can start reading the hidden revs
                 data = fh.read()
@@ -164,6 +162,11 @@ def tryreadcache(repo, hideable):
     finally:
         if fh:
             fh.close()
+
+def tryreadcache(repo, hideable):
+    """read a cache if the cache exists and is valid, otherwise returns None."""
+    newhash = cachehash(repo, hideable)
+    return _readhiddencache(repo, cachefile, newhash)
 
 def computehidden(repo):
     """compute the set of hidden revision to filter
@@ -297,10 +300,10 @@ class repoview(object):
     """
 
     def __init__(self, repo, filtername):
-        object.__setattr__(self, '_unfilteredrepo', repo)
-        object.__setattr__(self, 'filtername', filtername)
-        object.__setattr__(self, '_clcachekey', None)
-        object.__setattr__(self, '_clcache', None)
+        object.__setattr__(self, r'_unfilteredrepo', repo)
+        object.__setattr__(self, r'filtername', filtername)
+        object.__setattr__(self, r'_clcachekey', None)
+        object.__setattr__(self, r'_clcache', None)
 
     # not a propertycache on purpose we shall implement a proper cache later
     @property
@@ -328,8 +331,8 @@ class repoview(object):
         if cl is None:
             cl = copy.copy(unfichangelog)
             cl.filteredrevs = revs
-            object.__setattr__(self, '_clcache', cl)
-            object.__setattr__(self, '_clcachekey', newkey)
+            object.__setattr__(self, r'_clcache', cl)
+            object.__setattr__(self, r'_clcachekey', newkey)
         return cl
 
     def unfiltered(self):

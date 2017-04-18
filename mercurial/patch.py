@@ -34,14 +34,16 @@ from . import (
     mail,
     mdiff,
     pathutil,
+    pycompat,
     scmutil,
     similar,
     util,
+    vfs as vfsmod,
 )
 stringio = util.stringio
 
-gitre = re.compile('diff --git a/(.*) b/(.*)')
-tabsplitter = re.compile(r'(\t+|[^\t]+)')
+gitre = re.compile(br'diff --git a/(.*) b/(.*)')
+tabsplitter = re.compile(br'(\t+|[^\t]+)')
 
 class PatchError(Exception):
     pass
@@ -209,7 +211,7 @@ def extract(ui, fileobj):
 
     data = {}
     fd, tmpname = tempfile.mkstemp(prefix='hg-patch-')
-    tmpfp = os.fdopen(fd, 'w')
+    tmpfp = os.fdopen(fd, pycompat.sysstr('w'))
     try:
         msg = email.Parser.Parser().parse(fileobj)
 
@@ -448,7 +450,7 @@ class abstractbackend(object):
 class fsbackend(abstractbackend):
     def __init__(self, ui, basedir):
         super(fsbackend, self).__init__(ui)
-        self.opener = scmutil.opener(basedir)
+        self.opener = vfsmod.vfs(basedir)
 
     def _join(self, f):
         return os.path.join(self.opener.base, f)
@@ -559,7 +561,7 @@ class filestore(object):
         else:
             if self.opener is None:
                 root = tempfile.mkdtemp(prefix='hg-patch-')
-                self.opener = scmutil.opener(root)
+                self.opener = vfsmod.vfs(root)
             # Avoid filename issues with these simple names
             fn = str(self.created)
             self.opener.write(fn, data)
@@ -735,7 +737,7 @@ class patchfile(object):
         for x in self.rej:
             for l in x.hunk:
                 lines.append(l)
-                if l[-1] != '\n':
+                if l[-1:] != '\n':
                     lines.append("\n\ No newline at end of file\n")
         self.backend.writerej(self.fname, len(self.rej), self.hunks, lines)
 
@@ -1055,7 +1057,7 @@ the hunk is left unchanged.
                 ncpatchfp = None
                 try:
                     # Write the initial patch
-                    f = os.fdopen(patchfd, "w")
+                    f = os.fdopen(patchfd, pycompat.sysstr("w"))
                     chunk.header.write(f)
                     chunk.write(f)
                     f.write('\n'.join(['# ' + i for i in phelp.splitlines()]))
@@ -1063,7 +1065,8 @@ the hunk is left unchanged.
                     # Start the editor and wait for it to complete
                     editor = ui.geteditor()
                     ret = ui.system("%s \"%s\"" % (editor, patchfn),
-                                    environ={'HGUSER': ui.username()})
+                                    environ={'HGUSER': ui.username()},
+                                    blockedtag='filterpatch')
                     if ret != 0:
                         ui.warn(_("editor exited with exit code %d\n") % ret)
                         continue
@@ -2207,13 +2210,15 @@ def difffeatureopts(ui, opts=None, untrusted=False, section='diff', git=False,
                                             'ignoreblanklines')
     if formatchanging:
         buildopts['text'] = opts and opts.get('text')
-        buildopts['nobinary'] = get('nobinary', forceplain=False)
+        binary = None if opts is None else opts.get('binary')
+        buildopts['nobinary'] = (not binary if binary is not None
+                                 else get('nobinary', forceplain=False))
         buildopts['noprefix'] = get('noprefix', forceplain=False)
 
-    return mdiff.diffopts(**buildopts)
+    return mdiff.diffopts(**pycompat.strkwargs(buildopts))
 
-def diff(repo, node1=None, node2=None, match=None, changes=None, opts=None,
-         losedatafn=None, prefix='', relroot='', copy=None):
+def diff(repo, node1=None, node2=None, match=None, changes=None,
+         opts=None, losedatafn=None, prefix='', relroot='', copy=None):
     '''yields diff of changes to files between two nodes, or node and
     working directory.
 
@@ -2236,6 +2241,24 @@ def diff(repo, node1=None, node2=None, match=None, changes=None, opts=None,
 
     copy, if not empty, should contain mappings {dst@y: src@x} of copy
     information.'''
+    for header, hunks in diffhunks(repo, node1=node1, node2=node2, match=match,
+                                   changes=changes, opts=opts,
+                                   losedatafn=losedatafn, prefix=prefix,
+                                   relroot=relroot, copy=copy):
+        text = ''.join(sum((list(hlines) for hrange, hlines in hunks), []))
+        if header and (text or len(header) > 1):
+            yield '\n'.join(header) + '\n'
+        if text:
+            yield text
+
+def diffhunks(repo, node1=None, node2=None, match=None, changes=None,
+              opts=None, losedatafn=None, prefix='', relroot='', copy=None):
+    """Yield diff of changes to files in the form of (`header`, `hunks`) tuples
+    where `header` is a list of diff headers and `hunks` is an iterable of
+    (`hunkrange`, `hunklines`) tuples.
+
+    See diff() for the meaning of parameters.
+    """
 
     if opts is None:
         opts = mdiff.defaultopts
@@ -2531,11 +2554,12 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
         elif revs and not repo.ui.quiet:
             header.append(diffline(path1, revs))
 
-        if binary and opts.git and not opts.nobinary:
+        if binary and opts.git and not opts.nobinary and not opts.text:
             text = mdiff.b85diff(content1, content2)
             if text:
                 header.append('index %s..%s' %
                               (gitindex(content1), gitindex(content2)))
+            hunks = (None, [text]),
         else:
             if opts.git and opts.index > 0:
                 flag = flag1
@@ -2546,13 +2570,11 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
                                gitindex(content2)[0:opts.index],
                                gitmode[flag]))
 
-            text = mdiff.unidiff(content1, date1,
-                                 content2, date2,
-                                 path1, path2, opts=opts)
-        if header and (text or len(header) > 1):
-            yield '\n'.join(header) + '\n'
-        if text:
-            yield text
+            uheaders, hunks = mdiff.unidiff(content1, date1,
+                                            content2, date2,
+                                            path1, path2, opts=opts)
+            header.extend(uheaders)
+        yield header, hunks
 
 def diffstatsum(stats):
     maxfile, maxtotal, addtotal, removetotal, binary = 0, 0, 0, 0, False

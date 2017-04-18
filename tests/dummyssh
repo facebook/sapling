@@ -10,7 +10,7 @@ os.chdir(os.getenv('TESTTMP'))
 if sys.argv[1] != "user@dummy":
     sys.exit(-1)
 
-os.environ["SSH_CLIENT"] = "127.0.0.1 1 2"
+os.environ["SSH_CLIENT"] = "%s 1 2" % os.environ.get('LOCALIP', '127.0.0.1')
 
 log = open("dummylog", "ab")
 log.write("Got arguments")

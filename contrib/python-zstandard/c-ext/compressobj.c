@@ -18,11 +18,6 @@ static void ZstdCompressionObj_dealloc(ZstdCompressionObj* self) {
 	PyMem_Free(self->output.dst);
 	self->output.dst = NULL;
 
-	if (self->cstream) {
-		ZSTD_freeCStream(self->cstream);
-		self->cstream = NULL;
-	}
-
 	Py_XDECREF(self->compressor);
 
 	PyObject_Del(self);
@@ -42,9 +37,9 @@ static PyObject* ZstdCompressionObj_compress(ZstdCompressionObj* self, PyObject*
 	}
 
 #if PY_MAJOR_VERSION >= 3
-	if (!PyArg_ParseTuple(args, "y#", &source, &sourceSize)) {
+	if (!PyArg_ParseTuple(args, "y#:compress", &source, &sourceSize)) {
 #else
-	if (!PyArg_ParseTuple(args, "s#", &source, &sourceSize)) {
+	if (!PyArg_ParseTuple(args, "s#:compress", &source, &sourceSize)) {
 #endif
 		return NULL;
 	}
@@ -55,7 +50,13 @@ static PyObject* ZstdCompressionObj_compress(ZstdCompressionObj* self, PyObject*
 
 	while ((ssize_t)input.pos < sourceSize) {
 		Py_BEGIN_ALLOW_THREADS
-		zresult = ZSTD_compressStream(self->cstream, &self->output, &input);
+		if (self->compressor->mtcctx) {
+			zresult = ZSTDMT_compressStream(self->compressor->mtcctx,
+				&self->output, &input);
+		}
+		else {
+			zresult = ZSTD_compressStream(self->compressor->cstream, &self->output, &input);
+		}
 		Py_END_ALLOW_THREADS
 
 		if (ZSTD_isError(zresult)) {
@@ -98,7 +99,7 @@ static PyObject* ZstdCompressionObj_flush(ZstdCompressionObj* self, PyObject* ar
 	PyObject* result = NULL;
 	Py_ssize_t resultSize = 0;
 
-	if (!PyArg_ParseTuple(args, "|i", &flushMode)) {
+	if (!PyArg_ParseTuple(args, "|i:flush", &flushMode)) {
 		return NULL;
 	}
 
@@ -118,7 +119,12 @@ static PyObject* ZstdCompressionObj_flush(ZstdCompressionObj* self, PyObject* ar
 		/* The output buffer is of size ZSTD_CStreamOutSize(), which is 
 		   guaranteed to hold a full block. */
 		Py_BEGIN_ALLOW_THREADS
-		zresult = ZSTD_flushStream(self->cstream, &self->output);
+		if (self->compressor->mtcctx) {
+			zresult = ZSTDMT_flushStream(self->compressor->mtcctx, &self->output);
+		}
+		else {
+			zresult = ZSTD_flushStream(self->compressor->cstream, &self->output);
+		}
 		Py_END_ALLOW_THREADS
 
 		if (ZSTD_isError(zresult)) {
@@ -150,7 +156,12 @@ static PyObject* ZstdCompressionObj_flush(ZstdCompressionObj* self, PyObject* ar
 	self->finished = 1;
 
 	while (1) {
-		zresult = ZSTD_endStream(self->cstream, &self->output);
+		if (self->compressor->mtcctx) {
+			zresult = ZSTDMT_endStream(self->compressor->mtcctx, &self->output);
+		}
+		else {
+			zresult = ZSTD_endStream(self->compressor->cstream, &self->output);
+		}
 		if (ZSTD_isError(zresult)) {
 			PyErr_Format(ZstdError, "error ending compression stream: %s",
 				ZSTD_getErrorName(zresult));
@@ -181,9 +192,6 @@ static PyObject* ZstdCompressionObj_flush(ZstdCompressionObj* self, PyObject* ar
 			break;
 		}
 	}
-
-	ZSTD_freeCStream(self->cstream);
-	self->cstream = NULL;
 
 	if (result) {
 		return result;

@@ -582,8 +582,7 @@ The transplant case
   21: fbb6c5cc81002f2b4b49c9d731404688bcae5ade
   branch=dev
   convert_revision=7e61b508e709a11d28194a5359bc3532d910af21
-  transplant_source=z\xe8F\xe9\x11\x1f\xc8\xf5wEcBP\xc7\xb9\xac (esc)
-  `h\x9b (esc)
+  transplant_source=z\xe8F\xe9\x11\x1f\xc8\xf5wEcBP\xc7\xb9\xac\n`h\x9b
   $ hg -R ../converted log -r 'origin(tip)'
   changeset:   2:e0213322b2c1
   user:        test

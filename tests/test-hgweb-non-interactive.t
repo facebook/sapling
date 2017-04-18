@@ -60,7 +60,7 @@ by the WSGI standard and strictly implemented by mod_wsgi.
   >     'SCRIPT_NAME': '',
   >     'PATH_INFO': '',
   >     'QUERY_STRING': '',
-  >     'SERVER_NAME': '127.0.0.1',
+  >     'SERVER_NAME': '$LOCALIP',
   >     'SERVER_PORT': os.environ['HGPORT'],
   >     'SERVER_PROTOCOL': 'HTTP/1.0'
   > }

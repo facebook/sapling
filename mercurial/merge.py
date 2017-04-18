@@ -27,6 +27,7 @@ from . import (
     copies,
     error,
     filemerge,
+    match as matchmod,
     obsolete,
     pycompat,
     scmutil,
@@ -123,7 +124,7 @@ class mergestate(object):
             self._mdstate = 's'
         else:
             self._mdstate = 'u'
-        shutil.rmtree(self._repo.join('merge'), True)
+        shutil.rmtree(self._repo.vfs.join('merge'), True)
         self._results = {}
         self._dirty = False
 
@@ -314,13 +315,15 @@ class mergestate(object):
     @util.propertycache
     def localctx(self):
         if self._local is None:
-            raise RuntimeError("localctx accessed but self._local isn't set")
+            msg = "localctx accessed but self._local isn't set"
+            raise error.ProgrammingError(msg)
         return self._repo[self._local]
 
     @util.propertycache
     def otherctx(self):
         if self._other is None:
-            raise RuntimeError("otherctx accessed but self._other isn't set")
+            msg = "otherctx accessed but self._other isn't set"
+            raise error.ProgrammingError(msg)
         return self._repo[self._other]
 
     def active(self):
@@ -818,11 +821,10 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, matcher,
         if any(wctx.sub(s).dirty() for s in wctx.substate):
             m1['.hgsubstate'] = modifiednodeid
 
-    # Compare manifests
-    if matcher is not None:
-        m1 = m1.matches(matcher)
-        m2 = m2.matches(matcher)
-    diff = m1.diff(m2)
+    diff = m1.diff(m2, match=matcher)
+
+    if matcher is None:
+        matcher = matchmod.always('', '')
 
     actions = {}
     for f, ((n1, fl1), (n2, fl2)) in diff.iteritems():
@@ -927,7 +929,7 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, matcher,
                         # new file added in a directory that was moved
                         df = dirmove[d] + f[len(d):]
                         break
-                if df in m1:
+                if df is not None and df in m1:
                     actions[df] = ('m', (df, f, f, False, pa.node()),
                             "local directory rename - respect move from " + f)
                 elif acceptremote:
@@ -1060,8 +1062,7 @@ def batchremove(repo, actions):
     yields tuples for progress updates
     """
     verbose = repo.ui.verbose
-    unlink = util.unlinkpath
-    wjoin = repo.wjoin
+    unlinkpath = repo.wvfs.unlinkpath
     audit = repo.wvfs.audit
     try:
         cwd = pycompat.getcwd()
@@ -1076,7 +1077,7 @@ def batchremove(repo, actions):
             repo.ui.note(_("removing %s\n") % f)
         audit(f)
         try:
-            unlink(wjoin(f), ignoremissing=True)
+            unlinkpath(f, ignoremissing=True)
         except OSError as inst:
             repo.ui.warn(_("update failed to remove %s: %s!\n") %
                          (f, inst.strerror))
@@ -1190,7 +1191,7 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
         if os.path.lexists(repo.wjoin(f)):
             repo.ui.debug("removing %s\n" % f)
             audit(f)
-            util.unlinkpath(repo.wjoin(f))
+            repo.wvfs.unlinkpath(f)
 
     numupdates = sum(len(l) for m, l in actions.items() if m != 'k')
 
@@ -1247,7 +1248,7 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
         repo.ui.note(_("moving %s to %s\n") % (f0, f))
         audit(f)
         repo.wwrite(f, wctx.filectx(f0).data(), flags)
-        util.unlinkpath(repo.wjoin(f0))
+        repo.wvfs.unlinkpath(f0)
         updated += 1
 
     # local directory rename, get
@@ -1444,11 +1445,12 @@ def recordupdates(repo, actions, branchmerge):
             repo.dirstate.normal(f)
 
 def update(repo, node, branchmerge, force, ancestor=None,
-           mergeancestor=False, labels=None, matcher=None, mergeforce=False):
+           mergeancestor=False, labels=None, matcher=None, mergeforce=False,
+           updatecheck=None):
     """
     Perform a merge between the working directory and the given node
 
-    node = the node to update to, or None if unspecified
+    node = the node to update to
     branchmerge = whether to merge between branches
     force = whether to force branch merging or file overwriting
     matcher = a matcher to filter file lists (dirstate not updated)
@@ -1464,34 +1466,47 @@ def update(repo, node, branchmerge, force, ancestor=None,
     The table below shows all the behaviors of the update command
     given the -c and -C or no options, whether the working directory
     is dirty, whether a revision is specified, and the relationship of
-    the parent rev to the target rev (linear, on the same named
-    branch, or on another named branch).
+    the parent rev to the target rev (linear or not). Match from top first. The
+    -n option doesn't exist on the command line, but represents the
+    experimental.updatecheck=noconflict option.
 
     This logic is tested by test-update-branches.t.
 
-    -c  -C  dirty  rev  |  linear      same    cross
-     n   n    n     n   |    ok        (1)       x
-     n   n    n     y   |    ok        ok       ok
-     n   n    y     n   |   merge      (2)      (2)
-     n   n    y     y   |   merge      (3)      (3)
-     n   y    *     *   |   discard   discard   discard
-     y   n    y     *   |    (4)       (4)      (4)
-     y   n    n     *   |    ok        ok       ok
-     y   y    *     *   |    (5)       (5)      (5)
+    -c  -C  -n  -m  dirty  rev  linear  |  result
+     y   y   *   *    *     *     *     |    (1)
+     y   *   y   *    *     *     *     |    (1)
+     y   *   *   y    *     *     *     |    (1)
+     *   y   y   *    *     *     *     |    (1)
+     *   y   *   y    *     *     *     |    (1)
+     *   *   y   y    *     *     *     |    (1)
+     *   *   *   *    *     n     n     |     x
+     *   *   *   *    n     *     *     |    ok
+     n   n   n   n    y     *     y     |   merge
+     n   n   n   n    y     y     n     |    (2)
+     n   n   n   y    y     *     *     |   merge
+     n   n   y   n    y     *     *     |  merge if no conflict
+     n   y   n   n    y     *     *     |  discard
+     y   n   n   n    y     *     *     |    (3)
 
     x = can't happen
     * = don't-care
-    1 = abort: not a linear update (merge or update --check to force update)
-    2 = abort: uncommitted changes (commit and merge, or update --clean to
-                 discard changes)
-    3 = abort: uncommitted changes (commit or update --clean to discard changes)
-    4 = abort: uncommitted changes (checked in commands.py)
-    5 = incompatible options (checked in commands.py)
+    1 = incompatible options (checked in commands.py)
+    2 = abort: uncommitted changes (commit or update --clean to discard changes)
+    3 = abort: uncommitted changes (checked in commands.py)
 
     Return the same tuple as applyupdates().
     """
 
-    onode = node
+    # This function used to find the default destination if node was None, but
+    # that's now in destutil.py.
+    assert node is not None
+    if not branchmerge and not force:
+        # TODO: remove the default once all callers that pass branchmerge=False
+        # and force=False pass a value for updatecheck. We may want to allow
+        # updatecheck='abort' to better suppport some of these callers.
+        if updatecheck is None:
+            updatecheck = 'linear'
+        assert updatecheck in ('none', 'linear', 'noconflict')
     # If we're doing a partial update, we need to skip updating
     # the dirstate, so make a note of any partial-ness to the
     # update here.
@@ -1531,7 +1546,7 @@ def update(repo, node, branchmerge, force, ancestor=None,
                 raise error.Abort(_("merging with a working directory ancestor"
                                    " has no effect"))
             elif pas == [p1]:
-                if not mergeancestor and p1.branch() == p2.branch():
+                if not mergeancestor and wc.branch() == p2.branch():
                     raise error.Abort(_("nothing to merge"),
                                      hint=_("use 'hg update' "
                                             "or check 'hg heads'"))
@@ -1548,39 +1563,33 @@ def update(repo, node, branchmerge, force, ancestor=None,
                 repo.hook('update', parent1=xp2, parent2='', error=0)
                 return 0, 0, 0, 0
 
-            if pas not in ([p1], [p2]):  # nonlinear
+            if (updatecheck == 'linear' and
+                    pas not in ([p1], [p2])):  # nonlinear
                 dirty = wc.dirty(missing=True)
-                if dirty or onode is None:
+                if dirty:
                     # Branching is a bit strange to ensure we do the minimal
-                    # amount of call to obsolete.background.
+                    # amount of call to obsolete.foreground.
                     foreground = obsolete.foreground(repo, [p1.node()])
                     # note: the <node> variable contains a random identifier
                     if repo[node].node() in foreground:
-                        pas = [p1]  # allow updating to successors
-                    elif dirty:
+                        pass # allow updating to successors
+                    else:
                         msg = _("uncommitted changes")
-                        if onode is None:
-                            hint = _("commit and merge, or update --clean to"
-                                     " discard changes")
-                        else:
-                            hint = _("commit or update --clean to discard"
-                                     " changes")
-                        raise error.Abort(msg, hint=hint)
-                    else:  # node is none
-                        msg = _("not a linear update")
-                        hint = _("merge or update --check to force update")
-                        raise error.Abort(msg, hint=hint)
+                        hint = _("commit or update --clean to discard changes")
+                        raise error.UpdateAbort(msg, hint=hint)
                 else:
                     # Allow jumping branches if clean and specific rev given
-                    pas = [p1]
+                    pass
+
+        if overwrite:
+            pas = [wc]
+        elif not branchmerge:
+            pas = [p1]
 
         # deprecated config: merge.followcopies
         followcopies = repo.ui.configbool('merge', 'followcopies', True)
         if overwrite:
-            pas = [wc]
             followcopies = False
-        elif pas == [p2]: # backwards
-            pas = [p1]
         elif not pas[0]:
             followcopies = False
         if not branchmerge and not wc.dirty(missing=True):
@@ -1590,6 +1599,13 @@ def update(repo, node, branchmerge, force, ancestor=None,
         actionbyfile, diverge, renamedelete = calculateupdates(
             repo, wc, p2, pas, branchmerge, force, mergeancestor,
             followcopies, matcher=matcher, mergeforce=mergeforce)
+
+        if updatecheck == 'noconflict':
+            for f, (m, args, msg) in actionbyfile.iteritems():
+                if m not in ('g', 'k', 'e', 'r'):
+                    msg = _("conflicting changes")
+                    hint = _("commit or update --clean to discard changes")
+                    raise error.Abort(msg, hint=hint)
 
         # Prompt and create actions. Most of this is in the resolve phase
         # already, but we can't handle .hgsubstate in filemerge or
@@ -1664,7 +1680,7 @@ def update(repo, node, branchmerge, force, ancestor=None,
             repo.setparents(fp1, fp2)
             recordupdates(repo, actions, branchmerge)
             # update completed, clear state
-            util.unlink(repo.join('updatestate'))
+            util.unlink(repo.vfs.join('updatestate'))
 
             if not branchmerge:
                 repo.dirstate.setbranch(p2.branch())

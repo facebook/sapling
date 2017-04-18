@@ -190,6 +190,7 @@ tip - two revisions
   <h3>
    log a @ 4:<a href="/rev/3f41bc784e7e">3f41bc784e7e</a>
    <span class="branchname">a-branch</span> 
+   
   </h3>
   
   <form class="search" action="/log">
@@ -221,6 +222,7 @@ tip - two revisions
      <span class="branchname">a-branch</span> 
     </td>
    </tr>
+   
    <tr>
     <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
     <td class="author">test</td>
@@ -229,6 +231,7 @@ tip - two revisions
      <span class="tag">a-tag</span> <span class="tag">a-bookmark</span> 
     </td>
    </tr>
+   
   
   </tbody>
   </table>
@@ -309,6 +312,7 @@ second version - two revisions
   <h3>
    log a @ 4:<a href="/rev/3f41bc784e7e">3f41bc784e7e</a>
    <span class="branchname">a-branch</span> 
+   
   </h3>
   
   <form class="search" action="/log">
@@ -340,6 +344,7 @@ second version - two revisions
      <span class="branchname">a-branch</span> 
     </td>
    </tr>
+   
    <tr>
     <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
     <td class="author">test</td>
@@ -348,6 +353,7 @@ second version - two revisions
      <span class="tag">a-tag</span> <span class="tag">a-bookmark</span> 
     </td>
    </tr>
+   
   
   </tbody>
   </table>
@@ -428,6 +434,7 @@ first deleted - one revision
   <h3>
    log a @ 1:<a href="/rev/5ed941583260">5ed941583260</a>
    <span class="tag">a-tag</span> <span class="tag">a-bookmark</span> 
+   
   </h3>
   
   <form class="search" action="/log">
@@ -459,6 +466,7 @@ first deleted - one revision
      <span class="tag">a-tag</span> <span class="tag">a-bookmark</span> 
     </td>
    </tr>
+   
   
   </tbody>
   </table>
@@ -539,6 +547,7 @@ first version - one revision
   <h3>
    log a @ 1:<a href="/rev/5ed941583260">5ed941583260</a>
    <span class="tag">a-tag</span> <span class="tag">a-bookmark</span> 
+   
   </h3>
   
   <form class="search" action="/log">
@@ -570,6 +579,7 @@ first version - one revision
      <span class="tag">a-tag</span> <span class="tag">a-bookmark</span> 
     </td>
    </tr>
+   
   
   </tbody>
   </table>
@@ -652,6 +662,264 @@ before addition - error
   </body>
   </html>
   
+  [1]
+
+  $ hg log -r 'followlines(c, 1:2, startrev=tip) and follow(c)'
+  changeset:   0:6563da9dcf87
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     b
+  
+  changeset:   7:46c1a66bd8fc
+  branch:      a-branch
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     change c
+  
+  $ (get-with-headers.py localhost:$HGPORT 'log/tip/c?linerange=1:2')
+  200 Script output follows
+  
+  <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+  <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-US">
+  <head>
+  <link rel="icon" href="/static/hgicon.png" type="image/png" />
+  <meta name="robots" content="index, nofollow" />
+  <link rel="stylesheet" href="/static/style-paper.css" type="text/css" />
+  <script type="text/javascript" src="/static/mercurial.js"></script>
+  
+  <title>test: c history</title>
+  <link rel="alternate" type="application/atom+xml"
+     href="/atom-log/tip/c" title="Atom feed for test:c" />
+  <link rel="alternate" type="application/rss+xml"
+     href="/rss-log/tip/c" title="RSS feed for test:c" />
+  </head>
+  <body>
+  
+  <div class="container">
+  <div class="menu">
+  <div class="logo">
+  <a href="https://mercurial-scm.org/">
+  <img src="/static/hglogo.png" alt="mercurial" /></a>
+  </div>
+  <ul>
+  <li><a href="/shortlog/tip">log</a></li>
+  <li><a href="/graph/tip">graph</a></li>
+  <li><a href="/tags">tags</a></li>
+  <li><a href="/bookmarks">bookmarks</a></li>
+  <li><a href="/branches">branches</a></li>
+  </ul>
+  <ul>
+  <li><a href="/rev/tip">changeset</a></li>
+  <li><a href="/file/tip">browse</a></li>
+  </ul>
+  <ul>
+  <li><a href="/file/tip/c">file</a></li>
+  <li><a href="/diff/tip/c">diff</a></li>
+  <li><a href="/comparison/tip/c">comparison</a></li>
+  <li><a href="/annotate/tip/c">annotate</a></li>
+  <li class="active">file log</li>
+  <li><a href="/raw-file/tip/c">raw</a></li>
+  </ul>
+  <ul>
+  <li><a href="/help">help</a></li>
+  </ul>
+  <div class="atom-logo">
+  <a href="/atom-log/tip/c" title="subscribe to atom feed">
+  <img class="atom-logo" src="/static/feed-icon-14x14.png" alt="atom feed" />
+  </a>
+  </div>
+  </div>
+  
+  <div class="main">
+  <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
+  <h3>
+   log c @ 7:<a href="/rev/46c1a66bd8fc">46c1a66bd8fc</a>
+   <span class="branchname">a-branch</span> <span class="tag">tip</span> 
+    (following lines 1:2 <a href="/log/tip/c">back to filelog</a>)
+  </h3>
+  
+  <form class="search" action="/log">
+  
+  <p><input name="rev" id="search1" type="text" size="30" /></p>
+  <div id="hint">Find changesets by keywords (author, files, the commit message), revision
+  number or hash, or <a href="/help/revsets">revset expression</a>.</div>
+  </form>
+  
+  <div class="navigate">
+  <a href="/log/tip/c?linerange=1%3A2&revcount=30">less</a>
+  <a href="/log/tip/c?linerange=1%3A2&revcount=120">more</a>
+  |  </div>
+  
+  <table class="bigtable">
+  <thead>
+   <tr>
+    <th class="age">age</th>
+    <th class="author">author</th>
+    <th class="description">description</th>
+   </tr>
+  </thead>
+  <tbody class="stripes2">
+   <tr>
+    <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
+    <td class="author">test</td>
+    <td class="description">
+     <a href="/rev/46c1a66bd8fc">change c</a>
+     <span class="branchhead">a-branch</span> <span class="tag">tip</span> 
+    </td>
+   </tr>
+   
+   <tr>
+    <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
+    <td class="author">test</td>
+    <td class="description">
+     <a href="/rev/6563da9dcf87">b</a>
+     
+    </td>
+   </tr>
+   
+  
+  </tbody>
+  </table>
+  
+  <div class="navigate">
+  <a href="/log/tip/c?linerange=1%3A2&revcount=30">less</a>
+  <a href="/log/tip/c?linerange=1%3A2&revcount=120">more</a>
+  |  
+  </div>
+  
+  </div>
+  </div>
+  
+  
+  
+  </body>
+  </html>
+  
+  $ (get-with-headers.py localhost:$HGPORT 'log/tip/c?linerange=1%3A2&revcount=1')
+  200 Script output follows
+  
+  <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+  <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-US">
+  <head>
+  <link rel="icon" href="/static/hgicon.png" type="image/png" />
+  <meta name="robots" content="index, nofollow" />
+  <link rel="stylesheet" href="/static/style-paper.css" type="text/css" />
+  <script type="text/javascript" src="/static/mercurial.js"></script>
+  
+  <title>test: c history</title>
+  <link rel="alternate" type="application/atom+xml"
+     href="/atom-log/tip/c" title="Atom feed for test:c" />
+  <link rel="alternate" type="application/rss+xml"
+     href="/rss-log/tip/c" title="RSS feed for test:c" />
+  </head>
+  <body>
+  
+  <div class="container">
+  <div class="menu">
+  <div class="logo">
+  <a href="https://mercurial-scm.org/">
+  <img src="/static/hglogo.png" alt="mercurial" /></a>
+  </div>
+  <ul>
+  <li><a href="/shortlog/tip?revcount=1">log</a></li>
+  <li><a href="/graph/tip?revcount=1">graph</a></li>
+  <li><a href="/tags?revcount=1">tags</a></li>
+  <li><a href="/bookmarks?revcount=1">bookmarks</a></li>
+  <li><a href="/branches?revcount=1">branches</a></li>
+  </ul>
+  <ul>
+  <li><a href="/rev/tip?revcount=1">changeset</a></li>
+  <li><a href="/file/tip?revcount=1">browse</a></li>
+  </ul>
+  <ul>
+  <li><a href="/file/tip/c?revcount=1">file</a></li>
+  <li><a href="/diff/tip/c?revcount=1">diff</a></li>
+  <li><a href="/comparison/tip/c?revcount=1">comparison</a></li>
+  <li><a href="/annotate/tip/c?revcount=1">annotate</a></li>
+  <li class="active">file log</li>
+  <li><a href="/raw-file/tip/c">raw</a></li>
+  </ul>
+  <ul>
+  <li><a href="/help?revcount=1">help</a></li>
+  </ul>
+  <div class="atom-logo">
+  <a href="/atom-log/tip/c" title="subscribe to atom feed">
+  <img class="atom-logo" src="/static/feed-icon-14x14.png" alt="atom feed" />
+  </a>
+  </div>
+  </div>
+  
+  <div class="main">
+  <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
+  <h3>
+   log c @ 7:<a href="/rev/46c1a66bd8fc?revcount=1">46c1a66bd8fc</a>
+   <span class="branchname">a-branch</span> <span class="tag">tip</span> 
+    (following lines 1:2 <a href="/log/tip/c?revcount=1">back to filelog</a>)
+  </h3>
+  
+  <form class="search" action="/log">
+  <input type="hidden" name="revcount" value="1" />
+  <p><input name="rev" id="search1" type="text" size="30" /></p>
+  <div id="hint">Find changesets by keywords (author, files, the commit message), revision
+  number or hash, or <a href="/help/revsets">revset expression</a>.</div>
+  </form>
+  
+  <div class="navigate">
+  <a href="/log/tip/c?linerange=1%3A2&revcount=1">less</a>
+  <a href="/log/tip/c?linerange=1%3A2&revcount=2">more</a>
+  |  </div>
+  
+  <table class="bigtable">
+  <thead>
+   <tr>
+    <th class="age">age</th>
+    <th class="author">author</th>
+    <th class="description">description</th>
+   </tr>
+  </thead>
+  <tbody class="stripes2">
+   <tr>
+    <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
+    <td class="author">test</td>
+    <td class="description">
+     <a href="/rev/46c1a66bd8fc?revcount=1">change c</a>
+     <span class="branchhead">a-branch</span> <span class="tag">tip</span> 
+    </td>
+   </tr>
+   
+  
+  </tbody>
+  </table>
+  
+  <div class="navigate">
+  <a href="/log/tip/c?linerange=1%3A2&revcount=1">less</a>
+  <a href="/log/tip/c?linerange=1%3A2&revcount=2">more</a>
+  |  
+  </div>
+  
+  </div>
+  </div>
+  
+  
+  
+  </body>
+  </html>
+  
+  $ (get-with-headers.py localhost:$HGPORT 'log/3/a?linerange=1' --headeronly)
+  400 invalid linerange parameter
+  [1]
+  $ (get-with-headers.py localhost:$HGPORT 'log/3/a?linerange=1:a' --headeronly)
+  400 invalid linerange parameter
+  [1]
+  $ (get-with-headers.py localhost:$HGPORT 'log/3/a?linerange=1:2&linerange=3:4' --headeronly)
+  400 redundant linerange parameter
+  [1]
+  $ (get-with-headers.py localhost:$HGPORT 'log/3/a?linerange=3:2' --headeronly)
+  400 line range must be positive
+  [1]
+  $ (get-with-headers.py localhost:$HGPORT 'log/3/a?linerange=0:1' --headeronly)
+  400 fromline must be strictly positive
   [1]
 
 should show base link, use spartan because it shows it
@@ -757,6 +1025,674 @@ should show base link, use spartan because it shows it
   <a href="https://mercurial-scm.org/">
   <img src="/static/hglogo.png" width=75 height=90 border=0 alt="mercurial"></a>
   </div>
+  
+  </body>
+  </html>
+  
+
+filelog with patch
+
+  $ (get-with-headers.py localhost:$HGPORT 'log/4/a?patch=1')
+  200 Script output follows
+  
+  <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+  <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-US">
+  <head>
+  <link rel="icon" href="/static/hgicon.png" type="image/png" />
+  <meta name="robots" content="index, nofollow" />
+  <link rel="stylesheet" href="/static/style-paper.css" type="text/css" />
+  <script type="text/javascript" src="/static/mercurial.js"></script>
+  
+  <title>test: a history</title>
+  <link rel="alternate" type="application/atom+xml"
+     href="/atom-log/tip/a" title="Atom feed for test:a" />
+  <link rel="alternate" type="application/rss+xml"
+     href="/rss-log/tip/a" title="RSS feed for test:a" />
+  </head>
+  <body>
+  
+  <div class="container">
+  <div class="menu">
+  <div class="logo">
+  <a href="https://mercurial-scm.org/">
+  <img src="/static/hglogo.png" alt="mercurial" /></a>
+  </div>
+  <ul>
+  <li><a href="/shortlog/4">log</a></li>
+  <li><a href="/graph/4">graph</a></li>
+  <li><a href="/tags">tags</a></li>
+  <li><a href="/bookmarks">bookmarks</a></li>
+  <li><a href="/branches">branches</a></li>
+  </ul>
+  <ul>
+  <li><a href="/rev/4">changeset</a></li>
+  <li><a href="/file/4">browse</a></li>
+  </ul>
+  <ul>
+  <li><a href="/file/4/a">file</a></li>
+  <li><a href="/diff/4/a">diff</a></li>
+  <li><a href="/comparison/4/a">comparison</a></li>
+  <li><a href="/annotate/4/a">annotate</a></li>
+  <li class="active">file log</li>
+  <li><a href="/raw-file/4/a">raw</a></li>
+  </ul>
+  <ul>
+  <li><a href="/help">help</a></li>
+  </ul>
+  <div class="atom-logo">
+  <a href="/atom-log/tip/a" title="subscribe to atom feed">
+  <img class="atom-logo" src="/static/feed-icon-14x14.png" alt="atom feed" />
+  </a>
+  </div>
+  </div>
+  
+  <div class="main">
+  <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
+  <h3>
+   log a @ 4:<a href="/rev/3f41bc784e7e">3f41bc784e7e</a>
+   <span class="branchname">a-branch</span> 
+   
+  </h3>
+  
+  <form class="search" action="/log">
+  
+  <p><input name="rev" id="search1" type="text" size="30" /></p>
+  <div id="hint">Find changesets by keywords (author, files, the commit message), revision
+  number or hash, or <a href="/help/revsets">revset expression</a>.</div>
+  </form>
+  
+  <div class="navigate">
+  <a href="/log/4/a?patch=1&revcount=30">less</a>
+  <a href="/log/4/a?patch=1&revcount=120">more</a>
+  | <a href="/log/5ed941583260/a">(0)</a> <a href="/log/tip/a">tip</a> </div>
+  
+  <table class="bigtable">
+  <thead>
+   <tr>
+    <th class="age">age</th>
+    <th class="author">author</th>
+    <th class="description">description</th>
+   </tr>
+  </thead>
+  <tbody class="stripes2">
+   <tr>
+    <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
+    <td class="author">test</td>
+    <td class="description">
+     <a href="/rev/3f41bc784e7e">second a</a>
+     <span class="branchname">a-branch</span> 
+    </td>
+   </tr>
+   <tr><td colspan="3"><div class="bottomline inc-lineno"><pre class="sourcelines wrap">
+  <span id="3f41bc784e7e-l1.1" class="minusline">--- /dev/null	Thu Jan 01 00:00:00 1970 +0000</span><a href="#3f41bc784e7e-l1.1"></a>
+  <span id="3f41bc784e7e-l1.2" class="plusline">+++ b/a	Thu Jan 01 00:00:00 1970 +0000</span><a href="#3f41bc784e7e-l1.2"></a>
+  <span id="3f41bc784e7e-l1.3" class="atline">@@ -0,0 +1,1 @@</span><a href="#3f41bc784e7e-l1.3"></a>
+  <span id="3f41bc784e7e-l1.4" class="plusline">+b</span><a href="#3f41bc784e7e-l1.4"></a></pre></div></td></tr>
+   <tr>
+    <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
+    <td class="author">test</td>
+    <td class="description">
+     <a href="/rev/5ed941583260">first a</a>
+     <span class="tag">a-tag</span> <span class="tag">a-bookmark</span> 
+    </td>
+   </tr>
+   <tr><td colspan="3"><div class="bottomline inc-lineno"><pre class="sourcelines wrap">
+  <span id="5ed941583260-l1.1" class="minusline">--- /dev/null	Thu Jan 01 00:00:00 1970 +0000</span><a href="#5ed941583260-l1.1"></a>
+  <span id="5ed941583260-l1.2" class="plusline">+++ b/a	Thu Jan 01 00:00:00 1970 +0000</span><a href="#5ed941583260-l1.2"></a>
+  <span id="5ed941583260-l1.3" class="atline">@@ -0,0 +1,1 @@</span><a href="#5ed941583260-l1.3"></a>
+  <span id="5ed941583260-l1.4" class="plusline">+a</span><a href="#5ed941583260-l1.4"></a></pre></div></td></tr>
+  
+  </tbody>
+  </table>
+  
+  <div class="navigate">
+  <a href="/log/4/a?patch=1&revcount=30">less</a>
+  <a href="/log/4/a?patch=1&revcount=120">more</a>
+  | <a href="/log/5ed941583260/a">(0)</a> <a href="/log/tip/a">tip</a> 
+  </div>
+  
+  </div>
+  </div>
+  
+  
+  
+  </body>
+  </html>
+  
+filelog with 'linerange' and 'patch'
+
+  $ cat c
+  b
+  c
+  $ cat <<EOF > c
+  > 0
+  > 0
+  > b
+  > c+
+  > 
+  > a
+  > a
+  > 
+  > d
+  > e
+  > f
+  > EOF
+  $ hg ci -m 'make c bigger and touch its beginning' c
+  $ cat <<EOF > c
+  > 0
+  > 0
+  > b
+  > c+
+  > 
+  > a
+  > a
+  > 
+  > d
+  > e+
+  > f
+  > EOF
+  $ hg ci -m 'just touch end of c' c
+  $ cat <<EOF > c
+  > 0
+  > 0
+  > b
+  > c++
+  > 
+  > a
+  > a
+  > 
+  > d
+  > e+
+  > f
+  > EOF
+  $ hg ci -m 'touch beginning of c' c
+  $ cat <<EOF > c
+  > 0
+  > 0
+  > b-
+  > c++
+  > 
+  > a
+  > a
+  > 
+  > d
+  > e+
+  > f+
+  > EOF
+  $ hg ci -m 'touching beginning and end of c' c
+  $ hg log -r 'followlines(c, 3:4, startrev=tip) and follow(c)' -p
+  changeset:   0:6563da9dcf87
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     b
+  
+  diff -r 000000000000 -r 6563da9dcf87 b
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/b	Thu Jan 01 00:00:00 1970 +0000
+  @@ -0,0 +1,1 @@
+  +b
+  
+  changeset:   7:46c1a66bd8fc
+  branch:      a-branch
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     change c
+  
+  diff -r c9637d3cc8ef -r 46c1a66bd8fc c
+  --- a/c	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/c	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,1 +1,2 @@
+   b
+  +c
+  
+  changeset:   8:5c6574614c37
+  branch:      a-branch
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     make c bigger and touch its beginning
+  
+  diff -r 46c1a66bd8fc -r 5c6574614c37 c
+  --- a/c	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/c	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,2 +1,11 @@
+  +0
+  +0
+   b
+  -c
+  +c+
+  +
+  +a
+  +a
+  +
+  +d
+  +e
+  +f
+  
+  changeset:   10:e95928d60479
+  branch:      a-branch
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     touch beginning of c
+  
+  diff -r e1d3e9c5a23f -r e95928d60479 c
+  --- a/c	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/c	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,7 +1,7 @@
+   0
+   0
+   b
+  -c+
+  +c++
+   
+   a
+   a
+  
+  changeset:   11:fb9bc322513a
+  branch:      a-branch
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     touching beginning and end of c
+  
+  diff -r e95928d60479 -r fb9bc322513a c
+  --- a/c	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/c	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,6 +1,6 @@
+   0
+   0
+  -b
+  +b-
+   c++
+   
+   a
+  @@ -8,4 +8,4 @@
+   
+   d
+   e+
+  -f
+  +f+
+  
+  $ (get-with-headers.py localhost:$HGPORT 'log/tip/c?linerange=3:4&patch=')
+  200 Script output follows
+  
+  <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+  <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-US">
+  <head>
+  <link rel="icon" href="/static/hgicon.png" type="image/png" />
+  <meta name="robots" content="index, nofollow" />
+  <link rel="stylesheet" href="/static/style-paper.css" type="text/css" />
+  <script type="text/javascript" src="/static/mercurial.js"></script>
+  
+  <title>test: c history</title>
+  <link rel="alternate" type="application/atom+xml"
+     href="/atom-log/tip/c" title="Atom feed for test:c" />
+  <link rel="alternate" type="application/rss+xml"
+     href="/rss-log/tip/c" title="RSS feed for test:c" />
+  </head>
+  <body>
+  
+  <div class="container">
+  <div class="menu">
+  <div class="logo">
+  <a href="https://mercurial-scm.org/">
+  <img src="/static/hglogo.png" alt="mercurial" /></a>
+  </div>
+  <ul>
+  <li><a href="/shortlog/tip">log</a></li>
+  <li><a href="/graph/tip">graph</a></li>
+  <li><a href="/tags">tags</a></li>
+  <li><a href="/bookmarks">bookmarks</a></li>
+  <li><a href="/branches">branches</a></li>
+  </ul>
+  <ul>
+  <li><a href="/rev/tip">changeset</a></li>
+  <li><a href="/file/tip">browse</a></li>
+  </ul>
+  <ul>
+  <li><a href="/file/tip/c">file</a></li>
+  <li><a href="/diff/tip/c">diff</a></li>
+  <li><a href="/comparison/tip/c">comparison</a></li>
+  <li><a href="/annotate/tip/c">annotate</a></li>
+  <li class="active">file log</li>
+  <li><a href="/raw-file/tip/c">raw</a></li>
+  </ul>
+  <ul>
+  <li><a href="/help">help</a></li>
+  </ul>
+  <div class="atom-logo">
+  <a href="/atom-log/tip/c" title="subscribe to atom feed">
+  <img class="atom-logo" src="/static/feed-icon-14x14.png" alt="atom feed" />
+  </a>
+  </div>
+  </div>
+  
+  <div class="main">
+  <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
+  <h3>
+   log c @ 11:<a href="/rev/fb9bc322513a">fb9bc322513a</a>
+   <span class="branchname">a-branch</span> <span class="tag">tip</span> 
+    (following lines 3:4 <a href="/log/tip/c">back to filelog</a>)
+  </h3>
+  
+  <form class="search" action="/log">
+  
+  <p><input name="rev" id="search1" type="text" size="30" /></p>
+  <div id="hint">Find changesets by keywords (author, files, the commit message), revision
+  number or hash, or <a href="/help/revsets">revset expression</a>.</div>
+  </form>
+  
+  <div class="navigate">
+  <a href="/log/tip/c?linerange=3%3A4&patch=&revcount=30">less</a>
+  <a href="/log/tip/c?linerange=3%3A4&patch=&revcount=120">more</a>
+  |  </div>
+  
+  <table class="bigtable">
+  <thead>
+   <tr>
+    <th class="age">age</th>
+    <th class="author">author</th>
+    <th class="description">description</th>
+   </tr>
+  </thead>
+  <tbody class="stripes2">
+   <tr>
+    <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
+    <td class="author">test</td>
+    <td class="description">
+     <a href="/rev/fb9bc322513a">touching beginning and end of c</a>
+     <span class="branchhead">a-branch</span> <span class="tag">tip</span> 
+    </td>
+   </tr>
+   <tr><td colspan="3"><div class="bottomline inc-lineno"><pre class="sourcelines wrap">
+  <span id="fb9bc322513a-l1.1" class="minusline">--- a/c	Thu Jan 01 00:00:00 1970 +0000</span><a href="#fb9bc322513a-l1.1"></a>
+  <span id="fb9bc322513a-l1.2" class="plusline">+++ b/c	Thu Jan 01 00:00:00 1970 +0000</span><a href="#fb9bc322513a-l1.2"></a>
+  <span id="fb9bc322513a-l1.3" class="atline">@@ -1,6 +1,6 @@</span><a href="#fb9bc322513a-l1.3"></a>
+  <span id="fb9bc322513a-l1.4"> 0</span><a href="#fb9bc322513a-l1.4"></a>
+  <span id="fb9bc322513a-l1.5"> 0</span><a href="#fb9bc322513a-l1.5"></a>
+  <span id="fb9bc322513a-l1.6" class="minusline">-b</span><a href="#fb9bc322513a-l1.6"></a>
+  <span id="fb9bc322513a-l1.7" class="plusline">+b-</span><a href="#fb9bc322513a-l1.7"></a>
+  <span id="fb9bc322513a-l1.8"> c++</span><a href="#fb9bc322513a-l1.8"></a>
+  <span id="fb9bc322513a-l1.9"> </span><a href="#fb9bc322513a-l1.9"></a>
+  <span id="fb9bc322513a-l1.10"> a</span><a href="#fb9bc322513a-l1.10"></a></pre></div></td></tr>
+   <tr>
+    <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
+    <td class="author">test</td>
+    <td class="description">
+     <a href="/rev/e95928d60479">touch beginning of c</a>
+     <span class="branchname">a-branch</span> 
+    </td>
+   </tr>
+   <tr><td colspan="3"><div class="bottomline inc-lineno"><pre class="sourcelines wrap">
+  <span id="e95928d60479-l1.1" class="minusline">--- a/c	Thu Jan 01 00:00:00 1970 +0000</span><a href="#e95928d60479-l1.1"></a>
+  <span id="e95928d60479-l1.2" class="plusline">+++ b/c	Thu Jan 01 00:00:00 1970 +0000</span><a href="#e95928d60479-l1.2"></a>
+  <span id="e95928d60479-l1.3" class="atline">@@ -1,7 +1,7 @@</span><a href="#e95928d60479-l1.3"></a>
+  <span id="e95928d60479-l1.4"> 0</span><a href="#e95928d60479-l1.4"></a>
+  <span id="e95928d60479-l1.5"> 0</span><a href="#e95928d60479-l1.5"></a>
+  <span id="e95928d60479-l1.6"> b</span><a href="#e95928d60479-l1.6"></a>
+  <span id="e95928d60479-l1.7" class="minusline">-c+</span><a href="#e95928d60479-l1.7"></a>
+  <span id="e95928d60479-l1.8" class="plusline">+c++</span><a href="#e95928d60479-l1.8"></a>
+  <span id="e95928d60479-l1.9"> </span><a href="#e95928d60479-l1.9"></a>
+  <span id="e95928d60479-l1.10"> a</span><a href="#e95928d60479-l1.10"></a>
+  <span id="e95928d60479-l1.11"> a</span><a href="#e95928d60479-l1.11"></a></pre></div></td></tr>
+   <tr>
+    <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
+    <td class="author">test</td>
+    <td class="description">
+     <a href="/rev/5c6574614c37">make c bigger and touch its beginning</a>
+     <span class="branchname">a-branch</span> 
+    </td>
+   </tr>
+   <tr><td colspan="3"><div class="bottomline inc-lineno"><pre class="sourcelines wrap">
+  <span id="5c6574614c37-l1.1" class="minusline">--- a/c	Thu Jan 01 00:00:00 1970 +0000</span><a href="#5c6574614c37-l1.1"></a>
+  <span id="5c6574614c37-l1.2" class="plusline">+++ b/c	Thu Jan 01 00:00:00 1970 +0000</span><a href="#5c6574614c37-l1.2"></a>
+  <span id="5c6574614c37-l1.3" class="atline">@@ -1,2 +1,11 @@</span><a href="#5c6574614c37-l1.3"></a>
+  <span id="5c6574614c37-l1.4" class="plusline">+0</span><a href="#5c6574614c37-l1.4"></a>
+  <span id="5c6574614c37-l1.5" class="plusline">+0</span><a href="#5c6574614c37-l1.5"></a>
+  <span id="5c6574614c37-l1.6"> b</span><a href="#5c6574614c37-l1.6"></a>
+  <span id="5c6574614c37-l1.7" class="minusline">-c</span><a href="#5c6574614c37-l1.7"></a>
+  <span id="5c6574614c37-l1.8" class="plusline">+c+</span><a href="#5c6574614c37-l1.8"></a>
+  <span id="5c6574614c37-l1.9" class="plusline">+</span><a href="#5c6574614c37-l1.9"></a>
+  <span id="5c6574614c37-l1.10" class="plusline">+a</span><a href="#5c6574614c37-l1.10"></a>
+  <span id="5c6574614c37-l1.11" class="plusline">+a</span><a href="#5c6574614c37-l1.11"></a>
+  <span id="5c6574614c37-l1.12" class="plusline">+</span><a href="#5c6574614c37-l1.12"></a>
+  <span id="5c6574614c37-l1.13" class="plusline">+d</span><a href="#5c6574614c37-l1.13"></a>
+  <span id="5c6574614c37-l1.14" class="plusline">+e</span><a href="#5c6574614c37-l1.14"></a>
+  <span id="5c6574614c37-l1.15" class="plusline">+f</span><a href="#5c6574614c37-l1.15"></a></pre></div></td></tr>
+   <tr>
+    <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
+    <td class="author">test</td>
+    <td class="description">
+     <a href="/rev/46c1a66bd8fc">change c</a>
+     <span class="branchname">a-branch</span> 
+    </td>
+   </tr>
+   <tr><td colspan="3"><div class="bottomline inc-lineno"><pre class="sourcelines wrap">
+  <span id="46c1a66bd8fc-l1.1" class="minusline">--- a/c	Thu Jan 01 00:00:00 1970 +0000</span><a href="#46c1a66bd8fc-l1.1"></a>
+  <span id="46c1a66bd8fc-l1.2" class="plusline">+++ b/c	Thu Jan 01 00:00:00 1970 +0000</span><a href="#46c1a66bd8fc-l1.2"></a>
+  <span id="46c1a66bd8fc-l1.3" class="atline">@@ -1,1 +1,2 @@</span><a href="#46c1a66bd8fc-l1.3"></a>
+  <span id="46c1a66bd8fc-l1.4"> b</span><a href="#46c1a66bd8fc-l1.4"></a>
+  <span id="46c1a66bd8fc-l1.5" class="plusline">+c</span><a href="#46c1a66bd8fc-l1.5"></a></pre></div></td></tr>
+   <tr>
+    <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
+    <td class="author">test</td>
+    <td class="description">
+     <a href="/rev/6563da9dcf87">b</a>
+     
+    </td>
+   </tr>
+   <tr><td colspan="3"><div class="bottomline inc-lineno"><pre class="sourcelines wrap">
+  <span id="6563da9dcf87-l1.1" class="minusline">--- /dev/null	Thu Jan 01 00:00:00 1970 +0000</span><a href="#6563da9dcf87-l1.1"></a>
+  <span id="6563da9dcf87-l1.2" class="plusline">+++ b/b	Thu Jan 01 00:00:00 1970 +0000</span><a href="#6563da9dcf87-l1.2"></a></pre></div></td></tr>
+  
+  </tbody>
+  </table>
+  
+  <div class="navigate">
+  <a href="/log/tip/c?linerange=3%3A4&patch=&revcount=30">less</a>
+  <a href="/log/tip/c?linerange=3%3A4&patch=&revcount=120">more</a>
+  |  
+  </div>
+  
+  </div>
+  </div>
+  
+  
+  
+  </body>
+  </html>
+  
+  $ hg log -r 'followlines(c, 3:4, startrev=8, descend=True) and follow(c)' -p
+  changeset:   8:5c6574614c37
+  branch:      a-branch
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     make c bigger and touch its beginning
+  
+  diff -r 46c1a66bd8fc -r 5c6574614c37 c
+  --- a/c	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/c	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,2 +1,11 @@
+  +0
+  +0
+   b
+  -c
+  +c+
+  +
+  +a
+  +a
+  +
+  +d
+  +e
+  +f
+  
+  changeset:   10:e95928d60479
+  branch:      a-branch
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     touch beginning of c
+  
+  diff -r e1d3e9c5a23f -r e95928d60479 c
+  --- a/c	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/c	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,7 +1,7 @@
+   0
+   0
+   b
+  -c+
+  +c++
+   
+   a
+   a
+  
+  changeset:   11:fb9bc322513a
+  branch:      a-branch
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     touching beginning and end of c
+  
+  diff -r e95928d60479 -r fb9bc322513a c
+  --- a/c	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/c	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,6 +1,6 @@
+   0
+   0
+  -b
+  +b-
+   c++
+   
+   a
+  @@ -8,4 +8,4 @@
+   
+   d
+   e+
+  -f
+  +f+
+  
+  $ (get-with-headers.py localhost:$HGPORT 'log/8/c?linerange=3:4&descend=')
+  200 Script output follows
+  
+  <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+  <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-US">
+  <head>
+  <link rel="icon" href="/static/hgicon.png" type="image/png" />
+  <meta name="robots" content="index, nofollow" />
+  <link rel="stylesheet" href="/static/style-paper.css" type="text/css" />
+  <script type="text/javascript" src="/static/mercurial.js"></script>
+  
+  <title>test: c history</title>
+  <link rel="alternate" type="application/atom+xml"
+     href="/atom-log/tip/c" title="Atom feed for test:c" />
+  <link rel="alternate" type="application/rss+xml"
+     href="/rss-log/tip/c" title="RSS feed for test:c" />
+  </head>
+  <body>
+  
+  <div class="container">
+  <div class="menu">
+  <div class="logo">
+  <a href="https://mercurial-scm.org/">
+  <img src="/static/hglogo.png" alt="mercurial" /></a>
+  </div>
+  <ul>
+  <li><a href="/shortlog/8">log</a></li>
+  <li><a href="/graph/8">graph</a></li>
+  <li><a href="/tags">tags</a></li>
+  <li><a href="/bookmarks">bookmarks</a></li>
+  <li><a href="/branches">branches</a></li>
+  </ul>
+  <ul>
+  <li><a href="/rev/8">changeset</a></li>
+  <li><a href="/file/8">browse</a></li>
+  </ul>
+  <ul>
+  <li><a href="/file/8/c">file</a></li>
+  <li><a href="/diff/8/c">diff</a></li>
+  <li><a href="/comparison/8/c">comparison</a></li>
+  <li><a href="/annotate/8/c">annotate</a></li>
+  <li class="active">file log</li>
+  <li><a href="/raw-file/8/c">raw</a></li>
+  </ul>
+  <ul>
+  <li><a href="/help">help</a></li>
+  </ul>
+  <div class="atom-logo">
+  <a href="/atom-log/tip/c" title="subscribe to atom feed">
+  <img class="atom-logo" src="/static/feed-icon-14x14.png" alt="atom feed" />
+  </a>
+  </div>
+  </div>
+  
+  <div class="main">
+  <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
+  <h3>
+   log c @ 8:<a href="/rev/5c6574614c37">5c6574614c37</a>
+   <span class="branchname">a-branch</span> 
+    (following lines 3:4, descending <a href="/log/8/c">back to filelog</a>)
+  </h3>
+  
+  <form class="search" action="/log">
+  
+  <p><input name="rev" id="search1" type="text" size="30" /></p>
+  <div id="hint">Find changesets by keywords (author, files, the commit message), revision
+  number or hash, or <a href="/help/revsets">revset expression</a>.</div>
+  </form>
+  
+  <div class="navigate">
+  <a href="/log/8/c?descend=&linerange=3%3A4&revcount=30">less</a>
+  <a href="/log/8/c?descend=&linerange=3%3A4&revcount=120">more</a>
+  |  </div>
+  
+  <table class="bigtable">
+  <thead>
+   <tr>
+    <th class="age">age</th>
+    <th class="author">author</th>
+    <th class="description">description</th>
+   </tr>
+  </thead>
+  <tbody class="stripes2">
+   <tr>
+    <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
+    <td class="author">test</td>
+    <td class="description">
+     <a href="/rev/5c6574614c37">make c bigger and touch its beginning</a>
+     <span class="branchname">a-branch</span> 
+    </td>
+   </tr>
+   
+   <tr>
+    <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
+    <td class="author">test</td>
+    <td class="description">
+     <a href="/rev/e95928d60479">touch beginning of c</a>
+     <span class="branchname">a-branch</span> 
+    </td>
+   </tr>
+   
+   <tr>
+    <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
+    <td class="author">test</td>
+    <td class="description">
+     <a href="/rev/fb9bc322513a">touching beginning and end of c</a>
+     <span class="branchhead">a-branch</span> <span class="tag">tip</span> 
+    </td>
+   </tr>
+   
+  
+  </tbody>
+  </table>
+  
+  <div class="navigate">
+  <a href="/log/8/c?descend=&linerange=3%3A4&revcount=30">less</a>
+  <a href="/log/8/c?descend=&linerange=3%3A4&revcount=120">more</a>
+  |  
+  </div>
+  
+  </div>
+  </div>
+  
+  
   
   </body>
   </html>

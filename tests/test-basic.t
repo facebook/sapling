@@ -11,13 +11,36 @@ Create a repository:
   ui.interactive=False
   ui.mergemarkers=detailed
   ui.promptecho=True
+  web.address=localhost
+  web\.ipv6=(?:True|False) (re)
   $ hg init t
   $ cd t
 
-Make a changeset:
+Prepare a changeset:
 
   $ echo a > a
   $ hg add a
+
+  $ hg status
+  A a
+
+Writes to stdio succeed and fail appropriately
+
+#if devfull
+  $ hg status 2>/dev/full
+  A a
+
+  $ hg status >/dev/full
+  abort: No space left on device
+  [255]
+
+  $ hg status >/dev/full 2>&1
+  [1]
+
+  $ hg status ENOENT 2>/dev/full
+  [1]
+#endif
+
   $ hg commit -m test
 
 This command is ancient:

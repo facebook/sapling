@@ -22,8 +22,8 @@ from . import (
     encoding,
     error,
     match as matchmod,
-    scmutil,
     util,
+    vfs as vfsmod,
 )
 stringio = util.stringio
 
@@ -249,7 +249,7 @@ class fileit(object):
 
     def __init__(self, name, mtime):
         self.basedir = name
-        self.opener = scmutil.opener(self.basedir)
+        self.opener = vfsmod.vfs(self.basedir)
 
     def addfile(self, name, mode, islink, data):
         if islink:
@@ -331,7 +331,7 @@ def archive(repo, dest, node, kind, decode=True, matchfn=None,
         for subpath in sorted(ctx.substate):
             sub = ctx.workingsub(subpath)
             submatch = matchmod.subdirmatcher(subpath, matchfn)
-            total += sub.archive(archiver, prefix, submatch)
+            total += sub.archive(archiver, prefix, submatch, decode)
 
     if total == 0:
         raise error.Abort(_('no files match the archive pattern'))

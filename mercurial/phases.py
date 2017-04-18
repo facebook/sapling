@@ -113,8 +113,10 @@ from .node import (
     short,
 )
 from . import (
-    encoding,
     error,
+    smartset,
+    txnutil,
+    util,
 )
 
 allphases = public, draft, secret = range(3)
@@ -136,15 +138,7 @@ def _readroots(repo, phasedefaults=None):
     dirty = False
     roots = [set() for i in allphases]
     try:
-        f = None
-        if 'HG_PENDING' in encoding.environ:
-            try:
-                f = repo.svfs('phaseroots.pending')
-            except IOError as inst:
-                if inst.errno != errno.ENOENT:
-                    raise
-        if f is None:
-            f = repo.svfs('phaseroots')
+        f, pending = txnutil.trypending(repo.root, repo.svfs, 'phaseroots')
         try:
             for line in f:
                 phase, nh = line.split()
@@ -169,6 +163,27 @@ class phasecache(object):
             self._phasesets = None
             self.filterunknown(repo)
             self.opener = repo.svfs
+
+    def getrevset(self, repo, phases):
+        """return a smartset for the given phases"""
+        self.loadphaserevs(repo) # ensure phase's sets are loaded
+
+        if self._phasesets and all(self._phasesets[p] is not None
+                                   for p in phases):
+            # fast path - use _phasesets
+            revs = self._phasesets[phases[0]]
+            if len(phases) > 1:
+                revs = revs.copy() # only copy when needed
+                for p in phases[1:]:
+                    revs.update(self._phasesets[p])
+            if repo.changelog.filteredrevs:
+                revs = revs - repo.changelog.filteredrevs
+            return smartset.baseset(revs)
+        else:
+            # slow path - enumerate all revisions
+            phase = self.phase
+            revs = (r for r in repo if phase(repo, r) in phases)
+            return smartset.generatorset(revs, iterasc=True)
 
     def copy(self):
         # Shallow copy meant to ensure isolation in
@@ -199,7 +214,7 @@ class phasecache(object):
         self._phaserevs = revs
         self._populatephaseroots(repo)
         for phase in trackedphases:
-            roots = map(repo.changelog.rev, self.phaseroots[phase])
+            roots = list(map(repo.changelog.rev, self.phaseroots[phase]))
             if roots:
                 for rev in roots:
                     revs[rev] = phase
@@ -210,12 +225,8 @@ class phasecache(object):
         """ensure phase information is loaded in the object"""
         if self._phaserevs is None:
             try:
-                if repo.ui.configbool('experimental',
-                                      'nativephaseskillswitch'):
-                    self._computephaserevspure(repo)
-                else:
-                    res = self._getphaserevsnative(repo)
-                    self._phaserevs, self._phasesets = res
+                res = self._getphaserevsnative(repo)
+                self._phaserevs, self._phasesets = res
             except AttributeError:
                 self._computephaserevspure(repo)
 
@@ -376,7 +387,8 @@ def retractboundary(repo, tr, targetphase, nodes):
 
 def listphases(repo):
     """List phases root for serialization over pushkey"""
-    keys = {}
+    # Use ordered dictionary so behavior is deterministic.
+    keys = util.sortdict()
     value = '%i' % draft
     for root in repo._phasecache.phaseroots[draft]:
         keys[hex(root)] = value

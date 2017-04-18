@@ -136,6 +136,10 @@ Interaction with Mercurial Commands
     subrepository changes are available when referenced by top-level
     repositories.  Push is a no-op for Subversion subrepositories.
 
+:serve: serve does not recurse into subrepositories unless
+    -S/--subrepos is specified.  Git and Subversion subrepositories
+    are currently silently ignored.
+
 :status: status does not recurse into subrepositories unless
     -S/--subrepos is specified. Subrepository changes are displayed as
     regular Mercurial changes on the subrepository

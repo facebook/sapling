@@ -1443,7 +1443,7 @@ help/ shows help topics
         "topic": "branches"
       },
       {
-        "summary": "create a changegroup file",
+        "summary": "create a bundle file",
         "topic": "bundle"
       },
       {
@@ -1535,7 +1535,7 @@ help/ shows help topics
         "topic": "tags"
       },
       {
-        "summary": "apply one or more changegroup files",
+        "summary": "apply one or more bundle files",
         "topic": "unbundle"
       },
       {
@@ -1548,6 +1548,14 @@ help/ shows help topics
       }
     ],
     "topics": [
+      {
+        "summary": "Bundle File Formats",
+        "topic": "bundlespec"
+      },
+      {
+        "summary": "Colorizing Outputs",
+        "topic": "color"
+      },
       {
         "summary": "Configuration Files",
         "topic": "config"
@@ -1591,6 +1599,10 @@ help/ shows help topics
       {
         "summary": "Merge Tools",
         "topic": "merge-tools"
+      },
+      {
+        "summary": "Pager Support",
+        "topic": "pager"
       },
       {
         "summary": "File Name Patterns",

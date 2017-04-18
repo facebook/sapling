@@ -26,11 +26,6 @@ static void ZstdDecompressorIterator_dealloc(ZstdDecompressorIterator* self) {
 		self->buffer = NULL;
 	}
 
-	if (self->dstream) {
-		ZSTD_freeDStream(self->dstream);
-		self->dstream = NULL;
-	}
-
 	if (self->input.src) {
 		PyMem_Free((void*)self->input.src);
 		self->input.src = NULL;
@@ -50,6 +45,8 @@ static DecompressorIteratorResult read_decompressor_iterator(ZstdDecompressorIte
 	DecompressorIteratorResult result;
 	size_t oldInputPos = self->input.pos;
 
+	assert(self->decompressor->dstream);
+
 	result.chunk = NULL;
 
 	chunk = PyBytes_FromStringAndSize(NULL, self->outSize);
@@ -63,7 +60,7 @@ static DecompressorIteratorResult read_decompressor_iterator(ZstdDecompressorIte
 	self->output.pos = 0;
 
 	Py_BEGIN_ALLOW_THREADS
-	zresult = ZSTD_decompressStream(self->dstream, &self->output, &self->input);
+	zresult = ZSTD_decompressStream(self->decompressor->dstream, &self->output, &self->input);
 	Py_END_ALLOW_THREADS
 
 	/* We're done with the pointer. Nullify to prevent anyone from getting a
@@ -160,7 +157,7 @@ read_from_source:
 					PyErr_SetString(PyExc_ValueError,
 						"skip_bytes larger than first input chunk; "
 						"this scenario is currently unsupported");
-					Py_DecRef(readResult);
+					Py_XDECREF(readResult);
 					return NULL;
 				}
 
@@ -179,7 +176,7 @@ read_from_source:
 		else if (!self->readCount) {
 			self->finishedInput = 1;
 			self->finishedOutput = 1;
-			Py_DecRef(readResult);
+			Py_XDECREF(readResult);
 			PyErr_SetString(PyExc_StopIteration, "empty input");
 			return NULL;
 		}
@@ -188,7 +185,7 @@ read_from_source:
 		}
 
 		/* We've copied the data managed by memory. Discard the Python object. */
-		Py_DecRef(readResult);
+		Py_XDECREF(readResult);
 	}
 
 	result = read_decompressor_iterator(self);

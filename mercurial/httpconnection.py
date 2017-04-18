@@ -44,10 +44,10 @@ class httpsendfile(object):
         self._total = self.length // 1024 * 2
 
     def read(self, *args, **kwargs):
-        try:
-            ret = self._data.read(*args, **kwargs)
-        except EOFError:
+        ret = self._data.read(*args, **kwargs)
+        if not ret:
             self.ui.progress(_('sending'), None)
+            return ret
         self._pos += len(ret)
         # We pass double the max for total because we currently have
         # to send the bundle twice in the case of a server that
@@ -67,13 +67,16 @@ class httpsendfile(object):
 # moved here from url.py to avoid a cycle
 def readauthforuri(ui, uri, user):
     # Read configuration
-    config = dict()
+    groups = {}
     for key, val in ui.configitems('auth'):
+        if key in ('cookiefile',):
+            continue
+
         if '.' not in key:
             ui.warn(_("ignoring invalid [auth] key '%s'\n") % key)
             continue
         group, setting = key.rsplit('.', 1)
-        gdict = config.setdefault(group, dict())
+        gdict = groups.setdefault(group, {})
         if setting in ('username', 'cert', 'key'):
             val = util.expandpath(val)
         gdict[setting] = val
@@ -83,7 +86,7 @@ def readauthforuri(ui, uri, user):
     bestuser = None
     bestlen = 0
     bestauth = None
-    for group, auth in config.iteritems():
+    for group, auth in groups.iteritems():
         if user and user != auth.get('username', user):
             # If a username was set in the URI, the entry username
             # must either match it or be unset

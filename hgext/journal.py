@@ -4,7 +4,7 @@
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
-"""Track previous positions of bookmarks (EXPERIMENTAL)
+"""track previous positions of bookmarks (EXPERIMENTAL)
 
 This extension adds a new command: `hg journal`, which shows you where
 bookmarks were previously located.
@@ -163,7 +163,7 @@ def unsharejournal(orig, ui, repo, repopath):
             # to copy. move shared date over from source to destination but
             # move the local file first
             if repo.vfs.exists('namejournal'):
-                journalpath = repo.join('namejournal')
+                journalpath = repo.vfs.join('namejournal')
                 util.rename(journalpath, journalpath + '.bak')
             storage = repo.journal
             local = storage._open(

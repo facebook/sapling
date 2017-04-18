@@ -90,10 +90,10 @@ class mercurial_sink(common.converter_sink):
             self.wlock.release()
 
     def revmapfile(self):
-        return self.repo.join("shamap")
+        return self.repo.vfs.join("shamap")
 
     def authorfile(self):
-        return self.repo.join("authormap")
+        return self.repo.vfs.join("authormap")
 
     def setbranch(self, branch, pbranches):
         if not self.clonebranches:
@@ -625,7 +625,7 @@ class mercurial_source(common.converter_source):
 
     def converted(self, rev, destrev):
         if self.convertfp is None:
-            self.convertfp = open(self.repo.join('shamap'), 'a')
+            self.convertfp = open(self.repo.vfs.join('shamap'), 'a')
         self.convertfp.write('%s %s\n' % (destrev, rev))
         self.convertfp.flush()
 

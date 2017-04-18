@@ -73,6 +73,43 @@ Preparing the 'main' repo which depends on the subrepo 'sub1'
   adding main/main (glob)
   $ hg commit -R main -m "main import"
 
+#if serve
+
+Unfortunately, subrepos not at their nominal location cannot be cloned.  But
+they are still served from their location within the local repository.  The only
+reason why 'main' can be cloned via the filesystem is because 'sub1' and 'sub2'
+are also available as siblings of 'main'.
+
+  $ hg serve -R main --debug -S -p $HGPORT -d --pid-file=hg1.pid -E error.log -A access.log
+  adding  = $TESTTMP/main (glob)
+  adding sub1 = $TESTTMP/main/sub1 (glob)
+  adding sub1/sub2 = $TESTTMP/main/sub1/sub2 (glob)
+  listening at http://*:$HGPORT/ (bound to *:$HGPORT) (glob) (?)
+  adding  = $TESTTMP/main (glob) (?)
+  adding sub1 = $TESTTMP/main/sub1 (glob) (?)
+  adding sub1/sub2 = $TESTTMP/main/sub1/sub2 (glob) (?)
+  $ cat hg1.pid >> $DAEMON_PIDS
+
+  $ hg clone http://localhost:$HGPORT httpclone --config progress.disable=True
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 3 changes to 3 files
+  updating to branch default
+  abort: HTTP Error 404: Not Found
+  [255]
+
+  $ cat access.log
+  * "GET /?cmd=capabilities HTTP/1.1" 200 - (glob)
+  * "GET /?cmd=batch HTTP/1.1" 200 - * (glob)
+  * "GET /?cmd=getbundle HTTP/1.1" 200 - * (glob)
+  * "GET /../sub1?cmd=capabilities HTTP/1.1" 404 - (glob)
+
+  $ killdaemons.py
+  $ rm hg1.pid error.log access.log
+#endif
+
 Cleaning both repositories, just as a clone -U
 
   $ hg up -C -R sub2 null

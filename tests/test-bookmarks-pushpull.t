@@ -581,12 +581,12 @@ Test to show result of bookmarks comparison
 be exchanged)
 
   $ hg -R repo1 incoming -B
-  comparing with $TESTTMP/bmcomparison/source
+  comparing with $TESTTMP/bmcomparison/source (glob)
   searching for changed bookmarks
   no changed bookmarks found
   [1]
   $ hg -R repo1 outgoing -B
-  comparing with $TESTTMP/bmcomparison/source
+  comparing with $TESTTMP/bmcomparison/source (glob)
   searching for changed bookmarks
   no changed bookmarks found
   [1]

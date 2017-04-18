@@ -21,7 +21,7 @@ from . import (
 if getattr(sys, 'frozen', None) is not None:
     module = pycompat.sysexecutable
 else:
-    module = __file__
+    module = pycompat.fsencode(__file__)
 
 try:
     unicode
