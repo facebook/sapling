@@ -6,9 +6,9 @@ import time
 
 from mercurial import error
 from mercurial import manifest
-from mercurial import scmutil
 from mercurial import ui
 from mercurial import util
+from mercurial import vfs as vfsmod
 
 class mockmanifest(object):
     def __init__(self, text):
@@ -62,7 +62,7 @@ class HybridManifest(unittest.TestCase):
         breakage in prod
 
         """
-        vfs = scmutil.vfs(os.getcwd())
+        vfs = vfsmod.vfs(os.getcwd())
         hd = fastmanifest.implementation.hybridmanifest(ui.ui(), vfs, fast=True)
         ismagic = lambda x: x.startswith("__") and x.endswith("__")
         magicmethods = [k
@@ -83,11 +83,11 @@ class HybridManifest(unittest.TestCase):
 
     def test_looselock_basic(self):
         """Attempt to secure two locks.  The second one should fail."""
-        vfs = scmutil.vfs('')
+        vfs = vfsmod.vfs('')
         with fastmanifest.concurrency.looselock(vfs, "lock") as l1:
             assert l1.held()
 
-            vfs2 = scmutil.vfs('')
+            vfs2 = vfsmod.vfs('')
             try:
                 with fastmanifest.concurrency.looselock(vfs2, "lock") as l2:
                     assert l2.held()
@@ -103,7 +103,7 @@ class HybridManifest(unittest.TestCase):
     def test_cachehierarchy(self):
         """We mock the ondisk cache and test that the two layers of cache
         work properly"""
-        vfs = scmutil.vfs(os.getcwd())
+        vfs = vfsmod.vfs(os.getcwd())
         cache = fastmanifest.implementation.fastmanifestcache(vfs,
                                                               ui.ui(), None)
         ondiskcache = mockondiskcache()
@@ -144,7 +144,7 @@ class HybridManifest(unittest.TestCase):
 
         Finally, verify that the locks are properly cleaned up.
         """
-        vfs = scmutil.vfs('')
+        vfs = vfsmod.vfs('')
         with fastmanifest.concurrency.looselock(vfs, "lock") as l1:
             assert l1.held()
 
@@ -152,11 +152,11 @@ class HybridManifest(unittest.TestCase):
             # have to wait.........
             time.sleep(2)
 
-            vfs2 = scmutil.vfs('')
+            vfs2 = vfsmod.vfs('')
             with fastmanifest.concurrency.looselock(vfs2, "lock", 0.2) as l2:
                 assert l2.held()
 
-                vfs3 = scmutil.vfs('')
+                vfs3 = vfsmod.vfs('')
                 try:
                     with fastmanifest.concurrency.looselock(vfs3, "lock") as l3:
                         assert l3.held()

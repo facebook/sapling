@@ -41,9 +41,9 @@ from mercurial import (
     manifest,
     mdiff,
     revlog,
-    scmutil,
     store,
     util,
+    vfs as vfsmod,
 )
 from mercurial.i18n import _
 from mercurial.node import bin, nullid
@@ -159,7 +159,7 @@ def getmanifestlog(orig, self):
     # configuration as the repo is to create it via a store, which requires the
     # repo object. So we need to build the opener here, then store it for later.
     pseudostore = store.store(self.requirements, self.path,
-                              scmutil.vfs)
+                              vfsmod.vfs)
     opener = pseudostore.vfs
     opener.options = self.svfs.options.copy()
     opener.options.update({

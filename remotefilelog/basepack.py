@@ -1,6 +1,7 @@
 import errno, hashlib, mmap, os, struct, time
-from mercurial import osutil, scmutil, util
+from mercurial import osutil, util
 from mercurial.i18n import _
+from mercurial import vfs as vfsmod
 
 import shallowutil
 
@@ -210,7 +211,7 @@ class basepack(object):
 
 class mutablebasepack(object):
     def __init__(self, ui, packdir):
-        opener = scmutil.vfs(packdir)
+        opener = vfsmod.vfs(packdir)
         opener.createmode = 0o444
         self.opener = opener
 

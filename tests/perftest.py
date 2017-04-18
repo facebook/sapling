@@ -9,7 +9,7 @@ from mercurial import (
     error,
     manifest,
     mdiff,
-    scmutil,
+    vfs as vfsmod,
 )
 from mercurial.node import nullid
 from remotefilelog import datapack, contentstore, shallowutil
@@ -213,7 +213,7 @@ def profiletreepack(repo, store, rev1, rev2, opts):
         repo.manifest.clearcaches()
         return repo.manifest.read(mfnode)._flatmanifest()
 
-    cacheopener = scmutil.vfs(repo.vfs.join('cache', 'fastmanifest_test'))
+    cacheopener = vfsmod.vfs(repo.vfs.join('cache', 'fastmanifest_test'))
     if not os.path.exists(cacheopener.base):
         os.mkdir(cacheopener.base)
 

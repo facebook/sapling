@@ -44,8 +44,8 @@ from mercurial import (
     extensions,
     localrepo,
     revlog,
-    scmutil,
     util,
+    vfs as vfsmod,
 )
 
 from mercurial.i18n import _
@@ -153,7 +153,7 @@ def debugcheckfastpartialindex(ui, repo):
     if not repo.svfs.exists(_partialindexdir):
         ui.warn(_('partial index is not built\n'))
         return 1
-    indexvfs = scmutil.vfs(repo.svfs.join(_partialindexdir))
+    indexvfs = vfsmod.vfs(repo.svfs.join(_partialindexdir))
     foundnodes = set()
     # Use unfiltered repo because index may have entries that point to hidden
     # commits
@@ -203,7 +203,7 @@ def debugfastpartialmatchstat(ui, repo):
     ui.write(_('generation number: %d\n') % generationnum)
     if _needsrebuilding(repo.svfs):
         ui.write(_('index will be rebuilt on the next pull\n'))
-    indexvfs = scmutil.vfs(repo.svfs.join(_partialindexdir))
+    indexvfs = vfsmod.vfs(repo.svfs.join(_partialindexdir))
     for indexfile in sorted(_iterindexfile(indexvfs)):
         size = indexvfs.stat(indexfile).st_size - _header.headersize
         entriescount = size / _entrysize
@@ -278,7 +278,7 @@ def _rebuildpartialindex(ui, repo, skiphexnodes=None):
     vfs.rename(tempdir, _partialindexdir)
 
 def _getopener(path):
-    vfs = scmutil.vfs(path)
+    vfs = vfsmod.vfs(path)
     vfs.createmode = 0o644
     return vfs
 
