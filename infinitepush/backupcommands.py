@@ -135,11 +135,11 @@ def backup(ui, repo, dest=None, **opts):
                 _removeoldlogfiles(userlogdir, reponame, maxlogfilenumber)
                 logfile = _getlogfilename(logdir, username, reponame)
             except (OSError, IOError) as e:
-                ui.warn(_('infinitepush backup log is disabled: %s\n') % e)
+                ui.debug('infinitepush backup log is disabled: %s\n' % e)
             except WrongPermissionsException as e:
-                ui.warn(_('%s directory has incorrect permission, ' +
-                          'infinitepush backup logging will be disabled\n') %
-                        e.logdir)
+                ui.debug(('%s directory has incorrect permission, ' +
+                         'infinitepush backup logging will be disabled\n') %
+                         e.logdir)
             finally:
                 os.umask(oldumask)
 

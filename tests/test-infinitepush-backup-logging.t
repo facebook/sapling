@@ -22,5 +22,7 @@ Setup infinitepush backup logging
 
 Check that logging fails because of wrong permissions
   $ hg pushbackup --background
+  $ waitbgbackup
+  $ hg pushbackup --background --debug
   $TESTTMP/logs directory has incorrect permission, infinitepush backup logging will be disabled
   $ waitbgbackup
