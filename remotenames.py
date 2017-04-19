@@ -951,14 +951,13 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
     if not origdest and dest == 'default' and 'default-push' in paths:
         dest = 'default-push'
 
-    try:
-        # hgsubversion and hggit do funcky things on push. Just call it
-        # directly
-        path = paths[dest]
-        if path.startswith('svn+') or path.startswith('git+'):
-            return orig(ui, repo, dest, opargs=opargs, **opts)
-    except KeyError:
-        pass
+    # get the actual path we will push to so we can do some url sniffing
+    for check in [dest, 'default-push', 'default']:
+        if check in paths:
+            path = paths[check]
+            # hgsubversion and hggit do funky things on push. Just call direct.
+            if path.startswith('svn+') or path.startswith('git+'):
+                return orig(ui, repo, dest, opargs=opargs, **opts)
 
     if not opargs['to']:
         if ui.configbool('remotenames', 'forceto', False):
