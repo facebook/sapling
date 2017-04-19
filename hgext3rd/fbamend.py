@@ -1070,6 +1070,10 @@ def _latest(repo, rev):
 
 def _clearpreamend(repo, revs):
     """Remove any preamend bookmarks on the given revisions."""
+    # Use unfiltered repo in case the given revs are hidden. This should
+    # ordinarily never happen due to the inhibit extension but it's better
+    # to be resilient to this case.
+    repo = repo.unfiltered()
     cl = repo.changelog
     for rev in revs:
         for bookmark in repo.nodebookmarks(cl.node(rev)):
