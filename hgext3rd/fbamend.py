@@ -52,6 +52,7 @@ from mercurial.i18n import _
 from collections import defaultdict, deque
 from contextlib import nested
 from itertools import count
+from hgext3rd.nodeprecate import nodeprecate
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
@@ -214,6 +215,7 @@ def commit(orig, ui, repo, *pats, **opts):
 
         return orig(ui, repo, *pats, **opts)
 
+@nodeprecate
 def unamend(ui, repo, **opts):
     """undo the amend operation on a current changeset
 
@@ -492,6 +494,7 @@ def fixupamend(ui, repo):
     finally:
         lockmod.release(wlock, lock, tr)
 
+@nodeprecate
 def wrapsplit(orig, ui, repo, *args, **opts):
     """Automatically rebase unstable descendants after split."""
     # Find the rev number of the changeset to split. This needs to happen
@@ -523,6 +526,7 @@ def wrapsplit(orig, ui, repo, *args, **opts):
 
     return ret
 
+@nodeprecate
 def wrapfold(orig, ui, repo, *args, **opts):
     """Automatically rebase unstable descendants after fold."""
     # Find the rev numbers of the changesets that will be folded. This needs
@@ -571,6 +575,7 @@ def wrapnext(orig, ui, repo, *args, **opts):
     """Replacement for `hg next` from the evolve extension."""
     _moverelative(ui, repo, args, opts, reverse=False)
 
+@nodeprecate
 def _moverelative(ui, repo, args, opts, reverse=False):
     """Update to a changeset relative to the current changeset.
        Implements both `hg previous` and `hg next`.
@@ -831,6 +836,7 @@ def _findstackbottom(ui, repo):
         raise error.Abort(_("current changeset is public"))
     return repo.revs("::. & draft()").first()
 
+@nodeprecate
 def wraprebase(orig, ui, repo, **opts):
     """Wrapper around `hg rebase` adding the `--restack` option, which rebases
        all "unstable" descendants of an obsolete changeset onto the latest
@@ -881,6 +887,7 @@ def wraprebase(orig, ui, repo, **opts):
 
     return orig(ui, repo, **opts)
 
+@nodeprecate
 def restack(ui, repo, rebaseopts=None):
     """Repair a situation in which one or more changesets in a stack
        have been obsoleted (thereby leaving their descendants in the stack
@@ -1136,6 +1143,7 @@ def _setbookmark(repo, tr, bookmark, rev):
     repo._bookmarks[bookmark] = node
     repo._bookmarks.recordchange(tr)
 
+@nodeprecate
 def _fixbookmarks(repo, revs):
     """Make any bookmarks pointing to the given revisions point to the
        latest version of each respective revision.

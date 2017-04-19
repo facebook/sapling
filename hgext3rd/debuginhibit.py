@@ -35,6 +35,7 @@ from mercurial import (
 )
 from mercurial.i18n import _
 from mercurial.node import short
+from hgext3rd.nodeprecate import nodeprecate
 
 testedwith = 'ships-with-fb-hgext'
 
@@ -91,6 +92,7 @@ def printnodeswrapper(ui, orig, repo, nodes, label=None):
     ('r', 'rev', [], _("revisions to inhibit or deinhibit")),
     ('d', 'deinhibit', False, _("deinhibit the specified revs"))
 ])
+@nodeprecate
 def debuginhibit(ui, repo, *revs, **opts):
     """manually inhibit or deinhibit the specified revisions
 

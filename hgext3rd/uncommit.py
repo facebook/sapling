@@ -30,6 +30,7 @@ from mercurial import (
 )
 from mercurial.i18n import _
 from contextlib import nested
+from hgext3rd.nodeprecate import nodeprecate
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
@@ -132,6 +133,7 @@ def _uncommitdirstate(repo, oldctx, match):
 @command('uncommit',
     commands.walkopts,
     _('[OPTION]... [FILE]...'))
+@nodeprecate
 def uncommit(ui, repo, *pats, **opts):
     """uncommit some or all of a local changeset
 
