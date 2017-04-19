@@ -1719,8 +1719,8 @@ def remotenameskw(**args):
     if (not remotenames or not suppress) and 'remotebranches' in repo.names:
         remotenames += repo.names['remotebranches'].names(repo, ctx.node())
 
-    return templatekw.showlist('remotename', remotenames,
-                               plural='remotenames', **args)
+    return templatekw.showlist('remotename', remotenames, args,
+                               plural='remotenames')
 
 #############################
 # bookmarks api compatibility
