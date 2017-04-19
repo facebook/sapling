@@ -511,7 +511,7 @@ def pushingmarkerfor(obsstore, pushset, node):
         for m in markers:
             nexts = m[1] # successors
             if not nexts: # this is a prune marker
-                nexts = m[5] # parents
+                nexts = m[5] or () # parents
             for n in nexts:
                 if n not in seen:
                     seen.add(n)

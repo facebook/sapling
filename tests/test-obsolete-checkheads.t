@@ -281,3 +281,32 @@ Pulling the missing data makes it work
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
+
+Old head is pruned without parent data and new unrelated head added
+===================================================================
+
+setup
+
+  $ cd ..
+  $ rm -R remote local
+  $ cp -R backup1 remote
+  $ hg clone remote local -qr c70b08862e08
+  $ cd local
+  $ hg up -q '.^'
+  $ mkcommit new-unrelated
+  created new head
+  $ hg debugobsolete `getid old`
+  $ hg log -G --hidden
+  @  350a93b716be (draft) add new-unrelated
+  |
+  | x  c70b08862e08 (draft) add old
+  |/
+  o  b4952fcf48cf (public) add base
+  
+
+  $ hg push
+  pushing to $TESTTMP/remote (glob)
+  searching for changes
+  abort: push creates new remote head 350a93b716be!
+  (merge or see 'hg help push' for details about pushing new heads)
+  [255]
