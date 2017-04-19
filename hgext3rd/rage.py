@@ -204,6 +204,7 @@ def rage(ui, repo, *pats, **opts):
                     clear_rules=False))),
         ('usechg', _failsafe(usechginfo)),
         ('rpm info', _failsafe(rpminfo)),
+        ('klist', _failsafe(lambda: shcmd('klist', check=False))),
         ('ifconfig', _failsafe(lambda: shcmd('ifconfig'))),
         ('airport', _failsafe(
             lambda: shcmd('/System/Library/PrivateFrameworks/Apple80211.' +
