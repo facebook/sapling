@@ -39,6 +39,7 @@ from mercurial import scmutil
 from mercurial import templatekw
 from mercurial import url
 from mercurial import util
+from mercurial import vfs as vfsmod
 from mercurial.i18n import _
 from mercurial.node import hex, short, bin, nullid
 from hgext import schemes
@@ -1372,7 +1373,7 @@ def joinremotename(remote, ref):
 
 def shareawarevfs(repo):
     if repo.shared():
-        return scmutil.vfs(repo.sharedpath)
+        return vfsmod.vfs(repo.sharedpath)
     else:
         return repo.vfs
 
