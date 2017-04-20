@@ -488,6 +488,8 @@ Test followlines() revset; we usually check both followlines(pat, range) and
 followlines(pat, range, descend=True) to make sure both give the same result
 when they should.
 
+  $ echo a >> foo
+  $ hg ci -m 'foo: add a'
   $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 3:5)'
   16: baz:0
   19: baz:3
@@ -528,17 +530,17 @@ when they should.
   16: baz:0
   19: baz:3
   20: baz:4
-  23: baz:3->3+
+  24: baz:3->3+
   $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 3:5, startrev=17, descend=True)'
   19: baz:3
   20: baz:4
-  23: baz:3->3+
+  24: baz:3->3+
   $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 1:2, descend=false)'
-  21: added two lines with 0
+  22: added two lines with 0
 
 file patterns are okay
   $ hg log -T '{rev}: {desc}\n' -r 'followlines("path:baz", 1:2)'
-  21: added two lines with 0
+  22: added two lines with 0
 
 renames are followed
   $ hg mv baz qux
@@ -549,15 +551,15 @@ renames are followed
   16: baz:0
   19: baz:3
   20: baz:4
-  23: baz:3->3+
-  24: qux:4->4+
+  24: baz:3->3+
+  25: qux:4->4+
 
 but are missed when following children
   $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 5:7, startrev=22, descend=True)'
-  23: baz:3->3+
+  24: baz:3->3+
 
 merge
-  $ hg up 23 --quiet
+  $ hg up 24 --quiet
   $ echo 7 >> baz
   $ hg ci -m 'one more line, out of line range'
   created new head
@@ -568,9 +570,9 @@ merge
   16: baz:0
   19: baz:3
   20: baz:4
-  23: baz:3->3+
-  26: baz:3+->3-
-  $ hg merge 24
+  24: baz:3->3+
+  27: baz:3+->3-
+  $ hg merge 25
   merging baz and qux to qux
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
@@ -579,12 +581,12 @@ merge
   16: baz:0
   19: baz:3
   20: baz:4
-  23: baz:3->3+
-  24: qux:4->4+
-  26: baz:3+->3-
-  27: merge
-  $ hg up 24 --quiet
-  $ hg merge 26
+  24: baz:3->3+
+  25: qux:4->4+
+  27: baz:3+->3-
+  28: merge
+  $ hg up 25 --quiet
+  $ hg merge 27
   merging qux and baz to qux
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
@@ -594,28 +596,28 @@ merge
   16: baz:0
   19: baz:3
   20: baz:4
-  23: baz:3->3+
-  24: qux:4->4+
-  26: baz:3+->3-
-  28: merge from other side
-  $ hg up 23 --quiet
+  24: baz:3->3+
+  25: qux:4->4+
+  27: baz:3+->3-
+  29: merge from other side
+  $ hg up 24 --quiet
 
 we are missing the branch with rename when following children
-  $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 5:7, startrev=25, descend=True)'
-  26: baz:3+->3-
+  $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 5:7, startrev=26, descend=True)'
+  27: baz:3+->3-
 
 we follow all branches in descending direction
-  $ hg up 22 --quiet
+  $ hg up 23 --quiet
   $ sed 's/3/+3/' baz > baz.new
   $ mv baz.new baz
   $ hg ci -m 'baz:3->+3'
   created new head
   $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 2:5, startrev=16, descend=True)' --graph
-  @  29: baz:3->+3
+  @  30: baz:3->+3
   :
-  : o  26: baz:3+->3-
+  : o  27: baz:3+->3-
   : :
-  : o  23: baz:3->3+
+  : o  24: baz:3->3+
   :/
   o    20: baz:4
   |\
@@ -628,7 +630,7 @@ we follow all branches in descending direction
   ~
 
 check error cases
-  $ hg up 23 --quiet
+  $ hg up 24 --quiet
   $ hg log -r 'followlines()'
   hg: parse error: followlines takes at least 1 positional arguments
   [255]

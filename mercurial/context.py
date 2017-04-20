@@ -1192,6 +1192,9 @@ def blockancestors(fctx, fromline, toline, followfirst=False):
     `fromline`-`toline` range.
     """
     diffopts = patch.diffopts(fctx._repo.ui)
+    introrev = fctx.introrev()
+    if fctx.rev() != introrev:
+        fctx = fctx.filectx(fctx.filenode(), changeid=introrev)
     visit = {(fctx.linkrev(), fctx.filenode()): (fctx, (fromline, toline))}
     while visit:
         c, linerange2 = visit.pop(max(visit))

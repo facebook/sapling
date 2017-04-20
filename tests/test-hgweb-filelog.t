@@ -1220,6 +1220,8 @@ filelog with 'linerange' and 'patch'
   > f+
   > EOF
   $ hg ci -m 'touching beginning and end of c' c
+  $ echo c > cc
+  $ hg ci -Am 'tip does not touch c' cc
   $ hg log -r 'followlines(c, 3:4, startrev=tip) and follow(c)' -p
   changeset:   0:6563da9dcf87
   user:        test
@@ -1289,7 +1291,6 @@ filelog with 'linerange' and 'patch'
   
   changeset:   11:fb9bc322513a
   branch:      a-branch
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     touching beginning and end of c
@@ -1369,7 +1370,7 @@ filelog with 'linerange' and 'patch'
   <div class="main">
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
   <h3>
-   log c @ 11:<a href="/rev/fb9bc322513a">fb9bc322513a</a>
+   log c @ 12:<a href="/rev/6e4182052f7b">6e4182052f7b</a>
    <span class="branchname">a-branch</span> <span class="tag">tip</span> 
     (following lines 3:4 <a href="/log/tip/c">back to filelog</a>)
   </h3>
@@ -1400,7 +1401,7 @@ filelog with 'linerange' and 'patch'
     <td class="author">test</td>
     <td class="description">
      <a href="/rev/fb9bc322513a">touching beginning and end of c</a>
-     <span class="branchhead">a-branch</span> <span class="tag">tip</span> 
+     <span class="branchname">a-branch</span> 
     </td>
    </tr>
    <tr><td colspan="3"><div class="bottomline inc-lineno"><pre class="sourcelines wrap">
@@ -1546,7 +1547,6 @@ filelog with 'linerange' and 'patch'
   
   changeset:   11:fb9bc322513a
   branch:      a-branch
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     touching beginning and end of c
@@ -1675,7 +1675,7 @@ filelog with 'linerange' and 'patch'
     <td class="author">test</td>
     <td class="description">
      <a href="/rev/fb9bc322513a">touching beginning and end of c</a>
-     <span class="branchhead">a-branch</span> <span class="tag">tip</span> 
+     <span class="branchname">a-branch</span> 
     </td>
    </tr>
    
