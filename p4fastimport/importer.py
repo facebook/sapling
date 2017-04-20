@@ -7,7 +7,7 @@ import os
 import re
 
 from mercurial.i18n import _
-from mercurial.node import nullid, short, hex
+from mercurial.node import nullid, short
 from mercurial import (
     error,
     util,
