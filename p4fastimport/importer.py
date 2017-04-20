@@ -281,7 +281,11 @@ class FileImporter(object):
     @property
     def relpath(self):
         # XXX: Do the correct mapping to the clientspec
-        return localpath(self._p4filelog.depotfile)
+        return localpath(self.depotfile)
+
+    @property
+    def depotfile(self):
+        return self._p4filelog.depotfile
 
     @util.propertycache
     def storepath(self):
@@ -289,6 +293,9 @@ class FileImporter(object):
         if p4.config('caseHandling') == 'insensitive':
             return path.lower()
         return path
+
+    def hgfilelog(self):
+        return self._repo.file(self.relpath)
 
     def create(self, tr, copy_tracer=None):
         assert tr is not None
@@ -312,7 +319,7 @@ class FileImporter(object):
             assert linkrev >= lastlinkrev
             lastlinkrev = linkrev
 
-            hgfilelog = self._repo.file(self.relpath)
+            hgfilelog = self.hgfilelog()
             if len(hgfilelog) > 0:
                 fparent1 = hgfilelog.tip()
 
