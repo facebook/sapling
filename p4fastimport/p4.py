@@ -43,12 +43,12 @@ def config(key):
         _config = parse_info()
     return _config[key]
 
-def parse_changes(client, startrev=None, endrev=None):
+def parse_changes(client, startcl=None, endcl=None):
     "Read changes affecting the path"
     cmd = 'p4 --client %s -ztag -G changes -s submitted //%s/...%s' % (
         util.shellquote(client),
         util.shellquote(client),
-        revrange(startrev, endrev))
+        revrange(startcl, endcl))
 
     stdout = util.popen(cmd, mode='rb')
     for d in loaditer(stdout):
@@ -59,14 +59,14 @@ def parse_changes(client, startrev=None, endrev=None):
         elif c:
             yield P4Changelist(int(c), int(c))
 
-def parse_filelist(client, startrev=None, endrev=None):
-    if startrev is None:
-        startrev = 0
+def parse_filelist(client, startcl=None, endcl=None):
+    if startcl is None:
+        startcl = 0
 
     cmd = 'p4 --client %s -G files -a //%s/...%s' % (
             util.shellquote(client),
             util.shellquote(client),
-            revrange(startrev, endrev))
+            revrange(startcl, endcl))
     stdout = util.popen(cmd, mode='rb')
     for d in loaditer(stdout):
         c = d.get('depotFile', None)
