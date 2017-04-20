@@ -33,17 +33,22 @@ native implementation of the datapack stores.
 """
 
 from mercurial import (
+    commands,
     changegroup,
     cmdutil,
     error,
     extensions,
+    hg,
     localrepo,
     manifest,
     mdiff,
     revlog,
+    scmutil,
+    sshserver,
     store,
     util,
     vfs as vfsmod,
+    wireproto,
 )
 from mercurial.i18n import _
 from mercurial.node import bin, nullid
@@ -51,7 +56,12 @@ from mercurial.node import bin, nullid
 from remotefilelog.contentstore import unioncontentstore
 from remotefilelog.datapack import datapackstore, mutabledatapack
 from remotefilelog.historypack import historypackstore, mutablehistorypack
-from remotefilelog import shallowutil
+from remotefilelog import shallowrepo, shallowutil, wirepack, constants
+from remotefilelog.shallowutil import (
+    readnodelist,
+    readpath,
+    readpathlist,
+)
 import cstore
 
 import os
@@ -70,6 +80,8 @@ def extsetup(ui):
     wrappropertycache(localrepo.localrepository, 'manifestlog', getmanifestlog)
 
     extensions.wrapfunction(manifest.memmanifestctx, 'write', _writemanifest)
+
+    wireproto.commands['gettreepack'] = (servergettreepack, '*')
 
 def reposetup(ui, repo):
     wraprepo(repo)
@@ -146,6 +158,12 @@ class treemanifestlog(manifest.manifestlog):
 def serverreposetup(repo):
     extensions.wrapfunction(manifest.manifestrevlog, 'addgroup',
                             _addmanifestgroup)
+
+    def _capabilities(orig, repo, proto):
+        caps = orig(repo, proto)
+        caps.append('gettreepack')
+        return caps
+    extensions.wrapfunction(wireproto, '_capabilities', _capabilities)
 
 def _addmanifestgroup(*args, **kwargs):
     raise error.Abort(_("cannot push commits to a treemanifest transition "
@@ -598,3 +616,136 @@ def wrappropertycache(cls, propname, wrapper):
     if currcls is object:
         raise AttributeError(_("%s has no property '%s'") %
                              (type(currcls), propname))
+
+@command('prefetchtrees', [
+    ('r', 'rev', '', _("revs to prefetch the trees for")),
+    ] + commands.walkopts, _('--rev REVS PATTERN..'))
+def prefetchtrees(ui, repo, *args, **opts):
+    revs = repo.revs(opts.get('rev'))
+
+    mfnodes = set()
+    for rev in revs:
+        mfnodes.add(repo[rev].manifestnode())
+
+    _prefetchtrees(repo, '', mfnodes, [], [])
+
+def _prefetchtrees(repo, rootdir, mfnodes, basemfnodes, directories):
+    # If possible, use remotefilelog's more expressive fallbackpath
+    if util.safehasattr(repo, 'fallbackpath'):
+        fallbackpath = repo.fallbackpath
+    else:
+        fallbackpath = repo.ui.config('paths', 'default')
+
+    remote = hg.peer(repo.ui, {}, fallbackpath)
+    if 'gettreepack' not in remote._capabilities():
+        raise error.Abort(_("missing gettreepack capability on remote"))
+    _sendtreepackrequest(remote, rootdir, mfnodes, basemfnodes, directories)
+
+    packpath = shallowutil.getcachepackpath(repo, PACK_CATEGORY)
+    receivedhistory, receiveddata = wirepack.receivepack(repo.ui, remote,
+                                                         packpath)
+    receivednodes = (node for dir, node in receiveddata if dir == rootdir)
+    missingnodes = mfnodes.difference(receivednodes)
+    if missingnodes:
+        raise error.Abort(_("unable to download %d trees (%s,...)") %
+                          (len(missingnodes), list(missingnodes)[0]))
+
+def _sendtreepackrequest(remote, rootdir, mfnodes, basemfnodes, directories):
+    remote._callstream("gettreepack")
+
+    # Issue request
+    rootdirlen = struct.pack(constants.FILENAMESTRUCT, len(rootdir))
+    nodeslen = struct.pack(constants.NODECOUNTSTRUCT, len(mfnodes))
+    rawnodes = ''.join(sorted(mfnodes))
+    remote.pipeo.write('%s%s%s%s' % (rootdirlen, rootdir, nodeslen, rawnodes))
+
+    basenodeslen = struct.pack(constants.NODECOUNTSTRUCT, len(basemfnodes))
+    rawbasenodes = ''.join(basemfnodes)
+    remote.pipeo.write('%s%s' % (basenodeslen, rawbasenodes))
+
+    dircount = struct.pack(constants.PATHCOUNTSTRUCT, len(directories))
+    rawdirectories = ''.join(
+        '%s%s' % (struct.pack(constants.FILENAMESTRUCT, len(d)), d)
+        for d in directories)
+    remote.pipeo.write('%s%s' % (dircount, rawdirectories))
+
+    remote.pipeo.flush()
+
+def servergettreepack(repo, proto, args):
+    """A server api for requesting a pack of tree information.
+    """
+    if shallowrepo.requirement in repo.requirements:
+        raise error.Abort(_('cannot fetch remote files from shallow repo'))
+    if not isinstance(proto, sshserver.sshserver):
+        raise error.Abort(_('cannot fetch remote files over non-ssh protocol'))
+
+    def streamer():
+        """
+        All size/len/counts are network order unsigned ints.
+
+        Request format:
+
+        <rootdir><mfnodes><basenodes><directories>
+        rootdir = <directory>
+        mfnodes = <node count: 4 byte>[<node: 20 bytes>,...]
+        basenodes = <basenode count: 4 byte>[<node: 20 bytes>,...]
+        directories = <directory count: 4 byte>[<directory>,...]
+        directory = <path len: 2 byte><path>
+
+        Response format:
+
+        [<fileresponse>,...]<10 null bytes>
+        fileresponse = <filename len: 2 byte><filename><history><deltas>
+        history = <count: 4 byte>[<history entry>,...]
+        historyentry = <node: 20 byte><p1: 20 byte><p2: 20 byte>
+                       <linknode: 20 byte><copyfrom len: 2 byte><copyfrom>
+        deltas = <count: 4 byte>[<delta entry>,...]
+        deltaentry = <node: 20 byte><deltabase: 20 byte>
+                     <delta len: 8 byte><delta>
+        """
+        request = _receivepackrequest(proto.fin)
+        rootdir, mfnodes, basemfnodes, directories = request
+
+        treemfl = repo.manifestlog.treemanifestlog
+        mfrevlog = treemfl._revlog
+        if rootdir != '':
+            mfrevlog = mfrevlog.dirlog(rootdir)
+
+        cl = repo.changelog
+        for node in mfnodes:
+            treemf = treemfl[node].read()
+            for subtree in treemf.walksubtrees():
+                subnode = subtree.node()
+                subrevlog = mfrevlog
+                if subtree._dir != '':
+                    subrevlog = mfrevlog.dirlog(subtree._dir)
+                subrev = subrevlog.rev(subnode)
+
+                # Append data
+                mfdata = subrevlog.revision(subrev)
+                data = [(subnode, nullid, mfdata)]
+
+                # Append history
+                # Only append first history for now, since the entire manifest
+                # history is very long.
+                x, x, x, x, linkrev, p1, p2, node = subrevlog.index[subrev]
+                copyfrom = ''
+                p1node = subrevlog.node(p1)
+                p2node = subrevlog.node(p2)
+                linknode = cl.node(linkrev)
+                history = [(subnode, p1node, p2node, linknode, copyfrom)]
+
+                for chunk in wirepack.sendpackpart(subtree._dir, history, data):
+                    yield chunk
+
+        yield wirepack.closepart()
+        proto.fout.flush()
+
+    return wireproto.streamres(streamer())
+
+def _receivepackrequest(stream):
+    rootdir = readpath(stream)
+    mfnodes = list(readnodelist(stream))
+    basemfnodes = list(readnodelist(stream))
+    directories = list(readpathlist(stream))
+    return rootdir, mfnodes, basemfnodes, directories
