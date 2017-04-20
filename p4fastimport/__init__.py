@@ -35,8 +35,11 @@ def create(tr, ui, repo, importset, filelogs):
         # same filelog. It would be more appropriate to update the filelist
         # after receiving the initial filelist but this would not be parallel.
         fi = importer.FileImporter(ui, repo, importset, filelog)
-        mdict = fi.create(tr)
-        yield 1, json.dumps(mdict)
+        fileflags = fi.create(tr)
+        yield 1, json.dumps({
+            'fileflags': fileflags,
+            'depotname': filelog.depotfile,
+        })
 
 # -> Dict[Int, List[str]]
 #def create_runlist(ui, repo, filelist, path):
@@ -152,11 +155,12 @@ def p4fastimport(ui, repo, client, **opts):
             ui.flush()
             prog = worker.worker(ui, weight, create, wargs, filelogs)
             for i, serialized in prog:
-                ui.progress(_('importing'), count, item='file', unit='file',
-                        total=len(p4filelogs))
+                data = json.loads(serialized)
+                ui.progress(_('importing'), count, item=data['depotname'],
+                            unit='file', total=len(p4filelogs))
                 # Json converts to UTF8 and int keys to strings, so we have to
                 # convert back. TODO: Find a better way to handle this.
-                fileflags.update(util.decodefileflags(json.loads(serialized)))
+                fileflags.update(util.decodefileflags(data['fileflags']))
                 count += i
             ui.progress(_('importing'), None)
 
