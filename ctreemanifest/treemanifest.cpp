@@ -487,8 +487,10 @@ SubtreeIterator::SubtreeIterator(Manifest *mainRoot,
     fetcher(fetcher) {
   this->mainStack.push_back(stackframe(mainRoot, false));
 
-  this->parents[0] = NULL;
-  this->parents[1] = NULL;
+  if (cmpRoots.size() > 2) {
+    throw std::logic_error("Tree comparison only supports 2 comparisons at "
+                           "once for now");
+  }
 
   for (size_t i = 0; i < cmpRoots.size(); i++) {
     Manifest *cmpRoot = cmpRoots[i];
@@ -499,115 +501,29 @@ SubtreeIterator::SubtreeIterator(Manifest *mainRoot,
   }
 }
 
-bool SubtreeIterator::popResult(std::string **path, Manifest **result,
+void SubtreeIterator::popResult(std::string **path, Manifest **result,
                                 Manifest **p1, Manifest **p2) {
   stackframe &mainFrame = this->mainStack.back();
   Manifest *mainManifest = mainFrame.manifest;
-  std::string mainSerialized;
 
-  // When we loop over the cmpStacks, record the cmp nodes that are parents
-  // of the level we're about to return.
-  this->parents[0] = NULL;
-  this->parents[1] = NULL;
-
-  bool alreadyExists = false;
-  size_t matchingParent = -1;
-  bool isRootManifest = this->mainStack.size() == 1;
-
-  // Record the nodes of all cmp manifest equivalents
+  // Record the comparison manifests of the level we're processing.
+  Manifest *cmpManifests[2] { NULL, NULL };
   for (size_t i = 0; i < cmpStacks.size(); i++) {
     // If a cmpstack is at the same level as the main stack, it represents
     // the same diretory and should be inspected.
     if (this->mainStack.size() == cmpStacks[i].size()) {
       std::vector<stackframe> &cmpStack = cmpStacks[i];
-      Manifest *cmpManifest = cmpStack.back().manifest;
-
-      if (!alreadyExists) {
-        std::string cmpSerialized;
-        cmpManifest->serialize(cmpSerialized);
-        mainManifest->serialize(mainSerialized);
-
-        // If the main manifest content is identical to a cmp content, we
-        // shouldn't return it. Note: We already do this check when pushing
-        // directories onto the stack, but for in-memory manifests we don't
-        // know the node until after we've traversed the children, so we can't
-        // verify their content until now.
-        if (cmpSerialized.compare(mainSerialized) == 0) {
-          alreadyExists = true;
-          matchingParent = i;
-        }
-      }
-
-      this->parents[i] = cmpManifest;
+      cmpManifests[i] = cmpStack.back().manifest;
+      cmpStack.pop_back();
     }
   }
 
-  // We've finished processing this frame, so pop all the stacks
   this->mainStack.pop_back();
-  for (size_t i = 0; i < cmpStacks.size(); i++) {
-    if (this->mainStack.size() < cmpStacks[i].size()) {
-      cmpStacks[i].pop_back();
-    }
-  }
-
-  if (alreadyExists && !isRootManifest) {
-    // Reuse existing node if we're not the root node. This is important,
-    // because otherwise we compute a new node for the same content, since p1/p2
-    // will be different. The root node is special since it changes when
-    // given a different p1/p2, regardless of content.
-    char *existingNode = this->parents[matchingParent]->node();
-    if (mainManifest->isMutable()) {
-      mainManifest->markPermanent(existingNode);
-    } else {
-      assert(memcmp(mainManifest->node(), existingNode, BIN_NODE_SIZE) == 0);
-    }
-  } else {
-    char *p1Node = (char*)NULLID;
-    char *p2Node = (char*)NULLID;
-    if (this->parents[0]) {
-      p1Node = this->parents[0]->node();
-    }
-    if (this->parents[1]) {
-      p2Node = this->parents[1]->node();
-    }
-
-    mainManifest->markPermanent(p1Node, p2Node);
-  }
-
-  // Update the node on the manifest entry
-  if (!isRootManifest) {
-    // Peek back up the stack so we can put the right node on the
-    // ManifestEntry.
-    stackframe &priorFrame = mainStack[mainStack.size() - 1];
-    ManifestEntry *priorEntry = priorFrame.currentvalue();
-
-    priorEntry->updatebinnode(mainManifest->node(), MANIFEST_DIRECTORY_FLAGPTR);
-
-    // Now that it has a node, it is permanent and shouldn't be modified.
-    assert(!priorEntry->resolved->isMutable());
-  }
-
-  // If the current manifest has the same contents as a cmp manifest,
-  // just give up now. Unless we're the root node (because the root node
-  // will always change based on the parent nodes).
-  if (alreadyExists && !isRootManifest) {
-    size_t slashoffset = this->path.find_last_of('/', this->path.size() - 2);
-    if (slashoffset == std::string::npos) {
-      this->path.erase();
-    } else {
-      this->path.erase(slashoffset + 1);
-    }
-    return false;
-  }
-
-  this->result = mainManifest;
-  assert(!mainManifest->isMutable());
 
   *path = &this->path;
-  *result = this->result;
-  *p1 = this->parents[0];
-  *p2 = this->parents[1];
-  return true;
+  *result = mainManifest;
+  *p1 = cmpManifests[0];
+  *p2 = cmpManifests[1];
 }
 
 bool SubtreeIterator::processDirectory(ManifestEntry *mainEntry) {
@@ -681,6 +597,12 @@ bool SubtreeIterator::processDirectory(ManifestEntry *mainEntry) {
 
 bool SubtreeIterator::next(std::string **path, Manifest **result,
                            Manifest **p1, Manifest **p2) {
+  ManifestEntry *resultEntry;
+  return this->next(path, result, p1, p2, &resultEntry);
+}
+
+bool SubtreeIterator::next(std::string **path, Manifest **result,
+                           Manifest **p1, Manifest **p2, ManifestEntry **resultEntry) {
   // Pop the last returned directory off the path
   size_t slashoffset = this->path.find_last_of('/', this->path.size() - 2);
   if (slashoffset == std::string::npos) {
@@ -689,6 +611,10 @@ bool SubtreeIterator::next(std::string **path, Manifest **result,
     this->path.erase(slashoffset + 1);
   }
 
+  *result = NULL;
+  *p1 = NULL;
+  *p2 = NULL;
+  *resultEntry = NULL;
   while (true) {
     if (this->mainStack.empty()) {
       return false;
@@ -701,15 +627,12 @@ bool SubtreeIterator::next(std::string **path, Manifest **result,
     if (mainFrame.isfinished()) {
       // This can return false if this manifest ended up being equivalent to
       // a cmp parent manifest, which means we should skip it.
-      if (this->popResult(path, result, p1, p2)) {
-        if (this->mainStack.size() > 0) {
-          this->mainStack.back().next();
-        }
-        return true;
-      }
+      this->popResult(path, result, p1, p2);
       if (this->mainStack.size() > 0) {
+        *resultEntry = this->mainStack.back().currentvalue();
         this->mainStack.back().next();
       }
+      return true;
     } else {
       // Use currentvalue instead of next so that the stack of frames match the
       // actual current filepath.
@@ -736,5 +659,53 @@ FinalizeIterator::FinalizeIterator(Manifest *mainRoot,
 
 bool FinalizeIterator::next(std::string **path, Manifest **result,
                             Manifest **p1, Manifest **p2) {
-  return _iterator.next(path, result, p1, p2);
+  ManifestEntry *resultEntry;
+  while (_iterator.next(path, result, p1, p2, &resultEntry)) {
+    std::string *realPath = *path;
+    Manifest *realResult = *result;
+    Manifest *realP1 = *p1;
+    Manifest *realP2 = *p2;
+
+    // If it's mutable, mark it permanent and check it against parents.
+    if (realResult->isMutable()) {
+      const char *p1Node = realP1 ? realP1->node() : NULLID;
+      const char *p2Node = realP2 ? realP2->node() : NULLID;
+
+      // If mutable root node, always give it new parents and return it
+      if (realPath->length() == 0) {
+        realResult->markPermanent(p1Node, p2Node, resultEntry);
+      // If mutable child has parents, compare with parent contents and return
+      // only if different.
+      } else if (p1 || p2) {
+        std::string mainRaw, parentRaw;
+        realResult->serialize(mainRaw);
+
+        bool parentMatch = false;
+        Manifest *parents[2] { realP1, realP2 };
+        for (int i = 0; i < 2; ++i) {
+          Manifest *p = parents[i];
+          if (p) {
+            p->serialize(parentRaw);
+            if (mainRaw.compare(parentRaw) == 0) {
+              realResult->markPermanent(p->node(), resultEntry);
+              parentMatch = true;
+              break;
+            }
+          }
+        }
+        if (parentMatch) {
+          continue;
+        }
+
+        realResult->markPermanent(p1Node, p2Node, resultEntry);
+      // If mutable child has no parents, always return
+      } else {
+        realResult->markPermanent(p1Node, p2Node, resultEntry);
+      }
+    }
+
+    return true;
+  }
+
+  return false;
 }

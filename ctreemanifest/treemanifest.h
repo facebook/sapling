@@ -251,8 +251,6 @@ class SubtreeIterator {
     std::vector<char*> cmpNodes;
     std::vector<std::vector<stackframe> > cmpStacks;
     std::string path;
-    Manifest *result;
-    Manifest *parents[2];
     ManifestFetcher fetcher;
   public:
     SubtreeIterator(Manifest *mainRoot,
@@ -263,17 +261,25 @@ class SubtreeIterator {
     /**
      * Outputs the next new Manifest and its corresponding path and node.
      *
+     * `resultEntry` contains the ManifestEntry that points at the result. This
+     * is useful for updating the ManifestEntry hash if the caller decides to
+     * make the result permanent.
+     *
      * Return true if a manifest was returned, or false if we've reached the
      * end.
      */
     bool next(std::string **path, Manifest **result,
+              Manifest **p1, Manifest **p2, ManifestEntry **resultEntry);
+
+    bool next(std::string **path, Manifest **result,
               Manifest **p1, Manifest **p2);
+
   private:
     /**
      * Pops the current Manifest, populating the output values and returning true
      * if the current Manifest is different from all comparison manifests.
      */
-    bool popResult(std::string **path, Manifest **result,
+    void popResult(std::string **path, Manifest **result,
                    Manifest **p1, Manifest **p2);
 
     /** Pushes the given Manifest onto the stacks. If the given Manifest equals

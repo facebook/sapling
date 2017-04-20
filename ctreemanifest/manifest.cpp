@@ -306,18 +306,24 @@ bool Manifest::isMutable() const {
   return this->_mutable;
 }
 
-void Manifest::markPermanent(const char *p1, const char *p2) {
+void Manifest::markPermanent(const char *p1, const char *p2, ManifestEntry *entry) {
   if (!this->isMutable()) {
     throw std::logic_error("attempting to double mark manifest immutable");
   }
   this->_mutable = false;
   this->computeNode(p1, p2, this->_node);
+  if (entry) {
+    entry->updatebinnode(this->_node, MANIFEST_DIRECTORY_FLAGPTR);
+  }
 }
 
-void Manifest::markPermanent(const char *node) {
+void Manifest::markPermanent(const char *node, ManifestEntry *entry) {
   if (!this->isMutable()) {
     throw std::logic_error("attempting to double mark manifest immutable");
   }
   this->_mutable = false;
   memcpy(this->_node, node, BIN_NODE_SIZE);
+  if (entry) {
+    entry->updatebinnode(this->_node, MANIFEST_DIRECTORY_FLAGPTR);
+  }
 }

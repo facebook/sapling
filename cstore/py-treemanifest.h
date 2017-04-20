@@ -233,7 +233,7 @@ static PyObject *newtreeiter_iternext(py_newtreeiter *self) {
       }
 
       if (path->size() == 0) {
-        // Record the root hash. This marks the tree as final and immutable.
+        // Record the root hash
         self->treemf->tm.root.updatebinnode(result->node(), MANIFEST_DIRECTORY_FLAGPTR);
       }
 
