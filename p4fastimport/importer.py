@@ -17,7 +17,8 @@ from . import p4
 from .util import localpath, caseconflict
 
 class ImportSet(object):
-    def __init__(self, changelists, filelist, storagepath):
+    def __init__(self, repo, changelists, filelist, storagepath):
+        self.repo = repo
         self.changelists = sorted(changelists)
         self.filelist = filelist
         self.storagepath = storagepath
@@ -27,7 +28,8 @@ class ImportSet(object):
 
     @util.propertycache
     def _linkrevmap(self):
-        return {c.cl: idx for idx, c in enumerate(self.changelists)}
+        start = len(self.repo)
+        return {c.cl: idx + start for idx, c in enumerate(self.changelists)}
 
     @util.propertycache
     def caseconflicts(self):
@@ -49,11 +51,14 @@ class ChangeManifestImporter(object):
             m[user['User']] = '%s <%s>' % (user['FullName'], user['Email'])
         return m
 
-    def create(self, tr, fileflags):
-        revnumdict = collections.defaultdict(lambda: 0)
+    def create(self, *args, **kwargs):
+        return list(self.creategen(*args, **kwargs))
+
+    def creategen(self, tr, fileflags, baserevs):
         mrevlog = self._repo.manifestlog._revlog
-        cp1, cp2 = nullid, nullid
         clog = self._repo.changelog
+        cp1 = self._repo['tip'].node()
+        cp2 = nullid
         p2 = self._repo[cp2]
         for i, change in enumerate(self._importset.changelists):
             # invalidate caches so that the lookup works
@@ -77,11 +82,11 @@ class ChangeManifestImporter(object):
             for path in amf:
                 hgfilelog = self._repo.file(path)
                 try:
-                    fnode = hgfilelog.node(revnumdict[path])
+                    fnode = hgfilelog.node(baserevs[path])
                 except (error.LookupError, IndexError):
                     raise error.Abort("can't find rev %d for %s cl %d" %
-                            (revnumdict[path], path, change.cl))
-                revnumdict[path] += 1
+                            (baserevs[path], path, change.cl))
+                baserevs[path] += 1
                 mf[path] = fnode
                 if path in fileflags and change.cl in fileflags[path]:
                     mf.setflag(path, fileflags[path][change.cl])
@@ -115,6 +120,7 @@ class ChangeManifestImporter(object):
                     user=username,
                     date=(change.parsed['time'], 0),
                     extra={'p4changelist': change.cl})
+            yield change.cl, cp1
         self._ui.progress(_('importing change'), pos=None)
 
 class RCSImporter(collections.Mapping):
@@ -274,6 +280,9 @@ class FileImporter(object):
 
         fileflags = collections.defaultdict(dict)
         lastlinkrev = 0
+
+        hgfilelog = self.hgfilelog()
+        origlen = len(hgfilelog)
         for c in sorted(revs):
             linkrev = self._importset.linkrev(c.cl)
             fparent1, fparent2 = nullid, nullid
@@ -282,7 +291,6 @@ class FileImporter(object):
             assert linkrev >= lastlinkrev
             lastlinkrev = linkrev
 
-            hgfilelog = self.hgfilelog()
             if len(hgfilelog) > 0:
                 fparent1 = hgfilelog.tip()
 
@@ -313,4 +321,6 @@ class FileImporter(object):
                 'writing filelog: %s, p1 %s, linkrev %d, %d bytes, src: %s, '
                 'path: %s\n' % (short(h), short(fparent1), linkrev,
                     len(text), src, self.relpath))
-        return fileflags
+
+        newlen = len(hgfilelog)
+        return fileflags, origlen, newlen

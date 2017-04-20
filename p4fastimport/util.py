@@ -30,3 +30,9 @@ def decodefileflags(json):
         for n, v in d.items():
             r[k][int(n)] = v.encode('ascii')
     return r
+
+def lastcl(node):
+    if node:
+        assert node.extra().get('p4changelist')
+        return int(node.extra()['p4changelist']) + 1
+    return None

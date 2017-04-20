@@ -22,6 +22,7 @@ from . import (
 )
 
 from mercurial.i18n import _
+from mercurial.node import short
 from mercurial import (
     cmdutil,
     error,
@@ -35,10 +36,13 @@ def create(tr, ui, repo, importset, filelogs):
         # same filelog. It would be more appropriate to update the filelist
         # after receiving the initial filelist but this would not be parallel.
         fi = importer.FileImporter(ui, repo, importset, filelog)
-        fileflags = fi.create(tr)
+        fileflags, oldtiprev, newtiprev = fi.create(tr)
         yield 1, json.dumps({
+            'newtiprev': newtiprev,
+            'oldtiprev': oldtiprev,
             'fileflags': fileflags,
             'depotname': filelog.depotfile,
+            'localname': fi.relpath,
         })
 
 cmdtable = {}
@@ -46,16 +50,22 @@ command = cmdutil.command(cmdtable)
 
 @command(
     'p4fastimport',
-    [('s', 'start', None, _('start of the CL range to import'), _('REV')),
-     ('e', 'end', None, _('end of the CL range to import'), _('REV')),
-     ('P', 'path', '.', _('path to the local depot store'), _('PATH'))],
-    _('hg p4fastimport [-s start] [-e end] [-P PATH] [CLIENT]'),
+    [('P', 'path', '.', _('path to the local depot store'), _('PATH'))],
+    _('hg p4fastimport [-P PATH] [CLIENT]'),
     inferrepo=True)
 def p4fastimport(ui, repo, client, **opts):
     if 'fncache' in repo.requirements:
         raise error.Abort(_('fncache must be disabled'))
 
     basepath = opts.get('path')
+
+    startcl = None
+    if len(repo) > 0 and startcl is None:
+        latestctx = list(repo.set("last(extra(p4changelist))"))
+        if latestctx:
+            startcl = util.lastcl(latestctx[0])
+            ui.note(_('incremental import from changelist: %d, node: %s\n') %
+                    (startcl, short(latestctx[0].node())))
 
     # A client defines checkout behavior for a user. It contains a list of
     # views.A view defines a set of files and directories to check out from a
@@ -65,14 +75,14 @@ def p4fastimport(ui, repo, client, **opts):
     #   server under foo/* locally under x/*.
     # 1. Return all the changelists touching files in a given client view.
     ui.note(_('loading changelist numbers.\n'))
-    changelists = list(p4.parse_changes(client))
+    changelists = list(p4.parse_changes(client, startcl=startcl))
     ui.note(_('%d changelists to import.\n') % len(changelists))
 
     # 2. Get a list of files that we will have to import from the depot with
     # it's full path in the depot.
     ui.note(_('loading list of files.\n'))
     filelist = set()
-    for fileinfo in p4.parse_filelist(client):
+    for fileinfo in p4.parse_filelist(client, startcl=startcl):
         if fileinfo['action'] in p4.SUPPORTED_ACTIONS:
             filelist.add(fileinfo['depotFile'])
         else:
@@ -80,8 +90,7 @@ def p4fastimport(ui, repo, client, **opts):
                                                     fileinfo['depotFile']))
     ui.note(_('%d files to import.\n') % len(filelist))
 
-    importset = importer.ImportSet(changelists, filelist, storagepath=basepath)
-
+    importset = importer.ImportSet(repo, changelists, filelist, basepath)
     p4filelogs = []
     for i, f in enumerate(importset.filelogs()):
         ui.progress(_('loading filelog'), i, item=f, unit="filelog",
@@ -113,6 +122,7 @@ def p4fastimport(ui, repo, client, **opts):
         # 3. Import files.
         count = 0
         fileflags = {}
+        baserevs = collections.defaultdict(lambda: 0)
         for filelogs in map(sorted, runlist.values()):
             wargs = (tr, ui, repo, importset)
 
@@ -136,13 +146,14 @@ def p4fastimport(ui, repo, client, **opts):
                             unit='file', total=len(p4filelogs))
                 # Json converts to UTF8 and int keys to strings, so we have to
                 # convert back. TODO: Find a better way to handle this.
+                baserevs[data['localname']] = data['oldtiprev']
                 fileflags.update(util.decodefileflags(data['fileflags']))
                 count += i
             ui.progress(_('importing'), None)
 
         # 4. Generate manifest and changelog based on the filelogs we imported
         clog = importer.ChangeManifestImporter(ui, repo, importset)
-        clog.create(tr, fileflags)
+        clog.create(tr, fileflags, baserevs)
         tr.close()
         ui.note(_('%d revision(s), %d file(s) imported.\n') % (
             len(changelists), count))
