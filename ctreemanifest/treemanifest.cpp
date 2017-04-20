@@ -40,7 +40,7 @@ void treemanifest_diffrecurse(
     if (!selfiter.isfinished()) {
       cmp--;
       selfentry = selfiter.currentvalue();
-      if (selfentry->node) {
+      if (selfentry->hasNode()) {
         selfbinnode = binfromhex(selfentry->node);
       } else {
         assert(selfentry->isdirectory());
@@ -52,7 +52,7 @@ void treemanifest_diffrecurse(
     if (!otheriter.isfinished()) {
       cmp++;
       otherentry = otheriter.currentvalue();
-      if (otherentry->node) {
+      if (otherentry->hasNode()) {
         otherbinnode = binfromhex(otherentry->node);
       } else {
         assert(otherentry->isdirectory());
@@ -313,7 +313,7 @@ static FindResult get_callback(
   ManifestEntry &entry = *iterator;
 
   result->resultnode->erase();
-  if (entry.node != NULL) {
+  if (entry.hasNode()) {
     appendbinfromhex(entry.node, *result->resultnode);
   }
 
@@ -558,7 +558,7 @@ bool SubtreeIterator::processDirectory(ManifestEntry *mainEntry) {
         if (cmp == 0) {
           // And the nodes match...
           if (!alreadyExists &&
-              (mainEntry->node && memcmp(mainEntry->node, cmpEntry->node, HEX_NODE_SIZE) == 0)) {
+              (mainEntry->hasNode() && memcmp(mainEntry->node, cmpEntry->node, HEX_NODE_SIZE) == 0)) {
             // Skip this entry
             alreadyExists = true;
           }
@@ -573,7 +573,7 @@ bool SubtreeIterator::processDirectory(ManifestEntry *mainEntry) {
 
   // If mainEntry matched any of the cmpEntries, we should skip mainEntry.
   if (alreadyExists) {
-    assert(mainEntry->node != NULL);
+    assert(mainEntry->hasNode());
     return false;
   }
 

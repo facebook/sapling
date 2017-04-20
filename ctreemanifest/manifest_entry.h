@@ -47,6 +47,7 @@ class ManifestEntry {
     ~ManifestEntry();
 
     bool isdirectory() const;
+    bool hasNode() const;
 
     void appendtopath(std::string &path);
 

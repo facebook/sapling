@@ -120,6 +120,10 @@ bool ManifestEntry::isdirectory() const {
   return this->flag && *this->flag == MANIFEST_DIRECTORY_FLAG;
 }
 
+bool ManifestEntry::hasNode() const {
+  return this->node;
+}
+
 void ManifestEntry::appendtopath(std::string &path) {
   path.append(this->filename, this->filenamelen);
   if (this->isdirectory()) {
@@ -161,7 +165,7 @@ void ManifestEntry::updatehexnode(const char *node, const char *flag) {
   }
 
   // initialize node if it's not already done.
-  if (this->node == NULL) {
+  if (!this->hasNode()) {
     this->node = this->filename + this->filenamelen + 1;
   }
   memcpy(this->node, node, HEX_NODE_SIZE);
