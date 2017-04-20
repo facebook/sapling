@@ -203,7 +203,8 @@ internalstable = sorted([
 
 def internalshelp(ui):
     """Generate the index for the "internals" topic."""
-    lines = []
+    lines = ['To access a subtopic, use "hg help internals.{subtopic-name}"\n',
+             '\n']
     for names, header, doc in internalstable:
         lines.append(' :%s: %s\n' % (names[0], header))
 

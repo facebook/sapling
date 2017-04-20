@@ -943,6 +943,8 @@ internals topic renders index of available sub-topics
   Technical implementation topics
   """""""""""""""""""""""""""""""
   
+      To access a subtopic, use "hg help internals.{subtopic-name}"
+  
        bundles       Bundles
        censor        Censor
        changegroups  Changegroups
