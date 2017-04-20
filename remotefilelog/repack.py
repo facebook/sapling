@@ -283,12 +283,17 @@ class repacker(object):
 
         count = 0
         for filename, entries in sorted(byfile.iteritems()):
+            ui.progress(_("repacking data"), count, unit=self.unit,
+                        total=len(byfile))
+
             ancestors = {}
             nodes = list(node for node in entries.iterkeys())
             nohistory = []
-            for node in nodes:
+            for i, node in enumerate(nodes):
                 if node in ancestors:
                     continue
+                ui.progress(_("building history"), i, unit='nodes',
+                            total=len(nodes))
                 try:
                     ancestors.update(self.history.getancestors(filename, node,
                                                                known=ancestors))
@@ -297,6 +302,7 @@ class repacker(object):
                     # corresponding history entries for them. It's not a big
                     # deal, but the entries won't be delta'd perfectly.
                     nohistory.append(node)
+            ui.progress(_("building history"), None)
 
             # Order the nodes children first, so we can produce reverse deltas
             orderednodes = list(reversed(self._toposort(ancestors)))
@@ -305,12 +311,14 @@ class repacker(object):
             # Compute deltas and write to the pack
             deltabases = defaultdict(lambda: nullid)
             nodes = set(nodes)
-            for node in orderednodes:
+            for i, node in enumerate(orderednodes):
                 # orderednodes is all ancestors, but we only want to serialize
                 # the files we have.
                 if node not in nodes:
                     continue
 
+                ui.progress(_("processing nodes"), i, unit='nodes',
+                            total=len(orderednodes))
                 # Find delta base
                 # TODO: allow delta'ing against most recent descendant instead
                 # of immediate child
@@ -354,9 +362,8 @@ class repacker(object):
 
                 entries[node].datarepacked = True
 
+            ui.progress(_("processing nodes"), None)
             count += 1
-            ui.progress(_("repacking data"), count, unit=self.unit,
-                        total=len(byfile))
 
         ui.progress(_("repacking data"), None)
         target.close(ledger=ledger)
