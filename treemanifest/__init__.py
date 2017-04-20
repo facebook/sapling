@@ -701,6 +701,32 @@ def _sendtreepackrequest(remote, rootdir, mfnodes, basemfnodes, directories):
 
     remote.pipeo.flush()
 
+class treememoizer(object):
+    """A class that keeps references to trees until they've been consumed the
+    expected number of times.
+    """
+    def __init__(self, store):
+        self._store = store
+        self._counts = {}
+        self._cache = {}
+
+    def adduse(self, node):
+        self._counts[node] = self._counts.get(node, 0) + 1
+
+    def get(self, node):
+        tree = self._cache.get(node)
+        if tree is None:
+            tree = cstore.treemanifest(self._store, node)
+            self._cache[node] = tree
+
+        count = self._counts.get(node, 1)
+        count -= 1
+        self._counts[node] = max(count, 0)
+        if count <= 0:
+            del self._cache[node]
+
+        return tree
+
 def servergettreepack(repo, proto, args):
     """A server api for requesting a pack of tree information.
     """
@@ -735,6 +761,8 @@ def servergettreepack(repo, proto, args):
         """
         request = _receivepackrequest(proto.fin)
         rootdir, mfnodes, basemfnodes, directories = request
+        if rootdir:
+            raise NotImplemented("rootdir not supported just yet")
 
         treemfl = repo.manifestlog.treemanifestlog
         mfrevlog = treemfl._revlog
@@ -744,10 +772,43 @@ def servergettreepack(repo, proto, args):
         revlogstore = manifestrevlogstore(repo)
         store = unioncontentstore(datastore, revlogstore)
 
+        mfnodeset = set(mfnodes)
+        basemfnodeset = set(basemfnodes)
+
+        # Count how many times we will need each comparison node, so we can keep
+        # trees in memory the appropriate amount of time.
+        trees = treememoizer(store)
+        for node in mfnodes:
+            p1node, p2node = mfrevlog.parents(node)
+            if p1node != nullid and (p1node in mfnodeset or
+                                     p1node in basemfnodeset):
+                trees.adduse(p1node)
+            else:
+                for basenode in basemfnodes:
+                    trees.adduse(basenode)
+            if p2node != nullid and (p2node in mfnodeset or
+                                     p2node in basemfnodeset):
+                trees.adduse(p2node)
+
         cl = repo.changelog
         for node in mfnodes:
-            treemf = cstore.treemanifest(store, node)
-            for subname, subnode, subtext, x, x, x,  in treemf.walksubtrees():
+            treemf = trees.get(node)
+
+            p1node, p2node = mfrevlog.parents(node)
+            # If p1 is being sent or is already on the client, chances are
+            # that's the best thing for us to delta against.
+            if p1node != nullid and (p1node in mfnodeset or
+                                     p1node in basemfnodeset):
+                basetrees = [trees.get(p1node)]
+            else:
+                basetrees = [trees.get(basenode) for basenode in basemfnodes]
+
+            if p2node != nullid and (p2node in mfnodeset or
+                                     p2node in basemfnodeset):
+                basetrees.append(trees.get(p2node))
+
+            subtrees = treemf.walksubtrees(comparetrees=basetrees)
+            for subname, subnode, subtext, x, x, x in subtrees:
                 # Append data
                 data = [(subnode, nullid, subtext)]
 

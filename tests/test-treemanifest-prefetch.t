@@ -60,15 +60,11 @@
 Test prefetchtrees
   $ hg prefetchtrees -r '0 + 1 + 2'
   $ ls $CACHEDIR/master/packs/manifests
+  8adc618d23082c0a5311a4bbf9ac08b9b9672471.dataidx
+  8adc618d23082c0a5311a4bbf9ac08b9b9672471.datapack
   c0a571385df83107268172e0ab75abb30a12079a.histidx
   c0a571385df83107268172e0ab75abb30a12079a.histpack
-  f074bc974cb09b3022f8bdd162950134af952bae.dataidx
-  f074bc974cb09b3022f8bdd162950134af952bae.datapack
   $ hg debugdatapack --long $CACHEDIR/master/packs/manifests/*.dataidx
-  
-  dir
-  Node                                      Delta Base                                Delta Length
-  bc0c2c938b929f98b1c31a8c5994396ebb096bf0  0000000000000000000000000000000000000000  43
   
   subdir
   Node                                      Delta Base                                Delta Length
@@ -85,6 +81,13 @@ Test prefetchtrees
   
   Node                                      Delta Base                                Delta Length
   60a7f7acb6bb5aaf93ca7d9062931b0f6a0d6db5  0000000000000000000000000000000000000000  95
+  
+  dir
+  Node                                      Delta Base                                Delta Length
+  bc0c2c938b929f98b1c31a8c5994396ebb096bf0  0000000000000000000000000000000000000000  43
+  
+  
+  Node                                      Delta Base                                Delta Length
   ef362f8bbe8aa457b0cfc49f200cbeb7747984ed  0000000000000000000000000000000000000000  46
   $ hg debughistorypack $CACHEDIR/master/packs/manifests/*.histidx
   
