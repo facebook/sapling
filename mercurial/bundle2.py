@@ -1005,7 +1005,7 @@ class bundlepart(object):
             # backup exception data for later
             ui.debug('bundle2-input-stream-interrupt: encoding exception %s'
                      % exc)
-            exc_info = sys.exc_info()
+            tb = sys.exc_info()[2]
             msg = 'unexpected error: %s' % exc
             interpart = bundlepart('error:abort', [('message', msg)],
                                    mandatory=False)
@@ -1016,10 +1016,7 @@ class bundlepart(object):
             outdebug(ui, 'closing payload chunk')
             # abort current part payload
             yield _pack(_fpayloadsize, 0)
-            if pycompat.ispy3:
-                raise exc_info[0](exc_info[1]).with_traceback(exc_info[2])
-            else:
-                exec("""raise exc_info[0], exc_info[1], exc_info[2]""")
+            pycompat.raisewithtb(exc, tb)
         # end of payload
         outdebug(ui, 'closing payload chunk')
         yield _pack(_fpayloadsize, 0)

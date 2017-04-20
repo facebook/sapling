@@ -164,6 +164,10 @@ if ispy3:
             return s
         return s.decode(u'latin-1')
 
+    def raisewithtb(exc, tb):
+        """Raise exception with the given traceback"""
+        raise exc.with_traceback(tb)
+
     def _wrapattrfunc(f):
         @functools.wraps(f)
         def w(object, name, *args):
@@ -223,6 +227,10 @@ else:
     iterbytestr = iter
     sysbytes = identity
     sysstr = identity
+
+    # this can't be parsed on Python 3
+    exec('def raisewithtb(exc, tb):\n'
+         '    raise exc, None, tb\n')
 
     # Partial backport from os.py in Python 3, which only accepts bytes.
     # In Python 2, our paths should only ever be bytes, a unicode path
