@@ -89,10 +89,10 @@ Simple import
   writing filelog: * (glob)
   writing filelog: * (glob)
   writing filelog: * (glob)
-  changelist 1: Writing manifest.
-  changelist 1: Writing changelog: initial
-  changelist 2: Writing manifest.
-  changelist 2: Writing changelog: second
+  changelist 1: writing manifest. node: 17971aea5e86 p1: 000000000000 p2: 000000000000 linkrev: 0
+  changelist 1: writing changelog: initial
+  changelist 2: writing manifest. node: ee5866cdbad7 p1: 17971aea5e86 p2: 000000000000 linkrev: 1
+  changelist 2: writing changelog: second
   2 revision(s), 3 file(s) imported.
 
 Verify

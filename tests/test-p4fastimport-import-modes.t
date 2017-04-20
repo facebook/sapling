@@ -87,10 +87,10 @@ Simple import
   writing filelog: ee47780ebabc, p1 8aa36f7e9a8d, linkrev 1, 7 bytes, src: *, path: depot/Main/b/c (glob)
   writing filelog: a9092a3d84a3, p1 000000000000, linkrev 0, 2 bytes, src: *, path: depot/Main/d (glob)
   writing filelog: f83f0637e55e, p1 a9092a3d84a3, linkrev 1, 4 bytes, src: *, path: depot/Main/d (glob)
-  changelist 1: Writing manifest.
-  changelist 1: Writing changelog: initial
-  changelist 2: Writing manifest.
-  changelist 2: Writing changelog: second
+  changelist 1: writing manifest. node: 3baf19a7398a p1: 000000000000 p2: 000000000000 linkrev: 0
+  changelist 1: writing changelog: initial
+  changelist 2: writing manifest. node: 204ea7b19daa p1: 3baf19a7398a p2: 000000000000 linkrev: 1
+  changelist 2: writing changelog: second
   2 revision(s), 3 file(s) imported.
 
 Verify

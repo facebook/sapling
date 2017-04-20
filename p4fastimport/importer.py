@@ -7,9 +7,9 @@ import os
 import re
 
 from mercurial.i18n import _
+from mercurial.node import nullid, short, hex
 from mercurial import (
     error,
-    node,
     util,
 )
 
@@ -52,7 +52,7 @@ class ChangeManifestImporter(object):
     def create(self, tr, fileflags):
         revnumdict = collections.defaultdict(lambda: 0)
         mrevlog = self._repo.manifestlog._revlog
-        cp1, cp2 = node.nullid, node.nullid
+        cp1, cp2 = nullid, nullid
         clog = self._repo.changelog
         p2 = self._repo[cp2]
         for i, change in enumerate(self._importset.changelists):
@@ -61,8 +61,6 @@ class ChangeManifestImporter(object):
             mf = p1.manifest().copy()
             self._ui.progress(_('importing change'), pos=i, item=change,
                     unit='changes', total=len(self._importset.changelists))
-            self._ui.debug(
-                _('changelist %d: Writing manifest.\n') % change.cl)
 
             added, modified, removed = change.files
 
@@ -93,6 +91,10 @@ class ChangeManifestImporter(object):
                                       linkrev,
                                       p1.manifestnode(),
                                       p2.manifestnode())
+            self._ui.debug('changelist %d: writing manifest. '
+                'node: %s p1: %s p2: %s linkrev: %d\n' % (
+                change.cl, short(mp1), short(p1.manifestnode()),
+                short(p2.manifestnode()), linkrev))
 
             desc = change.parsed['desc']
             if desc == '':
@@ -101,9 +103,8 @@ class ChangeManifestImporter(object):
 
             shortdesc = desc.splitlines()[0]
             username = change.parsed['user']
-            self._ui.debug(
-                _('changelist %d: Writing changelog: %s\n') % (change.cl,
-                    shortdesc))
+            self._ui.debug('changelist %d: writing changelog: %s\n' % (
+                change.cl, shortdesc))
             cp1 = clog.add(
                     mp1,
                     amf + rf,
@@ -254,7 +255,7 @@ class CopyTracer(object):
 # account
             copynode = copylog.node(p4fi.filelog.branchrev - 1)
             meta["copy"] = localpath(bsrc)
-            meta["copyrev"] = node.hex(copynode)
+            meta["copyrev"] = hex(copynode)
         return meta
 
     @util.propertycache
@@ -305,7 +306,7 @@ class FileImporter(object):
         lastlinkrev = 0
         for c in sorted(revs):
             linkrev = self._i.linkrev(c.cl)
-            fparent1, fparent2 = node.nullid, node.nullid
+            fparent1, fparent2 = nullid, nullid
 
             # invariant: our linkrevs do not criss-cross.
             assert linkrev >= lastlinkrev
@@ -343,6 +344,6 @@ class FileImporter(object):
             h = filelog.add(text, meta, tr, linkrev, fparent1, fparent2)
             self._ui.debug(
                 'writing filelog: %s, p1 %s, linkrev %d, %d bytes, src: %s, '
-                'path: %s\n' % (node.short(h), node.short(fparent1), linkrev,
+                'path: %s\n' % (short(h), short(fparent1), linkrev,
                     len(text), src, self.relpath))
         return fileflags

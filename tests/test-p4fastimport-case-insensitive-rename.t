@@ -83,12 +83,12 @@ import
   writing filelog: b789fdd96dc2, p1 000000000000, linkrev 2, 2 bytes, src: *, path: depot/Main/A (glob)
   writing filelog: b789fdd96dc2, p1 000000000000, linkrev 0, 2 bytes, src: *, path: depot/Main/a (glob)
   writing filelog: b789fdd96dc2, p1 000000000000, linkrev 1, 2 bytes, src: *, path: depot/Main/b (glob)
-  changelist 1: Writing manifest.
-  changelist 1: Writing changelog: initial
-  changelist 2: Writing manifest.
-  changelist 2: Writing changelog: moveway
-  changelist 3: Writing manifest.
-  changelist 3: Writing changelog: moveback
+  changelist 1: writing manifest. node: 77111a2fe360 p1: 000000000000 p2: 000000000000 linkrev: 0
+  changelist 1: writing changelog: initial
+  changelist 2: writing manifest. node: 8c09450f9f5d p1: 77111a2fe360 p2: 000000000000 linkrev: 1
+  changelist 2: writing changelog: moveway
+  changelist 3: writing manifest. node: fc1826355267 p1: 8c09450f9f5d p2: 000000000000 linkrev: 2
+  changelist 3: writing changelog: moveback
   3 revision(s), 3 file(s) imported.
 
 Verify

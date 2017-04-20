@@ -77,12 +77,12 @@ import
   case conflict: //depot/Main/A and //depot/Main/a
   writing filelog: b789fdd96dc2, p1 000000000000, linkrev 2, 2 bytes, src: *, path: depot/Main/A (glob)
   writing filelog: b789fdd96dc2, p1 000000000000, linkrev 0, 2 bytes, src: *, path: depot/Main/a (glob)
-  changelist 1: Writing manifest.
-  changelist 1: Writing changelog: initial
-  changelist 2: Writing manifest.
-  changelist 2: Writing changelog: delete
-  changelist 3: Writing manifest.
-  changelist 3: Writing changelog: add with case-inensitivity match
+  changelist 1: writing manifest. node: 77111a2fe360 p1: 000000000000 p2: 000000000000 linkrev: 0
+  changelist 1: writing changelog: initial
+  changelist 2: writing manifest. node: ba644731a088 p1: 77111a2fe360 p2: 000000000000 linkrev: 1
+  changelist 2: writing changelog: delete
+  changelist 3: writing manifest. node: a7bdbbc64a41 p1: ba644731a088 p2: 000000000000 linkrev: 2
+  changelist 3: writing changelog: add with case-inensitivity match
   3 revision(s), 2 file(s) imported.
 
 Verify
