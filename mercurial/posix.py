@@ -494,7 +494,7 @@ def statfiles(files):
 
 def getuser():
     '''return name of current user'''
-    return getpass.getuser()
+    return pycompat.fsencode(getpass.getuser())
 
 def username(uid=None):
     """Return the name of the user with the given uid.
