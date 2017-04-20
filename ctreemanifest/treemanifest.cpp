@@ -479,7 +479,7 @@ bool treemanifest::remove(
   return (result == FIND_PATH_OK) && extras.found;
 }
 
-NewTreeIterator::NewTreeIterator(Manifest *mainRoot,
+SubtreeIterator::SubtreeIterator(Manifest *mainRoot,
                 const std::vector<char*> &cmpNodes,
                 const std::vector<Manifest*> &cmpRoots,
                 const ManifestFetcher &fetcher) :
@@ -496,7 +496,7 @@ NewTreeIterator::NewTreeIterator(Manifest *mainRoot,
   }
 }
 
-bool NewTreeIterator::popResult(std::string **path, ManifestNode **result,
+bool SubtreeIterator::popResult(std::string **path, ManifestNode **result,
                                 ManifestNode **p1, ManifestNode **p2) {
   stackframe &mainFrame = this->mainStack.back();
   Manifest *mainManifest = mainFrame.manifest;
@@ -609,7 +609,7 @@ bool NewTreeIterator::popResult(std::string **path, ManifestNode **result,
   return true;
 }
 
-bool NewTreeIterator::processDirectory(ManifestEntry *mainEntry) {
+bool SubtreeIterator::processDirectory(ManifestEntry *mainEntry) {
   // mainEntry is a new entry we need to compare against each cmpEntry, and
   // then push if it is different from all of them.
 
@@ -678,7 +678,7 @@ bool NewTreeIterator::processDirectory(ManifestEntry *mainEntry) {
   return true;
 }
 
-bool NewTreeIterator::next(std::string **path, ManifestNode **result,
+bool SubtreeIterator::next(std::string **path, ManifestNode **result,
                            ManifestNode **p1, ManifestNode **p2) {
   // Pop the last returned directory off the path
   size_t slashoffset = this->path.find_last_of('/', this->path.size() - 2);

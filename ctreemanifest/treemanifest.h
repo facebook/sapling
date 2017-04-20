@@ -245,7 +245,7 @@ struct stackframe {
  * treemanifests and iterates over the Manifests that only exist in the main
  * treemanifest.
  */
-class NewTreeIterator {
+class SubtreeIterator {
   private:
     std::vector<stackframe> mainStack;
     std::vector<char*> cmpNodes;
@@ -255,7 +255,7 @@ class NewTreeIterator {
     ManifestNode parents[2];
     ManifestFetcher fetcher;
   public:
-    NewTreeIterator(Manifest *mainRoot,
+    SubtreeIterator(Manifest *mainRoot,
                     const std::vector<char*> &cmpNodes,
                     const std::vector<Manifest*> &cmpRoots,
                     const ManifestFetcher &fetcher);
