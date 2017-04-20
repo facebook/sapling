@@ -90,7 +90,7 @@ Various statprof formatters work
 
   $ hg --profile --config profiling.statformat=json sleep 2>../out
   $ cat ../out
-  \[\[\d+.* (re)
+  \[\[-?\d+.* (re)
 
 statprof can be used as a standalone module
 
