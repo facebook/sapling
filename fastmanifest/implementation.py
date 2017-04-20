@@ -139,11 +139,11 @@ class hybridmanifest(object):
                 self.__treemanifest = cstore.treemanifest(store)
             else:
                 store = self.opener.manifestdatastore
-                missing = store.getmissing([('', self.node)])
-                if not missing:
+                try:
+                    store.get('', self.node)
                     self.__treemanifest = cstore.treemanifest(store,
-                                                                     self.node)
-                else:
+                                                              self.node)
+                except KeyError:
                     # Record that it doesn't exist, so we don't keep checking
                     # the store.
                     self.__treemanifest = False

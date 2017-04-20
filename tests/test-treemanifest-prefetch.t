@@ -116,3 +116,28 @@ Test prefetchtrees
        0         0      48     -1       0 ef362f8bbe8a 000000000000 000000000000
        1        48      59      0       1 23848a702498 ef362f8bbe8a 000000000000
        2       107      59      1       2 b2ed7f50be40 23848a702498 000000000000
+
+Test auto prefetch during normal access
+  $ rm -rf $CACHEDIR/master
+  $ ls $CACHEDIR/master/packs/manifests
+  ls: cannot access $TESTTMP/hgcache/master/packs/manifests: No such file or directory
+  [2]
+  $ hg log -r tip --stat --pager=off
+  changeset:   2:e8f3c0d20aea
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     modify x
+  
+   dir/x |  1 +
+   1 files changed, 1 insertions(+), 0 deletions(-)
+  
+  $ ls $CACHEDIR/master/packs/manifests
+  18ff3e6f91cb928b438833d365e611a51b13d860.histidx
+  18ff3e6f91cb928b438833d365e611a51b13d860.histpack
+  1f5b5244ebc66953070a1a48c8cd712d11a450ed.histidx
+  1f5b5244ebc66953070a1a48c8cd712d11a450ed.histpack
+  396ec58cb360149de64fa9262309d1cd27852054.dataidx
+  396ec58cb360149de64fa9262309d1cd27852054.datapack
+  57215429ac4f777ea7c9be3419707cd854be5802.dataidx
+  57215429ac4f777ea7c9be3419707cd854be5802.datapack

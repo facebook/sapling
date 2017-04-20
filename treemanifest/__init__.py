@@ -30,18 +30,26 @@ native implementation of the datapack stores.
     [treemanifest]
     usecunionstore = True
 
+Disabling `treemanifest.demanddownload` will prevent the extension from
+automatically downloading trees from the server when they don't exist locally.
+
+    [treemanifest]
+    demanddownload = True
+
 """
 
 from mercurial import (
     commands,
     changegroup,
     cmdutil,
+    commands,
     error,
     extensions,
     hg,
     localrepo,
     manifest,
     mdiff,
+    phases,
     revlog,
     scmutil,
     sshserver,
@@ -51,7 +59,7 @@ from mercurial import (
     wireproto,
 )
 from mercurial.i18n import _
-from mercurial.node import bin, nullid
+from mercurial.node import bin, hex, nullid
 
 from remotefilelog.contentstore import unioncontentstore
 from remotefilelog.datapack import datapackstore, mutabledatapack
@@ -115,15 +123,21 @@ def clientreposetup(repo):
     if repo.ui.configbool("treemanifest", "usecunionstore"):
         datastore = cstore.datapackstore(packpath)
         localdatastore = cstore.datapackstore(localpackpath)
+        # TODO: can't use remotedatastore with cunionstore yet
         repo.svfs.manifestdatastore = cstore.uniondatapackstore(
                 [localdatastore, datastore])
     else:
         datastore = datapackstore(repo.ui, packpath, usecdatapack=usecdatapack)
         localdatastore = datapackstore(repo.ui, localpackpath,
                                        usecdatapack=usecdatapack)
+        stores = [datastore, localdatastore]
+        remotedatastore = remotetreedatastore(repo)
+        if repo.ui.configbool("treemanifest", "demanddownload", True):
+            stores.append(remotedatastore)
 
-        repo.svfs.manifestdatastore = unioncontentstore(localdatastore,
-            datastore, writestore=localdatastore)
+        repo.svfs.manifestdatastore = unioncontentstore(*stores,
+                                                    writestore=localdatastore)
+        remotedatastore.setshared(repo.svfs.manifestdatastore)
 
     repo.svfs.sharedmanifestdatastores = [datastore]
     repo.svfs.localmanifestdatastores = [localdatastore]
@@ -645,7 +659,7 @@ def _prefetchtrees(repo, rootdir, mfnodes, basemfnodes, directories):
     receivedhistory, receiveddata = wirepack.receivepack(repo.ui, remote,
                                                          packpath)
     receivednodes = (node for dir, node in receiveddata if dir == rootdir)
-    missingnodes = mfnodes.difference(receivednodes)
+    missingnodes = set(mfnodes).difference(receivednodes)
     if missingnodes:
         raise error.Abort(_("unable to download %d trees (%s,...)") %
                           (len(missingnodes), list(missingnodes)[0]))
@@ -749,3 +763,41 @@ def _receivepackrequest(stream):
     basemfnodes = list(readnodelist(stream))
     directories = list(readpathlist(stream))
     return rootdir, mfnodes, basemfnodes, directories
+
+class remotetreedatastore(object):
+    def __init__(self, repo):
+        self._repo = repo
+        self._shared = None
+
+    def setshared(self, shared):
+        self._shared = shared
+
+    def get(self, name, node):
+        # Only look at the server if not root or is public
+        if name == '':
+            mfrevlog = self._repo.manifestlog._revlog
+            rev = mfrevlog.rev(node)
+            linkrev = mfrevlog.linkrev(rev)
+            if self._repo[linkrev].phase() != phases.public:
+                return None
+
+        _prefetchtrees(self._repo, name, [node], [], [])
+        self._shared.markforrefresh()
+        return self._shared.get(name, node)
+
+    def getdeltachain(self, name, node):
+        # Since our remote content stores just contain full texts, we return a
+        # fake delta chain that just consists of a single full text revision.
+        # The nullid in the deltabasenode slot indicates that the revision is a
+        # fulltext.
+        revision = self.get(name, node)
+        return [(name, node, None, nullid, revision)]
+
+    def add(self, name, node, data):
+        raise RuntimeError("cannot add to a remote store")
+
+    def getmissing(self, keys):
+        return keys
+
+    def markledger(self, ledger):
+        pass

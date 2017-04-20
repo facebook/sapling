@@ -46,6 +46,7 @@
   > 
   > [treemanifest]
   > autocreatetrees=True
+  > demanddownload=False
   > EOF
   $ hg pull -q
   read flat manifest
