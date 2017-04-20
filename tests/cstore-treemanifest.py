@@ -282,6 +282,43 @@ class ctreemanifesttests(unittest.TestCase):
             anode : (nullid, nullid, alinknode, ''),
         })
 
+    def testWriteNoChange(self):
+        """Tests that making a change to a tree, then making a second change
+        such that the result is a no-op, doesn't serialize that subtree. It
+        should only serialize the root node, because we're giving the root node
+        a new parent.
+        """
+        a = cstore.treemanifest(FakeDataStore())
+        xhashflags = hashflags()
+        a.set("abc/def/x", *xhashflags)
+        a.set("abc/z", *hashflags())
+        alinknode = hashflags()[0]
+
+        dstore = FakeDataStore()
+        hstore = FakeHistoryStore()
+        for name, node, text, p1text, p1, p2 in a.finalize():
+            dstore.add(name, node, nullid, text)
+            hstore.add(name, node, p1, p2, alinknode, '')
+            if not name:
+                anode = node
+
+        a2 = cstore.treemanifest(dstore, anode)
+
+        b = a2.copy()
+        b.set("abc/def/x", *hashflags())
+        b.set("abc/def/x", *xhashflags)
+        blinknode = hashflags()[0]
+
+        newtrees = set()
+        for name, node, text, p1text, p1, p2 in b.finalize(a2):
+            newtrees.add((name, node))
+            dstore.add(name, node, nullid, text)
+            hstore.add(name, node, p1, p2, blinknode, '')
+
+        self.assertEquals(newtrees, set([
+            ('', node),
+        ]))
+
     def testWriteReplaceFile(self):
         """Tests writing a manifest which replaces a file with a directory."""
         a = cstore.treemanifest(FakeDataStore())
