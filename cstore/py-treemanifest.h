@@ -312,10 +312,10 @@ static void subtreeiter_dealloc(py_subtreeiter *self) {
 static py_subtreeiter *subtreeiter_create(py_treemanifest *treemf, Manifest *mainManifest,
                                           const std::vector<Manifest*> &cmpManifests,
                                           const ManifestFetcher &fetcher) {
-  py_subtreeiter *i = PyObject_New(py_subtreeiter, &subtreeiterType);
-  if (i) {
+  py_subtreeiter *pyiter = PyObject_New(py_subtreeiter, &subtreeiterType);
+  if (pyiter) {
     try {
-      i->treemf = treemf;
+      pyiter->treemf = treemf;
       Py_INCREF(treemf);
 
       // The provided created struct hasn't initialized our iter member, so
@@ -324,13 +324,13 @@ static py_subtreeiter *subtreeiter_create(py_treemanifest *treemf, Manifest *mai
       for (size_t i = 0; i < cmpManifests.size(); ++i) {
         cmpNodes.push_back(cmpManifests[i]->node());
       }
-      new (&i->iter) SubtreeIterator(mainManifest, cmpNodes, cmpManifests, fetcher);
-      return i;
+      new (&pyiter->iter) SubtreeIterator(mainManifest, cmpNodes, cmpManifests, fetcher);
+      return pyiter;
     } catch (const pyexception &ex) {
-      Py_DECREF(i);
+      Py_DECREF(pyiter);
       return NULL;
     } catch (const std::exception &ex) {
-      Py_DECREF(i);
+      Py_DECREF(pyiter);
       PyErr_SetString(PyExc_RuntimeError, ex.what());
       return NULL;
     }
