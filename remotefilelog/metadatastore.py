@@ -26,8 +26,12 @@ class unionmetadatastore(object):
             # may be queued as missing, then B and A are traversed for both.
             queue = [(curname, curnode)]
             missing = []
+            seen = set()
             while queue:
                 name, node = queue.pop()
+                if (name, node) in seen:
+                    continue
+                seen.add((name, node))
                 value = ancestors.get(node)
                 if not value:
                     missing.append((name, node))
