@@ -52,7 +52,7 @@ class ManifestEntry {
     void appendtopath(std::string &path);
 
     Manifest *get_manifest(
-        ManifestFetcher fetcher, const char *path, size_t pathlen);
+        const ManifestFetcher &fetcher, const char *path, size_t pathlen);
 
     void initialize(
         const char *filename, const size_t filenamelen,

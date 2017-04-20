@@ -53,18 +53,18 @@ Test autocreatetrees
   (run 'hg update' to get a working copy)
   $ ls -l $CACHEDIR/master/packs/manifests
   total * (glob)
-  * 1146 * 194862a96c9896c52b5dbc5502998d76501edb2e.dataidx (glob)
-  *  316 * 194862a96c9896c52b5dbc5502998d76501edb2e.datapack (glob)
-  * 1098 * 3513dce7ac2aba49a796f9527afc94a36fd536e8.histidx (glob)
-  *  184 * 3513dce7ac2aba49a796f9527afc94a36fd536e8.histpack (glob)
+  * 1146 * 678f597a73b2b96f2e120c84ef8a84069a250266.dataidx (glob)
+  *  315 * 678f597a73b2b96f2e120c84ef8a84069a250266.datapack (glob)
+  * 1098 * efcd3bb8489372214b9740b8d64e11f9bd78c867.histidx (glob)
+  *  183 * efcd3bb8489372214b9740b8d64e11f9bd78c867.histpack (glob)
 
-  $ hg debugdatapack $CACHEDIR/master/packs/manifests/194862a96c9896c52b5dbc5502998d76501edb2e
+  $ hg debugdatapack $CACHEDIR/master/packs/manifests/678f597a73b2b96f2e120c84ef8a84069a250266
   
   
   Node          Delta Base    Delta Length
   bc0c2c938b92  000000000000  43
   
-  subdir/
+  subdir
   Node          Delta Base    Delta Length
   ddb35f099a64  000000000000  43
   
@@ -79,11 +79,11 @@ Test that commit creates local trees
   $ hg commit -qAm 'modify subdir/z'
   $ ls -l .hg/store/packs/manifests
   * (glob)
-  * 1106 * 5ae421f7ddd38490fe5bb8fb379861746c7377d4.dataidx (glob)
-  *  255 * 5ae421f7ddd38490fe5bb8fb379861746c7377d4.datapack (glob)
-  $ hg debugdatapack .hg/store/packs/manifests/5ae421f7ddd38490fe5bb8fb379861746c7377d4
+  * 1106 * a7f7e084adff88a01cf76909345be1e56ee704a9.dataidx (glob)
+  *  254 * a7f7e084adff88a01cf76909345be1e56ee704a9.datapack (glob)
+  $ hg debugdatapack .hg/store/packs/manifests/a7f7e084adff88a01cf76909345be1e56ee704a9
   
-  subdir/
+  subdir
   Node          Delta Base    Delta Length
   ac728a786423  000000000000  43
   

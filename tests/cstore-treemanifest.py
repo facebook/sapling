@@ -647,7 +647,7 @@ class ctreemanifesttests(unittest.TestCase):
         # Walk over inmemory tree
         subtrees = list(a.walksubtrees())
         self.assertEquals(subtrees, [
-            ('abc/', nullid, 'z\0%s%s\n' % (hex(zflags[0]), zflags[1]),
+            ('abc', nullid, 'z\0%s%s\n' % (hex(zflags[0]), zflags[1]),
              '', nullid, nullid),
             ('', nullid, 'abc\0%st\nfoo\0%s%s\n' %
                             (hex(nullid), hex(fooflags[0]), fooflags[1]),
@@ -662,12 +662,12 @@ class ctreemanifesttests(unittest.TestCase):
             hstore.add(name, node, p1, p2, nullid, '')
             if name == '':
                 rootnode = node
-            if name == 'abc/':
+            if name == 'abc':
                 abcnode = node
 
         subtrees = list(a.walksubtrees())
         self.assertEquals(subtrees, [
-            ('abc/', abcnode, 'z\0%s%s\n' % (hex(zflags[0]), zflags[1]),
+            ('abc', abcnode, 'z\0%s%s\n' % (hex(zflags[0]), zflags[1]),
              '', nullid, nullid),
             ('', rootnode, 'abc\0%st\nfoo\0%s%s\n' %
                             (hex(abcnode), hex(fooflags[0]), fooflags[1]),

@@ -132,9 +132,14 @@ void ManifestEntry::appendtopath(std::string &path) {
 }
 
 Manifest *ManifestEntry::get_manifest(
-    ManifestFetcher fetcher, const char *path, size_t pathlen) {
+    const ManifestFetcher &fetcher, const char *path, size_t pathlen) {
   if (this->resolved.isnull()) {
     std::string binnode = binfromhex(node);
+    // Chop off the trailing slash
+    if (pathlen > 0) {
+      assert(path[pathlen - 1] == '/');
+      --pathlen;
+    }
     this->resolved = fetcher.get(path, pathlen, binnode);
   }
 

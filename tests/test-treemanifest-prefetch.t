@@ -59,13 +59,13 @@
 Test prefetchtrees
   $ hg prefetchtrees -r '0 + 1 + 2'
   $ ls $CACHEDIR/master/packs/manifests
-  20fe6511795b8b2a4c52223c5fa1846033afdaf0.dataidx
-  20fe6511795b8b2a4c52223c5fa1846033afdaf0.datapack
-  2124ac8f5a09b4be86db177166fc13820dbc2805.histidx
-  2124ac8f5a09b4be86db177166fc13820dbc2805.histpack
+  21274241696ccc6d17449191560a18a29afddb73.histidx
+  21274241696ccc6d17449191560a18a29afddb73.histpack
+  6b5db72dd8e391f7bf0216994a89f08c329a0f78.dataidx
+  6b5db72dd8e391f7bf0216994a89f08c329a0f78.datapack
   $ hg debugdatapack --long $CACHEDIR/master/packs/manifests/*.dataidx
   
-  dir/
+  dir
   Node                                      Delta Base                                Delta Length
   df7d132bbf2367134e62c458788b1da2d4709c09  0000000000000000000000000000000000000000  86
   
@@ -73,7 +73,7 @@ Test prefetchtrees
   Node                                      Delta Base                                Delta Length
   23848a702498b36725ff386a434cc0557926067e  0000000000000000000000000000000000000000  46
   
-  dir/
+  dir
   Node                                      Delta Base                                Delta Length
   4afc76c372c40e9f73c85b12b61ecaccbde6cab1  0000000000000000000000000000000000000000  86
   
@@ -81,7 +81,7 @@ Test prefetchtrees
   Node                                      Delta Base                                Delta Length
   b2ed7f50be40fa0559d1a65a811deac91df7efac  0000000000000000000000000000000000000000  46
   
-  dir/
+  dir
   Node                                      Delta Base                                Delta Length
   bc0c2c938b929f98b1c31a8c5994396ebb096bf0  0000000000000000000000000000000000000000  43
   
@@ -96,7 +96,7 @@ Test prefetchtrees
   23848a702498  ef362f8bbe8a  000000000000  2a62f70ac760  
   ef362f8bbe8a  000000000000  000000000000  ecfb693caff5  
   
-  dir/
+  dir
   Node          P1 Node       P2 Node       Link Node     Copy From
   4afc76c372c4  df7d132bbf23  000000000000  e8f3c0d20aea  
   df7d132bbf23  bc0c2c938b92  000000000000  2a62f70ac760  
@@ -133,11 +133,11 @@ Test auto prefetch during normal access
    1 files changed, 1 insertions(+), 0 deletions(-)
   
   $ ls $CACHEDIR/master/packs/manifests
-  18ff3e6f91cb928b438833d365e611a51b13d860.histidx
-  18ff3e6f91cb928b438833d365e611a51b13d860.histpack
-  1f5b5244ebc66953070a1a48c8cd712d11a450ed.histidx
-  1f5b5244ebc66953070a1a48c8cd712d11a450ed.histpack
-  69eeb8f7a99cf0fea8a22da6784259bb48b10550.dataidx
-  69eeb8f7a99cf0fea8a22da6784259bb48b10550.datapack
-  6bfd36e8424feecbd907b617782212b26955d504.dataidx
-  6bfd36e8424feecbd907b617782212b26955d504.datapack
+  1e580e4534dbc0dd30355113b6dee25689ff1687.histidx
+  1e580e4534dbc0dd30355113b6dee25689ff1687.histpack
+  2c993cccc55d86d8d58dc5ebc612a72de88e6d2a.dataidx
+  2c993cccc55d86d8d58dc5ebc612a72de88e6d2a.datapack
+  a9212cad574e8cc589758304d3475950de64e1c9.dataidx
+  a9212cad574e8cc589758304d3475950de64e1c9.datapack
+  c2626a6d90c486aa1b9a10931ed600b79c9bf07c.histidx
+  c2626a6d90c486aa1b9a10931ed600b79c9bf07c.histpack

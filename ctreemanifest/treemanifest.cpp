@@ -187,6 +187,12 @@ FindResult treemanifest::find(
     size_t pathlen;
 
     path.getPathToPosition(&pathstart, &pathlen);
+
+    // Chop off the trailing slash before fetching
+    // TODO: we should get rid of this code and just call
+    // manifestentry->get_manifest(). The only benefit here is avoiding the
+    // extra string allocation.
+    pathlen = pathlen > 0 ? pathlen - 1 : 0;
     findContext->nodebuffer.erase();
     appendbinfromhex(manifestentry->node, findContext->nodebuffer);
     manifestentry->resolved = this->fetcher.get(pathstart, pathlen,
@@ -604,7 +610,8 @@ bool SubtreeIterator::next(std::string **path, Manifest **result,
 bool SubtreeIterator::next(std::string **path, Manifest **result,
                            Manifest **p1, Manifest **p2, ManifestEntry **resultEntry) {
   // Pop the last returned directory off the path
-  size_t slashoffset = this->path.find_last_of('/', this->path.size() - 2);
+  assert(this->path.size() > 0);
+  size_t slashoffset = this->path.find_last_of('/', this->path.size() - 1);
   if (slashoffset == std::string::npos) {
     this->path.erase();
   } else {
@@ -631,6 +638,9 @@ bool SubtreeIterator::next(std::string **path, Manifest **result,
       if (this->mainStack.size() > 0) {
         *resultEntry = this->mainStack.back().currentvalue();
         this->mainStack.back().next();
+      }
+      if (this->path.size() > 0) {
+        this->path.erase(this->path.size() - 1);
       }
       return true;
     } else {

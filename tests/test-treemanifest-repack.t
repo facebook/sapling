@@ -32,10 +32,10 @@
   $ hg pull -q -r 0
   $ hg pull -q -r 1
   $ ls -l $CACHEDIR/master/packs/manifests | grep pack
-  *  181 * 095751e2986a69c95ca94f92e02aa5dc9f66570c.histpack (glob)
+  *  180 * 49bfd5c81a3ca40372ddaea09c4c23c40934a198.histpack (glob)
   *   89 * 54d5b52963363915130d0d7bcddcfd70be1dd0fc.histpack (glob)
   *  100 * 65df85879cdd898607ee3f323a0b61edc7de25b8.datapack (glob)
-  *  249 * e61e965008eb4449c7dd33d4cfe650606e00a0c8.datapack (glob)
+  *  248 * bb55d9105672c45d4f82df15bd091a555ef02c79.datapack (glob)
 
 - Verify datapack contents
   $ hg debugdatapack $CACHEDIR/master/packs/manifests/65df85879cdd898607ee3f323a0b61edc7de25b8
@@ -44,9 +44,9 @@
   Node          Delta Base    Delta Length
   a0c8bcbbb45c  000000000000  43
 
-  $ hg debugdatapack $CACHEDIR/master/packs/manifests/e61e965008eb4449c7dd33d4cfe650606e00a0c8
+  $ hg debugdatapack $CACHEDIR/master/packs/manifests/bb55d9105672c45d4f82df15bd091a555ef02c79
   
-  dir/
+  dir
   Node          Delta Base    Delta Length
   23226e7a252c  000000000000  43
   
@@ -55,13 +55,13 @@
   1832e0765de9  000000000000  89
 
 - Verify datapack contents
-  $ hg debughistorypack $CACHEDIR/master/packs/manifests/095751e2986a69c95ca94f92e02aa5dc9f66570c
+  $ hg debughistorypack $CACHEDIR/master/packs/manifests/49bfd5c81a3ca40372ddaea09c4c23c40934a198
   
   
   Node          P1 Node       P2 Node       Link Node     Copy From
   1832e0765de9  a0c8bcbbb45c  000000000000  8e83608cbe60  
   
-  dir/
+  dir
   Node          P1 Node       P2 Node       Link Node     Copy From
   23226e7a252c  000000000000  000000000000  8e83608cbe60  
 
@@ -75,28 +75,28 @@
   $ hg repack
 
   $ ls -l $CACHEDIR/master/packs/manifests | grep pack
-  *  316 * 4fa1c1e1a5f63679cb192ba1ab24f7363a79b7e9.datapack (glob)
-  *  263 * 812c2b1b119b5609e5c902abbd99455e32955cdf.histpack (glob)
+  *  262 * 6ef9454b3616ff75edca21af6f617d21a79f5963.histpack (glob)
+  *  315 * d24c358c968883e3b6c4bd6a85845dfb28fd8de6.datapack (glob)
 
-  $ hg debugdatapack $CACHEDIR/master/packs/manifests/4fa1c1e1a5f63679cb192ba1ab24f7363a79b7e9
+  $ hg debugdatapack $CACHEDIR/master/packs/manifests/d24c358c968883e3b6c4bd6a85845dfb28fd8de6
   
   
   Node          Delta Base    Delta Length
   1832e0765de9  000000000000  89
   a0c8bcbbb45c  1832e0765de9  12
   
-  dir/
+  dir
   Node          Delta Base    Delta Length
   23226e7a252c  000000000000  43
 
-  $ hg debughistorypack $CACHEDIR/master/packs/manifests/812c2b1b119b5609e5c902abbd99455e32955cdf
+  $ hg debughistorypack $CACHEDIR/master/packs/manifests/6ef9454b3616ff75edca21af6f617d21a79f5963
   
   
   Node          P1 Node       P2 Node       Link Node     Copy From
   1832e0765de9  a0c8bcbbb45c  000000000000  8e83608cbe60  
   a0c8bcbbb45c  000000000000  000000000000  1f0dee641bb7  
   
-  dir/
+  dir
   Node          P1 Node       P2 Node       Link Node     Copy From
   23226e7a252c  000000000000  000000000000  8e83608cbe60  
 
@@ -105,40 +105,40 @@
   $ echo a >> a && hg commit -Aqm 'modify a'
   $ echo b >> dir/b && hg commit -Aqm 'modify dir/b'
   $ ls -l .hg/store/packs/manifests | grep datapack
-  * 249 * 087d03b07be7a9d47094c965deb837846ff58fe1.datapack (glob)
+  * 248 * 5d1716bbef6e7200192de6509055d1ee31a4172c.datapack (glob)
   * 146 * cffef142da32f3e52c1779490e5d0ddac5f9b82b.datapack (glob)
   $ hg repack
   $ ls -l .hg/store/packs/manifests | grep datapack
-  * 394 * 6cbda0a4c1d906347a1183153d2e54760d4d6b14.datapack (glob)
+  * 393 * 45f06dbb5d82e52ae3975af82d7e1b4d73c8c599.datapack (glob)
 
 # Test incremental repacking of trees
   $ echo b >> dir/b && hg commit -Aqm 'modify dir/b'
   $ echo b >> dir/b && hg commit -Aqm 'modify dir/b'
   $ ls -l .hg/store/packs/manifests | grep datapack
-  * 249 * 4ed5d60b25e010b02fd9a79be8bb216e6c43eae7.datapack (glob)
-  * 394 * 6cbda0a4c1d906347a1183153d2e54760d4d6b14.datapack (glob)
-  * 249 * dfdc5f4d86ae2389fc5660338fb6018fb2000a4b.datapack (glob)
+  * 248 * 21501384df03b8489b366c5218be639fa08830e4.datapack (glob)
+  * 393 * 45f06dbb5d82e52ae3975af82d7e1b4d73c8c599.datapack (glob)
+  * 248 * d7e689a91ac63385be120a118af9ce8663748f28.datapack (glob)
 
 - repack incremental does nothing here because there are so few packs
   $ hg repack --incremental --config remotefilelog.data.generations=300,200 --config remotefilelog.data.repacksizelimit=300
   $ ls -l .hg/store/packs/manifests | grep datapack
-  * 249 * 4ed5d60b25e010b02fd9a79be8bb216e6c43eae7.datapack (glob)
-  * 394 * 6cbda0a4c1d906347a1183153d2e54760d4d6b14.datapack (glob)
-  * 249 * dfdc5f4d86ae2389fc5660338fb6018fb2000a4b.datapack (glob)
+  * 248 * 21501384df03b8489b366c5218be639fa08830e4.datapack (glob)
+  * 393 * 45f06dbb5d82e52ae3975af82d7e1b4d73c8c599.datapack (glob)
+  * 248 * d7e689a91ac63385be120a118af9ce8663748f28.datapack (glob)
 
   $ echo b >> dir/b && hg commit -Aqm 'modify dir/b'
   $ echo b >> dir/b && hg commit -Aqm 'modify dir/b'
   $ echo b >> dir/b && hg commit -Aqm 'modify dir/b'
   $ ls -l .hg/store/packs/manifests | grep datapack
-  * 249 * 4db71afc17447dc1728f4d41d684495ecc073822.datapack (glob)
-  * 249 * 4ed5d60b25e010b02fd9a79be8bb216e6c43eae7.datapack (glob)
-  * 394 * 6cbda0a4c1d906347a1183153d2e54760d4d6b14.datapack (glob)
-  * 249 * 6d64b99736cef7125a5998fa6fbe4c866e146ae7.datapack (glob)
-  * 249 * a1750dfd2e97ded5bc62ad05551c9be33ad7de53.datapack (glob)
-  * 249 * dfdc5f4d86ae2389fc5660338fb6018fb2000a4b.datapack (glob)
+  * 248 * 21501384df03b8489b366c5218be639fa08830e4.datapack (glob)
+  * 248 * 347263bf1efbdb5bf7e1d1565b6b504073fb9093.datapack (glob)
+  * 393 * 45f06dbb5d82e52ae3975af82d7e1b4d73c8c599.datapack (glob)
+  * 248 * 544a3b46a61732209116ae50847ec333b75e3765.datapack (glob)
+  * 248 * 863908ef8149261ab0d891c2344d8e8766c39441.datapack (glob)
+  * 248 * d7e689a91ac63385be120a118af9ce8663748f28.datapack (glob)
 
 - repack incremental kicks in once there are a number of packs
   $ hg repack --incremental --config remotefilelog.data.generations=300,200
   $ ls -l .hg/store/packs/manifests | grep datapack
-  *  394 * 6cbda0a4c1d906347a1183153d2e54760d4d6b14.datapack (glob)
-  * 1241 * a55c1202ad93c3a7821490cbe3d7fd9d9030c25a.datapack (glob)
+  *  393 * 45f06dbb5d82e52ae3975af82d7e1b4d73c8c599.datapack (glob)
+  * 1236 * 59f37d77ac8d5da86d6eea390010d0d46d9dae19.datapack (glob)
