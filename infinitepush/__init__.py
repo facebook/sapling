@@ -471,10 +471,17 @@ def getbundlechunks(orig, repo, source, heads=None, bundlecaps=None, **kwargs):
                 if not _needsrebundling(head, bundlerepo):
                     with util.posixfile(bundlefile, "rb") as f:
                         unbundler = exchange.readbundle(repo.ui, f, bundlefile)
-                        for part in unbundler.iterparts():
-                            if part.type == 'changegroup':
-                                version = part.params.get('version', '01')
-                                scratchbundles.append((part.read(), version))
+                        if isinstance(unbundler, changegroup.cg1unpacker):
+                            scratchbundles.append((unbundler._stream.read(),
+                                                   '01'))
+                        elif isinstance(unbundler, bundle2.unbundle20):
+                            for part in unbundler.iterparts():
+                                if part.type == 'changegroup':
+                                    version = part.params.get('version', '01')
+                                    scratchbundles.append(
+                                        (part.read(), version))
+                        else:
+                            raise error.Abort('unknown bundle type')
                 else:
                     outputbundleraw = _rebundle(bundlerepo, bundleroots,
                                                 head, version='02')
