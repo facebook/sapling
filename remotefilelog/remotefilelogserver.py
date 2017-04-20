@@ -126,7 +126,9 @@ def onetimesetup(ui):
                         if kind == stat.S_IFDIR:
                             visit.append(fp)
 
-            if 'treemanifest' in repo.requirements:
+            shallowtrees = repo.ui.configbool('remotefilelog', 'shallowtrees',
+                                              False)
+            if 'treemanifest' in repo.requirements and not shallowtrees:
                 for (u, e, s) in repo.store.datafiles():
                     if (u.startswith('meta/') and
                         (u.endswith('.i') or u.endswith('.d'))):
@@ -141,7 +143,10 @@ def onetimesetup(ui):
                         yield (u, e, s)
 
             for x in repo.store.topfiles():
+                if shallowtrees and x[0] == '00manifesttree.i':
+                    continue
                 yield x
+
         elif shallowrepo.requirement in repo.requirements:
             # don't allow cloning from a shallow repo to a full repo
             # since it would require fetching every version of every

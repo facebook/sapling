@@ -78,6 +78,7 @@ New errors are not allowed. Warnings are strongly discouraged.
   undocumented: remotefilelog.server (bool)
   undocumented: remotefilelog.servercachepath (str)
   undocumented: remotefilelog.serverexpiration (int) [30]
+  undocumented: remotefilelog.shallowtrees (bool)
   undocumented: remotefilelog.validatecache (str) ['on']
   undocumented: remotefilelog.validatecachelog (str)
   undocumented: simplecache.cachedir (str)
