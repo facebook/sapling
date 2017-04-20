@@ -207,6 +207,7 @@ def sortnodes(nodes, parentfunc):
         if not parents:
             roots.append(n)
 
+    roots.sort()
     # Process roots, adding children to the queue as they become roots
     results = []
     while roots:

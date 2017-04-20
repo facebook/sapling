@@ -192,6 +192,7 @@
   $ hg revert -r 0 x
   $ mv x y
   $ hg add y
+  $ echo >> y
   $ hg revert x
   $ hg commit -m 'add y back without metadata'
   $ cd ../shallow
@@ -200,11 +201,11 @@
   2 files fetched over 2 fetches - (2 misses, 0.00% hit ratio) over * (glob)
   $ hg repack
   $ ls $TESTTMP/hgcache/master/packs
-  2c833052b8b6b9d310b424403e87997bc7735459.dataidx
-  2c833052b8b6b9d310b424403e87997bc7735459.datapack
-  b6be6cc48737aa69dc05ec02575536846c67a471.histidx
-  b6be6cc48737aa69dc05ec02575536846c67a471.histpack
-  $ hg debughistorypack $TESTTMP/hgcache/master/packs/b6be6cc48737aa69dc05ec02575536846c67a471
+  eed421886c146bd8ce459254b0ae926dcad46f2d.histidx
+  eed421886c146bd8ce459254b0ae926dcad46f2d.histpack
+  fe51504596f73124dded93f6ea3c3b42ad7fe9c9.dataidx
+  fe51504596f73124dded93f6ea3c3b42ad7fe9c9.datapack
+  $ hg debughistorypack $TESTTMP/hgcache/master/packs/*.histidx
   
   x
   Node          P1 Node       P2 Node       Link Node     Copy From
@@ -216,14 +217,14 @@
   
   y
   Node          P1 Node       P2 Node       Link Node     Copy From
+  21f46f2721e7  000000000000  000000000000  d6868642b790  
   577959738234  1bb2e6237e03  000000000000  c7faf2fc439a  x
-  1406e7411862  000000000000  000000000000  b292c1e3311f  
   $ hg strip -r '.^'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  saved backup bundle to $TESTTMP/shallow/.hg/strip-backup/609547eda446-1aa878d4-backup.hg (glob)
+  saved backup bundle to $TESTTMP/shallow/.hg/strip-backup/609547eda446-b26b56a8-backup.hg (glob)
   $ hg -R ../master strip -r '.^'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  saved backup bundle to $TESTTMP/master/.hg/strip-backup/609547eda446-1aa878d4-backup.hg (glob)
+  saved backup bundle to $TESTTMP/master/.hg/strip-backup/609547eda446-b26b56a8-backup.hg (glob)
 
   $ rm -rf $TESTTMP/hgcache/master/packs
   $ cp -R $TESTTMP/backuppacks $TESTTMP/hgcache/master/packs
