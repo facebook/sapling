@@ -41,26 +41,6 @@ def create(tr, ui, repo, importset, filelogs):
             'depotname': filelog.depotfile,
         })
 
-# -> Dict[Int, List[str]]
-#def create_runlist(ui, repo, filelist, path):
-#    def follow(fi, depmap):
-#        # XXX: Careful about stackoverflow
-#        if fi.dependency[0] is not None:
-#            # XXX: Don't visit the same files twice
-#            flog = importer.FileImporter(ui, repo, path, fi.dependency[1])
-#            add, depmap = follow(flog, depmap)
-#            depmap[fi._depotfname] += add
-#        return depmap[fi._depotfname] + 1, depmap
-#
-#    depmap = collections.defaultdict(lambda: 0)
-#    for filename in filelist:
-#        fi = importer.FileImporter(ui, repo, path, filename)
-#        __, depmap = follow(fi, depmap)
-#    runlist = collections.defaultdict(list)
-#    for k, v in depmap.iteritems():
-#        runlist[v].append(k)
-#    return runlist
-
 cmdtable = {}
 command = cmdutil.command(cmdtable)
 
@@ -118,10 +98,6 @@ def p4fastimport(ui, repo, client, **opts):
     runlist = collections.OrderedDict()
     if ui.configbool('p4fastimport', 'copytrace', False):
         raise error.Abort(_('copytracing is broken'))
-    #        ui.note(_('Tracing file copies.\n'))
-    #        runlist = create_runlist(ui, repo, changelists, linkrevmap,
-    #           filelist, basepath)
-    #        copy_tracer = importer.CopyTracer(filelist)
     else:
         runlist[0] = p4filelogs
 

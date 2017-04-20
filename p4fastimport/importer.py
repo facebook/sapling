@@ -234,43 +234,6 @@ class P4FileImporter(collections.Mapping):
     def content(self, clnum):
         return p4.get_file(self._p4filelog.depotfile, clnum=clnum)
 
-class CopyTracer(object):
-    def __init__(self, repo, filelist, depotname):
-        self._repo = repo
-        self._filelist = filelist
-        self._depotpath = depotname
-
-    def iscopy(self, cl):
-        bcl, bsrc = self.dependency
-        return bcl is not None and bcl == cl
-
-    def copydata(self, cl):
-        meta = {}
-        bcl, bsrc = self.dependency
-        if bcl is not None and bcl == cl:
-            assert False
-            p4fi = P4FileImporter(self._depotpath)
-            copylog = self._repo.file(localpath(bsrc))
-# XXX: This is most likely broken, as we don't take add->delete->add into
-# account
-            copynode = copylog.node(p4fi.filelog.branchrev - 1)
-            meta["copy"] = localpath(bsrc)
-            meta["copyrev"] = hex(copynode)
-        return meta
-
-    @util.propertycache
-    def dependency(self):
-        """Returns a tuple. First value is the cl number when the file was
-        branched, the second parameter is the file it was branchedfrom. Other
-        otherwise it returns (None, None)
-        """
-        p4filelog = p4.parse_filelog(self._depotpath)
-        bcl = p4filelog.branchcl
-        bsrc = p4filelog.branchsource
-        if bcl is not None and bsrc in self._filelist:
-            return p4filelog.branchcl, p4filelog.branchsource
-        return None, None
-
 class FileImporter(object):
     def __init__(self, ui, repo, importset, p4filelog):
         self._ui = ui
@@ -337,9 +300,6 @@ class FileImporter(object):
                     c.cl, self.relpath))
 
             meta = {}
-            # iscopy = copy_tracer and copy_tracer.iscopy(c.cl)
-            #if iscopy:
-            #    meta = copy_tracer.copydata(c.cl)
             if self._p4filelog.isexec(c.cl):
                 fileflags[self.relpath][c.cl] = 'x'
             if self._p4filelog.issymlink(c.cl):
