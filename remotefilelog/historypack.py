@@ -1,6 +1,6 @@
 import hashlib, struct
 from mercurial import util
-from mercurial.node import hex
+from mercurial.node import hex, nullid
 import basepack, constants
 
 # (filename hash, offset, size)
@@ -30,16 +30,16 @@ class historypackstore(basepack.basepackstore):
     def getpack(self, path):
         return historypack(path)
 
-    def getancestors(self, name, node):
+    def getancestors(self, name, node, known=None):
         for pack in self.packs:
             try:
-                return pack.getancestors(name, node)
+                return pack.getancestors(name, node, known=known)
             except KeyError:
                 pass
 
         for pack in self.refresh():
             try:
-                return pack.getancestors(name, node)
+                return pack.getancestors(name, node, known=known)
             except KeyError:
                 pass
 
@@ -64,7 +64,7 @@ class historypack(basepack.basepack):
 
         return missing
 
-    def getancestors(self, name, node):
+    def getancestors(self, name, node, known=None):
         """Returns as many ancestors as we're aware of.
 
         return value: {
@@ -72,12 +72,19 @@ class historypack(basepack.basepack):
            ...
         }
         """
+        if known is None:
+            known = set()
+        if node in known:
+            return []
+
         filename, offset, size = self._findsection(name)
-        ancestors = set((node,))
+        pending = set((node,))
         data = self._data[offset:offset + size]
         results = {}
         o = 0
         while o < len(data):
+            if not pending:
+                break
             entry = struct.unpack(PACKFORMAT, data[o:o + PACKENTRYLENGTH])
             o += PACKENTRYLENGTH
             copyfrom = None
@@ -86,11 +93,18 @@ class historypack(basepack.basepack):
                 copyfrom = data[o:o + copyfromlen]
                 o += copyfromlen
 
-            if entry[ANC_NODE] in ancestors:
-                ancestors.add(entry[ANC_P1NODE])
-                ancestors.add(entry[ANC_P2NODE])
-                result = (entry[ANC_P1NODE],
-                          entry[ANC_P2NODE],
+            ancnode = entry[ANC_NODE]
+            if ancnode in pending:
+                pending.remove(ancnode)
+                p1node = entry[ANC_P1NODE]
+                p2node = entry[ANC_P2NODE]
+                if p1node != nullid and p1node not in known:
+                    pending.add(p1node)
+                if p2node != nullid and p2node not in known:
+                    pending.add(p2node)
+
+                result = (p1node,
+                          p2node,
                           entry[ANC_LINKNODE],
                           copyfrom)
                 results[entry[ANC_NODE]] = result

@@ -290,7 +290,8 @@ class repacker(object):
                 if node in ancestors:
                     continue
                 try:
-                    ancestors.update(self.history.getancestors(filename, node))
+                    ancestors.update(self.history.getancestors(filename, node,
+                                                               known=ancestors))
                 except KeyError:
                     # Since we're packing data entries, we may not have the
                     # corresponding history entries for them. It's not a big
@@ -376,7 +377,8 @@ class repacker(object):
             for node in nodes:
                 if node in ancestors:
                     continue
-                ancestors.update(self.history.getancestors(filename, node))
+                ancestors.update(self.history.getancestors(filename, node,
+                                                           known=ancestors))
 
             # Order the nodes children first
             orderednodes = reversed(self._toposort(ancestors))

@@ -11,7 +11,7 @@ class unionmetadatastore(object):
         # history can't be found.
         self.allowincomplete = kwargs.get('allowincomplete', False)
 
-    def getancestors(self, name, node):
+    def getancestors(self, name, node, known=None):
         """Returns as many ancestors as we're aware of.
 
         return value: {
@@ -19,6 +19,11 @@ class unionmetadatastore(object):
            ...
         }
         """
+        if known is None:
+            known = set()
+        if node in known:
+            return []
+
         ancestors = {}
         def traverse(curname, curnode):
             # TODO: this algorithm has the potential to traverse parts of
@@ -37,9 +42,9 @@ class unionmetadatastore(object):
                     missing.append((name, node))
                     continue
                 p1, p2, linknode, copyfrom = value
-                if p1 != nullid:
+                if p1 != nullid and p1 not in known:
                     queue.append((copyfrom or curname, p1))
-                if p2 != nullid:
+                if p2 != nullid and p2 not in known:
                     queue.append((curname, p2))
             return missing
 
@@ -47,7 +52,8 @@ class unionmetadatastore(object):
         while missing:
             curname, curnode = missing.pop()
             try:
-                ancestors.update(self._getpartialancestors(curname, curnode))
+                ancestors.update(self._getpartialancestors(curname, curnode,
+                                                           known=known))
                 newmissing = traverse(curname, curnode)
                 missing.extend(newmissing)
             except KeyError:
@@ -61,10 +67,10 @@ class unionmetadatastore(object):
         # TODO: ancestors should probably be (name, node) -> (value)
         return ancestors
 
-    def _getpartialancestors(self, name, node):
+    def _getpartialancestors(self, name, node, known=None):
         for store in self.stores:
             try:
-                return store.getancestors(name, node)
+                return store.getancestors(name, node, known=known)
             except KeyError:
                 pass
 
@@ -86,7 +92,7 @@ class unionmetadatastore(object):
             store.markledger(ledger)
 
 class remotefilelogmetadatastore(basestore.basestore):
-    def getancestors(self, name, node):
+    def getancestors(self, name, node, known=None):
         """Returns as many ancestors as we're aware of.
 
         return value: {
@@ -107,10 +113,10 @@ class remotemetadatastore(object):
         self._fileservice = fileservice
         self._shared = shared
 
-    def getancestors(self, name, node):
+    def getancestors(self, name, node, known=None):
         self._fileservice.prefetch([(name, hex(node))], force=True,
                                    fetchdata=False, fetchhistory=True)
-        return self._shared.getancestors(name, node)
+        return self._shared.getancestors(name, node, known=known)
 
     def add(self, name, node, data):
         raise RuntimeError("cannot add to a remote store")

@@ -185,14 +185,29 @@ class manifestrevlogstore(object):
         revision = self.get(name, node)
         return [(name, node, None, nullid, revision)]
 
-    def getancestors(self, name, node):
+    def getancestors(self, name, node, known=None):
+        if known is None:
+            known = set()
+        if node in known:
+            return []
+
         rl = self._revlog(name)
         ancestors = {}
+        missing = set((node,))
         for ancrev in rl.ancestors([rl.rev(node)], inclusive=True):
             ancnode = rl.node(ancrev)
+            missing.discard(ancnode)
+
             p1, p2 = rl.parents(ancnode)
+            if p1 != nullid and p1 not in known:
+                missing.add(p1)
+            if p2 != nullid and p2 not in known:
+                missing.add(p2)
+
             linknode = self._cl.node(rl.linkrev(ancrev))
             ancestors[rl.node(ancrev)] = (p1, p2, linknode, '')
+            if not missing:
+                break
         return ancestors
 
     def add(self, *args):
