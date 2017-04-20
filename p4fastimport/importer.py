@@ -275,7 +275,7 @@ class FileImporter(object):
     def __init__(self, ui, repo, importset, filelog):
         self._ui = ui
         self._repo = repo
-        self._i = importset
+        self._importset = importset
         self._filelog = filelog # type: p4.P4Filelog
 
     @property
@@ -285,7 +285,7 @@ class FileImporter(object):
 
     @util.propertycache
     def storepath(self):
-        path = os.path.join(self._i.storagepath, self.relpath)
+        path = os.path.join(self._importset.storagepath, self.relpath)
         if p4.config('caseHandling') == 'insensitive':
             return path.lower()
         return path
@@ -298,14 +298,14 @@ class FileImporter(object):
         local_revs = rcs.revisions | flat.revisions
 
         revs = []
-        for c in self._i.changelists:
+        for c in self._importset.changelists:
             if c.cl in p4fi.revisions and not self._filelog.isdeleted(c.cl):
                 revs.append(c)
 
         fileflags = collections.defaultdict(dict)
         lastlinkrev = 0
         for c in sorted(revs):
-            linkrev = self._i.linkrev(c.cl)
+            linkrev = self._importset.linkrev(c.cl)
             fparent1, fparent2 = nullid, nullid
 
             # invariant: our linkrevs do not criss-cross.
