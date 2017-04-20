@@ -70,6 +70,8 @@ Run tests without worker by forcing a low cost
   run
   done
 
+#if no-windows
+
 Known exception should be caught, but printed if --traceback is enabled
 
   $ hg --config "extensions.t=$abspath" --config 'worker.numcpus=2' \
@@ -88,3 +90,5 @@ Traceback must be printed for unknown exceptions
   $ hg --config "extensions.t=$abspath" --config 'worker.numcpus=2' \
   > test 100000.0 exc 2>&1 | grep '^Traceback'
   Traceback (most recent call last):
+
+#endif
