@@ -51,7 +51,6 @@ from mercurial import (
     mdiff,
     phases,
     revlog,
-    scmutil,
     sshserver,
     store,
     util,
@@ -186,17 +185,28 @@ def _addmanifestgroup(*args, **kwargs):
 def getmanifestlog(orig, self):
     mfl = orig(self)
 
-    # The treemanifest needs a special opener with special options to enable
-    # trees. The only way to get a copy of the opener with the exact same
-    # configuration as the repo is to create it via a store, which requires the
-    # repo object. So we need to build the opener here, then store it for later.
-    pseudostore = store.store(self.requirements, self.path,
-                              vfsmod.vfs)
-    opener = pseudostore.vfs
+    # The treemanifest needs its own opener with the treemanifest option set. We
+    # can't just set it globally because the normal repo needs to access the
+    # manifest without the treemanifest option set. Unfortunately, openers don't
+    # have nice easy copy functions, so we have to redo the appropriate creation
+    # based on the type of store.
+    repostore = self.store
+    if isinstance(repostore, store.fncachestore):
+        opener = store._fncachevfs(repostore.rawvfs,
+                                   repostore.fncache,
+                                   repostore.encode)
+    elif isinstance(repostore, store.encodedstore):
+        opener = vfsmod.filtervfs(repostore.rawvfs,
+                                  store.encodefilename)
+    else:
+        opener = vfsmod.filtervfs(repostore.rawvfs,
+                                  store.encodedir)
+
     opener.options = self.svfs.options.copy()
     opener.options.update({
         'treemanifest': True,
     })
+
     mfl.treemanifestlog = treemanifestlog(opener)
 
     return mfl

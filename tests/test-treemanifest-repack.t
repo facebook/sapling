@@ -142,3 +142,20 @@
   $ ls -l .hg/store/packs/manifests | grep datapack
   *  393 * 45f06dbb5d82e52ae3975af82d7e1b4d73c8c599.datapack (glob)
   * 1236 * 59f37d77ac8d5da86d6eea390010d0d46d9dae19.datapack (glob)
+
+Test repacking from revlogs to pack files on the server
+  $ cd ../master
+  $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > treemanifest=
+  > remotefilelog=
+  > [remotefilelog]
+  > server=True
+  > [treemanifest]
+  > server=True
+  > EOF
+  $ hg backfilltree
+  $ cat .hg/store/fncache | sort
+  data/a.i
+  data/dir/b.i
+  meta/dir/00manifest.i
