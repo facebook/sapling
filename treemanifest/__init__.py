@@ -61,7 +61,7 @@ from mercurial import (
 from mercurial.i18n import _
 from mercurial.node import bin, hex, nullid
 
-from remotefilelog.contentstore import unioncontentstore
+from remotefilelog.contentstore import revlogdatastore, unioncontentstore
 from remotefilelog.datapack import datapackstore, mutabledatapack
 from remotefilelog.historypack import historypackstore, mutablehistorypack
 from remotefilelog import shallowrepo, shallowutil, wirepack, constants
@@ -798,38 +798,6 @@ class remotetreedatastore(object):
 
     def getmissing(self, keys):
         return keys
-
-    def markledger(self, ledger):
-        pass
-
-class revlogdatastore(object):
-    def __init__(self, mfrevlog):
-        self._mfrevlog = mfrevlog
-
-    def get(self, name, node):
-        mfrevlog = self._mfrevlog
-        if name != '':
-            mfrevlog = mfrevlog.dirlog(name)
-
-        return mfrevlog.revision(node)
-
-    def getdeltachain(self, name, node):
-        revision = self.get(name, node)
-        return [(name, node, None, nullid, revision)]
-
-    def add(self, name, node, data):
-        raise RuntimeError("cannot add to a revlog store")
-
-    def getmissing(self, keys):
-        missing = []
-        for name, node in keys:
-            mfrevlog = self._mfrevlog
-            if name != '':
-                mfrevlog = mfrevlog.dirlog(name)
-            if node not in mfrevlog.nodemap:
-                missing.append((name, node))
-
-        return missing
 
     def markledger(self, ledger):
         pass
