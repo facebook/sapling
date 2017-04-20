@@ -139,9 +139,10 @@ Test prefetch with base node (subdir/ shouldn't show up in the pack)
 
 Test auto prefetch during normal access
   $ rm -rf $CACHEDIR/master
-  $ ls $CACHEDIR/master/packs/manifests
-  ls: cannot access $TESTTMP/hgcache/master/packs/manifests: No such file or directory
-  [2]
+|| ( exit 1 ) is needed because ls on OSX and Linux exits differently
+  $ ls $CACHEDIR/master/packs/manifests || ( exit 1 )
+  *No such file or directory (glob)
+  [1]
   $ hg log -r tip --stat --pager=off
   changeset:   2:bd6f9b289c01
   tag:         tip
