@@ -645,9 +645,14 @@ class ctreemanifesttests(unittest.TestCase):
         a.set("foo", *fooflags)
 
         # Walk over inmemory tree
-        # TODO: there's a bug in the non-finalized walksubtrees logic
-        #subtrees = list(a.walksubtrees())
-        #self.assertEquals(subtrees, [])
+        subtrees = list(a.walksubtrees())
+        self.assertEquals(subtrees, [
+            ('abc/', nullid, 'z\0%s%s\n' % (hex(zflags[0]), zflags[1]),
+             '', nullid, nullid),
+            ('', nullid, 'abc\0%st\nfoo\0%s%s\n' %
+                            (hex(nullid), hex(fooflags[0]), fooflags[1]),
+             '', nullid, nullid),
+        ])
 
         # Walk over finalized tree
         dstore = FakeDataStore()
