@@ -649,15 +649,23 @@ def wrappropertycache(cls, propname, wrapper):
 
 @command('prefetchtrees', [
     ('r', 'rev', '', _("revs to prefetch the trees for")),
+    ('', 'base', '', _("revs that are assumed to already be local")),
     ] + commands.walkopts, _('--rev REVS PATTERN..'))
 def prefetchtrees(ui, repo, *args, **opts):
     revs = repo.revs(opts.get('rev'))
+    baserevs = []
+    if opts.get('base'):
+        baserevs = repo.revs(opts.get('base'))
 
     mfnodes = set()
     for rev in revs:
         mfnodes.add(repo[rev].manifestnode())
 
-    _prefetchtrees(repo, '', mfnodes, [], [])
+    basemfnodes = set()
+    for rev in baserevs:
+        basemfnodes.add(repo[rev].manifestnode())
+
+    _prefetchtrees(repo, '', mfnodes, basemfnodes, [])
 
 def _prefetchtrees(repo, rootdir, mfnodes, basemfnodes, directories):
     # If possible, use remotefilelog's more expressive fallbackpath

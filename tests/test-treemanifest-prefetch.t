@@ -121,6 +121,22 @@ Test prefetchtrees
        1        48      62      0       1 1be4ab2126dd ef362f8bbe8a 000000000000
        2       110      59      1       2 60a7f7acb6bb 1be4ab2126dd 000000000000
 
+Test prefetch with base node (subdir/ shouldn't show up in the pack)
+  $ rm -rf $CACHEDIR/master
+  $ hg prefetchtrees -r '2' --base '1'
+  $ ls $CACHEDIR/master/packs/manifests/*.dataidx
+  $TESTTMP/hgcache/master/packs/manifests/3fb59713808147bda39cbd97b9cd862406f5865c.dataidx
+
+  $ hg debugdatapack $CACHEDIR/master/packs/manifests/3fb59713808147bda39cbd97b9cd862406f5865c.dataidx
+  
+  dir
+  Node          Delta Base    Delta Length
+  a18d21674e76  000000000000  43
+  
+  
+  Node          Delta Base    Delta Length
+  60a7f7acb6bb  000000000000  95
+
 Test auto prefetch during normal access
   $ rm -rf $CACHEDIR/master
   $ ls $CACHEDIR/master/packs/manifests
