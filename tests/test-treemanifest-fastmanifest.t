@@ -18,20 +18,6 @@
   >     return orig(self, nodeorrev, **kwargs)
   > EOF
 
-  $ cat >> $HGRCPATH <<EOF
-  > [extensions]
-  > fastmanifest=
-  > treemanifest=
-  > 
-  > [remotefilelog]
-  > usefastdatapack=True
-  > reponame=master
-  > 
-  > [fastmanifest]
-  > usetree=True
-  > usecache=True
-  > EOF
-
   $ hg init master
   $ cd master
   $ echo a > a && hg ci -Aqm 'added a'
@@ -45,10 +31,21 @@
 
   $ cd client
   $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > fastmanifest=
+  > flatcheck=$TESTTMP/flatcheck.py
+  > treemanifest=
+  > 
+  > [remotefilelog]
+  > usefastdatapack=True
+  > reponame=master
+  > 
+  > [fastmanifest]
+  > usetree=True
+  > usecache=True
+  > 
   > [treemanifest]
   > autocreatetrees=True
-  > [extensions]
-  > flatcheck=$TESTTMP/flatcheck.py
   > EOF
   $ hg pull -q
   read flat manifest

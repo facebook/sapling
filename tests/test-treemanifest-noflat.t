@@ -5,20 +5,6 @@ This file tests that normal mercurial operations almost never read the flat mani
   $ PYTHONPATH=$TESTDIR/..:$PYTHONPATH
   $ export PYTHONPATH
 
-  $ cat >> $HGRCPATH <<EOF
-  > [extensions]
-  > fastmanifest=
-  > treemanifest=
-  > 
-  > [remotefilelog]
-  > usefastdatapack=True
-  > reponame=master
-  > 
-  > [fastmanifest]
-  > usetree=True
-  > usecache=False
-  > EOF
-
   $ cat >> $TESTTMP/flatcheck.py <<EOF
   > import sys, traceback
   > from mercurial import extensions, manifest
@@ -51,10 +37,21 @@ This file tests that normal mercurial operations almost never read the flat mani
 
   $ cd ../client
   $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > fastmanifest=
+  > flatcheck=$TESTTMP/flatcheck.py
+  > treemanifest=
+  > 
+  > [remotefilelog]
+  > usefastdatapack=True
+  > reponame=master
+  > 
+  > [fastmanifest]
+  > usetree=True
+  > usecache=False
+  > 
   > [treemanifest]
   > autocreatetrees=True
-  > [extensions]
-  > flatcheck=$TESTTMP/flatcheck.py
   > EOF
 
 # Test there is one flat read is expected on the first pull, since

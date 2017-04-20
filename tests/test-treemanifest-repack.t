@@ -3,7 +3,15 @@
   $ PYTHONPATH=$TESTDIR/..:$PYTHONPATH
   $ export PYTHONPATH
 
-  $ cat >> $HGRCPATH <<EOF
+  $ hg init master
+  $ hg clone -q ssh://user@dummy/master client
+
+  $ cd master
+  $ echo a > a && hg commit -Aqm 'add a'
+  $ mkdir dir && echo b > dir/b && hg commit -Aqm 'add dir/b'
+
+  $ cd ../client
+  $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > fastmanifest=
   > treemanifest=
@@ -15,17 +23,7 @@
   > [fastmanifest]
   > usetree=True
   > usecache=False
-  > EOF
-
-  $ hg init master
-  $ hg clone -q master client
-
-  $ cd master
-  $ echo a > a && hg commit -Aqm 'add a'
-  $ mkdir dir && echo b > dir/b && hg commit -Aqm 'add dir/b'
-
-  $ cd ../client
-  $ cat >> .hg/hgrc <<EOF
+  > 
   > [treemanifest]
   > autocreatetrees=True
   > EOF
