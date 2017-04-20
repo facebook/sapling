@@ -16,7 +16,7 @@ from mercurial import (
     manifest,
     match as matchmod
 )
-from mercurial.node import nullid
+from mercurial.node import hex, nullid
 
 class FakeDataStore(object):
     def __init__(self):
@@ -635,6 +635,39 @@ class ctreemanifesttests(unittest.TestCase):
 
         self.assertEquals(list(a.iteritems()), [("abc/z", zflags[0]),
                                                 ("foo", fooflags[0])])
+
+    def testWalkSubtrees(self):
+        a = cstore.treemanifest(FakeDataStore())
+
+        zflags = hashflags()
+        fooflags = hashflags()
+        a.set("abc/z", *zflags)
+        a.set("foo", *fooflags)
+
+        # Walk over inmemory tree
+        # TODO: there's a bug in the non-finalized walksubtrees logic
+        #subtrees = list(a.walksubtrees())
+        #self.assertEquals(subtrees, [])
+
+        # Walk over finalized tree
+        dstore = FakeDataStore()
+        hstore = FakeHistoryStore()
+        for name, node, text, p1text, p1, p2 in a.finalize():
+            dstore.add(name, node, nullid, text)
+            hstore.add(name, node, p1, p2, nullid, '')
+            if name == '':
+                rootnode = node
+            if name == 'abc/':
+                abcnode = node
+
+        subtrees = list(a.walksubtrees())
+        self.assertEquals(subtrees, [
+            ('abc/', abcnode, 'z\0%s%s\n' % (hex(zflags[0]), zflags[1]),
+             '', nullid, nullid),
+            ('', rootnode, 'abc\0%st\nfoo\0%s%s\n' %
+                            (hex(abcnode), hex(fooflags[0]), fooflags[1]),
+             '', nullid, nullid),
+        ])
 
 if __name__ == '__main__':
     silenttestrunner.main(__name__)

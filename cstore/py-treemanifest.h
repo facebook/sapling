@@ -73,6 +73,48 @@ static PyTypeObject newtreeiterType = {
   (iternextfunc)newtreeiter_iternext, /* tp_iternext: next() method */
 };
 
+struct py_subtreeiter {
+  PyObject_HEAD;
+
+  SubtreeIterator iter;
+
+  py_treemanifest *treemf;
+};
+
+static void subtreeiter_dealloc(py_subtreeiter *self);
+static PyObject* subtreeiter_iternext(py_subtreeiter *self);
+static PyTypeObject subtreeiterType = {
+  PyObject_HEAD_INIT(NULL)
+  0,                               /*ob_size */
+  "treemanifest.subtreeiter",      /*tp_name */
+  sizeof(py_subtreeiter),          /*tp_basicsize */
+  0,                               /*tp_itemsize */
+  (destructor)subtreeiter_dealloc, /*tp_dealloc */
+  0,                               /*tp_print */
+  0,                               /*tp_getattr */
+  0,                               /*tp_setattr */
+  0,                               /*tp_compare */
+  0,                               /*tp_repr */
+  0,                               /*tp_as_number */
+  0,                               /*tp_as_sequence */
+  0,                               /*tp_as_mapping */
+  0,                               /*tp_hash */
+  0,                               /*tp_call */
+  0,                               /*tp_str */
+  0,                               /*tp_getattro */
+  0,                               /*tp_setattro */
+  0,                               /*tp_as_buffer */
+  /* tp_flags: Py_TPFLAGS_HAVE_ITER tells python to
+     use tp_iter and tp_iternext fields. */
+  Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_ITER,
+  "TODO",                          /* tp_doc */
+  0,                               /* tp_traverse */
+  0,                               /* tp_clear */
+  0,                               /* tp_richcompare */
+  0,                               /* tp_weaklistoffset */
+  PyObject_SelfIter,               /* tp_iter: __iter__() method */
+  (iternextfunc)subtreeiter_iternext, /* tp_iternext: next() method */
+};
 /**
  * The python iteration object for iterating over a tree.  This is separate from
  * the fileiter above because it lets us just call the constructor on
@@ -224,6 +266,95 @@ static PyObject *newtreeiter_iternext(py_newtreeiter *self) {
   std::string p1raw;
   try {
     while (iterator.next(&path, &result, &p1, &p2)) {
+      result->serialize(raw);
+
+      if (!p1) {
+        p1raw.erase();
+      } else {
+        p1->serialize(p1raw);
+      }
+
+      if (path->size() == 0) {
+        // Record the root hash
+        self->treemf->tm.root.updatebinnode(result->node(), MANIFEST_DIRECTORY_FLAGPTR);
+      }
+
+      const char *p1Node = p1 ? p1->node() : NULLID;
+      const char *p2Node = p2 ? p2->node() : NULLID;
+      return Py_BuildValue("(s#s#s#s#s#s#)",
+                           path->c_str(), (Py_ssize_t)path->size(),
+                           result->node(), (Py_ssize_t)BIN_NODE_SIZE,
+                           raw.c_str(), (Py_ssize_t)raw.size(),
+                           p1raw.c_str(), (Py_ssize_t)p1raw.size(),
+                           p1Node, (Py_ssize_t)BIN_NODE_SIZE,
+                           p2Node, (Py_ssize_t)BIN_NODE_SIZE);
+    }
+  } catch (const std::exception &ex) {
+    PyErr_SetString(PyExc_RuntimeError, ex.what());
+    return NULL;
+  }
+
+  return NULL;
+}
+
+// ==== py_subtreeiter functions ====
+
+/**
+ * Destructor for the subtree iterator. Cleans up all the member data of the
+ * iterator.
+ */
+static void subtreeiter_dealloc(py_subtreeiter *self) {
+  self->iter.~SubtreeIterator();
+  Py_XDECREF(self->treemf);
+  PyObject_Del(self);
+}
+
+static py_subtreeiter *subtreeiter_create(py_treemanifest *treemf, Manifest *mainManifest,
+                                          const std::vector<Manifest*> &cmpManifests,
+                                          const ManifestFetcher &fetcher) {
+  py_subtreeiter *i = PyObject_New(py_subtreeiter, &subtreeiterType);
+  if (i) {
+    try {
+      i->treemf = treemf;
+      Py_INCREF(treemf);
+
+      // The provided created struct hasn't initialized our iter member, so
+      // we do it manually.
+      std::vector<char*> cmpNodes(cmpManifests.size());
+      for (size_t i = 0; i < cmpManifests.size(); ++i) {
+        cmpNodes.push_back(cmpManifests[i]->node());
+      }
+      new (&i->iter) SubtreeIterator(mainManifest, cmpNodes, cmpManifests, fetcher);
+      return i;
+    } catch (const pyexception &ex) {
+      Py_DECREF(i);
+      return NULL;
+    } catch (const std::exception &ex) {
+      Py_DECREF(i);
+      PyErr_SetString(PyExc_RuntimeError, ex.what());
+      return NULL;
+    }
+  } else {
+    return NULL;
+  }
+}
+
+/**
+ * Returns the next new tree. If it's the final root node, it marks the tree as
+ * complete and immutable.
+ */
+static PyObject *subtreeiter_iternext(py_subtreeiter *self) {
+  SubtreeIterator &iterator = self->iter;
+
+  std::string *path = NULL;
+  Manifest *result = NULL;
+  ManifestEntry *resultEntry = NULL;
+  Manifest *p1 = NULL;
+  Manifest *p2 = NULL;
+  std::string raw;
+  std::string p1raw;
+  try {
+    while (iterator.next(&path, &result, &p1, &p2, &resultEntry)) {
       result->serialize(raw);
 
       if (!p1) {
@@ -1211,6 +1342,37 @@ static PyObject *treemanifest_text(py_treemanifest *self, PyObject *args, PyObje
   }
 }
 
+static PyObject *treemanifest_walksubtrees(py_treemanifest *self, PyObject *args,
+                                           PyObject *kwargs) {
+  PyObject* compareTrees = NULL;
+  static char const *kwlist[] = {"comparetrees", NULL};
+
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|O", (char**)kwlist,
+                                   &compareTrees)) {
+    return NULL;
+  }
+
+  try {
+    std::vector<Manifest*> cmpManifests;
+
+    if (compareTrees) {
+      PythonObj iterator = PyObject_GetIter(compareTrees);
+      PyObject *pyCompareTreeObj;
+      while ((pyCompareTreeObj = PyIter_Next(iterator))) {
+        // Assign to PythonObj so its lifecycle is managed.
+        PythonObj pyCompareTree = pyCompareTreeObj;
+        py_treemanifest *compareTree = (py_treemanifest*)pyCompareTreeObj;
+        cmpManifests.push_back(compareTree->tm.getRootManifest());
+      }
+    }
+
+    return (PyObject*)subtreeiter_create(self, self->tm.getRootManifest(),
+                                         cmpManifests, self->tm.fetcher);
+  } catch (const pyexception &ex) {
+    return NULL;
+  }
+}
+
 static PyObject *treemanifest_walk(py_treemanifest *self, PyObject *args) {
   PyObject* matcherObj;
 
@@ -1308,6 +1470,10 @@ static PyMethodDef treemanifest_methods[] = {
     "returns the text form of the manifest"},
   {"walk", (PyCFunction)treemanifest_walk, METH_VARARGS,
     "returns a iterator for walking the manifest"},
+  {"walksubtrees", (PyCFunction)treemanifest_walksubtrees, METH_VARARGS|METH_KEYWORDS,
+    "Returns a iterator for walking the subtree manifests."
+    "`comparetrees` is a list of trees to compare against and "
+    "avoid walking down any shared subtree."},
   {"finalize", (PyCFunction)treemanifest_finalize, METH_VARARGS|METH_KEYWORDS,
     "Returns an iterator that outputs each piece of the tree that is new."
     "When the iterator completes, the tree is marked as immutable."},
