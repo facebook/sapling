@@ -23,7 +23,6 @@ If stackdepth is not specified, a full stack trace will be printed.
 import inspect
 import os
 
-from contextlib import nested
 from functools import partial
 from operator import itemgetter
 
@@ -35,7 +34,6 @@ from mercurial import (
 )
 from mercurial.i18n import _
 from mercurial.node import short
-from hgext3rd.nodeprecate import nodeprecate
 
 testedwith = 'ships-with-fb-hgext'
 
@@ -92,7 +90,6 @@ def printnodeswrapper(ui, orig, repo, nodes, label=None):
     ('r', 'rev', [], _("revisions to inhibit or deinhibit")),
     ('d', 'deinhibit', False, _("deinhibit the specified revs"))
 ])
-@nodeprecate
 def debuginhibit(ui, repo, *revs, **opts):
     """manually inhibit or deinhibit the specified revisions
 
@@ -112,16 +109,17 @@ def debuginhibit(ui, repo, *revs, **opts):
     revs = scmutil.revrange(repo, revs)
     nodes = (repo.changelog.node(rev) for rev in revs)
 
-    with nested(repo.wlock(), repo.lock()):
-        with repo.transaction('debuginhibit') as tr:
-            if opts.get('deinhibit', False):
-                inhibit._deinhibitmarkers(repo, nodes)
-            else:
-                inhibit._inhibitmarkers(repo, nodes)
+    with repo.wlock():
+        with repo.lock():
+            with repo.transaction('debuginhibit') as tr:
+                if opts.get('deinhibit', False):
+                    inhibit._deinhibitmarkers(repo, nodes)
+                else:
+                    inhibit._inhibitmarkers(repo, nodes)
 
-            # Disable inhibit's post-transaction callback so that we only
-            # affect the changesets specified by the user.
-            del tr._postclosecallback['inhibitposttransaction']
+                # Disable inhibit's post-transaction callback so that we only
+                # affect the changesets specified by the user.
+                del tr._postclosecallback['inhibitposttransaction']
 
 def _prettyprintnodes(ui, repo, nodes):
     """Pretty print a list of nodes."""

@@ -29,8 +29,6 @@ from mercurial import (
     node
 )
 from mercurial.i18n import _
-from contextlib import nested
-from hgext3rd.nodeprecate import nodeprecate
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
@@ -133,7 +131,6 @@ def _uncommitdirstate(repo, oldctx, match):
 @command('uncommit',
     commands.walkopts,
     _('[OPTION]... [FILE]...'))
-@nodeprecate
 def uncommit(ui, repo, *pats, **opts):
     """uncommit some or all of a local changeset
 
@@ -143,33 +140,34 @@ def uncommit(ui, repo, *pats, **opts):
     modified in the working directory.
     """
 
-    with nested(repo.wlock(), repo.lock()):
-        wctx = repo[None]
+    with repo.wlock():
+        with repo.lock():
+            wctx = repo[None]
 
-        if len(wctx.parents()) <= 0 or not wctx.parents()[0]:
-            raise error.Abort(_("cannot uncommit null changeset"))
-        if len(wctx.parents()) > 1:
-            raise error.Abort(_("cannot uncommit while merging"))
-        old = repo['.']
-        oldphase = old.phase()
-        if oldphase == phases.public:
-            raise error.Abort(_("cannot rewrite immutable changeset"))
-        if len(old.parents()) > 1:
-            raise error.Abort(_("cannot uncommit merge changeset"))
+            if len(wctx.parents()) <= 0 or not wctx.parents()[0]:
+                raise error.Abort(_("cannot uncommit null changeset"))
+            if len(wctx.parents()) > 1:
+                raise error.Abort(_("cannot uncommit while merging"))
+            old = repo['.']
+            oldphase = old.phase()
+            if oldphase == phases.public:
+                raise error.Abort(_("cannot rewrite immutable changeset"))
+            if len(old.parents()) > 1:
+                raise error.Abort(_("cannot uncommit merge changeset"))
 
-        with repo.transaction('uncommit') as tr:
-            match = scmutil.match(old, pats, opts)
-            newid = _commitfiltered(repo, old, match)
-            if newid is None:
-                raise error.Abort(_('nothing to uncommit'))
+            with repo.transaction('uncommit') as tr:
+                match = scmutil.match(old, pats, opts)
+                newid = _commitfiltered(repo, old, match)
+                if newid is None:
+                    raise error.Abort(_('nothing to uncommit'))
 
-            # Move local changes on filtered changeset
-            obsolete.createmarkers(repo, [(old, (repo[newid],))])
-            phases.retractboundary(repo, tr, oldphase, [newid])
+                # Move local changes on filtered changeset
+                obsolete.createmarkers(repo, [(old, (repo[newid],))])
+                phases.retractboundary(repo, tr, oldphase, [newid])
 
-            repo.dirstate.beginparentchange()
-            repo.dirstate.setparents(newid, node.nullid)
-            _uncommitdirstate(repo, old, match)
-            repo.dirstate.endparentchange()
+                repo.dirstate.beginparentchange()
+                repo.dirstate.setparents(newid, node.nullid)
+                _uncommitdirstate(repo, old, match)
+                repo.dirstate.endparentchange()
 
-            _updatebookmarks(repo, old.node(), newid, tr)
+                _updatebookmarks(repo, old.node(), newid, tr)

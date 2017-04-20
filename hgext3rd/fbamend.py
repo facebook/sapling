@@ -50,9 +50,7 @@ from mercurial.node import hex, nullrev, short
 from mercurial import lock as lockmod
 from mercurial.i18n import _
 from collections import defaultdict, deque
-from contextlib import nested
 from itertools import count
-from hgext3rd.nodeprecate import nodeprecate
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
@@ -215,7 +213,6 @@ def commit(orig, ui, repo, *pats, **opts):
 
         return orig(ui, repo, *pats, **opts)
 
-@nodeprecate
 def unamend(ui, repo, **opts):
     """undo the amend operation on a current changeset
 
@@ -247,37 +244,38 @@ def unamend(ui, repo, **opts):
     if curctx.children():
         raise error.Abort(_("cannot unamend in the middle of a stack"))
 
-    with nested(repo.wlock(), repo.lock()):
-        repobookmarks = repo._bookmarks
-        ctxbookmarks = curctx.bookmarks()
-        # we want to inhibit markers that mark precnode obsolete
-        inhibitmod._inhibitmarkers(unfi, [precnode])
-        changedfiles = []
-        wctx = repo[None]
-        wm = wctx.manifest()
-        cm = precctx.manifest()
-        dirstate = repo.dirstate
-        diff = cm.diff(wm)
-        changedfiles.extend(diff.iterkeys())
+    with repo.wlock():
+        with repo.lock():
+            repobookmarks = repo._bookmarks
+            ctxbookmarks = curctx.bookmarks()
+            # we want to inhibit markers that mark precnode obsolete
+            inhibitmod._inhibitmarkers(unfi, [precnode])
+            changedfiles = []
+            wctx = repo[None]
+            wm = wctx.manifest()
+            cm = precctx.manifest()
+            dirstate = repo.dirstate
+            diff = cm.diff(wm)
+            changedfiles.extend(diff.iterkeys())
 
-        tr = repo.transaction('unamend')
-        dirstate.beginparentchange()
-        dirstate.rebuild(precnode, cm, changedfiles)
-        # we want added and removed files to be shown
-        # properly, not with ? and ! prefixes
-        for filename, data in diff.iteritems():
-            if data[0][0] is None:
-                dirstate.add(filename)
-            if data[1][0] is None:
-                dirstate.remove(filename)
-        dirstate.endparentchange()
-        for book in ctxbookmarks:
-            repobookmarks[book] = precnode
-        repobookmarks.recordchange(tr)
-        tr.close()
-        # we want to mark the changeset from which we were unamending
-        # as obsolete
-        obsolete.createmarkers(repo, [(curctx, ())])
+            tr = repo.transaction('unamend')
+            dirstate.beginparentchange()
+            dirstate.rebuild(precnode, cm, changedfiles)
+            # we want added and removed files to be shown
+            # properly, not with ? and ! prefixes
+            for filename, data in diff.iteritems():
+                if data[0][0] is None:
+                    dirstate.add(filename)
+                if data[1][0] is None:
+                    dirstate.remove(filename)
+            dirstate.endparentchange()
+            for book in ctxbookmarks:
+                repobookmarks[book] = precnode
+            repobookmarks.recordchange(tr)
+            tr.close()
+            # we want to mark the changeset from which we were unamending
+            # as obsolete
+            obsolete.createmarkers(repo, [(curctx, ())])
 
 def amend(ui, repo, *pats, **opts):
     '''amend the current changeset with more changes
@@ -494,7 +492,6 @@ def fixupamend(ui, repo):
     finally:
         lockmod.release(wlock, lock, tr)
 
-@nodeprecate
 def wrapsplit(orig, ui, repo, *args, **opts):
     """Automatically rebase unstable descendants after split."""
     # Find the rev number of the changeset to split. This needs to happen
@@ -513,20 +510,21 @@ def wrapsplit(orig, ui, repo, *args, **opts):
 
     # Fix up stack.
     if not opts['norebase'] and torebase:
-        with nested(repo.wlock(), repo.lock()):
-            with repo.transaction('splitrebase'):
-                top = repo.revs('allsuccessors(%d)', rev).last()
-                _restackonce(ui, repo, top)
-            # The rebasestate file is incorrectly left behind, so cleanup.
-            # See the earlier comment on util.unlinkpath for more details.
-            util.unlinkpath(repo.vfs.join("rebasestate"), ignoremissing=True)
+        with repo.wlock():
+            with repo.lock():
+                with repo.transaction('splitrebase'):
+                    top = repo.revs('allsuccessors(%d)', rev).last()
+                    _restackonce(ui, repo, top)
+                # The rebasestate file is incorrectly left behind, so cleanup.
+                # See the earlier comment on util.unlinkpath for more details.
+                util.unlinkpath(repo.vfs.join("rebasestate"),
+                                ignoremissing=True)
 
     # Fix up bookmarks, if any.
     _fixbookmarks(repo, [rev])
 
     return ret
 
-@nodeprecate
 def wrapfold(orig, ui, repo, *args, **opts):
     """Automatically rebase unstable descendants after fold."""
     # Find the rev numbers of the changesets that will be folded. This needs
@@ -546,21 +544,22 @@ def wrapfold(orig, ui, repo, *args, **opts):
         return ret
 
     # Fix up stack.
-    with nested(repo.wlock(), repo.lock()):
-        with repo.transaction('foldrebase'):
-            if not opts['norebase'] and torebase:
-                folded = repo.revs('allsuccessors(%ld)', revs).last()
-                _restackonce(ui, repo, folded)
-            else:
-                # If there's nothing to rebase, deinhibit the folded
-                # changesets so that they get correctly marked as
-                # hidden if needed. For some reason inhibit's
-                # post-transaction hook misses this changeset.
-                visible = repo.unfiltered().revs('(%ld) - hidden()', revs)
-                _deinhibit(repo, (repo[r] for r in visible))
-        # The rebasestate file is incorrectly left behind, so cleanup.
-        # See the earlier comment on util.unlinkpath for more details.
-        util.unlinkpath(repo.vfs.join("rebasestate"), ignoremissing=True)
+    with repo.wlock():
+        with repo.lock():
+            with repo.transaction('foldrebase'):
+                if not opts['norebase'] and torebase:
+                    folded = repo.revs('allsuccessors(%ld)', revs).last()
+                    _restackonce(ui, repo, folded)
+                else:
+                    # If there's nothing to rebase, deinhibit the folded
+                    # changesets so that they get correctly marked as
+                    # hidden if needed. For some reason inhibit's
+                    # post-transaction hook misses this changeset.
+                    visible = repo.unfiltered().revs('(%ld) - hidden()', revs)
+                    _deinhibit(repo, (repo[r] for r in visible))
+            # The rebasestate file is incorrectly left behind, so cleanup.
+            # See the earlier comment on util.unlinkpath for more details.
+            util.unlinkpath(repo.vfs.join("rebasestate"), ignoremissing=True)
 
     # Fix up bookmarks, if any.
     _fixbookmarks(repo, revs)
@@ -575,7 +574,6 @@ def wrapnext(orig, ui, repo, *args, **opts):
     """Replacement for `hg next` from the evolve extension."""
     _moverelative(ui, repo, args, opts, reverse=False)
 
-@nodeprecate
 def _moverelative(ui, repo, args, opts, reverse=False):
     """Update to a changeset relative to the current changeset.
        Implements both `hg previous` and `hg next`.
@@ -625,47 +623,48 @@ def _moverelative(ui, repo, args, opts, reverse=False):
     elif opts.get('rebase', False):
         raise error.Abort(_("cannot use both --merge and --rebase"))
 
-    with nested(repo.wlock(), repo.lock()):
-        # Record the active bookmark, if any.
-        bookmark = bmactive(repo)
-        noactivate = opts.get('no_activate_bookmark', False)
-        movebookmark = opts.get('move_bookmark', False)
+    with repo.wlock():
+        with repo.lock():
+            # Record the active bookmark, if any.
+            bookmark = bmactive(repo)
+            noactivate = opts.get('no_activate_bookmark', False)
+            movebookmark = opts.get('move_bookmark', False)
 
-        with repo.transaction('moverelative') as tr:
-            # Find the desired changeset. May potentially perform rebase.
-            try:
-                target = _findtarget(ui, repo, n, opts, reverse)
-            except error.InterventionRequired:
-                # Rebase failed. Need to manually close transaction to allow
-                # `hg rebase --continue` to work correctly.
-                tr.close()
-                raise
+            with repo.transaction('moverelative') as tr:
+                # Find the desired changeset. May potentially perform rebase.
+                try:
+                    target = _findtarget(ui, repo, n, opts, reverse)
+                except error.InterventionRequired:
+                    # Rebase failed. Need to manually close transaction to allow
+                    # `hg rebase --continue` to work correctly.
+                    tr.close()
+                    raise
 
-            # Move the active bookmark if neccesary. Needs to happen before
-            # we update to avoid getting a 'leaving bookmark X' message.
-            if movebookmark and bookmark is not None:
-                _setbookmark(repo, tr, bookmark, target)
+                # Move the active bookmark if neccesary. Needs to happen before
+                # we update to avoid getting a 'leaving bookmark X' message.
+                if movebookmark and bookmark is not None:
+                    _setbookmark(repo, tr, bookmark, target)
 
-            # Update to the target changeset.
-            commands.update(ui, repo, rev=target)
+                # Update to the target changeset.
+                commands.update(ui, repo, rev=target)
 
-            # Print out the changeset we landed on.
-            _showchangesets(ui, repo, revs=[target])
+                # Print out the changeset we landed on.
+                _showchangesets(ui, repo, revs=[target])
 
-            # Activate the bookmark on the new changeset.
-            if not noactivate and not movebookmark:
-                _activate(ui, repo, target)
+                # Activate the bookmark on the new changeset.
+                if not noactivate and not movebookmark:
+                    _activate(ui, repo, target)
 
-            # Clear cached 'visible' set so that the post-transaction hook
-            # set by the inhibit extension will see a correct view of
-            # the repository. The cached contents of the visible set are
-            # after a rebase operation show the old stack as visible,
-            # which will cause the inhibit extension to always inhibit
-            # the stack even if it is entirely obsolete and hidden.
-            repo.invalidatevolatilesets()
-        # The rebasestate file is incorrectly left behind, so cleanup.
-        # See the earlier comment on util.unlinkpath for more details.
-        util.unlinkpath(repo.vfs.join("rebasestate"), ignoremissing=True)
+                # Clear cached 'visible' set so that the post-transaction hook
+                # set by the inhibit extension will see a correct view of
+                # the repository. The cached contents of the visible set are
+                # after a rebase operation show the old stack as visible,
+                # which will cause the inhibit extension to always inhibit
+                # the stack even if it is entirely obsolete and hidden.
+                repo.invalidatevolatilesets()
+            # The rebasestate file is incorrectly left behind, so cleanup.
+            # See the earlier comment on util.unlinkpath for more details.
+            util.unlinkpath(repo.vfs.join("rebasestate"), ignoremissing=True)
 
 def _findtarget(ui, repo, n, opts, reverse):
     """Find the appropriate target changeset for `hg previous` and
@@ -836,7 +835,6 @@ def _findstackbottom(ui, repo):
         raise error.Abort(_("current changeset is public"))
     return repo.revs("::. & draft()").first()
 
-@nodeprecate
 def wraprebase(orig, ui, repo, **opts):
     """Wrapper around `hg rebase` adding the `--restack` option, which rebases
        all "unstable" descendants of an obsolete changeset onto the latest
@@ -874,20 +872,20 @@ def wraprebase(orig, ui, repo, **opts):
     # which may be created if the rebased commits have descendants that were
     # not rebased. To be less invasive, create a short transaction after the
     # rebase call instead of wrapping the call itself in a transaction.
-    with nested(repo.wlock(), repo.lock()):
-        ret = orig(ui, repo, **opts)
-        with repo.transaction('rebase'):
-            # The rebase command will cause the rebased commits to still be
-            # cached as 'visible', even if the entire stack has been
-            # rebased and everything is obsolete. We need to manaully clear
-            # the cached values to that the post-transaction callback will
-            # work correctly.
-            repo.invalidatevolatilesets()
-        return ret
+    with repo.wlock():
+        with repo.lock():
+            ret = orig(ui, repo, **opts)
+            with repo.transaction('rebase'):
+                # The rebase command will cause the rebased commits to still be
+                # cached as 'visible', even if the entire stack has been
+                # rebased and everything is obsolete. We need to manaully clear
+                # the cached values to that the post-transaction callback will
+                # work correctly.
+                repo.invalidatevolatilesets()
+            return ret
 
     return orig(ui, repo, **opts)
 
-@nodeprecate
 def restack(ui, repo, rebaseopts=None):
     """Repair a situation in which one or more changesets in a stack
        have been obsoleted (thereby leaving their descendants in the stack
@@ -897,48 +895,50 @@ def restack(ui, repo, rebaseopts=None):
     if rebaseopts is None:
         rebaseopts = {}
 
-    with nested(repo.wlock(), repo.lock()):
-        cmdutil.checkunfinished(repo)
-        cmdutil.bailifchanged(repo)
+    with repo.wlock():
+        with repo.lock():
+            cmdutil.checkunfinished(repo)
+            cmdutil.bailifchanged(repo)
 
-        # Find the latest version of the changeset at the botom of the
-        # current stack. If the current changeset is public, simply start
-        # restacking from the current changeset with the assumption
-        # that there are non-public changesets higher up.
-        base = repo.revs('::. & draft()').first()
-        latest = _latest(repo, base) if base is not None else repo['.'].rev()
-        targets = _findrestacktargets(repo, latest)
+            # Find the latest version of the changeset at the botom of the
+            # current stack. If the current changeset is public, simply start
+            # restacking from the current changeset with the assumption
+            # that there are non-public changesets higher up.
+            base = repo.revs('::. & draft()').first()
+            latest = (_latest(repo, base) if base is not None
+                                         else repo['.'].rev())
+            targets = _findrestacktargets(repo, latest)
 
-        with repo.transaction('restack') as tr:
-            # Attempt to stabilize all changesets that are or will be (after
-            # rebasing) descendants of base.
-            for rev in targets:
-                try:
-                    _restackonce(ui, repo, rev, rebaseopts)
-                except error.InterventionRequired:
-                    tr.close()
-                    raise
+            with repo.transaction('restack') as tr:
+                # Attempt to stabilize all changesets that are or will be (after
+                # rebasing) descendants of base.
+                for rev in targets:
+                    try:
+                        _restackonce(ui, repo, rev, rebaseopts)
+                    except error.InterventionRequired:
+                        tr.close()
+                        raise
 
-            # Ensure that we always end up on the latest version of the
-            # current changeset. Usually, this will be taken care of
-            # by the rebase operation. However, in some cases (such as
-            # if we are on the precursor of the base changeset) the
-            # rebase will not update to the latest version, so we need
-            # to do this manually.
-            successor = repo.revs('allsuccessors(.)').last()
-            if successor is not None:
-                commands.update(ui, repo, rev=successor)
+                # Ensure that we always end up on the latest version of the
+                # current changeset. Usually, this will be taken care of
+                # by the rebase operation. However, in some cases (such as
+                # if we are on the precursor of the base changeset) the
+                # rebase will not update to the latest version, so we need
+                # to do this manually.
+                successor = repo.revs('allsuccessors(.)').last()
+                if successor is not None:
+                    commands.update(ui, repo, rev=successor)
 
-            # Clear cached 'visible' set so that the post-transaction
-            # hook in the inhibit extension will see a correct view of
-            # the repository. The cached contents of the visible set are
-            # after a rebase operation show the old stack as visible,
-            # which will cause the inhibit extension to always inhibit
-            # the stack even if it is entirely obsolete.
-            repo.invalidatevolatilesets()
-        # The rebasestate file is incorrectly left behind, so cleanup.
-        # See the earlier comment on util.unlinkpath for more details.
-        util.unlinkpath(repo.vfs.join("rebasestate"), ignoremissing=True)
+                # Clear cached 'visible' set so that the post-transaction
+                # hook in the inhibit extension will see a correct view of
+                # the repository. The cached contents of the visible set are
+                # after a rebase operation show the old stack as visible,
+                # which will cause the inhibit extension to always inhibit
+                # the stack even if it is entirely obsolete.
+                repo.invalidatevolatilesets()
+            # The rebasestate file is incorrectly left behind, so cleanup.
+            # See the earlier comment on util.unlinkpath for more details.
+            util.unlinkpath(repo.vfs.join("rebasestate"), ignoremissing=True)
 
 def _restackonce(ui, repo, rev, rebaseopts=None, childrenonly=False):
     """Rebase all descendants of precursors of rev onto rev, thereby
@@ -1147,20 +1147,20 @@ def _setbookmark(repo, tr, bookmark, rev):
     repo._bookmarks[bookmark] = node
     repo._bookmarks.recordchange(tr)
 
-@nodeprecate
 def _fixbookmarks(repo, revs):
     """Make any bookmarks pointing to the given revisions point to the
        latest version of each respective revision.
     """
     repo = repo.unfiltered()
     cl = repo.changelog
-    with nested(repo.wlock(), repo.lock()):
-        with repo.transaction('movebookmarks') as tr:
-            for rev in revs:
-                latest = cl.node(_latest(repo, rev))
-                for bm in repo.nodebookmarks(cl.node(rev)):
-                    repo._bookmarks[bm] = latest
-            repo._bookmarks.recordchange(tr)
+    with repo.wlock():
+        with repo.lock():
+            with repo.transaction('movebookmarks') as tr:
+                for rev in revs:
+                    latest = cl.node(_latest(repo, rev))
+                    for bm in repo.nodebookmarks(cl.node(rev)):
+                        repo._bookmarks[bm] = latest
+                repo._bookmarks.recordchange(tr)
 
 ### bookmarks api compatibility layer ###
 def bmactivate(repo, mark):
