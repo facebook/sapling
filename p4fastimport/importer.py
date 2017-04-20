@@ -9,7 +9,6 @@ import re
 from mercurial.i18n import _
 from mercurial import (
     error,
-    manifest,
     node,
     util,
 )
@@ -51,15 +50,15 @@ class ChangeManifestImporter(object):
         return m
 
     def create(self, tr, fileflags):
-        mp1, mp2 = node.nullid, node.nullid
-        cp1, cp2 = node.nullid, node.nullid
-        mrevlog = self._repo._constructmanifest()
-        clog = self._repo.changelog
-        mf = manifest.manifestdict()
-        # revnumdict keeps track of the rev per file, when we see a file
-        # modified or added we increment it.
         revnumdict = collections.defaultdict(lambda: 0)
+        mrevlog = self._repo.manifestlog._revlog
+        cp1, cp2 = node.nullid, node.nullid
+        clog = self._repo.changelog
+        p2 = self._repo[cp2]
         for i, change in enumerate(self._importset.changelists):
+            # invalidate caches so that the lookup works
+            p1 = self._repo[cp1]
+            mf = p1.manifest().copy()
             self._ui.progress(_('importing change'), pos=i, item=change,
                     unit='changes', total=len(self._importset.changelists))
             self._ui.debug(
@@ -88,10 +87,12 @@ class ChangeManifestImporter(object):
                 mf[path] = fnode
                 if path in fileflags and change.cl in fileflags[path]:
                     mf.setflag(path, fileflags[path][change.cl])
-            linkrev = self._importset.linkrev(change.cl)
 
-            mp1 = mrevlog.addrevision(
-                    mf.text(mrevlog._usemanifestv2), tr, linkrev, mp1, mp2)
+            linkrev = self._importset.linkrev(change.cl)
+            mp1 = mrevlog.addrevision(mf.text(mrevlog._usemanifestv2), tr,
+                                      linkrev,
+                                      p1.manifestnode(),
+                                      p2.manifestnode())
 
             desc = change.parsed['desc']
             if desc == '':
@@ -113,7 +114,6 @@ class ChangeManifestImporter(object):
                     user=username,
                     date=(change.parsed['time'], 0),
                     extra={'p4changelist': change.cl})
-            mf = mf.copy()
         self._ui.progress(_('importing change'), pos=None)
 
 class RCSImporter(collections.Mapping):

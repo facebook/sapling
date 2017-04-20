@@ -102,6 +102,12 @@ Verify
 
 Update
 
+  $ hg manifest -r 0
+  depot/Main/a
+  $ hg manifest -r 1
+  depot/Main/b
+  $ hg manifest -r 2
+  depot/Main/A
   $ hg update -r 0
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cat depot/Main/a
