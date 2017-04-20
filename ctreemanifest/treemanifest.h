@@ -130,10 +130,7 @@ struct treemanifest {
 
     treemanifest(std::shared_ptr<Store> store) :
         fetcher(store) {
-      std::string hexnode;
-      hexnode.assign(HEX_NODE_SIZE, '\0');
-
-      root.initialize(NULL, 0, hexnode.c_str(), MANIFEST_DIRECTORY_FLAGPTR);
+      root.initialize(NULL, 0, HEXNULLID, MANIFEST_DIRECTORY_FLAGPTR);
     }
 
     treemanifest(treemanifest &other) :

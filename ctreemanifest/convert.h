@@ -18,6 +18,7 @@ const size_t BIN_NODE_SIZE = 20;
 const size_t HEX_NODE_SIZE = 40;
 
 const char *const NULLID = "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0";
+const char *const HEXNULLID = "0000000000000000000000000000000000000000";
 
 static int8_t hextable[256] = {
     -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
