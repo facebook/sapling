@@ -222,29 +222,34 @@ static PyObject *newtreeiter_iternext(py_newtreeiter *self) {
   ManifestNode *p2 = NULL;
   std::string raw;
   std::string p1raw;
-  while (iterator.next(&path, &result, &p1, &p2)) {
-    result->manifest->serialize(raw);
+  try {
+    while (iterator.next(&path, &result, &p1, &p2)) {
+      result->manifest->serialize(raw);
 
-    if (memcmp(p1->node, NULLID, BIN_NODE_SIZE) == 0) {
-      p1raw.erase();
-    } else {
-      p1->manifest->serialize(p1raw);
+      if (memcmp(p1->node, NULLID, BIN_NODE_SIZE) == 0) {
+        p1raw.erase();
+      } else {
+        p1->manifest->serialize(p1raw);
+      }
+
+      if (path->size() == 0) {
+        // Record the root hash. This marks the tree as final and immutable.
+        std::string hexnode;
+        hexfrombin(result->node, hexnode);
+        self->treemf->tm.root.update(hexnode.c_str(), MANIFEST_DIRECTORY_FLAGPTR);
+      }
+
+      return Py_BuildValue("(s#s#s#s#s#s#)",
+                           path->c_str(), (Py_ssize_t)path->size(),
+                           result->node, (Py_ssize_t)BIN_NODE_SIZE,
+                           raw.c_str(), (Py_ssize_t)raw.size(),
+                           p1raw.c_str(), (Py_ssize_t)p1raw.size(),
+                           p1->node, (Py_ssize_t)BIN_NODE_SIZE,
+                           p2->node, (Py_ssize_t)BIN_NODE_SIZE);
     }
-
-    if (path->size() == 0) {
-      // Record the root hash. This marks the tree as final and immutable.
-      std::string hexnode;
-      hexfrombin(result->node, hexnode);
-      self->treemf->tm.root.update(hexnode.c_str(), MANIFEST_DIRECTORY_FLAGPTR);
-    }
-
-    return Py_BuildValue("(s#s#s#s#s#s#)",
-                         path->c_str(), (Py_ssize_t)path->size(),
-                         result->node, (Py_ssize_t)BIN_NODE_SIZE,
-                         raw.c_str(), (Py_ssize_t)raw.size(),
-                         p1raw.c_str(), (Py_ssize_t)p1raw.size(),
-                         p1->node, (Py_ssize_t)BIN_NODE_SIZE,
-                         p2->node, (Py_ssize_t)BIN_NODE_SIZE);
+  } catch (const std::exception &ex) {
+    PyErr_SetString(PyExc_RuntimeError, ex.what());
+    return NULL;
   }
 
   return NULL;
