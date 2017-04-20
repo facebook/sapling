@@ -115,6 +115,7 @@ def recordfilter(ui, originalhunks, operation=None):
 def dorecord(ui, repo, commitfunc, cmdsuggest, backupall,
             filterfn, *pats, **opts):
     from . import merge as mergemod
+    opts = pycompat.byteskwargs(opts)
     if not ui.interactive():
         if cmdsuggest:
             msg = _('running non-interactively, use %s instead') % cmdsuggest
