@@ -10,9 +10,12 @@
 #ifndef REMOTEFILELOG_MANIFEST_H
 #define REMOTEFILELOG_MANIFEST_H
 
+#include <cstring>
 #include <list>
 #include <stdexcept>
 #include <openssl/sha.h>
+
+#include "convert.h"
 
 class Manifest;
 class ManifestIterator;
@@ -69,6 +72,7 @@ class Manifest {
     ConstantStringRef _rawobj;
     size_t _refcount;
     bool _mutable;
+    char _node[BIN_NODE_SIZE];
 
     std::list<ManifestEntry> entries;
     std::list<ManifestEntry *> mercurialSortedEntries;
@@ -77,9 +81,10 @@ class Manifest {
     Manifest() :
       _refcount(0),
       _mutable(true) {
+      memcpy(this->_node, NULLID, BIN_NODE_SIZE);
     }
 
-    Manifest(ConstantStringRef &rawobj);
+    Manifest(ConstantStringRef &rawobj, const char *node);
 
     void incref();
     size_t decref();
@@ -90,7 +95,12 @@ class Manifest {
     ManifestPtr copy();
 
     bool isMutable() const;
-    void markPermanent();
+    void markPermanent(const char *p1, const char *p2);
+    void markPermanent(const char *node);
+
+    char *node() {
+      return _node;
+    }
 
     ManifestIterator getIterator();
 
@@ -202,12 +212,6 @@ class SortedManifestIterator {
     ManifestEntry *currentvalue() const;
 
     bool isfinished() const;
-};
-
-class ManifestNode {
-  public:
-    Manifest *manifest;
-    char node[BIN_NODE_SIZE];
 };
 
 #endif //REMOTEFILELOG_MANIFEST_H

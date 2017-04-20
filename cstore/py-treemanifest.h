@@ -217,35 +217,37 @@ static PyObject *newtreeiter_iternext(py_newtreeiter *self) {
   SubtreeIterator &iterator = self->iter;
 
   std::string *path = NULL;
-  ManifestNode *result = NULL;
-  ManifestNode *p1 = NULL;
-  ManifestNode *p2 = NULL;
+  Manifest *result = NULL;
+  Manifest *p1 = NULL;
+  Manifest *p2 = NULL;
   std::string raw;
   std::string p1raw;
   try {
     while (iterator.next(&path, &result, &p1, &p2)) {
-      result->manifest->serialize(raw);
+      result->serialize(raw);
 
-      if (memcmp(p1->node, NULLID, BIN_NODE_SIZE) == 0) {
+      if (!p1) {
         p1raw.erase();
       } else {
-        p1->manifest->serialize(p1raw);
+        p1->serialize(p1raw);
       }
 
       if (path->size() == 0) {
         // Record the root hash. This marks the tree as final and immutable.
         std::string hexnode;
-        hexfrombin(result->node, hexnode);
+        hexfrombin(result->node(), hexnode);
         self->treemf->tm.root.update(hexnode.c_str(), MANIFEST_DIRECTORY_FLAGPTR);
       }
 
+      const char *p1Node = p1 ? p1->node() : NULLID;
+      const char *p2Node = p2 ? p2->node() : NULLID;
       return Py_BuildValue("(s#s#s#s#s#s#)",
                            path->c_str(), (Py_ssize_t)path->size(),
-                           result->node, (Py_ssize_t)BIN_NODE_SIZE,
+                           result->node(), (Py_ssize_t)BIN_NODE_SIZE,
                            raw.c_str(), (Py_ssize_t)raw.size(),
                            p1raw.c_str(), (Py_ssize_t)p1raw.size(),
-                           p1->node, (Py_ssize_t)BIN_NODE_SIZE,
-                           p2->node, (Py_ssize_t)BIN_NODE_SIZE);
+                           p1Node, (Py_ssize_t)BIN_NODE_SIZE,
+                           p2Node, (Py_ssize_t)BIN_NODE_SIZE);
     }
   } catch (const std::exception &ex) {
     PyErr_SetString(PyExc_RuntimeError, ex.what());

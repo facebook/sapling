@@ -156,7 +156,7 @@ struct treemanifest {
      */
     bool remove(const std::string &filename);
 
-    Manifest* getRootManifest() {
+    Manifest *getRootManifest() {
       if (this->root.resolved.isnull()) {
         std::string binnode;
         binnode.reserve(BIN_NODE_SIZE);
@@ -251,8 +251,8 @@ class SubtreeIterator {
     std::vector<char*> cmpNodes;
     std::vector<std::vector<stackframe> > cmpStacks;
     std::string path;
-    ManifestNode result;
-    ManifestNode parents[2];
+    Manifest *result;
+    Manifest *parents[2];
     ManifestFetcher fetcher;
   public:
     SubtreeIterator(Manifest *mainRoot,
@@ -266,15 +266,15 @@ class SubtreeIterator {
      * Return true if a manifest was returned, or false if we've reached the
      * end.
      */
-    bool next(std::string **path, ManifestNode **result,
-              ManifestNode **p1, ManifestNode **p2);
+    bool next(std::string **path, Manifest **result,
+              Manifest **p1, Manifest **p2);
   private:
     /**
      * Pops the current Manifest, populating the output values and returning true
      * if the current Manifest is different from all comparison manifests.
      */
-    bool popResult(std::string **path, ManifestNode **result,
-                   ManifestNode **p1, ManifestNode **p2);
+    bool popResult(std::string **path, Manifest **result,
+                   Manifest **p1, Manifest **p2);
 
     /** Pushes the given Manifest onto the stacks. If the given Manifest equals
      * one of the comparison Manifests, the function does nothing.

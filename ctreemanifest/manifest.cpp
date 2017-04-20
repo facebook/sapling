@@ -9,7 +9,7 @@
 
 #include "manifest.h"
 
-Manifest::Manifest(ConstantStringRef &rawobj) :
+Manifest::Manifest(ConstantStringRef &rawobj, const char *node) :
     _rawobj(rawobj),
     _refcount(0),
     _mutable(false) {
@@ -21,6 +21,12 @@ Manifest::Manifest(ConstantStringRef &rawobj) :
     parseptr = entry.initialize(parseptr);
     entries.push_back(entry);
   }
+
+  if (!node) {
+    throw std::logic_error("null node passed to manifest");
+  }
+
+  memcpy(this->_node, node, BIN_NODE_SIZE);
 }
 
 ManifestPtr Manifest::copy() {
@@ -300,6 +306,18 @@ bool Manifest::isMutable() const {
   return this->_mutable;
 }
 
-void Manifest::markPermanent() {
+void Manifest::markPermanent(const char *p1, const char *p2) {
+  if (!this->isMutable()) {
+    throw std::logic_error("attempting to double mark manifest immutable");
+  }
   this->_mutable = false;
+  this->computeNode(p1, p2, this->_node);
+}
+
+void Manifest::markPermanent(const char *node) {
+  if (!this->isMutable()) {
+    throw std::logic_error("attempting to double mark manifest immutable");
+  }
+  this->_mutable = false;
+  memcpy(this->_node, node, BIN_NODE_SIZE);
 }

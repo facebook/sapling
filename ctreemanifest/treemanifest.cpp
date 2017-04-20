@@ -487,6 +487,9 @@ SubtreeIterator::SubtreeIterator(Manifest *mainRoot,
     fetcher(fetcher) {
   this->mainStack.push_back(stackframe(mainRoot, false));
 
+  this->parents[0] = NULL;
+  this->parents[1] = NULL;
+
   for (size_t i = 0; i < cmpRoots.size(); i++) {
     Manifest *cmpRoot = cmpRoots[i];
 
@@ -496,16 +499,16 @@ SubtreeIterator::SubtreeIterator(Manifest *mainRoot,
   }
 }
 
-bool SubtreeIterator::popResult(std::string **path, ManifestNode **result,
-                                ManifestNode **p1, ManifestNode **p2) {
+bool SubtreeIterator::popResult(std::string **path, Manifest **result,
+                                Manifest **p1, Manifest **p2) {
   stackframe &mainFrame = this->mainStack.back();
   Manifest *mainManifest = mainFrame.manifest;
   std::string mainSerialized;
 
   // When we loop over the cmpStacks, record the cmp nodes that are parents
   // of the level we're about to return.
-  memcpy(this->parents[0].node, NULLID, BIN_NODE_SIZE);
-  memcpy(this->parents[1].node, NULLID, BIN_NODE_SIZE);
+  this->parents[0] = NULL;
+  this->parents[1] = NULL;
 
   bool alreadyExists = false;
   size_t matchingParent = -1;
@@ -535,19 +538,7 @@ bool SubtreeIterator::popResult(std::string **path, ManifestNode **result,
         }
       }
 
-      // Record the cmp parent nodes so later we can compute the main node
-      if (cmpStack.size() > 1) {
-        stackframe &priorCmpFrame = cmpStack[cmpStack.size() - 2];
-        ManifestEntry *priorCmpEntry = priorCmpFrame.currentvalue();
-        this->parents[i].manifest = cmpManifest;
-        memcpy(this->parents[i].node, binfromhex(priorCmpEntry->node).c_str(),
-               BIN_NODE_SIZE);
-      } else {
-        // Use the original passed in parent nodes
-        this->parents[i].manifest = cmpManifest;
-        memcpy(this->parents[i].node, binfromhex(this->cmpNodes[i]).c_str(),
-               BIN_NODE_SIZE);
-      }
+      this->parents[i] = cmpManifest;
     }
   }
 
@@ -559,16 +550,28 @@ bool SubtreeIterator::popResult(std::string **path, ManifestNode **result,
     }
   }
 
-  char tempnode[BIN_NODE_SIZE];
   if (alreadyExists && !isRootManifest) {
     // Reuse existing node if we're not the root node. This is important,
     // because otherwise we compute a new node for the same content, since p1/p2
     // will be different. The root node is special since it changes when
     // given a different p1/p2, regardless of content.
-    memcpy(tempnode, this->parents[matchingParent].node, BIN_NODE_SIZE);
+    char *existingNode = this->parents[matchingParent]->node();
+    if (mainManifest->isMutable()) {
+      mainManifest->markPermanent(existingNode);
+    } else {
+      assert(memcmp(mainManifest->node(), existingNode, BIN_NODE_SIZE) == 0);
+    }
   } else {
-    mainManifest->computeNode(this->parents[0].node, this->parents[1].node,
-                              tempnode);
+    char *p1Node = (char*)NULLID;
+    char *p2Node = (char*)NULLID;
+    if (this->parents[0]) {
+      p1Node = this->parents[0]->node();
+    }
+    if (this->parents[1]) {
+      p2Node = this->parents[1]->node();
+    }
+
+    mainManifest->markPermanent(p1Node, p2Node);
   }
 
   // Update the node on the manifest entry
@@ -579,11 +582,11 @@ bool SubtreeIterator::popResult(std::string **path, ManifestNode **result,
     ManifestEntry *priorEntry = priorFrame.currentvalue();
 
     std::string hexnode;
-    hexfrombin(tempnode, hexnode);
+    hexfrombin(mainManifest->node(), hexnode);
     priorEntry->update(hexnode.c_str(), MANIFEST_DIRECTORY_FLAGPTR);
 
     // Now that it has a node, it is permanent and shouldn't be modified.
-    priorEntry->resolved->markPermanent();
+    assert(!priorEntry->resolved->isMutable());
   }
 
   // If the current manifest has the same contents as a cmp manifest,
@@ -599,13 +602,13 @@ bool SubtreeIterator::popResult(std::string **path, ManifestNode **result,
     return false;
   }
 
-  this->result.manifest = mainManifest;
-  memcpy(this->result.node, tempnode, BIN_NODE_SIZE);
+  this->result = mainManifest;
+  assert(!mainManifest->isMutable());
 
   *path = &this->path;
-  *result = &this->result;
-  *p1 = &this->parents[0];
-  *p2 = &this->parents[1];
+  *result = this->result;
+  *p1 = this->parents[0];
+  *p2 = this->parents[1];
   return true;
 }
 
@@ -678,8 +681,8 @@ bool SubtreeIterator::processDirectory(ManifestEntry *mainEntry) {
   return true;
 }
 
-bool SubtreeIterator::next(std::string **path, ManifestNode **result,
-                           ManifestNode **p1, ManifestNode **p2) {
+bool SubtreeIterator::next(std::string **path, Manifest **result,
+                           Manifest **p1, Manifest **p2) {
   // Pop the last returned directory off the path
   size_t slashoffset = this->path.find_last_of('/', this->path.size() - 2);
   if (slashoffset == std::string::npos) {

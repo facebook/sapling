@@ -21,5 +21,5 @@ ManifestPtr ManifestFetcher::get(
     const char *path, size_t pathlen,
     std::string &node) const {
     ConstantStringRef content = _store->get(Key(path, pathlen, node.c_str(), node.size()));
-    return ManifestPtr(new Manifest(content));
+    return ManifestPtr(new Manifest(content, node.c_str()));
 }
