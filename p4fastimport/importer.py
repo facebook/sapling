@@ -75,9 +75,9 @@ class ChangeManifestImporter(object):
                     added + modified)
             amf = map(localpath, addmod)
             for path in amf:
-                filelog = self._repo.file(path)
+                hgfilelog = self._repo.file(path)
                 try:
-                    fnode = filelog.node(revnumdict[path])
+                    fnode = hgfilelog.node(revnumdict[path])
                 except (error.LookupError, IndexError):
                     raise error.Abort("can't find rev %d for %s cl %d" %
                             (revnumdict[path], path, change.cl))
@@ -211,8 +211,8 @@ class FlatfileImporter(collections.Mapping):
 class P4FileImporter(collections.Mapping):
     """Read a file from Perforce in case we cannot find it locally, in
     particular when there was branch or a rename"""
-    def __init__(self, filelog):
-        self._filelog = filelog # type: p4.P4Filelog
+    def __init__(self, p4filelog):
+        self._p4filelog = p4filelog # type: p4.P4Filelog
 
     def __len__(self):
         return len(self.revisions)
@@ -229,10 +229,10 @@ class P4FileImporter(collections.Mapping):
 
     @util.propertycache
     def revisions(self):
-        return self._filelog.revisions
+        return self._p4filelog.revisions
 
     def content(self, clnum):
-        return p4.get_file(self._filelog.depotfile, clnum=clnum)
+        return p4.get_file(self._p4filelog.depotfile, clnum=clnum)
 
 class CopyTracer(object):
     def __init__(self, repo, filelist, depotname):
@@ -264,24 +264,24 @@ class CopyTracer(object):
         branched, the second parameter is the file it was branchedfrom. Other
         otherwise it returns (None, None)
         """
-        filelog = p4.parse_filelog(self._depotpath)
-        bcl = filelog.branchcl
-        bsrc = filelog.branchsource
+        p4filelog = p4.parse_filelog(self._depotpath)
+        bcl = p4filelog.branchcl
+        bsrc = p4filelog.branchsource
         if bcl is not None and bsrc in self._filelist:
-            return filelog.branchcl, filelog.branchsource
+            return p4filelog.branchcl, p4filelog.branchsource
         return None, None
 
 class FileImporter(object):
-    def __init__(self, ui, repo, importset, filelog):
+    def __init__(self, ui, repo, importset, p4filelog):
         self._ui = ui
         self._repo = repo
         self._importset = importset
-        self._filelog = filelog # type: p4.P4Filelog
+        self._p4filelog = p4filelog # type: p4.P4Filelog
 
     @property
     def relpath(self):
         # XXX: Do the correct mapping to the clientspec
-        return localpath(self._filelog.depotfile)
+        return localpath(self._p4filelog.depotfile)
 
     @util.propertycache
     def storepath(self):
@@ -292,14 +292,14 @@ class FileImporter(object):
 
     def create(self, tr, copy_tracer=None):
         assert tr is not None
-        p4fi = P4FileImporter(self._filelog)
+        p4fi = P4FileImporter(self._p4filelog)
         rcs = RCSImporter(self.storepath)
         flat = FlatfileImporter(self.storepath)
         local_revs = rcs.revisions | flat.revisions
 
         revs = []
         for c in self._importset.changelists:
-            if c.cl in p4fi.revisions and not self._filelog.isdeleted(c.cl):
+            if c.cl in p4fi.revisions and not self._p4filelog.isdeleted(c.cl):
                 revs.append(c)
 
         fileflags = collections.defaultdict(dict)
@@ -312,9 +312,9 @@ class FileImporter(object):
             assert linkrev >= lastlinkrev
             lastlinkrev = linkrev
 
-            filelog = self._repo.file(self.relpath)
-            if len(filelog) > 0:
-                fparent1 = filelog.tip()
+            hgfilelog = self._repo.file(self.relpath)
+            if len(hgfilelog) > 0:
+                fparent1 = hgfilelog.tip()
 
             # select the content
             text = None
@@ -333,15 +333,15 @@ class FileImporter(object):
             # iscopy = copy_tracer and copy_tracer.iscopy(c.cl)
             #if iscopy:
             #    meta = copy_tracer.copydata(c.cl)
-            if self._filelog.isexec(c.cl):
+            if self._p4filelog.isexec(c.cl):
                 fileflags[self.relpath][c.cl] = 'x'
-            if self._filelog.issymlink(c.cl):
+            if self._p4filelog.issymlink(c.cl):
                 fileflags[self.relpath][c.cl] = 'l'
-            if self._filelog.iskeyworded(c.cl):
+            if self._p4filelog.iskeyworded(c.cl):
                 # Replace keyword expansion
                 pass
 
-            h = filelog.add(text, meta, tr, linkrev, fparent1, fparent2)
+            h = hgfilelog.add(text, meta, tr, linkrev, fparent1, fparent2)
             self._ui.debug(
                 'writing filelog: %s, p1 %s, linkrev %d, %d bytes, src: %s, '
                 'path: %s\n' % (short(h), short(fparent1), linkrev,
