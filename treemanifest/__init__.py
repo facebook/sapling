@@ -722,26 +722,26 @@ def servergettreepack(repo, proto, args):
 
         treemfl = repo.manifestlog.treemanifestlog
         mfrevlog = treemfl._revlog
-        if rootdir != '':
-            mfrevlog = mfrevlog.dirlog(rootdir)
+        revlogstore = revlogdatastore(mfrevlog)
 
         cl = repo.changelog
         for node in mfnodes:
-            treemf = treemfl[node].read()
-            for subtree in treemf.walksubtrees():
-                subnode = subtree.node()
-                subrevlog = mfrevlog
-                if subtree._dir != '':
-                    subrevlog = mfrevlog.dirlog(subtree._dir)
-                subrev = subrevlog.rev(subnode)
-
+            treemf = cstore.treemanifest(revlogstore, node)
+            for subname, subnode, subtext, x, x, x,  in treemf.walksubtrees():
                 # Append data
-                mfdata = subrevlog.revision(subrev)
-                data = [(subnode, nullid, mfdata)]
+                data = [(subnode, nullid, subtext)]
 
                 # Append history
                 # Only append first history for now, since the entire manifest
                 # history is very long.
+                # Append data
+                data = [(subnode, nullid, subtext)]
+
+                # Append history
+                subrevlog = mfrevlog
+                if subname != '':
+                    subrevlog = mfrevlog.dirlog(subname)
+                subrev = subrevlog.rev(subnode)
                 x, x, x, x, linkrev, p1, p2, node = subrevlog.index[subrev]
                 copyfrom = ''
                 p1node = subrevlog.node(p1)
@@ -749,7 +749,7 @@ def servergettreepack(repo, proto, args):
                 linknode = cl.node(linkrev)
                 history = [(subnode, p1node, p2node, linknode, copyfrom)]
 
-                for chunk in wirepack.sendpackpart(subtree._dir, history, data):
+                for chunk in wirepack.sendpackpart(subname, history, data):
                     yield chunk
 
         yield wirepack.closepart()
@@ -798,6 +798,38 @@ class remotetreedatastore(object):
 
     def getmissing(self, keys):
         return keys
+
+    def markledger(self, ledger):
+        pass
+
+class revlogdatastore(object):
+    def __init__(self, mfrevlog):
+        self._mfrevlog = mfrevlog
+
+    def get(self, name, node):
+        mfrevlog = self._mfrevlog
+        if name != '':
+            mfrevlog = mfrevlog.dirlog(name)
+
+        return mfrevlog.revision(node)
+
+    def getdeltachain(self, name, node):
+        revision = self.get(name, node)
+        return [(name, node, None, nullid, revision)]
+
+    def add(self, name, node, data):
+        raise RuntimeError("cannot add to a revlog store")
+
+    def getmissing(self, keys):
+        missing = []
+        for name, node in keys:
+            mfrevlog = self._mfrevlog
+            if name != '':
+                mfrevlog = mfrevlog.dirlog(name)
+            if node not in mfrevlog.nodemap:
+                missing.append((name, node))
+
+        return missing
 
     def markledger(self, ledger):
         pass

@@ -59,15 +59,11 @@
 Test prefetchtrees
   $ hg prefetchtrees -r '0 + 1 + 2'
   $ ls $CACHEDIR/master/packs/manifests
+  20fe6511795b8b2a4c52223c5fa1846033afdaf0.dataidx
+  20fe6511795b8b2a4c52223c5fa1846033afdaf0.datapack
   2124ac8f5a09b4be86db177166fc13820dbc2805.histidx
   2124ac8f5a09b4be86db177166fc13820dbc2805.histpack
-  6234687cbd154a10e8cbbe2c1e780a5c449f4e8e.dataidx
-  6234687cbd154a10e8cbbe2c1e780a5c449f4e8e.datapack
   $ hg debugdatapack --long $CACHEDIR/master/packs/manifests/*.dataidx
-  
-  
-  Node                                      Delta Base                                Delta Length
-  23848a702498b36725ff386a434cc0557926067e  0000000000000000000000000000000000000000  46
   
   dir/
   Node                                      Delta Base                                Delta Length
@@ -75,7 +71,7 @@ Test prefetchtrees
   
   
   Node                                      Delta Base                                Delta Length
-  b2ed7f50be40fa0559d1a65a811deac91df7efac  0000000000000000000000000000000000000000  46
+  23848a702498b36725ff386a434cc0557926067e  0000000000000000000000000000000000000000  46
   
   dir/
   Node                                      Delta Base                                Delta Length
@@ -83,11 +79,15 @@ Test prefetchtrees
   
   
   Node                                      Delta Base                                Delta Length
-  ef362f8bbe8aa457b0cfc49f200cbeb7747984ed  0000000000000000000000000000000000000000  46
+  b2ed7f50be40fa0559d1a65a811deac91df7efac  0000000000000000000000000000000000000000  46
   
   dir/
   Node                                      Delta Base                                Delta Length
   bc0c2c938b929f98b1c31a8c5994396ebb096bf0  0000000000000000000000000000000000000000  43
+  
+  
+  Node                                      Delta Base                                Delta Length
+  ef362f8bbe8aa457b0cfc49f200cbeb7747984ed  0000000000000000000000000000000000000000  46
   $ hg debughistorypack $CACHEDIR/master/packs/manifests/*.histidx
   
   
@@ -137,7 +137,7 @@ Test auto prefetch during normal access
   18ff3e6f91cb928b438833d365e611a51b13d860.histpack
   1f5b5244ebc66953070a1a48c8cd712d11a450ed.histidx
   1f5b5244ebc66953070a1a48c8cd712d11a450ed.histpack
-  396ec58cb360149de64fa9262309d1cd27852054.dataidx
-  396ec58cb360149de64fa9262309d1cd27852054.datapack
-  57215429ac4f777ea7c9be3419707cd854be5802.dataidx
-  57215429ac4f777ea7c9be3419707cd854be5802.datapack
+  69eeb8f7a99cf0fea8a22da6784259bb48b10550.dataidx
+  69eeb8f7a99cf0fea8a22da6784259bb48b10550.datapack
+  6bfd36e8424feecbd907b617782212b26955d504.dataidx
+  6bfd36e8424feecbd907b617782212b26955d504.datapack
