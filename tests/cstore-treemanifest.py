@@ -269,7 +269,7 @@ class ctreemanifesttests(unittest.TestCase):
         b.set("abc/z", *hashflags())
         blinknode = hashflags()[0]
 
-        for name, node, text, p1text, p1, p2 in b.finalize():
+        for name, node, text, p1text, p1, p2 in b.finalize(a2):
             dstore.add(name, node, nullid, text)
             hstore.add(name, node, p1, p2, blinknode, '')
             if not name:
@@ -278,7 +278,8 @@ class ctreemanifesttests(unittest.TestCase):
         b2 = cstore.treemanifest(dstore, bnode)
         self.assertEquals(list(b.iterentries()), list(b2.iterentries()))
         self.assertEquals(hstore.getancestors('', bnode), {
-            bnode : (nullid, nullid, blinknode, ''),
+            bnode : (anode, nullid, blinknode, ''),
+            anode : (nullid, nullid, alinknode, ''),
         })
 
     def testWriteReplaceFile(self):
@@ -411,14 +412,16 @@ class ctreemanifesttests(unittest.TestCase):
         diff = a.diff(b)
         self.assertEquals(diff, {})
 
+        b2 = b.copy()
+
         # Diff with modifications
         newfileflags = hashflags()
         newzflags = hashflags()
-        b.set("newfile", *newfileflags)
-        b.set("abc/z", *newzflags)
+        b2.set("newfile", *newfileflags)
+        b2.set("abc/z", *newzflags)
 
         # - uncommitted trees
-        diff = a.diff(b)
+        diff = a.diff(b2)
         self.assertEquals(diff, {
             "newfile": ((None, ''), newfileflags),
             "abc/z": (zflags, newzflags)
@@ -426,33 +429,30 @@ class ctreemanifesttests(unittest.TestCase):
 
         # - uncommitted trees with matcher
         match = matchmod.match('/', '/', ['abc/*'])
-        diff = a.diff(b, match=match)
+        diff = a.diff(b2, match=match)
         self.assertEquals(diff, {
             "abc/z": (zflags, newzflags)
         })
 
         match = matchmod.match('/', '/', ['newfile'])
-        diff = a.diff(b, match=match)
+        diff = a.diff(b2, match=match)
         self.assertEquals(diff, {
             "newfile": ((None, ''), newfileflags),
         })
 
         # - committed trees
-        for name, node, text, p1text, p1, p2 in a.finalize():
-            dstore.add(name, node, nullid, text)
-            hstore.add(name, node, p1, p2, alinknode, '')
-        for name, node, text, p1text, p1, p2 in b.finalize():
+        for name, node, text, p1text, p1, p2 in b2.finalize(a):
             dstore.add(name, node, nullid, text)
             hstore.add(name, node, p1, p2, blinknode, '')
 
-        diff = a.diff(b)
+        diff = a.diff(b2)
         self.assertEquals(diff, {
             "newfile": ((None, ''), newfileflags),
             "abc/z": (zflags, newzflags)
         })
 
         # Diff with clean
-        diff = a.diff(b, clean=True)
+        diff = a.diff(b2, clean=True)
         self.assertEquals(diff, {
             "newfile": ((None, ''), newfileflags),
             "abc/z": (zflags, newzflags),
