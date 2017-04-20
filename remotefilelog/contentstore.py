@@ -1,5 +1,5 @@
 import basestore, shallowutil
-from mercurial import mdiff, util
+from mercurial import mdiff, revlog, util
 from mercurial.node import hex, nullid
 
 class ChainIndicies(object):
@@ -171,34 +171,71 @@ class remotecontentstore(object):
     def markledger(self, ledger):
         pass
 
-class revlogdatastore(object):
-    def __init__(self, mfrevlog):
-        self._mfrevlog = mfrevlog
+class manifestrevlogstore(object):
+    def __init__(self, repo):
+        self._store = repo.store
+        self._svfs = repo.svfs
+        self._revlogs = dict()
+        self._cl = revlog.revlog(self._svfs, '00changelog.i')
 
     def get(self, name, node):
-        mfrevlog = self._mfrevlog
-        if name != '':
-            mfrevlog = mfrevlog.dirlog(name)
-
-        return mfrevlog.revision(node, raw=True)
+        return self._revlog(name).revision(node, raw=True)
 
     def getdeltachain(self, name, node):
         revision = self.get(name, node)
         return [(name, node, None, nullid, revision)]
 
-    def add(self, name, node, data):
+    def getancestors(self, name, node):
+        rl = self._revlog(name)
+        ancestors = {}
+        for ancrev in rl.ancestors([rl.rev(node)], inclusive=True):
+            ancnode = rl.node(ancrev)
+            p1, p2 = rl.parents(ancnode)
+            linknode = self._cl.node(rl.linkrev(ancrev))
+            ancestors[rl.node(ancrev)] = (p1, p2, linknode, '')
+        return ancestors
+
+    def add(self, *args):
         raise RuntimeError("cannot add to a revlog store")
+
+    def _revlog(self, name):
+        rl = self._revlogs.get(name)
+        if rl is None:
+            revlogname = '00manifesttree.i'
+            if name != '':
+                revlogname = 'meta/%s/00manifest.i' % name
+            rl = revlog.revlog(self._svfs, revlogname)
+            self._revlogs[name] = rl
+        return rl
 
     def getmissing(self, keys):
         missing = []
         for name, node in keys:
-            mfrevlog = self._mfrevlog
-            if name != '':
-                mfrevlog = mfrevlog.dirlog(name)
+            mfrevlog = self._revlog(name)
             if node not in mfrevlog.nodemap:
                 missing.append((name, node))
 
         return missing
 
     def markledger(self, ledger):
+        treename = ''
+        rl = revlog.revlog(self._svfs, '00manifesttree.i')
+        for rev in xrange(0, len(rl)):
+            node = rl.node(rev)
+            ledger.markdataentry(self, treename, node)
+            ledger.markhistoryentry(self, treename, node)
+
+        for path, encoded, size in self._store.datafiles():
+            if path[:5] != 'meta/' or path[-2:] != '.i':
+                continue
+
+            treename = path[5:-len('/00manifest.i')]
+
+            rl = revlog.revlog(self._svfs, path)
+            for rev in xrange(0, len(rl)):
+                node = rl.node(rev)
+                ledger.markdataentry(self, treename, node)
+                ledger.markhistoryentry(self, treename, node)
+
+    def cleanup(self, ledger):
         pass

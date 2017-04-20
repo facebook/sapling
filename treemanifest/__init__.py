@@ -39,7 +39,6 @@ automatically downloading trees from the server when they don't exist locally.
 """
 
 from mercurial import (
-    commands,
     changegroup,
     cmdutil,
     commands,
@@ -60,10 +59,17 @@ from mercurial import (
 from mercurial.i18n import _
 from mercurial.node import bin, hex, nullid
 
-from remotefilelog.contentstore import revlogdatastore, unioncontentstore
+from remotefilelog.contentstore import (
+    manifestrevlogstore,
+    unioncontentstore,
+)
+from remotefilelog.metadatastore import (
+    unionmetadatastore,
+)
 from remotefilelog.datapack import datapackstore, mutabledatapack
 from remotefilelog.historypack import historypackstore, mutablehistorypack
 from remotefilelog import shallowrepo, shallowutil, wirepack, constants
+from remotefilelog.repack import _runrepack
 from remotefilelog.shallowutil import (
     readnodelist,
     readpath,
@@ -732,11 +738,15 @@ def servergettreepack(repo, proto, args):
 
         treemfl = repo.manifestlog.treemanifestlog
         mfrevlog = treemfl._revlog
-        revlogstore = revlogdatastore(mfrevlog)
+
+        packpath = repo.vfs.join('cache/packs/%s' % PACK_CATEGORY)
+        datastore = cstore.datapackstore(packpath)
+        revlogstore = manifestrevlogstore(repo)
+        store = unioncontentstore(datastore, revlogstore)
 
         cl = repo.changelog
         for node in mfnodes:
-            treemf = cstore.treemanifest(revlogstore, node)
+            treemf = cstore.treemanifest(store, node)
             for subname, subnode, subtext, x, x, x,  in treemf.walksubtrees():
                 # Append data
                 data = [(subnode, nullid, subtext)]
@@ -811,3 +821,15 @@ class remotetreedatastore(object):
 
     def markledger(self, ledger):
         pass
+
+def serverrepack(repo):
+    packpath = repo.vfs.join('cache/packs/%s' % PACK_CATEGORY)
+
+    dpackstore = datapackstore(repo.ui, packpath)
+    revlogstore = manifestrevlogstore(repo)
+    datastore = unioncontentstore(dpackstore, revlogstore)
+
+    hpackstore = historypackstore(repo.ui, packpath)
+    histstore = unionmetadatastore(hpackstore, revlogstore)
+
+    _runrepack(repo, datastore, histstore, packpath, PACK_CATEGORY)

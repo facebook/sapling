@@ -159,3 +159,20 @@ Test repacking from revlogs to pack files on the server
   data/a.i
   data/dir/b.i
   meta/dir/00manifest.i
+
+  $ hg repack
+  $ ls .hg/cache/packs/manifests
+  6ef9454b3616ff75edca21af6f617d21a79f5963.histidx
+  6ef9454b3616ff75edca21af6f617d21a79f5963.histpack
+  d24c358c968883e3b6c4bd6a85845dfb28fd8de6.dataidx
+  d24c358c968883e3b6c4bd6a85845dfb28fd8de6.datapack
+  $ hg debugdatapack .hg/cache/packs/manifests/*.datapack
+  
+  
+  Node          Delta Base    Delta Length
+  1832e0765de9  000000000000  89
+  a0c8bcbbb45c  1832e0765de9  12
+  
+  dir
+  Node          Delta Base    Delta Length
+  23226e7a252c  000000000000  43

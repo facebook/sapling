@@ -1,7 +1,7 @@
 import os
 from collections import defaultdict
 from hgext3rd.extutil import runshellcommand
-from mercurial import error, mdiff, osutil, util
+from mercurial import error, extensions, mdiff, osutil, util
 from mercurial.node import nullid
 from mercurial.i18n import _
 import constants, datapack, historypack, contentstore, metadatastore
@@ -49,6 +49,10 @@ def fullrepack(repo):
         historysource = metadatastore.unionmetadatastore(*lhstores)
         _runrepack(repo, datasource, historysource, lpackpath,
                    constants.TREEPACK_CATEGORY)
+
+    if repo.ui.configbool('treemanifest', 'server'):
+        treemfmod = extensions.find('treemanifest')
+        treemfmod.serverrepack(repo)
 
 def incrementalrepack(repo):
     """This repacks the repo by looking at the distribution of pack files in the
