@@ -16,6 +16,7 @@ from . import (
     encoding,
     hbisect,
     node,
+    pycompat,
     registrar,
     templatekw,
     util,
@@ -23,6 +24,9 @@ from . import (
 
 urlerr = util.urlerr
 urlreq = util.urlreq
+
+if pycompat.ispy3:
+    long = int
 
 # filters are callables like:
 #   fn(obj)
