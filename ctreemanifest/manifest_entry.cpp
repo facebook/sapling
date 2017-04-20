@@ -137,7 +137,13 @@ Manifest *ManifestEntry::get_manifest(
   return this->resolved;
 }
 
-void ManifestEntry::update(const char *node, const char *flag) {
+void ManifestEntry::updatebinnode(const char *node, const char *flag) {
+  std::string hexnode;
+  hexfrombin(node, hexnode);
+  this->updatehexnode(hexnode.c_str(), flag);
+}
+
+void ManifestEntry::updatehexnode(const char *node, const char *flag) {
   // we cannot flip between file and directory.
   bool wasdir = this->flag != NULL && *this->flag == MANIFEST_DIRECTORY_FLAG;
   bool willbedir = flag != NULL && *flag == MANIFEST_DIRECTORY_FLAG;

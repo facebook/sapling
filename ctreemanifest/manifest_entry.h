@@ -62,7 +62,8 @@ class ManifestEntry {
 
     void initialize(ManifestEntry *other);
 
-    void update(const char *node, const char *flag);
+    void updatebinnode(const char *node, const char *flag);
+    void updatehexnode(const char *node, const char *flag);
 
     /**
      * Returns true iff the left precedes right.

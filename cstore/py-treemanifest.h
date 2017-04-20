@@ -234,9 +234,7 @@ static PyObject *newtreeiter_iternext(py_newtreeiter *self) {
 
       if (path->size() == 0) {
         // Record the root hash. This marks the tree as final and immutable.
-        std::string hexnode;
-        hexfrombin(result->node(), hexnode);
-        self->treemf->tm.root.update(hexnode.c_str(), MANIFEST_DIRECTORY_FLAGPTR);
+        self->treemf->tm.root.updatebinnode(result->node(), MANIFEST_DIRECTORY_FLAGPTR);
       }
 
       const char *p1Node = p1 ? p1->node() : NULLID;

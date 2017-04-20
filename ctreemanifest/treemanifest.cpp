@@ -378,7 +378,7 @@ static FindResult set_callback(
   } else {
     ManifestEntry *entry = &(*iterator);
 
-    entry->update(params->resultnode.c_str(), params->resultflag);
+    entry->updatehexnode(params->resultnode.c_str(), params->resultflag);
   }
   context->invalidate_checksums = true;
 
@@ -581,9 +581,7 @@ bool SubtreeIterator::popResult(std::string **path, Manifest **result,
     stackframe &priorFrame = mainStack[mainStack.size() - 1];
     ManifestEntry *priorEntry = priorFrame.currentvalue();
 
-    std::string hexnode;
-    hexfrombin(mainManifest->node(), hexnode);
-    priorEntry->update(hexnode.c_str(), MANIFEST_DIRECTORY_FLAGPTR);
+    priorEntry->updatebinnode(mainManifest->node(), MANIFEST_DIRECTORY_FLAGPTR);
 
     // Now that it has a node, it is permanent and shouldn't be modified.
     assert(!priorEntry->resolved->isMutable());
