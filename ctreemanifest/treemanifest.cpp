@@ -726,3 +726,15 @@ bool SubtreeIterator::next(std::string **path, Manifest **result,
     }
   }
 }
+
+FinalizeIterator::FinalizeIterator(Manifest *mainRoot,
+                const std::vector<char*> &cmpNodes,
+                const std::vector<Manifest*> &cmpRoots,
+                const ManifestFetcher &fetcher) :
+  _iterator(mainRoot, cmpNodes, cmpRoots, fetcher) {
+}
+
+bool FinalizeIterator::next(std::string **path, Manifest **result,
+                            Manifest **p1, Manifest **p2) {
+  return _iterator.next(path, result, p1, p2);
+}

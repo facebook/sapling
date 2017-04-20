@@ -33,7 +33,7 @@ struct py_treemanifest {
 struct py_newtreeiter {
   PyObject_HEAD;
 
-  SubtreeIterator iter;
+  FinalizeIterator iter;
 
   py_treemanifest *treemf;
 };
@@ -177,7 +177,7 @@ static py_fileiter *createfileiter(py_treemanifest *pytm,
  * iterator.
  */
 static void newtreeiter_dealloc(py_newtreeiter *self) {
-  self->iter.~SubtreeIterator();
+  self->iter.~FinalizeIterator();
   Py_XDECREF(self->treemf);
   PyObject_Del(self);
 }
@@ -194,7 +194,7 @@ static py_newtreeiter *newtreeiter_create(py_treemanifest *treemf, Manifest *mai
 
       // The provided created struct hasn't initialized our iter member, so
       // we do it manually.
-      new (&i->iter) SubtreeIterator(mainManifest, cmpNodes, cmpManifests, fetcher);
+      new (&i->iter) FinalizeIterator(mainManifest, cmpNodes, cmpManifests, fetcher);
       return i;
     } catch (const pyexception &ex) {
       Py_DECREF(i);
@@ -214,7 +214,7 @@ static py_newtreeiter *newtreeiter_create(py_treemanifest *treemf, Manifest *mai
  * complete and immutable.
  */
 static PyObject *newtreeiter_iternext(py_newtreeiter *self) {
-  SubtreeIterator &iterator = self->iter;
+  FinalizeIterator &iterator = self->iter;
 
   std::string *path = NULL;
   Manifest *result = NULL;

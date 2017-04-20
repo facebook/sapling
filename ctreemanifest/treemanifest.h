@@ -282,6 +282,19 @@ class SubtreeIterator {
     bool processDirectory(ManifestEntry *mainEntry);
 };
 
+class FinalizeIterator {
+  private:
+    SubtreeIterator _iterator;
+  public:
+    FinalizeIterator(Manifest *mainRoot,
+                    const std::vector<char*> &cmpNodes,
+                    const std::vector<Manifest*> &cmpRoots,
+                    const ManifestFetcher &fetcher);
+
+    bool next(std::string **path, Manifest **result,
+              Manifest **p1, Manifest **p2);
+};
+
 /**
  * A helper struct representing the state of an iterator recursing over a tree.
  */
