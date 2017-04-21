@@ -5340,7 +5340,7 @@ def unbundle(ui, repo, fname1, *fnames, **opts):
             else:
                 modheads = gen.apply(repo, 'unbundle', 'bundle:' + fname)
 
-    return postincoming(ui, repo, modheads, opts.get('update'), None, None)
+    return postincoming(ui, repo, modheads, opts.get(r'update'), None, None)
 
 @command('^update|up|checkout|co',
     [('C', 'clean', None, _('discard uncommitted changes (no backup)')),
