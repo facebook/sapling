@@ -186,6 +186,7 @@ class IgnoreChecker {
 
     StringPiece piece = path.stringPiece();
     auto idx = piece.rfind('/');
+    auto fileType = GitIgnore::TYPE_FILE;
     while (true) {
       StringPiece dirName;
       StringPiece childName;
@@ -201,7 +202,8 @@ class IgnoreChecker {
               << "\"";
       const GitIgnore* ignore = getIgnoreData(dirName);
       auto matchResult = ignore->match(
-          RelativePathPiece(childName, detail::SkipPathSanityCheck()));
+          RelativePathPiece(childName, detail::SkipPathSanityCheck()),
+          fileType);
       if (matchResult == GitIgnore::INCLUDE) {
         // Explicitly included.  We don't need to check parent directories.
         return false;
@@ -214,6 +216,7 @@ class IgnoreChecker {
         return false;
       }
       idx = dirName.rfind('/');
+      fileType = GitIgnore::TYPE_DIR;
     }
   }
 

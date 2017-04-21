@@ -21,10 +21,11 @@ using namespace facebook::eden;
  * pass in match enums without having to explicitly qualify them with
  * "GitIgnore::" everywhere in the test code.
  */
-#define EXPECT_IGNORE(ignore, expected, path)                               \
+#define EXPECT_IGNORE_WITH_TYPE(ignore, expected, path, fileType)           \
   do {                                                                      \
     auto expectedResult = GitIgnore::expected;                              \
-    auto matchResult = ignore.match(facebook::eden::RelativePath(path));    \
+    auto matchResult =                                                      \
+        (ignore).match(facebook::eden::RelativePath(path), (fileType));     \
     if (expectedResult != matchResult) {                                    \
       ADD_FAILURE() << "found <" << GitIgnore::matchString(matchResult)     \
                     << "> instead of <"                                     \
@@ -32,6 +33,12 @@ using namespace facebook::eden;
                     << path << "\"";                                        \
     }                                                                       \
   } while (0)
+
+#define EXPECT_IGNORE(ignore, expected, path) \
+  EXPECT_IGNORE_WITH_TYPE(ignore, expected, path, GitIgnore::TYPE_FILE)
+
+#define EXPECT_IGNORE_DIR(ignore, expected, path) \
+  EXPECT_IGNORE_WITH_TYPE(ignore, expected, path, GitIgnore::TYPE_DIR)
 
 TEST(GitIgnore, testEmpty) {
   GitIgnore ignore;
@@ -624,4 +631,40 @@ TEST(GitIgnore, testCornerCases) {
   EXPECT_IGNORE(ignore, NO_MATCH, "testpath");
   EXPECT_IGNORE(ignore, NO_MATCH, "test/path");
   EXPECT_IGNORE(ignore, EXCLUDE, "bar");
+}
+
+TEST(GitIgnore, directory) {
+  GitIgnore ignore;
+  ignore.loadFile(
+      "junk/\n"
+      "foo\n"
+      "!bar\n"
+      "/build/\n");
+
+  EXPECT_IGNORE(ignore, NO_MATCH, "junk");
+  EXPECT_IGNORE_DIR(ignore, EXCLUDE, "junk");
+  EXPECT_IGNORE(ignore, EXCLUDE, "foo");
+  EXPECT_IGNORE_DIR(ignore, EXCLUDE, "foo");
+  EXPECT_IGNORE(ignore, INCLUDE, "bar");
+  EXPECT_IGNORE_DIR(ignore, INCLUDE, "bar");
+  EXPECT_IGNORE(ignore, NO_MATCH, "build");
+  EXPECT_IGNORE_DIR(ignore, EXCLUDE, "build");
+
+  EXPECT_IGNORE(ignore, NO_MATCH, "test/junk");
+  EXPECT_IGNORE_DIR(ignore, EXCLUDE, "test/junk");
+
+  EXPECT_IGNORE_DIR(ignore, NO_MATCH, "test/build");
+  EXPECT_IGNORE_DIR(ignore, INCLUDE, "test/build/bar");
+  EXPECT_IGNORE_DIR(ignore, EXCLUDE, "test/build/foo");
+
+  // Note: we intentionally do not include checks for files like
+  // "test/junk/bar" and "build/bar".  The GitIgnoreStack code should always
+  // stop when it finds an excluded directory, and should not descend into it
+  // and try matching these patterns.  The results of these checks therefore do
+  // not matter.
+  //
+  // In practice the results are potentially slightly unexpected, because
+  // the GitIgnore code completely skips directory-only rules when processing a
+  // path known to be a file.  It expects ignored directories earlier in the
+  // path to have already been filtered out.
 }

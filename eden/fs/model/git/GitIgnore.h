@@ -21,6 +21,11 @@ class GitIgnorePattern;
 /**
  * A GitIgnore object represents the contents of a single .gitignore file
  *
+ * Note: Most callers typically do not want to use GitIgnore directly, and
+ * should use GitIgnoreStack instead.  The GitIgnoreStack class performs proper
+ * checking of the full path against a stack of GitIgnore objects.
+ * GitIgnoreStack correctly implements the logic described below:
+ *
  * To determine if a path should be included or excluded, you normally must
  * search through multiple separate GitIgnore objects.  These should be
  * processed in the following order (from highest precedence to lowest):
@@ -67,6 +72,26 @@ class GitIgnore {
     HIDDEN,
   };
 
+  /**
+   * An enum to indicate if the input path refers to a directory or not.
+   *
+   * This is required for matching since gitignore patterns ending in a
+   * trailing slash only match directories.
+   *
+   * The enum values use a "TYPE_" prefix to avoid any potential confusion with
+   * the "FILE" type name from <stdio.h> or the "DIR" typename from <dirent.h>
+   */
+  enum FileType {
+    /**
+     * A regular file, or a symbolic link.
+     */
+    TYPE_FILE,
+    /**
+     * A directory.
+     */
+    TYPE_DIR,
+  };
+
   GitIgnore();
   virtual ~GitIgnore();
   GitIgnore(GitIgnore&&) = default;
@@ -96,19 +121,23 @@ class GitIgnore {
   void loadFile(folly::StringPiece contents);
 
   /**
-   * Check to see if a patch matches any patterns in this GitIgnore object.
+   * Check to see if a path matches any patterns in this GitIgnore object.
    *
    * The input path should be relative to the directory where this .gitignore
    * file exists.  (For repository-wide .gitignore files or for user's personal
    * .gitignore files the path should be relative to the root of the
    * repository.)
    *
+   * The fileType argument indicates if this path refers to a directory or not.
+   * This is required since ignore patterns ending with a trailing slash match
+   * directories only.
+   *
    * It is safe to call match() from multiple threads concurrently on the same
    * GitIgnore object, provide no modifying operations are being done to the
    * GitIgnore object at the same time.
    */
-  MatchResult match(RelativePathPiece path) const {
-    return match(path, path.basename());
+  MatchResult match(RelativePathPiece path, FileType fileType) const {
+    return match(path, path.basename(), fileType);
   }
 
   /**
@@ -123,7 +152,10 @@ class GitIgnore {
    * files.  It is slightly more efficient for the caller to compute the
    * basename once, rather than re-computing it for each pattern that needs it.
    */
-  MatchResult match(RelativePathPiece path, PathComponentPiece basename) const;
+  MatchResult match(
+      RelativePathPiece path,
+      PathComponentPiece basename,
+      FileType fileType) const;
 
   /**
    * Get a human-readable description of a MatchResult enum value.

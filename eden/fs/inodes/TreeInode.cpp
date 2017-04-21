@@ -1703,9 +1703,11 @@ Future<Unit> TreeInode::computeDiff(
 
     auto processUntracked = [&](PathComponentPiece name, Entry* inodeEntry) {
       bool entryIgnored = isIgnored;
+      auto fileType = inodeEntry->isDirectory() ? GitIgnore::TYPE_DIR
+                                                : GitIgnore::TYPE_FILE;
       auto entryPath = currentPath + name;
       if (!isIgnored) {
-        auto ignoreStatus = ignore->match(entryPath);
+        auto ignoreStatus = ignore->match(entryPath, fileType);
         if (ignoreStatus == GitIgnore::HIDDEN) {
           // Completely skip over hidden entries.
           // This is used for reserved directories like .hg and .eden
@@ -1768,7 +1770,7 @@ Future<Unit> TreeInode::computeDiff(
           auto entryPath = currentPath + scmEntry.getName();
           if (!isIgnored && (inodeEntry->isDirectory() ||
                              scmEntry.getType() == TreeEntryType::TREE)) {
-            auto ignoreStatus = ignore->match(entryPath);
+            auto ignoreStatus = ignore->match(entryPath, GitIgnore::TYPE_DIR);
             if (ignoreStatus == GitIgnore::HIDDEN) {
               // This is rather unexpected.  We don't expect to find entries in
               // source control using reserved hidden names.

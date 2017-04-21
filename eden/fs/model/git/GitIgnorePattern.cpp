@@ -149,11 +149,10 @@ GitIgnorePattern::~GitIgnorePattern() {}
 
 GitIgnore::MatchResult GitIgnorePattern::match(
     RelativePathPiece path,
-    PathComponentPiece basename) const {
-  if (flags_ & FLAG_MUST_BE_DIR) {
-    // TODO: get the file type, and reject the file if it's not a directory.
-    // git does this lazily-ish.  It may or may not know the entry type ahead
-    // of time, and only looks it up if FLAG_MUST_BE_DIR is set.
+    PathComponentPiece basename,
+    GitIgnore::FileType fileType) const {
+  if ((flags_ & FLAG_MUST_BE_DIR) && (fileType != GitIgnore::TYPE_DIR)) {
+    return GitIgnore::NO_MATCH;
   }
 
   bool isMatch = false;

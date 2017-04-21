@@ -703,7 +703,7 @@ TEST(DiffTest, resetReplaceFileWithDir) {
 // Test with a .gitignore file in the top-level directory
 TEST(DiffTest, ignoreToplevelOnly) {
   DiffTest test({
-      {".gitignore", "/1.txt\nignore.txt\n"},
+      {".gitignore", "/1.txt\nignore.txt\njunk/\n!important.txt\n"},
       {"a/b.txt", "test\n"},
       {"src/x.txt", "test\n"},
       {"src/y.txt", "test\n"},
@@ -719,6 +719,11 @@ TEST(DiffTest, ignoreToplevelOnly) {
   test.getMount().mkdir("src/foo/abc");
   test.getMount().mkdir("src/foo/abc/xyz");
   test.getMount().addFile("src/foo/abc/xyz/ignore.txt", "new\n");
+  test.getMount().mkdir("junk");
+  test.getMount().addFile("junk/stuff.txt", "new\n");
+  // Even though important.txt matches an include rule, the fact that it
+  // is inside an excluded directory takes precedence.
+  test.getMount().addFile("junk/important.txt", "new\n");
 
   auto result = test.diff();
   EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
@@ -737,6 +742,8 @@ TEST(DiffTest, ignoreToplevelOnly) {
       UnorderedElementsAre(
           RelativePath{"1.txt"},
           RelativePath{"ignore.txt"},
+          RelativePath{"junk/stuff.txt"},
+          RelativePath{"junk/important.txt"},
           RelativePath{"src/foo/ignore.txt"},
           RelativePath{"src/foo/abc/xyz/ignore.txt"}));
   EXPECT_THAT(result.getRemoved(), UnorderedElementsAre());

@@ -63,7 +63,9 @@ class GitIgnoreStack {
   /**
    * Get the MatchResult for a path.
    */
-  GitIgnore::MatchResult match(RelativePathPiece path) const;
+  GitIgnore::MatchResult match(
+      RelativePathPiece path,
+      GitIgnore::FileType fileType) const;
 
  private:
   /**

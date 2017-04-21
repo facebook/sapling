@@ -46,8 +46,10 @@ class GitIgnorePattern {
    * <repo_root>/foo/bar/.gitignore, when testing the file
    * <repo_root>/foo/bar/abc/xyz.txt, pass in the path as "abc/xyz.txt"
    */
-  GitIgnore::MatchResult match(RelativePathPiece path) const {
-    return match(path, path.basename());
+  GitIgnore::MatchResult match(
+      RelativePathPiece path,
+      GitIgnore::FileType fileType) const {
+    return match(path, path.basename(), fileType);
   }
 
   /**
@@ -64,7 +66,8 @@ class GitIgnorePattern {
    */
   GitIgnore::MatchResult match(
       RelativePathPiece path,
-      PathComponentPiece basename) const;
+      PathComponentPiece basename,
+      GitIgnore::FileType fileType) const;
 
  private:
   /**

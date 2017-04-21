@@ -12,7 +12,9 @@
 namespace facebook {
 namespace eden {
 
-GitIgnore::MatchResult GitIgnoreStack::match(RelativePathPiece path) const {
+GitIgnore::MatchResult GitIgnoreStack::match(
+    RelativePathPiece path,
+    GitIgnore::FileType fileType) const {
   // Explicitly hide any entry named .hg or .eden
   //
   // We only check the very last component of the path.  Since these
@@ -48,7 +50,7 @@ GitIgnore::MatchResult GitIgnoreStack::match(RelativePathPiece path) const {
     const GitIgnore* ignore = &node->ignore_;
     node = node->parent_;
 
-    auto result = ignore->match(suffix, basename);
+    auto result = ignore->match(suffix, basename, fileType);
     if (result != GitIgnore::NO_MATCH) {
       return result;
     }
