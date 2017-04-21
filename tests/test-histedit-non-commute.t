@@ -161,12 +161,17 @@ fix up
   warning: conflicts while merging e! (edit, then use 'hg resolve --mark')
   Fix up the change (pick 7b4e2f4b7bcd)
   (hg histedit --continue to resume)
+  $ hg histedit --continue 2>&1 | fixbundle
+  abort: unresolved merge conflicts (see 'hg help resolve')
 
 This failure is caused by 7b4e2f4b7bcd "e" not rebasing the non commutative
 former children.
 
 just continue this time
   $ hg revert -r 'p1()' e
+make sure the to-be-empty commit doesn't screw up the state (issue5545)
+  $ hg histedit --continue 2>&1 | fixbundle
+  abort: unresolved merge conflicts (see 'hg help resolve')
   $ hg resolve --mark e
   (no more unresolved files)
   continue: hg histedit --continue

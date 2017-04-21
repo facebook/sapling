@@ -198,6 +198,7 @@ from mercurial import (
     hg,
     lock,
     merge as mergemod,
+    mergeutil,
     node,
     obsolete,
     repair,
@@ -1297,6 +1298,10 @@ def _getsummary(ctx):
 
 def bootstrapcontinue(ui, state, opts):
     repo = state.repo
+
+    ms = mergemod.mergestate.read(repo)
+    mergeutil.checkunresolved(ms)
+
     if state.actions:
         actobj = state.actions.pop(0)
 
