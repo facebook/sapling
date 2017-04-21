@@ -23,6 +23,12 @@ try:
 except ImportError:
     pass
 
+try:
+    from mercurial import smartset
+    smartset.baseset # force demandimport to load the module now
+except ImportError:
+    smartset = None
+
 import maps
 
 ignoredfiles = set(['.hgtags', '.hgsvnexternals', '.hgsub', '.hgsubstate'])
@@ -345,7 +351,10 @@ def revset_fromsvn(repo, subset, x):
         raise hgutil.Abort("svn metadata is missing - "
                            "run 'hg svn rebuildmeta' to reconstruct it")
     svnrevs = set(rev(h) for h in meta.revmap.hashes().keys())
-    return filter(svnrevs.__contains__, subset)
+    filteredrevs = filter(svnrevs.__contains__, subset)
+    if smartset is not None:
+        filteredrevs = smartset.baseset(filteredrevs)
+    return filteredrevs
 
 def revset_svnrev(repo, subset, x):
     '''``svnrev(number)``
@@ -369,6 +378,8 @@ def revset_svnrev(repo, subset, x):
         r = repo[n].rev()
         if r in subset:
             revs.append(r)
+    if smartset is not None:
+        revs = smartset.baseset(revs)
     return revs
 
 revsets = {
