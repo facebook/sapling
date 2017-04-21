@@ -77,10 +77,9 @@ Strip commit server-side
   
 Now do a backup, it should not fail
   $ cd ../client
-  $ hg pushbackup
-  starting backup .* (re)
-  searching for changes
-  finished in \d+\.(\d+)? seconds (re)
+  $ hg pushbackup > /dev/null
+  filtering revisions: [1]
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
 
 Now try to restore it from different client. Make sure bookmark
 `goodbooktobackup` is restored
@@ -99,3 +98,19 @@ Now try to restore it from different client. Make sure bookmark
   no changes found
   $ hg book
      goodbooktobackup          0:22ea264ff89d
+
+Create a commit which deletes a file. Make sure it is backed up correctly
+  $ cd ../client
+  $ hg up -q 0
+  $ mkcommit filetodelete
+  created new head
+  $ hg rm filetodelete
+  $ hg ci -m 'deleted'
+  $ hg log -r . -T '{node}\n'
+  507709f4da22941c0471885d8377c48d6dadce21
+  $ hg pushbackup > /dev/null
+  filtering revisions: [1]
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
+  $ scratchbookmarks
+  infinitepush/backups/test/*$TESTTMP/client/bookmarks/goodbooktobackup 22ea264ff89d6891c2889f15f338ac9fa2474f8b (glob)
+  infinitepush/backups/test/*$TESTTMP/client/heads/507709f4da22941c0471885d8377c48d6dadce21 507709f4da22941c0471885d8377c48d6dadce21 (glob)

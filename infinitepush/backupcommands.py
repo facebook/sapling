@@ -320,7 +320,7 @@ def _dobackup(ui, repo, dest, **opts):
         afterbackupheads = []
     afterbackupheads = set(afterbackupheads)
     other = _getremote(repo, ui, dest, **opts)
-    outgoing, badhexnodes = _getrevstobackup(repo, other,
+    outgoing, badhexnodes = _getrevstobackup(repo, ui, other,
                                              afterbackupheads - bkpstate.heads)
     # If remotefilelog extension is enabled then there can be nodes that we
     # can't backup. In this case let's remove them from afterbackupheads
@@ -585,7 +585,7 @@ def findcommonoutgoing(repo, other, heads):
     else:
         return None
 
-def _getrevstobackup(repo, other, headstobackup):
+def _getrevstobackup(repo, ui, other, headstobackup):
     revs = list(repo[hexnode].rev() for hexnode in headstobackup)
 
     outgoing = findcommonoutgoing(repo, other, revs)
@@ -598,13 +598,20 @@ def _getrevstobackup(repo, other, headstobackup):
         for node in outgoing.missing:
             changectx = repo[node]
             for file in changectx.files():
+                if file not in changectx:
+                    # file was deleted in this commit
+                    continue
                 try:
-                    changectx.filectx(file)
-                except error.ManifestLookupError:
+                    changectx.filectx(file).data()
+                except error.ResponseError:
                     rootstofilter.append(changectx.rev())
+                    break
 
     badhexnodes = set()
     if rootstofilter:
+        ui.warn(_('filtering revisions: %s\n') % rootstofilter)
+        ui.log('infinitepushbackup', 'corrupted nodes found',
+               infinitepushbackupcorruptednodes='failure')
         revstofilter = list(repo.revs('%ld::', rootstofilter))
         badhexnodes = set(repo[rev].hex() for rev in revstofilter)
         revs = set(revs) - set(revstofilter)
