@@ -1584,23 +1584,24 @@ class changeset_templater(changeset_printer):
         self._counter = itertools.count()
         self.cache = {}
 
-        # find correct templates for current mode
-        tmplmodes = [
-            (True, ''),
-            (self.ui.verbose, '_verbose'),
-            (self.ui.quiet, '_quiet'),
-            (self.ui.debugflag, '_debug'),
-        ]
-
         self._tref = tmplspec.ref
         self._parts = {'header': '', 'footer': '',
                        tmplspec.ref: tmplspec.ref,
                        'docheader': '', 'docfooter': ''}
-        for mode, postfix in tmplmodes:
-            for t in self._parts:
-                cur = t + postfix
-                if mode and cur in self.t:
-                    self._parts[t] = cur
+        if tmplspec.mapfile:
+            # find correct templates for current mode, for backward
+            # compatibility with 'log -v/-q/--debug' using a mapfile
+            tmplmodes = [
+                (True, ''),
+                (self.ui.verbose, '_verbose'),
+                (self.ui.quiet, '_quiet'),
+                (self.ui.debugflag, '_debug'),
+            ]
+            for mode, postfix in tmplmodes:
+                for t in self._parts:
+                    cur = t + postfix
+                    if mode and cur in self.t:
+                        self._parts[t] = cur
 
         if self._parts['docheader']:
             self.ui.write(templater.stringify(self.t(self._parts['docheader'])))
