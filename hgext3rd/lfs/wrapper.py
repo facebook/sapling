@@ -3,11 +3,12 @@
 from __future__ import absolute_import
 
 from mercurial import (
+    filelog,
     revlog,
     util as hgutil,
 )
 from mercurial.i18n import _
-from mercurial.node import bin, nullid
+from mercurial.node import nullid
 
 from . import (
     blobstore,
@@ -37,23 +38,42 @@ def readfromstore(self, text):
     Returns a 2-typle (text, validatehash) where validatehash is True as the
     contents of the blobstore should be checked using checkhash.
     """
-    if self.opener.options['lfsbypass']:
-        return (text, False)
-
     metadata = pointer.deserialize(text)
-    storeids = metadata.tostoreids()
-    store = self.opener.lfslocalblobstore
-    if not isinstance(storeids, list):
-        storeids = [storeids]
-    missing = filter(lambda id: not store.has(id), storeids)
-    if missing:
-        self.opener.lfsremoteblobstore.readbatch(missing, store)
-    text = ''.join([store.read(id) for id in storeids])
-    return (text, True)
+    verifyhash = False
+
+    # if bypass is set, do not read remote blobstore, skip hash check, but
+    # still write hg filelog metadata
+    if not self.opener.options['lfsbypass']:
+        verifyhash = True
+        storeids = metadata.tostoreids()
+        store = self.opener.lfslocalblobstore
+        if not isinstance(storeids, list):
+            storeids = [storeids]
+        missing = filter(lambda id: not store.has(id), storeids)
+        if missing:
+            self.opener.lfsremoteblobstore.readbatch(missing, store)
+        text = ''.join([store.read(id) for id in storeids])
+
+    # pack hg filelog metadata
+    hgmeta = {}
+    for k in metadata.keys():
+        if k.startswith('x-hg-'):
+            name = k[len('x-hg-'):]
+            hgmeta[name] = metadata[k]
+    if hgmeta or text.startswith('\1\n'):
+        text = filelog.packmeta(hgmeta, text)
+
+    return (text, verifyhash)
 
 def writetostore(self, text):
     if self.opener.options['lfsbypass']:
         return (text, False)
+
+    # hg filelog metadata (includes rename, etc)
+    hgmeta, offset = filelog.parsemeta(text)
+    if offset and offset > 0:
+        # lfs blob does not contain hg filelog metadata
+        text = text[offset:]
 
     offset = 0
     chunkoids = []
@@ -84,13 +104,10 @@ def writetostore(self, text):
             hashalgo=hashalgo,
             size=len(text))
 
-    # hg filelog metadata (includes rename, etc)
-    hgmeta = getattr(self, '_filelogmeta', None)
-    if hgmeta:
-        # only care about a whitelist of hg filelog metadata
-        for name in ['copy', 'copyrev']:
-            if name in hgmeta:
-                metadata['x-hg-%s' % name] = hgmeta[name]
+    # translate hg filelog metadata to lfs metadata with "x-hg-" prefix
+    if hgmeta is not None:
+        for k, v in hgmeta.iteritems():
+            metadata['x-hg-%s' % k] = v
     text = str(metadata)
 
     return (text, False)
@@ -105,45 +122,22 @@ def _islfs(rlog, node=None, rev=None):
     flags = revlog.revlog.flags(rlog, rev)
     return bool(flags & revlog.REVIDX_EXTSTORED)
 
-def filelogadd(orig, self, text, meta, transaction, link, p1=None, p2=None):
-    # drop meta (usually used for renaming tracking), to simplify blob handling
+def filelogaddrevision(orig, self, text, transaction, link, p1, p2,
+                       cachedelta=None, node=None,
+                       flags=revlog.REVIDX_DEFAULT_FLAGS, **kwds):
     if not self.opener.options['lfsbypass']:
         threshold = self.opener.options['lfsthreshold']
+        textlen = len(text)
+        # exclude hg rename meta from file size
+        meta, offset = filelog.parsemeta(text)
+        if offset:
+            textlen -= offset
 
-        if threshold and len(text) > threshold:
-            flags = revlog.REVIDX_EXTSTORED | revlog.REVIDX_DEFAULT_FLAGS
-            self._filelogmeta = meta # for flagprocessor to pick up
-            try:
-                return self.addrevision(text, transaction, link, p1, p2,
-                                        flags=flags)
-            finally:
-                self._filelogmeta = None
+        if threshold and textlen > threshold:
+            flags |= revlog.REVIDX_EXTSTORED
 
-    return orig(self, text, meta, transaction, link, p1, p2)
-
-def filelogread(orig, self, node):
-    if _islfs(self, node):
-        # no metadata stored, no need to test metadata header ("\1\n")
-        return self.revision(node)
-    return orig(self, node)
-
-def filelogcmp(orig, self, node, text):
-    if text.startswith('\1\n') and _islfs(self, node):
-        # do not prepend '\1\n' in lfs's case, test directly
-        return self.revision(node) != text
-    return orig(self, node, text)
-
-def filelogrenamed(orig, self, node):
-    if _islfs(self, node):
-        rawtext = self.revision(node, raw=True)
-        if not rawtext:
-            return False
-        metadata = pointer.deserialize(rawtext)
-        if 'x-hg-copy' in metadata and 'x-hg-copyrev' in metadata:
-            return metadata['x-hg-copy'], bin(metadata['x-hg-copyrev'])
-        else:
-            return False
-    return orig(self, node)
+    return orig(self, text, transaction, link, p1, p2, cachedelta=cachedelta,
+                node=node, flags=flags, **kwds)
 
 def filelogsize(orig, self, rev):
     if _islfs(self, rev=rev):

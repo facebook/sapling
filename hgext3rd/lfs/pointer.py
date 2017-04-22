@@ -37,6 +37,9 @@ class BasePointer(object):
     def _transformkv(self, key, value):
         return '%s %s\n' % (key, value)
 
+    def keys(self):
+        return self.__metadata.keys()
+
     def serialize(self):
         matcher = re.compile('[a-z0-9\-\.]+')
         text = 'version ' + self.VERSION

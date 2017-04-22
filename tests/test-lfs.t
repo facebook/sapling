@@ -291,6 +291,13 @@
   oid sha256:876dadc86a8542f9798048f2c47f51dbf8e4359aed883e8ec80c5db825f0d943
   size 32
 
+# Verify commit hashes include rename metadata
+
+  $ hg log -T '{rev}:{node|short} {desc}\n'
+  2:0fae949de7fa meta
+  1:9cd6bdffdac0 b
+  0:7f96794915f7 a
+
   $ cd ..
 
 # Test bundle
