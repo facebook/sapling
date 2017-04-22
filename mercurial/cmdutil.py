@@ -1586,10 +1586,10 @@ class changeset_templater(changeset_printer):
 
         # find correct templates for current mode
         tmplmodes = [
-            (True, None),
-            (self.ui.verbose, 'verbose'),
-            (self.ui.quiet, 'quiet'),
-            (self.ui.debugflag, 'debug'),
+            (True, ''),
+            (self.ui.verbose, '_verbose'),
+            (self.ui.quiet, '_quiet'),
+            (self.ui.debugflag, '_debug'),
         ]
 
         self._tref = tmplspec.ref
@@ -1598,9 +1598,7 @@ class changeset_templater(changeset_printer):
                        'docheader': '', 'docfooter': ''}
         for mode, postfix in tmplmodes:
             for t in self._parts:
-                cur = t
-                if postfix:
-                    cur += "_" + postfix
+                cur = t + postfix
                 if mode and cur in self.t:
                     self._parts[t] = cur
 
