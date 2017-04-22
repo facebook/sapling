@@ -347,8 +347,8 @@ class templateformatter(baseformatter):
         baseformatter.__init__(self, ui, topic, opts, _templateconverter)
         self._out = out
         self._topic = topic
-        self._t = gettemplater(ui, topic, opts.get('template', ''),
-                               cache=templatekw.defaulttempl)
+        spec = lookuptemplate(ui, topic, opts.get('template', ''))
+        self._t = loadtemplater(ui, topic, spec, cache=templatekw.defaulttempl)
         self._counter = itertools.count()
         self._cache = {}  # for templatekw/funcs to store reusable data
     def context(self, **ctxs):
@@ -405,10 +405,6 @@ def lookuptemplate(ui, topic, tmpl):
 
     # constant string?
     return tmpl, None
-
-def gettemplater(ui, topic, spec, cache=None):
-    tmpl, mapfile = lookuptemplate(ui, topic, spec)
-    return loadtemplater(ui, topic, (tmpl, mapfile), cache=cache)
 
 def loadtemplater(ui, topic, spec, cache=None):
     """Create a templater from either a literal template or loading from
