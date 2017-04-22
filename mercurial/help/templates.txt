@@ -109,6 +109,14 @@ defines a template, ``nodedate``, which can be called like::
 
   $ hg log -r . -Tnodedate
 
+A template defined in ``templates`` section can also be referenced from
+another template::
+
+  $ hg log -r . -T "{rev} {nodedate}"
+
+but be aware that the keywords cannot be overridden by templates. For example,
+a template defined as ``templates.rev`` cannot be referenced as ``{rev}``.
+
 Examples
 ========
 

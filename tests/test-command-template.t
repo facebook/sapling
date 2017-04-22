@@ -209,14 +209,29 @@ Make sure user/global hgrc does not affect tests
 
 Add some simple styles to settings
 
-  $ echo '[templates]' >> .hg/hgrc
-  $ printf 'simple = "{rev}\\n"\n' >> .hg/hgrc
-  $ printf 'simple2 = {rev}\\n\n' >> .hg/hgrc
+  $ cat <<'EOF' >> .hg/hgrc
+  > [templates]
+  > simple = "{rev}\n"
+  > simple2 = {rev}\n
+  > rev = "should not precede {rev} keyword\n"
+  > EOF
 
   $ hg log -l1 -Tsimple
   8
   $ hg log -l1 -Tsimple2
   8
+  $ hg log -l1 -Trev
+  should not precede 8 keyword
+  $ hg log -l1 -T '{simple}'
+  8
+
+Map file shouldn't see user templates:
+
+  $ cat <<EOF > tmpl
+  > changeset = 'nothing expanded:{simple}\n'
+  > EOF
+  $ hg log -l1 --style ./tmpl
+  nothing expanded:
 
 Test templates and style maps in files:
 

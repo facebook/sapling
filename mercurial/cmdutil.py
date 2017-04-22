@@ -1649,7 +1649,10 @@ class changeset_templater(changeset_printer):
                     self.t(self._parts['footer'], **props))
 
 def logtemplatespec(tmpl, mapfile):
-    return formatter.templatespec('changeset', tmpl, mapfile)
+    if mapfile:
+        return formatter.templatespec('changeset', tmpl, mapfile)
+    else:
+        return formatter.templatespec('', tmpl, None)
 
 def _lookuplogtemplate(ui, tmpl, style):
     """Find the template matching the given template spec or style
@@ -1706,7 +1709,7 @@ def show_changeset(ui, repo, opts, buffered=False):
 
     spec = _lookuplogtemplate(ui, opts.get('template'), opts.get('style'))
 
-    if not spec.tmpl and not spec.mapfile:
+    if not spec.ref and not spec.tmpl and not spec.mapfile:
         return changeset_printer(ui, repo, matchfn, opts, buffered)
 
     return changeset_templater(ui, repo, spec, matchfn, opts, buffered)

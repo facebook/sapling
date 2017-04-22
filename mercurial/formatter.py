@@ -391,11 +391,14 @@ def lookuptemplate(ui, topic, tmpl):
     selected, all templates defined in the file will be loaded, and the
     template matching the given topic will be rendered. No aliases will be
     loaded from user config.
+
+    If no map file selected, all templates in [templates] section will be
+    available as well as aliases in [templatealias].
     """
 
     # looks like a literal template?
     if '{' in tmpl:
-        return templatespec(topic, tmpl, None)
+        return templatespec('', tmpl, None)
 
     # perhaps a stock style?
     if not os.path.split(tmpl)[0]:
@@ -405,9 +408,8 @@ def lookuptemplate(ui, topic, tmpl):
             return templatespec(topic, None, mapname)
 
     # perhaps it's a reference to [templates]
-    t = ui.config('templates', tmpl)
-    if t:
-        return templatespec(topic, templater.unquotestring(t), None)
+    if ui.config('templates', tmpl):
+        return templatespec(tmpl, None, None)
 
     if tmpl == 'list':
         ui.write(_("available styles: %s\n") % templater.stylelist())
@@ -420,10 +422,10 @@ def lookuptemplate(ui, topic, tmpl):
             return templatespec(topic, None, os.path.realpath(tmpl))
         with util.posixfile(tmpl, 'rb') as f:
             tmpl = f.read()
-        return templatespec(topic, tmpl, None)
+        return templatespec('', tmpl, None)
 
     # constant string?
-    return templatespec(topic, tmpl, None)
+    return templatespec('', tmpl, None)
 
 def loadtemplater(ui, spec, cache=None):
     """Create a templater from either a literal template or loading from
@@ -440,6 +442,8 @@ def maketemplater(ui, tmpl, cache=None):
 def _maketemplater(ui, topic, tmpl, cache=None):
     aliases = ui.configitems('templatealias')
     t = templater.templater(cache=cache, aliases=aliases)
+    t.cache.update((k, templater.unquotestring(v))
+                   for k, v in ui.configitems('templates'))
     if tmpl:
         t.cache[topic] = tmpl
     return t
