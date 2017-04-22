@@ -2292,7 +2292,7 @@ def _graphnodeformatter(ui, displayer):
         return templatekw.showgraphnode  # fast path for "{graphnode}"
 
     spec = templater.unquotestring(spec)
-    templ = formatter.gettemplater(ui, 'graphnode', spec)
+    templ = formatter.maketemplater(ui, 'graphnode', spec)
     cache = {}
     if isinstance(displayer, changeset_templater):
         cache = displayer.cache  # reuse cache of slow templates
