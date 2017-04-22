@@ -1040,8 +1040,9 @@ class bugzilla(object):
         if not mapfile and not tmpl:
             tmpl = _('changeset {node|short} in repo {root} refers '
                      'to bug {bug}.\ndetails:\n\t{desc|tabindent}')
-        t = cmdutil.changeset_templater(self.ui, self.repo,
-                                        False, None, tmpl, mapfile, False)
+        spec = cmdutil.logtemplatespec(tmpl, mapfile)
+        t = cmdutil.changeset_templater(self.ui, self.repo, spec,
+                                        False, None, False)
         self.ui.pushbuffer()
         t.show(ctx, changes=ctx.changeset(),
                bug=str(bugid),

@@ -1578,9 +1578,8 @@ class jsonchangeset(changeset_printer):
 class changeset_templater(changeset_printer):
     '''format changeset information.'''
 
-    def __init__(self, ui, repo, matchfn, diffopts, tmpl, mapfile, buffered):
+    def __init__(self, ui, repo, tmplspec, matchfn, diffopts, buffered):
         changeset_printer.__init__(self, ui, repo, matchfn, diffopts, buffered)
-        tmplspec = logtemplatespec(tmpl, mapfile)
         self.t = formatter.loadtemplater(ui, 'changeset', tmplspec,
                                          cache=templatekw.defaulttempl)
         self._counter = itertools.count()
@@ -1679,8 +1678,9 @@ def _lookuplogtemplate(ui, tmpl, style):
 
 def makelogtemplater(ui, repo, tmpl, buffered=False):
     """Create a changeset_templater from a literal template 'tmpl'"""
-    return changeset_templater(ui, repo, matchfn=None, diffopts={},
-                               tmpl=tmpl, mapfile=None, buffered=buffered)
+    spec = logtemplatespec(tmpl, None)
+    return changeset_templater(ui, repo, spec, matchfn=None, diffopts={},
+                               buffered=buffered)
 
 def show_changeset(ui, repo, opts, buffered=False):
     """show one changeset using template or regular display.
@@ -1702,12 +1702,11 @@ def show_changeset(ui, repo, opts, buffered=False):
         return jsonchangeset(ui, repo, matchfn, opts, buffered)
 
     spec = _lookuplogtemplate(ui, opts.get('template'), opts.get('style'))
-    tmpl, mapfile = spec
 
-    if not tmpl and not mapfile:
+    if not spec.tmpl and not spec.mapfile:
         return changeset_printer(ui, repo, matchfn, opts, buffered)
 
-    return changeset_templater(ui, repo, matchfn, opts, tmpl, mapfile, buffered)
+    return changeset_templater(ui, repo, spec, matchfn, opts, buffered)
 
 def showmarker(fm, marker, index=None):
     """utility function to display obsolescence marker in a readable way
@@ -2954,9 +2953,8 @@ def commitforceeditor(repo, ctx, subs, finishdesc=None, extramsg=None,
 
 def buildcommittemplate(repo, ctx, subs, extramsg, tmpl):
     ui = repo.ui
-    tmpl, mapfile = _lookuplogtemplate(ui, tmpl, None)
-
-    t = changeset_templater(ui, repo, None, {}, tmpl, mapfile, False)
+    spec = _lookuplogtemplate(ui, tmpl, None)
+    t = changeset_templater(ui, repo, spec, None, {}, False)
 
     for k, v in repo.ui.configitems('committemplate'):
         if k != 'changeset':

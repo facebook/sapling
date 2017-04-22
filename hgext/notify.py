@@ -203,8 +203,9 @@ class notifier(object):
             mapfile = self.ui.config('notify', 'style')
         if not mapfile and not template:
             template = deftemplates.get(hooktype) or single_template
-        self.t = cmdutil.changeset_templater(self.ui, self.repo, False, None,
-                                             template, mapfile, False)
+        spec = cmdutil.logtemplatespec(template, mapfile)
+        self.t = cmdutil.changeset_templater(self.ui, self.repo, spec,
+                                             False, None, False)
 
     def strip(self, path):
         '''strip leading slashes from local path, turn into web-safe path.'''
