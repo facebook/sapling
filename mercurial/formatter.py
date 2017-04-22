@@ -408,6 +408,12 @@ def lookuptemplate(ui, topic, tmpl):
 
 def gettemplater(ui, topic, spec, cache=None):
     tmpl, mapfile = lookuptemplate(ui, topic, spec)
+    return loadtemplater(ui, topic, (tmpl, mapfile), cache=cache)
+
+def loadtemplater(ui, topic, spec, cache=None):
+    """Create a templater from either a literal template or loading from
+    a map file"""
+    tmpl, mapfile = spec
     assert not (tmpl and mapfile)
     if mapfile:
         return templater.templater.frommapfile(mapfile, cache=cache)

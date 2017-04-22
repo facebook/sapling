@@ -1580,15 +1580,8 @@ class changeset_templater(changeset_printer):
 
     def __init__(self, ui, repo, matchfn, diffopts, tmpl, mapfile, buffered):
         changeset_printer.__init__(self, ui, repo, matchfn, diffopts, buffered)
-        assert not (tmpl and mapfile)
-        defaulttempl = templatekw.defaulttempl
-        if mapfile:
-            self.t = templater.templater.frommapfile(mapfile,
-                                                     cache=defaulttempl)
-        else:
-            self.t = formatter.maketemplater(ui, 'changeset', tmpl,
-                                             cache=defaulttempl)
-
+        self.t = formatter.loadtemplater(ui, 'changeset', (tmpl, mapfile),
+                                         cache=templatekw.defaulttempl)
         self._counter = itertools.count()
         self.cache = {}
 
