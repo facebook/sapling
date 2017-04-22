@@ -32,9 +32,6 @@ command = registrar.command(cmdtable)
 # leave the attribute unspecified.
 testedwith = 'ships-with-hg-core'
 
-def maketemplater(ui, repo, tmpl):
-    return cmdutil.changeset_templater(ui, repo, False, None, tmpl, None, False)
-
 def changedlines(ui, repo, ctx1, ctx2, fns):
     added, removed = 0, 0
     fmatch = scmutil.matchfiles(repo, fns)
@@ -55,7 +52,7 @@ def countrate(ui, repo, amap, *pats, **opts):
             return date.strftime(opts['dateformat'])
     else:
         tmpl = opts.get('oldtemplate') or opts.get('template')
-        tmpl = maketemplater(ui, repo, tmpl)
+        tmpl = cmdutil.makelogtemplater(ui, repo, tmpl)
         def getkey(ctx):
             ui.pushbuffer()
             tmpl.show(ctx)

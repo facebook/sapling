@@ -196,9 +196,8 @@ def showwork(ui, repo, fm):
     revs = repo.revs('sort(_underway(), topo)')
 
     revdag = graphmod.dagwalker(repo, revs)
-    displayer = cmdutil.changeset_templater(ui, repo, None, None,
-                                            tmpl=fm._t.load(fm._topic),
-                                            mapfile=None, buffered=True)
+    tmpl = fm._t.load(fm._topic)
+    displayer = cmdutil.makelogtemplater(ui, repo, tmpl, buffered=True)
 
     ui.setconfig('experimental', 'graphshorten', True)
     cmdutil.displaygraph(ui, repo, revdag, displayer, graphmod.asciiedges)

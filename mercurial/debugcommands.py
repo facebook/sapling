@@ -2120,14 +2120,12 @@ def debugtemplate(ui, repo, tmpl, **opts):
         if newtree != tree:
             ui.note(("* expanded:\n"), templater.prettyformat(newtree), '\n')
 
-    mapfile = None
     if revs is None:
         k = 'debugtemplate'
         t = formatter.maketemplater(ui, k, tmpl)
         ui.write(templater.stringify(t(k, ui=ui, **props)))
     else:
-        displayer = cmdutil.changeset_templater(ui, repo, None, opts, tmpl,
-                                                mapfile, buffered=False)
+        displayer = cmdutil.makelogtemplater(ui, repo, tmpl)
         for r in revs:
             displayer.show(repo[r], **props)
         displayer.close()

@@ -1674,6 +1674,11 @@ def _lookuplogtemplate(ui, tmpl, style):
 
     return formatter.lookuptemplate(ui, 'changeset', tmpl)
 
+def makelogtemplater(ui, repo, tmpl, buffered=False):
+    """Create a changeset_templater from a literal template 'tmpl'"""
+    return changeset_templater(ui, repo, matchfn=None, diffopts={},
+                               tmpl=tmpl, mapfile=None, buffered=buffered)
+
 def show_changeset(ui, repo, opts, buffered=False):
     """show one changeset using template or regular display.
 
