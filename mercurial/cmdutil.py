@@ -2915,11 +2915,10 @@ def commitforceeditor(repo, ctx, subs, finishdesc=None, extramsg=None,
     forms.insert(0, 'changeset')
     templatetext = None
     while forms:
-        tmpl = repo.ui.config('committemplate', '.'.join(forms))
-        if tmpl:
-            tmpl = templater.unquotestring(tmpl)
+        ref = '.'.join(forms)
+        if repo.ui.config('committemplate', ref):
             templatetext = committext = buildcommittemplate(
-                repo, ctx, subs, extramsg, tmpl)
+                repo, ctx, subs, extramsg, ref)
             break
         forms.pop()
     else:
@@ -2957,14 +2956,12 @@ def commitforceeditor(repo, ctx, subs, finishdesc=None, extramsg=None,
 
     return text
 
-def buildcommittemplate(repo, ctx, subs, extramsg, tmpl):
+def buildcommittemplate(repo, ctx, subs, extramsg, ref):
     ui = repo.ui
-    spec = logtemplatespec(tmpl, None)
+    spec = formatter.templatespec(ref, None, None)
     t = changeset_templater(ui, repo, spec, None, {}, False)
-
-    for k, v in repo.ui.configitems('committemplate'):
-        if k != 'changeset':
-            t.t.cache[k] = v
+    t.t.cache.update((k, templater.unquotestring(v))
+                     for k, v in repo.ui.configitems('committemplate'))
 
     if not extramsg:
         extramsg = '' # ensure that extramsg is string
