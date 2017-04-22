@@ -357,23 +357,28 @@ class templateformatter(baseformatter):
         ctxs = pycompat.byteskwargs(ctxs)
         assert all(k == 'ctx' for k in ctxs)
         self._item.update(ctxs)
+
     def _showitem(self):
+        item = self._item.copy()
+        item['index'] = next(self._counter)
+        self._renderitem(self._tref, item)
+
+    def _renderitem(self, ref, item):
         # TODO: add support for filectx. probably each template keyword or
         # function will have to declare dependent resources. e.g.
         # @templatekeyword(..., requires=('ctx',))
         props = {}
-        if 'ctx' in self._item:
+        if 'ctx' in item:
             props.update(templatekw.keywords)
-        props['index'] = next(self._counter)
         # explicitly-defined fields precede templatekw
-        props.update(self._item)
-        if 'ctx' in self._item:
+        props.update(item)
+        if 'ctx' in item:
             # but template resources must be always available
             props['templ'] = self._t
             props['repo'] = props['ctx'].repo()
             props['revcache'] = {}
         props = pycompat.strkwargs(props)
-        g = self._t(self._tref, ui=self._ui, cache=self._cache, **props)
+        g = self._t(ref, ui=self._ui, cache=self._cache, **props)
         self._out.write(templater.stringify(g))
 
 templatespec = collections.namedtuple(r'templatespec',
