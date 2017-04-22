@@ -1646,7 +1646,7 @@ class changeset_templater(changeset_printer):
                 self.footer = templater.stringify(
                     self.t(self._parts['footer'], **props))
 
-def gettemplate(ui, tmpl, style):
+def _lookuplogtemplate(ui, tmpl, style):
     """
     Find the template matching the given template spec or style.
     """
@@ -1692,7 +1692,8 @@ def show_changeset(ui, repo, opts, buffered=False):
     if opts.get('template') == 'json':
         return jsonchangeset(ui, repo, matchfn, opts, buffered)
 
-    tmpl, mapfile = gettemplate(ui, opts.get('template'), opts.get('style'))
+    spec = _lookuplogtemplate(ui, opts.get('template'), opts.get('style'))
+    tmpl, mapfile = spec
 
     if not tmpl and not mapfile:
         return changeset_printer(ui, repo, matchfn, opts, buffered)
@@ -2944,7 +2945,7 @@ def commitforceeditor(repo, ctx, subs, finishdesc=None, extramsg=None,
 
 def buildcommittemplate(repo, ctx, subs, extramsg, tmpl):
     ui = repo.ui
-    tmpl, mapfile = gettemplate(ui, tmpl, None)
+    tmpl, mapfile = _lookuplogtemplate(ui, tmpl, None)
 
     t = changeset_templater(ui, repo, None, {}, tmpl, mapfile, False)
 
