@@ -530,6 +530,19 @@ template output:
   a: Adding b branch head 2
   default: Adding root node
 
+  $ cat <<'EOF' > "$TESTTMP/map-myjson"
+  > docheader = '\{\n'
+  > docfooter = '\n}\n'
+  > branches = '{ifeq(index, 0, "", ",\n")} {dict(branch, node|short)|json}'
+  > EOF
+  $ hg branches -T "$TESTTMP/map-myjson"
+  {
+   {"branch": "b", "node": "e23b5505d1ad"},
+   {"branch": "a branch *", "node": "10ff5895aa57"}, (glob)
+   {"branch": "a", "node": "d8cbc61dbaa6"},
+   {"branch": "default", "node": "19709c5a4e75"}
+  }
+
 Tests of revision branch name caching
 
 We rev branch cache is updated automatically. In these tests we use a trick to

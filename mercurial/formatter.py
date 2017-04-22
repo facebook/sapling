@@ -350,8 +350,12 @@ class templateformatter(baseformatter):
         spec = lookuptemplate(ui, topic, opts.get('template', ''))
         self._tref = spec.ref
         self._t = loadtemplater(ui, spec, cache=templatekw.defaulttempl)
+        self._parts = templatepartsmap(spec, self._t,
+                                       ['docheader', 'docfooter'])
         self._counter = itertools.count()
         self._cache = {}  # for templatekw/funcs to store reusable data
+        self._renderitem('docheader', {})
+
     def context(self, **ctxs):
         '''insert context objects to be used to render template keywords'''
         ctxs = pycompat.byteskwargs(ctxs)
@@ -363,7 +367,11 @@ class templateformatter(baseformatter):
         item['index'] = next(self._counter)
         self._renderitem(self._tref, item)
 
-    def _renderitem(self, ref, item):
+    def _renderitem(self, part, item):
+        if part not in self._parts:
+            return
+        ref = self._parts[part]
+
         # TODO: add support for filectx. probably each template keyword or
         # function will have to declare dependent resources. e.g.
         # @templatekeyword(..., requires=('ctx',))
@@ -380,6 +388,10 @@ class templateformatter(baseformatter):
         props = pycompat.strkwargs(props)
         g = self._t(ref, ui=self._ui, cache=self._cache, **props)
         self._out.write(templater.stringify(g))
+
+    def end(self):
+        baseformatter.end(self)
+        self._renderitem('docfooter', {})
 
 templatespec = collections.namedtuple(r'templatespec',
                                       r'ref tmpl mapfile')
@@ -433,6 +445,13 @@ def lookuptemplate(ui, topic, tmpl):
 
     # constant string?
     return templatespec('', tmpl, None)
+
+def templatepartsmap(spec, t, partnames):
+    """Create a mapping of {part: ref}"""
+    partsmap = {spec.ref: spec.ref}  # initial ref must exist in t
+    if spec.mapfile:
+        partsmap.update((p, p) for p in partnames if p in t)
+    return partsmap
 
 def loadtemplater(ui, spec, cache=None):
     """Create a templater from either a literal template or loading from
