@@ -533,7 +533,8 @@ template output:
   $ cat <<'EOF' > "$TESTTMP/map-myjson"
   > docheader = '\{\n'
   > docfooter = '\n}\n'
-  > branches = '{ifeq(index, 0, "", ",\n")} {dict(branch, node|short)|json}'
+  > separator = ',\n'
+  > branches = ' {dict(branch, node|short)|json}'
   > EOF
   $ hg branches -T "$TESTTMP/map-myjson"
   {

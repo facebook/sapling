@@ -351,7 +351,7 @@ class templateformatter(baseformatter):
         self._tref = spec.ref
         self._t = loadtemplater(ui, spec, cache=templatekw.defaulttempl)
         self._parts = templatepartsmap(spec, self._t,
-                                       ['docheader', 'docfooter'])
+                                       ['docheader', 'docfooter', 'separator'])
         self._counter = itertools.count()
         self._cache = {}  # for templatekw/funcs to store reusable data
         self._renderitem('docheader', {})
@@ -364,7 +364,9 @@ class templateformatter(baseformatter):
 
     def _showitem(self):
         item = self._item.copy()
-        item['index'] = next(self._counter)
+        item['index'] = index = next(self._counter)
+        if index > 0:
+            self._renderitem('separator', {})
         self._renderitem(self._tref, item)
 
     def _renderitem(self, part, item):
