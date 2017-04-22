@@ -91,4 +91,36 @@ Traceback must be printed for unknown exceptions
   > test 100000.0 exc 2>&1 | grep '^Traceback'
   Traceback (most recent call last):
 
+Workers should not do cleanups in all cases
+
+  $ cat > $TESTTMP/detectcleanup.py <<EOF
+  > from __future__ import absolute_import
+  > import atexit
+  > import os
+  > import time
+  > oldfork = os.fork
+  > count = 0
+  > parentpid = os.getpid()
+  > def delayedfork():
+  >     global count
+  >     count += 1
+  >     pid = oldfork()
+  >     # make it easier to test SIGTERM hitting other workers when they have
+  >     # not set up error handling yet.
+  >     if count > 1 and pid == 0:
+  >         time.sleep(0.1)
+  >     return pid
+  > os.fork = delayedfork
+  > def cleanup():
+  >     if os.getpid() != parentpid:
+  >         os.write(1, 'should never happen\n')
+  > atexit.register(cleanup)
+  > EOF
+
+  $ hg --config "extensions.t=$abspath" --config worker.numcpus=8 --config \
+  > "extensions.d=$TESTTMP/detectcleanup.py" test 100000 abort
+  start
+  abort: known exception
+  [255]
+
 #endif

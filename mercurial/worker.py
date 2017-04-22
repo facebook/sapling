@@ -134,37 +134,43 @@ def _posixworker(ui, func, staticargs, args):
             killworkers()
     oldchldhandler = signal.signal(signal.SIGCHLD, sigchldhandler)
     ui.flush()
+    parentpid = os.getpid()
     for pargs in partition(args, workers):
-        pid = os.fork()
-        if pid == 0:
-            signal.signal(signal.SIGINT, oldhandler)
-            signal.signal(signal.SIGCHLD, oldchldhandler)
+        # make sure we use os._exit in all worker code paths. otherwise the
+        # worker may do some clean-ups which could cause surprises like
+        # deadlock. see sshpeer.cleanup for example.
+        # override error handling *before* fork. this is necessary because
+        # exception (signal) may arrive after fork, before "pid =" assignment
+        # completes, and other exception handler (dispatch.py) can lead to
+        # unexpected code path without os._exit.
+        ret = -1
+        try:
+            pid = os.fork()
+            if pid == 0:
+                signal.signal(signal.SIGINT, oldhandler)
+                signal.signal(signal.SIGCHLD, oldchldhandler)
 
-            def workerfunc():
-                os.close(rfd)
-                for i, item in func(*(staticargs + (pargs,))):
-                    os.write(wfd, '%d %s\n' % (i, item))
-                return 0
+                def workerfunc():
+                    os.close(rfd)
+                    for i, item in func(*(staticargs + (pargs,))):
+                        os.write(wfd, '%d %s\n' % (i, item))
+                    return 0
 
-            # make sure we use os._exit in all code paths. otherwise the worker
-            # may do some clean-ups which could cause surprises like deadlock.
-            # see sshpeer.cleanup for example.
-            ret = 0
-            try:
+                ret = scmutil.callcatch(ui, workerfunc)
+        except: # parent re-raises, child never returns
+            if os.getpid() == parentpid:
+                raise
+            exctype = sys.exc_info()[0]
+            force = not issubclass(exctype, KeyboardInterrupt)
+            ui.traceback(force=force)
+        finally:
+            if os.getpid() != parentpid:
                 try:
-                    ret = scmutil.callcatch(ui, workerfunc)
-                finally:
                     ui.flush()
-            except KeyboardInterrupt:
-                os._exit(255)
-            except: # never return, therefore no re-raises
-                try:
-                    ui.traceback(force=True)
-                    ui.flush()
+                except: # never returns, no re-raises
+                    pass
                 finally:
-                    os._exit(255)
-            else:
-                os._exit(ret & 255)
+                    os._exit(ret & 255)
         pids.add(pid)
     os.close(wfd)
     fp = os.fdopen(rfd, pycompat.sysstr('rb'), 0)
