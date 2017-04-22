@@ -88,13 +88,13 @@ def run():
         status = -1
     if util.safehasattr(req.ui, 'fout'):
         try:
-            req.ui.fout.close()
+            req.ui.fout.flush()
         except IOError as err:
             status = -1
     if util.safehasattr(req.ui, 'ferr'):
         if err is not None and err.errno != errno.EPIPE:
             req.ui.ferr.write('abort: %s\n' % err.strerror)
-        req.ui.ferr.close()
+        req.ui.ferr.flush()
     sys.exit(status & 255)
 
 def _getsimilar(symbols, value):
