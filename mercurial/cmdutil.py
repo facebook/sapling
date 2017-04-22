@@ -1603,6 +1603,10 @@ class changeset_templater(changeset_printer):
                     cur = t + postfix
                     if mode and cur in self.t:
                         self._parts[t] = cur
+        else:
+            partnames = [p for p in self._parts.keys() if p != tmplspec.ref]
+            m = formatter.templatepartsmap(tmplspec, self.t, partnames)
+            self._parts.update(m)
 
         if self._parts['docheader']:
             self.ui.write(templater.stringify(self.t(self._parts['docheader'])))

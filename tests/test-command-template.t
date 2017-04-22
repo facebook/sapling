@@ -271,6 +271,24 @@ Test docheader, docfooter and separator in template map
    {"node": "29114dbae42b", "rev": 7}
   }
 
+Test docheader, docfooter and separator in [templates] section
+
+  $ cat <<'EOF' >> .hg/hgrc
+  > [templates]
+  > myjson = ' {dict(rev, node|short)|json}'
+  > myjson:docheader = '\{\n'
+  > myjson:docfooter = '\n}\n'
+  > myjson:separator = ',\n'
+  > :docheader = 'should not be selected as a docheader for literal templates\n'
+  > EOF
+  $ hg log -l2 -Tmyjson
+  {
+   {"node": "95c24699272e", "rev": 8},
+   {"node": "29114dbae42b", "rev": 7}
+  }
+  $ hg log -l1 -T'{rev}\n'
+  8
+
 Template should precede style option
 
   $ hg log -l1 --style default -T '{rev}\n'
