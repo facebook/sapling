@@ -103,6 +103,7 @@ baz: foo, bar
 
 from __future__ import absolute_import
 
+import collections
 import contextlib
 import itertools
 import os
@@ -373,6 +374,9 @@ class templateformatter(baseformatter):
         g = self._t(self._topic, ui=self._ui, cache=self._cache, **props)
         self._out.write(templater.stringify(g))
 
+templatespec = collections.namedtuple(r'templatespec',
+                                      r'tmpl mapfile')
+
 def lookuptemplate(ui, topic, tmpl):
     """Find the template matching the given -T/--template spec 'tmpl'
 
@@ -391,19 +395,19 @@ def lookuptemplate(ui, topic, tmpl):
 
     # looks like a literal template?
     if '{' in tmpl:
-        return tmpl, None
+        return templatespec(tmpl, None)
 
     # perhaps a stock style?
     if not os.path.split(tmpl)[0]:
         mapname = (templater.templatepath('map-cmdline.' + tmpl)
                    or templater.templatepath(tmpl))
         if mapname and os.path.isfile(mapname):
-            return None, mapname
+            return templatespec(None, mapname)
 
     # perhaps it's a reference to [templates]
     t = ui.config('templates', tmpl)
     if t:
-        return templater.unquotestring(t), None
+        return templatespec(templater.unquotestring(t), None)
 
     if tmpl == 'list':
         ui.write(_("available styles: %s\n") % templater.stylelist())
@@ -413,22 +417,21 @@ def lookuptemplate(ui, topic, tmpl):
     if ('/' in tmpl or '\\' in tmpl) and os.path.isfile(tmpl):
         # is it a mapfile for a style?
         if os.path.basename(tmpl).startswith("map-"):
-            return None, os.path.realpath(tmpl)
+            return templatespec(None, os.path.realpath(tmpl))
         with util.posixfile(tmpl, 'rb') as f:
             tmpl = f.read()
-        return tmpl, None
+        return templatespec(tmpl, None)
 
     # constant string?
-    return tmpl, None
+    return templatespec(tmpl, None)
 
 def loadtemplater(ui, topic, spec, cache=None):
     """Create a templater from either a literal template or loading from
     a map file"""
-    tmpl, mapfile = spec
-    assert not (tmpl and mapfile)
-    if mapfile:
-        return templater.templater.frommapfile(mapfile, cache=cache)
-    return maketemplater(ui, topic, tmpl, cache=cache)
+    assert not (spec.tmpl and spec.mapfile)
+    if spec.mapfile:
+        return templater.templater.frommapfile(spec.mapfile, cache=cache)
+    return maketemplater(ui, topic, spec.tmpl, cache=cache)
 
 def maketemplater(ui, topic, tmpl, cache=None):
     """Create a templater from a string template 'tmpl'"""

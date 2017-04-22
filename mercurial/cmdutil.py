@@ -1580,7 +1580,8 @@ class changeset_templater(changeset_printer):
 
     def __init__(self, ui, repo, matchfn, diffopts, tmpl, mapfile, buffered):
         changeset_printer.__init__(self, ui, repo, matchfn, diffopts, buffered)
-        self.t = formatter.loadtemplater(ui, 'changeset', (tmpl, mapfile),
+        tmplspec = logtemplatespec(tmpl, mapfile)
+        self.t = formatter.loadtemplater(ui, 'changeset', tmplspec,
                                          cache=templatekw.defaulttempl)
         self._counter = itertools.count()
         self.cache = {}
@@ -1646,6 +1647,8 @@ class changeset_templater(changeset_printer):
                 self.footer = templater.stringify(
                     self.t(self._parts['footer'], **props))
 
+logtemplatespec = formatter.templatespec
+
 def _lookuplogtemplate(ui, tmpl, style):
     """Find the template matching the given template spec or style
 
@@ -1656,7 +1659,7 @@ def _lookuplogtemplate(ui, tmpl, style):
     if not tmpl and not style: # template are stronger than style
         tmpl = ui.config('ui', 'logtemplate')
         if tmpl:
-            return templater.unquotestring(tmpl), None
+            return logtemplatespec(templater.unquotestring(tmpl), None)
         else:
             style = util.expandpath(ui.config('ui', 'style', ''))
 
@@ -1667,10 +1670,10 @@ def _lookuplogtemplate(ui, tmpl, style):
                        or templater.templatepath(mapfile))
             if mapname:
                 mapfile = mapname
-        return None, mapfile
+        return logtemplatespec(None, mapfile)
 
     if not tmpl:
-        return None, None
+        return logtemplatespec(None, None)
 
     return formatter.lookuptemplate(ui, 'changeset', tmpl)
 
