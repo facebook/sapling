@@ -1580,7 +1580,7 @@ class changeset_templater(changeset_printer):
 
     def __init__(self, ui, repo, tmplspec, matchfn, diffopts, buffered):
         changeset_printer.__init__(self, ui, repo, matchfn, diffopts, buffered)
-        self.t = formatter.loadtemplater(ui, 'changeset', tmplspec,
+        self.t = formatter.loadtemplater(ui, tmplspec,
                                          cache=templatekw.defaulttempl)
         self._counter = itertools.count()
         self.cache = {}
@@ -1646,7 +1646,8 @@ class changeset_templater(changeset_printer):
                 self.footer = templater.stringify(
                     self.t(self._parts['footer'], **props))
 
-logtemplatespec = formatter.templatespec
+def logtemplatespec(tmpl, mapfile):
+    return formatter.templatespec('changeset', tmpl, mapfile)
 
 def _lookuplogtemplate(ui, tmpl, style):
     """Find the template matching the given template spec or style

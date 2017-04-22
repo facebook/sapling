@@ -349,7 +349,7 @@ class templateformatter(baseformatter):
         self._out = out
         self._topic = topic
         spec = lookuptemplate(ui, topic, opts.get('template', ''))
-        self._t = loadtemplater(ui, topic, spec, cache=templatekw.defaulttempl)
+        self._t = loadtemplater(ui, spec, cache=templatekw.defaulttempl)
         self._counter = itertools.count()
         self._cache = {}  # for templatekw/funcs to store reusable data
     def context(self, **ctxs):
@@ -375,7 +375,7 @@ class templateformatter(baseformatter):
         self._out.write(templater.stringify(g))
 
 templatespec = collections.namedtuple(r'templatespec',
-                                      r'tmpl mapfile')
+                                      r'ref tmpl mapfile')
 
 def lookuptemplate(ui, topic, tmpl):
     """Find the template matching the given -T/--template spec 'tmpl'
@@ -395,19 +395,19 @@ def lookuptemplate(ui, topic, tmpl):
 
     # looks like a literal template?
     if '{' in tmpl:
-        return templatespec(tmpl, None)
+        return templatespec(topic, tmpl, None)
 
     # perhaps a stock style?
     if not os.path.split(tmpl)[0]:
         mapname = (templater.templatepath('map-cmdline.' + tmpl)
                    or templater.templatepath(tmpl))
         if mapname and os.path.isfile(mapname):
-            return templatespec(None, mapname)
+            return templatespec(topic, None, mapname)
 
     # perhaps it's a reference to [templates]
     t = ui.config('templates', tmpl)
     if t:
-        return templatespec(templater.unquotestring(t), None)
+        return templatespec(topic, templater.unquotestring(t), None)
 
     if tmpl == 'list':
         ui.write(_("available styles: %s\n") % templater.stylelist())
@@ -417,21 +417,21 @@ def lookuptemplate(ui, topic, tmpl):
     if ('/' in tmpl or '\\' in tmpl) and os.path.isfile(tmpl):
         # is it a mapfile for a style?
         if os.path.basename(tmpl).startswith("map-"):
-            return templatespec(None, os.path.realpath(tmpl))
+            return templatespec(topic, None, os.path.realpath(tmpl))
         with util.posixfile(tmpl, 'rb') as f:
             tmpl = f.read()
-        return templatespec(tmpl, None)
+        return templatespec(topic, tmpl, None)
 
     # constant string?
-    return templatespec(tmpl, None)
+    return templatespec(topic, tmpl, None)
 
-def loadtemplater(ui, topic, spec, cache=None):
+def loadtemplater(ui, spec, cache=None):
     """Create a templater from either a literal template or loading from
     a map file"""
     assert not (spec.tmpl and spec.mapfile)
     if spec.mapfile:
         return templater.templater.frommapfile(spec.mapfile, cache=cache)
-    return maketemplater(ui, topic, spec.tmpl, cache=cache)
+    return maketemplater(ui, spec.ref, spec.tmpl, cache=cache)
 
 def maketemplater(ui, topic, tmpl, cache=None):
     """Create a templater from a string template 'tmpl'"""
