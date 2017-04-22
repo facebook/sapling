@@ -2959,7 +2959,7 @@ def commitforceeditor(repo, ctx, subs, finishdesc=None, extramsg=None,
 
 def buildcommittemplate(repo, ctx, subs, extramsg, tmpl):
     ui = repo.ui
-    spec = _lookuplogtemplate(ui, tmpl, None)
+    spec = logtemplatespec(tmpl, None)
     t = changeset_templater(ui, repo, spec, None, {}, False)
 
     for k, v in repo.ui.configitems('committemplate'):
