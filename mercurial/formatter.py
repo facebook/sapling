@@ -453,6 +453,11 @@ def templatepartsmap(spec, t, partnames):
     partsmap = {spec.ref: spec.ref}  # initial ref must exist in t
     if spec.mapfile:
         partsmap.update((p, p) for p in partnames if p in t)
+    elif spec.ref:
+        for part in partnames:
+            ref = '%s:%s' % (spec.ref, part)  # select config sub-section
+            if ref in t:
+                partsmap[part] = ref
     return partsmap
 
 def loadtemplater(ui, spec, cache=None):

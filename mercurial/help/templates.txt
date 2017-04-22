@@ -117,6 +117,15 @@ another template::
 but be aware that the keywords cannot be overridden by templates. For example,
 a template defined as ``templates.rev`` cannot be referenced as ``{rev}``.
 
+A template defined in ``templates`` section may have sub templates which
+are inserted before/after/between items::
+
+  [templates]
+  myjson = ' {dict(rev, node|short)|json}'
+  myjson:docheader = '\{\n'
+  myjson:docfooter = '\n}\n'
+  myjson:separator = ',\n'
+
 Examples
 ========
 
