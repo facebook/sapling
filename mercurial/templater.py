@@ -1298,6 +1298,10 @@ class templater(object):
                               (self.map[t][1], inst.args[1]))
         return self.cache[t]
 
+    def render(self, mapping):
+        """Render the default unnamed template and return result as string"""
+        return stringify(self('', **mapping))
+
     def __call__(self, t, **mapping):
         ttype = t in self.map and self.map[t][0] or 'default'
         if ttype not in self.ecache:

@@ -534,10 +534,10 @@ def _formatconflictmarker(repo, ctx, template, label, pad):
     props['templ'] = template
     props['ctx'] = ctx
     props['repo'] = repo
-    templateresult = template('conflictmarker', **props)
+    templateresult = template.render(props)
 
     label = ('%s:' % label).ljust(pad + 1)
-    mark = '%s %s' % (label, templater.stringify(templateresult))
+    mark = '%s %s' % (label, templateresult)
 
     if mark:
         mark = mark.splitlines()[0] # split for safety
@@ -566,7 +566,7 @@ def _formatlabels(repo, fcd, fco, fca, labels):
     ui = repo.ui
     template = ui.config('ui', 'mergemarkertemplate', _defaultconflictmarker)
     template = templater.unquotestring(template)
-    tmpl = formatter.maketemplater(ui, 'conflictmarker', template)
+    tmpl = formatter.maketemplater(ui, template)
 
     pad = max(len(l) for l in labels)
 

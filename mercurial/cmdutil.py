@@ -2297,7 +2297,7 @@ def _graphnodeformatter(ui, displayer):
         return templatekw.showgraphnode  # fast path for "{graphnode}"
 
     spec = templater.unquotestring(spec)
-    templ = formatter.maketemplater(ui, 'graphnode', spec)
+    templ = formatter.maketemplater(ui, spec)
     cache = {}
     if isinstance(displayer, changeset_templater):
         cache = displayer.cache  # reuse cache of slow templates
@@ -2309,7 +2309,7 @@ def _graphnodeformatter(ui, displayer):
         props['repo'] = repo
         props['ui'] = repo.ui
         props['revcache'] = {}
-        return templater.stringify(templ('graphnode', **props))
+        return templ.render(props)
     return formatnode
 
 def displaygraph(ui, repo, dag, displayer, edgefn, getrenamed=None,

@@ -2121,9 +2121,9 @@ def debugtemplate(ui, repo, tmpl, **opts):
             ui.note(("* expanded:\n"), templater.prettyformat(newtree), '\n')
 
     if revs is None:
-        k = 'debugtemplate'
-        t = formatter.maketemplater(ui, k, tmpl)
-        ui.write(templater.stringify(t(k, ui=ui, **props)))
+        t = formatter.maketemplater(ui, tmpl)
+        props['ui'] = ui
+        ui.write(t.render(props))
     else:
         displayer = cmdutil.makelogtemplater(ui, repo, tmpl)
         for r in revs:
