@@ -186,8 +186,6 @@ def callcatch(ui, func):
         ui.warn(_("abort: file censored %s!\n") % inst)
     except error.RevlogError as inst:
         ui.warn(_("abort: %s!\n") % inst)
-    except error.SignalInterrupt:
-        ui.warn(_("killed!\n"))
     except error.InterventionRequired as inst:
         ui.warn("%s\n" % inst)
         if inst.hint:
