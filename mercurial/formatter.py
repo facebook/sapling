@@ -347,8 +347,8 @@ class templateformatter(baseformatter):
     def __init__(self, ui, out, topic, opts):
         baseformatter.__init__(self, ui, topic, opts, _templateconverter)
         self._out = out
-        self._topic = topic
         spec = lookuptemplate(ui, topic, opts.get('template', ''))
+        self._tref = spec.ref
         self._t = loadtemplater(ui, spec, cache=templatekw.defaulttempl)
         self._counter = itertools.count()
         self._cache = {}  # for templatekw/funcs to store reusable data
@@ -371,7 +371,7 @@ class templateformatter(baseformatter):
             props['templ'] = self._t
             props['repo'] = props['ctx'].repo()
             props['revcache'] = {}
-        g = self._t(self._topic, ui=self._ui, cache=self._cache, **props)
+        g = self._t(self._tref, ui=self._ui, cache=self._cache, **props)
         self._out.write(templater.stringify(g))
 
 templatespec = collections.namedtuple(r'templatespec',
