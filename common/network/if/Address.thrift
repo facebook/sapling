@@ -21,5 +21,5 @@ struct Address {
 struct BinaryAddress {
   1: required fbbinary addr,
   2: optional i64 port = 0,
-  3: optional string ifName = "",
+  3: optional string ifName,
 }
