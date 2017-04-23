@@ -494,6 +494,8 @@ def toutf8b(s):
     internal surrogate encoding as a UTF-8 string.)
     '''
 
+    if not isinstance(s, localstr) and isasciistr(s):
+        return s
     if "\xed" not in s:
         if isinstance(s, localstr):
             return s._utf8
@@ -544,6 +546,8 @@ def fromutf8b(s):
     True
     '''
 
+    if isasciistr(s):
+        return s
     # fast path - look for uDxxx prefixes in s
     if "\xed" not in s:
         return s
