@@ -26,7 +26,7 @@ charencode = policy.importmod(r'charencode')
 
 asciilower = charencode.asciilower
 asciiupper = charencode.asciiupper
-_jsonescapeu8fast = charencodepure.jsonescapeu8fast  # TODO: no "pure"
+_jsonescapeu8fast = charencode.jsonescapeu8fast
 
 _sysstr = pycompat.sysstr
 
@@ -404,8 +404,8 @@ def jsonescape(s, paranoid=False):
     'this is a test'
     >>> jsonescape('escape characters: \\0 \\x0b \\x7f')
     'escape characters: \\\\u0000 \\\\u000b \\\\u007f'
-    >>> jsonescape('escape characters: \\t \\n \\r \\" \\\\')
-    'escape characters: \\\\t \\\\n \\\\r \\\\" \\\\\\\\'
+    >>> jsonescape('escape characters: \\b \\t \\n \\f \\r \\" \\\\')
+    'escape characters: \\\\b \\\\t \\\\n \\\\f \\\\r \\\\" \\\\\\\\'
     >>> jsonescape('a weird byte: \\xdd')
     'a weird byte: \\xed\\xb3\\x9d'
     >>> jsonescape('utf-8: caf\\xc3\\xa9')
@@ -416,6 +416,10 @@ def jsonescape(s, paranoid=False):
     If paranoid, non-ascii and common troublesome characters are also escaped.
     This is suitable for web output.
 
+    >>> s = 'escape characters: \\0 \\x0b \\x7f'
+    >>> assert jsonescape(s) == jsonescape(s, paranoid=True)
+    >>> s = 'escape characters: \\b \\t \\n \\f \\r \\" \\\\'
+    >>> assert jsonescape(s) == jsonescape(s, paranoid=True)
     >>> jsonescape('escape boundary: \\x7e \\x7f \\xc2\\x80', paranoid=True)
     'escape boundary: ~ \\\\u007f \\\\u0080'
     >>> jsonescape('a weird byte: \\xdd', paranoid=True)

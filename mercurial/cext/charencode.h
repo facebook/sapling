@@ -22,6 +22,7 @@ PyObject *unhexlify(const char *str, Py_ssize_t len);
 PyObject *asciilower(PyObject *self, PyObject *args);
 PyObject *asciiupper(PyObject *self, PyObject *args);
 PyObject *make_file_foldmap(PyObject *self, PyObject *args);
+PyObject *jsonescapeu8fast(PyObject *self, PyObject *args);
 
 static const int8_t hextable[256] = {
 	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,

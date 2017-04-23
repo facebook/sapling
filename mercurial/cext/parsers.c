@@ -702,6 +702,8 @@ static PyMethodDef methods[] = {
 	 "construct a dict with an expected size\n"},
 	{"make_file_foldmap", make_file_foldmap, METH_VARARGS,
 	 "make file foldmap\n"},
+	{"jsonescapeu8fast", jsonescapeu8fast, METH_VARARGS,
+	 "escape a UTF-8 byte string to JSON (fast path)\n"},
 	{"encodedir", encodedir, METH_VARARGS, "encodedir a path\n"},
 	{"pathencode", pathencode, METH_VARARGS, "fncache-encode a path\n"},
 	{"lowerencode", lowerencode, METH_VARARGS, "lower-encode a path\n"},
@@ -714,7 +716,7 @@ void dirs_module_init(PyObject *mod);
 void manifest_module_init(PyObject *mod);
 void revlog_module_init(PyObject *mod);
 
-static const int version = 1;
+static const int version = 2;
 
 static void module_init(PyObject *mod)
 {

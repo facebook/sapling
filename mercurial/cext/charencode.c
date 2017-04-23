@@ -9,6 +9,7 @@
 
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
+#include <assert.h>
 
 #include "charencode.h"
 #include "util.h"
@@ -61,6 +62,42 @@ static const char uppertable[128] = {
 	'\x50', '\x51', '\x52', '\x53', '\x54', '\x55', '\x56', '\x57', /* p-w */
 	'\x58', '\x59', '\x5a', 					/* x-z */
 				'\x7b', '\x7c', '\x7d', '\x7e', '\x7f'
+};
+
+/* 1: no escape, 2: \<c>, 6: \u<x> */
+static const uint8_t jsonlentable[256] = {
+	6, 6, 6, 6, 6, 6, 6, 6, 2, 2, 2, 6, 2, 2, 6, 6, /* b, t, n, f, r */
+	6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
+	1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, /* " */
+	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, /* \\ */
+	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 6, /* DEL */
+	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+};
+
+static const uint8_t jsonparanoidlentable[128] = {
+	6, 6, 6, 6, 6, 6, 6, 6, 2, 2, 2, 6, 2, 2, 6, 6, /* b, t, n, f, r */
+	6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
+	1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, /* " */
+	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 6, 1, 6, 1, /* <, > */
+	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, /* \\ */
+	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 6, /* DEL */
+};
+
+static const char hexchartable[16] = {
+	'0', '1', '2', '3', '4', '5', '6', '7',
+	'8', '9', 'a', 'b', 'c', 'd', 'e', 'f',
 };
 
 /*
@@ -216,4 +253,106 @@ PyObject *make_file_foldmap(PyObject *self, PyObject *args)
 quit:
 	Py_XDECREF(file_foldmap);
 	return NULL;
+}
+
+/* calculate length of JSON-escaped string; returns -1 if unsupported */
+static Py_ssize_t jsonescapelen(const char *buf, Py_ssize_t len, bool paranoid)
+{
+	Py_ssize_t i, esclen = 0;
+
+	if (paranoid) {
+		/* don't want to process multi-byte escapes in C */
+		for (i = 0; i < len; i++) {
+			char c = buf[i];
+			if (c & 0x80) {
+				PyErr_SetString(PyExc_ValueError,
+						"cannot process non-ascii str");
+				return -1;
+			}
+			esclen += jsonparanoidlentable[(unsigned char)c];
+		}
+	} else {
+		for (i = 0; i < len; i++) {
+			char c = buf[i];
+			esclen += jsonlentable[(unsigned char)c];
+		}
+	}
+
+	return esclen;
+}
+
+/* map '\<c>' escape character */
+static char jsonescapechar2(char c)
+{
+	switch (c) {
+	case '\b': return 'b';
+	case '\t': return 't';
+	case '\n': return 'n';
+	case '\f': return 'f';
+	case '\r': return 'r';
+	case '"':  return '"';
+	case '\\': return '\\';
+	}
+	return '\0';  /* should not happen */
+}
+
+/* convert 'origbuf' to JSON-escaped form 'escbuf'; 'origbuf' should only
+   include characters mappable by json(paranoid)lentable */
+static void encodejsonescape(char *escbuf, Py_ssize_t esclen,
+			     const char *origbuf, Py_ssize_t origlen,
+			     bool paranoid)
+{
+	const uint8_t *lentable =
+		(paranoid) ? jsonparanoidlentable : jsonlentable;
+	Py_ssize_t i, j;
+
+	for (i = 0, j = 0; i < origlen; i++) {
+		char c = origbuf[i];
+		uint8_t l = lentable[(unsigned char)c];
+		assert(j + l <= esclen);
+		switch (l) {
+		case 1:
+			escbuf[j] = c;
+			break;
+		case 2:
+			escbuf[j] = '\\';
+			escbuf[j + 1] = jsonescapechar2(c);
+			break;
+		case 6:
+			memcpy(escbuf + j, "\\u00", 4);
+			escbuf[j + 4] = hexchartable[(unsigned char)c >> 4];
+			escbuf[j + 5] = hexchartable[(unsigned char)c & 0xf];
+			break;
+		}
+		j += l;
+	}
+}
+
+PyObject *jsonescapeu8fast(PyObject *self, PyObject *args)
+{
+	PyObject *origstr, *escstr;
+	const char *origbuf;
+	Py_ssize_t origlen, esclen;
+	int paranoid;
+	if (!PyArg_ParseTuple(args, "O!i:jsonescapeu8fast",
+			      &PyBytes_Type, &origstr, &paranoid))
+		return NULL;
+
+	origbuf = PyBytes_AS_STRING(origstr);
+	origlen = PyBytes_GET_SIZE(origstr);
+	esclen = jsonescapelen(origbuf, origlen, paranoid);
+	if (esclen < 0)
+		return NULL;  /* unsupported char found */
+	if (origlen == esclen) {
+		Py_INCREF(origstr);
+		return origstr;
+	}
+
+	escstr = PyBytes_FromStringAndSize(NULL, esclen);
+	if (!escstr)
+		return NULL;
+	encodejsonescape(PyBytes_AS_STRING(escstr), esclen, origbuf, origlen,
+			 paranoid);
+
+	return escstr;
 }
