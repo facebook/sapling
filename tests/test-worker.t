@@ -81,15 +81,15 @@ Known exception should be caught, but printed if --traceback is enabled
   [255]
 
   $ hg --config "extensions.t=$abspath" --config 'worker.numcpus=2' \
-  > test 100000.0 abort --traceback 2>&1 | grep '^Traceback'
-  Traceback (most recent call last):
-  Traceback (most recent call last):
+  > test 100000.0 abort --traceback 2>&1 | egrep '^(SystemExit|Abort)'
+  Abort: known exception
+  SystemExit: 255
 
 Traceback must be printed for unknown exceptions
 
   $ hg --config "extensions.t=$abspath" --config 'worker.numcpus=2' \
-  > test 100000.0 exc 2>&1 | grep '^Traceback'
-  Traceback (most recent call last):
+  > test 100000.0 exc 2>&1 | grep '^Exception'
+  Exception: unknown exception
 
 Workers should not do cleanups in all cases
 
