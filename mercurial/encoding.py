@@ -128,6 +128,9 @@ def tolocal(s):
     'foo: \\xc3\\xa4'
     """
 
+    if isasciistr(s):
+        return s
+
     try:
         try:
             # make sure string is actually stored in UTF-8
@@ -170,6 +173,8 @@ def fromlocal(s):
     # can we do a lossless round-trip?
     if isinstance(s, localstr):
         return s._utf8
+    if isasciistr(s):
+        return s
 
     try:
         u = s.decode(_sysstr(encoding), _sysstr(encodingmode))
