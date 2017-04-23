@@ -440,15 +440,12 @@ Two way tests
   $ echo b > b/f
   $ hg -R b ci -mb
 
-  $ tail */.hg/shamap
-  ==> 0/.hg/shamap <==
+  $ tail 0/.hg/shamap
   86f3f774ffb682bffb5dc3c1d3b3da637cb9a0d6 8a028c7c77f6c7bd6d63bc3f02ca9f779eabf16a
   dd9f218eb91fb857f2a62fe023e1d64a4e7812fe 8a028c7c77f6c7bd6d63bc3f02ca9f779eabf16a
-  
-  ==> a/.hg/shamap <==
+  $ tail a/.hg/shamap
   8a028c7c77f6c7bd6d63bc3f02ca9f779eabf16a 86f3f774ffb682bffb5dc3c1d3b3da637cb9a0d6
-  
-  ==> b/.hg/shamap <==
+  $ tail b/.hg/shamap
   8a028c7c77f6c7bd6d63bc3f02ca9f779eabf16a dd9f218eb91fb857f2a62fe023e1d64a4e7812fe
 
   $ hg convert a 0
