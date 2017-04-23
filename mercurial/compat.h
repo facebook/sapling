@@ -7,8 +7,10 @@
 #define inline __inline
 #if defined(_WIN64)
 typedef __int64 ssize_t;
+typedef unsigned __int64 uintptr_t;
 #else
 typedef int ssize_t;
+typedef unsigned int uintptr_t;
 #endif
 typedef signed char int8_t;
 typedef short int16_t;

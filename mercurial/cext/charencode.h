@@ -19,6 +19,7 @@ enum normcase_spec {
 };
 
 PyObject *unhexlify(const char *str, Py_ssize_t len);
+PyObject *isasciistr(PyObject *self, PyObject *args);
 PyObject *asciilower(PyObject *self, PyObject *args);
 PyObject *asciiupper(PyObject *self, PyObject *args);
 PyObject *make_file_foldmap(PyObject *self, PyObject *args);

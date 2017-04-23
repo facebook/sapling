@@ -75,7 +75,7 @@ _cextversions = {
     (r'cext', r'diffhelpers'): 1,
     (r'cext', r'mpatch'): 1,
     (r'cext', r'osutil'): 1,
-    (r'cext', r'parsers'): 2,
+    (r'cext', r'parsers'): 3,
 }
 
 # map import request to other package or module

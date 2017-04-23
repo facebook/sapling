@@ -696,6 +696,7 @@ static PyMethodDef methods[] = {
 	{"parse_manifest", parse_manifest, METH_VARARGS, "parse a manifest\n"},
 	{"parse_dirstate", parse_dirstate, METH_VARARGS, "parse a dirstate\n"},
 	{"parse_index2", parse_index2, METH_VARARGS, "parse a revlog index\n"},
+	{"isasciistr", isasciistr, METH_VARARGS, "check if an ASCII string\n"},
 	{"asciilower", asciilower, METH_VARARGS, "lowercase an ASCII string\n"},
 	{"asciiupper", asciiupper, METH_VARARGS, "uppercase an ASCII string\n"},
 	{"dict_new_presized", dict_new_presized, METH_VARARGS,
@@ -716,7 +717,7 @@ void dirs_module_init(PyObject *mod);
 void manifest_module_init(PyObject *mod);
 void revlog_module_init(PyObject *mod);
 
-static const int version = 2;
+static const int version = 3;
 
 static void module_init(PyObject *mod)
 {

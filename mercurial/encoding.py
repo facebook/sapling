@@ -24,6 +24,7 @@ from .pure import (
 
 charencode = policy.importmod(r'charencode')
 
+isasciistr = charencode.isasciistr
 asciilower = charencode.asciilower
 asciiupper = charencode.asciiupper
 _jsonescapeu8fast = charencode.jsonescapeu8fast

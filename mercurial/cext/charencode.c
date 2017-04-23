@@ -12,6 +12,7 @@
 #include <assert.h>
 
 #include "charencode.h"
+#include "compat.h"
 #include "util.h"
 
 #ifdef IS_PY3K
@@ -123,6 +124,29 @@ PyObject *unhexlify(const char *str, Py_ssize_t len)
 	}
 
 	return ret;
+}
+
+PyObject *isasciistr(PyObject *self, PyObject *args)
+{
+	const char *buf;
+	Py_ssize_t i, len;
+	if (!PyArg_ParseTuple(args, "s#:isasciistr", &buf, &len))
+		return NULL;
+	i = 0;
+	/* char array in PyStringObject should be at least 4-byte aligned */
+	if (((uintptr_t)buf & 3) == 0) {
+		const uint32_t *p = (const uint32_t *)buf;
+		for (; i < len / 4; i++) {
+			if (p[i] & 0x80808080U)
+				Py_RETURN_FALSE;
+		}
+		i *= 4;
+	}
+	for (; i < len; i++) {
+		if (buf[i] & 0x80)
+			Py_RETURN_FALSE;
+	}
+	Py_RETURN_TRUE;
 }
 
 static inline PyObject *_asciitransform(PyObject *str_obj,

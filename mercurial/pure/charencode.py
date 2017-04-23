@@ -13,6 +13,13 @@ from .. import (
     pycompat,
 )
 
+def isasciistr(s):
+    try:
+        s.decode('ascii')
+        return True
+    except UnicodeDecodeError:
+        return False
+
 def asciilower(s):
     '''convert a string to lowercase if ASCII
 

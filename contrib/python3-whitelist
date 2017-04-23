@@ -18,6 +18,7 @@ test-doctest.py
 test-duplicateoptions.py
 test-empty-dir.t
 test-empty.t
+test-encoding-func.py
 test-excessive-merge.t
 test-hghave.t
 test-imports-checker.t
