@@ -7,7 +7,6 @@
 
 from __future__ import absolute_import
 
-import array
 import io
 import locale
 import os
@@ -19,10 +18,15 @@ from . import (
     pycompat,
 )
 
+from .pure import (
+    charencode as charencodepure,
+)
+
 charencode = policy.importmod(r'charencode')
 
 asciilower = charencode.asciilower
 asciiupper = charencode.asciiupper
+_jsonescapeu8fast = charencodepure.jsonescapeu8fast  # TODO: no "pure"
 
 _sysstr = pycompat.sysstr
 
@@ -383,22 +387,6 @@ class normcasespecs(object):
     upper = 1
     other = 0
 
-_jsonmap = []
-_jsonmap.extend("\\u%04x" % x for x in range(32))
-_jsonmap.extend(pycompat.bytechr(x) for x in range(32, 127))
-_jsonmap.append('\\u007f')
-_jsonmap[0x09] = '\\t'
-_jsonmap[0x0a] = '\\n'
-_jsonmap[0x22] = '\\"'
-_jsonmap[0x5c] = '\\\\'
-_jsonmap[0x08] = '\\b'
-_jsonmap[0x0c] = '\\f'
-_jsonmap[0x0d] = '\\r'
-_paranoidjsonmap = _jsonmap[:]
-_paranoidjsonmap[0x3c] = '\\u003c'  # '<' (e.g. escape "</script>")
-_paranoidjsonmap[0x3e] = '\\u003e'  # '>'
-_jsonmap.extend(pycompat.bytechr(x) for x in range(128, 256))
-
 def jsonescape(s, paranoid=False):
     '''returns a string suitable for JSON
 
@@ -440,20 +428,12 @@ def jsonescape(s, paranoid=False):
     '\\\\u003cfoo@example.org\\\\u003e'
     '''
 
-    if paranoid:
-        jm = _paranoidjsonmap
-    else:
-        jm = _jsonmap
-
     u8chars = toutf8b(s)
     try:
-        return ''.join(jm[x] for x in bytearray(u8chars))  # fast path
-    except IndexError:
+        return _jsonescapeu8fast(u8chars, paranoid)
+    except ValueError:
         pass
-    # non-BMP char is represented as UTF-16 surrogate pair
-    u16codes = array.array('H', u8chars.decode('utf-8').encode('utf-16'))
-    u16codes.pop(0)  # drop BOM
-    return ''.join(jm[x] if x < 128 else '\\u%04x' % x for x in u16codes)
+    return charencodepure.jsonescapeu8fallback(u8chars, paranoid)
 
 _utf8len = [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 3, 4]
 
