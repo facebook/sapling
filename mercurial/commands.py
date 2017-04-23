@@ -4618,8 +4618,8 @@ def rollback(ui, repo, **opts):
     if not ui.configbool('ui', 'rollback', True):
         raise error.Abort(_('rollback is disabled because it is unsafe'),
                           hint=('see `hg help -v rollback` for information'))
-    return repo.rollback(dryrun=opts.get('dry_run'),
-                         force=opts.get('force'))
+    return repo.rollback(dryrun=opts.get(r'dry_run'),
+                         force=opts.get(r'force'))
 
 @command('root', [])
 def root(ui, repo):
