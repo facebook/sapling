@@ -24,6 +24,10 @@ Clone client
   $ mkcommit first
   $ hg paths
   default = ssh://user@dummy/repo
+
+Write smth to backup state file in the shared working copy to check that
+it's not read by infinitepush backup client
+  $ echo 'rubbish' > .hg/infinitepushbackupstate
   $ hg pushbackup
   starting backup .* (re)
   searching for changes
@@ -34,6 +38,6 @@ Clone client
   infinitepush/backups/test/*$TESTTMP/client/heads/b75a450e74d5a7708da8c3144fbeb4ac88694044 b75a450e74d5a7708da8c3144fbeb4ac88694044 (glob)
 
 Make sure that backup state is saved only on the "main" repo
-  $ [ -f .hg/infinitepushbackupstate ]
-  [1]
+  $ cat .hg/infinitepushbackupstate
+  rubbish
   $ [ -f ../client/.hg/infinitepushbackupstate ]

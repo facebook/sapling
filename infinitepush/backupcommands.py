@@ -303,9 +303,9 @@ def _dobackup(ui, repo, dest, **opts):
     ui.status(_('starting backup %s\n') % time.strftime('%H:%M:%S %d %b %Y %Z'))
     start = time.time()
     username = util.shortuser(ui.username())
-    bkpstate = _readlocalbackupstate(ui, repo)
     origreporoot = repo.origroot
     repo = _getsrcrepo(repo)
+    bkpstate = _readlocalbackupstate(ui, repo)
 
     maxheadstobackup = ui.configint('infinitepushbackup',
                                     'maxheadstobackup', -1)
