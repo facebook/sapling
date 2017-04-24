@@ -28,6 +28,7 @@ from __future__ import print_function
 from hgext import histedit
 from mercurial import (
     cmdutil,
+    destutil,
     node,
     scmutil,
     error,
@@ -560,6 +561,10 @@ def chistedit(ui, repo, *freeargs, **opts):
             raise error.Abort(_('history edit already in progress, try '
                                '--continue or --abort'))
         revs.extend(freeargs)
+        if not revs:
+            defaultrev = destutil.desthistedit(ui, repo)
+            if defaultrev is not None:
+                revs.append(defaultrev)
         if len(revs) != 1:
             raise error.Abort(
                 _('histedit requires exactly one ancestor revision'))
