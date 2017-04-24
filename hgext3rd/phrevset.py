@@ -24,7 +24,7 @@ callsign = E
 
 from mercurial import hg
 from mercurial import extensions
-from mercurial import revset
+from mercurial import revset, smartset
 from mercurial import error
 from mercurial.i18n import _
 
@@ -211,7 +211,13 @@ def revsetdiff(repo, subset, diffid):
         repo.ui.debug("[diffrev] HG rev is %s\n" % remoterev.encode('hex'))
         if not remoterev:
             repo.ui.debug('[diffrev] Falling back to linear search\n')
-            return finddiff(repo, diffid)
+            linear_search_result = finddiff(repo, diffid)
+            if linear_search_result is None:
+                # walked the entire repo and couldn't find the diff
+                raise error.Abort(
+                    'Could not find diff D%s in changelog' % diffid)
+
+            return [linear_search_result]
 
         return [repo[remoterev].rev()]
 
@@ -266,7 +272,7 @@ def revsetstringset(orig, repo, subset, revstr):
     """Wrapper that recognizes revisions starting with 'D'"""
 
     if revstr.startswith('D') and revstr[1:].isdigit():
-        return revsetdiff(repo, subset, revstr[1:])
+        return smartset.baseset(revsetdiff(repo, subset, revstr[1:]))
 
     return orig(repo, subset, revstr)
 
