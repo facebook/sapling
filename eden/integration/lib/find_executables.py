@@ -67,7 +67,8 @@ EDEN_CLI = _find_cli()
 def _find_daemon():
     edenfs = os.environ.get('EDENFS_SERVER_PATH')
     if not edenfs:
-        edenfs = os.path.join(BUCK_OUT, 'gen/eden/fs/service/edenfs%s' % EDENFS_SUFFIX)
+        edenfs = os.path.join(BUCK_OUT,
+                              'gen/eden/fs/service/edenfs%s' % EDENFS_SUFFIX)
     if not os.access(edenfs, os.X_OK):
         msg = 'unable to find eden daemon for integration testing: {!r}'.format(
             edenfs)

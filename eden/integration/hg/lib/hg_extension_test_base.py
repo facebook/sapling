@@ -25,12 +25,21 @@ def _find_post_clone():
 
 
 def _eden_ext_dir():
-    hg_ext_dir = os.path.join(find_executables.REPO_ROOT, 'eden/hg/eden')
-    if not os.path.isdir(hg_ext_dir):
-        msg = ('unable to find Hg extension for integration testing: {!r}'
-                .format(hg_ext_dir))
-        raise Exception(msg)
-    return hg_ext_dir
+    check_locations = [
+        # In dev mode, the python_binary link-tree can be found here:
+        'buck-out/gen/eden/hg/eden/eden#link-tree',
+        # In other modes, we unpack the python archive here:
+        'buck-out/gen/eden/hg/eden/eden/output',
+    ]
+    for location in check_locations:
+        hg_ext_dir = os.path.join(find_executables.REPO_ROOT, location,
+                                  'hgext3rd/eden')
+        if os.path.isdir(hg_ext_dir):
+            return hg_ext_dir
+
+    msg = ('unable to find Hg extension for integration testing: {!r}'
+            .format(hg_ext_dir))
+    raise Exception(msg)
 
 
 POST_CLONE = _find_post_clone()
