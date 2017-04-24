@@ -46,6 +46,7 @@ Revert interactive tests
   > y
   > y
   > y
+  > ?
   > y
   > n
   > n
@@ -88,6 +89,17 @@ Revert interactive tests
    3
    4
    5
+  revert change 3/6 to 'folder1/g'? [Ynesfdaq?] ?
+  
+  y - yes, revert this change
+  n - no, skip this change
+  e - edit this change manually
+  s - skip remaining changes to this file
+  f - revert remaining changes to this file
+  d - done, skip remaining changes and files
+  a - revert all changes to all remaining files
+  q - quit, reverting no changes
+  ? - ? (display help)
   revert change 3/6 to 'folder1/g'? [Ynesfdaq?] y
   
   @@ -1,5 +2,6 @@
@@ -264,6 +276,7 @@ Test --no-backup
   M folder1/g
   $ hg revert --interactive f << EOF
   > y
+  > ?
   > y
   > n
   > n
@@ -279,6 +292,17 @@ Test --no-backup
    3
    4
    5
+  discard change 1/2 to 'f'? [Ynesfdaq?] ?
+  
+  y - yes, discard this change
+  n - no, skip this change
+  e - edit this change manually
+  s - skip remaining changes to this file
+  f - discard remaining changes to this file
+  d - done, skip remaining changes and files
+  a - discard all changes to all remaining files
+  q - quit, discarding no changes
+  ? - ? (display help)
   discard change 1/2 to 'f'? [Ynesfdaq?] y
   
   @@ -2,6 +1,5 @@
@@ -436,4 +460,3 @@ Check the experimental config to invert the selection:
   forget added file newfile (Yn)? y
   $ hg status
   ? newfile
-

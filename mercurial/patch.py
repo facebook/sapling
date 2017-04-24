@@ -992,6 +992,38 @@ def filterpatch(ui, headers, operation=None):
             'record': _("record this change to '%s'?"),
             'revert': _("revert this change to '%s'?"),
         }[operation],
+        'help': {
+            'discard': _('[Ynesfdaq?]'
+                         '$$ &Yes, discard this change'
+                         '$$ &No, skip this change'
+                         '$$ &Edit this change manually'
+                         '$$ &Skip remaining changes to this file'
+                         '$$ Discard remaining changes to this &file'
+                         '$$ &Done, skip remaining changes and files'
+                         '$$ Discard &all changes to all remaining files'
+                         '$$ &Quit, discarding no changes'
+                         '$$ &? (display help)'),
+            'record': _('[Ynesfdaq?]'
+                        '$$ &Yes, record this change'
+                        '$$ &No, skip this change'
+                        '$$ &Edit this change manually'
+                        '$$ &Skip remaining changes to this file'
+                        '$$ Record remaining changes to this &file'
+                        '$$ &Done, skip remaining changes and files'
+                        '$$ Record &all changes to all remaining files'
+                        '$$ &Quit, recording no changes'
+                        '$$ &? (display help)'),
+            'revert': _('[Ynesfdaq?]'
+                        '$$ &Yes, revert this change'
+                        '$$ &No, skip this change'
+                        '$$ &Edit this change manually'
+                        '$$ &Skip remaining changes to this file'
+                        '$$ Revert remaining changes to this &file'
+                        '$$ &Done, skip remaining changes and files'
+                        '$$ Revert &all changes to all remaining files'
+                        '$$ &Quit, reverting no changes'
+                        '$$ &? (display help)')
+        }[operation]
     }
 
     def prompt(skipfile, skipall, query, chunk):
@@ -1010,16 +1042,7 @@ def filterpatch(ui, headers, operation=None):
         if skipfile is not None:
             return skipfile, skipfile, skipall, newpatches
         while True:
-            resps = _('[Ynesfdaq?]'
-                      '$$ &Yes, record this change'
-                      '$$ &No, skip this change'
-                      '$$ &Edit this change manually'
-                      '$$ &Skip remaining changes to this file'
-                      '$$ Record remaining changes to this &file'
-                      '$$ &Done, skip remaining changes and files'
-                      '$$ Record &all changes to all remaining files'
-                      '$$ &Quit, recording no changes'
-                      '$$ &? (display help)')
+            resps = messages['help']
             r = ui.promptchoice("%s %s" % (query, resps))
             ui.write("\n")
             if r == 8: # ?
