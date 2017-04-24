@@ -24,6 +24,7 @@ Test backups list and recover
   $ hg backups
   Recover changesets using: hg backups --recover <changeset hash>
   
+  Available backup changesets:
   * (glob)
   d2ae7f538514 b
 
@@ -32,8 +33,11 @@ Test backups list and recover
   * (glob)
   stripped changesets. If you are trying to recover a changeset hidden from a
   previous command, use hg journal to get its sha1 and you will be able to access
-  it directly without recovering a backup.Recover changesets using: hg backups --recover <changeset hash>
+  it directly without recovering a backup.
   
+  Recover changesets using: hg backups --recover <changeset hash>
+  
+  Available backup changesets:
   * (glob)
   d2ae7f538514 b
   $ hg backups --recover d2ae7f538514

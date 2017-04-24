@@ -4,7 +4,14 @@
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
-"""display recently made backups to recover stripped changesets"""
+"""display recently made backups to recover stripped changesets
+
+This extension allows the listing and restoring of strip backups.
+
+By default, this will display a warning if you have obsolescence marker creation
+enabled (since most hg installations use either strip or markers, but not both).
+To disable that warning, set ``backups.warnobsolescence`` to False.
+"""
 
 from mercurial import cmdutil, commands, error, bundlerepo
 from mercurial import hg, exchange, obsolete
@@ -25,7 +32,7 @@ msgwithcreatermarkers = """Marker creation is enabled so no changeset should be
 stripped unless you explicitly called hg strip. hg backups will show you the
 stripped changesets. If you are trying to recover a changeset hidden from a
 previous command, use hg journal to get its sha1 and you will be able to access
-it directly without recovering a backup."""
+it directly without recovering a backup.\n\n"""
 verbosetemplate = "{label('status.modified', node|short)} {desc|firstline}\n"
 
 @command('^backups', [
@@ -45,7 +52,7 @@ def backups(ui, repo, *pats, **opts):
     backup.
     '''
     supportsmarkers = obsolete.isenabled(repo, obsolete.createmarkersopt)
-    if supportsmarkers:
+    if supportsmarkers and ui.configbool('backups', 'warnobsolescence', True):
         # Warn users of obsolescence markers that they probably don't want to
         # use backups but reflog instead
         ui.warn(msgwithcreatermarkers)
@@ -77,7 +84,7 @@ def backups(ui, repo, *pats, **opts):
             return
     else:
         msg = _('Recover changesets using: hg backups --recover '
-                '<changeset hash>\n')
+                '<changeset hash>\n\nAvailable backup changesets:')
         ui.status(msg, label="status.removed")
 
     for backup in backups:
