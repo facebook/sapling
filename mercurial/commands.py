@@ -255,8 +255,7 @@ def add(ui, repo, *pats, **opts):
     Returns 0 if all files are successfully added.
     """
 
-    opts = pycompat.byteskwargs(opts)
-    m = scmutil.match(repo[None], pats, opts)
+    m = scmutil.match(repo[None], pats, pycompat.byteskwargs(opts))
     rejected = cmdutil.add(ui, repo, m, "", False, **opts)
     return rejected and 1 or 0
 

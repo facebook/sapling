@@ -1771,7 +1771,7 @@ class gitsubrepo(abstractsubrepo):
                 if exact:
                     rejected.append(f)
                 continue
-            if not opts.get('dry_run'):
+            if not opts.get(r'dry_run'):
                 self._gitcommand(command + [f])
 
         for f in rejected:

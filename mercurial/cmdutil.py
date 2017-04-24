@@ -2279,7 +2279,7 @@ def add(ui, repo, match, prefix, explicitonly, **opts):
         sub = wctx.sub(subpath)
         try:
             submatch = matchmod.subdirmatcher(subpath, match)
-            if opts.get('subrepos'):
+            if opts.get(r'subrepos'):
                 bad.extend(sub.add(ui, submatch, prefix, False, **opts))
             else:
                 bad.extend(sub.add(ui, submatch, prefix, True, **opts))
@@ -2287,7 +2287,7 @@ def add(ui, repo, match, prefix, explicitonly, **opts):
             ui.status(_("skipping missing subrepository: %s\n")
                            % join(subpath))
 
-    if not opts.get('dry_run'):
+    if not opts.get(r'dry_run'):
         rejected = wctx.add(names, prefix)
         bad.extend(f for f in rejected if f in match.files())
     return bad
