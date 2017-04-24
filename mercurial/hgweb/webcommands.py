@@ -131,6 +131,7 @@ def _filerevision(web, req, tmpl, fctx):
     f = fctx.path()
     text = fctx.data()
     parity = paritygen(web.stripecount)
+    ishead = fctx.filerev() in fctx.filelog().headrevs()
 
     if util.binary(text):
         mt = mimetypes.guess_type(f)[0] or 'application/octet-stream'
@@ -150,6 +151,7 @@ def _filerevision(web, req, tmpl, fctx):
                 symrev=webutil.symrevorshortnode(req, fctx),
                 rename=webutil.renamelink(fctx),
                 permissions=fctx.manifest().flags(f),
+                ishead=int(ishead),
                 **webutil.commonentry(web.repo, fctx))
 
 @webcommand('file')

@@ -17,6 +17,8 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
 
+    var isHead = parseInt(sourcelines.dataset.ishead || "0");
+
     // tooltip to invite on lines selection
     var tooltip = document.createElement('div');
     tooltip.id = 'followlines-tooltip';
@@ -153,7 +155,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // append the <div id="followlines"> element to last line of the
             // selection block
-            var divAndButton = followlinesBox(targetUri, startId, endId);
+            var divAndButton = followlinesBox(targetUri, startId, endId, isHead);
             var div = divAndButton[0],
                 button = divAndButton[1];
             inviteElement.appendChild(div);
@@ -186,7 +188,7 @@ document.addEventListener('DOMContentLoaded', function() {
     sourcelines.addEventListener('click', lineSelectStart);
 
     //** return a <div id="followlines"> and inner cancel <button> elements */
-    function followlinesBox(targetUri, fromline, toline) {
+    function followlinesBox(targetUri, fromline, toline, isHead) {
         // <div id="followlines">
         var div = document.createElement('div');
         div.id = 'followlines';
@@ -213,13 +215,16 @@ document.addEventListener('DOMContentLoaded', function() {
         aAsc.setAttribute('href', url);
         aAsc.textContent = 'ascending';
         aDiv.appendChild(aAsc);
-        var sep = document.createTextNode(' / ');
-        aDiv.appendChild(sep);
-        //     link to "descending" followlines
-        var aDesc = document.createElement('a');
-        aDesc.setAttribute('href', url + '&descend=');
-        aDesc.textContent = 'descending';
-        aDiv.appendChild(aDesc);
+
+        if (!isHead) {
+            var sep = document.createTextNode(' / ');
+            aDiv.appendChild(sep);
+            //     link to "descending" followlines
+            var aDesc = document.createElement('a');
+            aDesc.setAttribute('href', url + '&descend=');
+            aDesc.textContent = 'descending';
+            aDiv.appendChild(aDesc);
+        }
 
         div.appendChild(aDiv);
 

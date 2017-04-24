@@ -1343,7 +1343,7 @@ File-related
   <div class="overflow">
   <div class="sourcefirst linewraptoggle">line wrap: <a class="linewraplink" href="javascript:toggleLinewrap()">on</a></div>
   <div class="sourcefirst"> line source</div>
-  <pre class="sourcelines stripes4 wrap bottomline" data-logurl="/log/1/foo">
+  <pre class="sourcelines stripes4 wrap bottomline" data-logurl="/log/1/foo" data-ishead="0">
   <span id="l1">foo</span><a href="#l1"></a></pre>
   </div>
   
@@ -1471,7 +1471,7 @@ File-related
   <div class="overflow">
   <div class="sourcefirst linewraptoggle">line wrap: <a class="linewraplink" href="javascript:toggleLinewrap()">on</a></div>
   <div class="sourcefirst"> line source</div>
-  <pre class="sourcelines stripes4 wrap bottomline" data-logurl="/log/2/foo">
+  <pre class="sourcelines stripes4 wrap bottomline" data-logurl="/log/2/foo" data-ishead="1">
   <span id="l1">another</span><a href="#l1"></a></pre>
   </div>
   
