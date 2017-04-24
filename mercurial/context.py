@@ -1214,6 +1214,10 @@ def blockancestors(fctx, fromline, toline, followfirst=False):
                 # introduced in this revision; no need to go futher in this
                 # branch.
                 continue
+            # Set _descendantrev with 'c' (a known descendant) so that, when
+            # _adjustlinkrev is called for 'p', it receives this descendant
+            # (as srcrev) instead possibly topmost introrev.
+            p._descendantrev = c.rev()
             visit[p.linkrev(), p.filenode()] = p, linerange1
         if inrange:
             yield c, linerange2
