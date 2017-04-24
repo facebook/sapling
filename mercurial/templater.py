@@ -34,7 +34,7 @@ from . import (
 elements = {
     # token-type: binding-strength, primary, prefix, infix, suffix
     "(": (20, None, ("group", 1, ")"), ("func", 1, ")"), None),
-    "%": (16, None, None, ("%", 16), None),
+    "%": (15, None, None, ("%", 15), None),
     "|": (15, None, None, ("|", 15), None),
     "*": (5, None, None, ("*", 5), None),
     "/": (5, None, None, ("/", 5), None),

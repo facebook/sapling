@@ -134,6 +134,20 @@ But negate binds closer still:
     (string '\n'))
   -3
 
+Filters bind as close as map operator:
+
+  $ hg debugtemplate -r0 -v '{desc|splitlines % "{line}\n"}'
+  (template
+    (%
+      (|
+        (symbol 'desc')
+        (symbol 'splitlines'))
+      (template
+        (symbol 'line')
+        (string '\n'))))
+  line 1
+  line 2
+
 Keyword arguments:
 
   $ hg debugtemplate -r0 -v '{foo=bar|baz}'
