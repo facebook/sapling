@@ -213,7 +213,7 @@ document.addEventListener('DOMContentLoaded', function() {
         var aAsc = document.createElement('a');
         var url = targetUri + '?patch=&linerange=' + fromline + ':' + toline;
         aAsc.setAttribute('href', url);
-        aAsc.textContent = 'ascending';
+        aAsc.textContent = 'older';
         aDiv.appendChild(aAsc);
 
         if (!isHead) {
@@ -222,7 +222,7 @@ document.addEventListener('DOMContentLoaded', function() {
             //     link to "descending" followlines
             var aDesc = document.createElement('a');
             aDesc.setAttribute('href', url + '&descend=');
-            aDesc.textContent = 'descending';
+            aDesc.textContent = 'newer';
             aDiv.appendChild(aDesc);
         }
 
