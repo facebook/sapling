@@ -13,6 +13,8 @@ Config example:
     lfspointeronly = false
     # path to sqlite output file for lfs metadata
     lfsmetadata = PATH
+    # path to sqlite output file for metadata
+    metadata = PATH
 
 """
 from __future__ import absolute_import
@@ -53,6 +55,25 @@ def reposetup(ui, repo):
 
     extensions.wrapfunction(verify.verifier, 'verify', yoloverify)
     extensions.afterloaded('lfs', handlelfs)
+
+def writerevmetadata(revisions, outfile):
+    """Write the LFS mappings from OID to a depotpath and it's CLnum into
+    sqlite. This way the LFS server can import the correct file from Perforce
+    and mapping it to the correct OID.
+    """
+    with sqlite3.connect(outfile, isolation_level=None) as conn:
+        cur = conn.cursor()
+        cur.execute("BEGIN TRANSACTION")
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS revision_mapping (
+            "id" INTEGER PRIMARY KEY AUTOINCREMENT,
+            "cl" INTEGER NOT NULL,
+            "node" BLOB
+        )""")
+        cur.executemany(
+            "INSERT INTO revision_mapping(cl, node) VALUES (?,?)",
+            revisions)
+        cur.execute("COMMIT")
 
 def writelfsmetadata(largefiles, revisions, outfile):
     """Write the LFS mappings from OID to a depotpath and it's CLnum into
@@ -211,14 +232,24 @@ def p4fastimport(ui, repo, client, **opts):
         for cl, hgnode in clog.creategen(tr, fileflags, baserevs):
             revisions.append((cl, hex(hgnode)))
 
+        revisions = []
+        for cl, hgnode in clog.creategen(tr, fileflags, baserevs):
+            revisions.append((cl, hex(hgnode)))
+
         if ui.config('p4fastimport', 'lfsmetadata', None) is not None:
             ui.note(_('writing lfs metadata to sqlite\n'))
             writelfsmetadata(largefiles, revisions,
                 ui.config('p4fastimport', 'lfsmetadata', None))
 
+        if ui.config('p4fastimport', 'metadata', None) is not None:
+            ui.note(_('writing metadata to sqlite\n'))
+            writerevmetadata(revisions,
+                ui.config('p4fastimport', 'metadata', None))
+
         tr.close()
         ui.note(_('%d revision(s), %d file(s) imported.\n') % (
             len(changelists), count))
+
     finally:
         if tr:
             tr.release()
