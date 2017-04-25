@@ -245,13 +245,13 @@ struct stackframe {
 class SubtreeIterator {
   private:
     std::vector<stackframe> mainStack;
-    std::vector<char*> cmpNodes;
+    std::vector<const char*> cmpNodes;
     std::vector<std::vector<stackframe> > cmpStacks;
     std::string path;
     ManifestFetcher fetcher;
   public:
     SubtreeIterator(Manifest *mainRoot,
-                    const std::vector<char*> &cmpNodes,
+                    const std::vector<const char*> &cmpNodes,
                     const std::vector<Manifest*> &cmpRoots,
                     const ManifestFetcher &fetcher);
 
@@ -290,7 +290,7 @@ class FinalizeIterator {
     SubtreeIterator _iterator;
   public:
     FinalizeIterator(Manifest *mainRoot,
-                    const std::vector<char*> &cmpNodes,
+                    const std::vector<const char*> &cmpNodes,
                     const std::vector<Manifest*> &cmpRoots,
                     const ManifestFetcher &fetcher);
 

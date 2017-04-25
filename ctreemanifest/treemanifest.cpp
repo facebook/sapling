@@ -486,7 +486,7 @@ bool treemanifest::remove(
 }
 
 SubtreeIterator::SubtreeIterator(Manifest *mainRoot,
-                const std::vector<char*> &cmpNodes,
+                const std::vector<const char*> &cmpNodes,
                 const std::vector<Manifest*> &cmpRoots,
                 const ManifestFetcher &fetcher) :
     cmpNodes(cmpNodes),
@@ -661,7 +661,7 @@ bool SubtreeIterator::next(std::string **path, Manifest **result,
 }
 
 FinalizeIterator::FinalizeIterator(Manifest *mainRoot,
-                const std::vector<char*> &cmpNodes,
+                const std::vector<const char*> &cmpNodes,
                 const std::vector<Manifest*> &cmpRoots,
                 const ManifestFetcher &fetcher) :
   _iterator(mainRoot, cmpNodes, cmpRoots, fetcher) {

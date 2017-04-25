@@ -15,8 +15,8 @@ Manifest::Manifest(ConstantStringRef &rawobj, const char *node) :
     _rawobj(rawobj),
     _refcount(0),
     _mutable(false) {
-  char *parseptr = _rawobj.content();
-  char *endptr = parseptr + _rawobj.size();
+  const char *parseptr = _rawobj.content();
+  const char *endptr = parseptr + _rawobj.size();
 
   while (parseptr < endptr) {
     ManifestEntry entry;

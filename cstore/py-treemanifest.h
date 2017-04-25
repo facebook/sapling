@@ -225,7 +225,7 @@ static void newtreeiter_dealloc(py_newtreeiter *self) {
 }
 
 static py_newtreeiter *newtreeiter_create(py_treemanifest *treemf, Manifest *mainManifest,
-                                       const std::vector<char*> &cmpNodes,
+                                       const std::vector<const char*> &cmpNodes,
                                        const std::vector<Manifest*> &cmpManifests,
                                        const ManifestFetcher &fetcher) {
   py_newtreeiter *i = PyObject_New(py_newtreeiter, &newtreeiterType);
@@ -320,7 +320,7 @@ static py_subtreeiter *subtreeiter_create(py_treemanifest *treemf, Manifest *mai
 
       // The provided created struct hasn't initialized our iter member, so
       // we do it manually.
-      std::vector<char*> cmpNodes(cmpManifests.size());
+      std::vector<const char*> cmpNodes(cmpManifests.size());
       for (size_t i = 0; i < cmpManifests.size(); ++i) {
         cmpNodes.push_back(cmpManifests[i]->node());
       }
@@ -1409,7 +1409,7 @@ static PyObject *treemanifest_finalize(py_treemanifest *self, PyObject *args,
   }
 
   try {
-    std::vector<char*> cmpNodes;
+    std::vector<const char*> cmpNodes;
     std::vector<Manifest*> cmpManifests;
     if (p1tree) {
       assert(p1tree->tm.root.node);

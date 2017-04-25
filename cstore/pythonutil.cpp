@@ -116,9 +116,7 @@ ConstantStringRef PythonStore::get(const Key &key) {
     throw pyexception();
   }
 
-  char *buffer = new char[pathlen];
-  memcpy(buffer, path, pathlen);
-  return ConstantStringRef(buffer, pathlen);
+  return ConstantStringRef(path, pathlen);
 }
 
 bool PythonMatcher::matches(const std::string &path) {

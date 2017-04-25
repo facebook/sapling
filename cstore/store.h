@@ -11,92 +11,36 @@
 #define STORE_H
 
 #include "key.h"
-
-class ConstantString {
-  friend class ConstantStringRef;
-  private:
-    char *_content;
-    size_t _size;
-    size_t _refCount;
-
-    ConstantString(char *content, size_t size) :
-      _content(content),
-      _size(size),
-      _refCount(1) {}
-  public:
-    ~ConstantString() {
-      delete[] _content;
-    }
-
-    char *content() {
-      return _content;
-    }
-
-    size_t size() {
-      return _size;
-    }
-
-    void incref() {
-      _refCount++;
-    }
-
-    size_t decref() {
-      if (_refCount > 0) {
-        _refCount--;
-      }
-      return _refCount;
-    }
-};
+#include <memory>
 
 class ConstantStringRef {
   private:
-    ConstantString *_str;
+    std::shared_ptr<std::string> str_;
   public:
-    explicit ConstantStringRef() :
-      _str(NULL) {
-    }
+    ConstantStringRef() = default;
 
-    ConstantStringRef(char *str, size_t size) :
-      _str(new ConstantString(str, size)) {
-    }
+    /** Make a copy of the provided string buffer */
+    ConstantStringRef(const char *str, size_t size)
+        : str_(std::make_shared<std::string>(str, size)) {}
 
-    ConstantStringRef(const ConstantStringRef &other) {
-      if (other._str) {
-        other._str->incref();
+    /** Take ownership of an existing string */
+    ConstantStringRef(std::string &&str)
+        : str_(std::make_shared<std::string>(std::move(str))) {}
+
+    /** Take ownership of an existing shared_ptr<string> */
+    ConstantStringRef(std::shared_ptr<std::string> str) : str_(str) {}
+
+    const char *content() {
+      if (str_) {
+        return str_->data();
       }
-      _str = other._str;
-    }
-
-    ~ConstantStringRef() {
-      if (_str && _str->decref() == 0) {
-        delete _str;
-      }
-    }
-
-    ConstantStringRef& operator=(const ConstantStringRef &other) {
-      if (_str && _str->decref() == 0) {
-        delete _str;
-      }
-      _str = other._str;
-      if (_str) {
-        _str->incref();
-      }
-      return *this;
-    }
-
-    char *content() {
-      if (_str) {
-        return _str->content();
-      }
-
-      return NULL;
+      return nullptr;
     }
 
     size_t size() {
-      if (_str) {
-        return _str->size();
+      if (str_) {
+        return str_->size();
       }
-
       return 0;
     }
 };

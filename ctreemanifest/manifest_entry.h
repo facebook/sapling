@@ -30,13 +30,13 @@ class ManifestEntry;
  */
 class ManifestEntry {
   public:
-    char *filename;
+    const char *filename;
     size_t filenamelen;
-    char *node;
+    const char *node;
 
     // unlike filename/node, this is not always a valid pointer.  if the flag
     // is unset, flag will be set to NULL.
-    char *flag;
+    const char *flag;
     ManifestPtr resolved;
     char *ownedmemory;
 
@@ -59,7 +59,7 @@ class ManifestEntry {
         const char *node,
         const char *flag);
 
-    char *initialize(char *entrystart);
+    const char *initialize(const char *entrystart);
 
     void initialize(ManifestEntry *other);
 

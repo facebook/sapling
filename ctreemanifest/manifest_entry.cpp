@@ -10,13 +10,9 @@
 #include "manifest_entry.h"
 #include <cassert>
 
-ManifestEntry::ManifestEntry() {
-  this->filename = NULL;
-  this->filenamelen = 0;
-  this->node = NULL;
-  this->flag = NULL;
-  this->ownedmemory = NULL;
-}
+ManifestEntry::ManifestEntry()
+    : filename(nullptr), filenamelen(0), node(nullptr), flag(nullptr),
+      ownedmemory(nullptr) {}
 
 void ManifestEntry::initialize(
     const char *filename, const size_t filenamelen,
@@ -25,6 +21,9 @@ void ManifestEntry::initialize(
   if (flag != NULL && *flag == MANIFEST_DIRECTORY_FLAG) {
     this->resolved = ManifestPtr(new Manifest());
   }
+
+  assert(!this->ownedmemory);
+
   this->ownedmemory = new char[
   filenamelen +
   1 +              // null character
@@ -33,49 +32,53 @@ void ManifestEntry::initialize(
   1                // NL
   ];
 
-  // set up the pointers.
-  this->filename = this->ownedmemory;
-  if (node == NULL) {
-    this->node = NULL;
-  } else {
-    this->node = this->filename + filenamelen + 1;
+  // We'll use this as a cursor into the memory blob we just allocated
+  char *buf = this->ownedmemory;
+
+  char *filenamecopy = buf;
+  memcpy(filenamecopy, filename, filenamelen);
+  filenamecopy[filenamelen] = '\0';
+  buf += filenamelen + 1;
+
+  char *nodecopy = nullptr;
+  if (node) {
+    nodecopy = buf;
+    memcpy(nodecopy, node, HEX_NODE_SIZE);
+  }
+  // Note that the region where the node would have gone has undefined
+  // contents in the case that node is nullptr, but it is there
+  // and reserved ready for use by updatehexnode().
+  buf += HEX_NODE_SIZE;
+
+  char *flagcopy = nullptr;
+  if (flag) {
+    flagcopy = buf;
+    *flagcopy = *flag;
+    buf += 1;
   }
 
-  // set up the null character and NL.
-  this->filename[filenamelen] = '\0';
-  *(this->filename + filenamelen + 1 + HEX_NODE_SIZE + 1) = '\n';
+  *buf = '\n';
 
-  // set up filenamelen
+  this->filename = filenamecopy;
   this->filenamelen = filenamelen;
-
-  // write the memory.
-  memcpy(this->filename, filename, filenamelen);
-  if (node != NULL) {
-    memcpy(this->node, node, HEX_NODE_SIZE);
-  }
-  if (flag == NULL) {
-    *(this->filename + filenamelen + 1 + HEX_NODE_SIZE) = '\n';
-    this->flag = NULL;
-  } else {
-    this->flag = this->filename + filenamelen + 1 + HEX_NODE_SIZE;
-    *this->flag = *flag;
-  }
+  this->node = nodecopy;
+  this->flag = flagcopy;
 }
 
-char *ManifestEntry::initialize(char *entrystart) {
+const char *ManifestEntry::initialize(const char *entrystart) {
   // Each entry is of the format:
   //
   //   <filename>\0<40-byte hash><optional 1 byte flag>\n
   //
   // Where flags can be 't' to represent a sub directory
   this->filename = entrystart;
-  char *nulldelimiter = strchr(entrystart, '\0');
+  const char *nulldelimiter = strchr(entrystart, '\0');
   this->filenamelen = nulldelimiter - entrystart;
 
   this->node = nulldelimiter + 1;
 
   this->flag = nulldelimiter + 41;
-  char *nextpointer;
+  const char *nextpointer;
   if (*this->flag != '\n') {
     nextpointer = this->flag + 2;
   } else {
@@ -173,14 +176,18 @@ void ManifestEntry::updatehexnode(const char *node, const char *flag) {
   if (!this->hasNode()) {
     this->node = this->filename + this->filenamelen + 1;
   }
-  memcpy(this->node, node, HEX_NODE_SIZE);
+
+  // The const_cast is safe because we checked this->ownedmemory above.
+  char *owned_node = const_cast<char *>(this->node);
+  memcpy(owned_node, node, HEX_NODE_SIZE);
 
   if (flag == NULL) {
-    *(this->filename + this->filenamelen + 1 + HEX_NODE_SIZE) = '\n';
+    owned_node[HEX_NODE_SIZE] = '\n';
     this->flag = NULL;
   } else {
-    this->flag = this->filename + filenamelen + 1 + HEX_NODE_SIZE;
-    *this->flag = *flag;
+    owned_node[HEX_NODE_SIZE] = *flag;
+    owned_node[HEX_NODE_SIZE + 1] = '\n';
+    this->flag = owned_node + HEX_NODE_SIZE;
   }
 }
 

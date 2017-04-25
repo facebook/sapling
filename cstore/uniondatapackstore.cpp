@@ -59,9 +59,7 @@ ConstantStringRef UnionDatapackStore::get(const Key &key) {
 
   // Short circuit and just return the full text if it's one long
   if (links.size() == 0) {
-    char * finalText = new char[fulltextLink->delta_sz];
-    memcpy(finalText, fulltextLink->delta, (size_t)fulltextLink->delta_sz);
-    return ConstantStringRef(finalText, (size_t)fulltextLink->delta_sz);
+    return ConstantStringRef((const char*)fulltextLink->delta, fulltextLink->delta_sz);
   }
 
   std::reverse(links.begin(), links.end());
@@ -77,16 +75,15 @@ ConstantStringRef UnionDatapackStore::get(const Key &key) {
     throw std::logic_error("mpatch failed to calculate size");
   }
 
-  char *result= new char[outlen];
-  if (mpatch_apply(result, (const char*)fulltextLink->delta,
+  auto result = std::make_shared<std::string>(outlen, '\0');
+  if (mpatch_apply(&(*result)[0], (const char*)fulltextLink->delta,
 		   (ssize_t)fulltextLink->delta_sz, patch) < 0) {
-    delete[] result;
     mpatch_lfree(patch);
     throw std::logic_error("mpatch failed to apply patches");
   }
 
   mpatch_lfree(patch);
-  return ConstantStringRef(result, outlen);
+  return ConstantStringRef(result);
 }
 
 delta_chain_t UnionDeltaChainIterator::getNextChain(const Key &key) {
