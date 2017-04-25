@@ -121,6 +121,22 @@ def create(tr, ui, repo, importset, filelogs):
 cmdtable = {}
 command = cmdutil.command(cmdtable)
 
+def runworker(ui, fn, wargs, items):
+    # 0.4 is the cost per argument. So if we have at least 100 files
+    # on a 4 core machine than our linear cost outweights the
+    # drawback of spwaning. We are overwritign this if we force a
+    # worker to run with a ridiculous high number.
+    weight = 0.0  # disable worker
+    if ui.config('p4fastimport', 'useworker', None) == 'force':
+        weight = 100000.0  # force worker
+    elif ui.configbool('p4fastimport', 'useworker', False):
+        weight = 0.04  # normal weight
+
+    # Fix duplicated messages before
+    # https://www.mercurial-scm.org/repo/hg-committed/rev/9d3d56aa1a9f
+    ui.flush()
+    return worker.worker(ui, weight, fn, wargs, items)
+
 @command(
     'p4fastimport',
     [('P', 'path', '.', _('path to the local depot store'), _('PATH'))],
@@ -163,7 +179,8 @@ def p4fastimport(ui, repo, client, **opts):
                                                     fileinfo['depotFile']))
     ui.note(_('%d files to import.\n') % len(filelist))
 
-    importset = importer.ImportSet(repo, changelists, filelist, basepath)
+    importset = importer.ImportSet(repo, client, changelists,
+            filelist, basepath)
     p4filelogs = []
     for i, f in enumerate(importset.filelogs()):
         ui.progress(_('loading filelog'), i, item=f, unit="filelog",
@@ -194,34 +211,21 @@ def p4fastimport(ui, repo, client, **opts):
 
         # 3. Import files.
         count = 0
-        fileflags = {}
+        fileinfo = {}
         largefiles = []
-        baserevs = collections.defaultdict(lambda: 0)
         for filelogs in map(sorted, runlist.values()):
             wargs = (tr, ui, repo, importset)
-
-            # 0.4 is the cost per argument. So if we have at least 100 files
-            # on a 4 core machine than our linear cost outweights the
-            # drawback of spwaning. We are overwritign this if we force a
-            # worker to run with a ridiculous high number.
-            weight = 0.0  # disable worker
-            if ui.config('p4fastimport', 'useworker', None) == 'force':
-                weight = 100000.0  # force worker
-            elif ui.configbool('p4fastimport', 'useworker', False):
-                weight = 0.04  # normal weight
-
-            # Fix duplicated messages before
-            # https://www.mercurial-scm.org/repo/hg-committed/rev/9d3d56aa1a9f
-            ui.flush()
-            prog = worker.worker(ui, weight, create, wargs, filelogs)
-            for i, serialized in prog:
+            for i, serialized in runworker(ui, create, wargs, filelogs):
                 data = json.loads(serialized)
                 ui.progress(_('importing'), count, item=data['depotname'],
                             unit='file', total=len(p4filelogs))
                 # Json converts to UTF8 and int keys to strings, so we have to
                 # convert back. TODO: Find a better way to handle this.
-                baserevs[data['localname']] = data['oldtiprev']
-                fileflags.update(util.decodefileflags(data['fileflags']))
+                fileinfo[data['depotname']] = {
+                    'localname': data['localname'].encode('utf-8'),
+                    'flags': util.decodefileflags(data['fileflags']),
+                    'baserev': data['oldtiprev'],
+                }
                 largefiles.extend(data['largefiles'])
                 count += i
             ui.progress(_('importing'), None)
@@ -233,7 +237,7 @@ def p4fastimport(ui, repo, client, **opts):
             revisions.append((cl, hex(hgnode)))
 
         revisions = []
-        for cl, hgnode in clog.creategen(tr, fileflags, baserevs):
+        for cl, hgnode in clog.creategen(tr, fileinfo):
             revisions.append((cl, hex(hgnode)))
 
         if ui.config('p4fastimport', 'lfsmetadata', None) is not None:

@@ -105,14 +105,14 @@ Import
   loading list of files.
   1 files to import.
   importing repository.
-  writing filelog: b8e02f643373, p1 000000000000, linkrev 0, 2 bytes, src: *, path: depot/Main/a (glob)
-  writing filelog: 059c099e8c05, p1 b8e02f643373, linkrev 1, 2 bytes, src: *, path: depot/Main/a (glob)
-  writing filelog: de9e19b2b7a1, p1 059c099e8c05, linkrev 2, 2 bytes, src: *, path: depot/Main/a (glob)
-  changelist 1: writing manifest. node: 42bd0cc6c882 p1: 000000000000 p2: 000000000000 linkrev: 0
+  writing filelog: b8e02f643373, p1 000000000000, linkrev 0, 2 bytes, src: *, path: Main/a (glob)
+  writing filelog: 059c099e8c05, p1 b8e02f643373, linkrev 1, 2 bytes, src: *, path: Main/a (glob)
+  writing filelog: de9e19b2b7a1, p1 059c099e8c05, linkrev 2, 2 bytes, src: *, path: Main/a (glob)
+  changelist 1: writing manifest. node: ce8f3d0156f3 p1: 000000000000 p2: 000000000000 linkrev: 0
   changelist 1: writing changelog: CL1(1)
-  changelist 3: writing manifest. node: 6200a3b4ac89 p1: 42bd0cc6c882 p2: 000000000000 linkrev: 1
+  changelist 3: writing manifest. node: 63f2b10f26c4 p1: ce8f3d0156f3 p2: 000000000000 linkrev: 1
   changelist 3: writing changelog: CL3(3)
-  changelist 4: writing manifest. node: 4b051904a3a3 p1: 6200a3b4ac89 p2: 000000000000 linkrev: 2
+  changelist 4: writing manifest. node: c654b16ed766 p1: 63f2b10f26c4 p2: 000000000000 linkrev: 2
   changelist 4: writing changelog: CL4(2)
   3 revision(s), 1 file(s) imported.
   $ hg verify
@@ -121,6 +121,6 @@ Import
   crosschecking files in changesets and manifests
   checking files
   1 files, 3 changesets, 3 total revisions
-  $ hg cat -r tip depot/Main/a
+  $ hg cat -r tip Main/a
   4
   stopping the p4 server

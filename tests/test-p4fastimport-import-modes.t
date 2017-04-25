@@ -81,15 +81,15 @@ Simple import
   loading list of files.
   3 files to import.
   importing repository.
-  writing filelog: b789fdd96dc2, p1 000000000000, linkrev 0, 2 bytes, src: *, path: depot/Main/a (glob)
-  writing filelog: a80d06849b33, p1 b789fdd96dc2, linkrev 1, 4 bytes, src: *, path: depot/Main/a (glob)
-  writing filelog: 8aa36f7e9a8d, p1 000000000000, linkrev 0, 7 bytes, src: *, path: depot/Main/b/c (glob)
-  writing filelog: ee47780ebabc, p1 8aa36f7e9a8d, linkrev 1, 7 bytes, src: *, path: depot/Main/b/c (glob)
-  writing filelog: a9092a3d84a3, p1 000000000000, linkrev 0, 2 bytes, src: *, path: depot/Main/d (glob)
-  writing filelog: f83f0637e55e, p1 a9092a3d84a3, linkrev 1, 4 bytes, src: *, path: depot/Main/d (glob)
-  changelist 1: writing manifest. node: 3baf19a7398a p1: 000000000000 p2: 000000000000 linkrev: 0
+  writing filelog: b789fdd96dc2, p1 000000000000, linkrev 0, 2 bytes, src: *, path: Main/a (glob)
+  writing filelog: a80d06849b33, p1 b789fdd96dc2, linkrev 1, 4 bytes, src: *, path: Main/a (glob)
+  writing filelog: 8aa36f7e9a8d, p1 000000000000, linkrev 0, 7 bytes, src: *, path: Main/b/c (glob)
+  writing filelog: ee47780ebabc, p1 8aa36f7e9a8d, linkrev 1, 7 bytes, src: *, path: Main/b/c (glob)
+  writing filelog: a9092a3d84a3, p1 000000000000, linkrev 0, 2 bytes, src: *, path: Main/d (glob)
+  writing filelog: f83f0637e55e, p1 a9092a3d84a3, linkrev 1, 4 bytes, src: *, path: Main/d (glob)
+  changelist 1: writing manifest. node: 9b06e09b6cf9 p1: 000000000000 p2: 000000000000 linkrev: 0
   changelist 1: writing changelog: initial
-  changelist 2: writing manifest. node: 204ea7b19daa p1: 3baf19a7398a p2: 000000000000 linkrev: 1
+  changelist 2: writing manifest. node: d5f0551e02e2 p1: 9b06e09b6cf9 p2: 000000000000 linkrev: 1
   changelist 2: writing changelog: second
   2 revision(s), 3 file(s) imported.
 
@@ -105,9 +105,9 @@ Verify
   $ hg update tip
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg --debug manifest
-  a80d06849b333b8a3d5c445f8ba3142010dcdc9e 644   depot/Main/a
-  ee47780ebabc4dd227d21ef3b71ca3ab381eb4cf 644 @ depot/Main/b/c
-  f83f0637e55e3c48e9922f14a016761626d79d3d 755 * depot/Main/d
+  a80d06849b333b8a3d5c445f8ba3142010dcdc9e 644   Main/a
+  ee47780ebabc4dd227d21ef3b71ca3ab381eb4cf 644 @ Main/b/c
+  f83f0637e55e3c48e9922f14a016761626d79d3d 755 * Main/d
 
 End Test
 

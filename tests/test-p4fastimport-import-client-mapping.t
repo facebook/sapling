@@ -1,9 +1,7 @@
 #require p4
 
   $ echo "[extensions]" >> $HGRCPATH
-  $ echo "p4fastimport=" >> $HGRCPATH
-  $ echo "[p4fastimport]" >> $HGRCPATH
-  $ echo "useworker=force" >> $HGRCPATH
+  $ echo "p4fastimport= " >> $HGRCPATH
 
 create p4 depot
   $ p4wd=`pwd`/p4
@@ -33,7 +31,7 @@ start the p4 server
 create a client spec
   $ cd $p4wd
   $ P4CLIENT=hg-p4-import; export P4CLIENT
-  $ DEPOTPATH=//depot/...
+  $ DEPOTPATH=//depot/Main/...
   $ p4 client -o | sed '/^View:/,$ d' >p4client
   $ echo View: >>p4client
   $ echo " $DEPOTPATH //$P4CLIENT/..." >>p4client
@@ -41,12 +39,11 @@ create a client spec
   Client hg-p4-import saved.
 
 populate the depot
-  $ mkdir Main
-  $ mkdir Main/b
-  $ echo a > Main/a
-  $ echo c > Main/b/c
-  $ echo d > Main/d
-  $ p4 add Main/a Main/b/c Main/d
+  $ mkdir b
+  $ echo a > a
+  $ echo c > b/c
+  $ echo d > d
+  $ p4 add a b/c d
   //depot/Main/a#1 - opened for add
   //depot/Main/b/c#1 - opened for add
   //depot/Main/d#1 - opened for add
@@ -58,13 +55,13 @@ populate the depot
   add //depot/Main/d#1
   Change 1 submitted.
 
-  $ p4 edit Main/a Main/b/c Main/d
+  $ p4 edit a b/c d
   //depot/Main/a#1 - opened for edit
   //depot/Main/b/c#1 - opened for edit
   //depot/Main/d#1 - opened for edit
-  $ echo a >> Main/a
-  $ echo c >> Main/b/c
-  $ echo d >> Main/d
+  $ echo a >> a
+  $ echo c >> b/c
+  $ echo d >> d
   $ p4 submit -d second
   Submitting change 2.
   Locking 3 files ...
@@ -77,21 +74,21 @@ Simple import
 
   $ cd $hgwd
   $ hg init --config 'format.usefncache=False'
-  $ FORCE_J=1 hg p4fastimport --debug -P $P4ROOT hg-p4-import
+  $ hg p4fastimport --debug -P $P4ROOT hg-p4-import
   loading changelist numbers.
   2 changelists to import.
   loading list of files.
   3 files to import.
   importing repository.
-  writing filelog: * (glob)
-  writing filelog: * (glob)
-  writing filelog: * (glob)
-  writing filelog: * (glob)
-  writing filelog: * (glob)
-  writing filelog: * (glob)
-  changelist 1: writing manifest. node: a9f7e8df2a65 p1: 000000000000 p2: 000000000000 linkrev: 0
+  writing filelog: b789fdd96dc2, p1 000000000000, linkrev 0, 2 bytes, src: *, path: a (glob)
+  writing filelog: a80d06849b33, p1 b789fdd96dc2, linkrev 1, 4 bytes, src: *, path: a (glob)
+  writing filelog: 149da44f2a4e, p1 000000000000, linkrev 0, 2 bytes, src: *, path: b/c (glob)
+  writing filelog: b11e10a88bfa, p1 149da44f2a4e, linkrev 1, 4 bytes, src: *, path: b/c (glob)
+  writing filelog: a9092a3d84a3, p1 000000000000, linkrev 0, 2 bytes, src: *, path: d (glob)
+  writing filelog: f83f0637e55e, p1 a9092a3d84a3, linkrev 1, 4 bytes, src: *, path: d (glob)
+  changelist 1: writing manifest. node: 096669767a87 p1: 000000000000 p2: 000000000000 linkrev: 0
   changelist 1: writing changelog: initial
-  changelist 2: writing manifest. node: e2b9d9177f8d p1: a9f7e8df2a65 p2: 000000000000 linkrev: 1
+  changelist 2: writing manifest. node: 5b4fb7a7d302 p1: 096669767a87 p2: 000000000000 linkrev: 1
   changelist 2: writing changelog: second
   2 revision(s), 3 file(s) imported.
 

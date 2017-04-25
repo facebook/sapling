@@ -75,13 +75,13 @@ import
   2 files to import.
   importing repository.
   case conflict: //depot/Main/A and //depot/Main/a
-  writing filelog: b789fdd96dc2, p1 000000000000, linkrev 2, 2 bytes, src: *, path: depot/Main/A (glob)
-  writing filelog: b789fdd96dc2, p1 000000000000, linkrev 0, 2 bytes, src: *, path: depot/Main/a (glob)
-  changelist 1: writing manifest. node: 77111a2fe360 p1: 000000000000 p2: 000000000000 linkrev: 0
+  writing filelog: b789fdd96dc2, p1 000000000000, linkrev 2, 2 bytes, src: *, path: Main/A (glob)
+  writing filelog: b789fdd96dc2, p1 000000000000, linkrev 0, 2 bytes, src: *, path: Main/a (glob)
+  changelist 1: writing manifest. node: f495e209f723 p1: 000000000000 p2: 000000000000 linkrev: 0
   changelist 1: writing changelog: initial
-  changelist 2: writing manifest. node: ba644731a088 p1: 77111a2fe360 p2: 000000000000 linkrev: 1
+  changelist 2: writing manifest. node: af76bc402ee6 p1: f495e209f723 p2: 000000000000 linkrev: 1
   changelist 2: writing changelog: delete
-  changelist 3: writing manifest. node: a7bdbbc64a41 p1: ba644731a088 p2: 000000000000 linkrev: 2
+  changelist 3: writing manifest. node: c1187994dfbb p1: af76bc402ee6 p2: 000000000000 linkrev: 2
   changelist 3: writing changelog: add with case-inensitivity match
   3 revision(s), 2 file(s) imported.
 
@@ -98,12 +98,12 @@ Update
 
   $ hg update -r 0
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ cat depot/Main/a
+  $ cat Main/a
   a
   $ hg update -r 1
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg update -r 2
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ cat depot/Main/A
+  $ cat Main/A
   a
   stopping the p4 server

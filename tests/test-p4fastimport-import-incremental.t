@@ -81,15 +81,15 @@ Simple import
   loading list of files.
   3 files to import.
   importing repository.
-  writing filelog: b789fdd96dc2, p1 000000000000, linkrev 0, 2 bytes, src: *, path: depot/Main/a (glob)
-  writing filelog: a80d06849b33, p1 b789fdd96dc2, linkrev 1, 4 bytes, src: *, path: depot/Main/a (glob)
-  writing filelog: 149da44f2a4e, p1 000000000000, linkrev 0, 2 bytes, src: *, path: depot/Main/b/c (glob)
-  writing filelog: b11e10a88bfa, p1 149da44f2a4e, linkrev 1, 4 bytes, src: *, path: depot/Main/b/c (glob)
-  writing filelog: a9092a3d84a3, p1 000000000000, linkrev 0, 2 bytes, src: *, path: depot/Main/d (glob)
-  writing filelog: f83f0637e55e, p1 a9092a3d84a3, linkrev 1, 4 bytes, src: *, path: depot/Main/d (glob)
-  changelist 1: writing manifest. node: 17971aea5e86 p1: 000000000000 p2: 000000000000 linkrev: 0
+  writing filelog: b789fdd96dc2, p1 000000000000, linkrev 0, 2 bytes, src: *, path: Main/a (glob)
+  writing filelog: a80d06849b33, p1 b789fdd96dc2, linkrev 1, 4 bytes, src: *, path: Main/a (glob)
+  writing filelog: 149da44f2a4e, p1 000000000000, linkrev 0, 2 bytes, src: *, path: Main/b/c (glob)
+  writing filelog: b11e10a88bfa, p1 149da44f2a4e, linkrev 1, 4 bytes, src: *, path: Main/b/c (glob)
+  writing filelog: a9092a3d84a3, p1 000000000000, linkrev 0, 2 bytes, src: *, path: Main/d (glob)
+  writing filelog: f83f0637e55e, p1 a9092a3d84a3, linkrev 1, 4 bytes, src: *, path: Main/d (glob)
+  changelist 1: writing manifest. node: a9f7e8df2a65 p1: 000000000000 p2: 000000000000 linkrev: 0
   changelist 1: writing changelog: initial
-  changelist 2: writing manifest. node: ee5866cdbad7 p1: 17971aea5e86 p2: 000000000000 linkrev: 1
+  changelist 2: writing manifest. node: e2b9d9177f8d p1: a9f7e8df2a65 p2: 000000000000 linkrev: 1
   changelist 2: writing changelog: second
   2 revision(s), 3 file(s) imported.
 
@@ -127,12 +127,12 @@ Incremental import
   loading list of files.
   2 files to import.
   importing repository.
-  writing filelog: 544ee3484b75, p1 a80d06849b33, linkrev 2, 6 bytes, src: *, path: depot/Main/a (glob)
-  writing filelog: c96a7bc5f25b, p1 544ee3484b75, linkrev 3, 8 bytes, src: *, path: depot/Main/a (glob)
-  writing filelog: b7282976f1b3, p1 b11e10a88bfa, linkrev 2, 6 bytes, src: *, path: depot/Main/b/c (glob)
-  changelist 3: writing manifest. node: 7357c6fa87bd p1: ee5866cdbad7 p2: 000000000000 linkrev: 2
+  writing filelog: 544ee3484b75, p1 a80d06849b33, linkrev 2, 6 bytes, src: *, path: Main/a (glob)
+  writing filelog: c96a7bc5f25b, p1 544ee3484b75, linkrev 3, 8 bytes, src: *, path: Main/a (glob)
+  writing filelog: b7282976f1b3, p1 b11e10a88bfa, linkrev 2, 6 bytes, src: *, path: Main/b/c (glob)
+  changelist 3: writing manifest. node: 638e8977b4e8 p1: e2b9d9177f8d p2: 000000000000 linkrev: 2
   changelist 3: writing changelog: third
-  changelist 4: writing manifest. node: a08ce793cc8b p1: 7357c6fa87bd p2: 000000000000 linkrev: 3
+  changelist 4: writing manifest. node: 06cd79ae413e p1: 638e8977b4e8 p2: 000000000000 linkrev: 3
   changelist 4: writing changelog: fourth
   2 revision(s), 2 file(s) imported.
 

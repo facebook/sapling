@@ -80,14 +80,14 @@ import
   3 files to import.
   importing repository.
   case conflict: //depot/Main/A and //depot/Main/a
-  writing filelog: b789fdd96dc2, p1 000000000000, linkrev 2, 2 bytes, src: *, path: depot/Main/A (glob)
-  writing filelog: b789fdd96dc2, p1 000000000000, linkrev 0, 2 bytes, src: *, path: depot/Main/a (glob)
-  writing filelog: b789fdd96dc2, p1 000000000000, linkrev 1, 2 bytes, src: *, path: depot/Main/b (glob)
-  changelist 1: writing manifest. node: 77111a2fe360 p1: 000000000000 p2: 000000000000 linkrev: 0
+  writing filelog: b789fdd96dc2, p1 000000000000, linkrev 2, 2 bytes, src: *, path: Main/A (glob)
+  writing filelog: b789fdd96dc2, p1 000000000000, linkrev 0, 2 bytes, src: *, path: Main/a (glob)
+  writing filelog: b789fdd96dc2, p1 000000000000, linkrev 1, 2 bytes, src: *, path: Main/b (glob)
+  changelist 1: writing manifest. node: f495e209f723 p1: 000000000000 p2: 000000000000 linkrev: 0
   changelist 1: writing changelog: initial
-  changelist 2: writing manifest. node: 8c09450f9f5d p1: 77111a2fe360 p2: 000000000000 linkrev: 1
+  changelist 2: writing manifest. node: 510da33a44e3 p1: f495e209f723 p2: 000000000000 linkrev: 1
   changelist 2: writing changelog: moveway
-  changelist 3: writing manifest. node: fc1826355267 p1: 8c09450f9f5d p2: 000000000000 linkrev: 2
+  changelist 3: writing manifest. node: 6541d210de72 p1: 510da33a44e3 p2: 000000000000 linkrev: 2
   changelist 3: writing changelog: moveback
   3 revision(s), 3 file(s) imported.
 
@@ -103,21 +103,21 @@ Verify
 Update
 
   $ hg manifest -r 0
-  depot/Main/a
+  Main/a
   $ hg manifest -r 1
-  depot/Main/b
+  Main/b
   $ hg manifest -r 2
-  depot/Main/A
+  Main/A
   $ hg update -r 0
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ cat depot/Main/a
+  $ cat Main/a
   a
   $ hg update -r 1
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  $ cat depot/Main/b
+  $ cat Main/b
   a
   $ hg update -r 2
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  $ cat depot/Main/A
+  $ cat Main/A
   a
   stopping the p4 server

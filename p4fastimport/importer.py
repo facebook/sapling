@@ -15,11 +15,12 @@ from mercurial import (
 )
 
 from . import p4
-from .util import localpath, caseconflict
+from .util import caseconflict, localpath
 
 class ImportSet(object):
-    def __init__(self, repo, changelists, filelist, storagepath):
+    def __init__(self, repo, client, changelists, filelist, storagepath):
         self.repo = repo
+        self.client = client
         self.changelists = sorted(changelists)
         self.filelist = filelist
         self.storagepath = storagepath
@@ -55,7 +56,7 @@ class ChangeManifestImporter(object):
     def create(self, *args, **kwargs):
         return list(self.creategen(*args, **kwargs))
 
-    def creategen(self, tr, fileflags, baserevs):
+    def creategen(self, tr, fileinfo):
         mrevlog = self._repo.manifestlog._revlog
         clog = self._repo.changelog
         cp1 = self._repo['tip'].node()
@@ -70,27 +71,32 @@ class ChangeManifestImporter(object):
 
             added, modified, removed = change.files
 
-            # generate manifest mappings of filenames to filenodes
-            rmod = filter(lambda f: f in self._importset.filelist, removed)
-            rf = map(localpath, rmod)
-            for path in rf:
-                if path in mf:
-                    del mf[path]
+            changed = set()
 
-            addmod = filter(lambda f: f in self._importset.filelist,
-                    added + modified)
-            amf = map(localpath, addmod)
-            for path in amf:
-                hgfilelog = self._repo.file(path)
+            # generate manifest mappings of filenames to filenodes
+            for depotname in removed:
+                if depotname not in self._importset.filelist:
+                    continue
+                localname = fileinfo[depotname]['localname']
+                if localname in mf:
+                    changed.add(localname)
+                    del mf[localname]
+
+            for depotname in added + modified:
+                if depotname not in self._importset.filelist:
+                    continue
+                info = fileinfo[depotname]
+                localname, baserev = info['localname'], info['baserev']
+                hgfilelog = self._repo.file(localname)
                 try:
-                    fnode = hgfilelog.node(baserevs[path])
+                    mf[localname] = hgfilelog.node(baserev)
                 except (error.LookupError, IndexError):
-                    raise error.Abort("can't find rev %d for %s cl %d" %
-                            (baserevs[path], path, change.cl))
-                baserevs[path] += 1
-                mf[path] = fnode
-                if path in fileflags and change.cl in fileflags[path]:
-                    mf.setflag(path, fileflags[path][change.cl])
+                    raise error.Abort("can't find rev %d for %s cl %d" % (
+                        baserev, localname, change.cl))
+                changed.add(localname)
+                if change.cl in info['flags']:
+                    mf.setflag(localname, info['flags'][change.cl])
+                fileinfo[depotname]['baserev'] += 1
 
             linkrev = self._importset.linkrev(change.cl)
             mp1 = mrevlog.addrevision(mf.text(mrevlog._usemanifestv2), tr,
@@ -113,7 +119,7 @@ class ChangeManifestImporter(object):
                 change.cl, shortdesc))
             cp1 = clog.add(
                     mp1,
-                    amf + rf,
+                    changed,
                     desc,
                     tr,
                     cp1,
@@ -250,8 +256,9 @@ class FileImporter(object):
 
     @property
     def relpath(self):
-        # XXX: Do the correct mapping to the clientspec
-        return localpath(self.depotfile)
+        client = self._importset.client
+        where = p4.parse_where(client, self.depotfile)
+        return where['clientFile'].replace('//%s/' % client, '')
 
     @property
     def depotfile(self):
@@ -259,7 +266,8 @@ class FileImporter(object):
 
     @util.propertycache
     def storepath(self):
-        path = os.path.join(self._importset.storagepath, self.relpath)
+        path = os.path.join(self._importset.storagepath,
+                localpath(self.depotfile))
         if p4.config('caseHandling') == 'insensitive':
             return path.lower()
         return path
@@ -319,9 +327,9 @@ class FileImporter(object):
 
             meta = {}
             if self._p4filelog.isexec(c.cl):
-                fileflags[self.relpath][c.cl] = 'x'
+                fileflags[c.cl] = 'x'
             if self._p4filelog.issymlink(c.cl):
-                fileflags[self.relpath][c.cl] = 'l'
+                fileflags[c.cl] = 'l'
             if self._p4filelog.iskeyworded(c.cl):
                 # Replace keyword expansion
                 pass

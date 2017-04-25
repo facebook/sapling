@@ -17,7 +17,7 @@ New errors are not allowed. Warnings are strongly discouraged.
   >   hg files --cwd $RUNTESTDIR/.. "set:(**.py or **.txt) - tests/**" | sed "s#^#${RUNTESTDIR}/../#"
   > ) | sed 's|\\|/|g' |
   >   $PYTHON $RUNTESTDIR/../contrib/check-config.py
-              elif ui.configbool('p4fastimport', 'useworker', False):
+      elif ui.configbool('p4fastimport', 'useworker', False):
   
   conflict on p4fastimport.useworker: ('bool', '') != ('str', '')
                          repo.ui.config("paths", "default")))

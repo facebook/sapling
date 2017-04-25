@@ -83,15 +83,15 @@ Simple import
   loading list of files.
   3 files to import.
   importing repository.
-  writing filelog: b789fdd96dc2, p1 000000000000, linkrev 0, 2 bytes, src: *, path: depot/Main/a (glob)
-  writing filelog: f9597ff22e3f, p1 b789fdd96dc2, linkrev 2, 2 bytes, src: *, path: depot/Main/a (glob)
-  writing filelog: 149da44f2a4e, p1 000000000000, linkrev 0, 2 bytes, src: *, path: depot/Main/b/c (glob)
-  writing filelog: a9092a3d84a3, p1 000000000000, linkrev 0, 2 bytes, src: *, path: depot/Main/d (glob)
-  changelist 1: writing manifest. node: 17971aea5e86 p1: 000000000000 p2: 000000000000 linkrev: 0
+  writing filelog: b789fdd96dc2, p1 000000000000, linkrev 0, 2 bytes, src: *, path: Main/a (glob)
+  writing filelog: f9597ff22e3f, p1 b789fdd96dc2, linkrev 2, 2 bytes, src: *, path: Main/a (glob)
+  writing filelog: 149da44f2a4e, p1 000000000000, linkrev 0, 2 bytes, src: *, path: Main/b/c (glob)
+  writing filelog: a9092a3d84a3, p1 000000000000, linkrev 0, 2 bytes, src: *, path: Main/d (glob)
+  changelist 1: writing manifest. node: a9f7e8df2a65 p1: 000000000000 p2: 000000000000 linkrev: 0
   changelist 1: writing changelog: initial
-  changelist 2: writing manifest. node: 6b6c47cf17c5 p1: 17971aea5e86 p2: 000000000000 linkrev: 1
+  changelist 2: writing manifest. node: 572c24bb3dc1 p1: a9f7e8df2a65 p2: 000000000000 linkrev: 1
   changelist 2: writing changelog: second
-  changelist 3: writing manifest. node: ae40cd4cee98 p1: 6b6c47cf17c5 p2: 000000000000 linkrev: 2
+  changelist 3: writing manifest. node: f1f6d03759eb p1: 572c24bb3dc1 p2: 000000000000 linkrev: 2
   changelist 3: writing changelog: third
   3 revision(s), 3 file(s) imported.
 

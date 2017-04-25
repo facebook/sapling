@@ -26,9 +26,8 @@ def caseconflict(filelist):
 
 def decodefileflags(json):
     r = collections.defaultdict(dict)
-    for k, d in json.items():
-        for n, v in d.items():
-            r[k][int(n)] = v.encode('ascii')
+    for changelist, flag in json.items():
+        r[int(changelist)] = flag.encode('ascii')
     return r
 
 def lastcl(node):

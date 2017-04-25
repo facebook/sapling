@@ -73,6 +73,18 @@ def parse_filelist(client, startcl=None, endcl=None):
         if c:
             yield d
 
+def parse_where(client, depotname):
+    # TODO: investigate if we replace this with exactly one call to
+    # where //clientame/...
+    cmd = 'p4 --client %s -G where %s' % (
+            util.shellquote(client),
+            util.shellquote(depotname))
+    stdout = util.popen(cmd, mode='rb')
+    try:
+        return marshal.load(stdout)
+    except Exception:
+        raise P4Exception(stdout)
+
 def get_file(path, rev=None, clnum=None):
     """Returns a file from Perforce"""
     r = '#head'
