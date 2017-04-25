@@ -829,7 +829,8 @@ and osx)
   $ ls ../server/.hg/hg-bundle-* || true
   ls: *../server/.hg/hg-bundle-*: No such file or directory (glob)
 
-Server with obsstore disabled can still send obsmarkers useful to client
+Server with obsstore disabled can still send obsmarkers useful to client, and
+phase is updated correctly with the marker information.
 
   $ cat >> $HGRCPATH << EOF
   > [extensions]
@@ -876,12 +877,12 @@ Server with obsstore disabled can still send obsmarkers useful to client
   added 2 changesets with 1 changes to 2 files (+1 heads)
   1 new obsolescence markers
   $ hg up tip -q
-  $ hg log -G --hidden -T '{rev}: {desc}'
-  @  3: a2
+  $ log --hidden
+  @  a2 [public:722505d780e3]
   |
-  o  2: b
+  o  b [public:d2ae7f538514]
   |
-  | x  1: a2
+  | x  a2 [draft:045279cde9f0]
   |/
-  o  0: a
+  o  a [public:cb9a9f314b8b]
   

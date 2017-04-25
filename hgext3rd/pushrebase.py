@@ -11,7 +11,7 @@ from mercurial import bundle2, cmdutil, hg, scmutil, exchange, commands
 from mercurial import util, error, discovery, changegroup, context, revsetlang
 from mercurial import obsolete, pushkey, phases, extensions, manifest
 from mercurial import encoding
-from mercurial.extensions import wrapcommand, wrapfunction
+from mercurial.extensions import wrapcommand, wrapfunction, unwrapfunction
 from mercurial.hg import repository
 from mercurial.node import nullid, hex, bin
 from mercurial.i18n import _
@@ -189,29 +189,74 @@ def _push(orig, ui, repo, *args, **opts):
 
     overrides = {(experimental, configonto): onto,
                  ('remotenames', 'allownonfastforward'): True}
-    oldphasemove = None
     if onto:
         overrides[(experimental, 'bundle2.pushback')] = True
-        oldphasemove = wrapfunction(exchange, '_localphasemove', _phasemove)
+        wrapfunction(exchange, '_localphasemove', _phasemove)
+        wrapfunction(obsolete.obsstore, 'mergemarkers', _mergemarkers)
 
     try:
         with ui.configoverride(overrides, 'pushrebase'):
             result = orig(ui, repo, *args, **opts)
     finally:
-        if oldphasemove:
-            exchange._localphasemove = oldphasemove
+        if onto:
+            unwrapfunction(exchange, '_localphasemove', _phasemove)
+            unwrapfunction(obsolete.obsstore, 'mergemarkers', _mergemarkers)
 
     return result
 
+def _mergemarkers(orig, self, transaction, data):
+    """record new markers so we could know the correct nodes for _phasemove"""
+    version, markers = obsolete._readmarkers(data)
+    self._pushrebasereplaces = {}
+    if version == obsolete._fm1version:
+        # only support fm1 1:1 replacements for now, record prec -> sucs
+        for prec, sucs, flags, meta, date, parents in markers:
+            if len(sucs) == 1:
+                self._pushrebasereplaces[prec] = sucs[0]
+    return orig(self, transaction, data)
+
 def _phasemove(orig, pushop, nodes, phase=phases.public):
-    """prevent changesets from being marked public
+    """prevent original changesets from being marked public
 
-    Since these are going to be mutated on the server, they aren't really being
-    published, their successors are.  If we mark these as public now, hg evolve
-    will refuse to fix them for us later."""
+    When marking changesets as public, we need to mark the replaced nodes
+    returned from the server instead. This is done by looking at the new
+    obsmarker we received during "_mergemarkers" and map old nodes to new ones.
 
-    if phase != phases.public:
-        orig(pushop, nodes, phase)
+    See exchange.push for the order of this and bundle2 pushback:
+
+        _pushdiscovery(pushop)
+        _pushbundle2(pushop)
+            # bundle2 pushback is processed here, but the client receiving the
+            # pushback cannot affect pushop.*heads (which affects phasemove),
+            # because it only gets "repo", and creates a separate "op":
+            bundle2.processbundle(pushop.repo, reply, trgetter)
+        _pushchangeset(pushop)
+        _pushsyncphase(pushop)
+            _localphasemove(...) # this method always gets called
+        _pushobsolete(pushop)
+        _pushbookmark(pushop)
+
+    The least hacky way to get things "right" seem to be:
+
+        1. In core, allow bundle2 pushback handler to affect the original
+           "pushop" somehow (so original pushop's (common|future)heads could be
+           updated accordingly and phasemove logic is affected)
+        2. In pushrebase extension, add a new bundle2 part handler to receive
+           the new relationship, correct pushop.*headers, and write obsmarkers.
+        3. Migrate the obsmarker part to the new bundle2 part added in step 2,
+           i.e. the server won't send obsmarkers directly.
+
+    For now, we don't have "1" so things are done in a bit hacky way.
+    """
+    # find replacements. note: _pushrebasereplaces could be empty if obsstore
+    # is not enabled locally.
+    mapping = getattr(pushop.repo.obsstore, '_pushrebasereplaces', {})
+    nodes = [mapping.get(n, n) for n in nodes]
+    if phase == phases.public:
+        # only allow new nodes to become public
+        allowednodes = set(mapping.values())
+        nodes = [n for n in nodes if n in allowednodes]
+    orig(pushop, nodes, phase)
 
 @exchange.b2partsgenerator(commonheadsparttype)
 def commonheadspartgen(pushop, bundler):
