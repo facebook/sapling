@@ -84,6 +84,16 @@ Command aliases should have same behavior as main command
   paged! 'summary:     modify a 9\n'
   paged! '\n'
 
+Abbreviated command alias should also be paged
+
+  $ hg hist -l 1
+  paged! 'changeset:   10:46106edeeb38\n'
+  paged! 'tag:         tip\n'
+  paged! 'user:        test\n'
+  paged! 'date:        Thu Jan 01 00:00:00 1970 +0000\n'
+  paged! 'summary:     modify a 10\n'
+  paged! '\n'
+
 Pager should not start if stdout is not a tty.
 
   $ hg log -l1 -q --config ui.formatted=False
