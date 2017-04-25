@@ -410,3 +410,25 @@ Now set maxheadstobackup to 0 and backup again. Make sure nothing is backed up n
   finished in \d+\.(\d+)? seconds (re)
   $ scratchbookmarks
   infinitepush/backups/test/[0-9a-zA-Z.-]+\$TESTTMP/client/bookmarks/somebook 630839011471e17f808b92ab084bedfaca33b110 (re)
+
+Test isbackedup command
+  $ hg pushbackup
+  starting backup .* (re)
+  searching for changes
+  remote: pushing 2 commits:
+  remote:     cf2adfba1469  headone
+  remote:     6c4f4b30ae4c  headtwo
+  finished in \d+\.(\d+)? seconds (re)
+  $ hg isbackedup
+  6c4f4b30ae4c2dd928d551836c70c741ee836650 backed up
+  $ hg isbackedup -r 630839011471e17
+  630839011471e17f808b92ab084bedfaca33b110 not backed up
+  $ hg isbackedup -r . -r 630839011471e17
+  6c4f4b30ae4c2dd928d551836c70c741ee836650 backed up
+  630839011471e17f808b92ab084bedfaca33b110 not backed up
+
+Delete backup state file and try again
+  $ rm .hg/infinitepushbackupstate
+  $ hg isbackedup -r . -r 630839011471e17
+  6c4f4b30ae4c2dd928d551836c70c741ee836650 not backed up
+  630839011471e17f808b92ab084bedfaca33b110 not backed up

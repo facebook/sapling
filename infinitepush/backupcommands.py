@@ -56,6 +56,7 @@ from mercurial import (
     lock as lockmod,
     osutil,
     phases,
+    scmutil,
     util,
 )
 
@@ -298,6 +299,24 @@ def waitbackup(ui, repo, timeout):
         if e.errno == errno.ETIMEDOUT:
             raise error.Abort(_('timeout while waiting for backup'))
         raise
+
+@command('isbackedup',
+     [('r', 'rev', [], _('show the specified revision or revset'), _('REV'))])
+def isbackedup(ui, repo, **opts):
+    """checks if commit was backed up to infinitepush
+
+    If no revision are specified then it checks working copy parent
+    """
+
+    revs = opts.get('rev')
+    if not revs:
+        revs = ['.']
+    bkpstate = _readlocalbackupstate(ui, repo)
+    backeduprevs = repo.revs('draft() and ::%ls', bkpstate.heads)
+    for r in scmutil.revrange(repo, revs):
+        ui.write(_(repo[r].hex() + ' '))
+        ui.write(_('backed up' if r in backeduprevs else 'not backed up'))
+        ui.write(_('\n'))
 
 def _dobackup(ui, repo, dest, **opts):
     ui.status(_('starting backup %s\n') % time.strftime('%H:%M:%S %d %b %Y %Z'))
