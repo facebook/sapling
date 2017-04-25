@@ -333,13 +333,6 @@ service EdenService extends fb303.FacebookService {
     3: bool force
   ) throws (1: EdenError ex)
 
-  void scmMarkCommitted(
-    1: string mountPoint,
-    2: binary commitID,
-    3: list<string> pathsToClean,
-    4: list<string> pathsToDrop,
-  ) throws (1: EdenError ex)
-
   //////// Debugging APIs ////////
 
   /**

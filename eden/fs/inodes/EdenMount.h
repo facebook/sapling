@@ -9,6 +9,7 @@
  */
 #pragma once
 
+#include <folly/Portability.h>
 #include <folly/SharedMutex.h>
 #include <folly/Synchronized.h>
 #include <folly/ThreadLocal.h>
@@ -239,16 +240,25 @@ class EdenMount {
    * @param listIgnored Whether or not to inform the callback of ignored files.
    *     When listIgnored to false can speed up the diff computation, as the
    *     code does not need to descend into ignord directories at all.
+   *
+   * @return Returns a folly::Future that will be fulfilled when the diff
+   *     operation is complete.  This is marked FOLLY_WARN_UNUSED_RESULT to
+   *     make sure callers do not forget to wait for the operatio to complete.
    */
-  folly::Future<folly::Unit> diff(
+  FOLLY_WARN_UNUSED_RESULT folly::Future<folly::Unit> diff(
       InodeDiffCallback* callback,
       bool listIgnored = false);
 
   /**
    * Reset the state to point to the specified commit, without modifying
    * the working directory contents at all.
+   *
+   * @return Returns a folly::Future that will be fulfilled when the operation
+   *     is complete.  This is marked FOLLY_WARN_UNUSED_RESULT to make sure
+   *     callers do not forget to wait for the operation to complete.
    */
-  void resetCommit(Hash snapshotHash);
+  FOLLY_WARN_UNUSED_RESULT folly::Future<folly::Unit> resetCommit(
+      Hash snapshotHash);
 
   /**
    * Acquire the rename lock in exclusive mode.

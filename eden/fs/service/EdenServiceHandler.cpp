@@ -194,7 +194,7 @@ void EdenServiceHandler::resetParentCommit(
     std::unique_ptr<std::string> hash) {
   auto hashObj = hashFromThrift(*hash);
   auto edenMount = server_->getMount(*mountPoint);
-  edenMount->resetCommit(hashObj);
+  edenMount->resetCommit(hashObj).get();
 }
 
 void EdenServiceHandler::getSHA1(
@@ -441,31 +441,6 @@ void EdenServiceHandler::scmRemove(
     errorsToReport.back().path = error.path.stringPiece().str();
     errorsToReport.back().errorMessage = error.errorMessage;
   }
-}
-
-void EdenServiceHandler::scmMarkCommitted(
-    std::unique_ptr<std::string> mountPoint,
-    std::unique_ptr<std::string> commitID,
-    std::unique_ptr<std::vector<std::string>> pathsToCleanAsStrings,
-    std::unique_ptr<std::vector<std::string>> pathsToDropAsStrings) {
-  auto dirstate = server_->getMount(*mountPoint)->getDirstate();
-  DCHECK(dirstate != nullptr) << "Failed to get dirstate for "
-                              << mountPoint.get();
-
-  auto hash = hashFromThrift(*commitID);
-  std::vector<RelativePathPiece> pathsToClean;
-  pathsToClean.reserve(pathsToCleanAsStrings->size());
-  for (auto& path : *pathsToCleanAsStrings.get()) {
-    pathsToClean.emplace_back(RelativePathPiece(path));
-  }
-
-  std::vector<RelativePathPiece> pathsToDrop;
-  pathsToDrop.reserve(pathsToDropAsStrings->size());
-  for (auto& path : *pathsToDropAsStrings.get()) {
-    pathsToDrop.emplace_back(RelativePathPiece(path));
-  }
-
-  dirstate->markCommitted(hash, pathsToClean, pathsToDrop);
 }
 
 void EdenServiceHandler::debugGetScmTree(

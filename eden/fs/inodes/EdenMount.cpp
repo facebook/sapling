@@ -231,9 +231,21 @@ folly::Future<std::vector<CheckoutConflict>> EdenMount::checkout(
           std::tuple<unique_ptr<Tree>, unique_ptr<Tree>> treeResults) {
         auto& fromTree = std::get<0>(treeResults);
         auto& toTree = std::get<1>(treeResults);
+
+        // TODO: We should change the code to use shared_ptr<Tree>.
+        // The ObjectStore should always return shared_ptrs so it can cache
+        // them if we want to do so in the future.
+        auto toTreeCopy = make_unique<Tree>(*toTree);
+
         ctx->start(this->acquireRenameLock());
-        return this->getRootInode()->checkout(
-            ctx.get(), std::move(fromTree), std::move(toTree));
+        return this->getRootInode()
+            ->checkout(ctx.get(), std::move(fromTree), std::move(toTree))
+            .then([toTreeCopy = std::move(toTreeCopy)]() mutable {
+              return std::move(toTreeCopy);
+            });
+      })
+      .then([this](std::unique_ptr<Tree> toTree) {
+        return dirstate_->onSnapshotChanged(toTree.get());
       })
       .then([this, ctx, oldSnapshot, snapshotHash]() {
         // Save the new snapshot hash
@@ -283,22 +295,37 @@ Future<Unit> EdenMount::diff(InodeDiffCallback* callback, bool listIgnored) {
       .ensure(std::move(stateHolder));
 }
 
-void EdenMount::resetCommit(Hash snapshotHash) {
-  // We currently don't verify that snapshotHash refers to a valid commit
-  // in the ObjectStore.  We could do that just for verification purposes.
-
+Future<Unit> EdenMount::resetCommit(Hash snapshotHash) {
+  // Hold the snapshot lock around the entire operation.
   auto snapshotLock = currentSnapshot_.wlock();
   auto oldSnapshot = *snapshotLock;
-
   VLOG(1) << "resetting snapshot for " << this->getPath() << " from "
           << oldSnapshot << " to " << snapshotHash;
-  *snapshotLock = snapshotHash;
-  this->config_->setSnapshotID(snapshotHash);
 
-  auto journalDelta = make_unique<JournalDelta>();
-  journalDelta->fromHash = oldSnapshot;
-  journalDelta->toHash = snapshotHash;
-  journal_.wlock()->addDelta(std::move(journalDelta));
+  // TODO: Maybe we should walk the inodes and see if we can dematerialize some
+  // files using the new source control state.
+  //
+  // It probably makes sense to do this if/when we convert the Dirstate user
+  // directives into a tree-like data structure.
+
+  return objectStore_->getTreeForCommit(snapshotHash)
+      .then([this](std::unique_ptr<Tree> rootTree) {
+        return dirstate_->onSnapshotChanged(rootTree.get());
+      })
+      .then([
+        this,
+        snapshotHash,
+        oldSnapshot,
+        snapshotLock = std::move(snapshotLock)
+      ]() {
+        *snapshotLock = snapshotHash;
+        this->config_->setSnapshotID(snapshotHash);
+
+        auto journalDelta = make_unique<JournalDelta>();
+        journalDelta->fromHash = oldSnapshot;
+        journalDelta->toHash = snapshotHash;
+        journal_.wlock()->addDelta(std::move(journalDelta));
+      });
 }
 
 RenameLock EdenMount::acquireRenameLock() {

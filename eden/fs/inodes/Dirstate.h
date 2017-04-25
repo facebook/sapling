@@ -168,18 +168,12 @@ class Dirstate {
       std::vector<DirstateAddRemoveError>* errorsToReport);
 
   /**
-   * Called as part of `hg commit`, so this does three things (ideally
-   * atomically):
-   * 1. Updates the hashes in the Overlay.
-   * 3. Updates SNAPSHOT to the commitID.
-   * 4. Applies the changes represented by pathsToClean and pathsToDrop to the
-   *    dirstate. Note that this may not clear the dirstate altogether if the
-   *    user has done `hg commit <specific-files>` or `hg commit -i`.
+   * Clean up the Dirstate after the current commit has changed.
+   *
+   * This removes Add and Remove directives if the corresponding files have
+   * been added or removed in the new source control state.
    */
-  void markCommitted(
-      Hash commitID,
-      const std::vector<RelativePathPiece>& pathsToClean,
-      const std::vector<RelativePathPiece>& pathsToDrop);
+  folly::Future<folly::Unit> onSnapshotChanged(const Tree* rootTree);
 
  private:
   /**

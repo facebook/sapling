@@ -32,8 +32,11 @@
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/store/ObjectStores.h"
 
+using folly::Future;
+using folly::makeFuture;
 using folly::StringKeyedUnorderedMap;
 using folly::StringPiece;
+using folly::Unit;
 using facebook::eden::overlay::UserStatusDirective;
 
 namespace {
@@ -409,7 +412,7 @@ Dirstate::~Dirstate() {}
 
 ThriftHgStatus Dirstate::getStatus(bool listIgnored) const {
   ThriftStatusCallback callback(*userDirectives_.rlock());
-  mount_->diff(&callback, listIgnored);
+  mount_->diff(&callback, listIgnored).get();
   return callback.extractStatus();
 }
 
@@ -1189,82 +1192,40 @@ InodePtr Dirstate::getInodeBaseOrNull(RelativePathPiece path) const {
   }
 }
 
-void Dirstate::markCommitted(
-    Hash commitID,
-    const std::vector<RelativePathPiece>& pathsToClean,
-    const std::vector<RelativePathPiece>& pathsToDrop) {
-  // First, we update the root tree hash (as well as the hashes of other
-  // directories in the overlay). Currently, this is stored in two places: in
-  // the OverlayDir.treeHash for the root tree and in the SNAPSHOT file.
-  // In practice, the SNAPSHOT file is almost always ignored in code, so it
-  // mainly exists for debugging. Ultimately, we will probably drop the SNAPSHOT
-  // file.
-  auto objectStore = mount_->getObjectStore();
-  // Note: we immediately wait on the Future here.
-  // It may take a fairly long time to import the Tree.
-  auto treeForCommit = objectStore->getTreeForCommit(commitID).get();
-  if (treeForCommit == nullptr) {
-    throw std::runtime_error(folly::sformat(
-        "Cannot mark committed because commit for {} cannot be found.",
-        commitID.toString()));
-  }
+Future<Unit> Dirstate::onSnapshotChanged(const Tree* rootTree) {
+  auto* objectStore = mount_->getObjectStore();
 
-  // Perform a depth-first traversal of directories in the overlay and update
-  // the treeHash, as appropriate.
-  auto overlay = mount_->getOverlay();
-  auto toIgnore = std::unordered_set<RelativePathPiece>{
-      RelativePathPiece{".hg"}, RelativePathPiece{kDotEdenName}};
-  auto modifiedDirectories = getModifiedDirectoriesForMount(mount_, &toIgnore);
-  for (auto& directory : modifiedDirectories) {
-    auto treeForDirectory =
-        getTreeForDirectory(directory, treeForCommit.get(), objectStore);
-    if (treeForDirectory == nullptr) {
-      // This could happen because directory is:
-      // - .hg
-      // - a bind mount
-      // - an ignored directory.
-      continue;
-    }
-
-    auto treeInode = mount_->getTreeInodeBlocking(directory);
-    DCHECK(treeInode.get() != nullptr) << "Failed to get a TreeInode for "
-                                       << directory;
-
-    auto dir = treeInode->getContents().wlock();
-    dir->treeHash = treeForDirectory->getHash();
-    overlay->saveOverlayDir(treeInode->getNodeId(), &*dir);
-  }
-
-  // Now that the hashes are written, we update the userDirectives.
   {
     auto userDirectives = userDirectives_.wlock();
-    // Do we need to do anything in the overlay at the end of this?
-    for (auto& path : pathsToClean) {
-      VLOG(1) << "calling clean on " << path;
-      auto numErased = userDirectives->erase(path.copy());
-      if (numErased == 0) {
-        VLOG(1)
-            << "Was supposed to mark path " << path
-            << " clean in the dirstate, but was not in userDirectives. "
-            << "This is expected if the path was modified rather than added.";
+
+    // TODO: It would be much nicer if we stored the user directives in a
+    // tree-like structure, so we could avoid traversing the source control Tree
+    // separately each time for every entry in userDirectives.
+    auto iter = userDirectives->begin();
+    bool madeChanges = false;
+    while (iter != userDirectives->end()) {
+      // If we need to erase this element, it will erase iterators pointing to
+      // it, but other iterators will be unaffected.
+      auto current = iter;
+      ++iter;
+
+      // Check to see if this entry exists in source control now.
+      // TODO: We should look up the entry using a futures-based API.
+      auto entry = getEntryForFile(current->first, rootTree, objectStore);
+      auto actualStatus = entry ? overlay::UserStatusDirective::Add
+                                : overlay::UserStatusDirective::Remove;
+      if (current->second == actualStatus) {
+        userDirectives->erase(current);
+        madeChanges = true;
       }
     }
 
-    for (auto& path : pathsToDrop) {
-      VLOG(1) << "calling drop on " << path;
-      auto numErased = userDirectives->erase(path.copy());
-      if (numErased == 0) {
-        VLOG(1) << "Was supposed to drop path " << path
-                << " in the dirstate, but was not in userDirectives.";
-      }
+    if (madeChanges) {
+      persistence_.save(*userDirectives);
     }
-
-    persistence_.save(*userDirectives);
   }
 
-  // With respect to maintaining consistency, this is the least important I/O
-  // that we do, so we do it last.
-  mount_->getConfig()->setSnapshotID(commitID);
+  return makeFuture();
 }
 
 const char kStatusCodeCharClean = 'C';

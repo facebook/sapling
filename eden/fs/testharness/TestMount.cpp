@@ -165,7 +165,14 @@ void TestMount::resetCommit(
   auto* storedCommit =
       backingStore_->putCommit(commitHash, rootTree->get().getHash());
   storedCommit->setReady();
-  edenMount_->resetCommit(commitHash);
+
+  // The root tree needs to be made ready too, even if setReady is false.
+  // resetCommit() won't return until until the root tree can be loaded.
+  if (!setReady) {
+    rootTree->setReady();
+  }
+
+  edenMount_->resetCommit(commitHash).get();
 }
 
 void TestMount::setInitialCommit(Hash commitHash) {

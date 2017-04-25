@@ -104,12 +104,6 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
       std::unique_ptr<std::vector<std::string>> paths,
       bool force) override;
 
-  void scmMarkCommitted(
-      std::unique_ptr<std::string> mountPoint,
-      std::unique_ptr<std::string> commitID,
-      std::unique_ptr<std::vector<std::string>> pathsToClear,
-      std::unique_ptr<std::vector<std::string>> pathsToDrop) override;
-
   void debugGetScmTree(
       std::vector<ScmTreeEntry>& entries,
       std::unique_ptr<std::string> mountPoint,

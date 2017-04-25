@@ -54,7 +54,7 @@ TEST(EdenMount, resetCommit) {
   EXPECT_FALSE(testMount.hasFileAt("src/extra.h"));
 
   // Reset the TestMount to pointing to commit2
-  edenMount->resetCommit(makeTestHash("2"));
+  edenMount->resetCommit(makeTestHash("2")).get();
   // The snapshot ID should be updated, both in memory and on disk
   EXPECT_EQ(makeTestHash("2"), edenMount->getSnapshotID());
   EXPECT_EQ(makeTestHash("2"), edenMount->getConfig()->getSnapshotID());
