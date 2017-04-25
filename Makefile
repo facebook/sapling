@@ -270,6 +270,14 @@ docker-centos7:
 	mkdir -p packages/centos7
 	contrib/dockerrpm centos7
 
+linux-wheels: linux-wheels-x86_64 linux-wheels-i686
+
+linux-wheels-x86_64:
+	docker run -e "HGTEST_JOBS=$(shell nproc)" --rm -ti -v `pwd`:/src quay.io/pypa/manylinux1_x86_64 /src/contrib/build-linux-wheels.sh
+
+linux-wheels-i686:
+	docker run -e "HGTEST_JOBS=$(shell nproc)" --rm -ti -v `pwd`:/src quay.io/pypa/manylinux1_i686 linux32 /src/contrib/build-linux-wheels.sh
+
 .PHONY: help all local build doc cleanbutpackages clean install install-bin \
 	install-doc install-home install-home-bin install-home-doc \
 	dist dist-notests check tests check-code update-pot \
@@ -278,4 +286,5 @@ docker-centos7:
 	docker-ubuntu-xenial docker-ubuntu-xenial-ppa \
 	docker-ubuntu-yakkety docker-ubuntu-yakkety-ppa \
 	fedora20 docker-fedora20 fedora21 docker-fedora21 \
-	centos5 docker-centos5 centos6 docker-centos6 centos7 docker-centos7
+	centos5 docker-centos5 centos6 docker-centos6 centos7 docker-centos7 \
+	linux-wheels

@@ -62,6 +62,9 @@ mercurial/mpatch.py
 mercurial/osutil.py
 mercurial/parsers.py
 
+# Generated wheels
+wheelhouse/
+
 syntax: regexp
 ^\.pc/
 ^\.(pydev)?project
