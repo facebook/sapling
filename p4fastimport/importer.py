@@ -305,7 +305,8 @@ class FileImporter(object):
             linkrev = self._importset.linkrev(c.cl)
             fparent1, fparent2 = nullid, nullid
 
-            # invariant: our linkrevs do not criss-cross.
+            # invariant: our linkrevs do not criss-cross. They are monotonically
+            # increasing. See https://www.mercurial-scm.org/wiki/CrossedLinkrevs
             assert linkrev >= lastlinkrev
             lastlinkrev = linkrev
 
