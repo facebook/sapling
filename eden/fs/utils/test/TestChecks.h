@@ -93,14 +93,14 @@ CheckResult checkThrowErrno(Fn&& fn, int errnoValue, const char* statementStr) {
     // but folly throws them with std::system_category() at the moment.
     if (ex.code().category() != std::system_category()) {
       return CheckResult(false)
-          << "Expected: " << statementStr << "throws an exception with errno "
+          << "Expected: " << statementStr << " throws an exception with errno "
           << errnoValue << " (" << std::generic_category().message(errnoValue)
           << ")\nActual: it throws a system_error with category "
           << ex.code().category().name() << ": " << ex.what();
     }
     if (ex.code().value() != errnoValue) {
       return CheckResult(false)
-          << "Expected: " << statementStr << "throws an exception with errno "
+          << "Expected: " << statementStr << " throws an exception with errno "
           << errnoValue << " (" << std::generic_category().message(errnoValue)
           << ")\nActual: it throws errno " << ex.code().value() << ": "
           << ex.what();
@@ -108,18 +108,18 @@ CheckResult checkThrowErrno(Fn&& fn, int errnoValue, const char* statementStr) {
     return CheckResult(true);
   } catch (const std::exception& ex) {
     return CheckResult(false)
-        << "Expected: " << statementStr << "throws an exception with errno "
+        << "Expected: " << statementStr << " throws an exception with errno "
         << errnoValue << " (" << std::generic_category().message(errnoValue)
         << ")\nActual: it throws a different exception: "
         << ::folly::exceptionStr(ex);
   } catch (...) {
     return CheckResult(false)
-        << "Expected: " << statementStr << "throws an exception with errno "
+        << "Expected: " << statementStr << " throws an exception with errno "
         << errnoValue << " (" << std::generic_category().message(errnoValue)
         << ")\nActual: it throws a non-exception type";
   }
   return CheckResult(false)
-      << "Expected: " << statementStr << "throws an exception with errno "
+      << "Expected: " << statementStr << " throws an exception with errno "
       << errnoValue << " (" << std::generic_category().message(errnoValue)
       << ")\nActual: it throws nothing";
 }
@@ -143,9 +143,9 @@ struct CheckThrowRegex {
     } catch (const ExType& ex) {
       std::regex re(pattern);
       if (!std::regex_search(ex.what(), re)) {
-        return CheckResult(false) << "Expected: " << statementStr << "throws a "
-                                  << excTypeStr << " with message matching \""
-                                  << pattern
+        return CheckResult(false) << "Expected: " << statementStr
+                                  << " throws a " << excTypeStr
+                                  << " with message matching \"" << pattern
                                   << "\"\nActual: message is: " << ex.what();
       }
       return CheckResult(true);
@@ -155,11 +155,11 @@ struct CheckThrowRegex {
           << ")\nActual: it throws a different exception type: "
           << ::folly::exceptionStr(ex);
     } catch (...) {
-      return CheckResult(false) << "Expected: " << statementStr << "throws a "
+      return CheckResult(false) << "Expected: " << statementStr << " throws a "
                                 << excTypeStr
                                 << ")\nActual: it throws a non-exception type";
     }
-    return CheckResult(false) << "Expected: " << statementStr << "throws a "
+    return CheckResult(false) << "Expected: " << statementStr << " throws a "
                               << excTypeStr << ")\nActual: it throws nothing";
   }
 };
@@ -183,18 +183,18 @@ struct CheckThrowRegex<std::exception> {
     } catch (const std::exception& ex) {
       std::regex re(pattern);
       if (!std::regex_search(ex.what(), re)) {
-        return CheckResult(false) << "Expected: " << statementStr << "throws a "
-                                  << excTypeStr << " with message matching \""
-                                  << pattern
+        return CheckResult(false) << "Expected: " << statementStr
+                                  << " throws a " << excTypeStr
+                                  << " with message matching \"" << pattern
                                   << "\"\nActual: message is: " << ex.what();
       }
       return CheckResult(true);
     } catch (...) {
-      return CheckResult(false) << "Expected: " << statementStr << "throws a "
+      return CheckResult(false) << "Expected: " << statementStr << " throws a "
                                 << excTypeStr
                                 << ")\nActual: it throws a non-exception type";
     }
-    return CheckResult(false) << "Expected: " << statementStr << "throws a "
+    return CheckResult(false) << "Expected: " << statementStr << " throws a "
                               << excTypeStr << ")\nActual: it throws nothing";
   }
 };
