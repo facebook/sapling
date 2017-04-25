@@ -69,8 +69,9 @@ core:
    a 1
   +a 2
 
-If 'log' is in attend, then 'history' should also be paged:
-  $ hg history --limit 2 --config pager.attend=log
+Command aliases should have same behavior as main command
+
+  $ hg history --limit 2
   paged! 'changeset:   10:46106edeeb38\n'
   paged! 'tag:         tip\n'
   paged! 'user:        test\n'
