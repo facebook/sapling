@@ -14,7 +14,7 @@
 #include "ubc_check.h"
 
 
-/* 
+/*
    Because Little-Endian architectures are most common,
    we only set SHA1DC_BIGENDIAN if one of these conditions is met.
    Note that all MSFT platforms are little endian,
@@ -1622,7 +1622,7 @@ static void sha1_process(SHA1_CTX* ctx, const uint32_t block[16])
 	unsigned i, j;
 	uint32_t ubc_dv_mask[DVMASKSIZE] = { 0xFFFFFFFF };
 	uint32_t ihvtmp[5];
-	
+
 	ctx->ihv1[0] = ctx->ihv[0];
 	ctx->ihv1[1] = ctx->ihv[1];
 	ctx->ihv1[2] = ctx->ihv[2];
@@ -1723,7 +1723,7 @@ void SHA1DCSetCallback(SHA1_CTX* ctx, collision_block_callback callback)
 	ctx->callback = callback;
 }
 
-void SHA1DCUpdate(SHA1_CTX* ctx, const char* buf, size_t len)
+void SHA1DCUpdate(SHA1_CTX* ctx, const unsigned char* buf, size_t len)
 {
 	unsigned left, fill;
 	if (len == 0)
@@ -1768,7 +1768,7 @@ int SHA1DCFinal(unsigned char output[20], SHA1_CTX *ctx)
 	uint32_t last = ctx->total & 63;
 	uint32_t padn = (last < 56) ? (56 - last) : (120 - last);
 	uint64_t total;
-	SHA1DCUpdate(ctx, (const char*)(sha1_padding), padn);
+	SHA1DCUpdate(ctx, sha1_padding, padn);
 
 	total = ctx->total - padn;
 	total <<= 3;

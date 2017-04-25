@@ -5,14 +5,14 @@
 //
 // no-check-code
 
-#include <openssl/sha.h>
+#include "../clib/sha1/sha1.h"
 
 #include "node.h"
 #include "tree.h"
 
 static void update_checksum(node_t *node) {
-  SHA_CTX ctx;
-  SHA1_Init(&ctx);
+  SHA1_CTX ctx;
+  SHA1DCInit(&ctx);
 
   // find all the children and make sure their checksums are up-to-date.
   for (child_num_t ix = 0; ix < node->num_children; ix++) {
@@ -21,12 +21,12 @@ static void update_checksum(node_t *node) {
       update_checksum(child);
     }
 
-    SHA1_Update(&ctx, child->name, child->name_sz);
-    SHA1_Update(&ctx, child->checksum, child->checksum_sz);
-    SHA1_Update(&ctx, &child->flags, 1);
+    SHA1DCUpdate(&ctx, (const unsigned char*) child->name, child->name_sz);
+    SHA1DCUpdate(&ctx, child->checksum, child->checksum_sz);
+    SHA1DCUpdate(&ctx, &child->flags, 1);
   }
 
-  SHA1_Final(node->checksum, &ctx);
+  SHA1DCFinal(node->checksum, &ctx);
   node->checksum_sz = SHA1_BYTES;
   node->checksum_valid = true;
 }

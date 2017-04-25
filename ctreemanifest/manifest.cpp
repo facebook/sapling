@@ -7,6 +7,8 @@
 //
 // no-check-code
 
+#include "../clib/sha1/sha1.h"
+
 #include "manifest.h"
 
 Manifest::Manifest(ConstantStringRef &rawobj, const char *node) :
@@ -230,19 +232,19 @@ void Manifest::computeNode(const char *p1, const char *p2, char *result) {
   std::string content;
   this->serialize(content);
 
-  SHA_CTX ctx;
-  SHA1_Init(&ctx);
+  SHA1_CTX ctx;
+  SHA1DCInit(&ctx);
 
   if (memcmp(p1, p2, BIN_NODE_SIZE) == -1) {
-    SHA1_Update(&ctx, p1, BIN_NODE_SIZE);
-    SHA1_Update(&ctx, p2, BIN_NODE_SIZE);
+    SHA1DCUpdate(&ctx, p1, BIN_NODE_SIZE);
+    SHA1DCUpdate(&ctx, p2, BIN_NODE_SIZE);
   } else {
-    SHA1_Update(&ctx, p2, BIN_NODE_SIZE);
-    SHA1_Update(&ctx, p1, BIN_NODE_SIZE);
+    SHA1DCUpdate(&ctx, p2, BIN_NODE_SIZE);
+    SHA1DCUpdate(&ctx, p1, BIN_NODE_SIZE);
   }
-  SHA1_Update(&ctx, content.c_str(), content.size());
+  SHA1DCUpdate(&ctx, content.c_str(), content.size());
 
-  SHA1_Final((unsigned char*)result, &ctx);
+  SHA1DCFinal((unsigned char*)result, &ctx);
 }
 
 ManifestPtr::ManifestPtr() :

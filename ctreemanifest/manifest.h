@@ -13,7 +13,6 @@
 #include <cstring>
 #include <list>
 #include <stdexcept>
-#include <openssl/sha.h>
 
 #include "convert.h"
 

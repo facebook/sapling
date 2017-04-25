@@ -4,12 +4,11 @@
 //
 // no-check-code
 
-#include <openssl/sha.h>
-
 #include <inttypes.h>
 #include <memory.h>
 #include <stdio.h>
 #include "../clib/convert.h"
+#include "../clib/sha1/sha1.h"
 #include "cdatapack.h"
 #include <stdlib.h>
 
@@ -81,10 +80,10 @@ int main(int argc, char *argv[]) {
   for (int ix = 0; ix < chain.links_count; ix ++) {
     delta_chain_link_t *link = &chain.delta_chain_links[ix];
 
-    SHA_CTX ctx;
-    SHA1_Init(&ctx);
-    SHA1_Update(&ctx, link->delta, link->delta_sz);
-    SHA1_Final(sha, &ctx);
+    SHA1_CTX ctx;
+    SHA1DCInit(&ctx);
+    SHA1DCUpdate(&ctx, link->delta, link->delta_sz);
+    SHA1DCFinal(sha, &ctx);
 
     if (last_filename_sz != link->filename_sz ||
         memcmp(last_filename, link->filename, last_filename_sz) != 0) {

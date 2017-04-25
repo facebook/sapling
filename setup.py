@@ -140,12 +140,18 @@ else:
         ("datapack", {
             "sources" : ["cdatapack/cdatapack.c"],
             "include_dirs" : ["clib"] + include_dirs,
-            "libraries" : ["lz4", "crypto"],
+            "libraries" : ["lz4", "sha1"],
             "extra_args" : filter(None,
                 [STDC99, WALL, WERROR, WSTRICTPROTOTYPES] + cflags),
         }),
         ('mpatch', {
             'sources': ['cstore/mpatch.c']
+        }),
+        ("sha1", {
+            "sources" : ["clib/sha1/sha1.c", "clib/sha1/ubc_check.c"],
+            "include_dirs" : ["clib/sha1"] + include_dirs,
+            "extra_args" : filter(None,
+                [STDC99, WALL, WERROR, WSTRICTPROTOTYPES] + cflags),
         }),
     ]
 
@@ -204,18 +210,18 @@ else:
                     'ctreemanifest/treemanifest.cpp',
                 ],
                 include_dirs=[
-                    'cdatapack',
-                    'clib'
-                    'cstore',
                     'ctreemanifest',
+                    'cdatapack',
+                    'clib',
+                    'cstore',
                 ] + include_dirs,
                 library_dirs=[
                     'build/' + distutils_dir_name('lib'),
                 ] + library_dirs,
                 libraries=[
-                    'crypto',
                     'datapack',
                     'lz4',
+                    'sha1',
                 ],
                 extra_compile_args=filter(None, [STDCPP0X, WALL] + cflags),
             ),
@@ -241,8 +247,7 @@ else:
                     'clib',
                 ] + include_dirs,
                 library_dirs=library_dirs,
-                libraries=['crypto',
-                ],
+                libraries=['sha1'],
                 extra_compile_args=filter(None, [
                     STDC99,
                     WALL,
