@@ -78,7 +78,7 @@ Simple import
 
   $ cd $hgwd
   $ hg init --config 'format.usefncache=False'
-  $ hg p4fastimport --debug -P $P4ROOT hg-p4-import
+  $ hg p4fastimport --bookmark master --debug -P $P4ROOT hg-p4-import
   loading changelist numbers.
   2 changelists to import.
   loading list of files.
@@ -94,6 +94,7 @@ Simple import
   changelist 1: writing changelog: initial
   changelist 2: writing manifest. node: e2b9d9177f8d p1: a9f7e8df2a65 p2: 000000000000 linkrev: 1
   changelist 2: writing changelog: second
+  writing bookmark
   2 revision(s), 3 file(s) imported.
 
 Verify
@@ -105,8 +106,14 @@ Verify
   checking files
   3 files, 2 changesets, 6 total revisions
 
-  $ hg update tip
+  $ hg update master
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (activating bookmark master)
+
+  $ hg manifest -r master
+  Main/a
+  Main/b/c
+  Main/d
 
 End Test
 

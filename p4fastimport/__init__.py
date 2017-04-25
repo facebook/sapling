@@ -35,6 +35,7 @@ from mercurial import (
     cmdutil,
     error,
     extensions,
+    scmutil,
     verify,
     worker,
 )
@@ -55,6 +56,13 @@ def reposetup(ui, repo):
 
     extensions.wrapfunction(verify.verifier, 'verify', yoloverify)
     extensions.afterloaded('lfs', handlelfs)
+
+def writebookmark(tr, repo, revisions, name):
+    if len(revisions) > 0:
+        marks = repo._bookmarks
+        __, hexnode = revisions[-1]
+        marks[name] = repo[hexnode].node()
+        marks.recordchange(tr)
 
 def writerevmetadata(revisions, outfile):
     """Write the LFS mappings from OID to a depotpath and it's CLnum into
@@ -139,14 +147,18 @@ def runworker(ui, fn, wargs, items):
 
 @command(
     'p4fastimport',
-    [('P', 'path', '.', _('path to the local depot store'), _('PATH'))],
-    _('hg p4fastimport [-P PATH] [CLIENT]'),
+    [('P', 'path', '.', _('path to the local depot store'), _('PATH')),
+     ('B', 'bookmark', '', _('bookmark to set'), _('NAME'))],
+    _('[-P PATH] [-B NAME] [CLIENT]'),
     inferrepo=True)
 def p4fastimport(ui, repo, client, **opts):
     if 'fncache' in repo.requirements:
         raise error.Abort(_('fncache must be disabled'))
 
     basepath = opts.get('path')
+
+    if opts.get('bookmark'):
+        scmutil.checknewlabel(repo, opts['bookmark'], 'bookmark')
 
     startcl = None
     if len(repo) > 0 and startcl is None:
@@ -236,6 +248,10 @@ def p4fastimport(ui, repo, client, **opts):
             revisions = []
             for cl, hgnode in clog.creategen(tr, fileinfo):
                 revisions.append((cl, hex(hgnode)))
+
+            if opts.get('bookmark'):
+                ui.note(_('writing bookmark\n'))
+                writebookmark(tr, repo, revisions, opts['bookmark'])
 
             if ui.config('p4fastimport', 'lfsmetadata', None) is not None:
                 ui.note(_('writing lfs metadata to sqlite\n'))
