@@ -25,7 +25,7 @@ class ConstantString {
       _refCount(1) {}
   public:
     ~ConstantString() {
-      delete _content;
+      delete[] _content;
     }
 
     char *content() {
