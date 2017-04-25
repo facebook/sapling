@@ -1,5 +1,8 @@
 #require p4
 
+  $ PYTHONPATH=$TESTDIR/..:$PYTHONPATH
+  $ export PYTHONPATH
+
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "p4fastimport=" >> $HGRCPATH
   $ echo "[p4fastimport]" >> $HGRCPATH
