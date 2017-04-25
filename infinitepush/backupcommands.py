@@ -303,7 +303,8 @@ def _dobackup(ui, repo, dest, **opts):
     ui.status(_('starting backup %s\n') % time.strftime('%H:%M:%S %d %b %Y %Z'))
     start = time.time()
     username = util.shortuser(ui.username())
-    origreporoot = repo.origroot
+    maybesharedrepo = repo
+    # to handle multiple working copies correctly
     repo = _getsrcrepo(repo)
     bkpstate = _readlocalbackupstate(ui, repo)
 
@@ -341,15 +342,17 @@ def _dobackup(ui, repo, dest, **opts):
         username, repo, newbookmarks, removedbookmarks,
         newheads, removedheads)
 
-    if origreporoot != repo.origroot:
-        if ui.config('infinitepushbackup', 'tempcleanworkingcopiesbackups'):
+    if maybesharedrepo.origroot != repo.origroot:
+        if (ui.config('infinitepushbackup', 'tempcleanworkingcopiesbackups') and
+                _localbackupstateexists(maybesharedrepo)):
             # Previously there was a bug in infinitepush backup and it
             # made multiple backups for the same repo if pushbackup was called
             # from different working copies. Let's delete bookmarks for the
             # same working copy
             bookmarkprefixtodelete = '/'.join(
-                (_getcommonprefix(username, origreporoot), '*'))
+                (_getcommonprefix(username, maybesharedrepo.origroot), '*'))
             bookmarkstobackup[bookmarkprefixtodelete] = ''
+            _deletebackupstate(maybesharedrepo)
 
     # Special case if backup state is empty. Clean all backup bookmarks from the
     # server.
@@ -619,8 +622,14 @@ def _getrevstobackup(repo, ui, other, headstobackup):
 
     return outgoing, badhexnodes
 
+def _localbackupstateexists(repo):
+    return repo.vfs.exists(_backupstatefile)
+
+def _deletebackupstate(repo):
+    return repo.vfs.unlink(_backupstatefile)
+
 def _readlocalbackupstate(ui, repo):
-    if not repo.vfs.exists(_backupstatefile):
+    if not _localbackupstateexists(repo):
         return backupstate()
 
     errormsg = 'corrupt %s file' % _backupstatefile
@@ -756,6 +765,8 @@ def _dictdiff(first, second):
     return result
 
 def _getsrcrepo(repo):
+    '''returns main repo in case of shared woking copy
+    '''
     if repo.sharedpath == repo.path:
         return repo
 
