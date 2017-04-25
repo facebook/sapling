@@ -1,5 +1,6 @@
 #require test-repo
 
+  $ . $TESTDIR/require-core-hg.sh contrib/check-code.py
   $ check_code="$RUNTESTDIR"/../contrib/check-code.py
   $ cd "$TESTDIR"/..
   $ unset HGRCPATH
