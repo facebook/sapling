@@ -10,6 +10,7 @@ from mercurial.i18n import _
 from mercurial.node import nullid, short
 from mercurial import (
     error,
+    extensions,
     util,
 )
 
@@ -266,6 +267,13 @@ class FileImporter(object):
     def hgfilelog(self):
         return self._repo.file(self.relpath)
 
+    def findlfs(self):
+        try:
+            return extensions.find('lfs')
+        except KeyError:
+            pass
+        return None
+
     def create(self, tr, copy_tracer=None):
         assert tr is not None
         p4fi = P4FileImporter(self._p4filelog)
@@ -278,11 +286,14 @@ class FileImporter(object):
             if c.cl in p4fi.revisions and not self._p4filelog.isdeleted(c.cl):
                 revs.append(c)
 
+        largefiles = []
         fileflags = collections.defaultdict(dict)
         lastlinkrev = 0
 
         hgfilelog = self.hgfilelog()
         origlen = len(hgfilelog)
+
+        lfsext = self.findlfs()
         for c in sorted(revs):
             linkrev = self._importset.linkrev(c.cl)
             fparent1, fparent2 = nullid, nullid
@@ -316,11 +327,18 @@ class FileImporter(object):
                 # Replace keyword expansion
                 pass
 
-            h = hgfilelog.add(text, meta, tr, linkrev, fparent1, fparent2)
+            node = hgfilelog.add(text, meta, tr, linkrev, fparent1, fparent2)
             self._ui.debug(
                 'writing filelog: %s, p1 %s, linkrev %d, %d bytes, src: %s, '
-                'path: %s\n' % (short(h), short(fparent1), linkrev,
+                'path: %s\n' % (short(node), short(fparent1), linkrev,
                     len(text), src, self.relpath))
 
+            if lfsext and lfsext.wrapper._islfs(hgfilelog, node):
+                lfspointer = lfsext.pointer.deserialize(
+                        hgfilelog.revision(node, raw=True))
+                largefiles.append((c.cl, self.depotfile, lfspointer['oid']))
+                self._ui.debug('largefile: %s, oid: %s\n' % (
+                    self.relpath, lfspointer['oid']))
+
         newlen = len(hgfilelog)
-        return fileflags, origlen, newlen
+        return fileflags, largefiles, origlen, newlen

@@ -8,6 +8,9 @@ Config example:
     useworker = false
     # trace copies?
     copytrace = false
+    # if LFS is enabled, write only the metadata to disk, do not write the
+    # blob itself to the local cache.
+    lfspointeronly = false
 
 """
 from __future__ import absolute_import
@@ -26,8 +29,27 @@ from mercurial.node import short
 from mercurial import (
     cmdutil,
     error,
+    extensions,
+    verify,
     worker,
 )
+
+def reposetup(ui, repo):
+    def nothing(orig, *args, **kwargs):
+        pass
+    def yoloverify(orig, *args, **kwargs):
+        # We have to set it directly as repo is reading the config lfs.bypass
+        # during their repo setup.
+        repo.svfs.options['lfsbypass'] = True
+        return orig(*args, **kwargs)
+    def handlelfs(loaded):
+        if loaded:
+            lfs = extensions.find('lfs')
+            extensions.wrapfunction(lfs.blobstore.local, 'write', nothing)
+            extensions.wrapfunction(lfs.blobstore.local, 'read', nothing)
+
+    extensions.wrapfunction(verify.verifier, 'verify', yoloverify)
+    extensions.afterloaded('lfs', handlelfs)
 
 def create(tr, ui, repo, importset, filelogs):
     for filelog in filelogs:
@@ -36,11 +58,12 @@ def create(tr, ui, repo, importset, filelogs):
         # same filelog. It would be more appropriate to update the filelist
         # after receiving the initial filelist but this would not be parallel.
         fi = importer.FileImporter(ui, repo, importset, filelog)
-        fileflags, oldtiprev, newtiprev = fi.create(tr)
+        fileflags, largefiles, oldtiprev, newtiprev = fi.create(tr)
         yield 1, json.dumps({
             'newtiprev': newtiprev,
             'oldtiprev': oldtiprev,
             'fileflags': fileflags,
+            'largefiles': largefiles,
             'depotname': filelog.depotfile,
             'localname': fi.relpath,
         })
@@ -122,6 +145,7 @@ def p4fastimport(ui, repo, client, **opts):
         # 3. Import files.
         count = 0
         fileflags = {}
+        largefiles = []
         baserevs = collections.defaultdict(lambda: 0)
         for filelogs in map(sorted, runlist.values()):
             wargs = (tr, ui, repo, importset)
@@ -148,6 +172,7 @@ def p4fastimport(ui, repo, client, **opts):
                 # convert back. TODO: Find a better way to handle this.
                 baserevs[data['localname']] = data['oldtiprev']
                 fileflags.update(util.decodefileflags(data['fileflags']))
+                largefiles.extend(data['largefiles'])
                 count += i
             ui.progress(_('importing'), None)
 
