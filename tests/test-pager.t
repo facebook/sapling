@@ -94,6 +94,14 @@ Abbreviated command alias should also be paged
   paged! 'summary:     modify a 10\n'
   paged! '\n'
 
+Attend for an abbreviated command does not work
+
+  $ hg --config pager.attend-ident=true ident
+  46106edeeb38 tip
+
+  $ hg --config extensions.pager= --config pager.attend-ident=true ident
+  46106edeeb38 tip
+
 Pager should not start if stdout is not a tty.
 
   $ hg log -l1 -q --config ui.formatted=False
