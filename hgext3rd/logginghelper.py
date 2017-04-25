@@ -38,6 +38,15 @@ def _localrepoinit(orig, self, baseui, path=None, create=False):
         if value is not None:
             kwargs[name] = value
 
+    obsstore_size = 0
+    try:
+        obsstore_size = self.svfs.stat('obsstore').st_size
+    except Exception:
+        # just ignore exception, it's better than failing the whole command
+        pass
+
+    kwargs['obsstore_size'] = obsstore_size
+
     self.ui.log("logginghelper",
                 "",           # ui.log requires a format string as args[0].
                 **kwargs)
