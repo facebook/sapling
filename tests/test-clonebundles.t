@@ -61,7 +61,7 @@ Server is not running aborts
   $ echo "http://localhost:$HGPORT1/bundle.hg" > server/.hg/clonebundles.manifest
   $ hg clone http://localhost:$HGPORT server-not-runner
   applying clone bundle from http://localhost:$HGPORT1/bundle.hg
-  error fetching bundle: (.* refused.*|Protocol not supported) (re)
+  error fetching bundle: (.* refused.*|Protocol not supported|Cannot assign requested address) (re)
   abort: error applying bundle
   (if this error persists, consider contacting the server operator or disable clone bundles via "--config ui.clonebundles=false")
   [255]

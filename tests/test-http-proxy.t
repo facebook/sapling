@@ -87,7 +87,7 @@ bad host:port for proxy ("Protocol not supported" can happen on
 misconfigured hosts)
 
   $ http_proxy=localhost:$HGPORT2 hg clone --config http_proxy.always=True http://localhost:$HGPORT/ f
-  abort: error: (Connection refused|Protocol not supported|.* actively refused it) (re)
+  abort: error: (Connection refused|Protocol not supported|.* actively refused it|Cannot assign requested address) (re)
   [255]
 
 do not use the proxy if it is in the no list
