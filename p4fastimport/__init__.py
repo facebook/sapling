@@ -201,61 +201,54 @@ def p4fastimport(ui, repo, client, **opts):
         runlist[0] = p4filelogs
 
     ui.note(_('importing repository.\n'))
-    wlock = repo.wlock()
-    lock = repo.lock()
-    tr = None
-    try:
+    with repo.wlock(), repo.lock():
         tr = repo.transaction('import')
-        for a, b in importset.caseconflicts:
-            ui.warn(_('case conflict: %s and %s\n') % (a, b))
+        try:
+            for a, b in importset.caseconflicts:
+                ui.warn(_('case conflict: %s and %s\n') % (a, b))
 
-        # 3. Import files.
-        count = 0
-        fileinfo = {}
-        largefiles = []
-        for filelogs in map(sorted, runlist.values()):
-            wargs = (tr, ui, repo, importset)
-            for i, serialized in runworker(ui, create, wargs, filelogs):
-                data = json.loads(serialized)
-                ui.progress(_('importing'), count, item=data['depotname'],
-                            unit='file', total=len(p4filelogs))
-                # Json converts to UTF8 and int keys to strings, so we have to
-                # convert back. TODO: Find a better way to handle this.
-                fileinfo[data['depotname']] = {
-                    'localname': data['localname'].encode('utf-8'),
-                    'flags': util.decodefileflags(data['fileflags']),
-                    'baserev': data['oldtiprev'],
-                }
-                largefiles.extend(data['largefiles'])
-                count += i
-            ui.progress(_('importing'), None)
+            # 3. Import files.
+            count = 0
+            fileinfo = {}
+            largefiles = []
+            for filelogs in map(sorted, runlist.values()):
+                wargs = (tr, ui, repo, importset)
+                for i, serialized in runworker(ui, create, wargs, filelogs):
+                    data = json.loads(serialized)
+                    ui.progress(_('importing'), count,
+                            item=data['depotname'], unit='file',
+                            total=len(p4filelogs))
+                    # Json converts to UTF8 and int keys to strings, so we
+                    # have to convert back.
+                    # TODO: Find a better way to handle this.
+                    fileinfo[data['depotname']] = {
+                        'localname': data['localname'].encode('utf-8'),
+                        'flags': util.decodefileflags(data['fileflags']),
+                        'baserev': data['oldtiprev'],
+                    }
+                    largefiles.extend(data['largefiles'])
+                    count += i
+                ui.progress(_('importing'), None)
 
-        # 4. Generate manifest and changelog based on the filelogs we imported
-        clog = importer.ChangeManifestImporter(ui, repo, importset)
-        revisions = []
-        for cl, hgnode in clog.creategen(tr, fileflags, baserevs):
-            revisions.append((cl, hex(hgnode)))
+            # 4. Generate manifest and changelog based on the filelogs
+            # we imported
+            clog = importer.ChangeManifestImporter(ui, repo, importset)
+            revisions = []
+            for cl, hgnode in clog.creategen(tr, fileinfo):
+                revisions.append((cl, hex(hgnode)))
 
-        revisions = []
-        for cl, hgnode in clog.creategen(tr, fileinfo):
-            revisions.append((cl, hex(hgnode)))
+            if ui.config('p4fastimport', 'lfsmetadata', None) is not None:
+                ui.note(_('writing lfs metadata to sqlite\n'))
+                writelfsmetadata(largefiles, revisions,
+                     ui.config('p4fastimport', 'lfsmetadata', None))
 
-        if ui.config('p4fastimport', 'lfsmetadata', None) is not None:
-            ui.note(_('writing lfs metadata to sqlite\n'))
-            writelfsmetadata(largefiles, revisions,
-                ui.config('p4fastimport', 'lfsmetadata', None))
+            if ui.config('p4fastimport', 'metadata', None) is not None:
+                ui.note(_('writing metadata to sqlite\n'))
+                writerevmetadata(revisions,
+                     ui.config('p4fastimport', 'metadata', None))
 
-        if ui.config('p4fastimport', 'metadata', None) is not None:
-            ui.note(_('writing metadata to sqlite\n'))
-            writerevmetadata(revisions,
-                ui.config('p4fastimport', 'metadata', None))
-
-        tr.close()
-        ui.note(_('%d revision(s), %d file(s) imported.\n') % (
-            len(changelists), count))
-
-    finally:
-        if tr:
+            tr.close()
+            ui.note(_('%d revision(s), %d file(s) imported.\n') % (
+                len(changelists), count))
+        finally:
             tr.release()
-        lock.release()
-        wlock.release()
