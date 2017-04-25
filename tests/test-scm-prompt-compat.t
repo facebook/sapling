@@ -26,3 +26,12 @@ Test old mode
   5cad84d (no-eol)
   $ cmd hg book active
   active (no-eol)
+
+Test format string
+  $ oldcmd() {
+  >   "$@"
+  >   _dotfiles_scm_info "g g %s g g\n"
+  > }
+  $ hg init repo
+  $ oldcmd cd repo
+  g g empty g g

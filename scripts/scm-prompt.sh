@@ -208,10 +208,13 @@ _scm_prompt()
 
 _dotfiles_scm_info() {
   local fmt
+  fmt=$1
   if [[ -z "$fmt" ]]; then
     if [[ -n "$WANT_OLD_SCM_PROMPT" ]]; then
       fmt="%s"
+    else
+      fmt=' (%s)'
     fi
   fi
-  _scm_prompt $fmt
+  _scm_prompt "$fmt"
 }
