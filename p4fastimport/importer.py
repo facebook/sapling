@@ -286,13 +286,12 @@ class FileImporter(object):
             if c.cl in p4fi.revisions and not self._p4filelog.isdeleted(c.cl):
                 revs.append(c)
 
-        largefiles = []
         fileflags = collections.defaultdict(dict)
         lastlinkrev = 0
 
         hgfilelog = self.hgfilelog()
         origlen = len(hgfilelog)
-
+        largefiles = []
         lfsext = self.findlfs()
         for c in sorted(revs):
             linkrev = self._importset.linkrev(c.cl)

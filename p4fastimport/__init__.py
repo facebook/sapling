@@ -11,12 +11,15 @@ Config example:
     # if LFS is enabled, write only the metadata to disk, do not write the
     # blob itself to the local cache.
     lfspointeronly = false
+    # path to sqlite output file for lfs metadata
+    lfsmetadata = PATH
 
 """
 from __future__ import absolute_import
 
 import collections
 import json
+import sqlite3
 
 from . import (
     p4,
@@ -25,7 +28,7 @@ from . import (
 )
 
 from mercurial.i18n import _
-from mercurial.node import short
+from mercurial.node import short, hex
 from mercurial import (
     cmdutil,
     error,
@@ -50,6 +53,32 @@ def reposetup(ui, repo):
 
     extensions.wrapfunction(verify.verifier, 'verify', yoloverify)
     extensions.afterloaded('lfs', handlelfs)
+
+def writelfsmetadata(largefiles, revisions, outfile):
+    """Write the LFS mappings from OID to a depotpath and it's CLnum into
+    sqlite. This way the LFS server can import the correct file from Perforce
+    and mapping it to the correct OID.
+    """
+    with sqlite3.connect(outfile, isolation_level=None) as conn:
+        cur = conn.cursor()
+        cur.execute("BEGIN TRANSACTION")
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS p4_lfs_map(
+            "id" INTEGER PRIMARY KEY AUTOINCREMENT,
+            "cl" INTEGER NOT NULL,
+            "node" BLOB,
+            "oid" TEXT,
+            "path" BLOB
+        )""")
+        inserts = []
+        revdict = dict(revisions)
+        for cl, path, oid in largefiles:
+            inserts.append((cl, path, oid, revdict[cl]))
+
+        cur.executemany(
+            "INSERT INTO p4_lfs_map(cl, path, oid, node) VALUES (?,?,?,?)",
+            inserts)
+        cur.execute("COMMIT")
 
 def create(tr, ui, repo, importset, filelogs):
     for filelog in filelogs:
@@ -178,7 +207,15 @@ def p4fastimport(ui, repo, client, **opts):
 
         # 4. Generate manifest and changelog based on the filelogs we imported
         clog = importer.ChangeManifestImporter(ui, repo, importset)
-        clog.create(tr, fileflags, baserevs)
+        revisions = []
+        for cl, hgnode in clog.creategen(tr, fileflags, baserevs):
+            revisions.append((cl, hex(hgnode)))
+
+        if ui.config('p4fastimport', 'lfsmetadata', None) is not None:
+            ui.note(_('writing lfs metadata to sqlite\n'))
+            writelfsmetadata(largefiles, revisions,
+                ui.config('p4fastimport', 'lfsmetadata', None))
+
         tr.close()
         ui.note(_('%d revision(s), %d file(s) imported.\n') % (
             len(changelists), count))
