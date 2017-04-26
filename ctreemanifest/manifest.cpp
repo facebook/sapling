@@ -236,13 +236,13 @@ void Manifest::computeNode(const char *p1, const char *p2, char *result) {
   SHA1DCInit(&ctx);
 
   if (memcmp(p1, p2, BIN_NODE_SIZE) == -1) {
-    SHA1DCUpdate(&ctx, p1, BIN_NODE_SIZE);
-    SHA1DCUpdate(&ctx, p2, BIN_NODE_SIZE);
+    SHA1DCUpdate(&ctx, (const unsigned char *) p1, BIN_NODE_SIZE);
+    SHA1DCUpdate(&ctx, (const unsigned char *) p2, BIN_NODE_SIZE);
   } else {
-    SHA1DCUpdate(&ctx, p2, BIN_NODE_SIZE);
-    SHA1DCUpdate(&ctx, p1, BIN_NODE_SIZE);
+    SHA1DCUpdate(&ctx, (const unsigned char *)p2, BIN_NODE_SIZE);
+    SHA1DCUpdate(&ctx, (const unsigned char *)p1, BIN_NODE_SIZE);
   }
-  SHA1DCUpdate(&ctx, content.c_str(), content.size());
+  SHA1DCUpdate(&ctx, (const unsigned char *)content.c_str(), content.size());
 
   SHA1DCFinal((unsigned char*)result, &ctx);
 }
