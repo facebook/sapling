@@ -13,9 +13,6 @@ New errors are not allowed. Warnings are strongly discouraged.
    >             r.revision(r.node(x))
    don't convert rev to node before passing to revision(nodeorrev)
   Skipping i18n/polib.py it has no-che?k-code (glob)
-  mercurial/demandimport.py:314:
-   >     if os.environ.get('HGDEMANDIMPORT') != 'disable':
-   use encoding.environ instead (py3)
   mercurial/encoding.py:54:
    >     environ = os.environ
    use encoding.environ instead (py3)
@@ -30,15 +27,6 @@ New errors are not allowed. Warnings are strongly discouraged.
    use encoding.environ instead (py3)
   Skipping mercurial/httpclient/__init__.py it has no-che?k-code (glob)
   Skipping mercurial/httpclient/_readers.py it has no-che?k-code (glob)
-  mercurial/policy.py:46:
-   >     if 'HGMODULEPOLICY' in os.environ:
-   use encoding.environ instead (py3)
-  mercurial/policy.py:47:
-   >         policy = os.environ['HGMODULEPOLICY'].encode('utf-8')
-   use encoding.environ instead (py3)
-  mercurial/policy.py:49:
-   >     policy = os.environ.get('HGMODULEPOLICY', policy)
-   use encoding.environ instead (py3)
   Skipping mercurial/statprof.py it has no-che?k-code (glob)
   Skipping tests/badserverext.py it has no-che?k-code (glob)
   [1]
