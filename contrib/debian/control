@@ -7,7 +7,8 @@ Build-Depends:
  dh-python,
  python-all,
  python-all-dev,
- liblz4-dev
+ liblz4-dev,
+ cython
 Standards-Version: 3.9.4
 X-Python-Version: >= 2.6
 
