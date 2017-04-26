@@ -54,7 +54,6 @@ from . import (
     encoding,
     error,
     extensions,
-    osutil,
     pycompat,
     util,
 )
@@ -313,7 +312,7 @@ class chgcmdserver(commandserver.server):
         # tell client to sendmsg() with 1-byte payload, which makes it
         # distinctive from "attachio\n" command consumed by client.read()
         self.clientsock.sendall(struct.pack('>cI', 'I', 1))
-        clientfds = osutil.recvfds(self.clientsock.fileno())
+        clientfds = util.recvfds(self.clientsock.fileno())
         _log('received fds: %r\n' % clientfds)
 
         ui = self.ui
@@ -458,12 +457,12 @@ class chgcmdserver(commandserver.server):
                          'setenv': setenv,
                          'setumask': setumask})
 
-    if util.safehasattr(osutil, 'setprocname'):
+    if util.safehasattr(util, 'setprocname'):
         def setprocname(self):
             """Change process title"""
             name = self._readstr()
             _log('setprocname: %r\n' % name)
-            osutil.setprocname(name)
+            util.setprocname(name)
         capabilities['setprocname'] = setprocname
 
 def _tempaddress(address):

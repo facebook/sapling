@@ -8,8 +8,8 @@ import sys
 
 from . import (
     encoding,
-    osutil,
     pycompat,
+    util,
 )
 
 # BSD 'more' escapes ANSI color sequences by default. This can be disabled by
@@ -23,7 +23,7 @@ def _rcfiles(path):
     rcdir = os.path.join(path, 'hgrc.d')
     try:
         rcs.extend([os.path.join(rcdir, f)
-                    for f, kind in osutil.listdir(rcdir)
+                    for f, kind in util.listdir(rcdir)
                     if f.endswith(".rc")])
     except OSError:
         pass

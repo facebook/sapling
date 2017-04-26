@@ -182,7 +182,8 @@ def extsetup(ui):
         if pycompat.osname == 'nt':
             for f in winfuncs.split():
                 wrapname(f, wrapper)
-        wrapname("mercurial.osutil.listdir", wrapperforlistdir)
+        wrapname("mercurial.util.listdir", wrapperforlistdir)
+        wrapname("mercurial.windows.listdir", wrapperforlistdir)
         # wrap functions to be called with local byte string arguments
         for f in rfuncs.split():
             wrapname(f, reversewrapper)

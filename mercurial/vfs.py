@@ -17,7 +17,6 @@ import threading
 from .i18n import _
 from . import (
     error,
-    osutil,
     pathutil,
     pycompat,
     util,
@@ -163,7 +162,7 @@ class abstractvfs(object):
             return fd, fname
 
     def readdir(self, path=None, stat=None, skip=None):
-        return osutil.listdir(self.join(path), stat, skip)
+        return util.listdir(self.join(path), stat, skip)
 
     def readlock(self, path):
         return util.readlock(self.join(path))

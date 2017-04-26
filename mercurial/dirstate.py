@@ -18,7 +18,6 @@ from . import (
     encoding,
     error,
     match as matchmod,
-    osutil,
     parsers,
     pathutil,
     pycompat,
@@ -988,7 +987,7 @@ class dirstate(object):
         matchalways = match.always()
         matchtdir = match.traversedir
         dmap = self._map
-        listdir = osutil.listdir
+        listdir = util.listdir
         lstat = os.lstat
         dirkind = stat.S_IFDIR
         regkind = stat.S_IFREG

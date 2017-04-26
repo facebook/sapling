@@ -136,6 +136,9 @@ def posixfile(name, mode='r', buffering=-1):
         # convert to a friendlier exception
         raise IOError(err.errno, '%s: %s' % (name, err.strerror))
 
+# may be wrapped by win32mbcs extension
+listdir = osutil.listdir
+
 class winstdout(object):
     '''stdout on windows misbehaves if sent through a pipe'''
 
@@ -349,7 +352,7 @@ def statfiles(files):
         if cache is None:
             try:
                 dmap = dict([(normcase(n), s)
-                             for n, k, s in osutil.listdir(dir, True)
+                             for n, k, s in listdir(dir, True)
                              if getkind(s.st_mode) in _wantedkinds])
             except OSError as err:
                 # Python >= 2.5 returns ENOENT and adds winerror field
@@ -376,7 +379,7 @@ def groupname(gid=None):
 def removedirs(name):
     """special version of os.removedirs that does not remove symlinked
     directories or junction points if they actually contain files"""
-    if osutil.listdir(name):
+    if listdir(name):
         return
     os.rmdir(name)
     head, tail = os.path.split(name)
@@ -384,7 +387,7 @@ def removedirs(name):
         head, tail = os.path.split(head)
     while head and tail:
         try:
-            if osutil.listdir(head):
+            if listdir(head):
                 return
             os.rmdir(head)
         except (ValueError, OSError):

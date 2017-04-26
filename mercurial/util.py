@@ -106,6 +106,7 @@ groupname = platform.groupname
 hidewindow = platform.hidewindow
 isexec = platform.isexec
 isowner = platform.isowner
+listdir = osutil.listdir
 localpath = platform.localpath
 lookupreg = platform.lookupreg
 makedir = platform.makedir
@@ -142,6 +143,15 @@ testpid = platform.testpid
 umask = platform.umask
 unlink = platform.unlink
 username = platform.username
+
+try:
+    recvfds = osutil.recvfds
+except AttributeError:
+    pass
+try:
+    setprocname = osutil.setprocname
+except AttributeError:
+    pass
 
 # Python compatibility
 
@@ -1165,7 +1175,7 @@ def copyfiles(src, dst, hardlink=None, progress=lambda t, pos: None):
                         os.stat(os.path.dirname(dst)).st_dev)
         topic = gettopic()
         os.mkdir(dst)
-        for name, kind in osutil.listdir(src):
+        for name, kind in listdir(src):
             srcname = os.path.join(src, name)
             dstname = os.path.join(dst, name)
             def nprog(t, pos):
