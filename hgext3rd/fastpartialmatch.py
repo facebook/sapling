@@ -52,6 +52,9 @@ from mercurial.i18n import _
 from mercurial.node import (
     bin,
     hex,
+    nullhex,
+    nullid,
+    nullrev,
 )
 
 from operator import itemgetter
@@ -405,6 +408,8 @@ def _findcandidates(ui, vfs, id):
     candidates = {}
     if not (isinstance(id, str) and len(id) >= 4 and _maybehash(id)):
         return candidates
+    if nullhex.startswith(id):
+        candidates[nullid] = nullrev
     filename = id[:2]
     fullpath = os.path.join(_partialindexdir, filename)
     try:

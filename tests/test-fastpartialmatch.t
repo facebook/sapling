@@ -462,3 +462,6 @@ Try to create empty commit
   $ hg ci -m empty
   nothing changed
   [1]
+
+Try to checkout nullid
+  $ hg up --config fastpartialmatch.raiseifinconsistent=True -q 0000000000
