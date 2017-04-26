@@ -35,7 +35,7 @@ class ConstantStringRef {
       if (str_) {
         return str_->data();
       }
-      return nullptr;
+      return NULL;
     }
 
     size_t size() {

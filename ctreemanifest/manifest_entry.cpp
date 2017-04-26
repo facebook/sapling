@@ -11,8 +11,8 @@
 #include <cassert>
 
 ManifestEntry::ManifestEntry()
-    : filename(nullptr), filenamelen(0), node(nullptr), flag(nullptr),
-      ownedmemory(nullptr) {}
+    : filename(NULL), filenamelen(0), node(NULL), flag(NULL),
+      ownedmemory(NULL) {}
 
 void ManifestEntry::initialize(
     const char *filename, const size_t filenamelen,
@@ -40,17 +40,17 @@ void ManifestEntry::initialize(
   filenamecopy[filenamelen] = '\0';
   buf += filenamelen + 1;
 
-  char *nodecopy = nullptr;
+  char *nodecopy = NULL;
   if (node) {
     nodecopy = buf;
     memcpy(nodecopy, node, HEX_NODE_SIZE);
   }
   // Note that the region where the node would have gone has undefined
-  // contents in the case that node is nullptr, but it is there
+  // contents in the case that node is NULL, but it is there
   // and reserved ready for use by updatehexnode().
   buf += HEX_NODE_SIZE;
 
-  char *flagcopy = nullptr;
+  char *flagcopy = NULL;
   if (flag) {
     flagcopy = buf;
     *flagcopy = *flag;
