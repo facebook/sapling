@@ -192,6 +192,8 @@ static PyMethodDef methods[] = {
 	{NULL, NULL}
 };
 
+static const int version = 1;
+
 #ifdef IS_PY3K
 static struct PyModuleDef bdiff_module = {
 	PyModuleDef_HEAD_INIT,
@@ -203,11 +205,16 @@ static struct PyModuleDef bdiff_module = {
 
 PyMODINIT_FUNC PyInit_bdiff(void)
 {
-	return PyModule_Create(&bdiff_module);
+	PyObject *m;
+	m = PyModule_Create(&bdiff_module);
+	PyModule_AddIntConstant(m, "version", version);
+	return m;
 }
 #else
 PyMODINIT_FUNC initbdiff(void)
 {
-	Py_InitModule3("bdiff", methods, mdiff_doc);
+	PyObject *m;
+	m = Py_InitModule3("bdiff", methods, mdiff_doc);
+	PyModule_AddIntConstant(m, "version", version);
 }
 #endif
