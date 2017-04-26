@@ -70,4 +70,4 @@ def _markcleaned(repo):
 
 def _write(ui, msg):
     if ui.interactive() and not ui.plain('cleanobsstore'):
-        ui.write(_('%s\n') % msg)
+        ui.warn(_('%s\n') % msg)
