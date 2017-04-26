@@ -306,6 +306,12 @@ race conditions
   $ hg serve -R pull-race -p $HGPORT -d --pid-file=pull-race.pid -E main-error.log
   $ cat pull-race.pid >> $DAEMON_PIDS
 
+  $ cat <<EOF > $TESTTMP/out_makecommit.sh
+  > #!/bin/sh
+  > hg ci -Am5
+  > echo committed in pull-race
+  > EOF
+
   $ hg clone -q http://localhost:$HGPORT/ pull-race2
   $ cd pull-race
   $ hg up -q Y
@@ -314,7 +320,7 @@ race conditions
   $ echo c5 > f3
   $ cat <<EOF > .hg/hgrc
   > [hooks]
-  > outgoing.makecommit = hg ci -Am5; echo committed in pull-race
+  > outgoing.makecommit = sh $TESTTMP/out_makecommit.sh
   > EOF
 
 (new config needs a server restart)
@@ -347,12 +353,21 @@ race conditions
 Update a bookmark right after the initial lookup -B (issue4689)
 
   $ echo c6 > ../pull-race/f3 # to be committed during the race
+  $ cat <<EOF > $TESTTMP/listkeys_makecommit.sh
+  > #!/bin/sh
+  > if hg st | grep -q M; then
+  >     hg commit -m race
+  >     echo committed in pull-race
+  > else
+  >     exit 0
+  > fi
+  > EOF
   $ cat <<EOF > ../pull-race/.hg/hgrc
   > [hooks]
   > # If anything to commit, commit it right after the first key listing used
   > # during lookup. This makes the commit appear before the actual getbundle
   > # call.
-  > listkeys.makecommit= ((hg st | grep -q M) && (hg commit -m race; echo commited in pull-race)) || exit 0
+  > listkeys.makecommit= sh $TESTTMP/listkeys_makecommit.sh
   > EOF
 
 (new config need server restart)
