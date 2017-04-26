@@ -1,3 +1,6 @@
+  $ PYTHONPATH=$TESTDIR/../:$PYTHONPATH
+  $ export PYTHONPATH
+  
   $ cat > loop.py <<EOF
   > from mercurial import cmdutil, commands
   > import time
