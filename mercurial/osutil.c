@@ -1301,6 +1301,8 @@ static PyMethodDef methods[] = {
 	{NULL, NULL}
 };
 
+static const int version = 1;
+
 #ifdef IS_PY3K
 static struct PyModuleDef osutil_module = {
 	PyModuleDef_HEAD_INIT,
@@ -1312,17 +1314,22 @@ static struct PyModuleDef osutil_module = {
 
 PyMODINIT_FUNC PyInit_osutil(void)
 {
+	PyObject *m;
 	if (PyType_Ready(&listdir_stat_type) < 0)
 		return NULL;
 
-	return PyModule_Create(&osutil_module);
+	m = PyModule_Create(&osutil_module);
+	PyModule_AddIntConstant(m, "version", version);
+	return m;
 }
 #else
 PyMODINIT_FUNC initosutil(void)
 {
+	PyObject *m;
 	if (PyType_Ready(&listdir_stat_type) == -1)
 		return;
 
-	Py_InitModule3("osutil", methods, osutil_doc);
+	m = Py_InitModule3("osutil", methods, osutil_doc);
+	PyModule_AddIntConstant(m, "version", version);
 }
 #endif
