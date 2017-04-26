@@ -53,6 +53,11 @@ class historypack(basepack.basepack):
     INDEXSUFFIX = INDEXSUFFIX
     PACKSUFFIX = PACKSUFFIX
 
+    INDEXFORMAT = INDEXFORMAT
+    INDEXENTRYLENGTH = INDEXENTRYLENGTH
+
+    VERSION = 0
+
     def getmissing(self, keys):
         missing = []
         for name, node in keys:
@@ -167,17 +172,19 @@ class historypack(basepack.basepack):
         # Bisect between start and end to find node
         startnode = self._index[start:start + NODELENGTH]
         endnode = self._index[end:end + NODELENGTH]
+        entrylen = self.INDEXENTRYLENGTH
+
         if startnode == namehash:
-            entry = self._index[start:start + INDEXENTRYLENGTH]
+            entry = self._index[start:start + entrylen]
         elif endnode == namehash:
-            entry = self._index[end:end + INDEXENTRYLENGTH]
+            entry = self._index[end:end + entrylen]
         else:
-            while start < end - INDEXENTRYLENGTH:
+            while start < end - entrylen:
                 mid = start  + (end - start) / 2
-                mid = mid - ((mid - params.indexstart) % INDEXENTRYLENGTH)
+                mid = mid - ((mid - params.indexstart) % entrylen)
                 midnode = self._index[mid:mid + NODELENGTH]
                 if midnode == namehash:
-                    entry = self._index[mid:mid + INDEXENTRYLENGTH]
+                    entry = self._index[mid:mid + entrylen]
                     break
                 if namehash > midnode:
                     start = mid
@@ -188,7 +195,7 @@ class historypack(basepack.basepack):
             else:
                 raise KeyError(name)
 
-        filenamehash, offset, size = struct.unpack(INDEXFORMAT, entry)
+        filenamehash, offset, size = struct.unpack(self.INDEXFORMAT, entry)
         filenamelength = struct.unpack('!H', self._data[offset:offset +
                                                     constants.FILENAMESIZE])[0]
         offset += constants.FILENAMESIZE
@@ -318,7 +325,11 @@ class mutablehistorypack(basepack.mutablebasepack):
     """
     INDEXSUFFIX = INDEXSUFFIX
     PACKSUFFIX = PACKSUFFIX
+
+    INDEXFORMAT = INDEXFORMAT
     INDEXENTRYLENGTH = INDEXENTRYLENGTH
+
+    VERSION = 0
 
     def __init__(self, ui, packpath):
         super(mutablehistorypack, self).__init__(ui, packpath)
@@ -379,7 +390,8 @@ class mutablehistorypack(basepack.mutablebasepack):
         files = sorted(files)
 
         rawindex = ""
+        fmt = self.INDEXFORMAT
         for namehash, offset, size in files:
-            rawindex += struct.pack(INDEXFORMAT, namehash, offset, size)
+            rawindex += struct.pack(fmt, namehash, offset, size)
 
         return rawindex

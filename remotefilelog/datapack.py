@@ -10,10 +10,6 @@ try:
 except ImportError:
     cstore = None
 
-# Index entry format is: <node><delta offset><pack data offset><pack data size>
-# See the mutabledatapack doccomment for more details.
-INDEXFORMAT = '!20siQQ'
-INDEXENTRYLENGTH = 40
 NODELENGTH = 20
 
 # The indicator value in the index for a fulltext entry.
@@ -62,6 +58,11 @@ class datapack(basepack.basepack):
     INDEXSUFFIX = INDEXSUFFIX
     PACKSUFFIX = PACKSUFFIX
 
+    # Format is <node><delta offset><pack data offset><pack data size>
+    # See the mutabledatapack doccomment for more details.
+    INDEXFORMAT = '!20siQQ'
+    INDEXENTRYLENGTH = 40
+
     def getmissing(self, keys):
         missing = []
         for name, node in keys:
@@ -85,11 +86,12 @@ class datapack(basepack.basepack):
         # Precompute chains
         chain = [value]
         deltabaseoffset = value[1]
+        entrylen = self.INDEXENTRYLENGTH
         while (deltabaseoffset != FULLTEXTINDEXMARK
                and deltabaseoffset != NOBASEINDEXMARK):
             loc = params.indexstart + deltabaseoffset
-            value = struct.unpack(INDEXFORMAT, self._index[loc:loc +
-                                                           INDEXENTRYLENGTH])
+            value = struct.unpack(self.INDEXFORMAT,
+                                  self._index[loc:loc + entrylen])
             deltabaseoffset = value[1]
             chain.append(value)
 
@@ -148,17 +150,18 @@ class datapack(basepack.basepack):
         index = self._index
         startnode = index[start:start + NODELENGTH]
         endnode = index[end:end + NODELENGTH]
+        entrylen = self.INDEXENTRYLENGTH
         if startnode == node:
-            entry = index[start:start + INDEXENTRYLENGTH]
+            entry = index[start:start + entrylen]
         elif endnode == node:
-            entry = index[end:end + INDEXENTRYLENGTH]
+            entry = index[end:end + entrylen]
         else:
-            while start < end - INDEXENTRYLENGTH:
+            while start < end - entrylen:
                 mid = start  + (end - start) / 2
-                mid = mid - ((mid - params.indexstart) % INDEXENTRYLENGTH)
+                mid = mid - ((mid - params.indexstart) % entrylen)
                 midnode = index[mid:mid + NODELENGTH]
                 if midnode == node:
-                    entry = index[mid:mid + INDEXENTRYLENGTH]
+                    entry = index[mid:mid + entrylen]
                     break
                 if node > midnode:
                     start = mid
@@ -169,7 +172,7 @@ class datapack(basepack.basepack):
             else:
                 return None
 
-        return struct.unpack(INDEXFORMAT, entry)
+        return struct.unpack(self.INDEXFORMAT, entry)
 
     def markledger(self, ledger):
         for filename, node in self:
@@ -349,7 +352,10 @@ class mutabledatapack(basepack.mutablebasepack):
     """
     INDEXSUFFIX = INDEXSUFFIX
     PACKSUFFIX = PACKSUFFIX
-    INDEXENTRYLENGTH = INDEXENTRYLENGTH
+
+    # v0 index format: <node><delta offset><pack data offset><pack data size>
+    INDEXFORMAT = datapack.INDEXFORMAT
+    INDEXENTRYLENGTH = datapack.INDEXENTRYLENGTH
 
     def add(self, name, node, deltabasenode, delta):
         if len(name) > 2**16:
@@ -384,6 +390,7 @@ class mutabledatapack(basepack.mutablebasepack):
                          in self.entries.iteritems())
 
         rawindex = ''
+        fmt = self.INDEXFORMAT
         for node, deltabase, offset, size in entries:
             if deltabase == nullid:
                 deltabaselocation = FULLTEXTINDEXMARK
@@ -393,8 +400,7 @@ class mutabledatapack(basepack.mutablebasepack):
                 deltabaselocation = nodelocations.get(deltabase,
                                                       NOBASEINDEXMARK)
 
-            entry = struct.pack(INDEXFORMAT, node, deltabaselocation, offset,
-                                size)
+            entry = struct.pack(fmt, node, deltabaselocation, offset, size)
             rawindex += entry
 
         return rawindex
