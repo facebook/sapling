@@ -12,6 +12,7 @@
 
 #include "key.h"
 #include <memory>
+#include <cstddef>
 
 class ConstantStringRef {
   private:
