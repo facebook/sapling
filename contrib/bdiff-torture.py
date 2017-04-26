@@ -6,7 +6,6 @@ import sys
 
 from mercurial import (
     mdiff,
-    mpatch,
 )
 
 def reducetest(a, b):
@@ -45,7 +44,7 @@ def test1(a, b):
     d = mdiff.textdiff(a, b)
     if not d:
         raise ValueError("empty")
-    c = mpatch.patches(a, [d])
+    c = mdiff.patches(a, [d])
     if c != b:
         raise ValueError("bad")
 

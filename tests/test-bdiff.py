@@ -5,7 +5,6 @@ import unittest
 
 from mercurial import (
     mdiff,
-    mpatch,
 )
 
 class diffreplace(
@@ -19,7 +18,7 @@ class BdiffTests(unittest.TestCase):
         d = mdiff.textdiff(a, b)
         c = a
         if d:
-            c = mpatch.patches(a, [d])
+            c = mdiff.patches(a, [d])
         self.assertEqual(
             c, b, ("bad diff+patch result from\n  %r to\n  "
                    "%r: \nbdiff: %r\npatched: %r" % (a, b, d, c[:200])))
