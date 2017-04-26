@@ -98,7 +98,8 @@ def isexec(f):
     return (os.lstat(f).st_mode & 0o100 != 0)
 
 def setflags(f, l, x):
-    s = os.lstat(f).st_mode
+    st = os.lstat(f)
+    s = st.st_mode
     if l:
         if not stat.S_ISLNK(s):
             # switch file to link
@@ -125,6 +126,14 @@ def setflags(f, l, x):
         s = 0o666 & ~umask # avoid restatting for chmod
 
     sx = s & 0o100
+    if st.st_nlink > 1 and bool(x) != bool(sx):
+        # the file is a hardlink, break it
+        with open(f, "rb") as fp:
+            data = fp.read()
+        unlink(f)
+        with open(f, "wb") as fp:
+            fp.write(data)
+
     if x and not sx:
         # Turn on +x for every +r bit when making a file executable
         # and obey umask.

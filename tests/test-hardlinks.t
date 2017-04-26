@@ -203,10 +203,18 @@ Committing a change to f1 in r1 must break up hardlink f1.i in r2:
   2 r2/.hg/store/fncache
 #endif
 
+Create a file which exec permissions we will change
+  $ cd r3
+  $ echo "echo hello world" > f3
+  $ hg add f3
+  $ hg ci -mf3
+  $ cd ..
+
   $ cd r3
   $ hg tip --template '{rev}:{node|short}\n'
-  11:a6451b6bc41f
+  12:d3b77733a28a
   $ echo bla > f1
+  $ chmod +x f3
   $ hg ci -m1
   $ cd ..
 
@@ -241,6 +249,7 @@ r4 has hardlinks in the working dir (not just inside .hg):
   2 r4/.hg/store/data/d1/f2.d
   2 r4/.hg/store/data/d1/f2.i
   2 r4/.hg/store/data/f1.i
+  2 r4/.hg/store/data/f3.i
   2 r4/.hg/store/fncache
   2 r4/.hg/store/phaseroots
   2 r4/.hg/store/undo
@@ -256,17 +265,18 @@ r4 has hardlinks in the working dir (not just inside .hg):
   2 r4/d1/data1
   2 r4/d1/f2
   2 r4/f1
+  2 r4/f3
 
+Update back to revision 12 in r4 should break hardlink of file f1 and f3:
 #if hardlink-whitelisted
   $ nlinksdir r4/.hg/undo.backup.dirstate r4/.hg/undo.dirstate
   4 r4/.hg/undo.backup.dirstate
   4 r4/.hg/undo.dirstate
 #endif
 
-Update back to revision 11 in r4 should break hardlink of file f1:
 
-  $ hg -R r4 up 11
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg -R r4 up 12
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ nlinksdir r4
   2 r4/.hg/00changelog.i
@@ -287,6 +297,7 @@ Update back to revision 11 in r4 should break hardlink of file f1:
   2 r4/.hg/store/data/d1/f2.d
   2 r4/.hg/store/data/d1/f2.i
   2 r4/.hg/store/data/f1.i
+  2 r4/.hg/store/data/f3.i
   2 r4/.hg/store/fncache
   2 r4/.hg/store/phaseroots
   2 r4/.hg/store/undo
@@ -302,6 +313,7 @@ Update back to revision 11 in r4 should break hardlink of file f1:
   2 r4/d1/data1
   2 r4/d1/f2
   1 r4/f1
+  1 r4/f3
 
 #if hardlink-whitelisted
   $ nlinksdir r4/.hg/undo.backup.dirstate r4/.hg/undo.dirstate
