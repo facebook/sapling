@@ -2854,8 +2854,12 @@ static PyMethodDef methods[] = {
 void dirs_module_init(PyObject *mod);
 void manifest_module_init(PyObject *mod);
 
+static const int version = 1;
+
 static void module_init(PyObject *mod)
 {
+	PyModule_AddIntConstant(mod, "version", version);
+
 	/* This module constant has two purposes.  First, it lets us unit test
 	 * the ImportError raised without hard-coding any error text.  This
 	 * means we can change the text in the future without breaking tests,
