@@ -9,7 +9,6 @@ from __future__ import absolute_import
 
 from .i18n import _
 from . import (
-    bdiff,
     mdiff,
 )
 
@@ -56,10 +55,10 @@ def _ctxdata(fctx):
 def _score(fctx, otherdata):
     orig, lines = otherdata
     text = fctx.data()
-    # bdiff.blocks() returns blocks of matching lines
+    # mdiff.blocks() returns blocks of matching lines
     # count the number of bytes in each
     equal = 0
-    matches = bdiff.blocks(text, orig)
+    matches = mdiff.blocks(text, orig)
     for x1, x2, y1, y2 in matches:
         for line in lines[y1:y2]:
             equal += len(line)

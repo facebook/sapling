@@ -9,7 +9,7 @@ New errors are not allowed. Warnings are strongly discouraged.
 
   $ hg locate -X contrib/python-zstandard -X hgext/fsmonitor/pywatchman |
   > sed 's-\\-/-g' | "$check_code" --warnings --per-file=0 - || false
-  contrib/perf.py:869:
+  contrib/perf.py:868:
    >             r.revision(r.node(x))
    don't convert rev to node before passing to revision(nodeorrev)
   Skipping i18n/polib.py it has no-che?k-code (glob)

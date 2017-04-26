@@ -20,6 +20,8 @@ from . import (
     util,
 )
 
+blocks = bdiff.blocks
+fixws = bdiff.fixws
 patches = mpatch.patches
 patchedsize = mpatch.patchedsize
 textdiff = bdiff.bdiff

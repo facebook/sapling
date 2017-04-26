@@ -4,7 +4,7 @@ import struct
 import unittest
 
 from mercurial import (
-    bdiff,
+    mdiff,
     mpatch,
 )
 
@@ -16,7 +16,7 @@ class diffreplace(
 class BdiffTests(unittest.TestCase):
 
     def assert_bdiff_applies(self, a, b):
-        d = bdiff.bdiff(a, b)
+        d = mdiff.textdiff(a, b)
         c = a
         if d:
             c = mpatch.patches(a, [d])
@@ -54,7 +54,7 @@ class BdiffTests(unittest.TestCase):
             self.assert_bdiff(a, b)
 
     def showdiff(self, a, b):
-        bin = bdiff.bdiff(a, b)
+        bin = mdiff.textdiff(a, b)
         pos = 0
         q = 0
         actions = []
@@ -110,7 +110,7 @@ class BdiffTests(unittest.TestCase):
             ("", "", 0),
         ]
         for a, b, allws in cases:
-            c = bdiff.fixws(a, allws)
+            c = mdiff.fixws(a, allws)
             self.assertEqual(
                 c, b, 'fixws(%r) want %r got %r (allws=%r)' % (a, b, c, allws))
 

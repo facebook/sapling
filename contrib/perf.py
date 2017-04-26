@@ -26,7 +26,6 @@ import random
 import sys
 import time
 from mercurial import (
-    bdiff,
     changegroup,
     cmdutil,
     commands,
@@ -812,7 +811,7 @@ def perfbdiff(ui, repo, file_, rev=None, count=None, **opts):
 
     def d():
         for pair in textpairs:
-            bdiff.bdiff(*pair)
+            mdiff.textdiff(*pair)
 
     timer, fm = gettimer(ui, opts)
     timer(d)
