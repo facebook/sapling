@@ -160,6 +160,8 @@ static PyMethodDef methods[] = {
 	{NULL, NULL}
 };
 
+static const int version = 1;
+
 #ifdef IS_PY3K
 static struct PyModuleDef mpatch_module = {
 	PyModuleDef_HEAD_INIT,
@@ -181,6 +183,7 @@ PyMODINIT_FUNC PyInit_mpatch(void)
 					  NULL, NULL);
 	Py_INCREF(mpatch_Error);
 	PyModule_AddObject(m, "mpatchError", mpatch_Error);
+	PyModule_AddIntConstant(m, "version", version);
 
 	return m;
 }
@@ -188,8 +191,10 @@ PyMODINIT_FUNC PyInit_mpatch(void)
 PyMODINIT_FUNC
 initmpatch(void)
 {
-	Py_InitModule3("mpatch", methods, mpatch_doc);
+	PyObject *m;
+	m = Py_InitModule3("mpatch", methods, mpatch_doc);
 	mpatch_Error = PyErr_NewException("mercurial.mpatch.mpatchError",
 					  NULL, NULL);
+	PyModule_AddIntConstant(m, "version", version);
 }
 #endif
