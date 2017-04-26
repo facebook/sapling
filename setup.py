@@ -372,6 +372,9 @@ class hgbuildpy(build_py):
     def run(self):
         if self.distribution.pure:
             modulepolicy = 'py'
+        elif self.build_lib == '.':
+            # in-place build should run without rebuilding C extensions
+            modulepolicy = 'allow'
         else:
             modulepolicy = 'c'
         with open("mercurial/__modulepolicy__.py", "w") as f:
