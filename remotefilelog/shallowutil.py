@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 import errno, hashlib, os, stat, struct, tempfile
-from mercurial import filelog, util, error
+from mercurial import filelog, revlog, util, error
 from mercurial.i18n import _
 
 import constants
@@ -91,17 +91,40 @@ def parsemeta(text):
         text = text[s + 2:]
     return meta or {}, text
 
-def parsesize(raw):
+def parsesizeflags(raw):
+    """given a remotefilelog blob, return (headersize, rawtextsize, flags)
+
+    see remotefilelogserver.createfileblob for the format.
+    raise RuntimeError if the content is illformed.
+    """
+    flags = revlog.REVIDX_DEFAULT_FLAGS
+    size = None
     try:
         index = raw.index('\0')
-        size = int(raw[:index])
+        header = raw[:index]
+        if header.startswith('v'):
+            # v1 and above, header starts with 'v'
+            if header.startswith('v1\n'):
+                for s in header.split('\n'):
+                    if s.startswith(constants.METAKEYSIZE):
+                        size = int(s[len(constants.METAKEYSIZE):])
+                    elif s.startswith(constants.METAKEYFLAG):
+                        flags = int(s[len(constants.METAKEYFLAG):])
+            else:
+                raise RuntimeError('unsupported remotefilelog header: %s'
+                                   % header)
+        else:
+            # v0, str(int(size)) is the header
+            size = int(header)
     except ValueError:
-        raise RuntimeError("corrupt cache data")
-    return index, size
+        raise RuntimeError("unexpected remotefilelog header: illegal format")
+    if size is None:
+        raise RuntimeError("unexpected remotefilelog header: no size found")
+    return index + 1, size, flags
 
 def ancestormap(raw):
-    index, size = parsesize(raw)
-    start = index + 1 + size
+    offset, size, flags = parsesizeflags(raw)
+    start = offset + size
 
     mapping = {}
     while start < len(raw):

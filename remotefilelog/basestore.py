@@ -1,5 +1,11 @@
+from __future__ import absolute_import
+
 import errno, hashlib, heapq, os, shutil, time
-import shallowutil
+
+from . import (
+    shallowutil,
+)
+
 from mercurial import error
 from mercurial.i18n import _
 from mercurial.node import bin, hex
@@ -249,21 +255,22 @@ class basestore(object):
     def _validatedata(self, data, path):
         try:
             if len(data) > 0:
-                size, remainder = data.split('\0', 1)
-                size = int(size)
+                # see remotefilelogserver.createfileblob for the format
+                offset, size, flags = shallowutil.parsesizeflags(data)
                 if len(data) <= size:
                     # it is truncated
                     return False
 
                 # extract the node from the metadata
-                datanode = remainder[size:size + 20]
+                offset += size
+                datanode = data[offset:offset + 20]
 
                 # and compare against the path
                 if os.path.basename(path) == hex(datanode):
                     # Content matches the intended path
                     return True
                 return False
-        except ValueError:
+        except (ValueError, RuntimeError):
             pass
 
         return False

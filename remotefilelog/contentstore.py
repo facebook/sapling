@@ -120,8 +120,8 @@ class remotefilelogcontentstore(basestore.basestore):
     def get(self, name, node):
         data = self._getdata(name, node)
 
-        index, size = shallowutil.parsesize(data)
-        content = data[(index + 1):(index + 1 + size)]
+        offset, size, flags = shallowutil.parsesizeflags(data)
+        content = data[offset:offset + size]
 
         ancestormap = shallowutil.ancestormap(data)
         p1, p2, linknode, copyfrom = ancestormap[node]

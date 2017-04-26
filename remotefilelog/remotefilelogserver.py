@@ -259,6 +259,9 @@ def getfile(repo, proto, file, node):
     in batches to request many files at once. The return protocol is:
     <errorcode>\0<data/errormsg> where <errorcode> is 0 for success or
     non-zero for an error.
+
+    data is a compressed blob with revlog flag and ancestors information. See
+    createfileblob for its content.
     """
     if shallowrepo.requirement in repo.requirements:
         return '1\0' + _('cannot fetch remote files from shallow repo')
@@ -307,7 +310,30 @@ def getfiles(repo, proto):
     return wireproto.streamres(streamer())
 
 def createfileblob(filectx):
-    text = filectx.data()
+    """
+    format:
+        v0:
+            str(len(rawtext)) + '\0' + rawtext + ancestortext
+        v1:
+            'v1' + '\n' + metalist + '\0' + rawtext + ancestortext
+            metalist := metalist + '\n' + meta | meta
+            meta := sizemeta | flagmeta
+            sizemeta := METAKEYSIZE + str(len(rawtext))
+            flagmeta := METAKEYFLAG + str(flag)
+
+            note: sizemeta must exist. METAKEYFLAG and METAKEYSIZE must have a
+            length of 1.
+    """
+    flog = filectx.filelog()
+    frev = filectx.filerev()
+    revlogflags = flog.flags(frev)
+    if revlogflags == 0:
+        # normal files
+        text = filectx.data()
+    else:
+        # lfs, read raw revision data
+        text = flog.revision(frev, raw=True)
+
     repo = filectx._repo
 
     ancestors = [filectx]
@@ -337,7 +363,18 @@ def createfileblob(filectx):
     finally:
         repo.forcelinkrev = False
 
-    return "%d\0%s%s" % (len(text), text, ancestortext)
+    version = 0
+    if revlogflags:
+        version = 1
+
+    if version == 1:
+        header = ('v1\n%s%d\n%s%d'
+                  % (constants.METAKEYSIZE, len(text),
+                     constants.METAKEYFLAG, revlogflags))
+    else: # v0
+        header = '%d' % len(text)
+
+    return "%s\0%s%s" % (header, text, ancestortext)
 
 def gcserver(ui, repo):
     if not repo.ui.configbool("remotefilelog", "server"):
