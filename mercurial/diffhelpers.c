@@ -164,6 +164,8 @@ static PyMethodDef methods[] = {
 	{NULL, NULL}
 };
 
+static const int version = 1;
+
 #ifdef IS_PY3K
 static struct PyModuleDef diffhelpers_module = {
 	PyModuleDef_HEAD_INIT,
@@ -185,6 +187,7 @@ PyMODINIT_FUNC PyInit_diffhelpers(void)
 											NULL, NULL);
 	Py_INCREF(diffhelpers_Error);
 	PyModule_AddObject(m, "diffhelpersError", diffhelpers_Error);
+	PyModule_AddIntConstant(m, "version", version);
 
 	return m;
 }
@@ -192,8 +195,10 @@ PyMODINIT_FUNC PyInit_diffhelpers(void)
 PyMODINIT_FUNC
 initdiffhelpers(void)
 {
-	Py_InitModule3("diffhelpers", methods, diffhelpers_doc);
+	PyObject *m;
+	m = Py_InitModule3("diffhelpers", methods, diffhelpers_doc);
 	diffhelpers_Error = PyErr_NewException("diffhelpers.diffhelpersError",
 	                                        NULL, NULL);
+	PyModule_AddIntConstant(m, "version", version);
 }
 #endif
