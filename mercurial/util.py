@@ -42,6 +42,7 @@ import warnings
 import zlib
 
 from . import (
+    base85,
     encoding,
     error,
     i18n,
@@ -49,6 +50,9 @@ from . import (
     parsers,
     pycompat,
 )
+
+b85decode = base85.b85decode
+b85encode = base85.b85encode
 
 cookielib = pycompat.cookielib
 empty = pycompat.empty

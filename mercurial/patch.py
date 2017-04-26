@@ -26,7 +26,6 @@ from .node import (
     short,
 )
 from . import (
-    base85,
     copies,
     diffhelpers,
     encoding,
@@ -1430,7 +1429,7 @@ class binhunk(object):
             else:
                 l = ord(l) - ord('a') + 27
             try:
-                dec.append(base85.b85decode(line[1:])[:l])
+                dec.append(util.b85decode(line[1:])[:l])
             except ValueError as e:
                 raise PatchError(_('could not decode "%s" binary patch: %s')
                                  % (self._fname, str(e)))

@@ -52,7 +52,6 @@ from __future__ import absolute_import
 
 from .node import nullrev
 from . import (
-    base85,
     util,
 )
 
@@ -166,13 +165,13 @@ def ctxpvec(ctx):
                 else:
                     pvc[n] = _mergevec(pvc[p1], pvc[p2], node)
     bs = _join(*pvc[ctx.rev()])
-    return pvec(base85.b85encode(bs))
+    return pvec(util.b85encode(bs))
 
 class pvec(object):
     def __init__(self, hashorctx):
         if isinstance(hashorctx, str):
             self._bs = hashorctx
-            self._depth, self._vec = _split(base85.b85decode(hashorctx))
+            self._depth, self._vec = _split(util.b85decode(hashorctx))
         else:
             self._vec = ctxpvec(hashorctx)
 

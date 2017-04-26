@@ -13,7 +13,6 @@ import zlib
 
 from .i18n import _
 from . import (
-    base85,
     bdiff,
     error,
     mpatch,
@@ -430,7 +429,7 @@ def b85diff(to, tn):
             l = chr(ord('A') + l - 1)
         else:
             l = chr(l - 26 + ord('a') - 1)
-        return '%c%s\n' % (l, base85.b85encode(line, True))
+        return '%c%s\n' % (l, util.b85encode(line, True))
 
     def chunk(text, csize=52):
         l = len(text)

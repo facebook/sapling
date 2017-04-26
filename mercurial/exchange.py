@@ -16,7 +16,6 @@ from .node import (
     nullid,
 )
 from . import (
-    base85,
     bookmarks as bookmod,
     bundle2,
     changegroup,
@@ -1509,7 +1508,7 @@ def _pullobsolete(pullop):
             markers = []
             for key in sorted(remoteobs, reverse=True):
                 if key.startswith('dump'):
-                    data = base85.b85decode(remoteobs[key])
+                    data = util.b85decode(remoteobs[key])
                     version, newmarks = obsolete._readmarkers(data)
                     markers += newmarks
             if markers:

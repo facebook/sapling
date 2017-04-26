@@ -74,7 +74,6 @@ import struct
 
 from .i18n import _
 from . import (
-    base85,
     error,
     node,
     parsers,
@@ -744,7 +743,7 @@ def _pushkeyescape(markers):
         currentlen += len(nextdata)
     for idx, part in enumerate(reversed(parts)):
         data = ''.join([_pack('>B', _fm0version)] + part)
-        keys['dump%i' % idx] = base85.b85encode(data)
+        keys['dump%i' % idx] = util.b85encode(data)
     return keys
 
 def listmarkers(repo):
@@ -761,7 +760,7 @@ def pushmarker(repo, key, old, new):
     if old:
         repo.ui.warn(_('unexpected old value for %r') % key)
         return 0
-    data = base85.b85decode(new)
+    data = util.b85decode(new)
     lock = repo.lock()
     try:
         tr = repo.transaction('pushkey: obsolete markers')
