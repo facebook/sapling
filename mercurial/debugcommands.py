@@ -1020,19 +1020,20 @@ def debuginstall(ui, **opts):
     fm.write('hgmodules', _("checking installed modules (%s)...\n"),
              os.path.dirname(pycompat.fsencode(__file__)))
 
-    err = None
-    try:
-        from . import (
-            base85,
-            bdiff,
-            mpatch,
-            osutil,
-        )
-        dir(bdiff), dir(mpatch), dir(base85), dir(osutil) # quiet pyflakes
-    except Exception as inst:
-        err = inst
-        problems += 1
-    fm.condwrite(err, 'extensionserror', " %s\n", err)
+    if policy.policy in ('c', 'allow'):
+        err = None
+        try:
+            from . import (
+                base85,
+                bdiff,
+                mpatch,
+                osutil,
+            )
+            dir(bdiff), dir(mpatch), dir(base85), dir(osutil) # quiet pyflakes
+        except Exception as inst:
+            err = inst
+            problems += 1
+        fm.condwrite(err, 'extensionserror', " %s\n", err)
 
     compengines = util.compengines._engines.values()
     fm.write('compengines', _('checking registered compression engines (%s)\n'),

@@ -34,7 +34,7 @@ hg debuginstall JSON
     "editornotfound": false,
     "encoding": "ascii",
     "encodingerror": null,
-    "extensionserror": null,
+    "extensionserror": null, (no-pure !)
     "hgmodulepolicy": "*", (glob)
     "hgmodules": "*mercurial", (glob)
     "hgver": "*", (glob)
