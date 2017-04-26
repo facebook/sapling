@@ -7,7 +7,6 @@ Build-Depends:
  dh-python,
  python-all,
  python-all-dev,
- libssl-dev,
  liblz4-dev
 Standards-Version: 3.9.4
 X-Python-Version: >= 2.6
@@ -19,7 +18,6 @@ Depends:
  ${misc:Depends},
  ${python:Depends},
  liblz4-1,
- libssl-dev,
  python-lz4
 Enhances: mercurial
 Breaks: mercurial (<< 3.5)
