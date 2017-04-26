@@ -15,7 +15,7 @@ The schema of this file is (JSON):
 - state: map of topic names to objects with keys:
     - topic (e.g. "changesets", "manifests")
     - pos: which item number out of <total> we're processing
-    - total: total number of items (can change!) 
+    - total: total number of items (can change!)
     - unit: name of the type of unit being processed (e.g., "changeset")
     - item: the active item being processed (e.g., "changeset #5")
     - active: whether this is the currently active progress bar
