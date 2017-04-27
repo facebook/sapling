@@ -22,7 +22,7 @@ def sendpackpart(filename, history, data):
     historylen = struct.pack('!I', len(history))
     rawhistory = ''
     for entry in history:
-        copyfrom = entry[4]
+        copyfrom = entry[4] or ''
         copyfromlen = len(copyfrom)
         tup = entry[:-1] + (copyfromlen,)
         rawhistory += struct.pack('!20s20s20s20sH', *tup)

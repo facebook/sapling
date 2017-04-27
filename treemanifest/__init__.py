@@ -49,6 +49,7 @@ from mercurial import (
     cmdutil,
     commands,
     error,
+    exchange,
     extensions,
     hg,
     localrepo,
@@ -718,8 +719,12 @@ def _prefetchtrees(repo, rootdir, mfnodes, basemfnodes, directories):
     except error.BundleValueError as exc:
         raise error.Abort(_('missing support for %s') % exc)
 
-@bundle2.parthandler(TREEGROUP_PARTTYPE, ('version',))
+@bundle2.parthandler(TREEGROUP_PARTTYPE, ('version', 'treecache'))
 def treeparthandler(op, part):
+    """Handles received tree packs. If `treecache` is True, the received data
+    goes in to the shared pack cache. Otherwise, the received data goes into the
+    permanent repo local data.
+    """
     repo = op.repo
 
     version = part.params.get('version')
@@ -727,7 +732,11 @@ def treeparthandler(op, part):
         raise error.Abort(_("unknown treegroup bundle2 part version: %s") %
                           version)
 
-    packpath = shallowutil.getcachepackpath(repo, PACK_CATEGORY)
+    if part.params.get('treecache', 'False') == 'True':
+        packpath = shallowutil.getcachepackpath(repo, PACK_CATEGORY)
+    else:
+        packpath = shallowutil.getlocalpackpath(repo.svfs.vfs.base,
+                                                PACK_CATEGORY)
     receivedhistory, receiveddata = wirepack.receivepack(repo.ui, part,
                                                          packpath)
 
@@ -819,6 +828,7 @@ def servergettreepack(repo, proto, args):
                                         basemfnodes, directories)
         part = bundler.newpart(TREEGROUP_PARTTYPE, data=packstream)
         part.addparam('version', '1')
+        part.addparam('treecache', 'True')
 
     except error.Abort as exc:
         # cleanly forward Abort error to the client
@@ -969,3 +979,29 @@ def serverrepack(repo):
     histstore = unionmetadatastore(hpackstore, revlogstore)
 
     _runrepack(repo, datastore, histstore, packpath, PACK_CATEGORY)
+
+@exchange.b2partsgenerator('treepack')
+def gettreepackpart(pushop, bundler):
+    """add parts containing trees being pushed"""
+    if 'treepack' in pushop.stepsdone:
+        return
+    pushop.stepsdone.add('treepack')
+
+    rootdir = ''
+    mfnodes = []
+    basemfnodes = []
+    directories = []
+
+    outgoing = pushop.outgoing
+    for node in outgoing.missing:
+        mfnode = pushop.repo[node].manifestnode()
+        mfnodes.append(mfnode)
+    basectxs = pushop.repo.set('parents(roots(%ln))', outgoing.missing)
+    for basectx in basectxs:
+        basemfnodes.append(basectx.manifestnode())
+
+    packstream = generatepackstream(pushop.repo, rootdir, mfnodes,
+                                    basemfnodes, directories)
+    part = bundler.newpart(TREEGROUP_PARTTYPE, data=packstream)
+    part.addparam('version', '1')
+    part.addparam('treecache', 'False')
