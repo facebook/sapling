@@ -114,40 +114,40 @@
   -r--r--r--     248 5d1716bbef6e7200192de6509055d1ee31a4172c.datapack
   -r--r--r--     146 cffef142da32f3e52c1779490e5d0ddac5f9b82b.datapack
   $ hg repack
-  $ ls_l .hg/store/packs/manifests | grep datapack
-  -r--r--r--     393 45f06dbb5d82e52ae3975af82d7e1b4d73c8c599.datapack
+  $ ls -l .hg/store/packs/manifests | grep datapack
+  * 362 * 9e5a04938d53f5b418e4f1b6a413d250f231f60a.datapack (glob)
 
 # Test incremental repacking of trees
   $ echo b >> dir/b && hg commit -Aqm 'modify dir/b'
   $ echo b >> dir/b && hg commit -Aqm 'modify dir/b'
-  $ ls_l .hg/store/packs/manifests | grep datapack
-  -r--r--r--     248 21501384df03b8489b366c5218be639fa08830e4.datapack
-  -r--r--r--     393 45f06dbb5d82e52ae3975af82d7e1b4d73c8c599.datapack
-  -r--r--r--     248 d7e689a91ac63385be120a118af9ce8663748f28.datapack
+  $ ls -l .hg/store/packs/manifests | grep datapack
+  * 248 * 21501384df03b8489b366c5218be639fa08830e4.datapack (glob)
+  * 362 * 9e5a04938d53f5b418e4f1b6a413d250f231f60a.datapack (glob)
+  * 248 * d7e689a91ac63385be120a118af9ce8663748f28.datapack (glob)
 
 - repack incremental does nothing here because there are so few packs
   $ hg repack --incremental --config remotefilelog.data.generations=300,200 --config remotefilelog.data.repacksizelimit=300
-  $ ls_l .hg/store/packs/manifests | grep datapack
-  -r--r--r--     248 21501384df03b8489b366c5218be639fa08830e4.datapack
-  -r--r--r--     393 45f06dbb5d82e52ae3975af82d7e1b4d73c8c599.datapack
-  -r--r--r--     248 d7e689a91ac63385be120a118af9ce8663748f28.datapack
+  $ ls -l .hg/store/packs/manifests | grep datapack
+  * 248 * 21501384df03b8489b366c5218be639fa08830e4.datapack (glob)
+  * 362 * 9e5a04938d53f5b418e4f1b6a413d250f231f60a.datapack (glob)
+  * 248 * d7e689a91ac63385be120a118af9ce8663748f28.datapack (glob)
 
   $ echo b >> dir/b && hg commit -Aqm 'modify dir/b'
   $ echo b >> dir/b && hg commit -Aqm 'modify dir/b'
   $ echo b >> dir/b && hg commit -Aqm 'modify dir/b'
-  $ ls_l .hg/store/packs/manifests | grep datapack
-  -r--r--r--     248 21501384df03b8489b366c5218be639fa08830e4.datapack
-  -r--r--r--     248 347263bf1efbdb5bf7e1d1565b6b504073fb9093.datapack
-  -r--r--r--     393 45f06dbb5d82e52ae3975af82d7e1b4d73c8c599.datapack
-  -r--r--r--     248 544a3b46a61732209116ae50847ec333b75e3765.datapack
-  -r--r--r--     248 863908ef8149261ab0d891c2344d8e8766c39441.datapack
-  -r--r--r--     248 d7e689a91ac63385be120a118af9ce8663748f28.datapack
+  $ ls -l .hg/store/packs/manifests | grep datapack
+  * 248 * 21501384df03b8489b366c5218be639fa08830e4.datapack (glob)
+  * 248 * 347263bf1efbdb5bf7e1d1565b6b504073fb9093.datapack (glob)
+  * 248 * 544a3b46a61732209116ae50847ec333b75e3765.datapack (glob)
+  * 248 * 863908ef8149261ab0d891c2344d8e8766c39441.datapack (glob)
+  * 362 * 9e5a04938d53f5b418e4f1b6a413d250f231f60a.datapack (glob)
+  * 248 * d7e689a91ac63385be120a118af9ce8663748f28.datapack (glob)
 
 - repack incremental kicks in once there are a number of packs
   $ hg repack --incremental --config remotefilelog.data.generations=300,200
-  $ ls_l .hg/store/packs/manifests | grep datapack
-  -r--r--r--     393 45f06dbb5d82e52ae3975af82d7e1b4d73c8c599.datapack
-  -r--r--r--    1236 59f37d77ac8d5da86d6eea390010d0d46d9dae19.datapack
+  $ ls -l .hg/store/packs/manifests | grep datapack
+  * 1148 * 57360ff79b595e6474abacd912600d61b5e5c840.datapack (glob)
+  *  362 * 9e5a04938d53f5b418e4f1b6a413d250f231f60a.datapack (glob)
 
 Test repacking from revlogs to pack files on the server
   $ cd ../master

@@ -79,6 +79,8 @@ Test that commit creates local trees
   $ hg commit -qAm 'modify subdir/z'
   $ ls -l .hg/store/packs/manifests
   * (glob)
+  * 1098 * 3266ac531c4982ead12af52e4b8134752657a7d8.histidx (glob)
+  *  183 * 3266ac531c4982ead12af52e4b8134752657a7d8.histpack (glob)
   * 1106 * a7f7e084adff88a01cf76909345be1e56ee704a9.dataidx (glob)
   *  254 * a7f7e084adff88a01cf76909345be1e56ee704a9.datapack (glob)
   $ hg debugdatapack .hg/store/packs/manifests/a7f7e084adff88a01cf76909345be1e56ee704a9

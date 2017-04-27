@@ -22,7 +22,7 @@ from constants import (
 try:
     import cstore
     import treemanifest
-    from remotefilelog import datapack, shallowutil
+    from remotefilelog import datapack, historypack, shallowutil
     supportsctree = True
 except ImportError:
     supportsctree = False
@@ -991,28 +991,35 @@ class manifestfactory(object):
                     packpath = shallowutil.getlocalpackpath(
                             origself.opener.vfs.base,
                             'manifests')
-                    transaction.treepack = datapack.mutabledatapack(
+                    transaction.treedatapack = datapack.mutabledatapack(
+                            self.ui,
+                            packpath)
+                    transaction.treehistpack = historypack.mutablehistorypack(
                             self.ui,
                             packpath)
                     def postclose(tr):
-                        tr.treepack.close()
+                        tr.treedatapack.close()
+                        tr.treehistpack.close()
                         treemanifestcache.getinstance(origself.opener,
                                                       self.ui).clear()
                         origself.opener.manifestdatastore.markforrefresh()
                     def abort(tr):
-                        tr.treepack.abort()
+                        tr.treedatapack.abort()
+                        tr.treehistpack.abort()
                     transaction.addpostclose('treepack', postclose)
                     transaction.addabort('treepack', abort)
 
                 dpack = treemanifest.InterceptedMutableDataPack(
-                        transaction.treepack,
+                        transaction.treedatapack,
                         node, p1)
+                hpack = treemanifest.InterceptedMutableHistoryPack(
+                        transaction.treehistpack, node, p1)
                 newtreeiter = newtree.finalize(tree)
                 for nname, nnode, ntext, np1text, np1, np2 in newtreeiter:
                     # Not using deltas, since there aren't any other trees in
                     # this pack it could delta against.
                     dpack.add(nname, nnode, revlog.nullid, ntext)
-                    # TODO: support history packs during commits
+                    hpack.add(nname, nnode, np1, np2, revlog.nullid, '')
 
                 treemanifestcache.getinstance(origself.opener,
                                               self.ui)[node] = newtree
