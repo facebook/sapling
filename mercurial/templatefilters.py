@@ -230,7 +230,7 @@ def json(obj, paranoid=True):
     elif obj is True:
         return 'true'
     elif isinstance(obj, (int, long, float)):
-        return str(obj)
+        return pycompat.bytestr(obj)
     elif isinstance(obj, str):
         return '"%s"' % encoding.jsonescape(obj, paranoid=paranoid)
     elif util.safehasattr(obj, 'keys'):
@@ -359,7 +359,7 @@ def stringify(thing):
         return "".join([stringify(t) for t in thing if t is not None])
     if thing is None:
         return ""
-    return str(thing)
+    return pycompat.bytestr(thing)
 
 @templatefilter('stripdir')
 def stripdir(text):
