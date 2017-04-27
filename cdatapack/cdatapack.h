@@ -70,6 +70,8 @@ typedef struct _datapack_handle_t {
 
   bool large_fanout;
 
+  uint8_t version;
+
   // this is the computed fanout table.
   struct _fanout_table_entry_t *fanout_table;
 
@@ -90,6 +92,9 @@ typedef struct _delta_chain_link_t {
 
   data_offset_t delta_sz;
   const uint8_t *delta;
+
+  uint32_t meta_sz;
+  const uint8_t *meta;
 } delta_chain_link_t;
 
 typedef enum {
@@ -157,6 +162,7 @@ typedef struct _get_delta_chain_link_result_t {
 
 // this should really be private, but we need it for the cdatapack_dump tool.
 extern const get_delta_chain_link_result_t getdeltachainlink(
+    const datapack_handle_t *handle,
     const uint8_t *ptr, delta_chain_link_t *link);
 
 #endif //CDATAPACK_CDATAPACK_H

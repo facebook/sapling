@@ -28,6 +28,7 @@ hgcloneshallow() {
   cat >> $dest/.hg/hgrc <<EOF
 [remotefilelog]
 reponame=master
+datapackversion=1
 EOF
 }
 
@@ -46,4 +47,8 @@ mkcommit() {
   echo "$1" > "$1"
   hg add "$1"
   hg ci -m "$1"
+}
+
+ls_l() {
+  $PYTHON $TESTDIR/ls-l.py "$@"
 }

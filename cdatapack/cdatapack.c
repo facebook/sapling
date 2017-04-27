@@ -227,15 +227,18 @@ datapack_handle_t *open_datapack(
   }
   const disk_index_header_t *header = (const disk_index_header_t *)
       handle->index_mmap;
-  if (header->version != VERSION) {
+  if (header->version != ((const char *) handle->data_mmap)[0]) {
+    // data and index disagree on version
     handle->status = DATAPACK_HANDLE_VERSION_MISMATCH;
     goto error_cleanup;
   }
 
-  if (((const char *) handle->data_mmap)[0] != VERSION) {
+  if (header->version > 1) {
+    // unsupported version
     handle->status = DATAPACK_HANDLE_VERSION_MISMATCH;
     goto error_cleanup;
   }
+  handle->version = header->version;
 
   handle->large_fanout = ((header->config & LARGE_FANOUT) != 0);
   int fanout_count = 1 << (handle->large_fanout ? 16 : 8);
@@ -445,6 +448,7 @@ static inline int platform_madvise_away(void *ptr, size_t len) {
 }
 
 const get_delta_chain_link_result_t getdeltachainlink(
+    const datapack_handle_t *handle,
     const uint8_t *ptr, delta_chain_link_t *link) {
   link->filename_sz = ntohs(*((uint16_t *) ptr));
   ptr += sizeof(uint16_t);
@@ -480,6 +484,17 @@ const get_delta_chain_link_result_t getdeltachainlink(
   link->delta = decompress_output;
 
   ptr += compressed_sz;
+
+  if (handle->version == 1) {
+    // v1 has metadata block
+    link->meta_sz = ntohl(*((uint32_t *) ptr));
+    ptr += sizeof(uint32_t);
+    link->meta = ptr;
+    ptr += link->meta_sz;
+  } else {
+    link->meta_sz = 0;
+    link->meta = NULL;
+  }
 
   return COMPOUND_LITERAL(get_delta_chain_link_result_t) { GET_DELTA_CHAIN_LINK_OK, ptr };
 }
@@ -519,7 +534,7 @@ delta_chain_t getdeltachain(
     delta_chain_link_t *link = &result.delta_chain_links[ix];
     get_delta_chain_link_result_t next;
 
-    next = getdeltachainlink(ptr, link);
+    next = getdeltachainlink(handle, ptr, link);
 
     switch (next.code) {
       case GET_DELTA_CHAIN_LINK_OK:

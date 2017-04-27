@@ -1,4 +1,11 @@
-import basestore, shallowutil
+from __future__ import absolute_import
+
+from . import (
+    basestore,
+    constants,
+    shallowutil,
+)
+
 from mercurial import mdiff, revlog, util
 from mercurial.node import hex, nullid
 
@@ -77,6 +84,15 @@ class unioncontentstore(object):
 
         return chain
 
+    def getmeta(self, name, node):
+        """Returns the metadata dict for given node."""
+        for store in self.stores:
+            try:
+                return store.getmeta(name, node)
+            except KeyError:
+                pass
+        raise KeyError((name, hex(node)))
+
     def _getpartialchain(self, name, node):
         """Returns a partial delta chain for the given name/node pair.
 
@@ -117,6 +133,10 @@ class unioncontentstore(object):
                 store.markforrefresh()
 
 class remotefilelogcontentstore(basestore.basestore):
+    def __init__(self, *args, **kwargs):
+        super(remotefilelogcontentstore, self).__init__(*args, **kwargs)
+        self._metacache = (None, None) # (node, meta)
+
     def get(self, name, node):
         data = self._getdata(name, node)
 
@@ -129,6 +149,8 @@ class remotefilelogcontentstore(basestore.basestore):
         if copyfrom:
             copyrev = hex(p1)
 
+        self._updatemetacache(node, size, flags)
+
         revision = shallowutil.createrevlogtext(content, copyfrom, copyrev)
         return revision
 
@@ -140,13 +162,28 @@ class remotefilelogcontentstore(basestore.basestore):
         revision = self.get(name, node)
         return [(name, node, None, nullid, revision)]
 
+    def getmeta(self, name, node):
+        if node != self._metacache[0]:
+            data = self._getdata(name, node)
+            offset, size, flags = shallowutil.parsesizeflags(data)
+            self._updatemetacache(node, size, flags)
+        return self._metacache[1]
+
     def add(self, name, node, data):
         raise RuntimeError("cannot add content only to remotefilelog "
                            "contentstore")
 
+    def _updatemetacache(self, node, size, flags):
+        if node == self._metacache[0]:
+            return
+        meta = {constants.METAKEYFLAG: flags,
+                constants.METAKEYSIZE: size}
+        self._metacache = (node, meta)
+
 class remotecontentstore(object):
     def __init__(self, ui, fileservice, shared):
         self._fileservice = fileservice
+        # type(shared) is usually remotefilelogcontentstore
         self._shared = shared
 
     def get(self, name, node):
@@ -161,6 +198,11 @@ class remotecontentstore(object):
         # fulltext.
         revision = self.get(name, node)
         return [(name, node, None, nullid, revision)]
+
+    def getmeta(self, name, node):
+        self._fileservice.prefetch([(name, hex(node))], force=True,
+                                   fetchdata=True)
+        return self._shared.getmeta(name, node)
 
     def add(self, name, node, data):
         raise RuntimeError("cannot add to a remote store")
@@ -184,6 +226,12 @@ class manifestrevlogstore(object):
     def getdeltachain(self, name, node):
         revision = self.get(name, node)
         return [(name, node, None, nullid, revision)]
+
+    def getmeta(self, name, node):
+        rl = self._revlog(name)
+        rev = rl.rev(node)
+        return {constants.METAKEYFLAG: rl.flags(rev),
+                constants.METAKEYSIZE: rl.rawsize(rev)}
 
     def getancestors(self, name, node, known=None):
         if known is None:

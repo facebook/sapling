@@ -25,6 +25,7 @@ from remotefilelog.basepack import (
     SMALLFANOUTPREFIX,
     LARGEFANOUTPREFIX,
 )
+from remotefilelog import constants
 
 from mercurial.node import nullid
 import mercurial.ui
@@ -52,15 +53,20 @@ class datapacktestsbase(object):
     def getFakeHash(self):
         return ''.join(chr(random.randint(0, 255)) for _ in range(20))
 
-    def createPack(self, revisions=None):
+    def createPack(self, revisions=None, version=0):
         if revisions is None:
             revisions = [("filename", self.getFakeHash(), nullid, "content")]
 
         packdir = self.makeTempDir()
-        packer = mutabledatapack(mercurial.ui.ui(), packdir)
+        packer = mutabledatapack(mercurial.ui.ui(), packdir, version=version)
 
-        for filename, node, base, content in revisions:
-            packer.add(filename, node, base, content)
+        for args in revisions:
+            filename, node, base, content = args[0:4]
+            # meta is optional
+            meta = None
+            if len(args) > 4:
+                meta = args[4]
+            packer.add(filename, node, base, content, metadata=meta)
 
         path = packer.close()
         return self.datapackreader(path)
@@ -145,6 +151,38 @@ class datapacktestsbase(object):
                 expectedcontent = blobs[(entry[0], entry[1], entry[3])]
                 self.assertEquals(entry[4], expectedcontent)
 
+    def testPackMetadata(self):
+        # TODO: fix cdatapack to support getmeta
+        if self.datapackreader is fastdatapack:
+            return
+        revisions = []
+        for i in range(10):
+            filename = '%s.txt' % i
+            content = ' \n' * i
+            node = self.getHash(content)
+            meta = {constants.METAKEYFLAG: i % 4,
+                    constants.METAKEYSIZE: len(content)}
+            revisions.append((filename, node, nullid, content, meta))
+        pack = self.createPack(revisions, version=1)
+        for name, node, x, content, origmeta in revisions:
+            parsedmeta = pack.getmeta(name, node)
+            # flag == 0 should be optimized out
+            if origmeta[constants.METAKEYFLAG] == 0:
+                del origmeta[constants.METAKEYFLAG]
+            self.assertEquals(parsedmeta, origmeta)
+
+    def testPackMetadataThrows(self):
+        filename = '1'
+        content = '2'
+        node = self.getHash(content)
+        meta = {constants.METAKEYFLAG: 3}
+        revisions = [(filename, node, nullid, content, meta)]
+        try:
+            self.createPack(revisions, version=0)
+            self.assertTrue(False, "should throw if metadata is not supported")
+        except RuntimeError:
+            pass
+
     def testGetMissing(self):
         """Test the getmissing() api.
         """
@@ -184,7 +222,7 @@ class datapacktestsbase(object):
         path = pack.path + '.datapack'
         with open(path) as f:
             raw = f.read()
-        raw = struct.pack('!B', 1) + raw[1:]
+        raw = struct.pack('!B', 255) + raw[1:]
         os.chmod(path, os.stat(path).st_mode | stat.S_IWRITE)
         with open(path, 'w+') as f:
             f.write(raw)

@@ -85,11 +85,52 @@ def createrevlogtext(text, copyfrom=None, copyrev=None):
     return text
 
 def parsemeta(text):
+    """parse mercurial filelog metadata"""
     meta, size = filelog.parsemeta(text)
     if text.startswith('\1\n'):
         s = text.index('\1\n', 2)
         text = text[s + 2:]
     return meta or {}, text
+
+def parsepackmeta(metabuf):
+    """parse datapack meta, bytes (<metadata-list>) -> dict
+
+    raise ValueError if the data is corrupted
+    """
+    metadict = {}
+    offset = 0
+    buflen = len(metabuf)
+    while buflen - offset >= 2:
+        metalen = struct.unpack_from('!H', metabuf, offset)[0]
+        offset += 2
+        key = metabuf[offset]
+        if offset + metalen > buflen:
+            raise ValueError('corrupted metadata: incomplete buffer')
+        value = metabuf[offset + 1:offset + metalen]
+        metadict[key] = value
+        offset += metalen
+    if offset != buflen:
+        raise ValueError('corrupted metadata: redundant data')
+    return metadict
+
+def buildpackmeta(metadict):
+    """reverse of parsepackmeta, dict -> bytes (<metadata-list>)
+
+    raise ProgrammingError when metadata key is illegal, or ValueError if
+    length limit is exceeded
+    """
+    metabuf = ''
+    for k, v in sorted((metadict or {}).iteritems()):
+        if len(k) != 1:
+            raise error.ProgrammingError('illegal metadata key: %s' % k)
+        if len(v) > 0xfffe:
+            raise ValueError('metadata value is too long: 0x%x > 0xfffe'
+                             % len(v))
+        metabuf += struct.pack('!H', len(v) + 1) + k
+        metabuf += v
+    # len(metabuf) is guaranteed representable in 4 bytes, because there are
+    # only 256 keys, and for each value, len(value) <= 0xfffe.
+    return metabuf
 
 def parsesizeflags(raw):
     """given a remotefilelog blob, return (headersize, rawtextsize, flags)

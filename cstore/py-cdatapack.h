@@ -17,9 +17,14 @@ extern "C" {
 #include "../cdatapack/cdatapack.h"
 }
 
-// ====  Forward declarations ====
+// ====  py_cdatapack PyObject declaration ====
 
-struct py_cdatapack;
+struct py_cdatapack {
+  PyObject_HEAD;
+
+  bool initialized;
+  datapack_handle_t *handle;
+};
 
 // ====  py_cdatapack_iterator PyObject declaration ====
 
@@ -52,7 +57,9 @@ static PyObject *cdatapack_deltas_iterator_iternext(
     return NULL;
   }
 
-  get_delta_chain_link_result_t next = getdeltachainlink(iterator->ptr, &link);
+  get_delta_chain_link_result_t next = getdeltachainlink(
+		  iterator->datapack->handle,
+		  iterator->ptr, &link);
 
   switch (next.code) {
     case GET_DELTA_CHAIN_LINK_OK:
@@ -80,6 +87,7 @@ static PyObject *cdatapack_deltas_iterator_iternext(
   if (fn == NULL || node == NULL || deltabasenode == NULL || deltalen == NULL) {
     goto cleanup;
   }
+
   tuple = PyTuple_Pack(4, fn, node, deltabasenode, deltalen);
 
 cleanup:
@@ -147,7 +155,9 @@ static PyObject *cdatapack_iterator_iternext(py_cdatapack_iterator *iterator) {
     return NULL;
   }
 
-  get_delta_chain_link_result_t next = getdeltachainlink(iterator->ptr, &link);
+  get_delta_chain_link_result_t next = getdeltachainlink(
+                  iterator->datapack->handle,
+                  iterator->ptr, &link);
 
   switch (next.code) {
     case GET_DELTA_CHAIN_LINK_OK:
@@ -213,15 +223,6 @@ static PyTypeObject cdatapack_iterator_type = {
   0,                                    /* tp_weaklistoffset */
   PyObject_SelfIter,                    /* tp_iter: __iter__() method */
   (iternextfunc) cdatapack_iterator_iternext, /* tp_iternext: next() method */
-};
-
-// ====  py_cdatapack PyObject declaration ====
-
-struct py_cdatapack {
-  PyObject_HEAD;
-
-  bool initialized;
-  datapack_handle_t *handle;
 };
 
 /**

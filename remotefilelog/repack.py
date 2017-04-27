@@ -237,7 +237,10 @@ def _runrepack(repo, data, history, packpath, category):
 
     packer = repacker(repo, data, history, category)
 
-    with datapack.mutabledatapack(repo.ui, packpath) as dpack:
+    # internal config: remotefilelog.datapackversion
+    dv = repo.ui.configint('remotefilelog', 'datapackversion', 0)
+
+    with datapack.mutabledatapack(repo.ui, packpath, version=dv) as dpack:
         with historypack.mutablehistorypack(repo.ui, packpath) as hpack:
             try:
                 packer.run(dpack, hpack)
@@ -358,7 +361,8 @@ class repacker(object):
 
                 # TODO: don't use the delta if it's larger than the fulltext
                 # TODO: don't use the delta if the chain is already long
-                target.add(filename, node, deltabase, delta)
+                meta = self.data.getmeta(filename, node)
+                target.add(filename, node, deltabase, delta, meta)
 
                 entries[node].datarepacked = True
 

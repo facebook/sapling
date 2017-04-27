@@ -129,11 +129,27 @@ class basepackstore(object):
 
         return newpacks
 
-class basepack(object):
+class versionmixin(object):
+    # Mix-in for classes with multiple supported versions
+    VERSION = None
+    SUPPORTED_VERSIONS = [0]
+
+    def _checkversion(self, version):
+        if version in self.SUPPORTED_VERSIONS:
+            if self.VERSION is None:
+                # only affect this instance
+                self.VERSION = version
+            elif self.VERSION != version:
+                raise RuntimeError('inconsistent version: %s' % version)
+        else:
+            raise RuntimeError('unsupported version: %s' % version)
+
+class basepack(versionmixin):
     # The maximum amount we should read via mmap before remmaping so the old
     # pages can be released (100MB)
     MAXPAGEDIN = 100 * 1024**2
-    VERSION = 0
+
+    SUPPORTED_VERSIONS = [0]
 
     def __init__(self, path):
         self.path = path
@@ -151,15 +167,10 @@ class basepack(object):
         self.freememory() # initialize the mmap
 
         version = struct.unpack('!B', self._data[:PACKVERSIONSIZE])[0]
-        if version != self.VERSION:
-            raise RuntimeError("unsupported pack version '%s'" %
-                               version)
+        self._checkversion(version)
 
-        version, config = struct.unpack('!BB',
-                                        self._index[:INDEXVERSIONSIZE])
-        if version != self.VERSION:
-            raise RuntimeError("unsupported pack index version '%s'" %
-                               version)
+        version, config = struct.unpack('!BB', self._index[:INDEXVERSIONSIZE])
+        self._checkversion(version)
 
         if 0b10000000 & config:
             self.params = indexparams(LARGEFANOUTPREFIX)
@@ -209,10 +220,11 @@ class basepack(object):
     def iterentries(self):
         raise NotImplemented()
 
-class mutablebasepack(object):
-    VERSION = 0
+class mutablebasepack(versionmixin):
 
-    def __init__(self, ui, packdir):
+    def __init__(self, ui, packdir, version=0):
+        self._checkversion(version)
+
         opener = vfsmod.vfs(packdir)
         opener.createmode = 0o444
         self.opener = opener
@@ -238,8 +250,8 @@ class mutablebasepack(object):
         # Write header
         # TODO: make it extensible (ex: allow specifying compression algorithm,
         # a flexible key/value header, delta algorithm, fanout size, etc)
-        version = struct.pack('!B', self.VERSION) # unsigned 1 byte int
-        self.writeraw(version)
+        versionbuf = struct.pack('!B', self.VERSION) # unsigned 1 byte int
+        self.writeraw(versionbuf)
 
     def __enter__(self):
         return self

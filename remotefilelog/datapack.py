@@ -2,7 +2,7 @@ import struct
 from mercurial import util
 from mercurial.node import nullid, hex
 from mercurial.i18n import _
-import basepack, constants
+from . import basepack, constants, shallowutil
 from lz4wrapper import lz4compress, lz4decompress
 try:
     import cstore
@@ -36,6 +36,21 @@ class datapackstore(basepack.basepackstore):
     def get(self, name, node):
         raise RuntimeError("must use getdeltachain with datapackstore")
 
+    def getmeta(self, name, node):
+        for pack in self.packs:
+            try:
+                return pack.getmeta(name, node)
+            except KeyError:
+                pass
+
+        for pack in self.refresh():
+            try:
+                return pack.getmeta(name, node)
+            except KeyError:
+                pass
+
+        raise KeyError((name, hex(node)))
+
     def getdeltachain(self, name, node):
         for pack in self.packs:
             try:
@@ -63,6 +78,8 @@ class datapack(basepack.basepack):
     INDEXFORMAT = '!20siQQ'
     INDEXENTRYLENGTH = 40
 
+    SUPPORTED_VERSIONS = [0, 1]
+
     def getmissing(self, keys):
         missing = []
         for name, node in keys:
@@ -75,6 +92,36 @@ class datapack(basepack.basepack):
     def get(self, name, node):
         raise RuntimeError("must use getdeltachain with datapack (%s:%s)"
                            % (name, hex(node)))
+
+    def getmeta(self, name, node):
+        value = self._find(node)
+        if value is None:
+            raise KeyError((name, hex(node)))
+
+        # version 0 does not support metadata
+        if self.VERSION == 0:
+            return {}
+
+        node, deltabaseoffset, offset, size = value
+        rawentry = self._data[offset:offset + size]
+
+        # see docstring of mutabledatapack for the format
+        offset = 0
+        offset += struct.unpack_from('!H', rawentry, offset)[0] + 2 # filename
+        offset += 40 # node, deltabase node
+        offset += struct.unpack_from('!Q', rawentry, offset)[0] + 8 # delta
+
+        metalen = struct.unpack_from('!I', rawentry, offset)[0]
+        offset += 4
+
+        meta = shallowutil.parsepackmeta(rawentry[offset:offset + metalen])
+
+        # normalize: convert keys to int
+        for key in [constants.METAKEYFLAG, constants.METAKEYSIZE]:
+            if key in meta:
+                meta[key] = int(meta[key])
+
+        return meta
 
     def getdeltachain(self, name, node):
         value = self._find(node)
@@ -196,8 +243,10 @@ class datapack(basepack.basepack):
     def iterentries(self):
         # Start at 1 to skip the header
         offset = 1
+        data = self._data
         while offset < self.datasize:
-            data = self._data
+            oldoffset = offset
+
             # <2 byte len> + <filename>
             filenamelen = struct.unpack('!H', data[offset:offset + 2])[0]
             offset += 2
@@ -224,17 +273,15 @@ class datapack(basepack.basepack):
             uncompressedlen = struct.unpack('<I', data[offset:offset + 4])[0]
             offset += deltalen
 
-            self._pagedin += (
-                2 +             # the filename length
-                filenamelen +   # the filename itself.
-                2 * constants.NODESIZE + # the two nodes.
-                8 +             # the delta length
-                4               # the uncompressed delta length
-            )
+            if self.VERSION == 1:
+                # <4 byte len> + <metadata-list>
+                metalen = struct.unpack_from('!I', data, offset)[0]
+                offset += 4 + metalen
 
             yield (filename, node, deltabase, uncompressedlen)
 
             # If we've read a lot of data from the mmap, free some memory.
+            self._pagedin += offset - oldoffset
             self.freememory()
 
 class fastdatapack(basepack.basepack):
@@ -259,6 +306,10 @@ class fastdatapack(basepack.basepack):
     def get(self, name, node):
         raise RuntimeError("must use getdeltachain with datapack (%s:%s)"
                            % (name, hex(node)))
+
+    def getmeta(self, name, node):
+        # FIXME: implement this
+        return {}
 
     def getdeltachain(self, name, node):
         result = self.datapack.getdeltachain(node)
@@ -314,6 +365,13 @@ class mutabledatapack(basepack.mutablebasepack):
                    <deltabasenode: 20 byte>
                    <delta len: 8 byte unsigned int>
                    <delta>
+                   <metadata-list len: 4 byte unsigned int> [1]
+                   <metadata-list>                          [1]
+        metadata-list = [<metadata-item>, ...]
+        metadata-item = <metadata-item len: 2 byte unsigned>
+                        <metadata-key: 1 byte> <metadata-value>
+
+        metadata-key could be METAKEYFLAG or METAKEYSIZE.
 
     .dataidx
         The index file consists of two parts, the fanout and the index.
@@ -349,15 +407,21 @@ class mutabledatapack(basepack.mutablebasepack):
                      <deltabase location: 4 byte signed int>
                      <pack entry offset: 8 byte unsigned int>
                      <pack entry size: 8 byte unsigned int>
+
+    [1]: new in version 1.
     """
     INDEXSUFFIX = INDEXSUFFIX
     PACKSUFFIX = PACKSUFFIX
 
-    # v0 index format: <node><delta offset><pack data offset><pack data size>
+    # v[01] index format: <node><delta offset><pack data offset><pack data size>
     INDEXFORMAT = datapack.INDEXFORMAT
     INDEXENTRYLENGTH = datapack.INDEXENTRYLENGTH
 
-    def add(self, name, node, deltabasenode, delta):
+    # v1 has metadata support
+    SUPPORTED_VERSIONS = [0, 1]
+
+    def add(self, name, node, deltabasenode, delta, metadata=None):
+        # metadata is a dict, ex. {METAKEYFLAG: flag}
         if len(name) > 2**16:
             raise RuntimeError(_("name too long %s") % name)
         if len(node) != 20:
@@ -369,13 +433,32 @@ class mutabledatapack(basepack.mutablebasepack):
 
         # TODO: allow configurable compression
         delta = lz4compress(delta)
-        rawdata = "%s%s%s%s%s%s" % (
+
+        # normalize metadata - convert to strings
+        meta = dict((k, str(v)) for k, v in (metadata or {}).iteritems())
+
+        # drop unnecessary "flag" field to save space
+        if meta.get(constants.METAKEYFLAG, None) == '0':
+            del meta[constants.METAKEYFLAG]
+
+        # sanity check: v0 does not support flag
+        if self.VERSION == 0 and constants.METAKEYFLAG in meta:
+                raise RuntimeError('version 0 pack cannot store flags')
+
+        rawdata = ''.join((
             struct.pack('!H', len(name)), # unsigned 2 byte int
             name,
             node,
             deltabasenode,
             struct.pack('!Q', len(delta)), # unsigned 8 byte int
-            delta)
+            delta,
+        ))
+
+        # v1 support metadata
+        if self.VERSION == 1:
+            rawmeta = shallowutil.buildpackmeta(meta)
+            rawdata += struct.pack('!I', len(rawmeta)) # unsigned 4 byte
+            rawdata += rawmeta
 
         offset = self.packfp.tell()
 
