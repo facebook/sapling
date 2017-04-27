@@ -4,12 +4,19 @@
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
+from __future__ import absolute_import
 
 from mercurial import error, filelog, revlog
 from mercurial.node import bin, hex, nullid, short
 from mercurial.i18n import _
-import datapack, historypack, shallowrepo, fileserverclient
-from lz4wrapper import lz4decompress
+from . import (
+    datapack,
+    fileserverclient,
+    historypack,
+    shallowrepo,
+    shallowutil,
+)
+from .lz4wrapper import lz4decompress
 import hashlib, os
 
 def debugremotefilelog(ui, path, **opts):
@@ -166,9 +173,8 @@ def parsefileblob(path, decompress):
     if decompress:
         raw = lz4decompress(raw)
 
-    index = raw.index('\0')
-    size = int(raw[:index])
-    start = index + 1 + size
+    offset, size, flags = shallowutil.parsesizeflags(raw)
+    start = offset + size
 
     firstnode = None
 

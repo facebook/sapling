@@ -4,12 +4,13 @@
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
+from __future__ import absolute_import
 
 import errno, hashlib, os, stat, struct, tempfile
 from mercurial import filelog, revlog, util, error
 from mercurial.i18n import _
 
-import constants
+from . import constants
 
 if os.name != 'nt':
     import grp
@@ -162,6 +163,29 @@ def parsesizeflags(raw):
     if size is None:
         raise RuntimeError("unexpected remotefilelog header: no size found")
     return index + 1, size, flags
+
+def buildfileblobheader(size, flags, version=None):
+    """return the header of a remotefilelog blob.
+
+    see remotefilelogserver.createfileblob for the format.
+    approximately the reverse of parsesizeflags.
+
+    version could be 0 or 1, or None (auto decide).
+    """
+    # choose v0 if flags is empty, otherwise v1
+    if version is None:
+        version = int(bool(flags))
+    if version == 1:
+        header = ('v1\n%s%d\n%s%d'
+                  % (constants.METAKEYSIZE, size,
+                     constants.METAKEYFLAG, flags))
+    elif version == 0:
+        if flags:
+            raise error.ProgrammingError('fileblob v0 does not support flag')
+        header = '%d' % size
+    else:
+        raise error.ProgrammingError('unknown fileblob version %d' % version)
+    return header
 
 def ancestormap(raw):
     offset, size, flags = parsesizeflags(raw)

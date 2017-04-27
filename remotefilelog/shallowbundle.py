@@ -150,7 +150,7 @@ class shallowcg1packer(changegroup.cg1packer):
     def nodechunk(self, revlog, node, prevnode, linknode):
         prefix = ''
         if prevnode == nullid:
-            delta = revlog.revision(node)
+            delta = revlog.revision(node, raw=True)
             prefix = mdiff.trivialdiffheader(len(delta))
         else:
             # Actually uses remotefilelog.revdiff which works on nodes, not revs
@@ -309,7 +309,7 @@ def addchangegroupfiles(orig, repo, source, revmap, trp, expectedfiles, *args):
         if not available(f, node, f, deltabase):
             continue
 
-        base = fl.revision(deltabase)
+        base = fl.revision(deltabase, raw=True)
         text = mdiff.patch(base, delta)
         if isinstance(text, buffer):
             text = str(text)

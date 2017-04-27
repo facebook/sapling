@@ -5,11 +5,16 @@
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
+from __future__ import absolute_import
 
-import fileserverclient, shallowutil
+from . import (
+    constants,
+    fileserverclient,
+    shallowutil,
+)
 import collections, os
 from mercurial.node import bin, nullid
-from mercurial import revlog, mdiff, ancestor, error
+from mercurial import filelog, revlog, mdiff, ancestor, error
 from mercurial.i18n import _
 
 class remotefilelog(object):
@@ -35,13 +40,23 @@ class remotefilelog(object):
         hashtext = shallowutil.createrevlogtext(text, meta.get('copy'),
                                                 meta.get('copyrev'))
         node = revlog.hash(hashtext, p1, p2)
+        return self.addrevision(hashtext, transaction, linknode, p1, p2,
+                                node=node)
 
-        def _createfileblob():
-            data = "%s\0%s" % (len(text), text)
+    def addrevision(self, text, transaction, linknode, p1, p2, cachedelta=None,
+                    node=None, flags=revlog.REVIDX_DEFAULT_FLAGS):
+        # text passed to "addrevision" includes hg filelog metadata header
+        if node is None:
+            node = revlog.hash(text, p1, p2)
+
+        def _createfileblob(text, meta):
+            # text passed to "_createfileblob" does not include filelog metadata
+            header = shallowutil.buildfileblobheader(len(text), flags)
+            data = "%s\0%s" % (header, text)
 
             realp1 = p1
             copyfrom = ""
-            if 'copy' in meta:
+            if meta and 'copy' in meta:
                 copyfrom = meta['copy']
                 realp1 = bin(meta['copyrev'])
 
@@ -82,7 +97,21 @@ class remotefilelog(object):
 
             return data
 
-        data = _createfileblob()
+        meta, metaoffset = filelog.parsemeta(text)
+        rawtext, validatehash = self._processflags(text, flags, 'write')
+        if rawtext != text:
+            # rawtext is a different format that is only understood by the flag
+            # processor, we should not mangle it. pass it as-is so during read,
+            # the flag processor can decode it correctly.
+            blobtext = rawtext
+        elif metaoffset:
+            # remotefilelog fileblob stores copy metadata in its ancestortext,
+            # not its main blob. so we need to remove filelog metadata
+            # (containing copy information) from text.
+            blobtext = text[metaoffset:]
+        else:
+            blobtext = text
+        data = _createfileblob(blobtext, meta)
         self.repo.contentstore.addremotefilelognode(self.filename, node, data)
 
         return node
@@ -165,7 +194,7 @@ class remotefilelog(object):
         # This is a hack to make TortoiseHG work.
         return node
 
-    def revision(self, node):
+    def revision(self, node, raw=False):
         """returns the revlog contents at this node.
         this includes the meta data traditionally included in file revlogs.
         this is generally only used for bundling and communicating with vanilla
@@ -177,7 +206,37 @@ class remotefilelog(object):
             raise error.LookupError(node, self.filename,
                                     _('invalid revision input'))
 
-        return self.repo.contentstore.get(self.filename, node)
+        store = self.repo.contentstore
+        rawtext = store.get(self.filename, node)
+        if raw:
+            return rawtext
+        flags = store.getmeta(self.filename, node).get(constants.METAKEYFLAG, 0)
+        if flags == 0:
+            return rawtext
+        text, verifyhash = self._processflags(rawtext, flags, 'read')
+        return text
+
+    def _processflags(self, text, flags, operation, raw=False):
+        # mostly copied from hg/mercurial/revlog.py
+        validatehash = True
+        orderedflags = revlog.REVIDX_FLAGS_ORDER
+        if operation == 'write':
+            orderedflags = reversed(orderedflags)
+        for flag in orderedflags:
+            if flag & flags:
+                vhash = True
+                if flag not in revlog._flagprocessors:
+                    message = _("missing processor for flag '%#x'") % (flag)
+                    raise revlog.RevlogError(message)
+                readfunc, writefunc, rawfunc = revlog._flagprocessors[flag]
+                if raw:
+                    vhash = rawfunc(self, text)
+                elif operation == 'read':
+                    text, vhash = readfunc(self, text)
+                elif operation == 'write':
+                    text, vhash = writefunc(self, text)
+                validatehash = validatehash and vhash
+        return text, validatehash
 
     def _read(self, id):
         """reads the raw file blob from disk, cache, or server"""

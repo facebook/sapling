@@ -4,6 +4,7 @@
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
+from __future__ import absolute_import
 
 from mercurial import wireproto, changegroup, match, util, changelog, context
 from mercurial import exchange, sshserver, store, error
@@ -11,10 +12,14 @@ from mercurial.extensions import wrapfunction
 from mercurial.hgweb import protocol as httpprotocol
 from mercurial.node import bin, hex, nullid, nullrev
 from mercurial.i18n import _
-import constants, shallowrepo, wirepack
-from lz4wrapper import lzcompresshc
+from .  import (
+    constants,
+    lz4wrapper,
+    shallowrepo,
+    shallowutil,
+    wirepack,
+)
 import errno, stat, os, time
-from shallowutil import readexactly, readunpack
 
 try:
     from mercurial import streamclone
@@ -216,7 +221,7 @@ def _loadfileblob(repo, cachepath, path, node):
             filectx = repo.filectx(path, fileid=node)
 
         text = createfileblob(filectx)
-        text = lzcompresshc(text)
+        text = lz4wrapper.lzcompresshc(text)
 
         # everything should be user & group read/writable
         oldumask = os.umask(0o002)
@@ -363,16 +368,7 @@ def createfileblob(filectx):
     finally:
         repo.forcelinkrev = False
 
-    version = 0
-    if revlogflags:
-        version = 1
-
-    if version == 1:
-        header = ('v1\n%s%d\n%s%d'
-                  % (constants.METAKEYSIZE, len(text),
-                     constants.METAKEYFLAG, revlogflags))
-    else: # v0
-        header = '%d' % len(text)
+    header = shallowutil.buildfileblobheader(len(text), revlogflags)
 
     return "%s\0%s%s" % (header, text, ancestortext)
 
@@ -473,16 +469,18 @@ def getpack(repo, proto, args):
 def _receivepackrequest(stream):
     files = {}
     while True:
-        filenamelen = readunpack(stream, constants.FILENAMESTRUCT)[0]
+        filenamelen = shallowutil.readunpack(stream,
+                                             constants.FILENAMESTRUCT)[0]
         if filenamelen == 0:
             break
 
-        filename = readexactly(stream, filenamelen)
+        filename = shallowutil.readexactly(stream, filenamelen)
 
-        nodecount = readunpack(stream, constants.PACKREQUESTCOUNTSTRUCT)[0]
+        nodecount = shallowutil.readunpack(stream,
+                                           constants.PACKREQUESTCOUNTSTRUCT)[0]
 
         # Read N nodes
-        nodes = readexactly(stream, constants.NODESIZE * nodecount)
+        nodes = shallowutil.readexactly(stream, constants.NODESIZE * nodecount)
         nodes = set(nodes[i:i + constants.NODESIZE] for i in
                     xrange(0, len(nodes), constants.NODESIZE))
 
