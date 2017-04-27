@@ -69,6 +69,17 @@ print("re =", f(re))
 print("re.stderr =", f(re.stderr))
 print("re =", f(re))
 
+# Test access to special attributes through demandmod proxy
+from mercurial import pvec as pvecproxy
+print("pvecproxy =", f(pvecproxy))
+print("pvecproxy.__doc__ = %r"
+      % (' '.join(pvecproxy.__doc__.split()[:3]) + ' ...'))
+print("pvecproxy.__name__ = %r" % pvecproxy.__name__)
+# __name__ must be accessible via __dict__ so the relative imports can be
+# resolved
+print("pvecproxy.__dict__['__name__'] = %r" % pvecproxy.__dict__['__name__'])
+print("pvecproxy =", f(pvecproxy))
+
 import contextlib
 print("contextlib =", f(contextlib))
 try:

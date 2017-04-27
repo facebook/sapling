@@ -153,15 +153,23 @@ class _demandmod(object):
     def __call__(self, *args, **kwargs):
         raise TypeError("%s object is not callable" % repr(self))
 
-    def __getattribute__(self, attr):
-        if attr in ('_data', '_extend', '_load', '_module', '_addref'):
-            return object.__getattribute__(self, attr)
+    def __getattr__(self, attr):
         self._load()
         return getattr(self._module, attr)
 
     def __setattr__(self, attr, val):
         self._load()
         setattr(self._module, attr, val)
+
+    @property
+    def __dict__(self):
+        self._load()
+        return self._module.__dict__
+
+    @property
+    def __doc__(self):
+        self._load()
+        return self._module.__doc__
 
 _pypy = '__pypy__' in sys.builtin_module_names
 
