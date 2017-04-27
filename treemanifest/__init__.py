@@ -36,6 +36,11 @@ automatically downloading trees from the server when they don't exist locally.
     [treemanifest]
     demanddownload = True
 
+Setting `treemaniefst.pullprefetchcount` to an integer N will cause the latest N
+commits' manifests to be downloaded (if they aren't already).
+
+    [treemanifest]
+    pullprefetchcount = 0
 """
 
 from mercurial import (
@@ -93,6 +98,8 @@ def extsetup(ui):
     wrappropertycache(localrepo.localrepository, 'manifestlog', getmanifestlog)
 
     extensions.wrapfunction(manifest.memmanifestctx, 'write', _writemanifest)
+
+    extensions.wrapcommand(commands.table, 'pull', pull)
 
     wireproto.commands['gettreepack'] = (servergettreepack, '*')
 
@@ -687,6 +694,34 @@ def _prefetchtrees(repo, rootdir, mfnodes, basemfnodes, directories):
     if missingnodes:
         raise error.Abort(_("unable to download %d trees (%s,...)") %
                           (len(missingnodes), list(missingnodes)[0]))
+
+def pull(orig, ui, repo, *pats, **opts):
+    result = orig(ui, repo, *pats, **opts)
+
+    # prefetch if it's configured
+    prefetchcount = ui.configint('treemanifest', 'pullprefetchcount', None)
+    if prefetchcount:
+        ui.status(_("prefetching trees\n"))
+
+        mfstore = repo.svfs.manifestdatastore
+
+        # Calculate what recent manifests are we missing
+        firstrev = max(0, repo['tip'].rev() - prefetchcount + 1)
+        ctxs = list(repo.set('%s:', firstrev))
+        mfnodes = (ctx.manifestnode() for ctx in ctxs)
+        missingnodes = mfstore.getmissing(('', n) for n in mfnodes)
+        mfnodes = list(n for k, n in missingnodes)
+
+        # Calculate which parents we already have
+        parentctxs = repo.set('parents(roots(%ln:))',
+                              (ctx.node() for ctx in ctxs))
+        basemfnodes = set(ctx.manifestnode() for ctx in parentctxs)
+        missingbases = list(mfstore.getmissing(('', n) for n in basemfnodes))
+        basemfnodes.difference_update(n for k, n in missingbases)
+
+        _prefetchtrees(repo, '', mfnodes, basemfnodes, [])
+
+    return result
 
 def _sendtreepackrequest(remote, rootdir, mfnodes, basemfnodes, directories):
     remote._callstream("gettreepack")

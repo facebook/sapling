@@ -162,3 +162,82 @@ Test auto prefetch during normal access
   6fbf331dc6290577b48479f94c2746754f4a898a.histpack
   a2b37afce1a72987e098a62a03ef89f3f208bc70.histidx
   a2b37afce1a72987e098a62a03ef89f3f208bc70.histpack
+
+Test auto prefetch during pull
+
+- Prefetch everything
+  $ rm -rf $CACHEDIR/master
+  $ hg pull --config treemanifest.pullprefetchcount=10 --traceback
+  pulling from ssh://user@dummy/master
+  searching for changes
+  no changes found
+  prefetching trees
+  $ hg debugdatapack $CACHEDIR/master/packs/manifests/*.dataidx
+  
+  subdir
+  Node          Delta Base    Delta Length
+  ddb35f099a64  000000000000  43
+  
+  
+  Node          Delta Base    Delta Length
+  1be4ab2126dd  000000000000  95
+  
+  dir
+  Node          Delta Base    Delta Length
+  a18d21674e76  000000000000  43
+  
+  
+  Node          Delta Base    Delta Length
+  60a7f7acb6bb  000000000000  95
+  
+  dir
+  Node          Delta Base    Delta Length
+  bc0c2c938b92  000000000000  43
+  
+  
+  Node          Delta Base    Delta Length
+  ef362f8bbe8a  000000000000  46
+
+- Prefetch just the top manifest (but the full one)
+  $ rm -rf $CACHEDIR/master
+  $ hg pull --config treemanifest.pullprefetchcount=1 --traceback
+  pulling from ssh://user@dummy/master
+  searching for changes
+  no changes found
+  prefetching trees
+  $ hg debugdatapack $CACHEDIR/master/packs/manifests/*.dataidx
+  
+  dir
+  Node          Delta Base    Delta Length
+  a18d21674e76  000000000000  43
+  
+  subdir
+  Node          Delta Base    Delta Length
+  ddb35f099a64  000000000000  43
+  
+  
+  Node          Delta Base    Delta Length
+  60a7f7acb6bb  000000000000  95
+
+- Prefetch commit 1 then minimally prefetch commit 2
+  $ rm -rf $CACHEDIR/master
+  $ hg prefetchtrees -r 1
+  $ ls $CACHEDIR/master/packs/manifests/*dataidx
+  $TESTTMP/hgcache/master/packs/manifests/148e9eb32f473ea522c591c95be0f9e772be9675.dataidx
+  $ hg pull --config treemanifest.pullprefetchcount=1 --traceback
+  pulling from ssh://user@dummy/master
+  searching for changes
+  no changes found
+  prefetching trees
+  $ ls $CACHEDIR/master/packs/manifests/*dataidx
+  $TESTTMP/hgcache/master/packs/manifests/148e9eb32f473ea522c591c95be0f9e772be9675.dataidx
+  $TESTTMP/hgcache/master/packs/manifests/3fb59713808147bda39cbd97b9cd862406f5865c.dataidx
+  $ hg debugdatapack $CACHEDIR/master/packs/manifests/3fb59713808147bda39cbd97b9cd862406f5865c.dataidx
+  
+  dir
+  Node          Delta Base    Delta Length
+  a18d21674e76  000000000000  43
+  
+  
+  Node          Delta Base    Delta Length
+  60a7f7acb6bb  000000000000  95
