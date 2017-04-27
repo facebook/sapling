@@ -2759,7 +2759,7 @@ def help_(ui, name=None, **opts):
     Returns 0 if successful.
     """
 
-    keep = opts.get('system') or []
+    keep = opts.get(r'system') or []
     if len(keep) == 0:
         if pycompat.sysplatform.startswith('win'):
             keep.append('windows')

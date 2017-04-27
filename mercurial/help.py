@@ -23,6 +23,7 @@ from . import (
     filemerge,
     fileset,
     minirst,
+    pycompat,
     revset,
     templatefilters,
     templatekw,
@@ -304,6 +305,7 @@ def help_(ui, name, unknowncmd=False, full=True, subtopic=None, **opts):
     '''
 
     from . import commands # avoid cycle
+    opts = pycompat.byteskwargs(opts)
 
     def helpcmd(name, subtopic=None):
         try:
