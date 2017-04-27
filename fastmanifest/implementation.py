@@ -977,7 +977,7 @@ class manifestfactory(object):
                 return manifest.manifestdict(data)
             tree = hybridmanifest(self.ui, origself.opener, loadflat=loadflat,
                                   node=p1)._treemanifest()
-            if tree:
+            if tree is not None:
                 newtree = tree.copy()
                 for filename in removed:
                     del newtree[filename]
