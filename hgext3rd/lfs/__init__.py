@@ -48,6 +48,10 @@ from . import (
 )
 
 def reposetup(ui, repo):
+    # Nothing to do with a remote repo
+    if not repo.local():
+        return
+
     bypass = repo.ui.configbool('lfs', 'bypass', False)
     # Some code (without repo access) needs to test "bypass". They can only
     # access repo.svfs as self.opener.
@@ -67,11 +71,16 @@ def reposetup(ui, repo):
     # Push hook
     repo.prepushoutgoinghooks.add('lfs', wrapper.prepush)
 
-def extsetup(ui):
+def wrapfilelog(filelog):
     wrapfunction = extensions.wrapfunction
 
-    wrapfunction(filelog.filelog, 'addrevision', wrapper.filelogaddrevision)
-    wrapfunction(filelog.filelog, 'size', wrapper.filelogsize)
+    wrapfunction(filelog, 'addrevision', wrapper.filelogaddrevision)
+    wrapfunction(filelog, 'size', wrapper.filelogsize)
+
+def extsetup(ui):
+    wrapfilelog(filelog.filelog)
+
+    wrapfunction = extensions.wrapfunction
     wrapfunction(changegroup,
                  'supportedoutgoingversions',
                  wrapper.supportedoutgoingversions)

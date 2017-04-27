@@ -119,7 +119,7 @@ def _islfs(rlog, node=None, rev=None):
         node = rlog.node(rev)
     if node == nullid:
         return False
-    flags = revlog.revlog.flags(rlog, rev)
+    flags = rlog.flags(rev)
     return bool(flags & revlog.REVIDX_EXTSTORED)
 
 def filelogaddrevision(orig, self, text, transaction, link, p1, p2,

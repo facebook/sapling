@@ -138,6 +138,7 @@ class remotefilelogcontentstore(basestore.basestore):
         self._metacache = (None, None) # (node, meta)
 
     def get(self, name, node):
+        # return raw revision text
         data = self._getdata(name, node)
 
         offset, size, flags = shallowutil.parsesizeflags(data)
@@ -151,6 +152,10 @@ class remotefilelogcontentstore(basestore.basestore):
 
         self._updatemetacache(node, size, flags)
 
+        # lfs tracks renames in its own metadata, remove hg copy metadata,
+        # because copy metadata will be re-added by lfs flag processor.
+        if flags & revlog.REVIDX_EXTSTORED:
+            copyrev = copyfrom = None
         revision = shallowutil.createrevlogtext(content, copyfrom, copyrev)
         return revision
 

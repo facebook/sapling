@@ -91,6 +91,20 @@ def uisetup(ui):
         return orig(ui, repo, *args, **opts)
     extensions.wrapcommand(commands.table, "manifest", _manifest)
 
+    # Wrap remotefilelog with lfs code
+    def _lfsloaded(loaded=False):
+        lfsmod = None
+        try:
+            lfsmod = extensions.find('lfs')
+        except KeyError:
+            pass
+        if lfsmod:
+            lfsmod.wrapfilelog(remotefilelog.remotefilelog)
+    extensions.afterloaded('lfs', _lfsloaded)
+
+    # debugdata needs remotefilelog.len to work
+    extensions.wrapcommand(commands.table, 'debugdata', debugdatashallow)
+
 def cloneshallow(orig, ui, repo, *args, **opts):
     if opts.get('shallow'):
         repos = []
@@ -160,6 +174,14 @@ def cloneshallow(orig, ui, repo, *args, **opts):
             for r in repos:
                 if util.safehasattr(r, 'fileservice'):
                     r.fileservice.close()
+
+def debugdatashallow(orig, *args, **kwds):
+    oldlen = remotefilelog.remotefilelog.__len__
+    try:
+        remotefilelog.remotefilelog.__len__ = lambda x: 1
+        return orig(*args, **kwds)
+    finally:
+        remotefilelog.remotefilelog.__len__ = oldlen
 
 def reposetup(ui, repo):
     if not isinstance(repo, localrepo.localrepository):

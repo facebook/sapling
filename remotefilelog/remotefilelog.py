@@ -158,8 +158,12 @@ class remotefilelog(object):
     def empty(self):
         return False
 
-    def flags(self, rev):
-        return revlog.REVIDX_DEFAULT_FLAGS
+    def flags(self, node):
+        if isinstance(node, int):
+            raise error.ProgrammingError(
+                'remotefilelog does not accept integer rev for flags')
+        store = self.repo.contentstore
+        return store.getmeta(self.filename, node).get(constants.METAKEYFLAG, 0)
 
     def parents(self, node):
         if node == nullid:
@@ -193,6 +197,13 @@ class remotefilelog(object):
     def rev(self, node):
         # This is a hack to make TortoiseHG work.
         return node
+
+    def node(self, rev):
+        # This is a hack.
+        if isinstance(rev, int):
+            raise error.ProgrammingError(
+                'remotefilelog does not convert integer rev to node')
+        return rev
 
     def revision(self, node, raw=False):
         """returns the revlog contents at this node.
