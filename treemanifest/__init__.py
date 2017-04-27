@@ -44,6 +44,7 @@ commits' manifests to be downloaded (if they aren't already).
 """
 
 from mercurial import (
+    bundle2,
     changegroup,
     cmdutil,
     commands,
@@ -73,13 +74,8 @@ from remotefilelog.metadatastore import (
 )
 from remotefilelog.datapack import datapackstore, mutabledatapack
 from remotefilelog.historypack import historypackstore, mutablehistorypack
-from remotefilelog import shallowrepo, shallowutil, wirepack, constants
+from remotefilelog import shallowrepo, shallowutil, wirepack
 from remotefilelog.repack import _runrepack
-from remotefilelog.shallowutil import (
-    readnodelist,
-    readpath,
-    readpathlist,
-)
 import cstore
 
 import os
@@ -89,6 +85,9 @@ cmdtable = {}
 command = cmdutil.command(cmdtable)
 
 PACK_CATEGORY='manifests'
+
+TREEGROUP_PARTTYPE = 'b2x:treegroup'
+RECEIVEDNODE_RECORD = 'receivednodes'
 
 def extsetup(ui):
     extensions.wrapfunction(changegroup.cg1unpacker, '_unpackmanifests',
@@ -102,6 +101,7 @@ def extsetup(ui):
     extensions.wrapcommand(commands.table, 'pull', pull)
 
     wireproto.commands['gettreepack'] = (servergettreepack, '*')
+    wireproto.wirepeer.gettreepack = clientgettreepack
 
 def reposetup(ui, repo):
     wraprepo(repo)
@@ -684,16 +684,40 @@ def _prefetchtrees(repo, rootdir, mfnodes, basemfnodes, directories):
     remote = hg.peer(repo.ui, {}, fallbackpath)
     if 'gettreepack' not in remote._capabilities():
         raise error.Abort(_("missing gettreepack capability on remote"))
-    _sendtreepackrequest(remote, rootdir, mfnodes, basemfnodes, directories)
+    bundle = remote.gettreepack(rootdir, mfnodes, basemfnodes, directories)
+
+    try:
+        op = bundle2.processbundle(repo, bundle, None)
+
+        receivednodes = op.records[RECEIVEDNODE_RECORD]
+        missingnodes = set(mfnodes)
+        for reply in receivednodes:
+            missingnodes.difference_update(n for d, n
+                                           in reply
+                                           if d == rootdir)
+        if missingnodes:
+            raise error.Abort(_("unable to download %d trees (%s,...)") %
+                              (len(missingnodes), list(missingnodes)[0]))
+    except bundle2.AbortFromPart as exc:
+        repo.ui.status(_('remote: abort: %s\n') % exc)
+        raise error.Abort(_('pull failed on remote'), hint=exc.hint)
+    except error.BundleValueError as exc:
+        raise error.Abort(_('missing support for %s') % exc)
+
+@bundle2.parthandler(TREEGROUP_PARTTYPE, ('version',))
+def treeparthandler(op, part):
+    repo = op.repo
+
+    version = part.params.get('version')
+    if version != '1':
+        raise error.Abort(_("unknown treegroup bundle2 part version: %s") %
+                          version)
 
     packpath = shallowutil.getcachepackpath(repo, PACK_CATEGORY)
-    receivedhistory, receiveddata = wirepack.receivepack(repo.ui, remote.pipei,
+    receivedhistory, receiveddata = wirepack.receivepack(repo.ui, part,
                                                          packpath)
-    receivednodes = (node for dir, node in receiveddata if dir == rootdir)
-    missingnodes = set(mfnodes).difference(receivednodes)
-    if missingnodes:
-        raise error.Abort(_("unable to download %d trees (%s,...)") %
-                          (len(missingnodes), list(missingnodes)[0]))
+
+    op.records.add(RECEIVEDNODE_RECORD, receiveddata)
 
 def pull(orig, ui, repo, *pats, **opts):
     result = orig(ui, repo, *pats, **opts)
@@ -723,26 +747,15 @@ def pull(orig, ui, repo, *pats, **opts):
 
     return result
 
-def _sendtreepackrequest(remote, rootdir, mfnodes, basemfnodes, directories):
-    remote._callstream("gettreepack")
+def clientgettreepack(remote, rootdir, mfnodes, basemfnodes, directories):
+    opts = {}
+    opts['rootdir'] = rootdir
+    opts['mfnodes'] = wireproto.encodelist(mfnodes)
+    opts['basemfnodes'] = wireproto.encodelist(basemfnodes)
+    opts['directories'] = ','.join(wireproto.escapearg(d) for d in directories)
 
-    # Issue request
-    rootdirlen = struct.pack(constants.FILENAMESTRUCT, len(rootdir))
-    nodeslen = struct.pack(constants.NODECOUNTSTRUCT, len(mfnodes))
-    rawnodes = ''.join(sorted(mfnodes))
-    remote.pipeo.write('%s%s%s%s' % (rootdirlen, rootdir, nodeslen, rawnodes))
-
-    basenodeslen = struct.pack(constants.NODECOUNTSTRUCT, len(basemfnodes))
-    rawbasenodes = ''.join(basemfnodes)
-    remote.pipeo.write('%s%s' % (basenodeslen, rawbasenodes))
-
-    dircount = struct.pack(constants.PATHCOUNTSTRUCT, len(directories))
-    rawdirectories = ''.join(
-        '%s%s' % (struct.pack(constants.FILENAMESTRUCT, len(d)), d)
-        for d in directories)
-    remote.pipeo.write('%s%s' % (dircount, rawdirectories))
-
-    remote.pipeo.flush()
+    f = remote._callcompressable("gettreepack", **opts)
+    return bundle2.getunbundler(remote.ui, f)
 
 class treememoizer(object):
     """A class that keeps references to trees until they've been consumed the
@@ -778,115 +791,130 @@ def servergettreepack(repo, proto, args):
     if not isinstance(proto, sshserver.sshserver):
         raise error.Abort(_('cannot fetch remote files over non-ssh protocol'))
 
-    def streamer():
-        """
-        All size/len/counts are network order unsigned ints.
+    try:
+        bundler = bundle2.bundle20(repo.ui)
+        part = bundler.newpart(TREEGROUP_PARTTYPE,
+                               data=generatepackstream(repo, proto, args))
+        part.addparam('version', '1')
 
-        Request format:
+    except error.Abort as exc:
+        # cleanly forward Abort error to the client
+        bundler = bundle2.bundle20(repo.ui)
+        manargs = [('message', str(exc))]
+        advargs = []
+        if exc.hint is not None:
+            advargs.append(('hint', exc.hint))
+        bundler.addpart(bundle2.bundlepart('error:abort',
+                                           manargs, advargs))
+    return wireproto.streamres(gen=bundler.getchunks(), v1compressible=True)
 
-        <rootdir><mfnodes><basenodes><directories>
-        rootdir = <directory>
-        mfnodes = <node count: 4 byte>[<node: 20 bytes>,...]
-        basenodes = <basenode count: 4 byte>[<node: 20 bytes>,...]
-        directories = <directory count: 4 byte>[<directory>,...]
-        directory = <path len: 2 byte><path>
+def generatepackstream(repo, proto, args):
+    """
+    All size/len/counts are network order unsigned ints.
 
-        Response format:
+    Request args:
 
-        [<fileresponse>,...]<10 null bytes>
-        fileresponse = <filename len: 2 byte><filename><history><deltas>
-        history = <count: 4 byte>[<history entry>,...]
-        historyentry = <node: 20 byte><p1: 20 byte><p2: 20 byte>
-                       <linknode: 20 byte><copyfrom len: 2 byte><copyfrom>
-        deltas = <count: 4 byte>[<delta entry>,...]
-        deltaentry = <node: 20 byte><deltabase: 20 byte>
-                     <delta len: 8 byte><delta>
-        """
-        request = _receivepackrequest(proto.fin)
-        rootdir, mfnodes, basemfnodes, directories = request
-        if rootdir:
-            raise NotImplemented("rootdir not supported just yet")
+    `rootdir` - The directory of the tree to send (including its children)
+    `mfnodes` - The manifest nodes of the specified root directory to send.
+    `basemfnodes` - The manifest nodes of the specified root directory that are
+    already on the client.
+    `directories` - The fullpath (not relative path) of directories underneath
+    the rootdir that should be sent.
 
-        treemfl = repo.manifestlog.treemanifestlog
-        mfrevlog = treemfl._revlog
+    Response format:
 
-        packpath = repo.vfs.join('cache/packs/%s' % PACK_CATEGORY)
-        datastore = cstore.datapackstore(packpath)
-        revlogstore = manifestrevlogstore(repo)
-        store = unioncontentstore(datastore, revlogstore)
+    [<fileresponse>,...]<10 null bytes>
+    fileresponse = <filename len: 2 byte><filename><history><deltas>
+    history = <count: 4 byte>[<history entry>,...]
+    historyentry = <node: 20 byte><p1: 20 byte><p2: 20 byte>
+                   <linknode: 20 byte><copyfrom len: 2 byte><copyfrom>
+    deltas = <count: 4 byte>[<delta entry>,...]
+    deltaentry = <node: 20 byte><deltabase: 20 byte>
+                 <delta len: 8 byte><delta>
+    """
+    rootdir = args['rootdir']
 
-        mfnodeset = set(mfnodes)
-        basemfnodeset = set(basemfnodes)
+    # Sort to produce a consistent output
+    mfnodes = sorted(wireproto.decodelist(args['mfnodes']))
+    basemfnodes = sorted(wireproto.decodelist(args['basemfnodes']))
+    directories = sorted(list(wireproto.unescapearg(d) for d
+                              in args['directories'].split(',') if d != ''))
+    if rootdir:
+        raise RuntimeError("rootdir not supported just yet: %s" %
+                           rootdir)
+    if directories:
+        raise RuntimeError("directories arg is not supported yet ('%s')" %
+                            ', '.join(directories))
 
-        # Count how many times we will need each comparison node, so we can keep
-        # trees in memory the appropriate amount of time.
-        trees = treememoizer(store)
-        for node in mfnodes:
-            p1node, p2node = mfrevlog.parents(node)
-            if p1node != nullid and (p1node in mfnodeset or
-                                     p1node in basemfnodeset):
-                trees.adduse(p1node)
-            else:
-                for basenode in basemfnodes:
-                    trees.adduse(basenode)
-            if p2node != nullid and (p2node in mfnodeset or
-                                     p2node in basemfnodeset):
-                trees.adduse(p2node)
+    treemfl = repo.manifestlog.treemanifestlog
+    mfrevlog = treemfl._revlog
+    packpath = repo.vfs.join('cache/packs/%s' % PACK_CATEGORY)
+    datastore = cstore.datapackstore(packpath)
+    revlogstore = manifestrevlogstore(repo)
+    store = unioncontentstore(datastore, revlogstore)
 
-        cl = repo.changelog
-        for node in mfnodes:
-            treemf = trees.get(node)
+    mfnodeset = set(mfnodes)
+    basemfnodeset = set(basemfnodes)
 
-            p1node, p2node = mfrevlog.parents(node)
-            # If p1 is being sent or is already on the client, chances are
-            # that's the best thing for us to delta against.
-            if p1node != nullid and (p1node in mfnodeset or
-                                     p1node in basemfnodeset):
-                basetrees = [trees.get(p1node)]
-            else:
-                basetrees = [trees.get(basenode) for basenode in basemfnodes]
+    # Count how many times we will need each comparison node, so we can keep
+    # trees in memory the appropriate amount of time.
+    trees = treememoizer(store)
+    for node in mfnodes:
+        p1node, p2node = mfrevlog.parents(node)
+        if p1node != nullid and (p1node in mfnodeset or
+                                 p1node in basemfnodeset):
+            trees.adduse(p1node)
+        else:
+            for basenode in basemfnodes:
+                trees.adduse(basenode)
+        if p2node != nullid and (p2node in mfnodeset or
+                                 p2node in basemfnodeset):
+            trees.adduse(p2node)
 
-            if p2node != nullid and (p2node in mfnodeset or
-                                     p2node in basemfnodeset):
-                basetrees.append(trees.get(p2node))
+    cl = repo.changelog
+    for node in mfnodes:
+        treemf = trees.get(node)
 
-            subtrees = treemf.walksubtrees(comparetrees=basetrees)
-            for subname, subnode, subtext, x, x, x in subtrees:
-                # Append data
-                data = [(subnode, nullid, subtext)]
+        p1node, p2node = mfrevlog.parents(node)
+        # If p1 is being sent or is already on the client, chances are
+        # that's the best thing for us to delta against.
+        if p1node != nullid and (p1node in mfnodeset or
+                                 p1node in basemfnodeset):
+            basetrees = [trees.get(p1node)]
+        else:
+            basetrees = [trees.get(basenode) for basenode in basemfnodes]
 
-                # Append history
-                # Only append first history for now, since the entire manifest
-                # history is very long.
-                # Append data
-                data = [(subnode, nullid, subtext)]
+        if p2node != nullid and (p2node in mfnodeset or
+                                 p2node in basemfnodeset):
+            basetrees.append(trees.get(p2node))
 
-                # Append history
-                subrevlog = mfrevlog
-                if subname != '':
-                    subrevlog = mfrevlog.dirlog(subname)
-                subrev = subrevlog.rev(subnode)
-                x, x, x, x, linkrev, p1, p2, node = subrevlog.index[subrev]
-                copyfrom = ''
-                p1node = subrevlog.node(p1)
-                p2node = subrevlog.node(p2)
-                linknode = cl.node(linkrev)
-                history = [(subnode, p1node, p2node, linknode, copyfrom)]
+        subtrees = treemf.walksubtrees(comparetrees=basetrees)
+        for subname, subnode, subtext, x, x, x in subtrees:
+            # Append data
+            data = [(subnode, nullid, subtext)]
 
-                for chunk in wirepack.sendpackpart(subname, history, data):
-                    yield chunk
+            # Append history
+            # Only append first history for now, since the entire manifest
+            # history is very long.
+            # Append data
+            data = [(subnode, nullid, subtext)]
 
-        yield wirepack.closepart()
-        proto.fout.flush()
+            # Append history
+            subrevlog = mfrevlog
+            if subname != '':
+                subrevlog = mfrevlog.dirlog(subname)
+            subrev = subrevlog.rev(subnode)
+            x, x, x, x, linkrev, p1, p2, node = subrevlog.index[subrev]
+            copyfrom = ''
+            p1node = subrevlog.node(p1)
+            p2node = subrevlog.node(p2)
+            linknode = cl.node(linkrev)
+            history = [(subnode, p1node, p2node, linknode, copyfrom)]
 
-    return wireproto.streamres(streamer())
+            for chunk in wirepack.sendpackpart(subname, history, data):
+                yield chunk
 
-def _receivepackrequest(stream):
-    rootdir = readpath(stream)
-    mfnodes = list(readnodelist(stream))
-    basemfnodes = list(readnodelist(stream))
-    directories = list(readpathlist(stream))
-    return rootdir, mfnodes, basemfnodes, directories
+    yield wirepack.closepart()
 
 class remotetreedatastore(object):
     def __init__(self, repo):
