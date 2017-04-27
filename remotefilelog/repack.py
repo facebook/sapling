@@ -31,7 +31,10 @@ def fullrepack(repo):
         _runrepack(repo, datasource, historysource, packpath,
                    constants.FILEPACK_CATEGORY)
 
-    if util.safehasattr(repo.svfs, 'manifestdatastore'):
+    if repo.ui.configbool('treemanifest', 'server'):
+        treemfmod = extensions.find('treemanifest')
+        treemfmod.serverrepack(repo)
+    elif util.safehasattr(repo.svfs, 'manifestdatastore'):
         localdata, shareddata = _getmanifeststores(repo)
         lpackpath, ldstores, lhstores = localdata
         spackpath, sdstores, shstores = shareddata
@@ -54,9 +57,6 @@ def fullrepack(repo):
         _runrepack(repo, datasource, historysource, lpackpath,
                    constants.TREEPACK_CATEGORY)
 
-    if repo.ui.configbool('treemanifest', 'server'):
-        treemfmod = extensions.find('treemanifest')
-        treemfmod.serverrepack(repo)
 
 def incrementalrepack(repo):
     """This repacks the repo by looking at the distribution of pack files in the
@@ -72,7 +72,10 @@ def incrementalrepack(repo):
                            packpath,
                            constants.FILEPACK_CATEGORY)
 
-    if util.safehasattr(repo.svfs, 'manifestdatastore'):
+    if repo.ui.configbool('treemanifest', 'server'):
+        treemfmod = extensions.find('treemanifest')
+        treemfmod.serverrepack(repo)
+    elif util.safehasattr(repo.svfs, 'manifestdatastore'):
         localdata, shareddata = _getmanifeststores(repo)
         lpackpath, ldstores, lhstores = localdata
         spackpath, sdstores, shstores = shareddata

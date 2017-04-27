@@ -132,6 +132,8 @@ def clientreposetup(repo):
 
     localpackpath = shallowutil.getlocalpackpath(repo.svfs.vfs.base,
                                                  PACK_CATEGORY)
+
+    # Data store
     if repo.ui.configbool("treemanifest", "usecunionstore"):
         datastore = cstore.datapackstore(packpath)
         localdatastore = cstore.datapackstore(localpackpath)
@@ -154,12 +156,20 @@ def clientreposetup(repo):
     repo.svfs.sharedmanifestdatastores = [datastore]
     repo.svfs.localmanifestdatastores = [localdatastore]
 
+    # History store
+    sharedhistorystore = historypackstore(repo.ui, packpath)
+    localhistorystore = historypackstore(repo.ui, localpackpath)
     repo.svfs.sharedmanifesthistorystores = [
-        historypackstore(repo.ui, packpath),
+        sharedhistorystore
     ]
     repo.svfs.localmanifesthistorystores = [
-        historypackstore(repo.ui, localpackpath),
+        localhistorystore,
     ]
+    repo.svfs.manifesthistorystore = unionmetadatastore(
+        sharedhistorystore,
+        localhistorystore,
+        writestore=localhistorystore,
+    )
 
 class treemanifestlog(manifest.manifestlog):
     def __init__(self, opener):
@@ -190,6 +200,20 @@ def serverreposetup(repo):
         caps.append('gettreepack')
         return caps
     extensions.wrapfunction(wireproto, '_capabilities', _capabilities)
+
+    packpath = repo.vfs.join('cache/packs/%s' % PACK_CATEGORY)
+
+    # Data store
+    datastore = cstore.datapackstore(packpath)
+    revlogstore = manifestrevlogstore(repo)
+    repo.svfs.manifestdatastore = unioncontentstore(datastore, revlogstore)
+
+    # History store
+    historystore = historypackstore(repo.ui, packpath)
+    repo.svfs.manifesthistorystore = unionmetadatastore(
+        historystore,
+        revlogstore,
+    )
 
 def _addmanifestgroup(*args, **kwargs):
     raise error.Abort(_("cannot push commits to a treemanifest transition "
@@ -838,21 +862,17 @@ def generatepackstream(repo, rootdir, mfnodes, basemfnodes, directories):
         raise RuntimeError("directories arg is not supported yet ('%s')" %
                             ', '.join(directories))
 
-    treemfl = repo.manifestlog.treemanifestlog
-    mfrevlog = treemfl._revlog
-    packpath = repo.vfs.join('cache/packs/%s' % PACK_CATEGORY)
-    datastore = cstore.datapackstore(packpath)
-    revlogstore = manifestrevlogstore(repo)
-    store = unioncontentstore(datastore, revlogstore)
+    historystore = repo.svfs.manifesthistorystore
+    datastore = repo.svfs.manifestdatastore
 
     mfnodeset = set(mfnodes)
     basemfnodeset = set(basemfnodes)
 
     # Count how many times we will need each comparison node, so we can keep
     # trees in memory the appropriate amount of time.
-    trees = treememoizer(store)
+    trees = treememoizer(datastore)
     for node in mfnodes:
-        p1node, p2node = mfrevlog.parents(node)
+        p1node, p2node = historystore.getnodeinfo(rootdir, node)[:2]
         if p1node != nullid and (p1node in mfnodeset or
                                  p1node in basemfnodeset):
             trees.adduse(p1node)
@@ -863,11 +883,10 @@ def generatepackstream(repo, rootdir, mfnodes, basemfnodes, directories):
                                  p2node in basemfnodeset):
             trees.adduse(p2node)
 
-    cl = repo.changelog
     for node in mfnodes:
         treemf = trees.get(node)
 
-        p1node, p2node = mfrevlog.parents(node)
+        p1node, p2node = historystore.getnodeinfo(rootdir, node)[:2]
         # If p1 is being sent or is already on the client, chances are
         # that's the best thing for us to delta against.
         if p1node != nullid and (p1node in mfnodeset or
@@ -892,15 +911,8 @@ def generatepackstream(repo, rootdir, mfnodes, basemfnodes, directories):
             data = [(subnode, nullid, subtext)]
 
             # Append history
-            subrevlog = mfrevlog
-            if subname != '':
-                subrevlog = mfrevlog.dirlog(subname)
-            subrev = subrevlog.rev(subnode)
-            x, x, x, x, linkrev, p1, p2, node = subrevlog.index[subrev]
-            copyfrom = ''
-            p1node = subrevlog.node(p1)
-            p2node = subrevlog.node(p2)
-            linknode = cl.node(linkrev)
+            histdata = historystore.getnodeinfo(subname, subnode)
+            p1node, p2node, linknode, copyfrom = histdata
             history = [(subnode, p1node, p2node, linknode, copyfrom)]
 
             for chunk in wirepack.sendpackpart(subname, history, data):
