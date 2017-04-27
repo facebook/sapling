@@ -791,10 +791,19 @@ def servergettreepack(repo, proto, args):
     if not isinstance(proto, sshserver.sshserver):
         raise error.Abort(_('cannot fetch remote files over non-ssh protocol'))
 
+    rootdir = args['rootdir']
+
+    # Sort to produce a consistent output
+    mfnodes = sorted(wireproto.decodelist(args['mfnodes']))
+    basemfnodes = sorted(wireproto.decodelist(args['basemfnodes']))
+    directories = sorted(list(wireproto.unescapearg(d) for d
+                              in args['directories'].split(',') if d != ''))
+
     try:
         bundler = bundle2.bundle20(repo.ui)
-        part = bundler.newpart(TREEGROUP_PARTTYPE,
-                               data=generatepackstream(repo, proto, args))
+        packstream = generatepackstream(repo, rootdir, mfnodes,
+                                        basemfnodes, directories)
+        part = bundler.newpart(TREEGROUP_PARTTYPE, data=packstream)
         part.addparam('version', '1')
 
     except error.Abort as exc:
@@ -808,7 +817,7 @@ def servergettreepack(repo, proto, args):
                                            manargs, advargs))
     return wireproto.streamres(gen=bundler.getchunks(), v1compressible=True)
 
-def generatepackstream(repo, proto, args):
+def generatepackstream(repo, rootdir, mfnodes, basemfnodes, directories):
     """
     All size/len/counts are network order unsigned ints.
 
@@ -832,13 +841,6 @@ def generatepackstream(repo, proto, args):
     deltaentry = <node: 20 byte><deltabase: 20 byte>
                  <delta len: 8 byte><delta>
     """
-    rootdir = args['rootdir']
-
-    # Sort to produce a consistent output
-    mfnodes = sorted(wireproto.decodelist(args['mfnodes']))
-    basemfnodes = sorted(wireproto.decodelist(args['basemfnodes']))
-    directories = sorted(list(wireproto.unescapearg(d) for d
-                              in args['directories'].split(',') if d != ''))
     if rootdir:
         raise RuntimeError("rootdir not supported just yet: %s" %
                            rootdir)
