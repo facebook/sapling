@@ -15,7 +15,7 @@ import arcconfig
 
 urlreq = util.urlreq
 
-DEFAULT_HOST = 'https://phabricator.fb.com/api/'
+DEFAULT_HOST = 'https://phabricator.intern.facebook.com/api/'
 DEFAULT_TIMEOUT = 60
 mocked_responses = None
 
@@ -39,8 +39,15 @@ class Client(object):
             self._user = hostconfig['user']
             self._cert = hostconfig['cert']
         except KeyError:
-            raise arcconfig.ArcConfigError('arcrc is missing user credentials '
-                                           'for host %s' % self._host)
+            try:
+                hostconfig = config['hosts'][config['hosts'].keys()[0]]
+                self._user = hostconfig['user']
+                self._cert = hostconfig['cert']
+            except KeyError:
+                raise arcconfig.ArcConfigError(
+                    'arcrc is missing user '
+                    'credentials for host %s.  use '
+                    '"arc install-certificate" to fix.' % self._host)
         self._actas = self._user
         self._connection = None
 
