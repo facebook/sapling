@@ -89,8 +89,8 @@ EdenMount::EdenMount(
   auto rootOverlayDir = overlay_->loadOverlayDir(FUSE_ROOT_ID);
 
   // Load the current snapshot ID from the on-disk config
-  auto snapshotID = config_->getSnapshotID();
-  *currentSnapshot_.wlock() = snapshotID;
+  auto parents = config_->getParentCommits();
+  parentCommits_.wlock()->setParents(parents);
 
   // Create the inode for the root of the tree using the hash contained
   // within the snapshotPath file
@@ -104,7 +104,7 @@ EdenMount::EdenMount(
     // Loading the root tree may take a while.  It may be better to refactor
     // the code slightly so that this is done in a helper function, before the
     // EdenMount constructor is called.
-    auto rootTree = objectStore_->getTreeForCommit(snapshotID).get();
+    auto rootTree = objectStore_->getTreeForCommit(parents.parent1()).get();
     rootInode = TreeInodePtr::makeNew(this, std::move(rootTree));
   }
   auto maxInodeNumber = overlay_->getMaxRecordedInode();
@@ -117,7 +117,7 @@ EdenMount::EdenMount(
   // the journal.  This also sets things up so that we can carry the
   // snapshot id forward through subsequent journal entries.
   auto delta = std::make_unique<JournalDelta>();
-  delta->toHash = snapshotID;
+  delta->toHash = parents.parent1();
   journal_.wlock()->addDelta(std::move(delta));
 
   // Set up the magic .eden dir
@@ -181,7 +181,7 @@ TreeInodePtr EdenMount::getRootInode() const {
 }
 
 folly::Future<std::unique_ptr<Tree>> EdenMount::getRootTreeFuture() const {
-  auto commitHash = Hash{*currentSnapshot_.rlock()};
+  auto commitHash = Hash{parentCommits_.rlock()->parent1()};
   return objectStore_->getTreeForCommit(commitHash);
 }
 
@@ -217,13 +217,13 @@ folly::Future<std::vector<CheckoutConflict>> EdenMount::checkout(
   // Hold the snapshot lock for the duration of the entire checkout operation.
   //
   // This prevents multiple checkout operations from running in parallel.
-  auto snapshotLock = currentSnapshot_.wlock();
-  auto oldSnapshot = *snapshotLock;
-  auto ctx = std::make_shared<CheckoutContext>(std::move(snapshotLock), force);
-  VLOG(1) << "starting checkout for " << this->getPath() << ": " << oldSnapshot
+  auto parentsLock = parentCommits_.wlock();
+  auto oldParents = *parentsLock;
+  auto ctx = std::make_shared<CheckoutContext>(std::move(parentsLock), force);
+  VLOG(1) << "starting checkout for " << this->getPath() << ": " << oldParents
           << " to " << snapshotHash;
 
-  auto fromTreeFuture = objectStore_->getTreeForCommit(oldSnapshot);
+  auto fromTreeFuture = objectStore_->getTreeForCommit(oldParents.parent1());
   auto toTreeFuture = objectStore_->getTreeForCommit(snapshotHash);
 
   return folly::collect(fromTreeFuture, toTreeFuture)
@@ -247,11 +247,11 @@ folly::Future<std::vector<CheckoutConflict>> EdenMount::checkout(
       .then([this](std::unique_ptr<Tree> toTree) {
         return dirstate_->onSnapshotChanged(toTree.get());
       })
-      .then([this, ctx, oldSnapshot, snapshotHash]() {
+      .then([this, ctx, oldParents, snapshotHash]() {
         // Save the new snapshot hash
         VLOG(1) << "updating snapshot for " << this->getPath() << " from "
-                << oldSnapshot << " to " << snapshotHash;
-        this->config_->setSnapshotID(snapshotHash);
+                << oldParents << " to " << snapshotHash;
+        this->config_->setParentCommits(snapshotHash);
         auto conflicts = ctx->finish(snapshotHash);
 
         // Write a journal entry
@@ -261,7 +261,7 @@ folly::Future<std::vector<CheckoutConflict>> EdenMount::checkout(
         // changed--we intentionally don't process files that were changed but
         // have never been accessed.
         auto journalDelta = make_unique<JournalDelta>();
-        journalDelta->fromHash = oldSnapshot;
+        journalDelta->fromHash = oldParents.parent1();
         journalDelta->toHash = snapshotHash;
         journal_.wlock()->addDelta(std::move(journalDelta));
 
@@ -297,10 +297,10 @@ Future<Unit> EdenMount::diff(InodeDiffCallback* callback, bool listIgnored) {
 
 Future<Unit> EdenMount::resetCommit(Hash snapshotHash) {
   // Hold the snapshot lock around the entire operation.
-  auto snapshotLock = currentSnapshot_.wlock();
-  auto oldSnapshot = *snapshotLock;
+  auto parentsLock = parentCommits_.wlock();
+  auto oldParents = *parentsLock;
   VLOG(1) << "resetting snapshot for " << this->getPath() << " from "
-          << oldSnapshot << " to " << snapshotHash;
+          << oldParents << " to " << snapshotHash;
 
   // TODO: Maybe we should walk the inodes and see if we can dematerialize some
   // files using the new source control state.
@@ -315,14 +315,14 @@ Future<Unit> EdenMount::resetCommit(Hash snapshotHash) {
       .then([
         this,
         snapshotHash,
-        oldSnapshot,
-        snapshotLock = std::move(snapshotLock)
+        oldParents,
+        parentsLock = std::move(parentsLock)
       ]() {
-        *snapshotLock = snapshotHash;
-        this->config_->setSnapshotID(snapshotHash);
+        this->config_->setParentCommits(snapshotHash);
+        parentsLock->setParents(snapshotHash);
 
         auto journalDelta = make_unique<JournalDelta>();
-        journalDelta->fromHash = oldSnapshot;
+        journalDelta->fromHash = oldParents.parent1();
         journalDelta->toHash = snapshotHash;
         journal_.wlock()->addDelta(std::move(journalDelta));
       });

@@ -14,6 +14,7 @@
 #include <folly/dynamic.h>
 #include "InterpolatedPropertyTree.h"
 #include "eden/fs/model/Hash.h"
+#include "eden/fs/model/ParentCommits.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook {
@@ -77,9 +78,18 @@ class ClientConfig {
 
   static folly::dynamic loadClientDirectoryMap(AbsolutePathPiece edenDir);
 
-  Hash getSnapshotID() const;
+  /**
+   * Get the parent commit(s) of the working directory.
+   */
+  ParentCommits getParentCommits() const;
 
-  void setSnapshotID(Hash id) const;
+  /**
+   * Set the parent commit(s) of the working directory.
+   */
+  void setParentCommits(const ParentCommits& parents) const;
+  void setParentCommits(
+      Hash parent1,
+      folly::Optional<Hash> parent2 = folly::none) const;
 
   const AbsolutePath& getMountPath() const {
     return mountPath_;

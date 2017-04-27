@@ -13,6 +13,7 @@
 #include <vector>
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/InodePtrFwd.h"
+#include "eden/fs/model/ParentCommits.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/utils/PathFuncs.h"
 
@@ -36,7 +37,7 @@ class Tree;
 class CheckoutContext {
  public:
   CheckoutContext(
-      folly::Synchronized<Hash>::LockedPtr&& snapshotLock,
+      folly::Synchronized<ParentCommits>::LockedPtr&& parentsLock,
       bool force);
   ~CheckoutContext();
 
@@ -100,7 +101,7 @@ class CheckoutContext {
 
  private:
   bool const force_{false};
-  folly::Synchronized<Hash>::LockedPtr snapshotLock_;
+  folly::Synchronized<ParentCommits>::LockedPtr parentsLock_;
   RenameLock renameLock_;
 
   // The checkout processing may occur across many threads,

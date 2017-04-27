@@ -12,12 +12,15 @@
 #include <gtest/gtest.h>
 #include "eden/fs/config/ClientConfig.h"
 #include "eden/fs/utils/PathFuncs.h"
+#include "eden/fs/utils/test/TestChecks.h"
 
 using facebook::eden::AbsolutePath;
 using facebook::eden::BindMount;
 using facebook::eden::ClientConfig;
 using facebook::eden::Hash;
 using facebook::eden::RelativePath;
+using folly::Optional;
+using folly::StringPiece;
 
 namespace {
 
@@ -45,8 +48,12 @@ class ClientConfigTest : public ::testing::Test {
     mountPoint_ = "/tmp/someplace";
 
     auto snapshotPath = clientDir_ / "SNAPSHOT";
-    auto snapshot = "1234567812345678123456781234567812345678\n";
-    folly::writeFile(folly::StringPiece{snapshot}, snapshotPath.c_str());
+    auto snapshotContents = folly::StringPiece{
+        "eden\00\00\00\01"
+        "\x12\x34\x56\x78\x12\x34\x56\x78\x12\x34"
+        "\x56\x78\x12\x34\x56\x78\x12\x34\x56\x78",
+        28};
+    folly::writeFile(snapshotContents, snapshotPath.c_str());
 
     userConfigPath_ = edenDir_->path() / ".edenrc";
     auto data =
@@ -68,7 +75,11 @@ class ClientConfigTest : public ::testing::Test {
   virtual void TearDown() override {
     edenDir_.reset();
   }
+
+  template <typename ExceptionType = std::runtime_error>
+  void testBadSnapshot(StringPiece contents, const char* errorRegex);
 };
+}
 
 TEST_F(ClientConfigTest, testLoadFromClientDirectory) {
   auto configData = ClientConfig::loadConfigData(
@@ -79,9 +90,10 @@ TEST_F(ClientConfigTest, testLoadFromClientDirectory) {
       AbsolutePath{clientDir_.string()},
       &configData);
 
+  auto parents = config->getParentCommits();
   EXPECT_EQ(
-      Hash{"1234567812345678123456781234567812345678"},
-      config->getSnapshotID());
+      Hash{"1234567812345678123456781234567812345678"}, parents.parent1());
+  EXPECT_EQ(Optional<Hash>{}, parents.parent2());
   EXPECT_EQ("/tmp/someplace", config->getMountPath());
 
   std::vector<BindMount> expectedBindMounts;
@@ -110,9 +122,10 @@ TEST_F(ClientConfigTest, testLoadFromClientDirectoryWithNoBindMounts) {
       AbsolutePath{clientDir_.string()},
       &configData);
 
+  auto parents = config->getParentCommits();
   EXPECT_EQ(
-      Hash{"1234567812345678123456781234567812345678"},
-      config->getSnapshotID());
+      Hash{"1234567812345678123456781234567812345678"}, parents.parent1());
+  EXPECT_EQ(Optional<Hash>{}, parents.parent2());
   EXPECT_EQ("/tmp/someplace", config->getMountPath());
 
   std::vector<BindMount> expectedBindMounts;
@@ -145,9 +158,10 @@ TEST_F(ClientConfigTest, testOverrideSystemConfigData) {
       AbsolutePath{clientDir_.string()},
       &configData);
 
+  auto parents = config->getParentCommits();
   EXPECT_EQ(
-      Hash{"1234567812345678123456781234567812345678"},
-      config->getSnapshotID());
+      Hash{"1234567812345678123456781234567812345678"}, parents.parent1());
+  EXPECT_EQ(Optional<Hash>{}, parents.parent2());
   EXPECT_EQ("/tmp/someplace", config->getMountPath());
 
   std::vector<BindMount> expectedBindMounts;
@@ -179,9 +193,10 @@ TEST_F(ClientConfigTest, testOnlySystemConfigData) {
       AbsolutePath{clientDir_.string()},
       &configData);
 
+  auto parents = config->getParentCommits();
   EXPECT_EQ(
-      Hash{"1234567812345678123456781234567812345678"},
-      config->getSnapshotID());
+      Hash{"1234567812345678123456781234567812345678"}, parents.parent1());
+  EXPECT_EQ(Optional<Hash>{}, parents.parent2());
   EXPECT_EQ("/tmp/someplace", config->getMountPath());
 
   std::vector<BindMount> expectedBindMounts;
@@ -191,4 +206,133 @@ TEST_F(ClientConfigTest, testOnlySystemConfigData) {
                 AbsolutePath{"/tmp/someplace/path/to-my-path"}});
   EXPECT_EQ(expectedBindMounts, config->getBindMounts());
 }
+
+TEST_F(ClientConfigTest, testMultipleParents) {
+  auto configData = ClientConfig::loadConfigData(
+      AbsolutePath{etcEdenPath_.string()},
+      AbsolutePath{userConfigPath_.string()});
+  auto config = ClientConfig::loadFromClientDirectory(
+      AbsolutePath{mountPoint_.string()},
+      AbsolutePath{clientDir_.string()},
+      &configData);
+
+  // Overwrite the SNAPSHOT file to indicate that there are two parents
+  auto snapshotContents = folly::StringPiece{
+      "eden\00\00\00\01"
+      "\x99\x88\x77\x66\x55\x44\x33\x22\x11\x00"
+      "\xaa\xbb\xcc\xdd\xee\xff\xab\xcd\xef\x99"
+      "\xab\xcd\xef\x98\x76\x54\x32\x10\x01\x23"
+      "\x45\x67\x89\xab\xcd\xef\x00\x11\x22\x33",
+      48};
+  auto snapshotPath = clientDir_ / "SNAPSHOT";
+  folly::writeFile(snapshotContents, snapshotPath.c_str());
+
+  auto parents = config->getParentCommits();
+  EXPECT_EQ(
+      Hash{"99887766554433221100aabbccddeeffabcdef99"}, parents.parent1());
+  EXPECT_EQ(
+      Hash{"abcdef98765432100123456789abcdef00112233"}, parents.parent2());
+}
+
+TEST_F(ClientConfigTest, testWriteSnapshot) {
+  auto configData = ClientConfig::loadConfigData(
+      AbsolutePath{etcEdenPath_.string()},
+      AbsolutePath{userConfigPath_.string()});
+  auto config = ClientConfig::loadFromClientDirectory(
+      AbsolutePath{mountPoint_.string()},
+      AbsolutePath{clientDir_.string()},
+      &configData);
+
+  Hash hash1{"99887766554433221100aabbccddeeffabcdef99"};
+  Hash hash2{"abcdef98765432100123456789abcdef00112233"};
+  Hash zeroHash{};
+
+  // Write out a single parent and read it back
+  config->setParentCommits(hash1);
+  auto parents = config->getParentCommits();
+  EXPECT_EQ(hash1, parents.parent1());
+  EXPECT_EQ(Optional<Hash>{}, parents.parent2());
+
+  // Change the parent
+  config->setParentCommits(hash2);
+  parents = config->getParentCommits();
+  EXPECT_EQ(hash2, parents.parent1());
+  EXPECT_EQ(Optional<Hash>{}, parents.parent2());
+
+  // Set multiple parents
+  config->setParentCommits(hash1, hash2);
+  parents = config->getParentCommits();
+  EXPECT_EQ(hash1, parents.parent1());
+  EXPECT_EQ(hash2, parents.parent2());
+
+  // We should be able to distinguish between the second parent being the
+  // 0-hash and between not being set at all.
+  config->setParentCommits(hash2, zeroHash);
+  parents = config->getParentCommits();
+  EXPECT_EQ(hash2, parents.parent1());
+  EXPECT_EQ(zeroHash, parents.parent2());
+
+  // Move back to a single parent
+  config->setParentCommits(hash1);
+  parents = config->getParentCommits();
+  EXPECT_EQ(hash1, parents.parent1());
+  EXPECT_EQ(Optional<Hash>{}, parents.parent2());
+}
+
+template <typename ExceptionType>
+void ClientConfigTest::testBadSnapshot(
+    StringPiece contents,
+    const char* errorRegex) {
+  SCOPED_TRACE(
+      folly::to<std::string>("SNAPSHOT contents: ", folly::hexlify(contents)));
+  folly::writeFile(contents, (clientDir_ / "SNAPSHOT").c_str());
+
+  auto configData = ClientConfig::loadConfigData(
+      AbsolutePath{etcEdenPath_.string()},
+      AbsolutePath{userConfigPath_.string()});
+  auto config = ClientConfig::loadFromClientDirectory(
+      AbsolutePath{mountPoint_.string()},
+      AbsolutePath{clientDir_.string()},
+      &configData);
+  EXPECT_THROW_RE(config->getParentCommits(), ExceptionType, errorRegex);
+}
+
+TEST_F(ClientConfigTest, testBadSnapshot) {
+  testBadSnapshot("eden", "SNAPSHOT file is too short");
+  testBadSnapshot(StringPiece{"eden\0\0\0", 7}, "SNAPSHOT file is too short");
+  testBadSnapshot(
+      StringPiece{"eden\0\0\0\1", 8},
+      "unexpected length for eden SNAPSHOT file");
+  testBadSnapshot(
+      StringPiece{"eden\0\0\0\x0exyza", 12},
+      "unsupported eden SNAPSHOT file format \\(version 14\\)");
+  testBadSnapshot(
+      StringPiece{"eden\00\00\00\01"
+                  "\x99\x88\x77\x66\x55\x44\x33\x22\x11\x00"
+                  "\xaa\xbb\xcc\xdd\xee\xff\xab\xcd\xef\x99"
+                  "\xab\xcd\xef\x98\x76\x54\x32\x10\x01\x23"
+                  "\x45\x67\x89\xab\xcd\xef\x00\x11\x22",
+                  47},
+      "unexpected length for eden SNAPSHOT file");
+  testBadSnapshot(
+      StringPiece{"eden\00\00\00\01"
+                  "\x99\x88\x77\x66\x55\x44\x33\x22\x11\x00"
+                  "\xaa\xbb\xcc\xdd\xee\xff\xab\xcd\xef\x99"
+                  "\xab\xcd\xef\x98\x76\x54\x32\x10\x01\x23"
+                  "\x45\x67\x89\xab\xcd\xef\x00\x11\x22\x33\x44",
+                  49},
+      "unexpected length for eden SNAPSHOT file");
+
+  // The error type and message for this will probably change in the future
+  // when we drop support for the legacy SNAPSHOT file format (of a 40-byte
+  // ASCII string containing the snapshot hash).
+  testBadSnapshot<std::invalid_argument>("ede", "should have size 40");
+  testBadSnapshot<std::invalid_argument>(
+      StringPiece{"xden\00\00\00\01"
+                  "\x99\x88\x77\x66\x55\x44\x33\x22\x11\x00"
+                  "\xaa\xbb\xcc\xdd\xee\xff\xab\xcd\xef\x99"
+                  "\xab\xcd\xef\x98\x76\x54\x32\x10\x01\x23"
+                  "\x45\x67\x89\xab\xcd\xef\x00\x11\x22\x33",
+                  48},
+      "should have size 40");
 }

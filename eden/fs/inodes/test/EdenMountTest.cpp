@@ -20,6 +20,8 @@
 #include "eden/fs/testharness/TestMount.h"
 #include "eden/fs/testharness/TestUtil.h"
 
+using folly::Optional;
+
 namespace facebook {
 namespace eden {
 
@@ -45,8 +47,10 @@ TEST(EdenMount, resetCommit) {
   // Initialize the TestMount pointing at commit1
   testMount.initialize(makeTestHash("1"));
   const auto& edenMount = testMount.getEdenMount();
-  EXPECT_EQ(makeTestHash("1"), edenMount->getSnapshotID());
-  EXPECT_EQ(makeTestHash("1"), edenMount->getConfig()->getSnapshotID());
+  EXPECT_EQ(ParentCommits{makeTestHash("1")}, edenMount->getParentCommits());
+  EXPECT_EQ(
+      ParentCommits{makeTestHash("1")},
+      edenMount->getConfig()->getParentCommits());
   auto latestJournalEntry = edenMount->getJournal()->getLatest();
   EXPECT_EQ(makeTestHash("1"), latestJournalEntry->fromHash);
   EXPECT_EQ(makeTestHash("1"), latestJournalEntry->toHash);
@@ -56,8 +60,10 @@ TEST(EdenMount, resetCommit) {
   // Reset the TestMount to pointing to commit2
   edenMount->resetCommit(makeTestHash("2")).get();
   // The snapshot ID should be updated, both in memory and on disk
-  EXPECT_EQ(makeTestHash("2"), edenMount->getSnapshotID());
-  EXPECT_EQ(makeTestHash("2"), edenMount->getConfig()->getSnapshotID());
+  EXPECT_EQ(ParentCommits{makeTestHash("2")}, edenMount->getParentCommits());
+  EXPECT_EQ(
+      ParentCommits{makeTestHash("2")},
+      edenMount->getConfig()->getParentCommits());
   latestJournalEntry = edenMount->getJournal()->getLatest();
   EXPECT_EQ(makeTestHash("1"), latestJournalEntry->fromHash);
   EXPECT_EQ(makeTestHash("2"), latestJournalEntry->toHash);

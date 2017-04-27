@@ -174,7 +174,7 @@ void EdenServiceHandler::getCurrentSnapshot(
     std::string& result,
     std::unique_ptr<std::string> mountPoint) {
   auto edenMount = server_->getMount(*mountPoint);
-  result = thriftHash(edenMount->getSnapshotID());
+  result = thriftHash(edenMount->getParentCommits().parent1());
 }
 
 void EdenServiceHandler::checkOutRevision(

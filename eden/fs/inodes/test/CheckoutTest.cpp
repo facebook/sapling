@@ -445,7 +445,7 @@ TEST(Checkout, modifyThenRevert) {
   srcBuilder.setFile("a/test.txt", "test contents\n");
   srcBuilder.setFile("a/xyz.txt", "bar\n");
   TestMount testMount{srcBuilder};
-  auto originalCommit = testMount.getEdenMount()->getSnapshotID();
+  auto originalCommit = testMount.getEdenMount()->getParentCommits().parent1();
 
   // Modify a file.
   // We use the "normal" dispatcher APIs here, which will materialize the file.

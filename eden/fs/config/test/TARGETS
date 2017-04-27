@@ -4,6 +4,7 @@ cpp_unittest(
   deps = [
     '@/eden/fs/config:config',
     '@/eden/fs/utils:utils',
+    '@/eden/fs/utils/test:test_lib',
     '@/folly/experimental:test_util',
   ],
   external_deps = [

@@ -20,6 +20,7 @@
 #include "eden/fs/fuse/fuse_headers.h"
 #include "eden/fs/inodes/InodePtrFwd.h"
 #include "eden/fs/journal/JournalDelta.h"
+#include "eden/fs/model/ParentCommits.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace folly {
@@ -116,10 +117,10 @@ class EdenMount {
   const AbsolutePath& getPath() const;
 
   /**
-   * Get the hash of the currently checked out snapshot.
+   * Get the commit IDs of the working directory's parent commit(s).
    */
-  Hash getSnapshotID() const {
-    return *currentSnapshot_.rlock();
+  ParentCommits getParentCommits() const {
+    return *parentCommits_.rlock();
   }
 
   /*
@@ -330,10 +331,12 @@ class EdenMount {
   folly::SharedMutex renameMutex_;
 
   /**
-   * The hash of the current snapshot (i.e., commit) that is checked out in
-   * this mount point.
+   * The IDs of the parent commit(s) of the working directory.
+   *
+   * In most circumstances there will only be a single parent, but there
+   * will be two parents when in the middle of resolving a merge conflict.
    */
-  folly::Synchronized<Hash> currentSnapshot_;
+  folly::Synchronized<ParentCommits> parentCommits_;
 
   /*
    * Note that this config will not be updated if the user modifies the

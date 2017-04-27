@@ -55,6 +55,7 @@ class Hash : boost::totally_ordered<Hash> {
   static Hash sha1(folly::ByteRange data);
 
   folly::ByteRange getBytes() const;
+  folly::MutableByteRange mutableBytes();
 
   /** @return 40-character [lowercase] hex representation of this hash. */
   std::string toString() const;

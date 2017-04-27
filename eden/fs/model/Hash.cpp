@@ -45,6 +45,10 @@ ByteRange Hash::getBytes() const {
   return ByteRange{bytes_.data(), bytes_.size()};
 }
 
+folly::MutableByteRange Hash::mutableBytes() {
+  return folly::MutableByteRange{bytes_.data(), bytes_.size()};
+}
+
 std::string Hash::toString() const {
   std::string result;
   folly::hexlify(bytes_, result);
@@ -72,7 +76,7 @@ Hash::Storage hexToBytes(StringPiece hex) {
   if (hex.size() != requiredSize) {
     throw std::invalid_argument(folly::sformat(
         "{} should have size {} but had size {}",
-        hex,
+        folly::backslashify<std::string>(hex.str()),
         requiredSize,
         hex.size()));
   }
@@ -81,7 +85,8 @@ Hash::Storage hexToBytes(StringPiece hex) {
   bool isSuccess = folly::unhexlify(hex, bytes);
   if (!isSuccess) {
     throw std::invalid_argument(folly::sformat(
-        "{} could not be unhexlified: likely due to invalid characters", hex));
+        "{} could not be unhexlified: likely due to invalid characters",
+        folly::backslashify<std::string>(hex.str())));
   }
 
   Hash::Storage hashBytes;
@@ -93,7 +98,7 @@ Hash::Storage byteRangeToArray(ByteRange bytes) {
   if (bytes.size() != Hash::RAW_SIZE) {
     throw std::invalid_argument(folly::sformat(
         "{} should have size {} but had size {}",
-        static_cast<folly::Range<const char*>>(bytes).toString(),
+        folly::hexlify(bytes),
         static_cast<size_t>(Hash::RAW_SIZE),
         bytes.size()));
   }

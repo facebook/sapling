@@ -13,9 +13,16 @@
 #include <boost/range/adaptor/reversed.hpp>
 #include <folly/File.h>
 #include <folly/FileUtil.h>
+#include <folly/Range.h>
 #include <folly/String.h>
+#include <folly/io/Cursor.h>
+#include <folly/io/IOBuf.h>
 #include <folly/json.h>
 
+using folly::ByteRange;
+using folly::IOBuf;
+using folly::Optional;
+using folly::StringPiece;
 using std::string;
 
 namespace {
@@ -44,6 +51,19 @@ const facebook::eden::RelativePathPiece kDirstateFile{"dirstate"};
 
 // File holding mapping of client directories.
 const facebook::eden::RelativePathPiece kClientDirectoryMap{"config.json"};
+
+// Constants for use with the SNAPSHOT file
+//
+// The SNAPSHOT file format is:
+// - 4 byte identifier: "eden"
+// - 4 byte format version number (big endian)
+// - 20 byte commit ID
+// - (Optional 20 byte commit ID, only present when there are 2 parents)
+constexpr folly::StringPiece kSnapshotFileMagic{"eden"};
+enum : uint32_t {
+  kSnapshotHeaderSize = 8,
+  kSnapshotFormatVersion = 1,
+};
 }
 
 namespace facebook {
@@ -54,21 +74,89 @@ ClientConfig::ClientConfig(
     AbsolutePathPiece clientDirectory)
     : clientDirectory_(clientDirectory), mountPath_(mountPath) {}
 
-Hash ClientConfig::getSnapshotID() const {
+ParentCommits ClientConfig::getParentCommits() const {
   // Read the snapshot.
   auto snapshotFile = getSnapshotPath();
   string snapshotFileContents;
   folly::readFile(snapshotFile.c_str(), snapshotFileContents);
-  // Make sure to remove any leading or trailing whitespace.
-  auto snapshotID = folly::trimWhitespace(snapshotFileContents);
-  return Hash{snapshotID};
+
+  StringPiece contents{snapshotFileContents};
+  if (!contents.startsWith(kSnapshotFileMagic)) {
+    // Try reading an old-style SNAPSHOT file that just contains a single
+    // commit ID, as an ASCII hexadecimal string.
+    //
+    // TODO: In the not-to-distant future we can remove support for this old
+    // format, and simply throw an exception here if the snapshot file does not
+    // start with the correct identifier bytes.
+    auto snapshotID = folly::trimWhitespace(contents);
+    return ParentCommits{Hash{snapshotID}};
+  }
+
+  if (contents.size() < kSnapshotHeaderSize) {
+    throw std::runtime_error(folly::sformat(
+        "eden SNAPSHOT file is too short ({} bytes): {}",
+        contents.size(),
+        snapshotFile));
+  }
+
+  IOBuf buf(IOBuf::WRAP_BUFFER, ByteRange{contents});
+  folly::io::Cursor cursor(&buf);
+  cursor += kSnapshotFileMagic.size();
+  auto version = cursor.readBE<uint32_t>();
+  if (version != kSnapshotFormatVersion) {
+    throw std::runtime_error(folly::sformat(
+        "unsupported eden SNAPSHOT file format (version {}): {}",
+        uint32_t{version},
+        snapshotFile));
+  }
+
+  auto sizeLeft = cursor.length();
+  if (sizeLeft != Hash::RAW_SIZE && sizeLeft != (Hash::RAW_SIZE * 2)) {
+    throw std::runtime_error(folly::sformat(
+        "unexpected length for eden SNAPSHOT file ({} bytes): {}",
+        contents.size(),
+        snapshotFile));
+  }
+
+  ParentCommits parents;
+  cursor.pull(parents.parent1().mutableBytes().data(), Hash::RAW_SIZE);
+
+  if (!cursor.isAtEnd()) {
+    parents.parent2() = Hash{};
+    cursor.pull(parents.parent2()->mutableBytes().data(), Hash::RAW_SIZE);
+  }
+
+  return parents;
 }
 
-void ClientConfig::setSnapshotID(Hash id) const {
+void ClientConfig::setParentCommits(const ParentCommits& parents) const {
   auto snapshotPath = getSnapshotPath();
-  auto hashStr = id.toString() + "\n";
-  folly::writeFileAtomic(
-      snapshotPath.stringPiece(), folly::StringPiece(hashStr));
+
+  std::array<uint8_t, kSnapshotHeaderSize + (2 * Hash::RAW_SIZE)> buffer;
+  IOBuf buf(IOBuf::WRAP_BUFFER, ByteRange{buffer});
+  folly::io::RWPrivateCursor cursor{&buf};
+
+  // Snapshot file format:
+  // 4-byte identifier: "eden"
+  cursor.push(ByteRange{kSnapshotFileMagic});
+  // 4-byte format version identifier
+  cursor.writeBE<uint32_t>(kSnapshotFormatVersion);
+  // 20-byte commit ID: parent1
+  cursor.push(parents.parent1().getBytes());
+  // Optional 20-byte commit ID: parent2
+  if (parents.parent2().hasValue()) {
+    cursor.push(parents.parent2()->getBytes());
+    CHECK(cursor.isAtEnd());
+  }
+  size_t writtenSize = cursor - folly::io::RWPrivateCursor{&buf};
+  ByteRange snapshotData{buffer.data(), writtenSize};
+
+  folly::writeFileAtomic(snapshotPath.stringPiece(), snapshotData);
+}
+
+void ClientConfig::setParentCommits(Hash parent1, folly::Optional<Hash> parent2)
+    const {
+  return setParentCommits(ParentCommits{parent1, parent2});
 }
 
 const AbsolutePath& ClientConfig::getClientDirectory() const {
