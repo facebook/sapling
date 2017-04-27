@@ -245,7 +245,7 @@ class baseset(abstractsmartset):
     @util.propertycache
     def _list(self):
         # _list is only lazily constructed if we have _set
-        assert '_set' in self.__dict__
+        assert r'_set' in self.__dict__
         return list(self._set)
 
     def __iter__(self):
