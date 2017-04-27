@@ -403,15 +403,12 @@ class InterceptedMutableDataPack(object):
         return self._pack.add(name, node, deltabasenode, delta)
 
 class InterceptedMutableHistoryPack(object):
-    """This classes intercepts history pack writes and does two things:
-    1. replaces the node for the root with the provided node. This is
-       useful for forcing a tree manifest to be referencable via its flat hash.
-    2. Records the adds instead of sending them on. Since mutablehistorypack
-       requires all entries for a file to be written contiguously, we need to
-       record all the writes across the manifest import before sending them to
-       the actual mutablehistorypack.
+    """This classes intercepts history pack writes and replaces the node for the
+    root with the provided node. This is useful for forcing a tree manifest to
+    be referencable via its flat hash.
     """
-    def __init__(self, node, p1node):
+    def __init__(self, pack, node, p1node):
+        self._pack = pack
         self._node = node
         self._p1node = p1node
         self.entries = []
@@ -422,7 +419,7 @@ class InterceptedMutableHistoryPack(object):
             node = self._node
             if p1 != nullid:
                 p1 = self._p1node
-        self.entries.append((filename, node, p1, p2, linknode, copyfrom))
+        self._pack.add(filename, node, p1, p2, linknode, copyfrom)
 
 def recordmanifest(datapack, historypack, repo, oldtip, newtip, verify=False):
     cl = repo.changelog
@@ -446,7 +443,6 @@ def recordmanifest(datapack, historypack, repo, oldtip, newtip, verify=False):
             allowedtreeroots.add(repo[name].manifestnode())
 
     includedentries = set()
-    historyentries = {}
     for rev in xrange(oldtip, newtip):
         ui.progress(message, rev - oldtip, total=total)
         p1, p2 = mfrevlog.parentrevs(rev)
@@ -473,7 +469,8 @@ def recordmanifest(datapack, historypack, repo, oldtip, newtip, verify=False):
                 origtree.set(filename, node, flag)
 
             tempdatapack = InterceptedMutableDataPack(datapack, p1node, nullid)
-            temphistorypack = InterceptedMutableHistoryPack(p1node, nullid)
+            temphistorypack = InterceptedMutableHistoryPack(historypack, p1node,
+                                                            nullid)
             for nname, nnode, ntext, np1text, np1, np2 in origtree.finalize():
                 # No need to compute a delta, since we know the parent isn't
                 # already a tree.
@@ -550,7 +547,8 @@ def recordmanifest(datapack, historypack, repo, oldtip, newtip, verify=False):
 
         tempdatapack = InterceptedMutableDataPack(datapack, mfrevlog.node(rev),
                                                   p1node)
-        temphistorypack = InterceptedMutableHistoryPack(mfrevlog.node(rev),
+        temphistorypack = InterceptedMutableHistoryPack(historypack,
+                                                        mfrevlog.node(rev),
                                                         p1node)
         mfdatastore = repo.svfs.manifestdatastore
         newtreeiter = newtree.finalize(origtree if p1node != nullid else None)
@@ -583,10 +581,6 @@ def recordmanifest(datapack, historypack, repo, oldtip, newtip, verify=False):
             tempdatapack.add(nname, nnode, deltabase, delta)
             temphistorypack.add(nname, nnode, np1, np2, linknode, '')
             includedentries.add((nname, nnode))
-
-        for entry in temphistorypack.entries:
-            filename, values = entry[0], entry[1:]
-            historyentries.setdefault(filename, []).append(values)
 
         if ui.configbool('treemanifest', 'verifyautocreate', False):
             diff = newtree.diff(origtree)
@@ -625,10 +619,6 @@ def recordmanifest(datapack, historypack, repo, oldtip, newtip, verify=False):
             builttrees[mfnode] = newtree
 
     ui.progress(message, None)
-
-    for filename, entries in sorted(historyentries.iteritems()):
-        for entry in reversed(entries):
-            historypack.add(filename, *entry)
 
 def _checkhash(orig, self, *args, **kwargs):
     # Don't validate root hashes during the transition to treemanifest
@@ -697,7 +687,7 @@ def _prefetchtrees(repo, rootdir, mfnodes, basemfnodes, directories):
                                            if d == rootdir)
         if missingnodes:
             raise error.Abort(_("unable to download %d trees (%s,...)") %
-                              (len(missingnodes), list(missingnodes)[0]))
+                               (len(missingnodes), list(missingnodes)[0]))
     except bundle2.AbortFromPart as exc:
         repo.ui.status(_('remote: abort: %s\n') % exc)
         raise error.Abort(_('pull failed on remote'), hint=exc.hint)

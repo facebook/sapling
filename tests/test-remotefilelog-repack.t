@@ -202,8 +202,8 @@
   $ ls $TESTTMP/hgcache/master/packs
   176869acd887490e4e31f5f92c64ff3f63c88c5f.dataidx
   176869acd887490e4e31f5f92c64ff3f63c88c5f.datapack
-  eed421886c146bd8ce459254b0ae926dcad46f2d.histidx
-  eed421886c146bd8ce459254b0ae926dcad46f2d.histpack
+  8a9d6abc0b9d82acbf9301cedc5b73ca8fd56509.histidx
+  8a9d6abc0b9d82acbf9301cedc5b73ca8fd56509.histpack
   $ hg debughistorypack $TESTTMP/hgcache/master/packs/*.histidx
   
   x
@@ -216,8 +216,8 @@
   
   y
   Node          P1 Node       P2 Node       Link Node     Copy From
-  21f46f2721e7  000000000000  000000000000  d6868642b790  
   577959738234  1bb2e6237e03  000000000000  c7faf2fc439a  x
+  21f46f2721e7  000000000000  000000000000  d6868642b790  
   $ hg strip -r '.^'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/shallow/.hg/strip-backup/609547eda446-b26b56a8-backup.hg (glob)

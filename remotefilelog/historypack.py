@@ -1,7 +1,11 @@
 import hashlib, struct
 from mercurial import util
 from mercurial.node import hex, nullid
-import basepack, constants
+from . import (
+    basepack,
+    constants,
+    shallowutil,
+)
 
 # (filename hash, offset, size)
 INDEXFORMAT = '!20sQQ'
@@ -333,60 +337,66 @@ class mutablehistorypack(basepack.mutablebasepack):
 
     def __init__(self, ui, packpath):
         super(mutablehistorypack, self).__init__(ui, packpath)
-        self.pastfiles = {}
-        self.currentfile = None
-        self.currententries = []
+        self.files = {}
+        self.fileentries = {}
 
     def add(self, filename, node, p1, p2, linknode, copyfrom):
-        if filename != self.currentfile:
-            if filename in self.pastfiles:
-                raise RuntimeError("cannot add file node after another file's "
-                                   "nodes have been added")
-            if self.currentfile is not None:
-                self._writependingsection()
-
-            self.currentfile = filename
-            self.currententries = []
-
         copyfrom = copyfrom or ''
         copyfromlen = struct.pack('!H', len(copyfrom))
-        self.currententries.append((node, p1, p2, linknode, copyfromlen,
-                                    copyfrom))
+        self.fileentries.setdefault(filename, []).append((node, p1, p2,
+                                                          linknode,
+                                                          copyfromlen,
+                                                          copyfrom))
 
-    def _writependingsection(self):
-        filename = self.currentfile
-        sectionstart = self.packfp.tell()
+    def _write(self):
+        for filename in sorted(self.fileentries):
+            entries = self.fileentries[filename]
+            sectionstart = self.packfp.tell()
 
-        # Write the file section header
-        self.writeraw("%s%s%s" % (
-            struct.pack('!H', len(filename)),
-            filename,
-            struct.pack('!I', len(self.currententries)),
-        ))
-        sectionlen = constants.FILENAMESIZE + len(filename) + 4
+            # Write the file section header
+            self.writeraw("%s%s%s" % (
+                struct.pack('!H', len(filename)),
+                filename,
+                struct.pack('!I', len(entries)),
+            ))
+            sectionlen = constants.FILENAMESIZE + len(filename) + 4
 
-        # Write the file section content
-        rawdata = ''.join('%s%s%s%s%s%s' % e for e in self.currententries)
-        sectionlen += len(rawdata)
+            # Write the file section content
+            entrymap = dict((e[0], e) for e in entries)
+            def parentfunc(node):
+                x, p1, p2, x, x, x = entrymap[node]
+                parents = []
+                if p1 != nullid:
+                    parents.append(p1)
+                if p2 != nullid:
+                    parents.append(p2)
+                return parents
 
-        self.writeraw(rawdata)
+            sortednodes = reversed(shallowutil.sortnodes(
+                (e[0] for e in entries),
+                parentfunc))
+            rawdata = ''.join('%s%s%s%s%s%s' % entrymap[n] for n
+                              in sortednodes)
+            sectionlen += len(rawdata)
 
-        self.pastfiles[filename] = (sectionstart, sectionlen)
-        node = hashlib.sha1(filename).digest()
-        self.entries[node] = node
+            self.writeraw(rawdata)
+
+            # Record metadata for the index
+            self.files[filename] = (sectionstart, sectionlen)
+            node = hashlib.sha1(filename).digest()
+            self.entries[node] = node
 
     def close(self, ledger=None):
         if self._closed:
             return
 
-        if self.currentfile is not None:
-            self._writependingsection()
+        self._write()
 
         return super(mutablehistorypack, self).close(ledger=ledger)
 
     def createindex(self, nodelocations):
         files = ((hashlib.sha1(filename).digest(), offset, size)
-                for filename, (offset, size) in self.pastfiles.iteritems())
+                for filename, (offset, size) in self.files.iteritems())
         files = sorted(files)
 
         rawindex = ""

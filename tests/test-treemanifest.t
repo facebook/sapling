@@ -55,8 +55,8 @@ Test autocreatetrees
   total * (glob)
   * 1146 * 678f597a73b2b96f2e120c84ef8a84069a250266.dataidx (glob)
   *  315 * 678f597a73b2b96f2e120c84ef8a84069a250266.datapack (glob)
-  * 1098 * efcd3bb8489372214b9740b8d64e11f9bd78c867.histidx (glob)
-  *  183 * efcd3bb8489372214b9740b8d64e11f9bd78c867.histpack (glob)
+  * 1098 * a5378d78c51d22a741702be2049b31ac654072fa.histidx (glob)
+  *  265 * a5378d78c51d22a741702be2049b31ac654072fa.histpack (glob)
 
   $ hg debugdatapack $CACHEDIR/master/packs/manifests/678f597a73b2b96f2e120c84ef8a84069a250266
   

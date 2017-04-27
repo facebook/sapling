@@ -30,6 +30,7 @@
   > 
   > [treemanifest]
   > autocreatetrees=True
+  > demanddownload=False
   > 
   > [fastmanifest]
   > usetree=True
@@ -57,9 +58,10 @@ Test auto creating trees for merge commit
   $ hg manifest -r tip
   x
   z
-  $ hg debughistorypack $TESTTMP/hgcache/master/packs/manifests/5efcf6ea7ccfd8b6ac303c0f6b5a9cd73682e295
+  $ hg debughistorypack $TESTTMP/hgcache/master/packs/manifests/*.histidx
   
   
   Node          P1 Node       P2 Node       Link Node     Copy From
-  13532a598745  bc0c2c938b92  000000000000  92f4ca0e667c  
   ddb35f099a64  000000000000  000000000000  d32fd17cb041  
+  13532a598745  bc0c2c938b92  000000000000  92f4ca0e667c  
+  bc0c2c938b92  000000000000  000000000000  085784c01c08  
