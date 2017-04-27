@@ -933,7 +933,7 @@ class remotetreedatastore(object):
             rev = mfrevlog.rev(node)
             linkrev = mfrevlog.linkrev(rev)
             if self._repo[linkrev].phase() != phases.public:
-                return None
+                raise KeyError((name, node))
 
         _prefetchtrees(self._repo, name, [node], [], [])
         self._shared.markforrefresh()
