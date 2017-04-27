@@ -76,6 +76,15 @@ class unionmetadatastore(object):
 
         raise KeyError((name, hex(node)))
 
+    def getnodeinfo(self, name, node):
+        for store in self.stores:
+            try:
+                return store.getnodeinfo(name, node)
+            except KeyError:
+                pass
+
+        raise KeyError((name, hex(node)))
+
     def add(self, name, node, data):
         raise RuntimeError("cannot add content only to remotefilelog "
                            "contentstore")
@@ -104,6 +113,9 @@ class remotefilelogmetadatastore(basestore.basestore):
         ancestors = shallowutil.ancestormap(data)
         return ancestors
 
+    def getnodeinfo(self, name, node):
+        return self.getancestors(name, node)[node]
+
     def add(self, name, node, parents, linknode):
         raise RuntimeError("cannot add metadata only to remotefilelog "
                            "metadatastore")
@@ -117,6 +129,9 @@ class remotemetadatastore(object):
         self._fileservice.prefetch([(name, hex(node))], force=True,
                                    fetchdata=False, fetchhistory=True)
         return self._shared.getancestors(name, node, known=known)
+
+    def getnodeinfo(self, name, node):
+        return self.getancestors(name, node)[node]
 
     def add(self, name, node, data):
         raise RuntimeError("cannot add to a remote store")

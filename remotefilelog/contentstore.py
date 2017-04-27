@@ -263,6 +263,13 @@ class manifestrevlogstore(object):
                 break
         return ancestors
 
+    def getnodeinfo(self, name, node):
+        cl = self._cl
+        rl = self._revlog(name)
+        parents = rl.parents(node)
+        linkrev = rl.linkrev(rl.rev(node))
+        return (parents[0], parents[1], cl.node(linkrev), None)
+
     def add(self, *args):
         raise RuntimeError("cannot add to a revlog store")
 

@@ -49,6 +49,21 @@ class historypackstore(basepack.basepackstore):
 
         raise KeyError((name, node))
 
+    def getnodeinfo(self, name, node):
+        for pack in self.packs:
+            try:
+                return pack.getnodeinfo(name, node)
+            except KeyError:
+                pass
+
+        for pack in self.refresh():
+            try:
+                return pack.getnodeinfo(name, node)
+            except KeyError:
+                pass
+
+        raise KeyError((name, node))
+
     def add(self, filename, node, p1, p2, linknode, copyfrom):
         raise RuntimeError("cannot add to historypackstore (%s:%s)"
                            % (filename, hex(node)))
@@ -81,15 +96,32 @@ class historypack(basepack.basepack):
            ...
         }
         """
-        if known is None:
-            known = set()
-        if node in known:
+        if known and node in known:
             return []
 
+        ancestors = self._getancestors(name, node, known=known)
+        results = {}
+        for ancnode, p1, p2, linknode, copyfrom in ancestors:
+            results[ancnode] = (p1, p2, linknode, copyfrom)
+
+        if not results:
+            raise KeyError((name, node))
+        return results
+
+    def getnodeinfo(self, name, node):
+        ancestors = self._getancestors(name, node)
+        for ancnode, p1, p2, linknode, copyfrom in ancestors:
+            if ancnode == node:
+                return (p1, p2, linknode, copyfrom)
+
+        raise KeyError((name, node))
+
+    def _getancestors(self, name, node, known=None):
+        if known is None:
+            known = set()
         filename, offset, size = self._findsection(name)
         pending = set((node,))
         data = self._data[offset:offset + size]
-        results = {}
         o = 0
         while o < len(data):
             if not pending:
@@ -112,20 +144,7 @@ class historypack(basepack.basepack):
                 if p2node != nullid and p2node not in known:
                     pending.add(p2node)
 
-                result = (p1node,
-                          p2node,
-                          entry[ANC_LINKNODE],
-                          copyfrom)
-                results[entry[ANC_NODE]] = result
-
-            self._pagedin += PACKENTRYLENGTH
-
-        # If we've read a lot of data from the mmap, free some memory.
-        self.freememory()
-
-        if not results:
-            raise KeyError((name, node))
-        return results
+                yield (ancnode, p1node, p2node, entry[ANC_LINKNODE], copyfrom)
 
     def add(self, filename, node, p1, p2, linknode, copyfrom):
         raise RuntimeError("cannot add to historypack (%s:%s)" %

@@ -168,6 +168,25 @@ class histpacktests(unittest.TestCase):
                 self.assertEquals(alinknode, elinknode)
                 self.assertEquals(copyfrom, None)
 
+    def testGetNodeInfo(self):
+        revisions = []
+        filename = "foo"
+        lastnode = nullid
+        for i in range(10):
+            node = self.getFakeHash()
+            revisions.append((filename, node, lastnode, nullid, nullid, None))
+            lastnode = node
+
+        pack = self.createPack(revisions)
+
+        # Test that getnodeinfo returns the expected results
+        for filename, node, p1, p2, linknode, copyfrom in revisions:
+            ap1, ap2, alinknode, acopyfrom = pack.getnodeinfo(filename, node)
+            self.assertEquals(ap1, p1)
+            self.assertEquals(ap2, p2)
+            self.assertEquals(alinknode, linknode)
+            self.assertEquals(acopyfrom, copyfrom)
+
     def testGetMissing(self):
         """Test the getmissing() api.
         """
@@ -247,7 +266,6 @@ class histpacktests(unittest.TestCase):
             self.assertEquals(copyfrom, actual[3])
 # TODO:
 # histpack store:
-# - getmissing
 # - repack two packs into one
 
 if __name__ == '__main__':
