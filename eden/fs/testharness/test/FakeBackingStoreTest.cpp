@@ -109,7 +109,7 @@ TEST_F(FakeBackingStoreTest, getBlob) {
   EXPECT_THROW_RE(future3.get(), std::logic_error, "does not compute");
   ASSERT_TRUE(future4Failed);
   EXPECT_THROW_RE(
-      future4Error.throwException(), std::logic_error, "does not compute");
+      future4Error.throw_exception(), std::logic_error, "does not compute");
 
   // Calling setReady() should make the pending futures ready, as well
   // as all subsequent Futures returned by getBlob()

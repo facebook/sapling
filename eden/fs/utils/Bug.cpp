@@ -41,7 +41,7 @@ EdenBug::~EdenBug() noexcept(false) {
   // Callers should only ever store EdenBug objects if they plan to call
   // toException() on them.
   if (throwOnDestruction_) {
-    toException().throwException();
+    toException().throw_exception();
   }
 }
 
