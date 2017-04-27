@@ -218,7 +218,7 @@ def _clonesparsecmd(orig, ui, repo, *args, **opts):
         raise error.Abort(_("too many flags specified."))
     if include or exclude or enableprofile:
         def clone_sparse(orig, self, node, overwrite, *args, **kwargs):
-            _config(self.ui, self.unfiltered(), pat, include=include,
+            _config(self.ui, self.unfiltered(), pat, {}, include=include,
                     exclude=exclude, enableprofile=enableprofile)
             return orig(self, node, overwrite, *args, **kwargs)
         extensions.wrapfunction(hg, 'updaterepo', clone_sparse)
@@ -245,7 +245,7 @@ def _setupadd(ui):
             for pat in pats:
                 dirname, basename = util.split(pat)
                 dirs.add(dirname)
-            _config(ui, repo, list(dirs), include=True)
+            _config(ui, repo, list(dirs), opts, include=True)
         return orig(ui, repo, *pats, **opts)
 
     extensions.wrapcommand(commands.table, 'add', _add)
@@ -617,7 +617,7 @@ def _wraprepo(ui, repo):
     ('', 'clear-rules', False, _('clears local include/exclude rules')),
     ('', 'refresh', False, _('updates the working after sparseness changes')),
     ('', 'reset', False, _('makes the repo full again')),
-    ],
+    ] + commands.templateopts,
     _('[--OPTION] PATTERN...'))
 def sparse(ui, repo, *pats, **opts):
     """make the current checkout sparse, or edit the existing checkout
@@ -687,12 +687,12 @@ def sparse(ui, repo, *pats, **opts):
         return
 
     if include or exclude or delete or reset or enableprofile or disableprofile:
-        _config(ui, repo, pats, include=include, exclude=exclude, reset=reset,
-                delete=delete, enableprofile=enableprofile,
+        _config(ui, repo, pats, opts, include=include, exclude=exclude,
+                reset=reset, delete=delete, enableprofile=enableprofile,
                 disableprofile=disableprofile, force=force)
 
     if importrules:
-        _import(ui, repo, pats, force=force)
+        _import(ui, repo, pats, opts, force=force)
 
     if clearrules:
         _clear(ui, repo, pats, force=force)
@@ -700,11 +700,14 @@ def sparse(ui, repo, *pats, **opts):
     if refresh:
         try:
             wlock = repo.wlock()
-            _refresh(ui, repo, repo.status(), repo.sparsematch(), force)
+            fcounts = map(
+                len,
+                _refresh(ui, repo, repo.status(), repo.sparsematch(), force))
+            _verbose_output(ui, opts, 0, 0, 0, *fcounts)
         finally:
             wlock.release()
 
-def _config(ui, repo, pats, include=False, exclude=False, reset=False,
+def _config(ui, repo, pats, opts, include=False, exclude=False, reset=False,
             delete=False, enableprofile=False, disableprofile=False,
             force=False):
     """
@@ -716,7 +719,8 @@ def _config(ui, repo, pats, include=False, exclude=False, reset=False,
 
         if repo.vfs.exists('sparse'):
             raw = repo.vfs.read('sparse')
-            oldinclude, oldexclude, oldprofiles = repo.readsparseconfig(raw)
+            oldinclude, oldexclude, oldprofiles = map(
+                set, repo.readsparseconfig(raw))
         else:
             oldinclude = set()
             oldexclude = set()
@@ -750,14 +754,24 @@ def _config(ui, repo, pats, include=False, exclude=False, reset=False,
                 newexclude.difference_update(pats)
 
             repo.writesparseconfig(newinclude, newexclude, newprofiles)
-            _refresh(ui, repo, oldstatus, oldsparsematch, force)
+            fcounts = map(
+                len, _refresh(ui, repo, oldstatus, oldsparsematch, force))
+
+            profilecount = (len(newprofiles - oldprofiles) -
+                            len(oldprofiles - newprofiles))
+            includecount = (len(newinclude - oldinclude) -
+                            len(oldinclude - newinclude))
+            excludecount = (len(newexclude - oldexclude) -
+                            len(oldexclude - newexclude))
+            _verbose_output(
+                ui, opts, profilecount, includecount, excludecount, *fcounts)
         except Exception:
             repo.writesparseconfig(oldinclude, oldexclude, oldprofiles)
             raise
     finally:
         wlock.release()
 
-def _import(ui, repo, files, force=False):
+def _import(ui, repo, files, opts, force=False):
     with repo.wlock():
         # load union of current active profile
         revs = [repo.changelog.rev(node) for node in
@@ -792,11 +806,23 @@ def _import(ui, repo, files, force=False):
                 if len(includes) + len(excludes) + len(profiles) > oldsize:
                     changed = True
 
+        profilecount = includecount = excludecount = 0
+        fcounts = (0, 0, 0)
+
         if changed:
+            profilecount = len(profiles - aprofiles)
+            includecount = len(includes - aincludes)
+            excludecount = len(excludes - aexcludes)
+
             oldstatus = repo.status()
             oldsparsematch = repo.sparsematch()
             repo.writesparseconfig(includes, excludes, profiles)
-            _refresh(ui, repo, oldstatus, oldsparsematch, force)
+
+            fcounts = map(
+                len, _refresh(ui, repo, oldstatus, oldsparsematch, force))
+
+        _verbose_output(ui, opts, profilecount, includecount, excludecount,
+                        *fcounts)
 
 def _clear(ui, repo, files, force=False):
     with repo.wlock():
@@ -902,6 +928,35 @@ def _refresh(ui, repo, origstatus, origsparsematch, force):
     for file in lookup:
         # File exists on disk, and we're bringing it back in an unknown state.
         dirstate.normallookup(file)
+
+    return added, dropped, lookup
+
+def _verbose_output(ui, opts, profilecount, includecount, excludecount, added,
+                    dropped, lookup):
+    """Produce --verbose and templatable output
+
+    This specifically enables -Tjson, providing machine-readable stats on how
+    the sparse profile changed.
+
+    """
+    with ui.formatter('sparse', opts) as fm:
+        fm.startitem()
+        fm.condwrite(ui.verbose, 'profiles_added', 'Profile # change: %d\n',
+                     profilecount)
+        fm.condwrite(ui.verbose, 'include_rules_added',
+                     'Include rule # change: %d\n', includecount)
+        fm.condwrite(ui.verbose, 'exclude_rules_added',
+                     'Exclude rule # change: %d\n', excludecount)
+        # In 'plain' verbose mode, mergemod.applyupdates already outputs what
+        # files are added or removed outside of the templating formatter
+        # framework. No point in repeating ourselves in that case.
+        if not fm.isplain():
+            fm.condwrite(ui.verbose, 'files_added', 'Files added: %d\n',
+                         added)
+            fm.condwrite(ui.verbose, 'files_dropped', 'Files dropped: %d\n',
+                         dropped)
+            fm.condwrite(ui.verbose, 'files_conflicting',
+                         'Files conflicting: %d\n', lookup)
 
 class forceincludematcher(object):
     """A matcher that returns true for any of the forced includes before testing

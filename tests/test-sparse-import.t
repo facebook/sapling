@@ -78,6 +78,72 @@ Start against an existing profile; rules *already active* should be ignored
   [exclude]
   *.py
 
+  $ hg sparse --reset
+  $ rm .hg/sparse
+
+Same tests, with -Tjson enabled to output summaries
+
+  $ cat > $HGTMP/rules_to_import <<EOF
+  > [include]
+  > *.py
+  > EOF
+  $ hg sparse --import-rules $HGTMP/rules_to_import -Tjson
+  [
+   {
+    "exclude_rules_added": 0,
+    "files_added": 0,
+    "files_conflicting": 0,
+    "files_dropped": 4,
+    "include_rules_added": 1,
+    "profiles_added": 0
+   }
+  ]
+
+  $ hg sparse --reset
+  $ rm .hg/sparse
+
+  $ cat > $HGTMP/rules_to_import <<EOF
+  > %include base.sparse
+  > [include]
+  > *.py
+  > EOF
+  $ hg sparse --import-rules $HGTMP/rules_to_import -Tjson
+  [
+   {
+    "exclude_rules_added": 0,
+    "files_added": 0,
+    "files_conflicting": 0,
+    "files_dropped": 2,
+    "include_rules_added": 1,
+    "profiles_added": 1
+   }
+  ]
+
+  $ hg sparse --reset
+  $ rm .hg/sparse
+
+  $ hg sparse --enable-profile webpage.sparse
+  $ hg sparse --include *.py
+  $ cat > $HGTMP/rules_to_import <<EOF
+  > %include base.sparse
+  > [include]
+  > *.html
+  > *.txt
+  > [exclude]
+  > *.py
+  > EOF
+  $ hg sparse --import-rules $HGTMP/rules_to_import -Tjson
+  [
+   {
+    "exclude_rules_added": 1,
+    "files_added": 1,
+    "files_conflicting": 0,
+    "files_dropped": 1,
+    "include_rules_added": 1,
+    "profiles_added": 0
+   }
+  ]
+
 If importing results in no new rules being added, no refresh should take place!
 
   $ cat > $HGTMP/trap_sparse_refresh.py <<EOF
