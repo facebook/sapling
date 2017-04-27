@@ -26,9 +26,14 @@ def _load_file(filename):
         raise
 
 def load_for_path(path):
-    homedir = os.getenv('HOME')
+    # location where `arc install-certificate` writes .arcrc
+    if os.name == 'nt':
+        envvar = 'APPDATA'
+    else:
+        envvar = 'HOME'
+    homedir = os.getenv(envvar)
     if not homedir:
-        raise ArcConfigError('$HOME environment variable not found')
+        raise ArcConfigError('$%s environment variable not found' % envvar)
 
     # Use their own file as a basis
     userconfig = _load_file(os.path.join(homedir, '.arcrc')) or {}
