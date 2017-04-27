@@ -38,7 +38,9 @@ def fullrepack(repo):
 
         # Repack the shared manifest store
         datasource = contentstore.unioncontentstore(*sdstores)
-        historysource = metadatastore.unionmetadatastore(*shstores)
+        historysource = metadatastore.unionmetadatastore(
+                        *shstores,
+                        allowincomplete=True)
         _runrepack(repo, datasource, historysource, spackpath,
                    constants.TREEPACK_CATEGORY)
 
@@ -46,7 +48,9 @@ def fullrepack(repo):
         datasource = contentstore.unioncontentstore(
                         *ldstores,
                         allowincomplete=True)
-        historysource = metadatastore.unionmetadatastore(*lhstores)
+        historysource = metadatastore.unionmetadatastore(
+                        *lhstores,
+                        allowincomplete=True)
         _runrepack(repo, datasource, historysource, lpackpath,
                    constants.TREEPACK_CATEGORY)
 

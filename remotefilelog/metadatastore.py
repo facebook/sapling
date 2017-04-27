@@ -74,7 +74,7 @@ class unionmetadatastore(object):
             except KeyError:
                 pass
 
-        raise KeyError((name, node))
+        raise KeyError((name, hex(node)))
 
     def add(self, name, node, data):
         raise RuntimeError("cannot add content only to remotefilelog "
