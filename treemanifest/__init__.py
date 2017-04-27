@@ -687,7 +687,7 @@ def _prefetchtrees(repo, rootdir, mfnodes, basemfnodes, directories):
     _sendtreepackrequest(remote, rootdir, mfnodes, basemfnodes, directories)
 
     packpath = shallowutil.getcachepackpath(repo, PACK_CATEGORY)
-    receivedhistory, receiveddata = wirepack.receivepack(repo.ui, remote,
+    receivedhistory, receiveddata = wirepack.receivepack(repo.ui, remote.pipei,
                                                          packpath)
     receivednodes = (node for dir, node in receiveddata if dir == rootdir)
     missingnodes = set(mfnodes).difference(receivednodes)

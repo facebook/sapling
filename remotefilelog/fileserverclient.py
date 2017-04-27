@@ -442,7 +442,8 @@ class fileserverclient(object):
         packpath = shallowutil.getcachepackpath(self.repo,
                                                 constants.FILEPACK_CATEGORY)
         receiveddata, receivedhistory = wirepack.receivepack(self.repo.ui,
-                                                             remote, packpath)
+                                                             remote.pipei,
+                                                             packpath)
 
     def _sendpackrequest(self, remote, fileids):
         """Formats and writes the given fileids to the remote as part of a

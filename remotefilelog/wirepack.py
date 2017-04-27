@@ -41,7 +41,7 @@ def sendpackpart(filename, history, data):
 def closepart():
     return '\0' * 10
 
-def receivepack(ui, remote, packpath):
+def receivepack(ui, fh, packpath):
     receiveddata = []
     receivedhistory = []
     mkstickygroupdir(ui, packpath)
@@ -49,17 +49,17 @@ def receivepack(ui, remote, packpath):
         with historypack.mutablehistorypack(ui, packpath) as hpack:
             pendinghistory = defaultdict(dict)
             while True:
-                filename = readpath(remote.pipei)
+                filename = readpath(fh)
                 count = 0
 
                 # Store the history for later sorting
-                for value in readhistory(remote):
+                for value in readhistory(fh):
                     node = value[0]
                     pendinghistory[filename][node] = value
                     receivedhistory.append((filename, node))
                     count += 1
 
-                for node, deltabase, delta in readdeltas(remote):
+                for node, deltabase, delta in readdeltas(fh):
                     dpack.add(filename, node, deltabase, delta)
                     receiveddata.append((filename, node))
                     count += 1
@@ -85,20 +85,20 @@ def receivepack(ui, remote, packpath):
 
     return receiveddata, receivedhistory
 
-def readhistory(remote):
-    count = readunpack(remote.pipei, '!I')[0]
+def readhistory(fh):
+    count = readunpack(fh, '!I')[0]
     for i in xrange(count):
-        entry = readunpack(remote.pipei,'!20s20s20s20sH')
+        entry = readunpack(fh,'!20s20s20s20sH')
         if entry[4] != 0:
-            copyfrom = readexactly(remote.pipei, entry[4])
+            copyfrom = readexactly(fh, entry[4])
         else:
             copyfrom = ''
         entry = entry[:4] + (copyfrom,)
         yield entry
 
-def readdeltas(remote):
-    count = readunpack(remote.pipei, '!I')[0]
+def readdeltas(fh):
+    count = readunpack(fh, '!I')[0]
     for i in xrange(count):
-        node, deltabase, deltalen = readunpack(remote.pipei, '!20s20sQ')
-        delta = readexactly(remote.pipei, deltalen)
+        node, deltabase, deltalen = readunpack(fh, '!20s20sQ')
+        delta = readexactly(fh, deltalen)
         yield (node, deltabase, delta)
