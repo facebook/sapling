@@ -148,7 +148,7 @@ def onetimesetup(ui):
                         yield (u, e, s)
 
             for x in repo.store.topfiles():
-                if shallowtrees and x[0] == '00manifesttree.i':
+                if shallowtrees and x[0][:15] == '00manifesttree.':
                     continue
                 yield x
 
