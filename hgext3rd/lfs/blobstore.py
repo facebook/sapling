@@ -209,9 +209,28 @@ class _dummyremote(object):
         filename = os.path.join(self._storepath, storeid.oid)
         return filename
 
+class _nullremote(object):
+    """Null store storing blobs to /dev/null."""
+
+    def __init__(self, repo):
+        pass
+
+    def write(self, storeid, data):
+        pass
+
+    def read(self, storeid):
+        raise NotImplementedError()
+
+    def writebatch(self, storeids, fromstore, ui=None, total=None):
+        pass
+
+    def readbatch(self, storeids, tostore, ui=None, total=None):
+        pass
+
 _storemap = {
     'git-lfs': _gitlfsremote,
     'dummy': _dummyremote,
+    'null': _nullremote,
 }
 
 def remote(repo):

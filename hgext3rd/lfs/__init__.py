@@ -10,7 +10,7 @@ Configs::
     remoteuser = user
     # password for HTTP auth
     remotepassword = password
-    # blobstore type. "git-lfs", or "dummy" (test-only)
+    # blobstore type. "git-lfs", "dummy" (test-only), or "null" (interal use)
     remotestore = git-lfs
     # local filesystem path (only used by the dummy blobstore, test-only)
     remotepath = /tmp/test
