@@ -52,12 +52,18 @@ print("hgweb =", f(hgweb))
 import re as fred
 print("fred =", f(fred))
 
+import re as remod
+print("remod =", f(remod))
+
 import sys as re
 print("re =", f(re))
 
 print("fred =", f(fred))
 print("fred.sub =", f(fred.sub))
 print("fred =", f(fred))
+
+remod.escape  # use remod
+print("remod =", f(remod))
 
 print("re =", f(re))
 print("re.stderr =", f(re.stderr))

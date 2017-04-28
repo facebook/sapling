@@ -132,8 +132,11 @@ class _demandmod(object):
                 subload(mod, x)
 
             # Replace references to this proxy instance with the actual module.
-            if locals and locals.get(head) is self:
-                locals[head] = mod
+            if locals:
+                if locals.get(head) is self:
+                    locals[head] = mod
+                elif locals.get(head + r'mod') is self:
+                    locals[head + r'mod'] = mod
 
             for modname in modrefs:
                 modref = sys.modules.get(modname, None)
