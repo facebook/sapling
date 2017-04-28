@@ -1,4 +1,3 @@
-from distutils.version import LooseVersion
 from distutils.core import setup, Extension
 import distutils
 from glob import glob
@@ -308,13 +307,17 @@ else:
     ]
 for cythonmodule in cythonmodules:
     if cythonmodule in components:
-        import Cython
-        if LooseVersion(Cython.__version__) < LooseVersion('0.22'):
-            raise RuntimeError('Cython >= 0.22 is required')
-
-        from Cython.Build import cythonize
         module = availableextmodules[cythonmodule]
-        availableextmodules[cythonmodule] = cythonize(module)
+        try:
+            from Cython.Build import cythonize
+            availableextmodules[cythonmodule] = cythonize(module)
+        except Exception: # ImportError or Cython.Compiler.Errors.CompileError
+            sys.stderr.write(
+                '+------------------------------------------------+\n'
+                '| Failed to run cythonize.                       |\n'
+                '| Make sure you have Cython >= 0.21.1 installed. |\n'
+                '+------------------------------------------------+\n')
+            raise SystemExit(255)
 
 packages = []
 for package in availablepackages:
