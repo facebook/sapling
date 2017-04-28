@@ -71,5 +71,5 @@ so it tries to parse the (empty) arc config files.
 
   $ hg log -T '{phabstatus}\n' -r .
   arcconfig configuration problem. No diff information can be provided.
-  Error info: arcrc is missing user credentials for host https://phabricator.fb.com/api/
+  Error info: arcrc is missing user credentials for host https://phabricator.intern.facebook.com/api/.  use "arc install-certificate" to fix.
   Error
