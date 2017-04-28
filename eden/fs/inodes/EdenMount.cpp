@@ -295,12 +295,12 @@ Future<Unit> EdenMount::diff(InodeDiffCallback* callback, bool listIgnored) {
       .ensure(std::move(stateHolder));
 }
 
-Future<Unit> EdenMount::resetCommit(Hash snapshotHash) {
+Future<Unit> EdenMount::resetParents(const ParentCommits& parents) {
   // Hold the snapshot lock around the entire operation.
   auto parentsLock = parentCommits_.wlock();
   auto oldParents = *parentsLock;
   VLOG(1) << "resetting snapshot for " << this->getPath() << " from "
-          << oldParents << " to " << snapshotHash;
+          << oldParents << " to " << parents;
 
   // TODO: Maybe we should walk the inodes and see if we can dematerialize some
   // files using the new source control state.
@@ -308,24 +308,28 @@ Future<Unit> EdenMount::resetCommit(Hash snapshotHash) {
   // It probably makes sense to do this if/when we convert the Dirstate user
   // directives into a tree-like data structure.
 
-  return objectStore_->getTreeForCommit(snapshotHash)
+  return objectStore_->getTreeForCommit(parents.parent1())
       .then([this](std::unique_ptr<Tree> rootTree) {
         return dirstate_->onSnapshotChanged(rootTree.get());
       })
       .then([
         this,
-        snapshotHash,
+        parents,
         oldParents,
         parentsLock = std::move(parentsLock)
       ]() {
-        this->config_->setParentCommits(snapshotHash);
-        parentsLock->setParents(snapshotHash);
+        this->config_->setParentCommits(parents);
+        parentsLock->setParents(parents);
 
         auto journalDelta = make_unique<JournalDelta>();
         journalDelta->fromHash = oldParents.parent1();
-        journalDelta->toHash = snapshotHash;
+        journalDelta->toHash = parents.parent1();
         journal_.wlock()->addDelta(std::move(journalDelta));
       });
+}
+
+Future<Unit> EdenMount::resetParent(const Hash& parent) {
+  return resetParents(ParentCommits{parent});
 }
 
 RenameLock EdenMount::acquireRenameLock() {

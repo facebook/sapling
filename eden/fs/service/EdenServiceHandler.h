@@ -41,8 +41,8 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
 
   void listMounts(std::vector<MountInfo>& results) override;
 
-  void getCurrentSnapshot(
-      std::string& result,
+  void getParentCommits(
+      WorkingDirectoryParents& result,
       std::unique_ptr<std::string> mountPoint) override;
 
   void checkOutRevision(
@@ -51,9 +51,9 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
       std::unique_ptr<std::string> hash,
       bool force) override;
 
-  void resetParentCommit(
+  void resetParentCommits(
       std::unique_ptr<std::string> mountPoint,
-      std::unique_ptr<std::string> hash) override;
+      std::unique_ptr<WorkingDirectoryParents> parents) override;
 
   void getBindMounts(
       std::vector<std::string>& out,

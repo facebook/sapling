@@ -170,11 +170,15 @@ void EdenServiceHandler::listMounts(std::vector<MountInfo>& results) {
   }
 }
 
-void EdenServiceHandler::getCurrentSnapshot(
-    std::string& result,
+void EdenServiceHandler::getParentCommits(
+    WorkingDirectoryParents& result,
     std::unique_ptr<std::string> mountPoint) {
   auto edenMount = server_->getMount(*mountPoint);
-  result = thriftHash(edenMount->getParentCommits().parent1());
+  auto parents = edenMount->getParentCommits();
+  result.set_parent1(thriftHash(parents.parent1()));
+  if (parents.parent2().hasValue()) {
+    result.set_parent2(thriftHash(parents.parent2().value()));
+  }
 }
 
 void EdenServiceHandler::checkOutRevision(
@@ -189,12 +193,16 @@ void EdenServiceHandler::checkOutRevision(
   results = checkoutFuture.get();
 }
 
-void EdenServiceHandler::resetParentCommit(
+void EdenServiceHandler::resetParentCommits(
     std::unique_ptr<std::string> mountPoint,
-    std::unique_ptr<std::string> hash) {
-  auto hashObj = hashFromThrift(*hash);
+    std::unique_ptr<WorkingDirectoryParents> parents) {
+  ParentCommits edenParents;
+  edenParents.parent1() = hashFromThrift(parents->parent1);
+  if (parents->__isset.parent2) {
+    edenParents.parent2() = hashFromThrift(parents->parent2);
+  }
   auto edenMount = server_->getMount(*mountPoint);
-  edenMount->resetCommit(hashObj).get();
+  edenMount->resetParents(edenParents).get();
 }
 
 void EdenServiceHandler::getSHA1(

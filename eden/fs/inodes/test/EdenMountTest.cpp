@@ -25,7 +25,7 @@ using folly::Optional;
 namespace facebook {
 namespace eden {
 
-TEST(EdenMount, resetCommit) {
+TEST(EdenMount, resetParents) {
   TestMount testMount;
 
   // Prepare two commits
@@ -58,7 +58,7 @@ TEST(EdenMount, resetCommit) {
   EXPECT_FALSE(testMount.hasFileAt("src/extra.h"));
 
   // Reset the TestMount to pointing to commit2
-  edenMount->resetCommit(makeTestHash("2")).get();
+  edenMount->resetParent(makeTestHash("2")).get();
   // The snapshot ID should be updated, both in memory and on disk
   EXPECT_EQ(ParentCommits{makeTestHash("2")}, edenMount->getParentCommits());
   EXPECT_EQ(

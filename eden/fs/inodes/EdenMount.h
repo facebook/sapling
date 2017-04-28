@@ -251,15 +251,26 @@ class EdenMount {
       bool listIgnored = false);
 
   /**
-   * Reset the state to point to the specified commit, without modifying
-   * the working directory contents at all.
+   * Reset the state to point to the specified parent commit(s), without
+   * modifying the working directory contents at all.
    *
    * @return Returns a folly::Future that will be fulfilled when the operation
    *     is complete.  This is marked FOLLY_WARN_UNUSED_RESULT to make sure
    *     callers do not forget to wait for the operation to complete.
    */
-  FOLLY_WARN_UNUSED_RESULT folly::Future<folly::Unit> resetCommit(
-      Hash snapshotHash);
+  FOLLY_WARN_UNUSED_RESULT folly::Future<folly::Unit> resetParents(
+      const ParentCommits& parents);
+
+  /**
+   * Reset the state to point to the specified parent commit, without
+   * modifying the working directory contents at all.
+   *
+   * This is a small wrapper around resetParents() for when the code knows at
+   * compile time that it will only ever have a single parent commit on this
+   * code path.
+   */
+  FOLLY_WARN_UNUSED_RESULT folly::Future<folly::Unit> resetParent(
+      const Hash& parent);
 
   /**
    * Acquire the rename lock in exclusive mode.

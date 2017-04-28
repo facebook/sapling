@@ -75,7 +75,7 @@ struct JournalPosition {
   2: unsigned64 sequenceNumber
 
   /** Records the snapshot hash at the appropriate point in the journal */
-  3: binary snapshotHash
+  3: BinaryHash snapshotHash
 }
 
 /** Holds information about a set of paths that changed between two points.
@@ -198,6 +198,11 @@ struct TreeInodeEntryDebugInfo {
   6: BinaryHash hash
 }
 
+struct WorkingDirectoryParents {
+  1: BinaryHash parent1
+  2: optional BinaryHash parent2
+}
+
 struct TreeInodeDebugInfo {
   1: i64 inodeNumber
   2: binary path
@@ -212,9 +217,9 @@ service EdenService extends fb303.FacebookService {
   void unmount(1: string mountPoint) throws (1: EdenError ex)
 
   /**
-   * Get the current snapshot that is checked out in the given mount point.
+   * Get the parent commit(s) of the working directory
    */
-  BinaryHash getCurrentSnapshot(1: string mountPoint)
+  WorkingDirectoryParents getParentCommits(1: string mountPoint)
     throws (1: EdenError ex)
 
   /**
@@ -246,17 +251,15 @@ service EdenService extends fb303.FacebookService {
       throws (1: EdenError ex)
 
   /**
-   * Reset the working directory's parent commit, without changing the working
+   * Reset the working directory's parent commits, without changing the working
    * directory contents.
    *
    * This operation is equivalent to `git reset --soft` or `hg reset --keep`
    */
-  void resetParentCommit(
+  void resetParentCommits(
     1: string mountPoint,
-    2: BinaryHash snapshotHash)
+    2: WorkingDirectoryParents parents)
       throws (1: EdenError ex)
-
-  // Mount-specific APIs.
 
   /**
    * For each path, returns an EdenError instead of the SHA-1 if any of the

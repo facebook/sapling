@@ -172,7 +172,7 @@ void TestMount::resetCommit(
     rootTree->setReady();
   }
 
-  edenMount_->resetCommit(commitHash).get();
+  edenMount_->resetParent(commitHash).get();
 }
 
 void TestMount::setInitialCommit(Hash commitHash) {
