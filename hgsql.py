@@ -637,6 +637,8 @@ def wraprepo(repo):
                 # circumvent this when we sync from the server.
                 configbackups.append(ui.backupconfig("hooks", "pretxnopen.hg-ssh"))
                 self.ui.setconfig("hooks", "pretxnopen.hg-ssh", None)
+                configbackups.append(ui.backupconfig("hooks", "pretxnopen.readonlyrejectpush"))
+                self.ui.setconfig("hooks", "pretxnopen.readonlyrejectpush", None)
                 # Someone else may have synced us while we were waiting.
                 # Restart the transaction so we have access to the latest rows.
                 self.sqlconn.rollback()
