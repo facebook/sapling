@@ -21,6 +21,7 @@ if pycompat.osname == 'nt':
 else:
     from . import scmposix as scmplatform
 
+fallbackpager = scmplatform.fallbackpager
 systemrcpath = scmplatform.systemrcpath
 userrcpath = scmplatform.userrcpath
 

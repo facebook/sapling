@@ -8,7 +8,7 @@ To set the pager that should be used, set the application variable::
 
 If no pager is set, the pager extensions uses the environment variable
 $PAGER. If neither pager.pager, nor $PAGER is set, a default pager
-will be used, typically `more`.
+will be used, typically `less` on Unix and `more` on Windows.
 
 You can disable the pager for certain commands by adding them to the
 pager.ignore list::

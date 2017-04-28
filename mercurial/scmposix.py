@@ -12,6 +12,12 @@ from . import (
     pycompat,
 )
 
+# BSD 'more' escapes ANSI color sequences by default. This can be disabled by
+# $MORE variable, but there's no compatible option with Linux 'more'. Given
+# OS X is widely used and most modern Unix systems would have 'less', setting
+# 'less' as the default seems reasonable.
+fallbackpager = 'less'
+
 def _rcfiles(path):
     rcs = [os.path.join(path, 'hgrc')]
     rcdir = os.path.join(path, 'hgrc.d')

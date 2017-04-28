@@ -857,8 +857,7 @@ class ui(object):
             # HGPLAINEXCEPT=pager, and the user didn't specify --debug.
             return
 
-        fallbackpager = 'more'
-        pagercmd = self.config('pager', 'pager', fallbackpager)
+        pagercmd = self.config('pager', 'pager', rcutil.fallbackpager)
         if not pagercmd:
             return
 
