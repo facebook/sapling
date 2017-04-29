@@ -1684,7 +1684,7 @@ class TestSuite(unittest.TestSuite):
             def get():
                 num_tests[0] += 1
                 if getattr(test, 'should_reload', False):
-                    return self._loadtest(test.path, num_tests[0])
+                    return self._loadtest(test, num_tests[0])
                 return test
             if not os.path.exists(test.path):
                 result.addSkip(test, "Doesn't exist")
@@ -1782,7 +1782,7 @@ class TestSuite(unittest.TestSuite):
                         if getattr(test, 'should_reload', False):
                             num_tests[0] += 1
                             tests.append(
-                                self._loadtest(test.name, num_tests[0]))
+                                self._loadtest(test, num_tests[0]))
                         else:
                             tests.append(test)
                     if self._jobs == 1:
@@ -2095,6 +2095,7 @@ class TestRunner(object):
             perf = {}
             def sortkey(f):
                 # run largest tests first, as they tend to take the longest
+                f = f['path']
                 try:
                     return perf[f]
                 except KeyError:
@@ -2262,11 +2263,16 @@ class TestRunner(object):
             else:
                 args = os.listdir(b'.')
 
-        return [t for t in args
+        return [{'path': t} for t in args
                 if os.path.basename(t).startswith(b'test-')
                     and (t.endswith(b'.py') or t.endswith(b'.t'))]
 
     def _runtests(self, tests):
+        def _reloadtest(test, i):
+            # convert a test back to its description dict
+            desc = {'path': test.path}
+            return self._gettest(desc, i)
+
         try:
             if self._installdir:
                 self._installhg()
@@ -2280,7 +2286,7 @@ class TestRunner(object):
             if self.options.restart:
                 orig = list(tests)
                 while tests:
-                    if os.path.exists(tests[0] + ".err"):
+                    if os.path.exists(tests[0]['path'] + ".err"):
                         break
                     tests.pop(0)
                 if not tests:
@@ -2304,7 +2310,7 @@ class TestRunner(object):
                               loop=self.options.loop,
                               runs_per_test=self.options.runs_per_test,
                               showchannels=self.options.showchannels,
-                              tests=tests, loadtest=self._gettest)
+                              tests=tests, loadtest=_reloadtest)
             verbosity = 1
             if self.options.verbose:
                 verbosity = 2
@@ -2351,7 +2357,8 @@ class TestRunner(object):
         Returns a Test instance. The Test may not be runnable if it doesn't
         map to a known type.
         """
-        lctest = test.lower()
+        path = test['path']
+        lctest = path.lower()
         testcls = Test
 
         for ext, cls in self.TESTTYPES:
@@ -2359,7 +2366,7 @@ class TestRunner(object):
                 testcls = cls
                 break
 
-        refpath = os.path.join(self._testdir, test)
+        refpath = os.path.join(self._testdir, path)
         tmpdir = os.path.join(self._hgtmp, b'child%d' % count)
 
         t = testcls(refpath, tmpdir,
