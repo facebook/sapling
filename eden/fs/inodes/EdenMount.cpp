@@ -275,22 +275,20 @@ Future<Unit> EdenMount::diff(InodeDiffCallback* callback, bool listIgnored) {
       make_unique<DiffContext>(callback, listIgnored, getObjectStore());
   const DiffContext* ctxPtr = context.get();
 
-  // TODO: Load the system-wide ignore settings and user-specific
-  // ignore settings.
-  auto ignore = make_unique<GitIgnoreStack>(nullptr);
-  auto* ignorePtr = ignore.get();
-
   // stateHolder() exists to ensure that the DiffContext and GitIgnoreStack
   // exists until the diff completes.
-  auto stateHolder =
-      [ ctx = std::move(context), ignore = std::move(ignore) ](){};
+  auto stateHolder = [ctx = std::move(context)](){};
 
   auto rootInode = getRootInode();
   return getRootTreeFuture()
-      .then([ ctxPtr, ignorePtr, rootInode = std::move(rootInode) ](
+      .then([ ctxPtr, rootInode = std::move(rootInode) ](
           std::unique_ptr<Tree> && rootTree) {
         return rootInode->diff(
-            ctxPtr, RelativePathPiece{}, std::move(rootTree), ignorePtr, false);
+            ctxPtr,
+            RelativePathPiece{},
+            std::move(rootTree),
+            ctxPtr->getToplevelIgnore(),
+            false);
       })
       .ensure(std::move(stateHolder));
 }

@@ -345,7 +345,7 @@ class TreeInode : public InodeBase {
       const DiffContext* context,
       RelativePathPiece currentPath,
       std::unique_ptr<Tree> tree,
-      GitIgnoreStack* parentIgnore,
+      const GitIgnoreStack* parentIgnore,
       bool isIgnored);
 
   /**
@@ -616,7 +616,7 @@ class TreeInode : public InodeBase {
       const DiffContext* context,
       RelativePathPiece currentPath,
       std::unique_ptr<Tree> tree,
-      GitIgnoreStack* parentIgnore,
+      const GitIgnoreStack* parentIgnore,
       bool isIgnored);
 
   /**

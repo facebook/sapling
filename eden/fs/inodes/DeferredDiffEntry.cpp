@@ -39,7 +39,7 @@ class UntrackedDiffEntry : public DeferredDiffEntry {
       const DiffContext* context,
       RelativePath path,
       InodePtr inode,
-      GitIgnoreStack* ignore,
+      const GitIgnoreStack* ignore,
       bool isIgnored)
       : DeferredDiffEntry{context, std::move(path)},
         ignore_{ignore},
@@ -59,7 +59,7 @@ class UntrackedDiffEntry : public DeferredDiffEntry {
       const DiffContext* context,
       RelativePath path,
       InodeFuture&& inodeFuture,
-      GitIgnoreStack* ignore,
+      const GitIgnoreStack* ignore,
       bool isIgnored)
       : DeferredDiffEntry{context, std::move(path)},
         ignore_{ignore},
@@ -90,7 +90,7 @@ class UntrackedDiffEntry : public DeferredDiffEntry {
   }
 
  private:
-  GitIgnoreStack* ignore_{nullptr};
+  const GitIgnoreStack* ignore_{nullptr};
   bool isIgnored_{false};
   InodePtr inode_;
   folly::Optional<folly::Future<InodePtr>> inodeFuture_;
@@ -190,7 +190,7 @@ class ModifiedDiffEntry : public DeferredDiffEntry {
       RelativePath path,
       const TreeEntry& scmEntry,
       InodePtr inode,
-      GitIgnoreStack* ignore,
+      const GitIgnoreStack* ignore,
       bool isIgnored)
       : DeferredDiffEntry{context, std::move(path)},
         ignore_{ignore},
@@ -203,7 +203,7 @@ class ModifiedDiffEntry : public DeferredDiffEntry {
       RelativePath path,
       const TreeEntry& scmEntry,
       folly::Future<InodePtr>&& inodeFuture,
-      GitIgnoreStack* ignore,
+      const GitIgnoreStack* ignore,
       bool isIgnored)
       : DeferredDiffEntry{context, std::move(path)},
         ignore_{ignore},
@@ -298,7 +298,7 @@ class ModifiedDiffEntry : public DeferredDiffEntry {
         });
   }
 
-  GitIgnoreStack* ignore_{nullptr};
+  const GitIgnoreStack* ignore_{nullptr};
   bool isIgnored_{false};
   TreeEntry scmEntry_;
   folly::Optional<folly::Future<InodePtr>> inodeFuture_;
@@ -339,7 +339,7 @@ unique_ptr<DeferredDiffEntry> DeferredDiffEntry::createUntrackedEntry(
     const DiffContext* context,
     RelativePath path,
     InodePtr inode,
-    GitIgnoreStack* ignore,
+    const GitIgnoreStack* ignore,
     bool isIgnored) {
   return make_unique<UntrackedDiffEntry>(
       context, std::move(path), std::move(inode), ignore, isIgnored);
@@ -350,7 +350,7 @@ DeferredDiffEntry::createUntrackedEntryFromInodeFuture(
     const DiffContext* context,
     RelativePath path,
     Future<InodePtr>&& inodeFuture,
-    GitIgnoreStack* ignore,
+    const GitIgnoreStack* ignore,
     bool isIgnored) {
   return make_unique<UntrackedDiffEntry>(
       context, std::move(path), std::move(inodeFuture), ignore, isIgnored);
@@ -368,7 +368,7 @@ unique_ptr<DeferredDiffEntry> DeferredDiffEntry::createModifiedEntry(
     RelativePath path,
     const TreeEntry& scmEntry,
     InodePtr inode,
-    GitIgnoreStack* ignore,
+    const GitIgnoreStack* ignore,
     bool isIgnored) {
   return make_unique<ModifiedDiffEntry>(
       context, std::move(path), scmEntry, std::move(inode), ignore, isIgnored);
@@ -380,7 +380,7 @@ DeferredDiffEntry::createModifiedEntryFromInodeFuture(
     RelativePath path,
     const TreeEntry& scmEntry,
     folly::Future<InodePtr>&& inodeFuture,
-    GitIgnoreStack* ignore,
+    const GitIgnoreStack* ignore,
     bool isIgnored) {
   return make_unique<ModifiedDiffEntry>(
       context,

@@ -49,13 +49,13 @@ class GitIgnoreStack {
    * Create a new GitIgnoreStack for a directory that does not contain a
    * .gitignore file.
    */
-  explicit GitIgnoreStack(GitIgnoreStack* parent) : parent_{parent} {}
+  explicit GitIgnoreStack(const GitIgnoreStack* parent) : parent_{parent} {}
 
   /**
    * Create a new GitIgnoreStack for a directory that contains a .gitignore
    * file.
    */
-  GitIgnoreStack(GitIgnoreStack* parent, std::string ignoreFileContents)
+  GitIgnoreStack(const GitIgnoreStack* parent, std::string ignoreFileContents)
       : parent_{parent} {
     ignore_.loadFile(ignoreFileContents);
   }
@@ -82,7 +82,7 @@ class GitIgnoreStack {
    * This is a non-owning pointer.  Our caller is responsible for ensuring that
    * parent nodes on the stack always live longer than children nodes.
    */
-  GitIgnoreStack* parent_{nullptr};
+  const GitIgnoreStack* parent_{nullptr};
 };
 }
 }

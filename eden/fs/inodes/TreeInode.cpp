@@ -1493,7 +1493,7 @@ Future<Unit> TreeInode::diff(
     const DiffContext* context,
     RelativePathPiece currentPath,
     unique_ptr<Tree> tree,
-    GitIgnoreStack* parentIgnore,
+    const GitIgnoreStack* parentIgnore,
     bool isIgnored) {
   static const PathComponentPiece kIgnoreFilename{".gitignore"};
 
@@ -1603,7 +1603,7 @@ Future<Unit> TreeInode::loadGitIgnoreThenDiff(
     const DiffContext* context,
     RelativePathPiece currentPath,
     unique_ptr<Tree> tree,
-    GitIgnoreStack* parentIgnore,
+    const GitIgnoreStack* parentIgnore,
     bool isIgnored) {
   auto fileInode = gitignoreInode.asFileOrNull();
   if (!fileInode) {

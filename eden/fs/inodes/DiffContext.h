@@ -9,8 +9,13 @@
  */
 #pragma once
 
+#include "eden/fs/model/git/GitIgnoreStack.h"
+
 namespace facebook {
 namespace eden {
+
+class InodeDiffCallback;
+class ObjectStore;
 
 /**
  * A small helper class to store parameters for a TreeInode::diff() operation.
@@ -23,7 +28,14 @@ namespace eden {
 class DiffContext {
  public:
   DiffContext(InodeDiffCallback* cb, bool listIgn, ObjectStore* os)
-      : callback{cb}, store{os}, listIgnored{listIgn} {}
+      : callback{cb}, store{os}, listIgnored{listIgn} {
+    // TODO: Load the system-wide ignore settings and user-specific
+    // ignore settings into rootIgnore_.
+  }
+
+  const GitIgnoreStack* getToplevelIgnore() const {
+    return &rootIgnore_;
+  }
 
   InodeDiffCallback* const callback;
   ObjectStore* const store;
@@ -34,6 +46,9 @@ class DiffContext {
    * it can completely omit processing ignored subdirectories.
    */
   bool const listIgnored;
+
+ private:
+  GitIgnoreStack rootIgnore_{nullptr};
 };
 }
 }
