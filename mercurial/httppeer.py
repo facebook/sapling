@@ -80,7 +80,7 @@ def _wraphttpresponse(resp):
             except httplib.HTTPException as e:
                 raise error.PeerTransportError(
                     _('HTTP request error (%s)') % e,
-                    hint=_('this may be an intermittent failure; '
+                    hint=_('this may be an intermittent network failure; '
                            'if the error persists, consider contacting the '
                            'network or server operator'))
 
