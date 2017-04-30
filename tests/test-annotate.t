@@ -668,7 +668,7 @@ check error cases
   hg: parse error at 43: syntax error in revset 'followlines(baz, 2:4, startrev=20, descend=[1])'
   [255]
   $ hg log -r 'followlines(baz, 2:4, startrev=20, descend=a)'
-  hg: parse error: 'descend' argument must be a boolean
+  hg: parse error: descend argument must be a boolean
   [255]
 
 Test annotate with whitespace options

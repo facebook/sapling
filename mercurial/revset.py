@@ -926,6 +926,7 @@ def followlines(repo, subset, x):
         revs = getset(repo, fullreposet(repo), args['startrev'])
         if len(revs) != 1:
             raise error.ParseError(
+                # i18n: "followlines" is a keyword
                 _("followlines expects exactly one revision"))
         rev = revs.last()
 
@@ -936,9 +937,11 @@ def followlines(repo, subset, x):
         m = matchmod.match(repo.root, repo.getcwd(), [pat], ctx=repo[rev])
         files = [f for f in repo[rev] if m(f)]
         if len(files) != 1:
+            # i18n: "followlines" is a keyword
             raise error.ParseError(_("followlines expects exactly one file"))
         fname = files[0]
 
+    # i18n: "followlines" is a keyword
     lr = getrange(args['lines'][0], _("followlines expects a line range"))
     fromline, toline = [getinteger(a, _("line range bounds must be integers"))
                         for a in lr]
@@ -948,7 +951,8 @@ def followlines(repo, subset, x):
     descend = False
     if 'descend' in args:
         descend = getboolean(args['descend'],
-                             _("'descend' argument must be a boolean"))
+                             # i18n: "descend" is a keyword
+                             _("descend argument must be a boolean"))
     if descend:
         rs = generatorset(
             (c.rev() for c, _linerange
