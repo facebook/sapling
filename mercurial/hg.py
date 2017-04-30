@@ -148,10 +148,12 @@ def openpath(ui, path):
 # a list of (ui, repo) functions called for wire peer initialization
 wirepeersetupfuncs = []
 
-def _peerorrepo(ui, path, create=False):
+def _peerorrepo(ui, path, create=False, presetupfuncs=None):
     """return a repository object for the specified path"""
     obj = _peerlookup(path).instance(ui, path, create)
     ui = getattr(obj, "ui", ui)
+    for f in presetupfuncs or []:
+        f(ui, obj)
     for name, module in extensions.extensions(ui):
         hook = getattr(module, 'reposetup', None)
         if hook:
@@ -161,9 +163,9 @@ def _peerorrepo(ui, path, create=False):
             f(ui, obj)
     return obj
 
-def repository(ui, path='', create=False):
+def repository(ui, path='', create=False, presetupfuncs=None):
     """return a repository object for the specified path"""
-    peer = _peerorrepo(ui, path, create)
+    peer = _peerorrepo(ui, path, create, presetupfuncs=presetupfuncs)
     repo = peer.local()
     if not repo:
         raise error.Abort(_("repository '%s' is not local") %

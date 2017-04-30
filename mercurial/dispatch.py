@@ -47,7 +47,7 @@ from . import (
 
 class request(object):
     def __init__(self, args, ui=None, repo=None, fin=None, fout=None,
-                 ferr=None):
+                 ferr=None, prereposetups=None):
         self.args = args
         self.ui = ui
         self.repo = repo
@@ -56,6 +56,10 @@ class request(object):
         self.fin = fin
         self.fout = fout
         self.ferr = ferr
+
+        # reposetups which run before extensions, useful for chg to pre-fill
+        # low-level repo state (for example, changelog) before extensions.
+        self.prereposetups = prereposetups or []
 
     def _runexithandlers(self):
         exc = None
@@ -875,7 +879,8 @@ def _dispatch(req):
                 repo.ui.ferr = ui.ferr
             else:
                 try:
-                    repo = hg.repository(ui, path=path)
+                    repo = hg.repository(ui, path=path,
+                                         presetupfuncs=req.prereposetups)
                     if not repo.local():
                         raise error.Abort(_("repository '%s' is not local")
                                           % path)
