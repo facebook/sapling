@@ -119,7 +119,7 @@ effects may be overridden from your configuration file::
 Custom colors
 =============
 
-Because there are only eight standard colors, this module allows you
+Because there are only eight standard colors, Mercurial allows you
 to define color names for other color slots which might be available
 for your terminal type, assuming terminfo mode.  For instance::
 
