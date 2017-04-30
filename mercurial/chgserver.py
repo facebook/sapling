@@ -44,6 +44,7 @@ import hashlib
 import inspect
 import os
 import re
+import socket
 import struct
 import time
 
@@ -516,6 +517,7 @@ class chgunixservicehandler(object):
         tempaddress = _tempaddress(self._realaddress)
         util.bindunixsocket(sock, tempaddress)
         self._socketstat = os.stat(tempaddress)
+        sock.listen(socket.SOMAXCONN)
         # rename will replace the old socket file if exists atomically. the
         # old server will detect ownership change and exit.
         util.rename(tempaddress, self._realaddress)

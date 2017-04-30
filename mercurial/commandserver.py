@@ -409,6 +409,7 @@ class unixservicehandler(object):
 
     def bindsocket(self, sock, address):
         util.bindunixsocket(sock, address)
+        sock.listen(socket.SOMAXCONN)
 
     def unlinksocket(self, address):
         os.unlink(address)
@@ -452,7 +453,6 @@ class unixforkingservice(object):
     def init(self):
         self._sock = socket.socket(socket.AF_UNIX)
         self._servicehandler.bindsocket(self._sock, self.address)
-        self._sock.listen(socket.SOMAXCONN)
         o = signal.signal(signal.SIGCHLD, self._sigchldhandler)
         self._oldsigchldhandler = o
         self._servicehandler.printbanner(self.address)
