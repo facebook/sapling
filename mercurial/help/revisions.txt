@@ -109,10 +109,10 @@ These are the supported infix operators:
     [revsetalias]
     issue(a1) = grep(r'\bissue[ :]?' ## a1 ## r'\b|\bbug\(' ## a1 ## r'\)')
 
-    ``issue(1234)`` is equivalent to
-    ``grep(r'\bissue[ :]?1234\b|\bbug\(1234\)')``
-    in this case. This matches against all of "issue 1234", "issue:1234",
-    "issue1234" and "bug(1234)".
+  ``issue(1234)`` is equivalent to
+  ``grep(r'\bissue[ :]?1234\b|\bbug\(1234\)')``
+  in this case. This matches against all of "issue 1234", "issue:1234",
+  "issue1234" and "bug(1234)".
 
 There is a single postfix operator:
 
@@ -132,9 +132,8 @@ Matching is case-sensitive, unless otherwise noted.  To perform a case-
 insensitive match on a case-sensitive predicate, use a regular expression,
 prefixed with ``(?i)``.
 
-  For example::
-
-    ``tag(r're:(?i)release')`` matches "release" or "RELEASE" or "Release", etc
+For example, ``tag(r're:(?i)release')`` matches "release" or "RELEASE"
+or "Release", etc
 
 Predicates
 ==========

@@ -665,7 +665,7 @@ def rebase(ui, repo, **opts):
     Configuration Options:
 
     You can make rebase require a destination if you set the following config
-    option:
+    option::
 
       [commands]
       rebase.requiredest = True
