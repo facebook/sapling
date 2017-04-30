@@ -668,7 +668,7 @@ def rebase(ui, repo, **opts):
     option:
 
       [commands]
-      rebase.requiredest = False
+      rebase.requiredest = True
 
     Return Values:
 
