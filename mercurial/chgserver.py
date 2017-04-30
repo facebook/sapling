@@ -492,6 +492,7 @@ class chgunixservicehandler(object):
         self._checkextensions()
         self._bind(sock)
         self._createsymlink()
+        # no "listening at" message should be printed to simulate hg behavior
 
     def _inithashstate(self, address):
         self._baseaddress = address
@@ -545,10 +546,6 @@ class chgunixservicehandler(object):
         # since that server will detect and exit automatically and
         # the client will start a new server on demand.
         util.tryunlink(self._realaddress)
-
-    def printbanner(self, address):
-        # no "listening at" message should be printed to simulate hg behavior
-        pass
 
     def shouldexit(self):
         if not self._issocketowner():
