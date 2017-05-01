@@ -1,14 +1,19 @@
-Mercurial can colorizes output from several commands.
+Mercurial colorizes output from several commands.
 
 For example, the diff command shows additions in green and deletions
 in red, while the status command shows modified files in magenta. Many
 other commands have analogous colors. It is possible to customize
 these colors.
 
-To enable color use::
+To enable color (default) use::
 
   [ui]
   color = auto
+
+To disable color use::
+
+  [ui]
+  color = never
 
 Mode
 ====
