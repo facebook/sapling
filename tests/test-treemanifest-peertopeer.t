@@ -48,7 +48,26 @@
   fb1ee78215bfece34ca8e233fcf5e9fd69ec52bd.dataidx
   fb1ee78215bfece34ca8e233fcf5e9fd69ec52bd.datapack
 
+Pushing with treemanifest disabled does nothing
+(disable demand import so treemanifest.py is forced to load)
+  $ HGDEMANDIMPORT=disable hg push -q ../client2 --config extensions.treemanifest=! --config fastmanifest.usetree=False
+  $ ls ../client2/.hg/store/packs/manifests || true
+  * No such file or directory (glob)
+
+  $ hg -R ../client2 strip -q -r tip
+
+Pushing p2p with sendtrees=False does nothing
+  $ hg push -q ../client2
+  $ ls ../client2/.hg/store/packs/manifests || true
+  * No such file or directory (glob)
+
+  $ hg -R ../client2 strip -q -r tip
+
 Pushing p2p puts the received packs in the local pack store
+  $ cat >> .hg/hgrc <<EOF
+  > [treemanifest]
+  > sendtrees=True
+  > EOF
   $ hg push -q ../client2
   $ ls ../client2/.hg/store/packs/manifests
   36c63010eaf0a52d3536ced5e32bf4c6847a0e40.histidx

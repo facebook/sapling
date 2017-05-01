@@ -36,11 +36,17 @@ automatically downloading trees from the server when they don't exist locally.
     [treemanifest]
     demanddownload = True
 
-Setting `treemaniefst.pullprefetchcount` to an integer N will cause the latest N
+Setting `treemanifest.pullprefetchcount` to an integer N will cause the latest N
 commits' manifests to be downloaded (if they aren't already).
 
     [treemanifest]
     pullprefetchcount = 0
+
+Setting `treemanifest.sendtrees` to True will include tree packs in sent
+bundles.
+
+    [treemanifest]
+    sendtrees = False
 """
 
 from mercurial import (
@@ -983,7 +989,8 @@ def serverrepack(repo):
 @exchange.b2partsgenerator('treepack')
 def gettreepackpart(pushop, bundler):
     """add parts containing trees being pushed"""
-    if 'treepack' in pushop.stepsdone:
+    if ('treepack' in pushop.stepsdone or
+        not pushop.repo.ui.configbool('treemanifest', 'sendtrees')):
         return
     pushop.stepsdone.add('treepack')
 
