@@ -551,7 +551,8 @@ delta_chain_t getdeltachain(
 
     next = getdeltachainlink(handle, ptr, link);
     if (!uncompressdeltachainlink(link)) {
-      next.code = GET_DELTA_CHAIN_CORRUPT;
+      result.code = GET_DELTA_CHAIN_CORRUPT;
+      goto error_cleanup;
     }
 
     switch (next.code) {
