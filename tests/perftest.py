@@ -13,7 +13,7 @@ from mercurial import (
 )
 from mercurial.node import nullid
 from remotefilelog import datapack, contentstore, shallowutil
-import hashlib, os, time
+import contextlib, hashlib, os, time
 from fastmanifest.implementation import fastmanifestcache
 from fastmanifest import cachemanager
 import cstore
@@ -300,3 +300,70 @@ def profiletreepack(repo, store, rev1, rev2, opts):
             exectest(test, iterations, prep, func)
             repo.ui.status("\n")
         repo.ui.status("\n")
+
+def perfstat():
+    """return a dict of stats including time usage"""
+    utime, stime, cutime, cstime, elapsed = os.times()
+    elapsed = time.time()
+    result = {
+        'real': elapsed,
+        'user': utime,
+        'sys': stime,
+    }
+    return result
+
+def perfstatdiff(stat1, stat2):
+    """return a str describing difference between 2 perfstat results"""
+    result = ''
+    for name in ['real', 'user', 'sys']:
+        if name in stat1 and name in stat2:
+            diff = stat2[name] - stat1[name]
+            diffstr = '%.3f' % diff
+            if result:
+                result += ', '
+            result += '%s %s' % (name, diffstr)
+    return result
+
+@contextlib.contextmanager
+def benchmark(name):
+    stat1 = perfstat()
+    try:
+        yield
+    finally:
+        stat2 = perfstat()
+        print('%s: %s' % (name, perfstatdiff(stat1, stat2)))
+
+@command('perfdatapack')
+def perfdatapack(ui, repo, *args, **opts):
+    '''benchmark different access patterns regarding on reading content, meta'''
+    store = repo.contentstore
+    assert isinstance(store, contentstore.unioncontentstore)
+
+    packpath = store.stores[0].packs[0].path
+
+    ui.status(('using all nodes from %s\n') % packpath)
+
+    if ui.configbool('remotefilelog', 'fastdatapack', True):
+        pack = datapack.fastdatapack(packpath)
+    else:
+        pack = datapack.datapack(packpath)
+    nodes = []
+    for filename, node in pack:
+        nodes.append(node)
+
+    ui.status(('%s nodes found\n') % len(nodes))
+
+    testfuncs = [
+        ('chain   only', lambda n: store.getdeltachain('', n)),
+        ('content only', lambda n: store.get('', n)),
+        ('meta    only', lambda n: store.getmeta('', n)),
+        ('content,meta', lambda n: (store.get('', n), store.getmeta('', n))),
+        ('meta,content', lambda n: (store.getmeta('', n), store.get('', n))),
+    ]
+
+    reversednodes = list(reversed(nodes))
+    for order, nodelist in [(' (asc)', nodes), ('(desc)', reversednodes)]:
+        for name, func in testfuncs:
+            with benchmark('%s %s' % (name, order)):
+                for n in nodelist:
+                    func(n)
