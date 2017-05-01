@@ -51,8 +51,8 @@ samplehgrcs = {
 # username = Jane Doe <jdoe@example.com>
 username =
 
-# uncomment to colorize command output
-# color = auto
+# uncomment to disable color in command output
+# color = never
 
 [extensions]
 # uncomment these lines to enable some popular extensions
@@ -97,8 +97,8 @@ default = %s
 """# example system-wide hg config (see 'hg help config' for more info)
 
 [ui]
-# uncomment to colorize command output
-# color = auto
+# uncomment to disable color in command output
+# color = never
 
 [extensions]
 # uncomment these lines to enable some popular extensions
